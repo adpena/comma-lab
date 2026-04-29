@@ -953,6 +953,55 @@ def _load_masks_from_amrc(
     return masks
 
 
+def _load_masks_from_stcb(stcb_path: Path) -> torch.Tensor:
+    """Load pre-extracted masks from a Lane STC boundary-codec archive.
+
+    STCB = "Syndrome-Trellis Code Boundary" — Lane STC v1
+    (``src/tac/stc_boundary_codec.py``). Bit-identical lossless recovery
+    of the SegNet argmax class IDs that produced the encoded payload.
+
+    Strict-scorer-rule compliance: the decoder is pure integer/byte parsing
+    (Sobel-on-class-IDs at compress time only); no SegNet/PoseNet load at
+    inflate time.
+
+    Args:
+        stcb_path: path to masks.stcb inside the archive directory.
+
+    Returns:
+        (N, H, W) long tensor with values in [0, NUM_CLASSES).
+    """
+    t0 = time.monotonic()
+    if not stcb_path.exists():
+        raise FileNotFoundError(f"STCB mask file not found: {stcb_path}")
+    try:
+        from tac.stc_boundary_codec import decode_mask_video_stc
+    except ImportError as e:
+        raise ImportError(
+            f"STCB mask file present at {stcb_path} but tac.stc_boundary_codec "
+            f"is not importable ({e}). The codec is required to inflate "
+            f"masks.stcb; either ship the tac wheel in the inflate environment "
+            f"or convert masks back to .mkv / .amrc before submission."
+        ) from e
+    masks = decode_mask_video_stc(stcb_path)
+    n_frames = int(masks.shape[0])
+    # Half-frame compatibility: STCB files encoded from 600-frame inputs are
+    # legitimate half-frame archives (same Quantizr paradigm as AV1/AMRC).
+    if n_frames == NUM_FRAMES // 2:
+        masks._half_frame_only = True  # type: ignore[attr-defined]
+        print(
+            f"  Half-frame STCB masks detected: {n_frames} odd-frame masks "
+            f"(deferred warp expansion)",
+            file=sys.stderr,
+        )
+    elapsed = time.monotonic() - t0
+    print(
+        f"  Loaded {n_frames} pre-extracted STCB masks "
+        f"({masks.shape[1]}x{masks.shape[2]}) from {stcb_path} ({elapsed:.2f}s)",
+        file=sys.stderr,
+    )
+    return masks
+
+
 def _load_masks_from_archive(
     mask_video_path: Path,
     expected_frames: int = NUM_FRAMES,
@@ -993,9 +1042,13 @@ def _load_masks_from_archive(
     # Codec routing: prefer extension hint, fall back to magic-byte sniff.
     if mask_video_path.suffix.lower() == ".amrc":
         return _load_masks_from_amrc(mask_video_path, expected_frames=expected_frames)
+    if mask_video_path.suffix.lower() == ".stcb":
+        return _load_masks_from_stcb(mask_video_path)
     head = mask_video_path.read_bytes()[:4] if mask_video_path.stat().st_size >= 4 else b""
     if head == b"AMRC":
         return _load_masks_from_amrc(mask_video_path, expected_frames=expected_frames)
+    if head == b"STCB":
+        return _load_masks_from_stcb(mask_video_path)
 
     # Probe video dimensions
     probe_cmd = [
@@ -2559,11 +2612,12 @@ def _detect_device_and_batch_size() -> tuple[str, int]:
 
 
 def _resolve_mask_path(archive_dir: str | Path, mask_filename: str) -> Path:
-    """Pick the mask file inside the archive, supporting both AV1 (.mkv)
-    and the lossless argmax-RLE codec (.amrc). The given ``mask_filename``
-    is tried first; if it does not exist, we look for the sibling format
-    automatically. This lets callers pass the legacy default
-    "masks.mkv" while still working with new AMRC archives.
+    """Pick the mask file inside the archive, supporting AV1 (.mkv),
+    the lossless argmax-RLE codec (.amrc), and the Lane STC boundary
+    codec (.stcb). The given ``mask_filename`` is tried first; if it does
+    not exist, we look for the sibling format automatically. This lets
+    callers pass the legacy default "masks.mkv" while still working with
+    AMRC or STCB archives.
     """
     archive = Path(archive_dir)
     primary = archive / mask_filename
@@ -2575,10 +2629,19 @@ def _resolve_mask_path(archive_dir: str | Path, mask_filename: str) -> Path:
     siblings = []
     if mask_filename.endswith(".mkv"):
         siblings.append(archive / f"{stem}.amrc")
+        siblings.append(archive / f"{stem}.stcb")
     elif mask_filename.endswith(".amrc"):
         siblings.append(archive / f"{stem}.mkv")
+        siblings.append(archive / f"{stem}.stcb")
+    elif mask_filename.endswith(".stcb"):
+        siblings.append(archive / f"{stem}.mkv")
+        siblings.append(archive / f"{stem}.amrc")
     # Also try the canonical names as a last resort.
-    siblings.extend([archive / "masks.amrc", archive / "masks.mkv"])
+    siblings.extend([
+        archive / "masks.amrc",
+        archive / "masks.stcb",
+        archive / "masks.mkv",
+    ])
     for sib in siblings:
         if sib.exists():
             return sib
