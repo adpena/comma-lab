@@ -723,11 +723,18 @@ def cmd_mark(pattern: str, status: str = "reviewed",
 
 def cmd_mark_file(file_path: str, status: str = "reviewed",
                   reviewer: str = "council", review_pass: str = "",
-                  dry_run: bool = False) -> None:
-    """Mark all entities in a file."""
+                  dry_run: bool = False) -> int:
+    """Mark all entities in a file. Returns 0 on success, 1 on no-match.
+
+    Returning a non-zero exit on no-match prevents the silent-success failure
+    mode where an operator marks a `.sh`/`.md`/`.json` file (which the tracker
+    only follows for `.py` files) and assumes the gate passed. The tracker
+    only ingests Python entities — for non-Python files use a same-line
+    `REVIEW_GATE_OVERRIDE=1` waiver per CLAUDE.md.
+    """
     if status not in VALID_STATUSES:
         print(f"ERROR: invalid status '{status}'. Must be one of: {VALID_STATUSES}")
-        return
+        return 1
 
     con = _init_db()
     now = datetime.now(timezone.utc).isoformat()
@@ -746,16 +753,38 @@ def cmd_mark_file(file_path: str, status: str = "reviewed",
     ).fetchall()
 
     if not rows:
-        print(f"No entities in file matching '{file_path}'")
+        # Helpful classification: did the operator pass a non-Python file?
+        # The tracker only ingests .py files; .sh/.md/.json/.yaml/.toml are
+        # silently invisible. Emit a clear hint instead of "no entities".
+        suffix = Path(normalized).suffix.lower()
+        non_py_extensions = {".sh", ".md", ".json", ".yaml", ".yml",
+                             ".toml", ".env", ".txt", ".cfg", ".ini"}
+        if suffix in non_py_extensions:
+            print(
+                f"NOTICE: '{file_path}' has extension '{suffix}' which the "
+                f"tracker does not ingest. The review gate is enforced for "
+                f"`.py` files only. For non-code files use "
+                f"`REVIEW_GATE_OVERRIDE=1 git commit ...` per CLAUDE.md "
+                f"non-negotiable.",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                f"NOTICE: no entities in tracker matching '{file_path}'. "
+                f"Either the file is non-Python (tracker only ingests .py), "
+                f"or the path is wrong, or `scan` has not been run since the "
+                f"file was added. Try: python tools/review_tracker.py scan",
+                file=sys.stderr,
+            )
         con.close()
-        return
+        return 1
 
     if dry_run:
         print(f"DRY RUN: would mark {len(rows)} entities in '{file_path}' as '{status}'")
         for (qn,) in rows:
             print(f"  {qn}")
         con.close()
-        return
+        return 0
 
     for (qn,) in rows:
         con.execute("""
@@ -770,6 +799,7 @@ def cmd_mark_file(file_path: str, status: str = "reviewed",
     _export_json(con)
     con.close()
     print(f"Marked {len(rows)} entities in '{file_path}' as '{status}'")
+    return 0
 
 
 def cmd_status() -> None:
@@ -1695,7 +1725,12 @@ def main() -> None:
             print("ERROR: 'mark-file' requires a file path argument.", file=sys.stderr)
             print("Usage: python tools/review_tracker.py mark-file <path> [--status S]", file=sys.stderr)
             sys.exit(1)
-        cmd_mark_file(positional[2], status=status, reviewer=reviewer, review_pass=review_pass, dry_run=dry_run)
+        rc = cmd_mark_file(
+            positional[2], status=status, reviewer=reviewer,
+            review_pass=review_pass, dry_run=dry_run,
+        )
+        if rc:
+            sys.exit(rc)
     elif cmd == "report":
         cmd_report()
     elif cmd == "dashboard":
