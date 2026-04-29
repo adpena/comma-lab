@@ -63,8 +63,12 @@ def get_processes() -> list[dict]:
         seen_pids.add(pid)
         tag = ""
         if "--tag" in cmd:
-            try: tag = cmd.split("--tag")[1].strip().split()[0]
-            except: pass
+            # IndexError if --tag is the last token (no value follows);
+            # other exceptions would indicate a real bug, so don't swallow.
+            try:
+                tag = cmd.split("--tag")[1].strip().split()[0]
+            except IndexError:
+                tag = ""
         kind = "trainer"
         if "proxy" in cmd or "evaluate" in cmd:
             kind = "proxy"
