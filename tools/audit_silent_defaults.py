@@ -227,7 +227,14 @@ def _is_risky_default(rec: dict) -> bool:
     if not rec.get("has_profile_flag", False):
         return False
     # File-level filter: scripts with an override-detection mechanism
-    # already handle the silent-default problem correctly.
+    # (_user_provided_flags / _apply_profile / _resolve(args.X)) handle
+    # the silent-default problem correctly.
+    # CAVEAT: this is broad. A file with SOME _resolve calls and SOME
+    # un-resolved non-None defaults will pass the file-level check yet
+    # contain real bugs in the un-resolved flags. The 3 real bugs caught
+    # this loop in train_renderer.py (--grad-clip, --fp4-codebook,
+    # --wall-clock-timeout) were all of this shape — fixed in commit
+    # 256c5e42. Per-flag verification is a future enhancement.
     if rec.get("has_override_mechanism", False):
         return False
     return True
