@@ -1,5 +1,27 @@
 # run log
 
+## 2026-04-29T08:40:00-05:00 — reinit from latest codebase; Lane G v3 promoted as active floor
+
+**State reconciliation:** refreshed durable state around the latest local evidence. Current best measured artifact is **Lane G v3 = 1.05 [contest-CUDA]** (`experiments/results/lane_g_v3_landed/contest_auth_eval.json`, 694,074-byte archive, SegNet 0.00400846, PoseNet 0.00345458, rate 0.01848622). Lane A remains fallback at **1.15 [contest-CUDA]**.
+
+**Verification run:**
+- `comma-lab doctor` reports all required local tools present.
+- `experiments/canonical_local_auth_eval_smoke.py --lane g_v3_corrected_kl_weight --quiet` passed 10 stages in 0.02s.
+- Focused tests passed: `34 passed in 2.00s` for canonical smoke, Check 64, and contest auth-eval tests.
+- Check 64: zero violations.
+- Check 65: initially 12 warning-only lane-class gaps; backfilled `.omx/state/lane_class_proofs.json` with explicit `canonical-local-smoke` plumbing proofs. These are not score claims.
+
+**Important caveat:** upstream snapshot is stale/ambiguous. `comma-lab status` still points to snapshot commit `ec82c291...` from 2026-04-03; live workspace upstream is `cd64c68...`; root `upstream/` is `11ad728...` with many local modifications. Need a deliberate rebootstrap/review before final reproduction.
+
+**Fresh failures triaged:**
+- SZ phase2 recovered a 3.3KB archive but canonical smoke failed: no masks file in archive, so current inflator would fall back to non-compliant SegNet extraction.
+- Modal MAE-V failed before training on missing `pydantic`.
+- Modal Omega Hessian failed with CUDA device-side assert during profiling.
+- Modal Uniward failed because the expected baseline artifact path was absent.
+- Modal auth eval `8e331354a6b5` failed on pose shape `(600, 6)` vs expected `(N, 1)`.
+
+**Next queue:** fix Modal runtime install; repair remote anchor paths; isolate Omega Hessian CUDA assert with a tiny smoke; decide whether SZ no-mask gets a compliant inflator or is demoted; then rebootstrap upstream snapshot deliberately.
+
 ## 2026-04-26T16:50:00-05:00 — LANE-B pose TTO HURT score; bootstrap silent-cascade fixed; qat_finetune dispatch fixed
 
 **LANE-B (instance 35627136, RTX 4090, ~6.5h, ~$2):** first pose TTO run on the dilated-h64 baseline renderer with `noise_std=0.5` + `eval_roundtrip=True`. Proxy converged to PoseNet ~0.0007 across all 75 pairs but contest-CUDA auth measured **0.246 — a 350x proxy-auth gap** despite both fixes wired. Final auth score **2.40** (vs 0.90 baseline, **+1.5 worse**).
@@ -478,4 +500,3 @@ NUCLEAR experiments queued (zero-GPU, run TODAY):
 1. Half-frame mask AV1 sweep at 384×512 (CRF 24..48) — int8 overflow already fixed in encode_masks_monochrome (R25 reviewer corrected my battleplan claim)
 2. SHIRAZ Phase 3 → immediate auth eval before any v2 deploy
 3. Even-frame-warp-from-odd at inflate (Quantizr paradigm) — same architectural change as #1, NOT additive (R25 reviewer caught my double-counting)
-
