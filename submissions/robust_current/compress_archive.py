@@ -78,10 +78,25 @@ def _parse_args() -> argparse.Namespace:
         help="Encode poses as anchor + int8 deltas (Lane PD, "
              "src/tac/pose_delta_codec.py). Driving poses are smooth so "
              "delta range is ~10x smaller than absolute range; quantising "
-             "deltas to int8 saves ~49%% vs fp16 absolute (3.7KB vs 7.2KB "
-             "for 600 pairs). Decoder is pure-Python in submission_archive."
+             "deltas to int8 [empirical:src/tac/tests/test_compress_archive_pose_delta.py] "
+             "saves ~18%% vs fp16 raw bytes once torch.save overhead is "
+             "amortised on both sides (the docstring's earlier 49%% was a "
+             "derivation, not a measurement — caught by the regression "
+             "test). Decoder is pure-Python in submission_archive"
              ".load_optimized_poses (already wired). Mutually exclusive "
-             "with --binary-poses.",
+             "with --binary-poses and --pose-delta-v2.",
+    )
+    p.add_argument(
+        "--pose-delta-v2", action="store_true",
+        help="Encode poses as Lane PD-V2: V1 (anchor + int8 deltas) PLUS "
+             "static-histogram arithmetic coding of the int8 stream "
+             "(src/tac/pose_delta_codec_v2.py). [prediction] +7-11 bp "
+             "deterministic vs V1 from the grand-council stacking codex "
+             "(memory: project_codec_stacking_composition_canonical_orders"
+             "_20260429.md). Includes a hard overhead gate that falls back "
+             "to V1 if the AC blob is no smaller than V1 — degenerate "
+             "inputs (constant pose) silently land as V1. Mutually "
+             "exclusive with --binary-poses and --pose-delta.",
     )
     p.add_argument(
         "--brotli", action="store_true",
@@ -225,6 +240,54 @@ def _convert_poses_to_pose_delta(
         f"    Encoded poses (Lane PD): {poses_path.name} "
         f"({poses_path.stat().st_size:,} bytes) -> pose_delta_v1 .pt "
         f"({pt_path.stat().st_size:,} bytes, {poses.shape})",
+        file=sys.stderr,
+    )
+    return pt_path
+
+
+def _convert_poses_to_pose_delta_v2(
+    poses_path: Path,
+    output_dir: Path,
+) -> Path:
+    """Convert poses (.pt or .bin) to Lane PD-V2 arithmetic-coded format.
+
+    [prediction] +7-11 basis points deterministic vs V1 (grand-council
+    stacking codex 2026-04-29). The hard overhead gate inside
+    ``encode_pose_delta_v2_or_fallback`` falls back to V1 silently if V2
+    fails to beat V1's torch.save bytes — so degenerate inputs (constant
+    poses) cannot ship a regression. Mutually exclusive with
+    ``--binary-poses`` and ``--pose-delta``.
+
+    Output is written as optimized_poses.pt (a torch-saved dict carrying
+    EITHER the format='pose_delta_v2' sentinel + AC blob, OR the V1
+    sentinel after fallback) so the existing decoder in
+    submission_archive.load_optimized_poses picks it up automatically.
+
+    Returns: Path to the saved .pt file.
+    """
+    import torch
+    from tac.pose_delta_codec_v2 import (
+        POSE_DELTA_FORMAT_SENTINEL_V2,
+        encode_pose_delta_v2_or_fallback,
+    )
+
+    if poses_path.suffix == ".bin":
+        from tac.submission_archive import load_poses_binary
+        poses = load_poses_binary(poses_path).float()
+    else:
+        poses = torch.load(
+            str(poses_path), map_location="cpu", weights_only=True
+        ).float()
+
+    obj = encode_pose_delta_v2_or_fallback(poses)
+    pt_path = output_dir / "optimized_poses.pt"
+    torch.save(obj, str(pt_path))
+    used_v2 = obj.get("format") == POSE_DELTA_FORMAT_SENTINEL_V2
+    label = "pose_delta_v2" if used_v2 else "pose_delta_v1 (fallback gate fired)"
+    print(
+        f"    Encoded poses (Lane PD-V2 / {label}): {poses_path.name} "
+        f"({poses_path.stat().st_size:,} bytes) -> "
+        f"{pt_path.stat().st_size:,} bytes, {poses.shape}",
         file=sys.stderr,
     )
     return pt_path

@@ -113,12 +113,14 @@ def _encode_residual_bytes(diff_mask: torch.Tensor, diff_classes: torch.Tensor) 
         rle_bytes.extend(int(rl).to_bytes(4, "little"))
 
     # Stage 2: arithmetic-code the diff_classes (one int per diff position).
-    # Class IDs are in [0, NUM_CLASSES); encode as int8 array.
+    # Class IDs are in [0, NUM_CLASSES) i.e. {0..4}. The existing arithmetic
+    # codec expects qints centered around an offset; for class IDs we use
+    # offset=0 and num_symbols=NUM_CLASSES=5.
     class_array = diff_classes.numpy().astype(np.int8)
     if class_array.size == 0:
         class_blob = b""
     else:
-        class_blob = encode_qints_arithmetic(class_array, max_abs=4)
+        class_blob = encode_qints_arithmetic(class_array, num_symbols=5, offset=0)
 
     return len(rle_bytes) + len(class_blob)
 

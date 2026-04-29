@@ -518,7 +518,17 @@ def load_optimized_poses(
             decode_pose_deltas,
             is_pose_delta_dict,
         )
-        if is_pose_delta_dict(obj):
+        from tac.pose_delta_codec_v2 import (
+            decode_pose_delta_v2,
+            is_pose_delta_v2_dict,
+        )
+        if is_pose_delta_v2_dict(obj):
+            # Lane PD-V2: arithmetic-coded per-pair pose deltas. The dict's
+            # "blob" key holds the PDV2 binary container (magic-byte sniffed
+            # against b"PDV2" in is_pose_delta_v2_dict). See
+            # src/tac/pose_delta_codec_v2.py for the on-disk schema.
+            poses = decode_pose_delta_v2(obj["blob"], pose_dim=pose_dim)
+        elif is_pose_delta_dict(obj):
             # Lane PD: per-pair pose deltas + anchor + per-channel scale.
             # See src/tac/pose_delta_codec.py for the on-disk schema.
             poses = decode_pose_deltas(obj, pose_dim=pose_dim)
