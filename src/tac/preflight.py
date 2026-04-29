@@ -500,6 +500,24 @@ def preflight_all(
         check_subprocess_run_checked(strict=False, verbose=verbose)
         check_tools_have_argparse(strict=False, verbose=verbose)
 
+        # 2026-04-28 evening: 2 NEW STRICT meta-bug checks (54, 55) for the
+        # canonical NVDEC workflow. Today wasted ~$10 on 87% NVDEC_BAD
+        # Vast.ai 4090 hosts before the 2-layer fix landed:
+        # - Layer 1 DETECTION (commit 58e55890): scripts/probe_nvdec.sh
+        #   --lightweight at setup_full.sh Stage 0.5 catches ~95% of
+        #   NVDEC-missing hosts BEFORE the 5-minute DALI install.
+        # - Layer 2 ACTION (commit 5acebb88-ish): launch_lane_on_vastai.py
+        #   phase2-launch Stage 2 polls setup.log + auto-destroys NVDEC_BAD.
+        # Per the user mandate ("we need to automate and canonicalize and
+        # permanently guard against NVDEC issue"), both layers are now
+        # structurally extinct bug classes — any future refactor that
+        # drops the poll OR re-orders the probe AFTER DALI fails preflight.
+        # Both checks land at 0 live violations → straight to STRICT per
+        # the Lane A pattern.
+        # Reference: feedback_canonical_nvdec_workflow_GUARD_20260428.
+        check_phase2_launch_polls_setup_log(strict=True, verbose=verbose)
+        check_setup_full_probe_before_dali(strict=True, verbose=verbose)
+
     # 2. Training inputs (only if profile + tto_frames provided)
     if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:
         preflight_training_inputs(
@@ -9822,6 +9840,288 @@ def check_tools_have_argparse(
     if violations and strict:
         raise MetaBugViolation(
             "CLI SCRIPTS WITHOUT --help:\n"
+            + "\n".join(f"  • {v}" for v in violations[:50])
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 54 (54th meta-bug): scripts/launch_lane_on_vastai.py phase2-launch
+#                          MUST call _poll_setup_log_for_outcome OR
+#                          honor a skip_post_verify opt-in. Closes the
+#                          "phase2-launch returns success before lane
+#                          starts" regression class.
+# ════════════════════════════════════════════════════════════════════════════
+#
+# 2026-04-28: Today wasted ~$10 on 87% NVDEC_BAD Vast.ai 4090 hosts because
+# phase2-launch returned success the moment SSH+tmux backgrounded the lane
+# wrapper — but setup_full.sh would then crash on Stage 4 NVDEC probe and
+# the operator only learned about it 5+ minutes later via heartbeat.
+#
+# Fix landed in two layers:
+#   Layer 1 DETECTION (commit 58e55890): scripts/probe_nvdec.sh
+#     --lightweight at setup_full.sh Stage 0.5 catches ~95% of
+#     NVDEC-missing hosts BEFORE the 5-minute DALI install.
+#   Layer 2 ACTION  (commit 5acebb88-ish): launch_lane_on_vastai.py
+#     phase2-launch Stage 2 polls setup.log via
+#     _poll_setup_log_for_outcome() and auto-destroys NVDEC_BAD hosts.
+#
+# Without Layer 2, the canonical workflow regresses to fire-and-forget
+# silent-failure mode. This check makes Layer 2 structurally permanent:
+# any future refactor that drops the post-launch poll fails preflight.
+#
+# Memory: feedback_canonical_nvdec_workflow_GUARD_20260428,
+#         feedback_vastai_launch_returns_success_before_lane_starts.
+
+def check_phase2_launch_polls_setup_log(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Forbid phase2-launch refactors that drop the post-launch outcome poll.
+
+    The launcher's phase2-launch must either:
+      (a) call ``_poll_setup_log_for_outcome(host, port, instance_id, ...)``
+          to detect NVDEC_BAD / SETUP_COMPLETE on the lane host, OR
+      (b) honor a ``skip_post_verify`` opt-in (``getattr(args,
+          "skip_post_verify", False)``) for explicit fire-and-forget.
+
+    Closes the "phase2-launch returns success before lane starts"
+    regression class (see feedback_canonical_nvdec_workflow_GUARD_20260428).
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    target = root / "scripts" / "launch_lane_on_vastai.py"
+    violations: list[str] = []
+
+    if not target.is_file():
+        if verbose:
+            print(f"  [phase2-launch-poll] SKIP: {target} not present")
+        return violations
+
+    try:
+        text = target.read_text()
+    except (OSError, UnicodeDecodeError) as e:
+        violations.append(f"{target.relative_to(root)}: cannot read — {e}")
+        if strict:
+            raise MetaBugViolation(violations[0])
+        return violations
+
+    try:
+        tree = ast.parse(text, filename=str(target))
+    except SyntaxError as e:
+        violations.append(
+            f"{target.relative_to(root)}: SyntaxError ({e}) — cannot AST-scan"
+        )
+        if strict:
+            raise MetaBugViolation(violations[0])
+        return violations
+
+    # Locate the cmd_phase2_launch function definition.
+    target_func: ast.FunctionDef | None = None
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef) and node.name == "cmd_phase2_launch":
+            target_func = node
+            break
+
+    if target_func is None:
+        violations.append(
+            f"{target.relative_to(root)}: cmd_phase2_launch function not "
+            f"found — the launcher must define a phase2-launch subcommand "
+            f"that polls setup.log for NVDEC_BAD outcomes."
+        )
+    else:
+        has_poll_call = False
+        has_skip_opt_in = False
+        for sub in ast.walk(target_func):
+            if isinstance(sub, ast.Call):
+                func_str = (
+                    ast.unparse(sub.func) if hasattr(ast, "unparse") else ""
+                )
+                # Match _poll_setup_log_for_outcome(...) or any call whose
+                # function name ends with that token (allows future module
+                # qualification, e.g. helpers._poll_setup_log_for_outcome).
+                if (
+                    func_str == "_poll_setup_log_for_outcome"
+                    or func_str.endswith("._poll_setup_log_for_outcome")
+                ):
+                    has_poll_call = True
+                # Match getattr(args, "skip_post_verify", False) opt-in
+                # (any 3-arg getattr whose 2nd literal is the flag name).
+                if (
+                    func_str == "getattr"
+                    and len(sub.args) >= 2
+                    and isinstance(sub.args[1], ast.Constant)
+                    and sub.args[1].value == "skip_post_verify"
+                ):
+                    has_skip_opt_in = True
+        if not (has_poll_call and has_skip_opt_in):
+            missing = []
+            if not has_poll_call:
+                missing.append("_poll_setup_log_for_outcome(...) call")
+            if not has_skip_opt_in:
+                missing.append('getattr(args, "skip_post_verify", False) opt-in')
+            violations.append(
+                f"{target.relative_to(root)}: cmd_phase2_launch missing "
+                f"{' AND '.join(missing)}. Closes the "
+                f"phase2-launch-returns-success-before-lane-starts regression "
+                f"class. See feedback_canonical_nvdec_workflow_GUARD_20260428."
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [phase2-launch-poll] {len(violations)} violation(s):"
+            )
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print(
+                f"  [phase2-launch-poll] OK: cmd_phase2_launch polls "
+                f"setup.log AND honors skip_post_verify opt-in"
+            )
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "PHASE2-LAUNCH POLL VIOLATIONS — the launcher's phase2-launch "
+            "must call _poll_setup_log_for_outcome AND honor a "
+            "skip_post_verify opt-in. Without the poll, NVDEC-bad hosts "
+            "burn $0.05-0.10 each (today's wave: ~$10 on 87% NVDEC_BAD).\n"
+            + "\n".join(f"  • {v}" for v in violations[:50])
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 55 (55th meta-bug): scripts/remote_setup_full.sh MUST invoke
+#                          probe_nvdec.sh --lightweight at Stage 0.5
+#                          BEFORE Stage 3 nvidia-dali-cuda120 install.
+# ════════════════════════════════════════════════════════════════════════════
+#
+# 2026-04-28: companion to Check 54. The deep DALI-based NVDEC probe at
+# Stage 4 runs AFTER a 5-minute `pip install nvidia-dali-cuda120` in
+# Stage 3, costing $0.05+ per bad-NVDEC host. The lightweight pre-probe
+# at Stage 0.5 dlopens libnvcuvid.so + cuvidGetDecoderCaps via ctypes —
+# DALI-free, ~3s, catches ~95% of NVDEC-missing hosts BEFORE the heavy
+# install.
+#
+# This check enforces ordering: if the script defines BOTH
+# probe_nvdec.sh --lightweight AND a nvidia-dali-cuda120 install, the
+# probe must come FIRST. A script that has neither is exempt (opt-out:
+# the canonical setup is the only one in-tree, but third-party variants
+# may not need DALI).
+
+def check_setup_full_probe_before_dali(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Forbid setup_full.sh refactors that move the lightweight NVDEC
+    probe AFTER the DALI install (defeating the savings purpose).
+
+    Scans ``scripts/remote_setup_full.sh`` for the FIRST occurrence of:
+      - ``probe_nvdec.sh --lightweight``  → line N1
+      - ``nvidia-dali-cuda120`` install OR ``Stage 3`` marker  → line N2
+
+    Asserts N1 < N2. A file with neither is exempt (no DALI install ⇒
+    no savings to defeat).
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    target = root / "scripts" / "remote_setup_full.sh"
+    violations: list[str] = []
+
+    if not target.is_file():
+        if verbose:
+            print(f"  [setup-full-probe-order] SKIP: {target} not present")
+        return violations
+
+    try:
+        text = target.read_text(errors="ignore")
+    except OSError as e:
+        violations.append(f"{target.relative_to(root)}: cannot read — {e}")
+        if strict:
+            raise MetaBugViolation(violations[0])
+        return violations
+
+    # Strip comment-only lines so docstring references don't count for
+    # the ordering check (preserve line indices via space-padding).
+    scan_lines: list[str] = []
+    for line in text.split("\n"):
+        if line.lstrip().startswith("#"):
+            scan_lines.append(" " * len(line))
+        else:
+            scan_lines.append(line)
+
+    # Match `probe_nvdec.sh` (allowing intervening quotes/whitespace from
+    # `bash "$WORKSPACE/scripts/probe_nvdec.sh" --lightweight`) followed by
+    # `--lightweight` flag anywhere on the same line.
+    probe_re = re.compile(r"probe_nvdec\.sh[\"'\s]*--lightweight\b")
+    probe_line: int | None = None
+    dali_line: int | None = None
+    for i, line in enumerate(scan_lines, start=1):
+        if probe_line is None and probe_re.search(line):
+            probe_line = i
+        if dali_line is None and (
+            "nvidia-dali-cuda120" in line
+            or "=== Stage 3" in line
+        ):
+            dali_line = i
+
+    # Opt-out: neither marker present ⇒ no DALI savings to defeat.
+    if probe_line is None and dali_line is None:
+        if verbose:
+            print(
+                f"  [setup-full-probe-order] OK: {target.relative_to(root)} "
+                f"has neither probe nor DALI install (opt-out)"
+            )
+        return violations
+
+    if probe_line is None:
+        violations.append(
+            f"{target.relative_to(root)}: nvidia-dali-cuda120 install "
+            f"present (line {dali_line}) but no `probe_nvdec.sh "
+            f"--lightweight` Stage 0.5 pre-probe. Add the lightweight "
+            f"probe BEFORE Stage 3 to save $0.05+/bad-NVDEC host."
+        )
+    elif dali_line is None:
+        # Probe but no DALI — fine, nothing to defeat.
+        if verbose:
+            print(
+                f"  [setup-full-probe-order] OK: probe present (line "
+                f"{probe_line}); no DALI install to defeat"
+            )
+        return violations
+    elif probe_line >= dali_line:
+        violations.append(
+            f"{target.relative_to(root)}: `probe_nvdec.sh --lightweight` "
+            f"at line {probe_line} runs AFTER nvidia-dali-cuda120 install "
+            f"at line {dali_line} — defeats the savings purpose. Move "
+            f"probe to Stage 0.5 BEFORE Stage 3 DALI install. See "
+            f"feedback_canonical_nvdec_workflow_GUARD_20260428."
+        )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [setup-full-probe-order] {len(violations)} violation(s):"
+            )
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print(
+                f"  [setup-full-probe-order] OK: probe@line{probe_line} "
+                f"runs BEFORE DALI@line{dali_line}"
+            )
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "SETUP_FULL NVDEC PROBE ORDER VIOLATIONS — the lightweight "
+            "NVDEC pre-probe must run BEFORE Stage 3 DALI install. "
+            "Without it, every bad-NVDEC host pays the 5-minute DALI "
+            "install cost before failing.\n"
             + "\n".join(f"  • {v}" for v in violations[:50])
         )
     return violations

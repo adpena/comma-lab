@@ -965,6 +965,20 @@ def main() -> int:
     add_common(p2l)
     p2l.add_argument("--instance-id", required=True)
     p2l.add_argument("--no-destroy-on-fail", action="store_true")
+    # Explicit fire-and-forget opt-out for the Stage 2 setup.log poll.
+    # Default OFF so the canonical workflow always polls + auto-destroys
+    # NVDEC_BAD hosts. Per preflight Check 54
+    # (check_phase2_launch_polls_setup_log) + memory
+    # feedback_canonical_nvdec_workflow_GUARD_20260428.
+    p2l.add_argument(
+        "--skip-post-verify",
+        action="store_true",
+        help=(
+            "Skip Stage 2 post-launch poll of setup.log. Use ONLY when "
+            "you intentionally want fire-and-forget; the default polls "
+            "for NVDEC_BAD outcomes and auto-destroys bad hosts."
+        ),
+    )
 
     # full (legacy combined — may hit harness)
     pf = sub.add_parser("full", help="Combined phase1+phase2 (~5-7 min, harness-risky)")
