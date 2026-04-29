@@ -267,6 +267,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--saug-v2-normal-sigma-max", type=float, default=None,
                    help="SAUG-V2 normal-sigma log-uniform upper bound "
                         "(default 80.0).")
+    p.add_argument("--use-calibrated-positional-encoding", action="store_true",
+                   default=None,
+                   help="Lane CG: enable analytic per-pixel viewing-ray "
+                        "positional encoding (src/tac/contrib/"
+                        "calibrated_positional_encoding.py).")
 
     # Lane MAE-V: Masked Autoencoder Variant on input mask patches. Drops a
     # MAEMaskAugmenter (src/tac/mae_mask_aug.py) into the per-step pair
@@ -772,6 +777,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         getattr(args, "saug_v2_normal_sigma_max", None),
         "saug_v2_normal_sigma_max", 80.0,
     )
+    # Lane CG resolver (calibrated positional encoding orphan wire-up).
+    # Importing the module triggers its monkey-patch of MaskRenderer so
+    # downstream build_renderer accepts use_calibrated_positional_encoding.
+    args.use_calibrated_positional_encoding = _resolve(
+        getattr(args, "use_calibrated_positional_encoding", None),
+        "use_calibrated_positional_encoding", False,
+    )
+    if args.use_calibrated_positional_encoding:
+        # Trigger _patch_renderer_mask_renderer() side effect.
+        from tac.contrib import calibrated_positional_encoding  # noqa: F401
     # Lane MAE-V resolvers (mirror SAUG-V2 wiring pattern).
     args.use_mae_mask_aug = _resolve(
         getattr(args, "use_mae_mask_aug", None),

@@ -185,6 +185,34 @@ SAUG_V2_DILATED_H64 = {
     "saug_v2_normal_sigma_max": 80.0,
 }
 
+# Lane HM: analytical road-plane homography motion (FOE-centered perspective
+# zoom). Replaces the learned-CNN motion module with the orphan
+# src/tac/contrib/homography_motion.py:HomographyMotionModule. Zero learned
+# motion params (vs ~80K for the CNN motion module). Renderer arch
+# unchanged from PROVEN_BASELINE; only the motion submodule is swapped.
+# Predicted band: [1.30, 2.20] [contest-CUDA] — homography is a strong
+# inductive bias for road scenes but loses fine-grained per-class flow
+# the learned CNN can capture (vehicles, pedestrians).
+HM_DILATED_H64 = {
+    **PROVEN_BASELINE,
+    "motion_type": "homography_analytical",
+}
+
+# Lane CG: calibrated viewing-ray positional encoding for the renderer.
+# Adds the analytic per-pixel ray direction (derived from comma camera
+# intrinsics) as a fixed buffer the renderer can attend to. Wires the
+# orphan src/tac/contrib/calibrated_positional_encoding.py via a
+# `use_calibrated_positional_encoding=True` flag picked up by the
+# CalibratedMaskRenderer monkey-patch in that module's import path.
+# Predicted band: [1.05, 1.18] [contest-CUDA] — same arch + extra
+# input channels; small architectural risk, geometric prior is
+# steganalysis-aligned (CNN scorers typically lack explicit camera
+# calibration).
+CG_DILATED_H64 = {
+    **PROVEN_BASELINE,
+    "use_calibrated_positional_encoding": True,
+}
+
 # Pareto frontier explorer: PCGrad + MRS-adaptive weights
 # Decouples PoseNet and SegNet optimization via gradient surgery.
 # The adaptive weight tracks the Pareto MRS condition:
@@ -3680,6 +3708,8 @@ PROFILES = {
     "smoke": SMOKE,
     "psd_standard_adaptive": PSD_STANDARD_ADAPTIVE,
     "saug_v2_dilated_h64": SAUG_V2_DILATED_H64,
+    "hm_dilated_h64": HM_DILATED_H64,
+    "cg_dilated_h64": CG_DILATED_H64,
     "pareto_pcgrad": PARETO_PCGRAD,
     "extreme_posenet": EXTREME_POSENET,
     "extreme_segnet": EXTREME_SEGNET,
