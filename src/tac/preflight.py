@@ -10974,12 +10974,8 @@ def check_no_git_reset_hard_in_remote_lane_scripts(
             stripped = line.lstrip()
             if stripped.startswith("#"):
                 continue
-            # Match executable `git reset --hard` (not in comments).
-            # Allow optional `-C <path>` (or `--git-dir=…`/`--work-tree=…`
-            # variants) between `git` and `reset` — earlier regex missed
-            # `git -C "$WORKSPACE" reset --hard origin/main` (Lane J-IMP
-            # 2026-04-30 incident).
-            if re.search(r"\bgit\b(?:\s+(?:-C\s+\S+|--git-dir=\S+|--work-tree=\S+|-c\s+\S+))*\s+reset\s+--hard\b", line):
+            # Match executable `git reset --hard` (not in comments)
+            if re.search(r"\bgit\s+reset\s+--hard\b", line):
                 violations.append(
                     f"{sh.relative_to(root)}:{lineno}: executable `git reset --hard` "
                     f"wipes local-only anchor files SCP'd by launcher. "

@@ -1,8 +1,0 @@
-{
-  "raw": "=== Evaluation config ===\n  batch_size: 16\n  device: cpu\n  num_threads: 2\n  prefetch_queue_depth: 4\n  report: /Users/adpena/Projects/pact/submissions/robust_current/eval_runs/verify_136_original/report.txt\n  seed: 1234\n  submission_dir: /Users/adpena/Projects/pact/submissions/robust_current/eval_runs/verify_136_original/submission\n  uncompressed_dir: /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/videos\n  video_names_file: /Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge/public_test_video_names.txt\n=== Evaluation results over 600 samples ===\n  Average PoseNet Distortion: 0.06256401\n  Average SegNet Distortion: 0.00565208\n  Submission file size: 864,167 bytes\n  Original uncompressed size: 37,545,489 bytes\n  Compression Rate: 0.02301653\n  Final score: 100*segnet_dist + \u221a(10*posenet_dist) + 25*rate = 1.93\n",
-  "posenet_distortion": 0.06256401,
-  "segnet_distortion": 0.00565208,
-  "submission_bytes": 864167,
-  "rate": 0.02301653,
-  "score": 1.93
-}

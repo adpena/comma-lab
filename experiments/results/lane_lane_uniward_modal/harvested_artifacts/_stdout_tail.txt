@@ -1,5 +1,0 @@
-provenance: {"started_at_utc": "2026-04-29T12:09:54Z", "git_hash": "no-git", "gpu_name": "Tesla T4", "driver_version": "580.95.05", "torch_version": "2.5.1+cu124", "cuda_version": "12.4", "cuda_available": true, "lane_script": "scripts/remote_lane_uniward_texture.sh", "lane_name": "lane_uniward_texture", "tag": "lane_uniward", "anchor_dir": "submissions/baseline_dilated_h64_0_90", "predicted_band": [1.0, 1.13], "baseline_score": 1.15, "baseline_lane": "A", "hypothesis": "UNIWARD texture-prob (high-pass residual energy * inverse local variance) routes aggressive CRF to CNN-blind regions, cutting mask bytes without moving SegNet.", "strict_scorer_rule_compliant": true, "wires_orphan_module": "src/tac/uniward_texture.py", "output_dir": "/tmp/pact/lane_uniward_results"}
-[lane-uniward] 2026-04-29T12:09:55Z === Stage 0: NVDEC probe ===
-[probe_nvdec] Modal runtime — NVDEC not required (auth_eval uses cpu device)
-[lane-uniward] 2026-04-29T12:09:55Z === Stage 1: anchor checks (Lane A baseline + scorers + video) ===
-FATAL: missing submissions/baseline_dilated_h64_0_90/renderer.bin

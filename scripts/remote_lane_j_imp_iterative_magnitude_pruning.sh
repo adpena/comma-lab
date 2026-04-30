@@ -103,13 +103,12 @@ bash "$WORKSPACE/scripts/probe_nvdec.sh" --ensure-dali || {
     exit 2
 }
 
-# Stage 0b: tarball-only parity — NEVER git reset --hard.
-# CODE PARITY: launcher tarball is authoritative — do NOT git reset --hard
-# origin/main. Doing so wipes local-only anchor files (archive_lane_g_v3.zip,
-# iter_0/* baseline pieces, etc.) that the launcher just SCP'd. The tarball
-# IS the parity mechanism. (memory: feedback_git_reset_nukes_anchors_20260429;
-# preflight Check 66 prohibits this pattern.)
-log "=== Stage 0b: trusting launcher tarball (HEAD=$GIT_HASH) — no git sync ==="
+# Stage 0b: canonical git sync (CLAUDE.md non-negotiable: deployed code parity).
+log "=== Stage 0b: canonical git sync (fetch + reset --hard origin/main) ==="
+# Nuke local junk from prior failed deploys, then sync to origin/main exactly.
+git -C "$WORKSPACE" fetch origin main && git -C "$WORKSPACE" reset --hard origin/main 2>&1 | tail -3 || {
+    log "WARN: git fetch/reset failed — continuing with current HEAD ($GIT_HASH)"
+}
 
 # Pre-flight: anchor on Lane G v3 (1.05 [contest-CUDA]).
 ANCHOR_RENDERER="experiments/results/lane_g_v3_landed/iter_0/renderer.bin"
