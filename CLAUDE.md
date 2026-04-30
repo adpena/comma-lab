@@ -312,6 +312,28 @@ We need a fine-grained history of every file touched. Git is our lab notebook's 
 
 This is critical for the doc evolution viewer and the competition writeup. Our git history IS our research timeline. Every uncommitted change is invisible history.
 
+## Subagent commits MUST use serializer — NON-NEGOTIABLE
+
+When 2+ subagents reach `git add` + `git commit` near-simultaneously, the git index race shuffles commit BODIES across commit objects (memory: `feedback_concurrent_subagent_commit_message_swap_20260429.md`, 5 affected commits 2026-04-29 evening). The wrong fix is to retry; the right fix is to serialize.
+
+**Rule:** every subagent that lands code MUST commit via:
+
+```bash
+python tools/subagent_commit_serializer.py \
+    --message "<one-liner>" \
+    --files <file1> <file2> ...
+```
+
+The wrapper acquires `fcntl.flock(LOCK_EX)` on `.omx/state/.commit-lock`, runs `git add -- <files>` then `git commit -m <msg>` inside the lock, releases on success-or-failure. Every attempt is logged JSONL to `.omx/state/commit-serializer.log` for forensics.
+
+- **Parent agents** dispatching subagents MUST include the wrapper invocation in the subagent's prompt template (alongside CLAUDE.md non-negotiables).
+- **Bare `git commit`** from a subagent is FORBIDDEN — even if "the test ran clean" — because the body-shuffle race is silent and forensic-only after the fact.
+- The lock is held for the duration of `git add` + `git commit` ONLY (~5-10s for the preflight hook). Subagents do their work in parallel; they only serialize at the moment of staging+commit.
+- Operators running a single shell can use the wrapper too — overhead is negligible (<10ms when uncontended).
+- The lock is fcntl-advisory: bypassing it (running `git commit` directly) re-introduces the bug class. Don't.
+
+Cross-ref: `feedback_check_64_smoke_proofs_resolved_AND_subagent_serializer_landed_20260429.md`.
+
 ## Review gate — non-negotiable
 
 - **NEVER use `REVIEW_GATE_OVERRIDE=1` when committing `.py` files.** The review tracker exists to catch bugs before they ship. Bypassing it on code files is how bugs ship. Work with the review gate, not around it.
