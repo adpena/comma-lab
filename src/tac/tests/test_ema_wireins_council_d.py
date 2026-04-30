@@ -20,6 +20,7 @@ Per CLAUDE.md "EMA — NON-NEGOTIABLE" + the audit's recommended fix list
 """
 from __future__ import annotations
 
+import ast
 import importlib
 import inspect
 from pathlib import Path
@@ -289,3 +290,229 @@ def test_ema_does_not_mutate_live_model_on_update() -> None:
             assert delta > 0.4, (
                 f"EMA.update() must not mutate the live model. {k} delta={delta}"
             )
+
+
+# ── Round 7 Defect #4: AST-level ordering + decay assertions ────────────────
+#
+# Council Round 7 §6.4 noted the existing wire-in tests are TEXT-grep
+# checks (inspect.getsource(m) + substring match for "EMA" / "ema.update" /
+# "decay=0.997"). A subagent could add `# EMA = "Exponential Moving Average"`
+# as a comment + the tests pass vacuously. Strengthen by walking the AST:
+#
+#   - Test #1 verifies ema.update(model) is called AFTER optimizer.step()
+#     in source order, NOT before (a future operator inserting
+#     ema.update(model) before optimizer.step would not be caught by the
+#     text-grep tests). Skips train_lora_tto.py (LoRA may have a different
+#     ordering pattern that the AST scanner would mis-flag).
+#   - Test #2 verifies the EMA(model, decay=...) constructor is called
+#     with a decay value that is exactly 0.997 OR a config attribute named
+#     ``ema_decay`` (the canonical Quantizr default and the config-driven
+#     pattern). Catches a future regression where someone hard-codes
+#     decay=0.999 / 0.999.
+
+
+# Scripts that Check 88 wires in. Skip _lora_tto until LoRA ordering audit.
+_AST_TEST_TARGETS = [
+    "experiments/train_szabolcs.py",
+    "experiments/qat_finetune.py",
+    "experiments/qat_omega_lagrangian.py",
+    "experiments/quantize_distilled.py",
+    "experiments/train_imp_cycle.py",
+    "experiments/train_postfilter_on_renderer.py",
+    "experiments/train_joint_pair.py",
+]
+# train_lora_tto.py uses LoRA-specific ema timing (apply at end-of-epoch
+# vs per-step). Skip for AST ordering assertion until a LoRA-aware audit
+# lands.
+_AST_TEST_SKIP = {
+    "experiments/train_lora_tto.py",
+}
+
+
+def _find_optimizer_step_then_ema_update_order(
+    tree: "ast.Module",
+) -> tuple[bool, str]:
+    """AST walk: for each function body containing both `optimizer.step()`
+    (or `*.step()` with a recognised receiver name) and `ema.update(...)`,
+    verify the step call appears BEFORE the update call in source line
+    order.
+
+    Returns (ok, message). ok=True if every function body honours the
+    ordering OR if no function body contains both. ok=False otherwise.
+    """
+    import ast
+
+    OPT_NAMES = {"optimizer", "optim", "opt", "_opt"}
+
+    for fn in ast.walk(tree):
+        if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        # Find all .step() and ema.update() calls inside this function.
+        step_lines: list[int] = []
+        ema_update_lines: list[int] = []
+        for node in ast.walk(fn):
+            if not isinstance(node, ast.Call):
+                continue
+            if not isinstance(node.func, ast.Attribute):
+                continue
+            if node.func.attr == "step":
+                v = node.func.value
+                if isinstance(v, ast.Name) and v.id in OPT_NAMES:
+                    step_lines.append(node.lineno)
+                elif isinstance(v, ast.Attribute) and v.attr in OPT_NAMES:
+                    step_lines.append(node.lineno)
+            elif node.func.attr == "update":
+                v = node.func.value
+                # Match `ema.update(...)` or `self.ema.update(...)`.
+                if isinstance(v, ast.Name) and v.id == "ema":
+                    ema_update_lines.append(node.lineno)
+                elif isinstance(v, ast.Attribute) and v.attr == "ema":
+                    ema_update_lines.append(node.lineno)
+        if step_lines and ema_update_lines:
+            # The CANONICAL pattern: every ema.update should appear AFTER
+            # at least one optimizer.step that itself appears before it.
+            # Equivalently: max(step_lines) > min(ema_update_lines) would
+            # be a violation. We assert: there exists at least one step
+            # call before the FIRST ema.update.
+            first_update = min(ema_update_lines)
+            steps_before_first_update = [s for s in step_lines if s < first_update]
+            if not steps_before_first_update:
+                return False, (
+                    f"function {fn.name} (line {fn.lineno}): first ema.update "
+                    f"at line {first_update} appears BEFORE any "
+                    f"optimizer.step (step lines: {step_lines}). EMA "
+                    f"update must come AFTER optimizer.step."
+                )
+    return True, ""
+
+
+def test_ema_update_called_after_optimizer_step_via_ast() -> None:
+    """Round 7 Defect #4 strengthening: AST-verify EMA ordering.
+
+    For every Check 88 target script, walk every function body. If both
+    optimizer.step() and ema.update(...) exist, assert the FIRST ema.update
+    line is after at least one optimizer.step line.
+    """
+    import ast
+
+    failures: list[str] = []
+    for rel in _AST_TEST_TARGETS:
+        if rel in _AST_TEST_SKIP:
+            continue
+        text = _read_script(rel)
+        tree = ast.parse(text, filename=rel)
+        ok, msg = _find_optimizer_step_then_ema_update_order(tree)
+        if not ok:
+            failures.append(f"{rel}: {msg}")
+    assert not failures, (
+        f"EMA ordering violations (must be optimizer.step → ema.update):\n  "
+        + "\n  ".join(failures)
+    )
+
+
+def _find_ema_constructor_decay_arg(tree: "ast.Module") -> list[tuple[int, str]]:
+    """Walk AST for `EMA(model, decay=<X>)` constructor calls. Return list
+    of (lineno, decay_repr) for each EMA(...) call, where decay_repr is
+    either:
+      - "0.997" / "0.9995" / etc. (numeric literal value as str)
+      - "<attr>.<name>"  (attribute access — typically `cfg.ema_decay`,
+                          `args.ema_decay`)
+      - "<name>"         (bare Name reference — `decay`)
+      - "<missing>"      (decay kwarg not present — uses default)
+      - "<unknown>"      (some other expression form)
+    """
+    import ast
+
+    out: list[tuple[int, str]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        # EMA(...) — Name form
+        if isinstance(node.func, ast.Name) and node.func.id == "EMA":
+            decay_kw = next(
+                (kw for kw in node.keywords if kw.arg == "decay"), None
+            )
+            out.append((node.lineno, _decay_repr(decay_kw)))
+        # tac.training.EMA(...) — Attribute form
+        elif (
+            isinstance(node.func, ast.Attribute)
+            and node.func.attr == "EMA"
+        ):
+            decay_kw = next(
+                (kw for kw in node.keywords if kw.arg == "decay"), None
+            )
+            out.append((node.lineno, _decay_repr(decay_kw)))
+    return out
+
+
+def _decay_repr(decay_kw) -> str:
+    """Reduce an AST keyword node to a string we can pattern-match against."""
+    import ast
+
+    if decay_kw is None:
+        return "<missing>"
+    v = decay_kw.value
+    return _decay_value_repr(v)
+
+
+def _decay_value_repr(v) -> str:
+    """Helper: render an AST value node to a comparison-friendly string.
+    Handles Constant, Attribute, Name, and Call(arg) (e.g. float(args.ema_decay)).
+    """
+    import ast
+
+    # Constant float / int
+    if isinstance(v, ast.Constant):
+        return repr(v.value)
+    # Attribute access: cfg.ema_decay / args.ema_decay
+    if isinstance(v, ast.Attribute):
+        receiver = "?"
+        if isinstance(v.value, ast.Name):
+            receiver = v.value.id
+        elif isinstance(v.value, ast.Attribute):
+            receiver = "<attr>"
+        return f"{receiver}.{v.attr}"
+    # Bare Name: decay
+    if isinstance(v, ast.Name):
+        return v.id
+    # Call wrappers: float(args.ema_decay), float(cfg.ema_decay), etc.
+    # Recurse into the SOLE positional argument.
+    if isinstance(v, ast.Call) and len(v.args) == 1 and not v.keywords:
+        return _decay_value_repr(v.args[0])
+    return "<unknown>"
+
+
+def test_ema_decay_is_quantizr_canonical_via_ast() -> None:
+    """Round 7 Defect #4 strengthening: AST-verify EMA decay value.
+
+    For every Check 88 target script, walk every EMA(model, decay=...)
+    constructor call. The decay value MUST be either:
+      - the literal 0.997 (Quantizr canonical), OR
+      - an attribute access ending in .ema_decay (config-driven, where
+        the config default is asserted by test_canonical_ema_decay_default_is_quantizr).
+
+    Forbids: literal != 0.997, opaque expressions, missing decay kwarg.
+    """
+    failures: list[str] = []
+    import ast
+
+    for rel in _AST_TEST_TARGETS:
+        text = _read_script(rel)
+        tree = ast.parse(text, filename=rel)
+        for lineno, repr_ in _find_ema_constructor_decay_arg(tree):
+            ok = False
+            # Literal 0.997.
+            if repr_ == "0.997":
+                ok = True
+            # Attribute access ending in .ema_decay.
+            elif repr_.endswith(".ema_decay"):
+                ok = True
+            if not ok:
+                failures.append(
+                    f"{rel}:{lineno}: EMA constructor decay={repr_} is not "
+                    f"the Quantizr canonical 0.997 nor a config-attribute "
+                    f"named .ema_decay."
+                )
+    assert not failures, (
+        f"EMA decay constructor violations:\n  " + "\n  ".join(failures)
+    )
