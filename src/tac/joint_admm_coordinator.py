@@ -508,11 +508,46 @@ def run_admm(
         # stabilise even though discrete oscillation may be present.
         dual_res = rho * float(np.linalg.norm(bytes_arr - bytes_prev))
 
-        # Adaptive ρ (Boyd §3.4.1).
-        if primal_res > cfg.rho_imbalance_ratio * max(dual_res, 1e-12):
-            rho = min(rho * cfg.rho_growth, cfg.rho_max)
-        elif dual_res > cfg.rho_imbalance_ratio * max(primal_res, 1e-12):
-            rho = max(rho * cfg.rho_shrink, cfg.rho_init * 1e-3)
+        # Q4B FIX (Carmack Option B, Boyd §3.4.1, 2026-04-30 council #271):
+        # Adaptive rho_init refinement on the FIRST iteration only.
+        #
+        # Rationale: cfg.rho_init=1.0 (default) is unstable for problems
+        # with low quadratic curvature 2*a < 0.01 because the dual update
+        # rho * budget_gap blows up before bytes_arr can stabilise. Boyd
+        # 2011 §3.4.1 recommends scaling rho to the first-iteration ratio
+        # of primal/dual residuals: if r1 / s1 > 10 (rho too small),
+        # multiply by 2; if s1 / r1 > 10 (rho too large), divide by 2.
+        # Cap at [1e-6, 1e6].
+        #
+        # Applied on iter 1 ONLY, and EXCLUSIVE with the steady-state
+        # adaptive rule below: when Q4B fires we skip the steady-state
+        # adjustment for this iteration. This prevents the well-tuned
+        # rho_init configurations (e.g. test_two_stream_convex_converges_to_kkt
+        # with rho_init=0.02) from being double-bumped to instability. No
+        # API change: cfg.rho_init stays as the SEED, the adaptive step
+        # refines it once on iter 1.
+        q4b_fired = False
+        if it == 1:
+            primal_safe = max(primal_res, 1e-12)
+            dual_safe = max(dual_res, 1e-12)
+            ratio = primal_safe / dual_safe
+            if ratio > 10.0:
+                rho = min(max(rho * 2.0, 1e-6), 1e6)
+                q4b_fired = True
+            elif ratio < 0.1:
+                rho = min(max(rho * 0.5, 1e-6), 1e6)
+                q4b_fired = True
+
+        # Adaptive ρ (Boyd §3.4.1). Skip on iter 1 if Q4B already adjusted —
+        # otherwise the same residual ratio drives BOTH rules and rho gets
+        # double-scaled (verified failure mode on test_two_stream_convex_*
+        # with rho_init=0.02: Q4B → 0.04, then steady-state → 0.08 → bytes
+        # corner-pin to [0, 29] instead of equilibrating to KKT [167, 133]).
+        if not q4b_fired:
+            if primal_res > cfg.rho_imbalance_ratio * max(dual_res, 1e-12):
+                rho = min(rho * cfg.rho_growth, cfg.rho_max)
+            elif dual_res > cfg.rho_imbalance_ratio * max(primal_res, 1e-12):
+                rho = max(rho * cfg.rho_shrink, cfg.rho_init * 1e-3)
 
         # Divergence detection: TWO classes of pathology.
         # (a) primal residual strictly increasing for K iters.
