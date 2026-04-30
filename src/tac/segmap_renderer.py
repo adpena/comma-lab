@@ -278,7 +278,15 @@ def _eval_roundtrip_chain(
     # 384x512 (scorer in) -> 874x1164 (camera) -> uint8 -> 384x512.
     flat = rgb_pair_btchw.reshape(b * t, c, h, w)
     up = F.interpolate(flat, size=CAMERA_SIZE[::-1], mode="bicubic", align_corners=False)
-    up_u8 = up.clamp(0, 255).round()  # STE-friendly proxy for uint8 cast
+    # CRITICAL: torch.tensor.round() has ZERO gradient. Using bare .round()
+    # here severs the entire backprop chain to SegMap parameters → optimizer
+    # steps but params don't move. This was the Lane DARTS-S V1 freeze bug
+    # (5h on Vast.ai 4090, 400 epochs of identical loss=277.02). Lane SC++,
+    # SA, SO, MM v2 all invalidated by the same bug. Use Uint8STE (forward
+    # = clamp+round, backward = identity inside [0,255], zero outside).
+    # See council_darts_s_freeze_audit_20260429.md for the full diagnosis.
+    from tac.quantization import Uint8STE
+    up_u8 = Uint8STE.apply(up)
     if noise_std > 0:
         up_u8 = up_u8 + noise_std * torch.randn_like(up_u8)
     back = F.interpolate(up_u8, size=(h, w), mode="bicubic", align_corners=False)

@@ -301,7 +301,13 @@ def _eval_roundtrip_with_noise(
             mean=0.0, std=noise_std, generator=generator,
         )
         flat = flat + noise
-    flat = flat.round().clamp(0.0, 255.0)
+    # CRITICAL: bare .round() has ZERO gradient → severs backprop chain →
+    # silent training freeze. Lane DARTS-S V1 burned 5h on Vast.ai 4090 with
+    # this exact bug at src/tac/segmap_renderer.py:281. Use Uint8STE for
+    # proper STE behavior (forward = clamp+round, backward = identity).
+    # Council A 2026-04-29 PM, .omx/research/council_darts_s_freeze_audit.
+    from tac.quantization import Uint8STE
+    flat = Uint8STE.apply(flat)
     flat = F.interpolate(
         flat, size=(SCORER_INPUT_H, SCORER_INPUT_W),
         mode="bilinear", align_corners=False,

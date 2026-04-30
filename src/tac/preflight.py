@@ -337,6 +337,13 @@ def preflight_all(
         # returns "seg_dist"/"pose_dist". Lands STRICT @ 0 violations after
         # train_segmap.py cleanup + DistillTrainer.step keys registered.
         check_training_script_metric_keys_consistent(strict=True, verbose=verbose)
+        # Check 86 (DARTS-S freeze ROOT CAUSE incident 2026-04-29 PM):
+        # forbid bare .round() inside eval-roundtrip chains. .round() has
+        # zero gradient → severs backprop → optimizer "steps" but params
+        # don't move → 5h GPU burned producing constant loss=277.02 across
+        # 400 epochs. Lane SC++/SA-v2/SO/MM v2 all invalidated. Lands STRICT
+        # @ 0 violations after segmap_renderer.py:281 fix.
+        check_no_bare_round_in_eval_roundtrip(strict=True, verbose=verbose)
 
         # 2026-04-27 meta-bug audit (commit a57731a0): 12 NEW checks for
         # additional bug classes from session + memory. 4 land at 0 live
@@ -6037,6 +6044,13 @@ TRAINER_RETURN_KEYS: dict[str, set[str]] = {
         "texture_loss", "linf_penalty", "markov_loss", "uncertainty_loss",
         "loss", "epoch",
     },
+    # experiments/optimize_poses.py optimize_poses_batch() returns these
+    # per-batch keys consumed via batch_metrics.get(...) in the script.
+    "optimize_poses_batch": {
+        "per_class_distortion", "final_seg_distortion", "improvement_pct",
+        "steps_run", "batch_idx", "time_s", "initial_pose_distortion",
+        "final_pose_distortion", "loss", "epoch",
+    },
     # Add other trainers as preflight encounters new dispatchers.
 }
 
@@ -6066,7 +6080,9 @@ def _scan_train_script_for_metric_key_misses(
     for ks in TRAINER_RETURN_KEYS.values():
         all_known.update(ks)
 
-    metric_dict_names = {"epoch_metrics", "metrics"}
+    # Common metric-dict variable names across our training scripts.
+    # `batch_metrics` is used by experiments/optimize_poses.py per-batch returns.
+    metric_dict_names = {"epoch_metrics", "metrics", "batch_metrics"}
 
     violations: list[str] = []
     for node in ast.walk(tree):
@@ -6127,6 +6143,152 @@ def check_training_script_metric_keys_consistent(
             + "\n\nFix: either correct the key name in the print/log to match "
             "a real trainer return key, OR add the new key to "
             "TRAINER_RETURN_KEYS for the matching trainer."
+        )
+    return violations
+
+
+# ── Check 86 (DARTS-S freeze incident): no bare .round() in eval-roundtrip
+#    chains. PyTorch's torch.tensor.round() has ZERO gradient → severs the
+#    backprop chain → optimizer "steps" but params don't move → 5h GPU
+#    burned producing constant loss = 277.02 across 400 epochs.
+#
+# Incident (2026-04-29 PM): Lane DARTS-S V1 sweep on Vast.ai 4090 ran 5h
+# with pose_dist=158.49, seg_dist=2.37, kl_aux=4.48 IDENTICAL to 4 decimals
+# across all 400 epochs. The eval-roundtrip in src/tac/segmap_renderer.py:281
+# called `up.clamp(0, 255).round()` with a comment claiming it was
+# "STE-friendly proxy" — it was NOT. Empirical confirmation by Council A
+# (.omx/research/council_darts_s_freeze_audit_20260429.md): with .round(),
+# max(|grad|)=0.00e+00 + loss frozen to 6 decimals; with Uint8STE.apply,
+# max(|grad|)=5.83e+03 + loss DECREASES.
+#
+# Cross-impact: Lane SC++, Lane SA-v2, Lane SO, Lane MM v2 — all invalidated.
+# Lane G v3 unaffected (uses train_distill.py + Uint8STE correctly).
+#
+# This check scans every src/tac/*.py and experiments/*.py file for the
+# pattern `.round()` called inside a function whose name contains
+# "roundtrip" or "eval_roundtrip" or whose body calls F.interpolate
+# (the canonical roundtrip pattern). Whitelist the canonical Uint8STE.apply
+# path (which uses .round() internally but provides STE backward).
+#
+# Memory: feedback_check_86_eval_roundtrip_round_zero_gradient_20260429.md
+# (forthcoming).
+
+_BARE_ROUND_RE = re.compile(r"\.round\(\s*\)")
+_INTERPOLATE_RE = re.compile(r"F\.interpolate\(")
+_UINT8_STE_RE = re.compile(r"Uint8STE\.apply|uint8_ste\(")
+# Manual STE pattern: `... + (X.round().clamp(...) - Y).detach()` produces
+# the round forward but identity backward — same effect as Uint8STE.apply.
+# Detected by presence of `.detach()` on a same-line expression alongside
+# `.round()`, since the AST + line-text combination needs both.
+_MANUAL_STE_RE = re.compile(r"\.detach\(\s*\).*\.round\(\)|\.round\(\).*\.detach\(\s*\)")
+# Files that are READ-ONLY measurement tools — bare .round() is correct
+# because no gradient is needed (analysis / forensics / proxy-score path).
+_BARE_ROUND_READONLY_FILES: set[str] = {
+    "src/tac/forensics.py",                  # explicit "no STE — analysis"
+    "src/tac/scorer.py",                     # compute_proxy_score read-only
+    "experiments/pair_difficulty_map.py",    # measurement tool
+    "experiments/profile_fp4_layer_sensitivity.py",  # measurement tool
+}
+
+
+def _scan_python_for_bare_round_in_roundtrip(
+    path: Path, repo_root: Path,
+) -> list[str]:
+    """Detect `.round()` calls inside functions that look like eval-roundtrip
+    chains (body calls F.interpolate AND has 'roundtrip' in the function name
+    OR docstring). Whitelists the canonical Uint8STE forward implementation."""
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    rel_s = str(rel)
+    # Whitelist: Uint8STE itself uses .round() in its forward pass; its
+    # backward provides the STE behavior. Quantization helpers also use
+    # bare .round() in well-tested STE wrappers.
+    if rel_s in {
+        "src/tac/quantization.py",
+        "src/tac/learnable_bit_quant.py",
+    }:
+        return []
+    # Read-only measurement tools where no gradient is needed.
+    if rel_s in _BARE_ROUND_READONLY_FILES:
+        return []
+    try:
+        text = path.read_text()
+        tree = ast.parse(text, filename=str(path))
+    except (SyntaxError, UnicodeDecodeError, FileNotFoundError):
+        return []
+
+    violations: list[str] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.FunctionDef):
+            continue
+        # Get the function source body via line range.
+        start = node.lineno - 1
+        end = node.end_lineno or start + 50
+        body_text = "\n".join(text.splitlines()[start:end])
+        # Heuristic: function is eval-roundtrip-shaped if it calls
+        # F.interpolate AND its name or docstring mentions "roundtrip".
+        name_or_doc_mentions_roundtrip = (
+            "roundtrip" in node.name.lower()
+            or (ast.get_docstring(node) or "").lower().count("roundtrip") > 0
+        )
+        if not _INTERPOLATE_RE.search(body_text):
+            continue
+        if not name_or_doc_mentions_roundtrip:
+            continue
+        # Check if the body has a bare .round() that is NOT inside the
+        # canonical Uint8STE.apply() OR the manual-STE pattern
+        # `... + (X.round().clamp(...) - Y).detach()`.
+        if _BARE_ROUND_RE.search(body_text) and not _UINT8_STE_RE.search(body_text):
+            # Find the specific .round() line for the report.
+            for off, line in enumerate(text.splitlines()[start:end]):
+                if not _BARE_ROUND_RE.search(line):
+                    continue
+                if _UINT8_STE_RE.search(line):
+                    continue
+                # Manual-STE pattern: .round() and .detach() on same line
+                # produces correct STE behavior (forward = round, backward = identity).
+                if _MANUAL_STE_RE.search(line):
+                    continue
+                violations.append(
+                    f"{rel_s}:{start + off + 1}: function {node.name!r} "
+                    f"uses .round() inside eval-roundtrip pattern (calls "
+                    f"F.interpolate + 'roundtrip' in name/docstring) — "
+                    f".round() has ZERO gradient. Use Uint8STE.apply()."
+                )
+    return violations
+
+
+def check_no_bare_round_in_eval_roundtrip(
+    *, strict: bool = False, verbose: bool = False, repo_root: Path | None = None,
+) -> list[str]:
+    """Forbid `.round()` inside eval-roundtrip chains. .round() has zero
+    gradient → severs backprop → silent training freeze. Use Uint8STE.apply
+    instead (clamp+round forward, identity backward inside [0,255])."""
+    root = repo_root or REPO_ROOT
+    scan_dirs = ["src/tac", "experiments"]
+    violations: list[str] = []
+    for sd in scan_dirs:
+        sd_path = root / sd
+        if not sd_path.is_dir():
+            continue
+        for py in sd_path.rglob("*.py"):
+            violations.extend(
+                _scan_python_for_bare_round_in_roundtrip(py, root)
+            )
+    if verbose:
+        if violations:
+            print(
+                f"  [no-bare-round-roundtrip] {len(violations)} violation(s)"
+            )
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print("  [no-bare-round-roundtrip] OK: 0 violations")
+    if violations and strict:
+        raise MetaBugViolation(
+            "BARE .round() IN EVAL-ROUNDTRIP DETECTED:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nFix: replace `up.clamp(0, 255).round()` with "
+            "`Uint8STE.apply(up)` (canonical STE at src/tac/quantization.py)."
         )
     return violations
 
