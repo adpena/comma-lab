@@ -280,6 +280,17 @@ class PipelineConfig:
     # Convergence is reached when marginal improvement falls below the
     # marginal rate cost of running another cycle.
 
+    # Lane 8: multi-pass compress with score-feedback loop.
+    # When ``multipass=True`` the compress flow wraps step_archive +
+    # step_eval inside a ``MultiPassCompressor`` outer loop that iterates
+    # encoder parameters (mask CRF) based on per-pass score deltas.
+    # Compress-time only — strict-scorer-rule per CLAUDE.md.
+    # See `.omx/research/council_lane_8_multipass_design_20260430.md`.
+    multipass: bool = False
+    multipass_max_passes: int = 3    # council verdict default (Carmack 80/30)
+    multipass_target_score: float = 0.0  # 0 == "use baseline - 0.005"
+    multipass_eps: float = 1e-3      # below scorer noise floor
+
 
 # ── Step implementations ─────────────────────────────────────────────────
 
@@ -1994,6 +2005,127 @@ def _capture_provenance(cfg: PipelineConfig) -> dict:
     return prov
 
 
+def step_multipass(
+    cfg: PipelineConfig,
+    final_renderer: Path,
+    poses_path: Path | None,
+    iteration: int,
+    corrections_bin: Path | None = None,
+) -> tuple[Path, dict]:
+    """Lane 8 — multi-pass compress with score-feedback.
+
+    Wraps ``step_archive`` + ``step_eval`` inside a ``MultiPassCompressor``
+    that iterates encoder parameters (currently ``mask_crf``) based on
+    per-pass score deltas. The output is the BEST archive across passes
+    (regression-guarded). Inflate side is UNCHANGED.
+
+    Strict-scorer-rule per CLAUDE.md: this runs at COMPRESS time only and
+    invokes the contest scorer through ``step_eval`` (which uses
+    ``experiments/auth_eval_renderer.py``). Inflate-time scorer loads are
+    forbidden — preflight Check 91 enforces this statically.
+
+    Returns ``(archive_path, eval_meta)`` where ``eval_meta`` is the same
+    schema as ``step_eval``. The pass history JSONL is written to
+    ``iter_dir/multipass_history.jsonl`` for forensics.
+    """
+    from tac.multipass_compressor import (
+        ABSOLUTE_MAX_PASSES, DEFAULT_EPS, MultiPassCompressor,
+    )
+
+    iter_dir = Path(cfg.output_dir) / f"iter_{iteration}"
+    iter_dir.mkdir(parents=True, exist_ok=True)
+    history_log = iter_dir / "multipass_history.jsonl"
+
+    if cfg.multipass_max_passes > ABSOLUTE_MAX_PASSES:
+        raise ValueError(
+            f"--multipass-max-passes={cfg.multipass_max_passes} exceeds "
+            f"ABSOLUTE_MAX_PASSES={ABSOLUTE_MAX_PASSES}. Council verdict "
+            f"(Shannon log saturation) — see "
+            f".omx/research/council_lane_8_multipass_design_20260430.md"
+        )
+
+    # Encoder closure: re-runs step_archive with the proposed mask_crf.
+    # The encoder must return BYTES (the compressor's contract). We read
+    # archive.zip back into memory at the end of each pass.
+    def encoder(_state: object, params: dict) -> bytes:
+        # Apply parameters: today only mask_crf is wired through to the
+        # encoder. Other axes (pose_q_bits, block_fp_block_size,
+        # residual_gain) are reserved for future sub-encoders. Coordinate-
+        # descent will plateau on those axes immediately and roll forward.
+        cfg.mask_crf = int(round(params.get("mask_crf", cfg.mask_crf)))
+        # Bust the archive cache so step_archive re-runs.
+        done_marker = iter_dir / ".done_archive"
+        if done_marker.exists():
+            done_marker.unlink()
+        archive_path = step_archive(
+            cfg, final_renderer, poses_path, iteration,
+            corrections_bin=corrections_bin,
+        )
+        return archive_path.read_bytes()
+
+    # Scorer closure: writes the compressor's archive bytes to a unique
+    # path per pass and runs step_eval. step_eval is cached on
+    # iter_dir/.done_eval; we bust the cache before each pass.
+    def scorer(archive_bytes: bytes) -> float:
+        eval_archive = iter_dir / "multipass_archive.zip"
+        eval_archive.write_bytes(archive_bytes)
+        done_marker = iter_dir / ".done_eval"
+        if done_marker.exists():
+            done_marker.unlink()
+        meta = step_eval(
+            cfg, final_renderer, eval_archive, iteration,
+            poses_path=poses_path,
+        )
+        s = meta.get("score")
+        if s is None:
+            raise RuntimeError(
+                f"step_eval returned None score for {eval_archive}; "
+                f"see {iter_dir}/auth_eval.stdout.log for the full eval log."
+            )
+        scorer.last_meta = meta  # keep last meta for the return value
+        return float(s)
+
+    scorer.last_meta = {}  # type: ignore[attr-defined]
+
+    target = cfg.multipass_target_score or 0.0
+    if target == 0.0:
+        # Convention: 0 == "use baseline - 0.005" — but we don't know the
+        # baseline until pass 1 runs. We special-case by setting an
+        # impossibly-low target so target_hit never short-circuits and the
+        # eps/regression guards do the work.
+        target = -1.0
+    _log(
+        f"Lane 8 multipass: max_passes={cfg.multipass_max_passes} "
+        f"target={target:.4f} eps={cfg.multipass_eps}"
+    )
+
+    result = MultiPassCompressor(
+        target_score=target,
+        max_passes=cfg.multipass_max_passes,
+        eps=cfg.multipass_eps,
+        regression_guard=True,
+        initial_params={
+            "mask_crf": float(cfg.mask_crf),
+        },
+        log_path=history_log,
+    ).compress(None, encoder, scorer)
+
+    _log(
+        f"Lane 8 multipass: best_pass_idx={result.best_pass_idx} "
+        f"score={result.final_score:.4f} reverted={result.reverted} "
+        f"converged={result.converged} target_hit={result.target_hit}"
+    )
+
+    # Persist the BEST archive at iter_dir/archive.zip (the canonical name).
+    final_archive = iter_dir / "archive.zip"
+    final_archive.write_bytes(result.final_archive_bytes)
+
+    # Write a final summary alongside the history log.
+    summary_path = iter_dir / "multipass_summary.json"
+    summary_path.write_text(json.dumps(result.to_dict(), indent=2))
+    return final_archive, scorer.last_meta  # type: ignore[attr-defined]
+
+
 def run_compress(cfg: PipelineConfig) -> None:
     """Full compress pipeline: video → archive with iterative optimization."""
     output_dir = Path(cfg.output_dir)
@@ -2109,13 +2241,23 @@ def run_compress(cfg: PipelineConfig) -> None:
         )
 
         # Step 4: Archive (include corrections if available)
-        archive_path = step_archive(cfg, final_renderer, poses_path, iteration,
-                                     corrections_bin=corrections_bin)
+        # Lane 8: when --multipass is set, step_archive + step_eval are
+        # invoked together inside MultiPassCompressor's outer loop, which
+        # iterates encoder parameters based on per-pass score feedback.
+        # Compress-time only — strict-scorer-rule per CLAUDE.md.
+        if cfg.multipass:
+            archive_path, eval_result = step_multipass(
+                cfg, final_renderer, poses_path, iteration,
+                corrections_bin=corrections_bin,
+            )
+        else:
+            archive_path = step_archive(cfg, final_renderer, poses_path, iteration,
+                                         corrections_bin=corrections_bin)
 
-        # Step 5: Eval (pass renderer.bin for scoring, archive.zip for rate,
-        # and poses for FiLM conditioning — see step_eval docstring).
-        eval_result = step_eval(cfg, final_renderer, archive_path, iteration,
-                                 poses_path=poses_path)
+            # Step 5: Eval (pass renderer.bin for scoring, archive.zip for rate,
+            # and poses for FiLM conditioning — see step_eval docstring).
+            eval_result = step_eval(cfg, final_renderer, archive_path, iteration,
+                                     poses_path=poses_path)
         score = eval_result.get("score")
 
         if score is not None:
@@ -2358,6 +2500,22 @@ def main() -> int:
     # Iteration
     comp.add_argument("--max-iterations", type=int, default=10,
                       help="Safety bound on convergence cycles (stops earlier when converged)")
+    # Lane 8: multi-pass compress
+    comp.add_argument("--multipass", action="store_true",
+                      help="Lane 8: wrap step_archive + step_eval in a MultiPassCompressor "
+                           "outer loop with score-feedback parameter adjustment "
+                           "(compress-time only, strict-scorer-rule per CLAUDE.md). "
+                           "See .omx/research/council_lane_8_multipass_design_20260430.md")
+    comp.add_argument("--multipass-max-passes", type=int, default=3,
+                      help="Multi-pass safety bound (council verdict: 3 default, 5 absolute cap)")
+    comp.add_argument("--multipass-target-score", type=float, default=0.0,
+                      help="Multi-pass target score (lower=better). "
+                           "0 = sentinel — never short-circuit on target_hit; "
+                           "rely on eps + regression guard + max-passes for stop. "
+                           "Set explicitly to e.g. 1.045 to trip target_hit and "
+                           "early-stop the loop.")
+    comp.add_argument("--multipass-eps", type=float, default=1e-3,
+                      help="Multi-pass eps stop threshold (default 1e-3 = below scorer noise floor)")
 
     # eval subcommand
     ev = sub.add_parser("eval", help="Evaluate an existing archive")

@@ -1,0 +1,45 @@
+{
+  "tag": "[empirical:offline-byte-proxy]",
+  "scope": "lane_8_multipass_real_archive_smoke",
+  "anchor_path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
+  "anchor_bytes": 694074,
+  "baseline_score": 1.05,
+  "target_score": 1.04,
+  "max_passes": 3,
+  "elapsed_seconds": 5.954099469818175e-05,
+  "result": {
+    "final_score": 0.9534108724796277,
+    "best_pass_idx": 0,
+    "converged": true,
+    "target_hit": true,
+    "reverted": false,
+    "n_passes": 1,
+    "final_archive_bytes_len": 543224,
+    "pass_history": [
+      {
+        "pass_idx": 0,
+        "params": {
+          "mask_crf": 50.0,
+          "pose_q_bits": 8.0,
+          "block_fp_block_size": 16.0,
+          "residual_gain": 0.0
+        },
+        "archive_bytes": 543224,
+        "score": 0.9534108724796277,
+        "delta": Infinity,
+        "elapsed_seconds": 4.5833003241568804e-05,
+        "reason": "init"
+      }
+    ],
+    "axes_active": []
+  },
+  "bytes_delta_vs_baseline": -150850,
+  "score_delta_vs_baseline": -0.0965891275203723,
+  "interpretation": "Byte proxy ONLY. Real-bytes empirical for Level 3 requires GPU dispatch via scripts/remote_lane_8_multipass.sh (Phase G). Tagged [empirical:offline-byte-proxy] \u2014 does NOT count toward [contest-CUDA] gate.",
+  "claude_md_compliance": {
+    "score_lane_tag": "[empirical:offline-byte-proxy]",
+    "no_mps_used": true,
+    "no_scorer_loaded": true,
+    "strict_scorer_rule": "compress-time only; no inflate-time scorer"
+  }
+}
