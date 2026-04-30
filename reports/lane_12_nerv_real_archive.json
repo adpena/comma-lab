@@ -1,0 +1,19 @@
+{
+  "baseline_av1_bytes": 421483,
+  "nerv_codec_params": 11781,
+  "nerv_arch": {
+    "num_freqs": 8,
+    "hidden_dim": 64,
+    "depth": 4
+  },
+  "nerv_fp16_bytes": 23594,
+  "nerv_int8_bytes": 11845,
+  "byte_savings_fp16": 397889,
+  "byte_savings_pct_fp16": 94.4,
+  "byte_savings_pct_int8": 97.19,
+  "final_argmax_disagreement_vs_av1_source": 0.020032391018337675,
+  "training_steps_run": 1400,
+  "training_seconds": 228.7,
+  "note": "CPU training is partial (NSTEPS=2000); real convergence requires full --steps from profile (60000) on CUDA. See Phase G for [contest-CUDA] tag.",
+  "tag": "[empirical:reports/lane_12_nerv_real_archive.json]"
+}

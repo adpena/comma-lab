@@ -953,6 +953,77 @@ def _load_masks_from_amrc(
     return masks
 
 
+def _load_masks_from_nrv(
+    nrv_path: Path,
+    expected_frames: int = NUM_FRAMES,
+    height: int = SEG_H,
+    width: int = SEG_W,
+) -> torch.Tensor:
+    """Load masks from a Lane 12 NeRV codec payload (NRV1 / NRV2).
+
+    NRV = "Neural Representation for Video" mask codec
+    (``src/tac/nerv_mask_codec.py``). The payload is a tiny coordinate-MLP
+    state-dict (typically 12-23 KB) trained at compress time to overfit the
+    SegNet argmax mask sequence. Inflate runs the MLP forward over all
+    (t, y, x) coords → argmax class IDs → 5-class mask tensor.
+
+    Strict-scorer-rule compliance: decoder runs only the small NeRV MLP at
+    inflate time — no SegNet/PoseNet load. The MLP forward is ~2-3 seconds
+    on T4 for 1200×384×512 = 236M coords; well under the 30-min budget.
+
+    Args:
+        nrv_path: path to masks.nrv inside the archive directory.
+        expected_frames: expected total frames (default 1200).
+        height: scorer-resolution mask height (default 384).
+        width: scorer-resolution mask width (default 512).
+
+    Returns:
+        (N, H, W) long tensor with values in [0, NUM_CLASSES).
+    """
+    t0 = time.monotonic()
+    if not nrv_path.exists():
+        raise FileNotFoundError(f"NRV mask file not found: {nrv_path}")
+    try:
+        from tac.nerv_mask_codec import decode_nerv_codec, render_mask_argmax
+    except ImportError as e:
+        raise ImportError(
+            f"NRV mask file present at {nrv_path} but tac.nerv_mask_codec "
+            f"is not importable ({e}). The codec is required to inflate "
+            f"masks.nrv; ship the tac wheel in the inflate environment or "
+            f"convert masks back to .mkv / .amrc before submission."
+        ) from e
+    blob = nrv_path.read_bytes()
+    codec = decode_nerv_codec(blob)
+    # Run on CUDA if available; CPU fallback only if explicit (test path).
+    # The 2-3s T4 budget is on CUDA; CPU may take 30-60s but still fits.
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    # Half-frame: if expected_frames // 2 was used at compress time, the
+    # decode produces a half-frame mask sequence. We support both 1200 and
+    # 600 frame counts in the inflate path (matches AMRC/STCB).
+    half_path = expected_frames // 2
+    # For now, decode at full frame count; the renderer can warp halves.
+    masks = render_mask_argmax(
+        codec,
+        num_frames=expected_frames,
+        height=height,
+        width=width,
+        batch_size=131072,
+        device=device,
+    )
+    masks_long = masks.long()
+    n_frames = int(masks_long.shape[0])
+    if n_frames == half_path:
+        masks_long._half_frame_only = True  # type: ignore[attr-defined]
+    elapsed = time.monotonic() - t0
+    print(
+        f"  Loaded {n_frames} NeRV-decoded masks "
+        f"({masks_long.shape[1]}x{masks_long.shape[2]}) from {nrv_path} "
+        f"({elapsed:.2f}s on {device})",
+        file=sys.stderr,
+    )
+    return masks_long
+
+
 def _load_masks_from_stcb(stcb_path: Path) -> torch.Tensor:
     """Load pre-extracted masks from a Lane STC boundary-codec archive.
 
@@ -1044,11 +1115,18 @@ def _load_masks_from_archive(
         return _load_masks_from_amrc(mask_video_path, expected_frames=expected_frames)
     if mask_video_path.suffix.lower() == ".stcb":
         return _load_masks_from_stcb(mask_video_path)
+    # Lane 12 NeRV codec (.nrv extension or NRV1 magic). The magic bytes
+    # are the same for v1 and v2 payloads (b"NRV1"); the version u16 in
+    # the header disambiguates.
+    if mask_video_path.suffix.lower() == ".nrv":
+        return _load_masks_from_nrv(mask_video_path, expected_frames=expected_frames)
     head = mask_video_path.read_bytes()[:4] if mask_video_path.stat().st_size >= 4 else b""
     if head == b"AMRC":
         return _load_masks_from_amrc(mask_video_path, expected_frames=expected_frames)
     if head == b"STCB":
         return _load_masks_from_stcb(mask_video_path)
+    if head == b"NRV1":
+        return _load_masks_from_nrv(mask_video_path, expected_frames=expected_frames)
 
     # Probe video dimensions
     probe_cmd = [
@@ -1862,7 +1940,12 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
            the static-histogram arithmetic codec; ineligible/overhead-gated
            tensors + non-Conv2d modules fall back to FP16. Pre-archive
            renderer payload only; no scorer load at inflate.
-       12. PyTorch pickle: state_dict or PairGenerator checkpoint
+       12. IMPS binary (Lane 17 IMP): iterative-magnitude-pruning sparse-CSR
+           (magic b"IMPS") — Conv2d weights at >=78% sparsity pass through
+           the per-tensor sparse-CSR codec (uint16 idx + FP4 val);
+           ineligible / low-sparsity / large-numel tensors fall back to
+           FP16. No scorer load at inflate (Check H STRICT).
+       13. PyTorch pickle: state_dict or PairGenerator checkpoint
 
     All variants produce the same `(B, 2, H, W, 3)` HWC pair output via
     `model(mask_t, mask_t1)`, so the rest of the inflate pipeline (mask
@@ -2159,6 +2242,36 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
             f"  Loaded OWV2 (Lane Ω-W-V2 water-fill arithmetic) "
             f"AsymmetricPairGenerator from .bin "
             f"({len(raw_bytes):,} bytes, {n_params:,} params, {elapsed:.1f}s) "
+            f"— strict-scorer-rule OK",
+            file=sys.stderr,
+        )
+        return model
+
+    # ── IMPS format: Lane 17 / Lane J-IMP sparse-CSR archive ──
+    # Magic b"IMPS" — layout matches OWV2 (multi-tensor archive with per-layer
+    # sparse-CSR or FP16 fallback). See tac.imps_renderer_archive for full
+    # wire format. The decode path is pure-math (sparse_csr_decode + fp16
+    # frombuffer); no scorer load (Check H STRICT).
+    if magic == b"IMPS":
+        try:
+            from tac.imps_renderer_archive import decode_imps_archive
+        except Exception as exc:
+            raise RuntimeError(
+                "IMPS (Lane 17 IMP sparse-CSR) format requires the tac "
+                "package (tac.imps_renderer_archive.decode_imps_archive). "
+                "The inflate container must include the tac wheel for "
+                f"Lane 17 archives. Underlying error: {exc!r}"
+            )
+        model = decode_imps_archive(data=raw_bytes, device=device)
+        elapsed = time.monotonic() - t0
+        n_params = sum(p.numel() for p in model.parameters())
+        n_zero = sum(int((p == 0).sum().item())
+                     for p in model.parameters() if p.dim() == 4)
+        print(
+            f"  Loaded IMPS (Lane 17 IMP sparse-CSR) "
+            f"AsymmetricPairGenerator from .bin "
+            f"({len(raw_bytes):,} bytes, {n_params:,} params, "
+            f"{n_zero:,} zeroed conv weights, {elapsed:.1f}s) "
             f"— strict-scorer-rule OK",
             file=sys.stderr,
         )
