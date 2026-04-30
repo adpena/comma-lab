@@ -1,0 +1,28 @@
+provenance: {"lane_id": "lane_sa_segmap_clone", "started_at_utc": "2026-04-29T16:07:18Z", "git_hash": "no-git", "gpu_name": "Tesla T4", "driver_version": "580.95.05", "torch_version": "2.5.1+cu124", "cuda_version": "12.4", "cuda_available": true, "lane_script": "scripts/remote_lane_sa_segmap_clone.sh", "output_dir": "/tmp/pact/lane_sa_segmap_clone_results", "variant": "plain", "arch": {"hidden": 24, "block_hidden": 24, "num_blocks": 8}, "predicted_band": [0.4, 0.55], "anchor_dir": "experiments/results/lane_a_landed/iter_0", "paradigm": "segmap_clone"}
+[lane-sa] 2026-04-29T16:07:18Z === Stage 0: NVDEC probe (--ensure-dali) ===
+[probe_nvdec] Modal runtime — NVDEC not required (auth_eval uses cpu device)
+[lane-sa] 2026-04-29T16:07:18Z === Stage 1: anchor checks (Check 76 — full-res masks only) ===
+[lane-sa] 2026-04-29T16:07:18Z === Stage 2: train SegMap (variant=plain) ===
+[train_segmap] SegMap variant=plain hidden=24 blocks=8 params=94,419
+[mask_codec] Decoded 1200 masks (384x512) from experiments/results/lane_a_landed/iter_0/masks.mkv
+[train_segmap] training pairs: 600 (non-overlapping)
+Traceback (most recent call last):
+  File "/tmp/pact/experiments/train_segmap.py", line 339, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/tmp/pact/experiments/train_segmap.py", line 287, in main
+    epoch_metrics = trainer.train_epoch(
+                    ^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/pact/src/tac/segmap_renderer.py", line 284, in train_epoch
+    rendered = self.model(masks_flat, frame_indices)  # (B*T, 3, H, W) in [0, 255]
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/pact/src/tac/segmap_renderer.py", line 161, in forward
+    feat = self.layer_in(torch.cat([x, affine_latent * self.latent_input_scale], dim=1))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 7.03 GiB. GPU 0 has a total capacity of 14.56 GiB of which 2.90 GiB is free. Process 1 has 11.66 GiB memory in use. Of the allocated memory 11.53 GiB is allocated by PyTorch, and 13.50 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)

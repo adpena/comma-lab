@@ -1,0 +1,8 @@
+{
+  "lane_script": "scripts/remote_lane_sc_plus_plus_kl_distill.sh",
+  "label": "lane_sc_plus_plus_v2",
+  "gpu": "T4",
+  "max_seconds": 46800,
+  "call_id": "fc-01KQD092XT7DQK8B7X75WV5TTY",
+  "dispatched_at": "2026-04-29T11:13:44.272227"
+}

@@ -1,0 +1,35 @@
+provenance: {"lane_id": "lane_sc_plus_plus_kl_distill", "started_at_utc": "2026-04-29T16:50:17Z", "git_hash": "no-git", "gpu_name": "NVIDIA A10", "driver_version": "580.95.05", "torch_version": "2.5.1+cu124", "cuda_version": "12.4", "cuda_available": true, "lane_script": "scripts/remote_lane_sc_plus_plus_kl_distill.sh", "output_dir": "/tmp/pact/lane_sc_plus_plus_kl_distill_results", "variant": "kl_distill", "arch": {"hidden": 24, "block_hidden": 24, "num_blocks": 8}, "kl_distill_weight": 0.002, "kl_distill_temperature": 2.0, "predicted_band": [0.3, 0.4], "anchor_dir": "experiments/results/lane_a_landed/iter_0", "paradigm": "segmap_clone_with_kl_distill"}
+[lane-sc++] 2026-04-29T16:50:19Z === Stage 0: NVDEC probe (--ensure-dali) ===
+[probe_nvdec] Modal runtime — NVDEC not required (auth_eval uses cpu device)
+[lane-sc++] 2026-04-29T16:50:19Z === Stage 1: anchor checks (Check 76 — full-res masks only) ===
+[lane-sc++] 2026-04-29T16:50:20Z === Stage 2: train SegMap (variant=kl_distill, T=2.0, w=0.002) ===
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/tmp/pact/experiments/train_segmap.py", line 355, in main
+    epoch_metrics = trainer.train_epoch(
+                    ^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/pact/src/tac/segmap_renderer.py", line 391, in train_epoch
+    rendered = self.model(masks_flat, frame_indices)  # (B*T, 3, H, W) in [0, 255]
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/pact/src/tac/segmap_renderer.py", line 161, in forward
+    feat = self.layer_in(torch.cat([x, affine_latent * self.latent_input_scale], dim=1))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/conv.py", line 554, in forward
+    return self._conv_forward(input, self.weight, self.bias)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/conv.py", line 549, in _conv_forward
+    return F.conv2d(
+           ^^^^^^^^^
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 21.09 GiB. GPU 0 has a total capacity of 22.06 GiB of which 5.83 GiB is free. Process 1 has 16.22 GiB memory in use. Of the allocated memory 15.92 GiB is allocated by PyTorch, and 33.50 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
