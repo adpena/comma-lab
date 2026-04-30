@@ -366,10 +366,19 @@ def preflight_all(
         # (anchor → finetune → joint → QAT → final). Council D audit
         # found 8 missing wire-ins; landed in same commit as Check 88
         # (train_szabolcs.py, qat_finetune.py, qat_omega_lagrangian.py,
-        # quantize_distilled.py, train_imp_cycle.py + the train_joint_pair.py
+        # quantize_distilled.py, train_imp_cycle.py, train_lora_tto.py,
+        # train_postfilter_on_renderer.py + the train_joint_pair.py
         # duplicate-class fix). Lands STRICT @ 0 violations after fix-ups.
         # Memory: .omx/research/council_ema_audit_20260429.md.
         check_training_paths_use_ema_correctly(strict=True, verbose=verbose)
+
+        # Check 89 (Council B UNIWARD NO-OP incident): encode-then-discard
+        # antipattern in remote_lane_*.sh scripts. WARN-ONLY initially —
+        # 14 live hits need per-lane manual classification (legitimate
+        # "cp anchor base then encode + replace one file" vs the UNIWARD
+        # bug where encode runs but Stage 4 cp overwrites the encoded
+        # payload). Promote to STRICT after sweep + waivers added.
+        check_remote_lane_scripts_use_computed_payloads(strict=False, verbose=verbose)
 
         # 2026-04-27 meta-bug audit (commit a57731a0): 12 NEW checks for
         # additional bug classes from session + memory. 4 land at 0 live
@@ -6703,6 +6712,120 @@ def check_training_paths_use_ema_correctly(
             + "\n".join(f"  • {v}" for v in violations)
             + "\n\nEMA EVERYWHERE (CLAUDE.md non-negotiable). Reference "
             "audit: .omx/research/council_ema_audit_20260429.md."
+        )
+    return violations
+
+
+# ── Check 89 (Council B UNIWARD NO-OP incident): remote_lane scripts that
+#    compute a payload and then `cp` over the anchor masks — the encoded
+#    bytes never make it into the archive.
+#
+# Incident (2026-04-29 PM): Lane UNIWARD v8 ran 779s on Modal T4, computed
+# an 8.6 MB UNIWARD SLI1 payload in Stage 3, then Stage 4 ran
+# `cp $ANCHOR_DIR/masks.mkv $ITER_DIR/` which OVERWROTE the encoded bytes
+# with bit-identical Lane A masks. The resulting score 1.14 [contest-CPU
+# advisory] was just Lane A measured on CPU. Council B (Fridrich+Shannon)
+# verdict: NO-OP, encoded bytes never shipped.
+#
+# This check scans every scripts/remote_lane_*.sh for the antipattern:
+# (a) script encodes a payload (writes a file with extension .sli1 / .br /
+#     .stcb / .nwc / .owv2 / .pdv2 / .lct / .bin OR has a comment "Stage N:
+#     encode"/"compute payload"/"build payload")
+# (b) AND later does `cp $ANCHOR_DIR/...mkv $ITER_DIR/` or
+#     `cp $ANCHOR/...zip $ITER_DIR/` (overwrites the staged-output area
+#     with anchor bytes).
+# If both, the script is suspect and must explicitly reference the encoded
+# payload in its archive build (or carry an `# UNIWARD-NO-OP-WAIVED:` marker).
+#
+# Memory: project_lane_uniward_v8_NO_OP_finding_20260429.md.
+
+_PAYLOAD_ENCODE_RE = re.compile(
+    r"(\.sli1|\.br|\.stcb|\.nwc|\.owv2|\.pdv2|\.lct|encode_payload|"
+    r"build_payload|build payload|compute payload|Stage \d+:\s*encode|"
+    r"Stage \d+:\s*build)"
+)
+_ANCHOR_CP_RE = re.compile(
+    r"\bcp\s+[\"']?\$\{?(ANCHOR_DIR|ANCHOR_PATH|ANCHOR)\}?[/\"'].*"
+    r"(masks\.mkv|archive\.zip|renderer\.bin|poses\.pt)"
+)
+_NO_OP_WAIVER_RE = re.compile(
+    r"(?:#\s*UNIWARD-NO-OP-WAIVED|#\s*ANCHOR-CP-INTENTIONAL)"
+)
+
+
+def _scan_remote_lane_for_encode_then_discard(
+    path: Path, repo_root: Path,
+) -> list[str]:
+    """Detect remote_lane scripts that encode a payload then `cp` anchor
+    bytes over it, discarding the encoder output (Lane UNIWARD NO-OP class).
+
+    Only flag cp's that come AFTER the FIRST encode step. cp before encode
+    is legitimate "stage anchor base then overwrite one file with encoded
+    version" pattern (most lane scripts do this).
+    """
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    rel_s = str(rel)
+    try:
+        text = path.read_text()
+    except (UnicodeDecodeError, FileNotFoundError):
+        return []
+    if _NO_OP_WAIVER_RE.search(text):
+        return []
+    encode_match = _PAYLOAD_ENCODE_RE.search(text)
+    if not encode_match:
+        return []
+    encode_pos = encode_match.start()
+    # Only consider cp matches AFTER the first encode step.
+    cp_matches = [
+        m for m in _ANCHOR_CP_RE.finditer(text) if m.start() > encode_pos
+    ]
+    if not cp_matches:
+        return []
+    violations: list[str] = []
+    for m in cp_matches:
+        line_num = text[:m.start()].count("\n") + 1
+        snippet = m.group(0)[:120]
+        violations.append(
+            f"{rel_s}:{line_num}: encode-then-discard antipattern — script "
+            f"encodes a payload BEFORE this cp at line "
+            f"{text[:encode_pos].count(chr(10)) + 1}, and `{snippet}` "
+            f"overwrites it. Add `# UNIWARD-NO-OP-WAIVED:` marker if "
+            f"intentional, OR fix archive build to ship encoded payload."
+        )
+    return violations
+
+
+def check_remote_lane_scripts_use_computed_payloads(
+    *, strict: bool = False, verbose: bool = False, repo_root: Path | None = None,
+) -> list[str]:
+    """Forbid the encode-then-discard antipattern in scripts/remote_lane_*.sh
+    (Lane UNIWARD v8 NO-OP class)."""
+    root = repo_root or REPO_ROOT
+    scripts_dir = root / "scripts"
+    violations: list[str] = []
+    if scripts_dir.is_dir():
+        for sh in sorted(scripts_dir.glob("remote_lane_*.sh")):
+            violations.extend(
+                _scan_remote_lane_for_encode_then_discard(sh, root)
+            )
+    if verbose:
+        if violations:
+            print(
+                f"  [encode-then-discard] {len(violations)} violation(s)"
+            )
+            for v in violations[:10]:
+                print(f"    • {v}")
+            if len(violations) > 10:
+                print(f"    … and {len(violations) - 10} more")
+        else:
+            print("  [encode-then-discard] OK: 0 violations")
+    if violations and strict:
+        raise MetaBugViolation(
+            "ENCODE-THEN-DISCARD ANTIPATTERN DETECTED:\n"
+            + "\n".join(f"  • {v}" for v in violations[:20])
+            + "\n\nFix: either (a) modify the archive build step to actually "
+            "ship the encoded payload, OR (b) add a `# UNIWARD-NO-OP-WAIVED:` "
+            "marker explaining why the anchor cp is intentional."
         )
     return violations
 
