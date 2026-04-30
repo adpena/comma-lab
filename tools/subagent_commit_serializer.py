@@ -102,7 +102,7 @@ def _append_log(record: dict) -> None:
               f"to log {LOG_PATH}: {record!r}", file=sys.stderr)
 
 
-def _acquire_lock(timeout_seconds: int) -> "io.IOBase":
+def _acquire_lock(timeout_seconds: int):
     """Acquire LOCK_EX on .commit-lock with a soft timeout.
 
     Returns the open file handle (caller must keep it open until release).
