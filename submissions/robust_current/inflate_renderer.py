@@ -1857,7 +1857,12 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
        10. NWC1 binary (Lane J-NWC): Neural Weight Compression
            (magic b"NWC1") — VQ-VAE codec encodes every state-dict tensor
            to (codebook_index + per-block scale); codec weights bundled in.
-       11. PyTorch pickle: state_dict or PairGenerator checkpoint
+       11. OWV2 binary (Lane Ω-W-V2): water-fill + arithmetic terminal
+           (magic b"OWV2") — block-FP-eligible Conv2d weights pass through
+           the static-histogram arithmetic codec; ineligible/overhead-gated
+           tensors + non-Conv2d modules fall back to FP16. Pre-archive
+           renderer payload only; no scorer load at inflate.
+       12. PyTorch pickle: state_dict or PairGenerator checkpoint
 
     All variants produce the same `(B, 2, H, W, 3)` HWC pair output via
     `model(mask_t, mask_t1)`, so the rest of the inflate pipeline (mask
@@ -2125,6 +2130,38 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
         elapsed = time.monotonic() - t0
         print(f"  Loaded C3 residual PairGenerator from .bin ({len(raw_bytes):,} bytes, {elapsed:.1f}s)",
               file=sys.stderr)
+        return model
+
+    # ── OWV2 format (Lane Ω-W-V2): water-fill + arithmetic-terminal renderer ──
+    # 2026-04-30: Lane Ω-W-V2 stack archive — block-FP-eligible Conv2d weights
+    # are encoded with the static-histogram arithmetic terminal codec
+    # (per `src/tac/water_filling_codec_v2.py`); ineligible / overhead-gated
+    # tensors fall back to FP16 raw bytes; non-Conv2d modules (Embedding,
+    # ConvTranspose2d, Linear) are FP16. The wrapper format is documented in
+    # `src/tac/owv2_renderer_archive.py`. Strict-scorer-rule compliant: pure
+    # CPU byte → tensor decode, no SegNet/PoseNet forward pass at inflate.
+    # Predicted: ~117KB renderer.bin shrink on Lane G v3 (~290KB → ~170KB)
+    # → score reduction ~0.078 at the rate term [derivation].
+    if magic == b"OWV2":
+        try:
+            from tac.owv2_renderer_archive import decode_owv2_archive
+        except ImportError as exc:
+            raise RuntimeError(
+                "OWV2 (Lane Ω-W-V2 water-fill arithmetic) format requires the "
+                "tac package (tac.owv2_renderer_archive.decode_owv2_archive). "
+                "The inflate container must include the tac wheel for Lane "
+                f"Ω-W-V2 archives. Underlying error: {exc!r}"
+            )
+        model = decode_owv2_archive(data=raw_bytes, device=device)
+        elapsed = time.monotonic() - t0
+        n_params = sum(p.numel() for p in model.parameters())
+        print(
+            f"  Loaded OWV2 (Lane Ω-W-V2 water-fill arithmetic) "
+            f"AsymmetricPairGenerator from .bin "
+            f"({len(raw_bytes):,} bytes, {n_params:,} params, {elapsed:.1f}s) "
+            f"— strict-scorer-rule OK",
+            file=sys.stderr,
+        )
         return model
 
     # ── ASYM format: AsymmetricPairGenerator ──
