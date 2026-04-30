@@ -186,3 +186,84 @@ Modal:
   `experiments/modal_train_lane.py` forces `AUTH_EVAL_DEVICE=cpu`.
 - Modal is approved for supplementary build/smoke/Fisher/ablation work whose
   outputs later move to Lightning exact CUDA eval for promotion.
+
+---
+
+## Update - 2026-04-30T16:40Z MCP Shutdown And Config Removal
+
+User directed that no MCP servers are in use and all MCP processes/configs
+should be disabled.
+
+Actions landed:
+
+- Killed all visible `chrome-devtools-mcp`, `rbx-studio-mcp`,
+  `roblox_studio_mcp`, and `model.context` processes.
+- Verified no matching MCP processes remain in `ps`.
+- Removed active MCP server entries from:
+  - `/Users/adpena/.codex/config.toml`
+  - `/Users/adpena/.claude/mcp.json`
+  - `/Users/adpena/.cursor/mcp.json`
+  - `/Users/adpena/Library/Application Support/Claude/claude_desktop_config.json`
+- Left JSON configs valid with empty `mcpServers` objects where applicable.
+- Backup files were written with timestamp `20260430T163944Z` beside each
+  edited config.
+
+Validation:
+
+- `python3 -m json.tool` passed for the edited JSON configs.
+- `rg` over the edited active config files shows no active `mcp_servers` TOML
+  sections and only empty `mcpServers` JSON objects.
+
+---
+
+## Update - 2026-04-30T17:00Z Scoped Regression Vocabulary Hardening
+
+Grand Council kill-discipline audit found that the policy was correct but
+some live helpers still emitted broad `hard-kill` vocabulary.
+
+Actions landed:
+
+- `scripts/adjudicate_contest_auth_eval.py` now accepts
+  `--regression-threshold` and emits `regression_triggered`,
+  `regression_threshold`, `regression_scope`, and
+  `REGRESSION_REVIEW_REQUIRED`.
+- The deprecated `--hard-kill-above` direct-call path remains only as a
+  backward-compatible alias.
+- Future provenance no longer writes `hard_kill_triggered` by default.
+- Active remote scripts that call the adjudicator now pass
+  `--regression-threshold`.
+- H-V3 and Lane 12/NeRV comments now describe run-abort thresholds rather than
+  scientific kills.
+
+Rigor implication:
+
+- A bad exact archive can retire the measured implementation/config only.
+  Family/method kills still require independent exact evidence or a
+  mathematical impossibility argument plus clean Grand Council consensus.
+
+---
+
+## Update - 2026-04-30T17:05Z CUDA Auth Eval Source-Of-Truth Pin
+
+User re-emphasized that MPS/local paths materially distort score and auth-eval
+signal. This is now pinned in `AGENTS.md`:
+
+- MPS, CPU, local proxy scorers, and non-canonical renderer checks are
+  development-only.
+- For GPU-dependent score or signal claims, the only reliable source of truth
+  is exact CUDA auth eval on the exact archive bytes:
+  `archive.zip -> inflate.sh -> upstream/evaluate.py`.
+- `experiments/contest_auth_eval.py --device cuda` and its
+  `contest_auth_eval.json` are the canonical path/artifact.
+- Local/MPS evidence must never promote, rank, kill, retire, validate a stack,
+  or anchor paper claims. If local/MPS disagrees with CUDA auth eval, CUDA wins.
+
+Verification for this greenup:
+
+- Focused regression suite covering auth-eval hardening, Lightning harvesting,
+  OWV3 fail-closed size guard, contest auth eval, PFP16 A++ helper, Vast
+  reconcile, and GP smooth-basis retirement guard: `70 passed in 1.71s`.
+- `py_compile` clean for touched Python adjudicator/Lightning/OWV3/PFP16/GP
+  files.
+- `bash -n` clean for touched adjudicator-calling remote scripts.
+- `git diff --check` clean.

@@ -31,7 +31,7 @@ Small deltas up to about `0.005` are accepted when the report stores a rounded d
 4. Hardware is T4-matched or officially equivalent to the contest judge for neural forward behavior.
 5. Inflate duration is inside the 30-minute contest budget with strict raw-output cardinality and byte-size validation.
 
-Current preserved lanes are Grade A score-grade, not Grade A++, because their provenance records RTX 4090 CUDA (`gpu_t4_match=false`) rather than a T4-matched contest host.
+Current controlling frontier: Lane G v3 PFP16 now has Grade A++ evidence from Lightning AI Tesla T4 with `gpu_t4_match=true`. Older RTX 4090 PFP16 evidence remains a corroborating Grade A run only.
 
 **Grade B diagnostic CUDA** means CUDA and component math are present, but artifact custody or provenance is incomplete. It can explain a failure mode, but it is not sufficient to promote, ship, or anchor a new floor.
 
@@ -39,33 +39,35 @@ Current preserved lanes are Grade A score-grade, not Grade A++, because their pr
 
 ---
 
-## 2. Grade A Score-Grade Ledger
+## 2. Grade A / A++ Score Ledger
 
-These are the only fully reproducible local CUDA score-grade lane results found in this pass. They are authoritative for score ordering, but any final submission candidate still needs the Grade A++ 1:1 gate.
+These are the only fully reproducible exact CUDA score-grade lane results found in this pass. PFP16 has since passed the stricter Grade A++ 1:1 gate on T4/equivalent hardware; the remaining rows are Grade A score-grade unless separately upgraded.
 
 | Lane / artifact | Score field | Recomputed | Pose | Seg | Bytes | Archive SHA status | Verdict |
 |---|---:|---:|---:|---:|---:|---|---|
-| Lane G v3 `experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip` | 1.05 | 1.048866 | 0.00345458 | 0.00400846 | 694,074 | matches `9b20...6870b` | **Current authoritative frontier** |
+| Lane G v3 PFP16 `experiments/results/lane_g_v3_pfp16/pfp16_a_plus_plus_t4_20260430T1620Z_codex/contest_auth_eval.json` | 1.04 | 1.043988 | 0.00346442 | 0.00400656 | 686,635 | matches `0af839...ded7f` | **Current A++ authoritative frontier** |
+| Lane G v3 `experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip` | 1.05 | 1.048866 | 0.00345458 | 0.00400846 | 694,074 | matches `9b20...6870b` | Previous frontier |
 | Lane A `experiments/results/lane_a_landed/archive_lane_a.zip` | 1.15 | 1.145767 | 0.00496876 | 0.00460724 | 694,045 | matches `a992...8e84` | Valid historical baseline |
 | Lane M-V2 `experiments/results/lane_m_v2_landed/archive_lane_m_v2.zip` | 1.84 | 1.839523 | 0.07602696 | 0.00505453 | 694,044 | matches `88cd...73aa` | Valid regression; config/architecture lesson |
 | Lane H CRF56 `experiments/results/lane_h_crf56/archive.zip` | 3.20 | 3.203149 | 0.51792711 | 0.00554966 | 559,250 | matches `4829...900f5` | Valid regression |
 | Baseline CRF50 `submissions/baseline_dilated_h64_0_90/archive_fullres_crf50.zip` | 2.29 | 2.293579 | 0.24758595 | 0.00258082 | 693,857 | matches `dcdb...ca30b` | Valid baseline, not frontier |
 
-**Mathematical check:** all five rows satisfy the scoring equation within report rounding tolerance.
+**Mathematical check:** all six rows satisfy the scoring equation within report rounding tolerance.
 
 ### Archive manifest check
 
-All five preserved Grade A archives have exactly three members: `renderer.bin`, `masks.mkv`, and `optimized_poses.pt`. No `.DS_Store`, `__MACOSX`, stale debug payloads, sidecar checkpoints, or external postfilter artifacts are present in these archives.
+All six preserved Grade A archives have clean three-member manifests. PFP16 uses `renderer.bin`, `masks.mkv`, and `optimized_poses.bin`; the legacy renderer archives use `renderer.bin`, `masks.mkv`, and `optimized_poses.pt`. No `.DS_Store`, `__MACOSX`, stale debug payloads, sidecar checkpoints, or external postfilter artifacts are present in these archives.
 
 | Lane | Manifest | External neural artifact dependency | Hardware note |
 |---|---|---|---|
+| Lane G v3 PFP16 | clean 3-file renderer archive | none found; FP16 pose payload is inside archive | Lightning AI Tesla T4, `gpu_t4_match=true`; log proves inflate budget |
 | Lane G v3 | clean 3-file renderer archive | none found | CUDA RTX 4090, not T4-matched |
 | Lane A | clean 3-file renderer archive | none found | CUDA RTX 4090, not T4-matched |
 | Lane M-V2 | clean 3-file renderer archive | none found | CUDA RTX 4090, not T4-matched |
 | Lane H CRF56 | clean 3-file renderer archive | none found | CUDA RTX 4090, not T4-matched |
 | Baseline CRF50 | clean 3-file renderer archive | none found | CUDA RTX 4090, not T4-matched |
 
-**Compliance implication:** the packages are clean enough to submit structurally, but the evidence ledger must not call them "100% 1:1 contest-grade" until the T4/equivalent hardware and inflate-budget evidence are attached to the exact archive SHA.
+**Compliance implication:** PFP16 may be called the current 1:1 contest-grade baseline after final bundle review. The other preserved archives remain structurally clean Grade A score-grade rows, not A++, until T4/equivalent hardware and inflate-budget evidence are attached to their exact archive SHA.
 
 ---
 
@@ -112,23 +114,25 @@ Many harvested `submissions/robust_current/auth_eval_renderer_fp4.json` files re
 
 | Lane | Evidence | Current grade |
 |---|---|---|
-| Lane 12 NeRV | `reports/lane_12_nerv_real_archive.json`: 94.4% byte saving, 2.003% argmax disagreement, CPU partial training | Empirical byte/mask-quality only; no contest score |
+| Lane 12 NeRV pre-eval report | `reports/lane_12_nerv_real_archive.json`: 94.4% byte saving, 2.003% argmax disagreement, CPU partial training | Superseded by exact negative eval for `jsonfix40`; keep only as a warning that byte/mask proxies were insufficient |
+| Lane 12 NeRV `jsonfix40` exact eval | `experiments/results/lane_12_nerv_20260430_codex_jsonfix40/contest_auth_eval.json`: recomputed `26.03719330455429`, PoseNet `49.77849960`, SegNet `0.03528685`, archive `296,478` bytes | Exact negative for this implementation; do not generalize to all alpha/mask compression |
+| OWV3/Fisher Modal smoke | `experiments/results/lane_lane_g_v3_owv3_fisher_smoke_20260430_codex_modal/lane_g_v3_owv3_fisher_stack_results/build_provenance.json`: archive `912,971` bytes, `+218,897` vs Lane G v3, no exact eval | Suspicious negative smoke only; diagnose encoder overhead/config before method conclusions |
 | Lane 17 IMP | `reports/lane_17_imp_real_archive.json`: 40.2% renderer-byte saving at cycle 9 | Empirical byte-only; no contest score |
 | Lane 19 logit-margin | `reports/lane_19_logit_margin_local_smoke.json` | Smoke-only; no contest score |
 | Lane 20 Ballé | `reports/lane_20_balle_real_archive.json` and recovered run: `STATIC_WINS_FALLBACK` | Empirical codec finding; no score improvement |
 | Lane 8 multipass | `reports/lane_8_multipass_real_archive.json` | Offline byte-proxy only |
-| Lane PFP16 | `reports/lane_pfp16_real_archive.json`: predicted 1.045046, archive exists | Empirical/predicted only until CUDA eval |
 
 ---
 
 ## 5. Required Retags / Corrections
 
-1. **Lane G v3 remains the only Grade A score-grade frontier.** Use score `1.05` with recomputed value `1.048866`.
+1. **Lane G v3 PFP16 is now the Grade A++ frontier.** Use score `1.04` with recomputed value `1.043987524793892` from `experiments/results/lane_g_v3_pfp16/pfp16_a_plus_plus_t4_20260430T1620Z_codex/contest_auth_eval.json`; the earlier RTX 4090 run is superseded for contest-identity wording.
 2. **Ω-W-V2 1.07 remains a CUDA diagnostic, not a fully reproducible Grade A artifact.** The PoseNet regression math is credible, but the exact archive must be recovered or rebuilt.
 3. **The old 0.9001 baseline is retracted as an anchor.** Memory `project_baseline_0_9001_lost_archive_test.md` says the committed `archive_baseline_0_9001.zip` is actually the 53.6-scoring 48x64-mask archive, and the real 0.9001 archive was not preserved.
 4. **All CPU/MPS results are advisory.** They cannot kill or promote lanes. This includes GP v2/v3, MM v2, UNIWARD v7/v8, and `true_auth_eval_round1`.
-5. **All byte-only reports must stay `[empirical:<path>]`.** NeRV, IMP, PFP16, Ballé, multipass, and logit-margin do not have contest scores yet.
-6. **Memory-only historical CUDA claims need provenance recovery before ranking.** Lane B, M+N, F/F-V2, and SHIRAZ v4 can inform failure analysis but should not be placed in the same authoritative table as Grade A results unless exact archive/report custody is restored.
+5. **All remaining byte-only reports must stay `[empirical:<path>]`.** IMP, Ballé, multipass, and logit-margin do not have contest scores yet. Lane 12 NeRV `jsonfix40` does have exact CUDA evidence now, but it retires that measured implementation/config only.
+6. **PFP16 remote provenance parser fields are superseded.** The harvested `remote_provenance.json` says `contest_cuda_score=100.0`, `hard_kill_triggered=true`, and `lane_status=HARD_KILL_REGRESSION`; those fields are invalid legacy parser/adjudication output and must be ignored in favor of `contest_auth_eval.json`. The current adjudicator uses scoped `regression_triggered` / `REGRESSION_REVIEW_REQUIRED` wording.
+7. **Memory-only historical CUDA claims need provenance recovery before ranking.** Lane B, M+N, F/F-V2, and SHIRAZ v4 can inform failure analysis but should not be placed in the same authoritative table as Grade A results unless exact archive/report custody is restored.
 
 ---
 
@@ -138,18 +142,19 @@ Many harvested `submissions/robust_current/auth_eval_renderer_fp4.json` files re
 
 Using only Grade A artifacts:
 
-1. **Lane G v3:** 1.048866 recomputed, best verified.
-2. **Lane A:** 1.145767 recomputed.
-3. **Lane M-V2:** 1.839523 recomputed.
-4. **Baseline CRF50:** 2.293579 recomputed.
-5. **Lane H CRF56:** 3.203149 recomputed.
+1. **Lane G v3 PFP16:** 1.043988 recomputed, best verified and A++ contest-grade.
+2. **Lane G v3:** 1.048866 recomputed.
+3. **Lane A:** 1.145767 recomputed.
+4. **Lane M-V2:** 1.839523 recomputed.
+5. **Baseline CRF50:** 2.293579 recomputed.
+6. **Lane H CRF56:** 3.203149 recomputed.
 
 ### Load-bearing quantitative deltas
 
 Against Lane G v3:
 
 - Ω-W-V2 diagnostic: rate improved by about `-0.034` score, but PoseNet worsened by about `+0.052`, net `+0.021`. This is enough to enforce PoseNet-sensitivity weighting for every renderer-weight codec.
-- PFP16 projected rate gain: `25 * 7439 / 37,545,489 = 0.004953`. This is too small to change strategy alone, but valuable because it is structurally low risk if CUDA validates.
+- PFP16 actual rate gain: archive bytes dropped by `7,439`, worth `25 * 7439 / 37,545,489 = 0.004953` before tiny Pose/Seg drift. The measured recomputed score improvement versus Lane G v3 is about `0.004878`, and T4 CUDA validated the lane at `1.043987524793892`.
 - Mask byte leverage: every `100,000` bytes saved is `25 * 100000 / 37,545,489 = 0.06659` score. This is why NeRV/mask payload remains the highest-EV rate lane, but it still needs SegNet/PoseNet contest validation.
 
 ### Kill/promote discipline
@@ -172,13 +177,14 @@ The narrow exception is pure byte/hash/round-trip claims, which can be local if 
 
 Priority order for converting promising lanes into Grade A score-grade and, when needed, Grade A++ 1:1:
 
-1. **PFP16:** run exact archive CUDA eval on `experiments/results/lane_g_v3_pfp16/archive_lane_g_v3_pfp16.zip`.
-2. **Recover/rebuild Ω-W-V2 archive:** find or regenerate SHA `eba8e4360e6366ca10905b58e9ec1d12b3480c78b041548daa21da0c46c31625`; otherwise keep as diagnostic only.
-3. **Lane 12 NeRV:** CUDA train + integrate exact archive + contest eval. Must report bytes, argmax disagreement, SegNet/PoseNet, and archive SHA.
-4. **Lane 17 IMP:** CUDA full cycle + exact archive + contest eval. Must include PoseNet regression guard.
-5. **Lane 19 logit-margin:** A/B against Lane G v3 with exact archive eval.
-6. **Lane 20 Ballé:** no Grade A rerun needed unless a non-static mode beats static in bytes before eval; current result is fallback/no-op.
-7. **Retag all historical reports:** Grade A table only for preserved exact CUDA artifacts; move everything else to diagnostic/advisory sections.
+1. **Freeze PFP16 A++ bundle:** attach final manifest, source/staged-tree provenance, log timing, and review notes to the exact archive SHA.
+2. **PFP16 provenance/adjudication fix:** keep the parser bug-class fix enforced so stale `contest_cuda_score=100.0` and legacy `hard_kill_triggered=true` fields never override `contest_auth_eval.json`.
+3. **Recover/rebuild Ω-W-V2 archive:** find or regenerate SHA `eba8e4360e6366ca10905b58e9ec1d12b3480c78b041548daa21da0c46c31625`; otherwise keep as diagnostic only.
+4. **Lane 12 alpha redesign:** current NeRV `jsonfix40` is retired by exact-CUDA regression at `26.03719330455429`; redesign the alpha objective before any new NeRV/INR spend.
+5. **Lane 17 IMP:** CUDA full cycle + exact archive + contest eval. Must include PoseNet regression guard.
+6. **Lane 19 logit-margin:** A/B against Lane G v3 with exact archive eval.
+7. **Lane 20 Ballé:** no Grade A rerun needed unless a non-static mode beats static in bytes before eval; current result is fallback/no-op.
+8. **Retag all historical reports:** Grade A table only for preserved exact CUDA artifacts; move everything else to diagnostic/advisory sections.
 
 ---
 
@@ -209,7 +215,7 @@ Every deployment candidate must pass this exact gate before it can be called pro
 
 The shortest path to the Shannon floor should run in this order:
 
-1. **Evidence hygiene first:** PFP16 exact CUDA eval; recover or rebuild Ω-W-V2 exact archive; attach A++ evidence to Lane G v3 if possible.
+1. **Evidence hygiene first:** fix PFP16 remote provenance/adjudication parsing; attach A++ evidence to PFP16 or Lane G v3 if possible; recover or rebuild Ω-W-V2 exact archive.
 2. **β foundation:** land sensitivity maps with 480/120 cross-validation and per-channel score gradients. This gates Ω-W-V3, logit-margin, water-fill, and ADMM.
 3. **α mask payload:** train NeRV and VQ-VAE/wavelet alternatives in parallel, but promote only if payload and SegNet/PoseNet survive exact archive eval.
 4. **Renderer branch:** implement Ω-W-V3 only after sensitivity maps; run IMP as an independent renderer branch; stack only after both have exact archive evidence.
@@ -222,14 +228,15 @@ Parallelism is allowed only across independent write sets and independent scient
 
 ## 10. Implementation Readiness Notes — 2026-04-30
 
-These changes improve the path to Grade A, but do not change the score ledger:
+These changes improve the path to Grade A:
 
-- `OWV3` is now a registered renderer magic with inflate dispatch and synthetic mixed-channel tests. It remains implementation-smoke evidence until a CUDA-produced sensitivity artifact, full archive builder, exact archive SHA, and contest eval report exist.
-- Lane 12 `.nrv` archive validation is unblocked at the auth-eval whitelist level, and the inflate mask resolver can discover `masks.nrv` from the legacy `masks.mkv` default. Lane 12 remains empirical-only until full CUDA NeRV training, dependency closure, and exact archive scoring land.
-- The Grade A table is unchanged. Current frontier remains Lane G v3 `1.048866` score-grade, not A++.
+- PFP16 exact T4 eval has now landed under `experiments/results/lane_g_v3_pfp16/pfp16_a_plus_plus_t4_20260430T1620Z_codex` and changes the score ledger: it is the current Grade A++ frontier at recomputed `1.043987524793892`.
+- `OWV3` is now a registered renderer magic with inflate dispatch and synthetic mixed-channel tests. Modal smoke produced a CUDA top-3 Fisher/build packet, but the archive was larger (`912,971` bytes, `+218,897` vs Lane G v3) and has no exact eval. It remains suspicious negative smoke until encoder overhead/config review.
+- Lane 12 `.nrv` archive validation is unblocked at the auth-eval whitelist level, and the inflate mask resolver can discover `masks.nrv` from the legacy `masks.mkv` default. The current Lane 12 NeRV `jsonfix40` archive is retired by exact-CUDA regression and may only motivate alpha redesign.
+- Remote PFP16 provenance contains invalid legacy parser/adjudication fields (`contest_cuda_score=100.0`, `hard_kill_triggered=true`) and is superseded by `contest_auth_eval.json`.
 
 ---
 
 ## 11. Bottom Line
 
-The strict contest-grade ledger is much smaller than the historical all-scores inventory. The current authoritative frontier is still **Lane G v3 = 1.05**. Most other results are scientifically useful as failure analysis, but not contest-grade enough to support kill/promote decisions until exact CUDA artifact custody is restored.
+The strict contest-grade ledger is much smaller than the historical all-scores inventory. The current authoritative frontier is **Lane G v3 PFP16 = 1.04** (`1.043987524793892` recomputed) with A++ T4 evidence. Most other results are scientifically useful as failure analysis, but not contest-grade enough to support kill/promote decisions until exact CUDA artifact custody is restored.

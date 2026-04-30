@@ -64,7 +64,8 @@ implementation readiness is not score evidence.
 
 1. Fix the PFP16 remote provenance/adjudication parser bug class that wrote
    `contest_cuda_score=100.0` and `hard_kill_triggered=true`; trust or
-   recompute from `contest_auth_eval.json`.
+   recompute from `contest_auth_eval.json`. The current adjudicator now emits
+   scoped regression fields for future runs.
 2. Attach A++ evidence for PFP16 on T4/equivalent hardware if it becomes the
    submission candidate.
 3. Recover or rebuild the exact OWV2 diagnostic archive, or keep it Grade B.
@@ -107,7 +108,7 @@ Grade impact:
 - `remote_provenance.json` currently has invalid parser/adjudication fields
   `contest_cuda_score=100.0`, `hard_kill_triggered=true`, and
   `lane_status=HARD_KILL_REGRESSION`. These are superseded by
-  `contest_auth_eval.json` until the script fix lands.
+  `contest_auth_eval.json`; the current adjudicator fix has landed.
 
 - OWV3 remains implementation-smoke only until a CUDA sensitivity artifact and
   exact archive eval exist.
@@ -208,7 +209,8 @@ New evaluated artifact:
   `0.19741250`, archive `296478` bytes.
 - Archive SHA-256 from nested provenance:
   `864549cc648f0b3a023076c11812ccd0f10b1d013ed3fd6bb24d20bbcde85c97`.
-- Grade: hard-kill regression. Not Grade A. Not promotable.
+- Grade: exact-CUDA regression review. Not Grade A. Not promotable. Retires
+  the measured implementation/config only.
 
 Evidence policy clarifications:
 
@@ -224,7 +226,8 @@ Evidence policy clarifications:
 Audit status:
 
 - No new positive Grade A/A++ lane result was added in this update.
-- One negative Grade-A-quality hard-kill evidence item was added for Lane 12.
+- One negative Grade-A-quality exact-regression evidence item was added for
+  Lane 12.
 
 ---
 
@@ -255,3 +258,38 @@ Audit grade: A++.
 
 This supersedes the earlier RTX 4090 Grade A score-grade run for hardware
 provenance, while matching the same exact archive SHA and byte count.
+
+---
+
+## Update - 2026-04-30T16:45Z OWV3 Smoke Evidence And Source-Doc Sync
+
+New non-promotable OWV3/Fisher smoke evidence:
+
+- Modal label: `lane_g_v3_owv3_fisher_smoke_20260430_codex`.
+- Recovered artifacts:
+  `experiments/results/lane_lane_g_v3_owv3_fisher_smoke_20260430_codex_modal/`.
+- Fisher/sensitivity artifacts exist for the smoke:
+  `hessian_per_weight.pt`, `owv3_sensitivity_map.pt`, metadata JSONs.
+- Build provenance:
+  `lane_g_v3_owv3_fisher_stack_results/build_provenance.json`.
+- Archive SHA:
+  `710cba0c7c490b13db8b0aee897dd0f33cb8b66a6ed229466bf0d1aea392f5a3`.
+- Archive bytes: `912971`, which is `+218897` vs Lane G v3.
+- Renderer bloat: ASYM `296776` bytes -> OWV3 `572250` bytes.
+- No exact eval was run (`RUN_CONTEST_EVAL=0`; Modal remains advisory).
+
+Audit grade: `empirical` suspicious negative smoke. It cannot promote or kill
+the OWV3 method family. It does require encoder overhead/config review before
+another promotion attempt.
+
+Source docs synchronized in this pass:
+
+- `contest_grade_all_lane_results_audit_20260430.md`
+- `shannon_floor_execution_readiness_20260430.md`
+- `shannon_floor_paper_rigor_writeup_blueprint_20260430.md`
+- `grand_council_paradigm_shift_to_shannon_floor_20260430.md`
+
+Policy addendum: PFP16 A++ is the controlling frontier; Lane 12 NeRV
+`jsonfix40` is exact-negative for that measured implementation only; Dykstra
+sub-0.30 byte ceiling is `450545` bytes and remains a necessary bound, not a
+sufficiency claim.

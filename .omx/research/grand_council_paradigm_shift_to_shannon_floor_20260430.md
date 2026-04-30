@@ -22,17 +22,17 @@ The chain `1.05 → 0.28` is **NOT one paradigm shift; it is THREE composable pa
 **Optimal stack composition (canonical order)**: `representation→prediction→quantization→hyperprior→arithmetic→pack` per `project_codec_stacking_composition_canonical_orders_20260429.md`. With all paradigm shifts: NeRV/grayscale mask + RAFT-radial pose preimage + IMP-pruned + Self-Compressed renderer + Joint-ADMM coordinator + per-channel sensitivity-weighted block-FP + Ballé hyperprior + arithmetic terminal + deterministic ZIP. Predicted final-stack score band [0.18, 0.30] central 0.24 [prediction] over 6 months, Shannon 0.28 floor reachable at 15-25% probability.
 
 **Top 3 paradigm shifts ranked by EV**:
-1. **NeRV mask codec @ <80KB** (Lane 12 already scaffolded) — predicted -0.20 to -0.25 score, 1-2 weeks dev + $1-2 GPU.
+1. **Redesigned alpha mask codec @ <80KB** (current Lane 12 NeRV `jsonfix40` exact-CUDA failed) — original predicted -0.20 to -0.25 score remains only a hypothesis until a scorer-preserving redesign lands.
 2. **Sensitivity-map module operationalized** (Phase 3 #275 in flight) — direct -0.005 to -0.020 + INDIRECT -0.05 to -0.15 unlocking Lane 19/20/Ω-W-V3.
 3. **Joint-ADMM real-codec coordinator** (Lane 10, Round 11 fix in flight) — -0.015 to -0.05 across stack, equilibrates per-stream KKT waterline.
 
 **Concrete week-1 next actions** (in priority order):
-1. Land Ω-W-V3 design (per Section 5 below) — gate dev work, not GPU yet.
-2. Once Ω-W-V2 stack contest-CUDA confirmed regression (already done at 1.07), pivot to Ω-W-V3 with sensitivity weights.
-3. Dispatch Lane 12 NeRV CUDA training pass on 1200-frame mask sequence (~$1-2, 2-4h Vast.ai 4090).
+1. Freeze Lane PFP16 A++ as deploy baseline: exact T4 score `1.043987524793892`, SHA `0af839...ded7f`.
+2. Redesign Ω-W-V3 after the Modal Fisher smoke size regression; fail closed on archive bloat before exact eval.
+3. Retire current Lane 12 NeRV `jsonfix40`; redesign alpha around scorer-preserving geometry/temporal objectives before more NeRV/INR spend.
 4. Land sensitivity-map module local + GPU dispatch (#275 already in flight).
-5. Land Lane PFP16 ($0, 5 LOC, 7KB savings, ZERO distortion — guaranteed -0.005 score).
-6. After Lane 12 NeRV lands, run the ADMM coordinator on the 4-stream archive (NeRV-mask + Ω-W-V3-renderer + PFP16-pose + LCT).
+5. Keep PFP16 as the current A++ baseline until an exact archive beats it.
+6. Run the ADMM coordinator only after redesigned alpha and beta/renderer components have standalone exact evidence.
 7. Build the corpus codec for Lane J-NWC amortization (paradigm shift δ — see Section 4).
 
 ---
@@ -149,7 +149,7 @@ The PER-STREAM R(D) decomposition:
 
 **TOTAL Shannon floor**: 30KB renderer + 50KB mask + 5KB pose + 5KB hyperprior + 10KB headers = **100KB** archive theoretical (rate term 0.067). Add seg+pose distortion floor 0.21 (ours 0.59 today, Quantizr 0.135) → **Shannon-strict floor 0.28** [derivation].
 
-**VERDICT: Three paradigm shifts are necessary AND sufficient: (α) mask payload overhaul, (β) sensitivity-aware everything, (γ) joint score-aware codec stack. Within these, the highest-EV single move is NeRV mask codec because it attacks the dominant rate stream with the largest headroom.**
+**VERDICT: Three paradigm shifts are necessary; sufficiency remains a hypothesis until standalone exact evals and a stacked exact eval prove the intersection feasible: (α) mask payload overhaul, (β) sensitivity-aware everything, (γ) joint score-aware codec stack. Within these, the highest-EV single move is geometry-preserving mask-codec redesign because it attacks the dominant rate stream with the largest headroom.**
 
 **Dykstra (CO-LEAD, Convex Feasibility / Pareto)**: The achievable region is the intersection of constraints `{rate ≤ R, seg ≤ S, pose ≤ P, archive ≤ A}`. At Lane G v3 we sit at `(R=0.462, S=0.401, P=0.186, A=694KB)`. The convex hull of EVERY documented external anchor (Quantizr, Selfcomp) lies STRICTLY INSIDE our current point on every dimension — meaning we are on the Pareto-DOMINATED side. The gap is real and exploitable.
 
@@ -305,7 +305,7 @@ No new paradigm shift; mathematical foundation is sound.
 - Predicted: -0.05 to -0.20 vs current best component-wise stack.
 - Risk: convergence on tiny dataset (only 1200 frames per video, 17 videos) — overfitting risk dominates.
 
-The portfolio-OR insight: **diversify across independent failure modes**. Run Lane 12 NeRV + Lane 11 wavelet + Lane 9 STC clean-source IN PARALLEL on the next dispatch wave. The first to land at <80KB mask payload defines the new baseline.
+The portfolio-OR insight: **diversify across independent failure modes**. After Lane 12 NeRV `jsonfix40` exact-CUDA collapse, do not rerun that implementation as-is; run redesigned alpha mask codecs plus Lane 11 wavelet + Lane 9 STC clean-source in parallel. The first to land at <80KB mask payload without PoseNet/SegNet collapse defines the new alpha baseline.
 
 **VERDICT**: Joint-codec end-to-end is the 6-month moonshot. Diversify Phase 2 mask-codec lanes for the 1-month target.
 
@@ -851,7 +851,7 @@ After incorporating Round 1-3 fixes, re-review with rotating perspectives.
 
 ### 10.1 Council roll call (signed verdicts)
 
-**Quintet pact (Shannon + Dykstra + Yousfi + Fridrich + Contrarian)**: 5/5 APPROVE. The three paradigm shifts (α + β + γ) are necessary and sufficient for sub-0.50; paradigm shifts δ + ε + ζ are necessary and sufficient for sub-0.30; paradigm shifts η + θ + ι are speculative for Shannon floor.
+**Quintet pact (Shannon + Dykstra + Yousfi + Fridrich + Contrarian)**: 5/5 APPROVE. After the later Lane 12 exact-CUDA collapse and OWV3/Fisher size-regression smoke, read the original "necessary and sufficient" language as a prioritized hypothesis about necessary directions, not as a proven sufficient architecture. Sub-0.50/sub-0.30 claims require redesigned alpha evidence, beta evidence, and exact stacked archive evaluation.
 
 **Co-members (Quantizr + Hotz + Selfcomp + MacKay + Ballé)**: 5/5 APPROVE. Quantizr confirms paradigm shift α + β + γ map directly to his "what I didn't try" list. Selfcomp confirms δ1 (joint mask-renderer) is his 6th shift.
 
@@ -907,12 +907,12 @@ After incorporating Round 1-3 fixes, re-review with rotating perspectives.
 
 ### 10.5 Concrete week-1 next actions for the user
 
-1. **Land Lane PFP16** (5 LOC, 5 min, $0). Predicted -0.005 score guaranteed [derivation].
+1. **Freeze Lane PFP16 A++** as the deploy baseline: exact T4 score `1.043987524793892`, SHA `0af839...ded7f`, bytes `686635`.
 2. **Verify sensitivity-map module #275 lands** (already in flight). Foundational for paradigm shift β.
-3. **Design Ω-W-V3 per Section 5.3 spec** (1-2 days dev). Adversarial review before code.
-4. **Dispatch Lane 12 NeRV CUDA training** (Vast.ai 4090, $1-2, 2-4h). Load-bearing for paradigm shift α.
+3. **Redesign Ω-W-V3 per Section 5.3 spec** after Modal smoke showed archive bloat. Adversarial review before any promotion run.
+4. **Redesign alpha after Lane 12 NeRV `jsonfix40` exact-CUDA failure**; no repeat dispatch of that implementation without a new scorer-preserving mechanism.
 5. **Wait for Ω-W-V2 stack contest-CUDA already landed at 1.07** — extract regression diagnostic for Ω-W-V3 design (DONE per `experiments/results/lane_g_v3_omega_w_v2_stack_landed/contest_auth_eval.json`).
-6. **Do NOT spawn new retraining lanes** until paradigm shift α (Lane 12 NeRV) lands at Level 2 minimum. Avoid the 2026-04-29 Selfcomp-v2 4/4-failed pattern.
+6. **Do NOT spawn duplicate same-hypothesis retraining lanes** without exact-evidence review. Independent beta/hidden-gem work may proceed in parallel.
 7. **Build the corpus codec for Lane J-NWC amortization** (paradigm shift δ prep). 1 week dev.
 
 ### 10.6 3-clean-pass adversarial review counter

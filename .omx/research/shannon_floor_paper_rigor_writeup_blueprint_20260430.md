@@ -1,9 +1,9 @@
 # Shannon-Floor Paper Rigor / Writeup Blueprint
 
-**Date:** 2026-04-30  
-**Scope:** contest-paper-quality blueprint for documenting the Shannon-floor push without inflating evidence.  
-**Allowed score claims:** only the current Grade A ledger in `contest_grade_all_lane_results_audit_20260430.md`.  
-**Current Grade A frontier:** Lane G v3 PFP16, recomputed score `1.0440481283330025`, with archive bytes `686,635`, pose `0.00346020`, segmentation `0.00400830`, and exact local archive/hash custody as recorded in the Grade A ledger. This is not Grade A++ because provenance records RTX 4090 CUDA with `gpu_t4_match=false`.
+**Date:** 2026-04-30
+**Scope:** contest-paper-quality blueprint for documenting the Shannon-floor push without inflating evidence.
+**Allowed score claims:** only the current Grade A/A++ ledger in `contest_grade_all_lane_results_audit_20260430.md` plus stricter Codex progress addenda.
+**Current A++ frontier:** Lane G v3 PFP16, recomputed score `1.043987524793892`, with archive bytes `686,635`, pose `0.00346442`, segmentation `0.00400656`, archive SHA `0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f`, and exact Lightning AI Tesla T4 provenance (`gpu_t4_match=true`) in `experiments/results/lane_g_v3_pfp16/pfp16_a_plus_plus_t4_20260430T1620Z_codex/`.
 **Hard boundary:** no Grade A/A++ claim is allowed without exact archive CUDA evidence. Predictions, byte-only reports, smoke tests, CPU/MPS/proxy runs, and memory-only results are paper-routing evidence only.
 
 ---
@@ -16,8 +16,8 @@ The paper/writeup must read like a reproducible compression-system paper, not an
 
 | Claim class | Example wording allowed | Evidence required | Forbidden wording before evidence |
 |---|---|---|---|
-| Grade A score result | "Lane G v3 achieves recomputed score `1.048866` under the local CUDA score-grade ledger." | Exact archive, SHA match, CUDA eval report, 600 samples, component recomputation | "contest-identical" unless Grade A++ gate passes |
-| Grade A++ contest-ready result | "Archive X is 1:1 contest-grade." | Grade A plus clean manifest, payload closure, `archive.zip -> inflate.sh -> upstream/evaluate.py`, T4/equivalent device, 30-minute inflate budget | Any final-submission claim without A++ evidence |
+| Grade A score result | "Lane X achieves recomputed score Y under the local CUDA score-grade ledger." | Exact archive, SHA match, CUDA eval report, 600 samples, component recomputation | "contest-identical" unless Grade A++ gate passes |
+| Grade A++ contest-ready result | "Lane G v3 PFP16 is the current 1:1 contest-grade frontier at recomputed `1.043987524793892`." | Grade A plus clean manifest, payload closure, `archive.zip -> inflate.sh -> upstream/evaluate.py`, T4/equivalent device, 30-minute inflate budget | Any final-submission claim without A++ evidence |
 | Empirical component result | "Component Y saved N bytes in a local archive builder." | Exact component report, manifest/hash if archive-shaped, no neural score claim | "improves score" |
 | Derivation | "Saving 100,000 bytes changes the rate term by `0.06659`." | Formula and arithmetic | "measured improvement" |
 | Prediction / design hypothesis | "Sensitivity weighting is expected to reduce PoseNet regression risk." | Stated mechanism, planned falsification gate | "validated", "frontier", "floor-moving" |
@@ -27,10 +27,11 @@ The paper/writeup must read like a reproducible compression-system paper, not an
 
 Use exactly these tags in the paper tables:
 
-| Grade | Meaning | Can rank lanes? | Can promote/kill? |
+| Grade | Meaning | Can rank lanes? | Can promote? / Can kill? |
 |---|---|---:|---:|
-| `A++` | 1:1 contest-grade exact archive evidence | Yes | Yes |
-| `A` | local CUDA score-grade exact archive evidence | Yes, with hardware caveat | Yes, with hardware caveat |
+| `A++` | 1:1 contest-grade exact archive evidence | Yes | Promote yes; method/family kill still requires scoped review/proof |
+| `A` | local CUDA score-grade exact archive evidence | Yes, with hardware caveat | Promote locally with caveat; method/family kill still requires scoped review/proof |
+| `A-negative` | exact archive CUDA evidence showing a measured implementation regresses | No | Retire measured implementation/config only; method/family kill requires separate three-pass scope review |
 | `B` | diagnostic CUDA evidence with incomplete artifact custody or schema | No | No |
 | `empirical` | byte, round-trip, loss, smoke, or partial component measurement | No | No |
 | `derivation` | formula-only conclusion | No | No |
@@ -62,6 +63,7 @@ All score tables in the paper must trace back to `contest_grade_all_lane_results
 |---|---|---|---|
 | `A++` | achieves, improves, regresses, promotes, kills, is contest-ready | predicted, expected | Exact T4/equivalent 1:1 archive evidence must be named. |
 | `A` | achieves locally, improves locally, regresses locally, ranks current local frontier | contest-identical, final, production-ready | State hardware caveat and missing A++ items. |
+| `A-negative` | diagnoses exact regression, supports redesign | ranks frontier, kills family/paradigm, permanently retires before scope review | State exact scope, unresolved engineering explanations, review-pass count, and revival condition. |
 | `B` | diagnoses, indicates, motivates, warns | ranks, promotes, kills | Explain missing artifact/provenance field. |
 | `empirical` | saves bytes, round-trips, smokes, measures component property | improves score, preserves score | State no exact neural eval exists. |
 | `derivation` | implies by formula, bounds, computes rate term | measures, validates | State formula-only, no archive eval. |
@@ -111,6 +113,22 @@ delta_rate_score = 25 * N / 37,545,489
 ```
 
 This is a derivation, not a score improvement, until neural distortion is measured through exact archive eval.
+
+### Dykstra ceiling bound
+
+Dykstra/ADMM language is a feasibility discipline over intersecting
+constraints, not proof that additive component deltas are realizable. For any
+sub-`0.30` claim:
+
+```text
+archive_bytes <= floor(0.30 * 37,545,489 / 25) = 450,545
+```
+
+PFP16 at `686,635` bytes already contributes about `0.4572` rate points, and
+its non-rate score is about `0.5868`. Therefore PFP16 is the current
+contest-grade deploy baseline, not a Shannon-floor architecture. The floor
+path needs both rate reduction and scorer-distortion reduction, with every
+stack measured as its own archive.
 
 ### Distortion sensitivity
 
@@ -190,13 +208,14 @@ The paper should maintain a machine-checkable table with one row per claim.
 
 | Claim id | Claim text | Grade | Evidence path | Formula / method | Review status | Allowed use |
 |---|---|---|---|---|---|---|
-| C-001 | Lane G v3 PFP16 is the current Grade A score-grade frontier at recomputed `1.0440481283330025`. | `A` | `contest_grade_all_lane_results_audit_20260430.md`; `experiments/results/lane_g_v3_pfp16/exact_cuda_20260430T1353Z/contest_auth_eval.json` | Contest score formula, exact archive row | Needs A++ review for final-submission wording | `rank_frontier` |
-| C-002 | Saving 100,000 archive bytes changes the rate term by `0.06659`. | `derivation` | This blueprint; contest formula | `25 * 100000 / 37545489` | Math review required | Prioritize byte work |
-| C-003 | PFP16 improved Lane G v3 locally by about `0.004818` recomputed score after exact CUDA archive eval. | `A` | `contest_grade_all_lane_results_audit_20260430.md` | Full score recomputation; archive bytes `694,074 -> 686,635` | A++ evidence pending | `promote_candidate` only after A++ if final-submission candidate |
-| C-004 | NeRV mask payload is a high-EV α hypothesis. | `empirical`/`prediction` until eval | `shannon_floor_execution_readiness_20260430.md`; later exact reports | Byte report plus planned score eval | Alpha review pending | Plan experiments only |
-| C-005 | Sensitivity maps are required before β allocation can promote a codec. | `derivation`/`empirical` depending on artifact | `external_research_intake_shannon_floor_20260430.md`; progress ledgers | Allocation objective and CV stability | Beta review pending | Gate β implementation |
-| C-006 | CPU/MPS/proxy scores cannot promote, kill, or rank lanes. | `derivation` from evidence policy | `contest_grade_all_lane_results_audit_20260430.md` | Evidence-grade standard | Audit review complete in source doc | Demote invalid claims |
-| C-007 | Lane 12 NeRV `jsonfix40` produced an exact CUDA regression at recomputed `26.03719330455429`; its prior byte-saving hypothesis is not score-valid. | `B` | `contest_grade_all_lane_results_audit_20260430_codex_progress.md`; `experiments/results/lane_12_nerv_20260430_codex_jsonfix40/contest_auth_eval.json` | Full score recomputation: PoseNet `49.77849960`, SegNet `0.03528685`, bytes `296,478` | Treat as negative evidence for this implementation; do not generalize to all INR mask codecs | `historical_lesson` |
+| C-001 | Lane G v3 PFP16 is the current A++ contest-grade frontier at recomputed `1.043987524793892`. | `A++` | `contest_grade_all_lane_results_audit_20260430_codex_progress.md`; `experiments/results/lane_g_v3_pfp16/pfp16_a_plus_plus_t4_20260430T1620Z_codex/contest_auth_eval.json` | Contest score formula, exact archive row, T4/equivalent provenance | A++ evidence landed; paper/deploy bundle review still required | `rank_frontier` |
+| C-002 | Saving 100,000 archive bytes changes the rate term by `0.06659`. | `derivation` | This blueprint; contest formula | `25 * 100000 / 37545489` | Math review required | `dispatch_priority` |
+| C-003 | PFP16 improved Lane G v3 by about `0.004878` recomputed score after exact T4 archive eval. | `A++` | `contest_grade_all_lane_results_audit_20260430_codex_progress.md` | Full score recomputation; archive bytes `694,074 -> 686,635` | A++ evidence landed; source-bundle provenance review still required | `promote_candidate` |
+| C-004 | Materially changed INR/NeRV-style mask payload variants remain α hypotheses, but Lane 12 `jsonfix40` is negative evidence for the current implementation. | `prediction` | `shannon_floor_execution_readiness_20260430.md`; Lane 12 exact negative report | Planned boundary/inflate/loss redesign plus exact score eval | Alpha review must address Lane 12 failure before rerun | `design_motivation` only |
+| C-005 | Sensitivity maps are required before β allocation can promote a codec. | `derivation` | `external_research_intake_shannon_floor_20260430.md`; progress ledgers | Allocation objective and required CV stability | Beta review pending | `design_motivation` |
+| C-006 | CPU/MPS/proxy scores cannot promote, kill, or rank lanes. | `derivation` | `contest_grade_all_lane_results_audit_20260430.md` | Evidence-grade standard | Audit review complete in source doc | `invalid_do_not_use` |
+| C-007 | Lane 12 NeRV `jsonfix40` produced an exact CUDA regression at recomputed `26.03719330455429`; its prior byte-saving hypothesis is not score-valid. | `A-negative` | `contest_grade_all_lane_results_audit_20260430_codex_progress.md`; `experiments/results/lane_12_nerv_20260430_codex_jsonfix40/contest_auth_eval.json` | Full score recomputation: PoseNet `49.77849960`, SegNet `0.03528685`, bytes `296,478` | Retire this implementation/config pending three-pass Grand Council scope review; do not generalize to all INR mask codecs | `historical_lesson` |
+| C-008 | OWV3/Fisher Modal smoke produced a larger archive (`912,971` bytes, `+218,897` vs Lane G v3) and is suspicious negative smoke evidence only. | `empirical` | `experiments/results/lane_lane_g_v3_owv3_fisher_smoke_20260430_codex_modal/lane_g_v3_owv3_fisher_stack_results/build_provenance.json` | Rate-only derivation; no exact neural eval | Requires encoder/overhead/config review before any method conclusion | `design_motivation` |
 
 Every future claim row must include an explicit `Allowed use` value from:
 
@@ -272,49 +291,50 @@ experiments/results/<lane_tag>/
 
 ## 7. Ablation Tables
 
-These are templates. Do not fill score cells unless the row has Grade A or A++ evidence.
+These are templates. Headline result and promotion ablation score cells require Grade A or A++ evidence. Lower-grade diagnostic rows may appear only when explicitly marked non-ranking and paired with a negative-result lesson.
 
 ### Verified frontier table
 
 | Lane | Grade | Archive SHA | Bytes | Seg | Pose | Reported score | Recomputed score | Hardware caveat |
 |---|---|---|---:|---:|---:|---:|---:|---|
-| Lane G v3 PFP16 | `A` | `0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f` | 686,635 | 0.00400830 | 0.00346020 | 1.04 | 1.0440481283330025 | CUDA RTX 4090, not T4-matched |
+| Lane G v3 PFP16 | `A++` | `0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f` | 686,635 | 0.00400656 | 0.00346442 | 1.04 | 1.043987524793892 | Lightning AI Tesla T4, `gpu_t4_match=true` |
 | Lane G v3 | `A` | `9b20...6870b` per Grade A ledger | 694,074 | 0.00400846 | 0.00345458 | 1.05 | 1.048866 | CUDA RTX 4090, not T4-matched |
 
 ### Component ablation table
 
 | Component | Baseline archive SHA | Candidate archive SHA | Grade | Byte delta | Rate-term delta | Seg delta | Pose delta | Score delta | Promotion decision |
 |---|---|---|---|---:|---:|---:|---:|---:|---|
-| PFP16 | Lane G v3 `9b20...6870b` | `0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f` | `A` | -7,439 | -0.004953 | approx -0.00000016 | approx +0.00000562 | approx -0.004818 | Local frontier; A++ evidence still required for final-submission wording |
-| NeRV mask Lane 12 `jsonfix40` | Lane G v3/PFP16 depending on comparison | `864549cc648f0b3a023076c11812ccd0f10b1d013ed3fd6bb24d20bbcde85c97` | `B` negative diagnostic | -390,157 vs PFP16 bytes | -0.2598 vs PFP16 bytes | +0.03127855 vs PFP16 | +49.77503940 vs PFP16 | +24.9931 vs PFP16 | Do not promote; only rerun if representation/loss/inflate contract materially changes |
-| OWV3 sensitivity renderer | TBD | TBD | pending | TBD | `25 * byte_delta / 37545489` | TBD | TBD | TBD | No decision before exact eval |
-| IMP renderer | TBD | TBD | pending | TBD | `25 * byte_delta / 37545489` | TBD | TBD | TBD | No decision before exact eval |
-| Logit-margin mask training | TBD | TBD | pending | TBD | `25 * byte_delta / 37545489` | TBD | TBD | TBD | No decision before exact eval |
+| PFP16 | Lane G v3 `9b20...6870b` | `0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f` | `A++` | -7,439 | -0.004953 | approx -0.00000190 | approx +0.00000984 | approx -0.004878 | Current deployable frontier after paper/provenance bundle review |
+| NeRV mask Lane 12 `jsonfix40` | Lane G v3/PFP16 depending on comparison | `864549cc648f0b3a023076c11812ccd0f10b1d013ed3fd6bb24d20bbcde85c97` | `A-negative` exact regression | -390,157 vs PFP16 bytes | -0.2598 vs PFP16 bytes | +0.03127855 vs PFP16 | +49.77503940 vs PFP16 | +24.9931 vs PFP16 | Do not promote; measured implementation/config retired only; alpha redesign remains live |
+| OWV3/Fisher Modal smoke | Lane G v3 `9b20...6870b` | `710cba0c7c490b13db8b0aee897dd0f33cb8b66a6ed229466bf0d1aea392f5a3` | `empirical` suspicious negative | +218,897 | +0.1457545 | no exact eval | no exact eval | rate-only predicted `+0.1458` | Fail closed; diagnose encoder overhead/config before any rerun or method conclusion |
+| IMP renderer | TBD | TBD | `empirical` | TBD | `25 * byte_delta / 37545489` | TBD | TBD | TBD | No decision before exact eval |
+| Logit-margin mask training | TBD | TBD | `prediction` | TBD | `25 * byte_delta / 37545489` | TBD | TBD | TBD | No decision before exact eval |
 
 ### Sensitivity-map ablation table
 
 | Artifact | Estimator | Calibration split | Holdout split | Stability metric | Protected fraction | Byte overhead | Exact archive grade | Decision |
 |---|---|---|---|---:|---:|---:|---|---|
-| Sensitivity map v1 | TBD | TBD | TBD | TBD | TBD | TBD | pending | Cannot guide promotion before CV stability |
+| Sensitivity map v1 | TBD | TBD | TBD | TBD | TBD | TBD | `empirical` | Cannot guide promotion before CV stability |
 
 ### Stack ablation table
 
 | Stack | Components individually Grade A? | Stack archive SHA | Side-info bytes | Net byte delta | Seg delta | Pose delta | Recomputed score | Decision |
 |---|---:|---|---:|---:|---:|---:|---:|---|
-| NeRV + PFP16 | No | TBD | TBD | TBD | TBD | TBD | TBD | Do not run as promotion stack until components are measured |
-| NeRV + OWV3 | No | TBD | TBD | TBD | TBD | TBD | TBD | Gate on measured α and β components |
+| Materially redesigned INR-mask + PFP16 | No | TBD | TBD | TBD | TBD | TBD | TBD | Do not run as promotion stack until the redesigned mask component is measured |
+| Materially redesigned INR-mask + OWV3 | No | TBD | TBD | TBD | TBD | TBD | TBD | Gate on measured α and β components |
 | Full γ coordinator | No | TBD | TBD | TBD | TBD | TBD | TBD | Deferred until at least two measured components exist |
 
 ### Negative-results table
 
 | Lane/result | Evidence grade | Failure class | Root cause | Repro artifact | Lesson allowed in paper |
 |---|---|---|---|---|---|
-| KL distill variants | Source ledger only | Method/config failure per current instructions | Overweighted KL caused PoseNet collapse | See project ledgers | Do not use KL distill loss mode |
-| Lane 12 NeRV `jsonfix40` | `B` negative diagnostic | implementation / representation failure for this archive | Byte savings were overwhelmed by PoseNet and SegNet collapse | `experiments/results/lane_12_nerv_20260430_codex_jsonfix40/contest_auth_eval.json` | Byte-only α wins are invalid until exact archive score proves distortion survived |
+| KL distill variants | `invalid` for future dispatch | Method/config failure per current instructions | Overweighted KL caused PoseNet collapse | See project ledgers | Do not use KL distill loss mode |
+| Lane 12 NeRV `jsonfix40` | `A-negative` exact regression | implementation / representation failure for this archive, scope review pending | Byte savings were overwhelmed by PoseNet and SegNet collapse | `experiments/results/lane_12_nerv_20260430_codex_jsonfix40/contest_auth_eval.json` | Byte-only α wins are invalid until exact archive score proves distortion survived |
+| OWV3/Fisher Modal smoke | `empirical` suspicious negative | implementation-smoke / overhead regression | Top-3 Fisher/build-only path produced a larger archive; no exact eval | `experiments/results/lane_lane_g_v3_owv3_fisher_smoke_20260430_codex_modal/lane_g_v3_owv3_fisher_stack_results/build_provenance.json` | OWV3 needs encoder/overhead/config review before another promotion run |
 | Ω-W-V2 stack | `B` diagnostic CUDA | scorer-sensitivity failure | Rate save was erased by PoseNet regression; exact archive not preserved locally | `experiments/results/lane_g_v3_omega_w_v2_stack_landed/contest_auth_eval.json` | Renderer codecs need PoseNet-sensitive channel protection |
-| Lane GP v2/v3/v4 | CPU/math advisory plus design audit | approach killed for smooth-basis pose fit | Pose dims 1-5 are white-noise-like, not smooth | `lane_gp_class_forensic_audit_20260430.md`; all-scores audit | Do not spend on polynomial/spline/DCT low-K pose fits |
-| UNIWARD v8 | CPU advisory / no-op finding | engineering bug | Computed payload was discarded; anchor mask copied into archive | all-scores forensic audit | Do not treat no-op archive copies as codec evidence |
-| SegMapTrainer OOM cohort | crash evidence | engineering bug | Full rendered tensor materialization exceeded GPU memory | all-scores forensic audit; Round 6-10 adversarial docs | Bad runs are mostly engineering failures, not method falsifications |
+| Lane GP v2/v3/v4 | `derivation` | approach killed for smooth-basis pose fit | Pose dims 1-5 are white-noise-like, not smooth | `lane_gp_class_forensic_audit_20260430.md`; all-scores audit | Do not spend on polynomial/spline/DCT low-K pose fits without new mathematical evidence |
+| UNIWARD v8 | `invalid` | engineering bug | Computed payload was discarded; anchor mask copied into archive | all-scores forensic audit | Do not treat no-op archive copies as codec evidence |
+| SegMapTrainer OOM cohort | `empirical` | engineering bug | Full rendered tensor materialization exceeded GPU memory | all-scores forensic audit; Round 6-10 adversarial docs | Bad runs are mostly engineering failures, not method falsifications |
 | CPU/MPS/proxy scores | `invalid` for ranking | Methodology bug | Non-authoritative device/path | Contest-grade audit | Never rank/promote/kill |
 | Byte-only lanes | `empirical` | Incomplete evidence | No exact CUDA score | Component reports | Use for dispatch priority only |
 
@@ -333,6 +353,7 @@ No strategic promotion or kill enters the paper until three consecutive clean re
 | R3 Artifact custody | Archive identity and compliance | SHA, manifest, payload closure, exact eval path | Rebuild/recover archive |
 | R4 Engineering | Silent defaults and no-op defense | Dead flags, encode-discard, fallback paths, dependency closure | Patch and rerun |
 | R5 Optimization / stack | Additivity and allocation validity | Component independence, KKT/waterline, side-info overhead | Run standalone component first |
+| R6 Mitigation / leaderboard reverse-engineering | Rescue paths before scoped retirement | Stacking options, hybrid residuals, fallback routing, leaderboard-style stream allocation hypotheses, full-stack archive analogies | Record redesign options; no broad kill |
 
 ### Review ledger row
 
@@ -352,7 +373,8 @@ next_review_due:
 Promotion rule:
 
 ```text
-promote_or_kill_allowed = Grade in {A, A++}
+promote_or_kill_allowed = Grade in {A, A++} and three_clean_reviews
+retire_measured_implementation_allowed = Grade == A-negative and three_clean_reviews
                          and clean_review_passes >= 3
                          and no unresolved artifact-custody finding
 ```
@@ -418,7 +440,7 @@ Required limitations section:
 
 | Item | Done? | Blocking source |
 |---|---|---|
-| All score rows are Grade A/A++ only | No | `contest_grade_all_lane_results_audit_20260430.md` |
+| All headline score rows are Grade A/A++ only | No | `contest_grade_all_lane_results_audit_20260430.md` |
 | Every claim has grade, artifact, formula, review status | No | Claim matrix in this blueprint |
 | Every candidate has exact archive SHA and manifest | No | Repro artifact pack |
 | All byte claims include rate-term arithmetic | No | Section 3 |
@@ -473,7 +495,7 @@ These are the paper claims that require either formal proof, reproducible arithm
 | M-005 | Stack deltas can be composed. | Unproven | Standalone Grade A rows and stack Grade A row, with side-info accounting | "planned stack measurement" |
 | M-006 | NeRV/INR mask representation preserves scorer-relevant geometry. | Falsified for Lane 12 `jsonfix40`; open for materially different variants | Boundary-local ablation, exact archive eval, no PoseNet/SegNet collapse | "future variant hypothesis" only |
 | M-007 | OWV3 protects PoseNet-sensitive renderer channels. | Unproven | CUDA sensitivity artifact, holdout stability, exact archive eval vs OWV2 failure mode | "PoseNet-protection hypothesis" |
-| M-008 | Grade A local CUDA result is contest-identical. | Not proven | A++ T4/equivalent rerun, inflate-budget proof, manifest/payload closure | Never say contest-identical from Grade A alone |
+| M-008 | Grade A local CUDA result is contest-identical. | False in general; proven only for PFP16 after separate A++ T4 evidence | A++ T4/equivalent rerun, inflate-budget proof, manifest/payload closure | Never say contest-identical from Grade A alone |
 | M-009 | A negative run kills a whole architectural family. | Usually unproven | Multiple independent implementations or a mathematical impossibility argument | Kill only the measured implementation unless proof is stronger |
 
 ### Formalizable lemmas
@@ -647,16 +669,16 @@ This appendix is mandatory for any final submission candidate. It should be bori
 | Check | Required evidence | Current PFP16 status |
 |---|---|---|
 | Exact archive preserved | `archive.zip` and SHA file | Yes locally |
-| Clean manifest | `archive_manifest.txt`, no hidden/debug files | Yes per Grade A ledger |
-| Payload closure | No score-relevant sidecars | Yes per Grade A ledger |
-| Inflate dispatch | Captured `inflate.sh` and `config.env` | Needs final A++ packet |
-| Upstream scorer | `archive.zip -> inflate.sh -> upstream/evaluate.py` | Yes for Grade A eval path |
+| Clean manifest | `archive_manifest.txt`, no hidden/debug files | Yes per A++ bundle / final manifest audit still needed |
+| Payload closure | No score-relevant sidecars | Yes per A++ bundle |
+| Inflate dispatch | Captured `inflate.sh` and `config.env` | Yes in helper/log path; final packet should co-locate copies |
+| Upstream scorer | `archive.zip -> inflate.sh -> upstream/evaluate.py` | Yes for A++ eval path |
 | Full sample count | `n_samples=600` | Yes |
 | CUDA | Provenance device CUDA | Yes |
-| T4/equivalent | `gpu_t4_match=true` or official equivalent | No, RTX 4090 only |
-| Inflate budget | Under 1800 seconds on contest-equivalent host | Needs A++ rerun |
+| T4/equivalent | `gpu_t4_match=true` or official equivalent | Yes: Lightning AI Tesla T4 |
+| Inflate budget | Under 1800 seconds on contest-equivalent host | Yes by log (`inflate` wrapper 87.0s, internal 39.8s); structured JSON timing now patched for future runs |
 | Score recomputation | Formula delta within tolerance | Yes |
-| Report custody | JSON, logs, manifest, provenance co-located | Needs final packet audit |
+| Report custody | JSON, logs, manifest, provenance co-located | Mostly yes; add source/staged-tree manifest for final packet |
 | Three clean reviews | Review ledger with no unresolved findings | Not complete |
 
 ### Compliance non-claims
@@ -677,12 +699,12 @@ The next evidence needed before a strong final writeup:
 
 | Gap | Needed artifact | Why it matters |
 |---|---|---|
-| PFP16 A++ | Exact same archive SHA on T4/equivalent with inflate-budget proof | Converts current frontier from local CUDA Grade A to 1:1 contest-grade |
+| PFP16 final publication bundle | Exact archive copy/manifest, source or staged-tree manifest, structured timing note, review signoff | Converts landed A++ evidence into a paper/deploy packet |
 | Lane 12 postmortem packet | Boundary/error visualizations plus payload/inflate contract review | Prevents overgeneralizing the `jsonfix40` failure |
-| OWV3 sensitivity truth point | CUDA Fisher/sensitivity artifact, CV stability, archive eval | Tests the beta hypothesis against the OWV2 PoseNet failure |
+| OWV3 sensitivity redesign truth point | CUDA Fisher/sensitivity artifact, CV stability, archive eval, and no size-regression guard trip | Tests the beta hypothesis after Modal smoke showed archive bloat |
 | Active lane harvest | Lane 19, SA, H-V3, HM-S exact evals or failure logs | Updates negative/result ledger without memory-only claims |
 | Deterministic rebuild proof | Rebuild PFP16 archive and compare SHA | Strengthens artifact custody |
 | Review ledger | Three clean adversarial passes for any promoted result | Prevents paper claims from outrunning audit |
 | Figure data files | CSVs generated from the schemas above | Makes plots reproducible rather than hand-entered |
 
-Until these gaps close, the paper should be framed as an evidence-gated systems report with a current Grade A local frontier, not as a Shannon-floor attainment paper.
+Until these gaps close, the paper should be framed as an evidence-gated systems report with a current A++ PFP16 contest-grade frontier, not as a Shannon-floor attainment paper.
