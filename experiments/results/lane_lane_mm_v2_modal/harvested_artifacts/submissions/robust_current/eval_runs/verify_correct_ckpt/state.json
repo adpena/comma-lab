@@ -1,0 +1,19 @@
+{
+  "stage": "scored",
+  "stage_updated": "2026-04-12T04:14:09.339878",
+  "config_hash": "04399bddaf1f5dc9",
+  "upstream_dir": "/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge",
+  "device": "cpu",
+  "submission_src": "/Users/adpena/Projects/pact/submissions/robust_current",
+  "started": "2026-04-12T02:43:55.496931",
+  "archive_bytes": 893317,
+  "failed_at": "inflating",
+  "error": "name 'config' is not defined",
+  "failed_time": "2026-04-12T02:59:50.235953",
+  "score": 1.96,
+  "calibrated_score": 1.3487352563220458,
+  "posenet": 0.05690359,
+  "calibrated_posenet": 0.0019828936413043476,
+  "segnet": 0.00613097,
+  "rate": 0.02379292
+}

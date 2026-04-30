@@ -1,0 +1,25 @@
+provenance: {"started_at_utc": "2026-04-29T13:35:22Z", "git_hash": "no-git", "gpu_name": "Tesla T4", "driver_version": "580.95.05", "torch_version": "2.5.1+cu124", "cuda_version": "12.4", "cuda_available": true, "lane_script": "scripts/remote_lane_q_faithful_jointgen.sh", "output_dir": "/tmp/pact/lane_q_faithful_results", "tag": "lane_q_faithful_jointgen_88k", "profile": "q_faithful_dilated_88k", "predicted_band": [0.4, 0.8], "anchor_score_baseline": 1.15, "anchor_lane": "lane_a (1.15 contest-CUDA, poses are load-bearing)", "lane_q_faithful_premise": "TRUE 1:1 Quantizr PR-#55 \u2014 JointFrameGenerator, NO motion module, NO warp, single-mask + FiLM-on-pose dual-head", "controlled_baseline": "lane_v_quantizr_replica_88k_halfframe (kept the wrong arch)", "cost_estimate_usd": 5.0, "cost_cap_usd": 8.0, "wall_clock_estimate_hours": 12.5, "wall_clock_cap_hours": 32.0, "param_count_target": 88000, "audit_reference": ".omx/research/quantizr_replica_audit_20260428.md", "pr_reference": "https://github.com/commaai/comma_video_compression_challenge/pull/55"}
+[lane-q-faithful] 2026-04-29T13:35:23Z === Stage 0: NVDEC probe + git pull ===
+[probe_nvdec] Modal runtime — NVDEC not required (auth_eval uses cpu device)
+[lane-q-faithful] 2026-04-29T13:35:23Z   all required artifacts present
+[lane-q-faithful] 2026-04-29T13:35:23Z === Pre-flight: argparse dead-flag scan ===
+OK: 5 train_renderer flags all real
+[lane-q-faithful] 2026-04-29T13:35:23Z === Stage 1: extract / build masks + reuse Lane A poses ===
+  Path: /tmp/pact/lane_q_faithful_results/archive_masks_seed.zip
+  Bytes: 695,235
+  Rate (unscaled): 0.018517
+  Rate (score contribution): 0.4629
+  Provenance: /tmp/pact/lane_q_faithful_results/archive_masks_seed.provenance.json
+  inflating: masks.mkv               
+  inflating: optimized_poses.pt      
+  inflating: renderer.bin            
+[lane-q-faithful] 2026-04-29T13:36:36Z   masks.mkv extracted (422688 bytes)
+[lane-q-faithful] 2026-04-29T13:36:36Z   Lane A poses to bundle: experiments/results/lane_a_landed/optimized_poses.pt
+[lane-q-faithful] 2026-04-29T13:36:36Z === Stage 2: train Q-FAITHFUL JointFrameGenerator (5-stage QAT) ===
+[lane-q-faithful] 2026-04-29T13:36:36Z    --profile q_faithful_dilated_88k (variant=quantizr_faithful)
+[lane-q-faithful] 2026-04-29T13:36:36Z    --eval-roundtrip + --kl-distill-weight 0.002 + --kl-distill-temperature 2.0
+[lane-q-faithful] 2026-04-29T13:36:36Z    total epochs ~3000; ~12h on RTX 4090
+[train] CONFIG ERROR: --auth-eval-on-best is enabled (default true) but variant='quantizr_faithful' is not FP4A-exportable. The post-training auth eval would crash after hours of GPU spend. Either:
+  (1) pass --no-auth-eval-on-best and run a variant-specific eval afterwards, OR
+  (2) switch to a build_renderer-compatible variant (see _VARIANTS_BUILD_RENDERER_FP4A_OK in train_renderer.py).
+Profile: 'q_faithful_dilated_88k'. Failure mode: codex R5-2 Finding #1.

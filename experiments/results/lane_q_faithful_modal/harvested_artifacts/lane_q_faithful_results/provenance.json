@@ -1,0 +1,28 @@
+{
+  "started_at_utc": "2026-04-29T13:30:45Z",
+  "git_hash": "no-git",
+  "gpu_name": "Tesla T4",
+  "driver_version": "580.95.05",
+  "torch_version": "2.5.1+cu124",
+  "cuda_version": "12.4",
+  "cuda_available": true,
+  "lane_script": "scripts/remote_lane_q_faithful_jointgen.sh",
+  "output_dir": "/tmp/pact/lane_q_faithful_results",
+  "tag": "lane_q_faithful_jointgen_88k",
+  "profile": "q_faithful_dilated_88k",
+  "predicted_band": [
+    0.4,
+    0.8
+  ],
+  "anchor_score_baseline": 1.15,
+  "anchor_lane": "lane_a (1.15 contest-CUDA, poses are load-bearing)",
+  "lane_q_faithful_premise": "TRUE 1:1 Quantizr PR-#55 \u2014 JointFrameGenerator, NO motion module, NO warp, single-mask + FiLM-on-pose dual-head",
+  "controlled_baseline": "lane_v_quantizr_replica_88k_halfframe (kept the wrong arch)",
+  "cost_estimate_usd": 5.0,
+  "cost_cap_usd": 8.0,
+  "wall_clock_estimate_hours": 12.5,
+  "wall_clock_cap_hours": 32.0,
+  "param_count_target": 88000,
+  "audit_reference": ".omx/research/quantizr_replica_audit_20260428.md",
+  "pr_reference": "https://github.com/commaai/comma_video_compression_challenge/pull/55"
+}

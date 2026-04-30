@@ -1,0 +1,8 @@
+{
+  "lane_script": "scripts/remote_lane_mm_grayscale_lut.sh",
+  "label": "lane_mm",
+  "gpu": "T4",
+  "max_seconds": 10800,
+  "call_id": "fc-01KQCZV4ZQ7SEKCJK8B0KQ74QB",
+  "dispatched_at": "2026-04-29T11:06:07.686090"
+}
