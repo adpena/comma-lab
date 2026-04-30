@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-04-30T12:49:26Z",
+  "updated_at": "2026-04-30T21:38:50Z",
   "description": "Canonical lane maturity registry. See feedback_production_hardened_standard_definition_20260430.md for the 7-gate Level 3 standard. Maintained via tools/lane_maturity.py \u2014 bare edits OK for seeding but mark/unmark/audit-log are the supported interface going forward.",
   "gate_definitions": {
     "impl_complete": "Production code lands; no NotImplementedError; all CLI flags wired; all error paths covered.",
@@ -873,7 +873,7 @@
       "id": "lane_pfp16",
       "name": "Lane PFP16 (pose fp16 cast)",
       "phase": 1.5,
-      "level": 2,
+      "level": 3,
       "gates": {
         "impl_complete": {
           "status": true,
@@ -884,8 +884,8 @@
           "evidence": "reports/lane_pfp16_real_archive.json"
         },
         "contest_cuda": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "experiments/results/lane_pfp16_stack_landed_lightning_l40s/RESULT_JSON"
         },
         "strict_preflight": {
           "status": true,
@@ -896,8 +896,8 @@
           "evidence": "Council 3-round review per recovery batch commit 591b7a43 (deploy script + codec landed; CLAUDE.md non-negotiable enforcement clean)"
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "/Users/adpena/.claude/projects/-Users-adpena-Projects-pact/memory/project_recovery_4_phase_C_inprogress_20260430.md"
         },
         "deploy_runbook": {
           "status": true,

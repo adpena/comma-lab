@@ -593,6 +593,28 @@
     "timestamp_utc": "2026-04-30T06:05:32Z",
     "tool_version": 1
   },
+  "remote_lane_g_v3_owv3_fisher_stack": {
+    "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
+    "archive_size_bytes": 694074,
+    "elapsed_seconds": 0.022,
+    "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
+    "lane_name": "remote_lane_g_v3_owv3_fisher_stack",
+    "stages_passed": [
+      "extract",
+      "whitelist",
+      "renderer_magic",
+      "masks_present",
+      "config_env",
+      "inflate_dispatch_path",
+      "inflate_renderer_imports",
+      "upstream_evaluate_arity",
+      "gt_video_present",
+      "launcher_includes_env"
+    ],
+    "submission_dir": "submissions/robust_current",
+    "timestamp_utc": "2026-04-30T15:56:46Z",
+    "tool_version": 1
+  },
   "remote_lane_g_v3_v2_lagrangian_snr": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,

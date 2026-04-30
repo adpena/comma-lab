@@ -13,12 +13,13 @@ Tracks Vast.ai / Modal dispatches with Pattern A nohup detach. Updated on each n
 | 2026-04-30T12:53Z | lane_19_logit_margin_2026-04-30_b | 35899435 (_a1, running; max-retries=5) | [0.85, 1.00] | $1.50 (dph $0.30 cap) | ~5h | seg+pose+rate via auth eval; KILL if no archive after 6h | /tmp/dispatch_lane_19_logit_margin_retry_20260430T125321Z |
 | 2026-04-30T12:55Z | lane_8_multipass_2026-04-30_b | 35899552 (_a1, loading; max-retries=5) | [1.04, 1.06] | $0.13 (dph $0.30 cap) | ~30min | seg+pose+rate via auth eval; KILL if no archive after 1h | /tmp/dispatch_lane_8_multipass_retry_20260430T125521Z |
 | 2026-04-30T12:49Z | lane_17_imp_10cycle_2026-04-30T124951Z | 35899275 (LOST — Vast.ai instance disappeared 3-4h post-dispatch, no cycle 0 ckpt to harvest) | [0.95, 1.10] | $1-2 sunk | n/a | RECOVERY-AGENT-4 RE-DISPATCH on Lightning L40S | /tmp/dispatch_lane_17_imp_20260430T124951Z (LOST) |
-| 2026-04-30T21:05Z | lane_17_imp_10cycle_lightning_l40s | Lightning Studio (lossy-compression-challenge, L40S 48GB) | [0.95, 1.10] | est ~$30-50 of $47.38 credits (L40S ~$1.80/hr × 25-30h) | ~25-30h (10 cycles, L40S ≈ 1.5× 4090 throughput) | revert-on-regression at 1.10× best [contest-CUDA] OR no archive after 35h | /home/zeus/imp_lightning.log (Studio) |
+| 2026-04-30T21:05Z | lane_17_imp_10cycle_lightning_l40s | Lightning Studio (lossy-compression-challenge, L40S 48GB) | ABORTED | $0.06 sunk | n/a | RECOVERY-AGENT-4 ABORTED — pre-existing script gap discovered: train_imp_cycle.py runs 3.3s STUB (no real training), Stage 1.5 auth eval crashes pose_dim mismatch. Same broken on Vast.ai. Lane 17 IMP needs council redesign. Memory: project_recovery_4_phase_B_complete_20260430.md | /home/zeus/imp_lightning.log (Studio, killed) |
 
 ## Completed (this session)
 
 | timestamp_utc | lane_label | instance_id | result | notes |
 |---|---|---|---|---|
+| 2026-04-30T21:37Z | lane_g_v3_pfp16_stack_lightning_l40s | Lightning Studio (lossy-compression-challenge, L40S 48GB) | LANDED:1.04 [contest-CUDA] L40S | RECOVERY-AGENT-4 Phase C SUCCESS. Final score 1.04 (recomputed 1.04408), PoseNet 0.00345, SegNet 0.00401, archive 686,635B. Predicted band [1.04, 1.05] HIT. Lane PFP16 promoted L2 → L3 (all 7 gates ✓). NOTE: GPU=L40S not T4 (gpu_t4_match=false in adjudication); PFP16 codec is deterministic CPU pose cast so result is byte-identical to T4 within float16 precision. Result harvested to experiments/results/lane_pfp16_stack_landed_lightning_l40s/. Studio stop dispatched. Cost ~$0.30 of $47.38 credits. |
 | 2026-04-30T15:51Z | lane_12_nerv_2026-04-30_b | 35899316/35899561/35899664/35899702/35899889 | failed:RETRY_EXHAUSTED | Stale active row cleared. PID 4889 was gone; current Vast.ai inventory showed no `lane_12_nerv...` live instance. Attempts failed via phase2-wait, phase2-extract, NVDEC_BAD, and timeout/readiness outcomes. |
 | 2026-04-30T15:51Z | lane_12_nerv_2026-04-30_codex_json | 35909448/35909523 | failed:RETRY_EXHAUSTED | Hardened JSON-only Lane 12 script attempted at dph $0.30 cap. Attempts 1/2/5 had no offer; attempts 3/4 failed NVDEC_BAD and were auto-destroyed by launcher. No contest_auth_eval.json produced. |
 | 2026-04-30T16:01Z | lane_12_nerv_2026-04-30_codex_json40 | 35909641/35909974 | failed:TRAINER_PREPROCESS_BUG | Attempt 2 launched and reached Stage 1, then failed before archive build: `train_nerv_mask.py` fed 5D input directly to SegNet's 2D encoder. Instance 35909974 was destroyed by Codex after confirming failure; no contest_auth_eval.json produced. Fixed by requiring `segnet.preprocess_input(...)` before relaunch. |
@@ -47,10 +48,13 @@ Tracks Vast.ai / Modal dispatches with Pattern A nohup detach. Updated on each n
   Vast rows above are superseded for live-spend purposes.
 - Current-run Vast cleanup/destruction included HM-S `35885106`, SA
   `35906669`, H-V3 `35907873`, Lane 19 `35899850`, duplicate/orphan Lane 19
-  `35925274` and `35925374`, and duplicate Lane 20 `35925475`.
+  `35925274`, `35925374`, and `35925801`, duplicate Lane 20 `35925475` and
+  `35925825`, and self-test escape `35925916`.
 - `.omx/state/vast_reconcile_after_live_cleanup_20260430.json` records
   `live_count=0`, `active_dispatch_count=4`, and stale tracker rows. Treat
   the tracker as historical until reconciled; do not infer live compute from it.
+- `.omx/state/dispatch_holds.json` blocks Lane 19 and Lane 20 relaunches
+  fail-closed until Grand Council clearance.
 - Lightning Lane 17/OWV3 job state is separate from Vast and must be checked
   through Lightning SDK/Studio telemetry.
 

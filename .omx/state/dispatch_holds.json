@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "updated_at_utc": "2026-04-30T22:10:00Z",
+  "holds": [
+    {
+      "logical_key": "lane_19_logit_margin_2026-04-30",
+      "reason": "Forensic hold: current Lane 19 runs were cost/proxy aborts with no exact archive/eval; rerun only after deterministic archive build, scripts/adjudicate_contest_auth_eval.py JSON adjudication, current Lane G v3 PFP16 A++ frontier score/component gates, and corrected logit-margin provenance/comments land.",
+      "created_by": "codex",
+      "created_at_utc": "2026-04-30T21:29:00Z",
+      "cleared": false
+    },
+    {
+      "logical_key": "lane_20_balle_2026-04-30",
+      "reason": "Forensic hold: Lane 20 on the Lane G v3 anchor is static-fallback/no-op; rerun only after non_static_byte_precheck.json proves BALLE_BEATS_STATIC with best_full_balle_bytes < static_baseline_bytes and completed real BHv1 archive/inflate integration.",
+      "created_by": "codex",
+      "created_at_utc": "2026-04-30T21:29:00Z",
+      "cleared": false
+    }
+  ]
+}
