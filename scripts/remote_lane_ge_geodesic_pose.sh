@@ -1,5 +1,6 @@
 #!/bin/bash
 # Lane GE: Chebyshev geodesic pose compression (rank-1 measurement).
+# UNIWARD-NO-OP-WAIVED: research-only lane — encodes meta-payload + ships Lane A anchor bytes intentionally (preflight Check 89 waiver).
 #
 # WHAT: Lane M+N's empirical finding was that PoseNet's useful signal is
 # effectively rank-1 (dim 0 dominates). Lane GE asks the related but

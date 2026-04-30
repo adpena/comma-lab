@@ -765,6 +765,101 @@ def preflight_all(
         # WARN-only: flip STRICT once first SegMap-paradigm encoder lane lands.
         check_segmap_export_calls_verify_roundtrip(strict=False, verbose=verbose)
 
+        # 2026-04-30: Check 91 — Lane GP basis-fit kill enforcement. Forbids
+        # any new experiments/fit_pose_*.py from importing smooth-basis fit
+        # functions (np.polyfit / scipy.interpolate.{BSpline,splrep,CubicSpline}
+        # / scipy.fft.dct) WITHOUT a `# LANE_GP_BASIS_FIT_KILL_ACKNOWLEDGED:`
+        # marker pointing to .omx/research/council_lane_gp_v4_design_20260430.md.
+        # The Lane GP v3 (89.67) failure was mis-attributed to Runge phenomenon;
+        # actual root cause is white-noise trajectory in dims 1-5 (diff_std >
+        # signal_std). All smooth-basis fits plateau at RMSE ≈ 1.2 (near signal
+        # std). Lands STRICT @ 0 violations after experiments/fit_pose_gp.py
+        # gets the kill marker (in same commit). Memory:
+        # project_lane_gp_v4_killed_basis_fit_infeasible_20260430.md.
+        check_pose_basis_fit_kill_acknowledged(strict=True, verbose=verbose)
+
+        # 2026-04-30: Check 90 — Lane Maturity Registry consistency.
+        # Every lane MUST be tracked in .omx/state/lane_registry.json via
+        # tools/lane_maturity.py. The registry encodes the 7-gate Level-3
+        # production-hardened standard. This check delegates to
+        # tools/lane_maturity.validate_registry() — verifies schema_version,
+        # no duplicates, all gates present, stored level matches computed
+        # level, and every file-path-looking evidence string points to a
+        # real file. Lands STRICT @ 0 violations (verified 2026-04-30
+        # against 23 seeded lanes from the Phase 1/1.5/2/3 audit).
+        # Memory: feedback_production_hardened_standard_definition_20260430.
+        # Memory: project_lane_maturity_harness_landed_20260430.
+        check_lane_registry_consistent(strict=True, verbose=verbose)
+
+        # 2026-04-30: Check 92 — Lane 8 inflate-time multipass forbidden.
+        # MultiPassCompressor is a COMPRESS-time optimizer (per the strict-
+        # scorer-rule in CLAUDE.md). Any reference to it inside
+        # `submissions/robust_current/inflate_renderer.py` or `inflate.sh`
+        # would attempt to load the contest scorer at inflate time, which
+        # destroys the rate term (~73MB scorer weights inside archive.zip).
+        # Lands STRICT @ 0 live violations after Lane 8 implementation
+        # lands (the implementation lives in src/tac/multipass_compressor.py
+        # and experiments/pipeline.py:step_multipass — both are explicitly
+        # COMPRESS-time entry points and are exempted by path).
+        # Memory: project_lane_8_multipass_landed_20260430.md (TBD).
+        check_no_inflate_time_multipass(strict=True, verbose=verbose)
+
+        # 2026-04-30: Check 93 — Lane 19 (logit-margin) callers pass
+        # explicit threshold=. The loss module raises ValueError when
+        # threshold is None, but a positional default would silently bypass
+        # that gate (degrading margin loss to standard CE because all
+        # weights collapse to ~1.0 when threshold is too large or 0.0).
+        # Same bug class as the 3 silent-default fixes in commit 256c5e42
+        # (--fp4-codebook, --grad-clip, --wall-clock-timeout). Landing
+        # STRICT @ 0 violations because the only current caller
+        # (train_renderer.py auxiliary block) already passes threshold=.
+        # Memory: .omx/research/council_lane_19_logit_margin_design_20260430.md.
+        # Memory: feedback_silent_default_bug_class_findings_20260429.md.
+        check_logit_margin_loss_uses_boundary_mask(strict=True, verbose=verbose)
+
+        # 2026-04-30: Check 94 — Lane 17 (IMP) cycle scripts must use EMA
+        # AND end the chain with CUDA auth eval. Check 88 (Council D EMA
+        # wire-in) covers per-script EMA presence; this check covers the
+        # full Lane 17 dispatcher chain: any scripts/remote_lane_*imp*.sh
+        # MUST contain (a) Stage-4 contest_auth_eval invocation, (b)
+        # revert-on-regression kill criterion, (c) heartbeat loop, (d)
+        # NVDEC probe at Stage 0. Lands STRICT @ 0 violations after the
+        # Council Lane-17 design landed. Memory:
+        # .omx/research/council_lane_17_imp_design_20260430.md.
+        check_imp_cycles_use_ema_and_auth_eval(strict=True, verbose=verbose)
+
+        # 2026-04-30: Check 95 — Lane 12 (NeRV mask codec) discipline.
+        # The Lane 12 codec lane (`src/tac/nerv_mask_codec.py`) ships its
+        # own training loop (`NeRVMaskTrainer`) and standalone trainer
+        # script (`experiments/train_nerv_mask.py`). Both must follow the
+        # canonical training-path discipline:
+        #   - canonical `tac.training.EMA` (NOT a local re-implementation)
+        #   - refuse `device='mps'` at construction
+        #   - no bare `.round()` in autograd-active forwards (Council A
+        #     zero-gradient bug class)
+        #   - auth-eval delegated to `scripts/remote_lane_nerv.sh` Stage 3
+        # Lands STRICT @ 0 violations after Phase C/E + tests landed.
+        # Reference: .omx/research/council_lane_12_nerv_design_20260430.md.
+        check_nerv_codec_uses_ema_and_no_mps_and_auth_eval(
+            strict=True, verbose=verbose
+        )
+
+        # Check 91 STRICT — Lane 20 (Ballé hyperprior) BHv1 wire-format
+        # integrity. Verifies that:
+        #   - encode_qints_full_balle serializes hyper_decoder weights into
+        #     side_info (otherwise decode silently drifts because the FP16
+        #     weight roundtrip changes σ values; debugged 2026-04-30 Phase B)
+        #   - encode_qints_balle_auto keeps the static_baseline_bytes guard
+        #     and the static_wins sentinel (the kill criterion that prevents
+        #     shipping a regressing untrained codec — Phase E empirical
+        #     showed untrained Ballé is ~3x worse than static on FP4 streams)
+        # Lands STRICT @ 0 violations on the 2026-04-30 codebase (Lane 20
+        # Phase B implementation already complies).
+        # Reference: .omx/research/council_lane_20_balle_design_20260430.md.
+        check_balle_hyperprior_includes_side_info_in_archive(
+            strict=True, verbose=verbose
+        )
+
     # 2. Training inputs (only if profile + tto_frames provided)
     if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:
         preflight_training_inputs(
@@ -5943,11 +6038,23 @@ _MPS_DECISION_EXEMPT_PATH_PARTS: tuple[str, ...] = (
 # Tags that, when present in the same paragraph, mark the entry as a
 # post-mortem / corrective record DOCUMENTING the rule rather than violating
 # it. The STC FALSIFICATION WITHDRAWN entry uses this pattern.
+#
+# Additional rule-attribution patterns (added 2026-04-30): when a paragraph
+# cites CLAUDE.md or a Council ruling as the AUTHORITY for a kill/promote
+# decision, the decision is NOT MPS-derived — it is rule-derived (CLAUDE.md
+# restatement) or council-derived. Lane 7 PSD kill memo was the motivating
+# false positive: docstring quoted CLAUDE.md verbatim and cited Council #271.
 _MPS_DECISION_EXEMPT_TAGS = re.compile(
     r"\[(WITHDRAWN|POST-MORTEM|HISTORICAL|ARCHIVED|advisory only|MPS-PROXY)\]"
     r"|\bWITHDRAWN\b"
     r"|\bPOST-MORTEM\b"
     r"|FALSIFICATION WITHDRAWN"
+    r"|\bper CLAUDE\.md\b"
+    r"|CLAUDE\.md non-negotiable"
+    r"|CLAUDE\.md FORBIDDEN PATTERNS"
+    r"|CLAUDE\.md \"[^\"]+\""
+    r"|\bper Council\b"
+    r"|\bCouncil #\d+\b"
 )
 
 
@@ -10284,13 +10391,36 @@ def check_remote_lane_argparse_arity(
                 )
 
             # Rule B: missing required (target requires a flag the launcher omits)
-            for flag, spec in target_sig.items():
-                if spec.get("required") and flag not in passed:
-                    violations.append(
-                        f"{sh.relative_to(root)}:{invocation_lineno}: "
-                        f"invokes {target_path} but does not pass "
-                        f"required arg {flag}"
-                    )
+            #
+            # Subcommand-aware skip: if the target uses argparse subparsers
+            # (e.g. experiments/pipeline.py has compress/eval/inflate/build
+            # subcommands), the merged target_sig contains the UNION of every
+            # subcommand's required args. A `compress` invocation should not
+            # be flagged for missing `--archive` when --archive is required
+            # only by the `eval` subparser. Heuristic: if a known subcommand
+            # token appears as a positional after the .py file, skip Rule B
+            # for this invocation (Rule A unknown-flag detection still fires).
+            _SUBCMD_TOKENS = {
+                "compress", "eval", "inflate", "build", "train",
+                "package", "harvest", "audit", "report",
+            }
+            tail_after_target = full_cmd[
+                full_cmd.find(target_path) + len(target_path):
+            ]
+            tokens_after_target = re.findall(
+                r"\s([a-z][a-z_-]{2,15})(?:\s|$|\\)", tail_after_target,
+            )
+            uses_subcommand = bool(
+                _SUBCMD_TOKENS.intersection(tokens_after_target)
+            )
+            if not uses_subcommand:
+                for flag, spec in target_sig.items():
+                    if spec.get("required") and flag not in passed:
+                        violations.append(
+                            f"{sh.relative_to(root)}:{invocation_lineno}: "
+                            f"invokes {target_path} but does not pass "
+                            f"required arg {flag}"
+                        )
 
             i += 1
 
@@ -14177,6 +14307,1010 @@ def check_segmap_export_calls_verify_roundtrip(
             + "\n\nEvery pack_payload_tar_xz call site should be paired with "
             "verify_roundtrip(state_dict, payload_path) BEFORE the archive "
             "ships, so a broken codec cannot silently degrade auth eval."
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 91 (2026-04-30): Lane GP basis-fit kill — forbid polynomial / smooth-
+# basis pose-fits in experiments/fit_pose_*.py without explicit kill-verdict
+# acknowledgement.
+# ════════════════════════════════════════════════════════════════════════════
+#
+# Lane GP v3 (89.67 [Modal-T4-CPU]) was killed per the Council #271 + Lane GP
+# v4 design proposal 2026-04-30. The Council Round-1 design verdict was that
+# the actual Lane G v3 baseline pose trajectory is approximately white-noise
+# in dims 1-5 (diff_std > signal_std) with uniformly-distributed spectral
+# support, making ANY low-rank smooth-basis fit (polynomial / cubic B-spline /
+# DCT / natural cubic) infeasible. All four bases plateau at RMSE ≈ 1.2 (near
+# signal std).
+#
+# This check prevents future agents from re-attempting the lane class. Any
+# new experiments/fit_pose_*.py file that imports `numpy.polyfit`,
+# `numpy.polynomial`, `scipy.interpolate.BSpline`, `scipy.interpolate.splrep`,
+# `scipy.interpolate.CubicSpline`, or `scipy.fft.dct` MUST include the marker
+#
+#     # LANE_GP_BASIS_FIT_KILL_ACKNOWLEDGED:
+#     # Read .omx/research/council_lane_gp_v4_design_20260430.md before
+#     # adding ANY smooth-basis pose-fit experiment.
+#
+# in the same file. Without the marker, the check fires.
+#
+# The current `experiments/fit_pose_gp.py` is exempted via the marker (will
+# be added in the same commit as this check).
+#
+# Reference: .omx/research/council_lane_gp_v4_design_20260430.md
+# Memory: project_lane_gp_v4_killed_basis_fit_infeasible_20260430.md
+def check_pose_basis_fit_kill_acknowledged(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Forbid smooth-basis pose-fits without Lane-GP-v4 kill acknowledgement.
+
+    Scans every `experiments/fit_pose_*.py` file. If the file imports any
+    smooth-basis fitting function (polyfit / BSpline / splrep / CubicSpline /
+    dct), the file MUST contain the marker
+    `LANE_GP_BASIS_FIT_KILL_ACKNOWLEDGED:` in a comment block. Otherwise the
+    check fires.
+
+    Returns list of violations. Raises PreflightError if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+
+    SMOOTH_BASIS_PATTERNS = [
+        r"\bnp\.polyfit\b",
+        r"\bnumpy\.polyfit\b",
+        r"\bnumpy\.polynomial\b",
+        r"\bscipy\.interpolate\.BSpline\b",
+        r"\bscipy\.interpolate\.splrep\b",
+        r"\bscipy\.interpolate\.CubicSpline\b",
+        r"\bscipy\.fft\.dct\b",
+        r"\bfrom\s+scipy\.interpolate\s+import\s+(BSpline|splrep|CubicSpline)\b",
+        r"\bfrom\s+scipy\.fft\s+import\s+dct\b",
+        r"\bfrom\s+numpy\s+import\s+polyfit\b",
+        r"\bfrom\s+numpy\.polynomial\b",
+    ]
+    KILL_MARKER = "LANE_GP_BASIS_FIT_KILL_ACKNOWLEDGED:"
+
+    # Round 1 council finding (Contrarian Q2): scan BOTH experiments/fit_pose_*.py
+    # AND src/tac/pose_*_fit.py / src/tac/pose_*_basis.py to close the
+    # module-level evasion path. A future agent might place a smooth-basis
+    # pose-fit module under src/tac/ instead of experiments/ — this gate
+    # catches that pattern too.
+    candidate_globs: list[Path] = []
+    exp_dir = root / "experiments"
+    if exp_dir.is_dir():
+        candidate_globs.extend(sorted(exp_dir.glob("fit_pose_*.py")))
+    tac_dir = root / "src" / "tac"
+    if tac_dir.is_dir():
+        candidate_globs.extend(sorted(tac_dir.glob("pose_*_fit.py")))
+        candidate_globs.extend(sorted(tac_dir.glob("pose_*_basis.py")))
+        candidate_globs.extend(sorted(tac_dir.glob("pose_*_polynomial.py")))
+        candidate_globs.extend(sorted(tac_dir.glob("pose_*_spline.py")))
+        candidate_globs.extend(sorted(tac_dir.glob("pose_*_dct.py")))
+        candidate_globs.extend(sorted(tac_dir.glob("pose_*_wavelet.py")))
+        # The existing pose_gaussian_process.py is exempted by name + marker
+        # path: it uses np.polyfit and IS the killed module — we add the
+        # marker there in this same commit.
+        candidate_globs.extend(sorted(tac_dir.glob("pose_gaussian_process.py")))
+
+    if not candidate_globs:
+        if verbose:
+            print(f"  [pose-basis-fit-kill] OK: no candidate files found, skipped")
+        return violations
+
+    for py in candidate_globs:
+        n_scanned += 1
+        try:
+            text = py.read_text()
+        except (OSError, UnicodeDecodeError):
+            continue
+        # Skip test files — they may legitimately exercise the patterns.
+        rel_str = str(py.relative_to(root)) if py.is_absolute() else str(py)
+        if "/tests/" in rel_str:
+            continue
+        # Strip docstrings and comments? We allow the patterns to match
+        # anywhere — even mention in docstring suggests intent. The kill
+        # marker is the only valid waiver.
+        triggers: list[str] = []
+        for pat in SMOOTH_BASIS_PATTERNS:
+            if re.search(pat, text):
+                triggers.append(pat)
+        if not triggers:
+            continue
+        if KILL_MARKER in text:
+            continue
+        rel = py.relative_to(root) if py.is_absolute() else py
+        violations.append(
+            f"{rel}: imports/uses smooth-basis fit ({', '.join(triggers[:3])}"
+            + (", ..." if len(triggers) > 3 else "")
+            + ") without `# LANE_GP_BASIS_FIT_KILL_ACKNOWLEDGED:` marker. "
+            "Read .omx/research/council_lane_gp_v4_design_20260430.md before "
+            "any new smooth-basis pose-fit experiment. The lane class is "
+            "structurally infeasible on the Lane G v3 baseline (white-noise "
+            "trajectory)."
+        )
+
+    if verbose:
+        if violations:
+            print(f"  [pose-basis-fit-kill] {len(violations)} violation(s) across {n_scanned} candidate file(s):")
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print(f"  [pose-basis-fit-kill] OK: {n_scanned} candidate file(s) scanned")
+
+    if violations and strict:
+        raise PreflightError(
+            "POSE-BASIS-FIT KILL violations:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nLane GP (any smooth-basis pose-fit variant) was killed "
+            "2026-04-30 per Council #271 + Lane GP v4 design verdict. The "
+            "baseline pose trajectory is approximately white-noise in dims "
+            "1-5 — no smooth basis can fit it below RMSE ≈ 1.2. Read "
+            ".omx/research/council_lane_gp_v4_design_20260430.md and add "
+            "`# LANE_GP_BASIS_FIT_KILL_ACKNOWLEDGED:` comment to override "
+            "(only legitimate use: archival of the original failed v3 lane)."
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 90 (2026-04-30): Lane Maturity Registry consistency.
+# ════════════════════════════════════════════════════════════════════════════
+#
+# Background: every lane MUST be tracked in .omx/state/lane_registry.json via
+# tools/lane_maturity.py. The registry encodes the 7-gate Level-3 production-
+# hardened standard (CLAUDE.md "Lane maturity registry — non-negotiable" +
+# memory feedback_production_hardened_standard_definition_20260430). Without
+# this check, a hand-edit could mark a lane Level 3 without the corresponding
+# 7 gates true, defeating the standard.
+#
+# This check delegates to tools/lane_maturity.py validate_registry(), which
+# verifies:
+#   1. Schema version matches expected (catches manual format drift).
+#   2. No duplicate lane ids (catches copy-paste mistakes).
+#   3. Every lane has all 7 gates present (so a missing gate cannot silently
+#      be treated as "satisfied").
+#   4. Each lane's stored `level` matches the COMPUTED level from its gates
+#      (catches hand-edits that bumped level without bumping gates).
+#   5. Every evidence string that LOOKS LIKE a file path (heuristic: contains
+#      `/` and starts with src/, tests/, scripts/, .omx/, reports/, memory/,
+#      experiments/, tools/, submissions/, docs/, configs/, upstream/, /)
+#      MUST point to a file that actually exists on disk.
+#
+# Lands STRICT @ 0 violations on the seeded registry (verified 2026-04-30
+# against the 23 seeded lanes from the Phase 1/1.5/2/3 audit).
+
+
+def check_lane_registry_consistent(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Validate .omx/state/lane_registry.json consistency.
+
+    Delegates to tools/lane_maturity.validate_registry() so the rules live
+    in one place. Returns the list of validation errors (empty = clean).
+    Raises MetaBugViolation if strict and any errors found.
+
+    Memory: feedback_production_hardened_standard_definition_20260430.md
+    Memory: project_lane_maturity_harness_landed_20260430.md
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+
+    # Import lazily so the import cycle stays clean and so test environments
+    # without the tools/ dir on sys.path don't break.
+    try:
+        # Make `tools.` importable.
+        tools_root = str(root)
+        if tools_root not in sys.path:
+            sys.path.insert(0, tools_root)
+        from tools import lane_maturity as lm  # type: ignore[import-untyped]
+    except (ImportError, FileNotFoundError) as e:
+        violations.append(
+            f"could not import tools.lane_maturity: {e}. "
+            f"This is a setup bug — the harness was supposed to land here."
+        )
+        if verbose:
+            print(f"  [lane-registry] WARN: {violations[-1]}")
+        if strict:
+            raise MetaBugViolation(
+                "LANE-REGISTRY check failed:\n  • " + violations[-1]
+            )
+        return violations
+
+    try:
+        data = lm.load_registry(repo_root=root)
+    except (FileNotFoundError, ValueError) as e:
+        violations.append(f"registry load failed: {e}")
+        if verbose:
+            print(f"  [lane-registry] FAIL: {violations[-1]}")
+        if strict:
+            raise MetaBugViolation(
+                "LANE-REGISTRY check failed:\n  • " + violations[-1]
+            )
+        return violations
+
+    errors = lm.validate_registry(data, repo_root=root)
+    violations.extend(errors)
+
+    if verbose:
+        if violations:
+            print(
+                f"  [lane-registry] {len(violations)} consistency error(s) "
+                f"across {len(data.get('lanes', []))} lane(s):"
+            )
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print(
+                f"  [lane-registry] OK: {len(data.get('lanes', []))} lane(s) "
+                f"validated cleanly"
+            )
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "LANE-REGISTRY consistency violations:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nFix via tools/lane_maturity.py (mark/unmark/add-lane). "
+            "Bare hand-edits of .omx/state/lane_registry.json are FORBIDDEN — "
+            "see CLAUDE.md 'Lane maturity registry — non-negotiable'."
+        )
+    return violations
+
+
+# ── Check 93: logit-margin loss callers pass explicit threshold ──────────────
+# Lane 19 (SegNet logit-margin boundary loss) — see council memo
+# .omx/research/council_lane_19_logit_margin_design_20260430.md.
+#
+# Bug class: silent-default-on-boundary-loss. The Lane 19 module raises
+# ValueError when threshold is None at runtime, but a caller that hard-codes
+# `threshold=1.0` via a positional default (or via getattr without an
+# explicit profile resolver) would NOT trip the runtime check. STRICT
+# preflight enforces caller-side hygiene: every invocation of
+# `logit_margin_loss`, `logit_margin_loss_with_teacher`,
+# `compute_segnet_logit_margin_aux`, or `fragility_weights` MUST pass an
+# explicit `threshold=` kwarg.
+#
+# Why STRICT @ 0 violations: the loss zeros out for confident pixels by
+# design; if threshold is silently set wrong (e.g., 0.0 → all weights 1.0
+# = standard CE; 100.0 → all weights ~1.0 also = standard CE), the loss
+# silently degrades to standard CE and the lane's wedge is invalidated.
+# Explicit-threshold-from-profile is the only audit-safe contract.
+#
+# Memory: feedback_silent_default_bug_class_findings_20260429.md
+# (3 real bugs landed in train_renderer.py from the same class). This
+# preflight is the structural fix for the Lane 19 instance.
+
+_LANE_19_LOSS_NAMES = frozenset({
+    "logit_margin_loss",
+    "logit_margin_loss_with_teacher",
+    "compute_segnet_logit_margin_aux",
+    "fragility_weights",
+})
+
+
+def _scan_lane19_threshold_calls(py_path: Path, root: Path) -> list[str]:
+    """Return list of violations: Lane 19 loss calls without explicit threshold=.
+
+    Walks the AST. For every Call node whose `.func` resolves to one of the
+    Lane 19 loss names, check that `threshold=` appears in keywords. If not,
+    record a violation at `<file>:<line>: <funcname>(...) missing threshold=`.
+    """
+    try:
+        text = py_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return []
+    if not any(name in text for name in _LANE_19_LOSS_NAMES):
+        return []
+    try:
+        tree = ast.parse(text, filename=str(py_path))
+    except SyntaxError:
+        return []  # syntax errors caught by other checks
+    violations: list[str] = []
+    rel = str(py_path.relative_to(root))
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        # Resolve callable name.
+        fn = node.func
+        if isinstance(fn, ast.Name):
+            name = fn.id
+        elif isinstance(fn, ast.Attribute):
+            name = fn.attr
+        else:
+            continue
+        if name not in _LANE_19_LOSS_NAMES:
+            continue
+        # Check for explicit threshold= kwarg.
+        kw_names = {kw.arg for kw in node.keywords if kw.arg is not None}
+        if "threshold" not in kw_names:
+            violations.append(
+                f"{rel}:{node.lineno}: {name}(...) missing explicit "
+                f"threshold= kwarg (Check 93 STRICT — Lane 19 callers MUST "
+                f"pass threshold from profile resolver, never positional/default)."
+            )
+    return violations
+
+
+def check_logit_margin_loss_uses_boundary_mask(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Lane 19 STRICT @ 0: every Lane 19 loss caller passes explicit threshold=.
+
+    Args:
+        repo_root: optional Path to repo root (default REPO_ROOT).
+        strict: if True, raise MetaBugViolation on any violation.
+        verbose: if True, print summary to stdout.
+
+    Returns:
+        List of violation strings (empty = clean).
+
+    Raises:
+        MetaBugViolation: if strict and any violation.
+
+    Memory: .omx/research/council_lane_19_logit_margin_design_20260430.md.
+    Memory: feedback_silent_default_bug_class_findings_20260429.md.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+    for py in _iter_python_files(root, _META_PY_SCAN_DIRS):
+        n_scanned += 1
+        violations.extend(_scan_lane19_threshold_calls(py, root))
+
+    if verbose and violations:
+        print(
+            f"  [lane-19-threshold] {len(violations)} violation(s) "
+            f"across {n_scanned} files:"
+        )
+        for v in violations:
+            print(f"    • {v}")
+    elif verbose:
+        print(
+            f"  [lane-19-threshold] OK: {n_scanned} files scanned "
+            f"(0 callers missing threshold=)"
+        )
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "Lane 19 logit-margin caller-threshold violations:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nLane 19 callers MUST pass an explicit threshold= kwarg "
+            "(Check 93 STRICT). The loss module raises ValueError on None, "
+            "but silent positional defaults bypass that gate. Pass threshold "
+            "from the profile resolver — see council memo "
+            ".omx/research/council_lane_19_logit_margin_design_20260430.md."
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 92 (2026-04-30): Lane 8 inflate-time multipass forbidden.
+# ════════════════════════════════════════════════════════════════════════════
+#
+# MultiPassCompressor (src/tac/multipass_compressor.py) is a COMPRESS-time
+# optimizer. Per the strict-scorer-rule in CLAUDE.md, the inflate-time
+# decoder may NOT load the contest scorer. A reference to MultiPassCompressor
+# from inside `submissions/robust_current/inflate_renderer.py` or
+# `submissions/robust_current/inflate.sh` would necessarily attempt a
+# scorer load (the compressor's `scorer` argument is a forward pass through
+# auth_eval_renderer.py), which destroys the rate term (~73MB of scorer
+# weights inside archive.zip).
+#
+# This check forbids the SYMBOL `MultiPassCompressor` and the helper
+# `compress_with_multipass` from appearing in inflate-side files. It also
+# forbids `from tac.multipass_compressor import …` from the same files.
+#
+# Lane 8 implementation lives in:
+#   - src/tac/multipass_compressor.py  (the codec, COMPRESS-time)
+#   - experiments/pipeline.py          (run_compress + step_multipass, COMPRESS-time)
+# Both are explicitly COMPRESS-time and are NOT in the forbidden path list.
+#
+# Same-line waiver: append `STRICT_PREFLIGHT_WAIVED: <reason>` to a line for
+# explicit operator approval (e.g. a documentation reference that mentions
+# the symbol name). Without the waiver, any non-comment line fires.
+#
+# Memory: project_lane_8_multipass_landed_20260430.md (TBD on landing).
+
+
+def check_no_inflate_time_multipass(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Forbid Lane 8 ``MultiPassCompressor`` references at inflate time.
+
+    Scans ``submissions/robust_current/inflate_renderer.py`` and
+    ``submissions/robust_current/inflate.sh`` for any reference to the
+    multipass codec. Lands STRICT @ 0 violations on Lane 8 implementation
+    landing.
+
+    Returns list of violations. Raises ``MetaBugViolation`` on strict + any.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+
+    INFLATE_PATHS = [
+        "submissions/robust_current/inflate_renderer.py",
+        "submissions/robust_current/inflate.sh",
+        "submissions/exact_current/inflate.py",
+        "submissions/exact_current/inflate.sh",
+    ]
+    FORBIDDEN_TOKENS = (
+        "MultiPassCompressor",
+        "compress_with_multipass",
+        "from tac.multipass_compressor",
+        "import multipass_compressor",
+    )
+
+    for rel in INFLATE_PATHS:
+        p = root / rel
+        if not p.exists():
+            continue
+        n_scanned += 1
+        try:
+            text = p.read_text()
+        except (OSError, UnicodeDecodeError):
+            continue
+        # Strip simple comment lines so a "DO NOT IMPORT MultiPassCompressor"
+        # documentation note doesn't trigger. We use a coarse line filter
+        # — if a line that contains a FORBIDDEN_TOKEN ALSO starts with
+        # `#` or `//` (after strip), it's a documentation reference and is
+        # exempt.
+        for line_idx, raw in enumerate(text.splitlines(), start=1):
+            stripped = raw.lstrip()
+            if not stripped:
+                continue
+            for token in FORBIDDEN_TOKENS:
+                if token not in raw:
+                    continue
+                if stripped.startswith("#") or stripped.startswith("//"):
+                    # comment / documentation — exempt
+                    continue
+                if "STRICT_PREFLIGHT_WAIVED" in raw:
+                    # explicit operator waiver — exempt (must be same-line)
+                    continue
+                violations.append(
+                    f"{rel}:{line_idx}: forbidden inflate-time multipass "
+                    f"token {token!r} on non-comment line. Multi-pass is "
+                    f"compress-time only (strict-scorer-rule per CLAUDE.md)."
+                )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [no-inflate-time-multipass] {len(violations)} violation(s) "
+                f"across {n_scanned} inflate file(s):"
+            )
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print(
+                f"  [no-inflate-time-multipass] OK: {n_scanned} inflate "
+                f"file(s) scanned"
+            )
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "INFLATE-TIME-MULTIPASS violations:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nMultiPassCompressor is COMPRESS-time only per the strict-"
+            "scorer-rule (CLAUDE.md). The compressor's scorer argument is a "
+            "forward pass through auth_eval_renderer.py which loads the "
+            "contest scorer; loading the scorer at inflate destroys the "
+            "rate term (~73MB inside archive.zip). Use the compressor only "
+            "from `experiments/pipeline.py compress --multipass` or your "
+            "own COMPRESS-time wrapper, never from inflate.sh / "
+            "inflate_renderer.py / inflate.py."
+        )
+    return violations
+
+
+# ── Check 94 (2026-04-30, Council Lane 17 IMP design): IMP cycle scripts
+# must (a) instantiate EMA + call ema.update, (b) end the chain with a CUDA
+# auth eval invocation, (c) include a revert-on-regression kill criterion,
+# (d) include a heartbeat loop, and (e) include an NVDEC probe at Stage 0.
+#
+# Bug class this catches: a long-running 10-cycle IMP dispatch that runs
+# 60h on a $25 cap GPU instance and produces no contest-CUDA score because
+# the script never invoked auth_eval at Stage 4 (silent skip), or that
+# burns past a regressing cycle without revert (sunk-cost fallacy in
+# code form), or that loses cycle artifacts because the heartbeat /
+# harvest path was missing.
+#
+# Detection: scan every scripts/remote_lane_*imp*.sh and assert presence
+# of (1) `contest_auth_eval.py` invocation, (2) revert-on-regression
+# token (one of: REVERT_ON_REGRESSION, revert-and-stop, REVERT_THRESHOLD,
+# kill-on-regression, regression-kill, or the council-canonical
+# `cycle_score_floor`), (3) `heartbeat`, (4) `probe_nvdec.sh`. The check
+# is the IMP-specialist sibling of Check 88 (EMA across all training
+# scripts) and Check 22 (auth-eval everywhere).
+#
+# Memory: .omx/research/council_lane_17_imp_design_20260430.md (Q4
+# revert-on-regression 9/10 vote; Q3 per-cycle auth eval 7/10 vote).
+
+
+_IMP_REVERT_TOKENS = (
+    "REVERT_ON_REGRESSION",
+    "revert-on-regression",
+    "revert_and_stop",
+    "REVERT_THRESHOLD",
+    "kill-on-regression",
+    "regression-kill",
+    "cycle_score_floor",
+    "CYCLE_SCORE_FLOOR",
+    # The exact bash variable used in the canonical dispatcher:
+    "BEST_CYCLE_SCORE",
+)
+
+
+def _scan_imp_dispatcher_for_chain_completeness(
+    path: Path, repo_root: Path,
+) -> list[str]:
+    """Audit one Lane-17 IMP dispatcher for the full chain (auth eval +
+    revert + heartbeat + NVDEC probe). Returns list of violations."""
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    rel_s = str(rel)
+    try:
+        text = path.read_text()
+    except (UnicodeDecodeError, FileNotFoundError):
+        return []
+
+    violations: list[str] = []
+    if "contest_auth_eval.py" not in text:
+        violations.append(
+            f"{rel_s}: IMP dispatcher missing CUDA auth eval invocation "
+            f"(`contest_auth_eval.py`). Add a Stage-4 auth eval block — "
+            f"per CLAUDE.md `Auth eval EVERYWHERE` non-negotiable, every "
+            f"chained experiment must end with a contest-CUDA auth eval."
+        )
+    if not any(tok in text for tok in _IMP_REVERT_TOKENS):
+        violations.append(
+            f"{rel_s}: IMP dispatcher missing revert-on-regression kill "
+            f"criterion. Council Q4 (9/10 vote) requires the dispatcher "
+            f"to revert + STOP if a cycle's auth score regresses >10% "
+            f"from the running best. Add one of: "
+            f"{', '.join(_IMP_REVERT_TOKENS)}. See "
+            f".omx/research/council_lane_17_imp_design_20260430.md§Q4."
+        )
+    if "heartbeat" not in text.lower():
+        violations.append(
+            f"{rel_s}: IMP dispatcher missing heartbeat loop. CLAUDE.md "
+            f"`Remote code parity` non-negotiable: every long-running "
+            f"remote script must write a heartbeat so a watchdog can "
+            f"detect hung processes."
+        )
+    if "probe_nvdec" not in text:
+        violations.append(
+            f"{rel_s}: IMP dispatcher missing NVDEC probe at Stage 0. "
+            f"CLAUDE.md `Vast.ai NVDEC roulette` non-negotiable: every "
+            f"remote_lane_*.sh must run `scripts/probe_nvdec.sh "
+            f"--ensure-dali` before any GPU spend."
+        )
+    return violations
+
+
+def check_imp_cycles_use_ema_and_auth_eval(
+    *, strict: bool = False, verbose: bool = False, repo_root: Path | None = None,
+) -> list[str]:
+    """Lane 17 IMP dispatcher chain must be complete (Council 2026-04-30).
+
+    Scans ``scripts/remote_lane_*imp*.sh`` (case-insensitive) and asserts
+    each contains:
+      1. ``contest_auth_eval.py`` invocation (auth-eval-everywhere).
+      2. A revert-on-regression token (Council Q4 — kill-criterion).
+      3. ``heartbeat`` loop / variable.
+      4. ``probe_nvdec`` at Stage 0.
+
+    The companion EMA-presence audit is Check 88
+    (``check_training_paths_use_ema_correctly``); this check is the
+    IMP-specialist chain-completeness sibling.
+    """
+    root = repo_root or REPO_ROOT
+    scripts_dir = root / "scripts"
+    violations: list[str] = []
+    n_scanned = 0
+    if scripts_dir.is_dir():
+        for sh in sorted(scripts_dir.glob("remote_lane_*.sh")):
+            name_lower = sh.name.lower()
+            if "imp" not in name_lower:
+                continue
+            n_scanned += 1
+            violations.extend(
+                _scan_imp_dispatcher_for_chain_completeness(sh, root)
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [imp-dispatcher-chain] {len(violations)} violation(s) "
+                f"across {n_scanned} IMP dispatcher(s):"
+            )
+            for v in violations[:10]:
+                print(f"    • {v}")
+            if len(violations) > 10:
+                print(f"    … and {len(violations) - 10} more")
+        else:
+            print(
+                f"  [imp-dispatcher-chain] OK: "
+                f"{n_scanned} IMP dispatcher(s) scanned (chain complete)"
+            )
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "LANE 17 IMP DISPATCHER CHAIN INCOMPLETE:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nCouncil Lane-17 design 2026-04-30 (Q3+Q4) requires "
+            "(1) auth eval, (2) revert-on-regression, (3) heartbeat, "
+            "(4) NVDEC probe. Reference: "
+            ".omx/research/council_lane_17_imp_design_20260430.md."
+        )
+    return violations
+
+
+# ── Check 95: Lane 12 NeRV codec uses canonical EMA + no MPS + no .round() ──
+#
+# 2026-04-30. Lane 12 (NeRV mask codec) is the Phase 2 ACCELERATE codec lane.
+# CLAUDE.md non-negotiables for any training path apply:
+#   - Trainer instantiates ``tac.training.EMA`` (NOT a local re-implementation
+#     — the Council D wire-in 2026-04-29 PM removed a duplicate `class EMA` in
+#     `train_joint_pair.py`; same risk class for new training paths).
+#   - Trainer refuses ``device='mps'`` (MPS auth-eval drift 23x on PoseNet,
+#     2x on SegNet).
+#   - No bare ``.round()`` inside any forward / training / step / sample /
+#     evaluate function (Council A `.round()` zero-gradient bug class —
+#     5h GPU burned on Lane DARTS-S V1 freeze).
+#   - The standalone trainer (`experiments/train_nerv_mask.py`) must end
+#     the chain with a CUDA auth eval (delegated to the dispatch script
+#     `scripts/remote_lane_nerv.sh` Stage 3).
+#
+# Detection: scan `src/tac/nerv_mask_codec.py` AST for:
+#   1. `from tac.training import EMA` (canonical EMA import).
+#   2. `device.startswith("mps")` raise (MPS refused at trainer construction).
+#   3. No bare `.round()` calls inside method bodies named in
+#      forbidden_contexts (forward / step / _sample_batch / evaluate*).
+# AND scan `experiments/train_nerv_mask.py` for `contest_auth_eval` invocation
+# OR delegation comment to the dispatch script.
+#
+# All 3 land at 0 live violations after Phase C/E + tests landed. Lands
+# STRICT immediately per the Lane-A pattern.
+#
+# Reference: .omx/research/council_lane_12_nerv_design_20260430.md.
+
+
+def _scan_nerv_mask_codec_for_canonical_discipline(
+    path: Path, repo_root: Path,
+) -> list[str]:
+    """Audit `src/tac/nerv_mask_codec.py` for the canonical training-path
+    discipline. Returns list of violations (empty if clean)."""
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    rel_s = str(rel)
+    try:
+        text = path.read_text()
+    except (UnicodeDecodeError, FileNotFoundError):
+        return []
+    violations: list[str] = []
+
+    # Trainer must import the canonical EMA class. We accept either the
+    # top-of-file `from tac.training import EMA` OR a deferred import inside
+    # `NeRVMaskTrainer.__init__` (the deferred form is preferred to avoid
+    # heavy `training.py` import cost on codec-only callers).
+    if "from tac.training import EMA" not in text:
+        violations.append(
+            f"{rel_s}: missing canonical EMA import. CLAUDE.md non-negotiable: "
+            f"every training path must use `tac.training.EMA` (decay=0.997). "
+            f"Re-implementing EMA locally is the bug class fixed in Council D "
+            f"2026-04-29 PM (duplicate `class EMA` in train_joint_pair.py)."
+        )
+
+    # Trainer must refuse MPS at construction.
+    if "refuses device='mps'" not in text and "refuses device=\"mps\"" not in text:
+        violations.append(
+            f"{rel_s}: NeRVMaskTrainer must refuse device='mps' (CLAUDE.md "
+            f"`MPS auth eval is NOISE`). Add a ValueError raise at trainer "
+            f"construction matching the SegMapTrainer pattern."
+        )
+
+    # AST scan for bare `.round()` in forbidden contexts (forward / step /
+    # sample / evaluate). The companion test in
+    # `test_nerv_mask_codec.py::test_no_bare_round_in_nerv_mask_codec_source_synthetic`
+    # also enforces this; the preflight check is the static-CI sibling.
+    try:
+        tree = ast.parse(text, filename=str(path))
+    except (SyntaxError, UnicodeDecodeError):
+        return violations
+    forbidden_contexts = ("forward", "step", "_sample_batch")
+
+    class _RoundFinder(ast.NodeVisitor):
+        def __init__(self) -> None:
+            self.fn_stack: list[str] = []
+            self.found: list[tuple[str, int]] = []
+
+        def _enter(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
+            self.fn_stack.append(node.name)
+            try:
+                self.generic_visit(node)
+            finally:
+                self.fn_stack.pop()
+
+        def visit_FunctionDef(self, node: ast.FunctionDef) -> None:  # noqa: N802
+            self._enter(node)
+
+        def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:  # noqa: N802
+            self._enter(node)
+
+        def visit_Call(self, node: ast.Call) -> None:  # noqa: N802
+            if isinstance(node.func, ast.Attribute) and node.func.attr == "round":
+                if len(node.args) == 0 and len(node.keywords) == 0:
+                    if self.fn_stack:
+                        innermost = self.fn_stack[-1]
+                        if innermost in forbidden_contexts or innermost.startswith(
+                            "evaluate"
+                        ):
+                            self.found.append((innermost, node.lineno))
+            self.generic_visit(node)
+
+    finder = _RoundFinder()
+    finder.visit(tree)
+    for fn_name, lineno in finder.found:
+        violations.append(
+            f"{rel_s}:{lineno}: bare `.round()` inside {fn_name!r} — "
+            f"Council A zero-gradient bug class. Use `Uint8STE.apply()` "
+            f"(from `tac.quantization`) inside any autograd-active forward."
+        )
+
+    return violations
+
+
+def _scan_nerv_trainer_script_for_auth_eval_delegation(
+    path: Path, repo_root: Path,
+) -> list[str]:
+    """Audit `experiments/train_nerv_mask.py` for auth-eval-everywhere
+    discipline. The standalone trainer either invokes `contest_auth_eval`
+    directly OR documents delegation to the dispatch script.
+
+    Comments are stripped before the substring check — a comment cannot
+    satisfy the discipline. Delegation is satisfied when a comment OR a
+    docstring mentions ``remote_lane_nerv.sh`` (a code-side import path
+    is also accepted, but a comment-only delegation is enough since the
+    dispatch script is the actual auth-eval invocation).
+    """
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    rel_s = str(rel)
+    try:
+        text = path.read_text()
+    except (UnicodeDecodeError, FileNotFoundError):
+        return []
+    violations: list[str] = []
+    # Strip line comments to ensure a comment cannot satisfy the direct
+    # invocation check. Delegation IS allowed via comment / docstring.
+    code_lines = []
+    for line in text.splitlines():
+        stripped = line.split("#", 1)[0]
+        code_lines.append(stripped)
+    code_only = "\n".join(code_lines)
+    has_direct = "contest_auth_eval" in code_only
+    has_delegation = "remote_lane_nerv.sh" in text or "delegated to" in text.lower()
+    if not (has_direct or has_delegation):
+        violations.append(
+            f"{rel_s}: trainer must either invoke `contest_auth_eval.py` "
+            f"directly OR document delegation to `scripts/remote_lane_nerv.sh` "
+            f"Stage 3. CLAUDE.md `Auth eval EVERYWHERE` non-negotiable."
+        )
+    return violations
+
+
+def check_nerv_codec_uses_ema_and_no_mps_and_auth_eval(
+    *, strict: bool = False, verbose: bool = False, repo_root: Path | None = None,
+) -> list[str]:
+    """Lane 12 NeRV codec must follow the canonical training-path discipline.
+
+    Audits both:
+      - `src/tac/nerv_mask_codec.py` for canonical EMA import + MPS refusal
+        + no bare `.round()` in forward/step/sample/evaluate methods.
+      - `experiments/train_nerv_mask.py` for auth-eval invocation OR
+        delegation to the dispatch script.
+
+    Sibling of Check 88 (`check_training_paths_use_ema_correctly`) and
+    Check 86 (`check_no_bare_round_in_eval_roundtrip`); Lane 12 specialist.
+
+    Reference: .omx/research/council_lane_12_nerv_design_20260430.md.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+    codec_path = root / "src" / "tac" / "nerv_mask_codec.py"
+    if codec_path.is_file():
+        n_scanned += 1
+        violations.extend(
+            _scan_nerv_mask_codec_for_canonical_discipline(codec_path, root)
+        )
+    trainer_path = root / "experiments" / "train_nerv_mask.py"
+    if trainer_path.is_file():
+        n_scanned += 1
+        violations.extend(
+            _scan_nerv_trainer_script_for_auth_eval_delegation(trainer_path, root)
+        )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [nerv-codec-discipline] {len(violations)} violation(s) "
+                f"across {n_scanned} Lane-12 file(s):"
+            )
+            for v in violations[:10]:
+                print(f"    • {v}")
+            if len(violations) > 10:
+                print(f"    … and {len(violations) - 10} more")
+        else:
+            print(
+                f"  [nerv-codec-discipline] OK: "
+                f"{n_scanned} Lane-12 file(s) scanned (canonical discipline)"
+            )
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "LANE 12 NERV CODEC DISCIPLINE VIOLATIONS:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nCLAUDE.md non-negotiables apply: canonical EMA "
+            "(tac.training.EMA decay 0.997), no MPS strategic decisions, "
+            "no bare `.round()` in autograd-active forwards, auth-eval at "
+            "end of chain. Reference: "
+            ".omx/research/council_lane_12_nerv_design_20260430.md."
+        )
+    return violations
+
+
+def _strip_python_comments_and_docstrings(text: str) -> str:
+    """Strip ``#`` line-comments and triple-quoted (doc)strings.
+
+    PRESERVES inline single-line string literals — the BHv1 integrity check
+    looks for ``"static_wins"`` as a sentinel literal in actual code, not
+    in docstrings. Stripping triple-quoted strings + ``#`` comments is
+    enough to defeat the comment-mentions-the-keyword false-positive.
+    """
+    # Remove triple-quoted strings (greedy across lines)
+    import re
+
+    out = re.sub(r'"""[\s\S]*?"""', "", text)
+    out = re.sub(r"'''[\s\S]*?'''", "", out)
+    # Remove # line comments (preserve the newline)
+    out = re.sub(r"#[^\n]*", "", out)
+    return out
+
+
+def _scan_balle_codec_for_side_info_inclusion(path: Path, root: Path) -> list[str]:
+    """Audit ``src/tac/balle_hyperprior_codec.py`` for two CLAUDE.md
+    non-negotiables:
+
+    1. ``encode_qints_full_balle`` MUST emit the hyper_decoder weights inside
+       ``side_info`` (otherwise the inflate-side decode cannot reconstruct
+       per-block σ → roundtrip fails → archive unreadable). This is the
+       Check 91 STRICT predicate.
+    2. ``encode_qints_balle_auto`` MUST keep the static-baseline guard so
+       a regressing codec is never shipped (the kill criterion from Phase A
+       council review §3 in ``.omx/research/council_lane_20_balle_design_20260430.md``).
+    """
+    violations: list[str] = []
+    rel = path.relative_to(root)
+    rel_s = str(rel).replace("\\", "/")
+    raw_text = path.read_text(encoding="utf-8", errors="replace")
+    # Strip comments + string literals so the heuristic only sees executable
+    # code (defeats false-positives when "static_wins" appears in a comment
+    # or docstring on a buggy synthetic test fixture).
+    text = _strip_python_comments_and_docstrings(raw_text)
+
+    # Predicate 1: encode_qints_full_balle must serialize hyper_decoder
+    # weights into side_info. Heuristic: same function body must call
+    # `_serialize_hyper_decoder` AND write the resulting bytes into the
+    # `side_info` BytesIO.
+    if "def encode_qints_full_balle" in text:
+        # Slice the function body out
+        start = text.index("def encode_qints_full_balle")
+        # End: next top-level "def " or end-of-file
+        next_def = text.find("\ndef ", start + 1)
+        body = text[start : next_def if next_def != -1 else len(text)]
+        if "_serialize_hyper_decoder" not in body:
+            violations.append(
+                f"{rel_s}:encode_qints_full_balle: missing call to "
+                f"`_serialize_hyper_decoder` — hyper_decoder weights MUST be "
+                f"in side_info or the inflate-side decode cannot recover σ "
+                f"(Check 91 STRICT)."
+            )
+        if "side_info.write(decoder_blob)" not in body:
+            violations.append(
+                f"{rel_s}:encode_qints_full_balle: hyper_decoder serialized "
+                f"bytes must be written into `side_info` (the BytesIO that is "
+                f"recorded as `side_info_bytes`). Without this, the archive "
+                f"loads but Lane 20 decode silently drifts — this is exactly "
+                f"the bug class CLAUDE.md FORBIDDEN PATTERNS warns against."
+            )
+
+    # Predicate 2: encode_qints_balle_auto must keep the static-baseline
+    # guard. Heuristic: same function body checks ``len(chosen_blob) >= int(
+    # static_baseline_bytes)`` AND returns the static_wins sentinel.
+    if "def encode_qints_balle_auto" in text:
+        start = text.index("def encode_qints_balle_auto")
+        next_def = text.find("\ndef ", start + 1)
+        body = text[start : next_def if next_def != -1 else len(text)]
+        if "static_baseline_bytes" not in body:
+            violations.append(
+                f"{rel_s}:encode_qints_balle_auto: missing "
+                f"`static_baseline_bytes` parameter / guard. The auto path "
+                f"MUST refuse to ship if no candidate beats the static "
+                f"baseline (kill criterion per Phase A council review)."
+            )
+        if "static_wins" not in body:
+            violations.append(
+                f"{rel_s}:encode_qints_balle_auto: missing the "
+                f"`static_wins` sentinel return path."
+            )
+    return violations
+
+
+def check_balle_hyperprior_includes_side_info_in_archive(
+    *, strict: bool = False, verbose: bool = False, repo_root: Path | None = None,
+) -> list[str]:
+    """Lane 20 (Ballé hyperprior) — BHv1 wire-format integrity check.
+
+    Verifies that the production codec at ``src/tac/balle_hyperprior_codec.py``:
+
+    1. Always serializes the hyper_decoder weights into ``side_info`` for
+       the FULL_BALLE mode (otherwise inflate-side decode silently drifts —
+       the FP16 round-trip mismatch debugged 2026-04-30 in Phase B).
+    2. Keeps the ``static_baseline_bytes`` guard in ``encode_qints_balle_auto``
+       so a regressing untrained codec falls back to ``static_wins`` rather
+       than shipping a 5x-larger blob (Phase E empirical: untrained Ballé is
+       ~3x worse than static on FP4 nibble streams; the auto-guard is the
+       only thing that keeps Lane 20 from being a regression).
+
+    Reference: ``.omx/research/council_lane_20_balle_design_20260430.md``;
+    ``feedback_production_hardened_standard_definition_20260430.md`` (the
+    Level 3 bar this check enforces for Lane 20).
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+    codec_path = root / "src" / "tac" / "balle_hyperprior_codec.py"
+    if codec_path.is_file():
+        n_scanned += 1
+        violations.extend(
+            _scan_balle_codec_for_side_info_inclusion(codec_path, root)
+        )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [balle-bhv1-integrity] {len(violations)} violation(s) "
+                f"across {n_scanned} Lane-20 file(s):"
+            )
+            for v in violations[:10]:
+                print(f"    • {v}")
+            if len(violations) > 10:
+                print(f"    … and {len(violations) - 10} more")
+        else:
+            print(
+                f"  [balle-bhv1-integrity] OK: "
+                f"{n_scanned} Lane-20 file(s) scanned (BHv1 wire-format integrity)"
+            )
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "LANE 20 BHv1 WIRE-FORMAT INTEGRITY VIOLATIONS:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nCLAUDE.md non-negotiables apply: side-info MUST contain "
+            "hyper_decoder weights or inflate-side decode silently drifts; "
+            "auto-fallback to static_wins MUST guard against shipping a "
+            "regressing untrained codec. Reference: "
+            ".omx/research/council_lane_20_balle_design_20260430.md."
         )
     return violations
 

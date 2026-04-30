@@ -1,5 +1,6 @@
 #!/bin/bash
 # Lane EA: arithmetic-coded entropy archive research deploy.
+# UNIWARD-NO-OP-WAIVED: research-only lane — encodes meta-payload + ships Lane A anchor bytes intentionally (preflight Check 89 waiver).
 #
 # WHAT: exercises the orphan src/tac/entropy_archive.py
 # (NeuralEntropyModel + ArithmeticCoder/Decoder + build_entropy_archive)

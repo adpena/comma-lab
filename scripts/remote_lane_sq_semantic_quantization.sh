@@ -1,5 +1,6 @@
 #!/bin/bash
 # Lane SQ: per-class adaptive quantization research deploy.
+# UNIWARD-NO-OP-WAIVED: research-only lane — encodes meta-payload + ships Lane A anchor bytes intentionally (preflight Check 89 waiver).
 #
 # WHAT: exercises the orphan src/tac/semantic_quantization.py
 # (semantic_adaptive_quantize: per-class bit allocation 8/6/6/4/4 for

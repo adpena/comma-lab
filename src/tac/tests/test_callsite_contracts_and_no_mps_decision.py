@@ -169,6 +169,86 @@ def test_pure_mps_mention_without_decision_verb_is_clean() -> None:
     assert violations == []
 
 
+def test_per_claude_md_attribution_exempts_rule_restatement() -> None:
+    """A docstring that QUOTES the CLAUDE.md rule (rather than makes a new
+    MPS-derived decision) is exempt. Lane 12 NeRV docstring motivated this:
+    `MPS is FORBIDDEN for any kill/promote decision per CLAUDE.md "MPS auth
+    eval is NOISE — NON-NEGOTIABLE"`."""
+    text = """
+    Trainer refuses MPS device at construction (PoseNet drift 23x; MPS is
+    FORBIDDEN for any kill/promote decision per CLAUDE.md "MPS auth eval
+    is NOISE — NON-NEGOTIABLE").
+    """
+    violations = _check_mps_decision_in_text(text, "src/tac/example.py")
+    assert violations == []
+
+
+def test_council_n_attribution_exempts_council_decision() -> None:
+    """A test docstring that cites Council #N as the kill authority is
+    exempt — the council made the decision, not the (possibly CPU-tagged)
+    score artifact. Lane GP v3 test docstring motivated this:
+    `Lane GP v3 (89.67 [Modal-T4-CPU]) was killed 2026-04-30 per Council #271`."""
+    text = """
+    Lane GP v3 (89.67 [Modal-T4-CPU]) was killed 2026-04-30 per Council #271
+    + Lane GP v4 design verdict.
+    """
+    violations = _check_mps_decision_in_text(text, "src/tac/tests/example.py")
+    assert violations == []
+
+
+def test_claude_md_non_negotiable_attribution_exempts() -> None:
+    """The phrase 'CLAUDE.md non-negotiable' explicitly cites the rule
+    source. Decisions backed by this attribution are rule-derived, not
+    MPS-derived."""
+    text = """
+    Strict ban on CPU-derived kill decisions per CLAUDE.md non-negotiable
+    'MPS auth eval is NOISE'. Any KILL relying on a CPU number alone is
+    void.
+    """
+    violations = _check_mps_decision_in_text(text, "docs/example.md")
+    assert violations == []
+
+
+def test_attribution_without_decision_verb_still_clean() -> None:
+    """Sanity: attribution alone shouldn't change behavior of clean text."""
+    text = """
+    The CLAUDE.md non-negotiable rule discusses CUDA evaluation paths.
+    """
+    violations = _check_mps_decision_in_text(text, "docs/example.md")
+    assert violations == []
+
+
+def test_rule_attribution_does_not_exempt_unattributed_paragraphs() -> None:
+    """If a kill verb + MPS token sits in a paragraph WITHOUT
+    rule attribution, the exemption must NOT bleed across paragraphs."""
+    # Note: paragraph window is ±10 lines, so a far-apart attribution
+    # phrase should NOT exempt an isolated MPS-derived decision.
+    text = """
+    Section 1: per Council #999 we documented the protocol.
+
+    [...30 lines of unrelated content omitted with line padding below...]
+    pad1
+    pad2
+    pad3
+    pad4
+    pad5
+    pad6
+    pad7
+    pad8
+    pad9
+    pad10
+    pad11
+    pad12
+    pad13
+    pad14
+    pad15
+
+    Section 2: Lane Foo killed based on MPS smoke (no rule citation).
+    """
+    violations = _check_mps_decision_in_text(text, "test.md")
+    assert len(violations) >= 1, "Far-apart attribution must not exempt"
+
+
 def test_repo_no_proxy_decision_violations_clean() -> None:
     """The actual repo must have 0 violations after the docs/hardware_layout
     cleanup. If a future write reintroduces an MPS-derived decision, this
