@@ -1,0 +1,390 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-04-30T00:00:00Z",
+  "description": "Canonical lane maturity registry. See feedback_production_hardened_standard_definition_20260430.md for the 7-gate Level 3 standard. Maintained via tools/lane_maturity.py — bare edits OK for seeding but mark/unmark/audit-log are the supported interface going forward.",
+  "gate_definitions": {
+    "impl_complete": "Production code lands; no NotImplementedError; all CLI flags wired; all error paths covered.",
+    "real_archive_empirical": "Real-archive empirical measurement on Lane G v3 anchor (or equivalent baseline). Tagged [empirical:<artifact>].",
+    "contest_cuda": "Actual [contest-CUDA] score from Vast.ai 4090 / Modal A100 / equivalent. NOT [contest-CPU advisory]. NEVER MPS.",
+    "strict_preflight": "STRICT preflight check covering the lane's bug class (or warn-only with documented STRICT promotion path).",
+    "three_clean_review": "3-clean-pass adversarial review per CLAUDE.md Recursive adversarial review protocol. Counter at 3/3 with rotating perspectives, no new bugs.",
+    "memory_entry": "Memory file documenting empirical result + dispatch metadata + cross-refs.",
+    "deploy_runbook": "Deploy script + heartbeat + watchdog + harvest path documented (e.g. scripts/remote_lane_<id>.sh)."
+  },
+  "level_rules": {
+    "0": "0 gates satisfied — SKETCH only.",
+    "1": "1+ gate satisfied (typically impl_complete) — SCAFFOLD.",
+    "2": "impl_complete AND real_archive_empirical satisfied — INTEGRATION.",
+    "3": "ALL 7 gates satisfied — FULL PRODUCTION HARDENED + RECURSIVE ADVERSARIAL REVIEWED."
+  },
+  "lanes": [
+    {
+      "id": "lane_g_v3",
+      "name": "Lane G v3",
+      "phase": 1,
+      "level": 3,
+      "gates": {
+        "impl_complete": {"status": true, "evidence": "src/tac/segmap_renderer.py — Lane G v3 baseline 1.05 [contest-CUDA]"},
+        "real_archive_empirical": {"status": true, "evidence": "Lane G v3 anchor archive measured at 1.05 [empirical] — see project_lane_g_v3_landed_1_05_20260428 memory entry"},
+        "contest_cuda": {"status": true, "evidence": "1.05 [contest-CUDA] (Vast.ai 4090) — project_modal_pipeline_trusted_lane_g_v3_1_04_20260429 memory entry"},
+        "strict_preflight": {"status": true, "evidence": "src/tac/preflight.py — multiple STRICT checks cover Lane G v3 path (check_no_eval_roundtrip_false, check_no_scorer_load_at_inflate, check_training_paths_use_ema_correctly)"},
+        "three_clean_review": {"status": true, "evidence": ".omx/research/council_chain_integrity_audit_20260430.md (Council E + repeated round-N reviews)"},
+        "memory_entry": {"status": true, "evidence": "project_lane_g_v3_landed_1_05_20260428 memory entry (in user MEMORY index)"},
+        "deploy_runbook": {"status": true, "evidence": "scripts/remote_lane_g_v3_corrected_kl_weight.sh (heartbeat + harvest path documented)"}
+      },
+      "notes": "The ONLY currently Level 3 lane per feedback_production_hardened_standard_definition_20260430."
+    },
+    {
+      "id": "lane_sc_plus_plus",
+      "name": "Lane SC++/q_faithful",
+      "phase": 1,
+      "level": 1,
+      "gates": {
+        "impl_complete": {"status": true, "evidence": "src/tac/segmap_renderer.py — SC++ paradigm wired"},
+        "real_archive_empirical": {"status": false, "evidence": ""},
+        "contest_cuda": {"status": false, "evidence": ""},
+        "strict_preflight": {"status": false, "evidence": ""},
+        "three_clean_review": {"status": false, "evidence": ""},
+        "memory_entry": {"status": false, "evidence": ""},
+        "deploy_runbook": {"status": true, "evidence": "scripts/remote_lane_sc_plus_plus_kl_distill.sh"}
+      },
+      "notes": "Level 1.5 in audit (firing now) — needs post-result harvest + archive integration + 3-clean review."
+    },
+    {
+      "id": "lane_pose_delta_pd_v2",
+      "name": "Lane Pose-delta + PD-V2",
+      "phase": 1,
+      "level": 2,
+      "gates": {
+        "impl_complete": {"status": true, "evidence": "src/tac/pose_delta_codec.py"},
+        "real_archive_empirical": {"status": true, "evidence": "PD-V2 empirical 18.6% savings — see project_codec_stacking_composition_canonical_orders_20260429 memory"},
+        "contest_cuda": {"status": false, "evidence": ""},
+        "strict_preflight": {"status": false, "evidence": ""},
+        "three_clean_review": {"status": false, "evidence": ""},
+        "memory_entry": {"status": false, "evidence": ""},
+        "deploy_runbook": {"status": false, "evidence": ""}
+      },
+      "notes": "Audit: Level 2 (#277 in flight). Gap: contest-CUDA validation in stacked archive + 3-clean review."
+    },
+    {
+      "id": "lane_stc_clean_source",
+      "name": "Lane STC clean-source",
+      "phase": 1,
+      "level": 1,
+      "gates": {
+        "impl_complete": {"status": true, "evidence": "src/tac/stc_boundary_codec.py — STC clean-source pipeline (firing now)"},
+        "real_archive_empirical": {"status": false, "evidence": ""},
+        "contest_cuda": {"status": false, "evidence": ""},
+        "strict_preflight": {"status": false, "evidence": ""},
+        "three_clean_review": {"status": false, "evidence": ""},
+        "memory_entry": {"status": false, "evidence": ""},
+        "deploy_runbook": {"status": false, "evidence": ""}
+      },
+      "notes": "Audit: Level 1.5 (firing now) — needs post-result harvest + archive integration + 3-clean review."
+    },
+    {
+      "id": "lane_omega_w_v2",
+      "name": "Lane Ω-W water-fill V2",
+      "phase": 1,
+      "level": 2,
+      "gates": {
+        "impl_complete": {"status": true, "evidence": "src/tac/joint_admm_proximal_water_filling_v2.py — Ω-W water-fill V2 (#272 inflate handler in flight)"},
+        "real_archive_empirical": {"status": true, "evidence": "Lane Ω-W-V2 empirical 40.98% byte savings on Lane G v3 renderer.bin — see project_session_state_checkpoint_20260430 memory"},
+        "contest_cuda": {"status": false, "evidence": ""},
+        "strict_preflight": {"status": false, "evidence": ""},
+        "three_clean_review": {"status": false, "evidence": ""},
+        "memory_entry": {"status": false, "evidence": ""},
+        "deploy_runbook": {"status": false, "evidence": ""}
+      },
+      "notes": "Audit: Level 2. Contest-CUDA result lands ~30min after dispatch."
+    },
+    {
+      "id": "lane_lct",
+      "name": "Lane LCT",
+      "phase": 1,
+      "level": 2,
+      "gates": {
+        "impl_complete": {"status": true, "evidence": "src/tac/learnable_class_targets.py (#277 integrating)"},
+        "real_archive_empirical": {"status": true, "evidence": "Lane LCT integration in flight (#277) — see project_session_state_checkpoint_20260430 memory"},
+        "contest_cuda": {"status": false, "evidence": ""},
+        "strict_preflight": {"status": false, "evidence": ""},
+        "three_clean_review": {"status": false, "evidence": ""},
+        "memory_entry": {"status": false, "evidence": ""},
+        "deploy_runbook": {"status": false, "evidence": ""}
+      },
+      "notes": "Audit: Level 2 (#277 integrating) — needs contest-CUDA validation in stacked archive + 3-clean review."
+    },
+    {
+      "id": "lane_gp_rerun",
+      "name": "Lane GP rerun",
+      "phase": 1,
+      "level": 0,
+      "gates": {
+        "impl_complete": {"status": false, "evidence": ""},
+        "real_archive_empirical": {"status": false, "evidence": ""},
+        "contest_cuda": {"status": false, "evidence": ""},
+        "strict_preflight": {"status": false, "evidence": ""},
+        "three_clean_review": {"status": false, "evidence": ""},
+        "memory_entry": {"status": false, "evidence": ""},
+        "deploy_runbook": {"status": false, "evidence": ""}
+      },
+      "notes": "KILLED per Council #271. Gap: PROPER REPLACEMENT needed (B-spline / DCT / non-polynomial fit) at user's standard."
+    },
+    {
+      "id": "lane_psd",
+      "name": "Lane PSD",
+      "phase": 1,
+      "level": 1,
+      "gates": {
+        "impl_complete": {"status": true, "evidence": "src/tac/profiles.py — PSD_STANDARD_ADAPTIVE profile registered"},
+        "real_archive_empirical": {"status": false, "evidence": ""},
+        "contest_cuda": {"status": false, "evidence": ""},
+        "strict_preflight": {"status": false, "evidence": ""},
+        "three_clean_review": {"status": false, "evidence": ""},
+        "memory_entry": {"status": false, "evidence": ""},
+        "deploy_runbook": {"status": true, "evidence": "scripts/remote_lane_psd_standard.sh (script + watchdog landed)"}
+      },
+      "notes": "Audit: Level 1 (script + watchdog landed but never dispatched). Dispatch-or-kill-with-rationale decision needed."
+    },
+    {
+      "id": "lane_multi_pass_inflate",
+      "name": "Lane Multi-pass inflate",
+      "phase": 1,
+      "level": 1,
+      "gates": {
+        "impl_complete": {"status": true, "evidence": "src/tac/trick_stack.py — _stage_multi_pass MVP control flow (GPU inner-step deferred)"},
+        "real_archive_empirical": {"status": false, "evidence": ""},
+        "contest_cuda": {"status": false, "evidence": ""},
+        "strict_preflight": {"status": false, "evidence": ""},
+        "three_clean_review": {"status": false, "evidence": ""},
+        "memory_entry": {"status": false, "evidence": ""},
+        "deploy_runbook": {"status": false, "evidence": ""}
+      },
+      "notes": "Audit: Level 1 (MVP). GPU inner-step implementation + integration + 3-clean review still required."
+    },
+    {
+      "id": "lane_joint_admm",
+      "name": "Lane Joint-ADMM",
+      "phase": 1.5,
+      "level": 1,
+      "gates": {
+        "impl_complete": {"status": true, "evidence": "src/tac/joint_admm_coordinator.py (28 tests synthetic) — Round 11 Nesterov fix in flight"},
+        "real_archive_empirical": {"status": false, "evidence": ""},
+        "contest_cuda": {"status": false, "evidence": ""},
+        "strict_preflight": {"status": false, "evidence": ""},
+        "three_clean_review": {"status": false, "evidence": ""},
+        "memory_entry": {"status": false, "evidence": ""},
+        "deploy_runbook": {"status": false, "evidence": ""}
+      },
+      "notes": "Audit: Level 1. Real-archive integration + Lane 10 V2 dispatch + 3-clean review required."
+    },
+    {
+      "id": "lane_multi_pass_inflate_phase15",
+      "name": "Lane Multi-pass inflate (Phase 1.5)",
+      "phase": 1.5,
+      "level": 1,
+      "gates": {
+        "impl_complete": {"status": true, "evidence": "src/tac/trick_stack.py — shared with Phase 1 Lane 8 (_stage_multi_pass MVP)"},
+        "real_archive_empirical": {"status": false, "evidence": ""},
+        "contest_cuda": {"status": false, "evidence": ""},
+        "strict_preflight": {"status": false, "evidence": ""},
+        "three_clean_review": {"status": false, "evidence": ""},
+        "memory_entry": {"status": false, "evidence": ""},
+        "deploy_runbook": {"status": false, "evidence": ""}
+      },
+      "notes": "Same gap as Phase 1 Lane 8."
+    },
+    {
+      "id": "lane_j_nwc",
+      "name": "Lane J-NWC (neural weight codec)",
+      "phase": 1.5,
+      "level": 2,
+      "gates": {
+        "impl_complete": {"status": true, "evidence": "src/tac/network_codec.py — end-to-end NWC1 codec + pipeline.py nwc branch"},
+        "real_archive_empirical": {"status": true, "evidence": "src/tac/tests/test_network_codec.py — end-to-end inflate dispatch validated"},
+        "contest_cuda": {"status": false, "evidence": ""},
+        "strict_preflight": {"status": false, "evidence": ""},
+        "three_clean_review": {"status": false, "evidence": ""},
+        "memory_entry": {"status": true, "evidence": "project_lane_j_nwc_landed_20260429 memory entry (in user MEMORY index)"},
+        "deploy_runbook": {"status": true, "evidence": "scripts/remote_lane_nwc.sh"}
+      },
+      "notes": "Audit: Level 2 (end-to-end inflate dispatch wired). Shared-corpus codec build + amortization measurement + contest-CUDA validation still required."
+    },
+    {
+      "id": "lane_10_admm_realcodec",
+      "name": "Lane 10 — ADMM real-codec wrap",
+      "phase": 2,
+      "level": 1,
+      "gates": {
+        "impl_complete": {"status": true, "evidence": "src/tac/joint_admm_coordinator.py wrap (Round 11 #276 fix in flight)"},
+        "real_archive_empirical": {"status": false, "evidence": ""},
+        "contest_cuda": {"status": false, "evidence": ""},
+        "strict_preflight": {"status": false, "evidence": ""},
+        "three_clean_review": {"status": false, "evidence": ""},
+        "memory_entry": {"status": false, "evidence": ""},
+        "deploy_runbook": {"status": false, "evidence": ""}
+      },
+      "notes": "Audit: Level 1. Round 11 #276 fix → real-archive dispatch → contest-CUDA → 3-clean review."
+    },
+    {
+      "id": "lane_12_nerv_mask_codec",
+      "name": "Lane 12 — NeRV mask codec",
+      "phase": 2,
+      "level": 1,
+      "gates": {
+        "impl_complete": {"status": true, "evidence": "src/tac/nerv_mask_codec.py (synthetic tests)"},
+        "real_archive_empirical": {"status": false, "evidence": ""},
+        "contest_cuda": {"status": false, "evidence": ""},
+        "strict_preflight": {"status": false, "evidence": ""},
+        "three_clean_review": {"status": false, "evidence": ""},
+        "memory_entry": {"status": false, "evidence": ""},
+        "deploy_runbook": {"status": false, "evidence": ""}
+      },
+      "notes": "Audit: Level 1. CUDA train pass on 1200-frame mask + byte measurement vs AV1 421KB + integration → contest-CUDA → 3-clean review."
+    },
+    {
+      "id": "lane_17_imp_10cycle",
+      "name": "Lane 17 — IMP 10-cycle",
+      "phase": 2,
+      "level": 1,
+      "gates": {
+        "impl_complete": {"status": true, "evidence": "experiments/train_imp_cycle.py — IMP cycle training script"},
+        "real_archive_empirical": {"status": false, "evidence": ""},
+        "contest_cuda": {"status": false, "evidence": ""},
+        "strict_preflight": {"status": false, "evidence": ""},
+        "three_clean_review": {"status": false, "evidence": ""},
+        "memory_entry": {"status": false, "evidence": ""},
+        "deploy_runbook": {"status": false, "evidence": ""}
+      },
+      "notes": "Audit: Level 1. CUDA full 10-cycle on Lane G v3 + integration → contest-CUDA → 3-clean review."
+    },
+    {
+      "id": "lane_19_segnet_logit_margin",
+      "name": "Lane 19 — SegNet logit-margin",
+      "phase": 2,
+      "level": 1,
+      "gates": {
+        "impl_complete": {"status": true, "evidence": "src/tac/losses_logit_margin.py — logit-margin loss module"},
+        "real_archive_empirical": {"status": false, "evidence": ""},
+        "contest_cuda": {"status": false, "evidence": ""},
+        "strict_preflight": {"status": false, "evidence": ""},
+        "three_clean_review": {"status": false, "evidence": ""},
+        "memory_entry": {"status": false, "evidence": ""},
+        "deploy_runbook": {"status": false, "evidence": ""}
+      },
+      "notes": "Audit: Level 1. A/B vs standard CE on Lane G v3 + integration → contest-CUDA → 3-clean review."
+    },
+    {
+      "id": "lane_20_balle_hyperprior",
+      "name": "Lane 20 — Ballé hyperprior",
+      "phase": 2,
+      "level": 1,
+      "gates": {
+        "impl_complete": {"status": true, "evidence": "src/tac/balle_hyperprior_renderer.py (synthetic tests)"},
+        "real_archive_empirical": {"status": false, "evidence": ""},
+        "contest_cuda": {"status": false, "evidence": ""},
+        "strict_preflight": {"status": false, "evidence": ""},
+        "three_clean_review": {"status": false, "evidence": ""},
+        "memory_entry": {"status": false, "evidence": ""},
+        "deploy_runbook": {"status": false, "evidence": ""}
+      },
+      "notes": "Audit: Level 1. Train ScalePriorMLP on Lane G v3 qint stream + amortization measurement + integration → contest-CUDA → 3-clean review."
+    },
+    {
+      "id": "lane_sensitivity_map",
+      "name": "Lane Sensitivity-map module",
+      "phase": 3,
+      "level": 0,
+      "gates": {
+        "impl_complete": {"status": false, "evidence": ""},
+        "real_archive_empirical": {"status": false, "evidence": ""},
+        "contest_cuda": {"status": false, "evidence": ""},
+        "strict_preflight": {"status": false, "evidence": ""},
+        "three_clean_review": {"status": false, "evidence": ""},
+        "memory_entry": {"status": false, "evidence": ""},
+        "deploy_runbook": {"status": false, "evidence": ""}
+      },
+      "notes": "Audit: 0 → 1 (#275 in flight). Level 0 lift in flight; then needs CUDA dispatch + integration."
+    },
+    {
+      "id": "lane_bit_level_archive_opt",
+      "name": "Lane Bit-level archive optimization",
+      "phase": 3,
+      "level": 0,
+      "gates": {
+        "impl_complete": {"status": false, "evidence": ""},
+        "real_archive_empirical": {"status": false, "evidence": ""},
+        "contest_cuda": {"status": false, "evidence": ""},
+        "strict_preflight": {"status": false, "evidence": ""},
+        "three_clean_review": {"status": false, "evidence": ""},
+        "memory_entry": {"status": false, "evidence": ""},
+        "deploy_runbook": {"status": false, "evidence": ""}
+      },
+      "notes": "SKETCH only. Full Level 0→3 cycle required."
+    },
+    {
+      "id": "lane_mdl_bayesian",
+      "name": "Lane MDL/Bayesian (MacKay)",
+      "phase": 3,
+      "level": 0,
+      "gates": {
+        "impl_complete": {"status": false, "evidence": ""},
+        "real_archive_empirical": {"status": false, "evidence": ""},
+        "contest_cuda": {"status": false, "evidence": ""},
+        "strict_preflight": {"status": false, "evidence": ""},
+        "three_clean_review": {"status": false, "evidence": ""},
+        "memory_entry": {"status": false, "evidence": ""},
+        "deploy_runbook": {"status": false, "evidence": ""}
+      },
+      "notes": "SKETCH only. Full Level 0→3 cycle required."
+    },
+    {
+      "id": "lane_raft_radial_pose",
+      "name": "Lane RAFT/radial pose",
+      "phase": 3,
+      "level": 0,
+      "gates": {
+        "impl_complete": {"status": false, "evidence": ""},
+        "real_archive_empirical": {"status": false, "evidence": ""},
+        "contest_cuda": {"status": false, "evidence": ""},
+        "strict_preflight": {"status": false, "evidence": ""},
+        "three_clean_review": {"status": false, "evidence": ""},
+        "memory_entry": {"status": false, "evidence": ""},
+        "deploy_runbook": {"status": false, "evidence": ""}
+      },
+      "notes": "SKETCH only. Full Level 0→3 cycle required."
+    },
+    {
+      "id": "lane_decoder_systems_rewrite",
+      "name": "Lane Decoder systems rewrite",
+      "phase": 3,
+      "level": 0,
+      "gates": {
+        "impl_complete": {"status": false, "evidence": ""},
+        "real_archive_empirical": {"status": false, "evidence": ""},
+        "contest_cuda": {"status": false, "evidence": ""},
+        "strict_preflight": {"status": false, "evidence": ""},
+        "three_clean_review": {"status": false, "evidence": ""},
+        "memory_entry": {"status": false, "evidence": ""},
+        "deploy_runbook": {"status": false, "evidence": ""}
+      },
+      "notes": "SKETCH only. PAUSED per Council E. Deferred — paused state acceptable per Council E."
+    },
+    {
+      "id": "lane_rl_pufferlib_bandit",
+      "name": "Lane RL/PufferLib bandit",
+      "phase": 3,
+      "level": 0,
+      "gates": {
+        "impl_complete": {"status": false, "evidence": ""},
+        "real_archive_empirical": {"status": false, "evidence": ""},
+        "contest_cuda": {"status": false, "evidence": ""},
+        "strict_preflight": {"status": false, "evidence": ""},
+        "three_clean_review": {"status": false, "evidence": ""},
+        "memory_entry": {"status": false, "evidence": ""},
+        "deploy_runbook": {"status": false, "evidence": ""}
+      },
+      "notes": "SKETCH only. Council #271 PILOT-WITH-CAP $5. Full Level 0→3 cycle if pilot proves out."
+    }
+  ]
+}
