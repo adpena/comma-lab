@@ -257,13 +257,39 @@ def test_canonical_ema_decay_default_is_quantizr() -> None:
 
     CLAUDE.md "EMA — NON-NEGOTIABLE" pins this default. If anyone changes it
     away from 0.997, this test trips and forces a council audit.
+
+    Round 8 F4 hardening (defense-in-depth for the AST-decay-scanner blind
+    spots — aliased imports `from tac.training import EMA as X` and
+    fake-attribute references like `EMA(model, decay=fake.ema_decay)` both
+    bypass the AST scanner. This test catches changes to the canonical
+    class default itself, which is the runtime safety net for those bypass
+    surfaces).
+
+    BOTH `inspect.signature(...).parameters['decay'].default` and
+    `EMA.__init__.__defaults__` are checked — the former for parameter-name
+    mapping, the latter as the raw tuple of positional defaults (defense
+    against signature-monkey-patching).
     """
     from tac.training import EMA
+
     sig = inspect.signature(EMA.__init__)
     decay_default = sig.parameters["decay"].default
     assert decay_default == 0.997, (
-        f"EMA default decay must be 0.997 (Quantizr canonical), got "
-        f"{decay_default}. CLAUDE.md \"EMA — NON-NEGOTIABLE\"."
+        "Canonical EMA decay drifted from Quantizr 0.997 — affects every "
+        "training script via class default. "
+        f"inspect.signature reported decay default = {decay_default!r}. "
+        'CLAUDE.md "EMA — NON-NEGOTIABLE".'
+    )
+
+    # Defense-in-depth: also check the raw __defaults__ tuple. If anyone
+    # monkey-patches the inspect.signature() output without changing the
+    # actual function defaults, this catches it.
+    raw_defaults = EMA.__init__.__defaults__
+    assert raw_defaults is not None and 0.997 in raw_defaults, (
+        "Canonical EMA decay drifted from Quantizr 0.997 — affects every "
+        "training script via class default. "
+        f"EMA.__init__.__defaults__ = {raw_defaults!r} (expected 0.997 to "
+        'be present). CLAUDE.md "EMA — NON-NEGOTIABLE".'
     )
 
 
@@ -515,4 +541,228 @@ def test_ema_decay_is_quantizr_canonical_via_ast() -> None:
                 )
     assert not failures, (
         f"EMA decay constructor violations:\n  " + "\n  ".join(failures)
+    )
+
+
+# ── Round 8 F4 hardening: WALK-EVERY-FUNCTION wrapper-bypass scanner ────────
+#
+# Round 8 §3.1 / Round 9 §4 catalogued the AST EMA-ordering scanner's
+# cross-function wrapper bypass:
+#
+#   def _train_one_step():
+#       ema.update(model)        # called BEFORE optimizer.step at runtime
+#       ...
+#   def main():
+#       optimizer.step()
+#       _train_one_step()        # bypass: cross-function call graph not traced
+#
+# `_find_optimizer_step_then_ema_update_order` only flags functions where
+# BOTH calls live in the same body. A wrapper helper passes silently.
+#
+# This test closes that gap by walking EVERY function definition in each
+# target script. For each function that calls `optimizer.step()` (or
+# variants), require that EITHER:
+#   (a) the SAME function ALSO calls `ema.update(...)` somewhere in its
+#       body, OR
+#   (b) the function carries a `# EMA-CALLER-RESPONSIBLE:` marker on its
+#       def-line OR within the first 3 lines of its body (escape hatch:
+#       the function explicitly delegates EMA update to its caller).
+#
+# A function that calls optimizer.step() but does NOT update ema and does
+# NOT carry the marker is a wrapper-bypass candidate — that is the bug
+# class Council D Check 88 prevents at the file level but not at the
+# wrapper-helper level.
+
+
+def _has_ema_caller_responsible_marker(
+    text: str, fn: "ast.FunctionDef | ast.AsyncFunctionDef",
+) -> bool:
+    """Return True if `fn` carries the `# EMA-CALLER-RESPONSIBLE:` marker
+    on its def-line OR within the first 3 lines of its body (using the
+    raw source text + `fn.lineno` / `body[0].lineno`).
+    """
+    lines = text.splitlines()
+    # def-line itself (1-indexed in fn.lineno → 0-indexed in `lines`)
+    def_idx = fn.lineno - 1
+    if 0 <= def_idx < len(lines) and "EMA-CALLER-RESPONSIBLE:" in lines[def_idx]:
+        return True
+    # Decorator lines just above the def.
+    for dec in getattr(fn, "decorator_list", []) or []:
+        dec_idx = getattr(dec, "lineno", fn.lineno) - 1
+        if 0 <= dec_idx < len(lines) and "EMA-CALLER-RESPONSIBLE:" in lines[dec_idx]:
+            return True
+    # First 3 body lines (catches docstring + leading comment markers).
+    if fn.body:
+        first_body_line = fn.body[0].lineno
+        for offset in range(0, 3):
+            i = (first_body_line - 1) + offset
+            if 0 <= i < len(lines) and "EMA-CALLER-RESPONSIBLE:" in lines[i]:
+                return True
+    return False
+
+
+def _function_has_optimizer_step(fn) -> list[int]:
+    """Return list of line numbers in `fn` body where `optimizer.step()`
+    (or `*.step()` with a recognised receiver name) is called."""
+    import ast
+
+    OPT_NAMES = {"optimizer", "optim", "opt", "_opt"}
+    out: list[int] = []
+    for node in ast.walk(fn):
+        if not isinstance(node, ast.Call):
+            continue
+        if not isinstance(node.func, ast.Attribute):
+            continue
+        if node.func.attr != "step":
+            continue
+        v = node.func.value
+        if isinstance(v, ast.Name) and v.id in OPT_NAMES:
+            out.append(node.lineno)
+        elif isinstance(v, ast.Attribute) and v.attr in OPT_NAMES:
+            out.append(node.lineno)
+    return out
+
+
+def _function_has_ema_update(fn) -> list[int]:
+    """Return list of line numbers in `fn` body where `ema.update(...)` (or
+    `self.ema.update(...)`, `*.ema.update(...)`) is called."""
+    import ast
+
+    out: list[int] = []
+    for node in ast.walk(fn):
+        if not isinstance(node, ast.Call):
+            continue
+        if not isinstance(node.func, ast.Attribute):
+            continue
+        if node.func.attr != "update":
+            continue
+        v = node.func.value
+        if isinstance(v, ast.Name) and v.id == "ema":
+            out.append(node.lineno)
+        elif isinstance(v, ast.Attribute) and v.attr == "ema":
+            out.append(node.lineno)
+    return out
+
+
+def test_ema_update_called_after_optimizer_step_via_ast_v2_walks_helpers() -> None:
+    """Round 8 F4 hardening: WALK EVERY FunctionDef.
+
+    The existing `_find_optimizer_step_then_ema_update_order` scanner
+    walks each function body INDEPENDENTLY and only flags functions with
+    BOTH calls. A wrapper helper that calls `optimizer.step()` but never
+    calls `ema.update()` (with a caller orchestrating both) silently
+    passes the original test — the cross-function call graph is invisible
+    to AST walks.
+
+    This V2 test closes the gap at the file level: any function in a
+    Check 88 target script that calls `optimizer.step()` MUST EITHER
+      (a) also call `ema.update(...)` somewhere in its body (the canonical
+          paired-call pattern), OR
+      (b) carry an explicit `# EMA-CALLER-RESPONSIBLE:` marker on the
+          def-line / decorator / first 3 body lines (escape hatch — the
+          function delegates EMA update to its caller).
+
+    A failure here means a wrapper helper was introduced that breaks the
+    Council D Check 88 invariant. To fix: either move ema.update into
+    that function OR add the marker if the calling site verifiably
+    handles ema.update.
+    """
+    import ast
+
+    failures: list[str] = []
+    for rel in _AST_TEST_TARGETS:
+        if rel in _AST_TEST_SKIP:
+            continue
+        text = _read_script(rel)
+        tree = ast.parse(text, filename=rel)
+        for fn in ast.walk(tree):
+            if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            step_lines = _function_has_optimizer_step(fn)
+            if not step_lines:
+                continue
+            ema_lines = _function_has_ema_update(fn)
+            if ema_lines:
+                continue  # canonical paired-call — fine
+            # No ema.update in this function. Allow the marker escape hatch.
+            if _has_ema_caller_responsible_marker(text, fn):
+                continue
+            failures.append(
+                f"Function {fn.name} in {rel} (line {fn.lineno}) calls "
+                f"optimizer.step() at line(s) {step_lines} but never "
+                f"ema.update() — bypass risk for the bug class Council D "
+                f"Check 88 prevents. Either add ema.update(model) after "
+                f"optimizer.step() in this function, OR add a "
+                f"`# EMA-CALLER-RESPONSIBLE: <reason>` marker on the "
+                f"def-line if a verified caller handles the EMA update."
+            )
+
+    assert not failures, (
+        "WRAPPER-BYPASS scan found functions that call optimizer.step() "
+        "without calling ema.update() — Round 8 F4 finding. "
+        "Each function below is a candidate for the cross-function "
+        "wrapper-bypass that the original AST scanner cannot detect:\n  "
+        + "\n  ".join(failures)
+    )
+
+
+def test_ema_caller_responsible_marker_is_recognised(tmp_path: Path) -> None:
+    """The `# EMA-CALLER-RESPONSIBLE:` marker must suppress the V2 scanner.
+
+    Synthetic test: a function that calls optimizer.step() but no
+    ema.update() AND carries the marker should pass; without the marker
+    it should fail.
+    """
+    import ast
+
+    marker_src = (
+        '"""Synthetic — wrapper helper delegates EMA to caller."""\n'
+        'import torch\n'
+        '\n'
+        'def _train_one_step(model, optimizer):  # EMA-CALLER-RESPONSIBLE: caller orchestrates\n'
+        '    optimizer.step()\n'
+        '    return None\n'
+    )
+    no_marker_src = (
+        '"""Synthetic — wrapper helper without marker."""\n'
+        'import torch\n'
+        '\n'
+        'def _train_one_step(model, optimizer):\n'
+        '    optimizer.step()\n'
+        '    return None\n'
+    )
+
+    tree_marker = ast.parse(marker_src)
+    tree_no_marker = ast.parse(no_marker_src)
+
+    fn_marker = next(
+        n for n in ast.walk(tree_marker) if isinstance(n, ast.FunctionDef)
+    )
+    fn_no_marker = next(
+        n for n in ast.walk(tree_no_marker) if isinstance(n, ast.FunctionDef)
+    )
+
+    # _function_has_optimizer_step must catch optimizer.step() in both.
+    assert _function_has_optimizer_step(fn_marker), (
+        "scanner failed to find optimizer.step() in marker case"
+    )
+    assert _function_has_optimizer_step(fn_no_marker), (
+        "scanner failed to find optimizer.step() in no-marker case"
+    )
+
+    # _function_has_ema_update must NOT find ema.update in either (neither
+    # has it).
+    assert not _function_has_ema_update(fn_marker), (
+        "scanner spuriously found ema.update in marker case"
+    )
+    assert not _function_has_ema_update(fn_no_marker), (
+        "scanner spuriously found ema.update in no-marker case"
+    )
+
+    # Marker recognition: only the marker case should be suppressed.
+    assert _has_ema_caller_responsible_marker(marker_src, fn_marker), (
+        "marker on def-line was NOT recognised"
+    )
+    assert not _has_ema_caller_responsible_marker(no_marker_src, fn_no_marker), (
+        "marker recognition spuriously fired on a no-marker function"
     )
