@@ -1,0 +1,106 @@
+{
+  "anchor_path": "experiments/results/lane_g_v3_landed/iter_0/renderer.bin",
+  "anchor_fp4a_bytes": 296776,
+  "imps_dense_baseline_bytes": 581579,
+  "cycle_results": [
+    {
+      "cycle": 0,
+      "cumulative_sparsity": 0.200026245974435,
+      "expected_sparsity": 0.19999999999999996,
+      "imps_archive_bytes": 581579,
+      "savings_vs_dense_imps_pct": 0.0,
+      "savings_vs_fp4a_anchor_pct": -95.96564412216621,
+      "sparse_eligible_layer_count": 20
+    },
+    {
+      "cycle": 1,
+      "cumulative_sparsity": 0.3600841289883241,
+      "expected_sparsity": 0.3599999999999999,
+      "imps_archive_bytes": 581579,
+      "savings_vs_dense_imps_pct": 0.0,
+      "savings_vs_fp4a_anchor_pct": -95.96564412216621,
+      "sparse_eligible_layer_count": 20
+    },
+    {
+      "cycle": 2,
+      "cumulative_sparsity": 0.48808645565849024,
+      "expected_sparsity": 0.4879999999999999,
+      "imps_archive_bytes": 581579,
+      "savings_vs_dense_imps_pct": 0.0,
+      "savings_vs_fp4a_anchor_pct": -95.96564412216621,
+      "sparse_eligible_layer_count": 20
+    },
+    {
+      "cycle": 3,
+      "cumulative_sparsity": 0.5904776767347171,
+      "expected_sparsity": 0.5903999999999999,
+      "imps_archive_bytes": 581579,
+      "savings_vs_dense_imps_pct": 0.0,
+      "savings_vs_fp4a_anchor_pct": -95.96564412216621,
+      "sparse_eligible_layer_count": 20
+    },
+    {
+      "cycle": 4,
+      "cumulative_sparsity": 0.6724005845049442,
+      "expected_sparsity": 0.6723199999999999,
+      "imps_archive_bytes": 578670,
+      "savings_vs_dense_imps_pct": 0.5001899999828054,
+      "savings_vs_fp4a_anchor_pct": -94.98544356686524,
+      "sparse_eligible_layer_count": 20
+    },
+    {
+      "cycle": 5,
+      "cumulative_sparsity": 0.7379552257863152,
+      "expected_sparsity": 0.7378559999999998,
+      "imps_archive_bytes": 516496,
+      "savings_vs_dense_imps_pct": 11.190741068711215,
+      "savings_vs_fp4a_anchor_pct": -74.03563630482249,
+      "sparse_eligible_layer_count": 20
+    },
+    {
+      "cycle": 6,
+      "cumulative_sparsity": 0.790376239590279,
+      "expected_sparsity": 0.7902847999999999,
+      "imps_archive_bytes": 362597,
+      "savings_vs_dense_imps_pct": 37.6530101671484,
+      "savings_vs_fp4a_anchor_pct": -22.178680216729116,
+      "sparse_eligible_layer_count": 20
+    },
+    {
+      "cycle": 7,
+      "cumulative_sparsity": 0.8323343311532623,
+      "expected_sparsity": 0.8322278399999999,
+      "imps_archive_bytes": 218473,
+      "savings_vs_dense_imps_pct": 62.434510186922154,
+      "savings_vs_fp4a_anchor_pct": 26.38454592015527,
+      "sparse_eligible_layer_count": 20
+    },
+    {
+      "cycle": 8,
+      "cumulative_sparsity": 0.8658830706371388,
+      "expected_sparsity": 0.8657822719999999,
+      "imps_archive_bytes": 195396,
+      "savings_vs_dense_imps_pct": 66.40250077805423,
+      "savings_vs_fp4a_anchor_pct": 34.16044424077418,
+      "sparse_eligible_layer_count": 20
+    },
+    {
+      "cycle": 9,
+      "cumulative_sparsity": 0.8927248996268815,
+      "expected_sparsity": 0.8926258175999999,
+      "imps_archive_bytes": 177466,
+      "savings_vs_dense_imps_pct": 69.48548692439033,
+      "savings_vs_fp4a_anchor_pct": 40.202037900638864,
+      "sparse_eligible_layer_count": 20
+    }
+  ],
+  "final_sparsity": 0.8927248996268815,
+  "final_imps_bytes": 177466,
+  "savings_vs_dense_imps_pct": 69.48548692439033,
+  "savings_vs_fp4a_anchor_pct": 40.202037900638864,
+  "council_predicted_band": [
+    0.85,
+    1.2
+  ],
+  "tag": "[empirical] CPU-only codec measurement; score still pending [contest-CUDA]."
+}

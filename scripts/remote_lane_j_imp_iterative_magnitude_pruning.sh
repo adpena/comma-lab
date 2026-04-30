@@ -162,7 +162,25 @@ TARGET_SPARSITY_PER_CYCLE=0.20
 FINAL_TARGET=0.893
 EPOCHS_PER_CYCLE=200
 
+# Council Lane-17 design 2026-04-30 (Q3 7/10 vote, Q4 9/10 vote):
+#   Q3: per-cycle CUDA auth eval at cycles 0, 2, 4, 6, 8, 9 (6 evals = $1.80).
+#   Q4: revert-on-regression — kill if cycle_N_score > 1.10 × min(cycle_0..N-1).
+# Variables defined here drive the in-loop hooks. To run a quick variant
+# (5-cycle), pass IMP_QUICK_VARIANT=1 to the launcher.
+IMP_AUTH_EVAL_CYCLES=${IMP_AUTH_EVAL_CYCLES:-"0 2 4 6 8 9"}
+IMP_REGRESSION_THRESHOLD=${IMP_REGRESSION_THRESHOLD:-1.10}
+# Council Round 1 M1 fix (2026-04-30): pre-populate BEST_CYCLE_SCORE with the
+# Lane G v3 anchor's known [contest-CUDA] score (1.05). This anchors the
+# regression check to the DENSE baseline, not whichever cycle's smoke happens
+# to land first (failure mode: cycle 0 auth eval crashes → cycle 2 becomes
+# baseline → 36% sparse network masks the dense-vs-sparse regression).
+BEST_CYCLE_SCORE="${IMP_BASELINE_SCORE:-1.05}"
+BEST_CYCLE_IDX="lane_g_v3_anchor"
+CYCLE_SCORE_FLOOR="$BEST_CYCLE_SCORE"  # Council kill-criterion sentinel (Check 94 token)
+
 log "=== Stage 1: 10-cycle IMP (target_per_cycle=$TARGET_SPARSITY_PER_CYCLE, final=$FINAL_TARGET) ==="
+log "  Council kill-criterion: revert-on-regression at threshold ×${IMP_REGRESSION_THRESHOLD}"
+log "  Auth-eval-on-cycles: $IMP_AUTH_EVAL_CYCLES"
 log "  cumulative sparsity schedule:"
 log "    cycle 0 → 0.200    cycle 5 → 0.738"
 log "    cycle 1 → 0.360    cycle 6 → 0.790"
@@ -222,14 +240,141 @@ for i in 0 1 2 3 4 5 6 7 8 9; do
     SPARSITY=$("$PYBIN" -c "import json; print(json.load(open('$CYC_DIR/stats.json'))['sparsity_after_rewind'])")
     log "  cycle $i complete: sparsity=$SPARSITY"
 
+    # Council Q3+Q4 (2026-04-30): per-cycle CUDA auth eval at scheduled
+    # cycles + revert-on-regression. The auth eval runs on a contest archive
+    # built by re-exporting the cycle's renderer.pt to FP4A and packaging
+    # alongside the Lane G v3 anchor masks/poses. All cost: ~$0.30/eval ×
+    # 6 evals = $1.80 — cheap insurance against burning $25 on a regressing
+    # 10-cycle run.
+    if echo " $IMP_AUTH_EVAL_CYCLES " | grep -q " $i "; then
+        log "  Stage 1.5: per-cycle CUDA auth eval (cycle $i)"
+        SMOKE_DIR="$CYC_DIR/auth_smoke"
+        mkdir -p "$SMOKE_DIR/iter_0"
+        # Re-export FP4A bytes for this cycle's renderer.pt → smoke archive.
+        "$PYBIN" -c "
+import sys, torch
+sys.path.insert(0, 'src'); sys.path.insert(0, 'upstream')
+from tac.renderer import build_renderer
+from tac.renderer_export import export_asymmetric_checkpoint_fp4
+ckpt = torch.load('$CYC_DIR/renderer.pt', map_location='cpu', weights_only=False)
+state = ckpt.get('model_state_dict', ckpt)
+m = build_renderer(num_classes=5, embed_dim=6, base_ch=36, mid_ch=60,
+                   motion_hidden=32, depth=1, pose_dim=6,
+                   use_zoom_flow=False, padding_mode='zeros')
+m.load_state_dict(state, strict=False); m.eval()
+with open('$SMOKE_DIR/iter_0/renderer.bin', 'wb') as f:
+    f.write(export_asymmetric_checkpoint_fp4(m))
+" 2>&1 | tee -a "$CYC_DIR/cycle.log" | tail -3
+        cp "$ANCHOR_MASKS" "$SMOKE_DIR/iter_0/masks.mkv"
+        [ -f "$ANCHOR_POSES" ] && cp "$ANCHOR_POSES" "$SMOKE_DIR/iter_0/optimized_poses.pt" || true
+        SMOKE_ARCHIVE="$SMOKE_DIR/archive_cycle_${i}.zip"
+        "$PYBIN" -c "
+import zipfile, os
+src = '$SMOKE_DIR/iter_0'
+with zipfile.ZipFile('$SMOKE_ARCHIVE', 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
+    for n in ('renderer.bin', 'masks.mkv', 'optimized_poses.pt'):
+        p = os.path.join(src, n)
+        if os.path.isfile(p):
+            z.write(p, arcname=n)
+"
+        # Run auth eval. Don't abort the dispatcher on a single eval crash —
+        # log and continue (Council resilience principle).
+        "$PYBIN" -u experiments/contest_auth_eval.py \
+            --archive "$SMOKE_ARCHIVE" \
+            --inflate-sh submissions/robust_current/inflate.sh \
+            --upstream-dir upstream \
+            --device cuda \
+            --keep-work-dir \
+            --work-dir "$SMOKE_DIR/eval_work" \
+            2>&1 | tee "$SMOKE_DIR/auth_eval.log" | tail -8 || \
+            log "  WARN: cycle $i auth eval crashed; continuing (no revert decision possible)"
+
+        if grep -q "RESULT_JSON" "$SMOKE_DIR/auth_eval.log"; then
+            CYC_SCORE=$("$PYBIN" -c "
+import json, re
+log = open('$SMOKE_DIR/auth_eval.log').read()
+m = re.search(r'RESULT_JSON\s*[:=]\s*(\{[^}]*\})', log)
+if not m:
+    print('NaN'); raise SystemExit(0)
+try:
+    j = json.loads(m.group(1))
+    print(j.get('score', j.get('total', 'NaN')))
+except Exception:
+    print('NaN')
+")
+            log "  cycle $i [contest-CUDA] score = $CYC_SCORE"
+            # Revert-on-regression — Council Q4 9/10 (the cycle_score_floor
+            # token is the Check 94 STRICT detection sentinel).
+            # BEST_CYCLE_SCORE is pre-populated to the Lane G v3 anchor
+            # baseline (1.05) per Round 1 M1 fix, so the regression check
+            # is always against the canonical [contest-CUDA] anchor.
+            IS_BETTER=$("$PYBIN" -c "
+try:
+    a, b = float('$CYC_SCORE'), float('$BEST_CYCLE_SCORE')
+    print('1' if a < b else '0')
+except: print('0')
+")
+            IS_REGRESSION=$("$PYBIN" -c "
+try:
+    a, b, t = float('$CYC_SCORE'), float('$BEST_CYCLE_SCORE'), float('$IMP_REGRESSION_THRESHOLD')
+    print('1' if a > b * t else '0')
+except: print('0')
+")
+            if [ "$IS_BETTER" = "1" ]; then
+                BEST_CYCLE_SCORE="$CYC_SCORE"
+                BEST_CYCLE_IDX="$i"
+                CYCLE_SCORE_FLOOR="$CYC_SCORE"
+                log "    NEW BEST: BEST_CYCLE_SCORE=$BEST_CYCLE_SCORE @ cycle $i"
+            fi
+            if [ "$IS_REGRESSION" = "1" ]; then
+                log "  REVERT_ON_REGRESSION: cycle $i score $CYC_SCORE > "
+                log "    threshold ($IMP_REGRESSION_THRESHOLD × $BEST_CYCLE_SCORE = "
+                log "    $("$PYBIN" -c "print(float('$BEST_CYCLE_SCORE') * float('$IMP_REGRESSION_THRESHOLD'))"))."
+                log "    REVERT to cycle $BEST_CYCLE_IDX as the lane's "
+                log "    final result and STOP per Council Q4."
+                # Mark the dispatcher's final-cycle pointer to the BEST.
+                echo "$BEST_CYCLE_IDX" > "$LOG_DIR/REVERT_TO_CYCLE.txt"
+                break
+            fi
+        else
+            log "  WARN: cycle $i auth eval log missing RESULT_JSON; "
+            log "    cannot decide revert. Continuing — final Stage 4 will catch."
+        fi
+    fi
+
     PREV_RENDER="$CYC_DIR/renderer.pt"
     PREV_MASK="$CYC_DIR/mask.pt"
     PREV_SNAPSHOT="$CYC_DIR/early_epoch_snapshot.pt"
 done
 
-FINAL_RENDERER_PT="$LOG_DIR/cycle_9/renderer.pt"
-FINAL_MASK="$LOG_DIR/cycle_9/mask.pt"
+# If revert-on-regression fired, swap the Stage-2 final pointer to the
+# best cycle. Otherwise it's the last cycle (9 in normal flow).
+# Special case (Round 1 M1 / Round 2 followup): BEST_CYCLE_IDX may be
+# "lane_g_v3_anchor" if EVERY cycle regressed past the threshold from the
+# DENSE baseline. In that case, NO IMP cycle survives — the lane's final
+# result IS the Lane G v3 anchor (sparse-CSR shipped no benefit). The
+# dispatcher emits a special "ALL_CYCLES_REGRESSED" exit code (8) so the
+# launcher / harvester can distinguish this from a normal "best-of-the-
+# pruned-cycles" revert.
+if [ -f "$LOG_DIR/REVERT_TO_CYCLE.txt" ]; then
+    REVERT_IDX=$(cat "$LOG_DIR/REVERT_TO_CYCLE.txt")
+    log "=== REVERTING to $REVERT_IDX (Council Q4 kill-criterion fired) ==="
+    if [ "$REVERT_IDX" = "lane_g_v3_anchor" ]; then
+        log "ALL_CYCLES_REGRESSED: every IMP cycle regressed >${IMP_REGRESSION_THRESHOLD}x "
+        log "  from Lane G v3 anchor (1.05). Lane 17 ships NO new artifact; "
+        log "  user should re-evaluate the LTH-at-88K hypothesis."
+        echo "ALL_CYCLES_REGRESSED" > "$LOG_DIR/LANE_17_VERDICT.txt"
+        exit 8
+    fi
+    FINAL_CYCLE_DIR="$LOG_DIR/cycle_${REVERT_IDX}"
+else
+    FINAL_CYCLE_DIR="$LOG_DIR/cycle_9"
+fi
+
+FINAL_RENDERER_PT="$FINAL_CYCLE_DIR/renderer.pt"
+FINAL_MASK="$FINAL_CYCLE_DIR/mask.pt"
 log "=== Stage 2: re-export final renderer to ASYM .bin (Lane G v3 mask + poses) ==="
+log "    sourcing from $FINAL_CYCLE_DIR (BEST cycle per kill-criterion gate)"
 # The IMP runs save .pt; the contest archive requires renderer.bin.
 # We re-export from the final FP32 weights so the on-disk bytes match
 # the inflate-time format. Sparse-CSR export is OPTIONAL post-stage and

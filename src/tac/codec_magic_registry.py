@@ -64,6 +64,18 @@ _REGISTRY: tuple[CodecMagicEntry, ...] = (
             "on block-FP-eligible conv weights. Pre-archive renderer payload."
         ),
     ),
+    CodecMagicEntry(
+        magic=b"IMPS",
+        name="Lane 17 IMP",
+        decode_module="tac.imps_renderer_archive:decode_imps_archive",
+        encode_module="tac.imps_renderer_archive:encode_imps_archive",
+        description=(
+            "Iterative-magnitude-pruning sparse-CSR archive — Conv2d weights "
+            "at >=78%% sparsity pass through the per-tensor sparse-CSR codec "
+            "(uint16 idx + FP4 val); ineligible / low-sparsity / large-numel "
+            "tensors fall back to FP16."
+        ),
+    ),
 )
 
 
