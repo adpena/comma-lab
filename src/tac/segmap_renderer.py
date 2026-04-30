@@ -664,7 +664,12 @@ class SegMapTrainer:
                         rt_hwc, gt_hwc, self.segnet,
                         temperature=self.config.temperature_start,
                     )
-                    loss = loss + 0.002 * kl_loss  # canonical Lane G v3 weight
+                    # Round 7 Defect #2 fix: read the weight from
+                    # config (Lane G v3 default 0.002), not hard-code.
+                    # The previous literal silently overrode any operator
+                    # passing --kl-distill-weight 0.001 / 0.005.
+                    kl_weight = float(getattr(self.config, "kl_distill_weight", 0.002))
+                    loss = loss + kl_weight * kl_loss
                     kl_aux_value = float(kl_value)
 
             # Gradient accumulation: scale by 1/N_minibatches so that the

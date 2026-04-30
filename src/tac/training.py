@@ -321,6 +321,28 @@ class TrainConfig(BaseModel):
         "RTX 4090 24 GB / A10G 22 GB.",
     )
 
+    # ── KL-distill weight (Round 7 Defect #2 fix, 2026-04-29 PM) ────────
+    # Memory: feedback_silent_default_bug_class_findings_20260429.md.
+    # Council Round 7 §6.2 caught train_segmap.py's --kl-distill-weight
+    # 0.002 default being silently DROPPED because TrainConfig had no
+    # corresponding field — the conditional plumbing at
+    # experiments/train_segmap.py:191 (`if "kl_distill_weight" in fields`)
+    # was a no-op, and src/tac/segmap_renderer.py:667 hard-coded
+    # `0.002 * kl_loss`. A future operator passing 0.001/0.01 (KL
+    # sensitivity sweep) would be silently ignored. This field closes
+    # the silent-default override loop: train_segmap.py now ALWAYS
+    # threads args.kl_distill_weight into the config, and the trainer
+    # uses self.config.kl_distill_weight instead of the literal 0.002.
+    kl_distill_weight: float = Field(
+        0.002,
+        ge=0.0,
+        description="KL-distill auxiliary loss weight applied to the "
+        "SegNet-only KL term in SegMapTrainer (and any other "
+        "kl_distill-mode trainer). Lane G v3 canonical = 0.002. Round 7 "
+        "Defect #2 fix made this operator-controllable instead of a "
+        "hard-coded literal in segmap_renderer.py.",
+    )
+
     # Output
     output_dir: str = "experiments/postfilter_weights"
     tag: str = Field("untitled", min_length=1, max_length=128, pattern=r"^[a-zA-Z0-9_\-]+$")

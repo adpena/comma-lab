@@ -184,12 +184,15 @@ def _build_trainer_config(args: argparse.Namespace, device: torch.device):
         bf16=bool(getattr(args, "bf16", False)),
         scorer_chunk=int(getattr(args, "scorer_chunk", 0) or 0),
     )
-    # KL-distill knobs only exist when tac.training.TrainConfig declares
-    # them; check via field listing to avoid a hard error if missing.
+    # Round 7 Defect #2 fix: ALWAYS pass kl_distill_weight (no longer a
+    # silent no-op when the field is missing — the field is now declared
+    # on TrainConfig and the SegMapTrainer reads self.config.kl_distill_weight
+    # instead of a hard-coded literal). The conditional plumbing pattern
+    # was a silent-default-override foot-gun (memory:
+    # feedback_silent_default_bug_class_findings_20260429.md).
+    cfg_kwargs["kl_distill_weight"] = args.kl_distill_weight
     if hasattr(TrainConfig, "model_fields"):
         fields = set(TrainConfig.model_fields.keys())
-        if "kl_distill_weight" in fields:
-            cfg_kwargs["kl_distill_weight"] = args.kl_distill_weight
         if "kl_distill_temperature" in fields:
             cfg_kwargs["kl_distill_temperature"] = args.kl_distill_temperature
         if "temperature_start" in fields and loss_mode == "kl_distill":

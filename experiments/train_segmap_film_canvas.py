@@ -150,10 +150,11 @@ def _build_trainer_config(args: argparse.Namespace, device: torch.device):
         bf16=bool(getattr(args, "bf16", False)),
         scorer_chunk=int(getattr(args, "scorer_chunk", 0) or 0),
     )
+    # Round 7 Defect #2 fix: ALWAYS pass kl_distill_weight (no longer
+    # silently dropped — see comment in experiments/train_segmap.py).
+    cfg_kwargs["kl_distill_weight"] = args.kl_distill_weight
     if hasattr(TrainConfig, "model_fields"):
         fields = set(TrainConfig.model_fields.keys())
-        if "kl_distill_weight" in fields:
-            cfg_kwargs["kl_distill_weight"] = args.kl_distill_weight
         if "kl_distill_temperature" in fields:
             cfg_kwargs["kl_distill_temperature"] = args.kl_distill_temperature
         if "temperature_start" in fields and loss_mode == "kl_distill":
