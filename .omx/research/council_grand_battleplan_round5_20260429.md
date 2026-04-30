@@ -149,7 +149,7 @@ Total budget cap: **$30 Vast.ai + $30 Modal**. Conservative wave; many sister-co
 | Lane DARTS-S V1 (5h frozen) | KILLED | Display NaN bug fixed (Check 85); model-not-learning bug separate | WAIT for sister council `council_darts_s_freeze_audit_20260429.md` verdict |
 | Lane DARTS-S V2 | WAIT | Need fix from sister council before dispatch | WAIT for sister council |
 | Lane STC clean-source | UNDETERMINED | MPS-FALSIFICATION withdrawn; Modal T4 CUDA re-run needed | Defer to Phase 2 (Lane 9) |
-| Lane MM v2 | KILLED | 2.63 [Modal-T4-CPU advisory] confirms prior FALSIFIED | Pursue Lane AL / Lane SC++ instead |
+| Lane MM v2 | KILLED | 2.63 [contest-CPU advisory] confirms prior FALSIFIED — verdict needs CUDA confirm to be promoted from FALSIFIED-on-CPU to FALSIFIED-on-CUDA (~$0.50 Vast.ai 4090 to formalize); Round 7 §7.2 retag | Pursue Lane AL / Lane SC++ instead |
 | Lane GP v2/v3 | KILLED | Runge phenomenon (degree-10 polynomial @ 600 equispaced points) | Use DCT/B-spline if rescuing |
 | Lane SC++ / SA / SO / W (OOM-class) | WAIT | Sister council `council_oom_class_deep_fix_20260429.md` pending | WAIT |
 | Lane EMA-class | WAIT | Sister council `council_ema_audit_20260429.md` pending | WAIT |
