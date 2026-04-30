@@ -354,16 +354,42 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     # path. See tac.losses_jbl for the math + .omx/research/jack_skunkworks
     # _segnet_rate_research_20260428.md §S1 for the wedge attribution.
     p.add_argument("--loss-mode", type=str, default=None,
-                   choices=["standard", "kl", "jbl"],
+                   choices=["standard", "kl", "jbl", "logit_margin"],
                    help="Auxiliary distillation loss family. 'standard'/'kl' = "
                         "Hinton KL distill (default, the Lane G v3 recipe). "
-                        "'jbl' = Lane J-JBL Jaccard + Boundary Label Smoothing.")
+                        "'jbl' = Lane J-JBL Jaccard + Boundary Label Smoothing. "
+                        "'logit_margin' = Lane 19 fragility-weighted CE that "
+                        "concentrates gradient on boundary pixels where "
+                        "top1-top2 logit gap < threshold (Fridrich UNIWARD "
+                        "applied to segmentation).")
     p.add_argument("--boundary-weight", type=float, default=None,
                    help="Lane J-JBL: per-pixel weight multiplier on boundary "
                         "pixels inside the BLS+CE channel (default 3.0).")
     p.add_argument("--bls-smoothing", type=float, default=None,
                    help="Lane J-JBL: label-smoothing epsilon applied at "
                         "boundary pixels only (default 0.1).")
+    # Lane 19 (SegNet logit-margin boundary loss).
+    # SegNet score = argmax disagreement rate; only the top-2 logit ordering
+    # matters per pixel. Standard CE wastes capacity on confident pixels;
+    # Lane 19 weights CE by `(threshold - margin) / threshold` so confident
+    # pixels (margin >= threshold) contribute zero loss and boundary pixels
+    # (margin < threshold) contribute proportional to their ambiguity.
+    # Fridrich UNIWARD principle (steganalysis): hide error in detector
+    # blind spots; here, the SegNet's boundaries ARE the detector blind
+    # spots (per CLAUDE.md "Exact scorer architectures").
+    #
+    # Wired as an AUXILIARY loss alongside scorer_loss (NOT a replacement)
+    # so confident-wrong pixels are still caught by the underlying scorer.
+    # Per council memo .omx/research/council_lane_19_logit_margin_design_20260430.md.
+    p.add_argument("--logit-margin-weight", type=float, default=None,
+                   help="Lane 19: scalar weight for the SegNet logit-margin "
+                        "auxiliary loss. Default 0.0 = off (byte-identical "
+                        "to Lane G v3). Profile LANE_19_LOGIT_MARGIN sets 0.1.")
+    p.add_argument("--logit-margin-threshold", type=float, default=None,
+                   help="Lane 19: top1-top2 logit-margin cutoff above which "
+                        "fragility weight = 0 (confident; no learning signal). "
+                        "Default 1.0. Typical range 0.5-2.0 depending on logit "
+                        "scale.")
     # Lane PS (per-class SegNet weighting). Per memory
     # `project_research_survey_20260420` — research-grade, never
     # implemented. SegNet predicts 5-class segmentation; cheap classes
@@ -936,6 +962,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "feature_match",
         "posenet_embedding",
         "segnet_kl",
+        "logit_margin",
     )
     # NOTE: keep the _VALID_LOSS_MODES tuple ABOVE this comment paren-free.
     # Preflight regex `_VALID_LOSS_MODES \s*=\s*\([^)]*\)` truncates at the
@@ -952,6 +979,26 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                                      "boundary_weight", 3.0)
     args.bls_smoothing = _resolve(getattr(args, "bls_smoothing", None),
                                    "bls_smoothing", 0.1)
+    # Lane 19 (logit-margin) resolvers. Default 0.0 weight = off (byte-
+    # identical to Lane G v3 anchor). Profile LANE_19_LOGIT_MARGIN sets 0.1.
+    args.logit_margin_weight = _resolve(
+        getattr(args, "logit_margin_weight", None),
+        "logit_margin_weight", 0.0,
+    )
+    args.logit_margin_threshold = _resolve(
+        getattr(args, "logit_margin_threshold", None),
+        "logit_margin_threshold", 1.0,
+    )
+    if args.logit_margin_weight < 0.0:
+        raise SystemExit(
+            f"FATAL: --logit-margin-weight must be >= 0; got "
+            f"{args.logit_margin_weight}."
+        )
+    if args.logit_margin_threshold <= 0.0:
+        raise SystemExit(
+            f"FATAL: --logit-margin-threshold must be > 0; got "
+            f"{args.logit_margin_threshold}."
+        )
     # Lane PS (per-class SegNet weighting) resolver. Default sentinel is
     # ``None`` / empty string. Profile key + CLI flag share the standard
     # _resolve() rules (CLI > profile > default). Parsed lazily into a
@@ -3120,6 +3167,29 @@ def train(args: argparse.Namespace):
                             ),
                         )
                         loss = loss + args.kl_distill_weight * kl_loss
+
+                # Lane 19 (SegNet logit-margin boundary loss). Fires alongside
+                # the KL distill aux (NOT a replacement — see council memo
+                # .omx/research/council_lane_19_logit_margin_design_20260430.md
+                # §2 Contrarian: confident-WRONG pixels contribute zero to
+                # margin loss but the underlying scorer_loss still catches
+                # them, so this is wired strictly as an auxiliary).
+                #
+                # Default weight 0.0 = byte-identical to Lane G v3. Profile
+                # LANE_19_LOGIT_MARGIN sets 0.1 to enable. Tagged
+                # KL_RAW_PAIRS_OK because rendered_pair was reassigned to
+                # the eval-roundtripped output at L1642 (same convention as
+                # the KL distill block above).
+                if args.logit_margin_weight > 0.0:
+                    from tac.losses_logit_margin import compute_segnet_logit_margin_aux
+                    lm_loss = compute_segnet_logit_margin_aux(  # KL_RAW_PAIRS_OK:rendered_pair was reassigned to roundtripped output at L1642
+                        rendered_pair=rendered_pair,
+                        gt_pair=gt_pair,
+                        segnet=segnet,
+                        threshold=float(args.logit_margin_threshold),
+                        reduction="mean",
+                    )
+                    loss = loss + float(args.logit_margin_weight) * lm_loss
 
                 # Yousfi #5 (council 5/0 vote 2026-04-26): inverse-SegNet-
                 # entropy weighted L1 on the SegNet-evaluated frame (index 1

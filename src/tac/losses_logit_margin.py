@@ -192,8 +192,23 @@ def logit_margin_loss(
         gt_argmax_long = gt_argmax.long()
     # CE per-pixel
     ce = F.cross_entropy(logits, gt_argmax_long, reduction="none")  # (N, ...)
-    # Fragility weights per-pixel
-    weights = fragility_weights(logits, threshold=threshold)  # (N, ...)
+    # Fragility weights per-pixel — DETACHED.
+    #
+    # Round 3 council finding (Filler / Fridrich / Hinton CRITICAL): the
+    # weight is derived from the student's own logits via the top1-top2
+    # margin. Allowing gradient to flow through `weights` lets the model
+    # ARTIFICIALLY WIDEN margins on confident pixels to reduce its own
+    # loss (exploit of the loss formulation, not a real learning signal).
+    # On a confidently-wrong boundary pixel, the unweighted-detach version
+    # had the contribution `-1/threshold × CE` term in ∂L/∂z[top1] which
+    # pushed z[top1] UP instead of DOWN — REVERSED gradient direction.
+    #
+    # The fix matches the standard pattern in importance-weighted losses:
+    # Hinton focal loss (2017 Lin et al.) detaches `(1 - p_t)^γ`; Hinton
+    # KL distillation detaches the teacher logits; etc. Lane 19 follows
+    # the same convention: weight is a STATIC per-step importance signal,
+    # not a learnable function of the logits.
+    weights = fragility_weights(logits, threshold=threshold).detach()  # (N, ...)
     if ce.shape != weights.shape:
         raise ValueError(
             f"logit_margin_loss: internal shape mismatch ce={tuple(ce.shape)} "
@@ -207,7 +222,138 @@ def logit_margin_loss(
     return weighted
 
 
+def logit_margin_loss_with_teacher(
+    student_logits: torch.Tensor | None = None,
+    teacher_logits: torch.Tensor | None = None,
+    *,
+    threshold: float | None = None,
+    reduction: Literal["mean", "sum", "none"] = "mean",
+) -> torch.Tensor:
+    """Logit-margin-weighted CE using teacher argmax as ground truth.
+
+    Mirrors the ``kl_distill_segnet_only`` pattern: derive the GT class IDs
+    from the teacher's argmax (the canonical contest-eval surrogate), then
+    apply :func:`logit_margin_loss` on the student logits.
+
+    Args:
+        student_logits: (N, K, ...) student class logits. Required.
+        teacher_logits: (N, K, ...) teacher class logits. Required.
+            ``argmax`` along K provides the GT used by CE; gradient does NOT
+            flow through teacher (caller is responsible for ``no_grad``).
+        threshold: positive scalar — fragility-weight cutoff. Required
+            (no silent default — Check 81 STRICT).
+        reduction: "mean" / "sum" / "none". Required keyword.
+
+    Returns:
+        Same as :func:`logit_margin_loss`.
+
+    Raises:
+        ValueError: bad inputs.
+    """
+    if student_logits is None or teacher_logits is None:
+        raise ValueError(
+            "logit_margin_loss_with_teacher: student_logits and "
+            "teacher_logits are required (no silent default — Check 81 STRICT)."
+        )
+    if student_logits.shape != teacher_logits.shape:
+        raise ValueError(
+            f"logit_margin_loss_with_teacher: shape mismatch "
+            f"student={tuple(student_logits.shape)} "
+            f"teacher={tuple(teacher_logits.shape)}"
+        )
+    # Teacher argmax → GT (no gradient through teacher).
+    with torch.no_grad():
+        gt_argmax = teacher_logits.argmax(dim=1)  # (N, ...)
+    return logit_margin_loss(
+        logits=student_logits,
+        gt_argmax=gt_argmax,
+        threshold=threshold,
+        reduction=reduction,
+    )
+
+
+def compute_segnet_logit_margin_aux(
+    rendered_pair: torch.Tensor | None = None,
+    gt_pair: torch.Tensor | None = None,
+    segnet: torch.nn.Module | None = None,
+    *,
+    threshold: float | None = None,
+    reduction: Literal["mean", "sum", "none"] = "mean",
+) -> torch.Tensor:
+    """SegNet-side Lane 19 auxiliary loss for the renderer training loop.
+
+    Mirrors the wiring of :func:`tac.losses.kl_distill_segnet_only`:
+
+    1. Forward the STUDENT (rendered) frame through SegNet → student_logits.
+    2. Forward the TEACHER (GT) frame through SegNet under no_grad → teacher_logits.
+    3. Use teacher's argmax as GT and compute :func:`logit_margin_loss` on student.
+
+    The contest-scorer evaluates SegNet on the LAST frame of each pair only
+    (``x[:, -1, ...]``). To match, we forward only ``rendered_pair[:, 1]`` /
+    ``gt_pair[:, 1]`` through SegNet. Per CLAUDE.md "Exact scorer architectures"
+    the SegNet output is at the bilinear-resized resolution and argmax
+    disagreement is the entire signal.
+
+    Args:
+        rendered_pair: (B, 2, H, W, 3) student-rendered frame pair. Required.
+        gt_pair: (B, 2, H, W, 3) ground-truth frame pair. Required.
+            Note: ``rendered_pair`` is expected to be the EVAL-roundtripped
+            tensor (mirrors KL_RAW_PAIRS_OK marker convention in
+            ``train_renderer.py``).
+        segnet: frozen SegNet module. Required.
+        threshold: positive scalar — fragility cutoff. Required.
+        reduction: aggregation mode. Required keyword.
+
+    Returns:
+        Scalar loss tensor on the same device as ``rendered_pair``.
+
+    Raises:
+        ValueError: bad inputs / shape mismatch.
+    """
+    if rendered_pair is None or gt_pair is None or segnet is None:
+        raise ValueError(
+            "compute_segnet_logit_margin_aux: rendered_pair / gt_pair / "
+            "segnet are required (no silent default — Check 81 STRICT)."
+        )
+    if threshold is None:
+        raise ValueError(
+            "compute_segnet_logit_margin_aux: threshold is required "
+            "(no silent default — Check 81 STRICT)."
+        )
+    if rendered_pair.ndim != 5 or gt_pair.ndim != 5:
+        raise ValueError(
+            f"compute_segnet_logit_margin_aux: pairs must be 5-D "
+            f"(B,2,H,W,3); got rendered={tuple(rendered_pair.shape)} "
+            f"gt={tuple(gt_pair.shape)}"
+        )
+    if rendered_pair.shape != gt_pair.shape:
+        raise ValueError(
+            f"compute_segnet_logit_margin_aux: pair shape mismatch "
+            f"rendered={tuple(rendered_pair.shape)} "
+            f"gt={tuple(gt_pair.shape)}"
+        )
+    # Last frame only (matches contest scorer's x[:, -1, ...] convention).
+    # Reshape (B, H, W, 3) → (B, 1, 3, H, W) for SegNet.preprocess_input.
+    rendered_last = rendered_pair[:, 1]  # (B, H, W, 3)
+    gt_last = gt_pair[:, 1]
+    fx = rendered_last.permute(0, 3, 1, 2).unsqueeze(1).contiguous()  # (B,1,3,H,W)
+    gx = gt_last.permute(0, 3, 1, 2).unsqueeze(1).contiguous()
+    fs_in = segnet.preprocess_input(fx)
+    with torch.no_grad():
+        gs_in = segnet.preprocess_input(gx)
+        teacher_logits = segnet(gs_in)
+    student_logits = segnet(fs_in)
+    return logit_margin_loss_with_teacher(
+        student_logits=student_logits,
+        teacher_logits=teacher_logits,
+        threshold=threshold,
+        reduction=reduction,
+    )
+
+
 __all__ = [
     "fragility_weights",
     "logit_margin_loss",
+    "logit_margin_loss_with_teacher",
+    "compute_segnet_logit_margin_aux",
 ]

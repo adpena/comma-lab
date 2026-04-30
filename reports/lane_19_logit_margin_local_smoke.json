@@ -1,0 +1,47 @@
+{
+  "tag": "[smoke-only]",
+  "_warning": "This is NOT a strategic measurement. CLAUDE.md non-negotiable: MPS / CPU forward passes through SegNet are NEVER decision-grade (PoseNet 23x drift, SegNet 2x drift, score 2.5x drift). Strategic decisions require [contest-CUDA]. This file documents the LOCAL IMPLEMENTATION SMOKE on CPU — the wiring fires, gradients flow, no exception.",
+  "lane": "Lane 19 (SegNet logit-margin boundary loss)",
+  "anchor": "Lane G v3 = 1.05 [contest-CUDA] (DILATED_H64_HALF_FRAME_V3_ANNEALED_KLDISTILL)",
+  "profile": "lane_19_logit_margin",
+  "device": "cpu",
+  "smoke_components_verified": [
+    {
+      "component": "tac.losses_logit_margin module",
+      "tests_passed": 16,
+      "tests_path": "src/tac/tests/test_losses_logit_margin.py",
+      "status": "PASS"
+    },
+    {
+      "component": "Check 93 (preflight) STRICT @ 0 violations on real codebase",
+      "tests_passed": 11,
+      "tests_path": "src/tac/tests/test_preflight_logit_margin_threshold.py",
+      "status": "PASS"
+    },
+    {
+      "component": "argparse round-trip --logit-margin-weight + --logit-margin-threshold",
+      "verified_via": "parse_args(['--profile', 'lane_19_logit_margin', '--tag', 'smoke', ...])",
+      "status": "PASS"
+    },
+    {
+      "component": "PROFILES['lane_19_logit_margin'] registered + has loss_mode='logit_margin' + logit_margin_weight=0.1 + threshold=1.0 + seed=89",
+      "status": "PASS"
+    },
+    {
+      "component": "compute_segnet_logit_margin_aux end-to-end with stub SegNet — finite scalar with grad",
+      "status": "PASS (test 12 in test_losses_logit_margin.py)"
+    },
+    {
+      "component": "logit_margin_loss invariant on confident pixels — same loss when confident pixel logit changes",
+      "status": "PASS (test 15)"
+    },
+    {
+      "component": "logit_margin_loss + scorer_loss handles confident-wrong (Contrarian concern) — Lane 19 returns 0; CE returns >5",
+      "status": "PASS (test 16)"
+    }
+  ],
+  "next_step": "Phase F: Vast.ai 4090 CUDA dispatch (~$1.50, ~5h training + 30min auth eval). Pattern A nohup detach. Tag result [contest-CUDA] only after inflate.sh + upstream/evaluate.py on the EXACT archive bytes.",
+  "predicted_band_contest_cuda": [0.75, 1.05],
+  "kill_criterion": "If contest-CUDA score >= 1.05, demote to Phase 3 deferred (margin loss bought nothing over Lane G v3 standard CE).",
+  "council_verdict": "5-of-6 GREEN (Yousfi/Fridrich/Hotz/Selfcomp + 1 GREEN-with-conditions Contrarian, integration-as-aux satisfies); Quantizr YELLOW pending A/B per .omx/research/council_lane_19_logit_margin_design_20260430.md"
+}

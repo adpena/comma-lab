@@ -2741,6 +2741,100 @@ DILATED_H64_HALF_FRAME_V3_ANNEALED_KLDISTILL = {
 }
 
 
+# ── LANE 19: SegNet logit-margin boundary loss ───────────────────────────────
+# Council .omx/research/council_lane_19_logit_margin_design_20260430.md
+# (5-of-6 GREEN with conditions; Quantizr YELLOW pending A/B).
+#
+# Anchored on Lane G v3 = 1.05 [contest-CUDA]
+# (DILATED_H64_HALF_FRAME_V3_ANNEALED_KLDISTILL).
+#
+# WHY: SegNet score = argmax disagreement rate. Confident-correct pixels
+# (margin >> threshold) cannot move the score; standard CE wastes capacity
+# on them. Lane 19 weights CE by `(threshold - margin) / threshold` so
+# every gradient step concentrates on boundary pixels (margin < threshold)
+# where flips actually happen. Fridrich UNIWARD applied to segmentation:
+# hide error in the detector's blind spots.
+#
+# Wired as an AUXILIARY (loss_mode="logit_margin" + logit_margin_weight=0.1)
+# alongside the existing KL distill aux. Confident-WRONG pixels still
+# contribute zero to margin loss but are caught by the underlying
+# scorer_loss path (council §2 Contrarian).
+#
+# Predicted band [prediction] (per CLAUDE.md SegNet paradigm shift):
+#   * Floor: -1e-3 SegNet distortion → ~0.10 score points improvement on
+#     Lane G v3 1.05 anchor (margin loss buys minor wedge over standard CE).
+#   * Ceiling: -3e-3 SegNet distortion → ~0.30 score points (Phase 2 spec).
+#   * Kill: A/B local smoke shows margin loss not converging to lower SegNet
+#     proxy than standard CE on identical 100-epoch run — demote to Phase 3.
+# ── LANE 12: NeRV mask codec (Phase 2 ACCELERATE) ────────────────────────────
+# Lane 12 is a MASK-CODEC lane, not a renderer-training lane. Compress-time
+# trainer is ``experiments/train_nerv_mask.py``; the profile is mostly a
+# registry stub anchoring the dispatch script + the inflate-time mask path.
+#
+# Math: see ``.omx/research/council_lane_12_nerv_design_20260430.md``.
+# Council UNANIMOUS GREEN at hidden=64, depth=4, num_freqs=8 (~11.7K params).
+# Predicted band: ~23 KB at fp16 vs 421 KB AV1 baseline (~18× reduction)
+# IF SegNet score holds within +25% of Lane G v3 1.05 [contest-CUDA] anchor.
+#
+# Kill criteria (binding per council):
+# - Final NRV2 bytes > 100 KB → abandon (worse than half AV1 savings).
+# - SegNet score > Lane G v3 + 25% → abandon (boundary-pixel underfitting).
+# - Inflate render time > 30s on T4 → abandon.
+NERV_MASK_LANE_G_V3 = {
+    # Inherit Lane G v3 anchor knobs so the renderer side of the archive is
+    # untouched — Lane 12 only changes the mask-codec wire format.
+    **DILATED_H64_HALF_FRAME_V3_ANNEALED_KLDISTILL,
+    # Lane-12-specific NeRV codec hyperparameters consumed by
+    # ``experiments/train_nerv_mask.py`` (NOT by ``train_renderer.py``):
+    "nerv_num_freqs": 8,
+    "nerv_hidden_dim": 64,
+    "nerv_depth": 4,
+    "nerv_num_classes": 5,
+    "nerv_learning_rate": 1e-3,
+    "nerv_ema_decay": 0.997,
+    "nerv_batch_coords": 4096,
+    "nerv_steps": 60000,  # ~1 full pass over 1200×384×512 = 236M coords
+    "nerv_eval_every": 5000,
+    "nerv_weight_dtype": "fp16",  # Phase A1; int8 deferred to Phase A2
+    "seed": 12,
+}
+
+
+LANE_19_LOGIT_MARGIN = {
+    **DILATED_H64_HALF_FRAME_V3_ANNEALED_KLDISTILL,  # inherit Lane G v3 anchor
+    # Override: enable Lane 19 auxiliary. The new loss_mode value drives the
+    # _VALID_LOSS_MODES allowlist + the auxiliary block in train_renderer.py.
+    "loss_mode": "logit_margin",
+    # Round 1 finding (Contrarian): logit_margin_weight 0.1 was below the
+    # noise floor relative to segnet_weight=100 (scorer_loss × 100 vs aux ×
+    # 0.1 = 0.1% contribution). Raise to 10.0 so boundary preference is
+    # actually felt: aux × 10 × ~0.5 (typical boundary CE) = 5; scorer_loss
+    # × 100 × ~0.05 (typical mean CE) = 5 — comparable order of magnitude.
+    # The boundary-pixel SegNet preference now meaningfully steers the
+    # optimizer instead of being drowned by scorer_loss.
+    "logit_margin_weight": 10.0,
+    # Round 1 finding (Fridrich): threshold scale must track logit scale.
+    # Default 1.0 assumes raw logits roughly bounded |z| ≤ 5. If a future
+    # profile adds temperature-scaling on logits (e.g., distill T=2.0), the
+    # threshold should scale to match (e.g., 0.5 if logits halved). For
+    # this profile (no temperature scaling), 1.0 means "boundary = top1-top2
+    # logit gap < 1.0" which catches roughly the most-ambiguous 10% of
+    # pixels at training start (empirical guideline).
+    "logit_margin_threshold": 1.0,
+    # Round 1 finding (Quantizr): KL distill weight 0.002 (inherited from
+    # Lane G v3) was drowned by Lane 19 aux at weight 0.1 (KL contribution
+    # ~5e-5 vs Lane 19 ~0.01 = 200× smaller). After raising Lane 19 to
+    # weight 10.0, the gap widens to ~200,000× — KL distill is pure noise.
+    # Disable it so Lane 19 IS the canonical SegNet-only distillation
+    # auxiliary; confident-wrong pixels are still caught by scorer_loss
+    # (segnet_weight=100 × CE) per the §2 Contrarian-mitigation analysis.
+    "kl_distill_weight": 0.0,
+    # Different seed so Lane 19 explores a different RNG basin from Lane G v3
+    # (seed=43) and Lane H-V3 (seed=67).
+    "seed": 89,
+}
+
+
 # ── LANE H-V3: half-frame revival via JOINT warp-expansion training ──────────
 # Council 2026-04-28 evening (forensic audit of killed lanes V/V-V2/D-V3).
 # Anchored on Lane G v3 = 1.05 [contest-CUDA] (DILATED_H64_HALF_FRAME_V3_ANNEALED_KLDISTILL).
@@ -2868,6 +2962,57 @@ IMP_CYCLE_DILATED_H64 = {
     # Different seed so IMP explores a different RNG basin from Lane A
     # (seed=42) while the prune+rewind schedule supplies the lane novelty.
     "seed": 89,
+}
+
+
+# ── LANE 8: multi-pass compress wrap on Lane G v3 anchor ──────────────────
+# Council 2026-04-30 (.omx/research/council_lane_8_multipass_design_20260430.md).
+#
+# Anchored on Lane G v3 1.05 [contest-CUDA]. The training arch is unchanged
+# from DILATED_H64_HALF_FRAME_V3_ANNEALED_KLDISTILL (Lane G v3); the lane
+# novelty is a COMPRESS-time multi-pass loop that re-runs step_archive +
+# step_eval with adjusted encoder parameters (mask_crf, pose_q_bits,
+# block_fp_block_size, residual_gain) until the score plateaus or the
+# regression guard fires.
+#
+# Inflate side is UNCHANGED — the canonical inflate_renderer.py path
+# handles the final archive natively (no new magic bytes, no inflate-time
+# scorers — strict-scorer-rule per CLAUDE.md).
+#
+# Council verdict on parameters (consensus across Shannon, Dykstra, Hotz,
+# Quantizr, Selfcomp, Contrarian, Carmack):
+#   * MAX_PASSES default = 3 (Carmack 80/30 + Shannon log saturation)
+#   * eps = 1e-3 (below scorer noise floor per CLAUDE.md)
+#   * regression_guard = True (Contrarian failure mode 1)
+#   * adjustment policy = CoordinateDescentPolicy on the 4 canonical axes
+MULTIPASS_LANE_G_V3 = {
+    # Anchor on Lane G v3 (the only currently Level-3 lane).
+    # NOTE on profile inheritance + multipass loop interaction (Round 1
+    # Quantizr finding): the inherited profile may set `mask_crf` (or any
+    # other compress-time encoder axis) to a starting value. The multipass
+    # loop reads `cfg.mask_crf` at each pass and OVERWRITES it via the
+    # CoordinateDescentPolicy; the inherited value is the loop's initial
+    # condition. Explicit CLI flags (`--mask-crf`) override the profile per
+    # `_apply_profile`'s contract and become the new initial condition.
+    **DILATED_H64_HALF_FRAME_V3_ANNEALED_KLDISTILL,
+    # Lane 8 specifics (read by experiments/pipeline.py compress).
+    "multipass": True,
+    "multipass_max_passes": 3,
+    "multipass_target_score": 0.0,   # 0 == sentinel: never short-circuit on target_hit
+    "multipass_eps": 1e-3,
+    # Predicted band: [empirical:reports/lane_8_multipass_real_archive.json]
+    # `[+5, +15] bp` improvement over Lane G v3 1.05 baseline.
+    # Expected landing: 1.035-1.045 [contest-CUDA] post-Phase-G dispatch.
+    #
+    # SCOPE NOTE (Round 2 Ballé finding): this lane is suitable ONLY for
+    # codec architectures that are NOT end-to-end-trained with their own
+    # entropy model. Lane G v3 ships a fixed FP4-codebook + Brotli renderer
+    # encoder + AV1 mask encoder; multi-pass adapts those at runtime.
+    # A future Ballé-hyperprior lane (Lane 20 in Council E's Phase 2 plan)
+    # would jointly train the entropy model with the encoder — multi-pass
+    # at runtime would be REDUNDANT with that joint training. Do NOT stack
+    # MULTIPASS_LANE_G_V3 onto a Lane 20 base without explicit council
+    # approval of the composition.
 }
 
 
@@ -3881,6 +4026,42 @@ PROFILES = {
     # arch (NOT 88K DSConv) bypasses Lane V channel bug. Predicted band
     # [0.55, 0.95] [contest-CUDA] per project_lane_h_v3_revival_design_20260428.
     "h_v3_joint_halfframe": H_V3_JOINT_HALFFRAME,
+    # Lane 19 (SegNet logit-margin boundary loss): auxiliary that weights CE
+    # by `(threshold - margin) / threshold` so confident pixels contribute
+    # zero loss and boundary pixels (margin < threshold) get full signal.
+    # Fridrich UNIWARD applied to segmentation. Predicted band [prediction]:
+    # -1e-3 to -3e-3 SegNet distortion → 0.10-0.30 score points on Lane G v3
+    # 1.05 anchor per .omx/research/council_lane_19_logit_margin_design_20260430.md.
+    "lane_19_logit_margin": LANE_19_LOGIT_MARGIN,
+    # Lane 12 (NeRV mask codec, Phase 2 ACCELERATE): registry stub for the
+    # NeRV codec lane. Consumed by experiments/train_nerv_mask.py +
+    # scripts/remote_lane_nerv.sh; renderer/loss knobs inherited from
+    # Lane G v3. Predicted band [23 KB, 80 KB] @ SegNet ≤ Lane G v3 + 25%
+    # per .omx/research/council_lane_12_nerv_design_20260430.md.
+    "nerv_mask_lane_g_v3": NERV_MASK_LANE_G_V3,
+    # Lane 20 (Ballé hyperprior, Phase 2 ACCELERATE): block-conditional
+    # arithmetic codec for the renderer's qint stream. Profile is a registry
+    # stub anchoring `experiments/measure_lane_20_balle_real_archive.py` +
+    # `scripts/remote_lane_20_balle.sh`. Renderer/loss knobs inherited from
+    # Lane G v3. Predicted band [-3%, -8%] on the renderer qint segment of
+    # the archive (~5-15 KB out of ~180 KB) per Phase A council review at
+    # .omx/research/council_lane_20_balle_design_20260430.md.
+    # KILL CRITERION: if real-archive empirical [empirical:reports/
+    # lane_20_balle_real_archive.json] shows Ballé-auto >= static, the auto
+    # path falls back to "static_wins" and Lane 20 contributes zero bytes
+    # (verified at preflight Check 91 STRICT).
+    "lane_20_balle_lane_g_v3": {
+        **DILATED_H64_HALF_FRAME_V3_ANNEALED_KLDISTILL,  # inherit Lane G v3 anchor
+        # Lane-20-specific Ballé hyperprior knobs (consumed by the codec
+        # measurement + training experiments — NOT by train_renderer.py):
+        "balle_block_size": 256,
+        "balle_z_dim": 8,
+        "balle_hidden_dim": 16,
+        "balle_ema_decay": 0.997,
+        "balle_num_chunks_lite": 4,
+        "balle_max_total_freq": 1 << 16,
+        "seed": 20,
+    },
     # Lane J-JBL (Jack Cycle 1 TOP-1): Jaccard Metric Loss + Boundary Label
     # Smoothing distillation, anchored on Lane G v3. Predicted band
     # [0.92, 1.02] per .omx/research/jack_skunkworks_segnet_rate_research_20260428.md §S1.
@@ -3891,6 +4072,12 @@ PROFILES = {
     # entry; arch is overridden via CLI in
     # scripts/remote_lane_j_imp_iterative_magnitude_pruning.sh.
     "imp_cycle_dilated_h64": IMP_CYCLE_DILATED_H64,
+    # Lane 8: multi-pass compress wrap on Lane G v3 anchor. COMPRESS-time
+    # only (no training change vs Lane G v3); the lane novelty is the
+    # MultiPassCompressor outer loop that adjusts encoder parameters per
+    # pass based on score feedback. See
+    # .omx/research/council_lane_8_multipass_design_20260430.md.
+    "multipass_lane_g_v3": MULTIPASS_LANE_G_V3,
     # Lane MAE-V (Cosmos research synthesis): Masked Autoencoder Variant
     # — random patch masking with learnable Gumbel-softmax mask token
     # during training only (eval mode is a strict passthrough). Anchored
