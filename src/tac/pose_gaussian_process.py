@@ -3,6 +3,19 @@
 Lane GP targets the contest observation that PoseNet's useful pose Jacobian is
 almost entirely dim 0. The archive stores a degree-10 polynomial for dim 0 and
 diagnostic sigma values for dims 1-5; inflate reconstructs dims 1-5 as zeros.
+
+LANE_GP_BASIS_FIT_KILL_ACKNOWLEDGED:
+This module's lane class (smooth-basis pose-fit) was killed 2026-04-30 per
+Council #271 + Lane GP v4 design verdict
+(.omx/research/council_lane_gp_v4_design_20260430.md). The Lane G v3 baseline
+pose trajectory is approximately white-noise in dims 1-5 (diff_std > signal_std)
+with uniformly-distributed spectral support — no smooth basis (polynomial /
+B-spline / DCT / natural cubic) can fit it below RMSE ≈ 1.2 (near signal std).
+The Runge-phenomenon diagnosis in
+project_lane_gp_v3_landed_runge_phenomenon_20260429.md was incomplete; the
+trajectory is structurally incompressible by smooth bases at any K. This module
+is RETAINED for archival/historical reasons (Lane GP v3 reproducer); the
+underlying lane class is killed. See preflight.py Check 91.
 """
 from __future__ import annotations
 
