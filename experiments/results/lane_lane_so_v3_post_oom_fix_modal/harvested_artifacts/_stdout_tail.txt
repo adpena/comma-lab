@@ -1,0 +1,5 @@
+provenance: {"lane_id": "lane_so_hessian_block_fp", "started_at_utc": "2026-04-30T07:10:47Z", "git_hash": "no-git", "gpu_name": "NVIDIA A10G", "driver_version": "580.95.05", "torch_version": "2.5.1+cu124", "cuda_version": "12.4", "cuda_available": true, "lane_script": "scripts/remote_lane_so_hessian_block_fp.sh", "output_dir": "/tmp/pact/lane_so_hessian_block_fp_results", "variant": "hessian_quant", "arch": {"hidden": 24, "block_hidden": 24, "num_blocks": 8}, "kl_distill_weight": 0.002, "kl_distill_temperature": 2.0, "predicted_band": [0.27, 0.35], "anchor_dir": "experiments/results/lane_a_landed/iter_0", "paradigm": "segmap_clone_with_kl_distill_and_hessian_export"}
+[lane-so] 2026-04-30T07:10:48Z === Stage 0: NVDEC probe (--ensure-dali) ===
+[probe_nvdec] Modal runtime — NVDEC not required (auth_eval uses cpu device)
+[lane-so] 2026-04-30T07:10:48Z === Stage 1: anchor checks (Check 76 — full-res masks only) ===
+[lane-so] 2026-04-30T07:10:48Z === Stage 2: train SegMap (variant=hessian_quant — same train as SC++) ===

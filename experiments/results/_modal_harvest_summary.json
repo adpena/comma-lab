@@ -10,6 +10,14 @@
     "call_id": "fc-01KQCR961Q8QJ4KPBASRTCVDF4"
   },
   {
+    "label": "lane_g_v3_owv3_fisher_smoke_20260430_codex",
+    "call_id": "fc-01KQFKCAKBZ3MKRRPNDK6T8DV6",
+    "rc": 0,
+    "elapsed_seconds": 46.994304066000005,
+    "n_artifacts": 60,
+    "crash_kind": "OK"
+  },
+  {
     "label": "lane_gp",
     "status": "already_harvested",
     "call_id": "fc-01KQCQ1NCV7T3GX2H1W85ZA2WQ"
@@ -71,8 +79,11 @@
   },
   {
     "label": "lane_sa_v5_post_oom_fix",
-    "status": "not_ready",
-    "call_id": "fc-01KQEKJ4ZX24PBKRTNSX976KZR"
+    "call_id": "fc-01KQEKJ4ZX24PBKRTNSX976KZR",
+    "rc": 1,
+    "elapsed_seconds": 25293.738436452,
+    "n_artifacts": 55,
+    "crash_kind": "ERROR"
   },
   {
     "label": "lane_sc_plus_plus",
@@ -111,8 +122,11 @@
   },
   {
     "label": "lane_so_v3_post_oom_fix",
-    "status": "not_ready",
-    "call_id": "fc-01KQEKJ4YD44SEA80KY6S9TV76"
+    "call_id": "fc-01KQEKJ4YD44SEA80KY6S9TV76",
+    "rc": 124,
+    "elapsed_seconds": 28800.007886009,
+    "n_artifacts": 52,
+    "crash_kind": "TIMEOUT"
   },
   {
     "label": "lane_uniward",

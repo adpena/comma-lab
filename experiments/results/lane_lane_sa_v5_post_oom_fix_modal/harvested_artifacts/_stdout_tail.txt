@@ -1,0 +1,41 @@
+provenance: {"lane_id": "lane_sa_segmap_clone", "started_at_utc": "2026-04-30T12:23:26Z", "git_hash": "no-git", "gpu_name": "NVIDIA A10", "driver_version": "580.95.05", "torch_version": "2.5.1+cu124", "cuda_version": "12.4", "cuda_available": true, "lane_script": "scripts/remote_lane_sa_segmap_clone.sh", "output_dir": "/tmp/pact/lane_sa_segmap_clone_results", "variant": "plain", "arch": {"hidden": 24, "block_hidden": 24, "num_blocks": 8}, "predicted_band": [0.4, 0.55], "anchor_dir": "experiments/results/lane_a_landed/iter_0", "paradigm": "segmap_clone"}
+[lane-sa] 2026-04-30T12:23:26Z === Stage 0: NVDEC probe (--ensure-dali) ===
+[probe_nvdec] Modal runtime — NVDEC not required (auth_eval uses cpu device)
+[lane-sa] 2026-04-30T12:23:26Z === Stage 1: anchor checks (Check 76 — full-res masks only) ===
+[lane-sa] 2026-04-30T12:23:26Z === Stage 2: train SegMap (variant=plain) ===
+[train_segmap] epoch=276 loss=1.923893 seg=0.016635 pose=0.008895
+[train_segmap] epoch=288 loss=1.889376 seg=0.016352 pose=0.008594
+[train_segmap] epoch=300 loss=1.911774 seg=0.016535 pose=0.008964
+[train_segmap] epoch=312 loss=1.926585 seg=0.016450 pose=0.008797
+[train_segmap] epoch=324 loss=1.934999 seg=0.016174 pose=0.011482
+[train_segmap] epoch=336 loss=1.911594 seg=0.016026 pose=0.010960
+[train_segmap] epoch=348 loss=1.837918 seg=0.015907 pose=0.006977
+[train_segmap] epoch=360 loss=1.787274 seg=0.015716 pose=0.005286
+[train_segmap] epoch=372 loss=1.796393 seg=0.015470 pose=0.007176
+[train_segmap] epoch=384 loss=1.775555 seg=0.015273 pose=0.007520
+[train_segmap] epoch=396 loss=1.744936 seg=0.015105 pose=0.005996
+[train_segmap] epoch=408 loss=1.786337 seg=0.015003 pose=0.009358
+[train_segmap] epoch=420 loss=1.700043 seg=0.014757 pose=0.005856
+[train_segmap] epoch=432 loss=1.724891 seg=0.014769 pose=0.007343
+[train_segmap] epoch=444 loss=1.688968 seg=0.014530 pose=0.006050
+[train_segmap] epoch=456 loss=1.678454 seg=0.014496 pose=0.006504
+[train_segmap] epoch=468 loss=1.720583 seg=0.014918 pose=0.006173
+[train_segmap] epoch=480 loss=1.657223 seg=0.014351 pose=0.005702
+[train_segmap] epoch=492 loss=1.665103 seg=0.014188 pose=0.007150
+[train_segmap] epoch=504 loss=1.637644 seg=0.014192 pose=0.005496
+[train_segmap] epoch=516 loss=1.627549 seg=0.014080 pose=0.005348
+[train_segmap] epoch=528 loss=1.632585 seg=0.013920 pose=0.006494
+[train_segmap] epoch=540 loss=1.609891 seg=0.013861 pose=0.005674
+[train_segmap] epoch=552 loss=1.586907 seg=0.013835 pose=0.005063
+[train_segmap] epoch=564 loss=1.595271 seg=0.013786 pose=0.005588
+[train_segmap] epoch=576 loss=1.627887 seg=0.013817 pose=0.008066
+[train_segmap] epoch=588 loss=1.599512 seg=0.013713 pose=0.006943
+[train_segmap] epoch=599 loss=1.614142 seg=0.013836 pose=0.006456
+[train_segmap] training complete in 25189.1s
+[train_segmap] wrote /tmp/pact/lane_sa_segmap_clone_results/train/segmap_train.pt, /tmp/pact/lane_sa_segmap_clone_results/train/segmap_inference.pt, summary.json
+[lane-sa] 2026-04-30T19:24:55Z === Stage 3: pack inference state via block_fp_codec ===
+Traceback (most recent call last):
+  File "<string>", line 7, in <module>
+  File "/tmp/pact/src/tac/block_fp_codec.py", line 799, in verify_roundtrip
+    raise AssertionError(
+AssertionError: verify_roundtrip: layer_in.weight MSE 0.000306793 > tol 1e-06

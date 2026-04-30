@@ -1,0 +1,48 @@
+_v3_landed/iter_0/optimized_poses.pt", "anchor_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip", "baseline_lane": "lane_g_v3_landed", "baseline_score_contest_cuda": 1.05, "fisher_top_k": 3, "pair_batch": 1, "bit_budget_ratio": 0.7, "protect_threshold": 0.001, "aggressive_threshold": 1e-05, "run_contest_eval": false, "auth_eval_device": "cpu", "output_dir": "/tmp/pact/lane_g_v3_owv3_fisher_stack_results", "predicted_band": [0.95, 1.05]}
+[lane-owv3-fisher] 2026-04-30T16:26:45Z === Stage 1: Lane G v3 renderer/mask/pose smoke ===
+smoke ok: out_shape=(1, 2, 384, 512, 3) range=[0.0000,143.2166]
+[lane-owv3-fisher] 2026-04-30T16:26:48Z pair weights: experiments/results/lane_lane_w_v2_modal/harvested_artifacts/lane_w_results/pair_weights.pt
+[lane-owv3-fisher] 2026-04-30T16:26:48Z === Stage 2: CUDA Fisher profile ===
+[profile] device=cuda
+[profile] loading renderer: experiments/results/lane_g_v3_landed/iter_0/renderer.bin
+[profile]   AsymmetricPairGenerator 288,363 params film=True zoom=False
+[profile] eligible weights: 16 layers, 242,960 weights (protected layers stay FP32)
+[profile]   poses loaded: (600, 6)
+[profile] decoding GT video upstream/videos/0.mkv ...
+[profile]   decoded 1200 frames in 19.9s
+[profile] decoding masks experiments/results/lane_g_v3_landed/iter_0/masks.mkv ...
+[profile]   decoded 1200 masks shape=(1200, 384, 512)
+[profile] 1200 frames → 600 pairs
+[profile]   pair_weights: top-3 hardest (min=0.333333 max=0.333333)
+[profile] loading differentiable scorers from upstream ...
+[profile] iterating 3 pairs with nonzero weight (batch=1)
+[profile]   processed 1/3 pairs
+[profile] importance stats: {'imp_min': 6.2707050866267946e-12, 'imp_max': 2.081935857649795, 'imp_mean': 0.001240885517822829, 'imp_median': 3.5605173441964006e-05, 'imp_p95': 0.002544305986833603, 'imp_p99': 0.018597836790525284}
+[profile] WROTE /tmp/pact/lane_g_v3_owv3_fisher_stack_results/hessian_per_weight.pt (1,950,274 bytes)
+[profile] WROTE /tmp/pact/lane_g_v3_owv3_fisher_stack_results/hessian_per_weight.meta.json (metadata sidecar)
+[lane-owv3-fisher] 2026-04-30T16:27:23Z Fisher artifact: /tmp/pact/lane_g_v3_owv3_fisher_stack_results/hessian_per_weight.pt (1950274 bytes)
+[lane-owv3-fisher] 2026-04-30T16:27:23Z === Stage 3: Fisher -> OWV3 sensitivity map ===
+=== Fisher -> OWV3 sensitivity-map conversion ===
+checkpoint: experiments/results/lane_g_v3_landed/iter_0/renderer.bin
+fisher:     /tmp/pact/lane_g_v3_owv3_fisher_stack_results/hessian_per_weight.pt
+wrote /tmp/pact/lane_g_v3_owv3_fisher_stack_results/owv3_sensitivity_map.pt with 19 layers, 717 channels, range=[0.00030418, 44.649]
+wrote metadata /tmp/pact/lane_g_v3_owv3_fisher_stack_results/owv3_sensitivity_map.metadata.json
+[lane-owv3-fisher] 2026-04-30T16:27:25Z === Stage 4: build Lane G v3 + OWV3 archive ===
+=== Lane G v3 + Ω-W-V3 stacked archive build ===
+Stage 1: verify Lane G v3 anchors...
+  renderer: 296,776B sha256=08f12d722dd3...
+  masks: 421,483B sha256=d3eeb82ce28b...
+  poses: 15,620B sha256=cb8517f7a7e3...
+  archive: 694,074B sha256=9b20bdfca246...
+Stage 2: load renderer and sensitivity map...
+  sensitivity: 19 layers, 717 channels, range=[0.00030418, 44.649]
+Stage 3: encode OWV3 renderer...
+  ASYM=296,776B -> OWV3=572,250B (delta=+275,474B)
+Stage 4: assemble deterministic archive...
+  wrote /tmp/pact/lane_g_v3_owv3_fisher_stack_results/archive_lane_g_v3_owv3.zip (912,971B sha256=710cba0c7c490b13...)
+  archive delta vs Lane G v3: +218,897B
+  predicted rate-only score: 1.05 + +0.14575 = 1.1958 [derivation, contest-CUDA pending]
+  build took 1.77s
+  wrote provenance: /tmp/pact/lane_g_v3_owv3_fisher_stack_results/build_provenance.json
+[lane-owv3-fisher] 2026-04-30T16:27:27Z OWV3 archive: /tmp/pact/lane_g_v3_owv3_fisher_stack_results/archive_lane_g_v3_owv3.zip = 912971 bytes sha256=710cba0c7c490b13db8b0aee897dd0f33cb8b66a6ed229466bf0d1aea392f5a3
+[lane-owv3-fisher] 2026-04-30T16:27:27Z RUN_CONTEST_EVAL=0; skipping exact eval. Archive requires CUDA eval before promotion.
