@@ -28,6 +28,8 @@ from __future__ import annotations
 
 import ast
 import datetime as _dt
+import hashlib
+import os
 import re
 import struct
 import subprocess
@@ -248,6 +250,25 @@ def preflight_all(
     # 1. Codebase drift check (cheap, always run unless explicitly disabled)
     if check_codebase:
         check_codebase_drift(strict=True)
+        # 2026-04-30 supply-chain incident: PyPI `lightning` 2.6.2/2.6.3
+        # contained Mini Shai-Hulud style credential-stealing malware that
+        # executes on import. This repository uses `lightning-sdk`; any
+        # install path for bare `lightning` is a remote-runner compromise risk.
+        check_no_compromised_lightning_supply_chain(strict=True, verbose=verbose)
+        # 2026-04-30 Lightning r3 exact-eval failure: CUDA preflight and
+        # archive/inflate succeeded, but upstream evaluate.py crashed on
+        # missing `nvidia.dali`. Exact-eval runners must bootstrap/probe DALI
+        # before copying the archive or spending inflate time, then rerun the
+        # supply-chain scan after any dependency mutation.
+        check_lightning_exact_eval_runner_bootstraps_dali(strict=True, verbose=verbose)
+        # 2026-04-30 MCP shutdown directive: repo-owned MCP configs must stay
+        # empty unless the user explicitly re-enables them. This catches
+        # accidental reintroduction of `.codex/.claude/.cursor` MCP server
+        # entries before helper processes respawn from editor/runtime config.
+        check_no_active_mcp_server_config(strict=True, verbose=verbose)
+        # Config checks do not catch helpers already spawned by an editor or
+        # previous agent session. Fail closed on live orphaned MCP helpers too.
+        check_no_live_mcp_processes(strict=True, verbose=verbose)
         preflight_arity(strict=True, verbose=verbose)
         # Check 72 (2026-04-29): close BUG CLASS A — invented CLI flags inside
         # remote_lane_*.sh shell-script invocations of experiments/*.py. The
@@ -311,6 +332,7 @@ def preflight_all(
         # straight to strict=True per the Lane A → strict pattern.
         check_no_brittle_six_line_waiver_lookback(strict=True, verbose=verbose)
         check_kl_distill_uses_roundtripped_frames(strict=True, verbose=verbose)
+        check_train_renderer_kl_aux_explicit_scope(strict=True, verbose=verbose)
         check_eval_roundtrip_gate_called_after_output_dir_resolution(strict=True, verbose=verbose)
         check_nvdec_probe_has_error_classification(strict=True, verbose=verbose)
         check_archive_builders_use_deterministic_zip(strict=True, verbose=verbose)
@@ -764,6 +786,7 @@ def preflight_all(
         check_block_fp_exponents_alongside_qint(strict=True, verbose=verbose)
         # WARN-only: flip STRICT once first SegMap-paradigm encoder lane lands.
         check_segmap_export_calls_verify_roundtrip(strict=False, verbose=verbose)
+        check_segmap_hm_sa_lossy_pack_contract(strict=True, verbose=verbose)
 
         # 2026-04-30: Check 91 — Lane GP basis-fit kill enforcement. Forbids
         # any new experiments/fit_pose_*.py from importing smooth-basis fit
@@ -859,6 +882,47 @@ def preflight_all(
         check_balle_hyperprior_includes_side_info_in_archive(
             strict=True, verbose=verbose
         )
+
+        # 2026-04-30: Check 96 — Lane PFP16 fp16-or-smaller pose stream
+        # discipline. Lane GP v4 KILL VERDICT surfaced Hotz's dominant-
+        # strategy successor: cast `optimized_poses.pt` from fp32 (~15.6 KB
+        # pickle) to raw fp16 binary (~7.2 KB) for ~8 KB savings at ZERO
+        # distortion (PoseNet runs in fp16 internally during contest CUDA
+        # eval). This check guards against any new archive build script
+        # shipping fp32 pose tensors when fp16 is sufficient. Lands STRICT
+        # @ 0 violations on the 2026-04-30 codebase (the only existing
+        # pose-touching build scripts use either canonical pose encoders
+        # OR pure byte-copy from a pre-built artifact — neither triggers
+        # the heuristic).
+        # Reference: .omx/research/council_lane_gp_v4_design_20260430.md.
+        # Memory: project_lane_pfp16_landed_20260430.md.
+        check_pose_stream_uses_fp16_or_smaller(strict=True, verbose=verbose)
+
+        # 2026-04-30: Check 98 — remote contest-auth adjudication must read
+        # machine JSON, never human-readable score text. PFP16 exact CUDA
+        # landed at recomputed score 1.0440481283330025, but the remote script
+        # parsed `Final score: 100*... = 1.04` as 100.0 and falsely hard-killed
+        # the lane. This check forbids the whole parser class in remote lanes.
+        check_remote_lane_auth_eval_json_adjudication(
+            strict=True, verbose=verbose
+        )
+
+        # 2026-04-30: Check 100 — retry launcher must be self-protecting.
+        # Dispatch attempts are production state transitions, not disposable
+        # helper calls. The wrapper must hold a single-flight lock, refuse a
+        # new Vast attempt when the same logical label is already live, and
+        # kill child process groups on timeout/signals so interrupted parents
+        # do not strand phase2 children or duplicate spend.
+        check_launch_retry_wrapper_singleflight_and_signal_safe(
+            strict=True, verbose=verbose
+        )
+
+        # 2026-04-30: Check 101 — Modal recovery docs must match the installed
+        # Modal CLI. Modal 1.4 removed the old `modal call get` command; stale
+        # guidance caused recovery confusion immediately after the OWV3 Fisher
+        # smoke dispatch. Recovery must go through experiments/modal_recover_lane.py
+        # and log streaming through `modal app logs <app-id>`.
+        check_modal_recovery_cli_guidance_current(strict=True, verbose=verbose)
 
     # 2. Training inputs (only if profile + tto_frames provided)
     if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:
@@ -1245,10 +1309,18 @@ def check_codebase_drift(strict: bool = True) -> list[str]:
             )
 
     # 2. Bash scripts outside whitelist
+    # Harvest bundles under experiments/results/<lane>/<bundle>/ record the
+    # exact remote command line as run_command.sh purely for audit/traceability
+    # — these are recorded artifacts, not deploy patterns, and are also
+    # gitignored. The drift rule exists to prevent ad-hoc deploy scripts
+    # creeping in alongside the canonical pipeline.py + deploy_vastai.py path,
+    # which a frozen result-bundle audit trail does not violate.
     for sh_path in REPO_ROOT.glob("experiments/**/*.sh"):
         if sh_path.is_dir():
             continue  # recovered_*.sh is a directory, not a script
         rel = str(sh_path.relative_to(REPO_ROOT))
+        if rel.startswith("experiments/results/"):
+            continue
         if rel not in ALLOWED_BASH_PATHS:
             all_violations.append(
                 f"{rel}: bash script in experiments/ — only contest submission "
@@ -2313,6 +2385,51 @@ _META_PY_SCAN_DIRS = ["src/tac", "experiments", "scripts"]
 # Directories scanned for shell meta-bug patterns.
 _META_SH_SCAN_DIRS = ["scripts", "submissions/robust_current"]
 
+_COMPROMISED_LIGHTNING_VERSIONS = {"2.6.2", "2.6.3"}
+_MINI_SHAI_HULUD_IOC_SHA256 = {
+    "5f5852b5f604369945118937b058e49064612ac69826e0adadca39a357dfb5b1",
+    "8046a11187c135da6959862ff3846e99ad15462d2ec8a2f77a30ad53ebd5dcf2",
+}
+_MINI_SHAI_HULUD_PLANTED_PATHS = {
+    ".claude/router_runtime.js",
+    ".claude/setup.mjs",
+    ".claude/settings.json",
+    ".vscode/setup.mjs",
+    ".vscode/tasks.json",
+    ".github/workflows/format-check.yml",
+}
+_LIGHTNING_BAD_VERSION_RE = re.compile(
+    r"(?i)(?:^|[^A-Za-z0-9_.-])(?:lightning(?:\[[^\]]+\])?|pytorch-lightning)"
+    r"\s*(?:==|=)\s*2\.6\.[23](?:[^0-9]|$)"
+)
+_LIGHTNING_WHEEL_BAD_VERSION_RE = re.compile(
+    r"(?i)(?:lightning|pytorch_lightning|pytorch-lightning)-2\.6\.[23]"
+)
+_PYPI_LIGHTNING_PACKAGE_RE = re.compile(
+    r"(?i)(?<![-A-Za-z0-9_])lightning(?:\[[^\]\s]+\])?(?![-A-Za-z0-9_])"
+)
+_LIGHTNING_INSTALL_RE = re.compile(
+    r"(?i)\b(?:uv\s+pip|python\s+-m\s+pip|pip)\s+install\b[^\n#;&|]*"
+    r"(?<![-A-Za-z0-9_])lightning(?:\[[^\]\s]+\])?(?![-A-Za-z0-9_])"
+)
+_LIGHTNING_VERSION_PROBE_RE = re.compile(
+    r"""(?ix)
+    (
+        subprocess\.(?:run|call|check_call|check_output|Popen)\s*\(\s*
+        \[\s*["']lightning["']\s*,\s*["']--version["']
+    )
+    |
+    (
+        (?<![-A-Za-z0-9_])lightning(?![-A-Za-z0-9_])
+        \s+--version
+    )
+    """
+)
+_PACKAGE_JSON_POSTINSTALL_SETUP_RE = re.compile(
+    r'"postinstall"\s*:\s*"[^"]*(?:setup\.mjs|router_runtime\.js)[^"]*"'
+)
+_TOML_NAME_LIGHTNING_RE = re.compile(r"""(?i)\bname\s*=\s*["']lightning["']""")
+
 
 def _iter_python_files(root: Path, dirs: list[str]) -> list[Path]:
     """Collect every .py file under `dirs` (recursively). Skips __pycache__."""
@@ -2338,6 +2455,661 @@ def _iter_shell_files(root: Path, dirs: list[str]) -> list[Path]:
         for p in d_path.rglob("*.sh"):
             out.append(p)
     return sorted(out)
+
+
+def _read_text_if_possible(path: Path) -> str:
+    try:
+        return path.read_text(errors="ignore")
+    except OSError:
+        return ""
+
+
+def _sha256_file(path: Path) -> str | None:
+    try:
+        h = hashlib.sha256()
+        with path.open("rb") as fh:
+            for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+                h.update(chunk)
+        return h.hexdigest()
+    except OSError:
+        return None
+
+
+def _is_heavy_scan_path(path: Path) -> bool:
+    return any(
+        part in {
+            ".git",
+            ".venv",
+            "venv",
+            "node_modules",
+            "__pycache__",
+            "experiments",
+            "reports",
+            "workspace",
+            ".mypy_cache",
+            ".pytest_cache",
+            ".ruff_cache",
+        }
+        for part in path.parts
+    )
+
+
+def _candidate_supply_chain_manifest_files(root: Path) -> list[Path]:
+    candidates: list[Path] = []
+    direct_names = {
+        "pyproject.toml",
+        "uv.lock",
+        "poetry.lock",
+        "setup.py",
+        "setup.cfg",
+        "Pipfile",
+        "Pipfile.lock",
+    }
+    for name in direct_names:
+        p = root / name
+        if p.exists():
+            candidates.append(p)
+    for pattern in ("requirements*.txt", "constraints*.txt", "environment*.yml", "environment*.yaml"):
+        candidates.extend(sorted(root.glob(pattern)))
+    for base in (root / "scripts", root / ".github" / "workflows", root / "src" / "tac" / "deploy"):
+        if not base.exists():
+            continue
+        for suffix in ("*.py", "*.sh", "*.yml", "*.yaml"):
+            candidates.extend(sorted(base.rglob(suffix)))
+    return sorted({p.resolve(): p for p in candidates if p.is_file()}.values())
+
+
+def _is_python_dependency_manifest(path: Path) -> bool:
+    name = path.name
+    suffix = path.suffix.lower()
+    return (
+        name in {
+            "pyproject.toml",
+            "uv.lock",
+            "poetry.lock",
+            "setup.py",
+            "setup.cfg",
+            "Pipfile",
+            "Pipfile.lock",
+        }
+        or name.startswith(("requirements", "constraints"))
+        or suffix in {".txt", ".in", ".toml", ".lock", ".cfg", ".yml", ".yaml"}
+    )
+
+
+def _line_refs_pypi_lightning_dependency(line: str) -> bool:
+    stripped = line.strip()
+    if not stripped or stripped.startswith("#"):
+        return False
+    if _TOML_NAME_LIGHTNING_RE.search(stripped):
+        return True
+    if not _PYPI_LIGHTNING_PACKAGE_RE.search(stripped):
+        return False
+    # Avoid false positives for natural-language strings such as
+    # "Lightning AI deployment"; dependency specs either start with the package
+    # name, quote/list it, install it, or use a package operator/URL form.
+    return bool(
+        re.search(
+            r"""(?ix)
+            (?:^|["'\s,{[(])
+            lightning(?:\[[^\]\s]+\])?
+            (?:
+                \s*(?:==|=|!=|~=|>=|<=|>|<|@)\s*
+                |
+                \s*(?:["',#\])}]|$)
+            )
+            """,
+            stripped,
+        )
+    )
+
+
+def _scan_dependency_manifests_for_compromised_lightning(
+    repo_root: Path,
+) -> list[str]:
+    """Block known-bad Lightning releases and unsafe `pip install lightning`.
+
+    The 2026-04-30 Mini Shai-Hulud incident affected the PyPI package named
+    `lightning` versions 2.6.2 and 2.6.3. The project uses `lightning-sdk`;
+    installing bare `lightning` is unnecessary. We therefore block the PyPI
+    package named `lightning` entirely in repo install/deploy paths rather than
+    trying to preserve a fragile allowlist of known-clean versions.
+    """
+    violations: list[str] = []
+    for path in _candidate_supply_chain_manifest_files(repo_root):
+        text = _read_text_if_possible(path)
+        if not text:
+            continue
+        rel = path.relative_to(repo_root) if path.is_relative_to(repo_root) else path
+        is_manifest = _is_python_dependency_manifest(path)
+        for i, line in enumerate(text.splitlines(), start=1):
+            if line.lstrip().startswith("#"):
+                continue
+            if _LIGHTNING_BAD_VERSION_RE.search(line) or _LIGHTNING_WHEEL_BAD_VERSION_RE.search(line):
+                violations.append(
+                    f"{rel}:{i}: references compromised Lightning release "
+                    "2.6.2/2.6.3; use lightning-sdk or a verified clean pin."
+                )
+            elif _LIGHTNING_INSTALL_RE.search(line):
+                violations.append(
+                    f"{rel}:{i}: installs PyPI package `lightning`; use "
+                    "`lightning-sdk` for Lightning AI Batch Jobs/CLI."
+                )
+            elif _LIGHTNING_VERSION_PROBE_RE.search(line):
+                violations.append(
+                    f"{rel}:{i}: executes `lightning --version`; inspect "
+                    "`lightning-sdk` package metadata instead of running a "
+                    "potentially poisoned console script."
+                )
+            elif is_manifest and _line_refs_pypi_lightning_dependency(line):
+                violations.append(
+                    f"{rel}:{i}: depends on PyPI package `lightning`; use "
+                    "`lightning-sdk` for this project."
+                )
+    return violations
+
+
+def _scan_repo_for_mini_shai_hulud_iocs(repo_root: Path) -> list[str]:
+    violations: list[str] = []
+    for rel_s in sorted(_MINI_SHAI_HULUD_PLANTED_PATHS):
+        path = repo_root / rel_s
+        if path.exists():
+            violations.append(
+                f"{rel_s}: Mini Shai-Hulud planted path is present; "
+                "treat repository as compromised until reviewed."
+            )
+
+    for pkg_json in sorted(repo_root.rglob("package.json")):
+        rel_parts = pkg_json.relative_to(repo_root).parts
+        if any(part in {".git", "node_modules", ".venv", "venv", "workspace"} for part in rel_parts):
+            continue
+        text = _read_text_if_possible(pkg_json)
+        if _PACKAGE_JSON_POSTINSTALL_SETUP_RE.search(text):
+            violations.append(
+                f"{pkg_json.relative_to(repo_root)}: package.json postinstall "
+                "references setup.mjs/router_runtime.js, matching worm behavior."
+            )
+
+    names = {"router_runtime.js", "start.py", "setup.mjs"}
+    for path in sorted(repo_root.rglob("*")):
+        if not path.is_file() or path.name not in names:
+            continue
+        rel = path.relative_to(repo_root)
+        if _is_heavy_scan_path(rel):
+            continue
+        digest = _sha256_file(path)
+        if digest in _MINI_SHAI_HULUD_IOC_SHA256:
+            violations.append(f"{rel}: known Mini Shai-Hulud IOC sha256={digest}")
+    return violations
+
+
+def _candidate_site_packages_roots(repo_root: Path) -> list[Path]:
+    candidates: list[Path] = []
+    prefixes = {Path(sys.prefix), repo_root / ".venv"}
+    for prefix in prefixes:
+        candidates.extend(sorted(prefix.glob("lib/python*/site-packages")))
+    for item in sys.path:
+        try:
+            p = Path(item)
+        except TypeError:
+            continue
+        if p.name == "site-packages":
+            candidates.append(p)
+    return sorted({p.resolve(): p for p in candidates if p.exists()}.values())
+
+
+def _scan_site_packages_for_compromised_lightning(
+    repo_root: Path,
+    site_packages_roots: list[Path] | None = None,
+) -> list[str]:
+    violations: list[str] = []
+    roots = _candidate_site_packages_roots(repo_root) if site_packages_roots is None else site_packages_roots
+    for site in roots:
+        if not site.exists():
+            continue
+        for dist in sorted(site.glob("lightning-*.dist-info")):
+            metadata = _read_text_if_possible(dist / "METADATA")
+            name = ""
+            version = ""
+            for line in metadata.splitlines():
+                if line.startswith("Name:"):
+                    name = line.split(":", 1)[1].strip().lower().replace("_", "-")
+                elif line.startswith("Version:"):
+                    version = line.split(":", 1)[1].strip()
+            if name == "lightning":
+                if version in _COMPROMISED_LIGHTNING_VERSIONS:
+                    violations.append(
+                        f"{dist}: installed compromised PyPI package lightning=={version}; "
+                        "remove the environment and rotate credentials if imported."
+                    )
+                else:
+                    violations.append(
+                        f"{dist}: installed PyPI package lightning=={version or '<unknown>'}; "
+                        "this repo policy forbids bare `lightning` entirely. Use "
+                        "`lightning-sdk` only, and avoid importing/executing "
+                        "the PyPI `lightning` package or console script."
+                    )
+
+        runtime_dir = site / "lightning" / "_runtime"
+        if runtime_dir.exists():
+            violations.append(
+                f"{runtime_dir}: hidden Lightning _runtime payload directory present; "
+                "this matches the compromised 2.6.2/2.6.3 package structure."
+            )
+        for name in ("router_runtime.js", "start.py"):
+            for path in sorted(site.rglob(name)):
+                digest = _sha256_file(path)
+                if digest in _MINI_SHAI_HULUD_IOC_SHA256:
+                    violations.append(f"{path}: known Mini Shai-Hulud IOC sha256={digest}")
+    return violations
+
+
+def check_no_compromised_lightning_supply_chain(
+    repo_root: Path | None = None,
+    site_packages_roots: list[Path] | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Guard against the 2026-04-30 Lightning PyPI compromise.
+
+    This check is intentionally narrow and fail-closed:
+    - forbids `lightning==2.6.2` / `lightning==2.6.3`
+    - forbids unpinned `pip install lightning` in deploy/install paths
+    - scans the active virtualenv for the compromised package shape / hashes
+    - scans repo-owned files for the Mini Shai-Hulud planted paths
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    violations.extend(_scan_dependency_manifests_for_compromised_lightning(root))
+    violations.extend(_scan_repo_for_mini_shai_hulud_iocs(root))
+    violations.extend(_scan_site_packages_for_compromised_lightning(root, site_packages_roots))
+    if verbose:
+        if violations:
+            print(f"  [lightning-supply-chain] {len(violations)} violation(s):")
+            for v in violations[:20]:
+                print(f"    • {v}")
+            if len(violations) > 20:
+                print(f"    … (+{len(violations) - 20} more)")
+        else:
+            print("  [lightning-supply-chain] OK: no compromised Lightning artifacts or unsafe install paths")
+    if violations and strict:
+        raise MetaBugViolation(
+            "COMPROMISED LIGHTNING SUPPLY-CHAIN RISK DETECTED:\n"
+            + "\n".join(f"  • {v}" for v in violations[:50])
+        )
+    return violations
+
+
+def check_lightning_exact_eval_runner_bootstraps_dali(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Guard the Lightning Batch Jobs exact-eval dependency preflight.
+
+    Bug class: a promotion-grade exact CUDA eval can pass CUDA and archive
+    checks, spend inflate time, then fail inside upstream ``evaluate.py``
+    because the runner env lacks ``nvidia.dali``. The exact-eval command must
+    therefore:
+    - run the Lightning supply-chain scan before any dependency mutation,
+    - bootstrap a pinned DALI wheel for the active CUDA major if missing,
+    - run the supply-chain scan again after mutation,
+    - prove DALI and CUDA imports before archive copy / inflate / eval.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+
+    try:
+        from tac.deploy.lightning.batch_jobs import (
+            ARTIFACT_DALI_BOOTSTRAP,
+            ARTIFACT_DALI_REQUIREMENTS,
+            ARTIFACT_RUNNER_PREFLIGHT,
+            ARTIFACT_SUPPLY_CHAIN_SCAN,
+            ARTIFACT_SUPPLY_CHAIN_SCAN_PRE,
+            LightningAdjudicationSpec,
+            LightningBatchJobSpec,
+            exact_cuda_eval_command,
+        )
+    except Exception as exc:
+        violations.append(f"could not import Lightning Batch Jobs helpers: {exc!r}")
+    else:
+        command = exact_cuda_eval_command(
+            repo_dir="/repo",
+            archive_path="/archive.zip",
+            upstream_dir="/upstream",
+            output_dir="/out",
+            expected_archive_sha256="a" * 64,
+            expected_archive_size_bytes=123,
+            adjudication=LightningAdjudicationSpec(
+                baseline_score=1.2,
+                predicted_band_low=1.0,
+                predicted_band_high=1.4,
+                regression_threshold=1.6,
+                baseline_archive_size_bytes=100,
+            ),
+        )
+        required_tokens = {
+            "supply-chain scan": "scripts/scan_lightning_supply_chain.py",
+            "pre-bootstrap supply-chain artifact": ARTIFACT_SUPPLY_CHAIN_SCAN_PRE,
+            "post-bootstrap supply-chain artifact": ARTIFACT_SUPPLY_CHAIN_SCAN,
+            "DALI bootstrap artifact": ARTIFACT_DALI_BOOTSTRAP,
+            "runner preflight artifact": ARTIFACT_RUNNER_PREFLIGHT,
+            "adjudication": "scripts/adjudicate_contest_auth_eval.py",
+            "CUDA sentinel": "LIGHTNING_RUNNER_CUDA_PREFLIGHT_OK",
+            "DALI sentinel": "LIGHTNING_RUNNER_DALI_PREFLIGHT_OK",
+            "DALI import": "import nvidia.dali.fn as dali_fn",
+            "CUDA 13 DALI pin": "nvidia-dali-cuda130==1.52.0",
+            "CUDA 12 DALI pin": "nvidia-dali-cuda120==1.52.0",
+            "CUDA 13 DALI wheel URL": "https://pypi.nvidia.com/nvidia-dali-cuda130/",
+            "CUDA 13 DALI wheel hash": "37369fb30e9c66f710b29836688c90abc36793bbe757cd3ad699fac76ba07119",
+            "DALI requirements artifact": ARTIFACT_DALI_REQUIREMENTS,
+            "hash-required install": "--require-hashes",
+            "no dependency resolver drift": "--no-deps",
+            "wheel-only install": "--only-binary",
+            "uv strict install validation": "--strict",
+        }
+        for label, token in required_tokens.items():
+            if token not in command:
+                violations.append(f"exact-eval command missing {label}: {token!r}")
+        forbidden_tokens = ("--index-url", "--extra-index-url")
+        for token in forbidden_tokens:
+            if token in command:
+                violations.append(
+                    f"exact-eval DALI bootstrap must use direct hash-pinned wheels, found {token!r}"
+                )
+
+        scan_count = command.count("scripts/scan_lightning_supply_chain.py")
+        if scan_count < 2:
+            violations.append(
+                "exact-eval command must run supply-chain scan twice "
+                f"(before and after DALI bootstrap); found {scan_count}"
+            )
+
+        def _pos(token: str) -> int:
+            return command.find(token)
+
+        order = [
+            ("initial supply-chain scan", _pos("scripts/scan_lightning_supply_chain.py")),
+            ("DALI bootstrap", _pos("DALI_VERSION = '1.52.0'")),
+            ("post-bootstrap supply-chain scan", command.rfind("scripts/scan_lightning_supply_chain.py")),
+            ("runner preflight", _pos("'tool': 'lightning_exact_eval_runner_preflight'")),
+            ("archive copy", _pos("cp /archive.zip /out/archive.zip")),
+            ("contest auth eval", _pos("experiments/contest_auth_eval.py")),
+        ]
+        missing_order = [name for name, pos in order if pos < 0]
+        if missing_order:
+            violations.append(f"exact-eval command missing ordered stages: {missing_order}")
+        else:
+            positions = [pos for _, pos in order]
+            if positions != sorted(positions):
+                violations.append(
+                    "exact-eval command stages are not fail-closed before spend: "
+                    + " -> ".join(f"{name}@{pos}" for name, pos in order)
+                )
+
+        bad = LightningBatchJobSpec(
+            name="bad",
+            machine="T4",
+            command=(
+                "scripts/scan_lightning_supply_chain.py && "
+                "python experiments/contest_auth_eval.py --device cuda && "
+                "echo LIGHTNING_RUNNER_CUDA_PREFLIGHT_OK && "
+                "cp contest_auth_eval.json ."
+            ),
+            role="exact_cuda_eval",
+            expected_archive_sha256="a" * 64,
+            expected_archive_size_bytes=123,
+            adjudication=LightningAdjudicationSpec(
+                baseline_score=1.2,
+                predicted_band_low=1.0,
+                predicted_band_high=1.4,
+                regression_threshold=1.6,
+            ),
+        )
+        try:
+            bad.validate()
+        except ValueError as exc:
+            if "DALI runner preflight" not in str(exc):
+                violations.append(
+                    "exact-eval validator rejected missing-DALI command for "
+                    f"the wrong reason: {exc}"
+                )
+        else:
+            violations.append(
+                "exact-eval validator accepted a command without "
+                "LIGHTNING_RUNNER_DALI_PREFLIGHT_OK"
+            )
+
+    if verbose:
+        if violations:
+            print(f"  [lightning-exact-eval-dali] {len(violations)} violation(s):")
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print("  [lightning-exact-eval-dali] OK: DALI bootstrap and preflight are fail-closed")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "LIGHTNING EXACT-EVAL DALI PREFLIGHT VIOLATIONS:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nExact CUDA eval must prove `nvidia.dali` and CUDA before "
+            "archive copy, inflate, or upstream evaluate.py. The 2026-04-30 "
+            "r3 OWV3 run failed after inflate because this dependency was "
+            "absent; this preflight prevents the same spend-before-fail class."
+        )
+    return violations
+
+
+_MCP_CONFIG_FILENAMES = {
+    "mcp.json",
+    "claude_desktop_config.json",
+    "config.toml",
+    "config.local.toml",
+    "settings.json",
+    "settings.local.json",
+}
+_MCP_CONFIG_DIRS = (".codex", ".claude", ".cursor", ".vscode")
+_MCP_PROCESS_TOKENS = (
+    "chrome-devtools-mcp",
+    "model.context",
+    "rbx-studio-mcp",
+    "roblox_studio_mcp",
+)
+_MCP_TOML_SECTION_RE = re.compile(r"^\s*\[\s*mcp_servers(?:[.\]\s]|$)")
+_MCP_TOML_INLINE_RE = re.compile(r"^\s*mcp_servers\s*=")
+
+
+def _candidate_mcp_config_files(repo_root: Path) -> list[Path]:
+    candidates: set[Path] = set()
+    for rel in (
+        ".codex/config.toml",
+        ".codex/config.local.toml",
+        ".claude/mcp.json",
+        ".claude/settings.json",
+        ".claude/settings.local.json",
+        ".cursor/mcp.json",
+        ".cursor/settings.json",
+        ".vscode/mcp.json",
+        ".vscode/settings.json",
+        "mcp.json",
+        "claude_desktop_config.json",
+    ):
+        path = repo_root / rel
+        if path.is_file():
+            candidates.add(path)
+    for dirname in _MCP_CONFIG_DIRS:
+        base = repo_root / dirname
+        if not base.is_dir():
+            continue
+        for path in base.rglob("*"):
+            if path.is_file() and path.name in _MCP_CONFIG_FILENAMES:
+                candidates.add(path)
+    return sorted(candidates)
+
+
+def _scan_mcp_config_file(path: Path, repo_root: Path) -> list[str]:
+    try:
+        rel = path.relative_to(repo_root) if path.is_absolute() else path
+    except ValueError:
+        rel = path
+    text = _read_text_if_possible(path)
+    if not text:
+        return []
+
+    violations: list[str] = []
+    if path.suffix.lower() == ".json":
+        try:
+            import json
+
+            payload = json.loads(text)
+        except Exception:
+            payload = None
+        if isinstance(payload, dict):
+            for key in ("mcpServers", "mcp_servers"):
+                servers = payload.get(key)
+                if isinstance(servers, dict) and servers:
+                    violations.append(
+                        f"{rel}: active {key} entries are present: "
+                        f"{sorted(str(name) for name in servers.keys())}. "
+                        "MCP servers are disabled for this project unless "
+                        "explicitly re-enabled by the user."
+                    )
+
+    for lineno, line in enumerate(text.splitlines(), start=1):
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or stripped.startswith("//"):
+            continue
+        if _MCP_TOML_SECTION_RE.search(line) or _MCP_TOML_INLINE_RE.search(line):
+            violations.append(
+                f"{rel}:{lineno}: active mcp_servers TOML config is present. "
+                "Remove the section or keep MCP disabled unless the user "
+                "explicitly re-enables it."
+            )
+        if any(token in line for token in _MCP_PROCESS_TOKENS):
+            violations.append(
+                f"{rel}:{lineno}: MCP helper command token is present. "
+                "MCP helper processes must not be configured for this project "
+                "unless the user explicitly re-enables them."
+            )
+    return violations
+
+
+def check_no_active_mcp_server_config(
+    repo_root: Path | None = None,
+    config_paths: list[Path] | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Block repo-owned MCP server configs from being reintroduced.
+
+    The 2026-04-30 shutdown removed active MCP server entries from local app
+    configs. This repo-level check stays intentionally narrow: it scans
+    workspace-owned `.codex`, `.claude`, `.cursor`, and explicit config files,
+    while callers can pass `config_paths` for a one-off home-config audit.
+    """
+    root = repo_root or REPO_ROOT
+    candidates = _candidate_mcp_config_files(root)
+    if config_paths:
+        candidates.extend(Path(item).expanduser().resolve() for item in config_paths)
+    candidates = sorted({p.resolve(): p for p in candidates if p.is_file()}.values())
+
+    violations: list[str] = []
+    for path in candidates:
+        violations.extend(_scan_mcp_config_file(path, root))
+
+    if verbose:
+        if violations:
+            print(f"  [mcp-config-disabled] {len(violations)} violation(s):")
+            for v in violations[:20]:
+                print(f"    • {v}")
+            if len(violations) > 20:
+                print(f"    … (+{len(violations) - 20} more)")
+        else:
+            print(
+                f"  [mcp-config-disabled] OK: {len(candidates)} repo-owned "
+                "MCP config file(s) scanned"
+            )
+    if violations and strict:
+        raise MetaBugViolation(
+            "ACTIVE MCP SERVER CONFIG DETECTED:\n"
+            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n\nMCP servers are disabled for this project unless the user "
+            "explicitly re-enables them."
+        )
+    return violations
+
+
+def _scan_live_mcp_process_rows(
+    rows: list[str],
+    *,
+    current_pid: int | None = None,
+) -> list[str]:
+    violations: list[str] = []
+    for raw in rows:
+        line = raw.strip()
+        if not line:
+            continue
+        pid_text, _, command = line.partition(" ")
+        try:
+            pid = int(pid_text)
+        except ValueError:
+            pid = None
+            command = line
+        if current_pid is not None and pid == current_pid:
+            continue
+        if any(token in command for token in _MCP_PROCESS_TOKENS):
+            label = f"pid {pid}" if pid is not None else "unknown pid"
+            violations.append(
+                f"{label}: live MCP helper process is running: {command}. "
+                "Kill MCP helpers before contest/eval work unless the user "
+                "explicitly re-enables MCP."
+            )
+    return violations
+
+
+def check_no_live_mcp_processes(
+    *,
+    process_rows: list[str] | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Block already-running MCP helpers from silently reappearing.
+
+    Config checks catch future launches; this live-process check catches the
+    orphaned helper class that can survive after configs are emptied.
+    """
+    if process_rows is None:
+        proc = subprocess.run(
+            ["ps", "-axo", "pid=,command="],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+        process_rows = proc.stdout.splitlines() if proc.returncode == 0 else []
+
+    violations = _scan_live_mcp_process_rows(
+        process_rows,
+        current_pid=os.getpid(),
+    )
+
+    if verbose:
+        if violations:
+            print(f"  [mcp-processes-disabled] {len(violations)} violation(s):")
+            for v in violations[:20]:
+                print(f"    • {v}")
+            if len(violations) > 20:
+                print(f"    … (+{len(violations) - 20} more)")
+        else:
+            print("  [mcp-processes-disabled] OK: no live MCP helpers found")
+    if violations and strict:
+        raise MetaBugViolation(
+            "LIVE MCP HELPER PROCESS DETECTED:\n"
+            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n\nKill MCP helper processes before contest/eval work unless "
+            "the user explicitly re-enables MCP."
+        )
+    return violations
 
 
 # Heredoc start: `<< [-]['"]?TOKEN['"]?` after a redirect-or-no-redirect operator.
@@ -4707,6 +5479,12 @@ _SAFE_LOADER_QUALNAMES = frozenset({
     "load_renderer_checkpoint",
     "detect_checkpoint_type",
     "load_int4_lzma2",
+    # NWCS sensitivity-aware container loader — does NWCS1 magic-byte
+    # validation at neural_weight_codec_sensitivity.py:230 before parsing.
+    # Functions that delegate to this then torch.load on the codec_blob
+    # extracted from inside the verified container (a known-pickle field,
+    # not a user-supplied file path) are content-safe by construction.
+    "load_nwcs_renderer_container",
     # Pose loaders (use the same content-detect pattern; see submission_archive)
     "load_optimized_poses",
     "load_poses_binary",
@@ -5500,6 +6278,13 @@ def check_kl_distill_uses_roundtripped_frames(
                 continue
             n_scanned += 1
             violations.extend(_scan_python_for_kl_distill_raw_pairs(p, root))
+    # SegMapTrainer is a library-side KL caller, not an experiment script.
+    # Keep it in this guard so trainer refactors cannot silently pass raw
+    # renderer pairs while experiments stay clean.
+    segmap_renderer = root / "src/tac/segmap_renderer.py"
+    if segmap_renderer.exists():
+        n_scanned += 1
+        violations.extend(_scan_python_for_kl_distill_raw_pairs(segmap_renderer, root))
 
     if verbose and violations:
         print(
@@ -8324,6 +9109,75 @@ def check_remote_scripts_write_provenance(
     return violations
 
 
+# ── Check M0: train_renderer KL auxiliaries require explicit scope ─────────
+
+
+def check_train_renderer_kl_aux_explicit_scope(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Prevent KL-like renderer auxiliaries from activating by weight alone.
+
+    Historical KL lanes were confounded by ambiguous primary-vs-auxiliary
+    semantics and stale weights. `train_renderer.py` may only use scoped
+    SegNet auxiliary KL/JBL, and every positive `kl_distill_weight` profile
+    must declare `kl_distill_scope="segnet_aux"`.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    try:
+        from tac.profiles import PROFILES
+    except Exception as exc:  # pragma: no cover - import failure is fatal below
+        violations.append(f"could not import tac.profiles.PROFILES: {exc}")
+        PROFILES = {}
+
+    for name, profile in sorted(PROFILES.items()):
+        weight = profile.get("kl_distill_weight")
+        scope = profile.get("kl_distill_scope", "none")
+        if scope == "primary_scorer":
+            violations.append(
+                f"profiles[{name!r}]: train_renderer profile declares "
+                "kl_distill_scope='primary_scorer', which is forensic-only "
+                "and blocked from renderer training."
+            )
+        if isinstance(weight, (int, float)) and weight > 0 and scope != "segnet_aux":
+            violations.append(
+                f"profiles[{name!r}]: kl_distill_weight={weight} but "
+                f"kl_distill_scope={scope!r}; positive renderer KL-like "
+                "auxiliary weights require explicit scope 'segnet_aux'."
+            )
+
+    train_renderer = root / "src/tac/experiments/train_renderer.py"
+    text = _read_text_if_possible(train_renderer)
+    required_tokens = {
+        "--kl-distill-scope": "CLI exposes the explicit KL scope",
+        "positive kl_distill_weight requires explicit": "positive weight fail-closed guard",
+        "train_renderer never permits primary/full-scorer KL": "primary KL hard block",
+        'args.kl_distill_scope == "segnet_aux"': "loss block checks explicit scope",
+    }
+    for token, reason in required_tokens.items():
+        if token not in text:
+            violations.append(f"{train_renderer.relative_to(root)}: missing {token!r} ({reason}).")
+
+    if verbose:
+        if violations:
+            print(f"  [train-renderer-kl-scope] {len(violations)} violation(s):")
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print("  [train-renderer-kl-scope] OK: renderer KL auxiliaries are explicit-scope")
+    if violations and strict:
+        raise PreflightError(
+            "TRAIN_RENDERER KL AUXILIARY SCOPE violations:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nRenderer KL-like auxiliaries must not activate from "
+            "kl_distill_weight alone. Use kl_distill_scope='segnet_aux' and "
+            "exact CUDA archive eval/component gates before any claim."
+        )
+    return violations
+
+
 # ── Check M: F.kl_div(reduction="batchmean") on spatial tensors ────────────
 #
 # Bug class (2026-04-27 council forensics, findings.md "Lane G — really
@@ -10974,8 +11828,12 @@ def check_no_git_reset_hard_in_remote_lane_scripts(
             stripped = line.lstrip()
             if stripped.startswith("#"):
                 continue
-            # Match executable `git reset --hard` (not in comments)
-            if re.search(r"\bgit\s+reset\s+--hard\b", line):
+            # Match executable `git reset --hard` (not in comments).
+            # Allow optional `-C <path>` (or `--git-dir=…`/`--work-tree=…`
+            # variants) between `git` and `reset` — earlier regex missed
+            # `git -C "$WORKSPACE" reset --hard origin/main` (Lane J-IMP
+            # 2026-04-30 incident).
+            if re.search(r"\bgit\b(?:\s+(?:-C\s+\S+|--git-dir=\S+|--work-tree=\S+|-c\s+\S+))*\s+reset\s+--hard\b", line):
                 violations.append(
                     f"{sh.relative_to(root)}:{lineno}: executable `git reset --hard` "
                     f"wipes local-only anchor files SCP'd by launcher. "
@@ -14311,6 +15169,81 @@ def check_segmap_export_calls_verify_roundtrip(
     return violations
 
 
+def check_segmap_hm_sa_lossy_pack_contract(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """HM-S/SA SegMap block-FP exports must declare the lossy contract.
+
+    These lanes use Selfcomp-style block-FP as a deliberately lossy renderer
+    weight codec. A strict lossless-style ``tol=1e-6`` post-training check
+    aborts valid trained checkpoints after GPU spend. The safe contract is:
+    relaxed per-tensor MSE gate + explicit lossy metadata + canonical CUDA
+    archive eval before any score claim.
+    """
+    root = repo_root or REPO_ROOT
+    scripts_dir = root / "scripts"
+    targets = (
+        scripts_dir / "remote_lane_hm_s_segmap_homography.sh",
+        scripts_dir / "remote_lane_sa_segmap_clone.sh",
+    )
+    violations: list[str] = []
+    n_scanned = 0
+    for path in targets:
+        if not path.is_file():
+            continue
+        n_scanned += 1
+        try:
+            text = path.read_text()
+        except (OSError, UnicodeDecodeError):
+            continue
+        rel = path.relative_to(root) if path.is_absolute() else path
+        if "segmap_weights.tar.xz" not in text:
+            continue
+        if re.search(r"verify_roundtrip\s*\([^)]*tol\s*=\s*1e-6", text, re.DOTALL):
+            violations.append(
+                f"{rel}: uses verify_roundtrip(..., tol=1e-6) for SegMap "
+                "block-FP. That codec is lossy; use "
+                "SEGMAP_LOSSY_ROUNDTRIP_MSE_TOL plus contract metadata."
+            )
+        required = {
+            "segmap_lossy_contract_metadata": "writes the explicit lossy contract",
+            "SEGMAP_LOSSY_ROUNDTRIP_MSE_TOL": "uses the reviewed lossy MSE tolerance",
+            "lossy_contract=contract": "embeds the contract in segmap_weights.tar.xz",
+            "segmap_pack_roundtrip.json": "preserves measured per-key pack errors",
+            "archive_level_exact_eval_required": "marks pre-exact-eval evidence as empirical",
+            "experiments/contest_auth_eval.py": "gates the archive through canonical auth eval",
+            "--device cuda": "uses CUDA for the archive-level gate",
+        }
+        for needle, reason in required.items():
+            if needle not in text:
+                violations.append(f"{rel}: missing {needle!r} ({reason}).")
+
+    if verbose:
+        if violations:
+            print(
+                f"  [segmap-hm-sa-lossy-pack-contract] {len(violations)} "
+                f"violation(s) across {n_scanned} file(s):"
+            )
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print(
+                f"  [segmap-hm-sa-lossy-pack-contract] OK: {n_scanned} "
+                "file(s) scanned"
+            )
+    if violations and strict:
+        raise PreflightError(
+            "SEGMAP HM-S/SA LOSSY PACK CONTRACT violations:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nThese lanes must either fail statically before GPU spend "
+            "or proceed only as lossy block-FP archives gated by exact CUDA "
+            "contest_auth_eval evidence."
+        )
+    return violations
+
+
 # ════════════════════════════════════════════════════════════════════════════
 # Check 91 (2026-04-30): Lane GP basis-fit kill — forbid polynomial / smooth-
 # basis pose-fits in experiments/fit_pose_*.py without explicit kill-verdict
@@ -15311,6 +16244,991 @@ def check_balle_hyperprior_includes_side_info_in_archive(
             "auto-fallback to static_wins MUST guard against shipping a "
             "regressing untrained codec. Reference: "
             ".omx/research/council_lane_20_balle_design_20260430.md."
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 96 (2026-04-30): Lane PFP16 — pose stream should use fp16 or smaller.
+# ════════════════════════════════════════════════════════════════════════════
+#
+# Background: Lane GP v4 KILL VERDICT (.omx/research/council_lane_gp_v4_design_20260430.md)
+# surfaced Hotz's dominant-strategy successor: cast `optimized_poses.pt` from
+# fp32 (~15.6 KB pickle) to raw fp16 binary (~7.2 KB) for an 8.4 KB pose
+# stream byte savings at zero distortion (PoseNet runs in fp16 internally
+# during contest CUDA evaluation, so the cast is invisible to scoring).
+# The corresponding implementation lane is Lane PFP16 (`src/tac/pfp16_codec.py`
+# + `experiments/build_lane_g_v3_pfp16_stack.py`).
+#
+# This check guards against future archive build scripts shipping fp32 pose
+# tensors when fp16 is sufficient. It scans every
+# `experiments/build_*_stack.py`, `experiments/build_*_archive.py`, and
+# `experiments/build_lane_*.py` file. If the file calls `torch.save(poses, ...)`
+# WITHOUT first calling `.half()` / `encode_pfp16()` / `save_poses_binary()`
+# / `encode_pose_deltas()` / `encode_pose_delta_v2()` / `encode_lora_*()`,
+# the build is shipping an fp32 pose tensor unnecessarily.
+#
+# Waiver pattern: `# POSE_FP32_REQUIRED:<reason>` — for legitimate exceptions
+# where fp32 precision IS required (e.g., a future renderer that uses pose
+# values outside fp16 dynamic range, or a debug build).
+#
+# Lands STRICT @ 0 violations after Lane PFP16 lands (the only existing
+# archive build that ships poses is `experiments/build_lane_g_v3_omega_w_v2_stack.py`,
+# which copies bit-identical bytes from Lane G v3 — that path is exempted
+# because it is a pure byte-copy with no encode-side decision to make).
+# Memory: project_lane_pfp16_landed_20260430.md.
+
+
+_PFP16_POSE_ENCODE_FUNCTIONS = (
+    "encode_pfp16",
+    "encode_pose_file_pfp16",
+    "save_poses_binary",
+    "encode_pose_deltas",
+    "encode_pose_file",  # pose_delta_codec wrapper
+    "encode_pose_delta_v2",
+    "encode_pose_file_pdv2",
+    "encode_lora_poses",
+    "encode_lora_v2_poses",
+)
+_PFP16_WAIVER_MARKER = "POSE_FP32_REQUIRED:"
+
+
+def check_pose_stream_uses_fp16_or_smaller(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Forbid archive build scripts that ship fp32 pose tensors when fp16
+    is sufficient.
+
+    Scans every `experiments/build_*_stack.py`, `experiments/build_*_archive.py`,
+    `experiments/build_lane_*.py`. A file is FLAGGED if it satisfies BOTH:
+
+      (a) calls `torch.save(...)` on what looks like a pose tensor (the
+          variable name contains `pose` OR the call pattern is
+          `torch.save(poses, ...)` / `torch.save(optimized_poses, ...)`),
+      (b) does NOT use any of the canonical pose-encode functions
+          (`encode_pfp16`, `save_poses_binary`, `encode_pose_deltas`, etc.)
+          AND does NOT carry a `# POSE_FP32_REQUIRED:<reason>` waiver.
+
+    A file is also flagged if it directly writes `tensor.float()` /
+    `tensor.to(torch.float32)` to an `optimized_poses.pt` archive entry.
+
+    Returns list of violations. Raises PreflightError if strict and any.
+
+    Files known to be pure byte-copies of pre-built pose artifacts (e.g.
+    `experiments/build_lane_g_v3_omega_w_v2_stack.py` copying Lane G v3's
+    `optimized_poses.pt` bit-identically) are exempted via path-based filter
+    + the same waiver marker.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+
+    exp_dir = root / "experiments"
+    if not exp_dir.is_dir():
+        if verbose:
+            print(f"  [pose-stream-fp16] OK: experiments/ not present, skipped")
+        return violations
+
+    candidate_globs: list[Path] = []
+    candidate_globs.extend(sorted(exp_dir.glob("build_*_stack.py")))
+    candidate_globs.extend(sorted(exp_dir.glob("build_*_archive.py")))
+    candidate_globs.extend(sorted(exp_dir.glob("build_lane_*.py")))
+    # Dedup (a build script may match multiple globs).
+    candidate_globs = sorted(set(candidate_globs))
+
+    if not candidate_globs:
+        if verbose:
+            print(f"  [pose-stream-fp16] OK: no candidate files found, skipped")
+        return violations
+
+    for py in candidate_globs:
+        n_scanned += 1
+        try:
+            text = py.read_text()
+        except (OSError, UnicodeDecodeError):
+            continue
+        rel = py.relative_to(root) if py.is_absolute() else py
+        rel_str = str(rel)
+
+        # Skip test files — they may legitimately exercise the patterns.
+        if "/tests/" in rel_str:
+            continue
+
+        # Waiver marker exempts the whole file.
+        if _PFP16_WAIVER_MARKER in text:
+            continue
+
+        # If the file uses any canonical pose-encode function, it's compliant.
+        if any(fn in text for fn in _PFP16_POSE_ENCODE_FUNCTIONS):
+            continue
+
+        # Heuristic: does this build script even touch poses? If not, skip.
+        # A build script that doesn't mention "pose" anywhere is not a pose
+        # producer; ignore.
+        text_lower = text.lower()
+        if "pose" not in text_lower:
+            continue
+
+        # Look for torch.save(...) calls — this is the fp32-pickle smoking
+        # gun. Pattern: torch.save(<expr>, ...) where <expr> mentions pose.
+        #
+        # Conservative: flag any torch.save in a pose-touching build script
+        # without a canonical encoder. The waiver marker is the explicit
+        # exemption mechanism for legitimate fp32-required cases.
+        torch_save_pattern = re.compile(
+            r"torch\.save\s*\([^)]*pose[^)]*\)",
+            re.IGNORECASE,
+        )
+        if torch_save_pattern.search(text):
+            violations.append(
+                f"{rel}: calls `torch.save(<pose-tensor>, ...)` without "
+                f"using canonical pose-encode function ({', '.join(_PFP16_POSE_ENCODE_FUNCTIONS[:4])}, "
+                f"...) and without `# POSE_FP32_REQUIRED:<reason>` waiver. "
+                f"This ships fp32 pose tensors when fp16 is sufficient (Lane "
+                f"PFP16 saves ~8 KB at zero distortion). Read "
+                f".omx/research/council_lane_gp_v4_design_20260430.md "
+                f"(Hotz successor option) and either (a) replace torch.save "
+                f"with encode_pfp16 + write_bytes, or (b) add `# POSE_FP32_REQUIRED:<reason>` "
+                f"comment if fp32 is genuinely required."
+            )
+
+    if verbose:
+        if violations:
+            print(f"  [pose-stream-fp16] {len(violations)} violation(s) across "
+                  f"{n_scanned} candidate file(s):")
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print(f"  [pose-stream-fp16] OK: {n_scanned} candidate file(s) "
+                  f"scanned (Lane PFP16 fp16-or-smaller discipline)")
+
+    if violations and strict:
+        raise PreflightError(
+            "POSE-STREAM FP16 VIOLATIONS:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nLane PFP16 (Hotz successor option from Lane GP v4 KILL) "
+            "ships pose streams as raw fp16 binary for ~8 KB savings at zero "
+            "distortion. Read .omx/research/council_lane_gp_v4_design_20260430.md "
+            "and use `encode_pfp16` from `src/tac/pfp16_codec.py` (or any of "
+            f"the other canonical pose encoders: {', '.join(_PFP16_POSE_ENCODE_FUNCTIONS)}). "
+            "Override with `# POSE_FP32_REQUIRED:<reason>` comment ONLY when "
+            "fp32 precision is genuinely required (e.g., pose values outside "
+            "fp16 dynamic range)."
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 98 (2026-04-30): remote auth-eval JSON adjudication only.
+# ════════════════════════════════════════════════════════════════════════════
+#
+# Incident: Lane PFP16 exact CUDA produced a clean contest_auth_eval.json
+# recomputed score of 1.0440481283330025, but the remote script parsed the human
+# report line `Final score: 100*segnet_dist + ... = 1.04` with a generic
+# `final[_ ]?score...` regex and captured the coefficient `100`. The resulting
+# provenance falsely recorded contest_cuda_score=100 and hard_kill_triggered.
+#
+# Rule: any remote_lane_*.sh that consumes contest_auth_eval output must use
+# machine JSON (`eval_work/contest_auth_eval.json` or the strict RESULT_JSON
+# sentinel) and must never scrape human score text or "last JSON-looking blob".
+
+
+_AUTH_EVAL_FRAGILE_LOG_JSON_RE = re.compile(
+    r"grep\s+-Eo\s+(['\"])(?:\\)?\{(?:\\)?\.\*(?:\\)?\}\1"
+)
+
+
+def _scan_remote_lane_auth_eval_fragile_parse(path: Path, repo_root: Path) -> list[str]:
+    """Return fragile contest-auth parse violations for one remote lane script."""
+    violations: list[str] = []
+    try:
+        text = path.read_text(errors="ignore")
+    except OSError:
+        return violations
+    if "contest_auth_eval" not in text:
+        return violations
+
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    code_text = "\n".join(line.split("#", 1)[0] for line in text.splitlines())
+    contest_cuda_claim = "[contest-CUDA]" in text
+    if contest_cuda_claim and "contest_auth_eval.py" in text:
+        if "--keep-work-dir" not in code_text or "--work-dir" not in code_text:
+            violations.append(
+                f"{rel}: [contest-CUDA] auth eval must pass --keep-work-dir "
+                f"AND --work-dir so eval_work/contest_auth_eval.json remains "
+                f"available for custody. RESULT_JSON log lines are diagnostics, "
+                f"not promotion evidence."
+            )
+        auth_device_guarded = (
+            'AUTH_DEVICE" != "cuda"' in code_text
+            or "AUTH_DEVICE' != 'cuda'" in code_text
+            or 'AUTH_EVAL_DEVICE" != "cuda"' in code_text
+            or "AUTH_EVAL_DEVICE' != 'cuda'" in code_text
+            or "ALLOW_NON_CUDA_EVAL" in code_text
+        )
+        if "AUTH_EVAL_DEVICE" in code_text and not auth_device_guarded:
+            violations.append(
+                f"{rel}: [contest-CUDA] auth eval references AUTH_EVAL_DEVICE "
+                f"without a fail-closed cuda guard. Promotable scripts must "
+                f"use `--device cuda` directly, or abort unless the resolved "
+                f"device is exactly cuda and explicitly mark non-cuda runs "
+                f"advisory."
+            )
+    for lineno, line in enumerate(text.splitlines(), start=1):
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if (
+            contest_cuda_claim
+            and "--device" in line
+            and "AUTH_EVAL_DEVICE" in line
+            and "ALLOW_NON_CUDA_EVAL" not in text
+        ):
+            violations.append(
+                f"{rel}:{lineno}: [contest-CUDA] auth eval uses AUTH_EVAL_DEVICE "
+                f"as the --device value. This can silently downgrade to CPU/MPS; "
+                f"use literal `--device cuda` for promotion."
+            )
+        if "final[_ ]?score" in line:
+            violations.append(
+                f"{rel}:{lineno}: parses human `final[_ ]?score` text. "
+                f"Read eval_work/contest_auth_eval.json and use "
+                f"score_recomputed_from_components instead."
+            )
+        if "re.search" in line and "score" in line and "\\s*" in line:
+            violations.append(
+                f"{rel}:{lineno}: regex-scrapes a score from auth-eval text. "
+                f"Use JSON schema fields from contest_auth_eval.json."
+            )
+        if _AUTH_EVAL_FRAGILE_LOG_JSON_RE.search(line):
+            violations.append(
+                f"{rel}:{lineno}: scrapes the last JSON-looking object from "
+                f"auth_eval.log. Require contest_auth_eval.json or a strict "
+                f"RESULT_JSON sentinel instead."
+            )
+    return violations
+
+
+def check_remote_lane_auth_eval_json_adjudication(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Forbid fragile score/log scraping in remote lane auth-eval scripts."""
+    root = repo_root or REPO_ROOT
+    scripts_dir = root / "scripts"
+    violations: list[str] = []
+    n_scanned = 0
+    if not scripts_dir.is_dir():
+        if verbose:
+            print("  [remote-auth-json] OK: scripts/ not present, skipped")
+        return violations
+
+    for sh in sorted(scripts_dir.glob("remote_lane_*.sh")):
+        n_scanned += 1
+        violations.extend(_scan_remote_lane_auth_eval_fragile_parse(sh, root))
+
+    if verbose:
+        if violations:
+            print(f"  [remote-auth-json] {len(violations)} violation(s) across "
+                  f"{n_scanned} remote_lane_*.sh file(s):")
+            for v in violations[:20]:
+                print(f"    • {v}")
+            if len(violations) > 20:
+                print(f"    ... {len(violations) - 20} more")
+        else:
+            print(f"  [remote-auth-json] OK: {n_scanned} remote_lane_*.sh "
+                  f"file(s) use machine-readable auth eval adjudication")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "REMOTE AUTH-EVAL JSON ADJUDICATION VIOLATIONS:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nDo not parse human report text. Use "
+            "`eval_work/contest_auth_eval.json` and "
+            "`score_recomputed_from_components`; keep `final_score` only as "
+            "rounded display."
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 100 (2026-04-30): launch retry wrapper single-flight and signal safety.
+# ════════════════════════════════════════════════════════════════════════════
+#
+# Incident: an interrupted SA retry dispatch created multiple same-label Vast
+# attempts. One child phase was orphan-risky, one instance had staged repo state,
+# and another had no repo. The correct behavior is fail-closed: one local
+# single-flight process per label, no new attempt if Vast already has a live
+# matching label prefix, and subprocess stages started in killable process
+# groups so parent termination cannot strand phase2 children.
+
+
+def check_launch_retry_wrapper_singleflight_and_signal_safe(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Guard launcher DX against duplicate spend and orphan phase processes."""
+    root = repo_root or REPO_ROOT
+    target = root / "scripts" / "launch_lane_with_retry.py"
+    violations: list[str] = []
+
+    if not target.is_file():
+        violations.append("scripts/launch_lane_with_retry.py missing")
+    else:
+        text = target.read_text(errors="ignore")
+        required_tokens = {
+            "single-flight advisory lock": "LaunchLock",
+            "fcntl non-blocking lock": "fcntl.flock",
+            "per-label lock directory": "launch_locks",
+            "child process group": "start_new_session=True",
+            "process-group kill": "os.killpg",
+            "SIGINT handler": "signal.signal(signal.SIGINT",
+            "SIGTERM handler": "signal.signal(signal.SIGTERM",
+            "live Vast label-prefix guard": "live_instances_with_label_prefix",
+            "duplicate-state sentinel": "UNKNOWN_EXISTING_LABEL_PREFIX",
+            "manual duplicate override flag": "allow_existing_label_prefix",
+            "logical lane duplicate key": "logical_lane_key",
+            "dispatch hold guard": "dispatch_hold_for_label",
+            "dispatch hold sentinel": "FATAL_DISPATCH_HOLD",
+            "Lane 12 retraining gate": "lane12_retraining_gate_violations",
+            "Lane 12 clearance packet": "lane12_nerv_l2_clearance.json",
+            "Lane 12 retraining sentinel": "FATAL_LANE12_RETRAINING_GATE",
+        }
+        for label, token in required_tokens.items():
+            if token not in text:
+                violations.append(
+                    f"scripts/launch_lane_with_retry.py missing {label} token `{token}`"
+                )
+
+    if verbose:
+        if violations:
+            print("  [launch-retry-self-protect] "
+                  f"{len(violations)} violation(s):")
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print("  [launch-retry-self-protect] OK: retry launcher is "
+                  "single-flight, duplicate-aware, and signal-safe")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "LAUNCH RETRY SELF-PROTECTION VIOLATIONS:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nDispatch orchestration must fail closed. Add a per-label "
+            "single-flight lock, a live Vast label-prefix guard, and "
+            "process-group cleanup for child stages before launching lanes."
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 101 (2026-04-30): Modal recovery CLI guidance must be current.
+# ════════════════════════════════════════════════════════════════════════════
+#
+# Incident: Modal 1.4.1 no longer exposes `modal call get`, but
+# experiments/modal_train_lane.py and experiments/modal_recover_lane.py still
+# printed it after a detached OWV3 Fisher smoke dispatch. Operators following
+# stale commands can miss harvest windows, duplicate jobs, or mistrust live
+# state. The supported path is:
+#   - poll/harvest through experiments/modal_recover_lane.py
+#   - list/log apps with `modal app list` and `modal app logs <app-id>`
+
+
+def check_modal_recovery_cli_guidance_current(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Forbid stale Modal CLI recovery commands in operator-facing scripts."""
+    root = repo_root or REPO_ROOT
+    targets = [
+        root / "experiments" / "modal_train_lane.py",
+        root / "experiments" / "modal_recover_lane.py",
+    ]
+    violations: list[str] = []
+
+    for target in targets:
+        if not target.is_file():
+            violations.append(f"{target.relative_to(root)} missing")
+            continue
+        text = target.read_text(errors="ignore")
+        rel = target.relative_to(root)
+        if "modal call get" in text:
+            violations.append(
+                f"{rel}: references removed Modal CLI command `modal call get`; "
+                "use experiments/modal_recover_lane.py and `modal app logs <app-id>`."
+            )
+        if "experiments/modal_recover_lane.py --call-id" not in text:
+            violations.append(
+                f"{rel}: does not expose direct recovery via "
+                "`experiments/modal_recover_lane.py --call-id`."
+            )
+        if "modal app logs <app-id>" not in text:
+            violations.append(
+                f"{rel}: does not expose current Modal log command "
+                "`modal app logs <app-id>`."
+            )
+
+    if verbose:
+        if violations:
+            print(f"  [modal-recovery-cli] {len(violations)} violation(s):")
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print("  [modal-recovery-cli] OK: Modal recovery guidance uses "
+                  "current CLI/API paths")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "MODAL RECOVERY CLI GUIDANCE VIOLATIONS:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nDetached Modal lanes must be recoverable with current "
+            "Modal CLI/API commands. Use `experiments/modal_recover_lane.py` "
+            "for FunctionCall polling and `modal app logs <app-id>` for logs."
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 97 (2026-04-30): renderer-codec PoseNet protection.
+# ════════════════════════════════════════════════════════════════════════════
+#
+# Background: Lane Ω-W-V2 stack on 2026-04-30 burnt $0.05 + 50s GPU and produced
+# score 1.07 vs Lane G v3 baseline 1.05. The codec saved -0.034 rate but cost
+# +0.052 PoseNet distortion (PoseNet went from 0.003455 → 0.005644, +63.4%).
+# Memory: feedback_owv2_savings_correction_conv_vs_full_renderer_20260430.md.
+#
+# Root cause: a codec module mutates renderer.bin weights but contains no
+# PoseNet-protection mention (no per-channel Hessian, no PoseNet-FastViT-input-
+# derivative weighting, no protected-layer fp16 fallback). The codec optimizes
+# bytes-saved without measuring score-relevant sensitivity.
+#
+# This check audits codec modules under src/tac/ that mutate state_dict or
+# module weights. Each such module MUST contain a PoseNet-protection signal
+# (one of the inline tags below) OR an explicit waiver.
+#
+# Tag patterns (case-insensitive, must appear inline somewhere in the module):
+#   `[posenet-protected]`            module weights PoseNet-sensitivity-aware
+#   `[posenet-sensitivity-weighted]` per-layer / per-channel sensitivity
+#   `[per-channel-hessian]`          uses Hessian for layer importance
+#   `[fp16-only-fallback]`           protected-layer fallback to fp16/fp32
+#   `[mask-codec-not-renderer]`      not a renderer codec
+#   `[pose-codec-not-renderer]`      not a renderer codec
+#
+# Waiver pattern: a same-line comment containing
+#   `# RENDERER_CODEC_POSENET_PROTECTION_WAIVED:<reason>`
+# anywhere in the module file.
+#
+# Scope: src/tac/*codec*.py and src/tac/owv2_renderer_archive.py (the OWV2
+# module file). Test files, magic registries, library-only utilities, and
+# benchmark wrappers are exempted by name.
+#
+# Lands WARN-ONLY initially per the Lane A → STRICT promotion path because 4
+# codec modules currently miss the tag (visible at audit time 2026-04-30):
+#   - src/tac/neural_weight_codec.py
+#   - src/tac/water_filling_codec_v2.py
+#   - src/tac/balle_hyperprior_codec.py
+#   - src/tac/block_fp_codec.py
+#   - src/tac/owv2_renderer_archive.py (only weak mention)
+# Promotion plan: each module gets the appropriate tag in a dedicated
+# follow-up commit (out of scope for the bug-class-hardening landing — adding
+# the tags requires per-module audit by the codec subagent owners).
+#
+# Reference: feedback_owv2_savings_correction_conv_vs_full_renderer_20260430.md
+# Memory: project_swarm_recovery_state_20260430.md (Finding 1: Ω-W-V2 1.07
+# REGRESSION).
+
+_RENDERER_CODEC_POSENET_TAGS = (
+    "[posenet-protected]",
+    "[posenet-sensitivity-weighted]",
+    "[per-channel-hessian]",
+    "[fp16-only-fallback]",
+    "[mask-codec-not-renderer]",
+    "[pose-codec-not-renderer]",
+)
+_RENDERER_CODEC_WAIVER_MARKER = "RENDERER_CODEC_POSENET_PROTECTION_WAIVED:"
+
+# Modules that touch state_dict but are NOT renderer codecs (mask / pose / pure
+# library / wrapper). Exempted by basename.
+_RENDERER_CODEC_EXEMPT_BASENAMES = frozenset({
+    # Mask codecs (not renderer state_dict mutation):
+    "mask_codec.py",
+    "nerv_mask_codec.py",
+    "argmax_codec.py",
+    "stc_boundary_codec.py",
+    # Pose codecs (not renderer state_dict mutation):
+    "pose_delta_codec.py",
+    "pose_delta_codec_v2.py",
+    "pfp16_codec.py",
+    # Library-only / arithmetic / magic / benchmark:
+    "arithmetic_qint_codec.py",
+    "codec_magic_registry.py",
+    "benchmark_codecs.py",
+    # Sensitivity wrapper (computes weights, doesn't apply them — consumers
+    # in renderer codecs MUST then prove they USE the weights).
+    "neural_weight_codec_sensitivity.py",
+    # Lossless container codecs (don't touch state_dict numerically).
+    "codecs.py",  # src/tac/lossless/codecs.py
+    # MDL framework (meta codec-comparison, no archive bytes).
+    "mdl_bayesian_codec.py",
+    # Pure VQ-VAE codebook (research code, not on the production renderer path).
+    "vqvae_codec.py",
+    # Network codec (already heavily PoseNet-protected — verified 13 mentions
+    # in audit). Stays in the scope but compliance is baked into its design.
+})
+
+
+def _renderer_codec_files(repo_root: Path) -> list[Path]:
+    """Enumerate src/tac/*codec*.py + owv2_renderer_archive.py files."""
+    out: list[Path] = []
+    tac_dir = repo_root / "src" / "tac"
+    if not tac_dir.is_dir():
+        return out
+    # Top-level codec modules.
+    out.extend(sorted(tac_dir.glob("*codec*.py")))
+    # OWV2 module — special case (incident origin).
+    owv2 = tac_dir / "owv2_renderer_archive.py"
+    if owv2.is_file():
+        out.append(owv2)
+    # Subdirectory codecs (lossless/, contrib/).
+    for sub in ("lossless", "contrib"):
+        subdir = tac_dir / sub
+        if subdir.is_dir():
+            out.extend(sorted(subdir.glob("*codec*.py")))
+    # Dedup + sort.
+    return sorted(set(out))
+
+
+def _renderer_codec_touches_state_dict(text: str) -> bool:
+    """Heuristic: does this codec mutate renderer state_dict / weights?
+
+    Looks for `state_dict()`, `state_dict[`, `.weight =`, `param.data =`,
+    `module.weight`, etc. Uses regex over text; conservative (false-positives
+    OK at warn level — they get suppressed via tag or waiver).
+    """
+    patterns = [
+        r"\bstate_dict\s*\(",
+        r"\bstate_dict\s*\[",
+        r"\.weight\s*=",
+        r"\.weight\.data\s*=",
+        r"\bparam\.data\s*=",
+        r"\.copy_\s*\(",  # in-place tensor copy (common in codec apply paths)
+    ]
+    for pat in patterns:
+        if re.search(pat, text):
+            return True
+    return False
+
+
+def check_renderer_codec_has_posenet_protection(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Forbid renderer-codec modules that mutate weights without PoseNet-protection.
+
+    Bug class motivation: Lane Ω-W-V2 burnt 50s GPU + $0.05 producing score
+    1.07 (regression vs Lane G v3 1.05) because the codec optimized
+    bytes-saved without measuring PoseNet sensitivity. This check audits every
+    `src/tac/*codec*.py` (+ `owv2_renderer_archive.py`) and requires either
+    (a) a PoseNet-protection tag in the module text, or (b) an explicit
+    `# RENDERER_CODEC_POSENET_PROTECTION_WAIVED:<reason>` waiver.
+
+    See `_RENDERER_CODEC_POSENET_TAGS` for the accepted tag list and
+    `_RENDERER_CODEC_EXEMPT_BASENAMES` for the by-name exemption list (mask
+    codecs, pose codecs, library utilities, magic registries, benchmarks).
+
+    Lands WARN-ONLY initially. Promotion plan: per-module owner adds the
+    appropriate tag, then flip strict=True via the Lane A pattern.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+
+    candidates = _renderer_codec_files(root)
+    if not candidates:
+        if verbose:
+            print(f"  [renderer-codec-posenet] OK: no candidate files found")
+        return violations
+
+    for py in candidates:
+        if py.name in _RENDERER_CODEC_EXEMPT_BASENAMES:
+            continue
+        # Skip test files.
+        rel_str = str(py.relative_to(root)) if py.is_absolute() else str(py)
+        if "/tests/" in rel_str:
+            continue
+        n_scanned += 1
+        try:
+            text = py.read_text()
+        except (OSError, UnicodeDecodeError):
+            continue
+
+        # Waiver covers the whole file.
+        if _RENDERER_CODEC_WAIVER_MARKER in text:
+            continue
+
+        # Must touch state_dict / weights to be subject to the rule.
+        if not _renderer_codec_touches_state_dict(text):
+            continue
+
+        # PoseNet-protection signal must appear inline (case-insensitive on tags).
+        text_lower = text.lower()
+        has_tag = any(tag.lower() in text_lower for tag in _RENDERER_CODEC_POSENET_TAGS)
+        if has_tag:
+            continue
+
+        rel = py.relative_to(root) if py.is_absolute() else py
+        violations.append(
+            f"{rel}: mutates renderer state_dict / weights without a "
+            f"PoseNet-protection tag. Add ONE of "
+            f"{', '.join(_RENDERER_CODEC_POSENET_TAGS)} to the module "
+            f"docstring (and ensure the implementation actually does what "
+            f"the tag claims). Lane Ω-W-V2 lost $0.05 + 50s GPU (score 1.07 "
+            f"regression vs 1.05) by shipping a codec that optimized bytes "
+            f"without PoseNet sensitivity weighting. Override with "
+            f"`# {_RENDERER_CODEC_WAIVER_MARKER}<reason>` ONLY when the "
+            f"codec is provably score-neutral (e.g., bit-identical "
+            f"transcoding) — in which case empirical evidence MUST be cited."
+        )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [renderer-codec-posenet] {len(violations)} violation(s) "
+                f"across {n_scanned} renderer-codec file(s):"
+            )
+            for v in violations[:10]:
+                print(f"    • {v}")
+            if len(violations) > 10:
+                print(f"    … and {len(violations) - 10} more")
+        else:
+            print(
+                f"  [renderer-codec-posenet] OK: {n_scanned} "
+                f"renderer-codec file(s) all PoseNet-protected"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "RENDERER-CODEC POSENET PROTECTION VIOLATIONS:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nLane Ω-W-V2 (2026-04-30) shipped a codec that optimized "
+            "bytes-saved without PoseNet-sensitivity weighting — burnt $0.05 + "
+            "50s GPU producing score 1.07 (regression vs Lane G v3 1.05). "
+            "Add a PoseNet-protection tag (or explicit waiver) to every codec "
+            "module that mutates renderer state_dict. Reference: "
+            "feedback_owv2_savings_correction_conv_vs_full_renderer_20260430.md."
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 98 (2026-04-30): pose-fit module empirical white-noise verification.
+# ════════════════════════════════════════════════════════════════════════════
+#
+# Background: Lane GP v4 (B-spline + DCT + natural cubic spline candidates) all
+# plateaued at avg RMSE ≈ 1.15-1.59 (near signal std 1.5-2.3) because pose
+# dims 1-5 of the actual Lane G v3 baseline `optimized_poses.pt` are
+# white-noise (`diff_std/signal_std ≈ 1.35` ≈ √2). Memory:
+# project_lane_gp_v4_killed_basis_fit_infeasible_20260430.md.
+#
+# Check 91 (`check_pose_basis_fit_kill_acknowledged`) covers KILL-marker
+# acknowledgement at the import level. This complementary check enforces
+# discipline at the EMPIRICAL level: any pose-fit module subject to the kill
+# marker must ALSO have a paired regression test that runs the white-noise
+# check on actual Lane G v3 baseline poses (so a future hopeful agent cannot
+# skip the empirical step and produce yet another optimistic memo).
+#
+# A test counts as the white-noise check iff:
+#   - Its filename matches `test_<module-stem>*white_noise*.py` OR
+#   - It contains the literal `WHITE_NOISE_CHECK:<module-name>` tag in a
+#     docstring/comment (operator escape hatch).
+#
+# Lands STRICT @ 0 violations: Lane GP v4's KILL markers cover all current
+# candidates (the kill-marker is the strongest possible deferral signal — it
+# states "no fit is possible, here is the empirical proof"). New pose-fit
+# modules added without either a kill marker (Check 91) OR a white-noise
+# regression test will fail this check.
+#
+# Reference: .omx/research/council_lane_gp_v4_design_20260430.md
+# Memory: project_lane_gp_v4_killed_basis_fit_infeasible_20260430.md
+# Sister check: Check 91 `check_pose_basis_fit_kill_acknowledged`.
+
+_POSE_FIT_KILL_MARKER = "LANE_GP_BASIS_FIT_KILL_ACKNOWLEDGED:"
+_WHITE_NOISE_TEST_TAG = "WHITE_NOISE_CHECK:"
+
+
+def _pose_fit_module_candidates(repo_root: Path) -> list[Path]:
+    """Same scope as Check 91 — pose-fit modules subject to the kill rule."""
+    out: list[Path] = []
+    exp = repo_root / "experiments"
+    if exp.is_dir():
+        out.extend(sorted(exp.glob("fit_pose_*.py")))
+    tac = repo_root / "src" / "tac"
+    if tac.is_dir():
+        out.extend(sorted(tac.glob("pose_*_fit.py")))
+        out.extend(sorted(tac.glob("pose_*_basis.py")))
+        out.extend(sorted(tac.glob("pose_*_polynomial.py")))
+        out.extend(sorted(tac.glob("pose_*_spline.py")))
+        out.extend(sorted(tac.glob("pose_*_dct.py")))
+        out.extend(sorted(tac.glob("pose_*_wavelet.py")))
+        out.extend(sorted(tac.glob("pose_gaussian_process.py")))
+    # Dedup.
+    return sorted(set(out))
+
+
+def _pose_fit_has_white_noise_test(
+    module_path: Path, repo_root: Path,
+) -> bool:
+    """Return True iff a paired white-noise regression test exists.
+
+    Two valid forms:
+      (a) `src/tac/tests/test_<stem>*white_noise*.py` exists (filename pattern).
+      (b) Any test file under src/tac/tests/ contains the inline tag
+          `WHITE_NOISE_CHECK:<module_stem>`.
+    """
+    stem = module_path.stem
+    tests_dir = repo_root / "src" / "tac" / "tests"
+    if not tests_dir.is_dir():
+        return False
+    # (a) filename pattern.
+    for pattern in (
+        f"test_{stem}_white_noise*.py",
+        f"test_{stem}*white_noise*.py",
+        f"test_white_noise_{stem}*.py",
+    ):
+        for hit in tests_dir.glob(pattern):
+            if hit.is_file():
+                return True
+    # (b) inline tag.
+    needle = f"{_WHITE_NOISE_TEST_TAG}{stem}"
+    for test_file in tests_dir.glob("test_*.py"):
+        try:
+            text = test_file.read_text()
+        except (OSError, UnicodeDecodeError):
+            continue
+        if needle in text:
+            return True
+    return False
+
+
+def check_pose_fit_module_has_white_noise_test(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Pose-fit modules MUST have either a kill marker OR a white-noise test.
+
+    Sister to Check 91. Check 91 catches the import-level "I forgot the kill
+    verdict exists" pattern. This check catches the empirical-discipline
+    pattern: a future agent CANNOT drop a new fit_pose_*.py without first
+    proving (via test) that the empirical white-noise check was actually run
+    on the current Lane G v3 baseline poses.
+
+    The kill marker counts as the strongest possible "white-noise check
+    deferred to council verdict" signal: the council ran the empirical check
+    in `.omx/research/council_lane_gp_v4_design_20260430.md` and concluded
+    NO BASIS WORKS. Acknowledging the kill marker is acknowledging that
+    empirical evidence.
+
+    Returns list of violations. Lands STRICT @ 0 violations.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+
+    candidates = _pose_fit_module_candidates(root)
+    if not candidates:
+        if verbose:
+            print(f"  [pose-fit-white-noise] OK: no candidate modules found")
+        return violations
+
+    for py in candidates:
+        n_scanned += 1
+        try:
+            text = py.read_text()
+        except (OSError, UnicodeDecodeError):
+            continue
+        rel_str = str(py.relative_to(root)) if py.is_absolute() else str(py)
+        if "/tests/" in rel_str:
+            continue
+
+        # Either a kill marker (Check 91 territory) OR a paired white-noise
+        # regression test must exist.
+        if _POSE_FIT_KILL_MARKER in text:
+            continue
+        if _pose_fit_has_white_noise_test(py, root):
+            continue
+
+        rel = py.relative_to(root) if py.is_absolute() else py
+        violations.append(
+            f"{rel}: pose-fit module without `{_POSE_FIT_KILL_MARKER}` marker "
+            f"AND without a paired white-noise regression test "
+            f"(`src/tac/tests/test_{py.stem}_white_noise*.py` OR an inline "
+            f"`{_WHITE_NOISE_TEST_TAG}{py.stem}` tag in any test file). "
+            f"The Lane G v3 baseline pose stream is white-noise in dims 1-5; "
+            f"any new smooth-basis fit MUST run the empirical check first. "
+            f"Reference: .omx/research/council_lane_gp_v4_design_20260430.md."
+        )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [pose-fit-white-noise] {len(violations)} violation(s) "
+                f"across {n_scanned} pose-fit module(s):"
+            )
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print(
+                f"  [pose-fit-white-noise] OK: {n_scanned} pose-fit "
+                f"module(s) all carry kill marker or paired test"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "POSE-FIT WHITE-NOISE TEST VIOLATIONS:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nLane GP v4 KILL VERDICT (2026-04-30) proved the Lane G v3 "
+            "pose trajectory is white-noise in dims 1-5; no smooth basis can "
+            "fit it below RMSE ≈ 1.2. Either acknowledge this with the "
+            "`LANE_GP_BASIS_FIT_KILL_ACKNOWLEDGED:` marker (sister Check 91) "
+            "OR ship a paired white-noise regression test that runs your "
+            "module on the actual baseline poses and asserts the basis cannot "
+            "fit dims 1-5 below RMSE 0.5. Reference: "
+            ".omx/research/council_lane_gp_v4_design_20260430.md."
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 99 (2026-04-30): preflight-hook changed-files-mode wiring discipline.
+# ════════════════════════════════════════════════════════════════════════════
+#
+# Background: tools/preflight_hook.py runs the full ~60s tac.preflight scan
+# on every commit. When N subagents commit in parallel via the serializer,
+# each waits for the exclusive lock + 60s hook. Observed in
+# `.omx/state/commit-serializer.log`: max wait 361.594s, max commit 160.144s.
+# Multiple `commit_failed` outcomes from full-repo violations the subagent
+# never touched (e.g., MDL Bayesian quantizer-roundtrip-tests blocking
+# unrelated subagent commits). Memory:
+# project_swarm_recovery_state_20260430.md ("Class C — preflight thundering
+# herd").
+#
+# This check enforces the architectural pattern: any future change to
+# `tools/preflight_hook.py` MUST keep the changed-files-only mode wired in,
+# i.e., MUST honor `PREFLIGHT_FULL` env override, MUST honor
+# `PREFLIGHT_HOOK_ENABLED=0` skip path, AND MUST default to a fast mode for
+# pre-commit operation (not whole-repo scan).
+#
+# Detection: scan tools/preflight_hook.py for required tokens:
+#   - `PREFLIGHT_FULL` (env switch for whole-repo scan)
+#   - `--changed-files-only` OR `_changed_files_mode` OR `staged_files`
+#     (some indicator that the hook supports a fast mode)
+#   - `PREFLIGHT_HOOK_ENABLED` (existing skip switch)
+#
+# Lands STRICT @ 0 violations after the changed-files refactor lands in the
+# same commit.
+
+_PREFLIGHT_HOOK_REQUIRED_TOKENS = (
+    "PREFLIGHT_FULL",
+    "PREFLIGHT_HOOK_ENABLED",
+)
+# At least one of these must be present (changed-files mode indicator).
+_PREFLIGHT_HOOK_FAST_MODE_TOKENS = (
+    "_changed_files_mode",
+    "PREFLIGHT_FULL",
+    "preflight_cache",
+)
+
+
+def check_preflight_hook_supports_changed_files_mode(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Enforce that tools/preflight_hook.py keeps changed-files-mode wired.
+
+    Bug class motivation: pre-commit hook running whole-repo preflight on
+    every commit produced a thundering-herd lock-contention pattern (max
+    wait 361s, max commit 160s — Class C in the bug-class audit). Refactor
+    landed alongside this check uses changed-files mode by default + cache.
+    This check guards against an accidental revert.
+
+    Returns list of violations. Lands STRICT @ 0 violations.
+    """
+    root = repo_root or REPO_ROOT
+    hook_path = root / "tools" / "preflight_hook.py"
+    violations: list[str] = []
+
+    if not hook_path.is_file():
+        if verbose:
+            print(
+                f"  [preflight-hook-changed-files] OK: hook not present, "
+                f"skipped (likely fresh checkout)"
+            )
+        return violations
+
+    try:
+        text = hook_path.read_text()
+    except (OSError, UnicodeDecodeError):
+        if verbose:
+            print(
+                f"  [preflight-hook-changed-files] OK: hook unreadable, "
+                f"skipped"
+            )
+        return violations
+
+    rel = hook_path.relative_to(root) if hook_path.is_absolute() else hook_path
+
+    missing_required = [t for t in _PREFLIGHT_HOOK_REQUIRED_TOKENS if t not in text]
+    if missing_required:
+        violations.append(
+            f"{rel}: missing required tokens {missing_required}. "
+            f"The hook must honor PREFLIGHT_HOOK_ENABLED=0 (skip) and "
+            f"PREFLIGHT_FULL=1 (whole-repo override) for the changed-files-"
+            f"only fast path."
+        )
+
+    has_fast_mode = any(t in text for t in _PREFLIGHT_HOOK_FAST_MODE_TOKENS)
+    if not has_fast_mode:
+        violations.append(
+            f"{rel}: missing fast-mode indicator (one of "
+            f"{list(_PREFLIGHT_HOOK_FAST_MODE_TOKENS)}). The pre-commit "
+            f"hook must support a changed-files-only mode to avoid the "
+            f"thundering-herd lock contention bug class (max wait 361s "
+            f"observed 2026-04-30 — see project_swarm_recovery_state_20260430.md)."
+        )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [preflight-hook-changed-files] {len(violations)} "
+                f"violation(s):"
+            )
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print(
+                f"  [preflight-hook-changed-files] OK: hook supports "
+                f"changed-files mode + skip + full-override switches"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "PREFLIGHT-HOOK CHANGED-FILES-MODE VIOLATIONS:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nThe pre-commit preflight hook MUST support changed-files-"
+            "only mode (default) + PREFLIGHT_FULL=1 override + "
+            "PREFLIGHT_HOOK_ENABLED=0 skip switch. Without changed-files "
+            "mode, parallel subagent commits queue serially behind a 60s "
+            "whole-repo scan (Class C bug class). Reference: "
+            "project_swarm_recovery_state_20260430.md, "
+            ".omx/research/bug_class_audit_20260430.md."
         )
     return violations
 

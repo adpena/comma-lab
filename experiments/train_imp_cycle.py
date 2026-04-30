@@ -95,6 +95,12 @@ def parse_args() -> argparse.Namespace:
                    help="0 = first cycle; 1+ = continuation")
     p.add_argument("--checkpoint", type=str, required=True,
                    help=".pt file (cycles 1+) or .bin file (cycle 0 ASYM)")
+    p.add_argument("--anchor-renderer", type=str, default=None,
+                   help="ASYM .bin used as architecture template when "
+                        "--checkpoint is a .pt (cycles 1+). Required if the "
+                        ".pt's saved arch differs from build_renderer's "
+                        "default (e.g. Lane G v3 has motion.head=[6,32,3,3] "
+                        "while build_renderer would produce [2,32,3,3]).")
     p.add_argument("--output-dir", type=str, required=True)
 
     # Mask / rewind state plumbing
@@ -163,31 +169,63 @@ def parse_args() -> argparse.Namespace:
 
 
 def _load_checkpoint(path: str, args: argparse.Namespace, device: torch.device) -> nn.Module:
-    """Load checkpoint into a freshly-built renderer."""
-    from tac.renderer import build_renderer
+    """Load checkpoint into a renderer matching the saved arch.
 
-    model = build_renderer(
-        num_classes=5,
-        embed_dim=args.embed_dim,
-        base_ch=args.base_ch,
-        mid_ch=args.mid_ch,
-        motion_hidden=args.motion_hidden,
-        depth=args.depth,
-        pose_dim=args.pose_dim,
-        use_zoom_flow=args.use_zoom_flow,
-        padding_mode=args.padding_mode,
-    ).to(device)
+    Cycle 0 checkpoint is the Lane G v3 ASYM .bin — its architecture is read
+    directly from the binary header (motion.head=[6,32,3,3] et al), so no
+    arch-template is needed.
 
+    Cycle 1+ checkpoints are .pt files saved by ``_save_state``. Their
+    state_dict has Lane G v3's motion.head=[6,32,3,3], but
+    ``build_renderer(use_zoom_flow=False, pose_dim=6, ...)`` produces a
+    legacy ``PairGenerator`` with hard-coded motion.head=[2,32,3,3] — the
+    pose_dim/use_zoom_flow logic that drives motion_output_channels lives
+    in ``AsymmetricPairGenerator`` only (renderer.py:1149). To avoid a
+    shape mismatch on ``load_state_dict``, build the architecture FROM
+    ``--anchor-renderer`` (which has the correct header) and overlay the
+    cycle's pruned state.
+
+    Memory: ``feedback_imp_dispatch_shape_mismatch_fix_20260430.md``.
+    """
     raw = Path(path).read_bytes()
     if raw[:4] == b"ASYM":
         from tac.renderer_export import load_asymmetric_checkpoint
-        loaded = load_asymmetric_checkpoint(raw, device=str(device))
-        return loaded
+        return load_asymmetric_checkpoint(raw, device=str(device))
     if raw[:4] == b"FP4A":
         from tac.renderer_export import load_asymmetric_checkpoint_fp4
-        loaded = load_asymmetric_checkpoint_fp4(raw, device=str(device))
-        return loaded
-    # .pt path
+        return load_asymmetric_checkpoint_fp4(raw, device=str(device))
+
+    # .pt path — needs an arch template that matches the saved state_dict.
+    anchor_candidates = [
+        getattr(args, "anchor_renderer", None),
+        "experiments/results/lane_g_v3_landed/iter_0/renderer.bin",
+        "experiments/results/lane_a_landed/iter_0/renderer.bin",
+        "submissions/baseline_dilated_h64_0_90/renderer.bin",
+    ]
+    anchor = next((p for p in anchor_candidates if p and p != path and Path(p).exists()), None)
+
+    if anchor is not None:
+        from tac.renderer_export import load_asymmetric_checkpoint
+        model = load_asymmetric_checkpoint(anchor, device=str(device))
+    else:
+        # Fallback: build from CLI flags. Only correct when the .pt was
+        # produced by the same build_renderer config (e.g. cycle 0 of a
+        # legacy-PairGenerator IMP run, no Lane G v3 motion.head).
+        print("  WARN: no anchor .bin found; falling back to build_renderer. "
+              "If state_dict has motion.head=[6,...] this will SHAPE-MISMATCH.")
+        from tac.renderer import build_renderer
+        model = build_renderer(
+            num_classes=5,
+            embed_dim=args.embed_dim,
+            base_ch=args.base_ch,
+            mid_ch=args.mid_ch,
+            motion_hidden=args.motion_hidden,
+            depth=args.depth,
+            pose_dim=args.pose_dim,
+            use_zoom_flow=args.use_zoom_flow,
+            padding_mode=args.padding_mode,
+        ).to(device)
+
     ckpt = torch.load(path, map_location=device, weights_only=False)
     state = ckpt.get("model_state_dict", ckpt.get("state_dict", ckpt))
     from tac.parametrize_strip import has_parametrize_keys, strip_parametrize_hooks

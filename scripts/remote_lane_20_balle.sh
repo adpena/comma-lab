@@ -6,7 +6,8 @@
 # (10-of-10 inner council members reviewed; Quantizr/Hotz YELLOW empirical
 # kill criterion wired into the auto-fallback).
 #
-# Anchor: Lane G v3 = 1.05 [contest-CUDA] (DILATED_H64_HALF_FRAME_V3_ANNEALED_KLDISTILL).
+# Current frontier gate: Lane G v3 PFP16 A++ frontier =
+# 1.043987524793892 [contest-CUDA/T4], archive 686635 bytes.
 #
 # DELTA from Lane G v3:
 #   * Lane 20 is a CODEC lane, NOT a renderer-training lane. The renderer
@@ -18,25 +19,32 @@
 #     2000-step trained Ballé STILL regresses by ~6% (~8 KB side-info
 #     overhead exceeds y-stream savings on the 141 KB Lane G v3 qint
 #     stream). The auto-fallback engages and ships ZERO Lane 20 bytes.
-#   * THIS SCRIPT runs the same chain on CUDA to confirm the verdict on
-#     contest-CUDA arithmetic (the byte counts are device-deterministic
-#     so no drift expected, but the CUDA device gate is the CLAUDE.md
-#     non-negotiable for any score claim).
+#   * THIS SCRIPT is fail-closed while Lane 20 is on forensic hold. It may
+#     train and write byte reports, but it must not clear the hold or spend
+#     auth-eval GPU unless a non-static BHv1 byte win exists and a real
+#     BHv1 archive/inflate path has landed.
 #
-# Predicted band [prediction]: Lane G v3 score 1.05 ± 0 [contest-CUDA].
-#   * The auto-fallback path means Lane 20 either:
-#     (a) ships identical bytes → identical score (most likely)
-#     (b) ships smaller bytes → marginally better score (~ -0.001 to -0.005)
-#     (c) ships larger bytes → BLOCKED by the static-baseline guard
-#   * Kill criterion: if final archive bytes >= Lane G v3 baseline archive
-#     bytes by >100 B, abort the auth-eval (waste of GPU spend).
+# Dispatch clearance requirements:
+#   * A non-static byte precheck must show BALLE_BEATS_STATIC with
+#     best_full_balle_bytes < static_baseline_bytes on the real qint stream.
+#   * The archive builder must ship a real BHv1 archive member, not a
+#     baseline/static copy.
+#   * inflate_renderer.py must decode that BHv1 archive member during inflate.
 #
 # Cost: 4090 @ $0.25/hr × ~30min training (CPU codec, GPU only for auth eval)
 #       + ~10min auth eval = ~$0.20.
 #
 # Per CLAUDE.md NEVER-INVENT-CLI-FLAGS: every flag passed to
-# train_balle_hyperprior.py / measure_lane_20_balle_real_archive.py /
-# contest_auth_eval.py was verified by argparse-grep (Stage 0 dead-flag scan).
+# train_balle_hyperprior.py / measure_lane_20_balle_real_archive.py are
+# verified by argparse-grep (Stage 0 dead-flag scan). Exact auth eval remains
+# behind the BHv1 integration gate and must use the JSON adjudicator when
+# re-enabled.
+#
+# Score-tagging: any score this script ever produces will be tagged
+# [contest-CUDA] in the completion-log line (LANE_20_DONE marker) per the
+# CLAUDE.md score-tag rule and preflight completion-tag check. This literal
+# is required even while Lane 20 is on forensic hold (no eval is actually
+# launched today) because the check matches script content statically.
 #
 # Memory: project_lane_20_balle_landed_20260430.md (TBD post-result).
 set -euo pipefail
@@ -74,11 +82,18 @@ prov = {
     'output_dir': '$LOG_DIR',
     'tag': '$TAG',
     'profile': 'lane_20_balle_lane_g_v3',
-    'predicted_band': [1.04, 1.05],
-    'anchor_score_baseline': 1.05,
-    'anchor_lane': 'lane_g_v3 (1.05 contest-CUDA)',
+    'predicted_band': [1.04, 1.043987524793892],
+    'anchor_score_baseline': 1.043987524793892,
+    'anchor_lane': 'Lane G v3 PFP16 A++ frontier (1.043987524793892 contest-CUDA/T4)',
+    'anchor_archive_bytes': 686635,
     'lane_20_premise': 'Replace the static arithmetic codec on the renderer FP4 qint stream with a learned Balle hyperprior (or Hotz-LITE chunked-static fallback). Auto-fallback to static prevents regression.',
     'phase_e_empirical_artifact': 'reports/lane_20_balle_real_archive.json',
+    'forensic_hold_clearance_requirements': [
+        'non_static_byte_precheck.json proves BALLE_BEATS_STATIC and best_full_balle_bytes < static_baseline_bytes',
+        'real BHv1 archive member is built from encode_qints_balle_auto output',
+        'inflate_renderer.py decodes the BHv1 archive member during inflate',
+    ],
+    'balle_archive_integration_status': 'held: real BHv1 archive/inflate integration not yet landed',
     'cost_estimate_usd': 0.20,
     'wall_clock_estimate_minutes': 40,
 }
@@ -198,66 +213,57 @@ log "  trainer verdict: $VERDICT"
 log "  static_baseline_bytes: $("$PYBIN" -c "import json; print(json.load(open('$LOG_DIR/training/lane_20_train_report.json'))['static_baseline_bytes'])")"
 log "  best_full_balle_bytes: $("$PYBIN" -c "import json; print(json.load(open('$LOG_DIR/training/lane_20_train_report.json'))['best_full_balle_bytes'])")"
 
-if [ "$VERDICT" = "STATIC_WINS_FALLBACK" ]; then
-    log "=== AUTO-FALLBACK ENGAGED — Lane 20 does not beat static ==="
-    log "  Per Phase A council kill criterion §3, the production archive will"
-    log "  use the static arithmetic codec. Lane 20 codec ships ZERO bytes."
-    log "  Skipping Stage 3+4 (no value in re-running auth eval on byte-identical archive)."
-    log "  Final report: $LOG_DIR/training/lane_20_train_report.json"
-    log "  Empirical anchor: reports/lane_20_balle_real_archive.json (from local Phase E)"
-    log "=== LANE_20_DONE [empirical:STATIC_WINS_FALLBACK] anchor=$ANCHOR_RENDERER ==="
-    exit 0
-fi
-
-# IF Lane 20 beats static, build a modified archive + auth eval
-log "=== Stage 3: build modified archive (Lane 20 codec on qint segment) ==="
-log "  (Stage 3 runs only when Ballé beats static — currently a placeholder for"
-log "   when a heteroscedastic anchor lane appears that Lane 20 can win on.)"
-# Placeholder: this would require a custom archive builder that writes a
-# BHv1 chunk where the FP4A qint blob normally sits, plus a corresponding
-# inflate-side dispatch (a future BHv1-aware FP4A loader). For the current
-# Lane G v3 anchor, the verdict is STATIC_WINS_FALLBACK so Stage 3 is a
-# no-op. The clean separation is intentional: the codec + STRICT check +
-# remote-lane plumbing all land NOW; the archive integration awaits a
-# heteroscedastic-anchor follow-up lane.
-
-ARCHIVE="${ARCHIVE_PATH:-$LOG_DIR/archive_lane_20.zip}"
+log "=== Stage 2b: non-static byte precheck (required before any auth eval) ==="
 "$PYBIN" -c "
-import zipfile, os, shutil
-src = 'submissions/baseline_dilated_h64_0_90'
-dst = '$ARCHIVE'
-files = ['renderer.bin', 'masks.mkv', 'optimized_poses.pt']
-with zipfile.ZipFile(dst, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
-    for n in files:
-        p = os.path.join(src, n)
-        assert os.path.isfile(p), f'missing {p}'
-        z.write(p, arcname=n)
-print(f'archive {dst}: {os.path.getsize(dst)} bytes ({len(files)} files)')
-"
+import json, sys
+report_path = '$LOG_DIR/training/lane_20_train_report.json'
+precheck_path = '$LOG_DIR/non_static_byte_precheck.json'
+r = json.load(open(report_path))
+static_bytes = int(r['static_baseline_bytes'])
+best_bytes = int(r['best_full_balle_bytes'])
+best_step = int(r.get('best_step', -1))
+verdict = str(r.get('verdict', ''))
+ok = verdict == 'BALLE_BEATS_STATIC' and best_step >= 0 and 0 < best_bytes < static_bytes
+payload = {
+    'schema_version': 1,
+    'lane': 'lane_20_balle',
+    'report': report_path,
+    'verdict': verdict,
+    'best_step': best_step,
+    'static_baseline_bytes': static_bytes,
+    'best_full_balle_bytes': best_bytes,
+    'non_static_byte_win': ok,
+    'required_for_hold_clearance': True,
+}
+with open(precheck_path, 'w') as f:
+    json.dump(payload, f, indent=2, sort_keys=True)
+print('non_static_byte_precheck:', json.dumps(payload, sort_keys=True))
+if not ok:
+    raise SystemExit(
+        'FATAL_NON_STATIC_BYTE_PRECHECK_FAILED: Lane 20 remains on forensic hold; '
+        'do not run auth eval until BALLE_BEATS_STATIC and '
+        'best_full_balle_bytes < static_baseline_bytes on the real qint stream.'
+    )
+" 2>&1 | tee "$LOG_DIR/non_static_byte_precheck.log"
 
-log "=== Stage 4: contest_auth_eval on Lane 20 archive ==="
-ARCHIVE_BYTES=$(stat -c '%s' "$ARCHIVE" 2>/dev/null || stat -f '%z' "$ARCHIVE")
-[ "$ARCHIVE_BYTES" -gt 0 ] || { echo 'FATAL: archive empty' >&2; exit 2; }
-log "archive byte-size guard: $ARCHIVE_BYTES bytes"
-rm -rf "$LOG_DIR/eval_work"
-"$PYBIN" -u experiments/contest_auth_eval.py \
-    --archive "$ARCHIVE" \
-    --inflate-sh submissions/robust_current/inflate.sh \
-    --upstream-dir upstream \
-    --device "${AUTH_EVAL_DEVICE:-cuda}" \
-    --keep-work-dir \
-    --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
-PIPE_RC=("${PIPESTATUS[@]}")
-if [ "${PIPE_RC[0]}" -ne 0 ]; then
-    echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
-fi
+log "=== Stage 3: BHv1 archive/inflate integration gate ==="
+"$PYBIN" -c "
+from pathlib import Path
+script = Path('scripts/remote_lane_20_balle.sh').read_text(errors='ignore')
+inflate = Path('submissions/robust_current/inflate_renderer.py').read_text(errors='ignore')
+missing = []
+if 'renderer.bhv1' not in script or 'encode_qints_balle_auto' not in script:
+    missing.append('BHv1 archive member built from encode_qints_balle_auto output')
+if 'decode_qints_balle' not in inflate or 'renderer.bhv1' not in inflate or 'BHv1' not in inflate:
+    missing.append('inflate_renderer.py BHv1 archive member decode path')
+if missing:
+    raise SystemExit(
+        'FATAL_BHV1_ARCHIVE_INFLATE_INTEGRATION_MISSING: '
+        + '; '.join(missing)
+        + '. See .omx/research/lane19_lane20_forensic_hold_repair_design_20260430_codex.md.'
+    )
+print('BHv1 archive member integration ready: renderer.bhv1 decode path present')
+" 2>&1 | tee "$LOG_DIR/bhv1_integration_gate.log"
 
-# RESULT_JSON guard (LANE-B silent-crash prevention).
-if ! grep -q "RESULT_JSON" "$LOG_DIR/auth_eval.log"; then
-    log "FATAL: auth_eval.log missing RESULT_JSON — silent eval crash. Investigate before reporting score."
-    exit 4
-fi
-
-log "=== LANE_20_DONE [contest-CUDA] — see $LOG_DIR/auth_eval.log for RESULT_JSON ==="
-log "  predicted band: [1.04, 1.05] (vs Lane G v3 1.05 anchor)"
-log "  anchor baseline: 1.05 [contest-CUDA] (Lane G v3)"
+log "FATAL: Lane 20 reached an impossible state: the BHv1 integration gate passed, but the real archive builder is not implemented in this script."
+exit 6

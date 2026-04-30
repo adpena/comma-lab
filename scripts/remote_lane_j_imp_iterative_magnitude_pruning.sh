@@ -103,12 +103,13 @@ bash "$WORKSPACE/scripts/probe_nvdec.sh" --ensure-dali || {
     exit 2
 }
 
-# Stage 0b: canonical git sync (CLAUDE.md non-negotiable: deployed code parity).
-log "=== Stage 0b: canonical git sync (fetch + reset --hard origin/main) ==="
-# Nuke local junk from prior failed deploys, then sync to origin/main exactly.
-git -C "$WORKSPACE" fetch origin main && git -C "$WORKSPACE" reset --hard origin/main 2>&1 | tail -3 || {
-    log "WARN: git fetch/reset failed — continuing with current HEAD ($GIT_HASH)"
-}
+# Stage 0b: tarball-only parity — NEVER git reset --hard.
+# CODE PARITY: launcher tarball is authoritative — do NOT git reset --hard
+# origin/main. Doing so wipes local-only anchor files (archive_lane_g_v3.zip,
+# iter_0/* baseline pieces, etc.) that the launcher just SCP'd. The tarball
+# IS the parity mechanism. (memory: feedback_git_reset_nukes_anchors_20260429;
+# preflight Check 66 prohibits this pattern.)
+log "=== Stage 0b: trusting launcher tarball (HEAD=$GIT_HASH) — no git sync ==="
 
 # Pre-flight: anchor on Lane G v3 (1.05 [contest-CUDA]).
 ANCHOR_RENDERER="experiments/results/lane_g_v3_landed/iter_0/renderer.bin"
@@ -201,6 +202,7 @@ for i in 0 1 2 3 4 5 6 7 8 9; do
         "$PYBIN" -u experiments/train_imp_cycle.py \
             --cycle 0 \
             --checkpoint "$ANCHOR_RENDERER" \
+            --anchor-renderer "$ANCHOR_RENDERER" \
             --output-dir "$CYC_DIR" \
             --target-sparsity "$TARGET_SPARSITY_PER_CYCLE" \
             --final-sparsity-target "$FINAL_TARGET" \
@@ -215,6 +217,7 @@ for i in 0 1 2 3 4 5 6 7 8 9; do
         "$PYBIN" -u experiments/train_imp_cycle.py \
             --cycle "$i" \
             --checkpoint "$PREV_RENDER" \
+            --anchor-renderer "$ANCHOR_RENDERER" \
             --mask-from "$PREV_MASK" \
             --early-epoch-weights "$PREV_SNAPSHOT" \
             --output-dir "$CYC_DIR" \
@@ -251,19 +254,26 @@ for i in 0 1 2 3 4 5 6 7 8 9; do
         SMOKE_DIR="$CYC_DIR/auth_smoke"
         mkdir -p "$SMOKE_DIR/iter_0"
         # Re-export FP4A bytes for this cycle's renderer.pt → smoke archive.
+        # Shape-mismatch fix (2026-04-30, see
+        # feedback_imp_dispatch_shape_mismatch_fix_20260430.md): build_renderer
+        # with use_zoom_flow=False, pose_dim=6 produces motion.head=[2,32,3,3]
+        # while the Lane G v3 ASYM anchor saves [6,32,3,3]. Reconstruct the
+        # architecture FROM the anchor's binary header (load_asymmetric_checkpoint
+        # reads arch from header), then overlay the cycle's pruned state_dict.
+        # Also: export_asymmetric_checkpoint_fp4 returns int (bytes written) and
+        # writes to its second positional arg — DO NOT wrap in f.write().
         "$PYBIN" -c "
 import sys, torch
 sys.path.insert(0, 'src'); sys.path.insert(0, 'upstream')
-from tac.renderer import build_renderer
-from tac.renderer_export import export_asymmetric_checkpoint_fp4
+from tac.renderer_export import load_asymmetric_checkpoint, export_asymmetric_checkpoint_fp4
 ckpt = torch.load('$CYC_DIR/renderer.pt', map_location='cpu', weights_only=False)
 state = ckpt.get('model_state_dict', ckpt)
-m = build_renderer(num_classes=5, embed_dim=6, base_ch=36, mid_ch=60,
-                   motion_hidden=32, depth=1, pose_dim=6,
-                   use_zoom_flow=False, padding_mode='zeros')
-m.load_state_dict(state, strict=False); m.eval()
-with open('$SMOKE_DIR/iter_0/renderer.bin', 'wb') as f:
-    f.write(export_asymmetric_checkpoint_fp4(m))
+m = load_asymmetric_checkpoint('$ANCHOR_RENDERER', device='cpu')
+missing, unexpected = m.load_state_dict(state, strict=False)
+if missing or unexpected:
+    print(f'  WARN auth-smoke state_dict mismatch missing={list(missing)[:3]} unexpected={list(unexpected)[:3]}')
+m.eval()
+export_asymmetric_checkpoint_fp4(m, '$SMOKE_DIR/iter_0/renderer.bin')
 " 2>&1 | tee -a "$CYC_DIR/cycle.log" | tail -3
         cp "$ANCHOR_MASKS" "$SMOKE_DIR/iter_0/masks.mkv"
         [ -f "$ANCHOR_POSES" ] && cp "$ANCHOR_POSES" "$SMOKE_DIR/iter_0/optimized_poses.pt" || true
@@ -293,12 +303,34 @@ with zipfile.ZipFile('$SMOKE_ARCHIVE', 'w', zipfile.ZIP_DEFLATED, compresslevel=
             CYC_SCORE=$("$PYBIN" -c "
 import json, re
 log = open('$SMOKE_DIR/auth_eval.log').read()
-m = re.search(r'RESULT_JSON\s*[:=]\s*(\{[^}]*\})', log)
-if not m:
+# Two bugs fixed 2026-04-30 (cycle 0 returned 1.98 [contest-CUDA] but parser
+# logged NaN, blocking revert-on-regression):
+#  (1) the previous regex r'\{[^}]*\}' stopped at the first '}' and so failed
+#      on RESULT_JSON's nested 'provenance' dict — find the JSON span by
+#      brace-balance instead.
+#  (2) contest_auth_eval.py emits 'final_score' (not 'score' / 'total').
+i = log.find('RESULT_JSON')
+if i < 0:
+    print('NaN'); raise SystemExit(0)
+start = log.find('{', i)
+if start < 0:
+    print('NaN'); raise SystemExit(0)
+depth = 0
+end = -1
+for k in range(start, len(log)):
+    c = log[k]
+    if c == '{': depth += 1
+    elif c == '}':
+        depth -= 1
+        if depth == 0:
+            end = k + 1
+            break
+if end < 0:
     print('NaN'); raise SystemExit(0)
 try:
-    j = json.loads(m.group(1))
-    print(j.get('score', j.get('total', 'NaN')))
+    j = json.loads(log[start:end])
+    score = j.get('final_score', j.get('score', j.get('total', 'NaN')))
+    print(score)
 except Exception:
     print('NaN')
 ")
@@ -380,28 +412,35 @@ log "    sourcing from $FINAL_CYCLE_DIR (BEST cycle per kill-criterion gate)"
 # the inflate-time format. Sparse-CSR export is OPTIONAL post-stage and
 # only beats dense FP4 above ~80% sparsity (we hit ~89%, so it pays).
 "$PYBIN" -c "
-import sys, torch, json
+import sys, os, torch, json
 sys.path.insert(0, 'src'); sys.path.insert(0, 'upstream')
-from tac.renderer import build_renderer
-from tac.renderer_export import export_asymmetric_checkpoint, export_asymmetric_checkpoint_fp4
+from tac.renderer_export import load_asymmetric_checkpoint, export_asymmetric_checkpoint, export_asymmetric_checkpoint_fp4
 from tac.iterative_magnitude_pruning import compute_actual_sparsity
 ckpt = torch.load('$FINAL_RENDERER_PT', map_location='cpu', weights_only=False)
 state = ckpt.get('model_state_dict', ckpt)
 mask = torch.load('$FINAL_MASK', map_location='cpu', weights_only=False)
 m = mask.get('mask', mask) if isinstance(mask, dict) else mask
-model = build_renderer(num_classes=5, embed_dim=6, base_ch=36, mid_ch=60,
-                       motion_hidden=32, depth=1, pose_dim=6,
-                       use_zoom_flow=False, padding_mode='zeros')
-model.load_state_dict(state, strict=False)
+# Shape-mismatch fix: build arch FROM Lane G v3 anchor header so motion.head
+# is [6,32,3,3] (matches saved state). build_renderer(use_zoom_flow=False,
+# pose_dim=6) would produce [2,32,3,3] and break load_state_dict.
+model = load_asymmetric_checkpoint('$ANCHOR_RENDERER', device='cpu')
+missing, unexpected = model.load_state_dict(state, strict=False)
+if missing or unexpected:
+    print(f'  WARN final-export state_dict mismatch missing={list(missing)[:3]} unexpected={list(unexpected)[:3]}')
 model.eval()
-asym_bytes = export_asymmetric_checkpoint(model)
-fp4_bytes = export_asymmetric_checkpoint_fp4(model)
-with open('$LOG_DIR/renderer.bin', 'wb') as f:
-    f.write(fp4_bytes)
+# These exporters write to path and return int (bytes written); we only
+# ship FP4, so asym goes to a scratch tmp purely to record its byte size.
+_tmp_asym = '$LOG_DIR/.tmp_asym.bin'
+asym_n = export_asymmetric_checkpoint(model, _tmp_asym)
+fp4_n  = export_asymmetric_checkpoint_fp4(model, '$LOG_DIR/renderer.bin')
+try:
+    os.unlink(_tmp_asym)
+except FileNotFoundError:
+    pass
 sparsity = compute_actual_sparsity(model)
 stats = {
-    'asym_fp32_bytes': len(asym_bytes),
-    'fp4_bytes': len(fp4_bytes),
+    'asym_fp32_bytes': asym_n,
+    'fp4_bytes': fp4_n,
     'final_sparsity': sparsity,
     'theoretical_sparse_csr_bytes': int((sum(p.numel() for n, p in model.named_parameters()
                                               if 'conv.weight' in n or n.endswith('.weight') and p.ndim == 4)
@@ -452,7 +491,7 @@ rm -rf "$LOG_DIR/eval_work"
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
     --upstream-dir upstream \
-    --device "${AUTH_EVAL_DEVICE:-cuda}" \
+    --device cuda \
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -15
     PIPE_RC=("${PIPESTATUS[@]}")

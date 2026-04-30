@@ -41,6 +41,11 @@ workspace/tools/
 # The ones below are known large files that should never be in git.
 experiments/raft_flow.pt
 experiments/results/**/*.pt
+# Harvest bundles record run_command.sh for traceability — these are
+# audit artifacts, not deploy scripts, and should be exempt from the
+# "shell-script-in-experiments" preflight rule.
+experiments/results/**/run_command.sh
+experiments/results/**/*.zip
 
 # Secrets and credentials
 .env
