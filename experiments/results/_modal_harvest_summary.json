@@ -1,107 +1,68 @@
 [
   {
     "label": "lane_fl",
-    "call_id": "fc-01KQCQ2AN6RGFNSRQ8HTBRZY86",
-    "rc": 137,
-    "elapsed_seconds": 33.025160749,
-    "n_artifacts": 55,
-    "crash_kind": "RC_137"
+    "status": "already_harvested",
+    "call_id": "fc-01KQCQ2AN6RGFNSRQ8HTBRZY86"
   },
   {
     "label": "lane_fl_v2",
-    "call_id": "fc-01KQCR961Q8QJ4KPBASRTCVDF4",
-    "rc": 137,
-    "elapsed_seconds": 25.243142915000004,
-    "n_artifacts": 55,
-    "crash_kind": "RC_137"
+    "status": "already_harvested",
+    "call_id": "fc-01KQCR961Q8QJ4KPBASRTCVDF4"
   },
   {
     "label": "lane_gp",
-    "call_id": "fc-01KQCQ1NCV7T3GX2H1W85ZA2WQ",
-    "rc": 1,
-    "elapsed_seconds": 12.047052263999994,
-    "n_artifacts": 55,
-    "crash_kind": "RC_1"
+    "status": "already_harvested",
+    "call_id": "fc-01KQCQ1NCV7T3GX2H1W85ZA2WQ"
   },
   {
     "label": "lane_gp_v2",
-    "call_id": "fc-01KQCR8G6843PK2JJ0HT3WBW3S",
-    "rc": 0,
-    "elapsed_seconds": 824.331508526,
-    "n_artifacts": 70,
-    "crash_kind": "OK"
+    "status": "already_harvested",
+    "call_id": "fc-01KQCR8G6843PK2JJ0HT3WBW3S"
   },
   {
     "label": "lane_gp_v3",
-    "call_id": "fc-01KQCTA49BTVP1XBATRGNS5XRJ",
-    "rc": 0,
-    "elapsed_seconds": 792.725123586,
-    "n_artifacts": 70,
-    "crash_kind": "OK"
+    "status": "already_harvested",
+    "call_id": "fc-01KQCTA49BTVP1XBATRGNS5XRJ"
   },
   {
     "label": "lane_mae_v",
-    "call_id": "fc-01KQCJ8F0X9KNR3CQ6QMWNDF4P",
-    "rc": 1,
-    "elapsed_seconds": 6.565697213,
-    "n_artifacts": 55,
-    "crash_kind": "ERROR"
+    "status": "already_harvested",
+    "call_id": "fc-01KQCJ8F0X9KNR3CQ6QMWNDF4P"
   },
   {
     "label": "lane_mm",
-    "call_id": "fc-01KQCZV4ZQ7SEKCJK8B0KQ74QB",
-    "rc": 3,
-    "elapsed_seconds": 4.229495890999999,
-    "n_artifacts": 50,
-    "crash_kind": "RC_3"
+    "status": "already_harvested",
+    "call_id": "fc-01KQCZV4ZQ7SEKCJK8B0KQ74QB"
   },
   {
     "label": "lane_mm_v2",
-    "call_id": "fc-01KQD283JJFDGJ11XYPPQK7VN5",
-    "rc": 0,
-    "elapsed_seconds": 831.610461059,
-    "n_artifacts": 61,
-    "crash_kind": "OK"
+    "status": "already_harvested",
+    "call_id": "fc-01KQD283JJFDGJ11XYPPQK7VN5"
   },
   {
     "label": "lane_omega_hessian",
-    "call_id": "fc-01KQCJ7J556562CSNMM7CZH801",
-    "rc": 1,
-    "elapsed_seconds": 44.632006531,
-    "n_artifacts": 52,
-    "crash_kind": "RC_1"
+    "status": "already_harvested",
+    "call_id": "fc-01KQCJ7J556562CSNMM7CZH801"
   },
   {
     "label": "lane_s",
-    "call_id": "fc-01KQCQ10HX6W62B7BHA3NN88ZQ",
-    "rc": 1,
-    "elapsed_seconds": 156.78563206500002,
-    "n_artifacts": 54,
-    "crash_kind": "RC_1"
+    "status": "already_harvested",
+    "call_id": "fc-01KQCQ10HX6W62B7BHA3NN88ZQ"
   },
   {
     "label": "lane_sa",
-    "call_id": "fc-01KQCZW4BM6NXBWTNSC4G24ZCC",
-    "rc": 1,
-    "elapsed_seconds": 129.33854739,
-    "n_artifacts": 52,
-    "crash_kind": "RC_1"
+    "status": "already_harvested",
+    "call_id": "fc-01KQCZW4BM6NXBWTNSC4G24ZCC"
   },
   {
     "label": "lane_sa_v2",
-    "call_id": "fc-01KQD090GDA30NFM325M0M20PB",
-    "rc": 1,
-    "elapsed_seconds": 126.056802656,
-    "n_artifacts": 52,
-    "crash_kind": "RC_1"
+    "status": "already_harvested",
+    "call_id": "fc-01KQD090GDA30NFM325M0M20PB"
   },
   {
     "label": "lane_sa_v3",
-    "call_id": "fc-01KQD2AHSSJEENJB2WBAKB2XRA",
-    "rc": 1,
-    "elapsed_seconds": 111.615706277,
-    "n_artifacts": 52,
-    "crash_kind": "RC_1"
+    "status": "already_harvested",
+    "call_id": "fc-01KQD2AHSSJEENJB2WBAKB2XRA"
   },
   {
     "label": "lane_sa_v4",
@@ -109,28 +70,24 @@
     "call_id": "fc-01KQD5WXJXAK8CV82BFSKPJA7V"
   },
   {
+    "label": "lane_sa_v5_post_oom_fix",
+    "status": "not_ready",
+    "call_id": "fc-01KQEKJ4ZX24PBKRTNSX976KZR"
+  },
+  {
     "label": "lane_sc_plus_plus",
-    "call_id": "fc-01KQCZW6WCBYV2VZMD5CAMEG2B",
-    "rc": 1,
-    "elapsed_seconds": 128.666151564,
-    "n_artifacts": 52,
-    "crash_kind": "RC_1"
+    "status": "already_harvested",
+    "call_id": "fc-01KQCZW6WCBYV2VZMD5CAMEG2B"
   },
   {
     "label": "lane_sc_plus_plus_v2",
-    "call_id": "fc-01KQD092XT7DQK8B7X75WV5TTY",
-    "rc": 1,
-    "elapsed_seconds": 159.989060777,
-    "n_artifacts": 52,
-    "crash_kind": "RC_1"
+    "status": "already_harvested",
+    "call_id": "fc-01KQD092XT7DQK8B7X75WV5TTY"
   },
   {
     "label": "lane_sc_plus_plus_v3",
-    "call_id": "fc-01KQD2AKKV97GVWXYYQVKPM84W",
-    "rc": 1,
-    "elapsed_seconds": 140.47479359599998,
-    "n_artifacts": 52,
-    "crash_kind": "RC_1"
+    "status": "already_harvested",
+    "call_id": "fc-01KQD2AKKV97GVWXYYQVKPM84W"
   },
   {
     "label": "lane_sc_plus_plus_v4",
@@ -139,19 +96,13 @@
   },
   {
     "label": "lane_so",
-    "call_id": "fc-01KQCZW7BJWHWMKQ3BDC5N6P0Q",
-    "rc": 1,
-    "elapsed_seconds": 127.924227941,
-    "n_artifacts": 52,
-    "crash_kind": "RC_1"
+    "status": "already_harvested",
+    "call_id": "fc-01KQCZW7BJWHWMKQ3BDC5N6P0Q"
   },
   {
     "label": "lane_so_v2",
-    "call_id": "fc-01KQD093VQ8TR0W0QX1AF14KM9",
-    "rc": 1,
-    "elapsed_seconds": 132.041815489,
-    "n_artifacts": 52,
-    "crash_kind": "RC_1"
+    "status": "already_harvested",
+    "call_id": "fc-01KQD093VQ8TR0W0QX1AF14KM9"
   },
   {
     "label": "lane_so_v3",
@@ -159,28 +110,24 @@
     "call_id": "fc-01KQD2AN7CKKHW9H2JEYMZQRKF"
   },
   {
+    "label": "lane_so_v3_post_oom_fix",
+    "status": "not_ready",
+    "call_id": "fc-01KQEKJ4YD44SEA80KY6S9TV76"
+  },
+  {
     "label": "lane_uniward",
-    "call_id": "fc-01KQCJ93WY9B57WNCY8BBHBPQW",
-    "rc": 1,
-    "elapsed_seconds": 4.185886556,
-    "n_artifacts": 50,
-    "crash_kind": "ERROR"
+    "status": "already_harvested",
+    "call_id": "fc-01KQCJ93WY9B57WNCY8BBHBPQW"
   },
   {
     "label": "lane_w",
-    "call_id": "fc-01KQCQ0A6W804Y7Y4N93AF7SJF",
-    "rc": 1,
-    "elapsed_seconds": 273.95998892,
-    "n_artifacts": 55,
-    "crash_kind": "RC_1"
+    "status": "already_harvested",
+    "call_id": "fc-01KQCQ0A6W804Y7Y4N93AF7SJF"
   },
   {
     "label": "lane_w_v2",
-    "call_id": "fc-01KQCR7SWQZPCS71F8D564C9ME",
-    "rc": 124,
-    "elapsed_seconds": 28800.008594441002,
-    "n_artifacts": 59,
-    "crash_kind": "TIMEOUT"
+    "status": "already_harvested",
+    "call_id": "fc-01KQCR7SWQZPCS71F8D564C9ME"
   },
   {
     "label": "mae_v_v2",
@@ -189,19 +136,13 @@
   },
   {
     "label": "q_faithful",
-    "call_id": "fc-01KQCPXJ36DDZRV85F0M3H4MTY",
-    "rc": 2,
-    "elapsed_seconds": 64.137555832,
-    "n_artifacts": 58,
-    "crash_kind": "RC_2"
+    "status": "already_harvested",
+    "call_id": "fc-01KQCPXJ36DDZRV85F0M3H4MTY"
   },
   {
     "label": "q_faithful_v2",
-    "call_id": "fc-01KQCQ5R4GH7ZYHB5GWJ6VW8B6",
-    "rc": 1,
-    "elapsed_seconds": 80.837770559,
-    "n_artifacts": 58,
-    "crash_kind": "RC_1"
+    "status": "already_harvested",
+    "call_id": "fc-01KQCQ5R4GH7ZYHB5GWJ6VW8B6"
   },
   {
     "label": "q_faithful_v3",
@@ -220,58 +161,37 @@
   },
   {
     "label": "uniward_v2",
-    "call_id": "fc-01KQCP43K3GGENCTY4QK087XY1",
-    "rc": 1,
-    "elapsed_seconds": 3.4171778549999985,
-    "n_artifacts": 52,
-    "crash_kind": "RC_1"
+    "status": "already_harvested",
+    "call_id": "fc-01KQCP43K3GGENCTY4QK087XY1"
   },
   {
     "label": "uniward_v3",
-    "call_id": "fc-01KQCQ6DEQJME9VWZ1PESQRPZ4",
-    "rc": 1,
-    "elapsed_seconds": 11.945904798,
-    "n_artifacts": 53,
-    "crash_kind": "ERROR"
+    "status": "already_harvested",
+    "call_id": "fc-01KQCQ6DEQJME9VWZ1PESQRPZ4"
   },
   {
     "label": "uniward_v4",
-    "call_id": "fc-01KQCQX3Q8VZ7YJ9XMZVSDMYQ4",
-    "rc": 1,
-    "elapsed_seconds": 14.036963152999999,
-    "n_artifacts": 53,
-    "crash_kind": "ERROR"
+    "status": "already_harvested",
+    "call_id": "fc-01KQCQX3Q8VZ7YJ9XMZVSDMYQ4"
   },
   {
     "label": "uniward_v5",
-    "call_id": "fc-01KQCR74WEBWX7JJ57MSM6MDA9",
-    "rc": 1,
-    "elapsed_seconds": 14.703013351,
-    "n_artifacts": 53,
-    "crash_kind": "ERROR"
+    "status": "already_harvested",
+    "call_id": "fc-01KQCR74WEBWX7JJ57MSM6MDA9"
   },
   {
     "label": "uniward_v6",
-    "call_id": "fc-01KQCRMNNFS60Z7Y9ZHAFC2MDG",
-    "rc": 1,
-    "elapsed_seconds": 14.748772480999996,
-    "n_artifacts": 54,
-    "crash_kind": "ERROR"
+    "status": "already_harvested",
+    "call_id": "fc-01KQCRMNNFS60Z7Y9ZHAFC2MDG"
   },
   {
     "label": "uniward_v7",
-    "call_id": "fc-01KQCS2QR22NPGAH5GTM6RWFKY",
-    "rc": 0,
-    "elapsed_seconds": 848.070805186,
-    "n_artifacts": 65,
-    "crash_kind": "OK"
+    "status": "already_harvested",
+    "call_id": "fc-01KQCS2QR22NPGAH5GTM6RWFKY"
   },
   {
     "label": "uniward_v8",
-    "call_id": "fc-01KQCTS1BKB5GYNA2AKREFRYXY",
-    "rc": 0,
-    "elapsed_seconds": 779.148722348,
-    "n_artifacts": 65,
-    "crash_kind": "OK"
+    "status": "already_harvested",
+    "call_id": "fc-01KQCTS1BKB5GYNA2AKREFRYXY"
   }
 ]
