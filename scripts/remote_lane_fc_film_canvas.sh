@@ -86,10 +86,15 @@ done
 log "=== Stage 2: train SegMapFilmCanvas (variant=kl_distill) ==="
 export PYTHONHASHSEED=1234
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+# Council C OOM-class deep fixes (DF2 + DF3) per Round 7 Defect #1:
+# train_segmap_film_canvas.py wraps the same SegMapTrainer that triggered
+# the 21 GiB FastViT-attention OOM; --bf16 + --scorer-chunk required.
+# B*N=4*2=8 satisfies Check 87's _OOM_GUARD_BN_PRODUCT_CAP.
 "$PYBIN" -u experiments/train_segmap_film_canvas.py \
     --variant kl_distill \
     --hidden 24 --block-hidden 24 --num-blocks 8 \
-    --epochs 600 --batch-size 8 --lr 1e-3 \
+    --epochs 600 --batch-size 4 --lr 1e-3 \
+    --bf16 --scorer-chunk 2 \
     --roundtrip-noise-std 0.5 \
     --kl-distill-weight 0.002 \
     --kl-distill-temperature 2.0 \

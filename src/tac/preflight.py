@@ -6374,6 +6374,14 @@ def check_no_bare_round_in_eval_roundtrip(
 
 _SEGMAP_CLASS_TRAINING_TARGETS = {
     "experiments/train_segmap.py",
+    # Round 7 Defect #1 (2026-04-29 PM): Lane FC invokes
+    # train_segmap_film_canvas.py which constructs the SAME SegMapTrainer
+    # at experiments/train_segmap_film_canvas.py:228 — therefore exposed to
+    # the SAME 21 GiB FastViT-attention-map OOM. The check was previously
+    # blind to it. Coverage gap closed; train_segmap_film_canvas.py also
+    # gained --bf16 + --scorer-chunk CLI flags in the same commit so the
+    # OOM-guard pattern is enforceable.
+    "experiments/train_segmap_film_canvas.py",
 }
 _OOM_GUARD_BN_PRODUCT_CAP = 8
 _OOM_GUARD_TIER_HINT_RE = re.compile(

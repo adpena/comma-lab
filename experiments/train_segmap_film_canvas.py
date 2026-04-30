@@ -83,6 +83,31 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument(
         "--device", type=str, default="cuda", choices=("cuda", "cpu")
     )
+
+    # ── Council C OOM-class deep fixes (DF2 + DF3) ────────────────────────
+    # Memory: .omx/research/council_oom_class_deep_fix_20260429.md.
+    # Round 7 Defect #1: this script wraps the SAME SegMapTrainer that
+    # train_segmap.py uses, so the SAME 21 GiB FastViT-attention OOM
+    # applies. Check 87 STRICT now scans this file too; --bf16 +
+    # --scorer-chunk are required on Modal A10G / RTX 4090 24 GB.
+    p.add_argument(
+        "--bf16",
+        action="store_true",
+        default=False,
+        help="Enable bf16 autocast around SegMapTrainer forward + scorer "
+             "(Council C DF2). Halves PoseNet FastViT attention-map "
+             "allocation. CUDA-only — raises if requested without CUDA.",
+    )
+    p.add_argument(
+        "--scorer-chunk",
+        type=int,
+        default=0,
+        help="Per-pair scorer chunk size for the dual scorer_forward_pair "
+             "calls (Council C DF3). 0 = no chunking. N>0 = split each "
+             "mini-batch's scorer call into chunks of N pairs along the "
+             "batch dim. Recommended B*N <= 8 for 24 GB RTX 4090.",
+    )
+
     p.add_argument("--output-dir", type=str, required=True)
     p.add_argument("--tag", type=str, default="lane_fc_film_canvas")
     p.add_argument("--dry-run", action="store_true")
@@ -119,6 +144,11 @@ def _build_trainer_config(args: argparse.Namespace, device: torch.device):
         ema_decay=args.ema_decay,
         tag=args.tag,
         output_dir=args.output_dir,
+        # Council C OOM-class deep fixes (DF2 + DF3). The TrainConfig
+        # validator rejects bf16=True without CUDA at SegMapTrainer.__init__
+        # time (FORBIDDEN PATTERN: no silent MPS/CPU fallback).
+        bf16=bool(getattr(args, "bf16", False)),
+        scorer_chunk=int(getattr(args, "scorer_chunk", 0) or 0),
     )
     if hasattr(TrainConfig, "model_fields"):
         fields = set(TrainConfig.model_fields.keys())
