@@ -225,8 +225,25 @@ def test_segmap_trainer_train_epoch_loss_finite() -> None:
 
     assert math.isfinite(stats["loss"]), f"loss not finite: {stats}"
     assert stats["num_steps"] == 1
-    # At least one gradient step landed.
+    # At least one gradient step landed (parameter values changed).
     assert not torch.equal(pre_param, post_param)
+    # Round 6 council Defect 3: pre!=post passes vacuously via AdamW
+    # weight-decay shrinkage (~0.99996/step) even with all-zero gradients.
+    # The .round() bug at segmap_renderer.py:281 (Lane DARTS-S V1 freeze,
+    # 5h GPU burned) would NOT have been caught by the line above. Assert
+    # that AT LEAST ONE trainable param has a non-zero gradient after
+    # train_epoch — proves the backward chain is intact.
+    nonzero_grads = [
+        p.grad.abs().max().item()
+        for p in model.parameters()
+        if p.requires_grad and p.grad is not None
+    ]
+    assert nonzero_grads, "no trainable param has a populated .grad attribute"
+    assert max(nonzero_grads) > 0, (
+        f"all trainable param grads are exactly zero — gradient chain is "
+        f"severed (the Council A .round() bug class). max grad: "
+        f"{max(nonzero_grads)}"
+    )
 
 
 # ─── Export tests ─────────────────────────────────────────────────────

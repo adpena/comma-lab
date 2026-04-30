@@ -339,7 +339,15 @@ def compute_proxy_score(
             cand_chw = cand_flat.reshape(B, T, C, SEGNET_INPUT_H, SEGNET_INPUT_W)
             gt_chw = gt_flat.reshape(B, T, C, SEGNET_INPUT_H, SEGNET_INPUT_W)
 
-        cand_chw = cand_chw.round().clamp(0, 255)
+        # Council Round 6 (2026-04-29 PM Defect 2): bare .round() has ZERO
+        # gradient. These two .round() calls sit OUTSIDE the no_grad block
+        # that starts at line 357. Today's callers use this only for
+        # monitoring (so no caller hits the bug), but a future TTO loop
+        # using compute_proxy_score for gradient signal would silently get
+        # zero gradients — exactly the Council A DARTS-S bug class.
+        # Use Uint8STE.apply (forward = clamp+round, backward = identity).
+        from tac.quantization import Uint8STE
+        cand_chw = Uint8STE.apply(cand_chw)
 
         if eval_roundtrip:
             flat = cand_chw.reshape(-1, *cand_chw.shape[2:])
@@ -347,7 +355,7 @@ def compute_proxy_score(
                 flat, size=(CAMERA_H, CAMERA_W),
                 mode="bilinear", align_corners=False,
             )
-            flat = flat.round().clamp(0, 255)
+            flat = Uint8STE.apply(flat)  # was: flat.round().clamp(0, 255)
             flat = F.interpolate(
                 flat, size=(SEGNET_INPUT_H, SEGNET_INPUT_W),
                 mode="bilinear", align_corners=False,
