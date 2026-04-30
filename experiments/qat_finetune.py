@@ -1217,6 +1217,29 @@ def main() -> None:
             model, block_size=cfg.fp4_block_size,
         )
 
+    # ── Round 7 Defect #3 fix (Option A, 2026-04-29 PM) ──────────────────
+    # Council Round 7 §6.3: between Phase A (INT8 parametrize keys added by
+    # apply_int8_fake_quant) and Phase B (FP4 parametrize keys added by
+    # apply_fp4_fake_quant / apply_mixed_precision_quant), the EMA shadow
+    # accumulated Phase A's int8 parametrize keys (.scale_int8). After
+    # remove_parametrizations() the live model goes back to plain weight
+    # keys; after the FP4 wrap above it gains DIFFERENT parametrize keys
+    # (.scale_fp4). The next ema.apply(model) call would then call
+    # model.load_state_dict(self.shadow) with the default strict=True and
+    # crash with RuntimeError on the key mismatch (shadow has stale
+    # scale_int8, live model has fresh scale_fp4 — neither overlaps).
+    #
+    # Option A (chosen): rebuild EMA shadow AFTER the Phase B wrap. The
+    # shadow now exactly matches the FP4-wrapped live model's state_dict
+    # keys; subsequent ema.update() / ema.apply() calls inside the Phase B
+    # loop are key-mismatch-free. The Phase A averaging is sacrificed —
+    # Phase A is a warm-up phase whose value lives in the live model
+    # state, not the shadow average. Memory:
+    # .omx/research/council_round7_adversarial_20260429.md.
+    if cfg.int8_warmup_epochs > 0:
+        ema = EMA(model, decay=cfg.ema_decay)
+        print("  EMA shadow rebuilt for Phase B (Round 7 Defect #3 fix)")
+
     optimizer = torch.optim.Adam(model.parameters(), lr=cfg.base_lr, weight_decay=1e-4)
     total_steps = cfg.fp4_epochs
 
