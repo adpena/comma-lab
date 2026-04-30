@@ -591,7 +591,25 @@ def run_admm(
     # iterates oscillate (Nesterov 2009 §3).
     final_bytes = bytes_avg.copy()
 
-    # Re-query each stream at the dual-averaged lambda to obtain the score
+    # Q4A FIX (Boyd / Dykstra / MacKay, 2026-04-30 council #271):
+    # Choose the dual at which to re-query streams based on convergence state.
+    #
+    # When ``converged == True``: use the FINAL non-averaged ``lam``. This is
+    # the converged KKT dual; ``lam_avg`` can lag the true dual by ~3× because
+    # the running-average rule under-weights the most recent (post-convergence)
+    # iterates that actually reflect the equilibrating Lagrangian.
+    #
+    # When ``converged == False``: use ``lam_avg``. In the divergent /
+    # early-stopped case the final ``lam`` may be a mid-trajectory artefact
+    # that is not representative of the operating point; the averaged dual is
+    # a more robust diagnostic estimate.
+    #
+    # Memory ref: .omx/research/council_strategic_design_decisions_20260430.md
+    # §5.1. Replaces the prior "always use lam_avg" behaviour which produced a
+    # ~7% budget overshoot when re-querying at convergence (Round 11 finding).
+    final_lam = lam if converged else lam_avg
+
+    # Re-query each stream at the chosen lambda to obtain the score
     # + marginal at the final operating point. This is one extra coordinator
     # step per stream — cheap, and gives us scorer-rule-compliant marginals
     # at the actual reported allocation.
@@ -602,7 +620,7 @@ def run_admm(
         # and marginal estimate.
         try:
             res = stream.proximal_step(
-                target_bytes=float(final_bytes[s_idx]), dual=float(lam_avg)
+                target_bytes=float(final_bytes[s_idx]), dual=float(final_lam)
             )
             final_bytes[s_idx] = float(res.encoded_bytes)
             final_score[s_idx] = float(res.score_delta)

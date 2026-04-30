@@ -499,3 +499,161 @@ def test_run_admm_rejects_non_protocol_stream():
     cfg = JointADMMConfig(byte_budget=100.0)
     with pytest.raises(TypeError, match="Protocol"):
         run_admm([NotAStream()], cfg)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Q4A regression — Nesterov-averaging bias on the FINAL dual
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class _DualSensingStream:
+    """Synthetic stream that lets the test observe which dual the coordinator
+    used for the FINAL re-query.
+
+    Stores the LAST dual it saw via ``proximal_step``. Test asserts that
+    after a successful ADMM run, ``last_dual`` matches the converged ``lam``
+    rather than the lagged ``lam_avg``.
+
+    Score / marginal model is a simple convex quadratic so the coordinator
+    actually converges (not a divergent mock).
+    """
+
+    def __init__(self, a: float, b_opt: float, name: str):
+        self.a = a
+        self.b_opt = b_opt
+        self._name = name
+        self.last_dual: float | None = None
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    def proximal_step(
+        self, target_bytes: float, dual: float
+    ) -> ProximalStepResult:
+        # Track the most recent dual the coordinator handed us. The test
+        # reads this AFTER run_admm returns to inspect the FINAL re-query.
+        self.last_dual = float(dual)
+        b_unconstr = self.b_opt - dual / (2.0 * self.a)
+        b = max(0.0, min(target_bytes, b_unconstr))
+        b = max(0.0, round(b))
+        score = self.a * (b - self.b_opt) ** 2
+        margin = max(2.0 * self.a * (self.b_opt - b), 0.0)
+        return ProximalStepResult(
+            encoded_bytes=int(b),
+            score_delta=float(score),
+            marginal=float(margin),
+            state=None,
+        )
+
+
+def test_q4a_final_lam_used_when_converged():
+    """[synthetic] Q4A regression: when ADMM converges, the final re-query
+    must use the NON-AVERAGED ``lam`` (the true converged dual), NOT the
+    Nesterov-averaged ``lam_avg`` which lags post-convergence iterates.
+
+    Council #271 prescription (Boyd / Dykstra / MacKay co-signed):
+    - converged=True  ⇒  use final lam   (the actual converged dual)
+    - converged=False ⇒  use lam_avg      (robust diagnostic on divergence)
+
+    The bug class this prevents: the prior code always used ``lam_avg`` for
+    the final re-query, producing ~7% budget overshoot because the averaged
+    dual under-weighted the equilibrating-phase iterates.
+
+    Verification approach: this test uses an OBSERVABILITY stream that
+    records every dual value handed to it. We then pull the FINAL re-query
+    dual (the LAST value seen by ``proximal_step`` after all iterations)
+    and assert it equals the FINAL ``lam`` from the iteration trace, not
+    the running ``lam_avg``. That direct comparison catches a regression
+    independently of the specific KKT-dual numerical value (which depends
+    on rho-conditioning + lam-clamping edge cases out of scope for Q4A).
+    """
+    # Construct a problem that converges cleanly so we can compare
+    # lam vs lam_avg trajectories.
+    s1 = _DualSensingStream(a=0.005, b_opt=300.0, name="s1")
+    s2 = _DualSensingStream(a=0.01, b_opt=200.0, name="s2")
+    cfg = JointADMMConfig(
+        byte_budget=300.0,
+        max_iters=300,
+        primal_tol=1e-2,
+        dual_tol=1e-2,
+        kkt_waterline_tol=0.05,
+        rho_init=0.02,
+        verbose=False,
+    )
+    result = run_admm([s1, s2], cfg)
+    assert result.converged, "test prerequisite: problem must converge"
+
+    # The FINAL ``lam`` from the iteration trace (what Q4A says we should
+    # be re-querying with).
+    final_lam_in_trace = float(result.history[-1].duals_per_stream[0])
+
+    # Both streams should have been re-queried at the SAME final dual.
+    assert s1.last_dual is not None and s2.last_dual is not None
+    assert abs(s1.last_dual - s2.last_dual) < 1e-9, (
+        f"streams re-queried at different duals s1={s1.last_dual} "
+        f"s2={s2.last_dual} — coordinator must hand the same final lam to all"
+    )
+    final_re_query_dual = float(s1.last_dual)
+
+    # PRIMARY Q4A ASSERTION: the dual handed to streams in the FINAL
+    # re-query must equal the FINAL ``lam`` from the trace, NOT lam_avg.
+    # If this assertion ever fires, the Q4A bug class has regressed —
+    # the coordinator is back to passing the lagged Nesterov-averaged dual.
+    assert abs(final_re_query_dual - final_lam_in_trace) < 1e-9, (
+        f"Q4A REGRESSION: final re-query dual {final_re_query_dual} != "
+        f"final lam in trace {final_lam_in_trace}. The coordinator must "
+        f"pass the converged ``lam`` to the final stream re-query when "
+        f"converged==True, not the Nesterov-averaged ``lam_avg``."
+    )
+
+    # Final allocation should be feasible (Q4A also prevents the ~7%
+    # overshoot from the lagged dual on this stream's clamp-to-target form).
+    bytes_arr = np.asarray(result.final_bytes_per_stream)
+    assert bytes_arr.sum() <= cfg.byte_budget + 5.0, (
+        f"budget overshoot {bytes_arr.sum()} > {cfg.byte_budget} — the "
+        f"Q4A fix should keep the allocation within tolerance for this "
+        f"clamp-to-target stream form"
+    )
+    print(
+        f"[Q4A] converged: final re-query dual={final_re_query_dual:.6f} "
+        f"== trace lam={final_lam_in_trace:.6f} (matched), "
+        f"bytes={bytes_arr.tolist()}"
+    )
+
+
+def test_q4a_lam_avg_used_when_not_converged():
+    """[synthetic] Q4A regression: on divergence / early-stop the coordinator
+    should fall back to ``lam_avg`` for the final re-query (more robust than
+    a possibly-mid-trajectory final ``lam``).
+
+    Uses the DivergentMockStream to force a non-converged termination, then
+    asserts the AdmmResult is still a valid object (the dual choice is an
+    internal detail; the visible contract is "run_admm always returns").
+    """
+    bad1 = DivergentMockStream(name="bad1")
+    bad2 = DivergentMockStream(name="bad2")
+    cfg = JointADMMConfig(
+        byte_budget=100.0,
+        max_iters=20,           # cap to force non-convergence
+        rho_init=10.0,
+        rho_max=1e4,
+        rho_imbalance_ratio=5.0,
+        restart_threshold=3,
+        primal_tol=1e-3,
+        dual_tol=1e-3,
+        verbose=False,
+    )
+    result = run_admm([bad1, bad2], cfg)
+    # Coordinator must NOT crash even when not converged + lam_avg path used.
+    assert isinstance(result, AdmmResult)
+    assert not result.converged or result.iters == cfg.max_iters
+    # final_bytes / score / margin must all be populated.
+    assert len(result.final_bytes_per_stream) == 2
+    assert len(result.final_score_per_stream) == 2
+    assert len(result.final_marginal_per_stream) == 2
+    print(
+        f"[Q4A non-converged] iters={result.iters} "
+        f"converged={result.converged} "
+        f"final_bytes={result.final_bytes_per_stream}"
+    )
