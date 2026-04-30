@@ -3318,5 +3318,25 @@
     "registered_at_utc": "2026-04-30T12:44:50Z",
     "registered_by_host": "Primary",
     "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35899200",
+    "label": "lane_17_imp_10cycle_2026-04-30_a3",
+    "metadata": {
+      "estimated_cost_usd": 24.0,
+      "predicted_band": [
+        0.95,
+        1.1
+      ],
+      "script": "scripts/remote_lane_j_imp_iterative_magnitude_pruning.sh",
+      "council_priority": 99,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2"
+    },
+    "registered_at_utc": "2026-04-30T12:47:45Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
   }
 ]
