@@ -1,0 +1,10 @@
+{
+  "stage": "inflating",
+  "stage_updated": "2026-04-12T04:31:05.360726",
+  "config_hash": "04399bddaf1f5dc9",
+  "upstream_dir": "/Users/adpena/Projects/pact/workspace/upstream/comma_video_compression_challenge",
+  "device": "cpu",
+  "submission_src": "/Users/adpena/Projects/pact/submissions/robust_current",
+  "started": "2026-04-12T04:31:05.357382",
+  "archive_bytes": 893317
+}

@@ -1,0 +1,38 @@
+provenance: {"started_at_utc": "2026-04-29T13:53:47Z", "git_hash": "no-git", "gpu_name": "Tesla T4", "driver_version": "580.95.05", "torch_version": "2.5.1+cu124", "cuda_version": "12.4", "cuda_available": true, "lane_script": "scripts/remote_lane_w_hard_pair_self_compress.sh", "lane_name": "lane_w_hard_pair", "anchor_renderer": "experiments/results/lane_a_landed/iter_0/renderer.bin", "anchor_poses": "experiments/results/lane_a_landed/iter_0/optimized_poses.pt", "anchor_masks": "experiments/results/lane_a_landed/iter_0/masks.mkv", "anchor_score_baseline": 1.15, "predicted_band": [0.85, 1.1], "output_dir": "/tmp/pact/lane_w_results", "top_k": 30, "hard_weight": 5.0, "sc_codec": true}
+[lane-w] 2026-04-29T13:53:48Z === Stage 0: NVDEC probe ===
+[probe_nvdec] Modal runtime — NVDEC not required (auth_eval uses cpu device)
+[lane-w] 2026-04-29T13:53:48Z   anchor_renderer: experiments/results/lane_a_landed/iter_0/renderer.bin (296776 bytes)
+[lane-w] 2026-04-29T13:53:48Z   anchor_poses:    experiments/results/lane_a_landed/iter_0/optimized_poses.pt   (15620 bytes)
+[lane-w] 2026-04-29T13:53:48Z   anchor_masks:    experiments/results/lane_a_landed/iter_0/masks.mkv   (421483 bytes)
+[lane-w] 2026-04-29T13:53:48Z === Stage 1: profile_pair_sensitivity (Lane A renderer + poses + masks) ===
+[lane-w-profile] device=cuda
+[lane-w-profile] checkpoint=/tmp/pact/experiments/results/lane_a_landed/iter_0/renderer.bin
+[lane-w-profile] poses=/tmp/pact/experiments/results/lane_a_landed/iter_0/optimized_poses.pt
+[lane-w-profile] masks_mkv=/tmp/pact/experiments/results/lane_a_landed/iter_0/masks.mkv
+[lane-w-profile] video_mkv=/tmp/pact/upstream/videos/0.mkv
+[lane-w-profile] top_k=30 hard_weight=5.0
+[lane-w-profile] scorers loaded in 5.4s
+  Loaded AsymmetricPairGenerator from .bin (296,776 bytes, 0.2s)
+[lane-w-profile] renderer loaded in 0.2s (pose_dim=6)
+[lane-w-profile] poses loaded: (600, 6)
+[lane-w-profile] GT video decoded: (1200, 3, 874, 1164) in 65.2s
+[lane-w-profile] masks decoded: (1200, 384, 512) in 2.5s
+[lane-w-profile] aligned: n_frames=1200 n_pairs=600
+[lane-w-profile]   pair 50/600
+[lane-w-profile]   pair 100/600
+[lane-w-profile]   pair 150/600
+[lane-w-profile]   pair 200/600
+[lane-w-profile]   pair 250/600
+[lane-w-profile]   pair 300/600
+[lane-w-profile]   pair 350/600
+[lane-w-profile]   pair 400/600
+[lane-w-profile]   pair 450/600
+[lane-w-profile]   pair 500/600
+[lane-w-profile]   pair 550/600
+[lane-w-profile]   pair 600/600
+[lane-w-profile] sweep done in 76.7s
+[lane-w-profile] wrote /tmp/pact/lane_w_results/pair_weights.pt (shape=(600,))
+[lane-w-profile] wrote sidecar /tmp/pact/lane_w_results/pair_weights.pt.meta.json
+[lane-w-profile] DONE  total=150.1s  contrib_mean=1.4827  top30_mean=3.7830
+[lane-w] 2026-04-29T13:56:21Z   pair_weights: /tmp/pact/lane_w_results/pair_weights.pt (3573 bytes)
+[lane-w] 2026-04-29T13:56:21Z === Stage 2: train_renderer.py SC + per-pair weighted ===

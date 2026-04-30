@@ -1,0 +1,23 @@
+{
+  "started_at_utc": "2026-04-29T13:32:17Z",
+  "git_hash": "no-git",
+  "gpu_name": "Tesla T4",
+  "driver_version": "580.95.05",
+  "torch_version": "2.5.1+cu124",
+  "cuda_version": "12.4",
+  "cuda_available": true,
+  "lane_script": "scripts/remote_lane_w_hard_pair_self_compress.sh",
+  "lane_name": "lane_w_hard_pair",
+  "anchor_renderer": "experiments/results/lane_a_landed/iter_0/renderer.bin",
+  "anchor_poses": "experiments/results/lane_a_landed/iter_0/optimized_poses.pt",
+  "anchor_masks": "experiments/results/lane_a_landed/iter_0/masks.mkv",
+  "anchor_score_baseline": 1.15,
+  "predicted_band": [
+    0.85,
+    1.1
+  ],
+  "output_dir": "/tmp/pact/lane_w_results",
+  "top_k": 30,
+  "hard_weight": 5.0,
+  "sc_codec": true
+}

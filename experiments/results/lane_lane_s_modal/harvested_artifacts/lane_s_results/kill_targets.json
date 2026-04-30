@@ -1,0 +1,9 @@
+{
+  "phase1_end_epoch": 150,
+  "phase1_pixel_l1_max": 5.0,
+  "phase2_smoke_epoch": 250,
+  "phase2_smoke_scorer_max": 3.0,
+  "phase4_end_epoch": 500,
+  "phase4_end_scorer_max": 1.50,
+  "comment": "Lane S kill targets — anchored on Lane A 1.15. If the SC fine-tune ends >1.50 it has degraded vs Lane A and should be aborted/recommitted with a higher target_bits."
+}

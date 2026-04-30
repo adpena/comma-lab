@@ -1,0 +1,40 @@
+": "self_compress_renderer_full", "anchor_renderer": "experiments/results/lane_a_landed/iter_0/renderer.bin", "anchor_poses": "experiments/results/lane_a_landed/iter_0/optimized_poses.pt", "anchor_masks": "experiments/results/lane_a_landed/iter_0/masks.mkv", "anchor_score_baseline": 1.15, "predicted_band": [0.85, 1.2], "rationale": "SC per-channel bit-depth (init 8 \u2192 target 2.5) preserves Lane A distortion floor while collapsing rate from 0.0185 \u2192 ~0.005-0.007 via 290KB \u2192 16-20KB renderer.", "sc_init_bits": 8.0, "sc_target_bits": 2.5, "sc_lambda_end": 1.0, "sc_lambda_ramp_start_frac": 0.3, "total_epochs": 500, "lr": 5e-05, "output_dir": "/tmp/pact/lane_s_results", "tag": "lane_s_self_compress"}
+[lane-s] 2026-04-29T13:33:14Z === Stage 0: NVDEC probe ===
+[probe_nvdec] Modal runtime — NVDEC not required (auth_eval uses cpu device)
+[lane-s] 2026-04-29T13:33:14Z   anchor_renderer: experiments/results/lane_a_landed/iter_0/renderer.bin (296776 bytes, ASYM FP32)
+[lane-s] 2026-04-29T13:33:14Z   anchor_poses:    experiments/results/lane_a_landed/iter_0/optimized_poses.pt
+[lane-s] 2026-04-29T13:33:15Z   anchor_masks:    experiments/results/lane_a_landed/iter_0/masks.mkv (421483 bytes)
+[lane-s] 2026-04-29T13:33:15Z === Pre-flight: profile validation ===
+PROFILE OK: init=8.0 target=2.5 lambda_end=1.0 ramp_start=0.3
+[lane-s] 2026-04-29T13:33:15Z === Pre-flight: argparse dead-flag scan ===
+OK: 23 flags all real
+[lane-s] 2026-04-29T13:33:15Z === Stage 1: warm-start SC init from Lane A's FP32 ASYM renderer ===
+[stage1] loading Lane A renderer: experiments/results/lane_a_landed/iter_0/renderer.bin
+[stage1] loaded class=AsymmetricPairGenerator
+[stage1] SC swap: swapped=16 protected=3 skipped=1
+[stage1] swapped layers (first 6): ['renderer.stem_conv', 'renderer.stem_res.conv1', 'renderer.stem_res.conv2', 'renderer.down_conv', 'renderer.down_res.conv1', 'renderer.down_res.conv2']
+[stage1] protected layers: ['renderer.fuse_conv', 'renderer.head', 'motion.head']
+[stage1] 16 SC layers; init bits/weight = 8.00 (expect 8.0)
+[stage1] wrote /tmp/pact/lane_s_results/lane_a_sc_init.pt: 1188638 bytes
+[lane-s] 2026-04-29T13:33:19Z === Stage 2: SC fine-tune (500 ep) anchored on Lane A weights ===
+[lane-s] 2026-04-29T13:33:19Z   profile:  self_compress_renderer_full (overridden phase epochs + LR + arch)
+[lane-s] 2026-04-29T13:33:19Z   schedule: 150ep FP32 warmup (lambda=0) + 350ep with rate ramp → 500 total
+[lane-s] 2026-04-29T13:33:19Z   lambda:   0 → 1.0 starting at 30% of training (epoch 150)
+[lane-s] 2026-04-29T13:33:19Z   lr:       5e-5 across all phases (preserves Lane A quality)
+[lane-s] 2026-04-29T13:33:19Z   arch:     base_ch=36 mid_ch=60 motion_hidden=32 embed_dim=6 depth=1
+[lane-s] 2026-04-29T13:33:19Z             pose_dim=6 use_zoom_flow=False (matches Lane A's ASYM bin)
+[lane-s] 2026-04-29T13:33:19Z   resume:   /tmp/pact/lane_s_results/lane_a_sc_init.pt (Lane A weights pre-loaded into SC layers)
+[lane-s] 2026-04-29T13:33:19Z   estimated wall clock on 4090: ~1.5h ($0.40 at $0.25/hr)
+[train] Device: cuda
+[train] Reproducibility: seed=42, deterministic=True
+[train] Loading scorers from /tmp/pact/upstream/models
+[masks] Extracting 1200 masks via frozen SegNet (batch_size=4)...
+[masks] Extracted torch.Size([1200, 384, 512]) masks in 33.6s
+[masks] RadialZoomWarp constructed for: half-frame sim (prob=0.5), ego_flow input — zoom mean=0.0042, std=0.1444, n_pairs=600
+[arch] pose_dim=6 (source=legacy_film_autodetect)
+[train] 5-phase Quantizr-style schedule active. Boundaries: [150, 400, 450, 500, 500] (total 500 epochs). P1(anchor):150ep@5.0e-05 | P2(finetune):250ep@5.0e-05 | P3(joint):50ep@5.0e-05 | P4(qat):50ep@5.0e-05
+[train] FP4 QAT deferred until Phase 4 (starts epoch 450)
+[train] 500 epochs (pretrain=0), 150/600 pairs/epoch, accum=2, lr=0.001, depth=1
+[train] P0: Precomputing GT scorer cache...
+[train] P0: Cached 600 GT scorer outputs (2359.3MB)
+[train] eval_roundtrip=True — GT cache DISABLED, roundtrip simulation active (noise_std=0.5)

@@ -1,0 +1,44 @@
+{
+  "epoch": 259,
+  "scorer": 2.45371280148534,
+  "pose": 0.4841782284455985,
+  "seg": 0.002533077741197,
+  "fp4_path": "/tmp/pact/lane_w_results/train/renderer_lane_w_hard_pair_best_fp4.pt",
+  "fp4_size": 232674,
+  "args": {
+    "base_ch": 36,
+    "mid_ch": 60,
+    "embed_dim": 6,
+    "motion_hidden": 32,
+    "depth": 1,
+    "pretrain_epochs": 0,
+    "epochs": 500,
+    "lr": 5e-05,
+    "profile": null,
+    "tag": "lane_w_hard_pair",
+    "variant": "mask_renderer",
+    "latent_ch": 8,
+    "latent_shapes": [
+      [
+        6,
+        8
+      ],
+      [
+        12,
+        16
+      ],
+      [
+        24,
+        32
+      ]
+    ],
+    "residual_hidden": 32,
+    "residual_layers": 2,
+    "residual_scale": 16.0,
+    "seed": 42,
+    "deterministic": true,
+    "no_mask_encoder": false,
+    "informational_only": false,
+    "stacking_candidate": true
+  }
+}

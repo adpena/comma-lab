@@ -1,0 +1,29 @@
+{
+  "started_at_utc": "2026-04-29T13:33:14Z",
+  "git_hash": "no-git",
+  "gpu_name": "Tesla T4",
+  "driver_version": "580.95.05",
+  "torch_version": "2.5.1+cu124",
+  "cuda_version": "12.4",
+  "cuda_available": true,
+  "lane_script": "scripts/remote_lane_s_self_compress.sh",
+  "lane_name": "lane_s_self_compress_on_lane_a",
+  "profile": "self_compress_renderer_full",
+  "anchor_renderer": "experiments/results/lane_a_landed/iter_0/renderer.bin",
+  "anchor_poses": "experiments/results/lane_a_landed/iter_0/optimized_poses.pt",
+  "anchor_masks": "experiments/results/lane_a_landed/iter_0/masks.mkv",
+  "anchor_score_baseline": 1.15,
+  "predicted_band": [
+    0.85,
+    1.2
+  ],
+  "rationale": "SC per-channel bit-depth (init 8 \u2192 target 2.5) preserves Lane A distortion floor while collapsing rate from 0.0185 \u2192 ~0.005-0.007 via 290KB \u2192 16-20KB renderer.",
+  "sc_init_bits": 8.0,
+  "sc_target_bits": 2.5,
+  "sc_lambda_end": 1.0,
+  "sc_lambda_ramp_start_frac": 0.3,
+  "total_epochs": 500,
+  "lr": 5e-05,
+  "output_dir": "/tmp/pact/lane_s_results",
+  "tag": "lane_s_self_compress"
+}

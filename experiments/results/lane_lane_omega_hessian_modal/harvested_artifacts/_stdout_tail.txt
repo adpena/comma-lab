@@ -1,0 +1,39 @@
+provenance: {"started_at_utc": "2026-04-29T12:09:09Z", "git_hash": "no-git", "gpu_name": "Tesla T4", "driver_version": "580.95.05", "torch_version": "2.5.1+cu124", "cuda_version": "12.4", "cuda_available": true, "lane_script": "scripts/remote_lane_omega_hessian_qat.sh", "lane_name": "lane_omega_hessian_qat_on_lane_a", "anchor_renderer": "experiments/results/lane_a_landed/iter_0/renderer.bin", "anchor_poses": "experiments/results/lane_a_landed/iter_0/optimized_poses.pt", "anchor_masks": "experiments/results/lane_a_landed/iter_0/masks.mkv", "anchor_score_baseline": 1.15, "predicted_band": [0.7, 1.05], "rationale": "Per-WEIGHT Hessian-aware bit allocation. Water-fill 600k bits across all eligible Conv2d/Linear weights. Critical weights (high Fisher importance) keep 6-8 bits; bulk weights drop to 1-2 bits. Protected layers (head/motion/FiLM/fuse_conv) stay FP16 \u2014 same protection list as Lane S.", "target_total_bits": 600000, "alpha": 0.5, "min_bits": 1, "max_bits": 8, "output_dir": "/tmp/pact/lane_omega_results", "tag": "lane_omega_hessian_qat"}
+[lane-omega] 2026-04-29T12:09:10Z === Stage 0: NVDEC probe ===
+[probe_nvdec] Modal runtime — NVDEC not required (auth_eval uses cpu device)
+[lane-omega] 2026-04-29T12:09:10Z   anchor_renderer: experiments/results/lane_a_landed/iter_0/renderer.bin (296776 bytes, ASYM FP32)
+[lane-omega] 2026-04-29T12:09:10Z   anchor_poses:    experiments/results/lane_a_landed/iter_0/optimized_poses.pt
+[lane-omega] 2026-04-29T12:09:10Z   anchor_masks:    experiments/results/lane_a_landed/iter_0/masks.mkv (421483 bytes)
+[lane-omega] 2026-04-29T12:09:10Z === Pre-flight: argparse dead-flag scan ===
+OK: 10 flags all real
+[lane-omega] 2026-04-29T12:09:10Z === Stage 1: per-weight Hessian importance profile ===
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/tmp/pact/experiments/profile_hessian_per_weight.py", line 545, in main
+    profile_hessian(
+  File "/tmp/pact/experiments/profile_hessian_per_weight.py", line 371, in profile_hessian
+    pairs_pred = model(masks_t, masks_t1, **kwargs)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/pact/src/tac/renderer.py", line 1217, in forward
+    frame_t1 = self.renderer(mask_t1, pose=pose)  # (B, 3, H, W) float [0, 255]
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/pact/src/tac/renderer.py", line 471, in forward
+    gy = torch.linspace(-1, 1, H, device=x.device, dtype=x.dtype)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: CUDA error: device-side assert triggered
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1
+Compile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.
+
