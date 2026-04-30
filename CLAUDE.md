@@ -789,4 +789,46 @@ J. `check_vastai_prompts_have_cost_cap` — Subagent prompts mentioning Vast.ai 
 K. `check_uniward_delta_has_attestation_gate` — `--with-uniward-delta` invocations must include `--allow-pending-compliance` OR an attestation file reference. Lane C R5 (commit ef8a9a1b). Live count: 6.
 L. `check_remote_scripts_write_provenance` — Every `scripts/remote_*.sh` must write `provenance.json`. Memory: `feedback_canonical_remote_bootstraps`. Live count: 5 (Lanes A/B/D/G).
 
+**Lane maturity registry (2026-04-30, STRICT @ 0):**
+
+90. `check_lane_registry_consistent` — `.omx/state/lane_registry.json` must parse, schema_version must match, no duplicate lane ids, every lane has all 7 gates present, stored `level` matches computed-from-gates, every file-path-looking evidence string points to a real file. Mutations only via `tools/lane_maturity.py mark/unmark/add-lane`. Memory: `project_lane_maturity_harness_landed_20260430` + `feedback_production_hardened_standard_definition_20260430`. Live count: 0.
+
 **Promotion path:** A new check starts `strict=False`, the live violation count is fixed across the codebase, then it is flipped `strict=True` in `preflight_all()`. The promotion pattern is documented in commit 7f2740e4 (the strict-flip of checks 1-11). Reverting any strict check will fail at commit/PR/run time.
+
+## Lane maturity registry — non-negotiable
+
+Every lane MUST be registered in `.omx/state/lane_registry.json` via `tools/lane_maturity.py`. Claiming Level 2 or Level 3 without a corresponding `mark` command is FORBIDDEN. Subagents shipping a lane MUST run `python tools/lane_maturity.py mark <lane> --gate <gate> --evidence <path>` for each gate they hit. Preflight Check 90 (`check_lane_registry_consistent`) fails STRICT if the registry is inconsistent (level/gates mismatch, duplicate ids, missing gates, file-path evidence pointing to non-existent files).
+
+The 7 gates and their meaning are defined in `feedback_production_hardened_standard_definition_20260430`:
+
+1. `impl_complete` — production code lands; no `NotImplementedError`; all CLI flags wired
+2. `real_archive_empirical` — real-archive empirical measurement on Lane G v3 anchor (or equivalent); tagged `[empirical:<artifact>]`
+3. `contest_cuda` — actual `[contest-CUDA]` score (Vast.ai 4090 / Modal A100); NEVER MPS, NEVER `[contest-CPU advisory]`
+4. `strict_preflight` — STRICT preflight check covering the lane's bug class
+5. `three_clean_review` — 3-clean-pass adversarial review counter at 3/3
+6. `memory_entry` — memory file documenting the empirical result + cross-refs
+7. `deploy_runbook` — `scripts/remote_lane_<id>.sh` + heartbeat + watchdog + harvest
+
+Computed level: 0 = 0 gates, 1 = ≥1 gate, 2 = `impl_complete` AND `real_archive_empirical` true, 3 = ALL 7 true. A lane with 4 gates true but missing `impl_complete` is still Level 1 (not Level 2). The CLI computes this for you — never set `level` by hand.
+
+CLI usage:
+
+```bash
+# Audit table
+python tools/lane_maturity.py audit
+
+# Mark a gate satisfied
+python tools/lane_maturity.py mark lane_g_v3 --gate contest_cuda \
+    --evidence "1.05 [contest-CUDA] reports/raw/2026-04-29-..."
+
+# Validate (preflight Check 90 also runs this)
+python tools/lane_maturity.py validate
+
+# Regenerate reports/lane_maturity.md
+python tools/lane_maturity.py report
+
+# Register a new lane at Level 0
+python tools/lane_maturity.py add-lane lane_new --name "New Lane" --phase 2
+```
+
+Every mutation appends a JSONL record to `.omx/state/lane_maturity_audit.log` for forensics.
