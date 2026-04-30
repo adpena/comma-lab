@@ -1,0 +1,697 @@
+#!/usr/bin/env python3
+"""Lane Maturity Harness — canonical CLI for the lane registry.
+
+Tracks every lane's level (0/1/2/3) status against the 7-gate Level-3
+checklist defined in
+`feedback_production_hardened_standard_definition_20260430.md`:
+
+  1. impl_complete            — production code lands
+  2. real_archive_empirical   — real-archive empirical measurement
+  3. contest_cuda             — [contest-CUDA] score, NEVER MPS, NEVER advisory
+  4. strict_preflight         — STRICT preflight check covers the bug class
+  5. three_clean_review       — 3-clean-pass adversarial review counter @ 3/3
+  6. memory_entry             — memory file with empirical result + cross-refs
+  7. deploy_runbook           — remote_lane script + heartbeat + watchdog +
+                                 harvest path
+
+Computed level rules (anything that disagrees with these is a CLI bug):
+
+  level 0 — 0 gates satisfied (SKETCH)
+  level 1 — 1+ gate satisfied  (SCAFFOLD)
+  level 2 — impl_complete AND real_archive_empirical satisfied (INTEGRATION)
+  level 3 — ALL 7 gates satisfied  (FULL PRODUCTION HARDENED + RECURSIVE
+            ADVERSARIAL REVIEWED)
+
+NOTE on the level-2-vs-1 tie-break: a lane that has, say, 4 gates satisfied
+but not impl_complete OR not real_archive_empirical is STILL only level 1 —
+because Level 2 specifically requires those two gates. The audit gate-count
+is informational; the rule above is binding.
+
+Subcommands
+───────────
+  audit                  — colored table to stdout (default if no args).
+  mark <id> --gate G --evidence E
+                         — set gate G of lane <id> to true with evidence E.
+                           Errors out if E looks like a path (contains '/')
+                           but does not exist on disk.
+  unmark <id> --gate G --reason R
+                         — revert gate G to false; reason logged in audit.
+  validate               — exit nonzero if registry is inconsistent.
+  report                 — write reports/lane_maturity.md.
+  add-lane <id> --name N --phase P
+                         — register a new lane at level 0.
+
+Every mutation appends a JSONL record to .omx/state/lane_maturity_audit.log.
+
+Cooperators
+───────────
+This CLI MUST be the only mutator of .omx/state/lane_registry.json. Bare
+hand-edits land a lane at potentially-wrong level + skip the audit log.
+Preflight Check 90 (`check_lane_registry_consistent`) verifies the registry
+is internally consistent at every commit.
+"""
+from __future__ import annotations
+
+import argparse
+import datetime as _dt
+import json
+import os
+import sys
+from pathlib import Path
+from typing import Any
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+
+REGISTRY_REL = ".omx/state/lane_registry.json"
+AUDIT_LOG_REL = ".omx/state/lane_maturity_audit.log"
+REPORT_REL = "reports/lane_maturity.md"
+
+EXPECTED_SCHEMA_VERSION = 1
+
+# The 7 gates, in fixed display order.
+GATES = [
+    "impl_complete",
+    "real_archive_empirical",
+    "contest_cuda",
+    "strict_preflight",
+    "three_clean_review",
+    "memory_entry",
+    "deploy_runbook",
+]
+
+# Gates that — if EITHER is unsatisfied — disqualify a lane from Level 2 even
+# if 4+ gates are otherwise true. See module docstring "level-2-vs-1 tie-break".
+LEVEL_2_REQUIRED_GATES = {"impl_complete", "real_archive_empirical"}
+
+# Heuristic: an "evidence" string LOOKS LIKE a file path if it contains a
+# slash AND starts with one of these prefixes.
+_FILE_PATH_PREFIXES = (
+    "/", "src/", "tests/", "scripts/", ".omx/", "reports/", "memory/",
+    "experiments/", "tools/", "submissions/", "docs/", "configs/",
+    "src/tac/", "upstream/",
+)
+
+
+# ── Time / IO helpers ────────────────────────────────────────────────────
+
+
+def _now_iso() -> str:
+    return _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _registry_path(repo_root: Path | None = None) -> Path:
+    return (repo_root or REPO_ROOT) / REGISTRY_REL
+
+
+def _audit_log_path(repo_root: Path | None = None) -> Path:
+    return (repo_root or REPO_ROOT) / AUDIT_LOG_REL
+
+
+def _report_path(repo_root: Path | None = None) -> Path:
+    return (repo_root or REPO_ROOT) / REPORT_REL
+
+
+def load_registry(repo_root: Path | None = None) -> dict[str, Any]:
+    """Load + parse the lane registry. Raises ValueError on schema mismatch."""
+    path = _registry_path(repo_root)
+    if not path.exists():
+        raise FileNotFoundError(f"lane registry missing: {path}")
+    data = json.loads(path.read_text())
+    if not isinstance(data, dict):
+        raise ValueError(f"registry must be a JSON object, got {type(data).__name__}")
+    sv = data.get("schema_version")
+    if sv != EXPECTED_SCHEMA_VERSION:
+        raise ValueError(
+            f"registry schema_version mismatch: expected {EXPECTED_SCHEMA_VERSION}, "
+            f"got {sv!r}"
+        )
+    if "lanes" not in data or not isinstance(data["lanes"], list):
+        raise ValueError("registry missing 'lanes' list")
+    return data
+
+
+def save_registry(data: dict[str, Any], repo_root: Path | None = None) -> None:
+    path = _registry_path(repo_root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    data["updated_at"] = _now_iso()
+    path.write_text(json.dumps(data, indent=2, sort_keys=False) + "\n")
+
+
+def append_audit_log(record: dict[str, Any], repo_root: Path | None = None) -> None:
+    path = _audit_log_path(repo_root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "a") as f:
+        f.write(json.dumps(record, sort_keys=True) + "\n")
+
+
+# ── Level computation ────────────────────────────────────────────────────
+
+
+def looks_like_filepath(evidence: str) -> bool:
+    """Heuristic: evidence string LOOKS LIKE a file path."""
+    if not evidence or not isinstance(evidence, str):
+        return False
+    # Strip leading bracketed tags like "[empirical:..." or "[contest-CUDA] ..."
+    # The actual path inside brackets is colon-separated; we match the prefix
+    # heuristic on the FULL string.
+    s = evidence.strip()
+    # If it doesn't contain a '/' it can't be a real path.
+    if "/" not in s:
+        return False
+    # The whole string need not be a path; we look at the first whitespace-
+    # delimited token.
+    first_token = s.split()[0].rstrip(",.;)")
+    # Strip a leading "[tag:" prefix if present
+    if "[" in first_token and ":" in first_token:
+        # e.g. "[empirical:reports/..." → reports/...
+        idx = first_token.index(":")
+        first_token = first_token[idx + 1:].rstrip("]")
+    return any(first_token.startswith(p) for p in _FILE_PATH_PREFIXES)
+
+
+def extract_filepath(evidence: str) -> str | None:
+    """Best-effort: extract the file path from an evidence string.
+
+    Returns the path token, or None if no path-like substring found.
+    """
+    if not looks_like_filepath(evidence):
+        return None
+    s = evidence.strip()
+    first_token = s.split()[0].rstrip(",.;)")
+    if "[" in first_token and ":" in first_token:
+        idx = first_token.index(":")
+        first_token = first_token[idx + 1:].rstrip("]")
+    return first_token
+
+
+def compute_level(gates: dict[str, dict[str, Any]]) -> int:
+    """Compute the level from gate status (0/1/2/3).
+
+    Rules (binding):
+      - Level 3: ALL 7 gates true.
+      - Level 2: impl_complete AND real_archive_empirical true.
+      - Level 1: at least 1 gate true.
+      - Level 0: 0 gates true.
+
+    A lane that has 4 gates true but is missing impl_complete is LEVEL 1,
+    not Level 2, because Level 2 requires those specific gates.
+    """
+    n_true = sum(1 for g in GATES if gates.get(g, {}).get("status") is True)
+    if n_true == len(GATES):
+        return 3
+    impl = bool(gates.get("impl_complete", {}).get("status"))
+    emp = bool(gates.get("real_archive_empirical", {}).get("status"))
+    if impl and emp:
+        return 2
+    if n_true >= 1:
+        return 1
+    return 0
+
+
+# ── Validation ───────────────────────────────────────────────────────────
+
+
+def validate_registry(
+    data: dict[str, Any], repo_root: Path | None = None,
+) -> list[str]:
+    """Return list of validation errors. Empty = valid."""
+    errors: list[str] = []
+    root = repo_root or REPO_ROOT
+
+    seen_ids: set[str] = set()
+    for lane in data.get("lanes", []):
+        lid = lane.get("id")
+        if not lid:
+            errors.append("lane has no 'id'")
+            continue
+        if lid in seen_ids:
+            errors.append(f"duplicate lane id: {lid}")
+        seen_ids.add(lid)
+
+        gates = lane.get("gates", {})
+        if not isinstance(gates, dict):
+            errors.append(f"{lid}: 'gates' must be a dict")
+            continue
+
+        # Every gate must be present (even if false)
+        for gname in GATES:
+            if gname not in gates:
+                errors.append(f"{lid}: gate '{gname}' missing")
+                continue
+            g = gates[gname]
+            if not isinstance(g, dict) or "status" not in g or "evidence" not in g:
+                errors.append(
+                    f"{lid}: gate '{gname}' must be {{status, evidence}}, "
+                    f"got {g!r}"
+                )
+                continue
+            if not isinstance(g["status"], bool):
+                errors.append(
+                    f"{lid}: gate '{gname}' status must be bool, "
+                    f"got {g['status']!r}"
+                )
+
+        # Computed level must match stored level
+        stored = lane.get("level")
+        computed = compute_level(gates)
+        if stored != computed:
+            errors.append(
+                f"{lid}: stored level {stored!r} disagrees with computed "
+                f"level {computed} (gate count: "
+                f"{sum(1 for g in GATES if gates.get(g, {}).get('status') is True)}/{len(GATES)})"
+            )
+
+        # Evidence path heuristic — if it LOOKS like a path, it MUST exist
+        for gname, g in gates.items():
+            if not isinstance(g, dict):
+                continue
+            if g.get("status") is not True:
+                # Don't validate paths on unsatisfied gates (evidence often "")
+                continue
+            ev = g.get("evidence", "")
+            if not ev:
+                errors.append(
+                    f"{lid}: gate '{gname}' status=true but evidence is empty"
+                )
+                continue
+            path = extract_filepath(ev)
+            if path is None:
+                # Evidence is descriptive text only — that's OK.
+                continue
+            if not (root / path).exists():
+                errors.append(
+                    f"{lid}: gate '{gname}' evidence path does not exist: {path}"
+                )
+
+    return errors
+
+
+# ── Mutations (mark / unmark / add-lane) ─────────────────────────────────
+
+
+def mark_gate(
+    data: dict[str, Any],
+    lane_id: str,
+    gate: str,
+    evidence: str,
+    repo_root: Path | None = None,
+) -> dict[str, Any]:
+    """Set lane.gates[gate] = {status: true, evidence}; bump computed level.
+
+    Returns the updated lane dict (mutates `data` in place).
+
+    Errors:
+      - lane_id not in registry
+      - gate not in GATES
+      - evidence empty
+      - evidence LOOKS LIKE a path but does not exist on disk
+    """
+    if gate not in GATES:
+        raise ValueError(
+            f"unknown gate '{gate}'. Valid gates: {', '.join(GATES)}"
+        )
+    if not evidence or not evidence.strip():
+        raise ValueError("evidence is required and must be non-empty")
+
+    lanes = data["lanes"]
+    lane = next((l for l in lanes if l["id"] == lane_id), None)
+    if lane is None:
+        raise ValueError(f"unknown lane id: {lane_id!r}")
+
+    path = extract_filepath(evidence)
+    if path is not None:
+        root = repo_root or REPO_ROOT
+        if not (root / path).exists():
+            raise ValueError(
+                f"evidence path does not exist on disk: {path} "
+                f"(if this is descriptive text not a path, rephrase to "
+                f"avoid leading '{path.split('/')[0]}/')"
+            )
+
+    lane.setdefault("gates", {})[gate] = {"status": True, "evidence": evidence}
+    lane["level"] = compute_level(lane["gates"])
+    return lane
+
+
+def unmark_gate(
+    data: dict[str, Any],
+    lane_id: str,
+    gate: str,
+    reason: str,
+) -> dict[str, Any]:
+    """Set lane.gates[gate] = {status: false, evidence: ""}; bump level."""
+    if gate not in GATES:
+        raise ValueError(
+            f"unknown gate '{gate}'. Valid gates: {', '.join(GATES)}"
+        )
+    lanes = data["lanes"]
+    lane = next((l for l in lanes if l["id"] == lane_id), None)
+    if lane is None:
+        raise ValueError(f"unknown lane id: {lane_id!r}")
+    if not reason or not reason.strip():
+        raise ValueError("--reason is required for unmark")
+    lane.setdefault("gates", {})[gate] = {"status": False, "evidence": ""}
+    lane["level"] = compute_level(lane["gates"])
+    return lane
+
+
+def add_lane(
+    data: dict[str, Any],
+    lane_id: str,
+    name: str,
+    phase: float | int,
+    notes: str = "",
+) -> dict[str, Any]:
+    """Register a new lane at level 0."""
+    lanes = data["lanes"]
+    if any(l["id"] == lane_id for l in lanes):
+        raise ValueError(f"lane id already exists: {lane_id}")
+    new_lane = {
+        "id": lane_id,
+        "name": name,
+        "phase": phase,
+        "level": 0,
+        "gates": {
+            g: {"status": False, "evidence": ""} for g in GATES
+        },
+        "notes": notes,
+    }
+    lanes.append(new_lane)
+    return new_lane
+
+
+# ── Output (audit / report) ──────────────────────────────────────────────
+
+
+# ANSI colors (no rich dep needed). Falls back to no-color if not a TTY.
+_COLOR = sys.stdout.isatty() and os.environ.get("NO_COLOR") is None
+def _c(code: str, s: str) -> str:
+    return f"\033[{code}m{s}\033[0m" if _COLOR else s
+def _green(s: str) -> str: return _c("32", s)
+def _yellow(s: str) -> str: return _c("33", s)
+def _red(s: str) -> str: return _c("31", s)
+def _bold(s: str) -> str: return _c("1", s)
+def _dim(s: str) -> str: return _c("2", s)
+
+
+_LEVEL_COLOR = {
+    0: _red,
+    1: _yellow,
+    2: _yellow,
+    3: _green,
+}
+
+
+def render_audit_table(data: dict[str, Any]) -> str:
+    """Render colored audit table to a string."""
+    lines: list[str] = []
+    lanes = data.get("lanes", [])
+
+    # Group by phase
+    phases: dict[float | int, list[dict[str, Any]]] = {}
+    for lane in lanes:
+        phases.setdefault(lane.get("phase", "?"), []).append(lane)
+
+    # Header
+    lines.append(_bold("LANE MATURITY AUDIT") + f" — {data.get('updated_at', '?')}")
+    lines.append("")
+
+    # Summary
+    by_level = {0: 0, 1: 0, 2: 0, 3: 0}
+    for lane in lanes:
+        by_level[lane.get("level", 0)] += 1
+    summary = (
+        f"{_bold('Total lanes:')} {len(lanes)}  "
+        f"{_green('L3=')}" + str(by_level[3]) + "  "
+        f"{_yellow('L2=')}" + str(by_level[2]) + "  "
+        f"{_yellow('L1=')}" + str(by_level[1]) + "  "
+        f"{_red('L0=')}" + str(by_level[0])
+    )
+    lines.append(summary)
+    lines.append("")
+
+    # Per-phase tables
+    for phase in sorted(phases.keys(), key=lambda x: float(x) if isinstance(x, (int, float)) else 99):
+        plist = phases[phase]
+        lines.append(_bold(f"── PHASE {phase} ──"))
+        # Header row
+        gate_short = {
+            "impl_complete": "impl",
+            "real_archive_empirical": "emp",
+            "contest_cuda": "cuda",
+            "strict_preflight": "preflt",
+            "three_clean_review": "3clean",
+            "memory_entry": "mem",
+            "deploy_runbook": "deploy",
+        }
+        hdr = f"  {'lvl':<3} {'lane id':<35} "
+        for g in GATES:
+            hdr += f"{gate_short[g]:>6} "
+        lines.append(_dim(hdr))
+        for lane in plist:
+            lvl = lane.get("level", 0)
+            lvl_str = _LEVEL_COLOR[lvl](f"L{lvl}")
+            gates = lane.get("gates", {})
+            row = f"  {lvl_str:<3} {lane['id']:<35} "
+            for g in GATES:
+                ok = gates.get(g, {}).get("status") is True
+                mark = _green("✓") if ok else _red("✗")
+                row += f"{mark:>6} "
+            lines.append(row)
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+def render_report_md(data: dict[str, Any]) -> str:
+    """Render Markdown report (auto-generated; safe to commit)."""
+    lanes = data.get("lanes", [])
+    by_level = {0: 0, 1: 0, 2: 0, 3: 0}
+    for lane in lanes:
+        by_level[lane.get("level", 0)] += 1
+
+    lines: list[str] = []
+    lines.append("# Lane Maturity Report")
+    lines.append("")
+    lines.append(
+        "*Auto-generated by `tools/lane_maturity.py report`. "
+        "Do not hand-edit — re-run the command to refresh.*"
+    )
+    lines.append("")
+    lines.append(f"- Updated: `{data.get('updated_at', '?')}`")
+    lines.append(f"- Total lanes: **{len(lanes)}**")
+    lines.append(f"- Level 3 (FULL PRODUCTION HARDENED): **{by_level[3]}**")
+    lines.append(f"- Level 2 (INTEGRATION):              **{by_level[2]}**")
+    lines.append(f"- Level 1 (SCAFFOLD):                 **{by_level[1]}**")
+    lines.append(f"- Level 0 (SKETCH):                   **{by_level[0]}**")
+    lines.append("")
+    lines.append("## Gate definitions")
+    lines.append("")
+    for g, desc in (data.get("gate_definitions") or {}).items():
+        lines.append(f"- **`{g}`** — {desc}")
+    lines.append("")
+
+    # Per-phase
+    phases: dict[float | int, list[dict[str, Any]]] = {}
+    for lane in lanes:
+        phases.setdefault(lane.get("phase", "?"), []).append(lane)
+
+    for phase in sorted(phases.keys(), key=lambda x: float(x) if isinstance(x, (int, float)) else 99):
+        lines.append(f"## Phase {phase}")
+        lines.append("")
+        lines.append(
+            "| Lane | Level | impl | emp | cuda | preflt | 3clean | mem | deploy | Notes |"
+        )
+        lines.append(
+            "|------|-------|------|-----|------|--------|--------|-----|--------|-------|"
+        )
+        for lane in phases[phase]:
+            lvl = lane.get("level", 0)
+            gates = lane.get("gates", {})
+
+            def _cell(g: str) -> str:
+                return "✓" if gates.get(g, {}).get("status") is True else "✗"
+
+            notes = (lane.get("notes") or "").replace("\n", " ").replace("|", "\\|")
+            lines.append(
+                f"| `{lane['id']}` ({lane.get('name','')}) | "
+                f"**L{lvl}** | "
+                f"{_cell('impl_complete')} | "
+                f"{_cell('real_archive_empirical')} | "
+                f"{_cell('contest_cuda')} | "
+                f"{_cell('strict_preflight')} | "
+                f"{_cell('three_clean_review')} | "
+                f"{_cell('memory_entry')} | "
+                f"{_cell('deploy_runbook')} | "
+                f"{notes} |"
+            )
+        lines.append("")
+
+    return "\n".join(lines) + "\n"
+
+
+# ── CLI ──────────────────────────────────────────────────────────────────
+
+
+def cmd_audit(args: argparse.Namespace) -> int:
+    data = load_registry()
+    print(render_audit_table(data))
+    return 0
+
+
+def cmd_validate(args: argparse.Namespace) -> int:
+    data = load_registry()
+    errors = validate_registry(data)
+    if errors:
+        print(_red(f"VALIDATION FAILED ({len(errors)} error(s)):"), file=sys.stderr)
+        for e in errors:
+            print(f"  • {e}", file=sys.stderr)
+        return 2
+    print(_green(f"OK — {len(data['lanes'])} lane(s) validated cleanly."))
+    return 0
+
+
+def cmd_mark(args: argparse.Namespace) -> int:
+    data = load_registry()
+    before = json.dumps(
+        next((l for l in data["lanes"] if l["id"] == args.lane_id), None),
+        sort_keys=True,
+    )
+    try:
+        lane = mark_gate(data, args.lane_id, args.gate, args.evidence)
+    except ValueError as e:
+        print(_red(f"ERROR: {e}"), file=sys.stderr)
+        return 2
+    save_registry(data)
+    after = json.dumps(lane, sort_keys=True)
+    append_audit_log({
+        "timestamp": _now_iso(),
+        "command": "mark",
+        "args": {"lane_id": args.lane_id, "gate": args.gate, "evidence": args.evidence},
+        "before_state": before,
+        "after_state": after,
+    })
+    print(_green(
+        f"OK — {args.lane_id}.{args.gate} = true (level now L{lane['level']})"
+    ))
+    return 0
+
+
+def cmd_unmark(args: argparse.Namespace) -> int:
+    data = load_registry()
+    before = json.dumps(
+        next((l for l in data["lanes"] if l["id"] == args.lane_id), None),
+        sort_keys=True,
+    )
+    try:
+        lane = unmark_gate(data, args.lane_id, args.gate, args.reason)
+    except ValueError as e:
+        print(_red(f"ERROR: {e}"), file=sys.stderr)
+        return 2
+    save_registry(data)
+    after = json.dumps(lane, sort_keys=True)
+    append_audit_log({
+        "timestamp": _now_iso(),
+        "command": "unmark",
+        "args": {
+            "lane_id": args.lane_id,
+            "gate": args.gate,
+            "reason": args.reason,
+        },
+        "before_state": before,
+        "after_state": after,
+    })
+    print(_yellow(
+        f"OK — {args.lane_id}.{args.gate} = false "
+        f"(level now L{lane['level']}); reason: {args.reason}"
+    ))
+    return 0
+
+
+def cmd_add_lane(args: argparse.Namespace) -> int:
+    data = load_registry()
+    try:
+        lane = add_lane(data, args.lane_id, args.name, args.phase, args.notes)
+    except ValueError as e:
+        print(_red(f"ERROR: {e}"), file=sys.stderr)
+        return 2
+    save_registry(data)
+    append_audit_log({
+        "timestamp": _now_iso(),
+        "command": "add-lane",
+        "args": {
+            "lane_id": args.lane_id, "name": args.name,
+            "phase": args.phase, "notes": args.notes,
+        },
+        "before_state": "null",
+        "after_state": json.dumps(lane, sort_keys=True),
+    })
+    print(_green(f"OK — added lane {args.lane_id} at L0 (phase {args.phase})"))
+    return 0
+
+
+def cmd_report(args: argparse.Namespace) -> int:
+    data = load_registry()
+    md = render_report_md(data)
+    out = _report_path()
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(md)
+    print(_green(f"OK — wrote {out.relative_to(REPO_ROOT)}"))
+    return 0
+
+
+def build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        prog="lane_maturity",
+    )
+    sub = p.add_subparsers(dest="cmd")
+
+    pa = sub.add_parser("audit", help="print colored audit table")
+    pa.set_defaults(func=cmd_audit)
+
+    pv = sub.add_parser("validate", help="exit nonzero if registry inconsistent")
+    pv.set_defaults(func=cmd_validate)
+
+    pm = sub.add_parser("mark", help="set a gate to true with evidence")
+    pm.add_argument("lane_id", help="lane id (e.g. lane_g_v3)")
+    pm.add_argument("--gate", required=True, choices=GATES,
+                    help=f"one of: {', '.join(GATES)}")
+    pm.add_argument("--evidence", required=True,
+                    help="evidence string (file path will be checked for existence)")
+    pm.set_defaults(func=cmd_mark)
+
+    pu = sub.add_parser("unmark", help="revert a gate to false")
+    pu.add_argument("lane_id", help="lane id")
+    pu.add_argument("--gate", required=True, choices=GATES)
+    pu.add_argument("--reason", required=True,
+                    help="why this gate is being reverted")
+    pu.set_defaults(func=cmd_unmark)
+
+    pal = sub.add_parser("add-lane", help="register a new lane at level 0")
+    pal.add_argument("lane_id", help="unique lane id")
+    pal.add_argument("--name", required=True, help="display name")
+    pal.add_argument("--phase", required=True, type=float,
+                     help="phase number (1, 1.5, 2, 3)")
+    pal.add_argument("--notes", default="", help="optional notes")
+    pal.set_defaults(func=cmd_add_lane)
+
+    pr = sub.add_parser("report",
+                        help=f"write {REPORT_REL}")
+    pr.set_defaults(func=cmd_report)
+
+    return p
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    if not getattr(args, "cmd", None):
+        # Default: audit
+        return cmd_audit(args)
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
