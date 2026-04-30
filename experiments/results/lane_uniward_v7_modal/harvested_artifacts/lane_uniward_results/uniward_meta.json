@@ -1,0 +1,14 @@
+{
+  "lane": "UNIWARD",
+  "actual_bytes": 176665,
+  "masks_shape": [
+    1200,
+    48,
+    64
+  ],
+  "texture_shape": [
+    48,
+    64
+  ],
+  "texture_quantile": 0.5
+}
