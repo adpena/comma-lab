@@ -135,26 +135,69 @@ def _release_lock(fh) -> None:
         fh.close()
 
 
-def _git_add(files: list[str]) -> tuple[int, str]:
-    """Run `git add -- <files>` and return (rc, output)."""
+def _make_temp_index() -> tuple[str, dict]:
+    """Create a per-invocation temp git index, seeded from HEAD.
+
+    Returns (temp_index_path, env_dict) — env_dict is the subprocess env
+    overlay that pins GIT_INDEX_FILE to the temp index. This isolates
+    `git add` + `git commit` from the shared `.git/index` so a CONCURRENT
+    subagent (or a manual `git add` from the user's shell) cannot inject
+    files into our commit's staged set.
+
+    Bug class fixed: 2026-04-29 PM — even with the file-lock serializer,
+    Defect #1 from subagent #264 was absorbed into commit 22a2bcd2 (Lane
+    Ω-W-V2 work) because subagent #263 staged AND committed files in the
+    brief window before #264 acquired the lock — both sets of files were
+    in the SHARED index when #263's commit fired. The temp-index
+    isolation makes this impossible going forward.
+    """
+    tmp = REPO_ROOT / ".omx" / "state" / f".subagent-temp-index-{os.getpid()}-{int(time.time() * 1000)}"
+    tmp.parent.mkdir(parents=True, exist_ok=True)
+    # Seed the temp index from HEAD (so `git add` adds modifications, not
+    # everything already-tracked-and-unchanged).
+    env = {**os.environ, "GIT_INDEX_FILE": str(tmp)}
+    proc = subprocess.run(
+        ["git", "read-tree", "HEAD"],
+        cwd=REPO_ROOT, env=env, capture_output=True, text=True,
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(
+            f"git read-tree HEAD failed: rc={proc.returncode} "
+            f"stderr={proc.stderr.strip()}"
+        )
+    return str(tmp), env
+
+
+def _cleanup_temp_index(temp_index_path: str) -> None:
+    """Remove the temp index file. Safe to call multiple times."""
+    try:
+        os.unlink(temp_index_path)
+    except FileNotFoundError:
+        pass
+
+
+def _git_add(files: list[str], env: dict) -> tuple[int, str]:
+    """Run `git add -- <files>` against env's GIT_INDEX_FILE."""
     if not files:
         return 0, "(no files)"
     # NEVER use `git add -A` / `git add .` — per CLAUDE.md "Always commit
     # specific files by name" (sensitive-file leakage prevention).
     cmd = ["git", "add", "--"] + files
-    proc = subprocess.run(cmd, cwd=REPO_ROOT, capture_output=True, text=True)
+    proc = subprocess.run(cmd, cwd=REPO_ROOT, env=env, capture_output=True, text=True)
     return proc.returncode, (proc.stdout + proc.stderr).strip()
 
 
-def _git_commit(message: str, allow_empty: bool = False) -> tuple[int, str, str]:
-    """Run `git commit -m <message>` and return (rc, stdout, stderr).
+def _git_commit(message: str, env: dict, allow_empty: bool = False) -> tuple[int, str, str]:
+    """Run `git commit -m <message>` against env's GIT_INDEX_FILE.
 
-    The pre-commit hook (preflight + review gate) runs here as usual.
+    The pre-commit hook (preflight + review gate) runs here as usual; it
+    inherits GIT_INDEX_FILE so `git diff --cached` calls inside the hook
+    see ONLY this subagent's staged files, not anyone else's.
     """
     cmd = ["git", "commit", "-m", message]
     if allow_empty:
         cmd.append("--allow-empty")
-    proc = subprocess.run(cmd, cwd=REPO_ROOT, capture_output=True, text=True)
+    proc = subprocess.run(cmd, cwd=REPO_ROOT, env=env, capture_output=True, text=True)
     return proc.returncode, proc.stdout, proc.stderr
 
 
@@ -250,21 +293,32 @@ def main() -> int:
         return 2
     wait_seconds = round(time.monotonic() - t0, 3)
 
+    temp_index_path: str | None = None
     try:
+        # Per-invocation temp index — isolates our staging from any
+        # concurrent subagent or manual `git add`. See _make_temp_index
+        # docstring for the bug class this fixes.
+        if args.no_stage:
+            # Caller already staged into .git/index; we honor that.
+            env = {**os.environ}
+        else:
+            temp_index_path, env = _make_temp_index()
+
         # Step 1: stage
         if not args.no_stage:
-            rc, msg = _git_add(files)
+            rc, msg = _git_add(files, env)
             if rc != 0:
                 _append_log({**base_record, "outcome": "git_add_failed",
                              "wait_seconds": wait_seconds,
-                             "git_add_rc": rc, "git_add_output": msg})
+                             "git_add_rc": rc, "git_add_output": msg,
+                             "temp_index": temp_index_path})
                 print(f"[subagent-commit-serializer] git add failed (rc={rc}):\n{msg}",
                       file=sys.stderr)
                 return rc
 
-        # Step 2: commit (pre-commit hook fires here)
+        # Step 2: commit (pre-commit hook fires here, inherits GIT_INDEX_FILE)
         commit_t0 = time.monotonic()
-        rc, stdout, stderr = _git_commit(args.message, allow_empty=args.allow_empty)
+        rc, stdout, stderr = _git_commit(args.message, env, allow_empty=args.allow_empty)
         commit_seconds = round(time.monotonic() - commit_t0, 3)
 
         head_after = _git_head_sha()
@@ -278,6 +332,7 @@ def main() -> int:
             "head_after": head_after,
             "stdout_tail": (stdout or "")[-200:],
             "stderr_tail": (stderr or "")[-200:],
+            "temp_index": temp_index_path,
         })
 
         # Surface git output to caller stderr/stdout.
@@ -294,10 +349,13 @@ def main() -> int:
 
         print(f"[subagent-commit-serializer] OK head={head_after} "
               f"label={args.label} files={len(files)} "
-              f"wait={wait_seconds}s commit={commit_seconds}s",
+              f"wait={wait_seconds}s commit={commit_seconds}s "
+              f"temp_index={'YES' if temp_index_path else 'NO (--no-stage)'}",
               file=sys.stderr)
         return 0
     finally:
+        if temp_index_path:
+            _cleanup_temp_index(temp_index_path)
         _release_lock(lock_fh)
 
 
