@@ -158,12 +158,15 @@ for i in "${!NAMES[@]}"; do
     log "===================================================================="
 
     log "  Stage 2/$NAME: train SegMap"
+    # Council C OOM-class deep fixes (DF2 + DF3) — see Check 87 STRICT.
+    # --bf16 + --scorer-chunk 2 + --batch-size 4 → B*N=8 (RTX 4090 24 GB safe).
     "$PYBIN" -u experiments/train_segmap.py \
         --variant kl_distill \
         --kl-distill-weight 0.002 \
         --kl-distill-temperature 2.0 \
         --hidden "$H" --block-hidden "$BH" --num-blocks "$NB" \
-        --epochs "$EPOCHS" --batch-size 8 --lr 1e-3 \
+        --epochs "$EPOCHS" --batch-size 4 --lr 1e-3 \
+        --bf16 --scorer-chunk 2 \
         --roundtrip-noise-std 0.5 \
         --anchor-renderer "$ANCHOR_RENDERER" \
         --anchor-poses "$ANCHOR_POSES" \

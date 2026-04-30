@@ -175,12 +175,15 @@ PAIR_WEIGHTS="$CURATOR_DIR/pair_weights.pt"
 log "=== Stage 2c: train SegMap (variant=kl_distill, pair_weights=Curator) ==="
 export PYTHONHASHSEED=1234
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+# Council C OOM-class deep fixes (DF2 + DF3) — see Check 87 STRICT.
+# --bf16 + --scorer-chunk 2 + --batch-size 4 → B*N=8 (RTX 4090 24 GB safe).
 "$PYBIN" -u experiments/train_segmap.py \
     --variant kl_distill \
     --kl-distill-weight 0.002 \
     --kl-distill-temperature 2.0 \
     --hidden 24 --block-hidden 24 --num-blocks 8 \
-    --epochs 600 --batch-size 8 --lr 1e-3 \
+    --epochs 600 --batch-size 4 --lr 1e-3 \
+    --bf16 --scorer-chunk 2 \
     --roundtrip-noise-std 0.5 \
     --pair-weights "$PAIR_WEIGHTS" \
     --anchor-renderer "$ANCHOR_RENDERER" \

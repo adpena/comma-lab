@@ -111,10 +111,13 @@ mkdir -p "$TRAIN_DIR"
 # have already saved the seeded weights and re-blend them into the trained
 # inference state below for the packaging stage).
 cp "$SEEDED_INFERENCE" "$TRAIN_DIR/segmap_inference_seeded.pt"
+# Council C OOM-class deep fixes (DF2 + DF3) — see Check 87 STRICT.
+# --bf16 + --scorer-chunk 2 + --batch-size 4 → B*N=8 (RTX 4090 24 GB safe).
 "$PYBIN" -u experiments/train_segmap.py \
     --variant kl_distill \
     --hidden 24 --block-hidden 24 --num-blocks 8 \
-    --epochs 400 --batch-size 8 --lr 5e-4 \
+    --epochs 400 --batch-size 4 --lr 5e-4 \
+    --bf16 --scorer-chunk 2 \
     --roundtrip-noise-std 0.5 \
     --kl-distill-weight 0.002 \
     --kl-distill-temperature 2.0 \

@@ -84,12 +84,19 @@ done
 log "=== Stage 2: train SegMap (variant=hessian_quant — same train as SC++) ==="
 export PYTHONHASHSEED=1234
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+# Council C OOM-class deep fixes (DF2 + DF3) — see Check 87 STRICT.
+# .omx/research/council_oom_class_deep_fix_20260429.md.
+# --bf16 cuts FastViT attention-map allocation ~50% (DF2).
+# --scorer-chunk 2 splits dual scorer_forward_pair calls into 2-pair chunks (DF3).
+# --batch-size 4 keeps B*N (effective per-scorer-call frame count) <= 8 → fits
+# RTX 4090 24 GB / A10G 22 GB with margin (Council C recommendation).
 "$PYBIN" -u experiments/train_segmap.py \
     --variant hessian_quant \
     --kl-distill-weight 0.002 \
     --kl-distill-temperature 2.0 \
     --hidden 24 --block-hidden 24 --num-blocks 8 \
-    --epochs 600 --batch-size 8 --lr 1e-3 \
+    --epochs 600 --batch-size 4 --lr 1e-3 \
+    --bf16 --scorer-chunk 2 \
     --roundtrip-noise-std 0.5 \
     --anchor-renderer "$ANCHOR_RENDERER" \
     --anchor-poses "$ANCHOR_POSES" \

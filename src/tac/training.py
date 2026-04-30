@@ -292,6 +292,35 @@ class TrainConfig(BaseModel):
         "0 = no limit. 39600 = 11h (for 12h Kaggle kernels).",
     )
 
+    # ── Council C OOM-class deep fixes (DF2 + DF3) ──────────────────────
+    # Memory: .omx/research/council_oom_class_deep_fix_20260429.md.
+    # The 21 GB OOM observed across Lane SC++/SA/SO on Modal A10G 22 GB
+    # comes from PoseNet FastViT-T12 stage-1 self-attention map
+    # (B × heads × N² × 4 bytes, N=12288 at 384×512 scorer input).
+    # bf16 halves that allocation; per-pair scorer chunking divides it
+    # by chunk_size. Both fixes are required for SegMap-class training
+    # to fit on a 24 GB 4090 with the canonical batch size.
+    bf16: bool = Field(
+        False,
+        description="Enable bf16 autocast around the SegMapTrainer forward "
+        "(DF2 of council OOM-class deep fix). Cuts the dominant FastViT "
+        "attention-map allocation by ~50%. CUDA-only; raises if requested "
+        "without CUDA. bf16 (NOT fp16) is intentional: bf16 has the same "
+        "exponent range as fp32 so no GradScaler is needed and KL-distill "
+        "softmax math stays well-conditioned for T >= 1.5.",
+    )
+    scorer_chunk: int = Field(
+        0,
+        ge=0,
+        description="Per-pair scorer chunk size (DF3 of council OOM-class "
+        "deep fix). 0 = no chunking (legacy unchunked behaviour). N>0 = "
+        "split each mini-batch's scorer_forward_pair call into chunks of "
+        "N pairs along the batch dim. Cuts per-call attention-map memory "
+        "by chunk_size. Apply to BOTH the gradient-flowing rendered branch "
+        "and the no_grad GT branch. Council C recommendation: B*N <= 8 for "
+        "RTX 4090 24 GB / A10G 22 GB.",
+    )
+
     # Output
     output_dir: str = "experiments/postfilter_weights"
     tag: str = Field("untitled", min_length=1, max_length=128, pattern=r"^[a-zA-Z0-9_\-]+$")

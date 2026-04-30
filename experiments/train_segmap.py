@@ -112,6 +112,28 @@ def _parse_args() -> argparse.Namespace:
              "(banner will be printed; bytes/score will differ).",
     )
 
+    # ── Council C OOM-class deep fixes (DF2 + DF3) ────────────────────
+    # Memory: .omx/research/council_oom_class_deep_fix_20260429.md.
+    # Required for SegMap-class lanes per Check 87 STRICT.
+    p.add_argument(
+        "--bf16",
+        action="store_true",
+        default=False,
+        help="Enable bf16 autocast around SegMapTrainer forward + scorer. "
+             "Halves PoseNet FastViT attention-map allocation. CUDA-only — "
+             "raises if requested without CUDA. Council C DF2.",
+    )
+    p.add_argument(
+        "--scorer-chunk",
+        type=int,
+        default=0,
+        help="Per-pair scorer chunk size for the dual scorer_forward_pair "
+             "calls. 0 = no chunking (legacy unchunked path). N>0 = split "
+             "each mini-batch's scorer call into chunks of N pairs along "
+             "the batch dim. Cuts attention-map memory by ~chunk_size. "
+             "Council C DF3 — recommended B*N <= 8 for 24 GB RTX 4090.",
+    )
+
     p.add_argument("--output-dir", type=str, required=True)
     p.add_argument("--tag", type=str, default="lane_segmap")
 
@@ -156,6 +178,11 @@ def _build_trainer_config(args: argparse.Namespace, device: torch.device):
         ema_decay=args.ema_decay,
         tag=args.tag,
         output_dir=args.output_dir,
+        # Council C OOM-class deep fixes (DF2 + DF3). The TrainConfig
+        # validator rejects bf16=True without CUDA at SegMapTrainer.__init__
+        # time (FORBIDDEN PATTERN: no silent MPS/CPU fallback).
+        bf16=bool(getattr(args, "bf16", False)),
+        scorer_chunk=int(getattr(args, "scorer_chunk", 0) or 0),
     )
     # KL-distill knobs only exist when tac.training.TrainConfig declares
     # them; check via field listing to avoid a hard error if missing.

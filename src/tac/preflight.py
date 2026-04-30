@@ -344,6 +344,32 @@ def preflight_all(
         # 400 epochs. Lane SC++/SA-v2/SO/MM v2 all invalidated. Lands STRICT
         # @ 0 violations after segmap_renderer.py:281 fix.
         check_no_bare_round_in_eval_roundtrip(strict=True, verbose=verbose)
+        # Check 87 (Council C OOM-class deep fix incident 2026-04-29 PM):
+        # SegMap-class lane scripts (any invocation of train_segmap.py)
+        # must pass --bf16 + --scorer-chunk N + --batch-size B with B*N<=8.
+        # Without DF2 (bf16 autocast) AND DF3 (per-pair scorer chunking),
+        # PoseNet FastViT stage-1 self-attention map allocates ~21 GiB
+        # in fp32 at B=16 frames — 14 OOM crashes on Modal A10G 22 GB
+        # shared-tenant cost ~$3.50 with zero artifact. Lands STRICT @ 0
+        # violations after the 8 SegMap-class scripts (SC++/SA/SO/HM-S/
+        # PA/WC-S/DARTS-S/FR-Ω) are updated to pass the new flags +
+        # the matching DF2+DF3 implementation in segmap_renderer.py.
+        # Memory: .omx/research/council_oom_class_deep_fix_20260429.md.
+        check_segmap_class_lanes_have_oom_guards(strict=True, verbose=verbose)
+
+        # Check 88 (Council D EMA wire-in 2026-04-29 PM): every training
+        # script in experiments/train_*.py + qat_*.py + quantize_*.py must
+        # instantiate EMA, call ema.update(model) after optimizer.step(),
+        # and ship the EMA shadow as the inference checkpoint. Per
+        # CLAUDE.md "EMA — NON-NEGOTIABLE". The Quantizr (#1, 0.33) +
+        # Selfcomp (#2, 0.38) full pipelines run EMA through ALL stages
+        # (anchor → finetune → joint → QAT → final). Council D audit
+        # found 8 missing wire-ins; landed in same commit as Check 88
+        # (train_szabolcs.py, qat_finetune.py, qat_omega_lagrangian.py,
+        # quantize_distilled.py, train_imp_cycle.py + the train_joint_pair.py
+        # duplicate-class fix). Lands STRICT @ 0 violations after fix-ups.
+        # Memory: .omx/research/council_ema_audit_20260429.md.
+        check_training_paths_use_ema_correctly(strict=True, verbose=verbose)
 
         # 2026-04-27 meta-bug audit (commit a57731a0): 12 NEW checks for
         # additional bug classes from session + memory. 4 land at 0 live
@@ -6289,6 +6315,394 @@ def check_no_bare_round_in_eval_roundtrip(
             + "\n".join(f"  • {v}" for v in violations)
             + "\n\nFix: replace `up.clamp(0, 255).round()` with "
             "`Uint8STE.apply(up)` (canonical STE at src/tac/quantization.py)."
+        )
+    return violations
+
+
+# ── Check 87 (Council C OOM-class deep fix): SegMap-class lanes must
+#    pass --bf16 + --scorer-chunk N + --batch-size B with B*N <= 8.
+#
+# Bug class this catches: a remote_lane_*.sh script that invokes
+#   "$PYBIN" -u experiments/train_segmap.py ... [no --bf16 OR no --scorer-chunk]
+# OR with --batch-size B and --scorer-chunk N where B*N > 8. The DOMINANT
+# memory cost in SegMap-class training is NOT the 94K-param SegMap renderer
+# itself — it is the **two frozen scorer forward+backward chains** (PoseNet
+# FastViT-T12 + SegNet EfficientNet-B2). Specifically PoseNet's FastViT
+# stage-1 self-attention map is `B × heads × N² × 4 bytes` where N=12288
+# at 384×512 scorer input — ~21 GiB at B=16 frames in fp32. This OOMed
+# 14 instances on Modal A10G 22 GB shared-tenant on 2026-04-29 (~$3.50
+# burnt for zero artifact).
+#
+# The matching code-side fixes are:
+#   DF2 (bf16 autocast): src/tac/segmap_renderer.py SegMapTrainer wraps
+#        the renderer forward + scorer call in
+#        torch.amp.autocast(device_type="cuda", dtype=torch.bfloat16).
+#        Halves the dominant attention-map allocation (10.5 GiB peak on B=8).
+#   DF3 (per-pair scorer chunking): SegMapTrainer._scorer_forward_chunked
+#        splits the dual scorer_forward_pair calls into chunks of N pairs
+#        along the batch dim. Cuts per-call attention by ~chunk_size.
+#   DF1 (gradient checkpointing on SegMap blocks): NOT REQUIRED because
+#        the renderer is only ~5% of the activation footprint per Boyd's
+#        Lagrangian. Allowed as an alternate path via --gradient-checkpointing
+#        + GPU_TIER_HINT=A100/H100 (reserved for future use; currently
+#        no script needs it).
+#
+# Both DF2 and DF3 must be present together (one without the other does
+# NOT fit on RTX 4090 24 GB at the canonical batch size). The B*N<=8 cap
+# is Council C's empirical envelope: 8 frames per scorer call × bf16
+# attention map = 5.3 GiB peak, fits 24 GB GPU with margin including the
+# no_grad GT scorer overlap during backward.
+#
+# Two acceptable patterns:
+#   (A) `--bf16` AND `--scorer-chunk N` AND `--batch-size B` are all
+#       passed AND `B * N <= 8`.
+#   (B) `--gradient-checkpointing` is passed AND the lane script also
+#       exports `GPU_TIER_HINT=A100` or `=H100` (reserved for the rare
+#       case where a lane explicitly wants the renderer-checkpoint path
+#       on a >40 GB GPU).
+#
+# Memory: .omx/research/council_oom_class_deep_fix_20260429.md.
+
+_SEGMAP_CLASS_TRAINING_TARGETS = {
+    "experiments/train_segmap.py",
+}
+_OOM_GUARD_BN_PRODUCT_CAP = 8
+_OOM_GUARD_TIER_HINT_RE = re.compile(
+    r'(?:^|\n)\s*export\s+GPU_TIER_HINT=(A100|H100)'
+)
+
+
+def check_segmap_class_lanes_have_oom_guards(
+    repo_root: Path | None = None,
+    shell_files: list[str] | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Refuse SegMap-class lane scripts that invoke train_segmap.py without
+    the OOM-class deep fixes (Council C DF2 + DF3).
+
+    See the Check 87 comment block above for the full context. This check
+    is the preflight-time guard that prevents a future operator from
+    re-introducing the 21 GiB single-allocation OOM that wasted ~$3.50 on
+    Modal A10G across 14 SC++/SA/SO instances on 2026-04-29.
+
+    Acceptable invocation patterns:
+      A) Has all three: --bf16 + --scorer-chunk N + --batch-size B
+         AND B * N (effective per-scorer-call frame count) <= 8.
+      B) Has --gradient-checkpointing AND env-export GPU_TIER_HINT=A100/H100
+         (only A100/H100 has VRAM headroom to skip the deep fixes).
+
+    Anything else is a violation.
+    """
+    root = repo_root or REPO_ROOT
+    if shell_files is None:
+        shell_files = sorted(
+            str(p.relative_to(root))
+            for p in (root / "scripts").glob("remote_lane_*.sh")
+        )
+
+    violations: list[str] = []
+    n_invocations_checked = 0
+
+    for shell_rel in shell_files:
+        shell_path = root / shell_rel
+        if not shell_path.exists():
+            continue
+        raw = shell_path.read_text()
+        # Path-B opt-out: A100/H100 + --gradient-checkpointing.
+        has_a100_or_h100_hint = bool(_OOM_GUARD_TIER_HINT_RE.search(raw))
+
+        for lineno, target, flags_used in _scan_shell_lane_invocations(shell_path):
+            if target not in _SEGMAP_CLASS_TRAINING_TARGETS:
+                continue
+            n_invocations_checked += 1
+
+            # Re-walk the collapsed logical line containing this invocation
+            # to extract literal --bf16 / --scorer-chunk N / --batch-size B
+            # values. Walking the COLLAPSED text matches the multi-line
+            # backslash-continuation idiom used by every lane script.
+            collapsed = _collapse_shell_continuations(raw)
+            inv_line = ""
+            for logical_line in collapsed.splitlines():
+                if target in logical_line:
+                    inv_line = logical_line
+                    break
+
+            has_bf16 = "--bf16" in inv_line
+            chunk_match = re.search(r'--scorer-chunk\s+(\d+)', inv_line)
+            bs_match = re.search(r'--batch-size\s+(\d+)', inv_line)
+            has_chkpt = "--gradient-checkpointing" in inv_line
+
+            chunk_value = int(chunk_match.group(1)) if chunk_match else None
+            bs_value = int(bs_match.group(1)) if bs_match else None
+
+            # Path A check: all three flags + B*N <= cap.
+            path_a_ok = (
+                has_bf16
+                and chunk_value is not None
+                and chunk_value > 0
+                and bs_value is not None
+                and bs_value * chunk_value <= _OOM_GUARD_BN_PRODUCT_CAP
+            )
+            # Path B check: gradient-checkpointing + A100/H100 hint.
+            path_b_ok = has_chkpt and has_a100_or_h100_hint
+
+            if not (path_a_ok or path_b_ok):
+                violations.append(
+                    f"{shell_rel}:{lineno}: invokes {target} without OOM-class "
+                    f"deep fixes (Council C DF2 + DF3). Required EITHER:\n"
+                    f"      (A) --bf16 + --scorer-chunk N + --batch-size B with "
+                    f"B*N<={_OOM_GUARD_BN_PRODUCT_CAP}, OR\n"
+                    f"      (B) --gradient-checkpointing AND "
+                    f"export GPU_TIER_HINT=A100 (or H100).\n"
+                    f"    Got: bf16={has_bf16}, scorer-chunk={chunk_value}, "
+                    f"batch-size={bs_value}, chkpt={has_chkpt}, "
+                    f"a100_or_h100_hint={has_a100_or_h100_hint}.\n"
+                    f"    Memory: 14 OOMs on 2026-04-29 (Modal A10G 22 GB); "
+                    f"PoseNet FastViT stage-1 attention is "
+                    f"O(B*heads*12288^2*4 bytes). See "
+                    f".omx/research/council_oom_class_deep_fix_20260429.md."
+                )
+
+    if verbose and violations:
+        print(f"  [segmap-oom-guard] {len(violations)} violation(s):")
+        for v in violations:
+            print(f"    • {v}")
+    elif verbose:
+        print(
+            f"  [segmap-oom-guard] OK: "
+            f"{n_invocations_checked} SegMap-class invocations clean"
+        )
+
+    if violations and strict:
+        raise PreflightError(
+            "SEGMAP OOM GUARD: SegMap-class lane scripts must include the "
+            "DF2+DF3 deep fixes (bf16 autocast + per-pair scorer chunking) "
+            "before dispatch. See "
+            ".omx/research/council_oom_class_deep_fix_20260429.md\n"
+            + "\n".join(f"  • {v}" for v in violations)
+        )
+    return violations
+
+
+# ── Check 88 (Council D EMA wire-in): every training path must EMA the model
+#
+# Bug class this catches: a script in experiments/train_*.py (or
+# src/tac/experiments/train_*.py) — and the QAT/post-training quantization
+# scripts (qat_*.py, quantize_*.py) — that calls optimizer.step() in its
+# main loop but does NOT instantiate `EMA(...)` or call `ema.update(...)`.
+# Per CLAUDE.md "EMA — NON-NEGOTIABLE": every training path MUST
+# instantiate EMA, update it after every optimizer.step(), and save the
+# EMA shadow (not the live weights) as the inference checkpoint.
+# Without EMA, single-epoch noise dominates the final checkpoint. Lane G
+# v3 (score 1.05) used EMA correctly. Quantizr (#1, 0.33) uses EMA.
+# Selfcomp (#2, 0.38) uses EMA. Every training run without EMA is a
+# wasted run (Quantizr 0.997 canonical decay).
+#
+# Detection: AST scan for a Call node whose unparsed func ends with
+# `.step()` AND whose receiver name is `optimizer` / `optim` / `_opt`
+# (the canonical training-shaped pattern). If present without (a) `EMA(`
+# construction OR (b) `ema.update(` invocation, flag.
+#
+# Whitelist (waiver — head-of-file marker `# EMA_WAIVED: <reason>` in
+# first 5 lines, OR exempt basename in _EMA_EXEMPT_TRAINING_SCRIPTS):
+#   - smoke / DRY-RUN scripts where EMA isn't needed
+#   - profile scripts (training intentionally a one-shot loop)
+#   - research utilities not in the submission path (mini_scorer)
+#   - codec-calibration scripts (not weight training): neural_weight_codec
+#
+# Memory: .omx/research/council_ema_audit_20260429.md (Council D).
+# Pairs with the CLAUDE.md "EMA — NON-NEGOTIABLE" section added in the
+# same commit.
+
+
+_EMA_OPTIMIZER_NAMES = {"optimizer", "optim", "opt", "_opt"}
+
+
+def _ema_script_calls_optimizer_step(tree: ast.Module) -> bool:
+    """True if the script calls `optimizer.step()` / `optim.step()` / similar
+    in any function body. Used to identify training-shaped scripts."""
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if not isinstance(node.func, ast.Attribute):
+            continue
+        if node.func.attr != "step":
+            continue
+        # node.func.value should be a Name in the canonical pattern.
+        v = node.func.value
+        if isinstance(v, ast.Name) and v.id in _EMA_OPTIMIZER_NAMES:
+            return True
+        # Also accept attribute chains like `self.optimizer.step()` /
+        # `cfg.optimizer.step()` where the trailing attr matches.
+        if isinstance(v, ast.Attribute) and v.attr in _EMA_OPTIMIZER_NAMES:
+            return True
+    return False
+
+
+def _ema_script_constructs_ema(tree: ast.Module) -> bool:
+    """True if the script constructs an EMA instance: `EMA(model, ...)`
+    or module-qualified `tac.training.EMA(...)`."""
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if isinstance(node.func, ast.Name) and node.func.id == "EMA":
+            return True
+        if isinstance(node.func, ast.Attribute) and node.func.attr == "EMA":
+            return True
+    return False
+
+
+def _ema_script_calls_ema_update(tree: ast.Module) -> bool:
+    """True if the script calls `<x>.update(<y>)` where the receiver name
+    contains 'ema'. Conservative: matches `ema.update(model)` /
+    `self.ema.update(model)` / `_ema.update(...)`."""
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if not isinstance(node.func, ast.Attribute):
+            continue
+        if node.func.attr != "update":
+            continue
+        v = node.func.value
+        if isinstance(v, ast.Name) and "ema" in v.id.lower():
+            return True
+        if isinstance(v, ast.Attribute) and "ema" in v.attr.lower():
+            return True
+    return False
+
+
+def _ema_script_imports_ema(tree: ast.Module) -> bool:
+    """True if the script imports `EMA` from any module."""
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            for alias in node.names:
+                if alias.name == "EMA":
+                    return True
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name.endswith(".EMA"):
+                    return True
+    return False
+
+
+def _has_ema_waiver_head_marker(text: str) -> bool:
+    """True if the script has `# EMA_WAIVED:` in its first 5 lines."""
+    head = "\n".join(text.split("\n")[:5])
+    return "# EMA_WAIVED:" in head
+
+
+# These training scripts are exempt because they don't produce a renderer
+# checkpoint that ships in the submission archive. Listed by basename so
+# the check is robust to repo-root path differences.
+_EMA_EXEMPT_TRAINING_SCRIPTS = {
+    # Research utility — never ships
+    "train_mini_scorer.py",
+    # Codec calibration (not weight training of a renderer)
+    "train_neural_weight_codec.py",
+}
+
+
+def _scan_training_script_for_ema_wireins(
+    path: Path, repo_root: Path,
+) -> list[str]:
+    """Return list of EMA wire-in violations for one training script.
+
+    Violation triggers if BOTH:
+      (a) the script calls optimizer.step() in some function body, AND
+      (b) the script does NOT both instantiate EMA AND call ema.update(...)
+
+    Either an explicit head-of-file `# EMA_WAIVED: <reason>` marker OR
+    presence of the script basename in `_EMA_EXEMPT_TRAINING_SCRIPTS`
+    suppresses the violation.
+    """
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    if path.name in _EMA_EXEMPT_TRAINING_SCRIPTS:
+        return []
+    try:
+        text = path.read_text()
+        tree = ast.parse(text, filename=str(path))
+    except (SyntaxError, UnicodeDecodeError, FileNotFoundError):
+        return []
+    if _has_ema_waiver_head_marker(text):
+        return []
+    if not _ema_script_calls_optimizer_step(tree):
+        return []
+    has_construct = _ema_script_constructs_ema(tree)
+    has_update = _ema_script_calls_ema_update(tree)
+    has_import = _ema_script_imports_ema(tree)
+    if has_construct and has_update:
+        return []
+    missing = []
+    if not (has_construct or has_import):
+        missing.append("`EMA(model, decay=0.997)` construction (or import)")
+    if not has_update:
+        missing.append("`ema.update(model)` call after optimizer.step()")
+    return [
+        f"{rel}: training script calls optimizer.step() but is missing "
+        f"{' AND '.join(missing)}. Per CLAUDE.md \"EMA — NON-NEGOTIABLE\": "
+        f"every training path MUST instantiate EMA (Quantizr decay=0.997), "
+        f"update after every optim.step(), and ship the EMA shadow as the "
+        f"inference checkpoint. Reference pattern: "
+        f"experiments/train_distill.py L820-828 + L1304. If this script is "
+        f"a research utility / codec calibrator NOT in the submission path, "
+        f"add a head-of-file marker `# EMA_WAIVED: <reason>` (within first "
+        f"5 lines) OR add the basename to `_EMA_EXEMPT_TRAINING_SCRIPTS` in "
+        f"src/tac/preflight.py."
+    ]
+
+
+def check_training_paths_use_ema_correctly(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Catch training scripts that call optimizer.step() but don't EMA.
+
+    Reference: CLAUDE.md "EMA — NON-NEGOTIABLE" + Council D audit at
+    .omx/research/council_ema_audit_20260429.md. Scans
+    `experiments/train_*.py`, `src/tac/experiments/train_*.py`, and the
+    QAT / post-training quantization scripts (qat_*.py,
+    quantize_*.py) that also produce inference checkpoints.
+
+    Returns list of violations. Raises MetaBugViolation if strict and any.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+    candidates: list[Path] = []
+    for d in ("experiments", "src/tac/experiments"):
+        d_path = root / d
+        if not d_path.exists():
+            continue
+        # Training scripts proper.
+        for p in sorted(d_path.glob("train_*.py")):
+            candidates.append(p)
+        # QAT and post-training quantization scripts (they ALSO produce
+        # inference checkpoints per Council D audit §3.2).
+        for pat in ("qat_*.py", "quantize_*.py"):
+            for p in sorted(d_path.glob(pat)):
+                candidates.append(p)
+    for p in candidates:
+        n_scanned += 1
+        violations.extend(_scan_training_script_for_ema_wireins(p, root))
+
+    if verbose and violations:
+        print(
+            f"  [training-needs-ema] {len(violations)} violation(s) across "
+            f"{n_scanned} files:"
+        )
+        for v in violations:
+            print(f"    • {v}")
+    elif verbose:
+        print(f"  [training-needs-ema] OK: {n_scanned} training scripts scanned")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "TRAINING SCRIPT MISSING EMA violations:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nEMA EVERYWHERE (CLAUDE.md non-negotiable). Reference "
+            "audit: .omx/research/council_ema_audit_20260429.md."
         )
     return violations
 
