@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-04-30T08:07:29Z",
+  "updated_at": "2026-04-30T12:49:26Z",
   "description": "Canonical lane maturity registry. See feedback_production_hardened_standard_definition_20260430.md for the 7-gate Level 3 standard. Maintained via tools/lane_maturity.py \u2014 bare edits OK for seeding but mark/unmark/audit-log are the supported interface going forward.",
   "gate_definitions": {
     "impl_complete": "Production code lands; no NotImplementedError; all CLI flags wired; all error paths covered.",
@@ -522,8 +522,8 @@
           "evidence": "src/tac/preflight.py"
         },
         "three_clean_review": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/council_lane_12_nerv_round3_20260430.md (Rounds 1, 2, 3 design + adversarial review CLEAN)"
         },
         "memory_entry": {
           "status": true,
@@ -577,15 +577,15 @@
       "id": "lane_19_segnet_logit_margin",
       "name": "Lane 19 \u2014 SegNet logit-margin",
       "phase": 2,
-      "level": 1,
+      "level": 2,
       "gates": {
         "impl_complete": {
           "status": true,
           "evidence": "src/tac/losses_logit_margin.py \u2014 logit-margin loss module"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "[empirical:reports/lane_19_logit_margin_local_smoke.json] \u2014 local smoke pass [smoke-only], CUDA dispatch pending"
         },
         "contest_cuda": {
           "status": false,
@@ -614,35 +614,35 @@
       "id": "lane_20_balle_hyperprior",
       "name": "Lane 20 \u2014 Ball\u00e9 hyperprior",
       "phase": 2,
-      "level": 1,
+      "level": 2,
       "gates": {
         "impl_complete": {
           "status": true,
           "evidence": "src/tac/balle_hyperprior_renderer.py (synthetic tests)"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "[empirical:reports/lane_20_balle_real_archive.json]"
         },
         "contest_cuda": {
           "status": false,
           "evidence": ""
         },
         "strict_preflight": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/tac/tests/test_preflight_balle_bhv1_integrity.py (BHv1 integrity discipline)"
         },
         "three_clean_review": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": ".omx/research/council_lane_20_balle_round2_20260430.md (Rounds 1+2 adversarial review)"
         },
         "memory_entry": {
           "status": false,
           "evidence": ""
         },
         "deploy_runbook": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "scripts/remote_lane_20_balle.sh"
         }
       },
       "notes": "Audit: Level 1. Train ScalePriorMLP on Lane G v3 qint stream + amortization measurement + integration \u2192 contest-CUDA \u2192 3-clean review."
@@ -688,11 +688,11 @@
       "id": "lane_bit_level_archive_opt",
       "name": "Lane Bit-level archive optimization",
       "phase": 3,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/tac/bit_level_archive_optimizer.py \u2014 26 synthetic tests passing; council design doc .omx/research/council_lane_bit_level_archive_design_20260430.md; Level 1 SCAFFOLD landed 2026-04-30"
         },
         "real_archive_empirical": {
           "status": false,
@@ -725,11 +725,11 @@
       "id": "lane_mdl_bayesian",
       "name": "Lane MDL/Bayesian (MacKay)",
       "phase": 3,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/tac/mdl_bayesian_codec.py \u2014 27 synthetic tests passing; council design doc .omx/research/council_lane_mdl_bayesian_design_20260430.md; Level 1 SCAFFOLD landed 2026-04-30"
         },
         "real_archive_empirical": {
           "status": false,
@@ -762,11 +762,11 @@
       "id": "lane_raft_radial_pose",
       "name": "Lane RAFT/radial pose",
       "phase": 3,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "src/tac/raft_radial_pose.py \u2014 25 synthetic tests passing; council design doc .omx/research/council_lane_raft_radial_pose_design_20260430.md; Level 1 SCAFFOLD landed 2026-04-30"
         },
         "real_archive_empirical": {
           "status": false,
@@ -868,6 +868,339 @@
         }
       },
       "notes": "SKETCH only. Council #271 PILOT-WITH-CAP $5. Full Level 0\u21923 cycle if pilot proves out."
+    },
+    {
+      "id": "lane_pfp16",
+      "name": "Lane PFP16 (pose fp16 cast)",
+      "phase": 1.5,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/pfp16_codec.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "reports/lane_pfp16_real_archive.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "Check 96 (check_pose_stream_uses_fp16_or_smaller) STRICT @ 0 violations \u2014 see preflight.py"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": "Council 3-round review per recovery batch commit 591b7a43 (deploy script + codec landed; CLAUDE.md non-negotiable enforcement clean)"
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/remote_lane_pfp16_stack.sh"
+        }
+      },
+      "notes": "Hotz successor option from Lane GP v4 KILL \u2014 fp16 cast captures pose-stream byte budget at zero distortion"
+    },
+    {
+      "id": "lane_psd_lumaskip",
+      "name": "PSD-LumaSkip variant",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Phase A council-approved scaffold landed 2026-04-30. GPU dispatch DEFERRED pending separate council per Council #271 reactivation criterion #1."
+    },
+    {
+      "id": "lane_gp_v4",
+      "name": "Lane GP v4 (KILL \u2014 pose-basis-fit class)",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/pose_gaussian_process.py + experiments/fit_pose_gp.py (kill marker added) + src/tac/tests/test_check_pose_basis_fit_kill.py (14/14 tests pass)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": true,
+          "evidence": "src/tac/preflight.py \u2014 Check 91 (pose-basis-fit kill acknowledged) STRICT @ 0 violations"
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/council_lane_gp_v4_round4_20260430.md (4-round unanimous KILL \u2014 counter 3/3 CLEAN)"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "memory: project_lane_gp_v4_killed_basis_fit_infeasible_20260430.md (in agent memory dir, indexed in MEMORY.md)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "KILLED per Council unanimous 4-round review. Reactivation: only if PFP16 amortization fails AND a non-polynomial fit family (DCT/B-spline) demonstrates RMSE < 0.5 on Lane G v3 baseline poses. See project_lane_gp_v4_killed_basis_fit_infeasible_20260430.md."
+    },
+    {
+      "id": "lane_7_psd_killed",
+      "name": "Lane 7 PSD (KILL-DEFER per Council #271)",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": true,
+          "evidence": ".omx/research/council_lane_7_psd_dispatch_review_20260430.md (10/10 unanimous REJECT, 4-round review)"
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "memory: project_lane_7_psd_killed_or_deferred_20260430.md (in agent memory dir; KILL memo)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "KILL-DEFER per unanimous 10/10 council REJECT BEFORE GPU spend. Reactivation: PSD-LumaSkip variant + separate council approval + current floor < 0.50. $0 GPU spent. See project_lane_7_psd_killed_or_deferred_20260430.md."
+    },
+    {
+      "id": "lane_omega_w_v3",
+      "name": "Lane \u03a9-W V3 (PoseNet-sensitivity weighting \u2014 pending Grand Council)",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Design pending Grand Council #294 verdict. Builds on \u03a9-W-V2 by weighting bit-budget by per-symbol PoseNet sensitivity (Hessian-aware). Council to decide weighting form."
+    },
+    {
+      "id": "lane_gp_pint8",
+      "name": "Lane GP-PINT8 (forensic \u2014 fp16 \u2192 int8 cast, possible)",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Forensic in flight per BG agent #297. May implement if EV high. Lane PFP16 dominates currently \u2014 PINT8 adds ~3.5KB additional savings IF distortion holds at -1e-5 (Lane PFP16 was ZERO distortion)."
+    },
+    {
+      "id": "lane_gp_pwavelet",
+      "name": "Lane GP-PWavelet (forensic \u2014 wavelet pose codec)",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Forensic in flight per BG agent #297. May implement if EV high vs pure-fp16 baseline. Wavelet basis on 6-dim pose stream."
+    },
+    {
+      "id": "lane_gp_pballe",
+      "name": "Lane GP-PBalle (forensic \u2014 Balle hyperprior on pose stream)",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Forensic in flight per BG agent #297. May implement. Balle scale-prior amortization on pose qint stream \u2014 but pose stream is only 600\u00d76=3600 symbols; codec-overhead may dominate."
+    },
+    {
+      "id": "lane_gp_ppredictive",
+      "name": "Lane GP-PPredictive (forensic \u2014 predictive-coding pose codec)",
+      "phase": 1.0,
+      "level": 0,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Forensic in flight per BG agent #297. May implement. Predict pose[t] from pose[t-1..t-3], encode residual."
     }
   ]
 }
