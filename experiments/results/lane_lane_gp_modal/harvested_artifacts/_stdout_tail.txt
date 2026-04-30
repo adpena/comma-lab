@@ -1,0 +1,47 @@
+ready satisfied: nvidia-cufft-cu12==11.2.1.3 in /usr/local/lib/python3.11/site-packages (from torch<3.0,>=2.0->tac==1.0.5) (11.2.1.3)
+Requirement already satisfied: nvidia-curand-cu12==10.3.5.147 in /usr/local/lib/python3.11/site-packages (from torch<3.0,>=2.0->tac==1.0.5) (10.3.5.147)
+Requirement already satisfied: nvidia-cusolver-cu12==11.6.1.9 in /usr/local/lib/python3.11/site-packages (from torch<3.0,>=2.0->tac==1.0.5) (11.6.1.9)
+Requirement already satisfied: nvidia-cusparse-cu12==12.3.1.170 in /usr/local/lib/python3.11/site-packages (from torch<3.0,>=2.0->tac==1.0.5) (12.3.1.170)
+Requirement already satisfied: nvidia-nccl-cu12==2.21.5 in /usr/local/lib/python3.11/site-packages (from torch<3.0,>=2.0->tac==1.0.5) (2.21.5)
+Requirement already satisfied: nvidia-nvtx-cu12==12.4.127 in /usr/local/lib/python3.11/site-packages (from torch<3.0,>=2.0->tac==1.0.5) (12.4.127)
+Requirement already satisfied: nvidia-nvjitlink-cu12==12.4.127 in /usr/local/lib/python3.11/site-packages (from torch<3.0,>=2.0->tac==1.0.5) (12.4.127)
+Requirement already satisfied: triton==3.1.0 in /usr/local/lib/python3.11/site-packages (from torch<3.0,>=2.0->tac==1.0.5) (3.1.0)
+Requirement already satisfied: sympy==1.13.1 in /usr/local/lib/python3.11/site-packages (from torch<3.0,>=2.0->tac==1.0.5) (1.13.1)
+Requirement already satisfied: mpmath<1.4,>=1.1.0 in /usr/local/lib/python3.11/site-packages (from sympy==1.13.1->torch<3.0,>=2.0->tac==1.0.5) (1.3.0)
+Collecting cffi>=2.0.0 (from cryptography>=41.0->tac==1.0.5)
+  Downloading cffi-2.0.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (2.6 kB)
+Collecting pycparser (from cffi>=2.0.0->cryptography>=41.0->tac==1.0.5)
+  Downloading pycparser-3.0-py3-none-any.whl.metadata (8.2 kB)
+Requirement already satisfied: MarkupSafe>=2.0 in /usr/local/lib/python3.11/site-packages (from jinja2->torch<3.0,>=2.0->tac==1.0.5) (3.0.3)
+Downloading brotli-1.2.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (1.4 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.4/1.4 MB 75.7 MB/s  0:00:00
+Downloading cryptography-47.0.0-cp311-abi3-manylinux_2_34_x86_64.whl (4.7 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.7/4.7 MB 231.9 MB/s  0:00:00
+Downloading cffi-2.0.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (215 kB)
+Downloading pycparser-3.0-py3-none-any.whl (48 kB)
+Building wheels for collected packages: tac
+  Building editable for tac (pyproject.toml): started
+  Building editable for tac (pyproject.toml): finished with status 'done'
+  Created wheel for tac: filename=tac-1.0.5-0.editable-py3-none-any.whl size=3521 sha256=1a0b8d0fc16daaaa90d194be9aa29d458475c25c8e7fe18c8348ea69e9c39c9e
+  Stored in directory: /tmp/pip-ephem-wheel-cache-igq21q33/wheels/63/45/08/d6f741b86af0112a1685528797b0e455049aa01b56adff5f07
+Successfully built tac
+Installing collected packages: brotli, pycparser, cffi, cryptography, tac
+  Attempting uninstall: tac
+    Found existing installation: tac 1.0.5
+    Can't uninstall 'tac'. No files were found to uninstall.
+
+Successfully installed brotli-1.2.0 cffi-2.0.0 cryptography-47.0.0 pycparser-3.0 tac-1.0.5
+[lane-gp] 2026-04-29T13:33:34Z === Stage 2: extract Lane A archive as anchor ===
+renderer.bin: 296776 bytes
+masks.mkv: 421483 bytes
+optimized_poses.pt: 15620 bytes
+[lane-gp] 2026-04-29T13:33:34Z === Stage 3: fit_pose_gp.py + reconstruct optimized_poses.pt ===
+Traceback (most recent call last):
+  File "/tmp/pact/experiments/fit_pose_gp.py", line 47, in <module>
+    main()
+  File "/tmp/pact/experiments/fit_pose_gp.py", line 32, in main
+    save_pose_gp(model, args.output)
+  File "/tmp/pact/src/tac/pose_gaussian_process.py", line 104, in save_pose_gp
+    values = torch.cat([model.poly_coeffs, model.sigma]).to(torch.float16).tolist()
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: Expected all tensors to be on the same device, but found at least two devices, cpu and cuda:0! (when checking argument for argument tensors in method wrapper_CUDA_cat)
