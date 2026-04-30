@@ -133,6 +133,14 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--device", type=str, default="cuda",
                    choices=["cuda", "cpu", "mps"])
     p.add_argument("--seed", type=int, default=42)
+    # Council D 2026-04-29 PM: EMA per IMP cycle (Frankle-Carbin LTH note:
+    # EMA reduces variance in masks selected per cycle). Per CLAUDE.md
+    # "EMA — NON-NEGOTIABLE": every training path must EMA the model and
+    # ship the EMA shadow as the inference state.
+    p.add_argument("--ema-decay", type=float, default=0.997,
+                   help="EMA decay during the per-cycle fine-tune (Quantizr "
+                        "0.997). EMA is mandatory per CLAUDE.md non-negotiable; "
+                        "the shadow stabilises the post-prune retrain.")
 
     # Smoke mode: skip the long fine-tune so cycle 0 + cycle 1 fit a CI minute.
     p.add_argument("--smoke", action="store_true",
@@ -350,6 +358,12 @@ def _finetune(model: nn.Module,
         [p for p in model.parameters() if p.requires_grad],
         lr=args.lr,
     )
+    # Council D 2026-04-29 PM: EMA shadow over the per-cycle fine-tune
+    # (Frankle-Carbin LTH: EMA reduces variance in masks selected per
+    # cycle). Per CLAUDE.md "EMA — NON-NEGOTIABLE".
+    from tac.training import EMA
+    ema = EMA(model, decay=float(args.ema_decay))
+    print(f"[lane-j-imp] EMA enabled (decay={args.ema_decay})")
     n_steps = 0
     # Deterministic synthetic data — the real fine-tune happens in the
     # deploy script via train_distill on TTO frames + masks.
@@ -366,7 +380,19 @@ def _finetune(model: nn.Module,
         # CRITICAL: re-apply mask so optimizer step doesn't resurrect pruned
         # weights via momentum / weight_decay drift.
         apply_mask_to_model(model, mask)
+        # Council D 2026-04-29: EMA update AFTER mask re-apply so the
+        # shadow tracks the masked weights (NOT the pre-mask state).
+        # If we updated BEFORE re-apply, the shadow would average over
+        # ghost weights that the mask immediately zeros — drift.
+        ema.update(model)
         n_steps += 1
+    # End-of-cycle: apply EMA shadow to the live model so _save_state
+    # ships the smoothed weights (CLAUDE.md non-negotiable). The mask
+    # is re-applied AFTER ema.apply() to preserve sparsity (the EMA
+    # shadow may have non-zero values at pruned positions due to the
+    # initial-state averaging; mask reapply zeros them out).
+    ema.apply(model)
+    apply_mask_to_model(model, mask)
     return n_steps
 
 

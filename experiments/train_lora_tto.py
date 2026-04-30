@@ -93,6 +93,15 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--video", type=str, default=None, help="Path to GT video")
     p.add_argument("--output-dir", type=str, default=None, help="Output directory")
     p.add_argument("--save-every", type=int, default=500, help="Save checkpoint every N epochs")
+    # Council D 2026-04-29 PM: EMA on LoRA factors. Per CLAUDE.md
+    # "EMA — NON-NEGOTIABLE": LoRA adapters are notoriously high-variance
+    # (rank-r factorization concentrates gradient magnitude → step-to-step
+    # noise). Every diffusion-LoRA repo defaults to EMA decay 0.999. We
+    # use Quantizr 0.997 to match the rest of the pipeline.
+    p.add_argument("--ema-decay", type=float, default=0.997,
+                   help="EMA decay over LoRA A/B factors (Quantizr 0.997). "
+                        "EMA shadow is what gets saved as lora_best.pt per "
+                        "CLAUDE.md non-negotiable.")
     p.add_argument("--smoke", action="store_true", help="Smoke test: 20 frames, 100 epochs")
     return p.parse_args()
 
@@ -241,6 +250,15 @@ def main() -> None:
     )
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
 
+    # Council D 2026-04-29 PM: EMA over LoRA factors (Karpathy /
+    # diffusion-LoRA canonical). The EMA covers ALL parameters; only the
+    # LoRA-tunable subset will actually move (frozen-base contributions
+    # are already frozen and just pass through the shadow). Per
+    # CLAUDE.md non-negotiable: ship EMA shadow as inference checkpoint.
+    from tac.training import EMA
+    ema = EMA(model, decay=float(args.ema_decay))
+    print(f"[lora-tto] EMA enabled (decay={args.ema_decay})")
+
     # Build pair dataset: masks + indices
     pair_masks = []  # list of (2, H, W) long tensors
     for i in range(n_pairs):
@@ -323,6 +341,10 @@ def main() -> None:
                 [p for p in model.parameters() if p.requires_grad], max_norm=1.0
             )
             optimizer.step()
+            # Council D 2026-04-29: EMA update AFTER optim.step(). Writes
+            # only to ema.shadow (all model params); the live model is
+            # untouched.
+            ema.update(model)
 
             epoch_loss += batch_loss.item()
             n_batches += 1
@@ -336,7 +358,17 @@ def main() -> None:
 
         if avg_loss < best_loss:
             best_loss = avg_loss
-            lora_state = extract_lora_state(model)
+            # Council D 2026-04-29 PM: extract LoRA state from EMA
+            # shadow (NOT live model). Per CLAUDE.md non-negotiable:
+            # inference bytes come from EMA shadow. Snapshot+apply+
+            # extract+restore so the live model continues training
+            # against its un-EMA'd weights.
+            _live_snapshot = {k: v.detach().clone() for k, v in model.state_dict().items()}
+            try:
+                ema.apply(model)
+                lora_state = extract_lora_state(model)
+            finally:
+                model.load_state_dict(_live_snapshot)
             torch.save(lora_state, output_dir / "lora_best.pt")
 
         if epoch % 100 == 0 or epoch == args.epochs - 1:
@@ -348,11 +380,21 @@ def main() -> None:
             )
 
         if epoch > 0 and epoch % args.save_every == 0:
-            lora_state = extract_lora_state(model)
+            # Council D 2026-04-29 PM: periodic-save EMA-shadow LoRA
+            # state with snapshot+restore (same pattern as best save).
+            _live_snapshot = {k: v.detach().clone() for k, v in model.state_dict().items()}
+            try:
+                ema.apply(model)
+                lora_state = extract_lora_state(model)
+            finally:
+                model.load_state_dict(_live_snapshot)
             torch.save(lora_state, output_dir / f"lora_ep{epoch}.pt")
 
     # Final save
     total_time = time.time() - t0
+    # Council D 2026-04-29 PM: end-of-training final-save EMA shadow.
+    # Apply directly (no restore needed — training is over).
+    ema.apply(model)
     lora_state = extract_lora_state(model)
     torch.save(lora_state, output_dir / "lora_final.pt")
 

@@ -131,8 +131,16 @@ class JointPairConfig:
     kill_loss_threshold: float = 1e5
     kill_patience: int = 200
 
-    # EMA
-    ema_decay: float = 0.9995
+    # EMA — Council D 2026-04-29 PM fix: 0.9995 → 0.997 (Quantizr canonical).
+    # The previous default was Polyak-style (200-epoch retention 0.9995^200
+    # ≈ 0.905) and out of band with the Quantizr 0.997 default the rest
+    # of the pipeline uses (200-epoch retention 0.997^200 ≈ 0.548 — i.e.
+    # ours was 1.65× MORE frozen than the leader's). The audit at
+    # .omx/research/council_ema_audit_20260429.md §3.6 prescribed this
+    # change; CLAUDE.md "EMA — NON-NEGOTIABLE" makes 0.997 the default
+    # weight EMA decay everywhere (codebook EMAs, e.g. LCT N_c/m_c, keep
+    # their van den Oord 0.99 default).
+    ema_decay: float = 0.997
 
     # Resume from checkpoint
     resume: str | None = None
@@ -485,30 +493,15 @@ def _full_eval(
 
 
 # ---------------------------------------------------------------------------
-# EMA
+# EMA — Council D 2026-04-29 PM fix: import canonical class from
+# tac.training instead of locally redefining (the local class diverged
+# from the canonical one in two ways: (a) lacked the float-buffer guard
+# at L356-358 of training.py for late-bound modules added AFTER EMA
+# construction; (b) used decay=0.9995 default deviating from Quantizr's
+# 0.997 — see .omx/research/council_ema_audit_20260429.md §3.6).
 # ---------------------------------------------------------------------------
 
-class EMA:
-    """Exponential moving average of model parameters."""
-
-    def __init__(self, model: nn.Module, decay: float = 0.9995):
-        self.decay = decay
-        self.shadow = {k: v.clone().detach() for k, v in model.state_dict().items()}
-
-    def update(self, model: nn.Module):
-        d = self.decay
-        for k, v in model.state_dict().items():
-            if self.shadow[k].is_floating_point():
-                self.shadow[k].mul_(d).add_(v.detach(), alpha=1 - d)
-            else:
-                self.shadow[k].copy_(v.detach())
-
-    def apply(self, model: nn.Module):
-        """Load shadow weights into model (for eval)."""
-        model.load_state_dict(self.shadow, strict=True)
-
-    def state_dict(self) -> dict:
-        return {k: v.clone() for k, v in self.shadow.items()}
+from tac.training import EMA  # noqa: E402
 
 
 # ---------------------------------------------------------------------------

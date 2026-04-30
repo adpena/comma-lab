@@ -66,6 +66,12 @@ from tac.contrib.szabolcs_renderer import (  # noqa: E402
     encode_luma_to_probability_map,
 )
 from tac.data import decode_video  # noqa: E402
+# Council D EMA wire-in (2026-04-29 PM): canonical EMA shadow with the
+# Quantizr decay=0.997 default. Selfcomp PR#56 (#2 leaderboard at 0.38)
+# uses EMA throughout its anchor → finetune → joint → QAT → final pipeline;
+# this script (the direct replica of that pipeline) was missing it
+# entirely per .omx/research/council_ema_audit_20260429.md §3.4.
+from tac.training import EMA  # noqa: E402
 
 
 # ── CLI ─────────────────────────────────────────────────────────────────
@@ -99,6 +105,13 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--grad-clip", type=float, default=1.0,
                    help="L2 grad-norm clip; 0 to disable.")
     p.add_argument("--seed", type=int, default=1234)
+    # Council D 2026-04-29 PM: EMA decay (Quantizr canonical 0.997). Per
+    # CLAUDE.md "EMA — NON-NEGOTIABLE", every training path that ships a
+    # checkpoint must EMA the model and save the EMA shadow.
+    p.add_argument("--ema-decay", type=float, default=0.997,
+                   help="EMA decay (Quantizr 0.997). Mandatory per "
+                   "CLAUDE.md non-negotiable; the EMA shadow is what gets "
+                   "saved as the inference checkpoint.")
     p.add_argument("--output-dir", type=str, required=True,
                    help="Directory for checkpoints, log, provenance.")
     p.add_argument("--tag", type=str, default="szabolcs",
@@ -226,6 +239,15 @@ def main() -> int:
         weight_decay=args.weight_decay,
     )
 
+    # ── EMA shadow (Council D 2026-04-29 PM) ────────────────────────────
+    # Mandatory per CLAUDE.md non-negotiable. update() is called AFTER
+    # every optim.step(); apply() is called ONLY at checkpoint save with
+    # snapshot+restore so the live model's gradient progress is never
+    # squashed by the shadow (the "EMA shadows back into live"
+    # antipattern documented in the Council D audit §6).
+    ema = EMA(model, decay=args.ema_decay)
+    print(f"[train_szabolcs] EMA enabled (decay={args.ema_decay})", flush=True)
+
     # ── Provenance ──────────────────────────────────────────────────────
     prov = {
         "started_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -245,6 +267,7 @@ def main() -> int:
         "param_count": bundle.total_params,
         "max_frame_index": max_frame_index,
         "smoke": args.smoke,
+        "ema_decay": args.ema_decay,
         "predicted_band_contest_cuda": [0.30, 0.50],
         "score_lane": "contest-CUDA",
         "rationale": (
@@ -300,6 +323,10 @@ def main() -> int:
                 if args.grad_clip and args.grad_clip > 0:
                     torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
                 optim.step()
+                # Council D 2026-04-29: EMA update AFTER optim.step(). Writes
+                # only to ema.shadow; never touches the live model. CLAUDE.md
+                # non-negotiable.
+                ema.update(model)
 
                 epoch_loss += float(loss.item())
                 n_steps += 1
@@ -317,8 +344,18 @@ def main() -> int:
 
             if mean < best_loss:
                 best_loss = mean
+                # Council D 2026-04-29 PM: ship EMA shadow as the
+                # inference state_dict (Quantizr / Selfcomp pattern).
+                # ``ema.state_dict()`` returns clones — the live model is
+                # never mutated. CLAUDE.md non-negotiable: inference
+                # bytes come from the EMA shadow, never the live model.
+                # ``model_state_dict_live`` is preserved for diagnostic /
+                # resume purposes.
                 torch.save({
-                    "model_state_dict": model.state_dict(),
+                    "model_state_dict": ema.state_dict(),
+                    "model_state_dict_live": model.state_dict(),
+                    "ema_state_dict": ema.state_dict(),
+                    "ema_decay": args.ema_decay,
                     "config": prov,
                     "epoch": epoch,
                     "loss": mean,
@@ -328,8 +365,14 @@ def main() -> int:
                 print(f"[train_szabolcs] epoch={epoch} mean_l1={mean:.4f} "
                       f"best={best_loss:.4f} elapsed={elapsed:.1f}s", flush=True)
 
+    # Final-epoch checkpoint: ship EMA shadow as the inference state_dict
+    # (Council D 2026-04-29 PM, CLAUDE.md non-negotiable). Live state
+    # preserved for diagnostic / resume.
     torch.save({
-        "model_state_dict": model.state_dict(),
+        "model_state_dict": ema.state_dict(),
+        "model_state_dict_live": model.state_dict(),
+        "ema_state_dict": ema.state_dict(),
+        "ema_decay": args.ema_decay,
         "config": prov,
         "epoch": args.total_epochs - 1,
         "loss": mean,

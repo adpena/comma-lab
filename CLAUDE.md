@@ -116,6 +116,44 @@ This applies to:
 
 Without eval_roundtrip, proxy-auth gap is 2-6x on PoseNet. Every training run without it is a WASTED run. This mistake has been made on EVERY component in this project. It stops now.
 
+## EMA — NON-NEGOTIABLE, HIGHEST EMPHASIS
+
+**EVERY training path MUST instantiate EMA, update it after every `optimizer.step()`, and save the EMA shadow (not the live weights) as the inference checkpoint.** There are ZERO exceptions for any path that produces a checkpoint that ships in the submission archive.
+
+This includes:
+- Renderer training (`train_renderer.py`, `train_renderer_fridrich.py`, `train_distill.py`) — already correct
+- SegMap training (`train_segmap.py`, `train_segmap_film_canvas.py`) — already correct
+- Joint pair training (`train_joint_pair.py`) — fixed 2026-04-29 PM (duplicate `class EMA` removed; default 0.9995 → 0.997)
+- Szabolcs / Selfcomp clones (`train_szabolcs.py`) — wired 2026-04-29 PM (Council D)
+- QAT (`qat_finetune.py`, `qat_omega_lagrangian.py`, `quantize_distilled.py`) — wired 2026-04-29 PM (Council D)
+- IMP cycles (`train_imp_cycle.py`) — wired 2026-04-29 PM (Council D)
+- LoRA TTO (`train_lora_tto.py`) — wired 2026-04-29 PM (Council D)
+- Postfilter training (`train_postfilter_on_renderer.py`) — wired 2026-04-29 PM (Council D)
+- Codebook EMA in VQ-VAE / LCT mechanisms (van den Oord persistent N_c/m_c form) — already correct
+- ANY new training script or optimization
+
+**Quantizr decay = 0.997.** All weight EMAs default to `decay=0.997`. The CANONICAL `class EMA` is `tac.training.EMA` (with the float-buffer guard at L359-364 and the late-bound module guard at L356-358). Codebook EMAs (van den Oord persistent buffer form, e.g. `LearnableClassTargets`, `vqvae_codec`) keep their own 0.99 default — codebooks adapt faster than weights by design.
+
+**Apply only at eval time, with snapshot+restore.** The canonical pattern (copied from `experiments/train_distill.py`):
+
+```python
+orig_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
+ema.apply(model)
+try:
+    score = evaluate(model, ...)
+finally:
+    model.load_state_dict(orig_state)
+    model.train()
+```
+
+**NEVER call `ema.apply(model)` inside `train_epoch`** without snapshot+restore — that shadows the live weights to the EMA snapshot and freezes learning (the DARTS-S freeze symptom class, even though that specific freeze was a different bug — bare `.round()` zero-gradient at `src/tac/segmap_renderer.py:281`; see Council D audit §6).
+
+**Inference / archive bytes come from `ema.state_dict()`** — never from `model.state_dict()` after training. The Quantizr 0.33 archive is the EMA shadow, not the live final-epoch weights. Selfcomp's 0.38 archive is the EMA shadow. Lane G v3 (1.05) used EMA correctly.
+
+**Without EMA, single-epoch noise dominates the final checkpoint.** Every training run without EMA is a wasted run. This stops now.
+
+Cross-references: Council D audit `.omx/research/council_ema_audit_20260429.md`; preflight Check 88 `check_training_paths_use_ema_correctly` (STRICT @ 0 violations); Lane G v3 reference `project_lane_g_v3_landed_1_05_20260428.md`; Lane MM-V2 falsification `project_lane_mm_v2_landed_2_63_falsified_20260429.md` (which the same audit's §6 freeze investigation should be re-checked against once the V3-clean retrain lands).
+
 ## MPS auth eval is NOISE — NON-NEGOTIABLE, HIGHEST EMPHASIS
 
 **LOCAL MPS IS NEVER TO BE USED FOR STRATEGY, PLANNING, OR ANALYSIS.** Verified 2026-04-25 with side-by-side gating measurement on the same pinned archive:

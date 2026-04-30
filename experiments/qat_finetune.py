@@ -149,6 +149,15 @@ class QATConfig:
     device: str = "cuda"
     seed: int = 42
 
+    # Council D 2026-04-29 PM: EMA on QAT (Quantizr's #1 + Selfcomp's #2
+    # full pipelines run EMA through anchor → finetune → joint → QAT →
+    # final). Mandatory per CLAUDE.md "EMA — NON-NEGOTIABLE". The EMA
+    # shadow set INCLUDES LSQ step-size scales / FP4 fake-quant scales
+    # (van den Oord + Ballé council endorsement: codec scales benefit
+    # MORE than weights from EMA because their gradient is naturally
+    # noisier through the round operator's surrogate gradient).
+    ema_decay: float = 0.997
+
 
 def create_model(cfg: QATConfig, device: torch.device) -> nn.Module:
     """Create renderer matching the float checkpoint.
@@ -829,6 +838,14 @@ def main() -> None:
                         help="Bit depth for FP4-intolerant critical layers "
                              "(default 16 = unchanged FP16).")
 
+    # Council D 2026-04-29 PM: EMA on QAT (Quantizr full pipeline). Per
+    # CLAUDE.md non-negotiable, every training path must EMA the model.
+    parser.add_argument("--ema-decay", type=float, default=0.997,
+                        help="EMA decay for the QAT model (Quantizr 0.997). "
+                             "EMA is mandatory per CLAUDE.md non-negotiable; "
+                             "the EMA shadow is what gets saved as the best "
+                             "checkpoint and exported as FP4 binary.")
+
     args = parser.parse_args()
 
     cfg = QATConfig(
@@ -861,6 +878,8 @@ def main() -> None:
         # Without this thread, the flag is parsed + logged but produces no
         # behavior change — Lane SG runs were byte-identical to legacy QAT.
         protected_pattern_set=str(args.protected_pattern_set),
+        # Council D 2026-04-29 PM: thread EMA decay through QATConfig.
+        ema_decay=float(args.ema_decay),
     )
 
     # Validate mixed-precision mutual exclusion + range.
@@ -1054,6 +1073,17 @@ def main() -> None:
     print(f"  pose_d={baseline['pose_d']:.5f} seg_d={baseline['seg_d']:.5f} "
           f"distortion={baseline['distortion']:.3f}")
 
+    # ── EMA (Council D 2026-04-29 PM) ──────────────────────────────────
+    # Mandatory per CLAUDE.md "EMA — NON-NEGOTIABLE". Quantizr (#1, 0.33)
+    # and Selfcomp (#2, 0.38) both EMA through QAT. The EMA shadow set
+    # union covers model.parameters AND any LSQ step-size / FP4 fake-quant
+    # scales the parametrize layer registers (van den Oord + Ballé
+    # endorsement). The Codex-2 hardening at training.py L356-358
+    # catches any late-bound parameter added after EMA construction.
+    from tac.training import EMA
+    ema = EMA(model, decay=cfg.ema_decay)
+    print(f"  EMA enabled (decay={cfg.ema_decay})")
+
     best_distortion = float("inf")
     best_state = None
     history = []
@@ -1097,6 +1127,10 @@ def main() -> None:
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip)
             optimizer.step()
+            # Council D 2026-04-29: EMA update AFTER optim.step(). The
+            # shadow set covers FP4-fake-quant scales as well as weights
+            # (LSQ scales benefit from EMA per van den Oord / Ballé).
+            ema.update(model)
 
             if epoch % cfg.log_every == 0:
                 print(f"  [INT8] ep {epoch:>4d}/{total_steps} | "
@@ -1105,8 +1139,17 @@ def main() -> None:
                       f"lr={lr:.2e}")
 
             if epoch > 0 and epoch % cfg.eval_every == 0:
-                q = evaluate_fp4_quality(model, masks, gt_frames, poses, device, n_pairs=10, zoom_warp=zoom_warp)
-                print(f"  [INT8] eval: distortion={q['distortion']:.3f}")
+                # Council D 2026-04-29: eval THROUGH EMA shadow with
+                # snapshot+restore (canonical pattern). Without this the
+                # eval prints noisy single-step state instead of the
+                # smoothed shadow that ships in the FP4 binary.
+                _live_snapshot = {k: v.detach().clone() for k, v in model.state_dict().items()}
+                try:
+                    ema.apply(model)
+                    q = evaluate_fp4_quality(model, masks, gt_frames, poses, device, n_pairs=10, zoom_warp=zoom_warp)
+                finally:
+                    model.load_state_dict(_live_snapshot)
+                print(f"  [INT8] eval: distortion={q['distortion']:.3f} (EMA shadow)")
                 history.append({"phase": "int8", "epoch": epoch, **q})
 
         # Remove INT8 parametrizations before Phase B
@@ -1202,6 +1245,10 @@ def main() -> None:
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip)
         optimizer.step()
+        # Council D 2026-04-29: EMA update AFTER optim.step(). Phase B
+        # FP4 fake-quant; the EMA shadow tracks both weights and the
+        # FP4 codebook scales the parametrize layer registers.
+        ema.update(model)
 
         if epoch % cfg.log_every == 0:
             print(f"  [FP4] ep {epoch:>4d}/{total_steps} | "
@@ -1210,16 +1257,29 @@ def main() -> None:
                   f"lr={lr:.2e}")
 
         if epoch > 0 and epoch % cfg.eval_every == 0:
-            q = evaluate_fp4_quality(model, masks, gt_frames, poses, device, n_pairs=15, zoom_warp=zoom_warp)
+            # Council D 2026-04-29 PM: evaluate THROUGH the EMA shadow.
+            # Snapshot live → apply ema → eval → restore live (canonical
+            # train_distill.py + train_renderer_fridrich.py pattern).
+            # Without this, "best" is the noisy single-step state, not
+            # the smoothed shadow that ships in the FP4 binary.
+            _live_snapshot = {k: v.detach().clone() for k, v in model.state_dict().items()}
+            try:
+                ema.apply(model)
+                q = evaluate_fp4_quality(model, masks, gt_frames, poses, device, n_pairs=15, zoom_warp=zoom_warp)
+            finally:
+                model.load_state_dict(_live_snapshot)
             print(f"  [FP4] eval: distortion={q['distortion']:.3f} "
-                  f"(pose={q['pose_d']:.5f} seg={q['seg_d']:.5f})")
+                  f"(pose={q['pose_d']:.5f} seg={q['seg_d']:.5f}) (EMA shadow)")
             history.append({"phase": "fp4", "epoch": epoch, **q})
 
             if q["distortion"] < best_distortion:
                 best_distortion = q["distortion"]
-                # Strip parametrize keys to plain weight keys so load_state_dict
-                # works AFTER parametrizations are removed (C1 fix)
-                raw_state = model.state_dict()
+                # Capture from the EMA shadow (NOT the live model). Strip
+                # parametrize keys to plain weight keys so load_state_dict
+                # works AFTER parametrizations are removed (C1 fix). The
+                # ema.state_dict() returns clones; we then strip via the
+                # same C1 path as before.
+                raw_state = ema.state_dict()
                 clean_state = {}
                 for k, v in raw_state.items():
                     if ".parametrizations.weight.original" in k:
@@ -1229,12 +1289,20 @@ def main() -> None:
                     else:
                         clean_state[k] = v.cpu().clone()
                 best_state = clean_state
-                print(f"  [FP4] ★ NEW BEST: distortion={best_distortion:.3f}")
+                print(f"  [FP4] ★ NEW BEST: distortion={best_distortion:.3f} "
+                      f"(captured from EMA shadow)")
 
         if epoch > 0 and epoch % cfg.checkpoint_every == 0:
             ckpt_path = out_dir / f"qat_epoch_{epoch}.pt"
             torch.save({
-                "model_state_dict": model.state_dict(),
+                # Council D 2026-04-29: ship EMA shadow as the primary
+                # state_dict (CLAUDE.md non-negotiable: inference bytes
+                # come from EMA shadow, never from live final-epoch).
+                # ``model_state_dict_live`` preserved for resume.
+                "model_state_dict": ema.state_dict(),
+                "model_state_dict_live": model.state_dict(),
+                "ema_state_dict": ema.state_dict(),
+                "ema_decay": cfg.ema_decay,
                 "epoch": epoch,
                 "phase": "fp4",
                 "distortion": metrics["total_loss"],

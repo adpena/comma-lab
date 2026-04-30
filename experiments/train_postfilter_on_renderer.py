@@ -143,6 +143,14 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--video", type=str, default=None, help="Path to GT video")
     p.add_argument("--output-dir", type=str, default=None, help="Output directory")
     p.add_argument("--save-every", type=int, default=500, help="Save every N epochs")
+    # Council D 2026-04-29 PM: EMA on the postfilter CNN. Per CLAUDE.md
+    # "EMA — NON-NEGOTIABLE" the postfilter is small (~8K params) but
+    # still ships in the submission archive when active — the EMA shadow
+    # smooths step-to-step noise. Hotz vote: lower priority but cheap.
+    p.add_argument("--ema-decay", type=float, default=0.997,
+                   help="EMA decay over postfilter parameters (Quantizr "
+                        "0.997). EMA shadow is what gets saved as "
+                        "postfilter_best.pt per CLAUDE.md non-negotiable.")
     p.add_argument("--smoke", action="store_true", help="Smoke test: 20 frames, 200 epochs")
     return p.parse_args()
 
@@ -264,6 +272,13 @@ def main() -> None:
     optimizer = torch.optim.Adam(postfilter.parameters(), lr=args.lr)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
 
+    # Council D 2026-04-29 PM: EMA over postfilter parameters. Per
+    # CLAUDE.md "EMA — NON-NEGOTIABLE" the EMA shadow is what gets
+    # saved as the inference checkpoint.
+    from tac.training import EMA
+    ema = EMA(postfilter, decay=float(args.ema_decay))
+    print(f"[postfilter] EMA enabled (decay={args.ema_decay})")
+
     print(f"[postfilter] Training: {args.epochs} epochs, batch_size={args.batch_size}")
     best_loss = float("inf")
     history = []
@@ -345,6 +360,8 @@ def main() -> None:
             batch_loss.backward()
             torch.nn.utils.clip_grad_norm_(postfilter.parameters(), max_norm=1.0)
             optimizer.step()
+            # Council D 2026-04-29: EMA update AFTER optim.step().
+            ema.update(postfilter)
             epoch_loss += batch_loss.item()
 
         scheduler.step()
@@ -356,7 +373,9 @@ def main() -> None:
 
         if avg_loss < best_loss:
             best_loss = avg_loss
-            torch.save(postfilter.state_dict(), output_dir / "postfilter_best.pt")
+            # Council D 2026-04-29 PM: ship EMA shadow (CLAUDE.md
+            # non-negotiable: inference bytes come from the shadow).
+            torch.save(ema.state_dict(), output_dir / "postfilter_best.pt")
 
         if epoch % 200 == 0 or epoch == args.epochs - 1:
             elapsed = time.time() - t0
@@ -367,13 +386,18 @@ def main() -> None:
             )
 
         if epoch > 0 and epoch % args.save_every == 0:
-            torch.save(postfilter.state_dict(), output_dir / f"postfilter_ep{epoch}.pt")
+            # Council D 2026-04-29: periodic save uses EMA shadow.
+            torch.save(ema.state_dict(), output_dir / f"postfilter_ep{epoch}.pt")
 
     # Final save
     total_time = time.time() - t0
+    # Council D 2026-04-29 PM: end-of-training final save AND the int8
+    # archive quantization both source from the EMA shadow. apply()
+    # mutates the live postfilter — training is over so no restore.
+    ema.apply(postfilter)
     torch.save(postfilter.state_dict(), output_dir / "postfilter_final.pt")
 
-    # Quantize to int8 for archive
+    # Quantize to int8 for archive (EMA shadow → int8).
     postfilter_int8 = {}
     for k, v in postfilter.state_dict().items():
         if "weight" in k:

@@ -82,6 +82,13 @@ def parse_args() -> argparse.Namespace:
                    help="QAT fine-tuning epochs")
     p.add_argument("--qat-lr", type=float, default=0.0003,
                    help="QAT learning rate (lower than initial training)")
+    # Council D 2026-04-29 PM: EMA on QAT (Quantizr canonical 0.997).
+    # Per CLAUDE.md "EMA — NON-NEGOTIABLE", every training path must EMA
+    # the model and use the EMA shadow for the post-QAT eval + binary.
+    p.add_argument("--ema-decay", type=float, default=0.997,
+                   help="EMA decay during QAT (Quantizr 0.997). The EMA "
+                        "shadow drives the post-QAT FP4 export per CLAUDE.md "
+                        "non-negotiable.")
     p.add_argument("--batch-size", type=int, default=8, help="Pairs per batch for eval")
     # CLAUDE.md non-negotiable: eval_roundtrip ALWAYS True. Removed
     # `--no-eval-roundtrip` flag; only escape hatch is TAC_ALLOW_NO_ROUNDTRIP=1.
@@ -391,6 +398,13 @@ def main() -> None:
         qat_model = QATRendererFP4(model, block_size=32)
 
         optimizer = torch.optim.Adam(model.parameters(), lr=args.qat_lr)
+        # Council D 2026-04-29 PM: EMA shadow on QAT (Quantizr full
+        # pipeline). Per CLAUDE.md non-negotiable. The EMA shadow set
+        # includes parametrize-registered FP4 fake-quant scales (LSQ
+        # endorsement: codec scales benefit MORE than weights).
+        from tac.training import EMA
+        ema = EMA(model, decay=float(args.ema_decay))
+        print(f"  QAT EMA enabled (decay={args.ema_decay})")
         from tac.losses import scorer_forward_pair
 
         n_pairs = len(gt_frames) // 2
@@ -440,6 +454,9 @@ def main() -> None:
 
                 batch_loss.backward()
                 optimizer.step()
+                # Council D 2026-04-29: EMA update AFTER optim.step().
+                # Writes only to ema.shadow; never touches the live model.
+                ema.update(model)
                 epoch_loss += batch_loss.item()
 
             if epoch % 100 == 0:
@@ -447,6 +464,13 @@ def main() -> None:
                 qat_history.append({"epoch": epoch, "loss": epoch_loss / n_pairs})
 
         # Evaluate after QAT: remove parametrizations and eval
+        # Council D 2026-04-29 PM: APPLY EMA shadow to live model BEFORE
+        # quantization + eval. Per CLAUDE.md "EMA — NON-NEGOTIABLE",
+        # inference bytes come from the EMA shadow, NEVER from the live
+        # final-step weights. This is end-of-training so the snapshot+
+        # restore guard is unnecessary — we want the shadow to BE the
+        # exported weights.
+        ema.apply(model)
         qat_model.remove_hooks()
         model.eval()
         packed_qat = quantize_fp4(model.state_dict(), block_size=32)
@@ -457,13 +481,20 @@ def main() -> None:
             model, gt_frames, gt_masks, posenet, segnet, device,
             eval_roundtrip=args.eval_roundtrip,
         )
-        print(f"  QAT result: proxy={qat_quality['proxy_score']:.4f}")
+        print(f"  QAT result: proxy={qat_quality['proxy_score']:.4f} (EMA shadow)")
         results["qat"] = {
             "proxy_score": qat_quality["proxy_score"],
             "epochs": args.qat_epochs,
+            "ema_decay": float(args.ema_decay),
             "history": qat_history,
         }
-        torch.save(model.state_dict(), output_dir / "renderer_qat.pt")
+        # Save EMA shadow as the inference state_dict (live=current model
+        # state == EMA-applied per the apply() above).
+        torch.save({
+            "model_state_dict": model.state_dict(),
+            "ema_state_dict": ema.state_dict(),
+            "ema_decay": float(args.ema_decay),
+        }, output_dir / "renderer_qat.pt")
 
     # Save results
     with open(output_dir / "results.json", "w") as f:

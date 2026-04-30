@@ -361,6 +361,16 @@ def run_qat(args: argparse.Namespace) -> dict:
           f"bits_params={len(bits_params)} "
           f"(lr={args.lr}, bits_lr={args.lr * args.bits_lr_scale})")
 
+    # Council D 2026-04-29 PM: EMA shadow over the union of weight params
+    # AND learnable bit_depth params. Per CLAUDE.md "EMA — NON-NEGOTIABLE",
+    # every training path must EMA the model and ship the EMA shadow as
+    # the inference state. Quantizr (#1, 0.33) + Selfcomp (#2, 0.38) both
+    # EMA through QAT. The Lagrangian dual variable is NOT EMA'd — only
+    # the primal weights / bit-depths.
+    from tac.training import EMA
+    ema = EMA(model, decay=float(args.ema_decay))
+    print(f"[lane-omega-v2] EMA enabled (decay={args.ema_decay})")
+
     # Output dir
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -391,6 +401,7 @@ def run_qat(args: argparse.Namespace) -> dict:
         "n_warm_started": len(swap_report["warm_started"]),
         "device": str(device),
         "seed": args.seed,
+        "ema_decay": float(args.ema_decay),
         "torch_version": torch.__version__,
     }
     (output_dir / "provenance.json").write_text(json.dumps(provenance, indent=2))
@@ -486,6 +497,10 @@ def run_qat(args: argparse.Namespace) -> dict:
         loss.backward()
         torch.nn.utils.clip_grad_norm_(weight_params + bits_params, 1.0)
         optimizer.step()
+        # Council D 2026-04-29: EMA update AFTER primal step (BEFORE the
+        # dual update — the EMA shadow tracks weights + bit-depths only;
+        # the Lagrangian λ has its own dual-ascent and is not EMA'd).
+        ema.update(model)
 
         # Bug 2 fix (codex Round 3): dual ascent on the constraint
         # residual after the primal step. Computes mean_bits from the
@@ -517,8 +532,16 @@ def run_qat(args: argparse.Namespace) -> dict:
         # Track best (by scorer loss only — rate is a constraint, not a metric)
         if metrics["scorer_loss"] < best_scorer_loss:
             best_scorer_loss = metrics["scorer_loss"]
+            # Council D 2026-04-29 PM: ship EMA shadow (CLAUDE.md
+            # non-negotiable). The OMG1 reload-and-export below loads
+            # ``model_state_dict`` first and then exports — keeping the
+            # primary key as the EMA shadow ensures the OMG1 binary is
+            # the smoothed shadow, not the noisy single-step.
             torch.save({
-                "model_state_dict": model.state_dict(),
+                "model_state_dict": ema.state_dict(),
+                "model_state_dict_live": model.state_dict(),
+                "ema_state_dict": ema.state_dict(),
+                "ema_decay": float(args.ema_decay),
                 "epoch": epoch,
                 "scorer_loss": best_scorer_loss,
                 "mean_bits": renderer_average_learnable_bits_per_weight(model),
@@ -621,6 +644,14 @@ def main(argv: list[str] | None = None) -> int:
                         help="Random seed (default 1234)")
     parser.add_argument("--log-every", type=int, default=10,
                         help="Epochs between log lines (default 10)")
+    # Council D 2026-04-29 PM: EMA on QAT (Quantizr canonical 0.997).
+    # Per CLAUDE.md "EMA — NON-NEGOTIABLE": every training path must
+    # EMA the model and ship the shadow as the inference checkpoint.
+    parser.add_argument("--ema-decay", type=float, default=0.997,
+                        help="EMA decay (Quantizr 0.997). EMA is mandatory "
+                             "per CLAUDE.md non-negotiable; the EMA shadow "
+                             "is what gets saved as best/best_path and "
+                             "exported as the OMG1 binary.")
     args = parser.parse_args(argv)
 
     run_qat(args)
