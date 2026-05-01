@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-04-30T21:38:50Z",
+  "updated_at": "2026-05-01T12:55:47Z",
   "description": "Canonical lane maturity registry. See feedback_production_hardened_standard_definition_20260430.md for the 7-gate Level 3 standard. Maintained via tools/lane_maturity.py \u2014 bare edits OK for seeding but mark/unmark/audit-log are the supported interface going forward.",
   "gate_definitions": {
     "impl_complete": "Production code lands; no NotImplementedError; all CLI flags wired; all error paths covered.",
@@ -1201,6 +1201,43 @@
         }
       },
       "notes": "Forensic in flight per BG agent #297. May implement. Predict pose[t] from pose[t-1..t-3], encode residual."
+    },
+    {
+      "id": "lane_owv3_0120",
+      "name": "OWV3 0120 (1.0024 contest-CUDA RTX 4090)",
+      "phase": 1.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "scripts/remote_archive_only_eval.sh + experiments/sweep_owv3_byte_plan.py"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "1.00239 [empirical:experiments/results/lane_g_v3_owv3_wave3_LANDED_20260501/]"
+        },
+        "contest_cuda": {
+          "status": true,
+          "evidence": "1.00239 [contest-CUDA RTX 4090 driver 580.126.09 torch 2.11.0+cu130 instance 35959478] experiments/results/lane_g_v3_owv3_wave3_LANDED_20260501/owv3_wave3_owv3_0120_bbr0p66_protect0p002_aggr1em05_results/contest_auth_eval.json"
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "project_lane_g_v3_owv3_0120_LANDED_1_002_20260501.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
     }
   ]
 }
