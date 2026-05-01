@@ -1,0 +1,6 @@
+=== Polling Modal call_id=fc-01KQCP43HDQZ9SE53HE90N550A ===
+  STILL RUNNING — re-run recovery later:
+    .venv/bin/python experiments/modal_recover_lane.py --label mae_v_v2
+  To stream logs with Modal 1.4+:
+    .venv/bin/modal app list
+    .venv/bin/modal app logs <app-id>

@@ -1,0 +1,18 @@
+{
+  "hostname": "Primary",
+  "package_versions": {
+    "lightning": null,
+    "lightning-sdk": "2026.4.10",
+    "lightning_sdk": "2026.4.10",
+    "pytorch-lightning": null
+  },
+  "python": "/Users/adpena/Projects/pact/.venv/bin/python",
+  "recorded_at_utc": "2026-04-30T23:42:15Z",
+  "repo_root": "/Users/adpena/Projects/pact",
+  "schema_version": 1,
+  "status": "OK",
+  "strict": true,
+  "tool": "scripts/scan_lightning_supply_chain.py",
+  "violation_count": 0,
+  "violations": []
+}

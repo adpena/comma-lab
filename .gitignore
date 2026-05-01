@@ -103,3 +103,8 @@ src/tac.egg-info/
 # Subagent commit serializer artifacts (lock + JSONL log are local-only forensics)
 .omx/state/.commit-lock
 .omx/state/commit-serializer.log
+
+# Ephemeral subagent_commit_serializer.py temp git indexes (per-PID, never commit)
+.omx/state/.subagent-temp-index-*
+.omx/state/.subagent-temp-index-*.lock
+.omx/state/launch_locks/
