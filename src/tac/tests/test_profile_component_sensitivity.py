@@ -54,6 +54,9 @@ def test_script_has_required_cli_flags() -> None:
         "evidence-grade",
         "promotion-finite-difference",
         "finite-difference-epsilon",
+        "finite-difference-shard-index",
+        "finite-difference-shard-count",
+        "merge-shard-dir",
     }
     assert not (expected - flags)
     assert "add_mutually_exclusive_group(required=True)" in src
@@ -689,6 +692,198 @@ def test_finite_difference_component_maps_measure_conv_channels() -> None:
     assert maps["posenet"]["conv.weight"].shape == (1,)
     assert torch.isfinite(maps["combined"]["conv.weight"]).all()
     assert maps["combined"]["conv.weight"].item() >= 0.0
+
+
+def test_finite_difference_shard_plan_partitions_channels() -> None:
+    module = _load_module()
+
+    model = nn.Sequential(
+        nn.Conv2d(1, 3, 1, bias=False),
+        nn.Conv2d(3, 2, 1, bias=False),
+    )
+
+    plans = [
+        module._finite_difference_shard_plan(
+            model,
+            shard_index=index,
+            shard_count=3,
+        )
+        for index in range(3)
+    ]
+    all_refs = module._refs_from_payload(plans[0]["all_channel_refs"], label="all")
+    assigned = [
+        ref
+        for plan in plans
+        for ref in module._refs_from_payload(plan["assigned_channel_refs"], label="assigned")
+    ]
+
+    assert len(all_refs) == 5
+    assert sorted(assigned) == sorted(all_refs)
+    assert len(set(assigned)) == len(assigned)
+    assert {plan["all_channel_sha256"] for plan in plans} == {module._channel_ref_sha256(all_refs)}
+    assert all(plan["merge_required_for_certification_handoff"] is True for plan in plans)
+
+
+def test_finite_difference_component_maps_can_measure_owned_channel_subset() -> None:
+    module = _load_module()
+
+    class ToyRenderer(nn.Module):
+        def __init__(self) -> None:
+            super().__init__()
+            self.conv = nn.Conv2d(1, 2, 1, bias=False)
+            with torch.no_grad():
+                self.conv.weight.fill_(1.0)
+
+        def forward(self, masks_t: torch.Tensor, masks_t1: torch.Tensor, **_: object) -> torch.Tensor:
+            del masks_t1
+            channels = self.conv(masks_t.float().unsqueeze(1))
+            frame = channels[:, :1].repeat(1, 3, 1, 1)
+            pair = torch.stack([frame, frame], dim=1)
+            return pair.permute(0, 1, 3, 4, 2)
+
+    class MeanPoseNet(nn.Module):
+        def preprocess_input(self, x: torch.Tensor) -> torch.Tensor:
+            return x
+
+        def forward(self, x: torch.Tensor) -> dict[str, torch.Tensor]:
+            mean = x.float().mean(dim=(1, 2, 3, 4), keepdim=False).reshape(-1, 1)
+            return {"pose": torch.cat([mean.repeat(1, 6), torch.zeros_like(mean).repeat(1, 6)], dim=1)}
+
+    class ThresholdSegNet(nn.Module):
+        def preprocess_input(self, x: torch.Tensor) -> torch.Tensor:
+            return x[:, -1]
+
+        def forward(self, x: torch.Tensor) -> torch.Tensor:
+            signal = x[:, 0]
+            return torch.stack([-signal, signal], dim=1)
+
+    model = ToyRenderer()
+    masks = torch.ones((2, 2, 2), dtype=torch.long)
+    gt = torch.zeros((2, 3, 2, 2), dtype=torch.float32)
+    baseline = module._evaluate_component_means(
+        model=model,
+        pair_indices=[0],
+        masks_cpu=masks,
+        gt_frames_cpu=gt,
+        poses=None,
+        posenet=MeanPoseNet(),
+        segnet=ThresholdSegNet(),
+        device=torch.device("cpu"),
+        zoom_warp=None,
+        pair_batch=1,
+    )
+
+    maps = module._finite_difference_component_channel_maps(
+        model=model,
+        pair_indices=[0],
+        baseline=baseline,
+        masks_cpu=masks,
+        gt_frames_cpu=gt,
+        poses=None,
+        posenet=MeanPoseNet(),
+        segnet=ThresholdSegNet(),
+        device=torch.device("cpu"),
+        zoom_warp=None,
+        pair_batch=1,
+        epsilon=0.1,
+        channel_refs=[("conv.weight", 1)],
+    )
+
+    assert maps["combined"]["conv.weight"][0].item() == 0.0
+    assert torch.isfinite(maps["combined"]["conv.weight"][1])
+
+
+def _write_fd_shard_dir(
+    module,
+    root: Path,
+    *,
+    shard_index: int,
+    shard_count: int,
+    refs: list[tuple[str, int]],
+    all_refs: list[tuple[str, int]],
+    value: float,
+) -> dict[str, object]:
+    shard = {
+        "schema": module.FINITE_DIFFERENCE_SHARD_SCHEMA,
+        "is_shard": True,
+        "shard_index": shard_index,
+        "shard_count": shard_count,
+        "assigned_channel_count": len(refs),
+        "all_channel_count": len(all_refs),
+        "assigned_channel_refs": module._channel_ref_payload(refs),
+        "all_channel_refs": module._channel_ref_payload(all_refs),
+        "all_channel_sha256": module._channel_ref_sha256(all_refs),
+        "assigned_channel_sha256": module._channel_ref_sha256(refs),
+        "merge_required_for_certification_handoff": True,
+    }
+    summary = {
+        "tool": "experiments/profile_component_sensitivity.py",
+        "device": "cuda",
+        "sensitivity_source": "direct_renderer_cuda_finite_difference_component_response",
+        "n_pairs_total": 600,
+        "n_pairs_selected": 600,
+        "n_pairs_calibration": 480,
+        "n_pairs_holdout": 120,
+        "split_seed": 20260430,
+        "finite_difference_epsilon": 0.001,
+        "component_response_path": "direct_renderer_tensor_inprocess_scorer",
+        "finite_difference_shard": shard,
+    }
+    root.mkdir(parents=True)
+    (root / "component_sensitivity_profile_summary.json").write_text(
+        json.dumps(summary, indent=2, sort_keys=True) + "\n"
+    )
+    for component in module.COMPONENT_OUTPUTS:
+        tensor = torch.zeros(2)
+        for key, channel in refs:
+            assert key == "a.weight"
+            tensor[channel] = value + channel
+        metadata = {
+            "device": "cuda",
+            "component": component,
+            "scorer_target": component,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "official_component_response": False,
+            "canonical_scorer_path": False,
+            "sensitivity_source": "direct_renderer_cuda_finite_difference_component_response",
+            "finite_difference_shard": shard,
+        }
+        module.save_sensitivity_map(root / f"{component}_sensitivity_map.pt", {"a.weight": tensor}, metadata=metadata)
+        module.save_sensitivity_map(
+            root / f"{component}_holdout_sensitivity_map.pt",
+            {"a.weight": tensor + 10.0},
+            metadata={**metadata, "split": "holdout"},
+        )
+    return summary
+
+
+def test_merge_finite_difference_shards_reconstructs_full_maps(tmp_path: Path) -> None:
+    module = _load_module()
+    all_refs = [("a.weight", 0), ("a.weight", 1)]
+    shard0 = tmp_path / "s0"
+    shard1 = tmp_path / "s1"
+    _write_fd_shard_dir(module, shard0, shard_index=0, shard_count=2, refs=[all_refs[0]], all_refs=all_refs, value=3.0)
+    _write_fd_shard_dir(module, shard1, shard_index=1, shard_count=2, refs=[all_refs[1]], all_refs=all_refs, value=3.0)
+
+    calibration, holdout, merge = module._merge_finite_difference_shard_maps([shard1, shard0])
+
+    assert merge["coverage"] == "exactly_once"
+    assert merge["source_shard_count"] == 2
+    assert calibration["combined"]["a.weight"].tolist() == [3.0, 4.0]
+    assert holdout["combined"]["a.weight"].tolist() == [13.0, 14.0]
+
+
+def test_merge_finite_difference_shards_rejects_duplicate_atoms(tmp_path: Path) -> None:
+    module = _load_module()
+    all_refs = [("a.weight", 0), ("a.weight", 1)]
+    shard0 = tmp_path / "s0"
+    shard1 = tmp_path / "s1"
+    _write_fd_shard_dir(module, shard0, shard_index=0, shard_count=2, refs=[all_refs[0]], all_refs=all_refs, value=3.0)
+    _write_fd_shard_dir(module, shard1, shard_index=1, shard_count=2, refs=[all_refs[0]], all_refs=all_refs, value=5.0)
+
+    with pytest.raises(ValueError, match="duplicate finite-difference shard channel"):
+        module._merge_finite_difference_shard_maps([shard0, shard1])
 
 
 def test_promotion_finite_difference_requires_exact_1200_frames() -> None:

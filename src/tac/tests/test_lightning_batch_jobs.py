@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 
 import pytest
+import torch
 
 from tac.deploy.lightning.batch_jobs import (
     ARTIFACT_DALI_BOOTSTRAP,
@@ -24,6 +25,7 @@ from tac.deploy.lightning.batch_jobs import (
     COMPONENT_SENSITIVITY_CANONICAL_ARTIFACT_FILES,
     ARTIFACT_VALIDATION,
     CANONICAL_ARTIFACT_FILES,
+    COMPONENT_SENSITIVITY_HOLDOUT_MAP_FILES,
     COMPONENT_SENSITIVITY_CURVE_FILES,
     COMPONENT_SENSITIVITY_MAP_FILES,
     COMPONENT_RESPONSE_CURVE_FILES,
@@ -51,6 +53,7 @@ from tac.deploy.lightning.batch_jobs import (
     validate_local_artifact_dir,
 )
 import tac.deploy.lightning.batch_jobs as lightning_batch_jobs
+from tac.sensitivity_map import save_sensitivity_map
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -380,6 +383,264 @@ def _write_component_response_artifact_dir(root: Path, *, passed: bool = True) -
     return baseline_sha, baseline_bytes
 
 
+def _write_component_sensitivity_artifact_dir(
+    root: Path,
+    *,
+    sensitivity_source: str = "fisher_proxy",
+) -> tuple[str, int]:
+    root.mkdir(parents=True, exist_ok=True)
+    direct_fd = sensitivity_source == "direct_renderer_cuda_finite_difference_component_response"
+    baseline_sha = "b" * 64
+    baseline_bytes = 456
+    metadata: dict[str, object] = {
+        "schema_version": 1,
+        "job_name": "component-sensitivity-job",
+        "role": "diagnostic_component_sensitivity",
+        "expected_archive_sha256": baseline_sha,
+        "expected_archive_size_bytes": baseline_bytes,
+        "expected_baseline_archive_sha256": baseline_sha,
+        "expected_baseline_archive_size_bytes": baseline_bytes,
+        "queue_metadata": {"lane": "component_sensitivity"},
+        "adjudication": None,
+        "score_claim": False,
+        "promotion_eligible": False,
+        "score_source": "none:diagnostic_component_sensitivity_non_promotable",
+        "status_source": "lightning_sdk_job_attributes",
+    }
+    (root / "lightning_queue_metadata.json").write_text(json.dumps(metadata, indent=2) + "\n")
+    (root / ARTIFACT_COMPONENT_SENSITIVITY_INPUTS).write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "tool": "lightning_diagnostic_component_sensitivity_input_preflight",
+                "baseline_archive": {
+                    "path": "/repo/baseline.zip",
+                    "bytes": baseline_bytes,
+                    "sha256": baseline_sha,
+                    "zip_member_count": 3,
+                },
+                "extracted_dir": "/out/extracted",
+                "extracted_members": {
+                    "renderer.bin": {"path": "/out/extracted/renderer.bin", "bytes": 111, "sha256": "c" * 64},
+                    "masks.mkv": {"path": "/out/extracted/masks.mkv", "bytes": 222, "sha256": "d" * 64},
+                    "optimized_poses.bin": {
+                        "path": "/out/extracted/optimized_poses.bin",
+                        "bytes": 333,
+                        "sha256": "e" * 64,
+                    },
+                },
+                "score_claim": False,
+                "promotion_eligible": False,
+                "diagnostic": True,
+            },
+            indent=2,
+        )
+        + "\n"
+    )
+    (root / ARTIFACT_COMPONENT_SENSITIVITY_RUN).write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "tool": "lightning_diagnostic_component_sensitivity_run_metadata",
+                "role": "diagnostic_component_sensitivity",
+                "profile_argv": [
+                    ".venv/bin/python",
+                    "-u",
+                    "experiments/profile_component_sensitivity.py",
+                    "--device",
+                    "cuda",
+                    *(
+                        [
+                            "--promotion-finite-difference",
+                            "--finite-difference-epsilon",
+                            "0.001",
+                            "--all-pairs",
+                        ]
+                        if direct_fd
+                        else []
+                    ),
+                ],
+                "diagnostic": True,
+                "score_claim": False,
+                "promotion_eligible": False,
+            },
+            indent=2,
+        )
+        + "\n"
+    )
+    supply_scan = {
+        "schema_version": 1,
+        "tool": "scripts/scan_lightning_supply_chain.py",
+        "status": "OK",
+        "strict": True,
+        "violation_count": 0,
+        "violations": [],
+        "package_versions": {"lightning": None, "lightning-sdk": "2026.4.10"},
+    }
+    (root / ARTIFACT_SUPPLY_CHAIN_SCAN_PRE).write_text(json.dumps(supply_scan) + "\n")
+    (root / ARTIFACT_SUPPLY_CHAIN_SCAN).write_text(json.dumps(supply_scan) + "\n")
+    (root / ARTIFACT_DALI_REQUIREMENTS).write_text(
+        "https://pypi.nvidia.com/nvidia-dali-cuda130/nvidia_dali_cuda130-1.52.0-py3-none-manylinux_2_28_x86_64.whl "
+        "--hash=sha256:37369fb30e9c66f710b29836688c90abc36793bbe757cd3ad699fac76ba07119\n"
+    )
+    (root / ARTIFACT_DALI_BOOTSTRAP).write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "tool": "lightning_exact_eval_dali_bootstrap",
+                "required_dali_version": "1.52.0",
+                "bootstrap_action": "already_exact",
+                "selected_package": "nvidia-dali-cuda130",
+                "selected_requirement": "nvidia-dali-cuda130==1.52.0",
+                "selected_wheels": [
+                    {
+                        "name": "nvidia-dali-cuda130",
+                        "version": "1.52.0",
+                        "url": "https://pypi.nvidia.com/nvidia-dali-cuda130/nvidia_dali_cuda130-1.52.0-py3-none-manylinux_2_28_x86_64.whl",
+                        "sha256": "37369fb30e9c66f710b29836688c90abc36793bbe757cd3ad699fac76ba07119",
+                    }
+                ],
+                "final_probe": {
+                    "dali_version": "1.52.0",
+                    "nvidia_dali_fn_module": "nvidia.dali.fn",
+                    "installed_distributions": {
+                        "nvidia-dali-cuda120": None,
+                        "nvidia-dali-cuda130": "1.52.0",
+                    },
+                },
+                "final_probe_violations": [],
+            },
+            indent=2,
+        )
+        + "\n"
+    )
+    (root / ARTIFACT_RUNNER_PREFLIGHT).write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "tool": "lightning_exact_eval_runner_preflight",
+                "cuda_available": True,
+                "device_count": 1,
+                "device_name": "T4",
+                "gpu_t4_match": True,
+                "nvidia_dali_fn_module": "nvidia.dali.fn",
+            }
+        )
+        + "\n"
+    )
+    if direct_fd:
+        calibration_pairs = [
+            {"video": 0, "pair_index": i, "t": 2 * i, "t1": 2 * i + 1}
+            for i in range(480)
+        ]
+        holdout_pairs = [
+            {"video": 0, "pair_index": i, "t": 2 * i, "t1": 2 * i + 1}
+            for i in range(480, 600)
+        ]
+    else:
+        calibration_pairs = [{"video": 0, "pair_index": 0, "t": 0, "t1": 1}]
+        holdout_pairs = [{"video": 0, "pair_index": 1, "t": 2, "t1": 3}]
+    (root / "sample_plan.json").write_text(
+        json.dumps(
+            {
+                "split_seed": 20260430,
+                "split_hash": "s" * 64,
+                "calibration_pairs": calibration_pairs,
+                "holdout_pairs": holdout_pairs,
+            },
+            indent=2,
+        )
+        + "\n"
+    )
+    (root / "stability.json").write_text(
+        json.dumps({"passed": False, "component_passed": {"posenet": False, "segnet": False, "combined": False}})
+        + "\n"
+    )
+    (root / "perturbation_basis_v1.json").write_text(json.dumps({"format": "perturbation_basis_v1"}) + "\n")
+    response_curve_paths = {}
+    map_paths = {}
+    for component in ("posenet", "segnet", "combined"):
+        map_name = f"{component}_sensitivity_map.pt"
+        holdout_map_name = f"{component}_holdout_sensitivity_map.pt"
+        curve_name = f"{component}_response_curve.json"
+        map_metadata = {
+            "device": "cuda",
+            "component": component,
+            "scorer_target": component,
+            "score_claim": False,
+            "promotion_eligible": False,
+            "official_component_response": False,
+            "canonical_scorer_path": False,
+            "sensitivity_source": sensitivity_source,
+            "finite_difference_shard": None,
+        }
+        save_sensitivity_map(
+            root / map_name,
+            {"renderer.layer.weight": torch.ones(2)},
+            metadata=map_metadata,
+        )
+        save_sensitivity_map(
+            root / holdout_map_name,
+            {"renderer.layer.weight": torch.ones(2)},
+            metadata={**map_metadata, "split": "holdout"},
+        )
+        map_paths[component] = str(root / map_name)
+        response_curve_paths[component] = str(root / curve_name)
+        (root / curve_name).write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "component": component,
+                    "device": "cuda",
+                    "score_claim": False,
+                    "official_component_response": False,
+                    "canonical_scorer_path": False,
+                    "component_response_path": "direct_renderer_tensor_inprocess_scorer",
+                    "promotion_eligible": False,
+                    "sensitivity_source": sensitivity_source,
+                    "points": [
+                        {"epsilon": -0.001, "value": 0.9, "baseline": 1.0, "delta": -0.1},
+                        {"epsilon": 0.0, "value": 1.0, "baseline": 1.0, "delta": 0.0},
+                        {"epsilon": 0.001, "value": 1.1, "baseline": 1.0, "delta": 0.1},
+                    ],
+                },
+                indent=2,
+            )
+            + "\n"
+        )
+    (root / ARTIFACT_COMPONENT_SENSITIVITY_SUMMARY).write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "tool": "experiments/profile_component_sensitivity.py",
+                "device": "cuda",
+                "evidence_grade": (
+                    "diagnostic_cuda_direct_renderer_finite_difference"
+                    if direct_fd
+                    else "diagnostic_cuda"
+                ),
+                "sensitivity_source": sensitivity_source,
+                "promotion_requested": direct_fd,
+                "finite_difference_epsilon": 0.001 if direct_fd else None,
+                "finite_difference_shard": None,
+                "finite_difference_merge": None,
+                "certification_handoff_eligible": direct_fd,
+                "score_claim": False,
+                "official_component_response": False,
+                "canonical_scorer_path": False,
+                "component_response_path": "direct_renderer_tensor_inprocess_scorer",
+                "promotion_eligible": False,
+                "map_paths": map_paths,
+                "response_curve_paths": response_curve_paths,
+                "n_pairs_total": 600,
+            },
+            indent=2,
+        )
+        + "\n"
+    )
+    return baseline_sha, baseline_bytes
+
+
 def test_exact_cuda_eval_command_is_json_and_cuda_only() -> None:
     command = exact_cuda_eval_command(
         repo_dir="/repo",
@@ -483,7 +744,13 @@ def test_diagnostic_component_sensitivity_command_extracts_archive_and_is_non_pr
     assert "--upstream /repo/upstream" in command
     assert "--device cuda" in command
     assert "--pair-weights /repo/weights.pt" in command
-    assert "--all-pairs" not in command
+    assert "--response-epsilons=-0.001,0.0,0.001" in command
+    assert "--response-epsilons -0.001,0.0,0.001" not in command
+    profile_line = next(
+        line for line in command.splitlines()
+        if line.startswith(".venv/bin/python -u experiments/profile_component_sensitivity.py")
+    )
+    assert "--all-pairs" not in profile_line
     assert "--manifest-output" not in command
     assert "zip-slip member in baseline archive" in command
     assert "duplicate zip member in baseline archive" in command
@@ -506,7 +773,7 @@ def test_diagnostic_component_sensitivity_command_extracts_archive_and_is_non_pr
     assert ARTIFACT_COMPONENT_SENSITIVITY_RUN in command
     assert ARTIFACT_COMPONENT_SENSITIVITY_SUMMARY in command
     assert ARTIFACT_COMPONENT_SENSITIVITY_VALIDATION in command
-    for name in COMPONENT_SENSITIVITY_MAP_FILES + COMPONENT_SENSITIVITY_CURVE_FILES:
+    for name in COMPONENT_SENSITIVITY_MAP_FILES + COMPONENT_SENSITIVITY_HOLDOUT_MAP_FILES + COMPONENT_SENSITIVITY_CURVE_FILES:
         assert name in command
     assert "--index-url" not in command
     assert "--extra-index-url" not in command
@@ -532,6 +799,28 @@ def test_diagnostic_component_sensitivity_spec_is_diagnostic_and_cuda() -> None:
     assert "score_claim" in spec.command
     assert "--all-pairs" in spec.command
     spec.validate()
+
+
+def test_diagnostic_component_sensitivity_command_can_request_direct_finite_difference() -> None:
+    command = diagnostic_component_sensitivity_command(
+        repo_dir="/repo",
+        baseline_archive_path="/repo/baseline.zip",
+        upstream_dir="/repo/upstream",
+        output_dir="/out",
+        expected_baseline_archive_sha256="b" * 64,
+        expected_baseline_archive_size_bytes=456,
+        promotion_finite_difference=True,
+        finite_difference_epsilon=0.002,
+        finite_difference_shard_index=3,
+        finite_difference_shard_count=16,
+    )
+
+    assert "--promotion-finite-difference" in command
+    assert "--finite-difference-epsilon 0.002" in command
+    assert "--finite-difference-shard-index 3" in command
+    assert "--finite-difference-shard-count 16" in command
+    assert "--all-pairs" in command
+    assert "--pair-weights" not in command
 
 
 def test_component_response_spec_is_fail_closed() -> None:
@@ -1185,6 +1474,111 @@ def test_refresh_status_uses_job_attributes_not_logs(tmp_path: Path) -> None:
     assert refreshed["status_history"][-1]["source"] == "lightning_sdk_job_attributes"
 
 
+def test_refresh_status_records_status_regression_anomaly(tmp_path: Path) -> None:
+    class FakeJob:
+        name = "volatile"
+        link = "https://lightning.ai/jobs/volatile"
+        snapshot_path = "/snapshot"
+        artifact_path = "/artifacts"
+        machine = "T4"
+        total_cost = 0.25
+
+        def __init__(self, status: str) -> None:
+            self.status = status
+
+    spec = make_exact_eval_spec(
+        name="volatile",
+        archive_path="/repo/archive.zip",
+        repo_dir="/repo",
+        upstream_dir="/upstream",
+        studio="pact",
+        adjudication=_adjudication(),
+        **_expected_archive_kwargs(),
+    )
+    client = LightningBatchJobsClient(state_path=tmp_path / "jobs.json")
+    client.submit(spec, dry_run=True)
+    records = json.loads((tmp_path / "jobs.json").read_text())
+    records[0]["dry_run"] = False
+    (tmp_path / "jobs.json").write_text(json.dumps(records, indent=2, sort_keys=True) + "\n")
+
+    client.refresh_status_from_job(job_name="volatile", job=FakeJob("Running"))
+    refreshed = client.refresh_status_from_job(job_name="volatile", job=FakeJob("Pending"))
+
+    assert refreshed["status"] == "REMOTE_STATUS_RECONCILIATION_REQUIRED"
+    assert refreshed["remote_observed_status"] == "Pending"
+    assert refreshed["remote_status_accepted"] is False
+    assert refreshed["status_reconciliation_required"] is True
+    assert refreshed["identity_confidence"] == "name_only"
+    assert refreshed["identity_reconciliation_required"] is True
+    anomaly = refreshed["status_anomalies"][-1]
+    assert anomaly["type"] == "nonterminal_status_regression"
+    assert anomaly["previous_status"] == "Running"
+    assert anomaly["current_status"] == "Pending"
+    assert anomaly["accepted_status"] == "REMOTE_STATUS_RECONCILIATION_REQUIRED"
+    assert anomaly["status_history_index"] == len(refreshed["status_history"]) - 1
+    assert refreshed["status_history"][-1]["anomaly"] == anomaly
+    assert refreshed["status_history"][-1]["observed_status"] == "Pending"
+    assert refreshed["status_history"][-1]["accepted_status"] == "REMOTE_STATUS_RECONCILIATION_REQUIRED"
+    assert refreshed["status_history"][-1]["job_snapshot"]["status"] == "Pending"
+
+
+def test_refresh_status_backfills_existing_status_history_anomalies(tmp_path: Path) -> None:
+    class FakeJob:
+        name = "volatile"
+        status = "Failed"
+        link = "https://lightning.ai/jobs/volatile"
+        snapshot_path = "/snapshot"
+        artifact_path = "/artifacts"
+        machine = "T4"
+        total_cost = 0.25
+
+    spec = make_exact_eval_spec(
+        name="volatile",
+        archive_path="/repo/archive.zip",
+        repo_dir="/repo",
+        upstream_dir="/upstream",
+        studio="pact",
+        adjudication=_adjudication(),
+        **_expected_archive_kwargs(),
+    )
+    client = LightningBatchJobsClient(state_path=tmp_path / "jobs.json")
+    client.submit(spec, dry_run=True)
+    records = json.loads((tmp_path / "jobs.json").read_text())
+    records[0]["dry_run"] = False
+    records[0]["status"] = "Pending"
+    records[0]["status_history"] = [
+        {"recorded_at_utc": "2026-05-01T00:00:00Z", "status": "SUBMITTED"},
+        {
+            "recorded_at_utc": "2026-05-01T00:01:00Z",
+            "status": "Pending",
+            "source": "lightning_sdk_job_attributes",
+        },
+        {
+            "recorded_at_utc": "2026-05-01T00:02:00Z",
+            "status": "Running",
+            "source": "lightning_sdk_job_attributes",
+        },
+        {
+            "recorded_at_utc": "2026-05-01T00:03:00Z",
+            "status": "Pending",
+            "source": "lightning_sdk_job_attributes",
+        },
+    ]
+    (tmp_path / "jobs.json").write_text(json.dumps(records, indent=2, sort_keys=True) + "\n")
+
+    refreshed = client.refresh_status_from_job(job_name="volatile", job=FakeJob())
+
+    anomaly = refreshed["status_anomalies"][0]
+    assert anomaly["type"] == "nonterminal_status_regression"
+    assert anomaly["previous_status"] == "Running"
+    assert anomaly["current_status"] == "Pending"
+    assert anomaly["status_history_index"] == 3
+    assert refreshed["status_history"][3]["anomaly"] == anomaly
+    assert refreshed["status_reconciliation_required"] is True
+    assert refreshed["status"] == "Failed"
+    assert refreshed["remote_status_accepted"] is True
+
+
 def test_batch_job_cli_refresh_status_infers_sdk_context_from_state(tmp_path: Path) -> None:
     state_path = tmp_path / "jobs.json"
     spec = make_exact_eval_spec(
@@ -1324,6 +1718,72 @@ class Job:
     assert payload["skipped_count"] == 1
     assert {row["job"]["name"] for row in payload["results"]} == {"job_one", "job_two"}
     assert payload["skipped"] == [{"job_name": "dry_job", "reason": "dry_run"}]
+
+
+def test_batch_job_cli_refresh_status_all_fails_on_status_anomaly(tmp_path: Path) -> None:
+    state_path = tmp_path / "jobs.json"
+    spec = make_exact_eval_spec(
+        name="volatile",
+        archive_path="/repo/archive.zip",
+        repo_dir="/repo",
+        upstream_dir="/upstream",
+        studio="pact",
+        teamspace="comma-lab",
+        user="adpena",
+        adjudication=_adjudication(),
+        **_expected_archive_kwargs(),
+    )
+    client = LightningBatchJobsClient(state_path=state_path)
+    client.submit(spec, dry_run=True)
+    records = json.loads(state_path.read_text())
+    records[0]["dry_run"] = False
+    records[0]["status"] = "Running"
+    records[0]["status_history"] = [
+        {
+            "recorded_at_utc": "2026-05-01T00:00:00Z",
+            "status": "Running",
+            "source": "lightning_sdk_job_attributes",
+        }
+    ]
+    state_path.write_text(json.dumps(records, indent=2, sort_keys=True) + "\n")
+
+    (tmp_path / "lightning_sdk.py").write_text(
+        """
+class Job:
+    def __init__(self, *, name, teamspace=None, org=None, user=None):
+        self.name = name
+        self.status = "Pending"
+        self.link = f"https://lightning.ai/jobs/{name}"
+        self.snapshot_path = f"/teamspace/jobs/{name}/snapshot"
+        self.artifact_path = f"/teamspace/jobs/{name}/artifacts"
+        self.machine = "g4dn.2xlarge"
+        self.total_cost = 0.25
+""".lstrip()
+    )
+
+    env = os.environ.copy()
+    env["PYTHONPATH"] = os.pathsep.join([str(tmp_path), str(REPO_ROOT / "src")])
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(CLI),
+            "refresh-status",
+            "--state-path",
+            str(state_path),
+            "--all",
+            "--fail-on-error",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=20,
+        env=env,
+        cwd=tmp_path,
+    )
+    assert result.returncode == 1
+    payload = json.loads(result.stdout)
+    assert payload["failure_count"] == 1
+    assert payload["failures"][0]["error_type"] == "StatusReconciliationRequired"
+    assert payload["results"][0]["status"] == "REMOTE_STATUS_RECONCILIATION_REQUIRED"
 
 
 def test_validate_local_artifact_dir_uses_json_not_logs(tmp_path: Path) -> None:
@@ -1479,6 +1939,162 @@ def test_validate_local_component_response_artifact_dir_rejects_failed_gates(
 
     with pytest.raises(ValueError, match="official component-response gates did not pass"):
         validate_local_component_response_artifact_dir(artifact_dir, require_passed=True)
+
+
+def test_validate_local_component_response_requires_external_baseline_repro_gate(
+    tmp_path: Path,
+) -> None:
+    artifact_dir = tmp_path / "component_response"
+    _write_component_response_artifact_dir(artifact_dir, passed=True)
+    summary_path = artifact_dir / ARTIFACT_COMPONENT_RESPONSE_SUMMARY
+    summary = json.loads(summary_path.read_text())
+    summary["external_baseline_contest_auth_eval_json"] = {
+        "path": "/repo/baseline_eval.json",
+        "bytes": 123,
+        "sha256": "f" * 64,
+    }
+    summary_path.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")
+
+    result = validate_local_component_response_artifact_dir(artifact_dir)
+
+    assert result["external_baseline_repro_required"] is True
+    assert result["promotion_eligible"] is False
+    assert result["failed_components"] == ["combined", "posenet", "segnet"]
+    with pytest.raises(ValueError, match="official component-response gates did not pass"):
+        validate_local_component_response_artifact_dir(artifact_dir, require_passed=True)
+
+
+def test_validate_local_component_sensitivity_artifact_dir_is_non_promotable(
+    tmp_path: Path,
+) -> None:
+    artifact_dir = tmp_path / "component_sensitivity"
+    expected_sha, expected_bytes = _write_component_sensitivity_artifact_dir(artifact_dir)
+
+    result = validate_local_component_sensitivity_artifact_dir(
+        artifact_dir,
+        expected_baseline_archive_sha256=expected_sha,
+        expected_baseline_archive_size_bytes=expected_bytes,
+    )
+
+    assert result["role"] == "diagnostic_component_sensitivity"
+    assert result["baseline_archive_sha256"] == expected_sha
+    assert result["baseline_archive_size_bytes"] == expected_bytes
+    assert result["device"] == "cuda"
+    assert result["promotion_eligible"] is False
+    assert result["score_claim"] is False
+    assert result["planning_eligible"] is True
+    assert result["certification_handoff_eligible"] is False
+    assert result["certification_candidate"] is False
+    assert result["score_source"] == "none:diagnostic_component_sensitivity_non_promotable"
+    assert set(result["curves"]) == {"posenet", "segnet", "combined"}
+
+
+def test_validate_local_component_sensitivity_accepts_direct_fd_planning_artifact(
+    tmp_path: Path,
+) -> None:
+    artifact_dir = tmp_path / "component_sensitivity_fd"
+    expected_sha, expected_bytes = _write_component_sensitivity_artifact_dir(
+        artifact_dir,
+        sensitivity_source="direct_renderer_cuda_finite_difference_component_response",
+    )
+
+    result = validate_local_component_sensitivity_artifact_dir(
+        artifact_dir,
+        expected_baseline_archive_sha256=expected_sha,
+        expected_baseline_archive_size_bytes=expected_bytes,
+    )
+
+    assert result["sensitivity_source"] == "direct_renderer_cuda_finite_difference_component_response"
+    assert result["planning_eligible"] is True
+    assert result["certification_handoff_eligible"] is True
+    assert result["certification_candidate"] is True
+    assert result["promotion_eligible"] is False
+    assert result["score_claim"] is False
+    assert result["summary"]["promotion_requested"] is True
+    assert "--promotion-finite-difference" in result["run_metadata"]["profile_argv"]
+
+
+def test_validate_local_component_sensitivity_rejects_unknown_source(
+    tmp_path: Path,
+) -> None:
+    artifact_dir = tmp_path / "component_sensitivity_unknown_source"
+    _write_component_sensitivity_artifact_dir(artifact_dir, sensitivity_source="unknown_proxy")
+
+    with pytest.raises(ValueError, match="sensitivity_source must be one of"):
+        validate_local_component_sensitivity_artifact_dir(artifact_dir)
+
+
+@pytest.mark.parametrize(
+    ("curve_key", "bad_value", "message"),
+    [
+        ("score_claim", True, "score_claim=false"),
+        ("promotion_eligible", True, "promotion_eligible=false"),
+        ("official_component_response", True, "must not claim official_component_response"),
+        ("canonical_scorer_path", True, "must not claim canonical_scorer_path"),
+        ("sensitivity_source", "other_source", "sensitivity_source does not match summary"),
+    ],
+)
+def test_validate_local_component_sensitivity_rejects_promotable_curve_claims(
+    tmp_path: Path,
+    curve_key: str,
+    bad_value: object,
+    message: str,
+) -> None:
+    artifact_dir = tmp_path / f"component_sensitivity_bad_{curve_key}"
+    _write_component_sensitivity_artifact_dir(artifact_dir)
+    curve_path = artifact_dir / "posenet_response_curve.json"
+    curve = json.loads(curve_path.read_text())
+    curve[curve_key] = bad_value
+    curve_path.write_text(json.dumps(curve, indent=2, sort_keys=True) + "\n")
+
+    with pytest.raises(ValueError, match=message):
+        validate_local_component_sensitivity_artifact_dir(artifact_dir)
+
+
+@pytest.mark.parametrize(
+    ("map_key", "bad_value", "message"),
+    [
+        ("score_claim", True, "score_claim=false"),
+        ("promotion_eligible", True, "promotion_eligible=false"),
+        ("official_component_response", True, "must not claim official_component_response"),
+        ("canonical_scorer_path", True, "must not claim canonical_scorer_path"),
+        ("sensitivity_source", "other_source", "sensitivity_source does not match summary"),
+    ],
+)
+def test_validate_local_component_sensitivity_rejects_promotable_map_metadata(
+    tmp_path: Path,
+    map_key: str,
+    bad_value: object,
+    message: str,
+) -> None:
+    artifact_dir = tmp_path / f"component_sensitivity_bad_map_{map_key}"
+    _write_component_sensitivity_artifact_dir(artifact_dir)
+    map_path = artifact_dir / "posenet_sensitivity_map.pt"
+    payload = torch.load(map_path, map_location="cpu", weights_only=False)
+    payload["metadata"][map_key] = bad_value
+    torch.save(payload, map_path)
+
+    with pytest.raises(ValueError, match=message):
+        validate_local_component_sensitivity_artifact_dir(artifact_dir)
+
+
+def test_mirror_local_component_sensitivity_artifact_dir_copies_compact_files(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "source_component_sensitivity"
+    mirror = tmp_path / "mirror_component_sensitivity"
+    expected_sha, expected_bytes = _write_component_sensitivity_artifact_dir(source)
+
+    result = mirror_local_component_sensitivity_artifact_dir(
+        source,
+        mirror,
+        expected_baseline_archive_sha256=expected_sha,
+        expected_baseline_archive_size_bytes=expected_bytes,
+    )
+
+    assert result["baseline_archive_sha256"] == expected_sha
+    assert result["copied_files"] == list(COMPONENT_SENSITIVITY_CANONICAL_ARTIFACT_FILES)
+    assert (mirror / ARTIFACT_COMPONENT_SENSITIVITY_VALIDATION).is_file()
 
 
 def test_harvest_local_artifacts_attaches_validation_to_state(tmp_path: Path) -> None:
@@ -1656,6 +2272,79 @@ def test_harvest_ssh_component_response_artifacts_uses_state_artifact_mapping(
     record = json.loads((tmp_path / "jobs.json").read_text())[0]
     assert record["status"] == "HARVESTED"
     assert record["status_history"][-1]["source"] == "ssh_component_response_artifact_validation"
+
+
+def test_harvest_ssh_component_sensitivity_artifacts_uses_state_artifact_mapping(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    remote_source = tmp_path / "remote_component_sensitivity"
+    expected_sha, expected_bytes = _write_component_sensitivity_artifact_dir(remote_source)
+    mirror = tmp_path / "mirror"
+    calls: list[list[str]] = []
+    persisted_remote = "/teamspace/jobs/component-sensitivity/artifacts/pact/remote/sensitivity"
+
+    def fake_run(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        calls.append(list(args))
+        if args[0] == "ssh" and args[-1].startswith("test -d "):
+            assert "BatchMode=yes" in args
+            assert "PasswordAuthentication=no" in args
+            assert "KbdInteractiveAuthentication=no" in args
+            assert "ConnectTimeout=15" in args
+            assert args[-2] == "lightning-host"
+            assert args[-1] == f"test -d {persisted_remote}"
+            return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+        if args[0] == "ssh" and args[-1].startswith("test -f "):
+            name = args[-1].rsplit("/", 1)[-1]
+            return subprocess.CompletedProcess(
+                args,
+                0 if (remote_source / name).is_file() else 1,
+                stdout="",
+                stderr="",
+            )
+        if args[0] == "scp":
+            assert "BatchMode=yes" in args
+            assert "PasswordAuthentication=no" in args
+            assert "KbdInteractiveAuthentication=no" in args
+            assert "ConnectTimeout=15" in args
+            assert "-p" in args
+            assert args[-2].startswith(f"lightning-host:{persisted_remote}/")
+            name = args[-2].rsplit("/", 1)[-1]
+            shutil.copy2(remote_source / name, Path(args[-1]))
+            if name == ARTIFACT_COMPONENT_SENSITIVITY_VALIDATION:
+                Path(args[-1]).chmod(0o444)
+            return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+        raise AssertionError(f"unexpected command: {args}")
+
+    monkeypatch.setattr(lightning_batch_jobs.subprocess, "run", fake_run)
+    spec = make_diagnostic_component_sensitivity_spec(
+        name="component_sensitivity",
+        baseline_archive_path="/repo/baseline.zip",
+        repo_dir="/repo",
+        upstream_dir="/repo/upstream",
+        output_dir="/teamspace/studios/this_studio/pact/remote/sensitivity",
+        local_artifact_dir=str(mirror),
+        expected_baseline_archive_sha256=expected_sha,
+        expected_baseline_archive_size_bytes=expected_bytes,
+    )
+    client = LightningBatchJobsClient(state_path=tmp_path / "jobs.json")
+    client.submit(spec, dry_run=True)
+
+    validation = client.harvest_ssh_component_sensitivity_artifacts(
+        job_name="component_sensitivity",
+        ssh_target="lightning-host",
+    )
+
+    assert calls[0][0] == "ssh"
+    assert calls[1][0] == "scp"
+    assert validation["baseline_archive_sha256"] == expected_sha
+    assert validation["promotion_eligible"] is False
+    assert validation["ssh_source"]["remote_dir"] == persisted_remote
+    assert (mirror / ARTIFACT_COMPONENT_SENSITIVITY_VALIDATION).is_file()
+    assert os.access(mirror / ARTIFACT_COMPONENT_SENSITIVITY_VALIDATION, os.W_OK)
+    record = json.loads((tmp_path / "jobs.json").read_text())[0]
+    assert record["status"] == "HARVESTED"
+    assert record["status_history"][-1]["source"] == "ssh_component_sensitivity_artifact_validation"
 
 
 def test_direct_ssh_harvest_rejects_bare_lightning_host(tmp_path: Path) -> None:
@@ -1950,6 +2639,13 @@ def test_batch_job_cli_component_sensitivity_dry_run(tmp_path: Path) -> None:
             "4",
             "--response-top-k",
             "8",
+            "--promotion-finite-difference",
+            "--finite-difference-epsilon",
+            "0.002",
+            "--finite-difference-shard-index",
+            "2",
+            "--finite-difference-shard-count",
+            "8",
             "--dry-run",
         ],
         capture_output=True,
@@ -1971,6 +2667,10 @@ def test_batch_job_cli_component_sensitivity_dry_run(tmp_path: Path) -> None:
     assert "--all-pairs" in command
     assert "--pair-batch 4" in command
     assert "--response-top-k 8" in command
+    assert "--promotion-finite-difference" in command
+    assert "--finite-difference-epsilon 0.002" in command
+    assert "--finite-difference-shard-index 2" in command
+    assert "--finite-difference-shard-count 8" in command
     assert "promotion_eligible" in command
     assert "score_claim" in command
 
@@ -2069,6 +2769,24 @@ def test_batch_job_cli_has_stateful_component_response_harvest_and_remote_prefli
     assert "--job-name" in harvest.stdout
     assert "--state-path" in harvest.stdout
     assert "--remote-artifact-dir" in harvest.stdout
+
+    harvest_sensitivity = subprocess.run(
+        [
+            sys.executable,
+            str(CLI),
+            "harvest-component-sensitivity-ssh",
+            "--help",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=20,
+        env={"PYTHONPATH": str(REPO_ROOT / "src")},
+        cwd=tmp_path,
+    )
+    assert harvest_sensitivity.returncode == 0, harvest_sensitivity.stderr
+    assert "--job-name" in harvest_sensitivity.stdout
+    assert "--state-path" in harvest_sensitivity.stdout
+    assert "--remote-artifact-dir" in harvest_sensitivity.stdout
 
 
 def test_remote_supply_chain_preflight_runs_strict_scan_before_submit(

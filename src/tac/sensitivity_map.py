@@ -14,13 +14,29 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Mapping, MutableMapping
+from typing import Any, Mapping, MutableMapping
 
 import torch
 import torch.nn as nn
 
 
 SENSITIVITY_MAP_FORMAT = "tac_score_sensitivity_map_v1"
+CERTIFIED_SENSITIVITY_MAP_CERTIFICATION_FORMAT = "component_sensitivity_map_certification_v1"
+
+_CERTIFICATION_SHA_FIELDS = (
+    "source_map_sha256",
+    "official_response_curve_sha256",
+    "stability_sha256",
+    "sample_plan_sha256",
+    "baseline_archive_sha256",
+    "contest_auth_eval_json_sha256",
+)
+_CERTIFICATION_TRUE_FIELDS = (
+    "official_component_response",
+    "canonical_scorer_path",
+    "promotion_eligible",
+)
+_CERTIFICATION_COMPONENTS = {"posenet", "segnet", "combined"}
 
 
 class SensitivityMapError(ValueError):
@@ -218,6 +234,89 @@ def load_sensitivity_map(path: str | Path) -> tuple[dict[str, torch.Tensor], dic
     return out, metadata
 
 
+def validate_certified_sensitivity_map_metadata(
+    metadata: Mapping[str, Any],
+    *,
+    component: str | None = None,
+    require_review_clean_passes: int = 3,
+) -> dict[str, Any]:
+    """Return a checked certification packet for a promotable sensitivity map."""
+    if not isinstance(metadata, Mapping):
+        raise SensitivityMapError("certified sensitivity metadata must be a mapping")
+    if metadata.get("promotion_eligible") is not True:
+        raise SensitivityMapError("certified sensitivity metadata requires promotion_eligible=true")
+    if metadata.get("official_component_response") is not True:
+        raise SensitivityMapError(
+            "certified sensitivity metadata requires official_component_response=true"
+        )
+    if metadata.get("canonical_scorer_path") is not True:
+        raise SensitivityMapError("certified sensitivity metadata requires canonical_scorer_path=true")
+    require_authoritative_device(metadata.get("device"))
+
+    certification = metadata.get("certification")
+    if not isinstance(certification, Mapping):
+        raise SensitivityMapError("certified sensitivity metadata requires certification mapping")
+    out = {str(k): v for k, v in certification.items()}
+    if out.get("format") != CERTIFIED_SENSITIVITY_MAP_CERTIFICATION_FORMAT:
+        raise SensitivityMapError(
+            "certification.format must be "
+            f"{CERTIFIED_SENSITIVITY_MAP_CERTIFICATION_FORMAT!r}"
+        )
+    cert_component = out.get("component")
+    if cert_component not in _CERTIFICATION_COMPONENTS:
+        raise SensitivityMapError(f"certification.component is invalid: {cert_component!r}")
+    if component is not None and cert_component != component:
+        raise SensitivityMapError(
+            f"certification.component={cert_component!r} does not match {component!r}"
+        )
+    require_authoritative_device(out.get("device"))
+    for key in _CERTIFICATION_TRUE_FIELDS:
+        if out.get(key) is not True:
+            raise SensitivityMapError(f"certification.{key} must be exactly true")
+    for key in _CERTIFICATION_SHA_FIELDS:
+        value = out.get(key)
+        if not isinstance(value, str) or len(value) != 64 or any(c not in "0123456789abcdef" for c in value):
+            raise SensitivityMapError(f"certification.{key} must be a lowercase SHA-256 hex digest")
+    archive_bytes = out.get("baseline_archive_bytes")
+    if not isinstance(archive_bytes, int) or isinstance(archive_bytes, bool) or archive_bytes <= 0:
+        raise SensitivityMapError("certification.baseline_archive_bytes must be a positive integer")
+    clean_passes = out.get("review_clean_passes")
+    if (
+        not isinstance(clean_passes, int)
+        or isinstance(clean_passes, bool)
+        or clean_passes < require_review_clean_passes
+    ):
+        raise SensitivityMapError(
+            "certification.review_clean_passes must be at least "
+            f"{require_review_clean_passes}"
+        )
+    unresolved = out.get("review_unresolved_blockers", [])
+    if unresolved not in ([], None):
+        raise SensitivityMapError("certification.review_unresolved_blockers must be empty")
+    return out
+
+
+def save_certified_sensitivity_map(
+    path: str | Path,
+    sensitivities: Mapping[str, torch.Tensor],
+    *,
+    component: str,
+    certification: Mapping[str, Any],
+) -> None:
+    """Persist a promotion-capable map after validating its certification."""
+    metadata = {
+        "component": component,
+        "device": "cuda",
+        "promotion_eligible": True,
+        "official_component_response": True,
+        "canonical_scorer_path": True,
+        "sensitivity_source": "certified_official_component_sensitivity",
+        "certification": dict(certification),
+    }
+    validate_certified_sensitivity_map_metadata(metadata, component=component)
+    save_sensitivity_map(path, sensitivities, metadata=metadata)
+
+
 def sensitivity_cv_distance(
     train: Mapping[str, torch.Tensor],
     holdout: Mapping[str, torch.Tensor],
@@ -253,6 +352,7 @@ def sensitivity_cv_distance(
 
 __all__ = [
     "SENSITIVITY_MAP_FORMAT",
+    "CERTIFIED_SENSITIVITY_MAP_CERTIFICATION_FORMAT",
     "SensitivityMapError",
     "SensitivityMapStats",
     "require_authoritative_device",
@@ -262,5 +362,7 @@ __all__ = [
     "validate_sensitivity_map_for_model",
     "save_sensitivity_map",
     "load_sensitivity_map",
+    "save_certified_sensitivity_map",
+    "validate_certified_sensitivity_map_metadata",
     "sensitivity_cv_distance",
 ]

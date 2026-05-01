@@ -48,7 +48,49 @@ def _component_map(component: str, sha256: str) -> dict[str, object]:
         "bytes": 456,
         "sha256": sha256,
         "scorer_target": component,
+        "map_format": "tac_score_sensitivity_map_v1",
+        "certification": _component_map_certification(component),
         "tensor": {"dtype": "float32", "shape": [8, 16], "numel": 128},
+    }
+
+
+def _component_map_certification(component: str) -> dict[str, object]:
+    return {
+        "format": "component_sensitivity_map_certification_v1",
+        "component": component,
+        "device": "cuda",
+        "official_component_response": True,
+        "canonical_scorer_path": True,
+        "promotion_eligible": True,
+        "source_map_sha256": SHA_A,
+        "official_response_curve_sha256": SHA_B,
+        "stability_sha256": SHA_C,
+        "sample_plan_sha256": SHA_D,
+        "baseline_archive_sha256": SHA_A,
+        "baseline_archive_bytes": 686635,
+        "contest_auth_eval_json_sha256": SHA_B,
+        "prediction_deltas_sha256": SHA_C,
+        "perturbation_basis_sha256": SHA_D,
+        "review_packet_sha256": SHA_A,
+        "review_clean_passes": 3,
+        "review_unresolved_blockers": [],
+        "response_gate_results": {
+            "finite_values": True,
+            "coverage_passed": True,
+            "zero_repro": True,
+            "zero_repro_error": 0.0,
+            "signal_present": True,
+            "observed_delta_max": 0.01,
+            "prediction_error_passed": True,
+            "max_relative_prediction_error": 0.02,
+            "promotion_gate_passed": True,
+        },
+        "stability_gate_results": {
+            "passed": True,
+            "cv_max": 0.04,
+            "spearman_min": 0.96,
+            "top_decile_overlap_min": 0.91,
+        },
     }
 
 
@@ -201,6 +243,22 @@ def test_component_map_scorer_target_must_match_component() -> None:
     manifest["component_maps"]["combined"]["scorer_target"] = "posenet"  # type: ignore[index]
 
     with pytest.raises(ComponentSensitivityArtifactError, match="scorer_target"):
+        validate_component_sensitivity_manifest(manifest)
+
+
+def test_component_map_requires_certification_for_promotion() -> None:
+    manifest = _valid_manifest()
+    del manifest["component_maps"]["combined"]["certification"]  # type: ignore[index]
+
+    with pytest.raises(ComponentSensitivityArtifactError, match="certification"):
+        validate_component_sensitivity_manifest(manifest)
+
+
+def test_component_map_rejects_insufficient_review_passes() -> None:
+    manifest = _valid_manifest()
+    manifest["component_maps"]["combined"]["certification"]["review_clean_passes"] = 2  # type: ignore[index]
+
+    with pytest.raises(ComponentSensitivityArtifactError, match="review_clean_passes"):
         validate_component_sensitivity_manifest(manifest)
 
 
@@ -462,16 +520,22 @@ def test_materialize_manifest_fills_custody_and_writes_deterministically(tmp_pat
         "combined": {
             "path": "combined.pt",
             "scorer_target": "combined",
+            "map_format": "tac_score_sensitivity_map_v1",
+            "certification": _component_map_certification("combined"),
             "tensor": {"dtype": "float32", "shape": [1]},
         },
         "segnet": {
             "path": "segnet.pt",
             "scorer_target": "segnet",
+            "map_format": "tac_score_sensitivity_map_v1",
+            "certification": _component_map_certification("segnet"),
             "tensor": {"dtype": "float32", "shape": [1]},
         },
         "posenet": {
             "path": "posenet.pt",
             "scorer_target": "posenet",
+            "map_format": "tac_score_sensitivity_map_v1",
+            "certification": _component_map_certification("posenet"),
             "tensor": {"dtype": "float32", "shape": [1]},
         },
     }

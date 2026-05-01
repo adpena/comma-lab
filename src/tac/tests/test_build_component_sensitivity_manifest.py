@@ -15,6 +15,10 @@ from tac.component_sensitivity_artifact import validate_component_sensitivity_ma
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SCRIPT = REPO_ROOT / "experiments" / "build_component_sensitivity_manifest.py"
+SHA_A = "a" * 64
+SHA_B = "b" * 64
+SHA_C = "c" * 64
+SHA_D = "d" * 64
 
 
 def _load_module():
@@ -77,8 +81,9 @@ def _write_inputs(root: Path) -> dict[str, Path]:
     for component in ("posenet", "segnet", "combined"):
         torch.save(
             {
-                "format": "test_component_map",
+                "format": "tac_score_sensitivity_map_v1",
                 "sensitivities": {f"{component}.weight": torch.ones(3, dtype=torch.float32)},
+                "metadata": _certified_map_metadata(component),
             },
             root / f"{component}_map.pt",
         )
@@ -128,6 +133,54 @@ def _write_inputs(root: Path) -> dict[str, Path]:
         "posenet_curve": root / "posenet_curve.json",
         "segnet_curve": root / "segnet_curve.json",
         "combined_curve": root / "combined_curve.json",
+    }
+
+
+def _certified_map_metadata(component: str) -> dict[str, object]:
+    return {
+        "component": component,
+        "device": "cuda",
+        "promotion_eligible": True,
+        "official_component_response": True,
+        "canonical_scorer_path": True,
+        "sensitivity_source": "certified_official_component_sensitivity",
+        "certification": {
+            "format": "component_sensitivity_map_certification_v1",
+            "component": component,
+            "device": "cuda",
+            "official_component_response": True,
+            "canonical_scorer_path": True,
+            "promotion_eligible": True,
+            "source_map_sha256": SHA_A,
+            "official_response_curve_sha256": SHA_B,
+            "stability_sha256": SHA_C,
+            "sample_plan_sha256": SHA_D,
+            "baseline_archive_sha256": SHA_A,
+            "baseline_archive_bytes": 686635,
+            "contest_auth_eval_json_sha256": SHA_B,
+            "prediction_deltas_sha256": SHA_C,
+            "perturbation_basis_sha256": SHA_D,
+            "review_packet_sha256": SHA_A,
+            "review_clean_passes": 3,
+            "review_unresolved_blockers": [],
+            "response_gate_results": {
+                "finite_values": True,
+                "coverage_passed": True,
+                "zero_repro": True,
+                "zero_repro_error": 0.0,
+                "signal_present": True,
+                "observed_delta_max": 0.02,
+                "prediction_error_passed": True,
+                "max_relative_prediction_error": 0.02,
+                "promotion_gate_passed": True,
+            },
+            "stability_gate_results": {
+                "passed": True,
+                "cv_max": 0.01,
+                "spearman_min": 0.96,
+                "top_decile_overlap_min": 0.9,
+            },
+        },
     }
 
 
@@ -279,12 +332,45 @@ def test_rejects_nonfinite_sensitivity_tensor(tmp_path: Path) -> None:
     paths = _write_inputs(tmp_path)
     bad = torch.ones(3, dtype=torch.float32)
     bad[1] = float("nan")
-    torch.save({"sensitivities": {"posenet.weight": bad}}, paths["posenet_map"])
+    torch.save(
+        {
+            "format": "tac_score_sensitivity_map_v1",
+            "sensitivities": {"posenet.weight": bad},
+            "metadata": _certified_map_metadata("posenet"),
+        },
+        paths["posenet_map"],
+    )
 
     args = module.parse_args(_base_argv(paths, tmp_path / "manifest.json"))
     with pytest.raises(
         module.ComponentSensitivityManifestBuildError,
         match="NaN/Inf",
+    ):
+        module.build_manifest(args)
+
+
+def test_rejects_clean_but_uncertified_sensitivity_map(tmp_path: Path) -> None:
+    module = _load_module()
+    paths = _write_inputs(tmp_path)
+    torch.save(
+        {
+            "format": "tac_score_sensitivity_map_v1",
+            "sensitivities": {"posenet.weight": torch.ones(3, dtype=torch.float32)},
+            "metadata": {
+                "component": "posenet",
+                "device": "cuda",
+                "promotion_eligible": True,
+                "official_component_response": True,
+                "canonical_scorer_path": True,
+            },
+        },
+        paths["posenet_map"],
+    )
+
+    args = module.parse_args(_base_argv(paths, tmp_path / "manifest.json"))
+    with pytest.raises(
+        module.ComponentSensitivityManifestBuildError,
+        match="certification",
     ):
         module.build_manifest(args)
 

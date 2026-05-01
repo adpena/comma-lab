@@ -92,6 +92,46 @@ encoders default to v2.
 # ── coordinate MLP ────────────────────────────────────────────────────────
 
 
+@dataclass(frozen=True)
+class NeRVSamplingComponent:
+    """One deterministic coordinate-sampling component for NeRV training."""
+
+    name: str
+    weight: float
+    flat_indices: torch.Tensor | None = None
+
+
+@dataclass(frozen=True)
+class NeRVSamplingPool:
+    """Weighted coordinate-sampling pool.
+
+    ``flat_indices=None`` means sample uniformly from the full mask tensor.
+    Non-empty index tensors sample uniformly within that component. Component
+    selection is weighted and driven by the trainer's CPU RNG, so repeated runs
+    with the same seed are deterministic.
+    """
+
+    components: tuple[NeRVSamplingComponent, ...]
+
+    def __post_init__(self) -> None:
+        if not self.components:
+            raise ValueError("NeRVSamplingPool requires at least one component")
+        for component in self.components:
+            if float(component.weight) <= 0.0:
+                raise ValueError(
+                    f"sampling component {component.name!r} weight must be > 0"
+                )
+            if component.flat_indices is not None:
+                if component.flat_indices.ndim != 1:
+                    raise ValueError(
+                        f"sampling component {component.name!r} indices must be 1-D"
+                    )
+                if component.flat_indices.numel() == 0:
+                    raise ValueError(
+                        f"sampling component {component.name!r} indices are empty"
+                    )
+
+
 def positional_encode(coords: torch.Tensor, num_freqs: int) -> torch.Tensor:
     """Sin/cos positional encoding at log-spaced frequencies.
 
@@ -618,6 +658,7 @@ class NeRVMaskTrainer:
         self,
         masks_THW: torch.Tensor,
         batch_size: int,
+        sampling_pool: NeRVSamplingPool | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Sample (coords, labels) from a (T, H, W) integer mask tensor.
 
@@ -628,9 +669,48 @@ class NeRVMaskTrainer:
         T, H, W = masks_THW.shape
         # Sample integer indices on CPU (deterministic generator) then move.
         flat_size = T * H * W
-        flat_idx = torch.randint(
-            0, flat_size, (batch_size,), generator=self._rng
-        )
+        if sampling_pool is None:
+            flat_idx = torch.randint(0, flat_size, (batch_size,), generator=self._rng)
+        else:
+            component_weights = torch.tensor(
+                [float(component.weight) for component in sampling_pool.components],
+                dtype=torch.float64,
+            )
+            component_draws = torch.multinomial(
+                component_weights,
+                int(batch_size),
+                replacement=True,
+                generator=self._rng,
+            )
+            flat_idx = torch.empty(int(batch_size), dtype=torch.long)
+            for component_index, component in enumerate(sampling_pool.components):
+                mask = component_draws == int(component_index)
+                n_draws = int(mask.sum().item())
+                if n_draws == 0:
+                    continue
+                if component.flat_indices is None:
+                    flat_idx[mask] = torch.randint(
+                        0,
+                        flat_size,
+                        (n_draws,),
+                        generator=self._rng,
+                    )
+                    continue
+                component_indices = component.flat_indices.detach().cpu().long()
+                min_index = int(component_indices.min().item())
+                max_index = int(component_indices.max().item())
+                if min_index < 0 or max_index >= flat_size:
+                    raise ValueError(
+                        f"sampling component {component.name!r} contains flat "
+                        f"indices outside [0, {flat_size})"
+                    )
+                source_draws = torch.randint(
+                    0,
+                    int(component_indices.numel()),
+                    (n_draws,),
+                    generator=self._rng,
+                )
+                flat_idx[mask] = component_indices[source_draws]
         t_idx = flat_idx // (H * W)
         rem = flat_idx % (H * W)
         y_idx = rem // W
@@ -652,12 +732,15 @@ class NeRVMaskTrainer:
         self,
         masks_THW: torch.Tensor,
         batch_size: int = 4096,
+        sampling_pool: NeRVSamplingPool | None = None,
     ) -> dict[str, float]:
         """Single SGD step on a uniform-coordinate batch of (T, H, W) masks.
 
         Args:
             masks_THW: (T, H, W) integer mask tensor on CPU (long/uint8).
             batch_size: number of (t, y, x) coords sampled per step.
+            sampling_pool: optional weighted sampling pool. When omitted,
+                sampling remains uniform over the full tensor.
 
         Returns:
             dict with keys ``loss`` (cross-entropy) and ``acc`` (argmax-match
@@ -669,7 +752,11 @@ class NeRVMaskTrainer:
                 f"got shape {tuple(masks_THW.shape)}"
             )
         self.codec.train()
-        coords, labels = self._sample_batch(masks_THW, batch_size=batch_size)
+        coords, labels = self._sample_batch(
+            masks_THW,
+            batch_size=batch_size,
+            sampling_pool=sampling_pool,
+        )
         logits = self.codec(coords)  # (B, num_classes)
         # Cross-entropy on raw logits — gradient flows through softmax. NO
         # `.round()` anywhere in the forward chain (argmax used only for
@@ -835,6 +922,8 @@ __all__ = [
     "NERV_VERSION",
     "NeRVHeader",
     "NeRVMaskCodec",
+    "NeRVSamplingComponent",
+    "NeRVSamplingPool",
     "NeRVMaskTrainer",
     "decode_nerv_codec",
     "encode_nerv_codec",

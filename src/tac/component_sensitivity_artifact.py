@@ -19,6 +19,8 @@ from typing import Any
 
 COMPONENT_SENSITIVITY_FORMAT = "component_sensitivity_v1"
 COMPONENT_SENSITIVITY_SCHEMA_VERSION = 1
+CERTIFIED_COMPONENT_MAP_FORMAT = "tac_score_sensitivity_map_v1"
+COMPONENT_MAP_CERTIFICATION_FORMAT = "component_sensitivity_map_certification_v1"
 COMPONENTS = ("posenet", "segnet", "combined")
 REQUIRED_INPUTS = ("checkpoint", "video", "upstream")
 CONTEST_SAMPLE_COUNT = 600
@@ -575,7 +577,124 @@ def _validate_component_maps(component_maps: Mapping[str, Any], *, promotion: bo
                 raise ComponentSensitivityArtifactError(
                     f"{context}.scorer_target must be {name!r}, got {target!r}"
                 )
+        if promotion:
+            _validate_component_map_certification(entry, component=name, context=context)
         _validate_tensor_metadata(entry, context)
+
+
+def _validate_component_map_certification(
+    entry: Mapping[str, Any],
+    *,
+    component: str,
+    context: str,
+) -> None:
+    map_format = _require_str(entry, "map_format", context=context)
+    if map_format != CERTIFIED_COMPONENT_MAP_FORMAT:
+        raise ComponentSensitivityArtifactError(
+            f"{context}.map_format must be {CERTIFIED_COMPONENT_MAP_FORMAT!r}, "
+            f"got {map_format!r}"
+        )
+    certification = _require_mapping(entry, "certification", context=context)
+    cert_format = _require_str(certification, "format", context=f"{context}.certification")
+    if cert_format != COMPONENT_MAP_CERTIFICATION_FORMAT:
+        raise ComponentSensitivityArtifactError(
+            f"{context}.certification.format must be {COMPONENT_MAP_CERTIFICATION_FORMAT!r}, "
+            f"got {cert_format!r}"
+        )
+    cert_component = _require_str(certification, "component", context=f"{context}.certification")
+    if cert_component != component:
+        raise ComponentSensitivityArtifactError(
+            f"{context}.certification.component must be {component!r}, got {cert_component!r}"
+        )
+    _require_cuda_device(
+        _require_str(certification, "device", context=f"{context}.certification"),
+        f"{context}.certification.device",
+    )
+    for key in (
+        "official_component_response",
+        "canonical_scorer_path",
+        "promotion_eligible",
+    ):
+        _require_exact_true(certification, key, context=f"{context}.certification")
+    for key in (
+        "source_map_sha256",
+        "official_response_curve_sha256",
+        "stability_sha256",
+        "sample_plan_sha256",
+        "baseline_archive_sha256",
+        "contest_auth_eval_json_sha256",
+    ):
+        _validate_sha256(
+            _require_str(certification, key, context=f"{context}.certification"),
+            f"{context}.certification.{key}",
+        )
+    if "prediction_deltas_sha256" in certification:
+        _validate_sha256(
+            _require_str(certification, "prediction_deltas_sha256", context=f"{context}.certification"),
+            f"{context}.certification.prediction_deltas_sha256",
+        )
+    if "perturbation_basis_sha256" in certification:
+        _validate_sha256(
+            _require_str(certification, "perturbation_basis_sha256", context=f"{context}.certification"),
+            f"{context}.certification.perturbation_basis_sha256",
+        )
+    if "review_packet_sha256" in certification:
+        _validate_sha256(
+            _require_str(certification, "review_packet_sha256", context=f"{context}.certification"),
+            f"{context}.certification.review_packet_sha256",
+        )
+    _require_positive_int_value(
+        certification.get("baseline_archive_bytes"),
+        f"{context}.certification.baseline_archive_bytes",
+    )
+    clean_passes = _require_int(
+        certification,
+        "review_clean_passes",
+        context=f"{context}.certification",
+        minimum=3,
+    )
+    if clean_passes < 3:
+        raise ComponentSensitivityArtifactError(
+            f"{context}.certification.review_clean_passes must be at least 3"
+        )
+    unresolved = certification.get("review_unresolved_blockers", [])
+    if unresolved not in ([], None):
+        raise ComponentSensitivityArtifactError(
+            f"{context}.certification.review_unresolved_blockers must be empty"
+        )
+    response_gate = _require_mapping(
+        certification,
+        "response_gate_results",
+        context=f"{context}.certification",
+    )
+    for key in _RESPONSE_GATE_RESULT_TRUE_KEYS:
+        _require_exact_true(response_gate, key, context=f"{context}.certification.response_gate_results")
+    _require_exact_true(response_gate, "finite_values", context=f"{context}.certification.response_gate_results")
+    _require_finite_number(
+        response_gate.get("zero_repro_error"),
+        f"{context}.certification.response_gate_results.zero_repro_error",
+        minimum=0.0,
+    )
+    _require_finite_number(
+        response_gate.get("observed_delta_max"),
+        f"{context}.certification.response_gate_results.observed_delta_max",
+        minimum=0.0,
+    )
+    _require_finite_number(
+        response_gate.get("max_relative_prediction_error"),
+        f"{context}.certification.response_gate_results.max_relative_prediction_error",
+        minimum=0.0,
+    )
+    stability_gate = _require_mapping(
+        certification,
+        "stability_gate_results",
+        context=f"{context}.certification",
+    )
+    _require_exact_true(stability_gate, "passed", context=f"{context}.certification.stability_gate_results")
+    if _validate_finite_numeric_tree(stability_gate, f"{context}.certification.stability_gate_results") == 0:
+        raise ComponentSensitivityArtifactError(
+            f"{context}.certification.stability_gate_results must contain finite numeric metrics"
+        )
 
 
 def _validate_stability(stability: Mapping[str, Any], *, promotion: bool) -> None:
@@ -649,6 +768,8 @@ def _validate_response_curve_gate_results(curve: Mapping[str, Any], *, context: 
     _validate_finite_numeric_tree(gate_results, f"{context}.gate_results")
     for key in _RESPONSE_GATE_RESULT_TRUE_KEYS:
         _require_exact_true(gate_results, key, context=f"{context}.gate_results")
+    if "external_baseline_repro" in gate_results:
+        _require_exact_true(gate_results, "external_baseline_repro", context=f"{context}.gate_results")
 
 
 def _validate_response_curve_promotion_blockers(curve: Mapping[str, Any], *, context: str) -> None:

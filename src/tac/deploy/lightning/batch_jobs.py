@@ -50,6 +50,10 @@ COMPONENT_SENSITIVITY_MAP_FILES = tuple(
     f"{component}_sensitivity_map.pt"
     for component in COMPONENT_RESPONSE_COMPONENTS
 )
+COMPONENT_SENSITIVITY_HOLDOUT_MAP_FILES = tuple(
+    f"{component}_holdout_sensitivity_map.pt"
+    for component in COMPONENT_RESPONSE_COMPONENTS
+)
 COMPONENT_SENSITIVITY_CURVE_FILES = tuple(
     f"{component}_response_curve.json"
     for component in COMPONENT_RESPONSE_COMPONENTS
@@ -60,8 +64,13 @@ COMPONENT_SENSITIVITY_PROFILE_FILES = (
     "stability.json",
     "perturbation_basis_v1.json",
     *COMPONENT_SENSITIVITY_MAP_FILES,
+    *COMPONENT_SENSITIVITY_HOLDOUT_MAP_FILES,
     *COMPONENT_SENSITIVITY_CURVE_FILES,
 )
+COMPONENT_SENSITIVITY_DIAGNOSTIC_SOURCES = {
+    "fisher_proxy",
+    "direct_renderer_cuda_finite_difference_component_response",
+}
 CANONICAL_ARTIFACT_FILES = (
     ARTIFACT_METADATA,
     "contest_auth_eval.json",
@@ -1680,11 +1689,15 @@ def _diagnostic_component_sensitivity_validation_command(
     py = _quote(python_bin)
     out = _quote(output_dir)
     expected_files = _quote(json.dumps(COMPONENT_SENSITIVITY_PROFILE_FILES, sort_keys=True))
+    allowed_sources = _quote(json.dumps(sorted(COMPONENT_SENSITIVITY_DIAGNOSTIC_SOURCES)))
+    components = _quote(json.dumps(COMPONENT_RESPONSE_COMPONENTS))
     return (
-        f"{py} - {out} {expected_files} <<'PY'\n"
+        f"{py} - {out} {expected_files} {allowed_sources} {components} <<'PY'\n"
         "import json, math, pathlib, sys, time\n"
         "root = pathlib.Path(sys.argv[1])\n"
         "expected_files = json.loads(sys.argv[2])\n"
+        "allowed_sources = set(json.loads(sys.argv[3]))\n"
+        "components = json.loads(sys.argv[4])\n"
         "summary_path = root / 'component_sensitivity_profile_summary.json'\n"
         "inputs_path = root / 'diagnostic_component_sensitivity_inputs.json'\n"
         "run_path = root / 'diagnostic_component_sensitivity_run.json'\n"
@@ -1694,10 +1707,17 @@ def _diagnostic_component_sensitivity_validation_command(
         "summary = json.loads(summary_path.read_text())\n"
         "inputs = json.loads(inputs_path.read_text())\n"
         "run = json.loads(run_path.read_text())\n"
+        "from tac.sensitivity_map import load_sensitivity_map\n"
+        "if inputs.get('score_claim') is not False or inputs.get('promotion_eligible') is not False:\n"
+        "    raise SystemExit('FATAL: diagnostic component-sensitivity inputs must be non-score and non-promotable')\n"
+        "if run.get('score_claim') is not False or run.get('promotion_eligible') is not False:\n"
+        "    raise SystemExit('FATAL: diagnostic component-sensitivity run metadata must be non-score and non-promotable')\n"
         "if summary.get('tool') != 'experiments/profile_component_sensitivity.py':\n"
         "    raise SystemExit('FATAL: profile summary has unexpected tool')\n"
         "if summary.get('device') != 'cuda':\n"
         "    raise SystemExit(f\"FATAL: profile summary device={summary.get('device')!r}, expected 'cuda'\")\n"
+        "if summary.get('score_claim') is not False:\n"
+        "    raise SystemExit('FATAL: diagnostic profile summary must have score_claim=false')\n"
         "if summary.get('promotion_eligible') is not False:\n"
         "    raise SystemExit('FATAL: diagnostic profile summary must have promotion_eligible=false')\n"
         "if summary.get('official_component_response') is not False:\n"
@@ -1706,12 +1726,106 @@ def _diagnostic_component_sensitivity_validation_command(
         "    raise SystemExit('FATAL: diagnostic profile summary must not claim canonical_scorer_path')\n"
         "if 'diagnostic' not in str(summary.get('evidence_grade', '')):\n"
         "    raise SystemExit('FATAL: diagnostic profile summary has non-diagnostic evidence_grade')\n"
+        "sensitivity_source = summary.get('sensitivity_source')\n"
+        "if sensitivity_source not in allowed_sources:\n"
+        "    raise SystemExit(f'FATAL: unsupported diagnostic sensitivity_source={sensitivity_source!r}')\n"
+        "profile_argv = run.get('profile_argv')\n"
+        "if not isinstance(profile_argv, list) or '--device' not in profile_argv:\n"
+        "    raise SystemExit('FATAL: diagnostic run metadata must record profile argv including --device')\n"
+        "if sensitivity_source == 'direct_renderer_cuda_finite_difference_component_response':\n"
+        "    if summary.get('promotion_requested') is not True:\n"
+        "        raise SystemExit('FATAL: direct finite-difference summary must record promotion_requested=true')\n"
+        "    if '--promotion-finite-difference' not in profile_argv or '--all-pairs' not in profile_argv:\n"
+        "        raise SystemExit('FATAL: direct finite-difference run metadata must include --promotion-finite-difference and --all-pairs')\n"
+        "    if summary.get('n_pairs_total') != 600:\n"
+        "        raise SystemExit('FATAL: direct finite-difference summary must cover all 600 contest pairs')\n"
+        "    finite_eps = summary.get('finite_difference_epsilon')\n"
+        "    if isinstance(finite_eps, bool) or not isinstance(finite_eps, (int, float)) or float(finite_eps) <= 0.0:\n"
+        "        raise SystemExit('FATAL: direct finite-difference summary must record positive finite_difference_epsilon')\n"
+        "elif '--promotion-finite-difference' in profile_argv:\n"
+        "    raise SystemExit('FATAL: fisher_proxy diagnostic run must not include --promotion-finite-difference')\n"
+        "sample_plan = json.loads((root / 'sample_plan.json').read_text())\n"
+        "seen_pairs = set()\n"
+        "for group_name in ('calibration_pairs', 'holdout_pairs'):\n"
+        "    rows = sample_plan.get(group_name)\n"
+        "    if not isinstance(rows, list):\n"
+        "        raise SystemExit(f'FATAL: sample_plan missing {group_name}')\n"
+        "    for idx, row in enumerate(rows):\n"
+        "        if not isinstance(row, dict):\n"
+        "            raise SystemExit(f'FATAL: sample_plan.{group_name}[{idx}] must be an object')\n"
+        "        pair_index = row.get('pair_index')\n"
+        "        if isinstance(pair_index, bool) or not isinstance(pair_index, int):\n"
+        "            raise SystemExit(f'FATAL: sample_plan.{group_name}[{idx}].pair_index must be int')\n"
+        "        if row.get('video') != 0 or row.get('t') != 2 * pair_index or row.get('t1') != 2 * pair_index + 1:\n"
+        "            raise SystemExit(f'FATAL: sample_plan.{group_name}[{idx}] does not use absolute contest pair ids')\n"
+        "        if pair_index in seen_pairs:\n"
+        "            raise SystemExit(f'FATAL: duplicate sample_plan pair_index={pair_index}')\n"
+        "        seen_pairs.add(pair_index)\n"
+        "sample_plan_validation = {\n"
+        "    'pair_count': len(seen_pairs),\n"
+        "    'full_600_pair_coverage': seen_pairs == set(range(600)),\n"
+        "    'split_hash': sample_plan.get('split_hash'),\n"
+        "}\n"
+        "fd_shard = summary.get('finite_difference_shard')\n"
+        "fd_is_partial_shard = isinstance(fd_shard, dict) and fd_shard.get('is_shard') is True\n"
+        "fd_merge = summary.get('finite_difference_merge')\n"
+        "fd_merged = isinstance(fd_merge, dict) and fd_merge.get('schema') == 'component_sensitivity_direct_fd_merge_v1'\n"
         "missing = [name for name in expected_files if not (root / name).is_file()]\n"
         "if missing:\n"
         "    raise SystemExit('FATAL: missing profile output artifacts: ' + ', '.join(missing))\n"
         "elapsed = summary.get('elapsed_s')\n"
         "if not isinstance(elapsed, (int, float)) or not math.isfinite(float(elapsed)):\n"
         "    raise SystemExit('FATAL: profile summary elapsed_s must be finite')\n"
+        "curves = {}\n"
+        "map_metadata_by_component = {}\n"
+        "for component in components:\n"
+        "    map_path = root / f'{component}_sensitivity_map.pt'\n"
+        "    _map_values, map_metadata = load_sensitivity_map(map_path)\n"
+        "    map_metadata_by_component[component] = map_metadata\n"
+        "    if map_metadata.get('device') != 'cuda':\n"
+        "        raise SystemExit(f\"FATAL: {component} sensitivity map device={map_metadata.get('device')!r}, expected 'cuda'\")\n"
+        "    if map_metadata.get('component') != component and map_metadata.get('scorer_target') != component:\n"
+        "        raise SystemExit(f'FATAL: {component} sensitivity map metadata does not identify the component')\n"
+        "    if map_metadata.get('score_claim') is not False or map_metadata.get('promotion_eligible') is not False:\n"
+        "        raise SystemExit(f'FATAL: {component} sensitivity map must be non-score and non-promotable')\n"
+        "    if map_metadata.get('official_component_response') is not False:\n"
+        "        raise SystemExit(f'FATAL: {component} sensitivity map must not claim official_component_response')\n"
+        "    if map_metadata.get('canonical_scorer_path') is not False:\n"
+        "        raise SystemExit(f'FATAL: {component} sensitivity map must not claim canonical_scorer_path')\n"
+        "    if map_metadata.get('sensitivity_source') != sensitivity_source:\n"
+        "        raise SystemExit(f'FATAL: {component} sensitivity map sensitivity_source does not match summary')\n"
+        "    if map_metadata.get('finite_difference_shard') != fd_shard:\n"
+        "        raise SystemExit(f'FATAL: {component} sensitivity map shard metadata does not match summary')\n"
+        "    _holdout_values, holdout_metadata = load_sensitivity_map(root / f'{component}_holdout_sensitivity_map.pt')\n"
+        "    if holdout_metadata.get('split') != 'holdout':\n"
+        "        raise SystemExit(f'FATAL: {component} holdout sensitivity map must record split=holdout')\n"
+        "    if holdout_metadata.get('finite_difference_shard') != fd_shard:\n"
+        "        raise SystemExit(f'FATAL: {component} holdout sensitivity map shard metadata does not match summary')\n"
+        "    curve_path = root / f'{component}_response_curve.json'\n"
+        "    curve = json.loads(curve_path.read_text())\n"
+        "    curves[component] = curve\n"
+        "    if curve.get('component') != component:\n"
+        "        raise SystemExit(f\"FATAL: {component} response curve component={curve.get('component')!r}\")\n"
+        "    if curve.get('device') != 'cuda':\n"
+        "        raise SystemExit(f\"FATAL: {component} response curve device={curve.get('device')!r}, expected 'cuda'\")\n"
+        "    if curve.get('score_claim') is not False or curve.get('promotion_eligible') is not False:\n"
+        "        raise SystemExit(f'FATAL: {component} response curve must be non-score and non-promotable')\n"
+        "    if curve.get('official_component_response') is not False:\n"
+        "        raise SystemExit(f'FATAL: {component} response curve must not claim official_component_response')\n"
+        "    if curve.get('canonical_scorer_path') is not False:\n"
+        "        raise SystemExit(f'FATAL: {component} response curve must not claim canonical_scorer_path')\n"
+        "    if curve.get('sensitivity_source') != sensitivity_source:\n"
+        "        raise SystemExit(f'FATAL: {component} response curve sensitivity_source does not match summary')\n"
+        "    if curve.get('component_response_path') != 'direct_renderer_tensor_inprocess_scorer':\n"
+        "        raise SystemExit(f'FATAL: {component} response curve must remain diagnostic direct-renderer response')\n"
+        "certification_handoff_eligible = bool(\n"
+        "    sensitivity_source == 'direct_renderer_cuda_finite_difference_component_response'\n"
+        "    and sample_plan_validation['full_600_pair_coverage'] is True\n"
+        "    and not fd_is_partial_shard\n"
+        "    and (not isinstance(fd_shard, dict) or fd_shard.get('merge_required_for_certification_handoff') is False)\n"
+        ")\n"
+        "if certification_handoff_eligible and isinstance(fd_shard, dict) and fd_shard.get('merged_from_shards') is True:\n"
+        "    certification_handoff_eligible = fd_merged\n"
         "payload = {\n"
         "    'schema_version': 1,\n"
         "    'validated_at_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),\n"
@@ -1723,12 +1837,17 @@ def _diagnostic_component_sensitivity_validation_command(
         "    'evidence_grade': summary.get('evidence_grade'),\n"
         "    'sensitivity_source': summary.get('sensitivity_source'),\n"
         "    'component_response_path': summary.get('component_response_path'),\n"
+        "    'planning_eligible': True,\n"
+        "    'sample_plan_validation': sample_plan_validation,\n"
+        "    'certification_handoff_eligible': certification_handoff_eligible,\n"
         "    'promotion_eligible': False,\n"
         "    'score_claim': False,\n"
         "    'diagnostic': True,\n"
         "    'input_preflight': inputs,\n"
         "    'run_metadata': run,\n"
         "    'summary': summary,\n"
+        "    'curves': curves,\n"
+        "    'map_metadata': map_metadata_by_component,\n"
         "    'preserved_files': expected_files,\n"
         "}\n"
         "(root / 'diagnostic_component_sensitivity_artifact_validation.json').write_text(json.dumps(payload, indent=2, sort_keys=True) + '\\n')\n"
@@ -1758,6 +1877,10 @@ def diagnostic_component_sensitivity_command(
     split_seed: int = 20260430,
     holdout_fraction: float = 0.2,
     aggregate: str = "sum",
+    promotion_finite_difference: bool = False,
+    finite_difference_epsilon: float = 0.001,
+    finite_difference_shard_index: int = 0,
+    finite_difference_shard_count: int = 1,
 ) -> str:
     """Build a CUDA diagnostic component-sensitivity profiler command."""
 
@@ -1778,6 +1901,22 @@ def diagnostic_component_sensitivity_command(
     _validate_optional_number(float(holdout_fraction), field="holdout_fraction", minimum=0.0, strict_minimum=True)
     if float(holdout_fraction) >= 1.0:
         raise ValueError("holdout_fraction must be < 1.0")
+    _validate_optional_number(
+        float(finite_difference_epsilon),
+        field="finite_difference_epsilon",
+        minimum=0.0,
+        strict_minimum=True,
+    )
+    if promotion_finite_difference and pair_weights_path:
+        raise ValueError("promotion_finite_difference requires --all-pairs; do not pass pair_weights_path")
+    if int(finite_difference_shard_count) <= 0:
+        raise ValueError("finite_difference_shard_count must be positive")
+    if int(finite_difference_shard_index) < 0 or int(finite_difference_shard_index) >= int(finite_difference_shard_count):
+        raise ValueError("finite_difference_shard_index must be within shard count")
+    if not promotion_finite_difference and (
+        int(finite_difference_shard_index) != 0 or int(finite_difference_shard_count) != 1
+    ):
+        raise ValueError("finite-difference shard flags require promotion_finite_difference")
 
     repo = _quote(repo_dir)
     out = _quote(output_dir)
@@ -1804,8 +1943,7 @@ def diagnostic_component_sensitivity_command(
         str(int(pair_batch)),
         "--response-top-k",
         str(int(response_top_k)),
-        "--response-epsilons",
-        str(response_epsilons),
+        f"--response-epsilons={response_epsilons}",
         "--split-seed",
         str(int(split_seed)),
         "--holdout-fraction",
@@ -1815,6 +1953,18 @@ def diagnostic_component_sensitivity_command(
         "--device",
         "cuda",
     ]
+    if promotion_finite_difference:
+        profile_argv.extend(
+            [
+                "--promotion-finite-difference",
+                "--finite-difference-epsilon",
+                str(float(finite_difference_epsilon)),
+                "--finite-difference-shard-index",
+                str(int(finite_difference_shard_index)),
+                "--finite-difference-shard-count",
+                str(int(finite_difference_shard_count)),
+            ]
+        )
     if pair_weights_path:
         profile_argv.extend(["--pair-weights", pair_weights_path])
     else:
@@ -1834,6 +1984,8 @@ def diagnostic_component_sensitivity_command(
         "score_source": "none:diagnostic_component_sensitivity_non_promotable",
         "score_claim": False,
         "promotion_eligible": False,
+        "finite_difference_shard_index": int(finite_difference_shard_index),
+        "finite_difference_shard_count": int(finite_difference_shard_count),
         "status_source": "lightning_sdk_job_attributes",
     }
 
@@ -1926,6 +2078,10 @@ def make_diagnostic_component_sensitivity_spec(
     split_seed: int = 20260430,
     holdout_fraction: float = 0.2,
     aggregate: str = "sum",
+    promotion_finite_difference: bool = False,
+    finite_difference_epsilon: float = 0.001,
+    finite_difference_shard_index: int = 0,
+    finite_difference_shard_count: int = 1,
 ) -> LightningBatchJobSpec:
     """Create a non-promotable diagnostic component-sensitivity Batch Job spec."""
 
@@ -1949,6 +2105,10 @@ def make_diagnostic_component_sensitivity_spec(
         split_seed=split_seed,
         holdout_fraction=holdout_fraction,
         aggregate=aggregate,
+        promotion_finite_difference=promotion_finite_difference,
+        finite_difference_epsilon=finite_difference_epsilon,
+        finite_difference_shard_index=finite_difference_shard_index,
+        finite_difference_shard_count=finite_difference_shard_count,
     )
     spec = LightningBatchJobSpec(
         name=name,
@@ -2437,6 +2597,147 @@ def _extract_job_status(snapshot: dict[str, Any]) -> str | None:
     return str(value)
 
 
+_LIGHTNING_STATUS_RANKS = {
+    "submitted": 10,
+    "queued": 20,
+    "pending": 20,
+    "provisioning": 30,
+    "starting": 35,
+    "running": 40,
+    "completed": 100,
+    "complete": 100,
+    "succeeded": 100,
+    "success": 100,
+    "failed": 100,
+    "error": 100,
+    "cancelled": 100,
+    "canceled": 100,
+    "stopped": 100,
+    "terminated": 100,
+    "timeout": 100,
+    "timed_out": 100,
+}
+
+_LIGHTNING_TERMINAL_STATUSES = {
+    "completed",
+    "complete",
+    "succeeded",
+    "success",
+    "failed",
+    "error",
+    "cancelled",
+    "canceled",
+    "stopped",
+    "terminated",
+    "timeout",
+    "timed_out",
+}
+
+_REMOTE_STATUS_RECONCILIATION_REQUIRED = "REMOTE_STATUS_RECONCILIATION_REQUIRED"
+_LIGHTNING_FAIL_CLOSED_ROLES = {
+    "exact_cuda_eval",
+    "official_component_response",
+    "diagnostic_component_sensitivity",
+}
+
+
+def _normalise_lightning_status(value: object) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    if not text:
+        return None
+    return text.lower().replace("-", "_").replace(" ", "_")
+
+
+def _lightning_status_transition_anomaly(
+    previous_status: object,
+    current_status: object,
+) -> dict[str, Any] | None:
+    previous_key = _normalise_lightning_status(previous_status)
+    current_key = _normalise_lightning_status(current_status)
+    if previous_key is None or current_key is None or previous_key == current_key:
+        return None
+    previous_rank = _LIGHTNING_STATUS_RANKS.get(previous_key)
+    current_rank = _LIGHTNING_STATUS_RANKS.get(current_key)
+    if previous_rank is None or current_rank is None:
+        return None
+    if previous_key in _LIGHTNING_TERMINAL_STATUSES and current_key not in _LIGHTNING_TERMINAL_STATUSES:
+        anomaly_type = "terminal_status_reopened"
+    elif current_rank < previous_rank:
+        anomaly_type = "nonterminal_status_regression"
+    else:
+        return None
+    return {
+        "type": anomaly_type,
+        "previous_status": str(previous_status),
+        "current_status": str(current_status),
+        "previous_rank": previous_rank,
+        "current_rank": current_rank,
+    }
+
+
+def _lightning_status_anomaly_key(anomaly: dict[str, Any]) -> tuple[object, ...]:
+    return (
+        anomaly.get("type"),
+        anomaly.get("previous_status"),
+        anomaly.get("current_status"),
+        anomaly.get("recorded_at_utc"),
+        anomaly.get("status_history_index"),
+    )
+
+
+def _attach_lightning_status_history_anomalies(record: dict[str, Any]) -> None:
+    history = [
+        dict(entry)
+        for entry in record.get("status_history") or []
+        if isinstance(entry, dict)
+    ]
+    anomalies = [
+        dict(entry)
+        for entry in record.get("status_anomalies") or []
+        if isinstance(entry, dict)
+    ]
+    seen = {_lightning_status_anomaly_key(entry) for entry in anomalies}
+    for index in range(1, len(history)):
+        previous = history[index - 1].get("observed_status", history[index - 1].get("status"))
+        current = history[index].get("observed_status", history[index].get("status"))
+        anomaly = _lightning_status_transition_anomaly(previous, current)
+        if anomaly is None:
+            continue
+        anomaly = {
+            **anomaly,
+            "recorded_at_utc": history[index].get("recorded_at_utc"),
+            "source": history[index].get("source"),
+            "status_history_index": index,
+        }
+        key = _lightning_status_anomaly_key(anomaly)
+        if key in seen:
+            continue
+        seen.add(key)
+        anomalies.append(anomaly)
+        history[index]["anomaly"] = anomaly
+    if anomalies:
+        record["status_anomalies"] = anomalies
+        record["status_reconciliation_required"] = True
+    record["status_history"] = history
+
+
+def _lightning_refresh_requires_fail_closed_status(
+    record: dict[str, Any],
+    anomaly: dict[str, Any] | None,
+    observed_status: object,
+) -> bool:
+    if anomaly is None or bool(record.get("dry_run")):
+        return False
+    observed_key = _normalise_lightning_status(observed_status)
+    if observed_key in _LIGHTNING_TERMINAL_STATUSES:
+        return False
+    spec = record.get("spec") if isinstance(record.get("spec"), dict) else {}
+    role = spec.get("role")
+    return role in _LIGHTNING_FAIL_CLOSED_ROLES
+
+
 def validate_local_artifact_dir(
     artifact_dir: str | Path,
     *,
@@ -2665,6 +2966,40 @@ def mirror_local_artifact_dir(
     return validation
 
 
+def _validate_component_sensitivity_sample_plan_full(path: Path) -> dict[str, Any]:
+    payload = _load_json_object(path, label="component-sensitivity sample plan")
+    calibration = payload.get("calibration_pairs")
+    holdout = payload.get("holdout_pairs")
+    if not isinstance(calibration, list) or not isinstance(holdout, list):
+        raise ValueError("component-sensitivity sample_plan missing calibration/holdout pairs")
+    seen: set[int] = set()
+    for group_name, rows in (("calibration_pairs", calibration), ("holdout_pairs", holdout)):
+        for index, row in enumerate(rows):
+            if not isinstance(row, dict):
+                raise ValueError(f"sample_plan.{group_name}[{index}] must be an object")
+            pair_index = row.get("pair_index")
+            if isinstance(pair_index, bool) or not isinstance(pair_index, int):
+                raise ValueError(f"sample_plan.{group_name}[{index}].pair_index must be an integer")
+            if row.get("video") != 0 or row.get("t") != 2 * pair_index or row.get("t1") != 2 * pair_index + 1:
+                raise ValueError(f"sample_plan.{group_name}[{index}] does not use absolute contest pair ids")
+            if pair_index in seen:
+                raise ValueError(f"sample_plan duplicate pair_index={pair_index}")
+            seen.add(pair_index)
+    missing = set(range(600)) - seen
+    extra = seen - set(range(600))
+    return {
+        "schema_version": 1,
+        "path": str(path),
+        "calibration_count": len(calibration),
+        "holdout_count": len(holdout),
+        "pair_count": len(seen),
+        "full_600_pair_coverage": not missing and not extra,
+        "missing_count": len(missing),
+        "extra_count": len(extra),
+        "split_hash": payload.get("split_hash"),
+    }
+
+
 def validate_local_component_response_artifact_dir(
     artifact_dir: str | Path,
     *,
@@ -2752,6 +3087,7 @@ def validate_local_component_response_artifact_dir(
         raise ValueError("component-response summary baseline sha256 does not match input preflight")
     if summary_baseline.get("bytes") != baseline_bytes:
         raise ValueError("component-response summary baseline bytes do not match input preflight")
+    external_baseline_required = summary.get("external_baseline_contest_auth_eval_json") is not None
 
     response_curve_paths = summary.get("response_curve_paths")
     if not isinstance(response_curve_paths, dict):
@@ -2779,8 +3115,15 @@ def validate_local_component_response_artifact_dir(
             raise ValueError(f"{component} response curve must include baseline plus response points")
         if Path(str(response_curve_paths.get(component, ""))).name != curve_path.name:
             raise ValueError(f"summary response_curve_paths[{component!r}] does not point at {curve_path.name}")
+        gate_results = curve.get("gate_results")
+        if external_baseline_required:
+            if not isinstance(gate_results, dict):
+                failed_components.append(component)
+            elif gate_results.get("external_baseline_repro") is not True:
+                failed_components.append(component)
         if curve.get("passed") is not True:
             failed_components.append(component)
+    failed_components = sorted(set(failed_components))
 
     promotion_eligible = bool(summary.get("promotion_eligible")) and not failed_components
     if require_passed and not promotion_eligible:
@@ -2802,6 +3145,7 @@ def validate_local_component_response_artifact_dir(
         "input_preflight": inputs,
         "summary": summary,
         "curves": curves,
+        "external_baseline_repro_required": external_baseline_required,
         "dali_bootstrap": dali_bootstrap,
         "runner_preflight": runner_preflight,
         "supply_chain_pre": supply_chain_pre,
@@ -2909,6 +3253,7 @@ def validate_local_component_sensitivity_artifact_dir(
         raise ValueError("component-sensitivity run metadata must be explicitly non-promotable")
     if not isinstance(run.get("profile_argv"), list) or "--device" not in run.get("profile_argv", []):
         raise ValueError("component-sensitivity run metadata must record profile argv including --device")
+    profile_argv = run.get("profile_argv", [])
 
     summary = _load_json_object(
         artifact_root / ARTIFACT_COMPONENT_SENSITIVITY_SUMMARY,
@@ -2918,6 +3263,8 @@ def validate_local_component_sensitivity_artifact_dir(
         raise ValueError("component-sensitivity summary has unexpected tool")
     if summary.get("device") != "cuda":
         raise ValueError(f"component-sensitivity summary device={summary.get('device')!r}, expected 'cuda'")
+    if summary.get("score_claim") is not False:
+        raise ValueError("component-sensitivity summary must have score_claim=false")
     if summary.get("promotion_eligible") is not False:
         raise ValueError("component-sensitivity summary must have promotion_eligible=false")
     if summary.get("official_component_response") is not False:
@@ -2926,14 +3273,81 @@ def validate_local_component_sensitivity_artifact_dir(
         raise ValueError("component-sensitivity summary must not claim canonical_scorer_path")
     if "diagnostic" not in str(summary.get("evidence_grade", "")):
         raise ValueError("component-sensitivity summary evidence_grade must be diagnostic")
-    if summary.get("sensitivity_source") != "fisher_proxy":
-        raise ValueError("component-sensitivity summary sensitivity_source must be fisher_proxy")
+    sensitivity_source = summary.get("sensitivity_source")
+    if sensitivity_source not in COMPONENT_SENSITIVITY_DIAGNOSTIC_SOURCES:
+        raise ValueError(
+            "component-sensitivity summary sensitivity_source must be one of "
+            f"{sorted(COMPONENT_SENSITIVITY_DIAGNOSTIC_SOURCES)}"
+        )
+    if sensitivity_source == "direct_renderer_cuda_finite_difference_component_response":
+        if summary.get("promotion_requested") is not True:
+            raise ValueError("direct finite-difference sensitivity summary must record promotion_requested=true")
+        if "--promotion-finite-difference" not in profile_argv:
+            raise ValueError("direct finite-difference run metadata must include --promotion-finite-difference")
+        if "--all-pairs" not in profile_argv:
+            raise ValueError("direct finite-difference run metadata must include --all-pairs")
+        if summary.get("n_pairs_total") != 600:
+            raise ValueError("direct finite-difference sensitivity summary must cover all 600 contest pairs")
+        finite_eps = summary.get("finite_difference_epsilon")
+        if isinstance(finite_eps, bool) or not isinstance(finite_eps, (int, float)) or float(finite_eps) <= 0.0:
+            raise ValueError("direct finite-difference sensitivity summary must record positive finite_difference_epsilon")
+    elif "--promotion-finite-difference" in profile_argv:
+        raise ValueError("fisher_proxy sensitivity run metadata must not include --promotion-finite-difference")
+    sample_plan_validation = _validate_component_sensitivity_sample_plan_full(
+        artifact_root / "sample_plan.json"
+    )
+    fd_shard = summary.get("finite_difference_shard")
+    fd_is_partial_shard = isinstance(fd_shard, dict) and fd_shard.get("is_shard") is True
+    fd_merge = summary.get("finite_difference_merge")
+    fd_merged = isinstance(fd_merge, dict) and fd_merge.get("schema") == "component_sensitivity_direct_fd_merge_v1"
 
     curves: dict[str, Any] = {}
+    map_metadata: dict[str, Any] = {}
+    from tac.sensitivity_map import load_sensitivity_map
+
     for component in COMPONENT_RESPONSE_COMPONENTS:
         map_path = artifact_root / f"{component}_sensitivity_map.pt"
         if map_path.stat().st_size <= 0:
             raise ValueError(f"{component} sensitivity map is empty")
+        try:
+            map_values, metadata_for_map = load_sensitivity_map(map_path)
+        except Exception as exc:
+            raise ValueError(f"{component} sensitivity map is not a valid tac sensitivity map: {exc}") from exc
+        if not map_values:
+            raise ValueError(f"{component} sensitivity map contains no tensors")
+        if metadata_for_map.get("device") != "cuda":
+            raise ValueError(
+                f"{component} sensitivity map metadata device={metadata_for_map.get('device')!r}, "
+                "expected 'cuda'"
+            )
+        if metadata_for_map.get("component") != component and metadata_for_map.get("scorer_target") != component:
+            raise ValueError(f"{component} sensitivity map metadata does not identify the component")
+        if metadata_for_map.get("score_claim") is not False:
+            raise ValueError(f"{component} sensitivity map metadata must have score_claim=false")
+        if metadata_for_map.get("promotion_eligible") is not False:
+            raise ValueError(f"{component} sensitivity map metadata must have promotion_eligible=false")
+        if metadata_for_map.get("official_component_response") is not False:
+            raise ValueError(f"{component} sensitivity map metadata must not claim official_component_response")
+        if metadata_for_map.get("canonical_scorer_path") is not False:
+            raise ValueError(f"{component} sensitivity map metadata must not claim canonical_scorer_path")
+        if metadata_for_map.get("sensitivity_source") != sensitivity_source:
+            raise ValueError(f"{component} sensitivity map metadata sensitivity_source does not match summary")
+        if metadata_for_map.get("finite_difference_shard") != fd_shard:
+            raise ValueError(f"{component} sensitivity map metadata finite_difference_shard does not match summary")
+        map_metadata[component] = metadata_for_map
+        holdout_map_path = artifact_root / f"{component}_holdout_sensitivity_map.pt"
+        if holdout_map_path.stat().st_size <= 0:
+            raise ValueError(f"{component} holdout sensitivity map is empty")
+        try:
+            holdout_values, holdout_metadata = load_sensitivity_map(holdout_map_path)
+        except Exception as exc:
+            raise ValueError(f"{component} holdout sensitivity map is invalid: {exc}") from exc
+        if not holdout_values:
+            raise ValueError(f"{component} holdout sensitivity map contains no tensors")
+        if holdout_metadata.get("split") != "holdout":
+            raise ValueError(f"{component} holdout sensitivity map metadata must record split=holdout")
+        if holdout_metadata.get("finite_difference_shard") != fd_shard:
+            raise ValueError(f"{component} holdout sensitivity map shard metadata does not match summary")
         curve_path = artifact_root / f"{component}_response_curve.json"
         curve = _load_json_object(curve_path, label=f"{component} diagnostic response curve")
         curves[component] = curve
@@ -2941,13 +3355,33 @@ def validate_local_component_sensitivity_artifact_dir(
             raise ValueError(f"{component} response curve component={curve.get('component')!r}")
         if curve.get("device") != "cuda":
             raise ValueError(f"{component} response curve device={curve.get('device')!r}, expected 'cuda'")
+        if curve.get("score_claim") is not False:
+            raise ValueError(f"{component} response curve must have score_claim=false")
+        if curve.get("promotion_eligible") is not False:
+            raise ValueError(f"{component} response curve must have promotion_eligible=false")
         if curve.get("official_component_response") is not False:
             raise ValueError(f"{component} response curve must not claim official_component_response")
         if curve.get("canonical_scorer_path") is not False:
             raise ValueError(f"{component} response curve must not claim canonical_scorer_path")
+        if curve.get("sensitivity_source") != sensitivity_source:
+            raise ValueError(f"{component} response curve sensitivity_source does not match summary")
+        if curve.get("component_response_path") != "direct_renderer_tensor_inprocess_scorer":
+            raise ValueError(f"{component} response curve must remain diagnostic direct-renderer response")
         points = curve.get("points")
         if not isinstance(points, list) or not points:
             raise ValueError(f"{component} diagnostic response curve must include points")
+
+    certification_handoff_eligible = (
+        sensitivity_source == "direct_renderer_cuda_finite_difference_component_response"
+        and sample_plan_validation["full_600_pair_coverage"] is True
+        and not fd_is_partial_shard
+        and (
+            fd_shard is None
+            or fd_shard.get("merge_required_for_certification_handoff") is False
+        )
+    )
+    if certification_handoff_eligible and isinstance(fd_shard, dict) and fd_shard.get("merged_from_shards") is True:
+        certification_handoff_eligible = fd_merged
 
     validation = {
         "schema_version": 1,
@@ -2963,6 +3397,14 @@ def validate_local_component_sensitivity_artifact_dir(
         "input_preflight": inputs,
         "run_metadata": run,
         "summary": summary,
+        "sensitivity_source": sensitivity_source,
+        "sample_plan_validation": sample_plan_validation,
+        "planning_eligible": True,
+        "certification_handoff_eligible": certification_handoff_eligible,
+        "certification_candidate": (
+            sensitivity_source == "direct_renderer_cuda_finite_difference_component_response"
+        ),
+        "map_metadata": map_metadata,
         "curves": curves,
         "dali_bootstrap": dali_bootstrap,
         "runner_preflight": runner_preflight,
@@ -3532,19 +3974,50 @@ class LightningBatchJobsClient:
         records = self.list_records()
         record = dict(records[index])
         snapshot = job_status_snapshot(job)
-        status = _extract_job_status(snapshot)
-        if status is not None:
-            record["status"] = status
+        observed_status = _extract_job_status(snapshot)
+        previous_status = record.get("status")
+        anomaly = _lightning_status_transition_anomaly(previous_status, observed_status)
+        accepted_status = observed_status
+        if _lightning_refresh_requires_fail_closed_status(record, anomaly, observed_status):
+            accepted_status = _REMOTE_STATUS_RECONCILIATION_REQUIRED
+        if observed_status is not None:
+            record["status"] = accepted_status
+            record["remote_observed_status"] = observed_status
+            record["remote_status_accepted"] = accepted_status == observed_status
+        if snapshot.get("id") in (None, ""):
+            record["identity_confidence"] = "name_only"
+            record["identity_reconciliation_required"] = True
+        else:
+            record["identity_confidence"] = "sdk_job_id"
+            record["identity_reconciliation_required"] = False
         record["job"] = snapshot
         history = list(record.get("status_history") or [])
-        history.append(
-            {
+        history_entry = {
+            "recorded_at_utc": snapshot["refreshed_at_utc"],
+            "previous_status": previous_status,
+            "observed_status": observed_status,
+            "accepted_status": record.get("status"),
+            "status": record.get("status"),
+            "source": snapshot["source"],
+            "job_snapshot": snapshot,
+            "identity_confidence": record.get("identity_confidence"),
+        }
+        if anomaly is not None:
+            anomaly = {
+                **anomaly,
                 "recorded_at_utc": snapshot["refreshed_at_utc"],
-                "status": record.get("status"),
                 "source": snapshot["source"],
+                "status_history_index": len(history),
+                "accepted_status": record.get("status"),
             }
-        )
+            anomalies = list(record.get("status_anomalies") or [])
+            anomalies.append(anomaly)
+            record["status_anomalies"] = anomalies
+            record["status_reconciliation_required"] = True
+            history_entry["anomaly"] = anomaly
+        history.append(history_entry)
         record["status_history"] = history
+        _attach_lightning_status_history_anomalies(record)
         self._replace_record(index, record)
         return record
 

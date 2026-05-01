@@ -377,7 +377,7 @@ def test_require_passed_reruns_zero_baseline_in_same_job(
 ) -> None:
     module = _load_module()
     paths = _write_basic_inputs(tmp_path)
-    _write_eval_json(paths["baseline_json"], archive=paths["baseline"], pose=0.20, seg=0.20)
+    _write_eval_json(paths["baseline_json"], archive=paths["baseline"], pose=0.04, seg=0.01)
     plan = tmp_path / "plan.json"
     plan.write_text(
         json.dumps(
@@ -464,9 +464,97 @@ def test_require_passed_reruns_zero_baseline_in_same_job(
     curve = json.loads(Path(summary["response_curve_paths"]["posenet"]).read_text())
     assert curve["baseline"]["values"]["posenet"] == pytest.approx(0.04)
     assert curve["baseline"]["values"]["segnet"] == pytest.approx(0.01)
+    assert curve["gate_results"]["external_baseline_repro"] is True
+    assert curve["gate_results"]["external_baseline_repro_error"] == pytest.approx(0.0)
     zero_point = [point for point in curve["points"] if point["epsilon"] == 0.0][0]
     assert zero_point["point_metadata"]["same_run_zero_baseline"] is True
     assert "external_zero_contest_auth_eval_json_ignored_for_curve" in zero_point["point_metadata"]
+
+
+def test_require_passed_fails_on_external_baseline_component_drift(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = _load_module()
+    paths = _write_basic_inputs(tmp_path)
+    _write_eval_json(paths["baseline_json"], archive=paths["baseline"], pose=0.20, seg=0.20)
+    plan = tmp_path / "plan.json"
+    plan.write_text(
+        json.dumps(
+            {
+                "format": "official_component_response_plan_v1",
+                "points": [
+                    {
+                        "epsilon": -0.001,
+                        "archive": str(paths["neg"]),
+                        "contest_auth_eval_json": str(paths["neg_json"]),
+                        "predicted_delta": {
+                            "posenet": 0.001,
+                            "segnet": 0.001,
+                            "combined": _combined_delta(
+                                baseline_pose=0.04,
+                                baseline_seg=0.01,
+                                pose=0.041,
+                                seg=0.011,
+                            ),
+                        },
+                    },
+                    {
+                        "epsilon": 0.001,
+                        "archive": str(paths["pos"]),
+                        "contest_auth_eval_json": str(paths["pos_json"]),
+                        "predicted_delta": {
+                            "posenet": 0.003,
+                            "segnet": 0.003,
+                            "combined": _combined_delta(
+                                baseline_pose=0.04,
+                                baseline_seg=0.01,
+                                pose=0.043,
+                                seg=0.013,
+                            ),
+                        },
+                    },
+                ],
+            }
+        )
+        + "\n"
+    )
+
+    def fake_run_contest_auth_eval(*, archive: Path, point_dir: Path, **kwargs) -> Path:
+        point_dir.mkdir(parents=True, exist_ok=True)
+        return _write_eval_json(
+            point_dir / "contest_auth_eval.json",
+            archive=archive,
+            pose=0.04,
+            seg=0.01,
+        )
+
+    monkeypatch.setattr(module, "_run_contest_auth_eval", fake_run_contest_auth_eval)
+
+    summary = module.produce_official_component_response_curves(
+        baseline_archive=paths["baseline"],
+        baseline_contest_auth_eval_json=paths["baseline_json"],
+        perturbation_plan=plan,
+        output_dir=tmp_path / "out",
+        contest_auth_eval_script=paths["contest_script"],
+        inflate_sh=paths["inflate"],
+        upstream_dir=paths["upstream"],
+        video_names_file=paths["video_names"],
+        device="cuda",
+        inflate_timeout=1,
+        evaluate_timeout=1,
+        max_relative_error=1e-12,
+        zero_repro_tolerance=1e-12,
+        min_observed_delta=1e-12,
+        allow_directional=False,
+        require_passed=True,
+    )
+
+    assert summary["promotion_eligible"] is False
+    curve = json.loads(Path(summary["response_curve_paths"]["posenet"]).read_text())
+    assert curve["gate_results"]["external_baseline_repro"] is False
+    blocker_codes = {item["code"] for item in curve["promotion_blockers"]}
+    assert "external_baseline_reproduction_failed" in blocker_codes
 
 
 def test_missing_prediction_deltas_fail_closed(tmp_path: Path) -> None:

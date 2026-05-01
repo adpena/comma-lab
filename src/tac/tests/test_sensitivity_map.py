@@ -8,13 +8,16 @@ import torch
 import torch.nn as nn
 
 from tac.sensitivity_map import (
+    CERTIFIED_SENSITIVITY_MAP_CERTIFICATION_FORMAT,
     SensitivityMapError,
     conv_weight_shapes,
     load_sensitivity_map,
     require_authoritative_device,
     resolve_layer_sensitivity,
+    save_certified_sensitivity_map,
     save_sensitivity_map,
     sensitivity_cv_distance,
+    validate_certified_sensitivity_map_metadata,
     validate_sensitivity_map_for_model,
     validate_sensitivity_vector,
 )
@@ -130,3 +133,52 @@ def test_save_load_and_cv_distance_round_trip(tmp_path: Path) -> None:
             {"x.weight": torch.tensor([1.0, -1.0])},
             {"x.weight": torch.tensor([1.0, 1.0])},
         )
+
+
+def _certification(component: str = "combined") -> dict[str, object]:
+    return {
+        "format": CERTIFIED_SENSITIVITY_MAP_CERTIFICATION_FORMAT,
+        "component": component,
+        "device": "cuda",
+        "official_component_response": True,
+        "canonical_scorer_path": True,
+        "promotion_eligible": True,
+        "source_map_sha256": "a" * 64,
+        "official_response_curve_sha256": "b" * 64,
+        "stability_sha256": "c" * 64,
+        "sample_plan_sha256": "d" * 64,
+        "baseline_archive_sha256": "e" * 64,
+        "baseline_archive_bytes": 686635,
+        "contest_auth_eval_json_sha256": "f" * 64,
+        "review_clean_passes": 3,
+        "review_unresolved_blockers": [],
+    }
+
+
+def test_certified_sensitivity_map_metadata_is_fail_closed(tmp_path: Path) -> None:
+    cert = _certification("combined")
+    metadata = {
+        "component": "combined",
+        "device": "cuda",
+        "promotion_eligible": True,
+        "official_component_response": True,
+        "canonical_scorer_path": True,
+        "certification": cert,
+    }
+    assert validate_certified_sensitivity_map_metadata(metadata, component="combined")["component"] == "combined"
+
+    bad = dict(metadata)
+    bad["certification"] = {**cert, "review_clean_passes": 2}
+    with pytest.raises(SensitivityMapError, match="review_clean_passes"):
+        validate_certified_sensitivity_map_metadata(bad, component="combined")
+
+    path = tmp_path / "combined.pt"
+    save_certified_sensitivity_map(
+        path,
+        {"layer.weight": torch.ones(3)},
+        component="combined",
+        certification=cert,
+    )
+    loaded, loaded_meta = load_sensitivity_map(path)
+    assert torch.equal(loaded["layer.weight"], torch.ones(3))
+    assert loaded_meta["official_component_response"] is True

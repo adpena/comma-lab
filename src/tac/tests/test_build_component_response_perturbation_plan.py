@@ -414,3 +414,204 @@ def test_prediction_delta_builder_projects_component_maps(tmp_path: Path) -> Non
     assert by_eps[-1.0]["predicted_delta"]["segnet"] == pytest.approx(0.08)
     assert by_eps[0.0]["predicted_delta"]["combined"] == 0.0
     assert summary["point_count"] == 3
+
+
+def test_plan_from_sensitivity_artifacts_builds_prediction_and_plan(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    script = REPO_ROOT / "experiments" / "build_component_response_plan_from_sensitivity_artifacts.py"
+    spec = importlib.util.spec_from_file_location(
+        "build_component_response_plan_from_sensitivity_artifacts",
+        script,
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+
+    baseline = _write_archive(tmp_path / "baseline.zip", _baseline_members())
+    baseline_eval = tmp_path / "contest_auth_eval.json"
+    baseline_eval.write_text('{"device":"cuda"}\n')
+    artifact_dir = tmp_path / "sensitivity"
+    artifact_dir.mkdir()
+    (artifact_dir / "perturbation_basis_v1.json").write_text(
+        json.dumps(
+            {
+                "format": "perturbation_basis_v1",
+                "atoms": [
+                    {
+                        "atom_id": "a0",
+                        "member": "renderer.bin",
+                        "offset": 8,
+                        "delta_per_epsilon": 1,
+                        "layer_name": "conv",
+                        "channel_index": 0,
+                    }
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n"
+    )
+    for component, scale in {"posenet": 0.01, "segnet": 0.02, "combined": 0.03}.items():
+        save_sensitivity_map(
+            artifact_dir / f"{component}_sensitivity_map.pt",
+            {"conv.weight": torch.tensor([scale], dtype=torch.float32)},
+            metadata={"component": component, "device": "cuda"},
+        )
+
+    baseline_meta = module._file_meta(baseline)
+    seen_validation_args: dict[str, object] = {}
+
+    def _fake_validate(artifact_root, **kwargs):
+        seen_validation_args["artifact_root"] = Path(artifact_root)
+        seen_validation_args.update(kwargs)
+        return {
+            "device": "cuda",
+            "gpu_model": "Tesla T4",
+            "baseline_archive_sha256": baseline_meta["sha256"],
+            "baseline_archive_size_bytes": baseline_meta["bytes"],
+            "promotion_eligible": False,
+            "score_claim": False,
+            "score_source": "none:diagnostic_component_sensitivity_non_promotable",
+        }
+
+    monkeypatch.setattr(module, "validate_local_component_sensitivity_artifact_dir", _fake_validate)
+
+    summary = module.build_component_response_plan_from_sensitivity_artifacts(
+        sensitivity_artifact_dir=artifact_dir,
+        baseline_archive=baseline,
+        baseline_contest_auth_eval_json=baseline_eval,
+        output_dir=tmp_path / "out",
+        epsilons=[-1.0, 0.0, 1.0],
+    )
+
+    assert seen_validation_args["artifact_root"] == artifact_dir.resolve()
+    assert seen_validation_args["expected_baseline_archive_sha256"] == baseline_meta["sha256"]
+    assert seen_validation_args["expected_baseline_archive_size_bytes"] == baseline_meta["bytes"]
+    assert summary["format"] == "official_component_response_plan_from_sensitivity_artifacts_summary_v1"
+    assert summary["promotion_eligible"] is False
+    assert summary["score_claim"] is False
+    assert summary["perturbation_basis"]["basis_source"] == "sensitivity_artifact_dir"
+    prediction_path = Path(summary["prediction_deltas"]["path"])
+    plan_path = Path(summary["official_response_plan"]["path"])
+    assert prediction_path.is_file()
+    assert plan_path.is_file()
+    prediction = json.loads(prediction_path.read_text())
+    plan = json.loads(plan_path.read_text())
+    assert prediction["prediction_model"]["prediction_error_mode"] == "absolute_magnitude"
+    assert plan["perturbation"]["prediction_model"]["prediction_error_mode"] == "absolute_magnitude"
+    assert plan["points"][0]["predicted_delta"] is not None
+
+
+def test_plan_from_sensitivity_artifacts_accepts_fresh_basis_override(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    script = REPO_ROOT / "experiments" / "build_component_response_plan_from_sensitivity_artifacts.py"
+    spec = importlib.util.spec_from_file_location(
+        "build_component_response_plan_from_sensitivity_artifacts_fresh_basis",
+        script,
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+
+    baseline = _write_archive(tmp_path / "baseline.zip", _baseline_members())
+    baseline_eval = tmp_path / "contest_auth_eval.json"
+    baseline_eval.write_text('{"device":"cuda"}\n')
+    artifact_dir = tmp_path / "sensitivity"
+    artifact_dir.mkdir()
+    stale_basis = artifact_dir / "perturbation_basis_v1.json"
+    stale_basis.write_text(
+        json.dumps(
+            {
+                "format": "perturbation_basis_v1",
+                "atoms": [
+                    {
+                        "atom_id": "stale",
+                        "member": "renderer.bin",
+                        "offset": 9,
+                        "delta_per_epsilon": 1,
+                        "layer_name": "conv",
+                        "channel_index": 0,
+                    }
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n"
+    )
+    fresh_basis = tmp_path / "fresh_basis.json"
+    fresh_basis.write_text(
+        json.dumps(
+            {
+                "format": "perturbation_basis_v1",
+                "atoms": [
+                    {
+                        "atom_id": "fresh",
+                        "member": "renderer.bin",
+                        "offset": 8,
+                        "delta_per_epsilon": 1,
+                        "layer_name": "conv",
+                        "channel_index": 0,
+                    }
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n"
+    )
+    for component in ("posenet", "segnet", "combined"):
+        save_sensitivity_map(
+            artifact_dir / f"{component}_sensitivity_map.pt",
+            {"conv.weight": torch.tensor([0.01], dtype=torch.float32)},
+            metadata={"component": component, "device": "cuda"},
+        )
+
+    baseline_meta = module._file_meta(baseline)
+
+    def _fake_validate(*_args, **_kwargs):
+        return {
+            "device": "cuda",
+            "gpu_model": "Tesla T4",
+            "baseline_archive_sha256": baseline_meta["sha256"],
+            "baseline_archive_size_bytes": baseline_meta["bytes"],
+            "promotion_eligible": False,
+            "score_claim": False,
+            "score_source": "none:diagnostic_component_sensitivity_non_promotable",
+        }
+
+    monkeypatch.setattr(module, "validate_local_component_sensitivity_artifact_dir", _fake_validate)
+
+    summary = module.build_component_response_plan_from_sensitivity_artifacts(
+        sensitivity_artifact_dir=artifact_dir,
+        baseline_archive=baseline,
+        baseline_contest_auth_eval_json=baseline_eval,
+        perturbation_basis_json=fresh_basis,
+        output_dir=tmp_path / "out",
+        epsilons=[-1.0, 0.0, 1.0],
+    )
+
+    plan_path = Path(summary["official_response_plan"]["path"])
+    plan = json.loads(plan_path.read_text())
+    basis_out = json.loads((plan_path.parent / plan["perturbation"]["basis_path"]).read_text())
+    assert summary["perturbation_basis"]["basis_source"] == "explicit_perturbation_basis_json"
+    assert basis_out["atoms"][0]["atom_id"] == "fresh"
+
+
+def test_plan_from_sensitivity_artifacts_cli_help_imports() -> None:
+    script = REPO_ROOT / "experiments" / "build_component_response_plan_from_sensitivity_artifacts.py"
+    result = subprocess.run(
+        [sys.executable, str(script), "--help"],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0
+    assert "--sensitivity-artifact-dir" in result.stdout
+    assert "ModuleNotFoundError" not in result.stderr

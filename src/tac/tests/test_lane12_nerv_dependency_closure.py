@@ -159,6 +159,108 @@ def test_train_nerv_mask_segnet_source_uses_preprocess_input(
     assert set(masks.unique().tolist()) == {2}
 
 
+def _make_alpha_primitive_contract(
+    train_mod,
+    masks: torch.Tensor,
+    *,
+    source_path: Path,
+    decoded_sha256: str | None = None,
+    decoded_shape: list[int] | None = None,
+) -> dict:
+    decoded_shape = decoded_shape or [int(v) for v in masks.shape]
+    return {
+        "schema_version": 1,
+        "diagnostic": "alpha_geo_primitive_contract_v1",
+        "score_evidence_grade": "empirical",
+        "promotion_eligible": False,
+        "score_claim_eligible": False,
+        "exact_eval_claim": False,
+        "source": {
+            "baseline": {
+                "path": str(source_path),
+                "archive_sha256": train_mod._sha256_file(source_path),
+                "archive_size_bytes": int(source_path.stat().st_size),
+                "decoded_mask_sha256": decoded_sha256
+                or train_mod._mask_tensor_sha256(masks),
+                "decoded_mask_sha256_algo": "sha256(shape,dtype,contiguous-raw-bytes)",
+                "decoded_mask_shape": decoded_shape,
+                "decoded_mask_dtype": str(masks.dtype),
+                "promotion_eligible": False,
+                "score_claim_eligible": False,
+                "exact_eval_claim": False,
+            },
+            "failed_candidate": {
+                "provenance_only": True,
+                "promotion_eligible": False,
+                "score_claim_eligible": False,
+                "exact_eval_claim": False,
+            },
+        },
+        "shape": {
+            "frames": decoded_shape[0],
+            "height": decoded_shape[1],
+            "width": decoded_shape[2],
+        },
+        "protected_classes": [
+            {"class_id": 1, "class_name": "class_1"},
+            {"class_id": 2, "class_name": "class_2"},
+        ],
+        "ranked_critical_boxes": [
+            {
+                "rank": 1,
+                "frames": [1],
+                "class_id": 1,
+                "box_xyxy": [1, 1, 4, 3],
+                "promotion_eligible": False,
+                "score_claim_eligible": False,
+                "exact_eval_claim": False,
+            }
+        ],
+        "decoded_baseline_boundary_recipes": [
+            {
+                "radius_px": 1,
+                "source": "decoded_baseline_mask",
+                "source_decoded_mask_sha256": decoded_sha256
+                or train_mod._mask_tensor_sha256(masks),
+                "protected_classes": [1, 2],
+                "promotion_eligible": False,
+                "score_claim_eligible": False,
+                "exact_eval_claim": False,
+            }
+        ],
+        "worst_transition_pairs": [
+            {
+                "rank": 1,
+                "pair_index": 0,
+                "frames": [0, 1],
+                "promotion_eligible": False,
+                "score_claim_eligible": False,
+                "exact_eval_claim": False,
+            }
+        ],
+        "threshold_gates": {
+            "exploratory_retrain_gate": {
+                "passed": True,
+                "thresholds": {},
+                "observed": {},
+                "blockers": [],
+                "promotion_eligible": False,
+                "score_claim_eligible": False,
+                "exact_eval_claim": False,
+            },
+            "exact_eval_spend_gate": {
+                "passed": False,
+                "thresholds": {},
+                "observed": {},
+                "blockers": ["not requested by trainer"],
+                "promotion_eligible": False,
+                "score_claim_eligible": False,
+                "exact_eval_claim": False,
+            },
+        },
+    }
+
+
 def test_train_nerv_mask_decoded_baseline_zip_source_records_custody(
     monkeypatch, tmp_path: Path
 ) -> None:
@@ -202,6 +304,80 @@ def test_train_nerv_mask_decoded_baseline_zip_source_records_custody(
     assert metadata["decoded_mask_shape"] == [2, 4, 5]
 
 
+def test_train_nerv_mask_alpha_contract_rejects_decoded_sha_mismatch(
+    tmp_path: Path,
+) -> None:
+    train_mod = _load_train_nerv_mask_module()
+    masks = torch.zeros(2, 4, 5, dtype=torch.long)
+    source_path = tmp_path / "baseline_masks.pt"
+    torch.save(masks, source_path)
+    contract = _make_alpha_primitive_contract(
+        train_mod,
+        masks,
+        source_path=source_path,
+        decoded_sha256="0" * 64,
+    )
+
+    with pytest.raises(ValueError, match="decoded_mask_sha256_match"):
+        train_mod._validate_alpha_primitive_contract(
+            contract,
+            contract_metadata={
+                "path": str(tmp_path / "contract.json"),
+                "sha256": "c" * 64,
+            },
+            masks_THW=masks,
+            decoded_metadata={"source_sha256": train_mod._sha256_file(source_path)},
+        )
+
+
+def test_train_nerv_mask_alpha_contract_sampling_pool_consumes_all_sources(
+    tmp_path: Path,
+) -> None:
+    train_mod = _load_train_nerv_mask_module()
+    masks = torch.zeros(2, 4, 5, dtype=torch.long)
+    masks[1, :, 2:] = 1
+    source_path = tmp_path / "baseline_masks.pt"
+    torch.save(masks, source_path)
+    contract = _make_alpha_primitive_contract(
+        train_mod,
+        masks,
+        source_path=source_path,
+    )
+    contract_metadata = {
+        "path": str(tmp_path / "contract.json"),
+        "sha256": "d" * 64,
+    }
+
+    gates = train_mod._validate_alpha_primitive_contract(
+        contract,
+        contract_metadata=contract_metadata,
+        masks_THW=masks,
+        decoded_metadata={"source_sha256": train_mod._sha256_file(source_path)},
+    )
+    pool, sampling = train_mod._build_alpha_primitive_sampling_pool(
+        contract,
+        masks,
+        seed=12,
+        contract_sha256=contract_metadata["sha256"],
+    )
+
+    assert gates["overall_passed"] is True
+    assert sampling["contract_sha256"] == contract_metadata["sha256"]
+    assert sampling["applied_to_training"] is True
+    assert sampling["score_claim_eligible"] is False
+    component_records = {row["name"]: row for row in sampling["components"]}
+    assert set(component_records) == {
+        "uniform_base",
+        "critical_boxes",
+        "boundary_bands",
+        "transition_endpoints",
+    }
+    assert component_records["critical_boxes"]["active"] is True
+    assert component_records["boundary_bands"]["active"] is True
+    assert component_records["transition_endpoints"]["active"] is True
+    assert {component.name for component in pool.components} == set(component_records)
+
+
 def test_train_nerv_mask_decoded_baseline_shape_gate_is_fail_closed() -> None:
     train_mod = _load_train_nerv_mask_module()
 
@@ -220,10 +396,17 @@ def test_train_nerv_mask_decoded_baseline_cli_smoke_records_non_promotable_prove
     """CPU smoke covers Alpha-Geo-1 decoded-baseline custody without score claims."""
     train_mod = _load_train_nerv_mask_module()
     baseline = torch.zeros(2, 4, 5, dtype=torch.long)
-    baseline[1, :, 2:] = 3
+    baseline[1, :, 2:] = 1
     baseline_path = tmp_path / "baseline_masks.pt"
+    contract_path = tmp_path / "alpha_contract.json"
     output_dir = tmp_path / "nerv_smoke"
     torch.save(baseline, baseline_path)
+    contract = _make_alpha_primitive_contract(
+        train_mod,
+        baseline,
+        source_path=baseline_path,
+    )
+    contract_path.write_text(json.dumps(contract, sort_keys=True))
 
     proc = subprocess.run(
         [
@@ -237,6 +420,8 @@ def test_train_nerv_mask_decoded_baseline_cli_smoke_records_non_promotable_prove
             "decoded-baseline",
             "--decoded-baseline-path",
             str(baseline_path),
+            "--alpha-primitive-contract",
+            str(contract_path),
             "--output-dir",
             str(output_dir),
             "--num-frames",
@@ -264,6 +449,7 @@ def test_train_nerv_mask_decoded_baseline_cli_smoke_records_non_promotable_prove
 
     assert provenance["trainer_artifact_evidence_grade"] == "empirical"
     assert provenance["trainer_score_claim_eligible"] is False
+    assert provenance["trainer_exact_eval_requested"] is False
     assert provenance["trainer_smoke_run"] is True
     assert "contest_auth_eval.py --device cuda" in provenance["trainer_score_claim_source_required"]
     assert any(
@@ -285,6 +471,83 @@ def test_train_nerv_mask_decoded_baseline_cli_smoke_records_non_promotable_prove
     assert target_metadata["source"] == "decoded-baseline"
     assert target_metadata["path"] == str(baseline_path)
     assert target_metadata["decoded_mask_sha256"] == expected_mask_sha
+    contract_provenance = provenance["alpha_primitive_contract"]
+    sampling = provenance["alpha_sampling_pool"]
+    assert contract_provenance["path"] == str(contract_path)
+    assert contract_provenance["sha256"] == hashlib.sha256(
+        contract_path.read_bytes()
+    ).hexdigest()
+    assert contract_provenance["consumption_gates"]["overall_passed"] is True
+    assert sampling["mode"] == "alpha_primitive_contract_weighted"
+    assert sampling["contract_sha256"] == contract_provenance["sha256"]
+    assert sampling["score_claim_eligible"] is False
+    components = {row["name"]: row for row in sampling["components"]}
+    assert components["uniform_base"]["active"] is True
+    assert components["critical_boxes"]["active"] is True
+    assert components["boundary_bands"]["active"] is True
+    assert components["transition_endpoints"]["active"] is True
+
+
+def test_train_nerv_mask_segnet_cli_fails_closed_without_forensic_flag(
+    tmp_path: Path,
+) -> None:
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "experiments" / "train_nerv_mask.py"),
+            "--profile",
+            "nerv_mask_lane_g_v3",
+            "--device",
+            "cpu",
+            "--gt-masks-source",
+            "segnet",
+            "--output-dir",
+            str(tmp_path / "segnet_forbidden"),
+            "--num-frames",
+            "1",
+            "--steps",
+            "1",
+            "--eval-every",
+            "1",
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert proc.returncode != 0
+    assert "--allow-forensic-segnet-target" in (proc.stderr + proc.stdout)
+
+
+def test_train_nerv_mask_production_decoded_baseline_requires_alpha_contract(
+    tmp_path: Path,
+) -> None:
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "experiments" / "train_nerv_mask.py"),
+            "--profile",
+            "nerv_mask_lane_g_v3",
+            "--device",
+            "cuda",
+            "--gt-masks-source",
+            "decoded-baseline",
+            "--decoded-baseline-path",
+            str(tmp_path / "baseline_masks.pt"),
+            "--output-dir",
+            str(tmp_path / "nerv_production_no_contract"),
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    combined = proc.stderr + proc.stdout
+    assert proc.returncode != 0
+    assert "decoded-baseline production retraining requires --alpha-primitive-contract" in combined
+    assert "torch.cuda.is_available" not in combined
 
 
 def test_canonical_archive_validation_accepts_masks_nrv(tmp_path: Path) -> None:
@@ -345,6 +608,12 @@ def test_remote_lane_nerv_defaults_to_alpha_geo_build_only_guardrail() -> None:
     assert 'BASE_ARCHIVE="${BASE_ARCHIVE:-$LANE_G_V3_BASE_ARCHIVE}"' in script
     assert 'GT_MASKS_SOURCE="${GT_MASKS_SOURCE:-decoded-baseline}"' in script
     assert 'RUN_AUTH_EVAL="${RUN_AUTH_EVAL:-0}"' in script
+    assert 'ALPHA_PRIMITIVE_CONTRACT="${ALPHA_PRIMITIVE_CONTRACT:-}"' in script
+    assert "alpha_geo_primitive_contract_v1" in script
+    assert "requires ALPHA_PRIMITIVE_CONTRACT" in script
+    assert 'if [ -z "$ALPHA_PRIMITIVE_CONTRACT" ]; then' in script
+    assert 'if [ ! -f "$ALPHA_PRIMITIVE_CONTRACT" ]; then' in script
+    assert '"alpha_primitive_contract": optional_json_file_meta' in script
     assert "command -v nvidia-smi" in script
     assert 'GPU_NAME="nvidia-smi unavailable"' in script
     assert 'L2_CLEARANCE_PATH="${L2_CLEARANCE_PATH:-$WORKSPACE/.omx/state/lane12_nerv_l2_clearance.json}"' in script
@@ -367,6 +636,7 @@ def test_remote_lane_nerv_defaults_to_alpha_geo_build_only_guardrail() -> None:
     assert 'if [ "$GT_MASKS_SOURCE" = "decoded-baseline" ]; then' in script
     assert '--decoded-baseline-path "$DECODED_BASELINE_PATH"' in script
     assert '--decoded-baseline-member "$DECODED_BASELINE_MEMBER"' in script
+    assert '--alpha-primitive-contract "$ALPHA_PRIMITIVE_CONTRACT"' in script
 
 
 def test_remote_lane_nerv_retains_gated_exact_cuda_archive_eval() -> None:

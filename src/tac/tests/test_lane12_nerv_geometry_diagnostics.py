@@ -40,6 +40,15 @@ def _two_class_boundary_masks() -> torch.Tensor:
     return masks
 
 
+def _write_mask_archive(path: Path, masks: torch.Tensor, *, member: str) -> bytes:
+    payload = io.BytesIO()
+    torch.save(masks, payload)
+    payload_bytes = payload.getvalue()
+    with zipfile.ZipFile(path, "w") as zf:
+        zf.writestr(member, payload_bytes)
+    return payload_bytes
+
+
 def test_identical_masks_have_zero_disagreement_and_pass() -> None:
     baseline = _two_class_boundary_masks()
 
@@ -538,6 +547,114 @@ def test_cli_writes_json_from_tensor_files(tmp_path: Path) -> None:
     assert data["visual_primitives"]["source"]["diagnose_nerv_geometry_json"] == str(out_json)
     assert data["diagnostic_config"]["visual_primitive_options"]["critical_component_min_area"] == 9
     assert data["diagnostic_config"]["visual_primitive_options"]["frame_stride"] == 2
+
+
+def test_cli_writes_alpha_geo_primitive_contract_no_claims_and_stable_content(
+    tmp_path: Path,
+) -> None:
+    baseline = torch.full((3, 12, 12), 4, dtype=torch.long)
+    baseline[:, 6:, :] = 0
+    baseline[0, 8:11, 2:5] = 1
+    baseline[1, 8:11, 3:6] = 1
+    baseline[2, 8:11, 4:7] = 1
+    baseline[1, 7:10, 8:11] = 2
+    candidate = baseline.clone()
+    candidate[0, 8:11, 2:5] = 0
+    candidate[1, 7:10, 8:11] = 0
+    candidate[1, 7:10, 9:12] = 2
+
+    member = "payloads/masks.pt"
+    baseline_archive = tmp_path / "baseline.zip"
+    candidate_archive = tmp_path / "failed_candidate.zip"
+    baseline_payload = _write_mask_archive(baseline_archive, baseline, member=member)
+    candidate_payload = _write_mask_archive(candidate_archive, candidate, member=member)
+    out_json = tmp_path / "diag.json"
+    contract_json = tmp_path / "primitive_contract.json"
+
+    import subprocess
+
+    subprocess.run(
+        [
+            sys.executable,
+            str(DIAG_PATH),
+            "--baseline",
+            str(baseline_archive),
+            "--baseline-member",
+            member,
+            "--candidate",
+            str(candidate_archive),
+            "--candidate-member",
+            member,
+            "--output-json",
+            str(out_json),
+            "--primitive-contract-json",
+            str(contract_json),
+            "--threshold-preset",
+            "none",
+            "--worst-pair-count",
+            "3",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    raw_contract = contract_json.read_text()
+    contract = json.loads(raw_contract)
+    assert raw_contract == json.dumps(contract, indent=2, sort_keys=True) + "\n"
+    assert contract == diag.build_alpha_geo_primitive_contract(json.loads(out_json.read_text()))
+    assert contract["diagnostic"] == "alpha_geo_primitive_contract_v1"
+    assert contract["score_evidence_grade"] == "empirical"
+    assert contract["promotion_eligible"] is False
+    assert contract["score_claim_eligible"] is False
+    assert contract["exact_eval_claim"] is False
+
+    source = contract["source"]
+    assert source["baseline"]["archive_sha256"] == hashlib.sha256(
+        baseline_archive.read_bytes()
+    ).hexdigest()
+    assert source["baseline"]["archive_member"] == member
+    assert source["baseline"]["archive_member_sha256"] == hashlib.sha256(
+        baseline_payload
+    ).hexdigest()
+    assert source["baseline"]["decoded_mask_sha256"] == diag._mask_tensor_sha256(baseline)
+    assert source["failed_candidate"]["provenance_only"] is True
+    assert source["failed_candidate"]["archive_sha256"] == hashlib.sha256(
+        candidate_archive.read_bytes()
+    ).hexdigest()
+    assert source["failed_candidate"]["archive_member_sha256"] == hashlib.sha256(
+        candidate_payload
+    ).hexdigest()
+    assert source["failed_candidate"]["decoded_mask_sha256"] == diag._mask_tensor_sha256(
+        candidate
+    )
+
+    assert contract["shape"] == {"frames": 3, "height": 12, "num_classes": 5, "width": 12}
+    assert [row["class_id"] for row in contract["protected_classes"]] == [1, 2]
+    top_box = contract["ranked_critical_boxes"][0]
+    assert top_box["source"] == (
+        "visual_primitives.primitive_metrics.connected_components."
+        "critical_box_failures"
+    )
+    assert top_box["class_id"] == 1
+    assert top_box["box_xyxy"] == [2, 8, 5, 11]
+    assert top_box["promotion_eligible"] is False
+    assert top_box["score_claim_eligible"] is False
+    assert top_box["exact_eval_claim"] is False
+
+    recipes = contract["decoded_baseline_boundary_recipes"]
+    assert [row["radius_px"] for row in recipes] == [1, 2, 3, 5]
+    assert {row["source_decoded_mask_sha256"] for row in recipes} == {
+        diag._mask_tensor_sha256(baseline)
+    }
+    assert recipes[1]["dilation_operator"]["kernel_size_px"] == 5
+    assert recipes[1]["observed_candidate_delta"]["computed_in_diagnostics"] is True
+    assert contract["worst_transition_pairs"]
+    assert contract["worst_transition_pairs"][0]["score_claim_eligible"] is False
+    gates = contract["threshold_gates"]
+    assert gates["exploratory_retrain_gate"]["thresholds"]["global_disagreement_max"] == 0.003
+    assert gates["exact_eval_spend_gate"]["thresholds"]["boundary_2px_disagreement_max"] == 0.002
+    assert gates["exact_eval_spend_gate"]["exact_eval_claim"] is False
 
 
 def test_zip_member_loader_records_member_and_decoded_hash(tmp_path: Path) -> None:
