@@ -1050,3 +1050,110 @@ Immediate next execution order:
 4. Run official component response with external-baseline repro gates.
 5. Only then certify `component_sensitivity_v1` and route OWV3/NWCS exact-eval
    candidates.
+
+## 2026-05-01T08:15Z Lightning SSH Permanence Diagnosis And Hardening
+
+Root cause / operating model:
+
+- SSH reachability and GPU attachment are separate Lightning states. Current
+  probe via hardened alias `scratch-studio-devbox` reaches the Studio shell,
+  but the interactive Studio has no `nvidia-smi` and no default `python` in the
+  shell path; therefore it is CPU-only at this moment.
+- This is not an SSH-key failure and not a repo staging failure. It is
+  Lightning machine-policy behavior: a Studio can remain reachable while the
+  GPU machine has switched back to CPU after inactivity. Promotion-grade CUDA
+  must therefore use Batch Jobs with explicit machine selection and per-job
+  runner preflight, or an interactive Studio that has just passed
+  `--require-cuda`.
+- Online/current-source review found that `lightning-sdk` exposes explicit
+  Studio machine switching and Batch Jobs with machine selection. OpenSSH
+  documentation supports the exact controls now used here:
+  `ConnectTimeout`, `ConnectionAttempts`, `ServerAliveInterval`,
+  `ServerAliveCountMax`, and `ControlMaster`/`ControlPersist`.
+
+Permanent hardening landed:
+
+- Added `scripts/configure_lightning_ssh.py`, a reproducible alias installer
+  that writes a managed SSH config block with public-key-only auth,
+  `BatchMode yes`, bounded connect attempts, client keepalives,
+  opportunistic multiplexing, `StrictHostKeyChecking accept-new`, and a
+  persistent known-hosts file. This replaces the Lightning UI one-liner for
+  contest custody because the UI helper may disable host-key checking and send
+  host keys to `/dev/null`.
+- Hardened legacy Lightning shell wrappers:
+  `scripts/lightning_auth_eval.sh`,
+  `scripts/lightning_deploy_asymmetric.sh`,
+  `scripts/lightning_auth_eval_renderer.sh`,
+  `scripts/pfp16_a_plus_plus_exact_t4_eval.sh`,
+  `src/tac/deploy/lightning/deploy.sh`,
+  `tools/lightning_run.sh`, and `tools/lightning_monitor.sh`.
+- Hardened legacy Python dispatcher
+  `src/tac/deploy/lightning/lightning_dispatch.py`: public-key-only
+  noninteractive SSH/SCP, keepalives, bounded attempts, and rejection of bare
+  `ssh.lightning.ai` as a target.
+- Extended `src/tac/preflight.py` so Lightning static SSH policy scans
+  `src/tac/deploy/lightning/` in addition to scripts/tools/runbooks/AGENTS.
+- Added `cloud` optional dependency extra in `pyproject.toml` and `uv.lock`
+  for reproducible operator tooling: `lightning-sdk`, `modal`, and `vastai`.
+  Local environment now has `lightning-sdk==2026.4.23`, `modal==1.4.2`,
+  `vastai==1.0.8`, and no installed `lightning` or `pytorch-lightning`.
+- Local `~/.ssh/config` was updated with the same hardened
+  `scratch-studio-devbox` options. This is operator-machine state, not a repo
+  custody artifact; the reproducible source of the policy is the new script.
+
+Current queue telemetry:
+
+- Lightning direct-FD refresh
+  `.omx/state/lightning_refresh_direct_fd_allwaves_20260501T081337Z.jsonl`
+  shows 6 L40S shards running (`00,01,03,04,05,07`) and 42 pending
+  (10 remaining L40S, all 16 T4, all 16 RTX PRO). No direct-FD Lightning shard
+  has completed/harvested yet.
+- Modal A10G r1 and r2 exposed dependency-closure bugs (`timm`, then
+  `segmentation_models_pytorch`). r3 image includes both dependencies and
+  dispatched all 16 A10G shards under label
+  `pfp16_direct_fd_modal_a10g_20260501_r3`; latest recovery still shows all
+  16 pending, with no failed shards and no artifacts yet.
+- Alpha-Geo-1 primitive-contract diagnostic completed:
+  `experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_1_vs_pfp16_repair_regions_20260501T080036Z.json`
+  SHA-256 `fcc7fcf9e22518cd95a5af4cb36aff189249c6248b5298f377ecc8ca66991a3e`
+  and
+  `experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_1_vs_pfp16_repair_regions_20260501T080036Z.primitive_contract.json`
+  SHA-256 `e5da815b680ba5c02bf653dae8c77b4f6d12500461e45b06d0cfb0881be5c16e`.
+  It remains CPU empirical/non-score.
+
+Verification:
+
+```bash
+.venv/bin/python -m py_compile \
+  scripts/configure_lightning_ssh.py \
+  scripts/launch_lightning_batch_job.py \
+  scripts/lightning_repro_workspace.py \
+  src/tac/deploy/lightning/batch_jobs.py \
+  src/tac/deploy/lightning/lightning_dispatch.py \
+  src/tac/preflight.py \
+  experiments/modal_component_sensitivity_shards.py \
+  experiments/merge_component_sensitivity_shards.py
+
+bash -n \
+  scripts/lightning_auth_eval.sh \
+  scripts/lightning_deploy_asymmetric.sh \
+  scripts/lightning_auth_eval_renderer.sh \
+  scripts/pfp16_a_plus_plus_exact_t4_eval.sh \
+  src/tac/deploy/lightning/deploy.sh \
+  tools/lightning_run.sh \
+  tools/lightning_monitor.sh
+
+.venv/bin/python -m pytest \
+  src/tac/tests/test_configure_lightning_ssh.py \
+  src/tac/tests/test_lightning_dispatch.py \
+  src/tac/tests/test_preflight_meta_bugs.py \
+  src/tac/tests/test_lightning_batch_jobs.py \
+  src/tac/tests/test_lightning_repro_workspace.py \
+  src/tac/tests/test_merge_component_sensitivity_shards.py -q
+
+.venv/bin/python scripts/scan_lightning_supply_chain.py --strict
+git diff --check
+```
+
+Observed result: `367 passed`; supply-chain scanner OK; Lightning static SSH
+preflight OK; MCP process preflight OK; diff whitespace clean.

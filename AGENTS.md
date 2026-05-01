@@ -256,6 +256,17 @@ deterministic.
   superseded by a source/artifact manifest before promotion. Generated payloads
   must be passed with explicit `--artifact`; bulky experiment outputs,
   checkpoints, videos, and archives are not source.
+- Use `scripts/configure_lightning_ssh.py` to install reproducible Lightning
+  SSH aliases on new operator machines. The managed alias uses BatchMode,
+  public-key-only auth, bounded connect attempts, SSH keepalives,
+  opportunistic ControlMaster reuse, `StrictHostKeyChecking accept-new`, and a
+  dedicated known-hosts file. Do not use Lightning UI helper output that
+  disables host-key checking or sends known-hosts to `/dev/null` for contest
+  custody work.
+- The `cloud` optional dependency extra owns Lightning SDK installation for
+  reproducible operator environments. Use `uv sync --locked --extra cloud`
+  when a fresh machine needs Lightning automation tools; continue to forbid
+  the PyPI package named `lightning`.
 - Use `scripts/lightning_repro_workspace.py --ssh-check-only --require-cuda`
   before interactive Lightning CUDA work. Plain SSH success only proves the
   Studio is reachable; it does not prove a GPU is attached. If this runtime
@@ -321,6 +332,11 @@ deterministic.
   disabled, and an explicit `ConnectTimeout`. Preflight-only SSH hardening is
   insufficient if the actual copy/harvest commands do not reuse the same
   policy.
+- Lightning SSH is transport only. It cannot keep a Studio GPU attached after
+  Lightning's machine policy switches the Studio back to CPU. Interactive SSH
+  work must probe `nvidia-smi` and `torch.cuda.is_available()` before CUDA
+  assumptions; promotion-grade CUDA should prefer Batch Jobs with explicit
+  machine selection and per-job runner preflight.
 - Studio-backed Lightning jobs persist Studio paths under the SDK artifact
   mirror, e.g. `/teamspace/jobs/<job>/artifacts/pact/...`. Use
   `scripts/launch_lightning_batch_job.py harvest-ssh --job-name ...` for

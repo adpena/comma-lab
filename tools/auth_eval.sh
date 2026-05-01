@@ -86,9 +86,20 @@ fi
 
 VIDEO_SIZE=$(stat -f%z "$ARCHIVE_DIR/0.mkv" 2>/dev/null || stat -c%s "$ARCHIVE_DIR/0.mkv")
 
-# Step 2: Bundle checkpoint into archive
+# Step 2: Bundle checkpoint into archive (use python zipfile per
+# feedback_zip_dep_bootstrap_trap — `zip` shell binary not present on PyTorch container images)
 cp "$CHECKPOINT" "$ARCHIVE_DIR/postfilter_int8.pt"
-cd "$ARCHIVE_DIR" && zip -9 -r "$WORK/archive.zip" . > /dev/null && cd "$REPO_ROOT"
+python3 -c "
+import os, zipfile
+src = '$ARCHIVE_DIR'
+out = '$WORK/archive.zip'
+with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
+    for root, _, files in os.walk(src):
+        for fn in files:
+            full = os.path.join(root, fn)
+            rel = os.path.relpath(full, src)
+            z.write(full, arcname=rel)
+"
 ARCHIVE_SIZE=$(stat -f%z "$WORK/archive.zip" 2>/dev/null || stat -c%s "$WORK/archive.zip")
 echo "  Archive: $ARCHIVE_SIZE bytes (video=$VIDEO_SIZE + model=$CHECKPOINT_SIZE)"
 

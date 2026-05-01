@@ -1,8 +1,8 @@
 {
   "archive_zip": null,
   "artifacts": [],
-  "completed_at_utc": "2026-04-29T05:52:09.683150+00:00",
-  "elapsed_seconds": 3.48330067936331e-05,
+  "completed_at_utc": "2026-04-30T06:08:28.217576+00:00",
+  "elapsed_seconds": 4.4374988647177815e-05,
   "instance_id": 42,
   "lane_label": "dead",
   "masks_mkv": null,
@@ -14,5 +14,5 @@
   "renderer_bin": null,
   "skipped_patterns": [],
   "ssh_reachable": false,
-  "started_at_utc": "2026-04-29T05:52:09.683119+00:00"
+  "started_at_utc": "2026-04-30T06:08:28.217538+00:00"
 }

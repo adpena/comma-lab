@@ -15,8 +15,8 @@
 #   ./src/tac/deploy/lightning/deploy.sh status
 #   ./src/tac/deploy/lightning/deploy.sh download
 #
-# Requires: Lightning SSH configured (~/.ssh/lightning_rsa)
-# Env vars: LIGHTNING_HOST (default: from ~/.ssh/config)
+# Requires: Lightning SSH configured through a ~/.ssh/config alias.
+# Env vars: LIGHTNING_SSH_TARGET (recommended) or LIGHTNING_HOST alias.
 
 set -euo pipefail
 
@@ -29,21 +29,36 @@ REMOTE_SCRIPT="$REMOTE_BASE/experiments/train_renderer_fridrich.py"
 # ---------------------------------------------------------------------------
 # SSH wiring
 # ---------------------------------------------------------------------------
-LIGHTNING_HOST="${LIGHTNING_HOST:-$(grep -A1 'Host ssh.lightning.ai' ~/.ssh/config 2>/dev/null | head -1 | awk '{print $2}' || echo '')}"
-if [ -z "$LIGHTNING_HOST" ]; then
-    echo "ERROR: LIGHTNING_HOST not set and no SSH config found."
-    echo "Run the Lightning SSH setup command from the Lightning UI first."
+LIGHTNING_SSH_TARGET="${LIGHTNING_SSH_TARGET:-${LIGHTNING_HOST:-}}"
+if [ -z "$LIGHTNING_SSH_TARGET" ]; then
+    echo "ERROR: LIGHTNING_SSH_TARGET is not set."
+    echo "Use a ~/.ssh/config alias such as scratch-studio-devbox."
     exit 1
 fi
+case "$LIGHTNING_SSH_TARGET" in
+    ssh.lightning.ai)
+        echo "ERROR: use a user-qualified target or SSH config alias, not bare ssh.lightning.ai." >&2
+        exit 2
+        ;;
+esac
 
-REMOTE_USER="${LIGHTNING_USER:-$(grep -oP 's_\w+' ~/.ssh/config 2>/dev/null | head -1 || echo '')}"
-REMOTE="${REMOTE_USER}@ssh.lightning.ai"
+REMOTE="$LIGHTNING_SSH_TARGET"
+SSH_OPTS=(
+    -o BatchMode=yes
+    -o PasswordAuthentication=no
+    -o KbdInteractiveAuthentication=no
+    -o ConnectTimeout=20
+    -o ConnectionAttempts=3
+    -o ServerAliveInterval=15
+    -o ServerAliveCountMax=4
+    -o TCPKeepAlive=yes
+)
 
 _ssh() {
-    ssh -i ~/.ssh/lightning_rsa -o StrictHostKeyChecking=no -o ConnectTimeout=10 "$@"
+    ssh "${SSH_OPTS[@]}" "$@"
 }
 _scp() {
-    scp -i ~/.ssh/lightning_rsa -o StrictHostKeyChecking=no "$@"
+    scp "${SSH_OPTS[@]}" "$@"
 }
 
 # ---------------------------------------------------------------------------

@@ -95,6 +95,17 @@ dev = [
     # have a Rotation API that differs subtly from what the test asserts.
     "scipy>=1.10",
 ]
+cloud = [
+    # Lightning AI Batch Jobs/Studio automation. Do not install the PyPI
+    # package named `lightning` for cloud orchestration; keep using the
+    # separate SDK package guarded by scripts/scan_lightning_supply_chain.py.
+    "lightning-sdk>=2026.4.10,<2026.5",
+    # Active contest compute backends. These must not be ambient developer
+    # packages; a locked cloud sync must preserve Modal dispatch/harvest and
+    # Vast reconciliation/cleanup tooling.
+    "modal>=1.4,<2",
+    "vastai>=1.0,<2",
+]
 
 [project.scripts]
 tac = "tac.cli:main"
