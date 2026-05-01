@@ -34,6 +34,7 @@ import re
 import struct
 import subprocess
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 
 import torch
@@ -255,6 +256,11 @@ def preflight_all(
         # executes on import. This repository uses `lightning-sdk`; any
         # install path for bare `lightning` is a remote-runner compromise risk.
         check_no_compromised_lightning_supply_chain(strict=True, verbose=verbose)
+        # Lightning SSH custody must not regress to TOFU-disabled shell snippets
+        # or bare provider-host targets. Direct provider targets have already
+        # caused confusing auth failures; scripts/runbooks should use an SSH
+        # config alias whose resolved policy is checked with ssh -G.
+        check_lightning_ssh_static_policy(strict=True, verbose=verbose)
         # 2026-04-30 Lightning r3 exact-eval failure: CUDA preflight and
         # archive/inflate succeeded, but upstream evaluate.py crashed on
         # missing `nvidia.dali`. Exact-eval runners must bootstrap/probe DALI
@@ -333,6 +339,7 @@ def preflight_all(
         check_no_brittle_six_line_waiver_lookback(strict=True, verbose=verbose)
         check_kl_distill_uses_roundtripped_frames(strict=True, verbose=verbose)
         check_train_renderer_kl_aux_explicit_scope(strict=True, verbose=verbose)
+        check_distillation_policy_schema_clean(strict=True, verbose=verbose)
         check_eval_roundtrip_gate_called_after_output_dir_resolution(strict=True, verbose=verbose)
         check_nvdec_probe_has_error_classification(strict=True, verbose=verbose)
         check_archive_builders_use_deterministic_zip(strict=True, verbose=verbose)
@@ -352,6 +359,17 @@ def preflight_all(
         # Memory: feedback_three_active_bug_classes_needing_strict_checks_20260429.md.
         check_callsite_contracts_satisfied(strict=True, verbose=verbose)
         check_no_proxy_metric_drives_decision(strict=True, verbose=verbose)
+        # PCC2 (2026-04-30): comment-only contracts. Catches the IMP cycle
+        # 0 = 1.98 metabug class — placeholder/stub with a comment promising
+        # the wrapper will swap in the real impl, but no backing assertion.
+        # Lands STRICT @ 0 live unbacked findings: the canonical incident
+        # in experiments/train_imp_cycle.py:_finetune now has an inline
+        # backing assertion (n_trainable == 0 → raise RuntimeError) that
+        # documents the deploy contract + the PCC3 wall-clock-floor in
+        # train_imp_cycle.main covers the runtime gate. Reverting either
+        # safety net will fail strict here.
+        # Council: feedback_grand_council_pcc2_comment_only_contracts_20260430.md
+        check_no_comment_only_contracts(strict=True, verbose=verbose)
         # Check 85 (DARTS-S NaN-display incident 2026-04-29 PM): epoch_metrics
         # key references must match TRAINER_RETURN_KEYS. Today's incident:
         # 5h of GPU compute appeared to show seg=nan/pose=nan because the
@@ -851,6 +869,24 @@ def preflight_all(
         # .omx/research/council_lane_17_imp_design_20260430.md.
         check_imp_cycles_use_ema_and_auth_eval(strict=True, verbose=verbose)
 
+        # 2026-04-30 ~23:30 UTC: Check 103 (PCC1) — Lane 17 IMP dispatcher
+        # MUST invoke a real trainer (train_distill / train_renderer /
+        # train_renderer_fridrich) in addition to train_imp_cycle.py.
+        # Closes the cycle 0 = 1.98 [contest-CUDA] metabug bug class
+        # permanently: train_imp_cycle.py's _finetune is a documented
+        # STUB loop (synthetic tensors, toy L2 loss, ~0.017s/epoch on L40S).
+        # Without a real-trainer swap, the dispatcher reproduces the metabug
+        # cycle after cycle. Council Option B+assertion 6/3/1 verdict in
+        # feedback_grand_council_imp_permanent_fix_review_20260430.md;
+        # SQ1/SQ2/SQ3 sub-questions 9/10 each in
+        # feedback_grand_council_imp_train_distill_swap_design_20260430.md.
+        # Lands STRICT @ 0 violations after the Stage 1.X swap landed in
+        # scripts/remote_lane_j_imp_iterative_magnitude_pruning.sh
+        # (same commit). Companion to PCC3 (the wall-clock assertion in
+        # train_imp_cycle.py main, ~L362-374) which catches the bug at
+        # runtime if the stub somehow gets shipped despite this check.
+        check_imp_dispatch_calls_train_distill(strict=True, verbose=verbose)
+
         # 2026-04-30: Check 95 — Lane 12 (NeRV mask codec) discipline.
         # The Lane 12 codec lane (`src/tac/nerv_mask_codec.py`) ships its
         # own training loop (`NeRVMaskTrainer`) and standalone trainer
@@ -906,6 +942,9 @@ def preflight_all(
         check_remote_lane_auth_eval_json_adjudication(
             strict=True, verbose=verbose
         )
+        check_remote_distillation_promotion_provenance(
+            strict=True, verbose=verbose
+        )
 
         # 2026-04-30: Check 100 — retry launcher must be self-protecting.
         # Dispatch attempts are production state transitions, not disposable
@@ -923,6 +962,35 @@ def preflight_all(
         # smoke dispatch. Recovery must go through experiments/modal_recover_lane.py
         # and log streaming through `modal app logs <app-id>`.
         check_modal_recovery_cli_guidance_current(strict=True, verbose=verbose)
+
+        # 2026-04-30: Check 102 — Modal CPU auth eval must remain advisory.
+        # The Modal training wrapper may force AUTH_EVAL_DEVICE=cpu to avoid
+        # NVDEC, but CPU/MPS scores cannot promote, rank, retire, or anchor a
+        # stack. Enforce explicit advisory markers and device-aware recovery
+        # output so stale provider telemetry does not become score truth.
+        check_modal_cpu_auth_eval_is_advisory_only(strict=True, verbose=verbose)
+
+        # 2026-04-30: Check PCC4 — KILL/FALSIFIED memory files MUST cite a
+        # Grand Council adversarial review. Per the user mandate ("permanently
+        # fix all bugs and bug classes and metabugs and everything and have all
+        # design decisions and ultimate experiment subject to extreme paranoia
+        # and adversarial grand council reviews", 2026-04-30 ~22:55 UTC) and
+        # the Lane 17 IMP premature-KILL incident (cycle 0 = 1.98 was a
+        # measurement bug — 200 epochs claimed in stats.json but elapsed_sec
+        # = 3.47s revealed the in-script "lightweight loop" stub never got
+        # swapped for train_distill).
+        #
+        # The fixture project_lane_17_imp_killed_cycle_0_198_regression_
+        # 20260430.md auto-passes via the WITHDRAWN-in-title rule (a kill
+        # reversed under adversarial scrutiny IS the success outcome of this
+        # check). Live audit on 2026-04-30 found 4 legacy 2026-04-30 kill
+        # records lacking the canonical sections; they will be backfilled
+        # in a follow-up commit before this check flips STRICT.
+        # Reference: feedback_grand_council_pcc4_kill_memory_review_
+        # enforcement_20260430.md.
+        check_kill_memory_files_have_council_review(
+            strict=False, verbose=verbose,
+        )
 
     # 2. Training inputs (only if profile + tto_frames provided)
     if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:
@@ -2383,12 +2451,24 @@ class MetaBugViolation(Exception):
 # adds scripts/ for shell-adjacent Python launchers.
 _META_PY_SCAN_DIRS = ["src/tac", "experiments", "scripts"]
 # Directories scanned for shell meta-bug patterns.
-_META_SH_SCAN_DIRS = ["scripts", "submissions/robust_current"]
+_META_SH_SCAN_DIRS = ["scripts", "tools", "submissions/robust_current"]
 
 _COMPROMISED_LIGHTNING_VERSIONS = {"2.6.2", "2.6.3"}
 _MINI_SHAI_HULUD_IOC_SHA256 = {
     "5f5852b5f604369945118937b058e49064612ac69826e0adadca39a357dfb5b1",
     "8046a11187c135da6959862ff3846e99ad15462d2ec8a2f77a30ad53ebd5dcf2",
+    "d2815d425ae08cc627f1db69009442165f8bbc64b7e9157e2ff9d7aab02094d4",
+    "2d4e21d2e78d0868ce7894487e67c67f929d8d81d78c5b07a3ad225b13eae890",
+    "3071422c3294e7b61cb490c57c48c8dea569bacf12e57a078293b6547d7586d3",
+    "56070a9d8de0c0ffb1ec5c309953cf4679432df5a78df9aeb020fbb73d2be9fb",
+}
+_MINI_SHAI_HULUD_IOC_LABELS = {
+    "5f5852b5f604369945118937b058e49064612ac69826e0adadca39a357dfb5b1": "router_runtime.js payload",
+    "8046a11187c135da6959862ff3846e99ad15462d2ec8a2f77a30ad53ebd5dcf2": "lightning 2.6.2 _runtime/start.py",
+    "d2815d425ae08cc627f1db69009442165f8bbc64b7e9157e2ff9d7aab02094d4": "lightning 2.6.3 _runtime/start.py",
+    "2d4e21d2e78d0868ce7894487e67c67f929d8d81d78c5b07a3ad225b13eae890": "malicious lightning/__init__.py",
+    "3071422c3294e7b61cb490c57c48c8dea569bacf12e57a078293b6547d7586d3": "lightning 2.6.2 wheel",
+    "56070a9d8de0c0ffb1ec5c309953cf4679432df5a78df9aeb020fbb73d2be9fb": "lightning 2.6.3 wheel",
 }
 _MINI_SHAI_HULUD_PLANTED_PATHS = {
     ".claude/router_runtime.js",
@@ -2404,6 +2484,10 @@ _LIGHTNING_BAD_VERSION_RE = re.compile(
 )
 _LIGHTNING_WHEEL_BAD_VERSION_RE = re.compile(
     r"(?i)(?:lightning|pytorch_lightning|pytorch-lightning)-2\.6\.[23]"
+)
+_LIGHTNING_BAD_CACHE_ARTIFACT_RE = re.compile(
+    r"(?i)(?:lightning|pytorch_lightning|pytorch-lightning)-2\.6\.[23]"
+    r".*\.(?:whl|zip|tar\.gz|tgz)$"
 )
 _PYPI_LIGHTNING_PACKAGE_RE = re.compile(
     r"(?i)(?<![-A-Za-z0-9_])lightning(?:\[[^\]\s]+\])?(?![-A-Za-z0-9_])"
@@ -2425,10 +2509,63 @@ _LIGHTNING_VERSION_PROBE_RE = re.compile(
     )
     """
 )
+_LIGHTNING_CONSOLE_SCRIPT_RE = re.compile(
+    r"""(?ix)
+    (?:
+        (?:^|[\s"'=({;&|`])
+        (?:
+            (?:\./)?\.venv/bin/
+            |
+            (?:\./)?venv/bin/
+            |
+            [./A-Za-z0-9_-]+/bin/
+        )
+        lightning
+        (?:$|[\s"')};|`])
+    )
+    |
+    (?:
+        (?:^|[;&|`(]\s*)
+        lightning
+        \s+
+        (?:connect|cp|list|run|studio|app|apps|job|jobs|open|download|upload|login|logout|--version)\b
+    )
+    """
+)
+_LIGHTNING_CONSOLE_VARIABLE_RE = re.compile(
+    r"""(?x)
+    (?:^|[\s"'({;&|`])
+    (?:\$\{LIGHTNING\}|\$LIGHTNING)
+    (?:$|[\s"')};|`])
+    """
+)
 _PACKAGE_JSON_POSTINSTALL_SETUP_RE = re.compile(
     r'"postinstall"\s*:\s*"[^"]*(?:setup\.mjs|router_runtime\.js)[^"]*"'
 )
 _TOML_NAME_LIGHTNING_RE = re.compile(r"""(?i)\bname\s*=\s*["']lightning["']""")
+_LIGHTNING_STRICT_HOSTKEY_DISABLED_RE = re.compile(
+    r"""(?ix)
+    \bStrictHostKeyChecking
+    (?:\s*=\s*|\s+)
+    (?:no|false|off)
+    \b
+    """
+)
+_LIGHTNING_NULL_KNOWN_HOSTS_RE = re.compile(
+    r"""(?ix)
+    \bUserKnownHostsFile
+    (?:\s*=\s*|\s+)
+    /dev/null
+    \b
+    """
+)
+_LIGHTNING_BARE_PROVIDER_TARGET_RE = re.compile(
+    r"""(?ix)
+    (?<![@A-Za-z0-9_.-])
+    ssh\.lightning\.ai
+    (?![A-Za-z0-9_.-])
+    """
+)
 
 
 def _iter_python_files(root: Path, dirs: list[str]) -> list[Path]:
@@ -2511,7 +2648,12 @@ def _candidate_supply_chain_manifest_files(root: Path) -> list[Path]:
             candidates.append(p)
     for pattern in ("requirements*.txt", "constraints*.txt", "environment*.yml", "environment*.yaml"):
         candidates.extend(sorted(root.glob(pattern)))
-    for base in (root / "scripts", root / ".github" / "workflows", root / "src" / "tac" / "deploy"):
+    for base in (
+        root / "scripts",
+        root / "tools",
+        root / ".github" / "workflows",
+        root / "src" / "tac" / "deploy",
+    ):
         if not base.exists():
             continue
         for suffix in ("*.py", "*.sh", "*.yml", "*.yaml"):
@@ -2601,11 +2743,144 @@ def _scan_dependency_manifests_for_compromised_lightning(
                     "`lightning-sdk` package metadata instead of running a "
                     "potentially poisoned console script."
                 )
+            elif _LIGHTNING_CONSOLE_SCRIPT_RE.search(line):
+                violations.append(
+                    f"{rel}:{i}: executes the PyPI `lightning` console script; "
+                    "use SSH, `lightning-sdk`, or package metadata APIs instead."
+                )
+            elif _LIGHTNING_CONSOLE_VARIABLE_RE.search(line):
+                violations.append(
+                    f"{rel}:{i}: executes a `LIGHTNING` console-script variable; "
+                    "use SSH, `lightning-sdk`, or package metadata APIs instead."
+                )
             elif is_manifest and _line_refs_pypi_lightning_dependency(line):
                 violations.append(
                     f"{rel}:{i}: depends on PyPI package `lightning`; use "
                     "`lightning-sdk` for this project."
                 )
+    return violations
+
+
+def _candidate_lightning_ssh_policy_files(repo_root: Path) -> list[Path]:
+    candidates: list[Path] = []
+    roots = [
+        repo_root / "scripts",
+        repo_root / "tools",
+        repo_root / "docs" / "runbooks",
+    ]
+    suffixes = {".py", ".sh", ".md", ".toml", ".json", ".yaml", ".yml", ".txt", ".sshconfig"}
+    for base in roots:
+        if not base.exists():
+            continue
+        for path in sorted(base.rglob("*")):
+            if not path.is_file() or path.suffix.lower() not in suffixes:
+                continue
+            rel = path.relative_to(repo_root)
+            rel_lower = rel.as_posix().lower()
+            if "lightning" in rel_lower:
+                candidates.append(path)
+    for name in ("AGENTS.md", "CLAUDE.md"):
+        path = repo_root / name
+        if path.is_file():
+            candidates.append(path)
+    return sorted({p.resolve(): p for p in candidates}.values())
+
+
+def _line_has_bare_lightning_provider_target(line: str) -> bool:
+    if "ssh.lightning.ai" not in line:
+        return False
+    stripped = line.strip()
+    if re.search(r"(?i)\bHostName\s+ssh\.lightning\.ai\b", stripped):
+        return False
+    lower = stripped.lower()
+    if "not bare ssh.lightning.ai" in lower or "bare ssh.lightning.ai" in lower and "fatal" in lower:
+        return False
+    if re.fullmatch(r"ssh\.lightning\.ai\)?", stripped):
+        return False
+    if re.search(
+        r"""(?x)(?:args\.\w+|[A-Za-z_][A-Za-z0-9_]*)\s*(?:==|!=)\s*["']ssh\.lightning\.ai["']""",
+        stripped,
+    ):
+        return False
+    # A direct Studio user target is still allowed for one-off compatibility;
+    # the unsafe static regression here is the provider host with no SSH user
+    # or alias, e.g. `--remote ssh.lightning.ai`.
+    if re.search(r"(?i)[A-Za-z0-9_.-]+@ssh\.lightning\.ai\b", stripped):
+        return False
+    return bool(_LIGHTNING_BARE_PROVIDER_TARGET_RE.search(stripped))
+
+
+def _scan_lightning_ssh_static_policy(path: Path, repo_root: Path) -> list[str]:
+    violations: list[str] = []
+    text = _read_text_if_possible(path)
+    if not text:
+        return violations
+    rel = path.relative_to(repo_root) if path.is_relative_to(repo_root) else path
+    for i, line in enumerate(text.splitlines(), start=1):
+        lower = line.lower()
+        negative_guidance = any(
+            token in lower
+            for token in (
+                "do not use",
+                "never use",
+                "forbid",
+                "reject",
+                "blocked",
+                "disallow",
+            )
+        )
+        if _LIGHTNING_STRICT_HOSTKEY_DISABLED_RE.search(line) and not negative_guidance:
+            violations.append(
+                f"{rel}:{i}: disables StrictHostKeyChecking for Lightning SSH; "
+                "use an SSH config alias with StrictHostKeyChecking accept-new or yes."
+            )
+        if _LIGHTNING_NULL_KNOWN_HOSTS_RE.search(line) and not negative_guidance:
+            violations.append(
+                f"{rel}:{i}: sends Lightning host keys to /dev/null; "
+                "use a persistent known_hosts file for custody."
+            )
+        if _line_has_bare_lightning_provider_target(line):
+            violations.append(
+                f"{rel}:{i}: uses bare ssh.lightning.ai as a Lightning target; "
+                "use an SSH config alias with HostName ssh.lightning.ai and a Studio User."
+            )
+    return violations
+
+
+def check_lightning_ssh_static_policy(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Block unsafe Lightning SSH/static-provider auth regressions.
+
+    This is deliberately narrower than the Vast SSH tooling: it only scans
+    Lightning-named scripts/tools/runbooks and durable agent guidance. Vast
+    launchers still own their separate SSH policy and are intentionally not
+    inspected by this check.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    for path in _candidate_lightning_ssh_policy_files(root):
+        violations.extend(_scan_lightning_ssh_static_policy(path, root))
+    if verbose:
+        if violations:
+            print(f"  [lightning-ssh-static-policy] {len(violations)} violation(s):")
+            for v in violations[:20]:
+                print(f"    • {v}")
+            if len(violations) > 20:
+                print(f"    … (+{len(violations) - 20} more)")
+        else:
+            print("  [lightning-ssh-static-policy] OK: Lightning SSH scripts/runbooks are fail-closed")
+    if violations and strict:
+        raise MetaBugViolation(
+            "LIGHTNING SSH STATIC POLICY VIOLATIONS:\n"
+            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n\nLightning scripts and runbooks must preserve host-key "
+            "checking and should target SSH config aliases instead of the "
+            "bare provider host. This keeps staging/harvest custody auditable "
+            "before any Batch Job or SSH artifact copy."
+        )
     return violations
 
 
@@ -2630,7 +2905,7 @@ def _scan_repo_for_mini_shai_hulud_iocs(repo_root: Path) -> list[str]:
                 "references setup.mjs/router_runtime.js, matching worm behavior."
             )
 
-    names = {"router_runtime.js", "start.py", "setup.mjs"}
+    names = {"router_runtime.js", "start.py", "setup.mjs", "__init__.py"}
     for path in sorted(repo_root.rglob("*")):
         if not path.is_file() or path.name not in names:
             continue
@@ -2639,7 +2914,8 @@ def _scan_repo_for_mini_shai_hulud_iocs(repo_root: Path) -> list[str]:
             continue
         digest = _sha256_file(path)
         if digest in _MINI_SHAI_HULUD_IOC_SHA256:
-            violations.append(f"{rel}: known Mini Shai-Hulud IOC sha256={digest}")
+            label = _MINI_SHAI_HULUD_IOC_LABELS.get(digest, "known payload")
+            violations.append(f"{rel}: known Mini Shai-Hulud IOC {label} sha256={digest}")
     return violations
 
 
@@ -2700,13 +2976,77 @@ def _scan_site_packages_for_compromised_lightning(
             for path in sorted(site.rglob(name)):
                 digest = _sha256_file(path)
                 if digest in _MINI_SHAI_HULUD_IOC_SHA256:
-                    violations.append(f"{path}: known Mini Shai-Hulud IOC sha256={digest}")
+                    label = _MINI_SHAI_HULUD_IOC_LABELS.get(digest, "known payload")
+                    violations.append(f"{path}: known Mini Shai-Hulud IOC {label} sha256={digest}")
+        lightning_init = site / "lightning" / "__init__.py"
+        if lightning_init.exists():
+            digest = _sha256_file(lightning_init)
+            if digest in _MINI_SHAI_HULUD_IOC_SHA256:
+                label = _MINI_SHAI_HULUD_IOC_LABELS.get(digest, "known payload")
+                violations.append(f"{lightning_init}: known Mini Shai-Hulud IOC {label} sha256={digest}")
+    return violations
+
+
+def _candidate_package_cache_roots() -> list[Path]:
+    candidates: list[Path] = []
+    for env_name in ("PIP_CACHE_DIR", "UV_CACHE_DIR"):
+        value = os.environ.get(env_name)
+        if value:
+            candidates.append(Path(value).expanduser())
+
+    home = Path.home()
+    xdg_cache = Path(os.environ.get("XDG_CACHE_HOME", home / ".cache")).expanduser()
+    candidates.extend(
+        [
+            xdg_cache / "pip",
+            xdg_cache / "uv",
+            home / "Library" / "Caches" / "pip",
+            home / "Library" / "Caches" / "uv",
+        ]
+    )
+    return sorted({p.resolve(): p for p in candidates if p.exists()}.values())
+
+
+def _scan_package_caches_for_compromised_lightning(
+    package_cache_roots: list[Path] | None = None,
+) -> list[str]:
+    violations: list[str] = []
+    roots = _candidate_package_cache_roots() if package_cache_roots is None else package_cache_roots
+    bad_stems = (
+        "lightning-2.6.2*",
+        "lightning-2.6.3*",
+        "pytorch_lightning-2.6.2*",
+        "pytorch_lightning-2.6.3*",
+        "pytorch-lightning-2.6.2*",
+        "pytorch-lightning-2.6.3*",
+    )
+    for root in roots:
+        if not root.exists():
+            continue
+        for pattern in bad_stems:
+            for path in sorted(root.glob(f"**/{pattern}")):
+                if not path.is_file():
+                    continue
+                if not _LIGHTNING_BAD_CACHE_ARTIFACT_RE.search(path.name):
+                    continue
+                digest = _sha256_file(path)
+                if digest in _MINI_SHAI_HULUD_IOC_SHA256:
+                    label = _MINI_SHAI_HULUD_IOC_LABELS.get(digest, "known payload")
+                    violations.append(
+                        f"{path}: cached compromised Lightning artifact {label} sha256={digest}"
+                    )
+                else:
+                    violations.append(
+                        f"{path}: cached Lightning 2.6.2/2.6.3 artifact present; "
+                        "treat the cache/environment as suspect and remove from trusted runners."
+                    )
     return violations
 
 
 def check_no_compromised_lightning_supply_chain(
     repo_root: Path | None = None,
     site_packages_roots: list[Path] | None = None,
+    package_cache_roots: list[Path] | None = None,
     strict: bool = False,
     verbose: bool = True,
 ) -> list[str]:
@@ -2716,6 +3056,7 @@ def check_no_compromised_lightning_supply_chain(
     - forbids `lightning==2.6.2` / `lightning==2.6.3`
     - forbids unpinned `pip install lightning` in deploy/install paths
     - scans the active virtualenv for the compromised package shape / hashes
+    - scans package caches for cached compromised wheels/source archives
     - scans repo-owned files for the Mini Shai-Hulud planted paths
     """
     root = repo_root or REPO_ROOT
@@ -2723,6 +3064,10 @@ def check_no_compromised_lightning_supply_chain(
     violations.extend(_scan_dependency_manifests_for_compromised_lightning(root))
     violations.extend(_scan_repo_for_mini_shai_hulud_iocs(root))
     violations.extend(_scan_site_packages_for_compromised_lightning(root, site_packages_roots))
+    cache_roots = package_cache_roots
+    if cache_roots is None and site_packages_roots is not None:
+        cache_roots = []
+    violations.extend(_scan_package_caches_for_compromised_lightning(cache_roots))
     if verbose:
         if violations:
             print(f"  [lightning-supply-chain] {len(violations)} violation(s):")
@@ -6840,6 +7185,9 @@ _MPS_DECISION_EXEMPT_TAGS = re.compile(
     r"|CLAUDE\.md \"[^\"]+\""
     r"|\bper Council\b"
     r"|\bCouncil #\d+\b"
+    # Same-line waiver marker (operator explicitly attests the line IS
+    # the rule, not a violation — meta-irony false-positive class).
+    r"|MPS-DECISION-WAIVED:"
 )
 
 
@@ -6933,6 +7281,295 @@ def check_no_proxy_metric_drives_decision(
             + "\n\nFix: either remove the decision verb (kill/promote/etc) "
             "from the record, or attach a [contest-CUDA] artifact reference "
             "in the same paragraph (within ±10 lines)."
+        )
+    return violations
+
+
+# ── PCC2 (2026-04-30): comment-only contracts ────────────────────────────────
+#
+# Bug class: a placeholder/stub function carries a comment promising the
+# wrapper/deploy/caller will swap in the real implementation, but the wrapper
+# never actually performs the swap. The stub runs in production. Comments rot;
+# assertions don't.
+#
+# Anchor incident (2026-04-30): experiments/train_imp_cycle.py:_finetune
+# carried "deploy script ... OVERRIDES this stub by calling train_distill.py"
+# in its docstring + body comments. The wrapper script never performed the
+# swap. Cycle 0 ran the toy synthetic-tensor loop on random inputs and shipped
+# a non-trained model. Auth eval = 1.98 [contest-CUDA], a 38× regression vs
+# the anchor (0.052). PCC3 added a wall-clock-floor backing assertion in
+# train_imp_cycle.main; PCC2 enforces the META rule across the whole codebase
+# so the next stub-comment without a backing assertion cannot ship.
+#
+# Council deliberation: feedback_grand_council_pcc2_comment_only_contracts_20260430.md
+# Q1 verdict (4-1 hybrid): regex for comment scan, AST for backing-assertion
+#   function-body lookup. Shell scripts skip the AST step.
+# Q2 verdict (6-0 tight): six high-precision patterns for STRICT mode.
+# Q3 verdict (5-0 liberal): backing assertion = any `raise` or `assert` in the
+#   same function body, OR within ±50 lines of the comment, OR a `check_*`
+#   sibling reference anywhere in the file.
+
+# Tight pattern set (STRICT). Each pattern matches a phrase that
+# explicitly promises the wrapper/deploy/caller will replace the current
+# code. Patterns are case-insensitive at match time.
+_COMMENT_ONLY_CONTRACT_PATTERNS_STRICT: tuple[re.Pattern[str], ...] = (
+    re.compile(r"deploy script swaps in (\w+)", re.IGNORECASE),
+    re.compile(
+        r"the deploy script (does|invokes|calls|runs|swaps|overrides|provides|injects|replaces)",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"(wrapper|deploy)\s+script\s+(handles|does|runs|invokes|calls|provides|overrides|swaps|injects|replaces)",
+        re.IGNORECASE,
+    ),
+    re.compile(r"OVERRIDES this stub", re.IGNORECASE),
+    re.compile(
+        r"(deploy|wrapper)\s+(script\s+)?(swaps|injects|provides|replaces)\b",
+        re.IGNORECASE,
+    ),
+    # NB: "caller is responsible for X" is NOT in the STRICT set — Q2 verdict
+    # ruled it produces too many legitimate-API-docstring false positives.
+    # It IS in the broader audit set below.
+)
+
+# Broader pattern set (--audit only). Used for periodic operator sweeps to
+# discover NEW variants of the bug class. Not gated by STRICT.
+_COMMENT_ONLY_CONTRACT_PATTERNS_AUDIT: tuple[re.Pattern[str], ...] = (
+    *_COMMENT_ONLY_CONTRACT_PATTERNS_STRICT,
+    re.compile(r"wrapper handles (\w+)", re.IGNORECASE),
+    re.compile(r"caller is responsible for (\w+)", re.IGNORECASE),
+    re.compile(r"the wrapper script does (\w+)", re.IGNORECASE),
+    re.compile(r"production (wrapper|deploy)", re.IGNORECASE),
+    re.compile(
+        r"(deploy|wrapper) will (do|run|swap|replace|invoke|call)",
+        re.IGNORECASE,
+    ),
+)
+
+# Backing-assertion patterns. ANY of these inside the function body, OR
+# within ±50 lines of the suspect comment, OR ANYWHERE in the file (for the
+# check_* sibling reference) satisfies the contract.
+_BACKING_ASSERTION_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"\bassert\s+\w"),                  # `assert <expr>`
+    re.compile(r"\braise\s+[A-Z]\w*"),             # `raise <ExceptionType>`
+    re.compile(r"check_\w+\s*\("),                 # `check_<name>(...)` call
+    re.compile(r"@requires_\w+"),                  # decorator family
+    re.compile(r"@assert_wrapper_\w+"),            # decorator family
+)
+
+# Files exempt from the scan.
+_COMMENT_ONLY_CONTRACT_EXEMPT_FILES: set[str] = {
+    "src/tac/preflight.py",                # this check itself
+    "src/tac/tests/test_no_comment_only_contracts.py",  # the test file
+}
+# Path-segment exemptions (any rel path containing one of these is skipped).
+_COMMENT_ONLY_CONTRACT_EXEMPT_PATH_PARTS: tuple[str, ...] = (
+    "/.claude/projects/",   # private memory
+    "/memory/",             # auto-memory
+    "MEMORY.md",
+    ".omx/context/",
+    ".omx/research/",
+    "src/tac/tests/",       # tests can carry illustrative comment patterns
+)
+
+
+def _find_enclosing_function_body(
+    tree: ast.AST, lineno: int,
+) -> tuple[int, int] | None:
+    """Return (start_lineno, end_lineno) of the function/method that encloses
+    the given line, or None if at module level. Picks the innermost enclosing
+    function when nested."""
+    best: tuple[int, int] | None = None
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        start = node.lineno
+        end = getattr(node, "end_lineno", None)
+        if end is None:
+            continue
+        if start <= lineno <= end:
+            if best is None or (end - start) < (best[1] - best[0]):
+                best = (start, end)
+    return best
+
+
+def _has_backing_assertion(
+    text: str, lines: list[str], comment_lineno: int,
+    tree: ast.AST | None,
+) -> bool:
+    """Liberal backing-assertion check per Q3 council verdict.
+
+    Returns True if ANY of:
+      (a) `assert` / `raise` / `check_*(` / decorator inside the enclosing
+          function body
+      (b) same patterns within ±50 lines of the comment
+      (c) any `check_*(` reference anywhere else in the file (sibling
+          preflight check pattern)
+    """
+    # (c) sibling check_* reference — cheap whole-file scan. Only count it if
+    # the reference is NOT on the comment line itself.
+    for m in re.finditer(r"\bcheck_\w+\s*\(", text):
+        line_idx = text[:m.start()].count("\n")
+        if line_idx + 1 != comment_lineno:
+            return True
+
+    # (a) enclosing function body scan via AST
+    if tree is not None:
+        rng = _find_enclosing_function_body(tree, comment_lineno)
+        if rng is not None:
+            start, end = rng
+            body_text = "\n".join(lines[start - 1:end])
+            for pat in _BACKING_ASSERTION_PATTERNS:
+                if pat.search(body_text):
+                    return True
+
+    # (b) ±50 lines window (line-anchored fallback for shell scripts and
+    # module-level comments outside any function body)
+    lo = max(0, comment_lineno - 51)
+    hi = min(len(lines), comment_lineno + 50)
+    window_text = "\n".join(lines[lo:hi])
+    for pat in _BACKING_ASSERTION_PATTERNS:
+        if pat.search(window_text):
+            return True
+    return False
+
+
+def _scan_file_for_comment_only_contracts(
+    path: Path, repo_root: Path,
+    patterns: tuple[re.Pattern[str], ...],
+) -> list[tuple[str, int, str, bool]]:
+    """Scan one file for comment-only-contract patterns.
+
+    Returns a list of (rel_path, lineno, snippet, is_backed) tuples.
+    `is_backed` is True iff a backing assertion was found per the liberal
+    Q3 council rule.
+    """
+    try:
+        rel = path.relative_to(repo_root) if path.is_absolute() else path
+    except ValueError:
+        return []
+    rel_s = str(rel)
+    if rel_s in _COMMENT_ONLY_CONTRACT_EXEMPT_FILES:
+        return []
+    if any(part in rel_s for part in _COMMENT_ONLY_CONTRACT_EXEMPT_PATH_PARTS):
+        return []
+    try:
+        text = path.read_text()
+    except (UnicodeDecodeError, OSError):
+        return []
+    lines = text.splitlines()
+    # AST is only useful for `.py` files (best-effort for backing-assertion
+    # function-body lookup). Shell scripts skip the AST step.
+    tree: ast.AST | None = None
+    if path.suffix == ".py":
+        try:
+            tree = ast.parse(text, filename=str(path))
+        except (SyntaxError, ValueError):
+            tree = None
+
+    findings: list[tuple[str, int, str, bool]] = []
+    for i, line in enumerate(lines, start=1):
+        for pat in patterns:
+            if pat.search(line):
+                snippet = line.strip()[:140]
+                backed = _has_backing_assertion(text, lines, i, tree)
+                findings.append((rel_s, i, snippet, backed))
+                break  # one finding per line is enough
+    return findings
+
+
+def check_no_comment_only_contracts(
+    *, strict: bool = False, verbose: bool = False,
+    repo_root: Path | None = None, audit: bool = False,
+) -> list[str]:
+    """Detect the "comment-only contract" anti-pattern (PCC2).
+
+    A placeholder/stub carries a comment promising the wrapper/deploy/caller
+    will swap in the real implementation, but no runtime assertion guards
+    the case where the swap doesn't happen. The IMP cycle 0 = 1.98 metabug
+    (38× regression) was rooted in this exact class.
+
+    Args:
+      strict: if True, raises MetaBugViolation on any unbacked finding.
+      verbose: print per-file violation lines.
+      repo_root: override repo root for testing.
+      audit: if True, use the broader pattern set (more false positives,
+        intended for periodic operator sweeps; should NOT be passed by
+        `preflight_all()`).
+
+    Returns: list of violation strings (file:line:snippet).
+
+    Council: feedback_grand_council_pcc2_comment_only_contracts_20260430.md
+    """
+    root = repo_root or REPO_ROOT
+    scan_dirs = (
+        "scripts", "experiments", "src/tac", "submissions/robust_current",
+    )
+    target_suffixes = (".py", ".sh")
+    patterns = (
+        _COMMENT_ONLY_CONTRACT_PATTERNS_AUDIT if audit
+        else _COMMENT_ONLY_CONTRACT_PATTERNS_STRICT
+    )
+
+    all_findings: list[tuple[str, int, str, bool]] = []
+    for sd in scan_dirs:
+        sd_path = root / sd
+        if not sd_path.is_dir():
+            continue
+        for f in sd_path.rglob("*"):
+            if not f.is_file() or f.suffix not in target_suffixes:
+                continue
+            all_findings.extend(
+                _scan_file_for_comment_only_contracts(f, root, patterns)
+            )
+
+    # Audit mode: report ALL findings (backed and unbacked).
+    # STRICT mode: violations are unbacked findings only.
+    unbacked = [f for f in all_findings if not f[3]]
+    violations = [
+        f"{rel_s}:{lineno}: {snippet}"
+        for rel_s, lineno, snippet, _ in unbacked
+    ]
+
+    if verbose:
+        if audit:
+            print(
+                f"  [no-comment-only-contracts AUDIT] {len(all_findings)} "
+                f"hit(s) ({len(unbacked)} unbacked, "
+                f"{len(all_findings) - len(unbacked)} backed):"
+            )
+            for rel_s, lineno, snippet, backed in all_findings[:30]:
+                tag = "UNBACKED" if not backed else "backed"
+                print(f"    [{tag}] {rel_s}:{lineno}: {snippet}")
+            if len(all_findings) > 30:
+                print(f"    … and {len(all_findings) - 30} more")
+        elif violations:
+            print(
+                f"  [no-comment-only-contracts] {len(violations)} "
+                f"violation(s):"
+            )
+            for v in violations[:10]:
+                print(f"    • {v}")
+            if len(violations) > 10:
+                print(f"    … and {len(violations) - 10} more")
+        else:
+            print(
+                "  [no-comment-only-contracts] OK: 0 unbacked findings"
+            )
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "COMMENT-ONLY CONTRACT DETECTED (PCC2):\n"
+            + "\n".join(f"  • {v}" for v in violations[:20])
+            + (
+                f"\n  … and {len(violations) - 20} more"
+                if len(violations) > 20 else ""
+            )
+            + "\n\nFix: add a backing assertion (assert/raise/check_*) within "
+            "±50 lines of the comment OR inside the enclosing function body. "
+            "The IMP cycle 0 = 1.98 metabug (38× regression) was rooted in "
+            "this exact class — comments rot, assertions don't.\n"
+            "Council: feedback_grand_council_pcc2_comment_only_contracts_20260430.md"
         )
     return violations
 
@@ -9121,8 +9758,9 @@ def check_train_renderer_kl_aux_explicit_scope(
 
     Historical KL lanes were confounded by ambiguous primary-vs-auxiliary
     semantics and stale weights. `train_renderer.py` may only use scoped
-    SegNet auxiliary KL/JBL, and every positive `kl_distill_weight` profile
-    must declare `kl_distill_scope="segnet_aux"`.
+    SegNet auxiliary KL/JBL, every positive `kl_distill_weight` profile
+    must declare `kl_distill_scope="segnet_aux"`, and legacy high-weight
+    KL profiles must be explicitly non-promotable.
     """
     root = repo_root or REPO_ROOT
     violations: list[str] = []
@@ -9147,6 +9785,17 @@ def check_train_renderer_kl_aux_explicit_scope(
                 f"kl_distill_scope={scope!r}; positive renderer KL-like "
                 "auxiliary weights require explicit scope 'segnet_aux'."
             )
+        if (
+            isinstance(weight, (int, float))
+            and weight >= 0.1
+            and profile.get("promotion_eligible") is not False
+        ):
+            violations.append(
+                f"profiles[{name!r}]: kl_distill_weight={weight} is a "
+                "high-scale KL configuration but promotion_eligible is not "
+                "False. Legacy high-weight KL is forensic-only until retuned "
+                "with loss-ratio evidence and exact CUDA component gates."
+            )
 
     train_renderer = root / "src/tac/experiments/train_renderer.py"
     text = _read_text_if_possible(train_renderer)
@@ -9155,6 +9804,8 @@ def check_train_renderer_kl_aux_explicit_scope(
         "positive kl_distill_weight requires explicit": "positive weight fail-closed guard",
         "train_renderer never permits primary/full-scorer KL": "primary KL hard block",
         'args.kl_distill_scope == "segnet_aux"': "loss block checks explicit scope",
+        "--allow-high-kl-weight-forensic": "high-weight KL requires forensic opt-in",
+        "kl_distill_weight >= 0.1": "direct high-weight KL is fail-closed",
     }
     for token, reason in required_tokens.items():
         if token not in text:
@@ -9173,7 +9824,89 @@ def check_train_renderer_kl_aux_explicit_scope(
             + "\n".join(f"  • {v}" for v in violations)
             + "\n\nRenderer KL-like auxiliaries must not activate from "
             "kl_distill_weight alone. Use kl_distill_scope='segnet_aux' and "
-            "exact CUDA archive eval/component gates before any claim."
+            "mark high-weight KL as non-promotable until exact CUDA archive "
+            "eval/component gates and scale review exist before any claim."
+        )
+    return violations
+
+
+# ── Check M0b: every KL/JBL profile normalizes through policy schema ──────
+
+
+def check_distillation_policy_schema_clean(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+    profiles: Mapping[str, Mapping[str, object]] | None = None,
+) -> list[str]:
+    """Validate KL/JBL/distillation configs through the frozen policy schema."""
+
+    violations: list[str] = []
+    if profiles is None:
+        try:
+            from tac.profiles import PROFILES
+        except Exception as exc:  # pragma: no cover - import failure is fatal below
+            violations.append(f"could not import tac.profiles.PROFILES: {exc}")
+            PROFILES = {}
+        profiles = PROFILES
+
+    try:
+        from tac.kl_config import DistillationPolicyError, normalize_distillation_policy
+    except Exception as exc:  # pragma: no cover - import failure is fatal below
+        violations.append(f"could not import tac.kl_config policy schema: {exc}")
+        normalize_distillation_policy = None  # type: ignore[assignment]
+        DistillationPolicyError = Exception  # type: ignore[assignment]
+
+    if normalize_distillation_policy is not None:
+        for name, profile in sorted(profiles.items()):
+            if not isinstance(profile, Mapping):
+                violations.append(f"profiles[{name!r}] is not a mapping")
+                continue
+            try:
+                policy = normalize_distillation_policy(profile)
+            except DistillationPolicyError as exc:
+                violations.append(f"profiles[{name!r}] distillation policy invalid: {exc}")
+                continue
+
+            weight = profile.get("kl_distill_weight", profile.get("weight", 0.0))
+            try:
+                weight_value = float(weight or 0.0)
+            except (TypeError, ValueError):
+                violations.append(f"profiles[{name!r}] has nonnumeric kl_distill_weight={weight!r}")
+                continue
+            scope = profile.get("kl_distill_scope", profile.get("scope", "none"))
+            if weight_value > 0.0 and scope == "segnet_aux" and policy.family == "none":
+                violations.append(
+                    f"profiles[{name!r}] has active kl_distill_weight={weight_value} "
+                    "but normalized to family='none'"
+                )
+            if policy.family in {"primary_scorer_kl", "segnet_kl_legacy", "jbl"}:
+                provenance = policy.to_provenance()
+                if provenance.get("promotion_eligible") is not False:
+                    violations.append(
+                        f"profiles[{name!r}] family={policy.family!r} is forensic-only "
+                        "but promotion_eligible is not False"
+                    )
+                if not provenance.get("forensic_reason"):
+                    violations.append(
+                        f"profiles[{name!r}] family={policy.family!r} is forensic-only "
+                        "but forensic_reason is missing"
+                    )
+
+    if verbose:
+        if violations:
+            print(f"  [distillation-policy-schema] {len(violations)} violation(s):")
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print("  [distillation-policy-schema] OK: KL/JBL profiles normalize through policy schema")
+    if violations and strict:
+        raise PreflightError(
+            "DISTILLATION POLICY SCHEMA violations:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nEvery KL/JBL/distillation lane must serialize a "
+            "distillation_policy_v1-compatible policy before training, "
+            "dispatch, adjudication, or promotion."
         )
     return violations
 
@@ -15889,6 +16622,180 @@ def check_imp_cycles_use_ema_and_auth_eval(
     return violations
 
 
+# ── Check 103 (PCC1): IMP dispatch must invoke train_distill (not just stub) ─
+#
+# 2026-04-30 ~23:00 UTC. The IMP cycle 0 = 1.98 [contest-CUDA] regression
+# metabug was caused by `experiments/train_imp_cycle.py::_finetune` being a
+# documented STUB loop (200 epochs in 3.5s on L40S = ~0.017s/epoch — synthetic
+# tensors, toy L2 loss). The stub's docstring promised "deploy script swaps
+# in train_distill" — but the swap never happened. The promise was a comment,
+# not a contract.
+#
+# Council Option B+assertion (6/3/1 verdict in
+# `feedback_grand_council_imp_permanent_fix_review_20260430.md`): the swap is
+# done by the dispatch script (Stage 1.X between train_imp_cycle.py and the
+# auth-smoke), AND a STRICT preflight check enforces that the swap is wired
+# in every IMP dispatcher.
+#
+# Detection: scan every `scripts/remote_lane_j_imp_*.sh` (the canonical IMP
+# dispatcher pattern). If `experiments/train_imp_cycle.py` is invoked, then
+# `experiments/train_distill.py` (or an equivalent real trainer like
+# `experiments/train_renderer.py` / `experiments/train_renderer_fridrich.py`)
+# MUST also be invoked subsequently in the same script. Without that swap,
+# the dispatcher would be running stub-pretending-to-be-real fine-tunes
+# cycle after cycle — exactly the metabug this check exists to extinguish.
+#
+# Live count at land time: 1 dispatcher (the canonical
+# remote_lane_j_imp_iterative_magnitude_pruning.sh) — verified to invoke
+# train_distill at the Stage 1.X swap landed in the same commit. Strict @ 0.
+#
+# Memory: feedback_grand_council_imp_permanent_fix_review_20260430.md (parent
+# council vote), feedback_grand_council_imp_train_distill_swap_design_20260430.md
+# (this commit's sub-question deliberation: epochs=500 phase1-only, masks =
+# Lane G v3 anchor, auth-smoke AFTER distill).
+
+
+_IMP_REAL_TRAINER_INVOCATIONS = (
+    "experiments/train_distill.py",
+    "experiments/train_renderer.py",
+    "experiments/train_renderer_fridrich.py",
+)
+
+
+def _scan_imp_dispatcher_for_train_distill_swap(
+    path: Path, repo_root: Path,
+) -> list[str]:
+    """Audit one Lane-17 IMP dispatcher to verify the train_distill swap.
+
+    A dispatcher that invokes train_imp_cycle.py without ALSO invoking a
+    real trainer (train_distill / train_renderer / train_renderer_fridrich)
+    is the cycle 0 = 1.98 metabug class. Returns list of violations.
+
+    Heuristic for "real invocation" (not a python heredoc reference):
+    looks for `"$PYBIN" -u <target>` OR `python -u <target>` patterns. Bare
+    `open('experiments/...')` strings inside python heredocs do NOT count.
+    """
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    rel_s = str(rel)
+    try:
+        text = path.read_text()
+    except (UnicodeDecodeError, FileNotFoundError):
+        return []
+
+    # Detect an actual invocation by looking for `<runner> -u <target>`.
+    # Acceptable runner tokens: `"$PYBIN"`, `$PYBIN`, `python`, `python3`,
+    # `.venv/bin/python`. The `-u` (unbuffered) flag is the canonical lane-
+    # script pattern (see CLAUDE.md "Vast.ai deployment" rule "Always use
+    # python3 -u for background jobs"). Heredoc references like
+    # `open('experiments/train_imp_cycle.py').read()` lack the `-u` token
+    # so are skipped.
+    import re as _re
+
+    def _has_real_invocation(target: str) -> bool:
+        # Match: optional " or nothing, runner, optional ", whitespace, -u, ws, target
+        pattern = (
+            r'(?:"?\$PYBIN"?|python3?|\.venv/bin/python)\s+-u\s+'
+            + _re.escape(target)
+        )
+        return bool(_re.search(pattern, text))
+
+    invokes_imp_cycle = _has_real_invocation("experiments/train_imp_cycle.py")
+    if not invokes_imp_cycle:
+        # No train_imp_cycle invocation at all — this isn't a real IMP
+        # dispatcher (or it uses some other mechanism). Don't flag.
+        return []
+
+    invokes_real_trainer = any(
+        _has_real_invocation(t) for t in _IMP_REAL_TRAINER_INVOCATIONS
+    )
+    if invokes_real_trainer:
+        return []
+
+    return [
+        f"{rel_s}: IMP dispatcher invokes experiments/train_imp_cycle.py "
+        f"without a subsequent real-trainer invocation (one of: "
+        f"{', '.join(_IMP_REAL_TRAINER_INVOCATIONS)}). "
+        f"train_imp_cycle.py's _finetune is a documented STUB loop "
+        f"(synthetic tensors, toy L2 loss); without the train_distill swap "
+        f"the dispatcher reproduces the cycle 0 = 1.98 [contest-CUDA] "
+        f"metabug (200 epochs in 3.5s = stub pretending to be real "
+        f"training). Council Option B+assertion 6/3/1 verdict in "
+        f"feedback_grand_council_imp_permanent_fix_review_20260430.md "
+        f"requires a Stage 1.X train_distill invocation between "
+        f"train_imp_cycle and the auth-smoke. See "
+        f"scripts/remote_lane_j_imp_iterative_magnitude_pruning.sh "
+        f"Stage 1.X for the canonical pattern."
+    ]
+
+
+def check_imp_dispatch_calls_train_distill(
+    *, strict: bool = False, verbose: bool = False, repo_root: Path | None = None,
+) -> list[str]:
+    """PCC1: every IMP dispatcher invoking train_imp_cycle.py MUST also
+    invoke a real trainer (train_distill / train_renderer / train_renderer_fridrich).
+
+    Bug class: stub-pretending-to-be-real (the IMP cycle 0 = 1.98 metabug,
+    2026-04-30). train_imp_cycle.py's `_finetune` at L402+ is a documented
+    in-script stub (synthetic tensors, toy L2 loss, ~0.017s/epoch on L40S);
+    its docstring promises "deploy script swaps in train_distill" but the
+    promise was enforced by NOTHING until this check. PCC3 (the wall-clock
+    assertion in train_imp_cycle.py's main, ~L362-374) catches the bug at
+    runtime; this check catches the bug at preflight time.
+
+    The check is the dispatch-side companion to PCC3 (runtime assertion):
+    PCC3 fails LOUD on the remote if the stub somehow gets shipped; this
+    PCC1 check fails LOUD at commit-time if the dispatch script doesn't
+    even contain the swap.
+
+    Memory: feedback_grand_council_imp_permanent_fix_review_20260430.md
+    (parent council 6/3/1 vote);
+    feedback_grand_council_imp_train_distill_swap_design_20260430.md
+    (sub-question deliberation: 9/10 vote each on epochs=500/masks=anchor/
+    auth-smoke-after-distill).
+    """
+    root = repo_root or REPO_ROOT
+    scripts_dir = root / "scripts"
+    violations: list[str] = []
+    n_scanned = 0
+    if scripts_dir.is_dir():
+        for sh in sorted(scripts_dir.glob("remote_lane_j_imp_*.sh")):
+            n_scanned += 1
+            violations.extend(
+                _scan_imp_dispatcher_for_train_distill_swap(sh, root)
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [imp-train-distill-swap] {len(violations)} violation(s) "
+                f"across {n_scanned} IMP dispatcher(s):"
+            )
+            for v in violations[:10]:
+                print(f"    • {v}")
+            if len(violations) > 10:
+                print(f"    … and {len(violations) - 10} more")
+        else:
+            print(
+                f"  [imp-train-distill-swap] OK: {n_scanned} IMP "
+                f"dispatcher(s) scanned (real-trainer swap present)"
+            )
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "LANE 17 IMP DISPATCHER MISSING train_distill SWAP (PCC1):\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nFix: add a Stage 1.X block to the dispatcher that "
+            "invokes `\"$PYBIN\" -u experiments/train_distill.py "
+            "--resume \"$CYC_DIR/renderer.pt\" --masks \"$ANCHOR_MASKS\" "
+            "--output-dir \"$CYC_DIR/distill\" --only-phase1 "
+            "--phase1-epochs 500 ...` between the train_imp_cycle.py "
+            "invocation and Stage 1.5 auth-smoke. Reference: "
+            "scripts/remote_lane_j_imp_iterative_magnitude_pruning.sh "
+            "+ feedback_grand_council_imp_permanent_fix_review_20260430.md."
+        )
+    return violations
+
+
 # ── Check 95: Lane 12 NeRV codec uses canonical EMA + no MPS + no .round() ──
 #
 # 2026-04-30. Lane 12 (NeRV mask codec) is the Phase 2 ACCELERATE codec lane.
@@ -16555,6 +17462,147 @@ def check_remote_lane_auth_eval_json_adjudication(
 
 
 # ════════════════════════════════════════════════════════════════════════════
+# Check 99 (2026-04-30): KL/JBL/distillation promotion provenance.
+# ════════════════════════════════════════════════════════════════════════════
+#
+# KL/JBL/distillation-active lanes can be useful forensic or promotion
+# experiments, but only after exact CUDA archive custody, a frozen
+# distillation_policy_v1 payload, a policy SHA, and explicit PoseNet/SegNet
+# non-collapse gates. The adjudicator enforces this dynamically; this static
+# scan catches remote scripts that wire an adjudicated promotion path without
+# the required policy/gate surface.
+
+
+def _strip_shell_comments(text: str) -> str:
+    return "\n".join(line.split("#", 1)[0] for line in text.splitlines())
+
+
+def _token_float_is_positive(token: str) -> bool:
+    try:
+        return float(token.strip().strip("'\"")) > 0.0
+    except ValueError:
+        return False
+
+
+def _script_has_distillation_runtime_signal(code_text: str) -> bool:
+    if "distillation_policy" in code_text:
+        return True
+    if re.search(r"(?i)(loss_mode['\"]?\s*:\s*['\"]jbl['\"]|--loss-mode\s+jbl)", code_text):
+        return True
+    for match in re.finditer(r"--kl-distill-weight\s+([^\s\\]+)", code_text):
+        if _token_float_is_positive(match.group(1)):
+            return True
+    for match in re.finditer(
+        r"kl_distill_weight['\"]?\s*:\s*['\"]?([^,'\"\s}\)]+)",
+        code_text,
+    ):
+        if _token_float_is_positive(match.group(1)):
+            return True
+    return False
+
+
+def _script_has_distillation_adjudication_path(code_text: str) -> bool:
+    return (
+        "scripts/adjudicate_contest_auth_eval.py" in code_text
+        or "adjudicate_contest_auth_eval.py" in code_text
+        or "PROMOTION_ELIGIBLE" in code_text
+        or '"promotion_eligible": True' in code_text
+        or '"promotion_eligible": true' in code_text
+    )
+
+
+def _scan_remote_distillation_promotion_provenance(path: Path, repo_root: Path) -> list[str]:
+    violations: list[str] = []
+    try:
+        text = path.read_text(errors="ignore")
+    except OSError:
+        return violations
+    if "contest_auth_eval" not in text:
+        return violations
+
+    code_text = _strip_shell_comments(text)
+    if not _script_has_distillation_runtime_signal(code_text):
+        return violations
+    if not _script_has_distillation_adjudication_path(code_text):
+        return violations
+
+    rel = path.relative_to(repo_root) if path.is_absolute() else path
+    required_tokens = {
+        "distillation_policy": "serialized distillation_policy_v1 payload in provenance",
+        "distillation_policy_sha256": "policy SHA in provenance",
+        "scripts/adjudicate_contest_auth_eval.py": "strict adjudication helper",
+        "--baseline-posenet-dist": "PoseNet reference for non-collapse gate",
+        "--baseline-segnet-dist": "SegNet reference for non-collapse gate",
+        "--max-posenet-relative": "PoseNet relative non-collapse gate",
+        "--max-segnet-relative": "SegNet relative non-collapse gate",
+    }
+    for token, reason in required_tokens.items():
+        if token not in code_text:
+            violations.append(f"{rel}: distillation promotion path missing {token!r} ({reason}).")
+
+    if re.search(r"--device\s+cuda\b", code_text) is None:
+        violations.append(
+            f"{rel}: distillation promotion path must run contest_auth_eval with exact "
+            "literal `--device cuda` before promotion."
+        )
+    if "ARCHIVE_SHA256" not in code_text and "contest_cuda_archive_sha256" not in code_text:
+        violations.append(
+            f"{rel}: distillation promotion path must surface archive SHA custody "
+            "from adjudication before promotion."
+        )
+    if "ARCHIVE_BYTES" not in code_text and "contest_cuda_archive_bytes" not in code_text:
+        violations.append(
+            f"{rel}: distillation promotion path must surface archive byte custody "
+            "from adjudication before promotion."
+        )
+
+    return violations
+
+
+def check_remote_distillation_promotion_provenance(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Require policy SHA, CUDA custody, archive custody, and component gates."""
+    root = repo_root or REPO_ROOT
+    scripts_dir = root / "scripts"
+    violations: list[str] = []
+    n_scanned = 0
+    if not scripts_dir.is_dir():
+        if verbose:
+            print("  [remote-distill-promotion] OK: scripts/ not present, skipped")
+        return violations
+
+    for sh in sorted(scripts_dir.glob("remote_lane_*.sh")):
+        n_scanned += 1
+        violations.extend(_scan_remote_distillation_promotion_provenance(sh, root))
+
+    if verbose:
+        if violations:
+            print(f"  [remote-distill-promotion] {len(violations)} violation(s) across "
+                  f"{n_scanned} remote_lane_*.sh file(s):")
+            for v in violations[:20]:
+                print(f"    • {v}")
+            if len(violations) > 20:
+                print(f"    ... {len(violations) - 20} more")
+        else:
+            print(f"  [remote-distill-promotion] OK: {n_scanned} remote_lane_*.sh "
+                  f"file(s) have no under-gated distillation promotion path")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "REMOTE DISTILLATION PROMOTION PROVENANCE VIOLATIONS:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nKL/JBL/distillation-active artifacts cannot promote unless "
+            "adjudication sees distillation_policy_v1, distillation_policy_sha256, "
+            "exact CUDA auth eval, archive SHA/bytes, and PoseNet/SegNet "
+            "non-collapse gates."
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
 # Check 100 (2026-04-30): launch retry wrapper single-flight and signal safety.
 # ════════════════════════════════════════════════════════════════════════════
 #
@@ -16689,6 +17737,106 @@ def check_modal_recovery_cli_guidance_current(
             + "\n\nDetached Modal lanes must be recoverable with current "
             "Modal CLI/API commands. Use `experiments/modal_recover_lane.py` "
             "for FunctionCall polling and `modal app logs <app-id>` for logs."
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 102 (2026-04-30): Modal CPU auth-eval advisory-only telemetry.
+# ════════════════════════════════════════════════════════════════════════════
+#
+# Incident class: provider wrappers may force contest_auth_eval to CPU to work
+# around missing NVDEC/DALI on Modal. Those outputs can be useful diagnostics,
+# but they are not CUDA auth-eval truth. Static preflight must prevent operator
+# text, metadata, or recovery output from presenting CPU/MPS scores as
+# promotable evidence.
+
+
+_MODAL_CPU_SCORE_TRUTH_RE = re.compile(
+    r"(?i)(identical scores|modal-t4-cuda|auto-extract(?:ed)? auth score)"
+)
+
+
+def check_modal_cpu_auth_eval_is_advisory_only(
+    repo_root: Path | None = None,
+    strict: bool = True,
+    verbose: bool = True,
+) -> list[str]:
+    """Ensure Modal CPU auth-eval output is labelled non-promotable."""
+    root = repo_root or REPO_ROOT
+    train_path = root / "experiments" / "modal_train_lane.py"
+    recover_path = root / "experiments" / "modal_recover_lane.py"
+    violations: list[str] = []
+
+    texts: dict[str, str] = {}
+    for target in (train_path, recover_path):
+        rel = target.relative_to(root)
+        if not target.is_file():
+            violations.append(f"{rel} missing")
+            continue
+        texts[str(rel)] = target.read_text(errors="ignore")
+
+    for rel, text in texts.items():
+        for match in _MODAL_CPU_SCORE_TRUTH_RE.finditer(text):
+            violations.append(
+                f"{rel}: stale Modal CPU score-truth wording `{match.group(0)}`. "
+                "Modal CPU auth eval is advisory only; exact CUDA auth eval is "
+                "required before promotion/ranking/retirement claims."
+            )
+
+    train_text = texts.get("experiments/modal_train_lane.py", "")
+    recover_text = texts.get("experiments/modal_recover_lane.py", "")
+    forces_cpu = bool(
+        re.search(r"AUTH_EVAL_DEVICE[\"']?\s*[:=]\s*[\"']cpu[\"']", train_text)
+        or re.search(r"AUTH_EVAL_DEVICE\s*=\s*cpu\b", train_text)
+    )
+
+    if forces_cpu:
+        train_required = {
+            "MODAL_AUTH_EVAL_ADVISORY_ONLY": "child environment advisory marker",
+            "SCORE_CLAIM": "child environment score-claim false marker",
+            "PROMOTION_ELIGIBLE": "child environment promotion false marker",
+            "auth_eval_advisory_only": "saved Modal metadata advisory marker",
+            "score_claim": "saved Modal metadata score-claim marker",
+            "promotion_eligible": "saved Modal metadata promotion marker",
+        }
+        for token, reason in train_required.items():
+            if token not in train_text:
+                violations.append(
+                    f"experiments/modal_train_lane.py: AUTH_EVAL_DEVICE=cpu "
+                    f"without {reason} `{token}`."
+                )
+
+        recover_required = {
+            "auth_score_summary_lines": "central score formatter",
+            "score_recomputed_from_components": "recomputed score preference",
+            "ADVISORY AUTH SCORE": "visible advisory header",
+            "NON-PROMOTABLE": "visible non-promotable warning",
+            "device_label == \"cuda\"": "device-aware CUDA branch",
+            "before promotion, ranking, retirement": "operator warning text",
+        }
+        for token, reason in recover_required.items():
+            if token not in recover_text:
+                violations.append(
+                    f"experiments/modal_recover_lane.py: Modal CPU auth eval "
+                    f"recovery missing {reason} `{token}`."
+                )
+
+    if verbose:
+        if violations:
+            print(f"  [modal-cpu-auth-advisory] {len(violations)} violation(s):")
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print("  [modal-cpu-auth-advisory] OK: Modal CPU auth eval is advisory-only")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "MODAL CPU AUTH-EVAL ADVISORY-ONLY VIOLATIONS:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nModal CPU/MPS auth output is diagnostic telemetry only. "
+            "Rerun exact archive bytes through contest_auth_eval.py --device "
+            "cuda before promotion, ranking, retirement, or stack claims."
         )
     return violations
 
@@ -17229,6 +18377,677 @@ def check_preflight_hook_supports_changed_files_mode(
             "whole-repo scan (Class C bug class). Reference: "
             "project_swarm_recovery_state_20260430.md, "
             ".omx/research/bug_class_audit_20260430.md."
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check PCC4 (2026-04-30): KILL/FALSIFIED memory files MUST cite a Grand
+#   Council adversarial review.
+# ════════════════════════════════════════════════════════════════════════════
+#
+# Background: 2026-04-30 ~22:50 UTC the agent recorded a KILL verdict on
+# Lane 17 IMP based on a measurement bug — the dispatch script's "in-script
+# lightweight loop" ran for 3.47 seconds claiming 200 epochs of fine-tune.
+# The user's adversarial challenge ("was the IMP results reliable and is
+# that verdict actually hold up acording to etreme adversarail grand
+# councill") caught the premature kill before it became durable folklore.
+#
+# CLAUDE.md non-negotiable now mandates that every KILL / FALSIFIED memory
+# file contain a Grand Council adversarial review section before it can
+# be committed. This check enforces that mandate at preflight time.
+#
+# Detection: scan ~/.claude/projects/-Users-adpena-Projects-pact/memory/
+# for .md files matching:
+#   - filename glob `project_*killed*.md` OR `project_*falsified*.md`
+#     (case-insensitive)
+#   - body contains literal `VERDICT: KILL` (case-sensitive)
+#   - body contains a kill-class verdict literal: `FALSIFIED`, `DEAD`,
+#     `RETIRED` (case-sensitive — these are explicit verdict markers, not
+#     incidental usage like "dead-flag bug" which is filtered by context)
+#
+# Required for every matched file (3 sections):
+#   1. Grand Council adversarial review:
+#      - header `## Grand Council` OR `Council vote` literal anywhere
+#      - 5+ named members from the inner-10 list
+#        (Shannon, Dykstra, Yousfi, Fridrich, Contrarian, Quantizr,
+#         Hotz, Selfcomp, MacKay, Ballé)
+#   2. Internal-consistency check subsection:
+#      - literal `internal-consistency` OR `## Internal consistency`
+#      - 1+ enumerated check (a bullet point or numbered item)
+#   3. "What would change my mind" / reactivation criteria subsection:
+#      - literal `what would change` OR `## Reactivation criteria`
+#        OR `## Conditions for retracting`
+#      - 1+ enumerated condition
+#
+# Auto-pass conditions (the file is exempt):
+#   - body contains `COUNCIL_REVIEW_SKIPPED_USER_OVERRIDE: <reason>` on
+#     a line of its own (the user-explicit override)
+#   - title contains `WITHDRAWN` (a kill-verdict that was reversed under
+#     adversarial scrutiny is the GOAL of this check, not a target — the
+#     reversal IS the adversarial outcome)
+#   - file timestamp suffix < 20260430 (legacy grandfather: this rule
+#     only binds for kill verdicts recorded on or after 2026-04-30, the
+#     date the protocol was established)
+#
+# Council deliberation captured in
+#   feedback_grand_council_pcc4_kill_memory_review_enforcement_20260430.md.
+# Bug-class lineage:
+#   - feedback_grand_council_imp_permanent_fix_review_20260430.md (DD3)
+#   - project_lane_17_imp_killed_cycle_0_198_regression_20260430.md
+#     (the test fixture — has WITHDRAWN in title, auto-passes)
+
+# Inner-10 council member names (CLAUDE.md "## Council conduct").
+_PCC4_INNER_COUNCIL_NAMES = (
+    "Shannon", "Dykstra", "Yousfi", "Fridrich", "Contrarian",
+    "Quantizr", "Hotz", "Selfcomp", "MacKay", "Ballé",
+)
+
+# Header / anchor literals for each required section. Searched
+# case-sensitively for the canonical literal but additional aliases
+# (lowercase / variant header text) are accepted via the OR groups.
+_PCC4_GRAND_COUNCIL_HEADERS = (
+    "## Grand Council",
+    "Council vote",
+    "## Council vote",
+    "## Grand Council adversarial review",
+    "## Inner council",
+    "## Adversarial council",
+)
+_PCC4_INTERNAL_CONSISTENCY_HEADERS = (
+    "internal-consistency",
+    "## Internal consistency",
+    "## Internal-consistency",
+    "## Internal-Consistency",
+    "internal consistency check",
+)
+_PCC4_REACTIVATION_HEADERS = (
+    "what would change",
+    "What would change",
+    "WHAT WOULD CHANGE",
+    "## Reactivation criteria",
+    "## Conditions for retracting",
+    "## Conditions for retraction",
+    "## What would change my mind",
+)
+
+# Override marker (user-explicit skip). Must be on its own line; we
+# verify with a regex that anchors to a line boundary.
+_PCC4_OVERRIDE_RE = re.compile(
+    r"^COUNCIL_REVIEW_SKIPPED_USER_OVERRIDE:[ \t]*\S",
+    re.MULTILINE,
+)
+
+# Filename globs for files that MUST be scanned regardless of body.
+_PCC4_KILL_FILENAME_GLOBS = (
+    "project_*killed*.md",
+    "project_*falsified*.md",
+    "project_*FALSIFIED*.md",
+    "project_*RETIRED*.md",
+    "project_*retired*.md",
+)
+
+# Body literals (case-sensitive) that ALSO trigger the check.
+_PCC4_KILL_BODY_LITERALS = (
+    "VERDICT: KILL",
+    "FALSIFIED",
+    "RETIRED",
+    # "DEAD" is intentionally NOT in this set: too ambiguous (matches
+    # "dead-flag bug", "dead resolver", "dead code", etc.). DEAD-only
+    # files are caught via the filename glob if they follow the
+    # naming convention, otherwise authors should use one of the
+    # explicit verdict literals above.
+)
+
+# Timestamp threshold: kill verdicts recorded BEFORE this date are
+# grandfathered (the protocol was established 2026-04-30).
+_PCC4_PROTOCOL_START_DATE = "20260430"
+
+# Default memory directory (per the user's machine layout). Tests
+# override via the `memory_dir` parameter.
+_PCC4_DEFAULT_MEMORY_DIR = (
+    Path.home() / ".claude" / "projects"
+    / "-Users-adpena-Projects-pact" / "memory"
+)
+
+
+def _pcc4_extract_filename_date_suffix(filename: str) -> str | None:
+    """Extract a YYYYMMDD suffix from a filename like
+    `project_lane_17_imp_killed_cycle_0_198_regression_20260430.md`.
+
+    Returns the 8-digit string or None if no recognizable suffix exists.
+    """
+    # Match _YYYYMMDD before the .md extension.
+    m = re.search(r"_(\d{8})(?:_v\d+)?\.md$", filename)
+    if m:
+        return m.group(1)
+    return None
+
+
+def _pcc4_file_is_grandfathered(filename: str) -> bool:
+    """True if the filename's timestamp suffix is BEFORE the protocol
+    start date (2026-04-30). Files without a timestamp suffix are
+    NOT grandfathered (treated as new)."""
+    date_suffix = _pcc4_extract_filename_date_suffix(filename)
+    if date_suffix is None:
+        return False
+    return date_suffix < _PCC4_PROTOCOL_START_DATE
+
+
+def _pcc4_title_contains_withdrawn(text: str) -> bool:
+    """True if the file's frontmatter title (line beginning with
+    `name:`) contains the literal `WITHDRAWN`. A kill that was
+    REVERSED under adversarial review is the success outcome, not
+    a target."""
+    for line in text.splitlines()[:20]:  # Frontmatter lives in first ~20.
+        if line.startswith("name:") and "WITHDRAWN" in line:
+            return True
+    return False
+
+
+def _pcc4_count_named_members(text: str) -> int:
+    """Return the number of inner-10 council members named in the
+    file body. Each member must appear on a non-empty line."""
+    found: set[str] = set()
+    for member in _PCC4_INNER_COUNCIL_NAMES:
+        # Must appear at least once; line must have non-whitespace
+        # content beyond the name (i.e. a position rationale or vote).
+        for line in text.splitlines():
+            if member in line and line.strip() != member:
+                found.add(member)
+                break
+    return len(found)
+
+
+def _pcc4_has_enumerated_item_after(text: str, header_literals: tuple[str, ...]) -> bool:
+    """True if AT LEAST ONE bullet (`- `, `* `) or numbered list item
+    (`1.`, `2.`, etc.) appears within 50 lines after any of the
+    given header literals. Conservative — false negatives are OK
+    (operator just adds a bullet)."""
+    lines = text.splitlines()
+    for i, line in enumerate(lines):
+        for header in header_literals:
+            if header in line:
+                # Scan up to 50 lines after for an enumerated item.
+                for j in range(i + 1, min(i + 50, len(lines))):
+                    nxt = lines[j].lstrip()
+                    if (nxt.startswith("- ")
+                            or nxt.startswith("* ")
+                            or re.match(r"^\d+[.)]\s", nxt)):
+                        return True
+    return False
+
+
+def _pcc4_file_has_kill_semantics(path: Path, text: str) -> bool:
+    """True if the file MUST be scanned by this check (filename glob
+    OR body literal match)."""
+    name = path.name
+    name_lower = name.lower()
+    # Filename glob match.
+    for pat in _PCC4_KILL_FILENAME_GLOBS:
+        # Convert glob to regex-friendly: `project_*killed*.md` →
+        # check substring `killed` in lowercased name with `project_`
+        # prefix.
+        pat_lower = pat.lower()
+        if pat_lower.startswith("project_") and pat_lower.endswith(".md"):
+            kw = pat_lower.replace("project_*", "").replace("*.md", "")
+            if name_lower.startswith("project_") and kw in name_lower:
+                return True
+    # Body literal match (case-sensitive).
+    for lit in _PCC4_KILL_BODY_LITERALS:
+        if lit in text:
+            return True
+    return False
+
+
+def _pcc4_audit_one_file(path: Path) -> list[str]:
+    """Audit a single memory file. Returns a list of missing-section
+    messages (empty if the file passes or is exempt)."""
+    try:
+        text = path.read_text(errors="ignore")
+    except OSError:
+        return []
+
+    # Auto-pass: explicit user override (own-line marker).
+    if _PCC4_OVERRIDE_RE.search(text):
+        return []
+
+    # Auto-pass: WITHDRAWN kill (the reversal IS the adversarial outcome).
+    if _pcc4_title_contains_withdrawn(text):
+        return []
+
+    # Auto-pass: legacy grandfather (filename date < 20260430).
+    if _pcc4_file_is_grandfathered(path.name):
+        return []
+
+    # Trigger condition: filename or body indicates kill semantics.
+    if not _pcc4_file_has_kill_semantics(path, text):
+        return []
+
+    missing: list[str] = []
+
+    # Required section 1: Grand Council adversarial review.
+    has_council_header = any(h in text for h in _PCC4_GRAND_COUNCIL_HEADERS)
+    named = _pcc4_count_named_members(text)
+    if not has_council_header:
+        missing.append(
+            f"missing Grand Council header — add one of "
+            f"{list(_PCC4_GRAND_COUNCIL_HEADERS[:3])}"
+        )
+    if named < 5:
+        missing.append(
+            f"only {named}/5 inner-council members named with rationale "
+            f"(need 5+ from "
+            f"{list(_PCC4_INNER_COUNCIL_NAMES)})"
+        )
+
+    # Required section 2: Internal-consistency check.
+    has_consistency_header = any(
+        h in text for h in _PCC4_INTERNAL_CONSISTENCY_HEADERS
+    )
+    if not has_consistency_header:
+        missing.append(
+            f"missing internal-consistency check section — add one of "
+            f"{list(_PCC4_INTERNAL_CONSISTENCY_HEADERS[:2])}"
+        )
+    elif not _pcc4_has_enumerated_item_after(
+        text, _PCC4_INTERNAL_CONSISTENCY_HEADERS,
+    ):
+        missing.append(
+            "internal-consistency section present but has no enumerated "
+            "checks (need 1+ bullet or numbered item, e.g. "
+            "`elapsed_sec >= epochs * MIN_SEC`)"
+        )
+
+    # Required section 3: Reactivation / "what would change my mind".
+    has_reactivation_header = any(
+        h in text for h in _PCC4_REACTIVATION_HEADERS
+    )
+    if not has_reactivation_header:
+        missing.append(
+            f"missing reactivation criteria — add one of "
+            f"{list(_PCC4_REACTIVATION_HEADERS[:3])}"
+        )
+    elif not _pcc4_has_enumerated_item_after(
+        text, _PCC4_REACTIVATION_HEADERS,
+    ):
+        missing.append(
+            "reactivation section present but has no enumerated "
+            "conditions (need 1+ bullet or numbered item)"
+        )
+
+    if not missing:
+        return []
+    return [f"{path.name}: " + "; ".join(missing)]
+
+
+def check_kill_memory_files_have_council_review(
+    *, strict: bool = False, verbose: bool = False,
+    memory_dir: Path | None = None,
+) -> list[str]:
+    """PCC4: every KILL / FALSIFIED / RETIRED memory file must contain
+    a Grand Council adversarial review with internal-consistency checks
+    and reactivation criteria.
+
+    Args:
+        strict: If True, raise PreflightError on any violation.
+        verbose: If True, print the audit summary.
+        memory_dir: Override the memory directory. Defaults to the user's
+            ~/.claude/projects/-Users-adpena-Projects-pact/memory/ tree.
+            Tests override via this parameter.
+
+    Returns:
+        A list of violation strings (one per non-compliant file).
+
+    Auto-pass conditions:
+        - File body contains `COUNCIL_REVIEW_SKIPPED_USER_OVERRIDE:`
+          on its own line.
+        - File title (frontmatter `name:` line) contains `WITHDRAWN`.
+        - File timestamp suffix `_YYYYMMDD.md` < 2026-04-30.
+    """
+    target_dir = memory_dir or _PCC4_DEFAULT_MEMORY_DIR
+    if not target_dir.is_dir():
+        if verbose:
+            print(
+                f"  [pcc4-kill-memory-review] SKIP: memory dir not found "
+                f"({target_dir})"
+            )
+        return []
+
+    violations: list[str] = []
+    candidates: list[Path] = []
+    for f in sorted(target_dir.iterdir()):
+        if not f.is_file() or f.suffix != ".md":
+            continue
+        if f.name == "MEMORY.md":
+            # Index file — never a kill record itself.
+            continue
+        candidates.append(f)
+
+    for f in candidates:
+        violations.extend(_pcc4_audit_one_file(f))
+
+    if verbose:
+        if violations:
+            print(
+                f"  [pcc4-kill-memory-review] {len(violations)} "
+                f"violation(s) (scanned {len(candidates)} memory files):"
+            )
+            for v in violations[:20]:
+                print(f"    • {v}")
+            if len(violations) > 20:
+                print(f"    … and {len(violations) - 20} more")
+        else:
+            print(
+                f"  [pcc4-kill-memory-review] OK: 0 violations "
+                f"({len(candidates)} memory files scanned)"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "KILL/FALSIFIED MEMORY FILES MISSING GRAND COUNCIL REVIEW:\n"
+            + "\n".join(f"  • {v}" for v in violations[:20])
+            + (f"\n  … and {len(violations) - 20} more"
+               if len(violations) > 20 else "")
+            + "\n\nFix: add the 3 required sections to each kill memory "
+            "file:\n"
+            "  1. `## Grand Council` header + 5+ named members "
+            "(Shannon, Dykstra, Yousfi, Fridrich, Contrarian, Quantizr, "
+            "Hotz, Selfcomp, MacKay, Ballé)\n"
+            "  2. `## Internal-consistency` subsection with 1+ enumerated "
+            "check (e.g. `elapsed_sec >= epochs * MIN_SEC`)\n"
+            "  3. `## Reactivation criteria` (or `## What would change "
+            "my mind`) subsection with 1+ enumerated condition\n"
+            "Override (use sparingly): add a line\n"
+            "  COUNCIL_REVIEW_SKIPPED_USER_OVERRIDE: <reason>\n"
+            "Reference CLAUDE.md non-negotiable + "
+            "feedback_grand_council_pcc4_kill_memory_review_enforcement_"
+            "20260430.md for the protocol."
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check PCC3 (2026-04-30): stats.json internal-consistency assertion.
+# ════════════════════════════════════════════════════════════════════════════
+#
+# Background: 2026-04-30 ~22:50 UTC the IMP cycle 0 = 1.98 KILL was based on
+# stats.json claiming `{"epochs": 200, "elapsed_sec": 3.47}` — physically
+# impossible (200 epochs of fine-tune in 3.5s on any device). The producer-side
+# assertion landed in `experiments/train_imp_cycle.py` (~line 366):
+#
+#     if not args.smoke and args.epochs > 0:
+#         expected_min = args.epochs * MIN_WALL_PER_EPOCH_SEC
+#         if elapsed < expected_min:
+#             raise RuntimeError("PCC3 STUB-LOOP DETECTED: ...")
+#
+# PCC3 enforces this pattern system-wide: every Python script that writes a
+# stats-shape JSON file (dict containing both an EPOCH-like and an ELAPSED-like
+# key) MUST carry a backing assertion within the same function comparing
+# elapsed-like to epochs-like with a Mult/Div op.
+#
+# Council vote (10/10 inner council, see
+# feedback_grand_council_pcc3_stats_consistency_20260430.md):
+#   - DD1: per-script MIN_WALL_PER_EPOCH_SEC constant (NOT a global)
+#   - DD2: producer-side assertion AND preflight enforcement (defense in depth)
+#   - DD3: assertion gated on `not args.smoke and args.epochs > 0`
+#
+# Live audit (2026-04-30): 2 violations fixed in this landing wave —
+# `experiments/train_segmap.py` (line 456) and
+# `experiments/train_segmap_film_canvas.py` (line 337). With those fixed,
+# PCC3 lands at 0 live violations and goes straight to STRICT.
+#
+# Bug-class lineage:
+#   - feedback_grand_council_imp_permanent_fix_review_20260430.md (DD3)
+#   - project_lane_17_imp_killed_cycle_0_198_regression_20260430.md (the
+#     fixture; auto-passes via WITHDRAWN-in-title in PCC4)
+#   - feedback_grand_council_pcc3_stats_consistency_20260430.md (this check)
+
+# Keys that suggest the dict is reporting a training/run iteration count.
+_PCC3_EPOCH_KEYS: frozenset[str] = frozenset({
+    "epochs", "steps", "iterations",
+    "n_epochs", "n_steps",
+    "num_epochs", "num_steps",
+    "epoch_count", "step_count", "iteration_count",
+})
+
+# Keys that suggest the dict is reporting a wall-clock duration.
+_PCC3_ELAPSED_KEYS: frozenset[str] = frozenset({
+    "elapsed_sec", "elapsed", "elapsed_s",
+    "elapsed_seconds", "elapsed_secs",
+    "wall_time", "wall_seconds", "wall_clock_sec",
+    "total_seconds", "duration_sec", "duration_s", "duration",
+})
+
+# Same-line waiver markers. Authors who legitimately need to skip the check
+# (e.g. a smoke-only script that always reports elapsed=0) add one of these
+# adjacent to the json.dump call. Like the mature waiver patterns elsewhere
+# in this file, we require an EXPLICIT REASON after the colon — not a bare
+# tag — to prevent drive-by waiver inflation.
+_PCC3_WAIVER_RE = re.compile(
+    r"#\s*PCC3-WAIVED(-INTERFUNCTION)?\s*:\s*\S",
+)
+
+# Directories scanned for stats.json producers.
+_PCC3_SCAN_DIRS: tuple[str, ...] = (
+    "scripts", "experiments", "src/tac", "submissions/robust_current",
+)
+
+# Files exempt from this check (the check definition + its tests + the
+# matching scanner tool, which itself constructs synthetic dict literals).
+_PCC3_EXEMPT_PATH_PARTS: tuple[str, ...] = (
+    "/tests/",
+    "/__pycache__/",
+    "src/tac/preflight.py",  # this file (defines the keyword sets)
+    "tools/scan_stats_json_consistency.py",  # operator-side scanner (if added)
+)
+
+
+def _pcc3_dict_keys_in_call(call_node: ast.Call) -> set[str]:
+    """If the first positional argument is a Dict literal, return its
+    string keys. Otherwise return the empty set (Name lookups are
+    handled separately in _pcc3_scan_function)."""
+    if not call_node.args:
+        return set()
+    first = call_node.args[0]
+    if isinstance(first, ast.Dict):
+        keys: set[str] = set()
+        for k in first.keys:
+            if isinstance(k, ast.Constant) and isinstance(k.value, str):
+                keys.add(k.value)
+        return keys
+    return set()
+
+
+def _pcc3_find_dict_assigned_to(name: str, body: list[ast.stmt]) -> set[str] | None:
+    """Walk function body for a top-level `<name> = { ... }` assignment.
+    Returns the literal string keys if found, else None.
+
+    Conservative: only matches simple top-level assignments; doesn't trace
+    `<name>['x'] = ...` mutations or returns-from-helpers (those use the
+    `# PCC3-WAIVED-INTERFUNCTION:` waiver)."""
+    for node in body:
+        if isinstance(node, ast.Assign):
+            for t in node.targets:
+                if isinstance(t, ast.Name) and t.id == name:
+                    if isinstance(node.value, ast.Dict):
+                        keys: set[str] = set()
+                        for k in node.value.keys:
+                            if isinstance(k, ast.Constant) and isinstance(k.value, str):
+                                keys.add(k.value)
+                        return keys
+    return None
+
+
+def _pcc3_function_has_assertion(
+    fn: ast.AST, before_line: int,
+) -> bool:
+    """True if `fn` contains at least one `assert` / `if … raise` /
+    bare `Raise` whose subtree mentions BOTH an elapsed-like name AND
+    an epochs-like name AND uses a Mult or Div op, occurring strictly
+    BEFORE `before_line`.
+
+    The Mult/Div requirement is what distinguishes a real
+    `elapsed >= epochs * MIN_SEC` assertion from a generic
+    `assert epochs > 0` check that happens to mention both names."""
+    elapsed_aliases = _PCC3_ELAPSED_KEYS | {
+        # accept common short variable names too
+        "elapsed", "elapsed_sec", "duration", "wall",
+    }
+    for node in ast.walk(fn):
+        if not hasattr(node, "lineno") or node.lineno is None:
+            continue
+        if node.lineno >= before_line:
+            continue
+        if not isinstance(node, (ast.Assert, ast.If, ast.Raise)):
+            continue
+        dump = ast.dump(node)
+        has_elapsed = any(t in dump for t in elapsed_aliases)
+        has_epoch = any(t in dump for t in _PCC3_EPOCH_KEYS)
+        if not (has_elapsed and has_epoch):
+            continue
+        # Must contain a Mult or Div op anywhere in the subtree.
+        if "Mult()" in dump or "Div()" in dump:
+            return True
+    return False
+
+
+def _pcc3_scan_function(
+    fn: ast.AST, src_lines: list[str],
+) -> list[tuple[int, set[str], set[str]]]:
+    """Find every `json.dump(...)` / `json.dumps(...)` inside `fn` whose
+    first arg is (or refers to) a dict literal containing both an
+    EPOCH-like and an ELAPSED-like key. Returns
+    `[(lineno, epoch_keys, elapsed_keys), ...]`.
+
+    Skips calls with a same-line `# PCC3-WAIVED:` waiver."""
+    matches: list[tuple[int, set[str], set[str]]] = []
+    for node in ast.walk(fn):
+        if not isinstance(node, ast.Call):
+            continue
+        if not (isinstance(node.func, ast.Attribute)
+                and node.func.attr in ("dump", "dumps")):
+            continue
+        base = node.func.value
+        if not (isinstance(base, ast.Name) and base.id == "json"):
+            continue
+        # Same-line waiver?
+        line_idx = node.lineno - 1
+        if 0 <= line_idx < len(src_lines):
+            if _PCC3_WAIVER_RE.search(src_lines[line_idx]):
+                continue
+        keys = _pcc3_dict_keys_in_call(node)
+        if not keys and node.args and isinstance(node.args[0], ast.Name):
+            assigned = _pcc3_find_dict_assigned_to(
+                node.args[0].id, list(getattr(fn, "body", []))
+            )
+            if assigned is not None:
+                keys = assigned
+        ep = keys & _PCC3_EPOCH_KEYS
+        el = keys & _PCC3_ELAPSED_KEYS
+        if ep and el:
+            matches.append((node.lineno, ep, el))
+    return matches
+
+
+def check_stats_json_internal_consistency(
+    *, strict: bool = False, verbose: bool = False,
+    repo_root: Path | None = None,
+) -> list[str]:
+    """PCC3: every stats.json producer must carry an internal-consistency
+    assertion comparing elapsed-like wall-clock to epochs-like iteration
+    count BEFORE the json.dump call. Catches the IMP-cycle-0=1.98 stub-
+    loop bug class (200 epochs claimed in 3.5s).
+
+    Args:
+        strict: If True, raise MetaBugViolation on any violation.
+        verbose: If True, print the audit summary.
+        repo_root: Override the repo root. Defaults to REPO_ROOT.
+
+    Returns:
+        A list of violation strings, one per offending json.dump call.
+
+    Waivers:
+        - `# PCC3-WAIVED: <reason>` same-line marker on the json.dump call
+          for legitimate cases (smoke-only producer, etc.)
+        - `# PCC3-WAIVED-INTERFUNCTION: <reason>` same-line marker for
+          producers whose backing assertion lives in the caller (e.g.
+          `train_imp_cycle.py:_save_state` is dispatched by `main()`
+          which holds the floor check at line 366 BEFORE the helper
+          call at line 394)
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    for sd in _PCC3_SCAN_DIRS:
+        d = root / sd
+        if not d.is_dir():
+            continue
+        for py in d.rglob("*.py"):
+            rel = py.relative_to(root)
+            rel_s = str(rel)
+            if any(part in rel_s for part in _PCC3_EXEMPT_PATH_PARTS):
+                continue
+            try:
+                src = py.read_text()
+                tree = ast.parse(src, filename=str(py))
+            except (OSError, SyntaxError):
+                continue
+            src_lines = src.splitlines()
+            for fn in ast.walk(tree):
+                if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    continue
+                matches = _pcc3_scan_function(fn, src_lines)
+                for lineno, ep, el in matches:
+                    if _pcc3_function_has_assertion(fn, lineno):
+                        continue
+                    # Inter-function waiver: check the function-call site for
+                    # the next-line waiver marker.
+                    waiver_line_idx = lineno - 1
+                    if 0 <= waiver_line_idx < len(src_lines):
+                        if "PCC3-WAIVED-INTERFUNCTION" in src_lines[waiver_line_idx]:
+                            continue
+                    snippet = src_lines[lineno - 1].strip()[:80] if 0 <= lineno - 1 < len(src_lines) else ""
+                    violations.append(
+                        f"{rel_s}:{lineno}: stats.json producer with epoch_keys="
+                        f"{sorted(ep)} + elapsed_keys={sorted(el)} but no "
+                        f"backing `elapsed >= epochs * MIN_SEC` assertion in "
+                        f"function `{fn.name}` — {snippet!r}"
+                    )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [pcc3-stats-internal-consistency] {len(violations)} "
+                f"violation(s):"
+            )
+            for v in violations[:20]:
+                print(f"    • {v}")
+            if len(violations) > 20:
+                print(f"    … and {len(violations) - 20} more")
+        else:
+            print(
+                f"  [pcc3-stats-internal-consistency] OK: 0 violations "
+                f"across {len(_PCC3_SCAN_DIRS)} scan dirs"
+            )
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "STATS.JSON INTERNAL-CONSISTENCY VIOLATIONS:\n"
+            + "\n".join(f"  • {v}" for v in violations[:20])
+            + (f"\n  … and {len(violations) - 20} more"
+               if len(violations) > 20 else "")
+            + "\n\nFix: each producer must include, BEFORE the json.dump call,\n"
+            "  a runtime assertion of the form:\n"
+            "    MIN_WALL_PER_EPOCH_SEC = <per-script-justified-constant>\n"
+            "    if not args.smoke and args.epochs > 0:\n"
+            "        expected_min = args.epochs * MIN_WALL_PER_EPOCH_SEC\n"
+            "        if elapsed < expected_min:\n"
+            "            raise RuntimeError('PCC3 STUB-LOOP DETECTED: ...')\n"
+            "  See experiments/train_imp_cycle.py:366 for the reference impl.\n"
+            "  Waivers (use sparingly):\n"
+            "    # PCC3-WAIVED: <reason>                  (same-line on json.dump)\n"
+            "    # PCC3-WAIVED-INTERFUNCTION: <reason>   (assertion in caller)\n"
+            "  Memory: feedback_grand_council_pcc3_stats_consistency_20260430.md."
         )
     return violations
 

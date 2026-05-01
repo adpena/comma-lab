@@ -28,6 +28,9 @@ START_TS="$(date +%s)"
 # ANCHOR_LANE_G_V3_ARCHIVE: discoverable by Check 43 tarball-anchor scanner.
 ANCHOR_LANE_G_V3_ARCHIVE="${ANCHOR_LANE_G_V3_ARCHIVE:-experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip}"
 ANCHOR_CORPUS_DIR="${ANCHOR_CORPUS_DIR:-experiments/results}"
+PREBUILT_CORPUS_MANIFEST="${PREBUILT_CORPUS_MANIFEST:-}"
+CORPUS_REPLAY_ROOT="${CORPUS_REPLAY_ROOT:-}"
+NWC_BUILD_ONLY="${NWC_BUILD_ONLY:-0}"
 
 cd "$WORKSPACE"
 export PYTHONHASHSEED=1234
@@ -35,6 +38,12 @@ export PYTHONPATH="src:upstream:${PYTHONPATH:-}"
 mkdir -p "$LOG_DIR"
 
 log() { echo "[lane-j-nwc] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
+
+AUTH_EVAL_DEVICE="${AUTH_EVAL_DEVICE:-cuda}"
+if [ "$AUTH_EVAL_DEVICE" != "cuda" ]; then
+    log "FATAL: AUTH_EVAL_DEVICE must be cuda for Lane J-NWC promotion; got '$AUTH_EVAL_DEVICE'"
+    exit 2
+fi
 
 cost_guard() {
     now="$(date +%s)"
@@ -76,10 +85,23 @@ python3 -u -m pip install -e .
     log "FATAL: missing Lane G v3 anchor archive: $ANCHOR_LANE_G_V3_ARCHIVE"
     exit 1
 }
-[ -d "$ANCHOR_CORPUS_DIR" ] || {
-    log "FATAL: missing corpus dir: $ANCHOR_CORPUS_DIR"
-    exit 1
-}
+if [ -n "$PREBUILT_CORPUS_MANIFEST" ]; then
+    [ -f "$PREBUILT_CORPUS_MANIFEST" ] || {
+        log "FATAL: missing PREBUILT_CORPUS_MANIFEST: $PREBUILT_CORPUS_MANIFEST"
+        exit 1
+    }
+    if [ -n "$CORPUS_REPLAY_ROOT" ]; then
+        [ -d "$CORPUS_REPLAY_ROOT" ] || {
+            log "FATAL: missing CORPUS_REPLAY_ROOT: $CORPUS_REPLAY_ROOT"
+            exit 1
+        }
+    fi
+else
+    [ -d "$ANCHOR_CORPUS_DIR" ] || {
+        log "FATAL: missing corpus dir: $ANCHOR_CORPUS_DIR"
+        exit 1
+    }
+fi
 GT_VIDEO="${GT_VIDEO:-upstream/videos/0.mkv}"
 SEGNET_WEIGHTS="upstream/models/segnet.safetensors"
 POSENET_WEIGHTS="upstream/models/posenet.safetensors"
@@ -102,7 +124,29 @@ out = Path("$ANCHOR_DIR")
 if not archive.is_file():
     raise SystemExit(f"FATAL: missing Lane G v3 archive: {archive}")
 with zipfile.ZipFile(archive) as zf:
-    zf.extractall(out)
+    expected = {"renderer.bin", "masks.mkv", "optimized_poses.pt"}
+    seen = set()
+    for info in zf.infolist():
+        name = info.filename
+        parts = Path(name).parts
+        if (
+            name.startswith("/")
+            or "\\" in name
+            or any(part in ("", ".", "..") for part in parts)
+            or any(part.startswith(".") for part in parts)
+            or name.startswith("__MACOSX/")
+        ):
+            raise SystemExit(f"FATAL: unsafe archive member {name!r}")
+        if name not in expected:
+            raise SystemExit(f"FATAL: unexpected archive member {name!r}")
+        if name in seen:
+            raise SystemExit(f"FATAL: duplicate archive member {name!r}")
+        seen.add(name)
+        with zf.open(info, "r") as src:
+            (out / name).write_bytes(src.read())
+    missing = expected - seen
+    if missing:
+        raise SystemExit(f"FATAL: missing required archive members {sorted(missing)}")
 for name in ("renderer.bin", "masks.mkv", "optimized_poses.pt"):
     p = out / name
     if not p.is_file():
@@ -118,9 +162,10 @@ ANCHOR_POSES="$ANCHOR_DIR/optimized_poses.pt"
 cost_guard
 log "=== Stage 2: train NWC codec on corpus ==="
 CODEC_PT="$LOG_DIR/codec.pt"
-python3 -u experiments/train_neural_weight_codec.py \
-    --corpus-dir "$ANCHOR_CORPUS_DIR" \
+CORPUS_MANIFEST="$LOG_DIR/corpus_manifest.json"
+NWC_TRAIN_ARGS=(
     --output "$CODEC_PT" \
+    --manifest-out "$CORPUS_MANIFEST" \
     --num-steps 2000 \
     --batch-size 256 \
     --lr 1e-3 \
@@ -131,12 +176,28 @@ python3 -u experiments/train_neural_weight_codec.py \
     --hidden 64 \
     --max-corpus-files 200 \
     --max-blocks-per-ckpt 50000 \
-    --seed 1234 2>&1 | tee "$LOG_DIR/train_codec.log" | tail -40
+    --seed 1234
+)
+if [ -n "$PREBUILT_CORPUS_MANIFEST" ]; then
+    log "using prebuilt corpus manifest: $PREBUILT_CORPUS_MANIFEST"
+    NWC_TRAIN_ARGS=(--corpus-manifest "$PREBUILT_CORPUS_MANIFEST" "${NWC_TRAIN_ARGS[@]}")
+    if [ -n "$CORPUS_REPLAY_ROOT" ]; then
+        NWC_TRAIN_ARGS+=(--corpus-replay-root "$CORPUS_REPLAY_ROOT")
+    fi
+else
+    NWC_TRAIN_ARGS=(--corpus-dir "$ANCHOR_CORPUS_DIR" "${NWC_TRAIN_ARGS[@]}")
+fi
+# NOTE: --output is also in NWC_TRAIN_ARGS (line 167); duplicating it here so
+# preflight check_remote_lane_arity can see the required flag literally on the
+# invocation line (it doesn't trace through bash array spread). Argparse takes
+# the LAST --output value, which from the array is still $CODEC_PT — no behavior change.
+python3 -u experiments/train_neural_weight_codec.py --output "$CODEC_PT" "${NWC_TRAIN_ARGS[@]}" 2>&1 | tee "$LOG_DIR/train_codec.log" | tail -40
     PIPE_RC=("${PIPESTATUS[@]}")
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
 [ -f "$CODEC_PT" ] || { log "FATAL: codec training did not produce $CODEC_PT"; exit 2; }
+[ -s "$CORPUS_MANIFEST" ] || { log "FATAL: codec training did not produce $CORPUS_MANIFEST"; exit 2; }
 
 # Stage 3: export Lane G v3 renderer via NWC1.
 #
@@ -191,12 +252,19 @@ import zipfile
 
 src = Path("$ITER_DIR")
 dst = Path("$ARCHIVE")
+
+def _zinfo(name: str) -> zipfile.ZipInfo:
+    info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+    info.compress_type = zipfile.ZIP_DEFLATED
+    info.external_attr = (0o644 & 0xFFFF) << 16
+    return info
+
 with zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
     for name in ("renderer.bin", "masks.mkv", "optimized_poses.pt"):
         p = src / name
         if not p.is_file():
             raise SystemExit(f"FATAL: missing archive input {p}")
-        z.write(p, arcname=name)
+        z.writestr(_zinfo(name), p.read_bytes())
 print(f"archive {dst}: {dst.stat().st_size} bytes")
 PY
 [ -f "$ARCHIVE" ] || { log "FATAL: missing archive"; exit 2; }
@@ -205,6 +273,86 @@ ARCHIVE_BYTES=$(stat -c '%s' "$ARCHIVE" 2>/dev/null || stat -f '%z' "$ARCHIVE")
     log "FATAL: archive size empty or zero — refusing to call auth_eval"
     exit 2
 }
+
+if [ "$NWC_BUILD_ONLY" = "1" ]; then
+    BUILD_ONLY_REASON="NWC_BUILD_ONLY=1: build-only stop before auth eval"
+    log "=== build-only/non-promotable stop before CUDA auth eval ==="
+    log "reason: $BUILD_ONLY_REASON"
+    python3 -u - <<PY
+from pathlib import Path
+import json
+import hashlib
+import subprocess
+import time
+
+log_dir = Path("$LOG_DIR")
+
+def file_meta(path):
+    if not str(path):
+        return None
+    p = Path(path)
+    if not p.is_file():
+        return None
+    h = hashlib.sha256()
+    with p.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return {"path": str(p), "bytes": p.stat().st_size, "sha256": h.hexdigest()}
+
+prov = {
+    "lane_name": "lane_j_nwc",
+    "started_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime($START_TS)),
+    "finished_provenance_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    "git_hash": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
+    "build_only": True,
+    "score_claim": False,
+    "promotion_eligible": False,
+    "non_promotable_reason": "$BUILD_ONLY_REASON",
+    "auth_eval_skipped": True,
+    "result_json": None,
+    "anchor_archive": "$ANCHOR_LANE_G_V3_ARCHIVE",
+    "corpus_dir": "$ANCHOR_CORPUS_DIR",
+    "prebuilt_corpus_manifest": "$PREBUILT_CORPUS_MANIFEST",
+    "corpus_replay_root": "$CORPUS_REPLAY_ROOT",
+    "corpus_manifest": "$CORPUS_MANIFEST",
+    "codec_pt": "$CODEC_PT",
+    "renderer_nwc_bin": "$NWC_RENDERER_BIN",
+    "archive": "$ARCHIVE",
+    "artifact_custody": {
+        "anchor_archive": file_meta("$ANCHOR_LANE_G_V3_ARCHIVE"),
+        "anchor_renderer_bin": file_meta("$ANCHOR_RENDERER_BIN"),
+        "anchor_masks_mkv": file_meta("$ANCHOR_MASKS"),
+        "anchor_optimized_poses_pt": file_meta("$ANCHOR_POSES"),
+        "prebuilt_corpus_manifest": file_meta("$PREBUILT_CORPUS_MANIFEST"),
+        "corpus_manifest": file_meta("$CORPUS_MANIFEST"),
+        "codec_pt": file_meta("$CODEC_PT"),
+        "renderer_nwc_bin": file_meta("$NWC_RENDERER_BIN"),
+        "archive": file_meta("$ARCHIVE"),
+    },
+    "strict_scorer_rule": (
+        "Build-only J-NWC artifacts are non-promotable. No "
+        "contest_auth_eval.py command ran, no RESULT_JSON was emitted, and "
+        "this record cannot be harvested as a score claim."
+    ),
+}
+(log_dir / "provenance.json").write_text(json.dumps(prov, indent=2) + "\n")
+record = {
+    "lane": "J-NWC",
+    "finished_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    "archive": "$ARCHIVE",
+    "result_json": None,
+    "provenance": "$LOG_DIR/provenance.json",
+    "build_only": True,
+    "score_claim": False,
+    "promotion_eligible": False,
+    "non_promotable_reason": "$BUILD_ONLY_REASON",
+}
+(log_dir / "final_record.json").write_text(json.dumps(record, indent=2) + "\n")
+print(json.dumps(record, indent=2))
+PY
+    log "=== LANE_J_NWC_BUILD_ONLY_NON_PROMOTABLE ==="
+    exit 0
+fi
 
 # Stage 5: CUDA auth eval [contest-CUDA].
 cost_guard
@@ -218,7 +366,7 @@ python3 -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
     --upstream-dir upstream \
-    --device "${AUTH_EVAL_DEVICE:-cuda}" \
+    --device cuda \
     --keep-work-dir \
     --work-dir "$EVAL_WORK" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -30
     PIPE_RC=("${PIPESTATUS[@]}")
@@ -231,9 +379,35 @@ if [ -f "$EVAL_WORK/contest_auth_eval.json" ]; then
 elif [ -f "$LOG_DIR/auth_eval/contest_auth_eval.json" ]; then
     cp "$LOG_DIR/auth_eval/contest_auth_eval.json" "$RESULT_JSON"
 else
-    grep -Eo '\{.*\}' "$LOG_DIR/auth_eval.log" | tail -1 > "$RESULT_JSON" || true
+    echo "FATAL: auth eval did not write contest_auth_eval.json; refusing log JSON scrape" >&2
+    exit 2
 fi
 [ -s "$RESULT_JSON" ] || { log "FATAL: auth eval did not write RESULT_JSON"; exit 2; }
+ADJUDICATION_PROVENANCE="$LOG_DIR/adjudication_provenance.json"
+ADJUDICATED_RESULT_JSON="$LOG_DIR/contest_auth_eval.adjudicated.json"
+python3 -u scripts/adjudicate_contest_auth_eval.py \
+    --contest-json "$RESULT_JSON" \
+    --provenance "$ADJUDICATION_PROVENANCE" \
+    --archive "$ARCHIVE" \
+    --result-copy "$ADJUDICATED_RESULT_JSON" \
+    --baseline-score 1.043987524793892 \
+    --baseline-archive-bytes 686635 \
+    --predicted-band 0.92 1.02 \
+    --regression-threshold 1.06 \
+    --delta-key score_delta_vs_pfp16_a_plus_plus \
+    --required-device cuda \
+    --required-samples 600 \
+    --max-sane-score 10.0 \
+    --baseline-posenet-dist 0.00346442 \
+    --baseline-segnet-dist 0.00400656 \
+    --max-posenet-relative 1.01 \
+    --max-segnet-relative 1.01 \
+    --component-reference-label "Lane G v3 PFP16 A++ frontier" \
+    2>&1 | tee "$LOG_DIR/adjudication.log"
+PIPE_RC=("${PIPESTATUS[@]}")
+if [ "${PIPE_RC[0]}" -ne 0 ]; then
+    echo "FATAL: adjudication failed rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
+fi
 
 # Stage 6: provenance + final record.
 cost_guard
@@ -241,10 +415,20 @@ log "=== Stage 6: write provenance.json ==="
 python3 -u - <<PY
 from pathlib import Path
 import json
+import hashlib
 import subprocess
 import time
 
 log_dir = Path("$LOG_DIR")
+
+def file_meta(path):
+    p = Path(path)
+    h = hashlib.sha256()
+    with p.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return {"path": str(p), "bytes": p.stat().st_size, "sha256": h.hexdigest()}
+
 prov = {
     "lane_name": "lane_j_nwc",
     "predicted_band": [0.92, 1.02],
@@ -259,10 +443,32 @@ prov = {
     "git_hash": subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
     "anchor_archive": "$ANCHOR_LANE_G_V3_ARCHIVE",
     "corpus_dir": "$ANCHOR_CORPUS_DIR",
+    "prebuilt_corpus_manifest": "$PREBUILT_CORPUS_MANIFEST",
+    "corpus_replay_root": "$CORPUS_REPLAY_ROOT",
+    "corpus_manifest": "$CORPUS_MANIFEST",
     "codec_pt": "$CODEC_PT",
     "renderer_nwc_bin": "$NWC_RENDERER_BIN",
     "archive": "$ARCHIVE",
     "result_json": "$RESULT_JSON",
+    "adjudicated_result_json": "$ADJUDICATED_RESULT_JSON",
+    "adjudication_provenance": "$ADJUDICATION_PROVENANCE",
+    "score_source": "contest_auth_eval.adjudicated.json:score_recomputed_from_components",
+    "adjudication_required": True,
+    "component_gates_required": True,
+    "artifact_custody": {
+        "anchor_archive": file_meta("$ANCHOR_LANE_G_V3_ARCHIVE"),
+        "anchor_renderer_bin": file_meta("$ANCHOR_RENDERER_BIN"),
+        "anchor_masks_mkv": file_meta("$ANCHOR_MASKS"),
+        "anchor_optimized_poses_pt": file_meta("$ANCHOR_POSES"),
+        "prebuilt_corpus_manifest": file_meta("$PREBUILT_CORPUS_MANIFEST") if "$PREBUILT_CORPUS_MANIFEST" else None,
+        "corpus_manifest": file_meta("$CORPUS_MANIFEST"),
+        "codec_pt": file_meta("$CODEC_PT"),
+        "renderer_nwc_bin": file_meta("$NWC_RENDERER_BIN"),
+        "archive": file_meta("$ARCHIVE"),
+        "result_json": file_meta("$RESULT_JSON"),
+        "adjudicated_result_json": file_meta("$ADJUDICATED_RESULT_JSON"),
+        "adjudication_provenance": file_meta("$ADJUDICATION_PROVENANCE"),
+    },
     "strict_scorer_rule": (
         "NWC codec is loaded ONLY at compress time to encode renderer.bin; "
         "the codec weights are bundled INTO renderer.bin so inflate can "
@@ -285,7 +491,11 @@ record = {
     "finished_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     "archive": "$ARCHIVE",
     "result_json": "$RESULT_JSON",
+    "adjudicated_result_json": "$ADJUDICATED_RESULT_JSON",
     "provenance": "$LOG_DIR/provenance.json",
+    "adjudication_provenance": "$ADJUDICATION_PROVENANCE",
+    "score_source": "contest_auth_eval.adjudicated.json:score_recomputed_from_components",
+    "adjudication_required": True,
     "predicted_band": [0.92, 1.02],
 }
 Path("$LOG_DIR/final_record.json").write_text(json.dumps(record, indent=2) + "\n")

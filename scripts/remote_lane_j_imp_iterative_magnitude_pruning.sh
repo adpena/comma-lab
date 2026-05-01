@@ -137,23 +137,61 @@ done
 log "  anchor_renderer: $ANCHOR_RENDERER"
 log "  anchor_masks:    $ANCHOR_MASKS"
 
-# Pre-flight: dead-flag scan for train_imp_cycle.py (CLAUDE.md
-# non-negotiable: NEVER invent CLI flags).
+# Pre-flight: dead-flag scan for train_imp_cycle.py + train_distill.py
+# (CLAUDE.md non-negotiable: NEVER invent CLI flags).
 log "=== Pre-flight: argparse dead-flag scan ==="
 "$PYBIN" -c "
 import re, sys
 script = open('scripts/remote_lane_j_imp_iterative_magnitude_pruning.sh').read()
-op_src = open('experiments/train_imp_cycle.py').read()
-real = set(re.findall(r'add_argument\(\s*[\"\\']--([a-z][a-z0-9-]+)', op_src))
-m = re.search(r'experiments/train_imp_cycle\.py(.*?)(?=\n\s*\[\s*-f|\n\s*log\b|\Z)',
-              script, re.DOTALL)
-assert m, 'could not locate train_imp_cycle.py invocation in script'
-used = set(re.findall(r'\B--([a-z][a-z0-9-]+)', m.group(0)))
-invented = used - real
-if invented:
-    print(f'INVENTED FLAGS: {sorted(invented)} not in train_imp_cycle argparse',
+
+def real_flags(p):
+    return set(re.findall(r'add_argument\(\s*[\"\\']--([a-z][a-z0-9-]+)', open(p).read()))
+
+def find_invocation_blocks(script_text, target_path):
+    '''Find every line starting with \"\\\$PYBIN\" -u <target_path> and slurp
+    the multi-line backslash-continuation block. Skips bare references inside
+    python heredocs (e.g., open(<target>) inside this very pre-flight scan).'''
+    blocks = []
+    lines = script_text.splitlines()
+    i = 0
+    needle = '$PYBIN\" -u ' + target_path
+    while i < len(lines):
+        line = lines[i]
+        if needle in line:
+            buf = [line]
+            while line.rstrip().endswith('\\\\') and i + 1 < len(lines):
+                i += 1
+                line = lines[i]
+                buf.append(line)
+            blocks.append('\n'.join(buf))
+        i += 1
+    return blocks
+
+# Scan train_imp_cycle.py invocation blocks (cycle 0 + cycle 1+ branches).
+real_imp = real_flags('experiments/train_imp_cycle.py')
+imp_blocks = find_invocation_blocks(script, 'experiments/train_imp_cycle.py')
+assert imp_blocks, 'could not locate any train_imp_cycle.py invocation in script'
+used_imp = set()
+for b in imp_blocks:
+    used_imp |= set(re.findall(r'\B--([a-z][a-z0-9-]+)', b))
+invented_imp = used_imp - real_imp
+if invented_imp:
+    print(f'INVENTED FLAGS in train_imp_cycle invocation: {sorted(invented_imp)}',
           file=sys.stderr); sys.exit(3)
-print(f'OK: {len(used)} flags all real')
+
+# Scan train_distill.py invocation blocks (Stage 1.X swap, Council Option B
+# 2026-04-30). Same dead-flag discipline applies.
+real_distill = real_flags('experiments/train_distill.py')
+distill_blocks = find_invocation_blocks(script, 'experiments/train_distill.py')
+assert distill_blocks, 'could not locate any train_distill.py invocation in script (PCC1 dispatch swap MISSING)'
+used_distill = set()
+for b in distill_blocks:
+    used_distill |= set(re.findall(r'\B--([a-z][a-z0-9-]+)', b))
+invented_distill = used_distill - real_distill
+if invented_distill:
+    print(f'INVENTED FLAGS in train_distill invocation: {sorted(invented_distill)}',
+          file=sys.stderr); sys.exit(3)
+print(f'OK: train_imp_cycle {len(used_imp)} flags + train_distill {len(used_distill)} flags all real')
 "
 
 # 10-cycle IMP loop. Each cycle's output feeds the next cycle's input.
@@ -162,6 +200,14 @@ print(f'OK: {len(used)} flags all real')
 TARGET_SPARSITY_PER_CYCLE=0.20
 FINAL_TARGET=0.893
 EPOCHS_PER_CYCLE=200
+# Council vote SQ1 2026-04-30 ~23:30 UTC (9/10 inner-council members for B):
+# real fine-tune is 500 epochs phase1-only via train_distill.py — the previous
+# `EPOCHS_PER_CYCLE=200` was the STUB-loop number (3.5s on L40S = 0.017s/epoch
+# synthetic-tensor SGD, NOT real training). The IMP cycle 0 = 1.98 [contest-CUDA]
+# regression was caused by that stub pretending to be real training.
+# Per-cycle: ~$0.05 train_distill on L40S; total ~$1 for 10 cycles. Council
+# memory: feedback_grand_council_imp_train_distill_swap_design_20260430.md.
+EPOCHS_PER_CYCLE_DISTILL="${EPOCHS_PER_CYCLE_DISTILL:-500}"
 
 # Council Lane-17 design 2026-04-30 (Q3 7/10 vote, Q4 9/10 vote):
 #   Q3: per-cycle CUDA auth eval at cycles 0, 2, 4, 6, 8, 9 (6 evals = $1.80).
@@ -242,6 +288,67 @@ for i in 0 1 2 3 4 5 6 7 8 9; do
 
     SPARSITY=$("$PYBIN" -c "import json; print(json.load(open('$CYC_DIR/stats.json'))['sparsity_after_rewind'])")
     log "  cycle $i complete: sparsity=$SPARSITY"
+
+    # Stage 1.X: REAL fine-tune via train_distill.py (Council Option B+assertion,
+    # 6/3/1 verdict in feedback_grand_council_imp_permanent_fix_review_20260430.md).
+    #
+    # PERMANENT-FIX: train_imp_cycle.py's _finetune is a documented STUB loop
+    # (synthetic tensors, toy L2 loss, ~0.017s/epoch on L40S). The PCC3 wall-clock
+    # assertion in train_imp_cycle.py raises if a stub is ever shipped as real
+    # training. Real fine-tune happens HERE, via train_distill.py phase1-only.
+    #
+    # Council vote SQ2 (9/10 for A): masks source = Lane G v3 anchor masks
+    # (the masks that ship in the contest archive — train on what ships).
+    # Council vote SQ3 (9/10 for A): auth-smoke is AFTER train_distill (Stage 1.5
+    # below measures the post-distill weights = what feeds the next cycle).
+    #
+    # All --flags here are verified against `grep "add_argument"
+    # experiments/train_distill.py` (CLAUDE.md "NEVER invent CLI flags"
+    # non-negotiable): --resume L1547, --masks L1399, --output-dir L1405,
+    # --only-phase1 L1549, --phase1-epochs L1530, --embed-dim L1408, --pose-dim
+    # L1410, --base-ch L1411, --mid-ch L1412, --motion-hidden L1416,
+    # --depth L1413, --padding-mode L1418, --device L1431, --seed L1432,
+    # --phase2-epochs L1531, --phase3-epochs L1532. NOTE: train_distill.py has
+    # NO --auth-eval-on-best flag (that's a train_renderer.py flag); auth-eval
+    # is the dispatcher's Stage 1.5 (Council Option B "stage separation").
+    log "  Stage 1.X: real train_distill fine-tune (cycle $i, ${EPOCHS_PER_CYCLE_DISTILL} phase1 epochs)"
+    DISTILL_DIR="$CYC_DIR/distill"
+    mkdir -p "$DISTILL_DIR"
+    "$PYBIN" -u experiments/train_distill.py \
+        --resume "$CYC_DIR/renderer.pt" \
+        --masks "$ANCHOR_MASKS" \
+        --output-dir "$DISTILL_DIR" \
+        --only-phase1 \
+        --phase1-epochs "$EPOCHS_PER_CYCLE_DISTILL" \
+        --phase2-epochs 0 \
+        --phase3-epochs 0 \
+        --phase1-lr 1e-4 \
+        --phase1-batch-size 4 \
+        --embed-dim 6 --pose-dim 6 \
+        --base-ch 36 --mid-ch 60 --motion-hidden 32 \
+        --depth 1 --padding-mode zeros \
+        --device cuda --seed 42 \
+        2>&1 | tee "$DISTILL_DIR/distill.log" | tail -10
+    DISTILL_RC="${PIPESTATUS[0]}"
+    if [ "$DISTILL_RC" -ne 0 ]; then
+        log "FATAL: cycle $i train_distill exited rc=$DISTILL_RC"
+        exit "$DISTILL_RC"
+    fi
+
+    # Cross-cutting council decision (unanimous): swap the post-distill
+    # checkpoint back into $CYC_DIR/renderer.pt so the NEXT cycle's
+    # train_imp_cycle.py --checkpoint $PREV_RENDER sees the POST-DISTILL
+    # weights, not the post-prune-stub weights. Without this, IMP would
+    # iterate on stub-fine-tuned weights cycle after cycle (the bug the
+    # KILL retraction was preventing).
+    DISTILLED_PT="$DISTILL_DIR/distill_phase1_final.pt"
+    if [ ! -f "$DISTILLED_PT" ]; then
+        log "FATAL: cycle $i distill produced no $DISTILLED_PT"
+        exit 9
+    fi
+    log "  swapping post-distill checkpoint into cycle dir (overwriting post-prune stub renderer.pt)"
+    cp "$CYC_DIR/renderer.pt" "$CYC_DIR/renderer.pt.pre_distill"
+    cp "$DISTILLED_PT" "$CYC_DIR/renderer.pt"
 
     # Council Q3+Q4 (2026-04-30): per-cycle CUDA auth eval at scheduled
     # cycles + revert-on-regression. The auth eval runs on a contest archive

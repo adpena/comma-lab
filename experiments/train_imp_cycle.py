@@ -349,6 +349,29 @@ def main() -> int:
         n_steps = _finetune(model, new_mask, args, device)
 
     elapsed = time.time() - t0
+    # PCC3 internal-consistency check (Council 2026-04-30 ~23:00 UTC):
+    # the IMP cycle 0 = 1.98 metabug had stats.json claiming 200 epochs in 3.5
+    # seconds — internally inconsistent (stub loop pretending to be real).
+    # Now: in non-smoke mode, assert wall-clock is at least the lower bound a
+    # genuine fine-tune would consume (very conservative — 0.05s per epoch is
+    # below even toy training on CPU; stub loops on CUDA come in at ~0.017s/epoch
+    # which trips this). Operators who deliberately want to skip fine-tune use
+    # --smoke. Anyone else hitting this assertion has a stub-pretending-to-be-
+    # real bug and the script SHOULD fail loud, not silently ship a non-trained
+    # model into the contest archive pipeline.
+    MIN_WALL_PER_EPOCH_SEC = 0.05  # see council vote in
+                                   # feedback_grand_council_imp_permanent_fix_review_20260430
+    if not args.smoke and args.epochs > 0:
+        expected_min = args.epochs * MIN_WALL_PER_EPOCH_SEC
+        if elapsed < expected_min:
+            raise RuntimeError(
+                f"PCC3 STUB-LOOP DETECTED: claimed {args.epochs} epochs in "
+                f"{elapsed:.2f}s — below floor {expected_min:.2f}s ({MIN_WALL_PER_EPOCH_SEC}s/epoch). "
+                f"This is the IMP cycle 0 = 1.98 metabug (stub loop pretending "
+                f"to be real training). The dispatch script must invoke a real "
+                f"trainer (train_distill or equivalent) BEFORE the auth-smoke. "
+                f"See feedback_grand_council_imp_permanent_fix_review_20260430.md."
+            )
     meta = {
         "cycle": args.cycle,
         "profile": args.profile,
@@ -360,6 +383,7 @@ def main() -> int:
         "epochs": args.epochs if not args.smoke else 0,
         "fine_tune_steps": n_steps,
         "elapsed_sec": round(elapsed, 2),
+        "wall_per_epoch_sec_floor": MIN_WALL_PER_EPOCH_SEC,
         "device": str(device),
         "seed": args.seed,
         "smoke": bool(args.smoke),
@@ -390,6 +414,19 @@ def _finetune(model: nn.Module,
     Returns the number of optimizer steps performed.
     """
     from tac.iterative_magnitude_pruning import apply_mask_to_model
+    # PCC2 backing assertion (2026-04-30): the docstring comment above promises
+    # the deploy script swaps in train_distill. To prevent the IMP cycle 0 =
+    # 1.98 metabug class (stub silently shipped), assert that --epochs > 0
+    # implies a non-zero parameter count to actually optimize. A 0-param model
+    # would skip the loop silently; raise loud instead. Combined with the PCC3
+    # wall-clock-floor in main(), this stub cannot ship without surfacing.
+    n_trainable = sum(1 for p in model.parameters() if p.requires_grad)
+    if args.epochs > 0 and n_trainable == 0:
+        raise RuntimeError(
+            "[lane-j-imp] _finetune: 0 trainable parameters — the wrapper "
+            "contract requires a model with trainable params. See PCC2 "
+            "council file feedback_grand_council_pcc2_comment_only_contracts_20260430.md"
+        )
     print(f"[lane-j-imp] fine-tune: {args.epochs} epochs @ lr={args.lr} "
           f"(in-script lightweight loop; deploy script swaps in train_distill)")
     optimizer = torch.optim.Adam(

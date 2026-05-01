@@ -430,6 +430,106 @@ This protocol caught 2 CRITICAL bugs (auto-kill at epoch 200, OOM fix bypassed) 
 - **If unsure** whether something is a bug fix or a design decision, it's a design decision. Ask the council.
 - Present the issue, list the options with pros/cons, and let the council make a binding decision.
 
+## KILL/FALSIFIED memory verdicts — NON-NEGOTIABLE, HIGHEST EMPHASIS
+
+Per user mandate 2026-04-30 ~22:55 UTC ("permanently fix all bugs and bug
+classes and metabugs and everything and have all design decisions and ultimate
+experiment subject to extreme paranoia and adversarial grand council reviews").
+
+Any memory file claiming a lane is KILLED, FALSIFIED, DEAD, or RETIRED MUST contain:
+
+1. **Grand Council adversarial review section** with at least 5 named inner-council
+   member positions (from Shannon/Dykstra/Yousfi/Fridrich/Contrarian/Quantizr/
+   Hotz/Selfcomp/MacKay/Ballé). Each position must have a one-line rationale.
+2. **Internal-consistency check subsection** listing what the verifier checked
+   (examples: "elapsed_sec >= epochs * MIN_SEC", "EMA shadow used at eval",
+   "auth-eval archive matches submission archive bytes", "stub-loop assertion
+   fired/passed", "anchor SHA matches eval target").
+3. **"What would change my mind" subsection** listing the conditions under which
+   the KILL would be reactivated. (e.g., "if cycle 0 with proper train_distill
+   fine-tune scores < 1.10, KILL retracted").
+
+Preflight check PCC4 (planned) enforces this STRICT. The file
+`feedback_grand_council_imp_permanent_fix_review_20260430.md` is the canonical
+example of council deliberation.
+
+**Memory linter rejects** any `project_lane_*_killed_*.md` OR any file containing
+`"VERDICT: KILL"` or `"FALSIFIED"` without all three sections. There is NO bypass
+short of explicit user override annotated in the file body.
+
+**This rule exists because** on 2026-04-30 ~22:50 UTC, the agent recorded a
+KILL verdict on Lane 17 IMP based on a 1.98 [contest-CUDA] cycle 0 score that
+was actually a measurement bug (3.5-second stub loop pretending to be 200 epochs
+of fine-tune). The user's adversarial challenge caught it. Without that
+challenge, a real lane would have been buried in the registry as KILLED.
+ALL future KILL verdicts must pass this gate the FIRST time, without needing
+user prompting.
+
+## Adversarial council review of design decisions — NON-NEGOTIABLE
+
+Per the same 2026-04-30 user mandate. Extends the existing "Design decisions —
+non-negotiable" section above.
+
+A DESIGN DECISION is any choice between alternatives where the wrong choice
+costs > $1 of GPU time, > 1 hour of wall clock, OR has 2+ alternatives that
+council members have non-trivial preferences over.
+
+For every design decision:
+
+1. **Enumerate the options** with pros/cons (typically Option A, B, C, D)
+2. **Get explicit positions** from at least 5 of the 10 inner council members
+   (Shannon LEAD, Dykstra CO-LEAD, Yousfi, Fridrich, Contrarian, Quantizr, Hotz,
+   Selfcomp, MacKay, Ballé)
+3. **Tally the vote** with a clear verdict line (e.g., "VERDICT: 6 for B+assertion / 3 for D / 1 for A")
+4. **Capture the deliberation** in a memory file under
+   `~/.claude/projects/<repo>/memory/feedback_grand_council_<topic>_<date>.md`
+
+The canonical example is `feedback_grand_council_imp_permanent_fix_review_20260430.md`.
+
+**The council's job is NOT to reach consensus** — it's to surface disagreement.
+A unanimous vote on a non-trivial decision signals that the council isn't
+thinking adversarially enough; the Contrarian's role is to make sure that
+doesn't happen.
+
+**No design decision proceeds to implementation** without the council file in
+memory. "I asked the council in my head and they said yes" is NOT compliance.
+
+## Comment-only contracts — FORBIDDEN
+
+Comments that promise behavior are NOT contracts. Pattern examples that bit us:
+- `# the deploy script swaps in train_distill` (IMP cycle 0 metabug)
+- `# the wrapper handles error recovery`
+- `# caller is responsible for X`
+
+Any code path with a comment promising "the wrapper does X" / "the deploy script
+does Y" / "the caller handles Z" MUST be backed by either:
+1. An inline `assert` that verifies the wrapper actually did X (preferred), OR
+2. A STRICT preflight check that scans the wrapper script and asserts X happens
+   (acceptable for cross-file contracts), OR
+3. An explicit raise / log-and-exit if the placeholder is hit in production
+
+Without one of those, the comment rots and the placeholder ships into a contest
+archive pipeline. Preflight check PCC2 (planned) enforces this STRICT.
+
+## Internal-consistency assertions in stats files — NON-NEGOTIABLE
+
+Any script writing a stats.json-style file MUST include internal-consistency
+assertions before the write. Specifically: if the stats include both `epochs` and
+`elapsed_sec` (or `steps` and `wall_time` or `iterations` and `total_seconds`),
+the producer code MUST assert
+`elapsed_sec >= epochs * MIN_SECONDS_PER_EPOCH`
+(or equivalent) before writing the JSON. Without it, stub-loops produce
+internally inconsistent stats files that look fine on inspection but represent
+no actual training.
+
+The canonical example: `experiments/train_imp_cycle.py:_finetune` had
+`stats.json: epochs=200, elapsed_sec=3.47` — internally inconsistent (200
+epochs in 3.5s impossible). Now (commit pending) it asserts
+`elapsed >= epochs * 0.05` and raises RuntimeError if violated.
+
+Preflight check PCC3 (planned) scans all .py files writing stats files and
+asserts the consistency check exists in the producer code.
+
 ## Council conduct — non-negotiable
 
 - **The council must NEVER have a conservative bias.** "Don't change working code" is NOT a valid argument. "Ship what we have" is NOT a valid argument. The only valid arguments are mathematical, scientific, geometric, or empirical.
@@ -832,3 +932,12 @@ python tools/lane_maturity.py add-lane lane_new --name "New Lane" --phase 2
 ```
 
 Every mutation appends a JSONL record to `.omx/state/lane_maturity_audit.log` for forensics.
+
+**Lifecycle discipline (non-negotiable):**
+
+- **Pre-registration is mandatory.** The moment a lane has a name and a council/design verdict — even if it's only a sketch — it MUST be `add-lane`'d at Level 0. This includes in-flight subagent lanes, future-design lanes, and forensic-investigation lanes. Pre-registration enables the audit table to distinguish IN-FLIGHT vs LANDED vs SKETCH.
+- **Mark gates as evidence is produced, NOT after-the-fact.** The moment a council Round-N CLEAN landing happens, mark `three_clean_review`. The moment a remote_lane script lands, mark `deploy_runbook`. Batch-backfilling stale evidence is a code smell.
+- **KILLED lanes get registry entries too.** Mark with `--gate three_clean_review --evidence "<council ref>"` and add `--notes "Reactivation: <criteria>"`. Do NOT just exclude killed lanes — the registry is the single source of truth for what we have considered, including kills.
+- **Backfill-when-discovered is acceptable.** When this rule is violated by an earlier subagent, a maturity-discipline pass that backfills evidence is the correct remedy. The audit log records the backfill timestamp; no harm done.
+- **Lifecycle: SKETCH (L0) → SCAFFOLD (L1) → INTEGRATION (L2) → FULL PRODUCTION HARDENED (L3).** The ONLY currently-Level-3 lane is `lane_g_v3` (1.05 [contest-CUDA]). That fact is the standard-bearer for the rest of the registry.
+- **Audit before commit.** Before any commit that adds a lane or marks a gate, run `python tools/lane_maturity.py validate` — Check 90 STRICT enforces this at commit time, but catching it earlier is cheaper than a re-stage.
