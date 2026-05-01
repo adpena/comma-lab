@@ -1,0 +1,21 @@
+{
+  "adjudication": null,
+  "artifact_recorded_at_utc": "2026-05-01T06:13:06Z",
+  "expected_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+  "expected_archive_size_bytes": 686635,
+  "expected_baseline_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+  "expected_baseline_archive_size_bytes": 686635,
+  "job_name": "component_sensitivity_pfp16_a_plus_plus_cuda_fisher_20260501_r2",
+  "promotion_eligible": false,
+  "queue_metadata": {
+    "evidence": "diagnostic_cuda_fisher_only",
+    "lane": "component_sensitivity_pfp16",
+    "machine_inventory_doctor": "lightning_doctor_component_sensitivity_pfp16_r2_t4.json",
+    "machine_submit_backend": "studio_aws_instance_type_g4dn_2xlarge"
+  },
+  "role": "diagnostic_component_sensitivity",
+  "schema_version": 1,
+  "score_claim": false,
+  "score_source": "none:diagnostic_component_sensitivity_non_promotable",
+  "status_source": "lightning_sdk_job_attributes"
+}

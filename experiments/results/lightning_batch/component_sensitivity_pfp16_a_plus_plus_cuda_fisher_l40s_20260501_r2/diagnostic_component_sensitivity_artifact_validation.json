@@ -1,0 +1,1400 @@
+{
+  "artifact_dir": "experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2",
+  "baseline_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+  "baseline_archive_size_bytes": 686635,
+  "curves": {
+    "combined": {
+      "baseline": {
+        "combined": 0.6928910083051828,
+        "posenet": 0.010833210063477356,
+        "segnet": 0.00363752586611857
+      },
+      "canonical_scorer_path": false,
+      "component": "combined",
+      "component_readout": "official_component_formula",
+      "component_response_path": "direct_renderer_tensor_inprocess_scorer",
+      "component_units": {
+        "combined": "100*segnet + sqrt(10*posenet), no rate term",
+        "posenet": "mean_pose_mse",
+        "segnet": "mean_argmax_disagreement"
+      },
+      "count": 7,
+      "device": "cuda",
+      "epsilon_ladder": [
+        -0.002,
+        -0.001,
+        -0.0005,
+        0.0,
+        0.0005,
+        0.001,
+        0.002
+      ],
+      "evidence_grade": "diagnostic_cuda_direct_renderer_component_response",
+      "gate_results": {
+        "finite_values": true,
+        "observed_delta_max": 0.0014895686046971779,
+        "prediction_error_gate_implemented": true,
+        "prediction_error_passed": false,
+        "promotion_gate_passed": false,
+        "signal_present": true,
+        "zero_repro": true,
+        "zero_repro_error": 0.0
+      },
+      "gate_spec": {
+        "holdout_error_max": 0.35,
+        "observed_delta_min": 1e-12,
+        "spearman_min": 0.3,
+        "top_decile_overlap_min": 0.5,
+        "zero_repro_tolerance": 1e-07
+      },
+      "holdout_error": 0.8937132958461733,
+      "holdout_error_kind": "max_relative_prediction_error_diagnostic",
+      "observed_holdout_delta_max": 0.0014895686046971779,
+      "official_component_response": false,
+      "passed": false,
+      "perturbation": "signed_weight_rms_topk_channels_v1",
+      "perturbation_basis": {
+        "component_atom_ids": [
+          "combined:000000:bad597130ed0",
+          "combined:000001:e54d2e4d7de8",
+          "combined:000002:359031d300ac",
+          "combined:000003:6e630597bfcb",
+          "combined:000004:f638c531cd80",
+          "combined:000005:4fe0d40f547d",
+          "combined:000006:ce712696fd5f",
+          "combined:000007:22a501681feb",
+          "combined:000008:f2bb8e34860d",
+          "combined:000009:36bead7e58a0",
+          "combined:000010:7db7fa03dfa7",
+          "combined:000011:104c0b3a9ed1",
+          "combined:000012:734d4b730747",
+          "combined:000013:37b4bf3439ac",
+          "combined:000014:cad4ab1a18f7",
+          "combined:000015:167941a8ced7"
+        ],
+        "format": "perturbation_basis_v1",
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/perturbation_basis_v1.json"
+      },
+      "points": [
+        {
+          "all_components": {
+            "combined": 0.693964302622027,
+            "posenet": 0.010908456759837766,
+            "segnet": 0.0036368477313468853
+          },
+          "baseline": 0.6928910083051828,
+          "delta": 0.00107329431684422,
+          "epsilon": -0.002,
+          "prediction": {
+            "abs_error": 0.0003131591621493026,
+            "fit_scale": 125.81583104470995,
+            "fitted_abs_delta": 0.0013864534789935225,
+            "raw_delta": 1.1019706085324287e-05,
+            "raw_model": "epsilon^2 * sum_selected_channel_sensitivity",
+            "relative_error": 0.29177380075027
+          },
+          "value": 0.693964302622027
+        },
+        {
+          "all_components": {
+            "combined": 0.6933086397393653,
+            "posenet": 0.010866027585385988,
+            "segnet": 0.003636720582532386
+          },
+          "baseline": 0.6928910083051828,
+          "delta": 0.00041763143418249715,
+          "epsilon": -0.001,
+          "prediction": {
+            "abs_error": 7.101806443411652e-05,
+            "fit_scale": 125.81583104470995,
+            "fitted_abs_delta": 0.00034661336974838063,
+            "raw_delta": 2.7549265213310718e-06,
+            "raw_model": "epsilon^2 * sum_selected_channel_sensitivity",
+            "relative_error": 0.17004961461565402
+          },
+          "value": 0.6933086397393653
+        },
+        {
+          "all_components": {
+            "combined": 0.693276409394995,
+            "posenet": 0.010867255945534756,
+            "segnet": 0.003636211963991324
+          },
+          "baseline": 0.6928910083051828,
+          "delta": 0.00038540108981222065,
+          "epsilon": -0.0005,
+          "prediction": {
+            "abs_error": 0.00029874774737512547,
+            "fit_scale": 125.81583104470995,
+            "fitted_abs_delta": 8.665334243709516e-05,
+            "raw_delta": 6.887316303327679e-07,
+            "raw_model": "epsilon^2 * sum_selected_channel_sensitivity",
+            "relative_error": 0.7751606190856508
+          },
+          "value": 0.693276409394995
+        },
+        {
+          "all_components": {
+            "combined": 0.6928910083051828,
+            "posenet": 0.010833210063477356,
+            "segnet": 0.00363752586611857
+          },
+          "baseline": 0.6928910083051828,
+          "delta": 0.0,
+          "epsilon": 0.0,
+          "prediction": {
+            "raw_delta": 0.0,
+            "raw_model": "epsilon^2 * sum_selected_channel_sensitivity"
+          },
+          "value": 0.6928910083051828
+        },
+        {
+          "all_components": {
+            "combined": 0.6920757290740978,
+            "posenet": 0.010787402869512637,
+            "segnet": 0.0036363390972837806
+          },
+          "baseline": 0.6928910083051828,
+          "delta": -0.0008152792310850421,
+          "epsilon": 0.0005,
+          "prediction": {
+            "abs_error": 0.0007286258886479469,
+            "fit_scale": 125.81583104470995,
+            "fitted_abs_delta": 8.665334243709516e-05,
+            "raw_delta": 6.887316303327679e-07,
+            "raw_model": "epsilon^2 * sum_selected_channel_sensitivity",
+            "relative_error": 0.8937132958461733
+          },
+          "value": 0.6920757290740978
+        },
+        {
+          "all_components": {
+            "combined": 0.6920320802630917,
+            "posenet": 0.010782587341964245,
+            "segnet": 0.0036366357778509456
+          },
+          "baseline": 0.6928910083051828,
+          "delta": -0.0008589280420910894,
+          "epsilon": 0.001,
+          "prediction": {
+            "abs_error": 0.0005123146723427088,
+            "fit_scale": 125.81583104470995,
+            "fitted_abs_delta": 0.00034661336974838063,
+            "raw_delta": 2.7549265213310718e-06,
+            "raw_model": "epsilon^2 * sum_selected_channel_sensitivity",
+            "relative_error": 0.5964581981692685
+          },
+          "value": 0.6920320802630917
+        },
+        {
+          "all_components": {
+            "combined": 0.6914014397004856,
+            "posenet": 0.010748435036900143,
+            "segnet": 0.0036355337981755537
+          },
+          "baseline": 0.6928910083051828,
+          "delta": -0.0014895686046971779,
+          "epsilon": 0.002,
+          "prediction": {
+            "abs_error": 0.00010311512570365536,
+            "fit_scale": 125.81583104470995,
+            "fitted_abs_delta": 0.0013864534789935225,
+            "raw_delta": 1.1019706085324287e-05,
+            "raw_model": "epsilon^2 * sum_selected_channel_sensitivity",
+            "relative_error": 0.0692248248106828
+          },
+          "value": 0.6914014397004856
+        }
+      ],
+      "prediction_calibration": {
+        "basis_strength": 2.754926521331072,
+        "fit_scale": 125.81583104470995,
+        "fit_status": "least_squares_scale_fit",
+        "gate_spec": {
+          "holdout_error_max": 0.35,
+          "spearman_min": 0.3
+        },
+        "implemented": true,
+        "max_abs_error": 0.0007286258886479469,
+        "max_relative_error": 0.8937132958461733,
+        "mean_abs_error": 0.0003378301101088093,
+        "mean_relative_error": 0.46606339221294996,
+        "passed": false,
+        "pearson": 0.8161797548658618,
+        "point_count": 6,
+        "sign_accuracy": 0.5,
+        "spearman": 0.9428571428571428
+      },
+      "promotion_blockers": [
+        {
+          "code": "fisher_proxy_not_official_component_response",
+          "mathematical_explanation": "This profiler estimates component sensitivity with empirical Fisher proxies and holdout perturbation diagnostics. It is not yet an official finite-difference component-response artifact over the exact contest scorer, so it cannot be used as promotion evidence."
+        },
+        {
+          "code": "non_canonical_component_response",
+          "mathematical_explanation": "Component-response curves are promotion-grade only when they are CUDA-authored and measured through the canonical archive.zip -> inflate.sh -> upstream/evaluate.py path."
+        }
+      ],
+      "promotion_eligible": false,
+      "response_kind": "symmetric",
+      "schema_version": 1,
+      "selected_channels": [
+        {
+          "channel": 1,
+          "key": "motion.head.weight",
+          "sensitivity": 0.8761749863624573
+        },
+        {
+          "channel": 0,
+          "key": "motion.head.weight",
+          "sensitivity": 0.41119077801704407
+        },
+        {
+          "channel": 1,
+          "key": "renderer.head.weight",
+          "sensitivity": 0.3042171895503998
+        },
+        {
+          "channel": 4,
+          "key": "renderer.stem_conv.weight",
+          "sensitivity": 0.30078503489494324
+        },
+        {
+          "channel": 2,
+          "key": "renderer.head.weight",
+          "sensitivity": 0.16647394001483917
+        },
+        {
+          "channel": 14,
+          "key": "renderer.stem_conv.weight",
+          "sensitivity": 0.1214057058095932
+        },
+        {
+          "channel": 20,
+          "key": "renderer.stem_conv.weight",
+          "sensitivity": 0.08343365043401718
+        },
+        {
+          "channel": 0,
+          "key": "renderer.stem_conv.weight",
+          "sensitivity": 0.07363687455654144
+        },
+        {
+          "channel": 0,
+          "key": "renderer.head.weight",
+          "sensitivity": 0.07177045941352844
+        },
+        {
+          "channel": 2,
+          "key": "renderer.stem_conv.weight",
+          "sensitivity": 0.06627802550792694
+        },
+        {
+          "channel": 29,
+          "key": "renderer.stem_conv.weight",
+          "sensitivity": 0.056720033288002014
+        },
+        {
+          "channel": 32,
+          "key": "renderer.stem_conv.weight",
+          "sensitivity": 0.05522364005446434
+        },
+        {
+          "channel": 0,
+          "key": "renderer.stem_res.conv1.weight",
+          "sensitivity": 0.05108513683080673
+        },
+        {
+          "channel": 3,
+          "key": "renderer.stem_conv.weight",
+          "sensitivity": 0.044153064489364624
+        },
+        {
+          "channel": 21,
+          "key": "motion.fuse.weight",
+          "sensitivity": 0.03895394504070282
+        },
+        {
+          "channel": 0,
+          "key": "renderer.fuse_conv.weight",
+          "sensitivity": 0.03342405706644058
+        }
+      ],
+      "sensitivity_source": "fisher_proxy",
+      "symmetric_epsilon_pairs": 3
+    },
+    "posenet": {
+      "baseline": {
+        "combined": 0.6928910083051828,
+        "posenet": 0.010833210063477356,
+        "segnet": 0.00363752586611857
+      },
+      "canonical_scorer_path": false,
+      "component": "posenet",
+      "component_readout": "official_pose_mse",
+      "component_response_path": "direct_renderer_tensor_inprocess_scorer",
+      "component_units": {
+        "combined": "100*segnet + sqrt(10*posenet), no rate term",
+        "posenet": "mean_pose_mse",
+        "segnet": "mean_argmax_disagreement"
+      },
+      "count": 7,
+      "device": "cuda",
+      "epsilon_ladder": [
+        -0.002,
+        -0.001,
+        -0.0005,
+        0.0,
+        0.0005,
+        0.001,
+        0.002
+      ],
+      "evidence_grade": "diagnostic_cuda_direct_renderer_component_response",
+      "gate_results": {
+        "finite_values": true,
+        "observed_delta_max": 9.802381197611398e-05,
+        "prediction_error_gate_implemented": true,
+        "prediction_error_passed": false,
+        "promotion_gate_passed": false,
+        "signal_present": true,
+        "zero_repro": true,
+        "zero_repro_error": 0.0
+      },
+      "gate_spec": {
+        "holdout_error_max": 0.35,
+        "observed_delta_min": 1e-12,
+        "spearman_min": 0.3,
+        "top_decile_overlap_min": 0.5,
+        "zero_repro_tolerance": 1e-07
+      },
+      "holdout_error": 0.866387379847859,
+      "holdout_error_kind": "max_relative_prediction_error_diagnostic",
+      "observed_holdout_delta_max": 9.802381197611398e-05,
+      "official_component_response": false,
+      "passed": false,
+      "perturbation": "signed_weight_rms_topk_channels_v1",
+      "perturbation_basis": {
+        "component_atom_ids": [
+          "posenet:000000:c1ecf6ffad26",
+          "posenet:000001:cd7b3ba70070",
+          "posenet:000002:689d8f7b8985",
+          "posenet:000003:845fe2cb8269",
+          "posenet:000004:4175ba7baa09",
+          "posenet:000005:63e814c088db",
+          "posenet:000006:4b667d05a906",
+          "posenet:000007:5567805b1696",
+          "posenet:000008:465227bc2e67",
+          "posenet:000009:056ae9528d7d",
+          "posenet:000010:3e79aec18239",
+          "posenet:000011:f899e79438f7",
+          "posenet:000012:73501b0f7a84",
+          "posenet:000013:16cc9df4e023",
+          "posenet:000014:7616fca72f50",
+          "posenet:000015:045437dcd958"
+        ],
+        "format": "perturbation_basis_v1",
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/perturbation_basis_v1.json"
+      },
+      "points": [
+        {
+          "all_components": {
+            "combined": 0.6938047517241128,
+            "posenet": 0.010900998620005946,
+            "segnet": 0.003636381480221947
+          },
+          "baseline": 0.010833210063477356,
+          "delta": 6.778855652858976e-05,
+          "epsilon": -0.002,
+          "prediction": {
+            "abs_error": 1.9299030907778323e-05,
+            "fit_scale": 10.946746218739355,
+            "fitted_abs_delta": 8.708758743636808e-05,
+            "raw_delta": 7.955568321049214e-06,
+            "raw_model": "epsilon^2 * sum_selected_channel_sensitivity",
+            "relative_error": 0.28469452509493953
+          },
+          "value": 0.010900998620005946
+        },
+        {
+          "all_components": {
+            "combined": 0.6932803771256155,
+            "posenet": 0.010860253152592729,
+            "segnet": 0.003637313951427738
+          },
+          "baseline": 0.010833210063477356,
+          "delta": 2.7043089115372232e-05,
+          "epsilon": -0.001,
+          "prediction": {
+            "abs_error": 5.271192256280212e-06,
+            "fit_scale": 10.946746218739355,
+            "fitted_abs_delta": 2.177189685909202e-05,
+            "raw_delta": 1.9888920802623034e-06,
+            "raw_model": "epsilon^2 * sum_selected_channel_sensitivity",
+            "relative_error": 0.19491827408444562
+          },
+          "value": 0.010860253152592729
+        },
+        {
+          "all_components": {
+            "combined": 0.693006014035001,
+            "posenet": 0.010851669878078004,
+            "segnet": 0.0036358728539198637
+          },
+          "baseline": 0.010833210063477356,
+          "delta": 1.8459814600647537e-05,
+          "epsilon": -0.0005,
+          "prediction": {
+            "abs_error": 1.3016840385874533e-05,
+            "fit_scale": 10.946746218739355,
+            "fitted_abs_delta": 5.442974214773005e-06,
+            "raw_delta": 4.972230200655759e-07,
+            "raw_model": "epsilon^2 * sum_selected_channel_sensitivity",
+            "relative_error": 0.7051446976839044
+          },
+          "value": 0.010851669878078004
+        },
+        {
+          "all_components": {
+            "combined": 0.6928910083051828,
+            "posenet": 0.010833210063477356,
+            "segnet": 0.00363752586611857
+          },
+          "baseline": 0.010833210063477356,
+          "delta": 0.0,
+          "epsilon": 0.0,
+          "prediction": {
+            "raw_delta": 0.0,
+            "raw_model": "epsilon^2 * sum_selected_channel_sensitivity"
+          },
+          "value": 0.010833210063477356
+        },
+        {
+          "all_components": {
+            "combined": 0.6920935643852139,
+            "posenet": 0.010792473086621613,
+            "segnet": 0.0036357456818223
+          },
+          "baseline": 0.010833210063477356,
+          "delta": -4.0736976855743415e-05,
+          "epsilon": 0.0005,
+          "prediction": {
+            "abs_error": 3.529400264097041e-05,
+            "fit_scale": 10.946746218739355,
+            "fitted_abs_delta": 5.442974214773005e-06,
+            "raw_delta": 4.972230200655759e-07,
+            "raw_model": "epsilon^2 * sum_selected_channel_sensitivity",
+            "relative_error": 0.866387379847859
+          },
+          "value": 0.010792473086621613
+        },
+        {
+          "all_components": {
+            "combined": 0.6922854832997983,
+            "posenet": 0.010795335844159126,
+            "segnet": 0.0036372291933124265
+          },
+          "baseline": 0.010833210063477356,
+          "delta": -3.7874219318230484e-05,
+          "epsilon": 0.001,
+          "prediction": {
+            "abs_error": 1.6102322459138465e-05,
+            "fit_scale": 10.946746218739355,
+            "fitted_abs_delta": 2.177189685909202e-05,
+            "raw_delta": 1.9888920802623034e-06,
+            "raw_model": "epsilon^2 * sum_selected_channel_sensitivity",
+            "relative_error": 0.42515259057465843
+          },
+          "value": 0.010795335844159126
+        },
+        {
+          "all_components": {
+            "combined": 0.6913815773292413,
+            "posenet": 0.010735186251501242,
+            "segnet": 0.00363735636540999
+          },
+          "baseline": 0.010833210063477356,
+          "delta": -9.802381197611398e-05,
+          "epsilon": 0.002,
+          "prediction": {
+            "abs_error": 1.0936224539745905e-05,
+            "fit_scale": 10.946746218739355,
+            "fitted_abs_delta": 8.708758743636808e-05,
+            "raw_delta": 7.955568321049214e-06,
+            "raw_model": "epsilon^2 * sum_selected_channel_sensitivity",
+            "relative_error": 0.11156701947492918
+          },
+          "value": 0.010735186251501242
+        }
+      ],
+      "prediction_calibration": {
+        "basis_strength": 1.9888920802623034,
+        "fit_scale": 10.946746218739355,
+        "fit_status": "least_squares_scale_fit",
+        "gate_spec": {
+          "holdout_error_max": 0.35,
+          "spearman_min": 0.3
+        },
+        "implemented": true,
+        "max_abs_error": 3.529400264097041e-05,
+        "max_relative_error": 0.866387379847859,
+        "mean_abs_error": 1.6653268864964643e-05,
+        "mean_relative_error": 0.4313107477934561,
+        "passed": false,
+        "pearson": 0.8989998493576171,
+        "point_count": 6,
+        "sign_accuracy": 0.5,
+        "spearman": 0.8285714285714286
+      },
+      "promotion_blockers": [
+        {
+          "code": "fisher_proxy_not_official_component_response",
+          "mathematical_explanation": "This profiler estimates component sensitivity with empirical Fisher proxies and holdout perturbation diagnostics. It is not yet an official finite-difference component-response artifact over the exact contest scorer, so it cannot be used as promotion evidence."
+        },
+        {
+          "code": "non_canonical_component_response",
+          "mathematical_explanation": "Component-response curves are promotion-grade only when they are CUDA-authored and measured through the canonical archive.zip -> inflate.sh -> upstream/evaluate.py path."
+        }
+      ],
+      "promotion_eligible": false,
+      "response_kind": "symmetric",
+      "schema_version": 1,
+      "selected_channels": [
+        {
+          "channel": 1,
+          "key": "motion.head.weight",
+          "sensitivity": 0.8761749863624573
+        },
+        {
+          "channel": 0,
+          "key": "motion.head.weight",
+          "sensitivity": 0.41119077801704407
+        },
+        {
+          "channel": 1,
+          "key": "renderer.head.weight",
+          "sensitivity": 0.24396297335624695
+        },
+        {
+          "channel": 2,
+          "key": "renderer.head.weight",
+          "sensitivity": 0.11059549450874329
+        },
+        {
+          "channel": 20,
+          "key": "renderer.stem_conv.weight",
+          "sensitivity": 0.058063432574272156
+        },
+        {
+          "channel": 4,
+          "key": "renderer.stem_conv.weight",
+          "sensitivity": 0.044363830238580704
+        },
+        {
+          "channel": 21,
+          "key": "motion.fuse.weight",
+          "sensitivity": 0.03895394504070282
+        },
+        {
+          "channel": 24,
+          "key": "motion.stem.0.weight",
+          "sensitivity": 0.03188373148441315
+        },
+        {
+          "channel": 6,
+          "key": "motion.fuse.weight",
+          "sensitivity": 0.03152865543961525
+        },
+        {
+          "channel": 3,
+          "key": "motion.stem.0.weight",
+          "sensitivity": 0.029617074877023697
+        },
+        {
+          "channel": 0,
+          "key": "renderer.head.weight",
+          "sensitivity": 0.021247247233986855
+        },
+        {
+          "channel": 23,
+          "key": "motion.fuse.weight",
+          "sensitivity": 0.02071785368025303
+        },
+        {
+          "channel": 22,
+          "key": "motion.fuse.weight",
+          "sensitivity": 0.01889701746404171
+        },
+        {
+          "channel": 2,
+          "key": "renderer.stem_conv.weight",
+          "sensitivity": 0.018294796347618103
+        },
+        {
+          "channel": 0,
+          "key": "renderer.fuse_conv.weight",
+          "sensitivity": 0.01794297806918621
+        },
+        {
+          "channel": 2,
+          "key": "motion.fuse.weight",
+          "sensitivity": 0.015457285568118095
+        }
+      ],
+      "sensitivity_source": "fisher_proxy",
+      "symmetric_epsilon_pairs": 3
+    },
+    "segnet": {
+      "baseline": {
+        "combined": 0.6928910083051828,
+        "posenet": 0.010833210063477356,
+        "segnet": 0.00363752586611857
+      },
+      "canonical_scorer_path": false,
+      "component": "segnet",
+      "component_readout": "official_argmax_disagreement",
+      "component_response_path": "direct_renderer_tensor_inprocess_scorer",
+      "component_units": {
+        "combined": "100*segnet + sqrt(10*posenet), no rate term",
+        "posenet": "mean_pose_mse",
+        "segnet": "mean_argmax_disagreement"
+      },
+      "count": 7,
+      "device": "cuda",
+      "epsilon_ladder": [
+        -0.002,
+        -0.001,
+        -0.0005,
+        0.0,
+        0.0005,
+        0.001,
+        0.002
+      ],
+      "evidence_grade": "diagnostic_cuda_direct_renderer_component_response",
+      "gate_results": {
+        "finite_values": true,
+        "observed_delta_max": 3.941815036038587e-06,
+        "prediction_error_gate_implemented": true,
+        "prediction_error_passed": false,
+        "promotion_gate_passed": false,
+        "signal_present": true,
+        "zero_repro": true,
+        "zero_repro_error": 0.0
+      },
+      "gate_spec": {
+        "holdout_error_max": 0.35,
+        "observed_delta_min": 1e-12,
+        "spearman_min": 0.3,
+        "top_decile_overlap_min": 0.5,
+        "zero_repro_tolerance": 1e-07
+      },
+      "holdout_error": 6.134856106824048,
+      "holdout_error_kind": "max_relative_prediction_error_diagnostic",
+      "observed_holdout_delta_max": 3.941815036038587e-06,
+      "official_component_response": false,
+      "passed": false,
+      "perturbation": "signed_weight_rms_topk_channels_v1",
+      "perturbation_basis": {
+        "component_atom_ids": [
+          "segnet:000000:bcd2c8cd3a59",
+          "segnet:000001:f582b3969f38",
+          "segnet:000002:5eaec9becda2",
+          "segnet:000003:574aededfbc8",
+          "segnet:000004:f7f238ee81ed",
+          "segnet:000005:5f06eba3396b",
+          "segnet:000006:7e3d098ffeab",
+          "segnet:000007:d46c4a94dc92",
+          "segnet:000008:307a40de3969",
+          "segnet:000009:7af6e1f644a6",
+          "segnet:000010:8beee8725e0f",
+          "segnet:000011:fc71cb658b1e",
+          "segnet:000012:ef005562410e",
+          "segnet:000013:6d5628f8bb68",
+          "segnet:000014:d7644e21aaba",
+          "segnet:000015:29b985e6e93a"
+        ],
+        "format": "perturbation_basis_v1",
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/perturbation_basis_v1.json"
+      },
+      "points": [
+        {
+          "all_components": {
+            "combined": 0.6936126818859092,
+            "posenet": 0.010877412891325851,
+            "segnet": 0.003638034507942696
+          },
+          "baseline": 0.00363752586611857,
+          "delta": 5.086418241261569e-07,
+          "epsilon": -0.002,
+          "prediction": {
+            "abs_error": 1.9096415171511755e-06,
+            "fit_scale": 0.6805179123177697,
+            "fitted_abs_delta": 2.4182833412773324e-06,
+            "raw_delta": 3.55359248816967e-06,
+            "raw_model": "epsilon^2 * sum_selected_channel_sensitivity",
+            "relative_error": 3.7543934190467456
+          },
+          "value": 0.003638034507942696
+        },
+        {
+          "all_components": {
+            "combined": 0.693192414698423,
+            "posenet": 0.010853618340721976,
+            "segnet": 0.003637441131286323
+          },
+          "baseline": 0.00363752586611857,
+          "delta": -8.473483224715611e-08,
+          "epsilon": -0.001,
+          "prediction": {
+            "abs_error": 5.19836003072177e-07,
+            "fit_scale": 0.6805179123177697,
+            "fitted_abs_delta": 6.045708353193331e-07,
+            "raw_delta": 8.883981220424175e-07,
+            "raw_model": "epsilon^2 * sum_selected_channel_sensitivity",
+            "relative_error": 6.134856106824048
+          },
+          "value": 0.003637441131286323
+        },
+        {
+          "all_components": {
+            "combined": 0.6930282869770981,
+            "posenet": 0.010850903387957562,
+            "segnet": 0.003636211925186217
+          },
+          "baseline": 0.00363752586611857,
+          "delta": -1.3139409323530485e-06,
+          "epsilon": -0.0005,
+          "prediction": {
+            "abs_error": 1.1627982235232151e-06,
+            "fit_scale": 0.6805179123177697,
+            "fitted_abs_delta": 1.5114270882983327e-07,
+            "raw_delta": 2.2209953051060438e-07,
+            "raw_model": "epsilon^2 * sum_selected_channel_sensitivity",
+            "relative_error": 0.8849699365410879
+          },
+          "value": 0.003636211925186217
+        },
+        {
+          "all_components": {
+            "combined": 0.6928910083051828,
+            "posenet": 0.010833210063477356,
+            "segnet": 0.00363752586611857
+          },
+          "baseline": 0.00363752586611857,
+          "delta": 0.0,
+          "epsilon": 0.0,
+          "prediction": {
+            "raw_delta": 0.0,
+            "raw_model": "epsilon^2 * sum_selected_channel_sensitivity"
+          },
+          "value": 0.00363752586611857
+        },
+        {
+          "all_components": {
+            "combined": 0.692478397063504,
+            "posenet": 0.010816099987520526,
+            "segnet": 0.003636000002734363
+          },
+          "baseline": 0.00363752586611857,
+          "delta": -1.5258633842070608e-06,
+          "epsilon": 0.0005,
+          "prediction": {
+            "abs_error": 1.3747206753772275e-06,
+            "fit_scale": 0.6805179123177697,
+            "fitted_abs_delta": 1.5114270882983327e-07,
+            "raw_delta": 2.2209953051060438e-07,
+            "raw_model": "epsilon^2 * sum_selected_channel_sensitivity",
+            "relative_error": 0.9009461067129696
+          },
+          "value": 0.003636000002734363
+        },
+        {
+          "all_components": {
+            "combined": 0.6919597508158422,
+            "posenet": 0.01078535293151314,
+            "segnet": 0.003635491399715344
+          },
+          "baseline": 0.00363752586611857,
+          "delta": -2.0344664032260866e-06,
+          "epsilon": 0.001,
+          "prediction": {
+            "abs_error": 1.4298955679067536e-06,
+            "fit_scale": 0.6805179123177697,
+            "fitted_abs_delta": 6.045708353193331e-07,
+            "raw_delta": 8.883981220424175e-07,
+            "raw_model": "epsilon^2 * sum_selected_channel_sensitivity",
+            "relative_error": 0.7028356750641568
+          },
+          "value": 0.003635491399715344
+        },
+        {
+          "all_components": {
+            "combined": 0.6916380391175773,
+            "posenet": 0.01077675181052958,
+            "segnet": 0.0036335840510825315
+          },
+          "baseline": 0.00363752586611857,
+          "delta": -3.941815036038587e-06,
+          "epsilon": 0.002,
+          "prediction": {
+            "abs_error": 1.5235316947612542e-06,
+            "fit_scale": 0.6805179123177697,
+            "fitted_abs_delta": 2.4182833412773324e-06,
+            "raw_delta": 3.55359248816967e-06,
+            "raw_model": "epsilon^2 * sum_selected_channel_sensitivity",
+            "relative_error": 0.38650512031441253
+          },
+          "value": 0.0036335840510825315
+        }
+      ],
+      "prediction_calibration": {
+        "basis_strength": 0.8883981220424175,
+        "fit_scale": 0.6805179123177697,
+        "fit_status": "least_squares_scale_fit",
+        "gate_spec": {
+          "holdout_error_max": 0.35,
+          "spearman_min": 0.3
+        },
+        "implemented": true,
+        "max_abs_error": 1.9096415171511755e-06,
+        "max_relative_error": 6.134856106824048,
+        "mean_abs_error": 1.3200706136319674e-06,
+        "mean_relative_error": 2.127417727417237,
+        "passed": false,
+        "pearson": 0.3451830992340176,
+        "point_count": 6,
+        "sign_accuracy": 0.16666666666666666,
+        "spearman": 0.37142857142857144
+      },
+      "promotion_blockers": [
+        {
+          "code": "fisher_proxy_not_official_component_response",
+          "mathematical_explanation": "This profiler estimates component sensitivity with empirical Fisher proxies and holdout perturbation diagnostics. It is not yet an official finite-difference component-response artifact over the exact contest scorer, so it cannot be used as promotion evidence."
+        },
+        {
+          "code": "non_canonical_component_response",
+          "mathematical_explanation": "Component-response curves are promotion-grade only when they are CUDA-authored and measured through the canonical archive.zip -> inflate.sh -> upstream/evaluate.py path."
+        }
+      ],
+      "promotion_eligible": false,
+      "response_kind": "symmetric",
+      "schema_version": 1,
+      "selected_channels": [
+        {
+          "channel": 4,
+          "key": "renderer.stem_conv.weight",
+          "sensitivity": 0.2562446892261505
+        },
+        {
+          "channel": 14,
+          "key": "renderer.stem_conv.weight",
+          "sensitivity": 0.11313220858573914
+        },
+        {
+          "channel": 1,
+          "key": "renderer.head.weight",
+          "sensitivity": 0.06733253598213196
+        },
+        {
+          "channel": 0,
+          "key": "renderer.stem_conv.weight",
+          "sensitivity": 0.05470048263669014
+        },
+        {
+          "channel": 29,
+          "key": "renderer.stem_conv.weight",
+          "sensitivity": 0.05361001193523407
+        },
+        {
+          "channel": 2,
+          "key": "renderer.stem_conv.weight",
+          "sensitivity": 0.046251870691776276
+        },
+        {
+          "channel": 32,
+          "key": "renderer.stem_conv.weight",
+          "sensitivity": 0.04194329306483269
+        },
+        {
+          "channel": 3,
+          "key": "renderer.stem_conv.weight",
+          "sensitivity": 0.04187438637018204
+        },
+        {
+          "channel": 0,
+          "key": "renderer.head.weight",
+          "sensitivity": 0.03876512125134468
+        },
+        {
+          "channel": 0,
+          "key": "renderer.stem_res.conv1.weight",
+          "sensitivity": 0.03625396266579628
+        },
+        {
+          "channel": 2,
+          "key": "renderer.head.weight",
+          "sensitivity": 0.03251098841428757
+        },
+        {
+          "channel": 20,
+          "key": "renderer.stem_conv.weight",
+          "sensitivity": 0.028453385457396507
+        },
+        {
+          "channel": 27,
+          "key": "renderer.stem_conv.weight",
+          "sensitivity": 0.023580064997076988
+        },
+        {
+          "channel": 10,
+          "key": "renderer.stem_conv.weight",
+          "sensitivity": 0.01942547783255577
+        },
+        {
+          "channel": 10,
+          "key": "renderer.stem_res.conv1.weight",
+          "sensitivity": 0.018964450806379318
+        },
+        {
+          "channel": 31,
+          "key": "renderer.stem_conv.weight",
+          "sensitivity": 0.015355192124843597
+        }
+      ],
+      "sensitivity_source": "fisher_proxy",
+      "symmetric_epsilon_pairs": 3
+    }
+  },
+  "dali_bootstrap": {
+    "bootstrap_action": "install_hash_pinned_wheels",
+    "cuda_family": "cu130",
+    "final_probe": {
+      "dali_version": "1.52.0",
+      "installed_distributions": {
+        "nvidia-dali-cuda120": null,
+        "nvidia-dali-cuda130": "1.52.0"
+      },
+      "nvidia_dali_fn_module": "nvidia.dali.fn",
+      "python": "/teamspace/studios/this_studio/pact/.venv/bin/python"
+    },
+    "final_probe_returncode": 0,
+    "final_probe_stderr_tail": "/teamspace/studios/this_studio/pact/.venv/lib/python3.12/site-packages/nvidia/dali/types.py:433: SyntaxWarning: invalid escape sequence '\\.'\n  _cupy_array_type_regex = re.compile(\".*cupy.*\\..*ndarray.*\")  # noqa: W605\n",
+    "final_probe_stdout": "{\"dali_version\": \"1.52.0\", \"installed_distributions\": {\"nvidia-dali-cuda120\": null, \"nvidia-dali-cuda130\": \"1.52.0\"}, \"nvidia_dali_fn_module\": \"nvidia.dali.fn\", \"python\": \"/teamspace/studios/this_studio/pact/.venv/bin/python\"}",
+    "final_probe_violations": [],
+    "initial_probe": null,
+    "initial_probe_returncode": 1,
+    "initial_probe_stderr_tail": "Traceback (most recent call last):\n  File \"<string>\", line 3, in <module>\nModuleNotFoundError: No module named 'nvidia.dali'\n",
+    "initial_probe_stdout": "",
+    "initial_probe_violations": [
+      "import failed: Traceback (most recent call last):\n  File \"<string>\", line 3, in <module>\nModuleNotFoundError: No module named 'nvidia.dali'\n"
+    ],
+    "install_command": [
+      "/usr/local/bin/uv",
+      "pip",
+      "install",
+      "--python",
+      "/teamspace/studios/this_studio/pact/.venv/bin/python",
+      "--require-hashes",
+      "--no-deps",
+      "--only-binary",
+      ":all:",
+      "--strict",
+      "-r",
+      "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/lightning_dali_requirements.txt"
+    ],
+    "install_returncode": 0,
+    "install_stderr_tail": "Resolved 17 packages in 487ms\nDownloading nvidia-nvjpeg (3.5MiB)\nDownloading nvidia-nvtiff-cu13 (1.5MiB)\nDownloading nvidia-nvjpeg2k-cu13 (2.5MiB)\nDownloading nvidia-nvcomp-cu13 (22.1MiB)\nDownloading nvidia-nvimgcodec-cu13 (25.9MiB)\nDownloading nvidia-dali-cuda130 (182.8MiB)\n Downloading nvidia-nvtiff-cu13\n Downloading nvidia-nvjpeg2k-cu13\n Downloading nvidia-nvjpeg\n Downloading nvidia-nvcomp-cu13\n Downloading nvidia-nvimgcodec-cu13\n Downloading nvidia-dali-cuda130\nPrepared 17 packages in 8.28s\nUninstalled 1 package in 4ms\nInstalled 17 packages in 95ms\n + absl-py==2.3.1 (from https://files.pythonhosted.org/packages/8f/aa/ba0014cc4659328dc818a28827be78e6d97312ab0cb98105a770924dc11e/absl_py-2.3.1-py3-none-any.whl)\n + astunparse==1.6.3 (from https://files.pythonhosted.org/packages/2b/03/13dde6512ad7b4557eb792fbcf0c653af6076b81e5941d36ec61f7ce6028/astunparse-1.6.3-py2.py3-none-any.whl)\n + attrs==25.4.0 (from https://files.pythonhosted.org/packages/3a/2a/7cc015f5b9f5db42b7d48157e23356022889fc354a2813c15934b7cb5c0e/attrs-25.4.0-py3-none-any.whl)\n + dm-tree==0.1.9 (from https://files.pythonhosted.org/packages/86/52/27607a275c12858b979b8e943d2bd3bd0f9028503bb7079d5830a8b3cac0/dm_tree-0.1.9-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl)\n + gast==0.6.0 (from https://files.pythonhosted.org/packages/a3/61/8001b38461d751cd1a0c3a6ae84346796a5758123f3ed97a1b121dfbf4f3/gast-0.6.0-py3-none-any.whl)\n + makefun==1.16.0 (from https://files.pythonhosted.org/packages/b7/c0/4bc973defd1270b89ccaae04cef0d5fa3ea85b59b108ad2c08aeea9afb76/makefun-1.16.0-py2.py3-none-any.whl)\n + nvidia-dali-cuda130==1.52.0 (from https://pypi.nvidia.com/nvidia-dali-cuda130/nvidia_dali_cuda130-1.52.0-py3-none-manylinux_2_28_x86_64.whl)\n + nvidia-nvcomp-cu13==5.0.0.6 (from https://files.pythonhosted.org/packages/56/c9/f8a1b957f949ab4c4dc29e7f56316a2224b92c78cad9a66aeab2b36f8857/nvidia_nvcomp_cu13-5.0.0.6-py3-none-manylinux_2_28_x86_64.whl)\n + nvidia-nvimgcodec-cu13==0.6.1.37 (from https://files.pythonhosted.org/packages/2a/86/5a89168b14c335891e446575b04bf807c23dac37509a755d032f7e62aec7/nvidia_nvimgcodec_cu13-0.6.1.37-py3-none-manylinux2014_x86_64.whl)\n + nvidia-nvjpeg==13.0.1.86 (from https://files.pythonhosted.org/packages/b6/e6/9b96fcead7f78a5e2d5d9e726f0d0b1517faf2895146d571e006793180d7/nvidia_nvjpeg-13.0.1.86-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl)\n + nvidia-nvjpeg2k-cu13==0.9.0.43 (from https://files.pythonhosted.org/packages/ea/ed/24134897e077340eefa0e9ae61b58620b13e2f2118f896010aa7fedd6168/nvidia_nvjpeg2k_cu13-0.9.0.43-py3-none-manylinux2014_x86_64.whl)\n + nvidia-nvtiff-cu13==0.5.1.75 (from https://files.pythonhosted.org/packages/19/eb/20c5b6d9e60b6252b3d72857d6401b7ea94aa3a29098fc49f9916aabaacf/nvidia_nvtiff_cu13-0.5.1.75-py3-none-manylinux2014_x86_64.whl)\n + nvtx==0.2.13 (from https://files.pythonhosted.org/packages/12/ab/762da984e7671f7c34ae87e5b70523c3eeb4563759268bfaea07c97f32a6/nvtx-0.2.13-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl)\n - packaging==26.0\n + packaging==25.0 (from https://files.pythonhosted.org/packages/20/12/38679034af332785aac8774540895e234f4d07f7545804097de4b666afd8/packaging-25.0-py3-none-any.whl)\n + six==1.17.0 (from https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl)\n + wheel==0.45.1 (from https://files.pythonhosted.org/packages/0b/2c/87f3254fd8ffd29e4c02732eee68a83a1d3c346ae39bc6822dcbcb697f2b/wheel-0.45.1-py3-none-any.whl)\n + wrapt==2.0.0 (from https://files.pythonhosted.org/packages/ff/0c/0f565294897a72493dbafe7b46229b5f09f3776795a894d6b737e98387de/wrapt-2.0.0-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl)\n",
+    "install_stdout_tail": "",
+    "installed": true,
+    "nvidia-dali-cuda120_version": null,
+    "nvidia-dali-cuda130_version": "1.52.0",
+    "python": "/teamspace/studios/this_studio/pact/.venv/bin/python",
+    "recorded_at_utc": "2026-05-01T06:10:59Z",
+    "required_dali_version": "1.52.0",
+    "requirements_path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/lightning_dali_requirements.txt",
+    "schema_version": 1,
+    "selected_package": "nvidia-dali-cuda130",
+    "selected_requirement": "nvidia-dali-cuda130==1.52.0",
+    "selected_wheels": [
+      {
+        "name": "absl-py",
+        "sha256": "eeecf07f0c2a93ace0772c92e596ace6d3d3996c042b2128459aaae2a76de11d",
+        "url": "https://files.pythonhosted.org/packages/8f/aa/ba0014cc4659328dc818a28827be78e6d97312ab0cb98105a770924dc11e/absl_py-2.3.1-py3-none-any.whl",
+        "version": "2.3.1"
+      },
+      {
+        "name": "astunparse",
+        "sha256": "c2652417f2c8b5bb325c885ae329bdf3f86424075c4fd1a128674bc6fba4b8e8",
+        "url": "https://files.pythonhosted.org/packages/2b/03/13dde6512ad7b4557eb792fbcf0c653af6076b81e5941d36ec61f7ce6028/astunparse-1.6.3-py2.py3-none-any.whl",
+        "version": "1.6.3"
+      },
+      {
+        "name": "attrs",
+        "sha256": "adcf7e2a1fb3b36ac48d97835bb6d8ade15b8dcce26aba8bf1d14847b57a3373",
+        "url": "https://files.pythonhosted.org/packages/3a/2a/7cc015f5b9f5db42b7d48157e23356022889fc354a2813c15934b7cb5c0e/attrs-25.4.0-py3-none-any.whl",
+        "version": "25.4.0"
+      },
+      {
+        "name": "gast",
+        "sha256": "52b182313f7330389f72b069ba00f174cfe2a06411099547288839c6cbafbd54",
+        "url": "https://files.pythonhosted.org/packages/a3/61/8001b38461d751cd1a0c3a6ae84346796a5758123f3ed97a1b121dfbf4f3/gast-0.6.0-py3-none-any.whl",
+        "version": "0.6.0"
+      },
+      {
+        "name": "makefun",
+        "sha256": "43baa4c3e7ae2b17de9ceac20b669e9a67ceeadff31581007cca20a07bbe42c4",
+        "url": "https://files.pythonhosted.org/packages/b7/c0/4bc973defd1270b89ccaae04cef0d5fa3ea85b59b108ad2c08aeea9afb76/makefun-1.16.0-py2.py3-none-any.whl",
+        "version": "1.16.0"
+      },
+      {
+        "name": "packaging",
+        "sha256": "29572ef2b1f17581046b3a2227d5c611fb25ec70ca1ba8554b24b0e69331a484",
+        "url": "https://files.pythonhosted.org/packages/20/12/38679034af332785aac8774540895e234f4d07f7545804097de4b666afd8/packaging-25.0-py3-none-any.whl",
+        "version": "25.0"
+      },
+      {
+        "name": "six",
+        "sha256": "4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274",
+        "url": "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl",
+        "version": "1.17.0"
+      },
+      {
+        "name": "wheel",
+        "sha256": "708e7481cc80179af0e556bbf0cc00b8444c7321e2700b8d8580231d13017248",
+        "url": "https://files.pythonhosted.org/packages/0b/2c/87f3254fd8ffd29e4c02732eee68a83a1d3c346ae39bc6822dcbcb697f2b/wheel-0.45.1-py3-none-any.whl",
+        "version": "0.45.1"
+      },
+      {
+        "name": "dm-tree",
+        "sha256": "2334cfe9d2ed4293f9f1c7aefba0657deaab9ea74b5fadd966f6d01d9b6b42d9",
+        "url": "https://files.pythonhosted.org/packages/86/52/27607a275c12858b979b8e943d2bd3bd0f9028503bb7079d5830a8b3cac0/dm_tree-0.1.9-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+        "version": "0.1.9"
+      },
+      {
+        "name": "nvtx",
+        "sha256": "453d838dd1424a04303281ee57a73e2b8dca0e03039bc609a945861b8fe7d7d9",
+        "url": "https://files.pythonhosted.org/packages/12/ab/762da984e7671f7c34ae87e5b70523c3eeb4563759268bfaea07c97f32a6/nvtx-0.2.13-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+        "version": "0.2.13"
+      },
+      {
+        "name": "wrapt",
+        "sha256": "43dc0550ae15e33e6bb45a82a5e1b5495be2587fbaa996244b509921810ee49f",
+        "url": "https://files.pythonhosted.org/packages/ff/0c/0f565294897a72493dbafe7b46229b5f09f3776795a894d6b737e98387de/wrapt-2.0.0-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl",
+        "version": "2.0.0"
+      },
+      {
+        "name": "nvidia-dali-cuda130",
+        "sha256": "37369fb30e9c66f710b29836688c90abc36793bbe757cd3ad699fac76ba07119",
+        "url": "https://pypi.nvidia.com/nvidia-dali-cuda130/nvidia_dali_cuda130-1.52.0-py3-none-manylinux_2_28_x86_64.whl",
+        "version": "1.52.0"
+      },
+      {
+        "name": "nvidia-nvcomp-cu13",
+        "sha256": "91a4e4b1dc15b0f38e54a3353c917086c99c9f415e1ad79a57d5f28d62b68a4d",
+        "url": "https://files.pythonhosted.org/packages/56/c9/f8a1b957f949ab4c4dc29e7f56316a2224b92c78cad9a66aeab2b36f8857/nvidia_nvcomp_cu13-5.0.0.6-py3-none-manylinux_2_28_x86_64.whl",
+        "version": "5.0.0.6"
+      },
+      {
+        "name": "nvidia-nvimgcodec-cu13",
+        "sha256": "c9cd2f917a3b4c248296c963fa3220e544c06a7d2679c82454ba0836a352981c",
+        "url": "https://files.pythonhosted.org/packages/2a/86/5a89168b14c335891e446575b04bf807c23dac37509a755d032f7e62aec7/nvidia_nvimgcodec_cu13-0.6.1.37-py3-none-manylinux2014_x86_64.whl",
+        "version": "0.6.1.37"
+      },
+      {
+        "name": "nvidia-nvjpeg",
+        "sha256": "f658a05c48702219b3db52e194c2ea1ff0ccd3fbf2b75127b4a573074cc22fd5",
+        "url": "https://files.pythonhosted.org/packages/b6/e6/9b96fcead7f78a5e2d5d9e726f0d0b1517faf2895146d571e006793180d7/nvidia_nvjpeg-13.0.1.86-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+        "version": "13.0.1.86"
+      },
+      {
+        "name": "nvidia-nvjpeg2k-cu13",
+        "sha256": "554761474cf2e0f85d04644d08e7949a4ffd2f4be10a5318de85e46f86ad8f07",
+        "url": "https://files.pythonhosted.org/packages/ea/ed/24134897e077340eefa0e9ae61b58620b13e2f2118f896010aa7fedd6168/nvidia_nvjpeg2k_cu13-0.9.0.43-py3-none-manylinux2014_x86_64.whl",
+        "version": "0.9.0.43"
+      },
+      {
+        "name": "nvidia-nvtiff-cu13",
+        "sha256": "f71ee243369e0e65d5a55ccf27eb7c76c6b77aafb7caabeb74bab5037a3d3d09",
+        "url": "https://files.pythonhosted.org/packages/19/eb/20c5b6d9e60b6252b3d72857d6401b7ea94aa3a29098fc49f9916aabaacf/nvidia_nvtiff_cu13-0.5.1.75-py3-none-manylinux2014_x86_64.whl",
+        "version": "0.5.1.75"
+      }
+    ],
+    "tool": "lightning_exact_eval_dali_bootstrap",
+    "torch_cuda_version": "13.0",
+    "torch_version": "2.11.0+cu130",
+    "unexpected_package": "nvidia-dali-cuda120"
+  },
+  "device": "cuda",
+  "gpu_model": "NVIDIA L40S",
+  "gpu_t4_match": false,
+  "input_preflight": {
+    "baseline_archive": {
+      "bytes": 686635,
+      "member_names": [
+        "renderer.bin",
+        "masks.mkv",
+        "optimized_poses.bin"
+      ],
+      "path": "/teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+      "required_members": [
+        "renderer.bin",
+        "masks.mkv",
+        "optimized_poses.bin"
+      ],
+      "sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+      "zip_member_count": 3
+    },
+    "diagnostic": true,
+    "extracted_dir": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/extracted",
+    "extracted_members": {
+      "masks.mkv": {
+        "bytes": 421483,
+        "member": "masks.mkv",
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/extracted/masks.mkv",
+        "sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9",
+        "zip_compress_size": 412169,
+        "zip_crc": 3779385004,
+        "zip_file_size": 421483
+      },
+      "optimized_poses.bin": {
+        "bytes": 7200,
+        "member": "optimized_poses.bin",
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/extracted/optimized_poses.bin",
+        "sha256": "4b3d8cd58965971ad518a970441f5e9cc53ce361a62d51e95c1cdd2056be4449",
+        "zip_compress_size": 6734,
+        "zip_crc": 1751957439,
+        "zip_file_size": 7200
+      },
+      "renderer.bin": {
+        "bytes": 296776,
+        "member": "renderer.bin",
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/extracted/renderer.bin",
+        "sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529",
+        "zip_compress_size": 267402,
+        "zip_crc": 405252151,
+        "zip_file_size": 296776
+      }
+    },
+    "pair_weights": null,
+    "promotion_blockers": [
+      "profile_component_sensitivity.py emits diagnostic direct-renderer/Fisher artifacts, not canonical archive.zip -> inflate.sh -> upstream/evaluate.py component-response evidence"
+    ],
+    "promotion_eligible": false,
+    "recorded_at_utc": "2026-05-01T06:11:17Z",
+    "schema_version": 1,
+    "score_claim": false,
+    "tool": "lightning_diagnostic_component_sensitivity_input_preflight"
+  },
+  "metadata": {
+    "adjudication": null,
+    "artifact_recorded_at_utc": "2026-05-01T06:10:54Z",
+    "expected_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+    "expected_archive_size_bytes": 686635,
+    "expected_baseline_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+    "expected_baseline_archive_size_bytes": 686635,
+    "job_name": "component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2",
+    "promotion_eligible": false,
+    "queue_metadata": {
+      "evidence": "diagnostic_cuda_fisher_only",
+      "hardware": "L40S_parallel_fast_signal",
+      "lane": "component_sensitivity_pfp16",
+      "machine_inventory_doctor": "lightning_doctor_component_sensitivity_pfp16_r2_l40s.json",
+      "machine_submit_backend": "studio_aws_instance_type_g6e_4xlarge"
+    },
+    "role": "diagnostic_component_sensitivity",
+    "schema_version": 1,
+    "score_claim": false,
+    "score_source": "none:diagnostic_component_sensitivity_non_promotable",
+    "status_source": "lightning_sdk_job_attributes"
+  },
+  "promotion_eligible": false,
+  "role": "diagnostic_component_sensitivity",
+  "run_metadata": {
+    "diagnostic": true,
+    "environment": {
+      "CUDA_VISIBLE_DEVICES": null,
+      "LIGHTNING_CLOUD_PROJECT_ID": "01knw7m9kx9h8rt5rz5csmrdan",
+      "LIGHTNING_DISPATCHED_JOB_NAME": null,
+      "UV_LINK_MODE": "symlink",
+      "UV_PROJECT_ENVIRONMENT": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/uv_project_env"
+    },
+    "profile_argv": [
+      ".venv/bin/python",
+      "-u",
+      "experiments/profile_component_sensitivity.py",
+      "--checkpoint",
+      "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/extracted/renderer.bin",
+      "--video",
+      "/teamspace/studios/this_studio/pact/upstream/videos/0.mkv",
+      "--masks-mkv",
+      "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/extracted/masks.mkv",
+      "--poses",
+      "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/extracted/optimized_poses.bin",
+      "--upstream",
+      "/teamspace/studios/this_studio/pact/upstream",
+      "--output-dir",
+      "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2",
+      "--top-k-pairs",
+      "64",
+      "--pair-batch",
+      "4",
+      "--response-top-k",
+      "16",
+      "--response-epsilons=-0.002,-0.001,-0.0005,0,0.0005,0.001,0.002",
+      "--split-seed",
+      "20260430",
+      "--holdout-fraction",
+      "0.2",
+      "--aggregate",
+      "sum",
+      "--device",
+      "cuda",
+      "--all-pairs"
+    ],
+    "promotion_blockers": [
+      "not canonical component-response custody; output is diagnostic only"
+    ],
+    "promotion_eligible": false,
+    "recorded_at_utc": "2026-05-01T06:11:17Z",
+    "role": "diagnostic_component_sensitivity",
+    "schema_version": 1,
+    "score_claim": false,
+    "tool": "lightning_diagnostic_component_sensitivity_run_metadata"
+  },
+  "runner_preflight": {
+    "cuda_available": true,
+    "device_count": 1,
+    "device_name": "NVIDIA L40S",
+    "gpu_t4_match": false,
+    "nvidia_dali_fn_module": "nvidia.dali.fn",
+    "nvidia_smi": "/usr/bin/nvidia-smi",
+    "nvidia_smi_head": [
+      "NVIDIA L40S, 580.126.09, 46068 MiB"
+    ],
+    "python": "/teamspace/studios/this_studio/pact/.venv/bin/python",
+    "recorded_at_utc": "2026-05-01T06:11:16Z",
+    "schema_version": 1,
+    "tool": "lightning_exact_eval_runner_preflight",
+    "torch_version": "2.11.0+cu130"
+  },
+  "schema_version": 1,
+  "score_claim": false,
+  "score_source": "none:diagnostic_component_sensitivity_non_promotable",
+  "ssh_source": {
+    "copied_files": [
+      "lightning_queue_metadata.json",
+      "diagnostic_component_sensitivity_inputs.json",
+      "diagnostic_component_sensitivity_run.json",
+      "component_sensitivity_profile_summary.json",
+      "sample_plan.json",
+      "stability.json",
+      "perturbation_basis_v1.json",
+      "posenet_sensitivity_map.pt",
+      "segnet_sensitivity_map.pt",
+      "combined_sensitivity_map.pt",
+      "posenet_response_curve.json",
+      "segnet_response_curve.json",
+      "combined_response_curve.json",
+      "lightning_dali_bootstrap.json",
+      "lightning_dali_requirements.txt",
+      "lightning_runner_preflight.json",
+      "lightning_supply_chain_scan_pre.json",
+      "lightning_supply_chain_scan.json",
+      "diagnostic_component_sensitivity.log",
+      "diagnostic_component_sensitivity_artifact_validation.json"
+    ],
+    "mirror_dir": "experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2",
+    "remote_dir": "/teamspace/jobs/component-sensitivity-pfp16-a-plus-plus-cuda-fisher-l40s-20260501-r2/artifacts/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2",
+    "ssh_connect_timeout": 15,
+    "ssh_target": "scratch-studio-devbox"
+  },
+  "summary": {
+    "aggregate": "sum",
+    "canonical_scorer_path": false,
+    "checkpoint": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/extracted/renderer.bin",
+    "component_response_path": "direct_renderer_tensor_inprocess_scorer",
+    "device": "cuda",
+    "elapsed_s": 152.41120897000002,
+    "evidence_grade": "diagnostic_cuda_fisher_proxy",
+    "excluded_layer_reasons": {
+      "renderer.film_bottleneck.scale.weight": "protected_linear",
+      "renderer.film_bottleneck.shift.weight": "protected_linear",
+      "renderer.film_decoder.scale.weight": "protected_linear",
+      "renderer.film_decoder.shift.weight": "protected_linear"
+    },
+    "finite_difference_epsilon": null,
+    "git_hash": "no-git",
+    "include_protected_conv2d": true,
+    "map_paths": {
+      "combined": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/combined_sensitivity_map.pt",
+      "posenet": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/posenet_sensitivity_map.pt",
+      "segnet": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/segnet_sensitivity_map.pt"
+    },
+    "masks_mkv": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/extracted/masks.mkv",
+    "n_pairs_calibration": 480,
+    "n_pairs_holdout": 120,
+    "n_pairs_selected": 600,
+    "n_pairs_total": 600,
+    "official_component_response": false,
+    "pair_weights": null,
+    "perturbation_basis_json": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/perturbation_basis_v1.json",
+    "poses": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/extracted/optimized_poses.bin",
+    "promotion_blockers": [
+      {
+        "code": "fisher_proxy_not_official_component_response",
+        "mathematical_explanation": "This profiler estimates component sensitivity with empirical Fisher proxies and holdout perturbation diagnostics. It is not yet an official finite-difference component-response artifact over the exact contest scorer, so it cannot be used as promotion evidence."
+      }
+    ],
+    "promotion_eligible": false,
+    "promotion_requested": false,
+    "response_curve_paths": {
+      "combined": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/combined_response_curve.json",
+      "posenet": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/posenet_response_curve.json",
+      "segnet": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/segnet_response_curve.json"
+    },
+    "sample_plan_json": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/sample_plan.json",
+    "schema_version": 1,
+    "sensitivity_source": "fisher_proxy",
+    "stability_json": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/stability.json",
+    "tool": "experiments/profile_component_sensitivity.py",
+    "torch_version": "2.11.0+cu130",
+    "upstream_dir": "/teamspace/studios/this_studio/pact/upstream",
+    "video_mkv": "/teamspace/studios/this_studio/pact/upstream/videos/0.mkv"
+  },
+  "supply_chain_post": {
+    "hostname": "ip-10-192-13-105",
+    "package_versions": {
+      "lightning": null,
+      "lightning-sdk": null,
+      "lightning_sdk": null,
+      "pytorch-lightning": null
+    },
+    "python": "/teamspace/studios/this_studio/pact/.venv/bin/python",
+    "recorded_at_utc": "2026-05-01T06:11:14Z",
+    "repo_root": "/teamspace/studios/this_studio/pact",
+    "schema_version": 1,
+    "status": "OK",
+    "strict": true,
+    "tool": "scripts/scan_lightning_supply_chain.py",
+    "violation_count": 0,
+    "violations": []
+  },
+  "supply_chain_pre": {
+    "hostname": "ip-10-192-13-105",
+    "package_versions": {
+      "lightning": null,
+      "lightning-sdk": null,
+      "lightning_sdk": null,
+      "pytorch-lightning": null
+    },
+    "python": "/teamspace/studios/this_studio/pact/.venv/bin/python",
+    "recorded_at_utc": "2026-05-01T06:10:58Z",
+    "repo_root": "/teamspace/studios/this_studio/pact",
+    "schema_version": 1,
+    "status": "OK",
+    "strict": true,
+    "tool": "scripts/scan_lightning_supply_chain.py",
+    "violation_count": 0,
+    "violations": []
+  },
+  "validated_at_utc": "2026-05-01T06:14:50Z"
+}

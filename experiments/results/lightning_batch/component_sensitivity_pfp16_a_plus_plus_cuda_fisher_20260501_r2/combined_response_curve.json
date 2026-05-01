@@ -1,0 +1,320 @@
+{
+  "baseline": {
+    "combined": 0.692138522327181,
+    "posenet": 0.010806571087353707,
+    "segnet": 0.003634050271163384
+  },
+  "canonical_scorer_path": false,
+  "component": "combined",
+  "component_readout": "official_component_formula",
+  "component_response_path": "direct_renderer_tensor_inprocess_scorer",
+  "component_units": {
+    "combined": "100*segnet + sqrt(10*posenet), no rate term",
+    "posenet": "mean_pose_mse",
+    "segnet": "mean_argmax_disagreement"
+  },
+  "count": 7,
+  "device": "cuda",
+  "epsilon_ladder": [
+    -0.002,
+    -0.001,
+    -0.0005,
+    0.0,
+    0.0005,
+    0.001,
+    0.002
+  ],
+  "evidence_grade": "diagnostic_cuda_direct_renderer_component_response",
+  "gate_results": {
+    "finite_values": true,
+    "observed_delta_max": 0.0012792891545105878,
+    "prediction_error_gate_implemented": true,
+    "prediction_error_passed": false,
+    "promotion_gate_passed": false,
+    "signal_present": true,
+    "zero_repro": true,
+    "zero_repro_error": 7.250132638692008e-08
+  },
+  "gate_spec": {
+    "holdout_error_max": 0.35,
+    "observed_delta_min": 1e-12,
+    "spearman_min": 0.3,
+    "top_decile_overlap_min": 0.5,
+    "zero_repro_tolerance": 1e-07
+  },
+  "holdout_error": 0.7429639807611883,
+  "holdout_error_kind": "max_relative_prediction_error_diagnostic",
+  "observed_holdout_delta_max": 0.0012792891545105878,
+  "official_component_response": false,
+  "passed": false,
+  "perturbation": "signed_weight_rms_topk_channels_v1",
+  "perturbation_basis": {
+    "component_atom_ids": [
+      "combined:000000:bad597130ed0",
+      "combined:000001:e54d2e4d7de8",
+      "combined:000002:359031d300ac",
+      "combined:000003:6e630597bfcb",
+      "combined:000004:f638c531cd80",
+      "combined:000005:4fe0d40f547d",
+      "combined:000006:23dc4c599bf0",
+      "combined:000007:93631236bc9e",
+      "combined:000008:7869fd18ce19",
+      "combined:000009:84469a1c9513",
+      "combined:000010:7db7fa03dfa7",
+      "combined:000011:3ae117835869",
+      "combined:000012:efb74de92980",
+      "combined:000013:20d5950f7d90",
+      "combined:000014:cad4ab1a18f7",
+      "combined:000015:167941a8ced7"
+    ],
+    "format": "perturbation_basis_v1",
+    "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_20260501_r2/perturbation_basis_v1.json"
+  },
+  "points": [
+    {
+      "all_components": {
+        "combined": 0.6934178114816916,
+        "posenet": 0.010884969689747474,
+        "segnet": 0.003634940371072541
+      },
+      "baseline": 0.692138522327181,
+      "delta": 0.0012792891545105878,
+      "epsilon": -0.002,
+      "prediction": {
+        "abs_error": 2.1057026895884498e-05,
+        "fit_scale": 125.3308673919838,
+        "fitted_abs_delta": 0.0012582321276147033,
+        "raw_delta": 1.0039283648133278e-05,
+        "raw_model": "epsilon^2 * sum_selected_channel_sensitivity",
+        "relative_error": 0.01645994325961451
+      },
+      "value": 0.6934178114816916
+    },
+    {
+      "all_components": {
+        "combined": 0.69277251010216,
+        "posenet": 0.010845222794159781,
+        "segnet": 0.003634516514527301
+      },
+      "baseline": 0.692138522327181,
+      "delta": 0.0006339877749790279,
+      "epsilon": -0.001,
+      "prediction": {
+        "abs_error": 0.0003194297430753521,
+        "fit_scale": 125.3308673919838,
+        "fitted_abs_delta": 0.0003145580319036758,
+        "raw_delta": 2.5098209120333195e-06,
+        "raw_model": "epsilon^2 * sum_selected_channel_sensitivity",
+        "relative_error": 0.503842117595909
+      },
+      "value": 0.69277251010216
+    },
+    {
+      "all_components": {
+        "combined": 0.6924444697512377,
+        "posenet": 0.01082557965273736,
+        "segnet": 0.003634219833960136
+      },
+      "baseline": 0.692138522327181,
+      "delta": 0.0003059474240567628,
+      "epsilon": -0.0005,
+      "prediction": {
+        "abs_error": 0.00022730791608084383,
+        "fit_scale": 125.3308673919838,
+        "fitted_abs_delta": 7.863950797591896e-05,
+        "raw_delta": 6.274552280083299e-07,
+        "raw_model": "epsilon^2 * sum_selected_channel_sensitivity",
+        "relative_error": 0.7429639807611883
+      },
+      "value": 0.6924444697512377
+    },
+    {
+      "all_components": {
+        "combined": 0.6921384498258546,
+        "posenet": 0.010806566320631343,
+        "segnet": 0.003634050271163384
+      },
+      "baseline": 0.692138522327181,
+      "delta": -7.250132638692008e-08,
+      "epsilon": 0.0,
+      "prediction": {
+        "raw_delta": 0.0,
+        "raw_model": "epsilon^2 * sum_selected_channel_sensitivity"
+      },
+      "value": 0.6921384498258546
+    },
+    {
+      "all_components": {
+        "combined": 0.6918800994550497,
+        "posenet": 0.010787916592380497,
+        "segnet": 0.003634304595955958
+      },
+      "baseline": 0.692138522327181,
+      "delta": -0.000258422872131292,
+      "epsilon": 0.0005,
+      "prediction": {
+        "abs_error": 0.00017978336415537305,
+        "fit_scale": 125.3308673919838,
+        "fitted_abs_delta": 7.863950797591896e-05,
+        "raw_delta": 6.274552280083299e-07,
+        "raw_model": "epsilon^2 * sum_selected_channel_sensitivity",
+        "relative_error": 0.6956944742260813
+      },
+      "value": 0.6918800994550497
+    },
+    {
+      "all_components": {
+        "combined": 0.6915748074402727,
+        "posenet": 0.010769818789655498,
+        "segnet": 0.0036340078668824086
+      },
+      "baseline": 0.692138522327181,
+      "delta": -0.0005637148869083175,
+      "epsilon": 0.001,
+      "prediction": {
+        "abs_error": 0.0002491568550046417,
+        "fit_scale": 125.3308673919838,
+        "fitted_abs_delta": 0.0003145580319036758,
+        "raw_delta": 2.5098209120333195e-06,
+        "raw_model": "epsilon^2 * sum_selected_channel_sensitivity",
+        "relative_error": 0.4419909085089756
+      },
+      "value": 0.6915748074402727
+    },
+    {
+      "all_components": {
+        "combined": 0.6910689370809969,
+        "posenet": 0.010735808251289806,
+        "segnet": 0.0036341350448007383
+      },
+      "baseline": 0.692138522327181,
+      "delta": -0.0010695852461840571,
+      "epsilon": 0.002,
+      "prediction": {
+        "abs_error": 0.00018864688143064613,
+        "fit_scale": 125.3308673919838,
+        "fitted_abs_delta": 0.0012582321276147033,
+        "raw_delta": 1.0039283648133278e-05,
+        "raw_model": "epsilon^2 * sum_selected_channel_sensitivity",
+        "relative_error": 0.17637386276940403
+      },
+      "value": 0.6910689370809969
+    }
+  ],
+  "prediction_calibration": {
+    "basis_strength": 2.5098209120333195,
+    "fit_scale": 125.3308673919838,
+    "fit_status": "least_squares_scale_fit",
+    "gate_spec": {
+      "holdout_error_max": 0.35,
+      "spearman_min": 0.3
+    },
+    "implemented": true,
+    "max_abs_error": 0.0003194297430753521,
+    "max_relative_error": 0.7429639807611883,
+    "mean_abs_error": 0.00019756363110712358,
+    "mean_relative_error": 0.42955421452019554,
+    "passed": false,
+    "pearson": 0.97094886024686,
+    "point_count": 6,
+    "sign_accuracy": 0.5,
+    "spearman": 0.8285714285714286
+  },
+  "promotion_blockers": [
+    {
+      "code": "fisher_proxy_not_official_component_response",
+      "mathematical_explanation": "This profiler estimates component sensitivity with empirical Fisher proxies and holdout perturbation diagnostics. It is not yet an official finite-difference component-response artifact over the exact contest scorer, so it cannot be used as promotion evidence."
+    },
+    {
+      "code": "non_canonical_component_response",
+      "mathematical_explanation": "Component-response curves are promotion-grade only when they are CUDA-authored and measured through the canonical archive.zip -> inflate.sh -> upstream/evaluate.py path."
+    }
+  ],
+  "promotion_eligible": false,
+  "response_kind": "symmetric",
+  "schema_version": 1,
+  "selected_channels": [
+    {
+      "channel": 1,
+      "key": "motion.head.weight",
+      "sensitivity": 0.8390673398971558
+    },
+    {
+      "channel": 0,
+      "key": "motion.head.weight",
+      "sensitivity": 0.41135135293006897
+    },
+    {
+      "channel": 1,
+      "key": "renderer.head.weight",
+      "sensitivity": 0.28477734327316284
+    },
+    {
+      "channel": 4,
+      "key": "renderer.stem_conv.weight",
+      "sensitivity": 0.20485533773899078
+    },
+    {
+      "channel": 2,
+      "key": "renderer.head.weight",
+      "sensitivity": 0.13334357738494873
+    },
+    {
+      "channel": 14,
+      "key": "renderer.stem_conv.weight",
+      "sensitivity": 0.09010078758001328
+    },
+    {
+      "channel": 3,
+      "key": "renderer.stem_conv.weight",
+      "sensitivity": 0.08668851852416992
+    },
+    {
+      "channel": 20,
+      "key": "renderer.stem_conv.weight",
+      "sensitivity": 0.08544997870922089
+    },
+    {
+      "channel": 2,
+      "key": "renderer.stem_conv.weight",
+      "sensitivity": 0.06570489704608917
+    },
+    {
+      "channel": 32,
+      "key": "renderer.stem_conv.weight",
+      "sensitivity": 0.05452149733901024
+    },
+    {
+      "channel": 29,
+      "key": "renderer.stem_conv.weight",
+      "sensitivity": 0.04993314668536186
+    },
+    {
+      "channel": 0,
+      "key": "renderer.head.weight",
+      "sensitivity": 0.04912910982966423
+    },
+    {
+      "channel": 0,
+      "key": "renderer.stem_conv.weight",
+      "sensitivity": 0.045260027050971985
+    },
+    {
+      "channel": 0,
+      "key": "renderer.stem_res.conv1.weight",
+      "sensitivity": 0.04382150620222092
+    },
+    {
+      "channel": 21,
+      "key": "motion.fuse.weight",
+      "sensitivity": 0.035748060792684555
+    },
+    {
+      "channel": 0,
+      "key": "renderer.fuse_conv.weight",
+      "sensitivity": 0.030068431049585342
+    }
+  ],
+  "sensitivity_source": "fisher_proxy",
+  "symmetric_epsilon_pairs": 3
+}

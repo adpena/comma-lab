@@ -1,0 +1,52 @@
+{
+  "diagnostic": true,
+  "environment": {
+    "CUDA_VISIBLE_DEVICES": null,
+    "LIGHTNING_CLOUD_PROJECT_ID": "01knw7m9kx9h8rt5rz5csmrdan",
+    "LIGHTNING_DISPATCHED_JOB_NAME": null,
+    "UV_LINK_MODE": "symlink",
+    "UV_PROJECT_ENVIRONMENT": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_20260501_r2/uv_project_env"
+  },
+  "profile_argv": [
+    ".venv/bin/python",
+    "-u",
+    "experiments/profile_component_sensitivity.py",
+    "--checkpoint",
+    "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_20260501_r2/extracted/renderer.bin",
+    "--video",
+    "/teamspace/studios/this_studio/pact/upstream/videos/0.mkv",
+    "--masks-mkv",
+    "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_20260501_r2/extracted/masks.mkv",
+    "--poses",
+    "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_20260501_r2/extracted/optimized_poses.bin",
+    "--upstream",
+    "/teamspace/studios/this_studio/pact/upstream",
+    "--output-dir",
+    "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_20260501_r2",
+    "--top-k-pairs",
+    "64",
+    "--pair-batch",
+    "2",
+    "--response-top-k",
+    "16",
+    "--response-epsilons=-0.002,-0.001,-0.0005,0,0.0005,0.001,0.002",
+    "--split-seed",
+    "20260430",
+    "--holdout-fraction",
+    "0.2",
+    "--aggregate",
+    "sum",
+    "--device",
+    "cuda",
+    "--all-pairs"
+  ],
+  "promotion_blockers": [
+    "not canonical component-response custody; output is diagnostic only"
+  ],
+  "promotion_eligible": false,
+  "recorded_at_utc": "2026-05-01T06:13:29Z",
+  "role": "diagnostic_component_sensitivity",
+  "schema_version": 1,
+  "score_claim": false,
+  "tool": "lightning_diagnostic_component_sensitivity_run_metadata"
+}

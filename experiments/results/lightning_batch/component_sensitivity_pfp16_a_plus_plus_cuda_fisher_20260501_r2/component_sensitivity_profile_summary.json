@@ -1,0 +1,53 @@
+{
+  "aggregate": "sum",
+  "canonical_scorer_path": false,
+  "checkpoint": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_20260501_r2/extracted/renderer.bin",
+  "component_response_path": "direct_renderer_tensor_inprocess_scorer",
+  "device": "cuda",
+  "elapsed_s": 600.3931622969999,
+  "evidence_grade": "diagnostic_cuda_fisher_proxy",
+  "excluded_layer_reasons": {
+    "renderer.film_bottleneck.scale.weight": "protected_linear",
+    "renderer.film_bottleneck.shift.weight": "protected_linear",
+    "renderer.film_decoder.scale.weight": "protected_linear",
+    "renderer.film_decoder.shift.weight": "protected_linear"
+  },
+  "finite_difference_epsilon": null,
+  "git_hash": "no-git",
+  "include_protected_conv2d": true,
+  "map_paths": {
+    "combined": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_20260501_r2/combined_sensitivity_map.pt",
+    "posenet": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_20260501_r2/posenet_sensitivity_map.pt",
+    "segnet": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_20260501_r2/segnet_sensitivity_map.pt"
+  },
+  "masks_mkv": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_20260501_r2/extracted/masks.mkv",
+  "n_pairs_calibration": 480,
+  "n_pairs_holdout": 120,
+  "n_pairs_selected": 600,
+  "n_pairs_total": 600,
+  "official_component_response": false,
+  "pair_weights": null,
+  "perturbation_basis_json": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_20260501_r2/perturbation_basis_v1.json",
+  "poses": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_20260501_r2/extracted/optimized_poses.bin",
+  "promotion_blockers": [
+    {
+      "code": "fisher_proxy_not_official_component_response",
+      "mathematical_explanation": "This profiler estimates component sensitivity with empirical Fisher proxies and holdout perturbation diagnostics. It is not yet an official finite-difference component-response artifact over the exact contest scorer, so it cannot be used as promotion evidence."
+    }
+  ],
+  "promotion_eligible": false,
+  "promotion_requested": false,
+  "response_curve_paths": {
+    "combined": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_20260501_r2/combined_response_curve.json",
+    "posenet": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_20260501_r2/posenet_response_curve.json",
+    "segnet": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_20260501_r2/segnet_response_curve.json"
+  },
+  "sample_plan_json": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_20260501_r2/sample_plan.json",
+  "schema_version": 1,
+  "sensitivity_source": "fisher_proxy",
+  "stability_json": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_20260501_r2/stability.json",
+  "tool": "experiments/profile_component_sensitivity.py",
+  "torch_version": "2.11.0+cu130",
+  "upstream_dir": "/teamspace/studios/this_studio/pact/upstream",
+  "video_mkv": "/teamspace/studios/this_studio/pact/upstream/videos/0.mkv"
+}
