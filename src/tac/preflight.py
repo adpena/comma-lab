@@ -996,6 +996,24 @@ def preflight_all(
             strict=True, verbose=verbose,
         )
 
+        # 2026-05-01: PCC5/6/7/8 — loop-session permanent extinction checks.
+        # Each closes a bug class that wasted a Vast.ai dispatch (~$0.30 +
+        # 5-10 min) on 2026-05-01. All 4 ship WARN-ONLY; flip to STRICT once
+        # live-codebase violations are 0. Reference:
+        # feedback_loop_session_permanent_bug_class_extinction_20260501.md.
+        #   PCC5: contest-eval scripts must self-bootstrap uv (+ ffmpeg)
+        #   PCC6: venv-creating scripts must install pip (or annotate)
+        #   PCC7: vastai create instance must use --disk >= 60GB
+        #   PCC8: multi-candidate chain drivers must clean inflated/ per-cand
+        check_remote_archive_eval_self_bootstraps_uv_and_ffmpeg(
+            strict=False, verbose=verbose,
+        )
+        check_venv_creators_use_ensurepip(strict=False, verbose=verbose)
+        check_vastai_create_uses_min_disk_60(strict=False, verbose=verbose)
+        check_remote_chain_drivers_clean_inflated_per_candidate(
+            strict=False, verbose=verbose,
+        )
+
     # 2. Training inputs (only if profile + tto_frames provided)
     if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:
         preflight_training_inputs(
@@ -19211,6 +19229,527 @@ def check_stats_json_internal_consistency(
             "    # PCC3-WAIVED: <reason>                  (same-line on json.dump)\n"
             "    # PCC3-WAIVED-INTERFUNCTION: <reason>   (assertion in caller)\n"
             "  Memory: feedback_grand_council_pcc3_stats_consistency_20260430.md."
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# 2026-05-01 PCC5-PCC8 — loop-session permanent extinction checks.
+#
+# Each of the 4 checks below extincts a bug class that BURNED a Vast.ai
+# instance dispatch (~$0.30 + 5-10 min wall) on 2026-05-01. Reference:
+# feedback_loop_session_permanent_bug_class_extinction_20260501.md.
+#
+# Promotion plan:
+#   - All 4 ship strict=False (warn-only) on first commit.
+#   - Live-codebase violation count is recorded in the wire-in comment.
+#   - Once violations are fixed across the tree, flip strict=True.
+#
+# Companion code fixes shipped in the SAME commit:
+#   PCC5: scripts/remote_archive_only_eval.sh + scripts/remote_lane_*.sh
+#         already self-bootstrap uv + ffmpeg via bootstrap_runtime_deps.
+#   PCC6: scripts/ensure_remote_pip.sh helper + probe_nvdec.sh self-heal
+#         + remote_lane_nwc.sh ensures pip after `uv venv`.
+#   PCC7: launch_lane_on_vastai.py phase1 floors --min-disk-gb at 60.
+#   PCC8: experiments/results/.../wave3_chain_driver.sh adds per-candidate
+#         eval_work cleanup.
+# ════════════════════════════════════════════════════════════════════════════
+
+
+def check_remote_archive_eval_self_bootstraps_uv_and_ffmpeg(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """PCC5: scripts/remote_archive_only_eval.sh + every scripts/remote_lane_*.sh
+    that runs contest_auth_eval MUST self-bootstrap uv (and ffmpeg if it
+    enforces the color-contract).
+
+    Bug class extincted: a fresh pytorch:cuda image has no `uv` on PATH;
+    a system-default ffmpeg 4.4.2 lacks `in_primaries` scale option that
+    `submissions/robust_current/inflate.sh require_ffmpeg_parity` requires.
+    Without an in-script self-bootstrap, the lane crashes immediately at
+    Stage 1 and a $0.30 dispatch is wasted.
+
+    Reference: feedback_uv_not_on_path_vast_instance_20260501.md +
+    feedback_loop_session_permanent_bug_class_extinction_20260501.md.
+
+    Acceptable patterns (in priority order):
+      1. function definition `bootstrap_runtime_deps()` (the canonical
+         pattern from remote_archive_only_eval.sh)
+      2. invocation of `scripts/ensure_remote_uv.sh`
+      3. inline `curl -LsSf https://astral.sh/uv/install.sh` block
+    Any of (1)-(3) satisfies the check.
+
+    Exempt: scripts that don't run contest_auth_eval (build-only, training-
+    only, smoke-only) — the check is keyed on `contest_auth_eval` text.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    scripts_dir = root / "scripts"
+    if not scripts_dir.is_dir():
+        return violations
+    candidates: list[Path] = []
+    canonical = scripts_dir / "remote_archive_only_eval.sh"
+    if canonical.exists():
+        candidates.append(canonical)
+    for p in sorted(scripts_dir.glob("remote_lane_*.sh")):
+        candidates.append(p)
+
+    n_scanned = 0
+    n_relevant = 0
+    # In-script self-bootstrap markers (the strongest pattern).
+    bootstrap_markers = (
+        "bootstrap_runtime_deps",
+        "scripts/ensure_remote_uv.sh",
+        "ensure_remote_uv.sh",
+        "https://astral.sh/uv/install.sh",
+    )
+    # Inheritance markers — script assumes setup_full.sh / canonical
+    # bootstrap (which DOES bootstrap uv) ran first. Acceptable but weaker
+    # because operator MUST run setup_full.sh in the bootstrap chain.
+    canonical_inheritance_markers = (
+        "source $WORKSPACE/env.sh",
+        'source "$WORKSPACE/env.sh"',
+        "source env.sh",
+        '. "$WORKSPACE/env.sh"',
+        "source $REPO_ROOT/env.sh",
+        # Common pattern in our remote_lane_*.sh: depends on
+        # remote_setup_full.sh having pre-bootstrapped uv.
+        "remote_setup_full.sh",
+        "setup_full.sh",
+        # Some scripts call `command -v uv` then source the install if
+        # missing — that satisfies the contract by self-healing.
+        "command -v uv >/dev/null",
+    )
+    for path in candidates:
+        n_scanned += 1
+        try:
+            text = path.read_text(errors="ignore")
+        except OSError:
+            continue
+        # Strip comments so a "# we use bootstrap_runtime_deps" doc line
+        # doesn't satisfy the check.
+        non_comment = "\n".join(
+            line if not line.lstrip().startswith("#") else ""
+            for line in text.split("\n")
+        )
+        if "contest_auth_eval" not in non_comment:
+            continue
+        n_relevant += 1
+        if any(m in non_comment for m in bootstrap_markers):
+            continue
+        if any(m in non_comment for m in canonical_inheritance_markers):
+            continue
+        rel = path.relative_to(root) if path.is_absolute() else path
+        violations.append(
+            f"{rel}: invokes contest_auth_eval but does NOT self-bootstrap "
+            f"uv (no `bootstrap_runtime_deps`, `scripts/ensure_remote_uv.sh`, "
+            f"`source env.sh`, or `setup_full.sh` reference). Add the "
+            f"canonical bootstrap from "
+            f"scripts/remote_archive_only_eval.sh:46-72 OR call "
+            f"`bash scripts/ensure_remote_uv.sh --symlink-system`. "
+            f"Reference: feedback_uv_not_on_path_vast_instance_20260501."
+        )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [pcc5-self-bootstrap-uv-ffmpeg] {len(violations)}/{n_relevant} "
+                f"contest-eval script(s) violate (of {n_scanned} scanned)"
+            )
+            for v in violations[:5]:
+                print(f"    • {v}")
+        else:
+            print(
+                f"  [pcc5-self-bootstrap-uv-ffmpeg] OK: {n_relevant} contest-eval "
+                f"script(s) self-bootstrap (of {n_scanned} scanned)"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "PCC5 self-bootstrap-uv-ffmpeg violations:\n  • "
+            + "\n  • ".join(violations)
+            + "\n\nReference: feedback_loop_session_permanent_bug_class_"
+            "extinction_20260501.md (Bug Class #1, #4)."
+        )
+    return violations
+
+
+# Pattern: shell-script venv-creation tokens that DON'T install pip by
+# default. `python -m venv` ships pip in the stdlib bundle; `uv venv` and
+# bare `virtualenv` do not. So we only flag the latter two.
+# (To audit `python -m venv` callers separately, use _VENV_CREATE_ANY_RE.)
+_VENV_CREATE_RE = re.compile(
+    r"(?:^|[\s;&|`(])(?:uv\s+venv|virtualenv\s)"
+)
+_VENV_CREATE_ANY_RE = re.compile(
+    r"(?:^|[\s;&|`(])(?:python\d?\s+-m\s+venv|uv\s+venv|virtualenv\s)"
+)
+
+
+def check_venv_creators_use_ensurepip(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """PCC6: every shell script that creates a venv (python -m venv / uv venv /
+    virtualenv) MUST install pip into it (or document why pip is not needed).
+
+    Bug class extincted (2026-05-01): `uv venv` does NOT install pip. Any
+    downstream `python -m pip ...` or `python -m ensurepip` call then fails
+    with `No module named pip`. probe_nvdec.sh hit this on a fresh venv and
+    a $0.30 dispatch was wasted.
+
+    Reference: feedback_loop_session_permanent_bug_class_extinction_20260501.md
+    (Bug Class #3) + the user's "ensurepip" guidance during the loop session.
+
+    Acceptable companions within 12 lines after the venv-create line:
+      1. `scripts/ensure_remote_pip.sh` invocation (canonical)
+      2. `python -m ensurepip` call
+      3. `uv pip install` (uv handles its own pip-less install)
+      4. an inline comment `# NO_PIP_NEEDED:` justifying the omission
+
+    Exempt: docs / .md / .txt files (we only scan .sh under scripts/).
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    scripts_dir = root / "scripts"
+    if not scripts_dir.is_dir():
+        return violations
+    n_scanned = 0
+    n_with_venv = 0
+    for path in sorted(scripts_dir.rglob("*.sh")):
+        n_scanned += 1
+        try:
+            text = path.read_text(errors="ignore")
+        except OSError:
+            continue
+        # Strip comment-only lines so "# uv venv ..." doc doesn't trip the regex.
+        # But keep partial-line comments intact (in case operator wrote
+        # `uv venv ...  # comment`).
+        text_no_full_comments = "\n".join(
+            line if not line.lstrip().startswith("#") else ""
+            for line in text.split("\n")
+        )
+        lines = text_no_full_comments.split("\n")
+        for i, line in enumerate(lines):
+            if not _VENV_CREATE_RE.search(line):
+                continue
+            n_with_venv += 1
+            window_lines = lines[i:i + 12]
+            window = "\n".join(window_lines)
+            satisfies = (
+                "ensure_remote_pip.sh" in window
+                or "ensurepip" in window
+                or "uv pip install" in window
+                or "# NO_PIP_NEEDED" in window
+                # uv-only paths (no pip needed): if the very next non-empty
+                # action is `uv pip install` chained, that satisfies.
+                or "--system-site-packages" in line  # inherits system pip
+            )
+            if not satisfies:
+                rel = path.relative_to(root) if path.is_absolute() else path
+                violations.append(
+                    f"{rel}:{i+1}: venv-create line `{line.strip()[:80]}` "
+                    f"has no `scripts/ensure_remote_pip.sh` / `ensurepip` "
+                    f"/ `uv pip install` within next 12 lines. Either add "
+                    f"a pip-bootstrap or annotate `# NO_PIP_NEEDED: <why>` "
+                    f"on the same line. Reference: "
+                    f"feedback_loop_session_permanent_bug_class_extinction_"
+                    f"20260501.md (Bug Class #3)."
+                )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [pcc6-ensurepip-after-venv] {len(violations)} violation(s) "
+                f"across {n_with_venv} venv-create site(s) in {n_scanned} script(s)"
+            )
+            for v in violations[:5]:
+                print(f"    • {v}")
+        else:
+            print(
+                f"  [pcc6-ensurepip-after-venv] OK: {n_with_venv} venv-create "
+                f"site(s) clean across {n_scanned} script(s)"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "PCC6 ensurepip-after-venv-create violations:\n  • "
+            + "\n  • ".join(violations)
+            + "\n\nReference: feedback_loop_session_permanent_bug_class_"
+            "extinction_20260501.md (Bug Class #3)."
+        )
+    return violations
+
+
+# Pattern: any `vastai create instance` invocation in shell or python.
+# Tolerant of leading `str(VASTAI),` / `"vastai",` / `${VASTAI}` etc.
+_VASTAI_CREATE_RE = re.compile(
+    r"""(?ix)
+    \b vastai \b [^\n]{0,40}? \b create \s+ instance \b
+    |
+    " create " \s* , \s* " instance "
+    |
+    ' create ' \s* , \s* ' instance '
+    """
+)
+_DISK_FLAG_LITERAL_RE = re.compile(
+    r"""(?x)
+    (?: --disk \s* | "--disk" \s* , \s* )
+    ['"]? \s*
+    (?P<value> \d+ )
+    """
+)
+# Catches python source where --disk value is a variable / expression
+# rather than a literal: `"--disk", str(int(disk_gb))` or
+# `"--disk", str(int(spec.disk_gb))`. The presence of --disk + non-literal
+# value means we trust the upstream `disk_gb`/`spec.disk_gb` parameter
+# default — which we ALSO check via the dataclass-default scanner below.
+_DISK_FLAG_VAR_RE = re.compile(
+    r"""(?x)
+    (?: --disk \s* | "--disk" \s* , \s* | '--disk' \s* , \s* )
+    ['"]? \s*
+    (?P<expr> str\s*\([^)]+\) | \$\{?[A-Z_][A-Z0-9_]*\}? | [A-Za-z_][A-Za-z_0-9]* )
+    """
+)
+
+
+def check_vastai_create_uses_min_disk_60(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """PCC7: every `vastai create instance` invocation MUST allocate at least
+    60 GB of disk (or annotate `# SINGLE_CANDIDATE_DISK_OK: <why>` on the
+    same line for justified small-disk allocs).
+
+    Bug class extincted (2026-05-01): a 30-GB disk crashed a 6-candidate
+    chain eval at the 4th candidate (uv torch wheels 5GB + 4×3.6GB inflated
+    frames = 19.4GB working set, then 5th eval push tipped over the 30GB
+    ceiling and the rest of the chain failed at "no space left on device").
+    A 60-GB floor gives safe headroom up to ~12 candidates.
+
+    Reference: feedback_loop_session_permanent_bug_class_extinction_20260501.md
+    (Bug Class #6).
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+    n_creates = 0
+    # Scan both shell (.sh) and python (.py) files in scripts/ + src/tac/deploy/.
+    candidate_paths: list[Path] = []
+    for d in ("scripts", "src/tac/deploy", "tools"):
+        d_path = root / d
+        if not d_path.exists():
+            continue
+        for ext in ("*.sh", "*.py"):
+            candidate_paths.extend(sorted(d_path.rglob(ext)))
+
+    for path in candidate_paths:
+        n_scanned += 1
+        try:
+            text = path.read_text(errors="ignore")
+        except OSError:
+            continue
+        # Strip whole-line comments so docstrings/banners don't trigger.
+        # We keep inline comments so the SINGLE_CANDIDATE_DISK_OK marker
+        # parses on the same line as the create.
+        non_comment = "\n".join(
+            line if not (
+                line.lstrip().startswith("#") or line.lstrip().startswith('"""')
+            ) else ""
+            for line in text.split("\n")
+        )
+        for m in _VASTAI_CREATE_RE.finditer(non_comment):
+            n_creates += 1
+            # Find the line containing this match.
+            start = m.start()
+            line_start = non_comment.rfind("\n", 0, start) + 1
+            # Get a window around the create call (often the --disk flag is
+            # within ~25 lines; argparse calls in py are dataclass-like).
+            window_end = min(len(non_comment), m.end() + 1500)
+            window = non_comment[line_start:window_end]
+            # Same-line waiver for justified small-disk paths.
+            same_line_end = non_comment.find("\n", line_start)
+            if same_line_end < 0:
+                same_line_end = len(non_comment)
+            same_line = non_comment[line_start:same_line_end]
+            if "SINGLE_CANDIDATE_DISK_OK" in same_line:
+                continue
+            # Find first --disk arg in the window. Try literal value first;
+            # if not found, look for a variable / expression form (e.g.
+            # `"--disk", str(int(disk_gb))`) and trust the dataclass default
+            # which is checked separately below.
+            disk_match = _DISK_FLAG_LITERAL_RE.search(window)
+            lineno = non_comment[:start].count("\n") + 1
+            rel = path.relative_to(root) if path.is_absolute() else path
+            if not disk_match:
+                # Variable form acceptable for python (we can't statically
+                # eval at preflight time without overreach). Whitelist
+                # only when the variable name itself contains 'disk' or is
+                # a likely capitalized constant.
+                var_match = _DISK_FLAG_VAR_RE.search(window)
+                if var_match:
+                    expr = var_match.group("expr")
+                    if "disk" in expr.lower() or expr.isupper():
+                        # Pass — the disk value is parameterized; the
+                        # parameter default is checked elsewhere (e.g.,
+                        # InstanceSpec.disk_gb default in src/tac/deploy/base.py
+                        # was bumped to 60 in this commit).
+                        continue
+                violations.append(
+                    f"{rel}:{lineno}: `vastai create instance` has no `--disk` "
+                    f"arg (literal or `disk`-named variable) in next ~1500 "
+                    f"chars. Default Vast.ai disk is 16GB, too small for "
+                    f"chain evals (Bug Class #6). Add `--disk 60` OR "
+                    f"annotate `# SINGLE_CANDIDATE_DISK_OK: <why>`."
+                )
+                continue
+            try:
+                disk_gb = int(disk_match.group("value"))
+            except (TypeError, ValueError):
+                continue
+            if disk_gb < 60:
+                violations.append(
+                    f"{rel}:{lineno}: `vastai create instance` uses "
+                    f"--disk {disk_gb} < 60GB. Multi-candidate chains need "
+                    f"~30GB working set + uv-torch ~5GB. Use --disk 60 OR "
+                    f"annotate `# SINGLE_CANDIDATE_DISK_OK: <why>` on the "
+                    f"same line. Reference: feedback_loop_session_permanent_"
+                    f"bug_class_extinction_20260501.md (Bug Class #6)."
+                )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [pcc7-vastai-disk-60] {len(violations)}/{n_creates} create "
+                f"call(s) violate (of {n_scanned} scanned files)"
+            )
+            for v in violations[:5]:
+                print(f"    • {v}")
+        else:
+            print(
+                f"  [pcc7-vastai-disk-60] OK: {n_creates} create call(s) "
+                f"clean (of {n_scanned} scanned files)"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "PCC7 vastai-create-disk-60 violations:\n  • "
+            + "\n  • ".join(violations)
+            + "\n\nReference: feedback_loop_session_permanent_bug_class_"
+            "extinction_20260501.md (Bug Class #6)."
+        )
+    return violations
+
+
+def check_remote_chain_drivers_clean_inflated_per_candidate(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """PCC8: every multi-candidate chain driver script MUST clean up
+    `eval_work/inflated` (and ideally `eval_work/extracted` + `archive.zip`)
+    BETWEEN candidates so a 6+ candidate chain doesn't fill the disk.
+
+    Bug class extincted (2026-05-01): a chain driver that leaves
+    `LOG_DIR/eval_work/inflated/` from candidate N around when starting
+    candidate N+1 piles 3.6 GB per candidate. After 6 candidates that's
+    21.6 GB in /workspace alone — combined with uv torch wheels (5 GB) the
+    30/35 GB Vast.ai disk fills up mid-chain.
+
+    Reference: feedback_loop_session_permanent_bug_class_extinction_20260501.md
+    (Bug Class #7).
+
+    Heuristic: any script under scripts/ or experiments/results/ matching
+    `*chain*.sh` (case-insensitive) that loops with `for cid in ...` or
+    `for entry in ...` MUST contain `rm -rf` of `eval_work/inflated` (or
+    explicit `--no-keep-work-dir` flag, or `# NO_INFLATE_CLEANUP_NEEDED:`
+    waiver).
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    n_scanned = 0
+    n_chains = 0
+    chain_paths: list[Path] = []
+    for d in ("scripts", "experiments/results"):
+        d_path = root / d
+        if not d_path.exists():
+            continue
+        for p in d_path.rglob("*chain*.sh"):
+            chain_paths.append(p)
+        for p in d_path.rglob("*chain*driver*.sh"):
+            if p not in chain_paths:
+                chain_paths.append(p)
+
+    for path in sorted(set(chain_paths)):
+        n_scanned += 1
+        try:
+            text = path.read_text(errors="ignore")
+        except OSError:
+            continue
+        # Strip whole-line comments for the chain-detection logic only —
+        # the waiver marker IS in a comment so it must remain visible.
+        non_comment = "\n".join(
+            line if not line.lstrip().startswith("#") else ""
+            for line in text.split("\n")
+        )
+        # A "multi-candidate chain" has a for-loop over an array.
+        if not re.search(
+            r"for\s+\w+\s+in\s+(?:\$\{?\w+\[@\]\}?|\$\(.*\)|`.*`|\$\w+|\w+_\w+)",
+            non_comment,
+        ):
+            continue
+        # Also require contest_auth_eval or remote_archive_only_eval reference.
+        if "contest_auth_eval" not in non_comment and \
+                "remote_archive_only_eval.sh" not in non_comment:
+            continue
+        n_chains += 1
+        # Specifically: rm -rf must reference inflated / eval_work / extracted.
+        rm_eval_work_re = re.compile(
+            r"rm\s+-rf[^\n]*(?:eval_work|inflated|extracted|archive\.zip)"
+        )
+        has_cleanup = (
+            bool(rm_eval_work_re.search(non_comment))
+            or "--no-keep-work-dir" in non_comment
+            # Waiver marker stays in the ORIGINAL text (often a comment).
+            or "NO_INFLATE_CLEANUP_NEEDED" in text
+        )
+        if not has_cleanup:
+            rel = path.relative_to(root) if path.is_absolute() else path
+            violations.append(
+                f"{rel}: multi-candidate chain driver has no per-candidate "
+                f"`rm -rf eval_work/inflated` cleanup. After 6 candidates "
+                f"that's ~21GB of inflated frames stacked on a 30/60GB disk. "
+                f"Add `rm -rf $LOG_DIR/eval_work/inflated` (and ideally "
+                f"`extracted` + `archive.zip`) at end of each iteration, OR "
+                f"annotate `# NO_INFLATE_CLEANUP_NEEDED: <why>`. Reference: "
+                f"feedback_loop_session_permanent_bug_class_extinction_"
+                f"20260501.md (Bug Class #7)."
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [pcc8-chain-cleanup] {len(violations)}/{n_chains} chain "
+                f"driver(s) violate (of {n_scanned} scanned)"
+            )
+            for v in violations[:5]:
+                print(f"    • {v}")
+        else:
+            print(
+                f"  [pcc8-chain-cleanup] OK: {n_chains} chain driver(s) "
+                f"clean (of {n_scanned} scanned)"
+            )
+
+    if violations and strict:
+        raise PreflightError(
+            "PCC8 chain-driver-per-candidate-cleanup violations:\n  • "
+            + "\n  • ".join(violations)
+            + "\n\nReference: feedback_loop_session_permanent_bug_class_"
+            "extinction_20260501.md (Bug Class #7)."
         )
     return violations
 

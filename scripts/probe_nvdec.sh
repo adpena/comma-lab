@@ -61,6 +61,8 @@ for arg in "$@"; do
 done
 
 PYBIN="${PYBIN:-/opt/conda/bin/python}"
+WORKSPACE="${WORKSPACE:-$(pwd)}"
+DALI_BOOTSTRAP_DIR="${DALI_BOOTSTRAP_DIR:-$WORKSPACE/.omx/state}"
 
 # ---------------------------------------------------------------------------
 # Lightweight pre-DALI NVDEC check via libnvcuvid.so + ctypes.
@@ -199,9 +201,40 @@ fi
 if ! "$PYBIN" -c "import nvidia.dali" 2>/dev/null; then
     if [ "$ENSURE_DALI" = "1" ]; then
         echo "[probe_nvdec] DALI missing; --ensure-dali set, installing..." >&2
-        "$PYBIN" -m pip install -q --extra-index-url \
-            https://developer.download.nvidia.com/compute/redist \
-            nvidia-dali-cuda120 2>&1 | tail -3 >&2
+        # 2026-05-01 self-heal (Bug Class #3): venvs created by `uv venv`
+        # have no pip. Auto-invoke scripts/ensure_remote_pip.sh BEFORE the
+        # pip install path so we don't fail with
+        # "No module named pip" on a fresh-host probe. Reference:
+        # feedback_loop_session_permanent_bug_class_extinction_20260501.md.
+        if ! "$PYBIN" -c "import pip" >/dev/null 2>&1; then
+            if [ -f "$WORKSPACE/scripts/ensure_remote_pip.sh" ]; then
+                echo "[probe_nvdec] pip missing on $PYBIN; running ensure_remote_pip.sh self-heal" >&2
+                PYBIN="$PYBIN" bash "$WORKSPACE/scripts/ensure_remote_pip.sh" "$PYBIN" >/dev/null 2>&1 || {
+                    echo "[probe_nvdec] WARN: ensure_remote_pip.sh failed; will try uv path next" >&2
+                }
+            else
+                echo "[probe_nvdec] WARN: pip missing AND scripts/ensure_remote_pip.sh missing; falling through to uv path" >&2
+            fi
+        fi
+        if [ -f "$WORKSPACE/scripts/bootstrap_dali_hash_pinned.py" ]; then
+            mkdir -p "$DALI_BOOTSTRAP_DIR"
+            DALI_BOOTSTRAP_JSON="${DALI_BOOTSTRAP_JSON:-$DALI_BOOTSTRAP_DIR/dali_hash_bootstrap_$(date -u +%Y%m%dT%H%M%SZ).json}"
+            "$PYBIN" "$WORKSPACE/scripts/bootstrap_dali_hash_pinned.py" \
+                --json-out "$DALI_BOOTSTRAP_JSON" \
+                --force >&2
+            echo "[probe_nvdec] DALI hash-pinned bootstrap recorded at $DALI_BOOTSTRAP_JSON" >&2
+        elif "$PYBIN" -m pip --version >/dev/null 2>&1; then
+            "$PYBIN" -m pip install -q --extra-index-url \
+                https://developer.download.nvidia.com/compute/redist \
+                nvidia-dali-cuda120 2>&1 | tail -3 >&2
+        elif command -v uv >/dev/null 2>&1; then
+            uv pip install --python "$PYBIN" --extra-index-url \
+                https://developer.download.nvidia.com/compute/redist \
+                nvidia-dali-cuda120 2>&1 | tail -3 >&2
+        else
+            echo "[probe_nvdec] FATAL: DALI missing and neither hash bootstrap, pip, nor uv is available" >&2
+            exit 1
+        fi
         if ! "$PYBIN" -c "import nvidia.dali" 2>/dev/null; then
             echo "[probe_nvdec] FATAL: install completed but import still fails" >&2
             exit 1

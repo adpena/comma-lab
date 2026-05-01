@@ -65,8 +65,15 @@ class InstanceSpec:
     num_gpus: int = 1
     """Number of GPUs."""
 
-    disk_gb: float = 40.0
-    """Minimum disk space in GB."""
+    disk_gb: float = 60.0
+    """Minimum disk space in GB.
+
+    2026-05-01 (Bug Class #6): bumped from 40 → 60. Multi-candidate eval
+    chains (e.g. 6 archive eval) need ~5 GB uv-torch wheels + 6 × 3.6 GB
+    inflated frames = 27 GB just for the work. 40 GB left no margin for
+    OS + container overhead and crashed mid-chain. 60 GB is the safe floor.
+    Reference: feedback_loop_session_permanent_bug_class_extinction_20260501.md.
+    """
 
     min_reliability: float = 0.95
     """Minimum reliability score (0.0-1.0). Vast.ai-specific but harmless elsewhere."""

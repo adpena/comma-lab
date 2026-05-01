@@ -81,12 +81,24 @@ def run(cmd: list[str], timeout: int = 60, capture: bool = True) -> tuple[int, s
         return -1, "", "TIMEOUT"
 
 
-def find_offer(min_reliability: float = 0.96, max_dph: float = 0.50) -> int:
-    """Search Vast.ai for cheapest 4090 matching constraints. Return offer id."""
+def find_offer(
+    min_reliability: float = 0.96,
+    max_dph: float = 0.50,
+    min_disk_gb: int = 60,
+) -> int:
+    """Search Vast.ai for cheapest 4090 matching constraints. Return offer id.
+
+    2026-05-01 (Bug Class #6): bumped min_disk_gb floor from 30 → 60.
+    A multi-candidate chain (e.g. wave3 6-archive eval) needs ~5 GB for
+    uv-installed torch wheels + 6 × 3.6 GB inflated frames = 27 GB, hitting
+    the previous 30 GB ceiling and crashing mid-chain. 60 GB gives a safe
+    margin for any chain up to ~12 candidates.
+    Reference: feedback_loop_session_permanent_bug_class_extinction_20260501.md.
+    """
     cmd = [
         str(VASTAI), "search", "offers",
         f"gpu_name=RTX_4090 reliability>{min_reliability} inet_down>200 "
-        f"disk_space>30 num_gpus=1 geolocation!=KR",
+        f"disk_space>{min_disk_gb} num_gpus=1 geolocation!=KR",
         "-o", "dph", "--raw",
     ]
     rc, out, err = run(cmd, timeout=30)
@@ -99,13 +111,21 @@ def find_offer(min_reliability: float = 0.96, max_dph: float = 0.50) -> int:
     raise RuntimeError(f"No offer < ${max_dph}/hr available")
 
 
-def create_instance(offer_id: int, label: str) -> int:
+def create_instance(offer_id: int, label: str, disk_gb: int = 60) -> int:
     """Create a Vast.ai instance. Returns instance ID (new_contract).
 
     2026-04-28: relaxed success check — Vast.ai sometimes returns
     `success=False` even when `new_contract` is set, for offers that get
     "queued for allocation" (cur_state=stopped). Caller should verify the
     instance transitions to `cur_state=running` via wait_for_vastai_ready.
+
+    2026-05-01 (Bug Class #6): default disk_gb bumped from 35 → 60.
+    A 30 GB ceiling held a 6-candidate eval chain to its OWN limits:
+    ~5 GB uv-managed torch wheels + 6 × 3.6 GB inflated frames = 27 GB
+    out of 30, then mid-chain disk-full crash. The matching offer-search
+    floor is also 60 (find_offer min_disk_gb=60). The new check
+    `check_vastai_create_uses_min_disk_60` enforces this in preflight.
+    Reference: feedback_loop_session_permanent_bug_class_extinction_20260501.md.
     """
     # NVIDIA_DRIVER_CAPABILITIES=all exposes libnvcuvid.so (NVDEC) +
     # libnvidia-encode.so (NVENC) inside the container. Default pytorch
@@ -113,10 +133,16 @@ def create_instance(offer_id: int, label: str) -> int:
     # showed "NVDEC missing" / DALI CUDA_ERROR_NO_DEVICE. Setting this on
     # the Vast.ai onstart env resurrects all those hosts.
     # Sources: NVIDIA Container Toolkit docs, DALI #4034, nvidia-docker #1001.
+    if disk_gb < 60:
+        sys.stderr.write(
+            f"  [warn] create_instance called with disk_gb={disk_gb} < 60GB; "
+            f"chain evals (>1 candidate) and uv-torch installs need ~30GB+ "
+            f"by themselves (Bug Class #6, 2026-05-01).\n"
+        )
     cmd = [
         str(VASTAI), "create", "instance", str(offer_id),
         "--image", "pytorch/pytorch:2.5.1-cuda12.4-cudnn9-devel",
-        "--disk", "35",
+        "--disk", str(int(disk_gb)),
         "--label", label,
         "--ssh",
         "--env", "NVIDIA_DRIVER_CAPABILITIES=all",
@@ -699,15 +725,16 @@ def cmd_phase1(args) -> int:
     if not lane_script_path.exists():
         print(f"FATAL: lane script not found: {args.lane_script}", file=sys.stderr)
         return 2
-    print(f"=== phase1 Stage 0: Find offer (max ${args.max_dph}/hr) ===")
+    min_disk_gb = int(getattr(args, "min_disk_gb", 60) or 60)
+    print(f"=== phase1 Stage 0: Find offer (max ${args.max_dph}/hr, disk>={min_disk_gb}GB) ===")
     try:
-        offer_id = find_offer(max_dph=args.max_dph)
+        offer_id = find_offer(max_dph=args.max_dph, min_disk_gb=min_disk_gb)
     except Exception as e:
         print(f"FATAL: {e}", file=sys.stderr)
         return 2
     print(f"  offer_id={offer_id}")
-    print("=== phase1 Stage 1: Create instance ===")
-    instance_id = create_instance(offer_id, args.label)
+    print(f"=== phase1 Stage 1: Create instance (disk={min_disk_gb}GB) ===")
+    instance_id = create_instance(offer_id, args.label, disk_gb=min_disk_gb)
     register_in_tracker(instance_id, args.label, {
         "estimated_cost_usd": args.estimated_cost,
         "predicted_band": list(args.predicted_band),
@@ -1039,6 +1066,12 @@ def main() -> int:
     p1.add_argument("--estimated-cost", type=float, default=2.0)
     p1.add_argument("--council-priority", type=int, default=99)
     p1.add_argument("--max-dph", type=float, default=0.50)
+    # 2026-05-01 (Bug Class #6): default 60 GB. Chain evals + uv-torch + 6
+    # inflated frame dirs run out of room at 30 GB. Reference:
+    # feedback_loop_session_permanent_bug_class_extinction_20260501.md.
+    p1.add_argument("--min-disk-gb", type=int, default=60,
+                    help="Minimum disk space (GB) for offer search AND --disk "
+                         "alloc on create. Bug Class #6: floors at 60.")
 
     # phase2 (legacy combined — kept for backward compat with v3 callers)
     p2 = sub.add_parser("phase2", help="Combined phase2-wait + phase2-deploy (~3-5 min, harness-risky)")
@@ -1110,6 +1143,9 @@ def main() -> int:
     pf.add_argument("--estimated-cost", type=float, default=2.0)
     pf.add_argument("--council-priority", type=int, default=99)
     pf.add_argument("--max-dph", type=float, default=0.50)
+    pf.add_argument("--min-disk-gb", type=int, default=60,
+                    help="Minimum disk space (GB) for offer search AND --disk "
+                         "alloc on create. Bug Class #6: floors at 60.")
 
     # Legacy positional support: if first arg isn't a subcommand, default to 'full'
     p.add_argument("--lane-script", required=False, help=argparse.SUPPRESS)
@@ -1123,6 +1159,7 @@ def main() -> int:
     p.add_argument("--council-priority", type=int, default=99, help=argparse.SUPPRESS)
     p.add_argument("--dry-run", action="store_true", help=argparse.SUPPRESS)
     p.add_argument("--max-dph", type=float, default=0.50, help=argparse.SUPPRESS)
+    p.add_argument("--min-disk-gb", type=int, default=60, help=argparse.SUPPRESS)
     args = p.parse_args()
 
     # Dispatch

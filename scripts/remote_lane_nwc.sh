@@ -170,6 +170,15 @@ fi
 if [ ! -d "$WORKSPACE/.venv" ]; then
     log "  creating uv venv at $WORKSPACE/.venv"
     uv venv "$WORKSPACE/.venv"
+    # 2026-05-01 (Bug Class #3): `uv venv` does NOT install pip; bootstrap
+    # via canonical helper so any downstream `python -m pip ...` works.
+    # Reference: feedback_loop_session_permanent_bug_class_extinction_20260501.md.
+    if [ -f "$WORKSPACE/scripts/ensure_remote_pip.sh" ]; then
+        PYBIN="$WORKSPACE/.venv/bin/python" \
+            bash "$WORKSPACE/scripts/ensure_remote_pip.sh" \
+            "$WORKSPACE/.venv/bin/python" >/dev/null || \
+            log "  warn: ensure_remote_pip.sh exited non-zero (uv-only path will be used)"
+    fi
 fi
 # Activate uv-managed venv
 # shellcheck disable=SC1091

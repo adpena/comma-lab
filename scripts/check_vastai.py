@@ -434,10 +434,14 @@ def cmd_create(args: argparse.Namespace) -> int:
     print(f"  Best offer: ${dph:.3f}/hr (ID: {offer_id})")
     print(f"  Label: {label}")
 
+    # 2026-05-01 (Bug Class #6): bumped --disk from 40 → 60. Chain evals
+    # need ~30GB working set + uv-torch wheels ~5GB; 40GB left no margin
+    # and crashed mid-chain. Reference:
+    # feedback_loop_session_permanent_bug_class_extinction_20260501.md.
     create_result = _run_vastai([
         "create", "instance", str(offer_id),
         "--image", "pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime",
-        "--disk", "40",
+        "--disk", "60",
         "--ssh", "--direct",
         "--onstart-cmd", ONSTART_SCRIPT,
         "--label", label,
