@@ -1,0 +1,19 @@
+{
+  "started_at_utc": "2026-04-29T02:27:21Z",
+  "git_hash": "no-git",
+  "gpu_name": "NVIDIA GeForce RTX 4090",
+  "driver_version": "550.90.07",
+  "torch_version": "2.5.1+cu124",
+  "cuda_version": "12.4",
+  "cuda_available": true,
+  "lane_script": "scripts/remote_lane_sz_phase2_full.sh",
+  "lane_name": "lane_sz_phase2_szabolcs_no_masks_paradigm",
+  "predicted_band": [
+    0.3,
+    0.5
+  ],
+  "rationale": "szabolcs PR#56 reports auth 0.36 [contest-CUDA]. Our SzabolcsRenderer is the byte-for-byte architecture replica from /tmp/szabolcs_re/inflate.py + an encoder we wrote (the reference is decode-only). Block-FP at 1.0-1.5 bits/weight + tar.xz outer compression. Predicted band: low end matches PR#56; high end accounts for our encoder fidelity + lack of QAT/pose-TTO refinement.",
+  "archive_contents": "renderer.bin (SZv1) ONLY \u2014 no masks.mkv (LUT reconstructed from luma), no optimized_poses.pt (per-frame affine embedded).",
+  "output_dir": "/workspace/pact/lane_sz_phase2_results",
+  "tag": "lane_sz_phase2"
+}

@@ -1,0 +1,26 @@
+{
+  "lane_id": "lane_sc_plus_plus_kl_distill",
+  "started_at_utc": "2026-04-30T07:09:05Z",
+  "git_hash": "no-git",
+  "gpu_name": "NVIDIA GeForce RTX 4090",
+  "driver_version": "550.120",
+  "torch_version": "2.5.1+cu124",
+  "cuda_version": "12.4",
+  "cuda_available": true,
+  "lane_script": "scripts/remote_lane_sc_plus_plus_kl_distill.sh",
+  "output_dir": "/workspace/pact/lane_sc_plus_plus_kl_distill_results",
+  "variant": "kl_distill",
+  "arch": {
+    "hidden": 24,
+    "block_hidden": 24,
+    "num_blocks": 8
+  },
+  "kl_distill_weight": 0.002,
+  "kl_distill_temperature": 2.0,
+  "predicted_band": [
+    0.3,
+    0.4
+  ],
+  "anchor_dir": "experiments/results/lane_a_landed/iter_0",
+  "paradigm": "segmap_clone_with_kl_distill"
+}

@@ -1,0 +1,39 @@
+{
+  "cache_kind": "diagnose_nerv_geometry_predecoded_mask_stream",
+  "decode_request": {
+    "archive_member": "masks.nrv",
+    "expected_frames": 1200,
+    "height": 384,
+    "nrv_batch_size": 262144,
+    "nrv_decode_mode": "bounded_cpu_coordinate_stream_v1",
+    "width": 512
+  },
+  "decoded_mask_dtype": "torch.uint8",
+  "decoded_mask_sha256": "5d8504ac2bb018a123fa238dbcb55615ca50278942c03bf49425df46023389b4",
+  "decoded_mask_sha256_algo": "sha256(shape,dtype,contiguous-raw-bytes)",
+  "decoded_mask_shape": [
+    1200,
+    384,
+    512
+  ],
+  "fingerprint": {
+    "archive_member_resolved": "masks.nrv",
+    "archive_member_sha256": "b3258dad7550f5e7a496f4834ed9990a3e9900a192c9045dca951e751412a4de",
+    "archive_member_size_bytes": 23594,
+    "cache_kind": "diagnose_nerv_geometry_predecoded_mask_stream",
+    "decoder_semantics": "class_id_tensor_THW_v1",
+    "expected_frames": 1200,
+    "height": 384,
+    "payload_suffix": ".nrv",
+    "schema_version": 1,
+    "source_sha256": "864549cc648f0b3a023076c11812ccd0f10b1d013ed3fd6bb24d20bbcde85c97",
+    "source_size_bytes": 296478,
+    "source_suffix": ".zip",
+    "width": 512
+  },
+  "promotion_eligible": false,
+  "schema_version": 1,
+  "score_claim_eligible": false,
+  "score_evidence_grade": "empirical",
+  "tensor_file": "9bba6fea10f3dbe15783f3bee710f1f8858624a26697971c86305a21c1a9d53a.pt"
+}

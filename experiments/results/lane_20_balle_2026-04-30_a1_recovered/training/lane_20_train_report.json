@@ -1,0 +1,25 @@
+{
+  "renderer": "submissions/baseline_dilated_h64_0_90/renderer.bin",
+  "n_total_qints": 281948,
+  "n_blocks": 1101,
+  "block_size": 256,
+  "z_dim": 8,
+  "hidden_dim": 16,
+  "num_symbols": 15,
+  "offset": 7,
+  "steps": 5000,
+  "lr": 0.01,
+  "ema_decay": 0.997,
+  "seed": 20,
+  "device": "cuda",
+  "static_baseline_bytes": 136296,
+  "best_full_balle_bytes": 136296,
+  "best_step": -1,
+  "savings_vs_static_pct": 0.0,
+  "verdict": "STATIC_WINS_FALLBACK",
+  "claude_md_compliance": {
+    "ema_decay_0_997": true,
+    "no_mps_used": true,
+    "auth_eval_delegated_to_remote_lane": true
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "started_at_utc": "2026-04-30T12:39:38Z",
+  "git_hash": "no-git",
+  "gpu_name": "NVIDIA GeForce RTX 4090",
+  "driver_version": "580.95.05",
+  "torch_version": "2.5.1+cu124",
+  "cuda_version": "12.4",
+  "cuda_available": true,
+  "lane_script": "scripts/remote_lane_20_balle.sh",
+  "output_dir": "/workspace/pact/lane_20_balle_results",
+  "tag": "lane_20_balle",
+  "profile": "lane_20_balle_lane_g_v3",
+  "predicted_band": [
+    1.04,
+    1.05
+  ],
+  "anchor_score_baseline": 1.05,
+  "anchor_lane": "lane_g_v3 (1.05 contest-CUDA)",
+  "lane_20_premise": "Replace the static arithmetic codec on the renderer FP4 qint stream with a learned Balle hyperprior (or Hotz-LITE chunked-static fallback). Auto-fallback to static prevents regression.",
+  "phase_e_empirical_artifact": "reports/lane_20_balle_real_archive.json",
+  "cost_estimate_usd": 0.2,
+  "wall_clock_estimate_minutes": 40
+}

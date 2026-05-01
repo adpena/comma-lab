@@ -1,0 +1,8 @@
+{
+  "lane_script": "scripts/remote_lane_g_v3_owv3_fisher_stack.sh",
+  "label": "lane_g_v3_owv3_fisher_smoke_20260430_codex",
+  "gpu": "A10G",
+  "max_seconds": 7200,
+  "call_id": "fc-01KQFKCAKBZ3MKRRPNDK6T8DV6",
+  "dispatched_at": "2026-04-30T11:26:02.222016"
+}

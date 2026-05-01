@@ -1,0 +1,220 @@
+{
+  "component_passed": {
+    "combined": false,
+    "posenet": false,
+    "segnet": false
+  },
+  "correlation": {
+    "combined": {
+      "pearson": 0.7837866786238227,
+      "spearman": 0.6902543230636515
+    },
+    "posenet": {
+      "pearson": 0.948278345891988,
+      "spearman": 0.8628230557404529
+    },
+    "segnet": {
+      "pearson": 0.4903349609886379,
+      "spearman": 0.8982370144661752
+    }
+  },
+  "counts": {
+    "combined": {
+      "calibration": {
+        "channels": 717,
+        "layers": 19,
+        "negative": 0,
+        "nonfinite": 0,
+        "zero": 0
+      },
+      "holdout": {
+        "channels": 717,
+        "layers": 19,
+        "negative": 0,
+        "nonfinite": 0,
+        "zero": 0
+      }
+    },
+    "posenet": {
+      "calibration": {
+        "channels": 717,
+        "layers": 19,
+        "negative": 0,
+        "nonfinite": 0,
+        "zero": 0
+      },
+      "holdout": {
+        "channels": 717,
+        "layers": 19,
+        "negative": 0,
+        "nonfinite": 0,
+        "zero": 0
+      }
+    },
+    "segnet": {
+      "calibration": {
+        "channels": 717,
+        "layers": 19,
+        "negative": 0,
+        "nonfinite": 0,
+        "zero": 198
+      },
+      "holdout": {
+        "channels": 717,
+        "layers": 19,
+        "negative": 0,
+        "nonfinite": 0,
+        "zero": 198
+      }
+    }
+  },
+  "cv": {
+    "combined": 0.9880682229995728,
+    "posenet": 0.9408424496650696,
+    "segnet": 1.1149845123291016
+  },
+  "cv_by_layer": {
+    "combined": {
+      "motion.bottleneck.conv1.weight": 0.6659563183784485,
+      "motion.bottleneck.conv2.weight": 0.4225703477859497,
+      "motion.down.0.weight": 0.5971605777740479,
+      "motion.fuse.weight": 0.3901785612106323,
+      "motion.head.weight": 0.2636915147304535,
+      "motion.stem.0.weight": 0.47136375308036804,
+      "motion.up_conv.weight": 0.44459959864616394,
+      "renderer.bottleneck.conv1.weight": 0.9880682229995728,
+      "renderer.bottleneck.conv2.weight": 0.9570825099945068,
+      "renderer.down_conv.weight": 0.755138635635376,
+      "renderer.down_res.conv1.weight": 0.9287346005439758,
+      "renderer.down_res.conv2.weight": 0.6946169137954712,
+      "renderer.fuse_conv.weight": 0.06888332962989807,
+      "renderer.head.weight": 0.34579476714134216,
+      "renderer.stem_conv.weight": 0.931751012802124,
+      "renderer.stem_res.conv1.weight": 0.7644262313842773,
+      "renderer.stem_res.conv2.weight": 0.8085172772407532,
+      "renderer.up_res.conv1.weight": 0.7150270938873291,
+      "renderer.up_res.conv2.weight": 0.5346814393997192
+    },
+    "posenet": {
+      "motion.bottleneck.conv1.weight": 0.6659563183784485,
+      "motion.bottleneck.conv2.weight": 0.4225703477859497,
+      "motion.down.0.weight": 0.5971605777740479,
+      "motion.fuse.weight": 0.3901785612106323,
+      "motion.head.weight": 0.2636915147304535,
+      "motion.stem.0.weight": 0.47136375308036804,
+      "motion.up_conv.weight": 0.44459959864616394,
+      "renderer.bottleneck.conv1.weight": 0.8928154706954956,
+      "renderer.bottleneck.conv2.weight": 0.9408424496650696,
+      "renderer.down_conv.weight": 0.6902532577514648,
+      "renderer.down_res.conv1.weight": 0.7795097231864929,
+      "renderer.down_res.conv2.weight": 0.7767186760902405,
+      "renderer.fuse_conv.weight": 0.27062827348709106,
+      "renderer.head.weight": 0.44731470942497253,
+      "renderer.stem_conv.weight": 0.8075104355812073,
+      "renderer.stem_res.conv1.weight": 0.47506341338157654,
+      "renderer.stem_res.conv2.weight": 0.7751467227935791,
+      "renderer.up_res.conv1.weight": 0.6753072738647461,
+      "renderer.up_res.conv2.weight": 0.40094780921936035
+    },
+    "segnet": {
+      "motion.bottleneck.conv1.weight": 0.0,
+      "motion.bottleneck.conv2.weight": 0.0,
+      "motion.down.0.weight": 0.0,
+      "motion.fuse.weight": 0.0,
+      "motion.head.weight": 0.0,
+      "motion.stem.0.weight": 0.0,
+      "motion.up_conv.weight": 0.0,
+      "renderer.bottleneck.conv1.weight": 1.0603656768798828,
+      "renderer.bottleneck.conv2.weight": 1.1149845123291016,
+      "renderer.down_conv.weight": 0.9173147678375244,
+      "renderer.down_res.conv1.weight": 0.947344183921814,
+      "renderer.down_res.conv2.weight": 0.7901434302330017,
+      "renderer.fuse_conv.weight": 1.0161415338516235,
+      "renderer.head.weight": 0.7700103521347046,
+      "renderer.stem_conv.weight": 1.0422409772872925,
+      "renderer.stem_res.conv1.weight": 0.8140459060668945,
+      "renderer.stem_res.conv2.weight": 0.9297870397567749,
+      "renderer.up_res.conv1.weight": 0.5773555040359497,
+      "renderer.up_res.conv2.weight": 0.8272109627723694
+    }
+  },
+  "passed": false,
+  "rank": {
+    "combined": 0.3333333333333333,
+    "posenet": 1.0,
+    "segnet": 0.0
+  },
+  "thresholds": {
+    "cv_max": 0.35,
+    "pearson_min": 0.0,
+    "spearman_min": 0.3,
+    "top_decile_overlap_min": 0.5
+  },
+  "top_fraction": {
+    "combined": {
+      "top_10pct": {
+        "fraction": 0.1,
+        "k": 72,
+        "overlap": 0.39805825242718446
+      },
+      "top_1pct": {
+        "fraction": 0.01,
+        "k": 8,
+        "overlap": 0.6
+      },
+      "top_5pct": {
+        "fraction": 0.05,
+        "k": 36,
+        "overlap": 0.3333333333333333
+      }
+    },
+    "posenet": {
+      "top_10pct": {
+        "fraction": 0.1,
+        "k": 72,
+        "overlap": 0.5652173913043478
+      },
+      "top_1pct": {
+        "fraction": 0.01,
+        "k": 8,
+        "overlap": 0.7777777777777778
+      },
+      "top_5pct": {
+        "fraction": 0.05,
+        "k": 36,
+        "overlap": 0.44
+      }
+    },
+    "segnet": {
+      "top_10pct": {
+        "fraction": 0.1,
+        "k": 72,
+        "overlap": 0.45454545454545453
+      },
+      "top_1pct": {
+        "fraction": 0.01,
+        "k": 8,
+        "overlap": 0.45454545454545453
+      },
+      "top_5pct": {
+        "fraction": 0.05,
+        "k": 36,
+        "overlap": 0.38461538461538464
+      }
+    }
+  },
+  "top_k": {
+    "combined": {
+      "k": 2,
+      "overlap": 0.3333333333333333
+    },
+    "posenet": {
+      "k": 2,
+      "overlap": 1.0
+    },
+    "segnet": {
+      "k": 2,
+      "overlap": 0.0
+    }
+  }
+}

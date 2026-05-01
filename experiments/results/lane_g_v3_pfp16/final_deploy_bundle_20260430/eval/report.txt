@@ -1,0 +1,17 @@
+=== Evaluation config ===
+  batch_size: 16
+  device: cuda
+  num_threads: 2
+  prefetch_queue_depth: 4
+  report: /home/zeus/content/pact_pfp16_exact_20260430T1625Z/experiments/results/lane_g_v3_pfp16/pfp16_a_plus_plus_t4_20260430T1620Z_codex/eval_work/report.txt
+  seed: 1234
+  submission_dir: /home/zeus/content/pact_pfp16_exact_20260430T1625Z/experiments/results/lane_g_v3_pfp16/pfp16_a_plus_plus_t4_20260430T1620Z_codex/eval_work
+  uncompressed_dir: /home/zeus/content/upstream/videos
+  video_names_file: /home/zeus/content/upstream/public_test_video_names.txt
+=== Evaluation results over 600 samples ===
+  Average PoseNet Distortion: 0.00346442
+  Average SegNet Distortion: 0.00400656
+  Submission file size: 686,635 bytes
+  Original uncompressed size: 37,545,489 bytes
+  Compression Rate: 0.01828808
+  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 1.04

@@ -1,0 +1,227 @@
+{
+  "atom_count": 5,
+  "atoms": [
+    {
+      "atom_id": "asym_payload_0000_l025_renderer_up_conv_ch18_b480",
+      "bits": 8,
+      "blob_kind": "weight",
+      "byte_index_within_channel_payload": 480,
+      "channel_index": 18,
+      "delta_per_epsilon": 1,
+      "layer_index": 25,
+      "layer_name": "renderer.up_conv",
+      "margin_to_byte_range": 91,
+      "member": "renderer.bin",
+      "offset": 203632,
+      "original_byte": 164,
+      "payload_bytes": 34560,
+      "selection_rank": 0,
+      "shape": [
+        60,
+        36,
+        4,
+        4
+      ]
+    },
+    {
+      "atom_id": "asym_payload_0001_l021_renderer_down_res_conv1_ch30_b270",
+      "bits": 8,
+      "blob_kind": "weight",
+      "byte_index_within_channel_payload": 270,
+      "channel_index": 30,
+      "delta_per_epsilon": 1,
+      "layer_index": 21,
+      "layer_name": "renderer.down_res.conv1",
+      "margin_to_byte_range": 114,
+      "member": "renderer.bin",
+      "offset": 72254,
+      "original_byte": 114,
+      "payload_bytes": 32400,
+      "selection_rank": 1,
+      "shape": [
+        60,
+        60,
+        3,
+        3
+      ]
+    },
+    {
+      "atom_id": "asym_payload_0002_l022_renderer_down_res_conv2_ch30_b270",
+      "bits": 8,
+      "blob_kind": "weight",
+      "byte_index_within_channel_payload": 270,
+      "channel_index": 30,
+      "delta_per_epsilon": 1,
+      "layer_index": 22,
+      "layer_name": "renderer.down_res.conv2",
+      "margin_to_byte_range": 88,
+      "member": "renderer.bin",
+      "offset": 104782,
+      "original_byte": 88,
+      "payload_bytes": 32400,
+      "selection_rank": 2,
+      "shape": [
+        60,
+        60,
+        3,
+        3
+      ]
+    },
+    {
+      "atom_id": "asym_payload_0003_l023_renderer_bottleneck_conv1_ch30_b270",
+      "bits": 8,
+      "blob_kind": "weight",
+      "byte_index_within_channel_payload": 270,
+      "channel_index": 30,
+      "delta_per_epsilon": 1,
+      "layer_index": 23,
+      "layer_name": "renderer.bottleneck.conv1",
+      "margin_to_byte_range": 113,
+      "member": "renderer.bin",
+      "offset": 137310,
+      "original_byte": 142,
+      "payload_bytes": 32400,
+      "selection_rank": 3,
+      "shape": [
+        60,
+        60,
+        3,
+        3
+      ]
+    },
+    {
+      "atom_id": "asym_payload_0004_l024_renderer_bottleneck_conv2_ch30_b270",
+      "bits": 8,
+      "blob_kind": "weight",
+      "byte_index_within_channel_payload": 270,
+      "channel_index": 30,
+      "delta_per_epsilon": 1,
+      "layer_index": 24,
+      "layer_name": "renderer.bottleneck.conv2",
+      "margin_to_byte_range": 76,
+      "member": "renderer.bin",
+      "offset": 169838,
+      "original_byte": 179,
+      "payload_bytes": 32400,
+      "selection_rank": 4,
+      "shape": [
+        60,
+        60,
+        3,
+        3
+      ]
+    }
+  ],
+  "auth_eval_required": "cuda",
+  "basis_kind": "asym_renderer_quantized_weight_payload_byte_additive",
+  "canonical_response_eval_path": "archive.zip -> inflate.sh -> upstream/evaluate.py",
+  "decode_verification": {
+    "device": "cpu",
+    "implemented": true,
+    "loader": "tac.renderer_export.load_asymmetric_checkpoint",
+    "points": [
+      {
+        "decode_ok": true,
+        "epsilon": -2.0,
+        "renderer_bytes": 296776,
+        "renderer_sha256": "1219c1f4f413135124b73efce1db09e6f569424daea80989259951e11e101bbe"
+      },
+      {
+        "decode_ok": true,
+        "epsilon": -1.0,
+        "renderer_bytes": 296776,
+        "renderer_sha256": "244d37ed1bf7a107a8251510935b5a65946365589545378d767b8f4be8f1c84d"
+      },
+      {
+        "decode_ok": true,
+        "epsilon": 0.0,
+        "renderer_bytes": 296776,
+        "renderer_sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529"
+      },
+      {
+        "decode_ok": true,
+        "epsilon": 1.0,
+        "renderer_bytes": 296776,
+        "renderer_sha256": "d4ea3b6585f5f0d4d3e800daeb2a9e2683430305bbf6710fecd0e8a16e5ebb5f"
+      },
+      {
+        "decode_ok": true,
+        "epsilon": 2.0,
+        "renderer_bytes": 296776,
+        "renderer_sha256": "2a529e59736df9285289bcc2ea70013a4de9a96c98629214f901a16fd56e03be"
+      }
+    ]
+  },
+  "epsilon_ladder": [
+    -2.0,
+    -1.0,
+    0.0,
+    1.0,
+    2.0
+  ],
+  "epsilon_units": "signed_integer_step",
+  "extended_format": "renderer_blob_perturbation_basis_v1",
+  "format": "perturbation_basis_v1",
+  "mutation_policy": {
+    "allowed_mutation_members": [
+      "renderer.bin"
+    ],
+    "byte_delta_formula": "new_byte = old_byte + round(epsilon * delta_per_epsilon)",
+    "byte_range": [
+      0,
+      255
+    ],
+    "forbidden_regions": [
+      "zip metadata",
+      "renderer magic",
+      "renderer header length",
+      "renderer JSON header",
+      "blob length fields",
+      "per-channel scale fields",
+      "bias blobs"
+    ],
+    "include_embeddings": false,
+    "out_of_range": "fail_closed"
+  },
+  "producer": "experiments/select_renderer_blob_perturbation_basis.py",
+  "renderer": {
+    "bytes": 296776,
+    "header_sha256": "371ac6e9be070b4a0d0b50ecf2f4728375ba4dc43c123756380c9152de7437f9",
+    "layer_count": 41,
+    "magic": "ASYM",
+    "member": "renderer.bin",
+    "sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529",
+    "version": 2
+  },
+  "schema_version": 1,
+  "score_claim": "none",
+  "selection_rule": "largest_non_embedding_weight_layers_median_payload_byte_with_byte_range_margin",
+  "source_archive": {
+    "bytes": 686635,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+    "sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+  },
+  "source_members": [
+    {
+      "compressed_bytes": 267402,
+      "crc32": "1827a837",
+      "name": "renderer.bin",
+      "raw_bytes": 296776,
+      "sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529"
+    },
+    {
+      "compressed_bytes": 412169,
+      "crc32": "e144d6ac",
+      "name": "masks.mkv",
+      "raw_bytes": 421483,
+      "sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9"
+    },
+    {
+      "compressed_bytes": 6734,
+      "crc32": "686cbfbf",
+      "name": "optimized_poses.bin",
+      "raw_bytes": 7200,
+      "sha256": "4b3d8cd58965971ad518a970441f5e9cc53ce361a62d51e95c1cdd2056be4449"
+    }
+  ]
+}

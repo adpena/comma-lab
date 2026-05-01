@@ -1,0 +1,49 @@
+{
+  "anchor_archive": "/Users/adpena/Projects/pact/experiments/results/lane_a_landed/archive_lane_a.zip",
+  "anchor_masks_bytes": 421483,
+  "clean_masks_source": "av1_anchor_fallback",
+  "crf_sweep": [
+    35,
+    45,
+    50,
+    55
+  ],
+  "results": [
+    {
+      "crf": 35,
+      "av1_bytes": 828469,
+      "residual_bytes": 601885,
+      "total_bytes": 1430354,
+      "n_diff_pixels": 80202,
+      "diff_fraction": 0.0003399403889973958
+    },
+    {
+      "crf": 45,
+      "av1_bytes": 498461,
+      "residual_bytes": 1567866,
+      "total_bytes": 2066327,
+      "n_diff_pixels": 234360,
+      "diff_fraction": 0.00099334716796875
+    },
+    {
+      "crf": 50,
+      "av1_bytes": 393121,
+      "residual_bytes": 1981915,
+      "total_bytes": 2375036,
+      "n_diff_pixels": 322398,
+      "diff_fraction": 0.0013665008544921876
+    },
+    {
+      "crf": 55,
+      "av1_bytes": 305791,
+      "residual_bytes": 2867658,
+      "total_bytes": 3173449,
+      "n_diff_pixels": 556326,
+      "diff_fraction": 0.0023580169677734374
+    }
+  ],
+  "best_total_bytes": 1430354,
+  "best_crf": 35,
+  "savings_vs_anchor_bytes": -1008871,
+  "council_kill_threshold_bytes": 380000
+}

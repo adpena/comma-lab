@@ -1,0 +1,45 @@
+{
+  "schema": "lane_pfp16_exact_cuda_adjudication_v1",
+  "evidence_grade": "A score-grade",
+  "a_plus_plus": false,
+  "a_plus_plus_blocker": "RTX 4090 CUDA, not T4/equivalent contest hardware",
+  "archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+  "archive_size_bytes": 686635,
+  "contest_auth_eval": {
+    "final_score_reported_rounded": 1.04,
+    "score_recomputed_from_components": 1.0440481283330025,
+    "avg_posenet_dist": 0.0034602,
+    "avg_segnet_dist": 0.0040083,
+    "score_pose_contribution": 0.18601612833300235,
+    "score_seg_contribution": 0.40083,
+    "score_rate_contribution": 0.45720200000000005,
+    "n_samples": 600,
+    "gpu_model": "NVIDIA GeForce RTX 4090",
+    "gpu_t4_match": false
+  },
+  "script_provenance_warning": {
+    "remote_script_contest_cuda_score": 100.0,
+    "remote_script_hard_kill_triggered": true,
+    "adjudication": "Invalid script parser flag. Trust contest_auth_eval.json; it reports recomputed score 1.0440481283330025, not 100.0."
+  },
+  "manifest": [
+    {
+      "filename": "renderer.bin",
+      "file_size": 296776,
+      "compress_size": 267402,
+      "CRC": "1827a837"
+    },
+    {
+      "filename": "masks.mkv",
+      "file_size": 421483,
+      "compress_size": 412169,
+      "CRC": "e144d6ac"
+    },
+    {
+      "filename": "optimized_poses.bin",
+      "file_size": 7200,
+      "compress_size": 6734,
+      "CRC": "686cbfbf"
+    }
+  ]
+}

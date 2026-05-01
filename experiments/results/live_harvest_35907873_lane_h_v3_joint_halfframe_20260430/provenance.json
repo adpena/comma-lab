@@ -1,0 +1,28 @@
+{
+  "started_at_utc": "2026-04-30T15:25:19Z",
+  "git_hash": "no-git",
+  "gpu_name": "NVIDIA GeForce RTX 4090",
+  "driver_version": "550.120",
+  "torch_version": "2.5.1+cu124",
+  "cuda_version": "12.4",
+  "cuda_available": true,
+  "lane_script": "scripts/remote_lane_h_v3_jointly_trained_halfframe.sh",
+  "output_dir": "/workspace/pact/lane_h_v3_results",
+  "tag": "lane_h_v3_joint_halfframe",
+  "profile": "h_v3_joint_halfframe",
+  "predicted_band": [
+    0.55,
+    0.95
+  ],
+  "anchor_score_baseline": 1.05,
+  "anchor_lane": "lane_g_v3 (1.05 contest-CUDA)",
+  "lane_h_v3_premise": "JOINT training from epoch 0 + curriculum 0.0 -> 1.0 (5%-15% ramp) + endpoint matches inflate",
+  "curriculum_schedule": "warmup full-frame [0..5%], ramp 0->1 [5%..15%], endpoint 1.0 [15%..100%]",
+  "fixes_prior_failures": {
+    "lane_d_retrofit": "JOINT from epoch 0 (NOT mid-train retrofit)",
+    "lane_d_v3_mismatch": "endpoint=1.0 matches inflate (NOT 0.5)",
+    "lane_v_channel_bug": "288K dilated-h64 arch (NOT 88K DSConv)"
+  },
+  "cost_estimate_usd": 1.5,
+  "wall_clock_estimate_hours": 5.0
+}

@@ -1,0 +1,261 @@
+D  .omx/research/active_dispatch_harvest_status_20260430.md
+D  .omx/research/codex_source_doc_structure_and_compliance_map_20260430.md
+ M .omx/research/contest_grade_all_lane_results_audit_20260430.md
+D  .omx/research/contest_grade_all_lane_results_audit_20260430_codex_progress.md
+D  .omx/research/council_lane_raft_radial_pose_design_20260430.md
+D  .omx/research/council_paradigm_shift_round1_20260430.md
+D  .omx/research/council_paradigm_shift_round2_20260430.md
+D  .omx/research/council_paradigm_shift_round3_20260430.md
+D  .omx/research/dx_self_protecting_harness_hardening_20260430_codex_progress.md
+D  .omx/research/external_research_intake_shannon_floor_20260430.md
+D  .omx/research/grand_council_paradigm_shift_to_shannon_floor_20260430.md
+D  .omx/research/grand_council_paradigm_shift_to_shannon_floor_20260430_codex_progress.md
+D  .omx/research/lane_gp_class_forensic_audit_20260430.md
+D  .omx/research/paradigm_alpha_mask_overhaul_audit_20260430.md
+D  .omx/research/pfp16_a_plus_plus_exact_t4_eval_runbook_20260430.md
+D  .omx/research/recoverable_lanes_re_engineering_plans_20260430.md
+D  .omx/research/shannon_floor_execution_readiness_20260430.md
+D  .omx/research/shannon_floor_execution_readiness_20260430_codex_progress.md
+D  .omx/research/shannon_floor_paper_rigor_writeup_blueprint_20260430.md
+ M .omx/state/active_dispatches.md
+ M .omx/state/lane_e2e_smoke_proofs.json
+ M .omx/state/review_tracker.duckdb
+ M .omx/state/review_tracker.json
+ M .omx/state/vastai_active_instances.json
+ M AGENTS.md
+ M CLAUDE.md
+D  experiments/build_lane_g_v3_owv3_stack.py
+D  experiments/build_lane_g_v3_pfp16_stack.py
+ M experiments/contest_auth_eval.py
+D  experiments/convert_fisher_to_owv3_sensitivity_map.py
+ M experiments/fit_pose_gp.py
+ M experiments/modal_recover_lane.py
+ M experiments/modal_train_lane.py
+D  experiments/paradigm_alpha_real_archive_eval.py
+ M experiments/profile_hessian_per_weight.py
+ M experiments/results/recovered_42_dead/recovery_metadata.json
+ M experiments/results/recovered_99999_phantom/recovery_metadata.json
+ M experiments/train_nerv_mask.py
+ M experiments/train_segmap.py
+ M reports/lane_maturity.md
+ ? reports/raw/kaggle_ingest/kaggle-dilated-h64-long1000-retry-v6-20260410T234220Z/comma_video_compression_challenge
+ M reports/silent_defaults.md
+D  scripts/adjudicate_contest_auth_eval.py
+ M scripts/launch_lane_with_retry.py
+D  scripts/pfp16_a_plus_plus_exact_t4_eval.sh
+D  scripts/reconcile_vast_dispatch_state.py
+ M scripts/remote_lane_8_multipass.sh
+ M scripts/remote_lane_a_optimized.sh
+ M scripts/remote_lane_darts_s_segmap_arch_sweep.sh
+ M scripts/remote_lane_fl_raft_derived_poses.sh
+ M scripts/remote_lane_fr_mm_sigma_sweep.sh
+ M scripts/remote_lane_gp_gaussian_process_pose.sh
+ M scripts/remote_lane_h_v3_jointly_trained_halfframe.sh
+ M scripts/remote_lane_j_imp_iterative_magnitude_pruning.sh
+ M scripts/remote_lane_j_nwc_neural_weight_compression.sh
+ M scripts/remote_lane_j_nwcs_ec_stack.sh
+ M scripts/remote_lane_j_nwcs_sensitivity_aware_codec.sh
+ M scripts/remote_lane_nerv.sh
+ M scripts/remote_lane_omega_w_v2_stack.sh
+ M scripts/remote_lane_omega_w_water_filling.sh
+D  scripts/remote_lane_pfp16_stack.sh
+ M scripts/remote_lane_sa_segmap_clone.sh
+ M scripts/remote_lane_wc_curator_outlier.sh
+ M src/tac.egg-info/PKG-INFO
+ M src/tac.egg-info/SOURCES.txt
+ M src/tac.egg-info/requires.txt
+ M src/tac.egg-info/top_level.txt
+ M src/tac/architectures.py
+ M src/tac/balle_hyperprior_codec.py
+ M src/tac/codec_magic_registry.py
+D  src/tac/deploy/azure/__init__.py
+D  src/tac/deploy/azure/azure_dispatch.py
+ M src/tac/deploy/lightning/__init__.py
+D  src/tac/joint_renderer_scorer_finetune.py
+D  src/tac/optimal_stack_orchestrator.py
+ M src/tac/pfp16_codec.py
+ M src/tac/preflight.py
+ M src/tac/profiles.py
+D  src/tac/psd_lumaskip_renderer.py
+D  src/tac/raft_radial_pose.py
+ M src/tac/segmap_renderer.py
+D  src/tac/self_compressing_nn.py
+ M src/tac/submission_archive.py
+D  src/tac/tests/test_check_pose_stream_fp16.py
+ M src/tac/tests/test_config_validation.py
+ M src/tac/tests/test_contest_auth_eval.py
+ M src/tac/tests/test_kl_distill_weight_plumbed.py
+D  src/tac/tests/test_lane12_nerv_dependency_closure.py
+D  src/tac/tests/test_profile_hessian_mask_decode.py
+D  src/tac/tests/test_psd_lumaskip_renderer.py
+D  src/tac/tests/test_raft_radial_pose.py
+D  src/tac/tests/test_reconcile_vast_dispatch_state.py
+D  src/tac/tests/test_remote_auth_eval_hardening.py
+D  src/tac/tests/test_remote_lane_g_v3_owv3_fisher_stack_script.py
+ M src/tac/tests/test_runtime_guards_pass_3.py
+D  src/tac/tests/test_self_compressing_nn.py
+ M src/tac/tests/test_training.py
+D  src/tac/tests/test_vqvae_mask_codec.py
+D  src/tac/tests/test_wavelet_mask_codec.py
+ M src/tac/training.py
+D  src/tac/vqvae_mask_codec.py
+D  src/tac/wavelet_mask_codec.py
+ M submissions/robust_current/inflate_renderer.py
+ M uv.lock
+?? .omx/research/active_dispatch_harvest_status_20260430.md
+?? .omx/research/codex_recursive_adversarial_greenup_review_20260430.md
+?? .omx/research/codex_source_doc_structure_and_compliance_map_20260430.md
+?? .omx/research/contest_grade_all_lane_results_audit_20260430_codex_progress.md
+?? .omx/research/council_lane_raft_radial_pose_design_20260430.md
+?? .omx/research/council_paradigm_shift_round1_20260430.md
+?? .omx/research/council_paradigm_shift_round2_20260430.md
+?? .omx/research/council_paradigm_shift_round3_20260430.md
+?? .omx/research/dx_self_protecting_harness_hardening_20260430_codex_progress.md
+?? .omx/research/external_research_intake_shannon_floor_20260430.md
+?? .omx/research/grand_council_paradigm_shift_to_shannon_floor_20260430.md
+?? .omx/research/grand_council_paradigm_shift_to_shannon_floor_20260430_codex_progress.md
+?? .omx/research/lane_gp_class_forensic_audit_20260430.md
+?? .omx/research/paradigm_alpha_mask_overhaul_audit_20260430.md
+?? .omx/research/pfp16_a_plus_plus_exact_t4_eval_runbook_20260430.md
+?? .omx/research/recoverable_lanes_re_engineering_plans_20260430.md
+?? .omx/research/shannon_floor_execution_readiness_20260430.md
+?? .omx/research/shannon_floor_execution_readiness_20260430_codex_progress.md
+?? .omx/research/shannon_floor_paper_rigor_writeup_blueprint_20260430.md
+?? .omx/state/.subagent-temp-index-78366-1777566358343
+?? .omx/state/.subagent-temp-index-78366-1777566358343.lock
+?? .omx/state/cost_projection.md
+?? .omx/state/dispatch_queue.md
+?? .omx/state/launch_locks/
+?? .omx/state/lightning_batch_jobs.json
+?? .ralph/run_log.md.bak
+?? docs/owv3_fisher_runbook.md
+?? experiments/build_lane_g_v3_owv3_stack.py
+?? experiments/build_lane_g_v3_pfp16_stack.py
+?? experiments/convert_fisher_to_owv3_sensitivity_map.py
+?? experiments/paradigm_alpha_real_archive_eval.py
+?? experiments/results/lane_12_nerv_20260430_codex_jsonfix40/
+?? experiments/results/lane_20_balle_2026-04-30_a1_recovered/
+?? experiments/results/lane_g_v3_pfp16/
+?? experiments/results/lane_g_v3_pfp16_landed/
+?? experiments/results/lane_j_imp_crashed_cycle0/
+?? experiments/results/lane_lane_g_v3_owv3_fisher_smoke_20260430_codex_modal/
+?? experiments/results/lane_lane_gp_v3_modal/lane_gp_results/anchor/
+?? experiments/results/lane_lane_gp_v3_modal/lane_gp_results/archive_lane_gp.zip
+?? experiments/results/lane_lane_gp_v3_modal/lane_gp_results/eval_work/archive.zip
+?? experiments/results/lane_lane_gp_v3_modal/lane_gp_results/eval_work/extracted/
+?? experiments/results/lane_lane_gp_v3_modal/lane_gp_results/eval_work/provenance.json
+?? experiments/results/lane_lane_gp_v3_modal/lane_gp_results/iter_0/
+?? experiments/results/lane_lane_gp_v3_modal/submissions/
+?? experiments/results/lane_lane_mae_v_modal/lane_mae_v_results/
+?? experiments/results/lane_lane_mae_v_modal/submissions/
+?? experiments/results/lane_lane_mm_modal/lane_mm_grayscale_lut_results/
+?? experiments/results/lane_lane_mm_modal/modal_call_id.txt
+?? experiments/results/lane_lane_mm_modal/submissions/
+?? experiments/results/lane_lane_mm_v2_modal/lane_mm_grayscale_lut_results/
+?? experiments/results/lane_lane_mm_v2_modal/modal_call_id.txt
+?? experiments/results/lane_lane_mm_v2_modal/submissions/
+?? experiments/results/lane_lane_omega_hessian_modal/lane_omega_results/
+?? experiments/results/lane_lane_omega_hessian_modal/submissions/
+?? experiments/results/lane_lane_sa_modal/modal_call_id.txt
+?? experiments/results/lane_lane_sa_v2_modal/lane_sa_segmap_clone_results/
+?? experiments/results/lane_lane_sa_v2_modal/modal_call_id.txt
+?? experiments/results/lane_lane_sa_v2_modal/submissions/
+?? experiments/results/lane_lane_sa_v3_modal/lane_sa_segmap_clone_results/
+?? experiments/results/lane_lane_sa_v3_modal/modal_call_id.txt
+?? experiments/results/lane_lane_sa_v3_modal/submissions/
+?? experiments/results/lane_lane_sa_v4_modal/
+?? experiments/results/lane_lane_sa_v5_post_oom_fix_modal/
+?? experiments/results/lane_lane_sc_plus_plus_modal/modal_call_id.txt
+?? experiments/results/lane_lane_sc_plus_plus_v2_modal/modal_call_id.txt
+?? experiments/results/lane_lane_sc_plus_plus_v3_modal/modal_call_id.txt
+?? experiments/results/lane_lane_sc_plus_plus_v4_modal/
+?? experiments/results/lane_lane_so_modal/modal_call_id.txt
+?? experiments/results/lane_lane_so_v2_modal/modal_call_id.txt
+?? experiments/results/lane_lane_so_v3_modal/
+?? experiments/results/lane_lane_so_v3_post_oom_fix_modal/
+?? experiments/results/lane_lane_uniward_modal/lane_uniward_results/
+?? experiments/results/lane_lane_uniward_modal/submissions/
+?? experiments/results/lane_q_faithful_modal/lane_q_faithful_results/
+?? experiments/results/lane_q_faithful_modal/submissions/
+?? experiments/results/lane_q_faithful_v2_modal/lane_q_faithful_results/
+?? experiments/results/lane_q_faithful_v2_modal/submissions/
+?? experiments/results/lane_stc_av1_residual_smoke/
+?? experiments/results/lane_stc_clean/
+?? experiments/results/lane_stc_clean_local/
+?? experiments/results/lane_stc_cuda_modal/
+?? experiments/results/lane_uniward_v2_modal/lane_uniward_results/
+?? experiments/results/lane_uniward_v2_modal/submissions/
+?? experiments/results/lane_uniward_v3_modal/lane_uniward_results/
+?? experiments/results/lane_uniward_v3_modal/submissions/
+?? experiments/results/lane_uniward_v4_modal/lane_uniward_results/
+?? experiments/results/lane_uniward_v4_modal/submissions/
+?? experiments/results/lane_uniward_v5_modal/lane_uniward_results/
+?? experiments/results/lane_uniward_v5_modal/submissions/
+?? experiments/results/lane_uniward_v6_modal/lane_uniward_results/
+?? experiments/results/lane_uniward_v6_modal/submissions/
+?? experiments/results/lane_uniward_v8_modal/lane_uniward_results/archive_lane_uniward.zip
+?? experiments/results/lane_uniward_v8_modal/lane_uniward_results/eval_work/archive.zip
+?? experiments/results/lane_uniward_v8_modal/lane_uniward_results/eval_work/extracted/
+?? experiments/results/lane_uniward_v8_modal/lane_uniward_results/eval_work/provenance.json
+?? experiments/results/lane_uniward_v8_modal/lane_uniward_results/iter_0/
+?? experiments/results/lane_uniward_v8_modal/submissions/
+?? experiments/results/modal_auth_eval_8e331354a6b5.json
+?? experiments/results/recovered_35787746_lane_omega_v3_v2/
+?? experiments/results/recovered_35793092_lane_sz_phase2_c/
+?? experiments/results/recovered_35794054_lane_m_v3_d/
+?? experiments/results/recovered_35807927_scripts_remote_lane_mae_v.sh/
+?? experiments/results/recovered_35809377_scripts_remote_lane_mae_v.sh/
+?? experiments/results/recovered_35809825_scripts_remote_lane_hm_homography_motion.sh/
+?? experiments/results/recovered_35849973_scripts_remote_lane_darts_s_segmap_arch_sweep.sh/
+?? experiments/results/recovered_35850665_scripts_remote_lane_darts_s_segmap_arch_sweep.sh/
+?? experiments/results/recovered_35884887_scripts_remote_lane_hm_s_segmap_homography.sh/
+?? experiments/results/recovered_35885106_scripts_remote_lane_hm_s_segmap_homography.sh/
+?? experiments/results/recovered_35885896_scripts_remote_lane_stc_clean_source.sh/
+?? experiments/results/recovered_35886131_scripts_remote_lane_omega_w_v2_stack.sh/
+?? experiments/results/recovered_35886307_scripts_remote_lane_omega_w_v2_stack.sh/
+?? experiments/results/recovered_35898286_scripts_remote_lane_nerv.sh/
+?? experiments/results/recovered_35898416_scripts_remote_lane_nerv.sh/
+?? experiments/results/recovered_35898590_scripts_remote_lane_8_multipass.sh/
+?? experiments/results/recovered_35898712_scripts_remote_lane_20_balle.sh/
+?? experiments/results/recovered_35898775_scripts_remote_lane_19_logit_margin.sh/
+?? experiments/results/recovered_35899088_scripts_remote_lane_j_imp_iterative_magnitude_pruning.sh/
+?? experiments/results/recovered_35899435_scripts_remote_lane_19_logit_margin.sh/
+?? experiments/results/recovered_35899561_scripts_remote_lane_nerv.sh/
+?? experiments/results/recovered_35899950_scripts_remote_lane_8_multipass.sh/
+?? experiments/results/recovered_35902406_scripts_remote_lane_pfp16_stack.sh/
+?? experiments/results/recovered_35904766_scripts_remote_lane_sa_segmap_clone.sh/
+?? experiments/results/recovered_35904947_scripts_remote_lane_sa_segmap_clone.sh/
+?? reports/lane_pfp16_real_archive.json
+?? reports/paradigm_alpha_real_archive.json
+?? scripts/adjudicate_contest_auth_eval.py
+?? scripts/build_pfp16_a_plus_plus_bundle.py
+?? scripts/launch_lane_azure.py
+?? scripts/launch_lane_lightning.py
+?? scripts/launch_lightning_batch_job.py
+?? scripts/pfp16_a_plus_plus_exact_t4_eval.sh
+?? scripts/reconcile_vast_dispatch_state.py
+?? scripts/remote_lane_pfp16_stack.sh
+?? src/tac/deploy/azure/
+?? src/tac/deploy/lightning/batch_jobs.py
+?? src/tac/deploy/lightning/lightning_dispatch.py
+?? src/tac/joint_renderer_scorer_finetune.py
+?? src/tac/optimal_stack_orchestrator.py
+?? src/tac/psd_lumaskip_renderer.py
+?? src/tac/raft_radial_pose.py
+?? src/tac/self_compressing_nn.py
+?? src/tac/tests/test_azure_dispatch.py
+?? src/tac/tests/test_check_pose_stream_fp16.py
+?? src/tac/tests/test_lane12_nerv_dependency_closure.py
+?? src/tac/tests/test_lightning_batch_jobs.py
+?? src/tac/tests/test_lightning_dispatch.py
+?? src/tac/tests/test_profile_hessian_mask_decode.py
+?? src/tac/tests/test_psd_lumaskip_renderer.py
+?? src/tac/tests/test_raft_radial_pose.py
+?? src/tac/tests/test_reconcile_vast_dispatch_state.py
+?? src/tac/tests/test_remote_auth_eval_hardening.py
+?? src/tac/tests/test_remote_lane_g_v3_owv3_fisher_stack_script.py
+?? src/tac/tests/test_self_compressing_nn.py
+?? src/tac/tests/test_vqvae_mask_codec.py
+?? src/tac/tests/test_wavelet_mask_codec.py
+?? src/tac/vqvae_mask_codec.py
+?? src/tac/wavelet_mask_codec.py

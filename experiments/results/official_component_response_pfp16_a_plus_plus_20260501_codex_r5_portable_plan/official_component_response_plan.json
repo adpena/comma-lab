@@ -1,0 +1,249 @@
+{
+  "baseline_archive": {
+    "bytes": 686635,
+    "path": "../lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+    "sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+  },
+  "baseline_contest_auth_eval": {
+    "bytes": 4287,
+    "path": "../lane_g_v3_pfp16/final_deploy_bundle_20260430/eval/contest_auth_eval.json",
+    "sha256": "b84e7352165cf0d2be0631a177d8404c3a1e5f27633d82d48990552b9ef382ab"
+  },
+  "baseline_contest_auth_eval_json": "../lane_g_v3_pfp16/final_deploy_bundle_20260430/eval/contest_auth_eval.json",
+  "format": "official_component_response_plan_v1",
+  "perturbation": {
+    "archive_variants_manifest": "archive_variants_manifest.json",
+    "archive_variants_manifest_sha256": "92ccb28e2536ecf57dd617b44259a38c41c83dcf4ac752e8d44e29026096b605",
+    "auth_eval_required": "cuda",
+    "basis_id": "e834549ea8c0d211027f43750991c7dfa112f4e89c91673b4edcaf83d0220c2f",
+    "basis_kind": "archive_byte_additive",
+    "basis_path": "perturbation_basis_v1.json",
+    "basis_sha256": "7f3e85c60b363cca039dd8ff003a84529d59f0470886dccda58c614e51f3cdbf",
+    "canonical_response_eval_path": "archive.zip -> inflate.sh -> upstream/evaluate.py",
+    "epsilon_units": "signed_integer_step",
+    "format": "perturbation_basis_v1",
+    "mutation_policy": {
+      "allow_renderer_magic_mutation": false,
+      "allowed_mutation_members": [
+        "renderer.bin"
+      ],
+      "byte_delta_formula": "new_byte = old_byte + round(epsilon * delta_per_epsilon)",
+      "byte_range": [
+        0,
+        255
+      ],
+      "max_abs_byte_delta": 2,
+      "max_mutated_bytes": 5,
+      "max_raw_l1_delta": 10,
+      "out_of_range": "fail_closed"
+    }
+  },
+  "points": [
+    {
+      "archive": "../official_component_response_pfp16_a_plus_plus_20260501_codex_r1/archives/point_000_eps_m2.zip",
+      "archive_bytes": 686632,
+      "archive_sha256": "aa212f894e79b7860a0a5fc13e363511f4615f21bd1211182129f35b18f3c18c",
+      "changed_member_bytes": 5,
+      "epsilon": -2.0,
+      "max_abs_byte_delta": 2,
+      "member_mutations": [
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 112,
+          "offset": 72254,
+          "original_byte": 114
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 86,
+          "offset": 104782,
+          "original_byte": 88
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 140,
+          "offset": 137310,
+          "original_byte": 142
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 177,
+          "offset": 169838,
+          "original_byte": 179
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 162,
+          "offset": 203632,
+          "original_byte": 164
+        }
+      ],
+      "raw_l1_byte_delta": 10
+    },
+    {
+      "archive": "../official_component_response_pfp16_a_plus_plus_20260501_codex_r1/archives/point_001_eps_m1.zip",
+      "archive_bytes": 686632,
+      "archive_sha256": "82014919a703ba84bcfb0363386204b227b622d2a878d4fe55b01fedf80b43b1",
+      "changed_member_bytes": 5,
+      "epsilon": -1.0,
+      "max_abs_byte_delta": 1,
+      "member_mutations": [
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 113,
+          "offset": 72254,
+          "original_byte": 114
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 87,
+          "offset": 104782,
+          "original_byte": 88
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 141,
+          "offset": 137310,
+          "original_byte": 142
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 178,
+          "offset": 169838,
+          "original_byte": 179
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 163,
+          "offset": 203632,
+          "original_byte": 164
+        }
+      ],
+      "raw_l1_byte_delta": 5
+    },
+    {
+      "archive": "../lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+      "archive_bytes": 686635,
+      "archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+      "changed_member_bytes": 0,
+      "epsilon": 0.0,
+      "max_abs_byte_delta": 0,
+      "predicted_delta": {
+        "combined": 0.0,
+        "posenet": 0.0,
+        "segnet": 0.0
+      },
+      "raw_l1_byte_delta": 0
+    },
+    {
+      "archive": "../official_component_response_pfp16_a_plus_plus_20260501_codex_r1/archives/point_003_eps_p1.zip",
+      "archive_bytes": 686632,
+      "archive_sha256": "ece516887ad48185a17bc7eeb3977bb62ad3f4f15fab9105f70439af7c5d8cce",
+      "changed_member_bytes": 5,
+      "epsilon": 1.0,
+      "max_abs_byte_delta": 1,
+      "member_mutations": [
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 115,
+          "offset": 72254,
+          "original_byte": 114
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 89,
+          "offset": 104782,
+          "original_byte": 88
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 143,
+          "offset": 137310,
+          "original_byte": 142
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 180,
+          "offset": 169838,
+          "original_byte": 179
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 165,
+          "offset": 203632,
+          "original_byte": 164
+        }
+      ],
+      "raw_l1_byte_delta": 5
+    },
+    {
+      "archive": "../official_component_response_pfp16_a_plus_plus_20260501_codex_r1/archives/point_004_eps_p2.zip",
+      "archive_bytes": 686632,
+      "archive_sha256": "3ab714bd4c7a337e7a8405fa08a74817cd6fa38c09dbb554f831f39847725557",
+      "changed_member_bytes": 5,
+      "epsilon": 2.0,
+      "max_abs_byte_delta": 2,
+      "member_mutations": [
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 116,
+          "offset": 72254,
+          "original_byte": 114
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 90,
+          "offset": 104782,
+          "original_byte": 88
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 144,
+          "offset": 137310,
+          "original_byte": 142
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 181,
+          "offset": 169838,
+          "original_byte": 179
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 166,
+          "offset": 203632,
+          "original_byte": 164
+        }
+      ],
+      "raw_l1_byte_delta": 10
+    }
+  ],
+  "portable_rewrite": {
+    "reason": "remove host-local absolute paths before Lightning Batch Job submit",
+    "rewritten_at_utc": "2026-05-01T02:37:08Z",
+    "schema_version": 1,
+    "source_plan": "experiments/results/official_component_response_pfp16_a_plus_plus_20260501_codex_r1/official_component_response_plan.json"
+  },
+  "producer": "experiments/build_component_response_perturbation_plan.py",
+  "schema_version": 1
+}

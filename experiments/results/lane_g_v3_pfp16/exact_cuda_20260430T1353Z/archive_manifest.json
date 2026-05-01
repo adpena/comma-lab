@@ -1,0 +1,20 @@
+[
+  {
+    "filename": "renderer.bin",
+    "file_size": 296776,
+    "compress_size": 267402,
+    "CRC": "1827a837"
+  },
+  {
+    "filename": "masks.mkv",
+    "file_size": 421483,
+    "compress_size": 412169,
+    "CRC": "e144d6ac"
+  },
+  {
+    "filename": "optimized_poses.bin",
+    "file_size": 7200,
+    "compress_size": 6734,
+    "CRC": "686cbfbf"
+  }
+]

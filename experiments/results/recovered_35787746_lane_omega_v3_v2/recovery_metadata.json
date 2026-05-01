@@ -1,0 +1,18 @@
+{
+  "archive_zip": null,
+  "artifacts": [],
+  "completed_at_utc": "2026-04-29T05:58:06.490579+00:00",
+  "elapsed_seconds": 0.45137958400300704,
+  "instance_id": 35787746,
+  "lane_label": "lane_omega_v3_v2",
+  "masks_mkv": null,
+  "notes": [
+    "SSH reachability probe to root@ssh8.vast.ai:27746 failed. Instance may be unreachable. Skipping recovery."
+  ],
+  "poses_pt": null,
+  "recovery_dir": "/Users/adpena/Projects/pact/experiments/results/recovered_35787746_lane_omega_v3_v2",
+  "renderer_bin": null,
+  "skipped_patterns": [],
+  "ssh_reachable": false,
+  "started_at_utc": "2026-04-29T05:58:06.039211+00:00"
+}

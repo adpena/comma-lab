@@ -1,0 +1,24 @@
+{
+  "archive": "experiments/results/nwcs_build_only_smoke_20260430_worker/archive_nwcs_build_only_smoke.zip",
+  "archive_bytes": 3895,
+  "archive_members": [
+    "renderer.bin",
+    "masks.mkv",
+    "optimized_poses.pt"
+  ],
+  "archive_sha256": "9339fed08deffb25b73803b2e311ec34a93508256e5aff993758d23ec0e9c6fd",
+  "auth_eval_skipped": true,
+  "checkpoint_type": "neural_weight_compression_sensitivity_v1",
+  "container_tensor_count": 1,
+  "device": "cpu",
+  "is_nwcs_renderer_container": true,
+  "kind": "local_cpu_build_only_smoke",
+  "lane": "J-NWCS",
+  "loaded_state_keys": [
+    "layer.weight"
+  ],
+  "promotion_eligible": false,
+  "renderer_bytes": 7210,
+  "renderer_sha256": "2eaefccf8bf321a4334bc29f46ffc2816dc15fb04605437ef53abb5300731db5",
+  "score_claim": false
+}

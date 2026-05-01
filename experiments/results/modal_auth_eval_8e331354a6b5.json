@@ -1,0 +1,4 @@
+{
+  "error": "inflate failed",
+  "stderr": "        ^^^^^^^^^^^^^^^^^\n  File \"/root/submission/inflate_renderer.py\", line 2800, in inflate_renderer\n    poses = _load_poses(optimized_poses_path, pose_dim=max(_renderer_pose_dim, 1))\n            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/root/tac/submission_archive.py\", line 531, in load_optimized_poses\n    raise ValueError(\nValueError: Pose tensor shape (600, 6) from optimized_poses.pt does not match expected (N, 1). Wrong pose_dim or transposed export?\n"
+}

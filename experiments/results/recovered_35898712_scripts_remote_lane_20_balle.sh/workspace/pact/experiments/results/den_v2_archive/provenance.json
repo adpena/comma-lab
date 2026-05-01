@@ -1,0 +1,13 @@
+{
+  "started_at_utc": "2026-04-26T08:54:28Z",
+  "git_hash": "no-git",
+  "gpu_name": "NVIDIA GeForce RTX 4090",
+  "driver_version": "560.35.03",
+  "torch_version": "2.5.1+cu124",
+  "cuda_version": "12.4",
+  "cuda_available": true,
+  "profile": "den",
+  "output_dir": "/workspace/pact/experiments/results/den_v2",
+  "pipeline": "remote_train_bootstrap.sh -> train_renderer.py + pipeline.py compress",
+  "cublas_workspace_config": ":4096:8"
+}

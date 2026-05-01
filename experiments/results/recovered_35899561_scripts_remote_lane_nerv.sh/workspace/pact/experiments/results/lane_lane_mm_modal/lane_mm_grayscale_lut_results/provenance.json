@@ -1,0 +1,26 @@
+{
+  "lane_id": "lane_mm_grayscale_lut",
+  "started_at_utc": "2026-04-29T16:07:01Z",
+  "git_hash": "no-git",
+  "gpu_name": "Tesla T4",
+  "driver_version": "580.95.05",
+  "torch_version": "2.5.1+cu124",
+  "cuda_version": "12.4",
+  "cuda_available": true,
+  "lane_script": "scripts/remote_lane_mm_grayscale_lut.sh",
+  "output_dir": "/tmp/pact/lane_mm_grayscale_lut_results",
+  "predicted_band": [
+    0.65,
+    0.85
+  ],
+  "anchor_archive": "experiments/results/lane_a_landed/archive_lane_a.zip",
+  "anchor_score_baseline": 1.15,
+  "controlled_baseline": "lane_a_landed (1.15 contest-CUDA)",
+  "paradigm": "grayscale_lut_mask_encoding",
+  "inflate_path": "PYTHON_INFLATE=renderer_grayscale",
+  "hypothesis": "grayscale-LUT mask cuts rate ~50% with no quality loss",
+  "cost_estimate_usd": 0.3,
+  "cost_cap_usd": 0.5,
+  "wall_clock_estimate_hours": 0.3,
+  "wall_clock_cap_hours": 1.0
+}

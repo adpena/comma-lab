@@ -1,0 +1,20 @@
+{
+  "calibration_pairs": [
+    {
+      "pair_index": 73,
+      "t": 146,
+      "t1": 147,
+      "video": 0
+    }
+  ],
+  "holdout_pairs": [
+    {
+      "pair_index": 454,
+      "t": 908,
+      "t1": 909,
+      "video": 0
+    }
+  ],
+  "split_hash": "c4270c2ed01d6860ff1149251471482aa70eaac8399434f3c6040c5640bbfffc",
+  "split_seed": 20260430
+}

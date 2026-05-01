@@ -1,0 +1,13 @@
+{
+  "phase1_end_epoch": 400,
+  "phase1_pixel_l1_max": 12.0,
+  "phase2_warmup_end_epoch": 100,
+  "phase2_warmup_scorer_max": 50.0,
+  "phase2_ramp_mid_epoch": 200,
+  "phase2_ramp_mid_scorer_max": 25.0,
+  "phase2_endpoint_epoch": 1500,
+  "phase2_endpoint_scorer_max": 4.0,
+  "phase4_end_epoch": 1880,
+  "phase4_end_scorer_max": 2.0,
+  "comment": "Lane H-V3 hard kill targets. Curriculum is aggressive (5%-15% ramp); endpoint scorer should track Lane G v3's eval performance closely. Late thresholds tighter than Lane D-V3 because JOINT training avoids the distribution mismatch."
+}

@@ -1,0 +1,58 @@
+{
+  "format": "lane_g_v3_pfp16_stack_provenance_v1",
+  "lane_id": "lane_g_v3_pfp16_stack",
+  "build_started_iso": "2026-04-30T20:46:01Z",
+  "build_completed_iso": "2026-04-30T20:46:01Z",
+  "anchors": {
+    "renderer": {
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_landed/iter_0/renderer.bin",
+      "size_bytes": 296776,
+      "sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529"
+    },
+    "masks": {
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_landed/iter_0/masks.mkv",
+      "size_bytes": 421483,
+      "sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9"
+    },
+    "poses": {
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_landed/iter_0/optimized_poses.pt",
+      "size_bytes": 15620,
+      "sha256": "cb8517f7a7e3c9382e952ff278dc3f8de44ba066db07746f16354c1dbe2cbca4"
+    },
+    "archive": {
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
+      "size_bytes": 694074,
+      "sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b"
+    }
+  },
+  "stacked_archive": {
+    "path": "experiments/results/lane_pfp16_stack_landed/archive_lane_g_v3_pfp16.zip",
+    "size_bytes": 686635,
+    "sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+  },
+  "pose_pfp16": {
+    "format_sentinel": "pose_fp16_raw_v1",
+    "input_bytes_fp32_pickle": 15620,
+    "output_bytes_fp16_raw": 7200,
+    "savings_bytes": 8420,
+    "savings_pct": 53.905249679897565,
+    "max_roundtrip_error": 0.0155181884765625,
+    "mean_roundtrip_error": 0.0010401408653706312,
+    "n_pairs": 600,
+    "pose_dim": 6
+  },
+  "size_delta_vs_lane_g_v3": -7439,
+  "lane_g_v3_baseline_score": 1.05,
+  "predicted_score_derivation": 1.0450466752477243,
+  "predicted_score_tag": "[derivation]",
+  "predicted_score_band": [
+    1.04,
+    1.05
+  ],
+  "score_validation_required": "contest-CUDA via experiments/contest_auth_eval.py",
+  "strict_scorer_rule": "compliant \u2014 no scorer load at any stage",
+  "council_provenance": {
+    "design_doc": ".omx/research/council_lane_gp_v4_design_20260430.md",
+    "rationale": "Hotz successor option from Lane GP v4 KILL \u2014 fp16 cast captures the bulk of pose-stream byte budget at zero distortion penalty"
+  }
+}

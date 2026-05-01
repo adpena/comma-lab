@@ -1,0 +1,31 @@
+{
+  "lane_id": "lane_g_v3_omega_w_v2_stack",
+  "started_at_utc": "2026-04-30T07:24:21Z",
+  "git_hash": "no-git",
+  "gpu_name": "NVIDIA GeForce RTX 4090",
+  "driver_version": "580.82.09",
+  "torch_version": "2.5.1+cu124",
+  "cuda_version": "12.4",
+  "cuda_available": true,
+  "lane_script": "scripts/remote_lane_omega_w_v2_stack.sh",
+  "output_dir": "/workspace/pact/lane_g_v3_omega_w_v2_stack_results",
+  "paradigm": "export_time_codec_swap_owv2_water_fill_arithmetic",
+  "codec_module": "tac.owv2_renderer_archive",
+  "codec_inner": "tac.water_filling_codec_v2",
+  "inflate_dispatch_magic": "OWV2",
+  "inflate_dispatch_module": "submissions/robust_current/inflate_renderer.py",
+  "bit_budget_ratio": 0.7,
+  "predicted_band": [
+    0.95,
+    1.02
+  ],
+  "predicted_score_central": 1.016,
+  "baseline_lane": "lane_g_v3_landed",
+  "baseline_score_contest_cuda": 1.05,
+  "expected_archive_bytes": 643089,
+  "expected_savings_bytes": 50985,
+  "controlled_baseline": "lane_g_v3_landed (only renderer.bin codec swapped: ASYM -> OWV2)",
+  "no_training": true,
+  "strict_scorer_rule_compliant": true,
+  "audit_doc": ".omx/research/council_chain_integrity_audit_20260430.md (Part G1)"
+}

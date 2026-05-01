@@ -1,0 +1,53 @@
+[
+  {
+    "compress_size": 412169,
+    "compress_type": 8,
+    "crc": "e144d6ac",
+    "date_time": [
+      1980,
+      1,
+      1,
+      0,
+      0,
+      0
+    ],
+    "external_attr": 27525120,
+    "file_size": 421483,
+    "filename": "masks.mkv",
+    "sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9"
+  },
+  {
+    "compress_size": 6734,
+    "compress_type": 8,
+    "crc": "686cbfbf",
+    "date_time": [
+      1980,
+      1,
+      1,
+      0,
+      0,
+      0
+    ],
+    "external_attr": 27525120,
+    "file_size": 7200,
+    "filename": "optimized_poses.bin",
+    "sha256": "4b3d8cd58965971ad518a970441f5e9cc53ce361a62d51e95c1cdd2056be4449"
+  },
+  {
+    "compress_size": 267402,
+    "compress_type": 8,
+    "crc": "1827a837",
+    "date_time": [
+      1980,
+      1,
+      1,
+      0,
+      0,
+      0
+    ],
+    "external_attr": 27525120,
+    "file_size": 296776,
+    "filename": "renderer.bin",
+    "sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529"
+  }
+]

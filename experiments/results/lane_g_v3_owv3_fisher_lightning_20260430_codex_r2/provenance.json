@@ -1,0 +1,29 @@
+{
+  "lane_id": "lane_g_v3_owv3_fisher_lightning_20260430_codex_r2",
+  "started_at_utc": "2026-04-30T18:31:37Z",
+  "git_hash": "05f916d8759ba518ba458f961dd50dd5958722da",
+  "gpu_name": "Tesla T4",
+  "driver_version": "580.126.09",
+  "torch_version": "2.11.0+cu130",
+  "cuda_version": "13.0",
+  "cuda_available": true,
+  "lane_script": "scripts/remote_lane_g_v3_owv3_fisher_stack.sh",
+  "anchor_renderer": "experiments/results/lane_g_v3_landed/iter_0/renderer.bin",
+  "anchor_masks": "experiments/results/lane_g_v3_landed/iter_0/masks.mkv",
+  "anchor_poses": "experiments/results/lane_g_v3_landed/iter_0/optimized_poses.pt",
+  "anchor_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
+  "baseline_lane": "lane_g_v3_landed",
+  "baseline_score_contest_cuda": 1.05,
+  "fisher_top_k": 30,
+  "pair_batch": 4,
+  "bit_budget_ratio": 0.7,
+  "protect_threshold": 0.001,
+  "aggressive_threshold": 1e-05,
+  "run_contest_eval": false,
+  "auth_eval_device": "cuda",
+  "output_dir": "/teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_owv3_fisher_lightning_20260430_codex_r2",
+  "predicted_band": [
+    0.95,
+    1.05
+  ]
+}

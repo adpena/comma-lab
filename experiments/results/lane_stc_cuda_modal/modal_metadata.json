@@ -1,0 +1,8 @@
+{
+  "lane_script": "scripts/remote_lane_stc_clean_source.sh",
+  "label": "stc_cuda",
+  "gpu": "T4",
+  "max_seconds": 7200,
+  "call_id": "fc-01KQDN5G9VKCR4Z2VPD3VD0PE2",
+  "dispatched_at": "2026-04-29T17:18:47.016631"
+}

@@ -1,0 +1,44 @@
+{
+  "epoch": 949,
+  "scorer": 38.797738894448116,
+  "pose": 146.52413626352947,
+  "seg": 0.0051926762618434924,
+  "fp4_path": "/workspace/pact/lane_h_v3_results/train/renderer_lane_h_v3_joint_halfframe_best_fp4.pt",
+  "fp4_size": 214913,
+  "args": {
+    "base_ch": 36,
+    "mid_ch": 60,
+    "embed_dim": 6,
+    "motion_hidden": 32,
+    "depth": 1,
+    "pretrain_epochs": 0,
+    "epochs": 1980,
+    "lr": 0.001,
+    "profile": "h_v3_joint_halfframe",
+    "tag": "lane_h_v3_joint_halfframe",
+    "variant": "dilated",
+    "latent_ch": 8,
+    "latent_shapes": [
+      [
+        6,
+        8
+      ],
+      [
+        12,
+        16
+      ],
+      [
+        24,
+        32
+      ]
+    ],
+    "residual_hidden": 32,
+    "residual_layers": 2,
+    "residual_scale": 16.0,
+    "seed": 67,
+    "deterministic": true,
+    "no_mask_encoder": false,
+    "informational_only": false,
+    "stacking_candidate": true
+  }
+}

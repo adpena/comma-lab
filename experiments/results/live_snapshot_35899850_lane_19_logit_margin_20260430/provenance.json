@@ -1,0 +1,29 @@
+{
+  "started_at_utc": "2026-04-30T13:06:44Z",
+  "git_hash": "no-git",
+  "gpu_name": "NVIDIA GeForce RTX 4090",
+  "driver_version": "550.54.15",
+  "torch_version": "2.5.1+cu124",
+  "cuda_version": "12.4",
+  "cuda_available": true,
+  "lane_script": "scripts/remote_lane_19_logit_margin.sh",
+  "output_dir": "/workspace/pact/lane_19_logit_margin_results",
+  "tag": "lane_19_logit_margin",
+  "profile": "lane_19_logit_margin",
+  "predicted_band": [
+    0.75,
+    1.05
+  ],
+  "anchor_score_baseline": 1.05,
+  "anchor_lane": "lane_g_v3 (1.05 contest-CUDA)",
+  "lane_19_premise": "SegNet score = argmax disagreement; weight CE by (threshold - margin)/threshold so confident pixels get zero loss + boundary pixels get full signal (Fridrich UNIWARD applied to segmentation).",
+  "delta_from_lane_g_v3": {
+    "loss_mode": "standard -> logit_margin",
+    "logit_margin_weight": "0.0 -> 0.1",
+    "logit_margin_threshold": "1.0 (default)",
+    "kl_distill_aux": "KEPT (Lane 19 is auxiliary, not replacement; confident-wrong pixels still caught by scorer_loss)",
+    "seed": "43 -> 89 (different RNG basin)"
+  },
+  "cost_estimate_usd": 1.5,
+  "wall_clock_estimate_hours": 5.5
+}

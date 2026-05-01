@@ -1,0 +1,3 @@
+renderer.bin	296776	267402	1827a837
+masks.mkv	421483	412169	e144d6ac
+optimized_poses.bin	7200	6734	686cbfbf

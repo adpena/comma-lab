@@ -1,0 +1,38 @@
+{
+  "adjudication": {
+    "allow_component_gate_forensic_success": true,
+    "baseline_archive_size_bytes": 686635,
+    "baseline_posenet_dist": 0.00316404,
+    "baseline_score": 1.037045485927815,
+    "baseline_segnet_dist": 0.00401966,
+    "component_reference_label": "paired_pfp16_a_plus_plus_t4_same_runner",
+    "delta_key": "score_delta_vs_baseline",
+    "max_posenet_dist": null,
+    "max_posenet_relative": 1.002,
+    "max_sane_score": 10.0,
+    "max_segnet_dist": null,
+    "max_segnet_relative": 1.002,
+    "predicted_band_high": 1.037045485927815,
+    "predicted_band_low": 0.0,
+    "provenance_name": "adjudication_provenance.json",
+    "regression_threshold": 1.037045485927815,
+    "required_device": "cuda",
+    "required_samples": 600,
+    "result_copy_name": "contest_auth_eval.adjudicated.json"
+  },
+  "artifact_recorded_at_utc": "2026-04-30T23:42:21Z",
+  "expected_archive_sha256": "9f7528bade11bf9cdf3df68f8073d11f196a6d5f48475a8680c21fb58c878c91",
+  "expected_archive_size_bytes": 686531,
+  "job_name": "owv3_r6_rank1_exact_cuda_20260430_codex_lightning_t4_r1",
+  "queue_metadata": {
+    "candidate_id": "owv3_0076_bbr0p65_protect0p0013_aggr1em05",
+    "failed_r5_reference": "owv3_0047_bbr0p67_protect0p00135_aggr1em05",
+    "lane": "owv3_r6_segnet_conservative_after_failed_r5",
+    "paired_pfp16_calibration_job": "pfp16_paired_calibration_20260430_codex_lightning_t4_r3_isolated_uv",
+    "required_gpu_t4_match": "true"
+  },
+  "role": "exact_cuda_eval",
+  "schema_version": 1,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

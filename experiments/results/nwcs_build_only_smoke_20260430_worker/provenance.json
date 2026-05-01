@@ -1,0 +1,43 @@
+{
+  "archive": "experiments/results/nwcs_build_only_smoke_20260430_worker/archive_nwcs_build_only_smoke.zip",
+  "archive_bytes": 3895,
+  "archive_members": [
+    "renderer.bin",
+    "masks.mkv",
+    "optimized_poses.pt"
+  ],
+  "archive_sha256": "9339fed08deffb25b73803b2e311ec34a93508256e5aff993758d23ec0e9c6fd",
+  "artifact_custody": {
+    "archive": {
+      "bytes": 3895,
+      "path": "experiments/results/nwcs_build_only_smoke_20260430_worker/archive_nwcs_build_only_smoke.zip",
+      "sha256": "9339fed08deffb25b73803b2e311ec34a93508256e5aff993758d23ec0e9c6fd"
+    },
+    "codec": {
+      "bytes": 6645,
+      "path": "experiments/results/nwcs_build_only_smoke_20260430_worker/nwcs_codec.pt",
+      "sha256": "db0d21b654700813785d2ecfc53bf30ed398cfa683b55328cb18c99e626d400b"
+    },
+    "renderer": {
+      "bytes": 7210,
+      "path": "experiments/results/nwcs_build_only_smoke_20260430_worker/iter_0/renderer.bin",
+      "sha256": "2eaefccf8bf321a4334bc29f46ffc2816dc15fb04605437ef53abb5300731db5"
+    }
+  },
+  "auth_eval_skipped": true,
+  "checkpoint_type": "neural_weight_compression_sensitivity_v1",
+  "container_tensor_count": 1,
+  "device": "cpu",
+  "git_hash": "bb9170979c858494890d94f437404686bcb834b9",
+  "is_nwcs_renderer_container": true,
+  "kind": "local_cpu_build_only_smoke",
+  "lane": "J-NWCS",
+  "loaded_state_keys": [
+    "layer.weight"
+  ],
+  "promotion_eligible": false,
+  "renderer_bytes": 7210,
+  "renderer_sha256": "2eaefccf8bf321a4334bc29f46ffc2816dc15fb04605437ef53abb5300731db5",
+  "score_claim": false,
+  "started_finished_at_utc": "2026-04-30T20:12:10Z"
+}

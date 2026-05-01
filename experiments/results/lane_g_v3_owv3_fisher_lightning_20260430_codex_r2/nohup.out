@@ -1,0 +1,53 @@
+[lane-owv3-fisher] 2026-04-30T18:31:33Z === Stage 0: CUDA/NVDEC/anchor preflight ===
+torch=2.11.0+cu130 cuda_available=True count=1
+cuda_device=Tesla T4
+provenance: {"lane_id": "lane_g_v3_owv3_fisher_lightning_20260430_codex_r2", "started_at_utc": "2026-04-30T18:31:37Z", "git_hash": "05f916d8759ba518ba458f961dd50dd5958722da", "gpu_name": "Tesla T4", "driver_version": "580.126.09", "torch_version": "2.11.0+cu130", "cuda_version": "13.0", "cuda_available": true, "lane_script": "scripts/remote_lane_g_v3_owv3_fisher_stack.sh", "anchor_renderer": "experiments/results/lane_g_v3_landed/iter_0/renderer.bin", "anchor_masks": "experiments/results/lane_g_v3_landed/iter_0/masks.mkv", "anchor_poses": "experiments/results/lane_g_v3_landed/iter_0/optimized_poses.pt", "anchor_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip", "baseline_lane": "lane_g_v3_landed", "baseline_score_contest_cuda": 1.05, "fisher_top_k": 30, "pair_batch": 4, "bit_budget_ratio": 0.7, "protect_threshold": 0.001, "aggressive_threshold": 1e-05, "run_contest_eval": false, "auth_eval_device": "cuda", "output_dir": "/teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_owv3_fisher_lightning_20260430_codex_r2", "predicted_band": [0.95, 1.05]}
+[lane-owv3-fisher] 2026-04-30T18:31:37Z === Stage 1: Lane G v3 renderer/mask/pose smoke ===
+smoke ok: out_shape=(1, 2, 384, 512, 3) range=[0.0000,143.2113]
+[lane-owv3-fisher] 2026-04-30T18:31:40Z pair weights: experiments/results/lane_lane_w_v2_modal/harvested_artifacts/lane_w_results/pair_weights.pt
+[lane-owv3-fisher] 2026-04-30T18:31:40Z === Stage 2: CUDA Fisher profile ===
+[profile] device=cuda
+[profile] loading renderer: experiments/results/lane_g_v3_landed/iter_0/renderer.bin
+[profile]   AsymmetricPairGenerator 288,363 params film=True zoom=False
+[profile] eligible weights: 19 layers, 247,388 weights (protected Conv2d included for sensitivity; protected Linear layers stay excluded)
+[profile]   OWV3 mode: protected Conv2d weights included for sensitivity only
+[profile]   poses loaded: (600, 6)
+[profile] decoding GT video upstream/videos/0.mkv ...
+[profile]   decoded 1200 frames in 18.5s
+[profile] decoding masks experiments/results/lane_g_v3_landed/iter_0/masks.mkv ...
+[profile]   decoded 1200 masks shape=(1200, 384, 512)
+[profile] 1200 frames → 600 pairs
+[profile]   pair_weights: top-30 hardest (min=0.033333 max=0.033333)
+[profile] loading differentiable scorers from upstream ...
+[profile] iterating 30 pairs with nonzero weight (batch=4)
+[profile]   processed 4/30 pairs
+[profile] importance stats: {'imp_min': 1.5094912846699097e-11, 'imp_max': 1.3699176908366333, 'imp_mean': 0.0004331258463089918, 'imp_median': 1.0248394539898445e-05, 'imp_p95': 0.0004264007462361172, 'imp_p99': 0.0037069214059221437}
+[profile] WROTE /teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_owv3_fisher_lightning_20260430_codex_r2/hessian_per_weight.pt (1,987,325 bytes)
+[profile] WROTE /teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_owv3_fisher_lightning_20260430_codex_r2/hessian_per_weight.meta.json (metadata sidecar)
+[lane-owv3-fisher] 2026-04-30T18:32:28Z Fisher artifact: /teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_owv3_fisher_lightning_20260430_codex_r2/hessian_per_weight.pt (1987325 bytes)
+[lane-owv3-fisher] 2026-04-30T18:32:28Z === Stage 3: Fisher -> OWV3 sensitivity map ===
+=== Fisher -> OWV3 sensitivity-map conversion ===
+checkpoint: experiments/results/lane_g_v3_landed/iter_0/renderer.bin
+fisher:     /teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_owv3_fisher_lightning_20260430_codex_r2/hessian_per_weight.pt
+wrote /teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_owv3_fisher_lightning_20260430_codex_r2/owv3_sensitivity_map.pt with 19 layers, 717 channels, range=[5.03581e-05, 29.259]
+wrote metadata /teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_owv3_fisher_lightning_20260430_codex_r2/owv3_sensitivity_map.metadata.json
+[lane-owv3-fisher] 2026-04-30T18:32:30Z === Stage 4: build Lane G v3 + OWV3 archive ===
+=== Lane G v3 + Ω-W-V3 stacked archive build ===
+Stage 1: verify Lane G v3 anchors...
+  renderer: 296,776B sha256=08f12d722dd3...
+  masks: 421,483B sha256=d3eeb82ce28b...
+  poses: 15,620B sha256=cb8517f7a7e3...
+  archive: 694,074B sha256=9b20bdfca246...
+Stage 2: load renderer and sensitivity map...
+  sensitivity: 19 layers, 717 channels, range=[5.03581e-05, 29.259]
+Stage 3: encode OWV3 renderer...
+  ASYM=296,776B -> OWV3=295,971B (delta=-805B)
+Stage 4: assemble deterministic archive...
+  wrote /teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_owv3_fisher_lightning_20260430_codex_r2/archive_lane_g_v3_owv3.zip (689,342B sha256=29a02b2af2c37371...)
+  archive delta vs Lane G v3: -4,732B
+  archive delta vs PFP16_A++: +2,707B
+  predicted rate-only score: 1.05 + -0.00315 = 1.0468 [derivation, contest-CUDA pending]
+  frontier rate-only comparator: 1.043988 + +0.00180 = 1.0458 [derivation, contest-CUDA pending]
+  FATAL: OWV3 size regression vs the active frontier comparator; promotion is blocked unless an explicit smoke/debug override is set.
+  build took 2.27s
+  wrote provenance: /teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_owv3_fisher_lightning_20260430_codex_r2/build_provenance.json

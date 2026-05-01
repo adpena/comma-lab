@@ -1,0 +1,27 @@
+{
+  "started_at_utc": "2026-04-30T12:51:52Z",
+  "git_hash": "no-git",
+  "gpu_name": "NVIDIA GeForce RTX 4090",
+  "driver_version": "580.95.05",
+  "torch_version": "2.5.1+cu124",
+  "cuda_version": "12.4",
+  "cuda_available": true,
+  "lane_script": "scripts/remote_lane_j_imp_iterative_magnitude_pruning.sh",
+  "lane_name": "lane_j_imp_iterative_magnitude_pruning",
+  "paper_refs": [
+    "arXiv:1803.03635",
+    "arXiv:1912.05671",
+    "arXiv:2406.01820"
+  ],
+  "mechanism": "10-cycle IMP @ 20%/cycle, rewind-to-early-epoch (Frankle 2019)",
+  "final_sparsity_target": 0.893,
+  "predicted_band": [
+    0.85,
+    1.0
+  ],
+  "anchor_score_baseline": 1.05,
+  "anchor_renderer": "experiments/results/lane_g_v3_landed/iter_0/renderer.bin",
+  "anchor_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
+  "cost_cap_usd": 25,
+  "output_dir": "/workspace/pact/lane_j_imp_results"
+}

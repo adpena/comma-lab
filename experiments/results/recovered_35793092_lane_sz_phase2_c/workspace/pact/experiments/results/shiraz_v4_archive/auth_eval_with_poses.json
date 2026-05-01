@@ -1,0 +1,681 @@
+{
+  "checkpoint": "/workspace/pact/experiments/results/shiraz_v4/iter_0/renderer_refined.bin",
+  "avg_posenet_dist": 0.2572946548461914,
+  "avg_segnet_dist": 0.00750431464985013,
+  "archive_size_bytes": 519074,
+  "gt_size_bytes": 37545489,
+  "rate": 0.01382520280931752,
+  "score_seg": 0.750431464985013,
+  "score_pose": 1.6040406941414904,
+  "score_rate": 0.34563007023293796,
+  "final_score": 2.7001022293594414,
+  "n_frames": 1200,
+  "device": "cuda",
+  "config": {
+    "version": 3,
+    "pair_mode": "asymmetric",
+    "quantization": "fp4",
+    "block_size": 32,
+    "codebook": [
+      0.0,
+      0.5,
+      1.0,
+      1.5,
+      2.0,
+      3.0,
+      4.0,
+      6.0
+    ],
+    "num_classes": 5,
+    "embed_dim": 6,
+    "base_ch": 32,
+    "mid_ch": 48,
+    "depth": 1,
+    "motion_hidden": 24,
+    "output_channels": 6,
+    "use_coord_grid": true,
+    "use_diff_features": true,
+    "max_flow_px": 20.0,
+    "max_residual": 20.0,
+    "flow_only": false,
+    "pose_dim": 6,
+    "use_dsconv": true,
+    "use_zoom_flow": false,
+    "padding_mode": "replicate",
+    "use_dilation": true,
+    "layers": [
+      {
+        "name": "renderer.embedding",
+        "shape": [
+          5,
+          6
+        ],
+        "bits": 4,
+        "has_bias": false,
+        "transposed": false,
+        "is_embedding": true,
+        "numel": 30,
+        "block_size": 32
+      },
+      {
+        "name": "renderer.stem_res.norm1.class_gamma",
+        "shape": [
+          5,
+          32
+        ],
+        "bits": 4,
+        "has_bias": false,
+        "transposed": false,
+        "is_embedding": true,
+        "numel": 160,
+        "block_size": 32
+      },
+      {
+        "name": "renderer.stem_res.norm1.class_beta",
+        "shape": [
+          5,
+          32
+        ],
+        "bits": 4,
+        "has_bias": false,
+        "transposed": false,
+        "is_embedding": true,
+        "numel": 160,
+        "block_size": 32
+      },
+      {
+        "name": "renderer.stem_res.norm2.class_gamma",
+        "shape": [
+          5,
+          32
+        ],
+        "bits": 4,
+        "has_bias": false,
+        "transposed": false,
+        "is_embedding": true,
+        "numel": 160,
+        "block_size": 32
+      },
+      {
+        "name": "renderer.stem_res.norm2.class_beta",
+        "shape": [
+          5,
+          32
+        ],
+        "bits": 4,
+        "has_bias": false,
+        "transposed": false,
+        "is_embedding": true,
+        "numel": 160,
+        "block_size": 32
+      },
+      {
+        "name": "renderer.down_res.norm1.class_gamma",
+        "shape": [
+          5,
+          48
+        ],
+        "bits": 4,
+        "has_bias": false,
+        "transposed": false,
+        "is_embedding": true,
+        "numel": 240,
+        "block_size": 32
+      },
+      {
+        "name": "renderer.down_res.norm1.class_beta",
+        "shape": [
+          5,
+          48
+        ],
+        "bits": 4,
+        "has_bias": false,
+        "transposed": false,
+        "is_embedding": true,
+        "numel": 240,
+        "block_size": 32
+      },
+      {
+        "name": "renderer.down_res.norm2.class_gamma",
+        "shape": [
+          5,
+          48
+        ],
+        "bits": 4,
+        "has_bias": false,
+        "transposed": false,
+        "is_embedding": true,
+        "numel": 240,
+        "block_size": 32
+      },
+      {
+        "name": "renderer.down_res.norm2.class_beta",
+        "shape": [
+          5,
+          48
+        ],
+        "bits": 4,
+        "has_bias": false,
+        "transposed": false,
+        "is_embedding": true,
+        "numel": 240,
+        "block_size": 32
+      },
+      {
+        "name": "renderer.bottleneck.norm1.class_gamma",
+        "shape": [
+          5,
+          48
+        ],
+        "bits": 4,
+        "has_bias": false,
+        "transposed": false,
+        "is_embedding": true,
+        "numel": 240,
+        "block_size": 32
+      },
+      {
+        "name": "renderer.bottleneck.norm1.class_beta",
+        "shape": [
+          5,
+          48
+        ],
+        "bits": 4,
+        "has_bias": false,
+        "transposed": false,
+        "is_embedding": true,
+        "numel": 240,
+        "block_size": 32
+      },
+      {
+        "name": "renderer.bottleneck.norm2.class_gamma",
+        "shape": [
+          5,
+          48
+        ],
+        "bits": 4,
+        "has_bias": false,
+        "transposed": false,
+        "is_embedding": true,
+        "numel": 240,
+        "block_size": 32
+      },
+      {
+        "name": "renderer.bottleneck.norm2.class_beta",
+        "shape": [
+          5,
+          48
+        ],
+        "bits": 4,
+        "has_bias": false,
+        "transposed": false,
+        "is_embedding": true,
+        "numel": 240,
+        "block_size": 32
+      },
+      {
+        "name": "renderer.up_res.norm1.class_gamma",
+        "shape": [
+          5,
+          32
+        ],
+        "bits": 4,
+        "has_bias": false,
+        "transposed": false,
+        "is_embedding": true,
+        "numel": 160,
+        "block_size": 32
+      },
+      {
+        "name": "renderer.up_res.norm1.class_beta",
+        "shape": [
+          5,
+          32
+        ],
+        "bits": 4,
+        "has_bias": false,
+        "transposed": false,
+        "is_embedding": true,
+        "numel": 160,
+        "block_size": 32
+      },
+      {
+        "name": "renderer.up_res.norm2.class_gamma",
+        "shape": [
+          5,
+          32
+        ],
+        "bits": 4,
+        "has_bias": false,
+        "transposed": false,
+        "is_embedding": true,
+        "numel": 160,
+        "block_size": 32
+      },
+      {
+        "name": "renderer.up_res.norm2.class_beta",
+        "shape": [
+          5,
+          32
+        ],
+        "bits": 4,
+        "has_bias": false,
+        "transposed": false,
+        "is_embedding": true,
+        "numel": 160,
+        "block_size": 32
+      },
+      {
+        "name": "renderer.stem_conv.0",
+        "shape": [
+          8,
+          1,
+          3,
+          3
+        ],
+        "bits": 4,
+        "has_bias": false,
+        "bias_blob_len": 0,
+        "transposed": false,
+        "is_linear": false,
+        "numel": 72,
+        "block_size": 32
+      },
+      {
+        "name": "renderer.stem_conv.1",
+        "shape": [
+          32,
+          8,
+          1,
+          1
+        ],
+        "bits": 4,
+        "has_bias": true,
+        "bias_blob_len": 64,
+        "transposed": false,
+        "is_linear": false,
+        "numel": 256,
+        "block_size": 32
+      },
+      {
+        "name": "renderer.stem_res.conv1",
+        "shape": [
+          32,
+          32,
+          3,
+          3
+        ],
+        "bits": 4,
+        "has_bias": false,
+        "bias_blob_len": 0,
+        "transposed": false,
+        "is_linear": false,
+        "numel": 9216,
+        "block_size": 32
+      },
+      {
+        "name": "renderer.stem_res.conv2",
+        "shape": [
+          32,
+          32,
+          3,
+          3
+        ],
+        "bits": 4,
+        "has_bias": false,
+        "bias_blob_len": 0,
+        "transposed": false,
+        "is_linear": false,
+        "numel": 9216,
+        "block_size": 32
+      },
+      {
+        "name": "renderer.down_conv.0",
+        "shape": [
+          32,
+          1,
+          3,
+          3
+        ],
+        "bits": 4,
+        "has_bias": false,
+        "bias_blob_len": 0,
+        "transposed": false,
+        "is_linear": false,
+        "numel": 288,
+        "block_size": 32
+      },
+      {
+        "name": "renderer.down_conv.1",
+        "shape": [
+          48,
+          32,
+          1,
+          1
+        ],
+        "bits": 4,
+        "has_bias": true,
+        "bias_blob_len": 96,
+        "transposed": false,
+        "is_linear": false,
+        "numel": 1536,
+        "block_size": 32
+      },
+      {
+        "name": "renderer.down_res.conv1",
+        "shape": [
+          48,
+          48,
+          3,
+          3
+        ],
+        "bits": 4,
+        "has_bias": false,
+        "bias_blob_len": 0,
+        "transposed": false,
+        "is_linear": false,
+        "numel": 20736,
+        "block_size": 32
+      },
+      {
+        "name": "renderer.down_res.conv2",
+        "shape": [
+          48,
+          48,
+          3,
+          3
+        ],
+        "bits": 4,
+        "has_bias": false,
+        "bias_blob_len": 0,
+        "transposed": false,
+        "is_linear": false,
+        "numel": 20736,
+        "block_size": 32
+      },
+      {
+        "name": "renderer.bottleneck.conv1",
+        "shape": [
+          48,
+          48,
+          3,
+          3
+        ],
+        "bits": 4,
+        "has_bias": false,
+        "bias_blob_len": 0,
+        "transposed": false,
+        "is_linear": false,
+        "numel": 20736,
+        "block_size": 32
+      },
+      {
+        "name": "renderer.bottleneck.conv2",
+        "shape": [
+          48,
+          48,
+          3,
+          3
+        ],
+        "bits": 4,
+        "has_bias": false,
+        "bias_blob_len": 0,
+        "transposed": false,
+        "is_linear": false,
+        "numel": 20736,
+        "block_size": 32
+      },
+      {
+        "name": "renderer.up_conv",
+        "shape": [
+          48,
+          32,
+          4,
+          4
+        ],
+        "bits": 4,
+        "has_bias": true,
+        "bias_blob_len": 64,
+        "transposed": true,
+        "is_linear": false,
+        "numel": 24576,
+        "block_size": 32
+      },
+      {
+        "name": "renderer.up_res.conv1",
+        "shape": [
+          32,
+          32,
+          3,
+          3
+        ],
+        "bits": 4,
+        "has_bias": false,
+        "bias_blob_len": 0,
+        "transposed": false,
+        "is_linear": false,
+        "numel": 9216,
+        "block_size": 32
+      },
+      {
+        "name": "renderer.up_res.conv2",
+        "shape": [
+          32,
+          32,
+          3,
+          3
+        ],
+        "bits": 4,
+        "has_bias": false,
+        "bias_blob_len": 0,
+        "transposed": false,
+        "is_linear": false,
+        "numel": 9216,
+        "block_size": 32
+      },
+      {
+        "name": "renderer.fuse_conv",
+        "shape": [
+          32,
+          64,
+          1,
+          1
+        ],
+        "bits": 4,
+        "has_bias": true,
+        "bias_blob_len": 64,
+        "transposed": false,
+        "is_linear": false,
+        "numel": 2048,
+        "block_size": 32
+      },
+      {
+        "name": "renderer.head",
+        "shape": [
+          3,
+          32,
+          1,
+          1
+        ],
+        "bits": 4,
+        "has_bias": true,
+        "bias_blob_len": 6,
+        "transposed": false,
+        "is_linear": false,
+        "numel": 96,
+        "block_size": 32
+      },
+      {
+        "name": "renderer.film_bottleneck.scale",
+        "shape": [
+          48,
+          6
+        ],
+        "bits": 4,
+        "has_bias": true,
+        "bias_blob_len": 96,
+        "transposed": false,
+        "is_linear": true,
+        "numel": 288,
+        "block_size": 32
+      },
+      {
+        "name": "renderer.film_bottleneck.shift",
+        "shape": [
+          48,
+          6
+        ],
+        "bits": 4,
+        "has_bias": true,
+        "bias_blob_len": 96,
+        "transposed": false,
+        "is_linear": true,
+        "numel": 288,
+        "block_size": 32
+      },
+      {
+        "name": "renderer.film_decoder.scale",
+        "shape": [
+          32,
+          6
+        ],
+        "bits": 4,
+        "has_bias": true,
+        "bias_blob_len": 64,
+        "transposed": false,
+        "is_linear": true,
+        "numel": 192,
+        "block_size": 32
+      },
+      {
+        "name": "renderer.film_decoder.shift",
+        "shape": [
+          32,
+          6
+        ],
+        "bits": 4,
+        "has_bias": true,
+        "bias_blob_len": 64,
+        "transposed": false,
+        "is_linear": true,
+        "numel": 192,
+        "block_size": 32
+      },
+      {
+        "name": "motion.stem.0",
+        "shape": [
+          24,
+          20,
+          3,
+          3
+        ],
+        "bits": 4,
+        "has_bias": true,
+        "bias_blob_len": 48,
+        "transposed": false,
+        "is_linear": false,
+        "numel": 4320,
+        "block_size": 32
+      },
+      {
+        "name": "motion.down.0",
+        "shape": [
+          24,
+          24,
+          3,
+          3
+        ],
+        "bits": 4,
+        "has_bias": true,
+        "bias_blob_len": 48,
+        "transposed": false,
+        "is_linear": false,
+        "numel": 5184,
+        "block_size": 32
+      },
+      {
+        "name": "motion.bottleneck.conv1",
+        "shape": [
+          24,
+          24,
+          3,
+          3
+        ],
+        "bits": 4,
+        "has_bias": false,
+        "bias_blob_len": 0,
+        "transposed": false,
+        "is_linear": false,
+        "numel": 5184,
+        "block_size": 32
+      },
+      {
+        "name": "motion.bottleneck.conv2",
+        "shape": [
+          24,
+          24,
+          3,
+          3
+        ],
+        "bits": 4,
+        "has_bias": false,
+        "bias_blob_len": 0,
+        "transposed": false,
+        "is_linear": false,
+        "numel": 5184,
+        "block_size": 32
+      },
+      {
+        "name": "motion.up_conv",
+        "shape": [
+          24,
+          24,
+          3,
+          3
+        ],
+        "bits": 4,
+        "has_bias": true,
+        "bias_blob_len": 48,
+        "transposed": false,
+        "is_linear": false,
+        "numel": 5184,
+        "block_size": 32
+      },
+      {
+        "name": "motion.fuse",
+        "shape": [
+          24,
+          48,
+          1,
+          1
+        ],
+        "bits": 4,
+        "has_bias": true,
+        "bias_blob_len": 48,
+        "transposed": false,
+        "is_linear": false,
+        "numel": 1152,
+        "block_size": 32
+      },
+      {
+        "name": "motion.head",
+        "shape": [
+          6,
+          24,
+          3,
+          3
+        ],
+        "bits": 4,
+        "has_bias": true,
+        "bias_blob_len": 12,
+        "transposed": false,
+        "is_linear": false,
+        "numel": 1296,
+        "block_size": 32
+      }
+    ],
+    "scalar_params": {}
+  },
+  "timestamp": "2026-04-26T08:48:49Z",
+  "elapsed_seconds": 222.4
+}

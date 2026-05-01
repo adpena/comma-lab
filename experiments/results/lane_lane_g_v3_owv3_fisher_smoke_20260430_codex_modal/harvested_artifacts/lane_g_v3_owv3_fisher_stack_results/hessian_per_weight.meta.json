@@ -1,0 +1,21 @@
+{
+  "checkpoint": "experiments/results/lane_g_v3_landed/iter_0/renderer.bin",
+  "poses": "experiments/results/lane_g_v3_landed/iter_0/optimized_poses.pt",
+  "masks_mkv": "experiments/results/lane_g_v3_landed/iter_0/masks.mkv",
+  "video_mkv": "upstream/videos/0.mkv",
+  "pair_weights": "experiments/results/lane_lane_w_v2_modal/harvested_artifacts/lane_w_results/pair_weights.pt",
+  "top_k": 3,
+  "n_pairs_seen": 3,
+  "n_eligible_layers": 16,
+  "n_eligible_weights": 242960,
+  "git_hash": "no-git",
+  "torch_version": "2.5.1+cu124",
+  "device": "cuda",
+  "elapsed_s": 32.173446655,
+  "imp_min": 6.2707050866267946e-12,
+  "imp_max": 2.081935857649795,
+  "imp_mean": 0.001240885517822829,
+  "imp_median": 3.5605173441964006e-05,
+  "imp_p95": 0.002544305986833603,
+  "imp_p99": 0.018597836790525284
+}

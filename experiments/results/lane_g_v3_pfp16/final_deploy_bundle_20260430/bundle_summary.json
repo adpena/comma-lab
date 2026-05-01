@@ -1,0 +1,28 @@
+{
+  "archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+  "archive_size_bytes": 686635,
+  "created_at_utc": "2026-04-30T17:10:38Z",
+  "custody_manifest": "custody/custody_manifest.json",
+  "cuda_auth_eval_source_of_truth": true,
+  "device": "cuda",
+  "evidence_grade": "A++",
+  "final_score_reported": 1.04,
+  "gpu_model": "Tesla T4",
+  "gpu_t4_match": true,
+  "known_bundle_gap": "remote_staged_tree_manifest missing because Lightning staged tree was non-git",
+  "legacy_remote_parser_fields_quarantined": true,
+  "n_samples": 600,
+  "paper_custody_note": "custody/PFP16_A_PLUS_PLUS_CUSTODY_NOTE.md",
+  "pact_commit_in_remote_eval": "<error:CalledProcessError(128, ['git', 'rev-parse', 'HEAD'])>",
+  "quarantined_remote_parser_fields": [
+    "contest_cuda_score",
+    "hard_kill_triggered",
+    "lane_status",
+    "score_delta_vs_lane_g_v3"
+  ],
+  "schema_version": 1,
+  "score_authority": "eval/contest_auth_eval.json",
+  "score_recomputed_from_components": 1.043987524793892,
+  "score_source": "eval/contest_auth_eval.json",
+  "upstream_commit": "c5e1274e54e47f81b121bc3bf75eaa9a432b1837"
+}

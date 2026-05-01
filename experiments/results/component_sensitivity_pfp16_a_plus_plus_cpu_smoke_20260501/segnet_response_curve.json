@@ -1,0 +1,156 @@
+{
+  "baseline": {
+    "combined": 0.30481598071214994,
+    "posenet": 0.000249942037044093,
+    "segnet": 0.0025482177734375
+  },
+  "canonical_scorer_path": false,
+  "component": "segnet",
+  "component_readout": "official_argmax_disagreement",
+  "component_response_path": "direct_renderer_tensor_inprocess_scorer",
+  "component_units": {
+    "combined": "100*segnet + sqrt(10*posenet), no rate term",
+    "posenet": "mean_pose_mse",
+    "segnet": "mean_argmax_disagreement"
+  },
+  "count": 3,
+  "device": "cpu",
+  "epsilon_ladder": [
+    -0.001,
+    0.0,
+    0.001
+  ],
+  "evidence_grade": "diagnostic_cpu",
+  "gate_results": {
+    "finite_values": true,
+    "observed_delta_max": 0.0,
+    "prediction_error_gate_implemented": true,
+    "prediction_error_passed": true,
+    "promotion_gate_passed": false,
+    "signal_present": false,
+    "zero_repro": true,
+    "zero_repro_error": 0.0
+  },
+  "gate_spec": {
+    "holdout_error_max": 0.35,
+    "observed_delta_min": 1e-12,
+    "spearman_min": 0.3,
+    "top_decile_overlap_min": 0.5,
+    "zero_repro_tolerance": 1e-07
+  },
+  "holdout_error": 0.0,
+  "holdout_error_kind": "max_relative_prediction_error_diagnostic",
+  "observed_holdout_delta_max": 0.0,
+  "official_component_response": false,
+  "passed": false,
+  "perturbation": "signed_weight_rms_topk_channels_v1",
+  "perturbation_basis": {
+    "component_atom_ids": [
+      "segnet:000000:5dcd80d26918",
+      "segnet:000001:a1bc04a9784d"
+    ],
+    "format": "perturbation_basis_v1",
+    "path": "experiments/results/component_sensitivity_pfp16_a_plus_plus_cpu_smoke_20260501/perturbation_basis_v1.json"
+  },
+  "points": [
+    {
+      "all_components": {
+        "combined": 0.3018648693240412,
+        "posenet": 0.00022130525030661374,
+        "segnet": 0.0025482177734375
+      },
+      "baseline": 0.0025482177734375,
+      "delta": 0.0,
+      "epsilon": -0.001,
+      "prediction": {
+        "abs_error": 0.0,
+        "fit_scale": 0.0,
+        "fitted_abs_delta": 0.0,
+        "raw_delta": 1.841853618621826e-05,
+        "raw_model": "epsilon^2 * sum_selected_channel_sensitivity",
+        "relative_error": 0.0
+      },
+      "value": 0.0025482177734375
+    },
+    {
+      "all_components": {
+        "combined": 0.30481598071214994,
+        "posenet": 0.000249942037044093,
+        "segnet": 0.0025482177734375
+      },
+      "baseline": 0.0025482177734375,
+      "delta": 0.0,
+      "epsilon": 0.0,
+      "prediction": {
+        "raw_delta": 0.0,
+        "raw_model": "epsilon^2 * sum_selected_channel_sensitivity"
+      },
+      "value": 0.0025482177734375
+    },
+    {
+      "all_components": {
+        "combined": 0.3078653616079395,
+        "posenet": 0.00028136218315921724,
+        "segnet": 0.0025482177734375
+      },
+      "baseline": 0.0025482177734375,
+      "delta": 0.0,
+      "epsilon": 0.001,
+      "prediction": {
+        "abs_error": 0.0,
+        "fit_scale": 0.0,
+        "fitted_abs_delta": 0.0,
+        "raw_delta": 1.841853618621826e-05,
+        "raw_model": "epsilon^2 * sum_selected_channel_sensitivity",
+        "relative_error": 0.0
+      },
+      "value": 0.0025482177734375
+    }
+  ],
+  "prediction_calibration": {
+    "basis_strength": 18.41853618621826,
+    "fit_scale": 0.0,
+    "fit_status": "least_squares_scale_fit",
+    "gate_spec": {
+      "holdout_error_max": 0.35,
+      "spearman_min": 0.3
+    },
+    "implemented": true,
+    "max_abs_error": 0.0,
+    "max_relative_error": 0.0,
+    "mean_abs_error": 0.0,
+    "mean_relative_error": 0.0,
+    "passed": true,
+    "pearson": 0.0,
+    "point_count": 2,
+    "sign_accuracy": 1.0,
+    "spearman": 0.9999999999999998
+  },
+  "promotion_blockers": [
+    {
+      "code": "fisher_proxy_not_official_component_response",
+      "mathematical_explanation": "This profiler estimates component sensitivity with empirical Fisher proxies and holdout perturbation diagnostics. It is not yet an official finite-difference component-response artifact over the exact contest scorer, so it cannot be used as promotion evidence."
+    },
+    {
+      "code": "non_cuda_response_curve",
+      "mathematical_explanation": "Component-response curves are promotion-grade only when they are CUDA-authored and measured through the canonical archive.zip -> inflate.sh -> upstream/evaluate.py path."
+    }
+  ],
+  "promotion_eligible": false,
+  "response_kind": "symmetric",
+  "schema_version": 1,
+  "selected_channels": [
+    {
+      "channel": 27,
+      "key": "renderer.stem_conv.weight",
+      "sensitivity": 10.302559852600098
+    },
+    {
+      "channel": 2,
+      "key": "renderer.head.weight",
+      "sensitivity": 8.115976333618164
+    }
+  ],
+  "sensitivity_source": "fisher_proxy",
+  "symmetric_epsilon_pairs": 1
+}

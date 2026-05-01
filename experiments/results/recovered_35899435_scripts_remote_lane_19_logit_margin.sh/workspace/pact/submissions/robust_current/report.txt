@@ -1,0 +1,22 @@
+=== Authoritative Evaluation Results (upstream evaluate.py, DALI, 600 samples) ===
+  Checkpoint:             asym_v5_lagrangian_fixed/renderer_best.pt (ep12600)
+  Inflation mode:         inflate_renderer.py (PYTHON_INFLATE=renderer)
+  Eval timestamp:         2026-04-14T13:20:23Z
+  Platform:               Modal T4
+
+  Average PoseNet Distortion: 0.03101325
+  Average SegNet Distortion:  0.00216888
+  Submission file size:   150,715 bytes
+  Original uncompressed:  37,545,489 bytes
+  Compression Rate:       0.00401420
+
+  Score breakdown:
+    100*seg  = 0.2169
+    sqrt(10*pose) = 0.5569
+    25*rate  = 0.1004
+  FINAL SCORE: 0.8700
+
+  Previous best (asym_v3_longer_tight, ep12400): 1.0000 auth
+  Improvement: 13% (1.00 -> 0.87)
+  Key delta: PoseNet 0.048 -> 0.031 (35% better), SegNet held flat
+  Source JSON: tac-asymmetric-results / asym_v5_lagrangian_fixed / auth_eval_renderer_best.json

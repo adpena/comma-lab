@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "created_at_utc": "2026-04-30T17:10:38Z",
+  "bundle": {
+    "name": "pfp16_a_plus_plus_final_deploy_bundle_20260430",
+    "evidence_grade": "A++",
+    "known_gap": "remote_staged_tree_manifest missing because Lightning staged tree was non-git"
+  },
+  "archive": {
+    "path": "archive/archive.zip",
+    "sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+    "size_bytes": 686635,
+    "manifest": "archive/archive_manifest.json",
+    "member_hashes": "archive/archive_member_sha256.txt",
+    "zipinfo": "archive/zipinfo.txt"
+  },
+  "authoritative_eval": {
+    "score_source": "eval/contest_auth_eval.json",
+    "final_score": 1.04,
+    "score_recomputed_from_components": 1.043987524793892,
+    "avg_segnet_dist": 0.00400656,
+    "avg_posenet_dist": 0.00346442,
+    "archive_size_bytes": 686635,
+    "archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+    "n_samples": 600,
+    "device": "cuda",
+    "gpu_model": "Tesla T4",
+    "gpu_t4_match": true,
+    "upstream_commit": "c5e1274e54e47f81b121bc3bf75eaa9a432b1837",
+    "eval_tool": "experiments/contest_auth_eval.py",
+    "eval_command": [
+      "experiments/contest_auth_eval.py",
+      "--archive",
+      "/home/zeus/content/pact_pfp16_exact_20260430T1625Z/auth_eval_input/pfp16_exact_0af839abb30e_archive.zip",
+      "--inflate-sh",
+      "submissions/robust_current/inflate.sh",
+      "--upstream-dir",
+      "/home/zeus/content/upstream",
+      "--device",
+      "cuda",
+      "--keep-work-dir",
+      "--work-dir",
+      "/home/zeus/content/pact_pfp16_exact_20260430T1625Z/experiments/results/lane_g_v3_pfp16/pfp16_a_plus_plus_t4_20260430T1620Z_codex/eval_work"
+    ]
+  },
+  "score_formula": "100 * seg_dist + sqrt(10 * pose_dist) + 25 * archive_bytes / 37545489",
+  "score_claim_policy": {
+    "authoritative_json": "eval/contest_auth_eval.json",
+    "must_recompute_from_components": true,
+    "ignored_score_sources": [
+      "eval/auth_eval.log human text",
+      "build/provenance.json legacy_parser_output_quarantined",
+      "MPS/CPU/proxy/local-renderer outputs"
+    ]
+  },
+  "legacy_parser_quarantine": {
+    "status": "invalid_superseded",
+    "reason": "Legacy remote provenance parsed/adjudicated non-authoritative output and emitted stale score/regression fields. contest_auth_eval.json is the only score authority for PFP16 A++.",
+    "authoritative_score_source": "../eval/contest_auth_eval.json",
+    "quarantined_fields": {
+      "contest_cuda_score": 100.0,
+      "score_delta_vs_lane_g_v3": 98.95,
+      "hard_kill_triggered": true,
+      "lane_status": "HARD_KILL_REGRESSION"
+    },
+    "reader_action": "Ignore quarantined fields for score, rank, promotion, regression, retirement, kill, and paper claims."
+  },
+  "paper_ready_claim": "PFP16 A++ exact T4 CUDA auth eval recomputed score 1.043987524793892 on archive SHA 0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f (686635 bytes, n=600)."
+}

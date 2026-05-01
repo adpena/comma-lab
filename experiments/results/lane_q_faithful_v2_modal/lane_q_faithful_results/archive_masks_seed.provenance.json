@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "tool": "experiments/build_baseline_archive.py",
+  "built_at_utc": "2026-04-29T13:36:34Z",
+  "device": "cuda",
+  "gpu_model": "Tesla T4",
+  "torch_version": "2.5.1+cu124",
+  "cuda_version": "12.4",
+  "crf": 50,
+  "seed": 1234,
+  "cublas_workspace_config": ":4096:8",
+  "archive_path": "/tmp/pact/lane_q_faithful_results/archive_masks_seed.zip",
+  "archive_size_bytes": 695235,
+  "archive_sha256": "f491c5029dd118f9668f9697e739a546d6f18a9ad39e4f11e5c41c964b2a8989",
+  "rate_unscaled": 0.01851713797095571,
+  "rate_score_contribution": 0.46292844927389276,
+  "segnet_weights_sha256": "68956e328d4c5d875389a1a444870e6bac1c052c9986123827af95c07c6991b6",
+  "use_brotli": false,
+  "brotli_quality": null,
+  "use_zero_cost_poses": false,
+  "components": {
+    "renderer.bin": {
+      "source": "/tmp/pact/submissions/baseline_dilated_h64_0_90/renderer.bin",
+      "size_bytes_uncompressed": 296776,
+      "size_bytes_in_archive": 296776,
+      "sha256_uncompressed": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529",
+      "compression": "none"
+    },
+    "masks.mkv": {
+      "source": "rebuilt from GT via SegNet at 384x512 CRF=50",
+      "size_bytes": 422688,
+      "sha256": "f28b5bb8f018a9c7fe28acaf63a85cf9930e676d76dd5564e735661b54b517cd"
+    },
+    "optimized_poses.pt": {
+      "source": "/tmp/pact/submissions/baseline_dilated_h64_0_90/optimized_poses.pt",
+      "size_bytes": 15645,
+      "sha256": "9624b96c7304ecac9aa7c06703413893a5c467350b86b8e9c2b37449288ff3af"
+    }
+  }
+}

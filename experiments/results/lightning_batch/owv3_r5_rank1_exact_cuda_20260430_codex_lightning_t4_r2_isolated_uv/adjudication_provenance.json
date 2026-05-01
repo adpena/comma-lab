@@ -1,0 +1,73 @@
+{
+  "allowed_use": [
+    "forensic",
+    "no_rank_frontier",
+    "no_promotion"
+  ],
+  "archive_delta_bytes": -167,
+  "baseline_archive_bytes": 686635,
+  "completed_at_utc": "2026-04-30T23:03:55Z",
+  "component_gate_triggered": true,
+  "component_gate_violations": [
+    {
+      "component": "segnet",
+      "max_relative": 1.002,
+      "metric": "avg_segnet_dist",
+      "observed": 0.0040215,
+      "reason": "relative_component_gate",
+      "reference": 0.00400656,
+      "reference_label": "experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/eval/contest_auth_eval.json",
+      "relative_to_reference": 1.003728884629208
+    }
+  ],
+  "component_gates": [
+    {
+      "component": "posenet",
+      "max_absolute": null,
+      "max_relative": 1.002,
+      "metric": "avg_posenet_dist",
+      "observed": 0.0031739,
+      "passed": true,
+      "reference": 0.00346442,
+      "reference_label": "experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/eval/contest_auth_eval.json",
+      "relative_to_reference": 0.9161418072866453
+    },
+    {
+      "component": "segnet",
+      "max_absolute": null,
+      "max_relative": 1.002,
+      "metric": "avg_segnet_dist",
+      "observed": 0.0040215,
+      "passed": false,
+      "reference": 0.00400656,
+      "reference_label": "experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/eval/contest_auth_eval.json",
+      "relative_to_reference": 1.003728884629208
+    }
+  ],
+  "contest_cuda_archive_bytes": 686468,
+  "contest_cuda_archive_sha256": "16ab95220c8add11b0bc40fb632bc8421f8bb8ad1cfba145f0b6058075237518",
+  "contest_cuda_avg_posenet_dist": 0.0031739,
+  "contest_cuda_avg_segnet_dist": 0.0040215,
+  "contest_cuda_device": "cuda",
+  "contest_cuda_gpu_model": "Tesla T4",
+  "contest_cuda_gpu_t4_match": true,
+  "contest_cuda_n_samples": 600,
+  "contest_cuda_result_json": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/owv3_r5_rank1_exact_cuda_20260430_codex_lightning_t4_r2_isolated_uv/contest_auth_eval.adjudicated.json",
+  "contest_cuda_score": 1.0373951773937642,
+  "contest_cuda_score_recomputed": 1.0373951773937642,
+  "contest_cuda_score_reported_rounded": 1.04,
+  "contest_cuda_score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "evidence_grade": "A++ contest T4",
+  "evidence_grade_semantics": "hardware_and_custody_grade_not_promotion_status",
+  "final_archive_bytes": 686468,
+  "lane_status": "COMPONENT_GATE_REVIEW_REQUIRED",
+  "paper_claim_grade": "A-negative scoped forensic",
+  "promotion_eligible": false,
+  "regression_scope": "measured_implementation_config_only_pending_review",
+  "regression_threshold": 1.04425,
+  "regression_triggered": false,
+  "result_tag": "[contest-CUDA]",
+  "score_delta_vs_baseline": -0.006592347400127707,
+  "score_tag": "[contest-CUDA]",
+  "stacked_archive_bytes": 686468
+}

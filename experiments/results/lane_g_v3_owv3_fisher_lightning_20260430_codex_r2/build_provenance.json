@@ -1,0 +1,231 @@
+{
+  "format": "lane_g_v3_owv3_stack_provenance_v1",
+  "lane_id": "lane_g_v3_owv3_stack",
+  "build_started_iso": "2026-04-30T18:32:30Z",
+  "build_completed_iso": "2026-04-30T18:32:32Z",
+  "anchors": {
+    "renderer": {
+      "path": "/teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_landed/iter_0/renderer.bin",
+      "size_bytes": 296776,
+      "sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529"
+    },
+    "masks": {
+      "path": "/teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_landed/iter_0/masks.mkv",
+      "size_bytes": 421483,
+      "sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9"
+    },
+    "poses": {
+      "path": "/teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_landed/iter_0/optimized_poses.pt",
+      "size_bytes": 15620,
+      "sha256": "cb8517f7a7e3c9382e952ff278dc3f8de44ba066db07746f16354c1dbe2cbca4"
+    },
+    "archive": {
+      "path": "/teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
+      "size_bytes": 694074,
+      "sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b"
+    }
+  },
+  "sensitivity_map": {
+    "path": "/teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_owv3_fisher_lightning_20260430_codex_r2/owv3_sensitivity_map.pt",
+    "sha256": "ed69bec3c9c530e4d574d82d3b6764399a6feca0289f2114899fa09689fabeba",
+    "metadata": {
+      "format": "owv3_channel_sensitivity_from_fisher_v1",
+      "checkpoint": "experiments/results/lane_g_v3_landed/iter_0/renderer.bin",
+      "checkpoint_sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529",
+      "fisher": "/teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_owv3_fisher_lightning_20260430_codex_r2/hessian_per_weight.pt",
+      "fisher_sha256": "7843e20d14be145556e5519f2362667f19e03ab61d7600aca837d420470f1926",
+      "source_metadata": {
+        "checkpoint": "experiments/results/lane_g_v3_landed/iter_0/renderer.bin",
+        "poses": "experiments/results/lane_g_v3_landed/iter_0/optimized_poses.pt",
+        "masks_mkv": "experiments/results/lane_g_v3_landed/iter_0/masks.mkv",
+        "video_mkv": "upstream/videos/0.mkv",
+        "pair_weights": "experiments/results/lane_lane_w_v2_modal/harvested_artifacts/lane_w_results/pair_weights.pt",
+        "top_k": 30,
+        "n_pairs_seen": 30,
+        "n_eligible_layers": 19,
+        "n_eligible_weights": 247388,
+        "eligible_layer_names": [
+          "motion.bottleneck.conv1.weight",
+          "motion.bottleneck.conv2.weight",
+          "motion.down.0.weight",
+          "motion.fuse.weight",
+          "motion.head.weight",
+          "motion.stem.0.weight",
+          "motion.up_conv.weight",
+          "renderer.bottleneck.conv1.weight",
+          "renderer.bottleneck.conv2.weight",
+          "renderer.down_conv.weight",
+          "renderer.down_res.conv1.weight",
+          "renderer.down_res.conv2.weight",
+          "renderer.fuse_conv.weight",
+          "renderer.head.weight",
+          "renderer.stem_conv.weight",
+          "renderer.stem_res.conv1.weight",
+          "renderer.stem_res.conv2.weight",
+          "renderer.up_res.conv1.weight",
+          "renderer.up_res.conv2.weight"
+        ],
+        "excluded_layer_reasons": {
+          "renderer.film_bottleneck.scale.weight": "protected_linear",
+          "renderer.film_bottleneck.shift.weight": "protected_linear",
+          "renderer.film_decoder.scale.weight": "protected_linear",
+          "renderer.film_decoder.shift.weight": "protected_linear"
+        },
+        "include_protected_conv2d": true,
+        "git_hash": "05f916d8759ba518ba458f961dd50dd5958722da",
+        "torch_version": "2.11.0+cu130",
+        "device": "cuda",
+        "elapsed_s": 44.59340524199979,
+        "imp_min": 1.5094912846699097e-11,
+        "imp_max": 1.3699176908366333,
+        "imp_mean": 0.0004331258463089918,
+        "imp_median": 1.0248394539898445e-05,
+        "imp_p95": 0.0004264007462361172,
+        "imp_p99": 0.0037069214059221437
+      },
+      "source_device": "cuda",
+      "authoritative_cuda": true,
+      "non_authoritative_allowed": false,
+      "aggregate": "sum",
+      "missing_policy": "error",
+      "protected_missing_policy": "error",
+      "missing_value": 0.01,
+      "protected_missing_conv_weight_keys": [],
+      "protected_missing_conv_weight_count": 0,
+      "nonprotected_missing_conv_weight_keys": [],
+      "n_layers": 19,
+      "n_channels": 717,
+      "min_value": 5.03581395605579e-05,
+      "max_value": 29.258962631225586,
+      "elapsed_s": 0.13663960100029726,
+      "evidence_label": "authoritative-cuda-artifact"
+    },
+    "stats": {
+      "n_layers": 19,
+      "n_channels": 717,
+      "min_value": 5.03581395605579e-05,
+      "max_value": 29.258962631225586
+    }
+  },
+  "owv3": {
+    "renderer_bytes": 295971,
+    "renderer_delta_vs_asym": -805,
+    "bit_budget_ratio": 0.7,
+    "protect_threshold": 0.001,
+    "aggressive_threshold": 1e-05,
+    "fallback_action": "keep_asym",
+    "decode_verified": true,
+    "byte_plan": {
+      "fallback_action": "keep_asym",
+      "asym_bits": 8,
+      "promotion_eligible": true,
+      "charged_body_bytes": 282446,
+      "action_counts": {
+        "owv2_low_bit_layers": 4,
+        "owv2_low_bit_channels": 47,
+        "keep_asym_layers": 37,
+        "keep_asym_channels": 706,
+        "diagnostic_fp16_layers": 0,
+        "fp16_protect_channels": 0
+      }
+    },
+    "layer_action_summary": {
+      "owv2_low_bit_layers": 4,
+      "owv2_low_bit_channels": 47,
+      "keep_asym_layers": 37,
+      "keep_asym_channels": 706,
+      "diagnostic_fp16_layers": 0,
+      "fp16_protect_channels": 0
+    }
+  },
+  "stacked_archive": {
+    "path": "/teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_owv3_fisher_lightning_20260430_codex_r2/archive_lane_g_v3_owv3.zip",
+    "size_bytes": 689342,
+    "sha256": "29a02b2af2c37371eec80ca3e278c4ce368703ba0a0a2121e2b32f570106a84c",
+    "manifest": [
+      {
+        "name": "renderer.bin",
+        "raw_bytes": 295971,
+        "compressed_bytes": 262662,
+        "crc32": "37d9dc8d",
+        "date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "permissions_octal": "0o644",
+        "sha256": "5af7f22941ca3a237a36ed95e7433b02a98a0d0cfc656036cad3cbe5ebb53f96"
+      },
+      {
+        "name": "masks.mkv",
+        "raw_bytes": 421483,
+        "compressed_bytes": 412169,
+        "crc32": "e144d6ac",
+        "date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "permissions_octal": "0o644",
+        "sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9"
+      },
+      {
+        "name": "optimized_poses.pt",
+        "raw_bytes": 15620,
+        "compressed_bytes": 14183,
+        "crc32": "8272fa8a",
+        "date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "permissions_octal": "0o644",
+        "sha256": "cb8517f7a7e3c9382e952ff278dc3f8de44ba066db07746f16354c1dbe2cbca4"
+      }
+    ],
+    "deterministic_rebuild": true,
+    "deterministic_rebuild_sha256": "29a02b2af2c37371eec80ca3e278c4ce368703ba0a0a2121e2b32f570106a84c"
+  },
+  "size_delta_vs_lane_g_v3": -4732,
+  "lane_g_v3_baseline_score": 1.05,
+  "predicted_score_derivation": 1.046849155433826,
+  "frontier_comparator": {
+    "label": "PFP16_A++",
+    "archive_bytes": 686635,
+    "archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+    "score": 1.043987524793892,
+    "archive_delta_bytes": 2707,
+    "rate_delta": 0.0018024801861017178,
+    "rate_only_score_derivation": 1.0457900049799935,
+    "byte_gate": {
+      "accepted": false,
+      "error": "Lane G v3 OWV3 archive byte plan exceeds PFP16_A++: 689342 > 686635 (+2707 bytes) without exact distortion justification or explicit smoke/debug override",
+      "candidate_bytes": 689342,
+      "comparator_bytes": 686635,
+      "delta_bytes": 2707,
+      "allow_size_regression": false
+    }
+  },
+  "predicted_score_tag": "[derivation]",
+  "score_validation_required": "contest-CUDA via experiments/contest_auth_eval.py",
+  "strict_scorer_rule": "compliant - no scorer load at OWV3 decode/inflate",
+  "evidence_label": "implementation-smoke until exact CUDA contest eval",
+  "size_regression_guard": {
+    "baseline_archive_size_bytes": 694074,
+    "archive_delta_bytes": -4732,
+    "blocked_by_default": false,
+    "allow_size_regression": false,
+    "frontier_blocked_by_default": true,
+    "frontier_blocked_effective": true,
+    "allow_frontier_regression": false
+  }
+}

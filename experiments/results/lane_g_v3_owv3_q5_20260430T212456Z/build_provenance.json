@@ -1,0 +1,199 @@
+{
+  "format": "lane_g_v3_owv3_stack_provenance_v1",
+  "lane_id": "lane_g_v3_owv3_stack",
+  "build_started_iso": "2026-04-30T21:24:56Z",
+  "build_completed_iso": "2026-04-30T21:24:56Z",
+  "anchors": {
+    "renderer": {
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_landed/iter_0/renderer.bin",
+      "size_bytes": 296776,
+      "sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529"
+    },
+    "masks": {
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_landed/iter_0/masks.mkv",
+      "size_bytes": 421483,
+      "sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9"
+    },
+    "poses": {
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_landed/iter_0/optimized_poses.pt",
+      "size_bytes": 15620,
+      "sha256": "cb8517f7a7e3c9382e952ff278dc3f8de44ba066db07746f16354c1dbe2cbca4"
+    },
+    "archive": {
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
+      "size_bytes": 694074,
+      "sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b"
+    }
+  },
+  "sensitivity_map": {
+    "path": "/Users/adpena/Projects/pact/experiments/results/lane_lane_g_v3_owv3_fisher_smoke_20260430_codex_modal/lane_g_v3_owv3_fisher_stack_results/owv3_sensitivity_map.pt",
+    "sha256": "8f8bc807a496fb9d4262175ecbafb5730036322e74ea74f63d3cd97a5b16b249",
+    "metadata": {
+      "format": "owv3_channel_sensitivity_from_fisher_v1",
+      "checkpoint": "experiments/results/lane_g_v3_landed/iter_0/renderer.bin",
+      "checkpoint_sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529",
+      "fisher": "/tmp/pact/lane_g_v3_owv3_fisher_stack_results/hessian_per_weight.pt",
+      "fisher_sha256": "5875e44146f6895afa331087383d6c27a72fd81cd18c9592fa433dd5962d2711",
+      "source_metadata": {
+        "checkpoint": "experiments/results/lane_g_v3_landed/iter_0/renderer.bin",
+        "poses": "experiments/results/lane_g_v3_landed/iter_0/optimized_poses.pt",
+        "masks_mkv": "experiments/results/lane_g_v3_landed/iter_0/masks.mkv",
+        "video_mkv": "upstream/videos/0.mkv",
+        "pair_weights": "experiments/results/lane_lane_w_v2_modal/harvested_artifacts/lane_w_results/pair_weights.pt",
+        "top_k": 3,
+        "n_pairs_seen": 3,
+        "n_eligible_layers": 16,
+        "n_eligible_weights": 242960,
+        "git_hash": "no-git",
+        "torch_version": "2.5.1+cu124",
+        "device": "cuda",
+        "elapsed_s": 32.173446655,
+        "imp_min": 6.2707050866267946e-12,
+        "imp_max": 2.081935857649795,
+        "imp_mean": 0.001240885517822829,
+        "imp_median": 3.5605173441964006e-05,
+        "imp_p95": 0.002544305986833603,
+        "imp_p99": 0.018597836790525284
+      },
+      "source_device": "cuda",
+      "authoritative_cuda": true,
+      "non_authoritative_allowed": false,
+      "aggregate": "sum",
+      "missing_policy": "protect",
+      "missing_value": 0.01,
+      "n_layers": 19,
+      "n_channels": 717,
+      "min_value": 0.0003041804884560406,
+      "max_value": 44.64900588989258,
+      "elapsed_s": 0.1111664400000052,
+      "evidence_label": "authoritative-cuda-artifact"
+    },
+    "stats": {
+      "n_layers": 19,
+      "n_channels": 717,
+      "min_value": 0.0003041804884560406,
+      "max_value": 44.64900588989258
+    }
+  },
+  "owv3": {
+    "renderer_bytes": 300628,
+    "renderer_delta_vs_asym": 3852,
+    "bit_budget_ratio": 0.7,
+    "protect_threshold": 0.001,
+    "aggressive_threshold": 1e-05,
+    "fallback_action": "keep_asym",
+    "decode_verified": true,
+    "byte_plan": {
+      "fallback_action": "keep_asym",
+      "asym_bits": 8,
+      "promotion_eligible": true,
+      "charged_body_bytes": 287885,
+      "action_counts": {
+        "owv2_low_bit_layers": 2,
+        "owv2_low_bit_channels": 16,
+        "keep_asym_layers": 39,
+        "keep_asym_channels": 737,
+        "diagnostic_fp16_layers": 0,
+        "fp16_protect_channels": 0
+      }
+    },
+    "layer_action_summary": {
+      "owv2_low_bit_layers": 2,
+      "owv2_low_bit_channels": 16,
+      "keep_asym_layers": 39,
+      "keep_asym_channels": 737,
+      "diagnostic_fp16_layers": 0,
+      "fp16_protect_channels": 0
+    }
+  },
+  "stacked_archive": {
+    "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_q5_20260430T212456Z/archive_lane_g_v3_owv3.zip",
+    "size_bytes": 692939,
+    "sha256": "ad50b4173627196fd4156eaf68e887dbec891949cb641cf292f85f731865eb7f",
+    "manifest": [
+      {
+        "name": "renderer.bin",
+        "raw_bytes": 300628,
+        "compressed_bytes": 266259,
+        "crc32": "681ccff8",
+        "date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "permissions_octal": "0o644",
+        "sha256": "15936656e53f346cba44cc2020ba0e9693119a50877458788be56d10075250eb"
+      },
+      {
+        "name": "masks.mkv",
+        "raw_bytes": 421483,
+        "compressed_bytes": 412169,
+        "crc32": "e144d6ac",
+        "date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "permissions_octal": "0o644",
+        "sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9"
+      },
+      {
+        "name": "optimized_poses.pt",
+        "raw_bytes": 15620,
+        "compressed_bytes": 14183,
+        "crc32": "8272fa8a",
+        "date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "permissions_octal": "0o644",
+        "sha256": "cb8517f7a7e3c9382e952ff278dc3f8de44ba066db07746f16354c1dbe2cbca4"
+      }
+    ],
+    "deterministic_rebuild": true,
+    "deterministic_rebuild_sha256": "ad50b4173627196fd4156eaf68e887dbec891949cb641cf292f85f731865eb7f"
+  },
+  "size_delta_vs_lane_g_v3": -1135,
+  "lane_g_v3_baseline_score": 1.05,
+  "predicted_score_derivation": 1.0492442500882064,
+  "frontier_comparator": {
+    "label": "PFP16_A++",
+    "archive_bytes": 686635,
+    "archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+    "score": 1.043987524793892,
+    "archive_delta_bytes": 6304,
+    "rate_delta": 0.004197574840482168,
+    "rate_only_score_derivation": 1.048185099634374,
+    "byte_gate": {
+      "accepted": false,
+      "error": "Lane G v3 OWV3 archive byte plan exceeds PFP16_A++: 692939 > 686635 (+6304 bytes) without exact distortion justification or explicit smoke/debug override",
+      "candidate_bytes": 692939,
+      "comparator_bytes": 686635,
+      "delta_bytes": 6304,
+      "allow_size_regression": false
+    }
+  },
+  "predicted_score_tag": "[derivation]",
+  "score_validation_required": "contest-CUDA via experiments/contest_auth_eval.py",
+  "strict_scorer_rule": "compliant - no scorer load at OWV3 decode/inflate",
+  "evidence_label": "implementation-smoke until exact CUDA contest eval",
+  "size_regression_guard": {
+    "baseline_archive_size_bytes": 694074,
+    "archive_delta_bytes": -1135,
+    "blocked_by_default": false,
+    "allow_size_regression": false,
+    "frontier_blocked_by_default": true,
+    "frontier_blocked_effective": true,
+    "allow_frontier_regression": false
+  }
+}

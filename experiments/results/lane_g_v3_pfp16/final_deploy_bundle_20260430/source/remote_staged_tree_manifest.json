@@ -1,0 +1,6 @@
+{
+  "reason": "Lightning staged tree was non-git; contest_auth_eval provenance recorded pact_commit error.",
+  "remote_archive_path": "/home/zeus/content/pact_pfp16_exact_20260430T1625Z/auth_eval_input/pfp16_exact_0af839abb30e_archive.zip",
+  "remote_pact_path_inferred": "/home/zeus/content/pact_pfp16_exact_20260430T1625Z",
+  "status": "missing"
+}

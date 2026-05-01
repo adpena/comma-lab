@@ -1,0 +1,115 @@
+{
+  "calibration_pair_indices": [
+    73
+  ],
+  "components": {
+    "combined": {
+      "atom_count": 2,
+      "atoms": [
+        {
+          "atom_id": "combined:000000:bad597130ed0",
+          "channel": 1,
+          "component": "combined",
+          "direction": "sign(weight), zeros treated as +1",
+          "key": "motion.head.weight",
+          "normalization": "weight_channel_rms",
+          "order": 0,
+          "sensitivity": 41.187923431396484
+        },
+        {
+          "atom_id": "combined:000001:d19e79938ae5",
+          "channel": 1,
+          "component": "combined",
+          "direction": "sign(weight), zeros treated as +1",
+          "key": "renderer.head.weight",
+          "normalization": "weight_channel_rms",
+          "order": 1,
+          "sensitivity": 31.32126235961914
+        }
+      ],
+      "response_top_k": 2,
+      "sensitivity_sum": 72.50918579101562
+    },
+    "posenet": {
+      "atom_count": 2,
+      "atoms": [
+        {
+          "atom_id": "posenet:000000:c1ecf6ffad26",
+          "channel": 1,
+          "component": "posenet",
+          "direction": "sign(weight), zeros treated as +1",
+          "key": "motion.head.weight",
+          "normalization": "weight_channel_rms",
+          "order": 0,
+          "sensitivity": 41.187923431396484
+        },
+        {
+          "atom_id": "posenet:000001:cd7b3ba70070",
+          "channel": 0,
+          "component": "posenet",
+          "direction": "sign(weight), zeros treated as +1",
+          "key": "motion.head.weight",
+          "normalization": "weight_channel_rms",
+          "order": 1,
+          "sensitivity": 26.50839614868164
+        }
+      ],
+      "response_top_k": 2,
+      "sensitivity_sum": 67.69631958007812
+    },
+    "segnet": {
+      "atom_count": 2,
+      "atoms": [
+        {
+          "atom_id": "segnet:000000:5dcd80d26918",
+          "channel": 27,
+          "component": "segnet",
+          "direction": "sign(weight), zeros treated as +1",
+          "key": "renderer.stem_conv.weight",
+          "normalization": "weight_channel_rms",
+          "order": 0,
+          "sensitivity": 10.302559852600098
+        },
+        {
+          "atom_id": "segnet:000001:a1bc04a9784d",
+          "channel": 2,
+          "component": "segnet",
+          "direction": "sign(weight), zeros treated as +1",
+          "key": "renderer.head.weight",
+          "normalization": "weight_channel_rms",
+          "order": 1,
+          "sensitivity": 8.115976333618164
+        }
+      ],
+      "response_top_k": 2,
+      "sensitivity_sum": 18.41853618621826
+    }
+  },
+  "epsilon_ladder": [
+    -0.001,
+    0.0,
+    0.001
+  ],
+  "epsilon_units": "dimensionless multiplier on each selected channel's RMS weight",
+  "format": "perturbation_basis_v1",
+  "holdout_pair_indices": [
+    454
+  ],
+  "input_custody": {
+    "checkpoint": "experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/extracted_for_sensitivity/renderer.bin",
+    "masks_mkv": "experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/extracted_for_sensitivity/masks.mkv",
+    "n_pairs_selected": 2,
+    "n_pairs_total": 600,
+    "pair_weights": "experiments/results/difficulty_map.pt",
+    "poses": "experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/extracted_for_sensitivity/optimized_poses.bin",
+    "upstream_dir": "upstream",
+    "video_mkv": "upstream/videos/0.mkv"
+  },
+  "normalization": "per-channel RMS over the selected weight channel",
+  "perturbation": "signed_weight_rms_topk_channels_v1",
+  "schema_version": 1,
+  "sign_convention": "epsilon * rms(weight[channel]) * sign(weight[channel]); zero weights use +1 sign",
+  "split_hash": "c4270c2ed01d6860ff1149251471482aa70eaac8399434f3c6040c5640bbfffc",
+  "split_seed": 20260430,
+  "tool": "experiments/profile_component_sensitivity.py"
+}

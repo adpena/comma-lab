@@ -1,0 +1,17 @@
+{
+  "score": 2.26,
+  "posenet_dist": 0.24523059,
+  "segnet_dist": 0.00237917,
+  "archive_bytes": 686321,
+  "gt_bytes": 37545489,
+  "rate": 0.01827972,
+  "posenet_contribution": 1.565984003749719,
+  "segnet_contribution": 0.237917,
+  "rate_contribution": 0.456993,
+  "inflate_time_s": 73.73053420800716,
+  "score_time_s": 20.554162916960195,
+  "total_time_s": 94.28469712496735,
+  "device": "mps",
+  "archive_path": "/Users/adpena/Projects/pact/submissions/robust_current/archive.zip",
+  "lane": "contest-compliant"
+}

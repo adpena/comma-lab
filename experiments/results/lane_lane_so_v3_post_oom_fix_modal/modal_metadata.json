@@ -1,0 +1,8 @@
+{
+  "lane_script": "scripts/remote_lane_so_hessian_block_fp.sh",
+  "label": "lane_so_v3_post_oom_fix",
+  "gpu": "A10G",
+  "max_seconds": 28800,
+  "call_id": "fc-01KQEKJ4YD44SEA80KY6S9TV76",
+  "dispatched_at": "2026-04-30T02:09:58.601772"
+}

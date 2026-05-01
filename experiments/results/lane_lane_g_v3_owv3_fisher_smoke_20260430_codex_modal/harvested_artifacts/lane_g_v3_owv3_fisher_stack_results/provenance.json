@@ -1,0 +1,29 @@
+{
+  "lane_id": "lane_g_v3_owv3_fisher_stack",
+  "started_at_utc": "2026-04-30T16:26:44Z",
+  "git_hash": "no-git",
+  "gpu_name": "NVIDIA A10",
+  "driver_version": "580.95.05",
+  "torch_version": "2.5.1+cu124",
+  "cuda_version": "12.4",
+  "cuda_available": true,
+  "lane_script": "scripts/remote_lane_g_v3_owv3_fisher_stack.sh",
+  "anchor_renderer": "experiments/results/lane_g_v3_landed/iter_0/renderer.bin",
+  "anchor_masks": "experiments/results/lane_g_v3_landed/iter_0/masks.mkv",
+  "anchor_poses": "experiments/results/lane_g_v3_landed/iter_0/optimized_poses.pt",
+  "anchor_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
+  "baseline_lane": "lane_g_v3_landed",
+  "baseline_score_contest_cuda": 1.05,
+  "fisher_top_k": 3,
+  "pair_batch": 1,
+  "bit_budget_ratio": 0.7,
+  "protect_threshold": 0.001,
+  "aggressive_threshold": 1e-05,
+  "run_contest_eval": false,
+  "auth_eval_device": "cpu",
+  "output_dir": "/tmp/pact/lane_g_v3_owv3_fisher_stack_results",
+  "predicted_band": [
+    0.95,
+    1.05
+  ]
+}
