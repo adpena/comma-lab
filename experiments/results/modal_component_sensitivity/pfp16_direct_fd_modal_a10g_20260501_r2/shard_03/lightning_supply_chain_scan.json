@@ -1,0 +1,18 @@
+{
+  "hostname": "modal",
+  "package_versions": {
+    "lightning": null,
+    "lightning-sdk": null,
+    "lightning_sdk": null,
+    "pytorch-lightning": null
+  },
+  "python": "/usr/local/bin/python",
+  "recorded_at_utc": "2026-05-01T07:59:01Z",
+  "repo_root": "/workspace/pact",
+  "schema_version": 1,
+  "status": "OK",
+  "strict": true,
+  "tool": "scripts/scan_lightning_supply_chain.py",
+  "violation_count": 0,
+  "violations": []
+}

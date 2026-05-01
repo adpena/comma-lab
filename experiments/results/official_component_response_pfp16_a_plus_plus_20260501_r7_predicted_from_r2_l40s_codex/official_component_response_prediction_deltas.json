@@ -1,0 +1,972 @@
+{
+  "atom_set_sha256": "3b080252de72aa911579e7d18dfb4edfa19b19f2ee6900630b06d0ae17017e05",
+  "epsilon_ladder": [
+    -2.0,
+    -1.0,
+    0.0,
+    1.0,
+    2.0
+  ],
+  "format": "official_component_response_prediction_deltas_v1",
+  "points": [
+    {
+      "atom_contributions": [
+        {
+          "atom_id": "asym_payload_0000_l021_renderer_down_res_conv1_ch30_b270",
+          "component_abs_delta": {
+            "combined": 0.0005619075382128358,
+            "posenet": 0.00033074384555220604,
+            "segnet": 0.00022314864327199757
+          },
+          "integer_byte_delta": -2
+        },
+        {
+          "atom_id": "asym_payload_0001_l022_renderer_down_res_conv2_ch30_b270",
+          "component_abs_delta": {
+            "combined": 0.0004391120164655149,
+            "posenet": 0.00014005218690726906,
+            "segnet": 0.0002803996903821826
+          },
+          "integer_byte_delta": -2
+        },
+        {
+          "atom_id": "asym_payload_0002_l023_renderer_bottleneck_conv1_ch30_b270",
+          "component_abs_delta": {
+            "combined": 0.0027629754040390253,
+            "posenet": 0.00224434700794518,
+            "segnet": 0.00039156319689936936
+          },
+          "integer_byte_delta": -2
+        },
+        {
+          "atom_id": "asym_payload_0003_l024_renderer_bottleneck_conv2_ch30_b270",
+          "component_abs_delta": {
+            "combined": 1.2701313607976772e-05,
+            "posenet": 3.176818609063048e-06,
+            "segnet": 9.353369023301639e-06
+          },
+          "integer_byte_delta": -2
+        },
+        {
+          "atom_id": "asym_payload_0004_l020_renderer_down_conv_ch30_b162",
+          "component_abs_delta": {
+            "combined": 0.005354693625122309,
+            "posenet": 0.0007102460949681699,
+            "segnet": 0.004500671289861202
+          },
+          "integer_byte_delta": -2
+        },
+        {
+          "atom_id": "asym_payload_0005_l018_renderer_stem_res_conv1_ch18_b162",
+          "component_abs_delta": {
+            "combined": 0.003555018687620759,
+            "posenet": 0.001842157798819244,
+            "segnet": 0.0017150802304968238
+          },
+          "integer_byte_delta": -2
+        },
+        {
+          "atom_id": "asym_payload_0006_l019_renderer_stem_res_conv2_ch18_b162",
+          "component_abs_delta": {
+            "combined": 0.0035506701096892357,
+            "posenet": 0.0009258555364795029,
+            "segnet": 0.0020849662832915783
+          },
+          "integer_byte_delta": -2
+        },
+        {
+          "atom_id": "asym_payload_0007_l026_renderer_up_res_conv1_ch18_b162",
+          "component_abs_delta": {
+            "combined": 0.00032143245334737003,
+            "posenet": 8.695630822330713e-05,
+            "segnet": 0.0001671354693826288
+          },
+          "integer_byte_delta": -2
+        },
+        {
+          "atom_id": "asym_payload_0008_l027_renderer_up_res_conv2_ch18_b162",
+          "component_abs_delta": {
+            "combined": 0.00032091597677208483,
+            "posenet": 0.00018055651162285358,
+            "segnet": 0.0001519687648396939
+          },
+          "integer_byte_delta": -2
+        },
+        {
+          "atom_id": "asym_payload_0009_l035_motion_down_0_ch16_b144",
+          "component_abs_delta": {
+            "combined": 0.010046670213341713,
+            "posenet": 0.010046670213341713,
+            "segnet": 0.0
+          },
+          "integer_byte_delta": -2
+        },
+        {
+          "atom_id": "asym_payload_0010_l036_motion_bottleneck_conv1_ch16_b144",
+          "component_abs_delta": {
+            "combined": 0.011568950489163399,
+            "posenet": 0.011568950489163399,
+            "segnet": 0.0
+          },
+          "integer_byte_delta": -2
+        },
+        {
+          "atom_id": "asym_payload_0011_l037_motion_bottleneck_conv2_ch16_b144",
+          "component_abs_delta": {
+            "combined": 0.0014180643483996391,
+            "posenet": 0.0014180639991536736,
+            "segnet": 0.0
+          },
+          "integer_byte_delta": -2
+        },
+        {
+          "atom_id": "asym_payload_0012_l038_motion_up_conv_ch16_b144",
+          "component_abs_delta": {
+            "combined": 0.001851869747042656,
+            "posenet": 0.001851869747042656,
+            "segnet": 0.0
+          },
+          "integer_byte_delta": -2
+        },
+        {
+          "atom_id": "asym_payload_0013_l034_motion_stem_0_ch16_b90",
+          "component_abs_delta": {
+            "combined": 0.023204827681183815,
+            "posenet": 0.023204822093248367,
+            "segnet": 0.0
+          },
+          "integer_byte_delta": -2
+        },
+        {
+          "atom_id": "asym_payload_0014_l017_renderer_stem_conv_ch18_b36",
+          "component_abs_delta": {
+            "combined": 0.03148540109395981,
+            "posenet": 0.0065302071161568165,
+            "segnet": 0.02571943961083889
+          },
+          "integer_byte_delta": -2
+        },
+        {
+          "atom_id": "asym_payload_0015_l028_renderer_fuse_conv_ch18_b36",
+          "component_abs_delta": {
+            "combined": 0.00145757629070431,
+            "posenet": 0.0005762378568761051,
+            "segnet": 0.0007712329970672727
+          },
+          "integer_byte_delta": -2
+        }
+      ],
+      "component_raw_abs_delta": {
+        "combined": 0.09791278698867245,
+        "posenet": 0.061660913624109526,
+        "segnet": 0.03601495954535494
+      },
+      "epsilon": -2.0,
+      "predicted_delta": {
+        "combined": 0.09791278698867245,
+        "posenet": 0.061660913624109526,
+        "segnet": 0.03601495954535494
+      }
+    },
+    {
+      "atom_contributions": [
+        {
+          "atom_id": "asym_payload_0000_l021_renderer_down_res_conv1_ch30_b270",
+          "component_abs_delta": {
+            "combined": 0.00014047688455320895,
+            "posenet": 8.268596138805151e-05,
+            "segnet": 5.578716081799939e-05
+          },
+          "integer_byte_delta": -1
+        },
+        {
+          "atom_id": "asym_payload_0001_l022_renderer_down_res_conv2_ch30_b270",
+          "component_abs_delta": {
+            "combined": 0.00010977800411637872,
+            "posenet": 3.5013046726817265e-05,
+            "segnet": 7.009992259554565e-05
+          },
+          "integer_byte_delta": -1
+        },
+        {
+          "atom_id": "asym_payload_0002_l023_renderer_bottleneck_conv1_ch30_b270",
+          "component_abs_delta": {
+            "combined": 0.0006907438510097563,
+            "posenet": 0.000561086751986295,
+            "segnet": 9.789079922484234e-05
+          },
+          "integer_byte_delta": -1
+        },
+        {
+          "atom_id": "asym_payload_0003_l024_renderer_bottleneck_conv2_ch30_b270",
+          "component_abs_delta": {
+            "combined": 3.175328401994193e-06,
+            "posenet": 7.94204652265762e-07,
+            "segnet": 2.3383422558254097e-06
+          },
+          "integer_byte_delta": -1
+        },
+        {
+          "atom_id": "asym_payload_0004_l020_renderer_down_conv_ch30_b162",
+          "component_abs_delta": {
+            "combined": 0.0013386734062805772,
+            "posenet": 0.00017756152374204248,
+            "segnet": 0.0011251678224653006
+          },
+          "integer_byte_delta": -1
+        },
+        {
+          "atom_id": "asym_payload_0005_l018_renderer_stem_res_conv1_ch18_b162",
+          "component_abs_delta": {
+            "combined": 0.0008887546719051898,
+            "posenet": 0.000460539449704811,
+            "segnet": 0.00042877005762420595
+          },
+          "integer_byte_delta": -1
+        },
+        {
+          "atom_id": "asym_payload_0006_l019_renderer_stem_res_conv2_ch18_b162",
+          "component_abs_delta": {
+            "combined": 0.0008876675274223089,
+            "posenet": 0.00023146388411987573,
+            "segnet": 0.0005212415708228946
+          },
+          "integer_byte_delta": -1
+        },
+        {
+          "atom_id": "asym_payload_0007_l026_renderer_up_res_conv1_ch18_b162",
+          "component_abs_delta": {
+            "combined": 8.035811333684251e-05,
+            "posenet": 2.1739077055826783e-05,
+            "segnet": 4.17838673456572e-05
+          },
+          "integer_byte_delta": -1
+        },
+        {
+          "atom_id": "asym_payload_0008_l027_renderer_up_res_conv2_ch18_b162",
+          "component_abs_delta": {
+            "combined": 8.022899419302121e-05,
+            "posenet": 4.5139127905713394e-05,
+            "segnet": 3.7992191209923476e-05
+          },
+          "integer_byte_delta": -1
+        },
+        {
+          "atom_id": "asym_payload_0009_l035_motion_down_0_ch16_b144",
+          "component_abs_delta": {
+            "combined": 0.0025116675533354282,
+            "posenet": 0.0025116675533354282,
+            "segnet": 0.0
+          },
+          "integer_byte_delta": -1
+        },
+        {
+          "atom_id": "asym_payload_0010_l036_motion_bottleneck_conv1_ch16_b144",
+          "component_abs_delta": {
+            "combined": 0.0028922376222908497,
+            "posenet": 0.0028922376222908497,
+            "segnet": 0.0
+          },
+          "integer_byte_delta": -1
+        },
+        {
+          "atom_id": "asym_payload_0011_l037_motion_bottleneck_conv2_ch16_b144",
+          "component_abs_delta": {
+            "combined": 0.0003545160870999098,
+            "posenet": 0.0003545159997884184,
+            "segnet": 0.0
+          },
+          "integer_byte_delta": -1
+        },
+        {
+          "atom_id": "asym_payload_0012_l038_motion_up_conv_ch16_b144",
+          "component_abs_delta": {
+            "combined": 0.000462967436760664,
+            "posenet": 0.000462967436760664,
+            "segnet": 0.0
+          },
+          "integer_byte_delta": -1
+        },
+        {
+          "atom_id": "asym_payload_0013_l034_motion_stem_0_ch16_b90",
+          "component_abs_delta": {
+            "combined": 0.005801206920295954,
+            "posenet": 0.005801205523312092,
+            "segnet": 0.0
+          },
+          "integer_byte_delta": -1
+        },
+        {
+          "atom_id": "asym_payload_0014_l017_renderer_stem_conv_ch18_b36",
+          "component_abs_delta": {
+            "combined": 0.007871350273489952,
+            "posenet": 0.0016325517790392041,
+            "segnet": 0.0064298599027097225
+          },
+          "integer_byte_delta": -1
+        },
+        {
+          "atom_id": "asym_payload_0015_l028_renderer_fuse_conv_ch18_b36",
+          "component_abs_delta": {
+            "combined": 0.0003643940726760775,
+            "posenet": 0.00014405946421902627,
+            "segnet": 0.00019280824926681817
+          },
+          "integer_byte_delta": -1
+        }
+      ],
+      "component_raw_abs_delta": {
+        "combined": 0.024478196747168113,
+        "posenet": 0.015415228406027381,
+        "segnet": 0.009003739886338735
+      },
+      "epsilon": -1.0,
+      "predicted_delta": {
+        "combined": 0.024478196747168113,
+        "posenet": 0.015415228406027381,
+        "segnet": 0.009003739886338735
+      }
+    },
+    {
+      "atom_contributions": [
+        {
+          "atom_id": "asym_payload_0000_l021_renderer_down_res_conv1_ch30_b270",
+          "component_abs_delta": {
+            "combined": 0.0,
+            "posenet": 0.0,
+            "segnet": 0.0
+          },
+          "integer_byte_delta": 0
+        },
+        {
+          "atom_id": "asym_payload_0001_l022_renderer_down_res_conv2_ch30_b270",
+          "component_abs_delta": {
+            "combined": 0.0,
+            "posenet": 0.0,
+            "segnet": 0.0
+          },
+          "integer_byte_delta": 0
+        },
+        {
+          "atom_id": "asym_payload_0002_l023_renderer_bottleneck_conv1_ch30_b270",
+          "component_abs_delta": {
+            "combined": 0.0,
+            "posenet": 0.0,
+            "segnet": 0.0
+          },
+          "integer_byte_delta": 0
+        },
+        {
+          "atom_id": "asym_payload_0003_l024_renderer_bottleneck_conv2_ch30_b270",
+          "component_abs_delta": {
+            "combined": 0.0,
+            "posenet": 0.0,
+            "segnet": 0.0
+          },
+          "integer_byte_delta": 0
+        },
+        {
+          "atom_id": "asym_payload_0004_l020_renderer_down_conv_ch30_b162",
+          "component_abs_delta": {
+            "combined": 0.0,
+            "posenet": 0.0,
+            "segnet": 0.0
+          },
+          "integer_byte_delta": 0
+        },
+        {
+          "atom_id": "asym_payload_0005_l018_renderer_stem_res_conv1_ch18_b162",
+          "component_abs_delta": {
+            "combined": 0.0,
+            "posenet": 0.0,
+            "segnet": 0.0
+          },
+          "integer_byte_delta": 0
+        },
+        {
+          "atom_id": "asym_payload_0006_l019_renderer_stem_res_conv2_ch18_b162",
+          "component_abs_delta": {
+            "combined": 0.0,
+            "posenet": 0.0,
+            "segnet": 0.0
+          },
+          "integer_byte_delta": 0
+        },
+        {
+          "atom_id": "asym_payload_0007_l026_renderer_up_res_conv1_ch18_b162",
+          "component_abs_delta": {
+            "combined": 0.0,
+            "posenet": 0.0,
+            "segnet": 0.0
+          },
+          "integer_byte_delta": 0
+        },
+        {
+          "atom_id": "asym_payload_0008_l027_renderer_up_res_conv2_ch18_b162",
+          "component_abs_delta": {
+            "combined": 0.0,
+            "posenet": 0.0,
+            "segnet": 0.0
+          },
+          "integer_byte_delta": 0
+        },
+        {
+          "atom_id": "asym_payload_0009_l035_motion_down_0_ch16_b144",
+          "component_abs_delta": {
+            "combined": 0.0,
+            "posenet": 0.0,
+            "segnet": 0.0
+          },
+          "integer_byte_delta": 0
+        },
+        {
+          "atom_id": "asym_payload_0010_l036_motion_bottleneck_conv1_ch16_b144",
+          "component_abs_delta": {
+            "combined": 0.0,
+            "posenet": 0.0,
+            "segnet": 0.0
+          },
+          "integer_byte_delta": 0
+        },
+        {
+          "atom_id": "asym_payload_0011_l037_motion_bottleneck_conv2_ch16_b144",
+          "component_abs_delta": {
+            "combined": 0.0,
+            "posenet": 0.0,
+            "segnet": 0.0
+          },
+          "integer_byte_delta": 0
+        },
+        {
+          "atom_id": "asym_payload_0012_l038_motion_up_conv_ch16_b144",
+          "component_abs_delta": {
+            "combined": 0.0,
+            "posenet": 0.0,
+            "segnet": 0.0
+          },
+          "integer_byte_delta": 0
+        },
+        {
+          "atom_id": "asym_payload_0013_l034_motion_stem_0_ch16_b90",
+          "component_abs_delta": {
+            "combined": 0.0,
+            "posenet": 0.0,
+            "segnet": 0.0
+          },
+          "integer_byte_delta": 0
+        },
+        {
+          "atom_id": "asym_payload_0014_l017_renderer_stem_conv_ch18_b36",
+          "component_abs_delta": {
+            "combined": 0.0,
+            "posenet": 0.0,
+            "segnet": 0.0
+          },
+          "integer_byte_delta": 0
+        },
+        {
+          "atom_id": "asym_payload_0015_l028_renderer_fuse_conv_ch18_b36",
+          "component_abs_delta": {
+            "combined": 0.0,
+            "posenet": 0.0,
+            "segnet": 0.0
+          },
+          "integer_byte_delta": 0
+        }
+      ],
+      "component_raw_abs_delta": {
+        "combined": 0.0,
+        "posenet": 0.0,
+        "segnet": 0.0
+      },
+      "epsilon": 0.0,
+      "predicted_delta": {
+        "combined": 0.0,
+        "posenet": 0.0,
+        "segnet": 0.0
+      }
+    },
+    {
+      "atom_contributions": [
+        {
+          "atom_id": "asym_payload_0000_l021_renderer_down_res_conv1_ch30_b270",
+          "component_abs_delta": {
+            "combined": 0.00014047688455320895,
+            "posenet": 8.268596138805151e-05,
+            "segnet": 5.578716081799939e-05
+          },
+          "integer_byte_delta": 1
+        },
+        {
+          "atom_id": "asym_payload_0001_l022_renderer_down_res_conv2_ch30_b270",
+          "component_abs_delta": {
+            "combined": 0.00010977800411637872,
+            "posenet": 3.5013046726817265e-05,
+            "segnet": 7.009992259554565e-05
+          },
+          "integer_byte_delta": 1
+        },
+        {
+          "atom_id": "asym_payload_0002_l023_renderer_bottleneck_conv1_ch30_b270",
+          "component_abs_delta": {
+            "combined": 0.0006907438510097563,
+            "posenet": 0.000561086751986295,
+            "segnet": 9.789079922484234e-05
+          },
+          "integer_byte_delta": 1
+        },
+        {
+          "atom_id": "asym_payload_0003_l024_renderer_bottleneck_conv2_ch30_b270",
+          "component_abs_delta": {
+            "combined": 3.175328401994193e-06,
+            "posenet": 7.94204652265762e-07,
+            "segnet": 2.3383422558254097e-06
+          },
+          "integer_byte_delta": 1
+        },
+        {
+          "atom_id": "asym_payload_0004_l020_renderer_down_conv_ch30_b162",
+          "component_abs_delta": {
+            "combined": 0.0013386734062805772,
+            "posenet": 0.00017756152374204248,
+            "segnet": 0.0011251678224653006
+          },
+          "integer_byte_delta": 1
+        },
+        {
+          "atom_id": "asym_payload_0005_l018_renderer_stem_res_conv1_ch18_b162",
+          "component_abs_delta": {
+            "combined": 0.0008887546719051898,
+            "posenet": 0.000460539449704811,
+            "segnet": 0.00042877005762420595
+          },
+          "integer_byte_delta": 1
+        },
+        {
+          "atom_id": "asym_payload_0006_l019_renderer_stem_res_conv2_ch18_b162",
+          "component_abs_delta": {
+            "combined": 0.0008876675274223089,
+            "posenet": 0.00023146388411987573,
+            "segnet": 0.0005212415708228946
+          },
+          "integer_byte_delta": 1
+        },
+        {
+          "atom_id": "asym_payload_0007_l026_renderer_up_res_conv1_ch18_b162",
+          "component_abs_delta": {
+            "combined": 8.035811333684251e-05,
+            "posenet": 2.1739077055826783e-05,
+            "segnet": 4.17838673456572e-05
+          },
+          "integer_byte_delta": 1
+        },
+        {
+          "atom_id": "asym_payload_0008_l027_renderer_up_res_conv2_ch18_b162",
+          "component_abs_delta": {
+            "combined": 8.022899419302121e-05,
+            "posenet": 4.5139127905713394e-05,
+            "segnet": 3.7992191209923476e-05
+          },
+          "integer_byte_delta": 1
+        },
+        {
+          "atom_id": "asym_payload_0009_l035_motion_down_0_ch16_b144",
+          "component_abs_delta": {
+            "combined": 0.0025116675533354282,
+            "posenet": 0.0025116675533354282,
+            "segnet": 0.0
+          },
+          "integer_byte_delta": 1
+        },
+        {
+          "atom_id": "asym_payload_0010_l036_motion_bottleneck_conv1_ch16_b144",
+          "component_abs_delta": {
+            "combined": 0.0028922376222908497,
+            "posenet": 0.0028922376222908497,
+            "segnet": 0.0
+          },
+          "integer_byte_delta": 1
+        },
+        {
+          "atom_id": "asym_payload_0011_l037_motion_bottleneck_conv2_ch16_b144",
+          "component_abs_delta": {
+            "combined": 0.0003545160870999098,
+            "posenet": 0.0003545159997884184,
+            "segnet": 0.0
+          },
+          "integer_byte_delta": 1
+        },
+        {
+          "atom_id": "asym_payload_0012_l038_motion_up_conv_ch16_b144",
+          "component_abs_delta": {
+            "combined": 0.000462967436760664,
+            "posenet": 0.000462967436760664,
+            "segnet": 0.0
+          },
+          "integer_byte_delta": 1
+        },
+        {
+          "atom_id": "asym_payload_0013_l034_motion_stem_0_ch16_b90",
+          "component_abs_delta": {
+            "combined": 0.005801206920295954,
+            "posenet": 0.005801205523312092,
+            "segnet": 0.0
+          },
+          "integer_byte_delta": 1
+        },
+        {
+          "atom_id": "asym_payload_0014_l017_renderer_stem_conv_ch18_b36",
+          "component_abs_delta": {
+            "combined": 0.007871350273489952,
+            "posenet": 0.0016325517790392041,
+            "segnet": 0.0064298599027097225
+          },
+          "integer_byte_delta": 1
+        },
+        {
+          "atom_id": "asym_payload_0015_l028_renderer_fuse_conv_ch18_b36",
+          "component_abs_delta": {
+            "combined": 0.0003643940726760775,
+            "posenet": 0.00014405946421902627,
+            "segnet": 0.00019280824926681817
+          },
+          "integer_byte_delta": 1
+        }
+      ],
+      "component_raw_abs_delta": {
+        "combined": 0.024478196747168113,
+        "posenet": 0.015415228406027381,
+        "segnet": 0.009003739886338735
+      },
+      "epsilon": 1.0,
+      "predicted_delta": {
+        "combined": 0.024478196747168113,
+        "posenet": 0.015415228406027381,
+        "segnet": 0.009003739886338735
+      }
+    },
+    {
+      "atom_contributions": [
+        {
+          "atom_id": "asym_payload_0000_l021_renderer_down_res_conv1_ch30_b270",
+          "component_abs_delta": {
+            "combined": 0.0005619075382128358,
+            "posenet": 0.00033074384555220604,
+            "segnet": 0.00022314864327199757
+          },
+          "integer_byte_delta": 2
+        },
+        {
+          "atom_id": "asym_payload_0001_l022_renderer_down_res_conv2_ch30_b270",
+          "component_abs_delta": {
+            "combined": 0.0004391120164655149,
+            "posenet": 0.00014005218690726906,
+            "segnet": 0.0002803996903821826
+          },
+          "integer_byte_delta": 2
+        },
+        {
+          "atom_id": "asym_payload_0002_l023_renderer_bottleneck_conv1_ch30_b270",
+          "component_abs_delta": {
+            "combined": 0.0027629754040390253,
+            "posenet": 0.00224434700794518,
+            "segnet": 0.00039156319689936936
+          },
+          "integer_byte_delta": 2
+        },
+        {
+          "atom_id": "asym_payload_0003_l024_renderer_bottleneck_conv2_ch30_b270",
+          "component_abs_delta": {
+            "combined": 1.2701313607976772e-05,
+            "posenet": 3.176818609063048e-06,
+            "segnet": 9.353369023301639e-06
+          },
+          "integer_byte_delta": 2
+        },
+        {
+          "atom_id": "asym_payload_0004_l020_renderer_down_conv_ch30_b162",
+          "component_abs_delta": {
+            "combined": 0.005354693625122309,
+            "posenet": 0.0007102460949681699,
+            "segnet": 0.004500671289861202
+          },
+          "integer_byte_delta": 2
+        },
+        {
+          "atom_id": "asym_payload_0005_l018_renderer_stem_res_conv1_ch18_b162",
+          "component_abs_delta": {
+            "combined": 0.003555018687620759,
+            "posenet": 0.001842157798819244,
+            "segnet": 0.0017150802304968238
+          },
+          "integer_byte_delta": 2
+        },
+        {
+          "atom_id": "asym_payload_0006_l019_renderer_stem_res_conv2_ch18_b162",
+          "component_abs_delta": {
+            "combined": 0.0035506701096892357,
+            "posenet": 0.0009258555364795029,
+            "segnet": 0.0020849662832915783
+          },
+          "integer_byte_delta": 2
+        },
+        {
+          "atom_id": "asym_payload_0007_l026_renderer_up_res_conv1_ch18_b162",
+          "component_abs_delta": {
+            "combined": 0.00032143245334737003,
+            "posenet": 8.695630822330713e-05,
+            "segnet": 0.0001671354693826288
+          },
+          "integer_byte_delta": 2
+        },
+        {
+          "atom_id": "asym_payload_0008_l027_renderer_up_res_conv2_ch18_b162",
+          "component_abs_delta": {
+            "combined": 0.00032091597677208483,
+            "posenet": 0.00018055651162285358,
+            "segnet": 0.0001519687648396939
+          },
+          "integer_byte_delta": 2
+        },
+        {
+          "atom_id": "asym_payload_0009_l035_motion_down_0_ch16_b144",
+          "component_abs_delta": {
+            "combined": 0.010046670213341713,
+            "posenet": 0.010046670213341713,
+            "segnet": 0.0
+          },
+          "integer_byte_delta": 2
+        },
+        {
+          "atom_id": "asym_payload_0010_l036_motion_bottleneck_conv1_ch16_b144",
+          "component_abs_delta": {
+            "combined": 0.011568950489163399,
+            "posenet": 0.011568950489163399,
+            "segnet": 0.0
+          },
+          "integer_byte_delta": 2
+        },
+        {
+          "atom_id": "asym_payload_0011_l037_motion_bottleneck_conv2_ch16_b144",
+          "component_abs_delta": {
+            "combined": 0.0014180643483996391,
+            "posenet": 0.0014180639991536736,
+            "segnet": 0.0
+          },
+          "integer_byte_delta": 2
+        },
+        {
+          "atom_id": "asym_payload_0012_l038_motion_up_conv_ch16_b144",
+          "component_abs_delta": {
+            "combined": 0.001851869747042656,
+            "posenet": 0.001851869747042656,
+            "segnet": 0.0
+          },
+          "integer_byte_delta": 2
+        },
+        {
+          "atom_id": "asym_payload_0013_l034_motion_stem_0_ch16_b90",
+          "component_abs_delta": {
+            "combined": 0.023204827681183815,
+            "posenet": 0.023204822093248367,
+            "segnet": 0.0
+          },
+          "integer_byte_delta": 2
+        },
+        {
+          "atom_id": "asym_payload_0014_l017_renderer_stem_conv_ch18_b36",
+          "component_abs_delta": {
+            "combined": 0.03148540109395981,
+            "posenet": 0.0065302071161568165,
+            "segnet": 0.02571943961083889
+          },
+          "integer_byte_delta": 2
+        },
+        {
+          "atom_id": "asym_payload_0015_l028_renderer_fuse_conv_ch18_b36",
+          "component_abs_delta": {
+            "combined": 0.00145757629070431,
+            "posenet": 0.0005762378568761051,
+            "segnet": 0.0007712329970672727
+          },
+          "integer_byte_delta": 2
+        }
+      ],
+      "component_raw_abs_delta": {
+        "combined": 0.09791278698867245,
+        "posenet": 0.061660913624109526,
+        "segnet": 0.03601495954535494
+      },
+      "epsilon": 2.0,
+      "predicted_delta": {
+        "combined": 0.09791278698867245,
+        "posenet": 0.061660913624109526,
+        "segnet": 0.03601495954535494
+      }
+    }
+  ],
+  "prediction_model": {
+    "equation": "predicted_delta[component] = sum_atoms round(epsilon * delta_per_epsilon)^2 * component_sensitivity[layer_name.weight][channel_index]",
+    "model": "quadratic_archive_byte_channel_sensitivity_projection_v1",
+    "prediction_delta_semantics": "nonnegative_component_delta_magnitude",
+    "prediction_error_mode": "absolute_magnitude",
+    "sign_policy": "nonnegative component-delta magnitude from nonnegative sensitivity maps; signed improvement/degradation claims require a future signed-map artifact",
+    "uses_official_response_observations": false
+  },
+  "prediction_source": {
+    "baseline_archive": {
+      "bytes": 686635,
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+      "sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    "component_maps": {
+      "combined": {
+        "bytes": 11987,
+        "map_metadata": {
+          "aggregate": "sum",
+          "canonical_scorer_path": false,
+          "checkpoint": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/extracted/renderer.bin",
+          "component": "combined",
+          "component_response_path": "direct_renderer_tensor_inprocess_scorer",
+          "device": "cuda",
+          "evidence_grade": "diagnostic_cuda_fisher_proxy",
+          "excluded_layer_reasons": {
+            "renderer.film_bottleneck.scale.weight": "protected_linear",
+            "renderer.film_bottleneck.shift.weight": "protected_linear",
+            "renderer.film_decoder.scale.weight": "protected_linear",
+            "renderer.film_decoder.shift.weight": "protected_linear"
+          },
+          "finite_difference_epsilon": null,
+          "git_hash": "no-git",
+          "include_protected_conv2d": true,
+          "masks_mkv": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/extracted/masks.mkv",
+          "n_pairs_calibration": 480,
+          "n_pairs_holdout": 120,
+          "n_pairs_selected": 600,
+          "n_pairs_total": 600,
+          "official_component_response": false,
+          "pair_weights": null,
+          "poses": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/extracted/optimized_poses.bin",
+          "promotion_blockers": [
+            {
+              "code": "fisher_proxy_not_official_component_response",
+              "mathematical_explanation": "This profiler estimates component sensitivity with empirical Fisher proxies and holdout perturbation diagnostics. It is not yet an official finite-difference component-response artifact over the exact contest scorer, so it cannot be used as promotion evidence."
+            }
+          ],
+          "promotion_eligible": false,
+          "promotion_requested": false,
+          "schema_version": 1,
+          "scorer_target": "combined",
+          "sensitivity_source": "fisher_proxy",
+          "tool": "experiments/profile_component_sensitivity.py",
+          "torch_version": "2.11.0+cu130",
+          "upstream_dir": "/teamspace/studios/this_studio/pact/upstream",
+          "video_mkv": "/teamspace/studios/this_studio/pact/upstream/videos/0.mkv"
+        },
+        "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/combined_sensitivity_map.pt",
+        "sha256": "304539234381d8e1e818a4539bff63d00565fc62524216d117570ff7dbf03a59"
+      },
+      "posenet": {
+        "bytes": 11642,
+        "map_metadata": {
+          "aggregate": "sum",
+          "canonical_scorer_path": false,
+          "checkpoint": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/extracted/renderer.bin",
+          "component": "posenet",
+          "component_response_path": "direct_renderer_tensor_inprocess_scorer",
+          "device": "cuda",
+          "evidence_grade": "diagnostic_cuda_fisher_proxy",
+          "excluded_layer_reasons": {
+            "renderer.film_bottleneck.scale.weight": "protected_linear",
+            "renderer.film_bottleneck.shift.weight": "protected_linear",
+            "renderer.film_decoder.scale.weight": "protected_linear",
+            "renderer.film_decoder.shift.weight": "protected_linear"
+          },
+          "finite_difference_epsilon": null,
+          "git_hash": "no-git",
+          "include_protected_conv2d": true,
+          "masks_mkv": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/extracted/masks.mkv",
+          "n_pairs_calibration": 480,
+          "n_pairs_holdout": 120,
+          "n_pairs_selected": 600,
+          "n_pairs_total": 600,
+          "official_component_response": false,
+          "pair_weights": null,
+          "poses": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/extracted/optimized_poses.bin",
+          "promotion_blockers": [
+            {
+              "code": "fisher_proxy_not_official_component_response",
+              "mathematical_explanation": "This profiler estimates component sensitivity with empirical Fisher proxies and holdout perturbation diagnostics. It is not yet an official finite-difference component-response artifact over the exact contest scorer, so it cannot be used as promotion evidence."
+            }
+          ],
+          "promotion_eligible": false,
+          "promotion_requested": false,
+          "schema_version": 1,
+          "scorer_target": "posenet",
+          "sensitivity_source": "fisher_proxy",
+          "tool": "experiments/profile_component_sensitivity.py",
+          "torch_version": "2.11.0+cu130",
+          "upstream_dir": "/teamspace/studios/this_studio/pact/upstream",
+          "video_mkv": "/teamspace/studios/this_studio/pact/upstream/videos/0.mkv"
+        },
+        "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/posenet_sensitivity_map.pt",
+        "sha256": "b1ea86bf70412ecbf8a421f6b7ceae9d6bbf68b1dddcb36bc52187f2142df7bc"
+      },
+      "segnet": {
+        "bytes": 11617,
+        "map_metadata": {
+          "aggregate": "sum",
+          "canonical_scorer_path": false,
+          "checkpoint": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/extracted/renderer.bin",
+          "component": "segnet",
+          "component_response_path": "direct_renderer_tensor_inprocess_scorer",
+          "device": "cuda",
+          "evidence_grade": "diagnostic_cuda_fisher_proxy",
+          "excluded_layer_reasons": {
+            "renderer.film_bottleneck.scale.weight": "protected_linear",
+            "renderer.film_bottleneck.shift.weight": "protected_linear",
+            "renderer.film_decoder.scale.weight": "protected_linear",
+            "renderer.film_decoder.shift.weight": "protected_linear"
+          },
+          "finite_difference_epsilon": null,
+          "git_hash": "no-git",
+          "include_protected_conv2d": true,
+          "masks_mkv": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/extracted/masks.mkv",
+          "n_pairs_calibration": 480,
+          "n_pairs_holdout": 120,
+          "n_pairs_selected": 600,
+          "n_pairs_total": 600,
+          "official_component_response": false,
+          "pair_weights": null,
+          "poses": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/extracted/optimized_poses.bin",
+          "promotion_blockers": [
+            {
+              "code": "fisher_proxy_not_official_component_response",
+              "mathematical_explanation": "This profiler estimates component sensitivity with empirical Fisher proxies and holdout perturbation diagnostics. It is not yet an official finite-difference component-response artifact over the exact contest scorer, so it cannot be used as promotion evidence."
+            }
+          ],
+          "promotion_eligible": false,
+          "promotion_requested": false,
+          "schema_version": 1,
+          "scorer_target": "segnet",
+          "sensitivity_source": "fisher_proxy",
+          "tool": "experiments/profile_component_sensitivity.py",
+          "torch_version": "2.11.0+cu130",
+          "upstream_dir": "/teamspace/studios/this_studio/pact/upstream",
+          "video_mkv": "/teamspace/studios/this_studio/pact/upstream/videos/0.mkv"
+        },
+        "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2/segnet_sensitivity_map.pt",
+        "sha256": "d9680ff6e44784a1a3413e87351f0c73891fce82b60a3e09af3abcaaabf034a1"
+      }
+    },
+    "perturbation_basis": {
+      "atom_set_sha256": "3b080252de72aa911579e7d18dfb4edfa19b19f2ee6900630b06d0ae17017e05",
+      "bytes": 12416,
+      "path": "/Users/adpena/Projects/pact/experiments/results/official_component_response_pfp16_a_plus_plus_20260501_r7_predicted_from_r2_l40s_codex/renderer_blob_perturbation_basis_v1.json",
+      "sha256": "2cf8f8c6940d7fd905068fe67a797c50929f60873951901fb09ad9bbc5bbb3aa"
+    },
+    "source_kind": "component_sensitivity_map_projection"
+  },
+  "producer": "experiments/build_component_response_prediction_deltas.py",
+  "schema_version": 1
+}

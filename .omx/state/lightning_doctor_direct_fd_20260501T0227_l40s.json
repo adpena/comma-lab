@@ -1,0 +1,126 @@
+{
+  "checks": {
+    "local_supply_chain": {
+      "ok": true,
+      "payload": {
+        "hostname": "Primary",
+        "package_versions": {
+          "lightning": null,
+          "lightning-sdk": "2026.4.10",
+          "lightning_sdk": "2026.4.10",
+          "pytorch-lightning": null
+        },
+        "python": "/Users/adpena/Projects/pact/.venv/bin/python",
+        "recorded_at_utc": "2026-05-01T07:27:32Z",
+        "repo_root": "/Users/adpena/Projects/pact",
+        "schema_version": 1,
+        "status": "OK",
+        "strict": true,
+        "tool": "scripts/scan_lightning_supply_chain.py",
+        "violation_count": 0,
+        "violations": []
+      },
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": "{\n  \"hostname\": \"Primary\",\n  \"package_versions\": {\n    \"lightning\": null,\n    \"lightning-sdk\": \"2026.4.10\",\n    \"lightning_sdk\": \"2026.4.10\",\n    \"pytorch-lightning\": null\n  },\n  \"python\": \"/Users/adpena/Projects/pact/.venv/bin/python\",\n  \"recorded_at_utc\": \"2026-05-01T07:27:32Z\",\n  \"repo_root\": \"/Users/adpena/Projects/pact\",\n  \"schema_version\": 1,\n  \"status\": \"OK\",\n  \"strict\": true,\n  \"tool\": \"scripts/scan_lightning_supply_chain.py\",\n  \"violation_count\": 0,\n  \"violations\": []\n}\n"
+    },
+    "machine_inventory": {
+      "machine_count": 1,
+      "ok": true,
+      "rows": [
+        {
+          "cloud_account": "gcp-lightning-public-prod",
+          "machines": []
+        },
+        {
+          "cloud_account": "lightning-aggregate-provider-prod",
+          "machines": []
+        },
+        {
+          "cloud_account": "Lightning Cloud",
+          "machines": []
+        },
+        {
+          "cloud_account": "lightning-cloudflare-prod",
+          "machines": []
+        },
+        {
+          "cloud_account": "lightning-lambda-prod",
+          "machines": []
+        },
+        {
+          "cloud_account": "lightning-nebius-prod",
+          "machines": []
+        },
+        {
+          "cloud_account": "lightning-public-prod",
+          "machines": [
+            {
+              "accelerator_count": 1,
+              "cost": 2.89,
+              "family": "L40S",
+              "instance_type": "g6e.4xlarge",
+              "interruptible_cost": 1.81302,
+              "interruptible_wait_time": "105",
+              "name": "g6e.4xlarge",
+              "out_of_capacity": false,
+              "provider": "AWS",
+              "slug": "lit-l40s-1",
+              "wait_time": "76"
+            }
+          ]
+        },
+        {
+          "cloud_account": "lightning-voltagepark-prod",
+          "machines": []
+        },
+        {
+          "cloud_account": "lightning-vultr-prod",
+          "machines": []
+        }
+      ]
+    },
+    "remote_supply_chain": {
+      "ok": true,
+      "payload": {
+        "hostname": "ip-10-192-11-142",
+        "package_versions": {
+          "lightning": null,
+          "lightning-sdk": null,
+          "lightning_sdk": null,
+          "pytorch-lightning": null
+        },
+        "python": "/teamspace/studios/this_studio/pact/.venv/bin/python",
+        "recorded_at_utc": "2026-05-01T07:27:41Z",
+        "repo_root": "/teamspace/studios/this_studio/pact",
+        "schema_version": 1,
+        "status": "OK",
+        "strict": true,
+        "tool": "scripts/scan_lightning_supply_chain.py",
+        "violation_count": 0,
+        "violations": []
+      },
+      "remote_json_out": ".omx/state/lightning_doctor_remote_supply_chain_direct_fd_20260501T0227_l40s.json",
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": "{\n  \"hostname\": \"ip-10-192-11-142\",\n  \"package_versions\": {\n    \"lightning\": null,\n    \"lightning-sdk\": null,\n    \"lightning_sdk\": null,\n    \"pytorch-lightning\": null\n  },\n  \"python\": \"/teamspace/studios/this_studio/pact/.venv/bin/python\",\n  \"recorded_at_utc\": \"2026-05-01T07:27:41Z\",\n  \"repo_root\": \"/teamspace/studios/this_studio/pact\",\n  \"schema_version\": 1,\n  \"status\": \"OK\",\n  \"strict\": true,\n  \"tool\": \"scripts/scan_lightning_supply_chain.py\",\n  \"violation_count\": 0,\n  \"violations\": []\n}\n"
+    },
+    "ssh_auth": {
+      "ok": true,
+      "target": "s_01knw7wnzbe79wfq5mqqbx1mbz@ssh.lightning.ai"
+    }
+  },
+  "failed_checks": [],
+  "package_versions": {
+    "lightning": null,
+    "lightning-sdk": "2026.4.10",
+    "lightning_sdk": "2026.4.10",
+    "pytorch-lightning": null
+  },
+  "python": "/Users/adpena/Projects/pact/.venv/bin/python",
+  "recorded_at_utc": "2026-05-01T07:27:26Z",
+  "repo_root": "/Users/adpena/Projects/pact",
+  "schema_version": 1,
+  "status": "OK",
+  "tool": "scripts/launch_lightning_batch_job.py doctor"
+}

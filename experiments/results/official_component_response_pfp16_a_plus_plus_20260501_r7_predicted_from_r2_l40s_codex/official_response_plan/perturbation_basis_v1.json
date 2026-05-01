@@ -1,0 +1,476 @@
+{
+  "atoms": [
+    {
+      "atom_id": "asym_payload_0000_l021_renderer_down_res_conv1_ch30_b270",
+      "delta_per_epsilon": 1,
+      "member": "renderer.bin",
+      "metadata": {
+        "bits": 8,
+        "blob_kind": "weight",
+        "byte_index_within_channel_payload": 270,
+        "channel_index": 30,
+        "layer_index": 21,
+        "layer_name": "renderer.down_res.conv1",
+        "margin_to_byte_range": 114,
+        "original_byte": 114,
+        "payload_bytes": 32400,
+        "selection_rank": 0,
+        "shape": [
+          60,
+          60,
+          3,
+          3
+        ]
+      },
+      "offset": 72254
+    },
+    {
+      "atom_id": "asym_payload_0001_l022_renderer_down_res_conv2_ch30_b270",
+      "delta_per_epsilon": 1,
+      "member": "renderer.bin",
+      "metadata": {
+        "bits": 8,
+        "blob_kind": "weight",
+        "byte_index_within_channel_payload": 270,
+        "channel_index": 30,
+        "layer_index": 22,
+        "layer_name": "renderer.down_res.conv2",
+        "margin_to_byte_range": 88,
+        "original_byte": 88,
+        "payload_bytes": 32400,
+        "selection_rank": 1,
+        "shape": [
+          60,
+          60,
+          3,
+          3
+        ]
+      },
+      "offset": 104782
+    },
+    {
+      "atom_id": "asym_payload_0002_l023_renderer_bottleneck_conv1_ch30_b270",
+      "delta_per_epsilon": 1,
+      "member": "renderer.bin",
+      "metadata": {
+        "bits": 8,
+        "blob_kind": "weight",
+        "byte_index_within_channel_payload": 270,
+        "channel_index": 30,
+        "layer_index": 23,
+        "layer_name": "renderer.bottleneck.conv1",
+        "margin_to_byte_range": 113,
+        "original_byte": 142,
+        "payload_bytes": 32400,
+        "selection_rank": 2,
+        "shape": [
+          60,
+          60,
+          3,
+          3
+        ]
+      },
+      "offset": 137310
+    },
+    {
+      "atom_id": "asym_payload_0003_l024_renderer_bottleneck_conv2_ch30_b270",
+      "delta_per_epsilon": 1,
+      "member": "renderer.bin",
+      "metadata": {
+        "bits": 8,
+        "blob_kind": "weight",
+        "byte_index_within_channel_payload": 270,
+        "channel_index": 30,
+        "layer_index": 24,
+        "layer_name": "renderer.bottleneck.conv2",
+        "margin_to_byte_range": 76,
+        "original_byte": 179,
+        "payload_bytes": 32400,
+        "selection_rank": 3,
+        "shape": [
+          60,
+          60,
+          3,
+          3
+        ]
+      },
+      "offset": 169838
+    },
+    {
+      "atom_id": "asym_payload_0004_l020_renderer_down_conv_ch30_b162",
+      "delta_per_epsilon": 1,
+      "member": "renderer.bin",
+      "metadata": {
+        "bits": 8,
+        "blob_kind": "weight",
+        "byte_index_within_channel_payload": 162,
+        "channel_index": 30,
+        "layer_index": 20,
+        "layer_name": "renderer.down_conv",
+        "margin_to_byte_range": 76,
+        "original_byte": 76,
+        "payload_bytes": 19440,
+        "selection_rank": 4,
+        "shape": [
+          60,
+          36,
+          3,
+          3
+        ]
+      },
+      "offset": 45858
+    },
+    {
+      "atom_id": "asym_payload_0005_l018_renderer_stem_res_conv1_ch18_b162",
+      "delta_per_epsilon": 1,
+      "member": "renderer.bin",
+      "metadata": {
+        "bits": 8,
+        "blob_kind": "weight",
+        "byte_index_within_channel_payload": 162,
+        "channel_index": 18,
+        "layer_index": 18,
+        "layer_name": "renderer.stem_res.conv1",
+        "margin_to_byte_range": 108,
+        "original_byte": 147,
+        "payload_bytes": 11664,
+        "selection_rank": 5,
+        "shape": [
+          36,
+          36,
+          3,
+          3
+        ]
+      },
+      "offset": 18458
+    },
+    {
+      "atom_id": "asym_payload_0006_l019_renderer_stem_res_conv2_ch18_b162",
+      "delta_per_epsilon": 1,
+      "member": "renderer.bin",
+      "metadata": {
+        "bits": 8,
+        "blob_kind": "weight",
+        "byte_index_within_channel_payload": 162,
+        "channel_index": 18,
+        "layer_index": 19,
+        "layer_name": "renderer.stem_res.conv2",
+        "margin_to_byte_range": 116,
+        "original_byte": 139,
+        "payload_bytes": 11664,
+        "selection_rank": 6,
+        "shape": [
+          36,
+          36,
+          3,
+          3
+        ]
+      },
+      "offset": 30202
+    },
+    {
+      "atom_id": "asym_payload_0007_l026_renderer_up_res_conv1_ch18_b162",
+      "delta_per_epsilon": 1,
+      "member": "renderer.bin",
+      "metadata": {
+        "bits": 8,
+        "blob_kind": "weight",
+        "byte_index_within_channel_payload": 162,
+        "channel_index": 18,
+        "layer_index": 26,
+        "layer_name": "renderer.up_res.conv1",
+        "margin_to_byte_range": 108,
+        "original_byte": 108,
+        "payload_bytes": 11664,
+        "selection_rank": 7,
+        "shape": [
+          36,
+          36,
+          3,
+          3
+        ]
+      },
+      "offset": 226650
+    },
+    {
+      "atom_id": "asym_payload_0008_l027_renderer_up_res_conv2_ch18_b162",
+      "delta_per_epsilon": 1,
+      "member": "renderer.bin",
+      "metadata": {
+        "bits": 8,
+        "blob_kind": "weight",
+        "byte_index_within_channel_payload": 162,
+        "channel_index": 18,
+        "layer_index": 27,
+        "layer_name": "renderer.up_res.conv2",
+        "margin_to_byte_range": 119,
+        "original_byte": 119,
+        "payload_bytes": 11664,
+        "selection_rank": 8,
+        "shape": [
+          36,
+          36,
+          3,
+          3
+        ]
+      },
+      "offset": 238394
+    },
+    {
+      "atom_id": "asym_payload_0009_l035_motion_down_0_ch16_b144",
+      "delta_per_epsilon": 1,
+      "member": "renderer.bin",
+      "metadata": {
+        "bits": 8,
+        "blob_kind": "weight",
+        "byte_index_within_channel_payload": 144,
+        "channel_index": 16,
+        "layer_index": 35,
+        "layer_name": "motion.down.0",
+        "margin_to_byte_range": 116,
+        "original_byte": 116,
+        "payload_bytes": 9216,
+        "selection_rank": 9,
+        "shape": [
+          32,
+          32,
+          3,
+          3
+        ]
+      },
+      "offset": 260138
+    },
+    {
+      "atom_id": "asym_payload_0010_l036_motion_bottleneck_conv1_ch16_b144",
+      "delta_per_epsilon": 1,
+      "member": "renderer.bin",
+      "metadata": {
+        "bits": 8,
+        "blob_kind": "weight",
+        "byte_index_within_channel_payload": 144,
+        "channel_index": 16,
+        "layer_index": 36,
+        "layer_name": "motion.bottleneck.conv1",
+        "margin_to_byte_range": 101,
+        "original_byte": 154,
+        "payload_bytes": 9216,
+        "selection_rank": 10,
+        "shape": [
+          32,
+          32,
+          3,
+          3
+        ]
+      },
+      "offset": 269554
+    },
+    {
+      "atom_id": "asym_payload_0011_l037_motion_bottleneck_conv2_ch16_b144",
+      "delta_per_epsilon": 1,
+      "member": "renderer.bin",
+      "metadata": {
+        "bits": 8,
+        "blob_kind": "weight",
+        "byte_index_within_channel_payload": 144,
+        "channel_index": 16,
+        "layer_index": 37,
+        "layer_name": "motion.bottleneck.conv2",
+        "margin_to_byte_range": 125,
+        "original_byte": 125,
+        "payload_bytes": 9216,
+        "selection_rank": 11,
+        "shape": [
+          32,
+          32,
+          3,
+          3
+        ]
+      },
+      "offset": 278842
+    },
+    {
+      "atom_id": "asym_payload_0012_l038_motion_up_conv_ch16_b144",
+      "delta_per_epsilon": 1,
+      "member": "renderer.bin",
+      "metadata": {
+        "bits": 8,
+        "blob_kind": "weight",
+        "byte_index_within_channel_payload": 144,
+        "channel_index": 16,
+        "layer_index": 38,
+        "layer_name": "motion.up_conv",
+        "margin_to_byte_range": 62,
+        "original_byte": 193,
+        "payload_bytes": 9216,
+        "selection_rank": 12,
+        "shape": [
+          32,
+          32,
+          3,
+          3
+        ]
+      },
+      "offset": 288130
+    },
+    {
+      "atom_id": "asym_payload_0013_l034_motion_stem_0_ch16_b90",
+      "delta_per_epsilon": 1,
+      "member": "renderer.bin",
+      "metadata": {
+        "bits": 8,
+        "blob_kind": "weight",
+        "byte_index_within_channel_payload": 90,
+        "channel_index": 16,
+        "layer_index": 34,
+        "layer_name": "motion.stem.0",
+        "margin_to_byte_range": 85,
+        "original_byte": 85,
+        "payload_bytes": 5760,
+        "selection_rank": 13,
+        "shape": [
+          32,
+          20,
+          3,
+          3
+        ]
+      },
+      "offset": 252396
+    },
+    {
+      "atom_id": "asym_payload_0014_l017_renderer_stem_conv_ch18_b36",
+      "delta_per_epsilon": 1,
+      "member": "renderer.bin",
+      "metadata": {
+        "bits": 8,
+        "blob_kind": "weight",
+        "byte_index_within_channel_payload": 36,
+        "channel_index": 18,
+        "layer_index": 17,
+        "layer_name": "renderer.stem_conv",
+        "margin_to_byte_range": 84,
+        "original_byte": 84,
+        "payload_bytes": 2592,
+        "selection_rank": 14,
+        "shape": [
+          36,
+          8,
+          3,
+          3
+        ]
+      },
+      "offset": 10980
+    },
+    {
+      "atom_id": "asym_payload_0015_l028_renderer_fuse_conv_ch18_b36",
+      "delta_per_epsilon": 1,
+      "member": "renderer.bin",
+      "metadata": {
+        "bits": 8,
+        "blob_kind": "weight",
+        "byte_index_within_channel_payload": 36,
+        "channel_index": 18,
+        "layer_index": 28,
+        "layer_name": "renderer.fuse_conv",
+        "margin_to_byte_range": 89,
+        "original_byte": 166,
+        "payload_bytes": 2592,
+        "selection_rank": 15,
+        "shape": [
+          36,
+          72,
+          1,
+          1
+        ]
+      },
+      "offset": 245476
+    }
+  ],
+  "auth_eval_required": "cuda",
+  "basis_id": "6676fc2fe0240ca72305e7ec3287ad314be6765b4d229f4a8b508629fc781f42",
+  "basis_kind": "archive_byte_additive",
+  "canonical_response_eval_path": "archive.zip -> inflate.sh -> upstream/evaluate.py",
+  "epsilon_ladder": [
+    -2.0,
+    -1.0,
+    0.0,
+    1.0,
+    2.0
+  ],
+  "epsilon_units": "signed_integer_step",
+  "format": "perturbation_basis_v1",
+  "mutation_policy": {
+    "allow_renderer_magic_mutation": false,
+    "allowed_mutation_members": [
+      "renderer.bin"
+    ],
+    "byte_delta_formula": "new_byte = old_byte + round(epsilon * delta_per_epsilon)",
+    "byte_range": [
+      0,
+      255
+    ],
+    "max_abs_byte_delta": 2,
+    "max_mutated_bytes": 16,
+    "max_raw_l1_delta": 32,
+    "out_of_range": "fail_closed"
+  },
+  "producer": "experiments/build_component_response_perturbation_plan.py",
+  "schema_version": 1,
+  "source_archive": {
+    "bytes": 686635,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+    "sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+  },
+  "source_members": [
+    {
+      "compress_type": 8,
+      "compressed_bytes": 412169,
+      "crc32": "e144d6ac",
+      "date_time": [
+        1980,
+        1,
+        1,
+        0,
+        0,
+        0
+      ],
+      "name": "masks.mkv",
+      "permissions_octal": "0o644",
+      "raw_bytes": 421483,
+      "sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9"
+    },
+    {
+      "compress_type": 8,
+      "compressed_bytes": 6734,
+      "crc32": "686cbfbf",
+      "date_time": [
+        1980,
+        1,
+        1,
+        0,
+        0,
+        0
+      ],
+      "name": "optimized_poses.bin",
+      "permissions_octal": "0o644",
+      "raw_bytes": 7200,
+      "sha256": "4b3d8cd58965971ad518a970441f5e9cc53ce361a62d51e95c1cdd2056be4449"
+    },
+    {
+      "compress_type": 8,
+      "compressed_bytes": 267402,
+      "crc32": "1827a837",
+      "date_time": [
+        1980,
+        1,
+        1,
+        0,
+        0,
+        0
+      ],
+      "name": "renderer.bin",
+      "permissions_octal": "0o644",
+      "raw_bytes": 296776,
+      "sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529"
+    }
+  ]
+}

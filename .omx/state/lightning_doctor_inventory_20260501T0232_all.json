@@ -1,0 +1,741 @@
+{
+  "checks": {
+    "local_supply_chain": {
+      "ok": true,
+      "payload": {
+        "hostname": "Primary",
+        "package_versions": {
+          "lightning": null,
+          "lightning-sdk": "2026.4.10",
+          "lightning_sdk": "2026.4.10",
+          "pytorch-lightning": null
+        },
+        "python": "/Users/adpena/Projects/pact/.venv/bin/python",
+        "recorded_at_utc": "2026-05-01T07:32:17Z",
+        "repo_root": "/Users/adpena/Projects/pact",
+        "schema_version": 1,
+        "status": "OK",
+        "strict": true,
+        "tool": "scripts/scan_lightning_supply_chain.py",
+        "violation_count": 0,
+        "violations": []
+      },
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": "{\n  \"hostname\": \"Primary\",\n  \"package_versions\": {\n    \"lightning\": null,\n    \"lightning-sdk\": \"2026.4.10\",\n    \"lightning_sdk\": \"2026.4.10\",\n    \"pytorch-lightning\": null\n  },\n  \"python\": \"/Users/adpena/Projects/pact/.venv/bin/python\",\n  \"recorded_at_utc\": \"2026-05-01T07:32:17Z\",\n  \"repo_root\": \"/Users/adpena/Projects/pact\",\n  \"schema_version\": 1,\n  \"status\": \"OK\",\n  \"strict\": true,\n  \"tool\": \"scripts/scan_lightning_supply_chain.py\",\n  \"violation_count\": 0,\n  \"violations\": []\n}\n"
+    },
+    "machine_inventory": {
+      "machine_count": 48,
+      "ok": true,
+      "rows": [
+        {
+          "cloud_account": "gcp-lightning-public-prod",
+          "machines": [
+            {
+              "accelerator_count": 1,
+              "cost": 5.39,
+              "family": "RTX PRO",
+              "instance_type": "g4-standard-48",
+              "interruptible_cost": 1.430556,
+              "interruptible_wait_time": "109",
+              "name": "g4-standard-48",
+              "out_of_capacity": false,
+              "provider": "GCP",
+              "slug": "lit-rtx-6000-pro-1",
+              "wait_time": "223"
+            },
+            {
+              "accelerator_count": 4,
+              "cost": 21.16,
+              "family": "RTX PRO",
+              "instance_type": "g4-standard-192",
+              "interruptible_cost": 5.576762,
+              "interruptible_wait_time": "146",
+              "name": "g4-standard-192",
+              "out_of_capacity": false,
+              "provider": "GCP",
+              "slug": "lit-rtx-6000-pro-4",
+              "wait_time": "283"
+            },
+            {
+              "accelerator_count": 2,
+              "cost": 10.64,
+              "family": "RTX PRO",
+              "instance_type": "g4-standard-96",
+              "interruptible_cost": 2.8126247,
+              "interruptible_wait_time": "126",
+              "name": "g4-standard-96",
+              "out_of_capacity": false,
+              "provider": "GCP",
+              "slug": "lit-rtx-6000-pro-2",
+              "wait_time": "156"
+            },
+            {
+              "accelerator_count": 8,
+              "cost": 42.18,
+              "family": "RTX PRO",
+              "instance_type": "g4-standard-384",
+              "interruptible_cost": 11.103485,
+              "interruptible_wait_time": "270",
+              "name": "g4-standard-384",
+              "out_of_capacity": false,
+              "provider": "GCP",
+              "slug": "lit-rtx-6000-pro-8",
+              "wait_time": "527"
+            },
+            {
+              "accelerator_count": 1,
+              "cost": 3.04,
+              "family": "TPU",
+              "instance_type": "v6e-1",
+              "interruptible_cost": 1.42604,
+              "interruptible_wait_time": "399",
+              "name": "v6e-1",
+              "out_of_capacity": false,
+              "provider": "GCP",
+              "slug": "lit-tpu-v6e-1",
+              "wait_time": "3254"
+            },
+            {
+              "accelerator_count": 4,
+              "cost": 12.05,
+              "family": "TPU",
+              "instance_type": "v6e-4",
+              "interruptible_cost": 5.65829,
+              "interruptible_wait_time": "600",
+              "name": "v6e-4",
+              "out_of_capacity": false,
+              "provider": "GCP",
+              "slug": "lit-tpu-v6e-4",
+              "wait_time": "600"
+            },
+            {
+              "accelerator_count": 8,
+              "cost": 37.38,
+              "family": "TPU",
+              "instance_type": "v5p-8",
+              "interruptible_cost": 14.79929,
+              "interruptible_wait_time": "378",
+              "name": "v5p-8",
+              "out_of_capacity": false,
+              "provider": "GCP",
+              "slug": "lit-tpu-v5p-8",
+              "wait_time": "600"
+            },
+            {
+              "accelerator_count": 1,
+              "cost": 0.43,
+              "family": "T4",
+              "instance_type": "n1-standard-8",
+              "interruptible_cost": 0.33826,
+              "interruptible_wait_time": "133",
+              "name": "n1-standard-8",
+              "out_of_capacity": false,
+              "provider": "GCP",
+              "slug": "lit-t4-1",
+              "wait_time": "79"
+            },
+            {
+              "accelerator_count": 4,
+              "cost": 2.75,
+              "family": "T4",
+              "instance_type": "n1-standard-32",
+              "interruptible_cost": 1.01725,
+              "interruptible_wait_time": "177",
+              "name": "n1-standard-32",
+              "out_of_capacity": false,
+              "provider": "GCP",
+              "slug": "lit-t4-4",
+              "wait_time": "314"
+            },
+            {
+              "accelerator_count": 1,
+              "cost": 0.48,
+              "family": "L4",
+              "instance_type": "g2-standard-8",
+              "interruptible_cost": 0.5313682,
+              "interruptible_wait_time": "96",
+              "name": "g2-standard-8",
+              "out_of_capacity": false,
+              "provider": "GCP",
+              "slug": "lit-l4-1",
+              "wait_time": "109"
+            },
+            {
+              "accelerator_count": 2,
+              "cost": 2.55,
+              "family": "L4",
+              "instance_type": "g2-standard-24",
+              "interruptible_cost": 1.3624468,
+              "interruptible_wait_time": "94",
+              "name": "g2-standard-24",
+              "out_of_capacity": false,
+              "provider": "GCP",
+              "slug": "lit-l4-2",
+              "wait_time": "215"
+            },
+            {
+              "accelerator_count": 4,
+              "cost": 5.04,
+              "family": "L4",
+              "instance_type": "g2-standard-48",
+              "interruptible_cost": 2.4668088,
+              "interruptible_wait_time": "106",
+              "name": "g2-standard-48",
+              "out_of_capacity": false,
+              "provider": "GCP",
+              "slug": "lit-l4-4",
+              "wait_time": "422"
+            },
+            {
+              "accelerator_count": 8,
+              "cost": 10.04,
+              "family": "L4",
+              "instance_type": "g2-standard-96",
+              "interruptible_cost": 4.88514,
+              "interruptible_wait_time": "98",
+              "name": "g2-standard-96",
+              "out_of_capacity": false,
+              "provider": "GCP",
+              "slug": "lit-l4-8",
+              "wait_time": "855"
+            },
+            {
+              "accelerator_count": 1,
+              "cost": 5.68,
+              "family": "A100",
+              "instance_type": "a2-ultragpu-1g",
+              "interruptible_cost": 3.0564096,
+              "interruptible_wait_time": "89",
+              "name": "a2-ultragpu-1g",
+              "out_of_capacity": false,
+              "provider": "GCP",
+              "slug": "lit-a100-80gb-1",
+              "wait_time": "157"
+            },
+            {
+              "accelerator_count": 2,
+              "cost": 11.31,
+              "family": "A100",
+              "instance_type": "a2-ultragpu-2g",
+              "interruptible_cost": 6.0627794,
+              "interruptible_wait_time": "359",
+              "name": "a2-ultragpu-2g",
+              "out_of_capacity": false,
+              "provider": "GCP",
+              "slug": "lit-a100-80gb-2",
+              "wait_time": "182"
+            },
+            {
+              "accelerator_count": 4,
+              "cost": 22.58,
+              "family": "A100",
+              "instance_type": "a2-ultragpu-4g",
+              "interruptible_cost": 12.075519,
+              "interruptible_wait_time": "127",
+              "name": "a2-ultragpu-4g",
+              "out_of_capacity": false,
+              "provider": "GCP",
+              "slug": "lit-a100-80gb-4",
+              "wait_time": "461"
+            },
+            {
+              "accelerator_count": 8,
+              "cost": 45.1,
+              "family": "A100",
+              "instance_type": "a2-ultragpu-8g",
+              "interruptible_cost": 24.100996,
+              "interruptible_wait_time": "200",
+              "name": "a2-ultragpu-8g",
+              "out_of_capacity": false,
+              "provider": "GCP",
+              "slug": "lit-a100-80gb-8",
+              "wait_time": "12130"
+            },
+            {
+              "accelerator_count": 1,
+              "cost": 12.34,
+              "family": "H100",
+              "instance_type": "a3-highgpu-1g",
+              "interruptible_cost": 5.1685824,
+              "interruptible_wait_time": "123",
+              "name": "a3-highgpu-1g",
+              "out_of_capacity": false,
+              "provider": "GCP",
+              "slug": "lit-h100-80gb-1",
+              "wait_time": "2188"
+            },
+            {
+              "accelerator_count": 2,
+              "cost": 24.62,
+              "family": "H100",
+              "instance_type": "a3-highgpu-2g",
+              "interruptible_cost": 10.288161,
+              "interruptible_wait_time": "133",
+              "name": "a3-highgpu-2g",
+              "out_of_capacity": false,
+              "provider": "GCP",
+              "slug": "lit-h100-80gb-2",
+              "wait_time": "10967"
+            },
+            {
+              "accelerator_count": 4,
+              "cost": 49.21,
+              "family": "H100",
+              "instance_type": "a3-highgpu-4g",
+              "interruptible_cost": 18.81576,
+              "interruptible_wait_time": "134",
+              "name": "a3-highgpu-4g",
+              "out_of_capacity": false,
+              "provider": "GCP",
+              "slug": "lit-h100-80gb-4",
+              "wait_time": "92143"
+            },
+            {
+              "accelerator_count": 8,
+              "cost": 98.37,
+              "family": "H100",
+              "instance_type": "a3-highgpu-8g",
+              "interruptible_cost": 37.585648,
+              "interruptible_wait_time": "406",
+              "name": "a3-highgpu-8g",
+              "out_of_capacity": false,
+              "provider": "GCP",
+              "slug": "lit-h100-80gb-8",
+              "wait_time": "2771"
+            },
+            {
+              "accelerator_count": 8,
+              "cost": 47.16,
+              "family": "H200",
+              "instance_type": "a3-ultragpu-8g",
+              "interruptible_cost": 46.198666,
+              "interruptible_wait_time": "204",
+              "name": "a3-ultragpu-8g",
+              "out_of_capacity": false,
+              "provider": "GCP",
+              "slug": "lit-h200x-8",
+              "wait_time": "39105"
+            },
+            {
+              "accelerator_count": 8,
+              "cost": 100.29,
+              "family": "B200",
+              "instance_type": "a4-highgpu-8g",
+              "interruptible_cost": 35.91291,
+              "interruptible_wait_time": "230",
+              "name": "a4-highgpu-8g",
+              "out_of_capacity": false,
+              "provider": "GCP",
+              "slug": "lit-b200x-8",
+              "wait_time": "7441"
+            }
+          ]
+        },
+        {
+          "cloud_account": "lightning-aggregate-provider-prod",
+          "machines": []
+        },
+        {
+          "cloud_account": "Lightning Cloud",
+          "machines": []
+        },
+        {
+          "cloud_account": "lightning-cloudflare-prod",
+          "machines": []
+        },
+        {
+          "cloud_account": "lightning-lambda-prod",
+          "machines": [
+            {
+              "accelerator_count": 1,
+              "cost": 1.55,
+              "family": "A100",
+              "instance_type": "gpu_1x_a100_sxm4",
+              "interruptible_cost": 0.0,
+              "interruptible_wait_time": "304",
+              "name": "gpu_1x_a100_sxm4",
+              "out_of_capacity": false,
+              "provider": "LAMBDA_LABS",
+              "slug": "lit-a100-40gb-1",
+              "wait_time": "304"
+            },
+            {
+              "accelerator_count": 2,
+              "cost": 5.98,
+              "family": "H100",
+              "instance_type": "gpu_2x_h100_sxm5",
+              "interruptible_cost": 0.0,
+              "interruptible_wait_time": "1701",
+              "name": "gpu_2x_h100_sxm5",
+              "out_of_capacity": false,
+              "provider": "LAMBDA_LABS",
+              "slug": "lit-h100-80gb-2",
+              "wait_time": "1701"
+            },
+            {
+              "accelerator_count": 1,
+              "cost": 2.99,
+              "family": "H100",
+              "instance_type": "gpu_1x_h100_sxm5",
+              "interruptible_cost": 0.0,
+              "interruptible_wait_time": "306",
+              "name": "gpu_1x_h100_sxm5",
+              "out_of_capacity": false,
+              "provider": "LAMBDA_LABS",
+              "slug": "lit-h100-80gb-1",
+              "wait_time": "306"
+            }
+          ]
+        },
+        {
+          "cloud_account": "lightning-nebius-prod",
+          "machines": [
+            {
+              "accelerator_count": 8,
+              "cost": 24.05,
+              "family": "H100",
+              "instance_type": "nb-h100-8gpu-128vcpu-1600gb",
+              "interruptible_cost": 0.0,
+              "interruptible_wait_time": "1199",
+              "name": "nb-h100-8gpu-128vcpu-1600gb",
+              "out_of_capacity": false,
+              "provider": "NEBIUS",
+              "slug": "lit-h100-80gb-8",
+              "wait_time": "1199"
+            },
+            {
+              "accelerator_count": 8,
+              "cost": 28.88,
+              "family": "H200",
+              "instance_type": "nb-h200-8gpu-128vcpu-1600gb",
+              "interruptible_cost": 0.0,
+              "interruptible_wait_time": "2746",
+              "name": "nb-h200-8gpu-128vcpu-1600gb",
+              "out_of_capacity": false,
+              "provider": "NEBIUS",
+              "slug": "lit-h200x-8",
+              "wait_time": "2746"
+            },
+            {
+              "accelerator_count": 1,
+              "cost": 1.79,
+              "family": "L40S",
+              "instance_type": "nb-l40s-1gpu-16vcpu-64gb",
+              "interruptible_cost": 0.0,
+              "interruptible_wait_time": "433",
+              "name": "nb-l40s-1gpu-16vcpu-64gb",
+              "out_of_capacity": false,
+              "provider": "NEBIUS",
+              "slug": "lit-l40s-1",
+              "wait_time": "433"
+            },
+            {
+              "accelerator_count": 1,
+              "cost": 3.62,
+              "family": "H200",
+              "instance_type": "nb-h200-1gpu-16vcpu-200gb",
+              "interruptible_cost": 0.0,
+              "interruptible_wait_time": "982",
+              "name": "nb-h200-1gpu-16vcpu-200gb",
+              "out_of_capacity": false,
+              "provider": "NEBIUS",
+              "slug": "lit-h200x-1",
+              "wait_time": "982"
+            },
+            {
+              "accelerator_count": 1,
+              "cost": 3.01,
+              "family": "H100",
+              "instance_type": "nb-h100-1gpu-16vcpu-200gb",
+              "interruptible_cost": 0.0,
+              "interruptible_wait_time": "308",
+              "name": "nb-h100-1gpu-16vcpu-200gb",
+              "out_of_capacity": false,
+              "provider": "NEBIUS",
+              "slug": "lit-h100-80gb-1",
+              "wait_time": "308"
+            }
+          ]
+        },
+        {
+          "cloud_account": "lightning-public-prod",
+          "machines": [
+            {
+              "accelerator_count": 8,
+              "cost": 27.67,
+              "family": "A100",
+              "instance_type": "p4d.24xlarge",
+              "interruptible_cost": 14.805,
+              "interruptible_wait_time": "126",
+              "name": "p4d.24xlarge",
+              "out_of_capacity": false,
+              "provider": "AWS",
+              "slug": "lit-a100-40gb-8",
+              "wait_time": "114"
+            },
+            {
+              "accelerator_count": 8,
+              "cost": 37.89,
+              "family": "L40S",
+              "instance_type": "g6e.48xlarge",
+              "interruptible_cost": 15.50112,
+              "interruptible_wait_time": "108",
+              "name": "g6e.48xlarge",
+              "out_of_capacity": false,
+              "provider": "AWS",
+              "slug": "lit-l40s-8",
+              "wait_time": "127"
+            },
+            {
+              "accelerator_count": 8,
+              "cost": 15.03,
+              "family": "L4",
+              "instance_type": "g6.48xlarge",
+              "interruptible_cost": 8.06772,
+              "interruptible_wait_time": "105",
+              "name": "g6.48xlarge",
+              "out_of_capacity": false,
+              "provider": "AWS",
+              "slug": "lit-l4-8",
+              "wait_time": "77"
+            },
+            {
+              "accelerator_count": 1,
+              "cost": 0.98,
+              "family": "T4",
+              "instance_type": "g4dn.2xlarge",
+              "interruptible_cost": 0.55627,
+              "interruptible_wait_time": "62",
+              "name": "g4dn.2xlarge",
+              "out_of_capacity": false,
+              "provider": "AWS",
+              "slug": "lit-t4-1",
+              "wait_time": "56"
+            },
+            {
+              "accelerator_count": 8,
+              "cost": 64.96,
+              "family": "H100",
+              "instance_type": "p5.48xlarge",
+              "interruptible_cost": 15.34632,
+              "interruptible_wait_time": "244",
+              "name": "p5.48xlarge",
+              "out_of_capacity": false,
+              "provider": "AWS",
+              "slug": "lit-h100-80gb-8",
+              "wait_time": "940"
+            },
+            {
+              "accelerator_count": 1,
+              "cost": 0.19,
+              "family": "T4",
+              "instance_type": "g4dn.xlarge",
+              "interruptible_cost": 0.53352,
+              "interruptible_wait_time": "77",
+              "name": "g4dn.xlarge",
+              "out_of_capacity": false,
+              "provider": "AWS",
+              "slug": "lit-t4-1-small",
+              "wait_time": "62"
+            },
+            {
+              "accelerator_count": 4,
+              "cost": 11.86,
+              "family": "L40S",
+              "instance_type": "g6e.12xlarge",
+              "interruptible_cost": 4.41972,
+              "interruptible_wait_time": "69",
+              "name": "g6e.12xlarge",
+              "out_of_capacity": false,
+              "provider": "AWS",
+              "slug": "lit-l40s-4",
+              "wait_time": "76"
+            },
+            {
+              "accelerator_count": 1,
+              "cost": 2.89,
+              "family": "L40S",
+              "instance_type": "g6e.4xlarge",
+              "interruptible_cost": 1.81302,
+              "interruptible_wait_time": "105",
+              "name": "g6e.4xlarge",
+              "out_of_capacity": false,
+              "provider": "AWS",
+              "slug": "lit-l40s-1",
+              "wait_time": "76"
+            },
+            {
+              "accelerator_count": 4,
+              "cost": 5.31,
+              "family": "L4",
+              "instance_type": "g6.12xlarge",
+              "interruptible_cost": 3.39996,
+              "interruptible_wait_time": "72",
+              "name": "g6.12xlarge",
+              "out_of_capacity": false,
+              "provider": "AWS",
+              "slug": "lit-l4-4",
+              "wait_time": "64"
+            },
+            {
+              "accelerator_count": 8,
+              "cost": 70.53,
+              "family": "H200",
+              "instance_type": "p5en.48xlarge",
+              "interruptible_cost": 25.46196,
+              "interruptible_wait_time": "182",
+              "name": "p5en.48xlarge",
+              "out_of_capacity": false,
+              "provider": "AWS",
+              "slug": "lit-h200x-8",
+              "wait_time": "10800"
+            },
+            {
+              "accelerator_count": 4,
+              "cost": 18.61,
+              "family": "RTX PRO",
+              "instance_type": "g7e.24xlarge",
+              "interruptible_cost": 5.28242,
+              "interruptible_wait_time": "103",
+              "name": "g7e.24xlarge",
+              "out_of_capacity": false,
+              "provider": "AWS",
+              "slug": "lit-rtx-6000-pro-4",
+              "wait_time": "106"
+            },
+            {
+              "accelerator_count": 2,
+              "cost": 9.41,
+              "family": "RTX PRO",
+              "instance_type": "g7e.12xlarge",
+              "interruptible_cost": 3.08077,
+              "interruptible_wait_time": "76",
+              "name": "g7e.12xlarge",
+              "out_of_capacity": false,
+              "provider": "AWS",
+              "slug": "lit-rtx-6000-pro-2",
+              "wait_time": "89"
+            },
+            {
+              "accelerator_count": 1,
+              "cost": 1.58,
+              "family": "L4",
+              "instance_type": "g6.4xlarge",
+              "interruptible_cost": 1.02498,
+              "interruptible_wait_time": "77",
+              "name": "g6.4xlarge",
+              "out_of_capacity": false,
+              "provider": "AWS",
+              "slug": "lit-l4-1",
+              "wait_time": "77"
+            },
+            {
+              "accelerator_count": 1,
+              "cost": 4.64,
+              "family": "RTX PRO",
+              "instance_type": "g7e.4xlarge",
+              "interruptible_cost": 1.59753,
+              "interruptible_wait_time": "74",
+              "name": "g7e.4xlarge",
+              "out_of_capacity": false,
+              "provider": "AWS",
+              "slug": "lit-rtx-6000-pro-1",
+              "wait_time": "76"
+            },
+            {
+              "accelerator_count": 8,
+              "cost": 37.03,
+              "family": "RTX PRO",
+              "instance_type": "g7e.48xlarge",
+              "interruptible_cost": 12.03873,
+              "interruptible_wait_time": "143",
+              "name": "g7e.48xlarge",
+              "out_of_capacity": false,
+              "provider": "AWS",
+              "slug": "lit-rtx-6000-pro-8",
+              "wait_time": "140"
+            },
+            {
+              "accelerator_count": 4,
+              "cost": 4.55,
+              "family": "T4",
+              "instance_type": "g4dn.12xlarge",
+              "interruptible_cost": 1.78632,
+              "interruptible_wait_time": "65",
+              "name": "g4dn.12xlarge",
+              "out_of_capacity": false,
+              "provider": "AWS",
+              "slug": "lit-t4-4",
+              "wait_time": "65"
+            }
+          ]
+        },
+        {
+          "cloud_account": "lightning-voltagepark-prod",
+          "machines": [
+            {
+              "accelerator_count": 8,
+              "cost": 15.92,
+              "family": "H100",
+              "instance_type": "vp_gpu_8x_h100_sxm5",
+              "interruptible_cost": 0.0,
+              "interruptible_wait_time": "300",
+              "name": "vp_gpu_8x_h100_sxm5",
+              "out_of_capacity": false,
+              "provider": "VOLTAGE_PARK",
+              "slug": "lit-h100-80gb-8",
+              "wait_time": "300"
+            }
+          ]
+        },
+        {
+          "cloud_account": "lightning-vultr-prod",
+          "machines": []
+        }
+      ]
+    },
+    "remote_supply_chain": {
+      "ok": true,
+      "payload": {
+        "hostname": "ip-10-192-11-142",
+        "package_versions": {
+          "lightning": null,
+          "lightning-sdk": null,
+          "lightning_sdk": null,
+          "pytorch-lightning": null
+        },
+        "python": "/teamspace/studios/this_studio/pact/.venv/bin/python",
+        "recorded_at_utc": "2026-05-01T07:32:26Z",
+        "repo_root": "/teamspace/studios/this_studio/pact",
+        "schema_version": 1,
+        "status": "OK",
+        "strict": true,
+        "tool": "scripts/scan_lightning_supply_chain.py",
+        "violation_count": 0,
+        "violations": []
+      },
+      "remote_json_out": ".omx/state/lightning_doctor_remote_supply_chain_inventory_20260501T0232_all.json",
+      "returncode": 0,
+      "stderr_tail": "",
+      "stdout_tail": "{\n  \"hostname\": \"ip-10-192-11-142\",\n  \"package_versions\": {\n    \"lightning\": null,\n    \"lightning-sdk\": null,\n    \"lightning_sdk\": null,\n    \"pytorch-lightning\": null\n  },\n  \"python\": \"/teamspace/studios/this_studio/pact/.venv/bin/python\",\n  \"recorded_at_utc\": \"2026-05-01T07:32:26Z\",\n  \"repo_root\": \"/teamspace/studios/this_studio/pact\",\n  \"schema_version\": 1,\n  \"status\": \"OK\",\n  \"strict\": true,\n  \"tool\": \"scripts/scan_lightning_supply_chain.py\",\n  \"violation_count\": 0,\n  \"violations\": []\n}\n"
+    },
+    "ssh_auth": {
+      "ok": true,
+      "target": "s_01knw7wnzbe79wfq5mqqbx1mbz@ssh.lightning.ai"
+    }
+  },
+  "failed_checks": [],
+  "package_versions": {
+    "lightning": null,
+    "lightning-sdk": "2026.4.10",
+    "lightning_sdk": "2026.4.10",
+    "pytorch-lightning": null
+  },
+  "python": "/Users/adpena/Projects/pact/.venv/bin/python",
+  "recorded_at_utc": "2026-05-01T07:32:10Z",
+  "repo_root": "/Users/adpena/Projects/pact",
+  "schema_version": 1,
+  "status": "OK",
+  "tool": "scripts/launch_lightning_batch_job.py doctor"
+}

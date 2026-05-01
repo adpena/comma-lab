@@ -1,0 +1,19 @@
+{
+  "adjudication": null,
+  "artifact_recorded_at_utc": "2026-05-01T06:34:16Z",
+  "expected_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+  "expected_archive_size_bytes": 686635,
+  "expected_baseline_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+  "expected_baseline_archive_size_bytes": 686635,
+  "job_name": "official_component_response_pfp16_a_plus_plus_20260501_r7_predicted_from_r2_l40s_codex_lightning_t4_parallel",
+  "queue_metadata": {
+    "evidence": "official_cuda_component_response_t4_crosscheck_from_l40s_plan",
+    "lane": "official_component_response",
+    "parent_sensitivity": "component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2",
+    "prediction_deltas": "experiments/results/official_component_response_pfp16_a_plus_plus_20260501_r7_predicted_from_r2_l40s_codex/official_component_response_prediction_deltas.json"
+  },
+  "role": "official_component_response",
+  "schema_version": 1,
+  "score_source": "official_component_response_summary.json:contest_auth_eval_json_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

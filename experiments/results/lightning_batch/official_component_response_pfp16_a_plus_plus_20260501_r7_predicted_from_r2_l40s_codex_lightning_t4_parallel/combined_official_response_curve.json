@@ -1,0 +1,768 @@
+{
+  "baseline": {
+    "archive": {
+      "bytes": 686635,
+      "path": "/teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+      "sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    "contest_auth_eval_json": {
+      "bytes": 4904,
+      "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_r7_predicted_from_r2_l40s_codex_lightning_t4_parallel/evals/point_002_eps_p0/contest_auth_eval.json",
+      "sha256": "093d7295f9d9b47e5e42f3f1cff425c582ac9dddeb0832d3863bfecbc324306b"
+    },
+    "epsilon": 0.0,
+    "values": {
+      "combined": 0.5798428266022327,
+      "posenet": 0.00316423,
+      "segnet": 0.0040196
+    }
+  },
+  "canonical_scorer_path": true,
+  "component": "combined",
+  "component_readout": "official_component_formula",
+  "component_response_path": "archive_zip_inflate_sh_upstream_evaluate_py",
+  "component_units": {
+    "combined": "100*segnet + sqrt(10*posenet), no rate term",
+    "posenet": "mean_pose_mse",
+    "segnet": "mean_argmax_disagreement"
+  },
+  "count": 5,
+  "device": "cuda",
+  "epsilon_ladder": [
+    -2.0,
+    -1.0,
+    0.0,
+    1.0,
+    2.0
+  ],
+  "evidence_grade": "diagnostic_cuda_official_component_response",
+  "format": "official_component_response_curves_v1",
+  "gate_results": {
+    "coverage_passed": true,
+    "finite_values": true,
+    "invalid_prediction_semantics": false,
+    "max_abs_prediction_error": 0.09773611631716128,
+    "max_relative_prediction_error": 553.2107592118479,
+    "observed_delta_max": 0.00017878149336858495,
+    "prediction_error_gate_implemented": true,
+    "prediction_error_mode": "absolute_magnitude",
+    "prediction_error_passed": false,
+    "promotion_gate_passed": false,
+    "signal_present": true,
+    "zero_repro": true,
+    "zero_repro_error": 0.0
+  },
+  "gate_spec": {
+    "holdout_error_max": 0.35,
+    "observed_delta_min": 1e-12,
+    "require_prediction_deltas": true,
+    "zero_repro_tolerance": 1e-07
+  },
+  "holdout_error": 553.2107592118479,
+  "holdout_error_kind": "max_relative_prediction_error_against_official_archive_response_abs_magnitude",
+  "observed_holdout_delta_max": 0.00017878149336858495,
+  "official_component_response": true,
+  "passed": false,
+  "perturbation": {
+    "archive_variants_manifest": "archive_variants_manifest.json",
+    "archive_variants_manifest_sha256": "691c39522811f0e3c57cade21416383085bfac2cdbf1391c4717b020acfe82dd",
+    "auth_eval_required": "cuda",
+    "basis_id": "6676fc2fe0240ca72305e7ec3287ad314be6765b4d229f4a8b508629fc781f42",
+    "basis_kind": "archive_byte_additive",
+    "basis_path": "perturbation_basis_v1.json",
+    "basis_sha256": "603a7813c5fa42e5fd889e5e3cc3aa5b10d25dea309dc4f742445aef18f73660",
+    "canonical_response_eval_path": "archive.zip -> inflate.sh -> upstream/evaluate.py",
+    "epsilon_units": "signed_integer_step",
+    "format": "perturbation_basis_v1",
+    "mutation_policy": {
+      "allow_renderer_magic_mutation": false,
+      "allowed_mutation_members": [
+        "renderer.bin"
+      ],
+      "byte_delta_formula": "new_byte = old_byte + round(epsilon * delta_per_epsilon)",
+      "byte_range": [
+        0,
+        255
+      ],
+      "max_abs_byte_delta": 2,
+      "max_mutated_bytes": 16,
+      "max_raw_l1_delta": 32,
+      "out_of_range": "fail_closed"
+    },
+    "predicted_deltas_source": {
+      "bytes": 36223,
+      "path": "../official_component_response_prediction_deltas.json",
+      "sha256": "e9deb2f21fa132e730d692a1fff046e6171dae04621b850696946ebae3089a3d"
+    },
+    "prediction_model": {
+      "equation": "predicted_delta[component] = sum_atoms round(epsilon * delta_per_epsilon)^2 * component_sensitivity[layer_name.weight][channel_index]",
+      "model": "quadratic_archive_byte_channel_sensitivity_projection_v1",
+      "prediction_delta_semantics": "nonnegative_component_delta_magnitude",
+      "prediction_error_mode": "absolute_magnitude",
+      "sign_policy": "nonnegative component-delta magnitude from nonnegative sensitivity maps; signed improvement/degradation claims require a future signed-map artifact",
+      "uses_official_response_observations": false
+    }
+  },
+  "points": [
+    {
+      "all_components": {
+        "combined": 0.5800194972737439,
+        "posenet": 0.00316646,
+        "segnet": 0.00402074
+      },
+      "archive": {
+        "bytes": 686637,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/official_component_response_pfp16_a_plus_plus_20260501_r7_predicted_from_r2_l40s_codex/official_response_plan/archives/point_000_eps_m2.zip",
+        "sha256": "73baaf5d1479ee9dcbfdd5a02ea97bd3ac915aa7fd0b4f7a60097c5c05113b08"
+      },
+      "baseline": 0.5798428266022327,
+      "contest_auth_eval_json": {
+        "bytes": 5056,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_r7_predicted_from_r2_l40s_codex_lightning_t4_parallel/evals/point_000_eps_m2/contest_auth_eval.json",
+        "sha256": "e9801d897aa13308ba401abec7f4175ecb010a0f4a185bf526fa4ace2a7b97b7"
+      },
+      "delta": 0.00017667067151116989,
+      "epsilon": -2.0,
+      "point_metadata": {
+        "archive_bytes": 686637,
+        "archive_sha256": "73baaf5d1479ee9dcbfdd5a02ea97bd3ac915aa7fd0b4f7a60097c5c05113b08",
+        "changed_member_bytes": 16,
+        "max_abs_byte_delta": 2,
+        "member_mutations": [
+          {
+            "delta": -2,
+            "member": "renderer.bin",
+            "mutated_byte": 82,
+            "offset": 10980,
+            "original_byte": 84
+          },
+          {
+            "delta": -2,
+            "member": "renderer.bin",
+            "mutated_byte": 145,
+            "offset": 18458,
+            "original_byte": 147
+          },
+          {
+            "delta": -2,
+            "member": "renderer.bin",
+            "mutated_byte": 137,
+            "offset": 30202,
+            "original_byte": 139
+          },
+          {
+            "delta": -2,
+            "member": "renderer.bin",
+            "mutated_byte": 74,
+            "offset": 45858,
+            "original_byte": 76
+          },
+          {
+            "delta": -2,
+            "member": "renderer.bin",
+            "mutated_byte": 112,
+            "offset": 72254,
+            "original_byte": 114
+          },
+          {
+            "delta": -2,
+            "member": "renderer.bin",
+            "mutated_byte": 86,
+            "offset": 104782,
+            "original_byte": 88
+          },
+          {
+            "delta": -2,
+            "member": "renderer.bin",
+            "mutated_byte": 140,
+            "offset": 137310,
+            "original_byte": 142
+          },
+          {
+            "delta": -2,
+            "member": "renderer.bin",
+            "mutated_byte": 177,
+            "offset": 169838,
+            "original_byte": 179
+          },
+          {
+            "delta": -2,
+            "member": "renderer.bin",
+            "mutated_byte": 106,
+            "offset": 226650,
+            "original_byte": 108
+          },
+          {
+            "delta": -2,
+            "member": "renderer.bin",
+            "mutated_byte": 117,
+            "offset": 238394,
+            "original_byte": 119
+          },
+          {
+            "delta": -2,
+            "member": "renderer.bin",
+            "mutated_byte": 164,
+            "offset": 245476,
+            "original_byte": 166
+          },
+          {
+            "delta": -2,
+            "member": "renderer.bin",
+            "mutated_byte": 83,
+            "offset": 252396,
+            "original_byte": 85
+          },
+          {
+            "delta": -2,
+            "member": "renderer.bin",
+            "mutated_byte": 114,
+            "offset": 260138,
+            "original_byte": 116
+          },
+          {
+            "delta": -2,
+            "member": "renderer.bin",
+            "mutated_byte": 152,
+            "offset": 269554,
+            "original_byte": 154
+          },
+          {
+            "delta": -2,
+            "member": "renderer.bin",
+            "mutated_byte": 123,
+            "offset": 278842,
+            "original_byte": 125
+          },
+          {
+            "delta": -2,
+            "member": "renderer.bin",
+            "mutated_byte": 191,
+            "offset": 288130,
+            "original_byte": 193
+          }
+        ],
+        "raw_l1_byte_delta": 32
+      },
+      "prediction": {
+        "abs_error": 0.09773611631716128,
+        "implemented": true,
+        "observed_delta_for_error": 0.00017667067151116989,
+        "predicted_delta": 0.09791278698867245,
+        "predicted_delta_for_error": 0.09791278698867245,
+        "prediction_error_mode": "absolute_magnitude",
+        "relative_error": 553.2107592118479,
+        "valid": true
+      },
+      "value": 0.5800194972737439
+    },
+    {
+      "all_components": {
+        "combined": 0.5800038860406183,
+        "posenet": 0.00316441,
+        "segnet": 0.00402116
+      },
+      "archive": {
+        "bytes": 686637,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/official_component_response_pfp16_a_plus_plus_20260501_r7_predicted_from_r2_l40s_codex/official_response_plan/archives/point_001_eps_m1.zip",
+        "sha256": "b60719f398a0317426ec498fb8f97f79615f7ac79f0b2d2aef512ae9c85b0fb5"
+      },
+      "baseline": 0.5798428266022327,
+      "contest_auth_eval_json": {
+        "bytes": 5069,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_r7_predicted_from_r2_l40s_codex_lightning_t4_parallel/evals/point_001_eps_m1/contest_auth_eval.json",
+        "sha256": "3f4805f962551cb5dd58a86a45de95ef5ee2ded907ced7c3f4a692e0045169b3"
+      },
+      "delta": 0.0001610594383855135,
+      "epsilon": -1.0,
+      "point_metadata": {
+        "archive_bytes": 686637,
+        "archive_sha256": "b60719f398a0317426ec498fb8f97f79615f7ac79f0b2d2aef512ae9c85b0fb5",
+        "changed_member_bytes": 16,
+        "max_abs_byte_delta": 1,
+        "member_mutations": [
+          {
+            "delta": -1,
+            "member": "renderer.bin",
+            "mutated_byte": 83,
+            "offset": 10980,
+            "original_byte": 84
+          },
+          {
+            "delta": -1,
+            "member": "renderer.bin",
+            "mutated_byte": 146,
+            "offset": 18458,
+            "original_byte": 147
+          },
+          {
+            "delta": -1,
+            "member": "renderer.bin",
+            "mutated_byte": 138,
+            "offset": 30202,
+            "original_byte": 139
+          },
+          {
+            "delta": -1,
+            "member": "renderer.bin",
+            "mutated_byte": 75,
+            "offset": 45858,
+            "original_byte": 76
+          },
+          {
+            "delta": -1,
+            "member": "renderer.bin",
+            "mutated_byte": 113,
+            "offset": 72254,
+            "original_byte": 114
+          },
+          {
+            "delta": -1,
+            "member": "renderer.bin",
+            "mutated_byte": 87,
+            "offset": 104782,
+            "original_byte": 88
+          },
+          {
+            "delta": -1,
+            "member": "renderer.bin",
+            "mutated_byte": 141,
+            "offset": 137310,
+            "original_byte": 142
+          },
+          {
+            "delta": -1,
+            "member": "renderer.bin",
+            "mutated_byte": 178,
+            "offset": 169838,
+            "original_byte": 179
+          },
+          {
+            "delta": -1,
+            "member": "renderer.bin",
+            "mutated_byte": 107,
+            "offset": 226650,
+            "original_byte": 108
+          },
+          {
+            "delta": -1,
+            "member": "renderer.bin",
+            "mutated_byte": 118,
+            "offset": 238394,
+            "original_byte": 119
+          },
+          {
+            "delta": -1,
+            "member": "renderer.bin",
+            "mutated_byte": 165,
+            "offset": 245476,
+            "original_byte": 166
+          },
+          {
+            "delta": -1,
+            "member": "renderer.bin",
+            "mutated_byte": 84,
+            "offset": 252396,
+            "original_byte": 85
+          },
+          {
+            "delta": -1,
+            "member": "renderer.bin",
+            "mutated_byte": 115,
+            "offset": 260138,
+            "original_byte": 116
+          },
+          {
+            "delta": -1,
+            "member": "renderer.bin",
+            "mutated_byte": 153,
+            "offset": 269554,
+            "original_byte": 154
+          },
+          {
+            "delta": -1,
+            "member": "renderer.bin",
+            "mutated_byte": 124,
+            "offset": 278842,
+            "original_byte": 125
+          },
+          {
+            "delta": -1,
+            "member": "renderer.bin",
+            "mutated_byte": 192,
+            "offset": 288130,
+            "original_byte": 193
+          }
+        ],
+        "raw_l1_byte_delta": 16
+      },
+      "prediction": {
+        "abs_error": 0.0243171373087826,
+        "implemented": true,
+        "observed_delta_for_error": 0.0001610594383855135,
+        "predicted_delta": 0.024478196747168113,
+        "predicted_delta_for_error": 0.024478196747168113,
+        "prediction_error_mode": "absolute_magnitude",
+        "relative_error": 150.98237987504248,
+        "valid": true
+      },
+      "value": 0.5800038860406183
+    },
+    {
+      "all_components": {
+        "combined": 0.5798428266022327,
+        "posenet": 0.00316423,
+        "segnet": 0.0040196
+      },
+      "archive": {
+        "bytes": 686635,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+        "sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+      },
+      "baseline": 0.5798428266022327,
+      "contest_auth_eval_json": {
+        "bytes": 4904,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_r7_predicted_from_r2_l40s_codex_lightning_t4_parallel/evals/point_002_eps_p0/contest_auth_eval.json",
+        "sha256": "093d7295f9d9b47e5e42f3f1cff425c582ac9dddeb0832d3863bfecbc324306b"
+      },
+      "delta": 0.0,
+      "epsilon": 0.0,
+      "point_metadata": {
+        "archive_bytes": 686635,
+        "archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+        "changed_member_bytes": 0,
+        "external_zero_contest_auth_eval_json_ignored_for_curve": "/teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/eval/contest_auth_eval.json",
+        "max_abs_byte_delta": 0,
+        "raw_l1_byte_delta": 0,
+        "same_run_zero_baseline": true
+      },
+      "prediction": {
+        "abs_error": 0.0,
+        "implemented": true,
+        "observed_delta_for_error": 0.0,
+        "predicted_delta": 0.0,
+        "predicted_delta_for_error": 0.0,
+        "prediction_error_mode": "absolute_magnitude",
+        "relative_error": 0.0,
+        "valid": true
+      },
+      "value": 0.5798428266022327
+    },
+    {
+      "all_components": {
+        "combined": 0.579772468746572,
+        "posenet": 0.003165,
+        "segnet": 0.00401868
+      },
+      "archive": {
+        "bytes": 686636,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/official_component_response_pfp16_a_plus_plus_20260501_r7_predicted_from_r2_l40s_codex/official_response_plan/archives/point_003_eps_p1.zip",
+        "sha256": "6caf3eeb488bd9cd38300122cd98ddc676857d8754d4ecfec3af88292f96d9fd"
+      },
+      "baseline": 0.5798428266022327,
+      "contest_auth_eval_json": {
+        "bytes": 5042,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_r7_predicted_from_r2_l40s_codex_lightning_t4_parallel/evals/point_003_eps_p1/contest_auth_eval.json",
+        "sha256": "c4966d9ce3f1245828c3fe930b0acd2642c5cb19c4cdc246448f5558af6cf7c7"
+      },
+      "delta": -7.035785566078534e-05,
+      "epsilon": 1.0,
+      "point_metadata": {
+        "archive_bytes": 686636,
+        "archive_sha256": "6caf3eeb488bd9cd38300122cd98ddc676857d8754d4ecfec3af88292f96d9fd",
+        "changed_member_bytes": 16,
+        "max_abs_byte_delta": 1,
+        "member_mutations": [
+          {
+            "delta": 1,
+            "member": "renderer.bin",
+            "mutated_byte": 85,
+            "offset": 10980,
+            "original_byte": 84
+          },
+          {
+            "delta": 1,
+            "member": "renderer.bin",
+            "mutated_byte": 148,
+            "offset": 18458,
+            "original_byte": 147
+          },
+          {
+            "delta": 1,
+            "member": "renderer.bin",
+            "mutated_byte": 140,
+            "offset": 30202,
+            "original_byte": 139
+          },
+          {
+            "delta": 1,
+            "member": "renderer.bin",
+            "mutated_byte": 77,
+            "offset": 45858,
+            "original_byte": 76
+          },
+          {
+            "delta": 1,
+            "member": "renderer.bin",
+            "mutated_byte": 115,
+            "offset": 72254,
+            "original_byte": 114
+          },
+          {
+            "delta": 1,
+            "member": "renderer.bin",
+            "mutated_byte": 89,
+            "offset": 104782,
+            "original_byte": 88
+          },
+          {
+            "delta": 1,
+            "member": "renderer.bin",
+            "mutated_byte": 143,
+            "offset": 137310,
+            "original_byte": 142
+          },
+          {
+            "delta": 1,
+            "member": "renderer.bin",
+            "mutated_byte": 180,
+            "offset": 169838,
+            "original_byte": 179
+          },
+          {
+            "delta": 1,
+            "member": "renderer.bin",
+            "mutated_byte": 109,
+            "offset": 226650,
+            "original_byte": 108
+          },
+          {
+            "delta": 1,
+            "member": "renderer.bin",
+            "mutated_byte": 120,
+            "offset": 238394,
+            "original_byte": 119
+          },
+          {
+            "delta": 1,
+            "member": "renderer.bin",
+            "mutated_byte": 167,
+            "offset": 245476,
+            "original_byte": 166
+          },
+          {
+            "delta": 1,
+            "member": "renderer.bin",
+            "mutated_byte": 86,
+            "offset": 252396,
+            "original_byte": 85
+          },
+          {
+            "delta": 1,
+            "member": "renderer.bin",
+            "mutated_byte": 117,
+            "offset": 260138,
+            "original_byte": 116
+          },
+          {
+            "delta": 1,
+            "member": "renderer.bin",
+            "mutated_byte": 155,
+            "offset": 269554,
+            "original_byte": 154
+          },
+          {
+            "delta": 1,
+            "member": "renderer.bin",
+            "mutated_byte": 126,
+            "offset": 278842,
+            "original_byte": 125
+          },
+          {
+            "delta": 1,
+            "member": "renderer.bin",
+            "mutated_byte": 194,
+            "offset": 288130,
+            "original_byte": 193
+          }
+        ],
+        "raw_l1_byte_delta": 16
+      },
+      "prediction": {
+        "abs_error": 0.024407838891507327,
+        "implemented": true,
+        "observed_delta_for_error": 7.035785566078534e-05,
+        "predicted_delta": 0.024478196747168113,
+        "predicted_delta_for_error": 0.024478196747168113,
+        "prediction_error_mode": "absolute_magnitude",
+        "relative_error": 346.90993155311986,
+        "valid": true
+      },
+      "value": 0.579772468746572
+    },
+    {
+      "all_components": {
+        "combined": 0.5796640451088642,
+        "posenet": 0.00316061,
+        "segnet": 0.00401883
+      },
+      "archive": {
+        "bytes": 686636,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/official_component_response_pfp16_a_plus_plus_20260501_r7_predicted_from_r2_l40s_codex/official_response_plan/archives/point_004_eps_p2.zip",
+        "sha256": "c00393dda0736edb2b2a25e3108624b7571042c63e6c5b138b5168c1a28f1193"
+      },
+      "baseline": 0.5798428266022327,
+      "contest_auth_eval_json": {
+        "bytes": 5043,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_r7_predicted_from_r2_l40s_codex_lightning_t4_parallel/evals/point_004_eps_p2/contest_auth_eval.json",
+        "sha256": "fc94bd6cbc246d02ede3ebcdd0be8da9eb0b47a5356809df2e809e226ad007c0"
+      },
+      "delta": -0.00017878149336858495,
+      "epsilon": 2.0,
+      "point_metadata": {
+        "archive_bytes": 686636,
+        "archive_sha256": "c00393dda0736edb2b2a25e3108624b7571042c63e6c5b138b5168c1a28f1193",
+        "changed_member_bytes": 16,
+        "max_abs_byte_delta": 2,
+        "member_mutations": [
+          {
+            "delta": 2,
+            "member": "renderer.bin",
+            "mutated_byte": 86,
+            "offset": 10980,
+            "original_byte": 84
+          },
+          {
+            "delta": 2,
+            "member": "renderer.bin",
+            "mutated_byte": 149,
+            "offset": 18458,
+            "original_byte": 147
+          },
+          {
+            "delta": 2,
+            "member": "renderer.bin",
+            "mutated_byte": 141,
+            "offset": 30202,
+            "original_byte": 139
+          },
+          {
+            "delta": 2,
+            "member": "renderer.bin",
+            "mutated_byte": 78,
+            "offset": 45858,
+            "original_byte": 76
+          },
+          {
+            "delta": 2,
+            "member": "renderer.bin",
+            "mutated_byte": 116,
+            "offset": 72254,
+            "original_byte": 114
+          },
+          {
+            "delta": 2,
+            "member": "renderer.bin",
+            "mutated_byte": 90,
+            "offset": 104782,
+            "original_byte": 88
+          },
+          {
+            "delta": 2,
+            "member": "renderer.bin",
+            "mutated_byte": 144,
+            "offset": 137310,
+            "original_byte": 142
+          },
+          {
+            "delta": 2,
+            "member": "renderer.bin",
+            "mutated_byte": 181,
+            "offset": 169838,
+            "original_byte": 179
+          },
+          {
+            "delta": 2,
+            "member": "renderer.bin",
+            "mutated_byte": 110,
+            "offset": 226650,
+            "original_byte": 108
+          },
+          {
+            "delta": 2,
+            "member": "renderer.bin",
+            "mutated_byte": 121,
+            "offset": 238394,
+            "original_byte": 119
+          },
+          {
+            "delta": 2,
+            "member": "renderer.bin",
+            "mutated_byte": 168,
+            "offset": 245476,
+            "original_byte": 166
+          },
+          {
+            "delta": 2,
+            "member": "renderer.bin",
+            "mutated_byte": 87,
+            "offset": 252396,
+            "original_byte": 85
+          },
+          {
+            "delta": 2,
+            "member": "renderer.bin",
+            "mutated_byte": 118,
+            "offset": 260138,
+            "original_byte": 116
+          },
+          {
+            "delta": 2,
+            "member": "renderer.bin",
+            "mutated_byte": 156,
+            "offset": 269554,
+            "original_byte": 154
+          },
+          {
+            "delta": 2,
+            "member": "renderer.bin",
+            "mutated_byte": 127,
+            "offset": 278842,
+            "original_byte": 125
+          },
+          {
+            "delta": 2,
+            "member": "renderer.bin",
+            "mutated_byte": 195,
+            "offset": 288130,
+            "original_byte": 193
+          }
+        ],
+        "raw_l1_byte_delta": 32
+      },
+      "prediction": {
+        "abs_error": 0.09773400549530387,
+        "implemented": true,
+        "observed_delta_for_error": 0.00017878149336858495,
+        "predicted_delta": 0.09791278698867245,
+        "predicted_delta_for_error": 0.09791278698867245,
+        "prediction_error_mode": "absolute_magnitude",
+        "relative_error": 546.6673516022742,
+        "valid": true
+      },
+      "value": 0.5796640451088642
+    }
+  ],
+  "promotion_blockers": [
+    {
+      "code": "prediction_error_gate_failed",
+      "mathematical_explanation": "Map-predicted component deltas did not pass the official response relative-error threshold."
+    }
+  ],
+  "promotion_eligible": false,
+  "response_kind": "symmetric",
+  "schema_version": 1,
+  "sensitivity_source": "official_archive_finite_difference_component_response",
+  "symmetric_epsilon_pairs": 2,
+  "tool": "experiments/profile_component_sensitivity_official.py"
+}

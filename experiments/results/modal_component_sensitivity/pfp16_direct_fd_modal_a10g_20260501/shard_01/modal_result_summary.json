@@ -1,0 +1,10 @@
+{
+  "elapsed_seconds": 27.486431321,
+  "label": "pfp16_direct_fd_modal_a10g_20260501",
+  "promotion_eligible": false,
+  "returncode": 1,
+  "score_claim": false,
+  "shard_count": 16,
+  "shard_index": 1,
+  "timed_out": false
+}
