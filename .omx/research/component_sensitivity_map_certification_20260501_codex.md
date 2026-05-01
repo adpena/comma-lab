@@ -265,3 +265,40 @@ Certification rule remains unchanged:
   and perturbation-basis custody, official archive-response curves,
   external-baseline reproduction, and adversarial review. They are not score
   evidence.
+
+## 2026-05-01T08:15Z Execution Backend Hardening And Live Queue Update
+
+Backend custody hardening:
+
+- Lightning SSH is now treated strictly as transport, not proof of GPU
+  availability. Interactive CUDA work requires a fresh runtime probe; exact
+  sensitivity/eval work remains assigned to Batch Jobs with explicit machines.
+- Added `scripts/configure_lightning_ssh.py` and tests so a new operator
+  machine can reproduce the hardened SSH alias without using the Lightning UI
+  helper's permissive host-key policy.
+- Added the locked `cloud` extra for `lightning-sdk`, `modal`, and `vastai`.
+  This closes the bug class where `uv sync --locked` could silently remove the
+  provider CLIs/imports needed to harvest active experiments.
+
+Live direct-FD telemetry:
+
+- Latest Lightning refresh:
+  `.omx/state/lightning_refresh_direct_fd_allwaves_20260501T081337Z.jsonl`.
+- Status: L40S shards `00,01,03,04,05,07` running; L40S shards
+  `02,06,08,09,10,11,12,13,14,15` pending; all T4 fallback shards pending;
+  all RTX PRO fallback shards pending.
+- Modal fallback r3:
+  `experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3/modal_call_ids.json`.
+  Recovery shows all 16 pending; no failures and no artifacts harvested yet.
+
+Alpha diagnostic feed into sensitivity/repair planning:
+
+- Alpha-Geo-1 wrote a 1000-region primitive-contract packet:
+  `experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_1_vs_pfp16_repair_regions_20260501T080036Z.json`
+  and `.primitive_contract.json`.
+- SHA-256 values:
+  `fcc7fcf9e22518cd95a5af4cb36aff189249c6248b5298f377ecc8ca66991a3e`
+  and `e5da815b680ba5c02bf653dae8c77b4f6d12500461e45b06d0cfb0881be5c16e`.
+- This packet is CPU empirical and cannot promote/rank/kill. It can inform
+  Alpha repair geometry and finite-difference perturbation design once CUDA
+  component-sensitivity evidence lands.
