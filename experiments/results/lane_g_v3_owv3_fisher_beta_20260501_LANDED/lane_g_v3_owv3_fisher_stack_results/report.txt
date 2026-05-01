@@ -1,0 +1,17 @@
+=== Evaluation config ===
+  batch_size: 16
+  device: cuda
+  num_threads: 2
+  prefetch_queue_depth: 4
+  report: /workspace/pact/lane_g_v3_owv3_fisher_stack_results/eval_work/report.txt
+  seed: 1234
+  submission_dir: /workspace/pact/lane_g_v3_owv3_fisher_stack_results/eval_work
+  uncompressed_dir: /workspace/pact/upstream/videos
+  video_names_file: /workspace/pact/upstream/public_test_video_names.txt
+=== Evaluation results over 600 samples ===
+  Average PoseNet Distortion: 0.00360019
+  Average SegNet Distortion: 0.00401348
+  Submission file size: 638,165 bytes
+  Original uncompressed size: 37,545,489 bytes
+  Compression Rate: 0.01699712
+  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 1.02

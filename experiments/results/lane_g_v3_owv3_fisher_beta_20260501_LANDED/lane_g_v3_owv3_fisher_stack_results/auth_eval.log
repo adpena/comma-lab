@@ -1,0 +1,118 @@
+[contest_auth_eval] provenance saved: /workspace/pact/lane_g_v3_owv3_fisher_stack_results/eval_work/provenance.json
+[contest_auth_eval] archive sha256: 57abe0fdf786d95b38325334b568e7a947143afe097ba189f214f2208492cb8f
+[contest_auth_eval] extracted 3 member(s): ['renderer.bin', 'masks.mkv', 'optimized_poses.pt']
+[contest_auth_eval] archive members validated against whitelist
+[inflate] cmd: bash /workspace/pact/submissions/robust_current/inflate.sh /workspace/pact/lane_g_v3_owv3_fisher_stack_results/eval_work/extracted /workspace/pact/lane_g_v3_owv3_fisher_stack_results/eval_work/inflated /workspace/pact/upstream/public_test_video_names.txt
+[inflate] timeout: 1800s (30.0 min)
+Inflating (neural renderer: mask→frame) /workspace/pact/lane_g_v3_owv3_fisher_stack_results/eval_work/extracted -> /workspace/pact/lane_g_v3_owv3_fisher_stack_results/eval_work/inflated
+   Building tac @ file:///workspace/pact
+Downloading numpy (16.1MiB)
+Downloading nvidia-cuda-runtime (2.1MiB)
+Downloading networkx (2.0MiB)
+Downloading brotli (1.4MiB)
+Downloading pydantic-core (2.0MiB)
+Downloading setuptools (1.0MiB)
+Downloading cryptography (4.2MiB)
+Downloading sympy (6.0MiB)
+Downloading nvidia-nvshmem-cu13 (57.6MiB)
+Downloading nvidia-cufft (204.2MiB)
+Downloading nvidia-nvjitlink (38.8MiB)
+Downloading nvidia-cusparselt-cu13 (162.0MiB)
+Downloading nvidia-cufile (1.2MiB)
+Downloading nvidia-curand (56.8MiB)
+Downloading nvidia-cudnn-cu13 (349.1MiB)
+Downloading triton (179.5MiB)
+Downloading cuda-bindings (6.0MiB)
+Downloading nvidia-cusolver (191.6MiB)
+Downloading nvidia-cuda-cupti (10.2MiB)
+Downloading nvidia-cuda-nvrtc (86.0MiB)
+Downloading nvidia-nccl-cu13 (187.4MiB)
+Downloading nvidia-cublas (403.5MiB)
+Downloading torch (506.0MiB)
+Downloading nvidia-cusparse (139.2MiB)
+ Downloaded setuptools
+ Downloaded nvidia-cufile
+ Downloaded brotli
+ Downloaded pydantic-core
+      Built tac @ file:///workspace/pact
+ Downloaded networkx
+ Downloaded nvidia-cuda-runtime
+ Downloaded cryptography
+ Downloaded sympy
+ Downloaded cuda-bindings
+ Downloaded nvidia-cuda-cupti
+ Downloaded numpy
+ Downloaded nvidia-nvjitlink
+ Downloaded nvidia-curand
+ Downloaded nvidia-nvshmem-cu13
+ Downloaded nvidia-cuda-nvrtc
+ Downloaded nvidia-cusparse
+ Downloaded nvidia-cusparselt-cu13
+ Downloaded triton
+ Downloaded nvidia-nccl-cu13
+ Downloaded nvidia-cusolver
+ Downloaded nvidia-cufft
+ Downloaded nvidia-cudnn-cu13
+ Downloaded nvidia-cublas
+ Downloaded torch
+Installed 40 packages in 1.30s
+Device: CUDA (NVIDIA GeForce RTX 4090)
+Mask source: archive (contest-compliant, no SegNet loading)
+Stage 1: Loading renderer ...
+  Loaded OWV3 (Lane Ω-W-V3 sensitivity-weighted water-fill) AsymmetricPairGenerator from .bin (234,120 bytes, 288,363 params, 1.2s) — strict-scorer-rule OK
+Stage 2: Loading pre-extracted masks ...
+  Loaded 1200 pre-extracted masks (384x512) from /workspace/pact/lane_g_v3_owv3_fisher_stack_results/eval_work/extracted/masks.mkv (28.5s)
+  Loaded OPTIMIZED poses: (600, 6) from archive (pose-space TTO)
+
+============================================================
+Video 1/1: 0.mkv
+============================================================
+Stage 3: Generating frames via renderer ...
+  Mode: asymmetric pair generation (1200 masks -> 1200 frames via 600 pairs)
+    Generated: 160/1200 frames
+    Generated: 320/1200 frames
+    Generated: 480/1200 frames
+    Generated: 640/1200 frames
+    Generated: 800/1200 frames
+    Generated: 960/1200 frames
+    Generated: 1120/1200 frames
+    Generated: 1200/1200 frames
+  Generated 1200 frames -> /workspace/pact/lane_g_v3_owv3_fisher_stack_results/eval_work/inflated/0.raw (3,662,409,600 bytes, 8.1s)
+  Video complete: 1200 frames in 8.1s (147.6 fps)
+
+Total inflate time: 38.0s
+[inflate] returncode=0 elapsed=316.5s
+[inflate] produced 1 .raw file(s), each 3,662,409,600 bytes — STRICT validation passed.
+[evaluate] cmd: /opt/conda/bin/python /workspace/pact/upstream/evaluate.py --submission-dir /workspace/pact/lane_g_v3_owv3_fisher_stack_results/eval_work --uncompressed-dir /workspace/pact/upstream/videos --video-names-file /workspace/pact/upstream/public_test_video_names.txt --device cuda --report /workspace/pact/lane_g_v3_owv3_fisher_stack_results/eval_work/report.txt
+[evaluate] returncode=0 elapsed=11.6s
+[evaluate] stdout (last 4KB):
+=== Evaluation config ===
+  batch_size: 16
+  device: cuda
+  num_threads: 2
+  prefetch_queue_depth: 4
+  report: /workspace/pact/lane_g_v3_owv3_fisher_stack_results/eval_work/report.txt
+  seed: 1234
+  submission_dir: /workspace/pact/lane_g_v3_owv3_fisher_stack_results/eval_work
+  uncompressed_dir: /workspace/pact/upstream/videos
+  video_names_file: /workspace/pact/upstream/public_test_video_names.txt
+DaliVideoDataset on rank 0 with 1 files.
+TensorVideoDataset on rank 0 with 1 files.
+=== Evaluation results over 600 samples ===
+  Average PoseNet Distortion: 0.00360019
+  Average SegNet Distortion: 0.00401348
+  Submission file size: 638,165 bytes
+  Original uncompressed size: 37,545,489 bytes
+  Compression Rate: 0.01699712
+  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 1.02
+
+
+RESULT_JSON: {"schema_version": 1, "final_score": 1.02, "avg_posenet_dist": 0.00360019, "avg_segnet_dist": 0.00401348, "rate_unscaled": 0.01699712, "score_pose_contribution": 0.18974166648366933, "score_seg_contribution": 0.401348, "score_rate_contribution": 0.42492800000000003, "score_recomputed_from_components": 1.0160176664836693, "archive_size_bytes": 638165, "n_samples": 600, "report_path": "/workspace/pact/lane_g_v3_owv3_fisher_stack_results/eval_work/report.txt", "evaluate_elapsed_seconds": 11.612780948868021, "inflate_elapsed_seconds": 316.5044138201047, "contest_auth_eval_elapsed_seconds": 328.11971913906746, "provenance": {"schema_version": 1, "started_at_utc": "2026-05-01T09:59:11Z", "tool": "experiments/contest_auth_eval.py", "archive_path": "/workspace/pact/lane_g_v3_owv3_fisher_stack_results/archive_lane_g_v3_owv3.zip", "archive_sha256": "57abe0fdf786d95b38325334b568e7a947143afe097ba189f214f2208492cb8f", "archive_size_bytes": 638165, "inflate_script": "/workspace/pact/submissions/robust_current/inflate.sh", "inflate_script_sha256": "6c1cb5f8d9a2c9ecfb972aa9937713ba0e5f58e2b9edd834d1ea64853af33d36", "upstream_dir": "/workspace/pact/upstream", "device": "cuda", "inflate_timeout_seconds": 1800, "evaluate_timeout_seconds": 1800, "video_names_file": "upstream/public_test_video_names.txt", "sys_argv": ["experiments/contest_auth_eval.py", "--archive", "/workspace/pact/lane_g_v3_owv3_fisher_stack_results/archive_lane_g_v3_owv3.zip", "--inflate-sh", "submissions/robust_current/inflate.sh", "--upstream-dir", "upstream", "--device", "cuda", "--keep-work-dir", "--work-dir", "/workspace/pact/lane_g_v3_owv3_fisher_stack_results/eval_work"], "env_vars": {"PYTHONPATH": "/workspace/pact/src:/workspace/pact/upstream:/workspace/pact:src:upstream:/workspace/pact", "CUDA_VISIBLE_DEVICES": null, "CUBLAS_WORKSPACE_CONFIG": ":4096:8", "PYTHONHASHSEED": "1234", "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True", "LD_LIBRARY_PATH": "/usr/local/nvidia/lib:/usr/local/nvidia/lib64"}, "gpu_model": "NVIDIA GeForce RTX 4090", "gpu_driver": "580.126.09", "gpu_t4_match": false, "torch_version": "2.5.1+cu124", "cuda_version": "12.4", "cuda_available": true, "cuda_device_count": 1, "ffmpeg_version": "ffmpeg version 4.4.2-0ubuntu0.22.04.1 Copyright (c) 2000-2021 the FFmpeg developers", "libsvtav1_version": null, "pact_commit": "<error:CalledProcessError(128, ['git', 'rev-parse', 'HEAD'])>"}, "work_dir": "/workspace/pact/lane_g_v3_owv3_fisher_stack_results/eval_work"}
+
+=== CONTEST AUTH EVAL ===
+  Final score:    1.0200
+  PoseNet dist:   0.003600
+  SegNet dist:    0.004013
+  Rate (unscaled): 0.016997
+  Archive bytes:  638,165
+  Result JSON:    /workspace/pact/lane_g_v3_owv3_fisher_stack_results/eval_work/contest_auth_eval.json

@@ -21,6 +21,28 @@
     "timestamp_utc": "2026-04-30T06:05:30Z",
     "tool_version": 1
   },
+  "remote_lane_12_alpha_geo0_pose_regen": {
+    "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
+    "archive_size_bytes": 694074,
+    "elapsed_seconds": 0.021,
+    "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
+    "lane_name": "remote_lane_12_alpha_geo0_pose_regen",
+    "stages_passed": [
+      "extract",
+      "whitelist",
+      "renderer_magic",
+      "masks_present",
+      "config_env",
+      "inflate_dispatch_path",
+      "inflate_renderer_imports",
+      "upstream_evaluate_arity",
+      "gt_video_present",
+      "launcher_includes_env"
+    ],
+    "submission_dir": "submissions/robust_current",
+    "timestamp_utc": "2026-05-01T10:29:51Z",
+    "tool_version": 1
+  },
   "remote_lane_19_logit_margin": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
