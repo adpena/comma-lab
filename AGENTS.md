@@ -225,6 +225,14 @@ and preserve weighted sampling provenance for uniform, critical-box,
 boundary-band, and transition-endpoint pools. These trainer artifacts are
 empirical/no-score until a later canonical CUDA archive eval is run.
 
+Alpha-Geo-0 stale-pose isolation is a permitted Lane 12/Alpha causal
+experiment when it does not retrain the mask codec: keep the exact measured
+`masks.nrv`, regenerate `optimized_poses.bin` against the decoded candidate
+mask stream, rebuild a deterministic archive, then run CUDA auth eval. Treat
+its result as a narrow answer to "stale poses vs incompatible mask geometry";
+it does not clear new NeRV retraining unless the L2 clearance packet and three
+clean Grand Council passes are recorded.
+
 ## Backend Routing
 
 - Lightning AI is the preferred exact-eval home for T4/equivalent
@@ -232,8 +240,17 @@ empirical/no-score until a later canonical CUDA archive eval is run.
 - Modal is approved for build-only, smoke, Fisher/sensitivity, ablation, and
   cheap exploratory work. Modal auth evals are advisory unless the wrapper
   proves CUDA exact eval and all contest gates.
+- Modal exact-eval wrappers must call `experiments/contest_auth_eval.py` with
+  literal `--device cuda`; they must not call `inflate_renderer.py` directly,
+  must not silently fall back to CPU, and must mark harvested artifacts
+  non-promotable until JSON adjudication validates custody, device, sample
+  count, SHA, bytes, and component gates.
 - Vast.AI is useful for cheap parallel training but has host/NVDEC and state
   drift hazards. Trust lane-local artifacts and live API over stale trackers.
+- Vast training/output lanes must be single-flight per lane label and output
+  directory. A duplicate concurrent trainer writing the same artifact tree
+  invalidates custody for that run; harvest logs for forensics, terminate the
+  duplicate work, and rerun behind an explicit lock before spending exact eval.
 - Local M-series/MPS work is for development, smoke, and byte/round-trip checks
   only. It cannot rank or promote.
 - Do not trust remote state ledgers without reconciliation. Use
@@ -245,6 +262,70 @@ empirical/no-score until a later canonical CUDA archive eval is run.
   `cleared_for_retraining_unblock=true`, `lane12_l2=true`,
   `geometry_gate_passed=true`, `grand_council_clean_passes>=3`, and evidence
   paths. The Vast retry launcher enforces this gate.
+
+## Remote Bootstrap Canonicalization And Reuse
+
+The 2026-05-01 loop session burned 4 destroyed Vast.ai instances and ~$1.50
+chasing 6 sequential bug-class re-discoveries: uv missing, ffmpeg missing,
+macOS resource forks in `upstream/`, `.venv` with no pip, system ffmpeg
+lacking `in_primaries` scale option, and the cu13-vs-cu124 torch wheel
+mismatch. The root cause was duplication: each new chain driver re-implemented
+the same install logic inline instead of reusing the canonical wrapper. To
+prevent re-learning these lessons, the rules below are now non-negotiable.
+
+- The single canonical bootstrap function is `bootstrap_runtime_deps()` in
+  `scripts/remote_archive_only_eval.sh`. It delegates uv install to
+  `scripts/ensure_remote_uv.sh`, apt-installs ffmpeg, strips macOS `._*`
+  resource forks under `upstream/`, and auto-downloads the BtbN ffmpeg static
+  build (with retry on truncated downloads) when the system ffmpeg lacks
+  `in_primaries`/`in_color_matrix`/`in_transfer` scale options required by
+  `submissions/robust_current/inflate.sh`.
+- Every new `scripts/remote_lane_*.sh`, every chain driver, and every ad-hoc
+  one-off MUST either invoke `scripts/remote_archive_only_eval.sh` directly or
+  `source` its bootstrap function. Inline duplication of `curl ... | sh`,
+  `apt-get install -y ffmpeg`, or `find upstream -name '._*' -delete` is
+  forbidden. Memory:
+  `feedback_remote_archive_only_eval_self_bootstraps_all_deps_20260501.md`.
+- `scripts/ensure_remote_uv.sh` is the only sanctioned uv installer. Sister
+  pattern for venvs that lack pip: call `python -m ensurepip --upgrade`
+  immediately after any `python -m venv` / `uv venv` / `virtualenv` invocation.
+  This was the root of the `/workspace/pact/.venv/bin/python: No module named
+  pip` failure that broke `scripts/probe_nvdec.sh` on instance 35958897.
+- The torch wheel must be pinned by the host driver before any
+  `uv run --with torch ...` invocation. The canonical selector lives in
+  `scripts/remote_archive_only_eval.sh:88-95`:
+  - `nvidia-smi` driver_major < 580 (CUDA 12.x): export
+    `INFLATE_TORCH_SPEC=torch==2.5.1+cu124`,
+    `UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu124`,
+    `UV_INDEX_STRATEGY=unsafe-best-match`.
+  - driver_major >= 580 (CUDA 13.x): the default `torch==2.11.0` (cu13 wheel)
+    works without an extra index.
+
+  Writing `--with torch` unpinned anywhere is forbidden because the cu13 wheel
+  silently fails `torch.cuda.init()` on a CUDA 12.x driver and the inflate
+  pipeline falls back to CPU, which makes every downstream score
+  `[advisory only]` per the MPS-falsification rule. Memory:
+  `feedback_vast_cuda_driver_too_old_silent_cpu_fallback_20260501.md`.
+- Vast.ai chain dispatches must use `--disk 60` minimum. The contest auth
+  eval pipeline writes 3.6GB of inflated raw frames per candidate; a
+  six-candidate chain needs ~27GB working set on top of the ~5GB uv torch
+  cache. The 30GB default fills before the chain finishes and crashes the
+  trailing candidates. The chain driver MUST also
+  `rm -rf eval_work/{inflated,extracted,archive.zip}` after every successful
+  evaluation. Reference driver:
+  `experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/wave3_chain_driver.sh`.
+- Vast.ai search filters must include `cuda_vers>=12.4`, `disk_space>=60`,
+  `reliability>0.95`, and a unique `--label`. Every successful create must
+  immediately register the instance ID into
+  `.omx/state/vastai_active_instances.json` so cleanup, harvest, and audit
+  scripts can reconcile drift.
+
+When a new bug class appears in this surface area, do not patch it inline in
+the failing script. Add the fix to `scripts/remote_archive_only_eval.sh` (or
+`scripts/ensure_remote_uv.sh`) and update this section so the next agent
+inherits the lesson. "Capture the meta-pattern in memory + CLAUDE.md the
+FIRST time it bites" — the same rule that already applies to the
+dead-flag-wiring trap applies here.
 
 ## Lightning And PyTorch Lightning Guidance
 
@@ -297,6 +378,14 @@ deterministic.
   the scorer environment. Export a per-job `UV_PROJECT_ENVIRONMENT` under the
   job output dir before `contest_auth_eval.py`; otherwise `inflate.sh` can
   recreate the shared repo `.venv` and break `upstream/evaluate.py`.
+- Inflate-side `uv run --with ...` dependencies must be deterministic. Do not
+  leave `brotli`, `av`, `torch`, or `numpy` as floating resolver inputs in
+  contest runtime scripts. `submissions/robust_current/inflate.sh` exposes
+  `INFLATE_BROTLI_SPEC`, `INFLATE_AV_SPEC`, `INFLATE_TORCH_SPEC`, and
+  `INFLATE_NUMPY_SPEC`; runners may override these only with recorded
+  provenance. Vast/other older-driver archive-only evals must choose a
+  driver-compatible Torch spec before inflate, rather than silently falling
+  back to CPU rendering from an incompatible latest wheel.
 - Exact-eval Batch Jobs that mutate/check the shared `.venv` for DALI/bootstrap
   must hold `.omx/state/lightning_exact_eval_venv.lock` while doing so. Parallel
   jobs may run the scorer concurrently only after this setup phase is complete.
@@ -344,6 +433,15 @@ deterministic.
   `remote_output_dir`, copies only canonical evidence files, and validates
   archive/adjudication JSON locally. Do not `scp -r` whole eval directories;
   they can contain multi-GB raw frames and break custody.
+- Custom score-producing Lightning jobs must use a specific fail-closed role,
+  not generic tracking. Alpha-Geo-0 pose-regeneration jobs use
+  `scripts/launch_lightning_alpha_geo0_pose_regen.py`, which records role
+  `alpha_geo0_exact_eval`, source/artifact manifest custody, remote
+  supply-chain preflight, hash-pinned DALI bootstrap, CUDA runner preflight,
+  canonical auth eval, and exact adjudication metadata. The final archive SHA
+  and bytes are unknown until pose regeneration finishes, so write them into
+  `lightning_queue_metadata.json` after deterministic archive construction and
+  before harvest validation.
 - Official component-response harvests must also be state-derived:
   `scripts/launch_lightning_batch_job.py harvest-component-response-ssh
   --state-path .omx/state/lightning_batch_jobs.json --job-name <job> ...`.
@@ -454,6 +552,13 @@ deterministic.
   non-promotable until certified with official CUDA component-response
   evidence. Fisher/proxy maps are planning-only and never certification handoff
   eligible.
+- Direct renderer finite-difference sensitivity maps are weight-space channel
+  response maps. They may rank channels and select perturbation atoms, but
+  they must not be projected into archive-byte `predicted_delta` values unless
+  a reviewed byte-basis calibration marks the maps
+  `archive_byte_prediction_eligible=true`. Response-only archive plans without
+  prediction deltas are allowed for calibration/diagnosis, but they are not
+  promotion-passed certification evidence.
 - Promotion-grade component maps must pass a separate certification stage; do
   not edit or strip diagnostic metadata from source maps. Use
   `experiments/certify_component_sensitivity_maps.py` to copy eligible CUDA
@@ -477,6 +582,13 @@ deterministic.
   certification must reject or de-promote curves that omit or fail
   `gate_results.external_baseline_repro` when an external baseline was
   supplied.
+- Official component-response packets may be non-promotable as calibration
+  packets while still containing exact point archives with valid CUDA
+  `contest_auth_eval.json` custody. A point archive may be separately
+  adjudicated and ranked only when its original archive bytes/SHA, exact
+  canonical CUDA eval JSON, provenance, sample count, device, component gates,
+  and source plan are preserved. Do not promote the parent response packet
+  itself unless its own promotion gates pass.
 - Component sensitivity sample plans must identify absolute dataset pair IDs.
   If top-k pair weighting selects a subset, do not record subset-relative
   offsets in calibration/holdout records.
@@ -585,7 +697,9 @@ deterministic.
 - Remote scripts must use strict shell mode, deterministic packaging,
   lane-local JSON adjudication, heartbeat/provenance logs, and explicit
   hardware recording.
-- Avoid duplicate dispatches: use locks and live-prefix checks.
+- Avoid duplicate dispatches: use locks and live-prefix checks. Promotion-capable
+  launchers must fail closed when an active process already targets the same
+  lane output directory.
 - Keep all warnings and low-severity DX issues on the hardening backlog.
 - MCP servers are disabled for this project unless explicitly re-enabled by the
   user; do not depend on MCP tools for routine work.
@@ -635,6 +749,29 @@ deterministic.
   CUDA archive custody and official response gates are satisfied. Do not use
   broad Modal training mounts for this path when only the PFP16 archive,
   source, and upstream scorer assets are needed.
+- Modal wrappers that rely on DALI/NVDEC must pin the DALI CUDA package to the
+  audited exact-eval line (`nvidia-dali-cuda120==1.52.0` for CUDA 12) and use
+  the NVIDIA package index. Unpinned Modal mirror resolution can change runtime
+  DALI behavior and must fail preflight before score work.
+- A Modal or Vast CUDA/DALI/NVDEC preflight failure is an infrastructure abort,
+  not lane evidence. Do not retry the same backend blindly when the same
+  NVDEC/NVML class repeats; reroute the scientific experiment to Lightning or
+  another exact-CUDA backend with manifest custody.
+- Mask/video decoding helpers must validate candidate `ffmpeg` binaries before
+  use. `TAC_FFMPEG` may be either an executable path or a command name on
+  `PATH`; an explicit unusable override must fail closed, while a broken
+  repo-local `upstream/ffmpeg-new` must be skipped in favor of a validated
+  system binary when one is available.
+- Remote archive-only eval runners must preflight both `uv` and a
+  parity-compatible `FFMPEG_BIN` before spending GPU time. The selected ffmpeg
+  must expose the explicit inflate color-contract `scale` options used by
+  `submissions/robust_current/inflate.sh` (`in_range`, `out_range`,
+  `in_color_matrix`, `in_primaries`, and `in_transfer`). Ubuntu 22.04
+  `ffmpeg` is not sufficient unless this preflight proves otherwise.
+- Empirical Alpha diagnostic helpers must be bounded by default and explicitly
+  non-promotable. Full-corpus or expensive primitive diagnostics require an
+  explicit operator flag, and their outputs remain design signal only until a
+  resulting archive passes exact CUDA auth eval.
 - J-NWC/NWCS promotion paths must use exact corpus-manifest custody. When a
   prebuilt corpus manifest or `CORPUS_SENSITIVITY_PT` is involved, remote
   scripts must receive the matching `PREBUILT_CORPUS_MANIFEST` and
