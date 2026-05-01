@@ -1,0 +1,1030 @@
+{
+  "baseline_r7_bytes": 631473,
+  "baseline_r7_score": 1.0134396099014253,
+  "selected": [
+    {
+      "label": "cons",
+      "id": "owv3_0043",
+      "name": "owv3_0043_bbr0p695_protect0p002_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0043_bbr0p695_protect0p002_aggr1em05.zip",
+      "bytes": 624419,
+      "bbr": 0.695,
+      "protect": 0.002
+    },
+    {
+      "label": "cons",
+      "id": "owv3_0032",
+      "name": "owv3_0032_bbr0p7_protect0p002_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0032_bbr0p7_protect0p002_aggr1em05.zip",
+      "bytes": 624996,
+      "bbr": 0.7,
+      "protect": 0.002
+    },
+    {
+      "label": "mid",
+      "id": "owv3_0076",
+      "name": "owv3_0076_bbr0p68_protect0p002_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0076_bbr0p68_protect0p002_aggr1em05.zip",
+      "bytes": 621914,
+      "bbr": 0.68,
+      "protect": 0.002
+    },
+    {
+      "label": "mid",
+      "id": "owv3_0065",
+      "name": "owv3_0065_bbr0p685_protect0p002_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0065_bbr0p685_protect0p002_aggr1em05.zip",
+      "bytes": 622407,
+      "bbr": 0.685,
+      "protect": 0.002
+    },
+    {
+      "label": "aggr",
+      "id": "owv3_0120",
+      "name": "owv3_0120_bbr0p66_protect0p002_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0120_bbr0p66_protect0p002_aggr1em05.zip",
+      "bytes": 617410,
+      "bbr": 0.66,
+      "protect": 0.002
+    },
+    {
+      "label": "aggr",
+      "id": "owv3_0119",
+      "name": "owv3_0119_bbr0p66_protect0p0018_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0119_bbr0p66_protect0p0018_aggr1em05.zip",
+      "bytes": 618443,
+      "bbr": 0.66,
+      "protect": 0.0018
+    }
+  ],
+  "all": [
+    {
+      "id": "owv3_0120",
+      "name": "owv3_0120_bbr0p66_protect0p002_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0120_bbr0p66_protect0p002_aggr1em05.zip",
+      "bytes": 617410,
+      "bbr": 0.66,
+      "protect": 0.002
+    },
+    {
+      "id": "owv3_0119",
+      "name": "owv3_0119_bbr0p66_protect0p0018_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0119_bbr0p66_protect0p0018_aggr1em05.zip",
+      "bytes": 618443,
+      "bbr": 0.66,
+      "protect": 0.0018
+    },
+    {
+      "id": "owv3_0109",
+      "name": "owv3_0109_bbr0p665_protect0p002_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0109_bbr0p665_protect0p002_aggr1em05.zip",
+      "bytes": 618923,
+      "bbr": 0.665,
+      "protect": 0.002
+    },
+    {
+      "id": "owv3_0098",
+      "name": "owv3_0098_bbr0p67_protect0p002_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0098_bbr0p67_protect0p002_aggr1em05.zip",
+      "bytes": 619502,
+      "bbr": 0.67,
+      "protect": 0.002
+    },
+    {
+      "id": "owv3_0108",
+      "name": "owv3_0108_bbr0p665_protect0p0018_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0108_bbr0p665_protect0p0018_aggr1em05.zip",
+      "bytes": 619855,
+      "bbr": 0.665,
+      "protect": 0.0018
+    },
+    {
+      "id": "owv3_0118",
+      "name": "owv3_0118_bbr0p66_protect0p0017_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0118_bbr0p66_protect0p0017_aggr1em05.zip",
+      "bytes": 620382,
+      "bbr": 0.66,
+      "protect": 0.0017
+    },
+    {
+      "id": "owv3_0097",
+      "name": "owv3_0097_bbr0p67_protect0p0018_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0097_bbr0p67_protect0p0018_aggr1em05.zip",
+      "bytes": 620482,
+      "bbr": 0.67,
+      "protect": 0.0018
+    },
+    {
+      "id": "owv3_0117",
+      "name": "owv3_0117_bbr0p66_protect0p00165_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0117_bbr0p66_protect0p00165_aggr1em05.zip",
+      "bytes": 620729,
+      "bbr": 0.66,
+      "protect": 0.00165
+    },
+    {
+      "id": "owv3_0087",
+      "name": "owv3_0087_bbr0p675_protect0p002_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0087_bbr0p675_protect0p002_aggr1em05.zip",
+      "bytes": 620733,
+      "bbr": 0.675,
+      "protect": 0.002
+    },
+    {
+      "id": "owv3_0116",
+      "name": "owv3_0116_bbr0p66_protect0p0016_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0116_bbr0p66_protect0p0016_aggr1em05.zip",
+      "bytes": 621543,
+      "bbr": 0.66,
+      "protect": 0.0016
+    },
+    {
+      "id": "owv3_0107",
+      "name": "owv3_0107_bbr0p665_protect0p0017_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0107_bbr0p665_protect0p0017_aggr1em05.zip",
+      "bytes": 621673,
+      "bbr": 0.665,
+      "protect": 0.0017
+    },
+    {
+      "id": "owv3_0076",
+      "name": "owv3_0076_bbr0p68_protect0p002_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0076_bbr0p68_protect0p002_aggr1em05.zip",
+      "bytes": 621914,
+      "bbr": 0.68,
+      "protect": 0.002
+    },
+    {
+      "id": "owv3_0106",
+      "name": "owv3_0106_bbr0p665_protect0p00165_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0106_bbr0p665_protect0p00165_aggr1em05.zip",
+      "bytes": 621931,
+      "bbr": 0.665,
+      "protect": 0.00165
+    },
+    {
+      "id": "owv3_0086",
+      "name": "owv3_0086_bbr0p675_protect0p0018_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0086_bbr0p675_protect0p0018_aggr1em05.zip",
+      "bytes": 621987,
+      "bbr": 0.675,
+      "protect": 0.0018
+    },
+    {
+      "id": "owv3_0115",
+      "name": "owv3_0115_bbr0p66_protect0p00155_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0115_bbr0p66_protect0p00155_aggr1em05.zip",
+      "bytes": 622282,
+      "bbr": 0.66,
+      "protect": 0.00155
+    },
+    {
+      "id": "owv3_0096",
+      "name": "owv3_0096_bbr0p67_protect0p0017_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0096_bbr0p67_protect0p0017_aggr1em05.zip",
+      "bytes": 622323,
+      "bbr": 0.67,
+      "protect": 0.0017
+    },
+    {
+      "id": "owv3_0065",
+      "name": "owv3_0065_bbr0p685_protect0p002_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0065_bbr0p685_protect0p002_aggr1em05.zip",
+      "bytes": 622407,
+      "bbr": 0.685,
+      "protect": 0.002
+    },
+    {
+      "id": "owv3_0095",
+      "name": "owv3_0095_bbr0p67_protect0p00165_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0095_bbr0p67_protect0p00165_aggr1em05.zip",
+      "bytes": 622640,
+      "bbr": 0.67,
+      "protect": 0.00165
+    },
+    {
+      "id": "owv3_0105",
+      "name": "owv3_0105_bbr0p665_protect0p0016_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0105_bbr0p665_protect0p0016_aggr1em05.zip",
+      "bytes": 622688,
+      "bbr": 0.665,
+      "protect": 0.0016
+    },
+    {
+      "id": "owv3_0075",
+      "name": "owv3_0075_bbr0p68_protect0p0018_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0075_bbr0p68_protect0p0018_aggr1em05.zip",
+      "bytes": 622907,
+      "bbr": 0.68,
+      "protect": 0.0018
+    },
+    {
+      "id": "owv3_0114",
+      "name": "owv3_0114_bbr0p66_protect0p0015_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0114_bbr0p66_protect0p0015_aggr1em05.zip",
+      "bytes": 622907,
+      "bbr": 0.66,
+      "protect": 0.0015
+    },
+    {
+      "id": "owv3_0064",
+      "name": "owv3_0064_bbr0p685_protect0p0018_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0064_bbr0p685_protect0p0018_aggr1em05.zip",
+      "bytes": 623414,
+      "bbr": 0.685,
+      "protect": 0.0018
+    },
+    {
+      "id": "owv3_0094",
+      "name": "owv3_0094_bbr0p67_protect0p0016_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0094_bbr0p67_protect0p0016_aggr1em05.zip",
+      "bytes": 623434,
+      "bbr": 0.67,
+      "protect": 0.0016
+    },
+    {
+      "id": "owv3_0104",
+      "name": "owv3_0104_bbr0p665_protect0p00155_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0104_bbr0p665_protect0p00155_aggr1em05.zip",
+      "bytes": 623484,
+      "bbr": 0.665,
+      "protect": 0.00155
+    },
+    {
+      "id": "owv3_0054",
+      "name": "owv3_0054_bbr0p69_protect0p002_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0054_bbr0p69_protect0p002_aggr1em05.zip",
+      "bytes": 623532,
+      "bbr": 0.69,
+      "protect": 0.002
+    },
+    {
+      "id": "owv3_0113",
+      "name": "owv3_0113_bbr0p66_protect0p00145_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0113_bbr0p66_protect0p00145_aggr1em05.zip",
+      "bytes": 623603,
+      "bbr": 0.66,
+      "protect": 0.00145
+    },
+    {
+      "id": "owv3_0085",
+      "name": "owv3_0085_bbr0p675_protect0p0017_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0085_bbr0p675_protect0p0017_aggr1em05.zip",
+      "bytes": 623698,
+      "bbr": 0.675,
+      "protect": 0.0017
+    },
+    {
+      "id": "owv3_0112",
+      "name": "owv3_0112_bbr0p66_protect0p0014_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0112_bbr0p66_protect0p0014_aggr1em05.zip",
+      "bytes": 623855,
+      "bbr": 0.66,
+      "protect": 0.0014
+    },
+    {
+      "id": "owv3_0103",
+      "name": "owv3_0103_bbr0p665_protect0p0015_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0103_bbr0p665_protect0p0015_aggr1em05.zip",
+      "bytes": 624013,
+      "bbr": 0.665,
+      "protect": 0.0015
+    },
+    {
+      "id": "owv3_0084",
+      "name": "owv3_0084_bbr0p675_protect0p00165_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0084_bbr0p675_protect0p00165_aggr1em05.zip",
+      "bytes": 624062,
+      "bbr": 0.675,
+      "protect": 0.00165
+    },
+    {
+      "id": "owv3_0093",
+      "name": "owv3_0093_bbr0p67_protect0p00155_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0093_bbr0p67_protect0p00155_aggr1em05.zip",
+      "bytes": 624158,
+      "bbr": 0.67,
+      "protect": 0.00155
+    },
+    {
+      "id": "owv3_0043",
+      "name": "owv3_0043_bbr0p695_protect0p002_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0043_bbr0p695_protect0p002_aggr1em05.zip",
+      "bytes": 624419,
+      "bbr": 0.695,
+      "protect": 0.002
+    },
+    {
+      "id": "owv3_0074",
+      "name": "owv3_0074_bbr0p68_protect0p0017_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0074_bbr0p68_protect0p0017_aggr1em05.zip",
+      "bytes": 624540,
+      "bbr": 0.68,
+      "protect": 0.0017
+    },
+    {
+      "id": "owv3_0053",
+      "name": "owv3_0053_bbr0p69_protect0p0018_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0053_bbr0p69_protect0p0018_aggr1em05.zip",
+      "bytes": 624543,
+      "bbr": 0.69,
+      "protect": 0.0018
+    },
+    {
+      "id": "owv3_0102",
+      "name": "owv3_0102_bbr0p665_protect0p00145_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0102_bbr0p665_protect0p00145_aggr1em05.zip",
+      "bytes": 624658,
+      "bbr": 0.665,
+      "protect": 0.00145
+    },
+    {
+      "id": "owv3_0083",
+      "name": "owv3_0083_bbr0p675_protect0p0016_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0083_bbr0p675_protect0p0016_aggr1em05.zip",
+      "bytes": 624813,
+      "bbr": 0.675,
+      "protect": 0.0016
+    },
+    {
+      "id": "owv3_0092",
+      "name": "owv3_0092_bbr0p67_protect0p0015_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0092_bbr0p67_protect0p0015_aggr1em05.zip",
+      "bytes": 624862,
+      "bbr": 0.67,
+      "protect": 0.0015
+    },
+    {
+      "id": "owv3_0063",
+      "name": "owv3_0063_bbr0p685_protect0p0017_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0063_bbr0p685_protect0p0017_aggr1em05.zip",
+      "bytes": 624921,
+      "bbr": 0.685,
+      "protect": 0.0017
+    },
+    {
+      "id": "owv3_0101",
+      "name": "owv3_0101_bbr0p665_protect0p0014_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0101_bbr0p665_protect0p0014_aggr1em05.zip",
+      "bytes": 624950,
+      "bbr": 0.665,
+      "protect": 0.0014
+    },
+    {
+      "id": "owv3_0073",
+      "name": "owv3_0073_bbr0p68_protect0p00165_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0073_bbr0p68_protect0p00165_aggr1em05.zip",
+      "bytes": 624961,
+      "bbr": 0.68,
+      "protect": 0.00165
+    },
+    {
+      "id": "owv3_0032",
+      "name": "owv3_0032_bbr0p7_protect0p002_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0032_bbr0p7_protect0p002_aggr1em05.zip",
+      "bytes": 624996,
+      "bbr": 0.7,
+      "protect": 0.002
+    },
+    {
+      "id": "owv3_0111",
+      "name": "owv3_0111_bbr0p66_protect0p00135_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0111_bbr0p66_protect0p00135_aggr1em05.zip",
+      "bytes": 625172,
+      "bbr": 0.66,
+      "protect": 0.00135
+    },
+    {
+      "id": "owv3_0042",
+      "name": "owv3_0042_bbr0p695_protect0p0018_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0042_bbr0p695_protect0p0018_aggr1em05.zip",
+      "bytes": 625227,
+      "bbr": 0.695,
+      "protect": 0.0018
+    },
+    {
+      "id": "owv3_0062",
+      "name": "owv3_0062_bbr0p685_protect0p00165_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0062_bbr0p685_protect0p00165_aggr1em05.zip",
+      "bytes": 625266,
+      "bbr": 0.685,
+      "protect": 0.00165
+    },
+    {
+      "id": "owv3_0091",
+      "name": "owv3_0091_bbr0p67_protect0p00145_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0091_bbr0p67_protect0p00145_aggr1em05.zip",
+      "bytes": 625364,
+      "bbr": 0.67,
+      "protect": 0.00145
+    },
+    {
+      "id": "owv3_0082",
+      "name": "owv3_0082_bbr0p675_protect0p00155_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0082_bbr0p675_protect0p00155_aggr1em05.zip",
+      "bytes": 625457,
+      "bbr": 0.675,
+      "protect": 0.00155
+    },
+    {
+      "id": "owv3_0110",
+      "name": "owv3_0110_bbr0p66_protect0p0013_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0110_bbr0p66_protect0p0013_aggr1em05.zip",
+      "bytes": 625625,
+      "bbr": 0.66,
+      "protect": 0.0013
+    },
+    {
+      "id": "owv3_0090",
+      "name": "owv3_0090_bbr0p67_protect0p0014_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0090_bbr0p67_protect0p0014_aggr1em05.zip",
+      "bytes": 625634,
+      "bbr": 0.67,
+      "protect": 0.0014
+    },
+    {
+      "id": "owv3_0072",
+      "name": "owv3_0072_bbr0p68_protect0p0016_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0072_bbr0p68_protect0p0016_aggr1em05.zip",
+      "bytes": 625680,
+      "bbr": 0.68,
+      "protect": 0.0016
+    },
+    {
+      "id": "owv3_0052",
+      "name": "owv3_0052_bbr0p69_protect0p0017_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0052_bbr0p69_protect0p0017_aggr1em05.zip",
+      "bytes": 625844,
+      "bbr": 0.69,
+      "protect": 0.0017
+    },
+    {
+      "id": "owv3_0031",
+      "name": "owv3_0031_bbr0p7_protect0p0018_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0031_bbr0p7_protect0p0018_aggr1em05.zip",
+      "bytes": 625935,
+      "bbr": 0.7,
+      "protect": 0.0018
+    },
+    {
+      "id": "owv3_0061",
+      "name": "owv3_0061_bbr0p685_protect0p0016_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0061_bbr0p685_protect0p0016_aggr1em05.zip",
+      "bytes": 626015,
+      "bbr": 0.685,
+      "protect": 0.0016
+    },
+    {
+      "id": "owv3_0081",
+      "name": "owv3_0081_bbr0p675_protect0p0015_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0081_bbr0p675_protect0p0015_aggr1em05.zip",
+      "bytes": 626063,
+      "bbr": 0.675,
+      "protect": 0.0015
+    },
+    {
+      "id": "owv3_0071",
+      "name": "owv3_0071_bbr0p68_protect0p00155_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0071_bbr0p68_protect0p00155_aggr1em05.zip",
+      "bytes": 626212,
+      "bbr": 0.68,
+      "protect": 0.00155
+    },
+    {
+      "id": "owv3_0051",
+      "name": "owv3_0051_bbr0p69_protect0p00165_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0051_bbr0p69_protect0p00165_aggr1em05.zip",
+      "bytes": 626242,
+      "bbr": 0.69,
+      "protect": 0.00165
+    },
+    {
+      "id": "owv3_0100",
+      "name": "owv3_0100_bbr0p665_protect0p00135_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0100_bbr0p665_protect0p00135_aggr1em05.zip",
+      "bytes": 626274,
+      "bbr": 0.665,
+      "protect": 0.00135
+    },
+    {
+      "id": "owv3_0021",
+      "name": "owv3_0021_bbr0p71_protect0p002_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0021_bbr0p71_protect0p002_aggr1em05.zip",
+      "bytes": 626311,
+      "bbr": 0.71,
+      "protect": 0.002
+    },
+    {
+      "id": "owv3_0041",
+      "name": "owv3_0041_bbr0p695_protect0p0017_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0041_bbr0p695_protect0p0017_aggr1em05.zip",
+      "bytes": 626573,
+      "bbr": 0.695,
+      "protect": 0.0017
+    },
+    {
+      "id": "owv3_0060",
+      "name": "owv3_0060_bbr0p685_protect0p00155_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0060_bbr0p685_protect0p00155_aggr1em05.zip",
+      "bytes": 626612,
+      "bbr": 0.685,
+      "protect": 0.00155
+    },
+    {
+      "id": "owv3_0080",
+      "name": "owv3_0080_bbr0p675_protect0p00145_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0080_bbr0p675_protect0p00145_aggr1em05.zip",
+      "bytes": 626626,
+      "bbr": 0.675,
+      "protect": 0.00145
+    },
+    {
+      "id": "owv3_0070",
+      "name": "owv3_0070_bbr0p68_protect0p0015_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0070_bbr0p68_protect0p0015_aggr1em05.zip",
+      "bytes": 626809,
+      "bbr": 0.68,
+      "protect": 0.0015
+    },
+    {
+      "id": "owv3_0099",
+      "name": "owv3_0099_bbr0p665_protect0p0013_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0099_bbr0p665_protect0p0013_aggr1em05.zip",
+      "bytes": 626819,
+      "bbr": 0.665,
+      "protect": 0.0013
+    },
+    {
+      "id": "owv3_0079",
+      "name": "owv3_0079_bbr0p675_protect0p0014_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0079_bbr0p675_protect0p0014_aggr1em05.zip",
+      "bytes": 626825,
+      "bbr": 0.675,
+      "protect": 0.0014
+    },
+    {
+      "id": "owv3_0089",
+      "name": "owv3_0089_bbr0p67_protect0p00135_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0089_bbr0p67_protect0p00135_aggr1em05.zip",
+      "bytes": 626944,
+      "bbr": 0.67,
+      "protect": 0.00135
+    },
+    {
+      "id": "owv3_0040",
+      "name": "owv3_0040_bbr0p695_protect0p00165_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0040_bbr0p695_protect0p00165_aggr1em05.zip",
+      "bytes": 626963,
+      "bbr": 0.695,
+      "protect": 0.00165
+    },
+    {
+      "id": "owv3_0050",
+      "name": "owv3_0050_bbr0p69_protect0p0016_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0050_bbr0p69_protect0p0016_aggr1em05.zip",
+      "bytes": 626989,
+      "bbr": 0.69,
+      "protect": 0.0016
+    },
+    {
+      "id": "owv3_0030",
+      "name": "owv3_0030_bbr0p7_protect0p0017_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0030_bbr0p7_protect0p0017_aggr1em05.zip",
+      "bytes": 627085,
+      "bbr": 0.7,
+      "protect": 0.0017
+    },
+    {
+      "id": "owv3_0059",
+      "name": "owv3_0059_bbr0p685_protect0p0015_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0059_bbr0p685_protect0p0015_aggr1em05.zip",
+      "bytes": 627155,
+      "bbr": 0.685,
+      "protect": 0.0015
+    },
+    {
+      "id": "owv3_0020",
+      "name": "owv3_0020_bbr0p71_protect0p0018_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0020_bbr0p71_protect0p0018_aggr1em05.zip",
+      "bytes": 627191,
+      "bbr": 0.71,
+      "protect": 0.0018
+    },
+    {
+      "id": "owv3_0088",
+      "name": "owv3_0088_bbr0p67_protect0p0013_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0088_bbr0p67_protect0p0013_aggr1em05.zip",
+      "bytes": 627327,
+      "bbr": 0.67,
+      "protect": 0.0013
+    },
+    {
+      "id": "owv3_0029",
+      "name": "owv3_0029_bbr0p7_protect0p00165_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0029_bbr0p7_protect0p00165_aggr1em05.zip",
+      "bytes": 627388,
+      "bbr": 0.7,
+      "protect": 0.00165
+    },
+    {
+      "id": "owv3_0010",
+      "name": "owv3_0010_bbr0p72_protect0p002_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0010_bbr0p72_protect0p002_aggr1em05.zip",
+      "bytes": 627411,
+      "bbr": 0.72,
+      "protect": 0.002
+    },
+    {
+      "id": "owv3_0069",
+      "name": "owv3_0069_bbr0p68_protect0p00145_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0069_bbr0p68_protect0p00145_aggr1em05.zip",
+      "bytes": 627444,
+      "bbr": 0.68,
+      "protect": 0.00145
+    },
+    {
+      "id": "owv3_0049",
+      "name": "owv3_0049_bbr0p69_protect0p00155_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0049_bbr0p69_protect0p00155_aggr1em05.zip",
+      "bytes": 627479,
+      "bbr": 0.69,
+      "protect": 0.00155
+    },
+    {
+      "id": "owv3_0039",
+      "name": "owv3_0039_bbr0p695_protect0p0016_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0039_bbr0p695_protect0p0016_aggr1em05.zip",
+      "bytes": 627642,
+      "bbr": 0.695,
+      "protect": 0.0016
+    },
+    {
+      "id": "owv3_0068",
+      "name": "owv3_0068_bbr0p68_protect0p0014_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0068_bbr0p68_protect0p0014_aggr1em05.zip",
+      "bytes": 627644,
+      "bbr": 0.68,
+      "protect": 0.0014
+    },
+    {
+      "id": "owv3_0058",
+      "name": "owv3_0058_bbr0p685_protect0p00145_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0058_bbr0p685_protect0p00145_aggr1em05.zip",
+      "bytes": 627780,
+      "bbr": 0.685,
+      "protect": 0.00145
+    },
+    {
+      "id": "owv3_0057",
+      "name": "owv3_0057_bbr0p685_protect0p0014_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0057_bbr0p685_protect0p0014_aggr1em05.zip",
+      "bytes": 627998,
+      "bbr": 0.685,
+      "protect": 0.0014
+    },
+    {
+      "id": "owv3_0028",
+      "name": "owv3_0028_bbr0p7_protect0p0016_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0028_bbr0p7_protect0p0016_aggr1em05.zip",
+      "bytes": 628037,
+      "bbr": 0.7,
+      "protect": 0.0016
+    },
+    {
+      "id": "owv3_0078",
+      "name": "owv3_0078_bbr0p675_protect0p00135_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0078_bbr0p675_protect0p00135_aggr1em05.zip",
+      "bytes": 628066,
+      "bbr": 0.675,
+      "protect": 0.00135
+    },
+    {
+      "id": "owv3_0048",
+      "name": "owv3_0048_bbr0p69_protect0p0015_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0048_bbr0p69_protect0p0015_aggr1em05.zip",
+      "bytes": 628113,
+      "bbr": 0.69,
+      "protect": 0.0015
+    },
+    {
+      "id": "owv3_0038",
+      "name": "owv3_0038_bbr0p695_protect0p00155_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0038_bbr0p695_protect0p00155_aggr1em05.zip",
+      "bytes": 628190,
+      "bbr": 0.695,
+      "protect": 0.00155
+    },
+    {
+      "id": "owv3_0009",
+      "name": "owv3_0009_bbr0p72_protect0p0018_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0009_bbr0p72_protect0p0018_aggr1em05.zip",
+      "bytes": 628233,
+      "bbr": 0.72,
+      "protect": 0.0018
+    },
+    {
+      "id": "owv3_0019",
+      "name": "owv3_0019_bbr0p71_protect0p0017_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0019_bbr0p71_protect0p0017_aggr1em05.zip",
+      "bytes": 628391,
+      "bbr": 0.71,
+      "protect": 0.0017
+    },
+    {
+      "id": "owv3_0077",
+      "name": "owv3_0077_bbr0p675_protect0p0013_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0077_bbr0p675_protect0p0013_aggr1em05.zip",
+      "bytes": 628483,
+      "bbr": 0.675,
+      "protect": 0.0013
+    },
+    {
+      "id": "owv3_0027",
+      "name": "owv3_0027_bbr0p7_protect0p00155_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0027_bbr0p7_protect0p00155_aggr1em05.zip",
+      "bytes": 628605,
+      "bbr": 0.7,
+      "protect": 0.00155
+    },
+    {
+      "id": "owv3_0067",
+      "name": "owv3_0067_bbr0p68_protect0p00135_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0067_bbr0p68_protect0p00135_aggr1em05.zip",
+      "bytes": 628669,
+      "bbr": 0.68,
+      "protect": 0.00135
+    },
+    {
+      "id": "owv3_0047",
+      "name": "owv3_0047_bbr0p69_protect0p00145_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0047_bbr0p69_protect0p00145_aggr1em05.zip",
+      "bytes": 628716,
+      "bbr": 0.69,
+      "protect": 0.00145
+    },
+    {
+      "id": "owv3_0037",
+      "name": "owv3_0037_bbr0p695_protect0p0015_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0037_bbr0p695_protect0p0015_aggr1em05.zip",
+      "bytes": 628759,
+      "bbr": 0.695,
+      "protect": 0.0015
+    },
+    {
+      "id": "owv3_0018",
+      "name": "owv3_0018_bbr0p71_protect0p00165_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0018_bbr0p71_protect0p00165_aggr1em05.zip",
+      "bytes": 628765,
+      "bbr": 0.71,
+      "protect": 0.00165
+    },
+    {
+      "id": "owv3_0046",
+      "name": "owv3_0046_bbr0p69_protect0p0014_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0046_bbr0p69_protect0p0014_aggr1em05.zip",
+      "bytes": 628910,
+      "bbr": 0.69,
+      "protect": 0.0014
+    },
+    {
+      "id": "owv3_0056",
+      "name": "owv3_0056_bbr0p685_protect0p00135_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0056_bbr0p685_protect0p00135_aggr1em05.zip",
+      "bytes": 629067,
+      "bbr": 0.685,
+      "protect": 0.00135
+    },
+    {
+      "id": "owv3_0066",
+      "name": "owv3_0066_bbr0p68_protect0p0013_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0066_bbr0p68_protect0p0013_aggr1em05.zip",
+      "bytes": 629069,
+      "bbr": 0.68,
+      "protect": 0.0013
+    },
+    {
+      "id": "owv3_0026",
+      "name": "owv3_0026_bbr0p7_protect0p0015_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0026_bbr0p7_protect0p0015_aggr1em05.zip",
+      "bytes": 629159,
+      "bbr": 0.7,
+      "protect": 0.0015
+    },
+    {
+      "id": "owv3_0036",
+      "name": "owv3_0036_bbr0p695_protect0p00145_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0036_bbr0p695_protect0p00145_aggr1em05.zip",
+      "bytes": 629313,
+      "bbr": 0.695,
+      "protect": 0.00145
+    },
+    {
+      "id": "owv3_0055",
+      "name": "owv3_0055_bbr0p685_protect0p0013_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0055_bbr0p685_protect0p0013_aggr1em05.zip",
+      "bytes": 629380,
+      "bbr": 0.685,
+      "protect": 0.0013
+    },
+    {
+      "id": "owv3_0035",
+      "name": "owv3_0035_bbr0p695_protect0p0014_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0035_bbr0p695_protect0p0014_aggr1em05.zip",
+      "bytes": 629450,
+      "bbr": 0.695,
+      "protect": 0.0014
+    },
+    {
+      "id": "owv3_0017",
+      "name": "owv3_0017_bbr0p71_protect0p0016_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0017_bbr0p71_protect0p0016_aggr1em05.zip",
+      "bytes": 629481,
+      "bbr": 0.71,
+      "protect": 0.0016
+    },
+    {
+      "id": "owv3_0008",
+      "name": "owv3_0008_bbr0p72_protect0p0017_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0008_bbr0p72_protect0p0017_aggr1em05.zip",
+      "bytes": 629574,
+      "bbr": 0.72,
+      "protect": 0.0017
+    },
+    {
+      "id": "owv3_0025",
+      "name": "owv3_0025_bbr0p7_protect0p00145_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0025_bbr0p7_protect0p00145_aggr1em05.zip",
+      "bytes": 629804,
+      "bbr": 0.7,
+      "protect": 0.00145
+    },
+    {
+      "id": "owv3_0007",
+      "name": "owv3_0007_bbr0p72_protect0p00165_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0007_bbr0p72_protect0p00165_aggr1em05.zip",
+      "bytes": 629921,
+      "bbr": 0.72,
+      "protect": 0.00165
+    },
+    {
+      "id": "owv3_0045",
+      "name": "owv3_0045_bbr0p69_protect0p00135_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0045_bbr0p69_protect0p00135_aggr1em05.zip",
+      "bytes": 629944,
+      "bbr": 0.69,
+      "protect": 0.00135
+    },
+    {
+      "id": "owv3_0024",
+      "name": "owv3_0024_bbr0p7_protect0p0014_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0024_bbr0p7_protect0p0014_aggr1em05.zip",
+      "bytes": 630007,
+      "bbr": 0.7,
+      "protect": 0.0014
+    },
+    {
+      "id": "owv3_0016",
+      "name": "owv3_0016_bbr0p71_protect0p00155_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0016_bbr0p71_protect0p00155_aggr1em05.zip",
+      "bytes": 630081,
+      "bbr": 0.71,
+      "protect": 0.00155
+    },
+    {
+      "id": "owv3_0044",
+      "name": "owv3_0044_bbr0p69_protect0p0013_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0044_bbr0p69_protect0p0013_aggr1em05.zip",
+      "bytes": 630339,
+      "bbr": 0.69,
+      "protect": 0.0013
+    },
+    {
+      "id": "owv3_0015",
+      "name": "owv3_0015_bbr0p71_protect0p0015_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0015_bbr0p71_protect0p0015_aggr1em05.zip",
+      "bytes": 630622,
+      "bbr": 0.71,
+      "protect": 0.0015
+    },
+    {
+      "id": "owv3_0034",
+      "name": "owv3_0034_bbr0p695_protect0p00135_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0034_bbr0p695_protect0p00135_aggr1em05.zip",
+      "bytes": 630631,
+      "bbr": 0.695,
+      "protect": 0.00135
+    },
+    {
+      "id": "owv3_0006",
+      "name": "owv3_0006_bbr0p72_protect0p0016_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0006_bbr0p72_protect0p0016_aggr1em05.zip",
+      "bytes": 630659,
+      "bbr": 0.72,
+      "protect": 0.0016
+    },
+    {
+      "id": "owv3_0033",
+      "name": "owv3_0033_bbr0p695_protect0p0013_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0033_bbr0p695_protect0p0013_aggr1em05.zip",
+      "bytes": 630990,
+      "bbr": 0.695,
+      "protect": 0.0013
+    },
+    {
+      "id": "owv3_0023",
+      "name": "owv3_0023_bbr0p7_protect0p00135_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0023_bbr0p7_protect0p00135_aggr1em05.zip",
+      "bytes": 631039,
+      "bbr": 0.7,
+      "protect": 0.00135
+    },
+    {
+      "id": "owv3_0014",
+      "name": "owv3_0014_bbr0p71_protect0p00145_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0014_bbr0p71_protect0p00145_aggr1em05.zip",
+      "bytes": 631177,
+      "bbr": 0.71,
+      "protect": 0.00145
+    },
+    {
+      "id": "owv3_0005",
+      "name": "owv3_0005_bbr0p72_protect0p00155_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0005_bbr0p72_protect0p00155_aggr1em05.zip",
+      "bytes": 631379,
+      "bbr": 0.72,
+      "protect": 0.00155
+    },
+    {
+      "id": "owv3_0013",
+      "name": "owv3_0013_bbr0p71_protect0p0014_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0013_bbr0p71_protect0p0014_aggr1em05.zip",
+      "bytes": 631448,
+      "bbr": 0.71,
+      "protect": 0.0014
+    },
+    {
+      "id": "owv3_0022",
+      "name": "owv3_0022_bbr0p7_protect0p0013_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0022_bbr0p7_protect0p0013_aggr1em05.zip",
+      "bytes": 631473,
+      "bbr": 0.7,
+      "protect": 0.0013
+    },
+    {
+      "id": "owv3_0004",
+      "name": "owv3_0004_bbr0p72_protect0p0015_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0004_bbr0p72_protect0p0015_aggr1em05.zip",
+      "bytes": 631949,
+      "bbr": 0.72,
+      "protect": 0.0015
+    },
+    {
+      "id": "owv3_0003",
+      "name": "owv3_0003_bbr0p72_protect0p00145_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0003_bbr0p72_protect0p00145_aggr1em05.zip",
+      "bytes": 632488,
+      "bbr": 0.72,
+      "protect": 0.00145
+    },
+    {
+      "id": "owv3_0012",
+      "name": "owv3_0012_bbr0p71_protect0p00135_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0012_bbr0p71_protect0p00135_aggr1em05.zip",
+      "bytes": 632644,
+      "bbr": 0.71,
+      "protect": 0.00135
+    },
+    {
+      "id": "owv3_0002",
+      "name": "owv3_0002_bbr0p72_protect0p0014_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0002_bbr0p72_protect0p0014_aggr1em05.zip",
+      "bytes": 632830,
+      "bbr": 0.72,
+      "protect": 0.0014
+    },
+    {
+      "id": "owv3_0011",
+      "name": "owv3_0011_bbr0p71_protect0p0013_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0011_bbr0p71_protect0p0013_aggr1em05.zip",
+      "bytes": 633017,
+      "bbr": 0.71,
+      "protect": 0.0013
+    },
+    {
+      "id": "owv3_0001",
+      "name": "owv3_0001_bbr0p72_protect0p00135_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0001_bbr0p72_protect0p00135_aggr1em05.zip",
+      "bytes": 633888,
+      "bbr": 0.72,
+      "protect": 0.00135
+    },
+    {
+      "id": "owv3_0000",
+      "name": "owv3_0000_bbr0p72_protect0p0013_aggr1em05",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0000_bbr0p72_protect0p0013_aggr1em05.zip",
+      "bytes": 634300,
+      "bbr": 0.72,
+      "protect": 0.0013
+    }
+  ]
+}
