@@ -300,3 +300,205 @@ Verification:
 - Focused Modal advisory tests: 4 passed.
 - `py_compile` clean for touched Python files.
 - `git diff --check` clean for touched files.
+
+---
+
+## Update - 2026-05-01T06:01Z Lightning Negative-Value CLI And Sensitivity Harvest Guards
+
+Bug classes hardened:
+
+- Generated remote commands that pass option values beginning with `-` can fail
+  under `argparse` when emitted as `--flag value`; the safe form is
+  `--flag=value`.
+- Diagnostic component-sensitivity artifacts need the same state-derived
+  harvest discipline as exact eval and official component-response artifacts,
+  otherwise operators can hand-compose stale `/teamspace/jobs/...` paths or
+  copy bulky raw outputs.
+
+Actions landed:
+
+- `src/tac/deploy/lightning/batch_jobs.py` now emits response epsilon ladders
+  as `--response-epsilons=<value>`.
+- Added local and SSH diagnostic component-sensitivity harvest/validation
+  helpers and CLI subcommands:
+  `validate-component-sensitivity-artifacts`,
+  `harvest-component-sensitivity-local`, and
+  `harvest-component-sensitivity-ssh`.
+- `AGENTS.md` now records the permanent equals-form rule for negative-valued
+  generated CLI options and the state-derived diagnostic sensitivity harvest
+  rule.
+- J-NWC/NWCS test fixtures were updated to the stricter
+  `component_sensitivity_v1` gate schema so tests fail closed with the current
+  promotion validator.
+
+Verification:
+
+- `py_compile` clean for touched sensitivity, Lightning, and NWC/NWCS files.
+- J-NWC/J-NWCS shell scripts: `bash -n` clean.
+- Focused pytest suite: `152 passed in 3.99s`.
+- `git diff --check` and `git diff --cached --check` clean.
+- `scripts/kill_orphaned_mcp_processes.py --strict --json` reported zero
+  matched or remaining MCP helper processes.
+- Local Lightning supply-chain scan:
+  `.omx/state/lightning_supply_chain_scan_local_20260501T0601Z_codex.json`,
+  strict `status=OK`, `violation_count=0`, with no installed `lightning` or
+  `pytorch-lightning` package and `lightning-sdk==2026.4.10`.
+
+---
+
+## Update - 2026-05-01T06:17Z Post-Harvest Response Planning Guard
+
+Bug class hardened:
+
+- Diagnostic sensitivity harvests previously required hand-wiring map files,
+  perturbation basis JSON, prediction deltas, archive variants, and official
+  response plans. That creates room for stale/post-hoc basis reuse and
+  operator path mistakes.
+
+Actions landed:
+
+- Added `experiments/build_component_response_plan_from_sensitivity_artifacts.py`.
+  It validates the harvested diagnostic sensitivity artifact directory,
+  optionally consumes a fresh explicit `perturbation_basis_v1`, builds
+  `official_component_response_prediction_deltas_v1`, and emits the official
+  response plan with `score_claim=false` and `promotion_eligible=false`.
+- `AGENTS.md` now records this script as the deterministic post-harvest bridge
+  before official CUDA component-response dispatch.
+- Added regression tests for artifact-dir validation, fresh-basis override,
+  prediction semantics propagation, and CLI import/help.
+
+Verification:
+
+- New focused test file path: `14 passed`.
+- Expanded focused suite after the first wrapper version: `154 passed`.
+- MCP strict cleanup remained zero-live-process.
+
+---
+
+## Update - 2026-05-01T06:37Z Certified Maps And External Baseline Repro Gate
+
+Bug classes hardened:
+
+- Diagnostic CUDA Fisher/proxy maps could be mistaken for promotion-grade
+  component sensitivity if a later tool copied tensors while ignoring source
+  metadata.
+- Official component-response runs with same-run eps=0 could pass internal
+  zero reproduction while drifting from a supplied external baseline
+  `contest_auth_eval.json`.
+
+Actions landed:
+
+- Added `experiments/certify_component_sensitivity_maps.py`, which certifies
+  only eligible CUDA direct finite-difference maps after official response
+  curves, stability, sample coverage, baseline custody, and review passes are
+  verified.
+- `experiments/build_component_sensitivity_manifest.py` now rejects diagnostic
+  maps and clean-but-uncertified maps for promotion assembly.
+- `src/tac/component_sensitivity_artifact.py` validates
+  `component_maps.*.certification` and rejects false external-baseline repro
+  gates when present.
+- `experiments/profile_component_sensitivity_official.py` now records
+  `external_baseline_repro` and blocks promotion when same-run eps=0 does not
+  reproduce the supplied baseline JSON.
+- `AGENTS.md` now records the certification protocol and external-baseline
+  repro requirement.
+
+Verification:
+
+- `py_compile` clean for touched certification and response files.
+- Certification/manifest/sensitivity suite: `64 passed`.
+- Official-response/certifier/component-artifact suite: `58 passed`.
+- Alpha-Geo primitive-contract suite from worker integration: `19 passed`.
+- `git diff --check` clean for touched files.
+- MCP strict cleanup reports zero live helper processes.
+
+---
+
+## Update - 2026-05-01T06:55Z Lightning Status, Certifier Custody, Alpha Contract DX
+
+Bug classes hardened:
+
+- Lightning SDK status can be non-monotonic or name-only; accepting
+  `Running -> Pending` as ordinary truth hides requeue/stale-read/name-collision
+  hazards.
+- Certified sensitivity maps could otherwise cite official curves without
+  mandatory prediction-delta and perturbation-basis custody.
+- Lane 12 NeRV training could still use direct SegNet targets unless the
+  decoded-baseline Alpha contract path was enforced.
+
+Actions landed:
+
+- `src/tac/deploy/lightning/batch_jobs.py` now records full refresh snapshots,
+  status anomalies, name-only identity confidence, and reconciliation-required
+  state. Nonterminal regressions on non-dry-run exact/component-response/
+  sensitivity jobs fail closed unless superseded by a terminal SDK status.
+- `scripts/launch_lightning_batch_job.py refresh-status --all --fail-on-error`
+  treats status reconciliation requirements as failures.
+- `validate_local_component_response_artifact_dir` now de-promotes official
+  response packets that cite an external baseline but whose curves omit or fail
+  `gate_results.external_baseline_repro`.
+- `experiments/certify_component_sensitivity_maps.py` now requires
+  `--prediction-deltas-json` and `--perturbation-basis-json`, validates formats,
+  cross-checks atom IDs and epsilon ladders, and verifies curve perturbation
+  custody against those SHAs.
+- `experiments/train_nerv_mask.py` and `src/tac/nerv_mask_codec.py` now enforce
+  Alpha primitive-contract consumption and deterministic weighted sampling for
+  decoded-baseline NeRV training; SegNet target training is forensic only.
+
+Verification:
+
+```text
+src/tac/tests/test_lightning_batch_jobs.py: 69 passed
+src/tac/tests/test_certify_component_sensitivity_maps.py: 4 passed
+Consolidated focused suite: 203 passed in 5.79s
+bash -n scripts/remote_lane_nerv.sh: clean
+git diff --check on touched files: clean
+MCP strict cleanup: zero live helper processes
+```
+
+---
+
+## Update - 2026-05-01T07:10Z Direct-FD Harvest And Alpha Remote Contract Closure
+
+Bug classes hardened:
+
+- Diagnostic direct finite-difference sensitivity packets could be rejected at
+  harvest as non-Fisher even though they are the required certification
+  handoff source.
+- Conversely, a diagnostic sensitivity packet could have clean summary/curve
+  JSON while map `.pt` metadata smuggled score/promotion claims or a mismatched
+  source.
+- Remote Lane 12 decoded-baseline dispatch could omit
+  `ALPHA_PRIMITIVE_CONTRACT` and silently fall back to unweighted/non-contract
+  NeRV training even though the trainer itself had a production gate.
+
+Actions landed:
+
+- `scripts/launch_lightning_batch_job.py component-sensitivity` and
+  `src/tac/deploy/lightning/batch_jobs.py` now expose/pass
+  `--promotion-finite-difference` and `--finite-difference-epsilon` for
+  direct renderer CUDA finite-difference sensitivity runs.
+- Local and remote diagnostic component-sensitivity validators now whitelist
+  only `fisher_proxy` and
+  `direct_renderer_cuda_finite_difference_component_response`, enforce
+  non-score/non-promotable status on inputs, run metadata, summaries, maps, and
+  curves, and return `planning_eligible=true` with
+  `certification_handoff_eligible=true` only for direct-FD maps.
+- `experiments/profile_component_sensitivity.py` now writes
+  `score_claim=false` into diagnostic summaries and response curves so harvest
+  validation can enforce the same invariant across all artifacts.
+- `scripts/remote_lane_nerv.sh` now records `alpha_primitive_contract`
+  metadata in lane provenance, fail-closes decoded-baseline dispatch when the
+  contract is missing or invalid, and forwards
+  `--alpha-primitive-contract "$ALPHA_PRIMITIVE_CONTRACT"` into
+  `experiments/train_nerv_mask.py`.
+
+Verification:
+
+```text
+py_compile: clean for touched Python files
+bash -n scripts/remote_lane_nerv.sh: clean
+src/tac/tests/test_lightning_batch_jobs.py + test_lane12_nerv_dependency_closure.py: 97 passed
+git diff --check on touched files: clean
+MCP strict cleanup: zero live helper processes
+```

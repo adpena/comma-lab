@@ -2210,3 +2210,245 @@ Next admissible production sequence:
   also non-promotable for the same missing-prediction-delta reason. R6 minus
   r5 delta differences are small: PoseNet within `4.0e-7`, SegNet within
   `6.0e-8`, combined within `8.3e-6` over the epsilon ladder.
+
+### 2026-05-01T05:11Z MCP Shutdown, Response-Gate Hardening, Lightning Repo Intake
+
+- Global MCP cleanup completed for this operator environment. Removed known
+  MCP config files, disabled backups, plugin caches, tool-output caches,
+  OAuth/state files, `.playwright-mcp` artifacts, and stale Claude/Cursor/
+  Gemini/LM Studio MCP residues. Final scans over local tool homes returned no
+  MCP paths, and `scripts/kill_orphaned_mcp_processes.py --strict --json`
+  reported `matched_count=0`, `remaining_count=0`.
+- Found and fixed a cleanup meta-bug: the MCP killer/preflight could match
+  audit commands that merely contained search strings such as
+  `*model.context*`. `scripts/kill_orphaned_mcp_processes.py` and
+  `src/tac/preflight.py` now classify actual helper launch forms while
+  ignoring `find`/`rg`/`grep`/audit commands and Python one-liners that only
+  mention MCP tokens. Focused verification: `6 passed`.
+- Component-response promotion path hardened after adversarial review of r5/r6:
+  those runs remain diagnostic only because eps=0 used an external copied
+  baseline JSON rather than a same-run zero archive, so their apparent deltas
+  cannot calibrate promotion gates. `profile_component_sensitivity_official`
+  now requires same-run eps=0 under `--require-passed`.
+- Added `experiments/build_component_response_prediction_deltas.py` and
+  fail-closed structured ingestion in
+  `experiments/build_component_response_perturbation_plan.py`. Promotion plans
+  must now consume `official_component_response_prediction_deltas_v1` authored
+  before official response evaluation, tied to baseline archive custody and the
+  perturbation-basis atom-set SHA, with observed-response leakage rejected.
+- Manifest promotion validation now requires finite explicit `gate_results`
+  with coverage, zero-repro, signal, prediction-error, and promotion gates all
+  true; builder preserves blockers/gates. Focused response/sensitivity tests:
+  `73 passed`.
+- Added Lightning ecosystem research intake:
+  `.omx/research/lightning_ecosystem_repo_intake_20260501_codex.md`.
+  Primary-source initial verdict: LitModels is research-only because optional
+  extras/examples reference `lightning`/`pytorch-lightning`; lightning-thunder
+  is opt-in performance research only until deterministic CUDA parity and
+  compile-cache provenance are audited; utilities is a good source for local
+  dependency doctor/rank-zero/import-helper patterns without changing exact
+  eval custody.
+
+### 2026-05-01T06:01Z Sensitivity Compute Relaunch And Gate Audit
+
+- R1 Lightning diagnostic component-sensitivity jobs on T4 and L40S were
+  forensically classified as harness failures, not CUDA/DALI/scorer failures:
+  remote preflight and DALI bootstrap passed, but the generated command used
+  `--response-epsilons -0.002,...`, which `argparse` parsed as a missing
+  argument because the value began with `-`.
+- Permanent fix landed in `src/tac/deploy/lightning/batch_jobs.py`: generated
+  Batch commands now emit `--response-epsilons=<ladder>`. Regression coverage
+  in `src/tac/tests/test_lightning_batch_jobs.py` asserts the equals-form and
+  rejects the fragile space-form.
+- Diagnostic component-sensitivity harvest support landed:
+  `validate-component-sensitivity-artifacts`,
+  `harvest-component-sensitivity-local`, and
+  `harvest-component-sensitivity-ssh`. These wrappers preserve only compact
+  canonical diagnostic files, validate archive SHA/bytes, force
+  `promotion_eligible=false`, and map Studio output dirs through recorded
+  Lightning state rather than hand-composed `/teamspace/jobs/...` paths.
+- R2 source staging completed through `scripts/lightning_repro_workspace.py`
+  with manifest
+  `.omx/state/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_20260501_r2_source_manifest.json`
+  and manifest SHA
+  `8d5eeb9c267c0ee6c3019710b1cdc3b799559833f8c86eebdc3497da6675ad66`.
+  The Studio shell still has no CUDA, which is expected; Batch Jobs request
+  GPU machines and write their own runner preflight.
+- R2 doctors passed for `g4dn.2xlarge` T4 and `g6e.4xlarge` L40S:
+  `.omx/state/lightning_doctor_component_sensitivity_pfp16_r2_t4.json` and
+  `.omx/state/lightning_doctor_component_sensitivity_pfp16_r2_l40s.json`.
+- Submitted two fixed CUDA diagnostic sensitivity jobs:
+  `component_sensitivity_pfp16_a_plus_plus_cuda_fisher_20260501_r2` on T4 and
+  `component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2` on
+  L40S. Latest refresh artifacts:
+  `.omx/state/lightning_refresh_component_sensitivity_pfp16_t4_20260501_r2_latest.json`
+  and
+  `.omx/state/lightning_refresh_component_sensitivity_pfp16_l40s_20260501_r2_latest.json`.
+  Both were `Pending` with zero cost at `2026-05-01T06:01Z`.
+- J-NWC/NWCS audit conclusion: promotion is correctly blocked until a
+  promotable `component_sensitivity_v1`, `ANCHOR_SENSITIVITY_PT`, and
+  `CORPUS_SENSITIVITY_PT` exist. Existing CPU/Fisher/proxy artifacts are
+  diagnostic only. Use the promotion-grade J-NWC/J-NWCS scripts, not legacy
+  `scripts/remote_lane_nwc.sh`, for custody-grade runs.
+- Alpha-Geo audit conclusion: Lane 12 `jsonfix40` remains blocked. Existing
+  packet
+  `experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_0_vs_lane_g_v3_codex_current_20260501.json`
+  has `overall_pass=false`, global disagreement `0.012303928799099393`,
+  boundary-2px disagreement `0.14883144511692872`, and missing-component rate
+  `0.4611606740560512`. Do not dispatch Lane 12 retraining or exact eval until
+  a successor archive has passing Alpha-Geo evidence plus pose-regeneration
+  provenance and L2 clearance.
+- Live provider reconciliation: Vast live instances `[]`; Modal app list has
+  zero live tasks. Modal harvest summary remains a forensic backlog with 33
+  already harvested, 6 not-ready, and 1 remote-error record.
+- Verification after fixes: `py_compile` clean for touched sensitivity,
+  Lightning, and NWC/NWCS files; J-NWC/J-NWCS shell syntax clean; focused
+  pytest suite `152 passed`; `git diff --check` and `git diff --cached --check`
+  clean; MCP strict cleanup reports zero live matches.
+
+### 2026-05-01T06:17Z L40S Sensitivity Harvest And Official Response Dispatch
+
+- Added deterministic post-harvest glue:
+  `experiments/build_component_response_plan_from_sensitivity_artifacts.py`.
+  It validates a harvested diagnostic component-sensitivity directory, builds
+  pre-response `official_component_response_prediction_deltas_v1`, and emits a
+  deterministic official response plan. It supports an explicit fresh
+  `--perturbation-basis-json` override so response planning does not reuse a
+  stale/post-hoc basis. Output remains `score_claim=false` and
+  `promotion_eligible=false` until official CUDA response passes.
+- L40S r2 diagnostic component-sensitivity job completed and was harvested
+  through `harvest-component-sensitivity-ssh` into
+  `experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2`.
+  Custody: baseline SHA
+  `0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f`,
+  bytes `686635`, CUDA device `NVIDIA L40S`, 600 pairs with 480/120
+  calibration/holdout, elapsed `152.41120897000002s`. Evidence remains
+  diagnostic Fisher/direct-renderer only: `promotion_eligible=false`,
+  `score_claim=false`.
+- Built fresh renderer-byte perturbation basis and response-plan packet at
+  `experiments/results/official_component_response_pfp16_a_plus_plus_20260501_r7_predicted_from_r2_l40s_codex`.
+  Fresh basis SHA
+  `2cf8f8c6940d7fd905068fe67a797c50929f60873951901fb09ad9bbc5bbb3aa`,
+  prediction-deltas SHA
+  `e9deb2f21fa132e730d692a1fff046e6171dae04621b850696946ebae3089a3d`,
+  plan SHA
+  `4f810618bc65ca9f72705cb6afe95f67fbfdf28e52252b1a38a26b6329521c43`,
+  epsilon ladder `[-2,-1,0,1,2]`.
+- Staged the response packet to Lightning with source manifest
+  `.omx/state/official_component_response_pfp16_a_plus_plus_20260501_r7_predicted_from_r2_l40s_codex_source_manifest.json`,
+  manifest SHA
+  `5f4a83cca89cdecc6ec7be11a1ef32ef2e6aa02d4752faaf7f105f1281d6e6d4`,
+  `1128` files, `153549874` bytes. Doctor passed for `g6e.4xlarge` L40S:
+  `.omx/state/lightning_doctor_official_component_response_pfp16_a_plus_plus_20260501_r7_predicted_from_r2_l40s_codex_l40s.json`.
+- Submitted official response job
+  `official_component_response_pfp16_a_plus_plus_20260501_r7_predicted_from_r2_l40s_codex_lightning_l40s`
+  on L40S with `--require-passed`, same-run eps=0 gate, strict supply-chain
+  preflight, and baseline SHA/byte checks. Latest refresh at `06:17Z`:
+  `Pending`, zero cost.
+- T4 r2 diagnostic sensitivity job remains `Running`; latest cost
+  `0.16442223`. When terminal, harvest it and either repeat the fresh-basis
+  response plan on T4 or use it as the promotion-preferred source while L40S
+  remains cross-machine calibration.
+- Subagent audit outcomes folded into the roadmap:
+  J-NWCS should run plain build-only first after `component_sensitivity_v1`
+  exists; EC stacking waits for exact plain evidence. Lane 12/Alpha remains
+  blocked because `jsonfix40` deletes lane/boundary/transition geometry; the
+  next Alpha repair must train on decoded archive masks with lane/boundary/
+  transition protection, and any stale-pose isolation run is forensic only.
+- Commit hygiene blocker: current index has stale rollback content in `MM`
+  files. Do not commit until the index is refreshed or unstaged carefully;
+  staged content would remove current hardening even though the worktree keeps
+  it.
+
+### 2026-05-01T06:37Z Certification Path, T4 Sensitivity Harvest, L40S Response Forensics
+
+- Added a dedicated certification path for promotion-grade component maps:
+  `experiments/certify_component_sensitivity_maps.py`,
+  `src/tac/sensitivity_map.py`,
+  `experiments/build_component_sensitivity_manifest.py`, and
+  `src/tac/component_sensitivity_artifact.py` now enforce that promotable
+  `component_sensitivity_v1` manifests consume certified
+  `tac_score_sensitivity_map_v1` maps with
+  `component_sensitivity_map_certification_v1` metadata. Raw diagnostic maps
+  and clean-but-uncertified maps fail closed. Source maps remain immutable and
+  referenced by SHA; no diagnostic metadata laundering is allowed.
+- Added certification research ledger:
+  `.omx/research/component_sensitivity_map_certification_20260501_codex.md`,
+  and added it to `AGENTS.md` source-of-truth docs.
+- Alpha-Geo worker landed deterministic
+  `alpha_geo_primitive_contract_v1` emission in
+  `experiments/diagnose_nerv_geometry.py` via `--primitive-contract-json`.
+  It is empirical/no-claim only and records baseline/candidate custody,
+  protected classes, critical boxes, boundary recipes, transition pairs, and
+  exact-eval-spend thresholds. Geometry tests: `19 passed`.
+- T4 r2 diagnostic sensitivity completed and was harvested:
+  `experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_20260501_r2`.
+  CUDA/T4, 600 pairs, 480/120 split, elapsed `600.3931622969999s`, baseline
+  SHA `0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f`,
+  bytes `686635`. It remains diagnostic Fisher/proxy only:
+  `promotion_eligible=false`, `official_component_response=false`.
+- L40S official response job failed and was harvested for forensics:
+  `experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_r7_predicted_from_r2_l40s_codex_lightning_l40s`.
+  Classification: `diagnostic_cuda_official_component_response`. All three
+  components failed `prediction_error_gate_failed`. Same-run eps=0 reproduced
+  internally, but the same archive's L40S components drifted from the supplied
+  PFP16 A++ T4 baseline JSON, so this is also a runner/scorer calibration
+  hazard, not promotion evidence.
+- Hardened `experiments/profile_component_sensitivity_official.py` so future
+  same-run eps=0 jobs with an external baseline JSON record and gate
+  `external_baseline_repro`; certifier rejects curves with
+  `external_baseline_repro=false`.
+- Current Lightning queue: T4 official response
+  `official_component_response_pfp16_a_plus_plus_20260501_r7_predicted_from_r2_l40s_codex_lightning_t4_parallel`
+  is still `Running` as of refresh `2026-05-01T06:36:45Z`, cost `0.1431889`.
+  It was submitted before the external-baseline hardening, so if it reaches
+  terminal state its curves must be manually checked against the external
+  baseline before any downstream certification decision.
+- Verification: `py_compile` clean for touched certification/official-response
+  files; certification/manifest/sensitivity focused suite `64 passed`;
+  official-response/certifier/component-artifact suite `58 passed`; Alpha-Geo
+  contract suite `19 passed`; `git diff --check` clean for touched files; MCP
+  strict cleanup reports zero live matches.
+
+### 2026-05-01T06:55Z T4 Response Failure, Alpha Contract Consumption, Status Hardening
+
+- T4 official response
+  `official_component_response_pfp16_a_plus_plus_20260501_r7_predicted_from_r2_l40s_codex_lightning_t4_parallel`
+  reached terminal `Failed` and was harvested without `--require-passed` for
+  forensic custody:
+  `experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_r7_predicted_from_r2_l40s_codex_lightning_t4_parallel`.
+  Classification remains `diagnostic_cuda_official_component_response`, not
+  promotable. CUDA/T4 preflight and supply-chain scans passed.
+- T4 official-response gates: coverage, finite values, same-run zero, and
+  signal were present, but all three components failed prediction-error gates:
+  posenet max relative error `85639.15781135917`, segnet
+  `46771.67473424154`, combined `553.2107592118479`. This invalidates the
+  R7 absolute-magnitude prediction model for promotion.
+- Runner/scorer drift is confirmed on the same archive bytes. PFP16 A++ anchor
+  recompute was `1.043987524793892` with PoseNet `0.00346442` and SegNet
+  `0.00400656`; the T4 r7 same-run eps=0 reproduced internally at
+  recomputed score `1.0370448266022327` with PoseNet `0.00316423` and SegNet
+  `0.0040196`. The r7 job used a different upstream commit and Torch/CUDA
+  stack, so no certification, stack math, or score claim may use it.
+- Lightning status hardening landed after the live anomaly. Refresh history
+  now backfills `status_anomalies` and records the observed `Running ->
+  Pending` regression at `2026-05-01T06:41:59Z`, while preserving the terminal
+  `Failed` state. Name-only SDK resolution is recorded as
+  `identity_confidence=name_only`, `identity_reconciliation_required=true`.
+- Alpha contract consumption landed in `experiments/train_nerv_mask.py` and
+  `src/tac/nerv_mask_codec.py`. Decoded-baseline NeRV training now requires
+  `--alpha-primitive-contract`, validates decoded-mask SHA/shape, records
+  contract custody, builds deterministic weighted sampling pools, and keeps
+  the trainer non-score/empirical. Direct SegNet targets now fail closed unless
+  `--allow-forensic-segnet-target` is explicit.
+- Certifier hardening: `experiments/certify_component_sensitivity_maps.py`
+  now requires pre-response prediction-deltas JSON and archive-byte
+  perturbation-basis JSON, cross-checks atom/epsilon consistency, and requires
+  `gate_results.external_baseline_repro=true` when the official response
+  summary cites an external baseline JSON. Local component-response validation
+  also de-promotes old packets missing that gate.
+- Verification: `py_compile` clean for touched Lightning, Alpha, and
+  sensitivity-certification files; consolidated focused suite `203 passed in
+  5.79s`; Lightning focused suite `69 passed`; certifier focused suite
+  `4 passed`; `bash -n scripts/remote_lane_nerv.sh` clean; `git diff --check`
+  clean for touched files; MCP strict cleanup reports zero live helpers.

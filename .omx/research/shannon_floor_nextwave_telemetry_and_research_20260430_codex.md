@@ -743,3 +743,310 @@ as unresolved Modal-control-plane records only; no artifacts were harvested.
   boundary disagreement `0.14883144511692872`, missing-component rate
   `0.4611606740560512`. No Lane 12 retraining or exact eval should run until
   a successor archive passes Alpha-Geo plus pose-regeneration provenance.
+
+## 2026-05-01T05:11Z No-MCP Closure And Lightning Repo Intake
+
+- MCP noise cleanup is now complete locally: known config files, disabled
+  backups, plugin caches, tool-output caches, OAuth/state files, and
+  `.playwright-mcp` artifacts were deleted from local tool homes. Final MCP
+  filesystem scans returned empty, and
+  `scripts/kill_orphaned_mcp_processes.py --strict --json` returned no live
+  matches.
+- The cleanup tooling was hardened after it matched audit `find` processes
+  containing `*model.context*` in the command line. The matcher now detects
+  actual helper launches and ignores search/audit commands. Regression
+  coverage passed: `6 passed`.
+- r5/r6 interpretation is tightened: both remain useful cross-machine
+  diagnostic response packets, but non-promotable. Their zero point reused an
+  external baseline JSON rather than a same-run zero archive; promotion now
+  requires same-run eps=0 under `--require-passed`.
+- Official component-response planning now has a pre-response prediction
+  artifact path:
+  `experiments/build_component_response_prediction_deltas.py` ->
+  `official_component_response_prediction_deltas_v1` ->
+  fail-closed perturbation plan ingestion. This blocks arbitrary/post-hoc
+  predicted-delta JSON and observed-response leakage.
+- Lightning ecosystem repositories are in active research intake:
+  LitModels, lightning-thunder, and utilities. Initial primary-source verdict:
+  adapt patterns only; do not add broad dependencies or install any path that
+  pulls the PyPI `lightning` package. Detailed ledger:
+  `.omx/research/lightning_ecosystem_repo_intake_20260501_codex.md`.
+
+Next execution order:
+
+1. Produce real CUDA component maps, response sample plan, and stability
+   packet.
+2. Build map-projected prediction deltas from those maps and the byte
+   perturbation basis.
+3. Rebuild official component-response plan with structured predictions and
+   run Lightning CUDA response with `--require-passed` so same-run zero is
+   mandatory.
+4. Assemble `component_sensitivity_v1` only after all explicit gates are true.
+5. Resume OWV3 exact eval only if the sensitivity artifact is promotable and
+   the byte frontier is justified against the PFP16 A++ anchor.
+
+## 2026-05-01T06:01Z Active Queue And Fastest-Wall-Clock Order
+
+- Active CUDA queue: two fixed diagnostic component-sensitivity jobs are
+  submitted on Lightning Batch Jobs, T4 and L40S in parallel:
+  `component_sensitivity_pfp16_a_plus_plus_cuda_fisher_20260501_r2` and
+  `component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2`.
+  Latest refresh shows both `Pending` with zero cost.
+- The r1 sensitivity failures are closed as a deterministic harness bug:
+  negative epsilon ladders must be emitted as `--response-epsilons=-...`.
+  The fix is in the job generator and covered by tests.
+- Immediate harvest plan when either job becomes terminal:
+  `scripts/launch_lightning_batch_job.py harvest-component-sensitivity-ssh`
+  using `.omx/state/lightning_batch_jobs.json`, the job name, and
+  `scratch-studio-devbox`. Do not `scp -r`; copy only compact validated
+  artifacts.
+- After the first valid CUDA diagnostic maps arrive, build map-projected
+  prediction deltas, rebuild the official component-response plan with
+  structured predictions, and submit official CUDA response with
+  `--require-passed`. The second machine result should be used as a
+  reproducibility/adversarial cross-check, not as an independent score claim.
+- Lane 12/Alpha remains off the compute-critical path until geometry is fixed:
+  current `jsonfix40` Alpha-Geo fails badly and the L2 clearance packet is
+  absent. Spending exact eval on that archive has negative EV.
+- J-NWC/NWCS remains staged behind sensitivity evidence: corpus/replay custody
+  is in place, but Conv2d-only diagnostic maps are insufficient for promotion.
+  The next useful J-NWC/NWCS work is exact corpus-manifest rehearsal and
+  all-parameter sensitivity coverage once CUDA maps exist.
+- Resource state: Vast has no live instances; Modal has zero live tasks and a
+  stale harvest backlog only. Keep Lightning GPU queue primary for exact CUDA
+  signal, Modal for cheap build/smoke/forensics, and Vast idle until a lane has
+  a clean dispatch packet.
+
+Next execution order:
+
+1. Refresh both Lightning r2 jobs until one reaches terminal state.
+2. Harvest terminal diagnostic sensitivity artifacts through the state-derived
+   SSH wrapper and validate archive custody.
+3. Convert harvested CUDA maps into prediction deltas and an official response
+   plan with absolute-magnitude error semantics.
+4. Submit official component-response Batch Job with same-run eps=0 required.
+5. Only then assemble `component_sensitivity_v1`, unlock OWV3/NWCS exact eval,
+   and resume stack experiments against the PFP16 A++ byte frontier.
+
+## 2026-05-01T06:17Z Live Queue Update
+
+- L40S diagnostic sensitivity completed and was harvested:
+  `experiments/results/lightning_batch/component_sensitivity_pfp16_a_plus_plus_cuda_fisher_l40s_20260501_r2`.
+  It is CUDA/L40S, 600-pair diagnostic Fisher evidence with exact baseline
+  archive custody, but remains non-promotable.
+- A fresh-basis official response packet was built from the L40S maps:
+  `experiments/results/official_component_response_pfp16_a_plus_plus_20260501_r7_predicted_from_r2_l40s_codex`.
+  This avoids reusing r5/r6 stale response plans and preserves pre-response
+  prediction provenance.
+- Submitted official CUDA component-response calibration job:
+  `official_component_response_pfp16_a_plus_plus_20260501_r7_predicted_from_r2_l40s_codex_lightning_l40s`.
+  It is `Pending` on L40S with `--require-passed`; failure is useful gate
+  evidence, not a lane kill.
+- T4 sensitivity remains `Running`. T4 is still the preferred promotion-source
+  diagnostic map; L40S is the fastest calibration signal and cross-machine
+  check.
+
+Next execution order:
+
+1. Refresh `resp_l40s` until terminal; harvest with
+   `harvest-component-response-ssh`. If it fails `--require-passed`, harvest
+   without `--require-passed` only for forensic diagnosis and keep blockers.
+2. Refresh and harvest T4 sensitivity when terminal.
+3. If L40S response passes, repeat or validate on T4 before any promotion
+   assembly; if it fails, inspect component gate/prediction errors and update
+   the signed/magnitude prediction model before another exact response spend.
+4. Do not assemble promotable `component_sensitivity_v1` from diagnostic
+   Fisher maps without a reviewed promotable map artifact path; current maps
+   are for prediction/planning and official-response calibration.
+
+## 2026-05-01T06:37Z Telemetry Update And Next-Wave Decision
+
+- T4 diagnostic sensitivity r2 completed and was harvested. It is CUDA/T4,
+  full 600-pair diagnostic Fisher/proxy evidence with exact baseline archive
+  custody, but remains non-promotable. Use it for comparison/calibration only
+  until a direct finite-difference map source exists.
+- L40S official response r7 failed. The useful signal is forensic:
+  coverage, finite values, same-run zero, and signal were present, but
+  prediction error failed catastrophically. Additionally, same-run L40S
+  baseline components drifted from the supplied PFP16 A++ T4 baseline JSON,
+  so L40S response curves cannot certify the PFP16 A++ sensitivity map path.
+- Hardening landed after this failure: future official-response jobs now gate
+  external-baseline agreement through `external_baseline_repro` whenever an
+  external baseline JSON is supplied. This closes the "same-run-only zero hides
+  runner drift" meta-bug.
+- T4 official response r7 remains running. Because it was queued before the
+  new hardening, harvest it when terminal and manually compare its eps=0
+  components against
+  `experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/eval/contest_auth_eval.json`
+  before using the curves. Passing old-code gates are not sufficient if
+  external-baseline drift is present.
+
+Next execution order:
+
+1. Refresh and harvest the T4 official response when terminal.
+2. If T4 response passes prediction and external-baseline agreement, use it
+   only as official response evidence; map certification still waits for
+   direct finite-difference CUDA maps.
+3. If T4 response fails prediction, fit R8 signed/quadratic response from the
+   harvested official curves and rebuild fresh prediction deltas; do not reuse
+   the L40S r7 magnitude-only calibration as promotable evidence.
+4. Implement or dispatch direct finite-difference CUDA map generation with
+   full parameter coverage for OWV3/NWCS, then certify maps through
+   `experiments/certify_component_sensitivity_maps.py`.
+5. Use the Alpha primitive contract to unblock decoded-baseline Lane 12
+   retraining design, still build-only/no exact eval until geometry and L2
+   clearance pass.
+
+## 2026-05-01T06:55Z T4 R7 Response Closed And R8 Direction
+
+- T4 official response r7 is terminal `Failed` and harvested:
+  `experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_r7_predicted_from_r2_l40s_codex_lightning_t4_parallel`.
+  The packet is CUDA/T4 forensic evidence only. It cannot certify maps or
+  support stack decisions.
+- Failure mode is twofold:
+  prediction-error gates failed on all components, and the same archive's
+  eps=0 baseline drifted from the PFP16 A++ T4 anchor. The old-code r7 packet
+  lacks the new explicit external-baseline gate, but the manual comparison is
+  decisive: treat this as runner/scorer calibration plus prediction-model
+  failure, not method retirement.
+- Fastest-wall-clock next action is not another Fisher-map response with the
+  same R7 model. Build R8 around direct finite-difference CUDA maps or, if
+  using the harvested r7 curves only for model fitting, fit a signed/quadratic
+  response model with explicit runner identity and external-baseline repro
+  gates before spending another official response job.
+- Lane 12 Alpha should proceed as decoded-baseline build-only retraining using
+  the `alpha_geo_primitive_contract_v1` contract consumer now landed. Exact
+  eval remains blocked until Alpha-Geo exploratory gates and L2 clearance pass.
+
+Next execution order:
+
+1. Run or queue direct finite-difference CUDA component-sensitivity map
+   generation with full 600-pair coverage; Fisher/proxy maps stay planning
+   only.
+2. Generate archive-byte perturbation basis and pre-response prediction deltas
+   from those direct-FD maps, then run official response with external-baseline
+   repro required.
+3. Certify maps only with prediction-deltas SHA, perturbation-basis SHA,
+   official curves, baseline custody, stability, sample coverage, and three
+   clean review passes.
+4. Use the Alpha contract consumer for build-only NeRV retraining and run
+   Alpha-Geo diagnostics before any CUDA exact eval spend.
+5. Keep Lightning status anomaly records under review; status alone never
+   promotes or kills a lane.
+
+## 2026-05-01T07:10Z Direct-FD Packet Ready, Sharding Is Next Bottleneck
+
+- Direct renderer CUDA finite-difference component-sensitivity is now a
+  first-class Lightning job mode and harvest artifact type. It is still
+  diagnostic/no-score, but the local and remote validators now preserve it as a
+  certification handoff candidate instead of rejecting it as non-Fisher.
+- Validation now checks `.pt` map metadata, not only JSON summaries and
+  response curves. Any score claim, promotion claim, official-response claim,
+  canonical-scorer claim, or source mismatch fails closed before a map can be
+  used downstream.
+- Lane 12 Alpha remote dispatch now requires and forwards
+  `ALPHA_PRIMITIVE_CONTRACT`; build-only decoded-baseline retraining cannot
+  silently run without the Alpha primitive contract.
+- Grand Council research note from Gauss: the unsharded direct-FD packet is
+  valid but wall-clock suboptimal. Current PFP16 candidate has hundreds of
+  eligible channels, so direct-FD should be sharded by deterministic
+  layer/channel ranges with a merge validator before spending serious T4 time.
+
+Immediate execution order:
+
+1. Implement deterministic direct-FD layer/channel sharding and merge
+   validation for `experiments/profile_component_sensitivity.py` artifacts.
+2. Restage Lightning source after the current hardening; do not reuse stale
+   r2 Fisher manifests.
+3. Submit direct-FD shards on T4/equivalent with full 600-pair coverage,
+   `--promotion-finite-difference`, external baseline custody, and state-derived
+   harvest.
+4. Build prediction deltas and archive-byte perturbation basis from merged
+   direct-FD maps, then run official component response with
+   external-baseline repro gates.
+5. Certify maps only after official response gates, stability gates, custody
+   SHA checks, and three clean adversarial passes.
+
+Telemetry snapshot:
+
+- Lightning local state currently has no running job records; recent scientific
+  jobs are terminal/harvested/failed. Two historical records are `Stopped` and
+  require no interpretation as active evidence.
+- Vast reconciliation reports `live_count=0`. Local Vast trackers are stale
+  relative to live API and must not be used as live evidence; active-dispatch
+  rows for old instance IDs are missing live counterparts.
+
+## 2026-05-01T07:55Z Queue-Diverse Direct-FD Execution And Alpha Repair Signal
+
+Deadline context: user confirmed the contest deadline is 2026-05-03 00:00
+local time, with the working time near 2026-05-01 02:25 local. The governing
+policy is therefore highest-EV real signal first, with harness changes only
+where they remove immediate signal-loss risk.
+
+Direct finite-difference component-sensitivity execution state:
+
+- Lightning reproducible staging succeeded at
+  `.omx/state/lightning_direct_fd_sensitivity_20260501T0226_codex_manifest.json`.
+  Manifest SHA-256:
+  `c2f414c52fcda142fcfbfd7ff237f9ae0434249a41129b4d48cc42573b5fd705`.
+- Baseline archive for every shard:
+  `experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip`,
+  SHA-256 `0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f`,
+  bytes `686635`.
+- Submitted Lightning queue-diverse duplicate waves, all using the same
+  deterministic 16-shard topology and non-score diagnostic metadata:
+  L40S `g6e.4xlarge`, T4 `g4dn.2xlarge`, and RTX PRO `g7e.4xlarge`.
+- Latest refresh
+  `.omx/state/lightning_refresh_direct_fd_allwaves_20260501T074759Z.jsonl`
+  shows all 48 Lightning shard jobs still `Pending`; cost was still zero at
+  refresh. Status is telemetry only, not evidence.
+- Added bounded Lightning SSH transport hardening after a transient
+  `kex_exchange_identification: read: Connection reset by peer` during rapid
+  pre-submit remote supply-chain preflights. The patch retries known
+  transport resets but keeps auth and supply-chain failures fail-closed.
+
+Modal queue-diversity fallback:
+
+- Added `experiments/modal_component_sensitivity_shards.py`, a lightweight
+  A10G/T4 direct-FD shard launcher that uploads the 686KB PFP16 archive bytes,
+  mounts source plus upstream assets, zip-slip-safely extracts
+  `renderer.bin`, `masks.mkv`, and `optimized_poses.bin`, and runs the same
+  `profile_component_sensitivity.py --promotion-finite-difference` shard
+  command.
+- Dispatched Modal A10G label
+  `pfp16_direct_fd_modal_a10g_20260501`, shards `0..15`, app
+  `comma-component-sensitivity`. Call IDs are recorded in
+  `experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501/modal_call_ids.json`.
+- Initial recovery reports all 16 Modal shards still pending, with no failed
+  shards and no harvested artifacts yet. Modal output remains
+  `diagnostic_cuda_modal_direct_renderer_finite_difference`, `score_claim=false`,
+  and `promotion_eligible=false`.
+
+Alpha/Lane 12 repair signal:
+
+- Ran the admissible CPU empirical Alpha-Geo residual materialization:
+  `experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_0_vs_pfp16_residual_regions_20260501T073504Z.json`.
+- This packet is `device=cpu`, `score_evidence_grade=empirical`; it cannot
+  promote, rank, kill, or justify exact-eval spend.
+- Operational finding: the dominant repair target is lower-field lane-marking
+  collapse and temporal boundary underfit. The top 200 residual regions total
+  87,652 pixels with 80,305 critical-class pixels across 165 frames; dense
+  clusters include frames 267-268, 304-305, 321-323, 583-584, 1034-1046,
+  1054-1059, and 1191-1198.
+- Next Alpha artifact, still pre-L2 and non-score, is a larger
+  `alpha_geo_1` primitive-contract packet with 1000 residual regions and
+  component-track diagnostics. Lane 12 retraining and exact eval remain
+  blocked until valid L2 clearance exists.
+
+Immediate next execution order:
+
+1. Poll Modal and Lightning direct-FD shards every few minutes; harvest
+   terminal shards state-derived only.
+2. Merge the first complete 16-shard source with
+   `experiments/merge_component_sensitivity_shards.py`; incomplete merges are
+   planning-only and non-handoff.
+3. Build prediction deltas and archive-byte perturbation basis from merged
+   direct-FD maps.
+4. Run official component response with external-baseline repro gates.
+5. Only then certify `component_sensitivity_v1` and route OWV3/NWCS exact-eval
+   candidates.
