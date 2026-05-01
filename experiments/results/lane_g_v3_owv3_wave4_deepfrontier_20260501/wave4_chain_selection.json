@@ -1,0 +1,41 @@
+{
+  "baseline_r7_bytes": 631473,
+  "baseline_r7_score": 1.0134,
+  "selected": [
+    {
+      "tag": "mild",
+      "candidate_id": "owv3_0023_bbr0p6_protect0p05_aggr1em05",
+      "bytes": 590176,
+      "bbr": 0.6,
+      "protect": 0.05
+    },
+    {
+      "tag": "aggr1",
+      "candidate_id": "owv3_0039_bbr0p55_protect0p05_aggr1em05",
+      "bytes": 577849,
+      "bbr": 0.55,
+      "protect": 0.05
+    },
+    {
+      "tag": "aggr2",
+      "candidate_id": "owv3_0038_bbr0p55_protect0p03_aggr1em05",
+      "bytes": 578273,
+      "bbr": 0.55,
+      "protect": 0.03
+    },
+    {
+      "tag": "extr1",
+      "candidate_id": "owv3_0071_bbr0p45_protect0p05_aggr1em05",
+      "bytes": 553350,
+      "bbr": 0.45,
+      "protect": 0.05
+    },
+    {
+      "tag": "extr2",
+      "candidate_id": "owv3_0070_bbr0p45_protect0p03_aggr1em05",
+      "bytes": 553766,
+      "bbr": 0.45,
+      "protect": 0.03
+    }
+  ]
+}
