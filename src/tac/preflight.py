@@ -985,11 +985,14 @@ def preflight_all(
         # reversed under adversarial scrutiny IS the success outcome of this
         # check). Live audit on 2026-04-30 found 4 legacy 2026-04-30 kill
         # records lacking the canonical sections; they will be backfilled
-        # in a follow-up commit before this check flips STRICT.
+        # 2026-05-01: 4 pre-existing KILL/FALSIFIED memory files cleaned up
+        # (Lane GP v4, Lane GP class, Lane 7 PSD, All-Scores forensic audit
+        # — each got Grand Council review section + internal-consistency
+        # check + reactivation criteria appended). PCC4 now STRICT @ 0.
         # Reference: feedback_grand_council_pcc4_kill_memory_review_
         # enforcement_20260430.md.
         check_kill_memory_files_have_council_review(
-            strict=False, verbose=verbose,
+            strict=True, verbose=verbose,
         )
 
     # 2. Training inputs (only if profile + tto_frames provided)
