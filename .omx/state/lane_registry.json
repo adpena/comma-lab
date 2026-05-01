@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-05-01T18:15:07Z",
+  "updated_at": "2026-05-01T18:32:40Z",
   "description": "Canonical lane maturity registry. See feedback_production_hardened_standard_definition_20260430.md for the 7-gate Level 3 standard. Maintained via tools/lane_maturity.py \u2014 bare edits OK for seeding but mark/unmark/audit-log are the supported interface going forward.",
   "gate_definitions": {
     "impl_complete": "Production code lands; no NotImplementedError; all CLI flags wired; all error paths covered.",
@@ -1349,6 +1349,43 @@
         }
       },
       "notes": "FALSIFIED 2026-05-01: AMRC=1,082,649 vs AV1=421,483 (2.57x larger). Confirms prior project_amrc_negative_result.md (5d old). Reactivation criteria: future renderer trained against AMRC-faithful clean masks AND distortion improvement >0.4 to compensate +600KB rate hit."
+    },
+    {
+      "id": "lane_q_faithful_retrain",
+      "name": "Lane Q-FAITHFUL retrain (RTX 4090 dispatch)",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/quantizr_faithful_renderer.py + scripts/remote_lane_q_faithful_jointgen.sh + 87836 params verified on RTX 4090 35959478"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/remote_lane_q_faithful_jointgen.sh + experiments/results/lane_q_faithful_retrain_20260501/dispatch_metadata.json + heartbeat at /workspace/pact/lane_q_faithful_results/heartbeat.log"
+        }
+      },
+      "notes": ""
     }
   ]
 }
