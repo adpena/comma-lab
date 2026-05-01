@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-05-01T12:55:47Z",
+  "updated_at": "2026-05-01T13:19:42Z",
   "description": "Canonical lane maturity registry. See feedback_production_hardened_standard_definition_20260430.md for the 7-gate Level 3 standard. Maintained via tools/lane_maturity.py \u2014 bare edits OK for seeding but mark/unmark/audit-log are the supported interface going forward.",
   "gate_definitions": {
     "impl_complete": "Production code lands; no NotImplementedError; all CLI flags wired; all error paths covered.",
@@ -1231,6 +1231,80 @@
         "memory_entry": {
           "status": true,
           "evidence": "project_lane_g_v3_owv3_0120_LANDED_1_002_20260501.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_overfit_known_video",
+      "name": "Overfit-known-video subagent (DUPLICATE\u2192DOC)",
+      "phase": 3.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": ".omx/research/overfit_known_video_strategy_20260501.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Subagent 2026-05-01 review: 5 prompt-suggested approaches (frame-idx NN / per-frame residual / Rust decoder / RL allocation / sensitivity-weighted truncation) all duplicate in-flight lanes (lane_j_nwc / lane_12_nerv_mask_codec / lane_owv3_0120 / lane_rl_pufferlib_bandit / lane_sensitivity_map). Council 7/0 NO-DISPATCH. Memo: .omx/research/overfit_known_video_strategy_20260501.md. $0 GPU spent. Reactivation: only if one of the duplicate lanes empirically falsifies that approach."
+    },
+    {
+      "id": "lane_owv3_0120_stack",
+      "name": "OWV3 0120 + PFP16 orthogonal stack",
+      "phase": 1.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "experiments/build_owv3_0120_stack.py + experiments/results/lane_g_v3_owv3_0120_stacked_20260501/build_provenance.json (deterministic SHA 1e9195cb6e0e08fc...)"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "experiments/results/lane_g_v3_owv3_0120_stacked_20260501/archive.zip 609963B sha 1e9195cb6e0e08fc... [empirical:experiments/results/lane_g_v3_owv3_0120_stacked_20260501/]"
+        },
+        "contest_cuda": {
+          "status": true,
+          "evidence": "0.997430 [contest-CUDA RTX 4090] experiments/results/lane_g_v3_owv3_0120_stacked_20260501/contest_auth_eval.json (Vast.ai instance 35959478, 2026-05-01T13:18:54Z)"
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": false,
+          "evidence": ""
         },
         "deploy_runbook": {
           "status": false,
