@@ -10,13 +10,13 @@ and where the technique might work in other contexts.
 
 ## Conclusively Killed (with evidence)
 
-### 1. KL Distillation Loss
-- **What:** Train postfilter with KL divergence against scorer soft targets
-- **Evidence:** Two auth evals confirmed PoseNet collapse (proxy 1.25→auth 1.85, proxy 1.43→auth 2.05)
-- **Why it failed:** KL loss optimizes distribution shape, not argmax agreement. PoseNet is sensitive to pixel-level changes that KL loss doesn't capture.
-- **Where it might work:** Image classification where soft targets are meaningful. NOT for geometric tasks like ego-motion estimation.
-- **Commits:** Multiple, documented in project memory
-- **Status:** DEAD — do not resurrect for this competition
+### 1. Primary Scorer KL Distillation Loss
+- **What:** Train postfilter with KL divergence against scorer soft targets.
+- **Evidence:** Two auth evals confirmed PoseNet collapse (proxy 1.25 -> auth 1.85, proxy 1.43 -> auth 2.05).
+- **Why it failed:** The measured primary-KL configurations optimized distribution shape while allowing PoseNet-sensitive pixel structure to collapse.
+- **Where it might work:** Image classification where soft targets are meaningful, or tightly scoped auxiliary use only after exact archive CUDA component proof.
+- **Commits:** Multiple, documented in project memory.
+- **Status:** Primary scorer KL is dead for promotion. SegNet-aux KL, JBL, and related distillation-family variants are forensic-gated hypotheses, not killed or promoted as a family; they require exact CUDA archive eval, archive SHA/bytes, full component gates, and explicit non-collapse evidence before any claim.
 
 ### 2. Adaptive Weight Formula (Hinton T²)
 - **What:** Automatically balance seg/pose/rate weights using temperature-based reweighting

@@ -13,7 +13,7 @@
   Section 10: Discussion
 -->
 
-> **2026-04-29 status update.** This draft contains historical claims that have been invalidated by the MPS-vs-CUDA drift discovery (2026-04-25): every "auth" score reported below in the legacy draft body that was measured on MPS is `[advisory only]` and ~2.5x optimistic. The lab's first reproducible-from-saved-artifacts contest-CUDA baseline is `0.90` (2026-04-25). Current contest-CUDA floor is **`1.05`** (Lane G v3 = dilated-h64 renderer + KL distill weight=0.002 + pose TTO retry, verified 2026-04-28; Modal T4 reproduction `1.04` on 2026-04-29 within 0.01 noise). The Era 2 + Era 3 narrative is summarized in `docs/paper_outline.md` Sections 11-13 (addendum). Live leaderboard: Quantizr 0.33 #1, Selfcomp 0.38 #2, Mask2mask 0.60 #3. Sub-0.30 is the user-set non-negotiable goal, deadline May 3.
+> **2026-05-01 claim-status update.** This is a historical draft, not the current claim authority. Every "auth" score below that was measured on MPS is `[advisory only]` after the MPS-vs-CUDA drift discovery. The current exact CUDA archive anchor is PFP16 A++: score `1.043987524793892`, archive `686635` bytes, SHA-256 `0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f`, `n=600`, Tesla T4 CUDA. KL/distillation-family text below is forensic-gated: primary scorer KL is promotion-ineligible, and SegNet-aux KL/JBL variants need matched exact CUDA component evidence before any mechanism, promotion, or safety claim. Do not cite the legacy `KL weight=0.002` narrative as a proven recipe without matched ablation proof.
 
 ## Abstract (current — to be revised before submission)
 

@@ -1,13 +1,15 @@
 # writeup working notes
 
-## current state — 2026-04-29 (4 days to deadline)
+## current state — 2026-04-30 (3 days to deadline)
 
-The writeup needs to reflect the post-AV1 era. We are no longer a tiny CNN post-filter pasted onto a codec — that arc ended around `1.73`. The current frontier is a neural renderer (Lane G v3 = 1.05 [contest-CUDA]), and the live competitive context is Selfcomp 0.38 #2 / Quantizr 0.33 #1.
+The writeup needs to reflect the post-AV1 era. We are no longer a tiny CNN post-filter pasted onto a codec — that arc ended around `1.73`. The current frontier is PFP16 A++ (`1.043987524793892` recomputed [contest-CUDA A++]) on top of the Lane G v3 renderer, and the live competitive context is Selfcomp 0.38 #2 / Quantizr 0.33 #1.
 
 ## live operating point
 
-- contest-compliant best: **`1.05` [contest-CUDA]** (Lane G v3, 694KB archive, KL distill + pose TTO retry)
-- Modal T4 reproduction: **`1.04` [Modal-T4-CUDA]** (within 0.01 noise floor of Vast.ai)
+- contest-compliant best: **`1.04` [contest-CUDA A++]** (PFP16 A++, 686,635-byte archive, exact Tesla T4 auth eval)
+- score authority: `experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/eval/contest_auth_eval.json`
+- stale provenance quarantine: `experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/custody/custody_manifest.json`
+- historical predecessor: **`1.05` [contest-CUDA]** (Lane G v3, 694KB archive, KL distill + pose TTO retry)
 - fallback floor: `1.15` [contest-CUDA] (Lane A, baseline pose-TTO from baseline poses)
 - nearby negative: Lane M-V2 = `1.84` [contest-CUDA] (radial-zoom rank-1 hypothesis; pose-pad asymmetry confirmed)
 - nearby catastrophic: Lane GP v3 = `89.67` [Modal-T4-CPU] (Runge phenomenon at degree-10 polynomial)
@@ -15,8 +17,8 @@ The writeup needs to reflect the post-AV1 era. We are no longer a tiny CNN post-
 ## the headline arc has changed three times
 
 1. **CNN post-filter on AV1** (4.06 → 1.73). The original story of dilation, QAT+EMA, and best-checkpoint int8 selection. Still publishable, still mathematically interesting (rank-1 Jacobian, dense mid-frequency CNN residual). But not the live frontier.
-2. **Neural renderer that bypasses the codec** (1.73 → 1.05). Asymmetric warp + Lagrangian + dilated-h64. Pose TTO at compress time. KL distill weight=0.002 finally lands the gain that the v1/v2 attempts missed.
-3. **Selfcomp paradigm shift** (1.05 → ?). Live work. Five concrete shifts (grayscale-LUT mask, single-mask + 6-DOF affine duality, analytical pose, block-FP weight self-compression at 1.017 bpw, 94K-param SegMap arch). Eight Modal lanes in flight to validate each shift in isolation and then stack.
+2. **Neural renderer that bypasses the codec** (1.73 → 1.05 → 1.04). Asymmetric warp + Lagrangian + dilated-h64. Pose TTO at compress time. KL distill weight=0.002 lands the gain that the v1/v2 attempts missed; PFP16 then makes the pose payload deterministic and smaller without changing the archive custody path.
+3. **Selfcomp paradigm shift** (1.04 → ?). Live work. Five concrete shifts (grayscale-LUT mask, single-mask + 6-DOF affine duality, analytical pose, block-FP weight self-compression at 1.017 bpw, 94K-param SegMap arch). Eight Modal lanes in flight to validate each shift in isolation and then stack.
 
 ## strongest rigor angle for the writeup
 
@@ -40,7 +42,7 @@ Three nested phase changes in one project:
 2. Pixel-space TTO → conditioning-space TTO (give up pixel locality)
 3. Hand-tuned bit allocation → block-FP self-compression (give up uniform precision)
 
-Each phase abandons an assumption of the previous. At each transition the score makes a discrete jump (1.73 → 1.15 → 1.05). The Selfcomp paradigm is the next jump if any of MM/SA/SC++/SO land predicted ≤ 0.5.
+Each phase abandons an assumption of the previous. At each transition the score makes a discrete jump (1.73 → 1.15 → 1.05 → 1.04). The Selfcomp paradigm is the next jump if any of MM/SA/SC++/SO land predicted ≤ 0.5.
 
 ## strongest competitive-intelligence angle (PRIVATE — do not publicize)
 
@@ -48,7 +50,7 @@ Each phase abandons an assumption of the previous. At each transition the score 
 - Selfcomp explicit admission: "underfit to segnet due to no architecture search" — implicit rate ceiling left on the table.
 - Mask2mask author refused to publish compress script — they are signaling competitive secrecy too.
 
-The writeup CAN reference public scores. The writeup MUST NOT publish our specific Lane W hard-pair weighting recipe, our Lane Ω Hessian-aware quantization schedule, or our specific Selfcomp-paradigm portfolio sequencing — those are the secret sauce. Cloudflare site keeps the public arc at the contest-CUDA Lane G v3 = 1.05 level and frames everything beyond as "live work".
+The writeup CAN reference public scores. The writeup MUST NOT publish our specific Lane W hard-pair weighting recipe, our Lane Ω Hessian-aware quantization schedule, or our specific Selfcomp-paradigm portfolio sequencing — those are the secret sauce. Public surfaces may headline PFP16 A++ = 1.04 only with the final deploy bundle custody path and the `contest_auth_eval.json` authority note.
 
 ## reusable visual story beats (still valid)
 
@@ -58,6 +60,7 @@ The writeup CAN reference public scores. The writeup MUST NOT publish our specif
 4. 11.5x SegNet leverage at the operating point (still the central tradeoff lever)
 5. NEW: CRF=50 dilated-h64 + matched poses 0.90 baseline — first reproducible-from-saved-artifacts contest-CUDA score
 6. NEW: Lane G v3 1.05 contest-CUDA — KL distill weight=0.002 finally clears the proxy-auth gap
+7. NEW: PFP16 A++ 1.04 contest-CUDA — deterministic fp16 pose payload drops archive bytes while `contest_auth_eval.json` stays authoritative
 
 ## what NOT to write yet
 

@@ -1,17 +1,18 @@
-# Latest Report — 2026-04-29 endgame status (4 days to deadline)
+# Latest Report — 2026-04-30 PFP16 custody update (3 days to deadline)
 
 ## Current Floor (the ONLY scores we report)
 
-**Best contest-CUDA artifact: Lane G v3 = 1.05 [contest-CUDA]** (2026-04-28 verified, reproduced 1.04 on Modal T4 2026-04-29).
+**Best contest-CUDA artifact: PFP16 A++ = 1.04 [contest-CUDA A++]** (exact Tesla T4 auth eval on 2026-04-30).
 
-- Evidence: `experiments/results/lane_g_v3_landed/contest_auth_eval.json`
-- Modal reproduction: `experiments/results/modal_auth_eval_9b20bdfca246.json` (1.04, drift 0.01 on PoseNet)
-- Archive: `experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip` (694,074 bytes)
-- SegNet: 0.00400846 / PoseNet: 0.00345458 / Rate: 0.01848622
-- Recipe: KL distill weight=0.002 + pose TTO retry on Lane A anchor
-- Beats Lane A (1.15) by 0.10 at the same archive size
+- Evidence: `experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/eval/contest_auth_eval.json`
+- Custody: `experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/custody/custody_manifest.json`
+- Archive: `experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip` (686,635 bytes, SHA `0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f`)
+- SegNet: 0.00400656 / PoseNet: 0.00346442 / Rate: 0.01828808
+- Recomputed score: `1.043987524793892`; `contest_auth_eval.json` is authoritative over build provenance and logs.
+- Recipe: Lane G v3 renderer + deterministic PFP16 pose payload; old Lane G v3 `1.05` is the historical predecessor.
+- Beats Lane A (1.15) by 0.11 and old Lane G v3 by ~0.0049.
 
-**Fallback floor: Lane A = 1.15 [contest-CUDA]** (`experiments/results/lane_a_landed/contest_auth_eval.json`).
+**Fallback floor: Lane G v3 pre-PFP16 = 1.05 [contest-CUDA]** (`experiments/results/lane_g_v3_landed/contest_auth_eval.json`).
 
 ## Live leaderboard (fetched 2026-04-29 ~10am)
 
@@ -22,13 +23,13 @@
 | 3 | **0.60** | **Mask2mask** | **#53** | "slightly different arch" (obfuscated) |
 | 4 | 1.89 | neural_inflate | #49 | |
 | 5 | 1.91 | svtav1_dilated_renderer | #58 | |
-| ours | 1.04 | Lane G v3 | not submitted | would rank ~4th if we shipped today |
+| ours | 1.04 | PFP16 A++ | not submitted | would rank ~4th against this 2026-04-29 snapshot |
 
 User-set NON-NEGOTIABLE goal: **sub-0.30**. Deadline May 3.
 
 ## Modal pipeline TRUSTED (canonical for >2h training)
 
-Modal T4 reproduced the Vast.ai Lane G v3 score within the noise floor (1.04 vs 1.05). For training jobs >2h, Modal is now canonical. Vast.ai 4090 NVDEC roulette has been ~85% bad-host rate this week; ~$5 burned across 5 dispatch rounds for 0 trained lanes on the bad nights. Modal's slightly higher per-hour cost is dominated by reliability — Modal wins on expected $ per successful lane.
+PFP16 A++ supersedes the old Lane G v3 Modal/Vast reproduction for frontier wording. For training jobs >2h, Modal remains the preferred queue. Vast.ai 4090 NVDEC roulette has been ~85% bad-host rate this week; ~$5 burned across 5 dispatch rounds for 0 trained lanes on the bad nights. Modal's slightly higher per-hour cost is dominated by reliability.
 
 ## Active portfolio (as of 2026-04-29 PM)
 
@@ -50,8 +51,8 @@ In implementation (5 sweep + 5 EUREKA lanes):
 
 - Lane M-V2 (radial-zoom rank-1 hypothesis): 1.84 [contest-CUDA], regression vs Lane A 1.15. Train/inference pose-pad asymmetry confirmed (Check 42).
 - Lane H CRF56: 3.20 [contest-CUDA].
-- Lane GP v3 (Gaussian-process pose fit): 89.67 [Modal-T4-CPU]. Runge phenomenon at degree-10 polynomial; off-manifold hypothesis disproved. Lane GP polynomial path is dead — DCT or B-spline if revived.
-- Lane UNIWARD v8: 1.14 [Modal-T4-CPU], identical to Lane A noise floor. Encoder pipeline is no-op on the bitstream without an SLI1 inflate-time decoder. Council 5/5 KILLED standalone (2026-04-29).
+- Lane GP v3 (Gaussian-process pose fit): `89.67` [Modal-T4-CPU diagnostic; invalid for score claims]. Treat as a Runge-condition debugging signal only; it does not disprove the off-manifold hypothesis or retire the polynomial path without lane-local CUDA archive custody.
+- Lane UNIWARD v8: `1.14` [Modal-T4-CPU diagnostic; invalid for score claims]. Treat as a suspected no-op/SLI1-decoder debugging signal only; no standalone kill or retirement without exact CUDA archive custody and scoped council review.
 - Lane V (Quantizr halfframe joint-from-epoch-0): crashed at ~7.6h on channel mismatch.
 - 2026-04-29 Modal first-wave failures: MAE-V missing pydantic; Omega Hessian CUDA assert; UNIWARD missing baseline; pose tensor shape (600,6) vs (N,1) on one inflate.
 
@@ -79,12 +80,12 @@ Total STRICT preflight checks: **78** (was 36 a week ago). Catalog in CLAUDE.md.
 ## Caveats
 
 - Upstream snapshot is stale/ambiguous: `comma-lab status` reports snapshot `ec82c291...` from 2026-04-03 while live workspace upstream is `cd64c68...`; root `upstream/` is `11ad728...` with local modifications. Deliberate rebootstrap pending.
-- ALL "1.04 vs 1.05" Modal-T4 vs Vast-4090 drift is within noise; both are contest-equivalent.
-- Internal "predicted X.XX" stack projections in this report are advisory only — only [contest-CUDA] or [Modal-T4-CUDA] tagged scores are real.
+- Older "1.04 vs 1.05" Modal-T4 vs Vast-4090 drift is predecessor context only; the PFP16 exact T4 `contest_auth_eval.json` is the current score authority.
+- Internal "predicted X.XX" stack projections and Modal/local diagnostics are advisory unless backed by lane-local CUDA `contest_auth_eval.json`, archive SHA/bytes, component recomputation, and custody. PFP16 A++ is the only current frontier anchor.
 
 ## Next queue
 
 1. Land the Selfcomp-paradigm portfolio (MM → SA → SC++ → SO).
 2. Sub-0.30 frontier: stack SC++ + FR-Ω + DARTS-S; predicted ~0.25 if additivity holds.
 3. Submission PR gate: 5-pass clean adversarial review (stricter than the standard 3-pass) before any May 3 push.
-4. Strategic-secrecy audit on writeup/site files before any public surface gets the Lane G v3 details.
+4. Strategic-secrecy audit on writeup/site files before any public surface gets the PFP16 A++ details.

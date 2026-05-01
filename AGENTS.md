@@ -30,6 +30,7 @@ Use these documents as the research/control plane:
 - `.omx/research/owv3_fisher_byte_aware_redesign_spec_20260430_codex.md`
 - `.omx/research/alpha_pose_preserving_redesign_spec_20260430_codex.md`
 - `.omx/research/kl_distill_hardening_status_20260430_codex.md`
+- `.omx/research/component_sensitivity_map_certification_20260501_codex.md`
 
 When these documents disagree, prefer the strictest contest-grade evidence
 standard and the newest dated progress addendum. Preserve history by appending
@@ -215,6 +216,15 @@ are independent:
 Stack experiments wait until component archives have exact evidence. A stack is
 its own archive and must pass its own exact eval.
 
+Lane 12/Alpha NeRV retraining is build-only until explicit L2 clearance.
+Production training targets must use decoded baseline archive masks with a
+validated `alpha_geo_primitive_contract_v1`; direct `gt_masks_source=segnet`
+is forensic/debug only behind an explicit flag. Contract consumption must
+validate decoded-mask SHA and shape, record contract SHA and sampling gates,
+and preserve weighted sampling provenance for uniform, critical-box,
+boundary-band, and transition-endpoint pools. These trainer artifacts are
+empirical/no-score until a later canonical CUDA archive eval is run.
+
 ## Backend Routing
 
 - Lightning AI is the preferred exact-eval home for T4/equivalent
@@ -287,6 +297,19 @@ deterministic.
   only `--state-path` and `--job-name` when the job was queued locally; it
   infers the SDK job name, teamspace, org, and user from the state record to
   avoid operator drift.
+- Lightning SDK status strings are telemetry, not standalone custody. If
+  refresh history shows a nonterminal regression such as `Running -> Pending`,
+  the local state must record `status_anomalies`,
+  `status_reconciliation_required=true`, and full per-refresh snapshots. For
+  non-dry-run exact/component-response/sensitivity jobs, nonterminal status
+  regressions must fail closed as `REMOTE_STATUS_RECONCILIATION_REQUIRED`
+  unless a terminal SDK status supersedes them; terminal artifacts still need
+  harvest validation before scientific use.
+- Lightning refreshes that only resolve jobs by name must record
+  `identity_confidence=name_only` and
+  `identity_reconciliation_required=true`. Prefer stable SDK job ids whenever
+  the SDK exposes them; null-id name-only refreshes are not enough for
+  promotion custody without state-derived artifact validation.
 - Non-dry-run Studio-backed Lightning Batch submissions must use
   `--remote-preflight-ssh-target <alias>` unless a specific auditable
   break-glass reason is recorded. This runs
@@ -311,6 +334,23 @@ deterministic.
   The wrapper maps recorded Studio output dirs into SDK artifact mirrors and
   validates compact response evidence locally. Do not hand-compose
   `/teamspace/jobs/...` paths for promotion-grade claims.
+- Diagnostic component-sensitivity harvests must also be state-derived:
+  `scripts/launch_lightning_batch_job.py harvest-component-sensitivity-ssh
+  --state-path .omx/state/lightning_batch_jobs.json --job-name <job> ...`.
+  These artifacts are non-promotable unless later assembled into a reviewed
+  `component_sensitivity_v1` packet through the official CUDA component
+  response path.
+- After a diagnostic CUDA component-sensitivity harvest, use
+  `experiments/build_component_response_plan_from_sensitivity_artifacts.py`
+  to validate the harvested artifact directory, build pre-response
+  `official_component_response_prediction_deltas_v1`, and emit the deterministic
+  official response plan. This remains planning evidence only; score signal
+  still requires the subsequent official CUDA component-response Batch Job with
+  same-run eps=0 and `--require-passed`.
+- Generated Lightning Batch commands must emit option values that may begin
+  with `-` using the `--flag=value` form, not `--flag value`. This is required
+  for epsilon ladders such as `--response-epsilons=-0.002,...`; otherwise
+  argparse can treat the negative value as another option and fail remotely.
 - Supply-chain rule: do not install the PyPI package named `lightning` in this
   repo or on remote runners. On 2026-04-30, `lightning==2.6.2` and
   `lightning==2.6.3` were reported compromised with import-time credential
@@ -338,6 +378,26 @@ deterministic.
 - Borrow Lightning Fabric patterns selectively for optional training-lane
   wrappers, seed/rank-zero discipline, callback organization, and optional
   training-state checkpoints.
+- Treat Lightning-AI ecosystem repos such as LitModels, lightning-thunder, and
+  utilities as research inputs, not promotion dependencies, until they pass the
+  local supply-chain scanner, deterministic replay checks, CUDA parity checks,
+  and import audit. Copy/adapt small, audited patterns where useful; do not add
+  broad dependencies or cloud model-registry custody to contest artifacts.
+- LitModels may inform checkpoint/registry ergonomics, but its optional
+  Lightning/PyTorch-Lightning integrations are outside promotion environments.
+  Do not install extras that pull the PyPI `lightning` package.
+- lightning-thunder may be evaluated only behind opt-in profiling/training
+  flags. It is not allowed in canonical exact eval or score custody until
+  numerical parity, deterministic behavior, compile-cache effects, and CUDA
+  runtime provenance are adversarially audited.
+- lightning-utilities patterns such as rank-zero logging, import/version
+  helpers, and dependency CLI checks may be adapted if they reduce local code
+  fragility. Keep local wrappers independent of `lightning` imports.
+- When adapting `lightning-utilities` import helpers, do not point any helper
+  that imports the target module at `lightning`; use metadata-only package
+  inspection for high-risk names. Avoid broad requirement-rewrite helpers for
+  Pact because `uv.lock`, upper bounds, and reviewed dependency custody are
+  authoritative.
 - Do not migrate canonical archive construction or exact eval into a full
   PyTorch Lightning `Trainer` loop.
 - Avoid DDP for exact eval unless sampler and aggregation are audited.
@@ -369,11 +429,60 @@ deterministic.
   component response validation, symmetric/directional response curves, and
   CUDA exact-eval custody are implemented and reviewed. CPU runs additionally
   require `--allow-diagnostic-cpu` and are non-promotable.
+- Lightning diagnostic component-sensitivity validation must inspect every map,
+  response curve, summary, input-preflight, and run-metadata artifact for
+  `score_claim=false`, `promotion_eligible=false`, allowed
+  `sensitivity_source`, non-official response status, and
+  `canonical_scorer_path=false`. Direct renderer CUDA finite-difference maps
+  may be `planning_eligible` and `certification_handoff_eligible`, but remain
+  non-promotable until certified with official CUDA component-response
+  evidence. Fisher/proxy maps are planning-only and never certification handoff
+  eligible.
+- Promotion-grade component maps must pass a separate certification stage; do
+  not edit or strip diagnostic metadata from source maps. Use
+  `experiments/certify_component_sensitivity_maps.py` to copy eligible CUDA
+  direct finite-difference tensors into new `tac_score_sensitivity_map_v1`
+  files with `component_sensitivity_map_certification_v1` metadata. The
+  certification must cite source-map SHA, official response-curve SHA,
+  stability SHA, sample-plan SHA, baseline archive SHA/bytes, baseline
+  `contest_auth_eval.json` SHA, pre-response prediction-deltas SHA,
+  archive-byte perturbation-basis SHA, response gate metrics, stability gate
+  metrics, and at least three clean review passes. Fisher/proxy/debug/smoke/
+  random maps are never certifiable.
+- `experiments/build_component_sensitivity_manifest.py` promotion assembly
+  must reject raw diagnostic maps and clean-but-uncertified maps. A promotable
+  manifest may only reference certified maps plus official CUDA response curves
+  with all promotion gates passed.
+- Official component-response jobs that are given an external baseline
+  `contest_auth_eval.json` must compare the same-run eps=0 baseline to that
+  external JSON. External-baseline component drift is a runner/scorer
+  calibration failure and blocks promotion even if same-run zero reproduces
+  internally. Local component-response artifact validation and map
+  certification must reject or de-promote curves that omit or fail
+  `gate_results.external_baseline_repro` when an external baseline was
+  supplied.
 - Component sensitivity sample plans must identify absolute dataset pair IDs.
   If top-k pair weighting selects a subset, do not record subset-relative
   offsets in calibration/holdout records.
 - Fake, random, dummy, CPU, MPS, smoke, debug, proxy-only, or no-holdout
   sensitivity artifacts are non-promotable. They may guide debugging only.
+- Official component-response promotion plans must carry pre-response
+  prediction deltas from
+  `experiments/build_component_response_prediction_deltas.py` in
+  `official_component_response_prediction_deltas_v1` format. Ad hoc epsilon
+  maps, post-hoc observed-response deltas, copied scorer JSON, or any payload
+  containing response-curve/eval leakage are non-promotable and must fail
+  closed when `--require-predicted-deltas` is set.
+- `experiments/profile_component_sensitivity_official.py --require-passed`
+  must use a same-run eps=0 baseline. External baseline JSON may be retained
+  as archive custody only; it cannot satisfy zero-repro gates or absorb
+  runtime/scorer drift.
+- Promotable component-response curves must include explicit finite
+  `gate_results` with coverage, same-run zero repro, signal, prediction-error,
+  and promotion gates all exactly true, and no nested promotion blockers.
+  `experiments/build_component_sensitivity_manifest.py` must preserve those
+  gates and `src/tac/component_sensitivity_artifact.py` must reject missing or
+  false gates.
 - OWV3 Fisher profiling for promotion must include protected Conv2d weights
   with `--include-protected-conv2d`; protected Linear FiLM parameters remain
   excluded unless a new reviewed converter supports them.
@@ -464,6 +573,11 @@ deterministic.
 - Keep all warnings and low-severity DX issues on the hardening backlog.
 - MCP servers are disabled for this project unless explicitly re-enabled by the
   user; do not depend on MCP tools for routine work.
+- MCP is globally disabled for this operator environment as of 2026-05-01:
+  known MCP config files, plugin caches, tool-output caches, OAuth/state files,
+  and `.playwright-mcp` artifacts have been removed from the local tool homes.
+  Do not recreate, install, sync, or enable MCP server/plugin state in Claude,
+  Cursor, Gemini, LM Studio, Codex, or project-local config.
 - Repo-owned MCP config files must have empty `mcpServers` objects and no
   active `mcp_servers` TOML sections; preflight blocks accidental reactivation.
 - If MCP helper processes respawn from an outer app/runtime, kill only the exact
@@ -476,6 +590,12 @@ deterministic.
   `roblox_studio_mcp`, and `model.context`). Prefer this over broad process
   killing. If helpers keep respawning, continue killing exact matches and treat
   the supervisor as external noise unless the user explicitly re-enables MCP.
+- MCP cleanup/preflight must distinguish live helpers from audit commands that
+  merely mention MCP tokens. Keep regression coverage so `find`, `rg`, `grep`,
+  shell audit commands, and Python one-liners containing these strings are not
+  killed or reported as live MCP helpers, while direct binaries, `npm exec`,
+  `npx`/package launchers, shell-wrapped launches, and `python -m
+  model.context` remain blocked.
 - Lightning source manifests are part of promotion custody. Any manifest used
   to submit exact-eval or component-response jobs must fail closed on absolute
   paths, `..` traversal, duplicate entries, empty separators, backslashes,
@@ -486,6 +606,19 @@ deterministic.
   use a configured SSH alias or user-qualified target. Not bare ssh.lightning.ai —
   preflight `check_lightning_ssh_static_policy` is FATAL on regressions to the
   bare provider host (it is not acceptable for reproducible artifact custody).
+- Lightning SSH commands used by repo wrappers must set noninteractive auth,
+  a finite `ConnectTimeout`, client keepalives (`ServerAliveInterval` and
+  `ServerAliveCountMax`), `TCPKeepAlive=yes`, and bounded
+  `ConnectionAttempts`. Transient provider key-exchange resets such as
+  `kex_exchange_identification` or `Connection reset by peer` should be retried
+  only as transport failures; public-key auth failures, disabled host-key
+  checking, and supply-chain scan failures must still fail closed.
+- Modal component-sensitivity fallback work must use the dedicated lightweight
+  direct-FD shard launcher, keep the same deterministic shard topology as the
+  Lightning wave it backs up, and remain diagnostic/non-promotable until exact
+  CUDA archive custody and official response gates are satisfied. Do not use
+  broad Modal training mounts for this path when only the PFP16 archive,
+  source, and upstream scorer assets are needed.
 - J-NWC/NWCS promotion paths must use exact corpus-manifest custody. When a
   prebuilt corpus manifest or `CORPUS_SENSITIVITY_PT` is involved, remote
   scripts must receive the matching `PREBUILT_CORPUS_MANIFEST` and
