@@ -162,3 +162,90 @@ def test_argparse_smoke_default_true():
     assert a1.auth_eval_on_best is True
     a2 = parse_args(["--tag", "smoke", "--no-auth-eval-on-best"])
     assert a2.auth_eval_on_best is False
+
+
+def test_kl_distill_positive_weight_requires_explicit_segnet_aux_scope():
+    sys.path.insert(0, str(REPO / "src" / "tac" / "experiments"))
+    if "train_renderer" in sys.modules:
+        del sys.modules["train_renderer"]
+    from train_renderer import parse_args  # noqa: E402
+
+    with pytest.raises(SystemExit, match="kl_distill_scope='segnet_aux'"):
+        parse_args(["--tag", "smoke", "--kl-distill-weight", "0.1"])
+
+    args = parse_args([
+        "--tag", "smoke",
+        "--kl-distill-weight", "0.01",
+        "--kl-distill-scope", "segnet_aux",
+    ])
+    assert args.kl_distill_weight == 0.01
+    assert args.kl_distill_scope == "segnet_aux"
+
+
+def test_kl_distill_high_weight_requires_forensic_nonpromotion_opt_in():
+    sys.path.insert(0, str(REPO / "src" / "tac" / "experiments"))
+    if "train_renderer" in sys.modules:
+        del sys.modules["train_renderer"]
+    from train_renderer import parse_args  # noqa: E402
+
+    with pytest.raises(SystemExit, match="high-scale KL"):
+        parse_args([
+            "--tag", "smoke",
+            "--kl-distill-weight", "1.0",
+            "--kl-distill-scope", "segnet_aux",
+        ])
+
+    args = parse_args([
+        "--tag", "smoke",
+        "--kl-distill-weight", "1.0",
+        "--kl-distill-scope", "segnet_aux",
+        "--allow-high-kl-weight-forensic",
+    ])
+    assert args.kl_distill_weight == 1.0
+    assert args.promotion_eligible is False
+
+
+def test_kl_distill_profiles_declare_explicit_scope():
+    sys.path.insert(0, str(REPO / "src" / "tac" / "experiments"))
+    if "train_renderer" in sys.modules:
+        del sys.modules["train_renderer"]
+    from train_renderer import parse_args  # noqa: E402
+
+    args = parse_args([
+        "--profile",
+        "dilated_h64_half_frame_v3_annealed_kldistill",
+        "--tag",
+        "smoke",
+    ])
+    assert args.kl_distill_weight == 0.002
+    assert args.kl_distill_scope == "segnet_aux"
+    assert args.promotion_eligible is True
+
+    with pytest.raises(SystemExit, match="never permits primary/full-scorer KL"):
+        parse_args([
+            "--tag", "smoke",
+            "--kl-distill-weight", "0.1",
+            "--kl-distill-scope", "primary_scorer",
+        ])
+
+
+def test_train_renderer_kl_scope_preflight_passes_current_profiles():
+    from tac.preflight import check_train_renderer_kl_aux_explicit_scope
+
+    assert check_train_renderer_kl_aux_explicit_scope(strict=True, verbose=False) == []
+
+
+def test_train_renderer_kl_scope_preflight_rejects_promotable_high_weight_profile(monkeypatch):
+    import tac.profiles as profiles
+    from tac.preflight import PreflightError, check_train_renderer_kl_aux_explicit_scope
+
+    patched = dict(profiles.PROFILES)
+    patched["unsafe_high_weight_kl"] = {
+        "kl_distill_weight": 1.0,
+        "kl_distill_scope": "segnet_aux",
+        "promotion_eligible": True,
+    }
+    monkeypatch.setattr(profiles, "PROFILES", patched)
+
+    with pytest.raises(PreflightError, match="high-scale KL"):
+        check_train_renderer_kl_aux_explicit_scope(strict=True, verbose=False)

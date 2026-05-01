@@ -12,10 +12,12 @@ from pathlib import Path
 
 import pytest
 
+import tac.preflight as preflight_mod
 from tac.preflight import (
     MetaBugViolation,
     _scan_inflate_for_scorer_load,
     _scan_inflate_sh_for_centralized_brotli,
+    _scan_lightning_ssh_static_policy,
     _scan_python_for_disable_eval_roundtrip_flag,
     _scan_python_for_eval_roundtrip_false,
     _scan_python_for_mps_fallback,
@@ -25,6 +27,11 @@ from tac.preflight import (
     _scan_shell_for_pipefail_grep_q,
     _scan_shell_for_zip_binary,
     _scan_training_script_for_auth_eval,
+    check_no_active_mcp_server_config,
+    check_no_compromised_lightning_supply_chain,
+    check_no_live_mcp_processes,
+    check_lightning_exact_eval_runner_bootstraps_dali,
+    check_lightning_ssh_static_policy,
     check_inflate_sh_handles_br_centrally,
     check_no_disable_eval_roundtrip_flag,
     check_no_eval_roundtrip_false,
@@ -49,7 +56,465 @@ def _stub_repo(tmp_path: Path) -> Path:
     (tmp_path / "src" / "tac").mkdir(parents=True, exist_ok=True)
     (tmp_path / "experiments").mkdir(parents=True, exist_ok=True)
     (tmp_path / "scripts").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "tools").mkdir(parents=True, exist_ok=True)
     return tmp_path
+
+
+# ─── Check 0: Lightning PyPI compromise guard ───────────────────────────────
+
+
+class TestNoCompromisedLightningSupplyChain:
+    def test_bad_lightning_pin_is_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        _write(root / "requirements.txt", """
+            lightning==2.6.3
+        """)
+        with pytest.raises(MetaBugViolation, match="COMPROMISED LIGHTNING"):
+            check_no_compromised_lightning_supply_chain(
+                repo_root=root,
+                site_packages_roots=[],
+                strict=True,
+                verbose=False,
+            )
+
+    @pytest.mark.parametrize(
+        "spec",
+        [
+            "lightning==2.6.1",
+            "lightning>=2.6.2",
+            "lightning~=2.6",
+            "lightning<2.6.4",
+            "lightning[extra]==2.6.3",
+            "lightning @ https://files.pythonhosted.org/packages/x/lightning-2.6.3-py3-none-any.whl",
+        ],
+    )
+    def test_any_pypi_lightning_dependency_is_caught(self, tmp_path: Path, spec: str) -> None:
+        root = _stub_repo(tmp_path)
+        _write(root / "requirements.txt", spec + "\n")
+        with pytest.raises(MetaBugViolation):
+            check_no_compromised_lightning_supply_chain(
+                repo_root=root,
+                site_packages_roots=[],
+                strict=True,
+                verbose=False,
+            )
+
+    def test_uv_lock_split_name_version_is_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        _write(root / "uv.lock", """
+            [[package]]
+            name = "lightning"
+            version = "2.6.3"
+        """)
+        with pytest.raises(MetaBugViolation):
+            check_no_compromised_lightning_supply_chain(
+                repo_root=root,
+                site_packages_roots=[],
+                strict=True,
+                verbose=False,
+            )
+
+    def test_waiver_text_cannot_suppress_known_bad_pin(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        _write(root / "requirements.txt", """
+            lightning==2.6.3  # lightning-pypi-ok: this must not waive malware
+        """)
+        with pytest.raises(MetaBugViolation):
+            check_no_compromised_lightning_supply_chain(
+                repo_root=root,
+                site_packages_roots=[],
+                strict=True,
+                verbose=False,
+            )
+
+    def test_bare_lightning_install_is_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        _write(root / "scripts" / "install_lightning.sh", """
+            #!/usr/bin/env bash
+            uv pip install lightning
+        """)
+        with pytest.raises(MetaBugViolation):
+            check_no_compromised_lightning_supply_chain(
+                repo_root=root,
+                site_packages_roots=[],
+                strict=True,
+                verbose=False,
+            )
+
+    def test_lightning_sdk_install_passes(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        _write(root / "scripts" / "install_lightning_sdk.sh", """
+            #!/usr/bin/env bash
+            uv pip install lightning-sdk
+        """)
+        v = check_no_compromised_lightning_supply_chain(
+            repo_root=root,
+            site_packages_roots=[],
+            strict=True,
+            verbose=False,
+        )
+        assert v == []
+
+    def test_lightning_version_probe_is_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        _write(root / "scripts" / "probe_lightning.py", """
+            import subprocess
+            subprocess.run(["lightning", "--version"], check=True)
+        """)
+        with pytest.raises(MetaBugViolation):
+            check_no_compromised_lightning_supply_chain(
+                repo_root=root,
+                site_packages_roots=[],
+                strict=True,
+                verbose=False,
+            )
+
+    @pytest.mark.parametrize(
+        "command",
+        [
+            ".venv/bin/lightning connect studio --name demo",
+            "LIGHTNING=.venv/bin/lightning",
+            "$LIGHTNING cp lit://workspace/out out",
+            "lightning list studios",
+        ],
+    )
+    def test_lightning_console_script_is_caught_in_tools(self, tmp_path: Path, command: str) -> None:
+        root = _stub_repo(tmp_path)
+        _write(root / "tools" / "stale_lightning_cli.sh", f"""
+            #!/usr/bin/env bash
+            {command}
+        """)
+        with pytest.raises(MetaBugViolation):
+            check_no_compromised_lightning_supply_chain(
+                repo_root=root,
+                site_packages_roots=[],
+                strict=True,
+                verbose=False,
+            )
+
+    def test_installed_bad_dist_info_is_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        site = tmp_path / "site-packages"
+        dist = site / "lightning-2.6.2.dist-info"
+        _write(dist / "METADATA", """
+            Name: lightning
+            Version: 2.6.2
+        """)
+        with pytest.raises(MetaBugViolation):
+            check_no_compromised_lightning_supply_chain(
+                repo_root=root,
+                site_packages_roots=[site],
+                strict=True,
+                verbose=False,
+            )
+
+    def test_installed_clean_bare_lightning_dist_info_is_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        site = tmp_path / "site-packages"
+        dist = site / "lightning-2.6.4.dist-info"
+        _write(dist / "METADATA", """
+            Name: lightning
+            Version: 2.6.4
+        """)
+        with pytest.raises(MetaBugViolation):
+            check_no_compromised_lightning_supply_chain(
+                repo_root=root,
+                site_packages_roots=[site],
+                strict=True,
+                verbose=False,
+            )
+
+    def test_installed_bad_lightning_init_hash_is_caught(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = _stub_repo(tmp_path)
+        site = tmp_path / "site-packages"
+        bad_init = site / "lightning" / "__init__.py"
+        _write(bad_init, "# malicious import-time trigger\n")
+        original_sha256_file = preflight_mod._sha256_file
+
+        def fake_sha256(path: Path) -> str | None:
+            if path == bad_init:
+                return "2d4e21d2e78d0868ce7894487e67c67f929d8d81d78c5b07a3ad225b13eae890"
+            return original_sha256_file(path)
+
+        monkeypatch.setattr(preflight_mod, "_sha256_file", fake_sha256)
+
+        with pytest.raises(MetaBugViolation, match="malicious lightning/__init__"):
+            check_no_compromised_lightning_supply_chain(
+                repo_root=root,
+                site_packages_roots=[site],
+                strict=True,
+                verbose=False,
+            )
+
+    def test_cached_bad_lightning_wheel_is_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        cache = tmp_path / "pip-cache"
+        _write(cache / "wheels" / "lightning-2.6.3-py3-none-any.whl", "placeholder\n")
+
+        with pytest.raises(MetaBugViolation, match="cached Lightning 2.6.2/2.6.3"):
+            check_no_compromised_lightning_supply_chain(
+                repo_root=root,
+                site_packages_roots=[],
+                package_cache_roots=[cache],
+                strict=True,
+                verbose=False,
+            )
+
+    def test_reported_lightning_iocs_are_registered(self) -> None:
+        assert "d2815d425ae08cc627f1db69009442165f8bbc64b7e9157e2ff9d7aab02094d4" in (
+            preflight_mod._MINI_SHAI_HULUD_IOC_SHA256
+        )
+        assert "2d4e21d2e78d0868ce7894487e67c67f929d8d81d78c5b07a3ad225b13eae890" in (
+            preflight_mod._MINI_SHAI_HULUD_IOC_SHA256
+        )
+        assert "3071422c3294e7b61cb490c57c48c8dea569bacf12e57a078293b6547d7586d3" in (
+            preflight_mod._MINI_SHAI_HULUD_IOC_SHA256
+        )
+        assert "56070a9d8de0c0ffb1ec5c309953cf4679432df5a78df9aeb020fbb73d2be9fb" in (
+            preflight_mod._MINI_SHAI_HULUD_IOC_SHA256
+        )
+
+    @pytest.mark.parametrize(
+        "rel_path",
+        [
+            ".claude/router_runtime.js",
+            ".claude/settings.json",
+            ".vscode/tasks.json",
+        ],
+    )
+    def test_planted_repo_ioc_path_is_caught(self, tmp_path: Path, rel_path: str) -> None:
+        root = _stub_repo(tmp_path)
+        _write(root / rel_path, """
+            // planted by a compromised dependency
+        """)
+        with pytest.raises(MetaBugViolation):
+            check_no_compromised_lightning_supply_chain(
+                repo_root=root,
+                site_packages_roots=[],
+                strict=True,
+                verbose=False,
+            )
+
+    def test_cloud_deploy_never_executes_lightning_cli_for_version_probe(self) -> None:
+        source = (Path(__file__).parents[3] / "src" / "tac" / "deploy" / "cloud_deploy.py").read_text()
+        assert 'subprocess.run(["lightning", "--version"]' not in source
+        assert "importlib.metadata.version(\"lightning-sdk\")" in source
+
+
+class TestLightningExactEvalDaliBootstrap:
+    def test_exact_eval_dali_bootstrap_preflight_passes_current_runner(self) -> None:
+        assert check_lightning_exact_eval_runner_bootstraps_dali(
+            strict=True,
+            verbose=False,
+        ) == []
+
+    def test_exact_eval_validator_rejects_missing_dali_preflight(self) -> None:
+        from tac.deploy.lightning.batch_jobs import LightningAdjudicationSpec, LightningBatchJobSpec
+
+        spec = LightningBatchJobSpec(
+            name="bad",
+            machine="T4",
+            command=(
+                "scripts/scan_lightning_supply_chain.py && "
+                "python experiments/contest_auth_eval.py --device cuda && "
+                "echo LIGHTNING_RUNNER_CUDA_PREFLIGHT_OK && "
+                "cp contest_auth_eval.json ."
+            ),
+            role="exact_cuda_eval",
+            expected_archive_sha256="a" * 64,
+            expected_archive_size_bytes=123,
+            adjudication=LightningAdjudicationSpec(
+                baseline_score=1.2,
+                predicted_band_low=1.0,
+                predicted_band_high=1.4,
+                regression_threshold=1.6,
+            ),
+        )
+        with pytest.raises(ValueError, match="DALI runner preflight"):
+            spec.validate()
+
+
+# ─── Check 0c: Lightning SSH static policy guard ────────────────────────────
+
+
+class TestLightningSshStaticPolicy:
+    def test_lightning_script_disabling_host_key_checking_is_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        script = root / "scripts" / "lightning_bad.sh"
+        _write(script, """
+            #!/usr/bin/env bash
+            set -euo pipefail
+            ssh -o StrictHostKeyChecking=no lightning-pact true
+        """)
+
+        violations = _scan_lightning_ssh_static_policy(script, root)
+
+        assert any("StrictHostKeyChecking" in item for item in violations)
+
+    def test_lightning_script_null_known_hosts_is_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        script = root / "tools" / "lightning_bad.sh"
+        _write(script, """
+            #!/usr/bin/env bash
+            set -euo pipefail
+            scp -o UserKnownHostsFile=/dev/null artifact lightning-pact:/tmp/
+        """)
+
+        violations = check_lightning_ssh_static_policy(root, strict=False, verbose=False)
+
+        assert any("known_hosts" in item for item in violations)
+
+    def test_lightning_runbook_bare_provider_target_is_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        _write(root / "docs" / "runbooks" / "lightning_bad.md", """
+            ```bash
+            export LIGHTNING_SSH_TARGET=ssh.lightning.ai
+            ssh ssh.lightning.ai true
+            ```
+        """)
+
+        with pytest.raises(MetaBugViolation, match="LIGHTNING SSH STATIC POLICY"):
+            check_lightning_ssh_static_policy(root, strict=True, verbose=False)
+
+    def test_lightning_ssh_alias_config_doc_passes(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        _write(root / "docs" / "runbooks" / "lightning_good.md", """
+            ```sshconfig
+            Host lightning-pact
+              HostName ssh.lightning.ai
+              User <studio-ssh-user>
+              IdentityFile ~/.ssh/lightning_pact
+              IdentitiesOnly yes
+              BatchMode yes
+              StrictHostKeyChecking accept-new
+            ```
+        """)
+
+        assert check_lightning_ssh_static_policy(root, strict=True, verbose=False) == []
+
+    def test_vast_scripts_are_out_of_scope_for_lightning_ssh_policy(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        _write(root / "scripts" / "launch_lane_on_vastai.sh", """
+            #!/usr/bin/env bash
+            set -euo pipefail
+            ssh -o StrictHostKeyChecking=no root@ssh5.vast.ai true
+        """)
+
+        assert check_lightning_ssh_static_policy(root, strict=True, verbose=False) == []
+
+
+# ─── Check 0b: MCP server config remains disabled ───────────────────────────
+
+
+class TestNoActiveMcpServerConfig:
+    def test_empty_json_mcp_servers_passes(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        _write(root / ".claude" / "mcp.json", """
+            {"mcpServers": {}}
+        """)
+        assert check_no_active_mcp_server_config(
+            repo_root=root,
+            strict=True,
+            verbose=False,
+        ) == []
+
+    def test_active_json_mcp_servers_are_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        _write(root / ".claude" / "mcp.json", """
+            {
+              "mcpServers": {
+                "chrome": {"command": "chrome-devtools-mcp"}
+              }
+            }
+        """)
+        with pytest.raises(MetaBugViolation, match="ACTIVE MCP"):
+            check_no_active_mcp_server_config(
+                repo_root=root,
+                strict=True,
+                verbose=False,
+            )
+
+    def test_codex_toml_mcp_server_section_is_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        _write(root / ".codex" / "config.toml", """
+            [mcp_servers.roblox]
+            command = "rbx-studio-mcp"
+        """)
+        with pytest.raises(MetaBugViolation, match="ACTIVE MCP"):
+            check_no_active_mcp_server_config(
+                repo_root=root,
+                strict=True,
+                verbose=False,
+            )
+
+    def test_json_helper_token_outside_mcp_servers_is_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        _write(root / ".cursor" / "settings.json", """
+            {
+              "mcpServers": {},
+              "terminal.integrated.env.osx": {
+                "MCP_COMMAND": "chrome-devtools-mcp"
+              }
+            }
+        """)
+        with pytest.raises(MetaBugViolation, match="ACTIVE MCP"):
+            check_no_active_mcp_server_config(
+                repo_root=root,
+                strict=True,
+                verbose=False,
+            )
+
+    def test_repo_vscode_mcp_config_is_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        _write(root / ".vscode" / "mcp.json", """
+            {
+              "mcpServers": {
+                "roblox": {"command": "rbx-studio-mcp"}
+              }
+            }
+        """)
+        with pytest.raises(MetaBugViolation, match="ACTIVE MCP"):
+            check_no_active_mcp_server_config(
+                repo_root=root,
+                strict=True,
+                verbose=False,
+            )
+
+    def test_live_repo_has_no_repo_owned_mcp_config(self) -> None:
+        assert check_no_active_mcp_server_config(strict=False, verbose=False) == []
+
+
+class TestNoLiveMcpProcesses:
+    def test_live_helper_process_is_caught(self) -> None:
+        rows = [
+            "101 /Users/adpena/.cargo/bin/rbx-studio-mcp --stdio",
+            "102 npm exec chrome-devtools-mcp@latest --channel stable",
+            "103 /bin/zsh -c 'npx chrome-devtools-mcp@latest --channel stable'",
+            "104 python -m model.context --stdio",
+        ]
+        with pytest.raises(MetaBugViolation, match="LIVE MCP"):
+            check_no_live_mcp_processes(
+                process_rows=rows,
+                strict=True,
+                verbose=False,
+            )
+
+    def test_unrelated_processes_pass(self) -> None:
+        rows = [
+            "201 /usr/libexec/colorsyncd",
+            "202 /bin/zsh -c ps -axo pid=,command=",
+            "203 find /Users/adpena -iname *mcp* -o -iname *model.context*",
+            "204 /bin/zsh -c find /Users/adpena -iname '*chrome-devtools-mcp*'",
+            "205 rg -n chrome-devtools-mcp AGENTS.md scripts",
+            "206 python -c 'print(\"model.context\")'",
+        ]
+        assert check_no_live_mcp_processes(
+            process_rows=rows,
+            strict=True,
+            verbose=False,
+        ) == []
 
 
 # ─── Check 1: MPS-fallback device default ────────────────────────────────────
@@ -1478,6 +1943,7 @@ class TestPreflightAllInvokesMetaBugChecks:
             "check_eval_roundtrip_gate_called_after_output_dir_resolution",
             "check_nvdec_probe_has_error_classification",
             "check_archive_builders_use_deterministic_zip",
+            "check_lightning_exact_eval_runner_bootstraps_dali",
         ]
         missing = [c for c in required_checks if c not in src]
         assert missing == [], (
@@ -1523,6 +1989,7 @@ class TestPreflightAllInvokesMetaBugChecks:
             "check_eval_roundtrip_gate_called_after_output_dir_resolution",
             "check_nvdec_probe_has_error_classification",
             "check_archive_builders_use_deterministic_zip",
+            "check_lightning_exact_eval_runner_bootstraps_dali",
         ]
         for chk in meta_checks:
             # Find the line invoking this check and confirm strict=True.

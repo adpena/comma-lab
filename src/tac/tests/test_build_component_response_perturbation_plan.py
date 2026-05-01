@@ -78,6 +78,8 @@ def _prediction_artifact(
                 },
                 "prediction_model": {
                     "model": "unit_test_projection",
+                    "prediction_delta_semantics": "signed_component_delta",
+                    "prediction_error_mode": "signed_delta",
                     "uses_official_response_observations": False,
                 },
                 "epsilon_ladder": [-1.0, 0.0, 1.0],
@@ -152,6 +154,8 @@ def test_builds_deterministic_official_plan_and_archive_variants(tmp_path: Path)
     assert plan["format"] == "official_component_response_plan_v1"
     assert plan["perturbation"]["format"] == "perturbation_basis_v1"
     assert plan["perturbation"]["auth_eval_required"] == "cuda"
+    assert plan["perturbation"]["prediction_model"]["model"] == "unit_test_projection"
+    assert plan["perturbation"]["prediction_model"]["prediction_error_mode"] == "signed_delta"
     assert [point["epsilon"] for point in plan["points"]] == [-1.0, 0.0, 1.0]
 
     by_eps = {point["epsilon"]: point for point in plan["points"]}
@@ -401,6 +405,11 @@ def test_prediction_delta_builder_projects_component_maps(tmp_path: Path) -> Non
     by_eps = {point["epsilon"]: point for point in payload["points"]}
     assert payload["format"] == "official_component_response_prediction_deltas_v1"
     assert payload["prediction_model"]["uses_official_response_observations"] is False
+    assert payload["prediction_model"]["prediction_error_mode"] == "absolute_magnitude"
+    assert (
+        payload["prediction_model"]["prediction_delta_semantics"]
+        == "nonnegative_component_delta_magnitude"
+    )
     assert by_eps[1.0]["predicted_delta"]["posenet"] == pytest.approx(0.04)
     assert by_eps[-1.0]["predicted_delta"]["segnet"] == pytest.approx(0.08)
     assert by_eps[0.0]["predicted_delta"]["combined"] == 0.0

@@ -339,6 +339,24 @@ def test_sensitivity_length_mismatch_raises():
         encode_with_variable_codebook(codec, weights, torch.zeros(5))
 
 
+def test_encode_rejects_negative_or_nonfinite_sensitivity():
+    cfg = SensitivityAwareCodecConfig(
+        block_size=8, latent_dim=8, hidden=32, codebook_sizes=[4, 16, 64, 256]
+    )
+    codec = SensitivityAwareWeightCodec(cfg)
+    weights = torch.randn(4, 4)  # 16 elements / 8 = 2 blocks
+
+    with pytest.raises(ValueError, match="non-negative"):
+        encode_with_variable_codebook(codec, weights, torch.tensor([0.1, -0.2]))
+
+    with pytest.raises(ValueError, match="NaN/Inf"):
+        encode_with_variable_codebook(
+            codec,
+            weights,
+            torch.tensor([0.1, float("nan")]),
+        )
+
+
 def test_decode_codebook_size_mismatch_raises():
     cfg = SensitivityAwareCodecConfig(
         block_size=8, latent_dim=8, hidden=32, codebook_sizes=[4, 16, 64, 256]
@@ -354,3 +372,33 @@ def test_decode_codebook_size_mismatch_raises():
     # State_dict shapes will mismatch, so just construct fresh codec.
     with pytest.raises(ValueError, match="codec bucket sizes mismatch"):
         decode_with_per_block_codebook(codec2, blob)
+
+
+def test_decode_rejects_trailing_bytes():
+    cfg = SensitivityAwareCodecConfig(
+        block_size=8, latent_dim=8, hidden=32, codebook_sizes=[4, 16, 64, 256]
+    )
+    codec = SensitivityAwareWeightCodec(cfg)
+    weights = torch.randn(4, 4)
+    sens = torch.tensor([0.1, 0.9])
+    blob = encode_with_variable_codebook(codec, weights, sens)
+
+    with pytest.raises(ValueError, match="trailing bytes"):
+        decode_with_per_block_codebook(codec, blob + b"junk")
+
+
+def test_decode_rejects_invalid_bucket_id():
+    cfg = SensitivityAwareCodecConfig(
+        block_size=8, latent_dim=8, hidden=32, codebook_sizes=[4, 16, 64, 256]
+    )
+    codec = SensitivityAwareWeightCodec(cfg)
+    weights = torch.randn(4, 4)
+    sens = torch.tensor([0.1, 0.9])
+    blob = bytearray(encode_with_variable_codebook(codec, weights, sens))
+
+    ndim = struct.unpack_from("<I", blob, 0)[0]
+    bucket_id_offset = 4 + (4 * ndim) + 4 + 1 + (2 * len(cfg.codebook_sizes))
+    blob[bucket_id_offset] = len(cfg.codebook_sizes)
+
+    with pytest.raises(ValueError, match="bucket id outside"):
+        decode_with_per_block_codebook(codec, bytes(blob))

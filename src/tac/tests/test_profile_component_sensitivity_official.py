@@ -238,6 +238,90 @@ def test_produces_passed_official_response_curves_from_existing_eval_json(tmp_pa
         assert curve["epsilon_ladder"] == [-0.001, 0.0, 0.001]
 
 
+def test_nonnegative_magnitude_predictions_compare_against_abs_response_delta(
+    tmp_path: Path,
+) -> None:
+    module = _load_module()
+    paths = _write_basic_inputs(tmp_path)
+    _write_eval_json(paths["neg_json"], archive=paths["neg"], pose=0.039, seg=0.009)
+    plan = tmp_path / "plan.json"
+    plan.write_text(
+        json.dumps(
+            {
+                "format": "official_component_response_plan_v1",
+                "perturbation": {
+                    "prediction_model": {
+                        "prediction_delta_semantics": "nonnegative_component_delta_magnitude",
+                        "prediction_error_mode": "absolute_magnitude",
+                    },
+                },
+                "points": [
+                    {
+                        "epsilon": -0.001,
+                        "archive": str(paths["neg"]),
+                        "contest_auth_eval_json": str(paths["neg_json"]),
+                        "predicted_delta": {
+                            "posenet": 0.001,
+                            "segnet": 0.001,
+                            "combined": abs(
+                                _combined_delta(
+                                    baseline_pose=0.04,
+                                    baseline_seg=0.01,
+                                    pose=0.039,
+                                    seg=0.009,
+                                )
+                            ),
+                        },
+                    },
+                    {
+                        "epsilon": 0.001,
+                        "archive": str(paths["pos"]),
+                        "contest_auth_eval_json": str(paths["pos_json"]),
+                        "predicted_delta": {
+                            "posenet": 0.003,
+                            "segnet": 0.003,
+                            "combined": _combined_delta(
+                                baseline_pose=0.04,
+                                baseline_seg=0.01,
+                                pose=0.043,
+                                seg=0.013,
+                            ),
+                        },
+                    },
+                ],
+            }
+        )
+        + "\n"
+    )
+
+    summary = module.produce_official_component_response_curves(
+        baseline_archive=paths["baseline"],
+        baseline_contest_auth_eval_json=paths["baseline_json"],
+        perturbation_plan=plan,
+        output_dir=tmp_path / "out",
+        contest_auth_eval_script=paths["contest_script"],
+        inflate_sh=paths["inflate"],
+        upstream_dir=paths["upstream"],
+        video_names_file=paths["video_names"],
+        device="cuda",
+        inflate_timeout=1,
+        evaluate_timeout=1,
+        max_relative_error=1e-12,
+        zero_repro_tolerance=1e-12,
+        min_observed_delta=1e-12,
+        allow_directional=False,
+    )
+
+    assert summary["promotion_eligible"] is True
+    curve = json.loads(Path(summary["response_curve_paths"]["posenet"]).read_text())
+    neg_point = next(point for point in curve["points"] if point["epsilon"] == -0.001)
+    assert neg_point["delta"] == pytest.approx(-0.001)
+    assert neg_point["prediction"]["prediction_error_mode"] == "absolute_magnitude"
+    assert neg_point["prediction"]["observed_delta_for_error"] == pytest.approx(0.001)
+    assert neg_point["prediction"]["relative_error"] == pytest.approx(0.0)
+    assert curve["holdout_error_kind"].endswith("_abs_magnitude")
+
+
 def test_explicit_baseline_eval_json_overrides_stale_plan_metadata(tmp_path: Path) -> None:
     module = _load_module()
     paths = _write_basic_inputs(tmp_path)

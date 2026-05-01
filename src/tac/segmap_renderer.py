@@ -330,6 +330,19 @@ class SegMapTrainer:
                 "is 2-11x on PoseNet (CLAUDE.md non-negotiable; "
                 "feedback_proxy_auth_math_useless)."
             )
+        if config.loss_mode == "kl_distill":
+            scope = getattr(config, "kl_distill_scope", "none")
+            if scope != "segnet_aux":
+                raise PreflightError(
+                    "SegMapTrainer implements only kl_distill_scope='segnet_aux' "
+                    "as a SegNet-only auxiliary on top of the standard scorer "
+                    "loss. Got kl_distill_scope="
+                    f"{scope!r}. The legacy primary_scorer KL path is "
+                    "forensic-only and must not be routed through SegMapTrainer."
+                )
+        self.distillation_policy = config.distillation_policy()
+        self.distillation_policy_provenance = self.distillation_policy.to_provenance()
+        self.distillation_policy_sha256 = config.distillation_policy_sha256()
         device_str = str(device)
         if device_str.startswith("mps"):
             raise PreflightError(
@@ -662,7 +675,13 @@ class SegMapTrainer:
                     gt_hwc = gt_btchw.permute(0, 1, 3, 4, 2).contiguous()
                     kl_loss, kl_value = kl_distill_segnet_only(
                         rt_hwc, gt_hwc, self.segnet,
-                        temperature=self.config.temperature_start,
+                        temperature=float(
+                            getattr(
+                                self.config,
+                                "kl_distill_temperature",
+                                self.config.temperature_start,
+                            )
+                        ),
                     )
                     # Round 7 Defect #2 fix: read the weight from
                     # config (Lane G v3 default 0.002), not hard-code.

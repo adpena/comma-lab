@@ -7,7 +7,9 @@ renderer while proving what is already wired and what still blocks promotion.
 from __future__ import annotations
 
 import ast
+import hashlib
 import importlib.util
+import json
 import subprocess
 import sys
 import types
@@ -15,6 +17,7 @@ import zipfile
 from pathlib import Path
 
 import numpy as np
+import pytest
 import torch
 
 from tac.nerv_mask_codec import NeRVMaskCodec, encode_nerv_codec
@@ -156,6 +159,134 @@ def test_train_nerv_mask_segnet_source_uses_preprocess_input(
     assert set(masks.unique().tolist()) == {2}
 
 
+def test_train_nerv_mask_decoded_baseline_zip_source_records_custody(
+    monkeypatch, tmp_path: Path
+) -> None:
+    """Alpha-Geo-1 target mode decodes baseline archive masks, not SegNet."""
+    train_mod = _load_train_nerv_mask_module()
+    import tac.mask_codec as mask_codec
+
+    expected = torch.zeros(2, 4, 5, dtype=torch.long)
+    expected[1, :, 2:] = 3
+    payload = b"baseline-mask-video"
+    archive = tmp_path / "baseline.zip"
+    with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("renderer.bin", b"renderer")
+        zf.writestr("masks.mkv", payload)
+
+    seen: dict[str, object] = {}
+
+    def fake_decode_masks(path: Path, expected_frames: int | None = None) -> torch.Tensor:
+        seen["path_name"] = Path(path).name
+        seen["expected_frames"] = expected_frames
+        seen["payload"] = Path(path).read_bytes()
+        return expected
+
+    monkeypatch.setattr(mask_codec, "decode_masks", fake_decode_masks)
+
+    masks, metadata = train_mod._load_decoded_baseline_masks(
+        archive,
+        archive_member=None,
+        expected_frames=2,
+    )
+
+    assert torch.equal(masks, expected)
+    assert seen == {
+        "path_name": "masks.mkv",
+        "expected_frames": 2,
+        "payload": payload,
+    }
+    assert metadata["archive_member_resolved"] == "masks.mkv"
+    assert metadata["archive_member_sha256"] == hashlib.sha256(payload).hexdigest()
+    assert metadata["decoded_mask_sha256"] == train_mod._mask_tensor_sha256(expected)
+    assert metadata["decoded_mask_shape"] == [2, 4, 5]
+
+
+def test_train_nerv_mask_decoded_baseline_shape_gate_is_fail_closed() -> None:
+    train_mod = _load_train_nerv_mask_module()
+
+    with pytest.raises(ValueError, match="decoded-baseline masks must match"):
+        train_mod._validate_decoded_baseline_target_shape(
+            torch.zeros(1, 4, 5, dtype=torch.long),
+            expected_frames=2,
+            expected_height=4,
+            expected_width=5,
+        )
+
+
+def test_train_nerv_mask_decoded_baseline_cli_smoke_records_non_promotable_provenance(
+    tmp_path: Path,
+) -> None:
+    """CPU smoke covers Alpha-Geo-1 decoded-baseline custody without score claims."""
+    train_mod = _load_train_nerv_mask_module()
+    baseline = torch.zeros(2, 4, 5, dtype=torch.long)
+    baseline[1, :, 2:] = 3
+    baseline_path = tmp_path / "baseline_masks.pt"
+    output_dir = tmp_path / "nerv_smoke"
+    torch.save(baseline, baseline_path)
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / "experiments" / "train_nerv_mask.py"),
+            "--profile",
+            "nerv_mask_lane_g_v3",
+            "--device",
+            "cpu",
+            "--gt-masks-source",
+            "decoded-baseline",
+            "--decoded-baseline-path",
+            str(baseline_path),
+            "--output-dir",
+            str(output_dir),
+            "--num-frames",
+            "2",
+            "--mask-height",
+            "4",
+            "--mask-width",
+            "5",
+            "--steps",
+            "1",
+            "--eval-every",
+            "1",
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    assert "RESULT_JSON" in proc.stdout
+    assert (output_dir / "masks.nrv").is_file()
+    provenance = json.loads((output_dir / "provenance.json").read_text())
+    target_metadata = provenance["target_mask_metadata"]
+    expected_mask_sha = train_mod._mask_tensor_sha256(baseline)
+
+    assert provenance["trainer_artifact_evidence_grade"] == "empirical"
+    assert provenance["trainer_score_claim_eligible"] is False
+    assert provenance["trainer_smoke_run"] is True
+    assert "contest_auth_eval.py --device cuda" in provenance["trainer_score_claim_source_required"]
+    assert any(
+        "training device is cpu" in reason
+        for reason in provenance["trainer_non_promotable_reasons"]
+    )
+    assert any(
+        "not the full contest scorer geometry" in reason
+        for reason in provenance["trainer_non_promotable_reasons"]
+    )
+    assert any(
+        "steps=1 differs" in reason
+        for reason in provenance["trainer_non_promotable_reasons"]
+    )
+    assert provenance["gt_masks_source"] == "decoded-baseline"
+    assert provenance["requested_mask_shape"] == [2, 4, 5]
+    assert provenance["target_mask_shape"] == [2, 4, 5]
+    assert provenance["target_mask_sha256"] == expected_mask_sha
+    assert target_metadata["source"] == "decoded-baseline"
+    assert target_metadata["path"] == str(baseline_path)
+    assert target_metadata["decoded_mask_sha256"] == expected_mask_sha
+
+
 def test_canonical_archive_validation_accepts_masks_nrv(tmp_path: Path) -> None:
     """Canonical manifest detection now recognizes Lane 12 masks.nrv."""
     archive = tmp_path / "archive.zip"
@@ -205,21 +336,54 @@ def test_build_submission_archive_supports_masks_nrv_manifest(tmp_path: Path) ->
         assert zf.getinfo("masks.nrv").date_time == (1980, 1, 1, 0, 0, 0)
 
 
-def test_remote_lane_nerv_runs_exact_cuda_archive_eval() -> None:
-    """Remote Lane 12 uses archive.zip -> inflate.sh -> upstream/evaluate.py."""
+def test_remote_lane_nerv_defaults_to_alpha_geo_build_only_guardrail() -> None:
+    """Remote Lane 12 defaults to canonical decoded-baseline build-only mode."""
     script = (REPO_ROOT / "scripts" / "remote_lane_nerv.sh").read_text()
 
     assert '"$PYBIN" -m pip install -e .' in script
+    assert 'LANE_G_V3_BASE_ARCHIVE_REL="${LANE_G_V3_BASE_ARCHIVE_REL:-experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip}"' in script
+    assert 'BASE_ARCHIVE="${BASE_ARCHIVE:-$LANE_G_V3_BASE_ARCHIVE}"' in script
+    assert 'GT_MASKS_SOURCE="${GT_MASKS_SOURCE:-decoded-baseline}"' in script
+    assert 'RUN_AUTH_EVAL="${RUN_AUTH_EVAL:-0}"' in script
+    assert "command -v nvidia-smi" in script
+    assert 'GPU_NAME="nvidia-smi unavailable"' in script
+    assert 'L2_CLEARANCE_PATH="${L2_CLEARANCE_PATH:-$WORKSPACE/.omx/state/lane12_nerv_l2_clearance.json}"' in script
+    assert "No new NeRV retraining is allowed until this packet is valid" in script
+    assert "cleared_for_retraining_unblock must be true" in script
+    assert "grand_council_clean_passes must be an integer >= 3" in script
+    assert "retired jsonfix40 target path" in script
+    assert "requires POSE_REGEN_PROVENANCE" in script
+    assert "ALLOW_STALE_POSE_AUTH_EVAL" not in script
+    assert "requires ALPHA_GEO_PROVENANCE" in script
+    assert "Alpha-Geo geometry gate did not pass" in script
+    assert "no CUDA auth eval by guardrail" in script
+    assert "duplicate BASE_ARCHIVE member" in script
+    assert "unsafe BASE_ARCHIVE member path" in script
+    assert "hidden/system BASE_ARCHIVE member" in script
+    assert "unexpected BASE_ARCHIVE member" in script
+    assert "validate_archive(dst, manifest=detect_pose_manifest(dst), strict=True)" in script
     assert "experiments/contest_auth_eval.py" in script
     assert "scripts/adjudicate_contest_auth_eval.py" in script
+    assert 'if [ "$GT_MASKS_SOURCE" = "decoded-baseline" ]; then' in script
+    assert '--decoded-baseline-path "$DECODED_BASELINE_PATH"' in script
+    assert '--decoded-baseline-member "$DECODED_BASELINE_MEMBER"' in script
+
+
+def test_remote_lane_nerv_retains_gated_exact_cuda_archive_eval() -> None:
+    """Exact eval path remains canonical but is not the default dispatch mode."""
+    script = (REPO_ROOT / "scripts" / "remote_lane_nerv.sh").read_text()
+
+    assert 'if [ "$RUN_AUTH_EVAL" != "1" ]; then' in script
     assert '--archive "$ARCHIVE"' in script
     assert "--inflate-sh submissions/robust_current/inflate.sh" in script
-    assert '--device "${AUTH_EVAL_DEVICE:-cuda}"' in script
+    assert "--device cuda" in script
+    assert "AUTH_EVAL_DEVICE" not in script
     assert "--keep-work-dir" in script
     assert '--work-dir "$EVAL_WORK_DIR"' in script
     assert 'CONTEST_JSON="$EVAL_WORK_DIR/contest_auth_eval.json"' in script
     assert '--contest-json "$CONTEST_JSON"' in script
     assert '--result-copy "$RESULT_JSON"' in script
     assert 'score_delta_vs_lane_g_v3' in script
+    assert "--max-sane-score 100.0" in script
     assert "refusing log JSON scrape" in script
     assert "auth_eval_renderer.py" not in script

@@ -331,32 +331,40 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                         "and 70%%, half-frame for last 30%%. Overrides the "
                         "static --mask-half-sim-prob value when supplied.")
 
-    # KL distillation: Quantizr's secret sauce per CLAUDE.md. Adds Hinton-style
-    # KL divergence on SegNet soft distributions ALONGSIDE the standard scorer
-    # loss (NOT replacing it — that caused PoseNet collapse historically).
-    # T=2.0 with weight ~1.0 is the proven recipe.
-    # default=None so the profile resolver can override (Quantizr council
-    # CRITICAL 2026-04-26): with default=0.0 the profile value was DEAD,
-    # KL distill never fired in any production training run.
+    # KL-like distillation is explicit-scope only. Historical primary/full-
+    # scorer KL collapsed PoseNet; train_renderer only permits the SegNet
+    # auxiliary path, and only when --kl-distill-scope=segnet_aux is present
+    # through CLI/profile. Positive weights without scope fail closed.
     p.add_argument("--kl-distill-weight", type=float, default=None,
                    help="Auxiliary KL distill loss weight (default: from profile, "
-                        "else 0.0 = off). Quantizr uses 1.0 with T=2.0 — Phase 2 only.")
+                        "else 0.0 = off). Requires --kl-distill-scope=segnet_aux "
+                        "when >0.")
     p.add_argument("--kl-distill-temperature", type=float, default=None,
                    help="Softmax temperature for KL distillation (default: from "
                         "profile, else 2.0).")
+    p.add_argument("--kl-distill-scope", type=str, default=None,
+                   choices=["none", "segnet_aux", "primary_scorer"],
+                   help="Required scope for KL-like auxiliaries. train_renderer "
+                        "permits only 'segnet_aux'; 'primary_scorer' is "
+                        "forensic-only and blocked here.")
+    p.add_argument("--allow-high-kl-weight-forensic", action="store_true", default=None,
+                   help="Explicit forensic opt-in for kl_distill_weight >= 0.1. "
+                        "High-weight KL is non-promotable until scale review "
+                        "and exact CUDA component gates exist.")
     # Lane J-JBL (Jack Cycle 1 TOP-1, 2026-04-28): swap the SegNet KL distill
     # auxiliary for Jaccard Metric Loss + Boundary Label Smoothing per
     # Wang et al. NeurIPS 2023 (arXiv 2302.05666). loss_mode="jbl" replaces
     # kl_distill_segnet_only with combined_jbl_distill_loss in the auxiliary
-    # add. loss_mode="standard" / "kl" keeps the historical behaviour.
+    # add. loss_mode="kl" selects SegNet-aux KL when the explicit scope and
+    # positive weight are also present.
     # Default None lets the profile resolver win; effective default is
     # "standard" so unprofiled CLI runs are byte-identical to the legacy
     # path. See tac.losses_jbl for the math + .omx/research/jack_skunkworks
     # _segnet_rate_research_20260428.md §S1 for the wedge attribution.
     p.add_argument("--loss-mode", type=str, default=None,
                    choices=["standard", "kl", "jbl", "logit_margin"],
-                   help="Auxiliary distillation loss family. 'standard'/'kl' = "
-                        "Hinton KL distill (default, the Lane G v3 recipe). "
+                   help="Auxiliary distillation loss family. 'kl' = "
+                        "Hinton SegNet-aux KL when kl_distill_scope=segnet_aux. "
                         "'jbl' = Lane J-JBL Jaccard + Boundary Label Smoothing. "
                         "'logit_margin' = Lane 19 fragility-weighted CE that "
                         "concentrates gradient on boundary pixels where "
@@ -945,6 +953,58 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                                        "kl_distill_weight", 0.0)
     args.kl_distill_temperature = _resolve(getattr(args, "kl_distill_temperature", None),
                                             "kl_distill_temperature", 2.0)
+    args.kl_distill_scope = _resolve(
+        getattr(args, "kl_distill_scope", None),
+        "kl_distill_scope",
+        "none",
+    )
+    args.allow_high_kl_weight_forensic = _resolve(
+        getattr(args, "allow_high_kl_weight_forensic", None),
+        "allow_high_kl_weight_forensic",
+        False,
+    )
+    args.promotion_eligible = _resolve(
+        getattr(args, "promotion_eligible", None),
+        "promotion_eligible",
+        True,
+    )
+    _VALID_KL_DISTILL_SCOPES = ("none", "segnet_aux", "primary_scorer")
+    if args.kl_distill_scope not in _VALID_KL_DISTILL_SCOPES:
+        raise SystemExit(
+            f"FATAL: --kl-distill-scope={args.kl_distill_scope!r} "
+            f"unrecognised; valid: {_VALID_KL_DISTILL_SCOPES}."
+        )
+    if args.kl_distill_weight < 0.0:
+        raise SystemExit(
+            f"FATAL: --kl-distill-weight must be >= 0; got "
+            f"{args.kl_distill_weight}."
+        )
+    if args.kl_distill_scope == "primary_scorer":
+        raise SystemExit(
+            "FATAL: train_renderer never permits primary/full-scorer KL "
+            "distillation. Use kl_distill_scope='segnet_aux' for scoped "
+            "SegNet auxiliary work, and require exact CUDA archive eval "
+            "before any claim."
+        )
+    if args.kl_distill_weight > 0.0 and args.kl_distill_scope != "segnet_aux":
+        raise SystemExit(
+            "FATAL: positive kl_distill_weight requires explicit "
+            "kl_distill_scope='segnet_aux'. This prevents stale profiles from "
+            "silently enabling KL-like auxiliaries from weight alone."
+        )
+    if (
+        args.kl_distill_weight >= 0.1
+        and args.promotion_eligible is not False
+        and not args.allow_high_kl_weight_forensic
+    ):
+        raise SystemExit(
+            "FATAL: kl_distill_weight >= 0.1 is a high-scale KL configuration. "
+            "It is forensic-only after the primary-KL/PoseNet-collapse review. "
+            "Use a profile with promotion_eligible=False or pass "
+            "--allow-high-kl-weight-forensic for non-promotable research."
+        )
+    if args.allow_high_kl_weight_forensic:
+        args.promotion_eligible = False
     # Lane J-JBL (Jack Cycle 1 TOP-1) resolvers — see CLI add_argument block
     # for context. Default loss_mode "standard" keeps the auxiliary KL
     # distill path byte-identical to Lane G v3 unless a profile / CLI
@@ -975,6 +1035,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             f"FATAL: --loss-mode={args.loss_mode!r} unrecognised; "
             f"valid: {_VALID_LOSS_MODES}."
         )
+    from tac.kl_config import (
+        DistillationPolicyError,
+        distillation_policy_sha256,
+        normalize_distillation_policy,
+    )
+    try:
+        _distillation_policy = normalize_distillation_policy(args)
+        args.distillation_policy_provenance = _distillation_policy.to_provenance()
+        args.distillation_policy_sha256 = distillation_policy_sha256(_distillation_policy)
+    except DistillationPolicyError as exc:
+        raise SystemExit(f"FATAL: invalid distillation policy: {exc}") from exc
     args.boundary_weight = _resolve(getattr(args, "boundary_weight", None),
                                      "boundary_weight", 3.0)
     args.bls_smoothing = _resolve(getattr(args, "bls_smoothing", None),
@@ -2490,6 +2561,8 @@ def train(args: argparse.Namespace):
             "use_t2_mask": bool(getattr(args, "use_t2_mask", False)),
             "no_mask_encoder": bool(getattr(args, "no_mask_encoder", False)),
             "informational_only": bool(getattr(args, "no_mask_encoder", False)),
+            "distillation_policy": getattr(args, "distillation_policy_provenance", None),
+            "distillation_policy_sha256": getattr(args, "distillation_policy_sha256", None),
         }
         torch.save({
             "epoch": current_epoch,
@@ -2504,6 +2577,8 @@ def train(args: argparse.Namespace):
             "seed": args.seed,
             "deterministic": args.deterministic,
             "arch_meta": arch_meta,
+            "distillation_policy": getattr(args, "distillation_policy_provenance", None),
+            "distillation_policy_sha256": getattr(args, "distillation_policy_sha256", None),
         }, tmp_path)
         tmp_path.rename(path)  # atomic on POSIX
 
@@ -3126,7 +3201,7 @@ def train(args: argparse.Namespace):
                 # byte-identical to Lane G v3 except for the loss family.
                 # See tac.losses_jbl + .omx/research/jack_skunkworks_segnet_
                 # rate_research_20260428.md §S1 for the wedge attribution.
-                if args.kl_distill_weight > 0:
+                if args.kl_distill_weight > 0 and args.kl_distill_scope == "segnet_aux":
                     if args.loss_mode == "jbl":
                         from tac.losses_jbl import combined_jbl_distill_loss
                         # Forward both student (renderer-rendered) and teacher
@@ -3555,6 +3630,8 @@ def train(args: argparse.Namespace):
                 ),
                 "no_mask_encoder": bool(getattr(args, "no_mask_encoder", False)),
                 "informational_only": bool(getattr(args, "no_mask_encoder", False)),
+                "distillation_policy": getattr(args, "distillation_policy_provenance", None),
+                "distillation_policy_sha256": getattr(args, "distillation_policy_sha256", None),
             }
             fp4_packed["__meta__"] = _arch_meta
             fp4_tmp = fp4_path.with_suffix(".pt.tmp")
@@ -3606,6 +3683,11 @@ def train(args: argparse.Namespace):
                 "seg": eval_seg,
                 "fp4_path": str(fp4_path),
                 "fp4_size": fp4_size,
+                "distillation_policy": getattr(args, "distillation_policy_provenance", None),
+                "distillation_policy_sha256": getattr(args, "distillation_policy_sha256", None),
+                "score_claim_eligible": False,
+                "promotion_eligible": False,
+                "exact_cuda_auth_eval_required": True,
                 "args": {
                     "base_ch": args.base_ch,
                     "mid_ch": args.mid_ch,
@@ -3680,6 +3762,11 @@ def train(args: argparse.Namespace):
                 "eval_seg": round(eval_seg, 8),
                 "best_epoch": best_epoch,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
+                "distillation_policy": getattr(args, "distillation_policy_provenance", None),
+                "distillation_policy_sha256": getattr(args, "distillation_policy_sha256", None),
+                "score_claim_eligible": False,
+                "promotion_eligible": False,
+                "exact_cuda_auth_eval_required": True,
                 # Codex R-Lane-D-Issue2: surface BOTH eval modes when in
                 # half-frame mode so post-hoc analysis can spot proxy/auth
                 # divergence between full-frame and half-frame distributions.

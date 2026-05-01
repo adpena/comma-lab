@@ -1,13 +1,13 @@
 """Lane PFP16 — Pose Float-16 cast codec (Lane GP v4 Hotz-option successor).
 
-Lane GP v4 KILL VERDICT (2026-04-30,
-.omx/research/council_lane_gp_v4_design_20260430.md) found that **all** smooth-
-basis pose-fits (polynomial / B-spline / DCT / natural cubic) plateau at RMSE
-≈ 1.2 — near signal std — because the Lane G v3 baseline `optimized_poses.pt`
-trajectory is approximately white-noise in dims 1-5 (diff_std > signal_std for
-every dim). The **only** dominant successor surfaced by Hotz's review is the
-trivial `tensor.half()` cast: it captures the bulk of the score-improvement
-budget at zero distortion penalty and zero compute.
+Lane GP v4 scoped smooth-basis retirement review (2026-04-30,
+.omx/research/council_lane_gp_v4_design_20260430.md) found that the measured
+smooth-basis pose-fit family reviewed there (polynomial / B-spline / DCT /
+natural cubic) plateaus at RMSE ≈ 1.2 — near signal std — because the Lane G v3
+baseline `optimized_poses.pt` trajectory is approximately white-noise in dims
+1-5 (diff_std > signal_std for every dim). The dominant successor surfaced by
+Hotz's review is the trivial `tensor.half()` cast: it captures the bulk of the
+score-improvement budget at zero distortion penalty and zero compute.
 
 Lane PFP16 is THAT cast — encoded as a raw fp16 binary `optimized_poses.bin`
 written into the archive in place of the fp32 pickled `optimized_poses.pt`.
@@ -56,7 +56,8 @@ CLAUDE.md compliance
 
 Cross-references
 ----------------
-* Lane GP v4 KILL: .omx/research/council_lane_gp_v4_design_20260430.md
+* Lane GP v4 scoped retirement review:
+  .omx/research/council_lane_gp_v4_design_20260430.md
 * Inflate dispatch: submissions/robust_current/inflate_renderer.py
   (auto-detects raw fp16 buffer via content sniffing — no inflate-side
   magic-byte handler needed; "PFP16" is a build-time concept, not a wire

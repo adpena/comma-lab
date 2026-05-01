@@ -789,6 +789,23 @@ class PixelShuffleUpscaleFilter(nn.Module):
         return (upscaled + residual).clamp(0, 1) * 255.0
 
 
+def _import_psd_lumaskip_postfilter():
+    """Lazy import to avoid circular references with submodule loaders.
+
+    The PSD-LumaSkip variant lives in ``tac.psd_lumaskip_renderer`` (Phase A
+    council-approved Lane PSD-LumaSkip scaffold, 2026-04-30). It is wired
+    into ``VARIANTS`` so ``build_postfilter("psd_lumaskip", ...)`` returns
+    the correct class.
+    """
+    from .psd_lumaskip_renderer import PSDLumaSkipPostFilter
+    return PSDLumaSkipPostFilter
+
+
+# Resolve at import time (no actual circular dependency, but using the helper
+# keeps the import order audit-grep-able).
+_PSD_LUMASKIP_CLS = _import_psd_lumaskip_postfilter()
+
+
 VARIANTS = {
     # Canonical names
     "standard": PostFilter,
@@ -796,6 +813,7 @@ VARIANTS = {
     "gated_dilated": GatedDilatedPostFilter,
     "pixelshuffle": PixelShufflePostFilter,
     "psd": PSDPostFilter,
+    "psd_lumaskip": _PSD_LUMASKIP_CLS,  # Lane PSD-LumaSkip (Phase A scaffold)
     "depthwise": DepthwisePostFilter,
     "luma": LumaPostFilter,
     "film": FiLMPostFilter,

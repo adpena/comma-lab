@@ -10,6 +10,7 @@ Covers parsing + the structural promises the tool makes:
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 import sys
 import zipfile
 from pathlib import Path
@@ -153,6 +154,71 @@ def test_parse_report_score_recomputation_consistent(cae, tmp_path: Path):
     assert abs(recomputed - result["final_score"]) < 0.01, (
         f"recomputed={recomputed:.4f} reported={result['final_score']:.4f}"
     )
+
+
+def test_parse_report_raw_stdout_not_treated_as_path(cae):
+    text = """=== Evaluation results over 600 samples ===
+  Average PoseNet Distortion: 0.0107
+  Average SegNet Distortion: 0.00240
+  Submission file size: 337748 bytes
+  Original uncompressed size: 37545489 bytes
+  Compression Rate: 0.00899
+  Final score: 100*segnet_dist + sqrt(10*posenet_dist) + 25*rate = 0.7919
+"""
+    result = cae._parse_report(text, archive_size=337748, source="stdout")
+
+    assert result["score_recomputed_from_components"] == pytest.approx(0.7918585446759225)
+
+
+def test_upstream_evaluate_records_elapsed_seconds(cae, tmp_path: Path, monkeypatch):
+    upstream = tmp_path / "upstream"
+    upstream.mkdir()
+    (upstream / "evaluate.py").write_text("print('unused')\n")
+    video_names = tmp_path / "names.txt"
+    video_names.write_text("0.mkv\n")
+    submission = tmp_path / "submission"
+    submission.mkdir()
+    (submission / "archive.zip").write_bytes(b"archive")
+
+    def fake_run(*_args, **_kwargs):
+        report = submission / "report.txt"
+        report.write_text("""=== Evaluation results over 600 samples ===
+  Average PoseNet Distortion: 0.0107
+  Average SegNet Distortion: 0.00240
+  Submission file size: 7 bytes
+  Original uncompressed size: 37545489 bytes
+  Compression Rate: 0.00899
+  Final score: 100*segnet_dist + sqrt(10*posenet_dist) + 25*rate = 0.7919
+""")
+        return subprocess.CompletedProcess(
+            args=["python", "evaluate.py"],
+            returncode=0,
+            stdout=report.read_text(),
+            stderr="",
+        )
+
+    monkeypatch.setattr(cae, "_validate_uncompressed_dir", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(cae.subprocess, "run", fake_run)
+
+    result = cae._run_upstream_evaluate(
+        upstream,
+        submission,
+        tmp_path / "videos",
+        video_names,
+        "cuda",
+    )
+
+    assert "evaluate_elapsed_seconds" in result
+    assert result["evaluate_elapsed_seconds"] >= 0.0
+
+
+def test_contest_auth_eval_source_records_inflate_budget_fields() -> None:
+    text = (REPO / "experiments" / "contest_auth_eval.py").read_text()
+
+    assert "inflate_timeout_seconds" in text
+    assert "evaluate_timeout_seconds" in text
+    assert "inflate_elapsed_seconds" in text
+    assert "contest_auth_eval_elapsed_seconds" in text
 
 
 def test_parse_report_malformed_raises(cae, tmp_path: Path):

@@ -15,7 +15,9 @@ from tac.owv3_sensitivity_weighted import (
     OWV3_ARCHIVE_VERSION,
     OWV3ArchiveError,
     decode_owv3_archive,
+    enforce_owv3_byte_budget,
     encode_owv3_archive,
+    inspect_owv3_archive,
     is_owv3_archive,
 )
 from tac.sensitivity_map import conv_weight_shapes
@@ -48,6 +50,13 @@ def _synthetic_sensitivity(model) -> dict[str, torch.Tensor]:
             value[0] = 1e-2
         out[key] = value
     return out
+
+
+def _all_protected_sensitivity(model) -> dict[str, torch.Tensor]:
+    return {
+        key: torch.full((channels,), 1e-2)
+        for key, channels in conv_weight_shapes(model).items()
+    }
 
 
 def _parse_header(blob: bytes) -> dict:
@@ -99,11 +108,15 @@ def test_owv3_mixed_channel_archive_round_trip_and_forward() -> None:
     assert is_owv3_archive(blob)
 
     header = _parse_header(blob)
+    assert header["byte_plan"]["fallback_action"] == "keep_asym"
+    assert header["byte_plan"]["promotion_eligible"] is True
     mixed_layers = [l for l in header["layers"] if l["kind"] == "owv3_conv"]
     assert mixed_layers, "expected at least one sensitivity-weighted Conv2d"
     assert any(
         l["quant_indices"] and l["protected_indices"] for l in mixed_layers
-    ), "expected a layer with both OWV2 and FP16 protected channels"
+    ), "expected a layer with both OWV2 and protected channels"
+    assert all(l.get("protected_codec") == "asym" for l in mixed_layers if l["protected_indices"])
+    assert header["byte_plan"]["action_counts"]["fp16_protect_channels"] == 0
 
     decoded = decode_owv3_archive(data=blob, device="cpu")
     assert not decoded.training
@@ -120,13 +133,95 @@ def test_owv3_mixed_channel_archive_round_trip_and_forward() -> None:
     restored_w = decoded_modules[first_mixed["name"]].weight.detach().cpu()[protected]
     max_abs = float(original_w.abs().max().item())
     max_err = float((original_w.float() - restored_w.float()).abs().max().item())
-    assert max_err <= max(1e-3, max_abs * (2.0 ** -9))
+    assert max_err <= max(2e-3, max_abs * 0.02)
 
     mask_t = torch.randint(0, 5, (1, 16, 16), dtype=torch.long)
     mask_t1 = torch.randint(0, 5, (1, 16, 16), dtype=torch.long)
     with torch.no_grad():
         out = decoded(mask_t, mask_t1)
     assert out.shape == (1, 2, 16, 16, 3)
+
+
+def test_owv3_default_protected_channels_are_asym_not_fp16() -> None:
+    model = _build_renderer()
+    blob = encode_owv3_archive(
+        model=model,
+        sensitivities=_synthetic_sensitivity(model),
+        bit_budget_ratio=0.7,
+    )
+    inspection = inspect_owv3_archive(blob)
+    header = inspection["header"]
+    protected_layers = [
+        l for l in header["layers"]
+        if l["kind"] == "owv3_conv" and l["protected_indices"]
+    ]
+    assert protected_layers
+    assert all(l["protected_codec"] == "asym" for l in protected_layers)
+    assert header["byte_plan"]["action_counts"]["fp16_protect_channels"] == 0
+    assert header["byte_plan"]["promotion_eligible"] is True
+
+
+def test_owv3_all_protected_default_keeps_asym_not_fp16() -> None:
+    model = _build_renderer()
+    blob = encode_owv3_archive(
+        model=model,
+        sensitivities=_all_protected_sensitivity(model),
+        bit_budget_ratio=0.7,
+    )
+    header = inspect_owv3_archive(blob)["header"]
+    all_protected = [
+        l for l in header["layers"]
+        if l.get("fallback_reason") == "all_channels_protected"
+    ]
+    assert all_protected
+    assert all(l["kind"] == "asym_conv" for l in all_protected)
+    assert not [
+        l for l in header["layers"]
+        if l["kind"] == "fp16_conv" and l.get("fallback_reason") == "all_channels_protected"
+    ]
+    assert header["byte_plan"]["fallback_action"] == "keep_asym"
+    assert header["byte_plan"]["promotion_eligible"] is True
+
+
+def test_owv3_diagnostic_fp16_fallback_is_explicit_smoke_only() -> None:
+    model = _build_renderer()
+    blob = encode_owv3_archive(
+        model=model,
+        sensitivities=_all_protected_sensitivity(model),
+        bit_budget_ratio=0.7,
+        fallback_action="diagnostic_fp16",
+    )
+    header = inspect_owv3_archive(blob)["header"]
+    all_protected_fp16 = [
+        l for l in header["layers"]
+        if l["kind"] == "fp16_conv" and l.get("fallback_reason") == "all_channels_protected"
+    ]
+    assert all_protected_fp16
+    assert header["byte_plan"]["fallback_action"] == "diagnostic_fp16"
+    assert header["byte_plan"]["promotion_eligible"] is False
+    assert header["byte_plan"]["action_counts"]["diagnostic_fp16_layers"] > 0
+
+
+def test_owv3_byte_budget_rejects_unjustified_size_regression() -> None:
+    with pytest.raises(OWV3ArchiveError, match="exceeds"):
+        enforce_owv3_byte_budget(
+            candidate_bytes=1100,
+            comparator_bytes=1000,
+            candidate_label="test OWV3",
+            comparator_label="test frontier",
+        )
+    report = enforce_owv3_byte_budget(
+        candidate_bytes=1100,
+        comparator_bytes=1000,
+        allow_size_regression=True,
+    )
+    assert report["accepted"] is True
+    justified = enforce_owv3_byte_budget(
+        candidate_bytes=1100,
+        comparator_bytes=1000,
+        distortion_justification={"contest_auth_eval_json": "exact-cuda.json"},
+    )
+    assert justified["accepted"] is True
 
 
 def test_owv3_requires_sensitivity_artifact() -> None:

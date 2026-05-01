@@ -1,7 +1,9 @@
 """Tests for training loop, checkpoint save/load, resume, and boundary masks."""
+import math
 import tempfile
 from pathlib import Path
 
+import pytest
 import torch
 
 from tac.architectures import build_postfilter
@@ -271,7 +273,13 @@ class TestFitLossModeGuard:
         model = build_postfilter("standard", hidden=8)
         config = TrainConfig(
             hidden=8, epochs=100, tag="test-guard",
-            loss_mode="kl_distill", temperature_start=5.0, temperature_end=1.0,
+            loss_mode="kl_distill",
+            kl_distill_scope="primary_scorer",
+            allow_banned_primary_kl_distill=True,
+            promotion_eligible=False,
+            forensic_reason="fit guard exercises legacy primary KL rejection",
+            temperature_start=5.0,
+            temperature_end=1.0,
         )
         trainer = Trainer(model, config, device="cpu")
         with pytest.raises(NotImplementedError, match="loss_mode='kl_distill'"):
@@ -332,6 +340,37 @@ class TestKLDistillLoss:
         loss.backward()
         assert filtered.grad is not None
         assert filtered.grad.abs().sum() > 0, "Gradients should be non-zero"
+
+    @pytest.mark.parametrize("bad_temperature", [0.0, -1.0, math.inf, -math.inf, math.nan, True])
+    def test_kl_distill_scorer_loss_rejects_invalid_temperature(self, bad_temperature):
+        """kl_distill_scorer_loss must fail before dividing logits by invalid T."""
+        from tac.losses import kl_distill_scorer_loss
+
+        class MockPoseNet(torch.nn.Module):
+            def preprocess_input(self, x):
+                return x.reshape(x.shape[0], -1, x.shape[-2], x.shape[-1])
+
+            def forward(self, x):
+                return {"pose": x.mean(dim=(2, 3))[:, :12]}
+
+        class MockSegNet(torch.nn.Module):
+            def preprocess_input(self, x):
+                return x[:, -1, ...]
+
+            def forward(self, x):
+                return x[:, :5, :, :]
+
+        filtered = torch.rand(1, 2, 16, 16, 3) * 255
+        gt = torch.rand(1, 2, 16, 16, 3) * 255
+
+        with pytest.raises(ValueError, match="temperature must be a finite positive number"):
+            kl_distill_scorer_loss(
+                filtered,
+                gt,
+                MockPoseNet(),
+                MockSegNet(),
+                temperature=bad_temperature,
+            )
 
     def test_t2_scaling(self):
         """Higher temperature should scale the loss by T^2."""

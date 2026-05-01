@@ -38,9 +38,11 @@ Compose-with rules (per ``docs/stacking_architecture.md``):
 
 from __future__ import annotations
 
+import json
 import struct
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 import torch
 import torch.nn as nn
@@ -54,12 +56,439 @@ from tac.neural_weight_codec import (
 
 
 __all__ = [
+    "NWCS_RENDERER_MAGIC",
+    "NWCSRendererContainer",
+    "NWCSRendererTensorEntry",
     "SensitivityAwareCodecConfig",
     "SensitivityAwareWeightCodec",
     "compute_per_block_sensitivity",
     "encode_with_variable_codebook",
     "decode_with_per_block_codebook",
+    "export_nwcs_renderer_container",
+    "is_nwcs_renderer_container",
+    "load_nwcs_renderer_container",
 ]
+
+
+# ── Renderer container format ─────────────────────────────────────────────
+
+NWCS_RENDERER_MAGIC = b"NWCS1\0\0\0"
+_NWCS_RENDERER_VERSION = 1
+# Signed int64 length fields make corrupt negative lengths reject explicitly.
+_NWCS_RENDERER_LEN = struct.Struct("<q")
+_NWCS_MAX_HEADER_BYTES = 64 * 1024 * 1024
+
+
+@dataclass(frozen=True)
+class NWCSRendererTensorEntry:
+    """One encoded tensor inside an NWCS renderer container."""
+
+    name: str
+    shape: tuple[int, ...]
+    dtype: str
+    original_dtype: str
+    block_metadata: dict[str, Any]
+    blob: bytes
+
+    @classmethod
+    def from_tensor_blob(
+        cls,
+        name: str,
+        tensor: torch.Tensor,
+        blob: bytes | bytearray | memoryview,
+        *,
+        block_size: int,
+        codebook_sizes: list[int] | tuple[int, ...] | None = None,
+        dtype: str | None = None,
+        original_dtype: str | None = None,
+        block_metadata: dict[str, Any] | None = None,
+    ) -> "NWCSRendererTensorEntry":
+        """Build metadata for an already encoded per-tensor NWCS blob.
+
+        This helper does not encode the tensor. It records the original tensor
+        geometry next to the caller-supplied encoded blob.
+        """
+        if block_size <= 0:
+            raise ValueError("block_size must be positive")
+        numel = int(tensor.numel())
+        n_blocks = numel // int(block_size)
+        tail_elements = numel - n_blocks * int(block_size)
+        dtype_name = dtype or _dtype_to_name(tensor.dtype)
+        original_dtype_name = original_dtype or dtype_name
+        meta: dict[str, Any] = {
+            "block_size": int(block_size),
+            "num_blocks": int(n_blocks),
+            "tail_elements": int(tail_elements),
+        }
+        if codebook_sizes is not None:
+            meta["codebook_sizes"] = [int(k) for k in codebook_sizes]
+        if block_metadata:
+            meta.update(block_metadata)
+        return cls(
+            name=name,
+            shape=tuple(int(s) for s in tensor.shape),
+            dtype=dtype_name,
+            original_dtype=original_dtype_name,
+            block_metadata=meta,
+            blob=bytes(blob),
+        )
+
+
+@dataclass(frozen=True)
+class NWCSRendererContainer:
+    """Decoded NWCS renderer container payload."""
+
+    header: dict[str, Any]
+    codec_checkpoint_blob: bytes
+    tensors: tuple[NWCSRendererTensorEntry, ...]
+
+    def tensor_blobs(self) -> dict[str, bytes]:
+        """Return encoded tensor blobs keyed by tensor name."""
+        return {entry.name: entry.blob for entry in self.tensors}
+
+
+def export_nwcs_renderer_container(
+    tensors: list[NWCSRendererTensorEntry | dict[str, Any]]
+    | tuple[NWCSRendererTensorEntry | dict[str, Any], ...],
+    *,
+    codec_checkpoint_blob: bytes | bytearray | memoryview | str | Path = b"",
+    output_path: str | Path | None = None,
+    metadata: dict[str, Any] | None = None,
+) -> bytes:
+    """Serialize encoded per-tensor NWCS blobs into a renderer container.
+
+    The returned bytes are deterministic for the same logical input: tensor
+    entries are emitted in lexicographic name order and the JSON header uses
+    sorted keys with compact separators.
+    """
+    entries = [_coerce_nwcs_tensor_entry(item) for item in tensors]
+    names = [entry.name for entry in entries]
+    if len(set(names)) != len(names):
+        raise ValueError("duplicate tensor name in NWCS renderer container")
+    entries = sorted(entries, key=lambda entry: entry.name)
+
+    codec_blob = _coerce_blob_or_path(codec_checkpoint_blob, "codec checkpoint")
+    container_metadata = dict(metadata or {})
+    _assert_json_serializable(container_metadata, "container metadata")
+    header_tensors: list[dict[str, Any]] = []
+    for entry in entries:
+        _validate_nwcs_tensor_entry(entry)
+        header_tensors.append(
+            {
+                "name": entry.name,
+                "shape": list(entry.shape),
+                "dtype": entry.dtype,
+                "original_dtype": entry.original_dtype,
+                "block_metadata": entry.block_metadata,
+                "blob_len": len(entry.blob),
+            }
+        )
+
+    header = {
+        "magic": "NWCS1",
+        "version": _NWCS_RENDERER_VERSION,
+        "format": "nwcs_renderer_container",
+        "codec_checkpoint_len": len(codec_blob),
+        "tensor_count": len(entries),
+        "metadata": container_metadata,
+        "tensors": header_tensors,
+    }
+    header_json = json.dumps(
+        header, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
+    if len(header_json) > _NWCS_MAX_HEADER_BYTES:
+        raise ValueError(f"NWCS renderer header too large: {len(header_json)} bytes")
+
+    buf = bytearray()
+    buf.extend(NWCS_RENDERER_MAGIC)
+    buf.extend(_NWCS_RENDERER_LEN.pack(len(header_json)))
+    buf.extend(header_json)
+    buf.extend(_NWCS_RENDERER_LEN.pack(len(codec_blob)))
+    buf.extend(codec_blob)
+    for entry in entries:
+        buf.extend(_NWCS_RENDERER_LEN.pack(len(entry.blob)))
+        buf.extend(entry.blob)
+
+    raw = bytes(buf)
+    if output_path is not None:
+        path = Path(output_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(raw)
+    return raw
+
+
+def load_nwcs_renderer_container(
+    path_or_bytes: str | Path | bytes | bytearray | memoryview,
+) -> NWCSRendererContainer:
+    """Load and validate an NWCS renderer container.
+
+    Raises ``ValueError`` for bad magic, malformed JSON, duplicate tensor
+    names, truncated fields, negative or oversized lengths, metadata/blob
+    length disagreement, and trailing bytes.
+    """
+    data = _coerce_blob_or_path(path_or_bytes, "NWCS renderer container")
+    if not data.startswith(NWCS_RENDERER_MAGIC):
+        raise ValueError(
+            f"NWCS renderer container bad magic: got "
+            f"{data[:len(NWCS_RENDERER_MAGIC)]!r}, expected {NWCS_RENDERER_MAGIC!r}"
+        )
+
+    offset = len(NWCS_RENDERER_MAGIC)
+    header_len, offset = _read_nwcs_len(data, offset, "header")
+    header_bytes, offset = _take_nwcs_field(
+        data,
+        offset,
+        header_len,
+        "header JSON",
+        max_len=_NWCS_MAX_HEADER_BYTES,
+    )
+    try:
+        header = json.loads(header_bytes.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError("NWCS renderer container invalid JSON header") from exc
+    if not isinstance(header, dict):
+        raise ValueError("NWCS renderer header must be a JSON object")
+    if header.get("magic") != "NWCS1":
+        raise ValueError(f"NWCS renderer header magic mismatch: {header.get('magic')!r}")
+    if header.get("version") != _NWCS_RENDERER_VERSION:
+        raise ValueError(
+            f"NWCS renderer unsupported version {header.get('version')!r}"
+        )
+
+    tensor_meta = header.get("tensors")
+    if not isinstance(tensor_meta, list):
+        raise ValueError("NWCS renderer header tensors must be a list")
+    tensor_count = _validate_json_int(
+        header.get("tensor_count", len(tensor_meta)),
+        "tensor_count",
+        minimum=0,
+    )
+    if tensor_count != len(tensor_meta):
+        raise ValueError(
+            f"NWCS renderer metadata/blob count mismatch: "
+            f"tensor_count={tensor_count}, tensors={len(tensor_meta)}"
+        )
+
+    expected_codec_len = _validate_json_int(
+        header.get("codec_checkpoint_len", 0),
+        "codec_checkpoint_len",
+        minimum=0,
+    )
+    codec_len, offset = _read_nwcs_len(data, offset, "codec checkpoint")
+    if codec_len != expected_codec_len:
+        raise ValueError(
+            f"NWCS renderer codec length mismatch: header={expected_codec_len}, "
+            f"stream={codec_len}"
+        )
+    codec_blob, offset = _take_nwcs_field(
+        data, offset, codec_len, "codec checkpoint blob"
+    )
+
+    entries: list[NWCSRendererTensorEntry] = []
+    seen_names: set[str] = set()
+    for index, meta in enumerate(tensor_meta):
+        if not isinstance(meta, dict):
+            raise ValueError(f"NWCS renderer tensor[{index}] metadata must be an object")
+        name = _validate_tensor_name(meta.get("name"), f"tensor[{index}].name")
+        if name in seen_names:
+            raise ValueError(f"NWCS renderer duplicate tensor name: {name!r}")
+        seen_names.add(name)
+        shape = _validate_shape(meta.get("shape"), f"tensor[{index}].shape")
+        dtype = _validate_dtype_name(meta.get("dtype"), f"tensor[{index}].dtype")
+        original_dtype = _validate_dtype_name(
+            meta.get("original_dtype", dtype), f"tensor[{index}].original_dtype"
+        )
+        block_metadata = meta.get("block_metadata")
+        if not isinstance(block_metadata, dict):
+            raise ValueError(
+                f"NWCS renderer tensor[{index}].block_metadata must be an object"
+            )
+        expected_blob_len = _validate_json_int(
+            meta.get("blob_len"), f"tensor[{index}].blob_len", minimum=0
+        )
+        blob_len, offset = _read_nwcs_len(data, offset, f"tensor[{index}] blob")
+        if blob_len != expected_blob_len:
+            raise ValueError(
+                f"NWCS renderer metadata/blob length mismatch for {name!r}: "
+                f"header={expected_blob_len}, stream={blob_len}"
+            )
+        blob, offset = _take_nwcs_field(data, offset, blob_len, f"tensor[{index}] blob")
+        entries.append(
+            NWCSRendererTensorEntry(
+                name=name,
+                shape=shape,
+                dtype=dtype,
+                original_dtype=original_dtype,
+                block_metadata=dict(block_metadata),
+                blob=blob,
+            )
+        )
+
+    if offset != len(data):
+        raise ValueError(
+            f"NWCS renderer metadata/blob count mismatch: {len(data) - offset} "
+            "trailing bytes"
+        )
+    return NWCSRendererContainer(
+        header=header,
+        codec_checkpoint_blob=codec_blob,
+        tensors=tuple(entries),
+    )
+
+
+def is_nwcs_renderer_container(
+    path_or_bytes: str | Path | bytes | bytearray | memoryview,
+) -> bool:
+    """Return True when the path or bytes start with the NWCS container magic."""
+    if isinstance(path_or_bytes, (bytes, bytearray, memoryview)):
+        return bytes(path_or_bytes).startswith(NWCS_RENDERER_MAGIC)
+    try:
+        with Path(path_or_bytes).open("rb") as f:
+            return f.read(len(NWCS_RENDERER_MAGIC)) == NWCS_RENDERER_MAGIC
+    except OSError:
+        return False
+
+
+def _dtype_to_name(dtype: torch.dtype) -> str:
+    return str(dtype).replace("torch.", "")
+
+
+def _coerce_blob_or_path(
+    value: bytes | bytearray | memoryview | str | Path,
+    label: str,
+) -> bytes:
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        return bytes(value)
+    if isinstance(value, (str, Path)):
+        return Path(value).read_bytes()
+    raise TypeError(f"{label} must be bytes-like or a path")
+
+
+def _coerce_nwcs_tensor_entry(
+    item: NWCSRendererTensorEntry | dict[str, Any],
+) -> NWCSRendererTensorEntry:
+    if isinstance(item, NWCSRendererTensorEntry):
+        return NWCSRendererTensorEntry(
+            name=_validate_tensor_name(item.name, "tensor.name"),
+            shape=_validate_shape(item.shape, "tensor.shape"),
+            dtype=_validate_dtype_name(item.dtype, "tensor.dtype"),
+            original_dtype=_validate_dtype_name(
+                item.original_dtype, "tensor.original_dtype"
+            ),
+            block_metadata=dict(item.block_metadata),
+            blob=bytes(item.blob),
+        )
+    if not isinstance(item, dict):
+        raise TypeError("NWCS tensor entry must be a NWCSRendererTensorEntry or dict")
+    blob_value = item.get("blob", item.get("encoded_blob"))
+    if blob_value is None:
+        raise ValueError("NWCS tensor entry missing blob")
+    dtype = item.get("dtype", item.get("original_dtype", "float32"))
+    original_dtype = item.get("original_dtype", dtype)
+    block_metadata = item.get("block_metadata", {})
+    if not isinstance(block_metadata, dict):
+        raise ValueError("NWCS tensor entry block_metadata must be a dict")
+    return NWCSRendererTensorEntry(
+        name=_validate_tensor_name(item.get("name"), "tensor.name"),
+        shape=_validate_shape(item.get("shape"), "tensor.shape"),
+        dtype=_validate_dtype_name(dtype, "tensor.dtype"),
+        original_dtype=_validate_dtype_name(original_dtype, "tensor.original_dtype"),
+        block_metadata=dict(block_metadata),
+        blob=bytes(blob_value),
+    )
+
+
+def _validate_nwcs_tensor_entry(entry: NWCSRendererTensorEntry) -> None:
+    _validate_tensor_name(entry.name, "tensor.name")
+    _validate_shape(entry.shape, "tensor.shape")
+    _validate_dtype_name(entry.dtype, "tensor.dtype")
+    _validate_dtype_name(entry.original_dtype, "tensor.original_dtype")
+    if not isinstance(entry.block_metadata, dict):
+        raise ValueError("NWCS tensor block_metadata must be a dict")
+    _assert_json_serializable(entry.block_metadata, "tensor block_metadata")
+    if not isinstance(entry.blob, (bytes, bytearray, memoryview)):
+        raise TypeError("NWCS tensor blob must be bytes-like")
+
+
+def _read_nwcs_len(data: bytes, offset: int, label: str) -> tuple[int, int]:
+    end = offset + _NWCS_RENDERER_LEN.size
+    if end > len(data):
+        raise ValueError(f"NWCS renderer truncated {label} length")
+    value = _NWCS_RENDERER_LEN.unpack_from(data, offset)[0]
+    if value < 0:
+        raise ValueError(f"NWCS renderer negative {label} length: {value}")
+    return value, end
+
+
+def _take_nwcs_field(
+    data: bytes,
+    offset: int,
+    length: int,
+    label: str,
+    *,
+    max_len: int | None = None,
+) -> tuple[bytes, int]:
+    if length < 0:
+        raise ValueError(f"NWCS renderer negative {label} length: {length}")
+    if max_len is not None and length > max_len:
+        raise ValueError(f"NWCS renderer oversized {label}: {length} bytes")
+    end = offset + length
+    if end > len(data):
+        remaining = len(data) - offset
+        raise ValueError(
+            f"NWCS renderer truncated/oversized {label}: "
+            f"declared={length}, remaining={remaining}"
+        )
+    return data[offset:end], end
+
+
+def _validate_json_int(
+    value: Any,
+    label: str,
+    *,
+    minimum: int | None = None,
+) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(f"NWCS renderer {label} must be an integer")
+    if minimum is not None and value < minimum:
+        raise ValueError(f"NWCS renderer negative {label}: {value}")
+    return int(value)
+
+
+def _validate_tensor_name(value: Any, label: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"NWCS renderer {label} must be a non-empty string")
+    if "\0" in value:
+        raise ValueError(f"NWCS renderer {label} contains NUL")
+    return value
+
+
+def _validate_shape(value: Any, label: str) -> tuple[int, ...]:
+    if not isinstance(value, (list, tuple)):
+        raise ValueError(f"NWCS renderer {label} must be a list or tuple")
+    shape: list[int] = []
+    for index, dim in enumerate(value):
+        if isinstance(dim, bool) or not isinstance(dim, int):
+            raise ValueError(f"NWCS renderer {label}[{index}] must be an integer")
+        if dim < 0:
+            raise ValueError(f"NWCS renderer {label}[{index}] is negative")
+        shape.append(int(dim))
+    return tuple(shape)
+
+
+def _validate_dtype_name(value: Any, label: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"NWCS renderer {label} must be a non-empty string")
+    if "\0" in value:
+        raise ValueError(f"NWCS renderer {label} contains NUL")
+    return value
+
+
+def _assert_json_serializable(value: Any, label: str) -> None:
+    try:
+        json.dumps(value, sort_keys=True, separators=(",", ":"))
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"NWCS renderer {label} must be JSON serializable") from exc
 
 
 # ── Config ────────────────────────────────────────────────────────────────
@@ -223,6 +652,11 @@ def _bucket_by_quantile(
 
     Bucket 0 = lowest sensitivity, n_buckets-1 = highest.
     """
+    sensitivity = _validate_block_sensitivities(
+        sensitivity,
+        name="sensitivity",
+        allow_empty=True,
+    )
     if sensitivity.numel() == 0:
         return torch.zeros(0, dtype=torch.long)
     if n_buckets <= 1:
@@ -231,6 +665,29 @@ def _bucket_by_quantile(
     edges = torch.quantile(sensitivity.float(), qs)
     bucket = torch.bucketize(sensitivity.float(), edges)
     return bucket.long().clamp(max=n_buckets - 1)
+
+
+def _validate_block_sensitivities(
+    sensitivities: torch.Tensor,
+    *,
+    name: str,
+    expected_len: int | None = None,
+    allow_empty: bool = False,
+) -> torch.Tensor:
+    if not torch.is_tensor(sensitivities):
+        raise TypeError(f"{name} must be a torch.Tensor")
+    out = sensitivities.detach().cpu().float().reshape(-1)
+    if expected_len is not None and out.numel() != expected_len:
+        raise ValueError(
+            f"{name} length {out.numel()} != expected length {expected_len}"
+        )
+    if out.numel() == 0 and not allow_empty:
+        raise ValueError(f"{name} must be non-empty")
+    if not torch.isfinite(out).all():
+        raise ValueError(f"{name} contains NaN/Inf values")
+    if (out < 0).any():
+        raise ValueError(f"{name} must be non-negative")
+    return out
 
 
 # ── Codec module ──────────────────────────────────────────────────────────
@@ -333,6 +790,11 @@ class SensitivityAwareWeightCodec(WeightCodec):
                 f"sensitivities must be 1-D length N={corpus.shape[0]}, "
                 f"got shape {tuple(sensitivities.shape)}"
             )
+        sensitivities = _validate_block_sensitivities(
+            sensitivities,
+            name="sensitivities",
+            expected_len=int(corpus.shape[0]),
+        )
         iw = float(importance_weight) if importance_weight is not None else self.sens_config.importance_weight
         device_t = torch.device(device)
         self.to(device_t)
@@ -439,10 +901,12 @@ def encode_with_variable_codebook(
     n_blocks = N // Bs
     tail_n = N - n_blocks * Bs
 
-    if sensitivities.numel() != n_blocks:
-        raise ValueError(
-            f"sensitivities length {sensitivities.numel()} != n_blocks {n_blocks}"
-        )
+    sensitivities = _validate_block_sensitivities(
+        sensitivities,
+        name="sensitivities",
+        expected_len=int(n_blocks),
+        allow_empty=(n_blocks == 0),
+    )
 
     n_buckets = len(codec.sens_config.codebook_sizes)
     buckets = _bucket_by_quantile(sensitivities, n_buckets).to(device)
@@ -497,36 +961,53 @@ def decode_with_per_block_codebook(
     device = next(codec.parameters()).device
     Bs = codec.config.block_size
     offset = 0
+    blob_len = len(blob)
 
-    ndim = struct.unpack_from("<I", blob, offset)[0]
-    offset += 4
+    def _read(fmt: str, label: str) -> tuple[int, ...]:
+        nonlocal offset
+        size = struct.calcsize(fmt)
+        end = offset + size
+        if end > blob_len:
+            raise ValueError(f"NWCS1.decode truncated {label}")
+        values = struct.unpack_from(fmt, blob, offset)
+        offset = end
+        return values
+
+    def _take(length: int, label: str) -> bytes:
+        nonlocal offset
+        if length < 0:
+            raise ValueError(f"NWCS1.decode negative {label} length")
+        end = offset + length
+        if end > blob_len:
+            raise ValueError(
+                f"NWCS1.decode truncated {label}: declared={length}, "
+                f"remaining={blob_len - offset}"
+            )
+        out = blob[offset:end]
+        offset = end
+        return out
+
+    ndim = _read("<I", "ndim")[0]
     if ndim == 0 or ndim > 8:
         raise ValueError(f"NWCS1.decode: implausible ndim={ndim}")
     shape = []
     for _ in range(ndim):
-        shape.append(struct.unpack_from("<I", blob, offset)[0])
-        offset += 4
-    n_blocks = struct.unpack_from("<I", blob, offset)[0]
-    offset += 4
+        shape.append(_read("<I", "shape")[0])
+    n_blocks = _read("<I", "n_blocks")[0]
 
-    n_buckets = struct.unpack_from("<B", blob, offset)[0]
-    offset += 1
+    n_buckets = _read("<B", "n_buckets")[0]
     bucket_sizes = []
     for _ in range(n_buckets):
-        bucket_sizes.append(struct.unpack_from("<H", blob, offset)[0])
-        offset += 2
+        bucket_sizes.append(_read("<H", "bucket size")[0])
     if list(bucket_sizes) != list(codec.sens_config.codebook_sizes):
         raise ValueError(
             f"NWCS1.decode: codec bucket sizes mismatch "
             f"(blob {bucket_sizes} vs codec {codec.sens_config.codebook_sizes})"
         )
 
-    bucket_ids_buf = blob[offset : offset + n_blocks]
-    offset += n_blocks
-    scales_buf = blob[offset : offset + n_blocks * 2]
-    offset += n_blocks * 2
-    codes_buf = blob[offset : offset + n_blocks]
-    offset += n_blocks
+    bucket_ids_buf = _take(n_blocks, "bucket ids")
+    scales_buf = _take(n_blocks * 2, "scales")
+    codes_buf = _take(n_blocks, "codes")
 
     numel = 1
     for s in shape:
@@ -536,25 +1017,43 @@ def decode_with_per_block_codebook(
         raise ValueError(
             f"NWCS1.decode negative tail (n_blocks={n_blocks}, Bs={Bs}, numel={numel})"
         )
-    tail_buf = blob[offset : offset + tail_n * 2]
-    offset += tail_n * 2
+    tail_buf = _take(tail_n * 2, "tail")
+    if offset != blob_len:
+        raise ValueError(f"NWCS1.decode trailing bytes: {blob_len - offset}")
 
     if n_blocks > 0:
         bucket_ids = torch.from_numpy(
             np.frombuffer(bucket_ids_buf, dtype=np.uint8).copy()
         ).to(device=device, dtype=torch.long)
+        if bucket_ids.numel() != n_blocks:
+            raise ValueError(
+                f"NWCS1.decode bucket id count mismatch: "
+                f"{bucket_ids.numel()} != {n_blocks}"
+            )
+        if int(bucket_ids.max().item()) >= n_buckets:
+            raise ValueError("NWCS1.decode bucket id outside bucket table")
         scales = torch.from_numpy(
             np.frombuffer(scales_buf, dtype=np.float16).copy()
         ).to(device=device, dtype=torch.float32)
+        if scales.numel() != n_blocks:
+            raise ValueError(
+                f"NWCS1.decode scale count mismatch: {scales.numel()} != {n_blocks}"
+            )
         codes = torch.from_numpy(
             np.frombuffer(codes_buf, dtype=np.uint8).copy()
         ).to(device=device, dtype=torch.long)
+        if codes.numel() != n_blocks:
+            raise ValueError(
+                f"NWCS1.decode code count mismatch: {codes.numel()} != {n_blocks}"
+            )
         with torch.no_grad():
             z_q = torch.zeros(n_blocks, codec.config.latent_dim, device=device)
             for k in range(n_buckets):
                 mask = (bucket_ids == k)
                 if not mask.any():
                     continue
+                if int(codes[mask].max().item()) >= codec.sens_config.codebook_sizes[k]:
+                    raise ValueError(f"NWCS1.decode code index outside bucket {k}")
                 z_q[mask] = codec.bucket_codebooks[k].index_select(0, codes[mask])
             recon_norm = codec.decoder(z_q)
             recon_blocks = recon_norm * scales.unsqueeze(1)

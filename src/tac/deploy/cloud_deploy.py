@@ -13,7 +13,7 @@ Usage:
     # Deploy to GCP (requires gcloud CLI + project with GPU quota)
     python deploy/cloud_deploy.py gcp --project YOUR_PROJECT
 
-    # Deploy to Lightning AI (requires lightning CLI)
+    # Deploy to Lightning AI (requires lightning-sdk CLI)
     python deploy/cloud_deploy.py lightning
 
     # Generate a Colab notebook
@@ -22,10 +22,10 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import importlib.metadata
 import json
 import os
 import shutil
-import subprocess
 from pathlib import Path
 
 REPO = Path(__file__).parent.parent
@@ -161,12 +161,15 @@ def deploy_lightning():
     print("  Or with kl_distill:")
     print("     TAG=lightning_h64_kl LOSS=kl_distill TEMP_START=5.0 TEMP_END=1.0 bash run.sh")
 
-    # Also create a Lightning CLI config if lightning is installed
+    # Also create a Lightning CLI config if the SDK CLI is installed.
+    # Do not execute `lightning --version` here: if a poisoned PyPI
+    # `lightning` console script is first on PATH, running it could import the
+    # compromised package. Inspect installed package metadata instead.
     try:
-        subprocess.run(["lightning", "--version"], capture_output=True, check=True)
-        print("\nLightning CLI detected! Auto-deploy coming soon.")
-    except (FileNotFoundError, subprocess.CalledProcessError):
-        print("\nInstall Lightning CLI for auto-deploy: uv pip install lightning")
+        version = importlib.metadata.version("lightning-sdk")
+        print(f"\nLightning SDK detected ({version})! Auto-deploy coming soon.")
+    except importlib.metadata.PackageNotFoundError:
+        print("\nInstall Lightning SDK CLI for auto-deploy: uv pip install lightning-sdk")
 
 
 def generate_colab():

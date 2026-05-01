@@ -12,12 +12,14 @@ the under-divided reduction will fail `test_kl_distill_segnet_only_reduction_is_
 """
 from __future__ import annotations
 
+import math
+
 import pytest
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from tac.losses import kl_distill_segnet_only
+from tac.losses import kl_distill_segnet_only, segnet_uncertainty_weighted_loss
 
 
 # ── Test stub: minimal SegNet-shaped module ─────────────────────────────────
@@ -65,10 +67,52 @@ class _ShapeStubSegNet(nn.Module):
         return self.proj(x)
 
 
+class _RecordingSegNet(nn.Module):
+    """Records SegNet input shapes and enforces the 3-channel scorer contract."""
+
+    def __init__(self, num_classes: int = 5, out_h: int = 4, out_w: int = 5):
+        super().__init__()
+        self.num_classes = num_classes
+        self.out_h = out_h
+        self.out_w = out_w
+        self.preprocess_shapes: list[tuple[int, ...]] = []
+        self.forward_shapes: list[tuple[int, ...]] = []
+
+    def preprocess_input(self, x: torch.Tensor) -> torch.Tensor:
+        self.preprocess_shapes.append(tuple(x.shape))
+        assert x.ndim == 5
+        assert x.shape[2] == 3
+        last = x[:, -1, ...]
+        return F.interpolate(
+            last.float(), size=(self.out_h, self.out_w),
+            mode="bilinear", align_corners=False,
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        self.forward_shapes.append(tuple(x.shape))
+        assert x.ndim == 4
+        assert x.shape[1] == 3
+        return x.new_zeros((x.shape[0], self.num_classes, x.shape[2], x.shape[3]))
+
+
 def _make_pair(B: int, H: int, W: int, *, seed: int = 0) -> torch.Tensor:
     """Synthesize a (B, T=2, H, W, C=3) HWC pair in [0, 1]."""
     g = torch.Generator().manual_seed(seed)
     return torch.rand(B, 2, H, W, 3, generator=g)
+
+
+def test_segnet_uncertainty_weighted_loss_preserves_3_channel_bchw_for_segnet():
+    """Regression for H-V3: do not index RGB channel 0 as the time axis."""
+    B, H, W = 2, 8, 10
+    rendered = torch.rand(B, H, W, 3)
+    gt = torch.rand(B, H, W, 3)
+    segnet = _RecordingSegNet(out_h=4, out_w=5)
+
+    loss = segnet_uncertainty_weighted_loss(rendered, gt, segnet)
+
+    assert loss.ndim == 0
+    assert segnet.preprocess_shapes == [(B, 1, 3, H, W)]
+    assert segnet.forward_shapes == [(B, 3, 4, 5)]
 
 
 # ─── Reduction correctness ──────────────────────────────────────────────────
@@ -109,6 +153,16 @@ class TestKlDistillSegnetOnlyReduction:
         )
         # Tensor and float must agree.
         assert pytest.approx(kl.item(), rel=1e-6) == kl_val
+
+    @pytest.mark.parametrize("bad_temperature", [0.0, -1.0, math.inf, -math.inf, math.nan, True])
+    def test_kl_distill_segnet_only_rejects_invalid_temperature(self, bad_temperature):
+        """KL helpers must fail before dividing logits by invalid temperatures."""
+        filtered = _make_pair(1, 8, 8, seed=11)
+        gt = _make_pair(1, 8, 8, seed=12)
+        segnet = _ShapeStubSegNet(num_classes=5, out_h=4, out_w=5)
+
+        with pytest.raises(ValueError, match="temperature must be a finite positive number"):
+            kl_distill_segnet_only(filtered, gt, segnet, temperature=bad_temperature)
 
     def test_kl_distill_segnet_only_matches_kl_distill_scorer_loss_pattern(self):
         """The two helpers compute the same per-position quantity. After

@@ -30,12 +30,17 @@ Memory:
 """
 from __future__ import annotations
 
+import argparse
+import importlib.util
 import math
+import sys
+from pathlib import Path
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from tac.preflight import PreflightError
 from tac.segmap_renderer import SEGMAP_INPUT_SIZE, SegMap, SegMapTrainer
 from tac.training import TrainConfig
 
@@ -94,10 +99,12 @@ def _make_kl_config(kl_weight: float) -> TrainConfig:
         lr=1e-3,
         eval_roundtrip=True,
         loss_mode="kl_distill",
+        kl_distill_scope="segnet_aux",
         # kl_distill validator requires temperature_start >= 2.0
         temperature_start=2.0,
         temperature_end=1.0,
         kl_distill_weight=kl_weight,
+        kl_distill_temperature=2.0,
     )
 
 
@@ -120,6 +127,54 @@ def test_train_config_exposes_kl_distill_weight_field() -> None:
     assert cfg.kl_distill_weight == 0.002
 
 
+def test_train_config_exposes_explicit_kl_temperature_and_scope_fields() -> None:
+    """KL auxiliary configs need explicit units/scope, not an overloaded
+    primary-loss temperature schedule."""
+    fields = TrainConfig.model_fields
+    assert "kl_distill_temperature" in fields
+    assert fields["kl_distill_temperature"].default == 2.0
+    assert "kl_distill_scope" in fields
+    assert fields["kl_distill_scope"].default == "none"
+
+
+def test_trainer_checkpoint_metadata_records_kl_scope_and_weights() -> None:
+    """Generic Trainer checkpoint sidecars must preserve enough KL metadata
+    to tell primary forensic KL from scoped SegNet-aux KL after harvest."""
+    src = (Path(__file__).resolve().parents[1] / "training.py").read_text()
+    for key in (
+        '"kl_distill_scope"',
+        '"kl_distill_weight"',
+        '"kl_distill_temperature"',
+        '"allow_banned_primary_kl_distill"',
+        '"promotion_eligible"',
+        '"distillation_policy"',
+    ):
+        assert key in src
+
+
+def test_train_config_distillation_policy_provenance_records_schema() -> None:
+    cfg = _make_kl_config(kl_weight=0.005)
+
+    provenance = cfg.distillation_policy_provenance()
+    assert provenance["format"] == "distillation_policy_v1"
+    assert provenance["family"] == "segnet_aux_kl"
+    assert provenance["scope"] == "segnet_aux"
+    assert provenance["weight"] == 0.005
+    assert provenance["temperature"] == 2.0
+    assert provenance["promotion_capable"] is True
+
+
+def test_train_config_zero_weight_kl_serializes_as_inactive_policy() -> None:
+    cfg = _make_kl_config(kl_weight=0.0)
+
+    provenance = cfg.distillation_policy_provenance()
+    assert provenance["format"] == "distillation_policy_v1"
+    assert provenance["family"] == "none"
+    assert provenance["scope"] == "none"
+    assert provenance["weight"] == 0.0
+    assert provenance["promotion_blockers"] == []
+
+
 def test_train_config_accepts_non_default_kl_weight() -> None:
     """The operator MUST be able to override kl_distill_weight (this was the
     silent-drop bug — the field didn't exist so override was a no-op)."""
@@ -136,6 +191,133 @@ def test_train_config_rejects_negative_kl_weight() -> None:
             eval_roundtrip=True, loss_mode="standard",
             kl_distill_weight=-0.1,
         )
+
+
+def test_active_kl_temperature_fails_before_trainer_construction() -> None:
+    """The policy validator must catch the active KL temperature, not just
+    the primary-loss annealing schedule."""
+    import pytest
+
+    with pytest.raises(Exception, match="temperature >= 2.0"):
+        TrainConfig(
+            hidden=8,
+            epochs=100,
+            warmup_epochs=10,
+            tag="kl-temp-too-low",
+            eval_roundtrip=True,
+            loss_mode="kl_distill",
+            kl_distill_scope="segnet_aux",
+            kl_distill_weight=0.002,
+            kl_distill_temperature=1.0,
+            temperature_start=2.0,
+            temperature_end=1.0,
+        )
+
+
+def test_segmap_trainer_rejects_primary_kl_scope() -> None:
+    """SegMapTrainer only implements the SegNet-auxiliary KL path.
+
+    A forensic ``primary_scorer`` config is valid at the TrainConfig layer
+    only so legacy primary KL can be audited. It must not be silently routed
+    through SegMapTrainer, where ``loss_mode='kl_distill'`` means
+    ``standard scorer loss + SegNet-only KL auxiliary``.
+    """
+    import pytest
+
+    cfg = TrainConfig(
+        hidden=8,
+        epochs=100,
+        warmup_epochs=10,
+        tag="primary-kl-forensic",
+        eval_roundtrip=True,
+        loss_mode="kl_distill",
+        kl_distill_scope="primary_scorer",
+        allow_banned_primary_kl_distill=True,
+        promotion_eligible=False,
+        forensic_reason="segmap must reject primary scorer KL routing",
+        temperature_start=2.0,
+        temperature_end=1.0,
+    )
+    with pytest.raises(PreflightError, match="only kl_distill_scope='segnet_aux'"):
+        SegMapTrainer(_make_tiny_segmap(), cfg, _MockPoseNet(), _MockSegNet(), device="cpu")
+
+
+def test_train_config_rejects_unfenced_segnet_kl() -> None:
+    """Legacy loss_mode='segnet_kl' must not silently stay promotion-capable.
+
+    Grand Council KL hardening found this was the remaining KL-like path not
+    covered by the explicit scope/promotion contract.
+    """
+    import pytest
+
+    with pytest.raises(Exception, match="kl_distill_scope='segnet_aux'"):
+        TrainConfig(
+            hidden=8,
+            epochs=100,
+            warmup_epochs=10,
+            tag="segnet-kl-unfenced",
+            eval_roundtrip=True,
+            loss_mode="segnet_kl",
+        )
+
+
+def test_train_config_accepts_forensic_segnet_kl_only_when_non_promotable() -> None:
+    cfg = TrainConfig(
+        hidden=8,
+        epochs=100,
+        warmup_epochs=10,
+        tag="segnet-kl-forensic",
+        eval_roundtrip=True,
+        loss_mode="segnet_kl",
+        kl_distill_scope="segnet_aux",
+        promotion_eligible=False,
+        forensic_reason="legacy SegNet-KL unit-test forensic path",
+    )
+
+    assert cfg.loss_mode == "segnet_kl"
+    assert cfg.kl_distill_scope == "segnet_aux"
+    assert cfg.promotion_eligible is False
+
+
+def test_segnet_kl_profiles_are_forensic_only() -> None:
+    from tac.profiles import SEGNET_KL_FULL, SEGNET_KL_SMOKE
+
+    for profile in (SEGNET_KL_SMOKE, SEGNET_KL_FULL):
+        assert profile["loss_mode"] == "segnet_kl"
+        assert profile["kl_distill_scope"] == "segnet_aux"
+        assert profile["promotion_eligible"] is False
+
+
+def test_train_segmap_film_canvas_kl_variant_sets_explicit_scope() -> None:
+    """FilmCanvas reuses SegMapTrainer, so it must satisfy the same explicit
+    KL scope contract as experiments/train_segmap.py."""
+    script = Path(__file__).resolve().parents[3] / "experiments" / "train_segmap_film_canvas.py"
+    spec = importlib.util.spec_from_file_location("train_segmap_film_canvas_under_test", script)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+
+    args = argparse.Namespace(
+        variant="kl_distill",
+        roundtrip_noise_std=0.5,
+        epochs=120,
+        batch_size=2,
+        lr=1e-3,
+        weight_decay=1e-4,
+        ema_decay=0.997,
+        tag="film_canvas_kl_test",
+        output_dir="experiments/results/film_canvas_kl_test",
+        bf16=False,
+        scorer_chunk=0,
+        kl_distill_weight=0.002,
+        kl_distill_temperature=2.0,
+    )
+
+    cfg = module._build_trainer_config(args, torch.device("cpu"))
+    assert cfg.loss_mode == "kl_distill"
+    assert cfg.kl_distill_scope == "segnet_aux"
+    assert cfg.kl_distill_weight == 0.002
 
 
 def _train_and_get_loss(kl_weight: float, seed: int = 1234) -> float:

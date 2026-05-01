@@ -175,6 +175,43 @@ PSD_STANDARD_ADAPTIVE = {
     "use_swa": True,
 }
 
+# Lane PSD-LumaSkip — PoseNet-aware luma-skip variant of PSD.
+# Council Phase A approval 2026-04-30 (10/10 APPROVE-FOR-SCAFFOLD,
+# DEFERRED for GPU dispatch pending separate council). See
+# .omx/research/council_lane_psd_lumaskip_design_20260430.md
+#
+# Architecture: dual-path post-filter combining PSD's half-res chroma+RGB
+# bottleneck (which preserves PSD's 12.8% SegNet advantage) with a
+# full-resolution luma skip path (which restores the high-frequency luma
+# content FastViT-PoseNet's attention layers attend to via the YUV6
+# polyphase decomposition; see upstream/frame_utils.py:51-78).
+#
+# Param count target: ~95-100K (vs Lane G v3's 88K and vanilla PSD's 95K).
+# Predicted bands (per Phase A council §4):
+#   - Optimistic (25% prob, luma-skip recovers >80% FastViT signal): [0.95, 1.05]
+#   - Central (45% prob, luma-skip recovers ~50% signal): [1.05, 1.20]
+#   - Pessimistic (30% prob, dual-path destabilizes): [1.20, 1.40]
+#
+# Inherits PSD_STANDARD_ADAPTIVE's adaptive training stabilizers
+# (boundary_weight, hard_frame_ratio, SWA) on top of PROVEN_BASELINE
+# (which provides the canonical EMA + eval_roundtrip plumbing —
+# both required per CLAUDE.md non-negotiables).
+PSD_LUMASKIP_LANE_G_V3 = {
+    **PROVEN_BASELINE,
+    "variant": "psd_lumaskip",
+    # Lane-specific arch flags (forwarded to PSDLumaSkipPostFilter ctor by
+    # train_renderer.py / pipeline.py when variant=="psd_lumaskip"). These
+    # are NOT silent defaults — they MUST be passed through explicitly.
+    "psd_lumaskip_luma_hidden": 16,                 # Fridrich Phase A recommendation
+    "psd_lumaskip_use_learned_luma_projection": True,  # Yousfi Phase A recommendation
+    # PSD_STANDARD_ADAPTIVE training stabilizers
+    "boundary_weight": 50.0,
+    "hard_frame_ratio": 0.3,
+    "error_replay_every": 200,
+    "eval_every": 5,
+    "use_swa": True,
+}
+
 SAUG_V2_DILATED_H64 = {
     **PROVEN_BASELINE,
     "use_saug_v2": True,
@@ -1237,12 +1274,18 @@ UINT8_STE_SMOKE = {
 SEGNET_KL_SMOKE = {
     **SMOKE,
     "loss_mode": "segnet_kl",
+    "kl_distill_scope": "segnet_aux",
+    "promotion_eligible": False,
+    "forensic_reason": "legacy SegNet-KL profile; non-promotable until migrated and exact CUDA component-gated",
     "segnet_loss_weight": 50.0,
 }
 
 SEGNET_KL_FULL = {
     **PROVEN_BASELINE,
     "loss_mode": "segnet_kl",
+    "kl_distill_scope": "segnet_aux",
+    "promotion_eligible": False,
+    "forensic_reason": "legacy SegNet-KL profile; non-promotable until migrated and exact CUDA component-gated",
     "segnet_loss_weight": 50.0,
     "epochs": 2500,
     "boundary_weight": 50.0,
@@ -2085,6 +2128,10 @@ WILDE = {
     # single most important SegNet trick.
     "kl_distill_weight": 1.0,
     "kl_distill_temperature": 2.0,
+    "kl_distill_scope": "segnet_aux",
+    # Forensic-only after KL hardening: corrected per-pixel KL made the old
+    # 1.0 recipe an unsafe high-scale configuration until exact retuning.
+    "promotion_eligible": False,
     # Training: 5-phase Quantizr-adapted schedule
     # Phase 1 (pixel warmup): all params, L1 loss
     # Phase 2 (anchor): freeze motion, SegNet CE + KL(T=2.0), error_boost=9x
@@ -2232,6 +2279,8 @@ SHIRAZ = {
     # single most important SegNet trick.
     "kl_distill_weight": 1.0,
     "kl_distill_temperature": 2.0,
+    "kl_distill_scope": "segnet_aux",
+    "promotion_eligible": False,
     "pose_weight": 10.0,
     "seg_weight": 100.0,
     "pixel_weight": 0.1,
@@ -2460,6 +2509,8 @@ DEN = {
     # over phases so distillation pressure tapers as the model converges.
     "kl_distill_weight": 1.0,
     "kl_distill_temperature": 2.0,
+    "kl_distill_scope": "segnet_aux",
+    "promotion_eligible": False,
     # Per-class weights (lane markings 15x — Yousfi).
     "use_per_class_weights": True,
     # Score weights — DOMINATED BY SegNet (77x more important per scoring math).
@@ -2606,6 +2657,8 @@ DILATED_H64_HALF_FRAME = {
     # Quantizr KL distillation on SegNet (T=2.0, weight=1.0)
     "kl_distill_weight": 1.0,
     "kl_distill_temperature": 2.0,
+    "kl_distill_scope": "segnet_aux",
+    "promotion_eligible": False,
     # Score weights — SegNet dominates per scoring math (77x more important)
     "pose_weight": 10.0,
     "seg_weight": 100.0,
@@ -2725,6 +2778,8 @@ DILATED_H64_HALF_FRAME_V3_ANNEALED_KLDISTILL = {
     # divided by H*W so weight=0.002 gives the intended 1%-of-scorer-loss
     # contribution.
     "kl_distill_weight": 0.002,
+    "kl_distill_scope": "segnet_aux",
+    "promotion_eligible": True,
     # Override 3: V2's LR floor fix (CHOICE B per remote_lane_d_v2_*.sh).
     # P1 unchanged (pixel warmup converges fast).
     # P2 raised 1.67× to fix the ep 700 plateau (cosine_lr eta_min=1e-6
@@ -2745,8 +2800,8 @@ DILATED_H64_HALF_FRAME_V3_ANNEALED_KLDISTILL = {
 # Council .omx/research/council_lane_19_logit_margin_design_20260430.md
 # (5-of-6 GREEN with conditions; Quantizr YELLOW pending A/B).
 #
-# Anchored on Lane G v3 = 1.05 [contest-CUDA]
-# (DILATED_H64_HALF_FRAME_V3_ANNEALED_KLDISTILL).
+# Held against the current Lane G v3 PFP16 A++ frontier =
+# 1.043987524793892 [contest-CUDA/T4], archive 686635 bytes.
 #
 # WHY: SegNet score = argmax disagreement rate. Confident-correct pixels
 # (margin >> threshold) cannot move the score; standard CE wastes capacity
@@ -2755,14 +2810,16 @@ DILATED_H64_HALF_FRAME_V3_ANNEALED_KLDISTILL = {
 # where flips actually happen. Fridrich UNIWARD applied to segmentation:
 # hide error in the detector's blind spots.
 #
-# Wired as an AUXILIARY (loss_mode="logit_margin" + logit_margin_weight=0.1)
-# alongside the existing KL distill aux. Confident-WRONG pixels still
-# contribute zero to margin loss but are caught by the underlying
-# scorer_loss path (council §2 Contrarian).
+# Wired as the SegNet auxiliary (loss_mode="logit_margin" +
+# logit_margin_weight=10.0). Inherited KL distill is disabled
+# (kl_distill_weight=0.0) because the raised margin auxiliary made the
+# old KL term non-load-bearing. Confident-WRONG pixels still contribute
+# zero to margin loss but are caught by the underlying scorer_loss path
+# (council §2 Contrarian).
 #
 # Predicted band [prediction] (per CLAUDE.md SegNet paradigm shift):
 #   * Floor: -1e-3 SegNet distortion → ~0.10 score points improvement on
-#     Lane G v3 1.05 anchor (margin loss buys minor wedge over standard CE).
+#     the current PFP16 frontier (margin loss buys minor wedge over standard CE).
 #   * Ceiling: -3e-3 SegNet distortion → ~0.30 score points (Phase 2 spec).
 #   * Kill: A/B local smoke shows margin loss not converging to lower SegNet
 #     proxy than standard CE on identical 100-epoch run — demote to Phase 3.
@@ -2929,6 +2986,8 @@ J_JBL_DILATED_H64 = {
     # picks combined_jbl_distill_loss when this is "jbl". Default
     # remains "standard" everywhere else.
     "loss_mode": "jbl",
+    "promotion_eligible": False,
+    "forensic_reason": "JBL distillation-family lane; requires exact CUDA non-collapse evidence before promotion",
     # Boundary pixel weight inside the BLS+CE channel (3× the interior
     # weight; middle of the paper's 3-5x recommendation).
     "boundary_weight": 3.0,
@@ -3176,6 +3235,7 @@ QUANTIZR_REPLICA_88K_HALFFRAME = {
     # so weight=0.002 produces KL contribution ~5e-5 (~1% of scorer loss).
     "kl_distill_weight": 0.002,
     "kl_distill_temperature": 2.0,
+    "kl_distill_scope": "segnet_aux",
     "ema_decay": 0.997,
     "use_per_class_weights": True,  # lane markings 15x (Yousfi)
     "use_swa": True,                # SWA for FP4 survival
@@ -3360,6 +3420,7 @@ LANE_Q_FAITHFUL_88K = {
     # puts KL contribution at ~10% of scorer = canonical Hinton 2015).
     "kl_distill_weight": 0.002,
     "kl_distill_temperature": 2.0,
+    "kl_distill_scope": "segnet_aux",
     # EMA decay 0.997 — Quantizr's 5-stage pipeline uses EMA for FP4 export.
     "ema_decay": 0.997,
     "use_per_class_weights": True,   # lane markings 15x (Yousfi)
@@ -3553,6 +3614,7 @@ DSCONV_QUANTIZR_KILLER = {
     # reduction fix (raw KL ~5000× larger pre-fix). Same calibration as Lane V.
     "kl_distill_weight": 0.002,
     "kl_distill_temperature": 2.0,
+    "kl_distill_scope": "segnet_aux",
     "ema_decay": 0.997,
     "use_per_class_weights": True,  # lane markings 15x (Yousfi)
     "use_swa": True,                # SWA → wider minima → FP4 survives
@@ -3728,6 +3790,7 @@ DILATED_H64_GHOST = {
     # Quantizr KL distillation on SegNet (T=2.0, weight=0.002 POST-FIX).
     "kl_distill_weight": 0.002,
     "kl_distill_temperature": 2.0,
+    "kl_distill_scope": "segnet_aux",
     "ema_decay": 0.997,
     "use_per_class_weights": True,  # lane markings 15x (Yousfi)
     "use_swa": True,                # SWA → wider minima → FP4 survives
@@ -3904,6 +3967,8 @@ SELF_COMPRESS_RENDERER_FULL = {
     "uncertainty_loss_floor": 0.1,
     "kl_distill_weight": 1.0,
     "kl_distill_temperature": 2.0,
+    "kl_distill_scope": "segnet_aux",
+    "promotion_eligible": False,
     "pose_weight": 10.0,
     "seg_weight": 100.0,
     "pixel_weight": 0.1,
@@ -3989,6 +4054,10 @@ PROFILES = {
     "h96_council": H96_COUNCIL,
     "smoke": SMOKE,
     "psd_standard_adaptive": PSD_STANDARD_ADAPTIVE,
+    # Lane PSD-LumaSkip: PoseNet-aware luma-skip variant of PSD (Phase A
+    # scaffold landed 2026-04-30; GPU dispatch DEFERRED pending separate
+    # council). See .omx/research/council_lane_psd_lumaskip_design_20260430.md.
+    "psd_lumaskip_lane_g_v3": PSD_LUMASKIP_LANE_G_V3,
     "saug_v2_dilated_h64": SAUG_V2_DILATED_H64,
     "hm_dilated_h64": HM_DILATED_H64,
     "cg_dilated_h64": CG_DILATED_H64,
@@ -4029,9 +4098,10 @@ PROFILES = {
     # Lane 19 (SegNet logit-margin boundary loss): auxiliary that weights CE
     # by `(threshold - margin) / threshold` so confident pixels contribute
     # zero loss and boundary pixels (margin < threshold) get full signal.
-    # Fridrich UNIWARD applied to segmentation. Predicted band [prediction]:
-    # -1e-3 to -3e-3 SegNet distortion → 0.10-0.30 score points on Lane G v3
-    # 1.05 anchor per .omx/research/council_lane_19_logit_margin_design_20260430.md.
+    # Fridrich UNIWARD applied to segmentation. Forensic hold clearance is
+    # against the Lane G v3 PFP16 A++ frontier score 1.043987524793892 with
+    # JSON adjudication and current component gates, not the older rounded
+    # Lane G v3 1.05 anchor.
     "lane_19_logit_margin": LANE_19_LOGIT_MARGIN,
     # Lane 12 (NeRV mask codec, Phase 2 ACCELERATE): registry stub for the
     # NeRV codec lane. Consumed by experiments/train_nerv_mask.py +
@@ -4039,17 +4109,14 @@ PROFILES = {
     # Lane G v3. Predicted band [23 KB, 80 KB] @ SegNet ≤ Lane G v3 + 25%
     # per .omx/research/council_lane_12_nerv_design_20260430.md.
     "nerv_mask_lane_g_v3": NERV_MASK_LANE_G_V3,
-    # Lane 20 (Ballé hyperprior, Phase 2 ACCELERATE): block-conditional
+    # Lane 20 (Ballé hyperprior, forensic hold): block-conditional
     # arithmetic codec for the renderer's qint stream. Profile is a registry
     # stub anchoring `experiments/measure_lane_20_balle_real_archive.py` +
     # `scripts/remote_lane_20_balle.sh`. Renderer/loss knobs inherited from
-    # Lane G v3. Predicted band [-3%, -8%] on the renderer qint segment of
-    # the archive (~5-15 KB out of ~180 KB) per Phase A council review at
-    # .omx/research/council_lane_20_balle_design_20260430.md.
-    # KILL CRITERION: if real-archive empirical [empirical:reports/
-    # lane_20_balle_real_archive.json] shows Ballé-auto >= static, the auto
-    # path falls back to "static_wins" and Lane 20 contributes zero bytes
-    # (verified at preflight Check 91 STRICT).
+    # Lane G v3. Current empirical evidence is static-fallback/no-op on this
+    # anchor, so no score rerun is allowed until a non-static byte precheck
+    # beats static and a real BHv1 archive/inflate path exists. The older
+    # predicted qint-segment savings are superseded for dispatch purposes.
     "lane_20_balle_lane_g_v3": {
         **DILATED_H64_HALF_FRAME_V3_ANNEALED_KLDISTILL,  # inherit Lane G v3 anchor
         # Lane-20-specific Ballé hyperprior knobs (consumed by the codec

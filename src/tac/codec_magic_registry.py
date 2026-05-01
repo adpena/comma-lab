@@ -65,6 +65,18 @@ _REGISTRY: tuple[CodecMagicEntry, ...] = (
         ),
     ),
     CodecMagicEntry(
+        magic=b"OWV3",
+        name="Lane Ω-W-V3",
+        decode_module="tac.owv3_sensitivity_weighted:decode_owv3_archive",
+        encode_module="tac.owv3_sensitivity_weighted:encode_owv3_archive",
+        description=(
+            "Sensitivity-weighted renderer archive: high-sensitivity Conv2d "
+            "output channels stay FP16 while the remaining channels pass "
+            "through OWV2 water-fill + arithmetic coding. Sensitivity is "
+            "compress-time only; decode is pure byte-to-tensor math."
+        ),
+    ),
+    CodecMagicEntry(
         magic=b"IMPS",
         name="Lane 17 IMP",
         decode_module="tac.imps_renderer_archive:decode_imps_archive",

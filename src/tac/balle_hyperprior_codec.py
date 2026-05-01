@@ -519,13 +519,25 @@ def encode_qints_full_balle(
     pad = n_blocks * block_size - n_total
     padded = np.concatenate([flat, np.zeros(pad, dtype=flat.dtype)])
     blocks = padded.reshape(n_blocks, block_size).astype(np.float32)
-    blocks_t = torch.from_numpy(blocks)
-    # CRITICAL: σ at encode-time MUST equal σ at decode-time, otherwise the
-    # discretized-Gaussian PMFs differ and the arithmetic decoder
-    # de-synchronises after the first symbol that flips bin. The decoder
-    # uses fp16-roundtripped weights (loaded from the wire format), so the
-    # encoder must use the SAME fp16-roundtripped weights — not the fp32
-    # live weights — to produce a matching σ stream.
+    # PARADIGM-γ device-mismatch fix (2026-04-30, Council #271 carry-over):
+    # The Lane 20 STATIC_WINS_FALLBACK regression had two contributing causes:
+    # (i) the codec's hyper_encoder/hyper_decoder may live on CUDA after a
+    #     trainer moved them with `.to('cuda')`, but `blocks_t` was always
+    #     constructed on CPU. Calling `codec.hyper_encoder(blocks_t)` then
+    #     fails with a device-mismatch RuntimeError, the encode silently
+    #     falls back to the static-arithmetic path (caller's try/except),
+    #     and the codec is never given a chance to compete.
+    # (ii) The fp16-roundtripped decoder is freshly constructed on CPU
+    #     (`_deserialize_hyper_decoder`), so the σ inference path needs its
+    #     input on CPU even when the encoder was on CUDA.
+    # Fix: always derive the encoder's actual parameter device, move
+    # `blocks_t` to that device, run the encoder, and bring the quantized
+    # z back to CPU for the σ-inference call which uses the CPU-based
+    # fp16_decoder. This is the bit-deterministic encode path: σ is
+    # computed from the QUANTIZED z (so encoder/decoder agree on z) AND
+    # the FP16-roundtripped CPU decoder (so encoder/decoder agree on σ).
+    enc_device = next(codec.hyper_encoder.parameters()).device
+    blocks_t = torch.from_numpy(blocks).to(enc_device)
     decoder_blob = _serialize_hyper_decoder(codec.hyper_decoder)
     fp16_decoder = _deserialize_hyper_decoder(
         z_dim=codec.z_dim,
@@ -533,11 +545,14 @@ def encode_qints_full_balle(
         blob=decoder_blob,
     )
     with torch.no_grad():
-        z = codec.hyper_encoder(blocks_t)  # (n_blocks, z_dim)
-        z_int = _quantize_z(z)  # int8
+        z = codec.hyper_encoder(blocks_t)  # (n_blocks, z_dim) on enc_device
+        z_int_dev = _quantize_z(z)  # int8 on enc_device
+        # Move quantized z back to CPU for the CPU-side fp16 σ-inference.
+        z_int = z_int_dev.detach().to("cpu")
         # σ is computed from the QUANTIZED z (so encoder/decoder agree on z)
-        # AND the FP16-roundtripped decoder (so encoder/decoder agree on σ).
-        sigma_per_block = fp16_decoder(z_int.float())  # (n_blocks,)
+        # AND the FP16-roundtripped CPU decoder (so encoder/decoder agree
+        # on σ). This pairs with the inflate path which has no GPU.
+        sigma_per_block = fp16_decoder(z_int.float())  # (n_blocks,) on CPU
 
     # Arithmetic-code the y stream using per-block discretized Gaussian.
     encoder = _ArithmeticEncoder()

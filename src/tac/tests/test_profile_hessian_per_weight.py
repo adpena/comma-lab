@@ -56,6 +56,7 @@ def test_argparse_has_required_flags():
     expected = {
         "checkpoint", "video", "masks-mkv", "poses", "upstream", "output",
         "top-k", "pair-weights", "all-pairs", "device", "pair-batch",
+        "include-protected-conv2d",
     }
     missing = expected - flags
     assert not missing, f"profile_hessian_per_weight.py missing flags: {sorted(missing)}"
@@ -190,6 +191,48 @@ def test_eligible_params_excludes_protected():
             assert not (base == pat or base.endswith("." + pat)), (
                 f"eligible weight {name} should be protected (matches {pat})"
             )
+
+
+def test_eligible_params_owv3_mode_includes_protected_conv2d_not_linear():
+    """OWV3 sensitivity maps need measured Conv2d sensitivity for protected
+    convs while protected FiLM Linear layers remain out of scope."""
+    mod = _load_module()
+    sys.path.insert(0, str(REPO / "src"))
+    from tac.renderer import AsymmetricPairGenerator
+
+    model = AsymmetricPairGenerator(
+        num_classes=5, embed_dim=6, base_ch=12, mid_ch=16,
+        motion_hidden=8, depth=1, pose_dim=6, use_dsconv=False,
+        use_zoom_flow=False, padding_mode="zeros", use_dilation=False,
+    )
+    eligible = mod._select_eligible_params(
+        model,
+        include_protected_conv2d=True,
+    )
+    assert "renderer.fuse_conv.weight" in eligible
+    assert "renderer.head.weight" in eligible
+    assert "motion.head.weight" in eligible
+    assert "renderer.film_bottleneck.scale.weight" not in eligible
+    assert "renderer.film_bottleneck.shift.weight" not in eligible
+
+
+def test_eligible_params_records_exclusion_reasons():
+    mod = _load_module()
+    sys.path.insert(0, str(REPO / "src"))
+    from tac.renderer import AsymmetricPairGenerator
+
+    model = AsymmetricPairGenerator(
+        num_classes=5, embed_dim=6, base_ch=12, mid_ch=16,
+        motion_hidden=8, depth=1, pose_dim=6, use_dsconv=False,
+        use_zoom_flow=False, padding_mode="zeros", use_dilation=False,
+    )
+    eligible, excluded = mod._select_eligible_params_with_exclusions(
+        model,
+        include_protected_conv2d=False,
+    )
+    assert "renderer.fuse_conv.weight" not in eligible
+    assert excluded["renderer.fuse_conv.weight"] == "protected_conv2d"
+    assert excluded["renderer.film_bottleneck.scale.weight"] == "protected_linear"
 
 
 def test_eligible_params_includes_bulk_convs():

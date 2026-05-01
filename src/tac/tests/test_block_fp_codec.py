@@ -13,6 +13,8 @@ guarantee:
 from __future__ import annotations
 
 import struct
+import json
+import tarfile
 
 import pytest
 import torch
@@ -164,11 +166,14 @@ def test_default_constants_documented():
 
 
 from tac.block_fp_codec import (  # noqa: E402
+    SEGMAP_LOSSY_CONTRACT_ID,
+    SEGMAP_LOSSY_ROUNDTRIP_MSE_TOL,
     decode_conv_weight,
     decode_tensor_linear_q_per_tensor_v1,
     encode_conv_weight,
     encode_tensor_linear_q_per_tensor_v1,
     pack_payload_tar_xz,
+    segmap_lossy_contract_metadata,
     unpack_payload_tar_xz,
     verify_roundtrip,
 )
@@ -275,6 +280,50 @@ def test_roundtrip_mse_below_threshold(tmp_path):
     assert set(mse.keys()) == set(state.keys())
     for k, v in mse.items():
         assert v <= 1e-3, f"{k} MSE {v:.6g} above tol"
+
+
+def test_segmap_lossy_contract_embedded_in_payload_meta(tmp_path):
+    state = {
+        "layer_in.weight": torch.randn(8, 4, 1, 1) * 0.1,
+        "layer_in.bias": torch.randn(8) * 0.1,
+    }
+    payload = tmp_path / "payload.tar.xz"
+    contract = segmap_lossy_contract_metadata()
+
+    mse = verify_roundtrip(
+        state,
+        payload,
+        tol=SEGMAP_LOSSY_ROUNDTRIP_MSE_TOL,
+        lossy_contract=contract,
+    )
+
+    assert max(mse.values()) <= SEGMAP_LOSSY_ROUNDTRIP_MSE_TOL
+    with tarfile.open(payload, "r:xz") as tf:
+        meta = json.loads(tf.extractfile("meta.json").read().decode("utf-8"))
+    assert meta["lossy_contract"]["contract_id"] == SEGMAP_LOSSY_CONTRACT_ID
+    assert meta["lossy_contract"]["exact_archive_eval_required"] is True
+
+
+def test_segmap_lossy_contract_replaces_lossless_tol_for_conv_payload(tmp_path):
+    torch.manual_seed(11)
+    state = {
+        "layer_in.weight": torch.randn(24, 8, 1, 1) * 0.18,
+        "layer_in.bias": torch.randn(24) * 0.05,
+    }
+    strict_payload = tmp_path / "strict.tar.xz"
+    lossy_payload = tmp_path / "lossy.tar.xz"
+
+    with pytest.raises(AssertionError, match="tol 1e-06"):
+        verify_roundtrip(state, strict_payload, tol=1e-6)
+
+    mse = verify_roundtrip(
+        state,
+        lossy_payload,
+        tol=SEGMAP_LOSSY_ROUNDTRIP_MSE_TOL,
+        lossy_contract=segmap_lossy_contract_metadata(),
+    )
+    assert mse["layer_in.weight"] > 1e-6
+    assert mse["layer_in.weight"] <= SEGMAP_LOSSY_ROUNDTRIP_MSE_TOL
 
 
 def test_conv_weight_hwoi_permute_is_invertible():

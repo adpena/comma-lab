@@ -35,12 +35,13 @@ The combined ``combined_jbl_distill_loss`` consumes:
       weighted ``boundary_pixel_weight`` × interior pixels (the
       "boundary precision" channel).
 
-Both channels are mathematically convex around the teacher / GT and
-cannot induce the PoseNet collapse that historically afflicted naive
-KL distillation as PRIMARY loss (CLAUDE.md "Critical Lessons"). JBL is
-designed to STACK with the standard scorer loss, NOT replace it — see
-``train_renderer.py``'s ``args.loss_mode == "jbl"`` dispatch which
-auxiliary-adds the JBL term alongside the existing ``scorer_loss``.
+Both channels are distillation-family auxiliaries around the teacher / GT.
+They do not replace exact component gates: JBL can only be treated as
+promotion-capable after exact CUDA archive eval proves PoseNet non-collapse
+and SegNet behavior under the canonical scorer path. JBL is designed to STACK
+with the standard scorer loss, NOT replace it — see ``train_renderer.py``'s
+``args.loss_mode == "jbl"`` dispatch which auxiliary-adds the JBL term
+alongside the existing ``scorer_loss``.
 
 CLAUDE.md compliance:
   * No CUDA/MPS device defaults — pure functional API; caller picks device.

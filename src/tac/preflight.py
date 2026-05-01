@@ -31,6 +31,7 @@ import datetime as _dt
 import hashlib
 import os
 import re
+import shlex
 import struct
 import subprocess
 import sys
@@ -3263,6 +3264,27 @@ _MCP_PROCESS_TOKENS = (
     "rbx-studio-mcp",
     "roblox_studio_mcp",
 )
+_MCP_SHELL_BASENAMES = {"bash", "dash", "sh", "zsh"}
+_MCP_INSPECTION_BASENAMES = {
+    "awk",
+    "egrep",
+    "fgrep",
+    "find",
+    "grep",
+    "head",
+    "ps",
+    "rg",
+    "sed",
+    "tail",
+    "xargs",
+}
+_MCP_PACKAGE_LAUNCHER_BASENAMES = {
+    "bun",
+    "npx",
+    "pnpm",
+    "uvx",
+    "yarn",
+}
 _MCP_TOML_SECTION_RE = re.compile(r"^\s*\[\s*mcp_servers(?:[.\]\s]|$)")
 _MCP_TOML_INLINE_RE = re.compile(r"^\s*mcp_servers\s*=")
 
@@ -3387,6 +3409,87 @@ def check_no_active_mcp_server_config(
     return violations
 
 
+def _split_process_command(command: str) -> list[str]:
+    try:
+        return shlex.split(command)
+    except ValueError:
+        return command.split()
+
+
+def _process_arg_basename(arg: str) -> str:
+    return os.path.basename(arg.rstrip("/"))
+
+
+def _process_arg_matches_mcp_token(arg: str, token: str) -> bool:
+    base = _process_arg_basename(arg)
+    if base == token or base.startswith(f"{token}@"):
+        return True
+    parts = [part for part in arg.replace("\\", "/").split("/") if part]
+    return any(part == token or part.startswith(f"{token}@") for part in parts)
+
+
+def _classify_live_mcp_helper_command(command: str, *, shell_depth: int = 0) -> str | None:
+    argv = _split_process_command(command)
+    if not argv:
+        return None
+    base = _process_arg_basename(argv[0])
+
+    if base in _MCP_SHELL_BASENAMES and shell_depth < 2 and "-c" in argv:
+        index = argv.index("-c")
+        if index + 1 < len(argv):
+            return _classify_live_mcp_helper_command(
+                argv[index + 1],
+                shell_depth=shell_depth + 1,
+            )
+        return None
+
+    if base in {"command", "exec"} and len(argv) > 1:
+        tail = " ".join(shlex.quote(part) for part in argv[1:])
+        return _classify_live_mcp_helper_command(tail, shell_depth=shell_depth)
+
+    if base in _MCP_INSPECTION_BASENAMES:
+        return None
+
+    for token in _MCP_PROCESS_TOKENS:
+        if _process_arg_matches_mcp_token(argv[0], token):
+            return token
+
+    if base == "npm":
+        launch_indices = [
+            i for i, arg in enumerate(argv[1:], start=1) if arg in {"exec", "x"}
+        ]
+        search_from = (launch_indices[0] + 1) if launch_indices else len(argv)
+        for arg in argv[search_from:]:
+            for token in _MCP_PROCESS_TOKENS:
+                if _process_arg_matches_mcp_token(arg, token):
+                    return token
+        return None
+
+    if base in _MCP_PACKAGE_LAUNCHER_BASENAMES:
+        for arg in argv[1:]:
+            if arg.startswith("-"):
+                continue
+            for token in _MCP_PROCESS_TOKENS:
+                if _process_arg_matches_mcp_token(arg, token):
+                    return token
+        return None
+
+    if base.startswith("python"):
+        for index, arg in enumerate(argv[:-1]):
+            if arg == "-m":
+                module = argv[index + 1]
+                for token in _MCP_PROCESS_TOKENS:
+                    if module == token:
+                        return token
+        return None
+
+    for arg in argv[1:]:
+        for token in _MCP_PROCESS_TOKENS:
+            if _process_arg_matches_mcp_token(arg, token):
+                return token
+    return None
+
+
 def _scan_live_mcp_process_rows(
     rows: list[str],
     *,
@@ -3405,10 +3508,11 @@ def _scan_live_mcp_process_rows(
             command = line
         if current_pid is not None and pid == current_pid:
             continue
-        if any(token in command for token in _MCP_PROCESS_TOKENS):
+        token = _classify_live_mcp_helper_command(command)
+        if token is not None:
             label = f"pid {pid}" if pid is not None else "unknown pid"
             violations.append(
-                f"{label}: live MCP helper process is running: {command}. "
+                f"{label}: live MCP helper process ({token}) is running: {command}. "
                 "Kill MCP helpers before contest/eval work unless the user "
                 "explicitly re-enables MCP."
             )

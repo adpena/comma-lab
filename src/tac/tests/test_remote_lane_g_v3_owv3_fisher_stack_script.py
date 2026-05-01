@@ -72,6 +72,7 @@ def test_profiler_invocation_uses_real_cuda_flags() -> None:
     assert not invented, f"profile_hessian_per_weight.py invented flags: {invented}"
     assert "--device cuda" in block
     assert "--pair-batch" in block
+    assert "--include-protected-conv2d" in block
     assert 'PAIR_WEIGHT_ARGS=(--all-pairs)' in text
     assert 'PAIR_WEIGHT_ARGS=(--pair-weights "$PAIR_WEIGHTS")' in text
 
@@ -88,7 +89,9 @@ def test_converter_and_builder_invocations_use_real_flags() -> None:
     assert not invented_convert, (
         f"convert_fisher_to_owv3_sensitivity_map.py invented flags: {invented_convert}"
     )
-    assert "--missing-policy protect" in convert_block
+    assert "--missing-policy error" in convert_block
+    assert "--protected-missing-policy" not in convert_block
+    assert "--missing-policy protect" not in convert_block
     assert "--metadata-json" in convert_block
 
     build_block = _invocation_block(text, "experiments/build_lane_g_v3_owv3_stack.py")
@@ -99,6 +102,21 @@ def test_converter_and_builder_invocations_use_real_flags() -> None:
     )
     assert "--sensitivity-map" in build_block
     assert "--bit-budget-ratio" in build_block
+
+
+def test_builder_fails_closed_on_size_regression_by_default() -> None:
+    script_text = SCRIPT.read_text()
+    builder_text = BUILDER.read_text()
+    build_block = _invocation_block(
+        script_text,
+        "experiments/build_lane_g_v3_owv3_stack.py",
+    )
+
+    assert "allow-size-regression" in _argparse_flags(BUILDER)
+    assert "--allow-size-regression" not in build_block
+    assert "archive_delta >= 0" in builder_text
+    assert "OWV3 size regression" in builder_text
+    assert "return 3" in builder_text
 
 
 def test_exact_eval_is_cuda_by_default_and_non_cuda_is_smoke_only() -> None:

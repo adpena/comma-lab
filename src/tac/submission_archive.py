@@ -152,6 +152,9 @@ class ArchiveManifest:
     # (src/tac/lossless/argmax_codec.py). Mutually exclusive with
     # masks_mkv — see required_files() invariant.
     masks_amrc: bool = False
+    # Lane 12 NeRV mask payload. Mutually exclusive with masks_mkv and
+    # masks_amrc; the inflate path decodes it via tac.nerv_mask_codec.
+    masks_nrv: bool = False
     optimized_poses_pt: bool = False
     optimized_poses_bin: bool = False  # raw fp16 binary (half the size of .pt)
     optimized_embedding_pt: bool = False
@@ -174,6 +177,7 @@ class ArchiveManifest:
             "renderer_bin": "renderer.bin",
             "masks_mkv": "masks.mkv",
             "masks_amrc": "masks.amrc",
+            "masks_nrv": "masks.nrv",
             "optimized_poses_pt": "optimized_poses.pt",
             "optimized_poses_bin": "optimized_poses.bin",
             "optimized_embedding_pt": "optimized_embedding.pt",
@@ -186,9 +190,12 @@ class ArchiveManifest:
             "zoom_scalars_bin": "zoom_scalars.bin",
             "foveation_params_bin": "foveation_params.bin",
         }
-        if self.masks_mkv and self.masks_amrc:
+        n_mask_formats = sum(
+            bool(v) for v in (self.masks_mkv, self.masks_amrc, self.masks_nrv)
+        )
+        if n_mask_formats > 1:
             raise ValueError(
-                "ArchiveManifest: masks_mkv and masks_amrc are mutually "
+                "ArchiveManifest: masks_mkv, masks_amrc, and masks_nrv are mutually "
                 "exclusive — pick one mask format per submission archive."
             )
         return [
@@ -233,6 +240,18 @@ RENDERER_AMRC_MANIFEST = ArchiveManifest(
     optimized_poses_pt=True,
 )
 
+RENDERER_NRV_MANIFEST = ArchiveManifest(
+    renderer_bin=True,
+    masks_nrv=True,
+    optimized_poses_pt=True,
+)
+
+RENDERER_NRV_COMPACT_MANIFEST = ArchiveManifest(
+    renderer_bin=True,
+    masks_nrv=True,
+    optimized_poses_bin=True,
+)
+
 
 def detect_pose_manifest(archive_path) -> ArchiveManifest:
     """R38 fix: inspect the archive and return whichever manifest matches
@@ -247,9 +266,13 @@ def detect_pose_manifest(archive_path) -> ArchiveManifest:
     except (zipfile.BadZipFile, FileNotFoundError):
         # Default to .pt manifest; the validator will catch the missing zip.
         return RENDERER_SUBMISSION_MANIFEST
-    if "optimized_poses.bin" in names:
-        return RENDERER_COMPACT_MANIFEST
-    return RENDERER_SUBMISSION_MANIFEST
+    has_pose_bin = "optimized_poses.bin" in names
+    pose_field = "optimized_poses_bin" if has_pose_bin else "optimized_poses_pt"
+    if "masks.nrv" in names:
+        return ArchiveManifest(renderer_bin=True, masks_nrv=True, **{pose_field: True})
+    if "masks.amrc" in names:
+        return ArchiveManifest(renderer_bin=True, masks_amrc=True, **{pose_field: True})
+    return ArchiveManifest(renderer_bin=True, masks_mkv=True, **{pose_field: True})
 
 
 @dataclass
@@ -391,6 +414,31 @@ def validate_archive(
                     f"masks.amrc unusually large: {size:,} bytes "
                     f"(expected ~0.5-2MB for 1200 frames)"
                 )
+
+        if "masks.nrv" in result.files_found:
+            size = result.files_found["masks.nrv"]
+            if size < 16:
+                result.errors.append(
+                    f"masks.nrv suspiciously small: {size} bytes "
+                    f"(NRV header alone is larger than this)"
+                )
+                result.valid = False
+            elif size > 5_000_000:
+                result.warnings.append(
+                    f"masks.nrv unusually large: {size:,} bytes "
+                    f"(expected tens of KB for Lane 12)"
+                )
+            try:
+                with zipfile.ZipFile(archive_path, "r") as zf:
+                    head = zf.read("masks.nrv")[:4]
+                if head != b"NRV1":
+                    result.errors.append(
+                        f"masks.nrv has bad magic {head!r}; expected b'NRV1'"
+                    )
+                    result.valid = False
+            except Exception as exc:
+                result.errors.append(f"failed reading masks.nrv header: {exc!r}")
+                result.valid = False
 
         if "optimized_poses.pt" in result.files_found:
             size = result.files_found["optimized_poses.pt"]
@@ -601,6 +649,7 @@ def build_submission_archive(
     renderer_bin: Path | str | None = None,
     masks_mkv: Path | str | None = None,
     masks_amrc: Path | str | None = None,
+    masks_nrv: Path | str | None = None,
     optimized_poses_pt: Path | str | None = None,
     optimized_poses_bin: Path | str | None = None,
     optimized_embedding_pt: Path | str | None = None,
@@ -620,6 +669,7 @@ def build_submission_archive(
         output_path: Where to write archive.zip
         renderer_bin: Path to renderer.bin
         masks_mkv: Path to masks.mkv
+        masks_nrv: Path to masks.nrv
         optimized_poses_pt: Path to optimized_poses.pt
         optimized_poses_bin: Path to optimized_poses.bin (raw fp16, smaller)
         optimized_embedding_pt: Path to optimized_embedding.pt (optional)
@@ -646,6 +696,7 @@ def build_submission_archive(
         "renderer.bin": Path(renderer_bin) if renderer_bin else None,
         "masks.mkv": Path(masks_mkv) if masks_mkv else None,
         "masks.amrc": Path(masks_amrc) if masks_amrc else None,
+        "masks.nrv": Path(masks_nrv) if masks_nrv else None,
         "optimized_poses.pt": Path(optimized_poses_pt) if optimized_poses_pt else None,
         "optimized_poses.bin": Path(optimized_poses_bin) if optimized_poses_bin else None,
         "optimized_embedding.pt": Path(optimized_embedding_pt) if optimized_embedding_pt else None,
@@ -654,7 +705,7 @@ def build_submission_archive(
         "foveation_params.bin": Path(foveation_params_bin) if foveation_params_bin else None,
     }
 
-    required = set(manifest.required_files())
+    required = manifest.required_files()
 
     # Verify all required source files exist BEFORE creating the archive
     for name in required:
@@ -716,6 +767,15 @@ def build_submission_archive(
                         n_mask_frames,
                         "full" if n_mask_frames == NUM_FRAMES else "half-frame")
 
+    nrv_src = source_map.get("masks.nrv")
+    if nrv_src and nrv_src.exists():
+        head = nrv_src.read_bytes()[:4]
+        if head != b"NRV1":
+            raise ValueError(
+                f"masks.nrv has bad magic {head!r}; expected b'NRV1'. "
+                "Refusing to build an archive that would fail at inflate."
+            )
+
     # FP4 without QAT warning: check renderer.bin header
     renderer_src = source_map.get("renderer.bin")
     if renderer_src and renderer_src.exists():
@@ -750,7 +810,11 @@ def build_submission_archive(
                 raw_data = src.read_bytes()
                 compressed_data = brotli_compress(raw_data, quality=brotli_quality)
                 br_name = name + ".br"
-                zf.writestr(br_name, compressed_data)
+                zi = zipfile.ZipInfo(br_name)
+                zi.date_time = (1980, 1, 1, 0, 0, 0)
+                zi.compress_type = zipfile.ZIP_STORED
+                zi.external_attr = (0o644 & 0xFFFF) << 16
+                zf.writestr(zi, compressed_data)
                 ratio = len(compressed_data) / len(raw_data) * 100
                 logger.info(
                     "  Added %s (%d -> %d bytes, %.1f%%)",
@@ -761,7 +825,11 @@ def build_submission_archive(
                     f"{len(compressed_data):,}B ({ratio:.1f}%) as {br_name}"
                 )
             else:
-                zf.write(src, arcname=name)
+                zi = zipfile.ZipInfo(name)
+                zi.date_time = (1980, 1, 1, 0, 0, 0)
+                zi.compress_type = zipfile.ZIP_DEFLATED
+                zi.external_attr = (0o644 & 0xFFFF) << 16
+                zf.writestr(zi, src.read_bytes())
                 logger.info("  Added %s (%d bytes)", name, src.stat().st_size)
 
     # Determine expected archive names for validation

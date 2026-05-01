@@ -46,6 +46,12 @@ def test_validator_passes_brotli_renderer():
     validator(["renderer.bin.br", "masks.mkv", "poses.pt"])
 
 
+def test_validator_passes_nerv_mask_archive():
+    """Lane 12 NeRV stores masks in a dedicated .nrv payload."""
+    validator = _get_validator()
+    validator(["renderer.bin", "masks.nrv", "poses.pt"])
+
+
 def test_validator_rejects_macos_resource_fork():
     """macOS ._foo files inflate the rate silently — must raise."""
     validator = _get_validator()

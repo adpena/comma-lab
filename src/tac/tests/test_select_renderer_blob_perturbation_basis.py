@@ -78,6 +78,47 @@ def _asym_blob() -> bytes:
     return bytes(out)
 
 
+def _asym_blob_with_transposed_largest() -> bytes:
+    header = {
+        "version": 2,
+        "layers": [
+            {
+                "name": "renderer.transposed",
+                "shape": [8, 4, 4, 4],
+                "bits": 8,
+                "has_bias": False,
+                "transposed": True,
+                "is_linear": False,
+            },
+            {
+                "name": "renderer.conv",
+                "shape": [3, 2, 1, 1],
+                "bits": 8,
+                "has_bias": False,
+                "transposed": False,
+                "is_linear": False,
+            },
+        ],
+    }
+    header_json = json.dumps(header, separators=(",", ":")).encode("utf-8")
+    out = bytearray(b"ASYM")
+    out.extend(len(header_json).to_bytes(4, "little"))
+    out.extend(header_json)
+
+    def add_blob(channels: int, fan_in: int, fill: int) -> None:
+        blob = bytearray()
+        for _ in range(channels):
+            blob.extend(b"\x01\x3c")
+            blob.extend(bytes([fill]) * fan_in)
+        out.extend(len(blob).to_bytes(4, "little"))
+        out.extend(blob)
+        out.extend((0).to_bytes(4, "little"))
+
+    add_blob(channels=4, fan_in=128, fill=100)
+    add_blob(channels=3, fan_in=2, fill=120)
+    return bytes(out)
+
+
 def _write_archive(path: Path, renderer: bytes) -> Path:
     with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         zf.writestr("renderer.bin", renderer)
@@ -105,6 +146,26 @@ def test_parses_asym_regions_and_selects_largest_non_embedding_layer() -> None:
     assert atom.offset > 8 + len(json.dumps(header, separators=(",", ":")).encode("utf-8"))
     assert renderer[atom.offset] == 120
     assert atom.margin_to_byte_range >= 1
+
+
+def test_transposed_payloads_are_excluded_by_default_for_map_compatibility() -> None:
+    module = _load_module()
+    renderer = _asym_blob_with_transposed_largest()
+
+    _, atoms = module.select_basis_atoms(
+        renderer,
+        max_atoms=1,
+        epsilons=[-1.0, 0.0, 1.0],
+    )
+    assert atoms[0].layer_name == "renderer.conv"
+
+    _, forensic_atoms = module.select_basis_atoms(
+        renderer,
+        max_atoms=1,
+        epsilons=[-1.0, 0.0, 1.0],
+        include_transposed=True,
+    )
+    assert forensic_atoms[0].layer_name == "renderer.transposed"
 
 
 def test_builds_basis_json_compatible_with_component_plan_loader(tmp_path: Path) -> None:

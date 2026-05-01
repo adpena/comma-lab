@@ -2,8 +2,11 @@
 
 Ω-W-V3 is the β fix for the Ω-W-V2 failure mode: uniform renderer-weight
 compression saved bytes but over-perturbed PoseNet-sensitive channels. V3
-keeps high-sensitivity output channels in FP16 and sends the remaining
-channels through the existing OWV2 water-fill + arithmetic codec.
+sends low-sensitivity output channels through the existing OWV2 water-fill +
+arithmetic codec and, by default, keeps high-sensitivity/fallback channels in
+the compact ASYM-style representation instead of silently inflating them to
+FP16. The legacy FP16 protection path is still available for explicit
+smoke/debug artifacts only.
 
 Sensitivity computation is compress-time only. The decode/inflate path reads
 only the bytes in this archive and never imports or runs contest scorers.
@@ -33,6 +36,15 @@ from tac.water_filling_codec_v2 import (
 
 OWV3_ARCHIVE_MAGIC: bytes = b"OWV3"
 OWV3_ARCHIVE_VERSION: int = 1
+OWV3_DEFAULT_ASYM_BITS: int = 8
+OWV3_FALLBACK_ACTION_KEEP_ASYM: str = "keep_asym"
+OWV3_FALLBACK_ACTION_ERROR: str = "error"
+OWV3_FALLBACK_ACTION_DIAGNOSTIC_FP16: str = "diagnostic_fp16"
+OWV3_FALLBACK_ACTIONS: frozenset[str] = frozenset({
+    OWV3_FALLBACK_ACTION_KEEP_ASYM,
+    OWV3_FALLBACK_ACTION_ERROR,
+    OWV3_FALLBACK_ACTION_DIAGNOSTIC_FP16,
+})
 
 
 class OWV3ArchiveError(ValueError):
@@ -50,6 +62,16 @@ def _validate_thresholds(protect_threshold: float, aggressive_threshold: float) 
         raise OWV3ArchiveError(
             "aggressive_threshold must be < protect_threshold"
         )
+
+
+def _validate_fallback_action(fallback_action: str) -> str:
+    action = str(fallback_action)
+    if action not in OWV3_FALLBACK_ACTIONS:
+        raise OWV3ArchiveError(
+            "fallback_action must be one of "
+            f"{sorted(OWV3_FALLBACK_ACTIONS)}, got {fallback_action!r}"
+        )
+    return action
 
 
 def _eligible_for_owv3(module: nn.Module) -> bool:
@@ -86,6 +108,223 @@ def _read_fp16_to_tensor(blob: bytes, shape: list[int]) -> torch.Tensor:
         )
     arr = np.frombuffer(blob, dtype=np.float16).astype(np.float32).copy()
     return torch.from_numpy(arr).reshape(shape)
+
+
+def _pack_values(buf: bytearray, values: list[int], bits: int) -> None:
+    if bits == 8:
+        buf.extend(bytes(v & 0xFF for v in values))
+        return
+    bit_buffer = 0
+    bits_in_buffer = 0
+    for v in values:
+        bit_buffer |= (v & ((1 << bits) - 1)) << bits_in_buffer
+        bits_in_buffer += bits
+        while bits_in_buffer >= 8:
+            buf.append(bit_buffer & 0xFF)
+            bit_buffer >>= 8
+            bits_in_buffer -= 8
+    if bits_in_buffer > 0:
+        buf.append(bit_buffer & 0xFF)
+
+
+def _unpack_values(
+    data: bytes | bytearray | memoryview,
+    offset: int,
+    count: int,
+    bits: int,
+) -> tuple[list[int], int]:
+    if bits == 8:
+        return [int(data[offset + i]) for i in range(count)], offset + count
+    total_bytes = (count * bits + 7) // 8
+    raw = data[offset:offset + total_bytes]
+    bit_buffer = int.from_bytes(bytes(raw), byteorder="little")
+    mask = (1 << bits) - 1
+    values = []
+    for _ in range(count):
+        values.append(bit_buffer & mask)
+        bit_buffer >>= bits
+    return values, offset + total_bytes
+
+
+def _quantize_tensor_uniform(tensor: torch.Tensor, bits: int) -> tuple[float, list[int]]:
+    bits = max(int(bits), 2)
+    flat = tensor.detach().cpu().reshape(-1).float()
+    abs_max = flat.abs().max().clamp(min=6.2e-5).item()
+    n_levels = 2 ** bits
+    half = n_levels // 2
+    quantized = (
+        (flat / abs_max * (half - 1))
+        .round()
+        .clamp(-(half - 1), half - 1)
+        .long()
+    )
+    unsigned = (quantized + half).clamp(0, n_levels - 1).tolist()
+    return abs_max, [int(v) for v in unsigned]
+
+
+def _dequantize_values(values: list[int], bits: int, scale: float) -> torch.Tensor:
+    bits = max(int(bits), 2)
+    n_levels = 2 ** bits
+    half = n_levels // 2
+    return torch.tensor(
+        [(int(v) - half) / max(half - 1, 1) * float(scale) for v in values],
+        dtype=torch.float32,
+    )
+
+
+def _asym_channel_geometry(
+    shape: list[int],
+    *,
+    transposed: bool = False,
+) -> tuple[int, int, list[int]]:
+    if len(shape) == 2:
+        return int(shape[0]), int(shape[1]), [int(shape[1])]
+    if len(shape) != 4:
+        raise OWV3ArchiveError(f"ASYM channel packing expects rank 2 or 4, got {shape}")
+    if transposed:
+        return int(shape[1]), int(shape[0] * shape[2] * shape[3]), [
+            int(shape[0]),
+            int(shape[2]),
+            int(shape[3]),
+        ]
+    return int(shape[0]), int(shape[1] * shape[2] * shape[3]), [
+        int(shape[1]),
+        int(shape[2]),
+        int(shape[3]),
+    ]
+
+
+def _asym_pack_channels(
+    weight: torch.Tensor,
+    indices: list[int],
+    *,
+    transposed: bool = False,
+    bits: int = OWV3_DEFAULT_ASYM_BITS,
+) -> bytes:
+    shape = [int(v) for v in weight.shape]
+    c_out, _fan_in, _ch_shape = _asym_channel_geometry(shape, transposed=transposed)
+    packed = bytearray()
+    for ch_idx in indices:
+        if ch_idx < 0 or ch_idx >= c_out:
+            raise OWV3ArchiveError(
+                f"channel index {ch_idx} out of range for shape {shape}"
+            )
+        ch_weight = (
+            weight[:, ch_idx] if transposed and len(shape) == 4 else weight[ch_idx]
+        ).reshape(-1)
+        scale, unsigned = _quantize_tensor_uniform(ch_weight, bits)
+        packed.extend(struct.pack("<e", scale))
+        _pack_values(packed, unsigned, bits)
+    return bytes(packed)
+
+
+def _asym_read_channels(
+    blob: bytes,
+    shape: list[int],
+    indices: list[int],
+    *,
+    transposed: bool = False,
+    bits: int = OWV3_DEFAULT_ASYM_BITS,
+) -> torch.Tensor:
+    c_out, fan_in, ch_shape = _asym_channel_geometry(shape, transposed=transposed)
+    out = torch.zeros(shape, dtype=torch.float32)
+    offset = 0
+    for ch_idx in indices:
+        if ch_idx < 0 or ch_idx >= c_out:
+            raise OWV3ArchiveError(
+                f"channel index {ch_idx} out of range for shape {shape}"
+            )
+        if offset + 2 > len(blob):
+            raise OWV3ArchiveError("truncated ASYM channel scale")
+        scale = struct.unpack("<e", blob[offset:offset + 2])[0]
+        offset += 2
+        values, offset = _unpack_values(blob, offset, fan_in, bits)
+        dequant = _dequantize_values(values, bits, scale).reshape(ch_shape)
+        if transposed and len(shape) == 4:
+            out[:, ch_idx] = dequant
+        else:
+            out[ch_idx] = dequant
+    if offset != len(blob):
+        raise OWV3ArchiveError(
+            f"ASYM channel blob had {len(blob) - offset} trailing byte(s)"
+        )
+    return out
+
+
+def _asym_pack_embedding(
+    weight: torch.Tensor,
+    *,
+    bits: int = OWV3_DEFAULT_ASYM_BITS,
+) -> bytes:
+    packed = bytearray()
+    scale, unsigned = _quantize_tensor_uniform(weight.reshape(-1), bits)
+    packed.extend(struct.pack("<e", scale))
+    _pack_values(packed, unsigned, bits)
+    return bytes(packed)
+
+
+def _asym_read_embedding(
+    blob: bytes,
+    shape: list[int],
+    *,
+    bits: int = OWV3_DEFAULT_ASYM_BITS,
+) -> torch.Tensor:
+    count = int(np.prod(shape))
+    if len(blob) < 2:
+        raise OWV3ArchiveError("truncated ASYM embedding scale")
+    scale = struct.unpack("<e", blob[:2])[0]
+    values, offset = _unpack_values(blob, 2, count, bits)
+    if offset != len(blob):
+        raise OWV3ArchiveError(
+            f"ASYM embedding blob had {len(blob) - offset} trailing byte(s)"
+        )
+    return _dequantize_values(values, bits, scale).reshape(shape)
+
+
+def _asym_pack_bias(
+    bias: torch.Tensor | None,
+    *,
+    c_out: int,
+    bits: int = OWV3_DEFAULT_ASYM_BITS,
+) -> bytes:
+    if bias is None:
+        return b""
+    packed = bytearray()
+    n_levels = 2 ** max(int(bits), 2)
+    half = n_levels // 2
+    b = bias.detach().cpu().float()
+    for ch_idx in range(c_out):
+        b_val = float(b[ch_idx].item())
+        abs_max_b = max(abs(b_val), 6.2e-5)
+        q = int(round(b_val / abs_max_b * (half - 1)))
+        q = max(-(half - 1), min(half - 1, q))
+        packed.extend(struct.pack("<e", abs_max_b))
+        packed.extend(struct.pack("<H", q + half))
+    return bytes(packed)
+
+
+def _asym_read_bias(
+    blob: bytes,
+    *,
+    c_out: int,
+    bits: int = OWV3_DEFAULT_ASYM_BITS,
+) -> torch.Tensor:
+    expected = int(c_out) * 4
+    if len(blob) != expected:
+        raise OWV3ArchiveError(
+            f"ASYM bias blob length {len(blob)} != expected {expected}"
+        )
+    n_levels = 2 ** max(int(bits), 2)
+    half = n_levels // 2
+    out = torch.zeros(c_out, dtype=torch.float32)
+    offset = 0
+    for ch_idx in range(c_out):
+        scale_b = struct.unpack("<e", blob[offset:offset + 2])[0]
+        offset += 2
+        u_val = struct.unpack("<H", blob[offset:offset + 2])[0]
+        offset += 2
+        out[ch_idx] = (int(u_val) - half) / max(half - 1, 1) * float(scale_b)
+    return out
 
 
 def _classify_channels(
@@ -132,6 +371,192 @@ def _emit_fp16_conv_layer(
     layers_meta.append(meta)
 
 
+def _emit_fp16_linear_layer(
+    *,
+    name: str,
+    module: nn.Linear,
+    body_chunks: list[bytes],
+    layers_meta: list[dict],
+    fallback_reason: str | None = None,
+) -> None:
+    w_blob = _fp16_blob(module.weight)
+    b_blob = b""
+    if module.bias is not None:
+        b_blob = _fp16_blob(module.bias)
+    body_chunks.append(w_blob + b_blob)
+    meta = {
+        "name": name,
+        "kind": "fp16_linear",
+        "shape": list(module.weight.shape),
+        "has_bias": module.bias is not None,
+        "weight_blob_len": len(w_blob),
+        "bias_blob_len": len(b_blob),
+    }
+    if fallback_reason:
+        meta["fallback_reason"] = fallback_reason
+    layers_meta.append(meta)
+
+
+def _emit_asym_embedding_layer(
+    *,
+    name: str,
+    module: nn.Embedding,
+    body_chunks: list[bytes],
+    layers_meta: list[dict],
+    bits: int = OWV3_DEFAULT_ASYM_BITS,
+) -> None:
+    blob = _asym_pack_embedding(module.weight.detach().cpu().float(), bits=bits)
+    body_chunks.append(blob)
+    layers_meta.append({
+        "name": name,
+        "kind": "asym_emb",
+        "shape": list(module.weight.shape),
+        "bits": bits,
+        "blob_len": len(blob),
+        "codec_action": OWV3_FALLBACK_ACTION_KEEP_ASYM,
+        "charged_bytes": {"keep_asym": len(blob)},
+    })
+
+
+def _emit_asym_affine_layer(
+    *,
+    name: str,
+    module: nn.Module,
+    body_chunks: list[bytes],
+    layers_meta: list[dict],
+    kind: str,
+    fallback_reason: str | None = None,
+    bits: int = OWV3_DEFAULT_ASYM_BITS,
+) -> None:
+    w = module.weight.detach().cpu().float()
+    transposed = isinstance(module, nn.ConvTranspose2d)
+    c_out, _fan_in, _ch_shape = _asym_channel_geometry(
+        list(w.shape),
+        transposed=transposed,
+    )
+    w_blob = _asym_pack_channels(
+        w,
+        list(range(c_out)),
+        transposed=transposed,
+        bits=bits,
+    )
+    b_blob = _asym_pack_bias(
+        module.bias.detach().cpu().float() if getattr(module, "bias", None) is not None else None,
+        c_out=c_out,
+        bits=bits,
+    )
+    body_chunks.append(w_blob + b_blob)
+    meta = {
+        "name": name,
+        "kind": kind,
+        "shape": list(w.shape),
+        "bits": bits,
+        "has_bias": getattr(module, "bias", None) is not None,
+        "weight_blob_len": len(w_blob),
+        "bias_blob_len": len(b_blob),
+        "bias_codec": "asym" if getattr(module, "bias", None) is not None else "none",
+        "codec_action": OWV3_FALLBACK_ACTION_KEEP_ASYM,
+        "charged_bytes": {
+            OWV3_FALLBACK_ACTION_KEEP_ASYM: len(w_blob),
+            "bias": len(b_blob),
+        },
+    }
+    if isinstance(module, (nn.Conv2d, nn.ConvTranspose2d)):
+        meta.update({
+            "stride": module.stride[0] if isinstance(module.stride, tuple) else module.stride,
+            "padding": module.padding[0] if isinstance(module.padding, tuple) else module.padding,
+            "dilation": module.dilation[0] if isinstance(module.dilation, tuple) else module.dilation,
+            "groups": module.groups,
+            "padding_mode": module.padding_mode,
+            "out_channels": c_out,
+        })
+    if fallback_reason:
+        meta["fallback_reason"] = fallback_reason
+    layers_meta.append(meta)
+
+
+def _emit_fallback_affine_layer(
+    *,
+    name: str,
+    module: nn.Module,
+    body_chunks: list[bytes],
+    layers_meta: list[dict],
+    fallback_action: str,
+    fallback_reason: str,
+    asym_kind: str,
+    fp16_kind: str,
+) -> None:
+    if fallback_action == OWV3_FALLBACK_ACTION_ERROR:
+        raise OWV3ArchiveError(
+            f"{name}: OWV3 promotion fallback blocked ({fallback_reason})"
+        )
+    if fallback_action == OWV3_FALLBACK_ACTION_DIAGNOSTIC_FP16:
+        if isinstance(module, nn.Linear):
+            _emit_fp16_linear_layer(
+                name=name,
+                module=module,
+                body_chunks=body_chunks,
+                layers_meta=layers_meta,
+                fallback_reason=fallback_reason,
+            )
+        else:
+            _emit_fp16_conv_layer(
+                name=name,
+                module=module,
+                body_chunks=body_chunks,
+                layers_meta=layers_meta,
+                kind=fp16_kind,
+                fallback_reason=fallback_reason,
+            )
+        layers_meta[-1]["codec_action"] = OWV3_FALLBACK_ACTION_DIAGNOSTIC_FP16
+        layers_meta[-1]["promotion_eligible"] = False
+        layers_meta[-1]["charged_bytes"] = {
+            OWV3_FALLBACK_ACTION_DIAGNOSTIC_FP16: (
+                layers_meta[-1]["weight_blob_len"]
+                + layers_meta[-1].get("bias_blob_len", 0)
+            )
+        }
+        return
+    _emit_asym_affine_layer(
+        name=name,
+        module=module,
+        body_chunks=body_chunks,
+        layers_meta=layers_meta,
+        kind=asym_kind,
+        fallback_reason=fallback_reason,
+    )
+
+
+def _summarize_action_counts(layers_meta: list[dict]) -> dict[str, int]:
+    counts = {
+        "owv2_low_bit_layers": 0,
+        "owv2_low_bit_channels": 0,
+        "keep_asym_layers": 0,
+        "keep_asym_channels": 0,
+        "diagnostic_fp16_layers": 0,
+        "fp16_protect_channels": 0,
+    }
+    for meta in layers_meta:
+        action = meta.get("codec_action")
+        if action == OWV3_FALLBACK_ACTION_KEEP_ASYM:
+            counts["keep_asym_layers"] += 1
+            counts["keep_asym_channels"] += int(meta.get("out_channels", 0) or 0)
+        if action == OWV3_FALLBACK_ACTION_DIAGNOSTIC_FP16:
+            counts["diagnostic_fp16_layers"] += 1
+
+        if meta.get("kind") == "owv3_conv":
+            quant_n = len(meta.get("quant_indices") or [])
+            protected_n = len(meta.get("protected_indices") or [])
+            if quant_n:
+                counts["owv2_low_bit_layers"] += 1
+                counts["owv2_low_bit_channels"] += quant_n
+            if meta.get("protected_codec") == "asym":
+                counts["keep_asym_channels"] += protected_n
+            if meta.get("protected_codec") == "fp16":
+                counts["fp16_protect_channels"] += protected_n
+    return counts
+
+
 def encode_owv3_archive(
     model: nn.Module | None = None,
     *,
@@ -140,6 +565,7 @@ def encode_owv3_archive(
     protect_threshold: float = 1e-3,
     aggressive_threshold: float = 1e-5,
     require_all_conv_sensitivity: bool = False,
+    fallback_action: str = OWV3_FALLBACK_ACTION_KEEP_ASYM,
     arch_extra: dict | None = None,
 ) -> bytes:
     """Encode a renderer into an OWV3 sensitivity-weighted archive."""
@@ -150,6 +576,7 @@ def encode_owv3_archive(
             "encode_owv3_archive: sensitivities are required"
         )
     _validate_thresholds(protect_threshold, aggressive_threshold)
+    fallback_action = _validate_fallback_action(fallback_action)
     try:
         validate_sensitivity_map_for_model(
             sensitivities,
@@ -176,35 +603,58 @@ def encode_owv3_archive(
             if id(module) in seen_emb_ids:
                 continue
             seen_emb_ids.add(id(module))
-            blob = _fp16_blob(module.weight)
-            body_chunks.append(blob)
-            layers_meta.append({
-                "name": name,
-                "kind": "fp16_emb",
-                "shape": list(module.weight.shape),
-                "blob_len": len(blob),
-            })
+            if fallback_action == OWV3_FALLBACK_ACTION_ERROR:
+                raise OWV3ArchiveError(
+                    f"{name}: OWV3 fallback blocked for embedding keep_asym"
+                )
+            if fallback_action == OWV3_FALLBACK_ACTION_DIAGNOSTIC_FP16:
+                blob = _fp16_blob(module.weight)
+                body_chunks.append(blob)
+                layers_meta.append({
+                    "name": name,
+                    "kind": "fp16_emb",
+                    "shape": list(module.weight.shape),
+                    "blob_len": len(blob),
+                    "codec_action": OWV3_FALLBACK_ACTION_DIAGNOSTIC_FP16,
+                    "promotion_eligible": False,
+                    "charged_bytes": {
+                        OWV3_FALLBACK_ACTION_DIAGNOSTIC_FP16: len(blob),
+                    },
+                })
+            else:
+                _emit_asym_embedding_layer(
+                    name=name,
+                    module=module,
+                    body_chunks=body_chunks,
+                    layers_meta=layers_meta,
+                )
             continue
 
         if isinstance(module, nn.ConvTranspose2d):
-            _emit_fp16_conv_layer(
+            _emit_fallback_affine_layer(
                 name=name,
                 module=module,
                 body_chunks=body_chunks,
                 layers_meta=layers_meta,
-                kind="fp16_convt",
+                fallback_action=fallback_action,
+                fallback_reason="convt_keep_asym_fallback",
+                asym_kind="asym_convt",
+                fp16_kind="fp16_convt",
             )
             continue
 
         if isinstance(module, nn.Conv2d):
             w = module.weight.detach().cpu().float()
             if not _eligible_for_owv3(module):
-                _emit_fp16_conv_layer(
+                _emit_fallback_affine_layer(
                     name=name,
                     module=module,
                     body_chunks=body_chunks,
                     layers_meta=layers_meta,
+                    fallback_action=fallback_action,
                     fallback_reason="ineligible_for_owv3",
+                    asym_kind="asym_conv",
+                    fp16_kind="fp16_conv",
                 )
                 continue
 
@@ -225,12 +675,15 @@ def encode_owv3_archive(
             )
 
             if not quant_idx:
-                _emit_fp16_conv_layer(
+                _emit_fallback_affine_layer(
                     name=name,
                     module=module,
                     body_chunks=body_chunks,
                     layers_meta=layers_meta,
+                    fallback_action=fallback_action,
                     fallback_reason="all_channels_protected",
+                    asym_kind="asym_conv",
+                    fp16_kind="fp16_conv",
                 )
                 continue
 
@@ -244,20 +697,34 @@ def encode_owv3_archive(
                     total_bits=total_bits,
                 )
             except (BlockFPIneligible, GateRegression) as exc:
-                _emit_fp16_conv_layer(
+                _emit_fallback_affine_layer(
                     name=name,
                     module=module,
                     body_chunks=body_chunks,
                     layers_meta=layers_meta,
+                    fallback_action=fallback_action,
                     fallback_reason=f"owv2_gate:{type(exc).__name__}",
+                    asym_kind="asym_conv",
+                    fp16_kind="fp16_conv",
                 )
                 continue
 
             protected_blob = b""
+            protected_codec = "none"
             if protected_idx:
-                protected_blob = _fp16_blob(
-                    w[torch.tensor(protected_idx, dtype=torch.long)]
-                )
+                if fallback_action == OWV3_FALLBACK_ACTION_ERROR:
+                    raise OWV3ArchiveError(
+                        f"{name}: protected channels require fallback action "
+                        f"({len(protected_idx)} protected)"
+                    )
+                if fallback_action == OWV3_FALLBACK_ACTION_DIAGNOSTIC_FP16:
+                    protected_blob = _fp16_blob(
+                        w[torch.tensor(protected_idx, dtype=torch.long)]
+                    )
+                    protected_codec = "fp16"
+                else:
+                    protected_blob = _asym_pack_channels(w, protected_idx)
+                    protected_codec = "asym"
             b_blob = b""
             if module.bias is not None:
                 b_blob = _fp16_blob(module.bias)
@@ -277,29 +744,37 @@ def encode_owv3_archive(
                 "protected_indices": protected_idx,
                 "weight_blob_len": len(owv2_payload),
                 "protected_blob_len": len(protected_blob),
+                "protected_codec": protected_codec,
                 "bias_blob_len": len(b_blob),
+                "bias_codec": "fp16" if module.bias is not None else "none",
                 "bit_budget_ratio": ratio,
                 "protect_threshold": protect_threshold,
                 "aggressive_threshold": aggressive_threshold,
                 "sensitivity_min": float(sens.min().item()),
                 "sensitivity_max": float(sens.max().item()),
+                "codec_action": "owv2_low_bit",
+                "promotion_eligible": (
+                    fallback_action != OWV3_FALLBACK_ACTION_DIAGNOSTIC_FP16
+                ),
+                "charged_bytes": {
+                    "owv2_low_bit": len(owv2_payload),
+                    protected_codec: len(protected_blob),
+                    "bias": len(b_blob),
+                },
             })
             continue
 
         if isinstance(module, nn.Linear):
-            w_blob = _fp16_blob(module.weight)
-            b_blob = b""
-            if module.bias is not None:
-                b_blob = _fp16_blob(module.bias)
-            body_chunks.append(w_blob + b_blob)
-            layers_meta.append({
-                "name": name,
-                "kind": "fp16_linear",
-                "shape": list(module.weight.shape),
-                "has_bias": module.bias is not None,
-                "weight_blob_len": len(w_blob),
-                "bias_blob_len": len(b_blob),
-            })
+            _emit_fallback_affine_layer(
+                name=name,
+                module=module,
+                body_chunks=body_chunks,
+                layers_meta=layers_meta,
+                fallback_action=fallback_action,
+                fallback_reason="linear_keep_asym_fallback",
+                asym_kind="asym_linear",
+                fp16_kind="fp16_linear",
+            )
             continue
 
     captured: set[int] = set()
@@ -322,6 +797,15 @@ def encode_owv3_archive(
         "layers": layers_meta,
         "scalar_params": scalar_params,
         "body_len": len(body),
+        "byte_plan": {
+            "fallback_action": fallback_action,
+            "asym_bits": OWV3_DEFAULT_ASYM_BITS,
+            "promotion_eligible": (
+                fallback_action != OWV3_FALLBACK_ACTION_DIAGNOSTIC_FP16
+            ),
+            "charged_body_bytes": len(body),
+            "action_counts": _summarize_action_counts(layers_meta),
+        },
         "thresholds": {
             "protect_threshold": protect_threshold,
             "aggressive_threshold": aggressive_threshold,
@@ -447,6 +931,23 @@ def decode_owv3_archive(
                 module.weight.copy_(_read_fp16_to_tensor(chunk, layer_meta["shape"]))
             continue
 
+        if kind == "asym_emb":
+            blob_len = int(layer_meta["blob_len"])
+            chunk = body[body_offset:body_offset + blob_len]
+            body_offset += blob_len
+            if id(module) in seen_emb_ids:
+                continue
+            seen_emb_ids.add(id(module))
+            with torch.no_grad():
+                module.weight.copy_(
+                    _asym_read_embedding(
+                        chunk,
+                        layer_meta["shape"],
+                        bits=int(layer_meta.get("bits", OWV3_DEFAULT_ASYM_BITS)),
+                    )
+                )
+            continue
+
         if kind in ("fp16_conv", "fp16_convt", "fp16_linear"):
             w_len = int(layer_meta["weight_blob_len"])
             b_len = int(layer_meta["bias_blob_len"])
@@ -464,6 +965,33 @@ def decode_owv3_archive(
                         else int(layer_meta.get("out_channels", w_t.shape[1]))
                     )
                     module.bias.copy_(_read_fp16_to_tensor(b_chunk, [bias_len]))
+            continue
+
+        if kind in ("asym_conv", "asym_convt", "asym_linear"):
+            w_len = int(layer_meta["weight_blob_len"])
+            b_len = int(layer_meta["bias_blob_len"])
+            w_chunk = body[body_offset:body_offset + w_len]
+            body_offset += w_len
+            b_chunk = body[body_offset:body_offset + b_len]
+            body_offset += b_len
+            bits = int(layer_meta.get("bits", OWV3_DEFAULT_ASYM_BITS))
+            transposed = kind == "asym_convt"
+            shape = [int(v) for v in layer_meta["shape"]]
+            c_out, _fan_in, _ch_shape = _asym_channel_geometry(
+                shape,
+                transposed=transposed,
+            )
+            w_t = _asym_read_channels(
+                w_chunk,
+                shape,
+                list(range(c_out)),
+                transposed=transposed,
+                bits=bits,
+            )
+            with torch.no_grad():
+                module.weight.copy_(w_t)
+                if layer_meta.get("has_bias") and module.bias is not None:
+                    module.bias.copy_(_asym_read_bias(b_chunk, c_out=c_out, bits=bits))
             continue
 
         if kind == "owv3_conv":
@@ -486,11 +1014,26 @@ def decode_owv3_archive(
                 )
                 full[torch.tensor(quant_indices, dtype=torch.long)] = q_t
             if protected_indices:
-                p_t = _read_fp16_to_tensor(
-                    p_chunk,
-                    [len(protected_indices)] + layer_meta["shape"][1:],
-                )
-                full[torch.tensor(protected_indices, dtype=torch.long)] = p_t
+                protected_codec = layer_meta.get("protected_codec", "fp16")
+                if protected_codec == "fp16":
+                    p_t = _read_fp16_to_tensor(
+                        p_chunk,
+                        [len(protected_indices)] + layer_meta["shape"][1:],
+                    )
+                    full[torch.tensor(protected_indices, dtype=torch.long)] = p_t
+                elif protected_codec == "asym":
+                    p_full = _asym_read_channels(
+                        p_chunk,
+                        [int(v) for v in layer_meta["shape"]],
+                        protected_indices,
+                        bits=int(layer_meta.get("bits", OWV3_DEFAULT_ASYM_BITS)),
+                    )
+                    idx = torch.tensor(protected_indices, dtype=torch.long)
+                    full[idx] = p_full[idx]
+                else:
+                    raise OWV3ArchiveError(
+                        f"decode_owv3_archive: unknown protected_codec {protected_codec!r}"
+                    )
             with torch.no_grad():
                 module.weight.copy_(full)
                 if layer_meta.get("has_bias") and module.bias is not None:
@@ -527,11 +1070,84 @@ def is_owv3_archive(blob: bytes) -> bool:
     )
 
 
+def inspect_owv3_archive(blob: bytes) -> dict:
+    """Return header/body byte provenance for an OWV3 payload."""
+    if not is_owv3_archive(blob):
+        raise OWV3ArchiveError("inspect_owv3_archive: bad/missing magic")
+    data = bytes(blob)
+    if len(data) < 12:
+        raise OWV3ArchiveError("inspect_owv3_archive: truncated archive")
+    offset = 4
+    (header_len,) = struct.unpack("<I", data[offset:offset + 4])
+    offset += 4
+    if header_len <= 0 or offset + header_len + 4 > len(data):
+        raise OWV3ArchiveError(
+            f"inspect_owv3_archive: invalid header_len={header_len}"
+        )
+    header = json.loads(data[offset:offset + header_len].decode("utf-8"))
+    offset += header_len
+    (body_len,) = struct.unpack("<I", data[offset:offset + 4])
+    offset += 4
+    if offset + body_len != len(data):
+        raise OWV3ArchiveError(
+            f"inspect_owv3_archive: declared body_len={body_len} but "
+            f"{len(data) - offset} byte(s) remain"
+        )
+    return {
+        "magic": OWV3_ARCHIVE_MAGIC.decode("ascii"),
+        "version": header.get("version"),
+        "total_bytes": len(data),
+        "header_len": header_len,
+        "body_len": body_len,
+        "header": header,
+        "byte_plan": header.get("byte_plan", {}),
+    }
+
+
+def enforce_owv3_byte_budget(
+    *,
+    candidate_bytes: int,
+    comparator_bytes: int,
+    candidate_label: str = "OWV3 candidate",
+    comparator_label: str = "frontier comparator",
+    allow_size_regression: bool = False,
+    distortion_justification: Mapping[str, object] | None = None,
+) -> dict:
+    """Fail closed when an OWV3 candidate spends more bytes without evidence."""
+    candidate_bytes = int(candidate_bytes)
+    comparator_bytes = int(comparator_bytes)
+    if candidate_bytes <= 0 or comparator_bytes <= 0:
+        raise OWV3ArchiveError("byte budget inputs must be positive")
+    delta = candidate_bytes - comparator_bytes
+    accepted = delta <= 0 or bool(allow_size_regression) or bool(distortion_justification)
+    report = {
+        "candidate_label": candidate_label,
+        "comparator_label": comparator_label,
+        "candidate_bytes": candidate_bytes,
+        "comparator_bytes": comparator_bytes,
+        "delta_bytes": delta,
+        "allow_size_regression": bool(allow_size_regression),
+        "has_distortion_justification": bool(distortion_justification),
+        "accepted": accepted,
+    }
+    if not accepted:
+        raise OWV3ArchiveError(
+            f"{candidate_label} byte plan exceeds {comparator_label}: "
+            f"{candidate_bytes} > {comparator_bytes} ({delta:+d} bytes) "
+            "without exact distortion justification or explicit smoke/debug override"
+        )
+    if distortion_justification:
+        report["distortion_justification"] = dict(distortion_justification)
+    return report
+
+
 __all__ = [
     "OWV3_ARCHIVE_MAGIC",
     "OWV3_ARCHIVE_VERSION",
     "OWV3ArchiveError",
     "encode_owv3_archive",
     "decode_owv3_archive",
+    "enforce_owv3_byte_budget",
+    "inspect_owv3_archive",
     "is_owv3_archive",
 ]

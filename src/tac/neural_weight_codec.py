@@ -39,16 +39,14 @@ lane (per CLAUDE.md "no premature convergence" rule).
 
 from __future__ import annotations
 
-import io
-import json
-import math
 import struct
 from dataclasses import dataclass
-from pathlib import Path
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+from tac.neural_weight_corpus import build_corpus_from_checkpoints
 
 
 __all__ = [
@@ -348,66 +346,6 @@ def blocks_to_tensor(
     blocks = blocks_norm * scales.unsqueeze(1)
     flat = blocks.reshape(-1)
     return flat.reshape(*shape)
-
-
-def build_corpus_from_checkpoints(
-    checkpoint_paths: list[Path | str],
-    block_size: int,
-    *,
-    max_blocks_per_ckpt: int = 50_000,
-) -> torch.Tensor:
-    """Walk a list of .pt checkpoints and extract a (N, block_size) tensor of
-    unit-normalized weight blocks for codec training.
-
-    Skips:
-        * Non-floating tensors (LongTensor indices, BoolTensors, …)
-        * Tensors with fewer than `block_size` elements
-        * Bias tensors (heuristic: 1-D and ≤ 2048 elements)
-
-    Caps each checkpoint's contribution at `max_blocks_per_ckpt` to prevent
-    one giant checkpoint from dominating.
-    """
-    out_blocks: list[torch.Tensor] = []
-    for path in checkpoint_paths:
-        try:
-            obj = torch.load(str(path), map_location="cpu", weights_only=False)
-        except Exception as e:  # pragma: no cover — CLI guard
-            print(f"[nwc-corpus] WARNING: could not load {path}: {e}")
-            continue
-        # Heuristic: drill down into ['model'] / ['state_dict'] if present
-        sd = obj
-        if isinstance(obj, dict):
-            for k in ("model_state_dict", "state_dict", "model"):
-                if k in obj and isinstance(obj[k], dict):
-                    sd = obj[k]
-                    break
-        if not isinstance(sd, dict):
-            continue
-        ckpt_count = 0
-        for name, t in sd.items():
-            if not isinstance(t, torch.Tensor):
-                continue
-            if not torch.is_floating_point(t):
-                continue
-            if t.numel() < block_size:
-                continue
-            # bias filter (1-D small)
-            if t.dim() == 1 and t.numel() < 2048:
-                continue
-            blocks_norm, _ = tensor_to_blocks(t, block_size)
-            if blocks_norm.numel() == 0:
-                continue
-            out_blocks.append(blocks_norm)
-            ckpt_count += blocks_norm.shape[0]
-            if ckpt_count >= max_blocks_per_ckpt:
-                break
-
-    if not out_blocks:
-        raise ValueError(
-            f"build_corpus_from_checkpoints: no usable tensors found in "
-            f"{len(checkpoint_paths)} files at block_size={block_size}"
-        )
-    return torch.cat(out_blocks, dim=0)
 
 
 # ── Training loop ─────────────────────────────────────────────────────────

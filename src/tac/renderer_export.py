@@ -60,6 +60,7 @@ __all__ = [
     # Lane J-NWC (Neural Weight Compression renderer.bin, arXiv 2510.11234, 2026-04-28)
     "export_neural_compressed_checkpoint",
     "load_neural_compressed_checkpoint",
+    "load_nwcs_sensitivity_compressed_checkpoint",
 ]
 
 
@@ -1869,6 +1870,7 @@ def detect_checkpoint_type(data_or_path: Union[bytes, Path]) -> str:
         "self_compress_v1" for SC per-channel learnable bit-depth (SCv1 magic),
         "omega_v1" for Lane Ω per-weight Hessian-aware bit-depth (OMG1 magic),
         "neural_weight_compression_v1" for Lane J-NWC neural weight codec (NWC1 magic),
+        "neural_weight_compression_sensitivity_v1" for Lane J-NWCS (NWCS1 magic),
         "pytorch" for raw PyTorch checkpoints.
     """
     if isinstance(data_or_path, (str, Path)):
@@ -1890,6 +1892,8 @@ def detect_checkpoint_type(data_or_path: Union[bytes, Path]) -> str:
         return "self_compress_v1"
     elif data[:4] == b"OMG1":
         return "omega_v1"
+    elif data[:8] == b"NWCS1\0\0\0":
+        return "neural_weight_compression_sensitivity_v1"
     elif data[:4] == b"NWC1":
         return "neural_weight_compression_v1"
     elif data[:4] == _COOLCHIC_MAGIC:
@@ -1929,6 +1933,8 @@ def load_any_renderer_checkpoint(
         return load_omega_renderer(data_or_path, device=device)
     elif fmt == "neural_weight_compression_v1":
         return load_neural_compressed_checkpoint(data_or_path, device=device)
+    elif fmt == "neural_weight_compression_sensitivity_v1":
+        return load_nwcs_sensitivity_compressed_checkpoint(data_or_path, device=device)
     elif fmt == "int4_lzma2":
         from tac.mixed_precision_export import load_int4_lzma2
         from tac.renderer import AsymmetricPairGenerator
@@ -4487,6 +4493,56 @@ def load_neural_compressed_checkpoint(
     model = model.to(device)
     model.eval()
     return model
+
+
+def load_nwcs_sensitivity_compressed_checkpoint(
+    data_or_path: Union[bytes, Path, str],
+    device: str = "cpu",
+) -> nn.Module:
+    """Restore a renderer from an NWCS1 sensitivity-aware NWC container."""
+    from tac.neural_weight_codec_sensitivity import (
+        SensitivityAwareCodecConfig,
+        SensitivityAwareWeightCodec,
+        decode_with_per_block_codebook,
+        load_nwcs_renderer_container,
+    )
+
+    container = load_nwcs_renderer_container(data_or_path)
+    codec_state = torch.load(
+        io.BytesIO(container.codec_checkpoint_blob),
+        map_location="cpu",
+        weights_only=False,
+    )
+    cfg_dict = codec_state.get("config") or codec_state.get("codec_config")
+    if cfg_dict is None:
+        raise ValueError("NWCS1 codec checkpoint missing config/codec_config")
+    codec = SensitivityAwareWeightCodec(SensitivityAwareCodecConfig(**cfg_dict))
+    codec.load_state_dict(codec_state["codec_state_dict"])
+    codec.eval()
+
+    new_state: dict[str, torch.Tensor] = {}
+    for entry in container.tensors:
+        decoded = decode_with_per_block_codebook(codec, entry.blob)
+        new_state[entry.name] = decoded.reshape(entry.shape)
+
+    metadata = container.header.get("metadata", {})
+    config = metadata.get("config") or metadata.get("arch_config") or {"tensor_only": True}
+    if config.get("tensor_only"):
+        from tac.renderer import AsymmetricPairGenerator
+
+        model = AsymmetricPairGenerator()
+        model._nwcs_state_dict = new_state  # type: ignore[attr-defined]
+        return model.to(device).eval()
+
+    model = _fp8h_build_model_from_header({"config": config, "tensors": []}, device=device)
+    full_state = dict(model.state_dict())
+    for key, value in new_state.items():
+        if key in full_state:
+            full_state[key] = value.to(full_state[key].dtype)
+        else:
+            full_state[key] = value
+    model.load_state_dict(full_state, strict=False)
+    return model.to(device).eval()
 
 
 if __name__ == "__main__":

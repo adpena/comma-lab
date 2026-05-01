@@ -36,10 +36,31 @@ ARTIFACT_COMPONENT_RESPONSE_INPUTS = "official_component_response_inputs.json"
 ARTIFACT_COMPONENT_RESPONSE_SUMMARY = "official_component_response_summary.json"
 ARTIFACT_COMPONENT_RESPONSE_VALIDATION = "official_component_response_artifact_validation.json"
 ARTIFACT_COMPONENT_RESPONSE_LOG = "official_component_response.log"
+ARTIFACT_COMPONENT_SENSITIVITY_INPUTS = "diagnostic_component_sensitivity_inputs.json"
+ARTIFACT_COMPONENT_SENSITIVITY_RUN = "diagnostic_component_sensitivity_run.json"
+ARTIFACT_COMPONENT_SENSITIVITY_VALIDATION = "diagnostic_component_sensitivity_artifact_validation.json"
+ARTIFACT_COMPONENT_SENSITIVITY_LOG = "diagnostic_component_sensitivity.log"
+ARTIFACT_COMPONENT_SENSITIVITY_SUMMARY = "component_sensitivity_profile_summary.json"
 COMPONENT_RESPONSE_COMPONENTS = ("posenet", "segnet", "combined")
 COMPONENT_RESPONSE_CURVE_FILES = tuple(
     f"{component}_official_response_curve.json"
     for component in COMPONENT_RESPONSE_COMPONENTS
+)
+COMPONENT_SENSITIVITY_MAP_FILES = tuple(
+    f"{component}_sensitivity_map.pt"
+    for component in COMPONENT_RESPONSE_COMPONENTS
+)
+COMPONENT_SENSITIVITY_CURVE_FILES = tuple(
+    f"{component}_response_curve.json"
+    for component in COMPONENT_RESPONSE_COMPONENTS
+)
+COMPONENT_SENSITIVITY_PROFILE_FILES = (
+    ARTIFACT_COMPONENT_SENSITIVITY_SUMMARY,
+    "sample_plan.json",
+    "stability.json",
+    "perturbation_basis_v1.json",
+    *COMPONENT_SENSITIVITY_MAP_FILES,
+    *COMPONENT_SENSITIVITY_CURVE_FILES,
 )
 CANONICAL_ARTIFACT_FILES = (
     ARTIFACT_METADATA,
@@ -78,6 +99,21 @@ COMPONENT_RESPONSE_CANONICAL_ARTIFACT_FILES = (
 COMPONENT_RESPONSE_OPTIONAL_ARTIFACT_FILES = (
     ARTIFACT_COMPONENT_RESPONSE_LOG,
     ARTIFACT_COMPONENT_RESPONSE_VALIDATION,
+)
+COMPONENT_SENSITIVITY_CANONICAL_ARTIFACT_FILES = (
+    ARTIFACT_METADATA,
+    ARTIFACT_COMPONENT_SENSITIVITY_INPUTS,
+    ARTIFACT_COMPONENT_SENSITIVITY_RUN,
+    *COMPONENT_SENSITIVITY_PROFILE_FILES,
+    ARTIFACT_DALI_BOOTSTRAP,
+    ARTIFACT_DALI_REQUIREMENTS,
+    ARTIFACT_RUNNER_PREFLIGHT,
+    ARTIFACT_SUPPLY_CHAIN_SCAN_PRE,
+    ARTIFACT_SUPPLY_CHAIN_SCAN,
+)
+COMPONENT_SENSITIVITY_OPTIONAL_ARTIFACT_FILES = (
+    ARTIFACT_COMPONENT_SENSITIVITY_LOG,
+    ARTIFACT_COMPONENT_SENSITIVITY_VALIDATION,
 )
 COMPONENT_RESPONSE_EVAL_EVIDENCE_NAMES = {
     "contest_auth_eval.json",
@@ -841,6 +877,44 @@ class LightningBatchJobSpec:
                     "official component-response job command must not target /teamspace/jobs/...; "
                     "Lightning exposes that as a read-only artifact view inside Studio jobs"
                 )
+        if self.role == "diagnostic_component_sensitivity":
+            if self.interruptible:
+                raise ValueError("diagnostic component-sensitivity jobs must not be interruptible")
+            if "experiments/profile_component_sensitivity.py" not in self.command:
+                raise ValueError("diagnostic component-sensitivity job must run the diagnostic profiler")
+            if "--device cuda" not in self.command:
+                raise ValueError("diagnostic component-sensitivity job must run with --device cuda")
+            if "--manifest-output" in self.command:
+                raise ValueError("diagnostic component-sensitivity job must not assemble a promotion manifest")
+            if ARTIFACT_COMPONENT_SENSITIVITY_INPUTS not in self.command:
+                raise ValueError("diagnostic component-sensitivity job must record input custody")
+            if ARTIFACT_COMPONENT_SENSITIVITY_RUN not in self.command:
+                raise ValueError("diagnostic component-sensitivity job must record command/env metadata")
+            if ARTIFACT_COMPONENT_SENSITIVITY_SUMMARY not in self.command:
+                raise ValueError("diagnostic component-sensitivity job must preserve the profile summary")
+            for member in ("renderer.bin", "masks.mkv", "optimized_poses.bin"):
+                if member not in self.command:
+                    raise ValueError(
+                        "diagnostic component-sensitivity job must zip-slip-safely extract "
+                        f"{member}"
+                    )
+            if "scripts/scan_lightning_supply_chain.py" not in self.command:
+                raise ValueError("diagnostic component-sensitivity job must run Lightning supply-chain scan")
+            if "LIGHTNING_RUNNER_CUDA_PREFLIGHT_OK" not in self.command:
+                raise ValueError("diagnostic component-sensitivity job must run CUDA runner preflight")
+            if "LIGHTNING_RUNNER_DALI_PREFLIGHT_OK" not in self.command:
+                raise ValueError("diagnostic component-sensitivity job must run DALI runner preflight")
+            if "--require-hashes" not in self.command or "--no-deps" not in self.command:
+                raise ValueError("diagnostic component-sensitivity DALI bootstrap must use hash-pinned no-deps install")
+            if "--index-url" in self.command or "--extra-index-url" in self.command:
+                raise ValueError("diagnostic component-sensitivity DALI bootstrap must use direct wheel URLs, not package indexes")
+            if self.remote_output_dir is not None:
+                _validate_writable_output_dir(self.remote_output_dir)
+            if "/teamspace/jobs/" in self.command:
+                raise ValueError(
+                    "diagnostic component-sensitivity job command must not target /teamspace/jobs/...; "
+                    "Lightning exposes that as a read-only artifact view inside Studio jobs"
+                )
 
     def asdict(self) -> dict[str, Any]:
         out = dataclasses.asdict(self)
@@ -1429,6 +1503,473 @@ def make_exact_eval_spec(
         local_artifact_dir=local_artifact_dir,
         remote_output_dir=out,
         adjudication=adjudication,
+    )
+    spec.validate()
+    return spec
+
+
+def _diagnostic_component_sensitivity_input_preflight_command(
+    *,
+    python_bin: str,
+    output_dir: str,
+    baseline_archive_path: str,
+    expected_baseline_archive_sha256: str | None,
+    expected_baseline_archive_size_bytes: int | None,
+    pair_weights_path: str | None,
+) -> str:
+    py = _quote(python_bin)
+    out_path = _quote(f"{output_dir}/{ARTIFACT_COMPONENT_SENSITIVITY_INPUTS}")
+    extract_dir = _quote(f"{output_dir}/extracted")
+    baseline = _quote(baseline_archive_path)
+    expected_sha = _quote(expected_baseline_archive_sha256 or "")
+    expected_bytes = _quote(str(expected_baseline_archive_size_bytes or ""))
+    pair_weights = _quote(pair_weights_path or "")
+    return (
+        f"{py} - {out_path} {extract_dir} {baseline} {expected_sha} {expected_bytes} {pair_weights} <<'PY'\n"
+        "import hashlib, json, pathlib, shutil, sys, time, zipfile\n"
+        "\n"
+        "out = pathlib.Path(sys.argv[1])\n"
+        "extract_dir = pathlib.Path(sys.argv[2])\n"
+        "baseline_archive = pathlib.Path(sys.argv[3])\n"
+        "expected_sha = sys.argv[4] or None\n"
+        "expected_bytes = int(sys.argv[5]) if sys.argv[5] else None\n"
+        "pair_weights_arg = sys.argv[6]\n"
+        "pair_weights = pathlib.Path(pair_weights_arg) if pair_weights_arg else None\n"
+        "required_members = ('renderer.bin', 'masks.mkv', 'optimized_poses.bin')\n"
+        "\n"
+        "def sha256(path):\n"
+        "    h = hashlib.sha256()\n"
+        "    with path.open('rb') as f:\n"
+        "        for chunk in iter(lambda: f.read(1024 * 1024), b''):\n"
+        "            h.update(chunk)\n"
+        "    return h.hexdigest()\n"
+        "\n"
+        "def file_meta(path, *, label):\n"
+        "    path = path.resolve()\n"
+        "    if not path.is_file():\n"
+        "        raise SystemExit(f'FATAL: {label} not found: {path}')\n"
+        "    size = path.stat().st_size\n"
+        "    if size <= 0:\n"
+        "        raise SystemExit(f'FATAL: {label} is empty: {path}')\n"
+        "    return {'path': str(path), 'bytes': size, 'sha256': sha256(path)}\n"
+        "\n"
+        "archive_meta = file_meta(baseline_archive, label='baseline archive')\n"
+        "if expected_sha is not None and archive_meta['sha256'] != expected_sha:\n"
+        "    raise SystemExit(f\"FATAL: baseline archive sha256 mismatch: expected={expected_sha} actual={archive_meta['sha256']}\")\n"
+        "if expected_bytes is not None and archive_meta['bytes'] != expected_bytes:\n"
+        "    raise SystemExit(f\"FATAL: baseline archive bytes mismatch: expected={expected_bytes} actual={archive_meta['bytes']}\")\n"
+        "\n"
+        "extract_root = extract_dir.resolve()\n"
+        "if extract_root.exists():\n"
+        "    shutil.rmtree(extract_root)\n"
+        "extract_root.mkdir(parents=True, exist_ok=True)\n"
+        "seen = set()\n"
+        "infos = {}\n"
+        "member_names = []\n"
+        "try:\n"
+        "    with zipfile.ZipFile(baseline_archive, 'r') as zf:\n"
+        "        for info in zf.infolist():\n"
+        "            name = info.filename\n"
+        "            pure = pathlib.PurePosixPath(name)\n"
+        "            parts = pure.parts\n"
+        "            if not name or '\\\\' in name or pure.is_absolute() or '..' in parts:\n"
+        "                raise SystemExit(f'FATAL: zip-slip member in baseline archive: {name!r}')\n"
+        "            if name in seen:\n"
+        "                raise SystemExit(f'FATAL: duplicate zip member in baseline archive: {name!r}')\n"
+        "            seen.add(name)\n"
+        "            if any(part in {'__MACOSX', '.DS_Store'} or part.startswith('._') for part in parts):\n"
+        "                raise SystemExit(f'FATAL: hidden/resource-fork zip member in baseline archive: {name!r}')\n"
+        "            member_names.append(name)\n"
+        "            infos[name] = info\n"
+        "        missing = [name for name in required_members if name not in infos]\n"
+        "        if missing:\n"
+        "            raise SystemExit('FATAL: baseline archive missing required members: ' + ', '.join(missing))\n"
+        "        extracted = {}\n"
+        "        for name in required_members:\n"
+        "            info = infos[name]\n"
+        "            if info.is_dir():\n"
+        "                raise SystemExit(f'FATAL: required archive member is a directory: {name!r}')\n"
+        "            target = (extract_root / name).resolve()\n"
+        "            if target.parent != extract_root:\n"
+        "                raise SystemExit(f'FATAL: unsafe extraction target for member: {name!r}')\n"
+        "            with zf.open(info, 'r') as src, target.open('wb') as dst:\n"
+        "                shutil.copyfileobj(src, dst)\n"
+        "            meta = file_meta(target, label=f'extracted {name}')\n"
+        "            meta.update({\n"
+        "                'member': name,\n"
+        "                'zip_crc': int(info.CRC),\n"
+        "                'zip_file_size': int(info.file_size),\n"
+        "                'zip_compress_size': int(info.compress_size),\n"
+        "            })\n"
+        "            extracted[name] = meta\n"
+        "except zipfile.BadZipFile as exc:\n"
+        "    raise SystemExit(f'FATAL: baseline archive is not a readable zip: {baseline_archive}: {exc}') from exc\n"
+        "pair_weights_meta = file_meta(pair_weights, label='pair weights') if pair_weights else None\n"
+        "archive_meta.update({\n"
+        "    'zip_member_count': len(member_names),\n"
+        "    'required_members': list(required_members),\n"
+        "    'member_names': member_names,\n"
+        "})\n"
+        "payload = {\n"
+        "    'schema_version': 1,\n"
+        "    'tool': 'lightning_diagnostic_component_sensitivity_input_preflight',\n"
+        "    'recorded_at_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),\n"
+        "    'baseline_archive': archive_meta,\n"
+        "    'extracted_dir': str(extract_root),\n"
+        "    'extracted_members': extracted,\n"
+        "    'pair_weights': pair_weights_meta,\n"
+        "    'diagnostic': True,\n"
+        "    'score_claim': False,\n"
+        "    'promotion_eligible': False,\n"
+        "    'promotion_blockers': [\n"
+        "        'profile_component_sensitivity.py emits diagnostic direct-renderer/Fisher artifacts, not canonical archive.zip -> inflate.sh -> upstream/evaluate.py component-response evidence'\n"
+        "    ],\n"
+        "}\n"
+        "out.write_text(json.dumps(payload, indent=2, sort_keys=True) + '\\n')\n"
+        "print('LIGHTNING_DIAGNOSTIC_COMPONENT_SENSITIVITY_INPUT_PREFLIGHT_OK')\n"
+        "print(json.dumps({'baseline_sha256': archive_meta['sha256'], 'baseline_bytes': archive_meta['bytes'], 'extracted_members': list(required_members)}, sort_keys=True))\n"
+        "PY"
+    )
+
+
+def _diagnostic_component_sensitivity_run_metadata_command(
+    *,
+    python_bin: str,
+    output_dir: str,
+    profile_argv: list[str],
+) -> str:
+    py = _quote(python_bin)
+    out_path = _quote(f"{output_dir}/{ARTIFACT_COMPONENT_SENSITIVITY_RUN}")
+    argv_json = _quote(json.dumps(profile_argv, sort_keys=True))
+    return (
+        f"{py} - {out_path} {argv_json} <<'PY'\n"
+        "import json, os, sys, time\n"
+        "profile_argv = json.loads(sys.argv[2])\n"
+        "env_keys = [\n"
+        "    'CUDA_VISIBLE_DEVICES',\n"
+        "    'LIGHTNING_CLOUD_PROJECT_ID',\n"
+        "    'LIGHTNING_DISPATCHED_JOB_NAME',\n"
+        "    'UV_LINK_MODE',\n"
+        "    'UV_PROJECT_ENVIRONMENT',\n"
+        "]\n"
+        "payload = {\n"
+        "    'schema_version': 1,\n"
+        "    'tool': 'lightning_diagnostic_component_sensitivity_run_metadata',\n"
+        "    'recorded_at_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),\n"
+        "    'role': 'diagnostic_component_sensitivity',\n"
+        "    'profile_argv': profile_argv,\n"
+        "    'environment': {key: os.environ.get(key) for key in env_keys},\n"
+        "    'diagnostic': True,\n"
+        "    'score_claim': False,\n"
+        "    'promotion_eligible': False,\n"
+        "    'promotion_blockers': [\n"
+        "        'not canonical component-response custody; output is diagnostic only'\n"
+        "    ],\n"
+        "}\n"
+        "open(sys.argv[1], 'w').write(json.dumps(payload, indent=2, sort_keys=True) + '\\n')\n"
+        "print('LIGHTNING_DIAGNOSTIC_COMPONENT_SENSITIVITY_RUN_METADATA_OK')\n"
+        "PY"
+    )
+
+
+def _diagnostic_component_sensitivity_validation_command(
+    *,
+    python_bin: str,
+    output_dir: str,
+) -> str:
+    py = _quote(python_bin)
+    out = _quote(output_dir)
+    expected_files = _quote(json.dumps(COMPONENT_SENSITIVITY_PROFILE_FILES, sort_keys=True))
+    return (
+        f"{py} - {out} {expected_files} <<'PY'\n"
+        "import json, math, pathlib, sys, time\n"
+        "root = pathlib.Path(sys.argv[1])\n"
+        "expected_files = json.loads(sys.argv[2])\n"
+        "summary_path = root / 'component_sensitivity_profile_summary.json'\n"
+        "inputs_path = root / 'diagnostic_component_sensitivity_inputs.json'\n"
+        "run_path = root / 'diagnostic_component_sensitivity_run.json'\n"
+        "for path in (summary_path, inputs_path, run_path):\n"
+        "    if not path.is_file():\n"
+        "        raise SystemExit(f'FATAL: missing diagnostic component-sensitivity artifact: {path}')\n"
+        "summary = json.loads(summary_path.read_text())\n"
+        "inputs = json.loads(inputs_path.read_text())\n"
+        "run = json.loads(run_path.read_text())\n"
+        "if summary.get('tool') != 'experiments/profile_component_sensitivity.py':\n"
+        "    raise SystemExit('FATAL: profile summary has unexpected tool')\n"
+        "if summary.get('device') != 'cuda':\n"
+        "    raise SystemExit(f\"FATAL: profile summary device={summary.get('device')!r}, expected 'cuda'\")\n"
+        "if summary.get('promotion_eligible') is not False:\n"
+        "    raise SystemExit('FATAL: diagnostic profile summary must have promotion_eligible=false')\n"
+        "if summary.get('official_component_response') is not False:\n"
+        "    raise SystemExit('FATAL: diagnostic profile summary must not claim official_component_response')\n"
+        "if summary.get('canonical_scorer_path') is not False:\n"
+        "    raise SystemExit('FATAL: diagnostic profile summary must not claim canonical_scorer_path')\n"
+        "if 'diagnostic' not in str(summary.get('evidence_grade', '')):\n"
+        "    raise SystemExit('FATAL: diagnostic profile summary has non-diagnostic evidence_grade')\n"
+        "missing = [name for name in expected_files if not (root / name).is_file()]\n"
+        "if missing:\n"
+        "    raise SystemExit('FATAL: missing profile output artifacts: ' + ', '.join(missing))\n"
+        "elapsed = summary.get('elapsed_s')\n"
+        "if not isinstance(elapsed, (int, float)) or not math.isfinite(float(elapsed)):\n"
+        "    raise SystemExit('FATAL: profile summary elapsed_s must be finite')\n"
+        "payload = {\n"
+        "    'schema_version': 1,\n"
+        "    'validated_at_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),\n"
+        "    'role': 'diagnostic_component_sensitivity',\n"
+        "    'artifact_dir': str(root),\n"
+        "    'baseline_archive_sha256': inputs['baseline_archive']['sha256'],\n"
+        "    'baseline_archive_size_bytes': inputs['baseline_archive']['bytes'],\n"
+        "    'device': 'cuda',\n"
+        "    'evidence_grade': summary.get('evidence_grade'),\n"
+        "    'sensitivity_source': summary.get('sensitivity_source'),\n"
+        "    'component_response_path': summary.get('component_response_path'),\n"
+        "    'promotion_eligible': False,\n"
+        "    'score_claim': False,\n"
+        "    'diagnostic': True,\n"
+        "    'input_preflight': inputs,\n"
+        "    'run_metadata': run,\n"
+        "    'summary': summary,\n"
+        "    'preserved_files': expected_files,\n"
+        "}\n"
+        "(root / 'diagnostic_component_sensitivity_artifact_validation.json').write_text(json.dumps(payload, indent=2, sort_keys=True) + '\\n')\n"
+        "print('LIGHTNING_DIAGNOSTIC_COMPONENT_SENSITIVITY_ARTIFACTS_OK')\n"
+        "print(json.dumps({'baseline_sha256': payload['baseline_archive_sha256'], 'promotion_eligible': False, 'score_claim': False}, sort_keys=True))\n"
+        "PY"
+    )
+
+
+def diagnostic_component_sensitivity_command(
+    *,
+    repo_dir: str,
+    baseline_archive_path: str,
+    upstream_dir: str,
+    output_dir: str,
+    python_bin: str = ".venv/bin/python",
+    video_mkv: str | None = None,
+    pair_weights_path: str | None = None,
+    job_name: str | None = None,
+    expected_baseline_archive_sha256: str | None = None,
+    expected_baseline_archive_size_bytes: int | None = None,
+    queue_metadata: dict[str, Any] | None = None,
+    top_k_pairs: int = 64,
+    pair_batch: int = 2,
+    response_top_k: int = 16,
+    response_epsilons: str = "-0.002,-0.001,-0.0005,0.0,0.0005,0.001,0.002",
+    split_seed: int = 20260430,
+    holdout_fraction: float = 0.2,
+    aggregate: str = "sum",
+) -> str:
+    """Build a CUDA diagnostic component-sensitivity profiler command."""
+
+    _validate_writable_output_dir(output_dir)
+    _validate_expected_archive(
+        expected_baseline_archive_sha256,
+        expected_baseline_archive_size_bytes,
+    )
+    if aggregate not in {"sum", "mean", "max"}:
+        raise ValueError("aggregate must be one of: sum, mean, max")
+    for field, value in (
+        ("top_k_pairs", top_k_pairs),
+        ("pair_batch", pair_batch),
+        ("response_top_k", response_top_k),
+    ):
+        if int(value) <= 0:
+            raise ValueError(f"{field} must be positive")
+    _validate_optional_number(float(holdout_fraction), field="holdout_fraction", minimum=0.0, strict_minimum=True)
+    if float(holdout_fraction) >= 1.0:
+        raise ValueError("holdout_fraction must be < 1.0")
+
+    repo = _quote(repo_dir)
+    out = _quote(output_dir)
+    video = video_mkv or f"{str(upstream_dir).rstrip('/')}/videos/0.mkv"
+    profile_argv = [
+        python_bin,
+        "-u",
+        "experiments/profile_component_sensitivity.py",
+        "--checkpoint",
+        f"{output_dir}/extracted/renderer.bin",
+        "--video",
+        video,
+        "--masks-mkv",
+        f"{output_dir}/extracted/masks.mkv",
+        "--poses",
+        f"{output_dir}/extracted/optimized_poses.bin",
+        "--upstream",
+        upstream_dir,
+        "--output-dir",
+        output_dir,
+        "--top-k-pairs",
+        str(int(top_k_pairs)),
+        "--pair-batch",
+        str(int(pair_batch)),
+        "--response-top-k",
+        str(int(response_top_k)),
+        "--response-epsilons",
+        str(response_epsilons),
+        "--split-seed",
+        str(int(split_seed)),
+        "--holdout-fraction",
+        str(float(holdout_fraction)),
+        "--aggregate",
+        aggregate,
+        "--device",
+        "cuda",
+    ]
+    if pair_weights_path:
+        profile_argv.extend(["--pair-weights", pair_weights_path])
+    else:
+        profile_argv.append("--all-pairs")
+    profile_command = " ".join(_quote(part) for part in profile_argv)
+
+    metadata_payload = {
+        "schema_version": 1,
+        "job_name": job_name,
+        "role": "diagnostic_component_sensitivity",
+        "expected_archive_sha256": expected_baseline_archive_sha256,
+        "expected_archive_size_bytes": expected_baseline_archive_size_bytes,
+        "expected_baseline_archive_sha256": expected_baseline_archive_sha256,
+        "expected_baseline_archive_size_bytes": expected_baseline_archive_size_bytes,
+        "queue_metadata": _normalise_metadata(queue_metadata),
+        "adjudication": None,
+        "score_source": "none:diagnostic_component_sensitivity_non_promotable",
+        "score_claim": False,
+        "promotion_eligible": False,
+        "status_source": "lightning_sdk_job_attributes",
+    }
+
+    files_to_remove = [
+        ARTIFACT_METADATA,
+        ARTIFACT_COMPONENT_SENSITIVITY_INPUTS,
+        ARTIFACT_COMPONENT_SENSITIVITY_RUN,
+        ARTIFACT_COMPONENT_SENSITIVITY_VALIDATION,
+        ARTIFACT_COMPONENT_SENSITIVITY_LOG,
+        ARTIFACT_DALI_BOOTSTRAP,
+        ARTIFACT_DALI_REQUIREMENTS,
+        ARTIFACT_RUNNER_PREFLIGHT,
+        ARTIFACT_SUPPLY_CHAIN_SCAN_PRE,
+        ARTIFACT_SUPPLY_CHAIN_SCAN,
+        *COMPONENT_SENSITIVITY_PROFILE_FILES,
+    ]
+    command = "\n".join(
+        [
+            "set -euo pipefail",
+            f"cd {repo}",
+            "test -f env.sh && source env.sh || true",
+            f"mkdir -p {out}",
+            f"rm -rf {out}/extracted {out}/uv_project_env",
+            " ".join(["rm", "-f", *[f"{out}/{_quote(name)}" for name in files_to_remove]]),
+            _write_metadata_command(
+                python_bin=python_bin,
+                output_dir=output_dir,
+                payload=metadata_payload,
+            ),
+            _runner_preflight_command(python_bin=python_bin, output_dir=output_dir),
+            _diagnostic_component_sensitivity_input_preflight_command(
+                python_bin=python_bin,
+                output_dir=output_dir,
+                baseline_archive_path=baseline_archive_path,
+                expected_baseline_archive_sha256=expected_baseline_archive_sha256,
+                expected_baseline_archive_size_bytes=expected_baseline_archive_size_bytes,
+                pair_weights_path=pair_weights_path,
+            ),
+            (
+                f"export UV_PROJECT_ENVIRONMENT={out}/uv_project_env\n"
+                "export UV_LINK_MODE=${UV_LINK_MODE:-copy}\n"
+                + _diagnostic_component_sensitivity_run_metadata_command(
+                    python_bin=python_bin,
+                    output_dir=output_dir,
+                    profile_argv=profile_argv,
+                )
+            ),
+            profile_command + f" 2>&1 | tee {out}/{ARTIFACT_COMPONENT_SENSITIVITY_LOG}",
+            f"test -f {out}/{ARTIFACT_COMPONENT_SENSITIVITY_SUMMARY}",
+            *[
+                f"test -f {out}/{_quote(name)}"
+                for name in COMPONENT_SENSITIVITY_PROFILE_FILES
+            ],
+            _diagnostic_component_sensitivity_validation_command(
+                python_bin=python_bin,
+                output_dir=output_dir,
+            ),
+            f"test -f {out}/{ARTIFACT_COMPONENT_SENSITIVITY_VALIDATION}",
+        ]
+    )
+    return command
+
+
+def make_diagnostic_component_sensitivity_spec(
+    *,
+    name: str,
+    baseline_archive_path: str,
+    repo_dir: str,
+    upstream_dir: str,
+    output_dir: str | None = None,
+    machine: str = "T4",
+    studio: str | None = None,
+    image: str | None = None,
+    python_bin: str = ".venv/bin/python",
+    max_runtime: int | None = 6 * 60 * 60,
+    env: dict[str, str] | None = None,
+    teamspace: str | None = None,
+    org: str | None = None,
+    user: str | None = None,
+    video_mkv: str | None = None,
+    pair_weights_path: str | None = None,
+    expected_baseline_archive_sha256: str | None = None,
+    expected_baseline_archive_size_bytes: int | None = None,
+    queue_metadata: dict[str, Any] | None = None,
+    local_artifact_dir: str | None = None,
+    top_k_pairs: int = 64,
+    pair_batch: int = 2,
+    response_top_k: int = 16,
+    response_epsilons: str = "-0.002,-0.001,-0.0005,0.0,0.0005,0.001,0.002",
+    split_seed: int = 20260430,
+    holdout_fraction: float = 0.2,
+    aggregate: str = "sum",
+) -> LightningBatchJobSpec:
+    """Create a non-promotable diagnostic component-sensitivity Batch Job spec."""
+
+    out = output_dir or default_exact_eval_output_dir(repo_dir=repo_dir, job_name=name)
+    command = diagnostic_component_sensitivity_command(
+        repo_dir=repo_dir,
+        baseline_archive_path=baseline_archive_path,
+        upstream_dir=upstream_dir,
+        output_dir=out,
+        python_bin=python_bin,
+        video_mkv=video_mkv,
+        pair_weights_path=pair_weights_path,
+        job_name=name,
+        expected_baseline_archive_sha256=expected_baseline_archive_sha256,
+        expected_baseline_archive_size_bytes=expected_baseline_archive_size_bytes,
+        queue_metadata=queue_metadata,
+        top_k_pairs=top_k_pairs,
+        pair_batch=pair_batch,
+        response_top_k=response_top_k,
+        response_epsilons=response_epsilons,
+        split_seed=split_seed,
+        holdout_fraction=holdout_fraction,
+        aggregate=aggregate,
+    )
+    spec = LightningBatchJobSpec(
+        name=name,
+        machine=machine,
+        command=command,
+        studio=studio,
+        image=image,
+        teamspace=teamspace,
+        org=org,
+        user=user,
+        env=dict(env or {}),
+        interruptible=False,
+        max_runtime=max_runtime,
+        reuse_snapshot=False,
+        role="diagnostic_component_sensitivity",
+        expected_archive_sha256=expected_baseline_archive_sha256,
+        expected_archive_size_bytes=expected_baseline_archive_size_bytes,
+        queue_metadata=dict(queue_metadata or {}),
+        local_artifact_dir=local_artifact_dir,
+        remote_output_dir=out,
+        adjudication=None,
     )
     spec.validate()
     return spec
@@ -2272,6 +2813,168 @@ def validate_local_component_response_artifact_dir(
     return validation
 
 
+def validate_local_component_sensitivity_artifact_dir(
+    artifact_dir: str | Path,
+    *,
+    expected_baseline_archive_sha256: str | None = None,
+    expected_baseline_archive_size_bytes: int | None = None,
+) -> dict[str, Any]:
+    """Validate diagnostic component-sensitivity Lightning artifacts.
+
+    These artifacts are useful for design and exact-response planning, but they
+    are deliberately non-promotable: the profiler emits Fisher/direct-renderer
+    diagnostics, not canonical archive.zip -> inflate.sh -> upstream/evaluate.py
+    component-response measurements.
+    """
+
+    artifact_root = Path(artifact_dir)
+    if not artifact_root.is_dir():
+        raise FileNotFoundError(f"component-sensitivity artifact dir not found: {artifact_root}")
+    _validate_expected_archive(
+        expected_baseline_archive_sha256,
+        expected_baseline_archive_size_bytes,
+    )
+
+    required = [
+        artifact_root / name
+        for name in COMPONENT_SENSITIVITY_CANONICAL_ARTIFACT_FILES
+    ]
+    missing = [str(path) for path in required if not path.is_file()]
+    if missing:
+        raise FileNotFoundError(f"component-sensitivity artifact dir missing required files: {missing}")
+
+    metadata = _load_json_object(artifact_root / ARTIFACT_METADATA, label="Lightning queue metadata")
+    if metadata.get("role") != "diagnostic_component_sensitivity":
+        raise ValueError(
+            f"Lightning queue metadata role={metadata.get('role')!r}, "
+            "expected 'diagnostic_component_sensitivity'"
+        )
+    if metadata.get("score_source") != "none:diagnostic_component_sensitivity_non_promotable":
+        raise ValueError("component-sensitivity metadata score_source is not the diagnostic non-promotable source")
+    if metadata.get("score_claim") is not False or metadata.get("promotion_eligible") is not False:
+        raise ValueError("component-sensitivity metadata must record score_claim=false and promotion_eligible=false")
+
+    supply_chain_pre = _validate_supply_chain_scan_artifact(
+        artifact_root / ARTIFACT_SUPPLY_CHAIN_SCAN_PRE,
+        label="pre-DALI supply-chain scan",
+    )
+    supply_chain_post = _validate_supply_chain_scan_artifact(
+        artifact_root / ARTIFACT_SUPPLY_CHAIN_SCAN,
+        label="post-DALI supply-chain scan",
+    )
+    dali_bootstrap = _validate_dali_bootstrap_artifact(
+        artifact_root / ARTIFACT_DALI_BOOTSTRAP,
+        artifact_root / ARTIFACT_DALI_REQUIREMENTS,
+    )
+    runner_preflight = _validate_runner_preflight_artifact(artifact_root / ARTIFACT_RUNNER_PREFLIGHT)
+
+    inputs = _load_json_object(
+        artifact_root / ARTIFACT_COMPONENT_SENSITIVITY_INPUTS,
+        label="diagnostic component-sensitivity input preflight",
+    )
+    if inputs.get("tool") != "lightning_diagnostic_component_sensitivity_input_preflight":
+        raise ValueError("component-sensitivity input preflight has unexpected tool")
+    if inputs.get("score_claim") is not False or inputs.get("promotion_eligible") is not False:
+        raise ValueError("component-sensitivity input preflight must be explicitly non-promotable")
+    baseline_input = inputs.get("baseline_archive")
+    if not isinstance(baseline_input, dict):
+        raise ValueError("component-sensitivity input preflight missing baseline_archive")
+    baseline_sha = baseline_input.get("sha256")
+    baseline_bytes = baseline_input.get("bytes")
+    if expected_baseline_archive_sha256 is not None and baseline_sha != expected_baseline_archive_sha256:
+        raise ValueError(
+            "baseline archive sha256 does not match expected: "
+            f"actual={baseline_sha!r} expected={expected_baseline_archive_sha256!r}"
+        )
+    if expected_baseline_archive_size_bytes is not None and baseline_bytes != expected_baseline_archive_size_bytes:
+        raise ValueError(
+            "baseline archive bytes does not match expected: "
+            f"actual={baseline_bytes!r} expected={expected_baseline_archive_size_bytes!r}"
+        )
+    extracted = inputs.get("extracted_members")
+    if not isinstance(extracted, dict):
+        raise ValueError("component-sensitivity input preflight missing extracted_members")
+    for member in ("renderer.bin", "masks.mkv", "optimized_poses.bin"):
+        meta = extracted.get(member)
+        if not isinstance(meta, dict) or not meta.get("sha256") or not meta.get("bytes"):
+            raise ValueError(f"component-sensitivity input preflight missing extracted member custody: {member}")
+
+    run = _load_json_object(
+        artifact_root / ARTIFACT_COMPONENT_SENSITIVITY_RUN,
+        label="diagnostic component-sensitivity run metadata",
+    )
+    if run.get("role") != "diagnostic_component_sensitivity":
+        raise ValueError("component-sensitivity run metadata has unexpected role")
+    if run.get("score_claim") is not False or run.get("promotion_eligible") is not False:
+        raise ValueError("component-sensitivity run metadata must be explicitly non-promotable")
+    if not isinstance(run.get("profile_argv"), list) or "--device" not in run.get("profile_argv", []):
+        raise ValueError("component-sensitivity run metadata must record profile argv including --device")
+
+    summary = _load_json_object(
+        artifact_root / ARTIFACT_COMPONENT_SENSITIVITY_SUMMARY,
+        label="diagnostic component-sensitivity profile summary",
+    )
+    if summary.get("tool") != "experiments/profile_component_sensitivity.py":
+        raise ValueError("component-sensitivity summary has unexpected tool")
+    if summary.get("device") != "cuda":
+        raise ValueError(f"component-sensitivity summary device={summary.get('device')!r}, expected 'cuda'")
+    if summary.get("promotion_eligible") is not False:
+        raise ValueError("component-sensitivity summary must have promotion_eligible=false")
+    if summary.get("official_component_response") is not False:
+        raise ValueError("component-sensitivity summary must not claim official_component_response")
+    if summary.get("canonical_scorer_path") is not False:
+        raise ValueError("component-sensitivity summary must not claim canonical_scorer_path")
+    if "diagnostic" not in str(summary.get("evidence_grade", "")):
+        raise ValueError("component-sensitivity summary evidence_grade must be diagnostic")
+    if summary.get("sensitivity_source") != "fisher_proxy":
+        raise ValueError("component-sensitivity summary sensitivity_source must be fisher_proxy")
+
+    curves: dict[str, Any] = {}
+    for component in COMPONENT_RESPONSE_COMPONENTS:
+        map_path = artifact_root / f"{component}_sensitivity_map.pt"
+        if map_path.stat().st_size <= 0:
+            raise ValueError(f"{component} sensitivity map is empty")
+        curve_path = artifact_root / f"{component}_response_curve.json"
+        curve = _load_json_object(curve_path, label=f"{component} diagnostic response curve")
+        curves[component] = curve
+        if curve.get("component") != component:
+            raise ValueError(f"{component} response curve component={curve.get('component')!r}")
+        if curve.get("device") != "cuda":
+            raise ValueError(f"{component} response curve device={curve.get('device')!r}, expected 'cuda'")
+        if curve.get("official_component_response") is not False:
+            raise ValueError(f"{component} response curve must not claim official_component_response")
+        if curve.get("canonical_scorer_path") is not False:
+            raise ValueError(f"{component} response curve must not claim canonical_scorer_path")
+        points = curve.get("points")
+        if not isinstance(points, list) or not points:
+            raise ValueError(f"{component} diagnostic response curve must include points")
+
+    validation = {
+        "schema_version": 1,
+        "validated_at_utc": _utc_now(),
+        "artifact_dir": str(artifact_root),
+        "role": "diagnostic_component_sensitivity",
+        "baseline_archive_sha256": baseline_sha,
+        "baseline_archive_size_bytes": baseline_bytes,
+        "device": "cuda",
+        "gpu_model": runner_preflight.get("device_name"),
+        "gpu_t4_match": runner_preflight.get("gpu_t4_match"),
+        "metadata": metadata,
+        "input_preflight": inputs,
+        "run_metadata": run,
+        "summary": summary,
+        "curves": curves,
+        "dali_bootstrap": dali_bootstrap,
+        "runner_preflight": runner_preflight,
+        "supply_chain_pre": supply_chain_pre,
+        "supply_chain_post": supply_chain_post,
+        "promotion_eligible": False,
+        "score_claim": False,
+        "score_source": "none:diagnostic_component_sensitivity_non_promotable",
+    }
+    return validation
+
+
 def _copy_component_response_evidence_files(source: Path, mirror: Path) -> list[str]:
     copied: list[str] = []
     for name in COMPONENT_RESPONSE_CANONICAL_ARTIFACT_FILES:
@@ -2332,6 +3035,57 @@ def mirror_local_component_response_artifact_dir(
     )
     validation["copied_files"] = copied
     _write_json_replace(mirror / ARTIFACT_COMPONENT_RESPONSE_VALIDATION, validation)
+    return validation
+
+
+def _copy_component_sensitivity_evidence_files(source: Path, mirror: Path) -> list[str]:
+    copied: list[str] = []
+    for name in COMPONENT_SENSITIVITY_CANONICAL_ARTIFACT_FILES:
+        src = source / name
+        if not src.is_file():
+            raise FileNotFoundError(f"component-sensitivity artifact missing required file: {src}")
+        dest = mirror / name
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dest)
+        copied.append(name)
+    for name in COMPONENT_SENSITIVITY_OPTIONAL_ARTIFACT_FILES:
+        src = source / name
+        if not src.is_file():
+            continue
+        dest = mirror / name
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dest)
+        copied.append(name)
+    return copied
+
+
+def mirror_local_component_sensitivity_artifact_dir(
+    source_dir: str | Path,
+    mirror_dir: str | Path,
+    *,
+    expected_baseline_archive_sha256: str | None = None,
+    expected_baseline_archive_size_bytes: int | None = None,
+    overwrite: bool = False,
+) -> dict[str, Any]:
+    """Mirror compact diagnostic component-sensitivity artifacts and validate them."""
+
+    source = Path(source_dir)
+    mirror = Path(mirror_dir)
+    if not source.is_dir():
+        raise FileNotFoundError(f"source component-sensitivity artifact dir not found: {source}")
+    if mirror.exists() and any(mirror.iterdir()):
+        if not overwrite:
+            raise FileExistsError(f"mirror dir is not empty: {mirror}")
+        shutil.rmtree(mirror)
+    mirror.mkdir(parents=True, exist_ok=True)
+    copied = _copy_component_sensitivity_evidence_files(source, mirror)
+    validation = validate_local_component_sensitivity_artifact_dir(
+        mirror,
+        expected_baseline_archive_sha256=expected_baseline_archive_sha256,
+        expected_baseline_archive_size_bytes=expected_baseline_archive_size_bytes,
+    )
+    validation["copied_files"] = copied
+    _write_json_replace(mirror / ARTIFACT_COMPONENT_SENSITIVITY_VALIDATION, validation)
     return validation
 
 
@@ -2596,6 +3350,91 @@ def mirror_ssh_component_response_artifact_dir(
         "ssh_connect_timeout": ssh_connect_timeout,
     }
     _write_json_replace(mirror / ARTIFACT_COMPONENT_RESPONSE_VALIDATION, validation)
+    return validation
+
+
+def mirror_ssh_component_sensitivity_artifact_dir(
+    *,
+    ssh_target: str,
+    remote_dir: str | Path,
+    mirror_dir: str | Path,
+    expected_baseline_archive_sha256: str | None = None,
+    expected_baseline_archive_size_bytes: int | None = None,
+    overwrite: bool = False,
+    ssh_bin: str = "ssh",
+    scp_bin: str = "scp",
+    ssh_connect_timeout: int | None = 15,
+) -> dict[str, Any]:
+    """Mirror compact diagnostic component-sensitivity artifacts over SSH and validate."""
+
+    target, remote = _validate_ssh_artifact_source(ssh_target, remote_dir)
+    mirror = Path(mirror_dir)
+    if mirror.exists() and any(mirror.iterdir()):
+        if not overwrite:
+            raise FileExistsError(f"mirror dir is not empty: {mirror}")
+        shutil.rmtree(mirror)
+    mirror.mkdir(parents=True, exist_ok=True)
+
+    subprocess.run(
+        _ssh_command(ssh_bin, target, "test -d " + shlex.quote(remote), connect_timeout=ssh_connect_timeout),
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    copied_files: list[str] = []
+    for name in COMPONENT_SENSITIVITY_CANONICAL_ARTIFACT_FILES:
+        subprocess.run(
+            _scp_command(
+                scp_bin,
+                f"{target}:{remote}/{name}",
+                mirror / name,
+                connect_timeout=ssh_connect_timeout,
+            ),
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        copied_files.append(name)
+    for name in COMPONENT_SENSITIVITY_OPTIONAL_ARTIFACT_FILES:
+        exists = subprocess.run(
+            _ssh_command(
+                ssh_bin,
+                target,
+                "test -f " + shlex.quote(f"{remote}/{name}"),
+                connect_timeout=ssh_connect_timeout,
+            ),
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if exists.returncode != 0:
+            continue
+        subprocess.run(
+            _scp_command(
+                scp_bin,
+                f"{target}:{remote}/{name}",
+                mirror / name,
+                connect_timeout=ssh_connect_timeout,
+            ),
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        copied_files.append(name)
+
+    validation = validate_local_component_sensitivity_artifact_dir(
+        mirror,
+        expected_baseline_archive_sha256=expected_baseline_archive_sha256,
+        expected_baseline_archive_size_bytes=expected_baseline_archive_size_bytes,
+    )
+    validation["ssh_source"] = {
+        "ssh_target": target,
+        "remote_dir": remote,
+        "mirror_dir": str(mirror),
+        "copied_files": copied_files,
+        "ssh_connect_timeout": ssh_connect_timeout,
+    }
+    _write_json_replace(mirror / ARTIFACT_COMPONENT_SENSITIVITY_VALIDATION, validation)
     return validation
 
 
@@ -2898,6 +3737,80 @@ class LightningBatchJobsClient:
                 "recorded_at_utc": validation["validated_at_utc"],
                 "status": "HARVESTED",
                 "source": "ssh_component_response_artifact_validation",
+            }
+        )
+        record["status_history"] = history
+        self._replace_record(index, record)
+        return validation
+
+    def harvest_ssh_component_sensitivity_artifacts(
+        self,
+        *,
+        job_name: str,
+        ssh_target: str,
+        remote_dir: str | Path | None = None,
+        mirror_dir: str | Path | None = None,
+        expected_baseline_archive_sha256: str | None = None,
+        expected_baseline_archive_size_bytes: int | None = None,
+        overwrite: bool = False,
+        ssh_bin: str = "ssh",
+        scp_bin: str = "scp",
+        ssh_connect_timeout: int | None = 15,
+    ) -> dict[str, Any]:
+        """Mirror diagnostic component-sensitivity artifacts over SSH, validate, and record."""
+
+        index = self._find_record_index(job_name)
+        records = self.list_records()
+        record = dict(records[index])
+        spec = record.get("spec") if isinstance(record.get("spec"), dict) else {}
+        queue = record.get("queue") if isinstance(record.get("queue"), dict) else {}
+        job = record.get("job") if isinstance(record.get("job"), dict) else {}
+        persisted_remote = None
+        if isinstance(queue, dict):
+            sdk_artifact_path = job.get("artifact_path") or queue.get("sdk_artifact_path")
+            spec_remote_output = spec.get("remote_output_dir")
+            if isinstance(sdk_artifact_path, str) and isinstance(spec_remote_output, str):
+                persisted_remote = lightning_sdk_persisted_studio_output_dir(
+                    sdk_artifact_path=sdk_artifact_path,
+                    remote_output_dir=spec_remote_output,
+                )
+        resolved_remote = remote_dir or persisted_remote or spec.get("remote_output_dir")
+        resolved_mirror = mirror_dir or spec.get("local_artifact_dir")
+        if not resolved_remote:
+            raise ValueError("remote artifact dir is required; state record has no remote_output_dir")
+        if not resolved_mirror:
+            raise ValueError("mirror dir is required; state record has no local_artifact_dir")
+        expected_sha = (
+            expected_baseline_archive_sha256
+            or spec.get("expected_baseline_archive_sha256")
+            or spec.get("expected_archive_sha256")
+        )
+        expected_bytes = (
+            expected_baseline_archive_size_bytes
+            or spec.get("expected_baseline_archive_size_bytes")
+            or spec.get("expected_archive_size_bytes")
+        )
+        validation = mirror_ssh_component_sensitivity_artifact_dir(
+            ssh_target=ssh_target,
+            remote_dir=resolved_remote,
+            mirror_dir=resolved_mirror,
+            expected_baseline_archive_sha256=expected_sha,
+            expected_baseline_archive_size_bytes=expected_bytes,
+            overwrite=overwrite,
+            ssh_bin=ssh_bin,
+            scp_bin=scp_bin,
+            ssh_connect_timeout=ssh_connect_timeout,
+        )
+        harvests = list(record.get("harvests") or [])
+        harvests.append(validation)
+        record["harvests"] = harvests
+        record["status"] = "HARVESTED"
+        history = list(record.get("status_history") or [])
+        history.append(
+            {
+                "recorded_at_utc": validation["validated_at_utc"],
+                "status": "HARVESTED",
+                "source": "ssh_component_sensitivity_artifact_validation",
             }
         )
         record["status_history"] = history

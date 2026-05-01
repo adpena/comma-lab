@@ -261,9 +261,9 @@ def test_kl_distill_log_line_includes_kl_when_active():
     Silent KL = wasted GPU per CLAUDE.md 'no wasted resources' rule."""
     src = SCRIPT.read_text()
     # The log block formats `kl=...` in the f-string when the weight is on.
-    assert 'kl_str = f" kl={kl_loss_val:.6f}" if kl_distill_weight > 0 else ""' in src, (
+    assert 'kl_str = f" kl={kl_loss_val:.6f}" if _effective_kl_weight > 0 else ""' in src, (
         "Per-step log must include `kl={value:.6f}` when "
-        "kl_distill_weight > 0 so the operator can see the auxiliary "
+        "the effective KL weight is active so the operator can see the auxiliary "
         "loss component in real time. CLAUDE.md no-wasted-resources rule."
     )
 
@@ -305,3 +305,22 @@ def test_kl_distill_uses_roundtripped_frames_not_raw_pairs():
             f"remains in optimize_poses.py — KL block reverted to raw "
             f"renderer output."
         )
+
+
+def test_snr_controller_only_mode_materializes_gt_pairs():
+    """If the SNR controller is active, KL is active even when static
+    --kl-distill-weight is omitted. The main loop must still build
+    gt_frames_pair; otherwise the controller's positive effective weight
+    silently no-ops because optimize_poses_batch gates on gt_frames_pair.
+    """
+    src = SCRIPT.read_text()
+    assert (
+        "kl_distill_active = bool(args.kl_distill_weight > 0 or "
+        "kl_distill_snr_controller is not None)"
+    ) in src
+    assert re.search(r"if\s+kl_distill_active\s*:\s*\n\s*pair_t = torch\.stack", src), (
+        "main() must materialize batch_gt_frames_pair when either static KL "
+        "or the SNR controller is active. Gating only on args.kl_distill_weight "
+        "makes controller-only KL a silent no-op."
+    )
+    assert "kl_distill_snr_controller=kl_distill_snr_controller" in src

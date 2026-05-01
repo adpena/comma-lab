@@ -13,12 +13,13 @@ upstream scorers + GT video + masks):
   4. The output schema (delta / delta_pose / delta_seg / param_count /
      baseline / metadata) is documented in the source.
   5. The CLI rejects --device mps loud and clear.
+  6. Encoded grayscale masks are remapped to class ids before renderer input.
 
 Also pin the qat_finetune.py companion piece:
 
-  6. bit_allocation_from_sensitivity sorts layers by sensitivity ascending
+  7. bit_allocation_from_sensitivity sorts layers by sensitivity ascending
      and assigns FP4 to the bottom target_rate fraction of params.
-  7. target_rate=1.0 → uniform FP4 (all layers FP4); target_rate=0.0 →
+  8. target_rate=1.0 → uniform FP4 (all layers FP4); target_rate=0.0 →
      no FP4 (all layers FP16). Sweep boundary correctness.
 """
 from __future__ import annotations
@@ -84,6 +85,14 @@ def test_device_choice_restricted():
     )
 
 
+def test_cpu_requires_explicit_diagnostic_flag_in_source():
+    src = SCRIPT.read_text()
+    assert "--allow-diagnostic-cpu" in src
+    assert "diagnostic-only and non-promotable" in src
+    assert "promotion_eligible" in src
+    assert "diagnostic_cpu" in src
+
+
 def test_device_mps_rejection_message_in_source():
     """The source must contain an explicit MPS-rejection message so the
     operator gets a clear FATAL on accidental --device mps."""
@@ -125,6 +134,13 @@ def test_select_eligible_layers_skips_1d_weights():
     eligible = mod.select_eligible_layers(parent)
     assert "conv" in eligible
     assert "bn" not in eligible, "1D BatchNorm weight is not FP4-eligible"
+
+
+def test_gray_mask_to_class_ids_remaps_encoded_luma_values():
+    mod = _load_module(SCRIPT, "profile_fp4_layer_sensitivity")
+    gray = torch.tensor([[0, 63, 126, 189, 252, 255]], dtype=torch.uint8)
+    classes = mod._gray_mask_to_class_ids(gray)
+    assert classes.tolist() == [[0, 1, 2, 3, 4, 4]]
 
 
 # ── Per-layer quant + restore ───────────────────────────────────────────

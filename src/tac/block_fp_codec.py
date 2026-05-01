@@ -71,9 +71,34 @@ DEFAULT_CLIP_THRESHOLD: float = 0.5
 _EXP_MIN: int = -32
 _EXP_MAX: int = 32
 
+# SegMap Selfcomp-style block-FP is a deliberately lossy archive codec. A
+# lossless 1e-6 gate rejects valid payloads after training spend; archive-level
+# CUDA eval is the score gate for these lanes.
+SEGMAP_LOSSY_CONTRACT_ID: str = "segmap_block_fp_per_channel_lossy_v1"
+SEGMAP_LOSSY_ROUNDTRIP_MSE_TOL: float = 1e-3
+SEGMAP_LOSSY_EXACT_EVAL_GATE: str = (
+    "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda"
+)
+
 # Magic + version tags so a saved bytes blob can be sanity-checked at unpack.
 _BFP_MAGIC: bytes = b"BFP1"
 _BFP_VERSION: int = 1
+
+
+def segmap_lossy_contract_metadata(
+    roundtrip_mse_tol: float = SEGMAP_LOSSY_ROUNDTRIP_MSE_TOL,
+) -> dict[str, object]:
+    """Return the explicit lossy contract for SegMap block-FP payloads."""
+    return {
+        "contract_id": SEGMAP_LOSSY_CONTRACT_ID,
+        "codec": "block_fp_per_channel_v1+linear_q_per_tensor_v1",
+        "metric": "per_tensor_mse",
+        "roundtrip_mse_tol": float(roundtrip_mse_tol),
+        "lossless_roundtrip_required": False,
+        "exact_archive_eval_required": True,
+        "exact_archive_eval_gate": SEGMAP_LOSSY_EXACT_EVAL_GATE,
+        "pre_exact_eval_evidence_grade": "empirical",
+    }
 
 
 # ── Block partitioning ────────────────────────────────────────────────────
@@ -622,6 +647,7 @@ def pack_payload_tar_xz(
     qint_max: int = 7,
     linear_bits: int = 8,
     per_key_qint_max: dict[str, list[int] | torch.Tensor] | None = None,
+    lossy_contract: dict[str, object] | None = None,
 ) -> None:
     """Pack a SegMap state_dict into a tar.xz at ``output_path``.
 
@@ -652,6 +678,11 @@ def pack_payload_tar_xz(
     output_path = str(output_path)
     meta = {"layout_version": 1, "weight_tensor_layout": _SELFCOMP_HWOI_LAYOUT_TAG,
             "qint_max": qint_max, "linear_bits": linear_bits, "keys": {}}
+    if lossy_contract is not None:
+        # Fail before writing if a caller tries to stash non-reproducible
+        # objects such as Paths or tensors in the archive contract metadata.
+        json.dumps(lossy_contract)
+        meta["lossy_contract"] = dict(lossy_contract)
 
     # Build a flat map of tar-name -> bytes BEFORE writing so we can include
     # meta.json with full key listing.
@@ -762,6 +793,7 @@ def verify_roundtrip(
     state_dict: dict[str, torch.Tensor],
     payload_path: str | os.PathLike,
     tol: float = 1e-6,
+    lossy_contract: dict[str, object] | None = None,
 ) -> dict[str, float]:
     """Pack the state_dict, decode it, and assert per-key MSE < tol.
 
@@ -775,7 +807,7 @@ def verify_roundtrip(
     Returns:
         dict mapping key -> measured MSE. Useful for audit logging.
     """
-    pack_payload_tar_xz(state_dict, payload_path)
+    pack_payload_tar_xz(state_dict, payload_path, lossy_contract=lossy_contract)
     decoded = unpack_payload_tar_xz(payload_path)
     mse_map: dict[str, float] = {}
     for key, original in state_dict.items():
@@ -805,6 +837,9 @@ def verify_roundtrip(
 __all__ = [
     "DEFAULT_BLOCK_SIZE",
     "DEFAULT_CLIP_THRESHOLD",
+    "SEGMAP_LOSSY_CONTRACT_ID",
+    "SEGMAP_LOSSY_ROUNDTRIP_MSE_TOL",
+    "SEGMAP_LOSSY_EXACT_EVAL_GATE",
     "BlockFPHeader",
     "pack_block_fp",
     "unpack_block_fp",
@@ -817,4 +852,5 @@ __all__ = [
     "pack_payload_tar_xz",
     "unpack_payload_tar_xz",
     "verify_roundtrip",
+    "segmap_lossy_contract_metadata",
 ]

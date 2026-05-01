@@ -17,8 +17,15 @@ from tac.deploy.lightning.batch_jobs import (
     ARTIFACT_COMPONENT_RESPONSE_INPUTS,
     ARTIFACT_COMPONENT_RESPONSE_SUMMARY,
     ARTIFACT_COMPONENT_RESPONSE_VALIDATION,
+    ARTIFACT_COMPONENT_SENSITIVITY_INPUTS,
+    ARTIFACT_COMPONENT_SENSITIVITY_RUN,
+    ARTIFACT_COMPONENT_SENSITIVITY_SUMMARY,
+    ARTIFACT_COMPONENT_SENSITIVITY_VALIDATION,
+    COMPONENT_SENSITIVITY_CANONICAL_ARTIFACT_FILES,
     ARTIFACT_VALIDATION,
     CANONICAL_ARTIFACT_FILES,
+    COMPONENT_SENSITIVITY_CURVE_FILES,
+    COMPONENT_SENSITIVITY_MAP_FILES,
     COMPONENT_RESPONSE_CURVE_FILES,
     ARTIFACT_RUNNER_PREFLIGHT,
     ARTIFACT_SUPPLY_CHAIN_SCAN,
@@ -28,14 +35,18 @@ from tac.deploy.lightning.batch_jobs import (
     LightningBatchJobSpec,
     archive_identity,
     default_exact_eval_output_dir,
+    diagnostic_component_sensitivity_command,
     exact_cuda_eval_command,
     lightning_sdk_artifact_path,
     lightning_sdk_job_name,
     lightning_sdk_persisted_studio_output_dir,
+    make_diagnostic_component_sensitivity_spec,
     make_exact_eval_spec,
     make_official_component_response_spec,
+    mirror_local_component_sensitivity_artifact_dir,
     mirror_local_artifact_dir,
     official_component_response_command,
+    validate_local_component_sensitivity_artifact_dir,
     validate_local_component_response_artifact_dir,
     validate_local_artifact_dir,
 )
@@ -452,6 +463,77 @@ def test_official_component_response_command_is_cuda_and_supply_chain_guarded() 
     assert "--extra-index-url" not in command
 
 
+def test_diagnostic_component_sensitivity_command_extracts_archive_and_is_non_promotable() -> None:
+    command = diagnostic_component_sensitivity_command(
+        repo_dir="/repo",
+        baseline_archive_path="/repo/baseline.zip",
+        upstream_dir="/repo/upstream",
+        output_dir="/out",
+        expected_baseline_archive_sha256="b" * 64,
+        expected_baseline_archive_size_bytes=456,
+        pair_weights_path="/repo/weights.pt",
+        response_epsilons="-0.001,0.0,0.001",
+    )
+
+    assert "experiments/profile_component_sensitivity.py" in command
+    assert "--checkpoint /out/extracted/renderer.bin" in command
+    assert "--masks-mkv /out/extracted/masks.mkv" in command
+    assert "--poses /out/extracted/optimized_poses.bin" in command
+    assert "--video /repo/upstream/videos/0.mkv" in command
+    assert "--upstream /repo/upstream" in command
+    assert "--device cuda" in command
+    assert "--pair-weights /repo/weights.pt" in command
+    assert "--all-pairs" not in command
+    assert "--manifest-output" not in command
+    assert "zip-slip member in baseline archive" in command
+    assert "duplicate zip member in baseline archive" in command
+    assert "hidden/resource-fork zip member" in command
+    assert "renderer.bin" in command
+    assert "masks.mkv" in command
+    assert "optimized_poses.bin" in command
+    assert "LIGHTNING_DIAGNOSTIC_COMPONENT_SENSITIVITY_INPUT_PREFLIGHT_OK" in command
+    assert "LIGHTNING_DIAGNOSTIC_COMPONENT_SENSITIVITY_RUN_METADATA_OK" in command
+    assert "LIGHTNING_DIAGNOSTIC_COMPONENT_SENSITIVITY_ARTIFACTS_OK" in command
+    assert "promotion_eligible': False" in command
+    assert "score_claim': False" in command
+    assert "scripts/scan_lightning_supply_chain.py" in command
+    assert command.count("scripts/scan_lightning_supply_chain.py") == 2
+    assert "LIGHTNING_RUNNER_CUDA_PREFLIGHT_OK" in command
+    assert "LIGHTNING_RUNNER_DALI_PREFLIGHT_OK" in command
+    assert "--require-hashes" in command
+    assert "--no-deps" in command
+    assert ARTIFACT_COMPONENT_SENSITIVITY_INPUTS in command
+    assert ARTIFACT_COMPONENT_SENSITIVITY_RUN in command
+    assert ARTIFACT_COMPONENT_SENSITIVITY_SUMMARY in command
+    assert ARTIFACT_COMPONENT_SENSITIVITY_VALIDATION in command
+    for name in COMPONENT_SENSITIVITY_MAP_FILES + COMPONENT_SENSITIVITY_CURVE_FILES:
+        assert name in command
+    assert "--index-url" not in command
+    assert "--extra-index-url" not in command
+
+
+def test_diagnostic_component_sensitivity_spec_is_diagnostic_and_cuda() -> None:
+    spec = make_diagnostic_component_sensitivity_spec(
+        name="component_sensitivity",
+        baseline_archive_path="/repo/baseline.zip",
+        repo_dir="/repo",
+        upstream_dir="/repo/upstream",
+        studio="pact",
+        expected_baseline_archive_sha256="b" * 64,
+        expected_baseline_archive_size_bytes=456,
+        queue_metadata={"lane": "beta_diagnostic"},
+    )
+    assert spec.machine == "T4"
+    assert spec.interruptible is False
+    assert spec.reuse_snapshot is False
+    assert spec.role == "diagnostic_component_sensitivity"
+    assert spec.remote_output_dir == "/repo/experiments/results/lightning_batch/component_sensitivity"
+    assert spec.queue_metadata["lane"] == "beta_diagnostic"
+    assert "score_claim" in spec.command
+    assert "--all-pairs" in spec.command
+    spec.validate()
+
+
 def test_component_response_spec_is_fail_closed() -> None:
     spec = make_official_component_response_spec(
         name="component_response",
@@ -688,6 +770,37 @@ def test_component_response_dry_run_rejects_half_enabled_manifest_validation(tmp
 
     with pytest.raises(SystemExit, match="requires both --source-manifest and --local-perturbation-plan"):
         module._validate_component_response_submit_inputs(args)
+
+
+def test_component_sensitivity_submit_validates_staged_input_closure(tmp_path: Path) -> None:
+    module = _load_lightning_cli_module(tmp_path)
+    manifest = tmp_path / "source_manifest.json"
+    manifest.write_text(json.dumps({"files": [{"path": "baseline.zip"}]}))
+    args = argparse.Namespace(
+        dry_run=False,
+        source_manifest=str(manifest),
+        baseline_archive="/repo/baseline.zip",
+        repo_dir="/repo",
+        upstream_dir="/repo/upstream",
+        video=None,
+        pair_weights="/repo/weights.pt",
+    )
+
+    with pytest.raises(SystemExit, match="staged source manifest does not include"):
+        module._validate_component_sensitivity_submit_inputs(args)
+
+    manifest.write_text(
+        json.dumps(
+            {
+                "files": [
+                    {"path": "baseline.zip"},
+                    {"path": "upstream/videos/0.mkv"},
+                    {"path": "weights.pt"},
+                ]
+            }
+        )
+    )
+    module._validate_component_sensitivity_submit_inputs(args)
 
 
 def test_exact_eval_submit_requires_source_manifest_and_archive_closure(tmp_path: Path) -> None:
@@ -1664,6 +1777,33 @@ def test_lightning_doctor_payload_passes_with_required_skips_unset(
     assert payload["checks"]["remote_supply_chain"]["status"] == "skipped"
 
 
+def test_machine_rows_filter_provider_instance_names_without_sdk_enum() -> None:
+    module = _load_lightning_cli_module(REPO_ROOT)
+    rows = [
+        {
+            "family": "T4",
+            "instance_type": "g4dn.2xlarge",
+            "name": "g4dn.2xlarge",
+            "slug": "lit-t4-1",
+        },
+        {
+            "family": "T4",
+            "instance_type": "g4dn.xlarge",
+            "name": "g4dn.xlarge",
+            "slug": "lit-t4-1-small",
+        },
+    ]
+
+    assert module._is_sdk_machine_filter("T4") is True
+    assert module._is_sdk_machine_filter("g4dn.2xlarge") is False
+    assert module._filter_machine_rows(
+        rows,
+        machine="g4dn.2xlarge",
+        sdk_filtered=False,
+    ) == [rows[0]]
+    assert module._filter_machine_rows(rows, machine="T4", sdk_filtered=True) == rows
+
+
 def test_batch_job_cli_dry_run(tmp_path: Path) -> None:
     result = subprocess.run(
         [
@@ -1782,6 +1922,59 @@ def test_batch_job_cli_can_force_component_gate_job_failure(tmp_path: Path) -> N
     assert "--allow-component-gate-forensic-success" not in payload["spec"]["command"]
 
 
+def test_batch_job_cli_component_sensitivity_dry_run(tmp_path: Path) -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(CLI),
+            "component-sensitivity",
+            "--state-path",
+            str(tmp_path / "jobs.json"),
+            "--job-name",
+            "sens-dry",
+            "--baseline-archive",
+            "/repo/baseline.zip",
+            "--repo-dir",
+            "/repo",
+            "--upstream-dir",
+            "/repo/upstream",
+            "--studio",
+            "pact",
+            "--expected-baseline-archive-sha256",
+            "e" * 64,
+            "--expected-baseline-archive-size-bytes",
+            "456",
+            "--queue-metadata",
+            "lane=beta_diagnostic",
+            "--pair-batch",
+            "4",
+            "--response-top-k",
+            "8",
+            "--dry-run",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=20,
+        env={"PYTHONPATH": str(REPO_ROOT / "src")},
+        cwd=tmp_path,
+    )
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "DRY_RUN"
+    assert payload["spec"]["role"] == "diagnostic_component_sensitivity"
+    assert payload["queue"]["expected_archive_sha256"] == "e" * 64
+    assert payload["queue"]["expected_archive_size_bytes"] == 456
+    assert payload["queue"]["queue_metadata"]["lane"] == "beta_diagnostic"
+    command = payload["spec"]["command"]
+    assert "experiments/profile_component_sensitivity.py" in command
+    assert "--device cuda" in command
+    assert "--all-pairs" in command
+    assert "--pair-batch 4" in command
+    assert "--response-top-k 8" in command
+    assert "promotion_eligible" in command
+    assert "score_claim" in command
+
+
 def test_batch_job_cli_has_refresh_status_command(tmp_path: Path) -> None:
     result = subprocess.run(
         [
@@ -1840,6 +2033,24 @@ def test_batch_job_cli_has_stateful_component_response_harvest_and_remote_prefli
     )
     assert component.returncode == 0, component.stderr
     assert "--remote-preflight-ssh-target" in component.stdout
+
+    sensitivity = subprocess.run(
+        [
+            sys.executable,
+            str(CLI),
+            "component-sensitivity",
+            "--help",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=20,
+        env={"PYTHONPATH": str(REPO_ROOT / "src")},
+        cwd=tmp_path,
+    )
+    assert sensitivity.returncode == 0, sensitivity.stderr
+    assert "--baseline-archive" in sensitivity.stdout
+    assert "--pair-weights" in sensitivity.stdout
+    assert "--remote-preflight-ssh-target" in sensitivity.stdout
 
     harvest = subprocess.run(
         [
