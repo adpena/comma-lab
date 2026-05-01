@@ -78,6 +78,45 @@ next-turn command plan for fastest wall-clock progress.
 
 ---
 
+## Update - 2026-04-30T23:30Z
+
+Current execution state:
+
+- `owv3_r6_rank1_exact_cuda_20260430_codex_lightning_t4_r1` submitted to
+  Lightning and is `Pending`.
+- R6 candidate archive:
+  `experiments/results/lane_g_v3_owv3_byte_plan_sweep_20260430_codex_r5/archives/owv3_0076_bbr0p65_protect0p0013_aggr1em05.zip`
+  with SHA `9f7528bade11bf9cdf3df68f8073d11f196a6d5f48475a8680c21fb58c878c91`
+  and `686531` bytes.
+- Lane 12 NeRV remains blocked pending a real L2 clearance packet and passing
+  Alpha-Geo evidence.
+- J-NWC/NWCS remains blocked from promotion pending real sensitivity inputs for
+  anchor and corpus tensors.
+- Component sensitivity promotion remains blocked until the producer is moved
+  onto the canonical official scorer path; guardrails now reject several known
+  false-positive artifact classes.
+
+Landed guardrails:
+
+- R6 byte-plan selector and queue metadata.
+- Component-gate forensic-success mode for Lightning exact eval.
+- Sensitivity response zero-signal promotion rejection.
+- Manifest rejection for NaN/Inf tensors, archive custody mismatch, and sample
+  split-hash drift.
+
+Immediate next turn:
+
+1. Poll and harvest the R6 Lightning job.
+2. If R6 passes paired component gates, run Grand Council promotion review; if
+   it fails, classify the exact negative and choose the next R6/R7 candidate or
+   pivot to official finite-difference sensitivity.
+3. Implement `build_nwcs_sensitivity_inputs.py` only after a valid
+   `component_sensitivity_v1` or equivalent tensor-level sensitivity artifact
+   exists.
+4. Generate Lane 12 L2 packet only after passing Alpha-Geo evidence and three
+   clean Grand Council passes.
+---
+
 ## Update - 2026-04-30 Later
 
 Swarm results incorporated:
@@ -1229,12 +1268,133 @@ Readiness blockers:
 3. Lane 12 lacks L2 clearance, passing Alpha-Geo diagnostics, and
    pose-regeneration provenance.
 4. J-NWC/NWCS lack validated real sensitivity/corpus artifacts for exact eval.
-5. `scripts/lightning_repro_workspace.py` has an index/worktree hygiene issue:
-   staged deletion plus untracked same-path file. Resolve deliberately before
-   commit or deploy packaging.
+5. `scripts/lightning_repro_workspace.py` index/worktree hygiene issue was
+   normalized after verification; it is now a normal modified tracked path.
 
 Verification:
 
 - Focused tests: `137 passed in 3.27s`.
 - Shell syntax, Python compile, targeted whitespace checks, and strict
   preflights passed.
+
+### 2026-04-30T22:30Z Lightning Readiness Delta
+
+- SSH staging blocker cleared. The Studio accepts the generated key and remote
+  commands now execute.
+- Remote runtime install blocker found and fixed: `uv sync` must run with
+  `UV_LINK_MODE=copy` on Lightning to avoid cache hardlink failures while
+  installing Torch.
+- Stage manifest verified both source and explicit artifacts in the Studio:
+  PFP16 A++ archive, OWV3 R5 rank-1 archive, and baseline JSON.
+- Active Lightning queue:
+  - PFP16 paired calibration: `Pending`.
+  - OWV3 R5 rank-1 exact eval: `Pending`.
+- Next readiness action is harvest/validate once jobs leave `Pending`, then
+  paired re-adjudication for R5.
+
+### 2026-04-30T22:48Z Exact-Eval Isolation Readiness Delta
+
+- Discovered and fixed a Lightning exact-eval harness bug: inflate-side
+  `uv run` recreated the shared Studio `.venv`, breaking `upstream/evaluate.py`
+  on missing `tqdm`.
+- Fixed command generation in `src/tac/deploy/lightning/batch_jobs.py`:
+  per-job `UV_PROJECT_ENVIRONMENT`, copy link mode, and shared `.venv` setup
+  lock around DALI/bootstrap.
+- Stopped/abandoned contaminated attempts as harness failures, not lane
+  evidence.
+- Submitted clean isolated-uv reruns for PFP16 paired calibration and OWV3 R5
+  rank 1.
+
+### 2026-04-30T22:53Z Readiness Queue State
+
+- Clean isolated Lightning reruns are still queued:
+  - PFP16 paired calibration `r3_isolated_uv`: `Pending`, cost `0.0`.
+  - OWV3 R5 rank-1 `r2_isolated_uv`: `Pending`, cost `0.0`.
+- No harvest or adjudication is possible until at least one job reaches a
+  terminal state and artifacts are present under the SDK-normalized job
+  artifact path.
+- The integrated closeout regression slice is green: `177 passed in 5.04s`,
+  with Python compile, shell syntax, whitespace, provider, and MCP preflights
+  also clean.
+- Readiness remains exact-eval-queue ready, not result-ready. Promotion requires
+  artifact validation plus paired PFP16 readjudication.
+
+### 2026-04-30T22:55Z Readiness Running State
+
+- Latest Lightning refresh reports both clean isolated jobs as `Running`.
+- Vast reports no live instances. Modal app listing shows `Tasks=0` across
+  listed apps.
+- Strict MCP live-process and repo-config preflights remain clean.
+- Readiness next step is terminal-status harvest and artifact validation; no
+  scoring or KILL/BUILD conclusion can be drawn while jobs are running.
+
+### 2026-04-30T23:10Z Readiness Harvest State
+
+- Both clean isolated Lightning jobs reached terminal `Failed` status only
+  because adjudication returned nonzero on the predeclared SegNet component
+  gate. CUDA eval, archive identity, T4 runner preflight, and JSON production
+  completed for both.
+- The SDK artifact mirror stores Studio paths under
+  `/teamspace/jobs/<sdk-job>/artifacts/pact/...`; `harvest-ssh` now derives
+  that path and copies only canonical top-level evidence files, avoiding raw
+  frame harvest.
+- Local validation succeeded for both jobs with `require_adjudication=true`.
+- PFP16 calibration: score `1.037045485927815`, non-promotable by component
+  gate.
+- OWV3 R5: score `1.0373951773937642`, non-promotable by component gate and
+  worse than paired PFP16 by `0.00034969146594909795`.
+- Readiness next step is not another R5 exact eval. It is a SegNet-conservative
+  R6 design and authoritative finite-difference component sensitivity.
+- Closeout environment: Vast `[]`, Modal `Tasks=0`, local Lightning
+  supply-chain scan `OK`, and strict MCP process/config preflights are clean
+  after killing respawned `chrome-devtools-mcp` / `rbx-studio-mcp` helpers.
+
+### 2026-04-30T23:44Z Readiness / Security Hardening Delta
+
+- R6 Lightning exact eval status:
+  `owv3_r6_rank1_exact_cuda_20260430_codex_lightning_t4_r1` is `Running` as
+  of `2026-04-30T23:42:42Z`, cost `0.0882`, artifact path
+  `/teamspace/jobs/owv3-r6-rank1-exact-cuda-20260430-codex-lightning-t4-r1/artifacts`.
+  No harvest until terminal status.
+- `scripts/launch_lightning_batch_job.py refresh-status` now works from the
+  state record without repeating `--teamspace`/`--user`; the live R6 refresh
+  used that hardened path successfully.
+- Supply-chain protection strengthened for the `lightning` PyPI compromise:
+  strict scan covers `tools/`, blocks direct console-script invocations, and
+  the operator wrappers now use SSH instead of `.venv/bin/lightning`.
+- Local supply-chain state:
+  `.omx/state/lightning_supply_chain_scan_20260430_codex_tools_hardened.json`
+  is `OK` with `violation_count=0`.
+- Component-sensitivity profiler is non-promotable by construction until a
+  canonical scorer path exists. Use its outputs for diagnostics only.
+- KL profile/tooling hardening is fail-closed for high-weight KL by default;
+  future KL lanes need explicit forensic labeling or corrected low-weight
+  scope plus exact gates.
+- NWCS sensitivity-input construction is implemented but waits on promotable
+  `component_sensitivity_v1`; fake, uniform, stale, and incomplete maps are
+  rejected.
+- Lane 12 readiness remains blocked by missing L2 clearance and negative
+  `jsonfix40` exact CUDA evidence; do not dispatch through Vast/Lightning.
+- Verification in this delta:
+  `372 passed` across NWCS, KL, preflight, Lightning, component sensitivity,
+  and manifest tests; `358 passed` across the prior integrated slice;
+  Python compile passed, shell syntax passed, and scoped `git diff --check`
+  passed.
+
+### 2026-04-30T23:48Z R6 Harvest Readiness Delta
+
+- R6 is terminal and harvested:
+  `owv3_r6_rank1_exact_cuda_20260430_codex_lightning_t4_r1` completed at
+  `2026-04-30T23:47:45Z`; canonical artifacts were copied from the SDK mirror
+  and validated locally.
+- Validation passed for archive SHA/bytes, CUDA/T4 runner preflight, DALI
+  bootstrap, pre/post Lightning supply-chain scans, adjudication provenance,
+  and adjudicated JSON.
+- Result: score `1.0393166493980681`, bytes `686531`, PoseNet `0.00323147`,
+  SegNet `0.00402421`, n=600, Tesla T4.
+- Strict final-deploy adjudication rejected R6 with exit code `2` because it
+  regressed versus paired PFP16 and failed the PoseNet component gate. Do not
+  deploy, rank, or cite as a frontier.
+- Next readiness action: choose the next OWV branch only after forensic review
+  of why R6 fixed SegNet but paid PoseNet, or wait for canonical component
+  sensitivity evidence to guide byte allocation.

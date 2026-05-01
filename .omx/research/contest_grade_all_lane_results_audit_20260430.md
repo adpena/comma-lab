@@ -240,3 +240,28 @@ These changes improve the path to Grade A:
 ## 11. Bottom Line
 
 The strict contest-grade ledger is much smaller than the historical all-scores inventory. The current authoritative frontier is **Lane G v3 PFP16 = 1.04** (`1.043987524793892` recomputed) with A++ T4 evidence. Most other results are scientifically useful as failure analysis, but not contest-grade enough to support kill/promote decisions until exact CUDA artifact custody is restored.
+
+---
+
+## 12. Exact CUDA/T4 Forensic, Non-Promotable OWV3 Rows
+
+These artifacts have exact CUDA/T4 custody, but are not rank/frontier evidence
+because predeclared component or regression gates fired. They are scoped
+forensic evidence only.
+
+| Row | Score | Bytes | Archive SHA | Component gate | Allowed use |
+|---|---:|---:|---|---|---|
+| Paired PFP16 r3 calibration | `1.037045485927815` | `686635` | `0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f` | SegNet final-deploy gate fired; same-run calibration only | OWV paired delta baseline, `no_rank_frontier` |
+| OWV3 r4 byte-feasible | `1.0378905176070103` | `686557` | `e1deda126d8623ef9ab6acb03f708832df845bd7ab00d60c66e113f4948cf0ec` | SegNet relative ratio `1.003654` > `1.002` | scoped diagnostic, `no_promotion` |
+| OWV3 R5 rank-1 | `1.0373951773937642` | `686468` | `16ab95220c8add11b0bc40fb632bc8421f8bb8ad1cfba145f0b6058075237518` | SegNet component gate fired; worse than paired PFP16 by `+0.00034969146594909795` | scoped forensic, `no_rank_frontier` |
+| OWV3 R6 rank-1 | `1.0393166493980681` | `686531` | `9f7528bade11bf9cdf3df68f8073d11f196a6d5f48475a8680c21fb58c878c91` | PoseNet relative `1.0213113614240024` > `1.002`; score regressed by `+0.0022711634702530237` vs paired PFP16 | scoped forensic, `no_rank_frontier` |
+
+Interpretation:
+
+- `evidence_grade` in adjudication provenance records hardware/custody quality,
+  not promotion eligibility.
+- Failed-gate exact CUDA/T4 rows should be labeled
+  `A-negative scoped forensic` in paper tooling.
+- R7 scalar-threshold selection currently returns zero admissible candidates on
+  the existing byte-plan grid; next OWV work requires component-balanced
+  PoseNet/SegNet sensitivity or a materially new action rule.

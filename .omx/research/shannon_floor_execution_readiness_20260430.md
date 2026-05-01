@@ -39,7 +39,12 @@ But wall-clock optimal execution is not serial. Run independent streams in paral
 5. **Hidden-gem recovery:** re-engineer high-EV bugged lanes that test distinct hypotheses: Q-FAITHFUL, H-V3, SegMap clone, FL chunked, MAE-V.
 6. **γ coordinator:** Joint-ADMM, Ballé/hyperprior, arithmetic, and bit optimizer only after at least one mask lane and one renderer lane produce exact archive evidence.
 
-The previous "do not spawn new retraining lanes until Lane 12 L2" should be interpreted narrowly: do not launch duplicate same-hypothesis retraining noise. It does not block independent β work, pose-byte work, data-side lanes, or re-engineering lanes with different mechanisms.
+No new scorer-sensitive retraining lane may dispatch before
+`.omx/state/lane12_nerv_l2_clearance.json` records
+`cleared_for_retraining_unblock=true`, `lane12_l2=true`,
+`geometry_gate_passed=true`, `grand_council_clean_passes>=3`, and evidence
+paths. Build-only, harvest, and exact-eval-only lanes may continue; they do
+not create new scorer-sensitive retraining noise.
 
 ---
 
@@ -60,7 +65,7 @@ The previous "do not spawn new retraining lanes until Lane 12 L2" should be inte
 |---|---|---|---|---|
 | β sensitivity-map | scorer derivatives identify safe bits | design + older sensitivity tooling | implement cross-validated per-channel score sensitivity | train/holdout sensitivity stability within 10%; used by Ω-W-V3 |
 | Ω-W-V3 | recover Ω-W-V2 rate save without PoseNet pay | Ω-W-V2 diagnostic: `-0.034` rate, `+0.052` PoseNet pay | implement `src/tac/owv3_sensitivity_weighted.py` after β | exact archive score in `[1.025,1.045]` or better, PoseNet regression <= 20% |
-| Lane 12 alpha redesign | replace 421KB masks with a scorer-preserving compact representation | current NeRV `jsonfix40` exact-CUDA hard-killed at `26.03719330455429` from PoseNet collapse | diagnose geometry/temporal failure, redesign objective before rerun | exact archive eval beats PFP16 without PoseNet/SegNet collapse |
+| Lane 12 alpha redesign | replace 421KB masks with a scorer-preserving compact representation | current NeRV `jsonfix40` exact-CUDA retired for the measured implementation/config only at `26.03719330455429` from PoseNet collapse | diagnose geometry/temporal failure, redesign objective before rerun | exact archive eval beats PFP16 without PoseNet/SegNet collapse |
 | Lane 19 logit margin | protect SegNet boundary pixels | CPU smoke, tests pass | CUDA A/B against Lane G v3 | score < 1.05, fragility histogram decays |
 | Lane 17 IMP | sparse renderer lowers renderer bytes | CPU codec shows 40.2% byte saving at cycle 9 | continue active 10-cycle CUDA run | per-cycle auth eval, ship best cycle, no >10% regression |
 | Lane PFP16 | zero-risk pose-byte reduction | A++ exact T4 score `1.043987524793892`; 7,439 bytes saved | freeze deploy baseline and bundle provenance | current baseline until beaten by exact archive evidence |
@@ -171,10 +176,10 @@ archive bytes `686635`, `n_samples=600`, `gpu_t4_match=true`.
 
 Lane 12 NeRV `jsonfix40` is no longer pending. Exact CUDA evidence at
 `experiments/results/lane_12_nerv_20260430_codex_jsonfix40/contest_auth_eval.json`
-hard-kills that implementation with recomputed score `26.03719330455429`
-and PoseNet `49.77849960`. This does not kill all alpha/mask compression; it
-requires a redesigned, scorer-preserving alpha objective before more NeRV/INR
-spend.
+retires that measured implementation/config with recomputed score
+`26.03719330455429` and PoseNet `49.77849960`. This does not kill all
+alpha/mask compression; it requires a redesigned, scorer-preserving alpha
+objective before more NeRV/INR spend.
 
 OWV3/Fisher Modal smoke produced real build artifacts, but no exact eval and a
 rate-regressing archive: `912971` bytes, `+218897` vs Lane G v3, SHA

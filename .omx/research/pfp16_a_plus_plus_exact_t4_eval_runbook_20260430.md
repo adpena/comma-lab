@@ -147,12 +147,13 @@ Successful run must contain:
   - `provenance.gpu_t4_match: true`
   - `provenance.archive_sha256: 0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f`
 
-Expected metrics should be close to the existing exact CUDA evidence:
+Expected A++ metrics should match the successful Lightning T4 evidence below.
+The older RTX 4090 values are historical Grade A only:
 
 - reported rounded final score: `1.04`
-- recomputed score: about `1.0440481283330025`
-- PoseNet distortion: about `0.00346020`
-- SegNet distortion: about `0.00400830`
+- recomputed score: `1.043987524793892`
+- PoseNet distortion: `0.00346442`
+- SegNet distortion: `0.00400656`
 - rate: about `0.01828808`
 
 ## Existing Evidence And Blocker

@@ -267,3 +267,36 @@ Verification for this greenup:
   files.
 - `bash -n` clean for touched adjudicator-calling remote scripts.
 - `git diff --check` clean.
+
+---
+
+## Update - 2026-05-01 Modal CPU Auth-Eval Advisory Guard
+
+Bug class hardened:
+
+- Modal training wrappers can force `AUTH_EVAL_DEVICE=cpu` to avoid NVDEC/DALI,
+  producing useful diagnostic telemetry that must never be mistaken for CUDA
+  auth-eval evidence.
+
+Actions landed:
+
+- Added `check_modal_cpu_auth_eval_is_advisory_only` to `src/tac/preflight.py`
+  and wired it into codebase preflight.
+- Removed stale Modal CPU score-truth wording from
+  `experiments/modal_train_lane.py`.
+- Added explicit Modal metadata/env markers:
+  `MODAL_AUTH_EVAL_ADVISORY_ONLY=1`, `SCORE_CLAIM=false`,
+  `PROMOTION_ELIGIBLE=false`, `auth_eval_advisory_only=true`,
+  `score_claim=false`, and `promotion_eligible=false`.
+- Updated `experiments/modal_recover_lane.py` so recovered non-CUDA auth scores
+  print as `ADVISORY AUTH SCORE (NON-PROMOTABLE, device=...)` and prefer
+  `score_recomputed_from_components`.
+- Added regression tests proving stale CPU-equivalence wording is blocked and
+  CPU/CUDA recovery labels differ.
+
+Verification:
+
+- `src/tac/tests/test_remote_auth_eval_hardening.py`: 33 passed.
+- Focused Modal advisory tests: 4 passed.
+- `py_compile` clean for touched Python files.
+- `git diff --check` clean for touched files.

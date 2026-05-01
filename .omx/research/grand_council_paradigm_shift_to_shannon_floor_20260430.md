@@ -1,5 +1,17 @@
 # GRAND COUNCIL — PARADIGM-SHIFT BATTLEPLAN: Lane G v3 (1.05) → Shannon Floor (0.28)
 
+> **2026-05-01 Codex evidence-hygiene addendum.** Treat all `1.05` Lane G v3
+> references below as historical shorthand unless the PFP16 A++ exact archive
+> anchor is explicitly cited: score `1.043987524793892`, archive `686635`
+> bytes, SHA-256
+> `0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f`,
+> Tesla T4 CUDA, `n=600`. Sensitivity-aware allocation, KL/JBL/distillation,
+> Alpha visual primitives, and external leaderboard-derived mechanisms are
+> hypotheses/design inputs until exact CUDA archive evidence with component
+> gates and custody proves the specific claim. Do not cite KL as a proven
+> mechanism or sensitivity as sufficient protection without matched ablations
+> and official finite-difference response curves.
+
 **Date**: 2026-04-30
 **Convener**: Parent agent under user mandate "what does the grand council extreme rigor and all eureka moments and shower thoughts and memories recalled believe is necessary in terms of architecture and full pipeline and alleged 'paradigm shift' necessary to hit or approach and break through on progress to shannon floor"
 **Inner council (10 voices, quintet pact + 5 co-members)**: Shannon (LEAD), Dykstra (CO-LEAD), Yousfi, Fridrich, Contrarian, Quantizr, Hotz, Selfcomp, MacKay (memorial), Ballé

@@ -286,9 +286,11 @@ Paradigm-beta/KL hardening:
   promotion-ineligible guards.
 - SegNet-only KL auxiliary use is explicitly scoped as `segnet_aux`; ambiguous
   primary KL configs are rejected.
-- The collapse root cause remains a units bug: spatial KL with `batchmean` on
-  `[B,C,H,W]` effectively multiplied the intended auxiliary pressure by the
-  image area, producing the historic ~254x overweight failure.
+- A confirmed KL scale bug is one documented contributor/risk factor:
+  spatial KL with `batchmean` on `[B,C,H,W]` effectively multiplied the
+  intended auxiliary pressure by the image area, producing the historic
+  ~254x overweight failure. Do not present it as the sole collapse root cause
+  without matched post-fix exact CUDA ablations.
 - Grade policy: KL-like lanes remain gated unless exact archive CUDA evidence
   proves no PoseNet collapse.
 
@@ -1510,3 +1512,701 @@ Verification added in this closeout:
 - `137 passed in 3.27s` focused regression slice.
 - `py_compile`, shell syntax, targeted `git diff --check`, and strict MCP /
   remote-auth / launcher preflights passed.
+
+### 2026-04-30T22:30Z Lightning Exact-Eval Queue Delta
+
+- Lightning SSH is now operational after rerunning the setup script.
+- Reproducible staging is operational after hardening the remote `uv sync`
+  path to use copy-mode installs on Lightning filesystems.
+- Submitted two T4 Batch Jobs:
+  `pfp16_paired_calibration_20260430_codex_lightning_t4_r2` and
+  `owv3_r5_rank1_exact_cuda_20260430_codex_lightning_t4`.
+- Both were `Pending` at the first SDK refresh. They are active queue work, not
+  results.
+- R5 remains non-promotable until the paired PFP16 calibration result is
+  harvested and used for re-adjudication.
+
+### 2026-04-30T22:48Z Harness Failure Classification
+
+- The first Lightning PFP16/R5 exact-eval attempts are classified as harness
+  failures only. They do not measure PFP16 or R5.
+- Root cause: inflate-side `uv run` recreated the shared scorer `.venv`, then
+  `upstream/evaluate.py` failed due missing `tqdm`.
+- Permanent exact-eval isolation and bootstrap locking landed before clean
+  reruns were submitted.
+
+### 2026-04-30T22:53Z Grand Council Claim-State Closeout
+
+- Clean isolated Lightning jobs remain `Pending`; there is no new score, no new
+  rank claim, and no R5 promotion.
+- PFP16 A++ remains the only promotion-grade anchor.
+- OWV3 R5 rank-1 remains a queued candidate with a predeclared paired
+  calibration requirement. It must be readjudicated against the PFP16
+  calibration artifact before any score-band, component, or stack claim is
+  admissible.
+- The harness bug class is fixed at command-generation level, with regression
+  coverage and a green `177 passed in 5.04s` focused suite.
+- Scientific posture: queued, failed-harness, diagnostic, blocked, and
+  promotion-grade evidence remain separated in the writeup. No disappointing
+  lane result is treated as a family-level KILL without three clean adversarial
+  review passes and contest-grade artifact custody.
+
+### 2026-04-30T22:55Z Running Eval Claim-State Update
+
+- Both clean isolated Lightning jobs are now `Running`.
+- No Grand Council claim state changes: running jobs are not evidence.
+- The next scientifically admissible branch is:
+  terminal status -> artifact harvest -> archive identity validation -> CUDA/T4
+  provenance check -> adjudication JSON validation -> paired R5/PFP16 review ->
+  Grand Council adversarial promotion or forensic failure classification.
+
+### 2026-04-30T23:10Z Grand Council Exact-Evidence Update
+
+- The branch completed: terminal status -> SDK artifact harvest -> local
+  validation -> paired R5/PFP16 review.
+- PFP16 paired calibration scored `1.037045485927815` on exact CUDA/T4 but
+  fired the strict SegNet component gate versus the reference component
+  baseline. Treat as calibration/forensic evidence, not a new promotion packet.
+- OWV3 R5 scored `1.0373951773937642`, fired the same SegNet component gate,
+  and was worse than paired PFP16 by `0.00034969146594909795`.
+- Grand Council verdict for this branch: R5 is not promoted and not a family
+  KILL. It is a precise negative for the current R5 byte-plan/sensitivity
+  configuration. The next admissible build must target SegNet-conservative
+  perturbations or use an official finite-difference `component_sensitivity_v1`
+  artifact.
+- The writeup may cite these values only with the labels "exact CUDA/T4
+  forensic, non-promotable due predeclared component gate" and "paired R5 worse
+  than paired PFP16"; it must not cite R5 as a frontier result.
+
+### 2026-04-30T23:30Z Grand Council Queue/Gate Update
+
+- R6 is now the active OWV3 branch, not a result:
+  `owv3_r6_rank1_exact_cuda_20260430_codex_lightning_t4_r1` is `Pending` on
+  Lightning as of `2026-04-30T23:29:12Z`.
+- R6 candidate:
+  `owv3_0076_bbr0p65_protect0p0013_aggr1em05`, `686531` bytes, SHA
+  `9f7528bade11bf9cdf3df68f8073d11f196a6d5f48475a8680c21fb58c878c91`,
+  `-104` bytes versus paired PFP16, low-bit channels reduced from R5's `62`
+  to `58`.
+- The R6 selector is now codified in `experiments/sweep_owv3_byte_plan.py`:
+  after failed exact R5, a candidate must be byte-feasible, promotion-eligible
+  by byte-plan metadata, fallback `keep_asym`, no diagnostic fp16 layers, and
+  strictly lower OWV2-low-bit channels than failed R5.
+- Exact-eval DX now distinguishes operational failure from scientific
+  component-gate failure: Lightning jobs can complete with valid forensic
+  artifacts while remaining `promotion_eligible=false`.
+- Sensitivity promotion was hardened against zero-signal finite-difference
+  curves, NaN/Inf maps, contest JSON/archive custody mismatch, and sample-plan
+  hash rewriting.
+- Grand Council claim state is unchanged: PFP16 A++ remains the only rankable
+  frontier artifact; R6 is pending queue evidence only.
+
+### 2026-04-30T23:44Z Swarm Hardening / R6 Running Update
+
+- R6 exact eval is now `Running` on Lightning as of `2026-04-30T23:42:42Z`,
+  cost `0.0882`, not terminal and not harvestable. It remains queue evidence
+  only until canonical artifact harvest and adjudication.
+- Fixed Lightning status-refresh DX: `refresh-status` now infers SDK job name,
+  teamspace, org, and user from `.omx/state/lightning_batch_jobs.json`, so
+  operators do not have to retype launch context during harvest monitoring.
+- Extended the Lightning/PyPI supply-chain guard after the 2026-04-30
+  `lightning==2.6.2/2.6.3` compromise reports. Strict scan now covers `tools/`
+  and blocks stale `.venv/bin/lightning`, bare `lightning <subcommand>`, and
+  `$LIGHTNING` console-script wrappers. `tools/lightning_run.sh` and
+  `tools/lightning_monitor.sh` now use SSH only.
+- Local exposure remains clean: strict scan recorded at
+  `.omx/state/lightning_supply_chain_scan_20260430_codex_tools_hardened.json`
+  reports `status=OK`, no PyPI `lightning` or `pytorch-lightning`, and
+  `lightning-sdk==2026.4.10`.
+- Component-sensitivity finite differences are now explicitly diagnostic:
+  `promotion_eligible=false`, `official_component_response=false`, no
+  `--manifest-output`, exact `1200`-frame diagnostic guard, and
+  `not_canonical_inflate_eval_path` blocker until archive -> `inflate.sh` ->
+  `upstream/evaluate.py` custody exists.
+- Lane 12 remains a no-go. Worker E found missing L2 clearance and exact CUDA
+  negative `jsonfix40` evidence (`score=26.03719330455429`,
+  PoseNet `49.7784996`, SegNet `0.03528685`); do not dispatch Lane 12 before a
+  real `.omx/state/lane12_nerv_l2_clearance.json` packet and three clean
+  reviews.
+- KL hardening landed: high-weight `kl_distill_weight >= 0.1` in
+  `train_renderer` now requires explicit forensic opt-in; legacy 1.0-weight KL
+  profiles are non-promotable/forensic; FilmCanvas KL is scoped to `segnet_aux`.
+  Corrected Lane D-V3 remains promotion-capable only pending exact gates.
+- NWCS sensitivity input builder landed at
+  `experiments/build_nwcs_sensitivity_inputs.py`. It consumes only promotable
+  `component_sensitivity_v1` and rejects fake/proxy/uniform/stale or
+  incomplete coverage maps. It does not create sensitivity evidence; it blocks
+  fabrication until canonical component sensitivity exists.
+- MCP helper processes were killed again after respawn. The repo/config
+  preflight may be clean, but the host still has an external respawn source
+  that must be removed outside this repo if it appears again.
+
+### 2026-04-30T23:48Z Grand Council R6 Exact Negative
+
+- R6 terminal harvest completed with valid exact CUDA/T4 custody:
+  `score_recomputed_from_components=1.0393166493980681`, `686531` bytes, SHA
+  `9f7528bade11bf9cdf3df68f8073d11f196a6d5f48475a8680c21fb58c878c91`,
+  `avg_posenet_dist=0.00323147`, `avg_segnet_dist=0.00402421`, `n_samples=600`,
+  GPU `Tesla T4`.
+- It regressed versus paired PFP16 by `+0.0022711634702530237` score while
+  saving `104` bytes.
+- Component gate outcome changed from the R5 failure mode: PoseNet failed
+  (`1.0213113614240024` relative > `1.002`), SegNet passed
+  (`1.0011319365319455` relative <= `1.002`).
+- Strict final-deploy adjudication returned exit code `2`. R6 is
+  `promotion_eligible=false` forensic evidence, not a deploy candidate.
+- Grand Council interpretation: scoped negative for this R6 byte-plan/config,
+  not an OWV3 family KILL. The next OWV branch must solve PoseNet drift while
+  preserving the SegNet improvement, or switch to canonical sensitivity
+  evidence before spending more exact evals.
+
+### 2026-04-30T23:58Z Next-Wave Telemetry / Research / DX Update
+
+- New adjacent ledger:
+  `.omx/research/shannon_floor_nextwave_telemetry_and_research_20260430_codex.md`.
+- MCP helper processes were killed again and verified absent.
+- Live provider posture:
+  - Vast: `.venv/bin/vastai show instances --raw` returned `[]`.
+  - Modal: `.venv/bin/modal app list` showed zero tasks.
+  - Lightning: SDK bulk refresh updated 9 non-dry-run local records, skipped
+    13 dry-runs, and had zero failures. No new harvestable result surfaced
+    beyond already harvested R6.
+- DX hardening landed:
+  `scripts/launch_lightning_batch_job.py refresh-status --all` now performs a
+  state-driven bulk SDK refresh without using the Lightning console script.
+  Verification: `src/tac/tests/test_lightning_batch_jobs.py` passed
+  `33 passed`; Python compile passed.
+- Supply-chain scan:
+  `.omx/state/lightning_supply_chain_scan_20260430_codex_nextwave.json`
+  reports `status=OK`, no PyPI `lightning`/`pytorch-lightning`, and zero
+  violations.
+- Research-agent consensus:
+  arXiv:2604.26919v1, PufferLib/RL/LM Studio/visual primitives, and
+  Training-Free GRPO are useful for proposal hygiene, dual-readout audits,
+  bandit/BOHB scheduling, and experience memory only. They are not score
+  evidence and must not add runtime dependencies or weaken exact CUDA gates.
+- Provider audit worker wrote
+  `.omx/research/provider_telemetry_canonical_harvest_audit_20260430_worker_c.md`
+  and independently confirmed no live Vast/Modal/Lightning running work from
+  local state; historic Vast tracker rows are stale and not live spend truth.
+- OWV3 R7 guardrail landed in `experiments/sweep_owv3_byte_plan.py` with
+  coverage in `src/tac/tests/test_sweep_owv3_byte_plan.py`.
+  `r7-pose-balanced` excludes exact failed R5/R6 candidates, requires byte
+  feasibility versus paired PFP16, keeps `fallback_action=keep_asym`, rejects
+  diagnostic FP16 layers and non-promotable rows, requires OWV2-low-bit
+  channels `<=58`, and requires `bit_budget_ratio>=0.65`. On the existing
+  byte-plan rows it returns zero candidates, so blind scalar OWV3 thresholding
+  is stopped pending component-balanced PoseNet/SegNet sensitivity evidence.
+  Verification: `13 passed` for `test_sweep_owv3_byte_plan.py`, plus compile
+  and whitespace checks.
+- Official component-response producer landed at
+  `experiments/profile_component_sensitivity_official.py` with tests in
+  `src/tac/tests/test_profile_component_sensitivity_official.py`. It evaluates
+  baseline/perturbation archives through `contest_auth_eval.py` or validates
+  existing exact `contest_auth_eval.json` custody, then emits PoseNet, SegNet,
+  and combined official response curves for
+  `build_component_sensitivity_manifest.py`. It does not generate perturbation
+  archives, component maps, or stability JSON. Codex added a fail-closed guard
+  rejecting the baseline archive at nonzero epsilon. Verification:
+  official-response + manifest/schema suite `48 passed`, plus compile and
+  whitespace checks.
+
+### 2026-05-01T00:22Z Next Wave 2 Integration / Official Response Queue Ready
+
+- Integrated the xhigh swarm outputs for perturbation archive generation,
+  Lightning official-response queue readiness, Alpha diagnostics, NWCS
+  fail-closed sensitivity use, claim hygiene, and Modal CPU advisory guard.
+- New deterministic perturbation plan producer:
+  `experiments/build_component_response_perturbation_plan.py` emits
+  `official_component_response_plan_v1` plus deterministic archive variants
+  with custody metadata. It is explicitly a plan/archive producer, not score
+  evidence; CUDA exact eval remains mandatory.
+- Lightning Batch Jobs now have an `official_component_response` role with
+  CUDA runner preflight, strict Lightning supply-chain scans, DALI
+  hash-pinned/no-deps bootstrap, staged-manifest gating for non-dry-run submit,
+  compact cleanup, local validation, SSH harvest validation, and a runbook at
+  `docs/runbooks/lightning_official_component_response.md`.
+- Parent integration added regression coverage for the official-response
+  subprocess command so timeout flags cannot be duplicated/misparsed before
+  `contest_auth_eval.py` runs.
+- OWV3/PFP16 calibration claim hygiene is stricter: failed-gate exact CUDA/T4
+  records carry `promotion_eligible=false`,
+  `paper_claim_grade="A-negative scoped forensic"`, and
+  `allowed_use=["forensic","no_rank_frontier","no_promotion"]`; `evidence_grade`
+  is hardware/custody grade only.
+- Alpha/Lane 12 remains blocked from retraining or exact-eval spend without L2
+  clearance. The new residual-region ranking artifact is diagnostic only and
+  confirms the current `jsonfix40` measured config remains rejected, not
+  family-killed.
+- Provider telemetry at this checkpoint: Vast has no live instances, Modal has
+  zero tasks, Lightning has no running jobs, and the only completed refreshed
+  job is the already-harvested R6 exact negative.
+- Verification in parent:
+  - official response / perturbation plan / Lightning queue suite:
+    `52 passed`;
+  - Alpha diagnostics: `11 passed`;
+  - remote auth + NWCS guard slice: `87 passed`;
+  - Modal CPU advisory guard: `33 passed`;
+  - Python compile and touched shell syntax checks passed.
+- Open Grand Council research swarm, spawned xhigh after closing the first six
+  workers: arXiv:2604.26919v1, PufferLib/RL + visual primitives, Tencent
+  training-free GRPO, and KL-distill architecture audit.
+
+Next admissible production sequence:
+
+1. Generate official perturbation archives from a reviewed byte/semantic basis.
+2. Stage all inputs through the Lightning reproducibility workspace manifest.
+3. Submit the official component-response Batch Job with `--require-passed`.
+4. Harvest and validate compact artifacts; then assemble
+   `component_sensitivity_v1` only with exact CUDA response curves, component
+   maps, stability metrics, sample plan, and custody.
+5. Use that packet to unlock component-balanced OWV3/NWCS/Alpha choices; do
+   not exact-eval another scalar-threshold OWV3 grid point blind.
+
+### 2026-05-01T00:34Z External Research Intake / MCP Config Hardened
+
+- Research agents completed intake on arXiv:2604.26919v1, DeepSeek visual
+  primitives / PufferLib / LM Studio, and Tencent Training-Free GRPO. Consensus:
+  these are proposal, diagnostics, and meta-optimization methods only. They are
+  not score evidence and must not weaken exact CUDA archive custody.
+- Adopt immediately:
+  - Alpha visual-primitives diagnostic packet over decoded baseline masks.
+  - Beta/OWV3 dual-readout rule: structural channel/Fisher signal plus
+    held-out finite-difference component response.
+  - Hashed read-only experience library for grouped agent/lane proposals,
+    scored only from structured artifacts.
+- Defer:
+  - PufferLib/PPO-style search until a cheap surrogate reward has exact CUDA
+    rank-correlation anchors.
+  - External learned-codec stacks until a measured component proves byte value
+    under contest inflate and archive side-info budgets.
+- Related-method notes:
+  CI-ICM/channel-importance is a strong Beta/OWV3 design input; S2-CoT warns
+  that feature adaptation and entropy modeling must be co-tuned; TinyNeRV is
+  relevant to Alpha but only with decoded-mask training/eval discipline.
+- MCP configuration and process cleanup:
+  - killed live Roblox/Chrome MCP helpers;
+  - disabled `game-studio@openai-curated` and `cloudflare@openai-curated` in
+    `/Users/adpena/.codex/config.toml`;
+  - removed `.playwright-mcp` and transient `.codex/.tmp/.../.mcp.json` files;
+  - confirmed `/Users/adpena/.claude/mcp.json` is empty and no MCP helper
+    process remains.
+- KL-distill architecture audit remains the only active research subagent from
+  this wave.
+
+### 2026-05-01T00:41Z KL Audit Integrated
+
+- KL Grand Council audit completed. Primary scorer KL remains mostly fenced,
+  but promotion-grade use still requires a shared typed policy/provenance
+  architecture across `TrainConfig`, SegMap, `train_renderer`,
+  `optimize_poses`, remote runners, and adjudication.
+- Low-risk hardening landed immediately:
+  - `kl_distill_scorer_loss` and `kl_distill_segnet_only` validate finite
+    positive temperature before any logit division;
+  - JBL documentation no longer claims it cannot induce PoseNet collapse, and
+    now states exact CUDA component-gate proof is required for promotion.
+- Verification:
+  KL/training focused suite `70 passed`; py_compile passed for touched
+  KL/loss/test files.
+- Remaining KL work is a first-class next implementation lane:
+  add `src/tac/kl_config.py`, normalize legacy CLI/profile flags into one
+  policy object, serialize KL policy in all provenance, extend preflight and
+  adjudication blockers, and require teacher/student roundtrip contracts plus
+  exact CUDA non-collapse evidence before any KL-family claim.
+
+### 2026-05-01T01:02Z Official Response Plan, KL Policy Schema, Alpha Bounded Packet
+
+- Closed the xhigh swarm after integrating all six reports. Scout confirmed
+  PFP16 A++ as the exact CUDA archive anchor:
+  `experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip`,
+  `686635` bytes, SHA
+  `0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f`;
+  baseline eval JSON SHA
+  `b84e7352165cf0d2be0631a177d8404c3a1e5f27633d82d48990552b9ef382ab`.
+- Added ASYM-aware perturbation-basis selector:
+  `experiments/select_renderer_blob_perturbation_basis.py`. It parses the
+  renderer container, avoids magic/header/length/scale/bias bytes, selects
+  deterministic quantized-weight payload bytes, and CPU-decode-verifies every
+  epsilon renderer before handoff.
+- Generated first reviewed official component-response plan artifacts in
+  `experiments/results/official_component_response_pfp16_a_plus_plus_20260501_codex_r1/`:
+  `official_component_response_plan.json` SHA
+  `cc264c432bcdda0748ae3a8bf945f678ac5db26a4247c4531ce4e09ffd74999c`,
+  `perturbation_basis_v1.json` SHA
+  `7f3e85c60b363cca039dd8ff003a84529d59f0470886dccda58c614e51f3cdbf`,
+  and four nonzero archive variants for eps `-2,-1,+1,+2`, each `686632`
+  bytes. This is staging input only, not score evidence.
+- Produced a Lightning component-response dry-run queue record:
+  one `official_component_response` `DRY_RUN` for
+  `official_component_response_pfp16_a_plus_plus_20260501_codex_r1`.
+  Manifest closure exists at
+  `.omx/state/official_component_response_pfp16_a_plus_plus_20260501_codex_r1_manifest.json`
+  and includes the baseline archive/eval JSON, plan, both basis files,
+  archive-variant manifest, and all four nonzero archives.
+- Lightning non-dry-run submit is blocked by SSH auth, not repo readiness:
+  `ssh scratch-studio-devbox` and direct
+  `ssh s_01knw7wnzbe79wfq5mqqbx1mbz@ssh.lightning.ai` both return
+  `Permission denied (publickey)` after running the user-provided setup script.
+- Added typed KL/distillation policy surface:
+  `src/tac/kl_config.py` with tests in `src/tac/tests/test_kl_config.py`.
+  It normalizes legacy flags into frozen `distillation_policy_v1` provenance,
+  bans primary scorer KL unless explicitly forensic/non-promotable, fences
+  legacy `segnet_kl` and JBL, and requires eval-roundtrip contracts for
+  promotion-capable SegNet-aux KL.
+- Tightened paper/ledger claim hygiene in `docs/paper/ara/logic/claims.md`,
+  `docs/writeup_draft.md`, `docs/archive/killed_techniques/README.md`, and
+  the Grand Council source doc.
+- Integrated Alpha visual-primitives diagnostics into
+  `experiments/diagnose_nerv_geometry.py` with strict no-claim metadata and a
+  bounded `--visual-frame-stride` CLI path. Full-sequence Lane 12 vs PFP16
+  visual extraction was stopped after CPU cutoff; existing full scalar Alpha
+  JSON remains the full-sequence evidence.
+- Telemetry: read-only provider audit found no live Vast instances and no
+  Lightning running/pending jobs in structured state. Modal has stale local
+  `not_ready` entries only. MCP process probes are clean at close.
+- Verification in parent:
+  official response / plan / Alpha / KL focused suite `31 passed`;
+  KL + J-NWC/NWCS hardening suite `105 passed`; Alpha stride suite `13 passed`;
+  py_compile and J-NWC/NWCS shell syntax passed; scoped diff checks passed.
+
+### 2026-05-01T01:36Z KL Policy Runtime Greenup
+
+- Ran an xhigh read-only KL hardening audit after landing the first policy
+  schema. The audit identified two immediate high-severity gaps: policy
+  validation was not forced before trainer startup, and policy custody lived
+  mostly in sidecar JSON rather than movable checkpoint artifacts.
+- Hardened `distillation_policy_v1` runtime integration:
+  - `TrainConfig` now exposes `forensic_reason`, validates the frozen
+    distillation policy during config construction, and exposes a canonical
+    policy SHA-256 helper;
+  - `Trainer` and `SegMapTrainer` now normalize/store the frozen policy at
+    construction time before optimizer/scorer training work can proceed;
+  - active SegNet-aux KL now fails before trainer construction if
+    `kl_distill_temperature < 2.0`;
+  - forensic primary KL and legacy SegNet-KL must carry an explicit reason.
+- Embedded policy custody in training artifacts:
+  generic training state, int8 checkpoint metadata, renderer training state,
+  renderer FP4/FP32 `__meta__`, best-checkpoint meta JSON, and JSONL telemetry
+  now carry `distillation_policy` and `distillation_policy_sha256` where those
+  paths are available.
+- Tightened profile/preflight surface:
+  `check_distillation_policy_schema_clean(strict=True)` is wired into
+  `preflight_all`, validates live profiles through `src/tac/kl_config.py`, and
+  catches active KL/JBL schema drift. Live profile scan is clean.
+- Verification:
+  KL/config/training/loss suite `99 passed`; train-renderer/preflight adjacent
+  suite `270 passed`; py_compile and scoped diff-check passed; MCP helper probe
+  was clean after killing respawned `rbx-studio-mcp` and
+  `chrome-devtools-mcp` helpers.
+
+### 2026-05-01T01:30Z Continuation Swarm / Supply-Chain And Promotion Hardening
+
+- Spawned/closed xhigh agents for KL/distillation promotion hardening,
+  J-NWC/NWCS custody, six-item ops audit, Lightning security advisory review,
+  arXiv/Tencent research intake, and PufferLib/visual-primitives research.
+  Alpha visual-primitives runtime unblock also completed before closeout.
+- Landed fail-closed KL/JBL/distillation promotion adjudication:
+  `scripts/adjudicate_contest_auth_eval.py` now reports component distances,
+  component gates, `promotion_eligible`, `paper_claim_grade`, `allowed_use`,
+  and distillation-policy gate violations. Distillation-active artifacts must
+  carry `distillation_policy_v1`, matching policy SHA, exact CUDA device,
+  archive SHA/bytes, and passed PoseNet/SegNet component gates before
+  promotion.
+- Extended remote preflight in `src/tac/preflight.py` so remote scripts with
+  KL/JBL/distillation promotion paths must include policy provenance and
+  component-gate adjudication. Regression tests landed in
+  `src/tac/tests/test_remote_auth_eval_hardening.py`.
+- Landed NWCS corpus-manifest custody rechecks in
+  `experiments/build_nwcs_sensitivity_inputs.py`: selected checkpoint
+  size/SHA, tensor shape, dtype, block count, and used-block count are
+  revalidated before sensitivity projection.
+- Hardened the Lightning official component-response dry-run path:
+  `scripts/launch_lightning_batch_job.py component-response` now fail-closes
+  if only one of `--source-manifest` or `--local-perturbation-plan` is passed,
+  and validates that every plan-listed perturbation archive is present in the
+  staged manifest even on `--dry-run`.
+- Re-ran the prepared official component-response closure guard against
+  `official_component_response_pfp16_a_plus_plus_20260501_codex_r1`; dry-run
+  validation passed with command SHA
+  `1c6231a6c7e6528f5ab4a6587a5d3aad79602834eaa5a963b0cf0dfd818e0dab`.
+  No non-dry-run submission occurred because Lightning SSH still returns
+  `Permission denied (publickey)`.
+- Urgent Lightning security review result:
+  the active venv has no PyPI `lightning` or `pytorch-lightning`, has
+  `lightning_sdk==2026.4.10`, and strict scan output
+  `.omx/state/lightning_supply_chain_scan_20260501_codex_ioc_expanded.json`
+  reports `status=OK`, `violation_count=0`.
+- Expanded the Lightning compromise preflight IOC set to include the reported
+  2.6.3 `_runtime/start.py`, malicious `lightning/__init__.py`, and
+  malicious `lightning` 2.6.2/2.6.3 wheel hashes, plus pip/uv cache scans for
+  cached 2.6.2/2.6.3 artifacts.
+- Research consensus from the new paper/OSS swarm:
+  arXiv:2604.26919v1, Tencent Training-Free GRPO, PufferLib, and DeepSeek
+  visual primitives are admissible as control-plane methods only:
+  dual-readout validation, warm-ramp scheduling, byte-aware sparse winner
+  allocation, deterministic bandit/BO trial control, and visual-primitive
+  Alpha diagnostics. They are not score evidence, runtime dependencies, kill
+  evidence, or promotion evidence.
+- Ops audit repeated: Vast live `[]`, Modal tasks `0`, Lightning no running
+  jobs. Existing R4/R5/R6 OWV3/Fisher negatives remain scoped forensic
+  component-gate failures, not family kills. Lane 12 jsonfix40 remains
+  A-negative diagnostic only and lacks L2 retraining clearance.
+- Verification in parent:
+  supply-chain/preflight focused `27 passed`; combined preflight, Lightning
+  batch, KL/adjudication, and J-NWC/NWCS regression slice `347 passed`;
+  py_compile and scoped diff-check passed for touched implementation/test
+  files.
+
+### 2026-05-01T01:38Z Lane 12 Alpha Diagnostic Runtime Unblocked
+
+- Integrated the Alpha runtime worker output. `experiments/diagnose_nerv_geometry.py`
+  now supports bounded `.nrv` CPU streaming decode, deterministic decoded-mask
+  cache, bounded visual boundary sampling, and explicit no-claim residual/track
+  skip controls. Tests landed in
+  `src/tac/tests/test_lane12_nerv_geometry_diagnostics.py`.
+- Real bounded diagnostic artifact:
+  `experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_0_vs_pfp16_visual_primitives_bounded_20260501.json`.
+  It covers 1200 scalar frames and 1200 visual frames using the decoded-mask
+  cache at
+  `experiments/results/lane_12_nerv_20260430_codex_jsonfix40/predecoded_mask_cache`
+  (`450M`).
+- No-claim status is intact:
+  `visual_primitives.promotion_eligible=false`,
+  `score_claim_eligible=false`, `exact_eval_claim=false`, evidence grade
+  `empirical`, device `cpu`.
+- Diagnostic conclusion: no L2 unblock. The exact-eval spend gate fails with
+  blockers `global_disagreement`, `boundary_2px_disagreement`,
+  `pair_transition_disagreement`, `critical_missing_rate`, and
+  `critical_missing_area_rate`. Observed core metrics:
+  global disagreement `0.012303928799099393`, 2px-boundary disagreement
+  `0.14883144511692872`, pair-transition disagreement
+  `0.009507171571470149`, critical missing rate `0.6452857808237408`,
+  critical missing area rate `0.004038536840025019`.
+- Parent verification:
+  py_compile plus Alpha diagnostic focused tests `18 passed`; scoped
+  diff-check clean.
+
+### 2026-05-01T01:58Z Lightning Exact-Response Queue And Runtime Hardening
+
+- Lightning SSH is now operational through the alias `scratch-studio-devbox`,
+  but the interactive Studio shell is currently CPU-only:
+  `torch.cuda.is_available=false`, `device_count=0`, `nvidia-smi=None`.
+  Diagnostic evidence:
+  `.omx/state/lightning_ssh_runtime_cuda_preflight_20260501_cpu_only.json`.
+- Landed a fail-fast runtime guard in `scripts/lightning_repro_workspace.py`:
+  `--ssh-check-only --require-cuda` now probes the remote Python/Torch runtime
+  and fails on CPU-only Studios. Plain SSH success is no longer allowed to
+  masquerade as GPU readiness for interactive CUDA work.
+- Integrated the Lightning SSH/provider-auth hardening worker output:
+  static preflight now rejects unsafe Lightning SSH policy such as disabled
+  host-key checking, `/dev/null` known-hosts, and bare `ssh.lightning.ai`
+  provider-host usage in Lightning scripts/runbooks.
+- `AGENTS.md` now records the permanent rule: interactive Lightning CUDA work
+  requires the runtime CUDA probe; Batch Jobs remain governed by their own
+  `lightning_runner_preflight.json` artifacts.
+- Official component-response jobs in flight:
+  - `official_component_response_pfp16_a_plus_plus_20260501_codex_r1`: T4,
+    `Running`, `--require-passed`, command SHA
+    `772395f8e71bf67b095f2e36dd56479d52f82b25fab613b0e2dd61ccd71c0c45`.
+  - `official_component_response_pfp16_a_plus_plus_20260501_codex_r2_t4_small_race`:
+    T4_SMALL, `Running`, `--require-passed`, command SHA
+    `c7cc181f924f50df1ba65c10b30c78adef1f5bdb9e4615b75d3c655feb7432fe`.
+  - `official_component_response_pfp16_a_plus_plus_20260501_codex_r3_t4_no_gate`:
+    T4, `Pending`, no `--require-passed`, command SHA
+    `da87a91dc26a68a451a1326b33d234e7a4f77160c3f3cd521efecccaa6f23b5f`.
+- Rationale for the r3 no-gate race: adversarial review found the current
+  official response plan lacks nonzero `predicted_delta` entries, so
+  `--require-passed` may fail promotion gates after producing scientifically
+  useful official CUDA response curves. R3 is diagnostic CUDA evidence only and
+  is not promotable `component_sensitivity_v1`.
+- Latest known Lightning status at `2026-05-01T01:57:09Z`: r1 `Running`,
+  r2 `Running`, r3 `Pending`. Harvest terminal jobs immediately. If r1/r2
+  fail after writing curves, harvest without `--require-passed` for forensic
+  official-response evidence; do not discard curves because the prediction gate
+  model was incomplete.
+- Verification: merged Lightning/MCP hardening slice passed py_compile,
+  `bash -n` on touched Lightning shell tools, MCP cleanup, and focused tests:
+  `38 passed`.
+
+### 2026-05-01T02:15Z Deterministic Lightning Component-Response Harness
+
+- Classified r1/r2/r3 component-response jobs as harness/snapshot failures,
+  not lane-performance evidence. r1 failed before CUDA/DALI/input preflight
+  because its stale snapshot failed `scripts/scan_lightning_supply_chain.py
+  --strict` on old `tools/lightning_*` wrappers invoking the PyPI `lightning`
+  console script. r2 failed from the same stale snapshot class. r3 was stopped
+  to avoid spend on known-bad provenance.
+- Landed reusable production harness fixes:
+  `scripts/launch_lightning_batch_job.py component-response` and `exact-eval`
+  now support `--remote-preflight-ssh-target`, which runs the strict remote
+  supply-chain scan before non-dry-run SDK submission. Component-response SSH
+  harvest now supports `--job-name --state-path`, deriving the persisted SDK
+  artifact mirror from recorded `remote_output_dir` and `sdk_artifact_path`.
+- Added `LightningBatchJobsClient.harvest_ssh_component_response_artifacts`
+  and regression coverage for state-derived component-response harvest and
+  remote pre-submit supply-chain preflight. Focused verification:
+  `src/tac/tests/test_lightning_batch_jobs.py` = 45 passed; py_compile clean;
+  scoped `git diff --check` clean; MCP cleanup matched 0 processes.
+- Updated `AGENTS.md` and Lightning runbooks: `comma-lab` teamspace,
+  `lossy-compression-challenge` Studio, state-derived harvest, and remote
+  preflight are now the documented path. Manual `/teamspace/jobs/...` path
+  composition is explicitly non-promotable.
+- Staged r4 through `scripts/lightning_repro_workspace.py` with explicit
+  artifacts and remote byte verification. Manifest:
+  `.omx/state/official_component_response_pfp16_a_plus_plus_20260501_codex_r4_clean_t4_stateful_manifest.json`;
+  file_count 1114; total_bytes 21307573; manifest SHA
+  `80d44b40b4048ee1d2c7ba850e1e98e45025eda65b248b12a494d6e1fdf1928e`.
+- Submitted clean r4 diagnostic no-gate T4 Batch Job:
+  `official_component_response_pfp16_a_plus_plus_20260501_codex_r4_clean_t4_stateful`;
+  command SHA `d9eec67b70b20b938dc76b66b34e0f498cc7d92e5307348c8798c0aa072a63c0`;
+  link
+  `https://lightning.ai/adpena/comma-lab/studios/lossy-compression-challenge/app?app_id=jobs&job_name=official-component-response-pfp16-a-plus-plus-20260501-codex-r4-clean-t4-stateful`.
+  Latest status at submit refresh: `Pending`. Harvest with state-derived
+  component-response SSH once terminal.
+
+### 2026-05-01T02:38Z r4 Forensic Root Cause, r5 Portable Plan Queue
+
+- Refreshed r4:
+  `official_component_response_pfp16_a_plus_plus_20260501_codex_r4_clean_t4_stateful`
+  reached strict remote supply-chain OK, hash-pinned DALI OK, and
+  `lightning_runner_preflight.json` with `cuda_available=true`,
+  `device_name=Tesla T4`, then failed before official profiler output.
+  SDK logs identify the root cause as a non-portable plan path:
+  `baseline_contest_auth_eval_json` resolved to `/Users/adpena/...` inside
+  the job. Classification remains harness/input-plan failure only; no
+  lane-performance evidence.
+- Landed permanent fix class:
+  `experiments/profile_component_sensitivity_official.py` and the generated
+  Lightning component-response input preflight now let explicit
+  `--baseline-contest-auth-eval-json` override stale plan metadata. The plan
+  builder now emits repo-internal paths relative to the plan file instead of
+  host-local absolutes when possible.
+- Hardened submit closure:
+  `scripts/launch_lightning_batch_job.py component-response` now rejects
+  absolute plan point archives and per-point eval JSON unless a top-level
+  baseline JSON is explicitly supplied as the authority. Existing r1 plan also
+  had a zero-epsilon absolute archive path, so a portable r5 plan was produced
+  at
+  `experiments/results/official_component_response_pfp16_a_plus_plus_20260501_codex_r5_portable_plan/official_component_response_plan.json`.
+- Hardened SSH transfer DX:
+  `scripts/lightning_repro_workspace.py` and Lightning SSH harvest helpers now
+  reuse noninteractive SSH policy for actual `ssh`/`scp`/`rsync` operations:
+  `BatchMode=yes`, password and keyboard-interactive auth disabled, and
+  explicit `ConnectTimeout`.
+- Verification: py_compile clean and focused tests passed:
+  `src/tac/tests/test_lightning_batch_jobs.py`,
+  `src/tac/tests/test_lightning_repro_workspace.py`,
+  `src/tac/tests/test_profile_component_sensitivity_official.py`, and
+  `src/tac/tests/test_build_component_response_perturbation_plan.py`
+  (`85 passed`).
+- Pre-submit doctor passed:
+  `.omx/state/lightning_doctor_20260501_r5_pre_submit.json` with local and
+  remote supply-chain `status=OK`, SSH auth OK, and T4 inventory OK.
+- r5 staged with remote byte verification. Manifest:
+  `.omx/state/official_component_response_pfp16_a_plus_plus_20260501_codex_r5_explicit_baseline_t4_manifest.json`,
+  file_count `1115`, total_bytes `21367564`, manifest SHA
+  `ae3028935151c8e8e8f57315fa2a4f54edbfaebf3e6fd6c56064824e36f7e7e4`.
+- Submitted r5 diagnostic no-gate T4 Batch Job:
+  `official_component_response_pfp16_a_plus_plus_20260501_codex_r5_explicit_baseline_t4`,
+  command SHA `182c287d986a4fce61dbf12871b1e985bf01c4715b8e897e980e44d7e9c6ffa7`.
+  Latest refresh at `2026-05-01T02:38:30Z`: `Pending`. Harvest
+  state-derived component-response artifacts when terminal; do not classify
+  response quality until canonical curves and validation JSON are local.
+
+### 2026-05-01T02:55Z r6 Race Queue And Submit-Closure Hardening
+
+- r6 was staged to race r5 wall-clock queue latency on T4_SMALL:
+  `official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race`.
+  Remote manifest verification passed with file_count `1115`, total_bytes
+  `21370080`, manifest SHA
+  `91cd1e8011a7045a3068b0a2a4a74b0f842be6b8be4232da91473e6445780684`.
+  Remote environment/supply-chain preflight stayed clean: compromised
+  `lightning` package absent; `lightning-sdk` absent from the remote venv at
+  staging time; no runtime-security findings.
+- Submitted r6 diagnostic no-gate component-response Batch Job:
+  command SHA `8cd111eb0b3448c1f9143929a96b0fd990afd361e6488c66a2c7c2ed0086deec`,
+  expected baseline archive SHA
+  `0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f`,
+  size `686635`.
+- Latest Lightning status refresh:
+  r5 `Running` at `2026-05-01T02:48:23Z`; r6 `Pending` at
+  `2026-05-01T02:48:24Z`. Neither had harvestable local artifacts yet.
+  The interactive Studio SSH filesystem did not show the remote output dirs;
+  continue judging only from SDK status and terminal harvested artifacts.
+- Grand Council adversarial review found an additional closure bug class:
+  raw manifest path strings could include repo-relative traversal such as
+  `../archive.zip`. Permanent fix landed in
+  `scripts/launch_lightning_batch_job.py`: exact-eval and component-response
+  source manifests now reject absolute paths, traversal, empty/unstable
+  separators, backslashes, control characters, duplicate entries, and hidden
+  or resource-fork components. `_remote_repo_rel` now also validates the
+  derived repo-relative path.
+- Direct SSH artifact harvest is hardened in
+  `src/tac/deploy/lightning/batch_jobs.py`: library calls reject the bare
+  `ssh.lightning.ai` provider host and whitespace/control-character targets,
+  aligning lower-level helpers with CLI SSH custody policy.
+- Exact-eval submit closure now proves queue-metadata `baseline_json` or
+  `baseline_contest_auth_eval_json` is present in the staged source manifest
+  when provided by wrappers such as `scripts/lightning_exact_eval_repro.py`.
+- Verification: py_compile clean for touched Python; focused Lightning batch
+  suite passed with `57 passed`.
+- Parallel worker `Sagan the 2nd` is implementing the next J-NWC/NWCS custody
+  fix: prebuilt corpus-manifest plus replay-root support in remote scripts so
+  CUDA exact eval consumes the exact manifest that produced
+  `CORPUS_SENSITIVITY_PT`, failing closed on SHA/custody mismatch.
+- Latest refresh at `2026-05-01T02:54Z`: r5 remains `Running` on T4
+  (`total_cost=0.11215556`); r6 is now also `Running` on T4_SMALL
+  (`total_cost=0.007388889`). No terminal artifact exists yet. Vast live
+  inventory is empty. Modal stale call polls returned `STILL RUNNING` for
+  six labels despite app list showing zero live tasks; no Modal artifacts were
+  harvested or classified.
+
+### 2026-05-01T03:10Z r5 Harvested, J-NWC Custody Landed, Alpha Gate Rechecked
+
+- r5 component-response completed and was harvested statefully:
+  `experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r5_explicit_baseline_t4`.
+  Validation confirms CUDA evidence, expected baseline archive SHA
+  `0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f`,
+  size `686635`, point_count `5`, nonzero_point_count `4`, and copied
+  canonical per-point eval/provenance artifacts. It is diagnostic only:
+  `promotion_eligible=false`.
+- r5 official response curves have finite signal, zero baseline repro error,
+  and coverage passed, but fail promotion because the diagnostic plan has no
+  map-predicted component deltas. Observed max absolute official deltas:
+  PoseNet `0.0003012800000000001`, SegNet `1.3420000000000099e-05`,
+  combined `0.006991338976567674`. Blockers for all curves:
+  `missing_prediction_deltas`, `prediction_error_gate_failed`.
+- r5 harvest exposed a local mirror bug class: copied remote validation JSON
+  can be read-only, blocking overwrite during local validation. Fixed in
+  `src/tac/deploy/lightning/batch_jobs.py` with atomic JSON replace and
+  chmod `0644`; regression added to
+  `src/tac/tests/test_lightning_batch_jobs.py`. Verification:
+  `57 passed`.
+- J-NWC/NWCS corpus-manifest custody landed:
+  `experiments/train_neural_weight_codec.py` now supports
+  `--corpus-manifest`, `--manifest-out`, and `--corpus-replay-root`,
+  preserving exact prebuilt manifest bytes and recording manifest SHA/replay
+  root in codec payloads. Remote J-NWC/NWCS scripts accept
+  `PREBUILT_CORPUS_MANIFEST` + `CORPUS_REPLAY_ROOT`; NWCS promotion requires a
+  matching prebuilt manifest when `CORPUS_SENSITIVITY_PT` is used. Parent
+  verification: shell syntax clean, py_compile clean, and focused J-NWC/NWCS
+  tests `42 passed`.
+- Alpha-Geo current Lane G v3 rerun produced:
+  `experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_0_vs_lane_g_v3_codex_current_20260501.json`,
+  SHA `6b17b004d238ada62180077aa072f02594954ef02f5a5c610bc70e65619fa80d`.
+  It reproduces the known `jsonfix40` failure: `overall_pass=false`,
+  global disagreement `0.012303928799099393`, 2px boundary disagreement
+  `0.14883144511692872`, missing-component rate `0.4611606740560512`.
+  The duplicate Lane A rerun was stopped after the Lane G packet completed;
+  existing Lane A/base diagnostic remains the reference.
+- r6 is still live as a redundant T4_SMALL diagnostic race at
+  `2026-05-01T03:07:35Z`: `Running`, total_cost `0.048555557`.
+  Leave or harvest terminal artifacts only if useful for cross-machine
+  reproducibility; r5 already supplies the official diagnostic curve packet.
+- r6 then completed and was harvested:
+  `experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race`.
+  It reproduces the r5 diagnostic shape on T4_SMALL with the same baseline
+  archive SHA, CUDA device evidence, coverage, signal, and zero repro; it is
+  also non-promotable for the same missing-prediction-delta reason. R6 minus
+  r5 delta differences are small: PoseNet within `4.0e-7`, SegNet within
+  `6.0e-8`, combined within `8.3e-6` over the epsilon ladder.

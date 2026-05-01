@@ -232,3 +232,68 @@ find $ROOTS -type f \( -path "*/.claude/router_runtime.js" -o -path "*/.claude/s
 - Added regression coverage in `src/tac/tests/test_lightning_batch_jobs.py`.
 - Current policy remains: use `lightning-sdk`, never bare PyPI `lightning`, and
   scan every runner before exact-eval trust.
+
+## 2026-04-30T23:44Z Console-Script Hardening Follow-Up
+
+Additional sources checked during this follow-up:
+
+- Aikido:
+  https://www.aikido.dev/blog/pytorch-lightning-pypi-compromise-mini-shai-hulud
+- Socket:
+  https://socket.dev/blog/lightning-pypi-package-compromised
+- Snyk:
+  https://snyk.io/blog/lightning-pypi-compromise-bun-based-credential-stealer/
+- Semgrep:
+  https://semgrep.dev/blog/2026/malicious-dependency-in-pytorch-lightning-used-for-ai-training/
+- PyPI `lightning-sdk`:
+  https://pypi.org/project/lightning-sdk/
+
+Consensus remains: the reported malicious PyPI package is `lightning` versions
+`2.6.2` and `2.6.3`; local env still has no PyPI `lightning` or
+`pytorch-lightning`, and does have `lightning-sdk==2026.4.10`.
+
+New hardening landed:
+
+- `src/tac/preflight.py`
+  - Supply-chain manifest scan now includes `tools/`.
+  - Blocks `.venv/bin/lightning`, `venv/bin/lightning`, bare
+    `lightning <subcommand>` at shell command boundaries, and
+    `$LIGHTNING` / `${LIGHTNING}` executable variables.
+  - Kept the pattern narrow enough to allow prose and package/module names like
+    `lightning-sdk` and `lightning_sdk`.
+- `tools/lightning_run.sh`
+  - Replaced `.venv/bin/lightning connect studio` with SSH to
+    `${LIGHTNING_SSH_TARGET:-lightning-pact}`.
+- `tools/lightning_monitor.sh`
+  - Replaced `lightning cp/list` calls with SSH/SCP against
+    `${LIGHTNING_SSH_TARGET:-lightning-pact}` and
+    `${LIGHTNING_REMOTE_TAC:-/teamspace/studios/this_studio/tac}`.
+- `scripts/launch_lightning_batch_job.py`
+  - `refresh-status` now infers SDK job name, teamspace, org, and user from the
+    saved state record, avoiding retyped context during incident response or
+    harvest monitoring.
+- `AGENTS.md`
+  - Durable rule added: do not call `.venv/bin/lightning`, bare `lightning`, or
+    `$LIGHTNING` from operator scripts.
+
+Verification:
+
+```bash
+.venv/bin/python scripts/scan_lightning_supply_chain.py \
+  --json-out .omx/state/lightning_supply_chain_scan_20260430_codex_tools_hardened.json \
+  --strict
+# status=OK, violation_count=0
+
+.venv/bin/python -m pytest \
+  src/tac/tests/test_preflight_meta_bugs.py \
+  src/tac/tests/test_lightning_batch_jobs.py \
+  -q
+# 265 passed
+
+bash -n tools/lightning_run.sh tools/lightning_monitor.sh
+.venv/bin/python -m py_compile \
+  src/tac/preflight.py \
+  scripts/launch_lightning_batch_job.py \
+  src/tac/tests/test_preflight_meta_bugs.py \
+  src/tac/tests/test_lightning_batch_jobs.py
+```

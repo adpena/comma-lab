@@ -290,3 +290,234 @@ Submitted Lightning Batch Jobs:
 Do not promote either job until artifacts are harvested locally, archive
 identity is validated, CUDA/T4/sample gates pass, adjudication artifacts exist,
 and R5 is re-adjudicated against the paired calibration result.
+
+## 2026-04-30T22:48Z Lightning Exact-Eval Isolation Fix
+
+New finding:
+
+- The first live Lightning exact-eval attempts exposed a harness bug, not a lane
+  result. `submissions/robust_current/inflate.sh` invokes `uv run`; inside the
+  shared Studio repo this recreated `.venv`, then `upstream/evaluate.py` ran
+  under the mutated env and failed on `ModuleNotFoundError: tqdm`.
+- Affected jobs:
+  - `pfp16_paired_calibration_20260430_codex_lightning_t4_r2`: `Failed`,
+    harness/env failure, no score evidence.
+  - `owv3_r5_rank1_exact_cuda_20260430_codex_lightning_t4`: stopped after the
+    same known-bad path began; no score evidence.
+
+Permanent fix landed:
+
+- Lightning exact-eval commands now set a per-job
+  `UV_PROJECT_ENVIRONMENT=<output_dir>/uv_project_env` and
+  `UV_LINK_MODE=${UV_LINK_MODE:-copy}` before `contest_auth_eval.py`.
+- DALI/shared-venv setup now takes `.omx/state/lightning_exact_eval_venv.lock`
+  so parallel exact-eval jobs cannot mutate the shared `.venv` concurrently.
+- Tests cover both the copy-mode staging rule and the exact-eval isolation /
+  lock command text.
+
+Clean reruns submitted:
+
+- `pfp16_paired_calibration_20260430_codex_lightning_t4_r3_isolated_uv`
+  queued at `2026-04-30T22:47:20Z`, status initially `Pending`.
+- `owv3_r5_rank1_exact_cuda_20260430_codex_lightning_t4_r2_isolated_uv`
+  queued at `2026-04-30T22:47:39Z`, status initially `Pending`.
+
+Promotion state remains unchanged: PFP16 A++ is the only promotion-grade anchor;
+R5 is queue-only until harvested/validated/adjudicated against paired PFP16.
+
+## 2026-04-30T22:53Z Swarm Closeout Status
+
+Current Lightning exact-eval queue state:
+
+- `pfp16_paired_calibration_20260430_codex_lightning_t4_r3_isolated_uv`:
+  `Pending`, cost `0.0`, no completion/failure timestamp.
+- `owv3_r5_rank1_exact_cuda_20260430_codex_lightning_t4_r2_isolated_uv`:
+  `Pending`, cost `0.0`, no completion/failure timestamp.
+
+Evidence status:
+
+- No score is promoted from Lightning yet.
+- The abandoned `r2`/original jobs remain harness failures only, caused by the
+  pre-fix shared `.venv` mutation path.
+- The clean isolated jobs are admissible queue work, but become evidence only
+  after local harvest, archive SHA/size validation, CUDA/T4 provenance,
+  adjudication JSON, and paired R5-vs-PFP16 readjudication.
+
+Integrated verification:
+
+- Focused regression suite covering Lightning queue generation, exact-eval
+  reproduction, Lightning staging, remote-auth hardening, component
+  sensitivity, Lane 12, and J-NWC/NWCS: `177 passed in 5.04s`.
+- Python compile, shell syntax, targeted whitespace checks, provider telemetry,
+  and strict MCP live/config preflights passed in the same closeout loop.
+
+Next wall-clock-critical action is to poll both Lightning jobs, harvest only
+canonical JSON/archive/provenance artifacts after completion, and run paired
+adjudication before any R5 claim is allowed into the Grand Council result set.
+
+## 2026-04-30T22:55Z Lightning Running Status
+
+Latest SDK refresh:
+
+- `pfp16_paired_calibration_20260430_codex_lightning_t4_r3_isolated_uv`:
+  `Running`, cost `0.0`, no completion/failure timestamp.
+- `owv3_r5_rank1_exact_cuda_20260430_codex_lightning_t4_r2_isolated_uv`:
+  `Running`, cost `0.0`, no completion/failure timestamp.
+
+Operational implication: keep polling, but do not touch promotion state until
+both jobs reach terminal states and artifacts pass local validation. If either
+job fails, classify first as harness/infrastructure/custody/lane evidence only
+after log and artifact inspection.
+
+## 2026-04-30T23:10Z Exact CUDA Harvest And R5 Paired Result
+
+Lightning terminal state:
+
+- `pfp16_paired_calibration_20260430_codex_lightning_t4_r3_isolated_uv`:
+  SDK status `Failed` because adjudication exited nonzero after a SegNet
+  component gate fired, not because CUDA eval failed.
+- `owv3_r5_rank1_exact_cuda_20260430_codex_lightning_t4_r2_isolated_uv`:
+  SDK status `Failed` for the same adjudication-gate reason.
+
+Canonical harvest:
+
+- Added `harvest-ssh` to `scripts/launch_lightning_batch_job.py`. It derives
+  the SDK-persisted Studio artifact path, copies only canonical top-level
+  evidence files, validates archive SHA/bytes, CUDA/T4 provenance,
+  supply-chain scans, DALI/bootstrap records, and adjudication JSON, and
+  attaches the validation to `.omx/state/lightning_batch_jobs.json`.
+- Local artifact mirrors:
+  - `experiments/results/lightning_batch/pfp16_paired_calibration_20260430_codex_lightning_t4_r3_isolated_uv/`
+  - `experiments/results/lightning_batch/owv3_r5_rank1_exact_cuda_20260430_codex_lightning_t4_r2_isolated_uv/`
+
+Exact CUDA/T4 facts:
+
+- PFP16 paired calibration: recomputed score `1.037045485927815`, PoseNet
+  `0.00316404`, SegNet `0.00401966`, rate `0.01828808`, archive bytes
+  `686635`, SHA
+  `0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f`,
+  `promotion_eligible=false`, `COMPONENT_GATE_REVIEW_REQUIRED`.
+- OWV3 R5 rank-1: recomputed score `1.0373951773937642`, PoseNet
+  `0.0031739`, SegNet `0.0040215`, rate `0.01828363`, archive bytes
+  `686468`, SHA
+  `16ab95220c8add11b0bc40fb632bc8421f8bb8ad1cfba145f0b6058075237518`,
+  `promotion_eligible=false`, `COMPONENT_GATE_REVIEW_REQUIRED`.
+- Paired delta: R5 is `+0.00034969146594909795` worse than PFP16 despite
+  `167` fewer bytes. Do not promote R5.
+
+Scientific classification:
+
+- This is valid exact CUDA/T4 forensic evidence with local JSON custody.
+- It is not frontier evidence because the predeclared component gate fired,
+  and paired R5 is worse than paired PFP16.
+- Next R5 work should be SegNet-conservative or sensitivity-map-backed; do not
+  relax `max_segnet_relative=1.002` retroactively.
+
+Additional implementation delta:
+
+- `experiments/profile_component_sensitivity.py` now has an explicit
+  `--promotion-finite-difference` mode for official CUDA component-response
+  maps. The old Fisher-proxy path remains diagnostic and blocked from manifest
+  assembly.
+- Closeout verification: focused regression `154 passed in 4.10s`,
+  Lightning/sensitivity focused subset `101 passed in 2.24s`, local
+  supply-chain scan `OK`, Vast `[]`, Modal `Tasks=0`, and strict MCP
+  process/config preflights clean after killing respawned MCP helpers.
+
+## 2026-04-30T23:30Z R6 Queue And Guardrail Greenup
+
+Swarm closeout:
+
+- Worker A selected the shortest admissible R6 probe after the failed R5 exact
+  result: `owv3_0076_bbr0p65_protect0p0013_aggr1em05`.
+- Worker B found sensitivity-promotion blockers: zero-signal response curves,
+  NaN map acceptance, contest/archive custody mismatch, and sample-plan hash
+  rewriting.
+- Worker C confirmed J-NWC/NWCS must wait for a real
+  `build_nwcs_sensitivity_inputs.py`-style artifact builder; fake/uniform
+  sensitivity cannot enter promotion mode.
+- Worker D confirmed Lane 12 NeRV is blocked: no L2 clearance packet and the
+  latest `jsonfix40` Alpha-Geo diagnostic has `overall_pass=false`.
+- Worker E recommended component-gate-only outcomes complete as forensic
+  Lightning jobs while remaining non-promotable.
+- Worker F confirmed C-040 claim hygiene and listed stale public docs to
+  regenerate or quarantine.
+
+Implementation landed:
+
+- `experiments/sweep_owv3_byte_plan.py` now has an R6 SegNet-conservative
+  selector after failed exact R5. It requires strictly fewer OWV2-low-bit
+  channels than the failed R5 reference and records failed-R5 exact CUDA/T4
+  metrics in the queue packet.
+- `scripts/adjudicate_contest_auth_eval.py`,
+  `src/tac/deploy/lightning/batch_jobs.py`, and
+  `scripts/launch_lightning_batch_job.py` now support
+  `--allow-component-gate-forensic-success`. Default direct adjudication still
+  fails closed; Lightning exact-eval jobs can complete with valid forensic
+  artifacts when the component gate is the only failure.
+- `experiments/profile_component_sensitivity.py` now blocks zero-signal
+  finite-difference curves from promotion.
+- `experiments/build_component_sensitivity_manifest.py` now rejects NaN/Inf
+  tensors, contest JSON/archive SHA or byte mismatches, and sample-plan
+  `split_hash` mismatches instead of silently rewriting custody.
+- `docs/runbooks/owv3_r5_exact_eval_queue.md` now records R5 as historical
+  non-promotable exact evidence and R6 as active queue state.
+
+R6 exact-eval dispatch:
+
+- Remote archive custody checked on Lightning:
+  `9f7528bade11bf9cdf3df68f8073d11f196a6d5f48475a8680c21fb58c878c91`,
+  `686531` bytes.
+- Submitted Lightning job
+  `owv3_r6_rank1_exact_cuda_20260430_codex_lightning_t4_r1`.
+- SDK job name:
+  `owv3-r6-rank1-exact-cuda-20260430-codex-lightning-t4-r1`.
+- Latest status at `2026-04-30T23:29:12Z`: `Pending`, cost `0.0`.
+- The first submit attempt failed client-side because Lightning needed
+  `--user adpena`; the second failed client-side because accelerator alias
+  `T4` was not accepted by the AWS cluster. The successful submit used
+  `--machine g4dn.2xlarge`, which SDK reports as T4. Those failed attempts did
+  not start eval jobs.
+
+Verification:
+
+- `136 passed in 3.40s` across OWV3 sweep, Lightning batch tooling,
+  adjudication, profile sensitivity, manifest builder, and artifact validator.
+- Python compile passed for all touched Python files.
+
+Next admissible action: poll R6 until terminal, harvest with `harvest-ssh`,
+validate canonical artifacts, then classify the result under paired PFP16
+component gates. Do not cite R6 as score evidence while it is pending.
+
+## 2026-04-30T23:48Z R6 Exact Harvest Classification
+
+R6 reached terminal `Completed`, was harvested through `harvest-ssh`, and local
+artifact validation passed with adjudication required.
+
+Exact CUDA/T4 result:
+
+- Job: `owv3_r6_rank1_exact_cuda_20260430_codex_lightning_t4_r1`
+- Candidate: `owv3_0076_bbr0p65_protect0p0013_aggr1em05`
+- Archive SHA: `9f7528bade11bf9cdf3df68f8073d11f196a6d5f48475a8680c21fb58c878c91`
+- Archive bytes: `686531`
+- Score recomputed: `1.0393166493980681`
+- PoseNet: `0.00323147`
+- SegNet: `0.00402421`
+- Device: `cuda`, GPU: `Tesla T4`, samples: `600`
+
+Adjudication:
+
+- Regression versus paired PFP16: `+0.0022711634702530237` score.
+- Byte delta versus paired PFP16: `-104` bytes.
+- PoseNet gate failed: relative `1.0213113614240024` > `1.002`.
+- SegNet gate passed: relative `1.0011319365319455` <= `1.002`.
+- Strict final-deploy adjudication returned exit code `2`.
+
+Grand Council classification:
+
+- R6 is A++ exact CUDA/T4 forensic negative evidence for this
+  implementation/config.
+- It is not promotable and does not update the frontier.
+- It is not an OWV3 family KILL. The failure moved from R5's SegNet gate to
+  R6's PoseNet gate, so the next design problem is sensitivity balancing, not
+  generic byte-count reduction.

@@ -152,3 +152,107 @@ Follow-up repairs and classifications:
 No telemetry reviewed in this document justifies a broad family kill. Prior
 negative/aborted runs remain scoped engineering failures or cost/proxy aborts
 until exact CUDA archive evidence proves otherwise.
+
+## Worker E Provider Telemetry/Stale-State Audit - 2026-04-30T22:59Z
+
+Scope: Vast and Modal live provider state using existing CLIs only, plus local
+`.omx/state/active_dispatches.md`, `.omx/state/vastai_active_instances.json`,
+`.omx/state/dispatch_holds.json`, and `.omx/state/launch_locks/*.lock`.
+No provider resources were stopped, destroyed, or modified. No state files were
+edited.
+
+Commands run:
+
+- `.venv/bin/vastai show instances --raw`
+- `.venv/bin/python scripts/reconcile_vast_dispatch_state.py --json --max-items 1000`
+- `.venv/bin/modal app list --json`
+- `.venv/bin/modal app logs <app-id> --tail 80 --timestamps --show-function-call-id`
+  for the six visible detached `comma-train-lane` apps
+- Local read-only scans of Modal sentinels, active dispatch rows, holds, launch
+  locks, and local lane/provider processes.
+
+Current provider truth:
+
+- Vast live inventory is empty: `vastai show instances --raw` returned `[]`.
+  There is no current Vast spend visible to the CLI.
+- Vast reconciliation reports `live_count=0`, `tracker_count=211`,
+  `active_dispatch_count=4`, no live rows missing from local trackers, and
+  all tracker rows missing from live Vast.
+- `active_dispatches.md` still has stale Vast active rows for `35899435`
+  (`lane_19_logit_margin_2026-04-30_b`), `35899552`
+  (`lane_8_multipass_2026-04-30_b`), and `35899275`
+  (`lane_17_imp_10cycle_2026-04-30T124951Z`). The Lightning row is not a Vast
+  instance and remains outside this provider audit.
+- The later queue-drainer narrative rows for `35925801` and `35925825` are also
+  stale for live-spend purposes because current Vast live inventory is empty.
+- Modal app list shows three unrelated deployed apps with `Tasks=0`, six
+  detached `comma-train-lane` apps with `Tasks=0`, and two stopped
+  `comma-auth-eval` apps. No Modal app currently reports a nonzero task count.
+- Recent `modal app logs` calls for the six detached `comma-train-lane` app IDs
+  returned no log lines. This does not prove result status for old call IDs,
+  but it does support no currently running Modal task from the app list.
+
+Modal visible apps at audit time:
+
+| App ID | Description | State | Tasks | Created/stopped |
+|---|---|---:|---:|---|
+| `ap-RlaibbkTNTRqcm20qHJ7s3` | `test-credit-check` | deployed | 0 | 2026-04-22 13:35 CDT |
+| `ap-mdGXOBnT5XOhVDT1sP0YEM` | `falcon-ocr` | deployed | 0 | 2026-04-22 22:55 CDT |
+| `ap-Y559uAh9yaWaTRleN85cux` | `nemotron-ocr` | deployed | 0 | 2026-04-22 23:24 CDT |
+| `ap-MjIxiTCU5enXxCCu65BLR2` | `comma-train-lane` | ephemeral detached | 0 | 2026-04-29 08:13 CDT |
+| `ap-aAWrpYp33ACMCZV7N7zGHJ` | `comma-train-lane` | ephemeral detached | 0 | 2026-04-29 08:30 CDT |
+| `ap-5q2Gi7H1pVzoy5abRtj5fv` | `comma-train-lane` | ephemeral detached | 0 | 2026-04-29 08:44 CDT |
+| `ap-Jf0TaAn1kRUXk2NevJlYQq` | `comma-train-lane` | ephemeral detached | 0 | 2026-04-29 12:51 CDT |
+| `ap-RBhiodKuL27pB4f54C3M2B` | `comma-train-lane` | ephemeral detached | 0 | 2026-04-29 12:51 CDT |
+| `ap-g4xJh5PFBIuvHe8BQvKJFG` | `comma-train-lane` | ephemeral detached | 0 | 2026-04-29 17:18 CDT |
+| `ap-D2kAf4VfCOgvAzqvSFNB6F` | `comma-auth-eval` | stopped | 0 | stopped 2026-04-30 17:38 CDT |
+| `ap-8t26hdYqVjez4RHL6TipdV` | `comma-auth-eval` | stopped | 0 | stopped 2026-04-30 17:32 CDT |
+
+Local stale-state findings:
+
+- `.omx/state/vastai_active_instances.json` is historical, not live truth. It
+  contains 211 rows and every row is absent from current Vast live inventory.
+- `.omx/state/dispatch_holds.json` still correctly holds Lane 19 and Lane 20
+  fail-closed; those holds should remain.
+- Forty Modal result directories have `modal_call_id.txt` plus
+  `modal_metadata.json`. Seven sentinel directories still have no local
+  harvested artifacts: `lane_lane_sa_v4_modal`, `lane_lane_sc_plus_plus_v4_modal`,
+  `lane_lane_so_v3_modal`, `lane_mae_v_v2_modal`,
+  `lane_q_faithful_v3_modal`, `lane_stc_cuda_modal`, and
+  `lane_sz_phase2_v2_modal`. Because Modal app list reports `Tasks=0`, treat
+  these as stale/unharvested call records until explicitly polled/recovered;
+  do not infer live compute from them.
+- All eleven launch lock files under `.omx/state/launch_locks/` have dead PIDs.
+  A local process scan found no `launch_lane`, `remote_lane`, `vastai`,
+  `modal`, `contest_auth_eval`, `train_renderer`, `train_segmap`,
+  `train_nerv`, `train_imp_cycle`, or `dispatch_lane` process except the scan
+  command itself.
+
+Concrete cleanup commands, report-only:
+
+```bash
+# Refresh provider truth before local cleanup.
+.venv/bin/vastai show instances --raw
+.venv/bin/python scripts/reconcile_vast_dispatch_state.py --json --max-items 1000
+.venv/bin/modal app list --json
+
+# If those checks still show Vast [] and Modal Tasks=0, stale local launch
+# locks can be removed. This does not stop provider compute.
+rm -v \
+  .omx/state/launch_locks/lane_12_nerv_2026-04-30_codex_json.lock \
+  .omx/state/launch_locks/lane_12_nerv_2026-04-30_codex_json40.lock \
+  .omx/state/launch_locks/lane_12_nerv_2026-04-30_codex_jsonfix40.lock \
+  .omx/state/launch_locks/lane_19_logit_margin_2026-04-30.lock \
+  .omx/state/launch_locks/lane_19_logit_margin_2026-04-30_q1_20260430T211406Z.lock \
+  .omx/state/launch_locks/lane_19_logit_margin_2026-04-30_q1c_20260430T211553Z.lock \
+  .omx/state/launch_locks/lane_19_logit_margin_2026-04-30_qtest.lock \
+  .omx/state/launch_locks/lane_20_balle_2026-04-30.lock \
+  .omx/state/launch_locks/lane_20_balle_2026-04-30_q2_20260430T211618Z.lock \
+  .omx/state/launch_locks/lane_h_v3_joint_halfframe_2026-04-30_codex.lock \
+  .omx/state/launch_locks/lane_sa_segmap_clone_2026-04-30_codex.lock
+```
+
+No Vast destroy command is recommended because there are no live Vast
+instances. No Modal stop command is recommended from this audit because the
+`comma-train-lane` apps report zero tasks and old detached app shells may still
+be useful for log/call forensic lookup.

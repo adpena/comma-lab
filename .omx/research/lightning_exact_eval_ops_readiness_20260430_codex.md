@@ -229,3 +229,97 @@ Land the runner-preflight hardening above, run a fresh corrected dry-run, then
 submit the same spec without `--dry-run` only after local and remote strict
 supply-chain scans still pass and the dry-run command includes the in-job
 preflight artifacts.
+
+## 2026-04-30T23:17Z Worker E Component-Gate Exit Semantics Audit
+
+Scope: read-only review of `src/tac/deploy/lightning/batch_jobs.py` and
+`scripts/launch_lightning_batch_job.py` after `harvest-ssh` landed. No runtime
+code was edited in this audit.
+
+Current behavior:
+
+- `exact_cuda_eval_command()` runs under `set -euo pipefail`.
+- `_adjudication_command()` pipes `scripts/adjudicate_contest_auth_eval.py`
+  through `tee`, so the adjudicator exit code controls the SDK job result.
+- `scripts/adjudicate_contest_auth_eval.py` writes
+  `adjudication_provenance.json` and `contest_auth_eval.adjudicated.json`, then
+  returns `2` only when `component_gate_triggered=true`.
+- `validate_local_artifact_dir()` already treats this as valid forensic
+  evidence: it returns `promotion_eligible=false`,
+  `adjudication_lane_status=COMPONENT_GATE_REVIEW_REQUIRED`, and preserves the
+  component-gate violation details.
+- `harvest_ssh_artifacts()` can mirror failed SDK jobs successfully by deriving
+  the SDK-persisted Studio artifact path and copying only canonical artifacts.
+
+Recommendation:
+
+Component-gate-only outcomes should not keep Lightning SDK jobs `Failed` once
+the CUDA eval, archive identity checks, runner preflights, adjudication JSON,
+and artifact copies completed. They should be successful Batch Jobs that
+produce forensic, non-promotable evidence. SDK `Failed` should mean an
+operational or custody failure: missing CUDA, wrong sample count, archive
+identity mismatch, missing JSON, malformed adjudication, missing artifacts,
+supply-chain/preflight failure, timeout, or crash.
+
+Rationale:
+
+- A component gate is a scientific/adjudication result, not an execution
+  failure. The current behavior conflates "measured implementation failed a
+  predeclared component constraint" with "Batch Job failed to produce valid
+  evidence".
+- The current adjudicator already returns success for score-regression review
+  when no component gate fires; component gates should use the same evidence
+  semantics while still marking promotion ineligible.
+- `harvest-ssh` plus artifact validation now gives enough custody to preserve
+  non-promotable failures without depending on a red SDK job state.
+- Keeping gate-only jobs failed encourages duplicate retries and stale queue
+  alarms even when the result is complete and scientifically useful.
+
+Concrete patch plan:
+
+1. Add an explicit mode to `scripts/adjudicate_contest_auth_eval.py`, for
+   example `--allow-component-gate-forensic-success`.
+   - Default behavior stays fail-closed and returns `2` on component gates, so
+     existing remote promotion scripts do not silently change semantics.
+   - With the new flag, component-gate violations still write provenance,
+     print the violation summary, set `component_gate_triggered=true`, and
+     return `0`.
+
+2. Thread the new adjudicator flag through Lightning exact-eval command
+   generation in `src/tac/deploy/lightning/batch_jobs.py`.
+   - Add a `LightningAdjudicationSpec` field such as
+     `allow_component_gate_forensic_success: bool = True` for Lightning Batch
+     exact-eval specs.
+   - Include the field in `asdict()`/metadata so the artifact records the exit
+     policy.
+   - Have `_adjudication_command()` append
+     `--allow-component-gate-forensic-success` when the field is true.
+   - Have `LightningBatchJobSpec.validate()` require that exact CUDA eval
+     commands contain the flag, or explicitly document any opt-out.
+
+3. Keep artifact validation promotion semantics unchanged.
+   - `validate_local_artifact_dir()` should continue accepting adjudicated
+     component-gate artifacts and returning `promotion_eligible=false`.
+   - Do not weaken checks for CUDA device, sample count, archive SHA/bytes,
+     supply-chain scans, DALI/bootstrap, runner preflight, or adjudicated JSON
+     equality.
+
+4. Add focused tests.
+   - New adjudicator CLI test: component gate plus default mode returns `2` and
+     writes provenance/result-copy artifacts.
+   - New adjudicator CLI test: component gate plus forensic-success flag
+     returns `0`, writes identical artifacts, and records
+     `component_gate_triggered=true`.
+   - Lightning command-generation test asserts
+     `--allow-component-gate-forensic-success` is present in exact-eval jobs.
+   - Existing validation test
+     `test_validate_local_artifact_dir_reports_failed_component_gate_as_non_promotable`
+     already covers the harvest-side non-promotable result and should remain.
+
+Patch risk:
+
+- Low if the default adjudicator behavior remains unchanged and only Lightning
+  Batch exact-eval opts into forensic-success exit semantics.
+- Medium if the adjudicator default changes globally, because remote lane
+  scripts using strict shell mode may currently rely on exit `2` to stop
+  promotion flows.

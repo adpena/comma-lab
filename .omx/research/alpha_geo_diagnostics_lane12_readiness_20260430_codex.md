@@ -177,3 +177,116 @@ Changed files from this turn:
 - `src/tac/tests/test_lane12_nerv_geometry_diagnostics.py`
 - `experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_0_vs_lane_g_v3_codex_2px_hashes.json`
 - `.omx/research/alpha_geo_diagnostics_lane12_readiness_20260430_codex.md`
+
+## Residual Region Ranking Addendum
+
+Date: 2026-04-30. Scope: Alpha visual-primitive/geometry diagnostic tooling
+only. No MCP, Lightning, OWV3, retraining, archive rebuild, paid dispatch, or
+CUDA score eval was used.
+
+Evidence boundary: the new residual-region ranking is CPU tensor evidence with
+`score_evidence_grade=empirical`, `device=cpu`, `promotion_eligible=false`,
+and `score_claim_eligible=false`. It can prioritize sparse residual repair or
+reject future Alpha candidates before exact-eval spend. It cannot promote,
+rank by contest score, kill a method family, or supersede exact CUDA auth eval.
+Score truth remains exact archive bytes through:
+
+```text
+archive.zip -> inflate.sh -> upstream/evaluate.py
+```
+
+Patch summary:
+
+- Added `residual_region_ranking` to `experiments/diagnose_nerv_geometry.py`.
+- Ranking uses decoded baseline/candidate mask disagreements only; no scorer or
+  PoseNet proxy is loaded.
+- Priority is deterministic and lexicographic: lower-field lane-marking
+  residuals, lane residuals, road/vehicle boundary residuals, near-field
+  vehicle residuals, temporal-transition residuals, remaining boundary
+  residuals, then other class disagreement.
+- Each ranked region records frame, box, centroid, class histograms, confusion
+  pairs, critical-class pixels, boundary-band pixels, temporal-transition
+  disagreement pixels, estimated uncompressed pixels, and a deterministic
+  suggested repair class.
+- CLI controls were added for residual count, minimum area, boundary radius,
+  near-field y fraction, and critical classes.
+
+Focused test coverage:
+
+- Synthetic ranking test confirms lower-field lane-marking errors outrank less
+  critical residual regions and that the packet is CPU/non-promotable.
+- CLI test confirms residual ranking options and output are written into JSON.
+
+Verification:
+
+```bash
+.venv/bin/python -m py_compile experiments/diagnose_nerv_geometry.py src/tac/tests/test_lane12_nerv_geometry_diagnostics.py
+.venv/bin/python -m pytest src/tac/tests/test_lane12_nerv_geometry_diagnostics.py -q
+```
+
+Result:
+
+```text
+11 passed in 1.10s
+```
+
+Existing-artifact diagnostic command:
+
+```bash
+.venv/bin/python experiments/diagnose_nerv_geometry.py \
+  --baseline experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip \
+  --baseline-member masks.mkv \
+  --candidate experiments/results/lane_12_nerv_20260430_codex_jsonfix40/archive_lane_12_nerv.zip \
+  --candidate-member masks.nrv \
+  --output-json experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_0_vs_lane_g_v3_residual_regions_20260430.json \
+  --threshold-preset exploratory \
+  --residual-region-count 25 \
+  --residual-region-min-area 4 \
+  --residual-region-boundary-radius 2
+```
+
+Expected result: exit code `2`, because the known `jsonfix40` artifact still
+fails exploratory Alpha-Geo gates.
+
+New artifact:
+
+```text
+path = experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_0_vs_lane_g_v3_residual_regions_20260430.json
+sha256 = 99a5747ff2ceca745845a1316df8acf906969a7109d0f1a4400e29bc653f8a9c
+regions_considered = 112829
+regions_returned = 25
+overall_pass = false
+global_disagreement = 0.012303928799099393
+boundary_2px_disagreement = 0.14883144511692872
+pair_transition_disagreement = 0.009507171571470149
+```
+
+Top residual repair targets from existing `jsonfix40` vs Lane G v3 baseline:
+
+```text
+1. frame 267, box [0,173,131,257], area 6823 px,
+   priority = lower_field_lane_marking,
+   repair = lane_lower_field_residual,
+   critical_class_pixels = 3090,
+   boundary_band_pixels = 1102,
+   temporal_transition_disagreement_pixels = 6818
+2. frame 716, box [342,190,512,233], area 844 px,
+   priority = lower_field_lane_marking,
+   repair = lane_lower_field_residual,
+   critical_class_pixels = 844,
+   boundary_band_pixels = 556,
+   temporal_transition_disagreement_pixels = 693
+3. frame 1198, box [338,230,443,288], area 628 px,
+   priority = lower_field_lane_marking,
+   repair = lane_lower_field_residual,
+   critical_class_pixels = 595,
+   boundary_band_pixels = 616,
+   temporal_transition_disagreement_pixels = 315
+```
+
+Interpretation: the next bounded Alpha work should not spend exact CUDA on
+`jsonfix40` or any similarly failing mask stream. Use the ranked regions to
+design charged residual corrections or primitive-weighted decoded-baseline
+training, then rerun Alpha-Geo diagnostics. Exact CUDA auth eval remains
+blocked until a future candidate has passing geometry diagnostics or a reviewed
+forensic exception plus pose-regeneration provenance and clean archive custody.
