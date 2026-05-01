@@ -108,3 +108,8 @@ src/tac.egg-info/
 .omx/state/.subagent-temp-index-*
 .omx/state/.subagent-temp-index-*.lock
 .omx/state/launch_locks/
+
+# Ralph tool backup files (auto-generated)
+.ralph/*.bak
+# Ephemeral .omx/tmp/ scratch (never commit)
+.omx/tmp/

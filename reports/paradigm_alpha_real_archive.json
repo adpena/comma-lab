@@ -1,0 +1,24 @@
+{
+  "archive": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
+  "baseline_av1_bytes": 421483,
+  "masks_shape": [
+    1200,
+    384,
+    512
+  ],
+  "candidates": {
+    "alpha2_wavelet": {
+      "candidate": "alpha2_wavelet",
+      "config": {
+        "levels": 2,
+        "step_ll": 0.5,
+        "step_detail": 1.0
+      },
+      "encoded_bytes": 24084137,
+      "argmax_agreement_vs_source": 1.0,
+      "argmax_disagreement_vs_source": 0.0,
+      "bytes_saved_vs_av1": -23662654,
+      "pct_savings_vs_av1": -5614.14
+    }
+  }
+}

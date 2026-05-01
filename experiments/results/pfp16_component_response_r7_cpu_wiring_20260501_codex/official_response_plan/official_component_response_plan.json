@@ -1,0 +1,276 @@
+{
+  "baseline_archive": {
+    "bytes": 686635,
+    "path": "../../lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+    "sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+  },
+  "baseline_contest_auth_eval": {
+    "bytes": 4287,
+    "path": "../../lane_g_v3_pfp16/final_deploy_bundle_20260430/eval/contest_auth_eval.json",
+    "sha256": "b84e7352165cf0d2be0631a177d8404c3a1e5f27633d82d48990552b9ef382ab"
+  },
+  "baseline_contest_auth_eval_json": "../../lane_g_v3_pfp16/final_deploy_bundle_20260430/eval/contest_auth_eval.json",
+  "format": "official_component_response_plan_v1",
+  "perturbation": {
+    "archive_variants_manifest": "archive_variants_manifest.json",
+    "archive_variants_manifest_sha256": "24926738bcc63330729396850f54a99599ae6b0c287e5b11fcf1620b7cf0f174",
+    "auth_eval_required": "cuda",
+    "basis_id": "f6144e200ad69cb937cfc78f6d3d62aa3f71a91011493373f888f11691d6749c",
+    "basis_kind": "archive_byte_additive",
+    "basis_path": "perturbation_basis_v1.json",
+    "basis_sha256": "238572dda73cdf9bc01b572db853ee99ecb0b67a2a0a12ab1655fc9590660e09",
+    "canonical_response_eval_path": "archive.zip -> inflate.sh -> upstream/evaluate.py",
+    "epsilon_units": "signed_integer_step",
+    "format": "perturbation_basis_v1",
+    "mutation_policy": {
+      "allow_renderer_magic_mutation": false,
+      "allowed_mutation_members": [
+        "renderer.bin"
+      ],
+      "byte_delta_formula": "new_byte = old_byte + round(epsilon * delta_per_epsilon)",
+      "byte_range": [
+        0,
+        255
+      ],
+      "max_abs_byte_delta": 32,
+      "max_mutated_bytes": 1024,
+      "max_raw_l1_delta": 4096,
+      "out_of_range": "fail_closed"
+    },
+    "predicted_deltas_source": {
+      "bytes": 18910,
+      "path": "../official_component_response_prediction_deltas.json",
+      "sha256": "b40dfb5e758ca8abc3c1a486bf067585cb3144c0277b1c856a2a2e8570e2b716"
+    },
+    "prediction_model": {
+      "equation": "predicted_delta[component] = sum_atoms round(epsilon * delta_per_epsilon)^2 * component_sensitivity[layer_name.weight][channel_index]",
+      "model": "quadratic_archive_byte_channel_sensitivity_projection_v1",
+      "prediction_delta_semantics": "nonnegative_component_delta_magnitude",
+      "prediction_error_mode": "absolute_magnitude",
+      "sign_policy": "nonnegative component-delta magnitude from nonnegative sensitivity maps; signed improvement/degradation claims require a future signed-map artifact",
+      "uses_official_response_observations": false
+    }
+  },
+  "points": [
+    {
+      "archive": "archives/point_000_eps_m2.zip",
+      "archive_bytes": 686632,
+      "archive_sha256": "1b1c771caf07a6026d33242af756042884497404e73a209b91d12b9a1074f46a",
+      "changed_member_bytes": 5,
+      "epsilon": -2.0,
+      "max_abs_byte_delta": 2,
+      "member_mutations": [
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 74,
+          "offset": 45858,
+          "original_byte": 76
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 112,
+          "offset": 72254,
+          "original_byte": 114
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 86,
+          "offset": 104782,
+          "original_byte": 88
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 140,
+          "offset": 137310,
+          "original_byte": 142
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 177,
+          "offset": 169838,
+          "original_byte": 179
+        }
+      ],
+      "predicted_delta": {
+        "combined": 1.5557104339823127,
+        "posenet": 0.42213949622237124,
+        "segnet": 0.7839438105002046
+      },
+      "raw_l1_byte_delta": 10
+    },
+    {
+      "archive": "archives/point_001_eps_m1.zip",
+      "archive_bytes": 686632,
+      "archive_sha256": "c8f064d7d2800ee906b6b6a39521477e95f497496e296a05f63af40213745787",
+      "changed_member_bytes": 5,
+      "epsilon": -1.0,
+      "max_abs_byte_delta": 1,
+      "member_mutations": [
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 75,
+          "offset": 45858,
+          "original_byte": 76
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 113,
+          "offset": 72254,
+          "original_byte": 114
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 87,
+          "offset": 104782,
+          "original_byte": 88
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 141,
+          "offset": 137310,
+          "original_byte": 142
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 178,
+          "offset": 169838,
+          "original_byte": 179
+        }
+      ],
+      "predicted_delta": {
+        "combined": 0.38892760849557817,
+        "posenet": 0.10553487405559281,
+        "segnet": 0.19598595262505114
+      },
+      "raw_l1_byte_delta": 5
+    },
+    {
+      "archive": "../../lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+      "archive_bytes": 686635,
+      "archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+      "changed_member_bytes": 0,
+      "epsilon": 0.0,
+      "max_abs_byte_delta": 0,
+      "predicted_delta": {
+        "combined": 0.0,
+        "posenet": 0.0,
+        "segnet": 0.0
+      },
+      "raw_l1_byte_delta": 0
+    },
+    {
+      "archive": "archives/point_003_eps_p1.zip",
+      "archive_bytes": 686632,
+      "archive_sha256": "74207b51b03e6244c6c082123ada00a3d541c1474a4c7e3fc183392f0edbd450",
+      "changed_member_bytes": 5,
+      "epsilon": 1.0,
+      "max_abs_byte_delta": 1,
+      "member_mutations": [
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 77,
+          "offset": 45858,
+          "original_byte": 76
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 115,
+          "offset": 72254,
+          "original_byte": 114
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 89,
+          "offset": 104782,
+          "original_byte": 88
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 143,
+          "offset": 137310,
+          "original_byte": 142
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 180,
+          "offset": 169838,
+          "original_byte": 179
+        }
+      ],
+      "predicted_delta": {
+        "combined": 0.38892760849557817,
+        "posenet": 0.10553487405559281,
+        "segnet": 0.19598595262505114
+      },
+      "raw_l1_byte_delta": 5
+    },
+    {
+      "archive": "archives/point_004_eps_p2.zip",
+      "archive_bytes": 686632,
+      "archive_sha256": "7a16b74154798f90917605bb86a70d8730d3b33775aac44d573584661bea7de8",
+      "changed_member_bytes": 5,
+      "epsilon": 2.0,
+      "max_abs_byte_delta": 2,
+      "member_mutations": [
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 78,
+          "offset": 45858,
+          "original_byte": 76
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 116,
+          "offset": 72254,
+          "original_byte": 114
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 90,
+          "offset": 104782,
+          "original_byte": 88
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 144,
+          "offset": 137310,
+          "original_byte": 142
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 181,
+          "offset": 169838,
+          "original_byte": 179
+        }
+      ],
+      "predicted_delta": {
+        "combined": 1.5557104339823127,
+        "posenet": 0.42213949622237124,
+        "segnet": 0.7839438105002046
+      },
+      "raw_l1_byte_delta": 10
+    }
+  ],
+  "producer": "experiments/build_component_response_perturbation_plan.py",
+  "schema_version": 1
+}
