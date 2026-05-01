@@ -63,6 +63,66 @@ Every scored archive must record exact archive bytes, archive SHA-256,
 component distances, sample count, recomputed score, eval command, hardware,
 manifest, provenance, and logs.
 
+## Build Discipline — OSS, Paper, Production, Composability
+
+Every lane, codec, training script, decoder, optimizer, and tool must be
+designed with FOUR durable constituencies in mind from the first commit.
+Optimizing only for the current contest dispatch is forbidden — work must
+remain useful past the May 3 deadline.
+
+1. **OSS-readiness.** Code lands with permissive structure (clear module
+   boundaries, no hard-coded operator paths, no embedded credentials, MIT/
+   Apache-compatible upstream choices). Public-facing API surfaces must have
+   docstrings, type hints, and a usage example. README/section in
+   `docs/` for every promoted lane. Avoid hidden private assumptions
+   (machine-specific paths, undocumented env-var sentinels, magic constants
+   without rationale).
+
+2. **Paper-readiness.** Every score, every loss curve, every architectural
+   choice ships with a `[evidence:<artifact>]` tag and an entry in the dated
+   `.omx/research/` ledger. Hyperparameters, seeds, schedules, and
+   ablations must be reproducible from the committed manifest. Any claim
+   that lands in a writeup must be backed by a contest-CUDA artifact (per
+   the Evidence Grades section). Mathematical derivations get a `[derivation:<source>]`
+   citation pointing to the ledger entry; empirical claims get
+   `[empirical:<artifact path>]`. Lane memory files contain the council
+   deliberation that resolves design tradeoffs — these become paper sections.
+
+3. **comma-ai production-readiness.** Inflate paths, decoders, and
+   runtime artifacts must be small, deterministic, and run on the production
+   target (T4-equivalent CUDA + 30 min budget). Custom decoders in Rust,
+   Zig, or C must compile reproducibly with a documented toolchain (no
+   "works-on-my-machine" Cargo features). Submission archives must carry
+   their own decoder when one is needed; sidecar dependencies are
+   forbidden per Contest Compliance. Provenance JSON must record every
+   binary's SHA-256, build host, and reproducible-build instructions.
+   Code that can be upstreamed to openpilot's compression path
+   (`src/comma_lab/`) belongs there, not in lane-local one-offs.
+
+4. **Stacking and composability.** Every component is designed to compose
+   with others in the canonical order
+   `representation → prediction → quantization → hyperprior → arithmetic → pack`
+   (see memory `project_codec_stacking_composition_canonical_orders_20260429.md`).
+   Codecs accept a typed input contract (frames/masks/poses/weights) and
+   emit a typed output contract (bytes + decoder + meta), without
+   in-place mutations to global state. Cross-stream coordinators (Joint-ADMM,
+   water-fill, multi-pass) operate on these contracts, never on hidden
+   side-channels. Bolt-on lanes (PD-V2, LCT, Ω-W-V3, NeRV-mask) must
+   compose with the deploy champion's archive without re-deriving the
+   primary representation. New axes ship with stack-composition
+   documentation showing which other axes they're orthogonal to and
+   which they conflict with.
+
+When these four constituencies disagree (e.g., a faster contest-only
+shortcut conflicts with paper reproducibility), the slower path that
+preserves all four wins. The user has stated explicitly that this work
+continues past May 3 for paper, OSS release, and production deployment;
+short-term contest gains that compromise long-term value are net-negative.
+
+Subagents and codex-spawned helpers must inherit these four constituencies
+in their commits — review their output for OSS hygiene, ledger entries,
+production fitness, and composability hooks before promoting.
+
 ## Evidence Grades
 
 Use evidence grades rigorously:
@@ -212,6 +272,15 @@ are independent:
 - Hidden-gem recovery: bugged lanes re-engineered under strict evidence gates.
 - Gamma coordination: ADMM/MDL/entropy/hyperprior/range or arithmetic coding
   only after measured components exist.
+- Custom overfit decoder work: Rust/Zig/C/static-binary, Python bytecode,
+  bitpacked RLE/ANS/range-coded streams, temporal grammars, small learned
+  decoders, RL/bandit searched payloads, and unlimited offline compression
+  search are in scope when they are contest-compliant. The complete decoder
+  contract and all score-affecting payload bits must be inside `archive.zip`
+  or fixed submission code; no scorer patches, external sidecars, network
+  fetches, host-local files, or nondeterministic runtime generation are
+  allowed. Complex lanes have the same priority as small byte-shaving lanes
+  when they can run in parallel and preserve exact custody.
 
 Stack experiments wait until component archives have exact evidence. A stack is
 its own archive and must pass its own exact eval.
