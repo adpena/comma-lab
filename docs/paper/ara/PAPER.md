@@ -5,7 +5,7 @@ title: "Task-Aware Video Compression: From Codec Post-Filtering to Neural Render
 project: pact
 project_track: "comma.ai video compression challenge"
 deadline: 2026-05-03
-last_updated: 2026-04-29
+last_updated: 2026-04-30
 status: draft
 audiences:
   - human_reviewer: "comma.ai writeup-prize judges"
@@ -23,9 +23,9 @@ disclosure_policy:
     - "Specific Selfcomp paradigm sequencing decisions"
     - "Cloudflare site URL (until human approval)"
 score_lanes:
-  contest_compliant_floor: 1.05
-  contest_compliant_floor_evidence: "evidence/results/lane_g_v3_landed/contest_auth_eval.json"
-  contest_compliant_units: "[contest-CUDA]"
+  contest_compliant_floor: 1.043987524793892
+  contest_compliant_floor_evidence: "experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/eval/contest_auth_eval.json"
+  contest_compliant_units: "[contest-CUDA A++]"
   unlimited_compute_used: false
   unlimited_compute_units: "[unlimited-compute]"
 layer_index:
@@ -47,9 +47,11 @@ machine-executable knowledge package that replaces a single PDF narrative.
 - **What we did:** task-aware video compression that backpropagates through
   frozen PoseNet and SegNet scorer networks. Two distinct paradigms:
   Era 1 (AV1 + tiny CNN post-filter, 4.06 -> 1.73), Era 2 (neural renderer that
-  bypasses the codec, 1.73 -> 1.05 [contest-CUDA]).
-- **Where we are:** contest-CUDA floor `1.05` (Lane G v3, KL distill weight=0.002
-  + pose TTO retry). Modal T4 reproduction `1.04` within noise.
+  bypasses the codec, 1.73 -> 1.04 [contest-CUDA A++] after PFP16).
+- **Where we are:** contest-CUDA A++ floor `1.043987524793892` (PFP16 A++ on
+  Lane G v3 renderer; exact Tesla T4 auth eval). The authoritative artifact is
+  `experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/eval/contest_auth_eval.json`;
+  stale build-provenance parser fields are quarantined in the final bundle.
 - **Live work (Era 3):** Selfcomp paradigm portfolio (8 Modal lanes); not
   reported until [contest-CUDA] verified.
 - **Why the writeup matters:** the challenge has a separate writeup prize.

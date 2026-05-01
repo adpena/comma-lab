@@ -26,6 +26,8 @@ emit per-claim provenance metadata.
 | Reference                                          | Repository path                                                                       |
 |----------------------------------------------------|---------------------------------------------------------------------------------------|
 | `era2/lane_a_landed/contest_auth_eval.json`        | `../../../experiments/results/lane_a_landed/contest_auth_eval.json`                   |
+| `era2/lane_g_v3_pfp16_a_plus_plus/contest_auth_eval.json` | `../../../experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/eval/contest_auth_eval.json` |
+| `era2/lane_g_v3_pfp16_a_plus_plus/custody_manifest.json` | `../../../experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/custody/custody_manifest.json` |
 | `era2/lane_g_v3_landed/contest_auth_eval.json`     | `../../../experiments/results/lane_g_v3_landed/contest_auth_eval.json`                |
 | `era2/modal_repro/9b20bdfca246.json`               | `../../../experiments/results/modal_auth_eval_9b20bdfca246.json`                      |
 | `era2/lane_m_v2_audit/council_findings.md`         | (memory: `project_lane_m_v2_audit_council_findings_20260428.md`)                      |

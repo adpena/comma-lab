@@ -97,20 +97,48 @@ Format: each claim is one block. `id` is stable across compilations.
 - **code**: `src/tac/optimize_poses.py`
 - **public_safe**: yes (this is the headline Era 2 mechanism).
 
-## C8 — KL distill weight=0.002 dominates weight=0.01 on the same renderer
+## C8 — KL/distillation-family status is forensic-gated
 
-- **statement**: KL distillation on SegNet logits at T=2.0 with weight=0.002
-  improves both PoseNet (-31%) and SegNet (-13%) at the same archive size,
-  whereas weights >= 0.01 collapse PoseNet.
-- **falsifier**: any tested weight in [0.001, 0.005] that fails to reproduce
-  the joint improvement.
-- **status**: empirically supported on Lane G v3 (Vast.ai 4090) and reproduced
-  on Modal T4 within 0.01 noise.
+- **statement**: Primary scorer KL is promotion-ineligible. SegNet-auxiliary
+  KL, JBL, and related distillation-family variants are hypotheses, not a
+  public-safe mechanism claim, until exact CUDA archive eval proves archive
+  SHA/bytes, full component gates, and explicit non-collapse evidence. Lane
+  G v3/PFP16 remains the current score anchor, but it must not be attributed
+  to a proven KL recipe without matched exact-CUDA ablations.
+- **falsifier**: any public/paper claim that a KL-family recipe is promoted,
+  causally proven, or safe without exact CUDA archive custody plus matched
+  component evidence.
+- **status**: forensic-gated policy. Historical primary-KL failures remain
+  negative evidence; scoped auxiliary-KL variants require fresh exact CUDA
+  proof before promotion or mechanism claims.
 - **evidence**: `evidence/era2/lane_g_v3_landed/contest_auth_eval.json`,
-  `evidence/era2/modal_repro/9b20bdfca246.json`
-- **code**: `src/tac/training.py`, `src/tac/profiles.py`
-- **public_safe**: yes (the mechanism); the precise weight schedule for
-  derivative lanes is private.
+  `evidence/era2/modal_repro/9b20bdfca246.json`,
+  `.omx/research/kl_distill_hardening_grand_council_review_20260430_agent.md`
+- **code**: `src/tac/training.py`, `src/tac/profiles.py`,
+  `src/tac/losses.py`, `src/tac/losses_jbl.py`
+- **public_safe**: yes only as a rigor lesson and gating policy; no KL-family
+  mechanism is public-safe as a promoted result without matched ablation proof.
+
+## C11 — PFP16 A++ is the current contest-grade frontier
+
+- **statement**: The PFP16 A++ archive is the current exact contest-grade
+  frontier: recomputed score `1.043987524793892`, archive `686635` bytes,
+  SHA-256 `0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f`,
+  `n=600`, Tesla T4 CUDA, `gpu_t4_match=true`.
+- **falsifier**: exact `contest_auth_eval.py --device cuda` on the same
+  archive SHA recomputes a different score or fails payload closure.
+- **status**: A++ exact archive evidence. Legacy remote-provenance parser
+  fields (`contest_cuda_score=100.0`, `hard_kill_triggered=true`,
+  `lane_status=HARD_KILL_REGRESSION`) are quarantined and invalid for claims.
+- **evidence**:
+  `../../../experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/eval/contest_auth_eval.json`,
+  `../../../experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/custody/custody_manifest.json`
+- **code**: `src/tac/pfp16_codec.py`,
+  `experiments/build_lane_g_v3_pfp16_stack.py`,
+  `submissions/robust_current/inflate_renderer.py`
+- **experiment**: `experiments.md#E11`
+- **public_safe**: yes, only with the custody manifest and
+  `contest_auth_eval.json` authority note.
 
 ## C9 — Train/inference pose-pad asymmetry is a recurring measurement bug
 

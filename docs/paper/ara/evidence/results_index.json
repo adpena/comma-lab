@@ -1,8 +1,19 @@
 {
   "ara_version": "0.1",
-  "compiled_at": "2026-04-29T16:51:36.232922Z",
-  "record_count": 12,
+  "compiled_at": "2026-04-30T17:10:38Z",
+  "record_count": 13,
   "records": [
+    {
+      "archive_bytes": 686635,
+      "artifact_path": "experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/eval/contest_auth_eval.json",
+      "captured_at": "2026-04-30T16:20:05Z",
+      "lane": "lane_g_v3_pfp16_a_plus_plus",
+      "posenet": 0.00346442,
+      "rate": 0.01828808,
+      "score": 1.043987524793892,
+      "score_lane": "[contest-CUDA A++]",
+      "segnet": 0.00400656
+    },
     {
       "archive_bytes": null,
       "artifact_path": "experiments/results/lane_a_landed/contest_auth_eval.json",

@@ -11902,6 +11902,18 @@ def check_python_heredocs_no_undefined_names(
                                         defined.add(elt.id)
                     elif isinstance(node, ast.AugAssign) and isinstance(node.target, ast.Name):
                         defined.add(node.target.id)
+                    elif isinstance(node, ast.AnnAssign):
+                        # Annotated assignment: `name: type = value` or `name: type`.
+                        # 2026-05-01 fix: previously missed because only ast.Assign +
+                        # ast.AugAssign were handled. False-positive on
+                        # `scripts/remote_lane_nerv.sh:81-110` (function-local
+                        # `meta: dict = {...}`) was the trigger.
+                        if isinstance(node.target, ast.Name):
+                            defined.add(node.target.id)
+                    elif isinstance(node, ast.NamedExpr) and isinstance(node.target, ast.Name):
+                        # Walrus operator: `(name := value)` (PEP 572). Same class
+                        # of false-positive risk as AnnAssign.
+                        defined.add(node.target.id)
                     elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
                         defined.add(node.name)
                     elif isinstance(node, ast.For):
@@ -16799,12 +16811,29 @@ def _scan_imp_dispatcher_for_train_distill_swap(
     import re as _re
 
     def _has_real_invocation(target: str) -> bool:
-        # Match: optional " or nothing, runner, optional ", whitespace, -u, ws, target
-        pattern = (
-            r'(?:"?\$PYBIN"?|python3?|\.venv/bin/python)\s+-u\s+'
-            + _re.escape(target)
+        # Match: optional " or nothing, runner, optional ", whitespace,
+        # then EITHER `-u <target>` OR `-u -m <module>` OR `-m <module>`.
+        # Round 1 council greenup MEDIUM #9: the prior regex required `-u`
+        # AND the file path; legitimate dispatchers using `python -m
+        # experiments.train_distill` were false-positive flagged.
+        runner = r'(?:"?\$PYBIN"?|python3?|\.venv/bin/python)'
+        # File-path form (target ends with .py): `<runner> -u <target.py>`.
+        pattern_filepath = (
+            runner + r'\s+-u\s+' + _re.escape(target)
         )
-        return bool(_re.search(pattern, text))
+        if _re.search(pattern_filepath, text):
+            return True
+        # Module form: convert `experiments/train_distill.py` →
+        # `experiments.train_distill` and look for `<runner> [-u] -m <module>`.
+        if target.endswith(".py"):
+            module_path = target[:-3].replace("/", ".")
+            pattern_module = (
+                runner + r'\s+(?:-u\s+)?-m\s+'
+                + _re.escape(module_path) + r'\b'
+            )
+            if _re.search(pattern_module, text):
+                return True
+        return False
 
     invokes_imp_cycle = _has_real_invocation("experiments/train_imp_cycle.py")
     if not invokes_imp_cycle:
@@ -18687,7 +18716,16 @@ def _pcc4_has_enumerated_item_after(text: str, header_literals: tuple[str, ...])
 
 def _pcc4_file_has_kill_semantics(path: Path, text: str) -> bool:
     """True if the file MUST be scanned by this check (filename glob
-    OR body literal match)."""
+    OR body literal match).
+
+    Body-literal match excludes occurrences inside markdown table rows
+    (lines whose lstripped form starts with `|`). Status checkpoints and
+    forensic audits frequently CITE retired/falsified lanes in summary
+    tables; that is not the same as a kill verdict ABOUT the file itself.
+    Round 1 of the recursive greenup council pass caught this false
+    positive (memory: feedback_grand_council_recursive_greenup_shannon_
+    floor_20260501.md, CRITICAL #5).
+    """
     name = path.name
     name_lower = name.lower()
     # Filename glob match.
@@ -18700,10 +18738,25 @@ def _pcc4_file_has_kill_semantics(path: Path, text: str) -> bool:
             kw = pat_lower.replace("project_*", "").replace("*.md", "")
             if name_lower.startswith("project_") and kw in name_lower:
                 return True
-    # Body literal match (case-sensitive).
-    for lit in _PCC4_KILL_BODY_LITERALS:
-        if lit in text:
-            return True
+    # Body literal match (case-sensitive). Per Round 1 council greenup,
+    # exclude markdown table rows + lines inside fenced code blocks
+    # (`” ”` / `” ”python` etc.) — those are SELF-CITATIONS of other
+    # files' kill verdicts, not a verdict about the current file.
+    in_code_fence = False
+    for line in text.splitlines():
+        stripped = line.lstrip()
+        # Track fenced-code-block state.
+        if stripped.startswith("```"):
+            in_code_fence = not in_code_fence
+            continue
+        if in_code_fence:
+            continue
+        # Skip markdown table rows (lines that begin with `|`).
+        if stripped.startswith("|"):
+            continue
+        for lit in _PCC4_KILL_BODY_LITERALS:
+            if lit in line:
+                return True
     return False
 
 

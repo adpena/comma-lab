@@ -27,6 +27,8 @@ from the repository root with the standard `.venv/bin/python` interpreter.
 | C7    | `src/tac/optimize_poses.py`                      | per-pair pose TTO with rank-1 warm-start             |
 | C8    | `src/tac/training.py`                            | KL distill loss term (T=2.0, weight=0.002)           |
 | C8    | `src/tac/profiles.py`                            | Lane G v3 profile                                    |
+| C11   | `src/tac/pfp16_codec.py`                         | PFP16 pose payload codec                             |
+| C11   | `experiments/build_lane_g_v3_pfp16_stack.py`     | PFP16 archive builder                                |
 | C9    | `src/comma_lab/preflight/strict_checks.py`       | check_42_train_inference_parity                      |
 | C10   | `src/comma_lab/preflight/strict_checks.py`       | full STRICT check catalog                            |
 
@@ -37,13 +39,25 @@ from the repository root with the standard `.venv/bin/python` interpreter.
   python experiments/pipeline.py --profile proven_baseline --device cuda \
     --output-dir results/era1_repro
   ```
-- **Reproduce Era 2 floor (1.05 [contest-CUDA])**:
+- **Reproduce current PFP16 A++ floor (1.04 [contest-CUDA A++])**:
+  ```bash
+  .venv/bin/python experiments/contest_auth_eval.py \
+    --archive experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip \
+    --inflate-sh submissions/robust_current/inflate.sh \
+    --upstream-dir upstream \
+    --device cuda \
+    --keep-work-dir \
+    --work-dir experiments/results/lane_g_v3_pfp16/repro_eval_work
+  ```
+  The authoritative completed artifact is
+  `experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/eval/contest_auth_eval.json`.
+- **Reproduce historical Era 2 predecessor (1.05 [contest-CUDA])**:
   ```bash
   bash submissions/robust_current/inflate.sh \
     && python upstream/evaluate.py
   ```
   using the archive at `experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip`.
-- **Run Modal T4 contest-CUDA reproduction (1.04)**:
+- **Run historical Modal T4 reproduction of the Lane G v3 predecessor (1.04)**:
   ```bash
   .venv/bin/python experiments/modal_auth_eval.py \
     --archive experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip
@@ -59,6 +73,7 @@ profiles for the publishable claims:
 | `proven_baseline`   | 1   | h=64 QAT+EMA recipe (1.73 advisory)      |
 | `psd_standard_adaptive` | 1 | PSD architecture (alternate, advisory) |
 | `lane_g_v3`         | 2   | KL distill weight=0.002 + pose TTO retry |
+| PFP16 archive       | 2   | deterministic fp16 pose payload on Lane G v3 renderer |
 
 Profile keys NOT published here (Lane W, Lane Omega, Lane DARTS-S) are
 gated by the disclosure policy in `../PAPER.md`.
@@ -70,7 +85,9 @@ gated by the disclosure policy in `../PAPER.md`.
   proxy training; CPU for canonical local smoke)
 - NVDEC: pre-DALI probe required (Vast.ai NVDEC roulette mitigation)
 - Hardware envelopes:
-  - contest-CUDA: T4 (Modal) or A100 (Vast.ai/4090 acceptable substitute)
+  - contest-CUDA A++: Tesla T4 or contest-equivalent hardware with exact
+    `contest_auth_eval.py --device cuda` artifact custody
+  - contest-CUDA A: CUDA exact eval on other audited GPUs such as A100/4090
   - Era 1 long-horizon training: single consumer GPU, ~12h for h=64 at
     1000 epochs
   - Era 2 lane training: see `../../../experiments/results/<lane>/provenance.json`

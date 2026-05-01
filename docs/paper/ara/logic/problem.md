@@ -35,8 +35,8 @@ in pixel space.
    PoseNet sensitivity bandwidth (`evidence/cnn_residual/karpathy_2026-04-08.json`).
 4. **SegNet leverage at the operating point.** At score `1.73`, the partial
    derivative `dS/d(seg) = 100` and `dS/d(pose) ~= 2.74`. SegNet is ~36x more
-   leveraged than PoseNet on the marginal axis. By score `1.05`
-   (Era 2 floor), the leverage ratio shifts but SegNet still dominates.
+   leveraged than PoseNet on the marginal axis. By score `1.04`
+   (current PFP16 A++ floor), the leverage ratio shifts but SegNet still dominates.
 5. **MPS-vs-CUDA scorer drift (catastrophic).** PoseNet on Apple MPS produces
    pose distortion 23x larger than CUDA on identical artifacts. ALL "auth"
    scores prior to 2026-04-25 were measurement artifacts. The lab's first
@@ -53,12 +53,13 @@ Two distinct paradigms, in chronological order:
   weights (decay=0.997), and best-checkpoint int8 selection. Width scaling
   follows a log-linear law: `score = -0.159 ln(h) + 2.382`.
 
-- **Era 2 (neural renderer, 1.73 -> 1.05 [contest-CUDA]).** Abandon the codec.
+- **Era 2 (neural renderer, 1.73 -> 1.04 [contest-CUDA A++]).** Abandon the codec.
   A 287K-param dilated-h64 renderer (`AsymmetricPairGenerator`) takes per-pair
   6-DOF embeddings + low-resolution mask channels and emits 384x512 frames.
   AV1 only carries the masks. Compress-time pose TTO warm-started from
   baseline poses (Lane A, 1.15) followed by a small KL-distill nudge on
-  SegNet logits at weight=0.002 (Lane G v3, 1.05).
+  SegNet logits at weight=0.002 (Lane G v3, 1.05), then deterministic PFP16
+  pose payload custody (PFP16 A++, `1.043987524793892` recomputed).
 
 - **Era 3 (Selfcomp paradigm portfolio, live).** Eight Modal lanes
   reverse-engineered from the public Selfcomp 0.38 entry: grayscale-LUT
@@ -69,7 +70,7 @@ Two distinct paradigms, in chronological order:
 ## What this artifact does not claim
 
 - We do not claim to beat Quantizr 0.33 or Selfcomp 0.38. Our public floor
-  is `1.05`; live work targets sub-0.5 but those numbers are advisory only.
+  is `1.043987524793892`; live work targets sub-0.5 but those numbers are advisory only.
 - We do not claim that Era 1 numbers prior to 2026-04-25 are contest-CUDA
   valid. They are explicitly tagged `[MPS-PROXY]` and treated as advisory.
 
@@ -78,6 +79,8 @@ Two distinct paradigms, in chronological order:
 - Methodology rules: `../../../CLAUDE.md`
 - Pinned upstream snapshot: `../../../upstream/`
 - Era 1 promoted-floor evidence: `../evidence/era1/long1000_h64_authoritative/`
-- Era 2 contest-CUDA evidence: `../evidence/era2/lane_g_v3_landed/`
+- Era 2 contest-CUDA A++ evidence:
+  `../../../experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/`
+- Era 2 historical predecessor evidence: `../evidence/era2/lane_g_v3_landed/`
 - Detailed claims: `claims.md`
 - Verification plan: `experiments.md`

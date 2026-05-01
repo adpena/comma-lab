@@ -43,7 +43,8 @@ their result), or a baseline (we use them as the comparison floor).
   pose via affine_delta, single-mask-per-pair + 6-DOF affine duality.
   Reverse-engineered shifts inform our Era 3 portfolio but the specific
   sequencing decisions are private.
-- **our floor (#?)**: `1.05` [contest-CUDA] (Lane G v3, 694KB).
+- **our floor (#?)**: `1.04` [contest-CUDA A++] (PFP16 A++, 686,635 bytes;
+  exact Tesla T4 auth eval, `contest_auth_eval.json` authoritative).
 
 ## Methodological reference for THIS artifact
 

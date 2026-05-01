@@ -96,6 +96,23 @@ outcome. An Ara-native reviewer can verify any claim by walking
 - **failure mode if regressed**: would invalidate the Era 2 frontier claim;
   would require either a different KL weight or a new Era 2 path.
 
+## E11 — PFP16 A++ exact T4 auth eval
+
+- **tests**: C11
+- **prereq**: Lane G v3 renderer archive, PFP16 pose payload, canonical
+  `archive.zip -> inflate.sh -> upstream/evaluate.py` path
+- **command**: see
+  `../../../experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/eval/run_command.sh`
+- **artifact**:
+  `../../../experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/eval/contest_auth_eval.json`,
+  `../../../experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/custody/custody_manifest.json`
+- **success criterion**: exact CUDA eval on Tesla T4, `gpu_t4_match=true`,
+  `n_samples=600`, archive SHA
+  `0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f`,
+  recomputed score `1.043987524793892`
+- **failure mode if regressed**: do not parse logs or build provenance; use
+  `contest_auth_eval.json` only and quarantine stale parser fields.
+
 ## E9 — Lane M-V3 clean retest of rank-1 input subspace (PENDING)
 
 - **tests**: C9
