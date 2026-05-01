@@ -104,7 +104,9 @@ for f in "$ANCHOR_RENDERER" "$ANCHOR_MASKS" "$ANCHOR_POSES" \
          submissions/robust_current/inflate.sh \
          src/tac/multipass_compressor.py \
          experiments/pipeline.py \
-         experiments/auth_eval_renderer.py; do
+         experiments/auth_eval_renderer.py \
+         experiments/contest_auth_eval.py \
+         scripts/adjudicate_contest_auth_eval.py; do
     [ -f "$f" ] || { echo "FATAL: missing anchor $f" >&2; exit 1; }
 done
 log "  all anchors verified"
@@ -131,7 +133,7 @@ mkdir -p "$PIPELINE_OUT"
     --checkpoint "$ANCHOR_RENDERER" \
     --masks "$ANCHOR_MASKS" \
     --output-dir "$PIPELINE_OUT" \
-    --device "${AUTH_EVAL_DEVICE:-cuda}" \
+    --device cuda \
     --upstream upstream \
     --max-iterations 1 \
     --multipass \
@@ -179,7 +181,7 @@ rm -rf "$EVAL_WORK_DIR"
     --archive "$FINAL_ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
     --upstream-dir upstream \
-    --device "${AUTH_EVAL_DEVICE:-cuda}" \
+    --device cuda \
     --keep-work-dir \
     --work-dir "$EVAL_WORK_DIR" 2>&1 | tee "$EVAL_LOG" | tail -30
 PIPE_RC=("${PIPESTATUS[@]}")
@@ -188,15 +190,19 @@ if [ "${PIPE_RC[0]}" -ne 0 ]; then
     exit "${PIPE_RC[0]}"
 fi
 
-CANONICAL_SCORE=$("$PYBIN" -c "
-import re
-text = open('$EVAL_LOG').read()
-m = re.search(r'\"score\"\s*:\s*([0-9.]+)', text)
-if not m:
-    m = re.search(r'final[_ ]?score[\s:=]+([0-9.]+)', text, re.IGNORECASE)
-print(m.group(1) if m else 'NA')
-")
-log "  canonical contest_auth_eval score = $CANONICAL_SCORE [contest-CUDA]"
+RESULT_JSON="$LOG_DIR/canonical_contest_auth_eval.json"
+ADJUDICATION_LOG="$LOG_DIR/canonical_adjudication.log"
+"$PYBIN" -u scripts/adjudicate_contest_auth_eval.py \
+    --contest-json "$EVAL_WORK_DIR/contest_auth_eval.json" \
+    --provenance "$PROVENANCE" \
+    --archive "$FINAL_ARCHIVE" \
+    --result-copy "$RESULT_JSON" \
+    --baseline-score 1.05 \
+    --predicted-band 1.035 1.045 \
+    --regression-threshold 1.05 \
+    --delta-key score_delta_vs_lane_g_v3 | tee "$ADJUDICATION_LOG"
+CANONICAL_SCORE=$(grep '^SCORE_RECOMPUTED=' "$ADJUDICATION_LOG" | tail -1 | cut -d= -f2)
+log "  canonical contest_auth_eval score_recomputed = $CANONICAL_SCORE [contest-CUDA]"
 
 # Sanity: canonical score should match multipass-internal score within noise.
 "$PYBIN" -c "
@@ -219,6 +225,7 @@ summary = json.load(open('$SUMMARY_JSON'))
 prov['completed_at_utc'] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
 prov['final_score'] = summary['final_score']
 prov['final_archive_bytes'] = int('$ARCHIVE_BYTES')
+prov['canonical_contest_cuda_score_recomputed'] = float('$CANONICAL_SCORE')
 prov['n_passes'] = summary['n_passes']
 prov['converged'] = summary['converged']
 prov['target_hit'] = summary['target_hit']

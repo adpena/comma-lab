@@ -1,8 +1,9 @@
 #!/bin/bash
 # Lane PFP16 Stack — Lane G v3 + pose fp16 cast
 #
-# Lane GP v4 KILL VERDICT (.omx/research/council_lane_gp_v4_design_20260430.md)
-# surfaced Hotz's dominant-strategy successor: re-encode Lane G v3's
+# Lane GP v4 scoped smooth-basis retirement review
+# (.omx/research/council_lane_gp_v4_design_20260430.md) surfaced Hotz's
+# dominant-strategy successor: re-encode Lane G v3's
 # `optimized_poses.pt` (fp32 pickle, 15,620 B) as a raw fp16 binary
 # (`optimized_poses.bin`, 7,200 B). The inflate path already supports the
 # raw fp16 binary via Branch B of `tac.submission_archive.load_optimized_poses`
@@ -188,7 +189,7 @@ rm -rf "$EVAL_WORK_DIR"
     --archive "$STACKED_ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
     --upstream-dir upstream \
-    --device "${AUTH_EVAL_DEVICE:-cuda}" \
+    --device cuda \
     --keep-work-dir \
     --work-dir "$EVAL_WORK_DIR" 2>&1 | tee "$EVAL_LOG" | tail -30
 PIPE_RC=("${PIPESTATUS[@]}")
@@ -208,7 +209,7 @@ ADJUDICATION_LOG="$LOG_DIR/adjudication.log"
     --baseline-score 1.05 \
     --baseline-archive-bytes "$LANE_G_V3_BYTES" \
     --predicted-band 1.04 1.05 \
-    --hard-kill-above 1.05 \
+    --regression-threshold 1.05 \
     --delta-key score_delta_vs_lane_g_v3 | tee "$ADJUDICATION_LOG"
 SCORE=$(grep '^SCORE_RECOMPUTED=' "$ADJUDICATION_LOG" | tail -1 | cut -d= -f2)
 LANE_STATUS=$(grep '^LANE_STATUS=' "$ADJUDICATION_LOG" | tail -1 | cut -d= -f2)

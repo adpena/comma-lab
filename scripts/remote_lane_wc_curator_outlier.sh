@@ -330,7 +330,7 @@ python3 -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
     --upstream-dir upstream \
-    --device "${AUTH_EVAL_DEVICE:-cuda}" \
+    --device cuda \
     --keep-work-dir \
     --work-dir "$EVAL_WORK" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -30
     PIPE_RC=("${PIPESTATUS[@]}")
@@ -342,7 +342,8 @@ if [ -f "$EVAL_WORK/contest_auth_eval.json" ]; then
 elif [ -f "$LOG_DIR/auth_eval/contest_auth_eval.json" ]; then
     cp "$LOG_DIR/auth_eval/contest_auth_eval.json" "$RESULT_JSON"
 else
-    grep -Eo '\{.*\}' "$LOG_DIR/auth_eval.log" | tail -1 > "$RESULT_JSON" || true
+    echo "FATAL: auth eval did not write contest_auth_eval.json; refusing log JSON scrape" >&2
+    exit 2
 fi
 [ -s "$RESULT_JSON" ] || { echo "FATAL: auth eval did not write RESULT_JSON" >&2; exit 2; }
 

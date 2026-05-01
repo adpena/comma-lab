@@ -96,7 +96,9 @@ bash "$WORKSPACE/scripts/probe_nvdec.sh" || {
 for f in upstream/videos/0.mkv \
          upstream/models/segnet.safetensors \
          upstream/models/posenet.safetensors \
-         submissions/baseline_dilated_h64_0_90/optimized_poses.pt; do
+         submissions/baseline_dilated_h64_0_90/optimized_poses.pt \
+         experiments/contest_auth_eval.py \
+         scripts/adjudicate_contest_auth_eval.py; do
     [ -f "$f" ] || { echo "FATAL: missing $f" >&2; exit 1; }
 done
 
@@ -159,7 +161,7 @@ log "  tag:     $TAG"
 log "  schedule: 400ep P1 + 1080ep P2 + 200ep P3 + 200ep P4 + 100ep P5 = 1980 epochs"
 log "  estimated wall clock on 4090: ~5h (\$1.25 at \$0.25/hr)"
 
-# Smoke-kill metadata sidecar (matches Lane D-V3 with stricter late thresholds
+# Run-abort metadata sidecar (matches Lane D-V3 with stricter late thresholds
 # because the JOINT training should produce a strictly stronger renderer).
 cat > "$LOG_DIR/kill_targets.json" <<'EOF'
 {
@@ -173,7 +175,7 @@ cat > "$LOG_DIR/kill_targets.json" <<'EOF'
   "phase2_endpoint_scorer_max": 4.0,
   "phase4_end_epoch": 1880,
   "phase4_end_scorer_max": 2.0,
-  "comment": "Lane H-V3 hard kill targets. Curriculum is aggressive (5%-15% ramp); endpoint scorer should track Lane G v3's eval performance closely. Late thresholds tighter than Lane D-V3 because JOINT training avoids the distribution mismatch."
+  "comment": "Lane H-V3 run-abort targets. Curriculum is aggressive (5%-15% ramp); endpoint scorer should track Lane G v3's eval performance closely. Late thresholds are control thresholds only, not scientific kill evidence."
 }
 EOF
 
@@ -323,7 +325,7 @@ rm -rf "$LOG_DIR/eval_work"
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
     --upstream-dir upstream \
-    --device "${AUTH_EVAL_DEVICE:-cuda}" \
+    --device cuda \
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
     PIPE_RC=("${PIPESTATUS[@]}")
@@ -331,12 +333,19 @@ rm -rf "$LOG_DIR/eval_work"
         echo "FATAL: previous pipeline exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
     fi
 
-# RESULT_JSON guard.
-if ! grep -q "RESULT_JSON" "$LOG_DIR/auth_eval.log"; then
-    log "FATAL: auth_eval.log missing RESULT_JSON — silent eval crash. Investigate before reporting score."
-    exit 4
-fi
+RESULT_JSON="$LOG_DIR/RESULT_JSON"
+ADJUDICATION_LOG="$LOG_DIR/adjudication.log"
+"$PYBIN" -u scripts/adjudicate_contest_auth_eval.py \
+    --contest-json "$LOG_DIR/eval_work/contest_auth_eval.json" \
+    --provenance "$PROVENANCE" \
+    --archive "$ARCHIVE" \
+    --result-copy "$RESULT_JSON" \
+    --baseline-score 1.05 \
+    --baseline-archive-bytes 694074 \
+    --predicted-band 0.55 0.95 \
+    --regression-threshold 1.05 \
+    --delta-key score_delta_vs_lane_g_v3 | tee "$ADJUDICATION_LOG"
 
-log "=== LANE_H_V3_DONE [contest-CUDA] — see $LOG_DIR/auth_eval.log for RESULT_JSON ==="
+log "=== LANE_H_V3_DONE [contest-CUDA] — see $RESULT_JSON ==="
 log "  predicted band: [0.55, 0.95] standalone (vs Lane G v3 anchor 1.05)"
 log "  cost cap: \$1.50 / 6h on RTX 4090; destroy Vast.ai instance immediately at completion."

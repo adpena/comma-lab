@@ -111,7 +111,8 @@ for f in "$ANCHOR_RENDERER" "$ANCHOR_MASKS" "$ANCHOR_POSES" "$ANCHOR_ARCHIVE" \
          src/tac/owv2_renderer_archive.py \
          src/tac/water_filling_codec_v2.py \
          experiments/build_lane_g_v3_omega_w_v2_stack.py \
-         experiments/contest_auth_eval.py; do
+         experiments/contest_auth_eval.py \
+         scripts/adjudicate_contest_auth_eval.py; do
     [ -f "$f" ] || { echo "FATAL: missing anchor $f" >&2; exit 1; }
 done
 
@@ -148,7 +149,9 @@ fi
 
 [ -f "$STACKED_ARCHIVE" ] || { echo "FATAL: stacked archive not written" >&2; exit 2; }
 ARCHIVE_BYTES=$(stat -c '%s' "$STACKED_ARCHIVE" 2>/dev/null || stat -f '%z' "$STACKED_ARCHIVE")
+ARCHIVE_SHA=$("$PYBIN" -c "import hashlib, sys; print(hashlib.sha256(open(sys.argv[1], 'rb').read()).hexdigest())" "$STACKED_ARCHIVE")
 log "  stacked archive: $STACKED_ARCHIVE = $ARCHIVE_BYTES bytes"
+log "  stacked archive sha256: $ARCHIVE_SHA"
 
 # Sanity: archive must be < Lane G v3 baseline (the entire premise of this lane).
 LANE_G_V3_BYTES=$(stat -c '%s' "$ANCHOR_ARCHIVE" 2>/dev/null || stat -f '%z' "$ANCHOR_ARCHIVE")
@@ -167,7 +170,7 @@ rm -rf "$EVAL_WORK_DIR"
     --archive "$STACKED_ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
     --upstream-dir upstream \
-    --device "${AUTH_EVAL_DEVICE:-cuda}" \
+    --device cuda \
     --keep-work-dir \
     --work-dir "$EVAL_WORK_DIR" 2>&1 | tee "$EVAL_LOG" | tail -30
 PIPE_RC=("${PIPESTATUS[@]}")
@@ -176,41 +179,20 @@ if [ "${PIPE_RC[0]}" -ne 0 ]; then
     exit "${PIPE_RC[0]}"
 fi
 
-SCORE=$("$PYBIN" -c "
-import re
-text = open('$EVAL_LOG').read()
-m = re.search(r'\"score\"\s*:\s*([0-9.]+)', text)
-if not m:
-    m = re.search(r'final[_ ]?score[\s:=]+([0-9.]+)', text, re.IGNORECASE)
-print(m.group(1) if m else 'NA')
-")
-log "Lane G v3 + Ω-W-V2 stack score = $SCORE [contest-CUDA]"
-
-log "=== Stage 4: tag result + write final provenance ==="
-"$PYBIN" -c "
-import json, os, time
-prov = json.load(open('$PROVENANCE'))
-prov['completed_at_utc'] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
-prov['stacked_archive_bytes'] = int('$ARCHIVE_BYTES')
-prov['baseline_archive_bytes'] = int('$LANE_G_V3_BYTES')
-prov['archive_delta_bytes'] = int('$ARCHIVE_BYTES') - int('$LANE_G_V3_BYTES')
-score_str = '$SCORE'
-if score_str != 'NA':
-    score = float(score_str)
-    prov['contest_cuda_score'] = score
-    prov['score_tag'] = '[contest-CUDA]'
-    prov['score_delta_vs_lane_g_v3'] = score - 1.05
-    prov['hard_kill_triggered'] = score > 1.05
-    if score > 1.05:
-        prov['lane_status'] = 'HARD_KILL_REGRESSION'
-    elif 0.95 <= score <= 1.02:
-        prov['lane_status'] = 'IN_PREDICTED_BAND'
-    else:
-        prov['lane_status'] = 'OUT_OF_PREDICTED_BAND'
-else:
-    prov['lane_status'] = 'EVAL_PARSE_FAIL'
-json.dump(prov, open('$PROVENANCE', 'w'), indent=2)
-print('provenance updated.')
-"
-
-log "=== LANE_OWV2_STACK_DONE — score=$SCORE [contest-CUDA] archive_bytes=$ARCHIVE_BYTES ==="
+log "=== Stage 4: JSON adjudication + final provenance ==="
+RESULT_JSON="$LOG_DIR/RESULT_JSON"
+ADJUDICATION_LOG="$LOG_DIR/adjudication.log"
+"$PYBIN" -u scripts/adjudicate_contest_auth_eval.py \
+    --contest-json "$EVAL_WORK_DIR/contest_auth_eval.json" \
+    --provenance "$PROVENANCE" \
+    --archive "$STACKED_ARCHIVE" \
+    --result-copy "$RESULT_JSON" \
+    --baseline-score 1.05 \
+    --baseline-archive-bytes "$LANE_G_V3_BYTES" \
+    --predicted-band 0.95 1.02 \
+    --regression-threshold 1.05 \
+    --delta-key score_delta_vs_lane_g_v3 | tee "$ADJUDICATION_LOG"
+SCORE=$(grep '^SCORE_RECOMPUTED=' "$ADJUDICATION_LOG" | tail -1 | cut -d= -f2)
+LANE_STATUS=$(grep '^LANE_STATUS=' "$ADJUDICATION_LOG" | tail -1 | cut -d= -f2)
+log "Lane G v3 + Ω-W-V2 stack score_recomputed = $SCORE [contest-CUDA] status=$LANE_STATUS"
+log "=== LANE_OWV2_STACK_DONE — score_recomputed=$SCORE [contest-CUDA] archive_bytes=$ARCHIVE_BYTES ==="

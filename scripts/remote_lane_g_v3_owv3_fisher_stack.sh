@@ -230,7 +230,8 @@ set +e
     --top-k "$FISHER_TOP_K" \
     "${PAIR_WEIGHT_ARGS[@]}" \
     --device cuda \
-    --pair-batch "$PAIR_BATCH" 2>&1 | tee "$LOG_DIR/fisher_profile.log"
+    --pair-batch "$PAIR_BATCH" \
+    --include-protected-conv2d 2>&1 | tee "$LOG_DIR/fisher_profile.log"
 RC=${PIPESTATUS[0]}
 set -e
 [ "$RC" -eq 0 ] || exit "$RC"
@@ -239,14 +240,14 @@ log "Fisher artifact: $FISHER_PT ($(stat -c '%s' "$FISHER_PT" 2>/dev/null || sta
 
 log "=== Stage 3: Fisher -> OWV3 sensitivity map ==="
 SENSITIVITY_PT="$LOG_DIR/owv3_sensitivity_map.pt"
-"$PYBIN" -u experiments/convert_fisher_to_owv3_sensitivity_map.py \
-    --checkpoint "$ANCHOR_RENDERER" \
-    --fisher "$FISHER_PT" \
-    --output "$SENSITIVITY_PT" \
-    --aggregate sum \
-    --missing-policy protect \
-    --missing-value "$MISSING_VALUE" \
-    --metadata-json "$LOG_DIR/owv3_sensitivity_map.metadata.json" 2>&1 | tee "$LOG_DIR/convert_sensitivity.log"
+	"$PYBIN" -u experiments/convert_fisher_to_owv3_sensitivity_map.py \
+	    --checkpoint "$ANCHOR_RENDERER" \
+	    --fisher "$FISHER_PT" \
+	    --output "$SENSITIVITY_PT" \
+	    --aggregate sum \
+	    --missing-policy error \
+	    --missing-value "$MISSING_VALUE" \
+	    --metadata-json "$LOG_DIR/owv3_sensitivity_map.metadata.json" 2>&1 | tee "$LOG_DIR/convert_sensitivity.log"
 [ -f "$SENSITIVITY_PT" ] || fail "sensitivity conversion did not produce $SENSITIVITY_PT"
 
 log "=== Stage 4: build Lane G v3 + OWV3 archive ==="

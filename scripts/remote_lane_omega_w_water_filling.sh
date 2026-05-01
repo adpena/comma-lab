@@ -184,7 +184,7 @@ EOF
         --archive "$ARCHIVE" \
         --inflate-sh submissions/robust_current/inflate.sh \
         --upstream-dir upstream \
-        --device "${AUTH_EVAL_DEVICE:-cuda}" \
+        --device cuda \
         --keep-work-dir \
         --work-dir "$LOG_DIR/eval_work_${B}" 2>&1 | tee "$EVAL_LOG" | tail -20
     PIPE_RC=("${PIPESTATUS[@]}")
@@ -193,11 +193,15 @@ EOF
         continue
     fi
 
-    SCORE=$("$PYBIN" -c "
-import re, sys
-text = open('$EVAL_LOG').read()
-m = re.search(r'\"score\"\s*:\s*([0-9.]+)', text)
-print(m.group(1) if m else 'NA')
+	    SCORE=$("$PYBIN" -c "
+import json
+from pathlib import Path
+result_path = Path('$LOG_DIR/eval_work_${B}/contest_auth_eval.json')
+if not result_path.exists():
+    print('NA')
+else:
+    payload = json.loads(result_path.read_text())
+    print(payload['score_recomputed_from_components'])
 ")
     log "budget=${B} score=$SCORE [contest-CUDA]"
     if [ "$SCORE" != "NA" ]; then

@@ -6,8 +6,7 @@
 #
 # Pre-requisites on Lightning:
 #   - Upstream scorer files at /home/zeus/content/upstream (includes videos/, models/)
-#   - SSH key at ~/.ssh/lightning_rsa
-#   - LIGHTNING_USER env var set
+#   - LIGHTNING_SSH_TARGET env var set to a ~/.ssh/config alias
 #
 # Usage:
 #   bash scripts/lightning_auth_eval_renderer.sh
@@ -23,12 +22,26 @@
 set -euo pipefail
 
 # ── Configuration ──
-LIGHTNING_USER="${LIGHTNING_USER:?Set LIGHTNING_USER env var (e.g. s_XXXXX)}"
-LIGHTNING_HOST="${LIGHTNING_USER}@ssh.lightning.ai"
-SSH_KEY="${HOME}/.ssh/lightning_rsa"
-SSH="ssh -i $SSH_KEY -o StrictHostKeyChecking=no"
-SCP="scp -i $SSH_KEY -o StrictHostKeyChecking=no"
-RSYNC="rsync -avz -e 'ssh -i $SSH_KEY -o StrictHostKeyChecking=no'"
+LIGHTNING_SSH_TARGET="${LIGHTNING_SSH_TARGET:?Set LIGHTNING_SSH_TARGET to a ~/.ssh/config alias for the Lightning Studio}"
+case "$LIGHTNING_SSH_TARGET" in
+  ssh.lightning.ai)
+    echo "FATAL: use an SSH config alias, not bare ssh.lightning.ai" >&2
+    exit 2
+    ;;
+esac
+SSH_OPTS=(
+    -o BatchMode=yes
+    -o PasswordAuthentication=no
+    -o KbdInteractiveAuthentication=no
+    -o ConnectTimeout=20
+    -o ConnectionAttempts=3
+    -o ServerAliveInterval=15
+    -o ServerAliveCountMax=4
+    -o TCPKeepAlive=yes
+)
+SSH=(ssh "${SSH_OPTS[@]}")
+SCP=(scp "${SSH_OPTS[@]}")
+RSYNC_RSH="ssh -o BatchMode=yes -o PasswordAuthentication=no -o KbdInteractiveAuthentication=no -o ConnectTimeout=20 -o ConnectionAttempts=3 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 -o TCPKeepAlive=yes"
 
 REMOTE_ROOT="/home/zeus/content/pact"
 UPSTREAM="/home/zeus/content/upstream"
@@ -97,22 +110,22 @@ echo ""
 echo "[1/3] Syncing source tree + checkpoint to Lightning..."
 
 # Sync src/tac/ (model definitions, export utils)
-eval $RSYNC --exclude='__pycache__' --exclude='*.pyc' --exclude='.git' \
+rsync -avz -e "$RSYNC_RSH" --exclude='__pycache__' --exclude='*.pyc' --exclude='.git' \
     --exclude='*.egg-info' --exclude='results/' --exclude='precomputed_local/' \
-    src/ "$LIGHTNING_HOST:$REMOTE_ROOT/src/"
+    src/ "$LIGHTNING_SSH_TARGET:$REMOTE_ROOT/src/"
 
 # Sync the auth eval script
-eval $RSYNC --exclude='__pycache__' --exclude='*.pyc' --exclude='results/' \
+rsync -avz -e "$RSYNC_RSH" --exclude='__pycache__' --exclude='*.pyc' --exclude='results/' \
     experiments/auth_eval_renderer.py \
-    "$LIGHTNING_HOST:$REMOTE_ROOT/experiments/"
+    "$LIGHTNING_SSH_TARGET:$REMOTE_ROOT/experiments/"
 
 # Create eval dir on remote
-$SSH $LIGHTNING_HOST "mkdir -p $EVAL_DIR"
+"${SSH[@]}" "$LIGHTNING_SSH_TARGET" "mkdir -p $EVAL_DIR"
 
 # Upload local checkpoint if needed
 if [[ -n "$LOCAL_CHECKPOINT" ]]; then
     echo "  Uploading checkpoint: $LOCAL_CHECKPOINT -> $REMOTE_CHECKPOINT"
-    $SCP "$LOCAL_CHECKPOINT" "$LIGHTNING_HOST:$REMOTE_CHECKPOINT"
+    "${SCP[@]}" "$LOCAL_CHECKPOINT" "$LIGHTNING_SSH_TARGET:$REMOTE_CHECKPOINT"
 fi
 
 echo "  Source tree synced."
@@ -123,7 +136,7 @@ echo "[2/3] Running auth eval on Lightning T4..."
 echo "  Remote checkpoint: $REMOTE_CHECKPOINT"
 echo ""
 
-$SSH $LIGHTNING_HOST "
+"${SSH[@]}" "$LIGHTNING_SSH_TARGET" "
 source /system/conda/miniconda3/etc/profile.d/conda.sh 2>/dev/null
 conda activate cloudspace 2>/dev/null
 
@@ -153,7 +166,7 @@ echo "[3/3] Downloading results..."
 CKPT_STEM="${CKPT_BASENAME%.*}"
 RESULT_JSON="/tmp/auth_eval_renderer_${CKPT_STEM}.json"
 
-$SCP "$LIGHTNING_HOST:$EVAL_DIR/auth_eval_*.json" "$RESULT_JSON" 2>/dev/null || true
+"${SCP[@]}" "$LIGHTNING_SSH_TARGET:$EVAL_DIR/auth_eval_*.json" "$RESULT_JSON" 2>/dev/null || true
 
 if [[ -f "$RESULT_JSON" ]]; then
     echo ""
@@ -187,7 +200,7 @@ else
 fi
 
 # ── Cleanup remote eval dir ──
-$SSH $LIGHTNING_HOST "rm -rf $EVAL_DIR" 2>/dev/null || true
+"${SSH[@]}" "$LIGHTNING_SSH_TARGET" "rm -rf $EVAL_DIR" 2>/dev/null || true
 
 echo ""
 echo "============================================"

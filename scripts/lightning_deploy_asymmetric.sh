@@ -18,12 +18,26 @@
 
 set -euo pipefail
 
-LIGHTNING_USER="${LIGHTNING_USER:?Set LIGHTNING_USER env var (e.g. s_XXXXX)}"
-LIGHTNING_HOST="${LIGHTNING_USER}@ssh.lightning.ai"
-SSH_KEY="${HOME}/.ssh/lightning_rsa"
-SSH="ssh -i $SSH_KEY -o StrictHostKeyChecking=no"
-SCP="scp -i $SSH_KEY -o StrictHostKeyChecking=no"
-RSYNC="rsync -avz -e 'ssh -i $SSH_KEY -o StrictHostKeyChecking=no'"
+LIGHTNING_SSH_TARGET="${LIGHTNING_SSH_TARGET:?Set LIGHTNING_SSH_TARGET to a ~/.ssh/config alias for the Lightning Studio}"
+case "$LIGHTNING_SSH_TARGET" in
+  ssh.lightning.ai)
+    echo "FATAL: use an SSH config alias, not bare ssh.lightning.ai" >&2
+    exit 2
+    ;;
+esac
+SSH_OPTS=(
+    -o BatchMode=yes
+    -o PasswordAuthentication=no
+    -o KbdInteractiveAuthentication=no
+    -o ConnectTimeout=20
+    -o ConnectionAttempts=3
+    -o ServerAliveInterval=15
+    -o ServerAliveCountMax=4
+    -o TCPKeepAlive=yes
+)
+SSH=(ssh "${SSH_OPTS[@]}")
+SCP=(scp "${SSH_OPTS[@]}")
+RSYNC_RSH="ssh -o BatchMode=yes -o PasswordAuthentication=no -o KbdInteractiveAuthentication=no -o ConnectTimeout=20 -o ConnectionAttempts=3 -o ServerAliveInterval=15 -o ServerAliveCountMax=4 -o TCPKeepAlive=yes"
 
 REMOTE_ROOT="/home/zeus/content/pact"
 UPSTREAM="/home/zeus/content/upstream"
@@ -41,15 +55,15 @@ echo ""
 echo "[1/4] Syncing source tree to Lightning..."
 
 # Sync src/ and experiments/ (the code that changed in 27 commits)
-eval $RSYNC --exclude='__pycache__' --exclude='*.pyc' --exclude='.git' \
+rsync -avz -e "$RSYNC_RSH" --exclude='__pycache__' --exclude='*.pyc' --exclude='.git' \
     --exclude='*.egg-info' --exclude='results/' --exclude='precomputed_local/' \
-    src/ "$LIGHTNING_HOST:$REMOTE_ROOT/src/"
+    src/ "$LIGHTNING_SSH_TARGET:$REMOTE_ROOT/src/"
 
-eval $RSYNC --exclude='__pycache__' --exclude='*.pyc' --exclude='results/' \
+rsync -avz -e "$RSYNC_RSH" --exclude='__pycache__' --exclude='*.pyc' --exclude='results/' \
     --exclude='precomputed_local/' \
     experiments/train_renderer_fridrich.py \
     experiments/validate_dali_masks.py \
-    "$LIGHTNING_HOST:$REMOTE_ROOT/experiments/"
+    "$LIGHTNING_SSH_TARGET:$REMOTE_ROOT/experiments/"
 
 echo "  Source tree synced."
 echo ""
@@ -61,7 +75,7 @@ echo "[2/4] DALI mask validation (P0 blocker #4)..."
 echo "  Comparing PyAV vs DALI SegNet argmax masks..."
 echo ""
 
-$SSH $LIGHTNING_HOST "
+"${SSH[@]}" "$LIGHTNING_SSH_TARGET" "
 source /system/conda/miniconda3/etc/profile.d/conda.sh 2>/dev/null
 conda activate cloudspace 2>/dev/null
 
@@ -101,7 +115,7 @@ echo ""
 echo "[3/4] Smoke test (P3 Karpathy protocol)..."
 echo ""
 
-$SSH $LIGHTNING_HOST "
+"${SSH[@]}" "$LIGHTNING_SSH_TARGET" "
 source /system/conda/miniconda3/etc/profile.d/conda.sh 2>/dev/null
 conda activate cloudspace 2>/dev/null
 
@@ -132,7 +146,7 @@ echo "  pair_mode=asymmetric, 48h budget, T4 GPU"
 echo ""
 
 # Use nohup + screen so training survives SSH disconnect
-$SSH $LIGHTNING_HOST "
+"${SSH[@]}" "$LIGHTNING_SSH_TARGET" "
 source /system/conda/miniconda3/etc/profile.d/conda.sh 2>/dev/null
 conda activate cloudspace 2>/dev/null
 
@@ -191,11 +205,11 @@ echo "  DEPLOYMENT COMPLETE"
 echo "  $(date)"
 echo ""
 echo "  Monitor training:"
-echo "    ssh -i $SSH_KEY $LIGHTNING_HOST 'screen -r asymmetric_train'"
+echo "    ssh $LIGHTNING_SSH_TARGET 'screen -r asymmetric_train'"
 echo ""
 echo "  Tail log:"
-echo "    ssh -i $SSH_KEY $LIGHTNING_HOST 'tail -f $REMOTE_ROOT/experiments/results/fridrich_renderer/train_asymmetric.log'"
+echo "    ssh $LIGHTNING_SSH_TARGET 'tail -f $REMOTE_ROOT/experiments/results/fridrich_renderer/train_asymmetric.log'"
 echo ""
 echo "  Fetch checkpoints:"
-echo "    scp -i $SSH_KEY $LIGHTNING_HOST:$REMOTE_ROOT/experiments/results/fridrich_renderer/best_*.pt ."
+echo "    scp $LIGHTNING_SSH_TARGET:$REMOTE_ROOT/experiments/results/fridrich_renderer/best_*.pt ."
 echo "============================================"

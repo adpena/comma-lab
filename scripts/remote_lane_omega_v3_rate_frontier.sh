@@ -210,7 +210,7 @@ print(f'archive {dst}: {os.path.getsize(dst)} bytes')
         --archive "$ARCHIVE" \
         --inflate-sh submissions/robust_current/inflate.sh \
         --upstream-dir upstream \
-        --device "${AUTH_EVAL_DEVICE:-cuda}" \
+        --device cuda \
         --keep-work-dir \
         --work-dir "$SUBDIR/eval_work" 2>&1 | tee "$SUBDIR/auth_eval.log" | tail -15
     if ! grep -q "RESULT_JSON" "$SUBDIR/auth_eval.log"; then

@@ -73,7 +73,9 @@ log "=== Stage 1: anchor checks (Check 76 — full-res masks only) ==="
 for f in "$ANCHOR_RENDERER" "$ANCHOR_MASKS" "$ANCHOR_POSES" \
          upstream/videos/0.mkv \
          upstream/models/segnet.safetensors \
-         upstream/models/posenet.safetensors; do
+         upstream/models/posenet.safetensors \
+         experiments/contest_auth_eval.py \
+         scripts/adjudicate_contest_auth_eval.py; do
     [ -f "$f" ] || { echo "FATAL: missing anchor $f" >&2; exit 1; }
 done
 
@@ -111,14 +113,45 @@ INFERENCE_PT="$LOG_DIR/train/segmap_inference.pt"
 log "=== Stage 3: pack inference state via block_fp_codec ==="
 PAYLOAD="$LOG_DIR/segmap_weights.tar.xz"
 "$PYBIN" -c "
-import torch
-from tac.block_fp_codec import pack_payload_tar_xz, verify_roundtrip
+import json, os, torch
+from tac.block_fp_codec import (
+    SEGMAP_LOSSY_ROUNDTRIP_MSE_TOL,
+    segmap_lossy_contract_metadata,
+    verify_roundtrip,
+)
 
 state = torch.load('$INFERENCE_PT', map_location='cpu', weights_only=False)
-pack_payload_tar_xz(state, '$PAYLOAD')
-verify_roundtrip(state, '$PAYLOAD', tol=1e-6)
-import os
+contract = segmap_lossy_contract_metadata(SEGMAP_LOSSY_ROUNDTRIP_MSE_TOL)
+mse_by_key = verify_roundtrip(
+    state,
+    '$PAYLOAD',
+    tol=SEGMAP_LOSSY_ROUNDTRIP_MSE_TOL,
+    lossy_contract=contract,
+)
+max_mse_key = max(mse_by_key, key=mse_by_key.get)
+roundtrip = {
+    'contract': contract,
+    'mse_by_key': mse_by_key,
+    'max_mse_key': max_mse_key,
+    'max_mse': mse_by_key[max_mse_key],
+    'payload_path': '$PAYLOAD',
+    'payload_bytes': os.path.getsize('$PAYLOAD'),
+    'gate': 'archive-level CUDA contest_auth_eval is required before any score claim',
+}
+with open('$LOG_DIR/segmap_pack_roundtrip.json', 'w') as f:
+    json.dump(roundtrip, f, indent=2, sort_keys=True)
+prov = json.load(open('$PROVENANCE'))
+prov['segmap_pack_contract'] = contract
+prov['segmap_pack_roundtrip'] = {
+    'path': '$LOG_DIR/segmap_pack_roundtrip.json',
+    'max_mse_key': max_mse_key,
+    'max_mse': mse_by_key[max_mse_key],
+    'tol': SEGMAP_LOSSY_ROUNDTRIP_MSE_TOL,
+}
+prov['archive_level_exact_eval_required'] = True
+json.dump(prov, open('$PROVENANCE', 'w'), indent=2)
 print('payload bytes:', os.path.getsize('$PAYLOAD'))
+print('segmap lossy roundtrip max_mse:', max_mse_key, mse_by_key[max_mse_key])
 "
 
 log "=== Stage 4: build archive (grayscale.mkv + segmap_weights.tar.xz + poses) ==="
@@ -168,7 +201,11 @@ with zipfile.ZipFile('$ARCHIVE', 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as 
     for n in ('segmap_weights.tar.xz', 'grayscale.mkv', 'optimized_poses.pt'):
         p = os.path.join(src, n)
         assert os.path.isfile(p), f'missing archive component {p}'
-        z.write(p, arcname=n)
+        info = zipfile.ZipInfo(filename=n, date_time=(1980, 1, 1, 0, 0, 0))
+        info.compress_type = zipfile.ZIP_DEFLATED
+        info.external_attr = (0o644 & 0xFFFF) << 16
+        with open(p, 'rb') as fh:
+            z.writestr(info, fh.read(), compresslevel=9)
 print('archive bytes:', os.path.getsize('$ARCHIVE'))
 "
 
@@ -190,13 +227,25 @@ CONFIG_ENV_PATH="$INFLATE_CONFIG" "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
     --upstream-dir upstream \
-    --device "${AUTH_EVAL_DEVICE:-cuda}" \
+    --device cuda \
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
 PIPE_RC=("${PIPESTATUS[@]}")
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: contest_auth_eval exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
 fi
+
+RESULT_JSON="$LOG_DIR/RESULT_JSON"
+ADJUDICATION_LOG="$LOG_DIR/adjudication.log"
+"$PYBIN" -u scripts/adjudicate_contest_auth_eval.py \
+    --contest-json "$LOG_DIR/eval_work/contest_auth_eval.json" \
+    --provenance "$PROVENANCE" \
+    --archive "$ARCHIVE" \
+    --result-copy "$RESULT_JSON" \
+    --baseline-score 1.15 \
+    --predicted-band 0.40 0.55 \
+    --regression-threshold 1.30 \
+    --delta-key score_delta_vs_lane_a | tee "$ADJUDICATION_LOG"
 
 "$PYBIN" -c "
 import json, os, time
@@ -205,7 +254,9 @@ prov['completed_at_utc'] = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
 prov['archive_path'] = '$ARCHIVE'
 prov['archive_bytes'] = os.path.getsize('$ARCHIVE')
 prov['payload_bytes'] = os.path.getsize('$PAYLOAD')
-prov['lane_status'] = 'COMPLETE'
+prov['result_json'] = '$RESULT_JSON'
+prov['archive_level_exact_eval_completed'] = True
+prov['contest_auth_eval_json'] = '$LOG_DIR/eval_work/contest_auth_eval.json'
 json.dump(prov, open('$PROVENANCE', 'w'), indent=2)
 print('provenance updated.')
 "

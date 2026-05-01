@@ -209,7 +209,7 @@ EOF
 "$PYBIN" -u src/tac/experiments/train_renderer.py \
     --profile dilated_h64_half_frame \
     --tag "$TAG" \
-    --device "${AUTH_EVAL_DEVICE:-cuda}" \
+    --device cuda \
     --video upstream/videos/0.mkv \
     --output-dir "$LOG_DIR/train" \
     --use-qat \
@@ -350,7 +350,7 @@ rm -rf "$LOG_DIR/eval_work"
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
     --upstream-dir upstream \
-    --device "${AUTH_EVAL_DEVICE:-cuda}" \
+    --device cuda \
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
     PIPE_RC=("${PIPESTATUS[@]}")

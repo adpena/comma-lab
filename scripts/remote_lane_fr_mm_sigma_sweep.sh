@@ -141,14 +141,14 @@ EOF
         --archive "$ARCHIVE" \
         --inflate-sh submissions/robust_current/inflate.sh \
         --upstream-dir upstream \
-        --device "${AUTH_EVAL_DEVICE:-cuda}" \
+        --device cuda \
         --keep-work-dir \
         --work-dir "$EVAL_DIR/eval_work" 2>&1 | tee "$EVAL_DIR/auth_eval.log" | tail -15
     EVAL_RC=$?
     set -e
 
     "$PYBIN" -c "
-import json, os, re
+import json, os
 from pathlib import Path
 
 d = json.load(open('$SWEEP_RESULTS_JSON'))
@@ -157,16 +157,11 @@ entry = {
     'archive_bytes': os.path.getsize('$ARCHIVE'),
     'eval_rc': $EVAL_RC,
 }
-log_path = Path('$EVAL_DIR/auth_eval.log')
-if log_path.exists():
-    txt = log_path.read_text(errors='ignore')
-    m = re.search(r'\"score\"\s*:\s*([0-9.]+)', txt)
-    if m:
-        entry['score'] = float(m.group(1))
-    else:
-        m2 = re.search(r'score\s*=\s*([0-9.]+)', txt)
-        if m2:
-            entry['score'] = float(m2.group(1))
+result_path = Path('$EVAL_DIR/eval_work/contest_auth_eval.json')
+if result_path.exists():
+    payload = json.loads(result_path.read_text())
+    entry['score'] = float(payload['score_recomputed_from_components'])
+    entry['final_score_reported'] = float(payload['final_score'])
 d['sigmas'].append(entry)
 json.dump(d, open('$SWEEP_RESULTS_JSON', 'w'), indent=2)
 print(f'  recorded sigma sweep entry: {entry}')

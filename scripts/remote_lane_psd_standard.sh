@@ -254,7 +254,8 @@ log "  archive bytes: $ARCHIVE_BYTES"
     --inflate-sh submissions/robust_current/inflate.sh \
     --upstream-dir upstream \
     --device cuda \
-    --keep-work-dir 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
+    --keep-work-dir \
+    --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
 PIPE_RC=("${PIPESTATUS[@]}")
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: contest_auth_eval exited rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"

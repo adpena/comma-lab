@@ -4,21 +4,23 @@
 # Council .omx/research/council_lane_19_logit_margin_design_20260430.md
 # (5-of-6 GREEN with conditions; Quantizr YELLOW pending A/B).
 #
-# Anchor: Lane G v3 = 1.05 [contest-CUDA] (DILATED_H64_HALF_FRAME_V3_ANNEALED_KLDISTILL).
+# Current frontier gate: Lane G v3 PFP16 A++ frontier =
+# 1.043987524793892 [contest-CUDA/T4], archive 686635 bytes
+# (avg_posenet_dist=0.00346442, avg_segnet_dist=0.00400656).
 #
 # DELTA from Lane G v3:
-#   * loss_mode "standard" → "logit_margin"
-#   * NEW auxiliary `compute_segnet_logit_margin_aux` runs alongside
-#     KL distill (not as replacement). Boundary pixels (margin < threshold)
-#     get full CE weight; confident pixels (margin >= threshold) zero weight.
+#   * loss_mode "standard" -> "logit_margin"
+#   * `compute_segnet_logit_margin_aux` is the SegNet auxiliary. Boundary
+#     pixels (margin < threshold) get full CE weight; confident pixels
+#     (margin >= threshold) get zero weight.
+#   * logit_margin_weight = 10.0; inherited KL distill is disabled
+#     (kl_distill_weight = 0.0) per the profile.
 #   * Different seed (89) → different RNG basin from Lane G v3 (43).
 #
-# Predicted band [prediction]: [0.75, 1.05] [contest-CUDA] standalone.
-#   * Floor 0.75: -3e-3 SegNet distortion → ~0.30 score reduction on
-#     Lane G v3 1.05 anchor (Phase 2 ceiling).
-#   * Mid 0.95: -1e-3 SegNet distortion → ~0.10 score reduction (floor case).
-#   * Ceiling 1.05: margin loss buys nothing over standard CE (kill case;
-#     would demote to Phase 3 deferred).
+# Predicted band [prediction]: [0.75, 1.043987524793892]
+# [contest-CUDA] standalone. The rerun is on forensic hold until this script
+# has deterministic archive custody, JSON adjudication, current-frontier
+# score/component gates, and corrected provenance/comments.
 #
 # Cost: 4090 @ $0.25/hr × ~5h training + 30min auth eval = ~$1.50.
 #
@@ -64,15 +66,24 @@ prov = {
     'output_dir': '$LOG_DIR',
     'tag': '$TAG',
     'profile': 'lane_19_logit_margin',
-    'predicted_band': [0.75, 1.05],
-    'anchor_score_baseline': 1.05,
-    'anchor_lane': 'lane_g_v3 (1.05 contest-CUDA)',
+    'predicted_band': [0.75, 1.043987524793892],
+    'anchor_score_baseline': 1.043987524793892,
+    'anchor_lane': 'Lane G v3 PFP16 A++ frontier (1.043987524793892 contest-CUDA/T4)',
+    'anchor_archive_bytes': 686635,
+    'anchor_avg_posenet_dist': 0.00346442,
+    'anchor_avg_segnet_dist': 0.00400656,
     'lane_19_premise': 'SegNet score = argmax disagreement; weight CE by (threshold - margin)/threshold so confident pixels get zero loss + boundary pixels get full signal (Fridrich UNIWARD applied to segmentation).',
+    'forensic_hold_clearance_requirements': [
+        'deterministic archive build with fixed ZipInfo metadata and archive_manifest.json',
+        'scripts/adjudicate_contest_auth_eval.py over eval_work/contest_auth_eval.json',
+        'current Lane G v3 PFP16 A++ score and component gates',
+        'corrected Lane 19 provenance/comments: logit_margin_weight=10.0, kl_distill_weight=0.0',
+    ],
     'delta_from_lane_g_v3': {
         'loss_mode': 'standard -> logit_margin',
-        'logit_margin_weight': '0.0 -> 0.1',
+        'logit_margin_weight': '10.0 (profile value)',
         'logit_margin_threshold': '1.0 (default)',
-        'kl_distill_aux': 'KEPT (Lane 19 is auxiliary, not replacement; confident-wrong pixels still caught by scorer_loss)',
+        'kl_distill_weight': '0.0 (disabled; confident-wrong pixels still caught by scorer_loss)',
         'seed': '43 -> 89 (different RNG basin)',
     },
     'cost_estimate_usd': 1.50,
@@ -282,18 +293,45 @@ fi
 
 ARCHIVE="$LOG_DIR/archive_lane_19.zip"
 "$PYBIN" -c "
-import zipfile, os
+import hashlib, json, os, zipfile
 src = '$LOG_DIR/iter_0'
 dst = '$ARCHIVE'
 files = ['renderer.bin', 'masks.mkv', 'optimized_poses.pt']
 if os.path.isfile(os.path.join(src, 'zoom_scalars.pt')):
     files.append('zoom_scalars.pt')
+manifest = []
 with zipfile.ZipFile(dst, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
     for n in files:
         p = os.path.join(src, n)
         assert os.path.isfile(p), f'missing {p}'
-        z.write(p, arcname=n)
-print(f'archive {dst}: {os.path.getsize(dst)} bytes ({len(files)} files)')
+        data = open(p, 'rb').read()
+        info = zipfile.ZipInfo(filename=n, date_time=(1980, 1, 1, 0, 0, 0))
+        info.compress_type = zipfile.ZIP_DEFLATED
+        info.external_attr = (0o644 & 0xFFFF) << 16
+        z.writestr(info, data, compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
+        manifest.append({
+            'name': n,
+            'size_bytes': len(data),
+            'sha256': hashlib.sha256(data).hexdigest(),
+            'zip_date_time': list(info.date_time),
+            'external_attr': info.external_attr,
+        })
+archive_sha256 = hashlib.sha256(open(dst, 'rb').read()).hexdigest()
+archive_bytes = os.path.getsize(dst)
+manifest_payload = {
+    'schema_version': 1,
+    'lane': 'lane_19_logit_margin',
+    'archive': dst,
+    'archive_bytes': archive_bytes,
+    'archive_sha256': archive_sha256,
+    'fixed_member_order': files,
+    'fixed_zip_timestamp': [1980, 1, 1, 0, 0, 0],
+    'members': manifest,
+}
+with open('$LOG_DIR/archive_manifest.json', 'w') as f:
+    json.dump(manifest_payload, f, indent=2, sort_keys=True)
+print(f'archive {dst}: {archive_bytes} bytes ({len(files)} files) sha256={archive_sha256}')
+print('archive_manifest.json:', json.dumps(manifest_payload, sort_keys=True))
 "
 
 log "=== Stage 4: contest_auth_eval on Lane 19 archive ==="
@@ -302,7 +340,7 @@ rm -rf "$LOG_DIR/eval_work"
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
     --upstream-dir upstream \
-    --device "${AUTH_EVAL_DEVICE:-cuda}" \
+    --device cuda \
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
 PIPE_RC=("${PIPESTATUS[@]}")
@@ -315,7 +353,39 @@ if ! grep -q "RESULT_JSON" "$LOG_DIR/auth_eval.log"; then
     log "FATAL: auth_eval.log missing RESULT_JSON — silent eval crash. Investigate before reporting score."
     exit 4
 fi
+[ -f "$LOG_DIR/eval_work/contest_auth_eval.json" ] || {
+    log "FATAL: missing eval_work/contest_auth_eval.json — JSON adjudication cannot proceed."
+    exit 4
+}
 
-log "=== LANE_19_DONE [contest-CUDA] — see $LOG_DIR/auth_eval.log for RESULT_JSON ==="
-log "  predicted band: [0.75, 1.05] standalone (vs Lane G v3 1.05 anchor)"
-log "  anchor baseline: 1.05 [contest-CUDA] (Lane G v3)"
+log "=== Stage 5: JSON adjudication against current PFP16 frontier gates ==="
+# The adjudicator reads contest_auth_eval.json:score_recomputed_from_components
+# and component fields directly; no human score text is parsed.
+"$PYBIN" scripts/adjudicate_contest_auth_eval.py \
+    --contest-json "$LOG_DIR/eval_work/contest_auth_eval.json" \
+    --provenance "$PROVENANCE" \
+    --archive "$ARCHIVE" \
+    --result-copy "$LOG_DIR/contest_auth_eval.json" \
+    --baseline-score 1.043987524793892 \
+    --baseline-archive-bytes 686635 \
+    --predicted-band 0.75 1.043987524793892 \
+    --regression-threshold 1.043987524793892 \
+    --baseline-posenet-dist 0.00346442 \
+    --baseline-segnet-dist 0.00400656 \
+    --max-posenet-relative 1.002 \
+    --max-segnet-relative 1.002 \
+    --component-reference-label lane_g_v3_pfp16_a_plus_plus_t4_20260430 \
+    --required-device cuda \
+    --required-samples 600 2>&1 | tee "$LOG_DIR/adjudication.log"
+PIPE_RC=("${PIPESTATUS[@]}")
+if [ "${PIPE_RC[0]}" -ne 0 ]; then
+    echo "FATAL: JSON adjudication failed rc=${PIPE_RC[0]}" >&2; exit "${PIPE_RC[0]}"
+fi
+if ! grep -q "SCORE_RECOMPUTED" "$LOG_DIR/adjudication.log"; then
+    log "FATAL: adjudication.log missing SCORE_RECOMPUTED — no machine JSON result."
+    exit 4
+fi
+
+log "=== LANE_19_DONE [contest-CUDA] — see $LOG_DIR/contest_auth_eval.json and adjudication.log ==="
+log "  predicted band: [0.75, 1.043987524793892] standalone"
+log "  current frontier gate: Lane G v3 PFP16 A++ score=1.043987524793892 bytes=686635"

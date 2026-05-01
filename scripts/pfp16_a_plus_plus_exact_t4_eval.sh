@@ -36,8 +36,8 @@ Modes:
 Options:
   --archive PATH           Local fixed archive path.
   --remote HOST            SSH host or alias. Defaults to $PFP16_A_PLUS_PLUS_REMOTE,
-                           $REMOTE, $LIGHTNING_USER@ssh.lightning.ai, then
-                           scratch-studio-devbox.
+                           $REMOTE, then scratch-studio-devbox. Do not rely on
+                           bare ssh.lightning.ai for custody work.
   --remote-pact PATH       Remote pact repo. Default: /home/zeus/content/pact.
   --remote-upstream PATH   Remote upstream repo. Default: /home/zeus/content/upstream.
   --run-id ID              Stable output id. Default: pfp16_a_plus_plus_t4_<UTC>.
@@ -80,10 +80,6 @@ resolve_remote_default() {
   if [ -n "$REMOTE" ]; then
     return
   fi
-  if [ -n "${LIGHTNING_USER:-}" ]; then
-    REMOTE="${LIGHTNING_USER}@ssh.lightning.ai"
-    return
-  fi
   REMOTE="scratch-studio-devbox"
 }
 
@@ -100,11 +96,29 @@ verify_local_archive() {
 }
 
 ssh_base() {
-  ssh -o BatchMode=yes -o ConnectTimeout=20 "$@"
+  ssh \
+    -o BatchMode=yes \
+    -o PasswordAuthentication=no \
+    -o KbdInteractiveAuthentication=no \
+    -o ConnectTimeout=20 \
+    -o ConnectionAttempts=3 \
+    -o ServerAliveInterval=15 \
+    -o ServerAliveCountMax=4 \
+    -o TCPKeepAlive=yes \
+    "$@"
 }
 
 scp_base() {
-  scp -o BatchMode=yes -o ConnectTimeout=20 "$@"
+  scp \
+    -o BatchMode=yes \
+    -o PasswordAuthentication=no \
+    -o KbdInteractiveAuthentication=no \
+    -o ConnectTimeout=20 \
+    -o ConnectionAttempts=3 \
+    -o ServerAliveInterval=15 \
+    -o ServerAliveCountMax=4 \
+    -o TCPKeepAlive=yes \
+    "$@"
 }
 
 remote_probe() {

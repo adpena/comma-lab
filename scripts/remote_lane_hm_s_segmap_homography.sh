@@ -118,8 +118,12 @@ INFERENCE_PT="$LOG_DIR/train/segmap_inference.pt"
 log "=== Stage 3: pack inference state via block_fp_codec ==="
 PAYLOAD="$LOG_DIR/segmap_weights.tar.xz"
 "$PYBIN" -c "
-import torch, os
-from tac.block_fp_codec import pack_payload_tar_xz, verify_roundtrip
+import json, os, torch
+from tac.block_fp_codec import (
+    SEGMAP_LOSSY_ROUNDTRIP_MSE_TOL,
+    segmap_lossy_contract_metadata,
+    verify_roundtrip,
+)
 
 state = torch.load('$INFERENCE_PT', map_location='cpu', weights_only=False)
 # Sanity: SegMapHomography embeds (N, 8) instead of (N, 6).
@@ -127,9 +131,37 @@ emb = state.get('frame_affine_embedding.weight')
 if emb is None or emb.dim() != 2 or emb.shape[1] != 8:
     raise RuntimeError(f'expected frame_affine_embedding shape (N, 8), got {None if emb is None else tuple(emb.shape)}')
 print(f'[hm-s] frame_affine_embedding shape: {tuple(emb.shape)}')
-pack_payload_tar_xz(state, '$PAYLOAD')
-verify_roundtrip(state, '$PAYLOAD', tol=1e-6)
+contract = segmap_lossy_contract_metadata(SEGMAP_LOSSY_ROUNDTRIP_MSE_TOL)
+mse_by_key = verify_roundtrip(
+    state,
+    '$PAYLOAD',
+    tol=SEGMAP_LOSSY_ROUNDTRIP_MSE_TOL,
+    lossy_contract=contract,
+)
+max_mse_key = max(mse_by_key, key=mse_by_key.get)
+roundtrip = {
+    'contract': contract,
+    'mse_by_key': mse_by_key,
+    'max_mse_key': max_mse_key,
+    'max_mse': mse_by_key[max_mse_key],
+    'payload_path': '$PAYLOAD',
+    'payload_bytes': os.path.getsize('$PAYLOAD'),
+    'gate': 'archive-level CUDA contest_auth_eval is required before any score claim',
+}
+with open('$LOG_DIR/segmap_pack_roundtrip.json', 'w') as f:
+    json.dump(roundtrip, f, indent=2, sort_keys=True)
+prov = json.load(open('$PROVENANCE'))
+prov['segmap_pack_contract'] = contract
+prov['segmap_pack_roundtrip'] = {
+    'path': '$LOG_DIR/segmap_pack_roundtrip.json',
+    'max_mse_key': max_mse_key,
+    'max_mse': mse_by_key[max_mse_key],
+    'tol': SEGMAP_LOSSY_ROUNDTRIP_MSE_TOL,
+}
+prov['archive_level_exact_eval_required'] = True
+json.dump(prov, open('$PROVENANCE', 'w'), indent=2)
 print('payload bytes:', os.path.getsize('$PAYLOAD'))
+print('segmap lossy roundtrip max_mse:', max_mse_key, mse_by_key[max_mse_key])
 "
 
 log "=== Stage 4: build archive (grayscale.mkv + segmap_weights.tar.xz + poses) ==="
@@ -199,7 +231,7 @@ CONFIG_ENV_PATH="$INFLATE_CONFIG" "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE" \
     --inflate-sh submissions/robust_current/inflate.sh \
     --upstream-dir upstream \
-    --device "${AUTH_EVAL_DEVICE:-cuda}" \
+    --device cuda \
     --keep-work-dir \
     --work-dir "$LOG_DIR/eval_work" 2>&1 | tee "$LOG_DIR/auth_eval.log" | tail -20
 PIPE_RC=("${PIPESTATUS[@]}")
@@ -215,6 +247,8 @@ prov['archive_path'] = '$ARCHIVE'
 prov['archive_bytes'] = os.path.getsize('$ARCHIVE')
 prov['payload_bytes'] = os.path.getsize('$PAYLOAD')
 prov['lane_status'] = 'COMPLETE'
+prov['archive_level_exact_eval_completed'] = True
+prov['contest_auth_eval_json'] = '$LOG_DIR/eval_work/contest_auth_eval.json'
 json.dump(prov, open('$PROVENANCE', 'w'), indent=2)
 print('provenance updated.')
 "

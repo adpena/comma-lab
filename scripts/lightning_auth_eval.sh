@@ -1,17 +1,44 @@
 #!/bin/bash
 # Auth-quality scorer eval on Lightning T4 with DALI.
 # Run from local machine:
-#   bash scripts/lightning_auth_eval.sh [archive.zip]
+#   LIGHTNING_SSH_TARGET=lightning-pact bash scripts/lightning_auth_eval.sh [archive.zip]
 #
 # Repeatable: upload archive → inflate on T4 → score with DALI → fetch report.
 
 set -euo pipefail
 
-LIGHTNING_USER="${LIGHTNING_USER:?Set LIGHTNING_USER env var (e.g. s_XXXXX)}"
-LIGHTNING_HOST="${LIGHTNING_USER}@ssh.lightning.ai"
-SSH_KEY="${HOME}/.ssh/lightning_rsa"
-SSH="ssh -i $SSH_KEY -o StrictHostKeyChecking=no"
-SCP="scp -i $SSH_KEY -o StrictHostKeyChecking=no"
+LIGHTNING_SSH_TARGET="${LIGHTNING_SSH_TARGET:?Set LIGHTNING_SSH_TARGET to a ~/.ssh/config alias for the Lightning Studio}"
+case "$LIGHTNING_SSH_TARGET" in
+  ssh.lightning.ai)
+    echo "FATAL: use an SSH config alias, not bare ssh.lightning.ai" >&2
+    exit 2
+    ;;
+esac
+# Inline SSH options so preflight check_ssh_commands_have_connect_timeout
+# sees ConnectTimeout literally on the SSH= line (its 3-line lookahead
+# from `ssh ...` doesn't backtrack to find SSH_OPTS array assignment).
+SSH=(
+  ssh
+  -o BatchMode=yes
+  -o PasswordAuthentication=no
+  -o KbdInteractiveAuthentication=no
+  -o ConnectTimeout=20
+  -o ConnectionAttempts=3
+  -o ServerAliveInterval=15
+  -o ServerAliveCountMax=4
+  -o TCPKeepAlive=yes
+)
+SCP=(
+  scp
+  -o BatchMode=yes
+  -o PasswordAuthentication=no
+  -o KbdInteractiveAuthentication=no
+  -o ConnectTimeout=20
+  -o ConnectionAttempts=3
+  -o ServerAliveInterval=15
+  -o ServerAliveCountMax=4
+  -o TCPKeepAlive=yes
+)
 
 ARCHIVE="${1:-submissions/robust_current/archive.zip}"
 EVAL_DIR="/tmp/auth_eval_$(date +%Y%m%dT%H%M%S)"
@@ -26,16 +53,16 @@ echo "============================================"
 # 1. Upload
 echo ""
 echo "[1/5] Uploading archive + inflate scripts..."
-$SSH $LIGHTNING_HOST "mkdir -p $EVAL_DIR/submission/inflated"
-$SCP "$ARCHIVE" "$LIGHTNING_HOST:$EVAL_DIR/submission/archive.zip"
-$SCP submissions/robust_current/inflate_postfilter.py "$LIGHTNING_HOST:$EVAL_DIR/submission/"
-$SCP submissions/robust_current/config.env "$LIGHTNING_HOST:$EVAL_DIR/submission/"
+"${SSH[@]}" "$LIGHTNING_SSH_TARGET" "mkdir -p $EVAL_DIR/submission/inflated"
+"${SCP[@]}" "$ARCHIVE" "$LIGHTNING_SSH_TARGET:$EVAL_DIR/submission/archive.zip"
+"${SCP[@]}" submissions/robust_current/inflate_postfilter.py "$LIGHTNING_SSH_TARGET:$EVAL_DIR/submission/"
+"${SCP[@]}" submissions/robust_current/config.env "$LIGHTNING_SSH_TARGET:$EVAL_DIR/submission/"
 echo "  Done"
 
 # 2. Inflate + Score (single remote command)
 echo ""
 echo "[2/5] Running inflate + score on Lightning T4..."
-$SSH $LIGHTNING_HOST "
+"${SSH[@]}" "$LIGHTNING_SSH_TARGET" "
 source /system/conda/miniconda3/etc/profile.d/conda.sh 2>/dev/null
 conda activate cloudspace 2>/dev/null
 
@@ -67,7 +94,7 @@ python evaluate.py \
 # 3. Fetch report
 echo ""
 echo "[3/5] Fetching report..."
-$SCP "$LIGHTNING_HOST:$EVAL_DIR/report.txt" /tmp/lightning_auth_report.txt 2>/dev/null || true
+"${SCP[@]}" "$LIGHTNING_SSH_TARGET:$EVAL_DIR/report.txt" /tmp/lightning_auth_report.txt 2>/dev/null || true
 
 # 4. Display results
 echo ""
