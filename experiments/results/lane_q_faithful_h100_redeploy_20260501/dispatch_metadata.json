@@ -1,0 +1,63 @@
+{
+  "lane": "lane_q_faithful_retrain (H100 SXM emergency redeploy)",
+  "session": "EMERGENCY_REDEPLOY_20260501T2330Z",
+  "predecessor": {
+    "instance_id": "35959478",
+    "gpu": "RTX 4090",
+    "ssh": "ssh6.vast.ai:39478",
+    "fate": "PREEMPTED by Vast.ai ~5h into training",
+    "sunk_cost_usd": 5.0,
+    "sunk_wallclock_hours": 5.0,
+    "lost_artifacts": "All training progress in /workspace/pact/lane_q_faithful_results/ — no archive harvested",
+    "memory": "project_lane_q_faithful_retrain_dispatch_20260501.md"
+  },
+  "redeployed_to": {
+    "instance_id": "35985637",
+    "offer_id": "34383502",
+    "machine_id": "67296",
+    "gpu": "H100 SXM 80GB",
+    "vram_gb": 81.6,
+    "cuda_max_good": "13.0",
+    "driver_version": "580.126.09",
+    "country": "Texas, US",
+    "ssh_host": "ssh3.vast.ai",
+    "ssh_port": 25636,
+    "image": "pytorch/pytorch:2.5.1-cuda12.4-cudnn9-devel",
+    "disk_gb": 80,
+    "label": "q_faithful_h100_redeploy",
+    "dph_total_usd": 2.4889,
+    "reliability": 99.3,
+    "net_down_mbps": 3958.1
+  },
+  "torch_pin_decision": {
+    "INFLATE_TORCH_SPEC": "torch==2.5.1+cu124",
+    "UV_EXTRA_INDEX_URL": "https://download.pytorch.org/whl/cu124",
+    "UV_INDEX_STRATEGY": "unsafe-best-match",
+    "rationale": "Driver 580 IS cu13-compatible BUT cu124 is the proven path on prior 4090 dispatch (Hotz vote in council). cu13-native FP4 speedup on H100 deferred to next iteration to avoid wheel-resolution surprises during emergency redeploy."
+  },
+  "bootstrap_fixes_required": [
+    "TAC_FFMPEG=/workspace/ffmpeg-btbn/bin/ffmpeg (system ffmpeg 4.4.2 lacks svtav1-params)",
+    "apt-get install -y unzip (missing from pytorch image)",
+    "apt-get install -y wget (often missing too)",
+    "Verify torch.cuda.is_available() == True BEFORE training (CLAUDE.md non-negotiable)"
+  ],
+  "lane_script": "scripts/remote_lane_q_faithful_jointgen.sh",
+  "predicted_band": [0.40, 0.80],
+  "anchor_baseline": "Lane A 1.15 [contest-CUDA] / Quantizr leader 0.33",
+  "predicted_wallclock_hours_h100": [2.0, 4.0],
+  "predicted_wallclock_hours_4090_for_comparison": [12.5, 19.0],
+  "predicted_wallclock_savings_hours": 13.0,
+  "predicted_total_cost_usd": 10.0,
+  "cost_cap_usd": 15.0,
+  "monitoring": {
+    "remote_train_log": "/workspace/pact/lane_q_faithful_results/train.log",
+    "remote_heartbeat_log": "/workspace/pact/lane_q_faithful_results/heartbeat.log",
+    "remote_run_log": "/workspace/pact/lane_q_faithful_results/run.log",
+    "remote_launch_log": "/tmp/q_faithful_h100_runs/launch.log",
+    "ssh_one_liner": "ssh -p 25636 -o StrictHostKeyChecking=no root@ssh3.vast.ai 'tail -50 /workspace/pact/lane_q_faithful_results/train.log; tail -3 /workspace/pact/lane_q_faithful_results/heartbeat.log'"
+  },
+  "harvest_trigger": "When train.log shows 'LANE_Q_FAITHFUL_DONE' OR auth_eval.log appears, scp archive_lane_q_faithful.zip + auth_eval.log + eval_work/result.json",
+  "council_verdict": "7/7 ENDORSE H100 swap (Shannon: wallclock-bound on Phase 2 KL distill; Dykstra: feasibility region intersection unaffected by chip; Yousfi: KL distill T=2.0 unchanged; Fridrich: arch unchanged; Contrarian: 4090 preemption FORCES new chip choice; Quantizr: H100 SXM is what real labs use; Hotz: 13h saved at $5 incremental cost is the ROI no-brainer)",
+  "deploy_runbook_evidence": "scripts/remote_lane_q_faithful_jointgen.sh + this dispatch_metadata.json + memory file project_lane_q_faithful_h100_redeploy_emergency_20260501.md",
+  "started_at_utc": "2026-05-01T23:32:00Z"
+}
