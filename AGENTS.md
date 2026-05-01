@@ -332,6 +332,53 @@ clean Grand Council passes are recorded.
   `geometry_gate_passed=true`, `grand_council_clean_passes>=3`, and evidence
   paths. The Vast retry launcher enforces this gate.
 
+## Fast Chip Preference — Wall-Clock Optimization Beats $/hr
+
+Time-to-Shannon-floor is the optimization target, not $/hr. Per the user's
+2026-05-01 directive ("make sure we are using fast chips because we don't
+have time to waste waiting for results"), prefer the fastest available chip
+within a 2-minute boot window. $5-10/hr is acceptable when it removes 30+
+minutes of wait time.
+
+Default chip ranking (fastest first), measured by contest-CUDA archive
+inflate + evaluate end-to-end on a single owv3-class candidate:
+
+- **H100 SXM (80GB)**: ~5-8× T4 throughput, ~$1.80/hr Vast.ai. New default
+  for time-critical chains, sub-frontier sweeps, and any newly-spawned
+  iteration loop.
+- **H200**: ~6-10× T4, ~$2.50+/hr. Reserve for heaviest training (NeRV mask
+  codec, IMP cycles, Joint-ADMM long iterations).
+- **A100 SXM4 (40-80GB)**: ~3-4× T4 + extra VRAM, $0.80-1.50/hr. Use when
+  VRAM > 24GB needed (Q-FAITHFUL OOM'd on RTX 4090).
+- **RTX 5090**: ~4-5× T4, $0.50-1.00/hr. Acceptable when H100/A100 supply
+  is tight.
+- **RTX 4090**: ~3-4× T4, $0.25-0.30/hr. Use when warm-venv reuse on an
+  already-bootstrapped instance amortizes the slower chip cost.
+- **Modal A10G**: $0.59/hr, ~2× T4. Use only if Vast.ai supply is
+  exhausted or a Modal-specific lane (e.g., `modal_train_lane.py`) requires
+  it.
+- **T4 / Lightning T4**: 1.0× baseline. ONLY for the final A++ promotion
+  run on a deploy candidate (per the contest's T4-equivalent grading).
+  NEVER for iteration.
+
+Canonical Vast.ai search filter for new dispatches:
+
+```bash
+.venv/bin/vastai search offers \
+    'gpu_name in [H100_SXM,H100_NVL,H100_PCIE,H200] reliability>0.95 disk_space>=80 num_gpus=1 dph<3.0' \
+    -o 'dph'
+```
+
+Fallback to A100 / RTX 5090 / RTX 4090 only if no H100 within budget. The
+permanent fix in `scripts/launch_lane_on_vastai.py` should grow a
+`--prefer-fast-chip` flag that walks this list automatically; until then,
+operators specify the chip explicitly in `vastai create instance`.
+
+Cost discipline: do NOT parallelize on multiple slow chips when one fast
+chip clears the queue faster. Idle a slow instance to free up budget for
+a fast one. Memory:
+`feedback_fast_chip_directive_no_waiting_20260501.md`.
+
 ## Remote Bootstrap Canonicalization And Reuse
 
 The 2026-05-01 loop session burned 4 destroyed Vast.ai instances and ~$1.50
@@ -880,6 +927,12 @@ and adversarial review status.
 - Use subagents when explicitly authorized for parallel research, audit, or
   implementation. Give them disjoint scopes and require file paths changed or
   read-only output.
+- When a trusted partner agent is working in parallel, treat their lanes and
+  artifacts as live shared-worktree scopes. Do not overwrite, revert, or
+  reinterpret their work without independent custody review. Handoff artifacts
+  from partner agents must pass the same archive SHA/bytes, payload closure,
+  CUDA auth-eval, component recomputation, manifest, and adversarial-review
+  gates before promotion, ranking, stacking, or paper claims.
 - Use online research liberally for current papers, OSS, Lightning AI tooling,
   entropy coders, learned compression, and optimization methods, but never use
   external results as contest evidence.
