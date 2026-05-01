@@ -158,6 +158,18 @@ def _decode_gt_video(video_mkv: str) -> torch.Tensor:
     return out
 
 
+def _gray_mask_to_class_ids(gray: torch.Tensor) -> torch.Tensor:
+    """Convert encoded grayscale mask pixels to class IDs in ``[0, 4]``.
+
+    Contest mask videos encode class labels as grayscale values using
+    ``class_id * (255 // 4)``. Reading those bytes directly as class IDs sends
+    values like 63/126/189/252 into the renderer embedding and crashes CUDA.
+    """
+    scale = 255 // 4
+    classes = torch.round(gray.to(torch.float32) / float(scale)).to(torch.long)
+    return classes.clamp_(0, 4)
+
+
 def _load_masks_video(masks_mkv: str) -> torch.Tensor:
     """Decode masks .mkv (luma only) → int64 mask tensor (N, H, W)."""
     import av
@@ -169,40 +181,61 @@ def _load_masks_video(masks_mkv: str) -> torch.Tensor:
     for frame in container.decode(stream):
         # Masks are encoded as monochrome. The luma plane carries the class.
         gray = frame.to_ndarray(format="gray")
-        masks.append(torch.from_numpy(gray))
+        masks.append(_gray_mask_to_class_ids(torch.from_numpy(gray)))
     container.close()
     out = torch.stack(masks, dim=0).to(torch.long)
+    if int(out.min()) < 0 or int(out.max()) > 4:
+        raise RuntimeError(
+            f"decoded masks contain class range [{int(out.min())}, {int(out.max())}], "
+            "expected [0, 4]"
+        )
     print(f"[profile]   decoded {out.shape[0]} masks shape={tuple(out.shape)}")
     return out
 
 
-def _select_eligible_params(model: torch.nn.Module) -> dict[str, torch.nn.Parameter]:
+def _select_eligible_params_with_exclusions(
+    model: torch.nn.Module,
+    *,
+    include_protected_conv2d: bool = False,
+) -> tuple[dict[str, torch.nn.Parameter], dict[str, str]]:
     """Return dict of layer_name → weight Parameter for every eligible Conv2d
     / Linear weight, excluding the SC_PROTECTED_NAME_PATTERNS list.
 
     Matches Lane S's protection list so Lane Ω only quantizes the same
     "bulk" weights Lane S would.
     """
-    from tac.self_compress import SC_PROTECTED_NAME_PATTERNS
-
-    def _is_protected(qualified_name: str) -> bool:
-        for pat in SC_PROTECTED_NAME_PATTERNS:
-            if qualified_name == pat or qualified_name.endswith("." + pat):
-                return True
-        return False
+    from tac.self_compress import _is_protected_name
 
     out: dict[str, torch.nn.Parameter] = {}
+    excluded: dict[str, str] = {}
     for name, mod in model.named_modules():
-        if _is_protected(name):
-            continue
         if isinstance(mod, torch.nn.Conv2d):
             # ConvTranspose2d is a subclass mismatch — explicitly skip it.
             if isinstance(mod, torch.nn.ConvTranspose2d):
+                excluded[f"{name}.weight"] = "convtranspose2d_not_profiled"
+                continue
+            if _is_protected_name(name) and not include_protected_conv2d:
+                excluded[f"{name}.weight"] = "protected_conv2d"
                 continue
             out[f"{name}.weight"] = mod.weight
         elif isinstance(mod, torch.nn.Linear):
+            if _is_protected_name(name):
+                excluded[f"{name}.weight"] = "protected_linear"
+                continue
             out[f"{name}.weight"] = mod.weight
-    return out
+    return out, excluded
+
+
+def _select_eligible_params(
+    model: torch.nn.Module,
+    *,
+    include_protected_conv2d: bool = False,
+) -> dict[str, torch.nn.Parameter]:
+    eligible, _excluded = _select_eligible_params_with_exclusions(
+        model,
+        include_protected_conv2d=include_protected_conv2d,
+    )
+    return eligible
 
 
 def profile_hessian(
@@ -218,6 +251,7 @@ def profile_hessian(
     upstream_dir: str,
     pair_batch: int = 4,
     score_clip: float = 1e6,
+    include_protected_conv2d: bool = False,
 ) -> dict:
     """End-to-end profiler. See module docstring for output format."""
     t_start = time.monotonic()
@@ -246,10 +280,20 @@ def profile_hessian(
           f"film={has_film} zoom={has_zoom}")
 
     # ── select eligible weights (drops protected layers) ──
-    eligible = _select_eligible_params(model)
+    eligible, excluded = _select_eligible_params_with_exclusions(
+        model,
+        include_protected_conv2d=include_protected_conv2d,
+    )
+    protected_note = (
+        "protected Conv2d included for sensitivity; protected Linear layers stay excluded"
+        if include_protected_conv2d
+        else "protected layers stay FP32"
+    )
     print(f"[profile] eligible weights: {len(eligible)} layers, "
           f"{sum(p.numel() for p in eligible.values()):,} weights "
-          f"(protected layers stay FP32)")
+          f"({protected_note})")
+    if include_protected_conv2d:
+        print("[profile]   OWV3 mode: protected Conv2d weights included for sensitivity only")
 
     # ── load poses if model has FiLM ──
     poses = None
@@ -483,6 +527,9 @@ def profile_hessian(
         "n_pairs_seen": n_seen,
         "n_eligible_layers": len(eligible),
         "n_eligible_weights": int(sum(t.numel() for t in importance.values())),
+        "eligible_layer_names": sorted(eligible),
+        "excluded_layer_reasons": dict(sorted(excluded.items())),
+        "include_protected_conv2d": bool(include_protected_conv2d),
         "git_hash": git_hash,
         "torch_version": torch.__version__,
         "device": device,
@@ -538,6 +585,16 @@ def main(argv: list[str] | None = None) -> int:
                         help="Compute device (default cuda; MPS forbidden)")
     parser.add_argument("--pair-batch", type=int, default=4,
                         help="Pairs per backward step (default 4)")
+    parser.add_argument(
+        "--include-protected-conv2d",
+        action="store_true",
+        help=(
+            "Include SC-protected Conv2d weights in Fisher profiling. Required "
+            "for OWV3 sensitivity-map conversion because every Conv2d action "
+            "must have measured CUDA sensitivity. Protected Linear layers stay "
+            "excluded."
+        ),
+    )
     args = parser.parse_args(argv)
 
     pair_weights_path = None if args.all_pairs else args.pair_weights
@@ -553,6 +610,7 @@ def main(argv: list[str] | None = None) -> int:
         device=args.device,
         upstream_dir=args.upstream,
         pair_batch=args.pair_batch,
+        include_protected_conv2d=args.include_protected_conv2d,
     )
     return 0
 

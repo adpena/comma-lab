@@ -191,6 +191,8 @@ def _build_trainer_config(args: argparse.Namespace, device: torch.device):
     # was a silent-default-override foot-gun (memory:
     # feedback_silent_default_bug_class_findings_20260429.md).
     cfg_kwargs["kl_distill_weight"] = args.kl_distill_weight
+    if loss_mode == "kl_distill":
+        cfg_kwargs["kl_distill_scope"] = "segnet_aux"
     if hasattr(TrainConfig, "model_fields"):
         fields = set(TrainConfig.model_fields.keys())
         if "kl_distill_temperature" in fields:
@@ -300,6 +302,7 @@ def main() -> int:
             "variant": args.variant,
             "n_params": n_params,
             "config": cfg.model_dump() if hasattr(cfg, "model_dump") else dict(vars(cfg)),
+            "distillation_policy": cfg.distillation_policy_provenance(),
             "device": str(device),
         }
         (output_dir / "segmap_dry_run.json").write_text(json.dumps(meta, indent=2))
@@ -422,12 +425,39 @@ def main() -> int:
     elapsed = time.monotonic() - t_start
     print(f"[train_segmap] training complete in {elapsed:.1f}s", flush=True)
 
+    # PCC3 internal-consistency check (Council 2026-04-30 ~23:30 UTC, DD2/DD3
+    # 10/10 vote): producer-side assertion that elapsed wall-clock is at least
+    # the lower bound a real epoch would consume. SegMap on T4 with 600 mask
+    # pairs takes ~2 s/epoch (B=8 chunk × 75 chunks × ~0.025 s/chunk on T4 fp16);
+    # a stub loop pretending to be SegMap training would come in at <0.1s/epoch.
+    # The 0.5 s/epoch floor flags any 4× regression while leaving slack for
+    # batch-size/device variation. CPU smoke runs with --device cpu still trip
+    # this if epochs > 0; intentional smoke tests should pass --epochs 0 OR add
+    # an explicit args.smoke flag (currently this script has none — that gap is
+    # noted for a follow-up: dispatch scripts that want to no-op should pass
+    # --epochs 0). Memory: feedback_grand_council_pcc3_stats_consistency_20260430.
+    MIN_WALL_PER_EPOCH_SEC = 0.5  # see council vote
+    if args.epochs > 0:
+        expected_min = args.epochs * MIN_WALL_PER_EPOCH_SEC
+        if elapsed < expected_min:
+            raise RuntimeError(
+                f"PCC3 STUB-LOOP DETECTED: claimed {args.epochs} epochs in "
+                f"{elapsed:.2f}s — below floor {expected_min:.2f}s "
+                f"({MIN_WALL_PER_EPOCH_SEC}s/epoch). This indicates the train "
+                f"loop is not actually training (data loader empty? trainer "
+                f"step is no-op? tensor-shape early-exit?). The IMP cycle 0 "
+                f"= 1.98 metabug class. To run a deliberate no-op, pass "
+                f"--epochs 0 instead of pretending. Memory: "
+                f"feedback_grand_council_pcc3_stats_consistency_20260430.md."
+            )
+
     train_ckpt_path = output_dir / "segmap_train.pt"
     torch.save(
         {
             "model": model.state_dict(),
             "ema": ema.state_dict(),
             "config": cfg.model_dump() if hasattr(cfg, "model_dump") else dict(vars(cfg)),
+            "distillation_policy": cfg.distillation_policy_provenance(),
             "epoch": args.epochs,
             "n_params": n_params,
         },
@@ -446,6 +476,7 @@ def main() -> int:
         "elapsed_seconds": elapsed,
         "device": str(device),
         "config": cfg.model_dump() if hasattr(cfg, "model_dump") else dict(vars(cfg)),
+        "distillation_policy": cfg.distillation_policy_provenance(),
         "history": history,
     }
     (output_dir / "segmap_train.json").write_text(json.dumps(summary, indent=2))

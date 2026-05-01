@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import io
 import json
 import sys
 import time
@@ -37,6 +38,11 @@ LANE_G_V3_RENDERER = LANE_G_V3_DIR / "iter_0" / "renderer.bin"
 LANE_G_V3_MASKS = LANE_G_V3_DIR / "iter_0" / "masks.mkv"
 LANE_G_V3_POSES = LANE_G_V3_DIR / "iter_0" / "optimized_poses.pt"
 LANE_G_V3_ARCHIVE = LANE_G_V3_DIR / "archive_lane_g_v3.zip"
+PFP16_FRONTIER_ARCHIVE_BYTES = 686_635
+PFP16_FRONTIER_ARCHIVE_SHA256 = (
+    "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+)
+PFP16_FRONTIER_SCORE = 1.043987524793892
 
 
 def _sha256(data: bytes | Path) -> str:
@@ -82,6 +88,31 @@ def _zinfo(name: str) -> zipfile.ZipInfo:
     return info
 
 
+def _archive_bytes(members: list[tuple[str, bytes]]) -> bytes:
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
+        for name, data in members:
+            z.writestr(_zinfo(name), data)
+    return buf.getvalue()
+
+
+def _archive_manifest(zip_bytes: bytes) -> list[dict]:
+    manifest = []
+    with zipfile.ZipFile(io.BytesIO(zip_bytes), "r") as z:
+        for info in z.infolist():
+            data = z.read(info.filename)
+            manifest.append({
+                "name": info.filename,
+                "raw_bytes": info.file_size,
+                "compressed_bytes": info.compress_size,
+                "crc32": f"{info.CRC:08x}",
+                "date_time": list(info.date_time),
+                "permissions_octal": oct((info.external_attr >> 16) & 0o777),
+                "sha256": _sha256(data),
+            })
+    return manifest
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=__doc__,
@@ -96,8 +127,23 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--bit-budget-ratio", type=float, default=0.7)
     parser.add_argument("--protect-threshold", type=float, default=1e-3)
     parser.add_argument("--aggressive-threshold", type=float, default=1e-5)
+    parser.add_argument("--fallback-action",
+                        choices=["keep_asym", "error", "diagnostic_fp16"],
+                        default="keep_asym",
+                        help="Promotion default is keep_asym. diagnostic_fp16 is smoke/debug only.")
+    parser.add_argument("--frontier-comparator-bytes", type=int,
+                        default=PFP16_FRONTIER_ARCHIVE_BYTES,
+                        help="Promotion byte comparator. Defaults to PFP16 A++ frontier.")
+    parser.add_argument("--frontier-comparator-sha256", type=str,
+                        default=PFP16_FRONTIER_ARCHIVE_SHA256)
+    parser.add_argument("--frontier-comparator-label", type=str,
+                        default="PFP16_A++")
     parser.add_argument("--allow-non-authoritative", action="store_true",
                         help="Allow non-CUDA sensitivity metadata. Output is smoke-only.")
+    parser.add_argument("--allow-size-regression", action="store_true",
+                        help="Allow archives larger than Lane G v3/frontier. Smoke/debug only.")
+    parser.add_argument("--allow-frontier-regression", action="store_true",
+                        help="Allow archives larger than the frontier comparator. Smoke/debug only.")
     parser.add_argument("--no-decode-verify", action="store_true",
                         help="Skip local OWV3 decode sanity check.")
     args = parser.parse_args(argv)
@@ -140,7 +186,9 @@ def main(argv: list[str] | None = None) -> int:
     print("Stage 3: encode OWV3 renderer...")
     from tac.owv3_sensitivity_weighted import (
         decode_owv3_archive,
+        enforce_owv3_byte_budget,
         encode_owv3_archive,
+        inspect_owv3_archive,
         is_owv3_archive,
     )
 
@@ -151,9 +199,11 @@ def main(argv: list[str] | None = None) -> int:
         protect_threshold=args.protect_threshold,
         aggressive_threshold=args.aggressive_threshold,
         require_all_conv_sensitivity=True,
+        fallback_action=args.fallback_action,
     )
     if not is_owv3_archive(owv3_blob):
         raise RuntimeError("OWV3 encoder returned non-OWV3 blob")
+    owv3_inspection = inspect_owv3_archive(owv3_blob)
     if not args.no_decode_verify:
         decoded = decode_owv3_archive(data=owv3_blob, device="cpu")
         if set(decoded.state_dict()) != set(model.state_dict()):
@@ -167,26 +217,82 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     print("Stage 4: assemble deterministic archive...")
+    members = [
+        ("renderer.bin", owv3_blob),
+        ("masks.mkv", LANE_G_V3_MASKS.read_bytes()),
+        ("optimized_poses.pt", LANE_G_V3_POSES.read_bytes()),
+    ]
+    archive_data = _archive_bytes(members)
+    archive_rebuild = _archive_bytes(members)
+    deterministic_rebuild = archive_data == archive_rebuild
+    if not deterministic_rebuild:
+        raise RuntimeError("deterministic archive rebuild mismatch")
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(args.output, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
-        z.writestr(_zinfo("renderer.bin"), owv3_blob)
-        z.writestr(_zinfo("masks.mkv"), LANE_G_V3_MASKS.read_bytes())
-        z.writestr(_zinfo("optimized_poses.pt"), LANE_G_V3_POSES.read_bytes())
+    args.output.write_bytes(archive_data)
 
     archive_size = args.output.stat().st_size
     archive_sha256 = _sha256(args.output)
+    archive_manifest = _archive_manifest(archive_data)
     lane_g_v3_archive_size = LANE_G_V3_ARCHIVE.stat().st_size
     archive_delta = archive_size - lane_g_v3_archive_size
+    frontier_delta = archive_size - int(args.frontier_comparator_bytes)
     rate_delta = 25.0 * archive_delta / 37_545_489
+    frontier_rate_delta = 25.0 * frontier_delta / 37_545_489
     predicted_score = 1.05 + rate_delta
+    predicted_frontier_score = PFP16_FRONTIER_SCORE + frontier_rate_delta
     elapsed = time.monotonic() - t_start
+    allow_any_size_regression = bool(
+        args.allow_size_regression or args.allow_frontier_regression
+    )
+    try:
+        frontier_gate = enforce_owv3_byte_budget(
+            candidate_bytes=archive_size,
+            comparator_bytes=args.frontier_comparator_bytes,
+            candidate_label="Lane G v3 OWV3 archive",
+            comparator_label=args.frontier_comparator_label,
+            allow_size_regression=allow_any_size_regression,
+        )
+    except Exception as exc:
+        frontier_gate = {
+            "accepted": False,
+            "error": str(exc),
+            "candidate_bytes": archive_size,
+            "comparator_bytes": int(args.frontier_comparator_bytes),
+            "delta_bytes": frontier_delta,
+            "allow_size_regression": allow_any_size_regression,
+        }
 
     print(f"  wrote {args.output} ({archive_size:,}B sha256={archive_sha256[:16]}...)")
     print(f"  archive delta vs Lane G v3: {archive_delta:+,}B")
     print(
+        f"  archive delta vs {args.frontier_comparator_label}: "
+        f"{frontier_delta:+,}B"
+    )
+    print(
         f"  predicted rate-only score: 1.05 + {rate_delta:+.5f} = "
         f"{predicted_score:.4f} [derivation, contest-CUDA pending]"
     )
+    print(
+        f"  frontier rate-only comparator: {PFP16_FRONTIER_SCORE:.6f} "
+        f"+ {frontier_rate_delta:+.5f} = {predicted_frontier_score:.4f} "
+        "[derivation, contest-CUDA pending]"
+    )
+    size_regression = archive_delta >= 0
+    frontier_regression = frontier_delta > 0
+    frontier_blocked = not bool(frontier_gate.get("accepted"))
+    if size_regression:
+        print(
+            "  FATAL: OWV3 size regression vs Lane G v3; "
+            "exact-score promotion is blocked unless --allow-size-regression "
+            "is explicitly set for smoke/debug.",
+            file=sys.stderr,
+        )
+    if frontier_blocked:
+        print(
+            "  FATAL: OWV3 size regression vs the active frontier comparator; "
+            "promotion is blocked unless an explicit smoke/debug override is set.",
+            file=sys.stderr,
+        )
     print(f"  build took {elapsed:.2f}s")
 
     if args.provenance_json:
@@ -216,24 +322,58 @@ def main(argv: list[str] | None = None) -> int:
                 "bit_budget_ratio": args.bit_budget_ratio,
                 "protect_threshold": args.protect_threshold,
                 "aggressive_threshold": args.aggressive_threshold,
+                "fallback_action": args.fallback_action,
                 "decode_verified": not args.no_decode_verify,
+                "byte_plan": owv3_inspection.get("byte_plan", {}),
+                "layer_action_summary": owv3_inspection.get("byte_plan", {}).get("action_counts", {}),
             },
             "stacked_archive": {
                 "path": str(args.output),
                 "size_bytes": archive_size,
                 "sha256": archive_sha256,
+                "manifest": archive_manifest,
+                "deterministic_rebuild": deterministic_rebuild,
+                "deterministic_rebuild_sha256": _sha256(archive_rebuild),
             },
             "size_delta_vs_lane_g_v3": archive_delta,
             "lane_g_v3_baseline_score": 1.05,
             "predicted_score_derivation": predicted_score,
+            "frontier_comparator": {
+                "label": args.frontier_comparator_label,
+                "archive_bytes": int(args.frontier_comparator_bytes),
+                "archive_sha256": args.frontier_comparator_sha256,
+                "score": PFP16_FRONTIER_SCORE,
+                "archive_delta_bytes": frontier_delta,
+                "rate_delta": frontier_rate_delta,
+                "rate_only_score_derivation": predicted_frontier_score,
+                "byte_gate": frontier_gate,
+            },
             "predicted_score_tag": "[derivation]",
             "score_validation_required": "contest-CUDA via experiments/contest_auth_eval.py",
             "strict_scorer_rule": "compliant - no scorer load at OWV3 decode/inflate",
-            "evidence_label": "implementation-smoke until exact CUDA contest eval",
+            "evidence_label": (
+                "smoke/debug-size-override"
+                if allow_any_size_regression
+                else "implementation-smoke until exact CUDA contest eval"
+            ),
+            "size_regression_guard": {
+                "baseline_archive_size_bytes": lane_g_v3_archive_size,
+                "archive_delta_bytes": archive_delta,
+                "blocked_by_default": size_regression,
+                "allow_size_regression": args.allow_size_regression,
+                "frontier_blocked_by_default": frontier_regression,
+                "frontier_blocked_effective": frontier_blocked,
+                "allow_frontier_regression": args.allow_frontier_regression,
+            },
         }
         args.provenance_json.parent.mkdir(parents=True, exist_ok=True)
         args.provenance_json.write_text(json.dumps(prov, indent=2))
         print(f"  wrote provenance: {args.provenance_json}")
+
+    if size_regression and not args.allow_size_regression:
+        return 3
+    if frontier_blocked and not allow_any_size_regression:
+        return 3
 
     return 0
 

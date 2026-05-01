@@ -112,6 +112,8 @@ def _record_provenance(work_dir: Path, archive: Path, inflate_sh: Path,
         "inflate_script_sha256": _sha256(inflate_sh, prefix=0) if inflate_sh.exists() else None,
         "upstream_dir": str(upstream_dir),
         "device": args.device,
+        "inflate_timeout_seconds": int(args.inflate_timeout),
+        "evaluate_timeout_seconds": int(args.evaluate_timeout),
         "video_names_file": str(args.video_names_file),
         "sys_argv": sys.argv,
         "env_vars": {k: os.environ.get(k) for k in (
@@ -183,6 +185,7 @@ def _extract_archive(archive: Path, dest: Path) -> list[str]:
 _KNOWN_ARCHIVE_SUFFIXES = (
     ".bin", ".bin.br",          # renderer (raw or brotli'd)
     ".mkv", ".mp4",             # mask video (svtav1 / h264 / etc.)
+    ".nrv",                     # NeRV mask codec payload
     ".pt",                       # poses, optionally other state dicts
     ".json", ".txt",             # manifests / pose metadata
     ".bin.zst", ".bin.lzma",    # alternative compressors
@@ -237,7 +240,7 @@ def _validate_archive_members(members: list[str]) -> None:
 
 
 def _run_inflate(inflate_sh: Path, archive_dir: Path, inflated_dir: Path,
-                 video_names_file: Path, *, timeout: int = 1800) -> None:
+                 video_names_file: Path, *, timeout: int = 1800) -> float:
     """Invoke the submission's inflate.sh. Contest budget: 30 min on T4.
     Default timeout here is 30 min (1800s); pass --inflate-timeout for
     longer development runs.
@@ -306,6 +309,7 @@ def _run_inflate(inflate_sh: Path, archive_dir: Path, inflated_dir: Path,
         )
     print(f"[inflate] produced {len(test_videos)} .raw file(s), each "
           f"{EXPECTED_RAW_BYTES:,} bytes — STRICT validation passed.")
+    return elapsed
 
 
 def _validate_uncompressed_dir(uncompressed_dir: Path,
@@ -420,8 +424,13 @@ def _run_upstream_evaluate(upstream_dir: Path, submission_dir: Path,
         # Try to recover from stdout if report.txt is missing.
         if "Final score:" in result.stdout:
             print(f"[evaluate] report.txt missing — recovering from stdout")
-            return _parse_report(result.stdout, archive_size=archive_bytes_actual,
-                                 source="stdout")
+            parsed = _parse_report(
+                result.stdout,
+                archive_size=archive_bytes_actual,
+                source="stdout",
+            )
+            parsed["evaluate_elapsed_seconds"] = elapsed
+            return parsed
         raise RuntimeError(
             f"[evaluate] no report.txt at {report_path} AND stdout has no "
             f"'Final score:' line. Run produced no usable measurement."
@@ -447,6 +456,7 @@ def _run_upstream_evaluate(upstream_dir: Path, submission_dir: Path,
                         f"stdout for {k!r}: report={a} stdout={b}. One of "
                         f"the two surfaces was corrupted; refusing to ship."
                     )
+    parsed_file["evaluate_elapsed_seconds"] = elapsed
     return parsed_file
 
 
@@ -469,11 +479,24 @@ def _parse_report(report_path: Path | str, *, archive_size: int,
           Compression Rate: 0.00899
           Final score: 100*segnet_dist + sqrt(10*posenet_dist) + 25*rate = 0.90
     """
-    if isinstance(report_path, (str, Path)) and Path(str(report_path)).exists():
+    if isinstance(report_path, Path) and report_path.exists():
         text = Path(report_path).read_text()
     elif isinstance(report_path, str):
-        # Treat as raw text passthrough (used for stdout-direct parsing)
-        text = report_path
+        # Treat strings containing report newlines as raw text, not paths.
+        # Path.exists() on raw stdout can raise OSError for "file name too
+        # long"; stdout cross-checks must be robust because they are part of
+        # the exact-eval custody chain.
+        if "\n" not in report_path and len(report_path) < 4096:
+            try:
+                candidate = Path(report_path)
+                if candidate.exists():
+                    text = candidate.read_text()
+                else:
+                    text = report_path
+            except OSError:
+                text = report_path
+        else:
+            text = report_path
     else:
         raise RuntimeError(f"[{source}] not a path or readable string")
 
@@ -675,7 +698,8 @@ def main() -> int:
 
         # Stage 2: run submission's inflate.sh on the extracted archive dir
         inflated = work_dir / "inflated"
-        _run_inflate(
+        exact_eval_t0 = time.monotonic()
+        inflate_elapsed_seconds = _run_inflate(
             inflate_sh, extracted, inflated, video_names_file,
             timeout=args.inflate_timeout,
         )
@@ -690,6 +714,8 @@ def main() -> int:
             device=args.device,
             timeout=args.evaluate_timeout,
         )
+        result["inflate_elapsed_seconds"] = inflate_elapsed_seconds
+        result["contest_auth_eval_elapsed_seconds"] = time.monotonic() - exact_eval_t0
 
         # Save final JSON next to the work dir
         result["provenance"] = prov

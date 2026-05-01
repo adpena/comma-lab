@@ -149,6 +149,18 @@ def restore_layer(module: nn.Module, original: torch.Tensor) -> None:
         module.weight.data.copy_(original)
 
 
+def _gray_mask_to_class_ids(gray: torch.Tensor) -> torch.Tensor:
+    """Convert encoded grayscale mask pixels to class IDs in ``[0, 4]``.
+
+    Contest mask videos encode classes as ``class_id * (255 // 4)`` grayscale
+    values. Feeding raw luma values such as 63/126/189/252 into renderer
+    embeddings corrupts every downstream sensitivity conclusion.
+    """
+    scale = 255 // 4
+    classes = torch.round(gray.to(torch.float32) / float(scale)).to(torch.long)
+    return classes.clamp_(0, 4)
+
+
 # ── Distortion measurement (identical to qat_finetune.evaluate_fp4_quality) ─
 
 
@@ -222,6 +234,7 @@ def profile_fp4_layer_sensitivity(
     n_pairs: int,
     block_size: int,
     predicted_band: tuple[float, float] = (1.20, 1.50),
+    allow_diagnostic_cpu: bool = False,
 ) -> dict:
     t_start = time.monotonic()
 
@@ -231,7 +244,14 @@ def profile_fp4_layer_sensitivity(
             "FATAL: --device cuda requested but CUDA not available. "
             "Lane F-V4 profiler runs on CUDA only (FP4 round-trip + "
             "PoseNet-FastViT YUV6 has 23x MPS-CUDA drift per CLAUDE.md). "
-            "Pass --device cpu explicitly only if you accept advisory-only output."
+            "Use --device cpu --allow-diagnostic-cpu only for non-promotable "
+            "debug output."
+        )
+    if device == "cpu" and not allow_diagnostic_cpu:
+        raise SystemExit(
+            "FATAL: --device cpu is diagnostic-only and non-promotable. Pass "
+            "--allow-diagnostic-cpu to make that status explicit, or run on "
+            "--device cuda for sensitivity evidence."
         )
     if device == "mps":
         raise SystemExit(
@@ -284,9 +304,14 @@ def profile_fp4_layer_sensitivity(
     stream = container.streams.video[0]
     masks_list: list = []
     for frame in container.decode(stream):
-        masks_list.append(torch.from_numpy(frame.to_ndarray(format="gray")))
+        masks_list.append(_gray_mask_to_class_ids(torch.from_numpy(frame.to_ndarray(format="gray"))))
     container.close()
     masks = torch.stack(masks_list, dim=0).to(torch.long)
+    if int(masks.min()) < 0 or int(masks.max()) > 4:
+        raise SystemExit(
+            f"FATAL: decoded masks contain class range "
+            f"[{int(masks.min())}, {int(masks.max())}], expected [0, 4]"
+        )
     print(f"[profile_fp4]   masks shape={tuple(masks.shape)}")
 
     # ── Load DistortionNet (upstream authoritative scorer) ──
@@ -395,6 +420,9 @@ def profile_fp4_layer_sensitivity(
         "git_hash": git_hash,
         "torch_version": torch.__version__,
         "device": device,
+        "promotion_eligible": device == "cuda",
+        "evidence_grade": "empirical_cuda_proxy" if device == "cuda" else "diagnostic_cpu",
+        "mask_decode": "gray_luma_to_class_id_round_clamp_v1",
         "elapsed_s": time.monotonic() - t_start,
         "predicted_band": list(predicted_band),
     }
@@ -446,6 +474,11 @@ def main(argv: list[str] | None = None) -> int:
                         help="Output .pt path for layer_sensitivity tensor")
     parser.add_argument("--device", default="cuda", choices=["cuda", "cpu"],
                         help="Compute device (default cuda; MPS forbidden)")
+    parser.add_argument(
+        "--allow-diagnostic-cpu",
+        action="store_true",
+        help="Allow non-promotable CPU profiling for local debugging only.",
+    )
     parser.add_argument("--n-pairs", type=int, default=30,
                         help="Number of pairs per per-layer measurement "
                              "(default 30 — balances signal/noise vs runtime; "
@@ -468,6 +501,7 @@ def main(argv: list[str] | None = None) -> int:
         n_pairs=args.n_pairs,
         block_size=args.block_size,
         predicted_band=tuple(args.predicted_band),
+        allow_diagnostic_cpu=args.allow_diagnostic_cpu,
     )
     return 0
 

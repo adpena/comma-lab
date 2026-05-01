@@ -93,6 +93,14 @@ SSH_AUTH_OPTIONS = (
     "PasswordAuthentication=no",
     "-o",
     "KbdInteractiveAuthentication=no",
+    "-o",
+    "ServerAliveInterval=15",
+    "-o",
+    "ServerAliveCountMax=4",
+    "-o",
+    "TCPKeepAlive=yes",
+    "-o",
+    "ConnectionAttempts=3",
 )
 COMPONENT_RESPONSE_CANONICAL_ARTIFACT_FILES = (
     ARTIFACT_METADATA,

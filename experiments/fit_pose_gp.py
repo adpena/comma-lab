@@ -2,15 +2,17 @@
 # LANE_GP_BASIS_FIT_KILL_ACKNOWLEDGED:
 # Read .omx/research/council_lane_gp_v4_design_20260430.md before adding
 # ANY new smooth-basis pose-fit experiment. Lane GP v3 (89.67 [Modal-T4-CPU])
-# was killed 2026-04-30 per Council #271 + Lane GP v4 design verdict. The
-# baseline Lane G v3 pose trajectory is approximately white-noise in dims 1-5
-# (diff_std > signal_std) with uniformly-distributed spectral support — no
-# smooth basis (polynomial / B-spline / DCT / natural cubic) can fit it below
-# RMSE ≈ 1.2 (near signal std). The Runge-phenomenon diagnosis in
+# was retired as the measured smooth-basis implementation per Council #271 +
+# Lane GP v4 design verdict. The baseline Lane G v3 pose trajectory is
+# approximately white-noise in dims 1-5 (diff_std > signal_std) with
+# uniformly-distributed spectral support — no reviewed smooth basis
+# (polynomial / B-spline / DCT / natural cubic) can fit it below RMSE ≈ 1.2
+# (near signal std). The Runge-phenomenon diagnosis in
 # project_lane_gp_v3_landed_runge_phenomenon_20260429.md was incomplete; the
-# trajectory is structurally incompressible by smooth bases at any K. This
-# file is RETAINED for archival/historical reasons (Lane GP v3 reproducer);
-# the underlying lane class is killed. See preflight.py Check 91.
+# trajectory is structurally incompressible by the reviewed smooth bases at any
+# K. This file is RETAINED for archival/historical reasons (Lane GP v3
+# reproducer); new smooth-basis work requires explicit reactivation criteria.
+# See preflight.py Check 91.
 from __future__ import annotations
 
 import argparse

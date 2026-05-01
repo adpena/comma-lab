@@ -329,20 +329,18 @@ def parse_args() -> argparse.Namespace:
     # rename: this is NOT a Lagrangian dual-ascent loop (no explicit
     # multiplier λ, no constraint residual driven to zero by sub-gradient
     # ascent), it is a proportional ratio controller that empirically
-    # converges on stationary observations. Mutually exclusive with
-    # --kl-distill-weight (validated below in main()).
+    # converges on stationary observations. If --kl-distill-weight is supplied
+    # with the controller, it is only the initial controller weight.
     p.add_argument("--kl-distill-snr-target", type=float, default=None,
                    help="Lane G V3-V2: SNR-target ratio controller for "
                         "the KL-distill weight. Targets the auxiliary "
                         "KL contribution / scorer contribution ratio "
                         "(default 0.10 = canonical Hinton 2015 "
                         "auxiliary regime when set). When supplied, "
-                        "REPLACES --kl-distill-weight with a "
+                        "REPLACES the static meaning of --kl-distill-weight with a "
                         "multiplicative log-space ratio controller "
                         "(KLWeightProportionalController; alias "
-                        "LearnableKLWeight). Mutually exclusive with "
-                        "--kl-distill-weight (one or the other, not "
-                        "both). The controller's initial weight is the "
+                        "LearnableKLWeight). The controller's initial weight is the "
                         "value of --kl-distill-weight if it was passed, "
                         "else the canonical 0.002.")
     p.add_argument("--kl-distill-snr-eta", type=float, default=0.5,
@@ -713,9 +711,10 @@ def optimize_poses_batch(
         latent_dim: extra latent dimensions (0 = pose only)
         log_every: logging frequency
         gt_frames_pair: (B, 2, H, W, 3) float GT frames in 0-255 range,
-            required when kl_distill_weight > 0. Mirrors train_renderer.py's
-            `gt_pair` shape contract — segnet.preprocess_input handles
-            normalization internally.
+            required when static ``kl_distill_weight > 0`` or when a
+            ``kl_distill_snr_controller`` is supplied. Mirrors
+            train_renderer.py's `gt_pair` shape contract —
+            segnet.preprocess_input handles normalization internally.
         kl_distill_weight: auxiliary SegNet KL-distillation loss weight
             (default 0 = disabled). Uses tac.losses.kl_distill_segnet_only,
             same canonical helper as train_renderer (avoids the
@@ -757,7 +756,7 @@ def optimize_poses_batch(
             ``kl_distill_weight`` argument: the per-step weight is
             pulled from the controller and updated after each step
             using the observed SNR. ``kl_distill_weight`` is ignored
-            when this argument is non-None (mutually exclusive). Only
+            as a per-step static value when this argument is non-None. Only
             takes effect when ``gt_frames_pair is not None``.
 
     Returns:
@@ -1146,7 +1145,7 @@ def optimize_poses_batch(
                 - baseline_pose_for_linf
             ).norm(dim=1).mean().item()
             constraint_str = f" rejections={argmax_rejections}" if argmax_constraint else ""
-            kl_str = f" kl={kl_loss_val:.6f}" if kl_distill_weight > 0 else ""
+            kl_str = f" kl={kl_loss_val:.6f}" if _effective_kl_weight > 0 else ""
             linf_str = f" linf={linf_loss_val:.6f}" if linf_pose_weight > 0 else ""
             print(f"  step {step:4d}/{steps}: loss={loss_val:.6f} "
                   f"(seg={seg_loss.item():.6f}, pose={pose_loss.item():.6f}{kl_str}{linf_str}) "
@@ -1282,11 +1281,9 @@ def main():
         f"if optimizer=riemannian-sgd)",
         flush=True,
     )
-    # Lane G V3-V2: --kl-distill-snr-target validation. Mutually exclusive
-    # with a non-zero static --kl-distill-weight (the SNR controller's
-    # initial weight comes from --kl-distill-weight if set, but the
-    # operator must not also try to "lock" the weight statically — that
-    # would silently disable the controller). Build the controller here
+    # Lane G V3-V2: --kl-distill-snr-target validation. When present, a
+    # non-zero --kl-distill-weight is the controller initial value, not a
+    # locked static multiplier. Build the controller here
     # so any construction error fails-loud BEFORE the GPU-loaded
     # scorers/renderer are touched.
     kl_distill_snr_controller = None
@@ -1313,6 +1310,7 @@ def main():
             f"ratio update, NOT Lagrangian dual ascent)",
             flush=True,
         )
+    kl_distill_active = bool(args.kl_distill_weight > 0 or kl_distill_snr_controller is not None)
     # Lane M: explicit banner so the operator sees the pose-mode at-a-
     # glance (per CLAUDE.md "no wasted resources" — silent mode flips
     # are how 6h GPU runs go off-target).
@@ -1337,16 +1335,16 @@ def main():
             f"[lane-ps] SegNet per-class weights ACTIVE: "
             f"{segnet_class_weights_t.tolist()} "
             f"(applies to auxiliary KL distill loss when "
-            f"--kl-distill-weight > 0)",
+            f"--kl-distill-weight > 0 or --kl-distill-snr-target is active)",
             flush=True,
         )
-        if args.kl_distill_weight <= 0:
+        if not kl_distill_active:
             print(
                 "[lane-ps] WARNING: --segnet-class-weights supplied but "
-                "--kl-distill-weight <= 0 — Lane PS only takes effect "
+                "no KL auxiliary is active — Lane PS only takes effect "
                 "via the auxiliary KL distill path. The weights are "
-                "currently a NO-OP. Set --kl-distill-weight > 0 (e.g., "
-                "1.0 for Quantizr-style distillation) to activate.",
+                "currently a NO-OP. Set --kl-distill-weight > 0 or "
+                "--kl-distill-snr-target to activate.",
                 flush=True,
             )
 
@@ -1371,13 +1369,14 @@ def main():
             f"var_lambda={args.learnable_segnet_class_weights_var_lambda})",
             flush=True,
         )
-        if args.kl_distill_weight <= 0:
+        if not kl_distill_active:
             print(
                 "[lane-ps-v2] WARNING: --learnable-segnet-class-weights "
-                "supplied but --kl-distill-weight <= 0 — Lane PS only "
+                "supplied but no KL auxiliary is active — Lane PS only "
                 "takes effect via the auxiliary KL distill path. The "
                 "learnable weights will train but apply NO loss "
-                "contribution. Set --kl-distill-weight > 0 to activate.",
+                "contribution. Set --kl-distill-weight > 0 or "
+                "--kl-distill-snr-target to activate.",
                 flush=True,
             )
     print(f"[config] checkpoint={args.checkpoint}", flush=True)
@@ -2126,7 +2125,7 @@ def main():
         # tensor matches the renderer's float-0-255 output range that
         # kl_distill_segnet_only's _hwc_to_chw expects.
         batch_gt_frames_pair = None
-        if args.kl_distill_weight > 0:
+        if kl_distill_active:
             pair_t = torch.stack(
                 [gt_frames[i].float() for i in range(frame_start, frame_end, 2)]
             )

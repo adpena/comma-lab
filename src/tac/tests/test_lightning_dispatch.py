@@ -105,6 +105,13 @@ def test_dispatcher_ssh_args_no_key():
     assert args[0] == "ssh"
     assert "user_x@host_y" in args
     assert "-i" not in args
+    assert "BatchMode=yes" in args
+    assert "PasswordAuthentication=no" in args
+    assert "KbdInteractiveAuthentication=no" in args
+    assert "ServerAliveInterval=15" in args
+    assert "ServerAliveCountMax=4" in args
+    assert "ConnectionAttempts=3" in args
+    assert "TCPKeepAlive=yes" in args
 
 
 def test_dispatcher_ssh_args_with_alias_target():
@@ -116,6 +123,13 @@ def test_dispatcher_ssh_args_with_alias_target():
     assert args[0] == "ssh"
     assert "lightning-pact" in args
     assert not any(item.endswith("@ssh.lightning.ai") for item in args)
+
+
+def test_dispatcher_rejects_bare_lightning_host():
+    from tac.deploy.lightning import LightningDispatcher
+
+    with pytest.raises(ValueError, match="bare ssh.lightning.ai"):
+        LightningDispatcher(ssh_target="ssh.lightning.ai")
 
 
 def test_dispatcher_ssh_args_with_key():
@@ -140,6 +154,10 @@ def test_dispatcher_scp_args():
     assert "-r" in args
     assert "/local/path" in args
     assert "user_x@host_y:/remote/path" in args
+    assert "BatchMode=yes" in args
+    assert "ServerAliveInterval=15" in args
+    assert "ServerAliveCountMax=4" in args
+    assert "ConnectionAttempts=3" in args
 
 
 def test_harvest_prefers_contest_auth_eval_json_over_log_regex(tmp_path, monkeypatch):

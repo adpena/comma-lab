@@ -155,6 +155,9 @@ def test_staging_transfer_commands_reuse_noninteractive_ssh_policy(tmp_path: Pat
     assert "BatchMode=yes" in ssh_cmd
     assert "PasswordAuthentication=no" in ssh_cmd
     assert "KbdInteractiveAuthentication=no" in ssh_cmd
+    assert "ServerAliveInterval=15" in ssh_cmd
+    assert "ServerAliveCountMax=4" in ssh_cmd
+    assert "ConnectionAttempts=3" in ssh_cmd
     assert "ConnectTimeout=7" in ssh_cmd
     assert "BatchMode=yes" in scp_cmd
     assert "ConnectTimeout=7" in scp_cmd
@@ -163,6 +166,9 @@ def test_staging_transfer_commands_reuse_noninteractive_ssh_policy(tmp_path: Pat
     assert "BatchMode=yes" in transport
     assert "PasswordAuthentication=no" in transport
     assert "KbdInteractiveAuthentication=no" in transport
+    assert "ServerAliveInterval=15" in transport
+    assert "ServerAliveCountMax=4" in transport
+    assert "ConnectionAttempts=3" in transport
     assert "ConnectTimeout=7" in transport
 
 

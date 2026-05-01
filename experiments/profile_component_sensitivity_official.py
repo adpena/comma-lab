@@ -38,6 +38,7 @@ SIGNED_DELTA_ERROR_MODE = "signed_delta"
 ABSOLUTE_MAGNITUDE_ERROR_MODE = "absolute_magnitude"
 DEFAULT_GATE_SPEC = {
     "zero_repro_tolerance": 1e-7,
+    "external_baseline_repro_tolerance": 1e-7,
     "observed_delta_min": 1e-12,
     "holdout_error_max": 0.35,
     "require_prediction_deltas": True,
@@ -628,6 +629,7 @@ def _curve_for_component(
     coverage_passed: bool,
     plan: Mapping[str, Any],
     device: str,
+    external_baseline_values: Mapping[str, float] | None = None,
 ) -> dict[str, Any]:
     points: list[dict[str, Any]] = []
     missing_predictions = False
@@ -718,6 +720,15 @@ def _curve_for_component(
     observed_delta_max = max(nonzero_observed, default=0.0)
     zero_repro_error = max(zero_deltas, default=None)
     zero_repro = zero_repro_error is not None and zero_repro_error <= gate_spec["zero_repro_tolerance"]
+    external_baseline_value = None
+    external_baseline_repro_error = None
+    external_baseline_repro = True
+    if external_baseline_values is not None:
+        external_baseline_value = float(external_baseline_values[component])
+        external_baseline_repro_error = abs(float(baseline_values[component]) - external_baseline_value)
+        external_baseline_repro = (
+            external_baseline_repro_error <= gate_spec["external_baseline_repro_tolerance"]
+        )
     signal_present = observed_delta_max >= gate_spec["observed_delta_min"]
     prediction_error = max(prediction_errors, default=0.0)
     prediction_abs_error = max(abs_prediction_errors, default=0.0)
@@ -732,6 +743,7 @@ def _curve_for_component(
         and finite_values
         and coverage_passed
         and zero_repro
+        and external_baseline_repro
         and signal_present
         and prediction_error_passed
     )
@@ -764,6 +776,15 @@ def _curve_for_component(
             _blocker(
                 "zero_reproduction_failed",
                 "The eps=0 official archive response did not reproduce the baseline component value.",
+            )
+        )
+    if not external_baseline_repro:
+        blockers.append(
+            _blocker(
+                "external_baseline_reproduction_failed",
+                "The same-run eps=0 official archive response did not reproduce the supplied "
+                "baseline contest_auth_eval.json component value. Treat this as runner/scorer "
+                "calibration drift, not sensitivity evidence.",
             )
         )
     if not signal_present:
@@ -817,6 +838,9 @@ def _curve_for_component(
             "coverage_passed": bool(coverage_passed),
             "zero_repro": bool(zero_repro),
             "zero_repro_error": zero_repro_error,
+            "external_baseline_repro": bool(external_baseline_repro),
+            "external_baseline_repro_error": external_baseline_repro_error,
+            "external_baseline_value": external_baseline_value,
             "signal_present": bool(signal_present),
             "observed_delta_max": observed_delta_max,
             "prediction_error_gate_implemented": not missing_predictions,
@@ -914,13 +938,17 @@ def produce_official_component_response_curves(
         else None
     )
     if effective_same_run_zero_baseline:
+        external_baseline_values = None
         if baseline_contest_auth_eval_json is not None:
-            _validate_contest_eval_json(
+            external_baseline_payload = _validate_contest_eval_json(
                 baseline_contest_auth_eval_json,
                 archive=baseline_archive,
                 device=device,
             )
+            external_baseline_values = _component_values_from_contest_eval(external_baseline_payload)
         specs = _force_same_run_zero_baseline(specs, baseline_archive=baseline_archive)
+    else:
+        external_baseline_values = None
     results = evaluate_points(
         specs,
         output_dir=output_dir,
@@ -971,6 +999,7 @@ def produce_official_component_response_curves(
             coverage_passed=coverage_passed,
             plan=plan,
             device=device,
+            external_baseline_values=external_baseline_values,
         )
         path = output_dir / f"{component}_official_response_curve.json"
         _write_json(path, curve)
@@ -991,6 +1020,9 @@ def produce_official_component_response_curves(
         "perturbation_plan": _file_meta(perturbation_plan),
         "response_curve_paths": response_curve_paths,
         "gate_spec": gate_spec,
+        "external_baseline_component_values": (
+            dict(external_baseline_values) if external_baseline_values is not None else None
+        ),
         "response_coverage": dict(coverage),
         "response_coverage_passed": bool(coverage_passed),
         "points": [

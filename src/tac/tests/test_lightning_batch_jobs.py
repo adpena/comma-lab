@@ -2802,14 +2802,13 @@ def test_remote_supply_chain_preflight_runs_strict_scan_before_submit(
     def fake_run(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
         calls.append(list(args))
         assert args[0] == "ssh"
-        assert args[1:7] == [
-            "-o",
-            "BatchMode=yes",
-            "-o",
-            "PasswordAuthentication=no",
-            "-o",
-            "KbdInteractiveAuthentication=no",
-        ]
+        assert "BatchMode=yes" in args
+        assert "PasswordAuthentication=no" in args
+        assert "KbdInteractiveAuthentication=no" in args
+        assert "ServerAliveInterval=15" in args
+        assert "ServerAliveCountMax=4" in args
+        assert "TCPKeepAlive=yes" in args
+        assert "ConnectionAttempts=3" in args
         assert args[-2] == "lightning-host"
         assert "scripts/scan_lightning_supply_chain.py" in args[-1]
         assert "--quiet --strict" in args[-1]
@@ -2828,6 +2827,46 @@ def test_remote_supply_chain_preflight_runs_strict_scan_before_submit(
 
     assert calls[0] == ["auth"]
     assert calls[1][0] == "ssh"
+
+
+def test_remote_supply_chain_preflight_retries_transient_ssh_reset(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = _load_lightning_cli_module(tmp_path)
+    calls: list[list[str]] = []
+
+    def fake_auth_ready(*args: object, **kwargs: object) -> None:
+        calls.append(["auth"])
+
+    def fake_sleep(_delay: float) -> None:
+        calls.append(["sleep"])
+
+    def fake_run(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        calls.append(list(args))
+        if len(calls) == 2:
+            return subprocess.CompletedProcess(
+                args,
+                255,
+                stdout="",
+                stderr="kex_exchange_identification: read: Connection reset by peer\n",
+            )
+        return subprocess.CompletedProcess(args, 0, stdout='{"status":"OK"}\n', stderr="")
+
+    monkeypatch.setattr(module, "_ensure_ssh_auth_ready", fake_auth_ready)
+    monkeypatch.setattr(module.time, "sleep", fake_sleep)
+    monkeypatch.setattr(module.subprocess, "run", fake_run)
+
+    module._run_remote_supply_chain_preflight(
+        ssh_target="lightning-host",
+        job_name="component_response",
+        repo_dir="/teamspace/studios/this_studio/pact",
+        python_bin=".venv/bin/python",
+    )
+
+    ssh_calls = [call for call in calls if call and call[0] == "ssh"]
+    assert len(ssh_calls) == 2
+    assert ["sleep"] in calls
 
 
 def test_batch_job_cli_ssh_preflight_reports_identity_guidance(

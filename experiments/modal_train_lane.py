@@ -1,9 +1,11 @@
 """Run a `scripts/remote_lane_*.sh` on Modal T4 / A10G — reliable training surface.
 
 Why: 2026-04-29 night session showed Vast.ai 4090 NVDEC bad-host rate ≈ 85%.
-~$5 burned across 5 dispatch rounds for 0 trained lanes. Modal pipeline
-verified equivalent (Lane G v3 = 1.04 [Modal-T4-CUDA] vs 1.05 [Vast.ai-CUDA]
-in commit fc26b800). Time to pivot training to Modal too.
+~$5 burned across 5 dispatch rounds for 0 trained lanes. Modal is useful for
+build/training work after repeated Vast.ai NVDEC host failures.
+This wrapper forces Modal auth-eval to CPU to avoid NVDEC, so any score it
+prints is advisory only and non-promotable until the exact archive is rerun
+through CUDA auth eval.
 
 Pattern mirrors `experiments/modal_auth_eval.py` (commit 11d56896).
 
@@ -15,14 +17,16 @@ USAGE — RECOMMENDED (`--detach` for unattended training):
 
 Without `--detach` the local CLI blocks for the full 8-14h training duration
 — terminal disconnect = lost job. With `--detach`, Modal keeps the run
-alive and you can poll via `modal app logs <id>`. Round 12 caught this.
+alive and you can poll with `experiments/modal_recover_lane.py`, or stream logs
+via `modal app logs <app-id>`. Round 12 caught this.
 
 For PARALLEL dispatch of multiple lanes, fire 6 separate `modal run --detach`
 in background (each gets its own container — Modal handles concurrency
 natively).
 
-Output: artifacts saved to `experiments/results/lane_<label>_modal/`. Score
-auto-extracted from `contest_auth_eval.json` if the lane completes auth eval.
+Output: artifacts saved to `experiments/results/lane_<label>_modal/`. Any
+score extracted from `contest_auth_eval.json` is labelled advisory/non-promotable
+by the recovery helper when the recorded device is not CUDA.
 
 Cross-references:
   - feedback_vastai_nvdec_roulette_pivot_to_modal_20260429
@@ -168,7 +172,7 @@ def _run_lane_inner(lane_script: str, label: str, env_overrides: dict,
     #   2. Forcing auth_eval to --device cpu via AUTH_EVAL_DEVICE env (lane
     #      scripts honor this — see remote_lane_*.sh Stage 5). CPU device
     #      selects AVVideoDataset (PyAV) per upstream/evaluate.py:39-42 —
-    #      the ONLY way to get a score on Modal without NVDEC.
+    #      the ONLY way to get a diagnostic score on Modal without NVDEC.
     # Round 4 caught the AVVideoDataset-auto-fallback claim was wrong;
     # the fallback ONLY happens when device.type != cuda. So we have to
     # explicitly tell auth_eval to use cpu.
@@ -176,7 +180,7 @@ def _run_lane_inner(lane_script: str, label: str, env_overrides: dict,
     stub_probe.write_text(
         "#!/bin/bash\n"
         "# Modal-runtime stub. Lane training doesn't need NVDEC; auth_eval\n"
-        "# uses --device cpu (AVVideoDataset/PyAV) which produces identical scores.\n"
+        "# uses --device cpu (AVVideoDataset/PyAV), so scores are advisory only.\n"
         "echo '[probe_nvdec] Modal runtime — NVDEC not required (auth_eval uses cpu device)'\n"
         "exit 0\n"
     )
@@ -215,6 +219,8 @@ def _run_lane_inner(lane_script: str, label: str, env_overrides: dict,
     # python invocations so probe_nvdec.sh + lane scripts inherit it.
     # AUTH_EVAL_DEVICE=cpu forces lane Stage 5 contest_auth_eval to use
     # AVVideoDataset (PyAV) instead of DaliVideoDataset (which needs NVDEC).
+    # Mark the path non-promotable in the child environment so harvested
+    # metadata cannot be mistaken for exact CUDA evidence.
     env = {
         **os.environ,
         "WORKSPACE": str(workspace),
@@ -228,6 +234,9 @@ def _run_lane_inner(lane_script: str, label: str, env_overrides: dict,
         "TAC_UPSTREAM_DIR": str(workspace / "upstream"),
         "MODAL_RUNTIME": "1",
         "AUTH_EVAL_DEVICE": "cpu",
+        "MODAL_AUTH_EVAL_ADVISORY_ONLY": "1",
+        "SCORE_CLAIM": "false",
+        "PROMOTION_ELIGIBLE": "false",
         # Lanes test for AUTO_DESTROY_VAST + VAST_INSTANCE_ID; on Modal these
         # are no-ops since Modal manages instance lifecycle.
         "AUTO_DESTROY_VAST": "0",
@@ -422,15 +431,22 @@ def main(
     # or background work."). Tonight's first 3 dispatches all got killed at
     # 4-6s by this exact issue.
     #
-    # .spawn() returns a FunctionCall handle. We save it so the user can
-    # poll later with `modal call get <id>`.
+    # .spawn() returns a FunctionCall handle. We save it so the recovery script
+    # can poll later through Modal's Python API. Modal 1.4 no longer exposes a
+    # direct FunctionCall result CLI for this path.
     fn_call = fn.spawn(lane_script, label, overrides, max_seconds)
     call_id = fn_call.object_id
 
     print(f"\n✓ DISPATCHED via .spawn() — call_id={call_id}")
-    print(f"  Poll status:    modal call get {call_id}")
-    print(f"  Stream logs:    modal app logs <app_id> (see modal app list)")
-    print(f"  Get result:     modal call get {call_id} (after completion)")
+    print(
+        "  Poll/recover:   "
+        f".venv/bin/python experiments/modal_recover_lane.py --label {label}"
+    )
+    print("  Stream logs:    .venv/bin/modal app logs <app-id> (see modal app list)")
+    print(
+        "  Direct recover: "
+        f".venv/bin/python experiments/modal_recover_lane.py --call-id {call_id}"
+    )
     print(f"\n  Local entrypoint exiting; remote training continues for up to {timeout_hours:.0f}h.")
 
     # Save call_id to a sentinel file so a later script can recover artifacts.
@@ -443,6 +459,10 @@ def main(
         "gpu": gpu,
         "max_seconds": max_seconds,
         "call_id": call_id,
+        "auth_eval_device": "cpu",
+        "auth_eval_advisory_only": True,
+        "score_claim": False,
+        "promotion_eligible": False,
         "dispatched_at": __import__("datetime").datetime.now().isoformat(),
     }, indent=2))
     print(f"  call_id saved:  {sentinel_dir}/modal_call_id.txt")

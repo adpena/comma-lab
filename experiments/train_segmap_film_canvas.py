@@ -153,6 +153,8 @@ def _build_trainer_config(args: argparse.Namespace, device: torch.device):
     # Round 7 Defect #2 fix: ALWAYS pass kl_distill_weight (no longer
     # silently dropped — see comment in experiments/train_segmap.py).
     cfg_kwargs["kl_distill_weight"] = args.kl_distill_weight
+    if loss_mode == "kl_distill":
+        cfg_kwargs["kl_distill_scope"] = "segnet_aux"
     if hasattr(TrainConfig, "model_fields"):
         fields = set(TrainConfig.model_fields.keys())
         if "kl_distill_temperature" in fields:
@@ -243,6 +245,7 @@ def main() -> int:
             "dry_run": True,
             "n_params": n_params,
             "config": cfg.model_dump() if hasattr(cfg, "model_dump") else dict(vars(cfg)),
+            "distillation_policy": cfg.distillation_policy_provenance(),
             "device": str(device),
         }
         (output_dir / "segmap_fc_dry_run.json").write_text(json.dumps(meta, indent=2))
@@ -295,12 +298,32 @@ def main() -> int:
     elapsed = time.monotonic() - t_start
     print(f"[train_segmap_fc] training complete in {elapsed:.1f}s", flush=True)
 
+    # PCC3 internal-consistency check (Council 2026-04-30 ~23:30 UTC, DD2/DD3
+    # 10/10 vote): SegMap-FC training on T4 has the same per-epoch cost as
+    # plain SegMap (~2 s/epoch) PLUS the FiLM table/canvas overhead (~0.2 s).
+    # 0.5 s/epoch floor flags any 4× regression. To no-op the training, pass
+    # --epochs 0; a stub-loop pretending to be real training will trip this.
+    # Memory: feedback_grand_council_pcc3_stats_consistency_20260430.md.
+    MIN_WALL_PER_EPOCH_SEC = 0.5  # see council vote
+    if args.epochs > 0:
+        expected_min = args.epochs * MIN_WALL_PER_EPOCH_SEC
+        if elapsed < expected_min:
+            raise RuntimeError(
+                f"PCC3 STUB-LOOP DETECTED: claimed {args.epochs} epochs in "
+                f"{elapsed:.2f}s — below floor {expected_min:.2f}s "
+                f"({MIN_WALL_PER_EPOCH_SEC}s/epoch). This indicates the train "
+                f"loop is not actually training. To run a deliberate no-op, "
+                f"pass --epochs 0 instead of pretending. Memory: "
+                f"feedback_grand_council_pcc3_stats_consistency_20260430.md."
+            )
+
     train_ckpt_path = output_dir / "segmap_fc_train.pt"
     torch.save(
         {
             "model": model.state_dict(),
             "ema": ema.state_dict(),
             "config": cfg.model_dump() if hasattr(cfg, "model_dump") else dict(vars(cfg)),
+            "distillation_policy": cfg.distillation_policy_provenance(),
             "epoch": args.epochs,
             "n_params": n_params,
         },
@@ -326,6 +349,7 @@ def main() -> int:
         "elapsed_seconds": elapsed,
         "device": str(device),
         "config": cfg.model_dump() if hasattr(cfg, "model_dump") else dict(vars(cfg)),
+        "distillation_policy": cfg.distillation_policy_provenance(),
         "history": history,
         "has_film_table": True,
     }

@@ -2215,6 +2215,271 @@ def _alpha_geo_visual_primitives_packet(
     }
 
 
+def _primitive_contract_source_record(
+    diagnostics: dict[str, Any],
+    *,
+    key: str,
+    provenance_only: bool,
+) -> dict[str, Any]:
+    inputs = diagnostics.get("inputs", {})
+    source = inputs.get(f"{key}_source", {})
+    visual_source = diagnostics.get("visual_primitives", {}).get("source", {})
+    decoded_sha = source.get("decoded_mask_sha256") or visual_source.get(f"{key}_mask_sha256")
+    decoded_shape = source.get("decoded_mask_shape")
+    if decoded_shape is None:
+        shape = diagnostics.get("shape", {})
+        if {"frames", "height", "width"}.issubset(shape):
+            decoded_shape = [int(shape["frames"]), int(shape["height"]), int(shape["width"])]
+    return {
+        "path": inputs.get(key) or visual_source.get(key),
+        "archive_sha256": source.get("source_sha256") or visual_source.get(f"{key}_source_sha256"),
+        "archive_size_bytes": source.get("source_size_bytes"),
+        "archive_member": source.get("archive_member_resolved") or inputs.get(f"{key}_member"),
+        "archive_member_requested": source.get("archive_member_requested")
+        or inputs.get(f"{key}_member_requested"),
+        "archive_member_sha256": source.get("archive_member_sha256"),
+        "archive_member_size_bytes": source.get("archive_member_size_bytes"),
+        "archive_member_compressed_bytes": source.get("archive_member_compressed_bytes"),
+        "decoded_mask_sha256": decoded_sha,
+        "decoded_mask_sha256_algo": source.get("decoded_mask_sha256_algo")
+        or ("sha256(shape,dtype,contiguous-raw-bytes)" if decoded_sha else None),
+        "decoded_mask_shape": decoded_shape,
+        "decoded_mask_dtype": source.get("decoded_mask_dtype"),
+        "provenance_only": bool(provenance_only),
+        "promotion_eligible": False,
+        "score_claim_eligible": False,
+        "exact_eval_claim": False,
+    }
+
+
+def _primitive_contract_mentions_protected_class(row: dict[str, Any]) -> bool:
+    class_id = row.get("class_id")
+    if class_id is not None:
+        return int(class_id) in {1, 2}
+    for hist_key in ("baseline_class_hist", "candidate_class_hist"):
+        hist = row.get(hist_key, {})
+        if not isinstance(hist, dict):
+            continue
+        for cls in (1, 2):
+            if int(hist.get(str(cls), 0) or 0) > 0:
+                return True
+    return int(row.get("critical_class_pixels", 0) or 0) > 0
+
+
+def _primitive_contract_ranked_critical_boxes(diagnostics: dict[str, Any]) -> list[dict[str, Any]]:
+    visual_metrics = (
+        diagnostics.get("visual_primitives", {})
+        .get("primitive_metrics", {})
+        .get("connected_components", {})
+    )
+    boxes: list[dict[str, Any]] = []
+    component_source = (
+        "visual_primitives.primitive_metrics.connected_components."
+        "critical_box_failures"
+    )
+    for index, row in enumerate(visual_metrics.get("critical_box_failures", []), start=1):
+        if not _primitive_contract_mentions_protected_class(row):
+            continue
+        boxes.append(
+            {
+                "rank": None,
+                "source": component_source,
+                "source_rank": int(row.get("rank", index)),
+                "failure_type": row.get("failure_type"),
+                "frame": row.get("frame"),
+                "frames": [int(row["frame"])] if row.get("frame") is not None else None,
+                "class_id": row.get("class_id"),
+                "class_name": row.get("class_name"),
+                "box_xyxy": row.get("box_xyxy"),
+                "candidate_box_xyxy": row.get("candidate_box_xyxy"),
+                "area_px": row.get("area_px"),
+                "pose_sensitive": row.get("pose_sensitive"),
+                "box_iou": row.get("box_iou"),
+                "mask_iou": row.get("mask_iou"),
+                "centroid_jump_px": row.get("centroid_jump_px"),
+                "promotion_eligible": False,
+                "score_claim_eligible": False,
+                "exact_eval_claim": False,
+            }
+        )
+
+    residual_source = "residual_region_ranking.regions"
+    for index, row in enumerate(
+        diagnostics.get("residual_region_ranking", {}).get("regions", []),
+        start=1,
+    ):
+        if not _primitive_contract_mentions_protected_class(row):
+            continue
+        boxes.append(
+            {
+                "rank": None,
+                "source": residual_source,
+                "source_rank": int(row.get("rank", index)),
+                "failure_type": "residual_region",
+                "frame": row.get("frame"),
+                "frames": row.get("frame_range"),
+                "class_id": row.get("dominant_baseline_class"),
+                "class_name": row.get("dominant_baseline_name"),
+                "box_xyxy": row.get("box_xyxy"),
+                "candidate_box_xyxy": None,
+                "area_px": row.get("area_px"),
+                "pose_sensitive": row.get("lower_field"),
+                "priority_label": row.get("priority_label"),
+                "suggested_repair": row.get("suggested_repair"),
+                "critical_class_pixels": row.get("critical_class_pixels"),
+                "boundary_band_pixels": row.get("boundary_band_pixels"),
+                "temporal_transition_disagreement_pixels": row.get(
+                    "temporal_transition_disagreement_pixels"
+                ),
+                "baseline_class_hist": row.get("baseline_class_hist"),
+                "candidate_class_hist": row.get("candidate_class_hist"),
+                "promotion_eligible": False,
+                "score_claim_eligible": False,
+                "exact_eval_claim": False,
+            }
+        )
+
+    for rank, row in enumerate(boxes, start=1):
+        row["rank"] = int(rank)
+    return boxes
+
+
+def _primitive_contract_boundary_recipes(
+    diagnostics: dict[str, Any],
+    *,
+    baseline_source: dict[str, Any],
+) -> list[dict[str, Any]]:
+    boundary_bands = diagnostics.get("boundary_bands", {})
+    shape = diagnostics.get("shape", {})
+    recipes: list[dict[str, Any]] = []
+    for radius in (1, 2, 3, 5):
+        observed = boundary_bands.get(str(radius), {})
+        recipes.append(
+            {
+                "radius_px": int(radius),
+                "source": "decoded_baseline_mask",
+                "source_decoded_mask_sha256": baseline_source.get("decoded_mask_sha256"),
+                "shape": shape,
+                "protected_classes": [1, 2],
+                "class_boundary_definition": (
+                    "baseline pixel is true when any 4-neighbor decoded-baseline "
+                    "class id differs"
+                ),
+                "dilation_operator": {
+                    "type": "square_binary_dilation",
+                    "implementation": "torch.nn.functional.max_pool2d",
+                    "kernel_size_px": int(2 * radius + 1),
+                    "padding_px": int(radius),
+                    "metric": "chebyshev_linf_pixels",
+                },
+                "observed_candidate_delta": {
+                    "band_pixels": observed.get("band_pixels"),
+                    "band_fraction": observed.get("band_fraction"),
+                    "disagreement_pixels": observed.get("disagreement_pixels"),
+                    "disagreement_rate": observed.get("disagreement_rate"),
+                    "computed_in_diagnostics": bool(observed),
+                },
+                "promotion_eligible": False,
+                "score_claim_eligible": False,
+                "exact_eval_claim": False,
+            }
+        )
+    return recipes
+
+
+def _primitive_contract_gate_thresholds(diagnostics: dict[str, Any]) -> dict[str, Any]:
+    pass_fail = diagnostics.get("visual_primitives", {}).get("pass_fail", {})
+    gates: dict[str, Any] = {}
+    for name in ("exploratory_retrain_gate", "exact_eval_spend_gate"):
+        row = pass_fail.get(name, {})
+        gates[name] = {
+            "thresholds": row.get("thresholds", {}),
+            "observed": row.get("observed", {}),
+            "passed": row.get("passed"),
+            "blockers": row.get("blockers", []),
+            "promotion_eligible": False,
+            "score_claim_eligible": False,
+            "exact_eval_claim": False,
+        }
+    return gates
+
+
+def _primitive_contract_worst_transition_pairs(diagnostics: dict[str, Any]) -> list[dict[str, Any]]:
+    pairs: list[dict[str, Any]] = []
+    for rank, row in enumerate(diagnostics.get("temporal", {}).get("worst_frame_pairs", []), start=1):
+        pairs.append(
+            {
+                "rank": int(rank),
+                "pair_index": row.get("pair_index"),
+                "frames": row.get("frames"),
+                "transition_disagreement_pixels": row.get("transition_disagreement_pixels"),
+                "transition_disagreement_rate": row.get("transition_disagreement_rate"),
+                "stable_false_flip_pixels": row.get("stable_false_flip_pixels"),
+                "stable_false_flip_rate": row.get("stable_false_flip_rate"),
+                "pair_frame_disagreement_rate": row.get("pair_frame_disagreement_rate"),
+                "promotion_eligible": False,
+                "score_claim_eligible": False,
+                "exact_eval_claim": False,
+            }
+        )
+    return pairs
+
+
+def build_alpha_geo_primitive_contract(diagnostics: dict[str, Any]) -> dict[str, Any]:
+    """Build the empirical Alpha-Geo primitive contract from diagnostics JSON."""
+
+    baseline_source = _primitive_contract_source_record(
+        diagnostics,
+        key="baseline",
+        provenance_only=False,
+    )
+    candidate_source = _primitive_contract_source_record(
+        diagnostics,
+        key="candidate",
+        provenance_only=True,
+    )
+    visual_source = diagnostics.get("visual_primitives", {}).get("source", {})
+    contract = {
+        "schema_version": 1,
+        "diagnostic": "alpha_geo_primitive_contract_v1",
+        "score_evidence_grade": "empirical",
+        "device": "cpu",
+        "scorer_proxy": False,
+        "scorer_network_loaded": False,
+        "promotion_eligible": False,
+        "score_claim_eligible": False,
+        "exact_eval_claim": False,
+        "exact_score_source": (
+            "none in this contract; exact score requires archive.zip -> "
+            "inflate.sh -> upstream/evaluate.py on CUDA"
+        ),
+        "source": {
+            "diagnose_nerv_geometry_json": visual_source.get("diagnose_nerv_geometry_json"),
+            "baseline": baseline_source,
+            "failed_candidate": candidate_source,
+        },
+        "shape": diagnostics.get("shape", {}),
+        "protected_classes": [
+            {"class_id": 1, "class_name": CLASS_NAMES[1]},
+            {"class_id": 2, "class_name": CLASS_NAMES[2]},
+        ],
+        "ranked_critical_boxes": _primitive_contract_ranked_critical_boxes(diagnostics),
+        "decoded_baseline_boundary_recipes": _primitive_contract_boundary_recipes(
+            diagnostics,
+            baseline_source=baseline_source,
+        ),
+        "worst_transition_pairs": _primitive_contract_worst_transition_pairs(diagnostics),
+        "threshold_gates": _primitive_contract_gate_thresholds(diagnostics),
+        "contract_limitations": [
+            "CPU integer-mask diagnostics only",
+            "failed candidate archive hashes are provenance only",
+            "no scorer network or CUDA auth eval was loaded by this contract",
+            "no score, promotion, rank, or retirement claim is authorized",
+        ],
+    }
+    return _as_jsonable(contract)
+
+
 def _record_check(
     checks: dict[str, Any],
     name: str,
@@ -2939,6 +3204,15 @@ def main() -> int:
     parser.add_argument("--baseline", type=Path, required=True, help="Decoded baseline tensor/video/archive path.")
     parser.add_argument("--candidate", type=Path, required=True, help="Decoded candidate tensor/video/archive/.nrv path.")
     parser.add_argument("--output-json", type=Path, required=True, help="Path to write diagnostics JSON.")
+    parser.add_argument(
+        "--primitive-contract-json",
+        type=Path,
+        default=None,
+        help=(
+            "Optional path to write alpha_geo_primitive_contract_v1. This is "
+            "empirical/no-score contract metadata derived from diagnostics."
+        ),
+    )
     parser.add_argument("--baseline-member", type=str, default=None, help="Archive member for --baseline when it is a zip.")
     parser.add_argument("--candidate-member", type=str, default=None, help="Archive member for --candidate when it is a zip.")
     parser.add_argument("--num-frames", type=int, default=None, help="Required when loading .nrv.")
@@ -3175,6 +3449,16 @@ def main() -> int:
     }
     args.output_json.parent.mkdir(parents=True, exist_ok=True)
     args.output_json.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
+    if args.primitive_contract_json is not None:
+        contract = build_alpha_geo_primitive_contract(result)
+        args.primitive_contract_json.parent.mkdir(parents=True, exist_ok=True)
+        args.primitive_contract_json.write_text(
+            json.dumps(contract, indent=2, sort_keys=True) + "\n"
+        )
+        print(
+            f"[alpha-geo-primitive-contract] wrote {args.primitive_contract_json}",
+            flush=True,
+        )
     overall = result.get("pass_fail", {}).get("overall_pass")
     print(
         f"[alpha-geo-0] wrote {args.output_json} "

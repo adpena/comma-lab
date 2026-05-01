@@ -394,6 +394,28 @@ class TestLightningSshStaticPolicy:
 
         assert check_lightning_ssh_static_policy(root, strict=True, verbose=False) == []
 
+    def test_lightning_provider_host_constant_for_alias_generation_passes(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        _write(root / "scripts" / "configure_lightning_ssh.py", """
+            DEFAULT_HOST = "ssh.lightning.ai"
+            def render():
+                return f"HostName {DEFAULT_HOST}"
+        """)
+
+        assert check_lightning_ssh_static_policy(root, strict=True, verbose=False) == []
+
+    def test_lightning_deploy_tree_is_scanned(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        _write(root / "src" / "tac" / "deploy" / "lightning" / "bad.sh", """
+            #!/usr/bin/env bash
+            set -euo pipefail
+            ssh -o StrictHostKeyChecking=no lightning-pact true
+        """)
+
+        violations = check_lightning_ssh_static_policy(root, strict=False, verbose=False)
+
+        assert any("src/tac/deploy/lightning/bad.sh" in item for item in violations)
+
     def test_vast_scripts_are_out_of_scope_for_lightning_ssh_policy(self, tmp_path: Path) -> None:
         root = _stub_repo(tmp_path)
         _write(root / "scripts" / "launch_lane_on_vastai.sh", """

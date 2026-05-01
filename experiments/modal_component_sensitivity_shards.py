@@ -58,6 +58,8 @@ image = (
         "numpy<2.0",
         "Pillow",
         "pydantic>=2.0",
+        "segmentation-models-pytorch",
+        "timm",
     )
     .add_local_dir("src", remote_path="/workspace/pact/src")
     .add_local_dir("upstream", remote_path="/workspace/pact/upstream")

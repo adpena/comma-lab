@@ -18,7 +18,7 @@ import sys
 import tempfile
 import time
 from pathlib import Path
-from typing import Iterable
+from typing import Any, Callable, Iterable
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -82,6 +82,40 @@ MINI_SHAI_HULUD_REPO_INDICATORS = (
     ".vscode/setup.mjs",
     ".github/workflows/format-check.yml",
 )
+SSH_AUTH_OPTIONS = (
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "PasswordAuthentication=no",
+    "-o",
+    "KbdInteractiveAuthentication=no",
+    "-o",
+    "ServerAliveInterval=15",
+    "-o",
+    "ServerAliveCountMax=4",
+    "-o",
+    "TCPKeepAlive=yes",
+    "-o",
+    "ConnectionAttempts=3",
+)
+
+RunFn = Callable[..., subprocess.CompletedProcess[str]]
+
+
+class LightningSshPreflightError(RuntimeError):
+    """Raised when Lightning SSH auth is not reproducibly configured."""
+
+    def __init__(self, message: str, diagnostic: dict[str, Any]) -> None:
+        super().__init__(message)
+        self.diagnostic = diagnostic
+
+
+class LightningRuntimePreflightError(RuntimeError):
+    """Raised when a reachable Lightning Studio runtime is not fit for use."""
+
+    def __init__(self, message: str, diagnostic: dict[str, Any]) -> None:
+        super().__init__(message)
+        self.diagnostic = diagnostic
 
 
 def _utc_now() -> str:
@@ -122,6 +156,458 @@ def _capture(cmd: list[str], *, cwd: Path = REPO_ROOT) -> str | None:
     except Exception:
         return None
     return proc.stdout.strip()
+
+
+def _ssh_run(
+    cmd: list[str],
+    *,
+    runner: RunFn = subprocess.run,
+    check: bool = False,
+) -> subprocess.CompletedProcess[str]:
+    return runner(
+        cmd,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=check,
+    )
+
+
+def _ssh_options(connect_timeout: int | None) -> list[str]:
+    options = list(SSH_AUTH_OPTIONS)
+    if connect_timeout is not None:
+        if connect_timeout <= 0:
+            raise ValueError("ssh_connect_timeout must be positive")
+        options.extend(["-o", f"ConnectTimeout={int(connect_timeout)}"])
+    return options
+
+
+def _ssh_command(ssh_bin: str, target: str, remote_command: str, *, connect_timeout: int | None) -> list[str]:
+    return [ssh_bin, *_ssh_options(connect_timeout), target, remote_command]
+
+
+def _scp_command(scp_bin: str, source: str | Path, dest: str, *, connect_timeout: int | None) -> list[str]:
+    return [scp_bin, *_ssh_options(connect_timeout), str(source), dest]
+
+
+def _rsync_command(
+    source_file_list: Path,
+    remote: str,
+    remote_pact: str,
+    *,
+    connect_timeout: int | None,
+) -> list[str]:
+    ssh_transport = " ".join(shlex.quote(part) for part in ["ssh", *_ssh_options(connect_timeout)])
+    return [
+        "rsync",
+        "-a",
+        "-e",
+        ssh_transport,
+        "--files-from",
+        str(source_file_list),
+        "./",
+        f"{remote}:{remote_pact}/",
+    ]
+
+
+def _expand_ssh_path(value: str) -> str:
+    expanded = os.path.expandvars(os.path.expanduser(value))
+    return str(Path(expanded).resolve())
+
+
+def _public_key_for_identity(identity_file: str) -> str:
+    return _expand_ssh_path(identity_file) + ".pub"
+
+
+def _fingerprint_public_key(
+    public_key_file: str,
+    *,
+    runner: RunFn = subprocess.run,
+) -> str | None:
+    path = Path(public_key_file)
+    if not path.is_file():
+        return None
+    proc = _ssh_run(["ssh-keygen", "-lf", str(path)], runner=runner)
+    if proc.returncode != 0:
+        return None
+    return proc.stdout.strip() or None
+
+
+def _parse_ssh_g(stdout: str) -> dict[str, list[str]]:
+    values: dict[str, list[str]] = {}
+    for raw_line in stdout.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        key, sep, value = line.partition(" ")
+        if not sep:
+            continue
+        values.setdefault(key.lower(), []).append(value.strip())
+    return values
+
+
+def _last_ssh_config_value(values: dict[str, list[str]], key: str) -> str | None:
+    entries = values.get(key)
+    return entries[-1] if entries else None
+
+
+def lightning_ssh_diagnostic(
+    remote: str,
+    *,
+    ssh_bin: str = "ssh",
+    connect: bool,
+    connect_timeout: int = 15,
+    runner: RunFn = subprocess.run,
+) -> dict[str, Any]:
+    """Return sanitized SSH config/auth diagnostics for a Lightning target."""
+
+    target = str(remote).strip()
+    if not target or any(ch in target for ch in "\r\n\0"):
+        raise ValueError("Lightning SSH target must be non-empty and must not contain control characters")
+    if target == "ssh.lightning.ai":
+        raise ValueError(
+            "Lightning SSH target must be a ~/.ssh/config alias or user-qualified target, not bare ssh.lightning.ai"
+        )
+    diagnostic: dict[str, Any] = {
+        "schema_version": 1,
+        "target": target,
+        "ssh_bin": ssh_bin,
+        "auth_probe_requested": bool(connect),
+    }
+    config_proc = _ssh_run([ssh_bin, "-G", target], runner=runner)
+    diagnostic["ssh_g_returncode"] = config_proc.returncode
+    if config_proc.returncode == 0:
+        values = _parse_ssh_g(config_proc.stdout)
+        diagnostic["resolved"] = {
+            "host": _last_ssh_config_value(values, "host"),
+            "hostname": _last_ssh_config_value(values, "hostname"),
+            "user": _last_ssh_config_value(values, "user"),
+            "port": _last_ssh_config_value(values, "port"),
+            "identitiesonly": _last_ssh_config_value(values, "identitiesonly"),
+            "stricthostkeychecking": _last_ssh_config_value(values, "stricthostkeychecking"),
+            "userknownhostsfile": _last_ssh_config_value(values, "userknownhostsfile"),
+        }
+        identity_files = values.get("identityfile", [])
+        identity_records = []
+        seen_expanded: set[str] = set()
+        duplicate_expanded: list[str] = []
+        for identity in identity_files:
+            expanded = _expand_ssh_path(identity)
+            if expanded in seen_expanded:
+                duplicate_expanded.append(expanded)
+            seen_expanded.add(expanded)
+            public_key = _public_key_for_identity(identity)
+            identity_records.append(
+                {
+                    "identity_file": identity,
+                    "expanded_identity_file": expanded,
+                    "identity_file_exists": Path(expanded).is_file(),
+                    "public_key_file": public_key,
+                    "public_key_exists": Path(public_key).is_file(),
+                    "public_key_fingerprint": _fingerprint_public_key(public_key, runner=runner),
+                }
+            )
+        diagnostic["identity_files"] = identity_records
+        diagnostic["duplicate_expanded_identity_files"] = sorted(set(duplicate_expanded))
+    else:
+        diagnostic["ssh_g_stderr"] = config_proc.stderr.strip()
+
+    if connect:
+        probe_cmd = _ssh_command(ssh_bin, target, "true", connect_timeout=connect_timeout)
+        probe_proc = _ssh_run(probe_cmd, runner=runner)
+        diagnostic["auth_probe"] = {
+            "returncode": probe_proc.returncode,
+            "stdout": probe_proc.stdout.strip(),
+            "stderr": probe_proc.stderr.strip(),
+        }
+        diagnostic["status"] = "ok" if probe_proc.returncode == 0 else "fail"
+    else:
+        diagnostic["status"] = "not_probed"
+    return diagnostic
+
+
+def _format_lightning_ssh_failure(diagnostic: dict[str, Any]) -> str:
+    resolved = diagnostic.get("resolved") if isinstance(diagnostic.get("resolved"), dict) else {}
+    identities = diagnostic.get("identity_files") if isinstance(diagnostic.get("identity_files"), list) else []
+    probe = diagnostic.get("auth_probe") if isinstance(diagnostic.get("auth_probe"), dict) else {}
+    lines = [
+        f"Lightning SSH preflight failed for target {diagnostic.get('target')!r}.",
+        "This blocks reproducible staging/harvest before any rsync, scp, or Batch Job submission.",
+    ]
+    if resolved:
+        lines.append(
+            "Resolved SSH endpoint: "
+            f"user={resolved.get('user')!r} host={resolved.get('hostname')!r} "
+            f"identitiesonly={resolved.get('identitiesonly')!r} "
+            f"strict_host_key_checking={resolved.get('stricthostkeychecking')!r}."
+        )
+    if identities:
+        lines.append("Resolved identity/public-key candidates:")
+        for item in identities:
+            lines.append(
+                "  - "
+                f"identity={item.get('expanded_identity_file')} "
+                f"exists={item.get('identity_file_exists')} "
+                f"public_key={item.get('public_key_file')} "
+                f"public_key_exists={item.get('public_key_exists')} "
+                f"fingerprint={item.get('public_key_fingerprint')}"
+            )
+    duplicates = diagnostic.get("duplicate_expanded_identity_files")
+    if duplicates:
+        lines.append(f"Duplicate resolved IdentityFile entries: {duplicates!r}.")
+    policy_violations = diagnostic.get("policy_violations")
+    if policy_violations:
+        lines.append(f"SSH policy violations: {policy_violations!r}.")
+    stderr = str(probe.get("stderr") or "").strip()
+    if stderr:
+        lines.append(f"SSH stderr: {stderr}")
+    lines.extend(
+        [
+            "Fix guidance:",
+            "  1. Add the selected *.pub key to the Lightning Studio/account SSH keys.",
+            "  2. Keep ~/.ssh/config on an alias with HostName ssh.lightning.ai, the Studio SSH User, IdentityFile, IdentitiesOnly yes, and BatchMode yes.",
+            "  3. Verify with: ssh -o BatchMode=yes <alias> true",
+            "  4. Do not run the bare lightning CLI for discovery; use lightning-sdk wrappers after SSH is healthy.",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _ssh_policy_violations(diagnostic: dict[str, Any]) -> list[str]:
+    violations: list[str] = []
+    resolved = diagnostic.get("resolved") if isinstance(diagnostic.get("resolved"), dict) else {}
+    strict = str(resolved.get("stricthostkeychecking") or "").lower()
+    if strict in {"false", "no", "off"}:
+        violations.append(
+            "StrictHostKeyChecking is disabled; use accept-new or yes for Lightning custody"
+        )
+    identities = diagnostic.get("identity_files") if isinstance(diagnostic.get("identity_files"), list) else []
+    if identities and not any(bool(item.get("identity_file_exists")) for item in identities if isinstance(item, dict)):
+        violations.append("no resolved IdentityFile exists on disk")
+    if identities and not any(bool(item.get("public_key_exists")) for item in identities if isinstance(item, dict)):
+        violations.append("no resolved IdentityFile has a sibling .pub key for Lightning registration")
+    return violations
+
+
+def ensure_lightning_ssh_ready(
+    remote: str,
+    *,
+    ssh_bin: str = "ssh",
+    connect_timeout: int = 15,
+    runner: RunFn = subprocess.run,
+) -> dict[str, Any]:
+    diagnostic = lightning_ssh_diagnostic(
+        remote,
+        ssh_bin=ssh_bin,
+        connect=True,
+        connect_timeout=connect_timeout,
+        runner=runner,
+    )
+    if diagnostic.get("status") != "ok":
+        raise LightningSshPreflightError(_format_lightning_ssh_failure(diagnostic), diagnostic)
+    policy_violations = _ssh_policy_violations(diagnostic)
+    if policy_violations:
+        diagnostic["status"] = "fail"
+        diagnostic["policy_violations"] = policy_violations
+        raise LightningSshPreflightError(_format_lightning_ssh_failure(diagnostic), diagnostic)
+    return diagnostic
+
+
+RUNTIME_DIAGNOSTIC_MARKER = "LIGHTNING_RUNTIME_DIAGNOSTIC_JSON="
+
+
+def _remote_runtime_probe_command(
+    remote_pact: str,
+    *,
+    python_bin: str | None,
+    require_cuda: bool,
+) -> str:
+    lines = [
+        "set -euo pipefail",
+        f"cd {shlex.quote(remote_pact)}",
+    ]
+    if python_bin:
+        lines.extend(
+            [
+                f"PYBIN={shlex.quote(python_bin)}",
+                'test -x "$PYBIN"',
+            ]
+        )
+    else:
+        lines.extend(
+            [
+                "if [ -x .venv/bin/python ]; then",
+                "  PYBIN=.venv/bin/python",
+                "else",
+                "  PYBIN=$(command -v python3 || command -v python)",
+                "fi",
+            ]
+        )
+    lines.extend(
+        [
+            '"$PYBIN" - <<\'PY\'',
+            "import json, pathlib, shutil, subprocess, sys, time",
+            "payload = {",
+            "  'schema_version': 1,",
+            "  'tool': 'lightning_remote_runtime_preflight',",
+            "  'recorded_at_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),",
+            "  'cwd': str(pathlib.Path.cwd()),",
+            "  'python': sys.executable,",
+            "  'python_version': sys.version,",
+            f"  'python_bin_requested': {python_bin!r},",
+            f"  'require_cuda': {require_cuda!r},",
+            "}",
+            "try:",
+            "    import torch",
+            "    payload['torch_version'] = getattr(torch, '__version__', None)",
+            "    payload['torch_cuda_version'] = getattr(torch.version, 'cuda', None)",
+            "    payload['torch_cuda_available'] = bool(torch.cuda.is_available())",
+            "    payload['torch_cuda_device_count'] = int(torch.cuda.device_count())",
+            "    payload['torch_cuda_device_names'] = [",
+            "        torch.cuda.get_device_name(i) for i in range(int(torch.cuda.device_count()))",
+            "    ] if torch.cuda.is_available() else []",
+            "except Exception as exc:",
+            "    payload['torch_import_error'] = repr(exc)",
+            "nvidia_smi = shutil.which('nvidia-smi')",
+            "payload['nvidia_smi'] = nvidia_smi",
+            "if nvidia_smi:",
+            "    probe = subprocess.run(",
+            "        [nvidia_smi, '--query-gpu=name,driver_version,memory.total', '--format=csv,noheader'],",
+            "        check=False,",
+            "        capture_output=True,",
+            "        text=True,",
+            "        timeout=20,",
+            "    )",
+            "    payload['nvidia_smi_returncode'] = probe.returncode",
+            "    payload['nvidia_smi_output'] = (probe.stdout or probe.stderr).strip().splitlines()[:8]",
+            f"print({RUNTIME_DIAGNOSTIC_MARKER!r} + json.dumps(payload, sort_keys=True))",
+            f"if {require_cuda!r} and payload.get('torch_cuda_available') is not True:",
+            "    raise SystemExit('FATAL: --require-cuda requested but torch.cuda.is_available() is not true')",
+            "PY",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def lightning_remote_runtime_diagnostic(
+    remote: str,
+    *,
+    remote_pact: str,
+    python_bin: str | None,
+    require_cuda: bool,
+    ssh_bin: str = "ssh",
+    connect_timeout: int = 15,
+    runner: RunFn = subprocess.run,
+) -> dict[str, Any]:
+    """Probe the reachable Studio runtime, optionally requiring CUDA."""
+
+    command = _remote_runtime_probe_command(
+        remote_pact,
+        python_bin=python_bin,
+        require_cuda=require_cuda,
+    )
+    proc = _ssh_run(
+        _ssh_command(ssh_bin, remote, command, connect_timeout=connect_timeout),
+        runner=runner,
+    )
+    diagnostic: dict[str, Any] = {
+        "schema_version": 1,
+        "target": remote,
+        "remote_pact": remote_pact,
+        "python_bin_requested": python_bin,
+        "require_cuda": bool(require_cuda),
+        "ssh_bin": ssh_bin,
+        "returncode": proc.returncode,
+        "stdout_tail": proc.stdout[-4000:],
+        "stderr_tail": proc.stderr[-4000:],
+    }
+    for raw_line in proc.stdout.splitlines():
+        if raw_line.startswith(RUNTIME_DIAGNOSTIC_MARKER):
+            payload = raw_line[len(RUNTIME_DIAGNOSTIC_MARKER) :]
+            try:
+                diagnostic["remote_runtime"] = json.loads(payload)
+            except json.JSONDecodeError:
+                diagnostic["remote_runtime_parse_error"] = payload
+    remote_runtime = diagnostic.get("remote_runtime")
+    cuda_ok = (
+        isinstance(remote_runtime, dict)
+        and remote_runtime.get("torch_cuda_available") is True
+    )
+    diagnostic["status"] = "ok" if proc.returncode == 0 else "fail"
+    if require_cuda and not cuda_ok:
+        diagnostic["status"] = "fail"
+        diagnostic["runtime_policy_violations"] = [
+            "torch.cuda.is_available() is not true on the reachable Lightning Studio runtime"
+        ]
+    return diagnostic
+
+
+def _format_lightning_runtime_failure(diagnostic: dict[str, Any]) -> str:
+    remote_runtime = (
+        diagnostic.get("remote_runtime")
+        if isinstance(diagnostic.get("remote_runtime"), dict)
+        else {}
+    )
+    lines = [
+        f"Lightning remote runtime preflight failed for target {diagnostic.get('target')!r}.",
+        (
+            "The Studio SSH host is reachable, but this runtime is not valid for "
+            "interactive CUDA score work."
+        ),
+    ]
+    if remote_runtime:
+        lines.append(
+            "Remote runtime: "
+            f"python={remote_runtime.get('python')!r} "
+            f"torch={remote_runtime.get('torch_version')!r} "
+            f"torch_cuda={remote_runtime.get('torch_cuda_version')!r} "
+            f"cuda_available={remote_runtime.get('torch_cuda_available')!r} "
+            f"device_count={remote_runtime.get('torch_cuda_device_count')!r} "
+            f"device_names={remote_runtime.get('torch_cuda_device_names')!r} "
+            f"nvidia_smi={remote_runtime.get('nvidia_smi')!r}."
+        )
+    policy_violations = diagnostic.get("runtime_policy_violations")
+    if policy_violations:
+        lines.append(f"Runtime policy violations: {policy_violations!r}.")
+    stderr = str(diagnostic.get("stderr_tail") or "").strip()
+    if stderr:
+        lines.append(f"SSH/runtime stderr tail: {stderr}")
+    lines.extend(
+        [
+            "Fix guidance:",
+            "  1. Switch the Lightning Studio back to a GPU machine before interactive CUDA work.",
+            "  2. For Batch Jobs, rely on the per-job CUDA preflight artifact instead of the Studio shell.",
+            "  3. Never promote CPU/MPS results per CLAUDE.md non-negotiable; exact score evidence must come from CUDA auth eval artifacts.",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def ensure_lightning_remote_runtime_ready(
+    remote: str,
+    *,
+    remote_pact: str,
+    python_bin: str | None,
+    require_cuda: bool,
+    ssh_bin: str = "ssh",
+    connect_timeout: int = 15,
+    runner: RunFn = subprocess.run,
+) -> dict[str, Any]:
+    diagnostic = lightning_remote_runtime_diagnostic(
+        remote,
+        remote_pact=remote_pact,
+        python_bin=python_bin,
+        require_cuda=require_cuda,
+        ssh_bin=ssh_bin,
+        connect_timeout=connect_timeout,
+        runner=runner,
+    )
+    if diagnostic.get("status") != "ok":
+        raise LightningRuntimePreflightError(
+            _format_lightning_runtime_failure(diagnostic),
+            diagnostic,
+        )
+    return diagnostic
 
 
 def _repo_rel(path: str | Path, *, repo_root: Path = REPO_ROOT) -> Path:
@@ -271,7 +757,7 @@ def _remote_python_command(
     if requirements_mode == "uv-sync":
         install_block = "\n".join(
             [
-                "uv sync --locked --extra runtime",
+                "UV_LINK_MODE=${UV_LINK_MODE:-copy} uv sync --locked --extra runtime",
                 f"PYBIN={requested_py}" if requested_py else "PYBIN=.venv/bin/python",
                 'test -x "$PYBIN"',
             ]
@@ -418,7 +904,7 @@ def _remote_verify_command(remote_pact: str, remote_manifest: str) -> str:
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--remote", default=os.environ.get("REMOTE") or _default_remote())
+    parser.add_argument("--remote", default=_default_remote())
     parser.add_argument("--remote-pact", default=DEFAULT_REMOTE_PACT)
     parser.add_argument("--run-id", default=f"lightning_repro_{time.strftime('%Y%m%dT%H%M%SZ', time.gmtime())}")
     parser.add_argument("--manifest-out", default=None)
@@ -441,6 +927,22 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--require-cuda", action="store_true", help="Fail remote runtime verification unless torch CUDA is available.")
     parser.add_argument("--no-install", action="store_true", help="Deprecated alias for --requirements-mode no-install.")
     parser.add_argument("--no-verify", action="store_true", help="Skip remote SHA-256 verification.")
+    parser.add_argument(
+        "--ssh-check-only",
+        action="store_true",
+        help="Run the Lightning SSH config/auth preflight and exit without staging.",
+    )
+    parser.add_argument(
+        "--ssh-diagnostics-out",
+        default=None,
+        help="Optional local JSON path for sanitized SSH config/auth diagnostics.",
+    )
+    parser.add_argument(
+        "--ssh-connect-timeout",
+        type=int,
+        default=15,
+        help="BatchMode SSH auth preflight timeout in seconds.",
+    )
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args(argv)
     if args.no_install:
@@ -455,10 +957,12 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 
 def _default_remote() -> str:
-    user = os.environ.get("LIGHTNING_USER")
-    if user:
-        return f"{user}@ssh.lightning.ai"
-    return "ssh.lightning.ai"
+    return (
+        os.environ.get("LIGHTNING_SSH_TARGET")
+        or os.environ.get("LIGHTNING_REMOTE")
+        or os.environ.get("REMOTE")
+        or "lightning-pact"
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -466,10 +970,62 @@ def main(argv: list[str] | None = None) -> int:
     if args.remote == "ssh.lightning.ai":
         raise SystemExit("set --remote or LIGHTNING_USER to include the Studio SSH user")
 
+    if args.ssh_check_only:
+        diagnostic: dict[str, Any]
+        try:
+            diagnostic = ensure_lightning_ssh_ready(
+                args.remote,
+                connect_timeout=args.ssh_connect_timeout,
+            )
+        except LightningSshPreflightError as exc:
+            if args.ssh_diagnostics_out:
+                _write_json(Path(args.ssh_diagnostics_out), exc.diagnostic)
+            raise SystemExit(str(exc)) from exc
+        if args.require_cuda:
+            try:
+                runtime_diagnostic = ensure_lightning_remote_runtime_ready(
+                    args.remote,
+                    remote_pact=args.remote_pact,
+                    python_bin=args.python_bin,
+                    require_cuda=True,
+                    connect_timeout=args.ssh_connect_timeout,
+                )
+            except LightningRuntimePreflightError as exc:
+                diagnostic["runtime_probe"] = exc.diagnostic
+                if args.ssh_diagnostics_out:
+                    _write_json(Path(args.ssh_diagnostics_out), diagnostic)
+                raise SystemExit(str(exc)) from exc
+            diagnostic["runtime_probe"] = runtime_diagnostic
+        if args.ssh_diagnostics_out:
+            _write_json(Path(args.ssh_diagnostics_out), diagnostic)
+        print(json.dumps(diagnostic, indent=2, sort_keys=True))
+        return 0
+
     files = collect_files(args.source, args.artifact)
     manifest = build_manifest(args, files)
     manifest_out = Path(args.manifest_out) if args.manifest_out else DEFAULT_STATE_DIR / f"{args.run_id}_manifest.json"
     _write_json(manifest_out, manifest)
+
+    ssh_diagnostic: dict[str, Any] | None = None
+    try:
+        if args.dry_run:
+            ssh_diagnostic = lightning_ssh_diagnostic(
+                args.remote,
+                connect=False,
+                connect_timeout=args.ssh_connect_timeout,
+            )
+        else:
+            ssh_diagnostic = ensure_lightning_ssh_ready(
+                args.remote,
+                connect_timeout=args.ssh_connect_timeout,
+            )
+    except LightningSshPreflightError as exc:
+        ssh_diagnostic = exc.diagnostic
+        if args.ssh_diagnostics_out:
+            _write_json(Path(args.ssh_diagnostics_out), ssh_diagnostic)
+        raise SystemExit(str(exc)) from exc
+    if args.ssh_diagnostics_out and ssh_diagnostic is not None:
+        _write_json(Path(args.ssh_diagnostics_out), ssh_diagnostic)
 
     with tempfile.TemporaryDirectory(prefix="lightning-repro-") as tmp:
         tmpdir = Path(tmp)
@@ -480,17 +1036,49 @@ def main(argv: list[str] | None = None) -> int:
         remote_manifest = f"{remote_state}/{manifest_out.name}"
         remote_env = f"{remote_state}/{args.run_id}_environment.json"
 
-        _run(["ssh", args.remote, "mkdir", "-p", args.remote_pact, remote_state], dry_run=args.dry_run)
         _run(
-            ["rsync", "-a", "--files-from", str(file_list), "./", f"{args.remote}:{args.remote_pact}/"],
+            _ssh_command(
+                "ssh",
+                args.remote,
+                "mkdir -p "
+                + shlex.quote(args.remote_pact)
+                + " "
+                + shlex.quote(remote_state),
+                connect_timeout=args.ssh_connect_timeout,
+            ),
             dry_run=args.dry_run,
         )
-        _run(["scp", str(manifest_out), f"{args.remote}:{remote_manifest}"], dry_run=args.dry_run)
+        _run(
+            _rsync_command(
+                file_list,
+                args.remote,
+                args.remote_pact,
+                connect_timeout=args.ssh_connect_timeout,
+            ),
+            dry_run=args.dry_run,
+        )
+        _run(
+            _scp_command(
+                "scp",
+                manifest_out,
+                f"{args.remote}:{remote_manifest}",
+                connect_timeout=args.ssh_connect_timeout,
+            ),
+            dry_run=args.dry_run,
+        )
 
         if not args.no_verify:
-            _run(["ssh", args.remote, _remote_verify_command(args.remote_pact, remote_manifest)], dry_run=args.dry_run)
+            _run(
+                _ssh_command(
+                    "ssh",
+                    args.remote,
+                    _remote_verify_command(args.remote_pact, remote_manifest),
+                    connect_timeout=args.ssh_connect_timeout,
+                ),
+                dry_run=args.dry_run,
+            )
         _run(
-            [
+            _ssh_command(
                 "ssh",
                 args.remote,
                 _remote_python_command(
@@ -501,7 +1089,8 @@ def main(argv: list[str] | None = None) -> int:
                     python_bin=args.python_bin,
                     require_cuda=args.require_cuda,
                 ),
-            ],
+                connect_timeout=args.ssh_connect_timeout,
+            ),
             dry_run=args.dry_run,
         )
 

@@ -1935,17 +1935,23 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
        10. NWC1 binary (Lane J-NWC): Neural Weight Compression
            (magic b"NWC1") — VQ-VAE codec encodes every state-dict tensor
            to (codebook_index + per-block scale); codec weights bundled in.
+       10b. NWCS1 binary (Lane J-NWCS): sensitivity-aware Neural Weight
+           Compression container (magic b"NWCS1\\0\\0\\0").
        11. OWV2 binary (Lane Ω-W-V2): water-fill + arithmetic terminal
            (magic b"OWV2") — block-FP-eligible Conv2d weights pass through
            the static-histogram arithmetic codec; ineligible/overhead-gated
            tensors + non-Conv2d modules fall back to FP16. Pre-archive
            renderer payload only; no scorer load at inflate.
-       12. IMPS binary (Lane 17 IMP): iterative-magnitude-pruning sparse-CSR
+       12. OWV3 binary (Lane Ω-W-V3): sensitivity-weighted OWV2 archive
+           (magic b"OWV3") — high-sensitivity Conv2d output channels stay
+           FP16; lower-sensitivity channels use OWV2. Sensitivity is
+           compress-time only; no scorer load at inflate.
+       13. IMPS binary (Lane 17 IMP): iterative-magnitude-pruning sparse-CSR
            (magic b"IMPS") — Conv2d weights at >=78% sparsity pass through
            the per-tensor sparse-CSR codec (uint16 idx + FP4 val);
            ineligible / low-sparsity / large-numel tensors fall back to
            FP16. No scorer load at inflate (Check H STRICT).
-       13. PyTorch pickle: state_dict or PairGenerator checkpoint
+       14. PyTorch pickle: state_dict or PairGenerator checkpoint
 
     All variants produce the same `(B, 2, H, W, 3)` HWC pair output via
     `model(mask_t, mask_t1)`, so the rest of the inflate pipeline (mask
@@ -2107,6 +2113,28 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
         )
         return model
 
+    # ── NWCS1 format (Lane J-NWCS): Sensitivity-aware Neural Weight Compression renderer ──
+    if raw_bytes[:8] == b"NWCS1\0\0\0":
+        try:
+            from tac.renderer_export import load_nwcs_sensitivity_compressed_checkpoint
+        except ImportError as exc:
+            raise RuntimeError(
+                "NWCS1 (Lane J-NWCS sensitivity-aware neural weight compression) "
+                "format requires the tac package "
+                "(tac.renderer_export.load_nwcs_sensitivity_compressed_checkpoint). "
+                f"Underlying error: {exc!r}"
+            )
+        model = load_nwcs_sensitivity_compressed_checkpoint(raw_bytes, device=device)
+        elapsed = time.monotonic() - t0
+        n_params = sum(p.numel() for p in model.parameters())
+        print(
+            f"  Loaded NWCS1 (Sensitivity-Aware Neural-Weight-Compressed) "
+            f"AsymmetricPairGenerator from .bin ({len(raw_bytes):,} bytes, "
+            f"{n_params:,} params, {elapsed:.1f}s) — strict-scorer-rule OK",
+            file=sys.stderr,
+        )
+        return model
+
     # ── NWC1 format (Lane J-NWC): Neural Weight Compression renderer ──
     # 2026-04-29: Lane J-NWC tiny VQ-VAE-style codec (block_size=16, codebook
     # K=64, latent=16). The codec weights themselves are bundled INSIDE the
@@ -2240,6 +2268,33 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
         n_params = sum(p.numel() for p in model.parameters())
         print(
             f"  Loaded OWV2 (Lane Ω-W-V2 water-fill arithmetic) "
+            f"AsymmetricPairGenerator from .bin "
+            f"({len(raw_bytes):,} bytes, {n_params:,} params, {elapsed:.1f}s) "
+            f"— strict-scorer-rule OK",
+            file=sys.stderr,
+        )
+        return model
+
+    # ── OWV3 format (Lane Ω-W-V3): sensitivity-weighted OWV2 renderer ──
+    # High-sensitivity Conv2d output channels are stored as FP16 slices; the
+    # remaining channels are decoded by OWV2. Sensitivity maps are a
+    # compress-time artifact only and are not present in the contest archive.
+    if magic == b"OWV3":
+        try:
+            from tac.owv3_sensitivity_weighted import decode_owv3_archive
+        except ImportError as exc:
+            raise RuntimeError(
+                "OWV3 (Lane Ω-W-V3 sensitivity-weighted water-fill) format "
+                "requires the tac package "
+                "(tac.owv3_sensitivity_weighted.decode_owv3_archive). The "
+                "inflate container must include the tac wheel for Lane "
+                f"Ω-W-V3 archives. Underlying error: {exc!r}"
+            )
+        model = decode_owv3_archive(data=raw_bytes, device=device)
+        elapsed = time.monotonic() - t0
+        n_params = sum(p.numel() for p in model.parameters())
+        print(
+            f"  Loaded OWV3 (Lane Ω-W-V3 sensitivity-weighted water-fill) "
             f"AsymmetricPairGenerator from .bin "
             f"({len(raw_bytes):,} bytes, {n_params:,} params, {elapsed:.1f}s) "
             f"— strict-scorer-rule OK",
@@ -2797,11 +2852,11 @@ def _detect_device_and_batch_size() -> tuple[str, int]:
 
 def _resolve_mask_path(archive_dir: str | Path, mask_filename: str) -> Path:
     """Pick the mask file inside the archive, supporting AV1 (.mkv),
-    the lossless argmax-RLE codec (.amrc), and the Lane STC boundary
-    codec (.stcb). The given ``mask_filename`` is tried first; if it does
-    not exist, we look for the sibling format automatically. This lets
-    callers pass the legacy default "masks.mkv" while still working with
-    AMRC or STCB archives.
+    the lossless argmax-RLE codec (.amrc), Lane STC boundary codec
+    (.stcb), and Lane 12 NeRV masks (.nrv). The given ``mask_filename`` is
+    tried first; if it does not exist, we look for sibling formats
+    automatically. This lets callers pass the legacy default "masks.mkv"
+    while still working with alternate mask payloads.
     """
     archive = Path(archive_dir)
     primary = archive / mask_filename
@@ -2814,14 +2869,22 @@ def _resolve_mask_path(archive_dir: str | Path, mask_filename: str) -> Path:
     if mask_filename.endswith(".mkv"):
         siblings.append(archive / f"{stem}.amrc")
         siblings.append(archive / f"{stem}.stcb")
+        siblings.append(archive / f"{stem}.nrv")
     elif mask_filename.endswith(".amrc"):
         siblings.append(archive / f"{stem}.mkv")
         siblings.append(archive / f"{stem}.stcb")
+        siblings.append(archive / f"{stem}.nrv")
     elif mask_filename.endswith(".stcb"):
         siblings.append(archive / f"{stem}.mkv")
         siblings.append(archive / f"{stem}.amrc")
+        siblings.append(archive / f"{stem}.nrv")
+    elif mask_filename.endswith(".nrv"):
+        siblings.append(archive / f"{stem}.mkv")
+        siblings.append(archive / f"{stem}.amrc")
+        siblings.append(archive / f"{stem}.stcb")
     # Also try the canonical names as a last resort.
     siblings.extend([
+        archive / "masks.nrv",
         archive / "masks.amrc",
         archive / "masks.stcb",
         archive / "masks.mkv",

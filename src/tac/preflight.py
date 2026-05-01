@@ -2771,6 +2771,7 @@ def _candidate_lightning_ssh_policy_files(repo_root: Path) -> list[Path]:
         repo_root / "scripts",
         repo_root / "tools",
         repo_root / "docs" / "runbooks",
+        repo_root / "src" / "tac" / "deploy" / "lightning",
     ]
     suffixes = {".py", ".sh", ".md", ".toml", ".json", ".yaml", ".yml", ".txt", ".sshconfig"}
     for base in roots:
@@ -2795,6 +2796,8 @@ def _line_has_bare_lightning_provider_target(line: str) -> bool:
         return False
     stripped = line.strip()
     if re.search(r"(?i)\bHostName\s+ssh\.lightning\.ai\b", stripped):
+        return False
+    if re.search(r"(?i)\b(?:DEFAULT_HOST|ssh_host|host)\b[^#]*=\s*['\"]ssh\.lightning\.ai['\"]", stripped):
         return False
     lower = stripped.lower()
     if "not bare ssh.lightning.ai" in lower or "bare ssh.lightning.ai" in lower and "fatal" in lower:

@@ -44,34 +44,20 @@ if str(_SRC) not in sys.path:
 from tac.neural_weight_codec import (
     WeightCodec,
     WeightCodecConfig,
-    build_corpus_from_checkpoints,
     train_codec,
+)
+from tac.neural_weight_corpus import (
+    build_corpus_from_manifest,
+    build_corpus_manifest_from_dir,
+    canonical_manifest_json,
+    load_corpus_manifest,
+    sha256_file,
+    write_corpus_manifest,
 )
 
 
-def _discover_checkpoints(corpus_dir: Path, max_files: int) -> list[Path]:
-    """Walk corpus_dir for .pt checkpoints (sorted, capped)."""
-    if not corpus_dir.is_dir():
-        raise SystemExit(f"FATAL: corpus dir does not exist: {corpus_dir}")
-    candidates = sorted(corpus_dir.rglob("*.pt"))
-    # Filter out optimizer-state-only and tiny files (< 1KB are useless)
-    keepers = []
-    for p in candidates:
-        try:
-            sz = p.stat().st_size
-        except OSError:
-            continue
-        if sz < 1024:
-            continue
-        keepers.append(p)
-        if len(keepers) >= max_files:
-            break
-    if not keepers:
-        raise SystemExit(
-            f"FATAL: no .pt files >=1KB found under {corpus_dir} — pass a different "
-            f"--corpus-dir or relax --max-corpus-files."
-        )
-    return keepers
+def _default_manifest_out(output: Path) -> Path:
+    return output.with_suffix(".corpus_manifest.json")
 
 
 def main() -> None:
@@ -79,8 +65,35 @@ def main() -> None:
     parser.add_argument(
         "--corpus-dir",
         type=Path,
-        required=True,
+        default=None,
         help="Directory of .pt checkpoints to use as the codec training corpus.",
+    )
+    parser.add_argument(
+        "--corpus-manifest",
+        type=Path,
+        default=None,
+        help=(
+            "Existing deterministic corpus manifest JSON to replay. If omitted, "
+            "--corpus-dir is discovered and a manifest is emitted."
+        ),
+    )
+    parser.add_argument(
+        "--manifest-out",
+        type=Path,
+        default=None,
+        help=(
+            "Path to write the corpus manifest used for this run. Defaults to "
+            "<output>.corpus_manifest.json."
+        ),
+    )
+    parser.add_argument(
+        "--corpus-replay-root",
+        type=Path,
+        default=None,
+        help=(
+            "Root directory used to resolve selected manifest relative_path entries "
+            "when replaying --corpus-manifest."
+        ),
     )
     parser.add_argument(
         "--output",
@@ -105,9 +118,30 @@ def main() -> None:
     parser.add_argument("--hidden", type=int, default=64)
     parser.add_argument("--max-corpus-files", type=int, default=200)
     parser.add_argument("--max-blocks-per-ckpt", type=int, default=50_000)
+    parser.add_argument(
+        "--min-checkpoint-bytes",
+        type=int,
+        default=1024,
+        help="Exclude checkpoint files smaller than this many bytes during discovery.",
+    )
     parser.add_argument("--seed", type=int, default=1234)
     parser.add_argument("--log-interval", type=int, default=100)
     args = parser.parse_args()
+
+    if args.corpus_manifest is None and args.corpus_dir is None:
+        raise SystemExit("FATAL: pass either --corpus-dir or --corpus-manifest")
+    if args.corpus_manifest is None and args.corpus_replay_root is not None:
+        raise SystemExit("FATAL: --corpus-replay-root requires --corpus-manifest")
+    if args.corpus_manifest is not None and args.corpus_dir is not None:
+        print(
+            "[nwc-train-cli] NOTE: --corpus-manifest was provided; "
+            "--corpus-dir is recorded only by that manifest."
+        )
+    if args.corpus_replay_root is not None and not args.corpus_replay_root.is_dir():
+        raise SystemExit(
+            "FATAL: --corpus-replay-root is not a directory: "
+            f"{args.corpus_replay_root}"
+        )
 
     # Per CLAUDE.md: deterministic CUDA-or-explicit-CPU; no silent fallback.
     if args.device == "cuda" and not torch.cuda.is_available():
@@ -117,17 +151,54 @@ def main() -> None:
             "  to acknowledge that the codec training is byte-deterministic and CPU-OK."
         )
 
-    print(f"[nwc-train-cli] discovering corpus under {args.corpus_dir}")
-    ckpts = _discover_checkpoints(args.corpus_dir, args.max_corpus_files)
-    print(f"[nwc-train-cli] using {len(ckpts)} checkpoints (cap={args.max_corpus_files})")
+    manifest_out = args.manifest_out or _default_manifest_out(args.output)
+    if args.corpus_manifest is not None:
+        print(f"[nwc-train-cli] replaying corpus manifest {args.corpus_manifest}")
+        manifest = load_corpus_manifest(args.corpus_manifest)
+        if args.corpus_replay_root is not None:
+            print(f"[nwc-train-cli] replay root {args.corpus_replay_root}")
+    else:
+        print(f"[nwc-train-cli] discovering corpus under {args.corpus_dir}")
+        manifest = build_corpus_manifest_from_dir(
+            args.corpus_dir,
+            block_size=args.block_size,
+            max_files=args.max_corpus_files,
+            max_blocks_per_ckpt=args.max_blocks_per_ckpt,
+            min_checkpoint_bytes=args.min_checkpoint_bytes,
+        )
 
-    print(f"[nwc-train-cli] building corpus at block_size={args.block_size}")
-    corpus = build_corpus_from_checkpoints(
-        [str(p) for p in ckpts],
-        block_size=args.block_size,
-        max_blocks_per_ckpt=args.max_blocks_per_ckpt,
+    print(
+        "[nwc-train-cli] corpus manifest totals: "
+        f"files={manifest['totals']['selected_files']}/"
+        f"{manifest['totals']['discovered_files']} "
+        f"tensors={manifest['totals']['selected_tensors']} "
+        f"blocks={manifest['totals']['selected_blocks']}"
+    )
+    manifest_out.parent.mkdir(parents=True, exist_ok=True)
+    if args.corpus_manifest is not None:
+        source = args.corpus_manifest.resolve(strict=True)
+        destination = manifest_out.resolve(strict=False)
+        if destination != source:
+            manifest_out.write_bytes(args.corpus_manifest.read_bytes())
+    else:
+        write_corpus_manifest(manifest, manifest_out)
+    manifest_sha256 = sha256_file(manifest_out)
+    print(
+        f"[nwc-train-cli] wrote corpus manifest {manifest_out} "
+        f"sha256={manifest_sha256}"
+    )
+
+    print(f"[nwc-train-cli] building manifest-backed corpus at block_size={args.block_size}")
+    corpus = build_corpus_from_manifest(
+        manifest,
+        replay_root=args.corpus_replay_root,
     )
     print(f"[nwc-train-cli] corpus shape={tuple(corpus.shape)}")
+    if int(corpus.shape[0]) != int(manifest["totals"]["selected_blocks"]):
+        raise SystemExit(
+            "FATAL: corpus block count does not match manifest "
+            f"({corpus.shape[0]} vs {manifest['totals']['selected_blocks']})"
+        )
 
     cfg = WeightCodecConfig(
         block_size=args.block_size,
@@ -135,6 +206,11 @@ def main() -> None:
         latent_dim=args.latent_dim,
         hidden=args.hidden,
     )
+    # Seed before codec construction; codebook initialization is random and
+    # must be part of the advertised deterministic seed contract.
+    torch.manual_seed(int(args.seed))
+    if args.device == "cuda":
+        torch.cuda.manual_seed_all(int(args.seed))
     codec = WeightCodec(cfg)
     print(f"[nwc-train-cli] codec config: {cfg}")
     print(
@@ -159,7 +235,15 @@ def main() -> None:
         "codec_config": dataclasses.asdict(cfg),
         "training_loss_history": losses,
         "corpus_size_blocks": int(corpus.shape[0]),
-        "n_checkpoints": len(ckpts),
+        "n_checkpoints": int(manifest["totals"]["selected_files"]),
+        "corpus_manifest_path": str(manifest_out),
+        "corpus_manifest_sha256": manifest_sha256,
+        "corpus_manifest_totals": dict(manifest["totals"]),
+        "corpus_manifest_json": canonical_manifest_json(manifest),
+        "corpus_replay_root": (
+            None if args.corpus_replay_root is None else str(args.corpus_replay_root)
+        ),
+        "seed": int(args.seed),
     }
     torch.save(payload, args.output)
     sz = args.output.stat().st_size

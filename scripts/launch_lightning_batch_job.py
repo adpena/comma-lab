@@ -25,12 +25,16 @@ from tac.deploy.lightning.batch_jobs import (  # noqa: E402
     LightningAdjudicationSpec,
     LightningBatchJobsClient,
     archive_identity,
+    make_diagnostic_component_sensitivity_spec,
     make_exact_eval_spec,
     make_official_component_response_spec,
     lightning_sdk_job_name,
+    mirror_local_component_sensitivity_artifact_dir,
     mirror_local_component_response_artifact_dir,
     mirror_local_artifact_dir,
+    mirror_ssh_component_sensitivity_artifact_dir,
     mirror_ssh_component_response_artifact_dir,
+    validate_local_component_sensitivity_artifact_dir,
     validate_local_component_response_artifact_dir,
     validate_local_artifact_dir,
 )
@@ -42,7 +46,26 @@ SSH_AUTH_OPTIONS = (
     "PasswordAuthentication=no",
     "-o",
     "KbdInteractiveAuthentication=no",
+    "-o",
+    "ServerAliveInterval=15",
+    "-o",
+    "ServerAliveCountMax=4",
+    "-o",
+    "TCPKeepAlive=yes",
+    "-o",
+    "ConnectionAttempts=3",
 )
+SSH_TRANSIENT_FAILURE_PATTERNS = (
+    "connection reset by peer",
+    "connection timed out",
+    "connection closed by",
+    "connection refused",
+    "kex_exchange_identification",
+    "operation timed out",
+    "read: connection reset",
+)
+SSH_TRANSIENT_RETRY_ATTEMPTS = 4
+SSH_TRANSIENT_RETRY_INITIAL_DELAY_S = 2.0
 
 
 def _utc_now() -> str:
@@ -329,7 +352,7 @@ def _ensure_ssh_auth_ready(
         check=False,
     )
     values = _parse_ssh_g(config.stdout) if config.returncode == 0 else {}
-    probe = subprocess.run(
+    probe = _run_ssh_command_with_retries(
         [
             ssh_bin,
             *SSH_AUTH_OPTIONS,
@@ -338,9 +361,6 @@ def _ensure_ssh_auth_ready(
             target,
             "true",
         ],
-        capture_output=True,
-        text=True,
-        check=False,
     )
     policy_violations = _ssh_policy_violations(values) if values else []
     if probe.returncode == 0 and not policy_violations:
@@ -381,6 +401,35 @@ def _safe_artifact_stem(value: str) -> str:
     return stem or "lightning_batch_job"
 
 
+def _is_transient_ssh_failure(result: subprocess.CompletedProcess[str]) -> bool:
+    if result.returncode == 0:
+        return False
+    if result.returncode != 255:
+        return False
+    combined = (str(result.stderr or "") + "\n" + str(result.stdout or "")).lower()
+    return any(pattern in combined for pattern in SSH_TRANSIENT_FAILURE_PATTERNS)
+
+
+def _run_ssh_command_with_retries(
+    cmd: list[str],
+    *,
+    attempts: int = SSH_TRANSIENT_RETRY_ATTEMPTS,
+    initial_delay_s: float = SSH_TRANSIENT_RETRY_INITIAL_DELAY_S,
+) -> subprocess.CompletedProcess[str]:
+    last: subprocess.CompletedProcess[str] | None = None
+    delay = float(initial_delay_s)
+    for attempt in range(max(1, int(attempts))):
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        last = result
+        if result.returncode == 0 or not _is_transient_ssh_failure(result):
+            return result
+        if attempt + 1 < attempts:
+            time.sleep(delay)
+            delay = min(delay * 2.0, 15.0)
+    assert last is not None
+    return last
+
+
 def _run_remote_supply_chain_preflight(
     *,
     ssh_target: str | None,
@@ -417,7 +466,7 @@ def _run_remote_supply_chain_preflight(
         + " && cat "
         + shlex.quote(out)
     )
-    result = subprocess.run(
+    result = _run_ssh_command_with_retries(
         [
             ssh_bin,
             *SSH_AUTH_OPTIONS,
@@ -426,9 +475,6 @@ def _run_remote_supply_chain_preflight(
             target,
             command,
         ],
-        capture_output=True,
-        text=True,
-        check=False,
     )
     if result.returncode == 0:
         return
@@ -506,7 +552,7 @@ def _run_remote_supply_chain_scan(
         + " --quiet --strict > /dev/null && cat "
         + shlex.quote(out)
     )
-    result = subprocess.run(
+    result = _run_ssh_command_with_retries(
         [
             ssh_bin,
             *SSH_AUTH_OPTIONS,
@@ -515,9 +561,6 @@ def _run_remote_supply_chain_scan(
             ssh_target,
             command,
         ],
-        capture_output=True,
-        text=True,
-        check=False,
     )
     payload = _parse_json_stdout(result.stdout)
     return {
@@ -640,6 +683,46 @@ def _validate_component_response_submit_inputs(args: argparse.Namespace) -> None
         raise SystemExit(
             "component-response submit blocked; staged source manifest does not include "
             "all required plan artifacts: " + ", ".join(missing[:20])
+        )
+
+
+def _validate_component_sensitivity_submit_inputs(args: argparse.Namespace) -> None:
+    if args.dry_run and not args.source_manifest:
+        return
+    if not args.source_manifest:
+        raise SystemExit(
+            "component-sensitivity submit requires --source-manifest from "
+            "scripts/lightning_repro_workspace.py so the baseline archive and "
+            "profiling inputs are known staged artifacts; use --dry-run for a "
+            "topology-only check"
+        )
+    manifest_path = Path(args.source_manifest)
+    manifest = _load_json_object(manifest_path, label="source manifest")
+    manifest_paths = _manifest_repo_paths(manifest, manifest_path=manifest_path)
+
+    required: set[str] = set()
+    baseline_rel = _remote_repo_rel(args.baseline_archive, repo_dir=args.repo_dir)
+    if baseline_rel is None:
+        raise SystemExit("--baseline-archive must be inside --repo-dir for component-sensitivity submit")
+    required.add(baseline_rel)
+
+    video_path = args.video or f"{str(args.upstream_dir).rstrip('/')}/videos/0.mkv"
+    video_rel = _remote_repo_rel(video_path, repo_dir=args.repo_dir)
+    if video_rel is None:
+        raise SystemExit("--video must be inside --repo-dir for component-sensitivity submit")
+    required.add(video_rel)
+
+    if args.pair_weights:
+        pair_weights_rel = _remote_repo_rel(args.pair_weights, repo_dir=args.repo_dir)
+        if pair_weights_rel is None:
+            raise SystemExit("--pair-weights must be inside --repo-dir for component-sensitivity submit")
+        required.add(pair_weights_rel)
+
+    missing = sorted(required.difference(manifest_paths))
+    if missing:
+        raise SystemExit(
+            "component-sensitivity submit blocked; staged source manifest does not include "
+            "all required profiling artifacts: " + ", ".join(missing[:20])
         )
 
 
@@ -770,6 +853,58 @@ def cmd_component_response(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_component_sensitivity(args: argparse.Namespace) -> int:
+    _validate_component_sensitivity_submit_inputs(args)
+    _require_remote_preflight_for_submit(args, role="component-sensitivity")
+    if not args.dry_run:
+        _run_remote_supply_chain_preflight(
+            ssh_target=args.remote_preflight_ssh_target,
+            job_name=args.job_name,
+            repo_dir=args.repo_dir,
+            python_bin=args.python_bin,
+            ssh_bin=args.remote_preflight_ssh_bin,
+            connect_timeout=args.remote_preflight_ssh_connect_timeout,
+        )
+    expected_sha, expected_bytes = _expected_baseline_archive_fields(args)
+    spec = make_diagnostic_component_sensitivity_spec(
+        name=args.job_name,
+        baseline_archive_path=args.baseline_archive,
+        repo_dir=args.repo_dir,
+        upstream_dir=args.upstream_dir,
+        output_dir=args.output_dir,
+        machine=args.machine,
+        studio=args.studio,
+        image=args.image,
+        python_bin=args.python_bin,
+        max_runtime=args.max_runtime,
+        env=_parse_env_kv(args.env),
+        teamspace=args.teamspace,
+        org=args.org,
+        user=args.user,
+        video_mkv=args.video,
+        pair_weights_path=args.pair_weights,
+        expected_baseline_archive_sha256=expected_sha,
+        expected_baseline_archive_size_bytes=expected_bytes,
+        queue_metadata=_queue_metadata_from_args(args),
+        local_artifact_dir=args.local_artifact_dir,
+        top_k_pairs=args.top_k_pairs,
+        pair_batch=args.pair_batch,
+        response_top_k=args.response_top_k,
+        response_epsilons=args.response_epsilons,
+        split_seed=args.split_seed,
+        holdout_fraction=args.holdout_fraction,
+        aggregate=args.aggregate,
+        promotion_finite_difference=args.promotion_finite_difference,
+        finite_difference_epsilon=args.finite_difference_epsilon,
+        finite_difference_shard_index=args.finite_difference_shard_index,
+        finite_difference_shard_count=args.finite_difference_shard_count,
+    )
+    client = _client(args)
+    record = client.submit(spec, dry_run=args.dry_run)
+    print(json.dumps(record, indent=2, sort_keys=True))
+    return 0
+
+
 def cmd_list(args: argparse.Namespace) -> int:
     client = _client(args)
     print(json.dumps(client.list_records(), indent=2, sort_keys=True))
@@ -810,6 +945,18 @@ def cmd_validate_component_response_artifacts(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_validate_component_sensitivity_artifacts(args: argparse.Namespace) -> int:
+    result = validate_local_component_sensitivity_artifact_dir(
+        args.artifact_dir,
+        expected_baseline_archive_sha256=args.expected_baseline_archive_sha256,
+        expected_baseline_archive_size_bytes=args.expected_baseline_archive_size_bytes,
+    )
+    validation_path = Path(args.artifact_dir) / "diagnostic_component_sensitivity_artifact_validation.json"
+    validation_path.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n")
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
 def cmd_harvest_component_response_local(args: argparse.Namespace) -> int:
     if args.mirror_dir:
         result = mirror_local_component_response_artifact_dir(
@@ -826,6 +973,25 @@ def cmd_harvest_component_response_local(args: argparse.Namespace) -> int:
             expected_baseline_archive_sha256=args.expected_baseline_archive_sha256,
             expected_baseline_archive_size_bytes=args.expected_baseline_archive_size_bytes,
             require_passed=args.require_passed,
+        )
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
+def cmd_harvest_component_sensitivity_local(args: argparse.Namespace) -> int:
+    if args.mirror_dir:
+        result = mirror_local_component_sensitivity_artifact_dir(
+            args.artifact_dir,
+            args.mirror_dir,
+            expected_baseline_archive_sha256=args.expected_baseline_archive_sha256,
+            expected_baseline_archive_size_bytes=args.expected_baseline_archive_size_bytes,
+            overwrite=args.overwrite,
+        )
+    else:
+        result = validate_local_component_sensitivity_artifact_dir(
+            args.artifact_dir,
+            expected_baseline_archive_sha256=args.expected_baseline_archive_sha256,
+            expected_baseline_archive_size_bytes=args.expected_baseline_archive_size_bytes,
         )
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0
@@ -872,6 +1038,54 @@ def cmd_harvest_component_response_ssh(args: argparse.Namespace) -> int:
         expected_baseline_archive_sha256=args.expected_baseline_archive_sha256,
         expected_baseline_archive_size_bytes=args.expected_baseline_archive_size_bytes,
         require_passed=args.require_passed,
+        overwrite=args.overwrite,
+        ssh_bin=args.ssh_bin,
+        scp_bin=args.scp_bin,
+        ssh_connect_timeout=args.ssh_connect_timeout,
+    )
+    print(json.dumps(result, indent=2, sort_keys=True))
+    return 0
+
+
+def cmd_harvest_component_sensitivity_ssh(args: argparse.Namespace) -> int:
+    _require_manual_artifact_override(args, role="component-sensitivity")
+    if args.job_name:
+        client = _client(args)
+        _ensure_ssh_auth_ready(
+            args.ssh_target,
+            ssh_bin=args.ssh_bin,
+            connect_timeout=args.ssh_connect_timeout,
+        )
+        result = client.harvest_ssh_component_sensitivity_artifacts(
+            job_name=args.job_name,
+            ssh_target=args.ssh_target,
+            remote_dir=args.remote_artifact_dir,
+            mirror_dir=args.mirror_dir,
+            expected_baseline_archive_sha256=args.expected_baseline_archive_sha256,
+            expected_baseline_archive_size_bytes=args.expected_baseline_archive_size_bytes,
+            overwrite=args.overwrite,
+            ssh_bin=args.ssh_bin,
+            scp_bin=args.scp_bin,
+            ssh_connect_timeout=args.ssh_connect_timeout,
+        )
+        print(json.dumps(result, indent=2, sort_keys=True))
+        return 0
+    _ensure_ssh_auth_ready(
+        args.ssh_target,
+        ssh_bin=args.ssh_bin,
+        connect_timeout=args.ssh_connect_timeout,
+    )
+    if not args.remote_artifact_dir or not args.mirror_dir:
+        raise SystemExit(
+            "harvest-component-sensitivity-ssh requires either --job-name with state, "
+            "or both --remote-artifact-dir and --mirror-dir"
+        )
+    result = mirror_ssh_component_sensitivity_artifact_dir(
+        ssh_target=args.ssh_target,
+        remote_dir=args.remote_artifact_dir,
+        mirror_dir=args.mirror_dir,
+        expected_baseline_archive_sha256=args.expected_baseline_archive_sha256,
+        expected_baseline_archive_size_bytes=args.expected_baseline_archive_size_bytes,
         overwrite=args.overwrite,
         ssh_bin=args.ssh_bin,
         scp_bin=args.scp_bin,
@@ -996,6 +1210,17 @@ def cmd_refresh_status(args: argparse.Namespace) -> int:
                 )
                 continue
             results.append(record)
+            if record.get("status_reconciliation_required"):
+                failures.append(
+                    {
+                        "job_name": job_name,
+                        "error": "Lightning status reconciliation required",
+                        "error_type": "StatusReconciliationRequired",
+                        "status": record.get("status"),
+                        "remote_observed_status": record.get("remote_observed_status"),
+                        "status_anomalies": record.get("status_anomalies") or [],
+                    }
+                )
         print(
             json.dumps(
                 {
@@ -1072,6 +1297,34 @@ def _cluster_machine_to_record(machine: object) -> dict[str, object]:
     }
 
 
+def _is_sdk_machine_filter(machine: str | None) -> bool:
+    if not machine:
+        return False
+    return re.fullmatch(r"[A-Z][A-Z0-9_]*", machine) is not None
+
+
+def _filter_machine_rows(
+    machine_rows: list[dict[str, object]],
+    *,
+    machine: str | None,
+    sdk_filtered: bool,
+) -> list[dict[str, object]]:
+    if not machine or sdk_filtered:
+        return machine_rows
+    needle = machine.lower()
+    matched = []
+    for row in machine_rows:
+        values = [
+            row.get("name"),
+            row.get("slug"),
+            row.get("instance_type"),
+            row.get("family"),
+        ]
+        if any(str(value).lower() == needle for value in values if value is not None):
+            matched.append(row)
+    return matched
+
+
 def _list_machine_rows(
     *,
     teamspace_name: str,
@@ -1085,10 +1338,14 @@ def _list_machine_rows(
 
     teamspace = Teamspace(name=teamspace_name, org=org, user=user)
     selected_cloud_accounts = cloud_accounts or teamspace.cloud_accounts
+    sdk_filtered = _is_sdk_machine_filter(machine)
     rows = []
     for cloud_account in selected_cloud_accounts:
         try:
-            machines = teamspace.list_machines(cloud_account=cloud_account, machine=machine)
+            machines = teamspace.list_machines(
+                cloud_account=cloud_account,
+                machine=machine if sdk_filtered else None,
+            )
             machine_rows = [_machine_to_record(machine) for machine in machines]
         except AttributeError:
             # lightning-sdk 2026.4.10 expects an org-backed teamspace in
@@ -1097,7 +1354,7 @@ def _list_machine_rows(
             from lightning_sdk.machine import Machine
 
             machine_filter = None
-            if machine:
+            if machine and sdk_filtered:
                 machine_filter = getattr(Machine, machine.upper(), Machine(machine, machine))
             raw = TeamspaceApi().list_machines(
                 teamspace.id,
@@ -1110,6 +1367,11 @@ def _list_machine_rows(
                 for machine in raw
                 if not getattr(machine, "out_of_capacity", False)
             ]
+        machine_rows = _filter_machine_rows(
+            machine_rows,
+            machine=machine,
+            sdk_filtered=sdk_filtered,
+        )
         if gpu_only:
             machine_rows = [
                 row for row in machine_rows
@@ -1455,6 +1717,89 @@ def build_parser() -> argparse.ArgumentParser:
     component.add_argument("--dry-run", action="store_true")
     component.set_defaults(func=cmd_component_response)
 
+    sensitivity = sub.add_parser("component-sensitivity")
+    _add_state_arg(sensitivity)
+    sensitivity.add_argument("--job-name", required=True)
+    sensitivity.add_argument("--baseline-archive", required=True, help="Baseline archive path visible inside the Lightning job.")
+    sensitivity.add_argument("--repo-dir", required=True, help="Repo path visible inside the Lightning job.")
+    sensitivity.add_argument("--upstream-dir", required=True, help="Upstream scorer path visible inside the Lightning job.")
+    sensitivity.add_argument(
+        "--video",
+        default=None,
+        help="Ground-truth video path visible inside the Lightning job. Default: <upstream-dir>/videos/0.mkv.",
+    )
+    sensitivity.add_argument(
+        "--output-dir",
+        default=None,
+        help=(
+            "Writable artifact output dir visible inside job. Default: "
+            "<repo-dir>/experiments/results/lightning_batch/<job-name>."
+        ),
+    )
+    sensitivity.add_argument("--machine", default="T4")
+    sensitivity.add_argument("--studio", default=None, help="Lightning Studio name/env for Studio-backed jobs.")
+    sensitivity.add_argument("--image", default=None, help="Docker image for image-backed jobs.")
+    sensitivity.add_argument("--teamspace", default=None)
+    sensitivity.add_argument("--org", default=None)
+    sensitivity.add_argument("--user", default=None)
+    sensitivity.add_argument("--python-bin", default=".venv/bin/python")
+    sensitivity.add_argument("--max-runtime", type=int, default=6 * 60 * 60)
+    sensitivity.add_argument("--env", action="append", default=[], help="KEY=VALUE env override; repeatable.")
+    sensitivity.add_argument("--queue-metadata", action="append", default=[], help="KEY=VALUE audit metadata; repeatable.")
+    sensitivity.add_argument("--local-artifact-dir", default=None, help="Expected local mirror/harvest path for artifacts.")
+    _add_remote_preflight_args(sensitivity)
+    sensitivity.add_argument("--pair-weights", default=None, help="Optional pair-weights file visible inside the Lightning job; otherwise uses --all-pairs.")
+    sensitivity.add_argument("--top-k-pairs", type=int, default=64)
+    sensitivity.add_argument("--pair-batch", type=int, default=2)
+    sensitivity.add_argument("--response-top-k", type=int, default=16)
+    sensitivity.add_argument(
+        "--response-epsilons",
+        default="-0.002,-0.001,-0.0005,0.0,0.0005,0.001,0.002",
+    )
+    sensitivity.add_argument("--split-seed", type=int, default=20260430)
+    sensitivity.add_argument("--holdout-fraction", type=float, default=0.2)
+    sensitivity.add_argument("--aggregate", choices=["sum", "mean", "max"], default="sum")
+    sensitivity.add_argument(
+        "--promotion-finite-difference",
+        action="store_true",
+        help=(
+            "Run CUDA direct-renderer finite-difference maps instead of Fisher "
+            "proxy maps. Still non-promotable until certified through official "
+            "archive-response gates."
+        ),
+    )
+    sensitivity.add_argument("--finite-difference-epsilon", type=float, default=0.001)
+    sensitivity.add_argument("--finite-difference-shard-index", type=int, default=0)
+    sensitivity.add_argument("--finite-difference-shard-count", type=int, default=1)
+    sensitivity.add_argument("--expected-baseline-archive-sha256", default=None)
+    sensitivity.add_argument(
+        "--expected-baseline-archive-size-bytes",
+        "--expected-baseline-archive-bytes",
+        dest="expected_baseline_archive_size_bytes",
+        type=int,
+        default=None,
+    )
+    sensitivity.add_argument(
+        "--infer-expected-baseline-archive",
+        action="store_true",
+        help="Compute expected baseline archive SHA-256/bytes locally before submit/dry-run.",
+    )
+    sensitivity.add_argument(
+        "--local-baseline-archive",
+        default=None,
+        help="Local baseline archive to hash when --baseline-archive is a remote path.",
+    )
+    sensitivity.add_argument(
+        "--source-manifest",
+        default=None,
+        help=(
+            "Local lightning_repro_workspace.py manifest. Required for non-dry-run "
+            "component-sensitivity submit so the baseline archive/video are known staged inputs."
+        ),
+    )
+    sensitivity.add_argument("--dry-run", action="store_true")
+    sensitivity.set_defaults(func=cmd_component_sensitivity)
+
     list_cmd = sub.add_parser("list")
     _add_state_arg(list_cmd)
     list_cmd.set_defaults(func=cmd_list)
@@ -1480,6 +1825,18 @@ def build_parser() -> argparse.ArgumentParser:
     validate_component.add_argument("--require-passed", action="store_true")
     validate_component.set_defaults(func=cmd_validate_component_response_artifacts)
 
+    validate_sensitivity = sub.add_parser("validate-component-sensitivity-artifacts")
+    validate_sensitivity.add_argument("--artifact-dir", required=True)
+    validate_sensitivity.add_argument("--expected-baseline-archive-sha256", default=None)
+    validate_sensitivity.add_argument(
+        "--expected-baseline-archive-size-bytes",
+        "--expected-baseline-archive-bytes",
+        dest="expected_baseline_archive_size_bytes",
+        type=int,
+        default=None,
+    )
+    validate_sensitivity.set_defaults(func=cmd_validate_component_sensitivity_artifacts)
+
     harvest = sub.add_parser("harvest-local")
     _add_state_arg(harvest)
     harvest.add_argument("--job-name", required=True)
@@ -1504,6 +1861,20 @@ def build_parser() -> argparse.ArgumentParser:
     harvest_component.add_argument("--require-passed", action="store_true")
     harvest_component.add_argument("--overwrite", action="store_true")
     harvest_component.set_defaults(func=cmd_harvest_component_response_local)
+
+    harvest_sensitivity = sub.add_parser("harvest-component-sensitivity-local")
+    harvest_sensitivity.add_argument("--artifact-dir", required=True)
+    harvest_sensitivity.add_argument("--mirror-dir", default=None)
+    harvest_sensitivity.add_argument("--expected-baseline-archive-sha256", default=None)
+    harvest_sensitivity.add_argument(
+        "--expected-baseline-archive-size-bytes",
+        "--expected-baseline-archive-bytes",
+        dest="expected_baseline_archive_size_bytes",
+        type=int,
+        default=None,
+    )
+    harvest_sensitivity.add_argument("--overwrite", action="store_true")
+    harvest_sensitivity.set_defaults(func=cmd_harvest_component_sensitivity_local)
 
     harvest_ssh = sub.add_parser("harvest-ssh")
     _add_state_arg(harvest_ssh)
@@ -1568,6 +1939,40 @@ def build_parser() -> argparse.ArgumentParser:
         help="BatchMode SSH auth preflight timeout in seconds.",
     )
     harvest_component_ssh.set_defaults(func=cmd_harvest_component_response_ssh)
+
+    harvest_sensitivity_ssh = sub.add_parser("harvest-component-sensitivity-ssh")
+    _add_state_arg(harvest_sensitivity_ssh)
+    harvest_sensitivity_ssh.add_argument(
+        "--job-name",
+        default=None,
+        help=(
+            "State record name. When provided, remote/mirror dirs default "
+            "from state and Studio outputs are mapped into SDK artifacts."
+        ),
+    )
+    harvest_sensitivity_ssh.add_argument("--ssh-target", required=True)
+    harvest_sensitivity_ssh.add_argument("--remote-artifact-dir", default=None)
+    harvest_sensitivity_ssh.add_argument("--mirror-dir", default=None)
+    harvest_sensitivity_ssh.add_argument("--expected-baseline-archive-sha256", default=None)
+    harvest_sensitivity_ssh.add_argument(
+        "--expected-baseline-archive-size-bytes",
+        "--expected-baseline-archive-bytes",
+        dest="expected_baseline_archive_size_bytes",
+        type=int,
+        default=None,
+    )
+    harvest_sensitivity_ssh.add_argument("--overwrite", action="store_true")
+    harvest_sensitivity_ssh.add_argument("--allow-manual-artifact-dir", action="store_true")
+    harvest_sensitivity_ssh.add_argument("--override-reason", default=None)
+    harvest_sensitivity_ssh.add_argument("--ssh-bin", default="ssh")
+    harvest_sensitivity_ssh.add_argument("--scp-bin", default="scp")
+    harvest_sensitivity_ssh.add_argument(
+        "--ssh-connect-timeout",
+        type=int,
+        default=15,
+        help="BatchMode SSH auth preflight timeout in seconds.",
+    )
+    harvest_sensitivity_ssh.set_defaults(func=cmd_harvest_component_sensitivity_ssh)
 
     refresh = sub.add_parser("refresh-status")
     _add_state_arg(refresh)

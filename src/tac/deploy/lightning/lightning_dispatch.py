@@ -71,7 +71,8 @@ class LightningDispatcher:
     """SSH-based dispatcher for Lightning AI Studios.
 
     Studios are persistent so this class operates in a "ssh in, do stuff,
-    come back later" model — there's no spin-up cost per lane.
+    come back later" model. GPU attachment is controlled by Lightning Studio
+    machine policy or Batch Job machine selection, not by an idle SSH session.
     """
 
     def __init__(
@@ -90,6 +91,8 @@ class LightningDispatcher:
             if not ssh_user:
                 raise ValueError("ssh_user is required when ssh_target is not provided")
             ssh_target = f"{ssh_user}@{ssh_host}"
+        if ssh_target == "ssh.lightning.ai":
+            raise ValueError("use a user-qualified target or SSH config alias, not bare ssh.lightning.ai")
         self.ssh_user = ssh_user or ""
         self.ssh_host = ssh_host
         self.ssh_target = ssh_target
@@ -104,9 +107,23 @@ class LightningDispatcher:
         args = [
             "ssh",
             "-o",
+            "BatchMode=yes",
+            "-o",
+            "PasswordAuthentication=no",
+            "-o",
+            "KbdInteractiveAuthentication=no",
+            "-o",
             "StrictHostKeyChecking=accept-new",
             "-o",
             f"ConnectTimeout={self.connect_timeout}",
+            "-o",
+            "ConnectionAttempts=3",
+            "-o",
+            "ServerAliveInterval=15",
+            "-o",
+            "ServerAliveCountMax=4",
+            "-o",
+            "TCPKeepAlive=yes",
         ]
         if self.ssh_key:
             args += ["-i", self.ssh_key]
@@ -118,9 +135,23 @@ class LightningDispatcher:
             "scp",
             "-r",
             "-o",
+            "BatchMode=yes",
+            "-o",
+            "PasswordAuthentication=no",
+            "-o",
+            "KbdInteractiveAuthentication=no",
+            "-o",
             "StrictHostKeyChecking=accept-new",
             "-o",
             f"ConnectTimeout={self.connect_timeout}",
+            "-o",
+            "ConnectionAttempts=3",
+            "-o",
+            "ServerAliveInterval=15",
+            "-o",
+            "ServerAliveCountMax=4",
+            "-o",
+            "TCPKeepAlive=yes",
         ]
         if self.ssh_key:
             args += ["-i", self.ssh_key]

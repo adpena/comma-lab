@@ -30,6 +30,11 @@ from tac.component_sensitivity_artifact import (  # noqa: E402
     materialize_component_sensitivity_manifest,
     write_component_sensitivity_manifest,
 )
+from tac.sensitivity_map import (  # noqa: E402
+    SENSITIVITY_MAP_FORMAT,
+    SensitivityMapError,
+    validate_certified_sensitivity_map_metadata,
+)
 
 
 class ComponentSensitivityManifestBuildError(ValueError):
@@ -143,28 +148,50 @@ def _validate_contest_eval_archive_custody(
         )
 
 
-def _tensor_metadata_for_path(path: Path) -> dict[str, Any]:
+def _tensor_metadata_for_path(path: Path, *, component: str) -> dict[str, Any]:
     payload = torch.load(str(path), map_location="cpu", weights_only=False)
     _reject_diagnostic_source_payload(
         path,
         payload,
         context="component sensitivity map",
     )
+    if not isinstance(payload, dict) or payload.get("format") != SENSITIVITY_MAP_FORMAT:
+        raise ComponentSensitivityManifestBuildError(
+            f"{path}: promotion maps must use certified {SENSITIVITY_MAP_FORMAT!r} artifacts"
+        )
+    metadata = payload.get("metadata")
+    if not isinstance(metadata, dict):
+        raise ComponentSensitivityManifestBuildError(
+            f"{path}: certified sensitivity map requires metadata"
+        )
+    try:
+        certification = validate_certified_sensitivity_map_metadata(
+            metadata,
+            component=component,
+        )
+    except SensitivityMapError as exc:
+        raise ComponentSensitivityManifestBuildError(
+            f"{path}: sensitivity map certification failed: {exc}"
+        ) from exc
     tensors: dict[str, torch.Tensor] = {}
-    _collect_tensors(payload, tensors, prefix="payload")
+    _collect_tensors(payload.get("sensitivities"), tensors, prefix="sensitivities")
     if not tensors:
         raise ComponentSensitivityManifestBuildError(
             f"{path}: no torch tensors found; component maps must expose tensor custody"
         )
+    out: dict[str, Any] = {
+        "map_format": SENSITIVITY_MAP_FORMAT,
+        "certification": certification,
+    }
     if len(tensors) == 1:
         _name, tensor = next(iter(tensors.items()))
-        return {"tensor": _single_tensor_metadata(tensor)}
-    return {
-        "tensor_metadata": {
+        out["tensor"] = _single_tensor_metadata(tensor)
+        return out
+    out["tensor_metadata"] = {
             key: _single_tensor_metadata(tensor)
             for key, tensor in sorted(tensors.items())
         }
-    }
+    return out
 
 
 def _collect_tensors(value: Any, out: dict[str, torch.Tensor], *, prefix: str) -> None:
@@ -456,7 +483,7 @@ def build_manifest(args: argparse.Namespace) -> dict[str, Any]:
 
     for component, map_path in args.component_maps.items():
         entry = {"path": str(map_path), "scorer_target": component}
-        entry.update(_tensor_metadata_for_path(map_path))
+        entry.update(_tensor_metadata_for_path(map_path, component=component))
         manifest["component_maps"][component] = entry
 
     for component, curve_path in args.response_curves.items():
