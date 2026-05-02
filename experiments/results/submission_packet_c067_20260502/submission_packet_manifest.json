@@ -1,0 +1,154 @@
+{
+  "archive": {
+    "artifact_relative_path": "archive.zip",
+    "path": "experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip",
+    "sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+    "size_bytes": 276214
+  },
+  "archive_copied": false,
+  "claim_policy": {
+    "promotion_claim": false,
+    "ranking_claim": false,
+    "score_authority": "contest_auth_eval.adjudicated.json",
+    "score_claim": false,
+    "score_fields_are_custody_metadata_only": true
+  },
+  "contest_auth_eval": {
+    "artifact_relative_path": "contest_auth_eval.adjudicated.json",
+    "path": "experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/contest_auth_eval.adjudicated.json",
+    "sha256": "8cace9e008a9559a2e2e5710742103ef1e4e9c4eb387ce879efd7173ce0da969",
+    "size_bytes": 4884,
+    "validated_fields": {
+      "component_fields": {
+        "archive_size_bytes": 276214,
+        "avg_posenet_dist": 0.00049637,
+        "avg_segnet_dist": 0.00061244,
+        "n_samples": 600,
+        "score_recomputed_from_components": 0.31561703078448233
+      },
+      "provenance_fields": {
+        "archive_path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip",
+        "archive_sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+        "archive_size_bytes": 276214,
+        "cuda_available": true,
+        "cuda_device_count": 1,
+        "cuda_version": "13.0",
+        "device": "cuda",
+        "env_vars": {
+          "CONFIG_ENV_PATH": null,
+          "CUBLAS_WORKSPACE_CONFIG": null,
+          "CUDA_VISIBLE_DEVICES": null,
+          "INFLATE_AV_SPEC": null,
+          "INFLATE_BROTLI_SPEC": null,
+          "INFLATE_NUMPY_SPEC": null,
+          "INFLATE_TORCH_SPEC": "torch==2.5.1+cu124",
+          "LANE_MM_SIGMA": null,
+          "LD_LIBRARY_PATH": "/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda/lib64",
+          "PYTHONHASHSEED": null,
+          "PYTHONPATH": null,
+          "PYTHON_INFLATE": null,
+          "PYTORCH_CUDA_ALLOC_CONF": null,
+          "UV_BIN": "/usr/local/bin/uv",
+          "UV_PROJECT_ENVIRONMENT": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/uv_project_env"
+        },
+        "evaluate_timeout_seconds": 1800,
+        "ffmpeg_version": "ffmpeg version 8.0.1 Copyright (c) 2000-2025 the FFmpeg developers",
+        "gpu_driver": "580.126.09",
+        "gpu_model": "Tesla T4",
+        "gpu_t4_match": true,
+        "inflate_script": "/teamspace/studios/this_studio/pact/submissions/robust_current/inflate.sh",
+        "inflate_script_sha256": "86449a1f52ac6b2be120d47287b8410f915dce7e562c69f480103f6e527c6017",
+        "inflate_timeout_seconds": 1800,
+        "libsvtav1_version": "configuration: --prefix=/home/zeus/miniconda3/envs/cloudspace --cc=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/x86_64-conda-linux-gnu-cc --cxx=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/x86_64-conda-linux-gnu-c++ --nm=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/x86_64-conda-linux-gnu-nm --ar=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/x86_64-conda-linux-gnu-ar --enable-openssl --enable-demuxer=dash --enable-hardcoded-tables --enable-libfreetype --enable-libharfbuzz --enable-libfontconfig --enable-libopenh264 --enable-libdav1d --enable-libmp3lame --enable-libaom --enable-libsvtav1 --enable-libxml2 --enable-pic --enable-shared --enable-version3 --enable-zlib --enable-libvorbis --enable-libopus --enable-libwebp --enable-libshaderc --disable-ffplay --disable-static --disable-gpl --disable-doc --pkg-config=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/pkg-config --arch=x86_64 --target-os=linux --cross-prefix=x86_64-conda-linux-gnu- --host-cc=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/x86_64-conda-linux-gnu-cc --disable-gnutls --enable-libvpx --enable-pthreads --enable-alsa --enable-libpulse --enable-libdrm --enable-libvpl --enable-vaapi --enable-libtesseract --enable-libvpx --enable-libass --enable-librsvg",
+        "pact_commit": "<error:CalledProcessError(128, ['git', 'rev-parse', 'HEAD'])>",
+        "schema_version": 1,
+        "started_at_utc": "2026-05-02T09:04:55Z",
+        "sys_argv": [
+          "experiments/contest_auth_eval.py",
+          "--archive",
+          "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip",
+          "--inflate-sh",
+          "submissions/robust_current/inflate.sh",
+          "--upstream-dir",
+          "/teamspace/studios/this_studio/pact/upstream",
+          "--device",
+          "cuda",
+          "--keep-work-dir",
+          "--work-dir",
+          "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/eval_work"
+        ],
+        "tool": "experiments/contest_auth_eval.py",
+        "torch_version": "2.11.0+cu130",
+        "upstream_commit": "11ad728f563d8970929e8947a1cf6124ee6303e4",
+        "upstream_dir": "/teamspace/studios/this_studio/pact/upstream",
+        "video_names_file": "upstream/public_test_video_names.txt"
+      }
+    }
+  },
+  "copied_payloads": [],
+  "evidence_grade": "A++",
+  "external_source_attribution": {
+    "components": [
+      {
+        "attribution_doc": "docs/paper/EXTERNAL_SOURCE_ATTRIBUTION_C067.md",
+        "bytes": 219472,
+        "reverse_engineering_custody": "reports/raw/leaderboard_intel_20260501/pr67_archive.zip (sha a5ed8da0d9988943c986b231b4cd33cea0ab878a8e1628134341db5f7f41c765, 276564 bytes)",
+        "segment": "mask.obu.br",
+        "source": "PR #67 qpose14_qzs3_filmq9g_slsb1_r55 (EthanYangTW, comma.ai video compression challenge)"
+      },
+      {
+        "authorship": "this work",
+        "bytes": 55965,
+        "segment": "model.pt.br",
+        "source": "C-059 internal QZS3-grouped variable-bit-depth FP4 packed renderer"
+      },
+      {
+        "authorship": "this work",
+        "bytes": 677,
+        "segment": "pose_q.br",
+        "source": "C-059 internal QP1 (delta+VLQ first-column) pose codec output"
+      }
+    ],
+    "required": true
+  },
+  "metadata_only": true,
+  "optional_artifacts": {
+    "adjudication_provenance": {
+      "path": "experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/adjudication_provenance.json",
+      "sha256": "0ea4480347e74b1402fea2b414cae45eda5aa71451f834a43014b537e306f86d",
+      "size_bytes": 2477
+    },
+    "component_trace": {
+      "path": "experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/component_trace.json",
+      "sha256": "076b2a06c0ed919927682df77cb7bc1fab7070f7b4c7eea658e37315c2d23f1f",
+      "size_bytes": 399738
+    },
+    "eval_provenance": {
+      "path": "experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/eval_provenance.json",
+      "sha256": "0b93553d6947787a47c84cd3442e06a72507458f5feb381c72c1f168fca3e110",
+      "size_bytes": 3903
+    },
+    "report_text": {
+      "exists": true,
+      "path": "experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/report.txt"
+    }
+  },
+  "outputs": {
+    "submission_packet_checklist": "submission_packet_checklist.md",
+    "submission_packet_manifest": "submission_packet_manifest.json"
+  },
+  "packet_kind": "metadata_only_custody_packet",
+  "raw_frames_copied": false,
+  "schema_version": 1,
+  "source_artifact_dir": "experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z",
+  "validation": {
+    "adjudicated_json_byte_count_passed": true,
+    "adjudicated_json_sample_count_passed": true,
+    "adjudicated_json_sha_passed": true,
+    "archive_byte_count_check_passed": true,
+    "archive_sha_check_passed": true,
+    "component_trace_cross_check_passed": true,
+    "eval_provenance_device_passed": "cuda",
+    "eval_provenance_t4_match_passed": true
+  }
+}
