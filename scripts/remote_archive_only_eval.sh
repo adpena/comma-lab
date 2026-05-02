@@ -29,9 +29,11 @@ export TAC_UPSTREAM_DIR="${TAC_UPSTREAM_DIR:-$WORKSPACE/upstream}"
 
 ARCHIVE_PATH="${ARCHIVE_PATH:-/workspace/pact/iter_0/archive.zip}"
 ARCHIVE_LABEL="${ARCHIVE_LABEL:-archive_only_eval}"
+INFLATE_SH="${INFLATE_SH:-submissions/robust_current/inflate.sh}"
 PREDICTED_LOW="${PREDICTED_LOW:-0.50}"
 PREDICTED_HIGH="${PREDICTED_HIGH:-1.05}"
 CONTROLLED_BASELINE="${CONTROLLED_BASELINE:-lane_g_v3_pfp16_a_plus_plus_t4 (PFP16 frontier 1.044 [contest-CUDA T4])}"
+KEEP_EVAL_WORK="${KEEP_EVAL_WORK:-0}"
 
 LOG_DIR="${LOG_DIR:-$WORKSPACE/${ARCHIVE_LABEL}_results}"
 mkdir -p "$LOG_DIR"
@@ -43,18 +45,39 @@ DRIVER_VER=$(nvidia-smi --query-gpu=driver_version --format=csv,noheader 2>&1 | 
 
 log() { echo "[archive-only-eval] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
 
+resolve_inflate_sh() {
+    case "$INFLATE_SH" in
+        ""|*..*|*\\*)
+            log "FATAL: unsafe INFLATE_SH path: $INFLATE_SH"
+            exit 12
+            ;;
+    esac
+    if [[ "$INFLATE_SH" = /* ]]; then
+        INFLATE_SH_ABS="$INFLATE_SH"
+    else
+        INFLATE_SH_ABS="$WORKSPACE/$INFLATE_SH"
+    fi
+    if [ ! -f "$INFLATE_SH_ABS" ]; then
+        log "FATAL: INFLATE_SH missing: $INFLATE_SH_ABS"
+        exit 12
+    fi
+    INFLATE_SH_SHA="$(sha256sum "$INFLATE_SH_ABS" 2>/dev/null | cut -d ' ' -f 1 || shasum -a 256 "$INFLATE_SH_ABS" | cut -d ' ' -f 1)"
+    log "inflate_sh: $INFLATE_SH_ABS sha=$INFLATE_SH_SHA"
+}
+
 bootstrap_runtime_deps() {
     # Self-bootstrap: install uv + ffmpeg + strip macOS resource forks if missing.
     # Bug-class extincts: uv-not-on-PATH, ffmpeg-missing, ._ resource-fork in upstream.
     # See feedback_uv_not_on_path_vast_instance_20260501.md, feedback_vast_cuda_driver_too_old_silent_cpu_fallback_20260501.md.
     if ! command -v uv >/dev/null 2>&1; then
-        log "BOOTSTRAP: uv missing — installing via curl"
-        curl -LsSf https://astral.sh/uv/install.sh | sh > /tmp/uv_install.log 2>&1 || {
-            log "FATAL: uv install failed; see /tmp/uv_install.log"
+        log "BOOTSTRAP: uv missing — invoking scripts/ensure_remote_uv.sh"
+        if [ ! -f "$WORKSPACE/scripts/ensure_remote_uv.sh" ]; then
+            log "FATAL: scripts/ensure_remote_uv.sh missing; remote source bundle incomplete"
             exit 7
-        }
-        ln -sf "$HOME/.local/bin/uv" /usr/local/bin/uv 2>/dev/null || true
-        export PATH="$HOME/.local/bin:$PATH"
+        fi
+        UV_BIN="$(bash "$WORKSPACE/scripts/ensure_remote_uv.sh" --symlink-system)"
+        export UV_BIN
+        export PATH="$(dirname "$UV_BIN"):$HOME/.local/bin:$PATH"
     fi
     if ! command -v ffmpeg >/dev/null 2>&1 && [ ! -x /workspace/ffmpeg-btbn/bin/ffmpeg ]; then
         log "BOOTSTRAP: ffmpeg missing — installing via apt"
@@ -166,10 +189,92 @@ require_uv_and_ffmpeg_contract() {
     log "tooling: uv=$UV_BIN UV_PROJECT_ENVIRONMENT=$UV_PROJECT_ENVIRONMENT FFMPEG_BIN=$FFMPEG_BIN INFLATE_TORCH_SPEC=$INFLATE_TORCH_SPEC"
 }
 
+ensure_scorer_runtime_deps() {
+    # contest_auth_eval.py calls upstream/evaluate.py with PYBIN, not the
+    # inflate-side uv environment. Bare PyTorch images often lack scorer deps.
+    if "$PYBIN" - <<'PY' >/tmp/pact_scorer_deps_probe.log 2>&1
+import av, einops, safetensors, segmentation_models_pytorch, timm, tqdm
+PY
+    then
+        log "scorer deps: already importable in $PYBIN"
+        return
+    fi
+    log "BOOTSTRAP: scorer deps missing in $PYBIN; installing runtime scorer deps"
+    if ! "$PYBIN" -c "import pip" 2>/dev/null; then
+        "$PYBIN" -m ensurepip --upgrade >/tmp/pact_ensurepip_scorer.log 2>&1 || true
+    fi
+    "$PYBIN" -m pip install -q --root-user-action=ignore \
+        "timm>=0.9" \
+        "einops>=0.7" \
+        "segmentation-models-pytorch>=0.3" \
+        "safetensors>=0.4" \
+        "av>=10.0" \
+        "tqdm>=4.0" \
+        > "$LOG_DIR/scorer_deps_install.log" 2>&1 || {
+            log "FATAL: scorer dependency install failed; see $LOG_DIR/scorer_deps_install.log"
+            cat "$LOG_DIR/scorer_deps_install.log" >> "$LOG_DIR/run.log" 2>/dev/null || true
+            exit 9
+        }
+    "$PYBIN" - <<'PY' > "$LOG_DIR/scorer_deps_probe.json"
+import json
+mods = {}
+for name in ["torch", "timm", "einops", "safetensors", "segmentation_models_pytorch", "av", "tqdm"]:
+    module = __import__(name)
+    mods[name] = getattr(module, "__version__", "ok")
+print(json.dumps(mods, sort_keys=True))
+PY
+    log "scorer deps: installed and probed"
+}
+
+require_declared_source_shas() {
+    # Optional fail-closed source/runtime coherence guard.
+    #
+    # Format:
+    #   REQUIRED_SOURCE_SHA256S='src/tac/foo.py=<sha256>
+    #   submissions/robust_current/inflate.sh=<sha256>'
+    #
+    # This prevents exact-eval spend when an archive was built for a newer
+    # decoder/runtime than the remote source tree currently contains.
+    if [ -z "${REQUIRED_SOURCE_SHA256S:-}" ]; then
+        return
+    fi
+    log "=== Stage 0b: required source SHA preflight ==="
+    local line rel expected actual
+    while IFS= read -r line; do
+        line="${line#"${line%%[![:space:]]*}"}"
+        line="${line%"${line##*[![:space:]]}"}"
+        [ -z "$line" ] && continue
+        rel="${line%%=*}"
+        expected="${line#*=}"
+        if [ "$rel" = "$line" ] || [ -z "$rel" ] || [ -z "$expected" ]; then
+            log "FATAL: malformed REQUIRED_SOURCE_SHA256S entry: $line"
+            exit 11
+        fi
+        case "$rel" in
+            /*|*..*|*\\*)
+                log "FATAL: unsafe REQUIRED_SOURCE_SHA256S path: $rel"
+                exit 11
+                ;;
+        esac
+        if [ ! -f "$WORKSPACE/$rel" ]; then
+            log "FATAL: required source file missing: $rel"
+            exit 11
+        fi
+        actual="$(sha256sum "$WORKSPACE/$rel" | cut -d ' ' -f 1)"
+        if [ "$actual" != "$expected" ]; then
+            log "FATAL: required source SHA mismatch for $rel expected=$expected actual=$actual"
+            exit 11
+        fi
+        log "source_sha_ok: $rel $actual"
+    done <<< "$REQUIRED_SOURCE_SHA256S"
+}
+
 # Heartbeat (every 60s) — preflight Check 41
 ( while true; do echo "$(date -u +%FT%TZ) heartbeat pid=$$" >> "$HEARTBEAT"; sleep 60; done ) &
 HB_PID=$!
 trap "kill $HB_PID 2>/dev/null || true" EXIT
+
+resolve_inflate_sh
 
 cat > "$PROVENANCE" <<JSON
 {
@@ -181,6 +286,8 @@ cat > "$PROVENANCE" <<JSON
   "lane_script": "scripts/remote_archive_only_eval.sh",
   "tag": "$ARCHIVE_LABEL",
   "archive_path": "$ARCHIVE_PATH",
+  "inflate_sh": "$INFLATE_SH_ABS",
+  "inflate_sh_sha256": "$INFLATE_SH_SHA",
   "predicted_band": [$PREDICTED_LOW, $PREDICTED_HIGH],
   "controlled_baseline": "$CONTROLLED_BASELINE",
   "no_training": true,
@@ -191,6 +298,8 @@ cat > "$PROVENANCE" <<JSON
 JSON
 
 require_uv_and_ffmpeg_contract
+ensure_scorer_runtime_deps
+require_declared_source_shas
 DALI_BOOTSTRAP_DIR="${DALI_BOOTSTRAP_DIR:-$LOG_DIR}"
 export DALI_BOOTSTRAP_DIR
 cat > "$LOG_DIR/runtime_tooling.json" <<JSON
@@ -204,6 +313,8 @@ cat > "$LOG_DIR/runtime_tooling.json" <<JSON
   "uv_extra_index_url": "${UV_EXTRA_INDEX_URL:-}",
   "uv_index_strategy": "${UV_INDEX_STRATEGY:-}",
   "ffmpeg_bin": "$FFMPEG_BIN",
+  "inflate_sh": "$INFLATE_SH_ABS",
+  "inflate_sh_sha256": "$INFLATE_SH_SHA",
   "inflate_brotli_spec": "$INFLATE_BROTLI_SPEC",
   "inflate_av_spec": "$INFLATE_AV_SPEC",
   "inflate_torch_spec": "$INFLATE_TORCH_SPEC",
@@ -235,12 +346,33 @@ fi
 ARCHIVE_BYTES=$(stat -c '%s' "$ARCHIVE_PATH" 2>/dev/null || stat -f '%z' "$ARCHIVE_PATH")
 ARCHIVE_SHA=$(sha256sum "$ARCHIVE_PATH" 2>/dev/null | cut -d ' ' -f 1 || shasum -a 256 "$ARCHIVE_PATH" | cut -d ' ' -f 1)
 log "archive: $ARCHIVE_PATH (bytes=$ARCHIVE_BYTES sha=$ARCHIVE_SHA label=$ARCHIVE_LABEL)"
+CUSTODY_ARCHIVE="$LOG_DIR/archive.zip"
+if [ "$ARCHIVE_PATH" != "$CUSTODY_ARCHIVE" ]; then
+    cp "$ARCHIVE_PATH" "$CUSTODY_ARCHIVE"
+fi
+CUSTODY_BYTES=$(stat -c '%s' "$CUSTODY_ARCHIVE" 2>/dev/null || stat -f '%z' "$CUSTODY_ARCHIVE")
+CUSTODY_SHA=$(sha256sum "$CUSTODY_ARCHIVE" 2>/dev/null | cut -d ' ' -f 1 || shasum -a 256 "$CUSTODY_ARCHIVE" | cut -d ' ' -f 1)
+if [ "$CUSTODY_BYTES" != "$ARCHIVE_BYTES" ] || [ "$CUSTODY_SHA" != "$ARCHIVE_SHA" ]; then
+    log "FATAL: archive custody copy drifted: source bytes=$ARCHIVE_BYTES sha=$ARCHIVE_SHA copy bytes=$CUSTODY_BYTES sha=$CUSTODY_SHA"
+    exit 10
+fi
+cat > "$LOG_DIR/archive_custody.json" <<JSON
+{
+  "schema_version": 1,
+  "recorded_at_utc": "$(date -u +%FT%TZ)",
+  "archive_label": "$ARCHIVE_LABEL",
+  "archive_path": "$ARCHIVE_PATH",
+  "custody_archive_path": "$CUSTODY_ARCHIVE",
+  "archive_size_bytes": $ARCHIVE_BYTES,
+  "archive_sha256": "$ARCHIVE_SHA"
+}
+JSON
 
 log "=== Stage 4: contest_auth_eval [contest-CUDA] ==="
 rm -rf "$LOG_DIR/eval_work"
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE_PATH" \
-    --inflate-sh submissions/robust_current/inflate.sh \
+    --inflate-sh "$INFLATE_SH_ABS" \
     --upstream-dir upstream \
     --device cuda \
     --keep-work-dir \
@@ -262,6 +394,20 @@ fi
 }
 
 cp "$LOG_DIR/eval_work/contest_auth_eval.json" "$LOG_DIR/contest_auth_eval.json"
+cp "$LOG_DIR/eval_work/provenance.json" "$LOG_DIR/provenance.contest_auth_eval.json" 2>/dev/null || true
+cp "$LOG_DIR/eval_work/report.txt" "$LOG_DIR/report.txt" 2>/dev/null || true
+if [ "$KEEP_EVAL_WORK" != "1" ]; then
+    rm -rf "$LOG_DIR/eval_work/inflated" "$LOG_DIR/eval_work/extracted" "$LOG_DIR/eval_work/archive.zip"
+    if [ -n "${UV_PROJECT_ENVIRONMENT:-}" ]; then
+        UV_ENV_REAL="$(realpath -m "$UV_PROJECT_ENVIRONMENT" 2>/dev/null || true)"
+        LOG_DIR_REAL="$(realpath -m "$LOG_DIR" 2>/dev/null || true)"
+        if [ -n "$UV_ENV_REAL" ] && [ -n "$LOG_DIR_REAL" ] && [[ "$UV_ENV_REAL" == "$LOG_DIR_REAL"/* ]]; then
+            rm -rf "$UV_PROJECT_ENVIRONMENT"
+        else
+            log "SKIP_UV_PROJECT_ENV_CLEANUP path_not_under_log_dir=$UV_PROJECT_ENVIRONMENT"
+        fi
+    fi
+fi
 log "=== ARCHIVE_ONLY_EVAL_DONE [contest-CUDA] -- see $LOG_DIR/contest_auth_eval.json ==="
 log "  archive_label: $ARCHIVE_LABEL"
 log "  archive_sha:   $ARCHIVE_SHA"

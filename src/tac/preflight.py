@@ -106,6 +106,24 @@ def preflight_check(
         raw = renderer_path.read_bytes()
         magic = raw[:4]
 
+        runtime_renderer_magics = {
+            b"DPSM": "DPSM runtime renderer",
+            b"I4LZ": "INT4+LZMA2 runtime renderer",
+            b"FP8H": "FP8H runtime renderer",
+            b"CCh1": "Cool-Chic runtime renderer",
+            b"C3R1": "C3 residual runtime renderer",
+            b"SCv1": "Self-compressing runtime renderer",
+            b"SZv1": "Szabolcs/SegMap runtime renderer",
+            b"QFAI": "Q-FAITHFUL JointFrameGenerator runtime renderer",
+            b"QZS3": "QZS3 JointFrameGenerator runtime renderer",
+            b"MQZ1": "MQZ1 mixed/local QZS runtime renderer",
+            b"NWC1": "Neural weight codec runtime renderer",
+            b"OWV2": "OWV2 runtime renderer",
+            b"OWV3": "OWV3 runtime renderer",
+            b"IMPS": "IMP sparse-CSR runtime renderer",
+        }
+        pytorch_pickle_magics = (b"PK\x03\x04", b"\x80\x02", b"\x80\x03", b"\x80\x04", b"\x80\x05")
+
         if magic == b"ASYM":
             header_len = struct.unpack("<I", raw[4:8])[0]
             import json
@@ -122,8 +140,19 @@ def preflight_check(
         elif magic == b"FP4A":
             _pass(f"Renderer: FP4A, {len(raw):,}B")
             _warn("FP4 renderer — verify QAT was used during training (post-hoc QAT degrades 3-26x)")
+        elif magic in runtime_renderer_magics:
+            _pass(f"Renderer: {runtime_renderer_magics[magic]}, {len(raw):,}B")
+        elif raw[:8] == b"NWCS1\0\0\0":
+            _pass(f"Renderer: NWCS1 sensitivity-aware neural weight codec runtime renderer, {len(raw):,}B")
+        elif raw.startswith(pytorch_pickle_magics):
+            _warn(f"Renderer: PyTorch checkpoint payload, {len(raw):,}B")
         else:
-            _warn(f"Renderer: unknown format (magic={magic}), assuming PyTorch .pt")
+            _fail(
+                f"Renderer: unknown non-pickle binary format (magic={magic!r}). "
+                "Refusing to assume PyTorch .pt because that reopens the "
+                "renderer.bin torch.load bug class; add an explicit runtime "
+                "loader/preflight branch for this wire format."
+            )
 
     # ── Mask checks ──────────────────────────────────────────────
     if masks_path:
@@ -268,6 +297,22 @@ def preflight_all(
         # before copying the archive or spending inflate time, then rerun the
         # supply-chain scan after any dependency mutation.
         check_lightning_exact_eval_runner_bootstraps_dali(strict=True, verbose=verbose)
+        # 2026-05-01 public-floor PVL1 promotion attempt exposed a separate
+        # closure hole: exact-eval Studio submits could stage the archive
+        # without the inflate runtime config.env, then fail after queue time.
+        # T4/g4dn submits must also pin inflate-side Torch for old drivers.
+        check_lightning_exact_eval_manifest_runtime_closure(strict=True, verbose=verbose)
+        # Remote archive-only H100/L40S diagnostics are only useful if their
+        # score JSON is tied to preserved archive bytes. This catches wrapper
+        # regressions before overwritten artifact paths create false evidence.
+        check_remote_archive_only_eval_custody_closure(strict=True, verbose=verbose)
+        # 2026-05-02 standalone component traces hit the same runtime-boundary
+        # class as archive-only evals: system ffmpeg can lack the explicit
+        # color contract and inflate-side uv can mutate shared envs. Component
+        # traces are diagnostic, but they drive hard-pair/water-fill decisions,
+        # so runtime drift must fail before profile feedback enters the loop.
+        check_contest_component_trace_runtime_parity(strict=True, verbose=verbose)
+        check_dispatch_claim_helper_present(strict=True, verbose=verbose)
         # 2026-04-30 MCP shutdown directive: repo-owned MCP configs must stay
         # empty unless the user explicitly re-enables them. This catches
         # accidental reintroduction of `.codex/.claude/.cursor` MCP server
@@ -643,6 +688,8 @@ def preflight_all(
         #   Check 46 (quantizer-roundtrip-tests)                  0  → STRICT (R25 promotion: 5 test files added covering archive_codec/entropy_archive/mask_entropy_coder/network_codec/semantic_quantization; quantization_audit waived as drift-MEASUREMENT module not a quantizer)
         #   Check 47 (lane-archive-size-assertion)                0  → STRICT
         check_gradient_direction_tests_exist(strict=True, verbose=verbose)
+        check_posenet_gradient_preprocess_patch(strict=True, verbose=verbose)
+        check_line_search_scorer_runtime_preflight(strict=True, verbose=verbose)
         check_test_assertion_strength_for_loss_functions(strict=True, verbose=verbose)
         check_quantizer_modules_have_round_trip_test(strict=True, verbose=verbose)
         check_lane_deploy_scripts_have_archive_size_assertion(strict=True, verbose=verbose)
@@ -7291,6 +7338,9 @@ _MPS_DECISION_EXEMPT_PATH_PARTS: tuple[str, ...] = (
     ".omx/context/",        # frozen historical context snapshots
     ".omx/research/",       # research findings (catalog, not decisions)
     "reports/graphs/",      # judging surface; figure captions cite history
+    "/uv_project_env/",     # vendored Python deps in remote eval workspaces (numpy/distutils ccompiler_opt etc.)
+    "/site-packages/",      # vendored Python deps anywhere (third-party code, not ours)
+    "/__pycache__/",        # compiled bytecode artifacts
 )
 
 # Tags that, when present in the same paragraph, mark the entry as a
@@ -11122,6 +11172,9 @@ _ARCHIVE_ARTIFACT_FILENAMES = frozenset({
 # catch, or historically-dead lanes preserved for archeology. EVERY
 # EXEMPTION needs a one-line WHY comment.
 _DEPLOY_SCANNER_EXEMPT_PRODUCERS = frozenset({
+    # Planning tool — CPU-only, deterministic, writes score_claim=false atom plans
+    # for charged mask grammar work; not a deployable archive producer
+    "experiments/plan_charged_mask_grammar_atoms.py",
     # Registry itself — it's the source of truth, not a producer
     "src/tac/submission_archive.py",
     # Renderer export is invoked from training scripts, never standalone
@@ -13294,6 +13347,191 @@ def check_gradient_direction_tests_exist(
 
 
 # ════════════════════════════════════════════════════════════════════════════
+# Check 44b (2026-05-02): gradient-guided PoseNet proposal tools must patch
+#                         upstream no-grad preprocessing before backprop.
+#
+# The official upstream PoseNet preprocess path calls rgb_to_yuv6 through a
+# @torch.no_grad barrier. Gradient-guided proposal code that backprops through
+# `posenet.preprocess_input(...)` without patching it either crashes or produces
+# no usable direction signal. Exact rounded archive evaluation remains the score
+# truth; this check only protects proposal generation from a dead gradient.
+#
+# Same-line/file waiver: `POSENET_GRAD_PREPROCESS_WAIVER:<reason>`
+# ════════════════════════════════════════════════════════════════════════════
+
+_POSENET_GRAD_PREPROCESS_WAIVER_TOKEN = "POSENET_GRAD_PREPROCESS_WAIVER:"
+_POSENET_GRAD_PATCH_TOKENS = (
+    "patch_posenet_for_differentiable_search",
+    "make_scorers_differentiable",
+    "load_differentiable_scorers",
+    "patch_scorers_for_training",
+    "PoseNet preprocess_input kills gradients",
+)
+
+
+def _looks_like_posenet_gradient_proposal_tool(text: str) -> bool:
+    return (
+        "posenet.preprocess_input" in text
+        and (".backward(" in text or "torch.autograd.grad" in text)
+        and (
+            "gradient_delta_sets" in text
+            or "gradient-guided" in text
+            or "gradient guided" in text
+            or "proposal" in text
+        )
+    )
+
+
+def check_posenet_gradient_preprocess_patch(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Guard gradient-guided PoseNet proposal paths against dead gradients.
+
+    This is intentionally narrower than all scorer uses: exact eval and
+    inference paths should use the official no-grad scorer. The blocker is only
+    for optimization/proposal tools that explicitly backpropagate through
+    PoseNet preprocessing.
+    """
+    root = repo_root or REPO_ROOT
+    candidates = [
+        root / "experiments" / "line_search_pose_refinement.py",
+    ]
+    violations: list[str] = []
+    scanned = 0
+    seen: set[Path] = set()
+    for path in candidates:
+        if path in seen:
+            continue
+        seen.add(path)
+        if not path.exists():
+            continue
+        try:
+            text = path.read_text()
+        except (UnicodeDecodeError, FileNotFoundError):
+            continue
+        if _POSENET_GRAD_PREPROCESS_WAIVER_TOKEN in text:
+            continue
+        if not _looks_like_posenet_gradient_proposal_tool(text):
+            continue
+        scanned += 1
+        rel = path.relative_to(root) if path.is_absolute() else path
+        if not any(token in text for token in _POSENET_GRAD_PATCH_TOKENS):
+            violations.append(
+                f"{rel}: gradient-guided PoseNet proposal path calls "
+                "`posenet.preprocess_input(...)` and backpropagates, but does "
+                "not patch the upstream no-grad preprocessing. Call "
+                "`patch_posenet_for_differentiable_search(posenet)` or "
+                "`make_scorers_differentiable(...)` before optimization."
+            )
+        if "if not loss.requires_grad" not in text:
+            violations.append(
+                f"{rel}: gradient-guided PoseNet proposal path lacks an "
+                "`if not loss.requires_grad` fail-closed guard, so a future "
+                "preprocess refactor can silently remove the proposal signal."
+            )
+
+    if verbose:
+        if violations:
+            print(
+                f"  [posenet-grad-preprocess] {len(violations)} violation(s):"
+            )
+            for v in violations[:20]:
+                print(f"    • {v}")
+        else:
+            print(
+                "  [posenet-grad-preprocess] OK: "
+                f"{scanned} gradient proposal file(s) scanned"
+            )
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "POSENET GRADIENT PREPROCESS PATCH VIOLATIONS:\n"
+            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n\nThe upstream PoseNet preprocess path has a no-grad YUV "
+            "conversion barrier. Gradient proposal tools must patch it and "
+            "also assert `loss.requires_grad` before backward. Waive only with "
+            f"`{_POSENET_GRAD_PREPROCESS_WAIVER_TOKEN}<reason>`."
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# Check 44c (2026-05-02): scorer/profile proposal tools must fail before
+#                          remote paid work when upstream scorer deps or DALI
+#                          are absent.
+#
+# The H100 active-subspace line-search runner failed twice before scoring:
+# first on missing `timm`, then after that fix on missing `nvidia.dali`.
+# This check pins the meta-pattern: tools that directly load upstream scorer
+# modules and `DaliVideoDataset` need an explicit dependency preflight that
+# includes the hash-pinned DALI bootstrap path, not only the Python scorer deps.
+# ════════════════════════════════════════════════════════════════════════════
+
+
+def check_line_search_scorer_runtime_preflight(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Guard GT-backed line-search tools against missing scorer/DALI deps."""
+    root = repo_root or REPO_ROOT
+    path = root / "experiments" / "line_search_pose_refinement.py"
+    violations: list[str] = []
+    if not path.exists():
+        return violations
+    try:
+        text = path.read_text()
+    except (UnicodeDecodeError, FileNotFoundError):
+        return violations
+
+    rel = path.relative_to(root) if path.is_absolute() else path
+    if "DaliVideoDataset" not in text and "upstream.modules" not in text:
+        return violations
+
+    required_tokens = {
+        "SCORER_RUNTIME_MODULES": "declares the scorer runtime dependency tuple",
+        '"nvidia.dali"': "requires DALI before GT-backed profile/search work",
+        '"timm"': "requires upstream PoseNet/FastViT deps before scorer imports",
+        "assert_scorer_runtime_dependencies_available": "has a reusable preflight helper",
+        "scripts/bootstrap_dali_hash_pinned.py": "points operators at the hash-pinned DALI bootstrap",
+    }
+    for token, reason in required_tokens.items():
+        if token not in text:
+            violations.append(f"{rel}: missing {token!r} ({reason})")
+
+    load_posenet_idx = text.find("def load_posenet")
+    helper_idx = text.find("assert_scorer_runtime_dependencies_available()", load_posenet_idx)
+    import_idx = text.find("from upstream.modules import PoseNet", load_posenet_idx)
+    if load_posenet_idx >= 0 and (helper_idx < 0 or (import_idx >= 0 and helper_idx > import_idx)):
+        violations.append(
+            f"{rel}: `load_posenet` must call "
+            "`assert_scorer_runtime_dependencies_available()` before importing "
+            "`upstream.modules.PoseNet`."
+        )
+
+    if verbose:
+        if violations:
+            print("  [line-search-scorer-runtime] " f"{len(violations)} violation(s):")
+            for v in violations[:20]:
+                print(f"    • {v}")
+        else:
+            print("  [line-search-scorer-runtime] OK: dependency preflight is fail-closed")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "LINE-SEARCH SCORER RUNTIME PREFLIGHT VIOLATIONS:\n"
+            + "\n".join(f"  • {v}" for v in violations[:50])
+            + "\n\nGT-backed pose/search tools import upstream scorer modules "
+            "and DALI datasets. Missing runtime deps must fail before paid "
+            "remote work; use the repo runtime extra plus the hash-pinned "
+            "DALI bootstrap."
+        )
+    return violations
+
+
+# ════════════════════════════════════════════════════════════════════════════
 # Check 45 (2026-04-28): tests of *loss* functions/classes must include at
 #                        least one convergence (loss-decrease) check.
 #
@@ -15374,6 +15612,307 @@ def check_canonical_bootstraps_write_provenance(
         raise MetaBugViolation(
             "CANONICAL BOOTSTRAPS MUST WRITE provenance.json.\n"
             + "\n".join(f"  • {v}" for v in violations[:50])
+        )
+    return violations
+
+
+def check_lightning_exact_eval_manifest_runtime_closure(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Guard exact-eval submit-time manifest/runtime closure.
+
+    Exact CUDA eval can be correct in the job command and still be doomed if
+    the staged source manifest omits ``submissions/robust_current/config.env``.
+    T4/g4dn jobs also need an explicit inflate-side Torch pin because older
+    drivers can resolve CUDA-13 wheels that fail at runtime.
+    """
+    import argparse
+    import importlib.util
+    import json
+    import tempfile
+
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    cli = root / "scripts" / "launch_lightning_batch_job.py"
+    try:
+        spec = importlib.util.spec_from_file_location("launch_lightning_batch_job_preflight", cli)
+        if spec is None or spec.loader is None:
+            raise RuntimeError(f"could not load {cli}")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest = Path(tmp) / "manifest.json"
+            args = argparse.Namespace(
+                dry_run=False,
+                studio="pact",
+                source_manifest=str(manifest),
+                archive="/repo/archive.zip",
+                repo_dir="/repo",
+                queue_metadata=[],
+                env=[],
+                machine="L40S",
+            )
+            manifest.write_text(json.dumps({"files": [{"path": "archive.zip"}]}) + "\n")
+            try:
+                module._validate_exact_eval_submit_inputs(args)
+            except SystemExit as exc:
+                msg = str(exc)
+                if "inflate runtime closure" not in msg or "config.env" not in msg:
+                    violations.append(
+                        "exact-eval manifest closure rejected archive-only manifest "
+                        f"with the wrong message: {msg}"
+                    )
+            else:
+                violations.append(
+                    "exact-eval manifest closure accepted archive-only manifest "
+                    "without inflate.sh/config.env"
+                )
+
+            manifest.write_text(
+                json.dumps(
+                    {
+                        "files": [
+                            {"path": "archive.zip"},
+                            {"path": "submissions/robust_current/inflate.sh"},
+                            {"path": "submissions/robust_current/config.env"},
+                        ]
+                    }
+                )
+                + "\n"
+            )
+            try:
+                module._validate_exact_eval_submit_inputs(args)
+            except SystemExit as exc:
+                violations.append(f"exact-eval manifest closure rejected complete L40S manifest: {exc}")
+
+            args.machine = "g4dn.xlarge"
+            args.env = []
+            try:
+                module._validate_exact_eval_submit_inputs(args)
+            except SystemExit as exc:
+                if "INFLATE_TORCH_SPEC" not in str(exc):
+                    violations.append(f"T4/g4dn torch pin gate rejected with wrong message: {exc}")
+            else:
+                violations.append("T4/g4dn exact-eval submit accepted missing INFLATE_TORCH_SPEC")
+
+            args.env = [
+                "INFLATE_TORCH_SPEC=torch==2.5.1+cu124",
+                "UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu124",
+                "UV_INDEX_STRATEGY=unsafe-best-match",
+            ]
+            try:
+                module._validate_exact_eval_submit_inputs(args)
+            except SystemExit as exc:
+                violations.append(f"T4/g4dn exact-eval submit rejected complete cu124 pin: {exc}")
+    except Exception as exc:
+        violations.append(f"could not run exact-eval manifest runtime closure preflight: {exc!r}")
+
+    if verbose:
+        if violations:
+            print(f"  [lightning-exact-eval-runtime-closure] {len(violations)} violation(s):")
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print(
+                "  [lightning-exact-eval-runtime-closure] OK: manifest runtime "
+                "closure and T4 torch pin gates are fail-closed"
+            )
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "LIGHTNING EXACT-EVAL RUNTIME CLOSURE VIOLATIONS:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+        )
+    return violations
+
+
+def check_remote_archive_only_eval_custody_closure(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Guard archive-only exact-eval custody and runtime hardening.
+
+    H100/L40S archive-only diagnostics are fast enough to run often, which also
+    makes path drift dangerous: a result directory must preserve the exact
+    archive bytes that produced its JSON, plus the scorer/runtime dependency
+    and cleanup guards that avoid repeated remote bug classes.
+    """
+    root = repo_root or REPO_ROOT
+    script = root / "scripts" / "remote_archive_only_eval.sh"
+    violations: list[str] = []
+    try:
+        text = script.read_text()
+    except FileNotFoundError:
+        violations.append("scripts/remote_archive_only_eval.sh is missing")
+        text = ""
+
+    required_substrings = {
+        "archive custody sidecar": "archive_custody.json",
+        "archive custody copy": "CUSTODY_ARCHIVE",
+        "archive custody drift fail-close": "archive custody copy drifted",
+        "scorer dependency bootstrap": "ensure_scorer_runtime_deps",
+        "scorer dependency probe": "scorer_deps_probe.json",
+        "heavy eval cleanup": "eval_work/inflated",
+        "contest JSON preservation": "contest_auth_eval.json",
+        "contest provenance preservation": "provenance.contest_auth_eval.json",
+        "driver-compatible torch selection": "torch==2.5.1+cu124",
+        "canonical uv bootstrap": "scripts/ensure_remote_uv.sh",
+    }
+    for label, needle in required_substrings.items():
+        if needle not in text:
+            violations.append(f"remote archive-only wrapper missing {label}: {needle}")
+
+    if verbose:
+        if violations:
+            print(f"  [remote-archive-only-custody] {len(violations)} violation(s):")
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print(
+                "  [remote-archive-only-custody] OK: archive custody, scorer deps, "
+                "driver pins, and cleanup guards are present"
+            )
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "REMOTE ARCHIVE-ONLY EVAL CUSTODY VIOLATIONS:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+        )
+    return violations
+
+
+def check_contest_component_trace_runtime_parity(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Guard standalone component-trace runtime parity and profile feedback.
+
+    ``experiments/contest_component_trace.py`` is not promotion evidence, but
+    its per-pair deltas feed hard-pair selection, Lagrangian water filling, and
+    low-dimensional active-subspace searches. A trace produced through a
+    different ffmpeg color contract or a shared/mutated uv environment can
+    poison the optimizer even when the archive itself is valid.
+    """
+    root = repo_root or REPO_ROOT
+    script = root / "experiments" / "contest_component_trace.py"
+    violations: list[str] = []
+    try:
+        text = script.read_text()
+    except FileNotFoundError:
+        violations.append("experiments/contest_component_trace.py is missing")
+        text = ""
+
+    required_substrings = {
+        "parity ffmpeg resolver": "_ensure_parity_ffmpeg_env",
+        "explicit ffmpeg override rejection": "FFMPEG_BIN={explicit!r} is not executable",
+        "ffmpeg scale option list": "REQUIRED_FFMPEG_SCALE_OPTIONS",
+        "in_range color contract": '"in_range"',
+        "out_range color contract": '"out_range"',
+        "in_color_matrix color contract": '"in_color_matrix"',
+        "in_primaries color contract": '"in_primaries"',
+        "in_transfer color contract": '"in_transfer"',
+        "isolated inflate uv env": "_ensure_isolated_inflate_uv_env",
+        "uv copy mode": "UV_LINK_MODE",
+        "runtime environment sidecar": "component_trace_runtime_env.json",
+        "diagnostic evidence grade": "diagnostic_component_trace",
+        "non-promotable score claim": '"score_claim": False',
+        "contest auth cross-check": "contest_auth_eval_cross_check",
+    }
+    for label, needle in required_substrings.items():
+        if needle not in text:
+            violations.append(f"component trace missing {label}: {needle}")
+
+    if verbose:
+        if violations:
+            print(f"  [component-trace-runtime-parity] {len(violations)} violation(s):")
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print(
+                "  [component-trace-runtime-parity] OK: parity ffmpeg, isolated "
+                "uv env, runtime sidecar, and non-promotable cross-check guards "
+                "are present"
+            )
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "CONTEST COMPONENT TRACE RUNTIME PARITY VIOLATIONS:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+        )
+    return violations
+
+
+def check_dispatch_claim_helper_present(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Guard the cross-agent paid-dispatch claim helper."""
+    root = repo_root or REPO_ROOT
+    helper = root / "tools" / "claim_lane_dispatch.py"
+    lightning_launcher = root / "scripts" / "launch_lightning_batch_job.py"
+    agents = root / "AGENTS.md"
+    violations: list[str] = []
+    try:
+        helper_text = helper.read_text()
+    except FileNotFoundError:
+        helper_text = ""
+        violations.append("tools/claim_lane_dispatch.py is missing")
+    else:
+        if not os.access(helper, os.X_OK):
+            violations.append("tools/claim_lane_dispatch.py is not executable")
+    for needle in (
+        "fcntl.flock",
+        "REFUSING_DISPATCH",
+        "active claim(s) already exist",
+        "--allow-parallel",
+        "--child-of",
+        "TERMINAL_PREFIXES",
+        "closed_instance_job_ids",
+        "ttl-hours",
+    ):
+        if needle not in helper_text:
+            violations.append(f"dispatch claim helper missing required guard: {needle}")
+    try:
+        launcher_text = lightning_launcher.read_text()
+    except FileNotFoundError:
+        launcher_text = ""
+        violations.append("scripts/launch_lightning_batch_job.py is missing")
+    for needle in (
+        "_require_dispatch_claim_for_submit",
+        "--dispatch-lane-id",
+        "--allow-missing-dispatch-claim-reason",
+        "missing active dispatch claim",
+        "dispatch_claim_skip_reason",
+    ):
+        if needle not in launcher_text:
+            violations.append(f"Lightning launcher missing dispatch-claim guard: {needle}")
+    try:
+        agents_text = agents.read_text()
+    except FileNotFoundError:
+        agents_text = ""
+        violations.append("AGENTS.md is missing")
+    if "tools/claim_lane_dispatch.py claim" not in agents_text:
+        violations.append("AGENTS.md does not require the dispatch claim helper")
+    if "newer terminal row as closing" not in agents_text:
+        violations.append("AGENTS.md does not document terminal claim-row closure")
+
+    if verbose:
+        if violations:
+            print(f"  [dispatch-claim-helper] {len(violations)} violation(s):")
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print("  [dispatch-claim-helper] OK: paid-dispatch claim helper is present")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "DISPATCH CLAIM HELPER VIOLATIONS:\n"
+            + "\n".join(f"  • {v}" for v in violations)
         )
     return violations
 
