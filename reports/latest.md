@@ -1,91 +1,91 @@
-# Latest Report — 2026-04-30 PFP16 custody update (3 days to deadline)
+# Latest Report - 2026-05-02 C-067 contest-faithful status
 
-## Current Floor (the ONLY scores we report)
+## Current Floor
 
-**Best contest-CUDA artifact: PFP16 A++ = 1.04 [contest-CUDA A++]** (exact Tesla T4 auth eval on 2026-04-30).
+**Best internal contest-CUDA artifact in the current claim matrix: C-067 PR67-mask/C-059-model/C-059-pose fixed-slice frontier = `0.31561703078448233` [A++]**.
 
-- Evidence: `experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/eval/contest_auth_eval.json`
-- Custody: `experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/custody/custody_manifest.json`
-- Archive: `experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip` (686,635 bytes, SHA `0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f`)
-- SegNet: 0.00400656 / PoseNet: 0.00346442 / Rate: 0.01828808
-- Recomputed score: `1.043987524793892`; `contest_auth_eval.json` is authoritative over build provenance and logs.
-- Recipe: Lane G v3 renderer + deterministic PFP16 pose payload; old Lane G v3 `1.05` is the historical predecessor.
-- Beats Lane A (1.15) by 0.11 and old Lane G v3 by ~0.0049.
+- Evidence: `experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/contest_auth_eval.adjudicated.json`
+- Archive: `experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip`
+- Archive bytes/SHA: `276214`, `226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a`
+- Components: SegNet `0.00061244`, PoseNet `0.00049637`, samples `600`, device Tesla T4 CUDA
+- Anatomy (charged but source-attributed): PR67 mask segment `219472` bytes + C-059 model segment `55965` bytes + C-059 pose segment `677` bytes
+- External attribution required: PR #67 mask segment (see `docs/paper/EXTERNAL_SOURCE_ATTRIBUTION_C067.md`)
+- Authority: `.omx/research/shannon_floor_claim_matrix_20260430_codex.md` row `C-067` and `.omx/research/submission_writeup_integration_20260502_codex.md`
 
-**Fallback floor: Lane G v3 pre-PFP16 = 1.05 [contest-CUDA]** (`experiments/results/lane_g_v3_landed/contest_auth_eval.json`).
+C-067 supersedes C-063 (`0.3156230307844823` bytes `276223` SHA `83615afd...`) and C-059 (`0.3157055307844823` bytes `276347` SHA `cf44aa7f...`) by `-0.0000060` and `-0.000088` respectively, with PoseNet/SegNet identical (improvement is pure charged-rate `-9 bytes` and `-133 bytes`). C-063, C-059, C-058, C-057 remain predecessor rows for the PR67 comparison narrative and the lossless-repack/byte-micro-frontier chain. None of these rows is a Shannon-floor attainment claim.
 
-## Live leaderboard (fetched 2026-04-29 ~10am)
+## Public Context
 
-| Rank | Score | Entry | PR | Notes |
-|------|-------|-------|----|-------|
-| 1 | 0.33 | Quantizr | #55 | FiLM CNN 88K + KL-T2 + AV1 |
-| 2 | **0.38** | **Selfcomp** | **#56** | self-compression ~1.017 bpw + analytical-pose affine |
-| 3 | **0.60** | **Mask2mask** | **#53** | "slightly different arch" (obfuscated) |
-| 4 | 1.89 | neural_inflate | #49 | |
-| 5 | 1.91 | svtav1_dilated_renderer | #58 | |
-| ours | 1.04 | PFP16 A++ | not submitted | would rank ~4th against this 2026-04-29 snapshot |
+| Entry | Status | Score signal | Evidence use |
+|---|---:|---:|---|
+| PR #67 `qpose14_qzs3_filmq9g_slsb1_r55` | Open external PR | Reports rounded `0.31`, bytes `276564`, PoseNet `0.00048597`, SegNet `0.00061000` | External target; mask segment used in C-067 with attribution |
+| PR #65 `henosis_qz_n3z_r25_clean` | Open external PR | Reports `284425` bytes, local replay `0.31968`/`0.3600` | Side-channel correction motivation; multi-stage residual paradigm reverse-engineered |
+| PR #63/#64 public-floor lineage | Merged/visible | `0.32`/`0.33` rounded band | Basin anatomy and packer transfer |
+| C-067 | Internal exact A++ | Recomputed `0.31561703078448233`, bytes `276214` | **Active frontier** |
+| C-063 | Internal exact A++ superseded | Recomputed `0.3156230307844823`, bytes `276223` | Predecessor in PR67 comparison chain |
+| C-059 | Internal exact A++ superseded | Recomputed `0.3157055307844823`, bytes `276347` | Predecessor in lossless-repack chain |
+| C-058 | Internal exact A++ superseded | Recomputed `0.3157555307844823`, bytes `276422` | Active-subspace byte micro-frontier predecessor |
+| C-057 | Internal exact A++ superseded | Recomputed `0.3157562807844823`, bytes `276423` | Anisotropic-basis pose comparison anchor |
+| PR #68 `loophole_v2` | Closed external PR | Proof-of-concept moving payload to script | Quarantine as `invalid`/`external_quarantine`; archive-metering loophole risk |
+| PR #69 `houdini` | Open external PR | No maintainer-filled eval report at inspection time | Quarantine as `external_quarantine`; unverified boundary experiment |
+| PR #70 `mask_decoder` | Open external PR | Reports rounded `0.19`, bytes `57329`, author states bytes moved into `inflate.py` | Quarantine as `invalid`/`external_quarantine`; not leaderboard-comparable |
 
-User-set NON-NEGOTIABLE goal: **sub-0.30**. Deadline May 3.
+PR #67 remains the most relevant contest-faithful external source. C-067 locally evaluates a charged fixed-slice candidate that uses the PR67 mask segment with C-059 model/pose bytes; the local exact T4 score is A++ evidence for the exact archive bytes and simultaneously requires PR67 source attribution for the mask segment. PR #68/#69/#70 are useful only for compliance hardening: they show why payload closure must meter every score-affecting byte and why our reports must reject script-side payloads, hidden sidecars, malformed ZIP reliance, or uncharged runtime data.
 
-## Modal pipeline TRUSTED (canonical for >2h training)
+## Frontier Custody (last 24h)
 
-PFP16 A++ supersedes the old Lane G v3 Modal/Vast reproduction for frontier wording. For training jobs >2h, Modal remains the preferred queue. Vast.ai 4090 NVDEC roulette has been ~85% bad-host rate this week; ~$5 burned across 5 dispatch rounds for 0 trained lanes on the bad nights. Modal's slightly higher per-hour cost is dominated by reliability.
+Codex pose-manifold water-fill lineage (C-058 → C-059 → C-063 → C-067) on H100 NVL/SXM with Lightning Tesla T4 promotion. All micro-frontier improvements are pure charged-rate (PoseNet/SegNet identical, byte deltas only), reflecting the C-059-basin packer-and-layout exhaustion. Q-FAITHFUL successor work continues separately as `B`/`A-negative` evidence (zoom-runtime fix verified; measured snapshot still PoseNet-collapsed at `22.1476`); retire only that snapshot/export, not the future QAT++ or geometry-trained architecture.
 
-## Active portfolio (as of 2026-04-29 PM)
+CMG2 exact T4 wave landed as `A-negative scoped forensic` (plain 2x2: `2.295` at `194020` bytes; top512 AMR1 repair: `2.125` at `248074` bytes; top256 AMR1 repair: `2.223` at `219850` bytes). These retire the measured nearest-neighbor CMG2 base + hand-picked AMR1 repair only; learned/predictive/row-span/geometry-preserving mask grammars remain open. Predictive mask-grammar row-span probe is `empirical_byte_probe_only` (best `63212` charged bytes for `row_span_stride4_class_predictor`+`lzma6` on PR67 mask, `-156260` vs current `219472`-byte segment) and motivates CMG3 closed-archive implementation as the next charged-evidence step.
 
-In-flight on Modal (re-dispatched after Round 1 council fixes):
-- q_faithful_v3 (true Quantizr 1:1 replica)
-- sz_phase2_v2 (dilated moonshot)
-- mae_v_v2 (mask-augment)
-- lane_w_v2 (hard-pair self-compress)
-- Lane MM (grayscale-LUT mask encoding)
-- Lane SA (94K-param SegMap clone — Selfcomp paradigm)
-- Lane SC++ (SA + KL distill T=2.0 — sub-Quantizr stack candidate)
-- Lane SO (SC++ + Hessian-aware block-FP)
+## Submission Pipeline
 
-In implementation (5 sweep + 5 EUREKA lanes):
-- FR-Ω, HM-S, DARTS-S, WC-S, FR-MM (sweep)
-- PA, FC, SH, TR, PD (EUREKA bench: Shannon, Ballé, Karpathy, Schmidhuber, Carmack, Toderici, Olah)
+C-067 archive bytes are deploy-ready. Packet path candidate:
 
-## Negative / blocked evidence (recent)
+- archive: `experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip` (276,214 bytes, sha `226475de...8efb38a`)
+- inflate: `submissions/exact_current/inflate.sh` + frozen upstream evaluator
+- attribution: `docs/paper/EXTERNAL_SOURCE_ATTRIBUTION_C067.md` (PR #67 mask segment provenance)
+- runtime custody: `inflate_runtime_manifest.runtime_tree_sha256` recorded in adjudicated JSON
+- compliance audit: payload-closure check (no scorer patches, no host-local sidecars, no script-side payload movement, deterministic ZIP, hidden-file/resource-fork exclusion, zip-slip rejection, scorer-load guards, CUDA-only score truth)
 
-- Lane M-V2 (radial-zoom rank-1 hypothesis): 1.84 [contest-CUDA], regression vs Lane A 1.15. Train/inference pose-pad asymmetry confirmed (Check 42).
-- Lane H CRF56: 3.20 [contest-CUDA].
-- Lane GP v3 (Gaussian-process pose fit): `89.67` [Modal-T4-CPU diagnostic; invalid for score claims]. Treat as a Runge-condition debugging signal only; it does not disprove the off-manifold hypothesis or retire the polynomial path without lane-local CUDA archive custody.
-- Lane UNIWARD v8: `1.14` [Modal-T4-CPU diagnostic; invalid for score claims]. Treat as a suspected no-op/SLI1-decoder debugging signal only; no standalone kill or retirement without exact CUDA archive custody and scoped council review.
-- Lane V (Quantizr halfframe joint-from-epoch-0): crashed at ~7.6h on channel mismatch.
-- 2026-04-29 Modal first-wave failures: MAE-V missing pydantic; Omega Hessian CUDA assert; UNIWARD missing baseline; pose tensor shape (600,6) vs (N,1) on one inflate.
+## Report Pipeline Contract
 
-## Catastrophic-failure protections landed (past 7 days)
+Every public or judge-facing packet should be generated from structured rows with these sections:
 
-| Bug class | Detection | First incident |
-|-----------|-----------|----------------|
-| 48x64 mask resolution → score 53.61 | Check 76 STRICT (anchor mask resolution) | Lane UNIWARD v7 |
-| Wrong archive bytes used in eval | `submission_archive.require_valid_archive()` | Multi-week regression |
-| Overlapping pose pairs vs 600 non-overlap | Diff against upstream evaluate.py | Multi-week |
-| eval_roundtrip defaulted False | CLAUDE.md non-negotiable, all paths True | TTO/training |
-| Auto-bundle by file existence | All archive contents now require explicit flags | Compress.sh |
-| Lane GP Runge polynomial blow-up | Surface fit-quality RMSE in RESULT_JSON | Lane GP v2/v3 |
-| Vast.ai NVDEC roulette | Pre-DALI NVDEC probe (Stage 0.5) + Modal pivot | Multiple lanes |
-
-Total STRICT preflight checks: **78** (was 36 a week ago). Catalog in CLAUDE.md.
-
-## Verification notes
-
-- `comma-lab doctor`: required local tools present.
-- `canonical_local_auth_eval_smoke.py --lane g_v3_corrected_kl_weight --quiet`: PASS (10 stages, 0.02s).
-- Focused test slice: 34 passed in 2.00s.
-- Check 64 E2E smoke proof scan: 0 violations.
+1. `frontier_summary` - only Grade `A++`/`A` rows; current default is C-067, with C-063/C-059/C-058/C-057 retained as predecessor rows.
+2. `public_external_context` - PR67/PR65/PR63/PR64 anatomy and claimed scores tagged `external`.
+3. `quarantined_exploit_context` - PR68/PR69/PR70-style sidecar or rule-boundary evidence tagged `invalid` or `external_quarantine`.
+4. `exact_artifact_table` - archive path, SHA, bytes, eval JSON, device, samples, component values, recomputed score, evidence tag, allowed use, and `inflate_runtime_manifest.runtime_tree_sha256` for cross-run comparisons.
+5. `negative_results` - exact scoped regressions only [contest-CUDA]; no broad method kills from proxy, CPU/MPS, byte-only, or exploit evidence (these are `[advisory only]` device classes).
+6. `submission_checklist` - payload closure, deterministic ZIP, no scorer patches, no sidecars, no hidden files, `archive.zip -> inflate.sh -> upstream/evaluate.py`, CUDA/T4/equivalent proof, inflate budget, review signoff.
+7. `next_wave_roadmap` - CMG3 closed row-span archive + exact CUDA gate, predictive/lossy mask grammar atoms, Q-FAITHFUL successor geometry, charged pose-basis atoms, hard-pair temporal windows, payload-efficient residuals, and packer/layout atoms; all blocked from promotion until exact CUDA archive evidence exists.
 
 ## Caveats
 
-- Upstream snapshot is stale/ambiguous: `comma-lab status` reports snapshot `ec82c291...` from 2026-04-03 while live workspace upstream is `cd64c68...`; root `upstream/` is `11ad728...` with local modifications. Deliberate rebootstrap pending.
-- Older "1.04 vs 1.05" Modal-T4 vs Vast-4090 drift is predecessor context only; the PFP16 exact T4 `contest_auth_eval.json` is the current score authority.
-- Internal "predicted X.XX" stack projections and Modal/local diagnostics are advisory unless backed by lane-local CUDA `contest_auth_eval.json`, archive SHA/bytes, component recomputation, and custody. PFP16 A++ is the only current frontier anchor.
+- C-067 is the current internal exact frontier; C-063/C-059/C-058/C-057 are the predecessor rows for the PR67 comparison and lossless-repack/byte-micro-frontier chains. None is a Shannon-floor attainment claim.
+- Public PRs and GitHub comments are external design signals unless we have exact archive bytes, SHA, CUDA eval JSON, component recomputation, and custody.
+- PR #70's low reported score is non-comparable under our compliance policy because the public PR text says score-affecting bytes were moved from `archive.zip` into `inflate.py`.
+- C-067 carries an external-source attribution requirement (PR #67 mask segment); the local score claim is A++ evidence for the charged archive bytes, but the mask source remains externally attributed per `docs/paper/EXTERNAL_SOURCE_ATTRIBUTION_C067.md`.
+- The H100 NVL diagnostic of the same C-067 archive bytes scored `0.36295` earlier; this is a runtime-custody warning, not a contradiction. Cross-run comparisons require matching `inflate_runtime_manifest.runtime_tree_sha256`.
 
-## Next queue
+## Cross-references
 
-1. Land the Selfcomp-paradigm portfolio (MM → SA → SC++ → SO).
-2. Sub-0.30 frontier: stack SC++ + FR-Ω + DARTS-S; predicted ~0.25 if additivity holds.
-3. Submission PR gate: 5-pass clean adversarial review (stricter than the standard 3-pass) before any May 3 push.
-4. Strategic-secrecy audit on writeup/site files before any public surface gets the PFP16 A++ details.
+- Paper draft: `docs/paper/04_results.md` (C-067 frontier table integrated)
+- Codex writeup ledger: `.omx/research/submission_writeup_integration_20260502_codex.md`
+- Working notes: `reports/writeup_working.md` (live operating point)
+- Submission pipeline runbook: `docs/runbooks/contest_submission_pipeline_20260502.md`
+- Reverse-engineering refs: `reports/raw/leaderboard_intel_20260501/` (PR #65/#67 inflate.py + archive.zip + line_search.py)
+- Memory: `reference_pr65_pr67_blob_byte_layouts_proper_reverse_engineering_20260501.md`, `reference_pr67_line_search_R_D_joint_coordinate_descent_20260501.md`
+
+## Deadline
+
+Contest deadline: **May 3 11:59 PM AOE = May 4 06:59 AM CDT (May 4 11:59 UTC)**. Approximately 48 hours from this report timestamp (2026-05-02 ~06:30 AM CDT).
+
+## Next Queue
+
+1. Generate the structured `paper_results.csv`, `paper_component_ablation.csv`, `paper_negative_results.csv`, and `submission_packet.md` surfaces from the claim matrix with C-067 as frontier.
+2. Stand up the C-067 submission packet at `experiments/results/submission_packet_c067_20260502/` mirroring the C-059 packet schema with PR #67 mask attribution carried in the manifest.
+3. Treat PR #67 as the external component target; close the remaining PoseNet/SegNet gap with charged archive atoms only.
+4. Keep PR #68/#69/#70 evidence in quarantine unless a strict archive-metered rerun exists.
+5. CMG3 closed row-span archive implementation + exact CUDA gate (predictive mask-grammar row-span probe at `63212` bytes is the empirical motivation, not score evidence).
+</content>
