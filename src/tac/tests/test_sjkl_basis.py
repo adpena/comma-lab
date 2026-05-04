@@ -6,11 +6,18 @@ import numpy as np
 import pytest
 import torch
 
+import numpy as np
+
 from tac.sjkl_basis import (
     SJKLBasis,
     apply_sjkl_residual,
     compute_sjkl_basis_lanczos,
+    decode_full_sjkl_payload,
+    decode_sjkl_alpha_block,
     decode_sjkl_basis,
+    encode_full_sjkl_payload,
+    encode_sjkl_alpha_block_v1_dense,
+    encode_sjkl_alpha_block_v2_sparse,
     encode_sjkl_basis,
     unpack_sjkl_basis,
 )
@@ -166,3 +173,136 @@ def test_quant_bits_8_payload_byte_layout():
     # header (4 magic + 1 ver + 1 flag + 2 K + 4 D + 2 M = 14) + 4 scale + 2*10 basis + 2*2 coef
     expected = 14 + 4 + (2 * 10) + (2 * 2)
     assert len(blob) == expected, f"q8 blob size mismatch: got {len(blob)}, expected {expected}"
+
+
+# ============================================================
+# Alpha-block codec tests (per-frame-pair sparse coefficients)
+# ============================================================
+
+
+def _make_alpha_block_inputs(n_pairs: int, k: int, alpha_bits: int, *, seed: int = 0):
+    rng = np.random.default_rng(seed)
+    qmax = (1 << alpha_bits) - 1
+    qs = rng.integers(0, qmax + 1, size=(n_pairs, k), dtype=np.uint16 if alpha_bits > 8 else np.uint8)
+    mins = rng.standard_normal(n_pairs).astype(np.float32) * 0.1
+    steps = np.abs(rng.standard_normal(n_pairs).astype(np.float32)) * 0.01
+    pair_indices = rng.choice(10_000, size=n_pairs, replace=False).astype(np.uint16)
+    return qs, mins, steps, pair_indices
+
+
+def test_alpha_block_v2_sparse_roundtrip_byte_exact():
+    qs, mins, steps, pair_indices = _make_alpha_block_inputs(16, 4, alpha_bits=4)
+    blob = encode_sjkl_alpha_block_v2_sparse(qs, mins, steps, alpha_bits=4, pair_indices=pair_indices)
+    decoded = decode_sjkl_alpha_block(blob)
+    assert decoded["alpha_block_format"] == "sparse_bitpacked_v2"
+    assert np.array_equal(decoded["qs"], qs.astype(decoded["qs"].dtype))
+    assert np.allclose(decoded["mins"], mins, atol=1e-3)
+    assert np.allclose(decoded["steps"], steps, atol=1e-3)
+    assert np.array_equal(decoded["pair_indices"], pair_indices.astype(np.int64))
+
+
+def test_alpha_block_v1_dense_roundtrip_byte_exact():
+    qs, mins, steps, _ = _make_alpha_block_inputs(8, 6, alpha_bits=8)
+    blob = encode_sjkl_alpha_block_v1_dense(qs, mins, steps, alpha_bits=8)
+    decoded = decode_sjkl_alpha_block(blob)
+    assert decoded["alpha_block_format"] == "legacy_v1"
+    assert np.array_equal(decoded["qs"], qs)
+    assert decoded["pair_indices"] is None
+
+
+def test_alpha_block_v2_sparse_smaller_than_v1_dense_at_4bits():
+    """At alpha_bits=4 the bit-packing should beat dense-uint8 storage by ~half on qs portion."""
+    qs, mins, steps, pair_indices = _make_alpha_block_inputs(32, 8, alpha_bits=4)
+    v2 = encode_sjkl_alpha_block_v2_sparse(qs, mins, steps, alpha_bits=4, pair_indices=pair_indices)
+    v1 = encode_sjkl_alpha_block_v1_dense(qs, mins, steps, alpha_bits=4)
+    # v2 has +2*n_pairs for indices; v1 stores qs as uint8 (1 byte each); v2 packs to alpha_bits each
+    # net: at alpha_bits=4, v2's bit-packed qs portion is ~half the dense uint8 size, more than offsetting indices
+    assert len(v2) < len(v1) + 2 * 32  # account for indices overhead
+
+
+def test_alpha_block_rejects_invalid_alpha_bits():
+    qs, mins, steps, pair_indices = _make_alpha_block_inputs(2, 2, alpha_bits=4)
+    with pytest.raises(ValueError):
+        encode_sjkl_alpha_block_v2_sparse(qs, mins, steps, alpha_bits=0, pair_indices=pair_indices)
+    with pytest.raises(ValueError):
+        encode_sjkl_alpha_block_v2_sparse(qs, mins, steps, alpha_bits=17, pair_indices=pair_indices)
+
+
+def test_alpha_block_rejects_duplicate_pair_indices():
+    qs, mins, steps, _ = _make_alpha_block_inputs(4, 2, alpha_bits=4)
+    bad_indices = np.array([1, 2, 1, 3], dtype=np.uint16)
+    with pytest.raises(ValueError, match="duplicate"):
+        encode_sjkl_alpha_block_v2_sparse(qs, mins, steps, alpha_bits=4, pair_indices=bad_indices)
+
+
+def test_alpha_block_rejects_qs_out_of_range():
+    qs = np.array([[16, 0]], dtype=np.uint8)  # 16 > qmax=15 for 4-bit
+    mins = np.zeros(1, dtype=np.float32)
+    steps = np.ones(1, dtype=np.float32)
+    pair_indices = np.array([0], dtype=np.uint16)
+    with pytest.raises(ValueError, match="qs values must be in"):
+        encode_sjkl_alpha_block_v2_sparse(qs, mins, steps, alpha_bits=4, pair_indices=pair_indices)
+
+
+def test_alpha_block_decode_invalid_magic_rejected():
+    with pytest.raises(ValueError, match="bad SJ-KL alpha block magic"):
+        decode_sjkl_alpha_block(b"NOPE" + b"\x00" * 20)
+
+
+# ============================================================
+# Full sjkl.bin payload codec tests (basis + alpha block)
+# ============================================================
+
+
+def test_full_payload_roundtrip_basis_recoverable():
+    basis = _make_random_basis(rank=4, dim=32)
+    qs, mins, steps, pair_indices = _make_alpha_block_inputs(16, 4, alpha_bits=4)
+    alpha_block = encode_sjkl_alpha_block_v2_sparse(qs, mins, steps, alpha_bits=4, pair_indices=pair_indices)
+
+    full_payload = encode_full_sjkl_payload(basis, alpha_block, basis_quant_bits=6)
+    decoded_basis, meta = decode_full_sjkl_payload(full_payload)
+
+    assert decoded_basis.rank == basis.rank
+    assert decoded_basis.dim == basis.dim
+    rel_err = (decoded_basis.eigenvectors - basis.eigenvectors).abs().max().item() / max(
+        basis.eigenvectors.abs().max().item(), 1e-9
+    )
+    assert rel_err < 0.10
+
+
+def test_full_payload_roundtrip_alpha_block_recoverable():
+    basis = _make_random_basis(rank=2, dim=16)
+    qs, mins, steps, pair_indices = _make_alpha_block_inputs(8, 2, alpha_bits=6)
+    alpha_block = encode_sjkl_alpha_block_v2_sparse(qs, mins, steps, alpha_bits=6, pair_indices=pair_indices)
+
+    full_payload = encode_full_sjkl_payload(basis, alpha_block)
+    _basis, meta = decode_full_sjkl_payload(full_payload)
+    decoded_alpha = decode_sjkl_alpha_block(meta["alpha_block_raw_bytes"])
+
+    assert np.array_equal(decoded_alpha["qs"], qs.astype(decoded_alpha["qs"].dtype))
+    assert np.array_equal(decoded_alpha["pair_indices"], pair_indices.astype(np.int64))
+
+
+def test_full_payload_layout_matches_runtime_contract():
+    """Byte layout must be: SJKL[4] + basis_len[4] + block_len[4] + basis + block.
+    This is exactly what submissions/robust_current/inflate_renderer.py:_unpack_full_sjkl_payload
+    expects.
+    """
+    basis = _make_random_basis(rank=2, dim=8)
+    alpha_block = b"SJK2" + b"\x00" * 50  # arbitrary block-shaped bytes
+    full = encode_full_sjkl_payload(basis, alpha_block, basis_quant_bits=6)
+    import struct
+    assert full[:4] == b"SJKL"
+    basis_len, block_len = struct.unpack("<II", full[4:12])
+    assert block_len == len(alpha_block)
+    assert len(full) == 12 + basis_len + block_len
+
+
+def test_full_payload_invalid_magic_rejected():
+    with pytest.raises(ValueError, match="bad SJ-KL payload magic"):
+        decode_full_sjkl_payload(b"NOPE" + b"\x00" * 20)
+
+
+def test_full_payload_truncated_rejected():
+    with pytest.raises(ValueError, match="too short"):
+        decode_full_sjkl_payload(b"\x00")

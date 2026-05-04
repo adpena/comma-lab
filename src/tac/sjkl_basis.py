@@ -44,6 +44,8 @@ import numpy as np
 import torch
 
 _SJKL_MAGIC = b"SJKL"
+_SJKL_BLOCK_MAGIC = b"SJKB"      # legacy V1 dense alpha block (matches inflate_renderer.py)
+_SJKL_BLOCK_V2_MAGIC = b"SJK2"   # V2 sparse bit-packed alpha block with pair indices
 _SJKL_VERSION = 1
 _FP16_FLAG = 0  # basis_quant_bits=None / FP16 fallback
 
@@ -54,6 +56,11 @@ __all__ = [
     "unpack_sjkl_basis",
     "apply_sjkl_residual",
     "compute_sjkl_basis_lanczos",
+    "encode_sjkl_alpha_block_v2_sparse",
+    "encode_sjkl_alpha_block_v1_dense",
+    "decode_sjkl_alpha_block",
+    "encode_full_sjkl_payload",
+    "decode_full_sjkl_payload",
 ]
 
 
@@ -367,3 +374,287 @@ def compute_sjkl_basis_lanczos(
         rank=rank,
         dim=D,
     )
+
+
+# ============================================================
+# Alpha-block codec (per-frame-pair sparse coefficients)
+# ============================================================
+# The alpha block is the SECOND section of the full sjkl.bin payload.
+# It encodes per-pair quantized coefficient vectors for projecting frames
+# onto the basis. Two on-disk formats are supported:
+#   - SJKB (legacy V1 dense): all pairs in fixed order, qs as raw uint8/uint16
+#   - SJK2 (V2 sparse bit-packed): explicit pair_indices list, qs bit-packed
+#     to alpha_bits per value. PREFERRED for sparse selections.
+#
+# Byte layout (after brotli decompression — alpha block is brotli-compressed
+# in the full sjkl.bin payload):
+#
+# SJK2 sparse format:
+#   magic[4]              = b"SJK2"
+#   n_pairs[2 LE uint16]
+#   k[2 LE uint16]        (basis width, must match basis_coarse.shape[0])
+#   alpha_bits[1 byte]    in [1, 16]
+#   pair_indices[2*n_pairs] = uint16 LE per pair (no duplicates allowed)
+#   mins[2*n_pairs]       = float16 LE per pair
+#   steps[2*n_pairs]      = float16 LE per pair
+#   packed_qs[ceil(n_pairs * k * alpha_bits / 8)]
+#                         = bit-packed qs values, alpha_bits each, sequential,
+#                           starting at bit 0 of byte 0
+#
+# SJKB legacy V1 dense format (no pair_indices; all pairs in order):
+#   magic[4]              = b"SJKB"
+#   n_pairs[2 LE uint16]
+#   k[2 LE uint16]
+#   alpha_bits[1 byte]
+#   mins[2*n_pairs]       = float16 LE
+#   steps[2*n_pairs]      = float16 LE
+#   qs[per_alpha * n_pairs * k]
+#                         = uint8 if alpha_bits<=8 else uint16 (NOT bit-packed)
+#
+# qs values are in [0, 2^alpha_bits - 1] and decode as
+# alpha[i, j] = mins[i] + qs[i, j] * steps[i].
+
+import math
+
+
+def _validate_alpha_inputs(qs: np.ndarray, mins: np.ndarray, steps: np.ndarray, alpha_bits: int) -> None:
+    if qs.ndim != 2:
+        raise ValueError(f"qs must be 2-D (n_pairs, k), got shape {qs.shape}")
+    n_pairs, k = qs.shape
+    if not 1 <= alpha_bits <= 16:
+        raise ValueError(f"alpha_bits must be in [1, 16], got {alpha_bits}")
+    if not 1 <= n_pairs <= 10_000:
+        raise ValueError(f"n_pairs must be in [1, 10000], got {n_pairs}")
+    if not 1 <= k <= 256:
+        raise ValueError(f"k must be in [1, 256], got {k}")
+    if mins.shape != (n_pairs,) or steps.shape != (n_pairs,):
+        raise ValueError(
+            f"mins/steps must be (n_pairs={n_pairs},), got {mins.shape} / {steps.shape}"
+        )
+    qmax = (1 << alpha_bits) - 1
+    if int(qs.max()) > qmax or int(qs.min()) < 0:
+        raise ValueError(
+            f"qs values must be in [0, {qmax}] for alpha_bits={alpha_bits}; "
+            f"got [{int(qs.min())}, {int(qs.max())}]"
+        )
+
+
+def encode_sjkl_alpha_block_v2_sparse(
+    qs: np.ndarray,
+    mins: np.ndarray,
+    steps: np.ndarray,
+    alpha_bits: int,
+    pair_indices: np.ndarray,
+) -> bytes:
+    """Encode an SJK2 sparse bit-packed alpha block (no brotli applied here).
+
+    Args:
+        qs: (n_pairs, k) array of quantized coefficient values in [0, 2^alpha_bits - 1].
+        mins: (n_pairs,) float per-pair offsets.
+        steps: (n_pairs,) float per-pair scales.
+        alpha_bits: bits per quantized value, in [1, 16].
+        pair_indices: (n_pairs,) uint-like array of source pair indices (no duplicates).
+
+    Returns:
+        Raw bytes of the SJK2 alpha block (caller is responsible for brotli compression).
+    """
+    _validate_alpha_inputs(qs, mins, steps, alpha_bits)
+    n_pairs, k = qs.shape
+    if pair_indices.shape != (n_pairs,):
+        raise ValueError(f"pair_indices must be (n_pairs={n_pairs},), got {pair_indices.shape}")
+    if int(pair_indices.min()) < 0 or int(pair_indices.max()) > 0xFFFF:
+        raise ValueError(f"pair_indices must fit in uint16 [0, 65535]")
+    if len(set(int(x) for x in pair_indices.tolist())) != n_pairs:
+        raise ValueError("pair_indices must not contain duplicates")
+
+    header = _SJKL_BLOCK_V2_MAGIC + struct.pack("<HHB", n_pairs, k, alpha_bits)
+    indices_bytes = np.asarray(pair_indices, dtype=np.uint16).tobytes()
+    mins_bytes = np.asarray(mins, dtype=np.float16).tobytes()
+    steps_bytes = np.asarray(steps, dtype=np.float16).tobytes()
+
+    flat = qs.astype(np.uint32).flatten()
+    packed_len = math.ceil(n_pairs * k * alpha_bits / 8)
+    packed = bytearray(packed_len)
+    bit_pos = 0
+    mask = (1 << alpha_bits) - 1
+    for v in flat:
+        v_masked = int(v) & mask
+        byte_idx = bit_pos // 8
+        offset = bit_pos % 8
+        # write up to 4 bytes covering this value
+        window = v_masked << offset
+        for b in range(4):
+            if byte_idx + b < packed_len:
+                packed[byte_idx + b] |= (window >> (8 * b)) & 0xFF
+        bit_pos += alpha_bits
+
+    return header + indices_bytes + mins_bytes + steps_bytes + bytes(packed)
+
+
+def encode_sjkl_alpha_block_v1_dense(
+    qs: np.ndarray,
+    mins: np.ndarray,
+    steps: np.ndarray,
+    alpha_bits: int,
+) -> bytes:
+    """Encode an SJKB legacy V1 dense alpha block (no brotli applied here).
+
+    All n_pairs are emitted in order with no pair_indices side-channel. qs is
+    raw uint8 or uint16 (not bit-packed). Use the V2 sparse format instead for
+    sparse pair selections — it's smaller in nearly every case.
+    """
+    _validate_alpha_inputs(qs, mins, steps, alpha_bits)
+    n_pairs, k = qs.shape
+    header = _SJKL_BLOCK_MAGIC + struct.pack("<HHB", n_pairs, k, alpha_bits)
+    mins_bytes = np.asarray(mins, dtype=np.float16).tobytes()
+    steps_bytes = np.asarray(steps, dtype=np.float16).tobytes()
+    if alpha_bits <= 8:
+        qs_bytes = qs.astype(np.uint8).tobytes()
+    else:
+        qs_bytes = qs.astype(np.uint16).tobytes()
+    return header + mins_bytes + steps_bytes + qs_bytes
+
+
+def decode_sjkl_alpha_block(raw: bytes) -> dict:
+    """Decode an alpha block (post-brotli-decompression bytes) — auto-detects SJK2 vs SJKB.
+
+    Mirrors the runtime inverse in submissions/robust_current/inflate_renderer.py
+    (_unpack_sjkl_alpha_block) so encode→decode roundtrip is byte-exact.
+    """
+    if len(raw) < 9:
+        raise ValueError("SJ-KL alpha block is too short")
+    if raw[:4] == _SJKL_BLOCK_V2_MAGIC:
+        n_pairs, k, alpha_bits = struct.unpack("<HHB", raw[4:9])
+        cursor = 9
+        indices_end = cursor + 2 * n_pairs
+        mins_end = indices_end + 2 * n_pairs
+        steps_end = mins_end + 2 * n_pairs
+        packed_len = math.ceil(n_pairs * k * alpha_bits / 8)
+        qs_end = steps_end + packed_len
+        if qs_end != len(raw):
+            raise ValueError(
+                f"SJ-KL sparse alpha block length mismatch: expected {qs_end}, got {len(raw)}"
+            )
+        pair_indices = np.frombuffer(raw[cursor:indices_end], dtype=np.uint16).astype(np.int64).copy()
+        if len(set(int(x) for x in pair_indices.tolist())) != int(pair_indices.shape[0]):
+            raise ValueError("SJ-KL sparse alpha block contains duplicate pair indices")
+        mins = np.frombuffer(raw[indices_end:mins_end], dtype=np.float16).astype(np.float32).copy()
+        steps = np.frombuffer(raw[mins_end:steps_end], dtype=np.float16).astype(np.float32).copy()
+        packed = raw[steps_end:qs_end]
+        dtype = np.uint8 if alpha_bits <= 8 else np.uint16
+        qs_flat = np.zeros(n_pairs * k, dtype=dtype)
+        bit_pos = 0
+        mask = (1 << alpha_bits) - 1
+        for idx in range(int(qs_flat.shape[0])):
+            byte_idx = bit_pos // 8
+            offset = bit_pos % 8
+            window = 0
+            for b in range(4):
+                if byte_idx + b < len(packed):
+                    window |= packed[byte_idx + b] << (8 * b)
+            qs_flat[idx] = (window >> offset) & mask
+            bit_pos += alpha_bits
+        return {
+            "mins": mins,
+            "steps": steps,
+            "qs": qs_flat.reshape(n_pairs, k),
+            "alpha_bits": int(alpha_bits),
+            "pair_indices": pair_indices,
+            "alpha_block_format": "sparse_bitpacked_v2",
+        }
+    if raw[:4] != _SJKL_BLOCK_MAGIC:
+        raise ValueError(f"bad SJ-KL alpha block magic: {raw[:4]!r}")
+    n_pairs, k, alpha_bits = struct.unpack("<HHB", raw[4:9])
+    if alpha_bits <= 8:
+        a_dtype = np.uint8
+        per_alpha = 1
+    elif alpha_bits <= 16:
+        a_dtype = np.uint16
+        per_alpha = 2
+    else:
+        raise ValueError(f"unsupported SJ-KL alpha_bits={alpha_bits}")
+    cursor = 9
+    mins_end = cursor + 2 * n_pairs
+    steps_end = mins_end + 2 * n_pairs
+    qs_end = steps_end + per_alpha * n_pairs * k
+    if qs_end != len(raw):
+        raise ValueError(f"SJ-KL alpha block length mismatch: expected {qs_end}, got {len(raw)}")
+    mins = np.frombuffer(raw[cursor:mins_end], dtype=np.float16).astype(np.float32).copy()
+    steps = np.frombuffer(raw[mins_end:steps_end], dtype=np.float16).astype(np.float32).copy()
+    qs = np.frombuffer(raw[steps_end:qs_end], dtype=a_dtype).copy().reshape(n_pairs, k)
+    return {
+        "mins": mins,
+        "steps": steps,
+        "qs": qs,
+        "alpha_bits": int(alpha_bits),
+        "pair_indices": None,
+        "alpha_block_format": "legacy_v1",
+    }
+
+
+# ============================================================
+# Full sjkl.bin payload codec (basis section + alpha block section)
+# ============================================================
+# Wire format expected by submissions/robust_current/inflate_renderer.py
+# (_unpack_full_sjkl_payload):
+#
+#   SJKL[4] + basis_len[4 LE uint32] + block_len[4 LE uint32]
+#   + basis_bytes[basis_len]   (output of encode_sjkl_basis WITHOUT leading SJKL magic)
+#   + alpha_block_bytes[block_len]  (brotli-compressed SJK2 or SJKB block)
+#
+# The runtime prepends SJKL_MAGIC back to basis_bytes before parsing the basis.
+
+
+def encode_full_sjkl_payload(
+    basis: SJKLBasis,
+    alpha_block_bytes: bytes,
+    *,
+    basis_quant_bits: int | None = 6,
+) -> bytes:
+    """Encode a full sjkl.bin payload (basis + alpha block) per runtime contract.
+
+    Args:
+        basis: SJKLBasis (eigenvectors + optional coefficients).
+        alpha_block_bytes: pre-encoded alpha block (output of one of the
+            encode_sjkl_alpha_block_* functions, then brotli-compressed by caller).
+        basis_quant_bits: quantization bits for basis (default 6, addendum-verified).
+
+    Returns:
+        Full sjkl.bin payload bytes ready to be written as an archive member.
+    """
+    basis_full = encode_sjkl_basis(basis, basis_quant_bits=basis_quant_bits)
+    if not basis_full.startswith(_SJKL_MAGIC):
+        raise RuntimeError("encode_sjkl_basis must produce SJKL magic prefix")
+    # strip the SJKL magic from the basis section (runtime prepends it back)
+    basis_section = basis_full[len(_SJKL_MAGIC):]
+    if not isinstance(alpha_block_bytes, (bytes, bytearray)):
+        raise TypeError("alpha_block_bytes must be bytes")
+    header = _SJKL_MAGIC + struct.pack("<II", len(basis_section), len(alpha_block_bytes))
+    return header + basis_section + bytes(alpha_block_bytes)
+
+
+def decode_full_sjkl_payload(payload: bytes) -> tuple[SJKLBasis, dict]:
+    """Decode a full sjkl.bin payload into (basis, alpha_block_dict).
+
+    Note: the alpha block portion is returned as raw post-brotli bytes —
+    callers that wrote a brotli-compressed alpha block must brotli-decompress
+    those bytes BEFORE passing to decode_sjkl_alpha_block. This function does
+    NOT brotli-decompress automatically because some callers emit raw
+    (uncompressed) alpha blocks for testing/debugging.
+    """
+    if len(payload) < 12:
+        raise ValueError("SJ-KL payload is too short")
+    if payload[:4] != _SJKL_MAGIC:
+        raise ValueError(f"bad SJ-KL payload magic: {payload[:4]!r}")
+    basis_len, block_len = struct.unpack("<II", payload[4:12])
+    cursor = 12
+    basis_end = cursor + basis_len
+    block_end = basis_end + block_len
+    if basis_len <= 0 or block_len <= 0 or block_end != len(payload):
+        raise ValueError(
+            f"SJ-KL payload TOC mismatch: basis_len={basis_len} block_len={block_len} "
+            f"total={len(payload)}"
+        )
+    basis = decode_sjkl_basis(_SJKL_MAGIC + payload[cursor:basis_end])
+    alpha_raw = payload[basis_end:block_end]
+    return (basis, {"alpha_block_raw_bytes": alpha_raw, "block_len": block_len})
