@@ -16,17 +16,25 @@ The challenge permits any approach: standard codecs, neural compression, generat
 
 We developed an asymmetric warp renderer --- a 287K-parameter conditional generative model that produces frame pairs from compact semantic masks. The renderer is trained end-to-end against the frozen scorers using Lagrangian annealing with hard constraints on both SegNet and PoseNet distortion, following a constrained optimization formulation inspired by Fridrich's steganalysis framework [Fridrich 2009]. At test time, we apply coupled trajectory optimization (TTO), a form of test-time adaptation that directly optimizes the generated frames through the scorer networks.
 
-The final score is **0.43**, down from 1.97 at the start of the project. The trajectory:
+Our submitted contest score is **0.2293** (PR #107 `apogee`, exact T4 A++). The current public exact frontier as of contest close is PR #106 `belt_and_suspenders` (valtterivalo) at **0.20945673**, which we replayed byte-faithfully through our adapter pipeline. The trajectory of our internal best:
 
-| Stage | Score | Approach |
-|-------|-------|----------|
-| Baseline (H.265 re-encode) | 1.97 | CRF 28, no postfilter |
-| CPU postfilter (CNN) | 1.33 | Dilated h=64, trained against scorers |
-| Renderer (asymmetric warp) | 0.87 | Lagrangian annealing, FP4 quantized |
-| + TTO (blind PoseNet) | 0.70 | 500 steps, SegNet spillover only |
-| + TTO (gradient fix) | 0.43 | Differentiable BT.601 YUV conversion |
+| Stage | Score | Approach | Evidence |
+|-------|-------|----------|----------|
+| Baseline (H.265 re-encode) | 1.97 | CRF 28, no postfilter | — |
+| CPU postfilter (CNN) | 1.33 | Dilated h=64, trained against scorers | local |
+| Renderer (asymmetric warp) | 0.87 | Lagrangian annealing, FP4 quantized | local |
+| + TTO (blind PoseNet) | 0.70 | 500 steps, SegNet spillover only | local |
+| + TTO (gradient fix) | 0.43 | Differentiable BT.601 YUV conversion | local |
+| Lane G v3 (KL-distill weight 0.002 + pose TTO retry) | 1.05 | mid-cycle CUDA frontier | A++ contest-CUDA |
+| C-067 (PR67-mask + C-059 fixed-slice composite) | 0.31561703 | external-source mask attribution | A++ contest-CUDA |
+| **PR #107 `apogee` (deadline submission)** | **0.2293** | PR100-adapter lineage + Hessian-aware tweaks | A++ contest-CUDA |
+| **PR #106 `belt_and_suspenders` (current public frontier)** | **0.20945673** | external HNeRV — adapter-replayed for stress-test custody | A++ contest-CUDA |
+| Lane Ω-W-V3 (water-fill v2 → PR106 decoder, local stub) | ~0.195 [prediction] | per-channel sensitivity-aware bit allocation; LOW distortion risk | stub-mode preview, awaiting CUDA |
+| Lane #04 int4 (uniform 4-bit signed block-FP, local stub) | ~0.159 [prediction] | aggressive uniform quantization; HIGH distortion risk | stub-mode preview, awaiting CUDA |
 
-The single largest improvement --- 0.70 to 0.43, a 38.6% reduction --- came from discovering and fixing a gradient obstruction bug. The upstream scorer's RGB-to-YUV conversion was decorated with `@torch.no_grad`, silently zeroing all PoseNet gradients during test-time optimization. Every TTO experiment before the fix was optimizing PoseNet blindly. The optimizer moved pixels that happened to reduce PoseNet loss through SegNet gradient spillover, but it could not see PoseNet's actual loss surface.
+The single largest historical improvement --- 0.70 to 0.43, a 38.6% reduction --- came from discovering and fixing a gradient obstruction bug. The upstream scorer's RGB-to-YUV conversion was decorated with `@torch.no_grad`, silently zeroing all PoseNet gradients during test-time optimization. Every TTO experiment before the fix was optimizing PoseNet blindly. The optimizer moved pixels that happened to reduce PoseNet loss through SegNet gradient spillover, but it could not see PoseNet's actual loss surface.
+
+The end-of-contest pivot to HNeRV-style implicit neural representations (PR95 → PR99 → PR100 → PR106) compressed all participants' work-cycle time. PR106 set the public exact frontier in the final hours; we landed at PR107 apogee 0.2293 and are post-deadline scaffolding two locally-verified sub-0.20 candidates (Lane Ω-W-V3 and Lane #04 int4) for continued exploration. See §4.0 for current frontier table; §7 for community wiki + post-deadline roadmap.
 
 This bug was invisible to standard testing. PoseNet loss changed during optimization (because SegNet gradients moved pixels that incidentally affected PoseNet output), so nothing appeared wrong. It was caught only through adversarial review --- tracing the gradient computation graph by hand when the council demanded an explanation for why 50 steps of gradient descent made PoseNet worse, not better.
 
