@@ -1,0 +1,295 @@
+#!/usr/bin/env python3
+"""Build a sjkl.bin residual payload from prepared pair tensors + scorer.
+
+Recovery note: this script was lost when subagent worktrees were auto-cleaned
+without committing source. Rebuilt 2026-05-04 as a thin orchestration script
+on top of the now-complete tac.sjkl_basis codec library (basis encoder + alpha
+block V2 sparse + full payload wrapper, all runtime-byte-compatible).
+
+Pipeline:
+  1. Load prepared pair tensors (output of experiments/prepare_sjkl_pair_tensors.py)
+  2. Compute Fisher-info top-K basis via tac.sjkl_basis.compute_sjkl_basis_lanczos
+     (CPU-stub-friendly Lanczos HVP; runs on CUDA when --device cuda)
+  3. For each selected pair, project residual frames onto basis -> coefficients (K)
+  4. Quantize coefficients per-pair -> (mins, steps, qs) at alpha_bits
+  5. Encode SJK2 sparse alpha block, brotli-compress
+  6. Wrap basis + alpha_block via encode_full_sjkl_payload
+  7. Write sjkl.bin + sjkl_manifest.json (score_claim=false until contest_auth_eval)
+
+Per-pair quantization (per addendum):
+  alpha[i, j] = mins[i] + qs[i, j] * steps[i]
+  where steps[i] = (max_alpha[i] - min_alpha[i]) / (2^alpha_bits - 1)
+        mins[i]  = min_alpha[i]
+
+CUDA policy (per runbook):
+  - Default --device cuda (production)
+  - --device cpu allowed only with --allow-cpu-stub (CPU stub mode for smoke tests)
+  - Score claim is ALWAYS false; runtime auth eval through contest CUDA pipeline is required
+"""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+
+import brotli  # type: ignore[import-not-found]
+import numpy as np
+import torch
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT / "src") not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT / "src"))
+
+from tac.sjkl_basis import (  # noqa: E402
+    SJKLBasis,
+    compute_sjkl_basis_lanczos,
+    encode_full_sjkl_payload,
+    encode_sjkl_alpha_block_v2_sparse,
+)
+
+
+@dataclass(frozen=True)
+class BuildConfig:
+    pair_tensor_manifest: Path
+    output_dir: Path
+    device: str
+    rank: int
+    n_pairs: int
+    alpha_bits: int
+    basis_quant_bits: int
+    max_bytes: int
+    allow_cpu_stub: bool
+    seed: int
+
+
+def _sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 16), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _select_pairs(n_total: int, n_select: int, seed: int) -> np.ndarray:
+    """Select n_select pair indices deterministically. Default policy: first
+    n_select indices for reproducibility. Production callers should override
+    this via a sensitivity-ranking selector + an explicit pair_indices arg."""
+    if n_select > n_total:
+        raise ValueError(f"n_pairs ({n_select}) cannot exceed available pairs ({n_total})")
+    rng = np.random.default_rng(seed)
+    return rng.choice(n_total, size=n_select, replace=False).astype(np.uint16)
+
+
+def _quantize_alpha_per_pair(alpha: np.ndarray, alpha_bits: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Per-pair scalar quantization to alpha_bits.
+
+    alpha: (n_pairs, K) float32 raw projection coefficients.
+    Returns (qs, mins, steps) where qs is uint8/uint16 in [0, 2^alpha_bits - 1].
+    """
+    if alpha.ndim != 2:
+        raise ValueError(f"alpha must be 2-D (n_pairs, K), got {alpha.shape}")
+    qmax = (1 << alpha_bits) - 1
+    n_pairs, K = alpha.shape
+    mins = alpha.min(axis=1).astype(np.float32)
+    maxs = alpha.max(axis=1).astype(np.float32)
+    spans = (maxs - mins).clip(min=1e-12)  # avoid divide-by-zero on flat pairs
+    steps = (spans / qmax).astype(np.float32)
+    qs_float = (alpha - mins[:, None]) / steps[:, None]
+    qs = np.clip(np.round(qs_float), 0, qmax).astype(np.uint16 if alpha_bits > 8 else np.uint8)
+    return qs, mins, steps
+
+
+def _project_residual_onto_basis(
+    pair_residuals: torch.Tensor,
+    basis: SJKLBasis,
+) -> np.ndarray:
+    """Project per-pair residual frames onto basis to get (n_pairs, K) alpha coefficients.
+
+    pair_residuals: (n_pairs, D) float32 — each row is a flattened residual frame.
+    basis: SJKLBasis with eigenvectors (K, D).
+    """
+    if pair_residuals.shape[-1] != basis.dim:
+        raise ValueError(
+            f"pair_residuals last dim {pair_residuals.shape[-1]} does not match basis.dim {basis.dim}"
+        )
+    eigenvectors = basis.eigenvectors.to(pair_residuals.dtype).to(pair_residuals.device)
+    # alpha[i, k] = <pair_residuals[i], eigenvectors[k]>
+    alpha = pair_residuals @ eigenvectors.T  # (n_pairs, K)
+    return alpha.detach().cpu().to(torch.float32).numpy()
+
+
+def _build_cpu_stub_score_fn(dim: int, *, peak_idx: int = 0):
+    """A CPU-stub quadratic score_fn for smoke testing without a real scorer."""
+    diag = torch.tensor(
+        [10.0, 5.0, 2.0, 0.5, 0.1] + [0.05] * (dim - 5),
+        dtype=torch.float32,
+    )
+    if peak_idx != 0 and peak_idx < dim:
+        diag = diag.roll(peak_idx)
+
+    def score_fn(f: torch.Tensor) -> torch.Tensor:
+        return 0.5 * (diag.to(f.device) * f * f).sum()
+
+    return score_fn
+
+
+def _build_cpu_stub_pair_residuals(n_pairs: int, dim: int, *, seed: int) -> torch.Tensor:
+    """Synthetic pair residuals for smoke testing (small random noise around zero)."""
+    g = torch.Generator().manual_seed(seed)
+    return torch.randn(n_pairs, dim, generator=g, dtype=torch.float32) * 0.01
+
+
+def build_sjkl_residual(cfg: BuildConfig) -> dict:
+    """Main pipeline. Returns manifest dict (also written to disk)."""
+    device = torch.device(cfg.device)
+    if cfg.device != "cuda" and not cfg.allow_cpu_stub:
+        raise SystemExit(
+            f"FATAL: --device {cfg.device} requires --allow-cpu-stub. "
+            "Production builds must use --device cuda; score remains [advisory only] otherwise."
+        )
+
+    if cfg.allow_cpu_stub and not cfg.pair_tensor_manifest.is_file():
+        # Pure-CPU smoke mode: synthesize tiny inputs to exercise the pipeline byte-faithfully
+        print(f"[sjkl-residual] CPU STUB MODE: synthesizing inputs (manifest absent)", file=sys.stderr)
+        dim = 256
+        n_total_pairs = 600
+        anchor_frame = torch.zeros(dim, dtype=torch.float32)
+        pair_residuals_all = _build_cpu_stub_pair_residuals(n_total_pairs, dim, seed=cfg.seed)
+        score_fn = _build_cpu_stub_score_fn(dim)
+        manifest_sha = "stub_no_manifest"
+    else:
+        manifest = json.loads(cfg.pair_tensor_manifest.read_text())
+        manifest_sha = _sha256_file(cfg.pair_tensor_manifest)
+        anchor_path = REPO_ROOT / manifest["anchor_frame_path"]
+        residuals_path = REPO_ROOT / manifest["pair_residuals_path"]
+        anchor_frame = torch.load(anchor_path, map_location="cpu", weights_only=False)
+        pair_residuals_all = torch.load(residuals_path, map_location="cpu", weights_only=False)
+        if anchor_frame.dim() > 1:
+            anchor_frame = anchor_frame.flatten()
+        if pair_residuals_all.dim() > 2:
+            pair_residuals_all = pair_residuals_all.reshape(pair_residuals_all.shape[0], -1)
+        n_total_pairs, dim = pair_residuals_all.shape
+        # In CPU stub mode without a real scorer module, use the stub quadratic
+        if cfg.device == "cpu":
+            score_fn = _build_cpu_stub_score_fn(dim)
+        else:
+            raise NotImplementedError(
+                "Real-scorer integration on CUDA is the canonical production path. "
+                "Wire JointFrameGenerator + posenet/segnet score graph here. "
+                "Per CLAUDE.md FORBIDDEN PATTERNS: no MPS fallback. CUDA only."
+            )
+
+    # Move to device
+    anchor_frame = anchor_frame.to(device)
+    pair_residuals_all = pair_residuals_all.to(device)
+
+    # 1. Compute Fisher-info top-K basis
+    print(f"[sjkl-residual] Computing Lanczos top-{cfg.rank} basis (dim={dim})...", file=sys.stderr)
+    basis = compute_sjkl_basis_lanczos(
+        score_fn, anchor_frame, rank=cfg.rank, n_iters=max(cfg.rank * 4, 16), seed=cfg.seed
+    )
+
+    # 2. Select pair indices
+    pair_indices = _select_pairs(n_total_pairs, cfg.n_pairs, cfg.seed)
+    pair_residuals_sel = pair_residuals_all[pair_indices.astype(np.int64)]
+
+    # 3. Project residuals onto basis -> alpha coefficients (n_pairs, K)
+    alpha = _project_residual_onto_basis(pair_residuals_sel, basis)
+
+    # 4. Per-pair quantize alpha
+    qs, mins, steps = _quantize_alpha_per_pair(alpha, alpha_bits=cfg.alpha_bits)
+
+    # 5. Encode SJK2 sparse alpha block, brotli-compress
+    raw_alpha_block = encode_sjkl_alpha_block_v2_sparse(
+        qs, mins, steps, alpha_bits=cfg.alpha_bits, pair_indices=pair_indices
+    )
+    compressed_alpha_block = brotli.compress(raw_alpha_block, quality=11)
+
+    # 6. Wrap into full sjkl.bin payload
+    sjkl_bytes = encode_full_sjkl_payload(
+        basis, compressed_alpha_block, basis_quant_bits=cfg.basis_quant_bits
+    )
+
+    # 7. Size cap check (per addendum: SJKL_MAX_BYTES = 32768 default)
+    if len(sjkl_bytes) > cfg.max_bytes:
+        raise SystemExit(
+            f"FATAL: sjkl.bin size {len(sjkl_bytes)} > max_bytes {cfg.max_bytes}. "
+            f"Reduce --rank, --n-pairs, or --alpha-bits."
+        )
+
+    # 8. Write sjkl.bin + manifest
+    cfg.output_dir.mkdir(parents=True, exist_ok=True)
+    sjkl_path = cfg.output_dir / "sjkl.bin"
+    sjkl_path.write_bytes(sjkl_bytes)
+    sjkl_sha = hashlib.sha256(sjkl_bytes).hexdigest()
+
+    manifest_out = {
+        "sjkl_bin_path": str(sjkl_path.relative_to(REPO_ROOT) if sjkl_path.is_relative_to(REPO_ROOT) else sjkl_path),
+        "sjkl_bin_bytes": len(sjkl_bytes),
+        "sjkl_bin_sha256": sjkl_sha,
+        "rank": int(cfg.rank),
+        "n_pairs": int(cfg.n_pairs),
+        "alpha_bits": int(cfg.alpha_bits),
+        "basis_quant_bits": int(cfg.basis_quant_bits),
+        "selected_pair_indices": [int(x) for x in pair_indices.tolist()],
+        "device": cfg.device,
+        "seed": int(cfg.seed),
+        "pair_tensor_manifest_sha256": manifest_sha,
+        "score_claim": False,
+        "evidence_grade": "queued_exact_cuda_required_for_score",
+        "raw_alpha_block_bytes": len(raw_alpha_block),
+        "compressed_alpha_block_bytes": len(compressed_alpha_block),
+        "tag": "[empirical:" + str(sjkl_path) + "]" if cfg.device == "cuda" else "[advisory only]",
+    }
+    manifest_path = cfg.output_dir / "sjkl_manifest.json"
+    manifest_path.write_text(json.dumps(manifest_out, indent=2))
+
+    print(f"[sjkl-residual] wrote {sjkl_path} ({len(sjkl_bytes)} bytes, sha {sjkl_sha[:16]})", file=sys.stderr)
+    print(f"[sjkl-residual] wrote {manifest_path}", file=sys.stderr)
+    print(f"[sjkl-residual] score_claim=false; auth eval through contest CUDA pipeline required", file=sys.stderr)
+
+    return manifest_out
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--pair-tensor-manifest", type=Path, default=Path("/dev/null"))
+    parser.add_argument("--output-dir", type=Path, required=True)
+    parser.add_argument("--device", default="cuda", choices=["cuda", "cpu"])
+    parser.add_argument("--rank", type=int, default=4, help="Top-K basis width (k in alpha block).")
+    parser.add_argument("--n-pairs", type=int, default=16, help="Number of selected pairs (sparse).")
+    parser.add_argument("--alpha-bits", type=int, default=4, help="Bits per alpha coefficient (1-16).")
+    parser.add_argument("--basis-quant-bits", type=int, default=6, help="Bits per basis weight (4-8 or 0/None for FP16).")
+    parser.add_argument("--max-bytes", type=int, default=32768, help="Hard cap on sjkl.bin size.")
+    parser.add_argument(
+        "--allow-cpu-stub",
+        action="store_true",
+        help="Permit --device cpu (smoke tests only). Score remains [advisory only].",
+    )
+    parser.add_argument("--seed", type=int, default=0)
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    cfg = BuildConfig(
+        pair_tensor_manifest=args.pair_tensor_manifest,
+        output_dir=args.output_dir,
+        device=args.device,
+        rank=args.rank,
+        n_pairs=args.n_pairs,
+        alpha_bits=args.alpha_bits,
+        basis_quant_bits=args.basis_quant_bits,
+        max_bytes=args.max_bytes,
+        allow_cpu_stub=args.allow_cpu_stub,
+        seed=args.seed,
+    )
+    build_sjkl_residual(cfg)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
