@@ -4521,33 +4521,6 @@
     "registered_by_pid": 0
   },
   {
-    "instance_id": "35985637",
-    "label": "q_faithful_h100_redeploy",
-    "metadata": {
-      "anchor_dirs": [
-        "experiments/results/lane_a_landed/iter_0"
-      ],
-      "council_priority": 1,
-      "cuda_max_good": 13.0,
-      "dph_total": 2.4889,
-      "driver_version": "580.126.09",
-      "estimated_cost_usd": 10.0,
-      "gpu": "H100 SXM 80GB",
-      "launcher": "manual vastai create instance 34383502 (H100 SXM emergency redeploy)",
-      "predecessor_lost": "35959478 (RTX 4090, preempted ~5h training lost)",
-      "predicted_band": [
-        0.4,
-        0.8
-      ],
-      "script": "scripts/remote_lane_q_faithful_jointgen.sh",
-      "ssh_host": "ssh3.vast.ai",
-      "ssh_port": 25636
-    },
-    "registered_at_utc": "2026-05-01T23:29:22Z",
-    "registered_by_host": "Primary",
-    "registered_by_pid": 0
-  },
-  {
     "instance_id": "35985850",
     "label": "public_floor_pvl1_h100diag_20260501",
     "metadata": {
@@ -4567,5 +4540,74 @@
     "registered_at_utc": "2026-05-01T23:35:01+00:00",
     "registered_by_host": "Primary",
     "registered_by_pid": 98897
+  },
+  {
+    "instance_id": "35986044",
+    "label": "q_faithful_a100_sxm4_80g_redeploy",
+    "metadata": {
+      "estimated_cost_usd": 6.0,
+      "predicted_band": [
+        0.4,
+        0.8
+      ],
+      "script": "scripts/remote_lane_q_faithful_jointgen.sh",
+      "council_priority": 1,
+      "anchor_dirs": [
+        "experiments/results/lane_a_landed/iter_0"
+      ],
+      "launcher": "manual vastai create instance 29019332 (A100 SXM4 80GB Czechia, H100 fallback after queued)",
+      "gpu": "A100 SXM4 80GB",
+      "dph_total": 1.0933,
+      "cuda_max_good": 12.6,
+      "driver_version": "560.35.03",
+      "ssh_host": "ssh1.vast.ai",
+      "ssh_port": 26044,
+      "predecessor_lost": "35959478 (RTX 4090 PREEMPTED) + 35985637 (H100 SXM 34383502 RESOURCE_QUEUED, destroyed)"
+    },
+    "registered_at_utc": "2026-05-01T23:40:15Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35995649",
+    "label": "pact_eval_c059_qpost_bias_fastchip_20260502T0431Z",
+    "metadata": {
+      "estimated_cost_usd": 0.5,
+      "predicted_band": [
+        0.315,
+        0.318
+      ],
+      "script": "scripts/remote_eval_c059_qpost_bias_20260502.sh",
+      "council_priority": 1,
+      "anchor_dirs": [
+        "experiments/results/qzs3_postprocess_c059_bias_20260502"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2",
+      "prefer_fast_chip": true
+    },
+    "registered_at_utc": "2026-05-02T04:30:44Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
+  },
+  {
+    "instance_id": "35995924",
+    "label": "pact_eval_mixed_qzs_c059_fastchip_20260502T0438Z",
+    "metadata": {
+      "estimated_cost_usd": 0.5,
+      "predicted_band": [
+        0.315,
+        0.317
+      ],
+      "script": "scripts/remote_eval_mixed_qzs_c059_20260502.sh",
+      "council_priority": 1,
+      "anchor_dirs": [
+        "experiments/results/mixed_local_qzs_block_allocation_20260502/mixed_64_frame1_head_32_frame2_head_32_pose_mlp_32"
+      ],
+      "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2",
+      "prefer_fast_chip": true
+    },
+    "registered_at_utc": "2026-05-02T04:39:06Z",
+    "registered_by_host": "Primary",
+    "registered_by_pid": 0
   }
 ]

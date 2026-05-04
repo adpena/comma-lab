@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-05-01T18:47:19Z",
+  "updated_at": "2026-05-01T23:23:57Z",
   "description": "Canonical lane maturity registry. See feedback_production_hardened_standard_definition_20260430.md for the 7-gate Level 3 standard. Maintained via tools/lane_maturity.py \u2014 bare edits OK for seeding but mark/unmark/audit-log are the supported interface going forward.",
   "gate_definitions": {
     "impl_complete": "Production code lands; no NotImplementedError; all CLI flags wired; all error paths covered.",
@@ -1423,6 +1423,80 @@
         }
       },
       "notes": "PR #67 EthanYang qpose14_qzs3 byte-identical packer. Wave-1 from Grand Council Eureka session (memory: project_grand_council_shannon_floor_eureka_session_20260501.md). Consumes Q-FAITHFUL trained checkpoint (lane_q_faithful_retrain) into a 0.31-band-targeting candidate archive."
+    },
+    {
+      "id": "lane_sjkl_v1",
+      "name": "Wave-\u03a9-1 SJ-KL basis substitution",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/sjkl_basis.py + src/tac/tests/test_sjkl_basis.py (17/17 pass) + experiments/build_sjkl_residual.py + experiments/measure_sjkl_fisher_rank_20260501.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "~/.claude/projects/-Users-adpena-Projects-pact/memory/project_lane_sjkl_basis_v1_implementation_20260501.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_line_search_pose_refinement",
+      "name": "Wave-1.5 line-search pose refinement",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "experiments/line_search_pose_refinement.py + src/tac/tests/test_line_search_pose.py (12 tests pass)"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "project_lane_line_search_pose_landed_20260501.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "Port of pr67_line_search.py onto Q-FAITHFUL+QZS3. Predicted +0.001-0.005 score gain stacked on Wave-1 anchor. Pure CPU/MPS dev; CUDA dispatch deferred to harvest."
     }
   ]
 }
