@@ -1,0 +1,2732 @@
+{
+  "generated_at": "2026-05-04T15:09Z",
+  "frontier_target": {
+    "pr": 106,
+    "score": 0.20945673680571203,
+    "bytes": 186239,
+    "sha256_16": "3fefbe5dfdd73817"
+  },
+  "total_gems_profiled": 90,
+  "all_gems": [
+    {
+      "path": "src/tac/scorer_exploits.py",
+      "exists": true,
+      "sketch": "Scorer exploits",
+      "size_kb": 49.2,
+      "n_classes": 4,
+      "n_funcs": 25,
+      "top_classes": [
+        "PoseNetBlindSpots",
+        "SkipConnectionInfo",
+        "PreprocessNullspaceInfo"
+      ],
+      "doc_excerpt": "Scorer architecture exploitation for task-aware compression (Tricks 13-14).",
+      "level": 3,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        -0.02,
+        -0.005
+      ],
+      "hours_to_integrate": 4.0,
+      "blockers": [
+        "Strict-scorer rule: nothing at inflate time",
+        "Compress-time only"
+      ],
+      "council_position": "Yousfi/Fridrich/Quantizr",
+      "evidence_path": "Scorer exploits library [empirical]",
+      "rationale": "Documented scorer-blind-spot exploits \u2014 apply at TTO compress time.",
+      "ev_score": 0.003125
+    },
+    {
+      "path": "src/tac/water_filling_codec_v2.py",
+      "exists": true,
+      "sketch": "Lane \u03a9-W-V2 (40.98% bytes saved on Lane G v3)",
+      "size_kb": 23.7,
+      "n_classes": 3,
+      "n_funcs": 8,
+      "top_classes": [
+        "GateRegression",
+        "BlockFPIneligible",
+        "_OWV2Header"
+      ],
+      "doc_excerpt": "Lane \u03a9-W-V2 \u2014 water-fill + arithmetic terminal on Selfcomp/block-FP weights.",
+      "level": 4,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        -0.015,
+        -0.005
+      ],
+      "hours_to_integrate": 4.0,
+      "blockers": [
+        "Requires \u03b2-Fisher sensitivity map for PR106 HNeRV decoder",
+        "GPU $0 cap \u2014 sensitivity map needs forward pass"
+      ],
+      "council_position": "Shannon/Dykstra/Fridrich",
+      "evidence_path": "Lane \u03a9-W-V2 40.98% bytes [empirical] on Lane G v3 renderer.bin",
+      "rationale": "Per-parameter bit allocation by score-Jacobian magnitude. 40.98% byte saving was on a 88K-param renderer; HNeRV decoder may be larger but principle generalizes.",
+      "ev_score": 0.0025
+    },
+    {
+      "path": "src/tac/sensitivity_map.py",
+      "exists": true,
+      "sketch": "Sensitivity map (\u03b2-Fisher)",
+      "size_kb": 13.2,
+      "n_classes": 2,
+      "n_funcs": 10,
+      "top_classes": [
+        "SensitivityMapError",
+        "SensitivityMapStats"
+      ],
+      "doc_excerpt": "Score-sensitivity map contract for \u03b2 / \u03a9-W-V3.",
+      "level": 4,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        -0.005,
+        0.0
+      ],
+      "hours_to_integrate": 1.0,
+      "blockers": [
+        "Producer artifact for PR106 needs HNeRV decoder forward"
+      ],
+      "council_position": "Shannon/Dykstra/Fridrich/Selfcomp",
+      "evidence_path": "\u03b2-Fisher 1.016 LANDED [contest-CUDA T4]",
+      "rationale": "Foundational producer for water-fill / sjkl / IMP downstream. Itself doesn't score.",
+      "ev_score": 0.0025
+    },
+    {
+      "path": "src/tac/mask_grayscale_lut.py",
+      "exists": true,
+      "sketch": "Selfcomp Gaussian-LUT (PR #56)",
+      "size_kb": 8.1,
+      "n_classes": 0,
+      "n_funcs": 4,
+      "top_classes": [],
+      "doc_excerpt": "Selfcomp grayscale-LUT mask codec \u2014 lane MM rate-attack primitive.",
+      "level": 3,
+      "pr106_compat": "orthogonal",
+      "predicted_delta_band": [
+        -0.02,
+        -0.005
+      ],
+      "hours_to_integrate": 5.0,
+      "blockers": [
+        "LUT requires class-target derivation specific to PR106 HNeRV decoder output"
+      ],
+      "council_position": "Selfcomp/Mallat",
+      "evidence_path": "Selfcomp Gaussian-LUT [contest-CUDA]",
+      "rationale": "Replace neural mask channel with shared latent + Gaussian-softmax-LUT (\u03c3=15). Selfcomp 0.36 used this path. Could compose with PR106 decoder for ~150KB archive.",
+      "ev_score": 0.0025
+    },
+    {
+      "path": "src/tac/arithmetic_qint_codec.py",
+      "exists": true,
+      "sketch": "Arithmetic coder for qint streams",
+      "size_kb": 20.1,
+      "n_classes": 4,
+      "n_funcs": 18,
+      "top_classes": [
+        "_BitWriter",
+        "_BitReader",
+        "_ArithmeticEncoder",
+        "_ArithmeticDecoder"
+      ],
+      "doc_excerpt": "Lane SH \u2014 Shannon-optimal arithmetic coding for SegMap qint streams.",
+      "level": 3,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        -0.01,
+        -0.003
+      ],
+      "hours_to_integrate": 3.0,
+      "blockers": [
+        "PR106 already uses brotli \u2014 arithmetic gain is marginal unless context model is better"
+      ],
+      "council_position": "MacKay/Shannon",
+      "evidence_path": "Used in PD-V2 0.9974 sub-1.0 lineage [contest-CUDA]",
+      "rationale": "Arithmetic coder for quantized integer streams. PR106 latents (15849 bytes brotli) at entropy 7.985/8 \u2014 near saturated. Decoder weights similarly. Marginal.",
+      "ev_score": 0.002167
+    },
+    {
+      "path": "src/tac/quantizr_qzs3_codec.py",
+      "exists": true,
+      "sketch": "QZS3 alt entrypoint",
+      "size_kb": 28.6,
+      "n_classes": 1,
+      "n_funcs": 20,
+      "top_classes": [
+        "QZS4Candidate"
+      ],
+      "doc_excerpt": "QZS3 weight codec for Quantizr-faithful JointFrameGenerator models.",
+      "level": 4,
+      "pr106_compat": "replace",
+      "predicted_delta_band": [
+        -0.02,
+        -0.005
+      ],
+      "hours_to_integrate": 6.0,
+      "blockers": [
+        "Need HNeRV decoder weight extraction script",
+        "QZS3 expects FP4-quantized renderer state-dict shape \u2014 HNeRV decoder shape differs"
+      ],
+      "council_position": "Quantizr/Selfcomp",
+      "evidence_path": "Lane G v3 1.05 [contest-CUDA RTX 4090]",
+      "rationale": "Replace PR106's brotli-packed decoder (170KB) with grouped variable-bit-depth FP4 + arithmetic. Shannon-entropy floor on dense decoder weights ~ -3 to -10KB if decoder is FP32, less if already FP16.",
+      "ev_score": 0.002083
+    },
+    {
+      "path": "src/tac/uniward_delta.py",
+      "exists": true,
+      "sketch": "UNIWARD delta",
+      "size_kb": 29.6,
+      "n_classes": 1,
+      "n_funcs": 8,
+      "top_classes": [
+        "DeltaSpec"
+      ],
+      "doc_excerpt": "Lane C: UNIWARD \u03b4-injection on rendered frames at compress-time.",
+      "level": 3,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        -0.02,
+        -0.005
+      ],
+      "hours_to_integrate": 6.0,
+      "blockers": [
+        "UNIWARD attestation gate must be passed before deploy"
+      ],
+      "council_position": "Fridrich/Yousfi",
+      "evidence_path": "Lane UNIWARD v8 1.14 [contest-CPU advisory]",
+      "rationale": "Detector-informed embedding \u2014 Fridrich's textured-region undetectable error placement. Apply to PR106's mask channel for SegNet error masking.",
+      "ev_score": 0.002083
+    },
+    {
+      "path": "src/tac/block_fp_codec.py",
+      "exists": true,
+      "sketch": "Block-FP codec (Selfcomp paradigm)",
+      "size_kb": 34.1,
+      "n_classes": 1,
+      "n_funcs": 17,
+      "top_classes": [
+        "BlockFPHeader"
+      ],
+      "doc_excerpt": "Block-floating-point ternary codec for Lane SZ (szabolcs paradigm).",
+      "level": 3,
+      "pr106_compat": "replace",
+      "predicted_delta_band": [
+        -0.015,
+        -0.005
+      ],
+      "hours_to_integrate": 5.0,
+      "blockers": [
+        "Block-FP is per-tensor \u2014 must adapt per-channel for HNeRV decoder"
+      ],
+      "council_position": "Selfcomp/Quantizr",
+      "evidence_path": "Selfcomp 0.36 [contest-CUDA] uses block-FP",
+      "rationale": "Replace PR106 decoder packing with block-FP. Selfcomp's 1.017 bpw effective matches Quantizr's FP4 \u2014 could shave ~5-15KB on a 170KB decoder.",
+      "ev_score": 0.002
+    },
+    {
+      "path": "src/tac/qp1_pose_codec.py",
+      "exists": true,
+      "sketch": "QP1 pose codec \u2014 C-067 0.31561703 lineage",
+      "size_kb": 19.3,
+      "n_classes": 2,
+      "n_funcs": 18,
+      "top_classes": [
+        "QPV1DimensionStream",
+        "QPV1Payload"
+      ],
+      "doc_excerpt": "QP1 pose codec \u2014 PR #67 EthanYang qpose14_qzs3 byte-identical.",
+      "level": 4,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        -0.005,
+        -0.002
+      ],
+      "hours_to_integrate": 2.0,
+      "blockers": [
+        "PR106 baseline does not currently use a pose sidecar; need adapter to inject pose-delta as charged sidecar inside HNeRV archive"
+      ],
+      "council_position": "EthanYang/Hotz",
+      "evidence_path": "C-067 0.31561703 [contest-CUDA T4]",
+      "rationale": "Already shipped in C-067 lineage. PR106 pose contribution 0.018306 \u2014 sidecar + arithmetic-coded pose delta could shave ~0.001-0.003 if PR106 pose was bottlenecked. Risk: PR106's pose may already be near floor.",
+      "ev_score": 0.00175
+    },
+    {
+      "path": "src/tac/self_compressing_nn.py",
+      "exists": true,
+      "sketch": "Self-compressing NN (Lane SC)",
+      "size_kb": 22.8,
+      "n_classes": 4,
+      "n_funcs": 21,
+      "top_classes": [
+        "LearnableChannelGate",
+        "_LayerAccount",
+        "JointBitsAndWidthAccountant",
+        "SCNNRateScheduler"
+      ],
+      "doc_excerpt": "Lane SCNN \u2014 Self-Compressing Neural Networks (Wang et al. arXiv:2301.13142).",
+      "level": 2,
+      "pr106_compat": "replace",
+      "predicted_delta_band": [
+        -0.02,
+        -0.008
+      ],
+      "hours_to_integrate": 8.0,
+      "blockers": [
+        "Self-compressing NN training is multi-hour CUDA"
+      ],
+      "council_position": "Selfcomp/Schmidhuber",
+      "evidence_path": "Self-compressing NN scaffold [scaffold]",
+      "rationale": "Schmidhuber self-compression \u2014 train HNeRV decoder to compress itself recursively.",
+      "ev_score": 0.00175
+    },
+    {
+      "path": "src/tac/pose_gaussian_process.py",
+      "exists": true,
+      "sketch": "Pose GP (Lane GP)",
+      "size_kb": 7.0,
+      "n_classes": 1,
+      "n_funcs": 5,
+      "top_classes": [
+        "PoseGPModel"
+      ],
+      "doc_excerpt": "Deterministic rank-1 pose compression via a tiny polynomial model.",
+      "level": 3,
+      "pr106_compat": "orthogonal",
+      "predicted_delta_band": [
+        -0.01,
+        -0.003
+      ],
+      "hours_to_integrate": 4.0,
+      "blockers": [
+        "GP fit may not match PR106's pose representation"
+      ],
+      "council_position": "MacKay/Schmidhuber",
+      "evidence_path": "Lane GP scaffold [partial]",
+      "rationale": "Bayesian pose fit \u2014 could replace PR106 pose path with low-rank GP encoded poses.",
+      "ev_score": 0.001625
+    },
+    {
+      "path": "src/tac/sjkl_basis.py",
+      "exists": true,
+      "sketch": "Score-Jacobian KL basis (Wave-\u03a9 paradigm)",
+      "size_kb": 29.6,
+      "n_classes": 1,
+      "n_funcs": 21,
+      "top_classes": [
+        "SJKLBasis"
+      ],
+      "doc_excerpt": "Score-Jacobian Karhunen-Lo\u00e8ve (SJ-KL) basis primitive.",
+      "level": 2,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        -0.02,
+        -0.005
+      ],
+      "hours_to_integrate": 8.0,
+      "blockers": [
+        "Requires score-Jacobian computation against HNeRV decoder",
+        "PR98 HNeRV-adapter integration as residual basis"
+      ],
+      "council_position": "Shannon/Ball\u00e9",
+      "evidence_path": "Wave-\u03a9-1 council 22/22 GO [prediction]",
+      "rationale": "Score-Jacobian Karhunen-Lo\u00e8ve basis as task-aware residual primitive \u2014 Shannon-floor-optimal under known scorer. Stack potential predicted 0.180.",
+      "ev_score": 0.001563
+    },
+    {
+      "path": "src/tac/nerv_mask_codec.py",
+      "exists": true,
+      "sketch": "NeRV mask codec (Lane 12)",
+      "size_kb": 36.8,
+      "n_classes": 5,
+      "n_funcs": 18,
+      "top_classes": [
+        "NeRVSamplingComponent",
+        "NeRVSamplingPool",
+        "NeRVMaskCodec",
+        "NeRVHeader",
+        "NeRVMaskTrainer"
+      ],
+      "doc_excerpt": "Lane 12 \u2014 NeRV / Cool-Chic mask codec (van den Oord + Mallat lead).",
+      "level": 2,
+      "pr106_compat": "orthogonal",
+      "predicted_delta_band": [
+        -0.025,
+        -0.01
+      ],
+      "hours_to_integrate": 12.0,
+      "blockers": [
+        "NeRV training requires ~5-10h GPU"
+      ],
+      "council_position": "Karpathy/Schmidhuber/Quantizr",
+      "evidence_path": "Lane 12 NeRV \u03b1-redesign [partial]",
+      "rationale": "NeRV implicit neural representation for mask channel. 23.6KB / 94.4% byte savings empirical [Lane 12 Phase G]. Stack with PR106 HNeRV decoder for combined neural codec.",
+      "ev_score": 0.001458
+    },
+    {
+      "path": "src/tac/raft_pose.py",
+      "exists": true,
+      "sketch": "RAFT-derived pose (Lane GP)",
+      "size_kb": 5.6,
+      "n_classes": 0,
+      "n_funcs": 6,
+      "top_classes": [],
+      "doc_excerpt": "RAFT-derived pose-dim0 estimation for compress-time lane experiments.",
+      "level": 3,
+      "pr106_compat": "orthogonal",
+      "predicted_delta_band": [
+        -0.015,
+        -0.005
+      ],
+      "hours_to_integrate": 8.0,
+      "blockers": [
+        "RAFT requires CUDA forward (we capped GPU $0)",
+        "Already explored Lane GP \u2014 pose GP fit"
+      ],
+      "council_position": "Hotz/MacKay",
+      "evidence_path": "Lane GP scaffold [partial]",
+      "rationale": "Replace PR106's pose pathway with RAFT optical-flow-derived ego-motion. PR106 pose contribution 0.018306; RAFT-derived pose at training time is industry-standard openpilot path.",
+      "ev_score": 0.00125
+    },
+    {
+      "path": "src/tac/saliency_inversion.py",
+      "exists": true,
+      "sketch": "Saliency inversion",
+      "size_kb": 20.5,
+      "n_classes": 0,
+      "n_funcs": 9,
+      "top_classes": [],
+      "doc_excerpt": "Lane SI: Saliency-Inversion compression weighting.",
+      "level": 3,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        -0.008,
+        -0.002
+      ],
+      "hours_to_integrate": 4.0,
+      "blockers": [
+        "Inversion needs scorer forward at compress time"
+      ],
+      "council_position": "Fridrich/Mallat",
+      "evidence_path": "Saliency inversion scaffold [scaffold]",
+      "rationale": "Invert saliency map \u2014 encode where scorer is INSENSITIVE (Fridrich principle).",
+      "ev_score": 0.00125
+    },
+    {
+      "path": "src/tac/joint_admm_proximal_water_filling_v2.py",
+      "exists": true,
+      "sketch": "Joint-ADMM water-fill proximal step",
+      "size_kb": 11.9,
+      "n_classes": 2,
+      "n_funcs": 5,
+      "top_classes": [
+        "WaterFillingV2FrontierSample",
+        "WaterFillingV2ProximalCodec"
+      ],
+      "doc_excerpt": "Lane Joint-ADMM proximal wrapper for water_filling_codec_v2 (Lane \u03a9-W-V2).",
+      "level": 4,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        -0.005,
+        -0.002
+      ],
+      "hours_to_integrate": 3.0,
+      "blockers": [
+        "ADMM + water-fill needs sensitivity map for PR106"
+      ],
+      "council_position": "Boyd/Dykstra/Shannon",
+      "evidence_path": "ADMM proximal water-fill landed [empirical]",
+      "rationale": "Joint-ADMM water-fill proximal \u2014 feeds into ADMM coordinator.",
+      "ev_score": 0.001167
+    },
+    {
+      "path": "src/tac/wavelet_mask_codec.py",
+      "exists": true,
+      "sketch": "Wavelet mask codec (Mallat)",
+      "size_kb": 20.2,
+      "n_classes": 1,
+      "n_funcs": 16,
+      "top_classes": [
+        "WaveletConfig"
+      ],
+      "doc_excerpt": "Lane Wavelet \u2014 Daubechies/Haar wavelet-domain mask codec (Mallat lineage).",
+      "level": 2,
+      "pr106_compat": "orthogonal",
+      "predicted_delta_band": [
+        -0.01,
+        -0.003
+      ],
+      "hours_to_integrate": 6.0,
+      "blockers": [
+        "Wavelet codec needs pose-aware atomic decomposition"
+      ],
+      "council_position": "Mallat/MacKay",
+      "evidence_path": "Wavelet mask codec scaffold [scaffold]",
+      "rationale": "Mallat-style wavelet basis for mask coding \u2014 sparse coefficients + arithmetic coding. Could replace AV1 path entirely if entropy is lower.",
+      "ev_score": 0.001083
+    },
+    {
+      "path": "src/tac/mdl_bayesian_codec.py",
+      "exists": true,
+      "sketch": "MDL Bayesian codec (MacKay)",
+      "size_kb": 16.7,
+      "n_classes": 2,
+      "n_funcs": 10,
+      "top_classes": [
+        "MDLCodecResult",
+        "OccamCheck"
+      ],
+      "doc_excerpt": "Lane MDL/Bayesian \u2014 meta codec-comparison framework (MacKay).",
+      "level": 2,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        -0.01,
+        -0.003
+      ],
+      "hours_to_integrate": 6.0,
+      "blockers": [
+        "MDL Bayesian codec needs training"
+      ],
+      "council_position": "MacKay/Schmidhuber/Shannon",
+      "evidence_path": "MDL Bayesian codec scaffold [scaffold]",
+      "rationale": "MacKay MDL Bayesian \u2014 variational coder with Bayesian prior on weights. Strong theoretical foundation, untested on our scale.",
+      "ev_score": 0.001083
+    },
+    {
+      "path": "src/tac/balle_hyperprior_codec.py",
+      "exists": true,
+      "sketch": "Ball\u00e9 hyperprior codec",
+      "size_kb": 35.0,
+      "n_classes": 4,
+      "n_funcs": 19,
+      "top_classes": [
+        "HyperEncoder",
+        "HyperDecoder",
+        "BalleHyperpriorCodec",
+        "BHv1Header"
+      ],
+      "doc_excerpt": "Lane 20 \u2014 Production Ball\u00e9 hyperprior codec for qint streams.",
+      "level": 2,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        -0.015,
+        -0.005
+      ],
+      "hours_to_integrate": 10.0,
+      "blockers": [
+        "Hyperprior training is non-trivial; needs CUDA"
+      ],
+      "council_position": "Ball\u00e9/MacKay",
+      "evidence_path": "Hyperprior codec scaffold [scaffold]",
+      "rationale": "Replace fixed factorized priors with Ball\u00e9 2018 scale hyperprior. Standard rate prediction net for residual bits.",
+      "ev_score": 0.001
+    },
+    {
+      "path": "src/tac/balle_sensitivity_weighted.py",
+      "exists": true,
+      "sketch": "Ball\u00e9 sensitivity-weighted",
+      "size_kb": 11.2,
+      "n_classes": 2,
+      "n_funcs": 5,
+      "top_classes": [
+        "SensitivityWeightedBalleError",
+        "SensitivityConditionedHyperDecoder"
+      ],
+      "doc_excerpt": "Lane 20 \u03b2-variant \u2014 sensitivity-conditioned Ball\u00e9 hyperprior \u03c3 prediction.",
+      "level": 3,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        -0.005,
+        -0.001
+      ],
+      "hours_to_integrate": 3.0,
+      "blockers": [
+        "Hyperprior + sensitivity composition needs prototype"
+      ],
+      "council_position": "Ball\u00e9/Shannon",
+      "evidence_path": "Sensitivity-weighted Ball\u00e9 scaffold [scaffold]",
+      "rationale": "Sensitivity-weighted hyperprior \u2014 entropy bottleneck with task-aware bit allocation.",
+      "ev_score": 0.001
+    },
+    {
+      "path": "src/tac/joint_admm_coordinator.py",
+      "exists": true,
+      "sketch": "Boyd Joint-ADMM coordinator",
+      "size_kb": 30.8,
+      "n_classes": 5,
+      "n_funcs": 6,
+      "top_classes": [
+        "ProximalStepResult",
+        "StreamProximalCodec",
+        "JointADMMConfig",
+        "AdmmIteration",
+        "AdmmResult"
+      ],
+      "doc_excerpt": "Lane Joint-ADMM \u2014 Boyd-style coordinator across codec slots (Phase 2 Lane 10).",
+      "level": 3,
+      "pr106_compat": "orthogonal",
+      "predicted_delta_band": [
+        -0.01,
+        -0.002
+      ],
+      "hours_to_integrate": 6.0,
+      "blockers": [
+        "Joint-ADMM proximals defined for our codec components; need HNeRV decoder proximal"
+      ],
+      "council_position": "Boyd/Dykstra/Shannon",
+      "evidence_path": "Lane Joint-ADMM scaffold present [scaffold]",
+      "rationale": "Boyd ADMM coordinator splits archive-byte constraint across pose/seg/decoder. HNeRV PR106 hasn't run through this \u2014 could find Pareto-optimal allocation.",
+      "ev_score": 0.001
+    },
+    {
+      "path": "src/tac/iterative_magnitude_pruning.py",
+      "exists": true,
+      "sketch": "Lane 17 IMP",
+      "size_kb": 23.2,
+      "n_classes": 2,
+      "n_funcs": 19,
+      "top_classes": [
+        "IMPState"
+      ],
+      "doc_excerpt": "Lane J-IMP \u2014 Iterative Magnitude Pruning (LTH stabilized).",
+      "level": 4,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        -0.005,
+        -0.001
+      ],
+      "hours_to_integrate": 3.0,
+      "blockers": [
+        "Already wired (Lane 17 IMP)"
+      ],
+      "council_position": "Hinton/Hotz",
+      "evidence_path": "Lane 17 IMP cycle 0 [empirical-with-bug-now-fixed]",
+      "rationale": "IMP for HNeRV decoder. PR106 decoder may be amenable.",
+      "ev_score": 0.001
+    },
+    {
+      "path": "src/tac/owv3_sensitivity_weighted.py",
+      "exists": true,
+      "sketch": "OWv3 R7 sensitivity-weighted bit alloc",
+      "size_kb": 40.9,
+      "n_classes": 1,
+      "n_funcs": 31,
+      "top_classes": [
+        "OWV3ArchiveError"
+      ],
+      "doc_excerpt": "Lane \u03a9-W-V3 \u2014 sensitivity-weighted renderer archive.",
+      "level": 3,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        -0.005,
+        -0.001
+      ],
+      "hours_to_integrate": 3.0,
+      "blockers": [
+        "OWv3 path is for renderer.bin, not HNeRV decoder layout"
+      ],
+      "council_position": "Shannon/Dykstra",
+      "evidence_path": "OWv3 R7 1.013 [contest-CUDA] / 0.9974 [contest-CUDA]",
+      "rationale": "OWv3 sensitivity-weighted bit allocation \u2014 already best-in-class for our renderer.bin shape.",
+      "ev_score": 0.001
+    },
+    {
+      "path": "src/tac/stc_boundary_codec.py",
+      "exists": true,
+      "sketch": "Syndrome-trellis boundary codec (Filler)",
+      "size_kb": 24.7,
+      "n_classes": 0,
+      "n_funcs": 11,
+      "top_classes": [],
+      "doc_excerpt": "Lane STC \u2014 boundary-focused mask-class codec (Stage 2 implementation).",
+      "level": 2,
+      "pr106_compat": "orthogonal",
+      "predicted_delta_band": [
+        -0.008,
+        -0.002
+      ],
+      "hours_to_integrate": 5.0,
+      "blockers": [
+        "Filler STC requires syndrome trellis \u2014 needs design verification"
+      ],
+      "council_position": "Filler/Fridrich",
+      "evidence_path": "STC scaffold [scaffold]",
+      "rationale": "Syndrome-trellis boundary codec \u2014 Filler's optimal embedding for binary masks under distortion budget.",
+      "ev_score": 0.001
+    },
+    {
+      "path": "src/tac/trick_stack.py",
+      "exists": true,
+      "sketch": "Trick stack",
+      "size_kb": 58.6,
+      "n_classes": 1,
+      "n_funcs": 19,
+      "top_classes": [
+        "TrickStackConfig"
+      ],
+      "doc_excerpt": "Unified trick stacking engine for inflate-time optimizations.",
+      "level": 2,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        -0.005,
+        -0.001
+      ],
+      "hours_to_integrate": 3.0,
+      "blockers": [
+        "Trick stack is a meta-tool"
+      ],
+      "council_position": "Hotz",
+      "evidence_path": "Trick stack scaffold [scaffold]",
+      "rationale": "Stack of small score-improvement tricks. Marginal but composable.",
+      "ev_score": 0.001
+    },
+    {
+      "path": "src/tac/entropy_bottleneck.py",
+      "exists": true,
+      "sketch": "Entropy bottleneck (Ball\u00e9 2018)",
+      "size_kb": 3.9,
+      "n_classes": 1,
+      "n_funcs": 5,
+      "top_classes": [
+        "EntropyBottleneck"
+      ],
+      "doc_excerpt": "Entropy bottleneck rate model for renderer training.",
+      "level": 3,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        -0.005,
+        -0.001
+      ],
+      "hours_to_integrate": 3.0,
+      "blockers": [
+        "Bottleneck integration with HNeRV decoder"
+      ],
+      "council_position": "Ball\u00e9",
+      "evidence_path": "Ball\u00e9 entropy bottleneck implementation [scaffold]",
+      "rationale": "Ball\u00e9 2018 entropy bottleneck. Standard neural compression primitive.",
+      "ev_score": 0.001
+    },
+    {
+      "path": "src/tac/joint_codec_stack_orchestrator.py",
+      "exists": true,
+      "sketch": "Joint codec stack orchestrator",
+      "size_kb": 26.3,
+      "n_classes": 4,
+      "n_funcs": 10,
+      "top_classes": [
+        "StreamSource",
+        "_CodecProximal",
+        "StackStreamResult",
+        "JointCodecStackResult"
+      ],
+      "doc_excerpt": "PARADIGM-\u03b3 \u2014 Joint Codec Stack Pipeline (JCSP) orchestrator.",
+      "level": 2,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        -0.005,
+        0.0
+      ],
+      "hours_to_integrate": 3.0,
+      "blockers": [
+        "Orchestrator integration with PR106 archive layout"
+      ],
+      "council_position": "Dykstra/Boyd",
+      "evidence_path": "Stack orchestrator scaffold [scaffold]",
+      "rationale": "Coordinator \u2014 meta-tool that runs other codecs. Useful infrastructure but no direct score gain.",
+      "ev_score": 0.000833
+    },
+    {
+      "path": "src/tac/optimal_stack_orchestrator.py",
+      "exists": true,
+      "sketch": "Optimal stack orchestrator",
+      "size_kb": 21.0,
+      "n_classes": 4,
+      "n_funcs": 12,
+      "top_classes": [
+        "StreamProvenance",
+        "BuildResult",
+        "StreamInput",
+        "OptimalStackOrchestrator"
+      ],
+      "doc_excerpt": "Phase 4 final integration \u2014 Optimal Stack Orchestrator.",
+      "level": 2,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        -0.005,
+        0.0
+      ],
+      "hours_to_integrate": 3.0,
+      "blockers": [
+        "Same as joint orchestrator"
+      ],
+      "council_position": "Dykstra/Boyd",
+      "evidence_path": "Optimal stack scaffold [scaffold]",
+      "rationale": "Like joint stack but optimized \u2014 meta-tool, no direct score gain.",
+      "ev_score": 0.000833
+    },
+    {
+      "path": "src/tac/depth_motion.py",
+      "exists": true,
+      "sketch": "Depth+motion (openpilot-style)",
+      "size_kb": 10.7,
+      "n_classes": 1,
+      "n_funcs": 5,
+      "top_classes": [
+        "DepthAwareMotionPredictor"
+      ],
+      "doc_excerpt": "Depth-aware motion predictor: geometric parallax flow from per-class depth + 6-DOF camera.",
+      "level": 2,
+      "pr106_compat": "orthogonal",
+      "predicted_delta_band": [
+        -0.008,
+        -0.002
+      ],
+      "hours_to_integrate": 6.0,
+      "blockers": [
+        "Depth+motion needs CUDA training"
+      ],
+      "council_position": "Hotz/Hassabis",
+      "evidence_path": "Depth+motion scaffold [scaffold]",
+      "rationale": "openpilot-style depth + ego-motion as pose substitute. Strong prior for static-camera 0.mkv.",
+      "ev_score": 0.000833
+    },
+    {
+      "path": "src/tac/temporal_delta.py",
+      "exists": true,
+      "sketch": "Temporal delta",
+      "size_kb": 15.9,
+      "n_classes": 4,
+      "n_funcs": 15,
+      "top_classes": [
+        "DeltaConditioner",
+        "DeltaPredictor",
+        "TemporalDeltaRenderer",
+        "BackwardDeltaRenderer"
+      ],
+      "doc_excerpt": "Temporal delta renderer \u2014 frame[t] as frame[t-1] + delta[t] (Trick 15).",
+      "level": 2,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        -0.005,
+        -0.001
+      ],
+      "hours_to_integrate": 4.0,
+      "blockers": [
+        "Delta encoding adds runtime; needs verification with PR106 decoder"
+      ],
+      "council_position": "Mallat/Selfcomp",
+      "evidence_path": "Temporal delta scaffold [scaffold]",
+      "rationale": "Encode pair2 = pair1 + delta. Saves bytes if frame pairs are correlated.",
+      "ev_score": 0.00075
+    },
+    {
+      "path": "src/tac/variable_rate.py",
+      "exists": true,
+      "sketch": "Variable rate",
+      "size_kb": 6.1,
+      "n_classes": 0,
+      "n_funcs": 6,
+      "top_classes": [],
+      "doc_excerpt": "Variable-rate per-frame mask encoding with difficulty-based CRF allocation.",
+      "level": 2,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        -0.005,
+        -0.001
+      ],
+      "hours_to_integrate": 4.0,
+      "blockers": [
+        "Variable rate needs Lagrangian sweep"
+      ],
+      "council_position": "Shannon/Dykstra/Schmidhuber",
+      "evidence_path": "Variable rate scaffold [scaffold]",
+      "rationale": "Per-region variable bit rate \u2014 high rate for score-sensitive regions.",
+      "ev_score": 0.00075
+    },
+    {
+      "path": "src/tac/lane_mark_pose_v2.py",
+      "exists": true,
+      "sketch": "Lane-mark pose V2",
+      "size_kb": 14.8,
+      "n_classes": 0,
+      "n_funcs": 5,
+      "top_classes": [],
+      "doc_excerpt": "Lane LM-V2 \u2014 endpoint-tracking zero-archive-cost pose conditioning.",
+      "level": 3,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        -0.003,
+        -0.001
+      ],
+      "hours_to_integrate": 3.0,
+      "blockers": [
+        "Lane-mark pose only works on lane-marked frames; contest video is dashcam"
+      ],
+      "council_position": "Hotz/Hassabis",
+      "evidence_path": "Lane-mark pose V2 scaffold [scaffold]",
+      "rationale": "Lane-mark constrained pose. Marginal because contest video may not have visible markings consistently.",
+      "ev_score": 0.000667
+    },
+    {
+      "path": "src/tac/hyperbolic_foveation.py",
+      "exists": true,
+      "sketch": "Hyperbolic foveation",
+      "size_kb": 18.0,
+      "n_classes": 1,
+      "n_funcs": 25,
+      "top_classes": [
+        "HyperbolicFoveation"
+      ],
+      "doc_excerpt": "Invertible Telescope-style hyperbolic foveation.",
+      "level": 2,
+      "pr106_compat": "orthogonal",
+      "predicted_delta_band": [
+        -0.005,
+        0.0
+      ],
+      "hours_to_integrate": 4.0,
+      "blockers": [
+        "Foveation training is non-trivial"
+      ],
+      "council_position": "Mallat/Carmack",
+      "evidence_path": "Hyperbolic foveation scaffold [scaffold]",
+      "rationale": "Foveal mask weighting \u2014 focus encoding budget on score-relevant regions.",
+      "ev_score": 0.000625
+    },
+    {
+      "path": "src/tac/multi_model_inflate.py",
+      "exists": true,
+      "sketch": "Multi-model inflate",
+      "size_kb": 11.0,
+      "n_classes": 1,
+      "n_funcs": 7,
+      "top_classes": [
+        "MultiModelInflater"
+      ],
+      "doc_excerpt": "Multi-model inflation: dispatch different postfilters to different frames (Eureka 4).",
+      "level": 2,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        -0.005,
+        0.0
+      ],
+      "hours_to_integrate": 4.0,
+      "blockers": [
+        "Need multi-model archive layout"
+      ],
+      "council_position": "Carmack/Hotz",
+      "evidence_path": "Multi-model inflate scaffold [scaffold]",
+      "rationale": "Inflate multiple model variants and pick best per pair. Adds runtime complexity.",
+      "ev_score": 0.000625
+    },
+    {
+      "path": "src/tac/calibrated_geometry.py",
+      "exists": true,
+      "sketch": "Calibrated geometry",
+      "size_kb": 16.5,
+      "n_classes": 2,
+      "n_funcs": 10,
+      "top_classes": [
+        "HomographyDecomposition",
+        "CalibratedGeometry"
+      ],
+      "doc_excerpt": "Lane CG: calibrated camera geometry helpers (EON intrinsics, ray-casting,\nhomography \u2192 SE(3) decomposition).",
+      "level": 2,
+      "pr106_compat": "orthogonal",
+      "predicted_delta_band": [
+        -0.005,
+        0.0
+      ],
+      "hours_to_integrate": 4.0,
+      "blockers": [
+        "Camera calibration may not match contest video"
+      ],
+      "council_position": "Mallat/Hotz",
+      "evidence_path": "Calibrated geometry scaffold [scaffold]",
+      "rationale": "Calibrated camera geometry as prior for pose derivation.",
+      "ev_score": 0.000625
+    },
+    {
+      "path": "src/tac/multipass_compressor.py",
+      "exists": true,
+      "sketch": "Multipass compressor",
+      "size_kb": 21.5,
+      "n_classes": 6,
+      "n_funcs": 14,
+      "top_classes": [
+        "PassRecord",
+        "MultiPassResult",
+        "AdjustmentPolicy",
+        "CoordinateDescentPolicy",
+        "_InflateTimeAssertion"
+      ],
+      "doc_excerpt": "Lane 8 \u2014 Multi-pass compress-time optimizer over the canonical archive pipeline.",
+      "level": 2,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        -0.005,
+        -0.001
+      ],
+      "hours_to_integrate": 5.0,
+      "blockers": [
+        "Multipass with 30-min cap is tight"
+      ],
+      "council_position": "Carmack/Selfcomp",
+      "evidence_path": "Multipass scaffold [scaffold]",
+      "rationale": "Multi-pass refinement at compress time \u2014 try N codec configurations, pick best.",
+      "ev_score": 0.0006
+    },
+    {
+      "path": "src/tac/imp_sensitivity_weighted.py",
+      "exists": true,
+      "sketch": "IMP iterative magnitude pruning sensitivity",
+      "size_kb": 13.9,
+      "n_classes": 1,
+      "n_funcs": 6,
+      "top_classes": [
+        "SensitivityWeightedIMPError"
+      ],
+      "doc_excerpt": "Lane 17 IMP \u03b2-variant \u2014 sensitivity-weighted iterative magnitude pruning.",
+      "level": 3,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        -0.003,
+        0.0
+      ],
+      "hours_to_integrate": 3.0,
+      "blockers": [
+        "IMP needs PR106 finetune cycle"
+      ],
+      "council_position": "Hinton/Quantizr/Hotz",
+      "evidence_path": "Lane 17 IMP train_distill swap landed [empirical]",
+      "rationale": "IMP weighted by sensitivity. Small marginal gain on already-pruned HNeRV decoder.",
+      "ev_score": 0.0005
+    },
+    {
+      "path": "src/tac/wavelet_variance.py",
+      "exists": true,
+      "sketch": "Wavelet variance (Mallat)",
+      "size_kb": 7.4,
+      "n_classes": 0,
+      "n_funcs": 4,
+      "top_classes": [],
+      "doc_excerpt": "Daubechies-8 (db4) wavelet residual energy for UNIWARD variance maps.",
+      "level": 2,
+      "pr106_compat": "orthogonal",
+      "predicted_delta_band": [
+        -0.005,
+        0.0
+      ],
+      "hours_to_integrate": 5.0,
+      "blockers": [
+        "Wavelet variance needs sensitivity-aware adaptation"
+      ],
+      "council_position": "Mallat",
+      "evidence_path": "Wavelet variance scaffold [scaffold]",
+      "rationale": "Mallat wavelet variance for mask sparse coding. Useful primitive.",
+      "ev_score": 0.0005
+    },
+    {
+      "path": "src/tac/pr86_hpac_codec.py",
+      "exists": true,
+      "sketch": "PR #86 HPAC codec",
+      "size_kb": 74.3,
+      "n_classes": 8,
+      "n_funcs": 49,
+      "top_classes": [
+        "Pr86HpacReplayError",
+        "Pr86ArchiveContract",
+        "Pr86ArchiveBundle",
+        "HpacProbabilityVariant",
+        "_MaskedConv2dPG"
+      ],
+      "doc_excerpt": "Fail-closed local PR86 HPAC replay and byte-parity helpers.",
+      "level": 3,
+      "pr106_compat": "orthogonal",
+      "predicted_delta_band": [
+        -0.003,
+        0.0
+      ],
+      "hours_to_integrate": 3.0,
+      "blockers": [
+        "HPAC alone scored worse than PR106; combination unclear"
+      ],
+      "council_position": "n/a",
+      "evidence_path": "PR86 HPAC scaffold [scaffold]",
+      "rationale": "HPAC hybrid coder. Unproven for PR106 stack.",
+      "ev_score": 0.0005
+    },
+    {
+      "path": "src/tac/pr91_hpm1_codec.py",
+      "exists": true,
+      "sketch": "PR #91 HPM1 codec",
+      "size_kb": 129.5,
+      "n_classes": 2,
+      "n_funcs": 45,
+      "top_classes": [
+        "Pr91Hpm1Error",
+        "Hpm1MaskPayload"
+      ],
+      "doc_excerpt": "Local fail-closed PR91 HPM1 mask replay and re-encode helpers.",
+      "level": 3,
+      "pr106_compat": "orthogonal",
+      "predicted_delta_band": [
+        -0.003,
+        0.0
+      ],
+      "hours_to_integrate": 3.0,
+      "blockers": [
+        "HPM1 alone unverified; minimal docs"
+      ],
+      "council_position": "n/a",
+      "evidence_path": "PR91 HPM1 scaffold [scaffold]",
+      "rationale": "HPAC hybrid M1 variant. Unproven for PR106 stack.",
+      "ev_score": 0.0005
+    },
+    {
+      "path": "src/tac/openpilot_features.py",
+      "exists": true,
+      "sketch": "openpilot features",
+      "size_kb": 8.3,
+      "n_classes": 1,
+      "n_funcs": 13,
+      "top_classes": [
+        "SceneEmbeddingDistiller"
+      ],
+      "doc_excerpt": "Lane DI: compress-time openpilot supercombo feature extraction.",
+      "level": 2,
+      "pr106_compat": "orthogonal",
+      "predicted_delta_band": [
+        -0.005,
+        0.0
+      ],
+      "hours_to_integrate": 5.0,
+      "blockers": [
+        "Feature extraction needs comma model"
+      ],
+      "council_position": "Hotz",
+      "evidence_path": "openpilot features scaffold [scaffold]",
+      "rationale": "Use openpilot-pretrained features as low-rank conditioning for HNeRV decoder.",
+      "ev_score": 0.0005
+    },
+    {
+      "path": "src/tac/cross_frame_attention.py",
+      "exists": true,
+      "sketch": "Cross-frame attention",
+      "size_kb": 12.9,
+      "n_classes": 3,
+      "n_funcs": 10,
+      "top_classes": [
+        "CrossFrameAttention",
+        "CrossFrameRenderer"
+      ],
+      "doc_excerpt": "Cross-frame attention for temporal coherence in neural renderers (Trick 20).",
+      "level": 2,
+      "pr106_compat": "orthogonal",
+      "predicted_delta_band": [
+        -0.005,
+        0.0
+      ],
+      "hours_to_integrate": 6.0,
+      "blockers": [
+        "Cross-frame attention adds inflate time"
+      ],
+      "council_position": "Karpathy/Hotz",
+      "evidence_path": "Cross-frame attention scaffold [scaffold]",
+      "rationale": "Attention across pair frames for HNeRV-style decoder conditioning.",
+      "ev_score": 0.000417
+    },
+    {
+      "path": "src/tac/qzs3_renderer_codec.py",
+      "exists": false,
+      "sketch": "Quantizr-style grouped variable-bit-depth FP4 packer",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/qbf1_renderer_codec.py",
+      "exists": true,
+      "sketch": "QBF1 block-FP renderer codec",
+      "size_kb": 42.3,
+      "n_classes": 5,
+      "n_funcs": 36,
+      "top_classes": [
+        "QBF1CodecError",
+        "QBF1ByteAccounting",
+        "QBF1TensorMetadata",
+        "QBF1TensorRecord",
+        "QBF1Container"
+      ],
+      "doc_excerpt": "Prototype QBF1 block-FP container for JointFrameGenerator state dicts.",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/qh0_renderer_codec.py",
+      "exists": true,
+      "sketch": "QH0 codec",
+      "size_kb": 15.9,
+      "n_classes": 2,
+      "n_funcs": 13,
+      "top_classes": [
+        "QH0CodecError",
+        "QH0DecodeReport"
+      ],
+      "doc_excerpt": "QH0/QM0 renderer codec for PR85-style JointFrameGenerator payloads.",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/pfp16_codec.py",
+      "exists": true,
+      "sketch": "PFP16 codec",
+      "size_kb": 10.0,
+      "n_classes": 0,
+      "n_funcs": 3,
+      "top_classes": [],
+      "doc_excerpt": "Lane PFP16 \u2014 Pose Float-16 cast codec (Lane GP v4 Hotz-option successor).",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/balle_hyperprior_renderer.py",
+      "exists": true,
+      "sketch": "Ball\u00e9 renderer",
+      "size_kb": 15.4,
+      "n_classes": 2,
+      "n_funcs": 10,
+      "top_classes": [
+        "ScalePriorMLP",
+        "BHPHeader"
+      ],
+      "doc_excerpt": "Lane 20 \u2014 Ball\u00e9 2018 hyperprior + entropy bottleneck for renderer.bin.",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/arithmetic_terminal.py",
+      "exists": true,
+      "sketch": "Terminal arithmetic codec",
+      "size_kb": 13.7,
+      "n_classes": 0,
+      "n_funcs": 7,
+      "top_classes": [],
+      "doc_excerpt": "PARADIGM-\u03b3 Module \u03b3 \u2014 Arithmetic terminal layer (canonical).",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/water_filling_codec.py",
+      "exists": true,
+      "sketch": "Lane \u03a9-W water-fill bit allocation",
+      "size_kb": 22.9,
+      "n_classes": 1,
+      "n_funcs": 11,
+      "top_classes": [
+        "WaterFillError"
+      ],
+      "doc_excerpt": "Lane \u03a9-W \u2014 Water-filling Lagrangian bit-budget allocator.",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/joint_admm_proximal_pose_delta.py",
+      "exists": true,
+      "sketch": "Joint-ADMM pose-delta proximal",
+      "size_kb": 8.2,
+      "n_classes": 2,
+      "n_funcs": 4,
+      "top_classes": [
+        "PoseDeltaFrontierSample",
+        "PoseDeltaProximalCodec"
+      ],
+      "doc_excerpt": "Lane Joint-ADMM proximal wrapper for pose_delta_codec (Lane PD).",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/raft_radial_pose.py",
+      "exists": true,
+      "sketch": "RAFT radial pose",
+      "size_kb": 18.6,
+      "n_classes": 2,
+      "n_funcs": 8,
+      "top_classes": [
+        "RaftRadialPoseConfig",
+        "PoseCalibration"
+      ],
+      "doc_excerpt": "Lane RAFT/radial pose \u2014 full 6-DoF radial-basis decomposition of optical flow.",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/pose_delta_codec.py",
+      "exists": true,
+      "sketch": "Pose delta codec",
+      "size_kb": 9.1,
+      "n_classes": 0,
+      "n_funcs": 4,
+      "top_classes": [],
+      "doc_excerpt": "Lane PD \u2014 Pose-delta encoder/decoder (Schmidhuber eureka, 2026-04-29).",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/pose_delta_codec_v2.py",
+      "exists": true,
+      "sketch": "Pose delta codec V2",
+      "size_kb": 19.1,
+      "n_classes": 1,
+      "n_funcs": 6,
+      "top_classes": [
+        "PoseDeltaV2GateRegression"
+      ],
+      "doc_excerpt": "Lane PD-V2 \u2014 Arithmetic-coded pose-delta encoder/decoder (2026-04-29).",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/pose_from_embedding.py",
+      "exists": true,
+      "sketch": "Pose from embedding",
+      "size_kb": 15.6,
+      "n_classes": 2,
+      "n_funcs": 8,
+      "top_classes": [
+        "MaskFeatureExtractor",
+        "PoseFromEmbeddingMLP"
+      ],
+      "doc_excerpt": "Lane M-V3: PoseNet-embedding-space pose distillation (Path A).",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/geodesic_pose.py",
+      "exists": true,
+      "sketch": "Geodesic pose interpolation",
+      "size_kb": 5.0,
+      "n_classes": 1,
+      "n_funcs": 6,
+      "top_classes": [
+        "GeodesicPoseModel"
+      ],
+      "doc_excerpt": "Lane GE: compact one-dimensional geodesic pose compression.",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/lora_pose.py",
+      "exists": true,
+      "sketch": "LoRA pose adapter",
+      "size_kb": 8.7,
+      "n_classes": 1,
+      "n_funcs": 8,
+      "top_classes": [
+        "LoRAPose"
+      ],
+      "doc_excerpt": "Lane LR \u2014 Low-Rank pose adaptation for compress-time pose-space TTO.",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/lora_pose_v2.py",
+      "exists": true,
+      "sketch": "LoRA pose V2",
+      "size_kb": 12.4,
+      "n_classes": 1,
+      "n_funcs": 10,
+      "top_classes": [
+        "LearnableRankLoRAPose"
+      ],
+      "doc_excerpt": "Lane LR-V2 \u2014 LEARNABLE-rank pose adaptation.",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/riemannian_pose_optimizer.py",
+      "exists": true,
+      "sketch": "Riemannian pose optimizer",
+      "size_kb": 9.9,
+      "n_classes": 1,
+      "n_funcs": 2,
+      "top_classes": [
+        "RiemannianSGD"
+      ],
+      "doc_excerpt": "Riemannian SGD on SE(3) for Lane RM pose TTO.",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/se3.py",
+      "exists": true,
+      "sketch": "SE(3) ops",
+      "size_kb": 36.5,
+      "n_classes": 1,
+      "n_funcs": 14,
+      "top_classes": [
+        "SE3Element"
+      ],
+      "doc_excerpt": "SE(3) Lie group operations for Riemannian pose optimization (Lane RM).",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/network_codec.py",
+      "exists": true,
+      "sketch": "Network codec",
+      "size_kb": 50.4,
+      "n_classes": 5,
+      "n_funcs": 32,
+      "top_classes": [
+        "SIRENLayer",
+        "PositionalEncoding",
+        "SIRENVideoCodec",
+        "SelfCompressingVideoCodec",
+        "MaskConditionedSIREN"
+      ],
+      "doc_excerpt": "Network-IS-the-codec: a tiny neural network whose weights ARE the compressed video.",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/neural_weight_codec.py",
+      "exists": true,
+      "sketch": "Lane J-NWC neural weight codec",
+      "size_kb": 16.2,
+      "n_classes": 2,
+      "n_funcs": 8,
+      "top_classes": [
+        "WeightCodecConfig",
+        "WeightCodec"
+      ],
+      "doc_excerpt": "Lane J-NWC: Neural Weight Compression for renderer.bin.",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/neural_weight_codec_sensitivity.py",
+      "exists": true,
+      "sketch": "NWC sensitivity-weighted",
+      "size_kb": 40.8,
+      "n_classes": 4,
+      "n_funcs": 27,
+      "top_classes": [
+        "NWCSRendererTensorEntry",
+        "NWCSRendererContainer",
+        "SensitivityAwareCodecConfig",
+        "SensitivityAwareWeightCodec"
+      ],
+      "doc_excerpt": "Lane J-NWCS: Sensitivity-aware Neural Weight Compression.",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/neural_weight_corpus.py",
+      "exists": true,
+      "sketch": "NWC shared corpus",
+      "size_kb": 22.3,
+      "n_classes": 1,
+      "n_funcs": 19,
+      "top_classes": [
+        "CorpusManifestError"
+      ],
+      "doc_excerpt": "Deterministic corpus manifests for Lane J-NWC codec training.",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/vqvae_mask_codec.py",
+      "exists": true,
+      "sketch": "VQ-VAE mask codec",
+      "size_kb": 16.9,
+      "n_classes": 1,
+      "n_funcs": 15,
+      "top_classes": [
+        "VQVAEConfig"
+      ],
+      "doc_excerpt": "Lane VQ-VAE \u2014 Discrete codebook mask codec (van den Oord lineage).",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/mask_codec.py",
+      "exists": true,
+      "sketch": "Mask codec (AV1 monochrome)",
+      "size_kb": 36.1,
+      "n_classes": 0,
+      "n_funcs": 22,
+      "top_classes": [],
+      "doc_excerpt": "Mask extraction, encoding, and decoding for the GPU-lane submission.",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/mask_entropy_coder.py",
+      "exists": true,
+      "sketch": "Mask entropy coder",
+      "size_kb": 13.0,
+      "n_classes": 0,
+      "n_funcs": 9,
+      "top_classes": [],
+      "doc_excerpt": "Custom entropy coder for 5-class segmentation masks.",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/mask_prior.py",
+      "exists": true,
+      "sketch": "Mask prior",
+      "size_kb": 9.9,
+      "n_classes": 0,
+      "n_funcs": 5,
+      "top_classes": [],
+      "doc_excerpt": "Mask class-frequency prior (Lane MOS).",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/stbm1br_mask_codec.py",
+      "exists": true,
+      "sketch": "STBM1BR mask codec",
+      "size_kb": 33.9,
+      "n_classes": 3,
+      "n_funcs": 20,
+      "top_classes": [
+        "STBM1BRError",
+        "STBM1BRMetadata",
+        "_RangeDecoder"
+      ],
+      "doc_excerpt": "Standalone decoder for PR90 ``STBM1BR`` semantic topband mask segments.",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/stbm1br_rust_bridge.py",
+      "exists": true,
+      "sketch": "STBM1BR Rust bridge",
+      "size_kb": 3.1,
+      "n_classes": 1,
+      "n_funcs": 2,
+      "top_classes": [
+        "STBM1BRRustBridgeError"
+      ],
+      "doc_excerpt": "Explicit Rust bridge for STBM1BR semantic mask decode.",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/segmap_renderer.py",
+      "exists": true,
+      "sketch": "SegMap renderer (Selfcomp)",
+      "size_kb": 36.0,
+      "n_classes": 4,
+      "n_funcs": 12,
+      "top_classes": [
+        "ResidualBlock",
+        "SegMap",
+        "SegMapHomography",
+        "SegMapTrainer"
+      ],
+      "doc_excerpt": "Selfcomp ``SegMap`` renderer (mask -> RGB) + matching trainer.",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/segmap_film_canvas_renderer.py",
+      "exists": true,
+      "sketch": "SegMap FiLM canvas",
+      "size_kb": 7.0,
+      "n_classes": 1,
+      "n_funcs": 5,
+      "top_classes": [
+        "SegMapFilmCanvas"
+      ],
+      "doc_excerpt": "Lane FC \u2014 SegMap + FiLM-Canvas hybrid renderer.",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/szabolcs_archive.py",
+      "exists": true,
+      "sketch": "Szabolcs/Selfcomp archive",
+      "size_kb": 13.1,
+      "n_classes": 2,
+      "n_funcs": 4,
+      "top_classes": [
+        "SzabolcsArchiveStats",
+        "SzabolcsArchiveContents"
+      ],
+      "doc_excerpt": "SZv1 archive packer / unpacker for the szabolcs no-masks paradigm.",
+      "level": 4,
+      "pr106_compat": "obsolete",
+      "predicted_delta_band": [
+        0.0,
+        0.0
+      ],
+      "hours_to_integrate": 0,
+      "blockers": [
+        "Selfcomp 0.36 worse than PR106 0.21"
+      ],
+      "council_position": "Selfcomp",
+      "evidence_path": "PR56 0.36 [contest-CUDA]",
+      "rationale": "Selfcomp full archive. Worse than current frontier \u2014 Gaussian-LUT trick still composable separately.",
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/quantizr_faithful_renderer.py",
+      "exists": true,
+      "sketch": "Quantizr-faithful renderer",
+      "size_kb": 11.5,
+      "n_classes": 8,
+      "n_funcs": 18,
+      "top_classes": [
+        "SepConvGNAct",
+        "SepConv",
+        "SepResBlock",
+        "FiLMSepResBlock",
+        "SharedMaskDecoder"
+      ],
+      "doc_excerpt": "Lane Q-FAITHFUL: 1:1 reverse-engineering of Quantizr PR #55 architecture.",
+      "level": 4,
+      "pr106_compat": "obsolete",
+      "predicted_delta_band": [
+        0.0,
+        0.0
+      ],
+      "hours_to_integrate": 0,
+      "blockers": [
+        "Quantizr 0.33 worse than PR106 0.21 \u2014 but recipe portable"
+      ],
+      "council_position": "Quantizr",
+      "evidence_path": "Quantizr-faithful renderer landed [contest-CUDA]",
+      "rationale": "Quantizr faithful 88K-DSConv. Score worse than PR106 directly but FiLM/DSConv components could be extracted as a small decoder for sidecar.",
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/quantizr_faithful_export.py",
+      "exists": true,
+      "sketch": "Quantizr-faithful export",
+      "size_kb": 3.2,
+      "n_classes": 0,
+      "n_funcs": 2,
+      "top_classes": [],
+      "doc_excerpt": "QFAI export/load helpers for Lane Q-FAITHFUL JointFrameGenerator checkpoints.",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/henosis_pr82_transfer.py",
+      "exists": true,
+      "sketch": "PR #82 henosis transfer",
+      "size_kb": 30.4,
+      "n_classes": 4,
+      "n_funcs": 30,
+      "top_classes": [
+        "HenosisPr82TransferError",
+        "Pr82ReplayContract",
+        "Pr82Bundle",
+        "Pr82RandmultiGroup"
+      ],
+      "doc_excerpt": "PR82/Henosis atom-transfer helpers.",
+      "level": 3,
+      "pr106_compat": "obsolete",
+      "predicted_delta_band": [
+        0.0,
+        0.0
+      ],
+      "hours_to_integrate": 0,
+      "blockers": [
+        "henosis frontier 0.30 superseded by PR106 0.21"
+      ],
+      "council_position": "n/a",
+      "evidence_path": "PR82 replay 0.298 [contest-CUDA T4]",
+      "rationale": "Henosis transfer. Worse than current frontier.",
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/pr85_bundle.py",
+      "exists": true,
+      "sketch": "PR #85 bundle",
+      "size_kb": 29.2,
+      "n_classes": 4,
+      "n_funcs": 23,
+      "top_classes": [
+        "Pr85BundleError",
+        "Pr85Bundle",
+        "Pr85RuntimeExpansion",
+        "Pr85SegmentContract"
+      ],
+      "doc_excerpt": "Canonical parser/serializer for PR85 single-member ``x`` bundles.",
+      "level": 3,
+      "pr106_compat": "obsolete",
+      "predicted_delta_band": [
+        0.0,
+        0.0
+      ],
+      "hours_to_integrate": 0,
+      "blockers": [
+        "PR85 frontier (0.258) superseded by PR106 (0.209)"
+      ],
+      "council_position": "n/a",
+      "evidence_path": "PR85 replay 0.25807 [contest-CUDA T4]",
+      "rationale": "PR85 transfer codec. Score worse than current frontier by 0.05 \u2014 not stackable.",
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/public_frontier_intake.py",
+      "exists": true,
+      "sketch": "Public-frontier intake gate",
+      "size_kb": 19.7,
+      "n_classes": 2,
+      "n_funcs": 21,
+      "top_classes": [
+        "PublicFrontierIntakeError",
+        "_ParsedArchive"
+      ],
+      "doc_excerpt": "Static intake and byte diffing for public frontier archives.",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/fridrich.py",
+      "exists": true,
+      "sketch": "Fridrich UNIWARD primitives",
+      "size_kb": 51.3,
+      "n_classes": 2,
+      "n_funcs": 26,
+      "top_classes": [],
+      "doc_excerpt": "Fridrich steganalysis-inspired optimization for task-aware compression.",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/fridrich_losses.py",
+      "exists": true,
+      "sketch": "Fridrich losses",
+      "size_kb": 17.6,
+      "n_classes": 0,
+      "n_funcs": 9,
+      "top_classes": [],
+      "doc_excerpt": "Fridrich-inspired loss terms for inverse steganalysis.",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/uniward_texture.py",
+      "exists": true,
+      "sketch": "UNIWARD texture (Mallat-style)",
+      "size_kb": 5.9,
+      "n_classes": 0,
+      "n_funcs": 4,
+      "top_classes": [],
+      "doc_excerpt": "Lane SI-V3: UNIWARD-style texture probability masks.",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/saliency.py",
+      "exists": true,
+      "sketch": "Saliency",
+      "size_kb": 5.6,
+      "n_classes": 0,
+      "n_funcs": 3,
+      "top_classes": [],
+      "doc_excerpt": "Scorer-gradient saliency computation (PoseNet/SegNet gradient maps).",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/logit_margin_sensitivity_weighted.py",
+      "exists": true,
+      "sketch": "Lane 19 logit-margin",
+      "size_kb": 8.9,
+      "n_classes": 1,
+      "n_funcs": 3,
+      "top_classes": [
+        "SensitivityWeightedLogitMarginError"
+      ],
+      "doc_excerpt": "Lane 19 \u03b2-variant \u2014 sensitivity-weighted SegNet logit-margin loss.",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/self_compress.py",
+      "exists": true,
+      "sketch": "Self-compression",
+      "size_kb": 58.5,
+      "n_classes": 4,
+      "n_funcs": 36,
+      "top_classes": [
+        "_STEQuantize",
+        "LearnableBitDepth",
+        "SelfCompressingConv2d",
+        "SelfCompressingPostFilter"
+      ],
+      "doc_excerpt": "Self-compressing postfilter with learnable per-channel bit-depth.",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/stack_compositions.py",
+      "exists": true,
+      "sketch": "Stack compositions",
+      "size_kb": 20.2,
+      "n_classes": 1,
+      "n_funcs": 4,
+      "top_classes": [
+        "BitBudgetSplit"
+      ],
+      "doc_excerpt": "Cross-lane composition glue (per ``docs/stacking_architecture.md``).",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/parallel_inflate.py",
+      "exists": true,
+      "sketch": "Parallel inflate",
+      "size_kb": 11.8,
+      "n_classes": 0,
+      "n_funcs": 9,
+      "top_classes": [],
+      "doc_excerpt": "Parallel chunked inference for CPU inflate (Eureka 5).",
+      "level": 2,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        0.0,
+        0.0
+      ],
+      "hours_to_integrate": 2.0,
+      "blockers": [
+        "Pure runtime infra, no score gain"
+      ],
+      "council_position": "Carmack/Hotz",
+      "evidence_path": "Parallel inflate scaffold [scaffold]",
+      "rationale": "Speed up inflate to fit 30-min cap. PR106 already at 22.6s \u2014 comfortable.",
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/entropy_archive.py",
+      "exists": true,
+      "sketch": "Entropy archive",
+      "size_kb": 34.6,
+      "n_classes": 3,
+      "n_funcs": 24,
+      "top_classes": [
+        "ArithmeticCoder",
+        "ArithmeticDecoder",
+        "NeuralEntropyModel"
+      ],
+      "doc_excerpt": "Entropy-coded archive with learned probability models.",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/openpilot_seeding.py",
+      "exists": true,
+      "sketch": "openpilot seeding",
+      "size_kb": 42.1,
+      "n_classes": 1,
+      "n_funcs": 12,
+      "top_classes": [
+        "SupercomboUnavailable"
+      ],
+      "doc_excerpt": "Lane OS-A: openpilot supercombo seeding for pose TTO.",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/lane_mark_speed.py",
+      "exists": true,
+      "sketch": "Lane-mark speed",
+      "size_kb": 9.3,
+      "n_classes": 0,
+      "n_funcs": 6,
+      "top_classes": [],
+      "doc_excerpt": "Lane-marking-derived per-pair zoom scalar (Hotz analytical, zero archive cost).",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/scorer_loss_convergence_detector.py",
+      "exists": true,
+      "sketch": "Convergence detector",
+      "size_kb": 9.7,
+      "n_classes": 1,
+      "n_funcs": 8,
+      "top_classes": [
+        "ScorerLossConvergenceDetector"
+      ],
+      "doc_excerpt": "Scorer-loss convergence detector for SAGA-style auto warm-up.",
+      "level": null,
+      "pr106_compat": null,
+      "predicted_delta_band": null,
+      "hours_to_integrate": null,
+      "blockers": [],
+      "council_position": null,
+      "evidence_path": null,
+      "rationale": null,
+      "ev_score": 0.0
+    },
+    {
+      "path": "src/tac/lane_c_compliance.py",
+      "exists": true,
+      "sketch": "Lane C compliance gate",
+      "size_kb": 32.6,
+      "n_classes": 8,
+      "n_funcs": 9,
+      "top_classes": [
+        "AttestationMissing",
+        "AttestationMismatch",
+        "AttestationMalformed",
+        "AttestationSignatureInvalid",
+        "AttestationApproverNotInTrustRoot"
+      ],
+      "doc_excerpt": "Lane C \u03b4 compliance attestation utilities (Codex R5-2 #4 fix, 2026-04-27).",
+      "level": 4,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        0.0,
+        0.0
+      ],
+      "hours_to_integrate": 0,
+      "blockers": [
+        "Compliance gate, not score primitive"
+      ],
+      "council_position": "Contrarian",
+      "evidence_path": "Lane C compliance gate landed [contest-CUDA]",
+      "rationale": "Compliance enforcement, not optimization. Required for shipping.",
+      "ev_score": 0.0
+    }
+  ],
+  "pareto_top": [
+    {
+      "path": "src/tac/scorer_exploits.py",
+      "exists": true,
+      "sketch": "Scorer exploits",
+      "size_kb": 49.2,
+      "n_classes": 4,
+      "n_funcs": 25,
+      "top_classes": [
+        "PoseNetBlindSpots",
+        "SkipConnectionInfo",
+        "PreprocessNullspaceInfo"
+      ],
+      "doc_excerpt": "Scorer architecture exploitation for task-aware compression (Tricks 13-14).",
+      "level": 3,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        -0.02,
+        -0.005
+      ],
+      "hours_to_integrate": 4.0,
+      "blockers": [
+        "Strict-scorer rule: nothing at inflate time",
+        "Compress-time only"
+      ],
+      "council_position": "Yousfi/Fridrich/Quantizr",
+      "evidence_path": "Scorer exploits library [empirical]",
+      "rationale": "Documented scorer-blind-spot exploits \u2014 apply at TTO compress time.",
+      "ev_score": 0.003125
+    },
+    {
+      "path": "src/tac/water_filling_codec_v2.py",
+      "exists": true,
+      "sketch": "Lane \u03a9-W-V2 (40.98% bytes saved on Lane G v3)",
+      "size_kb": 23.7,
+      "n_classes": 3,
+      "n_funcs": 8,
+      "top_classes": [
+        "GateRegression",
+        "BlockFPIneligible",
+        "_OWV2Header"
+      ],
+      "doc_excerpt": "Lane \u03a9-W-V2 \u2014 water-fill + arithmetic terminal on Selfcomp/block-FP weights.",
+      "level": 4,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        -0.015,
+        -0.005
+      ],
+      "hours_to_integrate": 4.0,
+      "blockers": [
+        "Requires \u03b2-Fisher sensitivity map for PR106 HNeRV decoder",
+        "GPU $0 cap \u2014 sensitivity map needs forward pass"
+      ],
+      "council_position": "Shannon/Dykstra/Fridrich",
+      "evidence_path": "Lane \u03a9-W-V2 40.98% bytes [empirical] on Lane G v3 renderer.bin",
+      "rationale": "Per-parameter bit allocation by score-Jacobian magnitude. 40.98% byte saving was on a 88K-param renderer; HNeRV decoder may be larger but principle generalizes.",
+      "ev_score": 0.0025
+    },
+    {
+      "path": "src/tac/sensitivity_map.py",
+      "exists": true,
+      "sketch": "Sensitivity map (\u03b2-Fisher)",
+      "size_kb": 13.2,
+      "n_classes": 2,
+      "n_funcs": 10,
+      "top_classes": [
+        "SensitivityMapError",
+        "SensitivityMapStats"
+      ],
+      "doc_excerpt": "Score-sensitivity map contract for \u03b2 / \u03a9-W-V3.",
+      "level": 4,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        -0.005,
+        0.0
+      ],
+      "hours_to_integrate": 1.0,
+      "blockers": [
+        "Producer artifact for PR106 needs HNeRV decoder forward"
+      ],
+      "council_position": "Shannon/Dykstra/Fridrich/Selfcomp",
+      "evidence_path": "\u03b2-Fisher 1.016 LANDED [contest-CUDA T4]",
+      "rationale": "Foundational producer for water-fill / sjkl / IMP downstream. Itself doesn't score.",
+      "ev_score": 0.0025
+    },
+    {
+      "path": "src/tac/mask_grayscale_lut.py",
+      "exists": true,
+      "sketch": "Selfcomp Gaussian-LUT (PR #56)",
+      "size_kb": 8.1,
+      "n_classes": 0,
+      "n_funcs": 4,
+      "top_classes": [],
+      "doc_excerpt": "Selfcomp grayscale-LUT mask codec \u2014 lane MM rate-attack primitive.",
+      "level": 3,
+      "pr106_compat": "orthogonal",
+      "predicted_delta_band": [
+        -0.02,
+        -0.005
+      ],
+      "hours_to_integrate": 5.0,
+      "blockers": [
+        "LUT requires class-target derivation specific to PR106 HNeRV decoder output"
+      ],
+      "council_position": "Selfcomp/Mallat",
+      "evidence_path": "Selfcomp Gaussian-LUT [contest-CUDA]",
+      "rationale": "Replace neural mask channel with shared latent + Gaussian-softmax-LUT (\u03c3=15). Selfcomp 0.36 used this path. Could compose with PR106 decoder for ~150KB archive.",
+      "ev_score": 0.0025
+    },
+    {
+      "path": "src/tac/arithmetic_qint_codec.py",
+      "exists": true,
+      "sketch": "Arithmetic coder for qint streams",
+      "size_kb": 20.1,
+      "n_classes": 4,
+      "n_funcs": 18,
+      "top_classes": [
+        "_BitWriter",
+        "_BitReader",
+        "_ArithmeticEncoder",
+        "_ArithmeticDecoder"
+      ],
+      "doc_excerpt": "Lane SH \u2014 Shannon-optimal arithmetic coding for SegMap qint streams.",
+      "level": 3,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        -0.01,
+        -0.003
+      ],
+      "hours_to_integrate": 3.0,
+      "blockers": [
+        "PR106 already uses brotli \u2014 arithmetic gain is marginal unless context model is better"
+      ],
+      "council_position": "MacKay/Shannon",
+      "evidence_path": "Used in PD-V2 0.9974 sub-1.0 lineage [contest-CUDA]",
+      "rationale": "Arithmetic coder for quantized integer streams. PR106 latents (15849 bytes brotli) at entropy 7.985/8 \u2014 near saturated. Decoder weights similarly. Marginal.",
+      "ev_score": 0.002167
+    },
+    {
+      "path": "src/tac/quantizr_qzs3_codec.py",
+      "exists": true,
+      "sketch": "QZS3 alt entrypoint",
+      "size_kb": 28.6,
+      "n_classes": 1,
+      "n_funcs": 20,
+      "top_classes": [
+        "QZS4Candidate"
+      ],
+      "doc_excerpt": "QZS3 weight codec for Quantizr-faithful JointFrameGenerator models.",
+      "level": 4,
+      "pr106_compat": "replace",
+      "predicted_delta_band": [
+        -0.02,
+        -0.005
+      ],
+      "hours_to_integrate": 6.0,
+      "blockers": [
+        "Need HNeRV decoder weight extraction script",
+        "QZS3 expects FP4-quantized renderer state-dict shape \u2014 HNeRV decoder shape differs"
+      ],
+      "council_position": "Quantizr/Selfcomp",
+      "evidence_path": "Lane G v3 1.05 [contest-CUDA RTX 4090]",
+      "rationale": "Replace PR106's brotli-packed decoder (170KB) with grouped variable-bit-depth FP4 + arithmetic. Shannon-entropy floor on dense decoder weights ~ -3 to -10KB if decoder is FP32, less if already FP16.",
+      "ev_score": 0.002083
+    },
+    {
+      "path": "src/tac/uniward_delta.py",
+      "exists": true,
+      "sketch": "UNIWARD delta",
+      "size_kb": 29.6,
+      "n_classes": 1,
+      "n_funcs": 8,
+      "top_classes": [
+        "DeltaSpec"
+      ],
+      "doc_excerpt": "Lane C: UNIWARD \u03b4-injection on rendered frames at compress-time.",
+      "level": 3,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        -0.02,
+        -0.005
+      ],
+      "hours_to_integrate": 6.0,
+      "blockers": [
+        "UNIWARD attestation gate must be passed before deploy"
+      ],
+      "council_position": "Fridrich/Yousfi",
+      "evidence_path": "Lane UNIWARD v8 1.14 [contest-CPU advisory]",
+      "rationale": "Detector-informed embedding \u2014 Fridrich's textured-region undetectable error placement. Apply to PR106's mask channel for SegNet error masking.",
+      "ev_score": 0.002083
+    },
+    {
+      "path": "src/tac/block_fp_codec.py",
+      "exists": true,
+      "sketch": "Block-FP codec (Selfcomp paradigm)",
+      "size_kb": 34.1,
+      "n_classes": 1,
+      "n_funcs": 17,
+      "top_classes": [
+        "BlockFPHeader"
+      ],
+      "doc_excerpt": "Block-floating-point ternary codec for Lane SZ (szabolcs paradigm).",
+      "level": 3,
+      "pr106_compat": "replace",
+      "predicted_delta_band": [
+        -0.015,
+        -0.005
+      ],
+      "hours_to_integrate": 5.0,
+      "blockers": [
+        "Block-FP is per-tensor \u2014 must adapt per-channel for HNeRV decoder"
+      ],
+      "council_position": "Selfcomp/Quantizr",
+      "evidence_path": "Selfcomp 0.36 [contest-CUDA] uses block-FP",
+      "rationale": "Replace PR106 decoder packing with block-FP. Selfcomp's 1.017 bpw effective matches Quantizr's FP4 \u2014 could shave ~5-15KB on a 170KB decoder.",
+      "ev_score": 0.002
+    },
+    {
+      "path": "src/tac/qp1_pose_codec.py",
+      "exists": true,
+      "sketch": "QP1 pose codec \u2014 C-067 0.31561703 lineage",
+      "size_kb": 19.3,
+      "n_classes": 2,
+      "n_funcs": 18,
+      "top_classes": [
+        "QPV1DimensionStream",
+        "QPV1Payload"
+      ],
+      "doc_excerpt": "QP1 pose codec \u2014 PR #67 EthanYang qpose14_qzs3 byte-identical.",
+      "level": 4,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        -0.005,
+        -0.002
+      ],
+      "hours_to_integrate": 2.0,
+      "blockers": [
+        "PR106 baseline does not currently use a pose sidecar; need adapter to inject pose-delta as charged sidecar inside HNeRV archive"
+      ],
+      "council_position": "EthanYang/Hotz",
+      "evidence_path": "C-067 0.31561703 [contest-CUDA T4]",
+      "rationale": "Already shipped in C-067 lineage. PR106 pose contribution 0.018306 \u2014 sidecar + arithmetic-coded pose delta could shave ~0.001-0.003 if PR106 pose was bottlenecked. Risk: PR106's pose may already be near floor.",
+      "ev_score": 0.00175
+    },
+    {
+      "path": "src/tac/self_compressing_nn.py",
+      "exists": true,
+      "sketch": "Self-compressing NN (Lane SC)",
+      "size_kb": 22.8,
+      "n_classes": 4,
+      "n_funcs": 21,
+      "top_classes": [
+        "LearnableChannelGate",
+        "_LayerAccount",
+        "JointBitsAndWidthAccountant",
+        "SCNNRateScheduler"
+      ],
+      "doc_excerpt": "Lane SCNN \u2014 Self-Compressing Neural Networks (Wang et al. arXiv:2301.13142).",
+      "level": 2,
+      "pr106_compat": "replace",
+      "predicted_delta_band": [
+        -0.02,
+        -0.008
+      ],
+      "hours_to_integrate": 8.0,
+      "blockers": [
+        "Self-compressing NN training is multi-hour CUDA"
+      ],
+      "council_position": "Selfcomp/Schmidhuber",
+      "evidence_path": "Self-compressing NN scaffold [scaffold]",
+      "rationale": "Schmidhuber self-compression \u2014 train HNeRV decoder to compress itself recursively.",
+      "ev_score": 0.00175
+    },
+    {
+      "path": "src/tac/pose_gaussian_process.py",
+      "exists": true,
+      "sketch": "Pose GP (Lane GP)",
+      "size_kb": 7.0,
+      "n_classes": 1,
+      "n_funcs": 5,
+      "top_classes": [
+        "PoseGPModel"
+      ],
+      "doc_excerpt": "Deterministic rank-1 pose compression via a tiny polynomial model.",
+      "level": 3,
+      "pr106_compat": "orthogonal",
+      "predicted_delta_band": [
+        -0.01,
+        -0.003
+      ],
+      "hours_to_integrate": 4.0,
+      "blockers": [
+        "GP fit may not match PR106's pose representation"
+      ],
+      "council_position": "MacKay/Schmidhuber",
+      "evidence_path": "Lane GP scaffold [partial]",
+      "rationale": "Bayesian pose fit \u2014 could replace PR106 pose path with low-rank GP encoded poses.",
+      "ev_score": 0.001625
+    },
+    {
+      "path": "src/tac/sjkl_basis.py",
+      "exists": true,
+      "sketch": "Score-Jacobian KL basis (Wave-\u03a9 paradigm)",
+      "size_kb": 29.6,
+      "n_classes": 1,
+      "n_funcs": 21,
+      "top_classes": [
+        "SJKLBasis"
+      ],
+      "doc_excerpt": "Score-Jacobian Karhunen-Lo\u00e8ve (SJ-KL) basis primitive.",
+      "level": 2,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        -0.02,
+        -0.005
+      ],
+      "hours_to_integrate": 8.0,
+      "blockers": [
+        "Requires score-Jacobian computation against HNeRV decoder",
+        "PR98 HNeRV-adapter integration as residual basis"
+      ],
+      "council_position": "Shannon/Ball\u00e9",
+      "evidence_path": "Wave-\u03a9-1 council 22/22 GO [prediction]",
+      "rationale": "Score-Jacobian Karhunen-Lo\u00e8ve basis as task-aware residual primitive \u2014 Shannon-floor-optimal under known scorer. Stack potential predicted 0.180.",
+      "ev_score": 0.001563
+    },
+    {
+      "path": "src/tac/nerv_mask_codec.py",
+      "exists": true,
+      "sketch": "NeRV mask codec (Lane 12)",
+      "size_kb": 36.8,
+      "n_classes": 5,
+      "n_funcs": 18,
+      "top_classes": [
+        "NeRVSamplingComponent",
+        "NeRVSamplingPool",
+        "NeRVMaskCodec",
+        "NeRVHeader",
+        "NeRVMaskTrainer"
+      ],
+      "doc_excerpt": "Lane 12 \u2014 NeRV / Cool-Chic mask codec (van den Oord + Mallat lead).",
+      "level": 2,
+      "pr106_compat": "orthogonal",
+      "predicted_delta_band": [
+        -0.025,
+        -0.01
+      ],
+      "hours_to_integrate": 12.0,
+      "blockers": [
+        "NeRV training requires ~5-10h GPU"
+      ],
+      "council_position": "Karpathy/Schmidhuber/Quantizr",
+      "evidence_path": "Lane 12 NeRV \u03b1-redesign [partial]",
+      "rationale": "NeRV implicit neural representation for mask channel. 23.6KB / 94.4% byte savings empirical [Lane 12 Phase G]. Stack with PR106 HNeRV decoder for combined neural codec.",
+      "ev_score": 0.001458
+    },
+    {
+      "path": "src/tac/raft_pose.py",
+      "exists": true,
+      "sketch": "RAFT-derived pose (Lane GP)",
+      "size_kb": 5.6,
+      "n_classes": 0,
+      "n_funcs": 6,
+      "top_classes": [],
+      "doc_excerpt": "RAFT-derived pose-dim0 estimation for compress-time lane experiments.",
+      "level": 3,
+      "pr106_compat": "orthogonal",
+      "predicted_delta_band": [
+        -0.015,
+        -0.005
+      ],
+      "hours_to_integrate": 8.0,
+      "blockers": [
+        "RAFT requires CUDA forward (we capped GPU $0)",
+        "Already explored Lane GP \u2014 pose GP fit"
+      ],
+      "council_position": "Hotz/MacKay",
+      "evidence_path": "Lane GP scaffold [partial]",
+      "rationale": "Replace PR106's pose pathway with RAFT optical-flow-derived ego-motion. PR106 pose contribution 0.018306; RAFT-derived pose at training time is industry-standard openpilot path.",
+      "ev_score": 0.00125
+    },
+    {
+      "path": "src/tac/saliency_inversion.py",
+      "exists": true,
+      "sketch": "Saliency inversion",
+      "size_kb": 20.5,
+      "n_classes": 0,
+      "n_funcs": 9,
+      "top_classes": [],
+      "doc_excerpt": "Lane SI: Saliency-Inversion compression weighting.",
+      "level": 3,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        -0.008,
+        -0.002
+      ],
+      "hours_to_integrate": 4.0,
+      "blockers": [
+        "Inversion needs scorer forward at compress time"
+      ],
+      "council_position": "Fridrich/Mallat",
+      "evidence_path": "Saliency inversion scaffold [scaffold]",
+      "rationale": "Invert saliency map \u2014 encode where scorer is INSENSITIVE (Fridrich principle).",
+      "ev_score": 0.00125
+    },
+    {
+      "path": "src/tac/joint_admm_proximal_water_filling_v2.py",
+      "exists": true,
+      "sketch": "Joint-ADMM water-fill proximal step",
+      "size_kb": 11.9,
+      "n_classes": 2,
+      "n_funcs": 5,
+      "top_classes": [
+        "WaterFillingV2FrontierSample",
+        "WaterFillingV2ProximalCodec"
+      ],
+      "doc_excerpt": "Lane Joint-ADMM proximal wrapper for water_filling_codec_v2 (Lane \u03a9-W-V2).",
+      "level": 4,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        -0.005,
+        -0.002
+      ],
+      "hours_to_integrate": 3.0,
+      "blockers": [
+        "ADMM + water-fill needs sensitivity map for PR106"
+      ],
+      "council_position": "Boyd/Dykstra/Shannon",
+      "evidence_path": "ADMM proximal water-fill landed [empirical]",
+      "rationale": "Joint-ADMM water-fill proximal \u2014 feeds into ADMM coordinator.",
+      "ev_score": 0.001167
+    },
+    {
+      "path": "src/tac/wavelet_mask_codec.py",
+      "exists": true,
+      "sketch": "Wavelet mask codec (Mallat)",
+      "size_kb": 20.2,
+      "n_classes": 1,
+      "n_funcs": 16,
+      "top_classes": [
+        "WaveletConfig"
+      ],
+      "doc_excerpt": "Lane Wavelet \u2014 Daubechies/Haar wavelet-domain mask codec (Mallat lineage).",
+      "level": 2,
+      "pr106_compat": "orthogonal",
+      "predicted_delta_band": [
+        -0.01,
+        -0.003
+      ],
+      "hours_to_integrate": 6.0,
+      "blockers": [
+        "Wavelet codec needs pose-aware atomic decomposition"
+      ],
+      "council_position": "Mallat/MacKay",
+      "evidence_path": "Wavelet mask codec scaffold [scaffold]",
+      "rationale": "Mallat-style wavelet basis for mask coding \u2014 sparse coefficients + arithmetic coding. Could replace AV1 path entirely if entropy is lower.",
+      "ev_score": 0.001083
+    },
+    {
+      "path": "src/tac/mdl_bayesian_codec.py",
+      "exists": true,
+      "sketch": "MDL Bayesian codec (MacKay)",
+      "size_kb": 16.7,
+      "n_classes": 2,
+      "n_funcs": 10,
+      "top_classes": [
+        "MDLCodecResult",
+        "OccamCheck"
+      ],
+      "doc_excerpt": "Lane MDL/Bayesian \u2014 meta codec-comparison framework (MacKay).",
+      "level": 2,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        -0.01,
+        -0.003
+      ],
+      "hours_to_integrate": 6.0,
+      "blockers": [
+        "MDL Bayesian codec needs training"
+      ],
+      "council_position": "MacKay/Schmidhuber/Shannon",
+      "evidence_path": "MDL Bayesian codec scaffold [scaffold]",
+      "rationale": "MacKay MDL Bayesian \u2014 variational coder with Bayesian prior on weights. Strong theoretical foundation, untested on our scale.",
+      "ev_score": 0.001083
+    },
+    {
+      "path": "src/tac/balle_hyperprior_codec.py",
+      "exists": true,
+      "sketch": "Ball\u00e9 hyperprior codec",
+      "size_kb": 35.0,
+      "n_classes": 4,
+      "n_funcs": 19,
+      "top_classes": [
+        "HyperEncoder",
+        "HyperDecoder",
+        "BalleHyperpriorCodec",
+        "BHv1Header"
+      ],
+      "doc_excerpt": "Lane 20 \u2014 Production Ball\u00e9 hyperprior codec for qint streams.",
+      "level": 2,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        -0.015,
+        -0.005
+      ],
+      "hours_to_integrate": 10.0,
+      "blockers": [
+        "Hyperprior training is non-trivial; needs CUDA"
+      ],
+      "council_position": "Ball\u00e9/MacKay",
+      "evidence_path": "Hyperprior codec scaffold [scaffold]",
+      "rationale": "Replace fixed factorized priors with Ball\u00e9 2018 scale hyperprior. Standard rate prediction net for residual bits.",
+      "ev_score": 0.001
+    },
+    {
+      "path": "src/tac/balle_sensitivity_weighted.py",
+      "exists": true,
+      "sketch": "Ball\u00e9 sensitivity-weighted",
+      "size_kb": 11.2,
+      "n_classes": 2,
+      "n_funcs": 5,
+      "top_classes": [
+        "SensitivityWeightedBalleError",
+        "SensitivityConditionedHyperDecoder"
+      ],
+      "doc_excerpt": "Lane 20 \u03b2-variant \u2014 sensitivity-conditioned Ball\u00e9 hyperprior \u03c3 prediction.",
+      "level": 3,
+      "pr106_compat": "additive",
+      "predicted_delta_band": [
+        -0.005,
+        -0.001
+      ],
+      "hours_to_integrate": 3.0,
+      "blockers": [
+        "Hyperprior + sensitivity composition needs prototype"
+      ],
+      "council_position": "Ball\u00e9/Shannon",
+      "evidence_path": "Sensitivity-weighted Ball\u00e9 scaffold [scaffold]",
+      "rationale": "Sensitivity-weighted hyperprior \u2014 entropy bottleneck with task-aware bit allocation.",
+      "ev_score": 0.001
+    }
+  ]
+}
