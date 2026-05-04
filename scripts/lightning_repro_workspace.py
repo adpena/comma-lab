@@ -43,6 +43,7 @@ DEFAULT_SOURCE_PATHS = (
     "submissions/robust_current/inflate_segmap.py",
     "submissions/robust_current/inflate_segmap_arithmetic.py",
     "submissions/robust_current/inflate_segmap_film_canvas.py",
+    "submissions/robust_current/unpack_renderer_payload.py",
     "submissions/robust_current/runner.py",
     "submissions/robust_current/sky_degrade.py",
     "docs",
@@ -74,6 +75,9 @@ EXCLUDED_SOURCE_SUFFIXES = (
     ".raw",
     ".zip",
 )
+EXCLUDED_HIDDEN_SOURCE_NAMES = {
+    ".DS_Store",
+}
 REQUIREMENTS_MODES = ("uv-sync", "verify-only", "no-install")
 BANNED_LIGHTNING_VERSIONS = {"2.6.2", "2.6.3"}
 MINI_SHAI_HULUD_REPO_INDICATORS = (
@@ -118,6 +122,14 @@ class LightningRuntimePreflightError(RuntimeError):
         self.diagnostic = diagnostic
 
 
+class LightningLocalUvLockError(RuntimeError):
+    """Raised when local uv.lock cannot support remote `uv sync --locked`."""
+
+    def __init__(self, message: str, diagnostic: dict[str, Any]) -> None:
+        super().__init__(message)
+        self.diagnostic = diagnostic
+
+
 def _utc_now() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
@@ -156,6 +168,55 @@ def _capture(cmd: list[str], *, cwd: Path = REPO_ROOT) -> str | None:
     except Exception:
         return None
     return proc.stdout.strip()
+
+
+def ensure_local_uv_lock_current(
+    *,
+    cwd: Path = REPO_ROOT,
+    runner: RunFn = subprocess.run,
+) -> dict[str, Any]:
+    """Fail before SSH if remote `uv sync --locked` would reject uv.lock."""
+
+    cmd = ["uv", "lock", "--check"]
+    diagnostic: dict[str, Any] = {
+        "schema_version": 1,
+        "tool": "lightning_repro_workspace_local_uv_lock_preflight",
+        "recorded_at_utc": _utc_now(),
+        "cwd": str(cwd),
+        "command": cmd,
+    }
+    try:
+        proc = runner(
+            cmd,
+            cwd=cwd,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+    except FileNotFoundError as exc:
+        diagnostic.update({"status": "fail", "error": repr(exc)})
+        raise LightningLocalUvLockError(
+            "FATAL: --requirements-mode uv-sync requires local `uv lock --check`, but uv is not on PATH",
+            diagnostic,
+        ) from exc
+
+    diagnostic.update(
+        {
+            "status": "ok" if proc.returncode == 0 else "fail",
+            "returncode": proc.returncode,
+            "stdout_tail": (proc.stdout or "")[-2000:],
+            "stderr_tail": (proc.stderr or "")[-2000:],
+        }
+    )
+    if proc.returncode != 0:
+        raise LightningLocalUvLockError(
+            "FATAL: local uv.lock is stale for --requirements-mode uv-sync; "
+            "run `uv lock` or relaunch with `--requirements-mode no-install` "
+            "when using a previously verified remote exact-eval environment.",
+            diagnostic,
+        )
+    return diagnostic
 
 
 def _ssh_run(
@@ -623,6 +684,11 @@ def _is_excluded(rel: Path) -> bool:
     parts = set(rel.parts)
     if parts & EXCLUDED_DIR_NAMES:
         return True
+    for part in rel.parts:
+        if part == "__MACOSX" or part.startswith("._") or part in EXCLUDED_HIDDEN_SOURCE_NAMES:
+            return True
+        if part.startswith("."):
+            return True
     rel_posix = rel.as_posix()
     if rel_posix.endswith(EXCLUDED_SOURCE_SUFFIXES):
         return True
@@ -757,7 +823,15 @@ def _remote_python_command(
     if requirements_mode == "uv-sync":
         install_block = "\n".join(
             [
-                "UV_LINK_MODE=${UV_LINK_MODE:-copy} uv sync --locked --extra runtime",
+                "if [ ! -f scripts/ensure_remote_uv.sh ]; then",
+                "  echo 'FATAL: scripts/ensure_remote_uv.sh missing; remote source bundle incomplete' >&2",
+                "  exit 31",
+                "fi",
+                "UV_BIN=$(bash scripts/ensure_remote_uv.sh --symlink-system)",
+                "export UV_BIN",
+                'export PATH="$(dirname "$UV_BIN"):$PATH"',
+                'test -x "$UV_BIN"',
+                'UV_LINK_MODE=${UV_LINK_MODE:-copy} "$UV_BIN" sync --locked --extra runtime',
                 f"PYBIN={requested_py}" if requested_py else "PYBIN=.venv/bin/python",
                 'test -x "$PYBIN"',
             ]
@@ -792,10 +866,6 @@ def _remote_python_command(
             "set -euo pipefail",
             f"cd {shlex.quote(remote_pact)}",
             "UV_BIN=$(command -v uv || true)",
-            'if [ -z "$UV_BIN" ] && [ ' + shlex.quote(requirements_mode) + ' = uv-sync ]; then',
-            "  echo 'FATAL: uv is required for --requirements-mode uv-sync' >&2",
-            "  exit 31",
-            "fi",
             install_block,
             "$PYBIN - <<'PY'",
             "import importlib.metadata as md, json, os, pathlib, platform, subprocess, sys, time",
@@ -969,6 +1039,11 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv or sys.argv[1:])
     if args.remote == "ssh.lightning.ai":
         raise SystemExit("set --remote or LIGHTNING_USER to include the Studio SSH user")
+    if args.requirements_mode == "uv-sync" and not args.dry_run and not args.ssh_check_only:
+        try:
+            ensure_local_uv_lock_current()
+        except LightningLocalUvLockError as exc:
+            raise SystemExit(str(exc)) from exc
 
     if args.ssh_check_only:
         diagnostic: dict[str, Any]

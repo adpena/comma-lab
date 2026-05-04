@@ -47,6 +47,12 @@ dependencies = [
     # gets brotli automatically. The library is small (~300KB wheel) and
     # has no native build dependencies on T4 / 4090 wheels.
     "brotli>=1.0",
+    # Public PR86 / HPAC-family archives use constriction queue arithmetic
+    # coding plus PPMd-compressed entropy-model weights in their inflate path.
+    # Keep these as hard runtime dependencies so exact-eval and replay
+    # environments fail at lock/install time instead of inside a paid CUDA job.
+    "constriction>=0.4,<0.5",
+    "pyppmd>=1.3,<2.0",
     # Codex R5-3 #1 fix (2026-04-27): the Lane C compliance gate uses
     # Ed25519 detached signatures over a canonical-JSON serialization of
     # the attestation's trust-bearing fields. `cryptography` ships
@@ -63,7 +69,18 @@ dependencies = [
 
 [project.optional-dependencies]
 mlx = ["mlx>=0.5"]
-viz = ["plotly>=5.0"]
+viz = [
+    "plotly>=5.0",
+    "matplotlib>=3.8",
+    "pillow>=10.0",
+    "imageio>=2.34",
+]
+analysis = [
+    # Optional acceleration and table tooling for planning-only profilers,
+    # not contest runtime dependencies.
+    "dask[array]>=2024.1",
+    "polars>=0.20",
+]
 notebooks = ["marimo>=0.3"]
 # 2026-04-26 — canonical runtime extras for GPU training/eval deploys.
 # scripts/remote_*_bootstrap.sh installs `tac[runtime]` so adding a new
@@ -160,6 +177,7 @@ timeout = 60
 markers = [
     "slow: marks tests that load scorer models (deselect with '-m \"not slow\"')",
     "compliance: marks tests that verify upstream scorer compliance",
+    "cuda: marks tests that require a CUDA device (skipped on CPU/MPS hosts)",
 ]
 
 [tool.ty]

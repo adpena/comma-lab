@@ -51,10 +51,13 @@ import torch.nn.functional as F
 # ---------------------------------------------------------------------------
 # Path setup (must run before tac imports)
 # ---------------------------------------------------------------------------
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 _CANDIDATE_UPSTREAM = [
     Path(os.environ["TAC_UPSTREAM_DIR"]) if os.environ.get("TAC_UPSTREAM_DIR") else None,
     Path(os.environ["UPSTREAM_ROOT"]) if os.environ.get("UPSTREAM_ROOT") else None,
-    Path(__file__).resolve().parent.parent / "upstream",
+    REPO_ROOT / "upstream",
 ]
 UPSTREAM_ROOT: Path | None = None
 for _p in _CANDIDATE_UPSTREAM:
@@ -261,6 +264,12 @@ def parse_args() -> argparse.Namespace:
                    help="Path to precomputed GT pose targets (.pt, shape [N_pairs, 6]). "
                         "Skips expensive PoseNet inference on all GT frame pairs. "
                         "Generate with: extract_gt_pose_targets() and torch.save().")
+    p.add_argument("--skip-proxy-score", action="store_true",
+                   help="Skip GT-video proxy scoring at the end. This is for "
+                        "archive-build isolation runs where --gt-pose-targets "
+                        "is already supplied and exact CUDA auth eval will be "
+                        "run on the rebuilt archive. It avoids decoding GT "
+                        "frames that do not affect the archive bytes.")
     p.add_argument("--smoke", action="store_true",
                    help="Smoke test: 20 frames, 100 steps")
     # CLAUDE.md non-negotiable: eval_roundtrip ALWAYS True. Removed
@@ -553,9 +562,10 @@ def load_renderer(checkpoint_path: str, device: torch.device) -> torch.nn.Module
     from pathlib import Path
 
     raw = Path(checkpoint_path).read_bytes()
+    magic = raw[:4]
 
     # Auto-detect format by magic bytes
-    if raw[:4] == b"ASYM":
+    if magic == b"ASYM":
         from tac.renderer_export import load_asymmetric_checkpoint
         model = load_asymmetric_checkpoint(raw, device=str(device))
         model = model.eval()
@@ -564,7 +574,7 @@ def load_renderer(checkpoint_path: str, device: torch.device) -> torch.nn.Module
         print(f"[renderer] Loaded ASYM: {n_params:,} params, pose_dim={pose_dim}", flush=True)
         return model
 
-    if raw[:4] == b"FP4A":
+    if magic == b"FP4A":
         from tac.renderer_export import load_asymmetric_checkpoint_fp4
         model = load_asymmetric_checkpoint_fp4(raw, device=str(device))
         model = model.eval()
@@ -572,6 +582,63 @@ def load_renderer(checkpoint_path: str, device: torch.device) -> torch.nn.Module
         pose_dim = model.pose_dim
         print(f"[renderer] Loaded FP4A: {n_params:,} params, pose_dim={pose_dim}", flush=True)
         return model
+
+    if magic == b"OWV3":
+        # Lane Ω-W-V3 sensitivity-weighted water-fill renderer (used by
+        # OWv3 wave3 / wave4 archives). Decode via canonical
+        # tac.owv3_sensitivity_weighted.decode_owv3_archive — same path as
+        # submissions/robust_current/inflate_renderer.py:_load_renderer.
+        from tac.owv3_sensitivity_weighted import decode_owv3_archive
+        model = decode_owv3_archive(data=raw, device=str(device))
+        model = model.eval()
+        for p_param in model.parameters():
+            p_param.requires_grad = False
+        n_params = sum(p.numel() for p in model.parameters())
+        pose_dim = getattr(model, "pose_dim", 0)
+        print(f"[renderer] Loaded OWV3: {n_params:,} params, pose_dim={pose_dim}", flush=True)
+        return model
+
+    runtime_renderer_magics = {
+        b"DPSM", b"I4LZ", b"FP8H", b"CCh1", b"C3R1", b"SCv1", b"SZv1",
+        b"QFAI", b"QZS3", b"MQZ1", b"NWC1", b"OWV2", b"IMPS",
+    }
+    if magic in runtime_renderer_magics or raw[:8] == b"NWCS1\0\0\0":
+        # Keep pose-TTO in lockstep with contest inflate. A QZS3 C-063
+        # stale-pose isolation run hit the old partial-table bug here:
+        # QZS3 fell through to torch.load() and crashed before producing
+        # scientific evidence. Packed contest renderer formats must delegate
+        # to the runtime loader, not grow ad hoc branches in this tool.
+        import importlib.util
+
+        inflate_path = REPO_ROOT / "submissions" / "robust_current" / "inflate_renderer.py"
+        spec = importlib.util.spec_from_file_location(
+            "_pact_robust_current_inflate_renderer_for_optimize_poses",
+            inflate_path,
+        )
+        if spec is None or spec.loader is None:
+            raise RuntimeError(f"Cannot load contest inflate renderer from {inflate_path}")
+        inflate_mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(inflate_mod)
+        _load_contest_renderer = inflate_mod._load_renderer
+        model = _load_contest_renderer(checkpoint_path, str(device)).eval()
+        for p_param in model.parameters():
+            p_param.requires_grad = False
+        n_params = sum(p.numel() for p in model.parameters())
+        pose_dim = getattr(model, "pose_dim", 0)
+        print(
+            f"[renderer] Loaded contest runtime {magic!r}: "
+            f"{n_params:,} params, pose_dim={pose_dim}",
+            flush=True,
+        )
+        return model
+
+    pytorch_pickle_magics = (b"PK\x03\x04", b"\x80\x02", b"\x80\x03", b"\x80\x04", b"\x80\x05")
+    if not raw.startswith(pytorch_pickle_magics):
+        raise RuntimeError(
+            "Renderer checkpoint is neither a known contest renderer wire "
+            f"format nor a torch.save payload: magic={magic!r}, path={checkpoint_path}. "
+            "Refusing to call torch.load() on unknown binary bytes."
+        )
 
     # PyTorch .pt format
     from tac.renderer import AsymmetricPairGenerator
@@ -1185,6 +1252,30 @@ def _enforce_eval_roundtrip(args) -> None:
     enforce_eval_roundtrip(args, output_dir=output_dir, write_provenance=output_dir is not None)
 
 
+QZS3_CUDA_MAX_BATCH_PAIRS = 32
+
+
+def apply_renderer_cuda_batch_safety(args: argparse.Namespace, renderer: nn.Module) -> int:
+    """Cap known packed runtime renderers before CUDA Conv2d index math fails."""
+
+    requested = int(getattr(args, "batch_pairs", 0))
+    device = str(getattr(args, "device", ""))
+    is_qzs3_runtime = bool(getattr(renderer, "q_faithful", False))
+    if (
+        requested > QZS3_CUDA_MAX_BATCH_PAIRS
+        and device.startswith("cuda")
+        and is_qzs3_runtime
+    ):
+        args.batch_pairs = QZS3_CUDA_MAX_BATCH_PAIRS
+        print(
+            "[batch-safety] QZS3 runtime renderer on CUDA: "
+            f"capping --batch-pairs {requested} -> {args.batch_pairs} "
+            "to stay under PyTorch Conv2d 32-bit indexing limits.",
+            flush=True,
+        )
+    return int(getattr(args, "batch_pairs", requested))
+
+
 def main():
     args = parse_args()
 
@@ -1396,6 +1487,7 @@ def main():
     t0 = time.monotonic()
     renderer = load_renderer(args.checkpoint, device)
     print(f"[2/6] Renderer loaded in {time.monotonic() - t0:.1f}s", flush=True)
+    apply_renderer_cuda_batch_safety(args, renderer)
 
     # Load zoom warp for use_zoom_flow models
     zoom_warp = None
@@ -1429,13 +1521,30 @@ def main():
         sys.exit(1)
 
     # ── Step 3: Decode GT video + extract masks + pose targets ──────────
-    print(f"\n[3/6] Decoding GT video ({args.n_frames} frames)...", flush=True)
-    t0 = time.monotonic()
-    from tac.data import load_gt_video
-    gt_frames = load_gt_video(video_path, n_frames=args.n_frames)
-    args.n_frames = len(gt_frames)
-    n_pairs = args.n_frames // 2
-    print(f"[3/6] Decoded {args.n_frames} frames in {time.monotonic() - t0:.1f}s", flush=True)
+    gt_pose_targets_available = bool(args.gt_pose_targets and Path(args.gt_pose_targets).exists())
+    needs_gt_video = (
+        (not gt_pose_targets_available)
+        or kl_distill_active
+        or (not args.skip_proxy_score)
+    )
+    gt_frames: list[torch.Tensor] = []
+    if needs_gt_video:
+        print(f"\n[3/6] Decoding GT video ({args.n_frames} frames)...", flush=True)
+        t0 = time.monotonic()
+        from tac.data import load_gt_video
+        gt_frames = load_gt_video(video_path, n_frames=args.n_frames)
+        args.n_frames = len(gt_frames)
+        n_pairs = args.n_frames // 2
+        print(f"[3/6] Decoded {args.n_frames} frames in {time.monotonic() - t0:.1f}s", flush=True)
+    else:
+        args.n_frames = args.n_frames - (args.n_frames % 2)
+        n_pairs = args.n_frames // 2
+        print(
+            f"\n[3/6] Skipping GT video decode: precomputed pose targets are "
+            f"available, KL distill is disabled, and --skip-proxy-score is set "
+            f"({args.n_frames} frames, {n_pairs} pairs).",
+            flush=True,
+        )
 
     print("\n[4/6] Loading/extracting masks and pose targets...", flush=True)
     t0 = time.monotonic()
@@ -2345,49 +2454,55 @@ def main():
         print(f"  Saved optimized_latents.pt: {optimized_latents.shape}", flush=True)
 
     # Compute proxy score with GT poses vs optimized poses
-    print("\n  Computing proxy scores (GT poses vs optimized poses)...", flush=True)
-    from tac.scorer import compute_proxy_score
-
-    # Lane M-V2: optimized_poses is now ALWAYS (N, 6) — in radial-zoom
-    # mode dim 0 is the optimized scalar and dims 1-5 are the frozen
-    # baseline values (composed in the save block above). No projection
-    # needed for the renderer call; we keep the (N, 1) defensive branch
-    # only as a fallback for any future code path that bypasses the
-    # save-block composition (it should never trigger on the canonical
-    # path; if it does we pad with zeros to AT LEAST avoid a shape
-    # mismatch — but the warning prints loud so the operator notices).
-    if args.pose_mode == "radial-zoom" and optimized_poses.shape[1] == 1:
-        print(
-            "  [Lane M-V2 WARNING] optimized_poses is (N, 1) at proxy-score time. "
-            "The save-block composition should have produced (N, 6) with frozen "
-            "baseline dims 1-5. Falling back to ZERO pad for the in-memory render "
-            "(this will undercount PoseNet — fix the save-block path).",
-            flush=True,
-        )
-        zeros_pad = torch.zeros(optimized_poses.shape[0], 6 - 1, dtype=optimized_poses.dtype)  # OFF_MANIFOLD_OK: warned-fallback path for radial-zoom save-block bug; emits explicit "[Lane M-V2 WARNING]" so the operator knows the score is undercounted (proxy-only, never used in archive).
-        optimized_poses_for_render = torch.cat([optimized_poses, zeros_pad], dim=-1)
-    else:
+    if args.skip_proxy_score:
+        print("\n  Skipping proxy scores (--skip-proxy-score); exact CUDA auth eval is required.", flush=True)
+        gt_score = {"score": float("nan"), "pose": float("nan"), "seg": float("nan"), "skipped": True}
+        opt_score = {"score": float("nan"), "pose": float("nan"), "seg": float("nan"), "skipped": True}
         optimized_poses_for_render = optimized_poses
+    else:
+        print("\n  Computing proxy scores (GT poses vs optimized poses)...", flush=True)
+        from tac.scorer import compute_proxy_score
 
-    # Generate frames with GT poses (always 6-DOF — init_poses is GT)
-    gt_pose_frames = _generate_frames(renderer, gt_masks, init_poses[:n_pairs], device, args.batch_pairs, zoom_warp=zoom_warp)
-    gt_score = compute_proxy_score(
-        gt_pose_frames, gt_frames, posenet, segnet, device, rate=0.0,
-    )
+        # Lane M-V2: optimized_poses is now ALWAYS (N, 6) — in radial-zoom
+        # mode dim 0 is the optimized scalar and dims 1-5 are the frozen
+        # baseline values (composed in the save block above). No projection
+        # needed for the renderer call; we keep the (N, 1) defensive branch
+        # only as a fallback for any future code path that bypasses the
+        # save-block composition (it should never trigger on the canonical
+        # path; if it does we pad with zeros to AT LEAST avoid a shape
+        # mismatch — but the warning prints loud so the operator notices).
+        if args.pose_mode == "radial-zoom" and optimized_poses.shape[1] == 1:
+            print(
+                "  [Lane M-V2 WARNING] optimized_poses is (N, 1) at proxy-score time. "
+                "The save-block composition should have produced (N, 6) with frozen "
+                "baseline dims 1-5. Falling back to ZERO pad for the in-memory render "
+                "(this will undercount PoseNet — fix the save-block path).",
+                flush=True,
+            )
+            zeros_pad = torch.zeros(optimized_poses.shape[0], 6 - 1, dtype=optimized_poses.dtype)  # OFF_MANIFOLD_OK: warned-fallback path for radial-zoom save-block bug; emits explicit "[Lane M-V2 WARNING]" so the operator knows the score is undercounted (proxy-only, never used in archive).
+            optimized_poses_for_render = torch.cat([optimized_poses, zeros_pad], dim=-1)
+        else:
+            optimized_poses_for_render = optimized_poses
 
-    # Generate frames with optimized poses (always 6-DOF after Lane M projection)
-    opt_pose_frames = _generate_frames(renderer, gt_masks, optimized_poses_for_render, device, args.batch_pairs, zoom_warp=zoom_warp)
-    opt_score = compute_proxy_score(
-        opt_pose_frames, gt_frames, posenet, segnet, device, rate=0.0,
-    )
+        # Generate frames with GT poses (always 6-DOF — init_poses is GT)
+        gt_pose_frames = _generate_frames(renderer, gt_masks, init_poses[:n_pairs], device, args.batch_pairs, zoom_warp=zoom_warp)
+        gt_score = compute_proxy_score(
+            gt_pose_frames, gt_frames, posenet, segnet, device, rate=0.0,
+        )
 
-    print(f"\n  GT Poses:        score={gt_score['score']:.4f} "
-          f"(pose={gt_score['pose']:.6f}, seg={gt_score['seg']:.6f})", flush=True)
-    print(f"  Optimized Poses: score={opt_score['score']:.4f} "
-          f"(pose={opt_score['pose']:.6f}, seg={opt_score['seg']:.6f})", flush=True)
-    print(f"  Delta:           {opt_score['score'] - gt_score['score']:+.4f} "
-          f"(pose: {opt_score['pose'] - gt_score['pose']:+.6f}, "
-          f"seg: {opt_score['seg'] - gt_score['seg']:+.6f})", flush=True)
+        # Generate frames with optimized poses (always 6-DOF after Lane M projection)
+        opt_pose_frames = _generate_frames(renderer, gt_masks, optimized_poses_for_render, device, args.batch_pairs, zoom_warp=zoom_warp)
+        opt_score = compute_proxy_score(
+            opt_pose_frames, gt_frames, posenet, segnet, device, rate=0.0,
+        )
+
+        print(f"\n  GT Poses:        score={gt_score['score']:.4f} "
+              f"(pose={gt_score['pose']:.6f}, seg={gt_score['seg']:.6f})", flush=True)
+        print(f"  Optimized Poses: score={opt_score['score']:.4f} "
+              f"(pose={opt_score['pose']:.6f}, seg={opt_score['seg']:.6f})", flush=True)
+        print(f"  Delta:           {opt_score['score'] - gt_score['score']:+.4f} "
+              f"(pose: {opt_score['pose'] - gt_score['pose']:+.6f}, "
+              f"seg: {opt_score['seg'] - gt_score['seg']:+.6f})", flush=True)
 
     # Pose vector statistics — compare on the OPTIMIZABLE shape so
     # radial-zoom (N, 1) vs full-6dof (N, 6) both have well-defined L2

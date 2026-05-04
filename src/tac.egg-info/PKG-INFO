@@ -25,17 +25,38 @@ Requires-Dist: torch<3.0,>=2.0
 Requires-Dist: pydantic<3.0,>=2.0
 Requires-Dist: numpy<3.0,>=1.24
 Requires-Dist: click<9.0,>=8.0
+Requires-Dist: brotli>=1.0
+Requires-Dist: constriction<0.5,>=0.4
+Requires-Dist: pyppmd<2.0,>=1.3
+Requires-Dist: cryptography>=41.0
 Provides-Extra: mlx
 Requires-Dist: mlx>=0.5; extra == "mlx"
 Provides-Extra: viz
 Requires-Dist: plotly>=5.0; extra == "viz"
+Requires-Dist: matplotlib>=3.8; extra == "viz"
+Requires-Dist: pillow>=10.0; extra == "viz"
+Requires-Dist: imageio>=2.34; extra == "viz"
+Provides-Extra: analysis
+Requires-Dist: dask[array]>=2024.1; extra == "analysis"
+Requires-Dist: polars>=0.20; extra == "analysis"
 Provides-Extra: notebooks
 Requires-Dist: marimo>=0.3; extra == "notebooks"
+Provides-Extra: runtime
+Requires-Dist: av>=10.0; extra == "runtime"
+Requires-Dist: opencv-python>=4.5; extra == "runtime"
+Requires-Dist: timm>=0.9; extra == "runtime"
+Requires-Dist: einops>=0.7; extra == "runtime"
+Requires-Dist: segmentation-models-pytorch>=0.3; extra == "runtime"
 Provides-Extra: dev
 Requires-Dist: pytest>=8.0; extra == "dev"
 Requires-Dist: pytest-timeout>=2.0; extra == "dev"
 Requires-Dist: hypothesis>=6.0; extra == "dev"
 Requires-Dist: ruff>=0.4; extra == "dev"
+Requires-Dist: scipy>=1.10; extra == "dev"
+Provides-Extra: cloud
+Requires-Dist: lightning-sdk<2026.5,>=2026.4.10; extra == "cloud"
+Requires-Dist: modal<2,>=1.4; extra == "cloud"
+Requires-Dist: vastai<2,>=1.0; extra == "cloud"
 Dynamic: license-file
 
 # tac -- Task-Aware Codec

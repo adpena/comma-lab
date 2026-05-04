@@ -5,8 +5,8 @@ bug pattern — argparse defaults that silently override profile values.
 
 - **CRITICAL** (matches a key in `tac.profiles.PROFILES`): **0**
 - **SUSPICIOUS** (non-None default, no profile match): **5**
-- **SAFE** (default=None or action implies None): **1504**
-- **TOTAL ARGUMENTS SCANNED**: **1509**
+- **SAFE** (default=None or action implies None): **5721**
+- **TOTAL ARGUMENTS SCANNED**: **5726**
 
 ---
 
@@ -30,8 +30,8 @@ add the profile key + change the default to None.
 
 | line | arg | default |
 |------|-----|---------|
-| 857 | `--upstream` | `<expr:_REPO_ROOT / 'upstream'>` |
-| 863 | `--gt-masks-source` | `'segnet'` |
-| 919 | `--num-frames` | `1200` |
-| 922 | `--mask-height` | `384` |
-| 925 | `--mask-width` | `512` |
+| 862 | `--upstream` | `<expr:_REPO_ROOT / 'upstream'>` |
+| 868 | `--gt-masks-source` | `'segnet'` |
+| 924 | `--num-frames` | `1200` |
+| 927 | `--mask-height` | `384` |
+| 930 | `--mask-width` | `512` |

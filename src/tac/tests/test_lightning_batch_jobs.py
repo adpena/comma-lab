@@ -7,6 +7,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -15,6 +16,10 @@ import torch
 from tac.deploy.lightning.batch_jobs import (
     ARTIFACT_DALI_BOOTSTRAP,
     ARTIFACT_DALI_REQUIREMENTS,
+    ARTIFACT_INFRA_FAILURE,
+    ARTIFACT_INFLATE_RUNTIME_BOOTSTRAP,
+    ARTIFACT_INFLATE_RUNTIME_STATIC_PREFLIGHT,
+    ARTIFACT_METADATA,
     ARTIFACT_COMPONENT_RESPONSE_INPUTS,
     ARTIFACT_COMPONENT_RESPONSE_SUMMARY,
     ARTIFACT_COMPONENT_RESPONSE_VALIDATION,
@@ -35,7 +40,11 @@ from tac.deploy.lightning.batch_jobs import (
     LightningAdjudicationSpec,
     LightningBatchJobsClient,
     LightningBatchJobSpec,
+    LightningStudioCloudAccountMismatchError,
+    LIGHTNING_EMPTY_ARTIFACT_INFRA_TERMINAL_CLASS,
+    LIGHTNING_MISSING_EXACT_EVAL_JSON_TERMINAL_CLASS,
     archive_identity,
+    default_exact_eval_local_artifact_dir,
     default_exact_eval_output_dir,
     diagnostic_component_sensitivity_command,
     exact_cuda_eval_command,
@@ -51,6 +60,7 @@ from tac.deploy.lightning.batch_jobs import (
     validate_local_component_sensitivity_artifact_dir,
     validate_local_component_response_artifact_dir,
     validate_local_artifact_dir,
+    validate_studio_machine_class_pair,
 )
 import tac.deploy.lightning.batch_jobs as lightning_batch_jobs
 from tac.sensitivity_map import save_sensitivity_map
@@ -661,6 +671,10 @@ def test_exact_cuda_eval_command_is_json_and_cuda_only() -> None:
     assert "rm -rf /out/eval_work /out/uv_project_env" in command
     assert "export UV_PROJECT_ENVIRONMENT=/out/uv_project_env" in command
     assert "export UV_LINK_MODE=${UV_LINK_MODE:-copy}" in command
+    ensure_uv_idx = command.index("scripts/ensure_remote_uv.sh --symlink-system")
+    dali_idx = command.index("LIGHTNING_VENV_LOCK=.omx/state/lightning_exact_eval_venv.lock")
+    assert ensure_uv_idx < dali_idx
+    assert 'export PATH="$(dirname "$UV_BIN"):$PATH"' in command
     assert "LIGHTNING_VENV_LOCK=.omx/state/lightning_exact_eval_venv.lock" in command
     assert "FATAL: timed out waiting for Lightning exact-eval venv lock" in command
     assert "nvidia-dali-cuda130==1.52.0" in command
@@ -671,11 +685,16 @@ def test_exact_cuda_eval_command_is_json_and_cuda_only() -> None:
     assert "--no-deps" in command
     assert "LIGHTNING_RUNNER_DALI_PREFLIGHT_OK" in command
     assert "LIGHTNING_RUNNER_CUDA_PREFLIGHT_OK" in command
+    assert "LIGHTNING_INFLATE_RUNTIME_BOOTSTRAP_OK" in command
+    assert "LIGHTNING_INFLATE_RUNTIME_STATIC_PREFLIGHT_OK" in command
+    assert "pr81_router_actions" in command
     assert "nvidia.dali.fn" in command
     assert "nvidia_dali_fn_module" in command
     assert ARTIFACT_DALI_BOOTSTRAP in command
     assert "lightning_dali_requirements.txt" in command
     assert ARTIFACT_RUNNER_PREFLIGHT in command
+    assert ARTIFACT_INFLATE_RUNTIME_BOOTSTRAP in command
+    assert ARTIFACT_INFLATE_RUNTIME_STATIC_PREFLIGHT in command
     assert ARTIFACT_SUPPLY_CHAIN_SCAN in command
     assert "--index-url" not in command
     assert "--extra-index-url" not in command
@@ -683,6 +702,56 @@ def test_exact_cuda_eval_command_is_json_and_cuda_only() -> None:
     assert "re.search" not in command
     assert "expected_sha = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'" in command
     assert "expected_sha = null" not in command
+
+
+def test_exact_cuda_eval_command_installs_declared_external_inflate_deps() -> None:
+    command = exact_cuda_eval_command(
+        repo_dir="/repo",
+        archive_path="/artifacts/archive.zip",
+        upstream_dir="/upstream",
+        output_dir="/out",
+        adjudication=_adjudication(),
+        env={
+            "INFLATE_BROTLI_SPEC": "brotli==1.2.0",
+            "INFLATE_AV_SPEC": "av==17.0.1",
+        },
+        **_expected_archive_kwargs(),
+    )
+
+    assert "lightning_exact_eval_inflate_runtime_bootstrap" in command
+    assert "brotli==1.2.0" in command
+    assert "av==17.0.1" in command
+    assert "uv, 'pip', 'install'" in command
+    assert "export PATH=$(dirname .venv/bin/python):$PATH" in command
+    assert command.index("LIGHTNING_RUNNER_CUDA_PREFLIGHT_OK") < command.index(
+        "LIGHTNING_INFLATE_RUNTIME_BOOTSTRAP_OK"
+    )
+    assert command.index("LIGHTNING_INFLATE_RUNTIME_BOOTSTRAP_OK") < command.index(
+        "experiments/contest_auth_eval.py"
+    )
+
+
+def test_exact_cuda_eval_command_can_emit_component_trace() -> None:
+    command = exact_cuda_eval_command(
+        repo_dir="/repo",
+        archive_path="/artifacts/archive.zip",
+        upstream_dir="/upstream",
+        output_dir="/out",
+        adjudication=_adjudication(),
+        component_trace=True,
+        component_trace_top_k=13,
+        **_expected_archive_kwargs(),
+    )
+
+    assert "experiments/contest_component_trace.py" in command
+    assert "--submission-dir /out/eval_work" in command
+    assert "--contest-auth-eval-json /out/contest_auth_eval.json" in command
+    assert "--output-json /out/component_trace.json" in command
+    assert "--top-k 13" in command
+    assert "LIGHTNING_COMPONENT_TRACE_JSON_OK" in command
+    assert command.index("experiments/contest_auth_eval.py") < command.index(
+        "experiments/contest_component_trace.py"
+    )
 
 
 def test_official_component_response_command_is_cuda_and_supply_chain_guarded() -> None:
@@ -710,6 +779,9 @@ def test_official_component_response_command_is_cuda_and_supply_chain_guarded() 
     assert "LIGHTNING_COMPONENT_RESPONSE_CLEANUP_OK" in command
     assert "scripts/scan_lightning_supply_chain.py" in command
     assert command.count("scripts/scan_lightning_supply_chain.py") == 2
+    ensure_uv_idx = command.index("scripts/ensure_remote_uv.sh --symlink-system")
+    dali_idx = command.index("LIGHTNING_VENV_LOCK=.omx/state/lightning_exact_eval_venv.lock")
+    assert ensure_uv_idx < dali_idx
     assert "LIGHTNING_RUNNER_CUDA_PREFLIGHT_OK" in command
     assert "LIGHTNING_RUNNER_DALI_PREFLIGHT_OK" in command
     assert "--require-hashes" in command
@@ -765,6 +837,9 @@ def test_diagnostic_component_sensitivity_command_extracts_archive_and_is_non_pr
     assert "score_claim': False" in command
     assert "scripts/scan_lightning_supply_chain.py" in command
     assert command.count("scripts/scan_lightning_supply_chain.py") == 2
+    ensure_uv_idx = command.index("scripts/ensure_remote_uv.sh --symlink-system")
+    dali_idx = command.index("LIGHTNING_VENV_LOCK=.omx/state/lightning_exact_eval_venv.lock")
+    assert ensure_uv_idx < dali_idx
     assert "LIGHTNING_RUNNER_CUDA_PREFLIGHT_OK" in command
     assert "LIGHTNING_RUNNER_DALI_PREFLIGHT_OK" in command
     assert "--require-hashes" in command
@@ -1101,6 +1176,8 @@ def test_exact_eval_submit_requires_source_manifest_and_archive_closure(tmp_path
         archive="/repo/archive.zip",
         repo_dir="/repo",
         queue_metadata=[],
+        env=[],
+        machine="g6e.4xlarge",
     )
     with pytest.raises(SystemExit, match="requires --source-manifest"):
         module._validate_exact_eval_submit_inputs(args)
@@ -1112,13 +1189,81 @@ def test_exact_eval_submit_requires_source_manifest_and_archive_closure(tmp_path
         module._validate_exact_eval_submit_inputs(args)
 
     manifest.write_text(json.dumps({"files": [{"path": "archive.zip"}]}) + "\n")
+    with pytest.raises(SystemExit, match="inflate runtime closure"):
+        module._validate_exact_eval_submit_inputs(args)
+
+    manifest.write_text(
+        json.dumps(
+            {
+                "files": [
+                    {"path": "archive.zip"},
+                    {"path": "submissions/robust_current/inflate.sh"},
+                    {"path": "submissions/robust_current/config.env"},
+                ]
+            }
+        )
+        + "\n"
+    )
     module._validate_exact_eval_submit_inputs(args)
+
+
+def test_exact_eval_manifest_dispatch_gate_blocks_renderer_stack_without_pose_safety(tmp_path: Path) -> None:
+    module = _load_lightning_cli_module(tmp_path)
+    archive = tmp_path / "experiments/results/candidate/archive.zip"
+    archive.parent.mkdir(parents=True)
+    archive.write_bytes(b"placeholder")
+    (archive.parent / "manifest.json").write_text(
+        json.dumps(
+            {
+                "exact_eval_dispatch_gate": {
+                    "required": True,
+                    "status": "missing_pose_safety_report",
+                    "safe_for_exact_eval_dispatch": False,
+                    "blockers": ["missing renderer transplant pose-safety preflight"],
+                }
+            }
+        )
+        + "\n"
+    )
+    args = argparse.Namespace(
+        archive="/repo/experiments/results/candidate/archive.zip",
+        repo_dir="/repo",
+    )
+
+    with pytest.raises(SystemExit, match="exact_eval_dispatch_gate"):
+        module._validate_archive_manifest_dispatch_gate(args)
+
+    (archive.parent / "manifest.json").write_text(
+        json.dumps(
+            {
+                "exact_eval_dispatch_gate": {
+                    "required": True,
+                    "status": "pass",
+                    "safe_for_exact_eval_dispatch": True,
+                    "blockers": [],
+                }
+            }
+        )
+        + "\n"
+    )
+    module._validate_archive_manifest_dispatch_gate(args)
 
 
 def test_exact_eval_submit_requires_metadata_baseline_json_closure(tmp_path: Path) -> None:
     module = _load_lightning_cli_module(tmp_path)
     manifest = tmp_path / "manifest.json"
-    manifest.write_text(json.dumps({"files": [{"path": "archive.zip"}]}) + "\n")
+    manifest.write_text(
+        json.dumps(
+            {
+                "files": [
+                    {"path": "archive.zip"},
+                    {"path": "submissions/robust_current/inflate.sh"},
+                    {"path": "submissions/robust_current/config.env"},
+                ]
+            }
+        )
+        + "\n"
+    )
     args = argparse.Namespace(
         dry_run=False,
         studio="pact",
@@ -1126,6 +1271,8 @@ def test_exact_eval_submit_requires_metadata_baseline_json_closure(tmp_path: Pat
         archive="/repo/archive.zip",
         repo_dir="/repo",
         queue_metadata=["baseline_json=baseline/contest_auth_eval.json"],
+        env=[],
+        machine="g6e.4xlarge",
     )
 
     with pytest.raises(SystemExit, match="metadata baseline_json artifact"):
@@ -1136,12 +1283,114 @@ def test_exact_eval_submit_requires_metadata_baseline_json_closure(tmp_path: Pat
             {
                 "files": [
                     {"path": "archive.zip"},
+                    {"path": "submissions/robust_current/inflate.sh"},
+                    {"path": "submissions/robust_current/config.env"},
                     {"path": "baseline/contest_auth_eval.json"},
                 ]
             }
         )
         + "\n"
     )
+    module._validate_exact_eval_submit_inputs(args)
+
+
+def test_exact_eval_submit_rejects_symbolic_non_t4_studio_machine(tmp_path: Path) -> None:
+    module = _load_lightning_cli_module(tmp_path)
+    args = argparse.Namespace(dry_run=False, studio="pact", machine="RTXP_6000", cloud_account=None)
+
+    with pytest.raises(SystemExit, match="symbolic accelerator 'RTXP_6000'"):
+        module._validate_studio_machine_for_submit(args)
+
+    args.machine = "g7e.4xlarge"
+    module._validate_studio_machine_for_submit(args)
+
+    args.machine = "T4"
+    module._validate_studio_machine_for_submit(args)
+
+    args.machine = "T4_X_4"
+    module._validate_studio_machine_for_submit(args)
+
+
+def test_exact_eval_submit_rejects_unsupported_concrete_studio_machine(tmp_path: Path) -> None:
+    module = _load_lightning_cli_module(tmp_path)
+    args = argparse.Namespace(dry_run=False, studio="pact", machine="g4dn.4xlarge", cloud_account=None)
+
+    with pytest.raises(SystemExit, match="unsupported Lightning Studio machine/class pair"):
+        module._validate_studio_machine_for_submit(args)
+
+    for machine in ("g4dn.xlarge", "g4dn.2xlarge", "g4dn.12xlarge", "g6e.4xlarge"):
+        args.machine = machine
+        module._validate_studio_machine_for_submit(args)
+
+    with pytest.raises(ValueError, match="g4dn\\.4xlarge"):
+        validate_studio_machine_class_pair("g4dn.4xlarge")
+
+
+def test_exact_eval_submit_rejects_gcp_machine_without_cloud_account(tmp_path: Path) -> None:
+    module = _load_lightning_cli_module(tmp_path)
+    args = argparse.Namespace(dry_run=False, studio="pact", machine="n1-standard-8", cloud_account=None)
+
+    with pytest.raises(SystemExit, match="requires an explicit --cloud-account"):
+        module._validate_studio_machine_for_submit(args)
+
+    args.cloud_account = "gcp-lightning-public-prod"
+    module._validate_studio_machine_for_submit(args)
+
+
+def test_exact_eval_submit_requires_cdo1_manifest_pair_basis(tmp_path: Path) -> None:
+    module = _load_lightning_cli_module(tmp_path)
+    manifest = tmp_path / "source_manifest.json"
+    archive_manifest = tmp_path / "candidate" / "manifest.json"
+    archive_manifest.parent.mkdir(parents=True)
+    archive_manifest.write_text(
+        json.dumps(
+            {
+                "schema": "c067_decoded_delta_overlay_candidate_v1",
+                "cdo1_overlay": {
+                    "selected_pair_indices": [79, 153],
+                },
+            }
+        )
+        + "\n"
+    )
+    manifest.write_text(
+        json.dumps(
+            {
+                "files": [
+                    {"path": "archive.zip"},
+                    {"path": "submissions/robust_current/inflate.sh"},
+                    {"path": "submissions/robust_current/config.env"},
+                    {"path": "candidate/manifest.json"},
+                ]
+            }
+        )
+        + "\n"
+    )
+    args = argparse.Namespace(
+        dry_run=False,
+        studio="pact",
+        source_manifest=str(manifest),
+        archive="/repo/archive.zip",
+        repo_dir="/repo",
+        queue_metadata=[
+            "archive_manifest=candidate/manifest.json",
+            "pair_index_basis=half_frame_pair_index",
+        ],
+        env=[],
+        machine="g6e.4xlarge",
+    )
+
+    with pytest.raises(SystemExit, match="cdo1_overlay.pair_index_basis"):
+        module._validate_exact_eval_submit_inputs(args)
+
+    payload = json.loads(archive_manifest.read_text())
+    payload["cdo1_overlay"]["pair_index_basis"] = "video_frame_pair_index"
+    archive_manifest.write_text(json.dumps(payload) + "\n")
+    with pytest.raises(SystemExit, match="does not match archive manifest"):
+        module._validate_exact_eval_submit_inputs(args)
+
+    payload["cdo1_overlay"]["pair_index_basis"] = "half_frame_pair_index"
+    archive_manifest.write_text(json.dumps(payload) + "\n")
     module._validate_exact_eval_submit_inputs(args)
 
 
@@ -1156,10 +1405,52 @@ def test_exact_eval_manifest_rejects_traversal_entries(tmp_path: Path) -> None:
         archive="/repo/archive.zip",
         repo_dir="/repo",
         queue_metadata=[],
+        env=[],
+        machine="g6e.4xlarge",
     )
 
     with pytest.raises(SystemExit, match="path traversal"):
         module._validate_exact_eval_submit_inputs(args)
+
+
+def test_t4_exact_eval_submit_requires_driver_compatible_torch_pin(tmp_path: Path) -> None:
+    module = _load_lightning_cli_module(tmp_path)
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "files": [
+                    {"path": "archive.zip"},
+                    {"path": "submissions/robust_current/inflate.sh"},
+                    {"path": "submissions/robust_current/config.env"},
+                ]
+            }
+        )
+        + "\n"
+    )
+    args = argparse.Namespace(
+        dry_run=False,
+        studio="pact",
+        source_manifest=str(manifest),
+        archive="/repo/archive.zip",
+        repo_dir="/repo",
+        queue_metadata=[],
+        env=[],
+        machine="g4dn.xlarge",
+    )
+    with pytest.raises(SystemExit, match="INFLATE_TORCH_SPEC"):
+        module._validate_exact_eval_submit_inputs(args)
+
+    args.env = ["INFLATE_TORCH_SPEC=torch==2.5.1+cu124"]
+    with pytest.raises(SystemExit, match="UV_EXTRA_INDEX_URL"):
+        module._validate_exact_eval_submit_inputs(args)
+
+    args.env = [
+        "INFLATE_TORCH_SPEC=torch==2.5.1+cu124",
+        "UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu124",
+        "UV_INDEX_STRATEGY=unsafe-best-match",
+    ]
+    module._validate_exact_eval_submit_inputs(args)
 
 
 def test_non_dry_run_studio_submit_requires_remote_preflight(tmp_path: Path) -> None:
@@ -1170,11 +1461,144 @@ def test_non_dry_run_studio_submit_requires_remote_preflight(tmp_path: Path) -> 
         remote_preflight_ssh_target=None,
         allow_skip_remote_preflight_reason=None,
     )
-    with pytest.raises(SystemExit, match="requires --remote-preflight-ssh-target"):
+    with pytest.raises(SystemExit, match="missing --remote-preflight-ssh-target"):
         module._require_remote_preflight_for_submit(args, role="exact-eval")
 
     args.allow_skip_remote_preflight_reason = "externally attested image-backed repro path"
     module._require_remote_preflight_for_submit(args, role="exact-eval")
+
+    args.allow_skip_remote_preflight_reason = None
+    args.remote_preflight_ssh_target = "ssh.lightning.ai"
+    with pytest.raises(SystemExit, match="bare ssh\\.lightning\\.ai"):
+        module._require_remote_preflight_for_submit(args, role="exact-eval")
+
+
+def test_non_dry_run_studio_submit_with_teamspace_requires_user_or_org(tmp_path: Path) -> None:
+    module = _load_lightning_cli_module(tmp_path)
+    args = argparse.Namespace(
+        dry_run=False,
+        studio=None,
+        image=None,
+        teamspace=None,
+        org=None,
+        user=None,
+    )
+    with pytest.raises(SystemExit, match="requires explicit --studio or --image"):
+        module._require_lightning_identity_for_studio_submit(args, role="exact-eval")
+
+    args.image = "ghcr.io/example/exact-eval:latest"
+    module._require_lightning_identity_for_studio_submit(args, role="exact-eval")
+
+    args = argparse.Namespace(
+        dry_run=False,
+        studio="pact",
+        image=None,
+        teamspace=None,
+        org=None,
+        user=None,
+    )
+    with pytest.raises(SystemExit, match="requires --teamspace"):
+        module._require_lightning_identity_for_studio_submit(args, role="exact-eval")
+
+    args = argparse.Namespace(
+        dry_run=False,
+        studio="pact",
+        image=None,
+        teamspace="comma-lab",
+        org=None,
+        user=None,
+    )
+    with pytest.raises(SystemExit, match="requires --user or --org"):
+        module._require_lightning_identity_for_studio_submit(args, role="exact-eval")
+
+    args.user = "adpena"
+    module._require_lightning_identity_for_studio_submit(args, role="exact-eval")
+
+    args.user = None
+    args.org = "comma-ai"
+    module._require_lightning_identity_for_studio_submit(args, role="exact-eval")
+
+
+def test_cli_submit_helper_exits_on_studio_cloud_account_mismatch(tmp_path: Path) -> None:
+    module = _load_lightning_cli_module(tmp_path)
+
+    class FakeClient:
+        def submit(self, spec, *, dry_run: bool = False):
+            raise LightningStudioCloudAccountMismatchError(
+                job_name="h100_nebius_submit",
+                studio="aws-studio",
+                cloud_account="nebius-h100-prod",
+                machine="H100",
+                original_error_type="ValueError",
+                original_message=(
+                    "Studio cloud account does not match provided cloud account. "
+                    "Can only run jobs with Studio envs in the same cloud account."
+                ),
+            )
+
+    with pytest.raises(SystemExit) as excinfo:
+        module._submit_lightning_or_exit(FakeClient(), object(), dry_run=False)
+
+    message = str(excinfo.value)
+    assert "terminal_class=studio_cloud_account_namespace_mismatch" in message
+    assert "use a Studio/env in that cloud account" in message
+    assert "SDK said ValueError" in message
+
+
+def test_non_dry_run_studio_submit_requires_active_dispatch_claim(tmp_path: Path) -> None:
+    module = _load_lightning_cli_module(tmp_path)
+    claims = tmp_path / "active_lane_dispatch_claims.md"
+    args = argparse.Namespace(
+        dry_run=False,
+        studio="pact",
+        queue_metadata=["lane=lane_line_search_pose_refinement"],
+        dispatch_lane_id=None,
+        dispatch_claims_path=str(claims),
+        allow_missing_dispatch_claim_reason=None,
+        job_name="exact_eval_line_search_qzs3_qp1_t4_20260502T0100Z",
+    )
+
+    with pytest.raises(SystemExit, match="missing active dispatch claim"):
+        module._require_dispatch_claim_for_submit(args, role="exact-eval")
+
+    claims.write_text(
+        "# Active lane dispatch claims -- test\n\n"
+        "| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |\n"
+        "|---|---|---|---|---|---|---|---|\n"
+        "| 2026-05-02T00:00:00Z | codex:test | lane_line_search_pose_refinement | lightning | exact_eval_line_search_qzs3_qp1_t4_20260502T0100Z | 2026-05-02T01:00Z | eval | active |\n"
+    )
+    module._require_dispatch_claim_for_submit(args, role="exact-eval")
+
+    claims.write_text(
+        "# Active lane dispatch claims -- test\n\n"
+        "| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |\n"
+        "|---|---|---|---|---|---|---|---|\n"
+        "| 2026-05-02T00:00:00Z | codex:test | lane_line_search_pose_refinement | lightning | exact_eval_line_search_qzs3_qp1_t4_20260502T0100Z | 2026-05-02T01:00Z | completed_score=0.32 | terminal |\n"
+    )
+    with pytest.raises(SystemExit, match="missing active dispatch claim"):
+        module._require_dispatch_claim_for_submit(args, role="exact-eval")
+
+    args.allow_missing_dispatch_claim_reason = "manual operator recovery during provider outage"
+    module._require_dispatch_claim_for_submit(args, role="exact-eval")
+    metadata = module._queue_metadata_from_args(args)
+    assert metadata["dispatch_claim_skip_reason"] == "manual operator recovery during provider outage"
+
+    assert module._dispatch_claim_status_is_terminal("completed_a_negative_score=2.1") is True
+    assert module._dispatch_claim_status_is_terminal("completed_empirical_no_score") is True
+    assert module._dispatch_claim_status_is_terminal("stopped_duplicate_same_archive") is True
+    assert module._dispatch_claim_status_is_terminal("refused_dispatch_blockers_active") is True
+    assert module._dispatch_claim_status_is_terminal("stale_superseded_by_t4") is True
+
+    claims.write_text(
+        "# Active lane dispatch claims -- test\n\n"
+        "| timestamp_utc | agent | lane_id | platform | instance/job_id | predicted_eta_utc | status | notes |\n"
+        "|---|---|---|---|---|---|---|---|\n"
+        "| 2026-05-02T00:30:00Z | codex:test | lane_line_search_pose_refinement | lightning | exact_eval_line_search_qzs3_qp1_t4_20260502T0100Z | 2026-05-02T01:00Z | stopped_duplicate_same_archive | terminal |\n"
+        "| 2026-05-02T00:00:00Z | codex:test | lane_line_search_pose_refinement | lightning | exact_eval_line_search_qzs3_qp1_t4_20260502T0100Z | 2026-05-02T01:00Z | eval | stale active row |\n"
+    )
+    args.allow_missing_dispatch_claim_reason = None
+    with pytest.raises(SystemExit, match="missing active dispatch claim"):
+        module._require_dispatch_claim_for_submit(args, role="exact-eval")
 
 
 def test_component_response_ssh_harvest_requires_state_or_override(tmp_path: Path) -> None:
@@ -1233,6 +1657,7 @@ def test_exact_cuda_eval_command_wires_expected_archive_and_adjudication() -> No
     assert "--max-segnet-relative 1.2" in command
     assert "--component-reference-label frontier" in command
     assert "--allow-component-gate-forensic-success" in command
+    assert "--allow-sane-score-forensic-success" in command
     assert "adjudication_provenance.json" in command
 
 
@@ -1255,6 +1680,29 @@ def test_exact_cuda_eval_command_can_fail_job_on_component_gate() -> None:
 
     assert "scripts/adjudicate_contest_auth_eval.py" in command
     assert "--allow-component-gate-forensic-success" not in command
+    assert "--allow-sane-score-forensic-success" in command
+
+
+def test_exact_cuda_eval_command_can_fail_job_on_sane_score_gate() -> None:
+    adjudication = LightningAdjudicationSpec(
+        baseline_score=1.2,
+        predicted_band_low=1.0,
+        predicted_band_high=1.4,
+        regression_threshold=1.6,
+        allow_sane_score_forensic_success=False,
+    )
+    command = exact_cuda_eval_command(
+        repo_dir="/repo",
+        archive_path="/repo/archive.zip",
+        upstream_dir="/upstream",
+        output_dir="/out",
+        adjudication=adjudication,
+        **_expected_archive_kwargs(),
+    )
+
+    assert "scripts/adjudicate_contest_auth_eval.py" in command
+    assert "--allow-component-gate-forensic-success" in command
+    assert "--allow-sane-score-forensic-success" not in command
 
 
 def test_exact_eval_spec_is_fail_closed() -> None:
@@ -1293,6 +1741,38 @@ def test_exact_eval_spec_records_expected_archive_and_queue_metadata() -> None:
     assert payload["local_artifact_dir"].endswith("pfp16-eval")
 
 
+def test_exact_eval_spec_defaults_local_artifact_dir_for_harvest() -> None:
+    spec = make_exact_eval_spec(
+        name="exact_eval_missing_local_dir_regression",
+        archive_path="/repo/archive.zip",
+        repo_dir="/repo",
+        upstream_dir="/upstream",
+        expected_archive_sha256="b" * 64,
+        expected_archive_size_bytes=456,
+        adjudication=_adjudication(),
+    )
+    assert spec.local_artifact_dir == default_exact_eval_local_artifact_dir(
+        job_name="exact_eval_missing_local_dir_regression"
+    )
+    assert spec.asdict()["local_artifact_dir"] == (
+        "experiments/results/lightning_batch/exact_eval_missing_local_dir_regression"
+    )
+
+
+def test_exact_eval_command_can_gate_runtime_tree_hash() -> None:
+    spec = make_exact_eval_spec(
+        name="runtime-hash-eval",
+        archive_path="/repo/archive.zip",
+        repo_dir="/repo",
+        upstream_dir="/upstream",
+        expected_archive_sha256="b" * 64,
+        expected_archive_size_bytes=456,
+        queue_metadata={"expected_runtime_tree_sha256": "c" * 64},
+        adjudication=_adjudication(),
+    )
+    assert "--expected-runtime-tree-sha256 " + "c" * 64 in spec.command
+
+
 def test_exact_eval_default_output_dir_is_writable_studio_workspace_path() -> None:
     spec = make_exact_eval_spec(
         name="job_with_underscores",
@@ -1302,15 +1782,15 @@ def test_exact_eval_default_output_dir_is_writable_studio_workspace_path() -> No
         adjudication=_adjudication(),
         **_expected_archive_kwargs(),
     )
-    sdk_name = lightning_sdk_job_name("job_with_underscores")
-    assert sdk_name == "job-with-underscores"
+    sdk_name = lightning_sdk_job_name("job_with_underscores_T130313Z")
+    assert sdk_name == "job-with-underscores-t130313z"
     assert spec.remote_output_dir == default_exact_eval_output_dir(
         repo_dir="/teamspace/studios/this_studio/pact",
         job_name="job_with_underscores",
     )
     assert spec.remote_output_dir in spec.command
     assert "/teamspace/jobs/" not in spec.command
-    assert lightning_sdk_artifact_path("job_with_underscores") == (
+    assert lightning_sdk_artifact_path("job_with_underscores_T130313Z") == (
         f"/teamspace/jobs/{sdk_name}/artifacts"
     )
     assert lightning_sdk_persisted_studio_output_dir(
@@ -1384,6 +1864,77 @@ def test_exact_eval_rejects_missing_runner_preflight() -> None:
         spec.validate()
 
 
+def test_generic_lightning_job_rejects_invalid_python_stdin_heredoc() -> None:
+    spec = LightningBatchJobSpec(
+        name="bad_heredoc",
+        machine="g7e.4xlarge",
+        command=(
+            "set -euo pipefail\n"
+            "python - <<'PY'\n"
+            "from pathlib import Path\n"
+            "Path('x.json').write_text('unterminated\n"
+            "')\n"
+            "PY\n"
+        ),
+        role="training",
+    )
+    with pytest.raises(ValueError, match="embedded Python heredoc"):
+        spec.validate()
+
+
+def test_generic_lightning_job_accepts_valid_python_stdin_heredoc() -> None:
+    spec = LightningBatchJobSpec(
+        name="good_heredoc",
+        machine="g7e.4xlarge",
+        command=(
+            "set -euo pipefail\n"
+            ".venv/bin/python - \"$RUN/out.json\" <<'PY2'\n"
+            "import json, pathlib, sys\n"
+            "pathlib.Path(sys.argv[1]).write_text(json.dumps({'ok': True}) + '\\n')\n"
+            "PY2\n"
+        ),
+        role="training",
+    )
+    spec.validate()
+
+
+def test_alpha_geo0_exact_eval_role_allows_generated_archive_identity() -> None:
+    spec = LightningBatchJobSpec(
+        name="alpha",
+        machine="g4dn.xlarge",
+        command=(
+            "scripts/scan_lightning_supply_chain.py "
+            "LIGHTNING_RUNNER_CUDA_PREFLIGHT_OK "
+            "LIGHTNING_RUNNER_DALI_PREFLIGHT_OK "
+            "--require-hashes --no-deps "
+            "experiments/alpha_geo0_pose_regen.py --device cuda "
+            "contest_auth_eval.json"
+        ),
+        role="alpha_geo0_exact_eval",
+        adjudication=_adjudication(),
+    )
+    spec.validate()
+
+
+def test_alpha_geo0_exact_eval_role_rejects_generic_command() -> None:
+    spec = LightningBatchJobSpec(
+        name="alpha",
+        machine="g4dn.xlarge",
+        command=(
+            "scripts/scan_lightning_supply_chain.py "
+            "LIGHTNING_RUNNER_CUDA_PREFLIGHT_OK "
+            "LIGHTNING_RUNNER_DALI_PREFLIGHT_OK "
+            "--require-hashes --no-deps "
+            "experiments/contest_auth_eval.py --device cuda "
+            "contest_auth_eval.json"
+        ),
+        role="alpha_geo0_exact_eval",
+        adjudication=_adjudication(),
+    )
+    with pytest.raises(ValueError, match="alpha_geo0_pose_regen"):
+        spec.validate()
+
+
 def test_dry_run_records_without_sdk_call(tmp_path: Path) -> None:
     spec = make_exact_eval_spec(
         name="dry",
@@ -1403,6 +1954,110 @@ def test_dry_run_records_without_sdk_call(tmp_path: Path) -> None:
     assert record["queue"]["remote_output_dir"] == "/repo/experiments/results/lightning_batch/dry"
     assert record["queue"]["sdk_artifact_path"] == "/teamspace/jobs/dry/artifacts"
     assert json.loads((tmp_path / "jobs.json").read_text())[0]["status"] == "DRY_RUN"
+
+
+def test_state_record_waits_on_cross_process_file_lock(tmp_path: Path) -> None:
+    fcntl = pytest.importorskip("fcntl")
+    state_path = tmp_path / "jobs.json"
+    lock_path = state_path.with_name(state_path.name + ".lock")
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    lock_file = lock_path.open("a+", encoding="utf-8")
+    fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+    code = (
+        "import sys\n"
+        "from pathlib import Path\n"
+        "from tac.deploy.lightning.batch_jobs import LightningBatchJobsClient\n"
+        "client = LightningBatchJobsClient(state_path=Path(sys.argv[1]))\n"
+        "client.record({'schema_version': 2, 'status': 'CHILD', 'spec': {'name': 'child'}})\n"
+    )
+    env = {
+        **os.environ,
+        "PYTHONPATH": f"{REPO_ROOT / 'src'}:{os.environ.get('PYTHONPATH', '')}",
+    }
+    proc = subprocess.Popen(
+        [sys.executable, "-c", code, str(state_path)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=env,
+    )
+    try:
+        time.sleep(0.35)
+        assert proc.poll() is None
+        assert not state_path.exists()
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+        stdout, stderr = proc.communicate(timeout=10)
+    finally:
+        if proc.poll() is None:
+            proc.kill()
+            proc.communicate(timeout=10)
+        lock_file.close()
+
+    assert stdout == ""
+    assert stderr == ""
+    records = json.loads(state_path.read_text(encoding="utf-8"))
+    assert records == [{"schema_version": 2, "spec": {"name": "child"}, "status": "CHILD"}]
+
+
+def test_state_record_concurrent_subprocess_appends_preserve_json(tmp_path: Path) -> None:
+    pytest.importorskip("fcntl")
+    state_path = tmp_path / "jobs.json"
+    code = (
+        "import sys, time\n"
+        "from pathlib import Path\n"
+        "from tac.deploy.lightning.batch_jobs import LightningBatchJobsClient\n"
+        "state = Path(sys.argv[1])\n"
+        "prefix = sys.argv[2]\n"
+        "count = int(sys.argv[3])\n"
+        "client = LightningBatchJobsClient(state_path=state)\n"
+        "for idx in range(count):\n"
+        "    client.record({'schema_version': 2, 'status': 'APPENDED', 'spec': {'name': f'{prefix}-{idx}'}})\n"
+        "    time.sleep(0.005)\n"
+    )
+    env = {
+        **os.environ,
+        "PYTHONPATH": f"{REPO_ROOT / 'src'}:{os.environ.get('PYTHONPATH', '')}",
+    }
+    processes = [
+        subprocess.Popen(
+            [sys.executable, "-c", code, str(state_path), f"writer{writer}", "8"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=env,
+        )
+        for writer in range(5)
+    ]
+
+    for proc in processes:
+        stdout, stderr = proc.communicate(timeout=20)
+        assert proc.returncode == 0, stderr
+        assert stdout == ""
+
+    records = json.loads(state_path.read_text(encoding="utf-8"))
+    names = [record["spec"]["name"] for record in records]
+    assert len(records) == 40
+    assert len(set(names)) == 40
+    assert all(record["status"] == "APPENDED" for record in records)
+
+
+def test_dry_run_rejects_unsupported_studio_machine_before_sdk(tmp_path: Path) -> None:
+    class ExplodingJob:
+        @classmethod
+        def run(cls, **kwargs):
+            raise AssertionError("SDK should not be called")
+
+    spec = LightningBatchJobSpec(
+        name="bad-machine-dry-run",
+        machine="g4dn.4xlarge",
+        command="echo ok",
+        studio="pact",
+        role="generic",
+    )
+    client = LightningBatchJobsClient(state_path=tmp_path / "jobs.json", job_cls=ExplodingJob)
+
+    with pytest.raises(ValueError, match="unsupported Lightning Studio machine/class pair"):
+        client.submit(spec, dry_run=True)
 
 
 def test_submit_records_official_job_fields(tmp_path: Path) -> None:
@@ -1427,6 +2082,7 @@ def test_submit_records_official_job_fields(tmp_path: Path) -> None:
         repo_dir="/repo",
         upstream_dir="/upstream",
         studio="pact",
+        cloud_account="gcp-fast",
         adjudication=_adjudication(),
         **_expected_archive_kwargs(),
     )
@@ -1435,12 +2091,122 @@ def test_submit_records_official_job_fields(tmp_path: Path) -> None:
 
     assert FakeJob.calls[0]["name"] == "submitted"
     assert FakeJob.calls[0]["machine"] == "T4"
+    assert FakeJob.calls[0]["cloud_account"] == "gcp-fast"
     assert FakeJob.calls[0]["interruptible"] is False
     assert record["status"] == "SUBMITTED"
     assert record["job"]["snapshot_path"].endswith("/snapshot")
     assert record["job"]["artifact_path"].endswith("/artifacts")
     assert record["job"]["source"] == "lightning_sdk_job_attributes"
+    assert record["queue"]["cloud_account"] == "gcp-fast"
     assert record["queue"]["command_sha256"]
+
+
+def test_submit_failure_records_queue_record_before_reraising(tmp_path: Path) -> None:
+    class FailingJob:
+        @classmethod
+        def run(cls, **kwargs):
+            raise ValueError("teamspace unavailable")
+
+    spec = make_exact_eval_spec(
+        name="submit_fail",
+        archive_path="/repo/archive.zip",
+        repo_dir="/repo",
+        upstream_dir="/upstream",
+        studio="pact",
+        teamspace="missing",
+        adjudication=_adjudication(),
+        **_expected_archive_kwargs(),
+    )
+    state_path = tmp_path / "jobs.json"
+    client = LightningBatchJobsClient(state_path=state_path, job_cls=FailingJob)
+
+    with pytest.raises(ValueError, match="teamspace unavailable"):
+        client.submit(spec)
+
+    records = json.loads(state_path.read_text())
+    assert len(records) == 1
+    assert records[0]["status"] == "SUBMIT_FAILED"
+    assert records[0]["queue"]["job_name"] == "submit_fail"
+    assert records[0]["submit_error"] == {
+        "type": "ValueError",
+        "message": "teamspace unavailable",
+    }
+
+
+def test_submit_wraps_studio_cloud_account_mismatch_with_terminal_class(tmp_path: Path) -> None:
+    class FailingJob:
+        @classmethod
+        def run(cls, **kwargs):
+            raise ValueError(
+                "Studio cloud account does not match provided cloud account. "
+                "Can only run jobs with Studio envs in the same cloud account."
+            )
+
+    spec = make_exact_eval_spec(
+        name="submit_cloud_namespace_mismatch",
+        archive_path="/repo/archive.zip",
+        repo_dir="/repo",
+        upstream_dir="/upstream",
+        studio="pact-studio",
+        cloud_account="nebius-h100-prod",
+        machine="g6e.4xlarge",
+        adjudication=_adjudication(),
+        **_expected_archive_kwargs(),
+    )
+    state_path = tmp_path / "jobs.json"
+    client = LightningBatchJobsClient(state_path=state_path, job_cls=FailingJob)
+
+    with pytest.raises(LightningStudioCloudAccountMismatchError) as excinfo:
+        client.submit(spec)
+
+    message = str(excinfo.value)
+    assert "terminal_class=studio_cloud_account_namespace_mismatch" in message
+    assert "studio='pact-studio'" in message
+    assert "cloud_account='nebius-h100-prod'" in message
+    assert "omit --cloud-account" in message
+
+    records = json.loads(state_path.read_text())
+    assert records[0]["status"] == "SUBMIT_FAILED"
+    assert records[0]["terminal_class"] == "studio_cloud_account_namespace_mismatch"
+    assert records[0]["submit_error"]["terminal_class"] == "studio_cloud_account_namespace_mismatch"
+    assert records[0]["submit_error"]["type"] == "ValueError"
+
+
+def test_submit_default_cloud_account_keeps_sdk_failure_behavior(tmp_path: Path) -> None:
+    class FailingJob:
+        @classmethod
+        def run(cls, **kwargs):
+            raise ValueError(
+                "Studio cloud account does not match provided cloud account. "
+                "Can only run jobs with Studio envs in the same cloud account."
+            )
+
+    spec = make_exact_eval_spec(
+        name="submit_default_cloud_account",
+        archive_path="/repo/archive.zip",
+        repo_dir="/repo",
+        upstream_dir="/upstream",
+        studio="pact-studio",
+        cloud_account=None,
+        machine="g6e.4xlarge",
+        adjudication=_adjudication(),
+        **_expected_archive_kwargs(),
+    )
+    state_path = tmp_path / "jobs.json"
+    client = LightningBatchJobsClient(state_path=state_path, job_cls=FailingJob)
+
+    with pytest.raises(ValueError, match="Studio cloud account does not match"):
+        client.submit(spec)
+
+    records = json.loads(state_path.read_text())
+    assert "terminal_class" not in records[0]
+    assert records[0]["submit_error"] == {
+        "type": "ValueError",
+        "message": (
+            "Studio cloud account does not match provided cloud account. "
+            "Can only run jobs with Studio envs in the same cloud account."
+        ),
+    }
 
 
 def test_refresh_status_uses_job_attributes_not_logs(tmp_path: Path) -> None:
@@ -1786,6 +2552,81 @@ class Job:
     assert payload["results"][0]["status"] == "REMOTE_STATUS_RECONCILIATION_REQUIRED"
 
 
+def test_batch_job_cli_stop_infers_sdk_context_and_records_request(tmp_path: Path) -> None:
+    state_path = tmp_path / "jobs.json"
+    spec = make_exact_eval_spec(
+        name="job_with_underscores",
+        archive_path="/repo/archive.zip",
+        repo_dir="/repo",
+        upstream_dir="/upstream",
+        studio="pact",
+        teamspace="comma-lab",
+        user="adpena",
+        adjudication=_adjudication(),
+        **_expected_archive_kwargs(),
+    )
+    client = LightningBatchJobsClient(state_path=state_path)
+    client.submit(spec, dry_run=True)
+    records = json.loads(state_path.read_text())
+    records[0]["dry_run"] = False
+    records[0]["status"] = "Running"
+    records[0]["job"] = {"name": "custom-sdk-job"}
+    state_path.write_text(json.dumps(records, indent=2, sort_keys=True) + "\n")
+
+    (tmp_path / "lightning_sdk.py").write_text(
+        """
+class Job:
+    def __init__(self, *, name, teamspace=None, org=None, user=None):
+        if name != "custom-sdk-job":
+            raise RuntimeError(f"unexpected name {name!r}")
+        if teamspace != "comma-lab":
+            raise RuntimeError(f"unexpected teamspace {teamspace!r}")
+        if user != "adpena":
+            raise RuntimeError(f"unexpected user {user!r}")
+        self.name = name
+        self.status = "Running"
+        self.link = "https://lightning.ai/jobs/custom-sdk-job"
+        self.snapshot_path = "/teamspace/jobs/custom-sdk-job/snapshot"
+        self.artifact_path = "/teamspace/jobs/custom-sdk-job/artifacts"
+        self.machine = "g4dn.2xlarge"
+        self.total_cost = 0.25
+
+    def stop(self):
+        self.status = "stopped"
+""".lstrip()
+    )
+
+    env = os.environ.copy()
+    env["PYTHONPATH"] = os.pathsep.join([str(tmp_path), str(REPO_ROOT / "src")])
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(CLI),
+            "stop",
+            "--state-path",
+            str(state_path),
+            "--job-name",
+            "job_with_underscores",
+            "--reason",
+            "unit-test cleanup",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=20,
+        env=env,
+        cwd=tmp_path,
+    )
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["stop_request"]["stop_returned"] is True
+    assert payload["stop_request"]["sdk_job_name"] == "custom-sdk-job"
+    assert payload["record"]["status"] == "stopped"
+
+    records = json.loads(state_path.read_text())
+    assert records[0]["stop_requests"][0]["reason"] == "unit-test cleanup"
+    assert records[0]["status_history"][-1]["observed_status"] == "stopped"
+
+
 def test_validate_local_artifact_dir_uses_json_not_logs(tmp_path: Path) -> None:
     artifact_dir = tmp_path / "artifacts"
     expected_sha, expected_bytes = _write_artifact_dir(artifact_dir)
@@ -1905,6 +2746,40 @@ def test_validate_local_artifact_dir_reports_failed_component_gate_as_non_promot
 
     assert result["adjudication_lane_status"] == "COMPONENT_GATE_REVIEW_REQUIRED"
     assert result["adjudication_component_gate_triggered"] is True
+    assert result["promotion_eligible"] is False
+
+
+def test_validate_local_artifact_dir_uses_adjudicated_hardware_promotion_gate(
+    tmp_path: Path,
+) -> None:
+    artifact_dir = tmp_path / "artifacts"
+    _write_artifact_dir(artifact_dir, adjudication=True)
+    contest_path = artifact_dir / "contest_auth_eval.json"
+    contest = json.loads(contest_path.read_text())
+    contest["provenance"]["gpu_model"] = "NVIDIA RTX PRO 6000"
+    contest["provenance"]["gpu_t4_match"] = False
+    contest_path.write_text(json.dumps(contest, indent=2, sort_keys=True) + "\n")
+    (artifact_dir / "contest_auth_eval.adjudicated.json").write_text(
+        json.dumps(contest, indent=2, sort_keys=True) + "\n"
+    )
+    adjudication_path = artifact_dir / "adjudication_provenance.json"
+    adjudication = json.loads(adjudication_path.read_text())
+    adjudication.update(
+        {
+            "contest_cuda_gpu_model": "NVIDIA RTX PRO 6000",
+            "contest_cuda_gpu_t4_match": False,
+            "contest_equivalent_hardware": False,
+            "promotion_eligible": False,
+        }
+    )
+    adjudication_path.write_text(
+        json.dumps(adjudication, indent=2, sort_keys=True) + "\n"
+    )
+
+    result = validate_local_artifact_dir(artifact_dir, require_adjudication=True)
+
+    assert result["gpu_t4_match"] is False
+    assert result["adjudication_provenance"]["promotion_eligible"] is False
     assert result["promotion_eligible"] is False
 
 
@@ -2144,6 +3019,13 @@ def test_harvest_ssh_artifacts_mirrors_validates_and_records_state(
             assert args[-2] == "lightning-host"
             assert args[-1] == f"test -d {persisted_remote}"
             return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+        if args[0] == "ssh" and args[-1].startswith("find "):
+            return subprocess.CompletedProcess(
+                args,
+                0,
+                stdout="\n".join(f"{persisted_remote}/{name}" for name in CANONICAL_ARTIFACT_FILES) + "\n",
+                stderr="",
+            )
         if args[0] == "ssh" and args[-1].startswith("test -f "):
             name = args[-1].rsplit("/", 1)[-1]
             return subprocess.CompletedProcess(
@@ -2160,7 +3042,408 @@ def test_harvest_ssh_artifacts_mirrors_validates_and_records_state(
             assert "-p" in args
             assert args[-2].startswith(f"lightning-host:{persisted_remote}/")
             name = args[-2].rsplit("/", 1)[-1]
-            assert name in CANONICAL_ARTIFACT_FILES or name == "auth_eval.log"
+            assert name in CANONICAL_ARTIFACT_FILES or name in {
+                "auth_eval.log",
+                "component_trace.json",
+                "component_trace.log",
+            }
+            shutil.copy2(remote_source / name, Path(args[-1]))
+            return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+        raise AssertionError(f"unexpected command: {args}")
+
+    monkeypatch.setattr(lightning_batch_jobs.subprocess, "run", fake_run)
+    spec = make_exact_eval_spec(
+        name="dry",
+        archive_path="/repo/archive.zip",
+        repo_dir="/repo",
+        upstream_dir="/upstream",
+        output_dir="/teamspace/studios/this_studio/pact/remote/out",
+        local_artifact_dir=str(mirror),
+        expected_archive_sha256=expected_sha,
+        expected_archive_size_bytes=expected_bytes,
+        adjudication=_adjudication(),
+    )
+    client = LightningBatchJobsClient(state_path=tmp_path / "jobs.json")
+    client.submit(spec, dry_run=True)
+    records = json.loads((tmp_path / "jobs.json").read_text())
+    records[0]["status"] = "ARTIFACT_INFRA_FAILURE"
+    records[0]["terminal_class"] = LIGHTNING_MISSING_EXACT_EVAL_JSON_TERMINAL_CLASS
+    records[0]["artifact_failures"] = [
+        {"status": "ARTIFACT_INFRA_FAILURE", "terminal_class": LIGHTNING_MISSING_EXACT_EVAL_JSON_TERMINAL_CLASS}
+    ]
+    (tmp_path / "jobs.json").write_text(json.dumps(records, indent=2) + "\n")
+
+    validation = client.harvest_ssh_artifacts(
+        job_name="dry",
+        ssh_target="lightning-host",
+        require_adjudication=True,
+    )
+
+    assert calls[0][0] == "ssh"
+    assert calls[1][0] == "ssh"
+    assert calls[1][-1].startswith("find ")
+    assert calls[2][0] == "ssh"
+    assert calls[2][-1].startswith("test -d ")
+    assert any(call[0] == "scp" for call in calls[3:])
+    assert validation["archive_sha256"] == expected_sha
+    assert validation["ssh_source"]["remote_dir"] == persisted_remote
+    assert "eval_work" not in validation["ssh_source"]["copied_files"]
+    assert (mirror / ARTIFACT_VALIDATION).is_file()
+    record = json.loads((tmp_path / "jobs.json").read_text())[0]
+    assert record["status"] == "HARVESTED"
+    assert record["status_history"][-1]["source"] == "ssh_artifact_validation"
+    assert record["harvests"][0]["ssh_source"]["ssh_target"] == "lightning-host"
+
+
+def test_harvest_ssh_artifacts_records_empty_remote_dir_as_infra_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mirror = tmp_path / "mirror"
+    persisted_remote = "/teamspace/jobs/dry/artifacts/pact/remote/out"
+    calls: list[list[str]] = []
+
+    def fake_run(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        calls.append(list(args))
+        if args[0] == "ssh" and args[-1].startswith("test -d "):
+            return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+        if args[0] == "ssh" and args[-1].startswith("find "):
+            return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+        if args[0] == "scp":
+            raise AssertionError("empty artifact dirs must be classified before scp")
+        raise AssertionError(f"unexpected command: {args}")
+
+    monkeypatch.setattr(lightning_batch_jobs.subprocess, "run", fake_run)
+    spec = make_exact_eval_spec(
+        name="dry",
+        archive_path="/repo/archive.zip",
+        repo_dir="/repo",
+        upstream_dir="/upstream",
+        output_dir="/teamspace/studios/this_studio/pact/remote/out",
+        local_artifact_dir=str(mirror),
+        expected_archive_sha256=EXPECTED_SHA,
+        expected_archive_size_bytes=EXPECTED_BYTES,
+        adjudication=_adjudication(),
+    )
+    client = LightningBatchJobsClient(state_path=tmp_path / "jobs.json")
+    client.submit(spec, dry_run=True)
+
+    diagnostic = client.harvest_ssh_artifacts(
+        job_name="dry",
+        ssh_target="lightning-host",
+        require_adjudication=True,
+    )
+
+    assert [call[0] for call in calls] == ["ssh", "ssh"]
+    assert diagnostic["status"] == "ARTIFACT_INFRA_FAILURE"
+    assert diagnostic["terminal_class"] == LIGHTNING_EMPTY_ARTIFACT_INFRA_TERMINAL_CLASS
+    assert diagnostic["score_claim"] is False
+    assert diagnostic["method_evidence"] is False
+    assert diagnostic["promotion_eligible"] is False
+    assert diagnostic["score_source"] == "none:empty_lightning_artifact_dir"
+    assert diagnostic["ssh_source"]["remote_dir"] == persisted_remote
+    assert diagnostic["expected_archive_sha256"] == EXPECTED_SHA
+    assert (mirror / ARTIFACT_INFRA_FAILURE).is_file()
+
+    record = json.loads((tmp_path / "jobs.json").read_text())[0]
+    assert record["status"] == "ARTIFACT_INFRA_FAILURE"
+    assert record["terminal_class"] == LIGHTNING_EMPTY_ARTIFACT_INFRA_TERMINAL_CLASS
+    assert "harvests" not in record
+    assert record["artifact_failures"][0]["terminal_class"] == LIGHTNING_EMPTY_ARTIFACT_INFRA_TERMINAL_CLASS
+    assert record["status_history"][-1]["source"] == "ssh_artifact_preharvest_classification"
+
+
+def test_harvest_ssh_artifacts_reports_missing_remote_dir_as_not_ready(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mirror = tmp_path / "mirror"
+    calls: list[list[str]] = []
+
+    def fake_run(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        calls.append(list(args))
+        if args[0] == "ssh" and args[-1].startswith("test -d "):
+            return subprocess.CompletedProcess(args, 1, stdout="", stderr="missing")
+        if args[0] == "scp":
+            raise AssertionError("not-ready artifact dirs must not be mirrored")
+        raise AssertionError(f"unexpected command: {args}")
+
+    monkeypatch.setattr(lightning_batch_jobs.subprocess, "run", fake_run)
+    spec = make_exact_eval_spec(
+        name="dry",
+        archive_path="/repo/archive.zip",
+        repo_dir="/repo",
+        upstream_dir="/upstream",
+        output_dir="/teamspace/studios/this_studio/pact/remote/out",
+        local_artifact_dir=str(mirror),
+        expected_archive_sha256=EXPECTED_SHA,
+        expected_archive_size_bytes=EXPECTED_BYTES,
+        adjudication=_adjudication(),
+    )
+    client = LightningBatchJobsClient(state_path=tmp_path / "jobs.json")
+    client.submit(spec, dry_run=True)
+
+    diagnostic = client.harvest_ssh_artifacts(
+        job_name="dry",
+        ssh_target="lightning-host",
+        require_adjudication=True,
+    )
+
+    assert [call[0] for call in calls] == ["ssh"]
+    assert diagnostic["status"] == "ARTIFACT_NOT_READY"
+    assert diagnostic["score_claim"] is False
+    assert diagnostic["method_evidence"] is False
+    assert diagnostic["recommended_action"].startswith("Refresh job status")
+    assert not mirror.exists()
+
+    record = json.loads((tmp_path / "jobs.json").read_text())[0]
+    assert record["status"] == "DRY_RUN"
+    assert "artifact_failures" not in record
+    assert "harvests" not in record
+
+
+def test_harvest_ssh_artifacts_records_partial_missing_score_json_as_infra_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mirror = tmp_path / "mirror"
+    remote_source = tmp_path / "remote"
+    remote_source.mkdir()
+    (remote_source / "archive.zip").write_bytes(b"partial archive bytes")
+    identity = archive_identity(remote_source / "archive.zip")
+    (remote_source / ARTIFACT_METADATA).write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "role": "exact_cuda_eval",
+                "expected_archive_sha256": identity["archive_sha256"],
+                "expected_archive_size_bytes": identity["archive_size_bytes"],
+            }
+        )
+        + "\n"
+    )
+    (remote_source / "auth_eval.log").write_text("NameError before contest_auth_eval.json\n")
+    persisted_remote = "/teamspace/jobs/dry/artifacts/pact/remote/out"
+    calls: list[list[str]] = []
+
+    def fake_run(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        calls.append(list(args))
+        if args[0] == "ssh" and args[-1].startswith("test -d "):
+            return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+        if args[0] == "ssh" and args[-1].startswith("find "):
+            stdout = "\n".join(
+                f"{persisted_remote}/{path.name}" for path in sorted(remote_source.iterdir())
+            )
+            return subprocess.CompletedProcess(args, 0, stdout=stdout + "\n", stderr="")
+        if args[0] == "ssh" and args[-1].startswith("test -f "):
+            name = args[-1].rsplit("/", 1)[-1]
+            return subprocess.CompletedProcess(
+                args,
+                0 if (remote_source / name).is_file() else 1,
+                stdout="",
+                stderr="",
+            )
+        if args[0] == "scp":
+            name = args[-2].rsplit("/", 1)[-1]
+            shutil.copy2(remote_source / name, Path(args[-1]))
+            return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+        raise AssertionError(f"unexpected command: {args}")
+
+    monkeypatch.setattr(lightning_batch_jobs.subprocess, "run", fake_run)
+    spec = make_exact_eval_spec(
+        name="dry",
+        archive_path="/repo/archive.zip",
+        repo_dir="/repo",
+        upstream_dir="/upstream",
+        output_dir="/teamspace/studios/this_studio/pact/remote/out",
+        local_artifact_dir=str(mirror),
+        expected_archive_sha256=identity["archive_sha256"],
+        expected_archive_size_bytes=identity["archive_size_bytes"],
+        adjudication=_adjudication(),
+    )
+    client = LightningBatchJobsClient(state_path=tmp_path / "jobs.json")
+    client.submit(spec, dry_run=True)
+
+    diagnostic = client.harvest_ssh_artifacts(
+        job_name="dry",
+        ssh_target="lightning-host",
+        require_adjudication=True,
+    )
+
+    assert diagnostic["status"] == "ARTIFACT_INFRA_FAILURE"
+    assert diagnostic["terminal_class"] == LIGHTNING_MISSING_EXACT_EVAL_JSON_TERMINAL_CLASS
+    assert diagnostic["score_claim"] is False
+    assert diagnostic["method_evidence"] is False
+    assert diagnostic["archive_identity"]["archive_sha256"] == identity["archive_sha256"]
+    assert "contest_auth_eval.json" in diagnostic["missing_required_files"]
+    assert (mirror / "archive.zip").is_file()
+    assert (mirror / "auth_eval.log").is_file()
+    assert (mirror / ARTIFACT_INFRA_FAILURE).is_file()
+    assert (mirror / ARTIFACT_VALIDATION).is_file()
+
+    record = json.loads((tmp_path / "jobs.json").read_text())[0]
+    assert record["status"] == "ARTIFACT_INFRA_FAILURE"
+    assert record["terminal_class"] == LIGHTNING_MISSING_EXACT_EVAL_JSON_TERMINAL_CLASS
+    assert "harvests" not in record
+    assert record["artifact_failures"][0]["terminal_class"] == LIGHTNING_MISSING_EXACT_EVAL_JSON_TERMINAL_CLASS
+    assert record["status_history"][-1]["source"] == "ssh_artifact_partial_failure_classification"
+
+
+@pytest.mark.parametrize(
+    ("log_text", "terminal_class"),
+    [
+        (
+            "Archive validator rejected renderer_payload.bin.zst: extension not in whitelist\n",
+            "archive_validator_whitelist_block",
+        ),
+        (
+            "contest_auth_eval: inflate.sh returned non-zero exit status 1\ninflate returncode=1\n",
+            "inflate_returncode_failure",
+        ),
+        (
+            "PR86 constriction HPAC decode failed: invalid entropy model for stream 7\n",
+            "pr86_constriction_hpac_invalid_entropy_model",
+        ),
+    ],
+)
+def test_launch_cli_refines_missing_score_json_from_auth_eval_log_signatures(
+    tmp_path: Path,
+    log_text: str,
+    terminal_class: str,
+) -> None:
+    mod = _load_lightning_cli_module(tmp_path)
+    artifact_dir = tmp_path / "artifacts"
+    artifact_dir.mkdir()
+    (artifact_dir / "auth_eval.log").write_text(log_text)
+    diagnostic = {
+        "status": "ARTIFACT_INFRA_FAILURE",
+        "terminal_class": LIGHTNING_MISSING_EXACT_EVAL_JSON_TERMINAL_CLASS,
+        "missing_required_files": ["contest_auth_eval.json", "report.txt"],
+    }
+
+    refined = mod.refine_exact_eval_missing_json_failure(
+        diagnostic,
+        artifact_dir=artifact_dir,
+    )
+
+    assert refined["terminal_class"] == terminal_class
+    assert refined["refined_from_terminal_class"] == LIGHTNING_MISSING_EXACT_EVAL_JSON_TERMINAL_CLASS
+    assert refined["score_claim"] is False
+    assert refined["method_evidence"] is False
+    assert refined["promotion_eligible"] is False
+    assert refined["score_source"].startswith("none:")
+    assert "auth_eval_log_snippet_tail" in refined
+
+
+def test_launch_cli_keeps_missing_artifacts_bucket_when_auth_eval_log_is_unmatched(
+    tmp_path: Path,
+) -> None:
+    mod = _load_lightning_cli_module(tmp_path)
+    artifact_dir = tmp_path / "artifacts"
+    artifact_dir.mkdir()
+    (artifact_dir / "auth_eval.log").write_text("NameError before contest_auth_eval.json\n")
+    diagnostic = {
+        "status": "ARTIFACT_INFRA_FAILURE",
+        "terminal_class": LIGHTNING_MISSING_EXACT_EVAL_JSON_TERMINAL_CLASS,
+        "missing_required_files": ["contest_auth_eval.json"],
+    }
+
+    refined = mod.refine_exact_eval_missing_json_failure(
+        diagnostic,
+        artifact_dir=artifact_dir,
+    )
+
+    assert refined["terminal_class"] == LIGHTNING_MISSING_EXACT_EVAL_JSON_TERMINAL_CLASS
+    assert refined["auth_eval_log_classification"] == "missing_artifacts"
+    assert refined["score_source"] == "none:missing_contest_auth_eval_json"
+
+
+def test_launch_cli_persists_refined_harvest_failure_to_mirror_and_state(
+    tmp_path: Path,
+) -> None:
+    mod = _load_lightning_cli_module(tmp_path)
+    mirror = tmp_path / "mirror"
+    mirror.mkdir()
+    state_path = tmp_path / "jobs.json"
+    state_path.write_text(
+        json.dumps(
+            [
+                {
+                    "spec": {"name": "dry"},
+                    "status": "ARTIFACT_INFRA_FAILURE",
+                    "terminal_class": LIGHTNING_MISSING_EXACT_EVAL_JSON_TERMINAL_CLASS,
+                    "artifact_failures": [
+                        {
+                            "terminal_class": LIGHTNING_MISSING_EXACT_EVAL_JSON_TERMINAL_CLASS,
+                        }
+                    ],
+                    "status_history": [
+                        {
+                            "status": "ARTIFACT_INFRA_FAILURE",
+                            "terminal_class": LIGHTNING_MISSING_EXACT_EVAL_JSON_TERMINAL_CLASS,
+                            "source": "ssh_artifact_partial_failure_classification",
+                        }
+                    ],
+                }
+            ],
+            indent=2,
+        )
+        + "\n"
+    )
+    refined = {
+        "status": "ARTIFACT_INFRA_FAILURE",
+        "terminal_class": "archive_validator_whitelist_block",
+        "ssh_source": {"mirror_dir": str(mirror)},
+    }
+    args = argparse.Namespace(job_name="dry", state_path=str(state_path), mirror_dir=None)
+
+    mod._persist_harvest_failure_refinement(args=args, refined=refined)
+
+    for name in (ARTIFACT_INFRA_FAILURE, ARTIFACT_VALIDATION):
+        payload = json.loads((mirror / name).read_text())
+        assert payload["terminal_class"] == "archive_validator_whitelist_block"
+    record = json.loads(state_path.read_text())[0]
+    assert record["terminal_class"] == "archive_validator_whitelist_block"
+    assert record["artifact_failures"][0]["terminal_class"] == "archive_validator_whitelist_block"
+    assert record["status_history"][-1]["terminal_class"] == "archive_validator_whitelist_block"
+
+
+def test_harvest_ssh_artifacts_recovers_missing_adjudication_copy_from_metadata(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mirror = tmp_path / "mirror"
+    remote_source = tmp_path / "remote"
+    expected_sha, expected_bytes = _write_artifact_dir(remote_source, adjudication=True)
+    (remote_source / "adjudication_provenance.json").unlink()
+    (remote_source / "contest_auth_eval.adjudicated.json").unlink()
+    (remote_source / "adjudication.log").write_text(
+        "SCORE_RECOMPUTED=1.25\n"
+        "EVIDENCE_GRADE=A++ contest T4\n"
+        "PROMOTION_ELIGIBLE=1\n"
+    )
+    persisted_remote = "/teamspace/jobs/dry/artifacts/pact/remote/out"
+    calls: list[list[str]] = []
+
+    def fake_run(args: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        calls.append(list(args))
+        if args[0] == "ssh" and args[-1].startswith("test -d "):
+            return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+        if args[0] == "ssh" and args[-1].startswith("find "):
+            stdout = "\n".join(
+                f"{persisted_remote}/{path.name}" for path in sorted(remote_source.iterdir())
+            )
+            return subprocess.CompletedProcess(args, 0, stdout=stdout + "\n", stderr="")
+        if args[0] == "ssh" and args[-1].startswith("test -f "):
+            name = args[-1].rsplit("/", 1)[-1]
+            return subprocess.CompletedProcess(
+                args,
+                0 if (remote_source / name).is_file() else 1,
+                stdout="",
+                stderr="",
+            )
+        if args[0] == "scp":
+            name = args[-2].rsplit("/", 1)[-1]
             shutil.copy2(remote_source / name, Path(args[-1]))
             return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
         raise AssertionError(f"unexpected command: {args}")
@@ -2186,16 +3469,21 @@ def test_harvest_ssh_artifacts_mirrors_validates_and_records_state(
         require_adjudication=True,
     )
 
-    assert calls[0][0] == "ssh"
-    assert calls[1][0] == "scp"
     assert validation["archive_sha256"] == expected_sha
-    assert validation["ssh_source"]["remote_dir"] == persisted_remote
-    assert "eval_work" not in validation["ssh_source"]["copied_files"]
-    assert (mirror / ARTIFACT_VALIDATION).is_file()
+    assert validation["promotion_eligible"] is True
+    assert validation["adjudication_provenance"]["artifact_recovery"] == (
+        "reconstructed_missing_adjudication_artifacts_from_metadata"
+    )
+    assert (mirror / "adjudication_provenance.json").is_file()
+    assert (mirror / "contest_auth_eval.adjudicated.json").is_file()
+    assert not (mirror / ARTIFACT_INFRA_FAILURE).exists()
+    assert "adjudication_provenance.json:reconstructed" in validation["ssh_source"]["copied_files"]
+    assert "contest_auth_eval.adjudicated.json:reconstructed" in validation["ssh_source"]["copied_files"]
+
     record = json.loads((tmp_path / "jobs.json").read_text())[0]
     assert record["status"] == "HARVESTED"
+    assert "terminal_class" not in record
     assert record["status_history"][-1]["source"] == "ssh_artifact_validation"
-    assert record["harvests"][0]["ssh_source"]["ssh_target"] == "lightning-host"
 
 
 def test_harvest_ssh_component_response_artifacts_uses_state_artifact_mapping(
@@ -2464,6 +3752,8 @@ def test_lightning_doctor_payload_passes_with_required_skips_unset(
     assert payload["status"] == "OK"
     assert payload["checks"]["local_supply_chain"]["ok"] is True
     assert payload["checks"]["remote_supply_chain"]["status"] == "skipped"
+    assert "--remote-preflight-ssh-target" in payload["checks"]["argparse_surface"]["remote_related_options"]
+    assert "--ssh-target" in payload["checks"]["argparse_surface"]["remote_related_options"]
 
 
 def test_machine_rows_filter_provider_instance_names_without_sdk_enum() -> None:
@@ -2539,6 +3829,9 @@ def test_batch_job_cli_dry_run(tmp_path: Path) -> None:
             "1.2",
             "--component-reference-label",
             "frontier",
+            "--component-trace",
+            "--component-trace-top-k",
+            "17",
             "--dry-run",
         ],
         capture_output=True,
@@ -2563,7 +3856,112 @@ def test_batch_job_cli_dry_run(tmp_path: Path) -> None:
     assert payload["spec"]["adjudication"]["max_segnet_relative"] == 1.2
     assert payload["spec"]["adjudication"]["component_reference_label"] == "frontier"
     assert payload["spec"]["adjudication"]["allow_component_gate_forensic_success"] is True
+    assert payload["spec"]["adjudication"]["allow_sane_score_forensic_success"] is True
     assert "--allow-component-gate-forensic-success" in payload["spec"]["command"]
+    assert "--allow-sane-score-forensic-success" in payload["spec"]["command"]
+    assert "experiments/contest_component_trace.py" in payload["spec"]["command"]
+    assert "--top-k 17" in payload["spec"]["command"]
+    assert payload["submit_readiness"]["ok"] is False
+    assert "missing --remote-preflight-ssh-target" in payload["submit_readiness"]["blockers"][0]
+
+
+def test_batch_job_cli_unknown_remote_flag_reports_real_argparse_surface(tmp_path: Path) -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(CLI),
+            "exact-eval",
+            "--job-name",
+            "cli-dry",
+            "--archive",
+            "/repo/archive.zip",
+            "--repo-dir",
+            "/repo",
+            "--upstream-dir",
+            "/upstream",
+            "--studio",
+            "pact",
+            "--remote",
+            "lightning-pact",
+            "--adjudicate",
+            "--dry-run",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=20,
+        env={"PYTHONPATH": str(REPO_ROOT / "src")},
+        cwd=tmp_path,
+    )
+    assert result.returncode != 0
+    assert "--remote: --remote-preflight-ssh-target" in result.stderr
+    assert "Strict argparse rejected unknown option" in result.stderr
+
+
+def test_batch_job_cli_disallows_abbreviated_remote_preflight_flag(tmp_path: Path) -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(CLI),
+            "exact-eval",
+            "--job-name",
+            "cli-dry",
+            "--archive",
+            "/repo/archive.zip",
+            "--repo-dir",
+            "/repo",
+            "--upstream-dir",
+            "/upstream",
+            "--studio",
+            "pact",
+            "--remote-preflight-target",
+            "lightning-pact",
+            "--adjudicate",
+            "--dry-run",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=20,
+        env={"PYTHONPATH": str(REPO_ROOT / "src")},
+        cwd=tmp_path,
+    )
+    assert result.returncode != 0
+    assert "--remote-preflight-target: --remote-preflight-ssh-target" in result.stderr
+
+
+def test_batch_job_cli_rejects_adjudicator_only_flags_with_specific_hint(
+    tmp_path: Path,
+) -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(CLI),
+            "exact-eval",
+            "--job-name",
+            "cli-dry",
+            "--archive",
+            "/repo/archive.zip",
+            "--repo-dir",
+            "/repo",
+            "--upstream-dir",
+            "/upstream",
+            "--studio",
+            "pact",
+            "--required-device",
+            "cuda",
+            "--required-samples",
+            "600",
+            "--adjudicate",
+            "--dry-run",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=20,
+        env={"PYTHONPATH": str(REPO_ROOT / "src")},
+        cwd=tmp_path,
+    )
+    assert result.returncode != 0
+    assert "--required-device: belongs to scripts/adjudicate_contest_auth_eval.py" in result.stderr
+    assert "--required-samples: belongs to scripts/adjudicate_contest_auth_eval.py" in result.stderr
 
 
 def test_batch_job_cli_can_force_component_gate_job_failure(tmp_path: Path) -> None:
@@ -2608,7 +4006,9 @@ def test_batch_job_cli_can_force_component_gate_job_failure(tmp_path: Path) -> N
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
     assert payload["spec"]["adjudication"]["allow_component_gate_forensic_success"] is False
+    assert payload["spec"]["adjudication"]["allow_sane_score_forensic_success"] is True
     assert "--allow-component-gate-forensic-success" not in payload["spec"]["command"]
+    assert "--allow-sane-score-forensic-success" in payload["spec"]["command"]
 
 
 def test_batch_job_cli_component_sensitivity_dry_run(tmp_path: Path) -> None:

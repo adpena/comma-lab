@@ -161,7 +161,9 @@ print('provenance:', json.dumps(prov, indent=2))
     fi
     [ -f "$WORKSPACE/README.md" ] || { echo "FATAL: README.md missing — setuptools install will fail"; exit 1; }
     # 2026-04-26: canonical via pyproject.toml [project.optional-dependencies.runtime]
-    "$PYBIN" -m ensurepip --upgrade 2>&1 | tail -1
+    if ! "$PYBIN" -c "import pip" 2>/dev/null; then
+        "$PYBIN" -m ensurepip --upgrade 2>&1 | tail -1
+    fi
     "$PYBIN" -m pip install -q --upgrade pip 2>&1 | tail -1
     "$PYBIN" -m pip install -q -e ".[runtime]" 2>&1 | tail -3
 

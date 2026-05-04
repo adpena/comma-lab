@@ -11,9 +11,17 @@ set -euo pipefail
 SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SELF_DIR/../.." && pwd)"
 LIGHTNING_USER="${LIGHTNING_USER:?Set LIGHTNING_USER env var}"
-LIGHTNING_HOST="${LIGHTNING_USER}@ssh.lightning.ai"
-SSH_KEY="${HOME}/.ssh/lightning_rsa"
-REMOTE_RESULTS="/home/zeus/content/pact/results"
+LIGHTNING_HOST="${LIGHTNING_HOST:-${LIGHTNING_USER}@ssh.lightning.ai}"
+LIGHTNING_SSH_KEY="${LIGHTNING_SSH_KEY:-}"
+REMOTE_RESULTS="${LIGHTNING_REMOTE_RESULTS:-\${LIGHTNING_REMOTE_RESULTS}}"
+if [ -z "$REMOTE_RESULTS" ] || [ "$REMOTE_RESULTS" = '${LIGHTNING_REMOTE_RESULTS}' ]; then
+    echo "Set LIGHTNING_REMOTE_RESULTS to the remote results directory"
+    exit 2
+fi
+SCP_ARGS=(-o StrictHostKeyChecking=no)
+if [ -n "$LIGHTNING_SSH_KEY" ]; then
+    SCP_ARGS=(-i "$LIGHTNING_SSH_KEY" "${SCP_ARGS[@]}")
+fi
 
 RUN_NAME="${1:-lightning_full}"
 SKIP_SCORE="${2:-}"
@@ -29,11 +37,11 @@ mkdir -p "$CKPT_DIR"
 
 # 2. Download checkpoint + meta from Lightning
 echo "[1/5] Downloading checkpoint from Lightning..."
-scp -i "$SSH_KEY" -o StrictHostKeyChecking=no \
+scp "${SCP_ARGS[@]}" \
     "${LIGHTNING_HOST}:${REMOTE_RESULTS}/postfilter_${RUN_NAME}_best_int8.pt" \
     "$CKPT_DIR/postfilter_int8.pt" 2>/dev/null
 
-scp -i "$SSH_KEY" -o StrictHostKeyChecking=no \
+scp "${SCP_ARGS[@]}" \
     "${LIGHTNING_HOST}:${REMOTE_RESULTS}/postfilter_${RUN_NAME}_best_meta.json" \
     "$CKPT_DIR/meta.json" 2>/dev/null
 

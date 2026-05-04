@@ -17,10 +17,15 @@ Architecture classes (SPADE, SPADEResBlock, DPSIMSRenderer) are inlined
 for standalone operation on scorer machines without the tac package.
 """
 import json
+import bz2
+import lzma
 import os
+import shutil
 import struct
 import sys
 import time
+import tempfile
+import subprocess
 import zlib
 from pathlib import Path
 
@@ -39,6 +44,78 @@ SEG_W, SEG_H = 512, 384
 NUM_FRAMES = 1200
 NUM_CLASSES = 5  # Canonical source: tac.camera.NUM_CLASSES (kept local for standalone operation)
 EXPECTED_RAW_BYTES = OUT_W * OUT_H * 3 * NUM_FRAMES  # 3,662,409,600
+CMG1_MAGIC = b"CMG1"
+CMG1_SCHEMA_VERSION = 1
+CMG1_HEADER_STRUCT = struct.Struct("<4sHHHHBBI")
+CMG1_MODE_RAW_BIT_IDENTICAL = "raw_bit_identical_mask_stream"
+CMG1_MODE_CODES = {
+    "placeholder_strict_manifest": 0,
+    CMG1_MODE_RAW_BIT_IDENTICAL: 1,
+}
+CMG1_MAX_HEADER_JSON_BYTES = 1 << 20
+CMG1_MAX_RAW_STREAM_BYTES = 512 * 1024 * 1024
+CMG2_MAGIC = b"CMG2"
+CMG2_SCHEMA_VERSION = 1
+CMG2_HEADER_STRUCT = struct.Struct("<4sHI")
+CMG2_MAX_HEADER_JSON_BYTES = 1 << 20
+CMG2_MAX_LOW_TENSOR_BYTES = 128 * 1024 * 1024
+CMG3_MAGIC = b"CMG3"
+CMG3_SCHEMA_VERSION = 1
+CMG3_HEADER_STRUCT = struct.Struct("<4sHI")
+CMG3_HOTSPOT_RESIDUAL_RECORD_STRUCT = struct.Struct("<HHHHB")
+CMG3_MAX_HEADER_JSON_BYTES = 1 << 20
+CMG3_MAX_SPAN_TENSOR_BYTES = 128 * 1024 * 1024
+CDO1_OVERLAY_MAGIC = b"CDO1"
+CDO1_OVERLAY_SCHEMA_VERSION = 1
+CDO1_OVERLAY_SCHEMA = "c067_decoded_delta_overlay_payload_v1"
+CDO1_OVERLAY_HEADER_STRUCT = struct.Struct("<4sHI")
+CDO1_OVERLAY_RECORD_STRUCT = struct.Struct("<HHHHB")
+CDO1_OVERLAY_RECORD_STRUCT_NAME = "u16_frame_u16_y_u16_x0_u16_length_u8_value_le"
+CDO1_OVERLAY_MAX_HEADER_JSON_BYTES = 1 << 20
+CDO1_OVERLAY_MEMBER_CANDIDATES = (
+    ("masks.cdo1", "raw"),
+    ("masks.cdo1.zlib", "zlib"),
+    ("masks.cdo1.xz", "lzma_xz"),
+    ("masks.cdo1.br", "brotli"),
+)
+AMR1_REPAIR_MAGIC = b"AMR1"
+AMR1_REPAIR_SCHEMA = "alpha4_residual_repair_amr1_v1"
+AMR1_REPAIR_HEADER_STRUCT = ">I"
+AMR1_REPAIR_RECORD_STRUCT = ">IHHHB"
+AMR1_REPAIR_RECORD_SIZE = struct.calcsize(AMR1_REPAIR_RECORD_STRUCT)
+AMR1_REPAIR_MEMBER_CANDIDATES = (
+    ("alpha4_residual_repair.amr1", "raw"),
+    ("alpha4_residual_repair.amr1.zlib", "zlib"),
+    ("alpha4_residual_repair.amr1.xz", "lzma_xz"),
+    ("alpha4_residual_repair.amr1.br", "brotli"),
+)
+SJKL_PAYLOAD_FILENAME = "sjkl.bin"
+SJKL_MAGIC = b"SJKL"
+SJKL_BLOCK_MAGIC = b"SJKB"
+SJKL_BLOCK_V2_MAGIC = b"SJK2"
+SEG_TILE_ACTIONS_BIN = "seg_tile_actions.bin"
+SEG_TILE_ACTIONS_BR = "seg_tile_actions.br"
+SEG_TILE_ACTION_DICT_BIN = "seg_tile_action_dict.bin"
+SEG_TILE_ACTION_DICT_MAGIC = b"TAD1"
+SEG_TILE_ACTION_DICT_HEADER_STRUCT = struct.Struct("<4sHH")
+OPTIMIZED_POSES_QP1 = "optimized_poses.qp1"
+PR81_REORDERED_QZS3_MAGIC = b"Q81R"
+PR81_REORDERED_QZS3_MAGIC_LEN = 4
+PR81_SPLIT_MODEL_PACKED_REORDERED_BR_BYTES = 37_086
+PR81_SPLIT_MODEL_SCALES_REORDERED_BR_BYTES = 3_035
+PR81_SPLIT_MODEL_TAIL_REORDERED_BR_BYTES = 15_604
+PR81_SPLIT_MODEL_REORDERED_BYTES = (
+    PR81_SPLIT_MODEL_PACKED_REORDERED_BR_BYTES
+    + PR81_SPLIT_MODEL_SCALES_REORDERED_BR_BYTES
+    + PR81_SPLIT_MODEL_TAIL_REORDERED_BR_BYTES
+)
+PR81_ROUTER_ACTIONS = "router_actions.3bit"
+PR81_ROUTER_ACTION_COUNT = 600
+PR81_ROUTER_ACTION_BYTES = 225
+PR81_ROUTER_ACTION_BITS = 3
+STBM1BR_MAGIC = b"STBM1BR\0"
+SEG_TILE_SIZE = 32
+_TRUE_ENV_VALUES = {"1", "true", "yes", "on"}
 
 
 # ============================================================
@@ -250,6 +327,747 @@ def _apply_gradient_corrections_device(
     flat.scatter_add_(0, local_idx.unsqueeze(-1).expand(-1, C), src)
     flat.clamp_(0.0, 255.0)
     return flat.reshape(H, W, C)
+
+
+def _decode_qp1_poses_float32(
+    path: Path,
+    *,
+    pose_dim: int,
+    velocity_offset: float = 20.0,
+    velocity_scale: float = 512.0,
+) -> torch.Tensor:
+    """Decode public QP1 velocity poses directly to float32.
+
+    PR75 decodes QP1 into float32 before JointFrameGenerator. Materializing the
+    same stream through raw fp16 ``optimized_poses.bin`` changes pose values and
+    measurably changes rendered bytes, so QP1-capable archives use this path.
+    """
+    data = path.read_bytes()
+    if len(data) < 5 or data[:3] != b"QP1":
+        raise ValueError(f"bad QP1 pose payload: {path}")
+    if pose_dim <= 0:
+        raise ValueError(f"QP1 pose_dim must be positive; got {pose_dim}")
+
+    vals = [struct.unpack_from("<H", data, 3)[0]]
+    cursor = 5
+    while cursor < len(data):
+        shift = 0
+        acc = 0
+        while True:
+            if cursor >= len(data):
+                raise ValueError(f"truncated QP1 VLQ payload: {path}")
+            byte = data[cursor]
+            cursor += 1
+            acc |= (byte & 0x7F) << shift
+            if byte < 0x80:
+                break
+            shift += 7
+            if shift > 63:
+                raise ValueError(f"overlong QP1 VLQ payload: {path}")
+        delta = (acc >> 1) ^ -(acc & 1)
+        vals.append(vals[-1] + delta)
+
+    q_velocity = np.asarray(vals, dtype=np.uint16).astype(np.float32)
+    poses = np.zeros((len(vals), pose_dim), dtype=np.float32)
+    poses[:, 0] = q_velocity / float(velocity_scale) + float(velocity_offset)
+    return torch.from_numpy(poses)
+
+
+def _restore_pr81_reordered_qzs3_model_payload(model_payload: bytes) -> bytes:
+    """Restore PR81's reordered Brotli model bundle to normal QZS3 bytes."""
+
+    import brotli
+    from tac.quantizr_qzs3_codec import _is_bias_name, _is_fp4_weight_name, qzs3_qv_specs
+    from tac.quantizr_faithful_renderer import build_quantizr_faithful_renderer
+
+    if len(model_payload) != PR81_SPLIT_MODEL_REORDERED_BYTES:
+        raise ValueError(
+            f"unexpected PR81 reordered model payload length: "
+            f"{len(model_payload)} != {PR81_SPLIT_MODEL_REORDERED_BYTES}"
+        )
+    offset = 0
+    packed_br = model_payload[offset : offset + PR81_SPLIT_MODEL_PACKED_REORDERED_BR_BYTES]
+    offset += PR81_SPLIT_MODEL_PACKED_REORDERED_BR_BYTES
+    scales_br = model_payload[offset : offset + PR81_SPLIT_MODEL_SCALES_REORDERED_BR_BYTES]
+    offset += PR81_SPLIT_MODEL_SCALES_REORDERED_BR_BYTES
+    tail_br = model_payload[offset : offset + PR81_SPLIT_MODEL_TAIL_REORDERED_BR_BYTES]
+
+    template = build_quantizr_faithful_renderer()
+    template_state = template.state_dict()
+    qv_specs = qzs3_qv_specs()
+    packed_chunks: list[tuple[str, int]] = []
+    scales_chunks: list[tuple[str, int]] = []
+    tail_chunks: dict[str, list[tuple[str, int]]] = {
+        "bias": [],
+        "dense_fp": [],
+        "fp_weight": [],
+        "dense_other": [],
+        "qv": [],
+    }
+    for key, tensor in template_state.items():
+        shape = tuple(tensor.shape)
+        count = int(tensor.numel())
+        if _is_fp4_weight_name(key):
+            weight_numel = count
+            scale_count = (weight_numel + 31) // 32
+            packed_count = (scale_count * 32 + 1) // 2
+            packed_chunks.append((key, packed_count))
+            scales_chunks.append((key, scale_count * 2))
+        elif key.endswith(".weight") and (
+            key == "shared_trunk.embedding.weight"
+            or key in {"frame1_head.head.weight", "frame2_head.head.weight"}
+        ):
+            tail_chunks["fp_weight"].append((key, count * 2))
+        elif _is_bias_name(key):
+            tail_chunks["bias"].append((key, count * 2))
+        elif key in qv_specs:
+            bits, per_row = qv_specs[key]
+            rows = shape[0] if per_row and len(shape) >= 2 else 1
+            tail_chunks["qv"].append((key, rows * 4 + (count * bits + 7) // 8))
+        elif torch.is_floating_point(tensor):
+            tail_chunks["dense_fp"].append((key, count * 2))
+        else:
+            tail_chunks["dense_other"].append((key, count * torch.empty((), dtype=tensor.dtype).element_size()))
+
+    def restore_chunk_order(data: bytes, raw_chunks: list[tuple[str, int]], stored_chunks: list[tuple[str, int]]) -> bytes:
+        cursor = 0
+        by_name: dict[str, bytes] = {}
+        for name, count in stored_chunks:
+            by_name[name] = data[cursor : cursor + count]
+            cursor += count
+        if cursor != len(data):
+            raise ValueError(f"PR81 chunk length mismatch: consumed {cursor}, got {len(data)}")
+        return b"".join(by_name[name] for name, _count in raw_chunks)
+
+    packed = restore_chunk_order(
+        brotli.decompress(packed_br),
+        packed_chunks,
+        sorted(packed_chunks, key=lambda item: (item[1], item[0])),
+    )
+    scales = restore_chunk_order(
+        brotli.decompress(scales_br),
+        scales_chunks,
+        sorted(scales_chunks, key=lambda item: (-item[1], item[0])),
+    )
+    tail_data = brotli.decompress(tail_br)
+    tail_stored_order = ("qv", "dense_fp", "fp_weight", "bias")
+    tail_stored_chunks = {
+        "qv": sorted(tail_chunks["qv"], key=lambda item: item[0], reverse=True),
+        "dense_fp": sorted(tail_chunks["dense_fp"], key=lambda item: (item[1], item[0])),
+        "fp_weight": list(reversed(tail_chunks["fp_weight"])),
+        "bias": sorted(tail_chunks["bias"], key=lambda item: (-item[1], item[0])),
+    }
+    tail_cursor = 0
+    tail_by_type: dict[str, bytes] = {}
+    for key in tail_stored_order:
+        n_bytes = sum(size for _name, size in tail_stored_chunks[key])
+        tail_by_type[key] = restore_chunk_order(
+            tail_data[tail_cursor : tail_cursor + n_bytes],
+            tail_chunks[key],
+            tail_stored_chunks[key],
+        )
+        tail_cursor += n_bytes
+    if tail_cursor != len(tail_data):
+        raise ValueError(f"PR81 tail length mismatch: consumed {tail_cursor}, got {len(tail_data)}")
+    tail_by_type["dense_other"] = b""
+    tail = b"".join(tail_by_type[key] for key in ("bias", "dense_fp", "fp_weight", "dense_other", "qv"))
+    return b"QZS3" + (32).to_bytes(2, "little") + packed + scales + tail
+
+
+def _unpack_pr81_router_actions(data: bytes, count: int = PR81_ROUTER_ACTION_COUNT) -> torch.Tensor:
+    if len(data) != PR81_ROUTER_ACTION_BYTES:
+        raise ValueError(f"unexpected PR81 router action payload length: {len(data)}")
+    vals: list[int] = []
+    acc = 0
+    bits = 0
+    for byte in data:
+        acc |= int(byte) << bits
+        bits += 8
+        while bits >= PR81_ROUTER_ACTION_BITS and len(vals) < count:
+            vals.append(acc & ((1 << PR81_ROUTER_ACTION_BITS) - 1))
+            acc >>= PR81_ROUTER_ACTION_BITS
+            bits -= PR81_ROUTER_ACTION_BITS
+    if len(vals) != count:
+        raise ValueError(f"decoded {len(vals)} router actions, expected {count}")
+    return torch.tensor(vals, dtype=torch.uint8)
+
+
+def _load_pr81_router_actions_from_archive_dir(archive_dir: str | Path) -> torch.Tensor | None:
+    path = Path(archive_dir) / PR81_ROUTER_ACTIONS
+    if not path.exists():
+        return None
+    actions = _unpack_pr81_router_actions(path.read_bytes())
+    print(f"  Loaded PR81 router actions: {actions.numel()} pairs", file=sys.stderr)
+    return actions
+
+
+def _apply_pr81_router_actions_to_pairs(
+    pairs: torch.Tensor,
+    actions: torch.Tensor | None,
+    *,
+    pair_start: int,
+) -> torch.Tensor:
+    if actions is None:
+        return pairs
+    selected = actions[pair_start : pair_start + pairs.shape[0]].to(device=pairs.device, dtype=torch.long)
+    out = pairs.clamp(0, 255).round()
+
+    def mask(action_id: int) -> torch.Tensor:
+        return selected == action_id
+
+    m = mask(1)
+    if m.any():
+        out[m, 1, :, :, 2:3] = (out[m, 1, :, :, 2:3] - 3.0).clamp(0, 255).round()
+    m = mask(2)
+    if m.any():
+        out[m, :, :, :, 1:2] = (out[m, :, :, :, 1:2] - 3.0).clamp(0, 255).round()
+    m = mask(3)
+    if m.any():
+        out[m] = (out[m] - 2.0).clamp(0, 255).round()
+    m = mask(4)
+    if m.any():
+        out[m, 1:2] = ((out[m, 1:2] - 128.0) * 1.03 + 128.0).clamp(0, 255).round()
+    m = mask(5)
+    if m.any():
+        out[m, 1, :, :, 0:1] = (out[m, 1, :, :, 0:1] + 3.0).clamp(0, 255).round()
+    m = mask(6)
+    if m.any():
+        out[m, 1, :, :, 1:2] = (out[m, 1, :, :, 1:2] - 4.0).clamp(0, 255).round()
+    m = mask(7)
+    if m.any():
+        out[m] = torch.pow((out[m] / 255.0).clamp(0.0, 1.0), 1.04).mul(255.0).clamp(0, 255).round()
+    return out
+
+
+# ============================================================
+# Optional SJ-KL residual payload (charged archive bytes, no scorers)
+# ============================================================
+def _unpack_sjkl_alpha_block(payload: bytes) -> dict:
+    import brotli
+    import math
+
+    raw = brotli.decompress(payload)
+    if len(raw) < 9:
+        raise ValueError("SJ-KL alpha block is too short")
+    if raw[:4] == SJKL_BLOCK_V2_MAGIC:
+        n_pairs, k, alpha_bits = struct.unpack("<HHB", raw[4:9])
+        if n_pairs <= 0 or n_pairs > 10_000:
+            raise ValueError(f"invalid SJ-KL sparse pair count: {n_pairs}")
+        if k <= 0 or k > 256:
+            raise ValueError(f"invalid SJ-KL sparse basis width: {k}")
+        if alpha_bits <= 0 or alpha_bits > 16:
+            raise ValueError(f"unsupported SJ-KL sparse alpha_bits={alpha_bits}")
+        cursor = 9
+        indices_end = cursor + 2 * n_pairs
+        mins_end = indices_end + 2 * n_pairs
+        steps_end = mins_end + 2 * n_pairs
+        packed_len = math.ceil(n_pairs * k * alpha_bits / 8)
+        qs_end = steps_end + packed_len
+        if qs_end != len(raw):
+            raise ValueError(
+                f"SJ-KL sparse alpha block length mismatch: expected {qs_end}, got {len(raw)}"
+            )
+        pair_indices = np.frombuffer(raw[cursor:indices_end], dtype=np.uint16).astype(np.int64).copy()
+        if len(set(int(x) for x in pair_indices.tolist())) != int(pair_indices.shape[0]):
+            raise ValueError("SJ-KL sparse alpha block contains duplicate pair indices")
+        mins = np.frombuffer(raw[indices_end:mins_end], dtype=np.float16).astype(np.float32).copy()
+        steps = np.frombuffer(raw[mins_end:steps_end], dtype=np.float16).astype(np.float32).copy()
+        packed = raw[steps_end:qs_end]
+        dtype = np.uint8 if alpha_bits <= 8 else np.uint16
+        qs_flat = np.zeros(n_pairs * k, dtype=dtype)
+        bit_pos = 0
+        mask = (1 << alpha_bits) - 1
+        for idx in range(int(qs_flat.shape[0])):
+            byte_idx = bit_pos // 8
+            offset = bit_pos % 8
+            window = 0
+            for b in range(4):
+                if byte_idx + b < len(packed):
+                    window |= packed[byte_idx + b] << (8 * b)
+            qs_flat[idx] = (window >> offset) & mask
+            bit_pos += alpha_bits
+        pair_index_to_row = {int(pair_idx): row for row, pair_idx in enumerate(pair_indices.tolist())}
+        return {
+            "mins": mins,
+            "steps": steps,
+            "qs": qs_flat.reshape(n_pairs, k),
+            "alpha_bits": int(alpha_bits),
+            "pair_indices": pair_indices,
+            "pair_index_to_row": pair_index_to_row,
+            "alpha_block_format": "sparse_bitpacked_v2",
+        }
+    if raw[:4] != SJKL_BLOCK_MAGIC:
+        raise ValueError(f"bad SJ-KL alpha block magic: {raw[:4]!r}")
+    n_pairs, k, alpha_bits = struct.unpack("<HHB", raw[4:9])
+    if n_pairs <= 0 or n_pairs > 10_000:
+        raise ValueError(f"invalid SJ-KL pair count: {n_pairs}")
+    if k <= 0 or k > 256:
+        raise ValueError(f"invalid SJ-KL basis width: {k}")
+    if alpha_bits <= 8:
+        a_dtype = np.uint8
+        per_alpha = 1
+    elif alpha_bits <= 16:
+        a_dtype = np.uint16
+        per_alpha = 2
+    else:
+        raise ValueError(f"unsupported SJ-KL alpha_bits={alpha_bits}")
+
+    cursor = 9
+    mins_end = cursor + 2 * n_pairs
+    steps_end = mins_end + 2 * n_pairs
+    qs_end = steps_end + per_alpha * n_pairs * k
+    if qs_end != len(raw):
+        raise ValueError(
+            f"SJ-KL alpha block length mismatch: expected {qs_end}, got {len(raw)}"
+        )
+    mins = np.frombuffer(raw[cursor:mins_end], dtype=np.float16).astype(np.float32).copy()
+    steps = np.frombuffer(raw[mins_end:steps_end], dtype=np.float16).astype(np.float32).copy()
+    qs = np.frombuffer(raw[steps_end:qs_end], dtype=a_dtype).copy().reshape(n_pairs, k)
+    return {
+        "mins": mins,
+        "steps": steps,
+        "qs": qs,
+        "alpha_bits": int(alpha_bits),
+        "pair_indices": None,
+        "pair_index_to_row": None,
+        "alpha_block_format": "legacy_v1",
+    }
+
+
+def _unpack_full_sjkl_payload(payload: bytes) -> dict:
+    if len(payload) < 12:
+        raise ValueError("SJ-KL payload is too short")
+    if payload[:4] != SJKL_MAGIC:
+        raise ValueError(f"bad SJ-KL payload magic: {payload[:4]!r}")
+    basis_len, block_len = struct.unpack("<II", payload[4:12])
+    cursor = 12
+    basis_end = cursor + basis_len
+    block_end = basis_end + block_len
+    if basis_len <= 0 or block_len <= 0 or block_end != len(payload):
+        raise ValueError(
+            "SJ-KL payload TOC mismatch: "
+            f"basis_len={basis_len} block_len={block_len} total={len(payload)}"
+        )
+    try:
+        from tac.sjkl_basis import unpack_sjkl_basis
+    except ImportError as exc:
+        raise RuntimeError(
+            "sjkl.bin is present but tac.sjkl_basis is unavailable in the "
+            "inflate environment"
+        ) from exc
+
+    basis = unpack_sjkl_basis(SJKL_MAGIC + payload[cursor:basis_end])
+    alpha = _unpack_sjkl_alpha_block(payload[basis_end:block_end])
+    if int(alpha["qs"].shape[1]) != int(basis.basis_coarse.shape[0]):
+        raise ValueError(
+            "SJ-KL alpha width does not match basis width: "
+            f"{alpha['qs'].shape[1]} vs {basis.basis_coarse.shape[0]}"
+        )
+    return {
+        "basis": basis,
+        "qs": alpha["qs"],
+        "mins": alpha["mins"],
+        "steps": alpha["steps"],
+        "alpha_bits": alpha["alpha_bits"],
+        "pair_indices": alpha["pair_indices"],
+        "pair_index_to_row": alpha["pair_index_to_row"],
+        "alpha_block_format": alpha["alpha_block_format"],
+        "full_basis_cache": {},
+        "warned_shape_mismatch": False,
+        "warned_renderer_skip": False,
+        "applied_pair_count": 0,
+        "skipped_pair_count": 0,
+        "skip_reasons": [],
+    }
+
+
+def _load_sjkl_residual_from_archive_dir(archive_dir: str | Path) -> dict | None:
+    sjkl_path = Path(archive_dir) / SJKL_PAYLOAD_FILENAME
+    if not sjkl_path.exists():
+        return None
+    state = _unpack_full_sjkl_payload(sjkl_path.read_bytes())
+    state["path"] = sjkl_path
+    n_pairs = int(state["qs"].shape[0])
+    k = int(state["qs"].shape[1])
+    basis = state["basis"]
+    print(
+        f"  Loaded SJ-KL residual payload: {n_pairs} pairs, k={k}, "
+        f"target={basis.target_h}x{basis.target_w}, "
+        f"alpha_bits={state['alpha_bits']} "
+        f"({sjkl_path.stat().st_size:,} charged bytes)",
+        file=sys.stderr,
+    )
+    return state
+
+
+def _sjkl_require_applied_enabled() -> bool:
+    return os.environ.get("SJKL_REQUIRE_APPLIED", "").strip().lower() in _TRUE_ENV_VALUES
+
+
+def _record_sjkl_skip(sjkl_state: dict, reason: str, count: int = 1) -> None:
+    sjkl_state["skipped_pair_count"] = int(sjkl_state.get("skipped_pair_count", 0)) + max(0, int(count))
+    reasons = sjkl_state.setdefault("skip_reasons", [])
+    if reason not in reasons:
+        reasons.append(reason)
+
+
+def _finalize_sjkl_application_contract(sjkl_state: dict | None) -> None:
+    if sjkl_state is None or not _sjkl_require_applied_enabled():
+        return
+    applied = int(sjkl_state.get("applied_pair_count", 0))
+    if applied > 0:
+        print(
+            f"  SJ-KL strict contract passed: applied to {applied} pair(s).",
+            file=sys.stderr,
+        )
+        return
+    reasons = ", ".join(str(x) for x in sjkl_state.get("skip_reasons", [])) or "unknown"
+    raise RuntimeError(
+        "SJKL_REQUIRE_APPLIED=1 but charged sjkl.bin did not affect any "
+        f"renderer pair; skip_reasons={reasons}"
+    )
+
+
+def _seg_tile_action_specs(device: str | torch.device) -> torch.Tensor:
+    directions = [
+        (1.0, 1.0, 1.0),
+        (1.0, 0.0, 0.0),
+        (0.0, 1.0, 0.0),
+        (0.0, 0.0, 1.0),
+        (1.0, 1.0, 0.0),
+        (0.0, 1.0, 1.0),
+        (1.0, 0.0, 1.0),
+        (-0.35, 0.15, 0.45),
+        (0.25, 0.15, -0.20),
+    ]
+    specs = []
+    for vec in directions:
+        v = torch.tensor(vec, dtype=torch.float32, device=device).view(1, 1, 3)
+        v = v / v.abs().max().clamp_min(1e-6)
+        for amp in (2.0, 4.0, 6.0, 8.0, 12.0, 16.0):
+            specs.append(v * amp)
+            specs.append(-v * amp)
+    return torch.stack(specs, dim=0)
+
+
+def _load_seg_tile_action_dict(
+    archive: Path,
+    device: str | torch.device,
+) -> torch.Tensor | None:
+    path = archive / SEG_TILE_ACTION_DICT_BIN
+    if not path.exists():
+        return None
+    raw = path.read_bytes()
+    header_size = SEG_TILE_ACTION_DICT_HEADER_STRUCT.size
+    if len(raw) < header_size:
+        raise ValueError(f"{SEG_TILE_ACTION_DICT_BIN} is too short")
+    magic, version, count = SEG_TILE_ACTION_DICT_HEADER_STRUCT.unpack_from(raw, 0)
+    if magic != SEG_TILE_ACTION_DICT_MAGIC or version != 1:
+        raise ValueError(
+            f"unsupported {SEG_TILE_ACTION_DICT_BIN}: magic={magic!r} version={version}"
+        )
+    if count <= 0 or count > 256:
+        raise ValueError(f"unreasonable {SEG_TILE_ACTION_DICT_BIN} count: {count}")
+    expected = header_size + count * 3 * 4
+    if len(raw) != expected:
+        raise ValueError(
+            f"{SEG_TILE_ACTION_DICT_BIN} length mismatch: expected {expected}, got {len(raw)}"
+        )
+    values = np.frombuffer(raw, dtype="<f4", offset=header_size, count=count * 3)
+    deltas = torch.from_numpy(values.copy()).to(device=device, dtype=torch.float32)
+    return deltas.reshape(count, 1, 1, 3)
+
+
+def _load_seg_tile_actions_from_archive_dir(
+    archive_dir: str | Path,
+    device: str | torch.device,
+) -> dict | None:
+    archive = Path(archive_dir)
+    raw_path = archive / SEG_TILE_ACTIONS_BIN
+    br_path = archive / SEG_TILE_ACTIONS_BR
+    dict_path = archive / SEG_TILE_ACTION_DICT_BIN
+    if raw_path.exists() and br_path.exists():
+        raise RuntimeError(
+            f"Archive contains both {SEG_TILE_ACTIONS_BIN} and {SEG_TILE_ACTIONS_BR}; "
+            "refusing ambiguous tile-action payload."
+        )
+    if raw_path.exists():
+        raw = raw_path.read_bytes()
+        source_name = SEG_TILE_ACTIONS_BIN
+        charged_bytes = raw_path.stat().st_size
+    elif br_path.exists():
+        try:
+            import brotli
+        except ImportError as exc:
+            raise RuntimeError(f"{SEG_TILE_ACTIONS_BR} requires brotli") from exc
+        raw = brotli.decompress(br_path.read_bytes())
+        source_name = SEG_TILE_ACTIONS_BR
+        charged_bytes = br_path.stat().st_size
+    else:
+        if dict_path.exists():
+            raise RuntimeError(
+                f"Archive contains {SEG_TILE_ACTION_DICT_BIN} without "
+                f"{SEG_TILE_ACTIONS_BIN} or {SEG_TILE_ACTIONS_BR}; refusing no-op dictionary."
+            )
+        return None
+
+    def _read_uvarint(buf: bytes, cursor: int) -> tuple[int, int]:
+        shift = 0
+        value = 0
+        while True:
+            if cursor >= len(buf):
+                raise ValueError("seg tile action varint payload ended unexpectedly")
+            byte = int(buf[cursor])
+            cursor += 1
+            value |= (byte & 0x7F) << shift
+            if byte < 0x80:
+                return value, cursor
+            shift += 7
+            if shift > 28:
+                raise ValueError("seg tile action varint is too large")
+
+    def _parse_sg2_records(buf: bytes) -> bytes:
+        records: list[tuple[int, int, int]] = []
+        cursor = 3 if buf.startswith(b"SG2") else 0
+        while cursor < len(buf):
+            tile, cursor = _read_uvarint(buf, cursor)
+            count, cursor = _read_uvarint(buf, cursor)
+            if count <= 0:
+                raise ValueError("seg tile action SG2 group has zero records")
+            frame = 0
+            for idx in range(count):
+                delta, cursor = _read_uvarint(buf, cursor)
+                frame = delta if idx == 0 else frame + delta
+                if cursor >= len(buf):
+                    raise ValueError("seg tile action SG2 payload ended inside record")
+                action = int(buf[cursor])
+                cursor += 1
+                records.append((int(frame), int(tile), action))
+        use_raw5 = any(tile >= 256 for _, tile, _ in records)
+        out = bytearray()
+        for frame, tile, action in records:
+            out += int(frame).to_bytes(2, "little")
+            if use_raw5:
+                out += int(tile).to_bytes(2, "little")
+            else:
+                out.append(int(tile))
+            out.append(action)
+        return b"TA5" + bytes(out) if use_raw5 else bytes(out)
+
+    by_pair: dict[int, list[tuple[int, int]]] = {}
+    tile_size = SEG_TILE_SIZE
+    if raw.startswith(b"TG1"):
+        if len(raw) < 5:
+            raise ValueError("seg tile action TG1 header is truncated")
+        tile_size = int.from_bytes(raw[3:5], "little")
+        if tile_size <= 0 or SEG_H % tile_size != 0 or SEG_W % tile_size != 0:
+            raise ValueError(f"unsupported seg tile action TG1 tile size: {tile_size}")
+        raw = raw[5:]
+    max_tile = (SEG_H // tile_size) * (SEG_W // tile_size)
+    deltas = _load_seg_tile_action_dict(archive, device)
+    dictionary_source = SEG_TILE_ACTION_DICT_BIN if deltas is not None else "runtime_fixed"
+    dictionary_charged_bytes = dict_path.stat().st_size if deltas is not None else 0
+    if deltas is None:
+        deltas = _seg_tile_action_specs(device)
+    n_actions = int(deltas.shape[0])
+
+    def _record_size_is_semantically_valid(buf: bytes, size: int) -> tuple[bool, str]:
+        if size not in (4, 5):
+            return False, f"unsupported record size {size}"
+        if len(buf) % size != 0:
+            return False, f"length {len(buf)} not divisible by {size}"
+        for offset in range(0, len(buf), size):
+            frame = int.from_bytes(buf[offset:offset + 2], "little")
+            if size == 4:
+                tile = int(buf[offset + 2])
+                action = int(buf[offset + 3])
+            else:
+                tile = int.from_bytes(buf[offset + 2:offset + 4], "little")
+                action = int(buf[offset + 4])
+            if frame < 0 or frame >= 10_000:
+                return False, f"frame out of bounds at offset {offset}: {frame}"
+            if tile < 0 or tile >= max_tile:
+                return False, f"tile out of bounds at offset {offset}: {tile}"
+            if action < 0 or action >= n_actions:
+                return False, f"action out of bounds at offset {offset}: {action}"
+        return True, "ok"
+
+    if raw.startswith(b"TA4"):
+        raw = raw[3:]
+        record_size = 4
+    elif raw.startswith(b"TA5"):
+        raw = raw[3:]
+        record_size = 5
+    elif raw.startswith(b"SG2") or (len(raw) % 4 != 0 and len(raw) % 5 != 0):
+        raw = _parse_sg2_records(raw)
+        if raw.startswith(b"TA5"):
+            raw = raw[3:]
+            record_size = 5
+        else:
+            record_size = 4
+    elif len(raw) % 4 == 0 and len(raw) % 5 != 0:
+        record_size = 4
+    elif len(raw) % 5 == 0 and len(raw) % 4 != 0:
+        record_size = 5
+    elif not raw:
+        record_size = 4
+    else:
+        valid4, reason4 = _record_size_is_semantically_valid(raw, 4)
+        valid5, reason5 = _record_size_is_semantically_valid(raw, 5)
+        if valid4 and not valid5:
+            record_size = 4
+        elif valid5 and not valid4:
+            record_size = 5
+        else:
+            raise ValueError(
+                "ambiguous seg tile action payload length without TA4/TA5 "
+                f"header: {len(raw)}; valid4={valid4} ({reason4}); "
+                f"valid5={valid5} ({reason5})"
+            )
+
+    for offset in range(0, len(raw), record_size):
+        frame = int.from_bytes(raw[offset:offset + 2], "little")
+        if record_size == 4:
+            tile = raw[offset + 2]
+            action = raw[offset + 3]
+        else:
+            tile = int.from_bytes(raw[offset + 2:offset + 4], "little")
+            action = raw[offset + 4]
+        if frame < 0 or frame >= 10_000:
+            raise ValueError(f"seg tile action frame out of bounds: {frame}")
+        if tile < 0 or tile >= max_tile:
+            raise ValueError(f"seg tile action tile out of bounds: {tile}")
+        if action < 0 or action >= n_actions:
+            raise ValueError(f"seg tile action id out of bounds: {action}")
+        by_pair.setdefault(frame, []).append((tile, action))
+
+    state = {
+        "by_pair": by_pair,
+        "deltas": deltas,
+        "record_size": record_size,
+        "record_count": len(raw) // record_size,
+        "tile_size": tile_size,
+        "charged_bytes": charged_bytes,
+        "source_name": source_name,
+        "dictionary_source": dictionary_source,
+        "dictionary_charged_bytes": dictionary_charged_bytes,
+        "applied_action_count": 0,
+        "skipped_pair_count": 0,
+    }
+    print(
+        f"  Loaded SegNet tile actions: {state['record_count']} records "
+        f"(tile_size={tile_size}; "
+        f"({charged_bytes:,} charged bytes from {source_name}; "
+        f"dictionary={dictionary_source}, {dictionary_charged_bytes:,} bytes)",
+        file=sys.stderr,
+    )
+    return state
+
+
+def _apply_seg_tile_actions_to_pairs(
+    pairs: torch.Tensor,
+    seg_tile_actions: dict | None,
+    *,
+    pair_start: int,
+) -> torch.Tensor:
+    """Apply charged PR75-style tile action deltas to fake2 before upscale."""
+    if seg_tile_actions is None:
+        return pairs
+    if pairs.ndim != 5 or pairs.shape[1] != 2 or pairs.shape[-1] != 3:
+        seg_tile_actions["skipped_pair_count"] += int(pairs.shape[0]) if pairs.ndim else 1
+        return pairs
+    H = int(pairs.shape[2])
+    W = int(pairs.shape[3])
+    if H != SEG_H or W != SEG_W:
+        seg_tile_actions["skipped_pair_count"] += int(pairs.shape[0])
+        return pairs
+
+    tile_size = int(seg_tile_actions.get("tile_size", SEG_TILE_SIZE))
+    grid_w = W // tile_size
+    deltas = seg_tile_actions["deltas"].to(device=pairs.device, dtype=pairs.dtype)
+    for batch_j in range(int(pairs.shape[0])):
+        pair_idx = pair_start + batch_j
+        actions = seg_tile_actions["by_pair"].get(pair_idx)
+        if not actions:
+            continue
+        for tile_id, action_id in actions:
+            y0 = (tile_id // grid_w) * tile_size
+            x0 = (tile_id % grid_w) * tile_size
+            pairs[batch_j, 1, y0:y0 + tile_size, x0:x0 + tile_size, :] = (
+                pairs[batch_j, 1, y0:y0 + tile_size, x0:x0 + tile_size, :]
+                + deltas[action_id]
+            ).clamp(0, 255)
+            seg_tile_actions["applied_action_count"] += 1
+    return pairs
+
+
+def _apply_sjkl_residual_to_pairs(
+    pairs: torch.Tensor,
+    sjkl_state: dict | None,
+    *,
+    pair_start: int,
+) -> torch.Tensor:
+    """Apply sjkl.bin residuals to fake1 in the JointFrameGenerator pair path."""
+    if sjkl_state is None:
+        return pairs
+    if pairs.ndim != 5 or pairs.shape[1] != 2 or pairs.shape[-1] != 3:
+        _record_sjkl_skip(sjkl_state, "unexpected_pair_tensor_shape")
+        return pairs
+
+    basis = sjkl_state["basis"]
+    H = int(pairs.shape[2])
+    W = int(pairs.shape[3])
+    if int(basis.target_h) != H or int(basis.target_w) != W:
+        if not sjkl_state.get("warned_shape_mismatch", False):
+            print(
+                "  WARNING: sjkl.bin target shape "
+                f"{basis.target_h}x{basis.target_w} does not match renderer "
+                f"pair shape {H}x{W}; skipping SJ-KL residuals.",
+                file=sys.stderr,
+            )
+            sjkl_state["warned_shape_mismatch"] = True
+        _record_sjkl_skip(sjkl_state, "target_shape_mismatch", int(pairs.shape[0]))
+        return pairs
+
+    cache_key = (str(pairs.device), str(pairs.dtype), H, W)
+    full_basis = sjkl_state["full_basis_cache"].get(cache_key)
+    if full_basis is None:
+        full_basis = basis.upsample().to(device=pairs.device, dtype=pairs.dtype)
+        scale = basis.scale.to(device=pairs.device, dtype=pairs.dtype)
+        sjkl_state["full_basis_cache"][cache_key] = (full_basis, scale)
+        print(
+            f"  Applying SJ-KL residuals to JointFrameGenerator fake1 "
+            f"({H}x{W}, device={pairs.device})",
+            file=sys.stderr,
+        )
+    else:
+        full_basis, scale = full_basis
+
+    qs = sjkl_state["qs"]
+    mins = sjkl_state["mins"]
+    steps = sjkl_state["steps"]
+    n_pairs = int(qs.shape[0])
+    pair_index_to_row = sjkl_state.get("pair_index_to_row")
+    for local_pair in range(int(pairs.shape[0])):
+        global_pair = pair_start + local_pair
+        if pair_index_to_row is None:
+            row = global_pair
+            if row >= n_pairs:
+                _record_sjkl_skip(sjkl_state, "pair_index_out_of_payload_range")
+                continue
+        else:
+            row = pair_index_to_row.get(global_pair)
+            if row is None:
+                _record_sjkl_skip(sjkl_state, "pair_index_not_selected")
+                continue
+        alpha_np = mins[row] + steps[row] * qs[row].astype(np.float32)
+        alpha = torch.from_numpy(alpha_np).to(device=pairs.device, dtype=pairs.dtype)
+        weights = (alpha * scale).view(-1, 1, 1, 1)
+        delta_chw = (weights * full_basis).sum(dim=0)
+        delta_hwc = delta_chw.permute(1, 2, 0).contiguous()
+        pairs[local_pair, 0] = pairs[local_pair, 0] + delta_hwc
+        sjkl_state["applied_pair_count"] = int(sjkl_state.get("applied_pair_count", 0)) + 1
+    return pairs
 
 
 # ============================================================
@@ -1073,6 +1891,1028 @@ def _load_masks_from_stcb(stcb_path: Path) -> torch.Tensor:
     return masks
 
 
+def _sha256_bytes(data: bytes) -> str:
+    import hashlib
+
+    return hashlib.sha256(data).hexdigest()
+
+
+def _cmg1_stream_suffix(raw_stream: bytes) -> str:
+    if raw_stream.startswith(b"AMRC"):
+        return ".amrc"
+    if raw_stream.startswith(b"STCB"):
+        return ".stcb"
+    if raw_stream.startswith(b"NRV1"):
+        return ".nrv"
+    return ".mkv"
+
+
+def _decode_cmg1_payload(payload: bytes) -> dict:
+    """Decode and validate the CMG1 raw-stream scaffold.
+
+    CMG1 v1 is intentionally narrow: it may only wrap a byte-identical mask
+    stream that the existing mask loaders can decode. Placeholder payloads are
+    build artifacts and are rejected by the runtime path.
+    """
+    if len(payload) < CMG1_HEADER_STRUCT.size:
+        raise ValueError("CMG1 payload is shorter than the fixed header")
+    magic, version, frames, height, width, class_count, mode_code, header_len = (
+        CMG1_HEADER_STRUCT.unpack(payload[: CMG1_HEADER_STRUCT.size])
+    )
+    if magic != CMG1_MAGIC:
+        raise ValueError(f"unexpected CMG1 magic: {magic!r}")
+    if version != CMG1_SCHEMA_VERSION:
+        raise ValueError(f"unexpected CMG1 schema version: {version}")
+    if mode_code != CMG1_MODE_CODES[CMG1_MODE_RAW_BIT_IDENTICAL]:
+        raise ValueError(f"CMG1 runtime supports only raw bit-identical mode, got mode code {mode_code}")
+    if frames not in (NUM_FRAMES, NUM_FRAMES // 2):
+        raise ValueError(f"CMG1 frame count {frames} must be {NUM_FRAMES} or {NUM_FRAMES // 2}")
+    if height != SEG_H or width != SEG_W:
+        raise ValueError(f"CMG1 shape {height}x{width} must match scorer mask shape {SEG_H}x{SEG_W}")
+    if class_count != NUM_CLASSES:
+        raise ValueError(f"CMG1 class_count {class_count} must be {NUM_CLASSES}")
+    if header_len <= 0 or header_len > CMG1_MAX_HEADER_JSON_BYTES:
+        raise ValueError(f"CMG1 header JSON length {header_len} outside strict bounds")
+
+    header_start = CMG1_HEADER_STRUCT.size
+    header_end = header_start + header_len
+    if header_end > len(payload):
+        raise ValueError("CMG1 header manifest length exceeds payload length")
+    header_manifest = json.loads(payload[header_start:header_end].decode("utf-8"))
+    raw_stream = payload[header_end:]
+    if not raw_stream:
+        raise ValueError("CMG1 raw bit-identical mode requires a non-empty mask stream body")
+    if len(raw_stream) > CMG1_MAX_RAW_STREAM_BYTES:
+        raise ValueError(
+            f"CMG1 raw stream is {len(raw_stream):,} bytes, above "
+            f"{CMG1_MAX_RAW_STREAM_BYTES:,} byte inflate bound"
+        )
+
+    source = header_manifest.get("source_mask_stream")
+    if not isinstance(source, dict):
+        raise ValueError("CMG1 header manifest missing source_mask_stream record")
+    if int(source.get("bytes", -1)) != len(raw_stream):
+        raise ValueError(
+            f"CMG1 source byte count mismatch: manifest={source.get('bytes')!r} "
+            f"actual={len(raw_stream)}"
+        )
+    source_sha = source.get("sha256")
+    actual_sha = _sha256_bytes(raw_stream)
+    if source_sha != actual_sha:
+        raise ValueError(f"CMG1 source SHA mismatch: manifest={source_sha!r} actual={actual_sha}")
+
+    wire_shape = header_manifest.get("wire_contract", {}).get("shape", {})
+    expected_shape = {
+        "frames": frames,
+        "height": height,
+        "width": width,
+        "class_count": class_count,
+    }
+    if wire_shape != expected_shape:
+        raise ValueError(f"CMG1 wire-contract shape mismatch: {wire_shape!r} != {expected_shape!r}")
+
+    return {
+        "frames": frames,
+        "height": height,
+        "width": width,
+        "class_count": class_count,
+        "header_manifest": header_manifest,
+        "raw_stream": raw_stream,
+        "raw_stream_sha256": actual_sha,
+    }
+
+
+def _load_masks_from_cmg1(
+    cmg1_path: Path,
+    expected_frames: int = NUM_FRAMES,
+) -> torch.Tensor:
+    """Load a CMG1-wrapped byte-identical mask stream.
+
+    The temporary stream is derived only from charged archive bytes and is
+    deleted after the existing mask loader has validated and decoded it.
+    """
+    t0 = time.monotonic()
+    if not cmg1_path.exists():
+        raise FileNotFoundError(f"CMG1 mask file not found: {cmg1_path}")
+    decoded = _decode_cmg1_payload(cmg1_path.read_bytes())
+    suffix = _cmg1_stream_suffix(decoded["raw_stream"])
+    tmp_name = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            prefix="cmg1_decoded_mask_stream_",
+            suffix=suffix,
+            dir=str(cmg1_path.parent),
+            delete=False,
+        ) as tmp:
+            tmp.write(decoded["raw_stream"])
+            tmp_name = tmp.name
+        masks = _load_masks_from_archive(Path(tmp_name), expected_frames=expected_frames)
+    finally:
+        if tmp_name is not None:
+            try:
+                Path(tmp_name).unlink()
+            except FileNotFoundError:
+                pass
+
+    n_frames = int(masks.shape[0])
+    if n_frames != decoded["frames"]:
+        raise ValueError(
+            f"CMG1 decoded frame count mismatch: header={decoded['frames']} "
+            f"decoded={n_frames}"
+        )
+    if int(masks.shape[1]) != decoded["height"] or int(masks.shape[2]) != decoded["width"]:
+        raise ValueError(
+            f"CMG1 decoded mask shape mismatch: header="
+            f"({decoded['height']}, {decoded['width']}) decoded="
+            f"({int(masks.shape[1])}, {int(masks.shape[2])})"
+        )
+    if masks.numel() and (int(masks.min()) < 0 or int(masks.max()) >= decoded["class_count"]):
+        raise ValueError("CMG1 decoded masks contain class ids outside declared bounds")
+
+    if n_frames == expected_frames // 2:
+        masks._half_frame_only = True  # type: ignore[attr-defined]
+        print(
+            f"  Half-frame CMG1 masks detected: {n_frames} odd-frame masks "
+            f"(deferred warp expansion)",
+            file=sys.stderr,
+        )
+    elapsed = time.monotonic() - t0
+    print(
+        f"  Loaded {n_frames} CMG1-wrapped masks "
+        f"({masks.shape[1]}x{masks.shape[2]}) from {cmg1_path} "
+        f"({len(decoded['raw_stream']):,} charged raw-stream bytes, {elapsed:.2f}s)",
+        file=sys.stderr,
+    )
+    return masks
+
+
+def _decompress_cmg2_body(body: bytes, compressor: str) -> bytes:
+    if compressor == "raw":
+        return body
+    if compressor == "bz2":
+        return bz2.decompress(body)
+    if compressor == "zlib":
+        return zlib.decompress(body)
+    if compressor == "lzma_xz":
+        return lzma.decompress(body)
+    if compressor == "brotli":
+        try:
+            import brotli  # type: ignore
+        except ImportError as exc:
+            raise RuntimeError("CMG2 brotli payload requires brotli in the inflate environment") from exc
+        return brotli.decompress(body)
+    raise ValueError(f"unsupported CMG2 compressor: {compressor!r}")
+
+
+def _decode_cmg2_payload(payload: bytes) -> tuple[dict, bytes]:
+    if len(payload) < CMG2_HEADER_STRUCT.size:
+        raise ValueError("CMG2 payload is shorter than the fixed header")
+    magic, version, header_len = CMG2_HEADER_STRUCT.unpack(payload[: CMG2_HEADER_STRUCT.size])
+    if magic != CMG2_MAGIC:
+        raise ValueError(f"unexpected CMG2 magic: {magic!r}")
+    if version != CMG2_SCHEMA_VERSION:
+        raise ValueError(f"unexpected CMG2 schema version: {version}")
+    if header_len <= 0 or header_len > CMG2_MAX_HEADER_JSON_BYTES:
+        raise ValueError(f"CMG2 header JSON length {header_len} outside strict bounds")
+    header_start = CMG2_HEADER_STRUCT.size
+    header_end = header_start + header_len
+    if header_end > len(payload):
+        raise ValueError("CMG2 header manifest length exceeds payload length")
+    header = json.loads(payload[header_start:header_end].decode("utf-8"))
+    body = payload[header_end:]
+    expected_body_sha = header.get("body_sha256")
+    if expected_body_sha is not None:
+        actual_body_sha = _sha256_bytes(body)
+        if expected_body_sha != actual_body_sha:
+            raise ValueError(f"CMG2 body SHA mismatch: manifest={expected_body_sha!r} actual={actual_body_sha}")
+    return header, body
+
+
+def _load_masks_from_cmg2(
+    cmg2_path: Path,
+    expected_frames: int = NUM_FRAMES,
+) -> torch.Tensor:
+    """Load a CMG2 downsampled class tensor and deterministically upsample it.
+
+    CMG2 v1 is intentionally narrow: it carries a compressed low-resolution
+    uint8 class tensor and scale factors. It is a lossy representation and
+    therefore never score evidence until the containing archive receives exact
+    CUDA auth eval.
+    """
+    t0 = time.monotonic()
+    header, body = _decode_cmg2_payload(cmg2_path.read_bytes())
+    mode = header.get("mode")
+    if mode != "spatial_downsample_block_mode_v1":
+        raise ValueError(f"unsupported CMG2 mode: {mode!r}")
+    compressor = str(header.get("compressor", ""))
+    raw = _decompress_cmg2_body(body, compressor)
+    if len(raw) > CMG2_MAX_LOW_TENSOR_BYTES:
+        raise ValueError(f"CMG2 low tensor is too large: {len(raw):,} bytes")
+    expected_raw_sha = header.get("low_tensor_sha256")
+    actual_raw_sha = _sha256_bytes(raw)
+    if expected_raw_sha != actual_raw_sha:
+        raise ValueError(f"CMG2 low tensor SHA mismatch: manifest={expected_raw_sha!r} actual={actual_raw_sha}")
+    low_shape = header.get("low_shape")
+    if not (
+        isinstance(low_shape, list)
+        and len(low_shape) == 3
+        and all(isinstance(v, int) and v > 0 for v in low_shape)
+    ):
+        raise ValueError(f"CMG2 low_shape must be three positive integers, got {low_shape!r}")
+    scale = header.get("scale")
+    if not (
+        isinstance(scale, list)
+        and len(scale) == 2
+        and all(isinstance(v, int) and v > 0 for v in scale)
+    ):
+        raise ValueError(f"CMG2 scale must be two positive integers, got {scale!r}")
+    frames, low_h, low_w = (int(v) for v in low_shape)
+    expected_raw = frames * low_h * low_w
+    if len(raw) != expected_raw:
+        raise ValueError(f"CMG2 low tensor byte mismatch: expected {expected_raw}, got {len(raw)}")
+    if frames not in (expected_frames, expected_frames // 2):
+        raise ValueError(f"CMG2 frame count {frames} must be {expected_frames} or {expected_frames // 2}")
+    scale_y, scale_x = (int(v) for v in scale)
+    if low_h * scale_y != SEG_H or low_w * scale_x != SEG_W:
+        raise ValueError(
+            f"CMG2 low_shape/scale expands to {low_h * scale_y}x{low_w * scale_x}, "
+            f"expected {SEG_H}x{SEG_W}"
+        )
+
+    low = np.frombuffer(raw, dtype=np.uint8).reshape((frames, low_h, low_w))
+    if low.size and (int(low.min()) < 0 or int(low.max()) >= NUM_CLASSES):
+        raise ValueError("CMG2 low tensor contains class ids outside declared bounds")
+    full = np.repeat(np.repeat(low, scale_y, axis=1), scale_x, axis=2)
+    masks = torch.from_numpy(np.ascontiguousarray(full.astype(np.int64, copy=False)))
+    if frames == expected_frames // 2:
+        masks._half_frame_only = True  # type: ignore[attr-defined]
+        print(
+            f"  Half-frame CMG2 masks detected: {frames} low-resolution masks "
+            f"(deferred warp expansion)",
+            file=sys.stderr,
+        )
+    elapsed = time.monotonic() - t0
+    print(
+        f"  Loaded CMG2 {mode} masks from {cmg2_path}: low_shape={low_shape} "
+        f"scale={scale} compressor={compressor} body={len(body):,} bytes "
+        f"({elapsed:.2f}s)",
+        file=sys.stderr,
+    )
+    return masks
+
+
+def _decompress_cmg3_body(body: bytes, compressor: str) -> bytes:
+    if compressor == "raw":
+        return body
+    if compressor == "bz2":
+        return bz2.decompress(body)
+    if compressor == "zlib":
+        return zlib.decompress(body)
+    if compressor == "lzma_xz":
+        return lzma.decompress(body)
+    if compressor == "brotli":
+        try:
+            import brotli  # type: ignore
+        except ImportError as exc:
+            raise RuntimeError("CMG3 brotli payload requires brotli in the inflate environment") from exc
+        return brotli.decompress(body)
+    raise ValueError(f"unsupported CMG3 compressor: {compressor!r}")
+
+
+def _decode_cmg3_payload(payload: bytes) -> tuple[dict, bytes]:
+    if len(payload) < CMG3_HEADER_STRUCT.size:
+        raise ValueError("CMG3 payload is shorter than the fixed header")
+    magic, version, header_len = CMG3_HEADER_STRUCT.unpack(payload[: CMG3_HEADER_STRUCT.size])
+    if magic != CMG3_MAGIC:
+        raise ValueError(f"unexpected CMG3 magic: {magic!r}")
+    if version != CMG3_SCHEMA_VERSION:
+        raise ValueError(f"unexpected CMG3 schema version: {version}")
+    if header_len <= 0 or header_len > CMG3_MAX_HEADER_JSON_BYTES:
+        raise ValueError(f"CMG3 header JSON length {header_len} outside strict bounds")
+    header_start = CMG3_HEADER_STRUCT.size
+    header_end = header_start + header_len
+    if header_end > len(payload):
+        raise ValueError("CMG3 header manifest length exceeds payload length")
+    header = json.loads(payload[header_start:header_end].decode("utf-8"))
+    body = payload[header_end:]
+    expected_body_sha = header.get("body_sha256")
+    if expected_body_sha is not None:
+        actual_body_sha = _sha256_bytes(body)
+        if expected_body_sha != actual_body_sha:
+            raise ValueError(f"CMG3 body SHA mismatch: manifest={expected_body_sha!r} actual={actual_body_sha}")
+    return header, body
+
+
+def _cmg3_sampled_row_indices(height: int, row_stride: int) -> np.ndarray:
+    return np.arange(0, height, row_stride, dtype=np.int32)
+
+
+def _reconstruct_cmg3_row_spans(spans: np.ndarray, header: dict) -> np.ndarray:
+    frame_count = int(header.get("frame_count", -1))
+    height = int(header.get("height", -1))
+    width = int(header.get("width", -1))
+    class_count = int(header.get("class_count", NUM_CLASSES))
+    row_stride = int(header.get("row_stride", -1))
+    default_class = int(header.get("default_class", 0))
+    row_fill = str(header.get("row_fill", "nearest"))
+    draw_order_raw = header.get("draw_order", list(range(class_count)))
+
+    if frame_count <= 0 or height != SEG_H or width != SEG_W:
+        raise ValueError(f"CMG3 invalid frame/shape header: {frame_count=} {height=} {width=}")
+    if class_count != NUM_CLASSES:
+        raise ValueError(f"CMG3 class_count {class_count} does not match runtime NUM_CLASSES {NUM_CLASSES}")
+    if row_stride <= 0 or row_stride > height:
+        raise ValueError(f"CMG3 row_stride must be in [1,{height}], got {row_stride}")
+    if not (0 <= default_class < class_count):
+        raise ValueError(f"CMG3 default_class out of range: {default_class}")
+    if not isinstance(draw_order_raw, list):
+        raise ValueError(f"CMG3 draw_order must be a list, got {draw_order_raw!r}")
+    draw_order = [int(value) for value in draw_order_raw]
+    if len(set(draw_order)) != len(draw_order) or any(value < 0 or value >= class_count for value in draw_order):
+        raise ValueError(f"CMG3 draw_order has invalid class ids: {draw_order!r}")
+
+    sampled_rows = _cmg3_sampled_row_indices(height, row_stride)
+    expected_shape = (frame_count, class_count, len(sampled_rows), 2)
+    if tuple(int(value) for value in spans.shape) != expected_shape:
+        raise ValueError(f"CMG3 span_shape mismatch: expected {expected_shape}, got {tuple(spans.shape)}")
+
+    starts = spans[..., 0]
+    ends = spans[..., 1]
+    missing = (starts == -1) & (ends == -1)
+    valid = (starts >= 0) & (ends >= starts) & (ends < width)
+    if not bool(np.all(missing | valid)):
+        raise ValueError("CMG3 spans must be either [-1,-1] or 0 <= start <= end < width")
+
+    expanded_spans = _expand_cmg3_row_spans(spans, height=height, row_stride=row_stride, row_fill=row_fill)
+    sampled = np.full((frame_count, height, width), default_class, dtype=np.uint8)
+    for class_id in draw_order:
+        class_spans = expanded_spans[:, class_id, :, :]
+        class_valid = (class_spans[..., 0] >= 0) & (class_spans[..., 1] >= class_spans[..., 0])
+        for row_index in range(height):
+            frame_indices = np.flatnonzero(class_valid[:, row_index])
+            for frame_index in frame_indices:
+                start = int(class_spans[int(frame_index), row_index, 0])
+                end = int(class_spans[int(frame_index), row_index, 1])
+                sampled[int(frame_index), row_index, start : end + 1] = class_id
+    return np.ascontiguousarray(sampled)
+
+
+def _expand_cmg3_row_spans(spans: np.ndarray, *, height: int, row_stride: int, row_fill: str) -> np.ndarray:
+    sampled_rows = _cmg3_sampled_row_indices(height, row_stride)
+    rows = np.arange(height, dtype=np.int32)
+    if row_fill == "nearest":
+        sample_indices = np.minimum((rows + row_stride // 2) // row_stride, len(sampled_rows) - 1)
+        return np.ascontiguousarray(spans[:, :, sample_indices, :])
+    elif row_fill == "forward":
+        sample_indices = np.minimum(rows // row_stride, len(sampled_rows) - 1)
+        return np.ascontiguousarray(spans[:, :, sample_indices, :])
+    elif row_fill == "linear":
+        lower = np.minimum(rows // row_stride, len(sampled_rows) - 1)
+        upper = np.minimum(lower + 1, len(sampled_rows) - 1)
+        denom = np.maximum((upper - lower) * row_stride, 1).astype(np.float32)
+        alpha = ((rows - lower * row_stride).astype(np.float32) / denom).reshape(1, 1, height, 1)
+        lo = spans[:, :, lower, :].astype(np.float32, copy=False)
+        hi = spans[:, :, upper, :].astype(np.float32, copy=False)
+        lo_valid = (lo[..., 0] >= 0) & (lo[..., 1] >= lo[..., 0])
+        hi_valid = (hi[..., 0] >= 0) & (hi[..., 1] >= hi[..., 0])
+        interpolated = np.rint((1.0 - alpha) * lo + alpha * hi).astype(np.int16)
+        out = np.full_like(interpolated, -1, dtype=np.int16)
+        both = lo_valid & hi_valid
+        only_lo = lo_valid & ~hi_valid
+        only_hi = hi_valid & ~lo_valid
+        out[both] = interpolated[both]
+        out[only_lo] = lo.astype(np.int16)[only_lo]
+        out[only_hi] = hi.astype(np.int16)[only_hi]
+        inverted = out[..., 1] < out[..., 0]
+        out[inverted] = -1
+        return np.ascontiguousarray(out)
+    else:
+        raise ValueError(f"unsupported CMG3 row_fill policy: {row_fill!r}")
+
+
+def _decode_cmg3_nonzero_row_runs(raw: bytes, header: dict) -> np.ndarray:
+    frame_count = int(header.get("frame_count", -1))
+    height = int(header.get("height", -1))
+    width = int(header.get("width", -1))
+    class_count = int(header.get("class_count", NUM_CLASSES))
+    default_class = int(header.get("default_class", 0))
+    max_runs_per_row = int(header.get("max_runs_per_row", -1))
+    record_struct = str(header.get("record_struct", "u8_count_then_u8_class_u16_start_u16_end_le"))
+    if frame_count <= 0 or height != SEG_H or width != SEG_W:
+        raise ValueError(f"CMG3 invalid run frame/shape header: {frame_count=} {height=} {width=}")
+    if class_count != NUM_CLASSES:
+        raise ValueError(f"CMG3 class_count {class_count} does not match runtime NUM_CLASSES {NUM_CLASSES}")
+    if default_class != 0:
+        raise ValueError(f"CMG3 nonzero-row-runs currently requires default_class=0, got {default_class}")
+    if not (0 <= max_runs_per_row <= 255):
+        raise ValueError(f"CMG3 max_runs_per_row must be in [0,255], got {max_runs_per_row}")
+    if record_struct != "u8_count_then_u8_class_u16_start_u16_end_le":
+        raise ValueError(f"unsupported CMG3 run record_struct: {record_struct!r}")
+
+    out = np.full((frame_count, height, width), default_class, dtype=np.uint8)
+    offset = 0
+    row_count = frame_count * height
+    for flat_row in range(row_count):
+        if offset >= len(raw):
+            raise ValueError("CMG3 run stream ended before all rows were decoded")
+        n_runs = int(raw[offset])
+        offset += 1
+        if n_runs > max_runs_per_row:
+            raise ValueError(f"CMG3 row run count {n_runs} exceeds declared max {max_runs_per_row}")
+        frame_index = flat_row // height
+        y = flat_row % height
+        previous_end = -1
+        for _ in range(n_runs):
+            if offset + 5 > len(raw):
+                raise ValueError("CMG3 run stream ended inside a row-run record")
+            class_id = int(raw[offset])
+            start = int.from_bytes(raw[offset + 1 : offset + 3], "little")
+            end = int.from_bytes(raw[offset + 3 : offset + 5], "little")
+            offset += 5
+            if not (1 <= class_id < class_count):
+                raise ValueError(f"CMG3 nonzero run class id out of range: {class_id}")
+            if not (0 <= start <= end < width):
+                raise ValueError(f"CMG3 row run bounds out of range: start={start} end={end}")
+            if start <= previous_end:
+                raise ValueError(f"CMG3 row runs must be strictly non-overlapping and sorted, got start={start}")
+            previous_end = end
+            out[frame_index, y, start : end + 1] = class_id
+    if offset != len(raw):
+        raise ValueError(f"CMG3 run stream has {len(raw) - offset} trailing bytes")
+    return out
+
+
+def _decode_cmg3_row_span_hotspot_residual(raw: bytes, header: dict) -> np.ndarray:
+    span_shape = header.get("span_shape")
+    if not (
+        isinstance(span_shape, list)
+        and len(span_shape) == 4
+        and all(isinstance(v, int) and v > 0 for v in span_shape)
+    ):
+        raise ValueError(f"CMG3 span_shape must be four positive integers, got {span_shape!r}")
+    expected_span_bytes = int(np.prod(np.asarray(span_shape, dtype=np.int64))) * np.dtype("<i2").itemsize
+    residual_bytes = int(header.get("residual_record_bytes", -1))
+    residual_count = int(header.get("residual_record_count", -1))
+    record_struct = str(header.get("residual_record_struct", "u16_frame_u16_y_u16_x0_u16_x1_u8_class_le"))
+    if record_struct != "u16_frame_u16_y_u16_x0_u16_x1_u8_class_le":
+        raise ValueError(f"unsupported CMG3 hotspot residual record struct: {record_struct!r}")
+    if residual_count < 0 or residual_bytes < 0:
+        raise ValueError("CMG3 hotspot residual count/bytes must be nonnegative")
+    if residual_bytes != residual_count * CMG3_HOTSPOT_RESIDUAL_RECORD_STRUCT.size:
+        raise ValueError("CMG3 hotspot residual byte count does not match record count")
+    if len(raw) != expected_span_bytes + residual_bytes:
+        raise ValueError(
+            f"CMG3 hotspot raw byte mismatch: expected {expected_span_bytes + residual_bytes}, got {len(raw)}"
+        )
+    span_raw = raw[:expected_span_bytes]
+    residual_raw = raw[expected_span_bytes:]
+    expected_span_sha = header.get("span_tensor_sha256")
+    if expected_span_sha is not None and expected_span_sha != _sha256_bytes(span_raw):
+        raise ValueError("CMG3 hotspot span SHA mismatch")
+    expected_residual_sha = header.get("residual_stream_sha256")
+    if expected_residual_sha is not None and expected_residual_sha != _sha256_bytes(residual_raw):
+        raise ValueError("CMG3 hotspot residual SHA mismatch")
+
+    spans = np.frombuffer(span_raw, dtype="<i2").reshape(tuple(int(v) for v in span_shape))
+    out = _reconstruct_cmg3_row_spans(spans, header)
+    frame_count = int(out.shape[0])
+    height = int(out.shape[1])
+    width = int(out.shape[2])
+    class_count = int(header.get("class_count", NUM_CLASSES))
+    last_key: tuple[int, int, int, int] | None = None
+    last_row_end: dict[tuple[int, int], int] = {}
+    offset = 0
+    for _ in range(residual_count):
+        frame_index, y, x0, x1, class_id = CMG3_HOTSPOT_RESIDUAL_RECORD_STRUCT.unpack_from(residual_raw, offset)
+        offset += CMG3_HOTSPOT_RESIDUAL_RECORD_STRUCT.size
+        frame_index = int(frame_index)
+        y = int(y)
+        x0 = int(x0)
+        x1 = int(x1)
+        class_id = int(class_id)
+        key = (frame_index, y, x0, x1)
+        if last_key is not None and key < last_key:
+            raise ValueError("CMG3 hotspot residual records must be sorted lexicographically")
+        last_key = key
+        if not (0 <= frame_index < frame_count):
+            raise ValueError(f"CMG3 hotspot residual frame out of range: {frame_index}")
+        if not (0 <= y < height):
+            raise ValueError(f"CMG3 hotspot residual row out of range: {y}")
+        if not (0 <= x0 < x1 <= width):
+            raise ValueError(f"CMG3 hotspot residual run out of range: x0={x0} x1={x1}")
+        if not (0 <= class_id < class_count):
+            raise ValueError(f"CMG3 hotspot residual class out of range: {class_id}")
+        row_key = (frame_index, y)
+        previous_end = last_row_end.get(row_key, -1)
+        if x0 < previous_end:
+            raise ValueError("CMG3 hotspot residual records overlap within a row")
+        last_row_end[row_key] = x1
+        out[frame_index, y, x0:x1] = np.uint8(class_id)
+    if offset != len(residual_raw):
+        raise ValueError("CMG3 hotspot residual stream ended at unexpected offset")
+    return np.ascontiguousarray(out)
+
+
+def _load_masks_from_cmg3(
+    cmg3_path: Path,
+    expected_frames: int = NUM_FRAMES,
+) -> torch.Tensor:
+    """Load a CMG3 grammar and deterministically expand it to masks."""
+    t0 = time.monotonic()
+    header, body = _decode_cmg3_payload(cmg3_path.read_bytes())
+    mode = header.get("mode")
+    compressor = str(header.get("compressor", ""))
+    raw = _decompress_cmg3_body(body, compressor)
+    if len(raw) > CMG3_MAX_SPAN_TENSOR_BYTES:
+        raise ValueError(f"CMG3 decoded grammar payload is too large: {len(raw):,} bytes")
+    expected_raw_sha = header.get("body_raw_sha256") or header.get("span_tensor_sha256") or header.get("run_stream_sha256")
+    actual_raw_sha = _sha256_bytes(raw)
+    if expected_raw_sha != actual_raw_sha:
+        raise ValueError(f"CMG3 grammar SHA mismatch: manifest={expected_raw_sha!r} actual={actual_raw_sha}")
+
+    span_shape = None
+    if mode == "row_span_stride_class_predictor_v1":
+        span_shape = header.get("span_shape")
+        if not (
+            isinstance(span_shape, list)
+            and len(span_shape) == 4
+            and all(isinstance(v, int) and v > 0 for v in span_shape)
+        ):
+            raise ValueError(f"CMG3 span_shape must be four positive integers, got {span_shape!r}")
+        expected_raw = int(np.prod(np.asarray(span_shape, dtype=np.int64))) * np.dtype("<i2").itemsize
+        if len(raw) != expected_raw:
+            raise ValueError(f"CMG3 span tensor byte mismatch: expected {expected_raw}, got {len(raw)}")
+        frame_count = int(span_shape[0])
+        if frame_count not in (expected_frames, expected_frames // 2):
+            raise ValueError(f"CMG3 frame count {frame_count} must be {expected_frames} or {expected_frames // 2}")
+        if int(header.get("frame_count", frame_count)) != frame_count:
+            raise ValueError("CMG3 frame_count header disagrees with span_shape")
+        spans = np.frombuffer(raw, dtype="<i2").reshape(tuple(int(v) for v in span_shape))
+        full = _reconstruct_cmg3_row_spans(spans, header)
+    elif mode == "row_span_stride_class_predictor_hotspot_residual_v1":
+        full = _decode_cmg3_row_span_hotspot_residual(raw, header)
+        frame_count = int(full.shape[0])
+        if frame_count not in (expected_frames, expected_frames // 2):
+            raise ValueError(f"CMG3 frame count {frame_count} must be {expected_frames} or {expected_frames // 2}")
+    elif mode == "nonzero_row_runs_topk_v1":
+        frame_count = int(header.get("frame_count", -1))
+        if frame_count not in (expected_frames, expected_frames // 2):
+            raise ValueError(f"CMG3 frame count {frame_count} must be {expected_frames} or {expected_frames // 2}")
+        full = _decode_cmg3_nonzero_row_runs(raw, header)
+    else:
+        raise ValueError(f"unsupported CMG3 mode: {mode!r}")
+
+    if full.size and (int(full.min()) < 0 or int(full.max()) >= NUM_CLASSES):
+        raise ValueError("CMG3 decoded masks contain class ids outside declared bounds")
+    expected_recon_sha = header.get("reconstructed_mask_u8_sha256")
+    if expected_recon_sha is not None:
+        actual_recon_sha = _sha256_bytes(np.ascontiguousarray(full, dtype=np.uint8).tobytes(order="C"))
+        if expected_recon_sha != actual_recon_sha:
+            raise ValueError(
+                f"CMG3 reconstructed mask SHA mismatch: "
+                f"manifest={expected_recon_sha!r} actual={actual_recon_sha}"
+            )
+    masks = torch.from_numpy(full.astype(np.int64, copy=False))
+    if frame_count == expected_frames // 2:
+        masks._half_frame_only = True  # type: ignore[attr-defined]
+        print(
+            f"  Half-frame CMG3 masks detected: {frame_count} span masks "
+            f"(deferred warp expansion)",
+            file=sys.stderr,
+        )
+    elapsed = time.monotonic() - t0
+    print(
+        f"  Loaded CMG3 {mode} masks from {cmg3_path}: shape={tuple(full.shape)} "
+        f"row_stride={header.get('row_stride')} row_fill={header.get('row_fill')} "
+        f"max_runs_per_row={header.get('max_runs_per_row')} "
+        f"compressor={compressor} body={len(body):,} bytes ({elapsed:.2f}s)",
+        file=sys.stderr,
+    )
+    return masks
+
+
+def _class_tensor_sha256(classes: torch.Tensor) -> str:
+    return _sha256_bytes(classes.to(torch.uint8).contiguous().cpu().numpy().tobytes())
+
+
+def _decompress_charged_payload(path: Path, codec: str, *, label: str) -> bytes:
+    payload = path.read_bytes()
+    if codec == "raw":
+        return payload
+    if codec == "zlib":
+        return zlib.decompress(payload)
+    if codec == "lzma_xz":
+        return lzma.decompress(payload)
+    if codec == "brotli":
+        try:
+            import brotli  # type: ignore
+        except Exception as exc:  # pragma: no cover - optional dependency
+            raise RuntimeError(f"{label} requires brotli in the inflate environment") from exc
+        return brotli.decompress(payload)
+    raise RuntimeError(f"unsupported {label} codec {codec!r}")
+
+
+def _load_optional_charged_payload(
+    archive_dir: Path,
+    candidates: tuple[tuple[str, str], ...],
+    *,
+    label: str,
+) -> tuple[str, bytes] | None:
+    matches = []
+    for member_name, codec in candidates:
+        path = archive_dir / member_name
+        if path.exists():
+            matches.append((member_name, codec, path))
+    if len(matches) > 1:
+        names = ", ".join(name for name, _codec, _path in matches)
+        raise RuntimeError(f"multiple {label} payloads present: {names}")
+    if not matches:
+        return None
+    member_name, codec, path = matches[0]
+    return member_name, _decompress_charged_payload(path, codec, label=label)
+
+
+def _decode_cdo1_overlay_payload(payload: bytes) -> tuple[dict, list[tuple[int, int, int, int, int]]]:
+    if len(payload) < CDO1_OVERLAY_HEADER_STRUCT.size:
+        raise RuntimeError("CDO1 overlay payload is shorter than the fixed header")
+    magic, version, header_length = CDO1_OVERLAY_HEADER_STRUCT.unpack(
+        payload[: CDO1_OVERLAY_HEADER_STRUCT.size]
+    )
+    if magic != CDO1_OVERLAY_MAGIC:
+        raise RuntimeError(f"CDO1 overlay payload has bad magic {magic!r}")
+    if int(version) != CDO1_OVERLAY_SCHEMA_VERSION:
+        raise RuntimeError(f"unsupported CDO1 overlay version {version}")
+    if header_length <= 0 or header_length > CDO1_OVERLAY_MAX_HEADER_JSON_BYTES:
+        raise RuntimeError(f"CDO1 overlay header length outside strict bounds: {header_length}")
+    offset = CDO1_OVERLAY_HEADER_STRUCT.size
+    header_end = offset + int(header_length)
+    if header_end > len(payload):
+        raise RuntimeError("CDO1 overlay header extends past payload")
+    try:
+        header = json.loads(payload[offset:header_end].decode("utf-8"))
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("CDO1 overlay header is not valid JSON") from exc
+    if header.get("schema") != CDO1_OVERLAY_SCHEMA:
+        raise RuntimeError(f"unsupported CDO1 overlay schema {header.get('schema')!r}")
+    if header.get("run_struct") != CDO1_OVERLAY_RECORD_STRUCT_NAME:
+        raise RuntimeError(f"unsupported CDO1 overlay run_struct {header.get('run_struct')!r}")
+    shape = header.get("shape")
+    if not isinstance(shape, list) or len(shape) != 3:
+        raise RuntimeError(f"CDO1 overlay header has invalid shape {shape!r}")
+    t, h, w = [int(value) for value in shape]
+    if t <= 0 or h <= 0 or w <= 0:
+        raise RuntimeError(f"CDO1 overlay header has nonpositive shape {shape!r}")
+    offset = header_end
+    body_bytes = len(payload) - offset
+    record_size = CDO1_OVERLAY_RECORD_STRUCT.size
+    if body_bytes % record_size != 0:
+        raise RuntimeError(
+            f"CDO1 overlay body byte count {body_bytes} is not divisible by record size {record_size}"
+        )
+    record_count = body_bytes // record_size
+    expected_record_count = header.get("run_count")
+    if expected_record_count is not None and int(expected_record_count) != record_count:
+        raise RuntimeError(
+            f"CDO1 overlay run_count mismatch: header={expected_record_count} body={record_count}"
+        )
+    runs: list[tuple[int, int, int, int, int]] = []
+    previous_key: tuple[int, int, int] | None = None
+    selected_pixel_count = 0
+    for _ in range(record_count):
+        frame_index, y, x0, length, class_id = CDO1_OVERLAY_RECORD_STRUCT.unpack(
+            payload[offset : offset + record_size]
+        )
+        offset += record_size
+        frame_index = int(frame_index)
+        y = int(y)
+        x0 = int(x0)
+        length = int(length)
+        class_id = int(class_id)
+        if not (0 <= frame_index < t):
+            raise RuntimeError(f"CDO1 overlay frame out of range: {frame_index}")
+        if not (0 <= y < h):
+            raise RuntimeError(f"CDO1 overlay row out of range: {y}")
+        if not (0 <= x0 < w):
+            raise RuntimeError(f"CDO1 overlay x0 out of range: {x0}")
+        if length <= 0 or x0 + length > w:
+            raise RuntimeError(f"CDO1 overlay run length out of range: x0={x0} length={length}")
+        if not (0 <= class_id < NUM_CLASSES):
+            raise RuntimeError(f"CDO1 overlay class id out of range: {class_id}")
+        key = (frame_index, y, x0)
+        if previous_key is not None and key <= previous_key:
+            raise RuntimeError("CDO1 overlay records must be sorted lexicographically")
+        if runs and runs[-1][0] == frame_index and runs[-1][1] == y:
+            previous_end = runs[-1][2] + runs[-1][3]
+            if x0 < previous_end:
+                raise RuntimeError("CDO1 overlay records overlap within a row")
+        previous_key = key
+        selected_pixel_count += length
+        runs.append((frame_index, y, x0, length, class_id))
+    expected_pixels = header.get("selected_pixel_count")
+    if expected_pixels is not None and int(expected_pixels) != selected_pixel_count:
+        raise RuntimeError(
+            f"CDO1 overlay selected_pixel_count mismatch: "
+            f"header={expected_pixels} body={selected_pixel_count}"
+        )
+    if offset != len(payload):
+        raise RuntimeError("CDO1 overlay stream ended at unexpected offset")
+    return header, runs
+
+
+def _apply_cdo1_overlay(classes: torch.Tensor, payload: bytes, *, source_name: str) -> torch.Tensor:
+    header, runs = _decode_cdo1_overlay_payload(payload)
+    expected_shape = tuple(int(value) for value in header["shape"])
+    if tuple(int(value) for value in classes.shape) != expected_shape:
+        raise RuntimeError(
+            f"CDO1 overlay shape {expected_shape} does not match decoded classes "
+            f"{tuple(int(value) for value in classes.shape)}"
+        )
+    expected_base_sha = header.get("base_mask_tensor_sha256")
+    if expected_base_sha:
+        actual_base_sha = _class_tensor_sha256(classes)
+        if actual_base_sha != expected_base_sha:
+            raise RuntimeError(
+                f"CDO1 overlay base SHA mismatch for {source_name}: "
+                f"{actual_base_sha} != {expected_base_sha}"
+            )
+    overlaid = classes.clone()
+    for frame_index, y, x0, length, class_id in runs:
+        overlaid[frame_index, y, x0 : x0 + length] = class_id
+    if getattr(classes, "_half_frame_only", False):
+        overlaid._half_frame_only = True  # type: ignore[attr-defined]
+    expected_overlay_sha = (
+        header.get("reconstructed_mask_u8_sha256")
+        or header.get("overlay_mask_tensor_sha256")
+    )
+    if expected_overlay_sha:
+        actual_overlay_sha = _class_tensor_sha256(overlaid)
+        if actual_overlay_sha != expected_overlay_sha:
+            raise RuntimeError(
+                f"CDO1 overlay reconstructed SHA mismatch for {source_name}: "
+                f"{actual_overlay_sha} != {expected_overlay_sha}"
+            )
+    return overlaid
+
+
+def _maybe_apply_cdo1_overlay_from_archive_dir(archive_dir: Path, classes: torch.Tensor) -> torch.Tensor:
+    loaded = _load_optional_charged_payload(
+        archive_dir,
+        CDO1_OVERLAY_MEMBER_CANDIDATES,
+        label="CDO1 overlay",
+    )
+    if loaded is None:
+        return classes
+    member_name, payload = loaded
+    overlaid = _apply_cdo1_overlay(classes, payload, source_name=member_name)
+    print(
+        f"  Applied CDO1 decoded-mask overlay {member_name}: {len(payload):,} raw bytes",
+        file=sys.stderr,
+    )
+    return overlaid
+
+
+def _decompress_amr1_repair_payload(path: Path, codec: str) -> bytes:
+    return _decompress_charged_payload(path, codec, label="alpha4_residual_repair.amr1")
+
+
+def _load_optional_amr1_repair_payload(archive_dir: Path) -> tuple[str, bytes] | None:
+    return _load_optional_charged_payload(
+        archive_dir,
+        AMR1_REPAIR_MEMBER_CANDIDATES,
+        label="Alpha residual repair",
+    )
+
+
+def _decode_amr1_repair_payload(payload: bytes) -> tuple[dict, list[tuple[int, int, int, int, int]]]:
+    if not payload.startswith(AMR1_REPAIR_MAGIC):
+        raise RuntimeError("Alpha residual repair payload missing AMR1 magic")
+    offset = len(AMR1_REPAIR_MAGIC)
+    if len(payload) < offset + struct.calcsize(AMR1_REPAIR_HEADER_STRUCT):
+        raise RuntimeError("Alpha residual repair payload missing header length")
+    (header_length,) = struct.unpack(AMR1_REPAIR_HEADER_STRUCT, payload[offset : offset + 4])
+    offset += 4
+    header_end = offset + int(header_length)
+    if header_end > len(payload):
+        raise RuntimeError("Alpha residual repair header extends past payload")
+    header = json.loads(payload[offset:header_end].decode("utf-8"))
+    offset = header_end
+    if header.get("schema") != AMR1_REPAIR_SCHEMA:
+        raise RuntimeError(f"unsupported Alpha residual repair schema {header.get('schema')!r}")
+    if header.get("record_struct") != AMR1_REPAIR_RECORD_STRUCT:
+        raise RuntimeError(
+            f"unsupported Alpha residual repair record struct {header.get('record_struct')!r}"
+        )
+    shape = header.get("shape")
+    if not isinstance(shape, list) or len(shape) != 3:
+        raise RuntimeError(f"Alpha residual repair header has invalid shape {shape!r}")
+    t, h, w = [int(value) for value in shape]
+    if t <= 0 or h <= 0 or w <= 0:
+        raise RuntimeError(f"Alpha residual repair header has nonpositive shape {shape!r}")
+    record_count = int(header.get("record_count", -1))
+    if record_count < 0:
+        raise RuntimeError(f"Alpha residual repair record_count invalid: {record_count}")
+    expected = offset + record_count * AMR1_REPAIR_RECORD_SIZE
+    if expected != len(payload):
+        raise RuntimeError(
+            f"Alpha residual repair payload size mismatch: expected {expected}, got {len(payload)}"
+        )
+    runs: list[tuple[int, int, int, int, int]] = []
+    for _ in range(record_count):
+        frame_index, y, x0, length, class_id = struct.unpack(
+            AMR1_REPAIR_RECORD_STRUCT,
+            payload[offset : offset + AMR1_REPAIR_RECORD_SIZE],
+        )
+        offset += AMR1_REPAIR_RECORD_SIZE
+        frame_index = int(frame_index)
+        y = int(y)
+        x0 = int(x0)
+        length = int(length)
+        class_id = int(class_id)
+        if not (0 <= frame_index < t):
+            raise RuntimeError(f"Alpha repair frame out of range: {frame_index}")
+        if not (0 <= y < h):
+            raise RuntimeError(f"Alpha repair row out of range: {y}")
+        if not (0 <= x0 < w):
+            raise RuntimeError(f"Alpha repair x0 out of range: {x0}")
+        if length <= 0 or x0 + length > w:
+            raise RuntimeError(f"Alpha repair run length out of range: x0={x0} length={length}")
+        if not (0 <= class_id < NUM_CLASSES):
+            raise RuntimeError(f"Alpha repair class id out of range: {class_id}")
+        runs.append((frame_index, y, x0, length, class_id))
+    return header, runs
+
+
+def _apply_amr1_repair(classes: torch.Tensor, payload: bytes, *, source_name: str) -> torch.Tensor:
+    header, runs = _decode_amr1_repair_payload(payload)
+    expected_shape = tuple(int(value) for value in header["shape"])
+    if tuple(int(value) for value in classes.shape) != expected_shape:
+        raise RuntimeError(
+            f"Alpha residual repair shape {expected_shape} does not match decoded classes "
+            f"{tuple(int(value) for value in classes.shape)}"
+        )
+    expected_candidate_sha = header.get("candidate_mask_u8_sha256")
+    if expected_candidate_sha:
+        actual_candidate_sha = _class_tensor_sha256(classes)
+        if actual_candidate_sha != expected_candidate_sha:
+            raise RuntimeError(
+                f"Alpha residual repair candidate SHA mismatch for {source_name}: "
+                f"{actual_candidate_sha} != {expected_candidate_sha}"
+            )
+    repaired = classes.clone()
+    for frame_index, y, x0, length, class_id in runs:
+        repaired[frame_index, y, x0 : x0 + length] = class_id
+    if getattr(classes, "_half_frame_only", False):
+        repaired._half_frame_only = True  # type: ignore[attr-defined]
+    selection = header.get("selection") if isinstance(header.get("selection"), dict) else {}
+    if selection.get("partial_repair") is False and header.get("source_mask_u8_sha256"):
+        actual_source_sha = _class_tensor_sha256(repaired)
+        if actual_source_sha != header["source_mask_u8_sha256"]:
+            raise RuntimeError(
+                f"Alpha residual repair source SHA mismatch for {source_name}: "
+                f"{actual_source_sha} != {header['source_mask_u8_sha256']}"
+            )
+    return repaired
+
+
+def _maybe_apply_amr1_repair_from_archive_dir(archive_dir: Path, classes: torch.Tensor) -> torch.Tensor:
+    loaded = _load_optional_amr1_repair_payload(archive_dir)
+    if loaded is None:
+        return classes
+    member_name, payload = loaded
+    repaired = _apply_amr1_repair(classes, payload, source_name=member_name)
+    print(
+        f"  Applied Alpha residual repair {member_name}: {len(payload):,} raw AMR1 bytes",
+        file=sys.stderr,
+    )
+    return repaired
+
+
+def _load_archive_masks_with_optional_amr1_repair(
+    archive_dir: str | Path,
+    mask_video_path: Path,
+    *,
+    expected_frames: int = NUM_FRAMES,
+) -> torch.Tensor:
+    masks = _load_masks_from_archive(mask_video_path, expected_frames=expected_frames)
+    archive_path = Path(archive_dir)
+    # Legacy masks.mkv archives can carry a charged AMR1 residual repair.
+    # The grayscale wrapper owns this same repair path itself, so skip here
+    # when grayscale.mkv is present to avoid applying the payload twice.
+    if not (archive_path / "grayscale.mkv").exists():
+        masks = _maybe_apply_amr1_repair_from_archive_dir(archive_path, masks)
+    masks = _maybe_apply_cdo1_overlay_from_archive_dir(archive_path, masks)
+    return masks
+
+
+def _load_masks_from_qma9(
+    qma9_path: Path,
+    expected_frames: int = NUM_FRAMES // 2,
+) -> torch.Tensor:
+    """Decode charged PR81 QMA9 semantic masks through the bundled C++ source."""
+
+    t0 = time.monotonic()
+    payload = qma9_path.read_bytes()
+    if len(payload) < 20 or payload[:4] != b"QMA9":
+        raise ValueError(f"bad QMA9 mask payload: {qma9_path}")
+    frame_count, width, height, bitstream_bytes = struct.unpack_from("<IIII", payload, 4)
+    if 20 + int(bitstream_bytes) != len(payload):
+        raise ValueError(
+            f"QMA9 mask payload length mismatch: declared={20 + int(bitstream_bytes)} "
+            f"actual={len(payload)}"
+        )
+    codec_src = Path(__file__).with_name("range_mask_codec.cpp")
+    if codec_src.exists():
+        with tempfile.TemporaryDirectory(prefix="qma9_decode_") as tmp:
+            tmpdir = Path(tmp)
+            exe = tmpdir / "range_mask_codec"
+            last_error: Exception | None = None
+            for compiler in dict.fromkeys(c for c in (os.environ.get("CXX", ""), "c++", "g++", "clang++") if c):
+                compiler_path = shutil.which(compiler)
+                if compiler_path is None:
+                    continue
+                try:
+                    subprocess.run([compiler_path, "-O3", "-std=c++17", str(codec_src), "-o", str(exe)], check=True)
+                    break
+                except subprocess.CalledProcessError as exc:
+                    last_error = exc
+            else:
+                raise RuntimeError("failed to compile PR81 range-mask decoder") from last_error
+            packed = tmpdir / "masks.qma9"
+            raw_path = tmpdir / "masks.raw"
+            packed.write_bytes(payload)
+            subprocess.run([str(exe), "decode", str(packed), str(raw_path)], check=True)
+            decoded = np.frombuffer(raw_path.read_bytes(), dtype=np.uint8)
+    else:
+        from tac.qma9_range_mask_contract import decode_qma9_mask
+
+        decoded = np.frombuffer(decode_qma9_mask(payload).data, dtype=np.uint8)
+    expected_pixels = int(frame_count) * int(width) * int(height)
+    if decoded.size != expected_pixels:
+        raise ValueError(f"QMA9 decoded pixel count mismatch: {decoded.size} != {expected_pixels}")
+    if (int(frame_count), int(width), int(height)) == (600, 512, 384):
+        arr = decoded.reshape(600, 512, 384).transpose(0, 2, 1).copy()
+    elif (int(frame_count), int(width), int(height)) == (600, 384, 512):
+        arr = decoded.reshape(600, 384, 512).copy()
+    else:
+        raise ValueError(f"unexpected QMA9 dimensions: {(frame_count, width, height)}")
+    masks = torch.from_numpy(arr.astype(np.int64, copy=False))
+    if expected_frames is not None and int(masks.shape[0]) != int(expected_frames):
+        raise ValueError(f"QMA9 expected {expected_frames} masks, got {masks.shape[0]}")
+    masks._half_frame_only = True  # type: ignore[attr-defined]
+    elapsed = time.monotonic() - t0
+    print(
+        f"  Loaded QMA9 range masks from {qma9_path}: {tuple(masks.shape)} "
+        f"({elapsed:.1f}s, half-frame)",
+        file=sys.stderr,
+    )
+    return masks
+
+
+def _load_masks_from_stbm1br(
+    stbm_path: Path,
+    expected_frames: int = NUM_FRAMES // 2,
+) -> torch.Tensor:
+    """Decode charged PR90-derived STBM1BR semantic masks.
+
+    The branch is intentionally separate from QMA9: STBM1BR is a distinct,
+    self-describing mask segment and must never be silently interpreted as a
+    QMA9 stream.
+    """
+
+    t0 = time.monotonic()
+    payload = stbm_path.read_bytes()
+    if not payload.startswith(STBM1BR_MAGIC):
+        raise ValueError(f"bad STBM1BR mask payload: {stbm_path}")
+    rust_decoder = os.environ.get("PACT_STBM1BR_RUST_DECODER")
+    if rust_decoder:
+        from tac.stbm1br_rust_bridge import decode_stbm1br_mask_segment_via_rust
+
+        decoded = decode_stbm1br_mask_segment_via_rust(
+            payload,
+            expected_shape=(expected_frames, SEG_H, SEG_W),
+            decoder_path=rust_decoder,
+            timeout_seconds=120.0,
+        )
+        decode_impl = "rust"
+    else:
+        from tac.stbm1br_mask_codec import decode_stbm1br_mask_segment
+
+        decoded = decode_stbm1br_mask_segment(payload, expected_shape=(expected_frames, SEG_H, SEG_W))
+        decode_impl = "python"
+    masks = torch.from_numpy(decoded.astype(np.int64, copy=False))
+    if expected_frames is not None and int(masks.shape[0]) != int(expected_frames):
+        raise ValueError(f"STBM1BR expected {expected_frames} masks, got {masks.shape[0]}")
+    masks._half_frame_only = True  # type: ignore[attr-defined]
+    elapsed = time.monotonic() - t0
+    print(
+        f"  Loaded STBM1BR topband masks from {stbm_path}: {tuple(masks.shape)} "
+        f"via {decode_impl} "
+        f"({elapsed:.1f}s, half-frame)",
+        file=sys.stderr,
+    )
+    return masks
+
+
 def _load_masks_from_archive(
     mask_video_path: Path,
     expected_frames: int = NUM_FRAMES,
@@ -1115,18 +2955,45 @@ def _load_masks_from_archive(
         return _load_masks_from_amrc(mask_video_path, expected_frames=expected_frames)
     if mask_video_path.suffix.lower() == ".stcb":
         return _load_masks_from_stcb(mask_video_path)
+    if mask_video_path.suffix.lower() == ".cmg1":
+        return _load_masks_from_cmg1(mask_video_path, expected_frames=expected_frames)
+    if mask_video_path.suffix.lower() == ".cmg2":
+        return _load_masks_from_cmg2(mask_video_path, expected_frames=expected_frames)
+    if mask_video_path.suffix.lower() == ".cmg3":
+        return _load_masks_from_cmg3(mask_video_path, expected_frames=expected_frames)
+    if mask_video_path.suffix.lower() in (".stbm", ".stbm1br"):
+        stbm_expected = expected_frames // 2 if expected_frames == NUM_FRAMES else expected_frames
+        return _load_masks_from_stbm1br(mask_video_path, expected_frames=stbm_expected)
+    if mask_video_path.suffix.lower() == ".qma9":
+        qma9_expected = expected_frames // 2 if expected_frames == NUM_FRAMES else expected_frames
+        if mask_video_path.read_bytes()[: len(STBM1BR_MAGIC)] == STBM1BR_MAGIC:
+            return _load_masks_from_stbm1br(mask_video_path, expected_frames=qma9_expected)
+        return _load_masks_from_qma9(mask_video_path, expected_frames=qma9_expected)
     # Lane 12 NeRV codec (.nrv extension or NRV1 magic). The magic bytes
     # are the same for v1 and v2 payloads (b"NRV1"); the version u16 in
     # the header disambiguates.
     if mask_video_path.suffix.lower() == ".nrv":
         return _load_masks_from_nrv(mask_video_path, expected_frames=expected_frames)
-    head = mask_video_path.read_bytes()[:4] if mask_video_path.stat().st_size >= 4 else b""
+    head_bytes = mask_video_path.read_bytes()[: len(STBM1BR_MAGIC)] if mask_video_path.stat().st_size >= 4 else b""
+    head = head_bytes[:4]
     if head == b"AMRC":
         return _load_masks_from_amrc(mask_video_path, expected_frames=expected_frames)
     if head == b"STCB":
         return _load_masks_from_stcb(mask_video_path)
+    if head == b"CMG2":
+        return _load_masks_from_cmg2(mask_video_path, expected_frames=expected_frames)
+    if head == b"CMG3":
+        return _load_masks_from_cmg3(mask_video_path, expected_frames=expected_frames)
+    if head == CMG1_MAGIC:
+        return _load_masks_from_cmg1(mask_video_path, expected_frames=expected_frames)
     if head == b"NRV1":
         return _load_masks_from_nrv(mask_video_path, expected_frames=expected_frames)
+    if head == b"QMA9":
+        qma9_expected = expected_frames // 2 if expected_frames == NUM_FRAMES else expected_frames
+        return _load_masks_from_qma9(mask_video_path, expected_frames=qma9_expected)
+    if head_bytes == STBM1BR_MAGIC:
+        stbm_expected = expected_frames // 2 if expected_frames == NUM_FRAMES else expected_frames
+        return _load_masks_from_stbm1br(mask_video_path, expected_frames=stbm_expected)
 
     # Probe video dimensions
     probe_cmd = [
@@ -1914,6 +3781,29 @@ def _inline_load_int4_lzma2(raw_bytes: bytes, device: str = "cpu") -> dict:
     return state_dict
 
 
+class _QZS3QuantizrFaithfulInflateShim(nn.Module):
+    """Adapter for JointFrameGenerator renderers in the pair inflate loop."""
+
+    def __init__(self, gen):
+        super().__init__()
+        self.gen = gen
+        self.pose_dim = int(gen.pose_dim)
+        self.q_faithful = True
+
+    def forward(self, mask_t, mask_t1, pose=None, **_kwargs):
+        _ = mask_t  # unused by the Quantizr-faithful architecture
+        if pose is None:
+            pose = torch.zeros(
+                mask_t1.shape[0],
+                self.pose_dim,
+                device=mask_t1.device,
+                dtype=torch.float32,
+            )
+        f1, f2 = self.gen(mask_t1, pose)
+        pair = torch.stack([f1, f2], dim=1)
+        return pair.permute(0, 1, 3, 4, 2).contiguous()
+
+
 def _load_renderer(renderer_path: str, device: str) -> nn.Module:
     """Load renderer from a .bin or .pt checkpoint.
 
@@ -1932,6 +3822,13 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
         9. QFAI binary (Lane Q-FAITHFUL): TRUE 1:1 Quantizr PR #55 replica
            (magic b"QFAI") — JointFrameGenerator with NO motion/warp,
            single-mask + FiLM-on-pose dual-head architecture (~88K params).
+        9b. QZS3 binary (PR #67 qpose14-style packer): same
+           JointFrameGenerator architecture, grouped FP4/QV-packed weights.
+        9c. QBF1 binary: JointFrameGenerator block-FP readiness container
+           with strict pickle-free state_dict decoding.
+        9d. Torch-FP4 payload (PR #63 qpose14-style packer): same
+           JointFrameGenerator architecture, Torch serialized block-FP4
+           weights plus FP16 protected tensors.
        10. NWC1 binary (Lane J-NWC): Neural Weight Compression
            (magic b"NWC1") — VQ-VAE codec encodes every state-dict tensor
            to (codebook_index + per-block scale); codec weights bundled in.
@@ -2134,6 +4031,27 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
             file=sys.stderr,
         )
         return model
+
+    if raw_bytes.startswith(PR81_REORDERED_QZS3_MAGIC):
+        restored = _restore_pr81_reordered_qzs3_model_payload(
+            raw_bytes[PR81_REORDERED_QZS3_MAGIC_LEN:]
+        )
+        try:
+            from tac.quantizr_qzs3_codec import load_qzs3
+        except ImportError as exc:
+            raise RuntimeError(
+                "PR81 reordered QZS3 renderer requires tac.quantizr_qzs3_codec.load_qzs3"
+            ) from exc
+        gen = load_qzs3(restored, device=device)
+        wrapped = _QZS3QuantizrFaithfulInflateShim(gen).to(device).eval()
+        elapsed = time.monotonic() - t0
+        n_params = sum(p.numel() for p in gen.parameters())
+        print(
+            f"  Loaded PR81 reordered QZS3 JointFrameGenerator from .bin "
+            f"({len(raw_bytes):,} charged bytes, {n_params:,} params, {elapsed:.1f}s)",
+            file=sys.stderr,
+        )
+        return wrapped
 
     # ── NWC1 format (Lane J-NWC): Neural Weight Compression renderer ──
     # 2026-04-29: Lane J-NWC tiny VQ-VAE-style codec (block_size=16, codebook
@@ -2344,6 +4262,122 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
               file=sys.stderr)
         return model
 
+    # ── QZS3 format: PR #67 JointFrameGenerator grouped FP4/QV packer ──
+    # Layout:
+    #   [4] magic = b"QZS3"
+    #   [2] block_size uint16 LE
+    #   [...] fixed segment stream over the canonical JointFrameGenerator
+    #         state_dict: FP4 conv/embedding weights, FP16 residual tensors,
+    #         and variable-bit QV dense tensors.
+    # Same runtime contract as QFAI: the loaded JointFrameGenerator is wrapped
+    # as an asymmetric pair model for the contest inflate loop.
+    if magic == b"QZS3":
+        try:
+            from tac.quantizr_qzs3_codec import load_qzs3
+        except ImportError as exc:
+            raise RuntimeError(
+                "QZS3 (PR #67 qpose14-style JointFrameGenerator packer) "
+                "requires the tac package (tac.quantizr_qzs3_codec.load_qzs3). "
+                f"Underlying error: {exc!r}"
+            )
+        gen = load_qzs3(raw_bytes, device=device)
+        wrapped = _QZS3QuantizrFaithfulInflateShim(gen).to(device).eval()
+        elapsed = time.monotonic() - t0
+        n_params = sum(p.numel() for p in gen.parameters())
+        print(
+            f"  Loaded QZS3 JointFrameGenerator (qpose14-style packer) from .bin "
+            f"({len(raw_bytes):,} bytes, {n_params:,} params, {elapsed:.1f}s)",
+            file=sys.stderr,
+        )
+        return wrapped
+
+    # ── MQZ1 format: QZS3-compatible mixed/local FP4 block allocation ──
+    # Layout:
+    #   [4] magic = b"MQZ1"
+    #   [4] JSON header length uint32 LE
+    #   [header] charged metadata with per-FP4-tensor block sizes
+    #   [...] fixed segment stream over the canonical JointFrameGenerator.
+    if magic == b"MQZ1":
+        try:
+            from tac.quantizr_qzs3_codec import load_mixed_qzs_blocks
+        except ImportError as exc:
+            raise RuntimeError(
+                "MQZ1 mixed/local QZS block renderer requires the tac package "
+                "(tac.quantizr_qzs3_codec.load_mixed_qzs_blocks). "
+                f"Underlying error: {exc!r}"
+            )
+        gen = load_mixed_qzs_blocks(raw_bytes, device=device)
+        wrapped = _QZS3QuantizrFaithfulInflateShim(gen).to(device).eval()
+        elapsed = time.monotonic() - t0
+        n_params = sum(p.numel() for p in gen.parameters())
+        print(
+            f"  Loaded MQZ1 mixed/local QZS JointFrameGenerator from .bin "
+            f"({len(raw_bytes):,} bytes, {n_params:,} params, {elapsed:.1f}s)",
+            file=sys.stderr,
+        )
+        return wrapped
+
+    # ── QBF1 format: JointFrameGenerator block-FP readiness container ──
+    # Layout:
+    #   [4] magic = b"QBF1"
+    #   [versioned header + canonical JSON metadata + int8/scale stream]
+    # The loader is pickle-free and returns the same JointFrameGenerator wrapper
+    # used by QZS3/MQZ1.
+    if magic == b"QBF1":
+        try:
+            from tac.qbf1_renderer_codec import load_qbf1
+        except ImportError as exc:
+            raise RuntimeError(
+                "QBF1 JointFrameGenerator block-FP renderer requires the tac "
+                "package (tac.qbf1_renderer_codec.load_qbf1). "
+                f"Underlying error: {exc!r}"
+            )
+        gen = load_qbf1(raw_bytes, device=device)
+        wrapped = _QZS3QuantizrFaithfulInflateShim(gen).to(device).eval()
+        elapsed = time.monotonic() - t0
+        n_params = sum(p.numel() for p in gen.parameters())
+        print(
+            f"  Loaded QBF1 block-FP JointFrameGenerator from .bin "
+            f"({len(raw_bytes):,} bytes, {n_params:,} params, {elapsed:.1f}s)",
+            file=sys.stderr,
+        )
+        return wrapped
+
+    # ── QH0/QM0/QH1 format: PR85/PR89 custom JointFrameGenerator payload ──
+    # Layout:
+    #   [3] magic = b"QH0", b"QM0", or b"QH1"
+    #   [...] public adaptive-masking model stream: Conv/Embedding tensors
+    #         first, then dense Linear/GroupNorm tensors.  QH0 splits high/low
+    #         nibbles and even/odd bytes for better compression; QM0 stores the
+    #         same records directly.  QH1 is a lossless record-repack wrapper
+    #         that reconstructs QH0/QM0 bytes before the same tensor decoder.
+    #         The loader is pickle-free and returns the canonical
+    #         JointFrameGenerator wrapper used by QZS3/MQZ1/QBF1.
+    if magic[:3] in (b"QH0", b"QM0", b"QH1"):
+        try:
+            from tac.qh0_renderer_codec import decode_qh0_state_dict
+            from tac.quantizr_faithful_renderer import build_quantizr_faithful_renderer
+        except ImportError as exc:
+            raise RuntimeError(
+                "QH0/QM0 JointFrameGenerator renderer requires the tac package "
+                "(tac.qh0_renderer_codec.decode_qh0_state_dict). "
+                f"Underlying error: {exc!r}"
+            )
+        state, report = decode_qh0_state_dict(raw_bytes, device=device)
+        gen = build_quantizr_faithful_renderer()
+        gen.load_state_dict(state, strict=True)
+        gen.to(device).eval()
+        wrapped = _QZS3QuantizrFaithfulInflateShim(gen).to(device).eval()
+        elapsed = time.monotonic() - t0
+        n_params = sum(p.numel() for p in gen.parameters())
+        print(
+            f"  Loaded {report.magic} PR85 JointFrameGenerator from .bin "
+            f"({len(raw_bytes):,} bytes, {n_params:,} params, "
+            f"{report.q_fp4_tensor_count} FP4 tensors, {elapsed:.1f}s)",
+            file=sys.stderr,
+        )
+        return wrapped
+
     # ── QFAI format: Lane Q-FAITHFUL JointFrameGenerator (Quantizr-replica) ──
     # Layout:
     #   [4] magic = b"QFAI"
@@ -2452,6 +4486,31 @@ def _load_renderer(renderer_path: str, device: str) -> nn.Module:
     # PyTorch pickle format (.pt checkpoint from training)
     # weights_only=False required: training checkpoints contain config dicts, optimizer state
     ckpt = torch.load(renderer_path, map_location=device, weights_only=False)
+
+    # ── Torch-FP4 payload: PR #63 current-floor JointFrameGenerator packer ──
+    # This is a raw torch.save dictionary rather than a magic-prefixed .bin.
+    # Detect it before generic checkpoint reconstruction so it does not fall
+    # through to the DP-SIMS loader.
+    try:
+        from tac.quantizr_torch_fp4_codec import (
+            is_torch_fp4_payload,
+            load_torch_fp4_payload,
+        )
+    except ImportError:
+        is_torch_fp4_payload = None
+        load_torch_fp4_payload = None
+    if is_torch_fp4_payload is not None and is_torch_fp4_payload(ckpt):
+        gen = load_torch_fp4_payload(ckpt, device=device)
+        wrapped = _QZS3QuantizrFaithfulInflateShim(gen).to(device).eval()
+        elapsed = time.monotonic() - t0
+        n_params = sum(p.numel() for p in gen.parameters())
+        print(
+            f"  Loaded Torch-FP4 JointFrameGenerator (PR63-style packer) "
+            f"from .bin ({len(raw_bytes):,} bytes, {n_params:,} params, "
+            f"{elapsed:.1f}s)",
+            file=sys.stderr,
+        )
+        return wrapped
 
     # Extract config for architecture reconstruction
     config = ckpt.get("config", {})
@@ -2567,6 +4626,9 @@ def _generate_and_write(
     gradient_alpha: float = 1.0,
     zoom_warp: "nn.Module | None" = None,
     uniward_delta_spec: "object | None" = None,
+    sjkl_residual: dict | None = None,
+    seg_tile_actions: dict | None = None,
+    pr81_router_actions: torch.Tensor | None = None,
 ) -> int:
     """Generate frames from masks via renderer, upscale, and write raw RGB.
 
@@ -2598,6 +4660,11 @@ def _generate_and_write(
             actual scorer Jacobian. Applied AFTER rendering and AFTER any
             gradient corrections, BEFORE the camera-resolution upscale.
             Pure additive lookup — NO scorer required.
+        sjkl_residual: optional decoded sjkl.bin payload. Applied only to
+            q-faithful JointFrameGenerator fake1/fake2 pairs, never to
+            independent renderer paths.
+        seg_tile_actions: optional charged tile-action payload applied to
+            q-faithful fake2 before upsample.
 
     Returns:
         Number of frames written
@@ -2606,6 +4673,16 @@ def _generate_and_write(
     N = masks.shape[0]
     n_written = 0
     is_asymmetric = _is_asymmetric_model(renderer)
+    is_joint_frame_generator = bool(getattr(renderer, "q_faithful", False))
+    if sjkl_residual is not None and not is_joint_frame_generator:
+        if not sjkl_residual.get("warned_renderer_skip", False):
+            print(
+                "  WARNING: sjkl.bin present but renderer is not a "
+                "JointFrameGenerator/q-faithful pair model; skipping SJ-KL.",
+                file=sys.stderr,
+            )
+            sjkl_residual["warned_renderer_skip"] = True
+        _record_sjkl_skip(sjkl_residual, "renderer_not_joint_frame_generator")
 
     # Deterministic seed for reproducible output (noise injectors use torch.randn)
     torch.manual_seed(42)
@@ -2704,6 +4781,22 @@ def _generate_and_write(
                     if batch_ego_flow is not None:
                         fwd_kwargs["ego_flow"] = batch_ego_flow
                     pairs = renderer(masks_t, masks_t1, **fwd_kwargs)  # (B, 2, H, W, 3)
+                    if is_joint_frame_generator:
+                        pairs = _apply_sjkl_residual_to_pairs(
+                            pairs,
+                            sjkl_residual,
+                            pair_start=pair_idx // 2,
+                        )
+                        pairs = _apply_seg_tile_actions_to_pairs(
+                            pairs,
+                            seg_tile_actions,
+                            pair_start=pair_idx // 2,
+                        )
+                        pairs = _apply_pr81_router_actions_to_pairs(
+                            pairs,
+                            pr81_router_actions,
+                            pair_start=pair_idx // 2,
+                        )
 
                     # Apply gradient corrections at renderer resolution, then upscale
                     B_pairs = pairs.shape[0]
@@ -2844,6 +4937,12 @@ def _detect_device_and_batch_size() -> tuple[str, int]:
         batch_size = 16
         print(f"Device: CUDA ({torch.cuda.get_device_name(0)})", file=sys.stderr)
     else:
+        if os.environ.get("INFLATE_REQUIRE_CUDA", "").strip().lower() in _TRUE_ENV_VALUES:
+            raise RuntimeError(
+                "INFLATE_REQUIRE_CUDA=1 but torch.cuda.is_available() is false "
+                "inside inflate_renderer.py. Refusing CPU renderer fallback for "
+                "contest CUDA evidence."
+            )
         device = "cpu"
         batch_size = 4
         print(f"Device: CPU ({os.cpu_count()} cores)", file=sys.stderr)
@@ -2853,8 +4952,11 @@ def _detect_device_and_batch_size() -> tuple[str, int]:
 def _resolve_mask_path(archive_dir: str | Path, mask_filename: str) -> Path:
     """Pick the mask file inside the archive, supporting AV1 (.mkv),
     the lossless argmax-RLE codec (.amrc), Lane STC boundary codec
-    (.stcb), and Lane 12 NeRV masks (.nrv). The given ``mask_filename`` is
-    tried first; if it does not exist, we look for sibling formats
+    (.stcb), Lane 12 NeRV masks (.nrv), the CMG1 charged raw-stream
+    scaffold (.cmg1), CMG2 predictive mask probes (.cmg2), and CMG3
+    row-span grammar probes (.cmg3). The given
+    ``mask_filename`` is tried first; if it does
+    not exist, we look for sibling formats
     automatically. This lets callers pass the legacy default "masks.mkv"
     while still working with alternate mask payloads.
     """
@@ -2870,21 +4972,70 @@ def _resolve_mask_path(archive_dir: str | Path, mask_filename: str) -> Path:
         siblings.append(archive / f"{stem}.amrc")
         siblings.append(archive / f"{stem}.stcb")
         siblings.append(archive / f"{stem}.nrv")
+        siblings.append(archive / f"{stem}.cmg1")
+        siblings.append(archive / f"{stem}.cmg2")
+        siblings.append(archive / f"{stem}.cmg3")
+        siblings.append(archive / f"{stem}.stbm1br")
+        siblings.append(archive / f"{stem}.qma9")
     elif mask_filename.endswith(".amrc"):
         siblings.append(archive / f"{stem}.mkv")
         siblings.append(archive / f"{stem}.stcb")
         siblings.append(archive / f"{stem}.nrv")
+        siblings.append(archive / f"{stem}.cmg1")
+        siblings.append(archive / f"{stem}.cmg2")
+        siblings.append(archive / f"{stem}.cmg3")
     elif mask_filename.endswith(".stcb"):
         siblings.append(archive / f"{stem}.mkv")
         siblings.append(archive / f"{stem}.amrc")
         siblings.append(archive / f"{stem}.nrv")
+        siblings.append(archive / f"{stem}.cmg1")
+        siblings.append(archive / f"{stem}.cmg2")
+        siblings.append(archive / f"{stem}.cmg3")
     elif mask_filename.endswith(".nrv"):
         siblings.append(archive / f"{stem}.mkv")
         siblings.append(archive / f"{stem}.amrc")
         siblings.append(archive / f"{stem}.stcb")
+        siblings.append(archive / f"{stem}.cmg1")
+        siblings.append(archive / f"{stem}.cmg2")
+        siblings.append(archive / f"{stem}.cmg3")
+    elif mask_filename.endswith(".cmg1"):
+        siblings.append(archive / f"{stem}.mkv")
+        siblings.append(archive / f"{stem}.amrc")
+        siblings.append(archive / f"{stem}.stcb")
+        siblings.append(archive / f"{stem}.nrv")
+        siblings.append(archive / f"{stem}.cmg2")
+        siblings.append(archive / f"{stem}.cmg3")
+    elif mask_filename.endswith(".cmg2"):
+        siblings.append(archive / f"{stem}.mkv")
+        siblings.append(archive / f"{stem}.amrc")
+        siblings.append(archive / f"{stem}.stcb")
+        siblings.append(archive / f"{stem}.nrv")
+        siblings.append(archive / f"{stem}.cmg1")
+        siblings.append(archive / f"{stem}.cmg3")
+    elif mask_filename.endswith(".cmg3"):
+        siblings.append(archive / f"{stem}.mkv")
+        siblings.append(archive / f"{stem}.amrc")
+        siblings.append(archive / f"{stem}.stcb")
+        siblings.append(archive / f"{stem}.nrv")
+        siblings.append(archive / f"{stem}.cmg1")
+        siblings.append(archive / f"{stem}.cmg2")
+    elif mask_filename.endswith(".qma9"):
+        siblings.append(archive / f"{stem}.mkv")
+        siblings.append(archive / f"{stem}.amrc")
+        siblings.append(archive / f"{stem}.stcb")
+        siblings.append(archive / f"{stem}.nrv")
+        siblings.append(archive / f"{stem}.cmg1")
+        siblings.append(archive / f"{stem}.cmg2")
+        siblings.append(archive / f"{stem}.cmg3")
+        siblings.append(archive / f"{stem}.stbm1br")
     # Also try the canonical names as a last resort.
     siblings.extend([
+        archive / "masks.cmg3",
+        archive / "masks.cmg2",
+        archive / "masks.cmg1",
         archive / "masks.nrv",
+        archive / "masks.stbm1br",
+        archive / "masks.qma9",
         archive / "masks.amrc",
         archive / "masks.stcb",
         archive / "masks.mkv",
@@ -2923,9 +5074,97 @@ def _load_renderer_and_masks(
             f"Mask file not found: {mask_video_path} (also tried .amrc / .mkv "
             f"siblings inside {archive_dir})."
         )
-    masks = _load_masks_from_archive(mask_video_path)
+    masks = _load_archive_masks_with_optional_amr1_repair(archive_dir, mask_video_path)
 
     return renderer, masks, mask_video_path
+
+
+def _zoom_pair_count_from_masks(masks: torch.Tensor | None) -> int | None:
+    if masks is None:
+        return None
+    if getattr(masks, "_half_frame_only", False):
+        return int(masks.shape[0])
+    return int(masks.shape[0]) // 2
+
+
+def _load_zoom_warp_from_archive_dir(
+    archive_dir: str | Path,
+    *,
+    masks: torch.Tensor | None,
+    renderer: nn.Module,
+    device: str | torch.device,
+) -> nn.Module | None:
+    """Load charged zoom geometry for renderer ego-flow or half-frame masks."""
+    archive_path = Path(archive_dir)
+    zoom_scalars_path = archive_path / "zoom_scalars.bin"
+    zoom_scalars_pt = archive_path / "zoom_scalars.pt"
+    renderer_needs_ego_flow = bool(getattr(renderer, "use_zoom_flow", False))
+    half_frame_masks = masks is not None and bool(getattr(masks, "_half_frame_only", False))
+    geometry_present = zoom_scalars_path.exists() or zoom_scalars_pt.exists()
+
+    if not (renderer_needs_ego_flow or half_frame_masks or geometry_present):
+        return None
+
+    try:
+        from tac.radial_zoom import RadialZoomWarp
+    except ImportError as exc:
+        if renderer_needs_ego_flow or half_frame_masks:
+            raise RuntimeError(
+                "FATAL: archive requires charged zoom geometry for renderer ego-flow "
+                "or half-frame mask expansion, but tac.radial_zoom is unavailable"
+            ) from exc
+        print(
+            "  WARNING: zoom geometry member present but tac.radial_zoom is unavailable; "
+            "ignoring unused zoom geometry.",
+            file=sys.stderr,
+        )
+        return None
+
+    expected_pairs = _zoom_pair_count_from_masks(masks)
+    if zoom_scalars_path.exists():
+        raw_zs = zoom_scalars_path.read_bytes()
+        if len(raw_zs) % 2 != 0:
+            raise RuntimeError(
+                f"zoom_scalars.bin has odd byte length {len(raw_zs)}; expected fp16 scalars"
+            )
+        scalars = torch.frombuffer(bytearray(raw_zs), dtype=torch.float16).float()
+        if expected_pairs is not None and int(scalars.numel()) != expected_pairs:
+            raise RuntimeError(
+                f"zoom_scalars.bin pair count mismatch: got {int(scalars.numel())}, "
+                f"expected {expected_pairs} from mask contract"
+            )
+        zoom_warp = RadialZoomWarp(n_pairs=int(scalars.numel()))
+        with torch.no_grad():
+            zoom_warp.zoom_scalars.copy_(scalars)
+        zoom_warp = zoom_warp.to(device)
+        reason = "half-frame mask expansion" if half_frame_masks else "renderer ego-flow"
+        print(
+            f"  Loaded zoom scalars: {scalars.shape} from {zoom_scalars_path.name} "
+            f"for {reason}",
+            file=sys.stderr,
+        )
+        return zoom_warp
+
+    if zoom_scalars_pt.exists():
+        zw_state = torch.load(str(zoom_scalars_pt), map_location="cpu", weights_only=True)
+        n_pairs = expected_pairs if expected_pairs is not None else 600
+        zoom_warp = RadialZoomWarp(n_pairs=n_pairs)
+        zoom_warp.load_state_dict(zw_state)
+        zoom_warp = zoom_warp.to(device)
+        reason = "half-frame mask expansion" if half_frame_masks else "renderer ego-flow"
+        print(f"  Loaded zoom scalars from {zoom_scalars_pt.name} for {reason}", file=sys.stderr)
+        return zoom_warp
+
+    if renderer_needs_ego_flow:
+        n_pairs = expected_pairs if expected_pairs is not None else 600
+        zoom_warp = RadialZoomWarp(n_pairs=n_pairs).to(device)
+        print(
+            f"  WARNING: No zoom scalars in archive. Using identity zoom ({n_pairs} pairs).",
+            file=sys.stderr,
+        )
+        return zoom_warp
+
+    return None
 
 
 def inflate_renderer(
@@ -2972,6 +5211,12 @@ def inflate_renderer(
         batch_size = 16
         print(f"Device: CUDA ({torch.cuda.get_device_name(0)})", file=sys.stderr)
     else:
+        if os.environ.get("INFLATE_REQUIRE_CUDA", "").strip().lower() in _TRUE_ENV_VALUES:
+            raise RuntimeError(
+                "INFLATE_REQUIRE_CUDA=1 but torch.cuda.is_available() is false "
+                "inside inflate_renderer.py. Refusing CPU renderer fallback for "
+                "contest CUDA evidence."
+            )
         device = "cpu"
         batch_size = 4
         print(f"Device: CPU ({os.cpu_count()} cores)", file=sys.stderr)
@@ -2980,16 +5225,19 @@ def inflate_renderer(
     mask_source = os.environ.get("INFLATE_MASK_SOURCE", "archive")
     mask_video_path = _resolve_mask_path(archive_dir, mask_filename)
 
-    # Auto-detect: if a mask file exists in archive (either .mkv or .amrc),
-    # use it; otherwise fall back to SegNet extraction.
     if mask_source == "archive" and not mask_video_path.exists():
-        print(
-            f"  WARNING: no mask file found in archive (looked for "
-            f"{mask_filename} and .amrc/.mkv siblings). "
-            f"Falling back to SegNet extraction (NOT contest-compliant).",
-            file=sys.stderr,
+        raise FileNotFoundError(
+            f"INFLATE_MASK_SOURCE=archive but no mask file was found in the "
+            f"archive (looked for {mask_filename} and .amrc/.mkv siblings). "
+            "Refusing to fall back to SegNet extraction because scorer loads "
+            "at inflate time are not contest-compliant. For development-only "
+            "forensics, set INFLATE_MASK_SOURCE=segnet explicitly."
         )
-        mask_source = "segnet"
+    if mask_source not in {"archive", "segnet"}:
+        raise ValueError(
+            "INFLATE_MASK_SOURCE must be 'archive' or 'segnet', got "
+            f"{mask_source!r}"
+        )
 
     use_archive_masks = mask_source == "archive"
 
@@ -3014,8 +5262,7 @@ def inflate_renderer(
 
         # Loud non-compliance banner: scorer load at inflate is non-contest-
         # compliant (Yousfi PR #35). This branch is only reachable when the
-        # operator explicitly sets INFLATE_MASK_SOURCE != "archive" OR when
-        # masks.mkv is missing from the archive (a packaging bug).
+        # operator explicitly sets INFLATE_MASK_SOURCE=segnet.
         banner = (
             "\n" + "!" * 78 + "\n"
             "[strict-scorer-rule] Loading SegNet at inflate time "
@@ -3072,7 +5319,7 @@ def inflate_renderer(
     if use_archive_masks:
         stage_num += 1
         print(f"Stage {stage_num}: Loading pre-extracted masks ...", file=sys.stderr)
-        masks = _load_masks_from_archive(mask_video_path)
+        masks = _load_archive_masks_with_optional_amr1_repair(archive_dir, mask_video_path)
 
         # Verify mask resolution (accept clean downscale factors)
         mask_h, mask_w = masks.shape[1], masks.shape[2]
@@ -3099,6 +5346,7 @@ def inflate_renderer(
     poses = None
     optimized_poses_path = Path(archive_dir) / "optimized_poses.pt"
     poses_path = Path(archive_dir) / "poses.pt"
+    optimized_qp1_path = Path(archive_dir) / OPTIMIZED_POSES_QP1
     optimized_bin_path = Path(archive_dir) / "optimized_poses.bin"
     poses_bin_path = Path(archive_dir) / "poses.bin"
 
@@ -3109,6 +5357,9 @@ def inflate_renderer(
     if optimized_poses_path.exists():
         poses = _load_poses(optimized_poses_path, pose_dim=max(_renderer_pose_dim, 1))
         print(f"  Loaded OPTIMIZED poses: {tuple(poses.shape)} from archive (pose-space TTO)", file=sys.stderr)
+    elif optimized_qp1_path.exists() and _renderer_pose_dim > 0:
+        poses = _decode_qp1_poses_float32(optimized_qp1_path, pose_dim=_renderer_pose_dim)
+        print(f"  Loaded OPTIMIZED poses: {tuple(poses.shape)} from archive (QP1 float32)", file=sys.stderr)
     elif optimized_bin_path.exists() and _renderer_pose_dim > 0:
         poses = _load_poses(optimized_bin_path, pose_dim=_renderer_pose_dim)
         print(f"  Loaded OPTIMIZED poses: {tuple(poses.shape)} from archive (bin, pose-space TTO)", file=sys.stderr)
@@ -3309,62 +5560,13 @@ def inflate_renderer(
             "MLP feature extractor. Refusing to silently run unconditioned."
         )
 
-    # ---- Load zoom warp scalars (for use_zoom_flow models) ----
-    zoom_warp = None
-    if hasattr(renderer, 'use_zoom_flow') and renderer.use_zoom_flow:
-        zoom_scalars_path = Path(archive_dir) / "zoom_scalars.bin"
-        zoom_scalars_pt = Path(archive_dir) / "zoom_scalars.pt"
-        if zoom_scalars_path.exists():
-            raw_zs = zoom_scalars_path.read_bytes()
-            scalars = torch.frombuffer(bytearray(raw_zs), dtype=torch.float16).float()
-            try:
-                from tac.radial_zoom import RadialZoomWarp
-                zoom_warp = RadialZoomWarp(n_pairs=len(scalars))
-                zoom_warp.zoom_scalars.data = scalars
-                zoom_warp = zoom_warp.to(device)
-                print(f"  Loaded zoom scalars: {scalars.shape} from {zoom_scalars_path.name}",
-                      file=sys.stderr)
-            except ImportError:
-                print(f"  WARNING: use_zoom_flow=True but tac.radial_zoom not available. "
-                      f"Zoom flow disabled.", file=sys.stderr)
-                zoom_warp = None
-        elif zoom_scalars_pt.exists():
-            try:
-                from tac.radial_zoom import RadialZoomWarp
-                zw_state = torch.load(str(zoom_scalars_pt), map_location="cpu", weights_only=True)
-                # If masks tensor is tagged half-frame, shape[0] IS n_pairs
-                # (each odd-frame mask corresponds to one pair). Otherwise the
-                # full 1200-frame layout means n_pairs = N/2.
-                n_pairs = (
-                    masks.shape[0] if (masks is not None and getattr(masks, "_half_frame_only", False))
-                    else (masks.shape[0] // 2 if masks is not None else 600)
-                )
-                zoom_warp = RadialZoomWarp(n_pairs=n_pairs)
-                zoom_warp.load_state_dict(zw_state)
-                zoom_warp = zoom_warp.to(device)
-                print(f"  Loaded zoom scalars from {zoom_scalars_pt.name}", file=sys.stderr)
-            except ImportError:
-                print(f"  WARNING: use_zoom_flow=True but tac.radial_zoom not available.",
-                      file=sys.stderr)
-                zoom_warp = None
-        else:
-            # No zoom scalars in archive — create identity zoom (scalars=0 → no zoom)
-            try:
-                from tac.radial_zoom import RadialZoomWarp
-                # If masks tensor is tagged half-frame, shape[0] IS n_pairs
-                # (each odd-frame mask corresponds to one pair). Otherwise the
-                # full 1200-frame layout means n_pairs = N/2.
-                n_pairs = (
-                    masks.shape[0] if (masks is not None and getattr(masks, "_half_frame_only", False))
-                    else (masks.shape[0] // 2 if masks is not None else 600)
-                )
-                zoom_warp = RadialZoomWarp(n_pairs=n_pairs).to(device)
-                print(f"  WARNING: No zoom scalars in archive. Using identity zoom ({n_pairs} pairs).",
-                      file=sys.stderr)
-            except ImportError:
-                print(f"  FATAL: use_zoom_flow=True but tac.radial_zoom not available and "
-                      f"no zoom_scalars in archive.", file=sys.stderr)
-                raise RuntimeError("Cannot inflate use_zoom_flow model without zoom scalars or tac package")
+    # ---- Load zoom warp scalars for renderer ego-flow or half-frame masks ----
+    zoom_warp = _load_zoom_warp_from_archive_dir(
+        archive_dir,
+        masks=masks,
+        renderer=renderer,
+        device=device,
+    )
 
     # ---- Expand half-frame masks (Quantizr paradigm) ----
     # If only odd-frame masks were stored in the archive, we need to recover
@@ -3464,6 +5666,14 @@ def inflate_renderer(
                   f"skipping Lane C δ application.", file=sys.stderr)
             uniward_delta_spec = None
 
+    # ---- Load optional SJ-KL residuals ----
+    # sjkl.bin is a charged archive payload produced at compression time.
+    # Decode-time application uses only the stored basis/coefficients and
+    # does not import or load SegNet/PoseNet.
+    sjkl_residual = _load_sjkl_residual_from_archive_dir(archive_dir)
+    seg_tile_actions = _load_seg_tile_actions_from_archive_dir(archive_dir, device)
+    pr81_router_actions = _load_pr81_router_actions_from_archive_dir(archive_dir)
+
     # ---- Process each video ----
     output_path = Path(inflated_dir)
     output_path.mkdir(parents=True, exist_ok=True)
@@ -3555,6 +5765,9 @@ def inflate_renderer(
             gradient_corrections=grad_corrections,
             zoom_warp=zoom_warp,
             uniward_delta_spec=uniward_delta_spec,
+            sjkl_residual=sjkl_residual,
+            seg_tile_actions=seg_tile_actions,
+            pr81_router_actions=pr81_router_actions,
         )
 
         if not use_archive_masks:
@@ -3573,6 +5786,15 @@ def inflate_renderer(
         print(f"  Video complete: {n_written} frames in {t_video_elapsed:.1f}s "
               f"({n_written / max(t_video_elapsed, 0.01):.1f} fps)",
               file=sys.stderr)
+
+    _finalize_sjkl_application_contract(sjkl_residual)
+    if seg_tile_actions is not None:
+        print(
+            f"  SegNet tile actions applied: "
+            f"{seg_tile_actions['applied_action_count']}/"
+            f"{seg_tile_actions['record_count']} records",
+            file=sys.stderr,
+        )
 
     t_total = time.monotonic() - t_total_start
     print(f"\nTotal inflate time: {t_total:.1f}s", file=sys.stderr)
@@ -4037,7 +6259,7 @@ def _inflate_constrained_gen(
             )
             sys.exit(1)
     else:
-        masks = _load_masks_from_archive(mask_video_path)
+        masks = _load_archive_masks_with_optional_amr1_repair(archive_path, mask_video_path)
 
     N = masks.shape[0]
     if N % 2 != 0:
@@ -4276,12 +6498,16 @@ def _inflate_renderer_with_mini_tto(
     poses = None
     optimized_poses_path = archive_path / "optimized_poses.pt"
     poses_path = archive_path / "poses.pt"
+    optimized_qp1_path = archive_path / OPTIMIZED_POSES_QP1
     optimized_bin_path = archive_path / "optimized_poses.bin"
     poses_bin_path = archive_path / "poses.bin"
     from tac.submission_archive import load_optimized_poses as _load_poses
     if optimized_poses_path.exists():
         poses = _load_poses(optimized_poses_path, pose_dim=max(_renderer_pose_dim, 1))
         print(f"  Loaded OPTIMIZED poses: {tuple(poses.shape)} from archive (pose-space TTO)", file=sys.stderr)
+    elif optimized_qp1_path.exists() and _renderer_pose_dim > 0:
+        poses = _decode_qp1_poses_float32(optimized_qp1_path, pose_dim=_renderer_pose_dim)
+        print(f"  Loaded OPTIMIZED poses: {tuple(poses.shape)} from archive (QP1 float32)", file=sys.stderr)
     elif optimized_bin_path.exists() and _renderer_pose_dim > 0:
         poses = _load_poses(optimized_bin_path, pose_dim=_renderer_pose_dim)
         print(f"  Loaded OPTIMIZED poses: {tuple(poses.shape)} from archive (bin, pose-space TTO)", file=sys.stderr)

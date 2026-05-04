@@ -2,8 +2,8 @@
 
 **Date:** 2026-04-30
 **Scope:** contest-paper-quality blueprint for documenting the Shannon-floor push without inflating evidence.
-**Allowed score claims:** only the current Grade A/A++ ledger in `contest_grade_all_lane_results_audit_20260430.md` plus stricter Codex progress addenda.
-**Current A++ frontier:** Lane G v3 PFP16, recomputed score `1.043987524793892`, with archive bytes `686,635`, pose `0.00346442`, segmentation `0.00400656`, archive SHA `0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f`, and exact Lightning AI Tesla T4 provenance (`gpu_t4_match=true`) in `experiments/results/lane_g_v3_pfp16/pfp16_a_plus_plus_t4_20260430T1620Z_codex/`.
+**Allowed score claims:** only the current Grade A/A++ ledger in `contest_grade_all_lane_results_audit_20260430.md` plus stricter later Codex progress addenda and exact archive-custody notes.
+**Current A++ frontier:** C-058 QZS3/QP1 PR67-informed active-subspace byte micro-frontier on Tesla T4, score `0.3157555307844823`, archive bytes `276,422`, archive SHA `5145fb57be574b85639856d239420ffa35e605e32664f93e06753b120b21633f`, exact path `archive.zip -> inflate.sh -> upstream/evaluate.py`. C-057 remains the substantive anisotropic-basis anchor for the PR67 comparison narrative; C-058 is a one-byte exact successor for strict latest packets.
 **Hard boundary:** no Grade A/A++ claim is allowed without exact archive CUDA evidence. Predictions, byte-only reports, smoke tests, CPU/MPS/proxy runs, and memory-only results are paper-routing evidence only.
 
 ---
@@ -17,7 +17,7 @@ The paper/writeup must read like a reproducible compression-system paper, not an
 | Claim class | Example wording allowed | Evidence required | Forbidden wording before evidence |
 |---|---|---|---|
 | Grade A score result | "Lane X achieves recomputed score Y under the local CUDA score-grade ledger." | Exact archive, SHA match, CUDA eval report, 600 samples, component recomputation | "contest-identical" unless Grade A++ gate passes |
-| Grade A++ contest-ready result | "Lane G v3 PFP16 is the current 1:1 contest-grade frontier at recomputed `1.043987524793892`." | Grade A plus clean manifest, payload closure, `archive.zip -> inflate.sh -> upstream/evaluate.py`, T4/equivalent device, 30-minute inflate budget | Any final-submission claim without A++ evidence |
+| Grade A++ contest-ready result | "C-058 QZS3/QP1 active-subspace byte micro-frontier is the current 1:1 contest-grade frontier at recomputed `0.3157555307844823`; C-057 is the PR67 comparison anchor." | Grade A plus clean manifest, payload closure, `archive.zip -> inflate.sh -> upstream/evaluate.py`, T4/equivalent device, 30-minute inflate budget | Any final-submission claim without A++ evidence |
 | Empirical component result | "Component Y saved N bytes in a local archive builder." | Exact component report, manifest/hash if archive-shaped, no neural score claim | "improves score" |
 | Derivation | "Saving 100,000 bytes changes the rate term by `0.06659`." | Formula and arithmetic | "measured improvement" |
 | Prediction / design hypothesis | "Sensitivity weighting is expected to reduce PoseNet regression risk." | Stated mechanism, planned falsification gate | "validated", "frontier", "floor-moving" |
@@ -124,10 +124,12 @@ sub-`0.30` claim:
 archive_bytes <= floor(0.30 * 37,545,489 / 25) = 450,545
 ```
 
-PFP16 at `686,635` bytes already contributes about `0.4572` rate points, and
-its non-rate score is about `0.5868`. Therefore PFP16 is the current
-contest-grade deploy baseline, not a Shannon-floor architecture. The floor
-path needs both rate reduction and scorer-distortion reduction, with every
+The older PFP16 frontier at `686,635` bytes already contributed about `0.4572`
+rate points, and its non-rate score was about `0.5868`; that made it a
+historical contest-grade baseline, not a Shannon-floor architecture. The newer
+QZS3/QP1 r8 frontier is byte-scale-competitive at `276,426` bytes, but still
+needs additional scorer-distortion reduction before any sub-`0.30` claim. The
+floor path needs both rate discipline and component improvement, with every
 stack measured as its own archive.
 
 ### Distortion sensitivity
@@ -208,7 +210,12 @@ The paper should maintain a machine-checkable table with one row per claim.
 
 | Claim id | Claim text | Grade | Evidence path | Formula / method | Review status | Allowed use |
 |---|---|---|---|---|---|---|
-| C-001 | Lane G v3 PFP16 is the current A++ contest-grade frontier at recomputed `1.043987524793892`. | `A++` | `contest_grade_all_lane_results_audit_20260430_codex_progress.md`; `experiments/results/lane_g_v3_pfp16/pfp16_a_plus_plus_t4_20260430T1620Z_codex/contest_auth_eval.json` | Contest score formula, exact archive row, T4/equivalent provenance | A++ evidence landed; paper/deploy bundle review still required | `rank_frontier` |
+| C-001 | Lane G v3 PFP16 was the 2026-04-30 historical A++ contest-grade frontier at recomputed `1.043987524793892`. | `A++` | `contest_grade_all_lane_results_audit_20260430_codex_progress.md`; `experiments/results/lane_g_v3_pfp16/pfp16_a_plus_plus_t4_20260430T1620Z_codex/contest_auth_eval.json` | Contest score formula, exact archive row, T4/equivalent provenance | A++ evidence landed; superseded by QZS3/QP1 r8 for current frontier wording | `historical_lesson` |
+| C-009 | QZS3/QP1 r8 was the prior A++ frontier at `0.3159064496962538` on exact archive SHA `c68b7522d4d2c8a89771e491c5956b0fb3460e744b3adba9f410f053783044b1`; it is superseded by C-057 for current-frontier wording. | `A++` | `experiments/results/lightning_batch/exact_eval_line_search_qzs3_qp1_r8_t4_20260502T0110Z/contest_auth_eval.adjudicated.json`; `.omx/research/grand_council_stacking_full_pipeline_qzs3_pose_20260502_codex.md` | Contest score formula, exact archive bytes `276426`, T4 exact eval | A++ evidence landed; superseded by C-057 | `historical_lesson` |
+| C-011 | C-057 QZS3/QP1 anisotropic basis continuation is the current A++ frontier at `0.3157562807844823` on exact archive SHA `63e6213ae154b5b5ce164829c15e675ad6d7819a9bdb1e8c9b2f099374fa7009`. | `A++` | `experiments/results/lightning_batch/exact_eval_line_search_qzs3_qp1_basis_r13_t4_20260502T0200Z/contest_auth_eval.adjudicated.json`; `.omx/research/shannon_floor_claim_matrix_20260430_codex.md` | Contest score formula, exact archive bytes `276423`, T4 exact eval | A++ evidence landed; active frontier unless superseded by later exact T4/equivalent archive | `rank_frontier` |
+| C-012 | PR68/PR69/PR70 rule-boundary submissions are compliance lessons, not score evidence; PR70 explicitly moved score-affecting bytes into `inflate.py`, and PR69 has no filled maintainer eval report at inspection time. | `invalid` / `external_quarantine` | Public PR #68/#69/#70; `.omx/research/top_submission_reverse_engineering_canonical_repro_20260501_codex.md` | Payload-closure policy and external-source inspection | Must not enter ranked result tables unless strict charged-payload exact eval supersedes quarantine | `invalid_do_not_use` |
+| C-013 | C-058 is a one-byte exact A++ successor to C-057 at `0.3157555307844823`; use C-058 for strict latest-frontier packets and C-057 for PR67 narrative comparison. | `A++` | `experiments/results/lightning_batch/exact_eval_line_search_qzs3_qp1_active_fix2_t4_20260502T0250Z/contest_auth_eval.adjudicated.json`; `.omx/research/shannon_floor_claim_matrix_20260430_codex.md` | Contest score formula, exact archive bytes `276422`, T4 exact eval | A++ evidence landed; active frontier unless superseded by later exact T4/equivalent archive | `rank_frontier` |
+| C-010 | Sub-`0.30` likely requires PR65-style postprocess/side-channel atoms or an equivalent component-improving atom family, not only scalar QP1 pose line search. | `prediction` | `.omx/research/meta_lagrangian_scientific_rigor_thesis_review_20260502_codex.md`; public [PR #65](https://github.com/commaai/comma_video_compression_challenge/pull/65); public [PR #67](https://github.com/commaai/comma_video_compression_challenge/pull/67) | Rate/pose/seg decomposition and missing-score analysis | Must be falsified or confirmed by exact archive eval of charged atoms | `dispatch_priority` |
 | C-002 | Saving 100,000 archive bytes changes the rate term by `0.06659`. | `derivation` | This blueprint; contest formula | `25 * 100000 / 37545489` | Math review required | `dispatch_priority` |
 | C-003 | PFP16 improved Lane G v3 by about `0.004878` recomputed score after exact T4 archive eval. | `A++` | `contest_grade_all_lane_results_audit_20260430_codex_progress.md` | Full score recomputation; archive bytes `694,074 -> 686,635` | A++ evidence landed; source-bundle provenance review still required | `promote_candidate` |
 | C-004 | Materially changed INR/NeRV-style mask payload variants remain α hypotheses, but Lane 12 `jsonfix40` is negative evidence for the current implementation. | `prediction` | `shannon_floor_execution_readiness_20260430.md`; Lane 12 exact negative report | Planned boundary/inflate/loss redesign plus exact score eval | Alpha review must address Lane 12 failure before rerun | `design_motivation` only |
@@ -297,7 +304,10 @@ These are templates. Headline result and promotion ablation score cells require 
 
 | Lane | Grade | Archive SHA | Bytes | Seg | Pose | Reported score | Recomputed score | Hardware caveat |
 |---|---|---|---:|---:|---:|---:|---:|---|
-| Lane G v3 PFP16 | `A++` | `0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f` | 686,635 | 0.00400656 | 0.00346442 | 1.04 | 1.043987524793892 | Lightning AI Tesla T4, `gpu_t4_match=true` |
+| QZS3/QP1 C-058 active-subspace micro-frontier | `A++` | `5145fb57be574b85639856d239420ffa35e605e32664f93e06753b120b21633f` | 276,422 | 0.00061244 | 0.00049637 | 0.3157555307844823 | 0.3157555307844823 | Lightning AI Tesla T4; strict current frontier |
+| QZS3/QP1 C-057 anisotropic basis | `A++` | `63e6213ae154b5b5ce164829c15e675ad6d7819a9bdb1e8c9b2f099374fa7009` | 276,423 | 0.00061244 | 0.00049637 | 0.3157562807844823 | 0.3157562807844823 | Lightning AI Tesla T4; PR67 comparison anchor |
+| QZS3/QP1 line-search r8 | `A++` | `c68b7522d4d2c8a89771e491c5956b0fb3460e744b3adba9f410f053783044b1` | 276,426 | 0.00061244 | 0.00049846 | 0.3159064496962538 | 0.3159064496962538 | Lightning AI Tesla T4; historical frontier |
+| Lane G v3 PFP16 | `A++` | `0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f` | 686,635 | 0.00400656 | 0.00346442 | 1.04 | 1.043987524793892 | Historical A++ frontier superseded by QZS3/QP1 |
 | Lane G v3 | `A` | `9b20...6870b` per Grade A ledger | 694,074 | 0.00400846 | 0.00345458 | 1.05 | 1.048866 | CUDA RTX 4090, not T4-matched |
 
 ### Component ablation table
@@ -658,6 +668,20 @@ The final paper should use one table schema for all results. Avoid free-form res
 | `paper_lesson` | string | yes | Allowed wording |
 | `revival_condition` | string | yes | What evidence would reopen the result |
 
+### `paper_external_context.csv`
+
+| Column | Type | Required | Description |
+|---|---|---:|---|
+| `external_id` | string | yes | Stable id, e.g. `EXT-PR67` |
+| `source_url` | url | yes | Public PR, leaderboard, or upstream source |
+| `reported_score` | string/float | yes if present | Public score signal; keep rounded/exact distinction |
+| `archive_bytes` | int | yes if present | Publicly reported or locally measured external bytes |
+| `component_values` | object | yes if present | Public PoseNet/SegNet fields when available |
+| `evidence_tag` | enum | yes | `external`, `external_quarantine`, or `invalid` |
+| `allowed_use` | enum | yes | `design_signal`, `target_comparison`, `compliance_lesson`, `invalid_do_not_use` |
+| `local_reproduction_status` | enum | yes | `none`, `byte_anatomy`, `cuda_diagnostic`, `exact_promoted` |
+| `quarantine_reason` | string | yes if quarantined | Why it cannot rank or promote |
+
 ---
 
 ## 17. Contest Compliance Appendix
@@ -666,19 +690,19 @@ This appendix is mandatory for any final submission candidate. It should be bori
 
 ### A++ compliance checklist
 
-| Check | Required evidence | Current PFP16 status |
+| Check | Required evidence | Current C-057 status |
 |---|---|---|
-| Exact archive preserved | `archive.zip` and SHA file | Yes locally |
-| Clean manifest | `archive_manifest.txt`, no hidden/debug files | Yes per A++ bundle / final manifest audit still needed |
-| Payload closure | No score-relevant sidecars | Yes per A++ bundle |
-| Inflate dispatch | Captured `inflate.sh` and `config.env` | Yes in helper/log path; final packet should co-locate copies |
+| Exact archive preserved | `archive.zip` and SHA file | Required for final packet; C-057 SHA is recorded |
+| Clean manifest | `archive_manifest.txt`, no hidden/debug files | Required final audit |
+| Payload closure | No score-relevant sidecars | Required final audit |
+| Inflate dispatch | Captured `inflate.sh` and `config.env` | Required final packet |
 | Upstream scorer | `archive.zip -> inflate.sh -> upstream/evaluate.py` | Yes for A++ eval path |
-| Full sample count | `n_samples=600` | Yes |
+| Full sample count | `n_samples=600` | Yes per C-057 exact row |
 | CUDA | Provenance device CUDA | Yes |
-| T4/equivalent | `gpu_t4_match=true` or official equivalent | Yes: Lightning AI Tesla T4 |
-| Inflate budget | Under 1800 seconds on contest-equivalent host | Yes by log (`inflate` wrapper 87.0s, internal 39.8s); structured JSON timing now patched for future runs |
-| Score recomputation | Formula delta within tolerance | Yes |
-| Report custody | JSON, logs, manifest, provenance co-located | Mostly yes; add source/staged-tree manifest for final packet |
+| T4/equivalent | `gpu_t4_match=true` or official equivalent | Yes: Tesla T4 |
+| Inflate budget | Under 1800 seconds on contest-equivalent host | Must be co-located in final C-057 packet |
+| Score recomputation | Formula delta within tolerance | Required final adjudication row |
+| Report custody | JSON, logs, manifest, provenance co-located | Must be consolidated before final submission/paper packet |
 | Three clean reviews | Review ledger with no unresolved findings | Not complete |
 
 ### Compliance non-claims
@@ -699,12 +723,66 @@ The next evidence needed before a strong final writeup:
 
 | Gap | Needed artifact | Why it matters |
 |---|---|---|
-| PFP16 final publication bundle | Exact archive copy/manifest, source or staged-tree manifest, structured timing note, review signoff | Converts landed A++ evidence into a paper/deploy packet |
+| C-058/C-057 final publication bundle | Exact archive copy/manifest, source or staged-tree manifest, structured timing note, review signoff | Converts the current strict frontier and PR67 comparison anchor into a paper/deploy packet |
 | Lane 12 postmortem packet | Boundary/error visualizations plus payload/inflate contract review | Prevents overgeneralizing the `jsonfix40` failure |
 | OWV3 sensitivity redesign truth point | CUDA Fisher/sensitivity artifact, CV stability, archive eval, and no size-regression guard trip | Tests the beta hypothesis after Modal smoke showed archive bloat |
 | Active lane harvest | Lane 19, SA, H-V3, HM-S exact evals or failure logs | Updates negative/result ledger without memory-only claims |
-| Deterministic rebuild proof | Rebuild PFP16 archive and compare SHA | Strengthens artifact custody |
+| Deterministic rebuild proof | Rebuild C-057 archive and compare SHA, or document why byte-identical rebuild is impossible | Strengthens artifact custody |
 | Review ledger | Three clean adversarial passes for any promoted result | Prevents paper claims from outrunning audit |
 | Figure data files | CSVs generated from the schemas above | Makes plots reproducible rather than hand-entered |
 
-Until these gaps close, the paper should be framed as an evidence-gated systems report with a current A++ PFP16 contest-grade frontier, not as a Shannon-floor attainment paper.
+Until these gaps close, the paper should be framed as an evidence-gated systems report with a current A++ C-058/C-057 QZS3/QP1 contest-grade frontier, not as a Shannon-floor attainment paper.
+
+---
+
+## 19. 2026-05-02 Meta-Lagrangian Thesis Review Addendum
+
+The paper narrative now has a newer A++ frontier than the original 2026-04-30
+blueprint. The current verified result to write around is C-057 QZS3/QP1
+anisotropic basis continuation at `0.3157562807844823` on exact T4 archive SHA
+`63e6213ae154b5b5ce164829c15e675ad6d7819a9bdb1e8c9b2f099374fa7009`.
+Public source links for this addendum: the
+[challenge repository](https://github.com/commaai/comma_video_compression_challenge),
+[PR #67](https://github.com/commaai/comma_video_compression_challenge/pull/67),
+and [PR #65](https://github.com/commaai/comma_video_compression_challenge/pull/65).
+
+This changes the paper emphasis from "large renderer frontier plus future
+rate allocation" to "public-floor archive basin plus charged atom allocation."
+The core formalism should be:
+
+```text
+Score(A) = 100*Sg(A) + sqrt(10*P(A)) + 25*B(A)/37,545,489
+lambda_rate = 25/37,545,489
+
+utility(a | A, X) =
+  E[component_score_saved(a | A, X)]
+  - lambda_rate*charged_bytes(a | A, X)
+  - beta*uncertainty(a | A, X)
+  - gamma*interaction_risk(a | A, X)
+  + eta*synergy(a | X)
+```
+
+The KKT/waterline language is allowed only as a planning relaxation. In the
+actual archive problem, atoms are discrete and interact through decoder logic,
+Brotli layout, PoseNet, and SegNet. Therefore every accepted water-fill point
+must become its own deterministic archive and pass exact CUDA auth eval before
+it enters result tables.
+
+The thesis-advisor position is:
+
+- Write C-058 as the strict current exact frontier and C-057 as the PR67
+  comparison anchor.
+- Write r8/C-056 and earlier r13 diagnostics as historical/superseded unless a
+  later terminal exact T4/equivalent artifact supersedes C-057.
+- Write public PR #67 and PR #65 as external design signals, not local proof.
+- Write PR #68/#69/#70 as exploit or rule-boundary quarantine, not result
+  evidence.
+- Do not overstate sub-`0.30`. It likely needs PR65-style postprocess or
+  side-channel atoms, or an equivalent component-improving atom family, not
+  only scalar QP1 line search.
+- Require deterministic archive custody for every claim: exact archive copy,
+  SHA, bytes, manifest, provenance, eval command, CUDA device, sample count,
+  logs, component recomputation, and review status.
+
+The detailed study note is
+`.omx/research/meta_lagrangian_scientific_rigor_thesis_review_20260502_codex.md`.

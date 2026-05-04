@@ -2,7 +2,8 @@
 # Lane SA — SegMap clone of Selfcomp 0.38 paradigm (Quantizr-style mask renderer).
 #
 # Architecture: tac.segmap_renderer.SegMap(hidden=24, block_hidden=24,
-#               num_blocks=8, max_frame_index=1200). 5-class one-hot → RGB.
+#               num_blocks=8, max_frame_index=1200). Selfcomp soft-LUT
+#               5-class probability map -> RGB.
 #
 # Variant: --variant plain — standard scorer loss (eval_roundtrip=True,
 #                            roundtrip_noise_std=0.5).
@@ -43,6 +44,7 @@ prov = {
     'output_dir': '$LOG_DIR',
     'variant': 'plain',
     'arch': {'hidden': 24, 'block_hidden': 24, 'num_blocks': 8},
+    'grayscale_mode': 'soft_lut',
     'predicted_band': [0.40, 0.55],
     'anchor_dir': 'experiments/results/lane_a_landed/iter_0',
     'paradigm': 'segmap_clone',
@@ -219,6 +221,7 @@ log "archive_bytes=$ARCHIVE_BYTES"
 INFLATE_CONFIG="$LOG_DIR/lane_sa_config.env"
 cat > "$INFLATE_CONFIG" <<'EOF'
 PYTHON_INFLATE=segmap
+SEGMAP_GRAYSCALE_MODE=soft_lut
 EOF
 
 log "=== Stage 5: contest_auth_eval [contest-CUDA] ==="

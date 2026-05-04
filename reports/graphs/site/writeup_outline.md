@@ -5,13 +5,18 @@
 - Track A is the only intentionally non-rule-faithful lane.
 - Track B is the honest scorer-backed lane.
 - The writeup should foreground rigor, not just cleverness.
-- Two paradigms have produced floors: codec + post-filter (Era 1, peak `1.73`) and neural renderer (Era 2, peak `1.05`).
+- Three arcs matter: codec + post-filter (Era 1, peak `1.73`), neural renderer
+  controls (Era 2, peak control `1.05`), and public semantic/neural
+  sufficient-statistic replay culminating in PR100 at `0.22826947142244708`.
 
 ## 2. key result (current)
 
-- Best contest-CUDA result: **`1.05`** (Lane G v3, Era 2 — neural renderer)
-- Modal T4 reproduction: **`1.04`** (within 0.01 noise)
-- Recipe: dilated-h64 renderer + KL distill weight=0.002 + pose TTO retry
+- Best exact contest-CUDA result: **`0.22826947142244708`** (PR100
+  HNeRV-LC-v2 adapter replay, exact Tesla T4 A++)
+- Archive: `178981` bytes,
+  SHA-256 `afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641`
+- Runtime tree SHA-256:
+  `ef6323533666c9cac1c204a9d3f7054157d44a185b16fc859fb3f0438ccd1832`
 
 ## 3. historical key result (Era 1)
 
@@ -22,7 +27,9 @@
 
 - Two paradigms compose: AV1+CNN post-filter taught the lab how to measure; neural renderer broke through the codec assumption.
 - evaluator-boundary bugs can completely mask achievements (the MPS-vs-CUDA 23x PoseNet drift was the most consequential).
-- disciplined measurement (78 STRICT preflight checks), long-horizon training, and explicit state-keeping are the right operating model.
+- disciplined measurement, exact auth-eval custody, runtime tree hashing,
+  release hygiene, AI-assisted adversarial review, and explicit state-keeping
+  are the right operating model.
 
 ## 5. strongest visual story beats
 
@@ -38,12 +45,14 @@
 10. NEW: paradigm shift — abandon the codec entirely → neural renderer baseline `0.90` (CUDA-true; MPS reading was `2.26`, 2.5× drift)
 11. NEW: pose TTO from baseline poses → Lane A `1.15`
 12. NEW: KL distill weight=0.002 + pose TTO retry → Lane G v3 **`1.05`**
-13. NEW: leaderboard context — Quantizr 0.33 #1, Selfcomp 0.38 #2, Mask2mask 0.60 #3, ours `1.05` would rank ~4th
-14. NEW: live Selfcomp-paradigm work (no scores yet — eight Modal lanes in flight)
+13. NEW: C067/PR67 fixed-slice reproduction -> exact T4 `0.31561703078448233`
+14. NEW: PR85/PR95/PR99 semantic and HNeRV replays -> `0.2581`, `0.2309`, `0.2297`
+15. NEW: PR100 HNeRV-LC-v2 adapter replay -> exact T4 `0.22826947142244708`
+16. NEW: hidden-gem roadmap - HPM1/HPAC parity, native action atoms, scorer-gradient atoms, byte self-compression, and field-policy waterfill
 
 ## 6. strategic-secrecy guardrails
 
-- public-facing surfaces: only [contest-CUDA] tagged scores
+- public-facing surfaces: only exact CUDA auth-eval scores can rank
 - do NOT expose Lane W / Lane Ω / Lane DARTS-S internals on public surfaces
 - do NOT publicize the Cloudflare site URL until human says it is time
 - arXiv / paper writeup CAN have full disclosure but coordinate timing with submission

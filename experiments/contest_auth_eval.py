@@ -49,6 +49,7 @@ except (AttributeError, OSError):
     pass
 
 import argparse
+import ast
 import hashlib
 import json
 import os
@@ -64,6 +65,30 @@ from pathlib import Path
 # Schema version for the JSON we emit. Bump when adding fields so downstream
 # tooling (BATTLE_PLAN parsers, leaderboard, etc.) can detect compatibility.
 SCHEMA_VERSION = 1
+_RUNTIME_DEPENDENCY_SUFFIXES = {
+    ".c",
+    ".cc",
+    ".cpp",
+    ".env",
+    ".h",
+    ".hpp",
+    ".json",
+    ".py",
+    ".sh",
+    ".toml",
+    ".txt",
+}
+_RUNTIME_DEPENDENCY_SKIP_DIRS = {
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    "__pycache__",
+}
+
+
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parents[1]
 
 
 def _sha256(path: Path, *, prefix: int = 16) -> str:
@@ -76,14 +101,333 @@ def _sha256(path: Path, *, prefix: int = 16) -> str:
     return digest[:prefix] if prefix else digest
 
 
+def _is_tac_module(module_name: str) -> bool:
+    return module_name == "tac" or module_name.startswith("tac.")
+
+
+def _runtime_python_files(runtime_root: Path) -> list[Path]:
+    if not runtime_root.exists():
+        return []
+    paths: list[Path] = []
+    for path in runtime_root.rglob("*.py"):
+        if not path.is_file():
+            continue
+        rel_parts = path.relative_to(runtime_root).parts
+        if any(part in _RUNTIME_DEPENDENCY_SKIP_DIRS for part in rel_parts):
+            continue
+        paths.append(path)
+    return sorted(paths, key=lambda p: p.relative_to(runtime_root).as_posix())
+
+
+def _module_exists(module_name: str, repo_root: Path) -> bool:
+    if not _is_tac_module(module_name):
+        return False
+    rel_parts = module_name.split(".")[1:]
+    tac_root = repo_root / "src" / "tac"
+    if not rel_parts:
+        return (tac_root / "__init__.py").exists()
+    return (
+        (tac_root.joinpath(*rel_parts).with_suffix(".py")).exists()
+        or (tac_root.joinpath(*rel_parts) / "__init__.py").exists()
+    )
+
+
+def _relative_import_base(module_name: str, level: int) -> str:
+    parts = module_name.split(".")
+    if module_name.endswith(".__init__"):
+        parts = parts[:-1]
+    else:
+        parts = parts[:-1]
+    if level > 1:
+        parts = parts[: -(level - 1)]
+    return ".".join(parts)
+
+
+def _extract_tac_imports_from_source(
+    source_path: Path,
+    *,
+    module_name: str | None,
+    repo_root: Path,
+) -> tuple[set[str], str | None]:
+    try:
+        tree = ast.parse(source_path.read_text(), filename=str(source_path))
+    except SyntaxError as exc:
+        return set(), f"{exc.__class__.__name__}: {exc}"
+
+    modules: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if _is_tac_module(alias.name):
+                    modules.add(alias.name)
+        elif isinstance(node, ast.ImportFrom):
+            if node.level:
+                if module_name is None:
+                    continue
+                base = _relative_import_base(module_name, node.level)
+                imported = f"{base}.{node.module}" if node.module else base
+            else:
+                imported = node.module or ""
+            if _is_tac_module(imported):
+                modules.add(imported)
+                for alias in node.names:
+                    candidate = f"{imported}.{alias.name}"
+                    if _module_exists(candidate, repo_root):
+                        modules.add(candidate)
+        elif isinstance(node, ast.Call):
+            func = node.func
+            is_importlib_call = (
+                isinstance(func, ast.Attribute)
+                and func.attr == "import_module"
+                and isinstance(func.value, ast.Name)
+                and func.value.id == "importlib"
+            )
+            if is_importlib_call and node.args and isinstance(node.args[0], ast.Constant):
+                value = node.args[0].value
+                if isinstance(value, str) and _is_tac_module(value):
+                    modules.add(value)
+
+    return modules, None
+
+
+def _module_paths(module_name: str, repo_root: Path) -> list[Path]:
+    if not _is_tac_module(module_name):
+        return []
+    rel_parts = module_name.split(".")[1:]
+    tac_root = repo_root / "src" / "tac"
+    paths: list[Path] = []
+    for i in range(len(rel_parts) + 1):
+        init_path = tac_root.joinpath(*rel_parts[:i]) / "__init__.py"
+        if init_path.exists():
+            paths.append(init_path)
+    if rel_parts:
+        module_path = tac_root.joinpath(*rel_parts).with_suffix(".py")
+        if module_path.exists():
+            paths.append(module_path)
+    return paths
+
+
+def _module_name_for_tac_path(path: Path, repo_root: Path) -> str:
+    rel = path.relative_to(repo_root / "src").with_suffix("")
+    parts = rel.parts
+    if parts[-1] == "__init__":
+        parts = parts[:-1]
+    return ".".join(parts)
+
+
+def _repo_local_tac_import_manifest(runtime_root: Path, repo_root: Path) -> dict:
+    """Hash repo-local ``src/tac`` source reachable from robust runtime imports.
+
+    This is intentionally static: it parses Python import surfaces without
+    importing torch/av/scorer code or executing runtime branches. The closure is
+    an allowlist-equivalent custody surface for repo-local tac helpers.
+    """
+
+    root_imports: set[str] = set()
+    parse_errors: list[dict[str, str]] = []
+    for path in _runtime_python_files(runtime_root):
+        imports, error = _extract_tac_imports_from_source(
+            path,
+            module_name=None,
+            repo_root=repo_root,
+        )
+        root_imports.update(imports)
+        if error:
+            parse_errors.append(
+                {
+                    "path": path.relative_to(runtime_root).as_posix(),
+                    "error": error,
+                }
+            )
+
+    queue = sorted(root_imports)
+    seen_modules: set[str] = set()
+    seen_files: dict[Path, str] = {}
+    unresolved: set[str] = set()
+    while queue:
+        module = queue.pop(0)
+        if module in seen_modules:
+            continue
+        seen_modules.add(module)
+        paths = _module_paths(module, repo_root)
+        if not paths:
+            unresolved.add(module)
+            continue
+        for path in paths:
+            path = path.resolve()
+            file_module = _module_name_for_tac_path(path, repo_root)
+            seen_files.setdefault(path, file_module)
+            imports, error = _extract_tac_imports_from_source(
+                path,
+                module_name=file_module,
+                repo_root=repo_root,
+            )
+            if error:
+                parse_errors.append(
+                    {
+                        "path": path.relative_to(repo_root).as_posix(),
+                        "error": error,
+                    }
+                )
+            for imported in sorted(imports):
+                if imported not in seen_modules:
+                    queue.append(imported)
+
+    files = []
+    for path, module in sorted(
+        seen_files.items(),
+        key=lambda item: item[0].relative_to(repo_root).as_posix(),
+    ):
+        files.append(
+            {
+                "module": module,
+                "relative_path": path.relative_to(repo_root).as_posix(),
+                "bytes": path.stat().st_size,
+                "sha256": _sha256(path, prefix=0),
+            }
+        )
+
+    return {
+        "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+        "discovery": "static_ast_recursive_import_closure",
+        "runtime_root_name": runtime_root.name,
+        "tac_root_relative_path": "src/tac",
+        "root_import_modules": sorted(root_imports),
+        "unresolved_modules": sorted(unresolved),
+        "parse_errors": parse_errors,
+        "module_count": len(seen_modules),
+        "file_count": len(files),
+        "files": files,
+    }
+
+
+def _runtime_dependency_manifest(
+    inflate_sh: Path,
+    upstream_dir: Path,
+    *,
+    repo_root: Path | None = None,
+) -> dict:
+    """Hash fixed runtime files that can affect exact archive behavior.
+
+    The archive SHA is necessary but insufficient for custody whenever
+    ``inflate.sh`` dispatches into repo-local Python. Two runs with identical
+    archive bytes but different runtime helpers can produce different frames.
+    Recording this tree hash makes those comparisons auditable.
+    """
+
+    root = inflate_sh.parent.resolve()
+    repo_root = (repo_root or _repo_root()).resolve()
+    files: list[dict] = []
+    if root.exists():
+        for path in sorted(root.rglob("*"), key=lambda p: p.relative_to(root).as_posix()):
+            if not path.is_file():
+                continue
+            rel_parts = path.relative_to(root).parts
+            if any(part in _RUNTIME_DEPENDENCY_SKIP_DIRS for part in rel_parts):
+                continue
+            if path.name.startswith("._") or path.name in {".DS_Store", "Thumbs.db"}:
+                continue
+            if (
+                path.resolve() != inflate_sh.resolve()
+                and path.suffix.lower() not in _RUNTIME_DEPENDENCY_SUFFIXES
+            ):
+                continue
+            files.append(
+                {
+                    "relative_path": path.relative_to(root).as_posix(),
+                    "bytes": path.stat().st_size,
+                    "sha256": _sha256(path, prefix=0),
+                }
+            )
+
+    repo_local_tac = _repo_local_tac_import_manifest(root, repo_root)
+    evaluate_py = (upstream_dir / "evaluate.py").resolve()
+    upstream_eval = None
+    if evaluate_py.exists():
+        upstream_eval = {
+            "relative_path": "evaluate.py",
+            "bytes": evaluate_py.stat().st_size,
+            "sha256": _sha256(evaluate_py, prefix=0),
+        }
+
+    tree_payload = {
+        "runtime_root_name": root.name,
+        "files": files,
+        "repo_local_tac_import_manifest": repo_local_tac,
+        "upstream_evaluate_py": upstream_eval,
+    }
+    tree_sha = hashlib.sha256(
+        json.dumps(tree_payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    return {
+        "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+        "runtime_root": str(root),
+        "runtime_file_count": len(files),
+        "runtime_tree_sha256": tree_sha,
+        "files": files,
+        "repo_local_tac_import_manifest": repo_local_tac,
+        "upstream_evaluate_py": upstream_eval,
+    }
+
+
 def _ensure_uv_available() -> None:
     """The robust_current inflate.sh shells out to `uv run python ...`.
     Verify uv is on PATH so we fail loud here, not 200 lines deep."""
-    if shutil.which("uv") is None:
-        raise RuntimeError(
-            "FATAL: `uv` is not on PATH. submissions/robust_current/inflate.sh "
-            "uses `uv run python ...`. Install with `curl -LsSf "
-            "https://astral.sh/uv/install.sh | sh` then re-run."
+    if shutil.which("uv") is not None:
+        return
+
+    candidate_dirs = [
+        Path.home() / ".local" / "bin",
+        Path("/root/.local/bin"),
+    ]
+    for candidate_dir in candidate_dirs:
+        candidate = candidate_dir / "uv"
+        if candidate.is_file() and os.access(candidate, os.X_OK):
+            os.environ["PATH"] = f"{candidate_dir}{os.pathsep}{os.environ.get('PATH', '')}"
+            if shutil.which("uv") is not None:
+                return
+
+    raise RuntimeError(
+        "FATAL: `uv` is not on PATH. submissions/robust_current/inflate.sh "
+        "uses `uv run python ...`. Install with `curl -LsSf "
+        "https://astral.sh/uv/install.sh | sh` then re-run."
+    )
+
+
+def _inflate_sh_requires_config_env_guard(inflate_sh: Path) -> bool:
+    """Return whether this inflate launcher declares the robust config contract.
+
+    The F5 guard is mandatory for robust_current-style dispatchers that source
+    config.env and route through PYTHON_INFLATE. Public contest submissions can
+    be plain launchers that directly call their own inflate.py; requiring a
+    sibling config.env for those would reject valid external traces.
+    """
+
+    try:
+        text = inflate_sh.read_text(errors="replace")
+    except OSError:
+        return False
+    return "PYTHON_INFLATE" in text or "CONFIG_ENV_PATH" in text
+
+
+def _validate_config_env_for_renderer_dispatch(inflate_sh: Path) -> None:
+    if not _inflate_sh_requires_config_env_guard(inflate_sh):
+        return
+    inflate_dir = inflate_sh.parent
+    config_env = inflate_dir / "config.env"
+    if not config_env.exists():
+        raise SystemExit(
+            f"FATAL: {config_env} missing -- inflate.sh would fall into the\n"
+            f"       ffmpeg path and crash on extracted/0.mkv. Re-deploy with\n"
+            f"       the fixed launcher (Codex F5 2026-04-28) which includes\n"
+            f"       .env files via the .env suffix in _enumerate_python_and_shell."
+        )
+    config_text = config_env.read_text()
+    if "PYTHON_INFLATE=renderer" not in config_text:
+        raise SystemExit(
+            f"FATAL: {config_env} exists but does not set PYTHON_INFLATE=renderer.\n"
+            f"       inflate.sh would call its ffmpeg path which crashes on\n"
+            f"       renderer archives (no extracted/0.mkv). Update config.env."
         )
 
 
@@ -110,6 +454,7 @@ def _record_provenance(work_dir: Path, archive: Path, inflate_sh: Path,
         "archive_size_bytes": archive.stat().st_size,
         "inflate_script": str(inflate_sh),
         "inflate_script_sha256": _sha256(inflate_sh, prefix=0) if inflate_sh.exists() else None,
+        "inflate_runtime_manifest": _runtime_dependency_manifest(inflate_sh, upstream_dir),
         "upstream_dir": str(upstream_dir),
         "device": args.device,
         "inflate_timeout_seconds": int(args.inflate_timeout),
@@ -119,6 +464,9 @@ def _record_provenance(work_dir: Path, archive: Path, inflate_sh: Path,
         "env_vars": {k: os.environ.get(k) for k in (
             "PYTHONPATH", "CUDA_VISIBLE_DEVICES", "CUBLAS_WORKSPACE_CONFIG",
             "PYTHONHASHSEED", "PYTORCH_CUDA_ALLOC_CONF", "LD_LIBRARY_PATH",
+            "CONFIG_ENV_PATH", "PYTHON_INFLATE", "LANE_MM_SIGMA",
+            "INFLATE_BROTLI_SPEC", "INFLATE_AV_SPEC", "INFLATE_TORCH_SPEC",
+            "INFLATE_NUMPY_SPEC", "UV_BIN", "UV_PROJECT_ENVIRONMENT",
         )},
     }
     # GPU + driver — recorded in provenance for downstream comparison.
@@ -160,12 +508,49 @@ def _record_provenance(work_dir: Path, archive: Path, inflate_sh: Path,
     return prov
 
 
+def _record_inflate_runtime_artifacts(prov: dict, work_dir: Path, extracted_dir: Path) -> None:
+    """Attach inflate-produced custody summaries to provenance after inflate."""
+
+    summaries: dict[str, dict] = {}
+    renderer_summary = extracted_dir / "renderer_payload_unpack_summary.json"
+    if renderer_summary.exists():
+        try:
+            payload = json.loads(renderer_summary.read_text())
+        except json.JSONDecodeError as exc:
+            raise RuntimeError(
+                f"renderer payload unpack summary is not valid JSON: {renderer_summary}"
+            ) from exc
+        summaries["renderer_payload_unpack_summary"] = {
+            "path": str(renderer_summary),
+            "sha256": _sha256(renderer_summary, prefix=0),
+            "payload": payload,
+        }
+    if not summaries:
+        return
+    prov["inflate_runtime_artifacts"] = summaries
+    with open(work_dir / "provenance.json", "w") as f:
+        json.dump(prov, f, indent=2)
+
+
+def _validate_expected_runtime_tree(prov: dict, expected_runtime_tree_sha256: str | None) -> None:
+    if not expected_runtime_tree_sha256:
+        return
+    manifest = prov.get("inflate_runtime_manifest")
+    actual = manifest.get("runtime_tree_sha256") if isinstance(manifest, dict) else None
+    if actual != expected_runtime_tree_sha256:
+        raise RuntimeError(
+            "inflate runtime tree hash mismatch: "
+            f"expected={expected_runtime_tree_sha256} actual={actual}"
+        )
+
+
 def _extract_archive(archive: Path, dest: Path) -> list[str]:
     """Extract archive.zip into dest/. Returns list of member names.
     Refuses to write outside dest (zip-slip protection)."""
     dest.mkdir(parents=True, exist_ok=True)
     members: list[str] = []
     with zipfile.ZipFile(archive, "r") as z:
+        _validate_zip_container_integrity(archive, z.infolist())
         for info in z.infolist():
             # zip-slip protection
             target = (dest / info.filename).resolve()
@@ -174,6 +559,74 @@ def _extract_archive(archive: Path, dest: Path) -> list[str]:
             z.extract(info, dest)
             members.append(info.filename)
     return members
+
+
+def _decode_zip_name(raw: bytes, *, utf8: bool) -> str:
+    encoding = "utf-8" if utf8 else "cp437"
+    return raw.decode(encoding)
+
+
+def _validate_zip_container_integrity(
+    archive: Path,
+    infos: list[zipfile.ZipInfo],
+) -> None:
+    """Fail closed on ZIP parser-divergence tricks before extraction.
+
+    The official workflow currently shells out to `unzip`, while Python
+    `zipfile` reads the central directory and then verifies local headers.
+    A malformed archive can make those readers disagree about member names.
+    Contest-custody archives must not rely on that ambiguity.
+    """
+    seen: set[str] = set()
+    with archive.open("rb") as fh:
+        for info in infos:
+            if info.filename in seen:
+                raise RuntimeError(
+                    f"[archive-validate] DUPLICATE zip member name: {info.filename!r}"
+                )
+            seen.add(info.filename)
+            fh.seek(info.header_offset)
+            header = fh.read(30)
+            if len(header) != 30 or header[:4] != b"PK\x03\x04":
+                raise RuntimeError(
+                    "[archive-validate] MALFORMED zip local header for "
+                    f"{info.filename!r}"
+                )
+            name_len = int.from_bytes(header[26:28], "little")
+            extra_len = int.from_bytes(header[28:30], "little")
+            local_name_raw = fh.read(name_len)
+            if len(local_name_raw) != name_len:
+                raise RuntimeError(
+                    "[archive-validate] TRUNCATED zip local filename for "
+                    f"{info.filename!r}"
+                )
+            # Advance over the extra field so a short/truncated local header is
+            # caught before downstream extraction.
+            if len(fh.read(extra_len)) != extra_len:
+                raise RuntimeError(
+                    "[archive-validate] TRUNCATED zip local extra field for "
+                    f"{info.filename!r}"
+                )
+            if not local_name_raw:
+                raise RuntimeError(
+                    "[archive-validate] EMPTY zip local filename for central "
+                    f"member {info.filename!r}"
+                )
+            try:
+                local_name = _decode_zip_name(
+                    local_name_raw,
+                    utf8=bool(info.flag_bits & 0x800),
+                )
+            except UnicodeDecodeError as exc:
+                raise RuntimeError(
+                    "[archive-validate] UNDECODABLE zip local filename for "
+                    f"{info.filename!r}: {exc}"
+                ) from exc
+            if local_name != info.filename:
+                raise RuntimeError(
+                    "[archive-validate] ZIP central/local filename mismatch: "
+                    f"central={info.filename!r} local={local_name!r}"
+                )
 
 
 # 2026-04-28 deep hardening pass 3 dimension 3: Whitelist-based archive
@@ -186,10 +639,25 @@ _KNOWN_ARCHIVE_SUFFIXES = (
     ".bin", ".bin.br",          # renderer (raw or brotli'd)
     ".mkv", ".mp4",             # mask video (svtav1 / h264 / etc.)
     ".nrv",                     # NeRV mask codec payload
+    ".amrc",                    # lossless argmax-RLE mask codec payload
+    ".cmg1",                    # charged mask grammar payload
+    ".cmg2",                    # predictive charged mask grammar payload
+    ".cmg3",                    # row-span charged mask grammar payload
+    ".qma9",                    # PR85-style adaptive range-coded mask payload
+    ".cdo1", ".cdo1.xz", ".cdo1.zlib", ".cdo1.br",  # decoded-mask overlay payload
+    ".amr1",                    # Alpha sparse residual repair payload
+    ".amr1.xz", ".amr1.zlib", ".amr1.br",
     ".pt",                       # poses, optionally other state dicts
+    ".pt.gz",                    # PR86-style charged compressed model/state dict
+    ".pt.ppmd",                  # PR86-style charged PPMd-compressed HPAC state
     ".json", ".txt",             # manifests / pose metadata
     ".bin.zst", ".bin.lzma",    # alternative compressors
     ".npy", ".npz",             # numpy state if used
+)
+_KNOWN_ARCHIVE_BASENAMES = (
+    "p",                        # top-submission-style packed payload member
+    "x",                        # PR65/henosis-style packed payload member
+    "fb",                       # PR89-style charged final-bias atom
 )
 _FORBIDDEN_ARCHIVE_NAMES = (
     ".DS_Store", "__MACOSX", "._",  # macOS resource forks
@@ -219,9 +687,15 @@ def _validate_archive_members(members: list[str]) -> None:
                 forbidden_found.append(member)
                 break
         else:
-            # Whitelist by suffix
+            # Whitelist by exact basename or suffix. The exact basename path is
+            # deliberately tiny: it admits top-submission-style member "p"
+            # without allowing arbitrary extensionless debug payloads.
             lower = member.lower()
-            if not any(lower.endswith(s) for s in _KNOWN_ARCHIVE_SUFFIXES):
+            basename = Path(member).name.lower()
+            if (
+                basename not in _KNOWN_ARCHIVE_BASENAMES
+                and not any(lower.endswith(s) for s in _KNOWN_ARCHIVE_SUFFIXES)
+            ):
                 unknown_found.append(member)
     if forbidden_found:
         raise RuntimeError(
@@ -233,9 +707,10 @@ def _validate_archive_members(members: list[str]) -> None:
     if unknown_found:
         raise RuntimeError(
             f"[archive-validate] UNKNOWN file types in archive: {unknown_found}. "
-            f"Allowed suffixes: {_KNOWN_ARCHIVE_SUFFIXES}. If a new artifact "
-            f"type was added intentionally, append its suffix to "
-            f"_KNOWN_ARCHIVE_SUFFIXES in experiments/contest_auth_eval.py."
+            f"Allowed suffixes: {_KNOWN_ARCHIVE_SUFFIXES}; allowed basenames: "
+            f"{_KNOWN_ARCHIVE_BASENAMES}. If a new artifact type was added "
+            f"intentionally, append its suffix or exact basename to the "
+            f"archive whitelist in experiments/contest_auth_eval.py."
         )
 
 
@@ -544,6 +1019,7 @@ def _parse_report(report_path: Path | str, *, archive_size: int,
     score_seg = 100.0 * seg
     score_rate = 25.0 * rate_unscaled
     score_recomputed = score_seg + score_pose + score_rate
+    score_rounding_abs_delta = abs(score_recomputed - final)
 
     # Council R3 #6 (Medium): assert recomputed score matches reported
     # within upstream's print precision (.2f → ±0.005, generous bound 0.01).
@@ -567,6 +1043,11 @@ def _parse_report(report_path: Path | str, *, archive_size: int,
         "score_seg_contribution": score_seg,
         "score_rate_contribution": score_rate,
         "score_recomputed_from_components": score_recomputed,
+        "canonical_score": score_recomputed,
+        "canonical_score_source": "score_recomputed_from_components",
+        "reported_final_score_display_rounded": final,
+        "score_rounding_abs_delta": score_rounding_abs_delta,
+        "score_reported_rounded_differs_from_canonical": score_rounding_abs_delta > 1e-12,
         "archive_size_bytes": archive_size,
         "n_samples": actual_n,
         "report_path": str(report_path),
@@ -602,6 +1083,8 @@ def main() -> int:
                         help="upstream/evaluate.py timeout in seconds.")
     parser.add_argument("--keep-work-dir", action="store_true",
                         help="Don't delete work dir on success (for debugging)")
+    parser.add_argument("--expected-runtime-tree-sha256", default=None,
+                        help="Fail if the inflate runtime dependency tree hash differs.")
     args = parser.parse_args()
 
     # Resolve required paths
@@ -629,24 +1112,8 @@ def main() -> int:
     # opaque ffmpeg "No such file or directory" 200 lines downstream.
     # Placed AFTER the upstream check so existing tests that pass a fake
     # inflate.sh in tmp_path get the upstream-missing error first (the
-    # config.env check fires only when --inflate-sh resolves to a real
-    # submission directory that COULD have config.env).
-    inflate_dir = inflate_sh.parent
-    config_env = inflate_dir / "config.env"
-    if not config_env.exists():
-        raise SystemExit(
-            f"FATAL: {config_env} missing -- inflate.sh would fall into the\n"
-            f"       ffmpeg path and crash on extracted/0.mkv. Re-deploy with\n"
-            f"       the fixed launcher (Codex F5 2026-04-28) which includes\n"
-            f"       .env files via the .env suffix in _enumerate_python_and_shell."
-        )
-    config_text = config_env.read_text()
-    if "PYTHON_INFLATE=renderer" not in config_text:
-        raise SystemExit(
-            f"FATAL: {config_env} exists but does not set PYTHON_INFLATE=renderer.\n"
-            f"       inflate.sh would call its ffmpeg path which crashes on\n"
-            f"       renderer archives (no extracted/0.mkv). Update config.env."
-        )
+    # config.env check fires only when the inflate.sh declares that contract.
+    _validate_config_env_for_renderer_dispatch(inflate_sh)
     video_names_file = args.video_names_file.resolve()
     if not video_names_file.exists():
         # Common alt path
@@ -682,6 +1149,7 @@ def main() -> int:
 
         # Provenance snapshot
         prov = _record_provenance(work_dir, archive, inflate_sh, upstream_dir, args)
+        _validate_expected_runtime_tree(prov, args.expected_runtime_tree_sha256)
         print(f"[contest_auth_eval] provenance saved: {work_dir / 'provenance.json'}")
         print(f"[contest_auth_eval] archive sha256: {prov['archive_sha256']}")
 
@@ -703,6 +1171,7 @@ def main() -> int:
             inflate_sh, extracted, inflated, video_names_file,
             timeout=args.inflate_timeout,
         )
+        _record_inflate_runtime_artifacts(prov, work_dir, extracted)
 
         # Stage 3: run upstream/evaluate.py on submission_dir = work_dir
         # Note: evaluate.py needs (submission_dir / 'archive.zip') AND
@@ -728,7 +1197,8 @@ def main() -> int:
         # auth_eval_renderer.py uses, so existing log scrapers keep working)
         print(f"\nRESULT_JSON: {json.dumps(result)}")
         print(f"\n=== CONTEST AUTH EVAL ===")
-        print(f"  Final score:    {result['final_score']:.4f}")
+        print(f"  Canonical score: {result['canonical_score']:.12f}")
+        print(f"  Reported final:  {result['final_score']:.4f}")
         print(f"  PoseNet dist:   {result['avg_posenet_dist']:.6f}")
         print(f"  SegNet dist:    {result['avg_segnet_dist']:.6f}")
         print(f"  Rate (unscaled): {result['rate_unscaled']:.6f}")

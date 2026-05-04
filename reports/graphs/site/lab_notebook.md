@@ -1,14 +1,14 @@
 # lab notebook
 
-Last refreshed: `2026-04-29`
+Last refreshed: `2026-05-04`
 
-## executive summary (current era — neural renderer)
+## executive summary (current frontier - PR100)
 
-- contest-CUDA floor: **`1.05`** (Lane G v3, 694KB archive, KL distill + pose TTO retry)
-- Modal T4 reproduction: **`1.04`** (within noise of Vast.ai)
-- fallback contest-CUDA floor: **`1.15`** (Lane A baseline pose-TTO)
-- live leaderboard (2026-04-29): Quantizr 0.33 #1, Selfcomp 0.38 #2, Mask2mask 0.60 #3, our 1.05 would rank ~4th
-- live work focused on the Selfcomp paradigm portfolio (eight Modal lanes, target sub-0.30)
+- exact Tesla T4 A++ frontier: **`0.22826947142244708`** (PR100 HNeRV-LC-v2 adapter replay)
+- archive: `178981` bytes, SHA-256 `afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641`
+- runtime tree SHA-256: `ef6323533666c9cac1c204a9d3f7054157d44a185b16fc859fb3f0438ccd1832`
+- component distances: SegNet `0.00067623`, PoseNet `0.00017198`, `600` samples
+- evidence boundary: public PR bodies, leaderboard displays, static anatomy, GIFs, and roadmap probes are context unless exact CUDA replay validates the same archive/runtime pair
 
 This notebook is layered. Skim the executive summary for state. Drop into the era-specific sections for the detailed arc.
 
@@ -16,8 +16,8 @@ This notebook is layered. Skim the executive summary for state. Drop into the er
 
 1. Executive summary
 2. Era 1: AV1 codec + tiny CNN post-filter (`4.06 → 1.73`) — historical
-3. Era 2: Neural renderer that bypasses the codec (`1.73 → 1.05`) — current
-4. Era 3: Selfcomp paradigm shift — live work, no scores yet
+3. Era 2: Neural renderer that bypasses the codec (`1.73 -> 1.05`) - historical controls
+4. Era 3: public semantic/neural sufficient-statistic frontier (`0.3156 -> 0.2283`)
 5. Engineering rigor under the hood
 6. Runnable reproduction snippets
 7. Methodology, evidence, glossary
@@ -32,7 +32,7 @@ This was the original work that established the lab's measurement discipline and
 
 This era is no longer the live frontier but its mechanics still inform the renderer-era loss landscape.
 
-## era 2: neural renderer (current, score range 1.73 → 1.05)
+## era 2: neural renderer controls (historical, score range 1.73 -> 1.05)
 
 We abandoned the codec entirely. A small renderer (dilated-h64, 287K params) takes per-pair embeddings and produces frames; AV1 only carries low-resolution masks; PoseNet still runs at full resolution.
 
@@ -49,7 +49,21 @@ Negative results worth noting:
 - Lane GP v3 (Gaussian-process pose fit): `89.67` [Modal-T4-CPU]. Runge phenomenon at degree-10 polynomial; off-manifold hypothesis disproved. Lane GP polynomial is dead unless someone wants to try DCT or B-spline basis.
 - Lane UNIWARD v8: `1.14` ≈ Lane A noise. Encoder pipeline is no-op on the bitstream without an SLI1 inflate-time decoder. Council 5/5 KILLED standalone.
 
-## era 3: Selfcomp paradigm (live, no scores yet)
+## era 3: public semantic/neural sufficient-statistic frontier
+
+Late public submissions moved the active family from local renderer polish to
+public-source archive anatomy, exact replay, adapter repair, and deterministic
+packet hardening.
+
+- C067/PR67 fixed-slice reproduction established a sub-0.4 exact T4 basin at
+  `0.31561703078448233`.
+- PR85 semantic-bundle replay established `0.25806611029397786`.
+- PR95 stem-permutation repack established `0.23089404465634825`.
+- PR99 HNeRV/Muon LC adapter established `0.2297226895103603`.
+- PR100 HNeRV-LC-v2 adapter replay is the current exact frontier at
+  `0.22826947142244708`.
+
+## next-wave roadmap
 
 The Selfcomp 0.38 #2 entry uses paradigms we have not used. Reverse-engineered from PR #56 inflate.py, five concrete shifts:
 
@@ -59,18 +73,17 @@ The Selfcomp 0.38 #2 entry uses paradigms we have not used. Reverse-engineered f
 4. Block-FP weight self-compression at ~1.017 bpw (vs our FP4 4-8 bpw)
 5. 94K-param SegMap (vs our 287K-param ASYM)
 
-Eight Modal lanes are in flight to validate each shift in isolation and then stack:
-
-- MM (grayscale-LUT mask), SA (94K SegMap clone), SC++ (SA + KL distill T=2.0), SO (SC++ + Hessian block-FP)
-- in parallel: q_faithful_v3, sz_phase2_v2, mae_v_v2, lane_w_v2 (orthogonal sub-0.5 paths)
-
-We will not claim any sub-1.05 score on this site until it lands [contest-CUDA] from `inflate.sh` → `upstream/evaluate.py` on the EXACT submission archive bytes.
+Hidden-gem next-wave work includes HPM1/HPAC parity, native action atoms,
+HNeRV adapter replay hardening, scorer-gradient atoms, byte self-compression,
+and field-policy waterfill. These are research and roadmap signals until a
+complete charged archive lands exact CUDA auth eval through
+`archive.zip -> inflate.sh -> upstream/evaluate.py`.
 
 ## engineering rigor under the hood
 
-This is the differentiating story even if the scores plateau:
+This is the differentiating story behind the PR100 frontier:
 
-- **78 strict preflight checks** as of 2026-04-29 (was 36 a week ago). Every catastrophic measurement bug got a static check.
+- Strict preflight checks converted repeated harness bugs into fail-closed gates.
 - `eval_roundtrip` is a CLAUDE.md non-negotiable; every training path defaults True. Closed the 2-11x proxy-auth gap on PoseNet.
 - MPS vs CUDA drift on PoseNet is 23x. ALL auth eval is on CUDA only; MPS scores are tagged `[MPS-PROXY]` and treated as advisory only.
 - The strict-scorer rule: no PoseNet/SegNet weights at inflate time, ever. Detection via `check_no_scorer_load_at_inflate`.
@@ -86,14 +99,24 @@ source .venv/bin/activate
 comma-lab eval-submission robust_current --device cpu
 ```
 
-### 2. canonical local auth-eval smoke (Era 2 / current)
+### 2. canonical local auth-eval smoke (Era 2 / historical control)
 
 ```bash
 .venv/bin/python experiments/canonical_local_auth_eval_smoke.py \
   --lane g_v3_corrected_kl_weight --quiet
 ```
 
-### 3. Modal auth eval (the new canonical)
+### 3. exact PR100 artifact references
+
+```bash
+.venv/bin/python scripts/pre_submission_compliance_check.py \
+  --submission-dir experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter \
+  --archive experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter/archive.zip \
+  --auth-eval-json experiments/results/lightning_batch/exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z/contest_auth_eval.adjudicated.json \
+  --contest-final
+```
+
+### 4. Modal auth eval (historical path)
 
 ```bash
 .venv/bin/python experiments/modal_auth_eval.py \

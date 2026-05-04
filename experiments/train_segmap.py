@@ -237,25 +237,22 @@ def _build_pair_tensors(mask_classes: torch.Tensor, gt_frames):
     Returns (mask_pairs, gt_pairs) shaped (P, 2, ...) — the SegMapTrainer
     expects (B, T, num_classes, H, W) for masks and (B, T, 3, H, W) for GT.
     """
-    from tac.mask_grayscale_lut import create_gaussian_softmax_lut
+    from tac.mask_grayscale_lut import (
+        encode_masks_grayscale,
+        grayscale_to_probability_map,
+    )
 
     n = mask_classes.shape[0]
     if n % 2 != 0:
         raise RuntimeError(f"Frame count {n} is odd; cannot form non-overlapping pairs.")
     half = n // 2
 
-    # Convert class IDs to softmax-LUT logits (B, num_classes, H, W).
-    lut = create_gaussian_softmax_lut(sigma=15.0)
-    # Encode via the lookup: classes (0..4) → softmax over 5 classes. The LUT
-    # is keyed on grayscale 0..255 values; we feed an inverse mapping that
-    # maps class → grayscale-mean → 5-vector.
-    # Simpler path: one-hot the class IDs and let the trainer do its own
-    # softmax / smoothing if needed. The Selfcomp paradigm uses one-hot.
-    one_hot = torch.nn.functional.one_hot(
-        mask_classes.long(), num_classes=5
-    ).permute(0, 3, 1, 2).float()
-    # one_hot: (N, 5, H, W). Pairs: (half, 2, 5, H, W).
-    mask_pairs = one_hot.view(half, 2, 5, *one_hot.shape[-2:])
+    # Train on the exact analog distribution the inflate path will feed to
+    # SegMap. Public Selfcomp #2 does not hard-argmax grayscale masks before
+    # the renderer; it feeds the soft Gaussian-LUT probability map.
+    gray = encode_masks_grayscale(mask_classes.long())
+    soft = grayscale_to_probability_map(gray, sigma=15.0, channel_first=True)
+    mask_pairs = soft.view(half, 2, 5, *soft.shape[-2:])
 
     # GT frames may be a list of (3, H, W) tensors. Stack into (N, 3, H, W).
     if isinstance(gt_frames, list):

@@ -1,37 +1,77 @@
 # judges one-pager
 
-## headline (current era — neural renderer)
+## headline (current frontier - PR100 Apogee follow-up)
 
-- Best contest-CUDA score: **`1.05`** (Lane G v3, 694KB archive)
-- Modal T4 reproduction: **`1.04`** (within 0.01 noise of Vast.ai)
-- Recipe: dilated-h64 neural renderer + KL distill weight=0.002 + pose TTO retry on Lane A anchor
-- PoseNet 0.0034 / SegNet 0.0040 / Rate 0.0185
-- Live work targets sub-0.30 via the Selfcomp paradigm portfolio
+- Best exact contest-CUDA score: **`0.22826947142244708`** `[A++]`
+- Archive: `178981` bytes,
+  SHA-256 `afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641`
+- Packet:
+  `experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter`
+- Runtime tree SHA-256:
+  `ef6323533666c9cac1c204a9d3f7054157d44a185b16fc859fb3f0438ccd1832`
+- Recipe: public PR100 HNeRV-LC-v2 source attribution plus contest-signature
+  Apogee adapter runtime, evaluated on exact Tesla T4 CUDA custody
+- PoseNet `0.00017198` / SegNet `0.00067623`
+- Public source PR:
+  `https://github.com/commaai/comma_video_compression_challenge/pull/100`
 
-## historical headline (Era 1 — kept for the writeup arc)
+## historical arc
 
-- Best honest Track B **current_workflow** score: **`1.73`** (h64 long-horizon QAT+EMA learned int8 post-filter)
-- Bytes: `864,167`
-- This was the codec + post-filter era. Still the best score in that paradigm; the renderer paradigm displaced it after Era 2 launched.
+- We got nerd-sniped by this challenge. The work became a full-stack
+  engineering/research sprint across compression, neural representations,
+  scorer-aware optimization, archive forensics, and reproducibility tooling.
+- Era 1 codec/postfilter floor: `1.73`
+- Era 2 neural renderer controls: `0.90` CUDA baseline, `1.15` Lane A pose
+  TTO, `1.05` Lane G v3 KL-distill/TTO
+- Quantizr/QZS3 public-floor reproduction: C-067 exact T4
+  `0.31561703078448233`
+- Public semantic-bundle era: PR85 `0.25806611029397786`,
+  PR85+STBM/RMB1 `0.2535063602939779`, PR95 stemperm
+  `0.23089404465634825`, PR98/Apogee `0.22933111465960354`,
+  PR100 follow-up `0.22826947142244708`
 
-## why we landed at 1.05
+## why this is the score authority
 
-- **prior contest-CUDA floors**: 0.90 (pinned dilated h64 + CRF=50 baseline, 2026-04-25), 1.15 (Lane A pose TTO from baseline poses, 2026-04-27)
-- **change**: KL distill on the SegNet logits (T=2.0, weight=0.002) during renderer training, paired with a fresh pose-TTO retry on the Lane A anchor
-- **result**: `1.05` [contest-CUDA] (2026-04-28 verified, 2026-04-29 reproduced 1.04 on Modal T4)
-- **reflection**: distillation weight matters more than distillation choice — earlier KL attempts at weight≥0.01 collapsed PoseNet; weight=0.002 sustains the SegNet boundary signal without overwhelming the renderer's pose path
+- **exact packet**:
+  `experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter`
+- **exact eval JSON**:
+  `experiments/results/lightning_batch/exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z/contest_auth_eval.adjudicated.json`
+- **supersession**: PR99 exact adapter replay scored `0.2297226895103603`;
+  PR95 stemperm scored `0.23089404465634825`
+- **boundary**: PR96, public body scores, and PR91/HPM1 remain external until
+  exact CUDA replay lands; PR100 has local exact T4 replay
 
-## proof points
+## method contribution
 
-- contest-CUDA inflate.sh → upstream/evaluate.py on the EXACT submission archive bytes
-- Modal T4 reproduction independently confirms the score within 0.01
-- canonical local E2E smoke passes (10 stages, 0.02s)
-- 78 STRICT preflight checks gate every measurement against known catastrophic-failure classes
-- the proxy-auth gap is closed: eval_roundtrip non-negotiable everywhere
+- contest-CUDA `archive.zip -> inflate.sh -> upstream/evaluate.py` on exact
+  archive bytes
+- archive bytes/SHA and runtime tree SHA recorded with the score claim
+- strict pre-submission compliance JSON retained beside the packet
+- public-source attribution and score authority are separated
+- no scorer patches, sidecars, hidden payloads, or script-side payload movement
+- meta-Lagrangian atom pricing over bytes, SegNet, PoseNet, runtime, custody,
+  and compliance risk
+- deterministic packet generation, dispatch claims, exact JSON adjudication,
+  wrapper-contract adapters, and public-release hygiene
+- month-long research ledger plus AI-assisted Grand Council/Skunkworks Council
+  adversarial review, used to generate and audit hypotheses before exact eval
 
-## leaderboard context (fetched 2026-04-29)
+## visual supplement
 
-- Quantizr 0.33 (#1) — FiLM CNN 88K + KL-T2 + AV1
-- Selfcomp 0.38 (#2) — self-compression ~1.017 bpw + analytical-pose affine
-- Mask2mask 0.60 (#3) — obfuscated arch
-- our 1.05 would rank ~4th if submitted today; live work targets sub-0.30
+The public bundle includes generated comparison GIFs, including
+`comma_comparison.gif` and `comma_comparison_full.gif`, as the visual companion
+to the exact score tables. These are illustrative and judge-facing; they do not
+create score authority.
+
+## public context
+
+- Quantizr PR #53/#55 anticipated the late meta-game and the sub-0.30
+  architecture/compute direction; this is external context, not score evidence.
+- PR100 public body score is external/static context; the ranked PR100 value is
+  the local exact T4 replay at `0.22826947142244708`.
+- PR91/HPM1 is source anatomy and failed before score in local canonical replay.
+- PR87/PR70-style source-embedded payloads are compliance lessons, not valid
+  floor evidence.
+- Unlimited-compute or inflate-time optimization probes are research signals
+  unless every score-affecting bit is charged and exact CUDA eval validates the
+  final archive under the contest budget.

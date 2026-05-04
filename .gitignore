@@ -49,6 +49,8 @@ experiments/results/**/*.zip
 
 # Secrets and credentials
 .env
+.env*
+!.env.example
 *.env.local
 *.env.*.local
 *_api_key
@@ -56,13 +58,20 @@ experiments/results/**/*.zip
 credentials.json
 
 # Generated submission scratch artifacts
+submissions/*/archive.zip
+submissions/*/submission.zip
+submissions/*/inflated/
+submissions/*/__pycache__/
 submissions/robust_current/archive/
 submissions/robust_current/inflated/
+submission_packets/
+reports/public/submission_packets/
 reports/graphs/site/comparison/*.mp4
 reports/graphs/site/comparison/*.gif
 reports/graphs/site/comparison/frames/
 reports/graphs/site/comma_format/*.mp4
 reports/graphs/site/comma_format/*.gif
+reports/graphs/public_site/
 
 # Data directories (large, machine-generated)
 precomputed_local/
@@ -103,6 +112,12 @@ src/tac.egg-info/
 # Subagent commit serializer artifacts (lock + JSONL log are local-only forensics)
 .omx/state/.commit-lock
 .omx/state/commit-serializer.log
+.omx/state/*.json
+.omx/state/**/*.json
+.omx/logs/
+reports/raw/
+reports/private/
+reports/public/.env
 
 # Ephemeral subagent_commit_serializer.py temp git indexes (per-PID, never commit)
 .omx/state/.subagent-temp-index-*

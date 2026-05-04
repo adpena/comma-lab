@@ -2,6 +2,7 @@
 set -euo pipefail
 
 SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SELF_DIR/../.." && pwd)"
 DEFAULT_ROOT="$(cd "$SELF_DIR/../../workspace/upstream/comma_video_compression_challenge" 2>/dev/null && pwd || true)"
 UPSTREAM_ROOT="${COMMA_CHALLENGE_ROOT:-$DEFAULT_ROOT}"
 
@@ -729,7 +730,6 @@ if [ "$USE_PYTHON_ARCHIVE" = "1" ] && [ "$PYTHON_INFLATE" = "renderer" ]; then
       echo "[compress]   binary poses: enabled (.bin instead of .pt)"
     fi
 
-    PROJECT_ROOT="$(cd "$SELF_DIR/../.." && pwd)"
     if PYTHONPATH="${PROJECT_ROOT}/src:${PYTHONPATH:-}" \
        "$UV_BIN" run python "$SELF_DIR/compress_archive.py" "${_compress_archive_args[@]}"; then
       _python_archive_built=1
@@ -751,16 +751,16 @@ if [ "$_python_archive_built" = "0" ]; then
   # Per CLAUDE.md non-negotiable (feedback_zip_dep_bootstrap_trap): the PyTorch
   # container has no `zip` binary. Use python `zipfile.ZipFile` (always
   # present) to avoid the Lane-B silent-cascade bootstrap trap.
-  echo "[compress] Building archive via python zipfile (manual fallback)"
-  python3 - "$ARCHIVE_DIR" "$ARCHIVE_ZIP_TMP" <<'PYEOF'
-import os, sys, zipfile
-src_dir, out_zip = sys.argv[1], sys.argv[2]
-with zipfile.ZipFile(out_zip, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
-    for root, _dirs, files in os.walk(src_dir):
-        for name in files:
-            full = os.path.join(root, name)
-            arcname = os.path.relpath(full, src_dir)
-            zf.write(full, arcname)
+  echo "[compress] Building archive via deterministic python zipfile (manual fallback)"
+  python3 - "$ARCHIVE_DIR" "$ARCHIVE_ZIP_TMP" "$PROJECT_ROOT" <<'PYEOF'
+import sys
+from pathlib import Path
+
+src_dir, out_zip, project_root = sys.argv[1], sys.argv[2], sys.argv[3]
+sys.path.insert(0, str(Path(project_root) / "src"))
+from tac.submission_archive import deterministic_zip_directory
+
+deterministic_zip_directory(src_dir, out_zip)
 PYEOF
   mv "$ARCHIVE_ZIP_TMP" "$ARCHIVE_ZIP"
 fi

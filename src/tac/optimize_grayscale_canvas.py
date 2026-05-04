@@ -174,8 +174,8 @@ def _gaussian_softmax_soft(
     g = gray_continuous.unsqueeze(-3)
     t = targets.view(-1, 1, 1)
     sq_dist = (g - t) ** 2
-    logits = -sq_dist / (2.0 * sigma * sigma)
-    return F.softmax(logits, dim=-3)
+    bell = torch.exp(-sq_dist / (2.0 * sigma * sigma))
+    return F.softmax(bell, dim=-3)
 
 
 def _soft_embedding_lookup(

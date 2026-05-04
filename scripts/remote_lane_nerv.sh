@@ -29,6 +29,9 @@ GT_MASKS_SOURCE="${GT_MASKS_SOURCE:-decoded-baseline}"
 DECODED_BASELINE_PATH="${DECODED_BASELINE_PATH:-$BASE_ARCHIVE}"
 DECODED_BASELINE_MEMBER="${DECODED_BASELINE_MEMBER:-masks.mkv}"
 RUN_AUTH_EVAL="${RUN_AUTH_EVAL:-0}"
+NERV_STEPS="${NERV_STEPS:-}"
+NERV_EVAL_EVERY="${NERV_EVAL_EVERY:-}"
+NERV_WEIGHT_DTYPE="${NERV_WEIGHT_DTYPE:-}"
 POSE_REGEN_PROVENANCE="${POSE_REGEN_PROVENANCE:-}"
 ALPHA_GEO_PROVENANCE="${ALPHA_GEO_PROVENANCE:-}"
 ALPHA_PRIMITIVE_CONTRACT="${ALPHA_PRIMITIVE_CONTRACT:-}"
@@ -67,6 +70,7 @@ else
     DRIVER_VER="nvidia-smi unavailable"
 fi
 export PROVENANCE LOG_DIR GIT_HASH GPU_NAME DRIVER_VER BASE_ARCHIVE NERV_DIR PROFILE GT_MASKS_SOURCE DECODED_BASELINE_PATH DECODED_BASELINE_MEMBER
+export NERV_STEPS NERV_EVAL_EVERY NERV_WEIGHT_DTYPE
 export RUN_AUTH_EVAL POSE_REGEN_PROVENANCE ALPHA_GEO_PROVENANCE ALPHA_PRIMITIVE_CONTRACT L2_CLEARANCE_PATH ALLOW_RETIRED_SEGNET_TARGET LANE_G_V3_BASE_ARCHIVE
 "$PYBIN" - <<'PY'
 import hashlib
@@ -128,6 +132,9 @@ prov = {
     "gt_masks_source": os.environ["GT_MASKS_SOURCE"],
     "decoded_baseline_path": os.environ["DECODED_BASELINE_PATH"],
     "decoded_baseline_member": os.environ["DECODED_BASELINE_MEMBER"],
+    "nerv_steps_override": os.environ["NERV_STEPS"],
+    "nerv_eval_every_override": os.environ["NERV_EVAL_EVERY"],
+    "nerv_weight_dtype_override": os.environ["NERV_WEIGHT_DTYPE"],
     "run_auth_eval": os.environ["RUN_AUTH_EVAL"],
     "pose_regen_provenance": os.environ["POSE_REGEN_PROVENANCE"],
     "alpha_geo_provenance": os.environ["ALPHA_GEO_PROVENANCE"],
@@ -281,11 +288,21 @@ log "=== Stage 1: train NeRV mask codec ==="
 TRAIN_TARGET_ARGS=()
 if [ "$GT_MASKS_SOURCE" = "decoded-baseline" ]; then
     [ -f "$DECODED_BASELINE_PATH" ] || { echo "FATAL: missing $DECODED_BASELINE_PATH" >&2; exit 1; }
-    TRAIN_TARGET_ARGS+=(
-        --decoded-baseline-path "$DECODED_BASELINE_PATH"
-        --decoded-baseline-member "$DECODED_BASELINE_MEMBER"
-        --alpha-primitive-contract "$ALPHA_PRIMITIVE_CONTRACT"
-    )
+	TRAIN_TARGET_ARGS+=(
+	    --decoded-baseline-path "$DECODED_BASELINE_PATH"
+	    --decoded-baseline-member "$DECODED_BASELINE_MEMBER"
+	    --alpha-primitive-contract "$ALPHA_PRIMITIVE_CONTRACT"
+	)
+fi
+NERV_TRAINING_ARGS=()
+if [ -n "${NERV_STEPS:-}" ]; then
+    NERV_TRAINING_ARGS+=(--steps "$NERV_STEPS")
+fi
+if [ -n "${NERV_EVAL_EVERY:-}" ]; then
+    NERV_TRAINING_ARGS+=(--eval-every "$NERV_EVAL_EVERY")
+fi
+if [ -n "${NERV_WEIGHT_DTYPE:-}" ]; then
+    NERV_TRAINING_ARGS+=(--weight-dtype "$NERV_WEIGHT_DTYPE")
 fi
 "$PYBIN" -u experiments/train_nerv_mask.py \
     --profile "$PROFILE" \
@@ -294,6 +311,7 @@ fi
     --gt-masks-source "$GT_MASKS_SOURCE" \
     --output-dir "$NERV_DIR" \
     "${TRAIN_TARGET_ARGS[@]}" \
+    "${NERV_TRAINING_ARGS[@]}" \
     2>&1 | tee "$LOG_DIR/train_nerv_mask.log"
 PIPE_RC=("${PIPESTATUS[@]}")
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
@@ -409,6 +427,11 @@ if payload.get("diagnostic") != "alpha_geo_0_nerv_geometry":
     raise SystemExit("FATAL: ALPHA_GEO_PROVENANCE diagnostic must be alpha_geo_0_nerv_geometry")
 if payload.get("pass_fail", {}).get("overall_pass") is not True:
     raise SystemExit("FATAL: Alpha-Geo geometry gate did not pass for RUN_AUTH_EVAL=1")
+diagnostic_config = payload.get("diagnostic_config")
+if not isinstance(diagnostic_config, dict):
+    raise SystemExit("FATAL: Alpha-Geo provenance missing diagnostic_config")
+if diagnostic_config.get("threshold_preset") != "promotion":
+    raise SystemExit("FATAL: Alpha-Geo threshold_preset must be promotion for RUN_AUTH_EVAL=1")
 inputs = payload.get("inputs")
 if not isinstance(inputs, dict):
     raise SystemExit("FATAL: Alpha-Geo provenance missing inputs block")

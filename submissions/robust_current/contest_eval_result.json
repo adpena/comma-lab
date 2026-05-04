@@ -12,6 +12,6 @@
   "score_time_s": 21.654855249915272,
   "total_time_s": 106.26947366597597,
   "device": "mps",
-  "archive_path": "/Users/adpena/Projects/pact/submissions/robust_current/archive.zip",
+  "archive_path": "submissions/robust_current/archive.zip",
   "lane": "contest-compliant"
 }

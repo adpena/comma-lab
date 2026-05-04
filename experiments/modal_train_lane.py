@@ -38,6 +38,8 @@ from __future__ import annotations
 import modal
 
 app = modal.App("comma-train-lane")
+RESULTS_VOL = "comma-train-lane-results"
+results_vol = modal.Volume.from_name(RESULTS_VOL, create_if_missing=True)
 
 # Image with all deps. ffmpeg-master (with in_primaries support) is pulled
 # at build time via the same BtbN nightly that setup_full.sh uses on Vast.ai.
@@ -54,14 +56,16 @@ image = (
         "einops",
         "segmentation-models-pytorch",
         "av",
+        "brotli",
         "click",
-        "nvidia-dali-cuda120",
+        "nvidia-dali-cuda120==1.52.0",
         "tqdm",
         "timm",
         "scipy",
         "numpy<2.0",
         "Pillow",
         "pydantic>=2.0",
+        extra_index_url="https://pypi.nvidia.com",
     )
     # Install ffmpeg-master from BtbN nightly (has in_primaries + libsvtav1).
     # Mirrors `scripts/remote_setup_full.sh` Stage 6 EXACTLY — johnvansickle
@@ -98,7 +102,15 @@ training_image = (
     # (UNIWARD uses submissions/baseline_dilated_h64_0_90/, etc.)
     .add_local_dir("submissions", remote_path="/workspace/pact/submissions")
     .add_local_dir("upstream", remote_path="/workspace/pact/upstream")
-    .add_local_dir("experiments", remote_path="/workspace/pact/experiments")
+    .add_local_dir("experiments", remote_path="/workspace/pact/experiments", ignore=["results/**"])
+    .add_local_dir(
+        "experiments/results/public_pr95_intake_20260504_codex",
+        remote_path="/workspace/pact/experiments/results/public_pr95_intake_20260504_codex",
+    )
+    .add_local_dir(
+        "experiments/results/c067_fixed_renderer_burn_prep_20260503",
+        remote_path="/workspace/pact/experiments/results/c067_fixed_renderer_burn_prep_20260503",
+    )
     .add_local_dir("tools", remote_path="/workspace/pact/tools")
     .add_local_file("pyproject.toml", remote_path="/workspace/pact/pyproject.toml")
 )
@@ -113,6 +125,7 @@ def _run_lane_inner(lane_script: str, label: str, env_overrides: dict,
     import subprocess
     import sys
     import tempfile
+    import threading
     import time
     from pathlib import Path
 
@@ -213,6 +226,8 @@ def _run_lane_inner(lane_script: str, label: str, env_overrides: dict,
     # Heartbeat tracking
     log_dir = workspace / f"results/{label}"
     log_dir.mkdir(parents=True, exist_ok=True)
+    volume_dir = Path("/modal_results") / label
+    volume_dir.mkdir(parents=True, exist_ok=True)
 
     # Build env. PATH/LD_LIBRARY_PATH point to the actual extracted ffmpeg dir
     # (not a phantom /opt/ffmpeg-master). PYBIN is propagated to bash + child
@@ -259,6 +274,41 @@ def _run_lane_inner(lane_script: str, label: str, env_overrides: dict,
 
     log_path = workspace / f"modal_lane_{label}.log"
     timed_out = False
+    stop_sync = threading.Event()
+
+    def sync_volume() -> None:
+        sources = [
+            workspace / "experiments" / "results",
+            workspace / "results",
+            log_path,
+        ]
+        while not stop_sync.is_set():
+            try:
+                for src in sources:
+                    if not src.exists():
+                        continue
+                    dst = volume_dir / src.name
+                    if src.is_dir():
+                        shutil.copytree(src, dst, dirs_exist_ok=True)
+                    else:
+                        shutil.copy2(src, dst)
+                (volume_dir / "modal_live_metadata.json").write_text(json.dumps({
+                    "label": label,
+                    "lane_script": lane_script,
+                    "synced_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "volume": RESULTS_VOL,
+                    "volume_prefix": f"{label}/",
+                }, indent=2))
+                results_vol.commit()
+                print(f"[modal-train-lane] volume sync committed: {RESULTS_VOL}/{label}/")
+            except Exception as exc:
+                print(f"[modal-train-lane] volume sync failed: {exc!r}")
+            stop_sync.wait(timeout=180)
+
+    sync_thread = threading.Thread(target=sync_volume, daemon=True)
+    sync_thread.start()
     with log_path.open("w") as logf:
         try:
             proc = subprocess.run(
@@ -277,6 +327,21 @@ def _run_lane_inner(lane_script: str, label: str, env_overrides: dict,
             timed_out = True
             rc = 124
             print(f"[modal-train-lane] TIMEOUT after {max_seconds}s — collecting partial artifacts")
+    stop_sync.set()
+    sync_thread.join(timeout=60)
+    try:
+        for src in (workspace / "experiments" / "results", workspace / "results", log_path):
+            if not src.exists():
+                continue
+            dst = volume_dir / src.name
+            if src.is_dir():
+                shutil.copytree(src, dst, dirs_exist_ok=True)
+            else:
+                shutil.copy2(src, dst)
+        results_vol.commit()
+        print(f"[modal-train-lane] final volume commit: {RESULTS_VOL}/{label}/")
+    except Exception as exc:
+        print(f"[modal-train-lane] final volume commit failed: {exc!r}")
     elapsed = time.monotonic() - t0
     print(f"[modal-train-lane] finished in {elapsed:.1f}s rc={rc} timed_out={timed_out}")
 
@@ -356,6 +421,7 @@ def _run_lane_inner(lane_script: str, label: str, env_overrides: dict,
     image=training_image,
     gpu="T4",
     timeout=14 * 3600,  # 14h max — covers MAE-V (estimate)
+    volumes={"/modal_results": results_vol},
 )
 def run_lane_training_t4(lane_script: str, label: str, env_overrides: dict,
                           max_seconds: int = 14 * 3600) -> dict:
@@ -366,8 +432,31 @@ def run_lane_training_t4(lane_script: str, label: str, env_overrides: dict,
     image=training_image,
     gpu="A10G",
     timeout=14 * 3600,
+    volumes={"/modal_results": results_vol},
 )
 def run_lane_training_a10g(lane_script: str, label: str, env_overrides: dict,
+                            max_seconds: int = 14 * 3600) -> dict:
+    return _run_lane_inner(lane_script, label, env_overrides, max_seconds=max_seconds)
+
+
+@app.function(
+    image=training_image,
+    gpu="A100",
+    timeout=14 * 3600,
+    volumes={"/modal_results": results_vol},
+)
+def run_lane_training_a100(lane_script: str, label: str, env_overrides: dict,
+                            max_seconds: int = 14 * 3600) -> dict:
+    return _run_lane_inner(lane_script, label, env_overrides, max_seconds=max_seconds)
+
+
+@app.function(
+    image=training_image,
+    gpu="H100",
+    timeout=14 * 3600,
+    volumes={"/modal_results": results_vol},
+)
+def run_lane_training_h100(lane_script: str, label: str, env_overrides: dict,
                             max_seconds: int = 14 * 3600) -> dict:
     return _run_lane_inner(lane_script, label, env_overrides, max_seconds=max_seconds)
 
@@ -385,7 +474,7 @@ def main(
     Args:
         lane_script: relative path like 'scripts/remote_lane_omega_hessian_qat.sh'
         label: short label used for output dir naming
-        gpu: 'T4' (default, $0.59/hr) or 'A10G' ($1.10/hr, ~2x faster)
+        gpu: 'T4', 'A10G', 'A100', or 'H100'
         timeout_hours: max runtime (Modal hard kills at this)
         env_overrides: 'KEY1=val1,KEY2=val2' optional env to pass to lane
     """
@@ -412,8 +501,12 @@ def main(
         fn = run_lane_training_t4
     elif gpu in ("A10G", "A10g"):
         fn = run_lane_training_a10g
+    elif gpu in ("A100", "A100-40GB", "A100-80GB"):
+        fn = run_lane_training_a100
+    elif gpu in ("H100", "H100-80GB"):
+        fn = run_lane_training_h100
     else:
-        print(f"FATAL: unsupported gpu '{gpu}'. Use T4 or A10G.", file=sys.stderr)
+        print(f"FATAL: unsupported gpu '{gpu}'. Use T4, A10G, A100, or H100.", file=sys.stderr)
         sys.exit(2)
 
     print(f"=== modal_train_lane: {lane_script} → {label} on {gpu} ===")
@@ -448,6 +541,8 @@ def main(
         f".venv/bin/python experiments/modal_recover_lane.py --call-id {call_id}"
     )
     print(f"\n  Local entrypoint exiting; remote training continues for up to {timeout_hours:.0f}h.")
+    print(f"  Live volume:    .venv/bin/modal volume ls {RESULTS_VOL} {label}/")
+    print(f"  Download live:  .venv/bin/modal volume get {RESULTS_VOL} {label}/ ./modal_{label}/")
 
     # Save call_id to a sentinel file so a later script can recover artifacts.
     sentinel_dir = repo_root / "experiments" / "results" / f"lane_{label}_modal"
@@ -463,6 +558,8 @@ def main(
         "auth_eval_advisory_only": True,
         "score_claim": False,
         "promotion_eligible": False,
+        "live_volume": RESULTS_VOL,
+        "live_volume_prefix": f"{label}/",
         "dispatched_at": __import__("datetime").datetime.now().isoformat(),
     }, indent=2))
     print(f"  call_id saved:  {sentinel_dir}/modal_call_id.txt")

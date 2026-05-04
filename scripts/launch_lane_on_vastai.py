@@ -85,8 +85,15 @@ def find_offer(
     min_reliability: float = 0.96,
     max_dph: float = 0.50,
     min_disk_gb: int = 60,
+    prefer_fast_chip: bool = False,
 ) -> int:
-    """Search Vast.ai for cheapest 4090 matching constraints. Return offer id.
+    """Search Vast.ai for a matching offer. Return offer id.
+
+    By default this preserves the historical cheapest-4090 behavior for old
+    lane scripts. With prefer_fast_chip=True, it walks the canonical
+    H100/H200/A100-first chip preference from scripts/probe_fastest_chip.py and
+    returns the cheapest offer in the fastest available tier. This is the
+    contest-sprint path: wall-clock beats $/hr for active frontier iteration.
 
     2026-05-01 (Bug Class #6): bumped min_disk_gb floor from 30 → 60.
     A multi-candidate chain (e.g. wave3 6-archive eval) needs ~5 GB for
@@ -95,6 +102,16 @@ def find_offer(
     margin for any chain up to ~12 candidates.
     Reference: feedback_loop_session_permanent_bug_class_extinction_20260501.md.
     """
+    if prefer_fast_chip:
+        from probe_fastest_chip import probe
+
+        offers = probe(max_dph=max_dph, min_disk_gb=min_disk_gb)
+        if offers:
+            return int(offers[0].offer_id)
+        raise RuntimeError(
+            f"No canonical fast-chip offer < ${max_dph}/hr with disk>={min_disk_gb}GB"
+        )
+
     cmd = [
         str(VASTAI), "search", "offers",
         f"gpu_name=RTX_4090 reliability>{min_reliability} inet_down>200 "
@@ -150,8 +167,18 @@ def create_instance(offer_id: int, label: str, disk_gb: int = 60) -> int:
     ]
     rc, out, err = run(cmd, timeout=60)
     if rc != 0:
-        raise RuntimeError(f"vastai create failed: {err.strip()}")
-    d = json.loads(out)
+        raise RuntimeError(f"vastai create failed: stdout={out.strip()} stderr={err.strip()}")
+    raw_json = (out or "").strip() or (err or "").strip()
+    if not raw_json:
+        raise RuntimeError("vastai create returned empty stdout/stderr; instance creation state is unknown")
+    try:
+        d = json.loads(raw_json)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(
+            f"vastai create returned non-JSON output: stdout={out.strip()!r} stderr={err.strip()!r}"
+        ) from exc
+    if d.get("error"):
+        raise RuntimeError(f"vastai create returned API error: {d}")
     instance_id = d.get("new_contract") or d.get("id")
     if instance_id is None:
         raise RuntimeError(f"vastai create returned no instance ID: {d}")
@@ -456,7 +483,36 @@ def _enumerate_python_and_shell(root_subdir: str, max_total_mb: int = 50) -> lis
     return out
 
 
-def build_tarball() -> Path:
+def _expand_explicit_anchor_paths(anchor_dirs: list[str]) -> list[str]:
+    """Return repo-relative files from explicit anchor paths.
+
+    Explicit anchors are operator-provided payload/custody inputs. Missing or
+    unsafe anchors should stop launch before cloud spend instead of producing a
+    remote tree that only records the anchor in metadata.
+    """
+    out: list[str] = []
+    for raw in anchor_dirs:
+        if not raw:
+            continue
+        rel = Path(raw)
+        if rel.is_absolute() or ".." in rel.parts or "\\" in raw:
+            raise ValueError(f"unsafe anchor path: {raw!r}")
+        full = REPO_ROOT / rel
+        if not full.exists():
+            raise FileNotFoundError(f"explicit anchor path does not exist: {raw}")
+        if full.is_file():
+            out.append(str(rel))
+            continue
+        if full.is_dir():
+            for p in sorted(full.rglob("*")):
+                if p.is_file() and "__pycache__" not in p.parts:
+                    out.append(str(p.relative_to(REPO_ROOT)))
+            continue
+        raise ValueError(f"explicit anchor path is not a file or directory: {raw}")
+    return out
+
+
+def build_tarball(anchor_dirs: list[str] | None = None) -> Path:
     """Build a minimal tarball of the repo for SCP via EXPLICIT FILE LIST.
 
     Replaces the fragile include-dir + many-excludes pattern (which kept
@@ -467,7 +523,8 @@ def build_tarball() -> Path:
       1. Auto-enumerate all .py/.sh/.json/.toml/.md/.txt under src/, scripts/,
          experiments/, submissions/robust_current/ (capped at 50MB each)
       2. Auto-discover ANCHOR_* paths from remote_lane_*.sh
-      3. Add canonical small includes: pyproject.toml, README.md,
+      3. Include explicit --anchor-dirs payload/custody inputs fail-closed
+      4. Add canonical small includes: pyproject.toml, README.md,
          upstream/{models,videos,evaluate.py,modules.py,__init__.py,
          public_test_video_names.txt}
 
@@ -497,7 +554,12 @@ def build_tarball() -> Path:
                 if p.is_file() and "__pycache__" not in p.parts:
                     paths.append(str(p.relative_to(REPO_ROOT)))
 
-    # 3. Canonical small includes (always required) — ALL upstream/*.py
+    # 3. Explicit lane anchors requested by the operator. These often include
+    # archive.zip, policies, or CUDA evidence that suffix-capped source
+    # enumeration intentionally skips.
+    paths += _expand_explicit_anchor_paths(anchor_dirs or [])
+
+    # 4. Canonical small includes (always required) — ALL upstream/*.py
     # so imports like `from upstream.frame_utils import ...` work
     canonical = [
         "pyproject.toml", "README.md",
@@ -510,7 +572,7 @@ def build_tarball() -> Path:
         for p in sorted(upstream_dir.glob("*.py")):
             paths.append(str(p.relative_to(REPO_ROOT)))
 
-    # 4. upstream models + videos (need to enumerate files explicitly)
+    # 5. upstream models + videos (need to enumerate files explicitly)
     for subdir in ("upstream/models", "upstream/videos"):
         d = REPO_ROOT / subdir
         if d.is_dir():
@@ -518,7 +580,7 @@ def build_tarball() -> Path:
                 if p.is_file() and "__pycache__" not in p.parts:
                     paths.append(str(p.relative_to(REPO_ROOT)))
 
-    # 5. AUTO-DISCOVER referenced files via import/source/bash references
+    # 6. AUTO-DISCOVER referenced files via import/source/bash references
     # Iteratively scan included files for repo-relative references and
     # auto-add any that exist locally but aren't yet included. Fixed-point
     # iteration; typically 1-2 rounds.
@@ -539,20 +601,6 @@ def build_tarball() -> Path:
     if rc != 0:
         raise RuntimeError(f"tar failed (paths={len(paths)}): {err.strip()[:200]}")
     return tmpfile
-
-
-def add_lane_anchors_to_tarball(tar_path: Path, anchor_dirs: list[str]) -> None:
-    """Append lane-specific anchor data to the tarball."""
-    valid_dirs = [d for d in anchor_dirs if (REPO_ROOT / d).exists()]
-    if not valid_dirs:
-        return
-    cmd = ["tar", "-rzf", str(tar_path), "-C", str(REPO_ROOT)] + valid_dirs
-    # gzip-mode tar -r isn't natively supported on macOS bsdtar; rebuild
-    # the tarball if needed
-    rc, out, err = run(cmd, timeout=120)
-    if rc != 0:
-        # Fallback: build a separate small tar and let SCP transfer both
-        sys.stderr.write(f"WARN: anchor append failed ({err.strip()[:80]}), continuing without anchors\n")
 
 
 def scp_tarball(tar_path: Path, host: str, port: int) -> None:
@@ -726,9 +774,18 @@ def cmd_phase1(args) -> int:
         print(f"FATAL: lane script not found: {args.lane_script}", file=sys.stderr)
         return 2
     min_disk_gb = int(getattr(args, "min_disk_gb", 60) or 60)
-    print(f"=== phase1 Stage 0: Find offer (max ${args.max_dph}/hr, disk>={min_disk_gb}GB) ===")
+    prefer_fast_chip = bool(getattr(args, "prefer_fast_chip", False))
+    offer_mode = "fast-chip preference" if prefer_fast_chip else "RTX 4090 legacy"
+    print(
+        f"=== phase1 Stage 0: Find offer ({offer_mode}, max ${args.max_dph}/hr, "
+        f"disk>={min_disk_gb}GB) ==="
+    )
     try:
-        offer_id = find_offer(max_dph=args.max_dph, min_disk_gb=min_disk_gb)
+        offer_id = find_offer(
+            max_dph=args.max_dph,
+            min_disk_gb=min_disk_gb,
+            prefer_fast_chip=prefer_fast_chip,
+        )
     except Exception as e:
         print(f"FATAL: {e}", file=sys.stderr)
         return 2
@@ -742,6 +799,7 @@ def cmd_phase1(args) -> int:
         "council_priority": args.council_priority,
         "anchor_dirs": args.anchor_dirs,
         "launcher": "scripts/launch_lane_on_vastai.py phase1+phase2",
+        "prefer_fast_chip": prefer_fast_chip,
     })
     print(f"\n✓ phase1 SUCCESS")
     print(f"INSTANCE_ID={instance_id}")
@@ -817,7 +875,7 @@ def cmd_phase2_scp(args) -> int:
     instance_id = int(args.instance_id)
     print("=== phase2-scp Stage 1: Build tarball ===")
     try:
-        tar = build_tarball()
+        tar = build_tarball(args.anchor_dirs)
     except Exception as e:
         print(f"FATAL: tarball build failed: {e}", file=sys.stderr)
         return 1
@@ -1072,6 +1130,9 @@ def main() -> int:
     p1.add_argument("--min-disk-gb", type=int, default=60,
                     help="Minimum disk space (GB) for offer search AND --disk "
                          "alloc on create. Bug Class #6: floors at 60.")
+    p1.add_argument("--prefer-fast-chip", action="store_true",
+                    help="Prefer canonical H100/H200/A100 fast-chip offers over "
+                         "legacy cheapest RTX 4090 search.")
 
     # phase2 (legacy combined — kept for backward compat with v3 callers)
     p2 = sub.add_parser("phase2", help="Combined phase2-wait + phase2-deploy (~3-5 min, harness-risky)")
@@ -1146,6 +1207,9 @@ def main() -> int:
     pf.add_argument("--min-disk-gb", type=int, default=60,
                     help="Minimum disk space (GB) for offer search AND --disk "
                          "alloc on create. Bug Class #6: floors at 60.")
+    pf.add_argument("--prefer-fast-chip", action="store_true",
+                    help="Prefer canonical H100/H200/A100 fast-chip offers over "
+                         "legacy cheapest RTX 4090 search.")
 
     # Legacy positional support: if first arg isn't a subcommand, default to 'full'
     p.add_argument("--lane-script", required=False, help=argparse.SUPPRESS)
@@ -1159,6 +1223,7 @@ def main() -> int:
     p.add_argument("--council-priority", type=int, default=99, help=argparse.SUPPRESS)
     p.add_argument("--dry-run", action="store_true", help=argparse.SUPPRESS)
     p.add_argument("--max-dph", type=float, default=0.50, help=argparse.SUPPRESS)
+    p.add_argument("--prefer-fast-chip", action="store_true", help=argparse.SUPPRESS)
     p.add_argument("--min-disk-gb", type=int, default=60, help=argparse.SUPPRESS)
     args = p.parse_args()
 
@@ -1193,7 +1258,10 @@ def main() -> int:
         return 2
     if args.dry_run:
         try:
-            offer_id = find_offer(max_dph=args.max_dph)
+            offer_id = find_offer(
+                max_dph=args.max_dph,
+                prefer_fast_chip=bool(getattr(args, "prefer_fast_chip", False)),
+            )
             print(f"=== Stage 0: offer_id={offer_id} ===")
             print("DRY RUN — exiting before instance creation")
             return 0

@@ -8,6 +8,7 @@ import zipfile
 from pathlib import Path
 
 import pytest
+import torch
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -148,6 +149,29 @@ def test_parses_asym_regions_and_selects_largest_non_embedding_layer() -> None:
     assert atom.margin_to_byte_range >= 1
 
 
+def test_sensitivity_ranked_selection_prefers_high_response_channel() -> None:
+    module = _load_module()
+    renderer = _asym_blob()
+
+    _, atoms = module.select_basis_atoms(
+        renderer,
+        max_atoms=2,
+        epsilons=[-1.0, 0.0, 1.0],
+        sensitivity_scores={
+            "renderer.small.weight": [100.0, 0.0],
+            "renderer.big.weight": [1.0, 2.0, 3.0, 4.0],
+        },
+        selection_mode="sensitivity-desc",
+    )
+
+    assert atoms[0].layer_name == "renderer.small"
+    assert atoms[0].channel_index == 0
+    assert atoms[0].sensitivity_score == 100.0
+    assert atoms[0].selection_source == "sensitivity-desc"
+    assert atoms[1].layer_name == "renderer.big"
+    assert atoms[1].channel_index == 3
+
+
 def test_transposed_payloads_are_excluded_by_default_for_map_compatibility() -> None:
     module = _load_module()
     renderer = _asym_blob_with_transposed_largest()
@@ -193,6 +217,41 @@ def test_builds_basis_json_compatible_with_component_plan_loader(tmp_path: Path)
         assert atom["offset"] >= 8
         assert atom["delta_per_epsilon"] == 1
         assert atom["margin_to_byte_range"] >= 2
+
+
+def test_builds_sensitivity_ranked_basis_json_with_map_custody(tmp_path: Path) -> None:
+    module = _load_module()
+    archive = _write_archive(tmp_path / "archive.zip", _asym_blob())
+    sensitivity_map = tmp_path / "combined_sensitivity_map.pt"
+    output = tmp_path / "basis.json"
+    torch.save(
+        {
+            "format": "tac_score_sensitivity_map_v1",
+            "sensitivities": {
+                "renderer.small.weight": torch.tensor([100.0, 0.0]),
+                "renderer.big.weight": torch.tensor([1.0, 2.0, 3.0, 4.0]),
+            },
+            "metadata": {"device": "cuda", "unit_test": True},
+        },
+        sensitivity_map,
+    )
+
+    summary = module.build_renderer_blob_perturbation_basis(
+        archive=archive,
+        output_json=output,
+        epsilons=[-2.0, 0.0, 2.0],
+        max_atoms=2,
+        decode_verify=False,
+        sensitivity_map=sensitivity_map,
+        selection_mode="sensitivity-desc",
+    )
+
+    payload = json.loads(output.read_text())
+    assert payload["selection_mode"] == "sensitivity-desc"
+    assert payload["sensitivity_map"]["sha256"]
+    assert payload["atoms"][0]["selection_source"] == "sensitivity-desc"
+    assert payload["atoms"][0]["sensitivity_score"] == 100.0
+    assert summary["atom_count"] == 2
 
 
 def test_rejects_truncated_weight_blob() -> None:

@@ -185,3 +185,27 @@ score = 1.043987524793892
 - Integration: pose regeneration path records mask SHA and renderer SHA.
 - Integration: exact eval wrapper refuses CPU/MPS promotion artifacts.
 
+## 2026-05-02 - CRF52 Stale-Pose Isolation Result
+
+Evidence grade: `A-negative` H100 CUDA diagnostic.
+
+The C-063 CRF52 stale-pose isolation rebuilt `optimized_poses.bin` against the
+decoded CRF52 mask stream, repacked the archive, and ran exact CUDA auth eval
+through the canonical path.
+
+```text
+artifact=experiments/results/vast_harvest/c063_mask_crf52_pose_regen_h100sxm_fix3_20260502/exact_eval/contest_auth_eval.json
+archive_sha256=c1f635775df5e52977eb8ae4714f57fc066df5fd150ad775f3f56eae0447914c
+archive_bytes=263605
+score_recomputed=1.9196752592671689
+avg_posenet_dist=0.19799431
+avg_segnet_dist=0.00337047
+gpu=NVIDIA H100 80GB HBM3
+```
+
+Conclusion: stale pose parameters are not the primary failure mode for the
+CRF52 mask stream. Pose regeneration improves the collapsed CRF52 candidate,
+but PoseNet remains catastrophically above the frontier. Future Alpha work
+should spend H100 iteration on geometry-preserving mask representations,
+charged atom response, or learned/runtime-closed decoders rather than more
+plain AV1-mask plus pose-regeneration rescues.

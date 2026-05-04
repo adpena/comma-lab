@@ -12,6 +12,10 @@ QZS3 payload deployed in PR #67's rank-1 archive.
 from __future__ import annotations
 
 import importlib.util
+import subprocess
+import struct
+import sys
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -22,7 +26,14 @@ from tac.quantizr_qzs3_codec import (
     QZS3_MAGIC,
     decode_qzs3_state_dict,
     encode_qzs3_state_dict,
+    encode_qzs4_block_search_state_dict,
     qzs3_qv_specs,
+)
+from experiments.repack_quantizr_faithful_qzs3_archive import (
+    RENDERER_CODEC_QZS3,
+    RENDERER_CODEC_QZS4,
+    build_archive,
+    build_submission_archive,
 )
 
 
@@ -141,3 +152,139 @@ def test_block_size_header_field_round_trips() -> None:
     decoded = decode_qzs3_state_dict(payload, device="cpu")
     fresh = build_quantizr_faithful_renderer()
     fresh.load_state_dict(decoded, strict=True)
+
+
+def test_qzs4_block_search_keeps_qzs3_wire_format_and_records_candidates() -> None:
+    torch.manual_seed(11)
+    model = build_quantizr_faithful_renderer().eval()
+    payload, meta = encode_qzs4_block_search_state_dict(
+        model,
+        block_sizes=(32, 64),
+    )
+    assert payload.startswith(QZS3_MAGIC)
+    assert meta["packer_policy"] == "qzs4_block_search"
+    assert meta["wire_format"] == "QZS3"
+    assert meta["selected_block_size"] in {32, 64}
+    assert len(meta["candidates"]) == 2
+    assert sum(1 for item in meta["candidates"] if item["selected"]) == 1
+    decoded = decode_qzs3_state_dict(payload, device="cpu")
+    fresh = build_quantizr_faithful_renderer()
+    fresh.load_state_dict(decoded, strict=True)
+
+
+def test_repack_qzs3_block_size_reencodes_existing_qzs3_source(tmp_path: Path) -> None:
+    torch.manual_seed(12)
+    model = build_quantizr_faithful_renderer().eval()
+    source = tmp_path / "source.zip"
+    with zipfile.ZipFile(source, "w") as zf:
+        zf.writestr("renderer.bin", encode_qzs3_state_dict(model, block_size=32))
+        zf.writestr("masks.mkv", b"mask-bytes")
+        zf.writestr("optimized_poses.bin", b"\x00" * (4 * 6 * 2))
+
+    out = tmp_path / "out.zip"
+    meta = build_archive(
+        source,
+        out,
+        renderer_codec=RENDERER_CODEC_QZS3,
+        qzs3_block_size=64,
+    )
+
+    assert meta["renderer"]["action"] == "reencoded_qzs3_from_qzs3_state_dict"
+    assert meta["renderer"]["source_block_size"] == 32
+    assert meta["renderer"]["block_size"] == 64
+    with zipfile.ZipFile(out) as zf:
+        renderer = zf.read("renderer.bin")
+    assert renderer.startswith(QZS3_MAGIC)
+    assert int.from_bytes(renderer[4:6], "little") == 64
+    decoded = decode_qzs3_state_dict(renderer, device="cpu")
+    fresh = build_quantizr_faithful_renderer()
+    fresh.load_state_dict(decoded, strict=True)
+
+
+def test_repack_qzs4_records_submission_path_overhead_and_stackability(tmp_path: Path) -> None:
+    torch.manual_seed(12)
+    model = build_quantizr_faithful_renderer().eval()
+    source = tmp_path / "source.zip"
+    with zipfile.ZipFile(source, "w") as zf:
+        zf.writestr("renderer.bin", encode_qzs3_state_dict(model))
+        zf.writestr("masks.mkv", b"mask-bytes")
+        zf.writestr("optimized_poses.bin", b"\x00" * (4 * 6 * 2))
+
+    out = tmp_path / "out.zip"
+    meta = build_archive(
+        source,
+        out,
+        renderer_codec=RENDERER_CODEC_QZS4,
+        qzs4_block_sizes=(32, 64),
+    )
+    assert meta["renderer"]["renderer_codec"] == "qzs4"
+    assert meta["renderer"]["wire_format"] == "QZS3"
+    assert meta["submission_path"]["zip_overhead"]["member_count"] == 3
+    assert meta["submission_path"]["charged_accounting"]["all_score_affecting_bits_inside_archive"] is True
+    assert "pr65_postprocess_qpost_sidecar" in meta["submission_path"]["stackability"]
+
+
+def test_repack_qzs4_accepts_existing_single_blob_frontier_archive(tmp_path: Path) -> None:
+    from experiments.build_renderer_packed_payload_archive import (
+        PAYLOAD_FORMAT_PR64_LEN_TABLE,
+        POSE_QP1_CODEC,
+        build_packed_archive,
+    )
+
+    torch.manual_seed(13)
+    model = build_quantizr_faithful_renderer().eval()
+    runtime_zip = tmp_path / "runtime.zip"
+    pose_values: list[float] = []
+    for row in range(4):
+        pose_values.extend([20.0 + row / 512.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+    pose_bytes = struct.pack("<" + "e" * len(pose_values), *pose_values)
+    with zipfile.ZipFile(runtime_zip, "w") as zf:
+        zf.writestr("renderer.bin", encode_qzs3_state_dict(model))
+        zf.writestr("masks.mkv", b"mask-bytes")
+        zf.writestr("optimized_poses.bin", pose_bytes)
+
+    packed_frontier = tmp_path / "frontier_p.zip"
+    build_packed_archive(
+        runtime_zip,
+        packed_frontier,
+        payload_member_name="p",
+        payload_format=PAYLOAD_FORMAT_PR64_LEN_TABLE,
+        pose_codec=POSE_QP1_CODEC,
+    )
+
+    out = tmp_path / "stack.zip"
+    meta = build_submission_archive(
+        packed_frontier,
+        out,
+        renderer_codec=RENDERER_CODEC_QZS4,
+        qzs4_block_sizes=(32, 64),
+        submission_layout="pr64_single_blob",
+        pose_codec=POSE_QP1_CODEC,
+    )
+
+    assert meta["source_archive_sha256"]
+    assert meta["renderer_stage"]["source_runtime_contract"]["unpacked_from_packed_payload"] is True
+    assert meta["renderer_stage"]["source_runtime_contract"]["packed_payload_member"] == "p"
+    assert meta["renderer_stage"]["renderer"]["wire_format"] == "QZS3"
+    assert meta["submission_path"]["layout"] == "pr64_single_blob"
+    with zipfile.ZipFile(out) as zf:
+        assert zf.namelist() == ["p"]
+
+
+def test_repack_script_help_is_directly_executable_from_repo_root() -> None:
+    repo = Path(__file__).resolve().parents[3]
+    proc = subprocess.run(
+        [
+            sys.executable,
+            "experiments/repack_quantizr_faithful_qzs3_archive.py",
+            "--help",
+        ],
+        cwd=repo,
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=30,
+    )
+
+    assert proc.returncode == 0, proc.stderr
+    assert "--qzs3-block-size" in proc.stdout

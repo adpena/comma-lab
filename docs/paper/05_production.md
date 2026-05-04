@@ -1,5 +1,27 @@
 # 5. Production Deployment
 
+## Current Apogee Deployment Note
+
+The current submitted Apogee packet is not the older mask-renderer/TTO system
+described in the historical sections below. It is a route-specialized HNeRV/Muon
+archive with a single charged payload member, a deterministic adapter runtime,
+and exact Tesla T4 custody:
+
+- exact score: `0.22826947142244708` `[A++]`
+- archive bytes/SHA-256:
+  `178981`,
+  `afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641`
+- runtime tree SHA-256:
+  `ef6323533666c9cac1c204a9d3f7054157d44a185b16fc859fb3f0438ccd1832`
+- exact eval elapsed time: about `60.97s`
+- inflate elapsed time: about `22.56s`
+
+For production and OSS purposes, the deployable idea is the disciplined packet
+contract: charged neural payload, deterministic decoder, fail-closed wrapper,
+runtime tree hashing, exact replay tests, and public-release hygiene. The
+sections below remain useful as research and deployment context for the broader
+`tac` toolkit, but they should not be read as the submitted Apogee architecture.
+
 The comma.ai video compression challenge is not an academic exercise. It models a real engineering problem: how to compress dashcam video while preserving the signals that a self-driving system depends on. This section maps our techniques to comma.ai's actual production pipeline and analyzes deployment feasibility across three scenarios.
 
 ## 5.1 comma.ai System Architecture

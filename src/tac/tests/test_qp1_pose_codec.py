@@ -21,10 +21,19 @@ import torch
 from tac.qp1_pose_codec import (
     POSE_SCALE,
     QP1_MAGIC,
+    QP2_MAGIC,
+    QPV1DimensionStream,
+    QPV1Payload,
+    QPV1_MAGIC,
     VELOCITY_OFFSET,
     VELOCITY_SCALE,
     decode_qp1,
+    decode_qp2_residual_topk,
+    decode_qpv1,
     encode_qp1,
+    encode_qp2_residual_topk,
+    parse_qpv1,
+    qp2_residual_atom_plan,
 )
 
 
@@ -148,3 +157,97 @@ def test_qp1_decoder_byte_equivalent_to_pr67_reader() -> None:
     assert np.array_equal(pr67_vals, ours_vals), (
         f"PR67 vs our decoder disagree: pr67={pr67_vals[:5]}, ours={ours_vals[:5]}"
     )
+
+
+def test_qp2_residual_topk_is_deterministic_pvr1_wire_contract() -> None:
+    poses = _make_pose(12, seed=44)
+    poses[:, 1:] = np.linspace(-0.2, 0.3, num=12 * 5, dtype=np.float32).reshape(12, 5)
+    a = encode_qp2_residual_topk(poses, topk=7)
+    b = encode_qp2_residual_topk(poses, topk=7)
+    assert a == b
+    assert a.startswith(QP2_MAGIC)
+    decoded = decode_qp2_residual_topk(a)
+    assert decoded.shape == poses.shape
+    quant_step = 1.0 / VELOCITY_SCALE
+    assert np.max(np.abs(decoded[:, 0] - poses[:, 0])) < quant_step
+
+
+def test_qp2_residual_atom_plan_charges_topk_non_velocity_atoms() -> None:
+    poses = np.zeros((4, 6), dtype=np.float32)
+    poses[:, 0] = 30.0
+    poses[3, 5] = 10.0
+    poses[1, 2] = -8.0
+    plan = qp2_residual_atom_plan(poses, topk=2)
+    assert plan["topk"] == 2
+    assert [atom["key"] for atom in plan["atoms"]] == [23, 8]
+    payload = encode_qp2_residual_topk(poses, topk=2)
+    decoded = decode_qp2_residual_topk(payload)
+    assert decoded[3, 5] == pytest.approx(10.0)
+    assert decoded[1, 2] == pytest.approx(-8.0)
+
+
+def test_qpv1_multidim_round_trip_preserves_integer_streams() -> None:
+    payload = QPV1Payload(
+        count=4,
+        pose_dim=6,
+        streams=(
+            QPV1DimensionStream(0, 20.0, 512.0, (5120, 5124, 5110, 5130)),
+            QPV1DimensionStream(3, -0.25, 2048.0, (0, 8, -4, 12)),
+        ),
+    )
+    raw = payload.to_bytes()
+
+    parsed = parse_qpv1(raw)
+    decoded = decode_qpv1(raw)
+
+    assert raw.startswith(QPV1_MAGIC)
+    assert parsed.to_bytes() == raw
+    assert parsed.values_by_dim() == {0: [5120, 5124, 5110, 5130], 3: [0, 8, -4, 12]}
+    assert decoded.shape == (4, 6)
+    assert decoded[0, 0] == pytest.approx(30.0)
+    assert decoded[1, 3] == pytest.approx(-0.25 + 8.0 / 2048.0)
+    assert np.all(decoded[:, [1, 2, 4, 5]] == 0.0)
+
+
+def test_qpv1_rejects_duplicate_dimensions() -> None:
+    left = QPV1Payload(
+        count=2,
+        pose_dim=6,
+        streams=(
+            QPV1DimensionStream(0, 0.0, 1.0, (1, 2)),
+            QPV1DimensionStream(0, 0.0, 1.0, (3, 4)),
+        ),
+    )
+    with pytest.raises(ValueError, match="duplicate QPV1 dimension"):
+        left.to_bytes()
+
+    malformed = (
+        QPV1_MAGIC
+        + struct.pack("<HB", 1, 2)
+        + bytes([0])
+        + struct.pack("<ffi", 0.0, 1.0, 1)
+        + bytes([0])
+        + struct.pack("<ffi", 0.0, 1.0, 2)
+    )
+    with pytest.raises(ValueError, match="duplicate QPV1 dimension"):
+        parse_qpv1(malformed)
+
+
+def test_qpv1_rejects_truncated_vlq_and_trailing_bytes() -> None:
+    truncated = (
+        QPV1_MAGIC
+        + struct.pack("<HB", 2, 1)
+        + bytes([0])
+        + struct.pack("<ffi", 20.0, 512.0, 5120)
+        + b"\x80"
+    )
+    with pytest.raises(ValueError, match="truncated ZigZag-VLQ"):
+        parse_qpv1(truncated)
+
+    good = QPV1Payload(
+        count=1,
+        pose_dim=6,
+        streams=(QPV1DimensionStream(0, 20.0, 512.0, (5120,)),),
+    ).to_bytes()
+    with pytest.raises(ValueError, match="trailing bytes"):
+        parse_qpv1(good + b"x")

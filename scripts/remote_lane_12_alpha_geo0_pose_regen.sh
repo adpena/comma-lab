@@ -158,7 +158,7 @@ mkdir -p "$EXTRACT_DIR" "$MASK_CACHE_DIR"
     --output-json "$ALPHA_GEO_JSON" \
     --primitive-contract-json "$ALPHA_PRIMITIVE_CONTRACT" \
     --mask-cache-dir "$MASK_CACHE_DIR" \
-    --threshold-preset exploratory \
+    --threshold-preset promotion \
     --num-frames 1200 \
     --height 384 \
     --width 512 \

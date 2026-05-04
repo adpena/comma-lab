@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Paradigm α — Mask payload overhaul: real-archive empirical evaluator.
 
-Decodes the Lane G v3 archive's masks.mkv into a (T, H, W) int64 mask
+Decodes an exact archive's masks.mkv into a (T, H, W) int64 mask
 tensor, then runs each candidate codec end-to-end:
 
     α2 wavelet codec — Haar 2-level + uniform quantize + arithmetic code
@@ -17,22 +17,26 @@ Reports per-candidate:
 
 Usage:
     .venv/bin/python experiments/paradigm_alpha_real_archive_eval.py \\
-        --archive experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip \\
-        --output-dir reports/
+        --archive experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip \\
+        --mask-member masks.mkv \\
+        --output-dir experiments/results/alpha_mask_codec_probe
 
 Tagging:
-    All results stamped with [empirical:reports/...] tag.
+    All results are empirical/no-score outputs; exact CUDA archive eval is
+    required before score or promotion claims.
     NO scorer load (CLAUDE.md compliant for compress-time-only path).
 """
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import subprocess
 import sys
 import tempfile
 import zipfile
 from pathlib import Path
+from pathlib import PurePosixPath
 
 import numpy as np
 import torch
@@ -54,6 +58,63 @@ from tac.vqvae_mask_codec import (  # noqa: E402
     encode_vqvae_codec,
 )
 from tac.mask_grayscale_lut import CLASS_TO_GRAY  # noqa: E402
+
+ORIGINAL_VIDEO_BYTES = 37_545_489
+DEFAULT_PFP16_A_PLUS_PLUS_ARCHIVE = (
+    _REPO
+    / "experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip"
+)
+
+
+def _sha256_bytes(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def _sha256_file(path: Path, *, chunk_size: int = 1024 * 1024) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(chunk_size), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _validated_zip_infos(zf: zipfile.ZipFile) -> dict[str, zipfile.ZipInfo]:
+    infos: dict[str, zipfile.ZipInfo] = {}
+    for info in zf.infolist():
+        member_path = PurePosixPath(info.filename)
+        parts = member_path.parts
+        if info.filename in infos:
+            raise ValueError(f"duplicate archive member: {info.filename!r}")
+        if info.is_dir() or member_path.is_absolute() or ".." in parts:
+            raise ValueError(f"unsafe archive member path: {info.filename!r}")
+        if (
+            "__MACOSX" in parts
+            or ".DS_Store" in parts
+            or "Thumbs.db" in parts
+            or any(part.startswith("._") or part.startswith(".") for part in parts)
+        ):
+            raise ValueError(f"hidden/system archive member: {info.filename!r}")
+        infos[info.filename] = info
+    return infos
+
+
+def _read_archive_member(archive: Path, member: str) -> tuple[bytes, dict]:
+    member_path = PurePosixPath(member)
+    if member_path.is_absolute() or ".." in member_path.parts:
+        raise ValueError(f"unsafe requested archive member: {member!r}")
+    with zipfile.ZipFile(archive, "r") as zf:
+        infos = _validated_zip_infos(zf)
+        if member not in infos:
+            raise FileNotFoundError(f"{archive} missing archive member {member!r}")
+        data = zf.read(member)
+        info = infos[member]
+    return data, {
+        "archive_member_requested": member,
+        "archive_member_resolved": member,
+        "archive_member_size_bytes": int(info.file_size),
+        "archive_member_compressed_bytes": int(info.compress_size),
+        "archive_member_sha256": _sha256_bytes(data),
+    }
 
 
 def _decode_masks_mkv(mkv: Path) -> torch.Tensor:
@@ -86,6 +147,23 @@ def _decode_masks_mkv(mkv: Path) -> torch.Tensor:
     classes = np.round(pixels.astype(np.float32) / scale).astype(np.int64)
     classes = np.clip(classes, 0, 4)
     return torch.from_numpy(classes)
+
+
+def _load_archive_masks(archive: Path, member: str) -> tuple[torch.Tensor, dict]:
+    data, member_meta = _read_archive_member(archive, member)
+    with tempfile.TemporaryDirectory() as td:
+        local_member = Path(td) / PurePosixPath(member).name
+        local_member.write_bytes(data)
+        masks = _decode_masks_mkv(local_member)
+    meta = {
+        "archive": str(archive),
+        "archive_size_bytes": int(archive.stat().st_size),
+        "archive_sha256": _sha256_file(archive),
+        **member_meta,
+        "decoded_mask_shape": [int(v) for v in masks.shape],
+        "decoded_mask_dtype": str(masks.dtype),
+    }
+    return masks, meta
 
 
 def _encode_grayscale_av1(masks: torch.Tensor, output_path: Path, *, crf: int = 50) -> int:
@@ -197,8 +275,9 @@ def main() -> int:
     p.add_argument(
         "--archive",
         type=Path,
-        default=_REPO / "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
+        default=DEFAULT_PFP16_A_PLUS_PLUS_ARCHIVE,
     )
+    p.add_argument("--mask-member", default="masks.mkv")
     p.add_argument(
         "--output-dir",
         type=Path,
@@ -212,17 +291,14 @@ def main() -> int:
     )
     args = p.parse_args()
 
-    # Load real masks from Lane G v3 archive
-    print(f"[load] decoding masks from {args.archive}...", flush=True)
-    with tempfile.TemporaryDirectory() as td:
-        td_path = Path(td)
-        with zipfile.ZipFile(args.archive) as z:
-            z.extractall(td_path)
-        masks_mkv = td_path / "masks.mkv"
-        if not masks_mkv.exists():
-            raise FileNotFoundError(f"archive missing masks.mkv: {args.archive}")
-        baseline_av1_bytes = masks_mkv.stat().st_size
-        masks = _decode_masks_mkv(masks_mkv)
+    # Load real masks from the exact archive member without extracting the
+    # whole ZIP. This keeps Alpha probes zip-slip-safe and custody-specific.
+    print(
+        f"[load] decoding {args.mask_member} from {args.archive}...",
+        flush=True,
+    )
+    masks, source_meta = _load_archive_masks(args.archive, args.mask_member)
+    baseline_av1_bytes = int(source_meta["archive_member_size_bytes"])
 
     print(f"[load] masks shape: {tuple(masks.shape)}, dtype: {masks.dtype}", flush=True)
     print(f"[load] baseline AV1 masks.mkv = {baseline_av1_bytes:,} bytes", flush=True)
@@ -231,7 +307,21 @@ def main() -> int:
     args.output_dir.mkdir(parents=True, exist_ok=True)
     candidates = args.candidates.split(",")
     results = {
+        "schema": "paradigm_alpha_real_archive_eval_v2",
+        "evidence_grade": "empirical",
+        "promotion_eligible": False,
+        "score_claim_eligible": False,
+        "exact_eval_claim": False,
+        "scorer_network_loaded": False,
+        "score_source_required": (
+            "archive.zip -> inflate.sh -> upstream/evaluate.py via "
+            "experiments/contest_auth_eval.py --device cuda"
+        ),
         "archive": str(args.archive),
+        "archive_sha256": source_meta["archive_sha256"],
+        "archive_size_bytes": source_meta["archive_size_bytes"],
+        "mask_member": args.mask_member,
+        "mask_source": source_meta,
         "baseline_av1_bytes": baseline_av1_bytes,
         "masks_shape": list(masks.shape),
         "candidates": {},
@@ -241,6 +331,9 @@ def main() -> int:
         r = _eval_alpha2_wavelet(masks, args.output_dir / "alpha2_wavelet_artifacts")
         r["bytes_saved_vs_av1"] = baseline_av1_bytes - r["encoded_bytes"]
         r["pct_savings_vs_av1"] = round(100 * (1 - r["encoded_bytes"] / baseline_av1_bytes), 2)
+        r["raw_payload_rate_term_delta_vs_av1"] = round(
+            -25 * r["bytes_saved_vs_av1"] / ORIGINAL_VIDEO_BYTES, 12
+        )
         results["candidates"]["alpha2_wavelet"] = r
         print(f"[α2 wavelet] {r['encoded_bytes']:,} bytes → {r['pct_savings_vs_av1']}% saved, agreement {r['argmax_agreement_vs_source']:.4f}", flush=True)
 
@@ -248,6 +341,9 @@ def main() -> int:
         r = _eval_alpha3_vqvae(masks, args.output_dir / "alpha3_vqvae_artifacts")
         r["bytes_saved_vs_av1"] = baseline_av1_bytes - r["encoded_bytes"]
         r["pct_savings_vs_av1"] = round(100 * (1 - r["encoded_bytes"] / baseline_av1_bytes), 2)
+        r["raw_payload_rate_term_delta_vs_av1"] = round(
+            -25 * r["bytes_saved_vs_av1"] / ORIGINAL_VIDEO_BYTES, 12
+        )
         results["candidates"]["alpha3_vqvae"] = r
         print(f"[α3 vqvae] {r['encoded_bytes']:,} bytes → {r['pct_savings_vs_av1']}% saved, agreement {r['argmax_agreement_vs_source']:.4f}", flush=True)
 
@@ -255,6 +351,9 @@ def main() -> int:
         r = _eval_alpha4_grayscale_lut(masks, args.output_dir / "alpha4_grayscale_artifacts")
         r["bytes_saved_vs_av1"] = baseline_av1_bytes - r["encoded_bytes"]
         r["pct_savings_vs_av1"] = round(100 * (1 - r["encoded_bytes"] / baseline_av1_bytes), 2)
+        r["raw_payload_rate_term_delta_vs_av1"] = round(
+            -25 * r["bytes_saved_vs_av1"] / ORIGINAL_VIDEO_BYTES, 12
+        )
         results["candidates"]["alpha4_grayscale_lut"] = r
         print(f"[α4 grayscale-LUT] {r['encoded_bytes']:,} bytes → {r['pct_savings_vs_av1']}% saved, agreement {r['argmax_agreement_vs_source']:.4f}", flush=True)
 

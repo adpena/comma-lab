@@ -402,6 +402,70 @@ def test_inflate_shim_drops_mask_t_invariant(tmp_path) -> None:
     )
 
 
+def test_quantizr_qzs3_codec_roundtrip_loads(tmp_path) -> None:
+    """QZS3 is the compact PR #67-style packer for JointFrameGenerator."""
+    from tac.quantizr_faithful_export import save_qfai
+    from tac.quantizr_qzs3_codec import encode_qzs3_state_dict, load_qzs3
+
+    torch.manual_seed(17)
+    model_a = build_quantizr_faithful_renderer().eval()
+    qfai_path = tmp_path / "model.qfai.bin"
+    save_qfai(model_a, qfai_path)
+
+    payload = encode_qzs3_state_dict(model_a)
+    assert payload[:4] == b"QZS3"
+    assert len(payload) < qfai_path.stat().st_size
+
+    model_b = load_qzs3(payload, device="cpu").eval()
+    assert isinstance(model_b, JointFrameGenerator)
+    assert list(model_b.state_dict()) == list(model_a.state_dict())
+    for tensor in model_b.state_dict().values():
+        if torch.is_floating_point(tensor):
+            assert torch.isfinite(tensor).all()
+
+    mask2 = torch.randint(0, 5, (1, 384, 512), dtype=torch.long)
+    pose6 = torch.randn(1, 6)
+    with torch.no_grad():
+        f1, f2 = model_b(mask2, pose6)
+    assert f1.shape == (1, 3, 384, 512)
+    assert f2.shape == (1, 3, 384, 512)
+    assert torch.isfinite(f1).all()
+    assert torch.isfinite(f2).all()
+
+
+def test_inflate_shim_loads_qzs3(tmp_path) -> None:
+    """The contest inflate loader recognizes QZS3 renderer.bin payloads."""
+    from tac.quantizr_qzs3_codec import encode_qzs3_state_dict
+
+    torch.manual_seed(19)
+    model = build_quantizr_faithful_renderer().eval()
+    out_path = tmp_path / "renderer.bin"
+    out_path.write_bytes(encode_qzs3_state_dict(model))
+
+    import importlib.util
+    inflate_path = (
+        Path(__file__).resolve().parents[3]
+        / "submissions" / "robust_current" / "inflate_renderer.py"
+    )
+    spec = importlib.util.spec_from_file_location("_inflate_under_test_qzs3", inflate_path)
+    inflate_mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(inflate_mod)
+
+    wrapped = inflate_mod._load_renderer(str(out_path), device="cpu")
+
+    assert getattr(wrapped, "q_faithful", False)
+    assert inflate_mod._is_asymmetric_model(wrapped)
+    assert wrapped.pose_dim == 6
+
+    mask_t = torch.zeros(1, 384, 512, dtype=torch.long)
+    mask_t1 = torch.randint(0, 5, (1, 384, 512), dtype=torch.long)
+    pose = torch.randn(1, 6)
+    with torch.no_grad():
+        pair = wrapped(mask_t, mask_t1, pose=pose)
+    assert pair.shape == (1, 2, 384, 512, 3), pair.shape
+    assert torch.isfinite(pair).all()
+
+
 # Keep imports needed for the inflate-shim tests at module level so they
 # error early if the path resolves wrong.
 from pathlib import Path  # noqa: E402  (intentional bottom import)

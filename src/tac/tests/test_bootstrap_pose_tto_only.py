@@ -126,3 +126,10 @@ def test_archive_input_files_asserted(script_text: str):
     assert "assert os.path.isfile" in block, (
         "zipfile builder must assert each input file exists"
     )
+
+
+def test_ensurepip_is_guarded_by_pip_import_check(script_text: str):
+    ensurepip_idx = script_text.index("ensurepip --upgrade")
+    guard_window = script_text[max(0, ensurepip_idx - 260):ensurepip_idx]
+    assert "import pip" in guard_window
+    assert "if !" in guard_window

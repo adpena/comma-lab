@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import argparse
+import difflib
 import importlib.metadata as importlib_metadata
 import json
 import os
 import re
+import signal
 import shlex
 import subprocess
 import sys
@@ -22,8 +24,13 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 os.environ.setdefault("LIGHTNING_DISABLE_VERSION_CHECK", "1")
 
 from tac.deploy.lightning.batch_jobs import (  # noqa: E402
+    ARTIFACT_INFRA_FAILURE,
+    ARTIFACT_VALIDATION,
+    LIGHTNING_BATCH_STATE,
+    LIGHTNING_MISSING_EXACT_EVAL_JSON_TERMINAL_CLASS,
     LightningAdjudicationSpec,
     LightningBatchJobsClient,
+    LightningStudioCloudAccountMismatchError,
     archive_identity,
     make_diagnostic_component_sensitivity_spec,
     make_exact_eval_spec,
@@ -37,7 +44,9 @@ from tac.deploy.lightning.batch_jobs import (  # noqa: E402
     validate_local_component_sensitivity_artifact_dir,
     validate_local_component_response_artifact_dir,
     validate_local_artifact_dir,
+    validate_studio_machine_class_pair,
 )
+from tac.public_submission_refs import parse_public_pr_refs_csv  # noqa: E402
 
 SSH_AUTH_OPTIONS = (
     "-o",
@@ -67,6 +76,118 @@ SSH_TRANSIENT_FAILURE_PATTERNS = (
 SSH_TRANSIENT_RETRY_ATTEMPTS = 4
 SSH_TRANSIENT_RETRY_INITIAL_DELAY_S = 2.0
 
+_EXACT_EVAL_PRE_SCORE_FAILURES = (
+    {
+        "terminal_class": "archive_validator_whitelist_block",
+        "failure_class": "archive_validation_failure_before_score",
+        "score_source": "none:archive_validator_whitelist_block",
+        "reason": (
+            "auth_eval.log shows the archive validator rejected a member or "
+            "extension before contest_auth_eval.json could be written"
+        ),
+        "needles": (
+            ("archive validator", "whitelist"),
+            ("archive validator", "allowlist"),
+            ("not in", "whitelist"),
+            ("not in", "allowlist"),
+            ("unexpected archive member",),
+            ("archive member", "not allowed"),
+        ),
+    },
+    {
+        "terminal_class": "pr86_constriction_hpac_invalid_entropy_model",
+        "failure_class": "archive_runtime_decode_failure_before_score",
+        "score_source": "none:pr86_constriction_hpac_invalid_entropy_model",
+        "reason": (
+            "auth_eval.log shows PR86/constriction HPAC rejected an invalid "
+            "entropy model before scoring"
+        ),
+        "needles": (
+            ("pr86", "hpac", "invalid entropy model"),
+            ("constriction", "hpac", "invalid entropy model"),
+            ("hpac", "invalid entropy model"),
+        ),
+    },
+    {
+        "terminal_class": "inflate_returncode_failure",
+        "failure_class": "inflate_failure_before_score",
+        "score_source": "none:inflate_returncode_failure",
+        "reason": (
+            "auth_eval.log shows inflate.sh or the inflate stage returned "
+            "non-zero before contest_auth_eval.json could be written"
+        ),
+        "needles": (
+            ("inflate", "returncode"),
+            ("inflate", "return code"),
+            ("inflate", "returned non-zero"),
+            ("inflate.sh", "non-zero exit status"),
+            ("inflate.sh", "returned non-zero"),
+            ("inflate failed",),
+        ),
+    },
+)
+
+_AUTH_LOG_SNIPPET_BYTES = 4096
+
+_STALE_REMOTE_ARG_HINTS = {
+    "--remote": "--remote-preflight-ssh-target for submit preflight, or scripts/lightning_exact_eval_repro.py --remote at the wrapper layer",
+    "--rmote": "--remote in scripts/lightning_exact_eval_repro.py, or --remote-preflight-ssh-target in this launcher",
+    "--remote-preflight-target": "--remote-preflight-ssh-target",
+    "--remote-ssh-target": "--remote-preflight-ssh-target",
+    "--ssh": "--ssh-target for harvest/doctor, or --remote-preflight-ssh-target for submit preflight",
+    "--ssh-alias": "--ssh-target for harvest/doctor, or --remote-preflight-ssh-target for submit preflight",
+    "--required-device": "belongs to scripts/adjudicate_contest_auth_eval.py; launch_lightning_batch_job.py exact-eval emits it internally when --adjudicate is used",
+    "--required-samples": "belongs to scripts/adjudicate_contest_auth_eval.py; launch_lightning_batch_job.py exact-eval emits it internally when --adjudicate is used",
+}
+
+
+def _iter_parser_option_strings(parser: argparse.ArgumentParser) -> list[str]:
+    options: set[str] = set()
+    stack = [parser]
+    while stack:
+        current = stack.pop()
+        for action in current._actions:
+            options.update(action.option_strings)
+            if isinstance(action, argparse._SubParsersAction):
+                stack.extend(action.choices.values())
+    return sorted(options)
+
+
+def _unknown_arg_diagnostic(message: str, parser: argparse.ArgumentParser) -> str | None:
+    prefix = "unrecognized arguments:"
+    if prefix not in message:
+        return None
+    unknown = [item for item in message.split(prefix, 1)[1].split() if item.startswith("-")]
+    if not unknown:
+        return None
+    known = _iter_parser_option_strings(parser)
+    lines = ["Strict argparse rejected unknown option(s); use the real parser surface below:"]
+    for item in unknown:
+        stale_hint = _STALE_REMOTE_ARG_HINTS.get(item)
+        nearest = difflib.get_close_matches(item, known, n=3, cutoff=0.62)
+        if stale_hint:
+            lines.append(f"  {item}: {stale_hint}")
+        elif nearest:
+            lines.append(f"  {item}: did you mean {', '.join(nearest)}?")
+        else:
+            lines.append(f"  {item}: no close known option")
+    lines.append("Known options include: " + ", ".join(known[:80]))
+    if len(known) > 80:
+        lines.append(f"... plus {len(known) - 80} more; run the subcommand with --help for the scoped surface.")
+    return "\n".join(lines)
+
+
+class StrictArgumentParser(argparse.ArgumentParser):
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        kwargs.setdefault("allow_abbrev", False)
+        super().__init__(*args, **kwargs)
+
+    def error(self, message: str) -> None:
+        diagnostic = _unknown_arg_diagnostic(message, self)
+        if diagnostic:
+            message = message + "\n" + diagnostic
+        super().error(message)
+
 
 def _utc_now() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
@@ -94,10 +215,131 @@ def _parse_metadata_kv(items: list[str]) -> dict[str, str]:
 
 def _queue_metadata_from_args(args: argparse.Namespace) -> dict[str, str]:
     metadata = _parse_metadata_kv(args.queue_metadata)
+    source_prs = metadata.get("source_prs") or metadata.get("source_public_prs")
+    if source_prs:
+        refs = parse_public_pr_refs_csv(source_prs)
+        metadata["source_prs"] = ",".join(refs.keys())
+        metadata["source_pr_urls"] = ",".join(str(ref["url"]) for ref in refs.values())
     reason = getattr(args, "allow_skip_remote_preflight_reason", None)
     if reason:
         metadata["remote_preflight_skip_reason"] = str(reason).strip()
+    claim_reason = getattr(args, "allow_missing_dispatch_claim_reason", None)
+    if claim_reason:
+        metadata["dispatch_claim_skip_reason"] = str(claim_reason).strip()
     return metadata
+
+
+_DISPATCH_CLAIMS_PATH = Path(".omx/state/active_lane_dispatch_claims.md")
+_DISPATCH_CLAIM_TERMINAL_PREFIXES = (
+    "completed_",
+    "completed_score=",
+    "completed_no_frontier",
+    "failed_",
+    "preempted",
+    "cancelled",
+    "refused_dispatch",
+    "stale_assumed_dead",
+    "stale_superseded",
+    "stopped_",
+)
+
+
+def _dispatch_claim_status_is_terminal(status: str) -> bool:
+    return any(status.startswith(prefix) for prefix in _DISPATCH_CLAIM_TERMINAL_PREFIXES)
+
+
+def _read_dispatch_claim_rows(path: Path) -> list[dict[str, str]]:
+    if not path.exists():
+        return []
+    rows: list[dict[str, str]] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.startswith("| "):
+            continue
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if len(cells) != 8 or cells[0] in {"timestamp_utc", "---"}:
+            continue
+        rows.append(
+            {
+                "timestamp_utc": cells[0],
+                "agent": cells[1],
+                "lane_id": cells[2],
+                "platform": cells[3],
+                "instance_job_id": cells[4],
+                "predicted_eta_utc": cells[5],
+                "status": cells[6],
+                "notes": cells[7],
+            }
+        )
+    return rows
+
+
+def _require_dispatch_claim_for_submit(args: argparse.Namespace, *, role: str) -> None:
+    if getattr(args, "dry_run", False):
+        return
+    if not getattr(args, "studio", None):
+        return
+    metadata = _parse_metadata_kv(getattr(args, "queue_metadata", []) or [])
+    lane_id = (getattr(args, "dispatch_lane_id", None) or metadata.get("lane") or metadata.get("lane_id") or "").strip()
+    skip_reason = (getattr(args, "allow_missing_dispatch_claim_reason", None) or "").strip()
+    if not lane_id:
+        if skip_reason:
+            return
+        raise SystemExit(
+            f"{role} Studio submit requires --dispatch-lane-id or --queue-metadata lane=... "
+            "plus a matching active .omx/state/active_lane_dispatch_claims.md row"
+        )
+    claims_path = Path(getattr(args, "dispatch_claims_path", None) or _DISPATCH_CLAIMS_PATH)
+    job_name = str(getattr(args, "job_name", "")).strip()
+    acceptable_job_ids = {job_name}
+    if job_name:
+        acceptable_job_ids.add(lightning_sdk_job_name(job_name))
+    closed_job_ids: set[str] = set()
+    for row in _read_dispatch_claim_rows(claims_path):
+        if row["lane_id"] != lane_id:
+            continue
+        if row["platform"].lower() != "lightning":
+            continue
+        if row["instance_job_id"] not in acceptable_job_ids:
+            continue
+        if _dispatch_claim_status_is_terminal(row["status"]):
+            closed_job_ids.add(row["instance_job_id"])
+            continue
+        if row["instance_job_id"] in closed_job_ids:
+            continue
+        return
+    if skip_reason:
+        return
+    raise SystemExit(
+        f"{role} Studio submit blocked: missing active dispatch claim for lane_id={lane_id} "
+        f"job_name={job_name} in {claims_path}. Run tools/claim_lane_dispatch.py claim first, "
+        "or pass --allow-missing-dispatch-claim-reason for an auditable break-glass override."
+    )
+
+
+def _require_lightning_identity_for_studio_submit(args: argparse.Namespace, *, role: str) -> None:
+    if getattr(args, "dry_run", False):
+        return
+    if not getattr(args, "studio", None):
+        if getattr(args, "image", None):
+            return
+        raise SystemExit(
+            f"{role} non-dry-run Lightning submit requires explicit --studio "
+            "or --image. Do not rely on SDK autodetection; pass --studio, "
+            "--teamspace, and --user/--org for Studio-backed jobs."
+        )
+    if not getattr(args, "teamspace", None):
+        raise SystemExit(
+            f"{role} Studio submit requires --teamspace. "
+            "Pass --studio, --teamspace, and --user/--org explicitly so the "
+            "Lightning SDK namespace is deterministic before remote preflight."
+        )
+    if getattr(args, "org", None) or getattr(args, "user", None):
+        return
+    raise SystemExit(
+        f"{role} Studio submit with --teamspace requires --user or --org. "
+        "Lightning SDK cannot resolve user-owned teamspaces from a bare teamspace name; "
+        "pass --user <lightning-user> or --org <lightning-org> before remote preflight."
+    )
 
 
 def _state_path(args: argparse.Namespace) -> Path | None:
@@ -109,6 +351,18 @@ def _client(args: argparse.Namespace) -> LightningBatchJobsClient:
     if state_path is None:
         return LightningBatchJobsClient()
     return LightningBatchJobsClient(state_path=state_path)
+
+
+def _submit_lightning_or_exit(
+    client: LightningBatchJobsClient,
+    spec: object,
+    *,
+    dry_run: bool,
+) -> dict[str, object]:
+    try:
+        return client.submit(spec, dry_run=dry_run)
+    except LightningStudioCloudAccountMismatchError as exc:
+        raise SystemExit(str(exc)) from None
 
 
 def _adjudication_from_args(args: argparse.Namespace) -> LightningAdjudicationSpec | None:
@@ -150,6 +404,9 @@ def _adjudication_from_args(args: argparse.Namespace) -> LightningAdjudicationSp
         max_sane_score=args.max_sane_score,
         allow_component_gate_forensic_success=(
             not args.fail_job_on_component_gate
+        ),
+        allow_sane_score_forensic_success=(
+            not args.fail_job_on_sane_score_gate
         ),
     )
 
@@ -229,12 +486,245 @@ def _manifest_repo_paths(manifest: dict[str, object], *, manifest_path: Path) ->
     return paths
 
 
+def _default_exact_eval_inflate_sh(args: argparse.Namespace) -> str:
+    return str(getattr(args, "inflate_sh", None) or "submissions/robust_current/inflate.sh")
+
+
+def _exact_eval_runtime_requirements(args: argparse.Namespace) -> set[str]:
+    required: set[str] = set()
+    inflate_rel = _remote_repo_rel(_default_exact_eval_inflate_sh(args), repo_dir=args.repo_dir)
+    if inflate_rel is None:
+        raise SystemExit("--inflate-sh must be inside --repo-dir for exact-eval Studio submit")
+    required.add(inflate_rel)
+    inflate_path = PurePosixPath(inflate_rel)
+    local_config_env = Path(REPO_ROOT) / str(inflate_path.parent / "config.env")
+    if inflate_rel == "submissions/robust_current/inflate.sh" or local_config_env.is_file():
+        required.add(_safe_remote_repo_rel(str(inflate_path.parent / "config.env"), field="inflate config.env"))
+    if inflate_rel != "submissions/robust_current/inflate.sh":
+        runtime_dir = Path(REPO_ROOT) / str(inflate_path.parent)
+        if runtime_dir.is_dir():
+            for child in sorted(runtime_dir.iterdir()):
+                if not child.is_file() or child.name.startswith(".") or child.name.startswith("._"):
+                    continue
+                required.add(
+                    _safe_remote_repo_rel(
+                        str(inflate_path.parent / child.name),
+                        field=f"external inflate runtime sibling {child.name}",
+                    )
+                )
+    return required
+
+
+_SOURCE_EMBEDDED_PAYLOAD_LITERAL_RE = re.compile(
+    r"(?:b64decode|b85decode|a85decode|brotli\.decompress|lzma\.decompress|zlib\.decompress)\s*\(\s*([rubfRUBF]*[\"'])(?P<payload>.{65536,}?)(?<!\\)\1",
+    re.DOTALL,
+)
+
+
+def _validate_no_source_embedded_payload_runtime(
+    args: argparse.Namespace,
+    *,
+    archive_rel: str,
+    runtime_rels: set[str],
+) -> None:
+    """Block public-replay exact evals that move charged payload into source.
+
+    Public PR intake often replays external inflate runtimes for forensics. That
+    is useful, but a tiny archive plus a giant base85/base64 Python literal is
+    not a contest-faithful archive candidate for this repo: the score-affecting
+    bytes are in runtime source, not archive.zip. Keep this guard in the submit
+    path so a loophole replay cannot accidentally become promotion evidence.
+    """
+    if _remote_repo_rel(_default_exact_eval_inflate_sh(args), repo_dir=args.repo_dir) == "submissions/robust_current/inflate.sh":
+        return
+    waiver = str(getattr(args, "allow_source_embedded_payload_runtime_reason", "") or "").strip()
+    archive_path = Path(REPO_ROOT) / archive_rel
+    try:
+        archive_bytes = archive_path.stat().st_size
+    except OSError:
+        archive_bytes = 0
+    violations: list[str] = []
+    runtime_source_bytes = 0
+    for rel in sorted(runtime_rels):
+        path = Path(REPO_ROOT) / rel
+        if not path.is_file() or path.suffix.lower() not in {".py", ".sh"}:
+            continue
+        try:
+            raw = path.read_bytes()
+        except OSError:
+            continue
+        runtime_source_bytes += len(raw)
+        if path.suffix.lower() == ".py":
+            text = raw.decode("utf-8", errors="ignore")
+            match = _SOURCE_EMBEDDED_PAYLOAD_LITERAL_RE.search(text)
+            if match:
+                violations.append(
+                    f"{rel} contains a >=64KiB encoded/decompressed string literal"
+                )
+    if archive_bytes and archive_bytes <= 1024 and runtime_source_bytes > 64 * 1024:
+        violations.append(
+            f"archive is {archive_bytes} bytes but external inflate source is "
+            f"{runtime_source_bytes} bytes"
+        )
+    if violations and not waiver:
+        raise SystemExit(
+            "exact-eval submit blocked; external inflate runtime appears to "
+            "carry source-embedded payload bytes instead of charging them in "
+            "archive.zip: "
+            + "; ".join(violations)
+            + ". Quarantine as invalid/external or pass "
+            "--allow-source-embedded-payload-runtime-reason with an auditable "
+            "forensic-only reason."
+        )
+
+
+def _validate_t4_exact_eval_runtime_env(args: argparse.Namespace) -> None:
+    machine = str(getattr(args, "machine", "") or "").lower()
+    if "t4" not in machine and "g4dn" not in machine:
+        return
+    env = _parse_env_kv(getattr(args, "env", []) or [])
+    torch_spec = str(env.get("INFLATE_TORCH_SPEC", "")).strip()
+    if not torch_spec:
+        raise SystemExit(
+            "T4/g4dn exact-eval submit blocked; pass --env INFLATE_TORCH_SPEC=... "
+            "so inflate-side torch cannot resolve to a CUDA-13 wheel on an older driver"
+        )
+    if "+cu124" in torch_spec:
+        extra_index = str(env.get("UV_EXTRA_INDEX_URL", "")).strip()
+        strategy = str(env.get("UV_INDEX_STRATEGY", "")).strip()
+        if "download.pytorch.org/whl/cu124" not in extra_index or strategy != "unsafe-best-match":
+            raise SystemExit(
+                "T4/g4dn exact-eval submit blocked; cu124 torch pin requires "
+                "--env UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu124 "
+                "and --env UV_INDEX_STRATEGY=unsafe-best-match"
+            )
+
+
+def _validate_exact_eval_archive_payload_preflight(args: argparse.Namespace) -> None:
+    inflate_rel = _remote_repo_rel(_default_exact_eval_inflate_sh(args), repo_dir=args.repo_dir)
+    if inflate_rel != "submissions/robust_current/inflate.sh":
+        return
+    archive = Path(args.archive)
+    if not archive.is_file():
+        archive_rel = _remote_repo_rel(args.archive, repo_dir=args.repo_dir)
+        if archive_rel is not None:
+            archive = Path(REPO_ROOT) / archive_rel
+    if not archive.is_file():
+        return
+    from tac.submission_archive import validate_archive_seg_tile_actions_payloads
+
+    try:
+        errors = validate_archive_seg_tile_actions_payloads(archive)
+    except Exception as exc:
+        raise SystemExit(
+            "exact-eval submit blocked; seg_tile_actions preflight crashed before GPU dispatch: "
+            f"{exc}"
+        ) from exc
+    if errors:
+        detail = "; ".join(errors[:8])
+        raise SystemExit(
+            "exact-eval submit blocked; seg_tile_actions preflight rejected candidate "
+            f"before GPU dispatch: {detail}"
+        )
+
+
+def _validate_archive_manifest_dispatch_gate(args: argparse.Namespace) -> None:
+    archive = Path(args.archive)
+    if not archive.is_file():
+        archive_rel = _remote_repo_rel(args.archive, repo_dir=args.repo_dir)
+        if archive_rel is not None:
+            archive = Path(REPO_ROOT) / archive_rel
+    if not archive.is_file():
+        return
+    manifest_path = archive.with_name("manifest.json")
+    if not manifest_path.is_file():
+        return
+    manifest = _load_json_object(manifest_path, label="candidate archive manifest")
+    gate = manifest.get("exact_eval_dispatch_gate")
+    if not isinstance(gate, dict):
+        return
+    if gate.get("required") is not True:
+        return
+    if gate.get("safe_for_exact_eval_dispatch") is True:
+        return
+    status = gate.get("status") or "unknown"
+    blockers = gate.get("blockers") or []
+    if isinstance(blockers, list):
+        blocker_text = ", ".join(str(item) for item in blockers[:8])
+    else:
+        blocker_text = str(blockers)
+    raise SystemExit(
+        "exact-eval submit blocked; candidate archive manifest exact_eval_dispatch_gate "
+        f"is not safe_for_exact_eval_dispatch=true (status={status}). {blocker_text}"
+    )
+
+
+_STUDIO_SYMBOLIC_MACHINE_SUGGESTIONS = {
+    "H100": "use a concrete Studio-compatible provider class, or submit an image-backed job on a matching cloud account",
+    "H200": "use a concrete Studio-compatible provider class, or submit an image-backed job on a matching cloud account",
+    "A100": "use a concrete Studio-compatible provider class, or submit an image-backed job on a matching cloud account",
+    "A100_SXM4": "use a concrete Studio-compatible provider class, or submit an image-backed job on a matching cloud account",
+    "L40S": "use g6e.4xlarge for the current Studio-backed AWS L40S route",
+    "RTXP_6000": "use g7e.4xlarge for the current Studio-backed RTX PRO route",
+    "RTXP_6000_X_2": "use g7e.12xlarge for the current Studio-backed dual RTX PRO route",
+}
+_STUDIO_GCP_MACHINE_PREFIXES = (
+    "a2-",
+    "a3-",
+    "a4-",
+    "g2-",
+    "g4-standard-",
+    "n1-",
+    "v5",
+    "v6",
+)
+
+
+def _validate_studio_machine_for_submit(args: argparse.Namespace) -> None:
+    if getattr(args, "dry_run", False) or not getattr(args, "studio", None):
+        return
+    machine = str(getattr(args, "machine", "") or "").strip()
+    if not machine:
+        return
+    key = machine.upper()
+    if key in {"T4", "T4_SMALL"}:
+        return
+    suggestion = _STUDIO_SYMBOLIC_MACHINE_SUGGESTIONS.get(key)
+    if suggestion:
+        raise SystemExit(
+            "Studio exact-eval submit blocked; symbolic accelerator "
+            f"{machine!r} can be accepted by inventory but rejected by the "
+            "Studio provider cluster at SDK submit time. "
+            f"{suggestion}. Confirm with `launch_lightning_batch_job.py "
+            "list-machines --teamspace <teamspace> --user <user> --gpu-only`."
+        )
+    lower = machine.lower()
+    if lower.startswith(_STUDIO_GCP_MACHINE_PREFIXES) and not getattr(args, "cloud_account", None):
+        raise SystemExit(
+            "Studio exact-eval submit blocked; GCP machine "
+            f"{machine!r} requires an explicit --cloud-account route. Without "
+            "that route the Lightning SDK may submit through the default AWS "
+            "cluster and fail before job creation."
+        )
+    try:
+        validate_studio_machine_class_pair(
+            machine,
+            cloud_account=getattr(args, "cloud_account", None),
+        )
+    except ValueError as exc:
+        raise SystemExit(f"Studio exact-eval submit blocked; {exc}") from exc
+
+
 def _require_remote_preflight_for_submit(args: argparse.Namespace, *, role: str) -> None:
     if args.dry_run:
         return
     if not args.studio:
         return
-    if args.remote_preflight_ssh_target:
+    blocker = _ssh_target_shape_blocker(
+        getattr(args, "remote_preflight_ssh_target", None),
+        flag="--remote-preflight-ssh-target",
+    )
+    if blocker is None:
         return
     reason = str(getattr(args, "allow_skip_remote_preflight_reason", "") or "").strip()
     if reason:
@@ -242,7 +732,7 @@ def _require_remote_preflight_for_submit(args: argparse.Namespace, *, role: str)
             raise SystemExit("--allow-skip-remote-preflight-reason must be a specific auditable reason")
         return
     raise SystemExit(
-        f"{role} non-dry-run Studio submit requires --remote-preflight-ssh-target. "
+        f"{role} non-dry-run Studio submit blocked: {blocker}. "
         "Use --allow-skip-remote-preflight-reason only for a documented break-glass image-backed "
         "or separately attested custody path."
     )
@@ -382,6 +872,10 @@ def _ensure_ssh_auth_ready(
             lines.extend(identity_lines)
     elif config.stderr.strip():
         lines.append("ssh -G stderr: " + config.stderr.strip())
+        lines.append(
+            "ssh -G failed; this usually means the SSH alias is absent from ~/.ssh/config "
+            "or the target hostname is misspelled."
+        )
     if probe.stderr.strip():
         lines.append("SSH stderr: " + probe.stderr.strip())
     if policy_violations:
@@ -394,6 +888,39 @@ def _ensure_ssh_auth_ready(
         ]
     )
     raise SystemExit("\n".join(lines))
+
+
+def _ssh_target_shape_blocker(target: str | None, *, flag: str) -> str | None:
+    value = str(target or "").strip()
+    if not value:
+        return f"missing {flag}; non-dry-run Studio submit needs an SSH alias for remote preflight"
+    if any(ch in value for ch in "\r\n\0"):
+        return f"{flag} contains control characters"
+    if value == "ssh.lightning.ai":
+        return f"{flag} must be a ~/.ssh/config alias or user-qualified target, not bare ssh.lightning.ai"
+    return None
+
+
+def _remote_submit_readiness(args: argparse.Namespace, *, role: str) -> dict[str, object]:
+    blockers: list[str] = []
+    warnings: list[str] = []
+    if getattr(args, "studio", None):
+        blocker = _ssh_target_shape_blocker(
+            getattr(args, "remote_preflight_ssh_target", None),
+            flag="--remote-preflight-ssh-target",
+        )
+        skip_reason = str(getattr(args, "allow_skip_remote_preflight_reason", "") or "").strip()
+        if blocker and skip_reason:
+            warnings.append(f"{blocker}; break-glass skip reason is present")
+        elif blocker:
+            blockers.append(blocker)
+    return {
+        "ok": not blockers,
+        "role": role,
+        "blockers": blockers,
+        "warnings": warnings,
+        "required_ssh_flag": "--remote-preflight-ssh-target",
+    }
 
 
 def _safe_artifact_stem(value: str) -> str:
@@ -731,6 +1258,7 @@ def _validate_exact_eval_submit_inputs(args: argparse.Namespace) -> None:
         return
     if not args.studio:
         return
+    _validate_studio_machine_for_submit(args)
     if not args.source_manifest:
         raise SystemExit(
             "exact-eval non-dry-run Studio submit requires --source-manifest from "
@@ -747,6 +1275,20 @@ def _validate_exact_eval_submit_inputs(args: argparse.Namespace) -> None:
             "exact-eval submit blocked; staged source manifest does not include "
             f"archive artifact: {archive_rel}"
         )
+    runtime_reqs = _exact_eval_runtime_requirements(args)
+    runtime_missing = sorted(runtime_reqs.difference(manifest_paths))
+    if runtime_missing:
+        raise SystemExit(
+            "exact-eval submit blocked; staged source manifest does not include "
+            "inflate runtime closure: " + ", ".join(runtime_missing)
+        )
+    _validate_no_source_embedded_payload_runtime(
+        args,
+        archive_rel=archive_rel,
+        runtime_rels=runtime_reqs,
+    )
+    _validate_exact_eval_archive_payload_preflight(args)
+    _validate_archive_manifest_dispatch_gate(args)
     metadata = _parse_metadata_kv(getattr(args, "queue_metadata", []) or [])
     baseline_json = metadata.get("baseline_json") or metadata.get("baseline_contest_auth_eval_json")
     if baseline_json:
@@ -758,6 +1300,72 @@ def _validate_exact_eval_submit_inputs(args: argparse.Namespace) -> None:
                 "exact-eval submit blocked; staged source manifest does not include "
                 f"metadata baseline_json artifact: {baseline_json_rel}"
             )
+    archive_manifest = metadata.get("archive_manifest") or metadata.get("cdo1_manifest")
+    if archive_manifest:
+        archive_manifest_rel = _remote_repo_rel(archive_manifest, repo_dir=args.repo_dir)
+        if archive_manifest_rel is None:
+            raise SystemExit("exact-eval metadata archive_manifest must be inside --repo-dir")
+        if archive_manifest_rel not in manifest_paths:
+            raise SystemExit(
+                "exact-eval submit blocked; staged source manifest does not include "
+                f"metadata archive_manifest artifact: {archive_manifest_rel}"
+            )
+        _validate_score_payload_manifest_metadata(
+            Path(REPO_ROOT) / archive_manifest_rel,
+            metadata=metadata,
+        )
+    _validate_t4_exact_eval_runtime_env(args)
+
+
+def _manifest_cdo1_overlay(manifest: dict[str, object]) -> dict[str, object] | None:
+    overlay = manifest.get("cdo1_overlay")
+    if isinstance(overlay, dict):
+        return overlay
+    archive_report = manifest.get("archive_report")
+    if isinstance(archive_report, dict):
+        nested = archive_report.get("cdo1_overlay")
+        if isinstance(nested, dict):
+            return nested
+    return None
+
+
+def _validate_score_payload_manifest_metadata(
+    manifest_path: Path,
+    *,
+    metadata: dict[str, str],
+) -> None:
+    if not manifest_path.is_file():
+        raise SystemExit(f"metadata archive_manifest is not readable locally: {manifest_path}")
+    manifest = _load_json_object(manifest_path, label="score payload archive manifest")
+    cdo1_overlay = _manifest_cdo1_overlay(manifest)
+    if cdo1_overlay is None:
+        return
+    pair_index_basis = cdo1_overlay.get("pair_index_basis")
+    if not isinstance(pair_index_basis, str) or not pair_index_basis:
+        raise SystemExit(
+            "exact-eval submit blocked; CDO1 archive manifest must record "
+            "cdo1_overlay.pair_index_basis"
+        )
+    if pair_index_basis not in {"half_frame_pair_index", "video_frame_pair_index"}:
+        raise SystemExit(
+            "exact-eval submit blocked; CDO1 archive manifest has invalid "
+            f"pair_index_basis={pair_index_basis!r}"
+        )
+    selected_pairs = cdo1_overlay.get("selected_pair_indices")
+    if (
+        not isinstance(selected_pairs, list)
+        or any(isinstance(value, bool) or not isinstance(value, int) for value in selected_pairs)
+    ):
+        raise SystemExit(
+            "exact-eval submit blocked; CDO1 archive manifest must record "
+            "selected_pair_indices as integers"
+        )
+    metadata_basis = metadata.get("pair_index_basis")
+    if metadata_basis and metadata_basis != pair_index_basis:
+        raise SystemExit(
+            "exact-eval submit blocked; queue_metadata pair_index_basis does not "
+            f"match archive manifest: {metadata_basis!r} != {pair_index_basis!r}"
+        )
 
 
 def cmd_exact_eval(args: argparse.Namespace) -> int:
@@ -767,6 +1375,8 @@ def cmd_exact_eval(args: argparse.Namespace) -> int:
             "contest_auth_eval.json custody plus adjudication provenance"
         )
     _validate_exact_eval_submit_inputs(args)
+    _require_dispatch_claim_for_submit(args, role="exact-eval")
+    _require_lightning_identity_for_studio_submit(args, role="exact-eval")
     _require_remote_preflight_for_submit(args, role="exact-eval")
     if not args.dry_run:
         _run_remote_supply_chain_preflight(
@@ -793,20 +1403,29 @@ def cmd_exact_eval(args: argparse.Namespace) -> int:
         teamspace=args.teamspace,
         org=args.org,
         user=args.user,
+        cloud_account=args.cloud_account,
         expected_archive_sha256=expected_sha,
         expected_archive_size_bytes=expected_bytes,
         queue_metadata=_queue_metadata_from_args(args),
         local_artifact_dir=args.local_artifact_dir,
         adjudication=_adjudication_from_args(args),
+        component_trace=args.component_trace,
+        component_trace_top_k=args.component_trace_top_k,
+        inflate_sh=args.inflate_sh,
     )
     client = _client(args)
-    record = client.submit(spec, dry_run=args.dry_run)
+    record = _submit_lightning_or_exit(client, spec, dry_run=args.dry_run)
+    if args.dry_run:
+        record["submit_readiness"] = _remote_submit_readiness(args, role="exact-eval")
     print(json.dumps(record, indent=2, sort_keys=True))
     return 0
 
 
 def cmd_component_response(args: argparse.Namespace) -> int:
     _validate_component_response_submit_inputs(args)
+    _validate_studio_machine_for_submit(args)
+    _require_dispatch_claim_for_submit(args, role="component-response")
+    _require_lightning_identity_for_studio_submit(args, role="component-response")
     _require_remote_preflight_for_submit(args, role="component-response")
     if not args.dry_run:
         _run_remote_supply_chain_preflight(
@@ -834,6 +1453,7 @@ def cmd_component_response(args: argparse.Namespace) -> int:
         teamspace=args.teamspace,
         org=args.org,
         user=args.user,
+        cloud_account=args.cloud_account,
         baseline_contest_auth_eval_json=args.baseline_contest_auth_eval_json,
         inflate_sh=args.inflate_sh,
         video_names_file=args.video_names_file,
@@ -848,13 +1468,18 @@ def cmd_component_response(args: argparse.Namespace) -> int:
         require_passed=args.require_passed,
     )
     client = _client(args)
-    record = client.submit(spec, dry_run=args.dry_run)
+    record = _submit_lightning_or_exit(client, spec, dry_run=args.dry_run)
+    if args.dry_run:
+        record["submit_readiness"] = _remote_submit_readiness(args, role="component-response")
     print(json.dumps(record, indent=2, sort_keys=True))
     return 0
 
 
 def cmd_component_sensitivity(args: argparse.Namespace) -> int:
     _validate_component_sensitivity_submit_inputs(args)
+    _validate_studio_machine_for_submit(args)
+    _require_dispatch_claim_for_submit(args, role="component-sensitivity")
+    _require_lightning_identity_for_studio_submit(args, role="component-sensitivity")
     _require_remote_preflight_for_submit(args, role="component-sensitivity")
     if not args.dry_run:
         _run_remote_supply_chain_preflight(
@@ -881,6 +1506,7 @@ def cmd_component_sensitivity(args: argparse.Namespace) -> int:
         teamspace=args.teamspace,
         org=args.org,
         user=args.user,
+        cloud_account=args.cloud_account,
         video_mkv=args.video,
         pair_weights_path=args.pair_weights,
         expected_baseline_archive_sha256=expected_sha,
@@ -900,7 +1526,9 @@ def cmd_component_sensitivity(args: argparse.Namespace) -> int:
         finite_difference_shard_count=args.finite_difference_shard_count,
     )
     client = _client(args)
-    record = client.submit(spec, dry_run=args.dry_run)
+    record = _submit_lightning_or_exit(client, spec, dry_run=args.dry_run)
+    if args.dry_run:
+        record["submit_readiness"] = _remote_submit_readiness(args, role="component-sensitivity")
     print(json.dumps(record, indent=2, sort_keys=True))
     return 0
 
@@ -1110,6 +1738,146 @@ def cmd_harvest_local(args: argparse.Namespace) -> int:
     return 0
 
 
+def _log_matches_needles(log_lower: str, needles: tuple[tuple[str, ...], ...]) -> bool:
+    return any(all(needle in log_lower for needle in group) for group in needles)
+
+
+def _auth_log_tail_snippet(log_text: str) -> str:
+    encoded = log_text.encode("utf-8", errors="replace")
+    if len(encoded) <= _AUTH_LOG_SNIPPET_BYTES:
+        return log_text
+    return encoded[-_AUTH_LOG_SNIPPET_BYTES:].decode("utf-8", errors="replace")
+
+
+def classify_exact_eval_missing_json_failure_from_auth_log(
+    log_text: str,
+) -> dict[str, object] | None:
+    """Classify precise pre-score exact-eval failures from auth_eval.log.
+
+    This never parses scores from human logs. It only refines missing
+    ``contest_auth_eval.json`` diagnostics when the log identifies why scoring
+    never reached JSON custody.
+    """
+
+    log_lower = log_text.lower()
+    for failure in _EXACT_EVAL_PRE_SCORE_FAILURES:
+        needles = failure["needles"]
+        if _log_matches_needles(log_lower, needles):  # type: ignore[arg-type]
+            return {
+                "terminal_class": failure["terminal_class"],
+                "failure_class": failure["failure_class"],
+                "score_source": failure["score_source"],
+                "reason": failure["reason"],
+                "auth_eval_log_classification": "precise_pre_score_failure",
+                "auth_eval_log_snippet_tail": _auth_log_tail_snippet(log_text),
+            }
+    return {
+        "terminal_class": LIGHTNING_MISSING_EXACT_EVAL_JSON_TERMINAL_CLASS,
+        "failure_class": "runtime_or_harness_failure_before_score_json",
+        "score_source": "none:missing_contest_auth_eval_json",
+        "reason": (
+            "contest_auth_eval.json is missing and auth_eval.log does not match "
+            "a known precise pre-score failure signature"
+        ),
+        "auth_eval_log_classification": "missing_artifacts",
+        "auth_eval_log_snippet_tail": _auth_log_tail_snippet(log_text),
+    }
+
+
+def refine_exact_eval_missing_json_failure(
+    diagnostic: dict[str, object],
+    *,
+    artifact_dir: str | Path | None,
+) -> dict[str, object]:
+    if diagnostic.get("status") != "ARTIFACT_INFRA_FAILURE":
+        return diagnostic
+    if diagnostic.get("terminal_class") != LIGHTNING_MISSING_EXACT_EVAL_JSON_TERMINAL_CLASS:
+        return diagnostic
+    if "contest_auth_eval.json" not in set(diagnostic.get("missing_required_files") or []):
+        return diagnostic
+    if artifact_dir is None:
+        return diagnostic
+    auth_log = Path(artifact_dir) / "auth_eval.log"
+    if not auth_log.is_file():
+        refined = dict(diagnostic)
+        refined.setdefault("failure_class", "runtime_or_harness_failure_before_score_json")
+        refined["auth_eval_log_classification"] = "missing_artifacts"
+        refined["reason"] = (
+            "contest_auth_eval.json is missing and auth_eval.log was not present "
+            "in the harvested artifacts"
+        )
+        return refined
+    classification = classify_exact_eval_missing_json_failure_from_auth_log(
+        auth_log.read_text(encoding="utf-8", errors="replace")
+    )
+    if classification is None:
+        return diagnostic
+    refined = dict(diagnostic)
+    refined.update(classification)
+    refined["classified_at_utc"] = str(diagnostic.get("classified_at_utc") or _utc_now())
+    refined["score_claim"] = False
+    refined["method_evidence"] = False
+    refined["promotion_eligible"] = False
+    refined["evidence_grade"] = "invalid"
+    refined["refined_from_terminal_class"] = LIGHTNING_MISSING_EXACT_EVAL_JSON_TERMINAL_CLASS
+    refined["recommended_action"] = (
+        "Preserve the partial artifacts and logs as a pre-score exact-eval "
+        "failure. Do not rank, retire, promote, or claim score without "
+        "contest_auth_eval.json."
+    )
+    return refined
+
+
+def _replace_latest_harvest_failure_in_state(
+    *,
+    state_path: Path,
+    job_name: str,
+    refined: dict[str, object],
+) -> None:
+    if not state_path.is_file():
+        return
+    client = LightningBatchJobsClient(state_path=state_path)
+
+    def update_record(record: dict[str, object]) -> dict[str, object]:
+        failures = list(record.get("artifact_failures") or [])
+        if failures:
+            failures[-1] = refined
+            record["artifact_failures"] = failures
+        record["status"] = "ARTIFACT_INFRA_FAILURE"
+        if isinstance(refined.get("terminal_class"), str):
+            record["terminal_class"] = refined["terminal_class"]
+        history = list(record.get("status_history") or [])
+        if history and isinstance(history[-1], dict):
+            history[-1]["terminal_class"] = refined.get("terminal_class")
+            history[-1]["source"] = "ssh_artifact_partial_failure_classification"
+        record["status_history"] = history
+        return record
+
+    try:
+        client.replace_latest_record_for_job(job_name, update_record)
+    except KeyError:
+        return
+
+
+def _persist_harvest_failure_refinement(
+    *,
+    args: argparse.Namespace,
+    refined: dict[str, object],
+) -> None:
+    ssh_source = _dict_or_empty(refined.get("ssh_source"))
+    mirror_dir = ssh_source.get("mirror_dir") or getattr(args, "mirror_dir", None)
+    if isinstance(mirror_dir, str) and mirror_dir:
+        mirror = Path(mirror_dir)
+        if mirror.exists():
+            for name in (ARTIFACT_INFRA_FAILURE, ARTIFACT_VALIDATION):
+                (mirror / name).write_text(json.dumps(refined, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    _replace_latest_harvest_failure_in_state(
+        state_path=_state_path(args) or LIGHTNING_BATCH_STATE,
+        job_name=args.job_name,
+        refined=refined,
+    )
+
+
 def cmd_harvest_ssh(args: argparse.Namespace) -> int:
     _require_manual_artifact_override(args, role="exact-eval")
     client = _client(args)
@@ -1131,6 +1899,12 @@ def cmd_harvest_ssh(args: argparse.Namespace) -> int:
         scp_bin=args.scp_bin,
         ssh_connect_timeout=args.ssh_connect_timeout,
     )
+    ssh_source = _dict_or_empty(result.get("ssh_source"))
+    mirror_dir = ssh_source.get("mirror_dir") or args.mirror_dir
+    refined = refine_exact_eval_missing_json_failure(result, artifact_dir=mirror_dir)
+    if refined != result:
+        result = refined
+        _persist_harvest_failure_refinement(args=args, refined=result)
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0
 
@@ -1263,6 +2037,114 @@ def _refresh_one_status(
         user=args.user if args.user is not None else _record_string(spec.get("user")),
     )
     return client.refresh_status_from_job(job_name=args.job_name, job=job)
+
+
+def _attach_stop_request(
+    client: LightningBatchJobsClient,
+    *,
+    job_name: str,
+    stop_request: dict[str, object],
+) -> dict[str, object]:
+    index = client._find_record_index(job_name)
+    records = client.list_records()
+    record = dict(records[index])
+    requests = list(record.get("stop_requests") or [])
+    requests.append(stop_request)
+    record["stop_requests"] = requests
+    client._replace_record(index, record)
+    return record
+
+
+def _request_lightning_stop(job: object, *, timeout_seconds: float) -> object:
+    if timeout_seconds <= 0:
+        return job.stop()
+
+    previous_handler = signal.getsignal(signal.SIGALRM)
+
+    def _timeout_handler(signum: int, frame: object) -> None:  # pragma: no cover - signal plumbing
+        raise TimeoutError("Lightning Job.stop() timed out")
+
+    signal.signal(signal.SIGALRM, _timeout_handler)
+    signal.setitimer(signal.ITIMER_REAL, timeout_seconds)
+    try:
+        return job.stop()
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, previous_handler)
+
+
+def cmd_stop_job(args: argparse.Namespace) -> int:
+    client = _client(args)
+    record = _latest_record_for_job(client, args.job_name)
+    if record is None:
+        raise SystemExit(f"Lightning Batch Job record not found: {args.job_name}")
+    spec = _dict_or_empty(record.get("spec"))
+    job_record = _dict_or_empty(record.get("job"))
+    job_cls = client._job_cls or client._import_job_cls()
+    sdk_job_name = (
+        args.sdk_job_name
+        or _record_string(job_record.get("name"))
+        or lightning_sdk_job_name(args.job_name)
+    )
+    job = job_cls(
+        name=sdk_job_name,
+        teamspace=args.teamspace if args.teamspace is not None else _record_string(spec.get("teamspace")),
+        org=args.org if args.org is not None else _record_string(spec.get("org")),
+        user=args.user if args.user is not None else _record_string(spec.get("user")),
+    )
+    stop_request: dict[str, object] = {
+        "schema_version": 1,
+        "requested_at_utc": _utc_now(),
+        "job_name": args.job_name,
+        "sdk_job_name": sdk_job_name,
+        "reason": args.reason,
+        "timeout_seconds": args.timeout_seconds,
+        "status_before": str(getattr(job, "status", None)),
+    }
+    try:
+        result = _request_lightning_stop(job, timeout_seconds=float(args.timeout_seconds))
+    except TimeoutError as exc:
+        stop_request.update(
+            {
+                "stop_returned": False,
+                "error_type": type(exc).__name__,
+                "error": str(exc),
+                "status_after": str(getattr(job, "status", None)),
+            }
+        )
+    except Exception as exc:  # pragma: no cover - depends on provider SDK behavior
+        stop_request.update(
+            {
+                "stop_returned": False,
+                "error_type": type(exc).__name__,
+                "error": str(exc),
+                "status_after": str(getattr(job, "status", None)),
+            }
+        )
+    else:
+        stop_request.update(
+            {
+                "stop_returned": True,
+                "result_type": type(result).__name__,
+                "status_after": str(getattr(job, "status", None)),
+            }
+        )
+    _attach_stop_request(client, job_name=args.job_name, stop_request=stop_request)
+
+    refresh_record = None
+    refresh_error = None
+    try:
+        refresh_record = client.refresh_status_from_job(job_name=args.job_name, job=job)
+    except Exception as exc:  # pragma: no cover - defensive around SDK state
+        refresh_error = {"error_type": type(exc).__name__, "error": str(exc)}
+
+    payload = {
+        "stop_request": stop_request,
+        "record": refresh_record,
+        "refresh_error": refresh_error,
+    }
+    print(json.dumps(payload, indent=2, sort_keys=True))
+    return 1 if not stop_request.get("stop_returned") else 0
 
 
 def _machine_to_record(machine: object) -> dict[str, object]:
@@ -1404,6 +2286,16 @@ def _lightning_package_versions() -> dict[str, str | None]:
     return versions
 
 
+def _argparse_surface_summary(parser: argparse.ArgumentParser) -> dict[str, list[str]]:
+    summary: dict[str, list[str]] = {"__main__": sorted(parser._option_string_actions)}
+    for action in parser._actions:
+        if not isinstance(action, argparse._SubParsersAction):
+            continue
+        for name, subparser in action.choices.items():
+            summary[name] = sorted(subparser._option_string_actions)
+    return summary
+
+
 def _doctor_payload(args: argparse.Namespace) -> dict[str, object]:
     payload: dict[str, object] = {
         "schema_version": 1,
@@ -1416,6 +2308,20 @@ def _doctor_payload(args: argparse.Namespace) -> dict[str, object]:
     }
     checks = payload["checks"]
     assert isinstance(checks, dict)
+
+    parser_surface = _argparse_surface_summary(build_parser())
+    checks["argparse_surface"] = {
+        "ok": True,
+        "commands": sorted(parser_surface),
+        "remote_related_options": sorted(
+            {
+                option
+                for options in parser_surface.values()
+                for option in options
+                if "remote" in option or "ssh" in option
+            }
+        ),
+    }
 
     local_supply_chain = _run_local_supply_chain_scan()
     checks["local_supply_chain"] = local_supply_chain
@@ -1432,7 +2338,10 @@ def _doctor_payload(args: argparse.Namespace) -> dict[str, object]:
         except SystemExit as exc:
             checks["ssh_auth"] = {"ok": False, "target": ssh_target, "error": str(exc)}
     elif args.require_ssh:
-        checks["ssh_auth"] = {"ok": False, "error": "--require-ssh set but --ssh-target was not provided"}
+        checks["ssh_auth"] = {
+            "ok": False,
+            "error": "--require-ssh set but --ssh-target/SSH alias was not provided",
+        }
     else:
         checks["ssh_auth"] = {"ok": None, "status": "skipped"}
 
@@ -1547,6 +2456,27 @@ def _add_remote_preflight_args(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def _add_dispatch_claim_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--dispatch-lane-id",
+        default=None,
+        help="Lane id that must already be actively claimed in .omx/state/active_lane_dispatch_claims.md.",
+    )
+    parser.add_argument(
+        "--dispatch-claims-path",
+        default=str(_DISPATCH_CLAIMS_PATH),
+        help="Markdown active-dispatch claim ledger to check before non-dry-run Studio submit.",
+    )
+    parser.add_argument(
+        "--allow-missing-dispatch-claim-reason",
+        default=None,
+        help=(
+            "Break-glass reason allowing a non-dry-run Studio submit without a "
+            "matching active dispatch claim. Recorded in queue metadata."
+        ),
+    )
+
+
 def _add_expected_archive_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--expected-archive-sha256", default=None)
     parser.add_argument(
@@ -1559,8 +2489,8 @@ def _add_expected_archive_args(parser: argparse.ArgumentParser) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description=__doc__)
-    sub = parser.add_subparsers(dest="cmd", required=True)
+    parser = StrictArgumentParser(description=__doc__)
+    sub = parser.add_subparsers(dest="cmd", required=True, parser_class=StrictArgumentParser)
 
     exact = sub.add_parser("exact-eval")
     _add_state_arg(exact)
@@ -1582,12 +2512,24 @@ def build_parser() -> argparse.ArgumentParser:
     exact.add_argument("--teamspace", default=None)
     exact.add_argument("--org", default=None)
     exact.add_argument("--user", default=None)
+    exact.add_argument("--cloud-account", default=None)
     exact.add_argument("--python-bin", default=".venv/bin/python")
+    exact.add_argument("--inflate-sh", default="submissions/robust_current/inflate.sh")
+    exact.add_argument(
+        "--allow-source-embedded-payload-runtime-reason",
+        default=None,
+        help=(
+            "Forensic-only break-glass for public replay runtimes that embed "
+            "large score-affecting payload literals in source instead of "
+            "charging them in archive.zip."
+        ),
+    )
     exact.add_argument("--max-runtime", type=int, default=3 * 60 * 60)
     exact.add_argument("--env", action="append", default=[], help="KEY=VALUE env override; repeatable.")
     exact.add_argument("--queue-metadata", action="append", default=[], help="KEY=VALUE audit metadata; repeatable.")
     exact.add_argument("--local-artifact-dir", default=None, help="Expected local mirror/harvest path for artifacts.")
     _add_remote_preflight_args(exact)
+    _add_dispatch_claim_args(exact)
     exact.add_argument(
         "--source-manifest",
         default=None,
@@ -1637,12 +2579,31 @@ def build_parser() -> argparse.ArgumentParser:
     exact.add_argument("--component-reference-label", default="baseline")
     exact.add_argument("--max-sane-score", type=float, default=10.0)
     exact.add_argument(
+        "--component-trace",
+        action="store_true",
+        help=(
+            "After exact CUDA auth eval, emit diagnostic per-pair PoseNet/SegNet "
+            "component_trace.json cross-checked against contest_auth_eval.json."
+        ),
+    )
+    exact.add_argument("--component-trace-top-k", type=int, default=80)
+    exact.add_argument(
         "--fail-job-on-component-gate",
         action="store_true",
         help=(
             "Return a failed Lightning job on component-gate violation. By "
             "default exact-eval jobs complete with non-promotable forensic "
             "artifacts when CUDA custody and adjudication succeeded."
+        ),
+    )
+    exact.add_argument(
+        "--fail-job-on-sane-score-gate",
+        action="store_true",
+        help=(
+            "Return a failed Lightning job when a finite exact-CUDA score is "
+            "outside --max-sane-score. By default exact-eval jobs complete "
+            "with non-promotable forensic artifacts when CUDA custody and "
+            "adjudication succeeded."
         ),
     )
     exact.add_argument("--dry-run", action="store_true")
@@ -1669,12 +2630,14 @@ def build_parser() -> argparse.ArgumentParser:
     component.add_argument("--teamspace", default=None)
     component.add_argument("--org", default=None)
     component.add_argument("--user", default=None)
+    component.add_argument("--cloud-account", default=None)
     component.add_argument("--python-bin", default=".venv/bin/python")
     component.add_argument("--max-runtime", type=int, default=6 * 60 * 60)
     component.add_argument("--env", action="append", default=[], help="KEY=VALUE env override; repeatable.")
     component.add_argument("--queue-metadata", action="append", default=[], help="KEY=VALUE audit metadata; repeatable.")
     component.add_argument("--local-artifact-dir", default=None, help="Expected local mirror/harvest path for artifacts.")
     _add_remote_preflight_args(component)
+    _add_dispatch_claim_args(component)
     component.add_argument("--baseline-contest-auth-eval-json", default=None)
     component.add_argument("--inflate-sh", default="submissions/robust_current/inflate.sh")
     component.add_argument("--video-names-file", default="upstream/public_test_video_names.txt")
@@ -1742,12 +2705,14 @@ def build_parser() -> argparse.ArgumentParser:
     sensitivity.add_argument("--teamspace", default=None)
     sensitivity.add_argument("--org", default=None)
     sensitivity.add_argument("--user", default=None)
+    sensitivity.add_argument("--cloud-account", default=None)
     sensitivity.add_argument("--python-bin", default=".venv/bin/python")
     sensitivity.add_argument("--max-runtime", type=int, default=6 * 60 * 60)
     sensitivity.add_argument("--env", action="append", default=[], help="KEY=VALUE env override; repeatable.")
     sensitivity.add_argument("--queue-metadata", action="append", default=[], help="KEY=VALUE audit metadata; repeatable.")
     sensitivity.add_argument("--local-artifact-dir", default=None, help="Expected local mirror/harvest path for artifacts.")
     _add_remote_preflight_args(sensitivity)
+    _add_dispatch_claim_args(sensitivity)
     sensitivity.add_argument("--pair-weights", default=None, help="Optional pair-weights file visible inside the Lightning job; otherwise uses --all-pairs.")
     sensitivity.add_argument("--top-k-pairs", type=int, default=64)
     sensitivity.add_argument("--pair-batch", type=int, default=2)
@@ -2002,6 +2967,26 @@ def build_parser() -> argparse.ArgumentParser:
     refresh.add_argument("--org", default=None)
     refresh.add_argument("--user", default=None)
     refresh.set_defaults(func=cmd_refresh_status)
+
+    stop = sub.add_parser("stop")
+    stop.add_argument("--state-path", default=None, help="Override local Lightning Batch Jobs state JSON.")
+    stop.add_argument("--job-name", required=True)
+    stop.add_argument(
+        "--sdk-job-name",
+        default=None,
+        help="Lightning SDK job name. Defaults to the recorded SDK name or --job-name with underscores replaced by hyphens.",
+    )
+    stop.add_argument("--teamspace", default=None)
+    stop.add_argument("--org", default=None)
+    stop.add_argument("--user", default=None)
+    stop.add_argument("--reason", default=None)
+    stop.add_argument(
+        "--timeout-seconds",
+        type=float,
+        default=30.0,
+        help="Bound Job.stop() so provider-side blocking does not hang local orchestration.",
+    )
+    stop.set_defaults(func=cmd_stop_job)
 
     machines = sub.add_parser("list-machines")
     machines.add_argument("--teamspace", required=True)

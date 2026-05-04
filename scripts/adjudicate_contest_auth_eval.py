@@ -250,24 +250,37 @@ def _check_distillation_promotion_gate(
     }
 
 
-def _regression_threshold(args: argparse.Namespace) -> float:
+def _regression_threshold(args: argparse.Namespace) -> tuple[float, str]:
     threshold = getattr(args, "regression_threshold", None)
-    if threshold is None:
-        # Backward-compatible direct-call support for older tests/tools. New
-        # remote scripts should use --regression-threshold to avoid implying a
-        # broad scientific kill from one adjudicated archive.
-        threshold = getattr(args, "hard_kill_above", None)
-    if threshold is None:
-        raise SystemExit("FATAL: missing --regression-threshold")
-    return float(threshold)
+    if threshold is not None:
+        return float(threshold), "delta_vs_baseline"
+    # Backward-compatible direct-call support for older tests/tools. The
+    # deprecated hard-kill flag was historically an absolute score ceiling.
+    threshold = getattr(args, "hard_kill_above", None)
+    if threshold is not None:
+        return float(threshold), "absolute_score"
+    raise SystemExit("FATAL: missing --regression-threshold")
 
 
-def _status(score: float, predicted_low: float, predicted_high: float, regression_threshold: float) -> str:
-    if score > regression_threshold:
+def _status(score: float, predicted_low: float, predicted_high: float, regression_triggered: bool) -> str:
+    if regression_triggered:
         return "REGRESSION_REVIEW_REQUIRED"
     if predicted_low <= score <= predicted_high:
         return "IN_PREDICTED_BAND"
     return "OUT_OF_PREDICTED_BAND"
+
+
+def _add_review_status(lane_status: str, review_prefix: str) -> str:
+    """Append a review class without hiding earlier non-promotion reasons."""
+
+    if lane_status in {"IN_PREDICTED_BAND", "OUT_OF_PREDICTED_BAND"}:
+        return f"{review_prefix}_REVIEW_REQUIRED"
+    suffix = "_REVIEW_REQUIRED"
+    if lane_status.endswith(suffix):
+        base = lane_status[: -len(suffix)]
+        if review_prefix not in base.split("_AND_"):
+            return f"{base}_AND_{review_prefix}{suffix}"
+    return lane_status
 
 
 def _check_component_gates(
@@ -367,11 +380,18 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
     payload = json.loads(contest_json.read_text())
     score_recomputed = _require_number(payload, "score_recomputed_from_components")
     final_score = _require_number(payload, "final_score")
-    if not (0.0 < score_recomputed < args.max_sane_score):
-        raise SystemExit(
-            "FATAL: score_recomputed_from_components outside sane range "
-            f"(0,{args.max_sane_score}): {score_recomputed}"
-        )
+    sane_score_gate_triggered = not (0.0 < score_recomputed < args.max_sane_score)
+    sane_score_gate_violation = (
+        {
+            "metric": "score_recomputed_from_components",
+            "observed": score_recomputed,
+            "exclusive_min": 0.0,
+            "exclusive_max": args.max_sane_score,
+            "reason": "sane_score_gate",
+        }
+        if sane_score_gate_triggered
+        else None
+    )
 
     n_samples = payload.get("n_samples")
     if n_samples != args.required_samples:
@@ -429,9 +449,18 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
         result_copy = contest_json
 
     predicted_low, predicted_high = args.predicted_band
-    regression_threshold = _regression_threshold(args)
-    regression_triggered = score_recomputed > regression_threshold
-    lane_status = _status(score_recomputed, predicted_low, predicted_high, regression_threshold)
+    regression_threshold, regression_threshold_mode = _regression_threshold(args)
+    score_delta_vs_baseline = score_recomputed - args.baseline_score
+    if regression_threshold_mode == "absolute_score":
+        regression_triggered = score_recomputed > regression_threshold
+    else:
+        regression_triggered = score_delta_vs_baseline > regression_threshold
+    lane_status = _status(
+        score_recomputed,
+        predicted_low,
+        predicted_high,
+        regression_triggered,
+    )
     component_gate_triggered = bool(component_gate_violations)
     if component_gate_triggered:
         lane_status = (
@@ -439,6 +468,8 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
             if lane_status == "REGRESSION_REVIEW_REQUIRED"
             else "COMPONENT_GATE_REVIEW_REQUIRED"
         )
+    if sane_score_gate_triggered:
+        lane_status = _add_review_status(lane_status, "SANE_SCORE")
     if distillation_gate_triggered:
         if lane_status == "REGRESSION_AND_COMPONENT_GATE_REVIEW_REQUIRED":
             lane_status = "REGRESSION_COMPONENT_AND_DISTILLATION_POLICY_REVIEW_REQUIRED"
@@ -449,20 +480,33 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
         else:
             lane_status = "DISTILLATION_POLICY_REVIEW_REQUIRED"
     gpu_t4_match = eval_provenance.get("gpu_t4_match")
-    evidence_grade = "A++ contest T4" if gpu_t4_match is True else "A score-grade"
-    promotion_eligible = (
+    contest_equivalent_hardware = gpu_t4_match is True
+    evidence_grade = (
+        "A++ contest T4" if contest_equivalent_hardware else "A score-grade"
+    )
+    scientific_score_eligible = (
         not regression_triggered
         and not component_gate_triggered
+        and not sane_score_gate_triggered
         and not distillation_gate_triggered
     )
+    promotion_eligible = scientific_score_eligible and contest_equivalent_hardware
+    hardware_promotion_gate_triggered = scientific_score_eligible and not contest_equivalent_hardware
     paper_claim_grade = (
-        evidence_grade if promotion_eligible else "A-negative scoped forensic"
-    )
-    allowed_use = (
-        ["promotion_review", "rank_frontier_candidate"]
+        evidence_grade
         if promotion_eligible
-        else ["forensic", "no_rank_frontier", "no_promotion"]
+        else (
+            "A score-grade; T4/equivalent promotion required"
+            if scientific_score_eligible
+            else "A-negative scoped forensic"
+        )
     )
+    if promotion_eligible:
+        allowed_use = ["promotion_review", "rank_frontier_candidate"]
+    elif scientific_score_eligible:
+        allowed_use = ["diagnostic_score_screen", "requires_t4_confirmation", "no_promotion"]
+    else:
+        allowed_use = ["forensic", "no_rank_frontier", "no_promotion"]
 
     baseline_archive_bytes = args.baseline_archive_bytes
     archive_delta_bytes = None
@@ -489,17 +533,24 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
             "contest_cuda_device": device,
             "contest_cuda_gpu_model": eval_provenance.get("gpu_model"),
             "contest_cuda_gpu_t4_match": gpu_t4_match,
+            "contest_equivalent_hardware": contest_equivalent_hardware,
             "evidence_grade": evidence_grade,
             "promotion_eligible": promotion_eligible,
+            "scientific_score_eligible": scientific_score_eligible,
+            "hardware_promotion_gate_triggered": hardware_promotion_gate_triggered,
             "paper_claim_grade": paper_claim_grade,
             "allowed_use": allowed_use,
             "score_tag": "[contest-CUDA]",
             "result_tag": "[contest-CUDA]",
-            "score_delta_vs_baseline": score_recomputed - args.baseline_score,
-            args.delta_key: score_recomputed - args.baseline_score,
+            "score_delta_vs_baseline": score_delta_vs_baseline,
+            args.delta_key: score_delta_vs_baseline,
             "regression_threshold": regression_threshold,
+            "regression_threshold_mode": regression_threshold_mode,
             "regression_triggered": regression_triggered,
             "regression_scope": "measured_implementation_config_only_pending_review",
+            "sane_score_gate_triggered": sane_score_gate_triggered,
+            "sane_score_gate_violation": sane_score_gate_violation,
+            "max_sane_score": args.max_sane_score,
             "component_gates": component_gates,
             "component_gate_violations": component_gate_violations,
             "component_gate_triggered": component_gate_triggered,
@@ -522,6 +573,9 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
         "lane_status": lane_status,
         "regression_triggered": regression_triggered,
         "regression_threshold": regression_threshold,
+        "regression_threshold_mode": regression_threshold_mode,
+        "sane_score_gate_triggered": sane_score_gate_triggered,
+        "sane_score_gate_violation": sane_score_gate_violation,
         "avg_posenet_dist": components["avg_posenet_dist"],
         "avg_segnet_dist": components["avg_segnet_dist"],
         "component_gates": component_gates,
@@ -536,8 +590,11 @@ def adjudicate(args: argparse.Namespace) -> dict[str, Any]:
         "archive_bytes": actual_archive_bytes,
         "gpu_model": eval_provenance.get("gpu_model"),
         "gpu_t4_match": gpu_t4_match,
+        "contest_equivalent_hardware": contest_equivalent_hardware,
         "evidence_grade": evidence_grade,
         "promotion_eligible": promotion_eligible,
+        "scientific_score_eligible": scientific_score_eligible,
+        "hardware_promotion_gate_triggered": hardware_promotion_gate_triggered,
         "paper_claim_grade": paper_claim_grade,
         "allowed_use": allowed_use,
         "result_json": str(result_copy),
@@ -593,6 +650,15 @@ def main() -> int:
     p.add_argument("--required-samples", type=int, default=600)
     p.add_argument("--max-sane-score", type=float, default=10.0)
     p.add_argument(
+        "--allow-sane-score-forensic-success",
+        action="store_true",
+        help=(
+            "Return 0 for finite exact-CUDA results outside --max-sane-score "
+            "after writing custody artifacts. The result remains non-promotable "
+            "via lane_status and sane_score_gate_triggered metadata."
+        ),
+    )
+    p.add_argument(
         "--allow-component-gate-forensic-success",
         action="store_true",
         help=(
@@ -618,6 +684,7 @@ def main() -> int:
     print(f"LANE_STATUS={result['lane_status']}")
     print(f"REGRESSION_TRIGGERED={int(result['regression_triggered'])}")
     print(f"REGRESSION_THRESHOLD={result['regression_threshold']:.15g}")
+    print(f"SANE_SCORE_GATE_TRIGGERED={int(result['sane_score_gate_triggered'])}")
     print(f"COMPONENT_GATE_TRIGGERED={int(result['component_gate_triggered'])}")
     print(f"DISTILLATION_POLICY_ACTIVE={int(result['distillation_policy_active'])}")
     print(f"DISTILLATION_POLICY_GATE_TRIGGERED={int(result['distillation_policy_gate_triggered'])}")
@@ -630,6 +697,17 @@ def main() -> int:
     print(f"RESULT_JSON={result['result_json']}")
     print(f"ADJUDICATION_JSON: {json.dumps(result, sort_keys=True)}")
     exit_code = 0
+    if result["sane_score_gate_triggered"]:
+        violation_json = json.dumps(result["sane_score_gate_violation"], sort_keys=True)
+        if args.allow_sane_score_forensic_success:
+            print(
+                "SANE_SCORE_GATE_FORENSIC_SUCCESS=1 "
+                "non_promotable exact-CUDA sane-score violation: "
+                + violation_json
+            )
+        else:
+            print("FATAL: exact-CUDA sane-score violation: " + violation_json)
+            exit_code = 2
     if result["component_gate_triggered"]:
         violation_json = json.dumps(result["component_gate_violations"], sort_keys=True)
         if args.allow_component_gate_forensic_success:

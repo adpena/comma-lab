@@ -12,9 +12,9 @@ Archive layout:
                                  indexed by [2*idx, 2*idx+1].
 
 Pipeline:
-    grayscale.mkv  -> Gaussian-LUT      -> 5-class one-hot (1200, 5, 384, 512)
-    one-hot        -> SegMap forward    -> RGB frames      (1200, 3, 384, 512)
-    frames         -> bilinear upscale  -> raw RGB         (1200, 3, 874, 1164)
+    grayscale.mkv  -> Gaussian-LUT      -> 5-class soft map (1200, 5, 384, 512)
+    soft map       -> SegMap forward    -> RGB frames      (1200, 3, 384, 512)
+    frames         -> bicubic upscale   -> raw RGB         (1200, 3, 874, 1164)
 
 STRICT-SCORER-RULE COMPLIANCE: this script does NOT load the 73MB SegNet
 or PoseNet weights. The renderer (SegMap) is the only neural component
@@ -23,6 +23,7 @@ loaded at inflate time.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import time
 from pathlib import Path
@@ -68,6 +69,23 @@ def _grayscale_to_classes(gray: torch.Tensor) -> torch.Tensor:
 
 def _classes_to_one_hot(classes: torch.Tensor) -> torch.Tensor:
     return F.one_hot(classes.long(), num_classes=NUM_CLASSES).permute(0, 3, 1, 2).float()
+
+
+def _grayscale_to_mask_features(
+    gray: torch.Tensor, *, device: torch.device, mode: str
+) -> torch.Tensor:
+    if mode == "soft_lut":
+        from tac.mask_grayscale_lut import grayscale_to_probability_map
+
+        return grayscale_to_probability_map(
+            gray.to(device), sigma=15.0, channel_first=True
+        ).float()
+    if mode == "hard_onehot":
+        classes = _grayscale_to_classes(gray)
+        return _classes_to_one_hot(classes).to(device)
+    raise RuntimeError(
+        f"unknown SEGMAP_GRAYSCALE_MODE={mode!r}; expected soft_lut or hard_onehot"
+    )
 
 
 def _build_segmap(state_dict: dict, hidden: int, block_hidden: int,
@@ -158,9 +176,19 @@ def inflate(archive_dir: Path, inflated_dir: Path, video_names_file: Path,
             f"grayscale.mkv resolution {gray.shape[-2:]} != ({SEG_H}, {SEG_W}). "
             f"Half-resolution masks are FORBIDDEN (Check 76)."
         )
-    classes = _grayscale_to_classes(gray)
-    print(f"[inflate-segmap] grayscale->classes in {time.monotonic() - t0:.2f}s",
-          file=sys.stderr)
+    grayscale_mode = os.environ.get("SEGMAP_GRAYSCALE_MODE", "soft_lut").strip().lower()
+    if grayscale_mode in {"hard", "one_hot", "onehot"}:
+        grayscale_mode = "hard_onehot"
+    if grayscale_mode not in {"soft_lut", "hard_onehot"}:
+        raise RuntimeError(
+            f"unknown SEGMAP_GRAYSCALE_MODE={grayscale_mode!r}; "
+            "expected soft_lut or hard_onehot"
+        )
+    print(
+        f"[inflate-segmap] decoded grayscale in {time.monotonic() - t0:.2f}s "
+        f"(mode={grayscale_mode})",
+        file=sys.stderr,
+    )
 
     video_names = [
         ln.strip() for ln in Path(video_names_file).read_text().splitlines() if ln.strip()
@@ -170,7 +198,7 @@ def inflate(archive_dir: Path, inflated_dir: Path, video_names_file: Path,
     out_name = video_names[0]
     out_path = inflated_dir / f"{out_name}.raw"
 
-    n_total = classes.shape[0]
+    n_total = gray.shape[0]
     if n_total != NUM_FRAMES:
         raise RuntimeError(f"expected {NUM_FRAMES} frames, got {n_total}")
 
@@ -180,8 +208,9 @@ def inflate(archive_dir: Path, inflated_dir: Path, video_names_file: Path,
     with out_path.open("wb") as f, torch.no_grad():
         for start in range(0, n_total, batch):
             end = min(start + batch, n_total)
-            chunk_cls = classes[start:end]
-            chunk_oh = _classes_to_one_hot(chunk_cls).to(device)
+            chunk_oh = _grayscale_to_mask_features(
+                gray[start:end], device=device, mode=grayscale_mode
+            )
             frame_idx = torch.arange(start, end, device=device, dtype=torch.long)
             rgb = model(chunk_oh, frame_idx)
             # Round 2 review CRITICAL: training _eval_roundtrip_chain uses

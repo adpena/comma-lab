@@ -313,17 +313,17 @@
       <div class="hero-grid">
         <div class="hero-stack">
           <h1 id="site-title">A lab notebook for compression that machines can trust and people can follow.</h1>
-          <p class="lede">This site tracks scorer-backed experiments for the comma.ai video compression challenge. It is designed to work at two levels: a plain-English executive layer for judges and newcomers, and a deeper evidence trail for researchers who want the exact runs, artifacts, and failure cases.</p>
+          <p class="lede">This site tracks the Apogee public supplement for the comma.ai video compression challenge. The current score-bearing frontier is the PR100 HNeRV-LC-v2 adapter replay: exact Tesla T4 A++ score 0.22826947142244708 on the exact archive bytes and runtime tree.</p>
           <div class="pill-row" aria-label="Current highlights">
-            <span class="pill">Current floor: 1.73</span>
-            <span class="pill">Rule-faithful: 1.795</span>
-            <span class="pill">46 measured runs</span>
+            <span class="pill">Current exact frontier: 0.22826947142244708</span>
+            <span class="pill">178,981 bytes</span>
+            <span class="pill">A++ exact T4 CUDA</span>
           </div>
           <nav class="subnav" aria-label="Primary resources">
             <a href="./judges_one_pager.md">Judges one-pager</a>
             <a href="./submission_packet.md">Submission packet</a>
             <a href="./lab_notebook.md">Lab notebook</a>
-            <a href="./promotion_review_latest.md">Promotion review</a>
+            <a href="./apogee_release_manifest.json">Release manifest</a>
             <a href="./report_history.html">Report history</a>
             <a href="./evidence_index.md">Evidence index</a>
           </nav>
@@ -339,7 +339,7 @@
           </article>
           <article class="hero-card">
             <h2>For judges</h2>
-            <p>Jump to the compact packet and the promotion review if you want the measured result, the evidence root, and the short argument for why it matters.</p>
+            <p>Jump to the compact packet and manifest if you want the measured result, the evidence root, and the short argument for why it matters.</p>
             <div class="hero-links">
               <a href="./submission_packet.md">Submission packet</a>
               <a href="./judges_one_pager.md">Judges one-pager</a>
@@ -347,10 +347,10 @@
           </article>
           <article class="hero-card">
             <h2>For researchers</h2>
-            <p>Use the notebook, manifests, and raw evidence if you want the experimental path, the exact artifacts, and the rejected branches too.</p>
+            <p>Use the notebook, manifests, and evidence index if you want the experimental path, the exact artifacts, and the rejected branches too.</p>
             <div class="hero-links">
               <a href="./lab_notebook.md">Lab notebook</a>
-              <a href="./experiment_manifest.json">Experiment manifest</a>
+              <a href="./apogee_release_manifest.json">Release manifest</a>
             </div>
           </article>
         </div>
@@ -368,33 +368,45 @@
       </div>
       <div class="context-item">
         <div class="context-label">Who we are</div>
-        <p class="context-copy">comma-lab is a public experiment log and submission repo maintained by Alejandro Pena. It publishes measured runs, rejected branches, and the current promoted operating point in one place.</p>
+        <p class="context-copy">comma-lab is a public experiment log and submission repo maintained by Alejandro Pena. It publishes measured runs, rejected branches, and the current exact operating point in one place.</p>
         <div class="context-links">
           <a href="https://github.com/adpena/comma-lab">adpena/comma-lab</a>
           <a href="./experiment_manifest.json">Experiment manifest</a>
         </div>
       </div>
       <div class="context-item">
-        <div class="context-label">Private ops</div>
-        <p class="context-copy">Private-facing surfaces stay in-repo: <a href="./report_history.html">report history</a> and <code>comma-lab sched status</code> for scheduler state.</p>
-        <p class="context-meta">Scheduler details remain read-only and are not exposed as a public launch surface.</p>
+        <div class="context-label">Public bundle</div>
+        <p class="context-copy">The deployable Cloudflare bundle is generated from sanitized public files. Raw provider state, secrets, local paths, and job transcripts are not part of this surface.</p>
+        <p class="context-meta">Placeholders stay placeholders until a sanitized release manifest intentionally publishes URLs.</p>
       </div>
       <div class="context-item">
         <div class="context-label">Last updated</div>
-        <p class="context-copy">Apr 9, 2026, 4:58 PM CDT</p>
-        <p class="context-meta">Generated from repository state plus scorer-backed artifacts stored in this repo.</p>
+        <p class="context-copy">May 4, 2026</p>
+        <p class="context-meta">Aligned to the PR100 exact Tesla T4 A++ frontier and sanitized release manifest.</p>
       </div>
     </section>
 
-    <section class="summary-shell" aria-label="Era 2 state (current frontier)">
-      <p class="footnote" style="margin-bottom: 0.5em;"><strong>Era 2 — neural renderer (current frontier, contest-CUDA verified):</strong></p>
+    <section class="summary-shell" aria-label="Current PR100 exact frontier">
+      <p class="footnote" style="margin-bottom: 0.5em;"><strong>Current exact frontier - PR100 HNeRV-LC-v2 adapter replay:</strong></p>
+      <div class="summary-grid">
+        <div class="summary-stat"><div class="summary-label">Exact T4 A++ score</div><div class="summary-value">0.228269</div><div class="summary-meta">600 samples</div></div>
+        <div class="summary-stat"><div class="summary-label">Archive bytes</div><div class="summary-value">178,981</div><div class="summary-meta">SHA afd53348...eb80641</div></div>
+        <div class="summary-stat"><div class="summary-label">SegNet / PoseNet</div><div class="summary-value">6.76e-4 / 1.72e-4</div><div class="summary-meta">component distances</div></div>
+        <div class="summary-stat"><div class="summary-label">Runtime custody</div><div class="summary-value">ef632353</div><div class="summary-meta">runtime tree SHA prefix</div></div>
+      </div>
+      <p class="footnote">Score authority is the adjudicated exact auth-eval JSON for the archive/runtime pair. Public PR body scores, comments, static anatomy, and roadmap probes are attribution or research context until exact CUDA replay validates the final bytes.</p>
+      <p class="config-line" aria-label="Current frontier custody">archive.zip -> inflate.sh -> upstream/evaluate.py · score_json=experiments/results/lightning_batch/exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z/contest_auth_eval.adjudicated.json · manifest=./apogee_release_manifest.json</p>
+    </section>
+
+    <section class="summary-shell" aria-label="Era 2 historical neural renderer state">
+      <p class="footnote" style="margin-bottom: 0.5em;"><strong>Era 2 - neural renderer controls (historical, contest-CUDA verified):</strong></p>
       <div class="summary-grid">
         <div class="summary-stat"><div class="summary-label">Lane G v3 contest-CUDA</div><div class="summary-value">1.05</div><div class="summary-meta">694,074 bytes</div></div>
         <div class="summary-stat"><div class="summary-label">Modal T4 reproduction</div><div class="summary-value">1.04</div><div class="summary-meta">drift 0.01 within noise</div></div>
         <div class="summary-stat"><div class="summary-label">Fallback floor (Lane A)</div><div class="summary-value">1.15</div><div class="summary-meta">694,074 bytes</div></div>
         <div class="summary-stat"><div class="summary-label">Era 2 baseline (CUDA-true)</div><div class="summary-value">0.90</div><div class="summary-meta">293 KB</div></div>
       </div>
-      <p class="footnote">Recipe: dilated-h64 neural renderer + KL distill weight=0.002 + pose TTO retry on Lane A anchor. PoseNet 0.0034 / SegNet 0.0040 / Rate 0.0185. Live work targets sub-0.30 (eight Modal lanes in flight on the Selfcomp paradigm portfolio).</p>
+      <p class="footnote">Recipe: dilated-h64 neural renderer + KL distill weight=0.002 + pose TTO retry on Lane A anchor. PoseNet 0.0034 / SegNet 0.0040 / Rate 0.0185. This lane is now a historical control: PR100 supersedes it as the exact public-supplement frontier.</p>
       <p class="config-line" aria-label="Era 2 method">dilated-h64 renderer · CRF=50 mask · KL distill T=2.0 weight=0.002 · pose TTO from baseline poses · contest-CUDA inflate.sh → upstream/evaluate.py</p>
     </section>
 
@@ -483,12 +495,12 @@
       <div class="compare-head">
         <div>
           <h2 id="compare-title">Top runs explorer</h2>
-          <p class="muted">Compare the strongest scorer-backed internal runs against the source clip. drag to move the zoom window, change its size, and keep every pane frame-synced.</p>
-          <p class="explorer-meta">Internal media explorer last refreshed Apr 9, 2026, 10:52 AM CDT. Public entries below are reference metadata only because we do not have their artifacts or synced media. Official reference: <a href="https://comma.ai/leaderboard">comma.ai leaderboard</a> and the public PR stream in the official challenge repo.</p>
+          <p class="muted">Compare historical internal visual clips against the source clip. Drag to move the zoom window, change its size, and keep every pane frame-synced.</p>
+          <p class="explorer-meta">These GIF/MP4 assets are judge-facing illustrations, not score authority. The PR100 score claim remains the exact auth-eval JSON and release manifest. Official reference: <a href="https://comma.ai/leaderboard">comma.ai leaderboard</a> and the public PR stream in the official challenge repo.</p>
         </div>
         <div class="leaderboard-band" aria-label="Unofficial community leaderboard snapshot">
-          <div class="leaderboard-label">Unofficial community leaderboard snapshot</div>
-          <span class="leader-pill"><strong>Public #1</strong><span>1.89</span><span>neural_inflate</span></span><span class="leader-pill"><strong>Public #2</strong><span>1.94</span><span>roi_v2</span></span><span class="leader-pill"><strong>Public #3</strong><span>1.95</span><span>av1_roi_lanczos_unsharp</span></span>
+          <div class="leaderboard-label">Exact local frontier</div>
+          <span class="leader-pill"><strong>PR100 adapter</strong><span>0.228269</span><span>A++ T4</span></span><span class="leader-pill"><strong>Bytes</strong><span>178,981</span><span>archive closed</span></span><span class="leader-pill"><strong>Boundary</strong><span>exact JSON only</span><span>no body-score ranking</span></span>
         </div>
       </div>
       <div class="explorer-toolbar">
@@ -556,8 +568,8 @@
           <div class="step-num"></div>
           <div class="step-body">
             <h3>Current operating point</h3>
-            <p>The current honest floor is 1.73 at 864,167 bytes.</p>
-            <p>Against the first honest baseline (4.06 at 3,735,828 bytes), the lab reduced bytes while preserving task signal well enough to keep the score moving down.</p>
+            <p>The current exact public-supplement frontier is 0.22826947142244708 at 178,981 bytes.</p>
+            <p>The score claim is tied to archive SHA afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641 and runtime tree ef6323533666c9cac1c204a9d3f7054157d44a185b16fc859fb3f0438ccd1832.</p>
           </div>
         </li>
       </ol>
@@ -615,6 +627,7 @@
           <ul class="list-tight">
             <li><a href="./judges_one_pager.md">Judges one-pager</a></li>
             <li><a href="./submission_packet.md">Submission packet</a></li>
+            <li><a href="./apogee_release_manifest.json">Release manifest</a></li>
             <li><a href="./promotion_review_latest.md">Promotion review</a></li>
             <li><a href="./promotion_accounting.md">Promotion accounting</a></li>
             <li><a href="./code_callouts.md">Code callouts</a></li>
@@ -626,13 +639,13 @@
         </div>
         <div class="refs-group">
           <p class="refs-group-title">Turning points</p>
-          <ul class="list-tight"><li><strong>Initial honest floor</strong> — robust_current-baseline-cpu-2026-04-03 (4.06)</li><li><strong>512x384 / crf23</strong> — robust_current-medium23-cpu-2026-04-03 (3.62)</li><li><strong>ROI branch rejection</strong> — robust_current-dynamic-main-roi-cpu-2026-04-05 (4.47)</li><li><strong>Current floor</strong> — robust_current-long1000-h64-promoted-cpu-2026-04-09 (1.73)</li></ul>
+          <ul class="list-tight"><li><strong>Initial honest floor</strong> — robust_current-baseline-cpu-2026-04-03 (4.06)</li><li><strong>Era 1 postfilter floor</strong> — robust_current-long1000-h64-promoted-cpu-2026-04-09 (1.73)</li><li><strong>Era 2 neural renderer controls</strong> — 0.90 CUDA baseline and Lane G v3 at 1.05</li><li><strong>C067 public-floor reproduction</strong> — exact T4 0.31561703078448233</li><li><strong>Current exact frontier</strong> — PR100 HNeRV-LC-v2 adapter replay (0.22826947142244708)</li></ul>
         </div>
       </div>
-      <p class="footnote refs-note">The landing page is the guided entry point. Full depth lives in the linked notebook, packet, and raw evidence artifacts.</p>
+      <p class="footnote refs-note">The landing page is the guided entry point. Full depth lives in the linked notebook, packet, release manifest, and evidence index.</p>
     </section>
     <footer class="footer-meta" aria-label="Site metadata">
-      <span>Last updated Apr 9, 2026, 4:58 PM CDT</span>
+      <span>Last updated May 4, 2026</span>
       <span><a href="https://github.com/adpena/comma-lab">GitHub</a> · <a href="https://github.com/commaai/comma_video_compression_challenge">Challenge</a></span>
     </footer>
   </main>

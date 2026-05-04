@@ -1,5 +1,5 @@
 {
-  "checkpoint": "/Users/adpena/Projects/pact/submissions/robust_current/renderer_fp4.bin",
+  "checkpoint": "submissions/robust_current/renderer_fp4.bin",
   "avg_posenet_dist": 3.3888254165649414,
   "avg_segnet_dist": 0.008716522715985775,
   "archive_size_bytes": 375548,

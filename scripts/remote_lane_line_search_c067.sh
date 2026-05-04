@@ -53,12 +53,19 @@
 set -euo pipefail
 WORKSPACE="${WORKSPACE:-/workspace/pact}"
 PYBIN="${PYBIN:-/opt/conda/bin/python}"
+LS_RUN_ID="${LS_RUN_ID:-lane_line_search_c067_results}"
+LS_RADII="${LS_RADII:-1,2,3,5,8}"
+LS_PASSES="${LS_PASSES:-2}"
+LS_BATCH_SIZE="${LS_BATCH_SIZE:-16}"
+LS_CANDIDATE_CHUNK="${LS_CANDIDATE_CHUNK:-32}"
+LS_MAX_CANDIDATE_ITEMS="${LS_MAX_CANDIDATE_ITEMS:-2048}"
+LS_BASIS_WINDOW_RADIUS="${LS_BASIS_WINDOW_RADIUS:-0}"
 [ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
 cd "$WORKSPACE"
 export PYTHONPATH="$WORKSPACE/src:$WORKSPACE/upstream:$WORKSPACE:${PYTHONPATH:-}"
 export TAC_UPSTREAM_DIR="${TAC_UPSTREAM_DIR:-$WORKSPACE/upstream}"
 
-LOG_DIR="$WORKSPACE/lane_line_search_c067_results"
+LOG_DIR="${LS_OUTPUT_DIR:-$WORKSPACE/$LS_RUN_ID}"
 mkdir -p "$LOG_DIR"
 
 log() { echo "[lane-ls-c067] $(date -u +%FT%TZ) $*" | tee -a "$LOG_DIR/run.log"; }
@@ -99,11 +106,18 @@ prov = {
     'baseline_archive_sha256': '226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a',
     'baseline_archive_bytes': 276214,
     'baseline_anchor_lane': 'C-067 (lane_line_search_pose_refinement codex 2026-05-02 + frontier_public_pr67_fixedslice)',
+    'run_id': '$LS_RUN_ID',
     'output_dir': '$LOG_DIR',
     'tool': 'experiments/line_search_pose_refinement.py',
     'reference_tool': 'reports/raw/leaderboard_intel_20260501/pr67_line_search.py',
-    'radii': [1, 2, 3, 5, 8],
-    'passes': 2,
+    'radii': '$LS_RADII',
+    'delta_sets': '${LS_DELTA_SETS:-}',
+    'gradient_delta_sets': '${LS_GRADIENT_DELTA_SETS:-}',
+    'basis_delta_sets': '${LS_BASIS_DELTA_SETS:-}',
+    'basis_modes': '${LS_BASIS_MODES:-}',
+    'basis_pair_indices': '${LS_BASIS_PAIR_INDICES:-}',
+    'basis_window_radius': '${LS_BASIS_WINDOW_RADIUS:-0}',
+    'passes': int('$LS_PASSES'),
     'estimated_cost_usd': 1.50,
     'cost_cap_usd': 1.50,
     'note': 'PR67-style R(D)-joint coordinate descent on C-067 anchor pose stream. '
@@ -134,10 +148,10 @@ bash "$WORKSPACE/scripts/probe_nvdec.sh" --ensure-dali || {
 # Stage 1: stage C-067 source archive + metadata (shipped under
 # experiments/results/lane_line_search_c067_20260502/).
 log "=== Stage 1: stage C-067 source archive + metadata ==="
-SOURCE_ARCHIVE="$WORKSPACE/experiments/results/lane_line_search_c067_20260502/source_archive.zip"
-SOURCE_METADATA="$WORKSPACE/experiments/results/lane_line_search_c067_20260502/source_metadata.json"
-GT_VIDEO="$WORKSPACE/upstream/videos/0.mkv"
-POSENET_WEIGHTS="$WORKSPACE/upstream/models/posenet.safetensors"
+SOURCE_ARCHIVE="${LS_SOURCE_ARCHIVE:-$WORKSPACE/experiments/results/lane_line_search_c067_20260502/source_archive.zip}"
+SOURCE_METADATA="${LS_SOURCE_METADATA:-$WORKSPACE/experiments/results/lane_line_search_c067_20260502/source_metadata.json}"
+GT_VIDEO="${LS_GT_VIDEO:-$WORKSPACE/upstream/videos/0.mkv}"
+POSENET_WEIGHTS="${LS_POSENET_WEIGHTS:-$WORKSPACE/upstream/models/posenet.safetensors}"
 
 for f in "$SOURCE_ARCHIVE" "$SOURCE_METADATA" "$GT_VIDEO" "$POSENET_WEIGHTS"; do
     [ -f "$f" ] || { echo "FATAL: missing $f" >&2; exit 1; }
@@ -171,7 +185,21 @@ print('source metadata archive_path rewritten to:', meta['archive_path'])
 
 # Stage 2: line-search refinement.
 # CLI flags verified against experiments/line_search_pose_refinement.py:1141-1278.
-log "=== Stage 2: PR67-style line-search refinement (radii=[1,2,3,5,8] passes=2) ==="
+SEARCH_ARGS=()
+if [ -n "${LS_BASIS_DELTA_SETS:-}" ]; then
+    SEARCH_ARGS+=(--basis-delta-sets "$LS_BASIS_DELTA_SETS")
+    [ -n "${LS_BASIS_MODES:-}" ] && SEARCH_ARGS+=(--basis-modes "$LS_BASIS_MODES")
+    [ -n "${LS_BASIS_PAIR_INDICES:-}" ] && SEARCH_ARGS+=(--basis-pair-indices "$LS_BASIS_PAIR_INDICES")
+    SEARCH_ARGS+=(--basis-window-radius "$LS_BASIS_WINDOW_RADIUS")
+elif [ -n "${LS_GRADIENT_DELTA_SETS:-}" ]; then
+    SEARCH_ARGS+=(--gradient-delta-sets "$LS_GRADIENT_DELTA_SETS")
+    [ -n "${LS_GRADIENT_BACKTRACK_DELTAS:-}" ] && SEARCH_ARGS+=(--gradient-backtrack-deltas "$LS_GRADIENT_BACKTRACK_DELTAS")
+elif [ -n "${LS_DELTA_SETS:-}" ]; then
+    SEARCH_ARGS+=(--delta-sets "$LS_DELTA_SETS")
+else
+    SEARCH_ARGS+=(--radii "$LS_RADII")
+fi
+log "=== Stage 2: PR67-style line-search refinement (${SEARCH_ARGS[*]} passes=$LS_PASSES) ==="
 log "  Estimated 102K forward passes on RTX 4090 (~30-60 min)"
 REFINED_DIR="$LOG_DIR/refined"
 mkdir -p "$REFINED_DIR"
@@ -186,10 +214,11 @@ REFINED_METADATA="$REFINED_DIR/refined_metadata.json"
     --posenet-path "$POSENET_WEIGHTS" \
     --gt-mkv "$GT_VIDEO" \
     --device cuda:0 \
-    --batch-size 16 \
-    --candidate-chunk 32 \
-    --radii "1,2,3,5,8" \
-    --passes 2 2>&1 | tee "$LOG_DIR/line_search.log" | tail -60
+    --batch-size "$LS_BATCH_SIZE" \
+    --candidate-chunk "$LS_CANDIDATE_CHUNK" \
+    --max-candidate-items "$LS_MAX_CANDIDATE_ITEMS" \
+    "${SEARCH_ARGS[@]}" \
+    --passes "$LS_PASSES" 2>&1 | tee "$LOG_DIR/line_search.log" | tail -60
 PIPE_RC=("${PIPESTATUS[@]}")
 if [ "${PIPE_RC[0]}" -ne 0 ]; then
     echo "FATAL: line_search_pose_refinement.py exited rc=${PIPE_RC[0]}" >&2
@@ -202,6 +231,8 @@ if [ ! -f "$REFINED_ARCHIVE" ]; then
 fi
 REFINED_BYTES=$(stat -c '%s' "$REFINED_ARCHIVE" 2>/dev/null || stat -f '%z' "$REFINED_ARCHIVE")
 REFINED_SHA=$(sha256sum "$REFINED_ARCHIVE" 2>/dev/null | cut -d ' ' -f 1)
+cp "$REFINED_ARCHIVE" "$LOG_DIR/archive.zip"
+cp "$REFINED_METADATA" "$LOG_DIR/metadata.json"
 log "  refined_archive.zip = ${REFINED_BYTES} bytes, sha=${REFINED_SHA}"
 
 # Stage 3: contest_auth_eval on refined archive.
@@ -229,6 +260,17 @@ if [ ! -f "$EVAL_JSON" ]; then
 fi
 # Mirror to a stable convenience path for downstream tooling.
 cp "$EVAL_JSON" "$LOG_DIR/contest_auth_eval.json"
+if [ -f "$LOG_DIR/eval_work/report.txt" ]; then
+    cp "$LOG_DIR/eval_work/report.txt" "$LOG_DIR/report.txt"
+fi
+if [ -f "$LOG_DIR/eval_work/eval_provenance.json" ]; then
+    cp "$LOG_DIR/eval_work/eval_provenance.json" "$LOG_DIR/eval_provenance.json"
+fi
+if [ "${LS_CLEAN_EVAL_WORK:-1}" = "1" ]; then
+    rm -rf "$LOG_DIR/eval_work/inflated" \
+           "$LOG_DIR/eval_work/extracted" \
+           "$LOG_DIR/eval_work/archive.zip"
+fi
 
 REFINED_SCORE=$("$PYBIN" -c "
 import json

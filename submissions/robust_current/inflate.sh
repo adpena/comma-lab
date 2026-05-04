@@ -71,6 +71,23 @@ require_ffmpeg_parity() {
 
 require_ffmpeg_parity
 
+INFLATE_BROTLI_SPEC="${INFLATE_BROTLI_SPEC:-brotli==1.2.0}"
+INFLATE_AV_SPEC="${INFLATE_AV_SPEC:-av==17.0.1}"
+INFLATE_TORCH_SPEC="${INFLATE_TORCH_SPEC:-torch==2.11.0}"
+INFLATE_NUMPY_SPEC="${INFLATE_NUMPY_SPEC:-numpy==2.4.4}"
+
+UV_WITH_BROTLI=(--with "$INFLATE_BROTLI_SPEC")
+UV_WITH_AV_TORCH_NUMPY=(
+  --with "$INFLATE_AV_SPEC"
+  --with "$INFLATE_TORCH_SPEC"
+  --with "$INFLATE_NUMPY_SPEC"
+)
+UV_WITH_RENDERER_DEPS=(
+  "${UV_WITH_BROTLI[@]}"
+  "${UV_WITH_AV_TORCH_NUMPY[@]}"
+)
+
+echo "[inflate] uv dependency specs: brotli=$INFLATE_BROTLI_SPEC av=$INFLATE_AV_SPEC torch=$INFLATE_TORCH_SPEC numpy=$INFLATE_NUMPY_SPEC" >&2
 
 # ============================================================
 # Stage 0: brotli decompression (codex R5-3 fix, 2026-04-27)
@@ -96,7 +113,7 @@ require_ffmpeg_parity
 if compgen -G "$ARCHIVE_DIR"/*.br > /dev/null 2>&1 \
     || compgen -G "$ARCHIVE_DIR"/**/*.br > /dev/null 2>&1; then
   echo "[brotli stage 0] .br files detected in $ARCHIVE_DIR; decompressing before inflate dispatch..." >&2
-  if ! "$UV_BIN" run --with brotli python - "$ARCHIVE_DIR" <<'PY'
+  if ! "$UV_BIN" run "${UV_WITH_BROTLI[@]}" python - "$ARCHIVE_DIR" <<'PY'
 import sys
 from pathlib import Path
 
@@ -153,6 +170,25 @@ PY
     echo "       would fail later with a less actionable 'missing file' error." >&2
     exit 1
   fi
+fi
+
+if [ -f "$ARCHIVE_DIR/renderer_payload.bin" ] \
+    || [ -f "$ARCHIVE_DIR/renderer_payload.bin.br" ] \
+    || [ -f "$ARCHIVE_DIR/p" ]; then
+  echo "[inflate] renderer payload detected; expanding into renderer members" >&2
+  if ! "$UV_BIN" run "${UV_WITH_BROTLI[@]}" python \
+      "$SELF_DIR/unpack_renderer_payload.py" "$ARCHIVE_DIR" \
+      --summary-json "$ARCHIVE_DIR/renderer_payload_unpack_summary.json"; then
+    echo "FATAL: renderer payload unpack failed; refusing to dispatch inflate." >&2
+    exit 1
+  fi
+fi
+
+if [ "$PYTHON_INFLATE" = "renderer" ] \
+    && [ -f "$ARCHIVE_DIR/grayscale.mkv" ] \
+    && [ ! -f "$ARCHIVE_DIR/masks.mkv" ]; then
+  echo "[inflate] auto-selecting PYTHON_INFLATE=renderer_grayscale for grayscale-only archive" >&2
+  PYTHON_INFLATE="renderer_grayscale"
 fi
 
 
@@ -282,17 +318,22 @@ while IFS= read -r rel; do
     if [ "$PYTHON_INFLATE" = "renderer" ]; then
       echo "Inflating (neural renderer: mask→frame) $ARCHIVE_DIR -> $INFLATED_DIR"
       # Codex R5-2 #3 fix (2026-04-27, Lane B-alt deployment blocker):
-      # `--with brotli` makes the inflate path dependency-complete in a
+      # `--with brotli==...` makes the inflate path dependency-complete in a
       # CLEAN CONTEST ENVIRONMENT. The contest evaluator invokes inflate.sh
       # from inside the contest's own pyproject (upstream/pyproject.toml),
       # so `uv run` discovers THAT project's deps — NOT our `tac` package.
       # Without --with brotli, any Lane B-alt archive (renderer.bin.br,
       # masks.mkv.br, …) would fatal-exit at _decompress_brotli_in_archive
       # the first time .br files are seen. brotli is a tiny pure-C wheel;
-      # the cost of always-pulling is sub-second on T4. `--with av --with
-      # torch --with numpy` mirrors what the canonical PyAV path below does.
-      "$UV_BIN" run --with brotli --with av --with torch --with numpy python "$SELF_DIR/inflate_renderer.py" \
+      # the cost of always-pulling is sub-second on T4. Pinned `--with`
+      # specs prevent silent PyPI resolver drift across eval machines.
+      "$UV_BIN" run "${UV_WITH_RENDERER_DEPS[@]}" python "$SELF_DIR/inflate_renderer.py" \
         "$ARCHIVE_DIR" "$INFLATED_DIR" "$VIDEO_NAMES_FILE"
+      if [ -f "$ARCHIVE_DIR/qpost.bin" ]; then
+        echo "[inflate] qpost.bin detected; applying counted QZS3 postprocess atoms" >&2
+        "$UV_BIN" run "${UV_WITH_RENDERER_DEPS[@]}" python "$SELF_DIR/apply_qzs3_postprocess.py" \
+          "$ARCHIVE_DIR/qpost.bin" "$INFLATED_DIR" "$VIDEO_NAMES_FILE"
+      fi
       break
     elif [ "$PYTHON_INFLATE" = "postfilter" ]; then
       echo "Inflating (canonical + learned post-filter) $ARCHIVE_DIR -> $INFLATED_DIR"
@@ -305,7 +346,7 @@ while IFS= read -r rel; do
       break
     elif [ "$PYTHON_INFLATE" = "grain_mask" ]; then
       echo "Inflating (saliency-masked grain) $ARCHIVE_DIR -> $INFLATED_DIR"
-      "$UV_BIN" run --with av --with torch --with numpy python "$SELF_DIR/inflate_grain_mask.py" \
+      "$UV_BIN" run "${UV_WITH_AV_TORCH_NUMPY[@]}" python "$SELF_DIR/inflate_grain_mask.py" \
         "$ARCHIVE_DIR" "$INFLATED_DIR" "$VIDEO_NAMES_FILE" \
         "${GRAIN_MASK_SALIENCY:-experiments/masks/posenet_saliency.npy}" \
         "${GRAIN_MASK_STRENGTH:-8.0}"
@@ -317,7 +358,7 @@ while IFS= read -r rel; do
       # with Selfcomp class targets [0, 255, 64, 192, 128] + sigma=15
       # Gaussian softmax LUT). Predicted [0.65, 0.85] [contest-CUDA].
       echo "Inflating (Lane MM: grayscale-LUT mask + existing renderer) $ARCHIVE_DIR -> $INFLATED_DIR"
-      "$UV_BIN" run --with brotli --with av --with torch --with numpy python "$SELF_DIR/inflate_renderer_grayscale.py" \
+      "$UV_BIN" run "${UV_WITH_RENDERER_DEPS[@]}" python "$SELF_DIR/inflate_renderer_grayscale.py" \
         "$ARCHIVE_DIR" "$INFLATED_DIR" "$VIDEO_NAMES_FILE"
       break
     elif [ "$PYTHON_INFLATE" = "segmap" ]; then
@@ -328,7 +369,7 @@ while IFS= read -r rel; do
       # tac.block_fp_codec.pack_payload_tar_xz) OR a raw segmap_inference.pt.
       # CLAUDE.md strict-scorer-rule honored: inflate_segmap.py loads ONLY the SegMap renderer (no PoseNet, no SegNet). # SCORER_AT_INFLATE_WAIVED: documentation-line referencing strict-scorer-rule by name; no actual scorer load happens here.
       echo "Inflating (Selfcomp SegMap: grayscale-LUT -> SegMap) $ARCHIVE_DIR -> $INFLATED_DIR"
-      "$UV_BIN" run --with brotli --with av --with torch --with numpy python "$SELF_DIR/inflate_segmap.py" \
+      "$UV_BIN" run "${UV_WITH_RENDERER_DEPS[@]}" python "$SELF_DIR/inflate_segmap.py" \
         "$ARCHIVE_DIR" "$INFLATED_DIR" "$VIDEO_NAMES_FILE"
       break
     elif [ "$PYTHON_INFLATE" = "segmap_film_canvas" ]; then
@@ -339,7 +380,7 @@ while IFS= read -r rel; do
       # Auto-falls back to vanilla SegMap if the film_table key is absent.
       # CLAUDE.md strict-scorer-rule honored: inflate_segmap_film_canvas.py loads ONLY the SegMap renderer. # SCORER_AT_INFLATE_WAIVED: documentation-line referencing strict-scorer-rule by name; no actual scorer load happens here.
       echo "Inflating (Lane FC: SegMap+FiLM-Canvas) $ARCHIVE_DIR -> $INFLATED_DIR"
-      "$UV_BIN" run --with brotli --with av --with torch --with numpy python "$SELF_DIR/inflate_segmap_film_canvas.py" \
+      "$UV_BIN" run "${UV_WITH_RENDERER_DEPS[@]}" python "$SELF_DIR/inflate_segmap_film_canvas.py" \
         "$ARCHIVE_DIR" "$INFLATED_DIR" "$VIDEO_NAMES_FILE"
       break
     elif [ "$PYTHON_INFLATE" = "segmap_arithmetic" ]; then
@@ -350,12 +391,12 @@ while IFS= read -r rel; do
       # standard SegMap renderer.
       # CLAUDE.md strict-scorer-rule honored: inflate_segmap_arithmetic.py loads ONLY the SegMap renderer. # SCORER_AT_INFLATE_WAIVED: documentation-line referencing strict-scorer-rule by name; no actual scorer load happens here.
       echo "Inflating (Lane SH: arithmetic-coded SegMap weights) $ARCHIVE_DIR -> $INFLATED_DIR"
-      "$UV_BIN" run --with brotli --with av --with torch --with numpy python "$SELF_DIR/inflate_segmap_arithmetic.py" \
+      "$UV_BIN" run "${UV_WITH_RENDERER_DEPS[@]}" python "$SELF_DIR/inflate_segmap_arithmetic.py" \
         "$ARCHIVE_DIR" "$INFLATED_DIR" "$VIDEO_NAMES_FILE"
       break
     elif [ "$PYTHON_INFLATE" = "1" ]; then
       echo "Inflating (canonical PyAV + torch bicubic) $ARCHIVE_DIR -> $INFLATED_DIR"
-      "$UV_BIN" run --with av --with torch --with numpy python "$SELF_DIR/inflate.py" \
+      "$UV_BIN" run "${UV_WITH_AV_TORCH_NUMPY[@]}" python "$SELF_DIR/inflate.py" \
         "$ARCHIVE_DIR" "$INFLATED_DIR" "$VIDEO_NAMES_FILE"
       break  # Python script handles all videos in one call
     else

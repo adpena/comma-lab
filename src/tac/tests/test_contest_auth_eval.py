@@ -10,6 +10,7 @@ Covers parsing + the structural promises the tool makes:
 from __future__ import annotations
 
 import importlib.util
+import json
 import subprocess
 import sys
 import zipfile
@@ -74,6 +75,13 @@ def test_parse_report_baseline_format(cae, tmp_path: Path):
     assert result["score_seg_contribution"] == pytest.approx(0.20, abs=1e-3)
     assert result["score_pose_contribution"] == pytest.approx(0.327, abs=1e-3)
     assert result["score_rate_contribution"] == pytest.approx(0.225, abs=1e-3)
+    assert result["canonical_score"] == pytest.approx(
+        result["score_recomputed_from_components"]
+    )
+    assert result["canonical_score_source"] == "score_recomputed_from_components"
+    assert result["reported_final_score_display_rounded"] == pytest.approx(
+        result["final_score"]
+    )
     assert result["n_samples"] == 600
     assert result["archive_size_bytes"] == 337748
 
@@ -154,6 +162,33 @@ def test_parse_report_score_recomputation_consistent(cae, tmp_path: Path):
     assert abs(recomputed - result["final_score"]) < 0.01, (
         f"recomputed={recomputed:.4f} reported={result['final_score']:.4f}"
     )
+    assert result["canonical_score"] == pytest.approx(recomputed)
+    assert result["canonical_score_source"] == "score_recomputed_from_components"
+
+
+def test_parse_report_marks_reported_score_as_display_rounded(cae, tmp_path: Path):
+    """The upstream report prints a rounded final score; ranking tools must use
+    the recomputed component score instead."""
+    # 100*0.001 + sqrt(10*0.004) + 25*0.003 = 0.375, reported as 0.38.
+    text = """=== Evaluation results over 600 samples ===
+  Average PoseNet Distortion: 0.004
+  Average SegNet Distortion: 0.001
+  Submission file size: 337748 bytes
+  Original uncompressed size: 37545489 bytes
+  Compression Rate: 0.003
+  Final score: 100*segnet_dist + sqrt(10*posenet_dist) + 25*rate = 0.38
+"""
+    rp = tmp_path / "report.txt"
+    rp.write_text(text)
+
+    result = cae._parse_report(rp, archive_size=337748)
+
+    assert result["final_score"] == pytest.approx(0.38)
+    assert result["canonical_score"] == pytest.approx(0.375)
+    assert result["score_recomputed_from_components"] == pytest.approx(0.375)
+    assert result["reported_final_score_display_rounded"] == pytest.approx(0.38)
+    assert result["score_rounding_abs_delta"] == pytest.approx(0.005)
+    assert result["score_reported_rounded_differs_from_canonical"] is True
 
 
 def test_parse_report_raw_stdout_not_treated_as_path(cae):
@@ -219,6 +254,122 @@ def test_contest_auth_eval_source_records_inflate_budget_fields() -> None:
     assert "evaluate_timeout_seconds" in text
     assert "inflate_elapsed_seconds" in text
     assert "contest_auth_eval_elapsed_seconds" in text
+    assert "inflate_runtime_manifest" in text
+    assert "runtime_tree_sha256" in text
+
+
+def test_runtime_dependency_manifest_hashes_fixed_inflate_files(cae, tmp_path: Path):
+    runtime = tmp_path / "submission"
+    upstream = tmp_path / "upstream"
+    runtime.mkdir()
+    upstream.mkdir()
+    inflate_sh = runtime / "inflate.sh"
+    renderer = runtime / "inflate_renderer.py"
+    cpp_decoder = runtime / "range_mask_codec.cpp"
+    ignored_payload = runtime / "renderer.bin"
+    inflate_sh.write_text("#!/bin/sh\npython inflate_renderer.py\n")
+    renderer.write_text("print('v1')\n")
+    cpp_decoder.write_text("// decoder v1\n")
+    ignored_payload.write_bytes(b"archive payload belongs in archive.zip")
+    (upstream / "evaluate.py").write_text("print('eval')\n")
+
+    manifest_a = cae._runtime_dependency_manifest(inflate_sh, upstream)
+    cpp_decoder.write_text("// decoder v2\n")
+    manifest_b = cae._runtime_dependency_manifest(inflate_sh, upstream)
+
+    files = {entry["relative_path"]: entry for entry in manifest_a["files"]}
+    assert "inflate.sh" in files
+    assert "inflate_renderer.py" in files
+    assert "range_mask_codec.cpp" in files
+    assert "renderer.bin" not in files
+    assert manifest_a["upstream_evaluate_py"]["sha256"]
+    assert manifest_a["runtime_tree_sha256"] != manifest_b["runtime_tree_sha256"]
+
+
+def test_runtime_dependency_manifest_hashes_repo_local_tac_imports(cae, tmp_path: Path):
+    runtime = tmp_path / "submission"
+    upstream = tmp_path / "upstream"
+    repo = tmp_path / "repo"
+    tac = repo / "src" / "tac"
+    runtime.mkdir()
+    upstream.mkdir()
+    tac.mkdir(parents=True)
+    inflate_sh = runtime / "inflate.sh"
+    inflate_py = runtime / "inflate_renderer.py"
+    helper = tac / "runtime_helper.py"
+    inflate_sh.write_text("#!/bin/sh\npython inflate_renderer.py\n")
+    inflate_py.write_text("from tac.runtime_helper import decode\n")
+    (tac / "__init__.py").write_text("")
+    helper.write_text("def decode():\n    return 'v1'\n")
+    (upstream / "evaluate.py").write_text("print('eval')\n")
+
+    manifest_a = cae._runtime_dependency_manifest(inflate_sh, upstream, repo_root=repo)
+    helper.write_text("def decode():\n    return 'v2'\n")
+    manifest_b = cae._runtime_dependency_manifest(inflate_sh, upstream, repo_root=repo)
+
+    tac_manifest = manifest_a["repo_local_tac_import_manifest"]
+    files = {entry["relative_path"]: entry for entry in tac_manifest["files"]}
+    assert "src/tac/runtime_helper.py" in files
+    assert tac_manifest["discovery"] == "static_ast_recursive_import_closure"
+    assert manifest_a["runtime_tree_sha256"] != manifest_b["runtime_tree_sha256"]
+
+
+def test_runtime_dependency_manifest_hashes_transitive_tac_imports(cae, tmp_path: Path):
+    runtime = tmp_path / "submission"
+    upstream = tmp_path / "upstream"
+    repo = tmp_path / "repo"
+    tac = repo / "src" / "tac"
+    runtime.mkdir()
+    upstream.mkdir()
+    tac.mkdir(parents=True)
+    inflate_sh = runtime / "inflate.sh"
+    inflate_py = runtime / "inflate_renderer.py"
+    helper = tac / "helper.py"
+    leaf = tac / "leaf.py"
+    inflate_sh.write_text("#!/bin/sh\npython inflate_renderer.py\n")
+    inflate_py.write_text("from tac.helper import decode\n")
+    (tac / "__init__.py").write_text("")
+    helper.write_text("from tac.leaf import value\n\ndef decode():\n    return value\n")
+    leaf.write_text("value = 'v1'\n")
+    (upstream / "evaluate.py").write_text("print('eval')\n")
+
+    manifest_a = cae._runtime_dependency_manifest(inflate_sh, upstream, repo_root=repo)
+    leaf.write_text("value = 'v2'\n")
+    manifest_b = cae._runtime_dependency_manifest(inflate_sh, upstream, repo_root=repo)
+
+    files = {
+        entry["relative_path"]
+        for entry in manifest_a["repo_local_tac_import_manifest"]["files"]
+    }
+    assert "src/tac/helper.py" in files
+    assert "src/tac/leaf.py" in files
+    assert manifest_a["runtime_tree_sha256"] != manifest_b["runtime_tree_sha256"]
+
+
+def test_record_inflate_runtime_artifacts_captures_packed_payload_summary(cae, tmp_path: Path):
+    extracted = tmp_path / "extracted"
+    extracted.mkdir()
+    summary = extracted / "renderer_payload_unpack_summary.json"
+    summary.write_text(json.dumps({"members": [{"name": "renderer.bin", "bytes": 56093}]}))
+    prov: dict[str, object] = {}
+
+    cae._record_inflate_runtime_artifacts(prov, tmp_path, extracted)
+
+    artifacts = prov["inflate_runtime_artifacts"]
+    packed = artifacts["renderer_payload_unpack_summary"]
+    assert packed["sha256"] == cae._sha256(summary, prefix=0)
+    assert packed["payload"]["members"][0]["name"] == "renderer.bin"
+    assert (tmp_path / "provenance.json").is_file()
+
+
+def test_expected_runtime_tree_hash_mismatch_fails_closed(cae) -> None:
+    prov = {
+        "inflate_runtime_manifest": {
+            "runtime_tree_sha256": "a" * 64,
+        }
+    }
+    with pytest.raises(RuntimeError, match="runtime tree hash mismatch"):
+        cae._validate_expected_runtime_tree(prov, "b" * 64)
 
 
 def test_parse_report_malformed_raises(cae, tmp_path: Path):
@@ -248,6 +399,30 @@ def test_extract_archive_normal(cae, tmp_path: Path):
     assert sorted(members) == ["masks.mkv", "renderer.bin"]
     assert (tmp_path / "dest" / "renderer.bin").exists()
     assert (tmp_path / "dest" / "masks.mkv").exists()
+
+
+def test_archive_member_validator_accepts_charged_pr89_final_bias_member(cae):
+    """PR89-style `fb` is a charged archive atom, not a housekeeping sidecar."""
+    cae._validate_archive_members(["x", "fb"])
+
+
+def test_archive_member_validator_accepts_charged_pr86_hpac_members(cae):
+    """PR86's HPAC replay stores charged model/state blobs as compressed .pt files."""
+    cae._validate_archive_members(
+        ["master.pt.gz", "slave.pt.gz", "hpac.pt.ppmd", "tokens.bin", "meta.pt"]
+    )
+
+
+def test_archive_member_validator_accepts_charged_pr85_qma9_members(cae):
+    """PR85 bridge archives expose QMA9 as a charged mask payload member."""
+    cae._validate_archive_members(
+        ["masks.qma9", "renderer.bin", "optimized_poses.bin", "qpost.bin"]
+    )
+
+
+def test_archive_member_validator_still_rejects_unknown_extensionless_debug_member(cae):
+    with pytest.raises(RuntimeError, match="UNKNOWN file types"):
+        cae._validate_archive_members(["x", "debug"])
 
 
 def test_main_refuses_missing_archive(cae, tmp_path: Path):
