@@ -1082,6 +1082,16 @@ def preflight_all(
         check_remote_chain_drivers_clean_inflated_per_candidate(
             strict=False, verbose=verbose,
         )
+        # PCC9: shell-script runtime references must resolve. Catches the
+        # subagent-worktree-lost-helper bug class (e.g. ensure_remote_uv.sh,
+        # line_search_pose_refinement.py — both were lost when subagent
+        # worktrees were auto-cleaned without committing helper source).
+        # Warn-only initially; one known violation as of 2026-05-04.
+        try:
+            from tac.preflight_runtime_refs import check_shell_script_runtime_refs_resolve
+            check_shell_script_runtime_refs_resolve(strict=False, verbose=verbose)
+        except ImportError:
+            pass  # graceful if module missing during partial install
 
     # 2. Training inputs (only if profile + tto_frames provided)
     if profile_name and tto_frames_path and gt_poses_path and masks_path and profile_arch:
