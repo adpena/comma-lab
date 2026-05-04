@@ -46,6 +46,7 @@ prov = {
     'output_dir': '$LOG_DIR',
     'variant': 'film_canvas_kl_distill',
     'arch': {'hidden': 24, 'block_hidden': 24, 'num_blocks': 8, 'film_table_dim': 48},
+    'grayscale_mode': 'soft_lut',
     'predicted_band': [0.28, 0.40],
     'anchor_dir': 'experiments/results/lane_a_landed/iter_0',
     'paradigm': 'segmap_film_canvas',
@@ -185,6 +186,7 @@ log "archive_bytes=$ARCHIVE_BYTES"
 INFLATE_CONFIG="$LOG_DIR/lane_fc_config.env"
 cat > "$INFLATE_CONFIG" <<'EOF'
 PYTHON_INFLATE=segmap_film_canvas
+SEGMAP_GRAYSCALE_MODE=soft_lut
 EOF
 
 log "=== Stage 5: contest_auth_eval [contest-CUDA] ==="

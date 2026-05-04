@@ -370,6 +370,7 @@ JSON
 
 log "=== Stage 4: contest_auth_eval [contest-CUDA] ==="
 rm -rf "$LOG_DIR/eval_work"
+export INFLATE_REQUIRE_CUDA="${INFLATE_REQUIRE_CUDA:-1}"
 "$PYBIN" -u experiments/contest_auth_eval.py \
     --archive "$ARCHIVE_PATH" \
     --inflate-sh "$INFLATE_SH_ABS" \

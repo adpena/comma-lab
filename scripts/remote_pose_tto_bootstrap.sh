@@ -111,7 +111,12 @@ print('provenance written:', '$PROVENANCE')
     fi
     [ -f "$WORKSPACE/README.md" ] || { echo "FATAL: README.md missing — setuptools install will fail. rsync the full repo."; exit 1; }
     # 2026-04-26: canonical via pyproject.toml [project.optional-dependencies.runtime]
-    "$PYBIN" -m ensurepip --upgrade 2>&1 | tail -1
+    # 2026-05-01: guard ensurepip. Recent PyTorch containers can carry newer pip
+    # than ensurepip's bundled wheel; unconditional ensurepip can fail before
+    # any experiment code runs.
+    if ! "$PYBIN" -c "import pip" 2>/dev/null; then
+        "$PYBIN" -m ensurepip --upgrade 2>&1 | tail -1
+    fi
     "$PYBIN" -m pip install -q --upgrade pip 2>&1 | tail -1
     "$PYBIN" -m pip install -q -e ".[runtime]" 2>&1 | tail -3
 

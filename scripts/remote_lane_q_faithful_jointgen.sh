@@ -189,7 +189,7 @@ print(f'OK: {len(used)} train_renderer flags all real')
 # ──────────────────────────────────────────────────────────────────────────
 log "=== Stage 1: extract / build masks + reuse Lane A poses ==="
 "$PYBIN" experiments/build_baseline_archive.py \
-    --device cuda --crf 50 \
+    --device cuda --crf 50 --half-frame \
     --output "$LOG_DIR/archive_masks_seed.zip" 2>&1 | tee "$LOG_DIR/build_masks.log" | tail -5
     PIPE_RC=("${PIPESTATUS[@]}")
     if [ "${PIPE_RC[0]}" -ne 0 ]; then
@@ -216,6 +216,7 @@ export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
     --device cuda \
     --seed 1234 \
     --tag q_faithful_modal \
+    --qfaithful-training-poses "$ANCHOR_LANE_A_POSES" \
     --no-auth-eval-on-best \
     --output-dir "$LOG_DIR/train" 2>&1 | tee "$LOG_DIR/train.log" | tail -50
     PIPE_RC=("${PIPESTATUS[@]}")
@@ -265,17 +266,33 @@ gen.eval()
 n_params = sum(p.numel() for p in gen.parameters())
 print(f'JointFrameGenerator loaded: {n_params:,} params')
 
-# Save QFAI uncompressed first (for sha verification).
-qfai_path = Path('$LOG_DIR/train/renderer.qfai.bin')
-n_bytes = save_qfai(gen, qfai_path)
-print(f'QFAI uncompressed: {n_bytes:,} bytes')
+# Save raw QFAI as renderer.bin because inflate_renderer.py dispatches QFAI/QZS3 by file magic.
+training_pose_contract = None
+for key in ('qfaithful_training_pose_contract', 'training_pose_contract'):
+    value = ckpt.get(key)
+    if isinstance(value, dict):
+        training_pose_contract = value
+        break
+if training_pose_contract is None:
+    meta = ckpt.get('__meta__') or ckpt.get('arch_meta') or {}
+    if isinstance(meta, dict):
+        for key in ('qfaithful_training_pose_contract', 'training_pose_contract'):
+            value = meta.get(key)
+            if isinstance(value, dict):
+                training_pose_contract = value
+                break
+if not isinstance(training_pose_contract, dict) or training_pose_contract.get('training_pose_contract_promotable') is not True:
+    raise SystemExit('FATAL: checkpoint missing promotable Q-FAITHFUL training_pose_contract')
+qfai_path = Path('$LOG_DIR/train/renderer.bin')
+n_bytes = save_qfai(gen, qfai_path, extra_meta={'training_pose_contract': training_pose_contract})
+print(f'QFAI raw renderer.bin: {n_bytes:,} bytes')
 
-# Brotli compress (q=11) — matches Quantizr's compress.sh.
+# Brotli sidecar is for byte research only; deploy raw renderer.bin so magic dispatch works.
 raw = qfai_path.read_bytes()
 br = brotli.compress(raw, quality=11)
-br_path = Path('$LOG_DIR/train/renderer.bin')
+br_path = Path('$LOG_DIR/train/renderer.qfai.bin.br')
 br_path.write_bytes(br)
-print(f'QFAI brotli q=11:  {len(br):,} bytes ({100*len(br)/len(raw):.1f}% of raw)')
+print(f'QFAI brotli sidecar q=11: {len(br):,} bytes ({100*len(br)/len(raw):.1f}% of raw)')
 "
 
 EXPORT_BIN="$LOG_DIR/train/renderer.bin"
