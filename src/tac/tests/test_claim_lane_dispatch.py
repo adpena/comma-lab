@@ -1,0 +1,211 @@
+"""Tests for tools/claim_lane_dispatch recovered from .pyc cache + spec."""
+
+from __future__ import annotations
+
+import importlib.util
+import sys
+from pathlib import Path
+
+import pytest
+
+# Load the helper as a module
+_HELPER_PATH = Path(__file__).resolve().parents[3] / "tools" / "claim_lane_dispatch.py"
+spec = importlib.util.spec_from_file_location("claim_lane_dispatch", _HELPER_PATH)
+cld = importlib.util.module_from_spec(spec)
+sys.modules["claim_lane_dispatch"] = cld
+spec.loader.exec_module(cld)
+
+
+@pytest.fixture
+def claims_path(tmp_path):
+    return tmp_path / "claims.md"
+
+
+def test_first_claim_creates_file(claims_path):
+    rc = cld.main([
+        "claim",
+        "--claims-path", str(claims_path),
+        "--lane-id", "test_lane",
+        "--platform", "lightning",
+        "--instance-job-id", "job_001",
+        "--agent", "test_agent",
+        "--status", "eval",
+    ])
+    assert rc == 0
+    text = claims_path.read_text()
+    assert "test_lane" in text
+    assert "job_001" in text
+    assert "## Claims (newest first)" in text
+
+
+def test_conflict_refused_by_default(claims_path):
+    cld.main([
+        "claim", "--claims-path", str(claims_path),
+        "--lane-id", "X", "--platform", "L", "--instance-job-id", "j1",
+        "--agent", "a1", "--status", "eval",
+    ])
+    rc = cld.main([
+        "claim", "--claims-path", str(claims_path),
+        "--lane-id", "X", "--platform", "L", "--instance-job-id", "j2",
+        "--agent", "a2", "--status", "eval",
+    ])
+    assert rc == 3
+
+
+def test_terminal_status_does_not_conflict(claims_path):
+    cld.main([
+        "claim", "--claims-path", str(claims_path),
+        "--lane-id", "X", "--platform", "L", "--instance-job-id", "j1",
+        "--agent", "a1", "--status", "eval",
+    ])
+    # terminal closing row for the same job is allowed
+    rc = cld.main([
+        "claim", "--claims-path", str(claims_path),
+        "--lane-id", "X", "--platform", "L", "--instance-job-id", "j1",
+        "--agent", "a1", "--status", "completed_score=0.42",
+    ])
+    assert rc == 0
+    # and a fresh active claim after the terminal closes is allowed
+    rc = cld.main([
+        "claim", "--claims-path", str(claims_path),
+        "--lane-id", "X", "--platform", "L", "--instance-job-id", "j2",
+        "--agent", "a2", "--status", "eval",
+    ])
+    assert rc == 0
+
+
+def test_force_bypasses_conflict(claims_path):
+    cld.main([
+        "claim", "--claims-path", str(claims_path),
+        "--lane-id", "X", "--platform", "L", "--instance-job-id", "j1",
+        "--agent", "a1", "--status", "eval",
+    ])
+    rc = cld.main([
+        "claim", "--claims-path", str(claims_path),
+        "--lane-id", "X", "--platform", "L", "--instance-job-id", "j2",
+        "--agent", "a2", "--status", "eval",
+        "--force",
+    ])
+    assert rc == 0
+
+
+def test_allow_parallel_requires_child_of(claims_path):
+    cld.main([
+        "claim", "--claims-path", str(claims_path),
+        "--lane-id", "X", "--platform", "L", "--instance-job-id", "parent_job",
+        "--agent", "a1", "--status", "training",
+    ])
+    with pytest.raises(SystemExit) as exc:
+        cld.main([
+            "claim", "--claims-path", str(claims_path),
+            "--lane-id", "X", "--platform", "L", "--instance-job-id", "child_job",
+            "--agent", "a2", "--status", "eval",
+            "--allow-parallel",
+        ])
+    assert "child-of" in str(exc.value)
+
+
+def test_allow_parallel_with_correct_child_of(claims_path):
+    cld.main([
+        "claim", "--claims-path", str(claims_path),
+        "--lane-id", "X", "--platform", "L", "--instance-job-id", "parent_job",
+        "--agent", "a1", "--status", "training",
+    ])
+    rc = cld.main([
+        "claim", "--claims-path", str(claims_path),
+        "--lane-id", "X", "--platform", "L", "--instance-job-id", "child_job",
+        "--agent", "a2", "--status", "eval",
+        "--allow-parallel",
+        "--child-of", "parent_job",
+        "--parallel-reason", "follow-on T4 promotion of parent's checkpoint",
+    ])
+    assert rc == 0
+
+
+def test_allow_parallel_wrong_child_of_refused(claims_path):
+    cld.main([
+        "claim", "--claims-path", str(claims_path),
+        "--lane-id", "X", "--platform", "L", "--instance-job-id", "parent_job",
+        "--agent", "a1", "--status", "training",
+    ])
+    rc = cld.main([
+        "claim", "--claims-path", str(claims_path),
+        "--lane-id", "X", "--platform", "L", "--instance-job-id", "child_job",
+        "--agent", "a2", "--status", "eval",
+        "--allow-parallel",
+        "--child-of", "nonexistent_parent",
+        "--parallel-reason", "...",
+    ])
+    assert rc == 3
+
+
+def test_dry_run_does_not_write(claims_path):
+    rc = cld.main([
+        "claim", "--claims-path", str(claims_path),
+        "--lane-id", "X", "--platform", "L", "--instance-job-id", "j1",
+        "--agent", "a1", "--status", "eval",
+        "--dry-run",
+    ])
+    assert rc == 0
+    assert not claims_path.exists() or claims_path.read_text() == ""
+
+
+def test_pipe_in_cell_rejected(claims_path):
+    with pytest.raises(SystemExit) as exc:
+        cld.main([
+            "claim", "--claims-path", str(claims_path),
+            "--lane-id", "bad|lane", "--platform", "L", "--instance-job-id", "j",
+            "--agent", "a", "--status", "eval",
+        ])
+    assert "VALIDATION_ERROR" in str(exc.value) or "must not contain" in str(exc.value)
+
+
+def test_whitespace_in_lane_id_rejected(claims_path):
+    with pytest.raises(SystemExit):
+        cld.main([
+            "claim", "--claims-path", str(claims_path),
+            "--lane-id", "lane with space", "--platform", "L", "--instance-job-id", "j",
+            "--agent", "a", "--status", "eval",
+        ])
+
+
+def test_terminal_prefixes_constants():
+    # Spec from .pyc revealed these prefixes — verify they're all present
+    expected = {"completed_", "failed_", "preempted", "cancelled",
+                "refused_dispatch", "stale_assumed_dead", "stale_superseded", "stopped_"}
+    actual = set(cld.TERMINAL_PREFIXES)
+    assert expected == actual
+
+
+def test_stale_claim_outside_ttl_does_not_block(claims_path, monkeypatch):
+    """A claim older than --ttl-hours is treated as stale and does not conflict."""
+    cld.main([
+        "claim", "--claims-path", str(claims_path),
+        "--lane-id", "X", "--platform", "L", "--instance-job-id", "j_old",
+        "--agent", "a", "--status", "training",
+        "--now-utc", "2026-01-01T00:00:00Z",
+    ])
+    # 48 hours later, the old claim is stale (TTL default 24h)
+    rc = cld.main([
+        "claim", "--claims-path", str(claims_path),
+        "--lane-id", "X", "--platform", "L", "--instance-job-id", "j_new",
+        "--agent", "a", "--status", "eval",
+        "--now-utc", "2026-01-03T00:00:00Z",
+    ])
+    assert rc == 0
+
+
+def test_newest_first_ordering(claims_path):
+    cld.main([
+        "claim", "--claims-path", str(claims_path),
+        "--lane-id", "L1", "--platform", "lightning", "--instance-job-id", "j1",
+        "--agent", "a", "--status", "completed_first",
+    ])
+    cld.main([
+        "claim", "--claims-path", str(claims_path),
+        "--lane-id", "L2", "--platform", "lightning", "--instance-job-id", "j2",
+        "--agent", "a", "--status", "completed_second",
+    ])
+    text = claims_path.read_text()
+    # j2 (newer) should come BEFORE j1 in the file
+    assert text.find("j2") < text.find("j1")
