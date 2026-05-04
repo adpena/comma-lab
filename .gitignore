@@ -128,3 +128,19 @@ reports/public/.env
 .ralph/*.bak
 # Ephemeral .omx/tmp/ scratch (never commit)
 .omx/tmp/
+
+# Wave 11 — exclude vendored upstream test data from public PR intakes
+experiments/results/public_pr*_intake_*/source/videos/
+experiments/results/public_pr*_intake_*/repo/videos/
+experiments/results/public_pr*_intake_*/replay_submission/__pycache__/
+experiments/results/public_pr*_intake_*/source/.git/
+experiments/results/public_pr*_intake_*/source/models/
+experiments/results/public_pr*_intake_*/source/ffmpeg-new/
+experiments/results/public_pr*_intake_*/repo/.git/
+experiments/results/public_pr*_intake_*/repo/models/
+experiments/results/public_pr*_intake_*/repo/ffmpeg-new/
+experiments/results/public_pr*_intake_*/replay_submission/__pycache__/
+experiments/results/public_pr*_intake_*/__pycache__/
+
+# 13MB lightning log (one-time, not durable)
+.omx/state/lightning_refresh_all_followup_*.jsonl
