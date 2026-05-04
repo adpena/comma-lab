@@ -40,9 +40,14 @@ at inflate time. The renderer.bin is the only neural component.
 """
 from __future__ import annotations
 
+import hashlib
+import json
+import lzma
 import os
+import struct
 import subprocess
 import sys
+import zlib
 from pathlib import Path
 
 import numpy as np
@@ -58,6 +63,160 @@ for _p in (_REPO_ROOT / "src", _REPO_ROOT / "upstream"):
 # on-demand to avoid pulling in the full inflate_renderer module if the
 # user is just running the codec by itself.
 from tac.mask_grayscale_lut import create_gaussian_softmax_lut  # noqa: E402
+
+_REPAIR_MAGIC = b"AMR1"
+_REPAIR_SCHEMA = "alpha4_residual_repair_amr1_v1"
+_REPAIR_HEADER_STRUCT = ">I"
+_REPAIR_RECORD_STRUCT = ">IHHHB"
+_REPAIR_RECORD_SIZE = struct.calcsize(_REPAIR_RECORD_STRUCT)
+_OPTIONAL_REPAIR_MEMBERS = (
+    ("alpha4_residual_repair.amr1", "raw"),
+    ("alpha4_residual_repair.amr1.xz", "lzma_xz"),
+    ("alpha4_residual_repair.amr1.zlib", "zlib"),
+    ("alpha4_residual_repair.amr1.br", "brotli"),
+)
+
+
+def _class_tensor_sha256(classes: torch.Tensor) -> str:
+    data = classes.to(torch.uint8).contiguous().cpu().numpy().tobytes()
+    return hashlib.sha256(data).hexdigest()
+
+
+def _decompress_repair_payload(path: Path, codec: str) -> bytes:
+    payload = path.read_bytes()
+    if codec == "raw":
+        return payload
+    if codec == "lzma_xz":
+        return lzma.decompress(payload, format=lzma.FORMAT_XZ)
+    if codec == "zlib":
+        return zlib.decompress(payload)
+    if codec == "brotli":
+        try:
+            import brotli  # type: ignore
+        except ImportError as exc:  # pragma: no cover - contest env dependent
+            raise RuntimeError(
+                "alpha4_residual_repair.amr1.br requires brotli in the inflate environment"
+            ) from exc
+        return brotli.decompress(payload)
+    raise RuntimeError(f"unsupported repair codec {codec!r}")
+
+
+def _load_optional_repair_payload(archive_dir: Path) -> tuple[str, bytes] | None:
+    matches: list[tuple[str, str, Path]] = []
+    for member_name, codec in _OPTIONAL_REPAIR_MEMBERS:
+        path = archive_dir / member_name
+        if path.exists():
+            matches.append((member_name, codec, path))
+    if len(matches) > 1:
+        names = ", ".join(name for name, _, _ in matches)
+        raise RuntimeError(f"multiple Alpha residual repair payloads present: {names}")
+    if not matches:
+        return None
+    member_name, codec, path = matches[0]
+    return member_name, _decompress_repair_payload(path, codec)
+
+
+def _decode_amr1_repair_payload(payload: bytes) -> tuple[dict, list[tuple[int, int, int, int, int]]]:
+    if not payload.startswith(_REPAIR_MAGIC):
+        raise RuntimeError("Alpha residual repair payload missing AMR1 magic")
+    offset = len(_REPAIR_MAGIC)
+    if len(payload) < offset + struct.calcsize(_REPAIR_HEADER_STRUCT):
+        raise RuntimeError("Alpha residual repair payload missing header length")
+    (header_length,) = struct.unpack(_REPAIR_HEADER_STRUCT, payload[offset : offset + 4])
+    offset += 4
+    header_end = offset + int(header_length)
+    if header_end > len(payload):
+        raise RuntimeError("Alpha residual repair header extends past payload")
+    header = json.loads(payload[offset:header_end].decode("utf-8"))
+    offset = header_end
+    if header.get("schema") != _REPAIR_SCHEMA:
+        raise RuntimeError(f"unsupported Alpha residual repair schema {header.get('schema')!r}")
+    if header.get("record_struct") != _REPAIR_RECORD_STRUCT:
+        raise RuntimeError(
+            f"unsupported Alpha residual repair record struct {header.get('record_struct')!r}"
+        )
+    shape = header.get("shape")
+    if not isinstance(shape, list) or len(shape) != 3:
+        raise RuntimeError(f"Alpha residual repair header has invalid shape {shape!r}")
+    t, h, w = [int(value) for value in shape]
+    if t <= 0 or h <= 0 or w <= 0:
+        raise RuntimeError(f"Alpha residual repair header has nonpositive shape {shape!r}")
+    record_count = int(header.get("record_count", -1))
+    if record_count < 0:
+        raise RuntimeError(f"Alpha residual repair record_count invalid: {record_count}")
+    expected = offset + record_count * _REPAIR_RECORD_SIZE
+    if expected != len(payload):
+        raise RuntimeError(
+            f"Alpha residual repair payload size mismatch: expected {expected}, got {len(payload)}"
+        )
+    runs: list[tuple[int, int, int, int, int]] = []
+    for _ in range(record_count):
+        frame_index, y, x0, length, class_id = struct.unpack(
+            _REPAIR_RECORD_STRUCT,
+            payload[offset : offset + _REPAIR_RECORD_SIZE],
+        )
+        offset += _REPAIR_RECORD_SIZE
+        frame_index = int(frame_index)
+        y = int(y)
+        x0 = int(x0)
+        length = int(length)
+        class_id = int(class_id)
+        if not (0 <= frame_index < t):
+            raise RuntimeError(f"Alpha repair frame out of range: {frame_index}")
+        if not (0 <= y < h):
+            raise RuntimeError(f"Alpha repair row out of range: {y}")
+        if not (0 <= x0 < w):
+            raise RuntimeError(f"Alpha repair x0 out of range: {x0}")
+        if length <= 0 or x0 + length > w:
+            raise RuntimeError(f"Alpha repair run length out of range: x0={x0} length={length}")
+        if not (0 <= class_id < 5):
+            raise RuntimeError(f"Alpha repair class id out of range: {class_id}")
+        runs.append((frame_index, y, x0, length, class_id))
+    return header, runs
+
+
+def _apply_amr1_repair(classes: torch.Tensor, payload: bytes, *, source_name: str) -> torch.Tensor:
+    header, runs = _decode_amr1_repair_payload(payload)
+    expected_shape = tuple(int(value) for value in header["shape"])
+    if tuple(int(value) for value in classes.shape) != expected_shape:
+        raise RuntimeError(
+            f"Alpha residual repair shape {expected_shape} does not match decoded classes "
+            f"{tuple(int(value) for value in classes.shape)}"
+        )
+    expected_candidate_sha = header.get("candidate_mask_u8_sha256")
+    if expected_candidate_sha:
+        actual_candidate_sha = _class_tensor_sha256(classes)
+        if actual_candidate_sha != expected_candidate_sha:
+            raise RuntimeError(
+                f"Alpha residual repair candidate SHA mismatch for {source_name}: "
+                f"{actual_candidate_sha} != {expected_candidate_sha}"
+            )
+    repaired = classes.clone()
+    for frame_index, y, x0, length, class_id in runs:
+        repaired[frame_index, y, x0 : x0 + length] = class_id
+    selection = header.get("selection") if isinstance(header.get("selection"), dict) else {}
+    if selection.get("partial_repair") is False and header.get("source_mask_u8_sha256"):
+        actual_source_sha = _class_tensor_sha256(repaired)
+        if actual_source_sha != header["source_mask_u8_sha256"]:
+            raise RuntimeError(
+                f"Alpha residual repair source SHA mismatch for {source_name}: "
+                f"{actual_source_sha} != {header['source_mask_u8_sha256']}"
+            )
+    return repaired
+
+
+def _maybe_apply_residual_repair(archive_dir: Path, classes: torch.Tensor) -> torch.Tensor:
+    loaded = _load_optional_repair_payload(archive_dir)
+    if loaded is None:
+        return classes
+    member_name, payload = loaded
+    repaired = _apply_amr1_repair(classes, payload, source_name=member_name)
+    print(
+        f"[lane-mm] applied Alpha residual repair {member_name}: "
+        f"{len(payload):,} raw AMR1 bytes",
+        file=sys.stderr,
+    )
+    return repaired
 
 
 def _decode_grayscale_mkv_to_classes(
@@ -165,6 +324,7 @@ def inflate_renderer_grayscale(
     classes = _decode_grayscale_mkv_to_classes(
         grayscale_mkv, target_h=384, target_w=512
     )
+    classes = _maybe_apply_residual_repair(archive_dir, classes)
     print(
         f"[lane-mm] decoded grayscale -> {tuple(classes.shape)} "
         f"unique classes={sorted(classes.unique().tolist())}",
