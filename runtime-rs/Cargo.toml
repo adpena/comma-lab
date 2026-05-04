@@ -1,7 +1,10 @@
 [workspace]
 members = [
+  "crates/hpac-codec",
   "crates/inflate-cli",
+  "crates/qma-codec",
   "crates/raw-writer",
-  "crates/residual-codec"
+  "crates/residual-codec",
+  "crates/stbm1br-codec"
 ]
 resolver = "2"

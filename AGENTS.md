@@ -11,6 +11,108 @@ results in the dated `.omx/research/` ledgers and experiment artifact
 directories. This file is for durable protocols, codebase structure, and
 non-negotiable operating rules.
 
+## Execution Accountability — NON-NEGOTIABLE
+
+When the user asks to push score, recover state, harden a bug class, or proceed
+autonomously, do real work before adding more strategy text. A valid autonomous
+turn must produce or advance at least one concrete artifact: code patch, test,
+candidate archive, dispatch claim, queued job, harvested eval, ledger entry,
+profile artifact, or exact failure classification. Grand-council, research, and
+mathematical deliberation are useful only when they directly change the next
+build, eval, guard, or dispatch decision.
+
+Avoid narrative-only loops. If blocked, record the blocker as an artifact or
+guardrail, choose the next highest-EV unblocked action, and continue.
+
+## Frontier Velocity And Anti-Conservatism — NON-NEGOTIABLE
+
+The default operating mode is aggressive frontier movement, not conservative
+local polish. When public submissions, hidden-gem lanes, arithmetic/entropy
+coders, HNeRV/NeRV/SIREN-style representations, Cool-Chic/C3, RAFT/ego-motion,
+foveation, wavelets, learned atom allocation, or other high-leverage evidence
+appears, agents must immediately evaluate whether it changes the next dispatch
+or build. Do not continue shaving a saturated local basin when a plausible
+larger representation, packer, or exact-replay target is available.
+
+Before spending time on a small slice, ask and answer in the ledger or artifact:
+
+- Is there a live public/archive/blob/source target with a lower claimed score?
+- Is there a byte-level repack, arithmetic-code, entropy-code, or payload-layout
+  opportunity that can be tested on exact archive bytes?
+- Is there a hidden-gem lane already implemented that can be wired into the
+  current champion with less wall-clock than another micro-ablation?
+- Does this action produce a candidate archive, exact replay, profiler, guard,
+  or deconstruction artifact? If not, pick a higher-EV action.
+
+Conservatism is allowed only when it protects contest compliance, custody,
+public-release hygiene, or partner worktree state. It is not allowed as a reason
+to avoid high-upside deconstruction, exact replay, low-level binary analysis,
+or risky but contest-faithful experiments.
+
+## Public Frontier Watch And Intake — NON-NEGOTIABLE
+
+During active contest windows or post-deadline replay windows, keep the public
+frontier current. Refresh GitHub PRs and official leaderboard state often
+enough that late submissions are not missed while working on internal lanes.
+Any PR/archive/title/body/comment that plausibly beats the local exact frontier
+must enter an intake queue immediately with:
+
+- PR number, title, author, URL, head SHA, created/updated time.
+- Archive URL, local archive path, bytes, SHA-256, member names, member SHA-256s.
+- `inflate.sh`, `inflate.py`, `compress.sh`, README/report, training scripts,
+  binary blobs, releases, and relevant author-repo links when public.
+- Claimed components and recomputed score from public rounded values, tagged
+  `external` until exact CUDA replay lands.
+- Compliance risks: sidecars, network installs, source-embedded payloads,
+  malformed ZIP reliance, non-canonical runtime signatures, dependency gaps.
+- Fastest path to exact replay or fail-closed blocker.
+
+Use detached clones/downloads in experiment artifact directories for public PR
+forensics. Do not `gh pr checkout` into the dirty shared worktree.
+
+## Bit-Level Deconstruction And Repack Discipline
+
+For archive/packer work, start from bytes, not prose. Every public or internal
+archive that can affect the frontier should be inspectable at the lowest useful
+level:
+
+- ZIP structure: local/central header parity, member order, compression method,
+  timestamps, flags, sizes, CRCs, duplicate names, hidden files, resource forks.
+- Payload grammar: magic, fixed sections, length prefixes, section offsets,
+  hashes, entropy estimates, decoded tensor shapes, codec families, side
+  channels, and no-op/provenance detection.
+- Compression opportunities: brotli/zstd/lzma/arithmetic/range/ANS/Huffman,
+  tensor grouping, histogram overhead, prefix removal, filename/header savings,
+  section-length hardcoding only when contest-compliant, and deterministic
+  pack ordering.
+- Runtime impact: dependency closure, CUDA availability, inflate budget,
+  deterministic decode, scorer-free inflate, and runtime tree SHA.
+
+Arithmetic coding, range coding, and other entropy coders are first-class
+optimization lanes, not afterthoughts. If a dense byte stream remains in a
+generic compressor, estimate its entropy and compare a real coded payload
+before declaring the lane saturated.
+
+## Cross-Agent Dispatch Coordination — NON-NEGOTIABLE (Level 2)
+
+**Before dispatching ANY training, eval, or remote-GPU job (Vast.ai, Modal, Lightning, Azure, etc.), claim the lane with `tools/claim_lane_dispatch.py claim ...`.** The helper takes an exclusive file lock, reads `.omx/state/active_lane_dispatch_claims.md`, inserts the newest row at the top, and refuses active same-`lane_id` conflicts inside the 24-hour TTL unless an operator passes an explicit force flag with notes.
+
+If you find an active conflicting claim:
+- Do NOT dispatch
+- Coordinate via the file's notes column or pick a different lane
+
+When your dispatch completes (success or fail): append a terminal row with the
+same `lane_id` and `instance/job_id` via `tools/claim_lane_dispatch.py claim
+--force --status completed_...`, `--status failed_...`,
+`--status stopped_...`, `--status refused_dispatch...`, or a precise
+`--status stale_superseded...` row. The helper treats a newer terminal row as closing
+the matching older nonterminal row for conflict detection. Do not leave
+completed jobs as phantom active claims.
+
+Manual table edits are acceptable only for emergency recovery or correcting stale historical rows. This rule exists because 2026-05-01 ~23:50 UTC the user reported a possible Q-FAITHFUL dispatch conflict between Claude (H100 SXM via Vast.ai) and codex (Lightning).
+
+Lightning Studio-backed submitters enforce this rule in `scripts/launch_lightning_batch_job.py`: non-dry-run exact-eval, component-response, and component-sensitivity submissions must have a matching active claim row for the lane/job, unless an auditable `--allow-missing-dispatch-claim-reason` is supplied.
+
 ## Source-Of-Truth Documents
 
 Use these documents as the research/control plane:
@@ -31,6 +133,10 @@ Use these documents as the research/control plane:
 - `.omx/research/alpha_pose_preserving_redesign_spec_20260430_codex.md`
 - `.omx/research/kl_distill_hardening_status_20260430_codex.md`
 - `.omx/research/component_sensitivity_map_certification_20260501_codex.md`
+- `.omx/research/atom_lagrangian_waterfill_sub03_system_20260501_codex.md`
+- `.omx/research/contest_faithful_swarm_execution_20260502_codex.md`
+- `.omx/research/charged_mask_grammar_ego_foveation_greenup_20260502_codex.md`
+- `.omx/research/works_negatives_hardened_stack_20260502_codex.md`
 
 When these documents disagree, prefer the strictest contest-grade evidence
 standard and the newest dated progress addendum. Preserve history by appending
@@ -62,6 +168,29 @@ score = 100 * seg_dist
 Every scored archive must record exact archive bytes, archive SHA-256,
 component distances, sample count, recomputed score, eval command, hardware,
 manifest, provenance, and logs.
+
+## Positive And Negative Signal Discipline
+
+What works and what does not work are equally important contest assets. Exact
+negative results, harness bugs, preflight blocks, queue anomalies, no-op
+controls, and failed scorer-basin probes must be preserved and converted into
+guardrails. Do not bury them in chat.
+
+- Every scoped negative should record the exact archive or candidate, bytes,
+  SHA-256, component distances when available, hardware, command/logs,
+  evidence grade, failure class, and reactivation criteria.
+- Every repeated bug class should become one of: a test, strict preflight
+  guard, archive validator rule, dispatch-claim rule, manifest requirement, or
+  durable AGENTS protocol.
+- Byte-only wins that collapse PoseNet/SegNet are valuable boundary probes, not
+  failures to forget. Use them to define cliffs, trust regions, and water-fill
+  constraints.
+- No-op controls are first-class bugs. Format/packer experiments must prove the
+  targeted payload changed and provenance must distinguish reuse from
+  decode/re-encode from true codec transformation.
+- Treat the software stack as a small compiler for contest archives: typed
+  components, explicit lowering passes, profile-guided feedback, deterministic
+  byte emission, and exact CUDA validation as the final optimizer check.
 
 ## Build Discipline — OSS, Paper, Production, Composability
 
@@ -123,6 +252,32 @@ Subagents and codex-spawned helpers must inherit these four constituencies
 in their commits — review their output for OSS hygiene, ledger entries,
 production fitness, and composability hooks before promoting.
 
+## Public Release Hygiene And Hosted Supplements
+
+The public submission/report/site track may use Lightning.ai notebooks and
+Cloudflare Pages for the Apogee supplement, but public hosting is separate from
+private custody.
+
+- Do not commit secrets, API tokens, SSH targets, local absolute paths, private
+  Lightning Studio app links, Vast job endpoints, raw provider state, or
+  operator-specific account metadata to public-facing GitHub/docs/site
+  surfaces.
+- Use placeholders such as `${LIGHTNING_SUPPLEMENT_URL}`,
+  `${CLOUDFLARE_PAGES_URL}`, `${PUBLIC_NOTEBOOK_URL}`, and
+  `${APOGEE_RELEASE_MANIFEST}` until a URL has been intentionally published.
+  Final public URLs belong in a sanitized release manifest, not in raw
+  `.omx/state` or provider transcripts.
+- `.omx/state/`, `reports/raw/`, `reports/private/`, harvested manifests, and
+  provider job logs are local custody and forensic surfaces unless explicitly
+  sanitized and copied into a public artifact directory.
+- Public notebooks must strip execution environments, local paths, raw job
+  links, and credentials before upload. They should cite artifacts by SHA,
+  archive bytes, evidence grade, and relative release-manifest paths.
+- Before publishing GitHub/docs/Cloudflare/Lightning supplement content, run
+  `check_public_release_hygiene(strict=True, scan_paths=[...])` on the exact
+  publish surface. Normal repo preflight calls the same guard warn-only because
+  legacy custody ledgers intentionally preserve private local evidence.
+
 ## Evidence Grades
 
 Use evidence grades rigorously:
@@ -180,13 +335,37 @@ Non-negotiable compliance rules:
 - Do not load score-affecting sidecars outside the archive.
 - Archive manifests must exclude resource forks, hidden files, caches, debug
   payloads, and zip-slip paths.
+- Packed renderer archives must contain exactly one packed payload container
+  (`p`, `renderer_payload.bin`, or `renderer_payload.bin.br`). If more than
+  one container is present, inflate must fail closed before scoring. Exact
+  eval provenance must preserve the runtime unpack summary so the logical
+  members, bytes, and SHA-256s are auditable after unpack.
 - Use deterministic archive construction: fixed member ordering, timestamps,
   permissions, compression settings, and manifest records.
+- Strict-score archives must not depend on ZIP parser divergence. The central
+  directory and each local file header must name the same nonempty member, and
+  duplicate member names are forbidden. Public submissions that rely on
+  `unzip` accepting malformed ZIPs may be studied as external/current-workflow
+  forensics, but they are not strict custody evidence for our own claims.
+- Public fixed-slice single-member payloads must be sliced by their raw wire
+  contract, not by whatever order a runtime metadata wrapper reports. For
+  PR67/QZS3/QP1-style payloads the raw order is `masks.mkv`, `renderer.bin`,
+  then `optimized_poses.bin`; builders and profilers must verify each slice by
+  charged bytes, SHA-256, decompression success, and decoded magic. Total
+  archive-length heuristics are advisory only and may not dispatch GPU work
+  unless decompression/magic validation proves the split.
 - Exact eval path is canonical: `archive.zip -> inflate.sh ->
   upstream/evaluate.py`, preferably through `experiments/contest_auth_eval.py`.
 - JSON artifacts are authoritative. Do not parse scores from human logs when a
   structured `contest_auth_eval.json` exists.
 - Recompute the score from components before claiming any result.
+- Exact eval provenance must record the fixed inflate/runtime tree hash, not
+  only `archive.zip` SHA-256. Identical archive bytes can score differently
+  when repo-local runtime Python changes; `experiments/contest_auth_eval.py`
+  records `inflate_runtime_manifest.runtime_tree_sha256` and the runtime file
+  list. Any cross-run comparison with identical archive SHA but different
+  runtime tree hash is a runtime-custody comparison, not a pure archive
+  comparison.
 - Exact adjudication may reject on PoseNet/SegNet component gates even when
   the total score is in band. Component collapse is a first-class failure mode.
 - Learned codec/corpus lanes must emit deterministic manifests with checkpoint
@@ -196,6 +375,51 @@ Non-negotiable compliance rules:
   non-promotable in provenance.
 - Archive and diagnostic ZIP handling must be zip-slip safe: no absolute paths,
   parent traversal, resource forks, or hidden sidecars.
+- Any tool that consumes `renderer.bin` or a renderer-like checkpoint for
+  pose regeneration, TTO, tracing, sensitivity, component response, or exact
+  eval support must content-detect the wire format before loading. Packed
+  contest renderer formats (`QZS3`, `MQZ1`, `QFAI`, `OWV2`, `OWV3`, `NWC1`,
+  `NWCS1`, `IMPS`, `SCv1`, `SZv1`, `CCh1`, `C3R1`, etc.) must delegate to the
+  canonical contest inflate loader or an exactly equivalent reviewed loader.
+  Unknown non-pickle magic must fail closed in preflight; never let it fall
+  through to `torch.load()`. This is the C-063 pose-regeneration extension of
+  the DEN-V2/SHIRAZ loader bug class.
+- Renderer-transplant/self-compression candidates that preserve charged
+  `masks.mkv` and `optimized_poses.bin` but replace `renderer.bin` must pass
+  `experiments/preflight_renderer_transplant_pose_safety.py` against the exact
+  source/candidate archive SHA pair before any exact-eval dispatch command is
+  considered valid. Byte closure and loader compatibility are insufficient:
+  the local runtime output-parity gate must report
+  `safe_for_exact_eval_dispatch=true`, and the transplant preflight/readiness
+  planner must fail closed when the pose-safety report is missing, failed,
+  stale, or mismatched by SHA.
+- Any TTO, pose-regeneration, scorer-target, or training-support tool that
+  requests only the contest window of a video must push that frame limit into
+  the decoder itself. Do not decode a longer video and slice afterward.
+  `tac.data.decode_video(..., max_frames=N)` is the guard. This prevents
+  hidden wall-clock failures where `load_gt_video(n_frames=1200)` spends CPU
+  time materializing frames that cannot affect the archive.
+- Pose-regeneration/TTO archive-isolation runs that already provide
+  `--gt-pose-targets`, do not use KL distillation, and will immediately run
+  exact CUDA auth eval should pass `--skip-proxy-score`. Proxy scores are not
+  evidence, and decoding/rendering GT-video proxy comparisons can dominate
+  wall-clock without changing archive bytes.
+- QZS3/JointFrameGenerator pose-regeneration on CUDA must keep renderer
+  micro-batches below PyTorch's Conv2d 32-bit indexing limit. The canonical
+  guard is `experiments/optimize_poses.py::apply_renderer_cuda_batch_safety`,
+  which caps QZS3 CUDA `--batch-pairs` to 32 before the first renderer call.
+  Do not relaunch failed `batch_pairs=100` pose jobs by only changing a driver;
+  the guard and regression test must remain in place.
+- If a legacy `masks.mkv` archive contains `alpha4_residual_repair.amr1*`,
+  the default `inflate_renderer()` path must apply the repair and the exact
+  eval inflate log must show `Applied Alpha residual repair`. It is not enough
+  for helper/TTO paths to support the member. A scored run with the repair
+  member present but no apply log is a no-op harness bug, not method evidence.
+- AMR1 repair over half-frame mask streams must preserve tensor metadata such
+  as `_half_frame_only`. A repair transform that clones class tensors and drops
+  this metadata can silently switch the renderer from 1200-frame reconstruction
+  to 600-frame output; strict auth eval catches the wrong raw size, but the
+  runtime test must guard it before dispatch.
 
 ## Kill Discipline
 
@@ -253,6 +477,208 @@ Every negative result should produce redesign options, not just a verdict.
 - No Shannon-floor attainment claim is allowed without exact contest-grade
   evidence. The broad mandate is to push aggressively toward the floor, not to
   inflate claims.
+- Internal shorthand `Yousfi-Fridrich floor` means the contest-task
+  MDL/rate-distortion floor for a charged sufficient-statistic program of the
+  fixed video and fixed SegNet/PoseNet evaluator. It may sit below generic
+  human-video Shannon intuition because the target is machine score, not
+  perceptual reconstruction. It does not relax contest compliance: every
+  postfilter, learned decoder, GAN-style refiner, latent, pose stream, mask
+  grammar, and entropy-code bit must be charged inside `archive.zip` or fixed
+  contest code, and only exact CUDA eval can claim progress toward it.
+- Every new atom, radius, threshold, loss weight, quantizer, selector, basis,
+  foveation field, ego-motion model, decoder knob, and archive-packing rule
+  must be grounded before it can drive dispatch. Record which contest score
+  term it targets, which domain prior or measured artifact motivates it, what
+  hardware/runtime constraint it respects, what bytes are charged, and what
+  evidence grade supports it. Ungrounded constants are allowed only as
+  explicitly tagged heuristics in planning-only tools.
+- Prefer differentiable, learned, or statistically fitted proposal mechanisms
+  over hand-tuned grids when the contract permits it: Lagrangian water-filling,
+  Fisher/Hessian/Jacobian influence, active subspaces, Gumbel/STE selectors,
+  bandit/BO/CEM proposal search, and ego-motion or camera-geometry manifolds
+  should replace arbitrary scalar sweeps over time. The final archive remains
+  deterministic and byte-closed; the differentiable learner is either charged
+  inside the archive or used only to choose charged payload atoms at
+  compression time.
+- Any hard-coded cutoff that survives into an archive builder must have one of
+  three records: exact component-response support, an ablation/sweep manifest,
+  or a mathematical feasibility bound. Otherwise it must fail closed as
+  `planning_only` and cannot be promoted, stacked, or cited as score evidence.
+
+## Closed-Loop Compiler-Style Optimization
+
+Treat the contest archive pipeline like an optimizing compiler with profile-
+guided feedback. Each stage should emit a typed, machine-readable profile
+artifact that later stages and the next optimization pass can consume:
+
+- representation/profile facts: tensor shapes, stream contract, decoder
+  contract, payload member names, byte counts, SHA-256, runtime, and legality.
+- scorer-profile facts: exact component distances, pair/frame/class/component
+  deltas, hard-pair opportunity density, confidence, and failure class.
+- optimizer facts: selected atoms, rejected atoms, Lagrangian multipliers,
+  water-fill budgets, active subspace basis, constraints, and interaction
+  assumptions.
+
+These feedback edges are allowed to guide aggressive search, but only exact
+CUDA archive evidence can promote, rank, kill, or anchor paper claims. Proxy
+losses, component traces, public-submission anatomy, Hessian/Fisher maps,
+openpilot/camera/ego-motion priors, and learned selectors are compiler profile
+feedback, not score truth. Before a feedback artifact changes a dispatch, it
+must record its input archive SHA/bytes, source command, hardware/runtime
+environment, evidence grade, and whether it is promotable.
+
+Optimization passes should explicitly look for positive and negative feedback:
+an upstream representation can expose cheaper downstream pose coding; a
+renderer/pose change can shift SegNet hard pairs; a packer can make a repair
+atom cheap enough to become worthwhile; and a side-channel can improve one
+component while damaging another. Do not assume additive deltas compose. Use
+exact stacked archives to validate synergies and antagonisms.
+
+Planning artifacts that rank atoms or policies must emit learnable feedback
+fields when feasible: rate-score cost, break-even component benefit, bytes per
+changed element, bytes per run/component, trust-region membership, no-op
+status, and whether the record is positive/negative/neutral training signal.
+No-op or source-preserving policies must be penalized or marked
+non-dispatchable in the artifact itself. A low byte estimate is not sufficient
+for dispatch unless the artifact also shows an archive-relevant state change
+and a plausible break-even component path.
+
+### Hardware, Camera, And openpilot Priors
+
+The contest video was captured by real comma/openpilot hardware and scored on
+fixed CUDA hardware. Treat those facts as optimization priors, not as excuses
+for unchecked shortcuts.
+
+- Camera calibration, ego-motion, vanishing point, horizon, lane geometry,
+  rolling temporal structure, and openpilot-style pose semantics may define
+  allocation fields, foveation centers, hard-pair priors, low-dimensional
+  motion bases, curriculum weights, and learned proposal distributions.
+- These priors are development signals until a concrete archive consumes them
+  through charged payload bytes or fixed contest code and passes exact CUDA
+  auth eval. A plausible radial zoom, telescope/foveation transform, or
+  ego-flow model is invalid if the inflate runtime does not actually consume
+  it in the scored path.
+- Prefer using ego-motion and camera geometry first as atom-ranking fields and
+  active-subspace coordinates. Pixel warps, mask expansion warps, or learned
+  geometry decoders require parity tests, payload-closure checks, and exact
+  component gates because small geometric errors can catastrophically damage
+  PoseNet.
+- Hardware-specific speedups are allowed for compression search and inflate
+  runtime engineering when they are deterministic and contest-legal. Promotion
+  claims still require the canonical `archive.zip -> inflate.sh ->
+  upstream/evaluate.py` CUDA path on T4/equivalent hardware, with runtime and
+  dependency provenance recorded.
+
+### Yousfi-Fridrich Atom-Field Planning Contract
+
+The atom-field planner is the sanctioned bridge from high-dimensional math to
+contest archives. Use `experiments/plan_yousfi_fridrich_field_equations.py`
+to convert planning-only atom ledgers into deterministic policy JSON. Use
+`experiments/build_cmg3_adaptive_runs_candidate.py --field-policy-json ...`
+to consume those policies as archive bytes. This keeps the equation system,
+selected atoms, charged byte proxies, and concrete archive builder coupled
+without turning proxy math into a score claim.
+
+Two modes are allowed:
+
+- `contest`: the practical low-order projection. It emits archive-builder
+  policy candidates over charged atoms and remains `planning_only` until exact
+  CUDA auth eval.
+- `ideal`: the infinite-compute all-order field equation. It may record
+  Taylor/Frechet, Fourier/Walsh, Riemannian, Feynman/CEM, Dykstra/ADMM, and
+  learned-control search plans, but it must not dispatch or claim score.
+
+Configuration should be reproducible but fast to operate. CLI flags are the
+source of truth in manifests; environment variables are acceptable defaults
+for iteration; Python kwargs are acceptable for tests and composable tooling.
+Supported field-planner env defaults include `PACT_FIELD_EQUATION_MODE`,
+`PACT_FIELD_CANDIDATE_SIZES`, `PACT_FIELD_MAX_SOURCE_ATOMS`,
+`PACT_FIELD_INTERACTION_MODEL`, `PACT_FIELD_CURVATURE_STRENGTH`,
+`PACT_FIELD_PAIR_ANTAGONISM`, `PACT_FIELD_FRAME_ANTAGONISM`,
+`PACT_FIELD_CLASS_SYNERGY`, `PACT_FIELD_LOW_RANK_MODES`,
+`PACT_FIELD_POSITIVE_PROXY_ONLY`, and `PACT_FIELD_POLICY_PREFIX`.
+
+For CMG3A archives, always align the planner residual basis with the builder
+base. If a ledger was computed against a top-2 row-run candidate, build with
+`--base-runs-per-row 2`; if it was computed against top-1, build with
+`--base-runs-per-row 1`. The archive manifest must record the selected
+policy id, source policy SHA-256, matched/unmatched row-run atoms, and
+base-runs semantics.
+
+Field-policy archive builds must fail closed on duplicate selected atoms,
+unmatched atoms, and base-run mismatches. Negative field-energy policies should
+be filtered by default; emitting them requires an explicit
+`--allow-negative-field-energy` cliff-mapping decision and does not justify
+remote dispatch by itself.
+
+CMG3A target-body selection must never assume compressed body bytes are
+monotonic over a priority prefix. `--target-body-bytes` callers must use the
+builder's nonmonotonic search contract and record `body_search` in the
+manifest. Exhaustive mode is exact only over every prefix; coarse/auto sampled
+mode is a deterministic byte-screen heuristic and must record evaluated and
+unevaluated prefix counts. Do not describe sampled body-budget selection as an
+exact optimizer, and do not promote a candidate from body-budget proxy alone.
+
+### Local-Minimum Escape Discipline
+
+This project is a nonconvex rate-distortion search. Treat local minima as an
+expected failure mode, not an exception. Once a lane reaches diminishing
+returns, every additional polishing dispatch must be paired with one of:
+
+- an exact CUDA eval candidate that can plausibly cross a leaderboard threshold;
+- an orthogonal representation/decoder/packer family with independent failure
+  modes;
+- a finite policy search or atom-allocation proof that the remaining local
+  neighborhood has been materially exhausted;
+- an explicit ledger note explaining why diversification would cost more
+  wall-clock than it saves.
+
+For mask grammars, do not freeze a row-fill, draw order, default class,
+reconciliation rule, or residual selector because it was convenient in the
+first implementation. Search finite policy spaces exhaustively when they are
+small, record the search cardinality and winning policy, and keep runtime
+decode parity tests for every emitted policy mode. When the finite policy
+space becomes too large, emit a deterministic planning ledger with evaluated
+and unevaluated counts, then use exact CUDA archive eval to calibrate the next
+allocator.
+
+Remote PMG/row-span mask-grammar dispatches must carry a geometry-escape
+proof, a learned/pose-safe contract, or an explicit guarded replay marker. The
+permanent preflight guard is
+`check_pmg_remote_dispatch_requires_geometry_escape`; do not spend GPU on a
+byte-only PMG/CMG3 row-span candidate after same-family PoseNet-collapse
+evidence unless the command cites why it escapes that measured failure mode.
+
+Multimask and multichannel reconciliation lanes are valid orthogonal escape
+paths when every score-affecting bit is charged. They must remain
+non-promotable until a concrete archive with the reconciler and all mask/latent
+payloads inside `archive.zip` receives exact CUDA auth eval.
+
+### High-Upside Learned-Codec Non-Conservatism
+
+Do not let clearance gates silently become lane retirement. NeRV/HNeRV/INR,
+learned renderer, learned mask, learned latent, Muon/AdamW/QAT, and other
+large learned-codec families are high-upside floor-breaking candidates. A lane
+that is blocked by missing parser support, missing provenance, missing L2
+clearance, unstable training, or incomplete runtime closure must have one of:
+
+- an active owner and a concrete unblock artifact;
+- a paid or local experiment queued under the dispatch-claim rules;
+- an exact negative CUDA artifact that scopes the measured implementation; or
+- a mathematical impossibility argument recorded in a dated research ledger.
+
+Absence of clearance is not evidence that a family is low value. Public
+breakthrough submissions or credible external claims in these families must be
+handled in this order: exact replay of their archive/runtime, byte-and-runtime
+deconstruction, local parity/profile extraction, then an owned reproduction or
+improvement lane. Do not spend wall-clock on low-EV polish while a newly open
+floor-breaking learned codec has not been replayed or assigned.
+
+When a prior lane was delayed by conservatism, preserve that as a process bug
+and add a guard, checklist item, or dispatch policy. The correction is not to
+lower evidence standards; it is to run higher-upside experiments earlier while
+keeping archive custody, charged bits, exact CUDA eval, and deterministic
+manifests intact.
 
 ## Shannon-Floor Execution Policy
 
@@ -285,6 +711,102 @@ are independent:
 Stack experiments wait until component archives have exact evidence. A stack is
 its own archive and must pass its own exact eval.
 
+## 0.33-Or-Below Public-Floor Path
+
+The May 3 leaderboard objective requires a `0.33` or lower contest-valid
+archive. When current internal archives are far above that band, do not spend
+the critical path on incremental OWV3/Alpha polish unless it directly supports
+the public-floor basin. The active high-EV route is:
+
+1. Treat public PR #63 `qpose14` and PR #64 `unified_brotli` as the measured
+   basin contract, not just inspiration: decoded mask SHA, renderer payload
+   family, one-scalar pose manifold, PR64 single-Brotli length-table packing,
+   per-pair component traces, archive bytes, and exact CUDA reproduction.
+2. Build only charged, contest-closed variants of that contract: deterministic
+   repacks, pose residual atoms, renderer/pose/mask packers, and byte-layout
+   optimizers. Copying a public archive verbatim is not a scientific result;
+   every submitted candidate must have its own provenance and exact eval.
+3. Use fast empirical checks to reject out-of-basin candidates before exact
+   eval. A candidate that fails the public-floor geometry contract must not be
+   promoted just because its archive bytes are small.
+4. Use L40S/H100/A100 for triage and T4/equivalent only for promotion-grade
+   confirmation. Queue T4 only when formula math plus contract checks make
+   `<=0.33` plausible.
+5. If rigor must be compressed for wall-clock, sacrifice documentation polish
+   and low-value local sweeps first. Never sacrifice charged payload closure,
+   exact CUDA score truth, archive SHA/bytes custody, or failure classification.
+6. Prefer learned, differentiable, scorer-aligned proposal distributions over
+   arbitrary grids when the runtime contract permits it. For pose/byte search,
+   gradient-guided or bandit/BO proposal atoms are development-time search
+   policies only: the accepted payload must still be charged in the archive,
+   the final archive must inflate without scorer access, and the score truth
+   remains exact CUDA auth eval of the exact bytes.
+7. For public-floor QZS3/QP1/JFG archives, treat pose search as an
+   anisotropic manifold problem after scalar-radius gains flatten. The
+   preferred order is: accepted scalar checkpoints, sparse/asymmetric
+   `--delta-sets`, differentiable `--gradient-delta-sets`, hard-pair temporal
+   windows and DCT/spline/jerk modes through `--basis-delta-sets`, then
+   charged qpose residual atoms. Every proposal policy is non-promotable until
+   it produces a closed archive with exact CUDA auth eval on identical bytes.
+   Larger symmetric radii are lower priority once they stop improving the
+   rounded archive objective.
+8. Public-submission replays that require a public PR's own `inflate.sh` or a
+   compatibility adapter are reverse-engineering traces only. They can inform
+   mask/pose/model atom design, but they are not our contest evidence and must
+   be tagged `external` unless the exact charged archive and fixed submission
+   runtime are rebuilt under this repo's contest-faithful payload-closure
+   rules. Do not compare a public archive replay directly against our
+   leaderboard rank without that attribution boundary.
+
+## Quantizr-Style Five-Stage QAT Protocol
+
+Quantizr's public 0.33 lane demonstrated that five-stage QAT is a competitive
+training pattern, but copying the stage names is not enough. In this repo,
+five-stage QAT is only production/scientific-grade when each phase is wired to
+the same scorer, archive, and packer contracts used at deployment.
+
+Durable requirements for any five-stage QAT or Q-FAITHFUL successor:
+
+- The canonical stage shape is `anchor -> finetune -> joint -> QAT -> final`.
+  The stage boundaries, epoch counts, learning rates, seed, batch policy,
+  quantization start, and early-stop/kill criteria must be recorded in the
+  artifact provenance.
+- EMA must run through every stage, including QAT and final consolidation.
+  Export and archive builders must declare whether the EMA shadow or live
+  weights were packed.
+- Training must simulate the scorer input contract: upsample, clamp/round to
+  uint8, YUV/resize/downsample behavior, and any pair ordering or mask parity
+  used by the inflate path. `eval_roundtrip=True` remains mandatory.
+- Pose-conditioning is load-bearing. Any QAT lane with `pose_dim>0` must train
+  and export against the exact deployed pose stream or an explicitly recorded
+  candidate pose stream; zero-pose fallback is a preflight failure.
+- Half-frame Q-FAITHFUL successors with charged zoom/foveation/ego-motion
+  geometry must prove both byte preservation and runtime consumption. A
+  `zoom_scalars.bin` archive member is not sufficient: the inflate runtime
+  must consume it either as renderer `ego_flow` when `use_zoom_flow=True` or
+  as a pre-render half-frame mask-expansion warp when the renderer itself has
+  no `ego_flow` input. If neither consumed path is proven, exact-screen
+  preflight must fail closed with
+  `zoom_warp_geometry_not_consumed_by_runtime`.
+- Quantization is an optimization variable, not a post-hoc export step. Per-
+  tensor scales, grouped bit depth, FP4 codebook choice, stochastic/robust
+  scale, entropy model, and packer layout should be treated as atoms with byte
+  cost and scorer benefit.
+- Hard-pair and water-fill information may enter as Lagrange weights,
+  curriculum sampling, atom budgets, or learned selectors. These weights are
+  development signals until a concrete archive built from them passes exact
+  CUDA auth eval.
+- Every QAT snapshot that is harvested for a score attempt must emit a
+  deterministic archive through the same `representation -> prediction ->
+  quantization -> hyperprior -> arithmetic -> pack` contract as other lanes.
+  Byte-only, loss-only, or proxy improvements cannot promote.
+
+The aggressive upgrade over public Quantizr is not one bigger stage. It is a
+closed loop: exact component traces and public-floor deltas update QAT sampling
+and quantizer allocation; QAT exports update packer/anatomy measurements; exact
+archive eval updates the next Lagrangian weights. The loop is valid only when
+each feedback artifact is tagged with its evidence grade and provenance.
+
 Lane 12/Alpha NeRV retraining is build-only until explicit L2 clearance.
 Production training targets must use decoded baseline archive masks with a
 validated `alpha_geo_primitive_contract_v1`; direct `gt_masks_source=segnet`
@@ -293,6 +815,12 @@ validate decoded-mask SHA and shape, record contract SHA and sampling gates,
 and preserve weighted sampling provenance for uniform, critical-box,
 boundary-band, and transition-endpoint pools. These trainer artifacts are
 empirical/no-score until a later canonical CUDA archive eval is run.
+Lane 12 remote wrappers must forward full-CUDA training overrides explicitly:
+`NERV_STEPS`, `NERV_EVAL_EVERY`, and `NERV_WEIGHT_DTYPE` must reach
+`experiments/train_nerv_mask.py` as `--steps`, `--eval-every`, and
+`--weight-dtype`, and provenance must record the override values. Do not
+dispatch a long NeRV burn through a wrapper that silently falls back to the
+shorter profile defaults.
 
 Alpha-Geo-0 stale-pose isolation is a permitted Lane 12/Alpha causal
 experiment when it does not retrain the mask codec: keep the exact measured
@@ -301,6 +829,84 @@ mask stream, rebuild a deterministic archive, then run CUDA auth eval. Treat
 its result as a narrow answer to "stale poses vs incompatible mask geometry";
 it does not clear new NeRV retraining unless the L2 clearance packet and three
 clean Grand Council passes are recorded.
+
+Alpha sparse-repair archives may replace `masks.mkv` with `grayscale.mkv` plus
+an optional `alpha4_residual_repair.amr1` payload, including reviewed compressed
+forms `.xz`, `.zlib`, or `.br`. The inflate path must verify decoded-candidate
+mask SHA, AMR1 shape, record bounds, and full-repair source SHA when the payload
+declares non-partial repair. Archive builders must record repair policy,
+selected classes/runs/pixels, compressed and raw SHA/bytes, anchor mask SHA
+match, and `score_claim=false` until exact CUDA auth eval adjudication lands.
+Any new archive member suffix required by this contract must be admitted in the
+canonical auth-eval archive validator and the local smoke whitelist together;
+AMR1 suffixes currently allowed are `.amr1`, `.amr1.xz`, `.amr1.zlib`, and
+`.amr1.br`. Pair-targeted Alpha repair policies select frames `2*i` and
+`2*i+1` for each absolute contest pair index `i`; they must record the source
+of the pair list and remain non-promotable until the resulting archive has its
+own exact CUDA auth eval.
+
+Predictive charged mask grammar (`CMG2`-class) candidates must pass a
+byte-screen and runtime-contract screen before exact-eval spend. A manifest
+must compare the candidate against the currently charged mask stream bytes and
+record decoded tensor SHA, transform/decoder schema, payload SHA, payload
+bytes, and `score_claim=false`. Generic lossless tensor wrappers are planning
+signals only unless they beat the charged mask stream and ship with a reviewed
+runtime decoder envelope. Byte-regressive lossless probes must not be promoted
+to CUDA exact eval; move the main effort to predictive/lossy/scorer-weighted
+grammar or learned decoder atoms instead.
+
+CDO1 decoded-mask overlay sidecars (`masks.cdo1`, `.zlib`, `.xz`, `.br`) are
+charged overlay payloads, not standalone mask streams. The inflate runtime must
+decode the selected base mask payload first, verify
+`base_mask_tensor_sha256`, apply sorted non-overlapping overlay runs, preserve
+`_half_frame_only` metadata, verify `reconstructed_mask_u8_sha256`, and log
+that CDO1 was applied. Builders must record raw/compressed payload SHA/bytes,
+base archive SHA, output archive SHA/bytes, and `score_claim=false`. A CDO1
+payload or spec is non-promotable until the byte-closed archive gets exact CUDA
+auth eval; no-op overlays and spec-only artifacts are method evidence only for
+runtime/debugging, not score evidence.
+
+CDO1 remote dispatch also requires a joint byte+geometry preflight, not just a
+small overlay payload. Before exact-eval spend, record a planner artifact that
+prices both the candidate archive bytes and the residual decoded-mask
+disagreement after overlay. Byte-headroom candidates that still fail the
+residual geometry gate are lower-bound/economics evidence only; do not dispatch
+them unless a specific diagnostic override is recorded in the lane claim.
+CDO1 archive builders must support the deployed packed single-member `p`
+container, not only expanded `renderer.bin`/`masks.*` archives. A CDO1
+candidate that starts from a packed frontier archive must unpack through the
+reviewed runtime unpacker, add the charged overlay as a logical runtime member,
+and optionally re-emit a single packed payload with recorded payload format,
+member name, Brotli settings, expanded-candidate SHA, and final archive SHA.
+Tests must cover this packed round trip before any packed CDO1 dispatch.
+
+SJ-KL residual candidates may add an optional charged `sjkl.bin` archive
+member to JointFrameGenerator/QZS/QFAI-style renderer archives. The runtime
+contract is narrow: `sjkl.bin` contains only packed basis and coefficient
+bytes, the inflate path must not load SegNet/PoseNet or scorer modules, and
+the payload is applied only inside the q-faithful JointFrameGenerator pair
+path. Non-JointFrameGenerator renderers, shape mismatches, absent payloads,
+or invalid payload headers must skip/fail closed as appropriate and must not
+silently create a score claim. Builders must record basis SHA, coefficient
+SHA, coefficient quantization, charged bytes, target frame shape, source
+renderer-output SHA, GT/residual tensor SHA, and `score_claim=false` until
+the concrete archive receives exact CUDA auth eval. Any SJ-KL exact-eval
+dispatch must set `SJKL_REQUIRE_APPLIED=1` unless it is explicitly labelled
+forensic/no-op-control; charged `sjkl.bin` bytes that do not affect at least
+one renderer pair are a harness failure, not score evidence.
+
+C067-era JointFrameGenerator renderer compression lanes must anchor on the
+exact public-floor-style packed runtime contract, not on older Lane G/ASYM
+renderer assumptions. IMP, QZS reblocking, Block-FP, or self-compression
+builders for this family must first prove deterministic unpack/repack parity
+against the current packed payload, record logical member SHA/bytes, and emit
+`score_claim=false` archives with exact archive SHA/bytes before any remote
+spend. Byte-screen winners are empirical only. L40S/H100 diagnostics may test
+distortion quickly, but any frontier or leaderboard claim requires T4/equivalent
+CUDA confirmation on identical archive bytes. Remote IMP bridge scripts are
+build/byte-screen helpers only unless the emitted archive is separately routed
+through the canonical exact CUDA auth-eval path with source manifests and
+adjudication.
 
 ## Backend Routing
 
@@ -320,6 +926,14 @@ clean Grand Council passes are recorded.
   directory. A duplicate concurrent trainer writing the same artifact tree
   invalidates custody for that run; harvest logs for forensics, terminate the
   duplicate work, and rerun behind an explicit lock before spending exact eval.
+- Single-GPU diagnostic loops on warm Vast/H100 boxes must also be
+  single-flight by process signature and output directory. Before launching an
+  ad-hoc pose/search/eval process, run `pgrep -af <script-or-output-tag>` and
+  inspect `tmux ls` or the lane-local PID/log file. The launch must create the
+  output directory and first-byte stdout/stderr log before backgrounding. If a
+  duplicate process is found, keep the highest-EV active run, terminate only
+  the lower-priority duplicate, and mark the stale dispatch claim
+  `failed_<reason>` or `cancelled_duplicate_claim`.
 - Local M-series/MPS work is for development, smoke, and byte/round-trip checks
   only. It cannot rank or promote.
 - Do not trust remote state ledgers without reconciliation. Use
@@ -339,6 +953,13 @@ Time-to-Shannon-floor is the optimization target, not $/hr. Per the user's
 have time to waste waiting for results"), prefer the fastest available chip
 within a 2-minute boot window. $5-10/hr is acceptable when it removes 30+
 minutes of wait time.
+
+Every score-affecting experiment matters. New diagnostic exact-eval,
+component-response, trace, sweep, or build/eval loop work must use the fastest
+available verified CUDA hardware by default. Use T4 only for contest-equivalent
+A++ promotion or when the experiment specifically tests T4 runtime behavior.
+If a non-T4 diagnostic is in the public-floor band, queue T4 confirmation on
+the identical archive bytes immediately and keep the fast-chip loop moving.
 
 Default chip ranking (fastest first), measured by contest-CUDA archive
 inflate + evaluate end-to-end on a single owv3-class candidate:
@@ -396,6 +1017,47 @@ prevent re-learning these lessons, the rules below are now non-negotiable.
   build (with retry on truncated downloads) when the system ffmpeg lacks
   `in_primaries`/`in_color_matrix`/`in_transfer` scale options required by
   `submissions/robust_current/inflate.sh`.
+- `scripts/remote_archive_only_eval.sh` must also bootstrap scorer-runtime
+  dependencies in the Python interpreter that runs `upstream/evaluate.py`
+  (`timm`, `einops`, `segmentation-models-pytorch`, `safetensors`, `av`,
+  `tqdm`) and record a probe JSON. Bare CUDA images often have Torch but not
+  the scorer stack; failing after archive inflate is avoidable wall-clock loss.
+- Compress-time proposal tools that import `upstream/modules.py` directly
+  (for example `experiments/line_search_pose_refinement.py`) must run an
+  explicit scorer-runtime dependency preflight before importing the upstream
+  module, touching `DaliVideoDataset`, or launching paid remote work. Missing
+  `timm`, `einops`, `segmentation-models-pytorch`, `safetensors`, or
+  `nvidia.dali` is a
+  `failed_scorer_runtime_deps` preflight failure, not lane evidence. Do not
+  paper over this with ad-hoc imports; install the runtime extra and run
+  `scripts/bootstrap_dali_hash_pinned.py` in the runner interpreter so DALI is
+  direct-wheel, hash-pinned, and recorded before any GPU spend.
+- Compress-time proposal tools that decode the contest video through
+  `upstream/frame_utils.DaliVideoDataset` must also preflight
+  `nvidia.dali` in the same runner interpreter before paid remote work.
+  Missing DALI is a `failed_dali_runtime_deps` preflight failure. Install the
+  driver-compatible wheel (`nvidia-dali-cuda130` for CUDA 13 images,
+  `nvidia-dali-cuda120` for CUDA 12 images) and record a probe JSON before
+  relaunch.
+- Archive-only exact-eval chains must clean heavy inflated/eval work after
+  preserving canonical `contest_auth_eval.json`, provenance, report, logs, and
+  runtime-tooling metadata. They must also remove the per-job
+  `UV_PROJECT_ENVIRONMENT` when it lives under the job log dir; this directory
+  is reproducible dependency state, not scientific custody. Use an explicit
+  keep flag only when a later component trace or forensic inspection requires
+  the raw inflated directory.
+- Archive-only exact-eval chains must also mirror the exact evaluated
+  `archive.zip` into the result directory and write `archive_custody.json`
+  with SHA-256 and byte count before invoking the scorer. A score JSON whose
+  archive path can be overwritten later is diagnostic-only until custody is
+  re-established from a preserved archive copy.
+- Archive-only exact-eval chains that intentionally evaluate a non-default
+  inflate script must pass that path through the runner's explicit
+  `INFLATE_SH`/`--inflate-sh` control, resolve it inside the repo, record its
+  SHA-256 in provenance, and fail closed on unsafe or missing paths. The
+  default remains `submissions/robust_current/inflate.sh`; public-adapter
+  traces are external reverse-engineering evidence unless rebuilt as our own
+  charged runtime.
 - Every new `scripts/remote_lane_*.sh`, every chain driver, and every ad-hoc
   one-off MUST either invoke `scripts/remote_archive_only_eval.sh` directly or
   `source` its bootstrap function. Inline duplication of `curl ... | sh`,
@@ -494,6 +1156,23 @@ deterministic.
   the scorer environment. Export a per-job `UV_PROJECT_ENVIRONMENT` under the
   job output dir before `contest_auth_eval.py`; otherwise `inflate.sh` can
   recreate the shared repo `.venv` and break `upstream/evaluate.py`.
+- Exact-eval Studio submissions must be source-manifest closed over the
+  inflate runtime, not only the archive. For `submissions/robust_current`, the
+  staged manifest must include both `submissions/robust_current/inflate.sh`
+  and its sibling `submissions/robust_current/config.env`; missing
+  `config.env` is a submit-time blocker because `contest_auth_eval.py` will
+  fail closed before score evidence exists.
+- Promotion-sensitive exact evals should also gate the recorded
+  `inflate_runtime_manifest.runtime_tree_sha256` by passing
+  `expected_runtime_tree_sha256` through queue metadata. Identical archive
+  bytes evaluated under different runtime helpers are runtime-custody
+  comparisons, not interchangeable promotion evidence.
+- T4/g4dn exact-eval submissions must explicitly pin inflate-side Torch for
+  the host driver. For CUDA-12 era T4 workers, pass
+  `INFLATE_TORCH_SPEC=torch==2.5.1+cu124`,
+  `UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu124`, and
+  `UV_INDEX_STRATEGY=unsafe-best-match` in recorded job env. Do not rely on
+  resolver defaults for promotion-grade runs.
 - Inflate-side `uv run --with ...` dependencies must be deterministic. Do not
   leave `brotli`, `av`, `torch`, or `numpy` as floating resolver inputs in
   contest runtime scripts. `submissions/robust_current/inflate.sh` exposes
@@ -509,6 +1188,19 @@ deterministic.
   `lightning_sdk_job_name()` or an explicit output directory. The SDK normalizes
   underscores to hyphens for `/teamspace/jobs/<job>/artifacts`; do not
   hand-compose artifact paths from the local queue name.
+- Exact/component/sensitivity Batch submissions that target non-default
+  Lightning cloud accounts must pass the explicit `--cloud-account` through
+  to the SDK job run. Machine inventory on one cloud account is not evidence
+  that the same accelerator slug exists on the account selected by `Job.run`;
+  failed machine-name retries are a pre-spend routing bug.
+- Studio-backed Lightning Batch Jobs can only run on the cloud account attached
+  to that Studio namespace. `list-machines --cloud-account X` proving H100/L40S
+  capacity on account X is not dispatch authority unless the selected Studio is
+  also on account X. Before claiming/submitting a cross-account accelerator
+  hedge, either use a Studio that already belongs to that cloud account, switch
+  to a reviewed image-backed/non-Studio submit path, or record a terminal
+  `failed_predispatch_cloud_account_mismatch` claim. Do not spend queue time
+  retrying a Studio/cloud-account mismatch after the SDK reports it.
 - `scripts/launch_lightning_batch_job.py refresh-status` should be run with
   only `--state-path` and `--job-name` when the job was queued locally; it
   infers the SDK job name, teamspace, org, and user from the state record to
@@ -810,12 +1502,26 @@ deterministic.
 - Add preflight checks for known meta-bugs: stale CLI guidance, regex score
   parsing, nondeterministic archives, sidecars, duplicate dispatches, stale
   trackers, non-CUDA evals, and hidden fallbacks.
+- Format repackers must distinguish semantic codec changes from archive-layout
+  no-ops. If a source payload is already in the target codec family, a changed
+  knob such as block size, bit depth, grouping, quantizer, or entropy mode must
+  either decode/re-encode the payload and record source/target contract
+  provenance, or explicitly mark the candidate as a no-op control.
+- Frontier archives may be single charged runtime blobs (`p`,
+  `renderer_payload.bin`, or compressed variants). Repackers and analyzers must
+  consume the deployed archive contract directly, using the contest runtime
+  unpacker when needed, instead of relying on lane-local exploded sidecars.
 - Remote scripts must use strict shell mode, deterministic packaging,
   lane-local JSON adjudication, heartbeat/provenance logs, and explicit
   hardware recording.
 - Avoid duplicate dispatches: use locks and live-prefix checks. Promotion-capable
   launchers must fail closed when an active process already targets the same
   lane output directory.
+- Same-lane parallel dispatch is allowed only as an audited child claim:
+  `tools/claim_lane_dispatch.py claim --allow-parallel --child-of <active-job>
+  --parallel-reason <why-disjoint>`. This is for bounded cases such as promoting
+  a completed H100 diagnostic candidate on T4 while the parent sweep finishes.
+  Do not use `--force` for normal same-lane parallel work.
 - Keep all warnings and low-severity DX issues on the hardening backlog.
 - MCP servers are disabled for this project unless explicitly re-enabled by the
   user; do not depend on MCP tools for routine work.
@@ -884,6 +1590,14 @@ deterministic.
   `submissions/robust_current/inflate.sh` (`in_range`, `out_range`,
   `in_color_matrix`, `in_primaries`, and `in_transfer`). Ubuntu 22.04
   `ffmpeg` is not sufficient unless this preflight proves otherwise.
+- Standalone component traces must enforce the same runtime parity as exact
+  archive evals before their per-pair profile feedback can drive optimizer
+  decisions. `experiments/contest_component_trace.py` must select or reject
+  `FFMPEG_BIN` against the explicit color-contract options above, isolate
+  inflate-side `uv run` with a job-local `UV_PROJECT_ENVIRONMENT` and
+  `UV_LINK_MODE=copy`, emit `component_trace_runtime_env.json`, and remain
+  explicitly non-promotable unless cross-checked against exact CUDA
+  `contest_auth_eval.json` for identical archive bytes.
 - Empirical Alpha diagnostic helpers must be bounded by default and explicitly
   non-promotable. Full-corpus or expensive primitive diagnostics require an
   explicit operator flag, and their outputs remain design signal only until a
@@ -893,6 +1607,21 @@ deterministic.
   scripts must receive the matching `PREBUILT_CORPUS_MANIFEST` and
   `CORPUS_REPLAY_ROOT`, preserve manifest bytes/SHA, and fail closed on
   missing or mismatched replay custody.
+- Q-FAITHFUL/JointFrameGenerator training must consume a proven nonzero
+  deployed pose stream. Silent zero-pose fallback is forbidden for
+  `variant=quantizr_faithful`; training checkpoints and QFAI/QZS3 exports must
+  record a `training_pose_contract` with pose dimension, pair count, SHA-256,
+  `training_uses_nonzero_pose_stream=true`, and
+  `zero_pose_fallback_allowed=false`. Launchers for this family must build
+  half-frame mask archives explicitly and deploy runtime-readable QFAI/QZS3
+  bytes, not brotli-compressed data under a raw `.bin` member name.
+- Trained-renderer export scanners must include harvested Q-FAITHFUL artifact
+  trees and classify QFAI/QZS3/MQZ-style exports by evidence state: present
+  but raw-needs-packing, present but transplant-preflight-blocked, or
+  present-with-exact-negative CUDA evidence. Do not report this family as
+  "missing" when non-surrogate artifacts exist, and do not allow
+  exact-negative Q-FAITHFUL snapshots to re-enter H100/T4 dispatch through a
+  generic renderer self-compression readiness path.
 
 ## Verification Before Deployment
 

@@ -28,7 +28,6 @@ from __future__ import annotations
 
 import argparse
 import io
-import os
 import shutil
 import struct
 import sys
@@ -36,7 +35,10 @@ import tempfile
 import zipfile
 from pathlib import Path
 
-from tac.submission_archive import ORIGINAL_VIDEO_BYTES as GT_SIZE
+from tac.submission_archive import (
+    ORIGINAL_VIDEO_BYTES as GT_SIZE,
+    deterministic_zip_directory,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -184,12 +186,12 @@ def compress_archive(args: argparse.Namespace) -> None:
             archive_path.parent / f"{archive_path.stem}_compressed.zip"
         )
 
-        with zipfile.ZipFile(str(output_path), "w", zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
-            for root, _dirs, files in os.walk(str(tmpdir)):
-                for fname in files:
-                    full_path = Path(root) / fname
-                    arcname = str(full_path.relative_to(tmpdir))
-                    zf.write(str(full_path), arcname)
+        deterministic_zip_directory(
+            tmpdir,
+            output_path,
+            compress_type=zipfile.ZIP_DEFLATED,
+            compresslevel=9,
+        )
 
         new_archive_size = output_path.stat().st_size
         print(f"\n{'=' * 60}")

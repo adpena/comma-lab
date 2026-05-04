@@ -108,6 +108,54 @@ def replace_managed_block(existing: str, block: str) -> str:
     return out
 
 
+def prune_duplicate_host_stanzas(existing: str, *, alias: str) -> str:
+    """Remove unmanaged SSH Host stanzas that also match the managed alias."""
+
+    alias = _require_clean_token(alias, label="alias")
+    lines = existing.splitlines(keepends=True)
+    kept: list[str] = []
+    index = 0
+    in_managed = False
+    while index < len(lines):
+        line = lines[index]
+        stripped = line.strip()
+        if stripped == BEGIN:
+            in_managed = True
+            kept.append(line)
+            index += 1
+            continue
+        if stripped == END:
+            in_managed = False
+            kept.append(line)
+            index += 1
+            continue
+        if not in_managed and line[:1] not in {" ", "\t"} and stripped.startswith("Host "):
+            patterns = stripped.split()[1:]
+            if alias in patterns:
+                index += 1
+                while index < len(lines):
+                    next_line = lines[index]
+                    next_stripped = next_line.strip()
+                    if (
+                        next_line[:1] not in {" ", "\t"}
+                        and (
+                            next_stripped.startswith("Host ")
+                            or next_stripped.startswith("Match ")
+                            or next_stripped == BEGIN
+                        )
+                    ):
+                        break
+                    index += 1
+                while kept and not kept[-1].strip():
+                    kept.pop()
+                if kept and kept[-1].strip():
+                    kept.append("\n")
+                continue
+        kept.append(line)
+        index += 1
+    return "".join(kept)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--alias", default=os.environ.get("LIGHTNING_SSH_ALIAS", DEFAULT_ALIAS))
@@ -116,6 +164,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--identity-file", default=os.environ.get("LIGHTNING_IDENTITY_FILE", DEFAULT_IDENTITY_FILE))
     parser.add_argument("--known-hosts", default=os.environ.get("LIGHTNING_KNOWN_HOSTS", DEFAULT_KNOWN_HOSTS))
     parser.add_argument("--config", default=str(Path.home() / ".ssh" / "config"))
+    parser.add_argument(
+        "--no-prune-duplicate-hosts",
+        action="store_true",
+        help="Do not remove unmanaged SSH Host stanzas that also match --alias.",
+    )
     parser.add_argument("--dry-run", action="store_true")
     return parser
 
@@ -134,6 +187,8 @@ def main(argv: list[str] | None = None) -> int:
     config = Path(args.config).expanduser()
     existing = config.read_text() if config.exists() else ""
     updated = replace_managed_block(existing, block)
+    if not args.no_prune_duplicate_hosts:
+        updated = prune_duplicate_host_stanzas(updated, alias=args.alias)
     if args.dry_run:
         print(updated, end="")
         return 0

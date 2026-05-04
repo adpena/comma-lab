@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import importlib.metadata as metadata
 import json
+import os
 import pathlib
 import shutil
 import subprocess
@@ -91,8 +92,86 @@ def _write_requirements(path: pathlib.Path, wheels: list[dict[str, str]]) -> Non
     path.write_text("\n".join(lines) + "\n")
 
 
-def _install_command(requirements_path: pathlib.Path) -> list[str]:
+def _probe_python_pip() -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, "-c", "import pip"],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+
+
+def _ensure_uv(payload: dict[str, Any], *, timeout: int) -> str | None:
     uv = shutil.which("uv")
+    if uv:
+        payload["installer_bootstrap_action"] = "uv_already_available"
+        payload["installer_uv_path"] = uv
+        return uv
+
+    ensure_uv = REPO_ROOT / "scripts" / "ensure_remote_uv.sh"
+    if not ensure_uv.is_file():
+        payload["ensure_remote_uv_available"] = False
+        return None
+
+    cmd = ["bash", str(ensure_uv), "--symlink-system"]
+    payload["ensure_remote_uv_available"] = True
+    payload["ensure_remote_uv_command"] = cmd
+    install = subprocess.run(
+        cmd,
+        cwd=REPO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+    )
+    payload["ensure_remote_uv_returncode"] = install.returncode
+    payload["ensure_remote_uv_stdout_tail"] = install.stdout[-2000:]
+    payload["ensure_remote_uv_stderr_tail"] = install.stderr[-4000:]
+    if install.returncode != 0:
+        payload["ensure_remote_uv_failed"] = True
+        return None
+
+    stdout_paths = [line.strip() for line in install.stdout.splitlines() if line.strip()]
+    uv_path = stdout_paths[-1] if stdout_paths else shutil.which("uv")
+    if not uv_path or not os.access(uv_path, os.X_OK):
+        payload["ensure_remote_uv_failed"] = True
+        payload["ensure_remote_uv_error"] = f"uv path not executable after bootstrap: {uv_path!r}"
+        return None
+    payload["installer_bootstrap_action"] = "uv_bootstrapped_by_ensure_remote_uv"
+    payload["installer_uv_path"] = uv_path
+    return uv_path
+
+
+def _ensure_pip(payload: dict[str, Any], *, timeout: int) -> None:
+    probe = _probe_python_pip()
+    payload["pip_probe_returncode"] = probe.returncode
+    payload["pip_probe_stdout_tail"] = probe.stdout[-1000:]
+    payload["pip_probe_stderr_tail"] = probe.stderr[-1000:]
+    if probe.returncode == 0:
+        payload["installer_bootstrap_action"] = "pip_already_available"
+        return
+
+    cmd = [sys.executable, "-m", "ensurepip", "--upgrade"]
+    payload["guarded_ensurepip_command"] = cmd
+    ensurepip = subprocess.run(
+        cmd,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+    )
+    payload["guarded_ensurepip_returncode"] = ensurepip.returncode
+    payload["guarded_ensurepip_stdout_tail"] = ensurepip.stdout[-2000:]
+    payload["guarded_ensurepip_stderr_tail"] = ensurepip.stderr[-4000:]
+    if ensurepip.returncode != 0:
+        payload["installer_bootstrap_action"] = "guarded_ensurepip_failed"
+        raise SystemExit(f"FATAL: guarded ensurepip failed with returncode={ensurepip.returncode}")
+    payload["installer_bootstrap_action"] = "pip_bootstrapped_by_guarded_ensurepip"
+
+
+def _install_command(requirements_path: pathlib.Path, payload: dict[str, Any], *, timeout: int) -> list[str]:
+    uv = _ensure_uv(payload, timeout=timeout)
     if uv:
         return [
             uv,
@@ -108,6 +187,7 @@ def _install_command(requirements_path: pathlib.Path) -> list[str]:
             "-r",
             str(requirements_path),
         ]
+    _ensure_pip(payload, timeout=timeout)
     return [
         sys.executable,
         "-m",
@@ -162,6 +242,7 @@ def bootstrap(args: argparse.Namespace) -> dict[str, Any]:
         "requirements_path": str(requirements_path),
         "selected_wheels": selected_wheels,
         "installed": False,
+        "installer_bootstrap_action": None,
     }
 
     initial = _probe()
@@ -174,8 +255,10 @@ def bootstrap(args: argparse.Namespace) -> dict[str, Any]:
     payload["initial_probe_violations"] = initial_violations
     if not initial_violations:
         payload["bootstrap_action"] = "already_exact"
+        payload["installer_bootstrap_action"] = "not_needed_already_exact_dali"
     elif initial.get("ok") and not args.force:
         payload["bootstrap_action"] = "fail_wrong_preinstalled_dali"
+        payload["installer_bootstrap_action"] = "blocked_wrong_preinstalled_dali"
         _write_payload(pathlib.Path(args.json_out), payload)
         raise SystemExit(
             "FATAL: preinstalled DALI is not the exact expected package/version: "
@@ -183,7 +266,11 @@ def bootstrap(args: argparse.Namespace) -> dict[str, Any]:
         )
     else:
         payload["bootstrap_action"] = "install_hash_pinned_wheels"
-        cmd = _install_command(requirements_path)
+        try:
+            cmd = _install_command(requirements_path, payload, timeout=args.timeout)
+        except SystemExit:
+            _write_payload(pathlib.Path(args.json_out), payload)
+            raise
         payload["install_command"] = cmd
         install = subprocess.run(cmd, check=False, capture_output=True, text=True, timeout=args.timeout)
         payload["install_returncode"] = install.returncode

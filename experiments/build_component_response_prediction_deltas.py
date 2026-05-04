@@ -147,12 +147,18 @@ def _load_basis_atoms(path: Path) -> list[dict[str, Any]]:
             raise ComponentResponsePredictionError(
                 f"{path}: atoms[{index}].delta_per_epsilon must be a nonzero integer"
             )
-        layer = raw.get("layer_name")
+        metadata = raw.get("metadata")
+        if not isinstance(metadata, Mapping):
+            metadata = {}
+        layer = raw.get("layer_name", metadata.get("layer_name"))
         if not isinstance(layer, str) or not layer:
             raise ComponentResponsePredictionError(
                 f"{path}: atoms[{index}].layer_name is required for map projection"
             )
-        channel = raw.get("channel_index", raw.get("channel"))
+        channel = raw.get(
+            "channel_index",
+            raw.get("channel", metadata.get("channel_index", metadata.get("channel"))),
+        )
         if isinstance(channel, bool) or not isinstance(channel, int) or channel < 0:
             raise ComponentResponsePredictionError(
                 f"{path}: atoms[{index}].channel_index must be a nonnegative integer"
@@ -210,6 +216,31 @@ def _load_component_maps(paths: Mapping[str, Path]) -> tuple[dict[str, dict[str,
             "map_metadata": meta,
         }
     return maps, metadata
+
+
+def _validate_archive_byte_prediction_contract(metadata: Mapping[str, Any]) -> None:
+    """Reject map-unit contracts that cannot predict archive byte mutations."""
+
+    bad_components: list[str] = []
+    for component in COMPONENTS:
+        meta = metadata.get(component)
+        map_meta = meta.get("map_metadata") if isinstance(meta, Mapping) else None
+        if not isinstance(map_meta, Mapping):
+            continue
+        if (
+            map_meta.get("sensitivity_source")
+            == "direct_renderer_cuda_finite_difference_component_response"
+            and map_meta.get("archive_byte_prediction_eligible") is not True
+        ):
+            bad_components.append(component)
+    if bad_components:
+        raise ComponentResponsePredictionError(
+            "direct finite-difference component sensitivity maps are channel weight-space "
+            "response maps, not archive-byte response maps. Refusing to predict byte "
+            "mutation deltas for components "
+            f"{bad_components} without archive_byte_prediction_eligible=true metadata "
+            "from a reviewed byte-basis calibration."
+        )
 
 
 def _atom_sensitivity(
@@ -274,6 +305,7 @@ def build_component_response_prediction_deltas(
 
     atoms = _load_basis_atoms(perturbation_basis_json)
     maps, map_metadata = _load_component_maps(component_maps)
+    _validate_archive_byte_prediction_contract(map_metadata)
     atom_set_sha = _atom_set_sha256(atoms)
 
     atom_component_sensitivities: list[dict[str, Any]] = []

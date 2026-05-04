@@ -13,6 +13,7 @@ aliases, or CLI flags at runtime.
 from __future__ import annotations
 
 import argparse
+import difflib
 import hashlib
 import json
 import math
@@ -30,6 +31,52 @@ DEFAULT_STATE_DIR = REPO_ROOT / ".omx/state"
 DEFAULT_REMOTE_PACT = "/teamspace/studios/this_studio/pact"
 DEFAULT_UPSTREAM_DIR = "/teamspace/studios/this_studio/upstream"
 REQUIREMENTS_MODES = ("uv-sync", "verify-only", "no-install")
+
+_STALE_REMOTE_ARG_HINTS = {
+    "--rmote": "--remote",
+    "--remote-preflight-ssh-target": "--remote on this wrapper; the wrapper forwards it to launch_lightning_batch_job.py",
+    "--remote-preflight-target": "--remote",
+    "--ssh-target": "--remote",
+    "--ssh-alias": "--remote",
+}
+
+
+def _iter_parser_option_strings(parser: argparse.ArgumentParser) -> list[str]:
+    return sorted(parser._option_string_actions)
+
+
+def _unknown_arg_diagnostic(message: str, parser: argparse.ArgumentParser) -> str | None:
+    prefix = "unrecognized arguments:"
+    if prefix not in message:
+        return None
+    unknown = [item for item in message.split(prefix, 1)[1].split() if item.startswith("-")]
+    if not unknown:
+        return None
+    known = _iter_parser_option_strings(parser)
+    lines = ["Strict argparse rejected unknown option(s); use the real wrapper parser surface below:"]
+    for item in unknown:
+        stale_hint = _STALE_REMOTE_ARG_HINTS.get(item)
+        nearest = difflib.get_close_matches(item, known, n=3, cutoff=0.62)
+        if stale_hint:
+            lines.append(f"  {item}: {stale_hint}")
+        elif nearest:
+            lines.append(f"  {item}: did you mean {', '.join(nearest)}?")
+        else:
+            lines.append(f"  {item}: no close known option")
+    lines.append("Known options include: " + ", ".join(known))
+    return "\n".join(lines)
+
+
+class StrictArgumentParser(argparse.ArgumentParser):
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        kwargs.setdefault("allow_abbrev", False)
+        super().__init__(*args, **kwargs)
+
+    def error(self, message: str) -> None:
+        diagnostic = _unknown_arg_diagnostic(message, self)
+        if diagnostic:
+            message = message + "\n" + diagnostic
+        super().error(message)
 
 
 def _utc_now() -> str:
@@ -140,8 +187,35 @@ def _dedupe_preserve(items: list[str]) -> list[str]:
     return out
 
 
+def _ssh_target_shape_blocker(target: str | None, *, flag: str) -> str | None:
+    value = str(target or "").strip()
+    if not value:
+        return f"missing {flag}; Studio submit needs an SSH alias so remote preflight can run"
+    if any(ch in value for ch in "\r\n\0"):
+        return f"{flag} contains control characters"
+    if value == "ssh.lightning.ai":
+        return f"{flag} must be a ~/.ssh/config alias or user-qualified target, not bare ssh.lightning.ai"
+    return None
+
+
+def _inflate_runtime_artifacts(inflate_rel: Path, *, repo_root: Path) -> list[str]:
+    rels = [inflate_rel.as_posix()]
+    config_rel = inflate_rel.parent / "config.env"
+    if (repo_root / config_rel).is_file():
+        rels.append(config_rel.as_posix())
+    if inflate_rel.as_posix() == "submissions/robust_current/inflate.sh":
+        return _dedupe_preserve(rels)
+    runtime_dir = repo_root / inflate_rel.parent
+    if runtime_dir.is_dir():
+        for child in sorted(runtime_dir.iterdir()):
+            if not child.is_file() or child.name.startswith(".") or child.name.startswith("._"):
+                continue
+            rels.append((inflate_rel.parent / child.name).as_posix())
+    return _dedupe_preserve(rels)
+
+
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = StrictArgumentParser(description=__doc__)
     parser.add_argument("--job-name", required=True)
     parser.add_argument("--archive", required=True, help="Local repo-relative archive to stage and evaluate.")
     parser.add_argument("--extra-artifact", action="append", default=[], help="Additional repo artifact to stage.")
@@ -150,6 +224,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--remote-pact", default=os.environ.get("LIGHTNING_REMOTE_PACT", DEFAULT_REMOTE_PACT))
     parser.add_argument("--remote-archive-path", default=None, help="Override archive path visible inside the Batch job.")
     parser.add_argument("--upstream-dir", default=os.environ.get("LIGHTNING_UPSTREAM_DIR", DEFAULT_UPSTREAM_DIR))
+    parser.add_argument(
+        "--inflate-sh",
+        default=os.environ.get("LIGHTNING_INFLATE_SH", "submissions/robust_current/inflate.sh"),
+        help="Repo-relative inflate.sh to use for exact eval; public replay runs must not fall back to robust_current.",
+    )
     parser.add_argument("--studio", default=os.environ.get("LIGHTNING_STUDIO"))
     parser.add_argument("--image", default=os.environ.get("LIGHTNING_IMAGE"))
     parser.add_argument("--teamspace", default=os.environ.get("LIGHTNING_TEAMSPACE"))
@@ -185,7 +264,26 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--local-artifact-dir", default=None)
     parser.add_argument("--output-dir", default=None, help="Writable remote output dir. Defaults under remote pact results.")
     parser.add_argument("--plan-only", action="store_true", help="Write/print plan JSON without executing commands.")
+    parser.add_argument("--env", action="append", default=[], help="KEY=VALUE env override forwarded to the exact-eval Batch job.")
     parser.add_argument("--queue-metadata", action="append", default=[])
+    parser.add_argument(
+        "--dispatch-lane-id",
+        default=None,
+        help=(
+            "Active lane id already claimed in .omx/state/active_lane_dispatch_claims.md; "
+            "forwarded to launch_lightning_batch_job.py for non-dry-run submit guardrails."
+        ),
+    )
+    parser.add_argument(
+        "--dispatch-claims-path",
+        default=None,
+        help="Override dispatch-claim ledger path forwarded to launch_lightning_batch_job.py.",
+    )
+    parser.add_argument(
+        "--allow-missing-dispatch-claim-reason",
+        default=None,
+        help="Auditable break-glass reason forwarded to launch_lightning_batch_job.py.",
+    )
 
     parser.add_argument("--baseline-score", type=float)
     parser.add_argument("--baseline-archive-bytes", type=int)
@@ -200,6 +298,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--max-segnet-relative", type=float)
     parser.add_argument("--component-reference-label", default=None)
     parser.add_argument("--max-sane-score", type=float, default=10.0)
+    parser.add_argument(
+        "--component-trace",
+        action="store_true",
+        help="Forward exact-eval component trace generation for per-pair diagnostics.",
+    )
+    parser.add_argument("--component-trace-top-k", type=int)
     return parser
 
 
@@ -226,10 +330,26 @@ def build_plan(args: argparse.Namespace, *, repo_root: Path = REPO_ROOT) -> dict
         raise ValueError("--submit requires --studio or --image to avoid SDK-default ambiguity")
     if args.stage_workspace and not args.remote:
         raise ValueError("--stage-workspace requires --remote or LIGHTNING_SSH_TARGET")
+    if args.stage_workspace:
+        blocker = _ssh_target_shape_blocker(args.remote, flag="--remote")
+        if blocker:
+            raise ValueError(blocker)
+    if args.submit and args.studio:
+        blocker = _ssh_target_shape_blocker(args.remote, flag="--remote")
+        skip_reason = str(args.allow_skip_remote_preflight_reason or "").strip()
+        if blocker and not skip_reason:
+            raise ValueError(
+                blocker
+                + "; pass --remote/LIGHTNING_SSH_TARGET before --submit so "
+                "launch_lightning_batch_job.py receives --remote-preflight-ssh-target"
+            )
+        if blocker and len(skip_reason) < 12:
+            raise ValueError("--allow-skip-remote-preflight-reason must be a specific auditable reason")
 
     archive_rel = _repo_rel(args.archive, repo_root=repo_root)
     archive_path = repo_root / archive_rel
     identity = _archive_identity(archive_path)
+    inflate_rel = _repo_rel(args.inflate_sh, repo_root=repo_root)
     paths = _resolve_plan_paths(args, repo_root=repo_root)
 
     baseline_rel: Path | None = None
@@ -274,7 +394,8 @@ def build_plan(args: argparse.Namespace, *, repo_root: Path = REPO_ROOT) -> dict
         if missing:
             raise ValueError("exact-eval queue requires " + ", ".join(missing))
 
-    artifact_rels = [archive_rel.as_posix()]
+    inflate_artifact_rels = _inflate_runtime_artifacts(inflate_rel, repo_root=repo_root)
+    artifact_rels = [archive_rel.as_posix(), *inflate_artifact_rels]
     for item in args.extra_artifact:
         artifact_rels.append(_repo_rel(item, repo_root=repo_root).as_posix())
     if baseline_rel is not None:
@@ -358,6 +479,8 @@ def build_plan(args: argparse.Namespace, *, repo_root: Path = REPO_ROOT) -> dict
             args.remote_pact,
             "--upstream-dir",
             args.upstream_dir,
+            "--inflate-sh",
+            inflate_rel.as_posix(),
             "--machine",
             args.machine,
             "--python-bin",
@@ -396,6 +519,17 @@ def build_plan(args: argparse.Namespace, *, repo_root: Path = REPO_ROOT) -> dict
                         args.allow_skip_remote_preflight_reason,
                     ]
                 )
+            if args.dispatch_lane_id:
+                queue_cmd.extend(["--dispatch-lane-id", args.dispatch_lane_id])
+            if args.dispatch_claims_path:
+                queue_cmd.extend(["--dispatch-claims-path", args.dispatch_claims_path])
+            if args.allow_missing_dispatch_claim_reason:
+                queue_cmd.extend(
+                    [
+                        "--allow-missing-dispatch-claim-reason",
+                        args.allow_missing_dispatch_claim_reason,
+                    ]
+                )
         _append_optional(queue_cmd, "--state-path", args.state_path)
         _append_optional(queue_cmd, "--output-dir", remote_output_dir)
         _append_optional(queue_cmd, "--studio", args.studio)
@@ -410,6 +544,11 @@ def build_plan(args: argparse.Namespace, *, repo_root: Path = REPO_ROOT) -> dict
         _append_optional(queue_cmd, "--baseline-segnet-dist", baseline_segnet_dist)
         _append_optional(queue_cmd, "--max-posenet-relative", args.max_posenet_relative)
         _append_optional(queue_cmd, "--max-segnet-relative", args.max_segnet_relative)
+        if args.component_trace:
+            queue_cmd.append("--component-trace")
+        _append_optional(queue_cmd, "--component-trace-top-k", args.component_trace_top_k)
+        for item in args.env:
+            queue_cmd.extend(["--env", item])
         for key in sorted(metadata):
             queue_cmd.extend(["--queue-metadata", f"{key}={metadata[key]}"])
 
@@ -432,6 +571,10 @@ def build_plan(args: argparse.Namespace, *, repo_root: Path = REPO_ROOT) -> dict
             "sha256": identity["sha256"],
             "size_bytes": identity["size_bytes"],
         },
+        "inflate_runtime": {
+            "inflate_sh": inflate_rel.as_posix(),
+            "staged_artifacts": inflate_artifact_rels,
+        },
         "baseline": {
             "json_path": baseline_rel.as_posix() if baseline_rel else None,
             "loaded": baseline_payload,
@@ -444,6 +587,10 @@ def build_plan(args: argparse.Namespace, *, repo_root: Path = REPO_ROOT) -> dict
         "artifacts": artifact_rels,
         "paths": paths,
         "queue_metadata": metadata,
+        "env": list(args.env),
+        "component_trace": bool(args.component_trace),
+        "component_trace_top_k": args.component_trace_top_k,
+        "argparse_surface": _iter_parser_option_strings(build_parser()),
         "commands": commands,
         "command_strings": {
             key: shlex.join(value) if value else None

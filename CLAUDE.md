@@ -4,9 +4,78 @@ You are operating inside a dual-track lab for the comma video compression challe
 
 Read `PROGRAM.md` before making changes.
 
-## Score target — NON-NEGOTIABLE, HIGHEST EMPHASIS
+## Frontier target — NON-NEGOTIABLE, HIGHEST EMPHASIS
 
-**Any auth score above 1.0 is UNACCEPTABLE.** Do the math during training. If projected auth > 1.0, something is wrong — stop and fix it before burning more GPU hours. Every training run, TTO, postfilter, and optimization must be evaluated against this target BEFORE launch, not after.
+The target is the best contest-faithful public frontier, not an obsolete
+absolute threshold. During an active contest, deadline, or replay window, any
+public PR/archive/body/comment/release that plausibly beats the local exact
+A++ frontier takes priority over saturated local polish. Claimed public scores
+remain `external` until exact CUDA replay, but they must enter intake and exact
+replay immediately.
+
+Every frontier action must produce or advance a concrete artifact: candidate
+archive, bit-level intake record, dispatch claim, queued exact eval, harvested
+JSON, compliance packet, preflight guard, or release/report update. Grand
+council and strategy text are advisory only unless they change the next build,
+guard, replay, or dispatch.
+
+Deadline mode requires submission escrow: keep a sanitized current-best packet
+ready, submit the best exact A++ archive before operator sleep or hard deadline
+risk, then update with better replays if they land. Do not wait for the perfect
+future candidate when a valid current frontier can be disclosed now.
+
+## CROSS-AGENT DISPATCH COORDINATION — NON-NEGOTIABLE
+
+**Before dispatching ANY training, eval, or remote-GPU job, claim the lane with `tools/claim_lane_dispatch.py claim ...`.** The helper owns the file lock, reads `.omx/state/active_lane_dispatch_claims.md`, inserts the newest row at the top, and refuses active same-`lane_id` conflicts inside the 24-hour TTL unless an explicit force flag with notes is used.
+
+If you find an active conflicting claim:
+- Do NOT dispatch
+- Coordinate via the file's notes column or pick a different lane
+
+When your dispatch completes (success or fail): append a terminal row with the
+same `lane_id` and `instance/job_id` via `tools/claim_lane_dispatch.py claim
+--force --status completed_...`, `--status failed_...`,
+`--status stopped_...`, `--status refused_dispatch...`, or a precise
+`--status stale_superseded...` row. Do not leave completed jobs as phantom
+active claims.
+
+This rule exists because 2026-05-01 ~23:50 UTC the user reported a possible Q-FAITHFUL dispatch conflict between Claude (H100 SXM via Vast.ai) and codex (Lightning) — no formal cross-agent coordination existed and we may have burned $5-10 of duplicate GPU spend. Level 2 is now the norm: use the helper script and strict submitter checks, not manual table edits except for emergency recovery.
+
+## Public frontier watch and intake — NON-NEGOTIABLE
+
+During active contest or replay windows, refresh public PRs and official
+leaderboard state frequently enough that late submissions are not missed while
+internal lanes run. For any public target that can beat the local exact
+frontier, immediately collect PR number, title, author, URL, head SHA,
+created/updated time, archive URL, bytes, SHA-256, member names, source
+runtime, dependencies, claimed components, recomputed public score, compliance
+risks, and fastest exact-replay path. Use detached clones or artifact
+directories; do not checkout public PRs into the dirty shared worktree.
+
+If a lower public claim appears, the default order is:
+
+1. Download archive and source.
+2. Build bit-level anatomy and compliance-risk record.
+3. Claim replay lane.
+4. Queue exact CUDA eval on T4/equivalent or fastest available faithful path.
+5. Harvest JSON, adjudicate, then build/update submission packet.
+
+Council review cannot block steps 1-4 for a public lower-score replay unless
+there is a specific contest-compliance violation that would make the replay
+invalid.
+
+## Bit-level deconstruction and entropy discipline
+
+For archive/packer work, inspect bytes before arguing from prose. Record ZIP
+header parity, member order, compression method, sizes, CRCs, duplicate names,
+magic, section offsets, length prefixes, section hashes, entropy estimates,
+decoded tensor shapes, side channels, and no-op/provenance detection.
+
+Arithmetic coding, range coding, ANS/Huffman-style coders, brotli/zstd/lzma
+transforms, tensor grouping, histogram overhead, fixed-section removal, and
+deterministic pack ordering are first-class score lanes. If a dense stream
+remains in a generic compressor, estimate entropy and test a real coded payload
+before declaring the area saturated.
 
 ## FORBIDDEN PATTERNS — NON-NEGOTIABLE, READ BEFORE WRITING ANY CODE
 

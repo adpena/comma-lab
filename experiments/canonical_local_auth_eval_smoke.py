@@ -206,14 +206,19 @@ def _stage_whitelist_validate(members: list[str]) -> tuple[bool, str]:
     KNOWN = (
         ".bin", ".bin.br", ".mkv", ".mp4", ".pt", ".json", ".txt",
         ".bin.zst", ".bin.lzma", ".npy", ".npz", ".amrc",
+        ".nrv", ".cmg1", ".cmg2", ".cmg3",
+        ".cdo1", ".cdo1.xz", ".cdo1.zlib", ".cdo1.br",
+        ".amr1", ".amr1.xz", ".amr1.zlib", ".amr1.br",
     )
+    KNOWN_BASENAMES = ("p", "x")
     FORBIDDEN = (".DS_Store", "__MACOSX", "._", "Thumbs.db")
     forbidden = [m for m in members
                  if any(f in m for f in FORBIDDEN)]
     if forbidden:
         return False, f"forbidden housekeeping files: {forbidden}"
     unknown = [m for m in members
-               if not any(m.lower().endswith(s) for s in KNOWN)]
+               if Path(m).name.lower() not in KNOWN_BASENAMES
+               and not any(m.lower().endswith(s) for s in KNOWN)]
     if unknown:
         return False, f"unknown suffixes: {unknown}"
     return True, f"all {len(members)} member(s) on whitelist"
@@ -307,7 +312,7 @@ def _stage_renderer_magic(extracted: Path) -> tuple[bool, str]:
     magic = rb.read_bytes()[:4]
     KNOWN_MAGIC = {
         b"DPSM", b"ASYM", b"FP4A", b"I4LZ", b"CCh1",
-        b"C3R1", b"SCv1", b"SZv1", b"QFAI", b"MXLZ",
+        b"C3R1", b"SCv1", b"SZv1", b"QFAI", b"QZS3", b"MXLZ",
     }
     if magic in KNOWN_MAGIC:
         return True, f"renderer.bin magic={magic!r}"

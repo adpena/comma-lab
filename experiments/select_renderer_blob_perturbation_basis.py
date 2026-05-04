@@ -17,6 +17,7 @@ import argparse
 import hashlib
 import json
 import math
+import sys
 import tempfile
 import zipfile
 from dataclasses import dataclass
@@ -70,6 +71,8 @@ class SelectedAtom:
     selection_rank: int
     payload_bytes: int
     margin_to_byte_range: int
+    sensitivity_score: float | None = None
+    selection_source: str = "payload_size"
 
 
 def _sha256_bytes(data: bytes) -> str:
@@ -341,11 +344,17 @@ def _select_offset_for_region(
     region: BlobRegion,
     *,
     max_abs_byte_delta: int,
+    channel_index: int | None = None,
 ) -> tuple[int, int, int, int] | None:
     if region.output_channels <= 0 or region.per_channel_payload_bytes <= 0:
         return None
-    preferred_channel = region.output_channels // 2
-    channel_order = _nearest_payload_index(preferred_channel, region.output_channels)
+    if channel_index is None:
+        preferred_channel = region.output_channels // 2
+        channel_order = _nearest_payload_index(preferred_channel, region.output_channels)
+    else:
+        if channel_index < 0 or channel_index >= region.output_channels:
+            return None
+        channel_order = [int(channel_index)]
     preferred_byte = region.per_channel_payload_bytes // 2
     byte_order = _nearest_payload_index(preferred_byte, region.per_channel_payload_bytes)
     stride = 2 + region.per_channel_payload_bytes
@@ -362,6 +371,47 @@ def _select_offset_for_region(
     return None
 
 
+def _region_sensitivity_scores(
+    sensitivity_scores: Mapping[str, list[float]] | None,
+    region: BlobRegion,
+) -> list[float] | None:
+    if sensitivity_scores is None:
+        return None
+    for key in (f"{region.layer_name}.weight", region.layer_name):
+        raw = sensitivity_scores.get(key)
+        if raw is not None:
+            values = [float(value) for value in raw]
+            break
+    else:
+        return None
+    if len(values) != region.output_channels:
+        raise RendererBasisSelectionError(
+            f"sensitivity map for {region.layer_name}.weight has {len(values)} "
+            f"channel(s), expected {region.output_channels}"
+        )
+    for index, value in enumerate(values):
+        if not math.isfinite(value) or value < 0:
+            raise RendererBasisSelectionError(
+                f"sensitivity map for {region.layer_name}.weight channel {index} "
+                "must be finite and non-negative"
+            )
+    return values
+
+
+def _load_sensitivity_scores(path: Path) -> tuple[dict[str, list[float]], dict[str, Any]]:
+    repo_src = Path(__file__).resolve().parents[1] / "src"
+    if str(repo_src) not in sys.path:
+        sys.path.insert(0, str(repo_src))
+    from tac.sensitivity_map import load_sensitivity_map
+
+    sensitivities, metadata = load_sensitivity_map(path)
+    scores = {
+        key: [float(v) for v in value.detach().cpu().float().reshape(-1).tolist()]
+        for key, value in sensitivities.items()
+    }
+    return scores, dict(metadata)
+
+
 def select_basis_atoms(
     renderer: bytes,
     *,
@@ -370,6 +420,8 @@ def select_basis_atoms(
     delta_per_epsilon: int = 1,
     include_embeddings: bool = False,
     include_transposed: bool = False,
+    sensitivity_scores: Mapping[str, list[float]] | None = None,
+    selection_mode: str = "payload-desc",
 ) -> tuple[dict[str, Any], list[SelectedAtom]]:
     if max_atoms <= 0:
         raise RendererBasisSelectionError("max_atoms must be positive")
@@ -397,8 +449,103 @@ def select_basis_atoms(
         )
     )
 
+    if selection_mode not in {"payload-desc", "sensitivity-desc", "sensitivity-asc"}:
+        raise RendererBasisSelectionError(
+            "selection_mode must be one of: payload-desc, sensitivity-desc, sensitivity-asc"
+        )
+    if sensitivity_scores is None and selection_mode != "payload-desc":
+        raise RendererBasisSelectionError(
+            f"selection_mode={selection_mode!r} requires --sensitivity-map"
+        )
+    if sensitivity_scores is not None and selection_mode == "payload-desc":
+        raise RendererBasisSelectionError(
+            "--sensitivity-map requires --selection-mode sensitivity-desc or sensitivity-asc"
+        )
+
     atoms: list[SelectedAtom] = []
     used_offsets: set[int] = set()
+    if sensitivity_scores is not None:
+        scored_candidates: list[tuple[float, int, BlobRegion, int]] = []
+        for region_order, region in enumerate(candidates):
+            scores = _region_sensitivity_scores(sensitivity_scores, region)
+            if scores is None:
+                continue
+            for channel_index, score in enumerate(scores):
+                scored_candidates.append((float(score), region_order, region, channel_index))
+        if not scored_candidates:
+            raise RendererBasisSelectionError(
+                "sensitivity map contains no entries compatible with selectable ASYM regions"
+            )
+        reverse = selection_mode == "sensitivity-desc"
+        if not reverse:
+            scored_candidates.sort(
+                key=lambda item: (
+                    item[0],
+                    item[1],
+                    item[2].layer_index,
+                    item[2].layer_name,
+                    item[3],
+                )
+            )
+        else:
+            scored_candidates.sort(
+                key=lambda item: (
+                    -item[0],
+                    item[1],
+                    item[2].layer_index,
+                    item[2].layer_name,
+                    item[3],
+                )
+            )
+        for score, _region_order, region, channel_index in scored_candidates:
+            selected = _select_offset_for_region(
+                renderer,
+                region,
+                max_abs_byte_delta=max_abs_byte_delta,
+                channel_index=channel_index,
+            )
+            if selected is None:
+                continue
+            offset, selected_channel_index, byte_index, margin = selected
+            if offset in used_offsets:
+                continue
+            used_offsets.add(offset)
+            atom_id = (
+                "asym_sens_"
+                f"{len(atoms):04d}_"
+                f"l{region.layer_index:03d}_"
+                f"{_sanitize_atom_token(region.layer_name)}_"
+                f"ch{selected_channel_index}_b{byte_index}"
+            )
+            atoms.append(
+                SelectedAtom(
+                    atom_id=atom_id,
+                    member="renderer.bin",
+                    offset=offset,
+                    delta_per_epsilon=delta_per_epsilon,
+                    layer_index=region.layer_index,
+                    layer_name=region.layer_name,
+                    blob_kind=region.blob_kind,
+                    bits=region.bits,
+                    shape=region.shape,
+                    channel_index=selected_channel_index,
+                    byte_index_within_channel_payload=byte_index,
+                    original_byte=int(renderer[offset]),
+                    selection_rank=len(atoms),
+                    payload_bytes=region.payload_bytes,
+                    margin_to_byte_range=margin,
+                    sensitivity_score=float(score),
+                    selection_source=selection_mode,
+                )
+            )
+            if len(atoms) >= max_atoms:
+                break
+        if not atoms:
+            raise RendererBasisSelectionError(
+                "no sensitivity-ranked payload bytes found with enough byte-range margin"
+            )
+        return header, atoms
+
     for region in candidates:
         selected = _select_offset_for_region(
             renderer,
@@ -435,6 +582,7 @@ def select_basis_atoms(
                 selection_rank=len(atoms),
                 payload_bytes=region.payload_bytes,
                 margin_to_byte_range=margin,
+                selection_source="payload-desc",
             )
         )
         if len(atoms) >= max_atoms:
@@ -507,11 +655,28 @@ def build_renderer_blob_perturbation_basis(
     include_embeddings: bool = False,
     include_transposed: bool = False,
     decode_verify: bool = True,
+    sensitivity_map: Path | None = None,
+    selection_mode: str = "payload-desc",
 ) -> dict[str, Any]:
     archive = archive.resolve()
     output_json = output_json.resolve()
     epsilon_values = sorted({round(_finite_float(eps, field="epsilon"), 15) for eps in epsilons})
     renderer, archive_manifest = _read_renderer_from_archive(archive)
+    sensitivity_scores: dict[str, list[float]] | None = None
+    sensitivity_map_meta: dict[str, Any] | None = None
+    if sensitivity_map is not None:
+        sensitivity_map = sensitivity_map.resolve()
+        sensitivity_scores, sensitivity_metadata = _load_sensitivity_scores(sensitivity_map)
+        sensitivity_map_meta = {
+            "path": str(sensitivity_map),
+            "bytes": int(sensitivity_map.stat().st_size),
+            "sha256": _sha256_file(sensitivity_map),
+            "metadata": sensitivity_metadata,
+        }
+    elif selection_mode != "payload-desc":
+        raise RendererBasisSelectionError(
+            f"selection_mode={selection_mode!r} requires --sensitivity-map"
+        )
     header, atoms = select_basis_atoms(
         renderer,
         max_atoms=max_atoms,
@@ -519,6 +684,8 @@ def build_renderer_blob_perturbation_basis(
         delta_per_epsilon=delta_per_epsilon,
         include_embeddings=include_embeddings,
         include_transposed=include_transposed,
+        sensitivity_scores=sensitivity_scores,
+        selection_mode=selection_mode,
     )
     verification = (
         _decode_verify(renderer, atoms, epsilons=epsilon_values)
@@ -542,18 +709,27 @@ def build_renderer_blob_perturbation_basis(
             "selection_rank": atom.selection_rank,
             "payload_bytes": atom.payload_bytes,
             "margin_to_byte_range": atom.margin_to_byte_range,
+            "sensitivity_score": atom.sensitivity_score,
+            "selection_source": atom.selection_source,
         }
         for atom in atoms
     ]
+    if sensitivity_map_meta is None:
+        selection_rule = "largest_non_embedding_weight_layers_median_payload_byte_with_byte_range_margin"
+    else:
+        selection_rule = (
+            "sensitivity_ranked_non_embedding_weight_channels_median_payload_byte_"
+            "with_byte_range_margin"
+        )
     payload = {
         "schema_version": 1,
         "format": PLAN_BASIS_FORMAT,
         "extended_format": FORMAT,
         "producer": PRODUCER,
         "basis_kind": "asym_renderer_quantized_weight_payload_byte_additive",
-        "selection_rule": (
-            "largest_non_embedding_weight_layers_median_payload_byte_with_byte_range_margin"
-        ),
+        "selection_rule": selection_rule,
+        "selection_mode": selection_mode,
+        "sensitivity_map": sensitivity_map_meta,
         "epsilon_units": "signed_integer_step",
         "epsilon_ladder": epsilon_values,
         "source_archive": {
@@ -621,6 +797,25 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--epsilon", action="append", type=float, default=None)
     parser.add_argument("--max-atoms", type=int, default=64)
     parser.add_argument("--delta-per-epsilon", type=int, default=1)
+    parser.add_argument(
+        "--sensitivity-map",
+        type=Path,
+        default=None,
+        help=(
+            "Optional tac_score_sensitivity_map_v1 .pt file. When set, "
+            "--selection-mode must be sensitivity-desc or sensitivity-asc."
+        ),
+    )
+    parser.add_argument(
+        "--selection-mode",
+        choices=("payload-desc", "sensitivity-desc", "sensitivity-asc"),
+        default="payload-desc",
+        help=(
+            "Deterministic atom ordering rule. payload-desc preserves the "
+            "legacy largest-layer selection; sensitivity modes rank individual "
+            "channels by the supplied map."
+        ),
+    )
     parser.add_argument("--include-embeddings", action="store_true")
     parser.add_argument(
         "--include-transposed",
@@ -654,6 +849,8 @@ def main(argv: list[str] | None = None) -> int:
             include_embeddings=args.include_embeddings,
             include_transposed=args.include_transposed,
             decode_verify=not args.skip_decode_verify,
+            sensitivity_map=args.sensitivity_map,
+            selection_mode=args.selection_mode,
         )
     except RendererBasisSelectionError as exc:
         raise SystemExit(f"FATAL: {exc}") from exc

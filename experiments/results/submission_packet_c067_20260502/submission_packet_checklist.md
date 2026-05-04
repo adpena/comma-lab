@@ -49,10 +49,9 @@ Reverse-engineering custody for the PR #67 mask source: `reports/raw/leaderboard
 The deploy-ready submission consists of:
 
 - `archive.zip` (276,214 bytes, sha `226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a`) — the C-067 fixed-slice composite
-- `inflate.sh` from `submissions/exact_current/inflate.sh` (canonical contest inflate path)
-- `inflate.py` from `submissions/exact_current/inflate.py` (frozen upstream-snapshot-derived)
+- `inflate.sh` from `submissions/robust_current/inflate.sh` (sha `86449a1f52ac6b2be120d47287b8410f915dce7e562c69f480103f6e527c6017`) — VERIFIED 2026-05-02 to match `eval_provenance.json` `inflate_script_sha256`. This is the Track-B (robust_current) inflate path under which C-067 was scored. (Track A `submissions/exact_current/inflate.sh` has a different SHA `d2c3b491a52d09241e0660c0893e173b2411f4e87d8a3e880f91cb33c1bca36d` and was NOT used to score C-067.)
 
-Inflate runtime contract: `archive.zip → inflate.sh → upstream/evaluate.py` on T4-equivalent CUDA, 30 min budget.
+Inflate runtime contract: `archive.zip → submissions/robust_current/inflate.sh → upstream/evaluate.py` on T4-equivalent CUDA, 30 min budget.
 
 ## Cross-references
 
@@ -67,11 +66,20 @@ Inflate runtime contract: `archive.zip → inflate.sh → upstream/evaluate.py` 
 
 ## Submission action items (deferred until user signal)
 
-1. Verify `submissions/exact_current/inflate.sh` SHA matches the SHA recorded in `eval_provenance.json` (runtime-custody guard)
+1. [x] **DONE 2026-05-02**: Verify `submissions/robust_current/inflate.sh` SHA (`86449a1f52ac6b2be120d47287b8410f915dce7e562c69f480103f6e527c6017`) matches the SHA recorded in `eval_provenance.json` `inflate_script_sha256` field. Live file matches eval-recorded SHA exactly. (Note: prior version of this checklist incorrectly named `submissions/exact_current/inflate.sh` as canonical; corrected — the C-067 contest-CUDA score was measured on Track-B `robust_current` inflate path.)
 2. Confirm submission target (PR description, archive upload location, leaderboard form)
 3. Pre-submission contest-CUDA dry-run on a fresh T4 instance to verify reproducibility of the 0.31561703 score from these committed bytes
 4. PR description draft including the EXTERNAL_SOURCE_ATTRIBUTION_C067.md attribution boilerplate
 5. Acknowledgements section mentioning Quantizr (PR #55), EthanYangTW (PR #67), henosis-us (PR #65), szabolcs-cs (PR #56), and the comma.ai contest organizers
+
+## Post-deadline maintenance protocol (per user directive 2026-05-02)
+
+Per user mandate "keep pushing outside the deadline window too" + "we will update our writeup and results and submissions online even after the deadline" + "keep it all alive and push all extreme rigor": this packet is NOT the final state. After contest deadline (May 4 06:59 AM CDT), the engineering effort continues:
+
+- **Append-only packet schema**: each new sub-frontier archive lands a new `experiments/results/submission_packet_<id>_<date>/` directory; this C-067 packet remains immutable as the historical-deadline submission record.
+- **Post-deadline reactivations**: Council 5/0 SHIP-C-067 verdict for the deadline window does NOT close out the dispatched lanes — Lane 12 NeRV Path B (parser + Alpha-Geo contracts + L2 clearance), Quantizr's recipe #4 (KL-soft-distill on AV1 logits T=2.0), Block-FP transplant, and the other deferred sub-0.3 attempts remain ALIVE post-deadline workstreams under continued extreme-rigor council review.
+- **Public-facing artifact updates**: writeup (`docs/paper/`), site, GitHub PR description, leaderboard submission may be continuously updated as the post-deadline measurement cadence produces new sub-frontier results. The leaderboard submission mechanic + cadence is contest-organizer dependent and must be checked for each update.
+- **No "lane killed" verdicts** in the registry mean "permanently dead" — all kills are scoped to a deadline window and reactivate post-window unless an empirical-falsification has been recorded with full council review per `feedback_grand_council_imp_permanent_fix_review_20260430` standard.
 
 ## Update protocol
 

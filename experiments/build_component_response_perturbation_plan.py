@@ -631,6 +631,18 @@ def _validate_atoms(
             raise ComponentResponsePerturbationError(
                 f"atom {atom.atom_id!r} would mutate renderer magic bytes"
             )
+        expected_byte = atom.metadata.get("original_byte")
+        if expected_byte is not None:
+            if isinstance(expected_byte, bool) or not isinstance(expected_byte, int):
+                raise ComponentResponsePerturbationError(
+                    f"atom {atom.atom_id!r} original_byte metadata must be an integer"
+                )
+            actual_byte = int(members[atom.member].data[atom.offset])
+            if int(expected_byte) != actual_byte:
+                raise ComponentResponsePerturbationError(
+                    f"atom {atom.atom_id!r} original_byte={expected_byte} does not "
+                    f"match baseline {atom.member}@{atom.offset}={actual_byte}"
+                )
 
 
 def _integer_scaled_delta(epsilon: float, delta_per_epsilon: int, *, atom_id: str) -> int:
@@ -765,16 +777,27 @@ def _build_basis_payload(
     max_abs_byte_delta: int,
     max_raw_l1_delta: int,
 ) -> dict[str, Any]:
-    atom_payload = [
-        {
+    atom_payload = []
+    for atom in sorted(atoms, key=lambda item: item.atom_id):
+        metadata = dict(atom.metadata)
+        item = {
             "atom_id": atom.atom_id,
             "member": atom.member,
             "offset": int(atom.offset),
             "delta_per_epsilon": int(atom.delta_per_epsilon),
-            **({"metadata": dict(atom.metadata)} if atom.metadata else {}),
         }
-        for atom in sorted(atoms, key=lambda item: item.atom_id)
-    ]
+        for key in (
+            "layer_name",
+            "channel_index",
+            "original_byte",
+            "sensitivity_score",
+            "selection_source",
+        ):
+            if key in metadata:
+                item[key] = metadata[key]
+        if metadata:
+            item["metadata"] = metadata
+        atom_payload.append(item)
     basis_for_hash = {
         "format": PERTURBATION_BASIS_FORMAT,
         "basis_kind": "archive_byte_additive",

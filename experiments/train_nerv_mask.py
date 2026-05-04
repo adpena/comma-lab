@@ -224,10 +224,15 @@ def _normalize_mask_tensor(masks: torch.Tensor, *, name: str) -> torch.Tensor:
         if not torch.equal(masks, masks.round()):
             raise ValueError(f"{name} floating tensor contains non-integer class IDs")
         masks = masks.round()
-    masks = masks.detach().cpu().to(torch.long).contiguous()
+    masks = masks.detach().cpu().to(torch.long)
     if int(masks.min().item()) < 0:
         raise ValueError(f"{name} contains negative class IDs")
-    return masks
+    # Keep the canonical mask hash identical to Alpha-Geo diagnostics. The
+    # trainer casts labels to long at sampling time, so uint8 storage is safe
+    # for contest class IDs while avoiding contract-hash drift.
+    if int(masks.max().item()) <= 255:
+        return masks.to(torch.uint8).contiguous()
+    return masks.contiguous()
 
 
 def _mask_tensor_sha256(masks: torch.Tensor) -> str:

@@ -190,18 +190,20 @@ def _load_pairs(args: argparse.Namespace, device: torch.device):
 
 
 def _build_pair_tensors(mask_classes: torch.Tensor, gt_frames):
+    from tac.mask_grayscale_lut import (
+        encode_masks_grayscale,
+        grayscale_to_probability_map,
+    )
+
     n = mask_classes.shape[0]
     if n % 2 != 0:
         raise RuntimeError(
             f"Frame count {n} is odd; cannot form non-overlapping pairs."
         )
     half = n // 2
-    one_hot = (
-        torch.nn.functional.one_hot(mask_classes.long(), num_classes=5)
-        .permute(0, 3, 1, 2)
-        .float()
-    )
-    mask_pairs = one_hot.view(half, 2, 5, *one_hot.shape[-2:])
+    gray = encode_masks_grayscale(mask_classes.long())
+    soft = grayscale_to_probability_map(gray, sigma=15.0, channel_first=True)
+    mask_pairs = soft.view(half, 2, 5, *soft.shape[-2:])
     if isinstance(gt_frames, list):
         gt_tensor = torch.stack(gt_frames, dim=0)
     else:
