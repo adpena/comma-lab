@@ -738,14 +738,14 @@ A candidate may be promoted only after:
   - Create venvs: `uv venv`
   - Run scripts: `.venv/bin/python` (the uv-managed venv)
   - On remote machines: install uv first (`curl -LsSf https://astral.sh/uv/install.sh | sh`), then `uv venv && uv pip install ...`
-- **Always use the tac library** for new training experiments. The canonical entry point is `experiments/train_tac.py`.
+- **Always use the tac library** for new training experiments. The canonical entry point is `experiments/pipeline.py` (the prior `experiments/train_tac.py` was retired by commit 815e9028 — see the "Canonical pipeline standard" section above).
   - Do NOT duplicate training code in new experiment scripts.
   - All loss functions, architectures, data loading, and training loops live in `src/tac/`.
   - **Use named profiles** for new training runs: `--profile proven_baseline` is recommended (produced the 1.33 authoritative score).
   - Available profiles: `proven_baseline` (1.33 settings), `psd_standard_adaptive` (PSD arch + frontier), `council_v1` (static, legacy), `segnet_attack` (aggressive), `h96_council`, `smoke` (quick test).
   - Profiles live in `src/tac/profiles.py`. CLI args override profile values.
   - **Use precomputed data** when available: `--precomputed experiments/precomputed_local` (skips 5-min video decode).
-  - **Adaptive weight formula was retired** (`src/tac/adaptive.py`): T² cancels in the derivation, making the formula vacuous. Use standard loss with static weights instead.
+  - **Adaptive weight formula was retired**: lives at `src/tac/archive/adaptive.py` (moved by commit 2bac5927). T² cancels in the derivation, making the formula vacuous. Use standard loss with static weights instead.
 - **Always commit after every change.** Git history is the research timeline.
 - **Use `scripts/modal_check.py`** to check Modal TTO progress. Shows batch progress, ETA, recent PoseNet snapshots, and running apps. Run with `.venv/bin/python scripts/modal_check.py`.
 - **Use `scripts/kaggle_check.py`** to check Kaggle kernel status. Run with `.venv/bin/python scripts/kaggle_check.py`.
