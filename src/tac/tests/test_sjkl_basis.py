@@ -12,6 +12,7 @@ from tac.sjkl_basis import (
     compute_sjkl_basis_lanczos,
     decode_sjkl_basis,
     encode_sjkl_basis,
+    unpack_sjkl_basis,
 )
 
 
@@ -134,6 +135,28 @@ def test_zero_eigenvectors_encode_decode():
     decoded = decode_sjkl_basis(blob)
     assert torch.allclose(decoded.eigenvectors, torch.zeros(2, 8))
     assert torch.allclose(decoded.coefficients, torch.zeros(2))
+
+
+def test_runtime_contract_unpack_sjkl_basis_alias():
+    """Runtime contract: inflate_renderer.py imports unpack_sjkl_basis (not decode_*).
+    Verify the alias works and produces identical output to decode_sjkl_basis."""
+    basis = _make_random_basis(rank=4, dim=32)
+    blob = encode_sjkl_basis(basis, basis_quant_bits=6)
+    via_decode = decode_sjkl_basis(blob)
+    via_unpack = unpack_sjkl_basis(blob)
+    assert torch.equal(via_decode.eigenvectors, via_unpack.eigenvectors)
+    assert torch.equal(via_decode.coefficients, via_unpack.coefficients)
+    assert via_decode.rank == via_unpack.rank
+    assert via_decode.dim == via_unpack.dim
+
+
+def test_runtime_contract_basis_coarse_attribute():
+    """Runtime contract: inflate_renderer.py accesses basis.basis_coarse.
+    Verify the property returns the eigenvectors tensor."""
+    basis = _make_random_basis(rank=5, dim=24)
+    assert hasattr(basis, "basis_coarse")
+    assert torch.equal(basis.basis_coarse, basis.eigenvectors)
+    assert basis.basis_coarse.shape == (5, 24)
 
 
 def test_quant_bits_8_payload_byte_layout():

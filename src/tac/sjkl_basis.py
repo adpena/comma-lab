@@ -51,6 +51,7 @@ __all__ = [
     "SJKLBasis",
     "encode_sjkl_basis",
     "decode_sjkl_basis",
+    "unpack_sjkl_basis",
     "apply_sjkl_residual",
     "compute_sjkl_basis_lanczos",
 ]
@@ -66,11 +67,19 @@ class SJKLBasis:
         coefficients: shape (n_coefs,) — projection coefficients onto the basis.
         rank: K
         dim: D (flattened pixel dimensionality, e.g. 384*512*3 for RGB frames)
+
+    Runtime-contract aliases (used by submissions/robust_current/inflate_renderer.py):
+        basis_coarse: alias for eigenvectors with shape (K, D), tensor type
     """
     eigenvectors: torch.Tensor  # (K, D), float32
     coefficients: torch.Tensor  # (M,) float32 — typically M = K * num_frames
     rank: int
     dim: int
+
+    @property
+    def basis_coarse(self) -> torch.Tensor:
+        """Runtime contract alias for eigenvectors (shape (K, D))."""
+        return self.eigenvectors
 
 
 def _quantize_signed_intN(x: np.ndarray, bits: int) -> tuple[np.ndarray, float]:
@@ -223,6 +232,16 @@ def decode_sjkl_basis(data: bytes) -> SJKLBasis:
         rank=K,
         dim=D,
     )
+
+
+def unpack_sjkl_basis(data: bytes) -> SJKLBasis:
+    """Runtime-contract alias for decode_sjkl_basis.
+
+    submissions/robust_current/inflate_renderer.py:_unpack_full_sjkl_payload
+    calls this name. Keep this function importable as
+    `from tac.sjkl_basis import unpack_sjkl_basis`.
+    """
+    return decode_sjkl_basis(data)
 
 
 def apply_sjkl_residual(frames: torch.Tensor, basis: SJKLBasis) -> torch.Tensor:
