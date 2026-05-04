@@ -1,250 +1,257 @@
 # final writeup draft
 
-## opening
-
-This writeup is about the honest Track B search, not just the final number. Track A remains the published-workflow transparency lane; Track B is the scorer-backed lane. The important arc is that Track B moved from `4.06` to a promoted **current_workflow** floor of **`1.73`** at **`864,167` bytes** with an h=64 learned post-filter (45.6KB int8, 25219 params), while remaining honest enough to support a **rule_faithful estimate** of `1.7947470454539947` at `966,071` bytes. The session trajectory was `2.01 → 1.99 → 1.95 → 1.92 → 1.85 → 1.84 → 1.73`, each step driven by a specific verified insight.
-
-## why this writeup is stronger now
-
-The work is not only a sequence of scores. It is a sequence of explanations. Each beat was driven by a specific insight from a specific analysis, not luck or brute-force search.
-
-### The history of the post-filter invention
-
-**Beat 1 — Codec tuning (4.06 → 2.08):** AV1 with SVT-AV1 preset 0, CRF 34, film-grain synthesis at 22, Lanczos downscale to 524×394. This established the honest encoder floor. Key finding: film grain is structural signal for PoseNet (+292% when removed), not cosmetic texture.
-
-**Beat 2 — The post-filter idea (2.08 → 2.05):** Train a tiny 3-layer CNN (3→16→16→3, 3×3 kernels, ReLU, residual connection) that corrects decoded frames by backpropagating through the actual PoseNet and SegNet scorer models. The gradient of the competition score flows directly through frozen scorer weights into the 3,203-param filter. This is the first technique in the competition to use the scorer's own gradient signal.
-
-**Beat 3 — Saliency weighting (2.05 → 2.01):** PoseNet gradient saliency analysis revealed that only 7% of pixels contribute >0.05 saliency. Weighting the loss by `1 + α × saliency` (α=20) focuses the filter's limited capacity on PoseNet-critical pixels while an inverse-saliency reconstruction penalty protects SegNet-critical pixels.
-
-**Beat 4 — QAT + EMA (2.01 → 1.99 → 1.845):** Quantization-Aware Training (fake int8 quantization in the forward pass with straight-through gradient) closes the fp32→int8 deployment gap. Polyak/EMA weight averaging (decay=0.997) smooths late-epoch oscillation. These two techniques compound: QAT ensures the model trains for the quantized regime, EMA ensures the final weights are stable within it. Scaling from h=16 to h=32 and from 500 to 1000 epochs each gave additional gains (compound scaling).
-
-**Beat 5 — Best-checkpoint int8 selection (1.845 → 1.762 → 1.727):** The partner implemented `save_best_checkpoint` which evaluates the EMA weights AFTER actual int8 quantization at each checkpoint. Most epochs produce bad int8 models (the train-to-deploy gap is 2.25× on PoseNet). This mechanism finds the rare epoch where quantized weights perform best. Combined with width scaling to h=48 and h=64, this delivered the 1.762 and 1.727 breakthroughs that established a 0.22 lead over the leaderboard.
-
-### Why each technique was necessary
-
-| Technique | What it does | Without it |
-|-----------|-------------|------------|
-| Film grain synthesis | Provides texture signal for PoseNet | +292% PoseNet (catastrophe) |
-| Scorer-direct backprop | Optimizes the actual competition metric | No gradient signal to the filter |
-| Saliency weighting | Focuses capacity on PoseNet-critical pixels | SegNet/PoseNet tradeoff unresolved |
-| QAT fake-quantization | Trains for int8 deployment | ~0.02 deployment gap |
-| EMA averaging | Smooths oscillation over 1000+ epochs | Late-epoch noise dominates |
-| Best-checkpoint int8 | Selects epoch where quantization is cleanest | 2.25× train-to-deploy gap |
-| Width scaling (h→64) | More parameters = more correction capacity | Saturates at h=16 level |
-
-### What the mathematical investigation proved
-
-Three experiments (Jacobian pseudoinverse, SVD rank analysis, CNN residual characterization) proved that the CNN approach is not just empirically successful — it is *mathematically mandatory*. PoseNet's loss landscape has trust radius <0.0001 pixels, effective rank ~1, and condition number 399. The CNN's strategy (56.6% of pixels moved, 90.3% energy in mid-frequency DCT band) is the only one that stays inside the razor-sharp rank-1 basin. No closed-form, Newton, or single-step method can navigate this terrain.
-
-### The role of the expert panel — how falsification drove the deepest insights
-
-The search was guided by a multi-perspective expert panel operating in simulated dialogue. The most productive moments came not from correct predictions, but from *wrong ones that were empirically tested and updated*.
-
-**Andrej Karpathy** initially proposed a closed-form Jacobian correction that would "replace the CNN entirely." When the experiment failed catastrophically (pose 0.074 → 0.235, 3× worse), Karpathy's *updated theory* was more valuable than his original: he diagnosed why the failure happened (PoseNet's trust radius is sub-pixel), predicted what the CNN was doing instead (dense mid-frequency spreading), and proposed exactly the measurement that confirmed it (CNN residual analysis: 56.6% of pixels, 90.3% mid-frequency). **His insight after being proved wrong was the single most productive moment of the investigation.**
-
-**Terrence Tao** provided the mathematical leverage analysis that reframed the entire problem: SegNet has 14× the marginal impact of PoseNet at our operating point. His SegNet floor measurement (self-disagreement under jitter = 0.000094, giving 98.4% headroom) identified the untapped lever that drives the roadmap forward. His closed-form floor estimate (0.0034 ± 0.0005) tells us exactly how much further the SegNet lane can go.
-
-**Jacob Collier** brought the most lateral perspective: viewing the CNN as a "singer" and the ensemble failure as "two unisons don't make a chord — they phase-cancel." His two-voice counterpoint proposal (train disjoint-frequency filters jointly) and FiLM per-scene conditioning idea both came from production audio metaphors. The FiLM architecture is now implemented in the inflate loader. His diagnosis of why the ensemble averaging scored 2.05 (mode disconnection) was validated independently by the weight-space analysis.
-
-**Rick Rubin** consistently advocated for simplicity and patience over cleverness. His "don't add complexity, add time" philosophy led directly to the compound scaling insight: the biggest gains came from running the *same recipe* with more width and more epochs, not from novel loss functions. Of the 9 alternative training recipes tested against the 1.845 floor, all 9 failed — validating Rubin's instinct that the song was right, only the recording needed more takes.
-
-**John von Neumann** provided the information-theoretic framing. His CVaR worst-decile training proposal didn't beat the floor empirically, but his interaction analysis (which method stacks are synergistic vs interfering) shaped the prioritized roadmap: width + per-channel int8 are super-additive; SegNet boundary + FiLM may interfere.
-
-**Yann LeCun** provided the scaling law that drove the two biggest breakthroughs. His log-linear curve (`score = -0.159 × ln(h) + 2.382`) predicted h=48 at 1.83 — the actual result was 1.762, even better because of the best-checkpoint mechanism he didn't account for. The h=64 result (1.727) extended the curve further. His convergence-parity warning (h needs proportionally more epochs) motivated the 1500-epoch h=96 run now in flight.
-
-## why SegNet matters more than PoseNet
-
-The scorer is `100 * segnet_dist + sqrt(10 * posenet_dist) + 25 * rate`, which means SegNet has much higher local leverage at the current operating point. At the promoted floor, PoseNet distortion is `0.03317023`, so the PoseNet term changes by about `5 / sqrt(10 * 0.03317023) ~= 8.68` points per unit distortion, while the SegNet term changes by `100` points per unit distortion. That is about an **11.5x** leverage advantage for SegNet at the promoted `1.73` operating point. Earlier, around PoseNet `~0.08`, the ratio was closer to `18x`; the newer number is the one that matches the current floor.
-
-In practical terms, a `0.001` SegNet improvement is worth about `0.10` score points. To get the same gain from PoseNet alone, the pipeline would need a much larger absolute PoseNet distortion reduction. That is why later experiments should prefer changes that protect or improve SegNet even when PoseNet also looks tempting.
-
-## latest promoted result: h64 learned post-filter
-
-### prior promoted baseline
-
-- `1.84` at `864,168` bytes
-
-### earlier failure that mattered
-
-The first learned post-filter variant failed at `2.35` because it was trained on the wrong archive distribution. It learned to recover the catastrophic `film-grain=0` lane, then overcorrected when applied to the honest fg22 floor.
-
-### hypothesis
-
-Once the tiny shipped operator family was already working honestly, the next question was not “invent a new model,” but “does width still buy real scorer-backed signal after h32 and after the ensemble branch?” The answer turned out to be yes.
-
-### measured result
-
-- candidate run: `1.73` at `864,167` bytes
-- byte delta vs the `1.84` floor: `-1`
-- PoseNet: `0.03317023`
-- SegNet: `0.00575544`
-
-### reflection
-
-The main surprise is that the next decisive win still did not come from a more complicated objective. It came from staying inside the same shipped QAT+EMA family, widening to h64, and selecting the saved checkpoint that actually survives int8 deployment. That branch improved PoseNet enough to break the `1.84` ensemble floor while keeping bytes flat.
-
-## the chain of insights — how each discovery drove the next
-
-The session's 0.28-point improvement was not a single lucky find. It was a chain of insights where each discovery opened the door to the next. Here is the genealogy:
-
-### Insight 1 → 2: SegNet loss mismatch → scorer-faithful training
-**Who**: the team, reviewing upstream `evaluate.py` line by line
-**Discovery**: our training loss used soft cosine similarity for SegNet (~0.036 per pair) but the real scorer uses hard argmax disagreement (~0.006). This gave SegNet 10× too much gradient weight, limiting PoseNet optimization.
-**Impact**: led to `train_postfilter_v2.py` with STE hard-argmax loss, and the realization that the *old* soft-SegNet recipe was actually fine for EMA-based training (because EMA averages out the bias).
-
-### Insight 2 → 3: EMA smoothing → patience beats fancy losses
-**Who**: empirical observation across 9 alternative training recipes
-**Discovery**: EMA with decay=0.997 over 1000 epochs outperformed every alternative (Kalman, uint8 STE, CVaR, scorer-faithful STE). The rank-1 Jacobian basin is so narrow that any additional noise source (even well-intentioned) hurts.
-**Impact**: validated compound scaling (wider + longer) as the primary lever.
-
-### Insight 3 → 4: compound scaling → LeCun's width curve
-**Who**: Yann LeCun (panel), empirical validation
-**Discovery**: each doubling of hidden width gives ~0.07-0.14 score improvement. h=8→2.06, h=16→1.92, h=32→1.845, h=48→1.762, h=64→1.727. Log-linear fit: `score = -0.159 × ln(h) + 2.382`.
-**Impact**: motivated running h=48 and h=64 immediately, which delivered the 1.76 and 1.73 breakthroughs.
-
-### Insight 4 → 5: best-checkpoint int8 selection → closing the train/deploy gap
-**Who**: the partner agent, implementing `save_best_checkpoint` with `quantize_state_dict_like_saved_int8`
-**Discovery**: the train-to-deploy gap is 2.25× on PoseNet (training proxy shows 0.021, deployed shows 0.047). Most epochs produce BAD int8 models. Selecting the epoch where quantized weights happen to perform best (epoch 780 for h=48, epoch 918 for the shipped h=64 saved-best artifact) closes this gap dramatically.
-**Impact**: h=48 beat LeCun's prediction by 0.07 points. h=64 achieved 1.727 vs the proxy's 1.736. This mechanism is the single most important trick in the pipeline.
-
-### Insight 5 → 6: Jacobian analysis → CNN residual characterization
-**Who**: Andrej Karpathy (panel), with empirical verification
-**Discovery**: the Moore-Penrose pseudoinverse single-step correction failed catastrophically (pose 0.074 → 0.235, 3× worse). Trust radius measurement showed PoseNet is non-linear at scales below 0.0001 pixels. SVD analysis revealed effective rank ~1 (98% of sensitivity in one direction, condition number 399). CNN residual analysis showed 56.6% of pixels moved, 90.3% energy in mid-frequency DCT band.
-**Impact**: killed all closed-form/Newton approaches. Validated that the CNN approach is mathematically mandatory — only iterative descent with learned priors navigates the razor-sharp rank-1 basin.
-
-### Insight 6 → 7: SegNet headroom measurement → the untapped lever
-**Who**: Terrence Tao (panel), with empirical verification
-**Discovery**: SegNet self-disagreement under 0.5 LSB jitter is 0.000094 — our current 0.00576 is 60× above that. The SegNet term (100×S) has 98.4% headroom. Each 0.001 of SegNet reduction = 0.10 score points.
-**Impact**: identified SegNet as the dominant remaining lever. Led to the fixed-STE SegNet attack (seg=0.0053 in training) and the boundary-band weighting proposal (concentrating gradient on the 2.61% of flippable boundary pixels).
-
-### Insight 7 → 8: panel consensus → roadmap to 1.45
-**Who**: combined panel (Tao, Karpathy, LeCun, Rubin, Collier, Von Neumann)
-**Discovery**: width scaling continues to h=96-128 before rate penalty kills it. SegNet boundary attack could deliver -0.10 to -0.20. Per-channel int8 is synergistic with wider models. FiLM conditioning and counterpoint are secondary.
-**Impact**: clear prioritized roadmap: h=96 → per-channel int8 → SegNet boundary → pruning (if rate-bound). Expected floor: 1.45 ± 0.10.
-
-### Theoretical limits (Tao's analysis)
-- **Theoretical absolute minimum**: `100 × 0 + sqrt(10 × 0) + 25 × 0.020 = 0.50` (impossible — requires perfect reconstruction)
-- **Physical minimum**: `100 × 0.000094 + sqrt(10 × 0.02) + 25 × 0.020 = 0.009 + 0.447 + 0.50 = 0.96`
-- **Realistic achievable (24 days)**: `100 × 0.003 + sqrt(10 × 0.03) + 25 × 0.023 = 0.30 + 0.548 + 0.575 = **1.42**`
-- **Conservative target**: `100 × 0.004 + sqrt(10 × 0.035) + 25 × 0.023 = 0.40 + 0.592 + 0.575 = **1.57**`
-
-## mathematical investigation of why the CNN wins
-
-After the `1.85` promotion and before the `1.84` ensemble step, a sequence of mathematical experiments was run to answer the question "why does the CNN approach succeed where closed-form alternatives fail, and is there a theoretical ceiling we are approaching?" Three experiments produced surprising, falsifiable results.
-
-### experiment 1: single-step Jacobian pseudoinverse — falsified
-
-- **Script**: `experiments/jacobian_optimal.py`
-- **Hypothesis**: PoseNet is piecewise linear (ReLU), so the Moore-Penrose minimum-norm correction `δ = J^T (J J^T)^+ (pose_gt - pose_decoded)` should drive the pose residual to zero in a single step.
-- **Result**: baseline pose distortion `0.0742` → optimal correction pose distortion **`0.2349` (3× WORSE)**. The `δ` was concentrated on 0.0044% of pixels with max amplitude 3.07 LSB.
-- **Why it failed**: measured separately in `experiments/trust_region_sweep.py` — PoseNet's honest linear trust radius is at or below `0.0001` pixels RMS. Even there the median relative linearization error is already greater than `1.0`. Any concentrated correction blows through ReLU region boundaries and lands in a completely different linear piece than where the Jacobian was computed.
-
-### experiment 2: Jacobian SVD rank analysis — surprising
-
-- **Script**: `experiments/jacobian_svd_analysis.py`
-- **Measurement**: per-pair singular values of `J = dPose/dPixel` across 30 sampled pairs.
-- **Result**: effective rank (entropy-based) is **~1.008 out of 6**. The top singular value is 45× larger than the second. 98% of PoseNet's pixel sensitivity lies along a single direction per frame. Condition number is ~399.
-- **Implication**: PoseNet's 6-dim pose output is effectively one-dimensional at our operating point. The CNN is solving a scalar regression problem even though the output nominally has six degrees of freedom.
-
-### experiment 3: CNN residual characterization — Karpathy hypothesis confirmed
-
-- **Script**: `experiments/karpathy_cnn_residual_analysis.py`
-- **Setup**: measure pixel-change histogram and 2D-DCT spectrum of the `(filtered - decoded)` residual for the shipped h=32 filter on 20 frame pairs. Compare against the same statistics for the failed Jacobian delta.
-- **Predicted by Karpathy** (after the Jacobian failure updated his prior): the CNN spreads corrections densely across the image at small per-pixel amplitude and biases its residual toward the mid-frequency band where PoseNet's early convolutions respond most strongly. The Jacobian minimum-norm delta, by contrast, should be sparse, concentrated, and spectrally white because the L2 metric does not know about the ReLU structure.
-- **Measured result**:
-  - CNN moves **56.6% of pixels** (Jacobian moves 0.0024%) → CNN is 24,000× denser
-  - CNN places **90.3% of its luma residual energy in the mid-frequency DCT band**; Jacobian is roughly uniform across bands
-  - CNN mean absolute residual is 0.83 LSB (Jacobian 0.0044 LSB) → CNN is much larger per pixel than the linear model, which falsified the early "tiny dense correction" version of the hypothesis while preserving the denser / mid-band part
-- **Interpretation**: the CNN learned a strategy of dense mid-frequency correction that stays inside every ReLU region it touches because each per-pixel nudge is small relative to the spatially coherent structure it produces. This strategy is fundamentally out of reach of any linear method; only iterative descent (or a learned amortization of iterative descent, which is what the CNN is) can find it.
-
-### why this matters for the writeup
-
-These three experiments tell a cohesive scientific story. The first falsifies the most obvious closed-form alternative. The second explains why the linearization is so brittle (rank collapse + ill-conditioning). The third validates a specific structural theory of what the CNN is doing and gives us a concrete quantitative signature: dense, mid-frequency, spatially spread. That signature now informs every future experiment — architectural choices should bias toward mid-frequency corrections, parameter efficiency should exploit the effective rank-1 structure, and any idea that requires a single-step or small-iteration method on the pose residual should be treated as mathematically dead on arrival.
-
-The session trajectory — `2.01 → 1.99 → 1.95 → 1.92 → 1.85 → 1.84 → 1.73` — is not a sequence of lucky hyperparameter changes. It is a sequence of compute investments into the one approach that the mathematical structure of the problem actually admits.
-
-### evidence index for the mathematical investigation
-
-- `experiments/jacobian_optimal.py` — single-step Moore-Penrose correction on `dPose/dPixel`; reproduces the `0.0742 → 0.2349` regression.
-- `experiments/jacobian_svd_analysis.py` — per-pair SVD across 30 sampled frames; reproduces effective rank `1.008 / 6` and condition number `~399`.
-- `experiments/trust_region_sweep.py` — reproduces the `~0.0001` pixels RMS trust radius knee and the median relative linearization error already above `1` at the knee.
-- `experiments/karpathy_cnn_residual_analysis.py` — reproduces the `56.6%` dense pixel-change signature and the `90.3%` mid-frequency luma DCT energy concentration.
-- `experiments/rd_bound_mine.py` — MINE-based lower bound on the rate-distortion frontier at the current operating point, used to estimate how much honest headroom remains beyond `1.73`.
-- Raw promoted scorer report for the `1.73` floor: `reports/raw/2026-04-09-long1000-h64-authoritative/robust_current-long1000-h64-current_workflow-cpu-report.txt`.
-
----
-
-## (2026-04-29) Era 2: the neural renderer that bypasses the codec
-
-The 1.73 result was the Era 1 floor. After it, the lab abandoned the codec entirely. Era 2 is the neural-renderer paradigm: a small renderer (dilated-h64, 287K params) is trained directly against the scorer gradients and produces frames from per-pair embeddings; AV1 only carries low-resolution masks; PoseNet still runs at full resolution.
-
-### the MPS-vs-CUDA discovery (the most consequential measurement bug)
-
-For months the lab measured "auth" scores on local Apple Silicon (MPS). On 2026-04-25, side-by-side comparison against CUDA A100 (the contest hardware) showed:
-
-| Metric | Local MPS | CUDA A100 | Drift |
-|---|---|---|---|
-| PoseNet distortion | 0.245 | 0.0107 | **23x worse on MPS** |
-| SegNet distortion | 0.0024 | 0.00116 | 2x worse on MPS |
-| **Final score** | **2.26** | **0.90** | **2.5x worse on MPS** |
-
-Likely cause: FastViT-T12 attention softmax + YUV6 chroma plane numerics differ between MPS and CUDA float16. New non-negotiable: ALL auth eval on CUDA, MPS scores tagged `[MPS-PROXY]` and treated as advisory only. This invalidated every "auth" score in Era 1 above and made sub-Quantizr genuinely reachable from the true 0.90 baseline.
-
-### Era 2 score trajectory (contest-CUDA only)
-
-| Date | Lane | Recipe | Archive | Score |
-|---|---|---|---:|---:|
-| 2026-04-25 | baseline | dilated-h64 + CRF=50 + matched poses | 293KB | **0.90** |
-| 2026-04-27 | Lane A | + pose TTO from baseline poses (rank-1 init) | 694KB | **1.15** |
-| 2026-04-28 | Lane G v3 | + KL distill weight=0.002 + pose TTO retry | 694KB | **1.05** |
-| 2026-04-29 | Lane G v3 (Modal repro) | identical archive | 694KB | **1.04** |
-
-The 0.90 → 1.05 ordering is non-monotonic in score because Lane A and Lane G v3 carry an additional 401KB pose tensor that the baseline did not. At equal archive sizes, Lane G v3 is the lowest contest-CUDA score the lab has measured.
-
-### what worked and why
-
-**Pose TTO from baseline poses (Lane A: 1.15).** PoseNet's 6-dim output sensitivity has effective rank ~1 (from the Era 1 SVD analysis). Pose TTO warm-started from the baseline poses lands inside the rank-1 basin; gradient descent then sharpens PoseNet from 0.247 to 0.0034 (73x). Cold-started TTO does NOT work — the basin is too narrow.
-
-**KL distill weight=0.002 (Lane G v3: 1.05).** Earlier KL distillation attempts at weight ≥ 0.01 collapsed PoseNet because the KL signal overpowered the renderer's pose path. Weight=0.002 is small enough that KL never wins the gradient competition, but provides sustained nudge on the boundary classes that the standard SegNet loss undersamples. PoseNet AND SegNet both improve at the same rate term.
-
-**Modal vs Vast.ai for measurement.** Modal T4 reproduces Lane G v3 within 0.01 of Vast.ai 4090 (1.04 vs 1.05). For training jobs >2h, Modal is canonical: Vast.ai NVDEC roulette has been ~85% bad-host rate on some nights. Modal's slightly higher per-hour cost is dominated by reliability — Modal wins on expected $ per successful lane.
-
-### what did not work (Era 2 negatives)
-
-- **Lane M-V2 radial-zoom** (`1.84`): rank-1 PoseNet OUTPUT sensitivity ≠ rank-1 renderer INPUT subspace. The 6-DOF-trained renderer goes off-manifold when fed 1-DOF poses padded with zeros.
-- **Lane GP v3 polynomial pose-fit** (`89.67`): textbook Runge phenomenon at degree-10 polynomial. Endpoint oscillations at 1e6 magnitude. RMSE ≈ pose signal itself.
-- **Lane UNIWARD v8** (`1.14`): encoder pipeline is no-op on the archive bitstream without an SLI1 inflate-time decoder. Council 5/5 KILLED standalone.
-- **Lane V Quantizr halfframe joint-from-epoch-0**: crashed at ~7.6h on channel mismatch.
-
-## (2026-04-29) Era 3: the Selfcomp paradigm — live work, no scores yet
-
-Selfcomp 0.38 (PR #56, leaderboard #2) uses paradigms we have not used. Reverse-engineered from PR #56 inflate.py, five concrete shifts:
-
-1. **Grayscale-LUT mask encoding** (1ch smooth values + Gaussian softmax LUT) vs our 3ch discrete-class
-2. **Single-mask-per-pair + 6-DOF affine duality** (one mask warps to both frames)
-3. **Analytical pose via affine_delta** (no PoseNet predictor)
-4. **Block-FP weight self-compression** at ~1.017 bpw (vs our FP4 4-8 bpw)
-5. **94K-param SegMap** (vs our 287K-param ASYM)
-
-Eight Modal lanes are in flight to validate each shift in isolation and stack:
-- MM (grayscale-LUT mask), SA (94K SegMap clone), SC++ (SA + KL distill T=2.0), SO (SC++ + Hessian block-FP)
-- in parallel: q_faithful_v3 (Quantizr 1:1 replica), sz_phase2_v2, mae_v_v2, lane_w_v2
-
-We will not promote any score below `1.05` to this writeup until it is contest-CUDA verified on the EXACT submission archive bytes.
-
-## the rigor story (publishable independent of any further score)
-
-The lab's preflight catalog grew from 36 strict checks to **78 strict checks** in a single week. Every catastrophic measurement bug got a static check. Sample of the bug classes structurally extinct in this codebase:
-
-| Bug class | Detection | Impact if missed |
-|---|---|---|
-| MPS-vs-CUDA fallback default | `check_no_mps_fallback_default` | 23x PoseNet drift |
-| `eval_roundtrip=False` default | `check_no_eval_roundtrip_false` | 2-11x proxy-auth gap |
-| Mask resolution 48x64 vs 384x512 | `check_anchor_masks_resolution` | 53.61 catastrophic score |
-| Scorer load at inflate time | `check_no_scorer_load_at_inflate` | strict-scorer rule violation |
-| Vast.ai NVDEC missing | `check_remote_scripts_have_nvdec_probe` | bootstrap silent cascade |
-| Dead CLI flags wired into subprocess | `preflight_arity` | months of silently-skipped auth eval |
-| Same-line waiver scope drift | `check_no_brittle_six_line_waiver_lookback` | accidental waiver of unrelated calls |
-| `pipefail + grep -q` SIGPIPE trap | `check_no_pipefail_grep_q_trap` | silent failure cascade |
-
-The engineering story under the score story is that every mistake the lab made got a permanent guard-rail. The 0.90 → 1.05 → submitted-score arc only happens because the underlying measurement infrastructure stopped lying. This is differentiating and not competitively load-bearing — safe to publish.
+## thesis
+
+This writeup should present Apogee as a contest-faithful archive compiler for a
+single fixed driving video and fixed neural evaluator. The score-bearing output
+is not a proxy-score claim, public PR body claim, or leaderboard scrape. It is
+exact CUDA custody for exact archive bytes through the canonical contest path.
+
+We got nerd-sniped by the challenge in the best possible way: the problem kept
+opening into deeper systems questions about what a video is when the consumer is
+a fixed neural scorer, not a human viewer.
+
+The current confirmed champion packet is the PR100 HNeRV-LC-v2 adapter replay,
+published through the Apogee supplement/report lane with the `apogee` name.
+
+The score-bearing claim is:
+
+- `0.22826947142244708` exact Tesla T4 A++
+- `178981` archive bytes
+- archive SHA-256:
+  `afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641`
+- runtime tree SHA-256:
+  `ef6323533666c9cac1c204a9d3f7054157d44a185b16fc859fb3f0438ccd1832`
+- SegNet `0.00067623`
+- PoseNet `0.00017198`
+- score JSON:
+  `experiments/results/lightning_batch/exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z/contest_auth_eval.adjudicated.json`
+- packet:
+  `experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter`
+- public PR:
+  `https://github.com/commaai/comma_video_compression_challenge/pull/107`
+
+Every public-facing section should make the same distinction: exact local CUDA
+evidence can rank; public PR claims, comments, and static anatomy can motivate,
+attribute, and explain the meta-game, but cannot rank until replayed.
+
+## result arc
+
+The narrative arc:
+
+1. Early codec/postfilter and renderer work built the measurement discipline.
+2. QZS3/QP1 and QMA9 public-floor work shifted the frontier to semantic
+   sufficient statistics rather than perceptual reconstruction.
+3. PR85 established a stronger public semantic-bundle anchor with exact T4
+   score `0.25806611029397786`.
+4. PR85+STBM/RMB1 pushed that lineage to `0.2535063602939779`.
+5. The renderer era before public semantic bundles mattered: the 0.90 CUDA
+   baseline, 1.15 Lane A pose-TTO control result, and 1.05 Lane G v3
+   KL-distill/TTO result established scorer-aligned neural rendering and the
+   exact-eval harness discipline.
+6. Quantizr/JointFrameGenerator reproduction, QZS3/QP1 packer work, and PR67
+   mask-source attribution produced the first sub-0.4 exact public-floor basin,
+   including C-067 at `0.31561703078448233`.
+7. PR95 HNeRV/Muon showed that route-specialized neural video representations
+   had displaced hand-packed semantic streams as the live meta.
+8. PR95 repacking established a local exact predecessor at
+   `0.23089404465634825`.
+9. PR98 exact adapter replay improved the SegNet basin; PR100 HNeRV-LC-v2 then
+   became the current local exact A++ frontier at `0.22826947142244708`.
+
+## contest meta
+
+The challenge meta changed late. Public submissions were not a stable target;
+they were part of a competitive information game. Quantizr anticipated this in
+PR #53, noting that open submissions incentivize people to hold competitive
+work until the end so others cannot cheaply tune past it. Quantizr's PR #55
+then made two technically important public claims: sub-0.30 looked reachable by
+architecture/compute search, and neural mask encoding was a plausible next
+lever beyond ffmpeg-style mask video.
+
+Those comments are external process evidence, not score authority. They are
+useful because they explain why the final system had to run two coupled loops:
+
+- monitor and deconstruct late public archives, wrappers, payloads, and PR
+  prose;
+- simultaneously run exact replay, adapter repair, repacking, ablation, and
+  optimization searches under strict custody.
+
+The writeup should be candid that this became a meta-optimization problem:
+leaderboard intelligence changed the active representation family, while exact
+CUDA replay decided which public claims were usable.
+
+It should also be candid that the project state is distributed across git
+history, `.omx/research` ledgers, exact-eval artifact directories, generated
+site files, and public PR/release surfaces. The public release bundle should
+therefore be a curated evidence index, not a raw dump of operator state.
+
+## research process
+
+Apogee was built over a month of AI-assisted research and engineering using
+Claude Code, Codex, public PR intake, local artifact forensics, remote CUDA
+evals, and a large internal ledger system. The "Grand Council" and
+"Skunkworks Council" sessions were a deliberate prompting pattern: assign
+different expert roles to pressure-test architecture, math, compliance,
+steganalysis, openpilot priors, systems hardening, and contrarian failure
+modes before spending GPU or promoting a claim.
+
+That process did not replace evidence. It generated proposals, objections,
+failure classifications, and next experiments. Exact CUDA auth eval and
+deterministic archive custody remained the promotion gate. The online writeup
+should include a separate tooling/process appendix about this AI-assisted
+research workflow because it is part of what made the system reproducible under
+deadline pressure.
+
+## metalagrangian method
+
+The metalagrangian view treats the whole submission as a constrained program:
+
+```text
+minimize    S(A, R)
+
+S = 100 * D_seg(A, R)
+  + sqrt(10 * D_pose(A, R))
+  + 25 * |A| / 37,545,489
+```
+
+where `A` is the charged archive and `R` is the deterministic inflate runtime.
+Every stream, payload, decoder weight, latent, side channel, postprocess,
+wrapper, and packing rule is an optimization atom with a cost vector:
+
+```text
+atom_i -> (delta_bytes_i,
+           delta_seg_i,
+           delta_pose_i,
+           delta_runtime_i,
+           legality_i,
+           reproducibility_i)
+```
+
+The practical objective is a constrained Lagrangian:
+
+```text
+L = 100 * D_seg
+  + sqrt(10 * D_pose)
+  + lambda_rate * bytes
+  + lambda_time * inflate_time
+  + lambda_custody * custody_risk
+  + lambda_compliance * compliance_risk
+```
+
+The multipliers are not fixed constants; they are feedback variables. When the
+frontier sits in a PoseNet cliff, `lambda_pose` effectively rises. When public
+HNeRV archives reveal a smaller sufficient-statistic program, the representation
+family changes and previous local mask-packer polish becomes lower EV. When a
+runtime wrapper fails before score, `lambda_custody` becomes infinite until the
+adapter contract is fixed.
+
+This is why negative results mattered. A bad exact eval is a gradient-like
+constraint sample: it tells the optimizer which basin, byte region, runtime
+contract, or geometry transform is outside the trust region. The final Apogee
+packet is one point in that constrained search, with exact CUDA eval as the
+only optimizer check that can promote a point to evidence.
+
+## method
+
+The method is a typed archive compiler:
+
+- Parse public or internal archives into typed streams: neural decoder,
+  latents, masks, poses, correction payloads, layout, and action channels.
+- Prove local decode/output parity before treating any recode as a candidate.
+- Build deterministic archives with charged side information only.
+- Evaluate only through `archive.zip -> inflate.sh -> upstream/evaluate.py`.
+- Preserve runtime tree custody because identical archive bytes can score
+  differently under different inflate code.
+
+The PR100 adapter result is not a pure-rate result. It preserves the public
+PR100 HNeRV-LC-v2 archive bytes while repairing the contest wrapper contract
+and validating the archive under exact Tesla T4 CUDA. The measured score is
+lower than PR98 and PR95 stem-permutation because the decoded output moves to a
+better SegNet/PoseNet tradeoff despite slightly higher charged bytes.
+
+The harness is part of the method. Deterministic archive construction,
+runtime-tree hashing, dispatch claims, exact JSON adjudication, wrapper
+contract adapters, fail-closed archive validators, and public-release hygiene
+checks are what made late public archive deconstruction useful instead of
+unreproducible copying.
+
+The public supplement should include the generated matplotlib/GIF visual
+artifacts, especially `comma_comparison.gif` and `comma_comparison_full.gif`.
+Those figures make the machine-perception nature of the result legible in the
+same spirit as Quantizr's visual PR attachment, while the score table remains
+the authority.
+
+Unlimited-compute and inflate-time scorer-optimization experiments belong in
+the paper as probes of the Yousfi-Fridrich landscape, not as contest-ranking
+claims. They helped identify hard pairs, low-dimensional pose basins, and
+correction atoms. They are contest-valid only after the learned artifact or
+correction payload is charged inside `archive.zip`, inflate remains budgeted,
+and exact CUDA auth eval passes on the final bytes.
+
+## external context
+
+PR100 publicly claims a lower HNeRV-LC-v2 score than PR98. Our exact T4 replay
+validated the same archive bytes at `0.22826947142244708`, which supersedes the
+PR98/PR107 packet locally even though the public PR body score itself remains
+external context rather than score authority.
+
+PR91 publicly self-reports `0.24879480490416128` at `222404` bytes. Local T4
+and L40S replay failed before score in HPM1 entropy decode, so PR91 is an
+external frontier hypothesis and source anatomy, not local exact evidence.
+
+`range_mask_codec.cpp` in PR91 is live only for the QMA6-QMA9 fallback branch.
+It does not decode HPM1 and does not fallback-rescue the observed HPM1 entropy
+failure.
+
+## compliance posture
+
+The final release packet passed the strict pre-submission gate on:
+
+```bash
+.venv/bin/python scripts/pre_submission_compliance_check.py \
+  --submission-dir experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter \
+  --archive experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter/archive.zip \
+  --auth-eval-json experiments/results/lightning_batch/exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z/contest_auth_eval.adjudicated.json \
+  --contest-final \
+  --expect-single-member 0.bin \
+  --expected-archive-sha256 afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641 \
+  --expected-archive-size-bytes 178981 \
+  --expected-runtime-tree-sha256 ef6323533666c9cac1c204a9d3f7054157d44a185b16fc859fb3f0438ccd1832 \
+  --dispatch-claims-md .omx/state/active_lane_dispatch_claims.md \
+  --expected-lane-id public_pr98_hnerv_muon_finetuned_t4_adapter_replay \
+  --expected-job-id exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z \
+  --source-prs PR100
+```
+
+This gate is a release-readiness check, not a scorer. It verifies byte closure,
+deterministic ZIP custody, executable inflate, exact auth-eval match, runtime
+tree match, public-source references, and sanitized public surfaces.
+
+## paper claims
+
+Allowed:
+
+- "The PR100 Apogee follow-up packet is the current local exact A++ frontier at
+  `0.22826947142244708`."
+- "The score authority is the adjudicated exact auth-eval JSON on the submitted
+  archive bytes and matching runtime tree."
+- "Quantizr's PR #53/#55 comments correctly anticipated the late meta-game and
+  the HNeRV/neural-mask direction, but they are external process context."
+- "PR100 publicly claimed a lower score; local exact T4 replay validated the
+  archive at `0.22826947142244708`."
+
+Forbidden:
+
+- "The PR98 public body score is the local exact score."
+- "PR100 beats Apogee before local exact CUDA replay."
+- "The PR91 public self-report is an exact score."
+- "HPM1 is decoded by `range_mask_codec.cpp`."
+- "Source-embedded payloads establish a valid compression floor."
+
+## residual gaps
+
+- Public release hygiene scan on the exact Cloudflare/site bundle and notebook.
+- Final sanitized URLs for the public supplement.
+- Consolidated OSS documentation for the minimal Apogee runtime and the larger
+  `tac` research toolkit without publishing private custody state.
