@@ -1,0 +1,12 @@
+{
+  "elapsed_sec": 0.014,
+  "error": "Error(s) in loading state_dict for HPACMini:\n\tsize mismatch for frame_embed.weight: copying a param with shape torch.Size([600, 8]) from checkpoint, the shape in current model is torch.Size([1, 8]).",
+  "error_type": "RuntimeError",
+  "evidence_grade": "empirical_local_cpu_prefix_decode",
+  "python": "/Users/adpena/Projects/pact/.venv/bin/python",
+  "requested_frames": 1,
+  "schema_version": 1,
+  "score_claim": false,
+  "status": "failed",
+  "tool": "bounded_pr91_hpm1_first_frame_decode"
+}

@@ -1,0 +1,14 @@
+{
+  "random_basis": {
+    "basis_bytes": 32817,
+    "block_bytes": 3654,
+    "total_bytes": 36479,
+    "rate_contrib": 0.02428986875094369
+  },
+  "smooth_basis": {
+    "basis_bytes": 10320,
+    "block_bytes": 3654,
+    "total_bytes": 13982,
+    "rate_contrib": 0.009310039882554199
+  }
+}

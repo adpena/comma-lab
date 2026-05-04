@@ -1,0 +1,62 @@
+[
+  {
+    "archive": "/Users/adpena/Projects/pact/experiments/results/qzs3_postprocess_c059_pairgated_20260502/pairgated_qpost_top016/archive.zip",
+    "archive_byte_delta": 546,
+    "bytes": 276893,
+    "expected_net_utility": 0.00027099915892772895,
+    "formula_rate_score_delta": 0.00036355898840470557,
+    "include_streams": [
+      "post",
+      "shift",
+      "frac",
+      "frac2",
+      "frac3",
+      "bias",
+      "region"
+    ],
+    "name": "pairgated_qpost_top016",
+    "qpost_bytes": 452,
+    "selected_count": 16,
+    "sha256": "2080fdcee5dca4cea1ccc22e78c55a2e5c45aac651b64115014a2fe3851f502c"
+  },
+  {
+    "archive": "/Users/adpena/Projects/pact/experiments/results/qzs3_postprocess_c059_pairgated_20260502/pairgated_qpost_top032/archive.zip",
+    "archive_byte_delta": 732,
+    "bytes": 277079,
+    "expected_net_utility": 0.00041971884670332396,
+    "formula_rate_score_delta": 0.00048740875368542943,
+    "include_streams": [
+      "post",
+      "shift",
+      "frac",
+      "frac2",
+      "frac3",
+      "bias",
+      "region"
+    ],
+    "name": "pairgated_qpost_top032",
+    "qpost_bytes": 638,
+    "selected_count": 32,
+    "sha256": "ed6e383cea466fefa8379451ff1a7ba7b5927a8070a512aeb3fcec6d425115a6"
+  },
+  {
+    "archive": "/Users/adpena/Projects/pact/experiments/results/qzs3_postprocess_c059_pairgated_20260502/pairgated_qpost_top064/archive.zip",
+    "archive_byte_delta": 1018,
+    "bytes": 277365,
+    "expected_net_utility": 0.000619504387509875,
+    "formula_rate_score_delta": 0.0006778444142783704,
+    "include_streams": [
+      "post",
+      "shift",
+      "frac",
+      "frac2",
+      "frac3",
+      "bias",
+      "region"
+    ],
+    "name": "pairgated_qpost_top064",
+    "qpost_bytes": 924,
+    "selected_count": 64,
+    "sha256": "568cd1a0a3e69cd11bf0856fbf1c8526d736d9ff54729cc22ccecafbb9c4861e"
+  }
+]

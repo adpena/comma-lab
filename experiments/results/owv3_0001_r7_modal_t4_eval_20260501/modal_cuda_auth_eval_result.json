@@ -1,0 +1,46 @@
+{
+  "adjudication_required": true,
+  "allowed_use": [
+    "debug",
+    "no_score_claim",
+    "no_promotion"
+  ],
+  "archive_path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_byte_plan_sweep_20260501_r9_r7_component_balanced/r7_selected_for_eval/archive_lane_g_v3_owv3.zip",
+  "archive_sha256": "5c11013539755c6470fb9f55e4d7f2ab6ec1edb2b951a468513d4ed7550f66ef",
+  "archive_size_bytes": 631473,
+  "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda",
+  "command": [
+    "/usr/local/bin/python",
+    "-u",
+    "/workspace/pact/experiments/contest_auth_eval.py",
+    "--archive",
+    "/tmp/modal_auth_eval/archive.zip",
+    "--inflate-sh",
+    "/workspace/pact/submissions/robust_current/inflate.sh",
+    "--upstream-dir",
+    "/workspace/pact/upstream",
+    "--video-names-file",
+    "/workspace/pact/upstream/public_test_video_names.txt",
+    "--device",
+    "cuda",
+    "--keep-work-dir",
+    "--work-dir",
+    "/tmp/modal_auth_eval/eval_work",
+    "--inflate-timeout",
+    "1800",
+    "--evaluate-timeout",
+    "1800"
+  ],
+  "expected_archive_sha256": "5c11013539755c6470fb9f55e4d7f2ab6ec1edb2b951a468513d4ed7550f66ef",
+  "expected_archive_size_bytes": 631473,
+  "local_output_dir": "/Users/adpena/Projects/pact/experiments/results/owv3_0001_r7_modal_t4_eval_20260501",
+  "modal_elapsed_seconds": 124.77349285200002,
+  "passed": false,
+  "promotion_eligible": false,
+  "returncode": 1,
+  "schema_version": 1,
+  "score_claim": false,
+  "validation_errors": [
+    "contest_auth_eval.json was not produced"
+  ]
+}

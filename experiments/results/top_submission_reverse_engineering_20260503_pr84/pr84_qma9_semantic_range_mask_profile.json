@@ -1,0 +1,273 @@
+{
+  "archive": {
+    "bytes": 215735,
+    "members": [
+      {
+        "compress_size": 215635,
+        "compress_type": 0,
+        "crc32_hex": "535d065c",
+        "file_size": 215635,
+        "header_offset": 0,
+        "name": "p",
+        "sha256": "35b14e37ee34eeb2197117d52d805afb7aff8b33378b367685476dc4097e324d"
+      }
+    ],
+    "path": "experiments/results/top_submission_reverse_engineering_20260503_pr84/archive.zip",
+    "payload_bytes": 215635,
+    "payload_container": "p",
+    "payload_sha256": "35b14e37ee34eeb2197117d52d805afb7aff8b33378b367685476dc4097e324d",
+    "sha256": "a607a6c3ae9b610e6edfb546c3206004ae40fc348ecaef2446b7134a19b8e07f",
+    "zip_overhead_bytes": 100
+  },
+  "component_byte_deltas": [
+    {
+      "available": true,
+      "component": "mask_or_range_mask",
+      "delta_bytes_pr81_minus_reference": -60461,
+      "pr81_bytes": 159011,
+      "rate_term_delta": -0.0402584981647196,
+      "reference": "PR79_public",
+      "reference_bytes": 219472
+    },
+    {
+      "available": true,
+      "component": "model_or_renderer",
+      "delta_bytes_pr81_minus_reference": -31,
+      "pr81_bytes": 55725,
+      "rate_term_delta": -2.0641627546787313e-05,
+      "reference": "PR79_public",
+      "reference_bytes": 55756
+    },
+    {
+      "available": true,
+      "component": "pose",
+      "delta_bytes_pr81_minus_reference": 1,
+      "pr81_bytes": 899,
+      "rate_term_delta": 6.658589531221714e-07,
+      "reference": "PR79_public",
+      "reference_bytes": 898
+    },
+    {
+      "available": true,
+      "component": "router_or_actions",
+      "delta_bytes_pr81_minus_reference": -1162,
+      "pr81_bytes": 0,
+      "rate_term_delta": -0.0007737281035279631,
+      "reference": "PR79_public",
+      "reference_bytes": 1162
+    },
+    {
+      "available": true,
+      "component": "mask_or_range_mask",
+      "delta_bytes_pr81_minus_reference": -60461,
+      "pr81_bytes": 159011,
+      "rate_term_delta": -0.0402584981647196,
+      "reference": "PR79_S2",
+      "reference_bytes": 219472
+    },
+    {
+      "available": true,
+      "component": "model_or_renderer",
+      "delta_bytes_pr81_minus_reference": -31,
+      "pr81_bytes": 55725,
+      "rate_term_delta": -2.0641627546787313e-05,
+      "reference": "PR79_S2",
+      "reference_bytes": 55756
+    },
+    {
+      "available": true,
+      "component": "pose",
+      "delta_bytes_pr81_minus_reference": 1,
+      "pr81_bytes": 899,
+      "rate_term_delta": 6.658589531221714e-07,
+      "reference": "PR79_S2",
+      "reference_bytes": 898
+    },
+    {
+      "available": true,
+      "component": "router_or_actions",
+      "delta_bytes_pr81_minus_reference": -1095,
+      "pr81_bytes": 0,
+      "rate_term_delta": -0.0007291155536687777,
+      "reference": "PR79_S2",
+      "reference_bytes": 1095
+    }
+  ],
+  "dispatch_performed": false,
+  "evidence_grade": "external/planning_only",
+  "gpu_required": false,
+  "notes": [
+    "External/public artifact intake plus planning-only byte arithmetic.",
+    "No scorer invocation, no CUDA dependency, and no remote/GPU dispatch.",
+    "Static rate-term deltas are not component or score evidence."
+  ],
+  "optional_cpp_decode_hash_validation": {
+    "attempted": false,
+    "status": "skipped_not_requested"
+  },
+  "payload_split": {
+    "boundary_authority": "public_pr81_inflate_constant_table_plus_qma9_self_header",
+    "expected_payload_bytes": 215635,
+    "payload_format": "public_qma9_range_mask_qzs3_split_model_qp1_no_router_v1",
+    "segments": [
+      {
+        "bytes": 159011,
+        "codec": "qma9_adaptive9_binary_range_mask",
+        "name": "range_mask.qma9",
+        "offset": 0,
+        "prefix_hex": "514d4139580200000002000080010000",
+        "sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179"
+      },
+      {
+        "bytes": 55725,
+        "codec": "brotli_reordered_qzs3_model_bundle",
+        "name": "split_model_reordered.br_bundle",
+        "offset": 159011,
+        "prefix_hex": "1f8f945194b766e609ff91909b34bdd9",
+        "sha256": "b649b0dacb1dcc93fd7da2e7f5c6d398fa933d2fe3087520359612afc8e4832d"
+      },
+      {
+        "bytes": 899,
+        "codec": "brotli_qp1_pose_stream",
+        "name": "optimized_poses.qp1.br",
+        "offset": 214736,
+        "prefix_hex": "1f7304f81f07b939f4160b49fff31a2a",
+        "sha256": "83767bbd10ae72c3237e468351eb9c465a954e25a6af04a0e0cb84d1f7af9b51"
+      }
+    ]
+  },
+  "qma9": {
+    "bitstream_bytes": 158991,
+    "bitstream_sha256": "77196f31a8fdfbf8f91c9c30600945473376534f15245bfb7622ddd77d17e3af",
+    "class_symbol_count": 5,
+    "context_symbol_count": 10077696,
+    "decoded_mask_bytes": 117964800,
+    "frame_count": 600,
+    "header_bytes": 20,
+    "height": 384,
+    "magic": "QMA9",
+    "packed_bytes": 159011,
+    "payload_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+    "sentinel": 5,
+    "width": 512
+  },
+  "references": [
+    {
+      "archive_bytes": 277388,
+      "archive_sha256": "01dc02badf851d99108fd92c570271f36f74cc5424c6d2a8f1b499cb4d1c3446",
+      "available": true,
+      "label": "PR79_public",
+      "mask_charged_bytes": 219472,
+      "model_charged_bytes": 55756,
+      "payload_bytes": 277288,
+      "payload_sha256": "026c2a5801dc42e369ad9533736645488ef9183c0789d9c961adb23c1740e688",
+      "pose_charged_bytes": 898,
+      "router_or_action_charged_bytes": 1162,
+      "source_json": "/Users/adpena/Projects/pact/experiments/results/top_submission_reverse_engineering_20260503_pr79/pr79_minp_grammar_profile.json",
+      "unavailable_reason": null
+    },
+    {
+      "archive_bytes": 277321,
+      "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+      "available": true,
+      "label": "PR79_S2",
+      "mask_charged_bytes": 219472,
+      "model_charged_bytes": 55756,
+      "payload_bytes": 277221,
+      "payload_sha256": "c52308a335087e7a41e7353a4395269bddb0377b6fbad2b739aa8e283db22b72",
+      "pose_charged_bytes": 898,
+      "router_or_action_charged_bytes": 1095,
+      "source_json": "/Users/adpena/Projects/pact/experiments/results/pr79_runtime_parity_20260503_codex/pr79_s2_runtime_parity.json",
+      "unavailable_reason": null
+    }
+  ],
+  "schema": "pr81_qma9_semantic_range_mask_contract_v1",
+  "score_claim": false,
+  "split_constants": {
+    "PACKED_PAYLOAD_BYTES": 215860,
+    "POSE_STREAM_BYTES": 899,
+    "RANGE_MASK_BYTES": 159011,
+    "ROUTER_ACTION_BITS": 3,
+    "ROUTER_ACTION_BYTES": 225,
+    "ROUTER_ACTION_COUNT": 600,
+    "SPLIT_MODEL_PACKED_REORDERED_BR_BYTES": 37086,
+    "SPLIT_MODEL_REORDERED_BYTES": 55725,
+    "SPLIT_MODEL_SCALES_REORDERED_BR_BYTES": 3035,
+    "SPLIT_MODEL_TAIL_REORDERED_BR_BYTES": 15604
+  },
+  "static_break_even": [
+    {
+      "archive_byte_delta_pr81_minus_reference": -61653,
+      "bytes_saved_before_equal_rate": 61653,
+      "component_score_worsening_budget_before_equal_total": 0.041052202036841234,
+      "note": "Static contest-rate-term arithmetic only: 25 * archive_bytes / 37545489. This is not a score claim and assumes no component evidence.",
+      "pr81_archive_bytes": 215735,
+      "rate_score_delta_if_components_unchanged": -0.041052202036841234,
+      "reference_archive_bytes": 277388,
+      "reference_label": "PR79_public"
+    },
+    {
+      "archive_byte_delta_pr81_minus_reference": -61586,
+      "bytes_saved_before_equal_rate": 61586,
+      "component_score_worsening_budget_before_equal_total": 0.04100758948698205,
+      "note": "Static contest-rate-term arithmetic only: 25 * archive_bytes / 37545489. This is not a score claim and assumes no component evidence.",
+      "pr81_archive_bytes": 215735,
+      "rate_score_delta_if_components_unchanged": -0.04100758948698205,
+      "reference_archive_bytes": 277321,
+      "reference_label": "PR79_S2"
+    }
+  ],
+  "tool": "experiments/profile_pr81_qma9_range_mask_contract.py",
+  "transfer_recommendations": [
+    {
+      "estimated_charged_byte_savings_vs_primary_reference": 60461,
+      "evidence_grade": "external/planning_only",
+      "planning_signal": "large_static_mask_byte_reduction_vs_PR79_family",
+      "rank": 1,
+      "recommendation": "isolate_QMA9_semantic_mask_coder_as_first_transfer_candidate",
+      "required_before_dispatch": [
+        "decode_hash_or_raw_semantic_mask_parity_against_public_PR81_runtime",
+        "archive_payload_closure_with_QMA9_decoder_charged_or_fixed",
+        "exact_cuda_auth_eval_for_any_score_or_component_claim"
+      ],
+      "target": "range_mask.qma9"
+    },
+    {
+      "estimated_charged_byte_savings_vs_primary_reference": 1162,
+      "evidence_grade": "external/planning_only",
+      "planning_signal": "small_3bit_pair_router_stream",
+      "rank": 2,
+      "recommendation": "study_pair_router_as_semantic_action_compressor_not_drop_in_PR79_tile_action_replacement",
+      "required_before_dispatch": [
+        "prove_action_semantics_or_rendered_output_effect_not_just_byte_savings",
+        "record transfer mapping from PR79 tile actions to PR81 pair router actions",
+        "exact_cuda_auth_eval_for_any_score_or_component_claim"
+      ],
+      "target": "router_actions.3bit"
+    },
+    {
+      "delta_bytes_pr81_minus_primary_reference": -31,
+      "evidence_grade": "external/planning_only",
+      "planning_signal": "near_byte_neutral_vs_PR79_renderer",
+      "rank": 3,
+      "recommendation": "treat_as_runtime_coupled_model_split_with_low_standalone_transfer_value",
+      "required_before_dispatch": [
+        "loader_compatibility_and_runtime_tree_custody",
+        "rendered_output_parity_or_exact_eval_custody"
+      ],
+      "target": "split_model_reordered.br_bundle"
+    },
+    {
+      "delta_bytes_pr81_minus_primary_reference": 1,
+      "evidence_grade": "external/planning_only",
+      "planning_signal": "pose_stream_byte_delta_is_negligible",
+      "rank": 4,
+      "recommendation": "do_not_prioritize_pose_transfer_from_PR81_static_bytes_alone",
+      "required_before_dispatch": [
+        "pose_float_or_QP1_hash_comparison_before_claiming_identity",
+        "exact_cuda_auth_eval_for_any_pose_component_claim"
+      ],
+      "target": "optimized_poses.qp1.br"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "artifacts_saved": 0,
+  "call_id": "fc-01KQP9K42CAWJH7XEV4KC0V28M",
+  "gpu": "H100",
+  "label": "c067_fixed_renderer_burn_fix3_modal_h100_20260503T0659Z",
+  "lane_id": "c067_fixed_renderer_burn_qfaithful_fix3_modal_h100",
+  "output_dir": "experiments/results/trained_renderer_transplant_recovery_worker_20260503/modal_recovery/h100",
+  "status": "running",
+  "terminal": false
+}

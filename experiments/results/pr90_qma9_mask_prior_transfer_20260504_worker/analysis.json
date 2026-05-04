@@ -1,0 +1,184 @@
+{
+  "co_training_assessment": {
+    "fixed_pr85_runtime_transfer_blocked": true,
+    "lossless_mask_recode_transfer_supported": true,
+    "mask_stream_transfer_too_co_trained": false,
+    "whole_pr90_stack_is_co_trained": true
+  },
+  "decoded_mask_parity": {
+    "class_counts": {
+      "0": 27408427,
+      "1": 690063,
+      "2": 58413695,
+      "3": 1459867,
+      "4": 29992748
+    },
+    "decoded_mask_equal": true,
+    "diff_pixels": 0,
+    "performed": true,
+    "pr85_render_order_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+    "pr90_render_order_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+    "render_order_shape": [
+      600,
+      384,
+      512
+    ]
+  },
+  "dispatch_performed": false,
+  "evidence_grade": "empirical_local_exact_token_parity_no_score",
+  "planning_only": true,
+  "policy_json": "experiments/results/pr90_qma9_mask_prior_transfer_20260504_worker/ranked_candidate_policy.json",
+  "pr85": {
+    "archive": {
+      "archive_bytes": 236328,
+      "archive_path": "experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+      "archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+      "member_bytes": 236228,
+      "member_name": "x",
+      "member_sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+      "zip_overhead_bytes": 100
+    },
+    "bundle_format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+    "decoded_tokens": {
+      "class_counts": {
+        "0": 27408427,
+        "1": 690063,
+        "2": 58413695,
+        "3": 1459867,
+        "4": 29992748
+      },
+      "path": "experiments/results/public_pr85_intake_20260503_codex/qma9_token_source/pr85_qma9_tokens_u8_storage_order.bin",
+      "render_order_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+      "render_order_shape": [
+        600,
+        384,
+        512
+      ],
+      "storage_order_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "storage_order_shape": [
+        600,
+        512,
+        384
+      ]
+    },
+    "header_bytes": 24,
+    "mask_segment": {
+      "bytes": 159011,
+      "offset": 24,
+      "qma9_header": {
+        "bitstream_bytes": 158991,
+        "bitstream_sha256": "77196f31a8fdfbf8f91c9c30600945473376534f15245bfb7622ddd77d17e3af",
+        "decoded_mask_bytes": 117964800,
+        "frame_count": 600,
+        "height": 384,
+        "magic": "QMA9",
+        "payload_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+        "width": 512
+      },
+      "sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179"
+    }
+  },
+  "pr90": {
+    "archive": {
+      "archive_bytes": 218080,
+      "archive_path": "experiments/results/public_pr90_intake_20260504_worker/archive.zip",
+      "archive_sha256": "608ea0355e60faad97b046c27644205d05120ac85ab3e8a99543a75a4ab2dd2d",
+      "member_bytes": 217980,
+      "member_name": "p",
+      "member_sha256": "b48ba0ea138e4f3b12c02e320528a53ce92ed6540d71b8554249ee7bdcad6d34",
+      "zip_overhead_bytes": 100
+    },
+    "compact_split": {
+      "candidate_stbm_segment_sha256": "1b1ec60b64e284aae11e838dc3d9996bce00125df5712a8ba9c3e8f739c9d313",
+      "mask_body_bytes": 152431,
+      "mask_body_sha256": "420f74e5a02b7d559954c2920e2617846e52ad9d75d46111a3e224cc7d2c14ee",
+      "mode": "pr90_len_lt_260000_fixed_offsets",
+      "model_body_bytes": 56385,
+      "payload_bytes": 217980,
+      "pose_qrgb_body_bytes": 9164,
+      "stbm_magic_bytes_required_for_self_describing_pr85_segment": 8
+    },
+    "support_masks": {
+      "residual_coded_fraction": 0.30498877631293403,
+      "residual_coded_pixels_after_support": 35977940,
+      "road_non_top_fraction": 0.25425167507595486,
+      "road_non_top_pixels": 29992748,
+      "road_support_pixels": 29992748,
+      "road_support_sha256": "68b0f927e8c50bfd9b4a1efe72cc83ef0808973fb9f45523da82af5aea80cf59",
+      "road_support_shape": [
+        600,
+        384,
+        512
+      ],
+      "top_road_overlap_pixels": 0,
+      "top_support_fraction": 0.4407595486111111,
+      "top_support_pixels": 51994112,
+      "top_support_sha256": "ccef7bab5ccaea7ae82260f7fb48c67d09400ac791788ca93a2c0731bb1cb60a",
+      "top_support_shape": [
+        600,
+        384,
+        512
+      ],
+      "total_pixels": 117964800
+    },
+    "topband_stream": {
+      "boundary_xbins": 12,
+      "bytes": 160839,
+      "height": 384,
+      "m5_table": {
+        "bytes": 4961,
+        "offset": 13759
+      },
+      "magic": "QTBM5\u0000",
+      "n_pairs": 600,
+      "precision": 16,
+      "residual_bitstream": {
+        "bytes": 133925,
+        "offset": 26914
+      },
+      "residual_order": [
+        3,
+        2,
+        1,
+        0
+      ],
+      "road_payload": {
+        "bytes": 13096,
+        "offset": 312,
+        "sha256": "3dcf09a1e607f0c70533270c67677da7be47e77f49f2ae2cf7b8ae7ec28868ff"
+      },
+      "sha256": "609b41fbd0f7c395c1ea6f6e3359a72c5cdc95dba73d090d0fa109a8b55b2d94",
+      "shift_dx": 1,
+      "shift_dy": 1,
+      "sparse_features": {
+        "count": 5,
+        "ids": [
+          0,
+          15,
+          14,
+          20,
+          30
+        ],
+        "threshold_q8": 7424
+      },
+      "sparse_table": {
+        "bytes": 8178,
+        "offset": 18732
+      },
+      "spatial_table": {
+        "bytes": 347,
+        "offset": 13412
+      },
+      "top_bins": 1,
+      "top_payload": {
+        "bytes": 283,
+        "offset": 29,
+        "sha256": "7fb76960bfdc2a93df3bb22746b05b18383df7a6f1c6969321528fe064723905"
+      },
+      "width": 512
+    }
+  },
+  "schema": "pr90_qma9_mask_prior_transfer_analysis_v1",
+  "score_claim": false,
+  "tool": "experiments/analyze_pr90_qma9_mask_prior_transfer.py"
+}

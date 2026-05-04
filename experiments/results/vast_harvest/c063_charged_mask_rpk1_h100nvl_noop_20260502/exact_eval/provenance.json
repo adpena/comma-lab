@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "started_at_utc": "2026-05-02T08:13:17Z",
+  "git_hash": "no-git",
+  "gpu_name": "NVIDIA H100 NVL",
+  "driver_version": "580.82.07",
+  "lane_script": "scripts/remote_archive_only_eval.sh",
+  "tag": "archive_eval_c063_charged_mask_rpk1_budget4096_h100nvl_20260502",
+  "archive_path": "/workspace/pact/experiments/results/vast_live_harvest/c063_charged_mask_rpk1_h100nvl_20260502T0815Z/archive.zip",
+  "inflate_sh": "/workspace/pact/submissions/robust_current/inflate.sh",
+  "inflate_sh_sha256": "86449a1f52ac6b2be120d47287b8410f915dce7e562c69f480103f6e527c6017",
+  "predicted_band": [0.18, 2.35],
+  "controlled_baseline": "C-063 frontier with CRF52 mask base plus charged RPK1/AMR1 budget4096 repair; H100 diagnostic only",
+  "no_training": true,
+  "no_build": true,
+  "strict_scorer_rule_compliant": true,
+  "design_memo": "scripts/remote_archive_only_eval.sh"
+}

@@ -1,0 +1,43 @@
+{
+  "adjudication": {
+    "allow_component_gate_forensic_success": true,
+    "allow_sane_score_forensic_success": true,
+    "baseline_archive_size_bytes": 277321,
+    "baseline_posenet_dist": 0.00049415,
+    "baseline_score": 0.31453355357318635,
+    "baseline_segnet_dist": 0.00059581,
+    "component_reference_label": "experiments/results/lightning_batch/exact_eval_pr79_s2_fixed_adaptive_actions_t4_20260503T173023Z/contest_auth_eval.adjudicated.json",
+    "delta_key": "score_delta_vs_pr79_s2",
+    "max_posenet_dist": 0.01,
+    "max_posenet_relative": null,
+    "max_sane_score": 5.0,
+    "max_segnet_dist": 0.02,
+    "max_segnet_relative": null,
+    "predicted_band_high": 1.0,
+    "predicted_band_low": 0.29,
+    "provenance_name": "adjudication_provenance.json",
+    "regression_threshold": 1.0,
+    "required_device": "cuda",
+    "required_samples": 600,
+    "result_copy_name": "contest_auth_eval.adjudicated.json"
+  },
+  "artifact_recorded_at_utc": "2026-05-03T18:35:13Z",
+  "expected_archive_sha256": "5e49a972ab5d77d8a8eeedc9dd36a309bf8533ad2d2e2b9b96ad30448691d338",
+  "expected_archive_size_bytes": 260866,
+  "job_name": "exact_eval_pr79_mask_body_crf53_t4_2x_20260503T1824Z",
+  "queue_metadata": {
+    "archive_rel": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf53/archive.zip",
+    "baseline_json": "experiments/results/lightning_batch/exact_eval_pr79_s2_fixed_adaptive_actions_t4_20260503T173023Z/contest_auth_eval.adjudicated.json",
+    "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf53",
+    "local_supply_chain_scan": ".omx/state/pr79_mask_body_crf53_t4_2x_20260503T1824Z_local_lightning_supply_chain_scan.json",
+    "route": "wall_clock_hedge_after_pending_t4_small",
+    "run_id": "pr79_mask_body_crf53_t4_2x_20260503T1824Z",
+    "source_frontier": "pr79_s2",
+    "source_manifest": ".omx/state/pr79_mask_body_crf53_t4_2x_20260503T1824Z_manifest.json",
+    "wrapper": "scripts/lightning_exact_eval_repro.py"
+  },
+  "role": "exact_cuda_eval",
+  "schema_version": 1,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

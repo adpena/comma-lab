@@ -1,0 +1,359 @@
+{
+  "archive": {
+    "bytes": 277321,
+    "inventory": [
+      {
+        "compress_size": 277221,
+        "compress_type": 0,
+        "crc": "8345b687",
+        "file_size": 277221,
+        "name": "p",
+        "sha256": "c52308a335087e7a41e7353a4395269bddb0377b6fbad2b739aa8e283db22b72"
+      }
+    ],
+    "path": "experiments/results/pr79_action_dictionary_repack_v2_20260503_codex/pr79_s2_fixed_adaptive_actions/archive.zip",
+    "payload_bytes": 277221,
+    "payload_container": "p",
+    "payload_sha256": "c52308a335087e7a41e7353a4395269bddb0377b6fbad2b739aa8e283db22b72",
+    "sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68"
+  },
+  "comparison": {
+    "decoded_member_comparisons": [
+      {
+        "name": "masks.mkv",
+        "public_present": false,
+        "robust_bytes": 223385,
+        "robust_present": true,
+        "robust_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      {
+        "name": "optimized_poses.qp1",
+        "public_present": false,
+        "robust_bytes": 1140,
+        "robust_present": true,
+        "robust_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+      },
+      {
+        "name": "renderer.bin",
+        "public_present": false,
+        "robust_bytes": 59288,
+        "robust_present": true,
+        "robust_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+      },
+      {
+        "name": "seg_tile_actions.bin",
+        "public_present": false,
+        "robust_bytes": 2688,
+        "robust_present": true,
+        "robust_sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f"
+      }
+    ],
+    "decoded_member_hashes_all_equal": false,
+    "parity_gap_classes": [
+      "decoded_member_presence_mismatch:masks.mkv",
+      "decoded_member_presence_mismatch:optimized_poses.qp1",
+      "decoded_member_presence_mismatch:renderer.bin",
+      "decoded_member_presence_mismatch:seg_tile_actions.bin",
+      "public_pr79_parse_or_decode_failed",
+      "seg_tile_action_record_hash_mismatch"
+    ],
+    "pose_float32_sha256": {
+      "exact_equal": true,
+      "public": "afd13805bc30e79f5a9c0587d08cc8e05fa5508c03f1a2b5e6a425058b530b66",
+      "robust": "afd13805bc30e79f5a9c0587d08cc8e05fa5508c03f1a2b5e6a425058b530b66"
+    },
+    "seg_tile_actions": {
+      "canonical_records_exact_equal": false,
+      "public": {},
+      "robust": {
+        "canonical_records_sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f",
+        "first_records": [
+          [
+            54,
+            80,
+            2
+          ],
+          [
+            12,
+            83,
+            92
+          ],
+          [
+            16,
+            83,
+            7
+          ],
+          [
+            21,
+            83,
+            23
+          ],
+          [
+            87,
+            83,
+            69
+          ],
+          [
+            91,
+            83,
+            45
+          ],
+          [
+            94,
+            83,
+            95
+          ],
+          [
+            103,
+            83,
+            3
+          ]
+        ],
+        "grid_header": null,
+        "pair_max": 598,
+        "pair_min": 0,
+        "raw_sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f",
+        "record_count": 672,
+        "record_size": 4,
+        "unique_actions": 99,
+        "unique_pairs": 295,
+        "unique_tiles": 45
+      }
+    }
+  },
+  "forensic_interpretation": {
+    "decoded_runtime_members_equal": false,
+    "known_limits": [
+      "No scorer invocation and no remote GPU dispatch.",
+      "Member/action/pose parity cannot prove SegNet/PoseNet score parity.",
+      "If raw_output_parity is omitted, rendered-byte parity remains unmeasured by this run."
+    ],
+    "public_can_parse_archive_bytes": false,
+    "raw_output_parity_run": false,
+    "robust_can_parse_archive_bytes": true
+  },
+  "profiles": {
+    "public_pr79": {
+      "decoded_members": {},
+      "diagnostics": {
+        "failure_class": "error",
+        "payload_bytes": 277221,
+        "payload_sha256": "c52308a335087e7a41e7353a4395269bddb0377b6fbad2b739aa8e283db22b72",
+        "pose_float32_sha256": "afd13805bc30e79f5a9c0587d08cc8e05fa5508c03f1a2b5e6a425058b530b66"
+      },
+      "error": "brotli: decoder failed",
+      "label": "public_pr79",
+      "member_meta": [],
+      "ok": false,
+      "payload_format": null
+    },
+    "robust_current": {
+      "decoded_members": {
+        "masks.mkv": {
+          "bytes": 223385,
+          "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "optimized_poses.qp1": {
+          "bytes": 1140,
+          "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+        },
+        "renderer.bin": {
+          "bytes": 59288,
+          "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 2688,
+          "sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f"
+        }
+      },
+      "diagnostics": {
+        "header": {
+          "members": [
+            {
+              "bytes": 55756,
+              "codec": "brotli_qzs3",
+              "decoded_bytes": 59288,
+              "decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+              "name": "renderer.bin",
+              "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+            },
+            {
+              "bytes": 219472,
+              "codec": "brotli_av1_obu",
+              "decoded_bytes": 223385,
+              "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+              "name": "masks.mkv",
+              "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+            },
+            {
+              "bytes": 1095,
+              "codec": "seg_tile_actions_split_s2_adaptive_arith_v1",
+              "decoded_bytes": 2688,
+              "decoded_sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f",
+              "name": "seg_tile_actions.bin",
+              "sha256": "abbc8d26375d60e52bc4ab801f2e241e56bd47564fe48ff1edefc5e1bdf60273"
+            },
+            {
+              "bytes": 898,
+              "codec": "public_qp1_brotli",
+              "decoded_bytes": 1140,
+              "decoded_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+              "name": "optimized_poses.qp1",
+              "sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082"
+            }
+          ],
+          "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+          "schema": "renderer_payload_pr64_len_table_v1"
+        },
+        "payload_bytes": 277221,
+        "payload_sha256": "c52308a335087e7a41e7353a4395269bddb0377b6fbad2b739aa8e283db22b72",
+        "pose_float32_sha256": "afd13805bc30e79f5a9c0587d08cc8e05fa5508c03f1a2b5e6a425058b530b66",
+        "seg_tile_action_stats": {
+          "canonical_records_sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f",
+          "first_records": [
+            [
+              54,
+              80,
+              2
+            ],
+            [
+              12,
+              83,
+              92
+            ],
+            [
+              16,
+              83,
+              7
+            ],
+            [
+              21,
+              83,
+              23
+            ],
+            [
+              87,
+              83,
+              69
+            ],
+            [
+              91,
+              83,
+              45
+            ],
+            [
+              94,
+              83,
+              95
+            ],
+            [
+              103,
+              83,
+              3
+            ]
+          ],
+          "grid_header": null,
+          "pair_max": 598,
+          "pair_min": 0,
+          "raw_sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f",
+          "record_count": 672,
+          "record_size": 4,
+          "unique_actions": 99,
+          "unique_pairs": 295,
+          "unique_tiles": 45
+        }
+      },
+      "error": null,
+      "label": "robust_current",
+      "member_meta": [
+        {
+          "bytes": 55756,
+          "codec": "brotli_qzs3",
+          "decoded_bytes": 59288,
+          "decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+          "name": "renderer.bin",
+          "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+        },
+        {
+          "bytes": 219472,
+          "codec": "brotli_av1_obu",
+          "decoded_bytes": 223385,
+          "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+          "name": "masks.mkv",
+          "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+        },
+        {
+          "bytes": 1095,
+          "codec": "seg_tile_actions_split_s2_adaptive_arith_v1",
+          "decoded_bytes": 2688,
+          "decoded_sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f",
+          "name": "seg_tile_actions.bin",
+          "sha256": "abbc8d26375d60e52bc4ab801f2e241e56bd47564fe48ff1edefc5e1bdf60273"
+        },
+        {
+          "bytes": 898,
+          "codec": "public_qp1_brotli",
+          "decoded_bytes": 1140,
+          "decoded_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+          "name": "optimized_poses.qp1",
+          "sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082"
+        }
+      ],
+      "ok": true,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices"
+    }
+  },
+  "raw_output_parity": null,
+  "runtime_manifests": {
+    "public_pr79": {
+      "checkout": "/tmp/pact_pr79_inspect",
+      "commit": "9c93af0a5bf55cc8a03716e0f7b9babf187ad2a1",
+      "files": [
+        {
+          "bytes": 44399,
+          "label": "inflate.py",
+          "path": "/tmp/pact_pr79_inspect/submissions/qpose14_r55_segactions_minp/inflate.py",
+          "sha256": "3c6131bd2852b29e25c3d494885b07c2b88e727dca00a7642ab0268cbf15839b"
+        },
+        {
+          "bytes": 227,
+          "label": "inflate.sh",
+          "path": "/tmp/pact_pr79_inspect/submissions/qpose14_r55_segactions_minp/inflate.sh",
+          "sha256": "0649834da2c25884ca867f98e9d11b0fee43a241df9daada857b61c2c45a8be6"
+        }
+      ]
+    },
+    "robust_current": {
+      "commit": "43fc168bd26c303ce49f9e5538f579dbd9ae0797",
+      "files": [
+        {
+          "bytes": 19345,
+          "label": "inflate.sh",
+          "path": "/Users/adpena/Projects/pact/submissions/robust_current/inflate.sh",
+          "sha256": "e479b7fdfbb9686f9f9f4d7d9740d24f340b41b584b07c57dd3065f5f3923005"
+        },
+        {
+          "bytes": 301945,
+          "label": "inflate_renderer.py",
+          "path": "/Users/adpena/Projects/pact/submissions/robust_current/inflate_renderer.py",
+          "sha256": "83a5f14c6ebd56504261b9f6c75b6a26138eb35e6afc9db77e4d49b02a49ff19"
+        },
+        {
+          "bytes": 71985,
+          "label": "unpack_renderer_payload.py",
+          "path": "/Users/adpena/Projects/pact/submissions/robust_current/unpack_renderer_payload.py",
+          "sha256": "c7410f64f10776d24c147738519c6e8e8b74470397ec6fbb2a342382c8c181d2"
+        }
+      ],
+      "repo_root": "/Users/adpena/Projects/pact"
+    }
+  },
+  "schema": "pr79_runtime_parity_forensics_v1",
+  "score_context_not_recomputed": {
+    "delta_robust_minus_public_body": 0.0008078404864297895,
+    "note": "This tool does not run upstream/evaluate.py; exact CUDA auth eval remains score truth.",
+    "public_pr79_body_formula_score": 0.31372571308675656,
+    "robust_current_s2_exact_t4_score": 0.31453355357318635
+  },
+  "tool": "experiments/compare_pr79_runtime_parity.py"
+}

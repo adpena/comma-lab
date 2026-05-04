@@ -1,0 +1,73 @@
+{
+  "brotli_quality": 11,
+  "evidence_grade": "empirical",
+  "formula_only_rate_delta": -0.0034364980570635263,
+  "header": {
+    "members": [
+      {
+        "bytes": 59288,
+        "codec": "raw",
+        "name": "renderer.bin",
+        "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+      },
+      {
+        "bytes": 216317,
+        "codec": "raw",
+        "name": "masks.mkv",
+        "sha256": "3c84b3dcc09d11d0d108d8aaef6d375478644a854fa2985429f676542d7a51b3"
+      },
+      {
+        "bytes": 1140,
+        "codec": "pose_qp1_v1",
+        "decoded_bytes": 7200,
+        "decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f",
+        "lossy": true,
+        "name": "optimized_poses.bin",
+        "pose_error_stats": {
+          "max_abs_by_dim": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pose_dim": 6,
+          "rmse_by_dim": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rows": 600
+        },
+        "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583",
+        "source_decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+      },
+      {
+        "bytes": 9964,
+        "codec": "raw",
+        "name": "alpha4_residual_repair.amr1.zlib",
+        "sha256": "0b0879187940c0ed62c7975bdfac1cdcadc657ef4e0e5fd1b39f5086f81fb2a4"
+      }
+    ],
+    "schema": "renderer_payload_v1",
+    "source_archive_sha256": "20ebde16c73d962503bffd62faa38e40befda2b0a8abfeb690eeb716b134e528"
+  },
+  "output_archive": "experiments/results/c063_charged_mask_grammar_20260502_codex/legacy_pose_top32_boundary_horizon_fovea_ego_crf52_budget4096_zlib/packed_rpk1/archive.zip",
+  "output_archive_bytes": 274112,
+  "output_archive_sha256": "4d0cf75a3ccc6e72daf6fd903ddc4b942f243b4788d86b7b8e927aa9446a91b3",
+  "payload_compressed_bytes": 274012,
+  "payload_format": "rpk1_json",
+  "payload_member": "p",
+  "payload_raw_bytes": 287732,
+  "pose_codec": "pose_qp1_v1",
+  "pose_residual_topk": 0,
+  "savings_bytes": 5161,
+  "score_claim": false,
+  "source_archive": "experiments/results/c063_charged_mask_grammar_20260502_codex/legacy_pose_top32_boundary_horizon_fovea_ego_crf52_budget4096_zlib/archive.zip",
+  "source_archive_bytes": 279273,
+  "source_archive_sha256": "20ebde16c73d962503bffd62faa38e40befda2b0a8abfeb690eeb716b134e528"
+}

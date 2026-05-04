@@ -1,0 +1,190 @@
+{
+  "atom_summary": {
+    "atom_family_counts": {
+      "connected_row_run": 18,
+      "row_run": 494
+    },
+    "deduped_row_run_atom_count": 494,
+    "positive_row_run_net_count": 19,
+    "row_run_atom_count": 494,
+    "source_atom_count": 512
+  },
+  "candidate_policies": [],
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "configuration": {
+    "allow_negative_field_energy": false,
+    "candidate_sizes": [
+      8,
+      16,
+      32,
+      64,
+      128
+    ],
+    "class_synergy": 5e-07,
+    "curvature_strength": 0.08,
+    "env_defaults": {
+      "PACT_FIELD_ALLOW_NEGATIVE_FIELD_ENERGY": null,
+      "PACT_FIELD_CANDIDATE_SIZES": null,
+      "PACT_FIELD_EQUATION_MODE": null,
+      "PACT_FIELD_INTERACTION_MODEL": null,
+      "PACT_FIELD_MAX_SOURCE_ATOMS": null
+    },
+    "frame_antagonism": 5e-07,
+    "interaction_model": "sparse_pair_frame_class",
+    "low_rank_modes": 8,
+    "max_source_atoms": 512,
+    "pair_antagonism": 1e-06,
+    "policy_prefix": "c067_top2_yf",
+    "positive_proxy_only": false
+  },
+  "contest_practical_equations": {
+    "constraints": [
+      "all score-affecting bits must be inside archive.zip",
+      "archive must inflate deterministically through fixed contest runtime",
+      "runtime must pass T4-equivalent budget before promotion",
+      "selected atoms become score evidence only after exact CUDA auth eval",
+      "stacked deltas are not additive evidence until the stacked archive is exact-evaluated"
+    ],
+    "implemented_sparse_surrogate": {
+      "class_synergy": 5e-07,
+      "curvature_strength": 0.08,
+      "frame_antagonism": 5e-07,
+      "interaction_model": "sparse_pair_frame_class",
+      "marginal_energy": "DeltaF(a|S)=b_a-lambda*c_a-curvature(a)-pair_frame_antagonism(a,S)+class_synergy(a,S)",
+      "pair_antagonism": 1e-06
+    },
+    "name": "contest_practical_atom_field_equations",
+    "objective": "maximize F(x) = sum_a b_a*x_a - lambda_rate*sum_a c_a*x_a - 0.5*sum_{a,b} H_ab*x_a*x_b + sum_g synergy_g(x)",
+    "variables": {
+      "H_ab": "sparse sampled interaction or curvature between atoms a,b",
+      "b_a": "first-order scorer benefit proxy from exact residual/component evidence",
+      "c_a": "charged byte cost of atom a inside archive",
+      "lambda_rate": "25 / 37545489",
+      "x_a": "binary decision for charged archive atom a"
+    }
+  },
+  "cuda_jobs_launched": false,
+  "evidence_grade": "planning_only",
+  "filtered_candidate_policies": {
+    "negative_field_energy": [
+      {
+        "field_energy": -7.254977e-06,
+        "policy_id": "c067_top2_yf_sparse_pair_frame_class_top0008",
+        "reason": "negative_field_energy_filtered_by_default",
+        "selected_atom_count": 8
+      },
+      {
+        "field_energy": -2.1547748e-05,
+        "policy_id": "c067_top2_yf_sparse_pair_frame_class_top0016",
+        "reason": "negative_field_energy_filtered_by_default",
+        "selected_atom_count": 16
+      },
+      {
+        "field_energy": -6.0327965e-05,
+        "policy_id": "c067_top2_yf_sparse_pair_frame_class_top0032",
+        "reason": "negative_field_energy_filtered_by_default",
+        "selected_atom_count": 32
+      },
+      {
+        "field_energy": -0.000149137393,
+        "policy_id": "c067_top2_yf_sparse_pair_frame_class_top0064",
+        "reason": "negative_field_energy_filtered_by_default",
+        "selected_atom_count": 64
+      },
+      {
+        "field_energy": -0.000404717974,
+        "policy_id": "c067_top2_yf_sparse_pair_frame_class_top0128",
+        "reason": "negative_field_energy_filtered_by_default",
+        "selected_atom_count": 128
+      }
+    ],
+    "negative_field_energy_policy": "filtered by default; pass --allow-negative-field-energy only for explicit cliff-mapping diagnostics"
+  },
+  "formulas": {
+    "break_even_bytes_per_score": 1501819.56,
+    "contest_score_formula": "score = 100*seg_dist + sqrt(10*pose_dist) + 25*archive_bytes/37545489",
+    "lambda_rate": 6.658589531221714e-07,
+    "lambda_rate_formula": "25 / 37545489"
+  },
+  "ideal_infinite_compute_equations": {
+    "all_order_expansion": [
+      "Taylor/Frechet: exact local scorer expansion over atom coordinates",
+      "Fourier/Walsh: randomized low-dimensional subspace probes recover sparse interaction coefficients",
+      "Riemannian: optimize on pose/camera/ego-motion manifolds instead of arbitrary pixel axes",
+      "Feynman/CEM: sample correction paths, weight by exact/proxy energy, refit proposal distribution",
+      "Dykstra/ADMM: project against rate, distortion, runtime, compliance, and reproducibility constraints"
+    ],
+    "exact_objective": "min_A 100*seg_dist(M_A) + sqrt(10*pose_dist(P_A)) + 25*|A|/37545489",
+    "field_form": "delta S = integral g_i dphi_i + 1/2 integral integral H_ij dphi_i dphi_j + higher_order_terms, with phi spanning pixels, runs, poses, latents, decoder weights, and packer bits",
+    "infinite_compute_search": [
+      "enumerate or sample archive grammars and decoder families",
+      "for every candidate atom set, build exact archive bytes",
+      "run exact CUDA auth eval as the oracle",
+      "fit all-order interaction tensor from oracle calls",
+      "solve the charged archive minimum and promote only identical bytes on T4/equivalent"
+    ],
+    "low_rank_modes": 8,
+    "name": "ideal_infinite_compute_archive_field_equations",
+    "practical_projection": "The contest mode is the computable low-order projection of this system under the current wall-clock budget.",
+    "status": "mathematical_complete_system_not_score_evidence",
+    "variables": {
+      "A": "complete archive byte string including decoder and all payload bits",
+      "D_A": "deterministic inflate map induced by archive A",
+      "M_A,P_A": "inflated masks and poses/rendered frames consumed by the scorer",
+      "theta": "decoder/model/grammar/quantizer parameters charged inside A",
+      "z": "latent or side-information bits charged inside A"
+    }
+  },
+  "inputs": [
+    {
+      "atom_count": 125569,
+      "evidence_grade": "planning_only",
+      "expected_builder_base_runs_per_row": 2,
+      "path": "/Users/adpena/Projects/pact/experiments/results/c067_cmg3_pixel_lagrangian_atoms_after_t4/top2_ledger.json",
+      "schema": "cmg3_pixel_lagrangian_atom_ledger_v1",
+      "score_claim": false,
+      "sha256": "61f590c02bbed997d4eba0bcd311c73f79211a41fc041c09c57d1b9c986669d9",
+      "tensor": {
+        "candidate_class_histogram_pixels": {
+          "0": 28726119,
+          "1": 397049,
+          "2": 58048244,
+          "3": 807064,
+          "4": 29986324
+        },
+        "class_count": 5,
+        "pair_count": 300,
+        "residual_pixel_fraction": 0.011170213487,
+        "residual_pixels": 1317692,
+        "residual_run_count": 100989,
+        "shape": {
+          "frames": 600,
+          "height": 384,
+          "width": 512
+        },
+        "source_class_histogram_pixels": {
+          "0": 27408427,
+          "1": 690063,
+          "2": 58413695,
+          "3": 1459867,
+          "4": 29992748
+        },
+        "total_pixels": 117964800
+      },
+      "top_atoms_read": 512
+    }
+  ],
+  "mode": "both",
+  "no_score_claim": true,
+  "producer": "experiments/plan_yousfi_fridrich_field_equations.py",
+  "promotion_eligible": false,
+  "remote_jobs_dispatched": false,
+  "required_next_steps": [
+    "build concrete CMG3A archives from candidate_policies using --field-policy-json",
+    "byte-screen built archives and discard byte-regressive or high-disagreement variants",
+    "run fast CUDA diagnostic exact eval on the Pareto set",
+    "run T4/equivalent promotion only on identical bytes that survive diagnostics"
+  ],
+  "schema": "yousfi_fridrich_atom_field_allocator_v1",
+  "score_claim": false
+}

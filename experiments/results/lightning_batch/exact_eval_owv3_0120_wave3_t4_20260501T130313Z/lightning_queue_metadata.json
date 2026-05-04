@@ -1,0 +1,40 @@
+{
+  "adjudication": {
+    "allow_component_gate_forensic_success": true,
+    "baseline_archive_size_bytes": 631473,
+    "baseline_posenet_dist": 0.00340903,
+    "baseline_score": 1.0077865870356524,
+    "baseline_segnet_dist": 0.00402679,
+    "component_reference_label": "owv3_r7_same_t4_5c110",
+    "delta_key": "score_delta_vs_owv3_r7_t4",
+    "max_posenet_dist": null,
+    "max_posenet_relative": 1.05,
+    "max_sane_score": 2.0,
+    "max_segnet_dist": null,
+    "max_segnet_relative": 1.004,
+    "predicted_band_high": 1.02,
+    "predicted_band_low": 0.98,
+    "provenance_name": "adjudication_provenance.json",
+    "regression_threshold": 1.05,
+    "required_device": "cuda",
+    "required_samples": 600,
+    "result_copy_name": "contest_auth_eval.adjudicated.json"
+  },
+  "artifact_recorded_at_utc": "2026-05-01T13:21:20Z",
+  "expected_archive_sha256": "06af57f770342cde494c37839200fdda79bdadd29826009e5e107ab296b4057a",
+  "expected_archive_size_bytes": 617410,
+  "job_name": "exact_eval_owv3_0120_wave3_t4_20260501T130313Z",
+  "queue_metadata": {
+    "archive_rel": "experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/archives/owv3_0120_bbr0p66_protect0p002_aggr1em05.zip",
+    "baseline_json": "experiments/results/lightning_batch/exact_eval_owv3_5c110_r7_t4_20260501T1112Z/contest_auth_eval.json",
+    "discovery_source": "vast_4090_wave3_0120",
+    "local_supply_chain_scan": ".omx/state/exact_eval_owv3_0120_wave3_t4_20260501T130313Z_local_lightning_supply_chain_scan.json",
+    "run_id": "exact_eval_owv3_0120_wave3_t4_20260501T130313Z",
+    "source_manifest": ".omx/state/exact_eval_owv3_0120_wave3_t4_20260501T130313Z_manifest.json",
+    "wrapper": "scripts/lightning_exact_eval_repro.py"
+  },
+  "role": "exact_cuda_eval",
+  "schema_version": 1,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

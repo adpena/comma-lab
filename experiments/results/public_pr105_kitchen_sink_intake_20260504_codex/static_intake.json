@@ -1,0 +1,85 @@
+{
+  "archive": {
+    "bytes": 177857,
+    "bytes_delta_candidate_minus_baseline": 0,
+    "path": "experiments/results/public_pr105_kitchen_sink_intake_20260504_codex/archive.zip",
+    "rate_term": 0.11842767582545002,
+    "sha256": "597ba0732810eba08cdae619b679d211d398bc0249b8831898f7096d5beece1d"
+  },
+  "baseline_diffs": [
+    {
+      "baseline_archive_bytes": 178223,
+      "baseline_archive_path": "experiments/results/public_pr103_intake_20260504_codex/../public_pr103_intake_20260504_codex/archive.zip",
+      "baseline_label": "PR100",
+      "candidate_minus_baseline_archive_bytes": -366,
+      "candidate_minus_baseline_rate_score_delta": -0.00024370437684271472,
+      "changed_segments": [],
+      "segment_count": 0,
+      "unchanged_segment_count": 0
+    }
+  ],
+  "baselines": {
+    "PR100": {
+      "archive": {
+        "bytes": 178223,
+        "bytes_delta_candidate_minus_baseline": 366,
+        "path": "experiments/results/public_pr103_intake_20260504_codex/../public_pr103_intake_20260504_codex/archive.zip",
+        "rate_term": 0.11867138020229274,
+        "sha256": "31881b2d23d027e6619f2d8df2fe35d4d207d08882ec673d6c1b7ff119f18c30"
+      },
+      "primary_member_name": null,
+      "side_info_charged_bytes": 178123,
+      "strict_zip_valid": false
+    }
+  },
+  "evidence_grade": "external_archive_byte_intake_only",
+  "label": "PR105_kitchen_sink",
+  "notes": [
+    "byte-only intake; no inflate, scorer, dispatch, promotion, or score claim",
+    "public-reported components remain external until exact CUDA auth replay"
+  ],
+  "primary_member": null,
+  "promotion_eligible": false,
+  "schema": "public_frontier_archive_intake_v1",
+  "score_claim": false,
+  "side_info": {
+    "charged_bytes": 177749,
+    "member_count": 1,
+    "members": [
+      {
+        "bytes": 177749,
+        "container_probe_error": "pr85_v5_micro_24bit_lengths_fixed_bias_region segment 'mask' is truncated: end=7889943 raw=177749",
+        "entropy_bits_per_byte": 7.998159912028,
+        "magic_ascii": ".cx.[.~s",
+        "magic_hex": "ff6378025bcd7e73",
+        "name": "0.bin",
+        "recognized_container": null,
+        "sha256": "5f88fa8ed26816cf6e86a00cf3c88915963c2a84f899173fd6820359df29aad0"
+      }
+    ],
+    "rate_score_cost": 0.11835576305851284,
+    "requires_runtime_contract_review": true
+  },
+  "strict_zip": {
+    "blockers": [
+      "no_pr85_family_primary_member_detected"
+    ],
+    "member_count": 1,
+    "members": [
+      {
+        "blockers": [],
+        "bytes": 177749,
+        "central_local_name_match": true,
+        "compressed_bytes": 177749,
+        "crc32": "492094c7",
+        "header_offset": 0,
+        "local_header_name": "0.bin",
+        "method_id": 0,
+        "name": "0.bin",
+        "sha256": "5f88fa8ed26816cf6e86a00cf3c88915963c2a84f899173fd6820359df29aad0"
+      }
+    ],
+    "valid": false
+  },
+  "tool": "experiments/profile_public_frontier_intake.py"
+}

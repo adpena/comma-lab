@@ -1,0 +1,41 @@
+{
+  "archive_byte_delta": -278720,
+  "evidence_grade": "empirical_byte_only_until_cuda_auth_eval",
+  "formula_rate_score_delta": -0.1855882074142116,
+  "members": {
+    "masks.mkv": {
+      "bytes": 223738,
+      "sha256": "568439a26dbb9e240cf2c385ff350ddc2cb81f5bc514577498446d6043b21178"
+    },
+    "optimized_poses.bin": {
+      "bytes": 7200,
+      "sha256": "399c0898d110911979c8b1343be3f16420a30b27a072e1c61d4d0a552e6ec1e3"
+    },
+    "renderer.bin": {
+      "bytes": 59288,
+      "sha256": "ba507efea03454af4a9d8560efb553d3b022ca7b835a74fcabd0570817009d8b"
+    }
+  },
+  "output_archive": "/workspace/pact/lane_q_faithful_results/postprocess_fixed_snapshot_20260501T1947Z_fix3/qzs3_half_posebin/archive.zip",
+  "output_archive_bytes": 284486,
+  "output_archive_sha256": "751f4f9105a3479548685b2a70041b222ddae35ec25bae601b33284e76e48bf3",
+  "renderer": {
+    "action": "encoded_qzs3_from_qfai_state_dict",
+    "qzs3_bytes": 59288,
+    "qzs3_sha256": "ba507efea03454af4a9d8560efb553d3b022ca7b835a74fcabd0570817009d8b",
+    "source_bytes": 389756,
+    "source_renderer_format": "QFAI",
+    "source_sha256": "25537387f7179d581f2219be9a1f305f5c6f80fae047cb7b1984e5802a53e70f"
+  },
+  "runtime_member_order": [
+    "renderer.bin",
+    "masks.mkv",
+    "optimized_poses.bin"
+  ],
+  "schema_version": 1,
+  "score_claim": false,
+  "source_archive": "/workspace/pact/lane_q_faithful_results/postprocess_fixed_snapshot_20260501T1947Z_fix3/raw_qfai_half_posebin/archive.zip",
+  "source_archive_bytes": 563206,
+  "source_archive_sha256": "8ad1b494e03fba010a663d18f5d9b5b530e3fdcbd5fccf7633b0db295f4ad33e",
+  "tool": "repack_quantizr_faithful_qzs3_archive"
+}

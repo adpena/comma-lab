@@ -1,0 +1,175 @@
+{
+  "evidence_grade": "external_plus_empirical_byte_anatomy",
+  "items": [
+    {
+      "archive": {
+        "bytes": 287573,
+        "sha256": "e012ebeffcc1e1655f4d674d0a779c1bf4cd41cfa82746de2ff6f73692e82a66"
+      },
+      "container": {
+        "decoded_segments": [
+          {
+            "compressed_bytes": 219472,
+            "compressed_sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87",
+            "name": "mask_obu_br",
+            "raw_bytes": 223385,
+            "raw_head_hex": "12000a0a0000000c47fefefdfc5532dd",
+            "raw_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+          },
+          {
+            "compressed_bytes": 66841,
+            "compressed_sha256": "7847ceafa93086f74f49d4928c1185d84cd67676d038347344f62f7abbb43360",
+            "name": "model_torch_quantized_br",
+            "raw_bytes": 91582,
+            "raw_head_hex": "80028a0a6cfc9c46f9206aa850192e80",
+            "raw_sha256": "d97849d15859ae013ec983de8c1e2f638e63f3876fef658a8b7781bcfaa16a5f",
+            "torch_payload": {
+              "dense_fp16_key_count": 46,
+              "dense_weight_module_count": 3,
+              "first_quantized_key": "shared_trunk.embedding",
+              "fp4_module_count": 40,
+              "last_quantized_key": "frame2_head.head",
+              "parameter_like_count": 87836,
+              "quantized_module_count": 43,
+              "top_keys": [
+                "__block_size__",
+                "__codebook__",
+                "__format__",
+                "dense_fp16",
+                "quantized"
+              ],
+              "weight_kind_counts": {
+                "fp16": 3,
+                "fp4_packed": 40
+              }
+            }
+          },
+          {
+            "compressed_bytes": 1160,
+            "compressed_sha256": "f18d91b5de81c3c17cc759529197cce4cd17b0093a7ef7fe9e02dc5c8d5a3966",
+            "name": "pose_qpose14_uint16_br",
+            "pose_shape_inferred": [
+              600,
+              6
+            ],
+            "raw_bytes": 7200,
+            "raw_head_hex": "801c00000000000000000000621d0000",
+            "raw_sha256": "e38feab57d2e75f23d6b7ae6f287c6749e96c2709a9eee4432e3e4347c89bb84",
+            "velocity_word_max": 7721,
+            "velocity_word_min": 1666
+          }
+        ],
+        "fixed_lengths": {
+          "mask_obu_br": 219472,
+          "model_torch_quantized_br": 66841,
+          "pose_qpose14_uint16_br": 1160
+        },
+        "member": "p",
+        "segmentation": "fixed_lengths_from_pr63_inflate_py"
+      },
+      "label": "pr63_qpose14",
+      "reported_score": {
+        "archive_size_bytes": 287573,
+        "posenet_dist": 0.00052154,
+        "score": 0.32,
+        "segnet_dist": 0.00061261
+      },
+      "source": {
+        "archive_url": "https://github.com/user-attachments/files/27206870/archive.zip",
+        "commit": "17a3474eb2a7bbd648b850ec6c8338ef8ba15a65",
+        "pull_request": 63
+      },
+      "zip_members": [
+        {
+          "bytes": 287473,
+          "name": "p",
+          "sha256": "752e7a70e319254ae1cacc4fd2fb46059612a230f848cd501855a9066f919f20"
+        }
+      ]
+    },
+    {
+      "archive": {
+        "bytes": 287165,
+        "sha256": "7e48da0be75f915d6a4cf76a4679f8c1fbe689f82d69c7559f6ba1c2cb1e981d"
+      },
+      "container": {
+        "decoded_segments": [
+          {
+            "name": "mask_obu",
+            "raw_bytes": 223385,
+            "raw_head_hex": "12000a0a0000000c47fefefdfc5532dd",
+            "raw_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+          },
+          {
+            "name": "model_torch_quantized",
+            "raw_bytes": 91582,
+            "raw_head_hex": "80028a0a6cfc9c46f9206aa850192e80",
+            "raw_sha256": "d97849d15859ae013ec983de8c1e2f638e63f3876fef658a8b7781bcfaa16a5f",
+            "torch_payload": {
+              "dense_fp16_key_count": 46,
+              "dense_weight_module_count": 3,
+              "first_quantized_key": "shared_trunk.embedding",
+              "fp4_module_count": 40,
+              "last_quantized_key": "frame2_head.head",
+              "parameter_like_count": 87836,
+              "quantized_module_count": 43,
+              "top_keys": [
+                "__block_size__",
+                "__codebook__",
+                "__format__",
+                "dense_fp16",
+                "quantized"
+              ],
+              "weight_kind_counts": {
+                "fp16": 3,
+                "fp4_packed": 40
+              }
+            }
+          },
+          {
+            "delta_count": 599,
+            "delta_max": 3371,
+            "delta_min": -3939,
+            "name": "pose_velocity_delta_uint16_int16",
+            "raw_bytes": 1200,
+            "raw_head_hex": "7b1ce200c9fad002fa00cdffbffd0603",
+            "raw_sha256": "889e929ed2159f089e5c70622495dd4662f2242eb4b9d5646c17a63641418d18",
+            "velocity_anchor_uint16": 7291
+          }
+        ],
+        "length_table": {
+          "mask_obu": 223385,
+          "model_torch_quantized": 91582,
+          "pose_velocity_delta_uint16_int16": 1200
+        },
+        "member": "p",
+        "payload_compressed_bytes": 287065,
+        "payload_raw_bytes": 316179,
+        "segmentation": "single_brotli_len_table_raw_mask_model_pose"
+      },
+      "label": "pr64_unified_brotli",
+      "reported_score": {
+        "archive_size_bytes": 287165,
+        "posenet_dist": 0.00061622,
+        "score": 0.33,
+        "segnet_dist": 0.00061261
+      },
+      "source": {
+        "archive_url": "https://github.com/avocardio/comma_video_compression_challenge/releases/download/v1-unified_brotli/archive.zip",
+        "commit": "8e5437d923d664d88382a93be8110a25b1966348",
+        "pull_request": 64
+      },
+      "zip_members": [
+        {
+          "bytes": 287065,
+          "name": "p",
+          "sha256": "ddf204e819e7204da746a9fcfaaf9be61173ca9b75a92ec6afd61c91b662d490"
+        }
+      ]
+    }
+  ],
+  "public_floor_checked_utc": "2026-05-01T20:00Z",
+  "schema_version": 1,
+  "score_claim": false,
+  "tool": "codex_current_floor_attachment_anatomy_20260501"
+}

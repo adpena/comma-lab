@@ -1,0 +1,40 @@
+{
+  "adjudication": {
+    "allow_component_gate_forensic_success": true,
+    "allow_sane_score_forensic_success": true,
+    "baseline_archive_size_bytes": 276214,
+    "baseline_posenet_dist": 0.00049637,
+    "baseline_score": 0.31561703078448233,
+    "baseline_segnet_dist": 0.00061244,
+    "component_reference_label": "C067_SJKL_SPARSE_CANARY",
+    "delta_key": "score_delta_vs_baseline",
+    "max_posenet_dist": 0.5,
+    "max_posenet_relative": 2000.0,
+    "max_sane_score": 2.2,
+    "max_segnet_dist": 0.02,
+    "max_segnet_relative": 50.0,
+    "predicted_band_high": 1.0,
+    "predicted_band_low": 0.25,
+    "provenance_name": "adjudication_provenance.json",
+    "regression_threshold": 1.8,
+    "required_device": "cuda",
+    "required_samples": 600,
+    "result_copy_name": "contest_auth_eval.adjudicated.json"
+  },
+  "artifact_recorded_at_utc": "2026-05-02T21:29:51Z",
+  "expected_archive_sha256": "f4146e137d9e2e12d1f7c8d26609f24e0e2bd0d19e5c0534f90c761c35658825",
+  "expected_archive_size_bytes": 277455,
+  "job_name": "exact_eval_sjkl_c067_sparse_k1g08_p32_a3_rtxprodiag_20260502T2123Z",
+  "queue_metadata": {
+    "evidence": "diagnostic_rtxpro",
+    "lane": "sjkl_c067_sparse_canary",
+    "sjkl_bytes": "467",
+    "sjkl_format": "SJK2_sparse_bitpacked_v2",
+    "source_archive_sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+    "source_manifest": ".omx/state/exact_eval_sjkl_c067_sparse_k1g08_p32_a3_l40sdiag_20260502T2122Z_manifest.json"
+  },
+  "role": "exact_cuda_eval",
+  "schema_version": 1,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

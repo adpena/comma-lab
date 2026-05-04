@@ -1,0 +1,146 @@
+{
+  "baseline_archive": {
+    "bytes": 686635,
+    "path": "/teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+    "sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+  },
+  "baseline_contest_auth_eval_json": {
+    "bytes": 4287,
+    "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_small_20260501T0950Z/evals/point_002_eps_p0/contest_auth_eval.json",
+    "sha256": "b84e7352165cf0d2be0631a177d8404c3a1e5f27633d82d48990552b9ef382ab"
+  },
+  "device": "cuda",
+  "external_baseline_component_values": null,
+  "external_baseline_contest_auth_eval_json": {
+    "bytes": 4287,
+    "path": "/teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/eval/contest_auth_eval.json",
+    "sha256": "b84e7352165cf0d2be0631a177d8404c3a1e5f27633d82d48990552b9ef382ab"
+  },
+  "format": "official_component_response_summary_v1",
+  "gate_spec": {
+    "external_baseline_repro_tolerance": 1e-07,
+    "holdout_error_max": 0.35,
+    "observed_delta_min": 1e-12,
+    "require_prediction_deltas": true,
+    "zero_repro_tolerance": 1e-07
+  },
+  "perturbation_plan": {
+    "bytes": 14424,
+    "path": "/teamspace/studios/this_studio/pact/experiments/results/official_component_response_pfp16_direct_fd_mixed_complete_response_only_20260501/official_response_plan/official_component_response_plan.json",
+    "sha256": "d0026cf7ec5f22ff3de4e8402d3f3a660767eb64e890d779cb466933ed60c23f"
+  },
+  "points": [
+    {
+      "archive": {
+        "bytes": 686632,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/official_component_response_pfp16_direct_fd_mixed_complete_response_only_20260501/official_response_plan/archives/point_000_eps_m2.zip",
+        "sha256": "d561b8bf1367619e6c6e1d9b9d09213da6bdfdfd894be518866ef5119cba2927"
+      },
+      "contest_auth_eval_json": {
+        "bytes": 4975,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_small_20260501T0950Z/evals/point_000_eps_m2/contest_auth_eval.json",
+        "sha256": "a105ded1d42aee8c462cdff63b4e72e159092de709495bdc6e220c0ec1fcb2aa"
+      },
+      "epsilon": -2.0,
+      "values": {
+        "combined": 0.5784379048481846,
+        "posenet": 0.00311734,
+        "segnet": 0.00401878
+      }
+    },
+    {
+      "archive": {
+        "bytes": 686632,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/official_component_response_pfp16_direct_fd_mixed_complete_response_only_20260501/official_response_plan/archives/point_001_eps_m1.zip",
+        "sha256": "d69e45edd20bbe1a69a171098a9dbfce71673aad2c7b6a95d55ebd9b60cf0803"
+      },
+      "contest_auth_eval_json": {
+        "bytes": 4978,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_small_20260501T0950Z/evals/point_001_eps_m1/contest_auth_eval.json",
+        "sha256": "1102effceb73ba52a4e9c1fe9bc3f37275e3fe9dedca6e782222cebebeb8568d"
+      },
+      "epsilon": -1.0,
+      "values": {
+        "combined": 0.5792600735023694,
+        "posenet": 0.00314644,
+        "segnet": 0.00401878
+      }
+    },
+    {
+      "archive": {
+        "bytes": 686635,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+        "sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+      },
+      "contest_auth_eval_json": {
+        "bytes": 4287,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_small_20260501T0950Z/evals/point_002_eps_p0/contest_auth_eval.json",
+        "sha256": "b84e7352165cf0d2be0631a177d8404c3a1e5f27633d82d48990552b9ef382ab"
+      },
+      "epsilon": 0.0,
+      "values": {
+        "combined": 0.5867855247938919,
+        "posenet": 0.00346442,
+        "segnet": 0.00400656
+      }
+    },
+    {
+      "archive": {
+        "bytes": 686628,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/official_component_response_pfp16_direct_fd_mixed_complete_response_only_20260501/official_response_plan/archives/point_003_eps_p1.zip",
+        "sha256": "dccb3ebcac49e7046a53896335561d8d54fa6a41986287f91c43cced71020f6f"
+      },
+      "contest_auth_eval_json": {
+        "bytes": 4969,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_small_20260501T0950Z/evals/point_003_eps_p1/contest_auth_eval.json",
+        "sha256": "050baf2f719cd9ae55aef4375e28d712e404b6b5d3c34cb1f2c653cd354455f9"
+      },
+      "epsilon": 1.0,
+      "values": {
+        "combined": 0.5799136381562681,
+        "posenet": 0.00315992,
+        "segnet": 0.00402152
+      }
+    },
+    {
+      "archive": {
+        "bytes": 686632,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/official_component_response_pfp16_direct_fd_mixed_complete_response_only_20260501/official_response_plan/archives/point_004_eps_p2.zip",
+        "sha256": "c61a1201ac84d37a81aaa9dd9ea27a4d6a4bb22e58c2f44c01c798f53590a35c"
+      },
+      "contest_auth_eval_json": {
+        "bytes": 4978,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_small_20260501T0950Z/evals/point_004_eps_p2/contest_auth_eval.json",
+        "sha256": "464bc3dd2a643927e8a54194741119f739a8ca567c91eb745d189d83f51312d8"
+      },
+      "epsilon": 2.0,
+      "values": {
+        "combined": 0.5806585924386309,
+        "posenet": 0.00317526,
+        "segnet": 0.00402466
+      }
+    }
+  ],
+  "promotion_eligible": false,
+  "require_passed_mode": false,
+  "response_coverage": {
+    "epsilon_ladder": [
+      -2.0,
+      -1.0,
+      0.0,
+      1.0,
+      2.0
+    ],
+    "response_kind": "symmetric",
+    "symmetric_epsilon_pairs": 2
+  },
+  "response_coverage_passed": true,
+  "response_curve_paths": {
+    "combined": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_small_20260501T0950Z/combined_official_response_curve.json",
+    "posenet": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_small_20260501T0950Z/posenet_official_response_curve.json",
+    "segnet": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_small_20260501T0950Z/segnet_official_response_curve.json"
+  },
+  "same_run_zero_baseline": false,
+  "schema_version": 1,
+  "tool": "experiments/profile_component_sensitivity_official.py"
+}

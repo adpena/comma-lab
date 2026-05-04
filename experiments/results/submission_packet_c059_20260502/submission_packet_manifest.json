@@ -1,0 +1,255 @@
+{
+  "archive": {
+    "artifact_relative_path": "archive.zip",
+    "path": "experiments/results/lightning_batch/exact_eval_qzs3_b32_maskfirst_qp1_fix1_t4_20260502T0331Z/archive.zip",
+    "sha256": "cf44aa7fdb13b9ab6236aefde1f5f58e915d7dfa99128246235443841396c6ab",
+    "size_bytes": 276347
+  },
+  "archive_copied": false,
+  "claim_policy": {
+    "promotion_claim": false,
+    "ranking_claim": false,
+    "score_authority": "contest_auth_eval.json",
+    "score_claim": false,
+    "score_fields_are_custody_metadata_only": true
+  },
+  "contest_auth_eval": {
+    "artifact_relative_path": "contest_auth_eval.json",
+    "path": "experiments/results/lightning_batch/exact_eval_qzs3_b32_maskfirst_qp1_fix1_t4_20260502T0331Z/contest_auth_eval.json",
+    "sha256": "580ee31d22aa99fa496e0f94bec64127ed023f9e1ff2eccaf969f7655fb3959d",
+    "size_bytes": 4923,
+    "validated_fields": {
+      "component_fields": {
+        "archive_size_bytes": 276347,
+        "avg_posenet_dist": 0.00049637,
+        "avg_segnet_dist": 0.00061244,
+        "n_samples": 600,
+        "rate_unscaled": 0.00736032
+      },
+      "provenance_fields": {
+        "archive_path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_qzs3_b32_maskfirst_qp1_fix1_t4_20260502T0331Z/archive.zip",
+        "archive_sha256": "cf44aa7fdb13b9ab6236aefde1f5f58e915d7dfa99128246235443841396c6ab",
+        "archive_size_bytes": 276347,
+        "cuda_available": true,
+        "cuda_device_count": 1,
+        "device": "cuda",
+        "evaluate_timeout_seconds": 1800,
+        "gpu_model": "Tesla T4",
+        "gpu_t4_match": true,
+        "inflate_script": "/teamspace/studios/this_studio/pact/submissions/robust_current/inflate.sh",
+        "inflate_script_sha256": "86449a1f52ac6b2be120d47287b8410f915dce7e562c69f480103f6e527c6017",
+        "inflate_timeout_seconds": 1800,
+        "pact_commit": "<error:CalledProcessError(128, ['git', 'rev-parse', 'HEAD'])>",
+        "started_at_utc": "2026-05-02T03:45:50Z",
+        "sys_argv": [
+          "experiments/contest_auth_eval.py",
+          "--archive",
+          "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_qzs3_b32_maskfirst_qp1_fix1_t4_20260502T0331Z/archive.zip",
+          "--inflate-sh",
+          "submissions/robust_current/inflate.sh",
+          "--upstream-dir",
+          "/teamspace/studios/this_studio/pact/upstream",
+          "--device",
+          "cuda",
+          "--keep-work-dir",
+          "--work-dir",
+          "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_qzs3_b32_maskfirst_qp1_fix1_t4_20260502T0331Z/eval_work"
+        ],
+        "tool": "experiments/contest_auth_eval.py",
+        "upstream_commit": "11ad728f563d8970929e8947a1cf6124ee6303e4"
+      },
+      "runtime_fields": {
+        "contest_auth_eval_elapsed_seconds": 146.8959843779994,
+        "evaluate_elapsed_seconds": 38.762128590999055,
+        "inflate_elapsed_seconds": 108.13042756999857
+      },
+      "score_fields": {
+        "final_score": 0.32,
+        "score_pose_contribution": 0.07045353078448233,
+        "score_rate_contribution": 0.184008,
+        "score_recomputed_from_components": 0.3157055307844823,
+        "score_seg_contribution": 0.061244
+      }
+    }
+  },
+  "copied_payloads": [],
+  "evidence_grade": {
+    "basis": "cuda_t4_full_sample_adjudicated_fields",
+    "blockers": [],
+    "grade": "A++",
+    "reasons": [
+      "contest_auth_eval provenance reports device=cuda",
+      "contest_auth_eval reports n_samples=600",
+      "contest_auth_eval provenance reports cuda_available=true",
+      "contest_auth_eval provenance reports gpu_t4_match=true",
+      "adjudication JSON and adjudication provenance are present"
+    ]
+  },
+  "metadata_only": true,
+  "optional_artifacts": {
+    "adjudication_provenance.json": {
+      "artifact_relative_path": "adjudication_provenance.json",
+      "path": "experiments/results/lightning_batch/exact_eval_qzs3_b32_maskfirst_qp1_fix1_t4_20260502T0331Z/adjudication_provenance.json",
+      "present": true,
+      "sha256": "47658a8b046f9c3f3c865a697d831c540be347d174cdc68cc1dbcafdc8ea2807",
+      "size_bytes": 2480,
+      "validated_fields": {
+        "result_copy": null,
+        "schema_version": null,
+        "status": null
+      }
+    },
+    "component_trace.json": {
+      "artifact_relative_path": "component_trace.json",
+      "path": "experiments/results/lightning_batch/exact_eval_qzs3_b32_maskfirst_qp1_fix1_t4_20260502T0331Z/component_trace.json",
+      "present": true,
+      "sha256": "b2808d5cbf9f30cc551787f9a1c3ded83b96d6c0a93d00cd21a3cf30a141419c",
+      "size_bytes": 399560,
+      "validated_fields": {
+        "archive_size_bytes": 276347,
+        "contest_auth_eval_cross_check": {
+          "all_match": true,
+          "contest_auth_eval_json_sha256": "580ee31d22aa99fa496e0f94bec64127ed023f9e1ff2eccaf969f7655fb3959d"
+        },
+        "evidence_grade": "diagnostic_component_trace",
+        "n_samples": 600,
+        "score_claim": false
+      }
+    },
+    "contest_auth_eval.adjudicated.json": {
+      "artifact_relative_path": "contest_auth_eval.adjudicated.json",
+      "path": "experiments/results/lightning_batch/exact_eval_qzs3_b32_maskfirst_qp1_fix1_t4_20260502T0331Z/contest_auth_eval.adjudicated.json",
+      "present": true,
+      "sha256": "29e0c3efdc07797241ba39539455f7241e045664804f0242ee950925a4405886",
+      "size_bytes": 4924,
+      "validated_fields": {
+        "archive_sha256": "cf44aa7fdb13b9ab6236aefde1f5f58e915d7dfa99128246235443841396c6ab",
+        "archive_size_bytes": 276347,
+        "device": "cuda",
+        "gpu_t4_match": true,
+        "n_samples": 600,
+        "score_recomputed_from_components": 0.3157055307844823
+      }
+    },
+    "eval_provenance.json": {
+      "artifact_relative_path": "eval_provenance.json",
+      "path": "experiments/results/lightning_batch/exact_eval_qzs3_b32_maskfirst_qp1_fix1_t4_20260502T0331Z/eval_provenance.json",
+      "present": true,
+      "sha256": "7baf454766036d7e62b6784fe8c9afccc898b5c08ea1f5858fdc4f70da85641e",
+      "size_bytes": 3927,
+      "validated_fields": {
+        "archive_sha256": "cf44aa7fdb13b9ab6236aefde1f5f58e915d7dfa99128246235443841396c6ab",
+        "archive_size_bytes": 276347,
+        "device": "cuda",
+        "gpu_model": "Tesla T4",
+        "gpu_t4_match": true,
+        "tool": "experiments/contest_auth_eval.py"
+      }
+    },
+    "report.txt": {
+      "artifact_relative_path": "report.txt",
+      "path": "experiments/results/lightning_batch/exact_eval_qzs3_b32_maskfirst_qp1_fix1_t4_20260502T0331Z/report.txt",
+      "present": true,
+      "sha256": "1b6668ba6cc2579b95fc5f800196cf8e9fbf734f27ea432e9789e250ddf1ab95",
+      "size_bytes": 908
+    }
+  },
+  "outputs": {
+    "checklist": "experiments/results/submission_packet_c059_20260502/submission_packet_checklist.md",
+    "manifest": "experiments/results/submission_packet_c059_20260502/submission_packet_manifest.json"
+  },
+  "packet_kind": "contest_faithful_submission_packet",
+  "raw_frames_copied": false,
+  "schema_version": 1,
+  "source_artifact_dir": "experiments/results/lightning_batch/exact_eval_qzs3_b32_maskfirst_qp1_fix1_t4_20260502T0331Z",
+  "validation": {
+    "checks": [
+      {
+        "details": "archive.zip sha256=cf44aa7fdb13b9ab6236aefde1f5f58e915d7dfa99128246235443841396c6ab",
+        "name": "archive_sha256_matches_contest_auth_eval",
+        "passed": true
+      },
+      {
+        "details": "archive.zip bytes=276347",
+        "name": "archive_bytes_matches_contest_auth_eval",
+        "passed": true
+      },
+      {
+        "details": "contest_auth_eval provenance archive_size_bytes matches archive.zip",
+        "name": "provenance_archive_bytes_matches_archive",
+        "passed": true
+      },
+      {
+        "details": "formula=0.31570565490293501 json=0.31570553078448232",
+        "name": "score_recomputes_from_components",
+        "passed": true
+      },
+      {
+        "details": "expected=cf44aa7fdb13b9ab6236aefde1f5f58e915d7dfa99128246235443841396c6ab",
+        "name": "expected_archive_sha256",
+        "passed": true
+      },
+      {
+        "details": "expected=276347",
+        "name": "expected_archive_size_bytes",
+        "passed": true
+      },
+      {
+        "details": "expected=600",
+        "name": "expected_samples",
+        "passed": true
+      },
+      {
+        "details": "component trace cross-check did not report a mismatch",
+        "name": "component_trace_cross_check",
+        "passed": true
+      },
+      {
+        "details": "component trace cross-check points at this contest_auth_eval.json",
+        "name": "component_trace_contest_auth_eval_sha256",
+        "passed": true
+      },
+      {
+        "details": "trace=600 contest=600",
+        "name": "component_trace_n_samples",
+        "passed": true
+      },
+      {
+        "details": "trace=276347 contest=276347",
+        "name": "component_trace_archive_bytes",
+        "passed": true
+      },
+      {
+        "details": "eval_provenance archive_sha256 matches archive.zip",
+        "name": "eval_provenance_archive_sha256",
+        "passed": true
+      },
+      {
+        "details": "eval_provenance archive_size_bytes matches archive.zip",
+        "name": "eval_provenance_archive_bytes",
+        "passed": true
+      },
+      {
+        "details": "eval_provenance device matches contest_auth_eval provenance",
+        "name": "eval_provenance_device",
+        "passed": true
+      },
+      {
+        "details": "adjudicated JSON archive_sha256 matches archive.zip",
+        "name": "adjudicated_archive_sha256",
+        "passed": true
+      },
+      {
+        "details": "adjudicated JSON archive_size_bytes matches archive.zip",
+        "name": "adjudicated_archive_bytes",
+        "passed": true
+      },
+      {
+        "details": "adjudicated JSON n_samples matches contest_auth_eval.json",
+        "name": "adjudicated_n_samples",
+        "passed": true
+      }
+    ],
+    "status": "passed"
+  }
+}

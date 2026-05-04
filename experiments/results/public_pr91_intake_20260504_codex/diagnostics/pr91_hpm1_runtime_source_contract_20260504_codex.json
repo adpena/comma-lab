@@ -1,0 +1,34 @@
+{
+  "dispatch_performed": false,
+  "files": {
+    "inflate.py": {
+      "bytes": 86673,
+      "path": "experiments/results/public_pr91_intake_20260504_codex/replay_submission/hpac_coder_hybrid/inflate.py",
+      "sha256": "9665d3832abd8f720617cad4e976536ef9ff4ce9a117623b9a00229c518a22ba"
+    },
+    "pr86_hpac.py": {
+      "bytes": 19657,
+      "path": "experiments/results/public_pr91_intake_20260504_codex/replay_submission/hpac_coder_hybrid/pr86_hpac.py",
+      "sha256": "f86f3067386928478d983817c9f9ee095ce6eb02aee8c0fbb7987cd0af1f9b01"
+    }
+  },
+  "hpm1_runtime_contract": {
+    "decode_function": "pr86_hpac.decompress_tokens_hpac",
+    "decode_passes_main_runtime_device": true,
+    "explicit_hpac_cpu_force_detected": false,
+    "fallback_on_hpm1_entropy_failure_detected": false,
+    "hpm1_branch_present": true,
+    "main_device_expression_selects_cuda_when_available": true
+  },
+  "local_only": true,
+  "probability_model_contract": {
+    "categorical_perfect_false": true,
+    "explicit_16384_probability_grid": false,
+    "probability_clip_eps": "1e-7",
+    "probability_numpy_dtype": "float64",
+    "range_decoder_uint32_words": true
+  },
+  "score_claim": false,
+  "source_dir": "experiments/results/public_pr91_intake_20260504_codex/replay_submission/hpac_coder_hybrid",
+  "status": "passed"
+}

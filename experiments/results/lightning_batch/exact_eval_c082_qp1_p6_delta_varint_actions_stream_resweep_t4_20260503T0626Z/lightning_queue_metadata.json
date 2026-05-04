@@ -1,0 +1,37 @@
+{
+  "adjudication": {
+    "allow_component_gate_forensic_success": true,
+    "allow_sane_score_forensic_success": true,
+    "baseline_archive_size_bytes": 276386,
+    "baseline_posenet_dist": null,
+    "baseline_score": 0.3155226919767294,
+    "baseline_segnet_dist": null,
+    "component_reference_label": "baseline",
+    "delta_key": "score_delta_vs_c088",
+    "max_posenet_dist": 0.002,
+    "max_posenet_relative": null,
+    "max_sane_score": 1.0,
+    "max_segnet_dist": 0.002,
+    "max_segnet_relative": null,
+    "predicted_band_high": 0.3165,
+    "predicted_band_low": 0.313,
+    "provenance_name": "adjudication_provenance.json",
+    "regression_threshold": 0.002,
+    "required_device": "cuda",
+    "required_samples": 600,
+    "result_copy_name": "contest_auth_eval.adjudicated.json"
+  },
+  "artifact_recorded_at_utc": "2026-05-03T06:49:02Z",
+  "expected_archive_sha256": "9b78333dd39c12c986ca7fc02a4bb35a6a61ef5a1cc0c9c9c840820eb840058a",
+  "expected_archive_size_bytes": 276394,
+  "job_name": "exact_eval_c082_qp1_p6_delta_varint_actions_stream_resweep_t4_20260503T0626Z",
+  "queue_metadata": {
+    "candidate": "c082_p6_delta_varint_actions_stream_resweep",
+    "runtime_patch": "qp1_float32",
+    "source_manifest_sha": "8007b37505d48758feb6130933b7927a2f265b216691b47857ccf0da4099fa21"
+  },
+  "role": "exact_cuda_eval",
+  "schema_version": 1,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

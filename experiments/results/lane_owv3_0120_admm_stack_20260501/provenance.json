@@ -1,0 +1,155 @@
+{
+  "format": "lane_joint_admm_owv3_0120_v1",
+  "lane_id": "lane_joint_admm_owv3_0120",
+  "build_started_iso": "2026-05-01T13:17:32Z",
+  "build_completed_iso": "2026-05-01T13:17:32Z",
+  "champion": {
+    "archive": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_LANDED_20260501/archive_lane_g_v3_owv3_0120_LANDED.zip",
+    "score": 1.0023898347421667,
+    "bytes": 617410
+  },
+  "byte_budget": 649006,
+  "admm_config": {
+    "rho_init": 1.0,
+    "max_iters": 200,
+    "primal_tol": 0.001,
+    "dual_tol": 0.001,
+    "kkt_waterline_tol": 0.05
+  },
+  "admm_result": {
+    "converged": false,
+    "iters": 200,
+    "restarts": 47,
+    "elapsed_seconds": 0.0013674169895239174,
+    "kkt_waterline_residual": Infinity,
+    "kkt_waterline_satisfied": false,
+    "final_alloc": {
+      "renderer": 624996,
+      "masks": 393121,
+      "poses": 15620
+    },
+    "final_total_bytes": 1033737,
+    "final_score_per_stream": {
+      "renderer": 0.41751816999999997,
+      "masks": 0.41356190625000006,
+      "poses": 0.18879883474216677
+    },
+    "final_marginal_per_stream": {
+      "renderer": 0.0,
+      "masks": 0.0,
+      "poses": 0.0
+    }
+  },
+  "frontiers": {
+    "renderer": [
+      {
+        "bbr": 0.55,
+        "protect": 0.05,
+        "bytes": 577849,
+        "score": 1.0689,
+        "pose": 0.00729,
+        "seg": 0.004142
+      },
+      {
+        "bbr": 0.55,
+        "protect": 0.03,
+        "bytes": 578273,
+        "score": 1.0593,
+        "pose": 0.006943,
+        "seg": 0.004108
+      },
+      {
+        "bbr": 0.6,
+        "protect": 0.05,
+        "bytes": 590176,
+        "score": 1.112,
+        "pose": 0.010034,
+        "seg": 0.004023
+      },
+      {
+        "bbr": 0.66,
+        "protect": 0.002,
+        "bytes": 617410,
+        "score": 1.0024,
+        "pose": 0.003564,
+        "seg": 0.004025
+      },
+      {
+        "bbr": 0.66,
+        "protect": 0.0018,
+        "bytes": 618443,
+        "score": 1.0027,
+        "pose": 0.003576,
+        "seg": 0.004018
+      },
+      {
+        "bbr": 0.68,
+        "protect": 0.002,
+        "bytes": 621914,
+        "score": 1.01,
+        "pose": 0.003788,
+        "seg": 0.004013
+      },
+      {
+        "bbr": 0.685,
+        "protect": 0.002,
+        "bytes": 622407,
+        "score": 1.0061,
+        "pose": 0.003595,
+        "seg": 0.004021
+      },
+      {
+        "bbr": 0.7,
+        "protect": 0.002,
+        "bytes": 624996,
+        "score": 1.0088,
+        "pose": 0.003637,
+        "seg": 0.00402
+      }
+    ],
+    "pose": [
+      {
+        "bytes": 15620,
+        "pose_term": 0.18879883474216677
+      }
+    ],
+    "masks": {
+      "141604": {
+        "crf": 62,
+        "sha256": "6c4798ac53bc0fbfd7a348ce197038a8ded23fc0c0f7a8efcb7e7fff3c1ee6f4",
+        "predicted_cost": 0.511810734375
+      },
+      "217200": {
+        "crf": 59,
+        "sha256": "090c9dc6a5e71d116f7c0ef6d219f87a9ceba5afb6b12b09a5bcf4407ab9e2d8",
+        "predicted_cost": 0.48228104687500006
+      },
+      "281690": {
+        "crf": 56,
+        "sha256": "03a2ccbce2fb4cb1121ded269a7affa9c01f473ffd8752aaa7fdfb415aec709f",
+        "predicted_cost": 0.457089640625
+      },
+      "341813": {
+        "crf": 53,
+        "sha256": "adaa97916684be7027e303688b30baf19b2cdbd9ca695e5e0f298fbe986731ea",
+        "predicted_cost": 0.43360409375000003
+      },
+      "393121": {
+        "crf": 50,
+        "sha256": "1530aef893c12ef2fc037621853d4f37e38e478aef84bce018430381275a582c",
+        "predicted_cost": 0.41356190625000006
+      }
+    }
+  },
+  "predicted_score": 1.0198789109921669,
+  "predicted_score_tag": "[prediction]",
+  "score_validation_required": "contest-CUDA via experiments/contest_auth_eval.py",
+  "candidate_archive": {
+    "path": "/Users/adpena/Projects/pact/experiments/results/lane_owv3_0120_admm_stack_20260501/archive.zip",
+    "size_bytes": 0,
+    "sha256": "skipped",
+    "deterministic_rebuild": false
+  },
+  "strict_scorer_rule_compliant": true,
+  "design_memo": "experiments/build_owv3_0120_admm_stack.py"
+}

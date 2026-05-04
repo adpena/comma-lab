@@ -1,0 +1,425 @@
+{
+  "archive": {
+    "duplicate_member_names": [],
+    "member_count": 1,
+    "members": [
+      {
+        "compress_size": 222304,
+        "compress_type": 0,
+        "crc32_hex": "c57d54c8",
+        "date_time": "2026-05-03T23:28:12",
+        "file_size": 222304,
+        "name": "x",
+        "sha256": "5c213c61cc4d29b62286063bfdcb97e812af6b06c0021aeaecc8bc46644e17bf"
+      }
+    ],
+    "path": "experiments/results/public_pr91_intake_20260504_worker/archive.zip",
+    "sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f",
+    "size_bytes": 222404
+  },
+  "blockers": [
+    {
+      "detail": "Tried to decode from compressed data that is invalid for the employed entropy model.",
+      "evidence": "experiments/results/public_pr91_intake_20260504_worker/pr91_hpm1_frame0_decode_smoke.json",
+      "id": "hpm1_entropy_decode_assertion",
+      "severity": "blocking"
+    },
+    {
+      "detail": "PR91 pyproject declares brotli but not constriction or pyppmd, while pr86_hpac.py imports both.",
+      "id": "missing_declared_hpac_dependencies",
+      "severity": "blocking_for_oss_replay"
+    },
+    {
+      "detail": "PR91 adds inflate/runtime files only; no HPAC encoder or build recipe for reproducing HPM1 tokens against PR85 masks.",
+      "id": "no_compressor_or_builder",
+      "severity": "blocking_for_transfer"
+    },
+    {
+      "detail": "HPM1 branch aborts on decode errors instead of falling back to QMA9/old PR.",
+      "id": "no_runtime_fallback_on_hpm_failure",
+      "severity": "blocking_for_fail_closed_runtime"
+    },
+    {
+      "detail": "PR91 range decoder did not reproduce recorded PR85 token SHA on the PR85 QMA9 segment.",
+      "id": "qma_fallback_parity_mismatch",
+      "severity": "blocking_for_old_pr_fallback"
+    }
+  ],
+  "changed_files": [
+    {
+      "additions": 1546,
+      "deletions": 0,
+      "filename": "submissions/hpac_coder_hybrid/inflate.py",
+      "sha": "8959e0335a771508bd3a96a9940b0a845f782899",
+      "status": "added"
+    },
+    {
+      "additions": 12,
+      "deletions": 0,
+      "filename": "submissions/hpac_coder_hybrid/inflate.sh",
+      "sha": "f1fed20f30d0e77b7d9c44d161333a046b328d24",
+      "status": "added"
+    },
+    {
+      "additions": 444,
+      "deletions": 0,
+      "filename": "submissions/hpac_coder_hybrid/pr86_hpac.py",
+      "sha": "3887d2ba511a163a15813844c39c57a698e32974",
+      "status": "added"
+    },
+    {
+      "additions": 1375,
+      "deletions": 0,
+      "filename": "submissions/hpac_coder_hybrid/range_mask_codec.cpp",
+      "sha": "870ca59c60d7f3cdfa748abbd0ffff0d0aed04a7",
+      "status": "added"
+    }
+  ],
+  "commands_run": [
+    "curl PR91 API/files/patch and archive attachment into experiments/results/public_pr91_intake_20260504_worker/",
+    "git clone --depth 1 --branch hpac-coder-hybrid https://github.com/ottokunkel/comma_video_compression_challenge.git .../pr91_src/repo",
+    "unzip -lv archive.zip; shasum -a 256 archive.zip; python zip parser for pr91_archive_anatomy.json",
+    ".venv/bin/python bounded PR91 HPM1 frame0 decode smoke",
+    "c++ -O3 -std=c++17 PR91 range_mask_codec.cpp and decode PR85 QMA9 segment smoke",
+    "diff/static comparisons against PR85/PR86 intake artifacts"
+  ],
+  "evidence_grade": "external_static_profile_plus_empirical_local_prefix_smokes",
+  "fallback_mechanics": {
+    "builder_fallback_claim_status": "PR comment says falls back to old PR when compressor fails, but PR91 branch contains no compression script/builder proof; treated as external author note only.",
+    "hpm_failure_behavior": "HPM1 branch does not catch entropy decode failures; a constriction assertion aborts inflate instead of falling back to QMA9/old PR.",
+    "hpm_failure_runtime_fallback": false,
+    "qma_fallback_pr85_compatibility": "PR91 range_mask_codec.cpp compiled and decoded the PR85 QMA9 segment to 117,964,800 bytes with range 0..4, but SHA did not match the recorded PR85 token source; do not use it as the old-PR fallback decoder without parity repair.",
+    "runtime_dispatch_order": [
+      "HPM1 via pr86_hpac.decompress_tokens_hpac",
+      "QMA6/QMA7/QMA8/QMA9 via range_mask_codec.cpp",
+      "brotli OBU mask video"
+    ]
+  },
+  "hpm1_contract": {
+    "H": 384,
+    "N": 600,
+    "P": 32,
+    "W": 512,
+    "ch": 64,
+    "delta": 2,
+    "header_bytes": 48,
+    "hpac_d_film": 8,
+    "hpac_len": 28243,
+    "hpac_ppmd_sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+    "ppmd_order": 4,
+    "tail_bytes": 0,
+    "tokens_len": 116796,
+    "tokens_sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+    "tokens_uint32_aligned": true,
+    "tokens_uint32_words": 29199,
+    "use_spm": 1
+  },
+  "local_smokes": {
+    "hpm1_frame0_decode": {
+      "decoded_frames_requested": 1,
+      "elapsed_sec": 6.929,
+      "error": "Tried to decode from compressed data that is invalid for the employed entropy model.",
+      "error_type": "AssertionError",
+      "evidence_grade": "empirical_local_cpu_prefix_decode",
+      "model_N": 600,
+      "python": "/Users/adpena/Projects/pact/.venv/bin/python",
+      "schema_version": 1,
+      "score_claim": false,
+      "status": "failed",
+      "tool": "bounded_pr91_hpm1_frame0_decode_manual"
+    },
+    "pr91_range_codec_on_pr85_qma9": {
+      "compiler": "c++ -O3 -std=c++17 PR91 range_mask_codec.cpp",
+      "decoded_bytes": 117964800,
+      "evidence_grade": "empirical_local_range_decode",
+      "expected_pr85_storage_order_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "observed_range": {
+        "max": 4,
+        "min": 0
+      },
+      "raw_shape_assumed": [
+        600,
+        384,
+        512
+      ],
+      "raw_t_h_w_sha256": "3f26318d602aa62a459a71e2ec5629eac92f5f3eccb2fb6d246d55eae79f5aa4",
+      "schema_version": 1,
+      "score_claim": false,
+      "storage_order_match": false,
+      "tool": "pr91_range_codec_decode_pr85_qma9",
+      "transposed_t_w_h_sha256": "d40afc0efb51c08d23325549d7c876232a6efc1e3b1fad3894d836c042665528"
+    }
+  },
+  "next_implementation_decisions": [
+    "Do not dispatch PR91-derived HPAC locally until HPM1 full-stream decode and decode->reencode parity pass under pinned constriction/pyppmd/torch.",
+    "Port HPM1 as a typed mask segment only behind a fail-closed preflight: exact header parse, uint32 alignment, hpac.ppmd SHA, dependency versions, prefix decode, full token SHA, and runtime output parity.",
+    "Keep our existing PR85 QMA9 decoder as fallback; do not replace it with PR91 range_mask_codec.cpp until PR85 token-source parity is repaired.",
+    "For beating PR91, the direct byte target is mask bytes below 145,087 or stacking an independent non-mask reduction on the PR85-identical model/pose/post side channels; PR91 itself gives no non-mask improvement."
+  ],
+  "payload_layout": {
+    "bundle_format": "pr85_pr91_v5_micro_24bit_lengths_fixed_bias_region",
+    "duplicate_member_names": [],
+    "header_bytes": 24,
+    "segments": [
+      {
+        "bytes": 145087,
+        "hpm1": {
+          "H": 384,
+          "N": 600,
+          "P": 32,
+          "W": 512,
+          "ch": 64,
+          "delta": 2,
+          "header_bytes": 48,
+          "hpac_d_film": 8,
+          "hpac_len": 28243,
+          "hpac_ppmd_sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+          "ppmd_order": 4,
+          "tail_bytes": 0,
+          "tokens_len": 116796,
+          "tokens_sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+          "tokens_uint32_aligned": true,
+          "tokens_uint32_words": 29199,
+          "use_spm": 1
+        },
+        "magic_ascii": "HPM1X.......",
+        "magic_hex": "48504d315802000080010000",
+        "name": "mask",
+        "sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc"
+      },
+      {
+        "bytes": 57074,
+        "magic_ascii": "...?...b.?..",
+        "magic_hex": "b1a8843f8097a1622e3fe27f",
+        "name": "model",
+        "sha256": "c9194c19d44d3c32c4e588bbe4f9986ed0c562779078f0f4d6b073f0799b5dbc"
+      },
+      {
+        "bytes": 1487,
+        "magic_ascii": ".. ..4c.....",
+        "magic_hex": "a2e120a29a3463fe9f07b6cd",
+        "name": "pose",
+        "sha256": "2b6e03e02fb17f662e3f3f9ce47daf2fc33bf1f76c96e34ffac005f1c5c4054c"
+      },
+      {
+        "bytes": 1400,
+        "magic_ascii": ".+aFJ.g..s!.",
+        "magic_hex": "e22b61464ace67fcaa73219b",
+        "name": "post",
+        "sha256": "c3dc88e0fb5a1e48aec49eeacefeea20685e3c02598933deb1ff22dc09892575"
+      },
+      {
+        "bytes": 226,
+        "magic_ascii": "BK.. .:.5 ..",
+        "magic_hex": "424b00ff20803ad53520a718",
+        "name": "shift",
+        "sha256": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4"
+      },
+      {
+        "bytes": 106,
+        "magic_ascii": "B....6......",
+        "magic_hex": "421600009836dc8dfef5cb08",
+        "name": "frac",
+        "sha256": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992"
+      },
+      {
+        "bytes": 149,
+        "magic_ascii": "BK...rut.q..",
+        "magic_hex": "424b00bf917275740b71a808",
+        "name": "frac2",
+        "sha256": "3a01c7546d89d9d3ca846da37a20add7d456421e9211a6339850d946b856026b"
+      },
+      {
+        "bytes": 154,
+        "magic_ascii": "BK....5.....",
+        "magic_hex": "424b00ff919235bc13d195ae",
+        "name": "frac3",
+        "sha256": "d725b01b604566c5a76a06b821c644c8d5d5bb9a57ab0597d3bdabc8389858b5"
+      },
+      {
+        "bytes": 223,
+        "magic_ascii": "BK....5..A.a",
+        "magic_hex": "424b00ff919235bc1341ad61",
+        "name": "bias",
+        "sha256": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b"
+      },
+      {
+        "bytes": 273,
+        "magic_ascii": "BK...P.}.5..",
+        "magic_hex": "424b00fff050b57dbe35bbc5",
+        "name": "region",
+        "sha256": "4a7c16094fab281c30e27621a58577c095c4b1153c232518c9adbaba2a2b2392"
+      },
+      {
+        "bytes": 16101,
+        "magic_ascii": "..O+Q..Nh.M.",
+        "magic_hex": "b1004f2b51c6d84e68ba4d04",
+        "name": "randmulti",
+        "sha256": "c624372e60a0851c4c427dc333a60dcc5d6657ba8ed56951612e7c9d7be7629f"
+      }
+    ],
+    "single_zip_member": true
+  },
+  "pr85_diff": {
+    "archive_delta_bytes": -13924,
+    "mask_delta_bytes": -13924,
+    "non_mask_segments_byte_identical": true,
+    "segments": [
+      {
+        "byte_delta_vs_pr85": 0,
+        "name": "bias",
+        "pr85_bytes": 223,
+        "pr85_sha256": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b",
+        "pr91_bytes": 223,
+        "pr91_sha256": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b",
+        "sha_equal": true
+      },
+      {
+        "byte_delta_vs_pr85": 0,
+        "name": "frac",
+        "pr85_bytes": 106,
+        "pr85_sha256": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992",
+        "pr91_bytes": 106,
+        "pr91_sha256": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992",
+        "sha_equal": true
+      },
+      {
+        "byte_delta_vs_pr85": 0,
+        "name": "frac2",
+        "pr85_bytes": 149,
+        "pr85_sha256": "3a01c7546d89d9d3ca846da37a20add7d456421e9211a6339850d946b856026b",
+        "pr91_bytes": 149,
+        "pr91_sha256": "3a01c7546d89d9d3ca846da37a20add7d456421e9211a6339850d946b856026b",
+        "sha_equal": true
+      },
+      {
+        "byte_delta_vs_pr85": 0,
+        "name": "frac3",
+        "pr85_bytes": 154,
+        "pr85_sha256": "d725b01b604566c5a76a06b821c644c8d5d5bb9a57ab0597d3bdabc8389858b5",
+        "pr91_bytes": 154,
+        "pr91_sha256": "d725b01b604566c5a76a06b821c644c8d5d5bb9a57ab0597d3bdabc8389858b5",
+        "sha_equal": true
+      },
+      {
+        "byte_delta_vs_pr85": -13924,
+        "name": "mask",
+        "pr85_bytes": 159011,
+        "pr85_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+        "pr91_bytes": 145087,
+        "pr91_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+        "sha_equal": false
+      },
+      {
+        "byte_delta_vs_pr85": 0,
+        "name": "model",
+        "pr85_bytes": 57074,
+        "pr85_sha256": "c9194c19d44d3c32c4e588bbe4f9986ed0c562779078f0f4d6b073f0799b5dbc",
+        "pr91_bytes": 57074,
+        "pr91_sha256": "c9194c19d44d3c32c4e588bbe4f9986ed0c562779078f0f4d6b073f0799b5dbc",
+        "sha_equal": true
+      },
+      {
+        "byte_delta_vs_pr85": 0,
+        "name": "pose",
+        "pr85_bytes": 1487,
+        "pr85_sha256": "2b6e03e02fb17f662e3f3f9ce47daf2fc33bf1f76c96e34ffac005f1c5c4054c",
+        "pr91_bytes": 1487,
+        "pr91_sha256": "2b6e03e02fb17f662e3f3f9ce47daf2fc33bf1f76c96e34ffac005f1c5c4054c",
+        "sha_equal": true
+      },
+      {
+        "byte_delta_vs_pr85": 0,
+        "name": "post",
+        "pr85_bytes": 1400,
+        "pr85_sha256": "c3dc88e0fb5a1e48aec49eeacefeea20685e3c02598933deb1ff22dc09892575",
+        "pr91_bytes": 1400,
+        "pr91_sha256": "c3dc88e0fb5a1e48aec49eeacefeea20685e3c02598933deb1ff22dc09892575",
+        "sha_equal": true
+      },
+      {
+        "byte_delta_vs_pr85": 0,
+        "name": "randmulti",
+        "pr85_bytes": 16101,
+        "pr85_sha256": "c624372e60a0851c4c427dc333a60dcc5d6657ba8ed56951612e7c9d7be7629f",
+        "pr91_bytes": 16101,
+        "pr91_sha256": "c624372e60a0851c4c427dc333a60dcc5d6657ba8ed56951612e7c9d7be7629f",
+        "sha_equal": true
+      },
+      {
+        "byte_delta_vs_pr85": 0,
+        "name": "region",
+        "pr85_bytes": 273,
+        "pr85_sha256": "4a7c16094fab281c30e27621a58577c095c4b1153c232518c9adbaba2a2b2392",
+        "pr91_bytes": 273,
+        "pr91_sha256": "4a7c16094fab281c30e27621a58577c095c4b1153c232518c9adbaba2a2b2392",
+        "sha_equal": true
+      },
+      {
+        "byte_delta_vs_pr85": 0,
+        "name": "shift",
+        "pr85_bytes": 226,
+        "pr85_sha256": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4",
+        "pr91_bytes": 226,
+        "pr91_sha256": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4",
+        "sha_equal": true
+      }
+    ]
+  },
+  "pr86_relationship": {
+    "hpac_model_ppmd_sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+    "known_pr86_hpac_ppmd_sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+    "pr86_prior_blocker_status": "blocked_fail_closed",
+    "pr86_prior_primary_local_blocker": {
+      "gate": "pr86_full_decode_reencode_token_parity",
+      "next_action": "Run the local PR86 full-stream decode and decode->encode tokens.bin byte-parity probe.",
+      "status": "failed_closed"
+    },
+    "same_hpac_model_as_pr86_static": true
+  },
+  "recorded_at_utc": "2026-05-04T05:04:58Z",
+  "schema_version": 1,
+  "score_claim": false,
+  "source_pr": {
+    "additions": 3377,
+    "author": "ottokunkel",
+    "base_label": "commaai:master",
+    "changed_files": 4,
+    "claimed_report": {
+      "archive_bytes": 222404,
+      "exact_score_external_text": 0.24879480490416128,
+      "pose_dist": 0.0001894,
+      "seg_dist": 0.00057185
+    },
+    "commits": 7,
+    "deletions": 0,
+    "head_label": "ottokunkel:hpac-coder-hybrid",
+    "head_sha": "77f958d24e55980d95e01e3e9767b5a94320ed43",
+    "state": "open",
+    "title": "Hpac coder hybrid",
+    "url": "https://github.com/commaai/comma_video_compression_challenge/pull/91"
+  },
+  "tool": "public_pr91_hpac_hybrid_transfer_intake",
+  "transfer_opportunities": [
+    {
+      "detail": "PR91 proves the byte opportunity is entirely a mask replacement: PR85 archive 236,328 -> PR91 archive 222,404, delta -13,924 bytes, all non-mask segments identical.",
+      "id": "hpm1_mask_segment_swap",
+      "status": "high_value_blocked"
+    },
+    {
+      "detail": "HPM1 embeds the same 28,243-byte hpac.pt.ppmd SHA as PR86 plus a new 116,796-byte token stream. Reuse is attractive only after full local decode/reencode parity.",
+      "id": "reuse_pr86_hpac_model",
+      "status": "blocked_by_decode_contract"
+    },
+    {
+      "detail": "The PR85 v5 24-bit single-member bundle parser layout is unchanged; only add HPM1 as a new typed mask segment with fail-closed validation.",
+      "id": "bundle_parser",
+      "status": "directly_reusable_after_tests"
+    },
+    {
+      "detail": "PR91 modified QMA9 binary predictor order, update increment, and scale total; it is not a drop-in PR85 fallback based on local SHA mismatch.",
+      "id": "range_qma9_cpp_changes",
+      "status": "selective_research_only"
+    }
+  ]
+}

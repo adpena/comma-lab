@@ -1,0 +1,38 @@
+{
+  "adjudication": {
+    "allow_component_gate_forensic_success": true,
+    "baseline_archive_size_bytes": 287573,
+    "baseline_posenet_dist": 0.00052823,
+    "baseline_score": 0.32518843312932477,
+    "baseline_segnet_dist": 0.00061026,
+    "component_reference_label": "public_pr63_qpose14",
+    "delta_key": "score_delta_vs_public_pr63",
+    "max_posenet_dist": null,
+    "max_posenet_relative": 1.02,
+    "max_sane_score": 0.34,
+    "max_segnet_dist": null,
+    "max_segnet_relative": 1.02,
+    "predicted_band_high": 0.326,
+    "predicted_band_low": 0.324,
+    "provenance_name": "adjudication_provenance.json",
+    "regression_threshold": 0.01,
+    "required_device": "cuda",
+    "required_samples": 600,
+    "result_copy_name": "contest_auth_eval.adjudicated.json"
+  },
+  "artifact_recorded_at_utc": "2026-05-02T00:06:45Z",
+  "expected_archive_sha256": "4479badf2aeb489e182ad57a5bba7de10c475f2395d69cdf462462e7a7879610",
+  "expected_archive_size_bytes": 286960,
+  "job_name": "exact_eval_public_floor_pr63_pr64_pvl1_t4_fix1_20260501T2353Z",
+  "queue_metadata": {
+    "h100_score": "0.3246902093443082",
+    "h100_trace_score": "0.3246906061663023",
+    "lane": "public_floor_contract_pvl1",
+    "source": "pr63_decoded_geometry_pr64_pvl1_repack",
+    "source_manifest_sha256": "57ba9e6d08cec022d050e99402c0039754e45d203117117b94c135349dd818ea"
+  },
+  "role": "exact_cuda_eval",
+  "schema_version": 1,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

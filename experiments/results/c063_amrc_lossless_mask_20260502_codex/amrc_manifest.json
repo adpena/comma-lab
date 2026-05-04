@@ -1,0 +1,22 @@
+{
+  "decode_meta": {
+    "decoded_frames": 600,
+    "decoder": "legacy_av1_class_scaled_gray",
+    "ffmpeg": "/opt/homebrew/Cellar/ffmpeg/8.1_1/bin/ffmpeg",
+    "ffprobe": "/opt/homebrew/Cellar/ffmpeg/8.1_1/bin/ffprobe",
+    "height": 384,
+    "max_frames": null,
+    "reported_frames": null,
+    "truncated_by_builder": false,
+    "width": 512
+  },
+  "decoded_mask_u8_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+  "masks_amrc_bytes": 593417,
+  "masks_amrc_sha256": "82e5d26eb9f373b2a6956f10efcf26c574a26045d9ffe866b8992b83e1c1db5a",
+  "promotion_eligible": false,
+  "schema": "c063_amrc_lossless_mask_screen_v1",
+  "score_claim": false,
+  "source_mask_mkv_bytes": 223385,
+  "source_mask_mkv_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+  "source_runtime_zip": "experiments/results/c063_mask_av1_reencode_sweep_20260502/source/runtime_members.zip"
+}

@@ -1,0 +1,132 @@
+{
+  "decision": {
+    "fixed_pr85_runtime_preserved": false,
+    "implementable_next_archive_builder": true,
+    "reason": "PR90 topband stream decodes to the exact PR85 mask tensor; a builder can replace only the mask segment after adding an explicit STBM decoder path.",
+    "status": "ready_for_local_archive_builder_after_runtime_port"
+  },
+  "dispatch_performed": false,
+  "planning_only": true,
+  "ranked_candidates": [
+    {
+      "blockers": [
+        {
+          "blocker_class": "fixed_pr85_runtime_does_not_decode_stbm1br",
+          "requirement": "Current PR85 runtime expects the QMA9 mask path; STBM requires an explicit reviewed decoder path.",
+          "status": "blocking_fixed_runtime_transfer"
+        },
+        {
+          "blocker_class": "public_pr90_decoder_port_required",
+          "requirement": "Do not depend on mutable PR90 source paths at inflate time; vendor/reimplement the decoder in the archive runtime.",
+          "status": "blocking_until_vendored_and_reviewed"
+        }
+      ],
+      "charged_byte_estimate": {
+        "candidate_mask_segment_bytes": 152439,
+        "delta_archive_bytes": -6572,
+        "delta_mask_segment_bytes": -6572,
+        "estimated_archive_bytes_if_only_mask_segment_changes": 229756,
+        "pr85_archive_bytes": 236328,
+        "pr85_mask_segment_bytes": 159011,
+        "pr90_mask_body_bytes": 152431,
+        "rate_score_delta_if_components_unchanged": -0.004376025039918911,
+        "required_stbm_magic_bytes": 8
+      },
+      "dispatch_unlocked": false,
+      "exact_builder_requirements": [
+        "Build a PR85-family archive by replacing only the mask segment in the single-member x bundle.",
+        "Charge a self-describing STBM1BR\\0 mask segment; do not rely on PR90 compact fixed offsets inside PR85.",
+        "Port or reimplement the PR90 QTBM topband/road-boundary decoder into the PR85 inflate runtime with a distinct magic path.",
+        "Prove decoded-token SHA parity against the PR85 QMA9 render-order tensor before archive construction is considered valid.",
+        "Prove PR85 inflate/runtime output parity against the baseline archive before any exact CUDA eval dispatch.",
+        "Run archive validator checks for deterministic ZIP structure, member ordering, no sidecars, and updated bundle length header.",
+        "Only after local parity gates pass, claim a lane before any remote exact eval dispatch."
+      ],
+      "no_op_status": {
+        "archive_changing": true,
+        "candidate_mask_segment_differs_from_pr85_qma9": true,
+        "decoded_mask_changing": false,
+        "no_op": false,
+        "reason": "charged mask bytes change while decoded semantic tokens remain identical",
+        "source_byte_reuse": false
+      },
+      "parity_evidence": {
+        "decoded_mask_equal": true,
+        "diff_pixels": 0,
+        "pr85_render_order_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+        "pr90_render_order_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+        "render_order_shape": [
+          600,
+          384,
+          512
+        ]
+      },
+      "policy_id": "pr90_stbm1br_lossless_pr85_mask_recode",
+      "rank": 1,
+      "score_claim": false,
+      "source_signal": "PR90 semantic topband/road-boundary decomposition",
+      "status": "builder_ready_after_runtime_port",
+      "surface": "PR85 QMA9 mask segment",
+      "target_score_term": "archive_bytes_rate_only_if_decoded_mask_and_runtime_output_parity_hold",
+      "topband_road_boundary_profile": {
+        "residual_coded_fraction": 0.30498877631293403,
+        "residual_coded_pixels_after_support": 35977940,
+        "road_non_top_fraction": 0.25425167507595486,
+        "road_non_top_pixels": 29992748,
+        "road_support_pixels": 29992748,
+        "road_support_sha256": "68b0f927e8c50bfd9b4a1efe72cc83ef0808973fb9f45523da82af5aea80cf59",
+        "road_support_shape": [
+          600,
+          384,
+          512
+        ],
+        "top_road_overlap_pixels": 0,
+        "top_support_fraction": 0.4407595486111111,
+        "top_support_pixels": 51994112,
+        "top_support_sha256": "ccef7bab5ccaea7ae82260f7fb48c67d09400ac791788ca93a2c0731bb1cb60a",
+        "top_support_shape": [
+          600,
+          384,
+          512
+        ],
+        "total_pixels": 117964800
+      }
+    },
+    {
+      "blockers": [
+        {
+          "blocker_class": "qma9_runtime_has_no_topband_prior_contract",
+          "requirement": "A PR90-inspired prior cannot change QMA9 bytes while preserving the exact QMA9 decoder semantics.",
+          "status": "fail_closed_fixed_runtime"
+        }
+      ],
+      "charged_byte_estimate": {
+        "candidate_mask_segment_bytes": 159011,
+        "delta_mask_segment_bytes": 0,
+        "pr85_mask_segment_bytes": 159011,
+        "rate_score_delta_if_components_unchanged": 0.0
+      },
+      "dispatch_unlocked": false,
+      "exact_builder_requirements": [
+        "None under the fixed PR85 QMA9 runtime; a geometry prior must become a new mask grammar or a token-parity runtime extension."
+      ],
+      "no_op_status": {
+        "archive_changing": false,
+        "decoded_mask_changing": false,
+        "no_op": true,
+        "reason": "QMA9 has no charged prior side channel; changing its model requires runtime grammar changes.",
+        "source_byte_reuse": true
+      },
+      "policy_id": "fixed_runtime_qma9_geometry_prior_reencode",
+      "rank": 2,
+      "score_claim": false,
+      "source_signal": "PR90 topband/road-boundary support masks",
+      "status": "research_blocker_no_archive_changing_policy",
+      "surface": "PR85 QMA9 mask segment",
+      "target_score_term": "archive_bytes_rate"
+    }
+  ],
+  "schema": "pr90_qma9_mask_prior_transfer_ranked_policy_v1",
+  "score_claim": false,
+  "tool": "experiments/analyze_pr90_qma9_mask_prior_transfer.py"
+}

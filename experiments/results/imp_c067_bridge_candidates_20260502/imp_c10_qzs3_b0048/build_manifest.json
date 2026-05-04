@@ -1,0 +1,415 @@
+{
+  "bridge_mode": "no_train_global_magnitude_prune",
+  "candidate_id": "imp_c10_qzs3_b0048",
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "decision_support": {
+    "exact_cuda_auth_eval_required_for_score": true,
+    "local_archive_byte_win": true,
+    "local_renderer_byte_win": true,
+    "recommended_use": "If byte-positive and exact CUDA components survive, launch a real trained IMP-C067 H100 run; otherwise use the mask as a sparsity prior for Block-FP/self-compression.",
+    "safe_to_promote_from_this_manifest": false
+  },
+  "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
+  "imp_pruning": {
+    "actual_sparsity": 0.8927915398341556,
+    "cycle": 10,
+    "expected_sparsity": 0.8926258175999999,
+    "full_imp_training_required_before_promotion": true,
+    "mask_stats": {
+      "kept": 8171,
+      "pruned": 68045,
+      "sparsity": 0.8927915398341556,
+      "tensor_count": 42,
+      "tensors": [
+        {
+          "kept": 107,
+          "name": "frame1_head.block1.conv1.dw.weight",
+          "pruned": 397,
+          "sparsity": 0.7876984126984127,
+          "value_count": 504
+        },
+        {
+          "kept": 0,
+          "name": "frame1_head.block1.conv1.pw.weight",
+          "pruned": 3136,
+          "sparsity": 1.0,
+          "value_count": 3136
+        },
+        {
+          "kept": 116,
+          "name": "frame1_head.block1.conv2.dw.weight",
+          "pruned": 388,
+          "sparsity": 0.7698412698412699,
+          "value_count": 504
+        },
+        {
+          "kept": 0,
+          "name": "frame1_head.block1.conv2.pw.weight",
+          "pruned": 3136,
+          "sparsity": 1.0,
+          "value_count": 3136
+        },
+        {
+          "kept": 123,
+          "name": "frame1_head.block2.conv1.dw.weight",
+          "pruned": 381,
+          "sparsity": 0.7559523809523809,
+          "value_count": 504
+        },
+        {
+          "kept": 0,
+          "name": "frame1_head.block2.conv1.pw.weight",
+          "pruned": 3136,
+          "sparsity": 1.0,
+          "value_count": 3136
+        },
+        {
+          "kept": 110,
+          "name": "frame1_head.block2.conv2.dw.weight",
+          "pruned": 394,
+          "sparsity": 0.7817460317460317,
+          "value_count": 504
+        },
+        {
+          "kept": 0,
+          "name": "frame1_head.block2.conv2.pw.weight",
+          "pruned": 3136,
+          "sparsity": 1.0,
+          "value_count": 3136
+        },
+        {
+          "kept": 0,
+          "name": "frame1_head.head.weight",
+          "pruned": 156,
+          "sparsity": 1.0,
+          "value_count": 156
+        },
+        {
+          "kept": 97,
+          "name": "frame1_head.pre.dw.weight",
+          "pruned": 407,
+          "sparsity": 0.8075396825396826,
+          "value_count": 504
+        },
+        {
+          "kept": 0,
+          "name": "frame1_head.pre.pw.weight",
+          "pruned": 2912,
+          "sparsity": 1.0,
+          "value_count": 2912
+        },
+        {
+          "kept": 218,
+          "name": "frame2_head.block1.conv1.dw.weight",
+          "pruned": 286,
+          "sparsity": 0.5674603174603174,
+          "value_count": 504
+        },
+        {
+          "kept": 292,
+          "name": "frame2_head.block1.conv1.pw.weight",
+          "pruned": 2844,
+          "sparsity": 0.9068877551020408,
+          "value_count": 3136
+        },
+        {
+          "kept": 199,
+          "name": "frame2_head.block1.conv2.dw.weight",
+          "pruned": 305,
+          "sparsity": 0.6051587301587301,
+          "value_count": 504
+        },
+        {
+          "kept": 258,
+          "name": "frame2_head.block1.conv2.pw.weight",
+          "pruned": 2878,
+          "sparsity": 0.9177295918367347,
+          "value_count": 3136
+        },
+        {
+          "kept": 210,
+          "name": "frame2_head.block2.conv1.dw.weight",
+          "pruned": 294,
+          "sparsity": 0.5833333333333334,
+          "value_count": 504
+        },
+        {
+          "kept": 291,
+          "name": "frame2_head.block2.conv1.pw.weight",
+          "pruned": 2845,
+          "sparsity": 0.9072066326530612,
+          "value_count": 3136
+        },
+        {
+          "kept": 214,
+          "name": "frame2_head.block2.conv2.dw.weight",
+          "pruned": 290,
+          "sparsity": 0.5753968253968254,
+          "value_count": 504
+        },
+        {
+          "kept": 253,
+          "name": "frame2_head.block2.conv2.pw.weight",
+          "pruned": 2883,
+          "sparsity": 0.9193239795918368,
+          "value_count": 3136
+        },
+        {
+          "kept": 19,
+          "name": "frame2_head.head.weight",
+          "pruned": 137,
+          "sparsity": 0.8782051282051282,
+          "value_count": 156
+        },
+        {
+          "kept": 192,
+          "name": "frame2_head.pre.dw.weight",
+          "pruned": 312,
+          "sparsity": 0.6190476190476191,
+          "value_count": 504
+        },
+        {
+          "kept": 220,
+          "name": "frame2_head.pre.pw.weight",
+          "pruned": 2692,
+          "sparsity": 0.9244505494505495,
+          "value_count": 2912
+        },
+        {
+          "kept": 271,
+          "name": "shared_trunk.down_block.conv1.dw.weight",
+          "pruned": 305,
+          "sparsity": 0.5295138888888888,
+          "value_count": 576
+        },
+        {
+          "kept": 322,
+          "name": "shared_trunk.down_block.conv1.pw.weight",
+          "pruned": 3774,
+          "sparsity": 0.92138671875,
+          "value_count": 4096
+        },
+        {
+          "kept": 253,
+          "name": "shared_trunk.down_block.conv2.dw.weight",
+          "pruned": 323,
+          "sparsity": 0.5607638888888888,
+          "value_count": 576
+        },
+        {
+          "kept": 339,
+          "name": "shared_trunk.down_block.conv2.pw.weight",
+          "pruned": 3757,
+          "sparsity": 0.917236328125,
+          "value_count": 4096
+        },
+        {
+          "kept": 217,
+          "name": "shared_trunk.down_conv.dw.weight",
+          "pruned": 287,
+          "sparsity": 0.5694444444444444,
+          "value_count": 504
+        },
+        {
+          "kept": 305,
+          "name": "shared_trunk.down_conv.pw.weight",
+          "pruned": 3279,
+          "sparsity": 0.9148995535714286,
+          "value_count": 3584
+        },
+        {
+          "kept": 398,
+          "name": "shared_trunk.fuse.dw.weight",
+          "pruned": 610,
+          "sparsity": 0.6051587301587301,
+          "value_count": 1008
+        },
+        {
+          "kept": 395,
+          "name": "shared_trunk.fuse.pw.weight",
+          "pruned": 5877,
+          "sparsity": 0.9370216836734694,
+          "value_count": 6272
+        },
+        {
+          "kept": 232,
+          "name": "shared_trunk.fuse_block.conv1.dw.weight",
+          "pruned": 272,
+          "sparsity": 0.5396825396825397,
+          "value_count": 504
+        },
+        {
+          "kept": 300,
+          "name": "shared_trunk.fuse_block.conv1.pw.weight",
+          "pruned": 2836,
+          "sparsity": 0.9043367346938775,
+          "value_count": 3136
+        },
+        {
+          "kept": 222,
+          "name": "shared_trunk.fuse_block.conv2.dw.weight",
+          "pruned": 282,
+          "sparsity": 0.5595238095238095,
+          "value_count": 504
+        },
+        {
+          "kept": 294,
+          "name": "shared_trunk.fuse_block.conv2.pw.weight",
+          "pruned": 2842,
+          "sparsity": 0.90625,
+          "value_count": 3136
+        },
+        {
+          "kept": 206,
+          "name": "shared_trunk.stem_block.conv1.dw.weight",
+          "pruned": 298,
+          "sparsity": 0.5912698412698413,
+          "value_count": 504
+        },
+        {
+          "kept": 240,
+          "name": "shared_trunk.stem_block.conv1.pw.weight",
+          "pruned": 2896,
+          "sparsity": 0.923469387755102,
+          "value_count": 3136
+        },
+        {
+          "kept": 192,
+          "name": "shared_trunk.stem_block.conv2.dw.weight",
+          "pruned": 312,
+          "sparsity": 0.6190476190476191,
+          "value_count": 504
+        },
+        {
+          "kept": 262,
+          "name": "shared_trunk.stem_block.conv2.pw.weight",
+          "pruned": 2874,
+          "sparsity": 0.9164540816326531,
+          "value_count": 3136
+        },
+        {
+          "kept": 41,
+          "name": "shared_trunk.stem_conv.dw.weight",
+          "pruned": 31,
+          "sparsity": 0.4305555555555556,
+          "value_count": 72
+        },
+        {
+          "kept": 207,
+          "name": "shared_trunk.stem_conv.pw.weight",
+          "pruned": 241,
+          "sparsity": 0.5379464285714286,
+          "value_count": 448
+        },
+        {
+          "kept": 249,
+          "name": "shared_trunk.up.1.dw.weight",
+          "pruned": 327,
+          "sparsity": 0.5677083333333334,
+          "value_count": 576
+        },
+        {
+          "kept": 307,
+          "name": "shared_trunk.up.1.pw.weight",
+          "pruned": 3277,
+          "sparsity": 0.9143415178571429,
+          "value_count": 3584
+        }
+      ],
+      "value_count": 76216
+    },
+    "score_claim": false,
+    "sparsity_increment": 0.2,
+    "training_applied": false
+  },
+  "output_archive": {
+    "bytes": 245450,
+    "delta_bytes_vs_source_archive": -30764,
+    "formula_only_rate_delta_vs_source_archive": -0.02048448483385048,
+    "path": "/Users/adpena/Projects/pact/experiments/results/imp_c067_bridge_candidates_20260502/imp_c10_qzs3_b0048/archive.zip",
+    "sha256": "052b65fdaf04eadcdad28f3525f837998be7d67228fe6f182ebb8268dce22d58"
+  },
+  "packed_payload": {
+    "brotli_quality": 11,
+    "header": {
+      "members": [
+        {
+          "bytes": 58128,
+          "codec": "raw",
+          "name": "renderer.bin",
+          "sha256": "c1a97d0030f3d4dd5a9b71ca449bcc3b7f9d8622621bdd885217682db21a31b3"
+        },
+        {
+          "bytes": 223385,
+          "codec": "raw",
+          "name": "masks.mkv",
+          "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        {
+          "bytes": 7200,
+          "codec": "raw",
+          "name": "optimized_poses.bin",
+          "sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+        }
+      ],
+      "payload_format": "public_pr64_mask_first_len_table",
+      "schema": "renderer_payload_pr64_len_table_v1",
+      "source_archive_sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a"
+    },
+    "output_archive_members": [
+      "p"
+    ],
+    "payload_compressed_bytes": 245350,
+    "payload_format": "public_pr64_mask_first_len_table",
+    "payload_member": "p",
+    "payload_raw_bytes": 288725,
+    "runtime_parse_header_schema": "renderer_payload_pr64_len_table_v1",
+    "runtime_parse_logical_members": [
+      "renderer.bin",
+      "masks.mkv",
+      "optimized_poses.bin"
+    ],
+    "runtime_parse_payload_format": "public_pr64_mask_first_len_table"
+  },
+  "promotion_eligible": false,
+  "renderer_source_member": {
+    "bytes": 59288,
+    "member_name": "renderer.bin",
+    "prunable_tensor_count": 42,
+    "prunable_value_count": 76216,
+    "renderer_wire_format": "QZS3",
+    "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb",
+    "source_qzs3_block_size": 32,
+    "state_tensor_count": 111
+  },
+  "schema": "imp_c067_bridge_candidate_builder_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 276214,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c067_breakthrough_candidate_matrix_20260502T1030Z/line_search_source_c067_fixedslice/archive.zip",
+    "sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+    "source_archive_packaging": "packed_renderer_payload",
+    "source_logical_member_names": [
+      "renderer.bin",
+      "masks.mkv",
+      "optimized_poses.bin"
+    ],
+    "source_payload_header_payload_format": "public_pr67_qzs3_qp1_fixed_slices",
+    "source_payload_header_schema": "renderer_payload_pr64_len_table_v1",
+    "source_payload_member": "p",
+    "source_payload_member_bytes": 276114,
+    "source_payload_member_sha256": "1f0aaaa9d06967552df6f22d39905a48349239dee4731b093067951a20adc2af",
+    "source_zip_members": [
+      "p"
+    ]
+  },
+  "transformed_renderer_payload": {
+    "bytes": 58128,
+    "delta_bytes_vs_source_renderer": -1160,
+    "member_name": "renderer.bin",
+    "qzs3_block_size": 48,
+    "sha256": "c1a97d0030f3d4dd5a9b71ca449bcc3b7f9d8622621bdd885217682db21a31b3",
+    "transform": "c067_qzs3_decoded_jfg_no_train_imp_prune_reencoded_qzs3",
+    "wire_format": "QZS3"
+  }
+}

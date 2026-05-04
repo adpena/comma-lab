@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-05-02T06:00:18Z",
+  "archive_label": "qfaithful_2131_pr64_qp1",
+  "archive_path": "/workspace/pact/experiments/results/qfaithful_snapshot_h100_wave_20260502T055846Z/inputs/qfaithful_2131_pr64_qp1/archive.zip",
+  "custody_archive_path": "/workspace/pact/experiments/results/qfaithful_snapshot_h100_wave_20260502T055846Z/qfaithful_2131_pr64_qp1/archive.zip",
+  "archive_size_bytes": 272995,
+  "archive_sha256": "1a35d4d8899afa47602137efd36a427cdadc6e3a25615c4c54ec51c1ac73374f"
+}

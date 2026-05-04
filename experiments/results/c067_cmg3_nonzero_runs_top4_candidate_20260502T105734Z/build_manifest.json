@@ -1,0 +1,164 @@
+{
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "cmg3": {
+    "body_bytes": 280808,
+    "body_sha256": "04b459e9a1a9e0de4d247e24f24a771209c94efeb414a72be7165f5b16d042ec",
+    "class_count": 5,
+    "compression_candidates": [
+      {
+        "body_bytes": 280808,
+        "body_sha256": "04b459e9a1a9e0de4d247e24f24a771209c94efeb414a72be7165f5b16d042ec",
+        "compressor": "lzma_xz"
+      },
+      {
+        "body_bytes": 284719,
+        "body_sha256": "e1b58603da3f6fdcc17d5291e01d5a9d1b84e51ab45da5566eead2beb2d60df0",
+        "compressor": "bz2"
+      },
+      {
+        "body_bytes": 444171,
+        "body_sha256": "25d54e310c83f6f7f410c38bd33f6d133402c83ac3f3ea8fde9267fbe5af5848",
+        "compressor": "zlib"
+      },
+      {
+        "body_bytes": 1900380,
+        "body_sha256": "050f223e2e9572536b1306dc506dc17fc73618e74a0e9984c1bcf6895c477a4b",
+        "compressor": "raw"
+      }
+    ],
+    "compressor": "lzma_xz",
+    "default_class": 0,
+    "frame_count": 600,
+    "height": 384,
+    "lossless_under_builder": false,
+    "max_runs_per_row": 4,
+    "mode": "nonzero_row_runs_topk_v1",
+    "payload_bytes": 282182,
+    "payload_sha256": "76f023b820186ea43e6805787da4b8f78ed56560a6116d9727266804fd525db2",
+    "pixel_disagreement_count_vs_source": 221950,
+    "pixel_disagreement_vs_source": 0.0018814934624565972,
+    "promotion_eligible": false,
+    "reconstructed_mask_u8_sha256": "72bb9b1a4dcb2716e906ff89a168d7f102f4c611954834be89ef09c27542b66f",
+    "record_struct": "u8_count_then_u8_class_u16_start_u16_end_le",
+    "run_stats": {
+      "kept_run_fraction": 0.8936849963476209,
+      "kept_runs": 333996,
+      "max_runs_per_row": 4,
+      "pixel_disagreement": 0.0018814934624565972,
+      "pixel_disagreement_count": 221950,
+      "reconstructed_tensor_sha256": "72bb9b1a4dcb2716e906ff89a168d7f102f4c611954834be89ef09c27542b66f",
+      "runs_per_row_mean": 1.4496354166666667,
+      "runs_per_row_p95": 4.0,
+      "total_nonzero_runs": 373729
+    },
+    "run_stream_bytes": 1900380,
+    "run_stream_sha256": "050f223e2e9572536b1306dc506dc17fc73618e74a0e9984c1bcf6895c477a4b",
+    "schema": "cmg3_nonzero_row_runs_candidate_v1",
+    "score_claim": false,
+    "source_mask_u8_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+    "width": 512
+  },
+  "decoded_mask_array": {
+    "npy_sha256": "13f81851ae206f6142cd3348db5537eda4ea832665052824816f4d1bf432de0c",
+    "path": "/Users/adpena/Projects/pact/experiments/results/c063_trace_weighted_mask_grammar_plan_20260502_codex/decoded_mask_array.npy",
+    "shape": [
+      600,
+      384,
+      512
+    ],
+    "tensor_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45"
+  },
+  "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
+  "frontier_archive": {
+    "bytes": 276214,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip",
+    "sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a"
+  },
+  "output_archive": {
+    "bytes": 343592,
+    "delta_bytes_vs_frontier": 67378,
+    "formula_only_rate_delta_vs_frontier": 0.04486424454346566,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c067_cmg3_nonzero_runs_top4_candidate_20260502T105734Z/archive.zip",
+    "sha256": "d3366fb4349bc8b257647a42caa891b969540c5300cd33b52cd3cea450d6dab7"
+  },
+  "packed_payload": {
+    "brotli_quality": 11,
+    "evidence_grade": "empirical",
+    "formula_only_rate_delta": -0.003602296936390947,
+    "header": {
+      "members": [
+        {
+          "bytes": 59288,
+          "codec": "raw",
+          "name": "renderer.bin",
+          "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+        },
+        {
+          "bytes": 282182,
+          "codec": "raw",
+          "name": "masks.cmg3",
+          "sha256": "76f023b820186ea43e6805787da4b8f78ed56560a6116d9727266804fd525db2"
+        },
+        {
+          "bytes": 1140,
+          "codec": "pose_qp1_v1",
+          "decoded_bytes": 7200,
+          "decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f",
+          "lossy": true,
+          "name": "optimized_poses.bin",
+          "pose_error_stats": {
+            "max_abs_by_dim": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "pose_dim": 6,
+            "rmse_by_dim": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "rows": 600
+          },
+          "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583",
+          "source_decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+        }
+      ],
+      "schema": "renderer_payload_v1",
+      "source_archive_sha256": "b7257f2e0ec43ca7857322c7a35207dfe058ceceacbe400f5f298cde40b73293"
+    },
+    "output_archive": "/Users/adpena/Projects/pact/experiments/results/c067_cmg3_nonzero_runs_top4_candidate_20260502T105734Z/archive.zip",
+    "output_archive_bytes": 343592,
+    "output_archive_sha256": "d3366fb4349bc8b257647a42caa891b969540c5300cd33b52cd3cea450d6dab7",
+    "payload_compressed_bytes": 343492,
+    "payload_format": "rpk1_json",
+    "payload_member": "p",
+    "payload_raw_bytes": 343487,
+    "pose_codec": "pose_qp1_v1",
+    "pose_residual_topk": 0,
+    "savings_bytes": 5410,
+    "score_claim": false,
+    "source_archive": "/Users/adpena/Projects/pact/experiments/results/c067_cmg3_nonzero_runs_top4_candidate_20260502T105734Z/cmg3_nonzero_runs_source_members.zip",
+    "source_archive_bytes": 349002,
+    "source_archive_sha256": "b7257f2e0ec43ca7857322c7a35207dfe058ceceacbe400f5f298cde40b73293"
+  },
+  "promotion_eligible": false,
+  "required_next_steps": [
+    "local unpack/inflate smoke to prove masks.cmg3 routes through runtime",
+    "exact CUDA diagnostic on the archive bytes",
+    "T4 promotion only if component gates are near or below C-067"
+  ],
+  "schema": "cmg3_nonzero_row_runs_candidate_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 349002,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c067_cmg3_nonzero_runs_top4_candidate_20260502T105734Z/cmg3_nonzero_runs_source_members.zip",
+    "sha256": "b7257f2e0ec43ca7857322c7a35207dfe058ceceacbe400f5f298cde40b73293"
+  }
+}

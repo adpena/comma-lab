@@ -1,0 +1,16 @@
+{
+  "cuda_available": true,
+  "device_count": 1,
+  "device_name": "Tesla T4",
+  "gpu_t4_match": true,
+  "nvidia_dali_fn_module": "nvidia.dali.fn",
+  "nvidia_smi": "/usr/bin/nvidia-smi",
+  "nvidia_smi_head": [
+    "Tesla T4, 580.126.09, 15360 MiB"
+  ],
+  "python": "/teamspace/studios/this_studio/pact/.venv/bin/python",
+  "recorded_at_utc": "2026-05-04T05:06:42Z",
+  "schema_version": 1,
+  "tool": "lightning_exact_eval_runner_preflight",
+  "torch_version": "2.11.0+cu130"
+}

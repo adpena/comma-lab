@@ -1,0 +1,446 @@
+{
+  "baseline": {
+    "archive_sha256": "1e9195cb6e0e08fc98ee393590770e2b22905a2ee2718edb8b737cada125f279",
+    "archive_size_bytes": 609963,
+    "avg_posenet_dist": 0.00357302,
+    "avg_segnet_dist": 0.00402365,
+    "component_gate_status": null,
+    "device": "cuda",
+    "file": {
+      "bytes": 4876,
+      "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_owv3_0120_stack_t4aws_20260501T151050Z/contest_auth_eval.adjudicated.json",
+      "sha256": "2f7323561073fc644756eb626780e6bd2dd1141745429ea00e047541cd5d085b"
+    },
+    "formula_score": 0.9975386616806867,
+    "formula_score_delta_vs_recorded": 7.462325912754864e-08,
+    "hardware": null,
+    "n_samples": 600,
+    "pose_score_term": 0.1890243370574276,
+    "promotion_eligible": null,
+    "rate_score_term": 0.406149324623259,
+    "score": 0.9975385870574276,
+    "seg_score_term": 0.40236500000000003
+  },
+  "blocked_points": [
+    {
+      "axis_id": "lane12_nerv_existing_archive",
+      "family": "nerv_mask_geometry_forensic",
+      "point_id": "lane12_nerv_jsonfix40",
+      "score_delta": 25.039654717496862,
+      "violations": [
+        {
+          "baseline": 0.00357302,
+          "component": "posenet",
+          "max_relative": 1.25,
+          "observed": 49.7784996,
+          "relative_to_baseline": 13931.771890445618
+        },
+        {
+          "baseline": 0.00402365,
+          "component": "segnet",
+          "max_relative": 1.25,
+          "observed": 0.03528685,
+          "relative_to_baseline": 8.769860698619413
+        }
+      ]
+    },
+    {
+      "axis_id": "crf62_class2_sparse_repair",
+      "family": "alpha_posthoc_grayscale_amr1_repair",
+      "point_id": "alpha_crf62_class2_fix1_t4",
+      "score_delta": 3.077606657703115,
+      "violations": [
+        {
+          "baseline": 0.00357302,
+          "component": "posenet",
+          "max_relative": 1.25,
+          "observed": 0.89807248,
+          "relative_to_baseline": 251.34829360037165
+        },
+        {
+          "baseline": 0.00402365,
+          "component": "segnet",
+          "max_relative": 1.25,
+          "observed": 0.00674468,
+          "relative_to_baseline": 1.6762591179650317
+        }
+      ]
+    },
+    {
+      "axis_id": "crf63_pairatom_top10",
+      "family": "alpha_posthoc_grayscale_amr1_repair",
+      "point_id": "alpha_crf63_pairatom_top10_t4",
+      "score_delta": 3.8716682432716127,
+      "violations": [
+        {
+          "baseline": 0.00357302,
+          "component": "posenet",
+          "max_relative": 1.25,
+          "observed": 1.34407389,
+          "relative_to_baseline": 376.1730664815758
+        },
+        {
+          "baseline": 0.00402365,
+          "component": "segnet",
+          "max_relative": 1.25,
+          "observed": 0.00929418,
+          "relative_to_baseline": 2.309887788450785
+        }
+      ]
+    }
+  ],
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "continuation_candidates": [],
+  "coordinate_system": {
+    "continuous_time_view": "dtheta/dt follows projected negative score gradient while lambda terms enforce rate, SegNet, PoseNet, archive custody, inflate budget, and reproducibility constraints.",
+    "coordinates": [
+      "archive_size_bytes",
+      "avg_segnet_dist",
+      "avg_posenet_dist",
+      "score",
+      "family",
+      "axis_id",
+      "epsilon"
+    ],
+    "name": "contest_component_rate_distortion_manifold_v1"
+  },
+  "curvature_estimates": [],
+  "environment": {
+    "platform": "macOS-26.4-arm64-arm-64bit",
+    "python": "/Users/adpena/Projects/pact/.venv/bin/python",
+    "python_version": "3.12.13 (main, Mar 10 2026, 18:18:07) [Clang 21.1.4 ]"
+  },
+  "evidence_grade": "derivation",
+  "geometry_basin_limits": {
+    "max_posenet_relative": 1.25,
+    "max_segnet_relative": 1.25
+  },
+  "input_evidence_required": "A_or_A++_exact_cuda_archive_jsons",
+  "input_plan": {
+    "bytes": 2473,
+    "path": "/Users/adpena/Projects/pact/experiments/results/component_manifold_probe_c044_macro_20260501/component_manifold_probe_input.json",
+    "sha256": "445235123e7520e401f313ef7c34b3fbefe2048ea9e8464bd7b0c360ceedba29"
+  },
+  "interactions": [],
+  "next_dispatch_policy": {
+    "allowed": false,
+    "blocked_family_count": 3,
+    "rule": "Only points inside the geometry basin with exact-score improvement can seed another concrete archive/eval. Collapsed points update priors but cannot drive water-filling archive policies."
+  },
+  "planner_warning": "This artifact is a derivation over exact eval JSONs. It is not a score claim and cannot promote, rank, kill, or retire a lane without a concrete archive passing exact CUDA auth eval and adjudication.",
+  "points": [
+    {
+      "axis_id": "renderer_byte_fd_m2",
+      "continuation_candidate": false,
+      "coordinate": "standalone_archive_family_point",
+      "delta_vs_baseline": {
+        "archive_bytes_delta": 76669,
+        "avg_posenet_dist_delta": -0.0004555500000000003,
+        "avg_segnet_dist_delta": -4.930000000000212e-06,
+        "component_slope_per_epsilon": 0.0064768753887917,
+        "formula_score_delta": 0.038096989299340384,
+        "formula_score_slope_per_epsilon": -0.019048494649670192,
+        "pose_score_term_delta": -0.01246075077758338,
+        "rate_score_term_delta": 0.051050740076923784,
+        "rate_slope_per_epsilon": -0.025525370038461892,
+        "recorded_minus_formula_delta": 9.923076332851721e-09,
+        "score_delta": 0.038096999222416716,
+        "score_slope_per_epsilon": -0.019048499611208358,
+        "seg_score_term_delta": -0.0004930000000000212
+      },
+      "epsilon": -2.0,
+      "exact_eval": {
+        "archive_sha256": "d561b8bf1367619e6c6e1d9b9d09213da6bdfdfd894be518866ef5119cba2927",
+        "archive_size_bytes": 686632,
+        "avg_posenet_dist": 0.00311747,
+        "avg_segnet_dist": 0.00401872,
+        "component_gate_status": null,
+        "device": "cuda",
+        "file": {
+          "bytes": 4432,
+          "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_direct_fd_m2_frontier_t4_20260501T1110Z/contest_auth_eval.adjudicated.json",
+          "sha256": "fea9006cbbc9183f523e94f3ee53f20a055f2e4192c7645ecf69caa7bc2d763e"
+        },
+        "formula_score": 1.035635650980027,
+        "formula_score_delta_vs_recorded": 6.470018276694134e-08,
+        "hardware": null,
+        "n_samples": 600,
+        "pose_score_term": 0.17656358627984423,
+        "promotion_eligible": null,
+        "rate_score_term": 0.45720006470018276,
+        "score": 1.0356355862798443,
+        "seg_score_term": 0.401872
+      },
+      "family": "direct_fd_renderer_pose_safe_but_rate_regressive",
+      "geometry_basin": {
+        "limits": {
+          "max_posenet_relative": 1.25,
+          "max_segnet_relative": 1.25
+        },
+        "passed": true,
+        "ratios": {
+          "posenet_relative": 0.872502812747,
+          "segnet_relative": 0.998774744324
+        },
+        "violations": []
+      },
+      "notes": null,
+      "point_id": "direct_fd_m2_frontier_t4",
+      "tags": [
+        "inside_basin",
+        "rate_regressive",
+        "renderer_axis"
+      ]
+    },
+    {
+      "axis_id": "lane12_nerv_existing_archive",
+      "continuation_candidate": false,
+      "coordinate": "existing_archive_family_point",
+      "delta_vs_baseline": {
+        "archive_bytes_delta": -313485,
+        "avg_posenet_dist_delta": 49.774926580000006,
+        "avg_segnet_dist_delta": 0.031263200000000005,
+        "component_slope_per_epsilon": -25.248391467496862,
+        "formula_score_delta": 25.03965467357736,
+        "formula_score_slope_per_epsilon": -25.03965467357736,
+        "pose_score_term_delta": 22.122071467496863,
+        "rate_score_term_delta": -0.20873679391950387,
+        "rate_slope_per_epsilon": 0.20873679391950387,
+        "recorded_minus_formula_delta": 4.3919502701328383e-08,
+        "score_delta": 25.039654717496862,
+        "score_slope_per_epsilon": -25.039654717496862,
+        "seg_score_term_delta": 3.12632
+      },
+      "epsilon": -1.0,
+      "exact_eval": {
+        "archive_sha256": "864549cc648f0b3a023076c11812ccd0f10b1d013ed3fd6bb24d20bbcde85c97",
+        "archive_size_bytes": 296478,
+        "avg_posenet_dist": 49.7784996,
+        "avg_segnet_dist": 0.03528685,
+        "component_gate_status": null,
+        "device": "cuda",
+        "file": {
+          "bytes": 2363,
+          "path": "/Users/adpena/Projects/pact/experiments/results/lane_12_nerv_20260430_codex_jsonfix40/adjudicated_contest_auth_eval.json",
+          "sha256": "f94f31238cf7caf2859393a6bf2a46539e71c52fe5325ba73e130d9c2331d533"
+        },
+        "formula_score": 26.037193335258046,
+        "formula_score_delta_vs_recorded": 3.070375598213104e-08,
+        "hardware": null,
+        "n_samples": 600,
+        "pose_score_term": 22.31109580455429,
+        "promotion_eligible": null,
+        "rate_score_term": 0.1974125307037551,
+        "score": 26.03719330455429,
+        "seg_score_term": 3.5286850000000003
+      },
+      "family": "nerv_mask_geometry_forensic",
+      "geometry_basin": {
+        "limits": {
+          "max_posenet_relative": 1.25,
+          "max_segnet_relative": 1.25
+        },
+        "passed": false,
+        "ratios": {
+          "posenet_relative": 13931.771890445618,
+          "segnet_relative": 8.769860698619
+        },
+        "violations": [
+          {
+            "baseline": 0.00357302,
+            "component": "posenet",
+            "max_relative": 1.25,
+            "observed": 49.7784996,
+            "relative_to_baseline": 13931.771890445618
+          },
+          {
+            "baseline": 0.00402365,
+            "component": "segnet",
+            "max_relative": 1.25,
+            "observed": 0.03528685,
+            "relative_to_baseline": 8.769860698619413
+          }
+        ]
+      },
+      "notes": null,
+      "point_id": "lane12_nerv_jsonfix40",
+      "tags": [
+        "collapsed",
+        "nerv",
+        "no_retraining_gate_clearance"
+      ]
+    },
+    {
+      "axis_id": "crf62_class2_sparse_repair",
+      "continuation_candidate": false,
+      "coordinate": "posthoc_sparse_repair",
+      "delta_vs_baseline": {
+        "archive_bytes_delta": -3391,
+        "avg_posenet_dist_delta": 0.8944994599999999,
+        "avg_segnet_dist_delta": 0.00272103,
+        "component_slope_per_epsilon": -3.079864407703115,
+        "formula_score_delta": 3.0776064799930776,
+        "formula_score_slope_per_epsilon": -3.0776064799930776,
+        "pose_score_term_delta": 2.807761407703115,
+        "rate_score_term_delta": -0.002257927710037244,
+        "rate_slope_per_epsilon": 0.002257927710037244,
+        "recorded_minus_formula_delta": 1.7771003735234103e-07,
+        "score_delta": 3.077606657703115,
+        "score_slope_per_epsilon": -3.077606657703115,
+        "seg_score_term_delta": 0.27210300000000004
+      },
+      "epsilon": -1.0,
+      "exact_eval": {
+        "archive_sha256": "3cd592c53056585944dcf270fcc39532c01750ebe7b0ded24ffe695715d907b0",
+        "archive_size_bytes": 606572,
+        "avg_posenet_dist": 0.89807248,
+        "avg_segnet_dist": 0.00674468,
+        "component_gate_status": null,
+        "device": "cuda",
+        "file": {
+          "bytes": 4976,
+          "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_alpha_repair_c044_crf62_class2_fix1_t4_20260501T1605Z/contest_auth_eval.adjudicated.json",
+          "sha256": "ce28ae817ab736a96df556d5be8b9563396ff50a6ffc3871133ff09067cb38c2"
+        },
+        "formula_score": 4.075145141673764,
+        "formula_score_delta_vs_recorded": -1.030867782247924e-07,
+        "hardware": null,
+        "n_samples": 600,
+        "pose_score_term": 2.9967857447605426,
+        "promotion_eligible": null,
+        "rate_score_term": 0.40389139691322173,
+        "score": 4.0751452447605425,
+        "seg_score_term": 0.6744680000000001
+      },
+      "family": "alpha_posthoc_grayscale_amr1_repair",
+      "geometry_basin": {
+        "limits": {
+          "max_posenet_relative": 1.25,
+          "max_segnet_relative": 1.25
+        },
+        "passed": false,
+        "ratios": {
+          "posenet_relative": 251.348293600372,
+          "segnet_relative": 1.676259117965
+        },
+        "violations": [
+          {
+            "baseline": 0.00357302,
+            "component": "posenet",
+            "max_relative": 1.25,
+            "observed": 0.89807248,
+            "relative_to_baseline": 251.34829360037165
+          },
+          {
+            "baseline": 0.00402365,
+            "component": "segnet",
+            "max_relative": 1.25,
+            "observed": 0.00674468,
+            "relative_to_baseline": 1.6762591179650317
+          }
+        ]
+      },
+      "notes": null,
+      "point_id": "alpha_crf62_class2_fix1_t4",
+      "tags": [
+        "collapsed",
+        "amr1",
+        "best_alpha_repair_t4"
+      ]
+    },
+    {
+      "axis_id": "crf63_pairatom_top10",
+      "continuation_candidate": false,
+      "coordinate": "pair_atom_waterfill_candidate",
+      "delta_vs_baseline": {
+        "archive_bytes_delta": -199024,
+        "avg_posenet_dist_delta": 1.34050087,
+        "avg_segnet_dist_delta": 0.005270530000000001,
+        "component_slope_per_epsilon": -4.004189993271613,
+        "formula_score_delta": 3.8716680809854256,
+        "formula_score_slope_per_epsilon": -3.8716680809854256,
+        "pose_score_term_delta": 3.4771369932716127,
+        "rate_score_term_delta": -0.13252191228618698,
+        "rate_slope_per_epsilon": 0.13252191228618698,
+        "recorded_minus_formula_delta": 1.6228618715530274e-07,
+        "score_delta": 3.8716682432716127,
+        "score_slope_per_epsilon": -3.8716682432716127,
+        "seg_score_term_delta": 0.527053
+      },
+      "epsilon": -1.0,
+      "exact_eval": {
+        "archive_sha256": "56c4011ad368ea9f4f603d70f6930ab25c30066ce1febf3db30ea42f6e715aa0",
+        "archive_size_bytes": 410939,
+        "avg_posenet_dist": 1.34407389,
+        "avg_segnet_dist": 0.00929418,
+        "component_gate_status": null,
+        "device": "cuda",
+        "file": {
+          "bytes": 4992,
+          "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_alpha_repair_c044_crf63_pairatom_top10_t4_20260501T1620Z/contest_auth_eval.adjudicated.json",
+          "sha256": "fe87f260e27dadea4fd1c20a0e1ea0a0704654a3abb8dd9b4f126c920aaba107"
+        },
+        "formula_score": 4.869206742666113,
+        "formula_score_delta_vs_recorded": -8.76629275836649e-08,
+        "hardware": null,
+        "n_samples": 600,
+        "pose_score_term": 3.6661613303290403,
+        "promotion_eligible": null,
+        "rate_score_term": 0.273627412337072,
+        "score": 4.86920683032904,
+        "seg_score_term": 0.9294180000000001
+      },
+      "family": "alpha_posthoc_grayscale_amr1_repair",
+      "geometry_basin": {
+        "limits": {
+          "max_posenet_relative": 1.25,
+          "max_segnet_relative": 1.25
+        },
+        "passed": false,
+        "ratios": {
+          "posenet_relative": 376.173066481576,
+          "segnet_relative": 2.309887788451
+        },
+        "violations": [
+          {
+            "baseline": 0.00357302,
+            "component": "posenet",
+            "max_relative": 1.25,
+            "observed": 1.34407389,
+            "relative_to_baseline": 376.1730664815758
+          },
+          {
+            "baseline": 0.00402365,
+            "component": "segnet",
+            "max_relative": 1.25,
+            "observed": 0.00929418,
+            "relative_to_baseline": 2.309887788450785
+          }
+        ]
+      },
+      "notes": null,
+      "point_id": "alpha_crf63_pairatom_top10_t4",
+      "tags": [
+        "collapsed",
+        "amr1",
+        "best_byte_alpha_repair_t4"
+      ]
+    }
+  ],
+  "producer": "experiments/build_component_manifold_probe_plan.py",
+  "promotion_eligible": false,
+  "recorded_at_utc": "2026-05-01T17:00:29Z",
+  "required_samples": 600,
+  "resource_diversity_hooks": [
+    "Python planners and trainers",
+    "Rust/Zig/C deterministic decoders",
+    "arithmetic or ANS/range coding atoms",
+    "NeRV/INR/HNeRV latent manifolds",
+    "SegMap/Q-FAITHFUL soft-LUT control signals",
+    "systems-control and differential-equation lambda updates",
+    "Bayesian/bandit or reinforcement learned atom selectors"
+  ],
+  "schema": "component_manifold_probe_plan_v1",
+  "score_claim": false,
+  "strict_cuda": true
+}

@@ -1,0 +1,11 @@
+{
+  "archive_bytes": 207579,
+  "archive_sha256": "e67b7c22240dbe33853c19d049b0044a5df16ce5f751ba8f1021cab8ceb03cef",
+  "head_sha": "0eabe354f09b7490fd1cbb2b05a9102ab528d4d4",
+  "merge_commit_sha": "14bcede815306415a0005c3cd98804151bce4049",
+  "merged": true,
+  "merged_at": "2026-05-04T03:36:55Z",
+  "patch_bytes": 11578397,
+  "patch_sha256": "e4b00c03252d340b703da5fc9cd21cc5e16d681c52f7a3ce82ff7d380fb087ba",
+  "state": "closed"
+}

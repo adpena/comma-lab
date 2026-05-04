@@ -1,0 +1,7 @@
+[package]
+name = "hpac-codec"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+constriction = "=0.4.2"

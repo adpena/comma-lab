@@ -1,0 +1,44 @@
+{
+  "brotli_quality": 11,
+  "evidence_grade": "empirical",
+  "formula_only_rate_delta": -0.0030922489782993635,
+  "header": {
+    "members": [
+      {
+        "bytes": 59288,
+        "codec": "raw",
+        "name": "renderer.bin",
+        "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+      },
+      {
+        "bytes": 223385,
+        "codec": "raw",
+        "name": "masks.mkv",
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      {
+        "bytes": 7200,
+        "codec": "raw",
+        "name": "optimized_poses.bin",
+        "sha256": "cc99e99c28b2ea686439b226ee504ba3a0d82fd8eb8550f4fed05d35ece5dc40"
+      }
+    ],
+    "payload_format": "public_pr64_mask_first_len_table",
+    "schema": "renderer_payload_pr64_len_table_v1",
+    "source_archive_sha256": "8e774751cbd546412d545945c4bb9360748938023e4051696212ae6f09ff5254"
+  },
+  "output_archive": "experiments/results/public_floor_qzs3_qp1_packer_20260502/pr63_qzs3_publicmask_raw/archive.zip",
+  "output_archive_bytes": 276674,
+  "output_archive_sha256": "a64ae6d44432b91a8d7a7d55bef62a8fd01e6ca6e0e50754833c6037ff2b2a3f",
+  "payload_compressed_bytes": 276574,
+  "payload_format": "public_pr64_mask_first_len_table",
+  "payload_member": "p",
+  "payload_raw_bytes": 289885,
+  "pose_codec": "raw",
+  "pose_residual_topk": 0,
+  "savings_bytes": 4644,
+  "score_claim": false,
+  "source_archive": "experiments/results/public_floor_qzs3_qp1_packer_20260502/pr63_qzs3_runtime/archive.zip",
+  "source_archive_bytes": 281318,
+  "source_archive_sha256": "8e774751cbd546412d545945c4bb9360748938023e4051696212ae6f09ff5254"
+}

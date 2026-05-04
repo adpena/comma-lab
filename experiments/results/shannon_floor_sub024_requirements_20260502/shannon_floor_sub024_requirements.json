@@ -1,0 +1,219 @@
+{
+  "constants": {
+    "original_video_bytes": 37545489,
+    "rate_weight": 25.0
+  },
+  "decision": {
+    "nonnegotiable_next_lanes": [
+      {
+        "lane": "geometry_preserving_mask_topology_or_learned_decoder",
+        "minimum_evidence": "exact CUDA archive eval after deterministic archive build",
+        "reason": "masks.mkv is the only single stream large enough to carry sub-0.24 alone"
+      },
+      {
+        "lane": "real_non_surrogate_trained_renderer_self_compression",
+        "minimum_evidence": "non-surrogate export preflight plus exact CUDA archive eval",
+        "reason": "renderer-to-11KB can buy about 45KB but cannot reach sub-0.24 alone"
+      },
+      {
+        "lane": "stacked_mask_renderer_distortion_waterfill",
+        "minimum_evidence": "stacked archive exact eval; additive deltas are not score claims",
+        "reason": "sub-0.24 likely needs mask bytes plus renderer bytes plus small positive atoms"
+      }
+    ],
+    "sub024_bytes_to_remove_if_distortion_unchanged": 113564,
+    "sub024_distortion_reduction_needed_at_current_bytes": 0.07561709566216976,
+    "verdict": "sub_024_requires_large_representation_change",
+    "why": "At C067 distortion, sub-0.24 requires roughly six figures of archive-byte removal; at C067 bytes, it requires a large SegNet/PoseNet distortion reduction. Pose/SJ-KL micro-lanes are useful polish only unless fused into a bigger payload."
+  },
+  "evidence_grade": "derivation_plus_exact_frontier_inputs",
+  "frontier": {
+    "archive_bytes": 276214,
+    "archive_sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+    "distortion_score": 0.13169753078448232,
+    "gpu_model": "Tesla T4",
+    "gpu_t4_match": true,
+    "n_samples": 600,
+    "no_distortion_floor_at_current_bytes": 0.18391956487768743,
+    "pose_dist": 0.00049637,
+    "pose_score": 0.07045353078448233,
+    "rate_score": 0.18391956487768743,
+    "reported_rate_score": 0.1839195,
+    "reported_rate_score_delta": 6.487768741680888e-08,
+    "score": 0.31561703078448233,
+    "seg_dist": 0.00061244,
+    "seg_score": 0.061244
+  },
+  "inputs": {
+    "byte_profile": "/Users/adpena/Projects/pact/experiments/results/c067_archive_byte_accounting_20260502/archive_byte_accounting.json",
+    "byte_profile_sha256": "bd2ced8316d0f2b5976d4c2df8ccc8dbeafd6d7bcc59d83d88d8c71677f8343b",
+    "eval_json": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/contest_auth_eval.adjudicated.json",
+    "eval_json_sha256": "8cace9e008a9559a2e2e5710742103ef1e4e9c4eb387ce879efd7173ce0da969"
+  },
+  "schema": "shannon_floor_sub024_requirements_v1",
+  "score_truth_boundary": "derived from exact CUDA eval inputs; this planner itself is not a score claim",
+  "stream_budget_scenarios": [
+    {
+      "required_mask_savings_bytes": 23455,
+      "required_mask_savings_fraction": 0.10687012466282715,
+      "scenario": "mask_only_at_current_distortion",
+      "stream_can_cover": true,
+      "target_mask_bytes": 196017,
+      "target_score": 0.3
+    },
+    {
+      "required_renderer_savings_bytes": 23455,
+      "required_renderer_savings_fraction": 0.41910122397927274,
+      "scenario": "renderer_only_at_current_distortion",
+      "stream_can_cover": true,
+      "target_renderer_bytes": 32510,
+      "target_score": 0.3
+    },
+    {
+      "remaining_mask_savings_bytes": 0,
+      "remaining_mask_savings_fraction": 0.0,
+      "renderer_savings_bytes": 35965,
+      "renderer_target_bytes": 20000,
+      "scenario": "renderer_to_20000_then_mask",
+      "stream_can_cover": true,
+      "target_mask_bytes": 219472,
+      "target_score": 0.3
+    },
+    {
+      "remaining_mask_savings_bytes": 0,
+      "remaining_mask_savings_fraction": 0.0,
+      "renderer_savings_bytes": 44965,
+      "renderer_target_bytes": 11000,
+      "scenario": "renderer_to_11000_then_mask",
+      "stream_can_cover": true,
+      "target_mask_bytes": 219472,
+      "target_score": 0.3
+    },
+    {
+      "can_matter_alone": false,
+      "pose_stream_bytes": 677,
+      "pose_stream_score_span": 0.00045078651126371003,
+      "scenario": "pose_stream_upper_bound",
+      "target_score": 0.3
+    },
+    {
+      "required_mask_savings_bytes": 113564,
+      "required_mask_savings_fraction": 0.5174418604651163,
+      "scenario": "mask_only_at_current_distortion",
+      "stream_can_cover": true,
+      "target_mask_bytes": 105908,
+      "target_score": 0.24
+    },
+    {
+      "required_renderer_savings_bytes": 113564,
+      "required_renderer_savings_fraction": 2.0291968194407217,
+      "scenario": "renderer_only_at_current_distortion",
+      "stream_can_cover": false,
+      "target_renderer_bytes": 0,
+      "target_score": 0.24
+    },
+    {
+      "remaining_mask_savings_bytes": 77599,
+      "remaining_mask_savings_fraction": 0.35357129838886053,
+      "renderer_savings_bytes": 35965,
+      "renderer_target_bytes": 20000,
+      "scenario": "renderer_to_20000_then_mask",
+      "stream_can_cover": true,
+      "target_mask_bytes": 141873,
+      "target_score": 0.24
+    },
+    {
+      "remaining_mask_savings_bytes": 68599,
+      "remaining_mask_savings_fraction": 0.31256378945833635,
+      "renderer_savings_bytes": 44965,
+      "renderer_target_bytes": 11000,
+      "scenario": "renderer_to_11000_then_mask",
+      "stream_can_cover": true,
+      "target_mask_bytes": 150873,
+      "target_score": 0.24
+    },
+    {
+      "can_matter_alone": false,
+      "pose_stream_bytes": 677,
+      "pose_stream_score_span": 0.00045078651126371003,
+      "scenario": "pose_stream_upper_bound",
+      "target_score": 0.24
+    },
+    {
+      "required_mask_savings_bytes": 173637,
+      "required_mask_savings_fraction": 0.7911578697966027,
+      "scenario": "mask_only_at_current_distortion",
+      "stream_can_cover": true,
+      "target_mask_bytes": 45835,
+      "target_score": 0.2
+    },
+    {
+      "required_renderer_savings_bytes": 173637,
+      "required_renderer_savings_fraction": 3.102599839185205,
+      "scenario": "renderer_only_at_current_distortion",
+      "stream_can_cover": false,
+      "target_renderer_bytes": 0,
+      "target_score": 0.2
+    },
+    {
+      "remaining_mask_savings_bytes": 137672,
+      "remaining_mask_savings_fraction": 0.627287307720347,
+      "renderer_savings_bytes": 35965,
+      "renderer_target_bytes": 20000,
+      "scenario": "renderer_to_20000_then_mask",
+      "stream_can_cover": true,
+      "target_mask_bytes": 81800,
+      "target_score": 0.2
+    },
+    {
+      "remaining_mask_savings_bytes": 128672,
+      "remaining_mask_savings_fraction": 0.5862797987898228,
+      "renderer_savings_bytes": 44965,
+      "renderer_target_bytes": 11000,
+      "scenario": "renderer_to_11000_then_mask",
+      "stream_can_cover": true,
+      "target_mask_bytes": 90800,
+      "target_score": 0.2
+    },
+    {
+      "can_matter_alone": false,
+      "pose_stream_bytes": 677,
+      "pose_stream_score_span": 0.00045078651126371003,
+      "scenario": "pose_stream_upper_bound",
+      "target_score": 0.2
+    }
+  ],
+  "target_requirements": [
+    {
+      "bytes_to_remove_if_distortion_unchanged": 23455,
+      "current_gap": 0.015617030784482344,
+      "distortion_reduction_needed_at_current_bytes": 0.015617095662169761,
+      "feasible_by_distortion_only_at_current_bytes": true,
+      "feasible_by_rate_only_at_current_distortion": true,
+      "max_archive_bytes_if_distortion_unchanged": 252759,
+      "required_distortion_score_at_current_bytes": 0.11608043512231256,
+      "target_score": 0.3
+    },
+    {
+      "bytes_to_remove_if_distortion_unchanged": 113564,
+      "current_gap": 0.07561703078448234,
+      "distortion_reduction_needed_at_current_bytes": 0.07561709566216976,
+      "feasible_by_distortion_only_at_current_bytes": true,
+      "feasible_by_rate_only_at_current_distortion": true,
+      "max_archive_bytes_if_distortion_unchanged": 162650,
+      "required_distortion_score_at_current_bytes": 0.05608043512231256,
+      "target_score": 0.24
+    },
+    {
+      "bytes_to_remove_if_distortion_unchanged": 173637,
+      "current_gap": 0.11561703078448232,
+      "distortion_reduction_needed_at_current_bytes": 0.11561709566216974,
+      "feasible_by_distortion_only_at_current_bytes": true,
+      "feasible_by_rate_only_at_current_distortion": true,
+      "max_archive_bytes_if_distortion_unchanged": 102577,
+      "required_distortion_score_at_current_bytes": 0.01608043512231258,
+      "target_score": 0.2
+    }
+  ],
+  "tool": "experiments/plan_shannon_floor_sub024_requirements.py"
+}

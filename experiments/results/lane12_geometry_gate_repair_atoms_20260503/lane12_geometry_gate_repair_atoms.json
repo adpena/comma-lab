@@ -1,0 +1,4289 @@
+{
+  "atom_count": 62,
+  "atoms": [
+    {
+      "atom_id": "lane12_region_0001_f0267_c0028",
+      "atom_kind": "residual_region_patch",
+      "cost_model": {
+        "area_px": 6823,
+        "changed_pixels": 6835,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 1246,
+        "estimated_payload_bytes": 1228,
+        "estimated_rate_score_cost": 0.0008296602555902255,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 152
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 6823,
+        "boundary_band_pixels": 1102,
+        "confusion_pairs": [
+          {
+            "baseline_class": 3,
+            "baseline_name": "sky_or_movable",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 3731
+          },
+          {
+            "baseline_class": 3,
+            "baseline_name": "sky_or_movable",
+            "candidate_class": 2,
+            "candidate_name": "vehicle_undrivable",
+            "pixels": 2924
+          },
+          {
+            "baseline_class": 1,
+            "baseline_name": "lane_marking",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 87
+          },
+          {
+            "baseline_class": 2,
+            "baseline_name": "vehicle_undrivable",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 79
+          },
+          {
+            "baseline_class": 4,
+            "baseline_name": "background",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 2
+          }
+        ],
+        "critical_class_pixels": 3090,
+        "dominant_baseline_class": 3,
+        "dominant_candidate_class": 0,
+        "temporal_transition_disagreement_pixels": 6818
+      },
+      "identity": {
+        "box_xyxy": [
+          0,
+          173,
+          131,
+          257
+        ],
+        "frame": 267,
+        "priority_bucket": 0,
+        "priority_label": "lower_field_lane_marking",
+        "rank": 1,
+        "residual_region_id": "f0267_c0028",
+        "suggested_repair": "lane_lower_field_residual"
+      },
+      "priority": {
+        "planning_score_per_byte": 25.195826645264848,
+        "planning_signal": 31394.0,
+        "score_proxy": "geometry_pixels_weighted_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "1": 89,
+          "2": 79,
+          "3": 6665,
+          "4": 2
+        },
+        "changed_pixels": 6835,
+        "crop_shape": [
+          84,
+          131
+        ],
+        "row_run_count": 152,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_region_0003_f1198_c0087",
+      "atom_kind": "residual_region_patch",
+      "cost_model": {
+        "area_px": 628,
+        "changed_pixels": 678,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 566,
+        "estimated_payload_bytes": 548,
+        "estimated_rate_score_cost": 0.000376876167467149,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 67
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 628,
+        "boundary_band_pixels": 616,
+        "confusion_pairs": [
+          {
+            "baseline_class": 1,
+            "baseline_name": "lane_marking",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 566
+          },
+          {
+            "baseline_class": 0,
+            "baseline_name": "road",
+            "candidate_class": 4,
+            "candidate_name": "background",
+            "pixels": 33
+          },
+          {
+            "baseline_class": 1,
+            "baseline_name": "lane_marking",
+            "candidate_class": 4,
+            "candidate_name": "background",
+            "pixels": 15
+          },
+          {
+            "baseline_class": 0,
+            "baseline_name": "road",
+            "candidate_class": 1,
+            "candidate_name": "lane_marking",
+            "pixels": 14
+          }
+        ],
+        "critical_class_pixels": 595,
+        "dominant_baseline_class": 1,
+        "dominant_candidate_class": 0,
+        "temporal_transition_disagreement_pixels": 315
+      },
+      "identity": {
+        "box_xyxy": [
+          338,
+          230,
+          443,
+          288
+        ],
+        "frame": 1198,
+        "priority_bucket": 0,
+        "priority_label": "lower_field_lane_marking",
+        "rank": 3,
+        "residual_region_id": "f1198_c0087",
+        "suggested_repair": "lane_lower_field_residual"
+      },
+      "priority": {
+        "planning_score_per_byte": 7.097173144876325,
+        "planning_signal": 4017.0,
+        "score_proxy": "geometry_pixels_weighted_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "0": 97,
+          "1": 581
+        },
+        "changed_pixels": 678,
+        "crop_shape": [
+          58,
+          105
+        ],
+        "row_run_count": 67,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_region_0011_f0305_c0145",
+      "atom_kind": "residual_region_patch",
+      "cost_model": {
+        "area_px": 592,
+        "changed_pixels": 613,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 534,
+        "estimated_payload_bytes": 516,
+        "estimated_rate_score_cost": 0.0003555686809672395,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 63
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 592,
+        "boundary_band_pixels": 592,
+        "confusion_pairs": [
+          {
+            "baseline_class": 1,
+            "baseline_name": "lane_marking",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 469
+          },
+          {
+            "baseline_class": 0,
+            "baseline_name": "road",
+            "candidate_class": 4,
+            "candidate_name": "background",
+            "pixels": 110
+          },
+          {
+            "baseline_class": 1,
+            "baseline_name": "lane_marking",
+            "candidate_class": 4,
+            "candidate_name": "background",
+            "pixels": 12
+          },
+          {
+            "baseline_class": 2,
+            "baseline_name": "vehicle_undrivable",
+            "candidate_class": 4,
+            "candidate_name": "background",
+            "pixels": 1
+          }
+        ],
+        "critical_class_pixels": 482,
+        "dominant_baseline_class": 1,
+        "dominant_candidate_class": 0,
+        "temporal_transition_disagreement_pixels": 377
+      },
+      "identity": {
+        "box_xyxy": [
+          356,
+          232,
+          496,
+          289
+        ],
+        "frame": 305,
+        "priority_bucket": 0,
+        "priority_label": "lower_field_lane_marking",
+        "rank": 11,
+        "residual_region_id": "f0305_c0145",
+        "suggested_repair": "lane_lower_field_residual"
+      },
+      "priority": {
+        "planning_score_per_byte": 6.930711610486892,
+        "planning_signal": 3701.0,
+        "score_proxy": "geometry_pixels_weighted_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "0": 110,
+          "1": 481,
+          "2": 1,
+          "4": 21
+        },
+        "changed_pixels": 613,
+        "crop_shape": [
+          57,
+          140
+        ],
+        "row_run_count": 63,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_region_0004_f1134_c0131",
+      "atom_kind": "residual_region_patch",
+      "cost_model": {
+        "area_px": 593,
+        "changed_pixels": 623,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 606,
+        "estimated_payload_bytes": 588,
+        "estimated_rate_score_cost": 0.0004035105255920358,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 72
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 593,
+        "boundary_band_pixels": 566,
+        "confusion_pairs": [
+          {
+            "baseline_class": 1,
+            "baseline_name": "lane_marking",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 579
+          },
+          {
+            "baseline_class": 0,
+            "baseline_name": "road",
+            "candidate_class": 4,
+            "candidate_name": "background",
+            "pixels": 12
+          },
+          {
+            "baseline_class": 1,
+            "baseline_name": "lane_marking",
+            "candidate_class": 4,
+            "candidate_name": "background",
+            "pixels": 2
+          }
+        ],
+        "critical_class_pixels": 581,
+        "dominant_baseline_class": 1,
+        "dominant_candidate_class": 0,
+        "temporal_transition_disagreement_pixels": 485
+      },
+      "identity": {
+        "box_xyxy": [
+          359,
+          236,
+          452,
+          287
+        ],
+        "frame": 1134,
+        "priority_bucket": 0,
+        "priority_label": "lower_field_lane_marking",
+        "rank": 4,
+        "residual_region_id": "f1134_c0131",
+        "suggested_repair": "lane_lower_field_residual"
+      },
+      "priority": {
+        "planning_score_per_byte": 6.905940594059406,
+        "planning_signal": 4185.0,
+        "score_proxy": "geometry_pixels_weighted_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "0": 38,
+          "1": 583,
+          "3": 2
+        },
+        "changed_pixels": 623,
+        "crop_shape": [
+          51,
+          93
+        ],
+        "row_run_count": 72,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_region_0008_f1197_c0092",
+      "atom_kind": "residual_region_patch",
+      "cost_model": {
+        "area_px": 560,
+        "changed_pixels": 588,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 518,
+        "estimated_payload_bytes": 500,
+        "estimated_rate_score_cost": 0.0003449149377172848,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 61
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 560,
+        "boundary_band_pixels": 543,
+        "confusion_pairs": [
+          {
+            "baseline_class": 1,
+            "baseline_name": "lane_marking",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 514
+          },
+          {
+            "baseline_class": 0,
+            "baseline_name": "road",
+            "candidate_class": 4,
+            "candidate_name": "background",
+            "pixels": 30
+          },
+          {
+            "baseline_class": 1,
+            "baseline_name": "lane_marking",
+            "candidate_class": 4,
+            "candidate_name": "background",
+            "pixels": 16
+          }
+        ],
+        "critical_class_pixels": 530,
+        "dominant_baseline_class": 1,
+        "dominant_candidate_class": 0,
+        "temporal_transition_disagreement_pixels": 276
+      },
+      "identity": {
+        "box_xyxy": [
+          356,
+          241,
+          433,
+          288
+        ],
+        "frame": 1197,
+        "priority_bucket": 0,
+        "priority_label": "lower_field_lane_marking",
+        "rank": 8,
+        "residual_region_id": "f1197_c0092",
+        "suggested_repair": "lane_lower_field_residual"
+      },
+      "priority": {
+        "planning_score_per_byte": 6.8426640926640925,
+        "planning_signal": 3544.5,
+        "score_proxy": "geometry_pixels_weighted_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "0": 50,
+          "1": 538
+        },
+        "changed_pixels": 588,
+        "crop_shape": [
+          47,
+          77
+        ],
+        "row_run_count": 61,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_critical_box_0007_f0159_c1",
+      "atom_kind": "critical_component_box_patch",
+      "cost_model": {
+        "area_px": 432,
+        "changed_pixels": 432,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 438,
+        "estimated_payload_bytes": 420,
+        "estimated_rate_score_cost": 0.00029164622146751106,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 51
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 432,
+        "box_iou": 0.0,
+        "centroid_jump_px": null,
+        "mask_iou": 0.0
+      },
+      "identity": {
+        "box_xyxy": [
+          400,
+          235,
+          512,
+          285
+        ],
+        "class_id": 1,
+        "class_name": "lane_marking",
+        "failure_type": "missing_component",
+        "frame": 159,
+        "pose_sensitive": true,
+        "rank": 7
+      },
+      "priority": {
+        "planning_score_per_byte": 6.164383561643835,
+        "planning_signal": 2700.0,
+        "score_proxy": "critical_component_geometry_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "1": 432
+        },
+        "changed_pixels": 432,
+        "crop_shape": [
+          50,
+          112
+        ],
+        "row_run_count": 51,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_region_0005_f1193_c0082",
+      "atom_kind": "residual_region_patch",
+      "cost_model": {
+        "area_px": 576,
+        "changed_pixels": 609,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 630,
+        "estimated_payload_bytes": 612,
+        "estimated_rate_score_cost": 0.00041949114046696794,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 75
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 576,
+        "boundary_band_pixels": 501,
+        "confusion_pairs": [
+          {
+            "baseline_class": 1,
+            "baseline_name": "lane_marking",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 462
+          },
+          {
+            "baseline_class": 0,
+            "baseline_name": "road",
+            "candidate_class": 1,
+            "candidate_name": "lane_marking",
+            "pixels": 78
+          },
+          {
+            "baseline_class": 0,
+            "baseline_name": "road",
+            "candidate_class": 4,
+            "candidate_name": "background",
+            "pixels": 18
+          },
+          {
+            "baseline_class": 1,
+            "baseline_name": "lane_marking",
+            "candidate_class": 4,
+            "candidate_name": "background",
+            "pixels": 18
+          }
+        ],
+        "critical_class_pixels": 558,
+        "dominant_baseline_class": 1,
+        "dominant_candidate_class": 0,
+        "temporal_transition_disagreement_pixels": 405
+      },
+      "identity": {
+        "box_xyxy": [
+          337,
+          229,
+          441,
+          288
+        ],
+        "frame": 1193,
+        "priority_bucket": 0,
+        "priority_label": "lower_field_lane_marking",
+        "rank": 5,
+        "residual_region_id": "f1193_c0082",
+        "suggested_repair": "lane_lower_field_residual"
+      },
+      "priority": {
+        "planning_score_per_byte": 6.102380952380952,
+        "planning_signal": 3844.5,
+        "score_proxy": "geometry_pixels_weighted_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "0": 124,
+          "1": 485
+        },
+        "changed_pixels": 609,
+        "crop_shape": [
+          59,
+          104
+        ],
+        "row_run_count": 75,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_critical_box_0020_f0150_c1",
+      "atom_kind": "critical_component_box_patch",
+      "cost_model": {
+        "area_px": 408,
+        "changed_pixels": 408,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 422,
+        "estimated_payload_bytes": 404,
+        "estimated_rate_score_cost": 0.0002809924782175563,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 49
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 408,
+        "box_iou": 0.0,
+        "centroid_jump_px": null,
+        "mask_iou": 0.0
+      },
+      "identity": {
+        "box_xyxy": [
+          251,
+          234,
+          263,
+          282
+        ],
+        "class_id": 1,
+        "class_name": "lane_marking",
+        "failure_type": "missing_component",
+        "frame": 150,
+        "pose_sensitive": true,
+        "rank": 20
+      },
+      "priority": {
+        "planning_score_per_byte": 6.042654028436019,
+        "planning_signal": 2550.0,
+        "score_proxy": "critical_component_geometry_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "1": 408
+        },
+        "changed_pixels": 408,
+        "crop_shape": [
+          48,
+          12
+        ],
+        "row_run_count": 49,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_region_0018_f0258_c0111",
+      "atom_kind": "residual_region_patch",
+      "cost_model": {
+        "area_px": 451,
+        "changed_pixels": 485,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 526,
+        "estimated_payload_bytes": 508,
+        "estimated_rate_score_cost": 0.00035024180934226215,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 62
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 451,
+        "boundary_band_pixels": 451,
+        "confusion_pairs": [
+          {
+            "baseline_class": 1,
+            "baseline_name": "lane_marking",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 451
+          }
+        ],
+        "critical_class_pixels": 451,
+        "dominant_baseline_class": 1,
+        "dominant_candidate_class": 0,
+        "temporal_transition_disagreement_pixels": 297
+      },
+      "identity": {
+        "box_xyxy": [
+          336,
+          232,
+          408,
+          287
+        ],
+        "frame": 258,
+        "priority_bucket": 0,
+        "priority_label": "lower_field_lane_marking",
+        "rank": 18,
+        "residual_region_id": "f0258_c0111",
+        "suggested_repair": "lane_lower_field_residual"
+      },
+      "priority": {
+        "planning_score_per_byte": 5.909695817490494,
+        "planning_signal": 3108.5,
+        "score_proxy": "geometry_pixels_weighted_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "0": 33,
+          "1": 452
+        },
+        "changed_pixels": 485,
+        "crop_shape": [
+          55,
+          72
+        ],
+        "row_run_count": 62,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_critical_box_0002_f0305_c1",
+      "atom_kind": "critical_component_box_patch",
+      "cost_model": {
+        "area_px": 480,
+        "changed_pixels": 531,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 518,
+        "estimated_payload_bytes": 500,
+        "estimated_rate_score_cost": 0.0003449149377172848,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 61
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 480,
+        "box_iou": 0.0,
+        "centroid_jump_px": null,
+        "mask_iou": 0.0
+      },
+      "identity": {
+        "box_xyxy": [
+          356,
+          232,
+          441,
+          288
+        ],
+        "class_id": 1,
+        "class_name": "lane_marking",
+        "failure_type": "missing_component",
+        "frame": 305,
+        "pose_sensitive": true,
+        "rank": 2
+      },
+      "priority": {
+        "planning_score_per_byte": 5.88996138996139,
+        "planning_signal": 3051.0,
+        "score_proxy": "critical_component_geometry_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "0": 29,
+          "1": 480,
+          "2": 1,
+          "4": 21
+        },
+        "changed_pixels": 531,
+        "crop_shape": [
+          56,
+          85
+        ],
+        "row_run_count": 61,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_region_0010_f0221_c0171",
+      "atom_kind": "residual_region_patch",
+      "cost_model": {
+        "area_px": 510,
+        "changed_pixels": 526,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 566,
+        "estimated_payload_bytes": 548,
+        "estimated_rate_score_cost": 0.000376876167467149,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 67
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 510,
+        "boundary_band_pixels": 510,
+        "confusion_pairs": [
+          {
+            "baseline_class": 1,
+            "baseline_name": "lane_marking",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 486
+          },
+          {
+            "baseline_class": 4,
+            "baseline_name": "background",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 24
+          }
+        ],
+        "critical_class_pixels": 486,
+        "dominant_baseline_class": 1,
+        "dominant_candidate_class": 0,
+        "temporal_transition_disagreement_pixels": 280
+      },
+      "identity": {
+        "box_xyxy": [
+          330,
+          226,
+          428,
+          288
+        ],
+        "frame": 221,
+        "priority_bucket": 0,
+        "priority_label": "lower_field_lane_marking",
+        "rank": 10,
+        "residual_region_id": "f0221_c0171",
+        "suggested_repair": "lane_lower_field_residual"
+      },
+      "priority": {
+        "planning_score_per_byte": 5.8462897526501765,
+        "planning_signal": 3309.0,
+        "score_proxy": "geometry_pixels_weighted_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "1": 486,
+          "4": 40
+        },
+        "changed_pixels": 526,
+        "crop_shape": [
+          62,
+          98
+        ],
+        "row_run_count": 67,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_critical_box_0023_f0357_c1",
+      "atom_kind": "critical_component_box_patch",
+      "cost_model": {
+        "area_px": 401,
+        "changed_pixels": 448,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 438,
+        "estimated_payload_bytes": 420,
+        "estimated_rate_score_cost": 0.00029164622146751106,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 51
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 401,
+        "box_iou": 0.0,
+        "centroid_jump_px": null,
+        "mask_iou": 0.0
+      },
+      "identity": {
+        "box_xyxy": [
+          350,
+          239,
+          426,
+          287
+        ],
+        "class_id": 1,
+        "class_name": "lane_marking",
+        "failure_type": "missing_component",
+        "frame": 357,
+        "pose_sensitive": true,
+        "rank": 23
+      },
+      "priority": {
+        "planning_score_per_byte": 5.829337899543379,
+        "planning_signal": 2553.25,
+        "score_proxy": "critical_component_geometry_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "1": 403,
+          "2": 2,
+          "4": 43
+        },
+        "changed_pixels": 448,
+        "crop_shape": [
+          48,
+          76
+        ],
+        "row_run_count": 51,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_region_0014_f0203_c0177",
+      "atom_kind": "residual_region_patch",
+      "cost_model": {
+        "area_px": 490,
+        "changed_pixels": 539,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 566,
+        "estimated_payload_bytes": 548,
+        "estimated_rate_score_cost": 0.000376876167467149,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 67
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 490,
+        "boundary_band_pixels": 490,
+        "confusion_pairs": [
+          {
+            "baseline_class": 1,
+            "baseline_name": "lane_marking",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 468
+          },
+          {
+            "baseline_class": 4,
+            "baseline_name": "background",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 22
+          }
+        ],
+        "critical_class_pixels": 468,
+        "dominant_baseline_class": 1,
+        "dominant_candidate_class": 0,
+        "temporal_transition_disagreement_pixels": 284
+      },
+      "identity": {
+        "box_xyxy": [
+          344,
+          227,
+          453,
+          287
+        ],
+        "frame": 203,
+        "priority_bucket": 0,
+        "priority_label": "lower_field_lane_marking",
+        "rank": 14,
+        "residual_region_id": "f0203_c0177",
+        "suggested_repair": "lane_lower_field_residual"
+      },
+      "priority": {
+        "planning_score_per_byte": 5.734982332155477,
+        "planning_signal": 3246.0,
+        "score_proxy": "geometry_pixels_weighted_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "1": 472,
+          "4": 67
+        },
+        "changed_pixels": 539,
+        "crop_shape": [
+          60,
+          109
+        ],
+        "row_run_count": 67,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_critical_box_0005_f0168_c1",
+      "atom_kind": "critical_component_box_patch",
+      "cost_model": {
+        "area_px": 435,
+        "changed_pixels": 447,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 478,
+        "estimated_payload_bytes": 460,
+        "estimated_rate_score_cost": 0.0003182805795923979,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 56
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 435,
+        "box_iou": 0.0,
+        "centroid_jump_px": null,
+        "mask_iou": 0.0
+      },
+      "identity": {
+        "box_xyxy": [
+          378,
+          234,
+          488,
+          286
+        ],
+        "class_id": 1,
+        "class_name": "lane_marking",
+        "failure_type": "missing_component",
+        "frame": 168,
+        "pose_sensitive": true,
+        "rank": 5
+      },
+      "priority": {
+        "planning_score_per_byte": 5.712866108786611,
+        "planning_signal": 2730.75,
+        "score_proxy": "critical_component_geometry_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "1": 436,
+          "2": 1,
+          "3": 4,
+          "4": 6
+        },
+        "changed_pixels": 447,
+        "crop_shape": [
+          52,
+          110
+        ],
+        "row_run_count": 56,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_critical_box_0031_f0149_c1",
+      "atom_kind": "critical_component_box_patch",
+      "cost_model": {
+        "area_px": 391,
+        "changed_pixels": 405,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 438,
+        "estimated_payload_bytes": 420,
+        "estimated_rate_score_cost": 0.00029164622146751106,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 51
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 391,
+        "box_iou": 0.0,
+        "centroid_jump_px": null,
+        "mask_iou": 0.0
+      },
+      "identity": {
+        "box_xyxy": [
+          384,
+          223,
+          512,
+          271
+        ],
+        "class_id": 1,
+        "class_name": "lane_marking",
+        "failure_type": "missing_component",
+        "frame": 149,
+        "pose_sensitive": true,
+        "rank": 31
+      },
+      "priority": {
+        "planning_score_per_byte": 5.611301369863014,
+        "planning_signal": 2457.75,
+        "score_proxy": "critical_component_geometry_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "1": 405
+        },
+        "changed_pixels": 405,
+        "crop_shape": [
+          48,
+          128
+        ],
+        "row_run_count": 51,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_critical_box_0010_f0177_c1",
+      "atom_kind": "critical_component_box_patch",
+      "cost_model": {
+        "area_px": 428,
+        "changed_pixels": 438,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 486,
+        "estimated_payload_bytes": 468,
+        "estimated_rate_score_cost": 0.00032360745121737527,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 57
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 428,
+        "box_iou": 0.0,
+        "centroid_jump_px": null,
+        "mask_iou": 0.0
+      },
+      "identity": {
+        "box_xyxy": [
+          366,
+          235,
+          462,
+          287
+        ],
+        "class_id": 1,
+        "class_name": "lane_marking",
+        "failure_type": "missing_component",
+        "frame": 177,
+        "pose_sensitive": true,
+        "rank": 10
+      },
+      "priority": {
+        "planning_score_per_byte": 5.5246913580246915,
+        "planning_signal": 2685.0,
+        "score_proxy": "critical_component_geometry_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "1": 428,
+          "3": 1,
+          "4": 9
+        },
+        "changed_pixels": 438,
+        "crop_shape": [
+          52,
+          96
+        ],
+        "row_run_count": 57,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_region_0002_f0716_c0040",
+      "atom_kind": "residual_region_patch",
+      "cost_model": {
+        "area_px": 844,
+        "changed_pixels": 987,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 1046,
+        "estimated_payload_bytes": 1028,
+        "estimated_rate_score_cost": 0.0006964884649657912,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 127
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 844,
+        "boundary_band_pixels": 556,
+        "confusion_pairs": [
+          {
+            "baseline_class": 2,
+            "baseline_name": "vehicle_undrivable",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 810
+          },
+          {
+            "baseline_class": 1,
+            "baseline_name": "lane_marking",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 34
+          }
+        ],
+        "critical_class_pixels": 844,
+        "dominant_baseline_class": 2,
+        "dominant_candidate_class": 0,
+        "temporal_transition_disagreement_pixels": 693
+      },
+      "identity": {
+        "box_xyxy": [
+          342,
+          190,
+          512,
+          233
+        ],
+        "frame": 716,
+        "priority_bucket": 0,
+        "priority_label": "lower_field_lane_marking",
+        "rank": 2,
+        "residual_region_id": "f0716_c0040",
+        "suggested_repair": "lane_lower_field_residual"
+      },
+      "priority": {
+        "planning_score_per_byte": 5.486615678776291,
+        "planning_signal": 5739.0,
+        "score_proxy": "geometry_pixels_weighted_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "0": 86,
+          "1": 81,
+          "2": 820
+        },
+        "changed_pixels": 987,
+        "crop_shape": [
+          43,
+          170
+        ],
+        "row_run_count": 127,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_critical_box_0001_f0221_c1",
+      "atom_kind": "critical_component_box_patch",
+      "cost_model": {
+        "area_px": 486,
+        "changed_pixels": 502,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 558,
+        "estimated_payload_bytes": 540,
+        "estimated_rate_score_cost": 0.0003715492958421716,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 66
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 486,
+        "box_iou": 0.0,
+        "centroid_jump_px": null,
+        "mask_iou": 0.0
+      },
+      "identity": {
+        "box_xyxy": [
+          330,
+          226,
+          424,
+          287
+        ],
+        "class_id": 1,
+        "class_name": "lane_marking",
+        "failure_type": "missing_component",
+        "frame": 221,
+        "pose_sensitive": true,
+        "rank": 1
+      },
+      "priority": {
+        "planning_score_per_byte": 5.472222222222222,
+        "planning_signal": 3053.5,
+        "score_proxy": "critical_component_geometry_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "1": 486,
+          "4": 16
+        },
+        "changed_pixels": 502,
+        "crop_shape": [
+          61,
+          94
+        ],
+        "row_run_count": 66,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_critical_box_0011_f0305_c1",
+      "atom_kind": "critical_component_box_patch",
+      "cost_model": {
+        "area_px": 424,
+        "changed_pixels": 432,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 486,
+        "estimated_payload_bytes": 468,
+        "estimated_rate_score_cost": 0.00032360745121737527,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 57
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 424,
+        "box_iou": 0.0,
+        "centroid_jump_px": null,
+        "mask_iou": 0.0
+      },
+      "identity": {
+        "box_xyxy": [
+          128,
+          234,
+          192,
+          289
+        ],
+        "class_id": 1,
+        "class_name": "lane_marking",
+        "failure_type": "missing_component",
+        "frame": 305,
+        "pose_sensitive": true,
+        "rank": 11
+      },
+      "priority": {
+        "planning_score_per_byte": 5.469135802469136,
+        "planning_signal": 2658.0,
+        "score_proxy": "critical_component_geometry_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "1": 424,
+          "4": 8
+        },
+        "changed_pixels": 432,
+        "crop_shape": [
+          55,
+          64
+        ],
+        "row_run_count": 57,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_critical_box_0028_f0141_c1",
+      "atom_kind": "critical_component_box_patch",
+      "cost_model": {
+        "area_px": 393,
+        "changed_pixels": 393,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 454,
+        "estimated_payload_bytes": 436,
+        "estimated_rate_score_cost": 0.0003022999647174658,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 53
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 393,
+        "box_iou": 0.0,
+        "centroid_jump_px": null,
+        "mask_iou": 0.0
+      },
+      "identity": {
+        "box_xyxy": [
+          275,
+          229,
+          304,
+          282
+        ],
+        "class_id": 1,
+        "class_name": "lane_marking",
+        "failure_type": "missing_component",
+        "frame": 141,
+        "pose_sensitive": true,
+        "rank": 28
+      },
+      "priority": {
+        "planning_score_per_byte": 5.410242290748899,
+        "planning_signal": 2456.25,
+        "score_proxy": "critical_component_geometry_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "1": 393
+        },
+        "changed_pixels": 393,
+        "crop_shape": [
+          53,
+          29
+        ],
+        "row_run_count": 53,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_region_0020_f0304_c0122",
+      "atom_kind": "residual_region_patch",
+      "cost_model": {
+        "area_px": 456,
+        "changed_pixels": 562,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 582,
+        "estimated_payload_bytes": 564,
+        "estimated_rate_score_cost": 0.00038752991071710374,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 69
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 456,
+        "boundary_band_pixels": 456,
+        "confusion_pairs": [
+          {
+            "baseline_class": 1,
+            "baseline_name": "lane_marking",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 448
+          },
+          {
+            "baseline_class": 4,
+            "baseline_name": "background",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 5
+          },
+          {
+            "baseline_class": 3,
+            "baseline_name": "sky_or_movable",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 2
+          },
+          {
+            "baseline_class": 2,
+            "baseline_name": "vehicle_undrivable",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 1
+          }
+        ],
+        "critical_class_pixels": 449,
+        "dominant_baseline_class": 1,
+        "dominant_candidate_class": 0,
+        "temporal_transition_disagreement_pixels": 276
+      },
+      "identity": {
+        "box_xyxy": [
+          341,
+          224,
+          443,
+          287
+        ],
+        "frame": 304,
+        "priority_bucket": 0,
+        "priority_label": "lower_field_lane_marking",
+        "rank": 20,
+        "residual_region_id": "f0304_c0122",
+        "suggested_repair": "lane_lower_field_residual"
+      },
+      "priority": {
+        "planning_score_per_byte": 5.403780068728523,
+        "planning_signal": 3145.0,
+        "score_proxy": "geometry_pixels_weighted_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "1": 450,
+          "2": 1,
+          "3": 3,
+          "4": 108
+        },
+        "changed_pixels": 562,
+        "crop_shape": [
+          63,
+          102
+        ],
+        "row_run_count": 69,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_region_0016_f1191_c0113",
+      "atom_kind": "residual_region_patch",
+      "cost_model": {
+        "area_px": 472,
+        "changed_pixels": 493,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 585,
+        "estimated_payload_bytes": 567,
+        "estimated_rate_score_cost": 0.0003895274875764702,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 71
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 472,
+        "boundary_band_pixels": 461,
+        "confusion_pairs": [
+          {
+            "baseline_class": 1,
+            "baseline_name": "lane_marking",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 453
+          },
+          {
+            "baseline_class": 0,
+            "baseline_name": "road",
+            "candidate_class": 4,
+            "candidate_name": "background",
+            "pixels": 12
+          },
+          {
+            "baseline_class": 1,
+            "baseline_name": "lane_marking",
+            "candidate_class": 4,
+            "candidate_name": "background",
+            "pixels": 7
+          }
+        ],
+        "critical_class_pixels": 460,
+        "dominant_baseline_class": 1,
+        "dominant_candidate_class": 0,
+        "temporal_transition_disagreement_pixels": 283
+      },
+      "identity": {
+        "box_xyxy": [
+          358,
+          238,
+          432,
+          287
+        ],
+        "frame": 1191,
+        "priority_bucket": 0,
+        "priority_label": "lower_field_lane_marking",
+        "rank": 16,
+        "residual_region_id": "f1191_c0113",
+        "suggested_repair": "lane_lower_field_residual"
+      },
+      "priority": {
+        "planning_score_per_byte": 5.351282051282051,
+        "planning_signal": 3130.5,
+        "score_proxy": "geometry_pixels_weighted_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "0": 12,
+          "1": 468,
+          "4": 13
+        },
+        "changed_pixels": 493,
+        "crop_shape": [
+          49,
+          74
+        ],
+        "row_run_count": 71,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_region_0017_f1055_c0134",
+      "atom_kind": "residual_region_patch",
+      "cost_model": {
+        "area_px": 458,
+        "changed_pixels": 494,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 558,
+        "estimated_payload_bytes": 540,
+        "estimated_rate_score_cost": 0.0003715492958421716,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 66
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 458,
+        "boundary_band_pixels": 458,
+        "confusion_pairs": [
+          {
+            "baseline_class": 1,
+            "baseline_name": "lane_marking",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 454
+          },
+          {
+            "baseline_class": 0,
+            "baseline_name": "road",
+            "candidate_class": 4,
+            "candidate_name": "background",
+            "pixels": 1
+          },
+          {
+            "baseline_class": 1,
+            "baseline_name": "lane_marking",
+            "candidate_class": 4,
+            "candidate_name": "background",
+            "pixels": 1
+          },
+          {
+            "baseline_class": 2,
+            "baseline_name": "vehicle_undrivable",
+            "candidate_class": 4,
+            "candidate_name": "background",
+            "pixels": 1
+          },
+          {
+            "baseline_class": 3,
+            "baseline_name": "sky_or_movable",
+            "candidate_class": 4,
+            "candidate_name": "background",
+            "pixels": 1
+          }
+        ],
+        "critical_class_pixels": 456,
+        "dominant_baseline_class": 1,
+        "dominant_candidate_class": 0,
+        "temporal_transition_disagreement_pixels": 211
+      },
+      "identity": {
+        "box_xyxy": [
+          337,
+          231,
+          420,
+          289
+        ],
+        "frame": 1055,
+        "priority_bucket": 0,
+        "priority_label": "lower_field_lane_marking",
+        "rank": 17,
+        "residual_region_id": "f1055_c0134",
+        "suggested_repair": "lane_lower_field_residual"
+      },
+      "priority": {
+        "planning_score_per_byte": 5.32437275985663,
+        "planning_signal": 2971.0,
+        "score_proxy": "geometry_pixels_weighted_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "0": 37,
+          "1": 455,
+          "2": 1,
+          "3": 1
+        },
+        "changed_pixels": 494,
+        "crop_shape": [
+          58,
+          83
+        ],
+        "row_run_count": 66,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_critical_box_0008_f0318_c1",
+      "atom_kind": "critical_component_box_patch",
+      "cost_model": {
+        "area_px": 430,
+        "changed_pixels": 478,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 518,
+        "estimated_payload_bytes": 500,
+        "estimated_rate_score_cost": 0.0003449149377172848,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 61
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 430,
+        "box_iou": 0.0,
+        "centroid_jump_px": null,
+        "mask_iou": 0.0
+      },
+      "identity": {
+        "box_xyxy": [
+          126,
+          231,
+          192,
+          290
+        ],
+        "class_id": 1,
+        "class_name": "lane_marking",
+        "failure_type": "missing_component",
+        "frame": 318,
+        "pose_sensitive": true,
+        "rank": 8
+      },
+      "priority": {
+        "planning_score_per_byte": 5.280888030888031,
+        "planning_signal": 2735.5,
+        "score_proxy": "critical_component_geometry_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "0": 48,
+          "1": 430
+        },
+        "changed_pixels": 478,
+        "crop_shape": [
+          59,
+          66
+        ],
+        "row_run_count": 61,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_critical_box_0009_f0267_c1",
+      "atom_kind": "critical_component_box_patch",
+      "cost_model": {
+        "area_px": 429,
+        "changed_pixels": 432,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 510,
+        "estimated_payload_bytes": 492,
+        "estimated_rate_score_cost": 0.0003395880660923074,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 60
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 429,
+        "box_iou": 0.0,
+        "centroid_jump_px": null,
+        "mask_iou": 0.0
+      },
+      "identity": {
+        "box_xyxy": [
+          102,
+          232,
+          178,
+          288
+        ],
+        "class_id": 1,
+        "class_name": "lane_marking",
+        "failure_type": "missing_component",
+        "frame": 267,
+        "pose_sensitive": true,
+        "rank": 9
+      },
+      "priority": {
+        "planning_score_per_byte": 5.2632352941176475,
+        "planning_signal": 2684.25,
+        "score_proxy": "critical_component_geometry_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "1": 430,
+          "2": 1,
+          "4": 1
+        },
+        "changed_pixels": 432,
+        "crop_shape": [
+          56,
+          76
+        ],
+        "row_run_count": 60,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_critical_box_0016_f0108_c1",
+      "atom_kind": "critical_component_box_patch",
+      "cost_model": {
+        "area_px": 412,
+        "changed_pixels": 476,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 502,
+        "estimated_payload_bytes": 484,
+        "estimated_rate_score_cost": 0.00033426119446733,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 59
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 412,
+        "box_iou": 0.0,
+        "centroid_jump_px": null,
+        "mask_iou": 0.0
+      },
+      "identity": {
+        "box_xyxy": [
+          336,
+          232,
+          415,
+          288
+        ],
+        "class_id": 1,
+        "class_name": "lane_marking",
+        "failure_type": "missing_component",
+        "frame": 108,
+        "pose_sensitive": true,
+        "rank": 16
+      },
+      "priority": {
+        "planning_score_per_byte": 5.256972111553785,
+        "planning_signal": 2639.0,
+        "score_proxy": "critical_component_geometry_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "0": 64,
+          "1": 412
+        },
+        "changed_pixels": 476,
+        "crop_shape": [
+          56,
+          79
+        ],
+        "row_run_count": 59,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_critical_box_0003_f0194_c1",
+      "atom_kind": "critical_component_box_patch",
+      "cost_model": {
+        "area_px": 445,
+        "changed_pixels": 488,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 542,
+        "estimated_payload_bytes": 524,
+        "estimated_rate_score_cost": 0.00036089555259221685,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 64
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 445,
+        "box_iou": 0.0,
+        "centroid_jump_px": null,
+        "mask_iou": 0.0
+      },
+      "identity": {
+        "box_xyxy": [
+          349,
+          227,
+          445,
+          287
+        ],
+        "class_id": 1,
+        "class_name": "lane_marking",
+        "failure_type": "missing_component",
+        "frame": 194,
+        "pose_sensitive": true,
+        "rank": 3
+      },
+      "priority": {
+        "planning_score_per_byte": 5.2107933579335795,
+        "planning_signal": 2824.25,
+        "score_proxy": "critical_component_geometry_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "1": 446,
+          "2": 2,
+          "4": 40
+        },
+        "changed_pixels": 488,
+        "crop_shape": [
+          60,
+          96
+        ],
+        "row_run_count": 64,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_critical_box_0024_f0212_c1",
+      "atom_kind": "critical_component_box_patch",
+      "cost_model": {
+        "area_px": 399,
+        "changed_pixels": 399,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 479,
+        "estimated_payload_bytes": 461,
+        "estimated_rate_score_cost": 0.00031894643854552007,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 57
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 399,
+        "box_iou": 0.0,
+        "centroid_jump_px": null,
+        "mask_iou": 0.0
+      },
+      "identity": {
+        "box_xyxy": [
+          336,
+          225,
+          428,
+          282
+        ],
+        "class_id": 1,
+        "class_name": "lane_marking",
+        "failure_type": "missing_component",
+        "frame": 212,
+        "pose_sensitive": true,
+        "rank": 24
+      },
+      "priority": {
+        "planning_score_per_byte": 5.20615866388309,
+        "planning_signal": 2493.75,
+        "score_proxy": "critical_component_geometry_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "1": 399
+        },
+        "changed_pixels": 399,
+        "crop_shape": [
+          57,
+          92
+        ],
+        "row_run_count": 57,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_critical_box_0032_f0317_c1",
+      "atom_kind": "critical_component_box_patch",
+      "cost_model": {
+        "area_px": 390,
+        "changed_pixels": 390,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 469,
+        "estimated_payload_bytes": 451,
+        "estimated_rate_score_cost": 0.0003122878490142984,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 56
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 390,
+        "box_iou": 0.0,
+        "centroid_jump_px": null,
+        "mask_iou": 0.0
+      },
+      "identity": {
+        "box_xyxy": [
+          345,
+          226,
+          438,
+          282
+        ],
+        "class_id": 1,
+        "class_name": "lane_marking",
+        "failure_type": "missing_component",
+        "frame": 317,
+        "pose_sensitive": true,
+        "rank": 32
+      },
+      "priority": {
+        "planning_score_per_byte": 5.197228144989339,
+        "planning_signal": 2437.5,
+        "score_proxy": "critical_component_geometry_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "1": 390
+        },
+        "changed_pixels": 390,
+        "crop_shape": [
+          56,
+          93
+        ],
+        "row_run_count": 56,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_region_0019_f0308_c0125",
+      "atom_kind": "residual_region_patch",
+      "cost_model": {
+        "area_px": 450,
+        "changed_pixels": 494,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 582,
+        "estimated_payload_bytes": 564,
+        "estimated_rate_score_cost": 0.00038752991071710374,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 69
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 450,
+        "boundary_band_pixels": 450,
+        "confusion_pairs": [
+          {
+            "baseline_class": 1,
+            "baseline_name": "lane_marking",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 432
+          },
+          {
+            "baseline_class": 0,
+            "baseline_name": "road",
+            "candidate_class": 1,
+            "candidate_name": "lane_marking",
+            "pixels": 18
+          }
+        ],
+        "critical_class_pixels": 450,
+        "dominant_baseline_class": 1,
+        "dominant_candidate_class": 0,
+        "temporal_transition_disagreement_pixels": 237
+      },
+      "identity": {
+        "box_xyxy": [
+          341,
+          226,
+          441,
+          287
+        ],
+        "frame": 308,
+        "priority_bucket": 0,
+        "priority_label": "lower_field_lane_marking",
+        "rank": 19,
+        "residual_region_id": "f0308_c0125",
+        "suggested_repair": "lane_lower_field_residual"
+      },
+      "priority": {
+        "planning_score_per_byte": 5.142611683848798,
+        "planning_signal": 2993.0,
+        "score_proxy": "geometry_pixels_weighted_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "0": 62,
+          "1": 432
+        },
+        "changed_pixels": 494,
+        "crop_shape": [
+          61,
+          100
+        ],
+        "row_run_count": 69,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_critical_box_0013_f0212_c1",
+      "atom_kind": "critical_component_box_patch",
+      "cost_model": {
+        "area_px": 418,
+        "changed_pixels": 427,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 511,
+        "estimated_payload_bytes": 493,
+        "estimated_rate_score_cost": 0.0003402539250454296,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 63
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 418,
+        "box_iou": 0.0,
+        "centroid_jump_px": null,
+        "mask_iou": 0.0
+      },
+      "identity": {
+        "box_xyxy": [
+          128,
+          230,
+          195,
+          289
+        ],
+        "class_id": 1,
+        "class_name": "lane_marking",
+        "failure_type": "missing_component",
+        "frame": 212,
+        "pose_sensitive": true,
+        "rank": 13
+      },
+      "priority": {
+        "planning_score_per_byte": 5.13013698630137,
+        "planning_signal": 2621.5,
+        "score_proxy": "critical_component_geometry_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "0": 6,
+          "1": 418,
+          "3": 1,
+          "4": 2
+        },
+        "changed_pixels": 427,
+        "crop_shape": [
+          59,
+          67
+        ],
+        "row_run_count": 63,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_region_0013_f1054_c0145",
+      "atom_kind": "residual_region_patch",
+      "cost_model": {
+        "area_px": 469,
+        "changed_pixels": 535,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 632,
+        "estimated_payload_bytes": 614,
+        "estimated_rate_score_cost": 0.0004208228583732123,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 76
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 469,
+        "boundary_band_pixels": 469,
+        "confusion_pairs": [
+          {
+            "baseline_class": 1,
+            "baseline_name": "lane_marking",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 464
+          },
+          {
+            "baseline_class": 0,
+            "baseline_name": "road",
+            "candidate_class": 1,
+            "candidate_name": "lane_marking",
+            "pixels": 5
+          }
+        ],
+        "critical_class_pixels": 469,
+        "dominant_baseline_class": 1,
+        "dominant_candidate_class": 0,
+        "temporal_transition_disagreement_pixels": 291
+      },
+      "identity": {
+        "box_xyxy": [
+          331,
+          226,
+          416,
+          288
+        ],
+        "frame": 1054,
+        "priority_bucket": 0,
+        "priority_label": "lower_field_lane_marking",
+        "rank": 13,
+        "residual_region_id": "f1054_c0145",
+        "suggested_repair": "lane_lower_field_residual"
+      },
+      "priority": {
+        "planning_score_per_byte": 5.106803797468355,
+        "planning_signal": 3227.5,
+        "score_proxy": "geometry_pixels_weighted_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "0": 66,
+          "1": 464,
+          "3": 1,
+          "4": 4
+        },
+        "changed_pixels": 535,
+        "crop_shape": [
+          62,
+          85
+        ],
+        "row_run_count": 76,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_critical_box_0015_f0195_c1",
+      "atom_kind": "critical_component_box_patch",
+      "cost_model": {
+        "area_px": 414,
+        "changed_pixels": 428,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 510,
+        "estimated_payload_bytes": 492,
+        "estimated_rate_score_cost": 0.0003395880660923074,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 60
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 414,
+        "box_iou": 0.0,
+        "centroid_jump_px": null,
+        "mask_iou": 0.0
+      },
+      "identity": {
+        "box_xyxy": [
+          353,
+          229,
+          448,
+          287
+        ],
+        "class_id": 1,
+        "class_name": "lane_marking",
+        "failure_type": "missing_component",
+        "frame": 195,
+        "pose_sensitive": true,
+        "rank": 15
+      },
+      "priority": {
+        "planning_score_per_byte": 5.100980392156862,
+        "planning_signal": 2601.5,
+        "score_proxy": "critical_component_geometry_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "0": 14,
+          "1": 414
+        },
+        "changed_pixels": 428,
+        "crop_shape": [
+          58,
+          95
+        ],
+        "row_run_count": 60,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_critical_box_0029_f0346_c1",
+      "atom_kind": "critical_component_box_patch",
+      "cost_model": {
+        "area_px": 393,
+        "changed_pixels": 406,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 487,
+        "estimated_payload_bytes": 469,
+        "estimated_rate_score_cost": 0.00032427331017049744,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 58
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 393,
+        "box_iou": 0.0,
+        "centroid_jump_px": null,
+        "mask_iou": 0.0
+      },
+      "identity": {
+        "box_xyxy": [
+          116,
+          232,
+          188,
+          288
+        ],
+        "class_id": 1,
+        "class_name": "lane_marking",
+        "failure_type": "missing_component",
+        "frame": 346,
+        "pose_sensitive": true,
+        "rank": 29
+      },
+      "priority": {
+        "planning_score_per_byte": 5.0703285420944555,
+        "planning_signal": 2469.25,
+        "score_proxy": "critical_component_geometry_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "1": 393,
+          "4": 13
+        },
+        "changed_pixels": 406,
+        "crop_shape": [
+          56,
+          72
+        ],
+        "row_run_count": 58,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_critical_box_0022_f0105_c1",
+      "atom_kind": "critical_component_box_patch",
+      "cost_model": {
+        "area_px": 402,
+        "changed_pixels": 418,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 501,
+        "estimated_payload_bytes": 483,
+        "estimated_rate_score_cost": 0.00033359533551420784,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 66
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 402,
+        "box_iou": 0.0,
+        "centroid_jump_px": null,
+        "mask_iou": 0.0
+      },
+      "identity": {
+        "box_xyxy": [
+          106,
+          227,
+          188,
+          288
+        ],
+        "class_id": 1,
+        "class_name": "lane_marking",
+        "failure_type": "missing_component",
+        "frame": 105,
+        "pose_sensitive": true,
+        "rank": 22
+      },
+      "priority": {
+        "planning_score_per_byte": 5.04690618762475,
+        "planning_signal": 2528.5,
+        "score_proxy": "critical_component_geometry_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "0": 11,
+          "1": 403,
+          "2": 3,
+          "3": 1
+        },
+        "changed_pixels": 418,
+        "crop_shape": [
+          61,
+          82
+        ],
+        "row_run_count": 66,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_critical_box_0026_f0203_c1",
+      "atom_kind": "critical_component_box_patch",
+      "cost_model": {
+        "area_px": 396,
+        "changed_pixels": 413,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 495,
+        "estimated_payload_bytes": 477,
+        "estimated_rate_score_cost": 0.0003296001817954748,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 61
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 396,
+        "box_iou": 0.0,
+        "centroid_jump_px": null,
+        "mask_iou": 0.0
+      },
+      "identity": {
+        "box_xyxy": [
+          131,
+          231,
+          198,
+          290
+        ],
+        "class_id": 1,
+        "class_name": "lane_marking",
+        "failure_type": "missing_component",
+        "frame": 203,
+        "pose_sensitive": true,
+        "rank": 26
+      },
+      "priority": {
+        "planning_score_per_byte": 5.034343434343435,
+        "planning_signal": 2492.0,
+        "score_proxy": "critical_component_geometry_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "0": 9,
+          "1": 396,
+          "4": 8
+        },
+        "changed_pixels": 413,
+        "crop_shape": [
+          59,
+          67
+        ],
+        "row_run_count": 61,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_critical_box_0004_f0304_c1",
+      "atom_kind": "critical_component_box_patch",
+      "cost_model": {
+        "area_px": 443,
+        "changed_pixels": 556,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 574,
+        "estimated_payload_bytes": 556,
+        "estimated_rate_score_cost": 0.00038220303909212636,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 68
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 443,
+        "box_iou": 0.0,
+        "centroid_jump_px": null,
+        "mask_iou": 0.0
+      },
+      "identity": {
+        "box_xyxy": [
+          341,
+          224,
+          439,
+          287
+        ],
+        "class_id": 1,
+        "class_name": "lane_marking",
+        "failure_type": "missing_component",
+        "frame": 304,
+        "pose_sensitive": true,
+        "rank": 4
+      },
+      "priority": {
+        "planning_score_per_byte": 5.020470383275262,
+        "planning_signal": 2881.75,
+        "score_proxy": "critical_component_geometry_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "1": 445,
+          "2": 1,
+          "3": 2,
+          "4": 108
+        },
+        "changed_pixels": 556,
+        "crop_shape": [
+          63,
+          98
+        ],
+        "row_run_count": 68,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_critical_box_0019_f0593_c1",
+      "atom_kind": "critical_component_box_patch",
+      "cost_model": {
+        "area_px": 411,
+        "changed_pixels": 441,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 518,
+        "estimated_payload_bytes": 500,
+        "estimated_rate_score_cost": 0.0003449149377172848,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 61
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 411,
+        "box_iou": 0.0,
+        "centroid_jump_px": null,
+        "mask_iou": 0.0
+      },
+      "identity": {
+        "box_xyxy": [
+          121,
+          232,
+          195,
+          288
+        ],
+        "class_id": 1,
+        "class_name": "lane_marking",
+        "failure_type": "missing_component",
+        "frame": 593,
+        "pose_sensitive": true,
+        "rank": 19
+      },
+      "priority": {
+        "planning_score_per_byte": 5.016891891891892,
+        "planning_signal": 2598.75,
+        "score_proxy": "critical_component_geometry_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "0": 30,
+          "1": 411
+        },
+        "changed_pixels": 441,
+        "crop_shape": [
+          56,
+          74
+        ],
+        "row_run_count": 61,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_critical_box_0012_f0107_c1",
+      "atom_kind": "critical_component_box_patch",
+      "cost_model": {
+        "area_px": 419,
+        "changed_pixels": 511,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 542,
+        "estimated_payload_bytes": 524,
+        "estimated_rate_score_cost": 0.00036089555259221685,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 64
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 419,
+        "box_iou": 0.0,
+        "centroid_jump_px": null,
+        "mask_iou": 0.0
+      },
+      "identity": {
+        "box_xyxy": [
+          329,
+          226,
+          413,
+          287
+        ],
+        "class_id": 1,
+        "class_name": "lane_marking",
+        "failure_type": "missing_component",
+        "frame": 107,
+        "pose_sensitive": true,
+        "rank": 12
+      },
+      "priority": {
+        "planning_score_per_byte": 5.001383763837638,
+        "planning_signal": 2710.75,
+        "score_proxy": "critical_component_geometry_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "0": 90,
+          "1": 419,
+          "2": 2
+        },
+        "changed_pixels": 511,
+        "crop_shape": [
+          61,
+          84
+        ],
+        "row_run_count": 64,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_critical_box_0025_f0570_c1",
+      "atom_kind": "critical_component_box_patch",
+      "cost_model": {
+        "area_px": 398,
+        "changed_pixels": 421,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 502,
+        "estimated_payload_bytes": 484,
+        "estimated_rate_score_cost": 0.00033426119446733,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 59
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 398,
+        "box_iou": 0.0,
+        "centroid_jump_px": null,
+        "mask_iou": 0.0
+      },
+      "identity": {
+        "box_xyxy": [
+          117,
+          234,
+          189,
+          289
+        ],
+        "class_id": 1,
+        "class_name": "lane_marking",
+        "failure_type": "missing_component",
+        "frame": 570,
+        "pose_sensitive": true,
+        "rank": 25
+      },
+      "priority": {
+        "planning_score_per_byte": 5.000996015936255,
+        "planning_signal": 2510.5,
+        "score_proxy": "critical_component_geometry_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "0": 22,
+          "1": 398,
+          "4": 1
+        },
+        "changed_pixels": 421,
+        "crop_shape": [
+          55,
+          72
+        ],
+        "row_run_count": 59,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_critical_box_0006_f0222_c1",
+      "atom_kind": "critical_component_box_patch",
+      "cost_model": {
+        "area_px": 433,
+        "changed_pixels": 468,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 550,
+        "estimated_payload_bytes": 532,
+        "estimated_rate_score_cost": 0.00036622242421719423,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 65
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 433,
+        "box_iou": 0.0,
+        "centroid_jump_px": null,
+        "mask_iou": 0.0
+      },
+      "identity": {
+        "box_xyxy": [
+          343,
+          234,
+          425,
+          288
+        ],
+        "class_id": 1,
+        "class_name": "lane_marking",
+        "failure_type": "missing_component",
+        "frame": 222,
+        "pose_sensitive": true,
+        "rank": 6
+      },
+      "priority": {
+        "planning_score_per_byte": 4.984090909090909,
+        "planning_signal": 2741.25,
+        "score_proxy": "critical_component_geometry_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "0": 20,
+          "1": 445,
+          "2": 1,
+          "3": 2
+        },
+        "changed_pixels": 468,
+        "crop_shape": [
+          54,
+          82
+        ],
+        "row_run_count": 65,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_critical_box_0030_f0106_c1",
+      "atom_kind": "critical_component_box_patch",
+      "cost_model": {
+        "area_px": 392,
+        "changed_pixels": 418,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 501,
+        "estimated_payload_bytes": 483,
+        "estimated_rate_score_cost": 0.00033359533551420784,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 60
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 392,
+        "box_iou": 0.0,
+        "centroid_jump_px": null,
+        "mask_iou": 0.0
+      },
+      "identity": {
+        "box_xyxy": [
+          333,
+          229,
+          411,
+          286
+        ],
+        "class_id": 1,
+        "class_name": "lane_marking",
+        "failure_type": "missing_component",
+        "frame": 106,
+        "pose_sensitive": true,
+        "rank": 30
+      },
+      "priority": {
+        "planning_score_per_byte": 4.942115768463074,
+        "planning_signal": 2476.0,
+        "score_proxy": "critical_component_geometry_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "0": 26,
+          "1": 392
+        },
+        "changed_pixels": 418,
+        "crop_shape": [
+          57,
+          78
+        ],
+        "row_run_count": 60,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_critical_box_0017_f0131_c1",
+      "atom_kind": "critical_component_box_patch",
+      "cost_model": {
+        "area_px": 411,
+        "changed_pixels": 441,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 526,
+        "estimated_payload_bytes": 508,
+        "estimated_rate_score_cost": 0.00035024180934226215,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 62
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 411,
+        "box_iou": 0.0,
+        "centroid_jump_px": null,
+        "mask_iou": 0.0
+      },
+      "identity": {
+        "box_xyxy": [
+          39,
+          233,
+          144,
+          289
+        ],
+        "class_id": 1,
+        "class_name": "lane_marking",
+        "failure_type": "missing_component",
+        "frame": 131,
+        "pose_sensitive": true,
+        "rank": 17
+      },
+      "priority": {
+        "planning_score_per_byte": 4.940589353612167,
+        "planning_signal": 2598.75,
+        "score_proxy": "critical_component_geometry_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "0": 7,
+          "1": 411,
+          "3": 3,
+          "4": 20
+        },
+        "changed_pixels": 441,
+        "crop_shape": [
+          56,
+          105
+        ],
+        "row_run_count": 62,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_critical_box_0014_f1059_c1",
+      "atom_kind": "critical_component_box_patch",
+      "cost_model": {
+        "area_px": 418,
+        "changed_pixels": 450,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 537,
+        "estimated_payload_bytes": 519,
+        "estimated_rate_score_cost": 0.000357566257826606,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 65
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 418,
+        "box_iou": 0.0,
+        "centroid_jump_px": null,
+        "mask_iou": 0.0
+      },
+      "identity": {
+        "box_xyxy": [
+          105,
+          229,
+          188,
+          288
+        ],
+        "class_id": 1,
+        "class_name": "lane_marking",
+        "failure_type": "missing_component",
+        "frame": 1059,
+        "pose_sensitive": true,
+        "rank": 14
+      },
+      "priority": {
+        "planning_score_per_byte": 4.924581005586592,
+        "planning_signal": 2644.5,
+        "score_proxy": "critical_component_geometry_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "1": 418,
+          "3": 1,
+          "4": 31
+        },
+        "changed_pixels": 450,
+        "crop_shape": [
+          59,
+          83
+        ],
+        "row_run_count": 65,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_critical_box_0027_f0602_c1",
+      "atom_kind": "critical_component_box_patch",
+      "cost_model": {
+        "area_px": 395,
+        "changed_pixels": 427,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 511,
+        "estimated_payload_bytes": 493,
+        "estimated_rate_score_cost": 0.0003402539250454296,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 63
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 395,
+        "box_iou": 0.0,
+        "centroid_jump_px": null,
+        "mask_iou": 0.0
+      },
+      "identity": {
+        "box_xyxy": [
+          121,
+          230,
+          198,
+          289
+        ],
+        "class_id": 1,
+        "class_name": "lane_marking",
+        "failure_type": "missing_component",
+        "frame": 602,
+        "pose_sensitive": true,
+        "rank": 27
+      },
+      "priority": {
+        "planning_score_per_byte": 4.8938356164383565,
+        "planning_signal": 2500.75,
+        "score_proxy": "critical_component_geometry_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "0": 25,
+          "1": 397,
+          "2": 3,
+          "3": 2
+        },
+        "changed_pixels": 427,
+        "crop_shape": [
+          59,
+          77
+        ],
+        "row_run_count": 63,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_critical_box_0021_f0003_c1",
+      "atom_kind": "critical_component_box_patch",
+      "cost_model": {
+        "area_px": 405,
+        "changed_pixels": 505,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 558,
+        "estimated_payload_bytes": 540,
+        "estimated_rate_score_cost": 0.0003715492958421716,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 66
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 405,
+        "box_iou": 0.0,
+        "centroid_jump_px": null,
+        "mask_iou": 0.0
+      },
+      "identity": {
+        "box_xyxy": [
+          337,
+          228,
+          419,
+          288
+        ],
+        "class_id": 1,
+        "class_name": "lane_marking",
+        "failure_type": "missing_component",
+        "frame": 3,
+        "pose_sensitive": true,
+        "rank": 21
+      },
+      "priority": {
+        "planning_score_per_byte": 4.715501792114695,
+        "planning_signal": 2631.25,
+        "score_proxy": "critical_component_geometry_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "0": 94,
+          "1": 407,
+          "2": 1,
+          "3": 3
+        },
+        "changed_pixels": 505,
+        "crop_shape": [
+          60,
+          82
+        ],
+        "row_run_count": 66,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_critical_box_0018_f0304_c1",
+      "atom_kind": "critical_component_box_patch",
+      "cost_model": {
+        "area_px": 411,
+        "changed_pixels": 477,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 567,
+        "estimated_payload_bytes": 549,
+        "estimated_rate_score_cost": 0.00037754202642027116,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 71
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 411,
+        "box_iou": 0.0,
+        "centroid_jump_px": null,
+        "mask_iou": 0.0
+      },
+      "identity": {
+        "box_xyxy": [
+          128,
+          220,
+          208,
+          288
+        ],
+        "class_id": 1,
+        "class_name": "lane_marking",
+        "failure_type": "missing_component",
+        "frame": 304,
+        "pose_sensitive": true,
+        "rank": 18
+      },
+      "priority": {
+        "planning_score_per_byte": 4.646825396825397,
+        "planning_signal": 2634.75,
+        "score_proxy": "critical_component_geometry_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "1": 411,
+          "4": 66
+        },
+        "changed_pixels": 477,
+        "crop_shape": [
+          68,
+          80
+        ],
+        "row_run_count": 71,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_region_0015_f0584_c0079",
+      "atom_kind": "residual_region_patch",
+      "cost_model": {
+        "area_px": 487,
+        "changed_pixels": 616,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 723,
+        "estimated_payload_bytes": 705,
+        "estimated_rate_score_cost": 0.0004814160231073299,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 114
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 487,
+        "boundary_band_pixels": 487,
+        "confusion_pairs": [
+          {
+            "baseline_class": 1,
+            "baseline_name": "lane_marking",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 261
+          },
+          {
+            "baseline_class": 0,
+            "baseline_name": "road",
+            "candidate_class": 1,
+            "candidate_name": "lane_marking",
+            "pixels": 199
+          },
+          {
+            "baseline_class": 3,
+            "baseline_name": "sky_or_movable",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 19
+          },
+          {
+            "baseline_class": 2,
+            "baseline_name": "vehicle_undrivable",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 3
+          },
+          {
+            "baseline_class": 3,
+            "baseline_name": "sky_or_movable",
+            "candidate_class": 1,
+            "candidate_name": "lane_marking",
+            "pixels": 3
+          },
+          {
+            "baseline_class": 2,
+            "baseline_name": "vehicle_undrivable",
+            "candidate_class": 3,
+            "candidate_name": "sky_or_movable",
+            "pixels": 2
+          }
+        ],
+        "critical_class_pixels": 468,
+        "dominant_baseline_class": 1,
+        "dominant_candidate_class": 0,
+        "temporal_transition_disagreement_pixels": 141
+      },
+      "identity": {
+        "box_xyxy": [
+          352,
+          196,
+          512,
+          238
+        ],
+        "frame": 584,
+        "priority_bucket": 0,
+        "priority_label": "lower_field_lane_marking",
+        "rank": 15,
+        "residual_region_id": "f0584_c0079",
+        "suggested_repair": "lane_lower_field_residual"
+      },
+      "priority": {
+        "planning_score_per_byte": 4.19432918395574,
+        "planning_signal": 3032.5,
+        "score_proxy": "geometry_pixels_weighted_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "0": 214,
+          "1": 274,
+          "2": 106,
+          "3": 22
+        },
+        "changed_pixels": 616,
+        "crop_shape": [
+          42,
+          160
+        ],
+        "row_run_count": 114,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_region_0012_f0583_c0097",
+      "atom_kind": "residual_region_patch",
+      "cost_model": {
+        "area_px": 482,
+        "changed_pixels": 691,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 808,
+        "estimated_payload_bytes": 790,
+        "estimated_rate_score_cost": 0.0005380140341227145,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 116
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 482,
+        "boundary_band_pixels": 482,
+        "confusion_pairs": [
+          {
+            "baseline_class": 1,
+            "baseline_name": "lane_marking",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 276
+          },
+          {
+            "baseline_class": 0,
+            "baseline_name": "road",
+            "candidate_class": 1,
+            "candidate_name": "lane_marking",
+            "pixels": 190
+          },
+          {
+            "baseline_class": 3,
+            "baseline_name": "sky_or_movable",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 12
+          },
+          {
+            "baseline_class": 2,
+            "baseline_name": "vehicle_undrivable",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 4
+          }
+        ],
+        "critical_class_pixels": 470,
+        "dominant_baseline_class": 1,
+        "dominant_candidate_class": 0,
+        "temporal_transition_disagreement_pixels": 156
+      },
+      "identity": {
+        "box_xyxy": [
+          354,
+          199,
+          512,
+          239
+        ],
+        "frame": 583,
+        "priority_bucket": 0,
+        "priority_label": "lower_field_lane_marking",
+        "rank": 12,
+        "residual_region_id": "f0583_c0097",
+        "suggested_repair": "lane_lower_field_residual"
+      },
+      "priority": {
+        "planning_score_per_byte": 3.881188118811881,
+        "planning_signal": 3136.0,
+        "score_proxy": "geometry_pixels_weighted_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "0": 197,
+          "1": 287,
+          "2": 195,
+          "3": 12
+        },
+        "changed_pixels": 691,
+        "crop_shape": [
+          40,
+          158
+        ],
+        "row_run_count": 116,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_region_0007_f0322_c0048",
+      "atom_kind": "residual_region_patch",
+      "cost_model": {
+        "area_px": 591,
+        "changed_pixels": 803,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 934,
+        "estimated_payload_bytes": 916,
+        "estimated_rate_score_cost": 0.0006219122622161081,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 128
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 591,
+        "boundary_band_pixels": 577,
+        "confusion_pairs": [
+          {
+            "baseline_class": 1,
+            "baseline_name": "lane_marking",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 330
+          },
+          {
+            "baseline_class": 0,
+            "baseline_name": "road",
+            "candidate_class": 1,
+            "candidate_name": "lane_marking",
+            "pixels": 206
+          },
+          {
+            "baseline_class": 3,
+            "baseline_name": "sky_or_movable",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 39
+          },
+          {
+            "baseline_class": 0,
+            "baseline_name": "road",
+            "candidate_class": 3,
+            "candidate_name": "sky_or_movable",
+            "pixels": 16
+          }
+        ],
+        "critical_class_pixels": 536,
+        "dominant_baseline_class": 1,
+        "dominant_candidate_class": 0,
+        "temporal_transition_disagreement_pixels": 122
+      },
+      "identity": {
+        "box_xyxy": [
+          313,
+          187,
+          512,
+          235
+        ],
+        "frame": 322,
+        "priority_bucket": 0,
+        "priority_label": "lower_field_lane_marking",
+        "rank": 7,
+        "residual_region_id": "f0322_c0048",
+        "suggested_repair": "lane_lower_field_residual"
+      },
+      "priority": {
+        "planning_score_per_byte": 3.769271948608137,
+        "planning_signal": 3520.5,
+        "score_proxy": "geometry_pixels_weighted_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "0": 362,
+          "1": 363,
+          "2": 39,
+          "3": 39
+        },
+        "changed_pixels": 803,
+        "crop_shape": [
+          48,
+          199
+        ],
+        "row_run_count": 128,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_region_0006_f0323_c0036",
+      "atom_kind": "residual_region_patch",
+      "cost_model": {
+        "area_px": 590,
+        "changed_pixels": 901,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 1038,
+        "estimated_payload_bytes": 1020,
+        "estimated_rate_score_cost": 0.0006911615933408139,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 126
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 590,
+        "boundary_band_pixels": 587,
+        "confusion_pairs": [
+          {
+            "baseline_class": 1,
+            "baseline_name": "lane_marking",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 328
+          },
+          {
+            "baseline_class": 0,
+            "baseline_name": "road",
+            "candidate_class": 1,
+            "candidate_name": "lane_marking",
+            "pixels": 204
+          },
+          {
+            "baseline_class": 3,
+            "baseline_name": "sky_or_movable",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 34
+          },
+          {
+            "baseline_class": 0,
+            "baseline_name": "road",
+            "candidate_class": 3,
+            "candidate_name": "sky_or_movable",
+            "pixels": 14
+          },
+          {
+            "baseline_class": 2,
+            "baseline_name": "vehicle_undrivable",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 7
+          },
+          {
+            "baseline_class": 0,
+            "baseline_name": "road",
+            "candidate_class": 2,
+            "candidate_name": "vehicle_undrivable",
+            "pixels": 2
+          }
+        ],
+        "critical_class_pixels": 542,
+        "dominant_baseline_class": 1,
+        "dominant_candidate_class": 0,
+        "temporal_transition_disagreement_pixels": 246
+      },
+      "identity": {
+        "box_xyxy": [
+          313,
+          187,
+          512,
+          235
+        ],
+        "frame": 323,
+        "priority_bucket": 0,
+        "priority_label": "lower_field_lane_marking",
+        "rank": 6,
+        "residual_region_id": "f0323_c0036",
+        "suggested_repair": "lane_lower_field_residual"
+      },
+      "priority": {
+        "planning_score_per_byte": 3.7567437379576107,
+        "planning_signal": 3899.5,
+        "score_proxy": "geometry_pixels_weighted_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "0": 450,
+          "1": 402,
+          "2": 15,
+          "3": 34
+        },
+        "changed_pixels": 901,
+        "crop_shape": [
+          48,
+          199
+        ],
+        "row_run_count": 126,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_transition_pair_0267",
+      "atom_kind": "transition_pair_focus",
+      "cost_model": {
+        "area_px": 8569,
+        "changed_pixels": 8333,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 5750,
+        "estimated_payload_bytes": 5732,
+        "estimated_rate_score_cost": 0.003828688980452485,
+        "estimated_side_info_bytes": 18,
+        "model": "estimated_from_area",
+        "row_run_count": 715
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "pair_frame_disagreement_rate": 0.032033284505208336,
+        "stable_false_flip_pixels": 236,
+        "stable_false_flip_rate": 0.0012537919236674476,
+        "transition_disagreement_pixels": 8333,
+        "transition_disagreement_rate": 0.042383829752604164
+      },
+      "identity": {
+        "frames": [
+          267,
+          268
+        ],
+        "pair_index": 267,
+        "rank": 2
+      },
+      "priority": {
+        "planning_score_per_byte": 3.6743478260869566,
+        "planning_signal": 21127.5,
+        "score_proxy": "temporal_geometry_pixels_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": null
+    },
+    {
+      "atom_id": "lane12_transition_pair_0266",
+      "atom_kind": "transition_pair_focus",
+      "cost_model": {
+        "area_px": 8747,
+        "changed_pixels": 8472,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 5862,
+        "estimated_payload_bytes": 5844,
+        "estimated_rate_score_cost": 0.0039032651832021682,
+        "estimated_side_info_bytes": 18,
+        "model": "estimated_from_area",
+        "row_run_count": 729
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "pair_frame_disagreement_rate": 0.029238382975260418,
+        "stable_false_flip_pixels": 275,
+        "stable_false_flip_rate": 0.0014629138051186024,
+        "transition_disagreement_pixels": 8472,
+        "transition_disagreement_rate": 0.0430908203125
+      },
+      "identity": {
+        "frames": [
+          266,
+          267
+        ],
+        "pair_index": 266,
+        "rank": 1
+      },
+      "priority": {
+        "planning_score_per_byte": 3.6717417263732512,
+        "planning_signal": 21523.75,
+        "score_proxy": "temporal_geometry_pixels_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": null
+    },
+    {
+      "atom_id": "lane12_region_0009_f0321_c0055",
+      "atom_kind": "residual_region_patch",
+      "cost_model": {
+        "area_px": 569,
+        "changed_pixels": 924,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 1038,
+        "estimated_payload_bytes": 1020,
+        "estimated_rate_score_cost": 0.0006911615933408139,
+        "estimated_side_info_bytes": 18,
+        "model": "tensor_measured_row_runs",
+        "row_run_count": 126
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "area_px": 569,
+        "boundary_band_pixels": 546,
+        "confusion_pairs": [
+          {
+            "baseline_class": 1,
+            "baseline_name": "lane_marking",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 320
+          },
+          {
+            "baseline_class": 0,
+            "baseline_name": "road",
+            "candidate_class": 1,
+            "candidate_name": "lane_marking",
+            "pixels": 195
+          },
+          {
+            "baseline_class": 3,
+            "baseline_name": "sky_or_movable",
+            "candidate_class": 0,
+            "candidate_name": "road",
+            "pixels": 54
+          }
+        ],
+        "critical_class_pixels": 515,
+        "dominant_baseline_class": 1,
+        "dominant_candidate_class": 0,
+        "temporal_transition_disagreement_pixels": 261
+      },
+      "identity": {
+        "box_xyxy": [
+          305,
+          192,
+          512,
+          234
+        ],
+        "frame": 321,
+        "priority_bucket": 0,
+        "priority_label": "lower_field_lane_marking",
+        "rank": 9,
+        "residual_region_id": "f0321_c0055",
+        "suggested_repair": "lane_lower_field_residual"
+      },
+      "priority": {
+        "planning_score_per_byte": 3.6705202312138727,
+        "planning_signal": 3810.0,
+        "score_proxy": "geometry_pixels_weighted_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": {
+        "baseline_class_hist": {
+          "0": 470,
+          "1": 393,
+          "2": 7,
+          "3": 54
+        },
+        "changed_pixels": 924,
+        "crop_shape": [
+          42,
+          207
+        ],
+        "row_run_count": 126,
+        "tensor_measured": true
+      }
+    },
+    {
+      "atom_id": "lane12_transition_pair_1044",
+      "atom_kind": "transition_pair_focus",
+      "cost_model": {
+        "area_px": 5874,
+        "changed_pixels": 5650,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 3950,
+        "estimated_payload_bytes": 3932,
+        "estimated_rate_score_cost": 0.002630142864832577,
+        "estimated_side_info_bytes": 18,
+        "model": "estimated_from_area",
+        "row_run_count": 490
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "pair_frame_disagreement_rate": 0.02091217041015625,
+        "stable_false_flip_pixels": 224,
+        "stable_false_flip_rate": 0.0011723881651601827,
+        "transition_disagreement_pixels": 5650,
+        "transition_disagreement_rate": 0.028737386067708332
+      },
+      "identity": {
+        "frames": [
+          1044,
+          1045
+        ],
+        "pair_index": 1044,
+        "rank": 4
+      },
+      "priority": {
+        "planning_score_per_byte": 3.6468354430379746,
+        "planning_signal": 14405.0,
+        "score_proxy": "temporal_geometry_pixels_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": null
+    },
+    {
+      "atom_id": "lane12_transition_pair_1035",
+      "atom_kind": "transition_pair_focus",
+      "cost_model": {
+        "area_px": 6422,
+        "changed_pixels": 6124,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 4318,
+        "estimated_payload_bytes": 4300,
+        "estimated_rate_score_cost": 0.0028751789595815357,
+        "estimated_side_info_bytes": 18,
+        "model": "estimated_from_area",
+        "row_run_count": 536
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "pair_frame_disagreement_rate": 0.02706146240234375,
+        "stable_false_flip_pixels": 298,
+        "stable_false_flip_rate": 0.001564797311489183,
+        "transition_disagreement_pixels": 6124,
+        "transition_disagreement_rate": 0.031148274739583332
+      },
+      "identity": {
+        "frames": [
+          1035,
+          1036
+        ],
+        "pair_index": 1035,
+        "rank": 3
+      },
+      "priority": {
+        "planning_score_per_byte": 3.6318897637795278,
+        "planning_signal": 15682.5,
+        "score_proxy": "temporal_geometry_pixels_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": null
+    },
+    {
+      "atom_id": "lane12_transition_pair_1039",
+      "atom_kind": "transition_pair_focus",
+      "cost_model": {
+        "area_px": 5051,
+        "changed_pixels": 4812,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 3398,
+        "estimated_payload_bytes": 3380,
+        "estimated_rate_score_cost": 0.002262588722709138,
+        "estimated_side_info_bytes": 18,
+        "model": "estimated_from_area",
+        "row_run_count": 421
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "pair_frame_disagreement_rate": 0.021197001139322918,
+        "stable_false_flip_pixels": 239,
+        "stable_false_flip_rate": 0.0012488308539599434,
+        "transition_disagreement_pixels": 4812,
+        "transition_disagreement_rate": 0.02447509765625
+      },
+      "identity": {
+        "frames": [
+          1039,
+          1040
+        ],
+        "pair_index": 1039,
+        "rank": 7
+      },
+      "priority": {
+        "planning_score_per_byte": 3.6282371983519717,
+        "planning_signal": 12328.75,
+        "score_proxy": "temporal_geometry_pixels_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": null
+    },
+    {
+      "atom_id": "lane12_transition_pair_1029",
+      "atom_kind": "transition_pair_focus",
+      "cost_model": {
+        "area_px": 4512,
+        "changed_pixels": 4305,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 3038,
+        "estimated_payload_bytes": 3020,
+        "estimated_rate_score_cost": 0.0020228794995851567,
+        "estimated_side_info_bytes": 18,
+        "model": "estimated_from_area",
+        "row_run_count": 376
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "pair_frame_disagreement_rate": 0.019134521484375,
+        "stable_false_flip_pixels": 207,
+        "stable_false_flip_rate": 0.0010763031327180553,
+        "transition_disagreement_pixels": 4305,
+        "transition_disagreement_rate": 0.0218963623046875
+      },
+      "identity": {
+        "frames": [
+          1029,
+          1030
+        ],
+        "pair_index": 1029,
+        "rank": 10
+      },
+      "priority": {
+        "planning_score_per_byte": 3.6277978933508885,
+        "planning_signal": 11021.25,
+        "score_proxy": "temporal_geometry_pixels_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": null
+    },
+    {
+      "atom_id": "lane12_transition_pair_1034",
+      "atom_kind": "transition_pair_focus",
+      "cost_model": {
+        "area_px": 5495,
+        "changed_pixels": 5203,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 3694,
+        "estimated_payload_bytes": 3676,
+        "estimated_rate_score_cost": 0.002459682972833301,
+        "estimated_side_info_bytes": 18,
+        "model": "estimated_from_area",
+        "row_run_count": 458
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "pair_frame_disagreement_rate": 0.021486918131510418,
+        "stable_false_flip_pixels": 292,
+        "stable_false_flip_rate": 0.0015243982020454083,
+        "transition_disagreement_pixels": 5203,
+        "transition_disagreement_rate": 0.026463826497395832
+      },
+      "identity": {
+        "frames": [
+          1034,
+          1035
+        ],
+        "pair_index": 1034,
+        "rank": 5
+      },
+      "priority": {
+        "planning_score_per_byte": 3.6200595560368165,
+        "planning_signal": 13372.5,
+        "score_proxy": "temporal_geometry_pixels_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": null
+    },
+    {
+      "atom_id": "lane12_transition_pair_1045",
+      "atom_kind": "transition_pair_focus",
+      "cost_model": {
+        "area_px": 5210,
+        "changed_pixels": 4955,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 3510,
+        "estimated_payload_bytes": 3492,
+        "estimated_rate_score_cost": 0.0023371649254588216,
+        "estimated_side_info_bytes": 18,
+        "model": "estimated_from_area",
+        "row_run_count": 435
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "pair_frame_disagreement_rate": 0.0206298828125,
+        "stable_false_flip_pixels": 255,
+        "stable_false_flip_rate": 0.0013295307017315182,
+        "transition_disagreement_pixels": 4955,
+        "transition_disagreement_rate": 0.025202433268229168
+      },
+      "identity": {
+        "frames": [
+          1045,
+          1046
+        ],
+        "pair_index": 1045,
+        "rank": 6
+      },
+      "priority": {
+        "planning_score_per_byte": 3.620014245014245,
+        "planning_signal": 12706.25,
+        "score_proxy": "temporal_geometry_pixels_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": null
+    },
+    {
+      "atom_id": "lane12_transition_pair_1036",
+      "atom_kind": "transition_pair_focus",
+      "cost_model": {
+        "area_px": 5342,
+        "changed_pixels": 4604,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 3598,
+        "estimated_payload_bytes": 3580,
+        "estimated_rate_score_cost": 0.0023957605133335725,
+        "estimated_side_info_bytes": 18,
+        "model": "estimated_from_area",
+        "row_run_count": 446
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "pair_frame_disagreement_rate": 0.024749755859375,
+        "stable_false_flip_pixels": 738,
+        "stable_false_flip_rate": 0.003836337077833977,
+        "transition_disagreement_pixels": 4604,
+        "transition_disagreement_rate": 0.023417154947916668
+      },
+      "identity": {
+        "frames": [
+          1036,
+          1037
+        ],
+        "pair_index": 1036,
+        "rank": 8
+      },
+      "priority": {
+        "planning_score_per_byte": 3.4553918843802114,
+        "planning_signal": 12432.5,
+        "score_proxy": "temporal_geometry_pixels_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": null
+    },
+    {
+      "atom_id": "lane12_transition_pair_0000",
+      "atom_kind": "transition_pair_focus",
+      "cost_model": {
+        "area_px": 7250,
+        "changed_pixels": 4396,
+        "charge_status": "planning_estimate_not_archive_measured",
+        "estimated_charged_bytes": 4870,
+        "estimated_payload_bytes": 4852,
+        "estimated_rate_score_cost": 0.0032427331017049746,
+        "estimated_side_info_bytes": 18,
+        "model": "estimated_from_area",
+        "row_run_count": 605
+      },
+      "exact_eval_claim": false,
+      "geometry_signal": {
+        "pair_frame_disagreement_rate": 0.0244293212890625,
+        "stable_false_flip_pixels": 2854,
+        "stable_false_flip_rate": 0.014638374699308088,
+        "transition_disagreement_pixels": 4396,
+        "transition_disagreement_rate": 0.022359212239583332
+      },
+      "identity": {
+        "frames": [
+          0,
+          1
+        ],
+        "pair_index": 0,
+        "rank": 9
+      },
+      "priority": {
+        "planning_score_per_byte": 2.989219712525667,
+        "planning_signal": 14557.5,
+        "score_proxy": "temporal_geometry_pixels_not_scorer"
+      },
+      "promotion_eligible": false,
+      "score_claim": false,
+      "tensor_measurement": null
+    }
+  ],
+  "byte_closed_exact_eval_candidate_created": false,
+  "candidate_policies": [
+    {
+      "budget_estimated_charged_bytes": 512,
+      "builder_status": "not_byte_closed_no_archive_emitted",
+      "dispatch_allowed": false,
+      "estimated_charged_bytes": 438,
+      "estimated_rate_score_cost": 0.00029164622146751106,
+      "exact_eval_claim": false,
+      "planning_signal_total": 2700.0,
+      "policy_id": "lane12_geometry_gate_budget_512b",
+      "policy_kind": "planning_atom_selection",
+      "promotion_eligible": false,
+      "score_claim": false,
+      "selected_atom_count": 1,
+      "selected_atom_ids": [
+        "lane12_critical_box_0007_f0159_c1"
+      ]
+    },
+    {
+      "budget_estimated_charged_bytes": 1024,
+      "builder_status": "not_byte_closed_no_archive_emitted",
+      "dispatch_allowed": false,
+      "estimated_charged_bytes": 1004,
+      "estimated_rate_score_cost": 0.00066852238893466,
+      "exact_eval_claim": false,
+      "planning_signal_total": 6717.0,
+      "policy_id": "lane12_geometry_gate_budget_1024b",
+      "policy_kind": "planning_atom_selection",
+      "promotion_eligible": false,
+      "score_claim": false,
+      "selected_atom_count": 2,
+      "selected_atom_ids": [
+        "lane12_region_0003_f1198_c0087",
+        "lane12_critical_box_0007_f0159_c1"
+      ]
+    },
+    {
+      "budget_estimated_charged_bytes": 2048,
+      "builder_status": "not_byte_closed_no_archive_emitted",
+      "dispatch_allowed": false,
+      "estimated_charged_bytes": 1812,
+      "estimated_rate_score_cost": 0.0012065364230573745,
+      "exact_eval_claim": false,
+      "planning_signal_total": 35411.0,
+      "policy_id": "lane12_geometry_gate_budget_2048b",
+      "policy_kind": "planning_atom_selection",
+      "promotion_eligible": false,
+      "score_claim": false,
+      "selected_atom_count": 2,
+      "selected_atom_ids": [
+        "lane12_region_0001_f0267_c0028",
+        "lane12_region_0003_f1198_c0087"
+      ]
+    },
+    {
+      "budget_estimated_charged_bytes": 4096,
+      "builder_status": "not_byte_closed_no_archive_emitted",
+      "dispatch_allowed": false,
+      "estimated_charged_bytes": 3908,
+      "estimated_rate_score_cost": 0.0026021767888014455,
+      "exact_eval_claim": false,
+      "planning_signal_total": 49541.5,
+      "policy_id": "lane12_geometry_gate_budget_4096b",
+      "policy_kind": "planning_atom_selection",
+      "promotion_eligible": false,
+      "score_claim": false,
+      "selected_atom_count": 6,
+      "selected_atom_ids": [
+        "lane12_region_0001_f0267_c0028",
+        "lane12_region_0003_f1198_c0087",
+        "lane12_region_0011_f0305_c0145",
+        "lane12_region_0004_f1134_c0131",
+        "lane12_region_0008_f1197_c0092",
+        "lane12_critical_box_0007_f0159_c1"
+      ]
+    },
+    {
+      "budget_estimated_charged_bytes": 8192,
+      "builder_status": "not_byte_closed_no_archive_emitted",
+      "dispatch_allowed": false,
+      "estimated_charged_bytes": 8052,
+      "estimated_rate_score_cost": 0.005361496290539724,
+      "exact_eval_claim": false,
+      "planning_signal_total": 73934.5,
+      "policy_id": "lane12_geometry_gate_budget_8192b",
+      "policy_kind": "planning_atom_selection",
+      "promotion_eligible": false,
+      "score_claim": false,
+      "selected_atom_count": 14,
+      "selected_atom_ids": [
+        "lane12_region_0001_f0267_c0028",
+        "lane12_region_0003_f1198_c0087",
+        "lane12_region_0011_f0305_c0145",
+        "lane12_region_0004_f1134_c0131",
+        "lane12_region_0008_f1197_c0092",
+        "lane12_critical_box_0007_f0159_c1",
+        "lane12_region_0005_f1193_c0082",
+        "lane12_critical_box_0020_f0150_c1",
+        "lane12_region_0018_f0258_c0111",
+        "lane12_critical_box_0002_f0305_c1",
+        "lane12_region_0010_f0221_c0171",
+        "lane12_critical_box_0023_f0357_c1",
+        "lane12_region_0014_f0203_c0177",
+        "lane12_critical_box_0005_f0168_c1"
+      ]
+    },
+    {
+      "budget_estimated_charged_bytes": 16384,
+      "builder_status": "not_byte_closed_no_archive_emitted",
+      "dispatch_allowed": false,
+      "estimated_charged_bytes": 16265,
+      "estimated_rate_score_cost": 0.010830195872532117,
+      "exact_eval_claim": false,
+      "planning_signal_total": 118044.75,
+      "policy_id": "lane12_geometry_gate_budget_16384b",
+      "policy_kind": "planning_atom_selection",
+      "promotion_eligible": false,
+      "score_claim": false,
+      "selected_atom_count": 29,
+      "selected_atom_ids": [
+        "lane12_region_0001_f0267_c0028",
+        "lane12_region_0003_f1198_c0087",
+        "lane12_region_0011_f0305_c0145",
+        "lane12_region_0004_f1134_c0131",
+        "lane12_region_0008_f1197_c0092",
+        "lane12_critical_box_0007_f0159_c1",
+        "lane12_region_0005_f1193_c0082",
+        "lane12_critical_box_0020_f0150_c1",
+        "lane12_region_0018_f0258_c0111",
+        "lane12_critical_box_0002_f0305_c1",
+        "lane12_region_0010_f0221_c0171",
+        "lane12_critical_box_0023_f0357_c1",
+        "lane12_region_0014_f0203_c0177",
+        "lane12_critical_box_0005_f0168_c1",
+        "lane12_critical_box_0031_f0149_c1",
+        "lane12_critical_box_0010_f0177_c1",
+        "lane12_region_0002_f0716_c0040",
+        "lane12_critical_box_0001_f0221_c1",
+        "lane12_critical_box_0011_f0305_c1",
+        "lane12_critical_box_0028_f0141_c1",
+        "lane12_region_0020_f0304_c0122",
+        "lane12_region_0016_f1191_c0113",
+        "lane12_region_0017_f1055_c0134",
+        "lane12_critical_box_0008_f0318_c1",
+        "lane12_critical_box_0009_f0267_c1",
+        "lane12_critical_box_0016_f0108_c1",
+        "lane12_critical_box_0003_f0194_c1",
+        "lane12_critical_box_0024_f0212_c1",
+        "lane12_critical_box_0032_f0317_c1"
+      ]
+    }
+  ],
+  "deterministic": true,
+  "evidence_grade": "empirical_planning_only",
+  "exact_eval_claim": false,
+  "exact_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "geometry_gate_state": {
+    "blocked_for_exact_eval_dispatch": true,
+    "blocked_for_retraining_unblock": true,
+    "current_pass_fail": {
+      "checks": {
+        "boundary_band_1px_disagreement": {
+          "op": "<=",
+          "passed": false,
+          "skipped": false,
+          "threshold": 0.005,
+          "value": 0.2086177911086304
+        },
+        "boundary_band_2px_disagreement": {
+          "op": "<=",
+          "passed": false,
+          "skipped": false,
+          "threshold": 0.005,
+          "value": 0.14883144511692872
+        },
+        "boundary_band_3px_disagreement": {
+          "op": "<=",
+          "passed": false,
+          "skipped": false,
+          "threshold": 0.005,
+          "value": 0.11633853036183021
+        },
+        "boundary_band_5px_disagreement": {
+          "op": "<=",
+          "passed": false,
+          "skipped": false,
+          "threshold": 0.005,
+          "value": 0.08223161952370056
+        },
+        "global_disagreement": {
+          "op": "<=",
+          "passed": false,
+          "skipped": false,
+          "threshold": 0.003,
+          "value": 0.012303928799099393
+        },
+        "max_component_centroid_jump_px": {
+          "op": "<=",
+          "passed": false,
+          "skipped": false,
+          "threshold": 1.0,
+          "value": 289.6654980546722
+        },
+        "missing_component_rate": {
+          "op": "<=",
+          "passed": false,
+          "skipped": false,
+          "threshold": 0.0,
+          "value": 0.4611606740560512
+        },
+        "pair_transition_disagreement_rate": {
+          "op": "<=",
+          "passed": false,
+          "skipped": false,
+          "threshold": 0.004,
+          "value": 0.009507171571470149
+        },
+        "pair_transition_f1": {
+          "op": ">=",
+          "passed": null,
+          "reason": "threshold not configured",
+          "skipped": true,
+          "threshold": null,
+          "value": 0.095099661402374
+        },
+        "stable_region_false_flip_rate": {
+          "op": "<=",
+          "passed": true,
+          "skipped": false,
+          "threshold": 0.004,
+          "value": 0.0013034438031416468
+        },
+        "tiny_speckle_rate": {
+          "op": "<=",
+          "passed": true,
+          "skipped": false,
+          "threshold": 0.0005,
+          "value": 0.00025392744276258683
+        }
+      },
+      "overall_pass": false,
+      "thresholds": {
+        "boundary_band_disagreement_max": {
+          "1": 0.005,
+          "2": 0.005,
+          "3": 0.005,
+          "5": 0.005
+        },
+        "class_recall_min": {},
+        "global_disagreement_max": 0.003,
+        "max_component_centroid_jump_px": 1.0,
+        "missing_component_rate_max": 0.0,
+        "pair_transition_disagreement_max": 0.004,
+        "pair_transition_f1_min": null,
+        "stable_region_false_flip_rate_max": 0.004,
+        "tiny_speckle_rate_max": 0.0005
+      }
+    },
+    "promotion_gap": {
+      "observed": {
+        "boundary_band_disagreement": {
+          "1": 0.2086177911086304,
+          "2": 0.14883144511692872,
+          "3": 0.11633853036183021,
+          "5": 0.08223161952370056
+        },
+        "global_disagreement": 0.012303928799099393,
+        "max_component_centroid_jump_px": 289.6654980546722,
+        "missing_component_rate": 0.4611606740560512,
+        "pair_transition_disagreement": 0.009507171571470149,
+        "stable_region_false_flip_rate": 0.0013034438031416468
+      },
+      "required": {
+        "boundary_band_disagreement_max": {
+          "1": 0.002,
+          "2": 0.002,
+          "3": 0.002,
+          "5": 0.002
+        },
+        "class_recall_min": {
+          "1": 0.999,
+          "2": 0.999
+        },
+        "global_disagreement_max": 0.001,
+        "max_component_centroid_jump_px": 1.0,
+        "missing_component_rate_max": 0.0,
+        "pair_transition_disagreement_max": 0.002,
+        "pair_transition_f1_min": null,
+        "stable_region_false_flip_rate_max": 0.002,
+        "tiny_speckle_rate_max": 0.0001
+      }
+    }
+  },
+  "inputs": {
+    "geometry_json": {
+      "diagnostic": "alpha_geo_0_nerv_geometry",
+      "exists": true,
+      "is_file": true,
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_0_vs_lane_g_v3_codex_current_20260501.json",
+      "schema_version": 1,
+      "sha256": "6b17b004d238ada62180077aa072f02594954ef02f5a5c610bc70e65619fa80d",
+      "size_bytes": 123656
+    },
+    "mask_cache_dir": "/Users/adpena/Projects/pact/experiments/results/lane_12_nerv_20260430_codex_jsonfix40/predecoded_mask_cache",
+    "mask_cache_records": [
+      {
+        "archive_member": "masks.nrv",
+        "decoded_mask_sha256": "5d8504ac2bb018a123fa238dbcb55615ca50278942c03bf49425df46023389b4",
+        "decoded_mask_shape": [
+          1200,
+          384,
+          512
+        ],
+        "metadata_path": "/Users/adpena/Projects/pact/experiments/results/lane_12_nerv_20260430_codex_jsonfix40/predecoded_mask_cache/9bba6fea10f3dbe15783f3bee710f1f8858624a26697971c86305a21c1a9d53a.json",
+        "metadata_sha256": "9af7b66d282dafbc33695e6ec9371e2e6fe45fca5ff7d7fe86c464d872597b7b",
+        "tensor_exists": true,
+        "tensor_path": "/Users/adpena/Projects/pact/experiments/results/lane_12_nerv_20260430_codex_jsonfix40/predecoded_mask_cache/9bba6fea10f3dbe15783f3bee710f1f8858624a26697971c86305a21c1a9d53a.pt"
+      },
+      {
+        "archive_member": "masks.mkv",
+        "decoded_mask_sha256": "cce3a986341c40df9b9ebca24ff96e16c4b41b40b388dc2af86161ba76e2b4e9",
+        "decoded_mask_shape": [
+          1200,
+          384,
+          512
+        ],
+        "metadata_path": "/Users/adpena/Projects/pact/experiments/results/lane_12_nerv_20260430_codex_jsonfix40/predecoded_mask_cache/a14b8db6a452d5feb477f2206af7fe0b57d34acf2f51d77575fd6344cc5dfe55.json",
+        "metadata_sha256": "77593a34b378dbd1a93656ec527804efe4686f3cc849f3569ae9e3a412e78cb6",
+        "tensor_exists": true,
+        "tensor_path": "/Users/adpena/Projects/pact/experiments/results/lane_12_nerv_20260430_codex_jsonfix40/predecoded_mask_cache/a14b8db6a452d5feb477f2206af7fe0b57d34acf2f51d77575fd6344cc5dfe55.pt"
+      }
+    ],
+    "primitive_contract_json": {
+      "diagnostic": "alpha_geo_primitive_contract_v1",
+      "exists": true,
+      "is_file": true,
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_1_vs_pfp16_repair_regions_20260501T080036Z.primitive_contract.json",
+      "schema_version": 1,
+      "sha256": "e5da815b680ba5c02bf653dae8c77b4f6d12500461e45b06d0cfb0881be5c16e",
+      "size_bytes": 1062314
+    },
+    "tensor_status": {
+      "baseline": {
+        "decoded_mask_sha256": "cce3a986341c40df9b9ebca24ff96e16c4b41b40b388dc2af86161ba76e2b4e9",
+        "metadata_path": "/Users/adpena/Projects/pact/experiments/results/lane_12_nerv_20260430_codex_jsonfix40/predecoded_mask_cache/a14b8db6a452d5feb477f2206af7fe0b57d34acf2f51d77575fd6344cc5dfe55.json",
+        "tensor_path": "/Users/adpena/Projects/pact/experiments/results/lane_12_nerv_20260430_codex_jsonfix40/predecoded_mask_cache/a14b8db6a452d5feb477f2206af7fe0b57d34acf2f51d77575fd6344cc5dfe55.pt"
+      },
+      "candidate": {
+        "decoded_mask_sha256": "5d8504ac2bb018a123fa238dbcb55615ca50278942c03bf49425df46023389b4",
+        "metadata_path": "/Users/adpena/Projects/pact/experiments/results/lane_12_nerv_20260430_codex_jsonfix40/predecoded_mask_cache/9bba6fea10f3dbe15783f3bee710f1f8858624a26697971c86305a21c1a9d53a.json",
+        "tensor_path": "/Users/adpena/Projects/pact/experiments/results/lane_12_nerv_20260430_codex_jsonfix40/predecoded_mask_cache/9bba6fea10f3dbe15783f3bee710f1f8858624a26697971c86305a21c1a9d53a.pt"
+      },
+      "loaded": true,
+      "reason": null,
+      "requested": true
+    }
+  },
+  "platform": {
+    "platform": "macOS-26.4-arm64-arm-64bit",
+    "python": "3.12.13"
+  },
+  "policy_limitations": [
+    "byte costs are planning estimates, not measured archive deltas",
+    "policies are not dispatchable and must be converted into a charged builder before eval",
+    "geometry/proxy improvement must be remeasured against promotion thresholds before retraining unblock",
+    "exact CUDA auth eval is still required for any eventual archive score claim"
+  ],
+  "producer": "experiments/plan_lane12_geometry_gate_repair_atoms.py",
+  "promotion_eligible": false,
+  "remote_jobs_dispatched": false,
+  "repo_root": "/Users/adpena/Projects/pact",
+  "schema": "lane12_geometry_gate_repair_atom_plan_v1",
+  "schema_version": 1,
+  "score_claim": false,
+  "warning": "This is a local planning/profiling artifact only. It does not build a byte-closed archive, does not run CUDA auth eval, and cannot promote, rank, retire, or support a paper score claim."
+}

@@ -1,0 +1,127 @@
+{
+  "overlays": [
+    {
+      "archive_delta_bytes_vs_source_without_overlay": -13306,
+      "candidate_id": "bounded_mask_reencode_crf52_preset13_g9999",
+      "compressed_sizes": {
+        "brotli_q11_bytes": 739820,
+        "raw_bytes": 2725972,
+        "zlib9_bytes": 1150284
+      },
+      "exact_overlay_reconstructs_source_mask_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+      "mask_geometry_without_overlay": {
+        "bounded_pixel_disagreement": true,
+        "changed_frame_count": 600,
+        "changed_pixel_count": 894813,
+        "changed_pixel_fraction": 0.007585423787434896,
+        "max_changed_pixels_per_frame": 2594,
+        "mean_changed_pixels_per_changed_frame": 1491.355,
+        "source_to_candidate_confusion_5x5": [
+          [
+            27061247,
+            284127,
+            46702,
+            11777,
+            4574
+          ],
+          [
+            253867,
+            433986,
+            1749,
+            367,
+            94
+          ],
+          [
+            9421,
+            59113,
+            58323826,
+            21315,
+            20
+          ],
+          [
+            1453,
+            8631,
+            59446,
+            1385804,
+            4533
+          ],
+          [
+            4923,
+            11423,
+            30019,
+            81259,
+            29865124
+          ]
+        ],
+        "total_pixel_count": 117964800,
+        "zero_disagreement": false
+      },
+      "overlay_payload_sha256": "28adfaf0d60f8af94258438d6222d6e5bea8efea2a0a2593d3bb9398bcd4bd46",
+      "run_count": 302567,
+      "selected_pixel_count": 894813,
+      "verdict": "negative_too_large_for_byte_cut"
+    },
+    {
+      "archive_delta_bytes_vs_source_without_overlay": -71909,
+      "candidate_id": "bounded_mask_reencode_crf55_preset13_g9999",
+      "compressed_sizes": {
+        "brotli_q11_bytes": 754049,
+        "raw_bytes": 2777083,
+        "zlib9_bytes": 1175998
+      },
+      "exact_overlay_reconstructs_source_mask_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+      "mask_geometry_without_overlay": {
+        "bounded_pixel_disagreement": true,
+        "changed_frame_count": 600,
+        "changed_pixel_count": 959366,
+        "changed_pixel_fraction": 0.008132646348741319,
+        "max_changed_pixels_per_frame": 2858,
+        "mean_changed_pixels_per_changed_frame": 1598.9433333333334,
+        "source_to_candidate_confusion_5x5": [
+          [
+            27046461,
+            292335,
+            51218,
+            13261,
+            5152
+          ],
+          [
+            295079,
+            392574,
+            1928,
+            387,
+            95
+          ],
+          [
+            10365,
+            61030,
+            58320330,
+            21951,
+            19
+          ],
+          [
+            1895,
+            9428,
+            63725,
+            1380314,
+            4505
+          ],
+          [
+            5845,
+            12147,
+            31037,
+            77964,
+            29865755
+          ]
+        ],
+        "total_pixel_count": 117964800,
+        "zero_disagreement": false
+      },
+      "overlay_payload_sha256": "347aed7441ab974d9f89e750cdaaf934de7d51afef56d54625d55061e53da387",
+      "run_count": 308246,
+      "selected_pixel_count": 959366,
+      "verdict": "negative_too_large_for_byte_cut"
+    }
+  ],
+  "score_claim": false
+}

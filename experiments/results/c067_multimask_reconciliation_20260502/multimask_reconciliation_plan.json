@@ -1,0 +1,2196 @@
+{
+  "archive_builder_hooks": {
+    "charged_residual_contract": "Use estimated_byte_cost_model as a proxy only; a builder must emit deterministic charged bytes and record exact payload hashes.",
+    "policy_json_contract": "candidate_policies[*].fusion_reconciliation_policy",
+    "required_next_validation": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda"
+  },
+  "candidate_family_names": [
+    "cmg3_nonzero_top1",
+    "cmg3_nonzero_top2",
+    "cmg3a_body200",
+    "cmg3_rowspan_stride1"
+  ],
+  "candidate_policies": [
+    {
+      "candidate_family_names": [
+        "cmg3_nonzero_top1",
+        "cmg3_nonzero_top2",
+        "cmg3a_body200",
+        "cmg3_rowspan_stride1"
+      ],
+      "density_metrics": {
+        "arithmetic_entropy_floor_bytes_no_model_overhead": 99294,
+        "arithmetic_entropy_floor_rate_score_cost_no_model_overhead": 0.066115798891,
+        "arithmetic_estimated_bytes_with_model_overhead": 100776,
+        "arithmetic_estimated_rate_score_cost_with_model_overhead": 0.06710260186,
+        "break_even_component_score_improvement_per_changed_element": 1.141257058e-06,
+        "break_even_total_component_score_improvement_required": 0.30285196179,
+        "changed_element_fraction": 0.002249543932,
+        "changed_elements_per_run": 4.403846792127,
+        "estimated_bytes_per_changed_element": 1.713962173141,
+        "estimated_bytes_per_run": 7.548026818016,
+        "lambda_rate": 6.658589531221714e-07,
+        "learnable_feedback_role": "byte_distortion_density_observation",
+        "rate_score_cost": 0.30285196179,
+        "total_source_rows": 230400,
+        "touched_row_fraction": 0.1332421875
+      },
+      "differentiable_feedback_contract": {
+        "gradient_truth_boundary": "Differentiable rewards are proposal signals only; exact CUDA auth eval of a deterministic byte-closed archive is the score truth.",
+        "reward_terms": {
+          "negative_disagreement_proxy": "-disagreement_byte_equivalent * changed_elements_vs_source",
+          "negative_rate_cost": "-lambda_rate * estimated_charged_bytes",
+          "no_op_penalty": "-1000000000000 when no_op_vs_source=true"
+        },
+        "smooth_surrogate_targets": {
+          "atom_density": "maximize expected component benefit per charged byte",
+          "selection_probability": "relax hard policy choice with softmax/Gumbel over rank_cost_proxy",
+          "trust_region": "penalize source-change mass outside measured hotspot/confusion priors"
+        }
+      },
+      "disagreement_metrics": {
+        "candidate_pairwise": {
+          "max_disagreement_fraction": 0.118113886515,
+          "mean_disagreement_fraction": 0.061528429102,
+          "pair_count": 6
+        },
+        "fused_vs_candidate": {
+          "cmg3_nonzero_top1": {
+            "agreement_fraction": 0.96676489936,
+            "disagreement_count": 3920572,
+            "disagreement_fraction": 0.03323510064
+          },
+          "cmg3_nonzero_top2": {
+            "agreement_fraction": 0.991079330444,
+            "disagreement_count": 1052325,
+            "disagreement_fraction": 0.008920669556
+          },
+          "cmg3_rowspan_stride1": {
+            "agreement_fraction": 0.911562711928,
+            "disagreement_count": 10432487,
+            "disagreement_fraction": 0.088437288072
+          },
+          "cmg3a_body200": {
+            "agreement_fraction": 0.99920244005,
+            "disagreement_count": 94084,
+            "disagreement_fraction": 0.00079755995
+          }
+        },
+        "fused_vs_source": {
+          "agreement_fraction": 0.997750456068,
+          "disagreement_count": 265367,
+          "disagreement_fraction": 0.002249543932
+        }
+      },
+      "dispatch_relevance": {
+        "dispatchable_byte_model": true,
+        "no_op_vs_source": false,
+        "rank_penalty_applied": 0,
+        "reason": "changes source under empirical byte proxy; still requires deterministic archive builder"
+      },
+      "estimated_byte_cost_model": {
+        "alternatives": {
+          "compact_row_run_residual_over_source_proxy": {
+            "arithmetic_lower_bound_proxy": {
+              "changed_elements_vs_source": 265367,
+              "dispatchable_without_coder": false,
+              "entropy_bits": 793997.89974,
+              "entropy_floor_bytes_no_model_overhead": 99294,
+              "estimated_charged_bytes": 100776,
+              "formula": "policy_overhead + adaptive_model_overhead + ceil(sum(stream_zero_order_entropy_bits)/8); lower bound only until a deterministic archive-local arithmetic coder exists",
+              "kind": "ideal_adaptive_arithmetic_row_run_lower_bound_proxy",
+              "model_overhead_bytes": 1482,
+              "planning_lower_bound_only": true,
+              "run_count": 60258,
+              "stream_summaries": [
+                {
+                  "entropy_bits": 34038.15842,
+                  "entropy_bits_per_token": 1.10877091827,
+                  "max_symbol": 347,
+                  "min_symbol": 1,
+                  "name": "row_delta",
+                  "token_count": 30699,
+                  "unique_count": 153
+                },
+                {
+                  "entropy_bits": 58429.371033,
+                  "entropy_bits_per_token": 1.903298838181,
+                  "max_symbol": 8,
+                  "min_symbol": 1,
+                  "name": "runs_per_row",
+                  "token_count": 30699,
+                  "unique_count": 8
+                },
+                {
+                  "entropy_bits": 513253.420141,
+                  "entropy_bits_per_token": 8.517597997621,
+                  "max_symbol": 511,
+                  "min_symbol": 0,
+                  "name": "x_gap",
+                  "token_count": 60258,
+                  "unique_count": 511
+                },
+                {
+                  "entropy_bits": 188276.950146,
+                  "entropy_bits_per_token": 3.12451375994,
+                  "max_symbol": 39,
+                  "min_symbol": 1,
+                  "name": "length",
+                  "token_count": 60258,
+                  "unique_count": 36
+                },
+                {
+                  "entropy_bits": -0.0,
+                  "entropy_bits_per_token": -0.0,
+                  "max_symbol": 0,
+                  "min_symbol": 0,
+                  "name": "value",
+                  "token_count": 60258,
+                  "unique_count": 1
+                }
+              ],
+              "touched_row_count": 30699
+            },
+            "changed_elements_vs_source": 265367,
+            "estimated_charged_bytes": 454829,
+            "formula": "policy_overhead + touched_rows*(row_index_bytes+row_run_count_bytes) + run_count*(2*x_coord_bytes+value_bytes)",
+            "kind": "compact_row_run_residual_over_source_proxy",
+            "row_index_bytes": 3,
+            "row_run_count_bytes": 2,
+            "run_count": 60258,
+            "run_record_bytes": 5,
+            "touched_row_count": 30699,
+            "value_bytes": 1,
+            "x_coord_bytes": 2
+          },
+          "ideal_adaptive_arithmetic_row_run_lower_bound_proxy": {
+            "changed_elements_vs_source": 265367,
+            "dispatchable_without_coder": false,
+            "entropy_bits": 793997.89974,
+            "entropy_floor_bytes_no_model_overhead": 99294,
+            "estimated_charged_bytes": 100776,
+            "formula": "policy_overhead + adaptive_model_overhead + ceil(sum(stream_zero_order_entropy_bits)/8); lower bound only until a deterministic archive-local arithmetic coder exists",
+            "kind": "ideal_adaptive_arithmetic_row_run_lower_bound_proxy",
+            "model_overhead_bytes": 1482,
+            "planning_lower_bound_only": true,
+            "run_count": 60258,
+            "stream_summaries": [
+              {
+                "entropy_bits": 34038.15842,
+                "entropy_bits_per_token": 1.10877091827,
+                "max_symbol": 347,
+                "min_symbol": 1,
+                "name": "row_delta",
+                "token_count": 30699,
+                "unique_count": 153
+              },
+              {
+                "entropy_bits": 58429.371033,
+                "entropy_bits_per_token": 1.903298838181,
+                "max_symbol": 8,
+                "min_symbol": 1,
+                "name": "runs_per_row",
+                "token_count": 30699,
+                "unique_count": 8
+              },
+              {
+                "entropy_bits": 513253.420141,
+                "entropy_bits_per_token": 8.517597997621,
+                "max_symbol": 511,
+                "min_symbol": 0,
+                "name": "x_gap",
+                "token_count": 60258,
+                "unique_count": 511
+              },
+              {
+                "entropy_bits": 188276.950146,
+                "entropy_bits_per_token": 3.12451375994,
+                "max_symbol": 39,
+                "min_symbol": 1,
+                "name": "length",
+                "token_count": 60258,
+                "unique_count": 36
+              },
+              {
+                "entropy_bits": -0.0,
+                "entropy_bits_per_token": -0.0,
+                "max_symbol": 0,
+                "min_symbol": 0,
+                "name": "value",
+                "token_count": 60258,
+                "unique_count": 1
+              }
+            ],
+            "touched_row_count": 30699
+          },
+          "sparse_residual_over_source_proxy": {
+            "changed_elements_vs_source": 265367,
+            "estimated_charged_bytes": 1326879,
+            "index_bytes_per_changed_element": 4,
+            "kind": "sparse_residual_over_source_proxy",
+            "policy_overhead_bytes": 44,
+            "value_bytes_per_changed_element": 1
+          }
+        },
+        "selected": {
+          "arithmetic_lower_bound_proxy": {
+            "changed_elements_vs_source": 265367,
+            "dispatchable_without_coder": false,
+            "entropy_bits": 793997.89974,
+            "entropy_floor_bytes_no_model_overhead": 99294,
+            "estimated_charged_bytes": 100776,
+            "formula": "policy_overhead + adaptive_model_overhead + ceil(sum(stream_zero_order_entropy_bits)/8); lower bound only until a deterministic archive-local arithmetic coder exists",
+            "kind": "ideal_adaptive_arithmetic_row_run_lower_bound_proxy",
+            "model_overhead_bytes": 1482,
+            "planning_lower_bound_only": true,
+            "run_count": 60258,
+            "stream_summaries": [
+              {
+                "entropy_bits": 34038.15842,
+                "entropy_bits_per_token": 1.10877091827,
+                "max_symbol": 347,
+                "min_symbol": 1,
+                "name": "row_delta",
+                "token_count": 30699,
+                "unique_count": 153
+              },
+              {
+                "entropy_bits": 58429.371033,
+                "entropy_bits_per_token": 1.903298838181,
+                "max_symbol": 8,
+                "min_symbol": 1,
+                "name": "runs_per_row",
+                "token_count": 30699,
+                "unique_count": 8
+              },
+              {
+                "entropy_bits": 513253.420141,
+                "entropy_bits_per_token": 8.517597997621,
+                "max_symbol": 511,
+                "min_symbol": 0,
+                "name": "x_gap",
+                "token_count": 60258,
+                "unique_count": 511
+              },
+              {
+                "entropy_bits": 188276.950146,
+                "entropy_bits_per_token": 3.12451375994,
+                "max_symbol": 39,
+                "min_symbol": 1,
+                "name": "length",
+                "token_count": 60258,
+                "unique_count": 36
+              },
+              {
+                "entropy_bits": -0.0,
+                "entropy_bits_per_token": -0.0,
+                "max_symbol": 0,
+                "min_symbol": 0,
+                "name": "value",
+                "token_count": 60258,
+                "unique_count": 1
+              }
+            ],
+            "touched_row_count": 30699
+          },
+          "changed_elements_vs_source": 265367,
+          "estimated_charged_bytes": 454829,
+          "formula": "policy_overhead + touched_rows*(row_index_bytes+row_run_count_bytes) + run_count*(2*x_coord_bytes+value_bytes)",
+          "kind": "compact_row_run_residual_over_source_proxy",
+          "row_index_bytes": 3,
+          "row_run_count_bytes": 2,
+          "run_count": 60258,
+          "run_record_bytes": 5,
+          "selected": true,
+          "touched_row_count": 30699,
+          "value_bytes": 1,
+          "x_coord_bytes": 2
+        }
+      },
+      "estimated_charged_bytes": 454829,
+      "evidence_grade": "empirical",
+      "fused_mask_sha256": "6a422c08157199fd65fe78c47833802c48d748ac5e4666055e0d31c79ac2f7a0",
+      "fusion_reconciliation_policy": {
+        "inputs": [
+          "c067_decoded_source",
+          "cmg3_nonzero_top1",
+          "cmg3_nonzero_top2",
+          "cmg3a_body200",
+          "cmg3_rowspan_stride1"
+        ],
+        "name": "majority_vote",
+        "tie_break": "preserve_source_if_tied_else_lowest_label"
+      },
+      "non_promotable_warning": "No score claim is made by this multimask reconciliation planner. It emits byte/disagreement atom hypotheses only; a deterministic archive builder and exact CUDA auth eval of the exact archive bytes are required before promotion, ranking, or score claims.",
+      "policy_family": "majority_vote",
+      "policy_id": "majority_vote_all",
+      "rank": 1,
+      "rank_cost_proxy": 720196.0,
+      "score_claim": false
+    },
+    {
+      "candidate_family_names": [
+        "cmg3a_body200"
+      ],
+      "density_metrics": {
+        "arithmetic_entropy_floor_bytes_no_model_overhead": 127286,
+        "arithmetic_entropy_floor_rate_score_cost_no_model_overhead": 0.084754522707,
+        "arithmetic_estimated_bytes_with_model_overhead": 128734,
+        "arithmetic_estimated_rate_score_cost_with_model_overhead": 0.085718686471,
+        "break_even_component_score_improvement_per_changed_element": 1.10842376e-06,
+        "break_even_total_component_score_improvement_required": 0.398424029049,
+        "changed_element_fraction": 0.003047103882,
+        "changed_elements_per_run": 4.640053183936,
+        "estimated_bytes_per_changed_element": 1.664652483927,
+        "estimated_bytes_per_run": 7.724076058193,
+        "lambda_rate": 6.658589531221714e-07,
+        "learnable_feedback_role": "byte_distortion_density_observation",
+        "rate_score_cost": 0.398424029049,
+        "total_source_rows": 230400,
+        "touched_row_fraction": 0.183168402778
+      },
+      "differentiable_feedback_contract": {
+        "gradient_truth_boundary": "Differentiable rewards are proposal signals only; exact CUDA auth eval of a deterministic byte-closed archive is the score truth.",
+        "reward_terms": {
+          "negative_disagreement_proxy": "-disagreement_byte_equivalent * changed_elements_vs_source",
+          "negative_rate_cost": "-lambda_rate * estimated_charged_bytes",
+          "no_op_penalty": "-1000000000000 when no_op_vs_source=true"
+        },
+        "smooth_surrogate_targets": {
+          "atom_density": "maximize expected component benefit per charged byte",
+          "selection_probability": "relax hard policy choice with softmax/Gumbel over rank_cost_proxy",
+          "trust_region": "penalize source-change mass outside measured hotspot/confusion priors"
+        }
+      },
+      "disagreement_metrics": {
+        "candidate_pairwise": {
+          "max_disagreement_fraction": 0.0,
+          "mean_disagreement_fraction": 0.0,
+          "pair_count": 0
+        },
+        "fused_vs_candidate": {
+          "cmg3a_body200": {
+            "agreement_fraction": 1.0,
+            "disagreement_count": 0,
+            "disagreement_fraction": 0.0
+          }
+        },
+        "fused_vs_source": {
+          "agreement_fraction": 0.996952896118,
+          "disagreement_count": 359451,
+          "disagreement_fraction": 0.003047103882
+        }
+      },
+      "dispatch_relevance": {
+        "dispatchable_byte_model": true,
+        "no_op_vs_source": false,
+        "rank_penalty_applied": 0,
+        "reason": "changes source under empirical byte proxy; still requires deterministic archive builder"
+      },
+      "estimated_byte_cost_model": {
+        "alternatives": {
+          "compact_row_run_residual_over_source_proxy": {
+            "arithmetic_lower_bound_proxy": {
+              "changed_elements_vs_source": 359451,
+              "dispatchable_without_coder": false,
+              "entropy_bits": 1018153.396769,
+              "entropy_floor_bytes_no_model_overhead": 127286,
+              "estimated_charged_bytes": 128734,
+              "formula": "policy_overhead + adaptive_model_overhead + ceil(sum(stream_zero_order_entropy_bits)/8); lower bound only until a deterministic archive-local arithmetic coder exists",
+              "kind": "ideal_adaptive_arithmetic_row_run_lower_bound_proxy",
+              "model_overhead_bytes": 1448,
+              "planning_lower_bound_only": true,
+              "run_count": 77467,
+              "stream_summaries": [
+                {
+                  "entropy_bits": 38927.056071,
+                  "entropy_bits_per_token": 0.922398371424,
+                  "max_symbol": 336,
+                  "min_symbol": 1,
+                  "name": "row_delta",
+                  "token_count": 42202,
+                  "unique_count": 135
+                },
+                {
+                  "entropy_bits": 75559.23199,
+                  "entropy_bits_per_token": 1.790418273785,
+                  "max_symbol": 8,
+                  "min_symbol": 1,
+                  "name": "runs_per_row",
+                  "token_count": 42202,
+                  "unique_count": 8
+                },
+                {
+                  "entropy_bits": 665351.195162,
+                  "entropy_bits_per_token": 8.588833892657,
+                  "max_symbol": 511,
+                  "min_symbol": 0,
+                  "name": "x_gap",
+                  "token_count": 77467,
+                  "unique_count": 512
+                },
+                {
+                  "entropy_bits": 238315.913546,
+                  "entropy_bits_per_token": 3.076353977127,
+                  "max_symbol": 39,
+                  "min_symbol": 1,
+                  "name": "length",
+                  "token_count": 77467,
+                  "unique_count": 36
+                },
+                {
+                  "entropy_bits": -0.0,
+                  "entropy_bits_per_token": -0.0,
+                  "max_symbol": 0,
+                  "min_symbol": 0,
+                  "name": "value",
+                  "token_count": 77467,
+                  "unique_count": 1
+                }
+              ],
+              "touched_row_count": 42202
+            },
+            "changed_elements_vs_source": 359451,
+            "estimated_charged_bytes": 598361,
+            "formula": "policy_overhead + touched_rows*(row_index_bytes+row_run_count_bytes) + run_count*(2*x_coord_bytes+value_bytes)",
+            "kind": "compact_row_run_residual_over_source_proxy",
+            "row_index_bytes": 3,
+            "row_run_count_bytes": 2,
+            "run_count": 77467,
+            "run_record_bytes": 5,
+            "touched_row_count": 42202,
+            "value_bytes": 1,
+            "x_coord_bytes": 2
+          },
+          "ideal_adaptive_arithmetic_row_run_lower_bound_proxy": {
+            "changed_elements_vs_source": 359451,
+            "dispatchable_without_coder": false,
+            "entropy_bits": 1018153.396769,
+            "entropy_floor_bytes_no_model_overhead": 127286,
+            "estimated_charged_bytes": 128734,
+            "formula": "policy_overhead + adaptive_model_overhead + ceil(sum(stream_zero_order_entropy_bits)/8); lower bound only until a deterministic archive-local arithmetic coder exists",
+            "kind": "ideal_adaptive_arithmetic_row_run_lower_bound_proxy",
+            "model_overhead_bytes": 1448,
+            "planning_lower_bound_only": true,
+            "run_count": 77467,
+            "stream_summaries": [
+              {
+                "entropy_bits": 38927.056071,
+                "entropy_bits_per_token": 0.922398371424,
+                "max_symbol": 336,
+                "min_symbol": 1,
+                "name": "row_delta",
+                "token_count": 42202,
+                "unique_count": 135
+              },
+              {
+                "entropy_bits": 75559.23199,
+                "entropy_bits_per_token": 1.790418273785,
+                "max_symbol": 8,
+                "min_symbol": 1,
+                "name": "runs_per_row",
+                "token_count": 42202,
+                "unique_count": 8
+              },
+              {
+                "entropy_bits": 665351.195162,
+                "entropy_bits_per_token": 8.588833892657,
+                "max_symbol": 511,
+                "min_symbol": 0,
+                "name": "x_gap",
+                "token_count": 77467,
+                "unique_count": 512
+              },
+              {
+                "entropy_bits": 238315.913546,
+                "entropy_bits_per_token": 3.076353977127,
+                "max_symbol": 39,
+                "min_symbol": 1,
+                "name": "length",
+                "token_count": 77467,
+                "unique_count": 36
+              },
+              {
+                "entropy_bits": -0.0,
+                "entropy_bits_per_token": -0.0,
+                "max_symbol": 0,
+                "min_symbol": 0,
+                "name": "value",
+                "token_count": 77467,
+                "unique_count": 1
+              }
+            ],
+            "touched_row_count": 42202
+          },
+          "sparse_residual_over_source_proxy": {
+            "changed_elements_vs_source": 359451,
+            "estimated_charged_bytes": 1797271,
+            "index_bytes_per_changed_element": 4,
+            "kind": "sparse_residual_over_source_proxy",
+            "policy_overhead_bytes": 16,
+            "value_bytes_per_changed_element": 1
+          }
+        },
+        "selected": {
+          "arithmetic_lower_bound_proxy": {
+            "changed_elements_vs_source": 359451,
+            "dispatchable_without_coder": false,
+            "entropy_bits": 1018153.396769,
+            "entropy_floor_bytes_no_model_overhead": 127286,
+            "estimated_charged_bytes": 128734,
+            "formula": "policy_overhead + adaptive_model_overhead + ceil(sum(stream_zero_order_entropy_bits)/8); lower bound only until a deterministic archive-local arithmetic coder exists",
+            "kind": "ideal_adaptive_arithmetic_row_run_lower_bound_proxy",
+            "model_overhead_bytes": 1448,
+            "planning_lower_bound_only": true,
+            "run_count": 77467,
+            "stream_summaries": [
+              {
+                "entropy_bits": 38927.056071,
+                "entropy_bits_per_token": 0.922398371424,
+                "max_symbol": 336,
+                "min_symbol": 1,
+                "name": "row_delta",
+                "token_count": 42202,
+                "unique_count": 135
+              },
+              {
+                "entropy_bits": 75559.23199,
+                "entropy_bits_per_token": 1.790418273785,
+                "max_symbol": 8,
+                "min_symbol": 1,
+                "name": "runs_per_row",
+                "token_count": 42202,
+                "unique_count": 8
+              },
+              {
+                "entropy_bits": 665351.195162,
+                "entropy_bits_per_token": 8.588833892657,
+                "max_symbol": 511,
+                "min_symbol": 0,
+                "name": "x_gap",
+                "token_count": 77467,
+                "unique_count": 512
+              },
+              {
+                "entropy_bits": 238315.913546,
+                "entropy_bits_per_token": 3.076353977127,
+                "max_symbol": 39,
+                "min_symbol": 1,
+                "name": "length",
+                "token_count": 77467,
+                "unique_count": 36
+              },
+              {
+                "entropy_bits": -0.0,
+                "entropy_bits_per_token": -0.0,
+                "max_symbol": 0,
+                "min_symbol": 0,
+                "name": "value",
+                "token_count": 77467,
+                "unique_count": 1
+              }
+            ],
+            "touched_row_count": 42202
+          },
+          "changed_elements_vs_source": 359451,
+          "estimated_charged_bytes": 598361,
+          "formula": "policy_overhead + touched_rows*(row_index_bytes+row_run_count_bytes) + run_count*(2*x_coord_bytes+value_bytes)",
+          "kind": "compact_row_run_residual_over_source_proxy",
+          "row_index_bytes": 3,
+          "row_run_count_bytes": 2,
+          "run_count": 77467,
+          "run_record_bytes": 5,
+          "selected": true,
+          "touched_row_count": 42202,
+          "value_bytes": 1,
+          "x_coord_bytes": 2
+        }
+      },
+      "estimated_charged_bytes": 598361,
+      "evidence_grade": "empirical",
+      "fused_mask_sha256": "23c72566ef924ac3aebebea17cc2959c25da028d519ee0790e70294c8974c97b",
+      "fusion_reconciliation_policy": {
+        "base_family": "c067_decoded_source",
+        "name": "cheap_residual_over_base",
+        "residual_atom": "changed element indices plus replacement labels",
+        "residual_family": "cmg3a_body200"
+      },
+      "non_promotable_warning": "No score claim is made by this multimask reconciliation planner. It emits byte/disagreement atom hypotheses only; a deterministic archive builder and exact CUDA auth eval of the exact archive bytes are required before promotion, ranking, or score claims.",
+      "policy_family": "cheap_residual_over_base",
+      "policy_id": "cheap_residual_over_base_c067_decoded_source_to_cmg3a_body200",
+      "rank": 2,
+      "rank_cost_proxy": 957812.0,
+      "score_claim": false
+    },
+    {
+      "candidate_family_names": [
+        "cmg3_nonzero_top2"
+      ],
+      "density_metrics": {
+        "arithmetic_entropy_floor_bytes_no_model_overhead": 153037,
+        "arithmetic_entropy_floor_rate_score_cost_no_model_overhead": 0.101901056609,
+        "arithmetic_estimated_bytes_with_model_overhead": 154877,
+        "arithmetic_estimated_rate_score_cost_with_model_overhead": 0.103126237083,
+        "break_even_component_score_improvement_per_changed_element": 3.02173044e-07,
+        "break_even_total_component_score_improvement_required": 0.398171002647,
+        "changed_element_fraction": 0.011170213487,
+        "changed_elements_per_run": 15.652523044759,
+        "estimated_bytes_per_changed_element": 0.45380938793,
+        "estimated_bytes_per_run": 7.103261902499,
+        "lambda_rate": 6.658589531221714e-07,
+        "learnable_feedback_role": "byte_distortion_density_observation",
+        "rate_score_cost": 0.398171002647,
+        "total_source_rows": 230400,
+        "touched_row_fraction": 0.153684895833
+      },
+      "differentiable_feedback_contract": {
+        "gradient_truth_boundary": "Differentiable rewards are proposal signals only; exact CUDA auth eval of a deterministic byte-closed archive is the score truth.",
+        "reward_terms": {
+          "negative_disagreement_proxy": "-disagreement_byte_equivalent * changed_elements_vs_source",
+          "negative_rate_cost": "-lambda_rate * estimated_charged_bytes",
+          "no_op_penalty": "-1000000000000 when no_op_vs_source=true"
+        },
+        "smooth_surrogate_targets": {
+          "atom_density": "maximize expected component benefit per charged byte",
+          "selection_probability": "relax hard policy choice with softmax/Gumbel over rank_cost_proxy",
+          "trust_region": "penalize source-change mass outside measured hotspot/confusion priors"
+        }
+      },
+      "disagreement_metrics": {
+        "candidate_pairwise": {
+          "max_disagreement_fraction": 0.0,
+          "mean_disagreement_fraction": 0.0,
+          "pair_count": 0
+        },
+        "fused_vs_candidate": {
+          "cmg3_nonzero_top2": {
+            "agreement_fraction": 1.0,
+            "disagreement_count": 0,
+            "disagreement_fraction": 0.0
+          }
+        },
+        "fused_vs_source": {
+          "agreement_fraction": 0.988829786513,
+          "disagreement_count": 1317692,
+          "disagreement_fraction": 0.011170213487
+        }
+      },
+      "dispatch_relevance": {
+        "dispatchable_byte_model": true,
+        "no_op_vs_source": false,
+        "rank_penalty_applied": 0,
+        "reason": "changes source under empirical byte proxy; still requires deterministic archive builder"
+      },
+      "estimated_byte_cost_model": {
+        "alternatives": {
+          "compact_row_run_residual_over_source_proxy": {
+            "arithmetic_lower_bound_proxy": {
+              "changed_elements_vs_source": 1317692,
+              "dispatchable_without_coder": false,
+              "entropy_bits": 1224162.728885,
+              "entropy_floor_bytes_no_model_overhead": 153037,
+              "estimated_charged_bytes": 154877,
+              "formula": "policy_overhead + adaptive_model_overhead + ceil(sum(stream_zero_order_entropy_bits)/8); lower bound only until a deterministic archive-local arithmetic coder exists",
+              "kind": "ideal_adaptive_arithmetic_row_run_lower_bound_proxy",
+              "model_overhead_bytes": 1840,
+              "planning_lower_bound_only": true,
+              "run_count": 84184,
+              "stream_summaries": [
+                {
+                  "entropy_bits": 22696.64904,
+                  "entropy_bits_per_token": 0.640985315588,
+                  "max_symbol": 347,
+                  "min_symbol": 1,
+                  "name": "row_delta",
+                  "token_count": 35409,
+                  "unique_count": 146
+                },
+                {
+                  "entropy_bits": 79755.755503,
+                  "entropy_bits_per_token": 2.252414795748,
+                  "max_symbol": 9,
+                  "min_symbol": 1,
+                  "name": "runs_per_row",
+                  "token_count": 35409,
+                  "unique_count": 9
+                },
+                {
+                  "entropy_bits": 705437.929686,
+                  "entropy_bits_per_token": 8.379715025252,
+                  "max_symbol": 511,
+                  "min_symbol": 0,
+                  "name": "x_gap",
+                  "token_count": 84184,
+                  "unique_count": 512
+                },
+                {
+                  "entropy_bits": 416272.394656,
+                  "entropy_bits_per_token": 4.944792296111,
+                  "max_symbol": 278,
+                  "min_symbol": 1,
+                  "name": "length",
+                  "token_count": 84184,
+                  "unique_count": 220
+                },
+                {
+                  "entropy_bits": -0.0,
+                  "entropy_bits_per_token": -0.0,
+                  "max_symbol": 0,
+                  "min_symbol": 0,
+                  "name": "value",
+                  "token_count": 84184,
+                  "unique_count": 1
+                }
+              ],
+              "touched_row_count": 35409
+            },
+            "changed_elements_vs_source": 1317692,
+            "estimated_charged_bytes": 597981,
+            "formula": "policy_overhead + touched_rows*(row_index_bytes+row_run_count_bytes) + run_count*(2*x_coord_bytes+value_bytes)",
+            "kind": "compact_row_run_residual_over_source_proxy",
+            "row_index_bytes": 3,
+            "row_run_count_bytes": 2,
+            "run_count": 84184,
+            "run_record_bytes": 5,
+            "touched_row_count": 35409,
+            "value_bytes": 1,
+            "x_coord_bytes": 2
+          },
+          "ideal_adaptive_arithmetic_row_run_lower_bound_proxy": {
+            "changed_elements_vs_source": 1317692,
+            "dispatchable_without_coder": false,
+            "entropy_bits": 1224162.728885,
+            "entropy_floor_bytes_no_model_overhead": 153037,
+            "estimated_charged_bytes": 154877,
+            "formula": "policy_overhead + adaptive_model_overhead + ceil(sum(stream_zero_order_entropy_bits)/8); lower bound only until a deterministic archive-local arithmetic coder exists",
+            "kind": "ideal_adaptive_arithmetic_row_run_lower_bound_proxy",
+            "model_overhead_bytes": 1840,
+            "planning_lower_bound_only": true,
+            "run_count": 84184,
+            "stream_summaries": [
+              {
+                "entropy_bits": 22696.64904,
+                "entropy_bits_per_token": 0.640985315588,
+                "max_symbol": 347,
+                "min_symbol": 1,
+                "name": "row_delta",
+                "token_count": 35409,
+                "unique_count": 146
+              },
+              {
+                "entropy_bits": 79755.755503,
+                "entropy_bits_per_token": 2.252414795748,
+                "max_symbol": 9,
+                "min_symbol": 1,
+                "name": "runs_per_row",
+                "token_count": 35409,
+                "unique_count": 9
+              },
+              {
+                "entropy_bits": 705437.929686,
+                "entropy_bits_per_token": 8.379715025252,
+                "max_symbol": 511,
+                "min_symbol": 0,
+                "name": "x_gap",
+                "token_count": 84184,
+                "unique_count": 512
+              },
+              {
+                "entropy_bits": 416272.394656,
+                "entropy_bits_per_token": 4.944792296111,
+                "max_symbol": 278,
+                "min_symbol": 1,
+                "name": "length",
+                "token_count": 84184,
+                "unique_count": 220
+              },
+              {
+                "entropy_bits": -0.0,
+                "entropy_bits_per_token": -0.0,
+                "max_symbol": 0,
+                "min_symbol": 0,
+                "name": "value",
+                "token_count": 84184,
+                "unique_count": 1
+              }
+            ],
+            "touched_row_count": 35409
+          },
+          "sparse_residual_over_source_proxy": {
+            "changed_elements_vs_source": 1317692,
+            "estimated_charged_bytes": 6588476,
+            "index_bytes_per_changed_element": 4,
+            "kind": "sparse_residual_over_source_proxy",
+            "policy_overhead_bytes": 16,
+            "value_bytes_per_changed_element": 1
+          }
+        },
+        "selected": {
+          "arithmetic_lower_bound_proxy": {
+            "changed_elements_vs_source": 1317692,
+            "dispatchable_without_coder": false,
+            "entropy_bits": 1224162.728885,
+            "entropy_floor_bytes_no_model_overhead": 153037,
+            "estimated_charged_bytes": 154877,
+            "formula": "policy_overhead + adaptive_model_overhead + ceil(sum(stream_zero_order_entropy_bits)/8); lower bound only until a deterministic archive-local arithmetic coder exists",
+            "kind": "ideal_adaptive_arithmetic_row_run_lower_bound_proxy",
+            "model_overhead_bytes": 1840,
+            "planning_lower_bound_only": true,
+            "run_count": 84184,
+            "stream_summaries": [
+              {
+                "entropy_bits": 22696.64904,
+                "entropy_bits_per_token": 0.640985315588,
+                "max_symbol": 347,
+                "min_symbol": 1,
+                "name": "row_delta",
+                "token_count": 35409,
+                "unique_count": 146
+              },
+              {
+                "entropy_bits": 79755.755503,
+                "entropy_bits_per_token": 2.252414795748,
+                "max_symbol": 9,
+                "min_symbol": 1,
+                "name": "runs_per_row",
+                "token_count": 35409,
+                "unique_count": 9
+              },
+              {
+                "entropy_bits": 705437.929686,
+                "entropy_bits_per_token": 8.379715025252,
+                "max_symbol": 511,
+                "min_symbol": 0,
+                "name": "x_gap",
+                "token_count": 84184,
+                "unique_count": 512
+              },
+              {
+                "entropy_bits": 416272.394656,
+                "entropy_bits_per_token": 4.944792296111,
+                "max_symbol": 278,
+                "min_symbol": 1,
+                "name": "length",
+                "token_count": 84184,
+                "unique_count": 220
+              },
+              {
+                "entropy_bits": -0.0,
+                "entropy_bits_per_token": -0.0,
+                "max_symbol": 0,
+                "min_symbol": 0,
+                "name": "value",
+                "token_count": 84184,
+                "unique_count": 1
+              }
+            ],
+            "touched_row_count": 35409
+          },
+          "changed_elements_vs_source": 1317692,
+          "estimated_charged_bytes": 597981,
+          "formula": "policy_overhead + touched_rows*(row_index_bytes+row_run_count_bytes) + run_count*(2*x_coord_bytes+value_bytes)",
+          "kind": "compact_row_run_residual_over_source_proxy",
+          "row_index_bytes": 3,
+          "row_run_count_bytes": 2,
+          "run_count": 84184,
+          "run_record_bytes": 5,
+          "selected": true,
+          "touched_row_count": 35409,
+          "value_bytes": 1,
+          "x_coord_bytes": 2
+        }
+      },
+      "estimated_charged_bytes": 597981,
+      "evidence_grade": "empirical",
+      "fused_mask_sha256": "cff33b6dc73060a8fb8f28422ba446ddd11ed5c6bc5a50be9974b7a00a9aa9c9",
+      "fusion_reconciliation_policy": {
+        "base_family": "c067_decoded_source",
+        "name": "cheap_residual_over_base",
+        "residual_atom": "changed element indices plus replacement labels",
+        "residual_family": "cmg3_nonzero_top2"
+      },
+      "non_promotable_warning": "No score claim is made by this multimask reconciliation planner. It emits byte/disagreement atom hypotheses only; a deterministic archive builder and exact CUDA auth eval of the exact archive bytes are required before promotion, ranking, or score claims.",
+      "policy_family": "cheap_residual_over_base",
+      "policy_id": "cheap_residual_over_base_c067_decoded_source_to_cmg3_nonzero_top2",
+      "rank": 3,
+      "rank_cost_proxy": 1915673.0,
+      "score_claim": false
+    },
+    {
+      "candidate_family_names": [
+        "cmg3_nonzero_top1"
+      ],
+      "density_metrics": {
+        "arithmetic_entropy_floor_bytes_no_model_overhead": 225105,
+        "arithmetic_entropy_floor_rate_score_cost_no_model_overhead": 0.149888179643,
+        "arithmetic_estimated_bytes_with_model_overhead": 227107,
+        "arithmetic_estimated_rate_score_cost_with_model_overhead": 0.151221229267,
+        "break_even_component_score_improvement_per_changed_element": 1.3701385e-07,
+        "break_even_total_component_score_improvement_required": 0.573531616541,
+        "changed_element_fraction": 0.035484644572,
+        "changed_elements_per_run": 34.35236719654,
+        "estimated_bytes_per_changed_element": 0.205770079306,
+        "estimated_bytes_per_run": 7.06868932238,
+        "lambda_rate": 6.658589531221714e-07,
+        "learnable_feedback_role": "byte_distortion_density_observation",
+        "rate_score_cost": 0.573531616541,
+        "total_source_rows": 230400,
+        "touched_row_fraction": 0.218802083333
+      },
+      "differentiable_feedback_contract": {
+        "gradient_truth_boundary": "Differentiable rewards are proposal signals only; exact CUDA auth eval of a deterministic byte-closed archive is the score truth.",
+        "reward_terms": {
+          "negative_disagreement_proxy": "-disagreement_byte_equivalent * changed_elements_vs_source",
+          "negative_rate_cost": "-lambda_rate * estimated_charged_bytes",
+          "no_op_penalty": "-1000000000000 when no_op_vs_source=true"
+        },
+        "smooth_surrogate_targets": {
+          "atom_density": "maximize expected component benefit per charged byte",
+          "selection_probability": "relax hard policy choice with softmax/Gumbel over rank_cost_proxy",
+          "trust_region": "penalize source-change mass outside measured hotspot/confusion priors"
+        }
+      },
+      "disagreement_metrics": {
+        "candidate_pairwise": {
+          "max_disagreement_fraction": 0.0,
+          "mean_disagreement_fraction": 0.0,
+          "pair_count": 0
+        },
+        "fused_vs_candidate": {
+          "cmg3_nonzero_top1": {
+            "agreement_fraction": 1.0,
+            "disagreement_count": 0,
+            "disagreement_fraction": 0.0
+          }
+        },
+        "fused_vs_source": {
+          "agreement_fraction": 0.964515355428,
+          "disagreement_count": 4185939,
+          "disagreement_fraction": 0.035484644572
+        }
+      },
+      "dispatch_relevance": {
+        "dispatchable_byte_model": true,
+        "no_op_vs_source": false,
+        "rank_penalty_applied": 0,
+        "reason": "changes source under empirical byte proxy; still requires deterministic archive builder"
+      },
+      "estimated_byte_cost_model": {
+        "alternatives": {
+          "compact_row_run_residual_over_source_proxy": {
+            "arithmetic_lower_bound_proxy": {
+              "changed_elements_vs_source": 4185939,
+              "dispatchable_without_coder": false,
+              "entropy_bits": 1800706.399737,
+              "entropy_floor_bytes_no_model_overhead": 225105,
+              "estimated_charged_bytes": 227107,
+              "formula": "policy_overhead + adaptive_model_overhead + ceil(sum(stream_zero_order_entropy_bits)/8); lower bound only until a deterministic archive-local arithmetic coder exists",
+              "kind": "ideal_adaptive_arithmetic_row_run_lower_bound_proxy",
+              "model_overhead_bytes": 2002,
+              "planning_lower_bound_only": true,
+              "run_count": 121853,
+              "stream_summaries": [
+                {
+                  "entropy_bits": 22803.772832,
+                  "entropy_bits_per_token": 0.452348108233,
+                  "max_symbol": 290,
+                  "min_symbol": 1,
+                  "name": "row_delta",
+                  "token_count": 50412,
+                  "unique_count": 92
+                },
+                {
+                  "entropy_bits": 116541.948357,
+                  "entropy_bits_per_token": 2.311789819033,
+                  "max_symbol": 9,
+                  "min_symbol": 1,
+                  "name": "runs_per_row",
+                  "token_count": 50412,
+                  "unique_count": 9
+                },
+                {
+                  "entropy_bits": 991612.08436,
+                  "entropy_bits_per_token": 8.137773254328,
+                  "max_symbol": 511,
+                  "min_symbol": 0,
+                  "name": "x_gap",
+                  "token_count": 121853,
+                  "unique_count": 512
+                },
+                {
+                  "entropy_bits": 669748.594188,
+                  "entropy_bits_per_token": 5.496365244911,
+                  "max_symbol": 392,
+                  "min_symbol": 1,
+                  "name": "length",
+                  "token_count": 121853,
+                  "unique_count": 355
+                },
+                {
+                  "entropy_bits": -0.0,
+                  "entropy_bits_per_token": -0.0,
+                  "max_symbol": 0,
+                  "min_symbol": 0,
+                  "name": "value",
+                  "token_count": 121853,
+                  "unique_count": 1
+                }
+              ],
+              "touched_row_count": 50412
+            },
+            "changed_elements_vs_source": 4185939,
+            "estimated_charged_bytes": 861341,
+            "formula": "policy_overhead + touched_rows*(row_index_bytes+row_run_count_bytes) + run_count*(2*x_coord_bytes+value_bytes)",
+            "kind": "compact_row_run_residual_over_source_proxy",
+            "row_index_bytes": 3,
+            "row_run_count_bytes": 2,
+            "run_count": 121853,
+            "run_record_bytes": 5,
+            "touched_row_count": 50412,
+            "value_bytes": 1,
+            "x_coord_bytes": 2
+          },
+          "ideal_adaptive_arithmetic_row_run_lower_bound_proxy": {
+            "changed_elements_vs_source": 4185939,
+            "dispatchable_without_coder": false,
+            "entropy_bits": 1800706.399737,
+            "entropy_floor_bytes_no_model_overhead": 225105,
+            "estimated_charged_bytes": 227107,
+            "formula": "policy_overhead + adaptive_model_overhead + ceil(sum(stream_zero_order_entropy_bits)/8); lower bound only until a deterministic archive-local arithmetic coder exists",
+            "kind": "ideal_adaptive_arithmetic_row_run_lower_bound_proxy",
+            "model_overhead_bytes": 2002,
+            "planning_lower_bound_only": true,
+            "run_count": 121853,
+            "stream_summaries": [
+              {
+                "entropy_bits": 22803.772832,
+                "entropy_bits_per_token": 0.452348108233,
+                "max_symbol": 290,
+                "min_symbol": 1,
+                "name": "row_delta",
+                "token_count": 50412,
+                "unique_count": 92
+              },
+              {
+                "entropy_bits": 116541.948357,
+                "entropy_bits_per_token": 2.311789819033,
+                "max_symbol": 9,
+                "min_symbol": 1,
+                "name": "runs_per_row",
+                "token_count": 50412,
+                "unique_count": 9
+              },
+              {
+                "entropy_bits": 991612.08436,
+                "entropy_bits_per_token": 8.137773254328,
+                "max_symbol": 511,
+                "min_symbol": 0,
+                "name": "x_gap",
+                "token_count": 121853,
+                "unique_count": 512
+              },
+              {
+                "entropy_bits": 669748.594188,
+                "entropy_bits_per_token": 5.496365244911,
+                "max_symbol": 392,
+                "min_symbol": 1,
+                "name": "length",
+                "token_count": 121853,
+                "unique_count": 355
+              },
+              {
+                "entropy_bits": -0.0,
+                "entropy_bits_per_token": -0.0,
+                "max_symbol": 0,
+                "min_symbol": 0,
+                "name": "value",
+                "token_count": 121853,
+                "unique_count": 1
+              }
+            ],
+            "touched_row_count": 50412
+          },
+          "sparse_residual_over_source_proxy": {
+            "changed_elements_vs_source": 4185939,
+            "estimated_charged_bytes": 20929711,
+            "index_bytes_per_changed_element": 4,
+            "kind": "sparse_residual_over_source_proxy",
+            "policy_overhead_bytes": 16,
+            "value_bytes_per_changed_element": 1
+          }
+        },
+        "selected": {
+          "arithmetic_lower_bound_proxy": {
+            "changed_elements_vs_source": 4185939,
+            "dispatchable_without_coder": false,
+            "entropy_bits": 1800706.399737,
+            "entropy_floor_bytes_no_model_overhead": 225105,
+            "estimated_charged_bytes": 227107,
+            "formula": "policy_overhead + adaptive_model_overhead + ceil(sum(stream_zero_order_entropy_bits)/8); lower bound only until a deterministic archive-local arithmetic coder exists",
+            "kind": "ideal_adaptive_arithmetic_row_run_lower_bound_proxy",
+            "model_overhead_bytes": 2002,
+            "planning_lower_bound_only": true,
+            "run_count": 121853,
+            "stream_summaries": [
+              {
+                "entropy_bits": 22803.772832,
+                "entropy_bits_per_token": 0.452348108233,
+                "max_symbol": 290,
+                "min_symbol": 1,
+                "name": "row_delta",
+                "token_count": 50412,
+                "unique_count": 92
+              },
+              {
+                "entropy_bits": 116541.948357,
+                "entropy_bits_per_token": 2.311789819033,
+                "max_symbol": 9,
+                "min_symbol": 1,
+                "name": "runs_per_row",
+                "token_count": 50412,
+                "unique_count": 9
+              },
+              {
+                "entropy_bits": 991612.08436,
+                "entropy_bits_per_token": 8.137773254328,
+                "max_symbol": 511,
+                "min_symbol": 0,
+                "name": "x_gap",
+                "token_count": 121853,
+                "unique_count": 512
+              },
+              {
+                "entropy_bits": 669748.594188,
+                "entropy_bits_per_token": 5.496365244911,
+                "max_symbol": 392,
+                "min_symbol": 1,
+                "name": "length",
+                "token_count": 121853,
+                "unique_count": 355
+              },
+              {
+                "entropy_bits": -0.0,
+                "entropy_bits_per_token": -0.0,
+                "max_symbol": 0,
+                "min_symbol": 0,
+                "name": "value",
+                "token_count": 121853,
+                "unique_count": 1
+              }
+            ],
+            "touched_row_count": 50412
+          },
+          "changed_elements_vs_source": 4185939,
+          "estimated_charged_bytes": 861341,
+          "formula": "policy_overhead + touched_rows*(row_index_bytes+row_run_count_bytes) + run_count*(2*x_coord_bytes+value_bytes)",
+          "kind": "compact_row_run_residual_over_source_proxy",
+          "row_index_bytes": 3,
+          "row_run_count_bytes": 2,
+          "run_count": 121853,
+          "run_record_bytes": 5,
+          "selected": true,
+          "touched_row_count": 50412,
+          "value_bytes": 1,
+          "x_coord_bytes": 2
+        }
+      },
+      "estimated_charged_bytes": 861341,
+      "evidence_grade": "empirical",
+      "fused_mask_sha256": "1d186f6839608f3d5b15da6edd240eae2b7ffc2b5a3c3b04eb26bced0e4f143e",
+      "fusion_reconciliation_policy": {
+        "base_family": "c067_decoded_source",
+        "name": "cheap_residual_over_base",
+        "residual_atom": "changed element indices plus replacement labels",
+        "residual_family": "cmg3_nonzero_top1"
+      },
+      "non_promotable_warning": "No score claim is made by this multimask reconciliation planner. It emits byte/disagreement atom hypotheses only; a deterministic archive builder and exact CUDA auth eval of the exact archive bytes are required before promotion, ranking, or score claims.",
+      "policy_family": "cheap_residual_over_base",
+      "policy_id": "cheap_residual_over_base_c067_decoded_source_to_cmg3_nonzero_top1",
+      "rank": 4,
+      "rank_cost_proxy": 5047280.0,
+      "score_claim": false
+    },
+    {
+      "candidate_family_names": [
+        "cmg3_nonzero_top1",
+        "cmg3_nonzero_top2",
+        "cmg3a_body200",
+        "cmg3_rowspan_stride1"
+      ],
+      "density_metrics": {
+        "arithmetic_entropy_floor_bytes_no_model_overhead": 225125,
+        "arithmetic_entropy_floor_rate_score_cost_no_model_overhead": 0.149901496822,
+        "arithmetic_estimated_bytes_with_model_overhead": 227127,
+        "arithmetic_estimated_rate_score_cost_with_model_overhead": 0.151234546446,
+        "break_even_component_score_improvement_per_changed_element": 1.37017031e-07,
+        "break_even_total_component_score_improvement_required": 0.57354493372,
+        "changed_element_fraction": 0.035484644572,
+        "changed_elements_per_run": 34.35236719654,
+        "estimated_bytes_per_changed_element": 0.205774857206,
+        "estimated_bytes_per_run": 7.068853454572,
+        "lambda_rate": 6.658589531221714e-07,
+        "learnable_feedback_role": "byte_distortion_density_observation",
+        "rate_score_cost": 0.57354493372,
+        "total_source_rows": 230400,
+        "touched_row_fraction": 0.218802083333
+      },
+      "differentiable_feedback_contract": {
+        "gradient_truth_boundary": "Differentiable rewards are proposal signals only; exact CUDA auth eval of a deterministic byte-closed archive is the score truth.",
+        "reward_terms": {
+          "negative_disagreement_proxy": "-disagreement_byte_equivalent * changed_elements_vs_source",
+          "negative_rate_cost": "-lambda_rate * estimated_charged_bytes",
+          "no_op_penalty": "-1000000000000 when no_op_vs_source=true"
+        },
+        "smooth_surrogate_targets": {
+          "atom_density": "maximize expected component benefit per charged byte",
+          "selection_probability": "relax hard policy choice with softmax/Gumbel over rank_cost_proxy",
+          "trust_region": "penalize source-change mass outside measured hotspot/confusion priors"
+        }
+      },
+      "disagreement_metrics": {
+        "candidate_pairwise": {
+          "max_disagreement_fraction": 0.118113886515,
+          "mean_disagreement_fraction": 0.061528429102,
+          "pair_count": 6
+        },
+        "fused_vs_candidate": {
+          "cmg3_nonzero_top1": {
+            "agreement_fraction": 1.0,
+            "disagreement_count": 0,
+            "disagreement_fraction": 0.0
+          },
+          "cmg3_nonzero_top2": {
+            "agreement_fraction": 0.975685568915,
+            "disagreement_count": 2868247,
+            "disagreement_fraction": 0.024314431085
+          },
+          "cmg3_rowspan_stride1": {
+            "agreement_fraction": 0.881886113485,
+            "disagreement_count": 13933281,
+            "disagreement_fraction": 0.118113886515
+          },
+          "cmg3a_body200": {
+            "agreement_fraction": 0.96756245931,
+            "disagreement_count": 3826488,
+            "disagreement_fraction": 0.03243754069
+          }
+        },
+        "fused_vs_source": {
+          "agreement_fraction": 0.964515355428,
+          "disagreement_count": 4185939,
+          "disagreement_fraction": 0.035484644572
+        }
+      },
+      "dispatch_relevance": {
+        "dispatchable_byte_model": true,
+        "no_op_vs_source": false,
+        "rank_penalty_applied": 0,
+        "reason": "changes source under empirical byte proxy; still requires deterministic archive builder"
+      },
+      "estimated_byte_cost_model": {
+        "alternatives": {
+          "compact_row_run_residual_over_source_proxy": {
+            "arithmetic_lower_bound_proxy": {
+              "changed_elements_vs_source": 4185939,
+              "dispatchable_without_coder": false,
+              "entropy_bits": 1800706.399737,
+              "entropy_floor_bytes_no_model_overhead": 225125,
+              "estimated_charged_bytes": 227127,
+              "formula": "policy_overhead + adaptive_model_overhead + ceil(sum(stream_zero_order_entropy_bits)/8); lower bound only until a deterministic archive-local arithmetic coder exists",
+              "kind": "ideal_adaptive_arithmetic_row_run_lower_bound_proxy",
+              "model_overhead_bytes": 2002,
+              "planning_lower_bound_only": true,
+              "run_count": 121853,
+              "stream_summaries": [
+                {
+                  "entropy_bits": 22803.772832,
+                  "entropy_bits_per_token": 0.452348108233,
+                  "max_symbol": 290,
+                  "min_symbol": 1,
+                  "name": "row_delta",
+                  "token_count": 50412,
+                  "unique_count": 92
+                },
+                {
+                  "entropy_bits": 116541.948357,
+                  "entropy_bits_per_token": 2.311789819033,
+                  "max_symbol": 9,
+                  "min_symbol": 1,
+                  "name": "runs_per_row",
+                  "token_count": 50412,
+                  "unique_count": 9
+                },
+                {
+                  "entropy_bits": 991612.08436,
+                  "entropy_bits_per_token": 8.137773254328,
+                  "max_symbol": 511,
+                  "min_symbol": 0,
+                  "name": "x_gap",
+                  "token_count": 121853,
+                  "unique_count": 512
+                },
+                {
+                  "entropy_bits": 669748.594188,
+                  "entropy_bits_per_token": 5.496365244911,
+                  "max_symbol": 392,
+                  "min_symbol": 1,
+                  "name": "length",
+                  "token_count": 121853,
+                  "unique_count": 355
+                },
+                {
+                  "entropy_bits": -0.0,
+                  "entropy_bits_per_token": -0.0,
+                  "max_symbol": 0,
+                  "min_symbol": 0,
+                  "name": "value",
+                  "token_count": 121853,
+                  "unique_count": 1
+                }
+              ],
+              "touched_row_count": 50412
+            },
+            "changed_elements_vs_source": 4185939,
+            "estimated_charged_bytes": 861361,
+            "formula": "policy_overhead + touched_rows*(row_index_bytes+row_run_count_bytes) + run_count*(2*x_coord_bytes+value_bytes)",
+            "kind": "compact_row_run_residual_over_source_proxy",
+            "row_index_bytes": 3,
+            "row_run_count_bytes": 2,
+            "run_count": 121853,
+            "run_record_bytes": 5,
+            "touched_row_count": 50412,
+            "value_bytes": 1,
+            "x_coord_bytes": 2
+          },
+          "ideal_adaptive_arithmetic_row_run_lower_bound_proxy": {
+            "changed_elements_vs_source": 4185939,
+            "dispatchable_without_coder": false,
+            "entropy_bits": 1800706.399737,
+            "entropy_floor_bytes_no_model_overhead": 225125,
+            "estimated_charged_bytes": 227127,
+            "formula": "policy_overhead + adaptive_model_overhead + ceil(sum(stream_zero_order_entropy_bits)/8); lower bound only until a deterministic archive-local arithmetic coder exists",
+            "kind": "ideal_adaptive_arithmetic_row_run_lower_bound_proxy",
+            "model_overhead_bytes": 2002,
+            "planning_lower_bound_only": true,
+            "run_count": 121853,
+            "stream_summaries": [
+              {
+                "entropy_bits": 22803.772832,
+                "entropy_bits_per_token": 0.452348108233,
+                "max_symbol": 290,
+                "min_symbol": 1,
+                "name": "row_delta",
+                "token_count": 50412,
+                "unique_count": 92
+              },
+              {
+                "entropy_bits": 116541.948357,
+                "entropy_bits_per_token": 2.311789819033,
+                "max_symbol": 9,
+                "min_symbol": 1,
+                "name": "runs_per_row",
+                "token_count": 50412,
+                "unique_count": 9
+              },
+              {
+                "entropy_bits": 991612.08436,
+                "entropy_bits_per_token": 8.137773254328,
+                "max_symbol": 511,
+                "min_symbol": 0,
+                "name": "x_gap",
+                "token_count": 121853,
+                "unique_count": 512
+              },
+              {
+                "entropy_bits": 669748.594188,
+                "entropy_bits_per_token": 5.496365244911,
+                "max_symbol": 392,
+                "min_symbol": 1,
+                "name": "length",
+                "token_count": 121853,
+                "unique_count": 355
+              },
+              {
+                "entropy_bits": -0.0,
+                "entropy_bits_per_token": -0.0,
+                "max_symbol": 0,
+                "min_symbol": 0,
+                "name": "value",
+                "token_count": 121853,
+                "unique_count": 1
+              }
+            ],
+            "touched_row_count": 50412
+          },
+          "sparse_residual_over_source_proxy": {
+            "changed_elements_vs_source": 4185939,
+            "estimated_charged_bytes": 20929731,
+            "index_bytes_per_changed_element": 4,
+            "kind": "sparse_residual_over_source_proxy",
+            "policy_overhead_bytes": 36,
+            "value_bytes_per_changed_element": 1
+          }
+        },
+        "selected": {
+          "arithmetic_lower_bound_proxy": {
+            "changed_elements_vs_source": 4185939,
+            "dispatchable_without_coder": false,
+            "entropy_bits": 1800706.399737,
+            "entropy_floor_bytes_no_model_overhead": 225125,
+            "estimated_charged_bytes": 227127,
+            "formula": "policy_overhead + adaptive_model_overhead + ceil(sum(stream_zero_order_entropy_bits)/8); lower bound only until a deterministic archive-local arithmetic coder exists",
+            "kind": "ideal_adaptive_arithmetic_row_run_lower_bound_proxy",
+            "model_overhead_bytes": 2002,
+            "planning_lower_bound_only": true,
+            "run_count": 121853,
+            "stream_summaries": [
+              {
+                "entropy_bits": 22803.772832,
+                "entropy_bits_per_token": 0.452348108233,
+                "max_symbol": 290,
+                "min_symbol": 1,
+                "name": "row_delta",
+                "token_count": 50412,
+                "unique_count": 92
+              },
+              {
+                "entropy_bits": 116541.948357,
+                "entropy_bits_per_token": 2.311789819033,
+                "max_symbol": 9,
+                "min_symbol": 1,
+                "name": "runs_per_row",
+                "token_count": 50412,
+                "unique_count": 9
+              },
+              {
+                "entropy_bits": 991612.08436,
+                "entropy_bits_per_token": 8.137773254328,
+                "max_symbol": 511,
+                "min_symbol": 0,
+                "name": "x_gap",
+                "token_count": 121853,
+                "unique_count": 512
+              },
+              {
+                "entropy_bits": 669748.594188,
+                "entropy_bits_per_token": 5.496365244911,
+                "max_symbol": 392,
+                "min_symbol": 1,
+                "name": "length",
+                "token_count": 121853,
+                "unique_count": 355
+              },
+              {
+                "entropy_bits": -0.0,
+                "entropy_bits_per_token": -0.0,
+                "max_symbol": 0,
+                "min_symbol": 0,
+                "name": "value",
+                "token_count": 121853,
+                "unique_count": 1
+              }
+            ],
+            "touched_row_count": 50412
+          },
+          "changed_elements_vs_source": 4185939,
+          "estimated_charged_bytes": 861361,
+          "formula": "policy_overhead + touched_rows*(row_index_bytes+row_run_count_bytes) + run_count*(2*x_coord_bytes+value_bytes)",
+          "kind": "compact_row_run_residual_over_source_proxy",
+          "row_index_bytes": 3,
+          "row_run_count_bytes": 2,
+          "run_count": 121853,
+          "run_record_bytes": 5,
+          "selected": true,
+          "touched_row_count": 50412,
+          "value_bytes": 1,
+          "x_coord_bytes": 2
+        }
+      },
+      "estimated_charged_bytes": 861361,
+      "evidence_grade": "empirical",
+      "fused_mask_sha256": "1d186f6839608f3d5b15da6edd240eae2b7ffc2b5a3c3b04eb26bced0e4f143e",
+      "fusion_reconciliation_policy": {
+        "description": "Use the first candidate family as the proposed mask, with source as fallback metadata.",
+        "name": "priority_order",
+        "priority": [
+          "cmg3_nonzero_top1",
+          "cmg3_nonzero_top2",
+          "cmg3a_body200",
+          "cmg3_rowspan_stride1",
+          "c067_decoded_source"
+        ]
+      },
+      "non_promotable_warning": "No score claim is made by this multimask reconciliation planner. It emits byte/disagreement atom hypotheses only; a deterministic archive builder and exact CUDA auth eval of the exact archive bytes are required before promotion, ranking, or score claims.",
+      "policy_family": "priority_order",
+      "policy_id": "priority_order_cmg3_nonzero_top1_then_cmg3_nonzero_top2_then_cmg3a_body200_then_cmg3_rowspan_stride1",
+      "rank": 5,
+      "rank_cost_proxy": 5047300.0,
+      "score_claim": false
+    },
+    {
+      "candidate_family_names": [
+        "cmg3_rowspan_stride1"
+      ],
+      "density_metrics": {
+        "arithmetic_entropy_floor_bytes_no_model_overhead": 178295,
+        "arithmetic_entropy_floor_rate_score_cost_no_model_overhead": 0.118719322047,
+        "arithmetic_estimated_bytes_with_model_overhead": 180577,
+        "arithmetic_estimated_rate_score_cost_with_model_overhead": 0.120238812178,
+        "break_even_component_score_improvement_per_changed_element": 3.9241183e-08,
+        "break_even_total_component_score_improvement_required": 0.403694302663,
+        "changed_element_fraction": 0.087208353678,
+        "changed_elements_per_run": 136.535177246606,
+        "estimated_bytes_per_changed_element": 0.058933176872,
+        "estimated_bytes_per_run": 8.046451749904,
+        "lambda_rate": 6.658589531221714e-07,
+        "learnable_feedback_role": "byte_distortion_density_observation",
+        "rate_score_cost": 0.403694302663,
+        "total_source_rows": 230400,
+        "touched_row_fraction": 0.199240451389
+      },
+      "differentiable_feedback_contract": {
+        "gradient_truth_boundary": "Differentiable rewards are proposal signals only; exact CUDA auth eval of a deterministic byte-closed archive is the score truth.",
+        "reward_terms": {
+          "negative_disagreement_proxy": "-disagreement_byte_equivalent * changed_elements_vs_source",
+          "negative_rate_cost": "-lambda_rate * estimated_charged_bytes",
+          "no_op_penalty": "-1000000000000 when no_op_vs_source=true"
+        },
+        "smooth_surrogate_targets": {
+          "atom_density": "maximize expected component benefit per charged byte",
+          "selection_probability": "relax hard policy choice with softmax/Gumbel over rank_cost_proxy",
+          "trust_region": "penalize source-change mass outside measured hotspot/confusion priors"
+        }
+      },
+      "disagreement_metrics": {
+        "candidate_pairwise": {
+          "max_disagreement_fraction": 0.0,
+          "mean_disagreement_fraction": 0.0,
+          "pair_count": 0
+        },
+        "fused_vs_candidate": {
+          "cmg3_rowspan_stride1": {
+            "agreement_fraction": 1.0,
+            "disagreement_count": 0,
+            "disagreement_fraction": 0.0
+          }
+        },
+        "fused_vs_source": {
+          "agreement_fraction": 0.912791646322,
+          "disagreement_count": 10287516,
+          "disagreement_fraction": 0.087208353678
+        }
+      },
+      "dispatch_relevance": {
+        "dispatchable_byte_model": true,
+        "no_op_vs_source": false,
+        "rank_penalty_applied": 0,
+        "reason": "changes source under empirical byte proxy; still requires deterministic archive builder"
+      },
+      "estimated_byte_cost_model": {
+        "alternatives": {
+          "compact_row_run_residual_over_source_proxy": {
+            "arithmetic_lower_bound_proxy": {
+              "changed_elements_vs_source": 10287516,
+              "dispatchable_without_coder": false,
+              "entropy_bits": 1426225.821807,
+              "entropy_floor_bytes_no_model_overhead": 178295,
+              "estimated_charged_bytes": 180577,
+              "formula": "policy_overhead + adaptive_model_overhead + ceil(sum(stream_zero_order_entropy_bits)/8); lower bound only until a deterministic archive-local arithmetic coder exists",
+              "kind": "ideal_adaptive_arithmetic_row_run_lower_bound_proxy",
+              "model_overhead_bytes": 2282,
+              "planning_lower_bound_only": true,
+              "run_count": 75347,
+              "stream_summaries": [
+                {
+                  "entropy_bits": 27035.231772,
+                  "entropy_bits_per_token": 0.588938716314,
+                  "max_symbol": 291,
+                  "min_symbol": 1,
+                  "name": "row_delta",
+                  "token_count": 45905,
+                  "unique_count": 91
+                },
+                {
+                  "entropy_bits": 71755.962759,
+                  "entropy_bits_per_token": 1.563140458746,
+                  "max_symbol": 8,
+                  "min_symbol": 1,
+                  "name": "runs_per_row",
+                  "token_count": 45905,
+                  "unique_count": 8
+                },
+                {
+                  "entropy_bits": 572696.973386,
+                  "entropy_bits_per_token": 7.600793308109,
+                  "max_symbol": 510,
+                  "min_symbol": 1,
+                  "name": "x_gap",
+                  "token_count": 75347,
+                  "unique_count": 500
+                },
+                {
+                  "entropy_bits": 632688.128213,
+                  "entropy_bits_per_token": 8.396991628245,
+                  "max_symbol": 510,
+                  "min_symbol": 1,
+                  "name": "length",
+                  "token_count": 75347,
+                  "unique_count": 506
+                },
+                {
+                  "entropy_bits": 122049.525677,
+                  "entropy_bits_per_token": 1.61983258361,
+                  "max_symbol": 4,
+                  "min_symbol": 1,
+                  "name": "value",
+                  "token_count": 75347,
+                  "unique_count": 4
+                }
+              ],
+              "touched_row_count": 45905
+            },
+            "changed_elements_vs_source": 10287516,
+            "estimated_charged_bytes": 606276,
+            "formula": "policy_overhead + touched_rows*(row_index_bytes+row_run_count_bytes) + run_count*(2*x_coord_bytes+value_bytes)",
+            "kind": "compact_row_run_residual_over_source_proxy",
+            "row_index_bytes": 3,
+            "row_run_count_bytes": 2,
+            "run_count": 75347,
+            "run_record_bytes": 5,
+            "touched_row_count": 45905,
+            "value_bytes": 1,
+            "x_coord_bytes": 2
+          },
+          "ideal_adaptive_arithmetic_row_run_lower_bound_proxy": {
+            "changed_elements_vs_source": 10287516,
+            "dispatchable_without_coder": false,
+            "entropy_bits": 1426225.821807,
+            "entropy_floor_bytes_no_model_overhead": 178295,
+            "estimated_charged_bytes": 180577,
+            "formula": "policy_overhead + adaptive_model_overhead + ceil(sum(stream_zero_order_entropy_bits)/8); lower bound only until a deterministic archive-local arithmetic coder exists",
+            "kind": "ideal_adaptive_arithmetic_row_run_lower_bound_proxy",
+            "model_overhead_bytes": 2282,
+            "planning_lower_bound_only": true,
+            "run_count": 75347,
+            "stream_summaries": [
+              {
+                "entropy_bits": 27035.231772,
+                "entropy_bits_per_token": 0.588938716314,
+                "max_symbol": 291,
+                "min_symbol": 1,
+                "name": "row_delta",
+                "token_count": 45905,
+                "unique_count": 91
+              },
+              {
+                "entropy_bits": 71755.962759,
+                "entropy_bits_per_token": 1.563140458746,
+                "max_symbol": 8,
+                "min_symbol": 1,
+                "name": "runs_per_row",
+                "token_count": 45905,
+                "unique_count": 8
+              },
+              {
+                "entropy_bits": 572696.973386,
+                "entropy_bits_per_token": 7.600793308109,
+                "max_symbol": 510,
+                "min_symbol": 1,
+                "name": "x_gap",
+                "token_count": 75347,
+                "unique_count": 500
+              },
+              {
+                "entropy_bits": 632688.128213,
+                "entropy_bits_per_token": 8.396991628245,
+                "max_symbol": 510,
+                "min_symbol": 1,
+                "name": "length",
+                "token_count": 75347,
+                "unique_count": 506
+              },
+              {
+                "entropy_bits": 122049.525677,
+                "entropy_bits_per_token": 1.61983258361,
+                "max_symbol": 4,
+                "min_symbol": 1,
+                "name": "value",
+                "token_count": 75347,
+                "unique_count": 4
+              }
+            ],
+            "touched_row_count": 45905
+          },
+          "sparse_residual_over_source_proxy": {
+            "changed_elements_vs_source": 10287516,
+            "estimated_charged_bytes": 51437596,
+            "index_bytes_per_changed_element": 4,
+            "kind": "sparse_residual_over_source_proxy",
+            "policy_overhead_bytes": 16,
+            "value_bytes_per_changed_element": 1
+          }
+        },
+        "selected": {
+          "arithmetic_lower_bound_proxy": {
+            "changed_elements_vs_source": 10287516,
+            "dispatchable_without_coder": false,
+            "entropy_bits": 1426225.821807,
+            "entropy_floor_bytes_no_model_overhead": 178295,
+            "estimated_charged_bytes": 180577,
+            "formula": "policy_overhead + adaptive_model_overhead + ceil(sum(stream_zero_order_entropy_bits)/8); lower bound only until a deterministic archive-local arithmetic coder exists",
+            "kind": "ideal_adaptive_arithmetic_row_run_lower_bound_proxy",
+            "model_overhead_bytes": 2282,
+            "planning_lower_bound_only": true,
+            "run_count": 75347,
+            "stream_summaries": [
+              {
+                "entropy_bits": 27035.231772,
+                "entropy_bits_per_token": 0.588938716314,
+                "max_symbol": 291,
+                "min_symbol": 1,
+                "name": "row_delta",
+                "token_count": 45905,
+                "unique_count": 91
+              },
+              {
+                "entropy_bits": 71755.962759,
+                "entropy_bits_per_token": 1.563140458746,
+                "max_symbol": 8,
+                "min_symbol": 1,
+                "name": "runs_per_row",
+                "token_count": 45905,
+                "unique_count": 8
+              },
+              {
+                "entropy_bits": 572696.973386,
+                "entropy_bits_per_token": 7.600793308109,
+                "max_symbol": 510,
+                "min_symbol": 1,
+                "name": "x_gap",
+                "token_count": 75347,
+                "unique_count": 500
+              },
+              {
+                "entropy_bits": 632688.128213,
+                "entropy_bits_per_token": 8.396991628245,
+                "max_symbol": 510,
+                "min_symbol": 1,
+                "name": "length",
+                "token_count": 75347,
+                "unique_count": 506
+              },
+              {
+                "entropy_bits": 122049.525677,
+                "entropy_bits_per_token": 1.61983258361,
+                "max_symbol": 4,
+                "min_symbol": 1,
+                "name": "value",
+                "token_count": 75347,
+                "unique_count": 4
+              }
+            ],
+            "touched_row_count": 45905
+          },
+          "changed_elements_vs_source": 10287516,
+          "estimated_charged_bytes": 606276,
+          "formula": "policy_overhead + touched_rows*(row_index_bytes+row_run_count_bytes) + run_count*(2*x_coord_bytes+value_bytes)",
+          "kind": "compact_row_run_residual_over_source_proxy",
+          "row_index_bytes": 3,
+          "row_run_count_bytes": 2,
+          "run_count": 75347,
+          "run_record_bytes": 5,
+          "selected": true,
+          "touched_row_count": 45905,
+          "value_bytes": 1,
+          "x_coord_bytes": 2
+        }
+      },
+      "estimated_charged_bytes": 606276,
+      "evidence_grade": "empirical",
+      "fused_mask_sha256": "286f4bd2cd77f3a513d19bd47134de6699b92baaba5c2a13e0c4a083aec627b0",
+      "fusion_reconciliation_policy": {
+        "base_family": "c067_decoded_source",
+        "name": "cheap_residual_over_base",
+        "residual_atom": "changed element indices plus replacement labels",
+        "residual_family": "cmg3_rowspan_stride1"
+      },
+      "non_promotable_warning": "No score claim is made by this multimask reconciliation planner. It emits byte/disagreement atom hypotheses only; a deterministic archive builder and exact CUDA auth eval of the exact archive bytes are required before promotion, ranking, or score claims.",
+      "policy_family": "cheap_residual_over_base",
+      "policy_id": "cheap_residual_over_base_c067_decoded_source_to_cmg3_rowspan_stride1",
+      "rank": 6,
+      "rank_cost_proxy": 10893792.0,
+      "score_claim": false
+    },
+    {
+      "candidate_family_names": [
+        "cmg3_nonzero_top1",
+        "cmg3_nonzero_top2",
+        "cmg3a_body200",
+        "cmg3_rowspan_stride1"
+      ],
+      "density_metrics": {
+        "arithmetic_entropy_floor_bytes_no_model_overhead": 48,
+        "arithmetic_entropy_floor_rate_score_cost_no_model_overhead": 3.196123e-05,
+        "arithmetic_estimated_bytes_with_model_overhead": 112,
+        "arithmetic_estimated_rate_score_cost_with_model_overhead": 7.4576203e-05,
+        "break_even_component_score_improvement_per_changed_element": null,
+        "break_even_total_component_score_improvement_required": 3.196123e-05,
+        "changed_element_fraction": 0.0,
+        "changed_elements_per_run": null,
+        "estimated_bytes_per_changed_element": null,
+        "estimated_bytes_per_run": null,
+        "lambda_rate": 6.658589531221714e-07,
+        "learnable_feedback_role": "negative_no_op_guard",
+        "rate_score_cost": 3.196123e-05,
+        "total_source_rows": 230400,
+        "touched_row_fraction": null
+      },
+      "differentiable_feedback_contract": {
+        "gradient_truth_boundary": "Differentiable rewards are proposal signals only; exact CUDA auth eval of a deterministic byte-closed archive is the score truth.",
+        "reward_terms": {
+          "negative_disagreement_proxy": "-disagreement_byte_equivalent * changed_elements_vs_source",
+          "negative_rate_cost": "-lambda_rate * estimated_charged_bytes",
+          "no_op_penalty": "-1000000000000 when no_op_vs_source=true"
+        },
+        "smooth_surrogate_targets": {
+          "atom_density": "maximize expected component benefit per charged byte",
+          "selection_probability": "relax hard policy choice with softmax/Gumbel over rank_cost_proxy",
+          "trust_region": "penalize source-change mass outside measured hotspot/confusion priors"
+        }
+      },
+      "disagreement_metrics": {
+        "candidate_pairwise": {
+          "max_disagreement_fraction": 0.118113886515,
+          "mean_disagreement_fraction": 0.061528429102,
+          "pair_count": 6
+        },
+        "fused_vs_candidate": {
+          "cmg3_nonzero_top1": {
+            "agreement_fraction": 0.964515355428,
+            "disagreement_count": 4185939,
+            "disagreement_fraction": 0.035484644572
+          },
+          "cmg3_nonzero_top2": {
+            "agreement_fraction": 0.988829786513,
+            "disagreement_count": 1317692,
+            "disagreement_fraction": 0.011170213487
+          },
+          "cmg3_rowspan_stride1": {
+            "agreement_fraction": 0.912791646322,
+            "disagreement_count": 10287516,
+            "disagreement_fraction": 0.087208353678
+          },
+          "cmg3a_body200": {
+            "agreement_fraction": 0.996952896118,
+            "disagreement_count": 359451,
+            "disagreement_fraction": 0.003047103882
+          }
+        },
+        "fused_vs_source": {
+          "agreement_fraction": 1.0,
+          "disagreement_count": 0,
+          "disagreement_fraction": 0.0
+        }
+      },
+      "dispatch_relevance": {
+        "dispatchable_byte_model": false,
+        "no_op_vs_source": true,
+        "rank_penalty_applied": 1000000000000,
+        "reason": "no source change; cannot reduce archive bytes or score by itself"
+      },
+      "estimated_byte_cost_model": {
+        "alternatives": {
+          "compact_row_run_residual_over_source_proxy": {
+            "arithmetic_lower_bound_proxy": {
+              "changed_elements_vs_source": 0,
+              "dispatchable_without_coder": false,
+              "entropy_bits": 0.0,
+              "entropy_floor_bytes_no_model_overhead": 48,
+              "estimated_charged_bytes": 112,
+              "formula": "policy_overhead + adaptive_model_overhead + ceil(sum(stream_zero_order_entropy_bits)/8); lower bound only until a deterministic archive-local arithmetic coder exists",
+              "kind": "ideal_adaptive_arithmetic_row_run_lower_bound_proxy",
+              "model_overhead_bytes": 64,
+              "planning_lower_bound_only": true,
+              "run_count": 0,
+              "stream_summaries": [
+                {
+                  "entropy_bits": 0.0,
+                  "entropy_bits_per_token": 0.0,
+                  "max_symbol": null,
+                  "min_symbol": null,
+                  "name": "row_delta",
+                  "token_count": 0,
+                  "unique_count": 0
+                },
+                {
+                  "entropy_bits": 0.0,
+                  "entropy_bits_per_token": 0.0,
+                  "max_symbol": null,
+                  "min_symbol": null,
+                  "name": "runs_per_row",
+                  "token_count": 0,
+                  "unique_count": 0
+                },
+                {
+                  "entropy_bits": 0.0,
+                  "entropy_bits_per_token": 0.0,
+                  "max_symbol": null,
+                  "min_symbol": null,
+                  "name": "x_gap",
+                  "token_count": 0,
+                  "unique_count": 0
+                },
+                {
+                  "entropy_bits": 0.0,
+                  "entropy_bits_per_token": 0.0,
+                  "max_symbol": null,
+                  "min_symbol": null,
+                  "name": "length",
+                  "token_count": 0,
+                  "unique_count": 0
+                },
+                {
+                  "entropy_bits": 0.0,
+                  "entropy_bits_per_token": 0.0,
+                  "max_symbol": null,
+                  "min_symbol": null,
+                  "name": "value",
+                  "token_count": 0,
+                  "unique_count": 0
+                }
+              ],
+              "touched_row_count": 0
+            },
+            "changed_elements_vs_source": 0,
+            "estimated_charged_bytes": 48,
+            "formula": "policy_overhead + touched_rows*(row_index_bytes+row_run_count_bytes) + run_count*(2*x_coord_bytes+value_bytes)",
+            "kind": "compact_row_run_residual_over_source_proxy",
+            "row_index_bytes": 3,
+            "row_run_count_bytes": 2,
+            "run_count": 0,
+            "run_record_bytes": 5,
+            "touched_row_count": 0,
+            "value_bytes": 1,
+            "x_coord_bytes": 2
+          },
+          "ideal_adaptive_arithmetic_row_run_lower_bound_proxy": {
+            "changed_elements_vs_source": 0,
+            "dispatchable_without_coder": false,
+            "entropy_bits": 0.0,
+            "entropy_floor_bytes_no_model_overhead": 48,
+            "estimated_charged_bytes": 112,
+            "formula": "policy_overhead + adaptive_model_overhead + ceil(sum(stream_zero_order_entropy_bits)/8); lower bound only until a deterministic archive-local arithmetic coder exists",
+            "kind": "ideal_adaptive_arithmetic_row_run_lower_bound_proxy",
+            "model_overhead_bytes": 64,
+            "planning_lower_bound_only": true,
+            "run_count": 0,
+            "stream_summaries": [
+              {
+                "entropy_bits": 0.0,
+                "entropy_bits_per_token": 0.0,
+                "max_symbol": null,
+                "min_symbol": null,
+                "name": "row_delta",
+                "token_count": 0,
+                "unique_count": 0
+              },
+              {
+                "entropy_bits": 0.0,
+                "entropy_bits_per_token": 0.0,
+                "max_symbol": null,
+                "min_symbol": null,
+                "name": "runs_per_row",
+                "token_count": 0,
+                "unique_count": 0
+              },
+              {
+                "entropy_bits": 0.0,
+                "entropy_bits_per_token": 0.0,
+                "max_symbol": null,
+                "min_symbol": null,
+                "name": "x_gap",
+                "token_count": 0,
+                "unique_count": 0
+              },
+              {
+                "entropy_bits": 0.0,
+                "entropy_bits_per_token": 0.0,
+                "max_symbol": null,
+                "min_symbol": null,
+                "name": "length",
+                "token_count": 0,
+                "unique_count": 0
+              },
+              {
+                "entropy_bits": 0.0,
+                "entropy_bits_per_token": 0.0,
+                "max_symbol": null,
+                "min_symbol": null,
+                "name": "value",
+                "token_count": 0,
+                "unique_count": 0
+              }
+            ],
+            "touched_row_count": 0
+          },
+          "sparse_residual_over_source_proxy": {
+            "changed_elements_vs_source": 0,
+            "estimated_charged_bytes": 48,
+            "index_bytes_per_changed_element": 4,
+            "kind": "sparse_residual_over_source_proxy",
+            "policy_overhead_bytes": 48,
+            "value_bytes_per_changed_element": 1
+          }
+        },
+        "selected": {
+          "changed_elements_vs_source": 0,
+          "estimated_charged_bytes": 48,
+          "index_bytes_per_changed_element": 4,
+          "kind": "sparse_residual_over_source_proxy",
+          "policy_overhead_bytes": 48,
+          "selected": true,
+          "value_bytes_per_changed_element": 1
+        }
+      },
+      "estimated_charged_bytes": 48,
+      "evidence_grade": "empirical",
+      "fused_mask_sha256": "8bd9ed9e71242c6501473d27cbe54c36872b962bab92ebbc38fc695fba9885dc",
+      "fusion_reconciliation_policy": {
+        "candidate_consensus_threshold": 1.0,
+        "name": "disagreement_gated_veto",
+        "veto_rule": "Preserve source values where candidate consensus is below threshold."
+      },
+      "non_promotable_warning": "No score claim is made by this multimask reconciliation planner. It emits byte/disagreement atom hypotheses only; a deterministic archive builder and exact CUDA auth eval of the exact archive bytes are required before promotion, ranking, or score claims.",
+      "policy_family": "disagreement_gated_veto",
+      "policy_id": "disagreement_gated_veto_1p000",
+      "rank": 7,
+      "rank_cost_proxy": 1000000000048.0,
+      "score_claim": false
+    }
+  ],
+  "candidate_vs_source": {
+    "cmg3_nonzero_top1": {
+      "agreement_fraction": 0.964515355428,
+      "disagreement_count": 4185939,
+      "disagreement_fraction": 0.035484644572
+    },
+    "cmg3_nonzero_top2": {
+      "agreement_fraction": 0.988829786513,
+      "disagreement_count": 1317692,
+      "disagreement_fraction": 0.011170213487
+    },
+    "cmg3_rowspan_stride1": {
+      "agreement_fraction": 0.912791646322,
+      "disagreement_count": 10287516,
+      "disagreement_fraction": 0.087208353678
+    },
+    "cmg3a_body200": {
+      "agreement_fraction": 0.996952896118,
+      "disagreement_count": 359451,
+      "disagreement_fraction": 0.003047103882
+    }
+  },
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "evidence_grade": "empirical",
+  "inputs": {
+    "array_contract": {
+      "dtype_rule": "bool/integer/integer-valued-float labels; exact elementwise reconciliation",
+      "element_count": 117964800,
+      "shape": [
+        600,
+        384,
+        512
+      ]
+    },
+    "candidates": [
+      {
+        "array_dtype": "uint8",
+        "array_sha256": "1d186f6839608f3d5b15da6edd240eae2b7ffc2b5a3c3b04eb26bced0e4f143e",
+        "array_shape": [
+          600,
+          384,
+          512
+        ],
+        "family_name": "cmg3_nonzero_top1",
+        "path": "/Users/adpena/Projects/pact/experiments/results/c067_multimask_reconciliation_20260502/cmg3_nonzero_top1.decoded_mask_array.npz",
+        "sha256": "5bfc5494c0e70f8ca25b7174480ee5c2aae02198c73e0739d9cdb6f61ea6f2cd",
+        "size_bytes": 348235,
+        "source_manifest": null
+      },
+      {
+        "array_dtype": "uint8",
+        "array_sha256": "cff33b6dc73060a8fb8f28422ba446ddd11ed5c6bc5a50be9974b7a00a9aa9c9",
+        "array_shape": [
+          600,
+          384,
+          512
+        ],
+        "family_name": "cmg3_nonzero_top2",
+        "path": "/Users/adpena/Projects/pact/experiments/results/c067_multimask_reconciliation_20260502/cmg3_nonzero_top2.decoded_mask_array.npz",
+        "sha256": "6d4bb804094904217043fbb7d81dcf1230158b4d7530db49dff94543d0747cd7",
+        "size_bytes": 459119,
+        "source_manifest": null
+      },
+      {
+        "array_dtype": "uint8",
+        "array_sha256": "23c72566ef924ac3aebebea17cc2959c25da028d519ee0790e70294c8974c97b",
+        "array_shape": [
+          600,
+          384,
+          512
+        ],
+        "family_name": "cmg3a_body200",
+        "path": "/Users/adpena/Projects/pact/experiments/results/c067_multimask_reconciliation_20260502/cmg3a_body200.decoded_mask_array.npz",
+        "sha256": "43b84e8d954ebb7f1d1f1e49ae3db1d42280b99b62f3a9d39b93e51dc4d82350",
+        "size_bytes": 474462,
+        "source_manifest": null
+      },
+      {
+        "array_dtype": "uint8",
+        "array_sha256": "286f4bd2cd77f3a513d19bd47134de6699b92baaba5c2a13e0c4a083aec627b0",
+        "array_shape": [
+          600,
+          384,
+          512
+        ],
+        "family_name": "cmg3_rowspan_stride1",
+        "path": "/Users/adpena/Projects/pact/experiments/results/c067_multimask_reconciliation_20260502/cmg3_rowspan_stride1.decoded_mask_array.npz",
+        "sha256": "d214ee449868c2bd9723ddcc98a125da49b0fd0c862c725c6976526885126bfb",
+        "size_bytes": 416482,
+        "source_manifest": null
+      }
+    ],
+    "source": {
+      "array_dtype": "uint8",
+      "array_sha256": "8bd9ed9e71242c6501473d27cbe54c36872b962bab92ebbc38fc695fba9885dc",
+      "array_shape": [
+        600,
+        384,
+        512
+      ],
+      "family_name": "c067_decoded_source",
+      "path": "/Users/adpena/Projects/pact/experiments/results/c063_trace_weighted_mask_grammar_plan_20260502_codex/decoded_mask_array.npy",
+      "sha256": "13f81851ae206f6142cd3348db5537eda4ea832665052824816f4d1bf432de0c",
+      "size_bytes": 117964928,
+      "source_manifest": null
+    }
+  },
+  "non_promotable_warning": "No score claim is made by this multimask reconciliation planner. It emits byte/disagreement atom hypotheses only; a deterministic archive builder and exact CUDA auth eval of the exact archive bytes are required before promotion, ranking, or score claims.",
+  "promotion_eligible": false,
+  "ranking_model": {
+    "disagreement_byte_equivalent": 1.0,
+    "lower_is_better": true,
+    "rank_cost_proxy": "estimated_charged_bytes + fused_vs_source_disagreement_count * disagreement_byte_equivalent"
+  },
+  "schema_version": "multimask_reconciliation_atom_plan_v1",
+  "score_claim": false,
+  "source_class_histogram": {
+    "0": 27408427,
+    "1": 690063,
+    "2": 58413695,
+    "3": 1459867,
+    "4": 29992748
+  },
+  "source_family_name": "c067_decoded_source",
+  "tool": "experiments/plan_multimask_reconciliation_atoms.py"
+}

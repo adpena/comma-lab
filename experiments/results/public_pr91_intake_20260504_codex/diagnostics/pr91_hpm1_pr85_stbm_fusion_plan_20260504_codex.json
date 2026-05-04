@@ -1,0 +1,599 @@
+{
+  "blocker_class": "real_invalid_entropy_or_probability_model_contract_mismatch",
+  "byte_faithful_fusion": {
+    "archive_bytes_delta_vs_pr85_stbm": -7352,
+    "component_identity_required": true,
+    "existing_pr91_member_sha256": "5c213c61cc4d29b62286063bfdcb97e812af6b06c0021aeaecc8bc46644e17bf",
+    "exists": true,
+    "fusion_member_bytes": 222304,
+    "fusion_member_equals_existing_pr91_member": true,
+    "fusion_member_sha256": "5c213c61cc4d29b62286063bfdcb97e812af6b06c0021aeaecc8bc46644e17bf",
+    "header_mode": "v5",
+    "mask_bytes_delta_hpm1_vs_stbm": -7352,
+    "rate_score_delta_if_archive_is_valid": -0.004895395023354203,
+    "semantic_identity_evidence_required": "full HPM1 decode plus byte/semantic parity against PR85/STBM masks"
+  },
+  "dispatch_performed": false,
+  "dispatch_unlocked": false,
+  "do_not_dispatch": [
+    "PR91/HPM1 or HPM1+QRGB candidates while HPM1 local/exact replay fails entropy decode.",
+    "Any HPM1 archive whose inflate runtime falls back to STBM/QMA9 after entropy failure.",
+    "Any score projection that assumes PR85 components without decoded-mask parity evidence."
+  ],
+  "elapsed_sec": 10.154,
+  "failure_reason": "hpac_entropy_decode_contract_mismatch",
+  "fallback_semantics": {
+    "fallback_to_stbm_or_qma9_after_hpm1_failure_allowed": false,
+    "hpm1_entropy_failure_must_abort": true,
+    "reason": "A fallback to the STBM/QMA9 mask stream would consume bytes not present in the HPM1 archive unless the fallback payload is also charged. That is not a valid way to claim the 7352-byte rate reduction.",
+    "status": "fail_closed_required",
+    "submitted_pr91_runtime_source_contract": {
+      "dispatch_performed": false,
+      "files": {
+        "inflate.py": {
+          "bytes": 86673,
+          "path": "experiments/results/public_pr91_intake_20260504_codex/replay_submission/hpac_coder_hybrid/inflate.py",
+          "sha256": "9665d3832abd8f720617cad4e976536ef9ff4ce9a117623b9a00229c518a22ba"
+        },
+        "pr86_hpac.py": {
+          "bytes": 19657,
+          "path": "experiments/results/public_pr91_intake_20260504_codex/replay_submission/hpac_coder_hybrid/pr86_hpac.py",
+          "sha256": "f86f3067386928478d983817c9f9ee095ce6eb02aee8c0fbb7987cd0af1f9b01"
+        }
+      },
+      "hpm1_runtime_contract": {
+        "decode_device_argument": "str(device)",
+        "decode_function": "pr86_hpac.decompress_tokens_hpac",
+        "decode_passes_main_runtime_device": true,
+        "explicit_hpac_cpu_force_detected": false,
+        "fallback_on_hpm1_entropy_failure_detected": false,
+        "hpac_cpu_force_comment_detected": true,
+        "hpac_cpu_force_comment_matches_hpm1_call": false,
+        "hpm1_branch_present": true,
+        "main_device_expression_selects_cuda_when_available": true
+      },
+      "local_only": true,
+      "probability_model_contract": {
+        "categorical_perfect_false": true,
+        "explicit_16384_probability_grid": false,
+        "probability_clip_eps": "1e-7",
+        "probability_numpy_dtype": "float64",
+        "range_decoder_uint32_words": true
+      },
+      "score_claim": false,
+      "source_dir": "experiments/results/public_pr91_intake_20260504_codex/replay_submission/hpac_coder_hybrid",
+      "status": "passed"
+    }
+  },
+  "gpu_or_remote_work": false,
+  "hpm1_replay_gate": {
+    "archive": {
+      "bytes": 222404,
+      "duplicate_member_names": [],
+      "expected_bytes": 222404,
+      "expected_sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f",
+      "matches_expected_pr91_archive": true,
+      "member_count": 1,
+      "member_x": {
+        "bytes": 222304,
+        "compress_size": 222304,
+        "compress_type": 0,
+        "expected_bytes": 222304,
+        "expected_sha256": "5c213c61cc4d29b62286063bfdcb97e812af6b06c0021aeaecc8bc46644e17bf",
+        "file_size": 222304,
+        "matches_expected_pr91_member": true,
+        "sha256": "5c213c61cc4d29b62286063bfdcb97e812af6b06c0021aeaecc8bc46644e17bf"
+      },
+      "path": "experiments/results/public_pr91_intake_20260504_codex/archive.zip",
+      "sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f"
+    },
+    "attempt_reencode": false,
+    "blocker_class": "real_invalid_entropy_or_probability_model_contract_mismatch",
+    "bundle": {
+      "fixed_length_segments": {
+        "bias": 223,
+        "region": 273
+      },
+      "format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+      "header_bytes": 24,
+      "mask_expected_bytes": 145087,
+      "mask_expected_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+      "mask_matches_expected_pr91_hpm1": true,
+      "mask_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+      "segment_lengths": {
+        "bias": 223,
+        "frac": 106,
+        "frac2": 149,
+        "frac3": 154,
+        "mask": 145087,
+        "model": 57074,
+        "pose": 1487,
+        "post": 1400,
+        "randmulti": 16101,
+        "region": 273,
+        "shift": 226
+      }
+    },
+    "dependency_contract": {
+      "behavior_self_test": {
+        "compressed_dtype": "uint32",
+        "compressed_sha256": "7e5eceaf3fd016605aa6e45d8a0afd29f662f7dee75c8957ea4319999a4708ae",
+        "compressed_word_count": 19,
+        "decoded_symbols_sha256": "6cfe2f6c5763d2179ab869cf1668e41a36c1a1050021f5ecdaf3447b8edb1b31",
+        "encoded_symbols_sha256": "6cfe2f6c5763d2179ab869cf1668e41a36c1a1050021f5ecdaf3447b8edb1b31",
+        "get_compressed_tobytes_available": true,
+        "model_api": "constriction.stream.model.Categorical(..., perfect=False)",
+        "queue_api": "constriction.stream.queue.RangeEncoder/RangeDecoder",
+        "same_order_roundtrip_ok": true
+      },
+      "expected_versions": {
+        "constriction": "0.4.2",
+        "numpy": "2.4.4",
+        "pyppmd": "1.3.1",
+        "python": "3.12.13",
+        "torch": "2.11.0"
+      },
+      "installed_versions": {
+        "constriction": "0.4.2",
+        "numpy": "2.4.4",
+        "pyppmd": "1.3.1",
+        "python": "3.12.13",
+        "torch": "2.11.0"
+      },
+      "missing_required_packages": [],
+      "status": "passed",
+      "version_drift": [],
+      "version_matches_recorded": {
+        "constriction": true,
+        "numpy": true,
+        "pyppmd": true,
+        "python": true,
+        "torch": true
+      }
+    },
+    "device": "cpu",
+    "dispatch_performed": false,
+    "dispatch_unlocked": false,
+    "elapsed_sec": 10.152,
+    "failure_context": {
+      "decoded_symbol_count_before_failure": 5951,
+      "decoded_symbol_count_before_failure_group": 5760,
+      "decoded_symbol_count_before_frame": 0,
+      "error": "Tried to decode from compressed data that is invalid for the employed entropy model.",
+      "error_type": "AssertionError",
+      "failed_at": {
+        "frame": 0,
+        "group": 10,
+        "symbol_in_group": 191
+      },
+      "probability_variant": {
+        "categorical_perfect": false,
+        "description": "Merged PR86 source contract: clipped/renormalized numpy float64 probabilities with Categorical(..., perfect=False).",
+        "name": "source_float64_perfect_false",
+        "probability_dtype": "float64",
+        "source_contract": true
+      },
+      "source_tokens_bytes": 116796,
+      "source_tokens_sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b"
+    },
+    "failure_reason": "hpac_entropy_decode_contract_mismatch",
+    "failure_stage": "submitted_tokens_decode",
+    "gpu_or_remote_work": false,
+    "hpac_model": {
+      "compressed_bytes": 28243,
+      "compressed_sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+      "config": {
+        "N": 600,
+        "P": 32,
+        "ch": 64,
+        "delta": 2,
+        "hpac_d_film": 8,
+        "use_spm": true
+      },
+      "decompressed_bytes": 55856,
+      "decompressed_sha256": "0710789f72200a640c1f3b2f6bc0d2f037affaa086f73b2c9e5034e006e80ac1",
+      "load_state_dict_strict": false,
+      "member_name": "hpac.pt.ppmd",
+      "missing_keys": [],
+      "packed_state_key_count": 34,
+      "ppmd_max_order": 4,
+      "ppmd_mem_size": 16777216,
+      "reconstructed_state_key_count": 25,
+      "status": "passed",
+      "unexpected_keys": []
+    },
+    "hpac_reencode": {},
+    "hpm1_static_contract": {
+      "failures": [],
+      "hpac_ppmd": {
+        "bytes": 28243,
+        "sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd"
+      },
+      "mask": {
+        "bytes": 145087,
+        "magic": "HPM1",
+        "metadata": {
+          "H": 384,
+          "N": 600,
+          "P": 32,
+          "W": 512,
+          "ch": 64,
+          "delta": 2,
+          "header_bytes": 48,
+          "hpac_d_film": 8,
+          "hpac_len": 28243,
+          "hpac_ppmd_sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+          "ppmd_order": 4,
+          "runtime_contract": "HPM1_pr91_hpac_mask_stream",
+          "tail_bytes": 0,
+          "tokens_len": 116796,
+          "tokens_sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+          "tokens_uint32_aligned": true,
+          "tokens_uint32_words": 29199,
+          "use_spm": 1
+        },
+        "sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc"
+      },
+      "status": "passed",
+      "tokens": {
+        "bytes": 116796,
+        "sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+        "uint32_words": 29199
+      }
+    },
+    "local_only": true,
+    "max_frames": 1,
+    "pr86_hpac_relationship": {
+      "dispatch_performed": false,
+      "hpac_model": {
+        "pr86_bytes": 28243,
+        "pr86_sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+        "pr91_bytes": 28243,
+        "pr91_sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+        "same_as_pr86_hpac_ppmd": true
+      },
+      "local_only": true,
+      "pr86_archive": "experiments/results/public_pr86_intake_20260504_codex/archive.zip",
+      "pr86_archive_report": {
+        "expected_sha256": "e67b7c22240dbe33853c19d049b0044a5df16ce5f751ba8f1021cab8ceb03cef",
+        "expected_size_bytes": 207579,
+        "identity_matches_expected": true,
+        "member_contract_status": "passed",
+        "member_count": 5,
+        "members": [
+          {
+            "compress_size": 31144,
+            "crc32_hex": "20055e9d",
+            "file_size": 31144,
+            "name": "master.pt.gz",
+            "sha256": "3f3ee2b19ba5cf97017559750c0d64bc422c3f84fedaed1877741ee6c6bd5236",
+            "zip_compress_type": 0
+          },
+          {
+            "compress_size": 32287,
+            "crc32_hex": "7b335818",
+            "file_size": 32287,
+            "name": "slave.pt.gz",
+            "sha256": "817294dea0d940a8ef62c190bf96338f5a756930882f0f0d7f4d7c7eb87a82a8",
+            "zip_compress_type": 0
+          },
+          {
+            "compress_size": 28243,
+            "crc32_hex": "1624d441",
+            "file_size": 28243,
+            "name": "hpac.pt.ppmd",
+            "sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+            "zip_compress_type": 0
+          },
+          {
+            "compress_size": 113900,
+            "crc32_hex": "9e054fa5",
+            "file_size": 113900,
+            "name": "tokens.bin",
+            "sha256": "14144bde496631f89a02646496bc2e66306bba6da149ddca37e21d85d175f225",
+            "zip_compress_type": 0
+          },
+          {
+            "compress_size": 1499,
+            "crc32_hex": "d1b75b6b",
+            "file_size": 1499,
+            "name": "meta.pt",
+            "sha256": "848381e2da1b0f307670174f135a3925c43d8cdc73576b4bf05fadf833de4a08",
+            "zip_compress_type": 0
+          }
+        ],
+        "path": "experiments/results/public_pr86_intake_20260504_codex/archive.zip",
+        "sha256": "e67b7c22240dbe33853c19d049b0044a5df16ce5f751ba8f1021cab8ceb03cef",
+        "size_bytes": 207579
+      },
+      "relationship": "pr91_reuses_pr86_hpac_model_with_distinct_hpm1_token_stream",
+      "score_claim": false,
+      "status": "passed",
+      "tokens": {
+        "common_prefix_bytes": 164,
+        "common_prefix_uint32_words": 41,
+        "expected_pr86_sha256": "14144bde496631f89a02646496bc2e66306bba6da149ddca37e21d85d175f225",
+        "first_mismatch_byte": 164,
+        "first_mismatch_uint32_word": 41,
+        "pr86_bytes": 113900,
+        "pr86_sha256": "14144bde496631f89a02646496bc2e66306bba6da149ddca37e21d85d175f225",
+        "pr91_bytes": 116796,
+        "pr91_minus_pr86_bytes": 2896,
+        "pr91_sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+        "same_as_pr86_tokens": false
+      }
+    },
+    "prefix_or_full_decode": {},
+    "probability_variant": "source_float64_perfect_false",
+    "recorded_at_utc": "2026-05-04T06:46:16+00:00",
+    "schema_version": 1,
+    "score_claim": false,
+    "status": "failed_closed",
+    "tool": "tac.pr91_hpm1_codec.run_pr91_hpm1_preflight"
+  },
+  "hpm1_static_contract": {
+    "hpac_ppmd": {
+      "bytes": 28243,
+      "sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd"
+    },
+    "mask": {
+      "bytes": 145087,
+      "metadata": {
+        "H": 384,
+        "N": 600,
+        "P": 32,
+        "W": 512,
+        "ch": 64,
+        "delta": 2,
+        "header_bytes": 48,
+        "hpac_d_film": 8,
+        "hpac_len": 28243,
+        "hpac_ppmd_sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+        "ppmd_order": 4,
+        "runtime_contract": "HPM1_pr91_hpac_mask_stream",
+        "tail_bytes": 0,
+        "tokens_len": 116796,
+        "tokens_sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+        "tokens_uint32_aligned": true,
+        "tokens_uint32_words": 29199,
+        "use_spm": 1
+      },
+      "sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc"
+    },
+    "status": "passed",
+    "tokens": {
+      "bytes": 116796,
+      "sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b"
+    }
+  },
+  "local_only": true,
+  "next_exact_eval_dispatch_plan_after_parity": [
+    "Prove full HPM1 decode under the submitted runtime contract and record decoded mask SHA/class counts.",
+    "Prove PR91/HPM1 decoded masks are byte-identical or semantically identical to the PR85+STBM render-order mask tensor.",
+    "Prove full HPM1 decode plus byte-exact re-encode or an equivalent reviewed entropy trace for the submitted token stream.",
+    "Claim a lane with tools/claim_lane_dispatch.py before any exact-eval job.",
+    "Run archive.zip -> inflate.sh -> upstream/evaluate.py on T4/equivalent with no STBM/QMA9 fallback path.",
+    "Adjudicate contest_auth_eval.json and compare archive SHA plus inflate runtime tree SHA before promotion."
+  ],
+  "pr85_stbm_archive": "experiments/results/lightning_batch/exact_eval_pr85_stbm1br_stbm_runtime_t4_g4dn2x_20260504T0613Z/archive.zip",
+  "pr91_archive": "experiments/results/public_pr91_intake_20260504_codex/archive.zip",
+  "recorded_at_utc": "2026-05-04T06:46:16+00:00",
+  "schema_version": 1,
+  "score_claim": false,
+  "score_projection_if_hpm1_mask_is_semantically_identical": {
+    "base_pr85_stbm_score": 0.25369011029397787,
+    "base_score_source": "experiments/results/lightning_batch/exact_eval_pr85_stbm1br_stbm_runtime_t4_g4dn2x_20260504T0613Z/contest_auth_eval.adjudicated.json",
+    "evidence_grade": "prediction",
+    "expected_public_pr91_self_report": 0.24879480490416128,
+    "expected_public_pr91_self_report_abs_delta": 8.963353761992643e-08,
+    "matches_expected_public_pr91_self_report": true,
+    "projected_score": 0.24879471527062366,
+    "projection_formula": "base_score + 25 * archive_byte_delta / 37545489",
+    "rate_score_delta": -0.004895395023354203,
+    "score_claim": false
+  },
+  "segment_comparison": {
+    "all_non_mask_segments_identical": true,
+    "changed_segments": [
+      "mask"
+    ],
+    "pr91_archive": {
+      "archive_bytes": 222404,
+      "archive_sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f",
+      "label": "pr91_hpm1_source",
+      "member_bytes": 222304,
+      "member_name": "x",
+      "member_sha256": "5c213c61cc4d29b62286063bfdcb97e812af6b06c0021aeaecc8bc46644e17bf",
+      "path": "experiments/results/public_pr91_intake_20260504_codex/archive.zip",
+      "zip_compress_size": 222304,
+      "zip_compress_type": 0,
+      "zip_file_size": 222304,
+      "zip_overhead_bytes": 100
+    },
+    "pr91_bundle": {
+      "format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+      "header_bytes": 24,
+      "segment_lengths": {
+        "bias": 223,
+        "frac": 106,
+        "frac2": 149,
+        "frac3": 154,
+        "mask": 145087,
+        "model": 57074,
+        "pose": 1487,
+        "post": 1400,
+        "randmulti": 16101,
+        "region": 273,
+        "shift": 226
+      }
+    },
+    "segments": [
+      {
+        "byte_delta_right_minus_left": -7352,
+        "left_bytes": 152439,
+        "left_codec": "STBM1BR",
+        "left_sha256": "1b1ec60b64e284aae11e838dc3d9996bce00125df5712a8ba9c3e8f739c9d313",
+        "right_bytes": 145087,
+        "right_codec": "HPM1",
+        "right_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+        "same_bytes": false,
+        "segment": "mask"
+      },
+      {
+        "byte_delta_right_minus_left": 0,
+        "left_bytes": 57074,
+        "left_codec": "opaque",
+        "left_sha256": "c9194c19d44d3c32c4e588bbe4f9986ed0c562779078f0f4d6b073f0799b5dbc",
+        "right_bytes": 57074,
+        "right_codec": "opaque",
+        "right_sha256": "c9194c19d44d3c32c4e588bbe4f9986ed0c562779078f0f4d6b073f0799b5dbc",
+        "same_bytes": true,
+        "segment": "model"
+      },
+      {
+        "byte_delta_right_minus_left": 0,
+        "left_bytes": 1487,
+        "left_codec": "opaque",
+        "left_sha256": "2b6e03e02fb17f662e3f3f9ce47daf2fc33bf1f76c96e34ffac005f1c5c4054c",
+        "right_bytes": 1487,
+        "right_codec": "opaque",
+        "right_sha256": "2b6e03e02fb17f662e3f3f9ce47daf2fc33bf1f76c96e34ffac005f1c5c4054c",
+        "same_bytes": true,
+        "segment": "pose"
+      },
+      {
+        "byte_delta_right_minus_left": 0,
+        "left_bytes": 1400,
+        "left_codec": "opaque",
+        "left_sha256": "c3dc88e0fb5a1e48aec49eeacefeea20685e3c02598933deb1ff22dc09892575",
+        "right_bytes": 1400,
+        "right_codec": "opaque",
+        "right_sha256": "c3dc88e0fb5a1e48aec49eeacefeea20685e3c02598933deb1ff22dc09892575",
+        "same_bytes": true,
+        "segment": "post"
+      },
+      {
+        "byte_delta_right_minus_left": 0,
+        "left_bytes": 226,
+        "left_codec": "opaque",
+        "left_sha256": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4",
+        "right_bytes": 226,
+        "right_codec": "opaque",
+        "right_sha256": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4",
+        "same_bytes": true,
+        "segment": "shift"
+      },
+      {
+        "byte_delta_right_minus_left": 0,
+        "left_bytes": 106,
+        "left_codec": "opaque",
+        "left_sha256": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992",
+        "right_bytes": 106,
+        "right_codec": "opaque",
+        "right_sha256": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992",
+        "same_bytes": true,
+        "segment": "frac"
+      },
+      {
+        "byte_delta_right_minus_left": 0,
+        "left_bytes": 149,
+        "left_codec": "opaque",
+        "left_sha256": "3a01c7546d89d9d3ca846da37a20add7d456421e9211a6339850d946b856026b",
+        "right_bytes": 149,
+        "right_codec": "opaque",
+        "right_sha256": "3a01c7546d89d9d3ca846da37a20add7d456421e9211a6339850d946b856026b",
+        "same_bytes": true,
+        "segment": "frac2"
+      },
+      {
+        "byte_delta_right_minus_left": 0,
+        "left_bytes": 154,
+        "left_codec": "opaque",
+        "left_sha256": "d725b01b604566c5a76a06b821c644c8d5d5bb9a57ab0597d3bdabc8389858b5",
+        "right_bytes": 154,
+        "right_codec": "opaque",
+        "right_sha256": "d725b01b604566c5a76a06b821c644c8d5d5bb9a57ab0597d3bdabc8389858b5",
+        "same_bytes": true,
+        "segment": "frac3"
+      },
+      {
+        "byte_delta_right_minus_left": 0,
+        "left_bytes": 223,
+        "left_codec": "opaque",
+        "left_sha256": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b",
+        "right_bytes": 223,
+        "right_codec": "opaque",
+        "right_sha256": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b",
+        "same_bytes": true,
+        "segment": "bias"
+      },
+      {
+        "byte_delta_right_minus_left": 0,
+        "left_bytes": 273,
+        "left_codec": "opaque",
+        "left_sha256": "4a7c16094fab281c30e27621a58577c095c4b1153c232518c9adbaba2a2b2392",
+        "right_bytes": 273,
+        "right_codec": "opaque",
+        "right_sha256": "4a7c16094fab281c30e27621a58577c095c4b1153c232518c9adbaba2a2b2392",
+        "same_bytes": true,
+        "segment": "region"
+      },
+      {
+        "byte_delta_right_minus_left": 0,
+        "left_bytes": 16101,
+        "left_codec": "opaque",
+        "left_sha256": "c624372e60a0851c4c427dc333a60dcc5d6657ba8ed56951612e7c9d7be7629f",
+        "right_bytes": 16101,
+        "right_codec": "opaque",
+        "right_sha256": "c624372e60a0851c4c427dc333a60dcc5d6657ba8ed56951612e7c9d7be7629f",
+        "same_bytes": true,
+        "segment": "randmulti"
+      }
+    ],
+    "status": "passed",
+    "stbm_archive": {
+      "archive_bytes": 229756,
+      "archive_sha256": "c6f004d444ed32c628611a2f21f567c666af6bcbcceba618cc089ec024a0cda6",
+      "label": "pr85_stbm_frontier",
+      "member_bytes": 229656,
+      "member_name": "x",
+      "member_sha256": "c7586795bb29fb0ef611ad44715aec77e0e815370e19674d4c89ef2a54b417b5",
+      "path": "experiments/results/lightning_batch/exact_eval_pr85_stbm1br_stbm_runtime_t4_g4dn2x_20260504T0613Z/archive.zip",
+      "zip_compress_size": 229656,
+      "zip_compress_type": 0,
+      "zip_file_size": 229656,
+      "zip_overhead_bytes": 100
+    },
+    "stbm_bundle": {
+      "format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+      "header_bytes": 24,
+      "segment_lengths": {
+        "bias": 223,
+        "frac": 106,
+        "frac2": 149,
+        "frac3": 154,
+        "mask": 152439,
+        "model": 57074,
+        "pose": 1487,
+        "post": 1400,
+        "randmulti": 16101,
+        "region": 273,
+        "shift": 226
+      }
+    }
+  },
+  "source_frontier_score_anchor": {
+    "archive_sha256": "c6f004d444ed32c628611a2f21f567c666af6bcbcceba618cc089ec024a0cda6",
+    "archive_size_bytes": 229756,
+    "avg_posenet_dist": 0.0001894,
+    "avg_segnet_dist": 0.00057185,
+    "canonical_score": 0.25369011029397787,
+    "evidence_note": "A++ score anchor is used only for a rate-delta projection, not as an HPM1 score claim.",
+    "n_samples": 600,
+    "path": "experiments/results/lightning_batch/exact_eval_pr85_stbm1br_stbm_runtime_t4_g4dn2x_20260504T0613Z/contest_auth_eval.adjudicated.json",
+    "score_recomputed_from_components": 0.25369011029397787,
+    "status": "loaded"
+  },
+  "status": "blocked_hpm1_replay_failed",
+  "tool": "tac.pr91_hpm1_codec.plan_pr91_hpm1_pr85_stbm_fusion"
+}

@@ -1,0 +1,194 @@
+{
+  "action_wire": {
+    "action_id": "pr79_s2_frontier_wire_br_parser_only",
+    "compatibility_reason": "brotli: decoder failed",
+    "decoded_semantics_equal_pr79": true,
+    "direct_inflate_loader_compatible": false,
+    "member_name": "seg_tile_actions.br",
+    "runtime_raw_bytes": null,
+    "runtime_raw_sha256": null,
+    "source_archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+    "source_label": "pr79_s2_frontier",
+    "source_payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+    "wire_bytes": 1095,
+    "wire_sha256": "abbc8d26375d60e52bc4ab801f2e241e56bd47564fe48ff1edefc5e1bdf60273"
+  },
+  "candidate": {
+    "archive_bytes": 271547,
+    "archive_path": "experiments/results/pr79_next_byte_candidates_crf52_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf52__pr79_s2_frontier_wire_br_parser_only__stored_rpk1/archive.zip",
+    "archive_sha256": "979334074d6ea92d86c704272f9ba27badb78b1d4443ca33bb0fc43352598349",
+    "candidate_family": "stored_rpk1",
+    "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf52__pr79_s2_frontier_wire_br_parser_only__stored_rpk1",
+    "changed_members": {
+      "changed_vs_pr79_decoded": [
+        "masks.mkv",
+        "seg_tile_actions"
+      ],
+      "preserved_renderer_and_pose": true,
+      "semantic_equalities_vs_pr79": {
+        "masks.mkv": false,
+        "optimized_poses.qp1": true,
+        "renderer.bin": true,
+        "seg_tile_actions": false
+      }
+    },
+    "delta_bytes_vs_current_s2_frontier": -5774,
+    "dispatchability": {
+      "exact_screen_dispatchable_after_lane_claim": false,
+      "lane_claim_required_before_dispatch": true,
+      "reason": "brotli decode failed: brotli: decoder failed",
+      "remote_dispatch_performed": false,
+      "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+      "source_mask_body_exact_eval_ready_after_lane_claim": true
+    },
+    "manifest_path": "experiments/results/pr79_next_byte_candidates_crf52_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf52__pr79_s2_frontier_wire_br_parser_only__stored_rpk1/manifest.json",
+    "no_op_detection": {
+      "archive_sha_equal_to_pr79": false,
+      "decoded_members_equal_to_pr79": false,
+      "payload_sha_equal_to_pr79": false,
+      "status": "non_noop_changed_masks.mkv_seg_tile_actions"
+    },
+    "score_claim": false,
+    "score_estimate_vs_current_s2_frontier": {
+      "anchor": {
+        "archive_bytes": 277321,
+        "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+        "score": 0.31453355357318635,
+        "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+      },
+      "candidate_delta_bytes_vs_s2_frontier": -5774,
+      "rate_score_delta_vs_s2_frontier": -0.0038446695953274178,
+      "score_claim": false,
+      "score_if_components_unchanged_vs_current_s2_frontier": 0.31068888397785893,
+      "unchanged_component_estimate_only": true
+    }
+  },
+  "canonical_score_source_required": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+  "evidence_grade": "empirical_local_byte_screen_only",
+  "manifest_schema": "pr79_next_byte_candidate_manifest_v1",
+  "mask_candidate": {
+    "archive_bytes": 273141,
+    "archive_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf52/archive.zip",
+    "archive_sha256": "bc11b5e06f66571f9476dab3ad965f28cb42c63612ce2e0feb42d91c0e1aad27",
+    "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf52",
+    "exact_eval_ready_after_lane_claim": true,
+    "manifest_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf52/manifest.json",
+    "mask_bytes": 209259,
+    "mask_crf": 52,
+    "mask_sha256": "7543a23575a7e47e94eeb5477d4e2233c23fe49fe932bf6c77a9b534d36e96d0",
+    "plausibility_gate": {
+      "minimum_overall_argmax_agreement": 0.997,
+      "minimum_protected_argmax_agreement": 0.99,
+      "overall_argmax_agreement": 0.997372351752,
+      "passed": true,
+      "protected_argmax_agreement": 0.993066284952,
+      "reason": "protected-mask candidate clears local plausibility agreement thresholds"
+    },
+    "runtime_preflight": {
+      "archive_validation_errors": [],
+      "candidate_mask_decoded_sha256": "7543a23575a7e47e94eeb5477d4e2233c23fe49fe932bf6c77a9b534d36e96d0",
+      "candidate_mask_sha_matches_expected": true,
+      "non_mask_runtime_member_checks": {
+        "actions_decoded_preserved": true,
+        "pose_decoded_preserved": true,
+        "renderer_decoded_preserved": true
+      },
+      "non_mask_runtime_members_preserved": true,
+      "payload_format": null,
+      "runtime_member_headers": {
+        "masks.mkv": {
+          "bytes": 209259,
+          "codec": "raw",
+          "decoded_bytes": null,
+          "decoded_sha256": null,
+          "sha256": "7543a23575a7e47e94eeb5477d4e2233c23fe49fe932bf6c77a9b534d36e96d0"
+        },
+        "optimized_poses.qp1": {
+          "bytes": 1140,
+          "codec": "raw",
+          "decoded_bytes": null,
+          "decoded_sha256": null,
+          "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+        },
+        "renderer.bin": {
+          "bytes": 59288,
+          "codec": "raw",
+          "decoded_bytes": null,
+          "decoded_sha256": null,
+          "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 2688,
+          "codec": "raw",
+          "decoded_bytes": null,
+          "decoded_sha256": null,
+          "sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f"
+        }
+      },
+      "runtime_parser": "submissions/robust_current/unpack_renderer_payload.py",
+      "runtime_parser_ok": true
+    },
+    "source_manifest_sha256": "a855e4212acd9b643d7b79ffb2f95f38936f01bd3dd1b5624f600b90231b07e7"
+  },
+  "no_remote_dispatch_performed": true,
+  "payload_member": {
+    "bytes": 271447,
+    "decode_for_parse_sha256": "9882165a315e8bd8ce9fe7f0c93dfde5810740dbd97ea93eaa8fde9607215ba0",
+    "sha256": "9882165a315e8bd8ce9fe7f0c93dfde5810740dbd97ea93eaa8fde9607215ba0",
+    "top_level_brotli": false
+  },
+  "runtime_parse_validation": {
+    "action_loader": {
+      "compatible": false,
+      "reason": "brotli decode failed: brotli: decoder failed"
+    },
+    "action_semantics_parity": {
+      "equal_pr79_decoded_actions": false,
+      "semantics_sha256": null
+    },
+    "members": {
+      "masks.mkv": {
+        "bytes": 209259,
+        "sha256": "7543a23575a7e47e94eeb5477d4e2233c23fe49fe932bf6c77a9b534d36e96d0"
+      },
+      "optimized_poses.qp1": {
+        "bytes": 1140,
+        "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+      },
+      "renderer.bin": {
+        "bytes": 59288,
+        "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+      },
+      "seg_tile_actions.br": {
+        "bytes": 1095,
+        "sha256": "abbc8d26375d60e52bc4ab801f2e241e56bd47564fe48ff1edefc5e1bdf60273"
+      }
+    },
+    "payload_format": null,
+    "runtime_parser": "submissions/robust_current/unpack_renderer_payload.py"
+  },
+  "score_claim": false,
+  "source_pr79": {
+    "archive_bytes": 277388,
+    "archive_path": "experiments/results/top_submission_reverse_engineering_20260503_pr79/archive.zip",
+    "archive_sha256": "01dc02badf851d99108fd92c570271f36f74cc5424c6d2a8f1b499cb4d1c3446",
+    "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices"
+  },
+  "tool": "experiments/build_pr79_next_byte_candidates.py",
+  "zip_profile": {
+    "archive_bytes": 271547,
+    "archive_sha256": "979334074d6ea92d86c704272f9ba27badb78b1d4443ca33bb0fc43352598349",
+    "deterministic_rebuild_equal": true,
+    "deterministic_rebuild_sha256": "979334074d6ea92d86c704272f9ba27badb78b1d4443ca33bb0fc43352598349",
+    "single_stored_p": true,
+    "zip_member": "p",
+    "zip_timestamp": [
+      1980,
+      1,
+      1,
+      0,
+      0,
+      0
+    ]
+  }
+}

@@ -1,0 +1,754 @@
+{
+  "action_selection_guard": {
+    "changed_action_id_record_count": 0,
+    "custom_delta_record_count": 25,
+    "exact_duplicate_record_count": 0,
+    "no_op_transformed_record_count": 0,
+    "pair_tile_duplicate_group_count": 0,
+    "pair_tile_duplicate_record_count": 0,
+    "record_count": 25,
+    "runtime_signature_sha256": "955f488416b63d6aee89f6c4778a79ad477fbffde3db0c87e742bfbeb41367aa",
+    "transformed_record_count": 25,
+    "unique_source_record_count": 25
+  },
+  "actions_component_trace": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_only_p3_t4_20260503T0401Z/component_trace.json",
+  "archive": "experiments/results/pr75_action_dict_v2_worker_20260503/c067_pr75_actions_top25_wilddirmean_p5/archive.zip",
+  "archive_sha256": "52ec686cc23ff0bdfa19dca5b5d3b45a7d64a3d5fe6905f56ee07aa5379e2ae5",
+  "archive_size_bytes": 276421,
+  "base_component_trace": "experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/component_trace.json",
+  "calibration_component_traces": [
+    {
+      "max_rank": 40,
+      "path": "experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "transform": "identity"
+    }
+  ],
+  "custom_action_dictionary_brotli_bytes": 114,
+  "custom_action_dictionary_brotli_sha256": "bbc76cdb2ac0fde972fd0fee03490119c7b6ba573cf2188790f0bff56d9bd3a7",
+  "custom_action_dictionary_entries": [
+    {
+      "custom": true,
+      "delta_rgb": [
+        -16.0,
+        -0.0,
+        -16.0
+      ],
+      "dictionary_action_id": 0,
+      "source_action_id": null,
+      "source_action_ids": [
+        83
+      ]
+    },
+    {
+      "custom": true,
+      "delta_rgb": [
+        -12.0,
+        -12.0,
+        -12.0
+      ],
+      "dictionary_action_id": 1,
+      "source_action_id": null,
+      "source_action_ids": [
+        7,
+        9,
+        11
+      ]
+    },
+    {
+      "custom": true,
+      "delta_rgb": [
+        -11.0,
+        -0.0,
+        -0.0
+      ],
+      "dictionary_action_id": 2,
+      "source_action_id": null,
+      "source_action_ids": [
+        17,
+        23
+      ]
+    },
+    {
+      "custom": true,
+      "delta_rgb": [
+        -7.259259,
+        3.111111,
+        9.333333
+      ],
+      "dictionary_action_id": 3,
+      "source_action_id": null,
+      "source_action_ids": [
+        86,
+        90,
+        94
+      ]
+    },
+    {
+      "custom": true,
+      "delta_rgb": [
+        -4.0,
+        -4.0,
+        -0.0
+      ],
+      "dictionary_action_id": 4,
+      "source_action_id": null,
+      "source_action_ids": [
+        51
+      ]
+    },
+    {
+      "custom": true,
+      "delta_rgb": [
+        -0.0,
+        -12.0,
+        -12.0
+      ],
+      "dictionary_action_id": 5,
+      "source_action_id": null,
+      "source_action_ids": [
+        67,
+        71
+      ]
+    },
+    {
+      "custom": true,
+      "delta_rgb": [
+        -0.0,
+        -9.0,
+        -0.0
+      ],
+      "dictionary_action_id": 6,
+      "source_action_id": null,
+      "source_action_ids": [
+        29,
+        33
+      ]
+    },
+    {
+      "custom": true,
+      "delta_rgb": [
+        0.0,
+        0.0,
+        12.0
+      ],
+      "dictionary_action_id": 7,
+      "source_action_id": null,
+      "source_action_ids": [
+        44
+      ]
+    },
+    {
+      "custom": true,
+      "delta_rgb": [
+        0.0,
+        6.0,
+        6.0
+      ],
+      "dictionary_action_id": 8,
+      "source_action_id": null,
+      "source_action_ids": [
+        64
+      ]
+    },
+    {
+      "custom": true,
+      "delta_rgb": [
+        6.0,
+        6.0,
+        6.0
+      ],
+      "dictionary_action_id": 9,
+      "source_action_id": null,
+      "source_action_ids": [
+        2,
+        6
+      ]
+    },
+    {
+      "custom": true,
+      "delta_rgb": [
+        10.888889,
+        -4.666667,
+        -14.0
+      ],
+      "dictionary_action_id": 10,
+      "source_action_id": null,
+      "source_action_ids": [
+        93,
+        95
+      ]
+    },
+    {
+      "custom": true,
+      "delta_rgb": [
+        12.0,
+        0.0,
+        0.0
+      ],
+      "dictionary_action_id": 11,
+      "source_action_id": null,
+      "source_action_ids": [
+        20
+      ]
+    },
+    {
+      "custom": true,
+      "delta_rgb": [
+        12.0,
+        7.2,
+        -9.6
+      ],
+      "dictionary_action_id": 12,
+      "source_action_id": null,
+      "source_action_ids": [
+        102,
+        106
+      ]
+    }
+  ],
+  "custom_action_dictionary_raw_bytes": 164,
+  "custom_action_dictionary_raw_sha256": "25072d23f397a15a0ad419445128e79b79cd6cd61e0d09cb6e6803196bc25445",
+  "delta_bytes_vs_c067": 207,
+  "encoded_action_brotli_bytes": 79,
+  "encoded_action_brotli_sha256": "00818e39fe2419f556d0baeb855280c51a5694ef18c4aca264af26db80d06a3a",
+  "encoded_action_codec": "brotli_custom_dict_packed24_pair10_tile8_action6",
+  "encoded_action_stream_bytes": 75,
+  "encoded_action_stream_sha256": "d0b276e3adaf470521e39f978983c1ec35194105d0360437bff404fd2de4e72f",
+  "estimated_score_delta_vs_c067_from_trace_and_bytes": 4.905098548747507e-05,
+  "estimated_score_recomputed_from_c067_trace": 0.3155679183695767,
+  "evidence": "byte_and_trace_planning_only_until_exact_cuda",
+  "formula_rate_delta_vs_c067": 0.00013783280329628946,
+  "name": "c067_pr75_actions_top25_wilddirmean_p5",
+  "noop": false,
+  "noop_status": "not_noop_action_payload_nonempty",
+  "policy": "top25_wilddirmean",
+  "runtime_action_raw_bytes": 100,
+  "runtime_action_raw_sha256": "2cff5e27137440dc20fc9a9a73090a44f87e3c3cafe0a210066eec1c04d7b073",
+  "schema_version": 2,
+  "score_claim": false,
+  "selected_delta_combined_trace_sum": 0.00018688378878376453,
+  "selected_delta_pose_trace_sum": 3.0057313303814086e-05,
+  "selected_delta_seg_trace_sum": 0.00015682647547995054,
+  "selected_record_count": 25,
+  "selected_records": [
+    {
+      "action_id": 102,
+      "calibration_rank": null,
+      "calibration_source": null,
+      "custom_delta_rgb": [
+        12.0,
+        7.2,
+        -9.6
+      ],
+      "delta_combined": 8.518902860990291e-06,
+      "delta_pose": 8.518902860990291e-06,
+      "delta_seg": 0.0,
+      "index": 5,
+      "order_key": 50,
+      "pair_index": 67,
+      "source_action_id": 102,
+      "source_index": 5,
+      "tile_id": 88,
+      "transform": "wilddirmean_amp_12"
+    },
+    {
+      "action_id": 17,
+      "calibration_rank": null,
+      "calibration_source": null,
+      "custom_delta_rgb": [
+        -11.0,
+        -0.0,
+        -0.0
+      ],
+      "delta_combined": 4.663796402880078e-06,
+      "delta_pose": 4.252309504832488e-07,
+      "delta_seg": 4.23856545239687e-06,
+      "index": 10,
+      "order_key": 100,
+      "pair_index": 104,
+      "source_action_id": 17,
+      "source_index": 10,
+      "tile_id": 83,
+      "transform": "wilddirmean_amp_11"
+    },
+    {
+      "action_id": 94,
+      "calibration_rank": null,
+      "calibration_source": null,
+      "custom_delta_rgb": [
+        -7.259259,
+        3.111111,
+        9.333333
+      ],
+      "delta_combined": 2.3152230755622426e-05,
+      "delta_pose": 1.1117641328625455e-06,
+      "delta_seg": 2.2040466622759894e-05,
+      "index": 11,
+      "order_key": 110,
+      "pair_index": 105,
+      "source_action_id": 94,
+      "source_index": 11,
+      "tile_id": 99,
+      "transform": "wilddirmean_amp_9.33333"
+    },
+    {
+      "action_id": 64,
+      "calibration_rank": null,
+      "calibration_source": null,
+      "custom_delta_rgb": [
+        0.0,
+        6.0,
+        6.0
+      ],
+      "delta_combined": 6.197710245105454e-06,
+      "delta_pose": 1.959164195262258e-06,
+      "delta_seg": 4.238546049843223e-06,
+      "index": 12,
+      "order_key": 120,
+      "pair_index": 106,
+      "source_action_id": 64,
+      "source_index": 12,
+      "tile_id": 83,
+      "transform": "wilddirmean_amp_6"
+    },
+    {
+      "action_id": 44,
+      "calibration_rank": null,
+      "calibration_source": null,
+      "custom_delta_rgb": [
+        0.0,
+        0.0,
+        12.0
+      ],
+      "delta_combined": 6.719591264899103e-06,
+      "delta_pose": -9.098032663508969e-07,
+      "delta_seg": 7.62939453125e-06,
+      "index": 13,
+      "order_key": 130,
+      "pair_index": 119,
+      "source_action_id": 44,
+      "source_index": 13,
+      "tile_id": 86,
+      "transform": "wilddirmean_amp_12"
+    },
+    {
+      "action_id": 9,
+      "calibration_rank": null,
+      "calibration_source": null,
+      "custom_delta_rgb": [
+        -12.0,
+        -12.0,
+        -12.0
+      ],
+      "delta_combined": 1.1113301414474367e-05,
+      "delta_pose": 9.407753728077361e-07,
+      "delta_seg": 1.0172526041666671e-05,
+      "index": 17,
+      "order_key": 170,
+      "pair_index": 141,
+      "source_action_id": 9,
+      "source_index": 17,
+      "tile_id": 86,
+      "transform": "wilddirmean_amp_12"
+    },
+    {
+      "action_id": 7,
+      "calibration_rank": null,
+      "calibration_source": null,
+      "custom_delta_rgb": [
+        -12.0,
+        -12.0,
+        -12.0
+      ],
+      "delta_combined": 3.877380062258931e-06,
+      "delta_pose": -3.611756888611292e-07,
+      "delta_seg": 4.238555751120046e-06,
+      "index": 19,
+      "order_key": 190,
+      "pair_index": 152,
+      "source_action_id": 7,
+      "source_index": 19,
+      "tile_id": 86,
+      "transform": "wilddirmean_amp_12"
+    },
+    {
+      "action_id": 90,
+      "calibration_rank": null,
+      "calibration_source": null,
+      "custom_delta_rgb": [
+        -7.259259,
+        3.111111,
+        9.333333
+      ],
+      "delta_combined": 6.986055088954073e-06,
+      "delta_pose": 2.0436782741733523e-07,
+      "delta_seg": 6.781687261536717e-06,
+      "index": 20,
+      "order_key": 200,
+      "pair_index": 154,
+      "source_action_id": 90,
+      "source_index": 20,
+      "tile_id": 86,
+      "transform": "wilddirmean_amp_9.33333"
+    },
+    {
+      "action_id": 106,
+      "calibration_rank": null,
+      "calibration_source": null,
+      "custom_delta_rgb": [
+        12.0,
+        7.2,
+        -9.6
+      ],
+      "delta_combined": 4.356586752312383e-06,
+      "delta_pose": -2.4250956585859156e-06,
+      "delta_seg": 6.7816824108983125e-06,
+      "index": 22,
+      "order_key": 220,
+      "pair_index": 159,
+      "source_action_id": 106,
+      "source_index": 22,
+      "tile_id": 86,
+      "transform": "wilddirmean_amp_12"
+    },
+    {
+      "action_id": 20,
+      "calibration_rank": null,
+      "calibration_source": null,
+      "custom_delta_rgb": [
+        12.0,
+        0.0,
+        0.0
+      ],
+      "delta_combined": 5.197044495164631e-06,
+      "delta_pose": 9.584887440445845e-07,
+      "delta_seg": 4.23855575112006e-06,
+      "index": 23,
+      "order_key": 230,
+      "pair_index": 163,
+      "source_action_id": 20,
+      "source_index": 23,
+      "tile_id": 86,
+      "transform": "wilddirmean_amp_12"
+    },
+    {
+      "action_id": 6,
+      "calibration_rank": null,
+      "calibration_source": null,
+      "custom_delta_rgb": [
+        6.0,
+        6.0,
+        6.0
+      ],
+      "delta_combined": 1.132141785044116e-05,
+      "delta_pose": 4.5397402901812525e-06,
+      "delta_seg": 6.7816775602599075e-06,
+      "index": 24,
+      "order_key": 240,
+      "pair_index": 166,
+      "source_action_id": 6,
+      "source_index": 24,
+      "tile_id": 86,
+      "transform": "wilddirmean_amp_6"
+    },
+    {
+      "action_id": 2,
+      "calibration_rank": null,
+      "calibration_source": null,
+      "custom_delta_rgb": [
+        6.0,
+        6.0,
+        6.0
+      ],
+      "delta_combined": 7.164894922343819e-06,
+      "delta_pose": 1.2309197811587823e-06,
+      "delta_seg": 5.93397514118503e-06,
+      "index": 25,
+      "order_key": 250,
+      "pair_index": 167,
+      "source_action_id": 2,
+      "source_index": 25,
+      "tile_id": 86,
+      "transform": "wilddirmean_amp_6"
+    },
+    {
+      "action_id": 95,
+      "calibration_rank": null,
+      "calibration_source": null,
+      "custom_delta_rgb": [
+        10.888889,
+        -4.666667,
+        -14.0
+      ],
+      "delta_combined": 1.0019976923874045e-05,
+      "delta_pose": 1.542865421633966e-06,
+      "delta_seg": 8.477111502240092e-06,
+      "index": 26,
+      "order_key": 260,
+      "pair_index": 174,
+      "source_action_id": 95,
+      "source_index": 26,
+      "tile_id": 86,
+      "transform": "wilddirmean_amp_14"
+    },
+    {
+      "action_id": 93,
+      "calibration_rank": null,
+      "calibration_source": null,
+      "custom_delta_rgb": [
+        10.888889,
+        -4.666667,
+        -14.0
+      ],
+      "delta_combined": 5.799109477804877e-06,
+      "delta_pose": -9.82568082455058e-07,
+      "delta_seg": 6.7816775602599075e-06,
+      "index": 33,
+      "order_key": 330,
+      "pair_index": 197,
+      "source_action_id": 93,
+      "source_index": 33,
+      "tile_id": 90,
+      "transform": "wilddirmean_amp_14"
+    },
+    {
+      "action_id": 33,
+      "calibration_rank": null,
+      "calibration_source": null,
+      "custom_delta_rgb": [
+        -0.0,
+        -9.0,
+        -0.0
+      ],
+      "delta_combined": 5.844027126511019e-06,
+      "delta_pose": -9.376504337489156e-07,
+      "delta_seg": 6.7816775602599075e-06,
+      "index": 34,
+      "order_key": 340,
+      "pair_index": 198,
+      "source_action_id": 33,
+      "source_index": 34,
+      "tile_id": 107,
+      "transform": "wilddirmean_amp_9"
+    },
+    {
+      "action_id": 71,
+      "calibration_rank": null,
+      "calibration_source": null,
+      "custom_delta_rgb": [
+        -0.0,
+        -12.0,
+        -12.0
+      ],
+      "delta_combined": 3.712611963984947e-06,
+      "delta_pose": 3.2177318385497966e-07,
+      "delta_seg": 3.3908387801299538e-06,
+      "index": 37,
+      "order_key": 370,
+      "pair_index": 212,
+      "source_action_id": 71,
+      "source_index": 37,
+      "tile_id": 111,
+      "transform": "wilddirmean_amp_12"
+    },
+    {
+      "action_id": 23,
+      "calibration_rank": null,
+      "calibration_source": null,
+      "custom_delta_rgb": [
+        -11.0,
+        -0.0,
+        -0.0
+      ],
+      "delta_combined": 4.7641726833486694e-06,
+      "delta_pose": 2.221041172932005e-06,
+      "delta_seg": 2.543131510416671e-06,
+      "index": 39,
+      "order_key": 390,
+      "pair_index": 227,
+      "source_action_id": 23,
+      "source_index": 39,
+      "tile_id": 109,
+      "transform": "wilddirmean_amp_11"
+    },
+    {
+      "action_id": 11,
+      "calibration_rank": null,
+      "calibration_source": null,
+      "custom_delta_rgb": [
+        -12.0,
+        -12.0,
+        -12.0
+      ],
+      "delta_combined": 9.757661653321808e-06,
+      "delta_pose": 4.6713986324884585e-06,
+      "delta_seg": 5.086263020833336e-06,
+      "index": 42,
+      "order_key": 420,
+      "pair_index": 347,
+      "source_action_id": 11,
+      "source_index": 42,
+      "tile_id": 98,
+      "transform": "wilddirmean_amp_12"
+    },
+    {
+      "action_id": 9,
+      "calibration_rank": null,
+      "calibration_source": null,
+      "custom_delta_rgb": [
+        -12.0,
+        -12.0,
+        -12.0
+      ],
+      "delta_combined": 6.147876669754037e-06,
+      "delta_pose": 2.1389667793061593e-07,
+      "delta_seg": 5.933979991823435e-06,
+      "index": 51,
+      "order_key": 510,
+      "pair_index": 451,
+      "source_action_id": 9,
+      "source_index": 51,
+      "tile_id": 100,
+      "transform": "wilddirmean_amp_12"
+    },
+    {
+      "action_id": 67,
+      "calibration_rank": null,
+      "calibration_source": null,
+      "custom_delta_rgb": [
+        -0.0,
+        -12.0,
+        -12.0
+      ],
+      "delta_combined": 4.200227741091306e-06,
+      "delta_pose": 1.657096230674648e-06,
+      "delta_seg": 2.543131510416671e-06,
+      "index": 52,
+      "order_key": 520,
+      "pair_index": 459,
+      "source_action_id": 67,
+      "source_index": 52,
+      "tile_id": 87,
+      "transform": "wilddirmean_amp_12"
+    },
+    {
+      "action_id": 51,
+      "calibration_rank": null,
+      "calibration_source": null,
+      "custom_delta_rgb": [
+        -4.0,
+        -4.0,
+        -0.0
+      ],
+      "delta_combined": 1.5510633512418243e-05,
+      "delta_pose": 1.099542018354723e-06,
+      "delta_seg": 1.4411091494063527e-05,
+      "index": 54,
+      "order_key": 540,
+      "pair_index": 517,
+      "source_action_id": 51,
+      "source_index": 54,
+      "tile_id": 113,
+      "transform": "wilddirmean_amp_4"
+    },
+    {
+      "action_id": 44,
+      "calibration_rank": null,
+      "calibration_source": null,
+      "custom_delta_rgb": [
+        0.0,
+        0.0,
+        12.0
+      ],
+      "delta_combined": 6.50822021561854e-06,
+      "delta_pose": -2.734767471950078e-07,
+      "delta_seg": 6.781696962813554e-06,
+      "index": 55,
+      "order_key": 550,
+      "pair_index": 519,
+      "source_action_id": 44,
+      "source_index": 55,
+      "tile_id": 89,
+      "transform": "wilddirmean_amp_12"
+    },
+    {
+      "action_id": 29,
+      "calibration_rank": null,
+      "calibration_source": null,
+      "custom_delta_rgb": [
+        -0.0,
+        -9.0,
+        -0.0
+      ],
+      "delta_combined": 5.834663261606199e-06,
+      "delta_pose": 1.5960978092093296e-06,
+      "delta_seg": 4.23856545239687e-06,
+      "index": 56,
+      "order_key": 560,
+      "pair_index": 522,
+      "source_action_id": 29,
+      "source_index": 56,
+      "tile_id": 140,
+      "transform": "wilddirmean_amp_9"
+    },
+    {
+      "action_id": 86,
+      "calibration_rank": null,
+      "calibration_source": null,
+      "custom_delta_rgb": [
+        -7.259259,
+        3.111111,
+        9.333333
+      ],
+      "delta_combined": 5.0005517509449674e-06,
+      "delta_pose": 2.45742024052831e-06,
+      "delta_seg": 2.5431315104166576e-06,
+      "index": 63,
+      "order_key": 630,
+      "pair_index": 551,
+      "source_action_id": 86,
+      "source_index": 63,
+      "tile_id": 88,
+      "transform": "wilddirmean_amp_9.33333"
+    },
+    {
+      "action_id": 83,
+      "calibration_rank": null,
+      "calibration_source": null,
+      "custom_delta_rgb": [
+        -16.0,
+        -0.0,
+        -16.0
+      ],
+      "delta_combined": 4.515143688039162e-06,
+      "delta_pose": 2.765976381959375e-07,
+      "delta_seg": 4.238546049843236e-06,
+      "index": 65,
+      "order_key": 650,
+      "pair_index": 581,
+      "source_action_id": 83,
+      "source_index": 65,
+      "tile_id": 88,
+      "transform": "wilddirmean_amp_16"
+    }
+  ],
+  "selected_unique_source_record_count": 25,
+  "source_c067_archive": "experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip",
+  "source_c067_archive_sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+  "source_pr75_archive": "experiments/results/top_submission_reverse_engineering_20260503_pr75/archive.zip",
+  "source_pr75_archive_sha256": "cc1dfa346811dade15044910fa0143e73a7a049b98aeec39b96a53481a0788bd",
+  "source_preservation": {
+    "full_pr75_action_records_preserved": false,
+    "selected_action_ids_preserved": false,
+    "selected_effective_signature_sha256": "d9df2fc398692c12f83a49defceb7351145b3a5b5e80b960547a46c68c3ae596",
+    "selected_record_count": 25,
+    "source_effective_signature_sha256": "419254876db8dbf997cce324c9b1d0038a64070b8fdd929d5e678107b3c3f5d5",
+    "source_record_count": 67,
+    "status": "subset_or_transformed_pr75_action_records"
+  },
+  "source_preserving": false,
+  "source_record_count": 67,
+  "tool": "experiments/build_pr75_tile_action_subset_candidates.py",
+  "trace_delta_note": "Trace deltas are counted once per source PR75 record. Amplitude-shifted, custom-dictionary, and signed-combo policies require exact CUDA eval for measured effect.",
+  "wire_format": "p5"
+}

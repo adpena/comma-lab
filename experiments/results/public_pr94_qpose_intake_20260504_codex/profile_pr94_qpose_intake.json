@@ -1,0 +1,214 @@
+{
+  "archive": {
+    "archive_bytes": 277087,
+    "archive_sha256": "280fc6555e684f2d5f56e0ef883a6d30d00ec4722bd1ce5d959e27525f06eac7",
+    "crc32_hex": "227824e4",
+    "member_bytes": 276987,
+    "member_compress_size": 276987,
+    "member_name": "p",
+    "member_sha256": "34ea52517529107a8043e274b98ac745c45f9cdeb41ee5a1e8a8d942c92109b1",
+    "path": "experiments/results/public_pr94_qpose_intake_20260504_codex/archive.zip",
+    "zip_compress_type": 0,
+    "zip_overhead_bytes": 100,
+    "zip_stored": true,
+    "zip_timestamp": [
+      2026,
+      5,
+      3,
+      19,
+      5,
+      18
+    ]
+  },
+  "classification": {
+    "contest_faithfulness": "external_mps_report_only_until_cuda_replay",
+    "mask_decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+    "qpose": {
+      "decoded_bytes": 1140,
+      "encoded_columns": [
+        "velocity_col0"
+      ],
+      "first_velocity_q": 7277,
+      "format": "QP1_velocity_delta_varint",
+      "non_velocity_columns_fixed_zero": true,
+      "pose_rows": 600,
+      "runtime_pose_dim": 6,
+      "velocity_q_max": 7739,
+      "velocity_q_min": 1669,
+      "velocity_q_sha256": "2414c1f9333c18197494aa8bfd40d6eb13b99447b4542097a9543b3a1363b5b0"
+    },
+    "renderer_decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+    "renderer_magic": "QZS3",
+    "score_claim": false,
+    "tile_actions": {
+      "action_max": 107,
+      "action_min": 0,
+      "decoded_bytes": 1033,
+      "first_records": [
+        {
+          "action": 7,
+          "frame": 16,
+          "tile": 83
+        },
+        {
+          "action": 23,
+          "frame": 21,
+          "tile": 83
+        },
+        {
+          "action": 95,
+          "frame": 94,
+          "tile": 83
+        },
+        {
+          "action": 3,
+          "frame": 103,
+          "tile": 83
+        },
+        {
+          "action": 17,
+          "frame": 104,
+          "tile": 83
+        },
+        {
+          "action": 48,
+          "frame": 105,
+          "tile": 83
+        },
+        {
+          "action": 64,
+          "frame": 106,
+          "tile": 83
+        },
+        {
+          "action": 18,
+          "frame": 207,
+          "tile": 83
+        }
+      ],
+      "format": "sg2_tile_group_varint",
+      "frame_max": 598,
+      "frame_min": 0,
+      "record_count": 466,
+      "tile_max": 140,
+      "tile_min": 83,
+      "unique_action_count": 95,
+      "unique_frame_count": 254,
+      "unique_tile_count": 42
+    }
+  },
+  "evidence_grade": "empirical_static_archive_intake",
+  "layout": {
+    "actions_bytes": 861,
+    "mask_bytes": 219472,
+    "model_bytes": 55756,
+    "pose_bytes": 898,
+    "sum_segment_bytes": 276987
+  },
+  "notes": [
+    "No scorer was run.",
+    "No remote GPU job was dispatched.",
+    "MPS report text is invalid for promotion; exact CUDA auth eval remains the score truth."
+  ],
+  "payload": {
+    "boundary_authority": "pr94_inflate_len_range_276900_278000",
+    "header_bytes": 0,
+    "payload_bytes": 276987,
+    "payload_format": "pr94_fixed_range_qpose_tile_actions",
+    "payload_prefix_hex": "5b98684344152796",
+    "payload_sha256": "34ea52517529107a8043e274b98ac745c45f9cdeb41ee5a1e8a8d942c92109b1"
+  },
+  "reported_pr_text": {
+    "archive_bytes": 277087,
+    "device": "mps",
+    "head_sha": "ae765553e9dc4bb12a93f4150a41f73ca3d9af16",
+    "pose_dist": 0.00061985,
+    "pr_number": 94,
+    "promotion_validity": "invalid_for_promotion_mps_not_cuda",
+    "recomputed_report_score": 0.33425141289817706,
+    "seg_dist": 0.0007102,
+    "source": "experiments/results/public_pr94_hpac_contract_probe_20260504_codex/pr94_api.json",
+    "state": "open",
+    "title": "optimization_qpose_josema",
+    "updated_at": "2026-05-04T07:17:11Z"
+  },
+  "schema": "pr94_qpose_static_intake_profile_v1",
+  "score_claim": false,
+  "segments": [
+    {
+      "charged_bytes": 219472,
+      "charged_prefix_hex": "5b98684344152796",
+      "charged_sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87",
+      "codec": "brotli_av1_obu_mask_video",
+      "decoded_bytes": 223385,
+      "decoded_prefix_hex": "12000a0a0000000c",
+      "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+      "name": "masks.mkv"
+    },
+    {
+      "charged_bytes": 55756,
+      "charged_prefix_hex": "e2f2bcec00c3609e",
+      "charged_sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf",
+      "codec": "brotli_qzs_renderer",
+      "decoded_bytes": 59288,
+      "decoded_prefix_hex": "515a533320001675",
+      "decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+      "name": "renderer.bin"
+    },
+    {
+      "charged_bytes": 861,
+      "charged_prefix_hex": "1b0804f8e54a5739",
+      "charged_sha256": "aa0c0971452386cf27d8d44779f2784e73f441c3c80cf480f69b35a4d15317fd",
+      "codec": "brotli_seg_tile_actions",
+      "decoded_bytes": 1033,
+      "decoded_prefix_hex": "5347325308100705",
+      "decoded_sha256": "e8536eaf3dd3559c8e71307916d44b8c53cfafa04ac1c5e5dfb14bc936b2dde7",
+      "name": "seg_tile_actions.bin"
+    },
+    {
+      "charged_bytes": 898,
+      "charged_prefix_hex": "628e00ffe3203787",
+      "charged_sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082",
+      "codec": "brotli_qpose_qp1",
+      "decoded_bytes": 1140,
+      "decoded_prefix_hex": "5150316d1cd003c1",
+      "decoded_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+      "name": "optimized_poses.qp1"
+    }
+  ],
+  "stackability": [
+    {
+      "charged_bytes": 898,
+      "rate_score_delta_if_isolated": -0.00039219092338895893,
+      "reason": "PR94 encodes only velocity col0 and relies on its own qpose runtime path; PR85/STBM uses a different pose contract, so this is not a drop-in pose-side stack without decode/reencode and runtime-output parity.",
+      "static_delta_vs_pr85_stbm_pose_bytes": -589,
+      "surface": "pose_side_qp1_velocity",
+      "verdict": "blocked_not_isolated"
+    },
+    {
+      "charged_bytes": 55756,
+      "rate_score_delta_if_isolated": -0.0008776021002150218,
+      "reason": "The smaller QZS3 model is trained for PR94 masks/pose/actions; transplanting it onto PR85_STBM1BR/RMB1 would be a renderer replacement, not an isolated non-mask recode.",
+      "static_delta_vs_pr85_stbm_model_bytes": -1318,
+      "surface": "renderer_qzs3_model",
+      "verdict": "blocked_coupled_model_mask_pose"
+    },
+    {
+      "charged_bytes": 861,
+      "rate_score_delta_if_added": 0.0005733045586381895,
+      "reason": "Tile actions add charged bytes and only become useful if exact CUDA component gain exceeds their rate cost; PR94 only supplies MPS evidence.",
+      "static_delta_vs_no_tile_actions": 861,
+      "surface": "tile_actions_control",
+      "verdict": "not_rate_stackable"
+    },
+    {
+      "charged_bytes": 219472,
+      "rate_score_delta_if_replacing_stbm_mask": 0.04463452320463851,
+      "reason": "Replacing PR85_STBM1BR's lossless mask recode with PR94's full mask stream gives back the STBM byte win and changes the scorer-visible mask basin.",
+      "static_delta_vs_pr85_stbm_mask_bytes": 67033,
+      "surface": "mask_stream",
+      "verdict": "do_not_stack_onto_stbm"
+    }
+  ],
+  "tool": "experiments/profile_pr94_qpose_intake.py"
+}

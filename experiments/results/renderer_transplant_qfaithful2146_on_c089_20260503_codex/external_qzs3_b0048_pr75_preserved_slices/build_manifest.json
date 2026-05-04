@@ -1,0 +1,123 @@
+{
+  "candidate_id": "external_qzs3_b0048_pr75_preserved_slices",
+  "evidence_grade": "empirical_archive_candidate_until_pose_safety_and_exact_cuda",
+  "non_renderer_preservation": {
+    "all_non_renderer_members_preserved": true,
+    "members": {
+      "masks.mkv": {
+        "bytes": 223385,
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      "optimized_poses.qp1": {
+        "bytes": 1140,
+        "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 160,
+        "sha256": "50e997db4fd1b7642d9a2cd67b55802a4f7f9bd7a6603d0ca2eaf42e7fe7e320"
+      }
+    }
+  },
+  "output_archive": {
+    "bytes": 275204,
+    "delta_bytes_vs_source_archive": -1138,
+    "formula_only_rate_delta_vs_source_archive": -0.000757747488653031,
+    "path": "/Users/adpena/Projects/pact/experiments/results/renderer_transplant_qfaithful2146_on_c089_20260503_codex/external_qzs3_b0048_pr75_preserved_slices/archive.zip",
+    "sha256": "7ccfc312c698296292f41728f0bd26586cda14aff7cedc18d5947a03c6c24a87"
+  },
+  "payload": {
+    "action_dict_slice_bytes": 0,
+    "actions_slice_bytes": 116,
+    "brotli_quality": 11,
+    "bytes": 275104,
+    "mask_slice_bytes": 219472,
+    "member_name": "p",
+    "payload_format": "pr75_p6_preserve_slices",
+    "pose_slice_bytes": 677,
+    "record_count": 40,
+    "renderer_slice_bytes": 54827,
+    "renderer_slice_sha256": "e7780922c462576b07c4bf832a86fa369412b63a8ca2e1fd14c7b6d554f419a9",
+    "sha256": "e61feba593722e608d40eeefc39458db7bf7c1fd795d355d14eaf3744030c3d9",
+    "source_payload_format": "P6"
+  },
+  "promotion_eligible": false,
+  "renderer_transform": {
+    "codec": "qzs3",
+    "input_block_size": 32,
+    "output_block_size": 48,
+    "output_bytes": 58128,
+    "output_same_as_renderer_input": false,
+    "output_same_as_source_renderer": false,
+    "output_sha256": "fa0b6808c79bf89d9416662e585dbd6003e9173dabb4fe6c57e5eb8648eeaa78",
+    "renderer_input": {
+      "bytes": 59288,
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2146Z_fix1/qzs3_rp2_qpose14_unpacked_20260501T2159Z/renderer.bin",
+      "role": "external_renderer_export",
+      "same_as_source_renderer": false,
+      "sha256": "00ce395fc6495a47d26e3844537859fdc2a1bc38d121ea5f4fb2610179d26e46"
+    },
+    "source_block_size": 32,
+    "source_bytes": 59288,
+    "source_sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb",
+    "transform_kind": "qzs3_reencoded_state"
+  },
+  "runtime_contract": {
+    "byte_closed": true,
+    "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+    "pose_safety_preflight_required_before_dispatch": true,
+    "remote_gpu_dispatch_performed": false,
+    "renderer_only_transplant": true,
+    "runtime_unpack_summary": {
+      "members": [
+        {
+          "bytes": 58128,
+          "name": "renderer.bin",
+          "sha256": "fa0b6808c79bf89d9416662e585dbd6003e9173dabb4fe6c57e5eb8648eeaa78"
+        },
+        {
+          "bytes": 223385,
+          "name": "masks.mkv",
+          "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        {
+          "bytes": 1140,
+          "name": "optimized_poses.qp1",
+          "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+        },
+        {
+          "bytes": 160,
+          "name": "seg_tile_actions.bin",
+          "sha256": "50e997db4fd1b7642d9a2cd67b55802a4f7f9bd7a6603d0ca2eaf42e7fe7e320"
+        }
+      ],
+      "payload_bytes": 275104,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+      "schema": "renderer_payload_pr64_len_table_v1",
+      "source_archive_sha256": null
+    },
+    "runtime_unpack_verified": true,
+    "single_payload_member": true
+  },
+  "schema": "renderer_shrink_candidate_builder_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 276342,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/archive.zip",
+    "sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8",
+    "source_archive_packaging": "packed_renderer_payload",
+    "source_logical_member_names": [
+      "renderer.bin",
+      "masks.mkv",
+      "optimized_poses.qp1",
+      "seg_tile_actions.bin"
+    ],
+    "source_payload_header_payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+    "source_payload_header_schema": "renderer_payload_pr64_len_table_v1",
+    "source_payload_member": "p",
+    "source_payload_member_bytes": 276242,
+    "source_payload_member_sha256": "fcc3fddb3a4182182bbfca1d1064544c87e58a5a9f76ea6fddfcfe4eb0b453c1",
+    "source_zip_members": [
+      "p"
+    ]
+  }
+}

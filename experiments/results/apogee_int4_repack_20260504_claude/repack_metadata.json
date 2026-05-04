@@ -1,0 +1,13 @@
+{
+  "archive_path": "experiments/results/apogee_int4_repack_20260504_claude/apogee_int4_archive.zip",
+  "archive_size_bytes": 109981,
+  "pr106_size_bytes": 186239,
+  "delta_bytes": -76258,
+  "rate_component_score_delta_vs_pr106": -0.05077707204719054,
+  "block_size": 128,
+  "n_int4_layers": 13,
+  "n_brotli_int8_layers": 15,
+  "tag": "[design-validation]",
+  "council_status": "NOT_REVIEWED",
+  "next_step": "Compare empirically to Lane \u03a9-W-V3 stub-mode preview (-22,152 bytes / -0.01475 score \u0394). If int4 archive is significantly smaller AND empirical contest-CUDA score < 0.20945, this is a Lane #04 standalone success. If distortion blows up, fold int4 into water_filling_codec_v2 with per-channel sensitivity gating (hybrid)."
+}

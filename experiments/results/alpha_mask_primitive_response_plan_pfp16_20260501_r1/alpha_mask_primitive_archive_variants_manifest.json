@@ -1,0 +1,940 @@
+{
+  "auth_eval_required": "cuda",
+  "baseline_archive": {
+    "bytes": 686635,
+    "path_hint": "experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+    "sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+  },
+  "canonical_response_eval_path": "archive.zip -> inflate.sh -> upstream/evaluate.py",
+  "evidence_grade": "empirical",
+  "format": "alpha_mask_primitive_archive_variants_v1",
+  "mask_member": {
+    "compress_type": 8,
+    "compressed_bytes": 412169,
+    "crc32": "e144d6ac",
+    "date_time": [
+      1980,
+      1,
+      1,
+      0,
+      0,
+      0
+    ],
+    "name": "masks.mkv",
+    "permissions_octal": "0o644",
+    "raw_bytes": 421483,
+    "sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9"
+  },
+  "member_order": [
+    "masks.mkv",
+    "optimized_poses.bin",
+    "renderer.bin"
+  ],
+  "official_component_response": false,
+  "points": [
+    {
+      "archive": {
+        "bytes": 369707,
+        "path": "archives/point_001_connected_component_set_component_to_neighbor_class_connected_component_set_component_.zip",
+        "sha256": "2fa4bc52a373b0907a6f03197f38d5328d0699630350baa2a11ac0859c38d021"
+      },
+      "archive_byte_delta_vs_baseline": -316928,
+      "deterministic_rebuild": true,
+      "epsilon": 1.0,
+      "index": 1,
+      "mask_delta": {
+        "changed_fraction": 1.7361111e-05,
+        "changed_pixels": 4096,
+        "pixel_selection_policy": "row_major_within_component_after_exact_component_selection",
+        "selected_pixels_after_cap": 4096,
+        "selected_pixels_before_cap": 99018,
+        "selection_was_capped": true,
+        "source_class_histogram_in_selection": {
+          "0": 0,
+          "1": 0,
+          "2": 4096,
+          "3": 0,
+          "4": 0
+        },
+        "target_class_written": 0
+      },
+      "mask_member_artifact": {
+        "crf": 63,
+        "encoder": "tac.mask_codec.encode_masks",
+        "fps": 20,
+        "name": "masks.mkv",
+        "path": "mask_members/point_001_connected_component_set_component_to_neighbor_class_connected_component_set_component_.mkv",
+        "sha256": "b3a13e6306a8165261a9995b93981560cdd6eff71cc6efdcebbc617bac10faef",
+        "size_bytes": 108790
+      },
+      "members": [
+        {
+          "compress_type": 8,
+          "compressed_bytes": 95244,
+          "crc32": "b34f4528",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "masks.mkv",
+          "permissions_octal": "0o644",
+          "raw_bytes": 108790,
+          "sha256": "b3a13e6306a8165261a9995b93981560cdd6eff71cc6efdcebbc617bac10faef"
+        },
+        {
+          "compress_type": 8,
+          "compressed_bytes": 6734,
+          "crc32": "686cbfbf",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "optimized_poses.bin",
+          "permissions_octal": "0o644",
+          "raw_bytes": 7200,
+          "sha256": "4b3d8cd58965971ad518a970441f5e9cc53ce361a62d51e95c1cdd2056be4449"
+        },
+        {
+          "compress_type": 8,
+          "compressed_bytes": 267399,
+          "crc32": "1827a837",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "renderer.bin",
+          "permissions_octal": "0o644",
+          "raw_bytes": 296776,
+          "sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529"
+        }
+      ],
+      "primitive": {
+        "description": "flip one 4-connected component to its dominant neighboring class",
+        "frame_index": 719,
+        "kind": "connected_component",
+        "operation": "set_component_to_neighbor_class",
+        "params": {
+          "bbox_xyxy_exclusive": [
+            0,
+            0,
+            512,
+            218
+          ],
+          "boundary_edges_4conn": 1540,
+          "boundary_pixels_4conn": 1453,
+          "component_area": 99018,
+          "component_centroid_xy": [
+            257.875962,
+            96.52652
+          ],
+          "neighbor_histogram": {
+            "0": 348,
+            "1": 167,
+            "2": 0,
+            "3": 91,
+            "4": 0
+          },
+          "pixel_cap_policy": "row_major_within_component_after_exact_component_selection",
+          "scan_index": 0,
+          "seed_x": 0,
+          "seed_y": 0
+        },
+        "primitive_id": "connected_component_set_component_to_neighbor_class_719_2_0_935e2f9806e317d4",
+        "rank_pixels": 99018,
+        "selection_weight": 0.503631591796875,
+        "source_class": 2,
+        "target_class": 0
+      },
+      "promotion_eligible": false,
+      "score_claim": false
+    },
+    {
+      "archive": {
+        "bytes": 369713,
+        "path": "archives/point_002_connected_component_set_component_to_neighbor_class_connected_component_set_component_.zip",
+        "sha256": "4aaaec8e2b8416cc988285bdd23cec53643340fb1b48d9ab78d8af671a3ecbe7"
+      },
+      "archive_byte_delta_vs_baseline": -316922,
+      "deterministic_rebuild": true,
+      "epsilon": 2.0,
+      "index": 2,
+      "mask_delta": {
+        "changed_fraction": 1.7361111e-05,
+        "changed_pixels": 4096,
+        "pixel_selection_policy": "row_major_within_component_after_exact_component_selection",
+        "selected_pixels_after_cap": 4096,
+        "selected_pixels_before_cap": 98800,
+        "selection_was_capped": true,
+        "source_class_histogram_in_selection": {
+          "0": 0,
+          "1": 0,
+          "2": 4096,
+          "3": 0,
+          "4": 0
+        },
+        "target_class_written": 0
+      },
+      "mask_member_artifact": {
+        "crf": 63,
+        "encoder": "tac.mask_codec.encode_masks",
+        "fps": 20,
+        "name": "masks.mkv",
+        "path": "mask_members/point_002_connected_component_set_component_to_neighbor_class_connected_component_set_component_.mkv",
+        "sha256": "d3a83ebb28312ca1396b93d53532c2d5216af6577c11c43581cafe647f837880",
+        "size_bytes": 108790
+      },
+      "members": [
+        {
+          "compress_type": 8,
+          "compressed_bytes": 95250,
+          "crc32": "f2a6706e",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "masks.mkv",
+          "permissions_octal": "0o644",
+          "raw_bytes": 108790,
+          "sha256": "d3a83ebb28312ca1396b93d53532c2d5216af6577c11c43581cafe647f837880"
+        },
+        {
+          "compress_type": 8,
+          "compressed_bytes": 6734,
+          "crc32": "686cbfbf",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "optimized_poses.bin",
+          "permissions_octal": "0o644",
+          "raw_bytes": 7200,
+          "sha256": "4b3d8cd58965971ad518a970441f5e9cc53ce361a62d51e95c1cdd2056be4449"
+        },
+        {
+          "compress_type": 8,
+          "compressed_bytes": 267399,
+          "crc32": "1827a837",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "renderer.bin",
+          "permissions_octal": "0o644",
+          "raw_bytes": 296776,
+          "sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529"
+        }
+      ],
+      "primitive": {
+        "description": "flip one 4-connected component to its dominant neighboring class",
+        "frame_index": 799,
+        "kind": "connected_component",
+        "operation": "set_component_to_neighbor_class",
+        "params": {
+          "bbox_xyxy_exclusive": [
+            0,
+            0,
+            512,
+            216
+          ],
+          "boundary_edges_4conn": 1550,
+          "boundary_pixels_4conn": 1460,
+          "component_area": 98800,
+          "component_centroid_xy": [
+            257.075071,
+            96.333623
+          ],
+          "neighbor_histogram": {
+            "0": 382,
+            "1": 101,
+            "2": 0,
+            "3": 134,
+            "4": 0
+          },
+          "pixel_cap_policy": "row_major_within_component_after_exact_component_selection",
+          "scan_index": 0,
+          "seed_x": 0,
+          "seed_y": 0
+        },
+        "primitive_id": "connected_component_set_component_to_neighbor_class_799_2_0_2895a6419d41f0d9",
+        "rank_pixels": 98800,
+        "selection_weight": 0.5025227864583334,
+        "source_class": 2,
+        "target_class": 0
+      },
+      "promotion_eligible": false,
+      "score_claim": false
+    },
+    {
+      "archive": {
+        "bytes": 369658,
+        "path": "archives/point_003_boundary_band_set_source_boundary_band_to_target_class_boundary_band_set_source_bounda.zip",
+        "sha256": "a44944cc538766c6b37c20be67cb1c4f006bc5399f9a0916e52cffa76e4022b1"
+      },
+      "archive_byte_delta_vs_baseline": -316977,
+      "deterministic_rebuild": true,
+      "epsilon": 3.0,
+      "index": 3,
+      "mask_delta": {
+        "changed_fraction": 6.366306e-06,
+        "changed_pixels": 1502,
+        "pixel_selection_policy": "row_major_within_boundary_band",
+        "selected_pixels_after_cap": 1502,
+        "selected_pixels_before_cap": 1502,
+        "selection_was_capped": false,
+        "source_class_histogram_in_selection": {
+          "0": 1502,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0
+        },
+        "target_class_written": 1
+      },
+      "mask_member_artifact": {
+        "crf": 63,
+        "encoder": "tac.mask_codec.encode_masks",
+        "fps": 20,
+        "name": "masks.mkv",
+        "path": "mask_members/point_003_boundary_band_set_source_boundary_band_to_target_class_boundary_band_set_source_bounda.mkv",
+        "sha256": "832c0ef67ccee5ceb5ca6761162dd647de829103e711538b63fa0f5a55199b89",
+        "size_bytes": 108744
+      },
+      "members": [
+        {
+          "compress_type": 8,
+          "compressed_bytes": 95195,
+          "crc32": "1bb38b4a",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "masks.mkv",
+          "permissions_octal": "0o644",
+          "raw_bytes": 108744,
+          "sha256": "832c0ef67ccee5ceb5ca6761162dd647de829103e711538b63fa0f5a55199b89"
+        },
+        {
+          "compress_type": 8,
+          "compressed_bytes": 6734,
+          "crc32": "686cbfbf",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "optimized_poses.bin",
+          "permissions_octal": "0o644",
+          "raw_bytes": 7200,
+          "sha256": "4b3d8cd58965971ad518a970441f5e9cc53ce361a62d51e95c1cdd2056be4449"
+        },
+        {
+          "compress_type": 8,
+          "compressed_bytes": 267399,
+          "crc32": "1827a837",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "renderer.bin",
+          "permissions_octal": "0o644",
+          "raw_bytes": 296776,
+          "sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529"
+        }
+      ],
+      "primitive": {
+        "description": "flip a one-sided class boundary band to the adjacent target class",
+        "frame_index": 1039,
+        "kind": "boundary_band",
+        "operation": "set_source_boundary_band_to_target_class",
+        "params": {
+          "boundary_pair_pixels": 1502,
+          "boundary_width": 1,
+          "pixel_cap_policy": "row_major_within_boundary_band"
+        },
+        "primitive_id": "boundary_band_set_source_boundary_band_to_target_class_1039_0_1_1c4bf7d7e9642207",
+        "rank_pixels": 1502,
+        "selection_weight": 0.007639567057291667,
+        "source_class": 0,
+        "target_class": 1
+      },
+      "promotion_eligible": false,
+      "score_claim": false
+    },
+    {
+      "archive": {
+        "bytes": 369664,
+        "path": "archives/point_004_boundary_band_set_source_boundary_band_to_target_class_boundary_band_set_source_bounda.zip",
+        "sha256": "7affa1782a4f807c0fe2193f698f04e5e3c22c6b123c101a4497d4f8790ab1e7"
+      },
+      "archive_byte_delta_vs_baseline": -316971,
+      "deterministic_rebuild": true,
+      "epsilon": 4.0,
+      "index": 4,
+      "mask_delta": {
+        "changed_fraction": 6.116231e-06,
+        "changed_pixels": 1443,
+        "pixel_selection_policy": "row_major_within_boundary_band",
+        "selected_pixels_after_cap": 1443,
+        "selected_pixels_before_cap": 1443,
+        "selection_was_capped": false,
+        "source_class_histogram_in_selection": {
+          "0": 1443,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0
+        },
+        "target_class_written": 1
+      },
+      "mask_member_artifact": {
+        "crf": 63,
+        "encoder": "tac.mask_codec.encode_masks",
+        "fps": 20,
+        "name": "masks.mkv",
+        "path": "mask_members/point_004_boundary_band_set_source_boundary_band_to_target_class_boundary_band_set_source_bounda.mkv",
+        "sha256": "12a8e22889169d6794cac1208a34aee60386710af9ebcfc282abbc943fca74a5",
+        "size_bytes": 108748
+      },
+      "members": [
+        {
+          "compress_type": 8,
+          "compressed_bytes": 95201,
+          "crc32": "0cbcb2ad",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "masks.mkv",
+          "permissions_octal": "0o644",
+          "raw_bytes": 108748,
+          "sha256": "12a8e22889169d6794cac1208a34aee60386710af9ebcfc282abbc943fca74a5"
+        },
+        {
+          "compress_type": 8,
+          "compressed_bytes": 6734,
+          "crc32": "686cbfbf",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "optimized_poses.bin",
+          "permissions_octal": "0o644",
+          "raw_bytes": 7200,
+          "sha256": "4b3d8cd58965971ad518a970441f5e9cc53ce361a62d51e95c1cdd2056be4449"
+        },
+        {
+          "compress_type": 8,
+          "compressed_bytes": 267399,
+          "crc32": "1827a837",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "renderer.bin",
+          "permissions_octal": "0o644",
+          "raw_bytes": 296776,
+          "sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529"
+        }
+      ],
+      "primitive": {
+        "description": "flip a one-sided class boundary band to the adjacent target class",
+        "frame_index": 560,
+        "kind": "boundary_band",
+        "operation": "set_source_boundary_band_to_target_class",
+        "params": {
+          "boundary_pair_pixels": 1443,
+          "boundary_width": 1,
+          "pixel_cap_policy": "row_major_within_boundary_band"
+        },
+        "primitive_id": "boundary_band_set_source_boundary_band_to_target_class_560_0_1_45492e6e935d4dd8",
+        "rank_pixels": 1443,
+        "selection_weight": 0.0073394775390625,
+        "source_class": 0,
+        "target_class": 1
+      },
+      "promotion_eligible": false,
+      "score_claim": false
+    },
+    {
+      "archive": {
+        "bytes": 369707,
+        "path": "archives/point_005_class_flip_set_source_class_prefix_to_target_class_class_flip_set_source_class_prefix_.zip",
+        "sha256": "be0ac8de2aa95611e257f77ebcd40515f417c848994890c537dcc4c1fa2ff373"
+      },
+      "archive_byte_delta_vs_baseline": -316928,
+      "deterministic_rebuild": true,
+      "epsilon": 5.0,
+      "index": 5,
+      "mask_delta": {
+        "changed_fraction": 1.7361111e-05,
+        "changed_pixels": 4096,
+        "pixel_selection_policy": "row_major_prefix_of_source_class",
+        "selected_pixels_after_cap": 4096,
+        "selected_pixels_before_cap": 99032,
+        "selection_was_capped": true,
+        "source_class_histogram_in_selection": {
+          "0": 0,
+          "1": 0,
+          "2": 4096,
+          "3": 0,
+          "4": 0
+        },
+        "target_class_written": 0
+      },
+      "mask_member_artifact": {
+        "crf": 63,
+        "encoder": "tac.mask_codec.encode_masks",
+        "fps": 20,
+        "name": "masks.mkv",
+        "path": "mask_members/point_005_class_flip_set_source_class_prefix_to_target_class_class_flip_set_source_class_prefix_.mkv",
+        "sha256": "a0f5db9da24e7de566481aea8f5ef51d405f7c9787aedd85c5b8f206028a8e5c",
+        "size_bytes": 108790
+      },
+      "members": [
+        {
+          "compress_type": 8,
+          "compressed_bytes": 95244,
+          "crc32": "caaf3d26",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "masks.mkv",
+          "permissions_octal": "0o644",
+          "raw_bytes": 108790,
+          "sha256": "a0f5db9da24e7de566481aea8f5ef51d405f7c9787aedd85c5b8f206028a8e5c"
+        },
+        {
+          "compress_type": 8,
+          "compressed_bytes": 6734,
+          "crc32": "686cbfbf",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "optimized_poses.bin",
+          "permissions_octal": "0o644",
+          "raw_bytes": 7200,
+          "sha256": "4b3d8cd58965971ad518a970441f5e9cc53ce361a62d51e95c1cdd2056be4449"
+        },
+        {
+          "compress_type": 8,
+          "compressed_bytes": 267399,
+          "crc32": "1827a837",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "renderer.bin",
+          "permissions_octal": "0o644",
+          "raw_bytes": 296776,
+          "sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529"
+        }
+      ],
+      "primitive": {
+        "description": "flip a bounded row-major prefix of one frame/class to its dominant neighboring class",
+        "frame_index": 719,
+        "kind": "class_flip",
+        "operation": "set_source_class_prefix_to_target_class",
+        "params": {
+          "pixel_cap_policy": "row_major_prefix_of_source_class",
+          "source_class_pixels_in_frame": 99032
+        },
+        "primitive_id": "class_flip_set_source_class_prefix_to_target_class_719_2_0_9a7c415f05669a42",
+        "rank_pixels": 99032,
+        "selection_weight": 0.5037027994791666,
+        "source_class": 2,
+        "target_class": 0
+      },
+      "promotion_eligible": false,
+      "score_claim": false
+    },
+    {
+      "archive": {
+        "bytes": 369658,
+        "path": "archives/point_006_morphology_erode_erode_source_class_toward_target_class_morphology_erode_erode_source_.zip",
+        "sha256": "0350526b9e850a190467ea06a9f03f01b4df9cdc9f295d93150f7145dcf752d1"
+      },
+      "archive_byte_delta_vs_baseline": -316977,
+      "deterministic_rebuild": true,
+      "epsilon": 6.0,
+      "index": 6,
+      "mask_delta": {
+        "changed_fraction": 6.366306e-06,
+        "changed_pixels": 1502,
+        "pixel_selection_policy": "row_major_within_source_boundary",
+        "selected_pixels_after_cap": 1502,
+        "selected_pixels_before_cap": 1502,
+        "selection_was_capped": false,
+        "source_class_histogram_in_selection": {
+          "0": 1502,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0
+        },
+        "target_class_written": 1
+      },
+      "mask_member_artifact": {
+        "crf": 63,
+        "encoder": "tac.mask_codec.encode_masks",
+        "fps": 20,
+        "name": "masks.mkv",
+        "path": "mask_members/point_006_morphology_erode_erode_source_class_toward_target_class_morphology_erode_erode_source_.mkv",
+        "sha256": "53fa1ed62a76614af1decdb17bd4f42684dde1ec73f9b2a21d2291022af9649b",
+        "size_bytes": 108744
+      },
+      "members": [
+        {
+          "compress_type": 8,
+          "compressed_bytes": 95195,
+          "crc32": "c8223a77",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "masks.mkv",
+          "permissions_octal": "0o644",
+          "raw_bytes": 108744,
+          "sha256": "53fa1ed62a76614af1decdb17bd4f42684dde1ec73f9b2a21d2291022af9649b"
+        },
+        {
+          "compress_type": 8,
+          "compressed_bytes": 6734,
+          "crc32": "686cbfbf",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "optimized_poses.bin",
+          "permissions_octal": "0o644",
+          "raw_bytes": 7200,
+          "sha256": "4b3d8cd58965971ad518a970441f5e9cc53ce361a62d51e95c1cdd2056be4449"
+        },
+        {
+          "compress_type": 8,
+          "compressed_bytes": 267399,
+          "crc32": "1827a837",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "renderer.bin",
+          "permissions_octal": "0o644",
+          "raw_bytes": 296776,
+          "sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529"
+        }
+      ],
+      "primitive": {
+        "description": "erode source-class boundary pixels into an adjacent target class",
+        "frame_index": 1039,
+        "kind": "morphology_erode",
+        "operation": "erode_source_class_toward_target_class",
+        "params": {
+          "boundary_pair_pixels": 1502,
+          "boundary_width": 1,
+          "pixel_cap_policy": "row_major_within_source_boundary"
+        },
+        "primitive_id": "morphology_erode_erode_source_class_toward_target_class_1039_0_1_b37a434ce392a09a",
+        "rank_pixels": 1502,
+        "selection_weight": 0.007639567057291667,
+        "source_class": 0,
+        "target_class": 1
+      },
+      "promotion_eligible": false,
+      "score_claim": false
+    },
+    {
+      "archive": {
+        "bytes": 369658,
+        "path": "archives/point_007_morphology_dilate_dilate_source_class_into_target_class_morphology_dilate_dilate_sourc.zip",
+        "sha256": "1c3b452d7119da5b5fee1baadc3f34d03f82bf7ec5cf74510ee68a0e39b5c8f1"
+      },
+      "archive_byte_delta_vs_baseline": -316977,
+      "deterministic_rebuild": true,
+      "epsilon": 7.0,
+      "index": 7,
+      "mask_delta": {
+        "changed_fraction": 6.366306e-06,
+        "changed_pixels": 1502,
+        "pixel_selection_policy": "row_major_within_adjacent_target_pixels",
+        "selected_pixels_after_cap": 1502,
+        "selected_pixels_before_cap": 1502,
+        "selection_was_capped": false,
+        "source_class_histogram_in_selection": {
+          "0": 1502,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0
+        },
+        "target_class_written": 1
+      },
+      "mask_member_artifact": {
+        "crf": 63,
+        "encoder": "tac.mask_codec.encode_masks",
+        "fps": 20,
+        "name": "masks.mkv",
+        "path": "mask_members/point_007_morphology_dilate_dilate_source_class_into_target_class_morphology_dilate_dilate_sourc.mkv",
+        "sha256": "94618a696d3261e72b7c1eec5b9c18388a03c4cbe3d68f2a89b28f26aa5a3154",
+        "size_bytes": 108744
+      },
+      "members": [
+        {
+          "compress_type": 8,
+          "compressed_bytes": 95195,
+          "crc32": "e008d15a",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "masks.mkv",
+          "permissions_octal": "0o644",
+          "raw_bytes": 108744,
+          "sha256": "94618a696d3261e72b7c1eec5b9c18388a03c4cbe3d68f2a89b28f26aa5a3154"
+        },
+        {
+          "compress_type": 8,
+          "compressed_bytes": 6734,
+          "crc32": "686cbfbf",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "optimized_poses.bin",
+          "permissions_octal": "0o644",
+          "raw_bytes": 7200,
+          "sha256": "4b3d8cd58965971ad518a970441f5e9cc53ce361a62d51e95c1cdd2056be4449"
+        },
+        {
+          "compress_type": 8,
+          "compressed_bytes": 267399,
+          "crc32": "1827a837",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "renderer.bin",
+          "permissions_octal": "0o644",
+          "raw_bytes": 296776,
+          "sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529"
+        }
+      ],
+      "primitive": {
+        "description": "dilate source class into adjacent target-class pixels",
+        "frame_index": 1039,
+        "kind": "morphology_dilate",
+        "operation": "dilate_source_class_into_target_class",
+        "params": {
+          "boundary_width": 1,
+          "pixel_cap_policy": "row_major_within_adjacent_target_pixels",
+          "target_pixels_adjacent_to_source": 1502
+        },
+        "primitive_id": "morphology_dilate_dilate_source_class_into_target_class_1039_1_0_da3904667da2e5aa",
+        "rank_pixels": 1502,
+        "selection_weight": 0.007639567057291667,
+        "source_class": 1,
+        "target_class": 0
+      },
+      "promotion_eligible": false,
+      "score_claim": false
+    },
+    {
+      "archive": {
+        "bytes": 369674,
+        "path": "archives/point_008_transition_endpoint_advance_previous_endpoint_to_current_class_transition_endpoint_adv.zip",
+        "sha256": "4e1dc2d1c3c927a7d975fb7823dcdd9e508266e9d8def14b9f137cc5cc818e0a"
+      },
+      "archive_byte_delta_vs_baseline": -316961,
+      "deterministic_rebuild": true,
+      "epsilon": 8.0,
+      "index": 8,
+      "mask_delta": {
+        "changed_fraction": 1.6487969e-05,
+        "changed_pixels": 3890,
+        "pixel_selection_policy": "row_major_within_transition_pair",
+        "selected_pixels_after_cap": 3890,
+        "selected_pixels_before_cap": 3890,
+        "selection_was_capped": false,
+        "source_class_histogram_in_selection": {
+          "0": 3890,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0
+        },
+        "target_class_written": 3
+      },
+      "mask_member_artifact": {
+        "crf": 63,
+        "encoder": "tac.mask_codec.encode_masks",
+        "fps": 20,
+        "name": "masks.mkv",
+        "path": "mask_members/point_008_transition_endpoint_advance_previous_endpoint_to_current_class_transition_endpoint_adv.mkv",
+        "sha256": "d17b75c2c1a96231dcae41235c6e314690e220f5482e3d0f3f8be2bdbeeb9cf7",
+        "size_bytes": 108761
+      },
+      "members": [
+        {
+          "compress_type": 8,
+          "compressed_bytes": 95211,
+          "crc32": "f681085b",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "masks.mkv",
+          "permissions_octal": "0o644",
+          "raw_bytes": 108761,
+          "sha256": "d17b75c2c1a96231dcae41235c6e314690e220f5482e3d0f3f8be2bdbeeb9cf7"
+        },
+        {
+          "compress_type": 8,
+          "compressed_bytes": 6734,
+          "crc32": "686cbfbf",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "optimized_poses.bin",
+          "permissions_octal": "0o644",
+          "raw_bytes": 7200,
+          "sha256": "4b3d8cd58965971ad518a970441f5e9cc53ce361a62d51e95c1cdd2056be4449"
+        },
+        {
+          "compress_type": 8,
+          "compressed_bytes": 267399,
+          "crc32": "1827a837",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "renderer.bin",
+          "permissions_octal": "0o644",
+          "raw_bytes": 296776,
+          "sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529"
+        }
+      ],
+      "primitive": {
+        "description": "set changed pixels in the earlier endpoint forward to their next-frame class",
+        "frame_index": 266,
+        "kind": "transition_endpoint",
+        "operation": "advance_previous_endpoint_to_current_class",
+        "params": {
+          "changed_pixels_for_pair": 3890,
+          "current_class": 3,
+          "from_frame": 266,
+          "pixel_cap_policy": "row_major_within_transition_pair",
+          "previous_class": 0,
+          "to_frame": 267
+        },
+        "primitive_id": "transition_endpoint_advance_previous_endpoint_to_current_class_266_0_3_1999443ce02efa4b",
+        "rank_pixels": 3890,
+        "selection_weight": 0.019785563151041668,
+        "source_class": 0,
+        "target_class": 3
+      },
+      "promotion_eligible": false,
+      "score_claim": false
+    }
+  ],
+  "producer": "experiments/build_alpha_mask_primitive_response_plan.py",
+  "promotion_eligible": false,
+  "schema_version": 1,
+  "score_claim": false
+}

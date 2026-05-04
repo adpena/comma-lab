@@ -1,0 +1,165 @@
+{
+  "best_by_output_archive_bytes": {
+    "bytes": 280588,
+    "candidate_id": "qbf1_b0032",
+    "delta_bytes_vs_source_archive": 4374,
+    "formula_only_rate_delta_vs_source_archive": 0.0029124670609563773,
+    "sha256": "b578afb324261dabd5492083e9ea46b3b26c0ee99b2ae1298f360d58c2a36b8a"
+  },
+  "block_sizes": [
+    16,
+    24,
+    32,
+    48,
+    64,
+    96,
+    128,
+    256,
+    512,
+    1024,
+    2048,
+    4096
+  ],
+  "candidates": [
+    {
+      "archive_bytes": 288112,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b0016/archive.zip",
+      "archive_sha256": "b6a51996110cea840db2d27bb014359b4ba63678ab57aac978b1af0f2c6ee38d",
+      "candidate_id": "qbf1_b0016",
+      "delta_bytes_vs_source_archive": 11898,
+      "local_archive_byte_win": false,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b0016/build_manifest.json",
+      "renderer_bytes": 143301,
+      "renderer_sha256": "f4f4ce56c7c2a91f99b8c525acf843acb0a897ebea12b5baca5311a24512f0ad"
+    },
+    {
+      "archive_bytes": 296066,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b0024/archive.zip",
+      "archive_sha256": "46d96b873061c3736ced38be9497c3149328371cd8a88db7db3fd917675e86e2",
+      "candidate_id": "qbf1_b0024",
+      "delta_bytes_vs_source_archive": 19852,
+      "local_archive_byte_win": false,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b0024/build_manifest.json",
+      "renderer_bytes": 135979,
+      "renderer_sha256": "80c8d2ebe896fcb2ba49ffb6be9ee7af5771a09194984fc53e91a2dbd028c13a"
+    },
+    {
+      "archive_bytes": 280588,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b0032/archive.zip",
+      "archive_sha256": "b578afb324261dabd5492083e9ea46b3b26c0ee99b2ae1298f360d58c2a36b8a",
+      "candidate_id": "qbf1_b0032",
+      "delta_bytes_vs_source_archive": 4374,
+      "local_archive_byte_win": false,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b0032/build_manifest.json",
+      "renderer_bytes": 132129,
+      "renderer_sha256": "08bf9d1ec326f3dd9c42ce10ba6c2b234b5c7e56cb99c88637fc0254732e0224"
+    },
+    {
+      "archive_bytes": 292274,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b0048/archive.zip",
+      "archive_sha256": "03ea61c98fa5be25ec843f48abedd8f4c726fd59d7d6daf30a4757da8c5ec72f",
+      "candidate_id": "qbf1_b0048",
+      "delta_bytes_vs_source_archive": 16060,
+      "local_archive_byte_win": false,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b0048/build_manifest.json",
+      "renderer_bytes": 128667,
+      "renderer_sha256": "69a1bbeffdbd453318f59627e51cefacabae603fe3de2ada08d992d26726225a"
+    },
+    {
+      "archive_bytes": 285210,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b0064/archive.zip",
+      "archive_sha256": "c581bb0729e5937ac78343e3b6891a19d70b2f9a3dab19e02a37710fc32b8cec",
+      "candidate_id": "qbf1_b0064",
+      "delta_bytes_vs_source_archive": 8996,
+      "local_archive_byte_win": false,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b0064/build_manifest.json",
+      "renderer_bytes": 126584,
+      "renderer_sha256": "9fe75265cfd38bce56e76d2d4dc5c25c0064ddf30ecbb8b4f4f11cd66209a289"
+    },
+    {
+      "archive_bytes": 288131,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b0096/archive.zip",
+      "archive_sha256": "84d794b48585df4ae5f3b33d4e0241b6cf50e4327aa6da8d7213dcebef0d40b7",
+      "candidate_id": "qbf1_b0096",
+      "delta_bytes_vs_source_archive": 11917,
+      "local_archive_byte_win": false,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b0096/build_manifest.json",
+      "renderer_bytes": 124889,
+      "renderer_sha256": "2af33994dcec6d8e06e230fa4873bd327238e9bc7f1bfbdf474a1ce836e3ec36"
+    },
+    {
+      "archive_bytes": 284606,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b0128/archive.zip",
+      "archive_sha256": "29681c834e22ed6420d01cc75b9ccb2f281437ba5672d4692b8d6e4ac3af91c9",
+      "candidate_id": "qbf1_b0128",
+      "delta_bytes_vs_source_archive": 8392,
+      "local_archive_byte_win": false,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b0128/build_manifest.json",
+      "renderer_bytes": 124081,
+      "renderer_sha256": "b24b656f5c0cd54634dd1c062b7e66aba45595c9a8a340b412e1d09d67a138f7"
+    },
+    {
+      "archive_bytes": 285126,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b0256/archive.zip",
+      "archive_sha256": "bbf8c99d95bcfe7767c99a9623a8dde736dd446e46008ee5345c39480b1d8e52",
+      "candidate_id": "qbf1_b0256",
+      "delta_bytes_vs_source_archive": 8912,
+      "local_archive_byte_win": false,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b0256/build_manifest.json",
+      "renderer_bytes": 122745,
+      "renderer_sha256": "8044951ff1b7a9f9491d799a83f67f4e1826894e0f1425c56159ca779a735312"
+    },
+    {
+      "archive_bytes": 283957,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b0512/archive.zip",
+      "archive_sha256": "670a3eb118114096e284599dbc0b11625ee922baadd584b4e37c370b4b63f275",
+      "candidate_id": "qbf1_b0512",
+      "delta_bytes_vs_source_archive": 7743,
+      "local_archive_byte_win": false,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b0512/build_manifest.json",
+      "renderer_bytes": 122074,
+      "renderer_sha256": "d5f4b9c8f32d648f6748af6c99ec69a67df1dfdf4009f7ce0e220238b8025997"
+    },
+    {
+      "archive_bytes": 283869,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b1024/archive.zip",
+      "archive_sha256": "6d331e479d961df22a2baa8b3f09722394ece7d0c194821c80c6aa354cb1449b",
+      "candidate_id": "qbf1_b1024",
+      "delta_bytes_vs_source_archive": 7655,
+      "local_archive_byte_win": false,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b1024/build_manifest.json",
+      "renderer_bytes": 121891,
+      "renderer_sha256": "82d275e87929bfcb0c2f99c947d0d694db2229e7004379c509d3f267ac3ef2a7"
+    },
+    {
+      "archive_bytes": 283547,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b2048/archive.zip",
+      "archive_sha256": "a8351f70563c9c4097d9efeec16a1bea43846df06e17ffc22744759ac8c0890b",
+      "candidate_id": "qbf1_b2048",
+      "delta_bytes_vs_source_archive": 7333,
+      "local_archive_byte_win": false,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b2048/build_manifest.json",
+      "renderer_bytes": 121708,
+      "renderer_sha256": "abdd204bcd1f71d06e9b4ed46b712dbb52f1113184ff3d98ed550f0aef13d9b9"
+    },
+    {
+      "archive_bytes": 284282,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b4096/archive.zip",
+      "archive_sha256": "56a09778999b3b50c11e6e1f7559c3806341d86ccb1e78ecc28855634726db3a",
+      "candidate_id": "qbf1_b4096",
+      "delta_bytes_vs_source_archive": 8068,
+      "local_archive_byte_win": false,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b4096/build_manifest.json",
+      "renderer_bytes": 121618,
+      "renderer_sha256": "5ebc58e11438f347699e1fe539274b510c1b02677390680bf76a907d55084413"
+    }
+  ],
+  "promotion_eligible": false,
+  "schema": "blockfp_c067_archive_summary_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 276214,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip",
+    "sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a"
+  }
+}

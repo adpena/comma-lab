@@ -1,0 +1,38 @@
+{
+  "adjudication": {
+    "allow_component_gate_forensic_success": true,
+    "allow_sane_score_forensic_success": true,
+    "baseline_archive_size_bytes": 178981,
+    "baseline_posenet_dist": null,
+    "baseline_score": 0.22826947142244708,
+    "baseline_segnet_dist": null,
+    "component_reference_label": "pr100_adapter_a++",
+    "delta_key": "score_delta_vs_pr100_adapter",
+    "max_posenet_dist": 0.01,
+    "max_posenet_relative": null,
+    "max_sane_score": 1.0,
+    "max_segnet_dist": 0.01,
+    "max_segnet_relative": null,
+    "predicted_band_high": 0.27,
+    "predicted_band_low": 0.16,
+    "provenance_name": "adjudication_provenance.json",
+    "regression_threshold": 0.12,
+    "required_device": "cuda",
+    "required_samples": 600,
+    "result_copy_name": "contest_auth_eval.adjudicated.json"
+  },
+  "artifact_recorded_at_utc": "2026-05-04T13:02:48Z",
+  "expected_archive_sha256": "31881b2d23d027e6619f2d8df2fe35d4d207d08882ec673d6c1b7ff119f18c30",
+  "expected_archive_size_bytes": 178223,
+  "job_name": "exact_eval_public_pr103_hnerv_lc_ac_t4_20260504T1245Z",
+  "queue_metadata": {
+    "arithmetic_coding": "constriction_range_coder",
+    "public_claim_score": "0.19486470288878893",
+    "source_pr": "PR103",
+    "wrapper": "direct_launch_lightning_batch_job"
+  },
+  "role": "exact_cuda_eval",
+  "schema_version": 1,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

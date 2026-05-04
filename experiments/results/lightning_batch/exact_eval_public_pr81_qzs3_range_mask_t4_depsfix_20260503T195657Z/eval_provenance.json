@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "started_at_utc": "2026-05-03T20:15:47Z",
+  "tool": "experiments/contest_auth_eval.py",
+  "archive_path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_public_pr81_qzs3_range_mask_t4_depsfix_20260503T195657Z/archive.zip",
+  "archive_sha256": "cd01378a52688fe00ee1bfb898c67695aed89a7b3ded602b597eb7fc3031d7fc",
+  "archive_size_bytes": 215960,
+  "inflate_script": "/teamspace/studios/this_studio/pact/experiments/results/public_pr81_qzs3_range_mask_intake_20260503_codex/replay_submission/inflate.sh",
+  "inflate_script_sha256": "7824116e0d88c290e27b782d314de1d88611d5f99379521256af5369bb3ae74f",
+  "inflate_runtime_manifest": {
+    "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+    "runtime_root": "/teamspace/studios/this_studio/pact/experiments/results/public_pr81_qzs3_range_mask_intake_20260503_codex/replay_submission",
+    "runtime_file_count": 3,
+    "runtime_tree_sha256": "8e70ee53e787d2a7e404110780242b8da48434a7cb8f93722c858207fa08a242",
+    "files": [
+      {
+        "relative_path": "config.env",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "relative_path": "inflate.py",
+        "bytes": 28275,
+        "sha256": "429f6580ce409ccf01e2e46f72149181c0e40cc889a8ebd6d0bcefbddcebdaee"
+      },
+      {
+        "relative_path": "inflate.sh",
+        "bytes": 524,
+        "sha256": "7824116e0d88c290e27b782d314de1d88611d5f99379521256af5369bb3ae74f"
+      }
+    ],
+    "repo_local_tac_import_manifest": {
+      "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+      "discovery": "static_ast_recursive_import_closure",
+      "runtime_root_name": "replay_submission",
+      "tac_root_relative_path": "src/tac",
+      "root_import_modules": [],
+      "unresolved_modules": [],
+      "parse_errors": [],
+      "module_count": 0,
+      "file_count": 0,
+      "files": []
+    },
+    "upstream_evaluate_py": {
+      "relative_path": "evaluate.py",
+      "bytes": 6005,
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    }
+  },
+  "upstream_dir": "/teamspace/studios/this_studio/upstream",
+  "device": "cuda",
+  "inflate_timeout_seconds": 1800,
+  "evaluate_timeout_seconds": 1800,
+  "video_names_file": "upstream/public_test_video_names.txt",
+  "sys_argv": [
+    "experiments/contest_auth_eval.py",
+    "--archive",
+    "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_public_pr81_qzs3_range_mask_t4_depsfix_20260503T195657Z/archive.zip",
+    "--inflate-sh",
+    "experiments/results/public_pr81_qzs3_range_mask_intake_20260503_codex/replay_submission/inflate.sh",
+    "--upstream-dir",
+    "/teamspace/studios/this_studio/upstream",
+    "--device",
+    "cuda",
+    "--keep-work-dir",
+    "--work-dir",
+    "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_public_pr81_qzs3_range_mask_t4_depsfix_20260503T195657Z/eval_work"
+  ],
+  "env_vars": {
+    "PYTHONPATH": null,
+    "CUDA_VISIBLE_DEVICES": null,
+    "CUBLAS_WORKSPACE_CONFIG": null,
+    "PYTHONHASHSEED": null,
+    "PYTORCH_CUDA_ALLOC_CONF": null,
+    "LD_LIBRARY_PATH": "/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda/lib64",
+    "CONFIG_ENV_PATH": null,
+    "PYTHON_INFLATE": null,
+    "LANE_MM_SIGMA": null,
+    "INFLATE_BROTLI_SPEC": "brotli==1.2.0",
+    "INFLATE_AV_SPEC": null,
+    "INFLATE_TORCH_SPEC": "torch==2.5.1+cu124",
+    "INFLATE_NUMPY_SPEC": null,
+    "UV_BIN": "/usr/local/bin/uv",
+    "UV_PROJECT_ENVIRONMENT": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_public_pr81_qzs3_range_mask_t4_depsfix_20260503T195657Z/uv_project_env"
+  },
+  "gpu_model": "Tesla T4",
+  "gpu_driver": "580.126.09",
+  "gpu_t4_match": true,
+  "torch_version": "2.11.0+cu130",
+  "cuda_version": "13.0",
+  "cuda_available": true,
+  "cuda_device_count": 1,
+  "ffmpeg_version": "ffmpeg version 8.0.1 Copyright (c) 2000-2025 the FFmpeg developers",
+  "libsvtav1_version": "configuration: --prefix=/home/zeus/miniconda3/envs/cloudspace --cc=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/x86_64-conda-linux-gnu-cc --cxx=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/x86_64-conda-linux-gnu-c++ --nm=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/x86_64-conda-linux-gnu-nm --ar=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/x86_64-conda-linux-gnu-ar --enable-openssl --enable-demuxer=dash --enable-hardcoded-tables --enable-libfreetype --enable-libharfbuzz --enable-libfontconfig --enable-libopenh264 --enable-libdav1d --enable-libmp3lame --enable-libaom --enable-libsvtav1 --enable-libxml2 --enable-pic --enable-shared --enable-version3 --enable-zlib --enable-libvorbis --enable-libopus --enable-libwebp --enable-libshaderc --disable-ffplay --disable-static --disable-gpl --disable-doc --pkg-config=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/pkg-config --arch=x86_64 --target-os=linux --cross-prefix=x86_64-conda-linux-gnu- --host-cc=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/x86_64-conda-linux-gnu-cc --disable-gnutls --enable-libvpx --enable-pthreads --enable-alsa --enable-libpulse --enable-libdrm --enable-libvpl --enable-vaapi --enable-libtesseract --enable-libvpx --enable-libass --enable-librsvg",
+  "pact_commit": "<error:CalledProcessError(128, ['git', 'rev-parse', 'HEAD'])>",
+  "upstream_commit": "c5e1274e54e47f81b121bc3bf75eaa9a432b1837"
+}

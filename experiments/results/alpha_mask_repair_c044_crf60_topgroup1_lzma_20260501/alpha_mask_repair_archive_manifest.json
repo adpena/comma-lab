@@ -1,0 +1,250 @@
+{
+  "anchor": {
+    "archive_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_owv3_0120_stack_t4aws_20260501T151050Z/archive.zip",
+    "archive_sha256": "1e9195cb6e0e08fc98ee393590770e2b22905a2ee2718edb8b737cada125f279",
+    "archive_size_bytes": 609963,
+    "member_inventory": [
+      {
+        "compressed_size_bytes": 190730,
+        "crc32": "7f8f3808",
+        "name": "renderer.bin",
+        "sha256": "97bde7ac1de7f78ce60a2d68f747aca5d76d1ce7fd1d024680f8d61247ccf142",
+        "size_bytes": 211903
+      },
+      {
+        "compressed_size_bytes": 412169,
+        "crc32": "e144d6ac",
+        "name": "masks.mkv",
+        "sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9",
+        "size_bytes": 421483
+      },
+      {
+        "compressed_size_bytes": 6734,
+        "crc32": "686cbfbf",
+        "name": "optimized_poses.bin",
+        "sha256": "4b3d8cd58965971ad518a970441f5e9cc53ce361a62d51e95c1cdd2056be4449",
+        "size_bytes": 7200
+      }
+    ],
+    "replaced_member": {
+      "name": "masks.mkv",
+      "sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9",
+      "size_bytes": 421483
+    },
+    "reused_members": [
+      {
+        "name": "renderer.bin",
+        "sha256": "97bde7ac1de7f78ce60a2d68f747aca5d76d1ce7fd1d024680f8d61247ccf142"
+      },
+      {
+        "name": "optimized_poses.bin",
+        "sha256": "4b3d8cd58965971ad518a970441f5e9cc53ce361a62d51e95c1cdd2056be4449"
+      }
+    ]
+  },
+  "archive": {
+    "delta_vs_anchor_archive_bytes": 26581,
+    "members": [
+      {
+        "name": "renderer.bin",
+        "sha256": "97bde7ac1de7f78ce60a2d68f747aca5d76d1ce7fd1d024680f8d61247ccf142",
+        "size_bytes": 211903
+      },
+      {
+        "name": "grayscale.mkv",
+        "sha256": "32033c4f046ce4c98a8a40994ec163a6bc3456a98aaccc4bae222b800299b071",
+        "size_bytes": 380664
+      },
+      {
+        "name": "alpha4_residual_repair.amr1.xz",
+        "sha256": "00481432c284380696cfd9c21452b73ecaedb673a126ebaa5bc78bdaa5b28108",
+        "size_bytes": 67432
+      },
+      {
+        "name": "optimized_poses.bin",
+        "sha256": "4b3d8cd58965971ad518a970441f5e9cc53ce361a62d51e95c1cdd2056be4449",
+        "size_bytes": 7200
+      }
+    ],
+    "path": "/Users/adpena/Projects/pact/experiments/results/alpha_mask_repair_c044_crf60_topgroup1_lzma_20260501/archive.zip",
+    "rate_term_delta_vs_anchor": 0.017699196832940436,
+    "sha256": "67013d37f71049b111ce4819dc5d223ae1479b980bb5823de9b3c5d513673879",
+    "size_bytes": 636544
+  },
+  "candidate": {
+    "agreement_before_repair": {
+      "argmax_agreement": 0.995597229004,
+      "argmax_disagreement": 0.004402770996,
+      "candidate_shape": [
+        1200,
+        384,
+        512
+      ],
+      "different_pixels": 1038744,
+      "different_pixels_by_candidate_class": {
+        "0": 72623,
+        "1": 11857,
+        "2": 452769,
+        "3": 210459,
+        "4": 291036
+      },
+      "different_pixels_by_source_class": {
+        "0": 462336,
+        "1": 340543,
+        "2": 103770,
+        "3": 81870,
+        "4": 50225
+      },
+      "equal_pixels": 234890856,
+      "num_pixels": 235929600,
+      "residual_confusion_source_to_candidate": {
+        "0": {
+          "0": 0,
+          "1": 4285,
+          "2": 349370,
+          "3": 16683,
+          "4": 91998
+        },
+        "1": {
+          "0": 23272,
+          "1": 0,
+          "2": 58955,
+          "3": 178156,
+          "4": 80160
+        },
+        "2": {
+          "0": 35124,
+          "1": 575,
+          "2": 0,
+          "3": 12399,
+          "4": 55672
+        },
+        "3": {
+          "0": 1233,
+          "1": 6766,
+          "2": 10665,
+          "3": 0,
+          "4": 63206
+        },
+        "4": {
+          "0": 12994,
+          "1": 231,
+          "2": 33779,
+          "3": 3221,
+          "4": 0
+        }
+      },
+      "shape_match": true,
+      "source_shape": [
+        1200,
+        384,
+        512
+      ]
+    },
+    "crf": 60,
+    "grayscale_artifact": {
+      "candidate_archive_member": "grayscale.mkv",
+      "path": "experiments/results/alpha_mask_candidate_builder_pfp16_20260501_compact_crf_sweep/crf_60/grayscale.mkv",
+      "raw_payload_sha256": "32033c4f046ce4c98a8a40994ec163a6bc3456a98aaccc4bae222b800299b071",
+      "resolved_path": "/Users/adpena/Projects/pact/experiments/results/alpha_mask_candidate_builder_pfp16_20260501_compact_crf_sweep/crf_60/grayscale.mkv",
+      "role": "alpha4_grayscale_lut_video",
+      "sha256": "32033c4f046ce4c98a8a40994ec163a6bc3456a98aaccc4bae222b800299b071",
+      "size_bytes": 380664
+    },
+    "manifest_path": "/Users/adpena/Projects/pact/experiments/results/alpha_mask_candidate_builder_pfp16_20260501_compact_crf_sweep/crf_60/alpha_mask_candidate_manifest.json",
+    "manifest_sha256": "2eecda5daf0ebe77bb9894822200d1ab9e759b0a783557f2a6fde508a9e26088",
+    "residual_repair": {
+      "archive_member": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "00481432c284380696cfd9c21452b73ecaedb673a126ebaa5bc78bdaa5b28108",
+      "compressed_size_bytes": 67432,
+      "compressor": "lzma_xz",
+      "policy": {
+        "fail_on_partial_repair": false,
+        "partial_repair": true,
+        "policy_classes": [],
+        "policy_details": {
+          "frame_group_size": 50,
+          "requested_group_count": 1,
+          "selected_group_count": 1,
+          "selected_group_ids": [
+            20
+          ],
+          "selected_group_ranges": [
+            {
+              "end_frame_exclusive": 1050,
+              "start_frame": 1000
+            }
+          ],
+          "total_group_count": 24
+        },
+        "policy_kind": "top_residual_frame_groups",
+        "policy_name": "top_residual_frame_groups_1_of_24",
+        "residual_pixel_coverage": 0.050636152892,
+        "selected_repair_pixels": 52598,
+        "selected_repair_runs": 34750,
+        "source_manifest_selection": {
+          "class_priority": [
+            2,
+            1,
+            3,
+            4,
+            0
+          ],
+          "fail_on_partial_repair": false,
+          "max_repair_pixels": 2000000,
+          "max_repair_runs": 1000000,
+          "partial_reason": null,
+          "partial_repair": false,
+          "residual_pixel_coverage": 1.0,
+          "selected_repair_pixels": 1038744,
+          "selected_repair_pixels_by_source_class": {
+            "0": 462336,
+            "1": 340543,
+            "2": 103770,
+            "3": 81870,
+            "4": 50225
+          },
+          "strategy": "alpha4_residual_runs_by_source_class_priority",
+          "total_residual_pixels": 1038744,
+          "total_residual_pixels_by_source_class": {
+            "0": 462336,
+            "1": 340543,
+            "2": 103770,
+            "3": 81870,
+            "4": 50225
+          }
+        },
+        "strategy": "alpha_mask_replacement_archive_selected_repair_policy_v1",
+        "total_residual_pixels": 1038744,
+        "total_residual_runs": 696838
+      },
+      "raw_amr1_sha256": "efd85c9a95fb38dbe037a8e81b44ace7109e5d9e0fbd5dd319899458f88d8c76",
+      "raw_amr1_size_bytes": 383815,
+      "source_artifact": {
+        "candidate_archive_member": "alpha4_residual_repair.amr1",
+        "path": "experiments/results/alpha_mask_candidate_builder_pfp16_20260501_compact_crf_sweep/crf_60/alpha4_residual_repair.amr1",
+        "resolved_path": "/Users/adpena/Projects/pact/experiments/results/alpha_mask_candidate_builder_pfp16_20260501_compact_crf_sweep/crf_60/alpha4_residual_repair.amr1",
+        "role": "alpha4_residual_repair_payload",
+        "sha256": "c5d53fc896a87e2a78aa68919986d0b51576e44f832a439bbe9c67272cb90bf9",
+        "size_bytes": 7666142
+      }
+    }
+  },
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "promotion_eligible": false,
+  "recorded_at_utc": "2026-05-01T15:50:35Z",
+  "runtime_contract": {
+    "archive_members": [
+      "renderer.bin",
+      "grayscale.mkv",
+      "alpha4_residual_repair.amr1.xz",
+      "optimized_poses.bin"
+    ],
+    "expected_inflate_mode": "renderer_grayscale",
+    "inflate_auto_dispatch": "submissions/robust_current/inflate.sh sets PYTHON_INFLATE=renderer_grayscale when grayscale.mkv exists and masks.mkv is absent",
+    "optional_residual_repair": "inflate_renderer_grayscale.py applies alpha4_residual_repair.amr1 or supported compressed variants before re-encoding legacy masks.mkv"
+  },
+  "schema": "alpha_mask_replacement_archive_v1",
+  "score_claim": false,
+  "tool": "experiments/build_alpha_mask_replacement_archive.py"
+}

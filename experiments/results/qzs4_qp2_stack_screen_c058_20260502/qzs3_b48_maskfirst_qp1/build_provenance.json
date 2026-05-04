@@ -1,0 +1,220 @@
+{
+  "archive_byte_delta": -75,
+  "evidence_grade": "empirical_byte_only_until_cuda_auth_eval",
+  "formula_rate_score_delta": -4.993942148416285e-05,
+  "output_archive": "/Users/adpena/Projects/pact/experiments/results/qzs4_qp2_stack_screen_c058_20260502/qzs3_b48_maskfirst_qp1/archive.zip",
+  "output_archive_bytes": 276347,
+  "output_archive_sha256": "cf44aa7fdb13b9ab6236aefde1f5f58e915d7dfa99128246235443841396c6ab",
+  "packed_payload_stage": {
+    "brotli_quality": 11,
+    "evidence_grade": "empirical",
+    "formula_only_rate_delta": -0.003311316573876558,
+    "header": {
+      "members": [
+        {
+          "bytes": 59288,
+          "codec": "raw",
+          "name": "renderer.bin",
+          "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+        },
+        {
+          "bytes": 223385,
+          "codec": "raw",
+          "name": "masks.mkv",
+          "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        {
+          "bytes": 1140,
+          "codec": "pose_qp1_v1",
+          "decoded_bytes": 7200,
+          "decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f",
+          "lossy": true,
+          "name": "optimized_poses.bin",
+          "pose_error_stats": {
+            "max_abs_by_dim": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "pose_dim": 6,
+            "rmse_by_dim": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "rows": 600
+          },
+          "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583",
+          "source_decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+        }
+      ],
+      "payload_format": "public_pr64_mask_first_len_table",
+      "schema": "renderer_payload_pr64_len_table_v1",
+      "source_archive_sha256": "98ea2760a661ce06355a2b3b55b1998511650d02ef33b71fcdf5bb66fb5c62fa"
+    },
+    "output_archive": "experiments/results/qzs4_qp2_stack_screen_c058_20260502/qzs3_b48_maskfirst_qp1/archive.zip",
+    "output_archive_bytes": 276347,
+    "output_archive_sha256": "cf44aa7fdb13b9ab6236aefde1f5f58e915d7dfa99128246235443841396c6ab",
+    "payload_compressed_bytes": 276247,
+    "payload_format": "public_pr64_mask_first_len_table",
+    "payload_member": "p",
+    "payload_raw_bytes": 283825,
+    "pose_codec": "pose_qp1_v1",
+    "pose_residual_topk": 0,
+    "savings_bytes": 4973,
+    "score_claim": false,
+    "source_archive": "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/qzs_repack_90cd1p_7/runtime_members.zip",
+    "source_archive_bytes": 281320,
+    "source_archive_sha256": "98ea2760a661ce06355a2b3b55b1998511650d02ef33b71fcdf5bb66fb5c62fa"
+  },
+  "renderer_stage": {
+    "archive_byte_delta": 4898,
+    "evidence_grade": "empirical_byte_only_until_cuda_auth_eval",
+    "formula_rate_score_delta": 0.0032613771523923953,
+    "members": {
+      "masks.mkv": {
+        "bytes": 223385,
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      "optimized_poses.bin": {
+        "bytes": 7200,
+        "sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+      },
+      "renderer.bin": {
+        "bytes": 59288,
+        "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+      }
+    },
+    "output_archive": "/private/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/qzs_repack_90cd1p_7/runtime_members.zip",
+    "output_archive_bytes": 281320,
+    "output_archive_sha256": "98ea2760a661ce06355a2b3b55b1998511650d02ef33b71fcdf5bb66fb5c62fa",
+    "renderer": {
+      "action": "validated_existing_qzs3",
+      "output_renderer_bytes": 59288,
+      "output_renderer_sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb",
+      "renderer_codec": "qzs3",
+      "source_bytes": 59288,
+      "source_renderer_format": "QZS3",
+      "source_sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+    },
+    "runtime_member_order": [
+      "renderer.bin",
+      "masks.mkv",
+      "optimized_poses.bin"
+    ],
+    "schema_version": 1,
+    "score_claim": false,
+    "source_archive": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_line_search_qzs3_qp1_active_fix2_t4_20260502T0250Z/archive.zip",
+    "source_archive_bytes": 276422,
+    "source_archive_sha256": "5145fb57be574b85639856d239420ffa35e605e32664f93e06753b120b21633f",
+    "source_runtime_contract": {
+      "packed_payload_member": "p",
+      "packed_payload_unpack_summary": {
+        "members": [
+          {
+            "bytes": 59288,
+            "name": "renderer.bin",
+            "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+          },
+          {
+            "bytes": 223385,
+            "name": "masks.mkv",
+            "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+          },
+          {
+            "bytes": 7200,
+            "name": "optimized_poses.bin",
+            "sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+          }
+        ],
+        "payload_bytes": 276322,
+        "payload_format": "public_pr67_qzs3_qp1_fixed_slices",
+        "schema": "renderer_payload_pr64_len_table_v1",
+        "source_archive_sha256": null
+      },
+      "source_archive_contract": "packed_payload_zip",
+      "unpacked_from_packed_payload": true
+    },
+    "submission_path": {
+      "charged_accounting": {
+        "all_score_affecting_bits_inside_archive": true,
+        "archive_bytes": 281320,
+        "archive_sha256": "98ea2760a661ce06355a2b3b55b1998511650d02ef33b71fcdf5bb66fb5c62fa",
+        "pose_codec": "raw",
+        "pose_residual_topk": 0,
+        "score_claim": false
+      },
+      "full_pipeline_hooks": {
+        "archive_member_overhead_screen": true,
+        "deterministic_runtime_simplification_screen": true,
+        "rl_bandit_multipass_atom_selection_ready": true,
+        "single_blob_layout_screen": false
+      },
+      "layout": "multi_member",
+      "stackability": {
+        "mask_grammar_lanes": "stackable_if_mask_member_contract_and_decoder_are_inside_archive",
+        "pose_atoms": "stackable_with_qp1_col0_or_pvr1_residual_atoms_after_exact_eval",
+        "pr65_postprocess_qpost_sidecar": "stackable_if_qpost.bin_is_charged_and_runtime_reads_it",
+        "renderer_atoms": "qzs4_keeps_QZS3_wire_format_for_existing_decoder"
+      },
+      "zip_overhead": {
+        "archive_bytes": 281320,
+        "compressed_member_bytes": 280990,
+        "member_count": 3,
+        "member_names": [
+          "renderer.bin",
+          "masks.mkv",
+          "optimized_poses.bin"
+        ],
+        "uncompressed_member_bytes": 289873,
+        "zip_container_overhead_bytes": 330
+      }
+    },
+    "tool": "repack_quantizr_faithful_qzs3_archive"
+  },
+  "schema_version": 1,
+  "score_claim": false,
+  "source_archive": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_line_search_qzs3_qp1_active_fix2_t4_20260502T0250Z/archive.zip",
+  "source_archive_bytes": 276422,
+  "source_archive_sha256": "5145fb57be574b85639856d239420ffa35e605e32664f93e06753b120b21633f",
+  "submission_path": {
+    "charged_accounting": {
+      "all_score_affecting_bits_inside_archive": true,
+      "archive_bytes": 276347,
+      "archive_sha256": "cf44aa7fdb13b9ab6236aefde1f5f58e915d7dfa99128246235443841396c6ab",
+      "pose_codec": "pose_qp1_v1",
+      "pose_residual_topk": 0,
+      "score_claim": false
+    },
+    "full_pipeline_hooks": {
+      "archive_member_overhead_screen": true,
+      "deterministic_runtime_simplification_screen": true,
+      "rl_bandit_multipass_atom_selection_ready": true,
+      "single_blob_layout_screen": true
+    },
+    "layout": "pr64_mask_first_single_blob",
+    "stackability": {
+      "mask_grammar_lanes": "stackable_if_mask_member_contract_and_decoder_are_inside_archive",
+      "pose_atoms": "stackable_with_qp1_col0_or_pvr1_residual_atoms_after_exact_eval",
+      "pr65_postprocess_qpost_sidecar": "stackable_if_qpost.bin_is_charged_and_runtime_reads_it",
+      "renderer_atoms": "qzs4_keeps_QZS3_wire_format_for_existing_decoder"
+    },
+    "zip_overhead": {
+      "archive_bytes": 276347,
+      "compressed_member_bytes": 276247,
+      "member_count": 1,
+      "member_names": [
+        "p"
+      ],
+      "uncompressed_member_bytes": 276247,
+      "zip_container_overhead_bytes": 100
+    }
+  },
+  "tool": "repack_quantizr_faithful_qzs3_archive"
+}

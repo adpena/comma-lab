@@ -1,0 +1,174 @@
+{
+  "archive_delta_bytes_vs_source": -8,
+  "candidate_id": "c082_p3_stream_resweep",
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "decoded_members": {
+    "masks.mkv": {
+      "bytes": 223385,
+      "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+    },
+    "optimized_poses.bin": {
+      "bytes": 7200,
+      "sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+    },
+    "renderer.bin": {
+      "bytes": 59288,
+      "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+    },
+    "seg_tile_actions.bin": {
+      "bytes": 268,
+      "sha256": "bfd46b2b481a5064cc1f64b7b1288640c51b89ad6aeb5598408150f7945eac15"
+    }
+  },
+  "decoded_stream_parity": true,
+  "decoded_stream_parity_detail": {
+    "candidate_decoded_members": {
+      "masks.mkv": {
+        "bytes": 223385,
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      "optimized_poses.bin": {
+        "bytes": 7200,
+        "sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+      },
+      "renderer.bin": {
+        "bytes": 59288,
+        "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 268,
+        "sha256": "bfd46b2b481a5064cc1f64b7b1288640c51b89ad6aeb5598408150f7945eac15"
+      }
+    },
+    "members_compared": [
+      "masks.mkv",
+      "optimized_poses.bin",
+      "renderer.bin",
+      "seg_tile_actions.bin"
+    ],
+    "source_decoded_members": {
+      "masks.mkv": {
+        "bytes": 223385,
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      "optimized_poses.bin": {
+        "bytes": 7200,
+        "sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+      },
+      "renderer.bin": {
+        "bytes": 59288,
+        "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 268,
+        "sha256": "bfd46b2b481a5064cc1f64b7b1288640c51b89ad6aeb5598408150f7945eac15"
+      }
+    },
+    "status": "passed"
+  },
+  "evidence_grade": "empirical_lossless_byte_transform",
+  "formula_only_rate_score_delta_vs_source": -5.326871624977371e-06,
+  "noop": false,
+  "noop_status": "not_noop_repacked_payload",
+  "output_archive": {
+    "bytes": 276452,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c082_pr75_lossless_repack_20260503_worker/c082_p3_stream_resweep/archive.zip",
+    "sha256": "b13305713ba60af01eaaca8636509b5957cf7fd6ac8a1f442bb7fcbfb14f56bd"
+  },
+  "payload": {
+    "bytes": 276352,
+    "format": "public_pr75_qzs3_qp1_segactions_p3",
+    "member": "p",
+    "sha256": "68d25bd0606a1a73746bc1d0dc2959d3d84559fdc9e617c11ccb295d6075944d"
+  },
+  "promotion_eligible": false,
+  "runtime_parse_validation": {
+    "members": {
+      "masks.mkv": {
+        "bytes": 219465,
+        "codec": "brotli_av1_obu",
+        "decoded_bytes": 223385,
+        "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "sha256": "1ddf03dad8466797397ead26a0d481766e22e26cbc936251c1e3ed5d2f6eda99"
+      },
+      "optimized_poses.bin": {
+        "bytes": 676,
+        "codec": "public_qp1_brotli",
+        "decoded_bytes": 7200,
+        "decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f",
+        "sha256": "61732151609c5decd72a3ac2254e9ac2258dae2846464eaeb14b5ef0a32d86f5"
+      },
+      "renderer.bin": {
+        "bytes": 55965,
+        "codec": "brotli_qzs3",
+        "decoded_bytes": 59288,
+        "decoded_sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb",
+        "sha256": "2544dfe50d2631a56600cbfc7342e4a18c97f953526fc51425be0d62f97e22ad"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 236,
+        "codec": "brotli_seg_tile_actions_v1",
+        "decoded_bytes": 268,
+        "decoded_sha256": "bfd46b2b481a5064cc1f64b7b1288640c51b89ad6aeb5598408150f7945eac15",
+        "sha256": "f172ef412c72e6056b0d720184d67c08fe9f28b1a0720fd01dd1d64c9ace932b"
+      }
+    },
+    "parser": "/Users/adpena/Projects/pact/submissions/robust_current/unpack_renderer_payload.py",
+    "payload_format": "public_pr75_qzs3_qp1_segactions_p3"
+  },
+  "schema": "pr75_lossless_repack_candidate_manifest_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 276460,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_actions_only_p3_t4_20260503T0401Z/archive.zip",
+    "sha256": "851a61ddd88c0ddb4a05762f11e900f132fb771fd9dba743ac2026637ddf15d9"
+  },
+  "source_payload": {
+    "bytes": 276360,
+    "sha256": "a50045d4c29fa0efc9b57eac3c14349f262526ba19546615b14cfb728e216014"
+  },
+  "source_preservation": {
+    "archive_byte_identical_to_source": false,
+    "candidate_archive_sha256": "b13305713ba60af01eaaca8636509b5957cf7fd6ac8a1f442bb7fcbfb14f56bd",
+    "candidate_payload_sha256": "68d25bd0606a1a73746bc1d0dc2959d3d84559fdc9e617c11ccb295d6075944d",
+    "decoded_streams_byte_identical": true,
+    "payload_byte_identical_to_source": false,
+    "source_archive_sha256": "851a61ddd88c0ddb4a05762f11e900f132fb771fd9dba743ac2026637ddf15d9",
+    "source_payload_sha256": "a50045d4c29fa0efc9b57eac3c14349f262526ba19546615b14cfb728e216014",
+    "status": "lossless_decoded_stream_preserving_repack"
+  },
+  "source_preserving": true,
+  "stream_choices": {
+    "masks.mkv": {
+      "bytes": 219465,
+      "params": {
+        "lgblock": 17,
+        "lgwin": 19,
+        "mode": 0,
+        "quality": 11
+      },
+      "sha256": "1ddf03dad8466797397ead26a0d481766e22e26cbc936251c1e3ed5d2f6eda99"
+    },
+    "optimized_poses.bin": {
+      "bytes": 676,
+      "params": {
+        "lgblock": 0,
+        "lgwin": 16,
+        "mode": 0,
+        "quality": 11
+      },
+      "sha256": "61732151609c5decd72a3ac2254e9ac2258dae2846464eaeb14b5ef0a32d86f5"
+    },
+    "renderer.bin": {
+      "bytes": 55965,
+      "params": "source",
+      "sha256": "2544dfe50d2631a56600cbfc7342e4a18c97f953526fc51425be0d62f97e22ad"
+    },
+    "seg_tile_actions.bin": {
+      "bytes": 236,
+      "params": "source",
+      "sha256": "f172ef412c72e6056b0d720184d67c08fe9f28b1a0720fd01dd1d64c9ace932b"
+    }
+  },
+  "tool": "experiments/build_pr75_lossless_repack_candidates.py"
+}

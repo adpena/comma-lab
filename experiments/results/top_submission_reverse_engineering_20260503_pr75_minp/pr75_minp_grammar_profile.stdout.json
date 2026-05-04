@@ -1,0 +1,866 @@
+{
+  "compare_archive": {
+    "actions": {
+      "charged_brotli_bytes": 160,
+      "charged_brotli_sha256": "50e997db4fd1b7642d9a2cd67b55802a4f7f9bd7a6603d0ca2eaf42e7fe7e320",
+      "first_records": [
+        {
+          "action": 92,
+          "pair": 33,
+          "tile": 109
+        },
+        {
+          "action": 86,
+          "pair": 46,
+          "tile": 108
+        },
+        {
+          "action": 79,
+          "pair": 49,
+          "tile": 90
+        },
+        {
+          "action": 102,
+          "pair": 67,
+          "tile": 88
+        },
+        {
+          "action": 7,
+          "pair": 89,
+          "tile": 84
+        },
+        {
+          "action": 17,
+          "pair": 104,
+          "tile": 83
+        },
+        {
+          "action": 94,
+          "pair": 105,
+          "tile": 99
+        },
+        {
+          "action": 64,
+          "pair": 106,
+          "tile": 83
+        },
+        {
+          "action": 44,
+          "pair": 119,
+          "tile": 86
+        },
+        {
+          "action": 46,
+          "pair": 132,
+          "tile": 86
+        },
+        {
+          "action": 9,
+          "pair": 141,
+          "tile": 86
+        },
+        {
+          "action": 104,
+          "pair": 151,
+          "tile": 112
+        }
+      ],
+      "last_records": [
+        {
+          "action": 38,
+          "pair": 268,
+          "tile": 88
+        },
+        {
+          "action": 11,
+          "pair": 347,
+          "tile": 98
+        },
+        {
+          "action": 81,
+          "pair": 433,
+          "tile": 106
+        },
+        {
+          "action": 9,
+          "pair": 451,
+          "tile": 100
+        },
+        {
+          "action": 67,
+          "pair": 459,
+          "tile": 87
+        },
+        {
+          "action": 51,
+          "pair": 517,
+          "tile": 113
+        },
+        {
+          "action": 44,
+          "pair": 519,
+          "tile": 89
+        },
+        {
+          "action": 29,
+          "pair": 522,
+          "tile": 140
+        },
+        {
+          "action": 18,
+          "pair": 531,
+          "tile": 88
+        },
+        {
+          "action": 104,
+          "pair": 535,
+          "tile": 88
+        },
+        {
+          "action": 86,
+          "pair": 551,
+          "tile": 88
+        },
+        {
+          "action": 83,
+          "pair": 581,
+          "tile": 88
+        }
+      ],
+      "pair_max": 581,
+      "pair_min": 33,
+      "record_count": 40,
+      "runtime_record_bytes": 160,
+      "runtime_record_sha256": "50e997db4fd1b7642d9a2cd67b55802a4f7f9bd7a6603d0ca2eaf42e7fe7e320",
+      "top_actions": [
+        {
+          "count": 2,
+          "value": 86
+        },
+        {
+          "count": 2,
+          "value": 7
+        },
+        {
+          "count": 2,
+          "value": 44
+        },
+        {
+          "count": 2,
+          "value": 9
+        },
+        {
+          "count": 2,
+          "value": 104
+        },
+        {
+          "count": 1,
+          "value": 92
+        },
+        {
+          "count": 1,
+          "value": 79
+        },
+        {
+          "count": 1,
+          "value": 102
+        },
+        {
+          "count": 1,
+          "value": 17
+        },
+        {
+          "count": 1,
+          "value": 94
+        },
+        {
+          "count": 1,
+          "value": 64
+        },
+        {
+          "count": 1,
+          "value": 46
+        }
+      ],
+      "top_pairs": [
+        {
+          "count": 1,
+          "value": 33
+        },
+        {
+          "count": 1,
+          "value": 46
+        },
+        {
+          "count": 1,
+          "value": 49
+        },
+        {
+          "count": 1,
+          "value": 67
+        },
+        {
+          "count": 1,
+          "value": 89
+        },
+        {
+          "count": 1,
+          "value": 104
+        },
+        {
+          "count": 1,
+          "value": 105
+        },
+        {
+          "count": 1,
+          "value": 106
+        },
+        {
+          "count": 1,
+          "value": 119
+        },
+        {
+          "count": 1,
+          "value": 132
+        },
+        {
+          "count": 1,
+          "value": 141
+        },
+        {
+          "count": 1,
+          "value": 151
+        }
+      ],
+      "top_tiles": [
+        {
+          "count": 11,
+          "value": 86
+        },
+        {
+          "count": 6,
+          "value": 88
+        },
+        {
+          "count": 2,
+          "value": 109
+        },
+        {
+          "count": 2,
+          "value": 90
+        },
+        {
+          "count": 2,
+          "value": 83
+        },
+        {
+          "count": 2,
+          "value": 87
+        },
+        {
+          "count": 2,
+          "value": 113
+        },
+        {
+          "count": 1,
+          "value": 108
+        },
+        {
+          "count": 1,
+          "value": 84
+        },
+        {
+          "count": 1,
+          "value": 99
+        },
+        {
+          "count": 1,
+          "value": 112
+        },
+        {
+          "count": 1,
+          "value": 95
+        }
+      ],
+      "unique_action_count": 35,
+      "unique_pair_count": 40,
+      "unique_tile_count": 20,
+      "wire_kind": "robust_runtime_raw4_after_unpack",
+      "wire_raw_bytes": 160,
+      "wire_raw_sha256": "50e997db4fd1b7642d9a2cd67b55802a4f7f9bd7a6603d0ca2eaf42e7fe7e320"
+    },
+    "archive": {
+      "bytes": 276342,
+      "path": "experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/archive.zip",
+      "sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8",
+      "zip": {
+        "member_compress_size": 276242,
+        "member_compress_type": 0,
+        "member_crc": 3759995237,
+        "member_file_size": 276242,
+        "member_name": "p"
+      }
+    },
+    "payload": {
+      "bytes": 276242,
+      "member": "p",
+      "prefix_hex": "5036505903009dda",
+      "sha256": "fcc3fddb3a4182182bbfca1d1064544c87e58a5a9f76ea6fddfcfe4eb0b453c1"
+    },
+    "robust_current_parse": {
+      "decoded_members": {
+        "masks.mkv": {
+          "decoded_bytes": 223385,
+          "decoded_prefix_hex": "12000a0a0000000c",
+          "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "optimized_poses.qp1": {
+          "decoded_bytes": 1140,
+          "decoded_prefix_hex": "515031601cc003bf",
+          "decoded_sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+        },
+        "renderer.bin": {
+          "decoded_bytes": 59288,
+          "decoded_prefix_hex": "515a533320001675",
+          "decoded_sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+        },
+        "seg_tile_actions.bin": {
+          "decoded_bytes": 160,
+          "decoded_prefix_hex": "21006d5c2e006c56",
+          "decoded_sha256": "50e997db4fd1b7642d9a2cd67b55802a4f7f9bd7a6603d0ca2eaf42e7fe7e320"
+        }
+      },
+      "members": [
+        {
+          "bytes": 55965,
+          "codec": "brotli_qzs3",
+          "decoded_bytes": 59288,
+          "decoded_sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb",
+          "name": "renderer.bin",
+          "sha256": "2544dfe50d2631a56600cbfc7342e4a18c97f953526fc51425be0d62f97e22ad"
+        },
+        {
+          "bytes": 219472,
+          "codec": "brotli_av1_obu",
+          "decoded_bytes": 223385,
+          "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+          "name": "masks.mkv",
+          "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+        },
+        {
+          "bytes": 116,
+          "codec": "brotli_seg_tile_actions_delta_varint_v1",
+          "decoded_bytes": 160,
+          "decoded_sha256": "50e997db4fd1b7642d9a2cd67b55802a4f7f9bd7a6603d0ca2eaf42e7fe7e320",
+          "name": "seg_tile_actions.bin",
+          "sha256": "2f270cba1207030026353794196e2425de1c8aa85cff4de12d544a30346034da"
+        },
+        {
+          "bytes": 677,
+          "codec": "public_qp1_brotli",
+          "decoded_bytes": 1140,
+          "decoded_sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583",
+          "name": "optimized_poses.qp1",
+          "sha256": "c998610e82bb46a686a073e8a1847987de1346f86852a1c60cfa3244a1ad43c5"
+        }
+      ],
+      "ok": true,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint"
+    }
+  },
+  "comparison": {
+    "action_record_comparison": {
+      "compare_record_count": 40,
+      "compare_runtime_record_sha256": "50e997db4fd1b7642d9a2cd67b55802a4f7f9bd7a6603d0ca2eaf42e7fe7e320",
+      "public_record_count": 108,
+      "public_runtime_record_sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a",
+      "runtime_record_sha256_equal": false
+    },
+    "public_minus_compare_archive_bytes": 139,
+    "public_minus_compare_payload_bytes": 139,
+    "stream_comparison": {
+      "masks.mkv": {
+        "available": true,
+        "compare_decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "decoded_bytes_delta_public_minus_compare": 0,
+        "decoded_sha256_equal": true,
+        "public_decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      "optimized_poses.qp1": {
+        "available": true,
+        "compare_decoded_sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583",
+        "decoded_bytes_delta_public_minus_compare": 0,
+        "decoded_sha256_equal": false,
+        "public_decoded_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+      },
+      "renderer.bin": {
+        "available": true,
+        "compare_decoded_sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb",
+        "decoded_bytes_delta_public_minus_compare": 0,
+        "decoded_sha256_equal": false,
+        "public_decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+      },
+      "seg_tile_actions.bin": {
+        "available": true,
+        "compare_decoded_sha256": "50e997db4fd1b7642d9a2cd67b55802a4f7f9bd7a6603d0ca2eaf42e7fe7e320",
+        "decoded_bytes_delta_public_minus_compare": 121,
+        "decoded_sha256_equal": false,
+        "public_decoded_sha256": "b0a4d55d19a534f223512c07920c46f1a52dc2409951a7f7c5ea9ce0e70acddc"
+      }
+    }
+  },
+  "evidence_grade": "empirical_reverse_engineering_profile",
+  "implementation_implications": [
+    "current robust_current parses the PR75/minp 276381 fixed-slice payload and converts SG2 actions to runtime raw4 records.",
+    "the remaining parity risk is semantic/runtime parity, not byte-slice discovery: run raw-output parity against the public runtime before dispatch.",
+    "isolate actions-only, renderer-only, pose-only, and full-stack candidates after local stream/runtime parity is exact."
+  ],
+  "notes": [
+    "Local byte/runtime grammar profile only; exact CUDA auth eval remains the score truth.",
+    "Public current-workflow ZIP permissiveness is studied as forensics, not used as a score claim."
+  ],
+  "public_archive": {
+    "actions": {
+      "charged_brotli_bytes": 255,
+      "charged_brotli_sha256": "e2f8a113ee9e4d009448fec2497602ef67cabb8a13ef8d3fa9e11d69ff8ceed6",
+      "first_records": [
+        {
+          "action": 17,
+          "pair": 104,
+          "tile": 83
+        },
+        {
+          "action": 64,
+          "pair": 106,
+          "tile": 83
+        },
+        {
+          "action": 7,
+          "pair": 89,
+          "tile": 84
+        },
+        {
+          "action": 58,
+          "pair": 540,
+          "tile": 84
+        },
+        {
+          "action": 75,
+          "pair": 112,
+          "tile": 85
+        },
+        {
+          "action": 56,
+          "pair": 566,
+          "tile": 85
+        },
+        {
+          "action": 40,
+          "pair": 73,
+          "tile": 86
+        },
+        {
+          "action": 92,
+          "pair": 109,
+          "tile": 86
+        },
+        {
+          "action": 94,
+          "pair": 115,
+          "tile": 86
+        },
+        {
+          "action": 44,
+          "pair": 119,
+          "tile": 86
+        },
+        {
+          "action": 6,
+          "pair": 124,
+          "tile": 86
+        },
+        {
+          "action": 38,
+          "pair": 126,
+          "tile": 86
+        }
+      ],
+      "last_records": [
+        {
+          "action": 92,
+          "pair": 33,
+          "tile": 109
+        },
+        {
+          "action": 93,
+          "pair": 36,
+          "tile": 109
+        },
+        {
+          "action": 23,
+          "pair": 227,
+          "tile": 109
+        },
+        {
+          "action": 56,
+          "pair": 71,
+          "tile": 110
+        },
+        {
+          "action": 10,
+          "pair": 211,
+          "tile": 110
+        },
+        {
+          "action": 95,
+          "pair": 218,
+          "tile": 110
+        },
+        {
+          "action": 71,
+          "pair": 212,
+          "tile": 111
+        },
+        {
+          "action": 57,
+          "pair": 234,
+          "tile": 111
+        },
+        {
+          "action": 104,
+          "pair": 151,
+          "tile": 112
+        },
+        {
+          "action": 15,
+          "pair": 196,
+          "tile": 113
+        },
+        {
+          "action": 51,
+          "pair": 517,
+          "tile": 113
+        },
+        {
+          "action": 29,
+          "pair": 522,
+          "tile": 140
+        }
+      ],
+      "pair_max": 598,
+      "pair_min": 33,
+      "record_count": 108,
+      "runtime_record_bytes": 432,
+      "runtime_record_sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a",
+      "top_actions": [
+        {
+          "count": 4,
+          "value": 92
+        },
+        {
+          "count": 4,
+          "value": 94
+        },
+        {
+          "count": 4,
+          "value": 90
+        },
+        {
+          "count": 4,
+          "value": 47
+        },
+        {
+          "count": 4,
+          "value": 91
+        },
+        {
+          "count": 4,
+          "value": 93
+        },
+        {
+          "count": 3,
+          "value": 56
+        },
+        {
+          "count": 3,
+          "value": 38
+        },
+        {
+          "count": 3,
+          "value": 15
+        },
+        {
+          "count": 3,
+          "value": 22
+        },
+        {
+          "count": 3,
+          "value": 18
+        },
+        {
+          "count": 2,
+          "value": 17
+        }
+      ],
+      "top_pairs": [
+        {
+          "count": 2,
+          "value": 597
+        },
+        {
+          "count": 2,
+          "value": 519
+        },
+        {
+          "count": 1,
+          "value": 104
+        },
+        {
+          "count": 1,
+          "value": 106
+        },
+        {
+          "count": 1,
+          "value": 89
+        },
+        {
+          "count": 1,
+          "value": 540
+        },
+        {
+          "count": 1,
+          "value": 112
+        },
+        {
+          "count": 1,
+          "value": 566
+        },
+        {
+          "count": 1,
+          "value": 73
+        },
+        {
+          "count": 1,
+          "value": 109
+        },
+        {
+          "count": 1,
+          "value": 115
+        },
+        {
+          "count": 1,
+          "value": 119
+        }
+      ],
+      "top_tiles": [
+        {
+          "count": 30,
+          "value": 88
+        },
+        {
+          "count": 29,
+          "value": 86
+        },
+        {
+          "count": 11,
+          "value": 89
+        },
+        {
+          "count": 8,
+          "value": 87
+        },
+        {
+          "count": 3,
+          "value": 99
+        },
+        {
+          "count": 3,
+          "value": 109
+        },
+        {
+          "count": 3,
+          "value": 110
+        },
+        {
+          "count": 2,
+          "value": 83
+        },
+        {
+          "count": 2,
+          "value": 84
+        },
+        {
+          "count": 2,
+          "value": 85
+        },
+        {
+          "count": 2,
+          "value": 98
+        },
+        {
+          "count": 2,
+          "value": 108
+        }
+      ],
+      "unique_action_count": 60,
+      "unique_pair_count": 106,
+      "unique_tile_count": 21,
+      "wire_kind": "SG2_grouped_tile_frame_delta_varint",
+      "wire_raw_bytes": 281,
+      "wire_raw_sha256": "b0a4d55d19a534f223512c07920c46f1a52dc2409951a7f7c5ea9ce0e70acddc"
+    },
+    "archive": {
+      "bytes": 276481,
+      "path": "experiments/results/top_submission_reverse_engineering_20260503_pr75_minp/archive.zip",
+      "sha256": "03a2afd5fe92c93a9b7b7e43625158a73b455f0cfbca82d278008a728db78746",
+      "zip": {
+        "member_compress_size": 276381,
+        "member_compress_type": 0,
+        "member_crc": 3930107496,
+        "member_file_size": 276381,
+        "member_name": "p"
+      }
+    },
+    "decoded_streams": {
+      "masks.mkv": {
+        "charged_bytes": 219472,
+        "charged_sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87",
+        "codec": "brotli_av1_obu",
+        "decoded_bytes": 223385,
+        "decoded_prefix_hex": "12000a0a0000000c",
+        "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "name": "masks.mkv"
+      },
+      "optimized_poses.qp1": {
+        "charged_bytes": 898,
+        "charged_sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082",
+        "codec": "brotli_qp1",
+        "decoded_bytes": 1140,
+        "decoded_prefix_hex": "5150316d1cd003c1",
+        "decoded_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+        "name": "optimized_poses.qp1"
+      },
+      "renderer.bin": {
+        "charged_bytes": 55756,
+        "charged_sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf",
+        "codec": "brotli_qzs3",
+        "decoded_bytes": 59288,
+        "decoded_prefix_hex": "515a533320001675",
+        "decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+        "name": "renderer.bin"
+      },
+      "seg_tile_actions.bin": {
+        "charged_bytes": 255,
+        "charged_sha256": "e2f8a113ee9e4d009448fec2497602ef67cabb8a13ef8d3fa9e11d69ff8ceed6",
+        "codec": "brotli_public_seg_tile_actions",
+        "decoded_bytes": 281,
+        "decoded_prefix_hex": "5302681102405402",
+        "decoded_sha256": "b0a4d55d19a534f223512c07920c46f1a52dc2409951a7f7c5ea9ce0e70acddc",
+        "name": "seg_tile_actions.bin"
+      }
+    },
+    "payload": {
+      "bytes": 276381,
+      "fixed_slice_plan": {
+        "actions_br_bytes": 255,
+        "label": "pr75_minp_fixed_actions255_model55756",
+        "mask_br_bytes": 219472,
+        "payload_bytes": 276381,
+        "pose_br_bytes": 898,
+        "renderer_br_bytes": 55756
+      },
+      "member": "p",
+      "prefix_hex": "5b98684344152796",
+      "sha256": "f78c71d3086773e417c672734082a49ceb0ef5a0016cf406a920be7978fff252"
+    },
+    "pose": {
+      "codec": "QP1_col0_delta_varint",
+      "q0_first": 7277,
+      "q0_last": 5636,
+      "q0_max": 7739,
+      "q0_min": 1669,
+      "raw_bytes": 1140,
+      "raw_prefix_hex": "5150316d1cd003c1",
+      "raw_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+      "row_count": 600
+    },
+    "renderer": {
+      "magic": "QZS3",
+      "qzs3_block_size": 32
+    },
+    "robust_current_parse": {
+      "decoded_members": {
+        "masks.mkv": {
+          "decoded_bytes": 223385,
+          "decoded_prefix_hex": "12000a0a0000000c",
+          "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "optimized_poses.qp1": {
+          "decoded_bytes": 1140,
+          "decoded_prefix_hex": "5150316d1cd003c1",
+          "decoded_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+        },
+        "renderer.bin": {
+          "decoded_bytes": 59288,
+          "decoded_prefix_hex": "515a533320001675",
+          "decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+        },
+        "seg_tile_actions.bin": {
+          "decoded_bytes": 432,
+          "decoded_prefix_hex": "680053116a005340",
+          "decoded_sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a"
+        }
+      },
+      "members": [
+        {
+          "bytes": 55756,
+          "codec": "brotli_qzs3",
+          "decoded_bytes": 59288,
+          "decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+          "name": "renderer.bin",
+          "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+        },
+        {
+          "bytes": 219472,
+          "codec": "brotli_av1_obu",
+          "decoded_bytes": 223385,
+          "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+          "name": "masks.mkv",
+          "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+        },
+        {
+          "bytes": 255,
+          "codec": "brotli_seg_tile_actions_v1",
+          "decoded_bytes": 432,
+          "decoded_sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a",
+          "name": "seg_tile_actions.bin",
+          "sha256": "e2f8a113ee9e4d009448fec2497602ef67cabb8a13ef8d3fa9e11d69ff8ceed6"
+        },
+        {
+          "bytes": 898,
+          "codec": "public_qp1_brotli",
+          "decoded_bytes": 1140,
+          "decoded_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+          "name": "optimized_poses.qp1",
+          "sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082"
+        }
+      ],
+      "ok": true,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices"
+    }
+  },
+  "public_pr75_source": {
+    "branch": "submission/qpose14-r55-segactions-minp",
+    "commit": "deeef56eeb915ddb3f20ee22fd947002606a8b9c",
+    "exists": true,
+    "inflate_py": {
+      "exists": true,
+      "path": "/tmp/pr75-minp/submissions/qpose14_r55_segactions_minp/inflate.py",
+      "sha256": "ea490dec83e36788dd64913650d1c265dbef1386320a5f550b5df063a71838cc"
+    },
+    "path": "/tmp/pr75-minp"
+  },
+  "schema": "pr75_minp_archive_grammar_profile_v1",
+  "score_claim": false,
+  "tool": "experiments/profile_pr75_minp_archive.py"
+}

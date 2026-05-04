@@ -1,0 +1,39 @@
+{
+  "determinism": {
+    "brotli_quality": 11,
+    "single_member_order": [
+      "p"
+    ],
+    "zip_compress_type": "ZIP_STORED",
+    "zip_permissions": "0644",
+    "zip_timestamp": [
+      1980,
+      1,
+      1,
+      0,
+      0,
+      0
+    ]
+  },
+  "output_archive": {
+    "exists": true,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c063_breakthrough_candidate_matrix_20260502/line_search_source_c063_fixedslice/archive.zip",
+    "sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+    "size_bytes": 276214
+  },
+  "output_metadata": {
+    "exists": true,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c063_breakthrough_candidate_matrix_20260502/line_search_source_c063_fixedslice/metadata.json",
+    "sha256": "7397c4128e4219c1c43a89b5a47b060c12af9aa87aedd6e3e69caf68d6365411",
+    "size_bytes": 1877
+  },
+  "schema_version": 1,
+  "score_claim": false,
+  "source_archive": {
+    "exists": true,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_lossless_repack_c059_brotli_t4_20260502T0537Z/archive.zip",
+    "sha256": "83615afd130afa08e972e4a02476612397bffea53327caf3591891f8317aa52d",
+    "size_bytes": 276223
+  },
+  "tool": "experiments/build_c063_breakthrough_candidate_matrix.py"
+}

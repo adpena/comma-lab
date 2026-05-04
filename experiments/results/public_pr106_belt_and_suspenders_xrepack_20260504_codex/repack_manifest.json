@@ -1,0 +1,17 @@
+{
+  "byte_delta": -8,
+  "compress_type": 0,
+  "compression": "preserve",
+  "evidence_grade": "byte_repack_only",
+  "input": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip",
+  "input_bytes": 186239,
+  "input_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+  "output": "experiments/results/public_pr106_belt_and_suspenders_xrepack_20260504_codex/archive.zip",
+  "output_bytes": 186231,
+  "output_sha256": "d25bca80057e8b533197895b4c56370678feb4e05fea0312c405bd12f29bec8e",
+  "score_claim": false,
+  "source_member_bytes": 186131,
+  "source_member_name": "0.bin",
+  "source_member_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+  "target_member_name": "x"
+}

@@ -1,0 +1,27 @@
+{
+  "archive_delta_bytes_vs_stbm": -276,
+  "candidate_archive": {
+    "archive_bytes": 229480,
+    "archive_members": [
+      "x"
+    ],
+    "archive_sha256": "f8d2dff12004fe15bdedefcd3f9574fab97f22c302fa1417a265c325468ad774",
+    "member_bytes": 229380,
+    "member_name": "x",
+    "member_sha256": "cfdb1c0d0b09aa2557aa3e61053edf7403cc99969f2ef46cd4320fbd7f4b4ae4",
+    "path": "experiments/results/pr85_stbm1br_pr92_rmb1_randmulti_20260504_worker/pr85_stbm1br_plus_pr92_rmb1_randmulti_recode/archive.zip",
+    "zip_compress_type": 0,
+    "zip_overhead_bytes": 100
+  },
+  "candidate_count": 1,
+  "candidate_manifest": "experiments/results/pr85_stbm1br_pr92_rmb1_randmulti_20260504_worker/pr85_stbm1br_plus_pr92_rmb1_randmulti_recode/manifest.json",
+  "dispatch_performed": false,
+  "exact_t4_dispatch_justified_after_claim": true,
+  "next_claim_command": ".venv/bin/python tools/claim_lane_dispatch.py claim --lane-id pr85_stbm1br_pr92_rmb1_randmulti --platform lightning --instance-job-id exact_eval_pr85_stbm1br_pr92_rmb1_t4_20260504T0829Z --agent codex:gpt-5.5 --predicted-eta-utc 2026-05-04T10:29Z --status eval --notes \"T4 exact eval for pr85_stbm1br_plus_pr92_rmb1_randmulti_recode; archive_sha256=f8d2dff12004fe15bdedefcd3f9574fab97f22c302fa1417a265c325468ad774\"",
+  "randmulti_decoded_rows_sha256": "87bcc720c1e80afb9adad5ee01477423ced526f31c54d461d69dbf26e08eecc9",
+  "remote_jobs_dispatched": false,
+  "schema": "pr85_stbm1br_pr92_rmb1_randmulti_summary_v1",
+  "score_claim": false,
+  "strict_zip_valid": true,
+  "tool": "experiments/build_pr85_stbm1br_pr92_rmb1_randmulti_candidate.py"
+}

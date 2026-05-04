@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-05-02T16:22:06Z",
+  "pybin": ".venv/bin/python",
+  "uv_bin": "/usr/local/bin/uv",
+  "uv_project_environment": "/teamspace/studios/this_studio/pact/experiments/results/sjkl_c067_l40sdiag_20260502T151434Z/exact_eval/uv_project_env",
+  "uv_cache_dir": "/system/conda/miniconda3/uv/cache",
+  "uv_extra_index_url": "",
+  "uv_index_strategy": "",
+  "ffmpeg_bin": "/home/zeus/miniconda3/envs/cloudspace/bin/ffmpeg",
+  "inflate_sh": "/teamspace/studios/this_studio/pact/submissions/robust_current/inflate.sh",
+  "inflate_sh_sha256": "86449a1f52ac6b2be120d47287b8410f915dce7e562c69f480103f6e527c6017",
+  "inflate_brotli_spec": "brotli==1.2.0",
+  "inflate_av_spec": "av==17.0.1",
+  "inflate_torch_spec": "torch==2.11.0",
+  "inflate_numpy_spec": "numpy==2.4.4",
+  "dali_bootstrap_dir": "/teamspace/studios/this_studio/pact/experiments/results/sjkl_c067_l40sdiag_20260502T151434Z/exact_eval"
+}

@@ -1,0 +1,364 @@
+{
+  "candidates": [
+    {
+      "agreement_metrics": {
+        "argmax_agreement": 1.0,
+        "argmax_disagreement": 0.0,
+        "candidate_shape": [
+          16,
+          384,
+          512
+        ],
+        "different_pixels": 0,
+        "equal_pixels": 3145728,
+        "num_pixels": 3145728,
+        "shape_match": true,
+        "source_shape": [
+          16,
+          384,
+          512
+        ]
+      },
+      "archive_member_compressed_size_bytes": 412169,
+      "archive_member_crc32": "e144d6ac",
+      "byte_metrics": {
+        "baseline_av1_member_bytes": 421483,
+        "bytes_delta_vs_av1_member": 0,
+        "bytes_saved_vs_av1_member": 0,
+        "contest_rate_term_delta_proxy_vs_av1_member": 0.0,
+        "payload_bytes": 421483,
+        "pct_delta_vs_av1_member": 0.0,
+        "pct_saved_vs_av1_member": 0.0,
+        "rate_term_proxy_only": true
+      },
+      "config": {
+        "member": "masks.mkv",
+        "source": "existing archive member"
+      },
+      "evidence_grade": "empirical",
+      "exact_cuda_auth_eval_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+      "name": "av1_archive_member",
+      "payload_bytes": 421483,
+      "payload_format": "archive_member_av1_mask_video",
+      "payload_read_sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9",
+      "payload_sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9",
+      "payload_source": "archive_member",
+      "promotion_eligible": false,
+      "score_claim": false,
+      "status": "ok"
+    },
+    {
+      "agreement_metrics": {
+        "argmax_agreement": 1.0,
+        "argmax_disagreement": 0.0,
+        "candidate_shape": [
+          16,
+          384,
+          512
+        ],
+        "different_pixels": 0,
+        "equal_pixels": 3145728,
+        "num_pixels": 3145728,
+        "shape_match": true,
+        "source_shape": [
+          16,
+          384,
+          512
+        ]
+      },
+      "byte_metrics": {
+        "baseline_av1_member_bytes": 421483,
+        "bytes_delta_vs_av1_member": -95577,
+        "bytes_saved_vs_av1_member": 95577,
+        "contest_rate_term_delta_proxy_vs_av1_member": -0.063640801163,
+        "payload_bytes": 325906,
+        "pct_delta_vs_av1_member": -22.676359426122,
+        "pct_saved_vs_av1_member": 22.676359426122,
+        "rate_term_proxy_only": true
+      },
+      "config": {
+        "levels": 2,
+        "num_classes": 5,
+        "step_detail": 1.0,
+        "step_ll": 0.5
+      },
+      "evidence_grade": "empirical",
+      "exact_cuda_auth_eval_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+      "name": "alpha2_wavelet",
+      "payload_bytes": 325906,
+      "payload_format": "WMC1_wavelet_mask_codec",
+      "payload_sha256": "c1604d86e1b9a3a544bcda277541c261d13fc9d7f1406ca176056bf04a034948",
+      "promotion_eligible": false,
+      "score_claim": false,
+      "status": "ok"
+    },
+    {
+      "agreement_metrics": {
+        "argmax_agreement": 0.999315579732,
+        "argmax_disagreement": 0.000684420268,
+        "candidate_shape": [
+          16,
+          384,
+          512
+        ],
+        "different_pixels": 2153,
+        "equal_pixels": 3143575,
+        "num_pixels": 3145728,
+        "shape_match": true,
+        "source_shape": [
+          16,
+          384,
+          512
+        ]
+      },
+      "byte_metrics": {
+        "baseline_av1_member_bytes": 421483,
+        "bytes_delta_vs_av1_member": -366664,
+        "bytes_saved_vs_av1_member": 366664,
+        "contest_rate_term_delta_proxy_vs_av1_member": -0.244146507188,
+        "payload_bytes": 54819,
+        "pct_delta_vs_av1_member": -86.993781481104,
+        "pct_saved_vs_av1_member": 86.993781481104,
+        "rate_term_proxy_only": true
+      },
+      "config": {
+        "codebook_size": 256,
+        "num_classes": 5,
+        "patch_size": 4
+      },
+      "evidence_grade": "empirical",
+      "exact_cuda_auth_eval_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+      "name": "alpha3_vqvae",
+      "payload_bytes": 54819,
+      "payload_format": "VQM1_vqvae_mask_codec",
+      "payload_sha256": "94d54ada1eacd4c101a787a0fedd8876887fe9bd22c593b6d9ff5f653ed7f750",
+      "promotion_eligible": false,
+      "score_claim": false,
+      "status": "ok"
+    },
+    {
+      "agreement_metrics": {
+        "argmax_agreement": 0.998299280802,
+        "argmax_disagreement": 0.001700719198,
+        "candidate_shape": [
+          16,
+          384,
+          512
+        ],
+        "different_pixels": 5350,
+        "equal_pixels": 3140378,
+        "num_pixels": 3145728,
+        "shape_match": true,
+        "source_shape": [
+          16,
+          384,
+          512
+        ]
+      },
+      "byte_metrics": {
+        "baseline_av1_member_bytes": 421483,
+        "bytes_delta_vs_av1_member": -409494,
+        "bytes_saved_vs_av1_member": 409494,
+        "contest_rate_term_delta_proxy_vs_av1_member": -0.27266524615,
+        "payload_bytes": 11989,
+        "pct_delta_vs_av1_member": -97.155519914208,
+        "pct_saved_vs_av1_member": 97.155519914208,
+        "rate_term_proxy_only": true
+      },
+      "config": {
+        "class_to_gray": {
+          "0": 0,
+          "1": 255,
+          "2": 64,
+          "3": 192,
+          "4": 128
+        },
+        "crf": 50,
+        "fps": 20
+      },
+      "evidence_grade": "empirical",
+      "exact_cuda_auth_eval_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+      "name": "alpha4_grayscale_lut",
+      "payload_bytes": 11989,
+      "payload_format": "grayscale_lut_av1_mask_video",
+      "payload_sha256": "e9ea5f06e4a7c84b40e7b9aeb1c2c17096789d724b2c9981c6a8861562a27864",
+      "promotion_eligible": false,
+      "raw_grayscale_bytes": 3145728,
+      "raw_grayscale_sha256": "d2b75b0989040f8df990d7b4ab2016196cf38accd7f4863eceaa224324697064",
+      "score_claim": false,
+      "status": "ok"
+    }
+  ],
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "default_anchor": {
+    "archive_path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+    "archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+    "archive_size_bytes": 686635,
+    "name": "PFP16_A++_current_anchor"
+  },
+  "evidence_grade": "empirical",
+  "local_screen_only": true,
+  "promotion_eligible": false,
+  "provenance": {
+    "codec_module_available": {
+      "alpha2_wavelet": true,
+      "alpha3_vqvae": true,
+      "alpha4_grayscale_lut": true,
+      "av1": true
+    },
+    "command": [
+      "experiments/alpha_frontier_candidate_screen.py",
+      "--archive",
+      "experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+      "--mask-member",
+      "masks.mkv",
+      "--output",
+      "experiments/results/alpha_frontier_candidate_screen_pfp16_20260501/report_max16.json",
+      "--artifact-dir",
+      "experiments/results/alpha_frontier_candidate_screen_pfp16_20260501/artifacts_max16",
+      "--candidates",
+      "av1,alpha2,alpha3,alpha4",
+      "--max-frames",
+      "16"
+    ],
+    "cwd": "/Users/adpena/Projects/pact",
+    "ffmpeg_resolution": {
+      "TAC_FFMPEG": "/opt/homebrew/bin/ffmpeg",
+      "path_ffmpeg": "/opt/homebrew/bin/ffmpeg",
+      "upstream_ffmpeg_new": "/Users/adpena/Projects/pact/upstream/ffmpeg-new",
+      "upstream_ffmpeg_new_exists": true
+    },
+    "platform": "macOS-26.4-arm64-arm-64bit",
+    "python_executable": "/Users/adpena/Projects/pact/.venv/bin/python",
+    "python_version": "3.12.13",
+    "repo_root": "/Users/adpena/Projects/pact",
+    "selected_environment": {
+      "TAC_FFMPEG": "/opt/homebrew/bin/ffmpeg"
+    },
+    "tool": "experiments/alpha_frontier_candidate_screen.py"
+  },
+  "purpose": "choose Alpha mask representations for later exact CUDA auth eval; not score evidence",
+  "raw_stats": {
+    "class_id_bitpacked_min_3bpp_bytes": 1179648,
+    "class_id_u8_bytes": 3145728,
+    "class_id_u8_sha256": "140d6da6e117338c038203139d984588ad97acacd57c82c13f4c2327e8f929f3",
+    "grayscale_lut_raw_bytes": 3145728,
+    "grayscale_lut_raw_sha256": "d2b75b0989040f8df990d7b4ab2016196cf38accd7f4863eceaa224324697064",
+    "one_hot_u8_bytes": 15728640,
+    "raw_stats_are_payload_lower_bounds": true
+  },
+  "schema": "alpha_frontier_candidate_screen_v1",
+  "score_claim": false,
+  "scorer_network_loaded": false,
+  "screen_config": {
+    "alpha2_levels": 2,
+    "alpha2_step_detail": 1.0,
+    "alpha2_step_ll": 0.5,
+    "alpha3_codebook_size": 256,
+    "alpha3_patch_size": 4,
+    "alpha4_crf": 50,
+    "alpha4_fps": 20,
+    "candidates": [
+      "av1",
+      "alpha2",
+      "alpha3",
+      "alpha4"
+    ],
+    "include_raw_stats": true,
+    "max_frames": 16,
+    "write_payloads": false
+  },
+  "source": {
+    "archive_path": "experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+    "archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+    "archive_size_bytes": 686635,
+    "decoded_masks": {
+      "class_entropy_bits_per_pixel": 1.61439426983,
+      "class_fractions": {
+        "0": 0.232577145894,
+        "1": 0.005748816596,
+        "2": 0.495173962911,
+        "3": 0.012248908149,
+        "4": 0.25425116645
+      },
+      "class_histogram": {
+        "0": 54871833,
+        "1": 1356316,
+        "2": 116826195,
+        "3": 2889880,
+        "4": 59985376
+      },
+      "dtype": "torch.int64",
+      "num_pixels": 235929600,
+      "shape": [
+        1200,
+        384,
+        512
+      ],
+      "spatial_boundary_pixels": 3378720,
+      "temporal_changed_pixels": 2054333,
+      "zero_order_entropy_floor_bytes": 47610425
+    },
+    "frame_subset": {
+      "max_frames": 16,
+      "original_frames": 1200,
+      "screened_frames": 16,
+      "truncated": true
+    },
+    "mask_member": {
+      "compressed_size_bytes": 412169,
+      "crc32": "e144d6ac",
+      "name": "masks.mkv",
+      "sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9",
+      "size_bytes": 421483
+    },
+    "matches_default_pfp16_anchor": true,
+    "member_inventory": [
+      {
+        "compressed_size_bytes": 412169,
+        "crc32": "e144d6ac",
+        "name": "masks.mkv",
+        "size_bytes": 421483
+      },
+      {
+        "compressed_size_bytes": 6734,
+        "crc32": "686cbfbf",
+        "name": "optimized_poses.bin",
+        "size_bytes": 7200
+      },
+      {
+        "compressed_size_bytes": 267402,
+        "crc32": "1827a837",
+        "name": "renderer.bin",
+        "size_bytes": 296776
+      }
+    ],
+    "screened_masks": {
+      "class_entropy_bits_per_pixel": 1.636393461811,
+      "class_fractions": {
+        "0": 0.228035926819,
+        "1": 0.005976359049,
+        "2": 0.492697397868,
+        "3": 0.016858418783,
+        "4": 0.256431897481
+      },
+      "class_histogram": {
+        "0": 717339,
+        "1": 18800,
+        "2": 1549892,
+        "3": 53032,
+        "4": 806665
+      },
+      "dtype": "torch.int64",
+      "num_pixels": 3145728,
+      "shape": [
+        16,
+        384,
+        512
+      ],
+      "spatial_boundary_pixels": 46391,
+      "temporal_changed_pixels": 21606,
+      "zero_order_entropy_floor_bytes": 643457
+    }
+  }
+}

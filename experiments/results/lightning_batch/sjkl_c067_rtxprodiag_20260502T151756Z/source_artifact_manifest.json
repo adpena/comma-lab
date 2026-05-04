@@ -1,0 +1,85 @@
+{
+  "driver_version": "580.126.20",
+  "git_head": null,
+  "gpu_name": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+  "inputs": {
+    "gt_video": {
+      "bytes": 37545489,
+      "path": "/teamspace/studios/this_studio/pact/upstream/videos/0.mkv",
+      "sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9"
+    },
+    "inflate_sh": {
+      "bytes": 19270,
+      "path": "/teamspace/studios/this_studio/pact/submissions/robust_current/inflate.sh",
+      "sha256": "86449a1f52ac6b2be120d47287b8410f915dce7e562c69f480103f6e527c6017"
+    },
+    "renderer_frames": {
+      "bytes": 2831157066,
+      "path": "/teamspace/studios/this_studio/pact/experiments/results/renderer_output_for_postfilter.pt",
+      "sha256": "d3eeb53d58963e3585161605b38c7a3d3e12b78fc8c4fcf264433e7f16b7f60b"
+    },
+    "source_archive": {
+      "bytes": 276214,
+      "path": "/teamspace/studios/this_studio/pact/experiments/results/c067_breakthrough_candidate_matrix_20260502T1030Z/line_search_source_c067_fixedslice/archive.zip",
+      "sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a"
+    }
+  },
+  "promotion_eligible": false,
+  "required_score_truth": "contest_auth_eval.json from archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda",
+  "run_id": "sjkl_c067_rtxprodiag_20260502T151756Z",
+  "schema_version": 1,
+  "score_claim": false,
+  "source_files": {
+    "experiments/build_sjkl_c067_archive.py": {
+      "bytes": 11962,
+      "path": "/teamspace/studios/this_studio/pact/experiments/build_sjkl_c067_archive.py",
+      "sha256": "c02daaa8bafc0cac04d2bc17e14fe35f34a6b86e73a4c3d8c1cabb4410f8d10c"
+    },
+    "experiments/build_sjkl_residual.py": {
+      "bytes": 18403,
+      "path": "/teamspace/studios/this_studio/pact/experiments/build_sjkl_residual.py",
+      "sha256": "6ba003a437efb7c83596b1228e02cf8acd2c0e89ecb4157cbb2f32dace98d88b"
+    },
+    "experiments/contest_auth_eval.py": {
+      "bytes": 42655,
+      "path": "/teamspace/studios/this_studio/pact/experiments/contest_auth_eval.py",
+      "sha256": "7ef32b5bdcb1043898cb9d7913cec354f96cbfa13bceed75a5cfbef2e127655c"
+    },
+    "experiments/prepare_sjkl_pair_tensors.py": {
+      "bytes": 8054,
+      "path": "/teamspace/studios/this_studio/pact/experiments/prepare_sjkl_pair_tensors.py",
+      "sha256": "d4f673e196d5abf7629b4ad72e4457a19894ebc07c8ab4090d2026d3c872f79a"
+    },
+    "scripts/remote_archive_only_eval.sh": {
+      "bytes": 17192,
+      "path": "/teamspace/studios/this_studio/pact/scripts/remote_archive_only_eval.sh",
+      "sha256": "c457b819749186bd5d3bdfac139fb29d664b6071aba69f8c435b2554b80333f1"
+    },
+    "scripts/remote_lane_sjkl_c067.sh": {
+      "bytes": 13060,
+      "path": "/teamspace/studios/this_studio/pact/scripts/remote_lane_sjkl_c067.sh",
+      "sha256": "2241e21beee571e367c1e2f744d1315bab40a50d3e545e9ef9eddc19adeb400a"
+    },
+    "src/tac/sjkl_basis.py": {
+      "bytes": 26003,
+      "path": "/teamspace/studios/this_studio/pact/src/tac/sjkl_basis.py",
+      "sha256": "d6b7bc7913cfdacf8fa2dbf2535df116cb17145b2487a8685be4833b7a7fdbc1"
+    },
+    "submissions/robust_current/inflate.sh": {
+      "bytes": 19270,
+      "path": "/teamspace/studios/this_studio/pact/submissions/robust_current/inflate.sh",
+      "sha256": "86449a1f52ac6b2be120d47287b8410f915dce7e562c69f480103f6e527c6017"
+    },
+    "submissions/robust_current/inflate_renderer.py": {
+      "bytes": 274656,
+      "path": "/teamspace/studios/this_studio/pact/submissions/robust_current/inflate_renderer.py",
+      "sha256": "9ced5fb3c0bde02b572327cc5a39bc1b2937b2c4016c0dbb58c680ed8a78e8cb"
+    },
+    "submissions/robust_current/unpack_renderer_payload.py": {
+      "bytes": 34329,
+      "path": "/teamspace/studios/this_studio/pact/submissions/robust_current/unpack_renderer_payload.py",
+      "sha256": "58f42022e3b17c6215417909dfd03528a6dfaf22d8c32d418f6d3bc221fff5a4"
+    }
+  },
+  "tool": "scripts/remote_lane_sjkl_c067.sh"
+}

@@ -1,0 +1,759 @@
+{
+  "archive": {
+    "archive_bytes": 215735,
+    "archive_path": "experiments/results/top_submission_reverse_engineering_20260503_pr84/archive.zip",
+    "archive_sha256": "a607a6c3ae9b610e6edfb546c3206004ae40fc348ecaef2446b7134a19b8e07f",
+    "member_bytes": 215635,
+    "member_name": "p",
+    "member_sha256": "35b14e37ee34eeb2197117d52d805afb7aff8b33378b367685476dc4097e324d",
+    "zip_overhead_bytes": 100
+  },
+  "best_local_byte_win": null,
+  "candidates": [
+    {
+      "accepted_for_exact_eval_candidate": false,
+      "archive_relevant_state_change": true,
+      "delta_bytes_vs_source_range_mask": 0,
+      "error": null,
+      "mode_family": "qma9",
+      "mode_id": "qma9_reference_reencode",
+      "no_op_status": "state_changed",
+      "payload_bytes": 8586,
+      "payload_sha256": "f8a61ead71529b92bd03f56b1d0ee1fab55371f2af9e78e652835fd0511ea8cc",
+      "planning_only_reason": "reference mode only; exact-eval selection requires a non-reference local byte win",
+      "projected_archive_bytes_if_other_streams_unchanged": 215735,
+      "rate_score_delta_if_components_unchanged": 0.0,
+      "raw_mask_parity": true,
+      "rejection_reasons": [
+        "no_local_byte_screen_win"
+      ],
+      "role": "reference",
+      "selectable": false
+    },
+    {
+      "accepted_for_exact_eval_candidate": false,
+      "archive_relevant_state_change": true,
+      "delta_bytes_vs_source_range_mask": 10947,
+      "error": null,
+      "header": {
+        "bitstream_bytes": 19509,
+        "bitstream_sha256": "e953de61e13a3282371fd3be6bda4777d12762963e964eaef4475d35e2ba96c0",
+        "block_width": 1,
+        "decoded_mask_bytes": 6291456,
+        "frame_count": 32,
+        "header_bytes": 24,
+        "height": 384,
+        "magic": "QMB1",
+        "packed_bytes": 19533,
+        "payload_sha256": "c247826652d222d4e36407707a982eac2c812bb2e350f9eeef4b5dcea3f097f3",
+        "width": 512
+      },
+      "mode_family": "qmb1_vertical_block_escape",
+      "mode_id": "qmb1_vertical_block_escape_bw1",
+      "no_op_status": "state_changed",
+      "opportunities": {
+        "block_count_per_row": 384,
+        "block_width": 1,
+        "copied_block_fraction": 0.9969518254647749,
+        "copied_blocks": 6260028,
+        "copied_pixel_fraction": 0.9950046539306641,
+        "copied_pixels": 6260028,
+        "eligible_blocks": 6279168,
+        "total_pixels": 6291456
+      },
+      "payload_bytes": 19533,
+      "payload_sha256": "c247826652d222d4e36407707a982eac2c812bb2e350f9eeef4b5dcea3f097f3",
+      "planning_only_reason": "local byte screen only; runtime integration, lane claim, archive closure, and CUDA auth eval are still required",
+      "projected_archive_bytes_if_other_streams_unchanged": 226682,
+      "rate_score_delta_if_components_unchanged": 0.0072891579598284096,
+      "raw_mask_parity": true,
+      "rejection_reasons": [
+        "no_local_byte_screen_win"
+      ],
+      "selectable": false
+    },
+    {
+      "accepted_for_exact_eval_candidate": false,
+      "archive_relevant_state_change": true,
+      "delta_bytes_vs_source_range_mask": 9532,
+      "error": null,
+      "header": {
+        "bitstream_bytes": 18094,
+        "bitstream_sha256": "ca3beb9d6a200665c965f3746fca83c3b235b5731468278629d1bb79c75692bc",
+        "block_width": 2,
+        "decoded_mask_bytes": 6291456,
+        "frame_count": 32,
+        "header_bytes": 24,
+        "height": 384,
+        "magic": "QMB1",
+        "packed_bytes": 18118,
+        "payload_sha256": "98c064bd4f70bf364c8f3b099a73a173d29032a22f0e47e0d71a5d7c7e5b4d6c",
+        "width": 512
+      },
+      "mode_family": "qmb1_vertical_block_escape",
+      "mode_id": "qmb1_vertical_block_escape_bw2",
+      "no_op_status": "state_changed",
+      "opportunities": {
+        "block_count_per_row": 192,
+        "block_width": 2,
+        "copied_block_fraction": 0.9941578247309197,
+        "copied_blocks": 3121242,
+        "copied_pixel_fraction": 0.9922161102294922,
+        "copied_pixels": 6242484,
+        "eligible_blocks": 3139584,
+        "total_pixels": 6291456
+      },
+      "payload_bytes": 18118,
+      "payload_sha256": "98c064bd4f70bf364c8f3b099a73a173d29032a22f0e47e0d71a5d7c7e5b4d6c",
+      "planning_only_reason": "local byte screen only; runtime integration, lane claim, archive closure, and CUDA auth eval are still required",
+      "projected_archive_bytes_if_other_streams_unchanged": 225267,
+      "rate_score_delta_if_components_unchanged": 0.006346967541160538,
+      "raw_mask_parity": true,
+      "rejection_reasons": [
+        "no_local_byte_screen_win"
+      ],
+      "selectable": false
+    },
+    {
+      "accepted_for_exact_eval_candidate": false,
+      "archive_relevant_state_change": true,
+      "delta_bytes_vs_source_range_mask": 8754,
+      "error": null,
+      "header": {
+        "bitstream_bytes": 17316,
+        "bitstream_sha256": "e5d0676a3c41fb86dd9eca3f93d4f3f3db0529c0d48169cc040ffddd0d38ac45",
+        "block_width": 3,
+        "decoded_mask_bytes": 6291456,
+        "frame_count": 32,
+        "header_bytes": 24,
+        "height": 384,
+        "magic": "QMB1",
+        "packed_bytes": 17340,
+        "payload_sha256": "9387e553acd69ad339d6b64c130378fd22c007e6617e69a300a94a3c666e102e",
+        "width": 512
+      },
+      "mode_family": "qmb1_vertical_block_escape",
+      "mode_id": "qmb1_vertical_block_escape_bw3",
+      "no_op_status": "state_changed",
+      "opportunities": {
+        "block_count_per_row": 128,
+        "block_width": 3,
+        "copied_block_fraction": 0.9914651113013698,
+        "copied_blocks": 2075192,
+        "copied_pixel_fraction": 0.9895286560058594,
+        "copied_pixels": 6225576,
+        "eligible_blocks": 2093056,
+        "total_pixels": 6291456
+      },
+      "payload_bytes": 17340,
+      "payload_sha256": "9387e553acd69ad339d6b64c130378fd22c007e6617e69a300a94a3c666e102e",
+      "planning_only_reason": "local byte screen only; runtime integration, lane claim, archive closure, and CUDA auth eval are still required",
+      "projected_archive_bytes_if_other_streams_unchanged": 224489,
+      "rate_score_delta_if_components_unchanged": 0.005828929275631488,
+      "raw_mask_parity": true,
+      "rejection_reasons": [
+        "no_local_byte_screen_win"
+      ],
+      "selectable": false
+    },
+    {
+      "accepted_for_exact_eval_candidate": false,
+      "archive_relevant_state_change": true,
+      "delta_bytes_vs_source_range_mask": 8069,
+      "error": null,
+      "header": {
+        "bitstream_bytes": 16631,
+        "bitstream_sha256": "086d8925da0d72661a9b33644070939baa19c60eb8fb7be22e15957fe1746667",
+        "block_width": 4,
+        "decoded_mask_bytes": 6291456,
+        "frame_count": 32,
+        "header_bytes": 24,
+        "height": 384,
+        "magic": "QMB1",
+        "packed_bytes": 16655,
+        "payload_sha256": "be1bec757134b2c6203b43983c268e127edb5c240fe1887cb9e983730d600541",
+        "width": 512
+      },
+      "mode_family": "qmb1_vertical_block_escape",
+      "mode_id": "qmb1_vertical_block_escape_bw4",
+      "no_op_status": "state_changed",
+      "opportunities": {
+        "block_count_per_row": 96,
+        "block_width": 4,
+        "copied_block_fraction": 0.9888972551777561,
+        "copied_blocks": 1552363,
+        "copied_pixel_fraction": 0.9869658152262369,
+        "copied_pixels": 6209452,
+        "eligible_blocks": 1569792,
+        "total_pixels": 6291456
+      },
+      "payload_bytes": 16655,
+      "payload_sha256": "be1bec757134b2c6203b43983c268e127edb5c240fe1887cb9e983730d600541",
+      "planning_only_reason": "local byte screen only; runtime integration, lane claim, archive closure, and CUDA auth eval are still required",
+      "projected_archive_bytes_if_other_streams_unchanged": 223804,
+      "rate_score_delta_if_components_unchanged": 0.0053728158927428,
+      "raw_mask_parity": true,
+      "rejection_reasons": [
+        "no_local_byte_screen_win"
+      ],
+      "selectable": false
+    },
+    {
+      "accepted_for_exact_eval_candidate": false,
+      "archive_relevant_state_change": true,
+      "delta_bytes_vs_source_range_mask": 7569,
+      "error": null,
+      "header": {
+        "bitstream_bytes": 16131,
+        "bitstream_sha256": "574146b22fc5318ae3c76ab9f55f6dd3c79c95cc18821abc4515d233178a286e",
+        "block_width": 5,
+        "decoded_mask_bytes": 6291456,
+        "frame_count": 32,
+        "header_bytes": 24,
+        "height": 384,
+        "magic": "QMB1",
+        "packed_bytes": 16155,
+        "payload_sha256": "12aed9daa63f8981cf19e5e49d7735d8a959ee5253cec0d4e3c64759129da976",
+        "width": 512
+      },
+      "mode_family": "qmb1_vertical_block_escape",
+      "mode_id": "qmb1_vertical_block_escape_bw5",
+      "no_op_status": "state_changed",
+      "opportunities": {
+        "block_count_per_row": 77,
+        "block_width": 5,
+        "copied_block_fraction": 0.986379202988792,
+        "copied_blocks": 1241954,
+        "copied_pixel_fraction": 0.9844172795613607,
+        "copied_pixels": 6193418,
+        "eligible_blocks": 1259104,
+        "total_pixels": 6291456
+      },
+      "payload_bytes": 16155,
+      "payload_sha256": "12aed9daa63f8981cf19e5e49d7735d8a959ee5253cec0d4e3c64759129da976",
+      "planning_only_reason": "local byte screen only; runtime integration, lane claim, archive closure, and CUDA auth eval are still required",
+      "projected_archive_bytes_if_other_streams_unchanged": 223304,
+      "rate_score_delta_if_components_unchanged": 0.005039886416181715,
+      "raw_mask_parity": true,
+      "rejection_reasons": [
+        "no_local_byte_screen_win"
+      ],
+      "selectable": false
+    },
+    {
+      "accepted_for_exact_eval_candidate": false,
+      "archive_relevant_state_change": true,
+      "delta_bytes_vs_source_range_mask": 7084,
+      "error": null,
+      "header": {
+        "bitstream_bytes": 15646,
+        "bitstream_sha256": "572637a1ec418dd8274bdda74e23e1f429391859eee670fc3696ceb86e994e6c",
+        "block_width": 6,
+        "decoded_mask_bytes": 6291456,
+        "frame_count": 32,
+        "header_bytes": 24,
+        "height": 384,
+        "magic": "QMB1",
+        "packed_bytes": 15670,
+        "payload_sha256": "4460f117029cec945d0ec7921c06e8bc57e07a1434f10172ae8f582016d63e2f",
+        "width": 512
+      },
+      "mode_family": "qmb1_vertical_block_escape",
+      "mode_id": "qmb1_vertical_block_escape_bw6",
+      "no_op_status": "state_changed",
+      "opportunities": {
+        "block_count_per_row": 64,
+        "block_width": 6,
+        "copied_block_fraction": 0.9839134738869864,
+        "copied_blocks": 1029693,
+        "copied_pixel_fraction": 0.9819917678833008,
+        "copied_pixels": 6178158,
+        "eligible_blocks": 1046528,
+        "total_pixels": 6291456
+      },
+      "payload_bytes": 15670,
+      "payload_sha256": "4460f117029cec945d0ec7921c06e8bc57e07a1434f10172ae8f582016d63e2f",
+      "planning_only_reason": "local byte screen only; runtime integration, lane claim, archive closure, and CUDA auth eval are still required",
+      "projected_archive_bytes_if_other_streams_unchanged": 222819,
+      "rate_score_delta_if_components_unchanged": 0.004716944823917462,
+      "raw_mask_parity": true,
+      "rejection_reasons": [
+        "no_local_byte_screen_win"
+      ],
+      "selectable": false
+    },
+    {
+      "accepted_for_exact_eval_candidate": false,
+      "archive_relevant_state_change": true,
+      "delta_bytes_vs_source_range_mask": 6370,
+      "error": null,
+      "header": {
+        "bitstream_bytes": 14932,
+        "bitstream_sha256": "c734e12f3a567cc7d5a47841bc560f6e9094ed6b75dbfce18cce9b11746ac9be",
+        "block_width": 8,
+        "decoded_mask_bytes": 6291456,
+        "frame_count": 32,
+        "header_bytes": 24,
+        "height": 384,
+        "magic": "QMB1",
+        "packed_bytes": 14956,
+        "payload_sha256": "db729558a6e229b7c94db1180e969c30fd2cff180cf1479f1f9ad010e558cb02",
+        "width": 512
+      },
+      "mode_family": "qmb1_vertical_block_escape",
+      "mode_id": "qmb1_vertical_block_escape_bw8",
+      "no_op_status": "state_changed",
+      "opportunities": {
+        "block_count_per_row": 48,
+        "block_width": 8,
+        "copied_block_fraction": 0.9792634947814742,
+        "copied_blocks": 768620,
+        "copied_pixel_fraction": 0.9773508707682291,
+        "copied_pixels": 6148960,
+        "eligible_blocks": 784896,
+        "total_pixels": 6291456
+      },
+      "payload_bytes": 14956,
+      "payload_sha256": "db729558a6e229b7c94db1180e969c30fd2cff180cf1479f1f9ad010e558cb02",
+      "planning_only_reason": "local byte screen only; runtime integration, lane claim, archive closure, and CUDA auth eval are still required",
+      "projected_archive_bytes_if_other_streams_unchanged": 222105,
+      "rate_score_delta_if_components_unchanged": 0.004241521531388232,
+      "raw_mask_parity": true,
+      "rejection_reasons": [
+        "no_local_byte_screen_win"
+      ],
+      "selectable": false
+    },
+    {
+      "accepted_for_exact_eval_candidate": false,
+      "archive_relevant_state_change": true,
+      "delta_bytes_vs_source_range_mask": 5364,
+      "error": null,
+      "header": {
+        "bitstream_bytes": 13926,
+        "bitstream_sha256": "5eb2d0a43eea6d15c93b1aec570466fb74b3663e393677bce127ed778367700b",
+        "block_width": 12,
+        "decoded_mask_bytes": 6291456,
+        "frame_count": 32,
+        "header_bytes": 24,
+        "height": 384,
+        "magic": "QMB1",
+        "packed_bytes": 13950,
+        "payload_sha256": "e7216da87b67a17caec711f588bb46a25e0332928ffaf398abb85ded4784157a",
+        "width": 512
+      },
+      "mode_family": "qmb1_vertical_block_escape",
+      "mode_id": "qmb1_vertical_block_escape_bw12",
+      "no_op_status": "state_changed",
+      "opportunities": {
+        "block_count_per_row": 32,
+        "block_width": 12,
+        "copied_block_fraction": 0.9701508225293543,
+        "copied_blocks": 507645,
+        "copied_pixel_fraction": 0.9682559967041016,
+        "copied_pixels": 6091740,
+        "eligible_blocks": 523264,
+        "total_pixels": 6291456
+      },
+      "payload_bytes": 13950,
+      "payload_sha256": "e7216da87b67a17caec711f588bb46a25e0332928ffaf398abb85ded4784157a",
+      "planning_only_reason": "local byte screen only; runtime integration, lane claim, archive closure, and CUDA auth eval are still required",
+      "projected_archive_bytes_if_other_streams_unchanged": 221099,
+      "rate_score_delta_if_components_unchanged": 0.003571667424547327,
+      "raw_mask_parity": true,
+      "rejection_reasons": [
+        "no_local_byte_screen_win"
+      ],
+      "selectable": false
+    },
+    {
+      "accepted_for_exact_eval_candidate": false,
+      "archive_relevant_state_change": true,
+      "delta_bytes_vs_source_range_mask": 4752,
+      "error": null,
+      "header": {
+        "bitstream_bytes": 13314,
+        "bitstream_sha256": "b7ddce28f0b1ec9da4625cf60c45f8090227fca4df2bff02811769852f03ad0e",
+        "block_width": 16,
+        "decoded_mask_bytes": 6291456,
+        "frame_count": 32,
+        "header_bytes": 24,
+        "height": 384,
+        "magic": "QMB1",
+        "packed_bytes": 13338,
+        "payload_sha256": "a4cf6a7b27032e8ea14c1546697b8c489ba2854642df7f51b27738d07278c1f4",
+        "width": 512
+      },
+      "mode_family": "qmb1_vertical_block_escape",
+      "mode_id": "qmb1_vertical_block_escape_bw16",
+      "no_op_status": "state_changed",
+      "opportunities": {
+        "block_count_per_row": 24,
+        "block_width": 16,
+        "copied_block_fraction": 0.9612203400195695,
+        "copied_blocks": 377229,
+        "copied_pixel_fraction": 0.9593429565429688,
+        "copied_pixels": 6035664,
+        "eligible_blocks": 392448,
+        "total_pixels": 6291456
+      },
+      "payload_bytes": 13338,
+      "payload_sha256": "a4cf6a7b27032e8ea14c1546697b8c489ba2854642df7f51b27738d07278c1f4",
+      "planning_only_reason": "local byte screen only; runtime integration, lane claim, archive closure, and CUDA auth eval are still required",
+      "projected_archive_bytes_if_other_streams_unchanged": 220487,
+      "rate_score_delta_if_components_unchanged": 0.003164161745236558,
+      "raw_mask_parity": true,
+      "rejection_reasons": [
+        "no_local_byte_screen_win"
+      ],
+      "selectable": false
+    },
+    {
+      "accepted_for_exact_eval_candidate": false,
+      "archive_relevant_state_change": true,
+      "delta_bytes_vs_source_range_mask": 3854,
+      "error": null,
+      "header": {
+        "bitstream_bytes": 12416,
+        "bitstream_sha256": "9e1048f7619ba5400a1410706b44df2ecad68a8b4a4112a6890754746a12333d",
+        "block_width": 24,
+        "decoded_mask_bytes": 6291456,
+        "frame_count": 32,
+        "header_bytes": 24,
+        "height": 384,
+        "magic": "QMB1",
+        "packed_bytes": 12440,
+        "payload_sha256": "b17c74220e050b71618c4d4eb3dcb12cf3afa096803452226b1c0734ebeebf31",
+        "width": 512
+      },
+      "mode_family": "qmb1_vertical_block_escape",
+      "mode_id": "qmb1_vertical_block_escape_bw24",
+      "no_op_status": "state_changed",
+      "opportunities": {
+        "block_count_per_row": 16,
+        "block_width": 24,
+        "copied_block_fraction": 0.9442040728962818,
+        "copied_blocks": 247034,
+        "copied_pixel_fraction": 0.9423599243164062,
+        "copied_pixels": 5928816,
+        "eligible_blocks": 261632,
+        "total_pixels": 6291456
+      },
+      "payload_bytes": 12440,
+      "payload_sha256": "b17c74220e050b71618c4d4eb3dcb12cf3afa096803452226b1c0734ebeebf31",
+      "planning_only_reason": "local byte screen only; runtime integration, lane claim, archive closure, and CUDA auth eval are still required",
+      "projected_archive_bytes_if_other_streams_unchanged": 219589,
+      "rate_score_delta_if_components_unchanged": 0.0025662204053328486,
+      "raw_mask_parity": true,
+      "rejection_reasons": [
+        "no_local_byte_screen_win"
+      ],
+      "selectable": false
+    },
+    {
+      "accepted_for_exact_eval_candidate": false,
+      "archive_relevant_state_change": true,
+      "delta_bytes_vs_source_range_mask": 3316,
+      "error": null,
+      "header": {
+        "bitstream_bytes": 11878,
+        "bitstream_sha256": "2fdbafaea6a0a8276c9fb69422ce702fd8bcdcac317e9e9da60b372503c43ce9",
+        "block_width": 32,
+        "decoded_mask_bytes": 6291456,
+        "frame_count": 32,
+        "header_bytes": 24,
+        "height": 384,
+        "magic": "QMB1",
+        "packed_bytes": 11902,
+        "payload_sha256": "7d3a789c683a23ebca7a453bd53eb31c861836049f0dc2ae50684c3745916e12",
+        "width": 512
+      },
+      "mode_family": "qmb1_vertical_block_escape",
+      "mode_id": "qmb1_vertical_block_escape_bw32",
+      "no_op_status": "state_changed",
+      "opportunities": {
+        "block_count_per_row": 12,
+        "block_width": 32,
+        "copied_block_fraction": 0.9263851516634051,
+        "copied_blocks": 181779,
+        "copied_pixel_fraction": 0.9245758056640625,
+        "copied_pixels": 5816928,
+        "eligible_blocks": 196224,
+        "total_pixels": 6291456
+      },
+      "payload_bytes": 11902,
+      "payload_sha256": "7d3a789c683a23ebca7a453bd53eb31c861836049f0dc2ae50684c3745916e12",
+      "planning_only_reason": "local byte screen only; runtime integration, lane claim, archive closure, and CUDA auth eval are still required",
+      "projected_archive_bytes_if_other_streams_unchanged": 219051,
+      "rate_score_delta_if_components_unchanged": 0.0022079882885531203,
+      "raw_mask_parity": true,
+      "rejection_reasons": [
+        "no_local_byte_screen_win"
+      ],
+      "selectable": false
+    },
+    {
+      "accepted_for_exact_eval_candidate": false,
+      "archive_relevant_state_change": true,
+      "delta_bytes_vs_source_range_mask": 2708,
+      "error": null,
+      "header": {
+        "bitstream_bytes": 11270,
+        "bitstream_sha256": "e2946a0fc537bf32d761b1e82a53331dc0bc81fc2a0152b04f4eb6125a2d2588",
+        "block_width": 48,
+        "decoded_mask_bytes": 6291456,
+        "frame_count": 32,
+        "header_bytes": 24,
+        "height": 384,
+        "magic": "QMB1",
+        "packed_bytes": 11294,
+        "payload_sha256": "3434c6979cadfdb600b22e4b4e201c0d6f853c61123b7c1381f1d629acf5d179",
+        "width": 512
+      },
+      "mode_family": "qmb1_vertical_block_escape",
+      "mode_id": "qmb1_vertical_block_escape_bw48",
+      "no_op_status": "state_changed",
+      "opportunities": {
+        "block_count_per_row": 8,
+        "block_width": 48,
+        "copied_block_fraction": 0.8938891267123288,
+        "copied_blocks": 116935,
+        "copied_pixel_fraction": 0.8921432495117188,
+        "copied_pixels": 5612880,
+        "eligible_blocks": 130816,
+        "total_pixels": 6291456
+      },
+      "payload_bytes": 11294,
+      "payload_sha256": "3434c6979cadfdb600b22e4b4e201c0d6f853c61123b7c1381f1d629acf5d179",
+      "planning_only_reason": "local byte screen only; runtime integration, lane claim, archive closure, and CUDA auth eval are still required",
+      "projected_archive_bytes_if_other_streams_unchanged": 218443,
+      "rate_score_delta_if_components_unchanged": 0.0018031460450548401,
+      "raw_mask_parity": true,
+      "rejection_reasons": [
+        "no_local_byte_screen_win"
+      ],
+      "selectable": false
+    },
+    {
+      "accepted_for_exact_eval_candidate": false,
+      "archive_relevant_state_change": true,
+      "delta_bytes_vs_source_range_mask": 2463,
+      "error": null,
+      "header": {
+        "bitstream_bytes": 11025,
+        "bitstream_sha256": "c0ea2e1579e32216d34769d2bf491249750902a7af746b337ad4b5f6d35d963c",
+        "block_width": 64,
+        "decoded_mask_bytes": 6291456,
+        "frame_count": 32,
+        "header_bytes": 24,
+        "height": 384,
+        "magic": "QMB1",
+        "packed_bytes": 11049,
+        "payload_sha256": "a61fec8a2bbb6fde1e1763ad9761a16f3c56174a262f6c674d6ebe7fb577adbe",
+        "width": 512
+      },
+      "mode_family": "qmb1_vertical_block_escape",
+      "mode_id": "qmb1_vertical_block_escape_bw64",
+      "no_op_status": "state_changed",
+      "opportunities": {
+        "block_count_per_row": 6,
+        "block_width": 64,
+        "copied_block_fraction": 0.8611892530984997,
+        "copied_blocks": 84493,
+        "copied_pixel_fraction": 0.8595072428385416,
+        "copied_pixels": 5407552,
+        "eligible_blocks": 98112,
+        "total_pixels": 6291456
+      },
+      "payload_bytes": 11049,
+      "payload_sha256": "a61fec8a2bbb6fde1e1763ad9761a16f3c56174a262f6c674d6ebe7fb577adbe",
+      "planning_only_reason": "local byte screen only; runtime integration, lane claim, archive closure, and CUDA auth eval are still required",
+      "projected_archive_bytes_if_other_streams_unchanged": 218198,
+      "rate_score_delta_if_components_unchanged": 0.001640010601539908,
+      "raw_mask_parity": true,
+      "rejection_reasons": [
+        "no_local_byte_screen_win"
+      ],
+      "selectable": false
+    },
+    {
+      "accepted_for_exact_eval_candidate": false,
+      "archive_relevant_state_change": true,
+      "delta_bytes_vs_source_range_mask": 2000,
+      "error": null,
+      "header": {
+        "bitstream_bytes": 10562,
+        "bitstream_sha256": "7a5d0103f6b7a1ac26a7635b8ea2f17e02834afe28e2688f1f93df391d6763e1",
+        "block_width": 96,
+        "decoded_mask_bytes": 6291456,
+        "frame_count": 32,
+        "header_bytes": 24,
+        "height": 384,
+        "magic": "QMB1",
+        "packed_bytes": 10586,
+        "payload_sha256": "4c386d68f40c8ab1e79a5f8c1f8efff381ac731fbecbd33f367d2d7dea51dd51",
+        "width": 512
+      },
+      "mode_family": "qmb1_vertical_block_escape",
+      "mode_id": "qmb1_vertical_block_escape_bw96",
+      "no_op_status": "state_changed",
+      "opportunities": {
+        "block_count_per_row": 4,
+        "block_width": 96,
+        "copied_block_fraction": 0.8059870352250489,
+        "copied_blocks": 52718,
+        "copied_pixel_fraction": 0.804412841796875,
+        "copied_pixels": 5060928,
+        "eligible_blocks": 65408,
+        "total_pixels": 6291456
+      },
+      "payload_bytes": 10586,
+      "payload_sha256": "4c386d68f40c8ab1e79a5f8c1f8efff381ac731fbecbd33f367d2d7dea51dd51",
+      "planning_only_reason": "local byte screen only; runtime integration, lane claim, archive closure, and CUDA auth eval are still required",
+      "projected_archive_bytes_if_other_streams_unchanged": 217735,
+      "rate_score_delta_if_components_unchanged": 0.0013317179062443426,
+      "raw_mask_parity": true,
+      "rejection_reasons": [
+        "no_local_byte_screen_win"
+      ],
+      "selectable": false
+    },
+    {
+      "accepted_for_exact_eval_candidate": false,
+      "archive_relevant_state_change": true,
+      "delta_bytes_vs_source_range_mask": 1491,
+      "error": null,
+      "header": {
+        "bitstream_bytes": 10053,
+        "bitstream_sha256": "bfef90225fdfeed4e42e041775ebebe5c3d941127c66b42559356a627a525122",
+        "block_width": 128,
+        "decoded_mask_bytes": 6291456,
+        "frame_count": 32,
+        "header_bytes": 24,
+        "height": 384,
+        "magic": "QMB1",
+        "packed_bytes": 10077,
+        "payload_sha256": "7dc781306f05b31be650fe6fe4fdb85a9dece166a97d1f73a7aee57e16c4dfeb",
+        "width": 512
+      },
+      "mode_family": "qmb1_vertical_block_escape",
+      "mode_id": "qmb1_vertical_block_escape_bw128",
+      "no_op_status": "state_changed",
+      "opportunities": {
+        "block_count_per_row": 3,
+        "block_width": 128,
+        "copied_block_fraction": 0.7509988584474886,
+        "copied_blocks": 36841,
+        "copied_pixel_fraction": 0.7495320638020834,
+        "copied_pixels": 4715648,
+        "eligible_blocks": 49056,
+        "total_pixels": 6291456
+      },
+      "payload_bytes": 10077,
+      "payload_sha256": "7dc781306f05b31be650fe6fe4fdb85a9dece166a97d1f73a7aee57e16c4dfeb",
+      "planning_only_reason": "local byte screen only; runtime integration, lane claim, archive closure, and CUDA auth eval are still required",
+      "projected_archive_bytes_if_other_streams_unchanged": 217226,
+      "rate_score_delta_if_components_unchanged": 0.0009927956991051575,
+      "raw_mask_parity": true,
+      "rejection_reasons": [
+        "no_local_byte_screen_win"
+      ],
+      "selectable": false
+    }
+  ],
+  "dispatch_performed": false,
+  "evidence_grade": "empirical/local_byte_screen",
+  "gpu_required": false,
+  "mode_matrix": {
+    "accepted_local_byte_wins": 0,
+    "candidate_count": 16,
+    "qmb1_block_widths": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      8,
+      12,
+      16,
+      24,
+      32,
+      48,
+      64,
+      96,
+      128
+    ],
+    "qmf1_first_row_modes": [],
+    "reference_mode": "qma9_reference_reencode"
+  },
+  "raw_mask": {
+    "decoded_by_tool": true,
+    "frames": 32,
+    "raw_bytes": 6291456,
+    "raw_sha256": "276b3903c049cd9eb27e5fca95cfe36d1a70d0a04f0908c510fcd78ad1145164",
+    "source": "archive_range_mask.qma9",
+    "source_kind": "prefix_qma9_decode"
+  },
+  "schema": "qma9_range_mask_byte_search_profile_v1",
+  "score_claim": false,
+  "segments": [
+    {
+      "codec": "qma9_adaptive9_binary_range_mask",
+      "name": "range_mask.qma9",
+      "offset": 0,
+      "sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+      "size_bytes": 159011
+    },
+    {
+      "codec": "brotli_reordered_qzs3_model_bundle",
+      "name": "split_model_reordered.br_bundle",
+      "offset": 159011,
+      "sha256": "b649b0dacb1dcc93fd7da2e7f5c6d398fa933d2fe3087520359612afc8e4832d",
+      "size_bytes": 55725
+    },
+    {
+      "codec": "brotli_qp1_pose_stream",
+      "name": "optimized_poses.qp1.br",
+      "offset": 214736,
+      "sha256": "83767bbd10ae72c3237e468351eb9c465a954e25a6af04a0e0cb84d1f7af9b51",
+      "size_bytes": 899
+    },
+    {
+      "codec": "absent_pr84_no_router_actions",
+      "name": "router_actions.3bit",
+      "offset": 215635,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    }
+  ],
+  "selection_guard": {
+    "required_before_dispatch": [
+      "candidate accepted_for_exact_eval_candidate=true",
+      "runtime consumes the candidate payload from archive bytes",
+      "dispatch lane claim exists before any remote/GPU eval",
+      "exact CUDA auth eval through archive.zip -> inflate.sh -> upstream/evaluate.py"
+    ],
+    "safe_to_choose_exact_eval_candidate_after_local_screen_win": false
+  },
+  "source_qma9_header": {
+    "bitstream_bytes": 158991,
+    "bitstream_sha256": "77196f31a8fdfbf8f91c9c30600945473376534f15245bfb7622ddd77d17e3af",
+    "decoded_mask_bytes": 117964800,
+    "frame_count": 600,
+    "header_bytes": 20,
+    "height": 384,
+    "magic": "QMA9",
+    "packed_bytes": 159011,
+    "payload_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+    "width": 512
+  },
+  "split_constants": {
+    "PACKED_PAYLOAD_BYTES": 215860,
+    "POSE_STREAM_BYTES": 899,
+    "RANGE_MASK_BYTES": 159011,
+    "ROUTER_ACTION_BYTES": 225,
+    "SPLIT_MODEL_REORDERED_BYTES": 55725
+  },
+  "tool": "experiments/profile_qma9_range_mask_bitstream.py"
+}

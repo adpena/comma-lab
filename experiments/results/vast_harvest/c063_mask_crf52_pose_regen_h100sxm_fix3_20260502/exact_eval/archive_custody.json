@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-05-02T08:22:43Z",
+  "archive_label": "archive_eval_c063_mask_crf52_pose_regen_fix3_h100_20260502",
+  "archive_path": "/workspace/pact/experiments/results/vast_live_harvest/c063_mask_crf52_pose_regen_h100sxm_fix3_20260502T0820Z/archive.zip",
+  "custody_archive_path": "/workspace/pact/experiments/results/vast_live_harvest/c063_mask_crf52_pose_regen_h100sxm_fix3_20260502T0820Z/exact_eval/archive.zip",
+  "archive_size_bytes": 263605,
+  "archive_sha256": "c1f635775df5e52977eb8ae4714f57fc066df5fd150ad775f3f56eae0447914c"
+}

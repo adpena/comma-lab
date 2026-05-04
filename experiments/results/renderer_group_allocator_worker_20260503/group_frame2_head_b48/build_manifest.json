@@ -1,0 +1,858 @@
+{
+  "candidate_id": "group_frame2_head_b48",
+  "evidence_grade": "empirical_archive_candidate_until_pose_safety_and_exact_cuda",
+  "non_renderer_preservation": {
+    "all_non_renderer_members_preserved": true,
+    "members": {
+      "masks.mkv": {
+        "bytes": 223385,
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      "optimized_poses.qp1": {
+        "bytes": 1140,
+        "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 160,
+        "sha256": "50e997db4fd1b7642d9a2cd67b55802a4f7f9bd7a6603d0ca2eaf42e7fe7e320"
+      }
+    }
+  },
+  "output_archive": {
+    "byte_sufficient_for_sub314_if_components_unchanged": false,
+    "byte_target_for_unchanged_components": 274133,
+    "bytes": 276400,
+    "delta_bytes_vs_source_archive": 58,
+    "formula_only_rate_delta_vs_source_archive": 3.8619819281085936e-05,
+    "frontier_score_if_only_bytes_change": 0.3155093472146316,
+    "path": "/Users/adpena/Projects/pact/experiments/results/renderer_group_allocator_worker_20260503/group_frame2_head_b48/archive.zip",
+    "sha256": "2a69e13437f8e07fd3da0b2ff45898c84cbda0cb55ee335025ff364e9ff187fd",
+    "target_score": 0.314
+  },
+  "payload": {
+    "action_dict_slice_bytes": 0,
+    "actions_slice_bytes": 116,
+    "bytes": 276300,
+    "mask_slice_bytes": 219472,
+    "member_name": "p",
+    "payload_format": "pr75_p6_preserve_slices",
+    "pose_slice_bytes": 677,
+    "record_count": 40,
+    "renderer_slice_bytes": 56023,
+    "renderer_slice_sha256": "bb7f32b29708f6ee7ba9a3dfc4719d5694c42803e615214321625775330ce864",
+    "sha256": "d25e6548054c94951defb3b567693cd73e01ef8ee3773f8b30afb8bde7bb507c",
+    "source_payload_format": "P6"
+  },
+  "policy": {
+    "default_block_size": 32,
+    "name": "group_frame2_head_b48",
+    "overrides": [
+      {
+        "block_size": 48,
+        "prefix": "frame2_head"
+      }
+    ],
+    "rationale": "frame2-only renderer tensor group; avoids shared trunk, pose MLP, and frame1 pose-critical groups",
+    "risk_class": "low_risk_frame2_only",
+    "source": "generated_low_risk_group",
+    "spec": "group:frame2_head:48"
+  },
+  "policy_delta_table": [
+    {
+      "group": "frame2_head.block1",
+      "name": "frame2_head.block1.conv1.dw.weight",
+      "output_block_size": 48,
+      "output_raw_bytes": 286,
+      "raw_delta_vs_source": -2,
+      "risk_class": "low_risk_frame2_only",
+      "source_block_size": 32,
+      "source_raw_bytes": 288
+    },
+    {
+      "group": "frame2_head.block1",
+      "name": "frame2_head.block1.conv1.pw.weight",
+      "output_block_size": 48,
+      "output_raw_bytes": 1716,
+      "raw_delta_vs_source": -48,
+      "risk_class": "low_risk_frame2_only",
+      "source_block_size": 32,
+      "source_raw_bytes": 1764
+    },
+    {
+      "group": "frame2_head.block1",
+      "name": "frame2_head.block1.conv2.dw.weight",
+      "output_block_size": 48,
+      "output_raw_bytes": 286,
+      "raw_delta_vs_source": -2,
+      "risk_class": "low_risk_frame2_only",
+      "source_block_size": 32,
+      "source_raw_bytes": 288
+    },
+    {
+      "group": "frame2_head.block1",
+      "name": "frame2_head.block1.conv2.pw.weight",
+      "output_block_size": 48,
+      "output_raw_bytes": 1716,
+      "raw_delta_vs_source": -48,
+      "risk_class": "low_risk_frame2_only",
+      "source_block_size": 32,
+      "source_raw_bytes": 1764
+    },
+    {
+      "group": "frame2_head.block2",
+      "name": "frame2_head.block2.conv1.dw.weight",
+      "output_block_size": 48,
+      "output_raw_bytes": 286,
+      "raw_delta_vs_source": -2,
+      "risk_class": "low_risk_frame2_only",
+      "source_block_size": 32,
+      "source_raw_bytes": 288
+    },
+    {
+      "group": "frame2_head.block2",
+      "name": "frame2_head.block2.conv1.pw.weight",
+      "output_block_size": 48,
+      "output_raw_bytes": 1716,
+      "raw_delta_vs_source": -48,
+      "risk_class": "low_risk_frame2_only",
+      "source_block_size": 32,
+      "source_raw_bytes": 1764
+    },
+    {
+      "group": "frame2_head.block2",
+      "name": "frame2_head.block2.conv2.dw.weight",
+      "output_block_size": 48,
+      "output_raw_bytes": 286,
+      "raw_delta_vs_source": -2,
+      "risk_class": "low_risk_frame2_only",
+      "source_block_size": 32,
+      "source_raw_bytes": 288
+    },
+    {
+      "group": "frame2_head.block2",
+      "name": "frame2_head.block2.conv2.pw.weight",
+      "output_block_size": 48,
+      "output_raw_bytes": 1716,
+      "raw_delta_vs_source": -48,
+      "risk_class": "low_risk_frame2_only",
+      "source_block_size": 32,
+      "source_raw_bytes": 1764
+    },
+    {
+      "group": "frame2_head.pre",
+      "name": "frame2_head.pre.dw.weight",
+      "output_block_size": 48,
+      "output_raw_bytes": 286,
+      "raw_delta_vs_source": -2,
+      "risk_class": "low_risk_frame2_only",
+      "source_block_size": 32,
+      "source_raw_bytes": 288
+    },
+    {
+      "group": "frame2_head.pre",
+      "name": "frame2_head.pre.pw.weight",
+      "output_block_size": 48,
+      "output_raw_bytes": 1586,
+      "raw_delta_vs_source": -52,
+      "risk_class": "low_risk_frame2_only",
+      "source_block_size": 32,
+      "source_raw_bytes": 1638
+    }
+  ],
+  "promotion_eligible": false,
+  "remote_gpu_dispatch_performed": false,
+  "renderer_transform": {
+    "mixed_qzs_meta": {
+      "block_size_counts": {
+        "32": 30,
+        "48": 10
+      },
+      "charged_header_format": "compact_fp4_block_sizes_v1",
+      "charged_policy": {
+        "name": "group_frame2_head_b48",
+        "spec": "group:frame2_head:48"
+      },
+      "fp4_block_sizes": [
+        32,
+        32,
+        32,
+        32,
+        32,
+        32,
+        32,
+        32,
+        32,
+        32,
+        32,
+        32,
+        32,
+        32,
+        32,
+        32,
+        32,
+        32,
+        32,
+        32,
+        32,
+        32,
+        32,
+        32,
+        32,
+        32,
+        32,
+        32,
+        32,
+        32,
+        48,
+        48,
+        48,
+        48,
+        48,
+        48,
+        48,
+        48,
+        48,
+        48
+      ],
+      "fp4_tensor_order": "joint_frame_generator_state_dict_fp4_order_v1",
+      "fp4_tensors": [
+        {
+          "block_size": 32,
+          "name": "shared_trunk.stem_conv.dw.weight",
+          "numel": 72,
+          "packed_bytes": 48,
+          "scale_bytes": 6,
+          "shape": [
+            8,
+            1,
+            3,
+            3
+          ]
+        },
+        {
+          "block_size": 32,
+          "name": "shared_trunk.stem_conv.pw.weight",
+          "numel": 448,
+          "packed_bytes": 224,
+          "scale_bytes": 28,
+          "shape": [
+            56,
+            8,
+            1,
+            1
+          ]
+        },
+        {
+          "block_size": 32,
+          "name": "shared_trunk.stem_block.conv1.dw.weight",
+          "numel": 504,
+          "packed_bytes": 256,
+          "scale_bytes": 32,
+          "shape": [
+            56,
+            1,
+            3,
+            3
+          ]
+        },
+        {
+          "block_size": 32,
+          "name": "shared_trunk.stem_block.conv1.pw.weight",
+          "numel": 3136,
+          "packed_bytes": 1568,
+          "scale_bytes": 196,
+          "shape": [
+            56,
+            56,
+            1,
+            1
+          ]
+        },
+        {
+          "block_size": 32,
+          "name": "shared_trunk.stem_block.conv2.dw.weight",
+          "numel": 504,
+          "packed_bytes": 256,
+          "scale_bytes": 32,
+          "shape": [
+            56,
+            1,
+            3,
+            3
+          ]
+        },
+        {
+          "block_size": 32,
+          "name": "shared_trunk.stem_block.conv2.pw.weight",
+          "numel": 3136,
+          "packed_bytes": 1568,
+          "scale_bytes": 196,
+          "shape": [
+            56,
+            56,
+            1,
+            1
+          ]
+        },
+        {
+          "block_size": 32,
+          "name": "shared_trunk.down_conv.dw.weight",
+          "numel": 504,
+          "packed_bytes": 256,
+          "scale_bytes": 32,
+          "shape": [
+            56,
+            1,
+            3,
+            3
+          ]
+        },
+        {
+          "block_size": 32,
+          "name": "shared_trunk.down_conv.pw.weight",
+          "numel": 3584,
+          "packed_bytes": 1792,
+          "scale_bytes": 224,
+          "shape": [
+            64,
+            56,
+            1,
+            1
+          ]
+        },
+        {
+          "block_size": 32,
+          "name": "shared_trunk.down_block.conv1.dw.weight",
+          "numel": 576,
+          "packed_bytes": 288,
+          "scale_bytes": 36,
+          "shape": [
+            64,
+            1,
+            3,
+            3
+          ]
+        },
+        {
+          "block_size": 32,
+          "name": "shared_trunk.down_block.conv1.pw.weight",
+          "numel": 4096,
+          "packed_bytes": 2048,
+          "scale_bytes": 256,
+          "shape": [
+            64,
+            64,
+            1,
+            1
+          ]
+        },
+        {
+          "block_size": 32,
+          "name": "shared_trunk.down_block.conv2.dw.weight",
+          "numel": 576,
+          "packed_bytes": 288,
+          "scale_bytes": 36,
+          "shape": [
+            64,
+            1,
+            3,
+            3
+          ]
+        },
+        {
+          "block_size": 32,
+          "name": "shared_trunk.down_block.conv2.pw.weight",
+          "numel": 4096,
+          "packed_bytes": 2048,
+          "scale_bytes": 256,
+          "shape": [
+            64,
+            64,
+            1,
+            1
+          ]
+        },
+        {
+          "block_size": 32,
+          "name": "shared_trunk.up.1.dw.weight",
+          "numel": 576,
+          "packed_bytes": 288,
+          "scale_bytes": 36,
+          "shape": [
+            64,
+            1,
+            3,
+            3
+          ]
+        },
+        {
+          "block_size": 32,
+          "name": "shared_trunk.up.1.pw.weight",
+          "numel": 3584,
+          "packed_bytes": 1792,
+          "scale_bytes": 224,
+          "shape": [
+            56,
+            64,
+            1,
+            1
+          ]
+        },
+        {
+          "block_size": 32,
+          "name": "shared_trunk.fuse.dw.weight",
+          "numel": 1008,
+          "packed_bytes": 512,
+          "scale_bytes": 64,
+          "shape": [
+            112,
+            1,
+            3,
+            3
+          ]
+        },
+        {
+          "block_size": 32,
+          "name": "shared_trunk.fuse.pw.weight",
+          "numel": 6272,
+          "packed_bytes": 3136,
+          "scale_bytes": 392,
+          "shape": [
+            56,
+            112,
+            1,
+            1
+          ]
+        },
+        {
+          "block_size": 32,
+          "name": "shared_trunk.fuse_block.conv1.dw.weight",
+          "numel": 504,
+          "packed_bytes": 256,
+          "scale_bytes": 32,
+          "shape": [
+            56,
+            1,
+            3,
+            3
+          ]
+        },
+        {
+          "block_size": 32,
+          "name": "shared_trunk.fuse_block.conv1.pw.weight",
+          "numel": 3136,
+          "packed_bytes": 1568,
+          "scale_bytes": 196,
+          "shape": [
+            56,
+            56,
+            1,
+            1
+          ]
+        },
+        {
+          "block_size": 32,
+          "name": "shared_trunk.fuse_block.conv2.dw.weight",
+          "numel": 504,
+          "packed_bytes": 256,
+          "scale_bytes": 32,
+          "shape": [
+            56,
+            1,
+            3,
+            3
+          ]
+        },
+        {
+          "block_size": 32,
+          "name": "shared_trunk.fuse_block.conv2.pw.weight",
+          "numel": 3136,
+          "packed_bytes": 1568,
+          "scale_bytes": 196,
+          "shape": [
+            56,
+            56,
+            1,
+            1
+          ]
+        },
+        {
+          "block_size": 32,
+          "name": "frame1_head.block1.conv1.dw.weight",
+          "numel": 504,
+          "packed_bytes": 256,
+          "scale_bytes": 32,
+          "shape": [
+            56,
+            1,
+            3,
+            3
+          ]
+        },
+        {
+          "block_size": 32,
+          "name": "frame1_head.block1.conv1.pw.weight",
+          "numel": 3136,
+          "packed_bytes": 1568,
+          "scale_bytes": 196,
+          "shape": [
+            56,
+            56,
+            1,
+            1
+          ]
+        },
+        {
+          "block_size": 32,
+          "name": "frame1_head.block1.conv2.dw.weight",
+          "numel": 504,
+          "packed_bytes": 256,
+          "scale_bytes": 32,
+          "shape": [
+            56,
+            1,
+            3,
+            3
+          ]
+        },
+        {
+          "block_size": 32,
+          "name": "frame1_head.block1.conv2.pw.weight",
+          "numel": 3136,
+          "packed_bytes": 1568,
+          "scale_bytes": 196,
+          "shape": [
+            56,
+            56,
+            1,
+            1
+          ]
+        },
+        {
+          "block_size": 32,
+          "name": "frame1_head.block2.conv1.dw.weight",
+          "numel": 504,
+          "packed_bytes": 256,
+          "scale_bytes": 32,
+          "shape": [
+            56,
+            1,
+            3,
+            3
+          ]
+        },
+        {
+          "block_size": 32,
+          "name": "frame1_head.block2.conv1.pw.weight",
+          "numel": 3136,
+          "packed_bytes": 1568,
+          "scale_bytes": 196,
+          "shape": [
+            56,
+            56,
+            1,
+            1
+          ]
+        },
+        {
+          "block_size": 32,
+          "name": "frame1_head.block2.conv2.dw.weight",
+          "numel": 504,
+          "packed_bytes": 256,
+          "scale_bytes": 32,
+          "shape": [
+            56,
+            1,
+            3,
+            3
+          ]
+        },
+        {
+          "block_size": 32,
+          "name": "frame1_head.block2.conv2.pw.weight",
+          "numel": 3136,
+          "packed_bytes": 1568,
+          "scale_bytes": 196,
+          "shape": [
+            56,
+            56,
+            1,
+            1
+          ]
+        },
+        {
+          "block_size": 32,
+          "name": "frame1_head.pre.dw.weight",
+          "numel": 504,
+          "packed_bytes": 256,
+          "scale_bytes": 32,
+          "shape": [
+            56,
+            1,
+            3,
+            3
+          ]
+        },
+        {
+          "block_size": 32,
+          "name": "frame1_head.pre.pw.weight",
+          "numel": 2912,
+          "packed_bytes": 1456,
+          "scale_bytes": 182,
+          "shape": [
+            52,
+            56,
+            1,
+            1
+          ]
+        },
+        {
+          "block_size": 48,
+          "name": "frame2_head.block1.conv1.dw.weight",
+          "numel": 504,
+          "packed_bytes": 264,
+          "scale_bytes": 22,
+          "shape": [
+            56,
+            1,
+            3,
+            3
+          ]
+        },
+        {
+          "block_size": 48,
+          "name": "frame2_head.block1.conv1.pw.weight",
+          "numel": 3136,
+          "packed_bytes": 1584,
+          "scale_bytes": 132,
+          "shape": [
+            56,
+            56,
+            1,
+            1
+          ]
+        },
+        {
+          "block_size": 48,
+          "name": "frame2_head.block1.conv2.dw.weight",
+          "numel": 504,
+          "packed_bytes": 264,
+          "scale_bytes": 22,
+          "shape": [
+            56,
+            1,
+            3,
+            3
+          ]
+        },
+        {
+          "block_size": 48,
+          "name": "frame2_head.block1.conv2.pw.weight",
+          "numel": 3136,
+          "packed_bytes": 1584,
+          "scale_bytes": 132,
+          "shape": [
+            56,
+            56,
+            1,
+            1
+          ]
+        },
+        {
+          "block_size": 48,
+          "name": "frame2_head.block2.conv1.dw.weight",
+          "numel": 504,
+          "packed_bytes": 264,
+          "scale_bytes": 22,
+          "shape": [
+            56,
+            1,
+            3,
+            3
+          ]
+        },
+        {
+          "block_size": 48,
+          "name": "frame2_head.block2.conv1.pw.weight",
+          "numel": 3136,
+          "packed_bytes": 1584,
+          "scale_bytes": 132,
+          "shape": [
+            56,
+            56,
+            1,
+            1
+          ]
+        },
+        {
+          "block_size": 48,
+          "name": "frame2_head.block2.conv2.dw.weight",
+          "numel": 504,
+          "packed_bytes": 264,
+          "scale_bytes": 22,
+          "shape": [
+            56,
+            1,
+            3,
+            3
+          ]
+        },
+        {
+          "block_size": 48,
+          "name": "frame2_head.block2.conv2.pw.weight",
+          "numel": 3136,
+          "packed_bytes": 1584,
+          "scale_bytes": 132,
+          "shape": [
+            56,
+            56,
+            1,
+            1
+          ]
+        },
+        {
+          "block_size": 48,
+          "name": "frame2_head.pre.dw.weight",
+          "numel": 504,
+          "packed_bytes": 264,
+          "scale_bytes": 22,
+          "shape": [
+            56,
+            1,
+            3,
+            3
+          ]
+        },
+        {
+          "block_size": 48,
+          "name": "frame2_head.pre.pw.weight",
+          "numel": 2912,
+          "packed_bytes": 1464,
+          "scale_bytes": 122,
+          "shape": [
+            52,
+            56,
+            1,
+            1
+          ]
+        }
+      ],
+      "header_bytes": 556,
+      "payload_bytes": 59592,
+      "payload_sha256": "afa55172f33d9f255f2b0bf735d16b69bb1a2da93815252ecc3c568cd8b39d7d",
+      "policy": {
+        "default_block_size": 32,
+        "exact_evaluable_archive": true,
+        "name": "group_frame2_head_b48",
+        "overrides": [
+          {
+            "block_size": 48,
+            "prefix": "frame2_head"
+          }
+        ],
+        "rationale": "frame2-only renderer tensor group; avoids shared trunk, pose MLP, and frame1 pose-critical groups",
+        "risk_class": "low_risk_frame2_only",
+        "source": "generated_low_risk_group",
+        "spec": "group:frame2_head:48"
+      },
+      "runtime_decoder_available": true,
+      "schema": "mixed_qzs_block_screen_v1",
+      "segment_bytes": {
+        "bias": 2284,
+        "dense_fp": 3104,
+        "dense_other": 0,
+        "fp_weight": 684,
+        "packed": 38144,
+        "qv": 10424,
+        "scales": 4388
+      },
+      "source_codec_family": "QZS3",
+      "wire_format": "MQZ1"
+    },
+    "output_bytes": 59592,
+    "output_format": "MQZ1",
+    "output_sha256": "afa55172f33d9f255f2b0bf735d16b69bb1a2da93815252ecc3c568cd8b39d7d",
+    "renderer_delta_bytes": 304,
+    "source_bytes": 59288,
+    "source_format": "QZS3",
+    "source_sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+  },
+  "runtime_contract": {
+    "byte_closed": true,
+    "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+    "pose_safety_preflight_required_before_dispatch": true,
+    "renderer_only_transplant": true,
+    "runtime_unpack_summary": {
+      "members": [
+        {
+          "bytes": 59592,
+          "name": "renderer.bin",
+          "sha256": "afa55172f33d9f255f2b0bf735d16b69bb1a2da93815252ecc3c568cd8b39d7d"
+        },
+        {
+          "bytes": 223385,
+          "name": "masks.mkv",
+          "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        {
+          "bytes": 1140,
+          "name": "optimized_poses.qp1",
+          "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+        },
+        {
+          "bytes": 160,
+          "name": "seg_tile_actions.bin",
+          "sha256": "50e997db4fd1b7642d9a2cd67b55802a4f7f9bd7a6603d0ca2eaf42e7fe7e320"
+        }
+      ],
+      "payload_bytes": 276300,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+      "schema": "renderer_payload_pr64_len_table_v1",
+      "source_archive_sha256": null
+    },
+    "runtime_unpack_verified": true,
+    "single_payload_member": true
+  },
+  "schema": "renderer_group_allocator_candidates_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 276342,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/archive.zip",
+    "sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8",
+    "source_archive_packaging": "packed_renderer_payload",
+    "source_logical_member_names": [
+      "renderer.bin",
+      "masks.mkv",
+      "optimized_poses.qp1",
+      "seg_tile_actions.bin"
+    ],
+    "source_payload_header_payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+    "source_payload_header_schema": "renderer_payload_pr64_len_table_v1",
+    "source_payload_member": "p",
+    "source_payload_member_bytes": 276242,
+    "source_payload_member_sha256": "fcc3fddb3a4182182bbfca1d1064544c87e58a5a9f76ea6fddfcfe4eb0b453c1",
+    "source_zip_members": [
+      "p"
+    ]
+  },
+  "source_evidence": {
+    "bytes": 36440,
+    "exists": true,
+    "json_parseable": true,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/contest_auth_eval.json",
+    "sha256": "058e43c3f41df3e13c7ea2ff9269fa69ffcff77a811ae5dfb716a71da894e1a1",
+    "summary": {
+      "archive_size_bytes": 276342,
+      "avg_posenet_dist": 0.00049601,
+      "avg_segnet_dist": 0.00061038,
+      "canonical_score": 0.3154707273953505,
+      "n_samples": 600,
+      "provenance_archive_sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8",
+      "provenance_archive_size_bytes": 276342,
+      "provenance_device": "cuda",
+      "provenance_gpu_model": "Tesla T4",
+      "score_recomputed_from_components": 0.3154707273953505
+    }
+  },
+  "tool": "experiments/build_renderer_group_allocator_candidates.py"
+}

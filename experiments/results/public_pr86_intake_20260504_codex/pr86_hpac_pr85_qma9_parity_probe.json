@@ -1,0 +1,30 @@
+{
+  "dispatch_performed": false,
+  "evidence_grade": "local_decode_negative",
+  "failure_class": "pr86_hpac_decode_contract_or_dependency_mismatch",
+  "interpretation": "PR86 HPAC cannot be treated as a direct PR85 mask replacement until the exact dependency/runtime contract is reproduced and decoded-mask parity is proven.",
+  "next_steps": [
+    "replay PR86 inflate end-to-end in an isolated submission dir with declared deps",
+    "inspect whether tokens.bin encodes residual tokens or raw tokens",
+    "verify constriction version/API used by author",
+    "only then test PR85 decoded-mask parity"
+  ],
+  "observed_error": "AssertionError: Tried to decode from compressed data that is invalid for the employed entropy model.",
+  "pr85_decoded_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+  "pr85_decoded_shape": [
+    600,
+    384,
+    512
+  ],
+  "pr86_archive": "experiments/results/public_pr86_intake_20260504_codex/archive.zip",
+  "pr86_archive_sha256": "e67b7c22240dbe33853c19d049b0044a5df16ce5f751ba8f1021cab8ceb03cef",
+  "pr86_dependencies": {
+    "constriction": "0.4.2",
+    "pyppmd": "1.3.1"
+  },
+  "recorded_at_utc": "2026-05-04T00:15:44Z",
+  "schema_version": 1,
+  "score_claim": false,
+  "status": "blocked_entropy_decode_assertion",
+  "tool": "local_pr86_hpac_pr85_qma9_parity_probe"
+}

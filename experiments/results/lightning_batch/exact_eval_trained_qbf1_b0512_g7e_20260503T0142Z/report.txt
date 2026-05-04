@@ -1,0 +1,17 @@
+=== Evaluation config ===
+  batch_size: 16
+  device: cuda
+  num_threads: 2
+  prefetch_queue_depth: 4
+  report: /teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_trained_qbf1_b0512_g7e_20260503T0142Z/eval_work/report.txt
+  seed: 1234
+  submission_dir: /teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_trained_qbf1_b0512_g7e_20260503T0142Z/eval_work
+  uncompressed_dir: /teamspace/studios/this_studio/pact/upstream/videos
+  video_names_file: /teamspace/studios/this_studio/pact/upstream/public_test_video_names.txt
+=== Evaluation results over 600 samples ===
+  Average PoseNet Distortion: 29.82484055
+  Average SegNet Distortion: 0.00264080
+  Submission file size: 283,432 bytes
+  Original uncompressed size: 37,545,489 bytes
+  Compression Rate: 0.00754903
+  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 17.72

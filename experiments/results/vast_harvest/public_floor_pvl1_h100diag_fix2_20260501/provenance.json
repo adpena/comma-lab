@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "started_at_utc": "2026-05-01T23:41:52Z",
+  "git_hash": "no-git",
+  "gpu_name": "NVIDIA H100 NVL",
+  "driver_version": "580.82.07",
+  "lane_script": "scripts/remote_archive_only_eval.sh",
+  "tag": "public_floor_pvl1_h100diag_fix2_20260501",
+  "archive_path": "/workspace/pact/iter_0/archive.zip",
+  "predicted_band": [0.324, 0.326],
+  "controlled_baseline": "public_pr63_qpose14_l40s score=0.32518843312932477 bytes=287573 sha=e012ebeffcc1e1655f4d674d0a779c1bf4cd41cfa82746de2ff6f73692e82a66",
+  "no_training": true,
+  "no_build": true,
+  "strict_scorer_rule_compliant": true,
+  "design_memo": "scripts/remote_archive_only_eval.sh"
+}

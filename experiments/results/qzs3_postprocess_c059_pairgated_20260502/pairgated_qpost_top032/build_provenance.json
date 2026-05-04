@@ -1,0 +1,139 @@
+{
+  "archive_byte_delta": 732,
+  "evidence_grade": "empirical_byte_only_until_cuda_auth_eval",
+  "formula_rate_score_delta": 0.00048740875368542943,
+  "include_streams": [
+    "post",
+    "shift",
+    "frac",
+    "frac2",
+    "frac3",
+    "bias",
+    "region"
+  ],
+  "members": {
+    "p": {
+      "bytes": 276247,
+      "sha256": "eb5a5adc192d1a24ddfc37ab7c9a6f06bf448ce308ec0dfc42e4f9c016dfb3d7"
+    },
+    "qpost.bin": {
+      "bytes": 638,
+      "sha256": "c4bd091bd512e1b34804e18dec2e73ab085d54976f4ff5bee553c7fa133fde83"
+    }
+  },
+  "omitted_streams": [
+    "randmulti"
+  ],
+  "output_archive": "/Users/adpena/Projects/pact/experiments/results/qzs3_postprocess_c059_pairgated_20260502/pairgated_qpost_top032/archive.zip",
+  "output_archive_bytes": 277079,
+  "output_archive_sha256": "ed6e383cea466fefa8379451ff1a7ba7b5927a8070a512aeb3fcec6d425115a6",
+  "pair_filter": {
+    "nonselected_pairs_default_to_identity": true,
+    "pair_count": 32,
+    "pair_indices": [
+      37,
+      46,
+      64,
+      67,
+      70,
+      78,
+      87,
+      97,
+      103,
+      107,
+      111,
+      112,
+      129,
+      130,
+      143,
+      153,
+      156,
+      159,
+      164,
+      166,
+      191,
+      198,
+      221,
+      289,
+      290,
+      406,
+      418,
+      420,
+      426,
+      435,
+      496,
+      546
+    ],
+    "randmulti_supported": false
+  },
+  "pr65_archive": "/Users/adpena/Projects/pact/reports/raw/leaderboard_intel_20260501/pr65_archive.zip",
+  "pr65_archive_sha256": "b331cb4f6df9d8929db966b943b8c73624cdf3b6db71acbde361570852e59e68",
+  "qpost_streams": {
+    "bias": {
+      "active": true,
+      "bytes": 80,
+      "original_bytes": 223,
+      "original_sha256": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b",
+      "sha256": "cf47b808f98491b5d043e3112d4cf154dd56c620eb4060b22c0477c16564cc98"
+    },
+    "frac": {
+      "active": true,
+      "bytes": 49,
+      "original_bytes": 106,
+      "original_sha256": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992",
+      "sha256": "f9b1287aa4f305f7f6df21b622a4d84bec7930339a1ecb0a1b8c96d8bbabd62a"
+    },
+    "frac2": {
+      "active": true,
+      "bytes": 56,
+      "original_bytes": 149,
+      "original_sha256": "3a01c7546d89d9d3ca846da37a20add7d456421e9211a6339850d946b856026b",
+      "sha256": "210cedb1500c3b940ca3b23e03ef5aeff8487c83b9499b63fca49091139ba643"
+    },
+    "frac3": {
+      "active": true,
+      "bytes": 59,
+      "original_bytes": 154,
+      "original_sha256": "d725b01b604566c5a76a06b821c644c8d5d5bb9a57ab0597d3bdabc8389858b5",
+      "sha256": "45550f8d1def5deda2381a89135a91cfdeca7a318ed6c83b4a0c9d68ee77ff87"
+    },
+    "post": {
+      "active": true,
+      "bytes": 222,
+      "original_bytes": 1400,
+      "original_sha256": "c3dc88e0fb5a1e48aec49eeacefeea20685e3c02598933deb1ff22dc09892575",
+      "sha256": "9833b18529bbe1954c5a49fc979fcd9b2f860bdab040862b1bedf6f6d61e9187"
+    },
+    "randmulti": {
+      "active": false,
+      "bytes": 0,
+      "original_bytes": 3731,
+      "original_sha256": "dddf4b4fec32190b219d3e916e05bba5d1711d4208d16966929fa09cbc39349e",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "region": {
+      "active": true,
+      "bytes": 71,
+      "original_bytes": 273,
+      "original_sha256": "4a7c16094fab281c30e27621a58577c095c4b1153c232518c9adbaba2a2b2392",
+      "sha256": "0246005dd2903886d290df7325336a7a015f9bd95bcd57f39c730e0f9c10e22e"
+    },
+    "shift": {
+      "active": true,
+      "bytes": 65,
+      "original_bytes": 226,
+      "original_sha256": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4",
+      "sha256": "08a5d4e5e1115df6eac381ea88f30e3edcbdbbf167b283426992b02e42b6fa0d"
+    }
+  },
+  "schema_version": 1,
+  "score_claim": false,
+  "source_archive": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_qzs3_b32_maskfirst_qp1_fix1_t4_20260502T0331Z/archive.zip",
+  "source_archive_bytes": 276347,
+  "source_archive_sha256": "cf44aa7fdb13b9ab6236aefde1f5f58e915d7dfa99128246235443841396c6ab",
+  "source_policy_expected_net_utility": 0.00041971884670332396,
+  "source_policy_expected_scorer_utility": 0.00047312073474372213,
+  "source_policy_name": "public_pose_manifold_transfer_top032",
+  "source_policy_selected_count": 32,
+  "tool": "experiments/build_qzs3_postprocess_candidate.py"
+}

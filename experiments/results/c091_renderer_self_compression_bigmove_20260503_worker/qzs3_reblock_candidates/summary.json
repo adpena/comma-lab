@@ -1,0 +1,178 @@
+{
+  "best_by_archive_bytes": {
+    "archive": "/Users/adpena/Projects/pact/experiments/results/c091_renderer_self_compression_bigmove_20260503_worker/qzs3_reblock_candidates/qzs3_b0512_c091_p3_preserved_minp_slices/archive.zip",
+    "archive_bytes": 272340,
+    "archive_sha256": "7960d7abfb53750eddfc1658e183335a37d19cb639414247a1ea9a4af601efa1",
+    "candidate_id": "qzs3_b0512_c091_p3_preserved_minp_slices",
+    "delta_bytes_vs_source_archive": -4141,
+    "manifest": "/Users/adpena/Projects/pact/experiments/results/c091_renderer_self_compression_bigmove_20260503_worker/qzs3_reblock_candidates/qzs3_b0512_c091_p3_preserved_minp_slices/build_manifest.json",
+    "payload_format": "c091_p3_preserve_minp_slices",
+    "promotion_eligible": false,
+    "qzs3_block_size": 512,
+    "renderer_bytes": 58814,
+    "renderer_sha256": "99af87475a58e5bddad69d009415885c06d0bbb66f9acdc3fab68f3b6a2709f2",
+    "renderer_transform_kind": "qzs3_reencoded_state",
+    "score_claim": false
+  },
+  "candidate_count": 8,
+  "candidates": [
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/c091_renderer_self_compression_bigmove_20260503_worker/qzs3_reblock_candidates/qzs3_b0512_c091_p3_preserved_minp_slices/archive.zip",
+      "archive_bytes": 272340,
+      "archive_sha256": "7960d7abfb53750eddfc1658e183335a37d19cb639414247a1ea9a4af601efa1",
+      "candidate_id": "qzs3_b0512_c091_p3_preserved_minp_slices",
+      "delta_bytes_vs_source_archive": -4141,
+      "manifest": "/Users/adpena/Projects/pact/experiments/results/c091_renderer_self_compression_bigmove_20260503_worker/qzs3_reblock_candidates/qzs3_b0512_c091_p3_preserved_minp_slices/build_manifest.json",
+      "payload_format": "c091_p3_preserve_minp_slices",
+      "promotion_eligible": false,
+      "qzs3_block_size": 512,
+      "renderer_bytes": 58814,
+      "renderer_sha256": "99af87475a58e5bddad69d009415885c06d0bbb66f9acdc3fab68f3b6a2709f2",
+      "renderer_transform_kind": "qzs3_reencoded_state",
+      "score_claim": false
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/c091_renderer_self_compression_bigmove_20260503_worker/qzs3_reblock_candidates/qzs3_b0256_c091_p3_preserved_minp_slices/archive.zip",
+      "archive_bytes": 272894,
+      "archive_sha256": "5b82f1558f3f591f8ae72e0ceb78ed05aa4b2b76b552b81adbc410f76889f9f2",
+      "candidate_id": "qzs3_b0256_c091_p3_preserved_minp_slices",
+      "delta_bytes_vs_source_archive": -3587,
+      "manifest": "/Users/adpena/Projects/pact/experiments/results/c091_renderer_self_compression_bigmove_20260503_worker/qzs3_reblock_candidates/qzs3_b0256_c091_p3_preserved_minp_slices/build_manifest.json",
+      "payload_format": "c091_p3_preserve_minp_slices",
+      "promotion_eligible": false,
+      "qzs3_block_size": 256,
+      "renderer_bytes": 56932,
+      "renderer_sha256": "1584f005b731b5e8c85fa811962d07709c99b5c3aae491ac4751db2ac621d518",
+      "renderer_transform_kind": "qzs3_reencoded_state",
+      "score_claim": false
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/c091_renderer_self_compression_bigmove_20260503_worker/qzs3_reblock_candidates/qzs3_b0192_c091_p3_preserved_minp_slices/archive.zip",
+      "archive_bytes": 273140,
+      "archive_sha256": "ad3accc0fd789700500b9eb1ee2a3126c011cb2db1f603333856ce16628c9d9e",
+      "candidate_id": "qzs3_b0192_c091_p3_preserved_minp_slices",
+      "delta_bytes_vs_source_archive": -3341,
+      "manifest": "/Users/adpena/Projects/pact/experiments/results/c091_renderer_self_compression_bigmove_20260503_worker/qzs3_reblock_candidates/qzs3_b0192_c091_p3_preserved_minp_slices/build_manifest.json",
+      "payload_format": "c091_p3_preserve_minp_slices",
+      "promotion_eligible": false,
+      "qzs3_block_size": 192,
+      "renderer_bytes": 57172,
+      "renderer_sha256": "a36279df18dbcb9da445cafb991d1f1e5957e6cfe9bbac12b0bf200e2b3740e2",
+      "renderer_transform_kind": "qzs3_reencoded_state",
+      "score_claim": false
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/c091_renderer_self_compression_bigmove_20260503_worker/qzs3_reblock_candidates/qzs3_b0128_c091_p3_preserved_minp_slices/archive.zip",
+      "archive_bytes": 273704,
+      "archive_sha256": "4eabd1c8b4462530a53e4a57f2f91afead41cc956d9d3ad0ff0abbc8a15c270d",
+      "candidate_id": "qzs3_b0128_c091_p3_preserved_minp_slices",
+      "delta_bytes_vs_source_archive": -2777,
+      "manifest": "/Users/adpena/Projects/pact/experiments/results/c091_renderer_self_compression_bigmove_20260503_worker/qzs3_reblock_candidates/qzs3_b0128_c091_p3_preserved_minp_slices/build_manifest.json",
+      "payload_format": "c091_p3_preserve_minp_slices",
+      "promotion_eligible": false,
+      "qzs3_block_size": 128,
+      "renderer_bytes": 56300,
+      "renderer_sha256": "464df34846a5cb17549c80e8fa700bcf05adaa56a649dc77610cd352c4086ae0",
+      "renderer_transform_kind": "qzs3_reencoded_state",
+      "score_claim": false
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/c091_renderer_self_compression_bigmove_20260503_worker/qzs3_reblock_candidates/qzs3_b0096_c091_p3_preserved_minp_slices/archive.zip",
+      "archive_bytes": 274166,
+      "archive_sha256": "711af4b78976f9302d1d01c5ef0359faab9316f2a1df20e9e240a0170061c516",
+      "candidate_id": "qzs3_b0096_c091_p3_preserved_minp_slices",
+      "delta_bytes_vs_source_archive": -2315,
+      "manifest": "/Users/adpena/Projects/pact/experiments/results/c091_renderer_self_compression_bigmove_20260503_worker/qzs3_reblock_candidates/qzs3_b0096_c091_p3_preserved_minp_slices/build_manifest.json",
+      "payload_format": "c091_p3_preserve_minp_slices",
+      "promotion_eligible": false,
+      "qzs3_block_size": 96,
+      "renderer_bytes": 57052,
+      "renderer_sha256": "5853972fb76f81722ba62e96311bf25e209a8a899397534f4964c04fa4c058a9",
+      "renderer_transform_kind": "qzs3_reencoded_state",
+      "score_claim": false
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/c091_renderer_self_compression_bigmove_20260503_worker/qzs3_reblock_candidates/qzs3_b0064_c091_p3_preserved_minp_slices/archive.zip",
+      "archive_bytes": 274840,
+      "archive_sha256": "1af9c5db6e9990e368c600c8246111e53de81aff9b72c3feb0a94b01b86c896b",
+      "candidate_id": "qzs3_b0064_c091_p3_preserved_minp_slices",
+      "delta_bytes_vs_source_archive": -1641,
+      "manifest": "/Users/adpena/Projects/pact/experiments/results/c091_renderer_self_compression_bigmove_20260503_worker/qzs3_reblock_candidates/qzs3_b0064_c091_p3_preserved_minp_slices/build_manifest.json",
+      "payload_format": "c091_p3_preserve_minp_slices",
+      "promotion_eligible": false,
+      "qzs3_block_size": 64,
+      "renderer_bytes": 56962,
+      "renderer_sha256": "932a65cb0412d5727fb1170506535733f942813125af882295c8063e9e34e49d",
+      "renderer_transform_kind": "qzs3_reencoded_state",
+      "score_claim": false
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/c091_renderer_self_compression_bigmove_20260503_worker/qzs3_reblock_candidates/qzs3_b0048_c091_p3_preserved_minp_slices/archive.zip",
+      "archive_bytes": 275562,
+      "archive_sha256": "17603b13eaaffa58b6411d5b3d9ed9b49ddc035d0dd9bf36b19485a4010e54f8",
+      "candidate_id": "qzs3_b0048_c091_p3_preserved_minp_slices",
+      "delta_bytes_vs_source_archive": -919,
+      "manifest": "/Users/adpena/Projects/pact/experiments/results/c091_renderer_self_compression_bigmove_20260503_worker/qzs3_reblock_candidates/qzs3_b0048_c091_p3_preserved_minp_slices/build_manifest.json",
+      "payload_format": "c091_p3_preserve_minp_slices",
+      "promotion_eligible": false,
+      "qzs3_block_size": 48,
+      "renderer_bytes": 58128,
+      "renderer_sha256": "6cef37f3a32ae2513f5d39196743ab74014939afc6361fa65629f38b7562a591",
+      "renderer_transform_kind": "qzs3_reencoded_state",
+      "score_claim": false
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/c091_renderer_self_compression_bigmove_20260503_worker/qzs3_reblock_candidates/qzs3_b0032_c091_p3_preserved_minp_slices/archive.zip",
+      "archive_bytes": 276492,
+      "archive_sha256": "aeacdc7e31fcec319eaa6f98f424246863cc3906d4e2ca52ef9858dc9a6701a7",
+      "candidate_id": "qzs3_b0032_c091_p3_preserved_minp_slices",
+      "delta_bytes_vs_source_archive": 11,
+      "manifest": "/Users/adpena/Projects/pact/experiments/results/c091_renderer_self_compression_bigmove_20260503_worker/qzs3_reblock_candidates/qzs3_b0032_c091_p3_preserved_minp_slices/build_manifest.json",
+      "payload_format": "c091_p3_preserve_minp_slices",
+      "promotion_eligible": false,
+      "qzs3_block_size": 32,
+      "renderer_bytes": 59288,
+      "renderer_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+      "renderer_transform_kind": "qzs3_reencoded_state",
+      "score_claim": false
+    }
+  ],
+  "promotion_eligible": false,
+  "qzs3_block_sizes": [
+    32,
+    48,
+    64,
+    96,
+    128,
+    192,
+    256,
+    512
+  ],
+  "remote_gpu_dispatch_performed": false,
+  "schema": "c091_renderer_self_compression_candidate_summary_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 276481,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_pr75_minp_public_replay_t4_20260503T1049Z/archive.zip",
+    "sha256": "03a2afd5fe92c93a9b7b7e43625158a73b455f0cfbca82d278008a728db78746"
+  },
+  "source_members": {
+    "masks.mkv": {
+      "bytes": 223385,
+      "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+    },
+    "optimized_poses.qp1": {
+      "bytes": 1140,
+      "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+    },
+    "renderer.bin": {
+      "bytes": 59288,
+      "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+    },
+    "seg_tile_actions.bin": {
+      "bytes": 432,
+      "sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a"
+    }
+  },
+  "source_payload_layout": "c091_pr75_minp_fixed_slices"
+}

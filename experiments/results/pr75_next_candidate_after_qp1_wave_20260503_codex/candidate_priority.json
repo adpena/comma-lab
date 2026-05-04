@@ -1,0 +1,115 @@
+{
+  "schema": "pr75_next_candidate_after_qp1_wave_v1",
+  "generated_at_utc": "2026-05-03T06:30:00Z",
+  "scope": "planning_only_no_remote_dispatch",
+  "rate_score_per_byte": 0.0000006658589531221713,
+  "active_qp1_fixed_wave_excluded": [
+    {
+      "lane_id": "pr75_qp1_public_replay_t4",
+      "archive_bytes": 276741,
+      "archive_sha256_prefix": "cc1dfa346811"
+    },
+    {
+      "lane_id": "c067_pr75_qp1_lag_eval_top67_p6_t4",
+      "archive": "experiments/results/c067_pr75_tile_action_compiler_p6_trace_ev_20260503_codex/c067_pr75_actions_lag_eval_top67_p6/archive.zip",
+      "archive_bytes": 276352,
+      "archive_sha256": "d73f0957cf2d8da0526c1786613443331ccb913f5648131cfaaac5e6f7eae972"
+    },
+    {
+      "lane_id": "c067_pr75_qp1_lag_eval_pose2_top67_p6_t4",
+      "archive": "experiments/results/c067_pr75_tile_action_compiler_p6_trace_ev_20260503_codex/c067_pr75_actions_lag_eval_pose2_top67_p6/archive.zip",
+      "archive_bytes": 276338,
+      "archive_sha256": "af7a34cb1c051b1accebe2768245a44f55280e2596b315f8e4809a73a23926cd"
+    },
+    {
+      "lane_id": "c067_pr75_qp1_beam_pose2_top55_p3_t4",
+      "archive": "experiments/results/c067_pr75_tile_action_compiler_next_p3_20260503_codex/c067_pr75_actions_beam_pose2_top55_p3/archive.zip",
+      "archive_bytes": 276404,
+      "archive_sha256": "e1a589b0ba7e9c4dd14dc932ec8a18209f010038aa801df420873ed9028a99b5"
+    }
+  ],
+  "score_baselines": {
+    "c067_fixedslice_t4": {
+      "archive_bytes": 276214,
+      "archive_sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+      "score_recomputed_from_components": 0.31561703078448233,
+      "source": "experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/contest_auth_eval.json"
+    },
+    "c067_pr75_actions_only_p3_t4": {
+      "archive_bytes": 276460,
+      "archive_sha256": "851a61ddd88c0ddb4a05762f11e900f132fb771fd9dba743ac2026637ddf15d9",
+      "score_recomputed_from_components": 0.31553274375536466,
+      "source": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_only_p3_t4_20260503T0401Z/contest_auth_eval.json"
+    },
+    "c067_pr75_actions_top40_p3_t4": {
+      "archive_bytes": 276386,
+      "archive_sha256": "9feef7ffaa254f9e5408996a122682757a054144a3000539553786c5292b7d0a",
+      "score_recomputed_from_components": 0.3155226919767294,
+      "source": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/contest_auth_eval.json"
+    }
+  },
+  "top_next_candidates": [
+    {
+      "rank": 1,
+      "candidate_id": "c082_p6_delta_varint_actions_stream_resweep",
+      "archive": "experiments/results/c082_pr75_lossless_repack_20260503_worker/c082_p6_delta_varint_actions_stream_resweep/archive.zip",
+      "archive_bytes": 276394,
+      "archive_sha256": "9b78333dd39c12c986ca7fc02a4bb35a6a61ef5a1cc0c9c9c840820eb840058a",
+      "expected_score": 0.3154887970644586,
+      "expected_score_basis": "Exact T4 c067_pr75_actions_only_p3 score minus 66-byte rate delta; decoded streams are byte-identical to source.",
+      "evidence_grade": "empirical_lossless_byte_transform_plus_exact_parent_score",
+      "guards": {
+        "noop": false,
+        "source_preserving": true,
+        "decoded_stream_parity": true,
+        "requires_qp1_fixed_wave_check": "P6 parser/runtime tree must be validated by active QP1-fixed wave before promotion."
+      },
+      "rebuild_command": ".venv/bin/python experiments/build_pr75_lossless_repack_candidates.py --source-archive experiments/results/lightning_batch/exact_eval_c067_pr75_actions_only_p3_t4_20260503T0401Z/archive.zip --output-dir experiments/results/pr75_next_candidate_after_qp1_wave_20260503_codex/lossless_repack --force"
+    },
+    {
+      "rank": 2,
+      "candidate_id": "c067_pr75_actions_top40_p6",
+      "archive": "experiments/results/c067_pr75_tile_action_compiler_p6_trace_ev_20260503_codex/c067_pr75_actions_top40_p6/archive.zip",
+      "archive_bytes": 276342,
+      "archive_sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8",
+      "expected_score": 0.315493394182792,
+      "expected_score_basis": "Exact T4 c067_pr75_actions_top40_p3 score minus 44-byte P6 rate delta; same selected PR75 runtime records, different wire coding.",
+      "trace_planner_expected_score": 0.31546889359301233,
+      "evidence_grade": "byte_transform_candidate_plus_exact_parent_score",
+      "guards": {
+        "noop": false,
+        "source_preserving": false,
+        "record_count": 40,
+        "requires_qp1_fixed_wave_check": "Use only after active P6 QP1-fixed eval proves runtime parity."
+      },
+      "rebuild_command": ".venv/bin/python experiments/build_pr75_tile_action_subset_candidates.py --c067-archive experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip --pr75-archive experiments/results/top_submission_reverse_engineering_20260503_pr75/archive.zip --base-component-trace experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/component_trace.json --actions-component-trace experiments/results/lightning_batch/exact_eval_c067_pr75_actions_only_p3_t4_20260503T0401Z/component_trace.json --candidate top40:p6 --output-dir experiments/results/pr75_next_candidate_after_qp1_wave_20260503_codex/top40_p6_rebuild"
+    },
+    {
+      "rank": 3,
+      "candidate_id": "c067_pr75_actions_lag_eval_pose4_top67_p6",
+      "archive": "experiments/results/c067_pr75_tile_action_compiler_p6_trace_ev_20260503_codex/c067_pr75_actions_lag_eval_pose4_top67_p6/archive.zip",
+      "archive_bytes": 276338,
+      "archive_sha256": "de7d549ec4437b3ed9508c1f62f8a79bef88440ba3db0f4a7de5a2c83fe160ef",
+      "expected_score": 0.3154606501519654,
+      "expected_score_basis": "Trace-calibrated score from candidate matrix: C067 T4 baseline minus selected trace benefit plus 124-byte rate delta; kept out of active wave as the next pose-weight sensitivity check.",
+      "selected_delta_seg_trace_sum": 0.0001737806839325155,
+      "selected_delta_pose_trace_sum": 0.00006510502935348066,
+      "evidence_grade": "byte_and_trace_planning_only_until_exact_cuda",
+      "guards": {
+        "noop": false,
+        "source_preserving": false,
+        "record_count": 38,
+        "requires_qp1_fixed_wave_check": "Promote only if active lag_eval_top67/pose2 P6 QP1-fixed results match the trace ordering."
+      },
+      "rebuild_command": ".venv/bin/python experiments/build_pr75_tile_action_subset_candidates.py --c067-archive experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip --pr75-archive experiments/results/top_submission_reverse_engineering_20260503_pr75/archive.zip --base-component-trace experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/component_trace.json --actions-component-trace experiments/results/lightning_batch/exact_eval_c067_pr75_actions_only_p3_t4_20260503T0401Z/component_trace.json --calibration-component-trace identity:67:experiments/results/lightning_batch/exact_eval_c067_pr75_actions_only_p3_t4_20260503T0401Z/component_trace.json --calibration-component-trace identity:40:experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/component_trace.json --calibration-component-trace identity:25:experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top25_p3_t4_20260503T0440Z/component_trace.json --calibration-component-trace ampminus1:25:experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top25_ampminus1_p3_t4_20260503T0520Z/component_trace.json --calibration-component-trace ampminus2:40:experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_ampminus2_p3_l40sdiag_20260503T0512Z/component_trace.json --candidate lag_eval_pose4_top67:p6 --output-dir experiments/results/pr75_next_candidate_after_qp1_wave_20260503_codex/lag_eval_pose4_p6_rebuild"
+    }
+  ],
+  "near_miss": {
+    "candidate_id": "c067_pr75_actions_top49_p6",
+    "archive": "experiments/results/c067_pr75_tile_action_compiler_p6_trace_ev_20260503_codex/c067_pr75_actions_top49_p6/archive.zip",
+    "archive_bytes": 276368,
+    "archive_sha256": "bc2db878509e1ae30f09ab9e28d1feeb28cbff9c14eac6afea64309c68a880ca",
+    "trace_planner_expected_score": 0.3154680901896367,
+    "reason_not_top3": "Lower exact-parent confidence than top40_p6 and less orthogonal than lag_eval_pose4_top67_p6 after active lag_eval_top67/pose2 coverage."
+  }
+}

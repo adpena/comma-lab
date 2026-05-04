@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-05-02T07:57:31Z",
+  "archive_label": "archive_eval_c063_protected_boundary1_horizon_pose_top16_crf56_h100_20260502",
+  "archive_path": "/workspace/pact/experiments/results/vast_live_harvest/c063_protected_mask_h100nvl_seq_20260502T0800Z/protect_boundary1_horizon_pose_top16_crf56_rawzip.final_archive.zip",
+  "custody_archive_path": "/workspace/pact/experiments/results/vast_live_harvest/c063_protected_mask_h100nvl_seq_20260502T0800Z/archive_eval_c063_protected_boundary1_horizon_pose_top16_crf56_h100_20260502/archive.zip",
+  "archive_size_bytes": 207928,
+  "archive_sha256": "68d0d3080aefe2e8d376ddd7074270d713b351efecf8bd98425583a76c5912bf"
+}

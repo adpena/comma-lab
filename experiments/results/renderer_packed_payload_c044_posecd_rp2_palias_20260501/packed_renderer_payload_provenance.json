@@ -1,0 +1,46 @@
+{
+  "brotli_quality": 11,
+  "evidence_grade": "empirical",
+  "formula_only_rate_delta": -0.01055519612489266,
+  "header": {
+    "members": [
+      {
+        "bytes": 211903,
+        "codec": "raw",
+        "name": "renderer.bin",
+        "sha256": "97bde7ac1de7f78ce60a2d68f747aca5d76d1ce7fd1d024680f8d61247ccf142"
+      },
+      {
+        "bytes": 421483,
+        "codec": "raw",
+        "name": "masks.mkv",
+        "sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9"
+      },
+      {
+        "bytes": 7208,
+        "codec": "pose_fp16_col_delta_v1",
+        "decoded_bytes": 7200,
+        "decoded_sha256": "4b3d8cd58965971ad518a970441f5e9cc53ce361a62d51e95c1cdd2056be4449",
+        "name": "optimized_poses.bin",
+        "sha256": "7bd5bb0896298fde5e4a9584df2caa695dfeda1bb011e916089a45907c3014f4"
+      }
+    ],
+    "payload_format": "rp2_fixed3",
+    "schema": "renderer_payload_fixed3_v1",
+    "source_archive_sha256": "1e9195cb6e0e08fc98ee393590770e2b22905a2ee2718edb8b737cada125f279"
+  },
+  "output_archive": "experiments/results/renderer_packed_payload_c044_posecd_rp2_palias_20260501/archive.zip",
+  "output_archive_bytes": 594111,
+  "output_archive_sha256": "090541612003c4f153e448925cc9152787b0842338ae08ec0f1420e997c7ed11",
+  "payload_compressed_bytes": 594011,
+  "payload_format": "rp2_fixed3",
+  "payload_member": "p",
+  "payload_raw_bytes": 640614,
+  "pose_codec": "pose_fp16_col_delta_v1",
+  "pose_residual_topk": 0,
+  "savings_bytes": 15852,
+  "score_claim": false,
+  "source_archive": "experiments/results/lightning_batch/exact_eval_owv3_0120_stack_t4_20260501T150652Z/archive.zip",
+  "source_archive_bytes": 609963,
+  "source_archive_sha256": "1e9195cb6e0e08fc98ee393590770e2b22905a2ee2718edb8b737cada125f279"
+}

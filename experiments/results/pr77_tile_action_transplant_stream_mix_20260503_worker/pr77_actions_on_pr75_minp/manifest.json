@@ -1,0 +1,611 @@
+{
+  "archive_byte_profile": {
+    "archive_name": "archive.zip",
+    "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr77_tile_action_transplant_stream_mix_20260503_worker/pr77_actions_on_pr75_minp/archive.zip",
+    "archive_sha256": "8f60c64b9dff70a0f53387ca108d69c768157d2deec8c8f25bfe953a9a39a360",
+    "duplicate_detection": {
+      "duplicate_member_names": [],
+      "duplicate_payload_hashes": [],
+      "has_duplicate_member_names": false,
+      "has_duplicate_payload_hashes": false
+    },
+    "evidence_grade": "byte_profile_only",
+    "extension_totals": [
+      {
+        "compressed_size": 276451,
+        "member_count": 1,
+        "name": "(no_extension)",
+        "rate_term": 0.18407737345,
+        "uncompressed_size": 276451
+      }
+    ],
+    "member_count": 1,
+    "members": [
+      {
+        "central_directory_header_bytes_estimate": 47,
+        "compressed_size": 276451,
+        "compression_ratio": 1.0,
+        "crc32": "641faa25",
+        "extension_group": "(no_extension)",
+        "header_offset": 0,
+        "histogram": {
+          "histogram_counts": [
+            1263,
+            1138,
+            1091,
+            1012,
+            1104,
+            1073,
+            1086,
+            1113,
+            1116,
+            1055,
+            1138,
+            1117,
+            1107,
+            1026,
+            1057,
+            1100,
+            1089,
+            1082,
+            1043,
+            1052,
+            1074,
+            1035,
+            1043,
+            1115,
+            1095,
+            1079,
+            1039,
+            1068,
+            1043,
+            1046,
+            1093,
+            1094,
+            1124,
+            1017,
+            1058,
+            1109,
+            1050,
+            1069,
+            1109,
+            1067,
+            1051,
+            1149,
+            1080,
+            1049,
+            1128,
+            1131,
+            1087,
+            1038,
+            1136,
+            1153,
+            1034,
+            1041,
+            1112,
+            1083,
+            1103,
+            1053,
+            1112,
+            1102,
+            1029,
+            1083,
+            1093,
+            1141,
+            1029,
+            1133,
+            1081,
+            1080,
+            1058,
+            1080,
+            1064,
+            1069,
+            1065,
+            1104,
+            1037,
+            1089,
+            1066,
+            1070,
+            1117,
+            1084,
+            1101,
+            1067,
+            1103,
+            1044,
+            1042,
+            999,
+            1025,
+            1001,
+            1091,
+            1042,
+            1143,
+            1072,
+            1052,
+            1091,
+            1063,
+            1122,
+            1103,
+            1120,
+            1111,
+            1080,
+            1099,
+            1112,
+            1044,
+            1106,
+            1048,
+            1111,
+            1061,
+            1056,
+            1079,
+            1095,
+            1094,
+            1077,
+            1112,
+            1083,
+            1062,
+            1066,
+            1052,
+            1019,
+            1096,
+            1114,
+            1097,
+            1100,
+            1118,
+            1117,
+            1078,
+            1089,
+            1009,
+            1069,
+            1082,
+            1133,
+            1173,
+            1055,
+            1029,
+            1115,
+            1100,
+            1019,
+            1111,
+            1113,
+            1055,
+            1057,
+            1040,
+            1113,
+            1135,
+            1083,
+            1087,
+            1055,
+            1119,
+            1069,
+            1092,
+            1023,
+            1111,
+            1034,
+            1136,
+            1091,
+            1040,
+            1092,
+            1146,
+            1080,
+            1075,
+            1078,
+            1063,
+            1100,
+            1143,
+            1052,
+            1058,
+            1043,
+            1101,
+            1062,
+            1105,
+            1053,
+            1061,
+            1037,
+            1042,
+            1060,
+            1074,
+            1037,
+            1048,
+            1036,
+            1079,
+            1043,
+            1057,
+            1021,
+            1069,
+            1062,
+            1049,
+            1078,
+            1037,
+            1006,
+            1045,
+            1064,
+            1086,
+            1053,
+            1053,
+            1118,
+            1093,
+            1080,
+            1041,
+            1016,
+            1216,
+            1068,
+            1085,
+            1103,
+            1071,
+            1096,
+            1077,
+            1123,
+            1053,
+            1092,
+            1071,
+            1122,
+            1107,
+            1024,
+            1065,
+            1106,
+            1086,
+            1092,
+            1062,
+            1059,
+            1112,
+            1062,
+            1140,
+            1095,
+            1082,
+            1098,
+            1072,
+            1083,
+            1086,
+            960,
+            1045,
+            1139,
+            1087,
+            1050,
+            1051,
+            1135,
+            1042,
+            1108,
+            1090,
+            1093,
+            1100,
+            1068,
+            1086,
+            1117,
+            1064,
+            1044,
+            1024,
+            1033,
+            1125,
+            1055,
+            1143,
+            1082,
+            1048,
+            1074,
+            1133,
+            1067,
+            1136,
+            1124,
+            1080,
+            1136
+          ],
+          "printable_ascii_fraction": 0.371255665561,
+          "shannon_entropy_bits_per_byte": 7.999145104091,
+          "top_bytes": [
+            {
+              "byte": 0,
+              "count": 1263,
+              "fraction": 0.004568621564,
+              "hex": "0x00"
+            },
+            {
+              "byte": 196,
+              "count": 1216,
+              "fraction": 0.004398609519,
+              "hex": "0xc4"
+            },
+            {
+              "byte": 128,
+              "count": 1173,
+              "fraction": 0.004243066583,
+              "hex": "0x80"
+            },
+            {
+              "byte": 49,
+              "count": 1153,
+              "fraction": 0.004170721032,
+              "hex": "0x31"
+            },
+            {
+              "byte": 41,
+              "count": 1149,
+              "fraction": 0.004156251922,
+              "hex": "0x29"
+            },
+            {
+              "byte": 154,
+              "count": 1146,
+              "fraction": 0.004145400089,
+              "hex": "0x9a"
+            },
+            {
+              "byte": 88,
+              "count": 1143,
+              "fraction": 0.004134548256,
+              "hex": "0x58"
+            },
+            {
+              "byte": 160,
+              "count": 1143,
+              "fraction": 0.004134548256,
+              "hex": "0xa0"
+            },
+            {
+              "byte": 246,
+              "count": 1143,
+              "fraction": 0.004134548256,
+              "hex": "0xf6"
+            },
+            {
+              "byte": 61,
+              "count": 1141,
+              "fraction": 0.004127313701,
+              "hex": "0x3d"
+            }
+          ],
+          "unique_byte_count": 256,
+          "zero_byte_count": 1263,
+          "zero_byte_fraction": 0.004568621564,
+          "zero_order_entropy_bytes": 276422
+        },
+        "is_dir": false,
+        "local_header_bytes_estimate": 31,
+        "method": "stored",
+        "method_id": 0,
+        "name": "p",
+        "occurrence": 1,
+        "path_group": "(root)",
+        "rate_term": 0.18407737345,
+        "sha256": "3be6a58673133db2dd14d9f1f0903d528e452bd2e930d57fb4adb02bf264f8ec",
+        "uncompressed_size": 276451
+      }
+    ],
+    "path_group_totals": [
+      {
+        "compressed_size": 276451,
+        "member_count": 1,
+        "name": "(root)",
+        "rate_term": 0.18407737345,
+        "uncompressed_size": 276451
+      }
+    ],
+    "rate_term": 0.184143959345,
+    "schema": "archive_byte_profile_v1",
+    "score_claim": false,
+    "tool": "experiments/profile_archive_bytes.py",
+    "top_contributors": [
+      {
+        "compressed_size": 276451,
+        "method": "stored",
+        "name": "p",
+        "occurrence": 1,
+        "rate_term": 0.18407737345,
+        "uncompressed_size": 276451
+      }
+    ],
+    "total_bytes": 276551,
+    "valid_profile": true,
+    "zip_overhead_estimate": {
+      "archive_non_payload_bytes": 100,
+      "central_directory_header_bytes_estimate": 47,
+      "compressed_payload_bytes": 276451,
+      "local_header_bytes_estimate": 31,
+      "rate_term": 6.6585895e-05,
+      "unassigned_overhead_bytes_estimate": 22
+    }
+  },
+  "candidate_id": "pr77_actions_on_pr75_minp",
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda after lane claim",
+  "compatibility": {
+    "non_action_segments_vs_pr77": {
+      "masks.mkv": {
+        "decoded_equal_to_pr77": true,
+        "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "pr77_decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "pr77_raw_sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87",
+        "raw_equal_to_pr77": true,
+        "raw_sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+      },
+      "optimized_poses.qp1": {
+        "decoded_equal_to_pr77": true,
+        "decoded_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+        "pr77_decoded_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+        "pr77_raw_sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082",
+        "raw_equal_to_pr77": true,
+        "raw_sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082"
+      },
+      "renderer.bin": {
+        "decoded_equal_to_pr77": true,
+        "decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+        "pr77_decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+        "pr77_raw_sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf",
+        "raw_equal_to_pr77": true,
+        "raw_sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+      }
+    },
+    "required_preflight_before_dispatch": "Parent must claim lane before any exact CUDA auth eval; this candidate is still byte/provenance evidence only until CUDA eval.",
+    "semantic_status": "pr77_non_action_streams_identical"
+  },
+  "delta_vs_pr77_archive": {
+    "archive_bytes": 0,
+    "payload_bytes": 0
+  },
+  "delta_vs_target_archive": {
+    "archive_bytes": 70,
+    "payload_bytes": 70
+  },
+  "evidence_grade": "empirical_byte_screen_only",
+  "output_archive": {
+    "bytes": 276551,
+    "path": "/Users/adpena/Projects/pact/experiments/results/pr77_tile_action_transplant_stream_mix_20260503_worker/pr77_actions_on_pr75_minp/archive.zip",
+    "sha256": "8f60c64b9dff70a0f53387ca108d69c768157d2deec8c8f25bfe953a9a39a360"
+  },
+  "payload": {
+    "bytes": 276451,
+    "format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+    "member": "p",
+    "sha256": "3be6a58673133db2dd14d9f1f0903d528e452bd2e930d57fb4adb02bf264f8ec"
+  },
+  "promotion_eligible": false,
+  "raw_segment_sources": {
+    "masks.mkv": {
+      "bytes": 219472,
+      "source_archive_sha256": "03a2afd5fe92c93a9b7b7e43625158a73b455f0cfbca82d278008a728db78746",
+      "source_label": "pr75_minp",
+      "source_segment_sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+    },
+    "optimized_poses.qp1": {
+      "bytes": 898,
+      "source_archive_sha256": "03a2afd5fe92c93a9b7b7e43625158a73b455f0cfbca82d278008a728db78746",
+      "source_label": "pr75_minp",
+      "source_segment_sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082"
+    },
+    "renderer.bin": {
+      "bytes": 55756,
+      "source_archive_sha256": "03a2afd5fe92c93a9b7b7e43625158a73b455f0cfbca82d278008a728db78746",
+      "source_label": "pr75_minp",
+      "source_segment_sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+    },
+    "seg_tile_actions.bin": {
+      "bytes": 325,
+      "source_archive_sha256": "f90880383c95e14d82704f99db9b20944786ae6452a844348638b06c439972af",
+      "source_label": "pr77",
+      "source_segment_sha256": "d8c75e4f3725bbcf608434f0a78f5b37a9ce86bd8177c71092fd727d7e2af75a"
+    }
+  },
+  "runtime_parse_validation": {
+    "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+    "runtime_parser": "/Users/adpena/Projects/pact/submissions/robust_current/unpack_renderer_payload.py",
+    "segments": {
+      "masks.mkv": {
+        "decoded_bytes": 223385,
+        "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "raw_bytes": 219472,
+        "raw_sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87",
+        "source_label": "pr75_minp"
+      },
+      "optimized_poses.qp1": {
+        "decoded_bytes": 1140,
+        "decoded_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+        "raw_bytes": 898,
+        "raw_sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082",
+        "source_label": "pr75_minp"
+      },
+      "renderer.bin": {
+        "decoded_bytes": 59288,
+        "decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+        "raw_bytes": 55756,
+        "raw_sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf",
+        "source_label": "pr75_minp"
+      },
+      "seg_tile_actions.bin": {
+        "decoded_bytes": 588,
+        "decoded_sha256": "8ac9a01caad973096c58b42daf2b1a8e476ad68cf285d443baa4ac94fdb42255",
+        "raw_bytes": 325,
+        "raw_sha256": "d8c75e4f3725bbcf608434f0a78f5b37a9ce86bd8177c71092fd727d7e2af75a",
+        "source_label": "pr77"
+      }
+    }
+  },
+  "schema": "pr77_tile_action_transplant_candidate_manifest_v1",
+  "score_claim": false,
+  "source_archives": {
+    "pr77": {
+      "archive_bytes": 276551,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/top_submission_reverse_engineering_20260503_pr77/archive.zip",
+      "archive_sha256": "f90880383c95e14d82704f99db9b20944786ae6452a844348638b06c439972af",
+      "decoded_segments": {
+        "masks.mkv": {
+          "bytes": 223385,
+          "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "optimized_poses.qp1": {
+          "bytes": 1140,
+          "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+        },
+        "renderer.bin": {
+          "bytes": 59288,
+          "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 588,
+          "sha256": "8ac9a01caad973096c58b42daf2b1a8e476ad68cf285d443baa4ac94fdb42255"
+        }
+      },
+      "payload_bytes": 276451,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+      "payload_sha256": "3be6a58673133db2dd14d9f1f0903d528e452bd2e930d57fb4adb02bf264f8ec",
+      "raw_segments": {
+        "masks.mkv": {
+          "bytes": 219472,
+          "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+        },
+        "optimized_poses.qp1": {
+          "bytes": 898,
+          "sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082"
+        },
+        "renderer.bin": {
+          "bytes": 55756,
+          "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 325,
+          "sha256": "d8c75e4f3725bbcf608434f0a78f5b37a9ce86bd8177c71092fd727d7e2af75a"
+        }
+      }
+    },
+    "target": {
+      "archive_bytes": 276481,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/top_submission_reverse_engineering_20260503_pr75_minp/archive.zip",
+      "archive_sha256": "03a2afd5fe92c93a9b7b7e43625158a73b455f0cfbca82d278008a728db78746",
+      "decoded_segments": {
+        "masks.mkv": {
+          "bytes": 223385,
+          "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "optimized_poses.qp1": {
+          "bytes": 1140,
+          "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+        },
+        "renderer.bin": {
+          "bytes": 59288,
+          "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 432,
+          "sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a"
+        }
+      },
+      "payload_bytes": 276381,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+      "payload_sha256": "f78c71d3086773e417c672734082a49ceb0ef5a0016cf406a920be7978fff252",
+      "raw_segments": {
+        "masks.mkv": {
+          "bytes": 219472,
+          "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+        },
+        "optimized_poses.qp1": {
+          "bytes": 898,
+          "sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082"
+        },
+        "renderer.bin": {
+          "bytes": 55756,
+          "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 255,
+          "sha256": "e2f8a113ee9e4d009448fec2497602ef67cabb8a13ef8d3fa9e11d69ff8ceed6"
+        }
+      }
+    }
+  },
+  "tool": "experiments/build_pr77_tile_action_transplant_candidates.py"
+}

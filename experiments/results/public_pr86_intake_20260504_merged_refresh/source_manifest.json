@@ -1,0 +1,72 @@
+[
+  {
+    "bytes": 698,
+    "path": "README.md",
+    "sha256": "a35e8042adcff9f4d784b814c0333c4a66c742491f06f3107670ad67e1f3899c"
+  },
+  {
+    "bytes": 5215,
+    "path": "compress.py",
+    "sha256": "fda16b6e3d32bad77bf371f198e2253678e9f91470ee191cf7a9eef6bea196eb"
+  },
+  {
+    "bytes": 297,
+    "path": "compress.sh",
+    "sha256": "b562a4246d527880a4ae21ec43317eabd4ea8d96ae75ac229320595bd293d5b9"
+  },
+  {
+    "bytes": 19657,
+    "path": "inflate.py",
+    "sha256": "f86f3067386928478d983817c9f9ee095ce6eb02aee8c0fbb7987cd0af1f9b01"
+  },
+  {
+    "bytes": 396,
+    "path": "inflate.sh",
+    "sha256": "8c43acac3e0959161b612d9bacd66d7e70070f412aefbed74f7b5d65e60e94ce"
+  },
+  {
+    "bytes": 433,
+    "path": "intake_summary.json",
+    "sha256": "25548bc5e44283a9831158d83c90a655e3bd991554b12118703af890e60b1a40"
+  },
+  {
+    "bytes": 11578397,
+    "path": "pr86.patch",
+    "sha256": "e4b00c03252d340b703da5fc9cd21cc5e16d681c52f7a3ce82ff7d380fb087ba"
+  },
+  {
+    "bytes": 25376,
+    "path": "pr86_api.json",
+    "sha256": "04843db3109d2e3951302bd9d1b395b21303db6a1f05ebbba2bb13fa7cf521c3"
+  },
+  {
+    "bytes": 3968,
+    "path": "training/README.md",
+    "sha256": "3474d0fc4d6b48312f494bd8b84af5f916c8da0ae44384a9e04913266e7d92a1"
+  },
+  {
+    "bytes": 11615,
+    "path": "training/archive.py",
+    "sha256": "f5b5ca41b50b4dfae7cb9289e07d19044a23a32f8238dc1ac0f978794b134c64"
+  },
+  {
+    "bytes": 1701,
+    "path": "training/data.py",
+    "sha256": "3e2055277cd255141c1db5ea6391809f31bc189201556ec05c5ff6ec41fe3549"
+  },
+  {
+    "bytes": 26408,
+    "path": "training/hpac.py",
+    "sha256": "2d80be4ba7df9e45e9824f0acfa489f8678aadb3014d7938ca6691449c3d0a07"
+  },
+  {
+    "bytes": 23302,
+    "path": "training/master.py",
+    "sha256": "289969bbad32bcb791f6548d034aa2beee83319b184ed4cb5ef51f00d279118c"
+  },
+  {
+    "bytes": 52351,
+    "path": "training/slave.py",
+    "sha256": "04d26c6cddeb9d36d4e95d8733ad826acb28c5a88882865bd21b07d15d2d80c0"
+  }
+]

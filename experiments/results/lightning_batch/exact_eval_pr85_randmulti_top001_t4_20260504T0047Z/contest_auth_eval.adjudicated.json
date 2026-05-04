@@ -1,0 +1,120 @@
+{
+  "archive_size_bytes": 221736,
+  "avg_posenet_dist": 0.00053225,
+  "avg_segnet_dist": 0.00060138,
+  "canonical_score": 0.2807384658678841,
+  "canonical_score_source": "score_recomputed_from_components",
+  "contest_auth_eval_elapsed_seconds": 125.67898451899998,
+  "evaluate_elapsed_seconds": 43.38945969700001,
+  "final_score": 0.28,
+  "inflate_elapsed_seconds": 82.28628380400005,
+  "n_samples": 600,
+  "provenance": {
+    "archive_path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_pr85_randmulti_top001_t4_20260504T0047Z/archive.zip",
+    "archive_sha256": "2e671a7811261261cac99d571ec42f184e60418ee0e4dc1d7e84b525de6ee638",
+    "archive_size_bytes": 221736,
+    "cuda_available": true,
+    "cuda_device_count": 1,
+    "cuda_version": "13.0",
+    "device": "cuda",
+    "env_vars": {
+      "CONFIG_ENV_PATH": null,
+      "CUBLAS_WORKSPACE_CONFIG": null,
+      "CUDA_VISIBLE_DEVICES": null,
+      "INFLATE_AV_SPEC": null,
+      "INFLATE_BROTLI_SPEC": null,
+      "INFLATE_NUMPY_SPEC": null,
+      "INFLATE_TORCH_SPEC": "torch==2.5.1+cu124",
+      "LANE_MM_SIGMA": null,
+      "LD_LIBRARY_PATH": "/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda/lib64",
+      "PYTHONHASHSEED": null,
+      "PYTHONPATH": null,
+      "PYTHON_INFLATE": null,
+      "PYTORCH_CUDA_ALLOC_CONF": null,
+      "UV_BIN": "/usr/local/bin/uv",
+      "UV_PROJECT_ENVIRONMENT": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_pr85_randmulti_top001_t4_20260504T0047Z/uv_project_env"
+    },
+    "evaluate_timeout_seconds": 1800,
+    "ffmpeg_version": "ffmpeg version 8.0.1 Copyright (c) 2000-2025 the FFmpeg developers",
+    "gpu_driver": "580.126.09",
+    "gpu_model": "Tesla T4",
+    "gpu_t4_match": true,
+    "inflate_runtime_manifest": {
+      "files": [
+        {
+          "bytes": 85145,
+          "relative_path": "inflate.py",
+          "sha256": "ff534ee0ef7a51dd4ec7a24570d812b32ce966e8b98b2dfdbe347ce9fa4ff3e7"
+        },
+        {
+          "bytes": 228,
+          "relative_path": "inflate.sh",
+          "sha256": "2c37f19e210f97c8926b70594e4d57fd8b0256dadace0cd55c28bbe6995ff027"
+        },
+        {
+          "bytes": 53975,
+          "relative_path": "range_mask_codec.cpp",
+          "sha256": "94cd1a86111fb6d34b6e12d37c624bd5938df0fbc6c4c24c8d40c5a83fcb016b"
+        }
+      ],
+      "repo_local_tac_import_manifest": {
+        "discovery": "static_ast_recursive_import_closure",
+        "file_count": 0,
+        "files": [],
+        "module_count": 0,
+        "parse_errors": [],
+        "root_import_modules": [],
+        "runtime_root_name": "replay_submission",
+        "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+        "tac_root_relative_path": "src/tac",
+        "unresolved_modules": []
+      },
+      "runtime_file_count": 3,
+      "runtime_root": "/teamspace/studios/this_studio/pact/experiments/results/public_pr85_intake_20260503_codex/replay_submission",
+      "runtime_tree_sha256": "8fd3e7fffeaa8a719117b9fb5e013cb905151c5196064b082ab88f3c1b95ed4b",
+      "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+      "upstream_evaluate_py": {
+        "bytes": 6005,
+        "relative_path": "evaluate.py",
+        "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+      }
+    },
+    "inflate_script": "/teamspace/studios/this_studio/pact/experiments/results/public_pr85_intake_20260503_codex/replay_submission/inflate.sh",
+    "inflate_script_sha256": "2c37f19e210f97c8926b70594e4d57fd8b0256dadace0cd55c28bbe6995ff027",
+    "inflate_timeout_seconds": 1800,
+    "libsvtav1_version": "configuration: --prefix=/home/zeus/miniconda3/envs/cloudspace --cc=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/x86_64-conda-linux-gnu-cc --cxx=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/x86_64-conda-linux-gnu-c++ --nm=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/x86_64-conda-linux-gnu-nm --ar=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/x86_64-conda-linux-gnu-ar --enable-openssl --enable-demuxer=dash --enable-hardcoded-tables --enable-libfreetype --enable-libharfbuzz --enable-libfontconfig --enable-libopenh264 --enable-libdav1d --enable-libmp3lame --enable-libaom --enable-libsvtav1 --enable-libxml2 --enable-pic --enable-shared --enable-version3 --enable-zlib --enable-libvorbis --enable-libopus --enable-libwebp --enable-libshaderc --disable-ffplay --disable-static --disable-gpl --disable-doc --pkg-config=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/pkg-config --arch=x86_64 --target-os=linux --cross-prefix=x86_64-conda-linux-gnu- --host-cc=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/x86_64-conda-linux-gnu-cc --disable-gnutls --enable-libvpx --enable-pthreads --enable-alsa --enable-libpulse --enable-libdrm --enable-libvpl --enable-vaapi --enable-libtesseract --enable-libvpx --enable-libass --enable-librsvg",
+    "pact_commit": "<error:CalledProcessError(128, ['git', 'rev-parse', 'HEAD'])>",
+    "schema_version": 1,
+    "started_at_utc": "2026-05-04T01:02:25Z",
+    "sys_argv": [
+      "experiments/contest_auth_eval.py",
+      "--archive",
+      "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_pr85_randmulti_top001_t4_20260504T0047Z/archive.zip",
+      "--inflate-sh",
+      "experiments/results/public_pr85_intake_20260503_codex/replay_submission/inflate.sh",
+      "--upstream-dir",
+      "/teamspace/studios/this_studio/upstream",
+      "--device",
+      "cuda",
+      "--keep-work-dir",
+      "--work-dir",
+      "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_pr85_randmulti_top001_t4_20260504T0047Z/eval_work"
+    ],
+    "tool": "experiments/contest_auth_eval.py",
+    "torch_version": "2.11.0+cu130",
+    "upstream_commit": "c5e1274e54e47f81b121bc3bf75eaa9a432b1837",
+    "upstream_dir": "/teamspace/studios/this_studio/upstream",
+    "video_names_file": "upstream/public_test_video_names.txt"
+  },
+  "rate_unscaled": 0.0059058,
+  "report_path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_pr85_randmulti_top001_t4_20260504T0047Z/eval_work/report.txt",
+  "reported_final_score_display_rounded": 0.28,
+  "schema_version": 1,
+  "score_pose_contribution": 0.07295546586788408,
+  "score_rate_contribution": 0.147645,
+  "score_recomputed_from_components": 0.2807384658678841,
+  "score_reported_rounded_differs_from_canonical": true,
+  "score_rounding_abs_delta": 0.0007384658678840639,
+  "score_seg_contribution": 0.060138,
+  "work_dir": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_pr85_randmulti_top001_t4_20260504T0047Z/eval_work"
+}

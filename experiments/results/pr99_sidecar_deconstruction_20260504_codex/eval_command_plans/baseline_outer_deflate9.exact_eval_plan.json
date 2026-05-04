@@ -1,0 +1,32 @@
+{
+  "archive": "experiments/results/pr99_sidecar_deconstruction_20260504_codex/candidates/archive.baseline_outer_deflate9.zip",
+  "archive_bytes": 178601,
+  "archive_sha256": "cddf79a63917363746e8f271be86e29ff37b9504a9d4588f709bdd6da50fa9bf",
+  "claim_required_before_dispatch": true,
+  "command": [
+    ".venv/bin/python",
+    "scripts/launch_lightning_batch_job.py",
+    "exact-eval",
+    "--state-path",
+    ".omx/state/lightning_batch_jobs.json",
+    "--job-name",
+    "exact_eval_pr99_sidecar_baseline_outer_deflate9_t4_YYYYMMDDTHHMMSSZ",
+    "--archive",
+    "/Users/adpena/Projects/pact/experiments/results/pr99_sidecar_deconstruction_20260504_codex/candidates/archive.baseline_outer_deflate9.zip",
+    "--inflate-sh",
+    "/Users/adpena/Projects/pact/experiments/results/pr99_sidecar_deconstruction_20260504_codex/runtime_variants/baseline_outer_deflate9/inflate.sh",
+    "--machine",
+    "T4_SMALL",
+    "--adjudicate",
+    "--expected-archive-sha256",
+    "cddf79a63917363746e8f271be86e29ff37b9504a9d4588f709bdd6da50fa9bf",
+    "--expected-archive-size-bytes",
+    "178601"
+  ],
+  "dispatch_performed": false,
+  "runtime_root": "experiments/results/pr99_sidecar_deconstruction_20260504_codex/runtime_variants/baseline_outer_deflate9",
+  "runtime_tree_sha256": "d43e1398c9c156ab96dd3472016881ec3b0285c03483b889b8db2bfa1566c92c",
+  "schema": "pr99_sidecar_no_dispatch_exact_eval_plan_v1",
+  "suggested_job_name": "exact_eval_pr99_sidecar_baseline_outer_deflate9_t4_YYYYMMDDTHHMMSSZ",
+  "suggested_lane_id": "pr99_sidecar_baseline_outer_deflate9_t4_screen"
+}

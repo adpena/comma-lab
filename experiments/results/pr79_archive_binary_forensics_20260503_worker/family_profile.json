@@ -1,0 +1,3058 @@
+{
+  "action_pairwise_diffs": {
+    "c102_vs_pr75": {
+      "common_record_count": 108,
+      "left_only_record_count": 0,
+      "left_record_count": 108,
+      "left_sequence_sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a",
+      "right_only_record_count": 0,
+      "right_record_count": 108,
+      "right_sequence_sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a",
+      "sequence_equal": true
+    },
+    "c102_vs_pr77": {
+      "common_record_count": 56,
+      "left_only_record_count": 52,
+      "left_record_count": 108,
+      "left_sequence_sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a",
+      "right_only_record_count": 91,
+      "right_record_count": 147,
+      "right_sequence_sha256": "8ac9a01caad973096c58b42daf2b1a8e476ad68cf285d443baa4ac94fdb42255",
+      "sequence_equal": false
+    },
+    "c102_vs_pr79": {
+      "common_record_count": 105,
+      "left_only_record_count": 3,
+      "left_record_count": 108,
+      "left_sequence_sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a",
+      "right_only_record_count": 567,
+      "right_record_count": 672,
+      "right_sequence_sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f",
+      "sequence_equal": false
+    },
+    "pr75_vs_pr77": {
+      "common_record_count": 56,
+      "left_only_record_count": 52,
+      "left_record_count": 108,
+      "left_sequence_sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a",
+      "right_only_record_count": 91,
+      "right_record_count": 147,
+      "right_sequence_sha256": "8ac9a01caad973096c58b42daf2b1a8e476ad68cf285d443baa4ac94fdb42255",
+      "sequence_equal": false
+    },
+    "pr75_vs_pr79": {
+      "common_record_count": 105,
+      "left_only_record_count": 3,
+      "left_record_count": 108,
+      "left_sequence_sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a",
+      "right_only_record_count": 567,
+      "right_record_count": 672,
+      "right_sequence_sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f",
+      "sequence_equal": false
+    },
+    "pr77_vs_pr79": {
+      "common_record_count": 62,
+      "left_only_record_count": 85,
+      "left_record_count": 147,
+      "left_sequence_sha256": "8ac9a01caad973096c58b42daf2b1a8e476ad68cf285d443baa4ac94fdb42255",
+      "right_only_record_count": 610,
+      "right_record_count": 672,
+      "right_sequence_sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f",
+      "sequence_equal": false
+    }
+  },
+  "archives": [
+    {
+      "actions": {
+        "first_records": [
+          {
+            "action": 17,
+            "pair": 104,
+            "tile": 83
+          },
+          {
+            "action": 64,
+            "pair": 106,
+            "tile": 83
+          },
+          {
+            "action": 7,
+            "pair": 89,
+            "tile": 84
+          },
+          {
+            "action": 58,
+            "pair": 540,
+            "tile": 84
+          },
+          {
+            "action": 75,
+            "pair": 112,
+            "tile": 85
+          },
+          {
+            "action": 56,
+            "pair": 566,
+            "tile": 85
+          },
+          {
+            "action": 40,
+            "pair": 73,
+            "tile": 86
+          },
+          {
+            "action": 92,
+            "pair": 109,
+            "tile": 86
+          },
+          {
+            "action": 94,
+            "pair": 115,
+            "tile": 86
+          },
+          {
+            "action": 44,
+            "pair": 119,
+            "tile": 86
+          },
+          {
+            "action": 6,
+            "pair": 124,
+            "tile": 86
+          },
+          {
+            "action": 38,
+            "pair": 126,
+            "tile": 86
+          }
+        ],
+        "last_records": [
+          {
+            "action": 92,
+            "pair": 33,
+            "tile": 109
+          },
+          {
+            "action": 93,
+            "pair": 36,
+            "tile": 109
+          },
+          {
+            "action": 23,
+            "pair": 227,
+            "tile": 109
+          },
+          {
+            "action": 56,
+            "pair": 71,
+            "tile": 110
+          },
+          {
+            "action": 10,
+            "pair": 211,
+            "tile": 110
+          },
+          {
+            "action": 95,
+            "pair": 218,
+            "tile": 110
+          },
+          {
+            "action": 71,
+            "pair": 212,
+            "tile": 111
+          },
+          {
+            "action": 57,
+            "pair": 234,
+            "tile": 111
+          },
+          {
+            "action": 104,
+            "pair": 151,
+            "tile": 112
+          },
+          {
+            "action": 15,
+            "pair": 196,
+            "tile": 113
+          },
+          {
+            "action": 51,
+            "pair": 517,
+            "tile": 113
+          },
+          {
+            "action": 29,
+            "pair": 522,
+            "tile": 140
+          }
+        ],
+        "pair_max": 598,
+        "pair_min": 33,
+        "record_count": 108,
+        "runtime_record_bytes": 432,
+        "runtime_record_sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a",
+        "top_actions": [
+          {
+            "count": 4,
+            "value": 92
+          },
+          {
+            "count": 4,
+            "value": 94
+          },
+          {
+            "count": 4,
+            "value": 90
+          },
+          {
+            "count": 4,
+            "value": 47
+          },
+          {
+            "count": 4,
+            "value": 91
+          },
+          {
+            "count": 4,
+            "value": 93
+          },
+          {
+            "count": 3,
+            "value": 56
+          },
+          {
+            "count": 3,
+            "value": 38
+          },
+          {
+            "count": 3,
+            "value": 15
+          },
+          {
+            "count": 3,
+            "value": 22
+          },
+          {
+            "count": 3,
+            "value": 18
+          },
+          {
+            "count": 2,
+            "value": 17
+          }
+        ],
+        "top_pairs": [
+          {
+            "count": 2,
+            "value": 597
+          },
+          {
+            "count": 2,
+            "value": 519
+          },
+          {
+            "count": 1,
+            "value": 104
+          },
+          {
+            "count": 1,
+            "value": 106
+          },
+          {
+            "count": 1,
+            "value": 89
+          },
+          {
+            "count": 1,
+            "value": 540
+          },
+          {
+            "count": 1,
+            "value": 112
+          },
+          {
+            "count": 1,
+            "value": 566
+          },
+          {
+            "count": 1,
+            "value": 73
+          },
+          {
+            "count": 1,
+            "value": 109
+          },
+          {
+            "count": 1,
+            "value": 115
+          },
+          {
+            "count": 1,
+            "value": 119
+          }
+        ],
+        "top_tiles": [
+          {
+            "count": 30,
+            "value": 88
+          },
+          {
+            "count": 29,
+            "value": 86
+          },
+          {
+            "count": 11,
+            "value": 89
+          },
+          {
+            "count": 8,
+            "value": 87
+          },
+          {
+            "count": 3,
+            "value": 99
+          },
+          {
+            "count": 3,
+            "value": 109
+          },
+          {
+            "count": 3,
+            "value": 110
+          },
+          {
+            "count": 2,
+            "value": 83
+          },
+          {
+            "count": 2,
+            "value": 84
+          },
+          {
+            "count": 2,
+            "value": 85
+          },
+          {
+            "count": 2,
+            "value": 98
+          },
+          {
+            "count": 2,
+            "value": 108
+          }
+        ],
+        "unique_action_count": 60,
+        "unique_pair_count": 106,
+        "unique_tile_count": 21,
+        "wire_kind": "SG2_grouped_tile_frame_delta_varint",
+        "wire_raw_bytes": 281,
+        "wire_raw_sha256": "b0a4d55d19a534f223512c07920c46f1a52dc2409951a7f7c5ea9ce0e70acddc"
+      },
+      "archive": {
+        "bytes": 276485,
+        "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c091_next_cem_pose_waterfill_top192_s0125_m06_t4_20260503T1238Z/archive.zip",
+        "sha256": "79091f2c3f0c30ef3ca512808f3adc0306010e7f57fed3a09b3664c16fea4ea8",
+        "zip": {
+          "member_compress_size": 276385,
+          "member_compress_type": 0,
+          "member_crc": 4169367452,
+          "member_file_size": 276385,
+          "member_header_offset": 0,
+          "member_name": "p",
+          "overhead": {
+            "archive_bytes": 276485,
+            "central_directory_bytes": 47,
+            "comment_bytes": 0,
+            "data_descriptor_bytes": 0,
+            "eocd_and_comment_bytes": 22,
+            "local_header_bytes": 31,
+            "member_extra_bytes_local": 0,
+            "member_name_bytes_local": 1,
+            "minimal_single_stored_member_overhead_bytes": 100,
+            "over_minimal_bytes": 0,
+            "payload_compressed_bytes": 276385,
+            "total_overhead_bytes": 100
+          }
+        }
+      },
+      "decoded_streams": {
+        "masks.mkv": {
+          "charged_bytes": 219472,
+          "charged_entropy": {
+            "bytes": 219472,
+            "entropy_bits_per_byte": 7.998591976459037,
+            "unique_byte_count": 256,
+            "zero_order_entropy_bytes": 219434,
+            "zero_order_entropy_ratio": 0.9998268571845156
+          },
+          "charged_recompression_probe": {
+            "best_probe": {
+              "bytes": 219472,
+              "codec": "input_bytes"
+            },
+            "best_probe_delta_vs_input": 0,
+            "brotli_q11_bytes": 219477,
+            "brotli_q5_bytes": 219477,
+            "brotli_q9_bytes": 219477,
+            "input_bytes": 219472,
+            "lzma_preset9_bytes": 219544,
+            "zlib_9_bytes": 219548
+          },
+          "charged_sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87",
+          "codec": "brotli_av1_obu",
+          "decoded_brotli_reencode_probe": {
+            "best_reencode": {
+              "bytes": 219472,
+              "codec": "brotli_q11"
+            },
+            "best_reencode_delta_vs_current": 0,
+            "brotli_q11_bytes": 219472,
+            "brotli_q5_bytes": 223390,
+            "brotli_q9_bytes": 220355,
+            "current_charged_bytes": 219472,
+            "semantics_preserving_if_runtime_accepts_brotli_stream": true
+          },
+          "decoded_bytes": 223385,
+          "decoded_prefix_hex": "12000a0a0000000c",
+          "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+          "name": "masks.mkv"
+        },
+        "optimized_poses.qp1": {
+          "charged_bytes": 892,
+          "charged_entropy": {
+            "bytes": 892,
+            "entropy_bits_per_byte": 7.807275104296647,
+            "unique_byte_count": 249,
+            "zero_order_entropy_bytes": 871,
+            "zero_order_entropy_ratio": 0.976457399103139
+          },
+          "charged_recompression_probe": {
+            "best_probe": {
+              "bytes": 892,
+              "codec": "input_bytes"
+            },
+            "best_probe_delta_vs_input": 0,
+            "brotli_q11_bytes": 896,
+            "brotli_q5_bytes": 896,
+            "brotli_q9_bytes": 896,
+            "input_bytes": 892,
+            "lzma_preset9_bytes": 952,
+            "zlib_9_bytes": 903
+          },
+          "charged_sha256": "c4c6e22ef870db7ede58170b14aec6a820a224b72106a411655507a534d70add",
+          "codec": "public_qp1_brotli",
+          "decoded_brotli_reencode_probe": {
+            "best_reencode": {
+              "bytes": 893,
+              "codec": "brotli_q11"
+            },
+            "best_reencode_delta_vs_current": 1,
+            "brotli_q11_bytes": 893,
+            "brotli_q5_bytes": 1001,
+            "brotli_q9_bytes": 1017,
+            "current_charged_bytes": 892,
+            "semantics_preserving_if_runtime_accepts_brotli_stream": true
+          },
+          "decoded_bytes": 1140,
+          "decoded_prefix_hex": "5150316d1cd003c1",
+          "decoded_sha256": "80094e20f4f6cd29869e043eb6d224a6697ecd7fb0e77728ddcd6c7a05fccb9a",
+          "name": "optimized_poses.qp1"
+        },
+        "renderer.bin": {
+          "charged_bytes": 55756,
+          "charged_entropy": {
+            "bytes": 55756,
+            "entropy_bits_per_byte": 7.992730680026941,
+            "unique_byte_count": 256,
+            "zero_order_entropy_bytes": 55706,
+            "zero_order_entropy_ratio": 0.9991032355262214
+          },
+          "charged_recompression_probe": {
+            "best_probe": {
+              "bytes": 55756,
+              "codec": "input_bytes"
+            },
+            "best_probe_delta_vs_input": 0,
+            "brotli_q11_bytes": 55760,
+            "brotli_q5_bytes": 55760,
+            "brotli_q9_bytes": 55760,
+            "input_bytes": 55756,
+            "lzma_preset9_bytes": 55816,
+            "zlib_9_bytes": 55782
+          },
+          "charged_sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf",
+          "codec": "brotli_qzs3",
+          "decoded_brotli_reencode_probe": {
+            "best_reencode": {
+              "bytes": 55757,
+              "codec": "brotli_q11"
+            },
+            "best_reencode_delta_vs_current": 1,
+            "brotli_q11_bytes": 55757,
+            "brotli_q5_bytes": 56777,
+            "brotli_q9_bytes": 56692,
+            "current_charged_bytes": 55756,
+            "semantics_preserving_if_runtime_accepts_brotli_stream": true
+          },
+          "decoded_bytes": 59288,
+          "decoded_prefix_hex": "515a533320001675",
+          "decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+          "name": "renderer.bin"
+        },
+        "seg_tile_actions.bin": {
+          "charged_bytes": 255,
+          "charged_entropy": {
+            "bytes": 255,
+            "entropy_bits_per_byte": 7.205989442831412,
+            "unique_byte_count": 165,
+            "zero_order_entropy_bytes": 230,
+            "zero_order_entropy_ratio": 0.9019607843137255
+          },
+          "charged_recompression_probe": {
+            "best_probe": {
+              "bytes": 255,
+              "codec": "input_bytes"
+            },
+            "best_probe_delta_vs_input": 0,
+            "brotli_q11_bytes": 259,
+            "brotli_q5_bytes": 259,
+            "brotli_q9_bytes": 259,
+            "input_bytes": 255,
+            "lzma_preset9_bytes": 316,
+            "zlib_9_bytes": 266
+          },
+          "charged_sha256": "e2f8a113ee9e4d009448fec2497602ef67cabb8a13ef8d3fa9e11d69ff8ceed6",
+          "codec": "brotli_public_seg_tile_actions",
+          "decoded_brotli_reencode_probe": {
+            "best_reencode": {
+              "bytes": 255,
+              "codec": "brotli_q11"
+            },
+            "best_reencode_delta_vs_current": 0,
+            "brotli_q11_bytes": 255,
+            "brotli_q5_bytes": 257,
+            "brotli_q9_bytes": 257,
+            "current_charged_bytes": 255,
+            "semantics_preserving_if_runtime_accepts_brotli_stream": true
+          },
+          "decoded_bytes": 281,
+          "decoded_prefix_hex": "5302681102405402",
+          "decoded_sha256": "b0a4d55d19a534f223512c07920c46f1a52dc2409951a7f7c5ea9ce0e70acddc",
+          "name": "seg_tile_actions.bin"
+        }
+      },
+      "label": "c102",
+      "layout": {
+        "boundary_authority": "self_describing_p3_header",
+        "header": {
+          "actions_br_bytes": 255,
+          "bytes": 10,
+          "kind": "P3",
+          "mask_br_bytes": 219472,
+          "renderer_br_bytes": 55756
+        },
+        "payload_format": "public_pr75_qzs3_qp1_segactions_p3",
+        "segments": [
+          {
+            "charged_bytes": 219472,
+            "charged_prefix_hex": "5b98684344152796",
+            "charged_sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87",
+            "codec": "brotli_av1_obu",
+            "name": "masks.mkv",
+            "offset": 10
+          },
+          {
+            "charged_bytes": 55756,
+            "charged_prefix_hex": "e2f2bcec00c3609e",
+            "charged_sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf",
+            "codec": "brotli_qzs3",
+            "name": "renderer.bin",
+            "offset": 219482
+          },
+          {
+            "charged_bytes": 255,
+            "charged_prefix_hex": "1b1801f8e5605dfd",
+            "charged_sha256": "e2f8a113ee9e4d009448fec2497602ef67cabb8a13ef8d3fa9e11d69ff8ceed6",
+            "codec": "brotli_public_seg_tile_actions",
+            "name": "seg_tile_actions.bin",
+            "offset": 275238
+          },
+          {
+            "charged_bytes": 892,
+            "charged_prefix_hex": "628e00ffe3c08d15",
+            "charged_sha256": "c4c6e22ef870db7ede58170b14aec6a820a224b72106a411655507a534d70add",
+            "codec": "public_qp1_brotli",
+            "name": "optimized_poses.qp1",
+            "offset": 275493
+          }
+        ],
+        "stripped_p3_fixed_slice_parse": {
+          "decoded_sha256_equal": {
+            "masks.mkv": true,
+            "optimized_poses.qp1": true,
+            "renderer.bin": true,
+            "seg_tile_actions.bin": true
+          },
+          "ok": true,
+          "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+          "stripped_payload_bytes": 276375,
+          "stripped_payload_sha256": "82ebccc58d71e3f3b284f07d4be92d9d8d41d0d23249c98f76767389934aa595"
+        }
+      },
+      "payload": {
+        "bytes": 276385,
+        "compression_probe": {
+          "best_probe": {
+            "bytes": 276385,
+            "codec": "input_bytes"
+          },
+          "best_probe_delta_vs_input": 0,
+          "brotli_q11_bytes": 276390,
+          "brotli_q5_bytes": 276390,
+          "brotli_q9_bytes": 276390,
+          "input_bytes": 276385,
+          "lzma_preset9_bytes": 276460,
+          "zlib_9_bytes": 276476
+        },
+        "entropy": {
+          "bytes": 276385,
+          "entropy_bits_per_byte": 7.999145525419671,
+          "unique_byte_count": 256,
+          "zero_order_entropy_bytes": 276356,
+          "zero_order_entropy_ratio": 0.9998950739005373
+        },
+        "member": "p",
+        "prefix_hex": "503350590300ccd9",
+        "sha256": "44128c2715ad62ae4075e3b85e23403b3700f7ca1be876fb1f939318149cb84e"
+      },
+      "pose": {
+        "codec": "QP1_col0_delta_varint",
+        "q0_first": 7277,
+        "q0_last": 5636,
+        "q0_max": 7739,
+        "q0_min": 1668,
+        "raw_bytes": 1140,
+        "raw_prefix_hex": "5150316d1cd003c1",
+        "raw_sha256": "80094e20f4f6cd29869e043eb6d224a6697ecd7fb0e77728ddcd6c7a05fccb9a",
+        "row_count": 600
+      },
+      "robust_current_parse": {
+        "decoded_members": {
+          "masks.mkv": {
+            "decoded_bytes": 223385,
+            "decoded_prefix_hex": "12000a0a0000000c",
+            "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+          },
+          "optimized_poses.qp1": {
+            "decoded_bytes": 1140,
+            "decoded_prefix_hex": "5150316d1cd003c1",
+            "decoded_sha256": "80094e20f4f6cd29869e043eb6d224a6697ecd7fb0e77728ddcd6c7a05fccb9a"
+          },
+          "renderer.bin": {
+            "decoded_bytes": 59288,
+            "decoded_prefix_hex": "515a533320001675",
+            "decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+          },
+          "seg_tile_actions.bin": {
+            "decoded_bytes": 432,
+            "decoded_prefix_hex": "680053116a005340",
+            "decoded_sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a"
+          }
+        },
+        "members": [
+          {
+            "bytes": 55756,
+            "codec": "brotli_qzs3",
+            "decoded_bytes": 59288,
+            "decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+            "name": "renderer.bin",
+            "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+          },
+          {
+            "bytes": 219472,
+            "codec": "brotli_av1_obu",
+            "decoded_bytes": 223385,
+            "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+            "name": "masks.mkv",
+            "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+          },
+          {
+            "bytes": 255,
+            "codec": "brotli_seg_tile_actions_v1",
+            "decoded_bytes": 432,
+            "decoded_sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a",
+            "name": "seg_tile_actions.bin",
+            "sha256": "e2f8a113ee9e4d009448fec2497602ef67cabb8a13ef8d3fa9e11d69ff8ceed6"
+          },
+          {
+            "bytes": 892,
+            "codec": "public_qp1_brotli",
+            "decoded_bytes": 1140,
+            "decoded_sha256": "80094e20f4f6cd29869e043eb6d224a6697ecd7fb0e77728ddcd6c7a05fccb9a",
+            "name": "optimized_poses.qp1",
+            "sha256": "c4c6e22ef870db7ede58170b14aec6a820a224b72106a411655507a534d70add"
+          }
+        ],
+        "ok": true,
+        "payload_format": "public_pr75_qzs3_qp1_segactions_p3"
+      },
+      "role": "internal_c102_exact_archive"
+    },
+    {
+      "actions": {
+        "first_records": [
+          {
+            "action": 17,
+            "pair": 104,
+            "tile": 83
+          },
+          {
+            "action": 64,
+            "pair": 106,
+            "tile": 83
+          },
+          {
+            "action": 7,
+            "pair": 89,
+            "tile": 84
+          },
+          {
+            "action": 58,
+            "pair": 540,
+            "tile": 84
+          },
+          {
+            "action": 75,
+            "pair": 112,
+            "tile": 85
+          },
+          {
+            "action": 56,
+            "pair": 566,
+            "tile": 85
+          },
+          {
+            "action": 40,
+            "pair": 73,
+            "tile": 86
+          },
+          {
+            "action": 92,
+            "pair": 109,
+            "tile": 86
+          },
+          {
+            "action": 94,
+            "pair": 115,
+            "tile": 86
+          },
+          {
+            "action": 44,
+            "pair": 119,
+            "tile": 86
+          },
+          {
+            "action": 6,
+            "pair": 124,
+            "tile": 86
+          },
+          {
+            "action": 38,
+            "pair": 126,
+            "tile": 86
+          }
+        ],
+        "last_records": [
+          {
+            "action": 92,
+            "pair": 33,
+            "tile": 109
+          },
+          {
+            "action": 93,
+            "pair": 36,
+            "tile": 109
+          },
+          {
+            "action": 23,
+            "pair": 227,
+            "tile": 109
+          },
+          {
+            "action": 56,
+            "pair": 71,
+            "tile": 110
+          },
+          {
+            "action": 10,
+            "pair": 211,
+            "tile": 110
+          },
+          {
+            "action": 95,
+            "pair": 218,
+            "tile": 110
+          },
+          {
+            "action": 71,
+            "pair": 212,
+            "tile": 111
+          },
+          {
+            "action": 57,
+            "pair": 234,
+            "tile": 111
+          },
+          {
+            "action": 104,
+            "pair": 151,
+            "tile": 112
+          },
+          {
+            "action": 15,
+            "pair": 196,
+            "tile": 113
+          },
+          {
+            "action": 51,
+            "pair": 517,
+            "tile": 113
+          },
+          {
+            "action": 29,
+            "pair": 522,
+            "tile": 140
+          }
+        ],
+        "pair_max": 598,
+        "pair_min": 33,
+        "record_count": 108,
+        "runtime_record_bytes": 432,
+        "runtime_record_sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a",
+        "top_actions": [
+          {
+            "count": 4,
+            "value": 92
+          },
+          {
+            "count": 4,
+            "value": 94
+          },
+          {
+            "count": 4,
+            "value": 90
+          },
+          {
+            "count": 4,
+            "value": 47
+          },
+          {
+            "count": 4,
+            "value": 91
+          },
+          {
+            "count": 4,
+            "value": 93
+          },
+          {
+            "count": 3,
+            "value": 56
+          },
+          {
+            "count": 3,
+            "value": 38
+          },
+          {
+            "count": 3,
+            "value": 15
+          },
+          {
+            "count": 3,
+            "value": 22
+          },
+          {
+            "count": 3,
+            "value": 18
+          },
+          {
+            "count": 2,
+            "value": 17
+          }
+        ],
+        "top_pairs": [
+          {
+            "count": 2,
+            "value": 597
+          },
+          {
+            "count": 2,
+            "value": 519
+          },
+          {
+            "count": 1,
+            "value": 104
+          },
+          {
+            "count": 1,
+            "value": 106
+          },
+          {
+            "count": 1,
+            "value": 89
+          },
+          {
+            "count": 1,
+            "value": 540
+          },
+          {
+            "count": 1,
+            "value": 112
+          },
+          {
+            "count": 1,
+            "value": 566
+          },
+          {
+            "count": 1,
+            "value": 73
+          },
+          {
+            "count": 1,
+            "value": 109
+          },
+          {
+            "count": 1,
+            "value": 115
+          },
+          {
+            "count": 1,
+            "value": 119
+          }
+        ],
+        "top_tiles": [
+          {
+            "count": 30,
+            "value": 88
+          },
+          {
+            "count": 29,
+            "value": 86
+          },
+          {
+            "count": 11,
+            "value": 89
+          },
+          {
+            "count": 8,
+            "value": 87
+          },
+          {
+            "count": 3,
+            "value": 99
+          },
+          {
+            "count": 3,
+            "value": 109
+          },
+          {
+            "count": 3,
+            "value": 110
+          },
+          {
+            "count": 2,
+            "value": 83
+          },
+          {
+            "count": 2,
+            "value": 84
+          },
+          {
+            "count": 2,
+            "value": 85
+          },
+          {
+            "count": 2,
+            "value": 98
+          },
+          {
+            "count": 2,
+            "value": 108
+          }
+        ],
+        "unique_action_count": 60,
+        "unique_pair_count": 106,
+        "unique_tile_count": 21,
+        "wire_kind": "SG2_grouped_tile_frame_delta_varint",
+        "wire_raw_bytes": 281,
+        "wire_raw_sha256": "b0a4d55d19a534f223512c07920c46f1a52dc2409951a7f7c5ea9ce0e70acddc"
+      },
+      "archive": {
+        "bytes": 276481,
+        "path": "/Users/adpena/Projects/pact/experiments/results/top_submission_reverse_engineering_20260503_pr75_minp/archive.zip",
+        "sha256": "03a2afd5fe92c93a9b7b7e43625158a73b455f0cfbca82d278008a728db78746",
+        "zip": {
+          "member_compress_size": 276381,
+          "member_compress_type": 0,
+          "member_crc": 3930107496,
+          "member_file_size": 276381,
+          "member_header_offset": 0,
+          "member_name": "p",
+          "overhead": {
+            "archive_bytes": 276481,
+            "central_directory_bytes": 47,
+            "comment_bytes": 0,
+            "data_descriptor_bytes": 0,
+            "eocd_and_comment_bytes": 22,
+            "local_header_bytes": 31,
+            "member_extra_bytes_local": 0,
+            "member_name_bytes_local": 1,
+            "minimal_single_stored_member_overhead_bytes": 100,
+            "over_minimal_bytes": 0,
+            "payload_compressed_bytes": 276381,
+            "total_overhead_bytes": 100
+          }
+        }
+      },
+      "decoded_streams": {
+        "masks.mkv": {
+          "charged_bytes": 219472,
+          "charged_entropy": {
+            "bytes": 219472,
+            "entropy_bits_per_byte": 7.998591976459037,
+            "unique_byte_count": 256,
+            "zero_order_entropy_bytes": 219434,
+            "zero_order_entropy_ratio": 0.9998268571845156
+          },
+          "charged_recompression_probe": {
+            "best_probe": {
+              "bytes": 219472,
+              "codec": "input_bytes"
+            },
+            "best_probe_delta_vs_input": 0,
+            "brotli_q11_bytes": 219477,
+            "brotli_q5_bytes": 219477,
+            "brotli_q9_bytes": 219477,
+            "input_bytes": 219472,
+            "lzma_preset9_bytes": 219544,
+            "zlib_9_bytes": 219548
+          },
+          "charged_sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87",
+          "codec": "brotli_av1_obu",
+          "decoded_brotli_reencode_probe": {
+            "best_reencode": {
+              "bytes": 219472,
+              "codec": "brotli_q11"
+            },
+            "best_reencode_delta_vs_current": 0,
+            "brotli_q11_bytes": 219472,
+            "brotli_q5_bytes": 223390,
+            "brotli_q9_bytes": 220355,
+            "current_charged_bytes": 219472,
+            "semantics_preserving_if_runtime_accepts_brotli_stream": true
+          },
+          "decoded_bytes": 223385,
+          "decoded_prefix_hex": "12000a0a0000000c",
+          "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+          "name": "masks.mkv"
+        },
+        "optimized_poses.qp1": {
+          "charged_bytes": 898,
+          "charged_entropy": {
+            "bytes": 898,
+            "entropy_bits_per_byte": 7.811697516431102,
+            "unique_byte_count": 250,
+            "zero_order_entropy_bytes": 877,
+            "zero_order_entropy_ratio": 0.9766146993318485
+          },
+          "charged_recompression_probe": {
+            "best_probe": {
+              "bytes": 898,
+              "codec": "input_bytes"
+            },
+            "best_probe_delta_vs_input": 0,
+            "brotli_q11_bytes": 902,
+            "brotli_q5_bytes": 902,
+            "brotli_q9_bytes": 902,
+            "input_bytes": 898,
+            "lzma_preset9_bytes": 960,
+            "zlib_9_bytes": 909
+          },
+          "charged_sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082",
+          "codec": "public_qp1_brotli",
+          "decoded_brotli_reencode_probe": {
+            "best_reencode": {
+              "bytes": 899,
+              "codec": "brotli_q11"
+            },
+            "best_reencode_delta_vs_current": 1,
+            "brotli_q11_bytes": 899,
+            "brotli_q5_bytes": 1002,
+            "brotli_q9_bytes": 1023,
+            "current_charged_bytes": 898,
+            "semantics_preserving_if_runtime_accepts_brotli_stream": true
+          },
+          "decoded_bytes": 1140,
+          "decoded_prefix_hex": "5150316d1cd003c1",
+          "decoded_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+          "name": "optimized_poses.qp1"
+        },
+        "renderer.bin": {
+          "charged_bytes": 55756,
+          "charged_entropy": {
+            "bytes": 55756,
+            "entropy_bits_per_byte": 7.992730680026941,
+            "unique_byte_count": 256,
+            "zero_order_entropy_bytes": 55706,
+            "zero_order_entropy_ratio": 0.9991032355262214
+          },
+          "charged_recompression_probe": {
+            "best_probe": {
+              "bytes": 55756,
+              "codec": "input_bytes"
+            },
+            "best_probe_delta_vs_input": 0,
+            "brotli_q11_bytes": 55760,
+            "brotli_q5_bytes": 55760,
+            "brotli_q9_bytes": 55760,
+            "input_bytes": 55756,
+            "lzma_preset9_bytes": 55816,
+            "zlib_9_bytes": 55782
+          },
+          "charged_sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf",
+          "codec": "brotli_qzs3",
+          "decoded_brotli_reencode_probe": {
+            "best_reencode": {
+              "bytes": 55757,
+              "codec": "brotli_q11"
+            },
+            "best_reencode_delta_vs_current": 1,
+            "brotli_q11_bytes": 55757,
+            "brotli_q5_bytes": 56777,
+            "brotli_q9_bytes": 56692,
+            "current_charged_bytes": 55756,
+            "semantics_preserving_if_runtime_accepts_brotli_stream": true
+          },
+          "decoded_bytes": 59288,
+          "decoded_prefix_hex": "515a533320001675",
+          "decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+          "name": "renderer.bin"
+        },
+        "seg_tile_actions.bin": {
+          "charged_bytes": 255,
+          "charged_entropy": {
+            "bytes": 255,
+            "entropy_bits_per_byte": 7.205989442831412,
+            "unique_byte_count": 165,
+            "zero_order_entropy_bytes": 230,
+            "zero_order_entropy_ratio": 0.9019607843137255
+          },
+          "charged_recompression_probe": {
+            "best_probe": {
+              "bytes": 255,
+              "codec": "input_bytes"
+            },
+            "best_probe_delta_vs_input": 0,
+            "brotli_q11_bytes": 259,
+            "brotli_q5_bytes": 259,
+            "brotli_q9_bytes": 259,
+            "input_bytes": 255,
+            "lzma_preset9_bytes": 316,
+            "zlib_9_bytes": 266
+          },
+          "charged_sha256": "e2f8a113ee9e4d009448fec2497602ef67cabb8a13ef8d3fa9e11d69ff8ceed6",
+          "codec": "brotli_public_seg_tile_actions",
+          "decoded_brotli_reencode_probe": {
+            "best_reencode": {
+              "bytes": 255,
+              "codec": "brotli_q11"
+            },
+            "best_reencode_delta_vs_current": 0,
+            "brotli_q11_bytes": 255,
+            "brotli_q5_bytes": 257,
+            "brotli_q9_bytes": 257,
+            "current_charged_bytes": 255,
+            "semantics_preserving_if_runtime_accepts_brotli_stream": true
+          },
+          "decoded_bytes": 281,
+          "decoded_prefix_hex": "5302681102405402",
+          "decoded_sha256": "b0a4d55d19a534f223512c07920c46f1a52dc2409951a7f7c5ea9ce0e70acddc",
+          "name": "seg_tile_actions.bin"
+        }
+      },
+      "label": "pr75",
+      "layout": {
+        "boundary_authority": "fixed_slice_length_table",
+        "header": null,
+        "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+        "segments": [
+          {
+            "charged_bytes": 219472,
+            "charged_prefix_hex": "5b98684344152796",
+            "charged_sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87",
+            "codec": "brotli_av1_obu",
+            "name": "masks.mkv",
+            "offset": 0
+          },
+          {
+            "charged_bytes": 55756,
+            "charged_prefix_hex": "e2f2bcec00c3609e",
+            "charged_sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf",
+            "codec": "brotli_qzs3",
+            "name": "renderer.bin",
+            "offset": 219472
+          },
+          {
+            "charged_bytes": 255,
+            "charged_prefix_hex": "1b1801f8e5605dfd",
+            "charged_sha256": "e2f8a113ee9e4d009448fec2497602ef67cabb8a13ef8d3fa9e11d69ff8ceed6",
+            "codec": "brotli_public_seg_tile_actions",
+            "name": "seg_tile_actions.bin",
+            "offset": 275228
+          },
+          {
+            "charged_bytes": 898,
+            "charged_prefix_hex": "628e00ffe3203787",
+            "charged_sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082",
+            "codec": "public_qp1_brotli",
+            "name": "optimized_poses.qp1",
+            "offset": 275483
+          }
+        ],
+        "stripped_p3_fixed_slice_parse": null
+      },
+      "payload": {
+        "bytes": 276381,
+        "compression_probe": {
+          "best_probe": {
+            "bytes": 276381,
+            "codec": "input_bytes"
+          },
+          "best_probe_delta_vs_input": 0,
+          "brotli_q11_bytes": 276386,
+          "brotli_q5_bytes": 276386,
+          "brotli_q9_bytes": 276386,
+          "input_bytes": 276381,
+          "lzma_preset9_bytes": 276456,
+          "zlib_9_bytes": 276472
+        },
+        "entropy": {
+          "bytes": 276381,
+          "entropy_bits_per_byte": 7.999149643643106,
+          "unique_byte_count": 256,
+          "zero_order_entropy_bytes": 276352,
+          "zero_order_entropy_ratio": 0.9998950723819655
+        },
+        "member": "p",
+        "prefix_hex": "5b98684344152796",
+        "sha256": "f78c71d3086773e417c672734082a49ceb0ef5a0016cf406a920be7978fff252"
+      },
+      "pose": {
+        "codec": "QP1_col0_delta_varint",
+        "q0_first": 7277,
+        "q0_last": 5636,
+        "q0_max": 7739,
+        "q0_min": 1669,
+        "raw_bytes": 1140,
+        "raw_prefix_hex": "5150316d1cd003c1",
+        "raw_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+        "row_count": 600
+      },
+      "robust_current_parse": {
+        "decoded_members": {
+          "masks.mkv": {
+            "decoded_bytes": 223385,
+            "decoded_prefix_hex": "12000a0a0000000c",
+            "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+          },
+          "optimized_poses.qp1": {
+            "decoded_bytes": 1140,
+            "decoded_prefix_hex": "5150316d1cd003c1",
+            "decoded_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+          },
+          "renderer.bin": {
+            "decoded_bytes": 59288,
+            "decoded_prefix_hex": "515a533320001675",
+            "decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+          },
+          "seg_tile_actions.bin": {
+            "decoded_bytes": 432,
+            "decoded_prefix_hex": "680053116a005340",
+            "decoded_sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a"
+          }
+        },
+        "members": [
+          {
+            "bytes": 55756,
+            "codec": "brotli_qzs3",
+            "decoded_bytes": 59288,
+            "decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+            "name": "renderer.bin",
+            "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+          },
+          {
+            "bytes": 219472,
+            "codec": "brotli_av1_obu",
+            "decoded_bytes": 223385,
+            "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+            "name": "masks.mkv",
+            "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+          },
+          {
+            "bytes": 255,
+            "codec": "brotli_seg_tile_actions_v1",
+            "decoded_bytes": 432,
+            "decoded_sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a",
+            "name": "seg_tile_actions.bin",
+            "sha256": "e2f8a113ee9e4d009448fec2497602ef67cabb8a13ef8d3fa9e11d69ff8ceed6"
+          },
+          {
+            "bytes": 898,
+            "codec": "public_qp1_brotli",
+            "decoded_bytes": 1140,
+            "decoded_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+            "name": "optimized_poses.qp1",
+            "sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082"
+          }
+        ],
+        "ok": true,
+        "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices"
+      },
+      "role": "public_pr75_minp"
+    },
+    {
+      "actions": {
+        "first_records": [
+          {
+            "action": 58,
+            "pair": 546,
+            "tile": 82
+          },
+          {
+            "action": 17,
+            "pair": 104,
+            "tile": 83
+          },
+          {
+            "action": 50,
+            "pair": 106,
+            "tile": 83
+          },
+          {
+            "action": 16,
+            "pair": 598,
+            "tile": 83
+          },
+          {
+            "action": 58,
+            "pair": 540,
+            "tile": 84
+          },
+          {
+            "action": 99,
+            "pair": 542,
+            "tile": 84
+          },
+          {
+            "action": 75,
+            "pair": 112,
+            "tile": 85
+          },
+          {
+            "action": 56,
+            "pair": 566,
+            "tile": 85
+          },
+          {
+            "action": 92,
+            "pair": 109,
+            "tile": 86
+          },
+          {
+            "action": 94,
+            "pair": 115,
+            "tile": 86
+          },
+          {
+            "action": 52,
+            "pair": 116,
+            "tile": 86
+          },
+          {
+            "action": 44,
+            "pair": 119,
+            "tile": 86
+          }
+        ],
+        "last_records": [
+          {
+            "action": 10,
+            "pair": 597,
+            "tile": 99
+          },
+          {
+            "action": 44,
+            "pair": 578,
+            "tile": 105
+          },
+          {
+            "action": 6,
+            "pair": 34,
+            "tile": 109
+          },
+          {
+            "action": 35,
+            "pair": 510,
+            "tile": 109
+          },
+          {
+            "action": 10,
+            "pair": 211,
+            "tile": 110
+          },
+          {
+            "action": 74,
+            "pair": 210,
+            "tile": 111
+          },
+          {
+            "action": 51,
+            "pair": 517,
+            "tile": 113
+          },
+          {
+            "action": 94,
+            "pair": 76,
+            "tile": 119
+          },
+          {
+            "action": 88,
+            "pair": 523,
+            "tile": 131
+          },
+          {
+            "action": 58,
+            "pair": 368,
+            "tile": 132
+          },
+          {
+            "action": 92,
+            "pair": 522,
+            "tile": 139
+          },
+          {
+            "action": 80,
+            "pair": 522,
+            "tile": 140
+          }
+        ],
+        "pair_max": 599,
+        "pair_min": 11,
+        "record_count": 147,
+        "runtime_record_bytes": 588,
+        "runtime_record_sha256": "8ac9a01caad973096c58b42daf2b1a8e476ad68cf285d443baa4ac94fdb42255",
+        "top_actions": [
+          {
+            "count": 5,
+            "value": 92
+          },
+          {
+            "count": 4,
+            "value": 58
+          },
+          {
+            "count": 4,
+            "value": 94
+          },
+          {
+            "count": 4,
+            "value": 44
+          },
+          {
+            "count": 4,
+            "value": 88
+          },
+          {
+            "count": 4,
+            "value": 47
+          },
+          {
+            "count": 3,
+            "value": 17
+          },
+          {
+            "count": 3,
+            "value": 16
+          },
+          {
+            "count": 3,
+            "value": 99
+          },
+          {
+            "count": 3,
+            "value": 75
+          },
+          {
+            "count": 3,
+            "value": 6
+          },
+          {
+            "count": 3,
+            "value": 23
+          }
+        ],
+        "top_pairs": [
+          {
+            "count": 4,
+            "value": 542
+          },
+          {
+            "count": 3,
+            "value": 578
+          },
+          {
+            "count": 3,
+            "value": 514
+          },
+          {
+            "count": 3,
+            "value": 522
+          },
+          {
+            "count": 3,
+            "value": 510
+          },
+          {
+            "count": 2,
+            "value": 546
+          },
+          {
+            "count": 2,
+            "value": 598
+          },
+          {
+            "count": 2,
+            "value": 540
+          },
+          {
+            "count": 2,
+            "value": 577
+          },
+          {
+            "count": 2,
+            "value": 585
+          },
+          {
+            "count": 2,
+            "value": 592
+          },
+          {
+            "count": 2,
+            "value": 593
+          }
+        ],
+        "top_tiles": [
+          {
+            "count": 41,
+            "value": 88
+          },
+          {
+            "count": 30,
+            "value": 86
+          },
+          {
+            "count": 28,
+            "value": 89
+          },
+          {
+            "count": 16,
+            "value": 87
+          },
+          {
+            "count": 5,
+            "value": 99
+          },
+          {
+            "count": 3,
+            "value": 83
+          },
+          {
+            "count": 3,
+            "value": 96
+          },
+          {
+            "count": 2,
+            "value": 84
+          },
+          {
+            "count": 2,
+            "value": 85
+          },
+          {
+            "count": 2,
+            "value": 98
+          },
+          {
+            "count": 2,
+            "value": 109
+          },
+          {
+            "count": 1,
+            "value": 82
+          }
+        ],
+        "unique_action_count": 73,
+        "unique_pair_count": 121,
+        "unique_tile_count": 24,
+        "wire_kind": "SG2_grouped_tile_frame_delta_varint",
+        "wire_raw_bytes": 371,
+        "wire_raw_sha256": "f79727da7664fb53cbc1bddf695e9c528314fe1dd9626882810f2c2fd561608a"
+      },
+      "archive": {
+        "bytes": 276551,
+        "path": "/Users/adpena/Projects/pact/experiments/results/top_submission_reverse_engineering_20260503_pr77/archive.zip",
+        "sha256": "f90880383c95e14d82704f99db9b20944786ae6452a844348638b06c439972af",
+        "zip": {
+          "member_compress_size": 276451,
+          "member_compress_type": 0,
+          "member_crc": 1679796773,
+          "member_file_size": 276451,
+          "member_header_offset": 0,
+          "member_name": "p",
+          "overhead": {
+            "archive_bytes": 276551,
+            "central_directory_bytes": 47,
+            "comment_bytes": 0,
+            "data_descriptor_bytes": 0,
+            "eocd_and_comment_bytes": 22,
+            "local_header_bytes": 31,
+            "member_extra_bytes_local": 0,
+            "member_name_bytes_local": 1,
+            "minimal_single_stored_member_overhead_bytes": 100,
+            "over_minimal_bytes": 0,
+            "payload_compressed_bytes": 276451,
+            "total_overhead_bytes": 100
+          }
+        }
+      },
+      "decoded_streams": {
+        "masks.mkv": {
+          "charged_bytes": 219472,
+          "charged_entropy": {
+            "bytes": 219472,
+            "entropy_bits_per_byte": 7.998591976459037,
+            "unique_byte_count": 256,
+            "zero_order_entropy_bytes": 219434,
+            "zero_order_entropy_ratio": 0.9998268571845156
+          },
+          "charged_recompression_probe": {
+            "best_probe": {
+              "bytes": 219472,
+              "codec": "input_bytes"
+            },
+            "best_probe_delta_vs_input": 0,
+            "brotli_q11_bytes": 219477,
+            "brotli_q5_bytes": 219477,
+            "brotli_q9_bytes": 219477,
+            "input_bytes": 219472,
+            "lzma_preset9_bytes": 219544,
+            "zlib_9_bytes": 219548
+          },
+          "charged_sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87",
+          "codec": "brotli_av1_obu",
+          "decoded_brotli_reencode_probe": {
+            "best_reencode": {
+              "bytes": 219472,
+              "codec": "brotli_q11"
+            },
+            "best_reencode_delta_vs_current": 0,
+            "brotli_q11_bytes": 219472,
+            "brotli_q5_bytes": 223390,
+            "brotli_q9_bytes": 220355,
+            "current_charged_bytes": 219472,
+            "semantics_preserving_if_runtime_accepts_brotli_stream": true
+          },
+          "decoded_bytes": 223385,
+          "decoded_prefix_hex": "12000a0a0000000c",
+          "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+          "name": "masks.mkv"
+        },
+        "optimized_poses.qp1": {
+          "charged_bytes": 898,
+          "charged_entropy": {
+            "bytes": 898,
+            "entropy_bits_per_byte": 7.811697516431102,
+            "unique_byte_count": 250,
+            "zero_order_entropy_bytes": 877,
+            "zero_order_entropy_ratio": 0.9766146993318485
+          },
+          "charged_recompression_probe": {
+            "best_probe": {
+              "bytes": 898,
+              "codec": "input_bytes"
+            },
+            "best_probe_delta_vs_input": 0,
+            "brotli_q11_bytes": 902,
+            "brotli_q5_bytes": 902,
+            "brotli_q9_bytes": 902,
+            "input_bytes": 898,
+            "lzma_preset9_bytes": 960,
+            "zlib_9_bytes": 909
+          },
+          "charged_sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082",
+          "codec": "public_qp1_brotli",
+          "decoded_brotli_reencode_probe": {
+            "best_reencode": {
+              "bytes": 899,
+              "codec": "brotli_q11"
+            },
+            "best_reencode_delta_vs_current": 1,
+            "brotli_q11_bytes": 899,
+            "brotli_q5_bytes": 1002,
+            "brotli_q9_bytes": 1023,
+            "current_charged_bytes": 898,
+            "semantics_preserving_if_runtime_accepts_brotli_stream": true
+          },
+          "decoded_bytes": 1140,
+          "decoded_prefix_hex": "5150316d1cd003c1",
+          "decoded_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+          "name": "optimized_poses.qp1"
+        },
+        "renderer.bin": {
+          "charged_bytes": 55756,
+          "charged_entropy": {
+            "bytes": 55756,
+            "entropy_bits_per_byte": 7.992730680026941,
+            "unique_byte_count": 256,
+            "zero_order_entropy_bytes": 55706,
+            "zero_order_entropy_ratio": 0.9991032355262214
+          },
+          "charged_recompression_probe": {
+            "best_probe": {
+              "bytes": 55756,
+              "codec": "input_bytes"
+            },
+            "best_probe_delta_vs_input": 0,
+            "brotli_q11_bytes": 55760,
+            "brotli_q5_bytes": 55760,
+            "brotli_q9_bytes": 55760,
+            "input_bytes": 55756,
+            "lzma_preset9_bytes": 55816,
+            "zlib_9_bytes": 55782
+          },
+          "charged_sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf",
+          "codec": "brotli_qzs3",
+          "decoded_brotli_reencode_probe": {
+            "best_reencode": {
+              "bytes": 55757,
+              "codec": "brotli_q11"
+            },
+            "best_reencode_delta_vs_current": 1,
+            "brotli_q11_bytes": 55757,
+            "brotli_q5_bytes": 56777,
+            "brotli_q9_bytes": 56692,
+            "current_charged_bytes": 55756,
+            "semantics_preserving_if_runtime_accepts_brotli_stream": true
+          },
+          "decoded_bytes": 59288,
+          "decoded_prefix_hex": "515a533320001675",
+          "decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+          "name": "renderer.bin"
+        },
+        "seg_tile_actions.bin": {
+          "charged_bytes": 325,
+          "charged_entropy": {
+            "bytes": 325,
+            "entropy_bits_per_byte": 7.324491457236103,
+            "unique_byte_count": 183,
+            "zero_order_entropy_bytes": 298,
+            "zero_order_entropy_ratio": 0.916923076923077
+          },
+          "charged_recompression_probe": {
+            "best_probe": {
+              "bytes": 325,
+              "codec": "input_bytes"
+            },
+            "best_probe_delta_vs_input": 0,
+            "brotli_q11_bytes": 329,
+            "brotli_q5_bytes": 329,
+            "brotli_q9_bytes": 329,
+            "input_bytes": 325,
+            "lzma_preset9_bytes": 388,
+            "zlib_9_bytes": 336
+          },
+          "charged_sha256": "d8c75e4f3725bbcf608434f0a78f5b37a9ce86bd8177c71092fd727d7e2af75a",
+          "codec": "brotli_public_seg_tile_actions",
+          "decoded_brotli_reencode_probe": {
+            "best_reencode": {
+              "bytes": 326,
+              "codec": "brotli_q5"
+            },
+            "best_reencode_delta_vs_current": 1,
+            "brotli_q11_bytes": 347,
+            "brotli_q5_bytes": 326,
+            "brotli_q9_bytes": 326,
+            "current_charged_bytes": 325,
+            "semantics_preserving_if_runtime_accepts_brotli_stream": true
+          },
+          "decoded_bytes": 371,
+          "decoded_prefix_hex": "5201a2043a530368",
+          "decoded_sha256": "f79727da7664fb53cbc1bddf695e9c528314fe1dd9626882810f2c2fd561608a",
+          "name": "seg_tile_actions.bin"
+        }
+      },
+      "label": "pr77",
+      "layout": {
+        "boundary_authority": "fixed_slice_length_table",
+        "header": null,
+        "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+        "segments": [
+          {
+            "charged_bytes": 219472,
+            "charged_prefix_hex": "5b98684344152796",
+            "charged_sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87",
+            "codec": "brotli_av1_obu",
+            "name": "masks.mkv",
+            "offset": 0
+          },
+          {
+            "charged_bytes": 55756,
+            "charged_prefix_hex": "e2f2bcec00c3609e",
+            "charged_sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf",
+            "codec": "brotli_qzs3",
+            "name": "renderer.bin",
+            "offset": 219472
+          },
+          {
+            "charged_bytes": 325,
+            "charged_prefix_hex": "422e0080f8f5fbfd",
+            "charged_sha256": "d8c75e4f3725bbcf608434f0a78f5b37a9ce86bd8177c71092fd727d7e2af75a",
+            "codec": "brotli_public_seg_tile_actions",
+            "name": "seg_tile_actions.bin",
+            "offset": 275228
+          },
+          {
+            "charged_bytes": 898,
+            "charged_prefix_hex": "628e00ffe3203787",
+            "charged_sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082",
+            "codec": "public_qp1_brotli",
+            "name": "optimized_poses.qp1",
+            "offset": 275553
+          }
+        ],
+        "stripped_p3_fixed_slice_parse": null
+      },
+      "payload": {
+        "bytes": 276451,
+        "compression_probe": {
+          "best_probe": {
+            "bytes": 276451,
+            "codec": "input_bytes"
+          },
+          "best_probe_delta_vs_input": 0,
+          "brotli_q11_bytes": 276456,
+          "brotli_q5_bytes": 276456,
+          "brotli_q9_bytes": 276456,
+          "input_bytes": 276451,
+          "lzma_preset9_bytes": 276524,
+          "zlib_9_bytes": 276542
+        },
+        "entropy": {
+          "bytes": 276451,
+          "entropy_bits_per_byte": 7.9991451040909975,
+          "unique_byte_count": 256,
+          "zero_order_entropy_bytes": 276422,
+          "zero_order_entropy_ratio": 0.9998950989506278
+        },
+        "member": "p",
+        "prefix_hex": "5b98684344152796",
+        "sha256": "3be6a58673133db2dd14d9f1f0903d528e452bd2e930d57fb4adb02bf264f8ec"
+      },
+      "pose": {
+        "codec": "QP1_col0_delta_varint",
+        "q0_first": 7277,
+        "q0_last": 5636,
+        "q0_max": 7739,
+        "q0_min": 1669,
+        "raw_bytes": 1140,
+        "raw_prefix_hex": "5150316d1cd003c1",
+        "raw_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+        "row_count": 600
+      },
+      "robust_current_parse": {
+        "decoded_members": {
+          "masks.mkv": {
+            "decoded_bytes": 223385,
+            "decoded_prefix_hex": "12000a0a0000000c",
+            "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+          },
+          "optimized_poses.qp1": {
+            "decoded_bytes": 1140,
+            "decoded_prefix_hex": "5150316d1cd003c1",
+            "decoded_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+          },
+          "renderer.bin": {
+            "decoded_bytes": 59288,
+            "decoded_prefix_hex": "515a533320001675",
+            "decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+          },
+          "seg_tile_actions.bin": {
+            "decoded_bytes": 588,
+            "decoded_prefix_hex": "2202523a68005311",
+            "decoded_sha256": "8ac9a01caad973096c58b42daf2b1a8e476ad68cf285d443baa4ac94fdb42255"
+          }
+        },
+        "members": [
+          {
+            "bytes": 55756,
+            "codec": "brotli_qzs3",
+            "decoded_bytes": 59288,
+            "decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+            "name": "renderer.bin",
+            "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+          },
+          {
+            "bytes": 219472,
+            "codec": "brotli_av1_obu",
+            "decoded_bytes": 223385,
+            "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+            "name": "masks.mkv",
+            "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+          },
+          {
+            "bytes": 325,
+            "codec": "brotli_seg_tile_actions_v1",
+            "decoded_bytes": 588,
+            "decoded_sha256": "8ac9a01caad973096c58b42daf2b1a8e476ad68cf285d443baa4ac94fdb42255",
+            "name": "seg_tile_actions.bin",
+            "sha256": "d8c75e4f3725bbcf608434f0a78f5b37a9ce86bd8177c71092fd727d7e2af75a"
+          },
+          {
+            "bytes": 898,
+            "codec": "public_qp1_brotli",
+            "decoded_bytes": 1140,
+            "decoded_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+            "name": "optimized_poses.qp1",
+            "sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082"
+          }
+        ],
+        "ok": true,
+        "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices"
+      },
+      "role": "public_pr77_tile_delta"
+    },
+    {
+      "actions": {
+        "first_records": [
+          {
+            "action": 2,
+            "pair": 54,
+            "tile": 80
+          },
+          {
+            "action": 92,
+            "pair": 12,
+            "tile": 83
+          },
+          {
+            "action": 7,
+            "pair": 16,
+            "tile": 83
+          },
+          {
+            "action": 23,
+            "pair": 21,
+            "tile": 83
+          },
+          {
+            "action": 69,
+            "pair": 87,
+            "tile": 83
+          },
+          {
+            "action": 45,
+            "pair": 91,
+            "tile": 83
+          },
+          {
+            "action": 95,
+            "pair": 94,
+            "tile": 83
+          },
+          {
+            "action": 3,
+            "pair": 103,
+            "tile": 83
+          },
+          {
+            "action": 17,
+            "pair": 104,
+            "tile": 83
+          },
+          {
+            "action": 48,
+            "pair": 105,
+            "tile": 83
+          },
+          {
+            "action": 64,
+            "pair": 106,
+            "tile": 83
+          },
+          {
+            "action": 18,
+            "pair": 207,
+            "tile": 83
+          }
+        ],
+        "last_records": [
+          {
+            "action": 41,
+            "pair": 24,
+            "tile": 132
+          },
+          {
+            "action": 22,
+            "pair": 32,
+            "tile": 132
+          },
+          {
+            "action": 12,
+            "pair": 33,
+            "tile": 132
+          },
+          {
+            "action": 41,
+            "pair": 39,
+            "tile": 132
+          },
+          {
+            "action": 64,
+            "pair": 39,
+            "tile": 132
+          },
+          {
+            "action": 58,
+            "pair": 368,
+            "tile": 132
+          },
+          {
+            "action": 104,
+            "pair": 450,
+            "tile": 132
+          },
+          {
+            "action": 5,
+            "pair": 2,
+            "tile": 140
+          },
+          {
+            "action": 1,
+            "pair": 6,
+            "tile": 140
+          },
+          {
+            "action": 17,
+            "pair": 48,
+            "tile": 140
+          },
+          {
+            "action": 95,
+            "pair": 189,
+            "tile": 140
+          },
+          {
+            "action": 29,
+            "pair": 522,
+            "tile": 140
+          }
+        ],
+        "pair_max": 598,
+        "pair_min": 0,
+        "record_count": 672,
+        "runtime_record_bytes": 2688,
+        "runtime_record_sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f",
+        "top_actions": [
+          {
+            "count": 19,
+            "value": 1
+          },
+          {
+            "count": 19,
+            "value": 0
+          },
+          {
+            "count": 19,
+            "value": 94
+          },
+          {
+            "count": 18,
+            "value": 93
+          },
+          {
+            "count": 17,
+            "value": 95
+          },
+          {
+            "count": 17,
+            "value": 22
+          },
+          {
+            "count": 15,
+            "value": 92
+          },
+          {
+            "count": 15,
+            "value": 3
+          },
+          {
+            "count": 15,
+            "value": 47
+          },
+          {
+            "count": 15,
+            "value": 44
+          },
+          {
+            "count": 13,
+            "value": 7
+          },
+          {
+            "count": 13,
+            "value": 45
+          }
+        ],
+        "top_pairs": [
+          {
+            "count": 9,
+            "value": 39
+          },
+          {
+            "count": 8,
+            "value": 11
+          },
+          {
+            "count": 7,
+            "value": 91
+          },
+          {
+            "count": 7,
+            "value": 0
+          },
+          {
+            "count": 7,
+            "value": 42
+          },
+          {
+            "count": 7,
+            "value": 5
+          },
+          {
+            "count": 6,
+            "value": 21
+          },
+          {
+            "count": 6,
+            "value": 106
+          },
+          {
+            "count": 6,
+            "value": 13
+          },
+          {
+            "count": 6,
+            "value": 30
+          },
+          {
+            "count": 6,
+            "value": 56
+          },
+          {
+            "count": 6,
+            "value": 37
+          }
+        ],
+        "top_tiles": [
+          {
+            "count": 55,
+            "value": 86
+          },
+          {
+            "count": 55,
+            "value": 88
+          },
+          {
+            "count": 44,
+            "value": 90
+          },
+          {
+            "count": 39,
+            "value": 89
+          },
+          {
+            "count": 35,
+            "value": 87
+          },
+          {
+            "count": 35,
+            "value": 109
+          },
+          {
+            "count": 33,
+            "value": 112
+          },
+          {
+            "count": 31,
+            "value": 111
+          },
+          {
+            "count": 23,
+            "value": 98
+          },
+          {
+            "count": 22,
+            "value": 108
+          },
+          {
+            "count": 20,
+            "value": 110
+          },
+          {
+            "count": 18,
+            "value": 107
+          }
+        ],
+        "unique_action_count": 99,
+        "unique_pair_count": 295,
+        "unique_tile_count": 45,
+        "wire_kind": "SG2_grouped_tile_frame_delta_varint",
+        "wire_raw_bytes": 1451,
+        "wire_raw_sha256": "700d1ba2e11cf2c9a7729a473c0c56d374447aa7bbbbb833abb70f0ceee75f9a"
+      },
+      "archive": {
+        "bytes": 277388,
+        "path": "/Users/adpena/Projects/pact/experiments/results/top_submission_reverse_engineering_20260503_pr79/archive.zip",
+        "sha256": "01dc02badf851d99108fd92c570271f36f74cc5424c6d2a8f1b499cb4d1c3446",
+        "zip": {
+          "member_compress_size": 277288,
+          "member_compress_type": 0,
+          "member_crc": 1344838104,
+          "member_file_size": 277288,
+          "member_header_offset": 0,
+          "member_name": "p",
+          "overhead": {
+            "archive_bytes": 277388,
+            "central_directory_bytes": 47,
+            "comment_bytes": 0,
+            "data_descriptor_bytes": 0,
+            "eocd_and_comment_bytes": 22,
+            "local_header_bytes": 31,
+            "member_extra_bytes_local": 0,
+            "member_name_bytes_local": 1,
+            "minimal_single_stored_member_overhead_bytes": 100,
+            "over_minimal_bytes": 0,
+            "payload_compressed_bytes": 277288,
+            "total_overhead_bytes": 100
+          }
+        }
+      },
+      "decoded_streams": {
+        "masks.mkv": {
+          "charged_bytes": 219472,
+          "charged_entropy": {
+            "bytes": 219472,
+            "entropy_bits_per_byte": 7.998591976459037,
+            "unique_byte_count": 256,
+            "zero_order_entropy_bytes": 219434,
+            "zero_order_entropy_ratio": 0.9998268571845156
+          },
+          "charged_recompression_probe": {
+            "best_probe": {
+              "bytes": 219472,
+              "codec": "input_bytes"
+            },
+            "best_probe_delta_vs_input": 0,
+            "brotli_q11_bytes": 219477,
+            "brotli_q5_bytes": 219477,
+            "brotli_q9_bytes": 219477,
+            "input_bytes": 219472,
+            "lzma_preset9_bytes": 219544,
+            "zlib_9_bytes": 219548
+          },
+          "charged_sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87",
+          "codec": "brotli_av1_obu",
+          "decoded_brotli_reencode_probe": {
+            "best_reencode": {
+              "bytes": 219472,
+              "codec": "brotli_q11"
+            },
+            "best_reencode_delta_vs_current": 0,
+            "brotli_q11_bytes": 219472,
+            "brotli_q5_bytes": 223390,
+            "brotli_q9_bytes": 220355,
+            "current_charged_bytes": 219472,
+            "semantics_preserving_if_runtime_accepts_brotli_stream": true
+          },
+          "decoded_bytes": 223385,
+          "decoded_prefix_hex": "12000a0a0000000c",
+          "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+          "name": "masks.mkv"
+        },
+        "optimized_poses.qp1": {
+          "charged_bytes": 898,
+          "charged_entropy": {
+            "bytes": 898,
+            "entropy_bits_per_byte": 7.811697516431102,
+            "unique_byte_count": 250,
+            "zero_order_entropy_bytes": 877,
+            "zero_order_entropy_ratio": 0.9766146993318485
+          },
+          "charged_recompression_probe": {
+            "best_probe": {
+              "bytes": 898,
+              "codec": "input_bytes"
+            },
+            "best_probe_delta_vs_input": 0,
+            "brotli_q11_bytes": 902,
+            "brotli_q5_bytes": 902,
+            "brotli_q9_bytes": 902,
+            "input_bytes": 898,
+            "lzma_preset9_bytes": 960,
+            "zlib_9_bytes": 909
+          },
+          "charged_sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082",
+          "codec": "public_qp1_brotli",
+          "decoded_brotli_reencode_probe": {
+            "best_reencode": {
+              "bytes": 899,
+              "codec": "brotli_q11"
+            },
+            "best_reencode_delta_vs_current": 1,
+            "brotli_q11_bytes": 899,
+            "brotli_q5_bytes": 1002,
+            "brotli_q9_bytes": 1023,
+            "current_charged_bytes": 898,
+            "semantics_preserving_if_runtime_accepts_brotli_stream": true
+          },
+          "decoded_bytes": 1140,
+          "decoded_prefix_hex": "5150316d1cd003c1",
+          "decoded_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+          "name": "optimized_poses.qp1"
+        },
+        "renderer.bin": {
+          "charged_bytes": 55756,
+          "charged_entropy": {
+            "bytes": 55756,
+            "entropy_bits_per_byte": 7.992730680026941,
+            "unique_byte_count": 256,
+            "zero_order_entropy_bytes": 55706,
+            "zero_order_entropy_ratio": 0.9991032355262214
+          },
+          "charged_recompression_probe": {
+            "best_probe": {
+              "bytes": 55756,
+              "codec": "input_bytes"
+            },
+            "best_probe_delta_vs_input": 0,
+            "brotli_q11_bytes": 55760,
+            "brotli_q5_bytes": 55760,
+            "brotli_q9_bytes": 55760,
+            "input_bytes": 55756,
+            "lzma_preset9_bytes": 55816,
+            "zlib_9_bytes": 55782
+          },
+          "charged_sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf",
+          "codec": "brotli_qzs3",
+          "decoded_brotli_reencode_probe": {
+            "best_reencode": {
+              "bytes": 55757,
+              "codec": "brotli_q11"
+            },
+            "best_reencode_delta_vs_current": 1,
+            "brotli_q11_bytes": 55757,
+            "brotli_q5_bytes": 56777,
+            "brotli_q9_bytes": 56692,
+            "current_charged_bytes": 55756,
+            "semantics_preserving_if_runtime_accepts_brotli_stream": true
+          },
+          "decoded_bytes": 59288,
+          "decoded_prefix_hex": "515a533320001675",
+          "decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+          "name": "renderer.bin"
+        },
+        "seg_tile_actions.bin": {
+          "charged_bytes": 1162,
+          "charged_entropy": {
+            "bytes": 1162,
+            "entropy_bits_per_byte": 7.830559026918837,
+            "unique_byte_count": 252,
+            "zero_order_entropy_bytes": 1138,
+            "zero_order_entropy_ratio": 0.9793459552495697
+          },
+          "charged_recompression_probe": {
+            "best_probe": {
+              "bytes": 1162,
+              "codec": "input_bytes"
+            },
+            "best_probe_delta_vs_input": 0,
+            "brotli_q11_bytes": 1166,
+            "brotli_q5_bytes": 1166,
+            "brotli_q9_bytes": 1166,
+            "input_bytes": 1162,
+            "lzma_preset9_bytes": 1224,
+            "zlib_9_bytes": 1173
+          },
+          "charged_sha256": "3fdf6320b77685606283438e1a9bea4df3c83ecb525deb4750dade60c8e7dbdc",
+          "codec": "brotli_public_seg_tile_actions",
+          "decoded_brotli_reencode_probe": {
+            "best_reencode": {
+              "bytes": 1162,
+              "codec": "brotli_q11"
+            },
+            "best_reencode_delta_vs_current": 0,
+            "brotli_q11_bytes": 1162,
+            "brotli_q5_bytes": 1162,
+            "brotli_q9_bytes": 1166,
+            "current_charged_bytes": 1162,
+            "semantics_preserving_if_runtime_accepts_brotli_stream": true
+          },
+          "decoded_bytes": 1451,
+          "decoded_prefix_hex": "50013602530b0c5c",
+          "decoded_sha256": "700d1ba2e11cf2c9a7729a473c0c56d374447aa7bbbbb833abb70f0ceee75f9a",
+          "name": "seg_tile_actions.bin"
+        }
+      },
+      "label": "pr79",
+      "layout": {
+        "boundary_authority": "fixed_slice_length_table",
+        "header": null,
+        "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+        "segments": [
+          {
+            "charged_bytes": 219472,
+            "charged_prefix_hex": "5b98684344152796",
+            "charged_sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87",
+            "codec": "brotli_av1_obu",
+            "name": "masks.mkv",
+            "offset": 0
+          },
+          {
+            "charged_bytes": 55756,
+            "charged_prefix_hex": "e2f2bcec00c3609e",
+            "charged_sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf",
+            "codec": "brotli_qzs3",
+            "name": "renderer.bin",
+            "offset": 219472
+          },
+          {
+            "charged_bytes": 1162,
+            "charged_prefix_hex": "1baa05f8e578ffea",
+            "charged_sha256": "3fdf6320b77685606283438e1a9bea4df3c83ecb525deb4750dade60c8e7dbdc",
+            "codec": "brotli_public_seg_tile_actions",
+            "name": "seg_tile_actions.bin",
+            "offset": 275228
+          },
+          {
+            "charged_bytes": 898,
+            "charged_prefix_hex": "628e00ffe3203787",
+            "charged_sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082",
+            "codec": "public_qp1_brotli",
+            "name": "optimized_poses.qp1",
+            "offset": 276390
+          }
+        ],
+        "stripped_p3_fixed_slice_parse": null
+      },
+      "payload": {
+        "bytes": 277288,
+        "compression_probe": {
+          "best_probe": {
+            "bytes": 277288,
+            "codec": "input_bytes"
+          },
+          "best_probe_delta_vs_input": 0,
+          "brotli_q11_bytes": 277293,
+          "brotli_q5_bytes": 277293,
+          "brotli_q9_bytes": 277293,
+          "input_bytes": 277288,
+          "lzma_preset9_bytes": 277360,
+          "zlib_9_bytes": 277379
+        },
+        "entropy": {
+          "bytes": 277288,
+          "entropy_bits_per_byte": 7.999150162773589,
+          "unique_byte_count": 256,
+          "zero_order_entropy_bytes": 277259,
+          "zero_order_entropy_ratio": 0.9998954155967802
+        },
+        "member": "p",
+        "prefix_hex": "5b98684344152796",
+        "sha256": "026c2a5801dc42e369ad9533736645488ef9183c0789d9c961adb23c1740e688"
+      },
+      "pose": {
+        "codec": "QP1_col0_delta_varint",
+        "q0_first": 7277,
+        "q0_last": 5636,
+        "q0_max": 7739,
+        "q0_min": 1669,
+        "raw_bytes": 1140,
+        "raw_prefix_hex": "5150316d1cd003c1",
+        "raw_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+        "row_count": 600
+      },
+      "robust_current_parse": {
+        "decoded_members": {
+          "masks.mkv": {
+            "decoded_bytes": 223385,
+            "decoded_prefix_hex": "12000a0a0000000c",
+            "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+          },
+          "optimized_poses.qp1": {
+            "decoded_bytes": 1140,
+            "decoded_prefix_hex": "5150316d1cd003c1",
+            "decoded_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+          },
+          "renderer.bin": {
+            "decoded_bytes": 59288,
+            "decoded_prefix_hex": "515a533320001675",
+            "decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+          },
+          "seg_tile_actions.bin": {
+            "decoded_bytes": 2688,
+            "decoded_prefix_hex": "360050020c00535c",
+            "decoded_sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f"
+          }
+        },
+        "members": [
+          {
+            "bytes": 55756,
+            "codec": "brotli_qzs3",
+            "decoded_bytes": 59288,
+            "decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+            "name": "renderer.bin",
+            "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+          },
+          {
+            "bytes": 219472,
+            "codec": "brotli_av1_obu",
+            "decoded_bytes": 223385,
+            "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+            "name": "masks.mkv",
+            "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+          },
+          {
+            "bytes": 1162,
+            "codec": "brotli_seg_tile_actions_v1",
+            "decoded_bytes": 2688,
+            "decoded_sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f",
+            "name": "seg_tile_actions.bin",
+            "sha256": "3fdf6320b77685606283438e1a9bea4df3c83ecb525deb4750dade60c8e7dbdc"
+          },
+          {
+            "bytes": 898,
+            "codec": "public_qp1_brotli",
+            "decoded_bytes": 1140,
+            "decoded_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+            "name": "optimized_poses.qp1",
+            "sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082"
+          }
+        ],
+        "ok": true,
+        "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices"
+      },
+      "role": "public_pr79_minp_v2"
+    }
+  ],
+  "c102_eval_summary": {
+    "archive_sha256": "79091f2c3f0c30ef3ca512808f3adc0306010e7f57fed3a09b3664c16fea4ea8",
+    "archive_size_bytes": 276485,
+    "avg_posenet_dist": 0.00049337,
+    "avg_segnet_dist": 0.00060804,
+    "byte_savings_needed_if_components_unchanged": 7726,
+    "canonical_score": 0.31514430182167497,
+    "n_samples": 600,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c091_next_cem_pose_waterfill_top192_s0125_m06_t4_20260503T1238Z/contest_auth_eval.json",
+    "rate_lambda": 6.658589531221714e-07,
+    "score_gap_to_target": 0.005144301821674968,
+    "score_pose_contribution": 0.070240301821675,
+    "score_rate_contribution": 0.18409999999999999,
+    "score_seg_contribution": 0.060804000000000004,
+    "target_score": 0.31
+  },
+  "contest_formula_rate_term": {
+    "archive_rate_contribution": "25 * archive_bytes / 37,545,489",
+    "original_video_bytes": 37545489,
+    "rate_lambda": 6.658589531221714e-07
+  },
+  "evidence_grade": "empirical_reverse_engineering_forensics",
+  "identity": {
+    "mask_charged": [
+      {
+        "archive": "c102",
+        "bytes": 219472,
+        "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87",
+        "stream": "masks.mkv"
+      },
+      {
+        "archive": "pr75",
+        "bytes": 219472,
+        "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87",
+        "stream": "masks.mkv"
+      },
+      {
+        "archive": "pr77",
+        "bytes": 219472,
+        "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87",
+        "stream": "masks.mkv"
+      },
+      {
+        "archive": "pr79",
+        "bytes": 219472,
+        "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87",
+        "stream": "masks.mkv"
+      }
+    ],
+    "mask_decoded": [
+      {
+        "archive": "c102",
+        "bytes": 223385,
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "stream": "masks.mkv"
+      },
+      {
+        "archive": "pr75",
+        "bytes": 223385,
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "stream": "masks.mkv"
+      },
+      {
+        "archive": "pr77",
+        "bytes": 223385,
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "stream": "masks.mkv"
+      },
+      {
+        "archive": "pr79",
+        "bytes": 223385,
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "stream": "masks.mkv"
+      }
+    ],
+    "pose_charged": [
+      {
+        "archive": "c102",
+        "bytes": 892,
+        "sha256": "c4c6e22ef870db7ede58170b14aec6a820a224b72106a411655507a534d70add",
+        "stream": "optimized_poses.qp1"
+      },
+      {
+        "archive": "pr75",
+        "bytes": 898,
+        "sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082",
+        "stream": "optimized_poses.qp1"
+      },
+      {
+        "archive": "pr77",
+        "bytes": 898,
+        "sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082",
+        "stream": "optimized_poses.qp1"
+      },
+      {
+        "archive": "pr79",
+        "bytes": 898,
+        "sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082",
+        "stream": "optimized_poses.qp1"
+      }
+    ],
+    "pose_decoded": [
+      {
+        "archive": "c102",
+        "bytes": 1140,
+        "sha256": "80094e20f4f6cd29869e043eb6d224a6697ecd7fb0e77728ddcd6c7a05fccb9a",
+        "stream": "optimized_poses.qp1"
+      },
+      {
+        "archive": "pr75",
+        "bytes": 1140,
+        "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+        "stream": "optimized_poses.qp1"
+      },
+      {
+        "archive": "pr77",
+        "bytes": 1140,
+        "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+        "stream": "optimized_poses.qp1"
+      },
+      {
+        "archive": "pr79",
+        "bytes": 1140,
+        "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+        "stream": "optimized_poses.qp1"
+      }
+    ],
+    "renderer_charged": [
+      {
+        "archive": "c102",
+        "bytes": 55756,
+        "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf",
+        "stream": "renderer.bin"
+      },
+      {
+        "archive": "pr75",
+        "bytes": 55756,
+        "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf",
+        "stream": "renderer.bin"
+      },
+      {
+        "archive": "pr77",
+        "bytes": 55756,
+        "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf",
+        "stream": "renderer.bin"
+      },
+      {
+        "archive": "pr79",
+        "bytes": 55756,
+        "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf",
+        "stream": "renderer.bin"
+      }
+    ],
+    "renderer_decoded": [
+      {
+        "archive": "c102",
+        "bytes": 59288,
+        "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+        "stream": "renderer.bin"
+      },
+      {
+        "archive": "pr75",
+        "bytes": 59288,
+        "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+        "stream": "renderer.bin"
+      },
+      {
+        "archive": "pr77",
+        "bytes": 59288,
+        "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+        "stream": "renderer.bin"
+      },
+      {
+        "archive": "pr79",
+        "bytes": 59288,
+        "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+        "stream": "renderer.bin"
+      }
+    ]
+  },
+  "notes": [
+    "Local byte/runtime grammar profile only; exact CUDA auth eval remains score truth.",
+    "Public fixed-slice ZIP permissiveness is studied as forensics, not used as score evidence.",
+    "No GPU dispatch was performed by this tool."
+  ],
+  "opportunities": {
+    "lossless_semantics_preserving_ranked": [
+      {
+        "break_even": {
+          "archive_byte_delta_vs_c102": -10,
+          "pose_only_posenet_dist_ceiling": 0.00042383561554250673,
+          "pose_only_posenet_dist_reduction_required": 6.95343844574933e-05,
+          "rate_score_delta": -6.658589531221714e-06,
+          "required_total_component_score_gain_to_reach_0_31": 0.005137643232143746,
+          "seg_only_dist_reduction_required": 5.137643232143746e-05
+        },
+        "byte_savings": 10,
+        "class": "lossless_semantics_preserving",
+        "evidence": {
+          "decoded_sha256_equal": {
+            "masks.mkv": true,
+            "optimized_poses.qp1": true,
+            "renderer.bin": true,
+            "seg_tile_actions.bin": true
+          },
+          "ok": true,
+          "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+          "stripped_payload_bytes": 276375,
+          "stripped_payload_sha256": "82ebccc58d71e3f3b284f07d4be92d9d8d41d0d23249c98f76767389934aa595"
+        },
+        "implementation_note": "Remove the 10-byte P3 header and store the same mask/model/actions/QP1 slices; robust_current fixed-slice fallback parses the stripped payload to identical decoded members.",
+        "name": "strip_c102_p3_header_use_existing_fixed_slice_parser",
+        "new_archive_bytes_estimate": 276475,
+        "rank": 1,
+        "score_delta_if_components_unchanged": -6.658589531221714e-06,
+        "target_0_31_status": "insufficient_alone"
+      }
+    ],
+    "risky_component_affecting_ranked_by_break_even": [
+      {
+        "archive_byte_delta_vs_c102": -255,
+        "break_even": {
+          "archive_byte_delta_vs_c102": -255,
+          "pose_only_posenet_dist_ceiling": 0.00042596238707640066,
+          "pose_only_posenet_dist_reduction_required": 6.740761292359937e-05,
+          "rate_score_delta": -0.0001697940330461537,
+          "required_total_component_score_gain_to_reach_0_31": 0.004974507788628815,
+          "seg_only_dist_reduction_required": 4.974507788628814e-05
+        },
+        "class": "risky_component_affecting",
+        "dispatch_status": "not_recommended_without_component_trace",
+        "evidence": {
+          "removed_action_charged_bytes": 255,
+          "removed_record_count": 108
+        },
+        "name": "remove_c102_seg_tile_actions_stream"
+      },
+      {
+        "archive_byte_delta_vs_c102": 6,
+        "break_even": {
+          "archive_byte_delta_vs_c102": 6,
+          "pose_only_posenet_dist_ceiling": 0.00042369690949083073,
+          "pose_only_posenet_dist_reduction_required": 6.96730905091693e-05,
+          "rate_score_delta": 3.995153718733029e-06,
+          "required_total_component_score_gain_to_reach_0_31": 0.005148296975393701,
+          "seg_only_dist_reduction_required": 5.148296975393701e-05
+        },
+        "class": "risky_component_affecting",
+        "dispatch_status": "do_not_dispatch_from_byte_forensics",
+        "evidence": {
+          "c102_pose_sha256": "80094e20f4f6cd29869e043eb6d224a6697ecd7fb0e77728ddcd6c7a05fccb9a",
+          "public_pose_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+          "public_pose_streams_equal": true
+        },
+        "name": "replace_c102_qp1_pose_with_public_pr75_pr77_pr79_pose"
+      },
+      {
+        "archive_byte_delta_vs_c102": 70,
+        "break_even": {
+          "archive_byte_delta_vs_c102": 70,
+          "pose_only_posenet_dist_ceiling": 0.00042314231228861743,
+          "pose_only_posenet_dist_reduction_required": 7.02276877113826e-05,
+          "rate_score_delta": 4.6610126718551995e-05,
+          "required_total_component_score_gain_to_reach_0_31": 0.00519091194839352,
+          "seg_only_dist_reduction_required": 5.1909119483935204e-05
+        },
+        "class": "risky_component_affecting",
+        "dispatch_status": "do_not_dispatch_from_byte_forensics",
+        "evidence": {
+          "c102_action_sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a",
+          "pr77_action_sha256": "8ac9a01caad973096c58b42daf2b1a8e476ad68cf285d443baa4ac94fdb42255"
+        },
+        "extra_records_vs_c102_multiset": 91,
+        "name": "transplant_pr77_action_records",
+        "record_count": 147
+      },
+      {
+        "archive_byte_delta_vs_c102": 907,
+        "break_even": {
+          "archive_byte_delta_vs_c102": 907,
+          "pose_only_posenet_dist_ceiling": 0.0004159226567857324,
+          "pose_only_posenet_dist_reduction_required": 7.744734321426763e-05,
+          "rate_score_delta": 0.0006039340704818095,
+          "required_total_component_score_gain_to_reach_0_31": 0.005748235892156777,
+          "seg_only_dist_reduction_required": 5.748235892156777e-05
+        },
+        "class": "risky_component_affecting",
+        "dispatch_status": "do_not_dispatch_from_byte_forensics",
+        "evidence": {
+          "c102_action_sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a",
+          "pr79_action_sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f"
+        },
+        "extra_records_vs_c102_multiset": 567,
+        "name": "transplant_pr79_action_records",
+        "record_count": 672
+      }
+    ],
+    "unchanged_component_byte_target": {
+      "best_lossless_savings_found": 10,
+      "byte_savings_needed": 7726,
+      "lossless_path_to_0_31_found": false
+    }
+  },
+  "pose_diffs": {
+    "all_public_pose_streams_equal": true,
+    "all_streams_equal": false,
+    "base": "c102",
+    "labels": [
+      "c102",
+      "pr75",
+      "pr77",
+      "pr79"
+    ],
+    "raw_streams": {
+      "c102": {
+        "byte_diff_count_vs_base": 0,
+        "first_byte_diff_positions_vs_base": [],
+        "raw_bytes": 1140,
+        "raw_sha256": "80094e20f4f6cd29869e043eb6d224a6697ecd7fb0e77728ddcd6c7a05fccb9a"
+      },
+      "pr75": {
+        "byte_diff_count_vs_base": 185,
+        "first_byte_diff_positions_vs_base": [
+          114,
+          115,
+          118,
+          124,
+          126,
+          130,
+          132,
+          134,
+          136,
+          138,
+          140,
+          145,
+          147,
+          148,
+          149,
+          153,
+          154,
+          163,
+          169,
+          174
+        ],
+        "raw_bytes": 1140,
+        "raw_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+      },
+      "pr77": {
+        "byte_diff_count_vs_base": 185,
+        "first_byte_diff_positions_vs_base": [
+          114,
+          115,
+          118,
+          124,
+          126,
+          130,
+          132,
+          134,
+          136,
+          138,
+          140,
+          145,
+          147,
+          148,
+          149,
+          153,
+          154,
+          163,
+          169,
+          174
+        ],
+        "raw_bytes": 1140,
+        "raw_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+      },
+      "pr79": {
+        "byte_diff_count_vs_base": 185,
+        "first_byte_diff_positions_vs_base": [
+          114,
+          115,
+          118,
+          124,
+          126,
+          130,
+          132,
+          134,
+          136,
+          138,
+          140,
+          145,
+          147,
+          148,
+          149,
+          153,
+          154,
+          163,
+          169,
+          174
+        ],
+        "raw_bytes": 1140,
+        "raw_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+      }
+    },
+    "word_diffs_vs_base": {
+      "c102": {
+        "first_q0_diff_rows": [],
+        "q0_word_diff_count": 0,
+        "row_count": 600
+      },
+      "pr75": {
+        "first_q0_diff_rows": [
+          59,
+          60,
+          61,
+          62,
+          63,
+          64,
+          65,
+          66,
+          67,
+          68,
+          69,
+          70,
+          72,
+          73,
+          74,
+          75,
+          77,
+          78,
+          84,
+          85
+        ],
+        "q0_word_diff_count": 192,
+        "row_count": 600
+      },
+      "pr77": {
+        "first_q0_diff_rows": [
+          59,
+          60,
+          61,
+          62,
+          63,
+          64,
+          65,
+          66,
+          67,
+          68,
+          69,
+          70,
+          72,
+          73,
+          74,
+          75,
+          77,
+          78,
+          84,
+          85
+        ],
+        "q0_word_diff_count": 192,
+        "row_count": 600
+      },
+      "pr79": {
+        "first_q0_diff_rows": [
+          59,
+          60,
+          61,
+          62,
+          63,
+          64,
+          65,
+          66,
+          67,
+          68,
+          69,
+          70,
+          72,
+          73,
+          74,
+          75,
+          77,
+          78,
+          84,
+          85
+        ],
+        "q0_word_diff_count": 192,
+        "row_count": 600
+      }
+    }
+  },
+  "schema": "public_qpose_payload_family_forensics_v1",
+  "score_claim": false,
+  "tool": "experiments/analyze_public_qpose_payload_family.py"
+}

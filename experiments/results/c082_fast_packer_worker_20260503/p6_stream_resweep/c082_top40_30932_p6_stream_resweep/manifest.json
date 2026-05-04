@@ -1,0 +1,116 @@
+{
+  "candidate_id": "c082_top40_30932_p6_stream_resweep",
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "decoded_stream_parity": true,
+  "decoded_stream_parity_detail": {
+    "members_compared": [
+      "masks.mkv",
+      "optimized_poses.qp1",
+      "renderer.bin",
+      "seg_tile_actions.bin"
+    ],
+    "source_decoded_members": {
+      "masks.mkv": {
+        "bytes": 223385,
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      "optimized_poses.qp1": {
+        "bytes": 1140,
+        "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+      },
+      "renderer.bin": {
+        "bytes": 59288,
+        "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 160,
+        "sha256": "8b34ef134e6551c83d170f07c8f6672870f09df5d38551ab24320f4a2f20a373"
+      }
+    },
+    "status": "passed"
+  },
+  "determinism": {
+    "member_name": "p",
+    "zip_compress_type": "ZIP_STORED",
+    "zip_permissions": "0644",
+    "zip_timestamp": [
+      1980,
+      1,
+      1,
+      0,
+      0,
+      0
+    ]
+  },
+  "evidence_grade": "empirical_lossless_byte_transform",
+  "formula_only_rate_score_delta_vs_source": 0.0,
+  "noop": true,
+  "noop_status": "byte_identical_to_source_payload",
+  "output_archive": {
+    "bytes": 276333,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c082_fast_packer_worker_20260503/p6_stream_resweep/c082_top40_30932_p6_stream_resweep/archive.zip",
+    "sha256": "30932c684c6b09a7bd2bd248e17fd66a4bc448ed2fe5747f92e74bcceec66681"
+  },
+  "payload": {
+    "bytes": 276233,
+    "format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+    "member": "p",
+    "sha256": "b05d43c418eec424df9f93f51d6e8830d57e3013df3a72313dc1f7467d371a3f"
+  },
+  "pose_safety_preflight": null,
+  "promotion_eligible": false,
+  "schema": "c082_fast_p6_repack_manifest_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 276333,
+    "path": "/Users/adpena/Projects/pact/experiments/results/mask_bytecut_c088_20260503/lossless_repack_exhaustive/c082_p6_delta_varint_actions_stream_resweep/archive.zip",
+    "sha256": "30932c684c6b09a7bd2bd248e17fd66a4bc448ed2fe5747f92e74bcceec66681"
+  },
+  "source_payload": {
+    "bytes": 276233,
+    "format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+    "sha256": "b05d43c418eec424df9f93f51d6e8830d57e3013df3a72313dc1f7467d371a3f"
+  },
+  "source_preservation": {
+    "candidate_payload_sha256": "b05d43c418eec424df9f93f51d6e8830d57e3013df3a72313dc1f7467d371a3f",
+    "decoded_streams_byte_identical": true,
+    "payload_byte_identical_to_source": true,
+    "source_payload_sha256": "b05d43c418eec424df9f93f51d6e8830d57e3013df3a72313dc1f7467d371a3f",
+    "status": "byte_identical_noop"
+  },
+  "stream_choices": {
+    "masks.mkv": {
+      "bytes": 219465,
+      "delta_bytes_vs_source_stream": 0,
+      "improved": false,
+      "params": "source",
+      "sha256": "1ddf03dad8466797397ead26a0d481766e22e26cbc936251c1e3ed5d2f6eda99",
+      "source_bytes": 219465
+    },
+    "optimized_poses.qp1": {
+      "bytes": 676,
+      "delta_bytes_vs_source_stream": 0,
+      "improved": false,
+      "params": "source",
+      "sha256": "61732151609c5decd72a3ac2254e9ac2258dae2846464eaeb14b5ef0a32d86f5",
+      "source_bytes": 676
+    },
+    "renderer.bin": {
+      "bytes": 55965,
+      "delta_bytes_vs_source_stream": 0,
+      "improved": false,
+      "params": "source",
+      "sha256": "2544dfe50d2631a56600cbfc7342e4a18c97f953526fc51425be0d62f97e22ad",
+      "source_bytes": 55965
+    },
+    "seg_tile_actions.delta_varint": {
+      "bytes": 115,
+      "delta_bytes_vs_source_stream": 0,
+      "improved": false,
+      "params": "source",
+      "sha256": "0408a5dd43328ec7b0adb348cbc08cbd513c9fffcd10441a83fb7efcc98dfa71",
+      "source_bytes": 115
+    }
+  },
+  "tool": "experiments/results/c082_fast_packer_worker_20260503/search_p6_fast_repack.py"
+}

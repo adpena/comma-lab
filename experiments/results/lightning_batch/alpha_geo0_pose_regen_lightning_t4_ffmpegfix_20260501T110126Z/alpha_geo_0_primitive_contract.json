@@ -1,0 +1,1749 @@
+{
+  "contract_limitations": [
+    "CPU integer-mask diagnostics only",
+    "failed candidate archive hashes are provenance only",
+    "no scorer network or CUDA auth eval was loaded by this contract",
+    "no score, promotion, rank, or retirement claim is authorized"
+  ],
+  "decoded_baseline_boundary_recipes": [
+    {
+      "class_boundary_definition": "baseline pixel is true when any 4-neighbor decoded-baseline class id differs",
+      "dilation_operator": {
+        "implementation": "torch.nn.functional.max_pool2d",
+        "kernel_size_px": 3,
+        "metric": "chebyshev_linf_pixels",
+        "padding_px": 1,
+        "type": "square_binary_dilation"
+      },
+      "exact_eval_claim": false,
+      "observed_candidate_delta": {
+        "band_fraction": 0.04314801534016927,
+        "band_pixels": 10179894,
+        "computed_in_diagnostics": true,
+        "disagreement_pixels": 2123704,
+        "disagreement_rate": 0.2086174964100805
+      },
+      "promotion_eligible": false,
+      "protected_classes": [
+        1,
+        2
+      ],
+      "radius_px": 1,
+      "score_claim_eligible": false,
+      "shape": {
+        "frames": 1200,
+        "height": 384,
+        "num_classes": 5,
+        "width": 512
+      },
+      "source": "decoded_baseline_mask",
+      "source_decoded_mask_sha256": "cce3a986341c40df9b9ebca24ff96e16c4b41b40b388dc2af86161ba76e2b4e9"
+    },
+    {
+      "class_boundary_definition": "baseline pixel is true when any 4-neighbor decoded-baseline class id differs",
+      "dilation_operator": {
+        "implementation": "torch.nn.functional.max_pool2d",
+        "kernel_size_px": 5,
+        "metric": "chebyshev_linf_pixels",
+        "padding_px": 2,
+        "type": "square_binary_dilation"
+      },
+      "exact_eval_claim": false,
+      "observed_candidate_delta": {
+        "band_fraction": 0.06251634809705946,
+        "band_pixels": 14749457,
+        "computed_in_diagnostics": true,
+        "disagreement_pixels": 2195180,
+        "disagreement_rate": 0.14883124171961043
+      },
+      "promotion_eligible": false,
+      "protected_classes": [
+        1,
+        2
+      ],
+      "radius_px": 2,
+      "score_claim_eligible": false,
+      "shape": {
+        "frames": 1200,
+        "height": 384,
+        "num_classes": 5,
+        "width": 512
+      },
+      "source": "decoded_baseline_mask",
+      "source_decoded_mask_sha256": "cce3a986341c40df9b9ebca24ff96e16c4b41b40b388dc2af86161ba76e2b4e9"
+    },
+    {
+      "class_boundary_definition": "baseline pixel is true when any 4-neighbor decoded-baseline class id differs",
+      "dilation_operator": {
+        "implementation": "torch.nn.functional.max_pool2d",
+        "kernel_size_px": 7,
+        "metric": "chebyshev_linf_pixels",
+        "padding_px": 3,
+        "type": "square_binary_dilation"
+      },
+      "exact_eval_claim": false,
+      "observed_candidate_delta": {
+        "band_fraction": 0.0808917236328125,
+        "band_pixels": 19084752,
+        "computed_in_diagnostics": true,
+        "disagreement_pixels": 2220289,
+        "disagreement_rate": 0.11633837316827592
+      },
+      "promotion_eligible": false,
+      "protected_classes": [
+        1,
+        2
+      ],
+      "radius_px": 3,
+      "score_claim_eligible": false,
+      "shape": {
+        "frames": 1200,
+        "height": 384,
+        "num_classes": 5,
+        "width": 512
+      },
+      "source": "decoded_baseline_mask",
+      "source_decoded_mask_sha256": "cce3a986341c40df9b9ebca24ff96e16c4b41b40b388dc2af86161ba76e2b4e9"
+    },
+    {
+      "class_boundary_definition": "baseline pixel is true when any 4-neighbor decoded-baseline class id differs",
+      "dilation_operator": {
+        "implementation": "torch.nn.functional.max_pool2d",
+        "kernel_size_px": 11,
+        "metric": "chebyshev_linf_pixels",
+        "padding_px": 5,
+        "type": "square_binary_dilation"
+      },
+      "exact_eval_claim": false,
+      "observed_candidate_delta": {
+        "band_fraction": 0.11558634440104167,
+        "band_pixels": 27270240,
+        "computed_in_diagnostics": true,
+        "disagreement_pixels": 2242473,
+        "disagreement_rate": 0.08223150951366764
+      },
+      "promotion_eligible": false,
+      "protected_classes": [
+        1,
+        2
+      ],
+      "radius_px": 5,
+      "score_claim_eligible": false,
+      "shape": {
+        "frames": 1200,
+        "height": 384,
+        "num_classes": 5,
+        "width": 512
+      },
+      "source": "decoded_baseline_mask",
+      "source_decoded_mask_sha256": "cce3a986341c40df9b9ebca24ff96e16c4b41b40b388dc2af86161ba76e2b4e9"
+    }
+  ],
+  "device": "cpu",
+  "diagnostic": "alpha_geo_primitive_contract_v1",
+  "exact_eval_claim": false,
+  "exact_score_source": "none in this contract; exact score requires archive.zip -> inflate.sh -> upstream/evaluate.py on CUDA",
+  "promotion_eligible": false,
+  "protected_classes": [
+    {
+      "class_id": 1,
+      "class_name": "lane_marking"
+    },
+    {
+      "class_id": 2,
+      "class_name": "vehicle_undrivable"
+    }
+  ],
+  "ranked_critical_boxes": [
+    {
+      "area_px": 486,
+      "box_iou": 0.0,
+      "box_xyxy": [
+        330,
+        226,
+        424,
+        287
+      ],
+      "candidate_box_xyxy": null,
+      "centroid_jump_px": null,
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "exact_eval_claim": false,
+      "failure_type": "missing_component",
+      "frame": 221,
+      "frames": [
+        221
+      ],
+      "mask_iou": 0.0,
+      "pose_sensitive": true,
+      "promotion_eligible": false,
+      "rank": 1,
+      "score_claim_eligible": false,
+      "source": "visual_primitives.primitive_metrics.connected_components.critical_box_failures",
+      "source_rank": 1
+    },
+    {
+      "area_px": 480,
+      "box_iou": 0.0,
+      "box_xyxy": [
+        356,
+        232,
+        441,
+        288
+      ],
+      "candidate_box_xyxy": null,
+      "centroid_jump_px": null,
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "exact_eval_claim": false,
+      "failure_type": "missing_component",
+      "frame": 305,
+      "frames": [
+        305
+      ],
+      "mask_iou": 0.0,
+      "pose_sensitive": true,
+      "promotion_eligible": false,
+      "rank": 2,
+      "score_claim_eligible": false,
+      "source": "visual_primitives.primitive_metrics.connected_components.critical_box_failures",
+      "source_rank": 2
+    },
+    {
+      "area_px": 445,
+      "box_iou": 0.0,
+      "box_xyxy": [
+        349,
+        227,
+        445,
+        287
+      ],
+      "candidate_box_xyxy": null,
+      "centroid_jump_px": null,
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "exact_eval_claim": false,
+      "failure_type": "missing_component",
+      "frame": 194,
+      "frames": [
+        194
+      ],
+      "mask_iou": 0.0,
+      "pose_sensitive": true,
+      "promotion_eligible": false,
+      "rank": 3,
+      "score_claim_eligible": false,
+      "source": "visual_primitives.primitive_metrics.connected_components.critical_box_failures",
+      "source_rank": 3
+    },
+    {
+      "area_px": 443,
+      "box_iou": 0.0,
+      "box_xyxy": [
+        341,
+        224,
+        439,
+        287
+      ],
+      "candidate_box_xyxy": null,
+      "centroid_jump_px": null,
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "exact_eval_claim": false,
+      "failure_type": "missing_component",
+      "frame": 304,
+      "frames": [
+        304
+      ],
+      "mask_iou": 0.0,
+      "pose_sensitive": true,
+      "promotion_eligible": false,
+      "rank": 4,
+      "score_claim_eligible": false,
+      "source": "visual_primitives.primitive_metrics.connected_components.critical_box_failures",
+      "source_rank": 4
+    },
+    {
+      "area_px": 435,
+      "box_iou": 0.0,
+      "box_xyxy": [
+        378,
+        234,
+        488,
+        286
+      ],
+      "candidate_box_xyxy": null,
+      "centroid_jump_px": null,
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "exact_eval_claim": false,
+      "failure_type": "missing_component",
+      "frame": 168,
+      "frames": [
+        168
+      ],
+      "mask_iou": 0.0,
+      "pose_sensitive": true,
+      "promotion_eligible": false,
+      "rank": 5,
+      "score_claim_eligible": false,
+      "source": "visual_primitives.primitive_metrics.connected_components.critical_box_failures",
+      "source_rank": 5
+    },
+    {
+      "area_px": 433,
+      "box_iou": 0.0,
+      "box_xyxy": [
+        343,
+        234,
+        425,
+        288
+      ],
+      "candidate_box_xyxy": null,
+      "centroid_jump_px": null,
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "exact_eval_claim": false,
+      "failure_type": "missing_component",
+      "frame": 222,
+      "frames": [
+        222
+      ],
+      "mask_iou": 0.0,
+      "pose_sensitive": true,
+      "promotion_eligible": false,
+      "rank": 6,
+      "score_claim_eligible": false,
+      "source": "visual_primitives.primitive_metrics.connected_components.critical_box_failures",
+      "source_rank": 6
+    },
+    {
+      "area_px": 432,
+      "box_iou": 0.0,
+      "box_xyxy": [
+        400,
+        235,
+        512,
+        285
+      ],
+      "candidate_box_xyxy": null,
+      "centroid_jump_px": null,
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "exact_eval_claim": false,
+      "failure_type": "missing_component",
+      "frame": 159,
+      "frames": [
+        159
+      ],
+      "mask_iou": 0.0,
+      "pose_sensitive": true,
+      "promotion_eligible": false,
+      "rank": 7,
+      "score_claim_eligible": false,
+      "source": "visual_primitives.primitive_metrics.connected_components.critical_box_failures",
+      "source_rank": 7
+    },
+    {
+      "area_px": 430,
+      "box_iou": 0.0,
+      "box_xyxy": [
+        126,
+        231,
+        192,
+        290
+      ],
+      "candidate_box_xyxy": null,
+      "centroid_jump_px": null,
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "exact_eval_claim": false,
+      "failure_type": "missing_component",
+      "frame": 318,
+      "frames": [
+        318
+      ],
+      "mask_iou": 0.0,
+      "pose_sensitive": true,
+      "promotion_eligible": false,
+      "rank": 8,
+      "score_claim_eligible": false,
+      "source": "visual_primitives.primitive_metrics.connected_components.critical_box_failures",
+      "source_rank": 8
+    },
+    {
+      "area_px": 429,
+      "box_iou": 0.0,
+      "box_xyxy": [
+        102,
+        232,
+        178,
+        288
+      ],
+      "candidate_box_xyxy": null,
+      "centroid_jump_px": null,
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "exact_eval_claim": false,
+      "failure_type": "missing_component",
+      "frame": 267,
+      "frames": [
+        267
+      ],
+      "mask_iou": 0.0,
+      "pose_sensitive": true,
+      "promotion_eligible": false,
+      "rank": 9,
+      "score_claim_eligible": false,
+      "source": "visual_primitives.primitive_metrics.connected_components.critical_box_failures",
+      "source_rank": 9
+    },
+    {
+      "area_px": 428,
+      "box_iou": 0.0,
+      "box_xyxy": [
+        366,
+        235,
+        462,
+        287
+      ],
+      "candidate_box_xyxy": null,
+      "centroid_jump_px": null,
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "exact_eval_claim": false,
+      "failure_type": "missing_component",
+      "frame": 177,
+      "frames": [
+        177
+      ],
+      "mask_iou": 0.0,
+      "pose_sensitive": true,
+      "promotion_eligible": false,
+      "rank": 10,
+      "score_claim_eligible": false,
+      "source": "visual_primitives.primitive_metrics.connected_components.critical_box_failures",
+      "source_rank": 10
+    },
+    {
+      "area_px": 424,
+      "box_iou": 0.0,
+      "box_xyxy": [
+        128,
+        234,
+        192,
+        289
+      ],
+      "candidate_box_xyxy": null,
+      "centroid_jump_px": null,
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "exact_eval_claim": false,
+      "failure_type": "missing_component",
+      "frame": 305,
+      "frames": [
+        305
+      ],
+      "mask_iou": 0.0,
+      "pose_sensitive": true,
+      "promotion_eligible": false,
+      "rank": 11,
+      "score_claim_eligible": false,
+      "source": "visual_primitives.primitive_metrics.connected_components.critical_box_failures",
+      "source_rank": 11
+    },
+    {
+      "area_px": 419,
+      "box_iou": 0.0,
+      "box_xyxy": [
+        329,
+        226,
+        413,
+        287
+      ],
+      "candidate_box_xyxy": null,
+      "centroid_jump_px": null,
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "exact_eval_claim": false,
+      "failure_type": "missing_component",
+      "frame": 107,
+      "frames": [
+        107
+      ],
+      "mask_iou": 0.0,
+      "pose_sensitive": true,
+      "promotion_eligible": false,
+      "rank": 12,
+      "score_claim_eligible": false,
+      "source": "visual_primitives.primitive_metrics.connected_components.critical_box_failures",
+      "source_rank": 12
+    },
+    {
+      "area_px": 418,
+      "box_iou": 0.0,
+      "box_xyxy": [
+        128,
+        230,
+        195,
+        289
+      ],
+      "candidate_box_xyxy": null,
+      "centroid_jump_px": null,
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "exact_eval_claim": false,
+      "failure_type": "missing_component",
+      "frame": 212,
+      "frames": [
+        212
+      ],
+      "mask_iou": 0.0,
+      "pose_sensitive": true,
+      "promotion_eligible": false,
+      "rank": 13,
+      "score_claim_eligible": false,
+      "source": "visual_primitives.primitive_metrics.connected_components.critical_box_failures",
+      "source_rank": 13
+    },
+    {
+      "area_px": 418,
+      "box_iou": 0.0,
+      "box_xyxy": [
+        105,
+        229,
+        188,
+        288
+      ],
+      "candidate_box_xyxy": null,
+      "centroid_jump_px": null,
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "exact_eval_claim": false,
+      "failure_type": "missing_component",
+      "frame": 1059,
+      "frames": [
+        1059
+      ],
+      "mask_iou": 0.0,
+      "pose_sensitive": true,
+      "promotion_eligible": false,
+      "rank": 14,
+      "score_claim_eligible": false,
+      "source": "visual_primitives.primitive_metrics.connected_components.critical_box_failures",
+      "source_rank": 14
+    },
+    {
+      "area_px": 414,
+      "box_iou": 0.0,
+      "box_xyxy": [
+        353,
+        229,
+        448,
+        287
+      ],
+      "candidate_box_xyxy": null,
+      "centroid_jump_px": null,
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "exact_eval_claim": false,
+      "failure_type": "missing_component",
+      "frame": 195,
+      "frames": [
+        195
+      ],
+      "mask_iou": 0.0,
+      "pose_sensitive": true,
+      "promotion_eligible": false,
+      "rank": 15,
+      "score_claim_eligible": false,
+      "source": "visual_primitives.primitive_metrics.connected_components.critical_box_failures",
+      "source_rank": 15
+    },
+    {
+      "area_px": 412,
+      "box_iou": 0.0,
+      "box_xyxy": [
+        336,
+        232,
+        415,
+        288
+      ],
+      "candidate_box_xyxy": null,
+      "centroid_jump_px": null,
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "exact_eval_claim": false,
+      "failure_type": "missing_component",
+      "frame": 108,
+      "frames": [
+        108
+      ],
+      "mask_iou": 0.0,
+      "pose_sensitive": true,
+      "promotion_eligible": false,
+      "rank": 16,
+      "score_claim_eligible": false,
+      "source": "visual_primitives.primitive_metrics.connected_components.critical_box_failures",
+      "source_rank": 16
+    },
+    {
+      "area_px": 411,
+      "box_iou": 0.0,
+      "box_xyxy": [
+        39,
+        233,
+        144,
+        289
+      ],
+      "candidate_box_xyxy": null,
+      "centroid_jump_px": null,
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "exact_eval_claim": false,
+      "failure_type": "missing_component",
+      "frame": 131,
+      "frames": [
+        131
+      ],
+      "mask_iou": 0.0,
+      "pose_sensitive": true,
+      "promotion_eligible": false,
+      "rank": 17,
+      "score_claim_eligible": false,
+      "source": "visual_primitives.primitive_metrics.connected_components.critical_box_failures",
+      "source_rank": 17
+    },
+    {
+      "area_px": 411,
+      "box_iou": 0.0,
+      "box_xyxy": [
+        128,
+        220,
+        208,
+        288
+      ],
+      "candidate_box_xyxy": null,
+      "centroid_jump_px": null,
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "exact_eval_claim": false,
+      "failure_type": "missing_component",
+      "frame": 304,
+      "frames": [
+        304
+      ],
+      "mask_iou": 0.0,
+      "pose_sensitive": true,
+      "promotion_eligible": false,
+      "rank": 18,
+      "score_claim_eligible": false,
+      "source": "visual_primitives.primitive_metrics.connected_components.critical_box_failures",
+      "source_rank": 18
+    },
+    {
+      "area_px": 411,
+      "box_iou": 0.0,
+      "box_xyxy": [
+        121,
+        232,
+        195,
+        288
+      ],
+      "candidate_box_xyxy": null,
+      "centroid_jump_px": null,
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "exact_eval_claim": false,
+      "failure_type": "missing_component",
+      "frame": 593,
+      "frames": [
+        593
+      ],
+      "mask_iou": 0.0,
+      "pose_sensitive": true,
+      "promotion_eligible": false,
+      "rank": 19,
+      "score_claim_eligible": false,
+      "source": "visual_primitives.primitive_metrics.connected_components.critical_box_failures",
+      "source_rank": 19
+    },
+    {
+      "area_px": 408,
+      "box_iou": 0.0,
+      "box_xyxy": [
+        251,
+        234,
+        263,
+        282
+      ],
+      "candidate_box_xyxy": null,
+      "centroid_jump_px": null,
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "exact_eval_claim": false,
+      "failure_type": "missing_component",
+      "frame": 150,
+      "frames": [
+        150
+      ],
+      "mask_iou": 0.0,
+      "pose_sensitive": true,
+      "promotion_eligible": false,
+      "rank": 20,
+      "score_claim_eligible": false,
+      "source": "visual_primitives.primitive_metrics.connected_components.critical_box_failures",
+      "source_rank": 20
+    },
+    {
+      "area_px": 6823,
+      "baseline_class_hist": {
+        "1": 87,
+        "2": 79,
+        "3": 6655,
+        "4": 2
+      },
+      "boundary_band_pixels": 1102,
+      "box_xyxy": [
+        0,
+        173,
+        131,
+        257
+      ],
+      "candidate_box_xyxy": null,
+      "candidate_class_hist": {
+        "0": 3899,
+        "2": 2924
+      },
+      "class_id": 3,
+      "class_name": "sky_or_movable",
+      "critical_class_pixels": 3090,
+      "exact_eval_claim": false,
+      "failure_type": "residual_region",
+      "frame": 267,
+      "frames": [
+        267,
+        267
+      ],
+      "pose_sensitive": true,
+      "priority_label": "lower_field_lane_marking",
+      "promotion_eligible": false,
+      "rank": 21,
+      "score_claim_eligible": false,
+      "source": "residual_region_ranking.regions",
+      "source_rank": 1,
+      "suggested_repair": "lane_lower_field_residual",
+      "temporal_transition_disagreement_pixels": 6818
+    },
+    {
+      "area_px": 844,
+      "baseline_class_hist": {
+        "1": 34,
+        "2": 810
+      },
+      "boundary_band_pixels": 556,
+      "box_xyxy": [
+        342,
+        190,
+        512,
+        233
+      ],
+      "candidate_box_xyxy": null,
+      "candidate_class_hist": {
+        "0": 844
+      },
+      "class_id": 2,
+      "class_name": "vehicle_undrivable",
+      "critical_class_pixels": 844,
+      "exact_eval_claim": false,
+      "failure_type": "residual_region",
+      "frame": 716,
+      "frames": [
+        716,
+        716
+      ],
+      "pose_sensitive": true,
+      "priority_label": "lower_field_lane_marking",
+      "promotion_eligible": false,
+      "rank": 22,
+      "score_claim_eligible": false,
+      "source": "residual_region_ranking.regions",
+      "source_rank": 2,
+      "suggested_repair": "lane_lower_field_residual",
+      "temporal_transition_disagreement_pixels": 693
+    },
+    {
+      "area_px": 628,
+      "baseline_class_hist": {
+        "0": 47,
+        "1": 581
+      },
+      "boundary_band_pixels": 616,
+      "box_xyxy": [
+        338,
+        230,
+        443,
+        288
+      ],
+      "candidate_box_xyxy": null,
+      "candidate_class_hist": {
+        "0": 566,
+        "1": 14,
+        "4": 48
+      },
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "critical_class_pixels": 595,
+      "exact_eval_claim": false,
+      "failure_type": "residual_region",
+      "frame": 1198,
+      "frames": [
+        1198,
+        1198
+      ],
+      "pose_sensitive": true,
+      "priority_label": "lower_field_lane_marking",
+      "promotion_eligible": false,
+      "rank": 23,
+      "score_claim_eligible": false,
+      "source": "residual_region_ranking.regions",
+      "source_rank": 3,
+      "suggested_repair": "lane_lower_field_residual",
+      "temporal_transition_disagreement_pixels": 315
+    },
+    {
+      "area_px": 593,
+      "baseline_class_hist": {
+        "0": 12,
+        "1": 581
+      },
+      "boundary_band_pixels": 566,
+      "box_xyxy": [
+        359,
+        236,
+        452,
+        287
+      ],
+      "candidate_box_xyxy": null,
+      "candidate_class_hist": {
+        "0": 579,
+        "4": 14
+      },
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "critical_class_pixels": 581,
+      "exact_eval_claim": false,
+      "failure_type": "residual_region",
+      "frame": 1134,
+      "frames": [
+        1134,
+        1134
+      ],
+      "pose_sensitive": true,
+      "priority_label": "lower_field_lane_marking",
+      "promotion_eligible": false,
+      "rank": 24,
+      "score_claim_eligible": false,
+      "source": "residual_region_ranking.regions",
+      "source_rank": 4,
+      "suggested_repair": "lane_lower_field_residual",
+      "temporal_transition_disagreement_pixels": 485
+    },
+    {
+      "area_px": 576,
+      "baseline_class_hist": {
+        "0": 96,
+        "1": 480
+      },
+      "boundary_band_pixels": 501,
+      "box_xyxy": [
+        337,
+        229,
+        441,
+        288
+      ],
+      "candidate_box_xyxy": null,
+      "candidate_class_hist": {
+        "0": 462,
+        "1": 78,
+        "4": 36
+      },
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "critical_class_pixels": 558,
+      "exact_eval_claim": false,
+      "failure_type": "residual_region",
+      "frame": 1193,
+      "frames": [
+        1193,
+        1193
+      ],
+      "pose_sensitive": true,
+      "priority_label": "lower_field_lane_marking",
+      "promotion_eligible": false,
+      "rank": 25,
+      "score_claim_eligible": false,
+      "source": "residual_region_ranking.regions",
+      "source_rank": 5,
+      "suggested_repair": "lane_lower_field_residual",
+      "temporal_transition_disagreement_pixels": 405
+    },
+    {
+      "area_px": 590,
+      "baseline_class_hist": {
+        "0": 220,
+        "1": 329,
+        "2": 7,
+        "3": 34
+      },
+      "boundary_band_pixels": 587,
+      "box_xyxy": [
+        313,
+        187,
+        512,
+        235
+      ],
+      "candidate_box_xyxy": null,
+      "candidate_class_hist": {
+        "0": 369,
+        "1": 204,
+        "2": 2,
+        "3": 15
+      },
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "critical_class_pixels": 542,
+      "exact_eval_claim": false,
+      "failure_type": "residual_region",
+      "frame": 323,
+      "frames": [
+        323,
+        323
+      ],
+      "pose_sensitive": true,
+      "priority_label": "lower_field_lane_marking",
+      "promotion_eligible": false,
+      "rank": 26,
+      "score_claim_eligible": false,
+      "source": "residual_region_ranking.regions",
+      "source_rank": 6,
+      "suggested_repair": "lane_lower_field_residual",
+      "temporal_transition_disagreement_pixels": 246
+    },
+    {
+      "area_px": 591,
+      "baseline_class_hist": {
+        "0": 222,
+        "1": 330,
+        "3": 39
+      },
+      "boundary_band_pixels": 577,
+      "box_xyxy": [
+        313,
+        187,
+        512,
+        235
+      ],
+      "candidate_box_xyxy": null,
+      "candidate_class_hist": {
+        "0": 369,
+        "1": 206,
+        "3": 16
+      },
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "critical_class_pixels": 536,
+      "exact_eval_claim": false,
+      "failure_type": "residual_region",
+      "frame": 322,
+      "frames": [
+        322,
+        322
+      ],
+      "pose_sensitive": true,
+      "priority_label": "lower_field_lane_marking",
+      "promotion_eligible": false,
+      "rank": 27,
+      "score_claim_eligible": false,
+      "source": "residual_region_ranking.regions",
+      "source_rank": 7,
+      "suggested_repair": "lane_lower_field_residual",
+      "temporal_transition_disagreement_pixels": 122
+    },
+    {
+      "area_px": 560,
+      "baseline_class_hist": {
+        "0": 30,
+        "1": 530
+      },
+      "boundary_band_pixels": 543,
+      "box_xyxy": [
+        356,
+        241,
+        433,
+        288
+      ],
+      "candidate_box_xyxy": null,
+      "candidate_class_hist": {
+        "0": 514,
+        "4": 46
+      },
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "critical_class_pixels": 530,
+      "exact_eval_claim": false,
+      "failure_type": "residual_region",
+      "frame": 1197,
+      "frames": [
+        1197,
+        1197
+      ],
+      "pose_sensitive": true,
+      "priority_label": "lower_field_lane_marking",
+      "promotion_eligible": false,
+      "rank": 28,
+      "score_claim_eligible": false,
+      "source": "residual_region_ranking.regions",
+      "source_rank": 8,
+      "suggested_repair": "lane_lower_field_residual",
+      "temporal_transition_disagreement_pixels": 276
+    },
+    {
+      "area_px": 569,
+      "baseline_class_hist": {
+        "0": 195,
+        "1": 320,
+        "3": 54
+      },
+      "boundary_band_pixels": 546,
+      "box_xyxy": [
+        305,
+        192,
+        512,
+        234
+      ],
+      "candidate_box_xyxy": null,
+      "candidate_class_hist": {
+        "0": 374,
+        "1": 195
+      },
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "critical_class_pixels": 515,
+      "exact_eval_claim": false,
+      "failure_type": "residual_region",
+      "frame": 321,
+      "frames": [
+        321,
+        321
+      ],
+      "pose_sensitive": true,
+      "priority_label": "lower_field_lane_marking",
+      "promotion_eligible": false,
+      "rank": 29,
+      "score_claim_eligible": false,
+      "source": "residual_region_ranking.regions",
+      "source_rank": 9,
+      "suggested_repair": "lane_lower_field_residual",
+      "temporal_transition_disagreement_pixels": 261
+    },
+    {
+      "area_px": 510,
+      "baseline_class_hist": {
+        "1": 486,
+        "4": 24
+      },
+      "boundary_band_pixels": 510,
+      "box_xyxy": [
+        330,
+        226,
+        428,
+        288
+      ],
+      "candidate_box_xyxy": null,
+      "candidate_class_hist": {
+        "0": 510
+      },
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "critical_class_pixels": 486,
+      "exact_eval_claim": false,
+      "failure_type": "residual_region",
+      "frame": 221,
+      "frames": [
+        221,
+        221
+      ],
+      "pose_sensitive": true,
+      "priority_label": "lower_field_lane_marking",
+      "promotion_eligible": false,
+      "rank": 30,
+      "score_claim_eligible": false,
+      "source": "residual_region_ranking.regions",
+      "source_rank": 10,
+      "suggested_repair": "lane_lower_field_residual",
+      "temporal_transition_disagreement_pixels": 280
+    },
+    {
+      "area_px": 592,
+      "baseline_class_hist": {
+        "0": 110,
+        "1": 481,
+        "2": 1
+      },
+      "boundary_band_pixels": 592,
+      "box_xyxy": [
+        356,
+        232,
+        496,
+        289
+      ],
+      "candidate_box_xyxy": null,
+      "candidate_class_hist": {
+        "0": 469,
+        "4": 123
+      },
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "critical_class_pixels": 482,
+      "exact_eval_claim": false,
+      "failure_type": "residual_region",
+      "frame": 305,
+      "frames": [
+        305,
+        305
+      ],
+      "pose_sensitive": true,
+      "priority_label": "lower_field_lane_marking",
+      "promotion_eligible": false,
+      "rank": 31,
+      "score_claim_eligible": false,
+      "source": "residual_region_ranking.regions",
+      "source_rank": 11,
+      "suggested_repair": "lane_lower_field_residual",
+      "temporal_transition_disagreement_pixels": 377
+    },
+    {
+      "area_px": 482,
+      "baseline_class_hist": {
+        "0": 190,
+        "1": 276,
+        "2": 4,
+        "3": 12
+      },
+      "boundary_band_pixels": 482,
+      "box_xyxy": [
+        354,
+        199,
+        512,
+        239
+      ],
+      "candidate_box_xyxy": null,
+      "candidate_class_hist": {
+        "0": 292,
+        "1": 190
+      },
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "critical_class_pixels": 470,
+      "exact_eval_claim": false,
+      "failure_type": "residual_region",
+      "frame": 583,
+      "frames": [
+        583,
+        583
+      ],
+      "pose_sensitive": true,
+      "priority_label": "lower_field_lane_marking",
+      "promotion_eligible": false,
+      "rank": 32,
+      "score_claim_eligible": false,
+      "source": "residual_region_ranking.regions",
+      "source_rank": 12,
+      "suggested_repair": "lane_lower_field_residual",
+      "temporal_transition_disagreement_pixels": 156
+    },
+    {
+      "area_px": 469,
+      "baseline_class_hist": {
+        "0": 5,
+        "1": 464
+      },
+      "boundary_band_pixels": 469,
+      "box_xyxy": [
+        331,
+        226,
+        416,
+        288
+      ],
+      "candidate_box_xyxy": null,
+      "candidate_class_hist": {
+        "0": 464,
+        "1": 5
+      },
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "critical_class_pixels": 469,
+      "exact_eval_claim": false,
+      "failure_type": "residual_region",
+      "frame": 1054,
+      "frames": [
+        1054,
+        1054
+      ],
+      "pose_sensitive": true,
+      "priority_label": "lower_field_lane_marking",
+      "promotion_eligible": false,
+      "rank": 33,
+      "score_claim_eligible": false,
+      "source": "residual_region_ranking.regions",
+      "source_rank": 13,
+      "suggested_repair": "lane_lower_field_residual",
+      "temporal_transition_disagreement_pixels": 291
+    },
+    {
+      "area_px": 490,
+      "baseline_class_hist": {
+        "1": 468,
+        "4": 22
+      },
+      "boundary_band_pixels": 490,
+      "box_xyxy": [
+        344,
+        227,
+        453,
+        287
+      ],
+      "candidate_box_xyxy": null,
+      "candidate_class_hist": {
+        "0": 490
+      },
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "critical_class_pixels": 468,
+      "exact_eval_claim": false,
+      "failure_type": "residual_region",
+      "frame": 203,
+      "frames": [
+        203,
+        203
+      ],
+      "pose_sensitive": true,
+      "priority_label": "lower_field_lane_marking",
+      "promotion_eligible": false,
+      "rank": 34,
+      "score_claim_eligible": false,
+      "source": "residual_region_ranking.regions",
+      "source_rank": 14,
+      "suggested_repair": "lane_lower_field_residual",
+      "temporal_transition_disagreement_pixels": 284
+    },
+    {
+      "area_px": 487,
+      "baseline_class_hist": {
+        "0": 199,
+        "1": 261,
+        "2": 5,
+        "3": 22
+      },
+      "boundary_band_pixels": 487,
+      "box_xyxy": [
+        352,
+        196,
+        512,
+        238
+      ],
+      "candidate_box_xyxy": null,
+      "candidate_class_hist": {
+        "0": 283,
+        "1": 202,
+        "3": 2
+      },
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "critical_class_pixels": 468,
+      "exact_eval_claim": false,
+      "failure_type": "residual_region",
+      "frame": 584,
+      "frames": [
+        584,
+        584
+      ],
+      "pose_sensitive": true,
+      "priority_label": "lower_field_lane_marking",
+      "promotion_eligible": false,
+      "rank": 35,
+      "score_claim_eligible": false,
+      "source": "residual_region_ranking.regions",
+      "source_rank": 15,
+      "suggested_repair": "lane_lower_field_residual",
+      "temporal_transition_disagreement_pixels": 141
+    },
+    {
+      "area_px": 472,
+      "baseline_class_hist": {
+        "0": 12,
+        "1": 460
+      },
+      "boundary_band_pixels": 461,
+      "box_xyxy": [
+        358,
+        238,
+        432,
+        287
+      ],
+      "candidate_box_xyxy": null,
+      "candidate_class_hist": {
+        "0": 453,
+        "4": 19
+      },
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "critical_class_pixels": 460,
+      "exact_eval_claim": false,
+      "failure_type": "residual_region",
+      "frame": 1191,
+      "frames": [
+        1191,
+        1191
+      ],
+      "pose_sensitive": true,
+      "priority_label": "lower_field_lane_marking",
+      "promotion_eligible": false,
+      "rank": 36,
+      "score_claim_eligible": false,
+      "source": "residual_region_ranking.regions",
+      "source_rank": 16,
+      "suggested_repair": "lane_lower_field_residual",
+      "temporal_transition_disagreement_pixels": 283
+    },
+    {
+      "area_px": 458,
+      "baseline_class_hist": {
+        "0": 1,
+        "1": 455,
+        "2": 1,
+        "3": 1
+      },
+      "boundary_band_pixels": 458,
+      "box_xyxy": [
+        337,
+        231,
+        420,
+        289
+      ],
+      "candidate_box_xyxy": null,
+      "candidate_class_hist": {
+        "0": 454,
+        "4": 4
+      },
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "critical_class_pixels": 456,
+      "exact_eval_claim": false,
+      "failure_type": "residual_region",
+      "frame": 1055,
+      "frames": [
+        1055,
+        1055
+      ],
+      "pose_sensitive": true,
+      "priority_label": "lower_field_lane_marking",
+      "promotion_eligible": false,
+      "rank": 37,
+      "score_claim_eligible": false,
+      "source": "residual_region_ranking.regions",
+      "source_rank": 17,
+      "suggested_repair": "lane_lower_field_residual",
+      "temporal_transition_disagreement_pixels": 211
+    },
+    {
+      "area_px": 451,
+      "baseline_class_hist": {
+        "1": 451
+      },
+      "boundary_band_pixels": 451,
+      "box_xyxy": [
+        336,
+        232,
+        408,
+        287
+      ],
+      "candidate_box_xyxy": null,
+      "candidate_class_hist": {
+        "0": 451
+      },
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "critical_class_pixels": 451,
+      "exact_eval_claim": false,
+      "failure_type": "residual_region",
+      "frame": 258,
+      "frames": [
+        258,
+        258
+      ],
+      "pose_sensitive": true,
+      "priority_label": "lower_field_lane_marking",
+      "promotion_eligible": false,
+      "rank": 38,
+      "score_claim_eligible": false,
+      "source": "residual_region_ranking.regions",
+      "source_rank": 18,
+      "suggested_repair": "lane_lower_field_residual",
+      "temporal_transition_disagreement_pixels": 297
+    },
+    {
+      "area_px": 450,
+      "baseline_class_hist": {
+        "0": 18,
+        "1": 432
+      },
+      "boundary_band_pixels": 450,
+      "box_xyxy": [
+        341,
+        226,
+        441,
+        287
+      ],
+      "candidate_box_xyxy": null,
+      "candidate_class_hist": {
+        "0": 432,
+        "1": 18
+      },
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "critical_class_pixels": 450,
+      "exact_eval_claim": false,
+      "failure_type": "residual_region",
+      "frame": 308,
+      "frames": [
+        308,
+        308
+      ],
+      "pose_sensitive": true,
+      "priority_label": "lower_field_lane_marking",
+      "promotion_eligible": false,
+      "rank": 39,
+      "score_claim_eligible": false,
+      "source": "residual_region_ranking.regions",
+      "source_rank": 19,
+      "suggested_repair": "lane_lower_field_residual",
+      "temporal_transition_disagreement_pixels": 237
+    },
+    {
+      "area_px": 456,
+      "baseline_class_hist": {
+        "1": 448,
+        "2": 1,
+        "3": 2,
+        "4": 5
+      },
+      "boundary_band_pixels": 456,
+      "box_xyxy": [
+        341,
+        224,
+        443,
+        287
+      ],
+      "candidate_box_xyxy": null,
+      "candidate_class_hist": {
+        "0": 456
+      },
+      "class_id": 1,
+      "class_name": "lane_marking",
+      "critical_class_pixels": 449,
+      "exact_eval_claim": false,
+      "failure_type": "residual_region",
+      "frame": 304,
+      "frames": [
+        304,
+        304
+      ],
+      "pose_sensitive": true,
+      "priority_label": "lower_field_lane_marking",
+      "promotion_eligible": false,
+      "rank": 40,
+      "score_claim_eligible": false,
+      "source": "residual_region_ranking.regions",
+      "source_rank": 20,
+      "suggested_repair": "lane_lower_field_residual",
+      "temporal_transition_disagreement_pixels": 276
+    }
+  ],
+  "schema_version": 1,
+  "score_claim_eligible": false,
+  "score_evidence_grade": "empirical",
+  "scorer_network_loaded": false,
+  "scorer_proxy": false,
+  "shape": {
+    "frames": 1200,
+    "height": 384,
+    "num_classes": 5,
+    "width": 512
+  },
+  "source": {
+    "baseline": {
+      "archive_member": "masks.mkv",
+      "archive_member_compressed_bytes": 412169,
+      "archive_member_requested": "masks.mkv",
+      "archive_member_sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9",
+      "archive_member_size_bytes": 421483,
+      "archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+      "archive_size_bytes": 686635,
+      "decoded_mask_dtype": "torch.uint8",
+      "decoded_mask_sha256": "cce3a986341c40df9b9ebca24ff96e16c4b41b40b388dc2af86161ba76e2b4e9",
+      "decoded_mask_sha256_algo": "sha256(shape,dtype,contiguous-raw-bytes)",
+      "decoded_mask_shape": [
+        1200,
+        384,
+        512
+      ],
+      "exact_eval_claim": false,
+      "path": "/teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+      "promotion_eligible": false,
+      "provenance_only": false,
+      "score_claim_eligible": false
+    },
+    "diagnose_nerv_geometry_json": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/alpha_geo0_pose_regen_lightning_t4_ffmpegfix_20260501T110126Z/alpha_geo_0_geometry.json",
+    "failed_candidate": {
+      "archive_member": "masks.nrv",
+      "archive_member_compressed_bytes": 22127,
+      "archive_member_requested": "masks.nrv",
+      "archive_member_sha256": "b3258dad7550f5e7a496f4834ed9990a3e9900a192c9045dca951e751412a4de",
+      "archive_member_size_bytes": 23594,
+      "archive_sha256": "864549cc648f0b3a023076c11812ccd0f10b1d013ed3fd6bb24d20bbcde85c97",
+      "archive_size_bytes": 296478,
+      "decoded_mask_dtype": "torch.uint8",
+      "decoded_mask_sha256": "f213477bb66e484d827618e63c54faf91ba25546583d642fa62037a1ba230e47",
+      "decoded_mask_sha256_algo": "sha256(shape,dtype,contiguous-raw-bytes)",
+      "decoded_mask_shape": [
+        1200,
+        384,
+        512
+      ],
+      "exact_eval_claim": false,
+      "path": "/teamspace/studios/this_studio/pact/experiments/results/lane_12_nerv_20260430_codex_jsonfix40/archive_lane_12_nerv.zip",
+      "promotion_eligible": false,
+      "provenance_only": true,
+      "score_claim_eligible": false
+    }
+  },
+  "threshold_gates": {
+    "exact_eval_spend_gate": {
+      "blockers": [
+        "global_disagreement",
+        "boundary_2px_disagreement",
+        "pair_transition_disagreement",
+        "critical_missing_rate",
+        "critical_missing_area_rate"
+      ],
+      "exact_eval_claim": false,
+      "observed": {
+        "boundary_2px_disagreement": 0.14883124171961043,
+        "critical_missing_area_rate": 0.004038536840025019,
+        "critical_missing_rate": 0.6452857808237408,
+        "global_disagreement": 0.012303911844889322,
+        "pair_transition_disagreement": 0.009507154603119787
+      },
+      "passed": false,
+      "promotion_eligible": false,
+      "score_claim_eligible": false,
+      "thresholds": {
+        "boundary_2px_disagreement_max": 0.002,
+        "critical_missing_area_rate_max": 0.0005,
+        "critical_missing_rate_max": 0.001,
+        "global_disagreement_max": 0.001,
+        "pair_transition_disagreement_max": 0.002
+      }
+    },
+    "exploratory_retrain_gate": {
+      "blockers": [
+        "global_disagreement",
+        "boundary_2px_disagreement",
+        "pair_transition_disagreement",
+        "critical_missing_rate"
+      ],
+      "exact_eval_claim": false,
+      "observed": {
+        "boundary_2px_disagreement": 0.14883124171961043,
+        "critical_missing_area_rate": 0.004038536840025019,
+        "critical_missing_rate": 0.6452857808237408,
+        "global_disagreement": 0.012303911844889322,
+        "pair_transition_disagreement": 0.009507154603119787
+      },
+      "passed": false,
+      "promotion_eligible": false,
+      "score_claim_eligible": false,
+      "thresholds": {
+        "boundary_2px_disagreement_max": 0.005,
+        "critical_missing_area_rate_max": 0.01,
+        "critical_missing_rate_max": 0.02,
+        "global_disagreement_max": 0.003,
+        "pair_transition_disagreement_max": 0.004
+      }
+    }
+  },
+  "worst_transition_pairs": [
+    {
+      "exact_eval_claim": false,
+      "frames": [
+        266,
+        267
+      ],
+      "pair_frame_disagreement_rate": 0.029238382975260418,
+      "pair_index": 266,
+      "promotion_eligible": false,
+      "rank": 1,
+      "score_claim_eligible": false,
+      "stable_false_flip_pixels": 275,
+      "stable_false_flip_rate": 0.0014629138051186024,
+      "transition_disagreement_pixels": 8472,
+      "transition_disagreement_rate": 0.0430908203125
+    },
+    {
+      "exact_eval_claim": false,
+      "frames": [
+        267,
+        268
+      ],
+      "pair_frame_disagreement_rate": 0.032033284505208336,
+      "pair_index": 267,
+      "promotion_eligible": false,
+      "rank": 2,
+      "score_claim_eligible": false,
+      "stable_false_flip_pixels": 236,
+      "stable_false_flip_rate": 0.0012537919236674476,
+      "transition_disagreement_pixels": 8333,
+      "transition_disagreement_rate": 0.042383829752604164
+    },
+    {
+      "exact_eval_claim": false,
+      "frames": [
+        1035,
+        1036
+      ],
+      "pair_frame_disagreement_rate": 0.02706146240234375,
+      "pair_index": 1035,
+      "promotion_eligible": false,
+      "rank": 3,
+      "score_claim_eligible": false,
+      "stable_false_flip_pixels": 298,
+      "stable_false_flip_rate": 0.001564797311489183,
+      "transition_disagreement_pixels": 6124,
+      "transition_disagreement_rate": 0.031148274739583332
+    },
+    {
+      "exact_eval_claim": false,
+      "frames": [
+        1044,
+        1045
+      ],
+      "pair_frame_disagreement_rate": 0.02091217041015625,
+      "pair_index": 1044,
+      "promotion_eligible": false,
+      "rank": 4,
+      "score_claim_eligible": false,
+      "stable_false_flip_pixels": 224,
+      "stable_false_flip_rate": 0.0011723881651601827,
+      "transition_disagreement_pixels": 5650,
+      "transition_disagreement_rate": 0.028737386067708332
+    },
+    {
+      "exact_eval_claim": false,
+      "frames": [
+        1034,
+        1035
+      ],
+      "pair_frame_disagreement_rate": 0.021486918131510418,
+      "pair_index": 1034,
+      "promotion_eligible": false,
+      "rank": 5,
+      "score_claim_eligible": false,
+      "stable_false_flip_pixels": 292,
+      "stable_false_flip_rate": 0.0015243982020454083,
+      "transition_disagreement_pixels": 5203,
+      "transition_disagreement_rate": 0.026463826497395832
+    },
+    {
+      "exact_eval_claim": false,
+      "frames": [
+        1045,
+        1046
+      ],
+      "pair_frame_disagreement_rate": 0.0206298828125,
+      "pair_index": 1045,
+      "promotion_eligible": false,
+      "rank": 6,
+      "score_claim_eligible": false,
+      "stable_false_flip_pixels": 255,
+      "stable_false_flip_rate": 0.0013295307017315182,
+      "transition_disagreement_pixels": 4955,
+      "transition_disagreement_rate": 0.025202433268229168
+    },
+    {
+      "exact_eval_claim": false,
+      "frames": [
+        1039,
+        1040
+      ],
+      "pair_frame_disagreement_rate": 0.021197001139322918,
+      "pair_index": 1039,
+      "promotion_eligible": false,
+      "rank": 7,
+      "score_claim_eligible": false,
+      "stable_false_flip_pixels": 239,
+      "stable_false_flip_rate": 0.0012488308539599434,
+      "transition_disagreement_pixels": 4812,
+      "transition_disagreement_rate": 0.02447509765625
+    },
+    {
+      "exact_eval_claim": false,
+      "frames": [
+        1036,
+        1037
+      ],
+      "pair_frame_disagreement_rate": 0.024749755859375,
+      "pair_index": 1036,
+      "promotion_eligible": false,
+      "rank": 8,
+      "score_claim_eligible": false,
+      "stable_false_flip_pixels": 738,
+      "stable_false_flip_rate": 0.003836337077833977,
+      "transition_disagreement_pixels": 4604,
+      "transition_disagreement_rate": 0.023417154947916668
+    },
+    {
+      "exact_eval_claim": false,
+      "frames": [
+        0,
+        1
+      ],
+      "pair_frame_disagreement_rate": 0.0244293212890625,
+      "pair_index": 0,
+      "promotion_eligible": false,
+      "rank": 9,
+      "score_claim_eligible": false,
+      "stable_false_flip_pixels": 2854,
+      "stable_false_flip_rate": 0.014638374699308088,
+      "transition_disagreement_pixels": 4396,
+      "transition_disagreement_rate": 0.022359212239583332
+    },
+    {
+      "exact_eval_claim": false,
+      "frames": [
+        1029,
+        1030
+      ],
+      "pair_frame_disagreement_rate": 0.019134521484375,
+      "pair_index": 1029,
+      "promotion_eligible": false,
+      "rank": 10,
+      "score_claim_eligible": false,
+      "stable_false_flip_pixels": 207,
+      "stable_false_flip_rate": 0.0010763031327180553,
+      "transition_disagreement_pixels": 4305,
+      "transition_disagreement_rate": 0.0218963623046875
+    }
+  ]
+}

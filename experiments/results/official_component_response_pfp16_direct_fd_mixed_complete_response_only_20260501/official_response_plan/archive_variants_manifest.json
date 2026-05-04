@@ -1,0 +1,744 @@
+{
+  "auth_eval_required": "cuda",
+  "baseline_archive": {
+    "bytes": 686635,
+    "path": "../../lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+    "sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+  },
+  "basis": {
+    "bytes": 16621,
+    "path": "perturbation_basis_v1.json",
+    "sha256": "81cea1457b5b7eee57d12ce02c1b85dc294e4b6bb189159cbff0233dc2ad46b1"
+  },
+  "canonical_response_eval_path": "archive.zip -> inflate.sh -> upstream/evaluate.py",
+  "format": "official_component_response_archive_variants_v1",
+  "member_order": [
+    "masks.mkv",
+    "optimized_poses.bin",
+    "renderer.bin"
+  ],
+  "points": [
+    {
+      "archive": {
+        "bytes": 686632,
+        "path": "archives/point_000_eps_m2.zip",
+        "sha256": "d561b8bf1367619e6c6e1d9b9d09213da6bdfdfd894be518866ef5119cba2927"
+      },
+      "archive_byte_delta_vs_baseline": -3,
+      "changed_member_bytes": 16,
+      "deterministic_rebuild": true,
+      "epsilon": -2.0,
+      "max_abs_byte_delta": 2,
+      "member_mutations": [
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 113,
+          "offset": 11942,
+          "original_byte": 115
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 169,
+          "offset": 12590,
+          "original_byte": 171
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 124,
+          "offset": 25638,
+          "original_byte": 126
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 106,
+          "offset": 43576,
+          "original_byte": 108
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 131,
+          "offset": 63040,
+          "original_byte": 133
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 137,
+          "offset": 82552,
+          "original_byte": 139
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 84,
+          "offset": 89606,
+          "original_byte": 86
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 135,
+          "offset": 125386,
+          "original_byte": 137
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 106,
+          "offset": 127012,
+          "original_byte": 108
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 147,
+          "offset": 223716,
+          "original_byte": 149
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 120,
+          "offset": 225346,
+          "original_byte": 122
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 112,
+          "offset": 229258,
+          "original_byte": 114
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 139,
+          "offset": 245254,
+          "original_byte": 141
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 16,
+          "offset": 246942,
+          "original_byte": 18
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 96,
+          "offset": 246980,
+          "original_byte": 98
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 94,
+          "offset": 247018,
+          "original_byte": 96
+        }
+      ],
+      "members": [
+        {
+          "compress_type": 8,
+          "compressed_bytes": 412169,
+          "crc32": "e144d6ac",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "masks.mkv",
+          "permissions_octal": "0o644",
+          "raw_bytes": 421483,
+          "sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9"
+        },
+        {
+          "compress_type": 8,
+          "compressed_bytes": 6734,
+          "crc32": "686cbfbf",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "optimized_poses.bin",
+          "permissions_octal": "0o644",
+          "raw_bytes": 7200,
+          "sha256": "4b3d8cd58965971ad518a970441f5e9cc53ce361a62d51e95c1cdd2056be4449"
+        },
+        {
+          "compress_type": 8,
+          "compressed_bytes": 267399,
+          "crc32": "c85672fa",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "renderer.bin",
+          "permissions_octal": "0o644",
+          "raw_bytes": 296776,
+          "sha256": "5296bae3aed68bdfcff6dc491e73342af2c6050e4a4ed2c7103614d583e4b8dc"
+        }
+      ],
+      "raw_l1_byte_delta": 32
+    },
+    {
+      "archive": {
+        "bytes": 686632,
+        "path": "archives/point_001_eps_m1.zip",
+        "sha256": "d69e45edd20bbe1a69a171098a9dbfce71673aad2c7b6a95d55ebd9b60cf0803"
+      },
+      "archive_byte_delta_vs_baseline": -3,
+      "changed_member_bytes": 16,
+      "deterministic_rebuild": true,
+      "epsilon": -1.0,
+      "max_abs_byte_delta": 1,
+      "member_mutations": [
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 114,
+          "offset": 11942,
+          "original_byte": 115
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 170,
+          "offset": 12590,
+          "original_byte": 171
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 125,
+          "offset": 25638,
+          "original_byte": 126
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 107,
+          "offset": 43576,
+          "original_byte": 108
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 132,
+          "offset": 63040,
+          "original_byte": 133
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 138,
+          "offset": 82552,
+          "original_byte": 139
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 85,
+          "offset": 89606,
+          "original_byte": 86
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 136,
+          "offset": 125386,
+          "original_byte": 137
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 107,
+          "offset": 127012,
+          "original_byte": 108
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 148,
+          "offset": 223716,
+          "original_byte": 149
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 121,
+          "offset": 225346,
+          "original_byte": 122
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 113,
+          "offset": 229258,
+          "original_byte": 114
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 140,
+          "offset": 245254,
+          "original_byte": 141
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 17,
+          "offset": 246942,
+          "original_byte": 18
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 97,
+          "offset": 246980,
+          "original_byte": 98
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 95,
+          "offset": 247018,
+          "original_byte": 96
+        }
+      ],
+      "members": [
+        {
+          "compress_type": 8,
+          "compressed_bytes": 412169,
+          "crc32": "e144d6ac",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "masks.mkv",
+          "permissions_octal": "0o644",
+          "raw_bytes": 421483,
+          "sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9"
+        },
+        {
+          "compress_type": 8,
+          "compressed_bytes": 6734,
+          "crc32": "686cbfbf",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "optimized_poses.bin",
+          "permissions_octal": "0o644",
+          "raw_bytes": 7200,
+          "sha256": "4b3d8cd58965971ad518a970441f5e9cc53ce361a62d51e95c1cdd2056be4449"
+        },
+        {
+          "compress_type": 8,
+          "compressed_bytes": 267399,
+          "crc32": "1efd778f",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "renderer.bin",
+          "permissions_octal": "0o644",
+          "raw_bytes": 296776,
+          "sha256": "5a5b74f9df489a7667d9d741936977300128c04a6dd575f11e953cdd4baae871"
+        }
+      ],
+      "raw_l1_byte_delta": 16
+    },
+    {
+      "archive": {
+        "bytes": 686628,
+        "path": "archives/point_003_eps_p1.zip",
+        "sha256": "dccb3ebcac49e7046a53896335561d8d54fa6a41986287f91c43cced71020f6f"
+      },
+      "archive_byte_delta_vs_baseline": -7,
+      "changed_member_bytes": 16,
+      "deterministic_rebuild": true,
+      "epsilon": 1.0,
+      "max_abs_byte_delta": 1,
+      "member_mutations": [
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 116,
+          "offset": 11942,
+          "original_byte": 115
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 172,
+          "offset": 12590,
+          "original_byte": 171
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 127,
+          "offset": 25638,
+          "original_byte": 126
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 109,
+          "offset": 43576,
+          "original_byte": 108
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 134,
+          "offset": 63040,
+          "original_byte": 133
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 140,
+          "offset": 82552,
+          "original_byte": 139
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 87,
+          "offset": 89606,
+          "original_byte": 86
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 138,
+          "offset": 125386,
+          "original_byte": 137
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 109,
+          "offset": 127012,
+          "original_byte": 108
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 150,
+          "offset": 223716,
+          "original_byte": 149
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 123,
+          "offset": 225346,
+          "original_byte": 122
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 115,
+          "offset": 229258,
+          "original_byte": 114
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 142,
+          "offset": 245254,
+          "original_byte": 141
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 19,
+          "offset": 246942,
+          "original_byte": 18
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 99,
+          "offset": 246980,
+          "original_byte": 98
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 97,
+          "offset": 247018,
+          "original_byte": 96
+        }
+      ],
+      "members": [
+        {
+          "compress_type": 8,
+          "compressed_bytes": 412169,
+          "crc32": "e144d6ac",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "masks.mkv",
+          "permissions_octal": "0o644",
+          "raw_bytes": 421483,
+          "sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9"
+        },
+        {
+          "compress_type": 8,
+          "compressed_bytes": 6734,
+          "crc32": "686cbfbf",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "optimized_poses.bin",
+          "permissions_octal": "0o644",
+          "raw_bytes": 7200,
+          "sha256": "4b3d8cd58965971ad518a970441f5e9cc53ce361a62d51e95c1cdd2056be4449"
+        },
+        {
+          "compress_type": 8,
+          "compressed_bytes": 267395,
+          "crc32": "15ff54e2",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "renderer.bin",
+          "permissions_octal": "0o644",
+          "raw_bytes": 296776,
+          "sha256": "a5b76a34bcf495ea3cd67f5fb2bcdb06e6f1ef9dd8bbce932de0cead10242dc4"
+        }
+      ],
+      "raw_l1_byte_delta": 16
+    },
+    {
+      "archive": {
+        "bytes": 686632,
+        "path": "archives/point_004_eps_p2.zip",
+        "sha256": "c61a1201ac84d37a81aaa9dd9ea27a4d6a4bb22e58c2f44c01c798f53590a35c"
+      },
+      "archive_byte_delta_vs_baseline": -3,
+      "changed_member_bytes": 16,
+      "deterministic_rebuild": true,
+      "epsilon": 2.0,
+      "max_abs_byte_delta": 2,
+      "member_mutations": [
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 117,
+          "offset": 11942,
+          "original_byte": 115
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 173,
+          "offset": 12590,
+          "original_byte": 171
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 128,
+          "offset": 25638,
+          "original_byte": 126
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 110,
+          "offset": 43576,
+          "original_byte": 108
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 135,
+          "offset": 63040,
+          "original_byte": 133
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 141,
+          "offset": 82552,
+          "original_byte": 139
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 88,
+          "offset": 89606,
+          "original_byte": 86
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 139,
+          "offset": 125386,
+          "original_byte": 137
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 110,
+          "offset": 127012,
+          "original_byte": 108
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 151,
+          "offset": 223716,
+          "original_byte": 149
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 124,
+          "offset": 225346,
+          "original_byte": 122
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 116,
+          "offset": 229258,
+          "original_byte": 114
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 143,
+          "offset": 245254,
+          "original_byte": 141
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 20,
+          "offset": 246942,
+          "original_byte": 18
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 100,
+          "offset": 246980,
+          "original_byte": 98
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 98,
+          "offset": 247018,
+          "original_byte": 96
+        }
+      ],
+      "members": [
+        {
+          "compress_type": 8,
+          "compressed_bytes": 412169,
+          "crc32": "e144d6ac",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "masks.mkv",
+          "permissions_octal": "0o644",
+          "raw_bytes": 421483,
+          "sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9"
+        },
+        {
+          "compress_type": 8,
+          "compressed_bytes": 6734,
+          "crc32": "686cbfbf",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "optimized_poses.bin",
+          "permissions_octal": "0o644",
+          "raw_bytes": 7200,
+          "sha256": "4b3d8cd58965971ad518a970441f5e9cc53ce361a62d51e95c1cdd2056be4449"
+        },
+        {
+          "compress_type": 8,
+          "compressed_bytes": 267399,
+          "crc32": "972ae943",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "renderer.bin",
+          "permissions_octal": "0o644",
+          "raw_bytes": 296776,
+          "sha256": "f5d3cc2e50c5e15d8d763c19bf65c58c9a87bb129fe7a5542d937092eaa706a6"
+        }
+      ],
+      "raw_l1_byte_delta": 32
+    }
+  ],
+  "producer": "experiments/build_component_response_perturbation_plan.py",
+  "schema_version": 1
+}

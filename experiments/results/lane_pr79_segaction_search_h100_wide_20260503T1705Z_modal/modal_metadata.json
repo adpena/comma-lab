@@ -1,0 +1,12 @@
+{
+  "lane_script": "scripts/remote_lane_pr79_segaction_search.sh",
+  "label": "pr79_segaction_search_h100_wide_20260503T1705Z",
+  "gpu": "H100",
+  "max_seconds": 50400,
+  "call_id": "fc-01KQQCJB3YAXX7A9VYJ2DA2WJX",
+  "auth_eval_device": "cpu",
+  "auth_eval_advisory_only": true,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "dispatched_at": "2026-05-03T12:00:54.872826"
+}

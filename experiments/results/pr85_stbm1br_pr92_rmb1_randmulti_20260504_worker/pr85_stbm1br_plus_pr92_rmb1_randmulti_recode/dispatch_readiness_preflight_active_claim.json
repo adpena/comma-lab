@@ -1,0 +1,46 @@
+{
+  "blockers": [
+    {
+      "code": "active_lane_claim_conflict",
+      "detail": "active same-lane claim exists: 2026-05-04T08:22:20Z codex:gpt-5.5 lightning exact_eval_pr85_stbm1br_pr92_rmb1_t4_20260504T082220Z status=eval",
+      "severity": "blocking"
+    }
+  ],
+  "candidate_id": "pr85_stbm1br_plus_pr92_rmb1_randmulti_recode",
+  "dispatch_performed": false,
+  "lane_claim": {
+    "active_conflicts": [
+      {
+        "agent": "codex:gpt-5.5",
+        "instance_job_id": "exact_eval_pr85_stbm1br_pr92_rmb1_t4_20260504T082220Z",
+        "lane_id": "pr85_stbm1br_pr92_rmb1_randmulti",
+        "notes": "Correct replay-runtime T4 eval for PR85_STBM1BR plus PR92_RMB1 with cu124 inflate torch pin",
+        "platform": "lightning",
+        "predicted_eta_utc": "2026-05-04T09:37:20Z",
+        "status": "eval",
+        "timestamp_utc": "2026-05-04T08:22:20Z"
+      }
+    ],
+    "checked": true,
+    "claim_count": 754,
+    "claims_path": ".omx/state/active_lane_dispatch_claims.md",
+    "lane_id": "pr85_stbm1br_pr92_rmb1_randmulti",
+    "now_utc": "2026-05-04T08:29:06Z",
+    "ttl_hours": 24.0
+  },
+  "manifest_path": "experiments/results/pr85_stbm1br_pr92_rmb1_randmulti_20260504_worker/pr85_stbm1br_plus_pr92_rmb1_randmulti_recode/manifest.json",
+  "ready_for_exact_eval_dispatch": false,
+  "remote_jobs_dispatched": false,
+  "schema": "candidate_manifest_dispatch_readiness_preflight_v1",
+  "score_claim": false,
+  "warnings": [
+    {
+      "code": "formula_only_rate_summary_non_dispatching",
+      "detail": "formula_only_rate_delta_vs_stbm.archive_delta_bytes is recorded as a non-score explanatory rate projection"
+    },
+    {
+      "code": "formula_only_rate_summary_non_dispatching",
+      "detail": "formula_only_rate_delta_vs_stbm.score_delta_from_rate_only is recorded as a non-score explanatory rate projection"
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "adjudication": {
+    "allow_component_gate_forensic_success": true,
+    "baseline_archive_size_bytes": 594047,
+    "baseline_posenet_dist": null,
+    "baseline_score": 0.9867772369277311,
+    "baseline_segnet_dist": null,
+    "component_reference_label": "public_pr64_unified_brotli_external_floor",
+    "delta_key": "score_delta_vs_c051_frontier",
+    "max_posenet_dist": null,
+    "max_posenet_relative": null,
+    "max_sane_score": 20.0,
+    "max_segnet_dist": null,
+    "max_segnet_relative": null,
+    "predicted_band_high": 1.0,
+    "predicted_band_low": 0.2,
+    "provenance_name": "adjudication_provenance.json",
+    "regression_threshold": 20.0,
+    "required_device": "cuda",
+    "required_samples": 600,
+    "result_copy_name": "contest_auth_eval.adjudicated.json"
+  },
+  "artifact_recorded_at_utc": "2026-05-01T21:58:27Z",
+  "expected_archive_sha256": "7e48da0be75f915d6a4cf76a4679f8c1fbe689f82d69c7559f6ba1c2cb1e981d",
+  "expected_archive_size_bytes": 287165,
+  "job_name": "exact_eval_public_pr64_unified_trace_l40s_20260501T2150Z",
+  "queue_metadata": {
+    "external_public_archive": "true",
+    "lane": "public_floor_reverse_engineering",
+    "public_label": "pr64_unified_brotli",
+    "score_claim": "false"
+  },
+  "role": "exact_cuda_eval",
+  "schema_version": 1,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

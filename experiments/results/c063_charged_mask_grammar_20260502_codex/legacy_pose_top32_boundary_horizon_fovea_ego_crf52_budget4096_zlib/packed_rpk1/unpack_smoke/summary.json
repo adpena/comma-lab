@@ -1,0 +1,28 @@
+{
+  "members": [
+    {
+      "bytes": 59288,
+      "name": "renderer.bin",
+      "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+    },
+    {
+      "bytes": 216317,
+      "name": "masks.mkv",
+      "sha256": "3c84b3dcc09d11d0d108d8aaef6d375478644a854fa2985429f676542d7a51b3"
+    },
+    {
+      "bytes": 7200,
+      "name": "optimized_poses.bin",
+      "sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+    },
+    {
+      "bytes": 9964,
+      "name": "alpha4_residual_repair.amr1.zlib",
+      "sha256": "0b0879187940c0ed62c7975bdfac1cdcadc657ef4e0e5fd1b39f5086f81fb2a4"
+    }
+  ],
+  "payload_bytes": 287732,
+  "payload_format": null,
+  "schema": "renderer_payload_v1",
+  "source_archive_sha256": "20ebde16c73d962503bffd62faa38e40befda2b0a8abfeb690eeb716b134e528"
+}

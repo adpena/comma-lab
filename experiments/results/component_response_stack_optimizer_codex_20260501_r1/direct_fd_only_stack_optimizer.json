@@ -1,0 +1,791 @@
+{
+  "baseline": {
+    "archive": {
+      "bytes": 686635,
+      "path": "/teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+      "sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    "score_terms": {
+      "archive_bytes": 686635,
+      "combined_no_rate": 0.5867855247938919,
+      "posenet_dist": 0.00346442,
+      "posenet_score_term": 0.18612952479389186,
+      "rate_score_term": 0.45720206227704213,
+      "score": 1.043987587070934,
+      "segnet_dist": 0.00400656,
+      "segnet_score_term": 0.400656
+    },
+    "values": {
+      "combined": 0.5867855247938919,
+      "posenet": 0.00346442,
+      "segnet": 0.00400656
+    }
+  },
+  "composability_claim": false,
+  "dykstra_constraints": {
+    "archive_bytes_budget": 686635,
+    "max_posenet_dist": 0.00346442,
+    "max_segnet_dist": 0.00400656,
+    "projection_order": [
+      "archive_bytes_budget",
+      "posenet_gate",
+      "segnet_gate",
+      "score_formula",
+      "reproducibility_custody"
+    ]
+  },
+  "format": "component_response_stack_optimizer_v1",
+  "infeasible_recommendations": [
+    {
+      "action_count": 1,
+      "composability_claim": false,
+      "constraints": {
+        "archive_bytes_budget": {
+          "limit": 686635,
+          "margin": 3,
+          "passed": true,
+          "value": 686632
+        },
+        "posenet_gate": {
+          "limit": 0.00346442,
+          "margin": 0.00034699000000000015,
+          "passed": true,
+          "value": 0.00311743
+        },
+        "reproducibility_custody": {
+          "passed": true,
+          "required_fields": [
+            "archive.bytes",
+            "archive.sha256",
+            "contest_auth_eval_json",
+            "source JSON sha256"
+          ]
+        },
+        "score_formula": {
+          "formula": "100 * seg_dist + sqrt(10 * pose_dist) + 25 * archive_bytes / 37545489",
+          "passed": true,
+          "score": 1.0356355182399997
+        },
+        "segnet_gate": {
+          "limit": 0.00400656,
+          "margin": -1.2169999999999716e-05,
+          "passed": false,
+          "value": 0.00401873
+        }
+      },
+      "evidence_modes": [
+        "calibration_cuda_official_component_response"
+      ],
+      "feasible_under_dykstra_constraints": false,
+      "projected_components": {
+        "archive_bytes": 686632,
+        "combined_no_rate": 0.5784354535398168,
+        "posenet_dist": 0.00311743,
+        "posenet_score_term": 0.1765624535398169,
+        "rate_score_term": 0.45720006470018276,
+        "score": 1.0356355182399997,
+        "segnet_dist": 0.00401873,
+        "segnet_score_term": 0.401873
+      },
+      "promotion_blockers": [
+        {
+          "code": "offline_additive_response_model_only",
+          "mathematical_explanation": "Component deltas are added only for deterministic planning. No stack composability claim is made without a stacked exact eval."
+        },
+        {
+          "code": "stacked_exact_eval_required",
+          "mathematical_explanation": "A selected stack must be built as its own archive and evaluated through archive.zip -> inflate.sh -> upstream/evaluate.py."
+        },
+        {
+          "code": "calibration_or_exact_point_input",
+          "mathematical_explanation": "At least one selected action came from calibration or exact-point evidence rather than promotable response-curve gates."
+        }
+      ],
+      "promotion_eligible": false,
+      "requires_stacked_exact_eval": true,
+      "score_deltas": {
+        "archive_bytes_delta": -3.0,
+        "combined_no_rate_delta": -0.008350071254075053,
+        "posenet_dist_delta": -0.00034699000000000015,
+        "posenet_score_delta": -0.009567071254074966,
+        "rate_score_delta": -1.99757685936941e-06,
+        "score_delta": -0.008352068830934423,
+        "segnet_dist_delta": 1.2169999999999716e-05,
+        "segnet_score_delta": 0.001216999999999968
+      },
+      "selected_action_ids": [
+        "source_000_component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501t0950z:eps_m2:d561b8bf1367:214c45d5047e"
+      ],
+      "selected_actions": [
+        {
+          "action_id": "source_000_component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501t0950z:eps_m2:d561b8bf1367:214c45d5047e",
+          "archive": {
+            "bytes": 686632,
+            "path": "/teamspace/studios/this_studio/pact/experiments/results/official_component_response_pfp16_direct_fd_mixed_complete_response_only_20260501/official_response_plan/archives/point_000_eps_m2.zip",
+            "sha256": "d561b8bf1367619e6c6e1d9b9d09213da6bdfdfd894be518866ef5119cba2927"
+          },
+          "contest_auth_eval_json": {
+            "bytes": 4948,
+            "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z/evals/point_000_eps_m2/contest_auth_eval.json",
+            "sha256": "074f7462df7452a6f49bcaee3aba0bde4f409fbc5573d37ad5bfa369d30e6621"
+          },
+          "custody": {
+            "archive_bytes_recorded": true,
+            "archive_sha256_recorded": true,
+            "contest_auth_eval_json_recorded": true,
+            "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z/official_component_response_summary.json"
+          },
+          "deltas": {
+            "archive_bytes_delta": -3,
+            "combined_delta": -0.008350071254075053,
+            "posenet_dist_delta": -0.00034699000000000015,
+            "segnet_dist_delta": 1.2169999999999716e-05
+          },
+          "epsilon": -2.0,
+          "evidence_mode": "calibration_cuda_official_component_response",
+          "point_metadata": {},
+          "score_deltas": {
+            "archive_bytes_delta": -3.0,
+            "combined_no_rate_delta": -0.008350071254075053,
+            "posenet_dist_delta": -0.00034699000000000015,
+            "posenet_score_delta": -0.009567071254074966,
+            "rate_score_delta": -1.99757685936941e-06,
+            "score_delta": -0.008352068830934423,
+            "segnet_dist_delta": 1.2169999999999716e-05,
+            "segnet_score_delta": 0.001216999999999968
+          },
+          "score_terms": {
+            "archive_bytes": 686632,
+            "combined_no_rate": 0.5784354535398168,
+            "posenet_dist": 0.00311743,
+            "posenet_score_term": 0.1765624535398169,
+            "rate_score_term": 0.45720006470018276,
+            "score": 1.0356355182399997,
+            "segnet_dist": 0.00401873,
+            "segnet_score_term": 0.401873
+          },
+          "source_id": "source_000_component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501t0950z",
+          "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z/official_component_response_summary.json",
+          "values": {
+            "combined": 0.5784354535398168,
+            "posenet": 0.00311743,
+            "segnet": 0.00401873
+          }
+        }
+      ],
+      "source_ids": [
+        "source_000_component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501t0950z"
+      ],
+      "stack_id": "stack_cb586dfe3f07c01c",
+      "stack_score_claim": false
+    },
+    {
+      "action_count": 1,
+      "composability_claim": false,
+      "constraints": {
+        "archive_bytes_budget": {
+          "limit": 686635,
+          "margin": 3,
+          "passed": true,
+          "value": 686632
+        },
+        "posenet_gate": {
+          "limit": 0.00346442,
+          "margin": 0.00031795,
+          "passed": true,
+          "value": 0.00314647
+        },
+        "reproducibility_custody": {
+          "passed": true,
+          "required_fields": [
+            "archive.bytes",
+            "archive.sha256",
+            "contest_auth_eval_json",
+            "source JSON sha256"
+          ]
+        },
+        "score_formula": {
+          "formula": "100 * seg_dist + sqrt(10 * pose_dist) + 25 * archive_bytes / 37545489",
+          "passed": true,
+          "score": 1.0364599838327757
+        },
+        "segnet_gate": {
+          "limit": 0.00400656,
+          "margin": -1.2209999999999478e-05,
+          "passed": false,
+          "value": 0.00401877
+        }
+      },
+      "evidence_modes": [
+        "calibration_cuda_official_component_response"
+      ],
+      "feasible_under_dykstra_constraints": false,
+      "projected_components": {
+        "archive_bytes": 686632,
+        "combined_no_rate": 0.5792599191325929,
+        "posenet_dist": 0.00314647,
+        "posenet_score_term": 0.1773829191325929,
+        "rate_score_term": 0.45720006470018276,
+        "score": 1.0364599838327757,
+        "segnet_dist": 0.00401877,
+        "segnet_score_term": 0.401877
+      },
+      "promotion_blockers": [
+        {
+          "code": "offline_additive_response_model_only",
+          "mathematical_explanation": "Component deltas are added only for deterministic planning. No stack composability claim is made without a stacked exact eval."
+        },
+        {
+          "code": "stacked_exact_eval_required",
+          "mathematical_explanation": "A selected stack must be built as its own archive and evaluated through archive.zip -> inflate.sh -> upstream/evaluate.py."
+        },
+        {
+          "code": "calibration_or_exact_point_input",
+          "mathematical_explanation": "At least one selected action came from calibration or exact-point evidence rather than promotable response-curve gates."
+        }
+      ],
+      "promotion_eligible": false,
+      "requires_stacked_exact_eval": true,
+      "score_deltas": {
+        "archive_bytes_delta": -3.0,
+        "combined_no_rate_delta": -0.007525605661299006,
+        "posenet_dist_delta": -0.00031795,
+        "posenet_score_delta": -0.00874660566129895,
+        "rate_score_delta": -1.99757685936941e-06,
+        "score_delta": -0.007527603238158376,
+        "segnet_dist_delta": 1.2209999999999478e-05,
+        "segnet_score_delta": 0.001220999999999972
+      },
+      "selected_action_ids": [
+        "source_000_component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501t0950z:eps_m1:d69e45edd20b:3f22fbb63517"
+      ],
+      "selected_actions": [
+        {
+          "action_id": "source_000_component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501t0950z:eps_m1:d69e45edd20b:3f22fbb63517",
+          "archive": {
+            "bytes": 686632,
+            "path": "/teamspace/studios/this_studio/pact/experiments/results/official_component_response_pfp16_direct_fd_mixed_complete_response_only_20260501/official_response_plan/archives/point_001_eps_m1.zip",
+            "sha256": "d69e45edd20bbe1a69a171098a9dbfce71673aad2c7b6a95d55ebd9b60cf0803"
+          },
+          "contest_auth_eval_json": {
+            "bytes": 4948,
+            "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z/evals/point_001_eps_m1/contest_auth_eval.json",
+            "sha256": "a64cd4ecfab15a5d63856176606dd89a0cffc61eb5947e76e79f2c0df113c8e2"
+          },
+          "custody": {
+            "archive_bytes_recorded": true,
+            "archive_sha256_recorded": true,
+            "contest_auth_eval_json_recorded": true,
+            "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z/official_component_response_summary.json"
+          },
+          "deltas": {
+            "archive_bytes_delta": -3,
+            "combined_delta": -0.007525605661299006,
+            "posenet_dist_delta": -0.00031795,
+            "segnet_dist_delta": 1.2209999999999478e-05
+          },
+          "epsilon": -1.0,
+          "evidence_mode": "calibration_cuda_official_component_response",
+          "point_metadata": {},
+          "score_deltas": {
+            "archive_bytes_delta": -3.0,
+            "combined_no_rate_delta": -0.007525605661299006,
+            "posenet_dist_delta": -0.00031795,
+            "posenet_score_delta": -0.00874660566129895,
+            "rate_score_delta": -1.99757685936941e-06,
+            "score_delta": -0.007527603238158376,
+            "segnet_dist_delta": 1.2209999999999478e-05,
+            "segnet_score_delta": 0.001220999999999972
+          },
+          "score_terms": {
+            "archive_bytes": 686632,
+            "combined_no_rate": 0.5792599191325929,
+            "posenet_dist": 0.00314647,
+            "posenet_score_term": 0.1773829191325929,
+            "rate_score_term": 0.45720006470018276,
+            "score": 1.0364599838327757,
+            "segnet_dist": 0.00401877,
+            "segnet_score_term": 0.401877
+          },
+          "source_id": "source_000_component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501t0950z",
+          "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z/official_component_response_summary.json",
+          "values": {
+            "combined": 0.5792599191325929,
+            "posenet": 0.00314647,
+            "segnet": 0.00401877
+          }
+        }
+      ],
+      "source_ids": [
+        "source_000_component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501t0950z"
+      ],
+      "stack_id": "stack_0c7dc4312cc0030d",
+      "stack_score_claim": false
+    },
+    {
+      "action_count": 1,
+      "composability_claim": false,
+      "constraints": {
+        "archive_bytes_budget": {
+          "limit": 686635,
+          "margin": 7,
+          "passed": true,
+          "value": 686628
+        },
+        "posenet_gate": {
+          "limit": 0.00346442,
+          "margin": 0.00030449000000000014,
+          "passed": true,
+          "value": 0.00315993
+        },
+        "reproducibility_custody": {
+          "passed": true,
+          "required_fields": [
+            "archive.bytes",
+            "archive.sha256",
+            "contest_auth_eval_json",
+            "source JSON sha256"
+          ]
+        },
+        "score_formula": {
+          "formula": "100 * seg_dist + sqrt(10 * pose_dist) + 25 * archive_bytes / 37545489",
+          "passed": true,
+          "score": 1.0371153206959516
+        },
+        "segnet_gate": {
+          "limit": 0.00400656,
+          "margin": -1.5000000000000256e-05,
+          "passed": false,
+          "value": 0.00402156
+        }
+      },
+      "evidence_modes": [
+        "calibration_cuda_official_component_response"
+      ],
+      "feasible_under_dykstra_constraints": false,
+      "projected_components": {
+        "archive_bytes": 686628,
+        "combined_no_rate": 0.5799179194315813,
+        "posenet_dist": 0.00315993,
+        "posenet_score_term": 0.1777619194315813,
+        "rate_score_term": 0.45719740126437025,
+        "score": 1.0371153206959516,
+        "segnet_dist": 0.00402156,
+        "segnet_score_term": 0.40215600000000007
+      },
+      "promotion_blockers": [
+        {
+          "code": "offline_additive_response_model_only",
+          "mathematical_explanation": "Component deltas are added only for deterministic planning. No stack composability claim is made without a stacked exact eval."
+        },
+        {
+          "code": "stacked_exact_eval_required",
+          "mathematical_explanation": "A selected stack must be built as its own archive and evaluated through archive.zip -> inflate.sh -> upstream/evaluate.py."
+        },
+        {
+          "code": "calibration_or_exact_point_input",
+          "mathematical_explanation": "At least one selected action came from calibration or exact-point evidence rather than promotable response-curve gates."
+        }
+      ],
+      "promotion_eligible": false,
+      "requires_stacked_exact_eval": true,
+      "score_deltas": {
+        "archive_bytes_delta": -7.0,
+        "combined_no_rate_delta": -0.006867605362310569,
+        "posenet_dist_delta": -0.00030449000000000014,
+        "posenet_score_delta": -0.00836760536231057,
+        "rate_score_delta": -4.66101267188046e-06,
+        "score_delta": -0.006872266374982505,
+        "segnet_dist_delta": 1.5000000000000256e-05,
+        "segnet_score_delta": 0.0015000000000000568
+      },
+      "selected_action_ids": [
+        "source_000_component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501t0950z:eps_1:dccb3ebcac49:dbc96b4edeef"
+      ],
+      "selected_actions": [
+        {
+          "action_id": "source_000_component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501t0950z:eps_1:dccb3ebcac49:dbc96b4edeef",
+          "archive": {
+            "bytes": 686628,
+            "path": "/teamspace/studios/this_studio/pact/experiments/results/official_component_response_pfp16_direct_fd_mixed_complete_response_only_20260501/official_response_plan/archives/point_003_eps_p1.zip",
+            "sha256": "dccb3ebcac49e7046a53896335561d8d54fa6a41986287f91c43cced71020f6f"
+          },
+          "contest_auth_eval_json": {
+            "bytes": 4951,
+            "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z/evals/point_003_eps_p1/contest_auth_eval.json",
+            "sha256": "c9673f97880d848a91b9fd3f196959ffad50595d1defe3005a166eb3776b36be"
+          },
+          "custody": {
+            "archive_bytes_recorded": true,
+            "archive_sha256_recorded": true,
+            "contest_auth_eval_json_recorded": true,
+            "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z/official_component_response_summary.json"
+          },
+          "deltas": {
+            "archive_bytes_delta": -7,
+            "combined_delta": -0.006867605362310569,
+            "posenet_dist_delta": -0.00030449000000000014,
+            "segnet_dist_delta": 1.5000000000000256e-05
+          },
+          "epsilon": 1.0,
+          "evidence_mode": "calibration_cuda_official_component_response",
+          "point_metadata": {},
+          "score_deltas": {
+            "archive_bytes_delta": -7.0,
+            "combined_no_rate_delta": -0.006867605362310569,
+            "posenet_dist_delta": -0.00030449000000000014,
+            "posenet_score_delta": -0.00836760536231057,
+            "rate_score_delta": -4.66101267188046e-06,
+            "score_delta": -0.006872266374982505,
+            "segnet_dist_delta": 1.5000000000000256e-05,
+            "segnet_score_delta": 0.0015000000000000568
+          },
+          "score_terms": {
+            "archive_bytes": 686628,
+            "combined_no_rate": 0.5799179194315813,
+            "posenet_dist": 0.00315993,
+            "posenet_score_term": 0.1777619194315813,
+            "rate_score_term": 0.45719740126437025,
+            "score": 1.0371153206959516,
+            "segnet_dist": 0.00402156,
+            "segnet_score_term": 0.40215600000000007
+          },
+          "source_id": "source_000_component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501t0950z",
+          "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z/official_component_response_summary.json",
+          "values": {
+            "combined": 0.5799179194315813,
+            "posenet": 0.00315993,
+            "segnet": 0.00402156
+          }
+        }
+      ],
+      "source_ids": [
+        "source_000_component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501t0950z"
+      ],
+      "stack_id": "stack_4a8a4cc93d613d1f",
+      "stack_score_claim": false
+    },
+    {
+      "action_count": 1,
+      "composability_claim": false,
+      "constraints": {
+        "archive_bytes_budget": {
+          "limit": 686635,
+          "margin": 3,
+          "passed": true,
+          "value": 686632
+        },
+        "posenet_gate": {
+          "limit": 0.00346442,
+          "margin": 0.00028919000000000037,
+          "passed": true,
+          "value": 0.00317523
+        },
+        "reproducibility_custody": {
+          "passed": true,
+          "required_fields": [
+            "archive.bytes",
+            "archive.sha256",
+            "contest_auth_eval_json",
+            "source JSON sha256"
+          ]
+        },
+        "score_formula": {
+          "formula": "100 * seg_dist + sqrt(10 * pose_dist) + 25 * archive_bytes / 37545489",
+          "passed": true,
+          "score": 1.0378578153509916
+        },
+        "segnet_gate": {
+          "limit": 0.00400656,
+          "margin": -1.810000000000006e-05,
+          "passed": false,
+          "value": 0.00402466
+        }
+      },
+      "evidence_modes": [
+        "calibration_cuda_official_component_response"
+      ],
+      "feasible_under_dykstra_constraints": false,
+      "projected_components": {
+        "archive_bytes": 686632,
+        "combined_no_rate": 0.5806577506508088,
+        "posenet_dist": 0.00317523,
+        "posenet_score_term": 0.17819175065080875,
+        "rate_score_term": 0.45720006470018276,
+        "score": 1.0378578153509916,
+        "segnet_dist": 0.00402466,
+        "segnet_score_term": 0.40246600000000005
+      },
+      "promotion_blockers": [
+        {
+          "code": "offline_additive_response_model_only",
+          "mathematical_explanation": "Component deltas are added only for deterministic planning. No stack composability claim is made without a stacked exact eval."
+        },
+        {
+          "code": "stacked_exact_eval_required",
+          "mathematical_explanation": "A selected stack must be built as its own archive and evaluated through archive.zip -> inflate.sh -> upstream/evaluate.py."
+        },
+        {
+          "code": "calibration_or_exact_point_input",
+          "mathematical_explanation": "At least one selected action came from calibration or exact-point evidence rather than promotable response-curve gates."
+        }
+      ],
+      "promotion_eligible": false,
+      "requires_stacked_exact_eval": true,
+      "score_deltas": {
+        "archive_bytes_delta": -3.0,
+        "combined_no_rate_delta": -0.006127774143083076,
+        "posenet_dist_delta": -0.00028919000000000037,
+        "posenet_score_delta": -0.00793777414308311,
+        "rate_score_delta": -1.99757685936941e-06,
+        "score_delta": -0.006129771719942445,
+        "segnet_dist_delta": 1.810000000000006e-05,
+        "segnet_score_delta": 0.0018100000000000338
+      },
+      "selected_action_ids": [
+        "source_000_component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501t0950z:eps_2:c61a1201ac84:f60721d9e7a8"
+      ],
+      "selected_actions": [
+        {
+          "action_id": "source_000_component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501t0950z:eps_2:c61a1201ac84:f60721d9e7a8",
+          "archive": {
+            "bytes": 686632,
+            "path": "/teamspace/studios/this_studio/pact/experiments/results/official_component_response_pfp16_direct_fd_mixed_complete_response_only_20260501/official_response_plan/archives/point_004_eps_p2.zip",
+            "sha256": "c61a1201ac84d37a81aaa9dd9ea27a4d6a4bb22e58c2f44c01c798f53590a35c"
+          },
+          "contest_auth_eval_json": {
+            "bytes": 4956,
+            "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z/evals/point_004_eps_p2/contest_auth_eval.json",
+            "sha256": "1a11073c796016c0a9bbbc9c6849128a33c130049519ed9d197a1fcd782b2d2c"
+          },
+          "custody": {
+            "archive_bytes_recorded": true,
+            "archive_sha256_recorded": true,
+            "contest_auth_eval_json_recorded": true,
+            "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z/official_component_response_summary.json"
+          },
+          "deltas": {
+            "archive_bytes_delta": -3,
+            "combined_delta": -0.006127774143083076,
+            "posenet_dist_delta": -0.00028919000000000037,
+            "segnet_dist_delta": 1.810000000000006e-05
+          },
+          "epsilon": 2.0,
+          "evidence_mode": "calibration_cuda_official_component_response",
+          "point_metadata": {},
+          "score_deltas": {
+            "archive_bytes_delta": -3.0,
+            "combined_no_rate_delta": -0.006127774143083076,
+            "posenet_dist_delta": -0.00028919000000000037,
+            "posenet_score_delta": -0.00793777414308311,
+            "rate_score_delta": -1.99757685936941e-06,
+            "score_delta": -0.006129771719942445,
+            "segnet_dist_delta": 1.810000000000006e-05,
+            "segnet_score_delta": 0.0018100000000000338
+          },
+          "score_terms": {
+            "archive_bytes": 686632,
+            "combined_no_rate": 0.5806577506508088,
+            "posenet_dist": 0.00317523,
+            "posenet_score_term": 0.17819175065080875,
+            "rate_score_term": 0.45720006470018276,
+            "score": 1.0378578153509916,
+            "segnet_dist": 0.00402466,
+            "segnet_score_term": 0.40246600000000005
+          },
+          "source_id": "source_000_component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501t0950z",
+          "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z/official_component_response_summary.json",
+          "values": {
+            "combined": 0.5806577506508088,
+            "posenet": 0.00317523,
+            "segnet": 0.00402466
+          }
+        }
+      ],
+      "source_ids": [
+        "source_000_component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501t0950z"
+      ],
+      "stack_id": "stack_d24c602fbf6170ee",
+      "stack_score_claim": false
+    }
+  ],
+  "input_evidence_modes": [
+    "calibration_cuda_official_component_response"
+  ],
+  "input_evidence_promotable": false,
+  "input_sources": [
+    {
+      "action_count": 4,
+      "baseline": {
+        "archive": {
+          "bytes": 686635,
+          "path": "/teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+          "sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+        },
+        "score_terms": {
+          "archive_bytes": 686635,
+          "combined_no_rate": 0.5867855247938919,
+          "posenet_dist": 0.00346442,
+          "posenet_score_term": 0.18612952479389186,
+          "rate_score_term": 0.45720206227704213,
+          "score": 1.043987587070934,
+          "segnet_dist": 0.00400656,
+          "segnet_score_term": 0.400656
+        },
+        "values": {
+          "combined": 0.5867855247938919,
+          "posenet": 0.00346442,
+          "segnet": 0.00400656
+        }
+      },
+      "evidence_mode": "calibration_cuda_official_component_response",
+      "input_format": "official_component_response_summary_v1",
+      "input_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z/official_component_response_summary.json",
+      "promotion_eligible_input": false,
+      "source_files": [
+        {
+          "bytes": 23178,
+          "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z/combined_official_response_curve.json",
+          "sha256": "1a4dce979a8b4451ca9c9dfb9f07e47244f0474245266732f96a355630b77269"
+        },
+        {
+          "bytes": 6965,
+          "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z/official_component_response_summary.json",
+          "sha256": "0ac302cbfb61ec0235c17a8eeab7dc7e60d09d52529b82958789295bad9f2aaf"
+        },
+        {
+          "bytes": 23088,
+          "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z/posenet_official_response_curve.json",
+          "sha256": "cce629d3ea4f4eb8400c304af6facb1e152b50881f8dd7558564b4e4f8c7f3aa"
+        },
+        {
+          "bytes": 23103,
+          "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z/segnet_official_response_curve.json",
+          "sha256": "9420efa4de9f2e291676d7b70fa725dbf1fb1cf4beb56a3298af4be99dfe1129"
+        }
+      ],
+      "source_id": "source_000_component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501t0950z",
+      "validation": {
+        "allow_calibration_inputs": true,
+        "curve_validations": {
+          "combined": {
+            "component": "combined",
+            "evidence_mode": "calibration_cuda_official_component_response",
+            "gate_results": {
+              "coverage_passed": true,
+              "external_baseline_repro": true,
+              "external_baseline_repro_error": null,
+              "external_baseline_value": null,
+              "finite_values": true,
+              "invalid_prediction_semantics": false,
+              "max_abs_prediction_error": 0.0,
+              "max_relative_prediction_error": 0.0,
+              "observed_delta_max": 0.008350071254075053,
+              "prediction_error_gate_implemented": false,
+              "prediction_error_mode": "signed_delta",
+              "prediction_error_passed": false,
+              "promotion_gate_passed": false,
+              "signal_present": true,
+              "zero_repro": true,
+              "zero_repro_error": 0.0
+            },
+            "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z/combined_official_response_curve.json",
+            "promotion_blocker_codes": [
+              "missing_prediction_deltas",
+              "prediction_error_gate_failed"
+            ],
+            "promotion_eligible": false
+          },
+          "posenet": {
+            "component": "posenet",
+            "evidence_mode": "calibration_cuda_official_component_response",
+            "gate_results": {
+              "coverage_passed": true,
+              "external_baseline_repro": true,
+              "external_baseline_repro_error": null,
+              "external_baseline_value": null,
+              "finite_values": true,
+              "invalid_prediction_semantics": false,
+              "max_abs_prediction_error": 0.0,
+              "max_relative_prediction_error": 0.0,
+              "observed_delta_max": 0.00034699000000000015,
+              "prediction_error_gate_implemented": false,
+              "prediction_error_mode": "signed_delta",
+              "prediction_error_passed": false,
+              "promotion_gate_passed": false,
+              "signal_present": true,
+              "zero_repro": true,
+              "zero_repro_error": 0.0
+            },
+            "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z/posenet_official_response_curve.json",
+            "promotion_blocker_codes": [
+              "missing_prediction_deltas",
+              "prediction_error_gate_failed"
+            ],
+            "promotion_eligible": false
+          },
+          "segnet": {
+            "component": "segnet",
+            "evidence_mode": "calibration_cuda_official_component_response",
+            "gate_results": {
+              "coverage_passed": true,
+              "external_baseline_repro": true,
+              "external_baseline_repro_error": null,
+              "external_baseline_value": null,
+              "finite_values": true,
+              "invalid_prediction_semantics": false,
+              "max_abs_prediction_error": 0.0,
+              "max_relative_prediction_error": 0.0,
+              "observed_delta_max": 1.810000000000006e-05,
+              "prediction_error_gate_implemented": false,
+              "prediction_error_mode": "signed_delta",
+              "prediction_error_passed": false,
+              "promotion_gate_passed": false,
+              "signal_present": true,
+              "zero_repro": true,
+              "zero_repro_error": 0.0
+            },
+            "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z/segnet_official_response_curve.json",
+            "promotion_blocker_codes": [
+              "missing_prediction_deltas",
+              "prediction_error_gate_failed"
+            ],
+            "promotion_eligible": false
+          }
+        },
+        "summary_promotion_eligible": false
+      }
+    }
+  ],
+  "non_promotable_reasons": [
+    "offline optimizer emits planning candidates only",
+    "selected stack must be exact-evaluated as its own archive"
+  ],
+  "optimization": {
+    "actions_available": 4,
+    "candidate_stacks_considered": 4,
+    "feasible_candidate_count": 0,
+    "infeasible_candidate_count": 4,
+    "knapsack_objective": "minimize projected contest score under Dykstra-style constraints",
+    "max_enumerated_stacks": 200000,
+    "max_stack_size": 1,
+    "one_action_per_source": true,
+    "top_k": 20
+  },
+  "promotion_eligible": false,
+  "recommendation_promotable": false,
+  "recommendations": [],
+  "requires_stacked_exact_eval": true,
+  "schema_version": 1,
+  "score_claim": false,
+  "score_formula": {
+    "archive_bytes_denominator": 37545489,
+    "formula": "100 * seg_dist + sqrt(10 * pose_dist) + 25 * archive_bytes / 37545489",
+    "separated_terms": [
+      "segnet_score_term",
+      "posenet_score_term",
+      "rate_score_term"
+    ]
+  },
+  "tool": "experiments/optimize_component_response_stack.py"
+}

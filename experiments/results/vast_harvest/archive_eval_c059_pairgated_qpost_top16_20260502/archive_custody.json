@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-05-02T04:56:12Z",
+  "archive_label": "c059_pairgated_qpost_top16_20260502",
+  "archive_path": "/workspace/pact/experiments/results/qzs3_postprocess_c059_pairgated_20260502/pairgated_qpost_top016/archive.zip",
+  "custody_archive_path": "/workspace/pact/experiments/results/archive_eval_c059_pairgated_qpost_top16_20260502/archive.zip",
+  "archive_size_bytes": 276893,
+  "archive_sha256": "2080fdcee5dca4cea1ccc22e78c55a2e5c45aac651b64115014a2fe3851f502c"
+}

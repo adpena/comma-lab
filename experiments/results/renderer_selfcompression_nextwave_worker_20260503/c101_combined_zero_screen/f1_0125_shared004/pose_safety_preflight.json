@@ -1,0 +1,335 @@
+{
+  "candidate_archive": {
+    "bytes": 275958,
+    "duplicate_names": [],
+    "exactly_one_payload_member": true,
+    "extra_logical_members": [],
+    "logical_members": {
+      "masks.mkv": {
+        "bytes": 223385,
+        "magic4": "12000a0a",
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      "optimized_poses.qp1": {
+        "bytes": 1140,
+        "magic4": "5150316d",
+        "sha256": "d3f467b734f7d34e5608521b967bcb153e76fa3938b1e8f86b893f359c2d828b"
+      },
+      "renderer.bin": {
+        "bytes": 59288,
+        "magic4": "515a5333",
+        "sha256": "fee61b58573088e85dc7fe2bd690fa61ada01997efe0331ef5fb10d770b495fc"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 432,
+        "magic4": "68005311",
+        "sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a"
+      }
+    },
+    "missing_required_members": [],
+    "ok": true,
+    "path": "/Users/adpena/Projects/pact/experiments/results/renderer_selfcompression_nextwave_worker_20260503/c101_combined_zero_screen/f1_0125_shared004/archive.zip",
+    "payload_members": [
+      "p"
+    ],
+    "pose_members": [
+      "optimized_poses.qp1"
+    ],
+    "repo_relative_path": "experiments/results/renderer_selfcompression_nextwave_worker_20260503/c101_combined_zero_screen/f1_0125_shared004/archive.zip",
+    "safe_zip_names": true,
+    "sha256": "e449a89c42aa70e5696df5b0977047c07d1115f2ed060924b6779ca868107249",
+    "source_archive_packaging": "packed_renderer_payload",
+    "source_logical_member_names": [
+      "renderer.bin",
+      "masks.mkv",
+      "optimized_poses.qp1",
+      "seg_tile_actions.bin"
+    ],
+    "source_payload_header_payload_format": "public_pr75_qzs3_qp1_segactions_p3",
+    "source_payload_header_schema": "renderer_payload_pr64_len_table_v1",
+    "source_payload_member": "p",
+    "source_payload_member_bytes": 275858,
+    "source_payload_member_sha256": "7212b1ed8afc1934747667a331bd4f2847b760a42c10d70246db6c3ca499187e",
+    "source_zip_members": [
+      "p"
+    ],
+    "unsafe_names": [],
+    "zip_members": [
+      "p"
+    ]
+  },
+  "evidence_grade": "empirical_local_preflight_no_score",
+  "fail_closed_reasons": [],
+  "failure_class": null,
+  "output_parity": {
+    "aggregate": {
+      "failures": [],
+      "max_abs_delta": 72.27882385253906,
+      "mean_abs_delta": 2.3851301670074463,
+      "ok": true,
+      "rms_delta": 3.669052142775271,
+      "same_uint8_hash": false,
+      "thresholds": {
+        "max_max_abs_delta": 80.0,
+        "max_mean_abs_delta": 3.0,
+        "max_rms_delta": 8.0
+      }
+    },
+    "candidate_output_summary": {
+      "label": "candidate",
+      "max": 255.0,
+      "mean": 109.89075469970703,
+      "min": 2.843449465217418e-06,
+      "shape": [
+        5,
+        2,
+        384,
+        512,
+        3
+      ],
+      "std": 48.6066780090332,
+      "uint8_sha256": "a43387debe4c02383d286ae2f4a0cf5a2ea90de77dc4ad11bc5cef5e376e3895"
+    },
+    "failure_class": null,
+    "ok": true,
+    "pair_count_available": 600,
+    "per_pair": [
+      {
+        "failures": [],
+        "max_abs_delta": 47.70671081542969,
+        "mean_abs_delta": 2.351041078567505,
+        "ok": true,
+        "pair_index": 0,
+        "rms_delta": 3.5782927761139605,
+        "same_uint8_hash": false,
+        "thresholds": {
+          "max_max_abs_delta": 80.0,
+          "max_mean_abs_delta": 3.0,
+          "max_rms_delta": 8.0
+        }
+      },
+      {
+        "failures": [],
+        "max_abs_delta": 48.49620056152344,
+        "mean_abs_delta": 2.4074153900146484,
+        "ok": true,
+        "pair_index": 150,
+        "rms_delta": 3.7234102428237406,
+        "same_uint8_hash": false,
+        "thresholds": {
+          "max_max_abs_delta": 80.0,
+          "max_mean_abs_delta": 3.0,
+          "max_rms_delta": 8.0
+        }
+      },
+      {
+        "failures": [],
+        "max_abs_delta": 44.94629669189453,
+        "mean_abs_delta": 2.3917362689971924,
+        "ok": true,
+        "pair_index": 300,
+        "rms_delta": 3.673089918066751,
+        "same_uint8_hash": false,
+        "thresholds": {
+          "max_max_abs_delta": 80.0,
+          "max_mean_abs_delta": 3.0,
+          "max_rms_delta": 8.0
+        }
+      },
+      {
+        "failures": [],
+        "max_abs_delta": 50.66023254394531,
+        "mean_abs_delta": 2.37481951713562,
+        "ok": true,
+        "pair_index": 449,
+        "rms_delta": 3.649017875955859,
+        "same_uint8_hash": false,
+        "thresholds": {
+          "max_max_abs_delta": 80.0,
+          "max_mean_abs_delta": 3.0,
+          "max_rms_delta": 8.0
+        }
+      },
+      {
+        "failures": [],
+        "max_abs_delta": 72.27882385253906,
+        "mean_abs_delta": 2.400639057159424,
+        "ok": true,
+        "pair_index": 599,
+        "rms_delta": 3.7195215787162916,
+        "same_uint8_hash": false,
+        "thresholds": {
+          "max_max_abs_delta": 80.0,
+          "max_mean_abs_delta": 3.0,
+          "max_rms_delta": 8.0
+        }
+      }
+    ],
+    "sampled_pair_indices": [
+      0,
+      150,
+      300,
+      449,
+      599
+    ],
+    "source_output_summary": {
+      "label": "source",
+      "max": 255.0,
+      "mean": 109.76480865478516,
+      "min": 4.13098132412415e-06,
+      "shape": [
+        5,
+        2,
+        384,
+        512,
+        3
+      ],
+      "std": 48.789894104003906,
+      "uint8_sha256": "a3d5b3af8327b695d8477ccf7b2d48131a1ca8f29e31b91cb3588cb5cd91c57b"
+    }
+  },
+  "promotion_eligible": false,
+  "provenance": {
+    "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+    "no_score_no_promotion_reason": "local renderer output parity is a dispatch preflight only; CUDA auth eval remains the score truth",
+    "tool": "experiments/preflight_renderer_transplant_pose_safety.py"
+  },
+  "remote_gpu_dispatch_performed": false,
+  "runtime_state": {
+    "candidate": {
+      "half_frame_masks": true,
+      "mask_shape": [
+        600,
+        384,
+        512
+      ],
+      "pose_dim": 6,
+      "pose_shape": [
+        600,
+        6
+      ],
+      "pose_source": "optimized_poses.qp1"
+    },
+    "source": {
+      "half_frame_masks": true,
+      "mask_shape": [
+        600,
+        384,
+        512
+      ],
+      "pose_dim": 6,
+      "pose_shape": [
+        600,
+        6
+      ],
+      "pose_source": "optimized_poses.qp1"
+    }
+  },
+  "safe_for_exact_eval_dispatch": true,
+  "schema": "renderer_transplant_pose_safety_preflight_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 276489,
+    "duplicate_names": [],
+    "exactly_one_payload_member": true,
+    "extra_logical_members": [],
+    "logical_members": {
+      "masks.mkv": {
+        "bytes": 223385,
+        "magic4": "12000a0a",
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      "optimized_poses.qp1": {
+        "bytes": 1140,
+        "magic4": "5150316d",
+        "sha256": "d3f467b734f7d34e5608521b967bcb153e76fa3938b1e8f86b893f359c2d828b"
+      },
+      "renderer.bin": {
+        "bytes": 59288,
+        "magic4": "515a5333",
+        "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 432,
+        "magic4": "68005311",
+        "sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a"
+      }
+    },
+    "missing_required_members": [],
+    "ok": true,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c091_native_pose_manifold_top128_s025_t4_20260503T122013Z/archive.zip",
+    "payload_members": [
+      "p"
+    ],
+    "pose_members": [
+      "optimized_poses.qp1"
+    ],
+    "repo_relative_path": "experiments/results/lightning_batch/exact_eval_c091_native_pose_manifold_top128_s025_t4_20260503T122013Z/archive.zip",
+    "safe_zip_names": true,
+    "sha256": "1c9be2dd14b2607b9a86ecc071d6a37842896d18d62449885dac58d55afbbd64",
+    "source_archive_packaging": "packed_renderer_payload",
+    "source_logical_member_names": [
+      "renderer.bin",
+      "masks.mkv",
+      "optimized_poses.qp1",
+      "seg_tile_actions.bin"
+    ],
+    "source_payload_header_payload_format": "public_pr75_qzs3_qp1_segactions_p3",
+    "source_payload_header_schema": "renderer_payload_pr64_len_table_v1",
+    "source_payload_member": "p",
+    "source_payload_member_bytes": 276389,
+    "source_payload_member_sha256": "fc6a767cc4059b36437db6306f337a4afb21c981bb036a95a8d292ed7e4a6762",
+    "source_zip_members": [
+      "p"
+    ],
+    "unsafe_names": [],
+    "zip_members": [
+      "p"
+    ]
+  },
+  "transplant_contract": {
+    "candidate_pose_members": [
+      "optimized_poses.qp1"
+    ],
+    "comparisons": {
+      "masks.mkv": {
+        "candidate_bytes": 223385,
+        "candidate_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "same_bytes": true,
+        "source_bytes": 223385,
+        "source_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      "optimized_poses.qp1": {
+        "candidate_bytes": 1140,
+        "candidate_sha256": "d3f467b734f7d34e5608521b967bcb153e76fa3938b1e8f86b893f359c2d828b",
+        "same_bytes": true,
+        "source_bytes": 1140,
+        "source_sha256": "d3f467b734f7d34e5608521b967bcb153e76fa3938b1e8f86b893f359c2d828b"
+      },
+      "renderer.bin": {
+        "candidate_bytes": 59288,
+        "candidate_sha256": "fee61b58573088e85dc7fe2bd690fa61ada01997efe0331ef5fb10d770b495fc",
+        "same_bytes": false,
+        "source_bytes": 59288,
+        "source_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+      },
+      "seg_tile_actions.bin": {
+        "candidate_bytes": 432,
+        "candidate_sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a",
+        "same_bytes": true,
+        "source_bytes": 432,
+        "source_sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a"
+      }
+    },
+    "failures": [],
+    "non_renderer_name_mismatch": [],
+    "ok": true,
+    "required_missing": {
+      "candidate": [],
+      "source": []
+    },
+    "source_pose_members": [
+      "optimized_poses.qp1"
+    ]
+  }
+}

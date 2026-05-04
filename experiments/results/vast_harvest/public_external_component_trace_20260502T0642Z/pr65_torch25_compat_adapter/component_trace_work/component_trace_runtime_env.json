@@ -1,0 +1,8 @@
+{
+  "ffmpeg_bin": "/workspace/ffmpeg-btbn/bin/ffmpeg",
+  "inflate_torch_spec": null,
+  "recorded_at_utc": "2026-05-02T06:48:57Z",
+  "schema_version": 1,
+  "uv_link_mode": "copy",
+  "uv_project_environment": "/workspace/pact/experiments/results/public_external_component_trace_20260502T0642Z/pr65_torch25_compat_adapter/component_trace_work/uv_project_env"
+}

@@ -1,0 +1,85 @@
+{
+  "archive_bytes": 276424,
+  "archive_path": "experiments/results/public_floor_qzs3_qp1_packer_20260502/pr63_qzs3_qp1_fixedslice/archive.zip",
+  "archive_sha256": "cda95e70440e9ef295985a042fda2d74715ef6a0e665a1c37871cddd051cd908",
+  "blob_bytes": 276324,
+  "blob_sha256": "e55ad3642216cc836b8a6c10162905c559d84927760a20bfd77763e380ebf0e5",
+  "evidence_grade": "empirical_metadata_for_line_search",
+  "mask_br_bytes": 219472,
+  "mask_br_sha256": "b59080359dbf18277d66a03d8105c3ff0df807cc49b396ce736ee5057da28ce0",
+  "model_br_bytes": 55965,
+  "model_br_sha256": "e7db844ed72457a2a07bda73c48f65628613384b539da04f775ef242aa9e4c43",
+  "model_uncompressed_bytes": 59288,
+  "payload_format": "pr67_fixed_slice_like_mask_qzs3_qp1",
+  "pose_br_bytes": 887,
+  "pose_br_sha256": "6c264b0c390328e879591c2a3313f41623603b314e333ccdba812c386afccdc3",
+  "pose_codec": "qp1",
+  "pose_uncompressed_bytes": 1138,
+  "refinement": {
+    "best_archive_size": 276424,
+    "best_obj": 0.2537719592411499,
+    "best_pose_bytes": 887,
+    "best_pose_mse": 0.00048598415771266445,
+    "checkpoint": "accepted_latest",
+    "delta_count": 9,
+    "delta_max": 89,
+    "delta_min": -89,
+    "delta_sets": null,
+    "device": "cuda:0",
+    "gradient_backtrack_deltas": [
+      1,
+      2,
+      3
+    ],
+    "gradient_candidate_count": 9,
+    "gradient_delta_set_index": 3,
+    "gradient_delta_sets": [
+      [
+        1,
+        2,
+        3,
+        5,
+        8,
+        13,
+        21,
+        34
+      ],
+      [
+        1,
+        3,
+        5,
+        8,
+        13,
+        21,
+        34,
+        55
+      ],
+      [
+        1,
+        5,
+        13,
+        34,
+        89
+      ]
+    ],
+    "gradient_magnitude_max": 89,
+    "gradient_magnitude_min": 1,
+    "pass": 1,
+    "passes": 2,
+    "radii": [
+      1,
+      2,
+      3,
+      5,
+      8
+    ],
+    "reference": "pr67_line_search.py",
+    "search_stage_kind": "gradient_delta_set",
+    "search_stage_label": "gradient_delta_set=3 max=89 n=9",
+    "tool": "experiments/line_search_pose_refinement.py"
+  },
+  "schema_version": 1,
+  "score_claim": false,
+  "source_build_provenance": "experiments/results/public_floor_qzs3_qp1_packer_20260502/pr63_qzs3_qp1_fixedslice/build_provenance.json",
+  "tool": "manual_metadata_from_pr67_fixedslice_build_provenance"
+}

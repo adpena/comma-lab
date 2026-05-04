@@ -1,0 +1,549 @@
+{
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "cmg3": {
+    "body_bytes": 165984,
+    "body_sha256": "d8d116226012eef84bb41b3b243965c2aae871bc365483c494e29cc88bce28ef",
+    "class_count": 5,
+    "compression_candidates": [
+      {
+        "body_bytes": 165984,
+        "body_sha256": "d8d116226012eef84bb41b3b243965c2aae871bc365483c494e29cc88bce28ef",
+        "compressor": "lzma_xz"
+      },
+      {
+        "body_bytes": 169521,
+        "body_sha256": "4103e34b0889089992d888b114f56e6dcf2130bf423d7b3baadecc2d3a4f3dc1",
+        "compressor": "bz2"
+      },
+      {
+        "body_bytes": 272723,
+        "body_sha256": "0f878c22391d4effb311f2e68fdf193f4068d3d5be9c55a671961ce4ef8355a7",
+        "compressor": "zlib"
+      },
+      {
+        "body_bytes": 1611480,
+        "body_sha256": "f7f6f8c15e7b337038d06df2b68e54e411c884d7dabb5858dcedd3db0455b847",
+        "compressor": "raw"
+      }
+    ],
+    "compressor": "lzma_xz",
+    "default_class": 0,
+    "frame_count": 600,
+    "height": 384,
+    "lossless_under_builder": false,
+    "max_runs_per_row": 11,
+    "mode": "nonzero_row_runs_topk_v1",
+    "payload_bytes": 169318,
+    "payload_sha256": "d4b6d205a2afcd7fe2fe00a38554c1d7d181fe7d1ecc3f84413258fcde2ad5a1",
+    "pixel_disagreement_count_vs_source": 543600,
+    "pixel_disagreement_vs_source": 0.004608154296875,
+    "promotion_eligible": false,
+    "reconstructed_mask_u8_sha256": "d6cf9d3cf8286c82c6119efe765228c69901230c74fdd3f98a6a2342d941307c",
+    "record_struct": "u8_count_then_u8_class_u16_start_u16_end_le",
+    "run_stats": {
+      "available_rank_histogram": {
+        "1": 222328,
+        "10": 643,
+        "11": 441,
+        "12": 200,
+        "13": 120,
+        "14": 49,
+        "15": 30,
+        "16": 14,
+        "17": 4,
+        "18": 1,
+        "19": 1,
+        "2": 50412,
+        "3": 35409,
+        "4": 25847,
+        "5": 18189,
+        "6": 10749,
+        "7": 5745,
+        "8": 2272,
+        "9": 1275
+      },
+      "base_top1_runs": 222328,
+      "body_search": {
+        "baseline_body_bytes": 70493,
+        "effective_extra_run_cap": 151182,
+        "evaluations": [
+          {
+            "body_bytes": 70493,
+            "extra_runs": 0
+          },
+          {
+            "body_bytes": 348698,
+            "extra_runs": 151182
+          },
+          {
+            "body_bytes": 213788,
+            "extra_runs": 75591
+          },
+          {
+            "body_bytes": 133504,
+            "extra_runs": 37795
+          },
+          {
+            "body_bytes": 172104,
+            "extra_runs": 56693
+          },
+          {
+            "body_bytes": 150908,
+            "extra_runs": 47244
+          },
+          {
+            "body_bytes": 161804,
+            "extra_runs": 51968
+          },
+          {
+            "body_bytes": 166944,
+            "extra_runs": 54330
+          },
+          {
+            "body_bytes": 164532,
+            "extra_runs": 53149
+          },
+          {
+            "body_bytes": 165836,
+            "extra_runs": 53739
+          },
+          {
+            "body_bytes": 166368,
+            "extra_runs": 54034
+          },
+          {
+            "body_bytes": 165988,
+            "extra_runs": 53886
+          },
+          {
+            "body_bytes": 166328,
+            "extra_runs": 53960
+          },
+          {
+            "body_bytes": 166148,
+            "extra_runs": 53923
+          },
+          {
+            "body_bytes": 166196,
+            "extra_runs": 53904
+          },
+          {
+            "body_bytes": 166248,
+            "extra_runs": 53895
+          },
+          {
+            "body_bytes": 166100,
+            "extra_runs": 53890
+          },
+          {
+            "body_bytes": 165984,
+            "extra_runs": 53888
+          },
+          {
+            "body_bytes": 166120,
+            "extra_runs": 53889
+          }
+        ],
+        "monotonic_binary_search": true,
+        "note": "Compressed size is treated as approximately monotonic over the deterministic priority prefix.",
+        "selected_body_bytes_during_search": 165984,
+        "selected_by": "largest_priority_prefix_under_target_body_bytes",
+        "target_body_bytes": 166000
+      },
+      "candidate_extra_runs": 151182,
+      "max_available_runs_per_row": 19,
+      "max_selected_runs_per_row": 11,
+      "pixel_disagreement": 0.004608154296875,
+      "pixel_disagreement_count": 543600,
+      "reconstructed_tensor_sha256": "d6cf9d3cf8286c82c6119efe765228c69901230c74fdd3f98a6a2342d941307c",
+      "rows_with_extra_runs": 27634,
+      "selected_class_histogram": {
+        "1": 34325,
+        "2": 151843,
+        "3": 26796,
+        "4": 63252
+      },
+      "selected_extra_class_histogram": {
+        "1": 5402,
+        "2": 27206,
+        "3": 19136,
+        "4": 2144
+      },
+      "selected_extra_priority_max": 209.39538411458338,
+      "selected_extra_priority_min": 3.92002734375,
+      "selected_extra_rank_histogram": {
+        "10": 10,
+        "11": 1,
+        "2": 27628,
+        "3": 17050,
+        "4": 6001,
+        "5": 2118,
+        "6": 721,
+        "7": 261,
+        "8": 73,
+        "9": 25
+      },
+      "selected_extra_runs": 53888,
+      "selected_rank_histogram": {
+        "1": 222328,
+        "10": 10,
+        "11": 1,
+        "2": 27628,
+        "3": 17050,
+        "4": 6001,
+        "5": 2118,
+        "6": 721,
+        "7": 261,
+        "8": 73,
+        "9": 25
+      },
+      "selected_rows_by_run_count": {
+        "0": 8072,
+        "1": 194694,
+        "10": 9,
+        "11": 1,
+        "2": 10587,
+        "3": 11049,
+        "4": 3880,
+        "5": 1397,
+        "6": 460,
+        "7": 188,
+        "8": 48,
+        "9": 15
+      },
+      "selected_run_fraction": 0.7390809918416821,
+      "selected_runs": 276216,
+      "total_nonzero_runs": 373729
+    },
+    "run_stream_bytes": 1611480,
+    "run_stream_sha256": "f7f6f8c15e7b337038d06df2b68e54e411c884d7dabb5858dcedd3db0455b847",
+    "schema": "cmg3a_adaptive_nonzero_row_runs_candidate_v1",
+    "score_claim": false,
+    "selection_policy": {
+      "adaptive_max_runs_per_row": 12,
+      "base_runs_per_row": 1,
+      "effective_extra_run_cap": 151182,
+      "evidence_boundary": "Policy is a deterministic byte-screen prior. It is not scorer, promotion, or retirement evidence without exact CUDA auth eval.",
+      "hard_frame_indices": {
+        "frame_count": 64,
+        "frames": [
+          162,
+          163,
+          164,
+          165,
+          168,
+          169,
+          170,
+          171,
+          186,
+          187,
+          188,
+          189,
+          196,
+          197,
+          198,
+          199,
+          200,
+          201,
+          260,
+          261,
+          272,
+          273,
+          278,
+          279,
+          288,
+          289,
+          290,
+          291,
+          292,
+          293,
+          296,
+          297,
+          306,
+          307,
+          310,
+          311,
+          330,
+          331,
+          338,
+          339,
+          342,
+          343,
+          358,
+          359,
+          366,
+          367,
+          430,
+          431,
+          436,
+          437,
+          506,
+          507,
+          544,
+          545,
+          562,
+          563,
+          570,
+          571,
+          572,
+          573,
+          574,
+          575,
+          580,
+          581
+        ],
+        "sources": [
+          {
+            "expanded_frame_count": 64,
+            "kind": "pair_indices_expanded_to_frames_2i_2i_plus_1",
+            "pair_count": 32,
+            "path": "/Users/adpena/Projects/pact/experiments/results/c067_cmg3_pixel_lagrangian_atoms_after_t4/top2_hard_pair_indices_top32.json",
+            "sha256": "1107a290f45e91e9624176c6df94a9ceae495037de6436c0468dbd406529379f"
+          }
+        ]
+      },
+      "priority_formula": "length * class_weight * (1 + foveal_row_weight*row_center + foveal_col_weight*col_center) * hard_frame_multiplier_if_selected * (1 + boundary_detail_weight*short_run_prior) * rank_decay**max(0, rank-2) / raw_bytes_per_extra_atom",
+      "raw_bytes_per_extra_atom": 5.0,
+      "row_rank_prefix_required": false,
+      "schema": "cmg3a_adaptive_global_nonzero_row_run_policy_v1",
+      "selected_extra_runs": 53888,
+      "selected_max_runs_per_row": 11,
+      "selector": "global_weighted_budget_after_top1_per_row",
+      "sort_order": "priority_desc_then_frame_row_rank_start_end_class",
+      "target_body_bytes": 166000,
+      "target_extra_runs": null,
+      "weights": {
+        "boundary_detail_weight": 0.08,
+        "boundary_reference_run_length": 64,
+        "class_weight_note": "Explicit byte-screen priors only: class-id preference for likely vehicle/lane/boundary/source-sensitive mask structure. Not score evidence.",
+        "class_weights": {
+          "1": 1.08,
+          "2": 1.3,
+          "3": 1.22,
+          "4": 1.16
+        },
+        "foveal_col_weight": 0.2,
+        "foveal_row_weight": 0.2,
+        "hard_frame_multiplier": 2.5,
+        "rank_decay": 0.92
+      },
+      "wire_mode": "nonzero_row_runs_topk_v1"
+    },
+    "selector": "cmg3a_adaptive_global_budget",
+    "source_mask_u8_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+    "width": 512
+  },
+  "decoded_mask_array": {
+    "npy_sha256": "13f81851ae206f6142cd3348db5537eda4ea832665052824816f4d1bf432de0c",
+    "path": "/Users/adpena/Projects/pact/experiments/results/c063_trace_weighted_mask_grammar_plan_20260502_codex/decoded_mask_array.npy",
+    "shape": [
+      600,
+      384,
+      512
+    ],
+    "tensor_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45"
+  },
+  "evidence_grade": "empirical_byte_screen_archive_candidate_until_exact_cuda",
+  "frontier_archive": {
+    "bytes": 276214,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip",
+    "sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a"
+  },
+  "output_archive": {
+    "bytes": 224744,
+    "delta_bytes_vs_frontier": -51470,
+    "formula_only_rate_delta_vs_frontier": -0.03427176031719816,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c067_cmg3a_hardpairs32_body166k_20260502/archive.zip",
+    "sha256": "8a54c10a3f683a085888de6e0cf62ac70dc6f52ccdd8ac245eb9bcc8a94cf86f"
+  },
+  "packed_payload": {
+    "brotli_quality": 11,
+    "evidence_grade": "empirical",
+    "formula_only_rate_delta": -0.0075867969118740206,
+    "header": {
+      "members": [
+        {
+          "bytes": 59288,
+          "codec": "raw",
+          "name": "renderer.bin",
+          "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+        },
+        {
+          "bytes": 169318,
+          "codec": "raw",
+          "name": "masks.cmg3",
+          "sha256": "d4b6d205a2afcd7fe2fe00a38554c1d7d181fe7d1ecc3f84413258fcde2ad5a1"
+        },
+        {
+          "bytes": 1140,
+          "codec": "pose_qp1_v1",
+          "decoded_bytes": 7200,
+          "decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f",
+          "lossy": true,
+          "name": "optimized_poses.bin",
+          "pose_error_stats": {
+            "max_abs_by_dim": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "pose_dim": 6,
+            "rmse_by_dim": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "rows": 600
+          },
+          "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583",
+          "source_decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+        }
+      ],
+      "schema": "renderer_payload_v1",
+      "source_archive_sha256": "16616a60a63d09c20906f8bcdacb5c62e0e0e803b321cd64379f098edbfcb922"
+    },
+    "output_archive": "/Users/adpena/Projects/pact/experiments/results/c067_cmg3a_hardpairs32_body166k_20260502/archive.zip",
+    "output_archive_bytes": 224744,
+    "output_archive_sha256": "8a54c10a3f683a085888de6e0cf62ac70dc6f52ccdd8ac245eb9bcc8a94cf86f",
+    "payload_compressed_bytes": 224644,
+    "payload_format": "rpk1_json",
+    "payload_member": "p",
+    "payload_raw_bytes": 230623,
+    "pose_codec": "pose_qp1_v1",
+    "pose_residual_topk": 0,
+    "savings_bytes": 11394,
+    "score_claim": false,
+    "source_archive": "/Users/adpena/Projects/pact/experiments/results/c067_cmg3a_hardpairs32_body166k_20260502/cmg3a_adaptive_runs_source_members.zip",
+    "source_archive_bytes": 236138,
+    "source_archive_sha256": "16616a60a63d09c20906f8bcdacb5c62e0e0e803b321cd64379f098edbfcb922"
+  },
+  "policy": {
+    "adaptive_max_runs_per_row": 12,
+    "base_runs_per_row": 1,
+    "effective_extra_run_cap": 151182,
+    "evidence_boundary": "Policy is a deterministic byte-screen prior. It is not scorer, promotion, or retirement evidence without exact CUDA auth eval.",
+    "hard_frame_indices": {
+      "frame_count": 64,
+      "frames": [
+        162,
+        163,
+        164,
+        165,
+        168,
+        169,
+        170,
+        171,
+        186,
+        187,
+        188,
+        189,
+        196,
+        197,
+        198,
+        199,
+        200,
+        201,
+        260,
+        261,
+        272,
+        273,
+        278,
+        279,
+        288,
+        289,
+        290,
+        291,
+        292,
+        293,
+        296,
+        297,
+        306,
+        307,
+        310,
+        311,
+        330,
+        331,
+        338,
+        339,
+        342,
+        343,
+        358,
+        359,
+        366,
+        367,
+        430,
+        431,
+        436,
+        437,
+        506,
+        507,
+        544,
+        545,
+        562,
+        563,
+        570,
+        571,
+        572,
+        573,
+        574,
+        575,
+        580,
+        581
+      ],
+      "sources": [
+        {
+          "expanded_frame_count": 64,
+          "kind": "pair_indices_expanded_to_frames_2i_2i_plus_1",
+          "pair_count": 32,
+          "path": "/Users/adpena/Projects/pact/experiments/results/c067_cmg3_pixel_lagrangian_atoms_after_t4/top2_hard_pair_indices_top32.json",
+          "sha256": "1107a290f45e91e9624176c6df94a9ceae495037de6436c0468dbd406529379f"
+        }
+      ]
+    },
+    "priority_formula": "length * class_weight * (1 + foveal_row_weight*row_center + foveal_col_weight*col_center) * hard_frame_multiplier_if_selected * (1 + boundary_detail_weight*short_run_prior) * rank_decay**max(0, rank-2) / raw_bytes_per_extra_atom",
+    "raw_bytes_per_extra_atom": 5.0,
+    "row_rank_prefix_required": false,
+    "schema": "cmg3a_adaptive_global_nonzero_row_run_policy_v1",
+    "selected_extra_runs": 53888,
+    "selected_max_runs_per_row": 11,
+    "selector": "global_weighted_budget_after_top1_per_row",
+    "sort_order": "priority_desc_then_frame_row_rank_start_end_class",
+    "target_body_bytes": 166000,
+    "target_extra_runs": null,
+    "weights": {
+      "boundary_detail_weight": 0.08,
+      "boundary_reference_run_length": 64,
+      "class_weight_note": "Explicit byte-screen priors only: class-id preference for likely vehicle/lane/boundary/source-sensitive mask structure. Not score evidence.",
+      "class_weights": {
+        "1": 1.08,
+        "2": 1.3,
+        "3": 1.22,
+        "4": 1.16
+      },
+      "foveal_col_weight": 0.2,
+      "foveal_row_weight": 0.2,
+      "hard_frame_multiplier": 2.5,
+      "rank_decay": 0.92
+    },
+    "wire_mode": "nonzero_row_runs_topk_v1"
+  },
+  "promotion_eligible": false,
+  "required_next_steps": [
+    "local unpack/inflate smoke to prove masks.cmg3 routes through runtime",
+    "exact CUDA diagnostic on the archive bytes",
+    "T4 promotion only if component gates are near or below C-067"
+  ],
+  "schema": "cmg3a_adaptive_nonzero_row_runs_candidate_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 236138,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c067_cmg3a_hardpairs32_body166k_20260502/cmg3a_adaptive_runs_source_members.zip",
+    "sha256": "16616a60a63d09c20906f8bcdacb5c62e0e0e803b321cd64379f098edbfcb922"
+  }
+}

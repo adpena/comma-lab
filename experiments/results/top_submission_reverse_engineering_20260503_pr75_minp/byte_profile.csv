@@ -1,0 +1,2 @@
+row_type,archive,member,payload_format,segment,bytes,uncompressed_bytes,codec,type_guess,sha256,rate_score_contribution,best_probe_codec,best_probe_bytes,best_probe_delta
+zip_member,/Users/adpena/Projects/pact/experiments/results/top_submission_reverse_engineering_20260503_pr75_minp/archive.zip,p,,,276381,276381,stored,json_like,f78c71d3086773e417c672734082a49ceb0ef5a0016cf406a920be7978fff252,0.184082700321,input_bytes,276381,0

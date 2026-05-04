@@ -1,0 +1,68 @@
+{
+  "brotli_quality": 11,
+  "evidence_grade": "empirical",
+  "formula_only_rate_delta": -0.007472935030890129,
+  "header": {
+    "members": [
+      {
+        "bytes": 59288,
+        "codec": "raw",
+        "name": "renderer.bin",
+        "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+      },
+      {
+        "bytes": 216317,
+        "codec": "raw",
+        "name": "masks.mkv",
+        "sha256": "3c84b3dcc09d11d0d108d8aaef6d375478644a854fa2985429f676542d7a51b3"
+      },
+      {
+        "bytes": 1166,
+        "codec": "pose_qp1_v1",
+        "decoded_bytes": 7200,
+        "decoded_sha256": "e65ce99807ad8f7b7111d4e0e6f98e016003fadc24e1cfd755c3868726da01ce",
+        "lossy": true,
+        "name": "optimized_poses.bin",
+        "pose_error_stats": {
+          "max_abs_by_dim": [
+            0.0,
+            6.19921875,
+            6.7265625,
+            3.53515625,
+            5.83984375,
+            4.8671875
+          ],
+          "pose_dim": 6,
+          "rmse_by_dim": [
+            0.0,
+            1.822805016642248,
+            2.1891933025507977,
+            0.645562267226326,
+            0.9296886400059015,
+            1.2969706806377723
+          ],
+          "rows": 600
+        },
+        "sha256": "789745b93e29f0476951fff153f99149c3538e5224781950ab80dd1a6daafbba",
+        "source_decoded_sha256": "18d10d919faddcc7ad7bd4dc3e41119e6a41b2c4117ce8eef2d7ccb9b6d0ceb6"
+      }
+    ],
+    "payload_format": "public_pr64_mask_first_len_table",
+    "schema": "renderer_payload_pr64_len_table_v1",
+    "source_archive_sha256": "4dcd64e6ec1a40d7a35548e676124e26e0d8544bb6300f378ed6cb49bbc9657a"
+  },
+  "output_archive": "experiments/results/vast_live_harvest/c063_mask_crf52_pose_regen_h100sxm_fix3_20260502T0820Z/build/archive.zip",
+  "output_archive_bytes": 263499,
+  "output_archive_sha256": "89420084ddb0ac372d6ecb6776b58ff2968defe12e55a286aa1fa90a25b554d1",
+  "payload_compressed_bytes": 263399,
+  "payload_format": "public_pr64_mask_first_len_table",
+  "payload_member": "p",
+  "payload_raw_bytes": 276783,
+  "pose_codec": "pose_qp1_v1",
+  "pose_residual_topk": 0,
+  "savings_bytes": 11223,
+  "score_claim": false,
+  "source_archive": "experiments/results/vast_live_harvest/c063_mask_crf52_pose_regen_h100sxm_fix3_20260502T0820Z/runtime_members.zip",
+  "source_archive_bytes": 274722,
+  "source_archive_sha256": "4dcd64e6ec1a40d7a35548e676124e26e0d8544bb6300f378ed6cb49bbc9657a"
+}

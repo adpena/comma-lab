@@ -1,0 +1,622 @@
+{
+  "blocker": {
+    "id": "pr86_hpac_pr85_mask_contract_port",
+    "precise_failure": {
+      "pr85_hpac_parity_probe": {
+        "archive_byte_closed": null,
+        "baseline_mask_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+        "baseline_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+        "baseline_token_shape": [
+          600,
+          512,
+          384
+        ],
+        "byte_exact_token_parity": null,
+        "candidate_decoded_token_sha256": null,
+        "candidate_decoded_token_shape": null,
+        "candidate_digests": {},
+        "candidate_mask_replacement_kind": null,
+        "candidate_mask_segment_sha256": null,
+        "candidate_paths": [],
+        "dispatch_performed": false,
+        "noop": null,
+        "probe_failure_class": "pr86_hpac_decode_contract_or_dependency_mismatch",
+        "probe_observed_error": "AssertionError: Tried to decode from compressed data that is invalid for the employed entropy model.",
+        "probe_pr85_decoded_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+        "probe_pr85_decoded_shape": [
+          600,
+          384,
+          512
+        ],
+        "probe_status": "blocked_entropy_decode_assertion",
+        "runtime_output_parity": null,
+        "score_claim": false
+      },
+      "pr86_probability_matrix": {
+        "byte_parity_variants": [],
+        "dispatch_unlocked": false,
+        "failure_reason": "no_source_contract_variant_full_decode_byte_exact_reencode",
+        "source_contract_byte_parity_variants": [],
+        "status": "failed_closed",
+        "variants": [
+          {
+            "byte_parity_achieved": false,
+            "decoded_symbol_count_before_failure": 5951,
+            "dispatch_unlocked": false,
+            "failed_at": {
+              "frame": 0,
+              "group": 10,
+              "symbol_in_group": 191
+            },
+            "failure_reason": "hpac_entropy_decode_contract_mismatch",
+            "failure_stage": "submitted_tokens_decode",
+            "name": "source_float64_perfect_false",
+            "source_contract": true,
+            "status": "failed_closed"
+          },
+          {
+            "byte_parity_achieved": false,
+            "decoded_symbol_count_before_failure": 30513,
+            "dispatch_unlocked": false,
+            "failed_at": {
+              "frame": 0,
+              "group": 24,
+              "symbol_in_group": 561
+            },
+            "failure_reason": "hpac_entropy_decode_contract_mismatch",
+            "failure_stage": "submitted_tokens_decode",
+            "name": "source_float32_perfect_false",
+            "source_contract": false,
+            "status": "failed_closed"
+          },
+          {
+            "byte_parity_achieved": false,
+            "decoded_symbol_count_before_failure": 13822,
+            "dispatch_unlocked": false,
+            "failed_at": {
+              "frame": 0,
+              "group": 15,
+              "symbol_in_group": 1534
+            },
+            "failure_reason": "hpac_entropy_decode_contract_mismatch",
+            "failure_stage": "submitted_tokens_decode",
+            "name": "source_float64_perfect_true",
+            "source_contract": false,
+            "status": "failed_closed"
+          },
+          {
+            "byte_parity_achieved": false,
+            "decoded_symbol_count_before_failure": 12479,
+            "dispatch_unlocked": false,
+            "failed_at": {
+              "frame": 0,
+              "group": 15,
+              "symbol_in_group": 191
+            },
+            "failure_reason": "hpac_entropy_decode_contract_mismatch",
+            "failure_stage": "submitted_tokens_decode",
+            "name": "source_float32_perfect_true",
+            "source_contract": false,
+            "status": "failed_closed"
+          }
+        ]
+      }
+    },
+    "primary_local_blocker": {
+      "gate": "pr86_full_decode_reencode_token_parity",
+      "next_action": "Run the local PR86 full-stream decode and decode->encode tokens.bin byte-parity probe.",
+      "status": "failed_closed"
+    },
+    "removal_criteria": [
+      "PR86 full submitted tokens.bin decode succeeds under a named probability contract.",
+      "PR86 decode->reencode emits byte-identical tokens.bin.",
+      "PR85 HPAC candidate decodes to the PR85 baseline token SHA and shape.",
+      "Candidate mask replacement is byte-closed, runtime-output parity checked, and non-no-op."
+    ],
+    "status": "blocked_fail_closed"
+  },
+  "build_only": true,
+  "candidate_spec": {
+    "archive_byte_closure_required": true,
+    "blocked_by": [
+      {
+        "gate": "pr86_full_decode_reencode_token_parity",
+        "next_action": "Run the local PR86 full-stream decode and decode->encode tokens.bin byte-parity probe.",
+        "status": "failed_closed"
+      },
+      {
+        "gate": "pr85_hpac_token_parity",
+        "next_action": "After PR85 HPAC fitting, require decoded-token SHA and byte-closed runtime parity against the PR85 baseline.",
+        "status": "blocked_entropy_decode_assertion"
+      },
+      {
+        "gate": "pr85_runtime_output_parity",
+        "next_action": "Run PR85 runtime output parity after token parity passes.",
+        "status": "not_run"
+      },
+      {
+        "gate": "candidate_archive_byte_closure",
+        "next_action": "Build only after PR86 and PR85 token parity gates pass.",
+        "status": "not_run"
+      }
+    ],
+    "candidate_digests": {},
+    "candidate_paths": [],
+    "dispatch_performed": false,
+    "non_noop_guard": {
+      "baseline_mask_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+      "candidate_mask_must_differ_from_baseline": true,
+      "candidate_mask_sha256": null,
+      "noop": null,
+      "passed": false,
+      "required": true
+    },
+    "runtime_output_parity_required": true,
+    "schema": "pr86_hpac_pr85_candidate_spec_gate_v1",
+    "score_claim": false,
+    "status": "not_emitted_fail_closed",
+    "token_parity_guard": {
+      "baseline_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "byte_exact_token_parity": null,
+      "candidate_decoded_token_sha256": null,
+      "passed": false,
+      "required": true
+    }
+  },
+  "dispatch_gate": "blocked/fail_closed_no_remote_dispatch",
+  "dispatch_performed": false,
+  "dispatchability": {
+    "dispatchable": false,
+    "refusal_reasons": [
+      {
+        "gate": "pr86_exact_score_evidence",
+        "reason": "A PR86 exact CUDA contest_auth_eval.json with 600 samples and matching archive identity must exist before PR86 can justify a dispatchable contract port.",
+        "status": "blocked_missing_pr86_exact_score_json"
+      },
+      {
+        "gate": "pr86_full_decode_reencode_token_parity",
+        "reason": "PR86 tokens.bin must fully decode, then byte-exactly re-encode through the pinned HPAC/constriction contract.",
+        "status": "failed_closed"
+      },
+      {
+        "gate": "pr85_hpac_token_parity",
+        "reason": "A PR85 HPAC-coded candidate must decode to the same PR85 raw tokens before archive replacement is allowed.",
+        "status": "blocked_entropy_decode_assertion"
+      },
+      {
+        "gate": "pr85_runtime_output_parity",
+        "reason": "The PR85 inflate/runtime output must be byte- or tensor-parity equivalent before any exact eval dispatch.",
+        "status": "not_run"
+      },
+      {
+        "gate": "candidate_archive_byte_closure",
+        "reason": "A candidate archive must be deterministic, sidecar-free, manifest-complete, and byte-closed.",
+        "status": "not_run"
+      }
+    ],
+    "requested_dispatchable": true,
+    "status": "refused_fail_closed"
+  },
+  "dispatchable": false,
+  "evidence_grade": "planning_only_from_static_artifacts",
+  "fail_closed": true,
+  "fail_closed_reasons": [
+    {
+      "gate": "pr86_exact_score_evidence",
+      "next_action": "Classify the current PR86 replay blocker; do not claim score from external PR text or partial Lightning artifacts.",
+      "reason": "A PR86 exact CUDA contest_auth_eval.json with 600 samples and matching archive identity must exist before PR86 can justify a dispatchable contract port.",
+      "status": "blocked_missing_pr86_exact_score_json"
+    },
+    {
+      "gate": "pr86_full_decode_reencode_token_parity",
+      "next_action": "Run the local PR86 full-stream decode and decode->encode tokens.bin byte-parity probe.",
+      "reason": "PR86 tokens.bin must fully decode, then byte-exactly re-encode through the pinned HPAC/constriction contract.",
+      "status": "failed_closed"
+    },
+    {
+      "gate": "pr85_hpac_token_parity",
+      "next_action": "After PR85 HPAC fitting, require decoded-token SHA and byte-closed runtime parity against the PR85 baseline.",
+      "reason": "A PR85 HPAC-coded candidate must decode to the same PR85 raw tokens before archive replacement is allowed.",
+      "status": "blocked_entropy_decode_assertion"
+    },
+    {
+      "gate": "pr85_runtime_output_parity",
+      "next_action": "Run PR85 runtime output parity after token parity passes.",
+      "reason": "The PR85 inflate/runtime output must be byte- or tensor-parity equivalent before any exact eval dispatch.",
+      "status": "not_run"
+    },
+    {
+      "gate": "candidate_archive_byte_closure",
+      "next_action": "Build only after PR86 and PR85 token parity gates pass.",
+      "reason": "A candidate archive must be deterministic, sidecar-free, manifest-complete, and byte-closed.",
+      "status": "not_run"
+    }
+  ],
+  "gross_byte_math": {
+    "gross_mask_byte_opportunity": 15369,
+    "gross_saved_bytes_if_same_contract": 15369,
+    "interpretation": "Gross byte opportunity only. It is not a score delta and is non-dispatchable until the parity gates pass.",
+    "pr85_archive_bytes": 236328,
+    "pr85_mask_segment_bytes": 159011,
+    "pr85_non_mask_archive_bytes_estimate": 77317,
+    "pr86_archive_bytes": 207579,
+    "pr86_hpac_model_bytes": 28243,
+    "pr86_hpac_tokens_meta_bytes": 143642,
+    "pr86_meta_bytes": 1499,
+    "pr86_tokens_bytes": 113900,
+    "score_claim": false
+  },
+  "next_dispatch_gate": {
+    "id": "pr86_exact_score_evidence",
+    "next_action": "Classify the current PR86 replay blocker; do not claim score from external PR text or partial Lightning artifacts.",
+    "status": "blocked_missing_pr86_exact_score_json"
+  },
+  "next_gate": {
+    "id": "pr86_full_decode_reencode_token_parity",
+    "kind": "local_build_parity",
+    "next_action": "Run the local PR86 full-stream decode and decode->encode tokens.bin byte-parity probe.",
+    "status": "failed_closed"
+  },
+  "planning_only": true,
+  "pr85_target_reference": {
+    "archive_bytes": 236328,
+    "archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+    "expected_archive_bytes": 236328,
+    "expected_archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+    "mask_segment": {
+      "bytes": 159011,
+      "magic_ascii": "QMA9X\u0002\u0000\u0000",
+      "sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179"
+    },
+    "score_claim_from_this_plan": false,
+    "t4_best_score_reference": 0.25806611029397786
+  },
+  "pr86_source_archive": {
+    "bytes": 207579,
+    "current_exact_replay_status": "archive_validator_whitelist_blocked",
+    "expected_bytes": 207579,
+    "expected_sha256": "e67b7c22240dbe33853c19d049b0044a5df16ce5f751ba8f1021cab8ceb03cef",
+    "member_bytes": {
+      "hpac.pt.ppmd": 28243,
+      "master.pt.gz": 31144,
+      "meta.pt": 1499,
+      "slave.pt.gz": 32287,
+      "tokens.bin": 113900
+    },
+    "score_claim_from_this_plan": false,
+    "sha256": "e67b7c22240dbe33853c19d049b0044a5df16ce5f751ba8f1021cab8ceb03cef"
+  },
+  "ready_for_exact_eval_dispatch": false,
+  "recorded_at_utc": "2026-05-04T04:52:26Z",
+  "remote_jobs_dispatched": false,
+  "required_parity_gates": [
+    {
+      "dispatch_blocker": true,
+      "evidence": {
+        "archive_bytes": 207579,
+        "archive_sha256": "e67b7c22240dbe33853c19d049b0044a5df16ce5f751ba8f1021cab8ceb03cef",
+        "expected_member_mismatches": {}
+      },
+      "id": "pr86_archive_identity",
+      "local_build_gate": false,
+      "next_action": "Regenerate the PR86 anatomy artifact from the exact archive before planning a port.",
+      "passed": true,
+      "phase": "source_pr86",
+      "required": true,
+      "requirement": "PR86 anatomy must match the known archive SHA-256, bytes, and five member byte sizes.",
+      "status": "passed"
+    },
+    {
+      "dispatch_blocker": true,
+      "evidence": {
+        "promotable_member_contract": true
+      },
+      "id": "pr86_member_contract",
+      "local_build_gate": false,
+      "next_action": "Fix the PR86 archive custody/member anatomy before using HPAC bytes as a design prior.",
+      "passed": true,
+      "phase": "source_pr86",
+      "required": true,
+      "requirement": "PR86 anatomy must show exactly the expected members with no sidecars or unsafe names.",
+      "status": "passed"
+    },
+    {
+      "dispatch_blocker": true,
+      "evidence": {
+        "queue_word_dtype": "uint32",
+        "submitted_archive_token_encoding": "raw_tokens",
+        "tokens_bin_bytes": 113900,
+        "uint32_aligned": true,
+        "uint32_word_count": 28475
+      },
+      "id": "pr86_raw_uint32_token_stream",
+      "local_build_gate": false,
+      "next_action": "Resolve token semantics against PR86 inflate/training code before port planning.",
+      "passed": true,
+      "phase": "source_pr86",
+      "required": true,
+      "requirement": "Submitted PR86 tokens.bin must be raw-token uint32 queue words, not residual-token or ambiguous semantics.",
+      "status": "passed"
+    },
+    {
+      "dispatch_blocker": true,
+      "evidence": {
+        "archive_bytes": 236328,
+        "archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+        "mask_segment_bytes": 159011,
+        "pr85_archive_file_identity": {
+          "bytes": 236328,
+          "exists": true,
+          "path": "experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+          "sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e"
+        }
+      },
+      "id": "pr85_bundle_profile",
+      "local_build_gate": false,
+      "next_action": "Refresh the PR85 bundle profile from the exact PR85 archive before computing byte economics.",
+      "passed": true,
+      "phase": "target_pr85",
+      "required": true,
+      "requirement": "PR85 profile must match the known T4-best archive and QMA9 mask segment byte count.",
+      "status": "passed"
+    },
+    {
+      "dispatch_blocker": true,
+      "evidence": {
+        "gross_mask_byte_opportunity": 15369,
+        "pr85_mask_segment_bytes": 159011,
+        "pr86_hpac_tokens_meta_bytes": 143642
+      },
+      "id": "gross_mask_byte_math",
+      "local_build_gate": false,
+      "next_action": "Recompute from source artifacts; do not carry forward stale byte arithmetic.",
+      "passed": true,
+      "phase": "byte_economics",
+      "required": true,
+      "requirement": "Gross PR85 mask opportunity must be recomputed from profile bytes before any port decision.",
+      "status": "passed"
+    },
+    {
+      "dispatch_blocker": true,
+      "evidence": {
+        "archive_size_bytes": 207579,
+        "current_replay_status": "archive_validator_whitelist_blocked",
+        "evidence_grade": "invalid",
+        "n_samples": null,
+        "score_delta_vs_pr85": null,
+        "score_recomputed_from_components": null
+      },
+      "id": "pr86_exact_score_evidence",
+      "local_build_gate": false,
+      "next_action": "Classify the current PR86 replay blocker; do not claim score from external PR text or partial Lightning artifacts.",
+      "passed": false,
+      "phase": "exact_evidence",
+      "required": true,
+      "requirement": "A PR86 exact CUDA contest_auth_eval.json with 600 samples and matching archive identity must exist before PR86 can justify a dispatchable contract port.",
+      "status": "blocked_missing_pr86_exact_score_json"
+    },
+    {
+      "dispatch_blocker": true,
+      "evidence": {
+        "byte_exact_reencode_status": "failed_closed",
+        "full_archive_decode": false,
+        "probability_variant_matrix": {
+          "byte_parity_variants": [],
+          "dispatch_unlocked": false,
+          "failure_reason": "no_source_contract_variant_full_decode_byte_exact_reencode",
+          "source_contract_byte_parity_variants": [],
+          "status": "failed_closed",
+          "variants": [
+            {
+              "byte_parity_achieved": false,
+              "decoded_symbol_count_before_failure": 5951,
+              "dispatch_unlocked": false,
+              "failed_at": {
+                "frame": 0,
+                "group": 10,
+                "symbol_in_group": 191
+              },
+              "failure_reason": "hpac_entropy_decode_contract_mismatch",
+              "failure_stage": "submitted_tokens_decode",
+              "name": "source_float64_perfect_false",
+              "source_contract": true,
+              "status": "failed_closed"
+            },
+            {
+              "byte_parity_achieved": false,
+              "decoded_symbol_count_before_failure": 30513,
+              "dispatch_unlocked": false,
+              "failed_at": {
+                "frame": 0,
+                "group": 24,
+                "symbol_in_group": 561
+              },
+              "failure_reason": "hpac_entropy_decode_contract_mismatch",
+              "failure_stage": "submitted_tokens_decode",
+              "name": "source_float32_perfect_false",
+              "source_contract": false,
+              "status": "failed_closed"
+            },
+            {
+              "byte_parity_achieved": false,
+              "decoded_symbol_count_before_failure": 13822,
+              "dispatch_unlocked": false,
+              "failed_at": {
+                "frame": 0,
+                "group": 15,
+                "symbol_in_group": 1534
+              },
+              "failure_reason": "hpac_entropy_decode_contract_mismatch",
+              "failure_stage": "submitted_tokens_decode",
+              "name": "source_float64_perfect_true",
+              "source_contract": false,
+              "status": "failed_closed"
+            },
+            {
+              "byte_parity_achieved": false,
+              "decoded_symbol_count_before_failure": 12479,
+              "dispatch_unlocked": false,
+              "failed_at": {
+                "frame": 0,
+                "group": 15,
+                "symbol_in_group": 191
+              },
+              "failure_reason": "hpac_entropy_decode_contract_mismatch",
+              "failure_stage": "submitted_tokens_decode",
+              "name": "source_float32_perfect_true",
+              "source_contract": false,
+              "status": "failed_closed"
+            }
+          ]
+        }
+      },
+      "id": "pr86_full_decode_reencode_token_parity",
+      "local_build_gate": true,
+      "next_action": "Run the local PR86 full-stream decode and decode->encode tokens.bin byte-parity probe.",
+      "passed": false,
+      "phase": "local_parity",
+      "required": true,
+      "requirement": "PR86 tokens.bin must fully decode, then byte-exactly re-encode through the pinned HPAC/constriction contract.",
+      "status": "failed_closed"
+    },
+    {
+      "dispatch_blocker": true,
+      "evidence": {
+        "invalid_symbol_values": [],
+        "mask_segment_bytes": 159011,
+        "mask_segment_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+        "observed_range": {
+          "max": 4,
+          "min": 0
+        },
+        "profile_json_status": "present",
+        "raw_tensor_exact": true,
+        "source_mask_magic": "QMA9X\u0002\u0000\u0000",
+        "source_mask_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+        "token_bytes": 117964800,
+        "token_dtype": "uint8",
+        "token_extracted": true,
+        "token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+        "token_shape": [
+          600,
+          512,
+          384
+        ]
+      },
+      "id": "pr85_baseline_token_extraction",
+      "local_build_gate": true,
+      "next_action": "Extract PR85 QMA9 raw tokens with shape/range/SHA proof before fitting HPAC.",
+      "passed": true,
+      "phase": "local_parity",
+      "required": true,
+      "requirement": "Decode PR85 QMA9 mask bytes into the exact raw token source that HPAC would consume.",
+      "status": "passed_token_source_profiled"
+    },
+    {
+      "dispatch_blocker": true,
+      "evidence": {
+        "candidate_parity_probe": {
+          "archive_byte_closed": null,
+          "baseline_mask_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+          "baseline_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+          "baseline_token_shape": [
+            600,
+            512,
+            384
+          ],
+          "byte_exact_token_parity": null,
+          "candidate_decoded_token_sha256": null,
+          "candidate_decoded_token_shape": null,
+          "candidate_digests": {},
+          "candidate_mask_replacement_kind": null,
+          "candidate_mask_segment_sha256": null,
+          "candidate_paths": [],
+          "dispatch_performed": false,
+          "noop": null,
+          "probe_failure_class": "pr86_hpac_decode_contract_or_dependency_mismatch",
+          "probe_observed_error": "AssertionError: Tried to decode from compressed data that is invalid for the employed entropy model.",
+          "probe_pr85_decoded_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+          "probe_pr85_decoded_shape": [
+            600,
+            384,
+            512
+          ],
+          "probe_status": "blocked_entropy_decode_assertion",
+          "runtime_output_parity": null,
+          "score_claim": false
+        },
+        "parity_artifact_gate": {
+          "gate": "pr85_transfer_parity",
+          "required_before_pr85_transfer": true,
+          "requirement": "For PR85, prove decoded mask-token shape/range, raw-token parity against the PR85 baseline token source, archive byte closure, and runtime output parity before any exact-eval dispatch.",
+          "status": "not_run"
+        }
+      },
+      "id": "pr85_hpac_token_parity",
+      "local_build_gate": true,
+      "next_action": "After PR85 HPAC fitting, require decoded-token SHA and byte-closed runtime parity against the PR85 baseline.",
+      "passed": false,
+      "phase": "local_parity",
+      "required": true,
+      "requirement": "A PR85 HPAC-coded candidate must decode to the same PR85 raw tokens before archive replacement is allowed.",
+      "status": "blocked_entropy_decode_assertion"
+    },
+    {
+      "dispatch_blocker": true,
+      "evidence": {},
+      "id": "pr85_runtime_output_parity",
+      "local_build_gate": true,
+      "next_action": "Run PR85 runtime output parity after token parity passes.",
+      "passed": false,
+      "phase": "local_parity",
+      "required": true,
+      "requirement": "The PR85 inflate/runtime output must be byte- or tensor-parity equivalent before any exact eval dispatch.",
+      "status": "not_run"
+    },
+    {
+      "dispatch_blocker": true,
+      "evidence": {},
+      "id": "candidate_archive_byte_closure",
+      "local_build_gate": true,
+      "next_action": "Build only after PR86 and PR85 token parity gates pass.",
+      "passed": false,
+      "phase": "candidate_archive",
+      "required": true,
+      "requirement": "A candidate archive must be deterministic, sidecar-free, manifest-complete, and byte-closed.",
+      "status": "not_run"
+    }
+  ],
+  "schema": "pr86_hpac_pr85_contract_port_plan_v1",
+  "schema_version": 1,
+  "score_claim": false,
+  "score_claim_refusal": {
+    "reasons": [
+      "This planner is build-only and never emits a score claim.",
+      "External PR text and partial replay artifacts are carried as context only.",
+      "PR86 exact score evidence is a required gate, not a score claimed by this plan."
+    ],
+    "requested_score_claim": false,
+    "status": "refused"
+  },
+  "source_artifacts": {
+    "pr85_archive": "experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+    "pr85_hpac_parity_json": "experiments/results/public_pr86_intake_20260504_codex/pr86_hpac_pr85_qma9_parity_probe.json",
+    "pr85_profile_json": "experiments/results/public_pr85_intake_20260503_codex/profile_pr85_bundle.json",
+    "pr85_token_source_json": "experiments/results/public_pr85_intake_20260503_codex/qma9_token_source/pr85_qma9_token_source_profile.json",
+    "pr86_anatomy_json": "experiments/results/public_pr86_intake_20260504_codex/pr86_hpac_token_anatomy_forensics.json",
+    "pr86_parity_json": "experiments/results/public_pr86_intake_20260504_codex/pr86_hpac_full_decode_reencode_gate_20260504_codex.json",
+    "pr86_probability_matrix_json": "experiments/results/pr86_hpac_probability_contract_20260504_worker/pr86_hpac_probability_contract_variants.json"
+  },
+  "stable_plan_digest_sha256": "58b964de20b7a885d4983ea116d3968bdf12615897a5b37dc9bf1571d98e374a",
+  "token_stream_contract": {
+    "drop_in_status": "not_drop_in",
+    "raw_uint32_token_stream": true,
+    "stream_dtype": "uint32",
+    "submitted_archive_token_encoding": "raw_tokens",
+    "tokens_bin_bytes": 113900,
+    "training_objective": "residual_tokens",
+    "uint32_word_count": 28475,
+    "why_not_drop_in": "PR86 tokens.bin is raw uint32 queue-coded HPAC tokens tied to PR86 HPAC probabilities. PR85 uses a QMA9 mask segment inside a different bundle/runtime contract."
+  },
+  "tool": "experiments/plan_pr86_hpac_pr85_contract_port.py"
+}

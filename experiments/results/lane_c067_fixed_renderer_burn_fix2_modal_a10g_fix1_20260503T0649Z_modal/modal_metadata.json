@@ -1,0 +1,12 @@
+{
+  "lane_script": "scripts/remote_lane_c067_fixed_renderer_burn.sh",
+  "label": "c067_fixed_renderer_burn_fix2_modal_a10g_fix1_20260503T0649Z",
+  "gpu": "A10G",
+  "max_seconds": 50400,
+  "call_id": "fc-01KQP98P99HHAX82ZS1XCR1PJJ",
+  "auth_eval_device": "cpu",
+  "auth_eval_advisory_only": true,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "dispatched_at": "2026-05-03T01:43:58.395927"
+}

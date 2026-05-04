@@ -1,0 +1,78 @@
+{
+  "archive_variants_manifest": {
+    "bytes": 18666,
+    "path": "/Users/adpena/Projects/pact/experiments/results/official_component_response_pfp16_direct_fd_modal_a10g_complete_response_only_20260501/official_response_plan/archive_variants_manifest.json",
+    "sha256": "dc0499d340e96e3f2264f719aeb51fb9df92b296ef94005f3f2d8385108517af"
+  },
+  "baseline_archive": {
+    "bytes": 686635,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+    "sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+  },
+  "baseline_contest_auth_eval_json": {
+    "bytes": 4287,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/eval/contest_auth_eval.json",
+    "sha256": "b84e7352165cf0d2be0631a177d8404c3a1e5f27633d82d48990552b9ef382ab"
+  },
+  "component_maps": {
+    "combined": {
+      "bytes": 76115,
+      "path": "/Users/adpena/Projects/pact/experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3_complete_merge_20260501T0929Z/combined_sensitivity_map.pt",
+      "sha256": "99a9cd55b031cdae2c8cb3e7c8444483837104bc45ac63603205e7feee88c456"
+    },
+    "posenet": {
+      "bytes": 75770,
+      "path": "/Users/adpena/Projects/pact/experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3_complete_merge_20260501T0929Z/posenet_sensitivity_map.pt",
+      "sha256": "da8d407f5a1669b0b9fd6c95b9f6125f8ef481b27fb5e47f8edce51f08897aee"
+    },
+    "segnet": {
+      "bytes": 75745,
+      "path": "/Users/adpena/Projects/pact/experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3_complete_merge_20260501T0929Z/segnet_sensitivity_map.pt",
+      "sha256": "68b3312e95b80e5181abba18a1fe10a7eea89eca41948e45c5d2292c7a2b8a12"
+    }
+  },
+  "epsilon_ladder": [
+    -2.0,
+    -1.0,
+    0.0,
+    1.0,
+    2.0
+  ],
+  "evidence_grade": "planning:pre_response_prediction_and_archive_variants",
+  "format": "official_component_response_plan_from_sensitivity_artifacts_summary_v1",
+  "official_response_next_step": {
+    "requires_device": "cuda",
+    "requires_require_passed": false,
+    "requires_same_run_zero": true,
+    "script": "experiments/profile_component_sensitivity_official.py"
+  },
+  "official_response_plan": {
+    "bytes": 14384,
+    "path": "/Users/adpena/Projects/pact/experiments/results/official_component_response_pfp16_direct_fd_modal_a10g_complete_response_only_20260501/official_response_plan/official_component_response_plan.json",
+    "sha256": "a460009d891a38287378164989ca8a417780a11f857ae998f5d724a5eaa310bf"
+  },
+  "perturbation_basis": {
+    "basis_source": "explicit_perturbation_basis_json",
+    "bytes": 167241,
+    "path": "/Users/adpena/Projects/pact/experiments/results/official_component_response_pfp16_direct_fd_modal_a10g_complete_response_only_20260501/sensitivity_ranked_renderer_blob_perturbation_basis_v1.json",
+    "sha256": "ccbd739a3379bd0691bf9e30e24be7af3bdadfb793a8138cf3f9362f29b4b35b"
+  },
+  "prediction_deltas": null,
+  "producer": "experiments/build_component_response_plan_from_sensitivity_artifacts.py",
+  "promotion_eligible": false,
+  "response_only_no_prediction_deltas": true,
+  "schema_version": 1,
+  "score_claim": false,
+  "sensitivity_artifact": {
+    "baseline_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+    "baseline_archive_size_bytes": 686635,
+    "device": "cuda",
+    "gpu_model": "mixed_shards",
+    "path": "/Users/adpena/Projects/pact/experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3_complete_merge_20260501T0929Z",
+    "promotion_eligible": false,
+    "role": "diagnostic_component_sensitivity_merged_shards",
+    "score_claim": false,
+    "score_source": "none:diagnostic_component_sensitivity_merged_shards_non_promotable"
+  },
+  "summary_path": "/Users/adpena/Projects/pact/experiments/results/official_component_response_pfp16_direct_fd_modal_a10g_complete_response_only_20260501/component_response_plan_from_sensitivity_artifacts_summary.json"
+}

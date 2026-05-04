@@ -1,0 +1,13 @@
+{
+  "command": [
+    "bash",
+    "/teamspace/studios/this_studio/pact/scripts/probe_nvdec.sh"
+  ],
+  "elapsed_seconds": 4.465737879000017,
+  "name": "probe_nvdec",
+  "passed": true,
+  "returncode": 0,
+  "stderr_log": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/alpha_geo0_pose_regen_lightning_t4_20260501T103952Z/probe_nvdec.stderr.log",
+  "stdout_log": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/alpha_geo0_pose_regen_lightning_t4_20260501T103952Z/probe_nvdec.stdout.log",
+  "timed_out": false
+}

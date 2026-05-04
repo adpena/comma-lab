@@ -1,0 +1,28 @@
+{
+  "members": [
+    {
+      "bytes": 59288,
+      "name": "renderer.bin",
+      "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+    },
+    {
+      "bytes": 223385,
+      "name": "masks.mkv",
+      "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+    },
+    {
+      "bytes": 1140,
+      "name": "optimized_poses.qp1",
+      "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+    },
+    {
+      "bytes": 160,
+      "name": "seg_tile_actions.bin",
+      "sha256": "8b34ef134e6551c83d170f07c8f6672870f09df5d38551ab24320f4a2f20a373"
+    }
+  ],
+  "payload_bytes": 276233,
+  "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+  "schema": "renderer_payload_pr64_len_table_v1",
+  "source_archive_sha256": null
+}

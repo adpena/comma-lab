@@ -1,0 +1,512 @@
+{
+  "archive": {
+    "duplicate_member_names": [],
+    "exists": true,
+    "member_count": 5,
+    "members": [
+      {
+        "compress_size": 31144,
+        "crc32_hex": "20055e9d",
+        "file_size": 31144,
+        "name": "master.pt.gz",
+        "sha256": "3f3ee2b19ba5cf97017559750c0d64bc422c3f84fedaed1877741ee6c6bd5236"
+      },
+      {
+        "compress_size": 32287,
+        "crc32_hex": "7b335818",
+        "file_size": 32287,
+        "name": "slave.pt.gz",
+        "sha256": "817294dea0d940a8ef62c190bf96338f5a756930882f0f0d7f4d7c7eb87a82a8"
+      },
+      {
+        "compress_size": 28243,
+        "crc32_hex": "1624d441",
+        "file_size": 28243,
+        "name": "hpac.pt.ppmd",
+        "sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd"
+      },
+      {
+        "compress_size": 113900,
+        "crc32_hex": "9e054fa5",
+        "file_size": 113900,
+        "name": "tokens.bin",
+        "sha256": "14144bde496631f89a02646496bc2e66306bba6da149ddca37e21d85d175f225"
+      },
+      {
+        "compress_size": 1499,
+        "crc32_hex": "d1b75b6b",
+        "file_size": 1499,
+        "name": "meta.pt",
+        "sha256": "848381e2da1b0f307670174f135a3925c43d8cdc73576b4bf05fadf833de4a08"
+      }
+    ],
+    "path": "experiments/results/public_pr86_intake_20260504_codex/archive.zip",
+    "sha256": "e67b7c22240dbe33853c19d049b0044a5df16ce5f751ba8f1021cab8ceb03cef",
+    "size_bytes": 207579
+  },
+  "conclusions": {
+    "cpu_cuda_contract_status": "mismatch_needs_resolution",
+    "own_stream_decode_status": "bounded_prefix_decodes",
+    "pr85_transfer_status": "blocked_until_full PR86 own-stream decode/reencode parity, CPU/CUDA contract closure, and PR85 raw-token transfer parity are proven",
+    "submitted_archive_token_encoding": "raw_tokens",
+    "training_objective": "residual_tokens"
+  },
+  "constriction_queue_contract": {
+    "available": true,
+    "compressed_dtype": "uint32",
+    "compressed_word_count": 23,
+    "decoded_symbols_prefix": [
+      3,
+      0,
+      2,
+      4,
+      1,
+      3,
+      0,
+      2,
+      4,
+      1,
+      3,
+      0,
+      2,
+      4,
+      1,
+      3
+    ],
+    "decoded_symbols_sha256": "168e489c329705bca62f1b1a9e2117b55657467dc08c8e86a4359fb09f968913",
+    "encoded_symbols_prefix": [
+      3,
+      0,
+      2,
+      4,
+      1,
+      3,
+      0,
+      2,
+      4,
+      1,
+      3,
+      0,
+      2,
+      4,
+      1,
+      3
+    ],
+    "encoded_symbols_sha256": "168e489c329705bca62f1b1a9e2117b55657467dc08c8e86a4359fb09f968913",
+    "model_api": "constriction.stream.model.Categorical(..., perfect=False)",
+    "queue_api": "constriction.stream.queue.RangeEncoder/RangeDecoder",
+    "reversed_words_probe": {
+      "decoded_symbols_prefix": [
+        2,
+        3,
+        2,
+        1,
+        3,
+        0,
+        1,
+        3,
+        0,
+        1,
+        3,
+        2,
+        3,
+        2,
+        2,
+        2
+      ],
+      "decoded_symbols_sha256": "ef1dd52d85bb59e66e11819703c5b380ed94739840571c062e6bd27edf3d8b22",
+      "matches_original": false,
+      "status": "decoded"
+    },
+    "same_order_roundtrip_ok": true,
+    "status": "passed",
+    "symbol_count": 257,
+    "version": "0.4.2"
+  },
+  "decode_probes": [
+    {
+      "decoded_prefix_sha256": "3d238e3ed8906facdb569e209713221447390ce3de8fc3ce6be8535839477089",
+      "decoded_symbol_count": 3840,
+      "device": "cpu",
+      "elapsed_sec": 4.944,
+      "frames": [
+        {
+          "frame": 0,
+          "full_frame_decoded": false,
+          "groups": [
+            {
+              "first_symbols": [
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2
+              ],
+              "group": 0,
+              "histogram": [
+                24,
+                0,
+                121,
+                6,
+                41
+              ],
+              "positions": 192,
+              "status": "decoded"
+            },
+            {
+              "first_symbols": [
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2
+              ],
+              "group": 1,
+              "histogram": [
+                24,
+                0,
+                121,
+                5,
+                42
+              ],
+              "positions": 192,
+              "status": "decoded"
+            },
+            {
+              "first_symbols": [
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2
+              ],
+              "group": 2,
+              "histogram": [
+                46,
+                1,
+                242,
+                10,
+                85
+              ],
+              "positions": 384,
+              "status": "decoded"
+            },
+            {
+              "first_symbols": [
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2
+              ],
+              "group": 3,
+              "histogram": [
+                46,
+                1,
+                242,
+                9,
+                86
+              ],
+              "positions": 384,
+              "status": "decoded"
+            },
+            {
+              "first_symbols": [
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2
+              ],
+              "group": 4,
+              "histogram": [
+                67,
+                2,
+                363,
+                14,
+                130
+              ],
+              "positions": 576,
+              "status": "decoded"
+            },
+            {
+              "first_symbols": [
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2
+              ],
+              "group": 5,
+              "histogram": [
+                67,
+                2,
+                363,
+                13,
+                131
+              ],
+              "positions": 576,
+              "status": "decoded"
+            },
+            {
+              "first_symbols": [
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2
+              ],
+              "group": 6,
+              "histogram": [
+                90,
+                2,
+                484,
+                18,
+                174
+              ],
+              "positions": 768,
+              "status": "decoded"
+            },
+            {
+              "first_symbols": [
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2
+              ],
+              "group": 7,
+              "histogram": [
+                89,
+                3,
+                485,
+                16,
+                175
+              ],
+              "positions": 768,
+              "status": "decoded"
+            }
+          ],
+          "groups_decoded": 8
+        }
+      ],
+      "frames_decoded": 1,
+      "frames_requested": 1,
+      "full_archive_decode": false,
+      "full_frame_decode": false,
+      "groups_decoded_per_frame": 8,
+      "groups_per_frame_total": 94,
+      "groups_requested": 8,
+      "hpac_model_pairs": 600,
+      "meta": {
+        "N": 600,
+        "P": 32,
+        "ch": 64,
+        "delta": 2,
+        "hpac_d_film": 8,
+        "ppmd_max_order": 4,
+        "tokens_bpp": 0.007724338107638889,
+        "use_spm": true
+      },
+      "scope": "bounded_prefix_decode",
+      "state_load": {
+        "missing_keys": [],
+        "unexpected_keys": []
+      },
+      "status": "passed"
+    }
+  ],
+  "dependencies": {
+    "constriction": "0.4.2",
+    "numpy": "2.4.4",
+    "pyppmd": "1.3.1",
+    "python": "3.12.13",
+    "torch": "2.11.0"
+  },
+  "dispatch_performed": false,
+  "evidence_grade": "planning_only_local_bounded_decode",
+  "inflate_device_contract": {
+    "comment_claims_hpac_cpu": true,
+    "comment_code_mismatch": true,
+    "decompress_tokens_hpac_device_arg": "device",
+    "inflate_path": "experiments/results/public_pr86_intake_20260504_codex/inflate.py",
+    "interpretation": "Submitted inflate.py comments say HPAC is forced to CPU, but the call passes the main runtime device. On CUDA hosts, HPAC decode would run on CUDA unless the runtime is patched or CUDA is hidden.",
+    "main_device_expression_selects_cuda_when_available": true,
+    "submitted_code_passes_main_device_to_hpac": true
+  },
+  "planning_only": true,
+  "probability_model_contract": {
+    "archive_path": "experiments/results/public_pr86_intake_20260504_codex/training/archive.py",
+    "categorical_perfect_false_in_archive_code": true,
+    "explicit_16384_grid_in_archive_code": false,
+    "inflate_path": "experiments/results/public_pr86_intake_20260504_codex/inflate.py",
+    "interpretation": "Submitted encode/decode loops pass clipped, renormalized float64 probabilities to constriction Categorical(..., perfect=False). The README mentions a 1/16384 grid, but the submitted archive and inflate code do not implement an explicit 16384-grid quantizer.",
+    "probability_clip_eps": "1e-7",
+    "readme_mentions_16384_grid": true,
+    "readme_path": "experiments/results/public_pr86_intake_20260504_codex/training/README.md"
+  },
+  "promotable": false,
+  "recorded_at_utc": "2026-05-04T02:35:22+00:00",
+  "required_gates_before_hpac_transfer_to_pr85": [
+    {
+      "gate": "pr86_archive_custody",
+      "required_before_pr85_transfer": true,
+      "requirement": "Record archive.zip SHA-256, exact member names, member sizes, member SHA-256s, and meta.pt HPAC config.",
+      "status": "required"
+    },
+    {
+      "gate": "constriction_queue_contract",
+      "required_before_pr85_transfer": true,
+      "requirement": "Pin constriction and pyppmd versions and use stream.queue.RangeEncoder/RangeDecoder over uint32 words with Categorical(..., perfect=False).",
+      "status": "prefix_passed"
+    },
+    {
+      "gate": "token_semantics",
+      "required_before_pr85_transfer": true,
+      "requirement": "PR85 transfer must encode/decode the same token semantics as the submitted PR86 archive. Current diagnostic classifies submitted PR86 tokens.bin as raw tokens, not residual tokens.",
+      "status": "raw_token_contract_detected"
+    },
+    {
+      "gate": "pr86_own_stream_decode",
+      "required_before_pr85_transfer": true,
+      "requirement": "Before transfer, PR86 tokens.bin must decode with PR86 hpac.pt.ppmd under the pinned runtime. Bounded prefix pass is diagnostic only; full-frame/full-archive decode is still required for promotion.",
+      "status": "bounded_prefix_passed"
+    },
+    {
+      "device_contract_note": "Submitted inflate.py comments say HPAC is forced to CPU, but the call passes the main runtime device. On CUDA hosts, HPAC decode would run on CUDA unless the runtime is patched or CUDA is hidden.",
+      "gate": "cpu_cuda_hpac_contract",
+      "required_before_pr85_transfer": true,
+      "requirement": "Resolve the submitted inflate.py CPU/CUDA mismatch: either force HPAC decode to CPU and prove replay parity, or prove CPU and CUDA HPAC token decode equality under the exact constriction/torch stack.",
+      "status": "cuda_untested_or_unavailable"
+    },
+    {
+      "gate": "byte_exact_reencode",
+      "required_before_pr85_transfer": true,
+      "requirement": "Decode PR86 full tokens, re-encode with the same HPAC model and queue coder, and require byte-identical tokens.bin before using the coder as a transfer template.",
+      "status": "not_run"
+    },
+    {
+      "gate": "pr85_transfer_parity",
+      "required_before_pr85_transfer": true,
+      "requirement": "For PR85, prove decoded mask-token shape/range, raw-token parity against the PR85 baseline token source, archive byte closure, and runtime output parity before any exact-eval dispatch.",
+      "status": "not_run"
+    }
+  ],
+  "schema_version": 1,
+  "score_claim": false,
+  "token_semantics": {
+    "archive_compute_gt_tokens_call_present": true,
+    "archive_encode_frame_calls": [
+      {
+        "args": [
+          "gen",
+          "tokens_t[f:f + 1]",
+          "torch.tensor([f], dtype=torch.long, device=DEV)",
+          "prev_all[f:f + 1]",
+          "encoder"
+        ],
+        "lineno": 196,
+        "name": "encode_frame"
+      }
+    ],
+    "archive_mentions_residuals": false,
+    "archive_write_tokens_second_arg": "gt",
+    "inflate_path": "experiments/results/public_pr86_intake_20260504_codex/inflate.py",
+    "inflate_reconstructs_residuals": false,
+    "interpretation": "PR86 training optimizes residual-token targets, but the submitted archive builder passes raw SegNet token maps into encode_frame and inflate.py returns decoded tokens directly. Treat submitted tokens.bin as raw-token coded unless a separate archive proves residual reconstruction.",
+    "submitted_archive_token_encoding": "raw_tokens",
+    "training_archive_path": "experiments/results/public_pr86_intake_20260504_codex/training/archive.py",
+    "training_hpac_path": "experiments/results/public_pr86_intake_20260504_codex/training/hpac.py",
+    "training_objective": "residual_tokens",
+    "training_residual_definition_present": true
+  },
+  "tool": "pr86_hpac_replay_parity"
+}

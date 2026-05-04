@@ -1,0 +1,82 @@
+{
+  "canonical_score_source_required": "No dispatch from this profiler. Before exact eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run exact CUDA auth eval on the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+  "evidence_grade": "empirical_lossless_byte_screen",
+  "no_remote_dispatch_performed": true,
+  "recommendation": {
+    "candidate": {
+      "archive_bytes": 277321,
+      "archive_path": "experiments/results/pr79_pr77_lossless_s3_profile_20260503_codex/pr79_s2/pr79_s2_fixed_adaptive_actions/archive.zip",
+      "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+      "archive_validation_errors": [],
+      "candidate_id": "pr79_s2_fixed_adaptive_actions",
+      "decoded_semantics_proof": {
+        "action_record_parity": true,
+        "decoded_action_sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f",
+        "non_action_streams_preserved": true,
+        "runtime_parser": "submissions/robust_current/unpack_renderer_payload.py"
+      },
+      "delta_bytes_vs_pr79": -67,
+      "exact_eval_ready_after_lane_claim": true,
+      "manifest_path": "experiments/results/pr79_pr77_lossless_s3_profile_20260503_codex/pr79_s2/pr79_s2_fixed_adaptive_actions/manifest.json",
+      "no_op_status": "decoded_action_semantics_preserved_action_bytes_changed",
+      "payload_bytes": 277221,
+      "score_claim": false,
+      "stream_packing": {
+        "action_alphabet": 108,
+        "action_arithmetic_bytes": 555,
+        "action_arithmetic_nbits": 4439,
+        "action_codec": "S2_split_meta_delta_brotli_adaptive_arithmetic_actions",
+        "actions_raw_bytes": 672,
+        "actions_raw_sha256": "c66746ef4b215b7a8faac7027b21d633d31568e4456373c334a772a4af134240",
+        "meta_and_deltas_brotli_bytes": 533,
+        "meta_and_deltas_brotli_params": {
+          "lgblock": 0,
+          "lgwin": 16,
+          "mode": 0,
+          "quality": 4
+        },
+        "meta_and_deltas_raw_bytes": 778,
+        "meta_and_deltas_raw_sha256": "1fa83c8bf121b323bd4439092221b615e87b7c3aaba2d76266b7c823c8812844",
+        "payload_container": "fixed_public_slices",
+        "preserved_segments": [
+          "masks.mkv",
+          "renderer.bin",
+          "optimized_poses.qp1"
+        ],
+        "s1_baseline_brotli_bytes": 1121,
+        "s1_baseline_raw_bytes": 1450,
+        "s1_baseline_raw_sha256": "a4aa6d139460db6ecd61ce9b65f3f69560dbd39392abd9b0553be4aa145cae97"
+      },
+      "zip_profile": {
+        "archive_bytes": 277321,
+        "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+        "duplicate_member_names": [],
+        "member_count": 1,
+        "members": [
+          {
+            "compress_size": 277221,
+            "compress_type": 0,
+            "date_time": [
+              1980,
+              1,
+              1,
+              0,
+              0,
+              0
+            ],
+            "external_attr": 27525120,
+            "file_size": 277221,
+            "filename": "p"
+          }
+        ],
+        "single_stored_p": true,
+        "strict_zip_overhead_bytes": 100
+      }
+    },
+    "decision": "recommend_exact_cuda_eval_after_lane_claim",
+    "reason": "best local PR79 lossless action repack: archive bytes decrease, decoded action records and non-action streams are preserved, and archive validation is clean"
+  },
+  "schema": "pr79_pr77_lossless_s3_recommendation_v1",
+  "score_claim": false,
+  "tool": "experiments/profile_pr79_pr77_lossless_s3_candidates.py"
+}

@@ -1,0 +1,86 @@
+{
+  "archive": {
+    "bytes": 222404,
+    "duplicate_member_names": [],
+    "expected_bytes": 222404,
+    "expected_sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f",
+    "matches_expected_pr91_archive": true,
+    "member_count": 1,
+    "member_x": {
+      "bytes": 222304,
+      "compress_size": 222304,
+      "compress_type": 0,
+      "expected_bytes": 222304,
+      "expected_sha256": "5c213c61cc4d29b62286063bfdcb97e812af6b06c0021aeaecc8bc46644e17bf",
+      "file_size": 222304,
+      "matches_expected_pr91_member": true,
+      "sha256": "5c213c61cc4d29b62286063bfdcb97e812af6b06c0021aeaecc8bc46644e17bf"
+    },
+    "path": "experiments/results/public_pr91_intake_20260504_codex/archive.zip",
+    "sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f"
+  },
+  "bundle": {
+    "fixed_length_segments": {
+      "bias": 223,
+      "region": 273
+    },
+    "format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+    "header_bytes": 24,
+    "mask_expected_bytes": 145087,
+    "mask_expected_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+    "mask_matches_expected_pr91_hpm1": true,
+    "mask_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+    "segment_lengths": {
+      "bias": 223,
+      "frac": 106,
+      "frac2": 149,
+      "frac3": 154,
+      "mask": 145087,
+      "model": 57074,
+      "pose": 1487,
+      "post": 1400,
+      "randmulti": 16101,
+      "region": 273,
+      "shift": 226
+    }
+  },
+  "dispatch_performed": false,
+  "failures": [],
+  "hpac_ppmd": {
+    "bytes": 28243,
+    "sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd"
+  },
+  "local_only": true,
+  "mask": {
+    "bytes": 145087,
+    "magic": "HPM1",
+    "metadata": {
+      "H": 384,
+      "N": 600,
+      "P": 32,
+      "W": 512,
+      "ch": 64,
+      "delta": 2,
+      "header_bytes": 48,
+      "hpac_d_film": 8,
+      "hpac_len": 28243,
+      "hpac_ppmd_sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+      "ppmd_order": 4,
+      "runtime_contract": "HPM1_pr91_hpac_mask_stream",
+      "tail_bytes": 0,
+      "tokens_len": 116796,
+      "tokens_sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+      "tokens_uint32_aligned": true,
+      "tokens_uint32_words": 29199,
+      "use_spm": 1
+    },
+    "sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc"
+  },
+  "score_claim": false,
+  "status": "passed",
+  "tokens": {
+    "bytes": 116796,
+    "sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+    "uint32_words": 29199
+  }
+}

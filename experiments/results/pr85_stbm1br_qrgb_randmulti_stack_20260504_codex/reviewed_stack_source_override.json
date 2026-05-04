@@ -1,0 +1,51 @@
+{
+  "dispatch_performed": false,
+  "qrgb_planning_source_archive": {
+    "archive_bytes": 236328,
+    "archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+    "path": "experiments/results/public_pr85_intake_20260503_codex/archive.zip"
+  },
+  "remote_jobs_dispatched": false,
+  "review_scope": "local_stack_source_lineage_override_only",
+  "reviewed": true,
+  "reviewed_by": "codex",
+  "schema": "pr85_stbm1br_qrgb_stack_source_override_v1",
+  "score_claim": false,
+  "source_lineage_manifest": {
+    "path": "experiments/results/pr85_stbm1br_mask_recode_20260504_worker/pr90_stbm1br_lossless_pr85_mask_recode/manifest.json",
+    "sha256": "3a03d75144f65184fe166d3fca3dec6f718510f30c906adcbc14713691d4439e"
+  },
+  "source_sha_mismatch_override": {
+    "allowed_candidate_ids": [
+      "pr85_qrgb_f2_randglobal_pair_0192"
+    ],
+    "allowed_downstream_streams": [
+      "randmulti"
+    ],
+    "forbidden_downstream_streams": [
+      "mask"
+    ],
+    "reason": "QRGB action evidence is anchored to public PR85; stack source is STBM mask-only recode of that source"
+  },
+  "stack_source_archive": {
+    "archive_bytes": 229756,
+    "archive_sha256": "c6f004d444ed32c628611a2f21f567c666af6bcbcceba618cc089ec024a0cda6",
+    "path": "experiments/results/pr85_stbm1br_mask_recode_20260504_worker/pr90_stbm1br_lossless_pr85_mask_recode/archive.zip"
+  },
+  "transform_chain": [
+    {
+      "candidate_mask_sha256": "1b1ec60b64e284aae11e838dc3d9996bce00125df5712a8ba9c3e8f739c9d313",
+      "changed_segments": [
+        "mask"
+      ],
+      "decoded_mask_equal": true,
+      "diff_pixels": 0,
+      "input_archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+      "output_archive_sha256": "c6f004d444ed32c628611a2f21f567c666af6bcbcceba618cc089ec024a0cda6",
+      "preserved_non_mask_segments": true,
+      "render_order_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+      "source_mask_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+      "transform_id": "pr90_stbm1br_lossless_pr85_mask_recode"
+    }
+  ]
+}

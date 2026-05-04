@@ -1,0 +1,655 @@
+{
+  "archive_byte_profile": {
+    "archive_name": "archive.zip",
+    "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr82_henosis_atom_transfer_20260503_codex/pr82_pose_velocity_top032_on_source/archive.zip",
+    "archive_sha256": "d0a3780123d25dd82727abad145995da7b382bdd3b2db5afc74b1517fbe67a25",
+    "duplicate_detection": {
+      "duplicate_member_names": [],
+      "duplicate_payload_hashes": [],
+      "has_duplicate_member_names": false,
+      "has_duplicate_payload_hashes": false
+    },
+    "evidence_grade": "byte_profile_only",
+    "extension_totals": [
+      {
+        "compressed_size": 277222,
+        "member_count": 1,
+        "name": "(no_extension)",
+        "rate_term": 0.184590750702,
+        "uncompressed_size": 277222
+      }
+    ],
+    "member_count": 1,
+    "members": [
+      {
+        "central_directory_header_bytes_estimate": 47,
+        "compressed_size": 277222,
+        "compression_ratio": 1.0,
+        "crc32": "64c9e660",
+        "extension_group": "(no_extension)",
+        "header_offset": 0,
+        "histogram": {
+          "histogram_counts": [
+            1266,
+            1140,
+            1095,
+            1021,
+            1106,
+            1075,
+            1086,
+            1111,
+            1123,
+            1055,
+            1155,
+            1123,
+            1111,
+            1032,
+            1060,
+            1103,
+            1096,
+            1091,
+            1045,
+            1057,
+            1070,
+            1040,
+            1044,
+            1122,
+            1103,
+            1079,
+            1042,
+            1073,
+            1046,
+            1049,
+            1092,
+            1095,
+            1127,
+            1017,
+            1067,
+            1114,
+            1053,
+            1069,
+            1110,
+            1075,
+            1059,
+            1146,
+            1086,
+            1052,
+            1131,
+            1132,
+            1090,
+            1041,
+            1143,
+            1160,
+            1032,
+            1047,
+            1117,
+            1085,
+            1104,
+            1056,
+            1119,
+            1101,
+            1033,
+            1086,
+            1092,
+            1141,
+            1030,
+            1141,
+            1085,
+            1085,
+            1068,
+            1082,
+            1070,
+            1069,
+            1070,
+            1104,
+            1038,
+            1088,
+            1073,
+            1075,
+            1120,
+            1084,
+            1106,
+            1070,
+            1109,
+            1046,
+            1042,
+            996,
+            1029,
+            1000,
+            1096,
+            1045,
+            1147,
+            1076,
+            1049,
+            1095,
+            1065,
+            1120,
+            1107,
+            1123,
+            1109,
+            1086,
+            1104,
+            1111,
+            1046,
+            1103,
+            1055,
+            1114,
+            1063,
+            1060,
+            1076,
+            1102,
+            1100,
+            1084,
+            1110,
+            1089,
+            1064,
+            1071,
+            1058,
+            1017,
+            1099,
+            1119,
+            1098,
+            1096,
+            1118,
+            1118,
+            1084,
+            1092,
+            1009,
+            1070,
+            1087,
+            1132,
+            1174,
+            1061,
+            1031,
+            1119,
+            1098,
+            1016,
+            1117,
+            1124,
+            1059,
+            1060,
+            1038,
+            1110,
+            1146,
+            1090,
+            1082,
+            1057,
+            1127,
+            1071,
+            1092,
+            1029,
+            1110,
+            1040,
+            1138,
+            1094,
+            1041,
+            1093,
+            1147,
+            1080,
+            1079,
+            1081,
+            1064,
+            1104,
+            1153,
+            1051,
+            1061,
+            1050,
+            1098,
+            1064,
+            1108,
+            1056,
+            1071,
+            1037,
+            1048,
+            1060,
+            1072,
+            1040,
+            1048,
+            1045,
+            1086,
+            1048,
+            1056,
+            1029,
+            1070,
+            1071,
+            1051,
+            1083,
+            1041,
+            1006,
+            1048,
+            1067,
+            1086,
+            1061,
+            1053,
+            1122,
+            1098,
+            1081,
+            1047,
+            1015,
+            1212,
+            1073,
+            1088,
+            1109,
+            1070,
+            1101,
+            1081,
+            1125,
+            1054,
+            1090,
+            1081,
+            1122,
+            1108,
+            1027,
+            1067,
+            1112,
+            1091,
+            1095,
+            1061,
+            1068,
+            1114,
+            1067,
+            1142,
+            1099,
+            1086,
+            1102,
+            1076,
+            1084,
+            1090,
+            959,
+            1049,
+            1150,
+            1092,
+            1049,
+            1056,
+            1138,
+            1040,
+            1111,
+            1100,
+            1101,
+            1098,
+            1072,
+            1086,
+            1124,
+            1065,
+            1049,
+            1028,
+            1034,
+            1129,
+            1058,
+            1144,
+            1082,
+            1050,
+            1074,
+            1139,
+            1070,
+            1142,
+            1123,
+            1082,
+            1142
+          ],
+          "printable_ascii_fraction": 0.371182662271,
+          "shannon_entropy_bits_per_byte": 7.999133502728,
+          "top_bytes": [
+            {
+              "byte": 0,
+              "count": 1266,
+              "fraction": 0.004566737128,
+              "hex": "0x00"
+            },
+            {
+              "byte": 196,
+              "count": 1212,
+              "fraction": 0.004371947392,
+              "hex": "0xc4"
+            },
+            {
+              "byte": 128,
+              "count": 1174,
+              "fraction": 0.004234873134,
+              "hex": "0x80"
+            },
+            {
+              "byte": 49,
+              "count": 1160,
+              "fraction": 0.004184372092,
+              "hex": "0x31"
+            },
+            {
+              "byte": 10,
+              "count": 1155,
+              "fraction": 0.004166336005,
+              "hex": "0x0a"
+            },
+            {
+              "byte": 160,
+              "count": 1153,
+              "fraction": 0.00415912157,
+              "hex": "0xa0"
+            },
+            {
+              "byte": 227,
+              "count": 1150,
+              "fraction": 0.004148299918,
+              "hex": "0xe3"
+            },
+            {
+              "byte": 88,
+              "count": 1147,
+              "fraction": 0.004137478267,
+              "hex": "0x58"
+            },
+            {
+              "byte": 154,
+              "count": 1147,
+              "fraction": 0.004137478267,
+              "hex": "0x9a"
+            },
+            {
+              "byte": 41,
+              "count": 1146,
+              "fraction": 0.004133871049,
+              "hex": "0x29"
+            }
+          ],
+          "unique_byte_count": 256,
+          "zero_byte_count": 1266,
+          "zero_byte_fraction": 0.004566737128,
+          "zero_order_entropy_bytes": 277192
+        },
+        "is_dir": false,
+        "local_header_bytes_estimate": 31,
+        "method": "stored",
+        "method_id": 0,
+        "name": "p",
+        "occurrence": 1,
+        "path_group": "(root)",
+        "rate_term": 0.184590750702,
+        "sha256": "418fa7811cbe11ba6c9611b2c04f6fdd6a8f46d4d3899b37f7fa0dc8866a2314",
+        "uncompressed_size": 277222
+      }
+    ],
+    "path_group_totals": [
+      {
+        "compressed_size": 277222,
+        "member_count": 1,
+        "name": "(root)",
+        "rate_term": 0.184590750702,
+        "uncompressed_size": 277222
+      }
+    ],
+    "rate_term": 0.184657336598,
+    "schema": "archive_byte_profile_v1",
+    "score_claim": false,
+    "tool": "experiments/profile_archive_bytes.py",
+    "top_contributors": [
+      {
+        "compressed_size": 277222,
+        "method": "stored",
+        "name": "p",
+        "occurrence": 1,
+        "rate_term": 0.184590750702,
+        "uncompressed_size": 277222
+      }
+    ],
+    "total_bytes": 277322,
+    "valid_profile": true,
+    "zip_overhead_estimate": {
+      "archive_non_payload_bytes": 100,
+      "central_directory_header_bytes_estimate": 47,
+      "compressed_payload_bytes": 277222,
+      "local_header_bytes_estimate": 31,
+      "rate_term": 6.6585895e-05,
+      "unassigned_overhead_bytes_estimate": 22
+    }
+  },
+  "candidate_id": "pr82_pose_velocity_top032_on_source",
+  "candidate_kind": "pr82_p1d1_velocity_atoms_reencoded_qp1",
+  "dispatch_gate": {
+    "component_gain_required_for_sub314": 0.0005342194321394738,
+    "component_gain_required_to_beat_pr79_s2": 6.658589531221714e-07,
+    "dispatch_ready_now": false,
+    "formula_rate_score_delta_vs_source": 6.658589531221714e-07,
+    "lane_claim_required_before_any_exact_eval": true,
+    "proxy_component_gain": 0.0,
+    "reason": "no local raw-output delta proof is attached; nearby transfer family already has negative exact T4 evidence; no component proxy clears the rate break-even against PR79/S2",
+    "recommendation": "do_not_dispatch",
+    "remote_dispatch_performed": false,
+    "score_claim": false
+  },
+  "evidence_grade": "empirical_local_archive_build_and_pose_word_accounting",
+  "manifest_schema": "pr82_henosis_atom_transfer_manifest_v1",
+  "no_op_detection": {
+    "changed_pose_word_count": 32,
+    "is_noop": false,
+    "selected_atom_count": 32
+  },
+  "no_remote_dispatch": true,
+  "output_archive": {
+    "bytes": 277322,
+    "path": "experiments/results/pr82_henosis_atom_transfer_20260503_codex/pr82_pose_velocity_top032_on_source/archive.zip",
+    "sha256": "d0a3780123d25dd82727abad145995da7b382bdd3b2db5afc74b1517fbe67a25"
+  },
+  "pose_change": {
+    "base_pose_brotli_bytes": 898,
+    "base_pose_qp1_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+    "candidate_pose_brotli_bytes": 899,
+    "candidate_pose_brotli_params": {
+      "lgwin": 10,
+      "mode": 0,
+      "quality": 11
+    },
+    "candidate_pose_brotli_sha256": "97120301d23e48f48206c5bd5f78e1822b85a27699de860aff1e5f387cc60451",
+    "candidate_pose_qp1_sha256": "529e70e6207ecfa31fb4d337bb31327b9e8c69f0bf7d046f4975ebdff2110295",
+    "pr82_pose_float32_sha256": "ac4156113de559ad3738a878be0b577ad86f0269b37e0421249cff3e7752c523",
+    "selected_atoms": [
+      {
+        "abs_delta_q": 44,
+        "delta_q": 44,
+        "dimension": 0,
+        "pair_index": 54
+      },
+      {
+        "abs_delta_q": 31,
+        "delta_q": 31,
+        "dimension": 0,
+        "pair_index": 452
+      },
+      {
+        "abs_delta_q": 30,
+        "delta_q": -30,
+        "dimension": 0,
+        "pair_index": 21
+      },
+      {
+        "abs_delta_q": 30,
+        "delta_q": 30,
+        "dimension": 0,
+        "pair_index": 44
+      },
+      {
+        "abs_delta_q": 30,
+        "delta_q": 30,
+        "dimension": 0,
+        "pair_index": 90
+      },
+      {
+        "abs_delta_q": 30,
+        "delta_q": 30,
+        "dimension": 0,
+        "pair_index": 107
+      },
+      {
+        "abs_delta_q": 30,
+        "delta_q": 30,
+        "dimension": 0,
+        "pair_index": 316
+      },
+      {
+        "abs_delta_q": 30,
+        "delta_q": 30,
+        "dimension": 0,
+        "pair_index": 412
+      },
+      {
+        "abs_delta_q": 30,
+        "delta_q": 30,
+        "dimension": 0,
+        "pair_index": 501
+      },
+      {
+        "abs_delta_q": 29,
+        "delta_q": 29,
+        "dimension": 0,
+        "pair_index": 237
+      },
+      {
+        "abs_delta_q": 29,
+        "delta_q": 29,
+        "dimension": 0,
+        "pair_index": 445
+      },
+      {
+        "abs_delta_q": 28,
+        "delta_q": -28,
+        "dimension": 0,
+        "pair_index": 38
+      },
+      {
+        "abs_delta_q": 28,
+        "delta_q": -28,
+        "dimension": 0,
+        "pair_index": 64
+      },
+      {
+        "abs_delta_q": 28,
+        "delta_q": 28,
+        "dimension": 0,
+        "pair_index": 444
+      },
+      {
+        "abs_delta_q": 27,
+        "delta_q": -27,
+        "dimension": 0,
+        "pair_index": 15
+      },
+      {
+        "abs_delta_q": 27,
+        "delta_q": 27,
+        "dimension": 0,
+        "pair_index": 261
+      },
+      {
+        "abs_delta_q": 27,
+        "delta_q": 27,
+        "dimension": 0,
+        "pair_index": 372
+      },
+      {
+        "abs_delta_q": 27,
+        "delta_q": 27,
+        "dimension": 0,
+        "pair_index": 456
+      },
+      {
+        "abs_delta_q": 26,
+        "delta_q": -26,
+        "dimension": 0,
+        "pair_index": 72
+      },
+      {
+        "abs_delta_q": 26,
+        "delta_q": 26,
+        "dimension": 0,
+        "pair_index": 75
+      },
+      {
+        "abs_delta_q": 26,
+        "delta_q": 26,
+        "dimension": 0,
+        "pair_index": 181
+      },
+      {
+        "abs_delta_q": 26,
+        "delta_q": 26,
+        "dimension": 0,
+        "pair_index": 366
+      },
+      {
+        "abs_delta_q": 26,
+        "delta_q": 26,
+        "dimension": 0,
+        "pair_index": 435
+      },
+      {
+        "abs_delta_q": 25,
+        "delta_q": -25,
+        "dimension": 0,
+        "pair_index": 43
+      },
+      {
+        "abs_delta_q": 25,
+        "delta_q": 25,
+        "dimension": 0,
+        "pair_index": 77
+      },
+      {
+        "abs_delta_q": 25,
+        "delta_q": -25,
+        "dimension": 0,
+        "pair_index": 190
+      },
+      {
+        "abs_delta_q": 25,
+        "delta_q": 25,
+        "dimension": 0,
+        "pair_index": 439
+      },
+      {
+        "abs_delta_q": 24,
+        "delta_q": 24,
+        "dimension": 0,
+        "pair_index": 5
+      },
+      {
+        "abs_delta_q": 24,
+        "delta_q": 24,
+        "dimension": 0,
+        "pair_index": 26
+      },
+      {
+        "abs_delta_q": 24,
+        "delta_q": 24,
+        "dimension": 0,
+        "pair_index": 110
+      },
+      {
+        "abs_delta_q": 24,
+        "delta_q": -24,
+        "dimension": 0,
+        "pair_index": 149
+      },
+      {
+        "abs_delta_q": 24,
+        "delta_q": -24,
+        "dimension": 0,
+        "pair_index": 169
+      }
+    ]
+  },
+  "schema": "pr82_henosis_atom_transfer_candidates_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 277321,
+    "path": "experiments/results/pr79_action_dictionary_repack_v2_20260503_codex/pr79_s2_fixed_adaptive_actions/archive.zip",
+    "sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68"
+  },
+  "stream_closure": {
+    "non_pose_streams_preserved": true,
+    "source_payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices"
+  },
+  "stream_delta": {
+    "archive_delta_bytes_vs_source": 1,
+    "pose_brotli_delta_bytes_vs_source": 1
+  },
+  "tool": "experiments/build_pr82_henosis_atom_transfer_candidates.py"
+}

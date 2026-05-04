@@ -1,0 +1,38 @@
+{
+  "adjudication": {
+    "allow_component_gate_forensic_success": true,
+    "allow_sane_score_forensic_success": true,
+    "baseline_archive_size_bytes": 276214,
+    "baseline_posenet_dist": 0.00049637,
+    "baseline_score": 0.31561703078448233,
+    "baseline_segnet_dist": 0.00061244,
+    "component_reference_label": "c067_micro_mask_save08k_vs_c067",
+    "delta_key": "score_delta_vs_c067",
+    "max_posenet_dist": null,
+    "max_posenet_relative": null,
+    "max_sane_score": 60.0,
+    "max_segnet_dist": null,
+    "max_segnet_relative": null,
+    "predicted_band_high": 30.0,
+    "predicted_band_low": 0.2,
+    "provenance_name": "adjudication_provenance.json",
+    "regression_threshold": 60.0,
+    "required_device": "cuda",
+    "required_samples": 600,
+    "result_copy_name": "contest_auth_eval.adjudicated.json"
+  },
+  "artifact_recorded_at_utc": "2026-05-03T03:22:49Z",
+  "expected_archive_sha256": "be9ed67b0369b30c14ae797db12ed002659bf290e4baec42558730506d16b2bf",
+  "expected_archive_size_bytes": 264068,
+  "job_name": "exact_eval_c067_micro_mask_save08k_l40sdiag_20260503T0313Z",
+  "queue_metadata": {
+    "candidate_role": "protected_micro_av1_mask_reencode",
+    "lane": "c067_micro_mask_reencode_save08k_l40sdiag",
+    "score_claim": "false",
+    "sibling_save12k_negative": "true"
+  },
+  "role": "exact_cuda_eval",
+  "schema_version": 1,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

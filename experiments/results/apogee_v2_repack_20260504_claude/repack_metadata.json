@@ -1,0 +1,139 @@
+{
+  "pr106_archive": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip",
+  "pr106_archive_size": 186239,
+  "apogee_v2_archive": "experiments/results/apogee_v2_repack_20260504_claude/apogee_v2_archive.zip",
+  "apogee_v2_archive_size": 164087,
+  "size_delta_bytes": -22152,
+  "rate_component_score_delta": -0.014750107529562339,
+  "target_decoder_bytes": 145000,
+  "decoder_actual_bytes": 147562,
+  "n_owv2_layers": 9,
+  "n_brotli_int8_layers": 19,
+  "sensitivity_source": "experiments/results/sensitivity_map_pr106_20260504_claude/sensitivity_map_stub.pt",
+  "sensitivity_meta": {
+    "score_formula": "100*seg + sqrt(10*pose) per CLAUDE.md",
+    "n_pairs": 600,
+    "device": "cpu",
+    "is_stub": true,
+    "tag": "[stub-design-mode]",
+    "n_params_total": 228958,
+    "state_dict_source": "experiments/results/sensitivity_map_pr106_20260504_claude/state_dict.pt",
+    "latents_source": "experiments/results/sensitivity_map_pr106_20260504_claude/latents.pt",
+    "ts_utc": "2026-05-04T20:46:15Z"
+  },
+  "per_tensor_bytes": {
+    "stem.weight": {
+      "codec_id": 0,
+      "bytes": 31864
+    },
+    "blocks.0.weight": {
+      "codec_id": 1,
+      "bytes": 28873
+    },
+    "blocks.1.weight": {
+      "codec_id": 1,
+      "bytes": 28178
+    },
+    "blocks.2.weight": {
+      "codec_id": 1,
+      "bytes": 21373
+    },
+    "blocks.3.weight": {
+      "codec_id": 1,
+      "bytes": 12648
+    },
+    "blocks.4.weight": {
+      "codec_id": 1,
+      "bytes": 8618
+    },
+    "blocks.5.weight": {
+      "codec_id": 1,
+      "bytes": 7642
+    },
+    "stem.bias": {
+      "codec_id": 0,
+      "bytes": 1644
+    },
+    "refine.0.weight": {
+      "codec_id": 1,
+      "bytes": 1219
+    },
+    "refine.1.weight": {
+      "codec_id": 1,
+      "bytes": 1319
+    },
+    "skips.2.weight": {
+      "codec_id": 1,
+      "bytes": 1082
+    },
+    "skips.3.weight": {
+      "codec_id": 0,
+      "bytes": 541
+    },
+    "rgb_0.weight": {
+      "codec_id": 0,
+      "bytes": 463
+    },
+    "rgb_1.weight": {
+      "codec_id": 0,
+      "bytes": 470
+    },
+    "skips.4.weight": {
+      "codec_id": 0,
+      "bytes": 386
+    },
+    "blocks.0.bias": {
+      "codec_id": 0,
+      "bytes": 185
+    },
+    "blocks.1.bias": {
+      "codec_id": 0,
+      "bytes": 185
+    },
+    "blocks.2.bias": {
+      "codec_id": 0,
+      "bytes": 149
+    },
+    "blocks.3.bias": {
+      "codec_id": 0,
+      "bytes": 121
+    },
+    "blocks.4.bias": {
+      "codec_id": 0,
+      "bytes": 113
+    },
+    "blocks.5.bias": {
+      "codec_id": 0,
+      "bytes": 113
+    },
+    "skips.2.bias": {
+      "codec_id": 0,
+      "bytes": 67
+    },
+    "skips.3.bias": {
+      "codec_id": 0,
+      "bytes": 60
+    },
+    "skips.4.bias": {
+      "codec_id": 0,
+      "bytes": 58
+    },
+    "refine.1.bias": {
+      "codec_id": 0,
+      "bytes": 59
+    },
+    "refine.0.bias": {
+      "codec_id": 0,
+      "bytes": 50
+    },
+    "rgb_0.bias": {
+      "codec_id": 0,
+      "bytes": 41
+    },
+    "rgb_1.bias": {
+      "codec_id": 0,
+      "bytes": 41
+    }
+  },
+  "tag": "[design-validation]"
+}

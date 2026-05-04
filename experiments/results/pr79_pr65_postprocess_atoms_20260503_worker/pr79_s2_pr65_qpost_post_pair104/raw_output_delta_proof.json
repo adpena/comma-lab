@@ -1,0 +1,30 @@
+{
+  "after_bytes": 6104016,
+  "after_sha256": "0eec4df93ce3b9abd857a78529131804a5f2abb2a68588756c922748f3ad08f0",
+  "before_bytes": 6104016,
+  "before_sha256": "2df4c7618dd49fc58adb1cca7a32a64cc020d267ad60ba6bd8a056607a1725f4",
+  "changed_values": 3051750,
+  "compared_values": 6104016,
+  "device": "cpu",
+  "exact_equal": false,
+  "height": 874,
+  "max_abs_delta": 4,
+  "mean_abs_delta": 1.1659771206366432,
+  "proof_pair_index": 104,
+  "proof_type": "runtime_apply_qzs3_postprocess_selected_raw_pair",
+  "qpost_path": "experiments/results/pr79_pr65_postprocess_atoms_20260503_worker/pr79_s2_pr65_qpost_post_pair104/qpost_for_raw_delta_proof.bin",
+  "qpost_sha256": "92c8b36700d2797884d52995654ca007242504335d6f977c0421d69180ece30a",
+  "runtime_helper": "submissions/robust_current/apply_qzs3_postprocess.py",
+  "runtime_helper_sha256": "83a06ca93119dea43b74a8b466b417a5f99d6a8d64d772fdc85e0c3ea155abe0",
+  "selected_raw_pair_indices": [
+    0,
+    12,
+    33,
+    54,
+    104,
+    598
+  ],
+  "selected_raw_path": "experiments/results/top_submission_reverse_engineering_20260503_pr79/raw_output_parity_pairs_cpu/selected_raw/robust_current_selected.raw",
+  "selected_raw_sha256": "172d469ae42d8f262681d68d8957b3fd9774706030053fe06f24d578b0dd9aec",
+  "width": 1164
+}

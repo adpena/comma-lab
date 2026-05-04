@@ -1,0 +1,972 @@
+{
+  "candidates": [
+    {
+      "archive_path": "experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/builds/q6_minrpk1_stored/archive.zip",
+      "bytes": 276728,
+      "candidate_id": "q6_minrpk1_stored",
+      "changed_payload_proof": {
+        "archive_members": [
+          "p",
+          "sjkl.bin"
+        ],
+        "candidate_p_sha256": "93250610cbb819241d1356554149738af7de55e83a006396883fc7a18f51eff5",
+        "parent_p_sha256": "93250610cbb819241d1356554149738af7de55e83a006396883fc7a18f51eff5",
+        "score_affecting_payload_charged_in_archive": true,
+        "sidecars_required": false,
+        "sjkl_member_bytes": 250,
+        "sjkl_member_present": true,
+        "sjkl_member_sha256": "13f605bfd9ad950807d410c8371f20fd2b1c3d9c04bb59cc6bf07d474dcc78bb",
+        "source_payload_preserved_byte_for_byte": true
+      },
+      "dispatch_priority": "top_byte_candidate_but_defer_exact_eval",
+      "exact_cuda_command_template": "SJKL_REQUIRE_APPLIED=1 .venv/bin/python -u experiments/contest_auth_eval.py --archive experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/builds/q6_minrpk1_stored/archive.zip --inflate-sh submissions/robust_current/inflate.sh --upstream-dir upstream --device cuda --keep-work-dir --work-dir experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/exact_cuda/q6_minrpk1_stored",
+      "expected_score_band": {
+        "basis": "C067 exact T4 q6 component gain was ~0.00000284; high edge allows small PR75 interaction drift but no evidence supports the >0.00175 gain required for sub-0.314.",
+        "component_score_gain_required_for_sub314": 0.0017504157386971642,
+        "formula_only_no_component_change": 0.31575041573869717,
+        "high": 0.3158704157386972,
+        "low": 0.31574757693094424,
+        "rate_delta_vs_parent": 0.0002277237619677826
+      },
+      "no_op_proof": {
+        "local_static_runtime_apply_proof": {
+          "path": "/Users/adpena/Projects/pact/submissions/robust_current/inflate_renderer.py",
+          "proof_tokens": [
+            "SJKL_REQUIRE_APPLIED",
+            "_finalize_sjkl_application_contract",
+            "_apply_sjkl_residual_to_pairs",
+            "applied_pair_count",
+            "charged sjkl.bin did not affect"
+          ],
+          "require_env": "SJKL_REQUIRE_APPLIED=1",
+          "sha256": "57eff4e2d7c4de0ef20c8e0cea66e9464684ed14956872e603bb4a65e8c39d9e",
+          "verified": true
+        },
+        "pr75_exact_apply_status": "not run; exact CUDA template below sets SJKL_REQUIRE_APPLIED=1 so no-op should fail closed before score claim",
+        "prior_exact_or_diagnostic_apply_evidence": {
+          "archive_bytes": 276556,
+          "component_delta_vs_c067_score_terms": -2.8388077529528655e-06,
+          "evidence_grade": "A++ exact T4 on C067 parent, not PR75 stack",
+          "label": "sjkl_q6_minrpk1_on_C067_T4",
+          "observed_summary": "T4 strict apply passed, but total worsened versus C067 because component benefit was only about 0.00000284 while rate cost was 0.00022772.",
+          "score": 0.3158419419767293,
+          "strict_applied_pairs": 16,
+          "strict_apply_log": "experiments/results/lightning_batch/exact_eval_sjkl_c067_q6_sibling_t4_20260502T2357Z/auth_eval.log:101,108,119"
+        },
+        "residual_blind_spot": "PR75/C088 exact component response is unmeasured; cannot promote, rank, or claim sub-0.314 without CUDA auth eval on this exact archive."
+      },
+      "sha256": "f97e1dd1ef7e888b8ff72cbb94a534adc5403a5d677086de316c34930a7138d7",
+      "sjkl_payload": {
+        "bytes": 250,
+        "path": "/Users/adpena/Projects/pact/experiments/results/sjkl_c067_shrink_q6_minrpk1_20260502T_worker/repack/sjkl.bin",
+        "sha256": "13f605bfd9ad950807d410c8371f20fd2b1c3d9c04bb59cc6bf07d474dcc78bb",
+        "zip_compression": "stored"
+      },
+      "source_parent": {
+        "archive_path": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/archive.zip",
+        "bytes": 276386,
+        "label": "C088_PR75_top40_p3_T4",
+        "score_evidence": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/contest_auth_eval.json",
+        "score_recomputed_from_components": 0.3155226919767294,
+        "sha256": "9feef7ffaa254f9e5408996a122682757a054144a3000539553786c5292b7d0a"
+      }
+    },
+    {
+      "archive_path": "experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/builds/q6_minrpk1_deflated/archive.zip",
+      "bytes": 276733,
+      "candidate_id": "q6_minrpk1_deflated",
+      "changed_payload_proof": {
+        "archive_members": [
+          "p",
+          "sjkl.bin"
+        ],
+        "candidate_p_sha256": "93250610cbb819241d1356554149738af7de55e83a006396883fc7a18f51eff5",
+        "parent_p_sha256": "93250610cbb819241d1356554149738af7de55e83a006396883fc7a18f51eff5",
+        "score_affecting_payload_charged_in_archive": true,
+        "sidecars_required": false,
+        "sjkl_member_bytes": 250,
+        "sjkl_member_present": true,
+        "sjkl_member_sha256": "13f605bfd9ad950807d410c8371f20fd2b1c3d9c04bb59cc6bf07d474dcc78bb",
+        "source_payload_preserved_byte_for_byte": true
+      },
+      "dispatch_priority": "do_not_dispatch_immediate_t4",
+      "exact_cuda_command_template": "SJKL_REQUIRE_APPLIED=1 .venv/bin/python -u experiments/contest_auth_eval.py --archive experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/builds/q6_minrpk1_deflated/archive.zip --inflate-sh submissions/robust_current/inflate.sh --upstream-dir upstream --device cuda --keep-work-dir --work-dir experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/exact_cuda/q6_minrpk1_deflated",
+      "expected_score_band": {
+        "basis": "C067 exact T4 q6 component gain was ~0.00000284; high edge allows small PR75 interaction drift but no evidence supports the >0.00175 gain required for sub-0.314.",
+        "component_score_gain_required_for_sub314": 0.0017537450334627613,
+        "formula_only_no_component_change": 0.31575374503346276,
+        "high": 0.31587374503346277,
+        "low": 0.3157509062257098,
+        "rate_delta_vs_parent": 0.00023105305673339345
+      },
+      "no_op_proof": {
+        "local_static_runtime_apply_proof": {
+          "path": "/Users/adpena/Projects/pact/submissions/robust_current/inflate_renderer.py",
+          "proof_tokens": [
+            "SJKL_REQUIRE_APPLIED",
+            "_finalize_sjkl_application_contract",
+            "_apply_sjkl_residual_to_pairs",
+            "applied_pair_count",
+            "charged sjkl.bin did not affect"
+          ],
+          "require_env": "SJKL_REQUIRE_APPLIED=1",
+          "sha256": "57eff4e2d7c4de0ef20c8e0cea66e9464684ed14956872e603bb4a65e8c39d9e",
+          "verified": true
+        },
+        "pr75_exact_apply_status": "not run; exact CUDA template below sets SJKL_REQUIRE_APPLIED=1 so no-op should fail closed before score claim",
+        "prior_exact_or_diagnostic_apply_evidence": {
+          "archive_bytes": 276556,
+          "component_delta_vs_c067_score_terms": -2.8388077529528655e-06,
+          "evidence_grade": "A++ exact T4 on C067 parent, not PR75 stack",
+          "label": "sjkl_q6_minrpk1_on_C067_T4",
+          "observed_summary": "T4 strict apply passed, but total worsened versus C067 because component benefit was only about 0.00000284 while rate cost was 0.00022772.",
+          "score": 0.3158419419767293,
+          "strict_applied_pairs": 16,
+          "strict_apply_log": "experiments/results/lightning_batch/exact_eval_sjkl_c067_q6_sibling_t4_20260502T2357Z/auth_eval.log:101,108,119"
+        },
+        "residual_blind_spot": "PR75/C088 exact component response is unmeasured; cannot promote, rank, or claim sub-0.314 without CUDA auth eval on this exact archive."
+      },
+      "sha256": "7ef4e7493678be6d9b94f74aa7851e91cd3c58b77bb3a5a38ee415708256a092",
+      "sjkl_payload": {
+        "bytes": 250,
+        "path": "/Users/adpena/Projects/pact/experiments/results/sjkl_c067_shrink_q6_minrpk1_20260502T_worker/repack/sjkl.bin",
+        "sha256": "13f605bfd9ad950807d410c8371f20fd2b1c3d9c04bb59cc6bf07d474dcc78bb",
+        "zip_compression": "deflated"
+      },
+      "source_parent": {
+        "archive_path": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/archive.zip",
+        "bytes": 276386,
+        "label": "C088_PR75_top40_p3_T4",
+        "score_evidence": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/contest_auth_eval.json",
+        "score_recomputed_from_components": 0.3155226919767294,
+        "sha256": "9feef7ffaa254f9e5408996a122682757a054144a3000539553786c5292b7d0a"
+      }
+    },
+    {
+      "archive_path": "experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/builds/consensus24_g0046875_deflated/archive.zip",
+      "bytes": 276773,
+      "candidate_id": "consensus24_g0046875_deflated",
+      "changed_payload_proof": {
+        "archive_members": [
+          "p",
+          "sjkl.bin"
+        ],
+        "candidate_p_sha256": "93250610cbb819241d1356554149738af7de55e83a006396883fc7a18f51eff5",
+        "parent_p_sha256": "93250610cbb819241d1356554149738af7de55e83a006396883fc7a18f51eff5",
+        "score_affecting_payload_charged_in_archive": true,
+        "sidecars_required": false,
+        "sjkl_member_bytes": 296,
+        "sjkl_member_present": true,
+        "sjkl_member_sha256": "ff0e83b43600ef0e6aea3ef153d76eff2efba6373ab472ce57aa09a54cbfd66a",
+        "source_payload_preserved_byte_for_byte": true
+      },
+      "dispatch_priority": "do_not_dispatch_immediate_t4",
+      "exact_cuda_command_template": "SJKL_REQUIRE_APPLIED=1 .venv/bin/python -u experiments/contest_auth_eval.py --archive experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/builds/consensus24_g0046875_deflated/archive.zip --inflate-sh submissions/robust_current/inflate.sh --upstream-dir upstream --device cuda --keep-work-dir --work-dir experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/exact_cuda/consensus24_g0046875_deflated",
+      "expected_score_band": {
+        "basis": "No exact T4 PR75 component response exists; prior C067 SJ-KL results are diagnostic or negative, so this band is a conservative prediction around parent+rate.",
+        "component_score_gain_required_for_sub314": 0.0017803793915876498,
+        "formula_only_no_component_change": 0.31578037939158765,
+        "high": 0.31598037939158763,
+        "low": 0.31578037939158765,
+        "rate_delta_vs_parent": 0.0002576874148582803
+      },
+      "no_op_proof": {
+        "local_static_runtime_apply_proof": {
+          "path": "/Users/adpena/Projects/pact/submissions/robust_current/inflate_renderer.py",
+          "proof_tokens": [
+            "SJKL_REQUIRE_APPLIED",
+            "_finalize_sjkl_application_contract",
+            "_apply_sjkl_residual_to_pairs",
+            "applied_pair_count",
+            "charged sjkl.bin did not affect"
+          ],
+          "require_env": "SJKL_REQUIRE_APPLIED=1",
+          "sha256": "57eff4e2d7c4de0ef20c8e0cea66e9464684ed14956872e603bb4a65e8c39d9e",
+          "verified": true
+        },
+        "pr75_exact_apply_status": "not run; exact CUDA template below sets SJKL_REQUIRE_APPLIED=1 so no-op should fail closed before score claim",
+        "prior_exact_or_diagnostic_apply_evidence": null,
+        "residual_blind_spot": "PR75/C088 exact component response is unmeasured; cannot promote, rank, or claim sub-0.314 without CUDA auth eval on this exact archive."
+      },
+      "sha256": "db0196f6a07c9791f43868763d7bcbb5f767b2ab4e69908d57d4fdf0b982c7c5",
+      "sjkl_payload": {
+        "bytes": 296,
+        "path": "/Users/adpena/Projects/pact/experiments/results/sjkl_c067_consensus_top24_g0046875_sibling_20260503/repack/sjkl.bin",
+        "sha256": "ff0e83b43600ef0e6aea3ef153d76eff2efba6373ab472ce57aa09a54cbfd66a",
+        "zip_compression": "deflated"
+      },
+      "source_parent": {
+        "archive_path": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/archive.zip",
+        "bytes": 276386,
+        "label": "C088_PR75_top40_p3_T4",
+        "score_evidence": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/contest_auth_eval.json",
+        "score_recomputed_from_components": 0.3155226919767294,
+        "sha256": "9feef7ffaa254f9e5408996a122682757a054144a3000539553786c5292b7d0a"
+      }
+    },
+    {
+      "archive_path": "experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/builds/consensus24_g0046875_stored/archive.zip",
+      "bytes": 276774,
+      "candidate_id": "consensus24_g0046875_stored",
+      "changed_payload_proof": {
+        "archive_members": [
+          "p",
+          "sjkl.bin"
+        ],
+        "candidate_p_sha256": "93250610cbb819241d1356554149738af7de55e83a006396883fc7a18f51eff5",
+        "parent_p_sha256": "93250610cbb819241d1356554149738af7de55e83a006396883fc7a18f51eff5",
+        "score_affecting_payload_charged_in_archive": true,
+        "sidecars_required": false,
+        "sjkl_member_bytes": 296,
+        "sjkl_member_present": true,
+        "sjkl_member_sha256": "ff0e83b43600ef0e6aea3ef153d76eff2efba6373ab472ce57aa09a54cbfd66a",
+        "source_payload_preserved_byte_for_byte": true
+      },
+      "dispatch_priority": "do_not_dispatch_immediate_t4",
+      "exact_cuda_command_template": "SJKL_REQUIRE_APPLIED=1 .venv/bin/python -u experiments/contest_auth_eval.py --archive experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/builds/consensus24_g0046875_stored/archive.zip --inflate-sh submissions/robust_current/inflate.sh --upstream-dir upstream --device cuda --keep-work-dir --work-dir experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/exact_cuda/consensus24_g0046875_stored",
+      "expected_score_band": {
+        "basis": "No exact T4 PR75 component response exists; prior C067 SJ-KL results are diagnostic or negative, so this band is a conservative prediction around parent+rate.",
+        "component_score_gain_required_for_sub314": 0.0017810452505407914,
+        "formula_only_no_component_change": 0.3157810452505408,
+        "high": 0.31598104525054077,
+        "low": 0.3157810452505408,
+        "rate_delta_vs_parent": 0.0002583532738114025
+      },
+      "no_op_proof": {
+        "local_static_runtime_apply_proof": {
+          "path": "/Users/adpena/Projects/pact/submissions/robust_current/inflate_renderer.py",
+          "proof_tokens": [
+            "SJKL_REQUIRE_APPLIED",
+            "_finalize_sjkl_application_contract",
+            "_apply_sjkl_residual_to_pairs",
+            "applied_pair_count",
+            "charged sjkl.bin did not affect"
+          ],
+          "require_env": "SJKL_REQUIRE_APPLIED=1",
+          "sha256": "57eff4e2d7c4de0ef20c8e0cea66e9464684ed14956872e603bb4a65e8c39d9e",
+          "verified": true
+        },
+        "pr75_exact_apply_status": "not run; exact CUDA template below sets SJKL_REQUIRE_APPLIED=1 so no-op should fail closed before score claim",
+        "prior_exact_or_diagnostic_apply_evidence": null,
+        "residual_blind_spot": "PR75/C088 exact component response is unmeasured; cannot promote, rank, or claim sub-0.314 without CUDA auth eval on this exact archive."
+      },
+      "sha256": "b0d3a85f186673075e4f603e4ef492e061b6594692b0542d5fabeab94fb2b818",
+      "sjkl_payload": {
+        "bytes": 296,
+        "path": "/Users/adpena/Projects/pact/experiments/results/sjkl_c067_consensus_top24_g0046875_sibling_20260503/repack/sjkl.bin",
+        "sha256": "ff0e83b43600ef0e6aea3ef153d76eff2efba6373ab472ce57aa09a54cbfd66a",
+        "zip_compression": "stored"
+      },
+      "source_parent": {
+        "archive_path": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/archive.zip",
+        "bytes": 276386,
+        "label": "C088_PR75_top40_p3_T4",
+        "score_evidence": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/contest_auth_eval.json",
+        "score_recomputed_from_components": 0.3155226919767294,
+        "sha256": "9feef7ffaa254f9e5408996a122682757a054144a3000539553786c5292b7d0a"
+      }
+    },
+    {
+      "archive_path": "experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/builds/consensus32_g0046875_deflated/archive.zip",
+      "bytes": 276788,
+      "candidate_id": "consensus32_g0046875_deflated",
+      "changed_payload_proof": {
+        "archive_members": [
+          "p",
+          "sjkl.bin"
+        ],
+        "candidate_p_sha256": "93250610cbb819241d1356554149738af7de55e83a006396883fc7a18f51eff5",
+        "parent_p_sha256": "93250610cbb819241d1356554149738af7de55e83a006396883fc7a18f51eff5",
+        "score_affecting_payload_charged_in_archive": true,
+        "sidecars_required": false,
+        "sjkl_member_bytes": 311,
+        "sjkl_member_present": true,
+        "sjkl_member_sha256": "1e9325a8fb337edc50169d7ab8804463d654f1af16eab6422f459118988e1280",
+        "source_payload_preserved_byte_for_byte": true
+      },
+      "dispatch_priority": "second_tier_diagnostic_only",
+      "exact_cuda_command_template": "SJKL_REQUIRE_APPLIED=1 .venv/bin/python -u experiments/contest_auth_eval.py --archive experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/builds/consensus32_g0046875_deflated/archive.zip --inflate-sh submissions/robust_current/inflate.sh --upstream-dir upstream --device cuda --keep-work-dir --work-dir experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/exact_cuda/consensus32_g0046875_deflated",
+      "expected_score_band": {
+        "basis": "No exact T4 PR75 component response exists; prior C067 SJ-KL results are diagnostic or negative, so this band is a conservative prediction around parent+rate.",
+        "component_score_gain_required_for_sub314": 0.0017903672758844968,
+        "formula_only_no_component_change": 0.3157903672758845,
+        "high": 0.3159903672758845,
+        "low": 0.3157003672758845,
+        "rate_delta_vs_parent": 0.0002676752991551129
+      },
+      "no_op_proof": {
+        "local_static_runtime_apply_proof": {
+          "path": "/Users/adpena/Projects/pact/submissions/robust_current/inflate_renderer.py",
+          "proof_tokens": [
+            "SJKL_REQUIRE_APPLIED",
+            "_finalize_sjkl_application_contract",
+            "_apply_sjkl_residual_to_pairs",
+            "applied_pair_count",
+            "charged sjkl.bin did not affect"
+          ],
+          "require_env": "SJKL_REQUIRE_APPLIED=1",
+          "sha256": "57eff4e2d7c4de0ef20c8e0cea66e9464684ed14956872e603bb4a65e8c39d9e",
+          "verified": true
+        },
+        "pr75_exact_apply_status": "not run; exact CUDA template below sets SJKL_REQUIRE_APPLIED=1 so no-op should fail closed before score claim",
+        "prior_exact_or_diagnostic_apply_evidence": {
+          "archive_bytes": 276617,
+          "component_delta_vs_c067_t4_score_terms": -0.00028521405031567415,
+          "evidence_grade": "diagnostic CUDA on RTX PRO, not T4 and not PR75 stack",
+          "label": "sjkl_consensus32_g0046875_on_C067_RTXPRO_diag",
+          "observed_summary": "RTX diagnostic strict apply passed; cross-hardware component comparison is non-promotable and still far below sub-0.314 break-even after rate.",
+          "score": 0.31560031673416666,
+          "strict_applied_pairs": 32,
+          "strict_apply_log": "experiments/results/lightning_batch/exact_eval_sjkl_c067_consensus32_g0046875_sibling_rtxprodiag_20260502T2354Z/auth_eval.log:77,84,95"
+        },
+        "residual_blind_spot": "PR75/C088 exact component response is unmeasured; cannot promote, rank, or claim sub-0.314 without CUDA auth eval on this exact archive."
+      },
+      "sha256": "157e1a5393330d731e7de971b1521bbb2497704bf8365c67b85d82a97f89518c",
+      "sjkl_payload": {
+        "bytes": 311,
+        "path": "/Users/adpena/Projects/pact/experiments/results/sjkl_c067_consensus_top32_g0046875_sibling_20260503/repack/sjkl.bin",
+        "sha256": "1e9325a8fb337edc50169d7ab8804463d654f1af16eab6422f459118988e1280",
+        "zip_compression": "deflated"
+      },
+      "source_parent": {
+        "archive_path": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/archive.zip",
+        "bytes": 276386,
+        "label": "C088_PR75_top40_p3_T4",
+        "score_evidence": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/contest_auth_eval.json",
+        "score_recomputed_from_components": 0.3155226919767294,
+        "sha256": "9feef7ffaa254f9e5408996a122682757a054144a3000539553786c5292b7d0a"
+      }
+    },
+    {
+      "archive_path": "experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/builds/consensus32_g0046875_stored/archive.zip",
+      "bytes": 276789,
+      "candidate_id": "consensus32_g0046875_stored",
+      "changed_payload_proof": {
+        "archive_members": [
+          "p",
+          "sjkl.bin"
+        ],
+        "candidate_p_sha256": "93250610cbb819241d1356554149738af7de55e83a006396883fc7a18f51eff5",
+        "parent_p_sha256": "93250610cbb819241d1356554149738af7de55e83a006396883fc7a18f51eff5",
+        "score_affecting_payload_charged_in_archive": true,
+        "sidecars_required": false,
+        "sjkl_member_bytes": 311,
+        "sjkl_member_present": true,
+        "sjkl_member_sha256": "1e9325a8fb337edc50169d7ab8804463d654f1af16eab6422f459118988e1280",
+        "source_payload_preserved_byte_for_byte": true
+      },
+      "dispatch_priority": "do_not_dispatch_immediate_t4",
+      "exact_cuda_command_template": "SJKL_REQUIRE_APPLIED=1 .venv/bin/python -u experiments/contest_auth_eval.py --archive experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/builds/consensus32_g0046875_stored/archive.zip --inflate-sh submissions/robust_current/inflate.sh --upstream-dir upstream --device cuda --keep-work-dir --work-dir experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/exact_cuda/consensus32_g0046875_stored",
+      "expected_score_band": {
+        "basis": "No exact T4 PR75 component response exists; prior C067 SJ-KL results are diagnostic or negative, so this band is a conservative prediction around parent+rate.",
+        "component_score_gain_required_for_sub314": 0.0017910331348376385,
+        "formula_only_no_component_change": 0.31579103313483764,
+        "high": 0.3159910331348376,
+        "low": 0.31570103313483766,
+        "rate_delta_vs_parent": 0.00026834115810823507
+      },
+      "no_op_proof": {
+        "local_static_runtime_apply_proof": {
+          "path": "/Users/adpena/Projects/pact/submissions/robust_current/inflate_renderer.py",
+          "proof_tokens": [
+            "SJKL_REQUIRE_APPLIED",
+            "_finalize_sjkl_application_contract",
+            "_apply_sjkl_residual_to_pairs",
+            "applied_pair_count",
+            "charged sjkl.bin did not affect"
+          ],
+          "require_env": "SJKL_REQUIRE_APPLIED=1",
+          "sha256": "57eff4e2d7c4de0ef20c8e0cea66e9464684ed14956872e603bb4a65e8c39d9e",
+          "verified": true
+        },
+        "pr75_exact_apply_status": "not run; exact CUDA template below sets SJKL_REQUIRE_APPLIED=1 so no-op should fail closed before score claim",
+        "prior_exact_or_diagnostic_apply_evidence": {
+          "archive_bytes": 276617,
+          "component_delta_vs_c067_t4_score_terms": -0.00028521405031567415,
+          "evidence_grade": "diagnostic CUDA on RTX PRO, not T4 and not PR75 stack",
+          "label": "sjkl_consensus32_g0046875_on_C067_RTXPRO_diag",
+          "observed_summary": "RTX diagnostic strict apply passed; cross-hardware component comparison is non-promotable and still far below sub-0.314 break-even after rate.",
+          "score": 0.31560031673416666,
+          "strict_applied_pairs": 32,
+          "strict_apply_log": "experiments/results/lightning_batch/exact_eval_sjkl_c067_consensus32_g0046875_sibling_rtxprodiag_20260502T2354Z/auth_eval.log:77,84,95"
+        },
+        "residual_blind_spot": "PR75/C088 exact component response is unmeasured; cannot promote, rank, or claim sub-0.314 without CUDA auth eval on this exact archive."
+      },
+      "sha256": "4e6cfbe303e489346d61c72001ac26824ce1bb314afeeb98f177c85bb946fe10",
+      "sjkl_payload": {
+        "bytes": 311,
+        "path": "/Users/adpena/Projects/pact/experiments/results/sjkl_c067_consensus_top32_g0046875_sibling_20260503/repack/sjkl.bin",
+        "sha256": "1e9325a8fb337edc50169d7ab8804463d654f1af16eab6422f459118988e1280",
+        "zip_compression": "stored"
+      },
+      "source_parent": {
+        "archive_path": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/archive.zip",
+        "bytes": 276386,
+        "label": "C088_PR75_top40_p3_T4",
+        "score_evidence": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/contest_auth_eval.json",
+        "score_recomputed_from_components": 0.3155226919767294,
+        "sha256": "9feef7ffaa254f9e5408996a122682757a054144a3000539553786c5292b7d0a"
+      }
+    },
+    {
+      "archive_path": "experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/builds/consensus32_g00625_deflated/archive.zip",
+      "bytes": 276795,
+      "candidate_id": "consensus32_g00625_deflated",
+      "changed_payload_proof": {
+        "archive_members": [
+          "p",
+          "sjkl.bin"
+        ],
+        "candidate_p_sha256": "93250610cbb819241d1356554149738af7de55e83a006396883fc7a18f51eff5",
+        "parent_p_sha256": "93250610cbb819241d1356554149738af7de55e83a006396883fc7a18f51eff5",
+        "score_affecting_payload_charged_in_archive": true,
+        "sidecars_required": false,
+        "sjkl_member_bytes": 317,
+        "sjkl_member_present": true,
+        "sjkl_member_sha256": "78366b8e7e67d86e096ab26ac3ec1e017bcd4adb83dd475df09f2f4e13860def",
+        "source_payload_preserved_byte_for_byte": true
+      },
+      "dispatch_priority": "do_not_dispatch_immediate_t4",
+      "exact_cuda_command_template": "SJKL_REQUIRE_APPLIED=1 .venv/bin/python -u experiments/contest_auth_eval.py --archive experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/builds/consensus32_g00625_deflated/archive.zip --inflate-sh submissions/robust_current/inflate.sh --upstream-dir upstream --device cuda --keep-work-dir --work-dir experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/exact_cuda/consensus32_g00625_deflated",
+      "expected_score_band": {
+        "basis": "No exact T4 PR75 component response exists; prior C067 SJ-KL results are diagnostic or negative, so this band is a conservative prediction around parent+rate.",
+        "component_score_gain_required_for_sub314": 0.0017950282885563773,
+        "formula_only_no_component_change": 0.3157950282885564,
+        "high": 0.31599502828855636,
+        "low": 0.3157950282885564,
+        "rate_delta_vs_parent": 0.0002723363118269681
+      },
+      "no_op_proof": {
+        "local_static_runtime_apply_proof": {
+          "path": "/Users/adpena/Projects/pact/submissions/robust_current/inflate_renderer.py",
+          "proof_tokens": [
+            "SJKL_REQUIRE_APPLIED",
+            "_finalize_sjkl_application_contract",
+            "_apply_sjkl_residual_to_pairs",
+            "applied_pair_count",
+            "charged sjkl.bin did not affect"
+          ],
+          "require_env": "SJKL_REQUIRE_APPLIED=1",
+          "sha256": "57eff4e2d7c4de0ef20c8e0cea66e9464684ed14956872e603bb4a65e8c39d9e",
+          "verified": true
+        },
+        "pr75_exact_apply_status": "not run; exact CUDA template below sets SJKL_REQUIRE_APPLIED=1 so no-op should fail closed before score claim",
+        "prior_exact_or_diagnostic_apply_evidence": null,
+        "residual_blind_spot": "PR75/C088 exact component response is unmeasured; cannot promote, rank, or claim sub-0.314 without CUDA auth eval on this exact archive."
+      },
+      "sha256": "333b6eb0563730faa93ac41b6a83953a68ef6550c7347aa50d762183255655de",
+      "sjkl_payload": {
+        "bytes": 317,
+        "path": "/Users/adpena/Projects/pact/experiments/results/sjkl_c067_consensus_top32_g00625_sibling_20260503/repack/sjkl.bin",
+        "sha256": "78366b8e7e67d86e096ab26ac3ec1e017bcd4adb83dd475df09f2f4e13860def",
+        "zip_compression": "deflated"
+      },
+      "source_parent": {
+        "archive_path": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/archive.zip",
+        "bytes": 276386,
+        "label": "C088_PR75_top40_p3_T4",
+        "score_evidence": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/contest_auth_eval.json",
+        "score_recomputed_from_components": 0.3155226919767294,
+        "sha256": "9feef7ffaa254f9e5408996a122682757a054144a3000539553786c5292b7d0a"
+      }
+    },
+    {
+      "archive_path": "experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/builds/consensus32_g00625_stored/archive.zip",
+      "bytes": 276795,
+      "candidate_id": "consensus32_g00625_stored",
+      "changed_payload_proof": {
+        "archive_members": [
+          "p",
+          "sjkl.bin"
+        ],
+        "candidate_p_sha256": "93250610cbb819241d1356554149738af7de55e83a006396883fc7a18f51eff5",
+        "parent_p_sha256": "93250610cbb819241d1356554149738af7de55e83a006396883fc7a18f51eff5",
+        "score_affecting_payload_charged_in_archive": true,
+        "sidecars_required": false,
+        "sjkl_member_bytes": 317,
+        "sjkl_member_present": true,
+        "sjkl_member_sha256": "78366b8e7e67d86e096ab26ac3ec1e017bcd4adb83dd475df09f2f4e13860def",
+        "source_payload_preserved_byte_for_byte": true
+      },
+      "dispatch_priority": "do_not_dispatch_immediate_t4",
+      "exact_cuda_command_template": "SJKL_REQUIRE_APPLIED=1 .venv/bin/python -u experiments/contest_auth_eval.py --archive experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/builds/consensus32_g00625_stored/archive.zip --inflate-sh submissions/robust_current/inflate.sh --upstream-dir upstream --device cuda --keep-work-dir --work-dir experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/exact_cuda/consensus32_g00625_stored",
+      "expected_score_band": {
+        "basis": "No exact T4 PR75 component response exists; prior C067 SJ-KL results are diagnostic or negative, so this band is a conservative prediction around parent+rate.",
+        "component_score_gain_required_for_sub314": 0.0017950282885563773,
+        "formula_only_no_component_change": 0.3157950282885564,
+        "high": 0.31599502828855636,
+        "low": 0.3157950282885564,
+        "rate_delta_vs_parent": 0.0002723363118269681
+      },
+      "no_op_proof": {
+        "local_static_runtime_apply_proof": {
+          "path": "/Users/adpena/Projects/pact/submissions/robust_current/inflate_renderer.py",
+          "proof_tokens": [
+            "SJKL_REQUIRE_APPLIED",
+            "_finalize_sjkl_application_contract",
+            "_apply_sjkl_residual_to_pairs",
+            "applied_pair_count",
+            "charged sjkl.bin did not affect"
+          ],
+          "require_env": "SJKL_REQUIRE_APPLIED=1",
+          "sha256": "57eff4e2d7c4de0ef20c8e0cea66e9464684ed14956872e603bb4a65e8c39d9e",
+          "verified": true
+        },
+        "pr75_exact_apply_status": "not run; exact CUDA template below sets SJKL_REQUIRE_APPLIED=1 so no-op should fail closed before score claim",
+        "prior_exact_or_diagnostic_apply_evidence": null,
+        "residual_blind_spot": "PR75/C088 exact component response is unmeasured; cannot promote, rank, or claim sub-0.314 without CUDA auth eval on this exact archive."
+      },
+      "sha256": "a04f00f672d18b749348a7b2c7414f34a82d99e1d7d4843a6f939df245d2ef92",
+      "sjkl_payload": {
+        "bytes": 317,
+        "path": "/Users/adpena/Projects/pact/experiments/results/sjkl_c067_consensus_top32_g00625_sibling_20260503/repack/sjkl.bin",
+        "sha256": "78366b8e7e67d86e096ab26ac3ec1e017bcd4adb83dd475df09f2f4e13860def",
+        "zip_compression": "stored"
+      },
+      "source_parent": {
+        "archive_path": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/archive.zip",
+        "bytes": 276386,
+        "label": "C088_PR75_top40_p3_T4",
+        "score_evidence": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/contest_auth_eval.json",
+        "score_recomputed_from_components": 0.3155226919767294,
+        "sha256": "9feef7ffaa254f9e5408996a122682757a054144a3000539553786c5292b7d0a"
+      }
+    },
+    {
+      "archive_path": "experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/builds/trace_positive9_deflated/archive.zip",
+      "bytes": 276862,
+      "candidate_id": "trace_positive9_deflated",
+      "changed_payload_proof": {
+        "archive_members": [
+          "p",
+          "sjkl.bin"
+        ],
+        "candidate_p_sha256": "93250610cbb819241d1356554149738af7de55e83a006396883fc7a18f51eff5",
+        "parent_p_sha256": "93250610cbb819241d1356554149738af7de55e83a006396883fc7a18f51eff5",
+        "score_affecting_payload_charged_in_archive": true,
+        "sidecars_required": false,
+        "sjkl_member_bytes": 387,
+        "sjkl_member_present": true,
+        "sjkl_member_sha256": "49ff4c73cce806bb76cb95ef187b9781eb6778dcf3970eb26380654b4030900e",
+        "source_payload_preserved_byte_for_byte": true
+      },
+      "dispatch_priority": "do_not_dispatch_immediate_t4",
+      "exact_cuda_command_template": "SJKL_REQUIRE_APPLIED=1 .venv/bin/python -u experiments/contest_auth_eval.py --archive experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/builds/trace_positive9_deflated/archive.zip --inflate-sh submissions/robust_current/inflate.sh --upstream-dir upstream --device cuda --keep-work-dir --work-dir experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/exact_cuda/trace_positive9_deflated",
+      "expected_score_band": {
+        "basis": "No exact T4 PR75 component response exists; prior C067 SJ-KL results are diagnostic or negative, so this band is a conservative prediction around parent+rate.",
+        "component_score_gain_required_for_sub314": 0.001839640838415535,
+        "formula_only_no_component_change": 0.31583964083841554,
+        "high": 0.3160396408384155,
+        "low": 0.31574964083841556,
+        "rate_delta_vs_parent": 0.0003169488616861536
+      },
+      "no_op_proof": {
+        "local_static_runtime_apply_proof": {
+          "path": "/Users/adpena/Projects/pact/submissions/robust_current/inflate_renderer.py",
+          "proof_tokens": [
+            "SJKL_REQUIRE_APPLIED",
+            "_finalize_sjkl_application_contract",
+            "_apply_sjkl_residual_to_pairs",
+            "applied_pair_count",
+            "charged sjkl.bin did not affect"
+          ],
+          "require_env": "SJKL_REQUIRE_APPLIED=1",
+          "sha256": "57eff4e2d7c4de0ef20c8e0cea66e9464684ed14956872e603bb4a65e8c39d9e",
+          "verified": true
+        },
+        "pr75_exact_apply_status": "not run; exact CUDA template below sets SJKL_REQUIRE_APPLIED=1 so no-op should fail closed before score claim",
+        "prior_exact_or_diagnostic_apply_evidence": {
+          "archive_bytes": 277626,
+          "evidence_grade": "diagnostic CUDA on RTX PRO, not T4 and not PR75 stack",
+          "label": "sjkl_tracepos9_on_C067_RTXPRO_diag",
+          "observed_summary": "RTX diagnostic strict apply passed, but rate-heavy packaging scored worse on C067.",
+          "score": 0.31627277727763115,
+          "strict_applied_pairs": 9,
+          "strict_apply_log": "experiments/results/lightning_batch/exact_eval_sjkl_c067_tracepos9_rtxprodiag_20260502T2146Z/auth_eval.log:77,84,95"
+        },
+        "residual_blind_spot": "PR75/C088 exact component response is unmeasured; cannot promote, rank, or claim sub-0.314 without CUDA auth eval on this exact archive."
+      },
+      "sha256": "f4884003a245ac740ced190d374d8e8cc8421c23c687879fbb49a535eb667932",
+      "sjkl_payload": {
+        "bytes": 387,
+        "path": "/Users/adpena/Projects/pact/experiments/results/sjkl_c067_trace_selected_repack_20260502T_local/old_selected_positive9/repack/sjkl.bin",
+        "sha256": "49ff4c73cce806bb76cb95ef187b9781eb6778dcf3970eb26380654b4030900e",
+        "zip_compression": "deflated"
+      },
+      "source_parent": {
+        "archive_path": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/archive.zip",
+        "bytes": 276386,
+        "label": "C088_PR75_top40_p3_T4",
+        "score_evidence": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/contest_auth_eval.json",
+        "score_recomputed_from_components": 0.3155226919767294,
+        "sha256": "9feef7ffaa254f9e5408996a122682757a054144a3000539553786c5292b7d0a"
+      }
+    },
+    {
+      "archive_path": "experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/builds/trace_positive9_stored/archive.zip",
+      "bytes": 276865,
+      "candidate_id": "trace_positive9_stored",
+      "changed_payload_proof": {
+        "archive_members": [
+          "p",
+          "sjkl.bin"
+        ],
+        "candidate_p_sha256": "93250610cbb819241d1356554149738af7de55e83a006396883fc7a18f51eff5",
+        "parent_p_sha256": "93250610cbb819241d1356554149738af7de55e83a006396883fc7a18f51eff5",
+        "score_affecting_payload_charged_in_archive": true,
+        "sidecars_required": false,
+        "sjkl_member_bytes": 387,
+        "sjkl_member_present": true,
+        "sjkl_member_sha256": "49ff4c73cce806bb76cb95ef187b9781eb6778dcf3970eb26380654b4030900e",
+        "source_payload_preserved_byte_for_byte": true
+      },
+      "dispatch_priority": "do_not_dispatch_immediate_t4",
+      "exact_cuda_command_template": "SJKL_REQUIRE_APPLIED=1 .venv/bin/python -u experiments/contest_auth_eval.py --archive experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/builds/trace_positive9_stored/archive.zip --inflate-sh submissions/robust_current/inflate.sh --upstream-dir upstream --device cuda --keep-work-dir --work-dir experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/exact_cuda/trace_positive9_stored",
+      "expected_score_band": {
+        "basis": "No exact T4 PR75 component response exists; prior C067 SJ-KL results are diagnostic or negative, so this band is a conservative prediction around parent+rate.",
+        "component_score_gain_required_for_sub314": 0.0018416384152749044,
+        "formula_only_no_component_change": 0.3158416384152749,
+        "high": 0.3160416384152749,
+        "low": 0.3157516384152749,
+        "rate_delta_vs_parent": 0.00031894643854552007
+      },
+      "no_op_proof": {
+        "local_static_runtime_apply_proof": {
+          "path": "/Users/adpena/Projects/pact/submissions/robust_current/inflate_renderer.py",
+          "proof_tokens": [
+            "SJKL_REQUIRE_APPLIED",
+            "_finalize_sjkl_application_contract",
+            "_apply_sjkl_residual_to_pairs",
+            "applied_pair_count",
+            "charged sjkl.bin did not affect"
+          ],
+          "require_env": "SJKL_REQUIRE_APPLIED=1",
+          "sha256": "57eff4e2d7c4de0ef20c8e0cea66e9464684ed14956872e603bb4a65e8c39d9e",
+          "verified": true
+        },
+        "pr75_exact_apply_status": "not run; exact CUDA template below sets SJKL_REQUIRE_APPLIED=1 so no-op should fail closed before score claim",
+        "prior_exact_or_diagnostic_apply_evidence": {
+          "archive_bytes": 277626,
+          "evidence_grade": "diagnostic CUDA on RTX PRO, not T4 and not PR75 stack",
+          "label": "sjkl_tracepos9_on_C067_RTXPRO_diag",
+          "observed_summary": "RTX diagnostic strict apply passed, but rate-heavy packaging scored worse on C067.",
+          "score": 0.31627277727763115,
+          "strict_applied_pairs": 9,
+          "strict_apply_log": "experiments/results/lightning_batch/exact_eval_sjkl_c067_tracepos9_rtxprodiag_20260502T2146Z/auth_eval.log:77,84,95"
+        },
+        "residual_blind_spot": "PR75/C088 exact component response is unmeasured; cannot promote, rank, or claim sub-0.314 without CUDA auth eval on this exact archive."
+      },
+      "sha256": "6ed681a2f3fbb728a14d262a6fc9f9b6996719747958112750598e9cc5d41e42",
+      "sjkl_payload": {
+        "bytes": 387,
+        "path": "/Users/adpena/Projects/pact/experiments/results/sjkl_c067_trace_selected_repack_20260502T_local/old_selected_positive9/repack/sjkl.bin",
+        "sha256": "49ff4c73cce806bb76cb95ef187b9781eb6778dcf3970eb26380654b4030900e",
+        "zip_compression": "stored"
+      },
+      "source_parent": {
+        "archive_path": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/archive.zip",
+        "bytes": 276386,
+        "label": "C088_PR75_top40_p3_T4",
+        "score_evidence": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/contest_auth_eval.json",
+        "score_recomputed_from_components": 0.3155226919767294,
+        "sha256": "9feef7ffaa254f9e5408996a122682757a054144a3000539553786c5292b7d0a"
+      }
+    },
+    {
+      "archive_path": "experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/builds/trace_top16_stored/archive.zip",
+      "bytes": 276900,
+      "candidate_id": "trace_top16_stored",
+      "changed_payload_proof": {
+        "archive_members": [
+          "p",
+          "sjkl.bin"
+        ],
+        "candidate_p_sha256": "93250610cbb819241d1356554149738af7de55e83a006396883fc7a18f51eff5",
+        "parent_p_sha256": "93250610cbb819241d1356554149738af7de55e83a006396883fc7a18f51eff5",
+        "score_affecting_payload_charged_in_archive": true,
+        "sidecars_required": false,
+        "sjkl_member_bytes": 422,
+        "sjkl_member_present": true,
+        "sjkl_member_sha256": "9ecc86c074e51239a8129d80af18692002bee0e535deba9f6a73921a610d44ac",
+        "source_payload_preserved_byte_for_byte": true
+      },
+      "dispatch_priority": "do_not_dispatch_immediate_t4",
+      "exact_cuda_command_template": "SJKL_REQUIRE_APPLIED=1 .venv/bin/python -u experiments/contest_auth_eval.py --archive experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/builds/trace_top16_stored/archive.zip --inflate-sh submissions/robust_current/inflate.sh --upstream-dir upstream --device cuda --keep-work-dir --work-dir experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/exact_cuda/trace_top16_stored",
+      "expected_score_band": {
+        "basis": "No exact T4 PR75 component response exists; prior C067 SJ-KL results are diagnostic or negative, so this band is a conservative prediction around parent+rate.",
+        "component_score_gain_required_for_sub314": 0.0018649434786341956,
+        "formula_only_no_component_change": 0.3158649434786342,
+        "high": 0.3160649434786342,
+        "low": 0.3157749434786342,
+        "rate_delta_vs_parent": 0.00034225150190479606
+      },
+      "no_op_proof": {
+        "local_static_runtime_apply_proof": {
+          "path": "/Users/adpena/Projects/pact/submissions/robust_current/inflate_renderer.py",
+          "proof_tokens": [
+            "SJKL_REQUIRE_APPLIED",
+            "_finalize_sjkl_application_contract",
+            "_apply_sjkl_residual_to_pairs",
+            "applied_pair_count",
+            "charged sjkl.bin did not affect"
+          ],
+          "require_env": "SJKL_REQUIRE_APPLIED=1",
+          "sha256": "57eff4e2d7c4de0ef20c8e0cea66e9464684ed14956872e603bb4a65e8c39d9e",
+          "verified": true
+        },
+        "pr75_exact_apply_status": "not run; exact CUDA template below sets SJKL_REQUIRE_APPLIED=1 so no-op should fail closed before score claim",
+        "prior_exact_or_diagnostic_apply_evidence": {
+          "archive_bytes": 277547,
+          "evidence_grade": "diagnostic CUDA on RTX PRO, not T4 and not PR75 stack",
+          "label": "sjkl_tracetop16_on_C067_RTXPRO_diag",
+          "observed_summary": "RTX diagnostic strict apply passed, but rate-heavy packaging scored worse on C067.",
+          "score": 0.3162181456257131,
+          "strict_applied_pairs": 16,
+          "strict_apply_log": "experiments/results/lightning_batch/exact_eval_sjkl_c067_tracetop16_rtxprodiag_20260502T2146Z/auth_eval.log:77,84,95"
+        },
+        "residual_blind_spot": "PR75/C088 exact component response is unmeasured; cannot promote, rank, or claim sub-0.314 without CUDA auth eval on this exact archive."
+      },
+      "sha256": "61f0df090ba030269c728d3835e5fbae2d2475e8423f80dc989b6005f5c7cce0",
+      "sjkl_payload": {
+        "bytes": 422,
+        "path": "/Users/adpena/Projects/pact/experiments/results/sjkl_c067_trace_selected_repack_20260502T_local/trace_top16/repack/sjkl.bin",
+        "sha256": "9ecc86c074e51239a8129d80af18692002bee0e535deba9f6a73921a610d44ac",
+        "zip_compression": "stored"
+      },
+      "source_parent": {
+        "archive_path": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/archive.zip",
+        "bytes": 276386,
+        "label": "C088_PR75_top40_p3_T4",
+        "score_evidence": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/contest_auth_eval.json",
+        "score_recomputed_from_components": 0.3155226919767294,
+        "sha256": "9feef7ffaa254f9e5408996a122682757a054144a3000539553786c5292b7d0a"
+      }
+    },
+    {
+      "archive_path": "experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/builds/trace_top16_deflated/archive.zip",
+      "bytes": 276905,
+      "candidate_id": "trace_top16_deflated",
+      "changed_payload_proof": {
+        "archive_members": [
+          "p",
+          "sjkl.bin"
+        ],
+        "candidate_p_sha256": "93250610cbb819241d1356554149738af7de55e83a006396883fc7a18f51eff5",
+        "parent_p_sha256": "93250610cbb819241d1356554149738af7de55e83a006396883fc7a18f51eff5",
+        "score_affecting_payload_charged_in_archive": true,
+        "sidecars_required": false,
+        "sjkl_member_bytes": 422,
+        "sjkl_member_present": true,
+        "sjkl_member_sha256": "9ecc86c074e51239a8129d80af18692002bee0e535deba9f6a73921a610d44ac",
+        "source_payload_preserved_byte_for_byte": true
+      },
+      "dispatch_priority": "do_not_dispatch_immediate_t4",
+      "exact_cuda_command_template": "SJKL_REQUIRE_APPLIED=1 .venv/bin/python -u experiments/contest_auth_eval.py --archive experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/builds/trace_top16_deflated/archive.zip --inflate-sh submissions/robust_current/inflate.sh --upstream-dir upstream --device cuda --keep-work-dir --work-dir experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/exact_cuda/trace_top16_deflated",
+      "expected_score_band": {
+        "basis": "No exact T4 PR75 component response exists; prior C067 SJ-KL results are diagnostic or negative, so this band is a conservative prediction around parent+rate.",
+        "component_score_gain_required_for_sub314": 0.0018682727733997928,
+        "formula_only_no_component_change": 0.3158682727733998,
+        "high": 0.31606827277339977,
+        "low": 0.3157782727733998,
+        "rate_delta_vs_parent": 0.00034558079667040695
+      },
+      "no_op_proof": {
+        "local_static_runtime_apply_proof": {
+          "path": "/Users/adpena/Projects/pact/submissions/robust_current/inflate_renderer.py",
+          "proof_tokens": [
+            "SJKL_REQUIRE_APPLIED",
+            "_finalize_sjkl_application_contract",
+            "_apply_sjkl_residual_to_pairs",
+            "applied_pair_count",
+            "charged sjkl.bin did not affect"
+          ],
+          "require_env": "SJKL_REQUIRE_APPLIED=1",
+          "sha256": "57eff4e2d7c4de0ef20c8e0cea66e9464684ed14956872e603bb4a65e8c39d9e",
+          "verified": true
+        },
+        "pr75_exact_apply_status": "not run; exact CUDA template below sets SJKL_REQUIRE_APPLIED=1 so no-op should fail closed before score claim",
+        "prior_exact_or_diagnostic_apply_evidence": {
+          "archive_bytes": 277547,
+          "evidence_grade": "diagnostic CUDA on RTX PRO, not T4 and not PR75 stack",
+          "label": "sjkl_tracetop16_on_C067_RTXPRO_diag",
+          "observed_summary": "RTX diagnostic strict apply passed, but rate-heavy packaging scored worse on C067.",
+          "score": 0.3162181456257131,
+          "strict_applied_pairs": 16,
+          "strict_apply_log": "experiments/results/lightning_batch/exact_eval_sjkl_c067_tracetop16_rtxprodiag_20260502T2146Z/auth_eval.log:77,84,95"
+        },
+        "residual_blind_spot": "PR75/C088 exact component response is unmeasured; cannot promote, rank, or claim sub-0.314 without CUDA auth eval on this exact archive."
+      },
+      "sha256": "0d25c3a7739e3adcdff936fddb375e25b1e006895d23afbc67b65e811e3ee818",
+      "sjkl_payload": {
+        "bytes": 422,
+        "path": "/Users/adpena/Projects/pact/experiments/results/sjkl_c067_trace_selected_repack_20260502T_local/trace_top16/repack/sjkl.bin",
+        "sha256": "9ecc86c074e51239a8129d80af18692002bee0e535deba9f6a73921a610d44ac",
+        "zip_compression": "deflated"
+      },
+      "source_parent": {
+        "archive_path": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/archive.zip",
+        "bytes": 276386,
+        "label": "C088_PR75_top40_p3_T4",
+        "score_evidence": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/contest_auth_eval.json",
+        "score_recomputed_from_components": 0.3155226919767294,
+        "sha256": "9feef7ffaa254f9e5408996a122682757a054144a3000539553786c5292b7d0a"
+      }
+    },
+    {
+      "archive_path": "experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/builds/sparse_k1g08_p32_a3_stored/archive.zip",
+      "bytes": 276945,
+      "candidate_id": "sparse_k1g08_p32_a3_stored",
+      "changed_payload_proof": {
+        "archive_members": [
+          "p",
+          "sjkl.bin"
+        ],
+        "candidate_p_sha256": "93250610cbb819241d1356554149738af7de55e83a006396883fc7a18f51eff5",
+        "parent_p_sha256": "93250610cbb819241d1356554149738af7de55e83a006396883fc7a18f51eff5",
+        "score_affecting_payload_charged_in_archive": true,
+        "sidecars_required": false,
+        "sjkl_member_bytes": 467,
+        "sjkl_member_present": true,
+        "sjkl_member_sha256": "18c11b2f1e8c52df3bcdd87a6cc59db6d6aef627cb58bd9a45eb8866e0ea6243",
+        "source_payload_preserved_byte_for_byte": true
+      },
+      "dispatch_priority": "do_not_dispatch_immediate_t4",
+      "exact_cuda_command_template": "SJKL_REQUIRE_APPLIED=1 .venv/bin/python -u experiments/contest_auth_eval.py --archive experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/builds/sparse_k1g08_p32_a3_stored/archive.zip --inflate-sh submissions/robust_current/inflate.sh --upstream-dir upstream --device cuda --keep-work-dir --work-dir experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/exact_cuda/sparse_k1g08_p32_a3_stored",
+      "expected_score_band": {
+        "basis": "No exact T4 PR75 component response exists; prior C067 SJ-KL results are diagnostic or negative, so this band is a conservative prediction around parent+rate.",
+        "component_score_gain_required_for_sub314": 0.0018949071315246813,
+        "formula_only_no_component_change": 0.3158949071315247,
+        "high": 0.31609490713152466,
+        "low": 0.3158049071315247,
+        "rate_delta_vs_parent": 0.0003722151547952938
+      },
+      "no_op_proof": {
+        "local_static_runtime_apply_proof": {
+          "path": "/Users/adpena/Projects/pact/submissions/robust_current/inflate_renderer.py",
+          "proof_tokens": [
+            "SJKL_REQUIRE_APPLIED",
+            "_finalize_sjkl_application_contract",
+            "_apply_sjkl_residual_to_pairs",
+            "applied_pair_count",
+            "charged sjkl.bin did not affect"
+          ],
+          "require_env": "SJKL_REQUIRE_APPLIED=1",
+          "sha256": "57eff4e2d7c4de0ef20c8e0cea66e9464684ed14956872e603bb4a65e8c39d9e",
+          "verified": true
+        },
+        "pr75_exact_apply_status": "not run; exact CUDA template below sets SJKL_REQUIRE_APPLIED=1 so no-op should fail closed before score claim",
+        "prior_exact_or_diagnostic_apply_evidence": {
+          "archive_bytes": 277455,
+          "evidence_grade": "diagnostic CUDA on RTX PRO, not T4 and not PR75 stack",
+          "label": "sjkl_sparse_k1g08_p32_a3_on_C067_RTXPRO_diag",
+          "observed_summary": "RTX diagnostic strict apply passed, but rate-heavy packaging scored worse on C067.",
+          "score": 0.3161753677975756,
+          "strict_applied_pairs": 32,
+          "strict_apply_log": "experiments/results/lightning_batch/exact_eval_sjkl_c067_sparse_k1g08_p32_a3_rtxprodiag_20260502T2123Z/auth_eval.log:77,84,95"
+        },
+        "residual_blind_spot": "PR75/C088 exact component response is unmeasured; cannot promote, rank, or claim sub-0.314 without CUDA auth eval on this exact archive."
+      },
+      "sha256": "ae1578a2d1a2ee9cf309f0ed29027bb95b4e2e64d904ed4a604c2eae8af267ab",
+      "sjkl_payload": {
+        "bytes": 467,
+        "path": "/Users/adpena/Projects/pact/experiments/results/sjkl_c067_sparse_repack_screen_20260502T_local/k1_g08x06_p32_a3_gain003125/repack/sjkl.bin",
+        "sha256": "18c11b2f1e8c52df3bcdd87a6cc59db6d6aef627cb58bd9a45eb8866e0ea6243",
+        "zip_compression": "stored"
+      },
+      "source_parent": {
+        "archive_path": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/archive.zip",
+        "bytes": 276386,
+        "label": "C088_PR75_top40_p3_T4",
+        "score_evidence": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/contest_auth_eval.json",
+        "score_recomputed_from_components": 0.3155226919767294,
+        "sha256": "9feef7ffaa254f9e5408996a122682757a054144a3000539553786c5292b7d0a"
+      }
+    },
+    {
+      "archive_path": "experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/builds/sparse_k1g08_p32_a3_deflated/archive.zip",
+      "bytes": 276950,
+      "candidate_id": "sparse_k1g08_p32_a3_deflated",
+      "changed_payload_proof": {
+        "archive_members": [
+          "p",
+          "sjkl.bin"
+        ],
+        "candidate_p_sha256": "93250610cbb819241d1356554149738af7de55e83a006396883fc7a18f51eff5",
+        "parent_p_sha256": "93250610cbb819241d1356554149738af7de55e83a006396883fc7a18f51eff5",
+        "score_affecting_payload_charged_in_archive": true,
+        "sidecars_required": false,
+        "sjkl_member_bytes": 467,
+        "sjkl_member_present": true,
+        "sjkl_member_sha256": "18c11b2f1e8c52df3bcdd87a6cc59db6d6aef627cb58bd9a45eb8866e0ea6243",
+        "source_payload_preserved_byte_for_byte": true
+      },
+      "dispatch_priority": "do_not_dispatch_immediate_t4",
+      "exact_cuda_command_template": "SJKL_REQUIRE_APPLIED=1 .venv/bin/python -u experiments/contest_auth_eval.py --archive experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/builds/sparse_k1g08_p32_a3_deflated/archive.zip --inflate-sh submissions/robust_current/inflate.sh --upstream-dir upstream --device cuda --keep-work-dir --work-dir experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/exact_cuda/sparse_k1g08_p32_a3_deflated",
+      "expected_score_band": {
+        "basis": "No exact T4 PR75 component response exists; prior C067 SJ-KL results are diagnostic or negative, so this band is a conservative prediction around parent+rate.",
+        "component_score_gain_required_for_sub314": 0.0018982364262902784,
+        "formula_only_no_component_change": 0.3158982364262903,
+        "high": 0.31609823642629026,
+        "low": 0.3158082364262903,
+        "rate_delta_vs_parent": 0.0003755444495609046
+      },
+      "no_op_proof": {
+        "local_static_runtime_apply_proof": {
+          "path": "/Users/adpena/Projects/pact/submissions/robust_current/inflate_renderer.py",
+          "proof_tokens": [
+            "SJKL_REQUIRE_APPLIED",
+            "_finalize_sjkl_application_contract",
+            "_apply_sjkl_residual_to_pairs",
+            "applied_pair_count",
+            "charged sjkl.bin did not affect"
+          ],
+          "require_env": "SJKL_REQUIRE_APPLIED=1",
+          "sha256": "57eff4e2d7c4de0ef20c8e0cea66e9464684ed14956872e603bb4a65e8c39d9e",
+          "verified": true
+        },
+        "pr75_exact_apply_status": "not run; exact CUDA template below sets SJKL_REQUIRE_APPLIED=1 so no-op should fail closed before score claim",
+        "prior_exact_or_diagnostic_apply_evidence": {
+          "archive_bytes": 277455,
+          "evidence_grade": "diagnostic CUDA on RTX PRO, not T4 and not PR75 stack",
+          "label": "sjkl_sparse_k1g08_p32_a3_on_C067_RTXPRO_diag",
+          "observed_summary": "RTX diagnostic strict apply passed, but rate-heavy packaging scored worse on C067.",
+          "score": 0.3161753677975756,
+          "strict_applied_pairs": 32,
+          "strict_apply_log": "experiments/results/lightning_batch/exact_eval_sjkl_c067_sparse_k1g08_p32_a3_rtxprodiag_20260502T2123Z/auth_eval.log:77,84,95"
+        },
+        "residual_blind_spot": "PR75/C088 exact component response is unmeasured; cannot promote, rank, or claim sub-0.314 without CUDA auth eval on this exact archive."
+      },
+      "sha256": "aabbba12443f3849096af5dc260d8106e08296a1a1ecc9463b4bc3353c5feca4",
+      "sjkl_payload": {
+        "bytes": 467,
+        "path": "/Users/adpena/Projects/pact/experiments/results/sjkl_c067_sparse_repack_screen_20260502T_local/k1_g08x06_p32_a3_gain003125/repack/sjkl.bin",
+        "sha256": "18c11b2f1e8c52df3bcdd87a6cc59db6d6aef627cb58bd9a45eb8866e0ea6243",
+        "zip_compression": "deflated"
+      },
+      "source_parent": {
+        "archive_path": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/archive.zip",
+        "bytes": 276386,
+        "label": "C088_PR75_top40_p3_T4",
+        "score_evidence": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/contest_auth_eval.json",
+        "score_recomputed_from_components": 0.3155226919767294,
+        "sha256": "9feef7ffaa254f9e5408996a122682757a054144a3000539553786c5292b7d0a"
+      }
+    }
+  ],
+  "created_utc": "2026-05-03T00:00:00Z",
+  "remote_gpu_jobs_dispatched": false,
+  "schema": "sjkl_pr75_qp1_sub314_candidate_matrix_v1",
+  "summary": {
+    "best_byte_candidate": "q6_minrpk1_stored",
+    "best_byte_candidate_formula_no_component_score": 0.31575041573869717,
+    "candidate_count": 14,
+    "component_risk_status": "No-op is guarded by charged sjkl.bin plus SJKL_REQUIRE_APPLIED strict runtime, but PR75 component response remains unmeasured and cannot be inferred from C067.",
+    "parent": {
+      "bytes": 276386,
+      "label": "C088_PR75_top40_p3_T4",
+      "score_recomputed_from_components": 0.3155226919767294,
+      "sha256": "9feef7ffaa254f9e5408996a122682757a054144a3000539553786c5292b7d0a"
+    },
+    "sub314_assessment": "No built SJ-KL stack warrants immediate T4 exact eval for sub-0.314: the best byte candidate still needs about 0.001750 component-score gain after rate, while exact T4 C067 q6 SJ-KL showed only about 0.000003 gain and scored worse overall."
+  }
+}

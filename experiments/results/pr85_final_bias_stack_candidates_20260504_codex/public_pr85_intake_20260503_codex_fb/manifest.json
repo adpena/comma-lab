@@ -1,0 +1,58 @@
+{
+  "byte_delta_vs_source_x_archive": 380,
+  "candidate": {
+    "archive_bytes": 236708,
+    "archive_path": "experiments/results/pr85_final_bias_stack_candidates_20260504_codex/public_pr85_intake_20260503_codex_fb/archive.zip",
+    "archive_sha256": "930bb55c9453ccea5296611eed58b0fb70ee4d2e40dfb631d406c4d79e5c5ef0",
+    "members": [
+      {
+        "bytes": 236228,
+        "name": "x",
+        "sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+        "zip_stored": true
+      },
+      {
+        "bytes": 300,
+        "name": "fb",
+        "sha256": "1cac91437fd3ca3523ed6eaca4fc7f57b072fd24684fa2da9f267c42b2d0a5dc",
+        "zip_stored": true
+      }
+    ]
+  },
+  "candidate_id": "public_pr85_intake_20260503_codex_fb",
+  "charged_fb_bytes": 300,
+  "dispatch_performed": false,
+  "evidence_grade": "empirical_archive_stack_candidate",
+  "next_gate": "Exact CUDA eval with PR89 public inflate runtime after lane claim.",
+  "runtime_contract": {
+    "required_inflate_family": "public_pr89_henosis_final_bias",
+    "required_members": [
+      "x",
+      "fb"
+    ],
+    "score_truth": "exact CUDA auth eval only"
+  },
+  "schema": "pr85_final_bias_stack_candidate_v1",
+  "score_claim": false,
+  "source_fb": {
+    "archive_bytes": 236676,
+    "archive_path": "experiments/results/public_pr89_intake_20260504_codex/archive.zip",
+    "archive_sha256": "2f4d38f295792bebc3e722abaad7647ecdd647b8a5948285bbe0906a6883ee98",
+    "member_bytes": 300,
+    "member_name": "fb",
+    "member_sha256": "1cac91437fd3ca3523ed6eaca4fc7f57b072fd24684fa2da9f267c42b2d0a5dc",
+    "source_zip_compress_type": 8,
+    "source_zip_stored": false
+  },
+  "source_x": {
+    "archive_bytes": 236328,
+    "archive_path": "experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+    "archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+    "member_bytes": 236228,
+    "member_name": "x",
+    "member_sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+    "source_zip_compress_type": 0,
+    "source_zip_stored": true
+  },
+  "tool": "experiments/build_pr85_final_bias_stack_candidates.py"
+}

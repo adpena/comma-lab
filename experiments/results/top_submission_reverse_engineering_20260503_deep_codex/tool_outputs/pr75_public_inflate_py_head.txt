@@ -1,0 +1,260 @@
+#!/usr/bin/env python
+import io
+import os
+import struct
+import sys
+import tempfile
+from pathlib import Path
+
+import av
+import brotli
+import einops
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from tqdm import tqdm
+
+
+# -----------------------------
+# FP4 Dequantization Tools
+# -----------------------------
+class FP4Codebook:
+    pos_levels = torch.tensor([0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0], dtype=torch.float32)
+
+    @staticmethod
+    def dequantize_from_nibbles(nibbles: torch.Tensor, scales: torch.Tensor, orig_shape):
+        flat_n = int(torch.tensor(orig_shape).prod().item())
+        block_size = nibbles.numel() // scales.numel()
+
+        nibbles = nibbles.view(-1, block_size)
+        signs = (nibbles >> 3).to(torch.int64)
+        mag_idx = (nibbles & 0x7).to(torch.int64)
+
+        levels = FP4Codebook.pos_levels.to(scales.device, torch.float32)
+        q = levels[mag_idx]
+        q = torch.where(signs.bool(), -q, q)
+        dq = q * scales[:, None].to(torch.float32)
+        return dq.view(-1)[:flat_n].reshape(orig_shape)
+
+def unpack_nibbles(packed: torch.Tensor, count: int) -> torch.Tensor:
+    flat = packed.reshape(-1)
+    hi = (flat >> 4) & 0x0F
+    lo = flat & 0x0F
+    out = torch.empty(flat.numel() * 2, dtype=torch.uint8, device=packed.device)
+    out[0::2] = hi
+    out[1::2] = lo
+    return out[:count]
+
+def get_decoded_state_dict(payload_data, device: torch.device):
+    if payload_data.startswith(b"QZS3"):
+        return get_grouped_qv_state_dict(payload_data, device)
+    if payload_data.startswith(b"QZS2"):
+        return get_grouped_q10_state_dict(payload_data, device)
+    if payload_data.startswith(b"QZS1"):
+        return get_grouped_compact_state_dict(payload_data, device)
+    if payload_data.startswith(b"QZC1") or payload_data.startswith(b"QZC2") or payload_data.startswith(b"QZC3"):
+        return get_compact_state_dict(payload_data, device)
+
+    data = torch.load(io.BytesIO(payload_data), map_location=device)
+    state_dict = {}
+
+    for name, rec in data["quantized"].items():
+        if rec["weight_kind"] == "fp4_packed":
+            padded_count = rec["packed_weight"].numel() * 2
+            nibbles = unpack_nibbles(rec["packed_weight"].to(device), padded_count)
+            w = FP4Codebook.dequantize_from_nibbles(
+                nibbles, rec["scales_fp16"].to(device), rec["weight_shape"]
+            )
+        else:
+            w = rec["weight_fp16"].to(device).float()
+
+        state_dict[f"{name}.weight"] = w.float()
+        if rec.get("bias_fp16") is not None:
+            state_dict[f"{name}.bias"] = rec["bias_fp16"].to(device).float()
+
+    for name, tensor in data["dense_fp16"].items():
+        state_dict[name] = tensor.to(device).float() if torch.is_floating_point(tensor) else tensor.to(device)
+
+    return state_dict
+
+def get_compact_state_dict(payload_data, device: torch.device):
+    quant_all_side = payload_data.startswith(b"QZC2")
+    quant_dense_side = payload_data.startswith(b"QZC3")
+    block_size = int.from_bytes(payload_data[4:6], "little")
+    view = memoryview(payload_data)
+    offset = 6
+    template = JointFrameGenerator()
+    state_dict = {}
+    covered_keys = set()
+
+    def take(count):
+        nonlocal offset
+        out = view[offset:offset + count]
+        offset += count
+        return out
+
+    def take_fp(shape, quantized=False):
+        count = int(np.prod(shape))
+        if not quantized or count < 16:
+            return torch.frombuffer(take(count * 2), dtype=torch.float16).clone().reshape(shape).to(device).float()
+        mn = torch.frombuffer(take(2), dtype=torch.float16).clone().float()
+        step = torch.frombuffer(take(2), dtype=torch.float16).clone().float()
+        q = torch.frombuffer(take(count), dtype=torch.uint8).clone().reshape(shape).float()
+        return (mn + q * step).to(device)
+
+    for name, module in template.named_modules():
+        if isinstance(module, (QConv2d, QEmbedding)):
+            weight_shape = tuple(module.weight.shape)
+            covered_keys.add(f"{name}.weight")
+            if getattr(module, "quantize_weight", False):
+                weight_numel = int(module.weight.numel())
+                scale_count = (weight_numel + block_size - 1) // block_size
+                packed_count = (scale_count * block_size + 1) // 2
+                packed = torch.frombuffer(take(packed_count), dtype=torch.uint8).clone().to(device)
+                scales = take_fp((scale_count,), quantized=quant_all_side)
+                nibbles = unpack_nibbles(packed, packed.numel() * 2)
+                weight = FP4Codebook.dequantize_from_nibbles(nibbles, scales, weight_shape)
+            else:
+                weight = take_fp(weight_shape, quantized=quant_all_side)
+            state_dict[f"{name}.weight"] = weight.float()
+
+            if isinstance(module, QConv2d) and module.bias is not None:
+                covered_keys.add(f"{name}.bias")
+                state_dict[f"{name}.bias"] = take_fp(tuple(module.bias.shape), quantized=quant_all_side)
+
+    for key, tensor in template.state_dict().items():
+        if key in covered_keys:
+            continue
+        if torch.is_floating_point(tensor):
+            state_dict[key] = take_fp(tuple(tensor.shape), quantized=(quant_all_side or quant_dense_side))
+        else:
+            state_dict[key] = torch.frombuffer(take(tensor.numel() * tensor.element_size()), dtype=tensor.dtype).clone().reshape(tuple(tensor.shape)).to(device)
+    return state_dict
+
+def get_grouped_compact_state_dict(payload_data, device: torch.device):
+    block_size = int.from_bytes(payload_data[4:6], "little")
+    template = JointFrameGenerator()
+    specs = []
+    covered_keys = set()
+    sizes = {
+        "packed": 0,
+        "scales": 0,
+        "bias": 0,
+        "dense_fp": 0,
+        "fp_weight": 0,
+        "dense_other": 0,
+    }
+
+    for name, module in template.named_modules():
+        if not isinstance(module, (QConv2d, QEmbedding)):
+            continue
+        weight_shape = tuple(module.weight.shape)
+        covered_keys.add(f"{name}.weight")
+        if getattr(module, "quantize_weight", False):
+            weight_numel = int(module.weight.numel())
+            scale_count = (weight_numel + block_size - 1) // block_size
+            packed_count = (scale_count * block_size + 1) // 2
+            specs.append((name, "q", weight_shape, packed_count, scale_count))
+            sizes["packed"] += packed_count
+            sizes["scales"] += scale_count * 2
+        else:
+            specs.append((name, "fp", weight_shape, int(module.weight.numel())))
+            sizes["fp_weight"] += int(module.weight.numel()) * 2
+        if isinstance(module, QConv2d) and module.bias is not None:
+            covered_keys.add(f"{name}.bias")
+            specs.append((name, "bias", tuple(module.bias.shape), int(module.bias.numel())))
+            sizes["bias"] += int(module.bias.numel()) * 2
+
+    dense_specs = []
+    for key, tensor in template.state_dict().items():
+        if key in covered_keys:
+            continue
+        if torch.is_floating_point(tensor):
+            dense_specs.append((key, "dense_fp", tuple(tensor.shape), int(tensor.numel()), tensor.dtype))
+            sizes["dense_fp"] += int(tensor.numel()) * 2
+        else:
+            dense_specs.append((key, "dense_other", tuple(tensor.shape), int(tensor.numel()), tensor.dtype))
+            sizes["dense_other"] += int(tensor.numel()) * tensor.element_size()
+
+    view = memoryview(payload_data)
+    offset = 6
+    segments = {}
+    for key in ("packed", "scales", "bias", "dense_fp", "fp_weight", "dense_other"):
+        segments[key] = [view[offset:offset + sizes[key]], 0]
+        offset += sizes[key]
+
+    def take_from(key, count):
+        segment, pos = segments[key]
+        out = segment[pos:pos + count]
+        segments[key][1] = pos + count
+        return out
+
+    state_dict = {}
+    for spec in specs:
+        name, kind = spec[0], spec[1]
+        if kind == "q":
+            _, _, weight_shape, packed_count, scale_count = spec
+            packed = torch.frombuffer(take_from("packed", packed_count), dtype=torch.uint8).clone().to(device)
+            scales = torch.frombuffer(take_from("scales", scale_count * 2), dtype=torch.float16).clone().to(device).float()
+            nibbles = unpack_nibbles(packed, packed.numel() * 2)
+            weight = FP4Codebook.dequantize_from_nibbles(nibbles, scales, weight_shape)
+            state_dict[f"{name}.weight"] = weight.float()
+        elif kind == "fp":
+            _, _, weight_shape, count = spec
+            state_dict[f"{name}.weight"] = torch.frombuffer(take_from("fp_weight", count * 2), dtype=torch.float16).clone().reshape(weight_shape).to(device).float()
+        else:
+            _, _, bias_shape, count = spec
+            state_dict[f"{name}.bias"] = torch.frombuffer(take_from("bias", count * 2), dtype=torch.float16).clone().reshape(bias_shape).to(device).float()
+
+    for key, kind, shape, count, dtype in dense_specs:
+        if kind == "dense_fp":
+            state_dict[key] = torch.frombuffer(take_from("dense_fp", count * 2), dtype=torch.float16).clone().reshape(shape).to(device).float()
+        else:
+            state_dict[key] = torch.frombuffer(take_from("dense_other", count * torch.empty((), dtype=dtype).element_size()), dtype=dtype).clone().reshape(shape).to(device)
+    return state_dict
+
+def unpack_q10(data: memoryview, count: int) -> torch.Tensor:
+    raw = np.frombuffer(data, dtype=np.uint8)
+    out = np.empty(count, dtype=np.uint16)
+    acc = 0
+    bits = 0
+    j = 0
+    for byte in raw:
+        acc |= int(byte) << bits
+        bits += 8
+        while bits >= 10 and j < count:
+            out[j] = acc & 0x3FF
+            acc >>= 10
+            bits -= 10
+            j += 1
+    return torch.from_numpy(out.astype(np.float32, copy=False))
+
+def unpack_qbits(data: memoryview, count: int, width: int) -> torch.Tensor:
+    raw = np.frombuffer(data, dtype=np.uint8)
+    mask = (1 << width) - 1
+    out = np.empty(count, dtype=np.uint16)
+    acc = 0
+    bits = 0
+    j = 0
+    for byte in raw:
+        acc |= int(byte) << bits
+        bits += 8
+        while bits >= width and j < count:
+            out[j] = acc & mask
+            acc >>= width
+            bits -= width
+            j += 1
+    return torch.from_numpy(out.astype(np.float32, copy=False))
+
+def get_qv_specs():
+    specs = {
+        "frame1_head.block1.film_proj.weight": (9, False),
+        "pose_mlp.2.weight": (10, True),
+    }
+    for key in [
+        "frame1_head.block1.conv1.norm.weight",
+        "frame1_head.block1.conv1.norm.bias",
+        "frame1_head.block1.norm2.weight",
+        "frame1_head.block1.norm2.bias",
+        "frame1_head.block1.film_proj.bias",

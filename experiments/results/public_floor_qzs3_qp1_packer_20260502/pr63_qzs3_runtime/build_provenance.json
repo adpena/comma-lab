@@ -1,0 +1,42 @@
+{
+  "archive_byte_delta": -15829,
+  "evidence_grade": "empirical_byte_only_until_cuda_auth_eval",
+  "formula_rate_score_delta": -0.01053988136897085,
+  "members": {
+    "masks.mkv": {
+      "bytes": 223385,
+      "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+    },
+    "optimized_poses.bin": {
+      "bytes": 7200,
+      "sha256": "cc99e99c28b2ea686439b226ee504ba3a0d82fd8eb8550f4fed05d35ece5dc40"
+    },
+    "renderer.bin": {
+      "bytes": 59288,
+      "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+    }
+  },
+  "output_archive": "/Users/adpena/Projects/pact/experiments/results/public_floor_qzs3_qp1_packer_20260502/pr63_qzs3_runtime/archive.zip",
+  "output_archive_bytes": 281318,
+  "output_archive_sha256": "8e774751cbd546412d545945c4bb9360748938023e4051696212ae6f09ff5254",
+  "renderer": {
+    "action": "encoded_qzs3_from_pr63_torch_fp4_state_dict",
+    "output_renderer_bytes": 59288,
+    "output_renderer_sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb",
+    "renderer_codec": "qzs3",
+    "source_bytes": 91582,
+    "source_renderer_format": "Torch-FP4",
+    "source_sha256": "d97849d15859ae013ec983de8c1e2f638e63f3876fef658a8b7781bcfaa16a5f"
+  },
+  "runtime_member_order": [
+    "renderer.bin",
+    "masks.mkv",
+    "optimized_poses.bin"
+  ],
+  "schema_version": 1,
+  "score_claim": false,
+  "source_archive": "/private/tmp/pact_pr63_contract/source_runtime/archive.zip",
+  "source_archive_bytes": 297147,
+  "source_archive_sha256": "9e2b49437e63ead93329157b64b5bfc3208c825ec95df1ec929c1ccad2c3fb1c",
+  "tool": "repack_quantizr_faithful_qzs3_archive"
+}

@@ -1,0 +1,27 @@
+{
+  "app": "comma-auth-eval",
+  "archive_sha256": "e976acd5fe565c94fb9a8c62e5200c949919f76150e84599f268d6a58588440a",
+  "archive_size_bytes": 178417,
+  "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda",
+  "device_required": "cuda",
+  "inflate_sh_rel": "experiments/results/public_pr95_intake_20260504_codex/pr95_src/submissions/hnerv_muon/inflate.sh",
+  "nvidia_dali_import_ok": true,
+  "nvidia_dali_version": "1.52.0",
+  "nvidia_smi_path": "/usr/bin/nvidia-smi",
+  "nvidia_smi_query": "NVIDIA H100 80GB HBM3, 580.95.05",
+  "promotion_eligible": false,
+  "python": "3.11.12 (main, May 21 2025, 23:34:13) [GCC 12.2.0]",
+  "schema_version": 1,
+  "score_claim": false,
+  "started_at_utc": "2026-05-04T08:46:57Z",
+  "tool": "experiments/modal_auth_eval.py",
+  "torch_cuda_available": true,
+  "torch_cuda_capability": [
+    9,
+    0
+  ],
+  "torch_cuda_device_count": 1,
+  "torch_cuda_device_name": "NVIDIA H100 80GB HBM3",
+  "torch_cuda_version": "12.4",
+  "torch_version": "2.5.1+cu124"
+}

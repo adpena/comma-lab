@@ -1,0 +1,596 @@
+{
+  "active_metadata_summary": {
+    "archive_sha256": "cda95e70440e9ef295985a042fda2d74715ef6a0e665a1c37871cddd051cd908",
+    "archive_size_bytes": 276422,
+    "basis_index": 24,
+    "basis_kind": "pair_window",
+    "basis_pair_indices": [
+      2,
+      22,
+      24,
+      36,
+      46,
+      51,
+      59,
+      62,
+      63,
+      65,
+      72,
+      73,
+      87,
+      90,
+      93,
+      99,
+      105,
+      112,
+      155,
+      175,
+      197,
+      220,
+      228,
+      257,
+      282,
+      292,
+      295,
+      296,
+      306,
+      309,
+      313,
+      330,
+      332,
+      336,
+      389,
+      473,
+      484,
+      524,
+      546,
+      568,
+      584,
+      590
+    ],
+    "basis_signed_magnitude": -1,
+    "evidence_grade": "empirical_metadata_for_line_search",
+    "file": {
+      "path": "/Users/adpena/Projects/pact/experiments/results/vast_harvest/line_search_qzs3_qp1_pr67_active_subspace_c057_fix2_20260502T0240Z_latest/archive.accepted_latest.json",
+      "sha256": "0c0cb67ba36667f5df96e53ec5e11e428bedf3fa7f587c4188f66f4a18914316",
+      "size_bytes": 3259
+    },
+    "path": "/Users/adpena/Projects/pact/experiments/results/vast_harvest/line_search_qzs3_qp1_pr67_active_subspace_c057_fix2_20260502T0240Z_latest/archive.accepted_latest.json",
+    "score_claim": false
+  },
+  "artifacts": {
+    "artifact_manifest_json": {
+      "path": "experiments/results/pose_manifold_waterfill_c063_h100nvl_20260502_codex/artifact_manifest.json"
+    },
+    "dispatch_recommendations_json": {
+      "path": "experiments/results/pose_manifold_waterfill_c063_h100nvl_20260502_codex/exact_eval_recommendations.json",
+      "sha256": "d087a4f9e5d22aca81eecf6f9f606adb0299649fd49e3a149d79ce59e4df17c1",
+      "size_bytes": 2677
+    },
+    "ledger_md": {
+      "path": ".omx/research/pose_manifold_waterfill_c063_h100nvl_20260502_codex.md",
+      "sha256": "b1cc101fc483d9bbeccd6f2a734269d87f952453988d193d0ea610a40e1e28a3",
+      "size_bytes": 1952
+    },
+    "plan_json": {
+      "path": "experiments/results/pose_manifold_waterfill_c063_h100nvl_20260502_codex/pose_manifold_waterfill_plan.json",
+      "sha256": null,
+      "sha256_omitted_reason": "self-referential output; final hash is recorded in artifact_manifest",
+      "size_bytes": null
+    }
+  },
+  "contest_formula": {
+    "rate_score_per_byte": 6.658589531221714e-07,
+    "score": "100*seg_dist + sqrt(10*pose_dist) + 25*archive_bytes/37545489"
+  },
+  "dispatch_recommendations": [
+    {
+      "archive": {
+        "path": "/Users/adpena/Projects/pact/experiments/results/vast_harvest/archive_eval_ls_c059_weighted_pairs_top32_h100_20260502/archive.zip",
+        "sha256": "877fc5ac13e9fbd5c4158a9c7fa9dec3354057522b086004a4a28c6822456fe8",
+        "size_bytes": 276423
+      },
+      "candidate_id": "ls_c059_weighted_pairs_top32_h100",
+      "candidate_kind": "already_built_pose_manifold_archive",
+      "conflict_guard": "Before dispatch, claim a lane with tools/claim_lane_dispatch.py and confirm no active Lightning T4 promotion already covers this archive SHA.",
+      "diagnostic_delta_vs_frontier": {
+        "archive_bytes_delta_vs_frontier": 200,
+        "avg_posenet_delta_vs_frontier": 2.0000000000098064e-08,
+        "avg_segnet_delta_vs_frontier": 0.0,
+        "formula_score_delta_vs_frontier": 0.00013459903736734447,
+        "pose_score_term_delta_vs_frontier": 1.427246742860544e-06,
+        "rate_score_term_delta_vs_frontier": 0.0001331717906244423,
+        "score_delta_vs_frontier": 0.00013467724674287584,
+        "seg_score_term_delta_vs_frontier": 0.0
+      },
+      "diagnostic_eval": {
+        "path": "/Users/adpena/Projects/pact/experiments/results/vast_harvest/archive_eval_ls_c059_weighted_pairs_top32_h100_20260502/contest_auth_eval.json",
+        "sha256": "0611ccbc17c7796ff69abf776b0fd7530341f0f4460e1a959a47ce2a42e01a49",
+        "size_bytes": 3283
+      },
+      "diagnostic_hardware": {
+        "device": "cuda",
+        "gpu_model": "NVIDIA H100 NVL",
+        "gpu_t4_match": false
+      },
+      "dispatch_priority": "normal",
+      "exact_eval_command": [
+        ".venv/bin/python",
+        "-u",
+        "experiments/contest_auth_eval.py",
+        "--archive",
+        "/Users/adpena/Projects/pact/experiments/results/vast_harvest/archive_eval_ls_c059_weighted_pairs_top32_h100_20260502/archive.zip",
+        "--inflate-sh",
+        "submissions/robust_current/inflate.sh",
+        "--upstream-dir",
+        "upstream",
+        "--device",
+        "cuda",
+        "--keep-work-dir",
+        "--work-dir",
+        "experiments/results/pose_manifold_waterfill_c063_h100nvl_20260502_codex/ls_c059_weighted_pairs_top32_h100_t4_eval_work"
+      ],
+      "promotion_eligible": false,
+      "requires_t4_confirmation": true,
+      "score_claim": false,
+      "status": "ready_for_t4_confirmation"
+    }
+  ],
+  "evidence_grade": "diagnostic_planning_non_promotable",
+  "frontier": {
+    "archive_sha256": "83615afd130afa08e972e4a02476612397bffea53327caf3591891f8317aa52d",
+    "archive_size_bytes": 276223,
+    "avg_posenet_dist": 0.0004909,
+    "avg_segnet_dist": 0.00061012,
+    "device": "cuda",
+    "formula_score_delta_vs_recorded": 5.7608265491282395e-08,
+    "gpu_model": "NVIDIA H100 NVL",
+    "gpu_t4_match": false,
+    "label": "C-063-H100NVL",
+    "n_samples": 600,
+    "score_recomputed_from_components": 0.31500175622241344
+  },
+  "frontier_hard_pair_head": [
+    {
+      "frame_indices": [
+        210,
+        211
+      ],
+      "pair_index": 105,
+      "pose_score_contribution": 0.00031438184148178754,
+      "posenet_dist": 0.0026432443410158157,
+      "seg_score_contribution": 0.0001458062130647401,
+      "segnet_dist": 0.0008748372783884406,
+      "video_name": "0.mkv"
+    },
+    {
+      "frame_indices": [
+        328,
+        329
+      ],
+      "pair_index": 164,
+      "pose_score_contribution": 0.0003081627421847516,
+      "posenet_dist": 0.002590955700725317,
+      "seg_score_contribution": 0.00015004475911458334,
+      "segnet_dist": 0.0009002685546875,
+      "video_name": "0.mkv"
+    },
+    {
+      "frame_indices": [
+        256,
+        257
+      ],
+      "pair_index": 128,
+      "pose_score_contribution": 0.00028620354337422106,
+      "posenet_dist": 0.0024063282180577517,
+      "seg_score_contribution": 0.00011613634220945339,
+      "segnet_dist": 0.0006968180532567203,
+      "video_name": "0.mkv"
+    },
+    {
+      "frame_indices": [
+        212,
+        213
+      ],
+      "pair_index": 106,
+      "pose_score_contribution": 0.00029190305054687136,
+      "posenet_dist": 0.002454248256981373,
+      "seg_score_contribution": 0.0001076592404084901,
+      "segnet_dist": 0.0006459554424509406,
+      "video_name": "0.mkv"
+    },
+    {
+      "frame_indices": [
+        120,
+        121
+      ],
+      "pair_index": 60,
+      "pose_score_contribution": 0.0002694765982099986,
+      "posenet_dist": 0.0022656922228634357,
+      "seg_score_contribution": 0.00011274550342932343,
+      "segnet_dist": 0.0006764730205759406,
+      "video_name": "0.mkv"
+    },
+    {
+      "frame_indices": [
+        138,
+        139
+      ],
+      "pair_index": 69,
+      "pose_score_contribution": 0.0002932238386070203,
+      "posenet_dist": 0.002465353114530444,
+      "seg_score_contribution": 8.816189559487005e-05,
+      "segnet_dist": 0.0005289713735692203,
+      "video_name": "0.mkv"
+    },
+    {
+      "frame_indices": [
+        128,
+        129
+      ],
+      "pair_index": 64,
+      "pose_score_contribution": 0.0002797699112099669,
+      "posenet_dist": 0.0023522358387708664,
+      "seg_score_contribution": 9.409586588541667e-05,
+      "segnet_dist": 0.0005645751953125,
+      "video_name": "0.mkv"
+    },
+    {
+      "frame_indices": [
+        134,
+        135
+      ],
+      "pair_index": 67,
+      "pose_score_contribution": 0.000273557125775552,
+      "posenet_dist": 0.0023000002838671207,
+      "seg_score_contribution": 9.748671436682343e-05,
+      "segnet_dist": 0.0005849202862009406,
+      "video_name": "0.mkv"
+    },
+    {
+      "frame_indices": [
+        260,
+        261
+      ],
+      "pair_index": 130,
+      "pose_score_contribution": 0.0002550343851584615,
+      "posenet_dist": 0.0021442656870931387,
+      "seg_score_contribution": 0.00011274550342932343,
+      "segnet_dist": 0.0006764730205759406,
+      "video_name": "0.mkv"
+    },
+    {
+      "frame_indices": [
+        216,
+        217
+      ],
+      "pair_index": 108,
+      "pose_score_contribution": 0.00023127814473796675,
+      "posenet_dist": 0.0019445291254669428,
+      "seg_score_contribution": 0.00013478597005208334,
+      "segnet_dist": 0.0008087158203125,
+      "video_name": "0.mkv"
+    },
+    {
+      "frame_indices": [
+        272,
+        273
+      ],
+      "pair_index": 136,
+      "pose_score_contribution": 0.00023400686877786395,
+      "posenet_dist": 0.001967471558600664,
+      "seg_score_contribution": 0.00012546116098140678,
+      "segnet_dist": 0.0007527669658884406,
+      "video_name": "0.mkv"
+    },
+    {
+      "frame_indices": [
+        394,
+        395
+      ],
+      "pair_index": 197,
+      "pose_score_contribution": 0.00026253805088271486,
+      "posenet_dist": 0.0022073546424508095,
+      "seg_score_contribution": 9.324815861570339e-05,
+      "segnet_dist": 0.0005594889516942203,
+      "video_name": "0.mkv"
+    },
+    {
+      "frame_indices": [
+        250,
+        251
+      ],
+      "pair_index": 125,
+      "pose_score_contribution": 0.00023366245864883423,
+      "posenet_dist": 0.001964575843885541,
+      "seg_score_contribution": 9.579129012612005e-05,
+      "segnet_dist": 0.0005747477407567203,
+      "video_name": "0.mkv"
+    },
+    {
+      "frame_indices": [
+        140,
+        141
+      ],
+      "pair_index": 70,
+      "pose_score_contribution": 0.00020871302280865882,
+      "posenet_dist": 0.001754807191900909,
+      "seg_score_contribution": 0.00012037489796057343,
+      "segnet_dist": 0.0007222493877634406,
+      "video_name": "0.mkv"
+    },
+    {
+      "frame_indices": [
+        268,
+        269
+      ],
+      "pair_index": 134,
+      "pose_score_contribution": 0.00020522367216957698,
+      "posenet_dist": 0.0017254695994779468,
+      "seg_score_contribution": 0.00012037489796057343,
+      "segnet_dist": 0.0007222493877634406,
+      "video_name": "0.mkv"
+    },
+    {
+      "frame_indices": [
+        384,
+        385
+      ],
+      "pair_index": 192,
+      "pose_score_contribution": 0.00018288074005053437,
+      "posenet_dist": 0.0015376157825812697,
+      "seg_score_contribution": 0.00013902452580320338,
+      "segnet_dist": 0.0008341471548192203,
+      "video_name": "0.mkv"
+    }
+  ],
+  "inputs": {
+    "active_metadata": {
+      "path": "/Users/adpena/Projects/pact/experiments/results/vast_harvest/line_search_qzs3_qp1_pr67_active_subspace_c057_fix2_20260502T0240Z_latest/archive.accepted_latest.json",
+      "sha256": "0c0cb67ba36667f5df96e53ec5e11e428bedf3fa7f587c4188f66f4a18914316",
+      "size_bytes": 3259
+    },
+    "diagnostic_evals": [
+      {
+        "path": "/Users/adpena/Projects/pact/experiments/results/vast_harvest/archive_eval_ls_c059_weighted_pairs_top32_h100_20260502/contest_auth_eval.json",
+        "sha256": "0611ccbc17c7796ff69abf776b0fd7530341f0f4460e1a959a47ce2a42e01a49",
+        "size_bytes": 3283
+      }
+    ],
+    "frontier_component_trace": {
+      "path": "experiments/results/vast_harvest/c063_same_h100_component_trace_20260502T0700Z/component_trace.json",
+      "sha256": "434a76e2760246de4a1d13b6d84aad8b9246f4c104171465c742d89f9556ef5a",
+      "size_bytes": 356795
+    },
+    "frontier_contest_eval": {
+      "path": "experiments/results/vast_harvest/c063_same_h100_component_trace_20260502T0700Z/contest_auth_eval.json",
+      "sha256": "a62d379974610919105b9ebc01a8decf502bc03acc5f9c63dc4998280b6aa852",
+      "size_bytes": 3297
+    },
+    "pose_atom_plan": {
+      "path": "experiments/results/pose_atom_plan_c063_h100nvl_20260502/pose_atom_policies.json",
+      "sha256": "149b0bd2b933a2562955960e435091308b9dc1481f674721a253b6f46fa0ecc5",
+      "size_bytes": 348418
+    }
+  },
+  "macro_candidate_specs": [
+    {
+      "active_subspace_pair_overlap": [
+        105
+      ],
+      "active_subspace_pair_overlap_count": 1,
+      "archive_path": null,
+      "archive_sha256": null,
+      "archive_size_bytes": null,
+      "candidate_id": "c_063_h100nvl_pose_atoms_top048_macro_build_spec",
+      "candidate_kind": "pose_residual_macro_bundle_spec",
+      "estimated_charged_payload_bytes": 96.0,
+      "estimated_rate_score_cost": 6.392245949972846e-05,
+      "exact_eval_command_after_build": null,
+      "expected_net_score_utility_formula_only": 0.00057344331604332,
+      "expected_score_saved_formula_only": 0.0006373657755430484,
+      "measured_delta_atom_count": 1,
+      "next_build_step": "materialize selected pair residuals into a closed archive, then run exact CUDA auth eval on that archive",
+      "payload_contract": "charged PVR1/QP pose residual pair atoms inside archive.zip; no scorer-side sidecar or runtime fetch",
+      "prior_atom_count": 47,
+      "promotion_eligible": false,
+      "score_claim": false,
+      "selected_pair_count": 48,
+      "selected_pair_indices": [
+        128,
+        67,
+        69,
+        64,
+        125,
+        423,
+        97,
+        70,
+        148,
+        121,
+        141,
+        289,
+        435,
+        78,
+        434,
+        150,
+        75,
+        310,
+        138,
+        418,
+        105,
+        159,
+        74,
+        421,
+        290,
+        101,
+        103,
+        191,
+        142,
+        200,
+        430,
+        126,
+        129,
+        95,
+        426,
+        85,
+        144,
+        179,
+        183,
+        133,
+        203,
+        431,
+        439,
+        98,
+        114,
+        96,
+        427,
+        429
+      ],
+      "source_frontier_archive_sha256": "83615afd130afa08e972e4a02476612397bffea53327caf3591891f8317aa52d",
+      "source_frontier_archive_size_bytes": 276223,
+      "status": "build_required_before_eval"
+    },
+    {
+      "active_subspace_pair_overlap": [
+        105
+      ],
+      "active_subspace_pair_overlap_count": 1,
+      "archive_path": null,
+      "archive_sha256": null,
+      "archive_size_bytes": null,
+      "candidate_id": "c_063_h100nvl_pose_atoms_top032_macro_build_spec",
+      "candidate_kind": "pose_residual_macro_bundle_spec",
+      "estimated_charged_payload_bytes": 64.0,
+      "estimated_rate_score_cost": 4.261497299981897e-05,
+      "exact_eval_command_after_build": null,
+      "expected_net_score_utility_formula_only": 0.00044641081768296724,
+      "expected_score_saved_formula_only": 0.0004890257906827862,
+      "measured_delta_atom_count": 1,
+      "next_build_step": "materialize selected pair residuals into a closed archive, then run exact CUDA auth eval on that archive",
+      "payload_contract": "charged PVR1/QP pose residual pair atoms inside archive.zip; no scorer-side sidecar or runtime fetch",
+      "prior_atom_count": 31,
+      "promotion_eligible": false,
+      "score_claim": false,
+      "selected_pair_count": 32,
+      "selected_pair_indices": [
+        128,
+        67,
+        69,
+        64,
+        125,
+        423,
+        97,
+        70,
+        148,
+        121,
+        141,
+        289,
+        435,
+        78,
+        434,
+        150,
+        75,
+        310,
+        138,
+        418,
+        105,
+        159,
+        74,
+        421,
+        290,
+        101,
+        103,
+        191,
+        142,
+        200,
+        430,
+        126
+      ],
+      "source_frontier_archive_sha256": "83615afd130afa08e972e4a02476612397bffea53327caf3591891f8317aa52d",
+      "source_frontier_archive_size_bytes": 276223,
+      "status": "build_required_before_eval"
+    },
+    {
+      "active_subspace_pair_overlap": [],
+      "active_subspace_pair_overlap_count": 0,
+      "archive_path": null,
+      "archive_sha256": null,
+      "archive_size_bytes": null,
+      "candidate_id": "c_063_h100nvl_pose_atoms_top016_macro_build_spec",
+      "candidate_kind": "pose_residual_macro_bundle_spec",
+      "estimated_charged_payload_bytes": 32.0,
+      "estimated_rate_score_cost": 2.1307486499909485e-05,
+      "exact_eval_command_after_build": null,
+      "expected_net_score_utility_formula_only": 0.0002792760144979786,
+      "expected_score_saved_formula_only": 0.00030058350099788813,
+      "measured_delta_atom_count": 0,
+      "next_build_step": "materialize selected pair residuals into a closed archive, then run exact CUDA auth eval on that archive",
+      "payload_contract": "charged PVR1/QP pose residual pair atoms inside archive.zip; no scorer-side sidecar or runtime fetch",
+      "prior_atom_count": 16,
+      "promotion_eligible": false,
+      "score_claim": false,
+      "selected_pair_count": 16,
+      "selected_pair_indices": [
+        128,
+        67,
+        69,
+        64,
+        125,
+        423,
+        97,
+        70,
+        148,
+        121,
+        141,
+        289,
+        435,
+        78,
+        434,
+        150
+      ],
+      "source_frontier_archive_sha256": "83615afd130afa08e972e4a02476612397bffea53327caf3591891f8317aa52d",
+      "source_frontier_archive_size_bytes": 276223,
+      "status": "build_required_before_eval"
+    },
+    {
+      "active_subspace_pair_overlap": [],
+      "active_subspace_pair_overlap_count": 0,
+      "archive_path": null,
+      "archive_sha256": null,
+      "archive_size_bytes": null,
+      "candidate_id": "c_063_h100nvl_pose_atoms_top008_macro_build_spec",
+      "candidate_kind": "pose_residual_macro_bundle_spec",
+      "estimated_charged_payload_bytes": 16.0,
+      "estimated_rate_score_cost": 1.0653743249954742e-05,
+      "exact_eval_command_after_build": null,
+      "expected_net_score_utility_formula_only": 0.0001697128939857072,
+      "expected_score_saved_formula_only": 0.00018036663723566194,
+      "measured_delta_atom_count": 0,
+      "next_build_step": "materialize selected pair residuals into a closed archive, then run exact CUDA auth eval on that archive",
+      "payload_contract": "charged PVR1/QP pose residual pair atoms inside archive.zip; no scorer-side sidecar or runtime fetch",
+      "prior_atom_count": 8,
+      "promotion_eligible": false,
+      "score_claim": false,
+      "selected_pair_count": 8,
+      "selected_pair_indices": [
+        128,
+        67,
+        69,
+        64,
+        125,
+        423,
+        97,
+        70
+      ],
+      "source_frontier_archive_sha256": "83615afd130afa08e972e4a02476612397bffea53327caf3591891f8317aa52d",
+      "source_frontier_archive_size_bytes": 276223,
+      "status": "build_required_before_eval"
+    }
+  ],
+  "non_promotable_warning": "This artifact is a planning/specification artifact only. It cannot promote, rank, kill, retire, or support a score claim until a closed archive is evaluated through exact CUDA auth eval on identical bytes.",
+  "promotion_eligible": false,
+  "required_promotion_eval": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "schema_version": 1,
+  "score_claim": false,
+  "tool": "experiments/plan_pose_manifold_waterfill_candidates.py"
+}

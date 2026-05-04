@@ -1,0 +1,2543 @@
+{
+  "atom_summary": {
+    "atom_family_counts": {
+      "connected_row_run": 18,
+      "row_run": 494
+    },
+    "deduped_row_run_atom_count": 494,
+    "positive_row_run_net_count": 19,
+    "row_run_atom_count": 494,
+    "source_atom_count": 512
+  },
+  "candidate_policies": [
+    {
+      "builder": "experiments/build_cmg3_adaptive_runs_candidate.py --field-policy-json <this-json> --field-policy-id c067_top2_yf_sparse_pair_frame_class_top0008",
+      "estimated_proxy": {
+        "class_synergy": 2.185718e-06,
+        "curvature_penalty": 2e-12,
+        "density_proxy": -1.51145e-07,
+        "field_energy": -7.254977e-06,
+        "first_order_score_saved_proxy": 3.4520536e-05,
+        "pair_frame_antagonism": 1.2e-05,
+        "rate_score_cost": 3.196123e-05,
+        "selected_residual_pixels": 829,
+        "selected_uncompressed_proxy_bytes": 48
+      },
+      "evidence_grade": "planning_only",
+      "mode": "contest_practical_field_equation",
+      "policy_id": "c067_top2_yf_sparse_pair_frame_class_top0008",
+      "promotion_eligible": false,
+      "required_next_steps": [
+        "build concrete archive with this exact policy json and policy id",
+        "measure archive bytes and SHA",
+        "run exact CUDA diagnostic auth eval",
+        "rerun identical archive bytes on T4/equivalent only if diagnostic survives component gates"
+      ],
+      "score_claim": false,
+      "selected_atom_count": 8,
+      "selected_atom_ids": [
+        "cmg3pix_row_run_51ef63b2bcb879d9",
+        "cmg3pix_row_run_569d85433bd21c5f",
+        "cmg3pix_row_run_a726470a88906337",
+        "cmg3pix_row_run_c1ca1b1c4bb5039b",
+        "cmg3pix_row_run_fffd051c142bb296",
+        "cmg3pix_row_run_6cd0fa0ea23607bb",
+        "cmg3pix_row_run_f634e01cc8404584",
+        "cmg3pix_row_run_2f4990b3c7760dc5"
+      ],
+      "selected_row_run_atoms": [
+        {
+          "class_id": 2,
+          "frame_index": 563,
+          "x0": 263,
+          "x1_exclusive": 380,
+          "y": 171
+        },
+        {
+          "class_id": 2,
+          "frame_index": 310,
+          "x0": 301,
+          "x1_exclusive": 371,
+          "y": 175
+        },
+        {
+          "class_id": 2,
+          "frame_index": 110,
+          "x0": 208,
+          "x1_exclusive": 322,
+          "y": 169
+        },
+        {
+          "class_id": 2,
+          "frame_index": 169,
+          "x0": 234,
+          "x1_exclusive": 301,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 572,
+          "x0": 126,
+          "x1_exclusive": 235,
+          "y": 178
+        },
+        {
+          "class_id": 2,
+          "frame_index": 94,
+          "x0": 213,
+          "x1_exclusive": 330,
+          "y": 173
+        },
+        {
+          "class_id": 2,
+          "frame_index": 571,
+          "x0": 137,
+          "x1_exclusive": 239,
+          "y": 178
+        },
+        {
+          "class_id": 2,
+          "frame_index": 103,
+          "x0": 191,
+          "x1_exclusive": 324,
+          "y": 169
+        }
+      ],
+      "source_ledgers": [
+        "top2_ledger"
+      ],
+      "support": {
+        "class_atom_counts": {
+          "2": 8
+        },
+        "top_frame_indices_by_selected_atom_count": [
+          563,
+          310,
+          110,
+          169,
+          572,
+          94,
+          571,
+          103
+        ],
+        "top_pair_indices_by_selected_atom_count": [
+          281,
+          155,
+          55,
+          84,
+          286,
+          47,
+          285,
+          51
+        ]
+      }
+    },
+    {
+      "builder": "experiments/build_cmg3_adaptive_runs_candidate.py --field-policy-json <this-json> --field-policy-id c067_top2_yf_sparse_pair_frame_class_top0016",
+      "estimated_proxy": {
+        "class_synergy": 3.706997e-06,
+        "curvature_penalty": 3e-12,
+        "density_proxy": -2.24456e-07,
+        "field_energy": -2.1547748e-05,
+        "first_order_score_saved_proxy": 6.2667718e-05,
+        "pair_frame_antagonism": 2.4e-05,
+        "rate_score_cost": 6.3922459e-05,
+        "selected_residual_pixels": 1645,
+        "selected_uncompressed_proxy_bytes": 96
+      },
+      "evidence_grade": "planning_only",
+      "mode": "contest_practical_field_equation",
+      "policy_id": "c067_top2_yf_sparse_pair_frame_class_top0016",
+      "promotion_eligible": false,
+      "required_next_steps": [
+        "build concrete archive with this exact policy json and policy id",
+        "measure archive bytes and SHA",
+        "run exact CUDA diagnostic auth eval",
+        "rerun identical archive bytes on T4/equivalent only if diagnostic survives component gates"
+      ],
+      "score_claim": false,
+      "selected_atom_count": 16,
+      "selected_atom_ids": [
+        "cmg3pix_row_run_51ef63b2bcb879d9",
+        "cmg3pix_row_run_569d85433bd21c5f",
+        "cmg3pix_row_run_a726470a88906337",
+        "cmg3pix_row_run_c1ca1b1c4bb5039b",
+        "cmg3pix_row_run_fffd051c142bb296",
+        "cmg3pix_row_run_6cd0fa0ea23607bb",
+        "cmg3pix_row_run_f634e01cc8404584",
+        "cmg3pix_row_run_2f4990b3c7760dc5",
+        "cmg3pix_row_run_6046935c7b8cda3a",
+        "cmg3pix_row_run_4c341c25885eb0ae",
+        "cmg3pix_row_run_9a65dd868327b84c",
+        "cmg3pix_row_run_311f8589d9809a35",
+        "cmg3pix_row_run_43df8a13c4c5fa0e",
+        "cmg3pix_row_run_9975e45d1c20705d",
+        "cmg3pix_row_run_ac906a6b2c288881",
+        "cmg3pix_row_run_cfe3543bd7055082"
+      ],
+      "selected_row_run_atoms": [
+        {
+          "class_id": 2,
+          "frame_index": 563,
+          "x0": 263,
+          "x1_exclusive": 380,
+          "y": 171
+        },
+        {
+          "class_id": 2,
+          "frame_index": 310,
+          "x0": 301,
+          "x1_exclusive": 371,
+          "y": 175
+        },
+        {
+          "class_id": 2,
+          "frame_index": 110,
+          "x0": 208,
+          "x1_exclusive": 322,
+          "y": 169
+        },
+        {
+          "class_id": 2,
+          "frame_index": 169,
+          "x0": 234,
+          "x1_exclusive": 301,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 572,
+          "x0": 126,
+          "x1_exclusive": 235,
+          "y": 178
+        },
+        {
+          "class_id": 2,
+          "frame_index": 94,
+          "x0": 213,
+          "x1_exclusive": 330,
+          "y": 173
+        },
+        {
+          "class_id": 2,
+          "frame_index": 571,
+          "x0": 137,
+          "x1_exclusive": 239,
+          "y": 178
+        },
+        {
+          "class_id": 2,
+          "frame_index": 103,
+          "x0": 191,
+          "x1_exclusive": 324,
+          "y": 169
+        },
+        {
+          "class_id": 2,
+          "frame_index": 545,
+          "x0": 106,
+          "x1_exclusive": 204,
+          "y": 180
+        },
+        {
+          "class_id": 2,
+          "frame_index": 506,
+          "x0": 175,
+          "x1_exclusive": 259,
+          "y": 177
+        },
+        {
+          "class_id": 2,
+          "frame_index": 105,
+          "x0": 209,
+          "x1_exclusive": 322,
+          "y": 171
+        },
+        {
+          "class_id": 3,
+          "frame_index": 358,
+          "x0": 260,
+          "x1_exclusive": 320,
+          "y": 180
+        },
+        {
+          "class_id": 2,
+          "frame_index": 100,
+          "x0": 213,
+          "x1_exclusive": 326,
+          "y": 171
+        },
+        {
+          "class_id": 2,
+          "frame_index": 99,
+          "x0": 208,
+          "x1_exclusive": 326,
+          "y": 172
+        },
+        {
+          "class_id": 2,
+          "frame_index": 97,
+          "x0": 209,
+          "x1_exclusive": 327,
+          "y": 172
+        },
+        {
+          "class_id": 2,
+          "frame_index": 109,
+          "x0": 208,
+          "x1_exclusive": 320,
+          "y": 169
+        }
+      ],
+      "source_ledgers": [
+        "top2_ledger"
+      ],
+      "support": {
+        "class_atom_counts": {
+          "2": 15,
+          "3": 1
+        },
+        "top_frame_indices_by_selected_atom_count": [
+          563,
+          310,
+          110,
+          169,
+          572,
+          94,
+          571,
+          103,
+          545,
+          506,
+          105,
+          358,
+          100,
+          99,
+          97,
+          109
+        ],
+        "top_pair_indices_by_selected_atom_count": [
+          281,
+          155,
+          55,
+          84,
+          286,
+          47,
+          285,
+          51,
+          272,
+          253,
+          52,
+          179,
+          50,
+          49,
+          48,
+          54
+        ]
+      }
+    },
+    {
+      "builder": "experiments/build_cmg3_adaptive_runs_candidate.py --field-policy-json <this-json> --field-policy-id c067_top2_yf_sparse_pair_frame_class_top0032",
+      "estimated_proxy": {
+        "class_synergy": 5.646118e-06,
+        "curvature_penalty": 5e-12,
+        "density_proxy": -3.14208e-07,
+        "field_energy": -6.0327965e-05,
+        "first_order_score_saved_proxy": 0.000109870841,
+        "pair_frame_antagonism": 4.8e-05,
+        "rate_score_cost": 0.000127844919,
+        "selected_residual_pixels": 3116,
+        "selected_uncompressed_proxy_bytes": 192
+      },
+      "evidence_grade": "planning_only",
+      "mode": "contest_practical_field_equation",
+      "policy_id": "c067_top2_yf_sparse_pair_frame_class_top0032",
+      "promotion_eligible": false,
+      "required_next_steps": [
+        "build concrete archive with this exact policy json and policy id",
+        "measure archive bytes and SHA",
+        "run exact CUDA diagnostic auth eval",
+        "rerun identical archive bytes on T4/equivalent only if diagnostic survives component gates"
+      ],
+      "score_claim": false,
+      "selected_atom_count": 32,
+      "selected_atom_ids": [
+        "cmg3pix_row_run_51ef63b2bcb879d9",
+        "cmg3pix_row_run_569d85433bd21c5f",
+        "cmg3pix_row_run_a726470a88906337",
+        "cmg3pix_row_run_c1ca1b1c4bb5039b",
+        "cmg3pix_row_run_fffd051c142bb296",
+        "cmg3pix_row_run_6cd0fa0ea23607bb",
+        "cmg3pix_row_run_f634e01cc8404584",
+        "cmg3pix_row_run_2f4990b3c7760dc5",
+        "cmg3pix_row_run_6046935c7b8cda3a",
+        "cmg3pix_row_run_4c341c25885eb0ae",
+        "cmg3pix_row_run_9a65dd868327b84c",
+        "cmg3pix_row_run_311f8589d9809a35",
+        "cmg3pix_row_run_43df8a13c4c5fa0e",
+        "cmg3pix_row_run_9975e45d1c20705d",
+        "cmg3pix_row_run_ac906a6b2c288881",
+        "cmg3pix_row_run_cfe3543bd7055082",
+        "cmg3pix_row_run_397516cc84a5e01b",
+        "cmg3pix_row_run_82631360abec9e44",
+        "cmg3pix_row_run_1c4c157b92c6ba05",
+        "cmg3pix_row_run_7e955156ab17a59d",
+        "cmg3pix_row_run_1901853c4efd925b",
+        "cmg3pix_row_run_1f7965ca847097a9",
+        "cmg3pix_row_run_1431c7b665f7fc0e",
+        "cmg3pix_row_run_e2ca989e0c740bb7",
+        "cmg3pix_row_run_5d69e8d642a5a5df",
+        "cmg3pix_row_run_05dc3e1995197a8e",
+        "cmg3pix_row_run_34307e7ba854acd4",
+        "cmg3pix_row_run_0509719ecf1989ae",
+        "cmg3pix_row_run_f58d23779f590ede",
+        "cmg3pix_row_run_d9c8664487aa10cd",
+        "cmg3pix_row_run_3dfef24c90af9add",
+        "cmg3pix_row_run_56b58e99c12d0baa"
+      ],
+      "selected_row_run_atoms": [
+        {
+          "class_id": 2,
+          "frame_index": 563,
+          "x0": 263,
+          "x1_exclusive": 380,
+          "y": 171
+        },
+        {
+          "class_id": 2,
+          "frame_index": 310,
+          "x0": 301,
+          "x1_exclusive": 371,
+          "y": 175
+        },
+        {
+          "class_id": 2,
+          "frame_index": 110,
+          "x0": 208,
+          "x1_exclusive": 322,
+          "y": 169
+        },
+        {
+          "class_id": 2,
+          "frame_index": 169,
+          "x0": 234,
+          "x1_exclusive": 301,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 572,
+          "x0": 126,
+          "x1_exclusive": 235,
+          "y": 178
+        },
+        {
+          "class_id": 2,
+          "frame_index": 94,
+          "x0": 213,
+          "x1_exclusive": 330,
+          "y": 173
+        },
+        {
+          "class_id": 2,
+          "frame_index": 571,
+          "x0": 137,
+          "x1_exclusive": 239,
+          "y": 178
+        },
+        {
+          "class_id": 2,
+          "frame_index": 103,
+          "x0": 191,
+          "x1_exclusive": 324,
+          "y": 169
+        },
+        {
+          "class_id": 2,
+          "frame_index": 545,
+          "x0": 106,
+          "x1_exclusive": 204,
+          "y": 180
+        },
+        {
+          "class_id": 2,
+          "frame_index": 506,
+          "x0": 175,
+          "x1_exclusive": 259,
+          "y": 177
+        },
+        {
+          "class_id": 2,
+          "frame_index": 105,
+          "x0": 209,
+          "x1_exclusive": 322,
+          "y": 171
+        },
+        {
+          "class_id": 3,
+          "frame_index": 358,
+          "x0": 260,
+          "x1_exclusive": 320,
+          "y": 180
+        },
+        {
+          "class_id": 2,
+          "frame_index": 100,
+          "x0": 213,
+          "x1_exclusive": 326,
+          "y": 171
+        },
+        {
+          "class_id": 2,
+          "frame_index": 99,
+          "x0": 208,
+          "x1_exclusive": 326,
+          "y": 172
+        },
+        {
+          "class_id": 2,
+          "frame_index": 97,
+          "x0": 209,
+          "x1_exclusive": 327,
+          "y": 172
+        },
+        {
+          "class_id": 2,
+          "frame_index": 109,
+          "x0": 208,
+          "x1_exclusive": 320,
+          "y": 169
+        },
+        {
+          "class_id": 2,
+          "frame_index": 16,
+          "x0": 121,
+          "x1_exclusive": 239,
+          "y": 178
+        },
+        {
+          "class_id": 2,
+          "frame_index": 93,
+          "x0": 223,
+          "x1_exclusive": 328,
+          "y": 174
+        },
+        {
+          "class_id": 2,
+          "frame_index": 165,
+          "x0": 233,
+          "x1_exclusive": 298,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 112,
+          "x0": 227,
+          "x1_exclusive": 317,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 508,
+          "x0": 152,
+          "x1_exclusive": 259,
+          "y": 177
+        },
+        {
+          "class_id": 2,
+          "frame_index": 505,
+          "x0": 191,
+          "x1_exclusive": 297,
+          "y": 167
+        },
+        {
+          "class_id": 2,
+          "frame_index": 517,
+          "x0": 135,
+          "x1_exclusive": 247,
+          "y": 178
+        },
+        {
+          "class_id": 2,
+          "frame_index": 525,
+          "x0": 158,
+          "x1_exclusive": 266,
+          "y": 169
+        },
+        {
+          "class_id": 2,
+          "frame_index": 512,
+          "x0": 136,
+          "x1_exclusive": 256,
+          "y": 172
+        },
+        {
+          "class_id": 2,
+          "frame_index": 86,
+          "x0": 249,
+          "x1_exclusive": 333,
+          "y": 175
+        },
+        {
+          "class_id": 3,
+          "frame_index": 297,
+          "x0": 329,
+          "x1_exclusive": 381,
+          "y": 188
+        },
+        {
+          "class_id": 2,
+          "frame_index": 85,
+          "x0": 249,
+          "x1_exclusive": 334,
+          "y": 174
+        },
+        {
+          "class_id": 2,
+          "frame_index": 121,
+          "x0": 222,
+          "x1_exclusive": 313,
+          "y": 168
+        },
+        {
+          "class_id": 2,
+          "frame_index": 136,
+          "x0": 238,
+          "x1_exclusive": 322,
+          "y": 172
+        },
+        {
+          "class_id": 2,
+          "frame_index": 170,
+          "x0": 235,
+          "x1_exclusive": 299,
+          "y": 171
+        },
+        {
+          "class_id": 2,
+          "frame_index": 144,
+          "x0": 238,
+          "x1_exclusive": 318,
+          "y": 169
+        }
+      ],
+      "source_ledgers": [
+        "top2_ledger"
+      ],
+      "support": {
+        "class_atom_counts": {
+          "2": 30,
+          "3": 2
+        },
+        "top_frame_indices_by_selected_atom_count": [
+          563,
+          310,
+          110,
+          169,
+          572,
+          94,
+          571,
+          103,
+          545,
+          506,
+          105,
+          358,
+          100,
+          99,
+          97,
+          109,
+          16,
+          93,
+          165,
+          112,
+          508,
+          505,
+          517,
+          525
+        ],
+        "top_pair_indices_by_selected_atom_count": [
+          281,
+          155,
+          55,
+          84,
+          286,
+          47,
+          285,
+          51,
+          272,
+          253,
+          52,
+          179,
+          50,
+          49,
+          48,
+          54,
+          8,
+          46,
+          82,
+          56,
+          254,
+          252,
+          258,
+          262
+        ]
+      }
+    },
+    {
+      "builder": "experiments/build_cmg3_adaptive_runs_candidate.py --field-policy-json <this-json> --field-policy-id c067_top2_yf_sparse_pair_frame_class_top0064",
+      "estimated_proxy": {
+        "class_synergy": 8.440248e-06,
+        "curvature_penalty": 8e-12,
+        "density_proxy": -3.88379e-07,
+        "field_energy": -0.000149137393,
+        "first_order_score_saved_proxy": 0.000194112205,
+        "pair_frame_antagonism": 9.6e-05,
+        "rate_score_cost": 0.000255689838,
+        "selected_residual_pixels": 5718,
+        "selected_uncompressed_proxy_bytes": 384
+      },
+      "evidence_grade": "planning_only",
+      "mode": "contest_practical_field_equation",
+      "policy_id": "c067_top2_yf_sparse_pair_frame_class_top0064",
+      "promotion_eligible": false,
+      "required_next_steps": [
+        "build concrete archive with this exact policy json and policy id",
+        "measure archive bytes and SHA",
+        "run exact CUDA diagnostic auth eval",
+        "rerun identical archive bytes on T4/equivalent only if diagnostic survives component gates"
+      ],
+      "score_claim": false,
+      "selected_atom_count": 64,
+      "selected_atom_ids": [
+        "cmg3pix_row_run_51ef63b2bcb879d9",
+        "cmg3pix_row_run_569d85433bd21c5f",
+        "cmg3pix_row_run_a726470a88906337",
+        "cmg3pix_row_run_c1ca1b1c4bb5039b",
+        "cmg3pix_row_run_fffd051c142bb296",
+        "cmg3pix_row_run_6cd0fa0ea23607bb",
+        "cmg3pix_row_run_f634e01cc8404584",
+        "cmg3pix_row_run_2f4990b3c7760dc5",
+        "cmg3pix_row_run_6046935c7b8cda3a",
+        "cmg3pix_row_run_4c341c25885eb0ae",
+        "cmg3pix_row_run_9a65dd868327b84c",
+        "cmg3pix_row_run_311f8589d9809a35",
+        "cmg3pix_row_run_43df8a13c4c5fa0e",
+        "cmg3pix_row_run_9975e45d1c20705d",
+        "cmg3pix_row_run_ac906a6b2c288881",
+        "cmg3pix_row_run_cfe3543bd7055082",
+        "cmg3pix_row_run_397516cc84a5e01b",
+        "cmg3pix_row_run_82631360abec9e44",
+        "cmg3pix_row_run_1c4c157b92c6ba05",
+        "cmg3pix_row_run_7e955156ab17a59d",
+        "cmg3pix_row_run_1901853c4efd925b",
+        "cmg3pix_row_run_1f7965ca847097a9",
+        "cmg3pix_row_run_1431c7b665f7fc0e",
+        "cmg3pix_row_run_e2ca989e0c740bb7",
+        "cmg3pix_row_run_5d69e8d642a5a5df",
+        "cmg3pix_row_run_05dc3e1995197a8e",
+        "cmg3pix_row_run_34307e7ba854acd4",
+        "cmg3pix_row_run_0509719ecf1989ae",
+        "cmg3pix_row_run_f58d23779f590ede",
+        "cmg3pix_row_run_d9c8664487aa10cd",
+        "cmg3pix_row_run_3dfef24c90af9add",
+        "cmg3pix_row_run_56b58e99c12d0baa",
+        "cmg3pix_row_run_244ef22355bcd5ef",
+        "cmg3pix_row_run_6c59a93489365803",
+        "cmg3pix_row_run_33100fc5ebc4aa03",
+        "cmg3pix_row_run_c310b992f5cd02cd",
+        "cmg3pix_row_run_7c192864a3a6c46c",
+        "cmg3pix_row_run_ea1b775d5679e96f",
+        "cmg3pix_row_run_95e5717e1f686c50",
+        "cmg3pix_row_run_52f80ae546edb174",
+        "cmg3pix_row_run_9b74803a9cb0d79e",
+        "cmg3pix_row_run_5960b7899fc20a96",
+        "cmg3pix_row_run_8f9e91644e091e7c",
+        "cmg3pix_row_run_6b4030c8825f1943",
+        "cmg3pix_row_run_9522315c3cc3a389",
+        "cmg3pix_row_run_8bddf46c73ff8404",
+        "cmg3pix_row_run_6790df7806e7a058",
+        "cmg3pix_row_run_fdaf04e17415e6d8",
+        "cmg3pix_row_run_5f5315b975daea5d",
+        "cmg3pix_row_run_4acda316d5d2a703",
+        "cmg3pix_row_run_be6a3383fd254d20",
+        "cmg3pix_row_run_4a2cd49e81bc1929",
+        "cmg3pix_row_run_a0ac458c271212da",
+        "cmg3pix_row_run_21caf879ede60e6a",
+        "cmg3pix_row_run_afd6b1beb40ce571",
+        "cmg3pix_row_run_c613fafccc9f86fb",
+        "cmg3pix_row_run_9931464df7e0816e",
+        "cmg3pix_row_run_18e592b22de94fb0",
+        "cmg3pix_row_run_2c83c20896738d3d",
+        "cmg3pix_row_run_e8f092247c92fb80",
+        "cmg3pix_row_run_44c47aa6fee47b61",
+        "cmg3pix_row_run_af7f802f3cf5b026",
+        "cmg3pix_row_run_2b5ebcbe212fcac0",
+        "cmg3pix_row_run_97d1e8ef430e5106"
+      ],
+      "selected_row_run_atoms": [
+        {
+          "class_id": 2,
+          "frame_index": 563,
+          "x0": 263,
+          "x1_exclusive": 380,
+          "y": 171
+        },
+        {
+          "class_id": 2,
+          "frame_index": 310,
+          "x0": 301,
+          "x1_exclusive": 371,
+          "y": 175
+        },
+        {
+          "class_id": 2,
+          "frame_index": 110,
+          "x0": 208,
+          "x1_exclusive": 322,
+          "y": 169
+        },
+        {
+          "class_id": 2,
+          "frame_index": 169,
+          "x0": 234,
+          "x1_exclusive": 301,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 572,
+          "x0": 126,
+          "x1_exclusive": 235,
+          "y": 178
+        },
+        {
+          "class_id": 2,
+          "frame_index": 94,
+          "x0": 213,
+          "x1_exclusive": 330,
+          "y": 173
+        },
+        {
+          "class_id": 2,
+          "frame_index": 571,
+          "x0": 137,
+          "x1_exclusive": 239,
+          "y": 178
+        },
+        {
+          "class_id": 2,
+          "frame_index": 103,
+          "x0": 191,
+          "x1_exclusive": 324,
+          "y": 169
+        },
+        {
+          "class_id": 2,
+          "frame_index": 545,
+          "x0": 106,
+          "x1_exclusive": 204,
+          "y": 180
+        },
+        {
+          "class_id": 2,
+          "frame_index": 506,
+          "x0": 175,
+          "x1_exclusive": 259,
+          "y": 177
+        },
+        {
+          "class_id": 2,
+          "frame_index": 105,
+          "x0": 209,
+          "x1_exclusive": 322,
+          "y": 171
+        },
+        {
+          "class_id": 3,
+          "frame_index": 358,
+          "x0": 260,
+          "x1_exclusive": 320,
+          "y": 180
+        },
+        {
+          "class_id": 2,
+          "frame_index": 100,
+          "x0": 213,
+          "x1_exclusive": 326,
+          "y": 171
+        },
+        {
+          "class_id": 2,
+          "frame_index": 99,
+          "x0": 208,
+          "x1_exclusive": 326,
+          "y": 172
+        },
+        {
+          "class_id": 2,
+          "frame_index": 97,
+          "x0": 209,
+          "x1_exclusive": 327,
+          "y": 172
+        },
+        {
+          "class_id": 2,
+          "frame_index": 109,
+          "x0": 208,
+          "x1_exclusive": 320,
+          "y": 169
+        },
+        {
+          "class_id": 2,
+          "frame_index": 16,
+          "x0": 121,
+          "x1_exclusive": 239,
+          "y": 178
+        },
+        {
+          "class_id": 2,
+          "frame_index": 93,
+          "x0": 223,
+          "x1_exclusive": 328,
+          "y": 174
+        },
+        {
+          "class_id": 2,
+          "frame_index": 165,
+          "x0": 233,
+          "x1_exclusive": 298,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 112,
+          "x0": 227,
+          "x1_exclusive": 317,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 508,
+          "x0": 152,
+          "x1_exclusive": 259,
+          "y": 177
+        },
+        {
+          "class_id": 2,
+          "frame_index": 505,
+          "x0": 191,
+          "x1_exclusive": 297,
+          "y": 167
+        },
+        {
+          "class_id": 2,
+          "frame_index": 517,
+          "x0": 135,
+          "x1_exclusive": 247,
+          "y": 178
+        },
+        {
+          "class_id": 2,
+          "frame_index": 525,
+          "x0": 158,
+          "x1_exclusive": 266,
+          "y": 169
+        },
+        {
+          "class_id": 2,
+          "frame_index": 512,
+          "x0": 136,
+          "x1_exclusive": 256,
+          "y": 172
+        },
+        {
+          "class_id": 2,
+          "frame_index": 86,
+          "x0": 249,
+          "x1_exclusive": 333,
+          "y": 175
+        },
+        {
+          "class_id": 3,
+          "frame_index": 297,
+          "x0": 329,
+          "x1_exclusive": 381,
+          "y": 188
+        },
+        {
+          "class_id": 2,
+          "frame_index": 85,
+          "x0": 249,
+          "x1_exclusive": 334,
+          "y": 174
+        },
+        {
+          "class_id": 2,
+          "frame_index": 121,
+          "x0": 222,
+          "x1_exclusive": 313,
+          "y": 168
+        },
+        {
+          "class_id": 2,
+          "frame_index": 136,
+          "x0": 238,
+          "x1_exclusive": 322,
+          "y": 172
+        },
+        {
+          "class_id": 2,
+          "frame_index": 170,
+          "x0": 235,
+          "x1_exclusive": 299,
+          "y": 171
+        },
+        {
+          "class_id": 2,
+          "frame_index": 144,
+          "x0": 238,
+          "x1_exclusive": 318,
+          "y": 169
+        },
+        {
+          "class_id": 2,
+          "frame_index": 500,
+          "x0": 226,
+          "x1_exclusive": 303,
+          "y": 171
+        },
+        {
+          "class_id": 2,
+          "frame_index": 135,
+          "x0": 237,
+          "x1_exclusive": 320,
+          "y": 169
+        },
+        {
+          "class_id": 2,
+          "frame_index": 117,
+          "x0": 231,
+          "x1_exclusive": 318,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 159,
+          "x0": 236,
+          "x1_exclusive": 308,
+          "y": 172
+        },
+        {
+          "class_id": 2,
+          "frame_index": 90,
+          "x0": 247,
+          "x1_exclusive": 329,
+          "y": 176
+        },
+        {
+          "class_id": 2,
+          "frame_index": 79,
+          "x0": 260,
+          "x1_exclusive": 356,
+          "y": 174
+        },
+        {
+          "class_id": 2,
+          "frame_index": 82,
+          "x0": 253,
+          "x1_exclusive": 346,
+          "y": 173
+        },
+        {
+          "class_id": 2,
+          "frame_index": 114,
+          "x0": 215,
+          "x1_exclusive": 307,
+          "y": 169
+        },
+        {
+          "class_id": 3,
+          "frame_index": 273,
+          "x0": 298,
+          "x1_exclusive": 330,
+          "y": 174
+        },
+        {
+          "class_id": 2,
+          "frame_index": 143,
+          "x0": 242,
+          "x1_exclusive": 319,
+          "y": 169
+        },
+        {
+          "class_id": 2,
+          "frame_index": 138,
+          "x0": 237,
+          "x1_exclusive": 323,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 80,
+          "x0": 254,
+          "x1_exclusive": 349,
+          "y": 173
+        },
+        {
+          "class_id": 2,
+          "frame_index": 15,
+          "x0": 138,
+          "x1_exclusive": 244,
+          "y": 177
+        },
+        {
+          "class_id": 2,
+          "frame_index": 131,
+          "x0": 236,
+          "x1_exclusive": 322,
+          "y": 169
+        },
+        {
+          "class_id": 2,
+          "frame_index": 521,
+          "x0": 182,
+          "x1_exclusive": 272,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 574,
+          "x0": 308,
+          "x1_exclusive": 392,
+          "y": 183
+        },
+        {
+          "class_id": 2,
+          "frame_index": 320,
+          "x0": 312,
+          "x1_exclusive": 410,
+          "y": 179
+        },
+        {
+          "class_id": 2,
+          "frame_index": 167,
+          "x0": 232,
+          "x1_exclusive": 302,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 88,
+          "x0": 249,
+          "x1_exclusive": 329,
+          "y": 176
+        },
+        {
+          "class_id": 3,
+          "frame_index": 342,
+          "x0": 268,
+          "x1_exclusive": 318,
+          "y": 180
+        },
+        {
+          "class_id": 2,
+          "frame_index": 162,
+          "x0": 235,
+          "x1_exclusive": 299,
+          "y": 172
+        },
+        {
+          "class_id": 2,
+          "frame_index": 129,
+          "x0": 236,
+          "x1_exclusive": 312,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 149,
+          "x0": 240,
+          "x1_exclusive": 317,
+          "y": 169
+        },
+        {
+          "class_id": 2,
+          "frame_index": 146,
+          "x0": 240,
+          "x1_exclusive": 316,
+          "y": 168
+        },
+        {
+          "class_id": 2,
+          "frame_index": 518,
+          "x0": 199,
+          "x1_exclusive": 276,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 437,
+          "x0": 307,
+          "x1_exclusive": 380,
+          "y": 175
+        },
+        {
+          "class_id": 2,
+          "frame_index": 515,
+          "x0": 154,
+          "x1_exclusive": 251,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 140,
+          "x0": 238,
+          "x1_exclusive": 318,
+          "y": 167
+        },
+        {
+          "class_id": 2,
+          "frame_index": 151,
+          "x0": 239,
+          "x1_exclusive": 315,
+          "y": 168
+        },
+        {
+          "class_id": 2,
+          "frame_index": 428,
+          "x0": 264,
+          "x1_exclusive": 357,
+          "y": 178
+        },
+        {
+          "class_id": 2,
+          "frame_index": 522,
+          "x0": 179,
+          "x1_exclusive": 270,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 107,
+          "x0": 228,
+          "x1_exclusive": 314,
+          "y": 172
+        }
+      ],
+      "source_ledgers": [
+        "top2_ledger"
+      ],
+      "support": {
+        "class_atom_counts": {
+          "2": 60,
+          "3": 4
+        },
+        "top_frame_indices_by_selected_atom_count": [
+          563,
+          310,
+          110,
+          169,
+          572,
+          94,
+          571,
+          103,
+          545,
+          506,
+          105,
+          358,
+          100,
+          99,
+          97,
+          109,
+          16,
+          93,
+          165,
+          112,
+          508,
+          505,
+          517,
+          525
+        ],
+        "top_pair_indices_by_selected_atom_count": [
+          281,
+          155,
+          55,
+          84,
+          286,
+          47,
+          285,
+          51,
+          272,
+          253,
+          52,
+          179,
+          50,
+          49,
+          48,
+          54,
+          8,
+          46,
+          82,
+          56,
+          254,
+          252,
+          258,
+          262
+        ]
+      }
+    },
+    {
+      "builder": "experiments/build_cmg3_adaptive_runs_candidate.py --field-policy-json <this-json> --field-policy-id c067_top2_yf_sparse_pair_frame_class_top0128",
+      "estimated_proxy": {
+        "class_synergy": 1.2301476e-05,
+        "curvature_penalty": 1.5e-11,
+        "density_proxy": -5.26977e-07,
+        "field_energy": -0.000404717974,
+        "first_order_score_saved_proxy": 0.000370360241,
+        "pair_frame_antagonism": 0.000276,
+        "rate_score_cost": 0.000511379676,
+        "selected_residual_pixels": 11058,
+        "selected_uncompressed_proxy_bytes": 768
+      },
+      "evidence_grade": "planning_only",
+      "mode": "contest_practical_field_equation",
+      "policy_id": "c067_top2_yf_sparse_pair_frame_class_top0128",
+      "promotion_eligible": false,
+      "required_next_steps": [
+        "build concrete archive with this exact policy json and policy id",
+        "measure archive bytes and SHA",
+        "run exact CUDA diagnostic auth eval",
+        "rerun identical archive bytes on T4/equivalent only if diagnostic survives component gates"
+      ],
+      "score_claim": false,
+      "selected_atom_count": 128,
+      "selected_atom_ids": [
+        "cmg3pix_row_run_51ef63b2bcb879d9",
+        "cmg3pix_row_run_569d85433bd21c5f",
+        "cmg3pix_row_run_a726470a88906337",
+        "cmg3pix_row_run_c1ca1b1c4bb5039b",
+        "cmg3pix_row_run_fffd051c142bb296",
+        "cmg3pix_row_run_6cd0fa0ea23607bb",
+        "cmg3pix_row_run_f634e01cc8404584",
+        "cmg3pix_row_run_2f4990b3c7760dc5",
+        "cmg3pix_row_run_6046935c7b8cda3a",
+        "cmg3pix_row_run_4c341c25885eb0ae",
+        "cmg3pix_row_run_9a65dd868327b84c",
+        "cmg3pix_row_run_311f8589d9809a35",
+        "cmg3pix_row_run_43df8a13c4c5fa0e",
+        "cmg3pix_row_run_9975e45d1c20705d",
+        "cmg3pix_row_run_ac906a6b2c288881",
+        "cmg3pix_row_run_cfe3543bd7055082",
+        "cmg3pix_row_run_397516cc84a5e01b",
+        "cmg3pix_row_run_82631360abec9e44",
+        "cmg3pix_row_run_1c4c157b92c6ba05",
+        "cmg3pix_row_run_7e955156ab17a59d",
+        "cmg3pix_row_run_1901853c4efd925b",
+        "cmg3pix_row_run_1f7965ca847097a9",
+        "cmg3pix_row_run_1431c7b665f7fc0e",
+        "cmg3pix_row_run_e2ca989e0c740bb7",
+        "cmg3pix_row_run_5d69e8d642a5a5df",
+        "cmg3pix_row_run_05dc3e1995197a8e",
+        "cmg3pix_row_run_34307e7ba854acd4",
+        "cmg3pix_row_run_0509719ecf1989ae",
+        "cmg3pix_row_run_f58d23779f590ede",
+        "cmg3pix_row_run_d9c8664487aa10cd",
+        "cmg3pix_row_run_3dfef24c90af9add",
+        "cmg3pix_row_run_56b58e99c12d0baa",
+        "cmg3pix_row_run_244ef22355bcd5ef",
+        "cmg3pix_row_run_6c59a93489365803",
+        "cmg3pix_row_run_33100fc5ebc4aa03",
+        "cmg3pix_row_run_c310b992f5cd02cd",
+        "cmg3pix_row_run_7c192864a3a6c46c",
+        "cmg3pix_row_run_ea1b775d5679e96f",
+        "cmg3pix_row_run_95e5717e1f686c50",
+        "cmg3pix_row_run_52f80ae546edb174",
+        "cmg3pix_row_run_9b74803a9cb0d79e",
+        "cmg3pix_row_run_5960b7899fc20a96",
+        "cmg3pix_row_run_8f9e91644e091e7c",
+        "cmg3pix_row_run_6b4030c8825f1943",
+        "cmg3pix_row_run_9522315c3cc3a389",
+        "cmg3pix_row_run_8bddf46c73ff8404",
+        "cmg3pix_row_run_6790df7806e7a058",
+        "cmg3pix_row_run_fdaf04e17415e6d8",
+        "cmg3pix_row_run_5f5315b975daea5d",
+        "cmg3pix_row_run_4acda316d5d2a703",
+        "cmg3pix_row_run_be6a3383fd254d20",
+        "cmg3pix_row_run_4a2cd49e81bc1929",
+        "cmg3pix_row_run_a0ac458c271212da",
+        "cmg3pix_row_run_21caf879ede60e6a",
+        "cmg3pix_row_run_afd6b1beb40ce571",
+        "cmg3pix_row_run_c613fafccc9f86fb",
+        "cmg3pix_row_run_9931464df7e0816e",
+        "cmg3pix_row_run_18e592b22de94fb0",
+        "cmg3pix_row_run_2c83c20896738d3d",
+        "cmg3pix_row_run_e8f092247c92fb80",
+        "cmg3pix_row_run_44c47aa6fee47b61",
+        "cmg3pix_row_run_af7f802f3cf5b026",
+        "cmg3pix_row_run_2b5ebcbe212fcac0",
+        "cmg3pix_row_run_97d1e8ef430e5106",
+        "cmg3pix_row_run_2b76870e724fc241",
+        "cmg3pix_row_run_5a40a3ea379d7c30",
+        "cmg3pix_row_run_9340e39a212a2665",
+        "cmg3pix_row_run_1cd2a07090e889fa",
+        "cmg3pix_row_run_d85db8277d5aca3c",
+        "cmg3pix_row_run_58879025fe99f1fa",
+        "cmg3pix_row_run_ec7e738ce2ceb43c",
+        "cmg3pix_row_run_5aa8c53ad4d30fb9",
+        "cmg3pix_row_run_06f8f805b7923e8a",
+        "cmg3pix_row_run_fc75e758dc9b45da",
+        "cmg3pix_row_run_c10ea535be2030ea",
+        "cmg3pix_row_run_7130202a73c52949",
+        "cmg3pix_row_run_92febb2ff2307582",
+        "cmg3pix_row_run_ce98398ef5f8019a",
+        "cmg3pix_row_run_f017b9ed63a70ee7",
+        "cmg3pix_row_run_3d682c310e39436e",
+        "cmg3pix_row_run_e88519f80099e6e1",
+        "cmg3pix_row_run_0787b07e0a6ac058",
+        "cmg3pix_row_run_26c79ef0ab7740d2",
+        "cmg3pix_row_run_ca72fb67af07bf5e",
+        "cmg3pix_row_run_6e857b1abfd055e6",
+        "cmg3pix_row_run_6b6fc5c8cc02b331",
+        "cmg3pix_row_run_722babc9abaa35db",
+        "cmg3pix_row_run_6d25c920dca1cab3",
+        "cmg3pix_row_run_0c59a5178e5b1eaf",
+        "cmg3pix_row_run_7a3046b3f97a9740",
+        "cmg3pix_row_run_bb98f4cff513574c",
+        "cmg3pix_row_run_d56684eef4e2785b",
+        "cmg3pix_row_run_254dcfc773787b44",
+        "cmg3pix_row_run_692c54f6c16048e0",
+        "cmg3pix_row_run_6e6c01c72a612c33",
+        "cmg3pix_row_run_afd25dc5c6079d0c",
+        "cmg3pix_row_run_8501f76f0d11aa36",
+        "cmg3pix_row_run_748f1b15c6ef6bf6",
+        "cmg3pix_row_run_dc0f20b31df93005",
+        "cmg3pix_row_run_264be8f9c7330075",
+        "cmg3pix_row_run_28998a50d7c5c286",
+        "cmg3pix_row_run_f3d321e964054453",
+        "cmg3pix_row_run_3abaffb493fedf21",
+        "cmg3pix_row_run_a51e715376d35909",
+        "cmg3pix_row_run_e1d6e8854907fbc6",
+        "cmg3pix_row_run_a9c8e273ce8c397d",
+        "cmg3pix_row_run_affdb018174c8356",
+        "cmg3pix_row_run_a75066fd9fbc2d24",
+        "cmg3pix_row_run_7076efa7061f5ccc",
+        "cmg3pix_row_run_4fc79bbcd4871218",
+        "cmg3pix_row_run_083f147bd5c44568",
+        "cmg3pix_row_run_0d7874a2514cdd47",
+        "cmg3pix_row_run_54e7eb5d27ac2a34",
+        "cmg3pix_row_run_79581faaa85c6364",
+        "cmg3pix_row_run_74e5974bf06cf9a3",
+        "cmg3pix_row_run_1293085dfbb0b5f8",
+        "cmg3pix_row_run_3b590ae834f72779",
+        "cmg3pix_row_run_d2e57ceb940a3169",
+        "cmg3pix_row_run_5b8630a94f7c29e3",
+        "cmg3pix_row_run_7b782435f3a01059",
+        "cmg3pix_row_run_f54f89a55ef82600",
+        "cmg3pix_row_run_63e1ad44c68f5ae3",
+        "cmg3pix_row_run_555923491d87dc63",
+        "cmg3pix_row_run_34f523c823abd88f",
+        "cmg3pix_row_run_65e6726232bd5728",
+        "cmg3pix_row_run_fab1ac593745c12a",
+        "cmg3pix_row_run_06ee6a35967f43c0",
+        "cmg3pix_row_run_347bea0afc1cc05f"
+      ],
+      "selected_row_run_atoms": [
+        {
+          "class_id": 2,
+          "frame_index": 563,
+          "x0": 263,
+          "x1_exclusive": 380,
+          "y": 171
+        },
+        {
+          "class_id": 2,
+          "frame_index": 310,
+          "x0": 301,
+          "x1_exclusive": 371,
+          "y": 175
+        },
+        {
+          "class_id": 2,
+          "frame_index": 110,
+          "x0": 208,
+          "x1_exclusive": 322,
+          "y": 169
+        },
+        {
+          "class_id": 2,
+          "frame_index": 169,
+          "x0": 234,
+          "x1_exclusive": 301,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 572,
+          "x0": 126,
+          "x1_exclusive": 235,
+          "y": 178
+        },
+        {
+          "class_id": 2,
+          "frame_index": 94,
+          "x0": 213,
+          "x1_exclusive": 330,
+          "y": 173
+        },
+        {
+          "class_id": 2,
+          "frame_index": 571,
+          "x0": 137,
+          "x1_exclusive": 239,
+          "y": 178
+        },
+        {
+          "class_id": 2,
+          "frame_index": 103,
+          "x0": 191,
+          "x1_exclusive": 324,
+          "y": 169
+        },
+        {
+          "class_id": 2,
+          "frame_index": 545,
+          "x0": 106,
+          "x1_exclusive": 204,
+          "y": 180
+        },
+        {
+          "class_id": 2,
+          "frame_index": 506,
+          "x0": 175,
+          "x1_exclusive": 259,
+          "y": 177
+        },
+        {
+          "class_id": 2,
+          "frame_index": 105,
+          "x0": 209,
+          "x1_exclusive": 322,
+          "y": 171
+        },
+        {
+          "class_id": 3,
+          "frame_index": 358,
+          "x0": 260,
+          "x1_exclusive": 320,
+          "y": 180
+        },
+        {
+          "class_id": 2,
+          "frame_index": 100,
+          "x0": 213,
+          "x1_exclusive": 326,
+          "y": 171
+        },
+        {
+          "class_id": 2,
+          "frame_index": 99,
+          "x0": 208,
+          "x1_exclusive": 326,
+          "y": 172
+        },
+        {
+          "class_id": 2,
+          "frame_index": 97,
+          "x0": 209,
+          "x1_exclusive": 327,
+          "y": 172
+        },
+        {
+          "class_id": 2,
+          "frame_index": 109,
+          "x0": 208,
+          "x1_exclusive": 320,
+          "y": 169
+        },
+        {
+          "class_id": 2,
+          "frame_index": 16,
+          "x0": 121,
+          "x1_exclusive": 239,
+          "y": 178
+        },
+        {
+          "class_id": 2,
+          "frame_index": 93,
+          "x0": 223,
+          "x1_exclusive": 328,
+          "y": 174
+        },
+        {
+          "class_id": 2,
+          "frame_index": 165,
+          "x0": 233,
+          "x1_exclusive": 298,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 112,
+          "x0": 227,
+          "x1_exclusive": 317,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 508,
+          "x0": 152,
+          "x1_exclusive": 259,
+          "y": 177
+        },
+        {
+          "class_id": 2,
+          "frame_index": 505,
+          "x0": 191,
+          "x1_exclusive": 297,
+          "y": 167
+        },
+        {
+          "class_id": 2,
+          "frame_index": 517,
+          "x0": 135,
+          "x1_exclusive": 247,
+          "y": 178
+        },
+        {
+          "class_id": 2,
+          "frame_index": 525,
+          "x0": 158,
+          "x1_exclusive": 266,
+          "y": 169
+        },
+        {
+          "class_id": 2,
+          "frame_index": 512,
+          "x0": 136,
+          "x1_exclusive": 256,
+          "y": 172
+        },
+        {
+          "class_id": 2,
+          "frame_index": 86,
+          "x0": 249,
+          "x1_exclusive": 333,
+          "y": 175
+        },
+        {
+          "class_id": 3,
+          "frame_index": 297,
+          "x0": 329,
+          "x1_exclusive": 381,
+          "y": 188
+        },
+        {
+          "class_id": 2,
+          "frame_index": 85,
+          "x0": 249,
+          "x1_exclusive": 334,
+          "y": 174
+        },
+        {
+          "class_id": 2,
+          "frame_index": 121,
+          "x0": 222,
+          "x1_exclusive": 313,
+          "y": 168
+        },
+        {
+          "class_id": 2,
+          "frame_index": 136,
+          "x0": 238,
+          "x1_exclusive": 322,
+          "y": 172
+        },
+        {
+          "class_id": 2,
+          "frame_index": 170,
+          "x0": 235,
+          "x1_exclusive": 299,
+          "y": 171
+        },
+        {
+          "class_id": 2,
+          "frame_index": 144,
+          "x0": 238,
+          "x1_exclusive": 318,
+          "y": 169
+        },
+        {
+          "class_id": 2,
+          "frame_index": 500,
+          "x0": 226,
+          "x1_exclusive": 303,
+          "y": 171
+        },
+        {
+          "class_id": 2,
+          "frame_index": 135,
+          "x0": 237,
+          "x1_exclusive": 320,
+          "y": 169
+        },
+        {
+          "class_id": 2,
+          "frame_index": 117,
+          "x0": 231,
+          "x1_exclusive": 318,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 159,
+          "x0": 236,
+          "x1_exclusive": 308,
+          "y": 172
+        },
+        {
+          "class_id": 2,
+          "frame_index": 90,
+          "x0": 247,
+          "x1_exclusive": 329,
+          "y": 176
+        },
+        {
+          "class_id": 2,
+          "frame_index": 79,
+          "x0": 260,
+          "x1_exclusive": 356,
+          "y": 174
+        },
+        {
+          "class_id": 2,
+          "frame_index": 82,
+          "x0": 253,
+          "x1_exclusive": 346,
+          "y": 173
+        },
+        {
+          "class_id": 2,
+          "frame_index": 114,
+          "x0": 215,
+          "x1_exclusive": 307,
+          "y": 169
+        },
+        {
+          "class_id": 3,
+          "frame_index": 273,
+          "x0": 298,
+          "x1_exclusive": 330,
+          "y": 174
+        },
+        {
+          "class_id": 2,
+          "frame_index": 143,
+          "x0": 242,
+          "x1_exclusive": 319,
+          "y": 169
+        },
+        {
+          "class_id": 2,
+          "frame_index": 138,
+          "x0": 237,
+          "x1_exclusive": 323,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 80,
+          "x0": 254,
+          "x1_exclusive": 349,
+          "y": 173
+        },
+        {
+          "class_id": 2,
+          "frame_index": 15,
+          "x0": 138,
+          "x1_exclusive": 244,
+          "y": 177
+        },
+        {
+          "class_id": 2,
+          "frame_index": 131,
+          "x0": 236,
+          "x1_exclusive": 322,
+          "y": 169
+        },
+        {
+          "class_id": 2,
+          "frame_index": 521,
+          "x0": 182,
+          "x1_exclusive": 272,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 574,
+          "x0": 308,
+          "x1_exclusive": 392,
+          "y": 183
+        },
+        {
+          "class_id": 2,
+          "frame_index": 320,
+          "x0": 312,
+          "x1_exclusive": 410,
+          "y": 179
+        },
+        {
+          "class_id": 2,
+          "frame_index": 167,
+          "x0": 232,
+          "x1_exclusive": 302,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 88,
+          "x0": 249,
+          "x1_exclusive": 329,
+          "y": 176
+        },
+        {
+          "class_id": 3,
+          "frame_index": 342,
+          "x0": 268,
+          "x1_exclusive": 318,
+          "y": 180
+        },
+        {
+          "class_id": 2,
+          "frame_index": 162,
+          "x0": 235,
+          "x1_exclusive": 299,
+          "y": 172
+        },
+        {
+          "class_id": 2,
+          "frame_index": 129,
+          "x0": 236,
+          "x1_exclusive": 312,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 149,
+          "x0": 240,
+          "x1_exclusive": 317,
+          "y": 169
+        },
+        {
+          "class_id": 2,
+          "frame_index": 146,
+          "x0": 240,
+          "x1_exclusive": 316,
+          "y": 168
+        },
+        {
+          "class_id": 2,
+          "frame_index": 518,
+          "x0": 199,
+          "x1_exclusive": 276,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 437,
+          "x0": 307,
+          "x1_exclusive": 380,
+          "y": 175
+        },
+        {
+          "class_id": 2,
+          "frame_index": 515,
+          "x0": 154,
+          "x1_exclusive": 251,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 140,
+          "x0": 238,
+          "x1_exclusive": 318,
+          "y": 167
+        },
+        {
+          "class_id": 2,
+          "frame_index": 151,
+          "x0": 239,
+          "x1_exclusive": 315,
+          "y": 168
+        },
+        {
+          "class_id": 2,
+          "frame_index": 428,
+          "x0": 264,
+          "x1_exclusive": 357,
+          "y": 178
+        },
+        {
+          "class_id": 2,
+          "frame_index": 522,
+          "x0": 179,
+          "x1_exclusive": 270,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 107,
+          "x0": 228,
+          "x1_exclusive": 314,
+          "y": 172
+        },
+        {
+          "class_id": 2,
+          "frame_index": 580,
+          "x0": 332,
+          "x1_exclusive": 419,
+          "y": 185
+        },
+        {
+          "class_id": 2,
+          "frame_index": 11,
+          "x0": 136,
+          "x1_exclusive": 235,
+          "y": 178
+        },
+        {
+          "class_id": 3,
+          "frame_index": 423,
+          "x0": 253,
+          "x1_exclusive": 308,
+          "y": 180
+        },
+        {
+          "class_id": 2,
+          "frame_index": 119,
+          "x0": 233,
+          "x1_exclusive": 310,
+          "y": 169
+        },
+        {
+          "class_id": 2,
+          "frame_index": 541,
+          "x0": 144,
+          "x1_exclusive": 241,
+          "y": 175
+        },
+        {
+          "class_id": 2,
+          "frame_index": 424,
+          "x0": 265,
+          "x1_exclusive": 346,
+          "y": 178
+        },
+        {
+          "class_id": 2,
+          "frame_index": 154,
+          "x0": 237,
+          "x1_exclusive": 312,
+          "y": 167
+        },
+        {
+          "class_id": 2,
+          "frame_index": 127,
+          "x0": 236,
+          "x1_exclusive": 310,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 596,
+          "x0": 130,
+          "x1_exclusive": 224,
+          "y": 179
+        },
+        {
+          "class_id": 2,
+          "frame_index": 20,
+          "x0": 128,
+          "x1_exclusive": 228,
+          "y": 180
+        },
+        {
+          "class_id": 2,
+          "frame_index": 595,
+          "x0": 138,
+          "x1_exclusive": 231,
+          "y": 177
+        },
+        {
+          "class_id": 2,
+          "frame_index": 161,
+          "x0": 236,
+          "x1_exclusive": 301,
+          "y": 174
+        },
+        {
+          "class_id": 2,
+          "frame_index": 12,
+          "x0": 118,
+          "x1_exclusive": 223,
+          "y": 181
+        },
+        {
+          "class_id": 2,
+          "frame_index": 542,
+          "x0": 145,
+          "x1_exclusive": 239,
+          "y": 175
+        },
+        {
+          "class_id": 2,
+          "frame_index": 153,
+          "x0": 238,
+          "x1_exclusive": 315,
+          "y": 168
+        },
+        {
+          "class_id": 2,
+          "frame_index": 562,
+          "x0": 276,
+          "x1_exclusive": 379,
+          "y": 171
+        },
+        {
+          "class_id": 2,
+          "frame_index": 75,
+          "x0": 286,
+          "x1_exclusive": 368,
+          "y": 177
+        },
+        {
+          "class_id": 2,
+          "frame_index": 561,
+          "x0": 275,
+          "x1_exclusive": 374,
+          "y": 171
+        },
+        {
+          "class_id": 2,
+          "frame_index": 123,
+          "x0": 235,
+          "x1_exclusive": 306,
+          "y": 172
+        },
+        {
+          "class_id": 2,
+          "frame_index": 405,
+          "x0": 263,
+          "x1_exclusive": 323,
+          "y": 177
+        },
+        {
+          "class_id": 2,
+          "frame_index": 125,
+          "x0": 235,
+          "x1_exclusive": 315,
+          "y": 169
+        },
+        {
+          "class_id": 2,
+          "frame_index": 133,
+          "x0": 237,
+          "x1_exclusive": 320,
+          "y": 169
+        },
+        {
+          "class_id": 2,
+          "frame_index": 306,
+          "x0": 303,
+          "x1_exclusive": 359,
+          "y": 177
+        },
+        {
+          "class_id": 2,
+          "frame_index": 111,
+          "x0": 207,
+          "x1_exclusive": 321,
+          "y": 168
+        },
+        {
+          "class_id": 2,
+          "frame_index": 168,
+          "x0": 233,
+          "x1_exclusive": 301,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 311,
+          "x0": 303,
+          "x1_exclusive": 369,
+          "y": 176
+        },
+        {
+          "class_id": 2,
+          "frame_index": 95,
+          "x0": 212,
+          "x1_exclusive": 328,
+          "y": 173
+        },
+        {
+          "class_id": 2,
+          "frame_index": 544,
+          "x0": 118,
+          "x1_exclusive": 210,
+          "y": 180
+        },
+        {
+          "class_id": 2,
+          "frame_index": 101,
+          "x0": 213,
+          "x1_exclusive": 322,
+          "y": 173
+        },
+        {
+          "class_id": 2,
+          "frame_index": 507,
+          "x0": 163,
+          "x1_exclusive": 248,
+          "y": 179
+        },
+        {
+          "class_id": 2,
+          "frame_index": 96,
+          "x0": 211,
+          "x1_exclusive": 328,
+          "y": 172
+        },
+        {
+          "class_id": 2,
+          "frame_index": 570,
+          "x0": 150,
+          "x1_exclusive": 235,
+          "y": 179
+        },
+        {
+          "class_id": 2,
+          "frame_index": 102,
+          "x0": 212,
+          "x1_exclusive": 318,
+          "y": 173
+        },
+        {
+          "class_id": 2,
+          "frame_index": 573,
+          "x0": 298,
+          "x1_exclusive": 391,
+          "y": 181
+        },
+        {
+          "class_id": 2,
+          "frame_index": 113,
+          "x0": 228,
+          "x1_exclusive": 316,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 164,
+          "x0": 234,
+          "x1_exclusive": 298,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 509,
+          "x0": 125,
+          "x1_exclusive": 238,
+          "y": 180
+        },
+        {
+          "class_id": 3,
+          "frame_index": 296,
+          "x0": 328,
+          "x1_exclusive": 378,
+          "y": 188
+        },
+        {
+          "class_id": 2,
+          "frame_index": 84,
+          "x0": 252,
+          "x1_exclusive": 340,
+          "y": 172
+        },
+        {
+          "class_id": 2,
+          "frame_index": 104,
+          "x0": 229,
+          "x1_exclusive": 313,
+          "y": 173
+        },
+        {
+          "class_id": 2,
+          "frame_index": 158,
+          "x0": 236,
+          "x1_exclusive": 306,
+          "y": 171
+        },
+        {
+          "class_id": 2,
+          "frame_index": 137,
+          "x0": 237,
+          "x1_exclusive": 318,
+          "y": 171
+        },
+        {
+          "class_id": 2,
+          "frame_index": 81,
+          "x0": 253,
+          "x1_exclusive": 349,
+          "y": 172
+        },
+        {
+          "class_id": 2,
+          "frame_index": 145,
+          "x0": 244,
+          "x1_exclusive": 320,
+          "y": 169
+        },
+        {
+          "class_id": 2,
+          "frame_index": 134,
+          "x0": 237,
+          "x1_exclusive": 313,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 83,
+          "x0": 250,
+          "x1_exclusive": 346,
+          "y": 171
+        },
+        {
+          "class_id": 2,
+          "frame_index": 116,
+          "x0": 230,
+          "x1_exclusive": 314,
+          "y": 171
+        },
+        {
+          "class_id": 2,
+          "frame_index": 142,
+          "x0": 239,
+          "x1_exclusive": 316,
+          "y": 168
+        },
+        {
+          "class_id": 2,
+          "frame_index": 89,
+          "x0": 248,
+          "x1_exclusive": 329,
+          "y": 176
+        },
+        {
+          "class_id": 2,
+          "frame_index": 91,
+          "x0": 247,
+          "x1_exclusive": 329,
+          "y": 176
+        },
+        {
+          "class_id": 2,
+          "frame_index": 87,
+          "x0": 247,
+          "x1_exclusive": 332,
+          "y": 173
+        },
+        {
+          "class_id": 2,
+          "frame_index": 163,
+          "x0": 235,
+          "x1_exclusive": 299,
+          "y": 171
+        },
+        {
+          "class_id": 2,
+          "frame_index": 321,
+          "x0": 316,
+          "x1_exclusive": 413,
+          "y": 183
+        },
+        {
+          "class_id": 2,
+          "frame_index": 120,
+          "x0": 225,
+          "x1_exclusive": 309,
+          "y": 167
+        },
+        {
+          "class_id": 2,
+          "frame_index": 166,
+          "x0": 233,
+          "x1_exclusive": 301,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 130,
+          "x0": 236,
+          "x1_exclusive": 318,
+          "y": 169
+        },
+        {
+          "class_id": 2,
+          "frame_index": 150,
+          "x0": 238,
+          "x1_exclusive": 316,
+          "y": 167
+        },
+        {
+          "class_id": 2,
+          "frame_index": 519,
+          "x0": 195,
+          "x1_exclusive": 275,
+          "y": 169
+        },
+        {
+          "class_id": 3,
+          "frame_index": 272,
+          "x0": 297,
+          "x1_exclusive": 329,
+          "y": 174
+        },
+        {
+          "class_id": 2,
+          "frame_index": 581,
+          "x0": 334,
+          "x1_exclusive": 422,
+          "y": 185
+        },
+        {
+          "class_id": 2,
+          "frame_index": 98,
+          "x0": 235,
+          "x1_exclusive": 324,
+          "y": 172
+        },
+        {
+          "class_id": 2,
+          "frame_index": 108,
+          "x0": 229,
+          "x1_exclusive": 313,
+          "y": 171
+        },
+        {
+          "class_id": 2,
+          "frame_index": 115,
+          "x0": 229,
+          "x1_exclusive": 316,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 171,
+          "x0": 238,
+          "x1_exclusive": 296,
+          "y": 173
+        }
+      ],
+      "source_ledgers": [
+        "top2_ledger"
+      ],
+      "support": {
+        "class_atom_counts": {
+          "2": 121,
+          "3": 7
+        },
+        "top_frame_indices_by_selected_atom_count": [
+          563,
+          310,
+          110,
+          169,
+          572,
+          94,
+          571,
+          103,
+          545,
+          506,
+          105,
+          358,
+          100,
+          99,
+          97,
+          109,
+          16,
+          93,
+          165,
+          112,
+          508,
+          505,
+          517,
+          525
+        ],
+        "top_pair_indices_by_selected_atom_count": [
+          281,
+          155,
+          55,
+          84,
+          286,
+          47,
+          285,
+          51,
+          272,
+          253,
+          52,
+          50,
+          49,
+          48,
+          54,
+          82,
+          56,
+          254,
+          43,
+          148,
+          42,
+          60,
+          68,
+          85
+        ]
+      }
+    }
+  ],
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "configuration": {
+    "candidate_sizes": [
+      8,
+      16,
+      32,
+      64,
+      128
+    ],
+    "class_synergy": 5e-07,
+    "curvature_strength": 0.08,
+    "env_defaults": {
+      "PACT_FIELD_CANDIDATE_SIZES": null,
+      "PACT_FIELD_EQUATION_MODE": null,
+      "PACT_FIELD_INTERACTION_MODEL": null,
+      "PACT_FIELD_MAX_SOURCE_ATOMS": null
+    },
+    "frame_antagonism": 5e-07,
+    "interaction_model": "sparse_pair_frame_class",
+    "low_rank_modes": 8,
+    "max_source_atoms": 512,
+    "pair_antagonism": 1e-06,
+    "policy_prefix": "c067_top2_yf",
+    "positive_proxy_only": false
+  },
+  "contest_practical_equations": {
+    "constraints": [
+      "all score-affecting bits must be inside archive.zip",
+      "archive must inflate deterministically through fixed contest runtime",
+      "runtime must pass T4-equivalent budget before promotion",
+      "selected atoms become score evidence only after exact CUDA auth eval",
+      "stacked deltas are not additive evidence until the stacked archive is exact-evaluated"
+    ],
+    "implemented_sparse_surrogate": {
+      "class_synergy": 5e-07,
+      "curvature_strength": 0.08,
+      "frame_antagonism": 5e-07,
+      "interaction_model": "sparse_pair_frame_class",
+      "marginal_energy": "DeltaF(a|S)=b_a-lambda*c_a-curvature(a)-pair_frame_antagonism(a,S)+class_synergy(a,S)",
+      "pair_antagonism": 1e-06
+    },
+    "name": "contest_practical_atom_field_equations",
+    "objective": "maximize F(x) = sum_a b_a*x_a - lambda_rate*sum_a c_a*x_a - 0.5*sum_{a,b} H_ab*x_a*x_b + sum_g synergy_g(x)",
+    "variables": {
+      "H_ab": "sparse sampled interaction or curvature between atoms a,b",
+      "b_a": "first-order scorer benefit proxy from exact residual/component evidence",
+      "c_a": "charged byte cost of atom a inside archive",
+      "lambda_rate": "25 / 37545489",
+      "x_a": "binary decision for charged archive atom a"
+    }
+  },
+  "cuda_jobs_launched": false,
+  "evidence_grade": "planning_only",
+  "formulas": {
+    "break_even_bytes_per_score": 1501819.56,
+    "contest_score_formula": "score = 100*seg_dist + sqrt(10*pose_dist) + 25*archive_bytes/37545489",
+    "lambda_rate": 6.658589531221714e-07,
+    "lambda_rate_formula": "25 / 37545489"
+  },
+  "ideal_infinite_compute_equations": {
+    "all_order_expansion": [
+      "Taylor/Frechet: exact local scorer expansion over atom coordinates",
+      "Fourier/Walsh: randomized low-dimensional subspace probes recover sparse interaction coefficients",
+      "Riemannian: optimize on pose/camera/ego-motion manifolds instead of arbitrary pixel axes",
+      "Feynman/CEM: sample correction paths, weight by exact/proxy energy, refit proposal distribution",
+      "Dykstra/ADMM: project against rate, distortion, runtime, compliance, and reproducibility constraints"
+    ],
+    "exact_objective": "min_A 100*seg_dist(M_A) + sqrt(10*pose_dist(P_A)) + 25*|A|/37545489",
+    "field_form": "delta S = integral g_i dphi_i + 1/2 integral integral H_ij dphi_i dphi_j + higher_order_terms, with phi spanning pixels, runs, poses, latents, decoder weights, and packer bits",
+    "infinite_compute_search": [
+      "enumerate or sample archive grammars and decoder families",
+      "for every candidate atom set, build exact archive bytes",
+      "run exact CUDA auth eval as the oracle",
+      "fit all-order interaction tensor from oracle calls",
+      "solve the charged archive minimum and promote only identical bytes on T4/equivalent"
+    ],
+    "low_rank_modes": 8,
+    "name": "ideal_infinite_compute_archive_field_equations",
+    "practical_projection": "The contest mode is the computable low-order projection of this system under the current wall-clock budget.",
+    "status": "mathematical_complete_system_not_score_evidence",
+    "variables": {
+      "A": "complete archive byte string including decoder and all payload bits",
+      "D_A": "deterministic inflate map induced by archive A",
+      "M_A,P_A": "inflated masks and poses/rendered frames consumed by the scorer",
+      "theta": "decoder/model/grammar/quantizer parameters charged inside A",
+      "z": "latent or side-information bits charged inside A"
+    }
+  },
+  "inputs": [
+    {
+      "atom_count": 125569,
+      "evidence_grade": "planning_only",
+      "path": "/Users/adpena/Projects/pact/experiments/results/c067_cmg3_pixel_lagrangian_atoms_after_t4/top2_ledger.json",
+      "schema": "cmg3_pixel_lagrangian_atom_ledger_v1",
+      "score_claim": false,
+      "sha256": "61f590c02bbed997d4eba0bcd311c73f79211a41fc041c09c57d1b9c986669d9",
+      "tensor": {
+        "candidate_class_histogram_pixels": {
+          "0": 28726119,
+          "1": 397049,
+          "2": 58048244,
+          "3": 807064,
+          "4": 29986324
+        },
+        "class_count": 5,
+        "pair_count": 300,
+        "residual_pixel_fraction": 0.011170213487,
+        "residual_pixels": 1317692,
+        "residual_run_count": 100989,
+        "shape": {
+          "frames": 600,
+          "height": 384,
+          "width": 512
+        },
+        "source_class_histogram_pixels": {
+          "0": 27408427,
+          "1": 690063,
+          "2": 58413695,
+          "3": 1459867,
+          "4": 29992748
+        },
+        "total_pixels": 117964800
+      },
+      "top_atoms_read": 512
+    }
+  ],
+  "mode": "both",
+  "no_score_claim": true,
+  "producer": "experiments/plan_yousfi_fridrich_field_equations.py",
+  "promotion_eligible": false,
+  "remote_jobs_dispatched": false,
+  "required_next_steps": [
+    "build concrete CMG3A archives from candidate_policies using --field-policy-json",
+    "byte-screen built archives and discard byte-regressive or high-disagreement variants",
+    "run fast CUDA diagnostic exact eval on the Pareto set",
+    "run T4/equivalent promotion only on identical bytes that survive diagnostics"
+  ],
+  "schema": "yousfi_fridrich_atom_field_allocator_v1",
+  "score_claim": false
+}

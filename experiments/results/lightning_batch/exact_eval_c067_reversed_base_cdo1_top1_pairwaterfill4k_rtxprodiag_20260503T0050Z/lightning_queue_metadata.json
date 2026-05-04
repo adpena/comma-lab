@@ -1,0 +1,40 @@
+{
+  "adjudication": {
+    "allow_component_gate_forensic_success": true,
+    "allow_sane_score_forensic_success": true,
+    "baseline_archive_size_bytes": 276214,
+    "baseline_posenet_dist": 0.00049637,
+    "baseline_score": 0.31561703078448233,
+    "baseline_segnet_dist": 0.00061244,
+    "component_reference_label": "C067_Aplusplus_T4",
+    "delta_key": "score_delta_vs_C067_Aplusplus",
+    "max_posenet_dist": null,
+    "max_posenet_relative": 100000.0,
+    "max_sane_score": 50.0,
+    "max_segnet_dist": null,
+    "max_segnet_relative": 100000.0,
+    "predicted_band_high": 35.0,
+    "predicted_band_low": 0.1,
+    "provenance_name": "adjudication_provenance.json",
+    "regression_threshold": 35.0,
+    "required_device": "cuda",
+    "required_samples": 600,
+    "result_copy_name": "contest_auth_eval.adjudicated.json"
+  },
+  "artifact_recorded_at_utc": "2026-05-03T00:55:54Z",
+  "expected_archive_sha256": "78fb9b6d4466f3fe32e755676a45eb6ddf8b170214be44f55262a777d3bdcd7b",
+  "expected_archive_size_bytes": 132618,
+  "job_name": "exact_eval_c067_reversed_base_cdo1_top1_pairwaterfill4k_rtxprodiag_20260503T0050Z",
+  "queue_metadata": {
+    "base_exact_negative": "experiments/results/lightning_batch/exact_eval_c067_cmg3_nonzero_top1_t4_20260502T1100Z/contest_auth_eval.adjudicated.json",
+    "baseline_json": "experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/contest_auth_eval.adjudicated.json",
+    "cdo1_manifest": "experiments/results/c067_reversed_base_cdo1_candidate_20260503/cmg3_nonzero_top1_pairwaterfill4k/c067_reversed_base_cdo1_candidate_manifest.json",
+    "evidence": "diagnostic_rtxpro",
+    "lane": "cdo1_reversed_base_mask_topology",
+    "source_manifest": ".omx/state/exact_eval_c067_reversed_base_cdo1_top1_pairwaterfill4k_rtxprodiag_20260503T0050Z_manifest.json"
+  },
+  "role": "exact_cuda_eval",
+  "schema_version": 1,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

@@ -1,0 +1,44 @@
+{
+  "brotli_quality": 11,
+  "evidence_grade": "empirical",
+  "formula_only_rate_delta": -0.006488129639222438,
+  "header": {
+    "members": [
+      {
+        "bytes": 91582,
+        "codec": "raw",
+        "name": "renderer.bin",
+        "sha256": "d97849d15859ae013ec983de8c1e2f638e63f3876fef658a8b7781bcfaa16a5f"
+      },
+      {
+        "bytes": 223385,
+        "codec": "raw",
+        "name": "masks.mkv",
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      {
+        "bytes": 7200,
+        "codec": "raw",
+        "name": "optimized_poses.bin",
+        "sha256": "feb06921cb839e94780c4af8a1576babfcbc5e646e17272b56dd863d98f0129a"
+      }
+    ],
+    "payload_format": "pr64_len_table",
+    "schema": "renderer_payload_pr64_len_table_v1",
+    "source_archive_sha256": "976f5fcfedcab3ee78b878134fc9514ce751bb67232bf44340392d4c5b3b6ffb"
+  },
+  "output_archive": "experiments/results/public_floor_contract_variants_20260501/pr64_repro_pr64_raw/archive.zip",
+  "output_archive_bytes": 287394,
+  "output_archive_sha256": "c8a25a9093ba3dcca7c28e9e70d1840c421c89aa40056ef04f6349adbb37f2da",
+  "payload_compressed_bytes": 287294,
+  "payload_format": "pr64_len_table",
+  "payload_member": "p",
+  "payload_raw_bytes": 322179,
+  "pose_codec": "raw",
+  "pose_residual_topk": 0,
+  "savings_bytes": 9744,
+  "score_claim": false,
+  "source_archive": "/tmp/pact_pr64_contract/source_runtime/archive.zip",
+  "source_archive_bytes": 297138,
+  "source_archive_sha256": "976f5fcfedcab3ee78b878134fc9514ce751bb67232bf44340392d4c5b3b6ffb"
+}

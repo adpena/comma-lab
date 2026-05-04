@@ -1,0 +1,820 @@
+{
+  "archive": {
+    "archive_bytes": 236328,
+    "archive_path": "experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+    "archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+    "member_compress_size": 236228,
+    "member_crc32_hex": "c6356353",
+    "member_file_size": 236228,
+    "member_name": "x",
+    "member_sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+    "zip_stored": true
+  },
+  "artifact_consistency": {
+    "bit_budget_json_present": true,
+    "bundle_profile_json_present": true,
+    "checked": true,
+    "matches": true,
+    "mismatches": []
+  },
+  "bundle": {
+    "format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+    "header_bytes": 24,
+    "segment_lengths": {
+      "bias": 223,
+      "frac": 106,
+      "frac2": 149,
+      "frac3": 154,
+      "mask": 159011,
+      "model": 57074,
+      "pose": 1487,
+      "post": 1400,
+      "randmulti": 16101,
+      "region": 273,
+      "shift": 226
+    },
+    "segment_offsets": {
+      "bias": 219631,
+      "frac": 219222,
+      "frac2": 219328,
+      "frac3": 219477,
+      "mask": 24,
+      "model": 159035,
+      "pose": 216109,
+      "post": 217596,
+      "randmulti": 220127,
+      "region": 219854,
+      "shift": 218996
+    },
+    "segment_order": [
+      "mask",
+      "model",
+      "pose",
+      "post",
+      "shift",
+      "frac",
+      "frac2",
+      "frac3",
+      "bias",
+      "region",
+      "randmulti"
+    ]
+  },
+  "candidate_routes": [
+    {
+      "actionability_rank": 2,
+      "bytes_at_stake": 57074,
+      "contest_faithful_requirements": [
+        "use the reviewed QH0 parser/loader contract, not torch.load or replay-side heuristics",
+        "add a deterministic QH0 serializer with byte/tensor parity tests",
+        "prove runtime output parity on the exact PR85 archive before exact eval",
+        "score only through archive.zip -> inflate.sh -> upstream/evaluate.py on CUDA"
+      ],
+      "dispatch_blocker": "no reviewed QH0 serializer or runtime parity artifact in this profile",
+      "dispatch_performed": false,
+      "dispatchable_now": false,
+      "estimated_model_segment_bytes_saved": null,
+      "planning_only": true,
+      "recognized_qh0_payload": true,
+      "recommendation": "Top byte-saving route when lossless Brotli recode is non-improving: build a deterministic QH0 record-level serializer/repacker and target low-entropy decoded model records under runtime parity.",
+      "route_id": "qh0_record_level_repack_or_serializer",
+      "route_type": "score_affecting_model_payload_rewrite",
+      "score_claim": false
+    },
+    {
+      "actionability_rank": 3,
+      "best_static_candidate_codec": "brotli_q11_decoded_qh0_recode",
+      "bytes_at_stake": 57074,
+      "contest_faithful_requirements": [
+        "replace only PR85 model segment bytes inside the single-member x bundle",
+        "repack with tac.pr85_bundle and prove bundle roundtrip for unchanged segments",
+        "prove brotli-decompressed model bytes are identical to the source decoded QH0 bytes",
+        "run runtime output parity before any exact CUDA auth eval"
+      ],
+      "dispatch_blocker": "planning-only static profile; no runtime parity or CUDA auth eval performed",
+      "dispatch_performed": false,
+      "dispatchable_now": false,
+      "estimated_model_segment_bytes_saved": 0,
+      "estimated_model_segment_delta_bytes": 153,
+      "planning_only": true,
+      "recommendation": "Do not prioritize: generic Brotli recoding did not beat the current charged bytes.",
+      "route_id": "lossless_brotli_recode_decoded_model_segment",
+      "route_type": "lossless_container_recode",
+      "score_claim": false
+    },
+    {
+      "actionability_rank": 4,
+      "already_compressed_by_generic_probes": true,
+      "bytes_at_stake": 57074,
+      "decoded_best_probe_delta_vs_input": -4363,
+      "dispatch_performed": false,
+      "encoded_best_probe_delta_vs_input": 4,
+      "planning_only": true,
+      "recommendation": "Do not wrap the charged model segment in another generic compressor unless the decoded-byte recode proves a smaller byte-closed model segment.",
+      "route_id": "generic_wrapper_noop_guard",
+      "route_type": "negative_guardrail",
+      "score_claim": false
+    }
+  ],
+  "cuda_score_truth": "archive.zip -> inflate.sh -> upstream/evaluate.py on CUDA",
+  "deterministic": true,
+  "dispatch_performed": false,
+  "evidence_grade": "planning_only_static_model_payload_profile",
+  "inputs": {
+    "archive": "experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+    "bit_budget_json": "experiments/results/pr85_archive_bit_budget_20260504_codex/profile_pr85_archive_bit_budget.json",
+    "bundle_profile_json": "experiments/results/public_pr85_intake_20260503_codex/profile_pr85_bundle.json"
+  },
+  "model_segment": {
+    "container": {
+      "brotli_decodable": true,
+      "brotli_decode_error": null,
+      "canonical_loader": "tac.qh0_renderer_codec.decode_qh0_state_dict",
+      "decoded_magic_ascii": "QH0...?*",
+      "decoded_magic_hex": "51483000fcd63f2a",
+      "decoded_payload_kind": "pr85_qh0_joint_frame_model",
+      "decoder_used_for_profile": "brotli only; no model/scorer runtime imported",
+      "encoded_container": "brotli_stream",
+      "encoded_magic_ascii": "...?...b",
+      "encoded_magic_hex": "b1a8843f8097a162",
+      "hilo_split_qh0": true,
+      "recognized_runtime_model_payload": true
+    },
+    "decoded": {
+      "bytes": 61590,
+      "entropy_bits_per_byte": 7.824505803306,
+      "ff_byte_fraction": 0.002143205066,
+      "longest_equal_byte_run": {
+        "byte": 20,
+        "length": 29,
+        "start": 59560
+      },
+      "magic_ascii": "QH0...?*",
+      "magic_hex": "51483000fcd63f2a",
+      "sha256": "503d666ec4c1b3e0ce09fa9dcb963b049de185eac0ddd82318578a7732439ed4",
+      "top_byte_frequencies": [
+        {
+          "byte": 60,
+          "count": 1019,
+          "fraction": 0.016544893652,
+          "hex": "3c"
+        },
+        {
+          "byte": 44,
+          "count": 883,
+          "fraction": 0.014336742978,
+          "hex": "2c"
+        },
+        {
+          "byte": 42,
+          "count": 828,
+          "fraction": 0.013443740867,
+          "hex": "2a"
+        },
+        {
+          "byte": 43,
+          "count": 761,
+          "fraction": 0.012355901932,
+          "hex": "2b"
+        },
+        {
+          "byte": 0,
+          "count": 753,
+          "fraction": 0.012226010716,
+          "hex": "00"
+        },
+        {
+          "byte": 45,
+          "count": 676,
+          "fraction": 0.010975807761,
+          "hex": "2d"
+        },
+        {
+          "byte": 41,
+          "count": 614,
+          "fraction": 0.009969150836,
+          "hex": "29"
+        },
+        {
+          "byte": 38,
+          "count": 561,
+          "fraction": 0.009108621529,
+          "hex": "26"
+        },
+        {
+          "byte": 173,
+          "count": 523,
+          "fraction": 0.008491638253,
+          "hex": "ad"
+        },
+        {
+          "byte": 172,
+          "count": 497,
+          "fraction": 0.008069491801,
+          "hex": "ac"
+        },
+        {
+          "byte": 174,
+          "count": 485,
+          "fraction": 0.007874654976,
+          "hex": "ae"
+        },
+        {
+          "byte": 48,
+          "count": 471,
+          "fraction": 0.007647345348,
+          "hex": "30"
+        }
+      ],
+      "unique_byte_count": 256,
+      "zero_byte_fraction": 0.012226010716,
+      "zero_order_entropy_bytes": 60239,
+      "zero_order_entropy_delta_vs_input_bytes": -1351
+    },
+    "decoded_compression_probes": {
+      "best_probe": {
+        "bytes": 57227,
+        "codec": "brotli_q11_bytes"
+      },
+      "best_probe_delta_vs_input": -4363,
+      "best_probe_ratio": 0.929160578016,
+      "brotli_q11_bytes": 57227,
+      "brotli_q5_bytes": 58709,
+      "brotli_q9_bytes": 58330,
+      "generic_recompression_improves": true,
+      "input_bytes": 61590,
+      "lzma_preset9_bytes": 58184,
+      "zlib_9_bytes": 59111
+    },
+    "decoded_windows": {
+      "high_entropy_or_already_compressed_windows": [
+        {
+          "bytes": 4096,
+          "classification": "already_compressed_like",
+          "entropy_bits_per_byte": 7.869946421438,
+          "offset": 53248,
+          "unique_byte_count": 256,
+          "zero_byte_fraction": 0.00537109375,
+          "zlib_9_bytes": 4074,
+          "zlib_9_ratio": 0.99462890625
+        },
+        {
+          "bytes": 4096,
+          "classification": "already_compressed_like",
+          "entropy_bits_per_byte": 7.787570787536,
+          "offset": 32768,
+          "unique_byte_count": 255,
+          "zero_byte_fraction": 0.0029296875,
+          "zlib_9_bytes": 4051,
+          "zlib_9_ratio": 0.989013671875
+        },
+        {
+          "bytes": 4096,
+          "classification": "already_compressed_like",
+          "entropy_bits_per_byte": 7.740741160845,
+          "offset": 20480,
+          "unique_byte_count": 256,
+          "zero_byte_fraction": 0.0078125,
+          "zlib_9_bytes": 4051,
+          "zlib_9_ratio": 0.989013671875
+        },
+        {
+          "bytes": 4096,
+          "classification": "already_compressed_like",
+          "entropy_bits_per_byte": 7.731474753441,
+          "offset": 0,
+          "unique_byte_count": 246,
+          "zero_byte_fraction": 0.010498046875,
+          "zlib_9_bytes": 4053,
+          "zlib_9_ratio": 0.989501953125
+        },
+        {
+          "bytes": 4096,
+          "classification": "already_compressed_like",
+          "entropy_bits_per_byte": 7.728319337272,
+          "offset": 36864,
+          "unique_byte_count": 244,
+          "zero_byte_fraction": 0.009033203125,
+          "zlib_9_bytes": 4058,
+          "zlib_9_ratio": 0.99072265625
+        },
+        {
+          "bytes": 4096,
+          "classification": "mixed",
+          "entropy_bits_per_byte": 7.712730354731,
+          "offset": 24576,
+          "unique_byte_count": 256,
+          "zero_byte_fraction": 0.003173828125,
+          "zlib_9_bytes": 4003,
+          "zlib_9_ratio": 0.977294921875
+        },
+        {
+          "bytes": 4096,
+          "classification": "mixed",
+          "entropy_bits_per_byte": 7.711039424821,
+          "offset": 28672,
+          "unique_byte_count": 256,
+          "zero_byte_fraction": 0.002685546875,
+          "zlib_9_bytes": 4004,
+          "zlib_9_ratio": 0.9775390625
+        },
+        {
+          "bytes": 4096,
+          "classification": "already_compressed_like",
+          "entropy_bits_per_byte": 7.707527482732,
+          "offset": 16384,
+          "unique_byte_count": 248,
+          "zero_byte_fraction": 0.0068359375,
+          "zlib_9_bytes": 4031,
+          "zlib_9_ratio": 0.984130859375
+        },
+        {
+          "bytes": 4096,
+          "classification": "already_compressed_like",
+          "entropy_bits_per_byte": 7.701724442825,
+          "offset": 8192,
+          "unique_byte_count": 244,
+          "zero_byte_fraction": 0.005615234375,
+          "zlib_9_bytes": 4043,
+          "zlib_9_ratio": 0.987060546875
+        },
+        {
+          "bytes": 4096,
+          "classification": "already_compressed_like",
+          "entropy_bits_per_byte": 7.696852670037,
+          "offset": 4096,
+          "unique_byte_count": 243,
+          "zero_byte_fraction": 0.00537109375,
+          "zlib_9_bytes": 4021,
+          "zlib_9_ratio": 0.981689453125
+        }
+      ],
+      "low_entropy_or_redundant_windows": [
+        {
+          "bytes": 150,
+          "classification": "recode_candidate",
+          "entropy_bits_per_byte": 5.269433690538,
+          "offset": 61440,
+          "unique_byte_count": 73,
+          "zero_byte_fraction": 0.006666666667,
+          "zlib_9_bytes": 143,
+          "zlib_9_ratio": 0.953333333333
+        },
+        {
+          "bytes": 4096,
+          "classification": "recode_candidate",
+          "entropy_bits_per_byte": 6.897951137153,
+          "offset": 45056,
+          "unique_byte_count": 256,
+          "zero_byte_fraction": 0.1015625,
+          "zlib_9_bytes": 3438,
+          "zlib_9_ratio": 0.83935546875
+        },
+        {
+          "bytes": 4096,
+          "classification": "mixed",
+          "entropy_bits_per_byte": 7.130643852545,
+          "offset": 49152,
+          "unique_byte_count": 256,
+          "zero_byte_fraction": 0.001708984375,
+          "zlib_9_bytes": 3776,
+          "zlib_9_ratio": 0.921875
+        },
+        {
+          "bytes": 4096,
+          "classification": "mixed",
+          "entropy_bits_per_byte": 7.60574277028,
+          "offset": 57344,
+          "unique_byte_count": 256,
+          "zero_byte_fraction": 0.007568359375,
+          "zlib_9_bytes": 3811,
+          "zlib_9_ratio": 0.930419921875
+        },
+        {
+          "bytes": 4096,
+          "classification": "already_compressed_like",
+          "entropy_bits_per_byte": 7.68961049104,
+          "offset": 40960,
+          "unique_byte_count": 245,
+          "zero_byte_fraction": 0.00732421875,
+          "zlib_9_bytes": 4030,
+          "zlib_9_ratio": 0.98388671875
+        },
+        {
+          "bytes": 4096,
+          "classification": "mixed",
+          "entropy_bits_per_byte": 7.691682267444,
+          "offset": 12288,
+          "unique_byte_count": 251,
+          "zero_byte_fraction": 0.006103515625,
+          "zlib_9_bytes": 4008,
+          "zlib_9_ratio": 0.978515625
+        },
+        {
+          "bytes": 4096,
+          "classification": "already_compressed_like",
+          "entropy_bits_per_byte": 7.696852670037,
+          "offset": 4096,
+          "unique_byte_count": 243,
+          "zero_byte_fraction": 0.00537109375,
+          "zlib_9_bytes": 4021,
+          "zlib_9_ratio": 0.981689453125
+        },
+        {
+          "bytes": 4096,
+          "classification": "already_compressed_like",
+          "entropy_bits_per_byte": 7.701724442825,
+          "offset": 8192,
+          "unique_byte_count": 244,
+          "zero_byte_fraction": 0.005615234375,
+          "zlib_9_bytes": 4043,
+          "zlib_9_ratio": 0.987060546875
+        },
+        {
+          "bytes": 4096,
+          "classification": "already_compressed_like",
+          "entropy_bits_per_byte": 7.707527482732,
+          "offset": 16384,
+          "unique_byte_count": 248,
+          "zero_byte_fraction": 0.0068359375,
+          "zlib_9_bytes": 4031,
+          "zlib_9_ratio": 0.984130859375
+        },
+        {
+          "bytes": 4096,
+          "classification": "mixed",
+          "entropy_bits_per_byte": 7.711039424821,
+          "offset": 28672,
+          "unique_byte_count": 256,
+          "zero_byte_fraction": 0.002685546875,
+          "zlib_9_bytes": 4004,
+          "zlib_9_ratio": 0.9775390625
+        }
+      ],
+      "summary": {
+        "already_compressed_like_window_count": 9,
+        "low_entropy_window_count": 1,
+        "zero_heavy_window_count": 0
+      },
+      "window_bytes": 4096,
+      "window_count": 16
+    },
+    "encoded": {
+      "bytes": 57074,
+      "entropy_bits_per_byte": 7.995683133524,
+      "ff_byte_fraction": 0.004292672671,
+      "longest_equal_byte_run": {
+        "byte": 221,
+        "length": 4,
+        "start": 5283
+      },
+      "magic_ascii": "...?...b",
+      "magic_hex": "b1a8843f8097a162",
+      "sha256": "c9194c19d44d3c32c4e588bbe4f9986ed0c562779078f0f4d6b073f0799b5dbc",
+      "top_byte_frequencies": [
+        {
+          "byte": 218,
+          "count": 267,
+          "fraction": 0.004678137155,
+          "hex": "da"
+        },
+        {
+          "byte": 187,
+          "count": 265,
+          "fraction": 0.004643094929,
+          "hex": "bb"
+        },
+        {
+          "byte": 123,
+          "count": 258,
+          "fraction": 0.004520447139,
+          "hex": "7b"
+        },
+        {
+          "byte": 141,
+          "count": 258,
+          "fraction": 0.004520447139,
+          "hex": "8d"
+        },
+        {
+          "byte": 175,
+          "count": 258,
+          "fraction": 0.004520447139,
+          "hex": "af"
+        },
+        {
+          "byte": 181,
+          "count": 257,
+          "fraction": 0.004502926026,
+          "hex": "b5"
+        },
+        {
+          "byte": 249,
+          "count": 257,
+          "fraction": 0.004502926026,
+          "hex": "f9"
+        },
+        {
+          "byte": 238,
+          "count": 256,
+          "fraction": 0.004485404913,
+          "hex": "ee"
+        },
+        {
+          "byte": 251,
+          "count": 256,
+          "fraction": 0.004485404913,
+          "hex": "fb"
+        },
+        {
+          "byte": 4,
+          "count": 255,
+          "fraction": 0.0044678838,
+          "hex": "04"
+        },
+        {
+          "byte": 119,
+          "count": 255,
+          "fraction": 0.0044678838,
+          "hex": "77"
+        },
+        {
+          "byte": 127,
+          "count": 254,
+          "fraction": 0.004450362687,
+          "hex": "7f"
+        }
+      ],
+      "unique_byte_count": 256,
+      "zero_byte_fraction": 0.00357430704,
+      "zero_order_entropy_bytes": 57044,
+      "zero_order_entropy_delta_vs_input_bytes": -30
+    },
+    "encoded_compression_probes": {
+      "best_probe": {
+        "bytes": 57078,
+        "codec": "brotli_q11_bytes"
+      },
+      "best_probe_delta_vs_input": 4,
+      "best_probe_ratio": 1.000070084452,
+      "brotli_q11_bytes": 57078,
+      "brotli_q5_bytes": 57078,
+      "brotli_q9_bytes": 57078,
+      "generic_recompression_improves": false,
+      "input_bytes": 57074,
+      "lzma_preset9_bytes": 57136,
+      "zlib_9_bytes": 57100
+    },
+    "encoded_windows": {
+      "high_entropy_or_already_compressed_windows": [
+        {
+          "bytes": 4096,
+          "classification": "already_compressed_like",
+          "entropy_bits_per_byte": 7.958876889492,
+          "offset": 28672,
+          "unique_byte_count": 256,
+          "zero_byte_fraction": 0.003662109375,
+          "zlib_9_bytes": 4107,
+          "zlib_9_ratio": 1.002685546875
+        },
+        {
+          "bytes": 4096,
+          "classification": "already_compressed_like",
+          "entropy_bits_per_byte": 7.957200472066,
+          "offset": 45056,
+          "unique_byte_count": 256,
+          "zero_byte_fraction": 0.0029296875,
+          "zlib_9_bytes": 4107,
+          "zlib_9_ratio": 1.002685546875
+        },
+        {
+          "bytes": 4096,
+          "classification": "already_compressed_like",
+          "entropy_bits_per_byte": 7.954074925478,
+          "offset": 20480,
+          "unique_byte_count": 256,
+          "zero_byte_fraction": 0.00439453125,
+          "zlib_9_bytes": 4107,
+          "zlib_9_ratio": 1.002685546875
+        },
+        {
+          "bytes": 4096,
+          "classification": "already_compressed_like",
+          "entropy_bits_per_byte": 7.953097338388,
+          "offset": 49152,
+          "unique_byte_count": 256,
+          "zero_byte_fraction": 0.00341796875,
+          "zlib_9_bytes": 4107,
+          "zlib_9_ratio": 1.002685546875
+        },
+        {
+          "bytes": 4096,
+          "classification": "already_compressed_like",
+          "entropy_bits_per_byte": 7.952397758293,
+          "offset": 12288,
+          "unique_byte_count": 256,
+          "zero_byte_fraction": 0.002685546875,
+          "zlib_9_bytes": 4107,
+          "zlib_9_ratio": 1.002685546875
+        },
+        {
+          "bytes": 4096,
+          "classification": "already_compressed_like",
+          "entropy_bits_per_byte": 7.951925087133,
+          "offset": 8192,
+          "unique_byte_count": 256,
+          "zero_byte_fraction": 0.002197265625,
+          "zlib_9_bytes": 4107,
+          "zlib_9_ratio": 1.002685546875
+        },
+        {
+          "bytes": 4096,
+          "classification": "already_compressed_like",
+          "entropy_bits_per_byte": 7.951465396516,
+          "offset": 24576,
+          "unique_byte_count": 256,
+          "zero_byte_fraction": 0.00390625,
+          "zlib_9_bytes": 4107,
+          "zlib_9_ratio": 1.002685546875
+        },
+        {
+          "bytes": 4096,
+          "classification": "already_compressed_like",
+          "entropy_bits_per_byte": 7.949887809745,
+          "offset": 0,
+          "unique_byte_count": 256,
+          "zero_byte_fraction": 0.003173828125,
+          "zlib_9_bytes": 4107,
+          "zlib_9_ratio": 1.002685546875
+        },
+        {
+          "bytes": 4096,
+          "classification": "already_compressed_like",
+          "entropy_bits_per_byte": 7.949430556037,
+          "offset": 32768,
+          "unique_byte_count": 256,
+          "zero_byte_fraction": 0.00390625,
+          "zlib_9_bytes": 4107,
+          "zlib_9_ratio": 1.002685546875
+        },
+        {
+          "bytes": 4096,
+          "classification": "already_compressed_like",
+          "entropy_bits_per_byte": 7.949114759291,
+          "offset": 40960,
+          "unique_byte_count": 256,
+          "zero_byte_fraction": 0.005615234375,
+          "zlib_9_bytes": 4107,
+          "zlib_9_ratio": 1.002685546875
+        }
+      ],
+      "low_entropy_or_redundant_windows": [
+        {
+          "bytes": 4096,
+          "classification": "already_compressed_like",
+          "entropy_bits_per_byte": 7.939685861054,
+          "offset": 4096,
+          "unique_byte_count": 256,
+          "zero_byte_fraction": 0.00439453125,
+          "zlib_9_bytes": 4107,
+          "zlib_9_ratio": 1.002685546875
+        },
+        {
+          "bytes": 4096,
+          "classification": "already_compressed_like",
+          "entropy_bits_per_byte": 7.945557319038,
+          "offset": 16384,
+          "unique_byte_count": 256,
+          "zero_byte_fraction": 0.0029296875,
+          "zlib_9_bytes": 4107,
+          "zlib_9_ratio": 1.002685546875
+        },
+        {
+          "bytes": 4096,
+          "classification": "already_compressed_like",
+          "entropy_bits_per_byte": 7.947200378203,
+          "offset": 36864,
+          "unique_byte_count": 256,
+          "zero_byte_fraction": 0.004150390625,
+          "zlib_9_bytes": 4107,
+          "zlib_9_ratio": 1.002685546875
+        },
+        {
+          "bytes": 3826,
+          "classification": "already_compressed_like",
+          "entropy_bits_per_byte": 7.948071852014,
+          "offset": 53248,
+          "unique_byte_count": 256,
+          "zero_byte_fraction": 0.002613695766,
+          "zlib_9_bytes": 3837,
+          "zlib_9_ratio": 1.002875065342
+        },
+        {
+          "bytes": 4096,
+          "classification": "already_compressed_like",
+          "entropy_bits_per_byte": 7.949114759291,
+          "offset": 40960,
+          "unique_byte_count": 256,
+          "zero_byte_fraction": 0.005615234375,
+          "zlib_9_bytes": 4107,
+          "zlib_9_ratio": 1.002685546875
+        },
+        {
+          "bytes": 4096,
+          "classification": "already_compressed_like",
+          "entropy_bits_per_byte": 7.949430556037,
+          "offset": 32768,
+          "unique_byte_count": 256,
+          "zero_byte_fraction": 0.00390625,
+          "zlib_9_bytes": 4107,
+          "zlib_9_ratio": 1.002685546875
+        },
+        {
+          "bytes": 4096,
+          "classification": "already_compressed_like",
+          "entropy_bits_per_byte": 7.949887809745,
+          "offset": 0,
+          "unique_byte_count": 256,
+          "zero_byte_fraction": 0.003173828125,
+          "zlib_9_bytes": 4107,
+          "zlib_9_ratio": 1.002685546875
+        },
+        {
+          "bytes": 4096,
+          "classification": "already_compressed_like",
+          "entropy_bits_per_byte": 7.951465396516,
+          "offset": 24576,
+          "unique_byte_count": 256,
+          "zero_byte_fraction": 0.00390625,
+          "zlib_9_bytes": 4107,
+          "zlib_9_ratio": 1.002685546875
+        },
+        {
+          "bytes": 4096,
+          "classification": "already_compressed_like",
+          "entropy_bits_per_byte": 7.951925087133,
+          "offset": 8192,
+          "unique_byte_count": 256,
+          "zero_byte_fraction": 0.002197265625,
+          "zlib_9_bytes": 4107,
+          "zlib_9_ratio": 1.002685546875
+        },
+        {
+          "bytes": 4096,
+          "classification": "already_compressed_like",
+          "entropy_bits_per_byte": 7.952397758293,
+          "offset": 12288,
+          "unique_byte_count": 256,
+          "zero_byte_fraction": 0.002685546875,
+          "zlib_9_bytes": 4107,
+          "zlib_9_ratio": 1.002685546875
+        }
+      ],
+      "summary": {
+        "already_compressed_like_window_count": 14,
+        "low_entropy_window_count": 0,
+        "zero_heavy_window_count": 0
+      },
+      "window_bytes": 4096,
+      "window_count": 14
+    },
+    "offset_in_x_member": 159035,
+    "segment_name": "model"
+  },
+  "planning_only": true,
+  "schema": "pr85_model_payload_self_compression_profile_v1",
+  "score_claim": false,
+  "score_claim_refusal": {
+    "dispatch_performed": false,
+    "reason": "Static byte and compressibility profiling does not execute inflate, runtime parity, or CUDA auth eval.",
+    "score_claim": false
+  },
+  "score_rate_formula": {
+    "formula_only": true,
+    "model_rate_score_contribution": 0.03800323389049481,
+    "original_video_bytes": 37545489,
+    "rate_score_per_byte": 6.658589531221714e-07,
+    "score_claim_from_this_profile": false
+  },
+  "tool": "experiments/profile_pr85_model_payload_self_compression.py",
+  "top_implementable_route": {
+    "actionability_rank": 2,
+    "bytes_at_stake": 57074,
+    "contest_faithful_requirements": [
+      "use the reviewed QH0 parser/loader contract, not torch.load or replay-side heuristics",
+      "add a deterministic QH0 serializer with byte/tensor parity tests",
+      "prove runtime output parity on the exact PR85 archive before exact eval",
+      "score only through archive.zip -> inflate.sh -> upstream/evaluate.py on CUDA"
+    ],
+    "dispatch_blocker": "no reviewed QH0 serializer or runtime parity artifact in this profile",
+    "dispatch_performed": false,
+    "dispatchable_now": false,
+    "estimated_model_segment_bytes_saved": null,
+    "planning_only": true,
+    "recognized_qh0_payload": true,
+    "recommendation": "Top byte-saving route when lossless Brotli recode is non-improving: build a deterministic QH0 record-level serializer/repacker and target low-entropy decoded model records under runtime parity.",
+    "route_id": "qh0_record_level_repack_or_serializer",
+    "route_type": "score_affecting_model_payload_rewrite",
+    "score_claim": false
+  }
+}

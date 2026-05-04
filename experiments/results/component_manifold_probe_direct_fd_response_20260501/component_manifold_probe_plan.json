@@ -1,0 +1,386 @@
+{
+  "baseline": {
+    "archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+    "archive_size_bytes": 686635,
+    "avg_posenet_dist": 0.00346442,
+    "avg_segnet_dist": 0.00400656,
+    "component_gate_status": null,
+    "device": "cuda",
+    "file": {
+      "bytes": 4287,
+      "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z/evals/point_002_eps_p0/contest_auth_eval.json",
+      "sha256": "b84e7352165cf0d2be0631a177d8404c3a1e5f27633d82d48990552b9ef382ab"
+    },
+    "formula_score": 1.043987587070934,
+    "formula_score_delta_vs_recorded": 6.227704218986219e-08,
+    "hardware": null,
+    "n_samples": 600,
+    "pose_score_term": 0.18612952479389186,
+    "promotion_eligible": null,
+    "rate_score_term": 0.45720206227704213,
+    "score": 1.043987524793892,
+    "seg_score_term": 0.400656
+  },
+  "blocked_points": [],
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "continuation_candidates": [
+    {
+      "archive_bytes_delta": -3,
+      "axis_id": "mixed_renderer_fd_axis",
+      "family": "direct_fd_renderer_response",
+      "point_id": "direct_fd_eps_m2",
+      "reason": "inside geometry basin and lower exact score than baseline",
+      "score_delta": -0.008352071254075
+    },
+    {
+      "archive_bytes_delta": -3,
+      "axis_id": "mixed_renderer_fd_axis",
+      "family": "direct_fd_renderer_response",
+      "point_id": "direct_fd_eps_m1",
+      "reason": "inside geometry basin and lower exact score than baseline",
+      "score_delta": -0.007527605661298953
+    },
+    {
+      "archive_bytes_delta": -7,
+      "axis_id": "mixed_renderer_fd_axis",
+      "family": "direct_fd_renderer_response",
+      "point_id": "direct_fd_eps_p1",
+      "reason": "inside geometry basin and lower exact score than baseline",
+      "score_delta": -0.006872105362310643
+    },
+    {
+      "archive_bytes_delta": -3,
+      "axis_id": "mixed_renderer_fd_axis",
+      "family": "direct_fd_renderer_response",
+      "point_id": "direct_fd_eps_p2",
+      "reason": "inside geometry basin and lower exact score than baseline",
+      "score_delta": -0.006129774143083022
+    }
+  ],
+  "coordinate_system": {
+    "continuous_time_view": "dtheta/dt follows projected negative score gradient while lambda terms enforce rate, SegNet, PoseNet, archive custody, inflate budget, and reproducibility constraints.",
+    "coordinates": [
+      "archive_size_bytes",
+      "avg_segnet_dist",
+      "avg_posenet_dist",
+      "score",
+      "family",
+      "axis_id",
+      "epsilon"
+    ],
+    "name": "contest_component_rate_distortion_manifold_v1"
+  },
+  "curvature_estimates": [
+    {
+      "axis_id": "mixed_renderer_fd_axis",
+      "central_formula_score_slope": 0.00032766843158797687,
+      "central_score_slope": 0.0003277501494941548,
+      "epsilon_abs": 1.0,
+      "family": "direct_fd_renderer_response",
+      "formula_score_curvature_per_epsilon2": -0.014399869613140742,
+      "minus_point_id": "direct_fd_eps_m1",
+      "plus_point_id": "direct_fd_eps_p1",
+      "score_curvature_per_epsilon2": -0.014399711023609596
+    },
+    {
+      "axis_id": "mixed_renderer_fd_axis",
+      "central_formula_score_slope": 0.0005555742777479805,
+      "central_score_slope": 0.0005555742777479944,
+      "epsilon_abs": 2.0,
+      "family": "direct_fd_renderer_response",
+      "formula_score_curvature_per_epsilon2": -0.003620460137719203,
+      "minus_point_id": "direct_fd_eps_m2",
+      "plus_point_id": "direct_fd_eps_p2",
+      "score_curvature_per_epsilon2": -0.0036204613492895055
+    }
+  ],
+  "environment": {
+    "platform": "macOS-26.4-arm64-arm-64bit",
+    "python": "/Users/adpena/Projects/pact/.venv/bin/python",
+    "python_version": "3.12.13 (main, Mar 10 2026, 18:18:07) [Clang 21.1.4 ]"
+  },
+  "evidence_grade": "derivation",
+  "geometry_basin_limits": {
+    "max_posenet_relative": 1.25,
+    "max_segnet_relative": 1.25
+  },
+  "input_evidence_required": "A_or_A++_exact_cuda_archive_jsons",
+  "input_plan": {
+    "bytes": 2446,
+    "path": "/Users/adpena/Projects/pact/experiments/results/component_manifold_probe_direct_fd_response_20260501/component_manifold_probe_input.json",
+    "sha256": "f88bc3ecfa04b6ac0f11f90237dcfcedafcf75b6e24383a2f4f52c4402a91d7e"
+  },
+  "interactions": [],
+  "next_dispatch_policy": {
+    "allowed": true,
+    "blocked_family_count": 0,
+    "rule": "Only points inside the geometry basin with exact-score improvement can seed another concrete archive/eval. Collapsed points update priors but cannot drive water-filling archive policies."
+  },
+  "planner_warning": "This artifact is a derivation over exact eval JSONs. It is not a score claim and cannot promote, rank, kill, or retire a lane without a concrete archive passing exact CUDA auth eval and adjudication.",
+  "points": [
+    {
+      "axis_id": "mixed_renderer_fd_axis",
+      "continuation_candidate": true,
+      "coordinate": "epsilon_-2",
+      "delta_vs_baseline": {
+        "archive_bytes_delta": -3,
+        "avg_posenet_dist_delta": -0.00034699000000000015,
+        "avg_segnet_dist_delta": 1.2169999999999716e-05,
+        "component_slope_per_epsilon": 0.004175035627037499,
+        "formula_score_delta": -0.008352068830934367,
+        "formula_score_slope_per_epsilon": 0.004176034415467184,
+        "pose_score_term_delta": -0.009567071254074966,
+        "rate_score_term_delta": -1.99757685936941e-06,
+        "rate_slope_per_epsilon": 9.98788429684705e-07,
+        "recorded_minus_formula_delta": -2.4231406325903038e-09,
+        "score_delta": -0.008352071254075,
+        "score_slope_per_epsilon": 0.0041760356270375,
+        "seg_score_term_delta": 0.001216999999999968
+      },
+      "epsilon": -2.0,
+      "exact_eval": {
+        "archive_sha256": "d561b8bf1367619e6c6e1d9b9d09213da6bdfdfd894be518866ef5119cba2927",
+        "archive_size_bytes": 686632,
+        "avg_posenet_dist": 0.00311743,
+        "avg_segnet_dist": 0.00401873,
+        "component_gate_status": null,
+        "device": "cuda",
+        "file": {
+          "bytes": 4948,
+          "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z/evals/point_000_eps_m2/contest_auth_eval.json",
+          "sha256": "074f7462df7452a6f49bcaee3aba0bde4f409fbc5573d37ad5bfa369d30e6621"
+        },
+        "formula_score": 1.0356355182399997,
+        "formula_score_delta_vs_recorded": 6.470018276694134e-08,
+        "hardware": null,
+        "n_samples": 600,
+        "pose_score_term": 0.1765624535398169,
+        "promotion_eligible": null,
+        "rate_score_term": 0.45720006470018276,
+        "score": 1.035635453539817,
+        "seg_score_term": 0.401873
+      },
+      "family": "direct_fd_renderer_response",
+      "geometry_basin": {
+        "limits": {
+          "max_posenet_relative": 1.25,
+          "max_segnet_relative": 1.25
+        },
+        "passed": true,
+        "ratios": {
+          "posenet_relative": 0.899841820564,
+          "segnet_relative": 1.00303751847
+        },
+        "violations": []
+      },
+      "notes": null,
+      "point_id": "direct_fd_eps_m2",
+      "tags": [
+        "component_response",
+        "finite_difference"
+      ]
+    },
+    {
+      "axis_id": "mixed_renderer_fd_axis",
+      "continuation_candidate": true,
+      "coordinate": "epsilon_-1",
+      "delta_vs_baseline": {
+        "archive_bytes_delta": -3,
+        "avg_posenet_dist_delta": -0.00031795,
+        "avg_segnet_dist_delta": 1.2209999999999478e-05,
+        "component_slope_per_epsilon": 0.0075256056612989786,
+        "formula_score_delta": -0.007527603238158348,
+        "formula_score_slope_per_epsilon": 0.007527603238158348,
+        "pose_score_term_delta": -0.00874660566129895,
+        "rate_score_term_delta": -1.99757685936941e-06,
+        "rate_slope_per_epsilon": 1.99757685936941e-06,
+        "recorded_minus_formula_delta": -2.423140604834728e-09,
+        "score_delta": -0.007527605661298953,
+        "score_slope_per_epsilon": 0.007527605661298953,
+        "seg_score_term_delta": 0.001220999999999972
+      },
+      "epsilon": -1.0,
+      "exact_eval": {
+        "archive_sha256": "d69e45edd20bbe1a69a171098a9dbfce71673aad2c7b6a95d55ebd9b60cf0803",
+        "archive_size_bytes": 686632,
+        "avg_posenet_dist": 0.00314647,
+        "avg_segnet_dist": 0.00401877,
+        "component_gate_status": null,
+        "device": "cuda",
+        "file": {
+          "bytes": 4948,
+          "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z/evals/point_001_eps_m1/contest_auth_eval.json",
+          "sha256": "a64cd4ecfab15a5d63856176606dd89a0cffc61eb5947e76e79f2c0df113c8e2"
+        },
+        "formula_score": 1.0364599838327757,
+        "formula_score_delta_vs_recorded": 6.470018276694134e-08,
+        "hardware": null,
+        "n_samples": 600,
+        "pose_score_term": 0.1773829191325929,
+        "promotion_eligible": null,
+        "rate_score_term": 0.45720006470018276,
+        "score": 1.036459919132593,
+        "seg_score_term": 0.401877
+      },
+      "family": "direct_fd_renderer_response",
+      "geometry_basin": {
+        "limits": {
+          "max_posenet_relative": 1.25,
+          "max_segnet_relative": 1.25
+        },
+        "passed": true,
+        "ratios": {
+          "posenet_relative": 0.908224176053,
+          "segnet_relative": 1.003047502097
+        },
+        "violations": []
+      },
+      "notes": null,
+      "point_id": "direct_fd_eps_m1",
+      "tags": [
+        "component_response",
+        "finite_difference"
+      ]
+    },
+    {
+      "axis_id": "mixed_renderer_fd_axis",
+      "continuation_candidate": true,
+      "coordinate": "epsilon_+1",
+      "delta_vs_baseline": {
+        "archive_bytes_delta": -7,
+        "avg_posenet_dist_delta": -0.00030449000000000014,
+        "avg_segnet_dist_delta": 1.5000000000000256e-05,
+        "component_slope_per_epsilon": -0.006867605362310514,
+        "formula_score_delta": -0.006872266374982394,
+        "formula_score_slope_per_epsilon": -0.006872266374982394,
+        "pose_score_term_delta": -0.00836760536231057,
+        "rate_score_term_delta": -4.66101267188046e-06,
+        "rate_slope_per_epsilon": -4.66101267188046e-06,
+        "recorded_minus_formula_delta": 1.610126717510596e-07,
+        "score_delta": -0.006872105362310643,
+        "score_slope_per_epsilon": -0.006872105362310643,
+        "seg_score_term_delta": 0.0015000000000000568
+      },
+      "epsilon": 1.0,
+      "exact_eval": {
+        "archive_sha256": "dccb3ebcac49e7046a53896335561d8d54fa6a41986287f91c43cced71020f6f",
+        "archive_size_bytes": 686628,
+        "avg_posenet_dist": 0.00315993,
+        "avg_segnet_dist": 0.00402156,
+        "component_gate_status": null,
+        "device": "cuda",
+        "file": {
+          "bytes": 4951,
+          "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z/evals/point_003_eps_p1/contest_auth_eval.json",
+          "sha256": "c9673f97880d848a91b9fd3f196959ffad50595d1defe3005a166eb3776b36be"
+        },
+        "formula_score": 1.0371153206959516,
+        "formula_score_delta_vs_recorded": -9.873562967221972e-08,
+        "hardware": null,
+        "n_samples": 600,
+        "pose_score_term": 0.1777619194315813,
+        "promotion_eligible": null,
+        "rate_score_term": 0.45719740126437025,
+        "score": 1.0371154194315813,
+        "seg_score_term": 0.40215600000000007
+      },
+      "family": "direct_fd_renderer_response",
+      "geometry_basin": {
+        "limits": {
+          "max_posenet_relative": 1.25,
+          "max_segnet_relative": 1.25
+        },
+        "passed": true,
+        "ratios": {
+          "posenet_relative": 0.912109386275,
+          "segnet_relative": 1.003743860069
+        },
+        "violations": []
+      },
+      "notes": null,
+      "point_id": "direct_fd_eps_p1",
+      "tags": [
+        "component_response",
+        "finite_difference"
+      ]
+    },
+    {
+      "axis_id": "mixed_renderer_fd_axis",
+      "continuation_candidate": true,
+      "coordinate": "epsilon_+2",
+      "delta_vs_baseline": {
+        "archive_bytes_delta": -3,
+        "avg_posenet_dist_delta": -0.00028919000000000037,
+        "avg_segnet_dist_delta": 1.810000000000006e-05,
+        "component_slope_per_epsilon": -0.003063887071541538,
+        "formula_score_delta": -0.006129771719942445,
+        "formula_score_slope_per_epsilon": -0.0030648858599712225,
+        "pose_score_term_delta": -0.00793777414308311,
+        "rate_score_term_delta": -1.99757685936941e-06,
+        "rate_slope_per_epsilon": -9.98788429684705e-07,
+        "recorded_minus_formula_delta": -2.4231405770791525e-09,
+        "score_delta": -0.006129774143083022,
+        "score_slope_per_epsilon": -0.003064887071541511,
+        "seg_score_term_delta": 0.0018100000000000338
+      },
+      "epsilon": 2.0,
+      "exact_eval": {
+        "archive_sha256": "c61a1201ac84d37a81aaa9dd9ea27a4d6a4bb22e58c2f44c01c798f53590a35c",
+        "archive_size_bytes": 686632,
+        "avg_posenet_dist": 0.00317523,
+        "avg_segnet_dist": 0.00402466,
+        "component_gate_status": null,
+        "device": "cuda",
+        "file": {
+          "bytes": 4956,
+          "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z/evals/point_004_eps_p2/contest_auth_eval.json",
+          "sha256": "1a11073c796016c0a9bbbc9c6849128a33c130049519ed9d197a1fcd782b2d2c"
+        },
+        "formula_score": 1.0378578153509916,
+        "formula_score_delta_vs_recorded": 6.470018276694134e-08,
+        "hardware": null,
+        "n_samples": 600,
+        "pose_score_term": 0.17819175065080875,
+        "promotion_eligible": null,
+        "rate_score_term": 0.45720006470018276,
+        "score": 1.0378577506508089,
+        "seg_score_term": 0.40246600000000005
+      },
+      "family": "direct_fd_renderer_response",
+      "geometry_basin": {
+        "limits": {
+          "max_posenet_relative": 1.25,
+          "max_segnet_relative": 1.25
+        },
+        "passed": true,
+        "ratios": {
+          "posenet_relative": 0.916525709931,
+          "segnet_relative": 1.004517591151
+        },
+        "violations": []
+      },
+      "notes": null,
+      "point_id": "direct_fd_eps_p2",
+      "tags": [
+        "component_response",
+        "finite_difference"
+      ]
+    }
+  ],
+  "producer": "experiments/build_component_manifold_probe_plan.py",
+  "promotion_eligible": false,
+  "recorded_at_utc": "2026-05-01T17:00:29Z",
+  "required_samples": 600,
+  "resource_diversity_hooks": [
+    "Python planners and trainers",
+    "Rust/Zig/C deterministic decoders",
+    "arithmetic or ANS/range coding atoms",
+    "NeRV/INR/HNeRV latent manifolds",
+    "SegMap/Q-FAITHFUL soft-LUT control signals",
+    "systems-control and differential-equation lambda updates",
+    "Bayesian/bandit or reinforcement learned atom selectors"
+  ],
+  "schema": "component_manifold_probe_plan_v1",
+  "score_claim": false,
+  "strict_cuda": true
+}

@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "started_at_utc": "2026-05-02T09:20:21Z",
+  "git_hash": "no-git",
+  "gpu_name": "NVIDIA H100 80GB HBM3",
+  "driver_version": "590.48.01",
+  "lane_script": "scripts/remote_archive_only_eval.sh",
+  "tag": "qfaithful_zoom_runtime_fix_h100sxm_20260502T0920Z",
+  "archive_path": "/workspace/pact/experiments/results/qfaithful_geometry_closed_candidates_20260502/2146_qzs3_pr64_qp1_direct_zoom_v2/archive.zip",
+  "inflate_sh": "/workspace/pact/submissions/robust_current/inflate.sh",
+  "inflate_sh_sha256": "86449a1f52ac6b2be120d47287b8410f915dce7e562c69f480103f6e527c6017",
+  "predicted_band": [0.30, 0.80],
+  "controlled_baseline": "C-067 A++ frontier 0.31561703078448233; prior qfaithful direct-zoom H100 collapsed because charged zoom was not loaded for half-frame mask expansion",
+  "no_training": true,
+  "no_build": true,
+  "strict_scorer_rule_compliant": true,
+  "design_memo": "scripts/remote_archive_only_eval.sh"
+}

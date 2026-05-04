@@ -1,0 +1,55 @@
+{
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "runtime_archive": {
+    "bytes": 281303,
+    "member_order": [
+      "renderer.bin",
+      "masks.mkv",
+      "optimized_poses.bin"
+    ],
+    "members": {
+      "masks.mkv": {
+        "bytes": 223385,
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      "optimized_poses.bin": {
+        "bytes": 7200,
+        "sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+      },
+      "renderer.bin": {
+        "bytes": 59288,
+        "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+      }
+    },
+    "path": "/Users/adpena/Projects/pact/experiments/results/c067_fixedslice_unpacked_runtime_20260502/archive.zip",
+    "sha256": "886562a9f25f207c2004161fbc9d01881f28f125123e68a8582c330467e54f80"
+  },
+  "schema": "c067_unpacked_runtime_archive_v1",
+  "score_claim": false,
+  "source_archive": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip",
+  "source_archive_bytes": 276214,
+  "source_archive_sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+  "unpack_summary": {
+    "members": [
+      {
+        "bytes": 59288,
+        "name": "renderer.bin",
+        "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+      },
+      {
+        "bytes": 223385,
+        "name": "masks.mkv",
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      {
+        "bytes": 7200,
+        "name": "optimized_poses.bin",
+        "sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+      }
+    ],
+    "payload_bytes": 276114,
+    "payload_format": "public_pr67_qzs3_qp1_fixed_slices",
+    "schema": "renderer_payload_pr64_len_table_v1",
+    "source_archive_sha256": null
+  }
+}

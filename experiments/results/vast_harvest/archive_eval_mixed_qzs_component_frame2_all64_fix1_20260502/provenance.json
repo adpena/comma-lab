@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "started_at_utc": "2026-05-02T05:04:06Z",
+  "git_hash": "no-git",
+  "gpu_name": "NVIDIA H100 80GB HBM3",
+  "driver_version": "590.48.01",
+  "lane_script": "scripts/remote_archive_only_eval.sh",
+  "tag": "mixed_qzs_component_frame2_all64_fix1_20260502",
+  "archive_path": "/workspace/pact/experiments/results/mixed_local_qzs_component_aware_20260502/component_aware_v1_frame2_all64/archive.zip",
+  "predicted_band": [0.3154, 0.3162],
+  "controlled_baseline": "C-059 A++ exact T4 frontier score=0.3157055307844823 sha=cf44aa7fdb13b9ab6236aefde1f5f58e915d7dfa99128246235443841396c6ab bytes=276347; fix1 synced compact MQZ1 fp4_block_sizes decoder sha=d19ab43e974e203aa59f5850e2cff6f730cdd6bcc235b81c3120de8c29435d24; candidate is component-aware MQZ1 frame2_head block64 only.",
+  "no_training": true,
+  "no_build": true,
+  "strict_scorer_rule_compliant": true,
+  "design_memo": "scripts/remote_archive_only_eval.sh"
+}

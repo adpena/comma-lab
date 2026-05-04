@@ -1,0 +1,63 @@
+{
+  "baseline_contest_json": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_owv3_0120_stack_t4aws_20260501T151050Z/contest_auth_eval.adjudicated.json",
+  "geometry_basin_limits": {
+    "max_posenet_relative": 1.25,
+    "max_segnet_relative": 1.25
+  },
+  "name": "c044_macro_archive_family_chart_20260501",
+  "points": [
+    {
+      "axis_id": "renderer_byte_fd_m2",
+      "contest_auth_eval_json": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_direct_fd_m2_frontier_t4_20260501T1110Z/contest_auth_eval.adjudicated.json",
+      "coordinate": "standalone_archive_family_point",
+      "epsilon": -2.0,
+      "family": "direct_fd_renderer_pose_safe_but_rate_regressive",
+      "point_id": "direct_fd_m2_frontier_t4",
+      "tags": [
+        "inside_basin",
+        "rate_regressive",
+        "renderer_axis"
+      ]
+    },
+    {
+      "axis_id": "lane12_nerv_existing_archive",
+      "contest_auth_eval_json": "/Users/adpena/Projects/pact/experiments/results/lane_12_nerv_20260430_codex_jsonfix40/adjudicated_contest_auth_eval.json",
+      "coordinate": "existing_archive_family_point",
+      "epsilon": -1.0,
+      "family": "nerv_mask_geometry_forensic",
+      "point_id": "lane12_nerv_jsonfix40",
+      "tags": [
+        "collapsed",
+        "nerv",
+        "no_retraining_gate_clearance"
+      ]
+    },
+    {
+      "axis_id": "crf62_class2_sparse_repair",
+      "contest_auth_eval_json": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_alpha_repair_c044_crf62_class2_fix1_t4_20260501T1605Z/contest_auth_eval.adjudicated.json",
+      "coordinate": "posthoc_sparse_repair",
+      "epsilon": -1.0,
+      "family": "alpha_posthoc_grayscale_amr1_repair",
+      "point_id": "alpha_crf62_class2_fix1_t4",
+      "tags": [
+        "collapsed",
+        "amr1",
+        "best_alpha_repair_t4"
+      ]
+    },
+    {
+      "axis_id": "crf63_pairatom_top10",
+      "contest_auth_eval_json": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_alpha_repair_c044_crf63_pairatom_top10_t4_20260501T1620Z/contest_auth_eval.adjudicated.json",
+      "coordinate": "pair_atom_waterfill_candidate",
+      "epsilon": -1.0,
+      "family": "alpha_posthoc_grayscale_amr1_repair",
+      "point_id": "alpha_crf63_pairatom_top10_t4",
+      "tags": [
+        "collapsed",
+        "amr1",
+        "best_byte_alpha_repair_t4"
+      ]
+    }
+  ],
+  "schema": "component_manifold_probe_input_v1"
+}

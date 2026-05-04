@@ -1,0 +1,40 @@
+{
+  "adjudication": {
+    "allow_component_gate_forensic_success": true,
+    "allow_sane_score_forensic_success": true,
+    "baseline_archive_size_bytes": 276214,
+    "baseline_posenet_dist": 0.00049637,
+    "baseline_score": 0.31561703078448233,
+    "baseline_segnet_dist": 0.00061244,
+    "component_reference_label": "C067_Aplusplus_T4",
+    "delta_key": "score_delta_vs_C067_Aplusplus",
+    "max_posenet_dist": null,
+    "max_posenet_relative": 40.0,
+    "max_sane_score": 10.0,
+    "max_segnet_dist": null,
+    "max_segnet_relative": 40.0,
+    "predicted_band_high": 10.0,
+    "predicted_band_low": 0.0,
+    "provenance_name": "adjudication_provenance.json",
+    "regression_threshold": 10.0,
+    "required_device": "cuda",
+    "required_samples": 600,
+    "result_copy_name": "contest_auth_eval.adjudicated.json"
+  },
+  "artifact_recorded_at_utc": "2026-05-03T02:01:16Z",
+  "expected_archive_sha256": "19beb6cdc0424bc423633625e630f94ce16e013e62fd7a574beefd23aa161821",
+  "expected_archive_size_bytes": 137987,
+  "job_name": "exact_eval_cmg3a_poseguard_top0012_g7e_20260503T0200Z",
+  "queue_metadata": {
+    "build_manifest": "experiments/results/c067_cmg3a_poseguard_neg2_top0012_20260503/build_manifest.json",
+    "candidate_id": "c067_hotspot_poseguard_neg2_top0012",
+    "lane_id": "c067_poseguard_field_mask_topology_cmg3a",
+    "purpose": "cmg3a_poseguard_g7e_diagnostic",
+    "source_archive_sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+    "source_plan": "experiments/results/c067_hotspot_mask_geometry_compiler_20260502/next_pose_safe_plan_after_extra065_072_negatives.json"
+  },
+  "role": "exact_cuda_eval",
+  "schema_version": 1,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

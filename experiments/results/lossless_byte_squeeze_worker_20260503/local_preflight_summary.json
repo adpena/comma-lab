@@ -1,0 +1,314 @@
+{
+  "remote_dispatch": false,
+  "rows": [
+    {
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/lossless_byte_squeeze_worker_20260503/anchor_p3_qzs3_block128_nonparity_probe/archive.zip",
+      "candidate_id": "anchor_p3_qzs3_block128_nonparity_probe",
+      "contest_auth_eval_extract_status": "passed",
+      "expected_parse_status": "passed",
+      "members": [
+        "p"
+      ],
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p3",
+      "summary_members": {
+        "masks.mkv": {
+          "bytes": 223385,
+          "codec": null,
+          "decoded_bytes": null,
+          "decoded_sha256": null
+        },
+        "optimized_poses.qp1": {
+          "bytes": 1140,
+          "codec": null,
+          "decoded_bytes": null,
+          "decoded_sha256": null
+        },
+        "renderer.bin": {
+          "bytes": 56300,
+          "codec": null,
+          "decoded_bytes": null,
+          "decoded_sha256": null
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 432,
+          "codec": null,
+          "decoded_bytes": null,
+          "decoded_sha256": null
+        }
+      },
+      "unpack_status": "passed"
+    },
+    {
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/lossless_byte_squeeze_worker_20260503/anchor_p3_qzs3_block96_nonparity_probe/archive.zip",
+      "candidate_id": "anchor_p3_qzs3_block96_nonparity_probe",
+      "contest_auth_eval_extract_status": "passed",
+      "expected_parse_status": "passed",
+      "members": [
+        "p"
+      ],
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p3",
+      "summary_members": {
+        "masks.mkv": {
+          "bytes": 223385,
+          "codec": null,
+          "decoded_bytes": null,
+          "decoded_sha256": null
+        },
+        "optimized_poses.qp1": {
+          "bytes": 1140,
+          "codec": null,
+          "decoded_bytes": null,
+          "decoded_sha256": null
+        },
+        "renderer.bin": {
+          "bytes": 57052,
+          "codec": null,
+          "decoded_bytes": null,
+          "decoded_sha256": null
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 432,
+          "codec": null,
+          "decoded_bytes": null,
+          "decoded_sha256": null
+        }
+      },
+      "unpack_status": "passed"
+    },
+    {
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/lossless_byte_squeeze_worker_20260503/anchor_p3_qzs3_block64_nonparity_probe/archive.zip",
+      "candidate_id": "anchor_p3_qzs3_block64_nonparity_probe",
+      "contest_auth_eval_extract_status": "passed",
+      "expected_parse_status": "passed",
+      "members": [
+        "p"
+      ],
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p3",
+      "summary_members": {
+        "masks.mkv": {
+          "bytes": 223385,
+          "codec": null,
+          "decoded_bytes": null,
+          "decoded_sha256": null
+        },
+        "optimized_poses.qp1": {
+          "bytes": 1140,
+          "codec": null,
+          "decoded_bytes": null,
+          "decoded_sha256": null
+        },
+        "renderer.bin": {
+          "bytes": 56962,
+          "codec": null,
+          "decoded_bytes": null,
+          "decoded_sha256": null
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 432,
+          "codec": null,
+          "decoded_bytes": null,
+          "decoded_sha256": null
+        }
+      },
+      "unpack_status": "passed"
+    },
+    {
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/lossless_byte_squeeze_worker_20260503/anchor_p3_qzs3_block48_nonparity_probe/archive.zip",
+      "candidate_id": "anchor_p3_qzs3_block48_nonparity_probe",
+      "contest_auth_eval_extract_status": "passed",
+      "expected_parse_status": "passed",
+      "members": [
+        "p"
+      ],
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p3",
+      "summary_members": {
+        "masks.mkv": {
+          "bytes": 223385,
+          "codec": null,
+          "decoded_bytes": null,
+          "decoded_sha256": null
+        },
+        "optimized_poses.qp1": {
+          "bytes": 1140,
+          "codec": null,
+          "decoded_bytes": null,
+          "decoded_sha256": null
+        },
+        "renderer.bin": {
+          "bytes": 58128,
+          "codec": null,
+          "decoded_bytes": null,
+          "decoded_sha256": null
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 432,
+          "codec": null,
+          "decoded_bytes": null,
+          "decoded_sha256": null
+        }
+      },
+      "unpack_status": "passed"
+    },
+    {
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/lossless_byte_squeeze_worker_20260503/anchor_raw_fixedslice_short_streams_parser_rejected/archive.zip",
+      "candidate_id": "anchor_raw_fixedslice_short_streams_parser_rejected",
+      "contest_auth_eval_extract_status": "passed",
+      "expected_parse_status": "failed_parser_rejected",
+      "members": [
+        "p"
+      ],
+      "unpack_error": "ValueError: bad renderer payload magic b'U\\x98h#'; expected b'RPK1'",
+      "unpack_status": "failed"
+    },
+    {
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/lossless_byte_squeeze_worker_20260503/anchor_stored_zip_rewrite_payload_identical/archive.zip",
+      "candidate_id": "anchor_stored_zip_rewrite_payload_identical",
+      "contest_auth_eval_extract_status": "passed",
+      "expected_parse_status": "passed",
+      "members": [
+        "p"
+      ],
+      "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+      "summary_members": {
+        "masks.mkv": {
+          "bytes": 223385,
+          "codec": null,
+          "decoded_bytes": null,
+          "decoded_sha256": null
+        },
+        "optimized_poses.qp1": {
+          "bytes": 1140,
+          "codec": null,
+          "decoded_bytes": null,
+          "decoded_sha256": null
+        },
+        "renderer.bin": {
+          "bytes": 59288,
+          "codec": null,
+          "decoded_bytes": null,
+          "decoded_sha256": null
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 432,
+          "codec": null,
+          "decoded_bytes": null,
+          "decoded_sha256": null
+        }
+      },
+      "unpack_status": "passed"
+    },
+    {
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/lossless_byte_squeeze_worker_20260503/anchor_p3_best_lossless_streams_negative/archive.zip",
+      "candidate_id": "anchor_p3_best_lossless_streams_negative",
+      "contest_auth_eval_extract_status": "passed",
+      "expected_parse_status": "passed",
+      "members": [
+        "p"
+      ],
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p3",
+      "summary_members": {
+        "masks.mkv": {
+          "bytes": 223385,
+          "codec": null,
+          "decoded_bytes": null,
+          "decoded_sha256": null
+        },
+        "optimized_poses.qp1": {
+          "bytes": 1140,
+          "codec": null,
+          "decoded_bytes": null,
+          "decoded_sha256": null
+        },
+        "renderer.bin": {
+          "bytes": 59288,
+          "codec": null,
+          "decoded_bytes": null,
+          "decoded_sha256": null
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 432,
+          "codec": null,
+          "decoded_bytes": null,
+          "decoded_sha256": null
+        }
+      },
+      "unpack_status": "passed"
+    },
+    {
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/lossless_byte_squeeze_worker_20260503/anchor_outer_brotli_fixed_payload_negative/archive.zip",
+      "candidate_id": "anchor_outer_brotli_fixed_payload_negative",
+      "contest_auth_eval_extract_status": "passed",
+      "expected_parse_status": "passed",
+      "members": [
+        "p"
+      ],
+      "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+      "summary_members": {
+        "masks.mkv": {
+          "bytes": 223385,
+          "codec": null,
+          "decoded_bytes": null,
+          "decoded_sha256": null
+        },
+        "optimized_poses.qp1": {
+          "bytes": 1140,
+          "codec": null,
+          "decoded_bytes": null,
+          "decoded_sha256": null
+        },
+        "renderer.bin": {
+          "bytes": 59288,
+          "codec": null,
+          "decoded_bytes": null,
+          "decoded_sha256": null
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 432,
+          "codec": null,
+          "decoded_bytes": null,
+          "decoded_sha256": null
+        }
+      },
+      "unpack_status": "passed"
+    },
+    {
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/lossless_byte_squeeze_worker_20260503/anchor_zip_deflate_payload_identical_negative/archive.zip",
+      "candidate_id": "anchor_zip_deflate_payload_identical_negative",
+      "contest_auth_eval_extract_status": "passed",
+      "expected_parse_status": "passed",
+      "members": [
+        "p"
+      ],
+      "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+      "summary_members": {
+        "masks.mkv": {
+          "bytes": 223385,
+          "codec": null,
+          "decoded_bytes": null,
+          "decoded_sha256": null
+        },
+        "optimized_poses.qp1": {
+          "bytes": 1140,
+          "codec": null,
+          "decoded_bytes": null,
+          "decoded_sha256": null
+        },
+        "renderer.bin": {
+          "bytes": 59288,
+          "codec": null,
+          "decoded_bytes": null,
+          "decoded_sha256": null
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 432,
+          "codec": null,
+          "decoded_bytes": null,
+          "decoded_sha256": null
+        }
+      },
+      "unpack_status": "passed"
+    }
+  ],
+  "schema": "lossless_byte_squeeze_local_preflight_v1",
+  "score_claim": false
+}

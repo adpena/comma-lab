@@ -1,0 +1,68 @@
+{
+  "brotli_quality": 11,
+  "evidence_grade": "empirical",
+  "formula_only_rate_delta": -0.0036382533198595444,
+  "header": {
+    "members": [
+      {
+        "bytes": 59288,
+        "codec": "raw",
+        "name": "renderer.bin",
+        "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+      },
+      {
+        "bytes": 145770,
+        "codec": "raw",
+        "name": "masks.mkv",
+        "sha256": "d71f2e1ac1a6b371d0e17548dbff6665f61e8fc0efcd524e8b6f564771e4bb26"
+      },
+      {
+        "bytes": 1140,
+        "codec": "pose_qp1_v1",
+        "decoded_bytes": 7200,
+        "decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f",
+        "lossy": true,
+        "name": "optimized_poses.bin",
+        "pose_error_stats": {
+          "max_abs_by_dim": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pose_dim": 6,
+          "rmse_by_dim": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rows": 600
+        },
+        "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583",
+        "source_decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+      }
+    ],
+    "payload_format": "public_pr64_mask_first_len_table",
+    "schema": "renderer_payload_pr64_len_table_v1",
+    "source_archive_sha256": "bd607bc947c10c5d6e6bca79c609fe0c30baf1484b40fbe97f4f33d86911b29e"
+  },
+  "output_archive": "experiments/results/c067_micro_mask_reencode_hardframes32_20260502/crf56/packed_pr64_maskfirst_qp1/archive.zip",
+  "output_archive_bytes": 194240,
+  "output_archive_sha256": "f4867ec2261b1568c18078043cea7466145df1d8dbb1809d253ee2fbe17937db",
+  "payload_compressed_bytes": 194140,
+  "payload_format": "public_pr64_mask_first_len_table",
+  "payload_member": "p",
+  "payload_raw_bytes": 206210,
+  "pose_codec": "pose_qp1_v1",
+  "pose_residual_topk": 0,
+  "savings_bytes": 5464,
+  "score_claim": false,
+  "source_archive": "experiments/results/c067_micro_mask_reencode_hardframes32_20260502/crf56/runtime_members/archive.zip",
+  "source_archive_bytes": 199704,
+  "source_archive_sha256": "bd607bc947c10c5d6e6bca79c609fe0c30baf1484b40fbe97f4f33d86911b29e"
+}

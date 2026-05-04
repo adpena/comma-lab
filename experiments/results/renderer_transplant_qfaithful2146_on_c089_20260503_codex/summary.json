@@ -1,0 +1,193 @@
+{
+  "best_by_archive_bytes": {
+    "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_transplant_qfaithful2146_on_c089_20260503_codex/external_qzs3_b1024_pr75_preserved_slices/archive.zip",
+    "archive_bytes": 270372,
+    "archive_sha256": "57e2640ace74af9dd0b60024e8fdcf906c113958806fcd555f43b2045791e507",
+    "candidate_id": "external_qzs3_b1024_pr75_preserved_slices",
+    "delta_bytes_vs_source_archive": -5970,
+    "manifest": "/Users/adpena/Projects/pact/experiments/results/renderer_transplant_qfaithful2146_on_c089_20260503_codex/external_qzs3_b1024_pr75_preserved_slices/build_manifest.json",
+    "payload_format": "pr75_p6_preserve_slices",
+    "promotion_eligible": false,
+    "qzs3_block_size": 1024,
+    "renderer_bytes": 66874,
+    "renderer_input_role": "external_renderer_export",
+    "renderer_sha256": "b6611aedc61599d132bf2391a30b731755d0c63e370ea29fba3d3abb45fd6f06",
+    "renderer_transform_kind": "qzs3_reencoded_state",
+    "score_claim": false
+  },
+  "candidate_count": 8,
+  "candidates": [
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_transplant_qfaithful2146_on_c089_20260503_codex/external_qzs3_direct_pr75_preserved_slices/archive.zip",
+      "archive_bytes": 277159,
+      "archive_sha256": "4e0304b8dcc2dde73816f416596161138856aa8b466d543898be7aace5eb8d13",
+      "candidate_id": "external_qzs3_direct_pr75_preserved_slices",
+      "delta_bytes_vs_source_archive": 817,
+      "manifest": "/Users/adpena/Projects/pact/experiments/results/renderer_transplant_qfaithful2146_on_c089_20260503_codex/external_qzs3_direct_pr75_preserved_slices/build_manifest.json",
+      "payload_format": "pr75_p6_preserve_slices",
+      "promotion_eligible": false,
+      "qzs3_block_size": null,
+      "renderer_bytes": 59288,
+      "renderer_input_role": "external_renderer_export",
+      "renderer_sha256": "00ce395fc6495a47d26e3844537859fdc2a1bc38d121ea5f4fb2610179d26e46",
+      "renderer_transform_kind": "external_export_direct",
+      "score_claim": false
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_transplant_qfaithful2146_on_c089_20260503_codex/external_qzs3_b0048_pr75_preserved_slices/archive.zip",
+      "archive_bytes": 275204,
+      "archive_sha256": "7ccfc312c698296292f41728f0bd26586cda14aff7cedc18d5947a03c6c24a87",
+      "candidate_id": "external_qzs3_b0048_pr75_preserved_slices",
+      "delta_bytes_vs_source_archive": -1138,
+      "manifest": "/Users/adpena/Projects/pact/experiments/results/renderer_transplant_qfaithful2146_on_c089_20260503_codex/external_qzs3_b0048_pr75_preserved_slices/build_manifest.json",
+      "payload_format": "pr75_p6_preserve_slices",
+      "promotion_eligible": false,
+      "qzs3_block_size": 48,
+      "renderer_bytes": 58128,
+      "renderer_input_role": "external_renderer_export",
+      "renderer_sha256": "fa0b6808c79bf89d9416662e585dbd6003e9173dabb4fe6c57e5eb8648eeaa78",
+      "renderer_transform_kind": "qzs3_reencoded_state",
+      "score_claim": false
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_transplant_qfaithful2146_on_c089_20260503_codex/external_qzs3_b0064_pr75_preserved_slices/archive.zip",
+      "archive_bytes": 274330,
+      "archive_sha256": "6c577f4f9bbe94d4aca4fb75efa7728cecbebd3fbe73e7f837092491efac2572",
+      "candidate_id": "external_qzs3_b0064_pr75_preserved_slices",
+      "delta_bytes_vs_source_archive": -2012,
+      "manifest": "/Users/adpena/Projects/pact/experiments/results/renderer_transplant_qfaithful2146_on_c089_20260503_codex/external_qzs3_b0064_pr75_preserved_slices/build_manifest.json",
+      "payload_format": "pr75_p6_preserve_slices",
+      "promotion_eligible": false,
+      "qzs3_block_size": 64,
+      "renderer_bytes": 56962,
+      "renderer_input_role": "external_renderer_export",
+      "renderer_sha256": "c5702dea45b078ccf179469d90de15f3711e095c95685810acf9a87dd84c9060",
+      "renderer_transform_kind": "qzs3_reencoded_state",
+      "score_claim": false
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_transplant_qfaithful2146_on_c089_20260503_codex/external_qzs3_b0096_pr75_preserved_slices/archive.zip",
+      "archive_bytes": 273514,
+      "archive_sha256": "9f0ffe769280ff85c4a8ecabcdefc9f3165eca146b7aecd55ebdc9d38aeba86e",
+      "candidate_id": "external_qzs3_b0096_pr75_preserved_slices",
+      "delta_bytes_vs_source_archive": -2828,
+      "manifest": "/Users/adpena/Projects/pact/experiments/results/renderer_transplant_qfaithful2146_on_c089_20260503_codex/external_qzs3_b0096_pr75_preserved_slices/build_manifest.json",
+      "payload_format": "pr75_p6_preserve_slices",
+      "promotion_eligible": false,
+      "qzs3_block_size": 96,
+      "renderer_bytes": 57052,
+      "renderer_input_role": "external_renderer_export",
+      "renderer_sha256": "3573dc25ad4f3ed7941a677f12c3ee2fdeb7c72b660df7f0910fe05ba2b5bfd8",
+      "renderer_transform_kind": "qzs3_reencoded_state",
+      "score_claim": false
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_transplant_qfaithful2146_on_c089_20260503_codex/external_qzs3_b0128_pr75_preserved_slices/archive.zip",
+      "archive_bytes": 272925,
+      "archive_sha256": "294a5fd7dcf14d18b382f00bbad61f71b2209e5aab310673c8d4e4949c7ba984",
+      "candidate_id": "external_qzs3_b0128_pr75_preserved_slices",
+      "delta_bytes_vs_source_archive": -3417,
+      "manifest": "/Users/adpena/Projects/pact/experiments/results/renderer_transplant_qfaithful2146_on_c089_20260503_codex/external_qzs3_b0128_pr75_preserved_slices/build_manifest.json",
+      "payload_format": "pr75_p6_preserve_slices",
+      "promotion_eligible": false,
+      "qzs3_block_size": 128,
+      "renderer_bytes": 56300,
+      "renderer_input_role": "external_renderer_export",
+      "renderer_sha256": "ffb4637f73557a5f5c715a8e93d83e3c6bfb5911ff5fb9f2f9d7ac86ea828ae2",
+      "renderer_transform_kind": "qzs3_reencoded_state",
+      "score_claim": false
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_transplant_qfaithful2146_on_c089_20260503_codex/external_qzs3_b0256_pr75_preserved_slices/archive.zip",
+      "archive_bytes": 272004,
+      "archive_sha256": "e289afd4638c581ac995ba7e9966fcbf2909630cb617c5d1f49da74149f34e0b",
+      "candidate_id": "external_qzs3_b0256_pr75_preserved_slices",
+      "delta_bytes_vs_source_archive": -4338,
+      "manifest": "/Users/adpena/Projects/pact/experiments/results/renderer_transplant_qfaithful2146_on_c089_20260503_codex/external_qzs3_b0256_pr75_preserved_slices/build_manifest.json",
+      "payload_format": "pr75_p6_preserve_slices",
+      "promotion_eligible": false,
+      "qzs3_block_size": 256,
+      "renderer_bytes": 56932,
+      "renderer_input_role": "external_renderer_export",
+      "renderer_sha256": "8ec975c3dc536a48b1d5526ae7bb93d5fbedae8c14234278d1486e2811adc985",
+      "renderer_transform_kind": "qzs3_reencoded_state",
+      "score_claim": false
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_transplant_qfaithful2146_on_c089_20260503_codex/external_qzs3_b0512_pr75_preserved_slices/archive.zip",
+      "archive_bytes": 271172,
+      "archive_sha256": "0ced2e78f522b32c8921f7004f504aec8a776dd671c877d70e047a37b393bf41",
+      "candidate_id": "external_qzs3_b0512_pr75_preserved_slices",
+      "delta_bytes_vs_source_archive": -5170,
+      "manifest": "/Users/adpena/Projects/pact/experiments/results/renderer_transplant_qfaithful2146_on_c089_20260503_codex/external_qzs3_b0512_pr75_preserved_slices/build_manifest.json",
+      "payload_format": "pr75_p6_preserve_slices",
+      "promotion_eligible": false,
+      "qzs3_block_size": 512,
+      "renderer_bytes": 58814,
+      "renderer_input_role": "external_renderer_export",
+      "renderer_sha256": "123e40b7a666c708b1653749419d258d8a3152ee09e8798303de5bdbf5ef0961",
+      "renderer_transform_kind": "qzs3_reencoded_state",
+      "score_claim": false
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_transplant_qfaithful2146_on_c089_20260503_codex/external_qzs3_b1024_pr75_preserved_slices/archive.zip",
+      "archive_bytes": 270372,
+      "archive_sha256": "57e2640ace74af9dd0b60024e8fdcf906c113958806fcd555f43b2045791e507",
+      "candidate_id": "external_qzs3_b1024_pr75_preserved_slices",
+      "delta_bytes_vs_source_archive": -5970,
+      "manifest": "/Users/adpena/Projects/pact/experiments/results/renderer_transplant_qfaithful2146_on_c089_20260503_codex/external_qzs3_b1024_pr75_preserved_slices/build_manifest.json",
+      "payload_format": "pr75_p6_preserve_slices",
+      "promotion_eligible": false,
+      "qzs3_block_size": 1024,
+      "renderer_bytes": 66874,
+      "renderer_input_role": "external_renderer_export",
+      "renderer_sha256": "b6611aedc61599d132bf2391a30b731755d0c63e370ea29fba3d3abb45fd6f06",
+      "renderer_transform_kind": "qzs3_reencoded_state",
+      "score_claim": false
+    }
+  ],
+  "promotion_eligible": false,
+  "qzs3_block_sizes": [
+    48,
+    64,
+    96,
+    128,
+    256,
+    512,
+    1024
+  ],
+  "remote_gpu_dispatch_performed": false,
+  "renderer_input": {
+    "bytes": 59288,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2146Z_fix1/qzs3_rp2_qpose14_unpacked_20260501T2159Z/renderer.bin",
+    "role": "external_renderer_export",
+    "same_as_source_renderer": false,
+    "sha256": "00ce395fc6495a47d26e3844537859fdc2a1bc38d121ea5f4fb2610179d26e46"
+  },
+  "schema": "renderer_shrink_candidate_summary_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 276342,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/archive.zip",
+    "sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8"
+  },
+  "source_members": {
+    "masks.mkv": {
+      "bytes": 223385,
+      "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+    },
+    "optimized_poses.qp1": {
+      "bytes": 1140,
+      "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+    },
+    "renderer.bin": {
+      "bytes": 59288,
+      "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+    },
+    "seg_tile_actions.bin": {
+      "bytes": 160,
+      "sha256": "50e997db4fd1b7642d9a2cd67b55802a4f7f9bd7a6603d0ca2eaf42e7fe7e320"
+    }
+  },
+  "source_payload_layout": "pr75_preserved_slices"
+}

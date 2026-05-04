@@ -1,0 +1,171 @@
+{
+  "archive_byte_delta": 1018,
+  "evidence_grade": "empirical_byte_only_until_cuda_auth_eval",
+  "formula_rate_score_delta": 0.0006778444142783704,
+  "include_streams": [
+    "post",
+    "shift",
+    "frac",
+    "frac2",
+    "frac3",
+    "bias",
+    "region"
+  ],
+  "members": {
+    "p": {
+      "bytes": 276247,
+      "sha256": "eb5a5adc192d1a24ddfc37ab7c9a6f06bf448ce308ec0dfc42e4f9c016dfb3d7"
+    },
+    "qpost.bin": {
+      "bytes": 924,
+      "sha256": "c7add9380506387d2403688564663ee7a9c6cd18b0aeb6a556ed4bd15ce8154e"
+    }
+  },
+  "omitted_streams": [
+    "randmulti"
+  ],
+  "output_archive": "/Users/adpena/Projects/pact/experiments/results/qzs3_postprocess_c059_pairgated_20260502/pairgated_qpost_top064/archive.zip",
+  "output_archive_bytes": 277365,
+  "output_archive_sha256": "568cd1a0a3e69cd11bf0856fbf1c8526d736d9ff54729cc22ccecafbb9c4861e",
+  "pair_filter": {
+    "nonselected_pairs_default_to_identity": true,
+    "pair_count": 64,
+    "pair_indices": [
+      37,
+      46,
+      58,
+      64,
+      67,
+      70,
+      73,
+      78,
+      81,
+      87,
+      97,
+      102,
+      103,
+      107,
+      111,
+      112,
+      113,
+      114,
+      122,
+      129,
+      130,
+      143,
+      149,
+      153,
+      156,
+      157,
+      159,
+      164,
+      166,
+      171,
+      177,
+      179,
+      183,
+      184,
+      191,
+      198,
+      209,
+      221,
+      231,
+      252,
+      256,
+      267,
+      280,
+      289,
+      290,
+      301,
+      326,
+      367,
+      382,
+      385,
+      404,
+      406,
+      418,
+      420,
+      426,
+      427,
+      431,
+      435,
+      496,
+      500,
+      509,
+      546,
+      550,
+      598
+    ],
+    "randmulti_supported": false
+  },
+  "pr65_archive": "/Users/adpena/Projects/pact/reports/raw/leaderboard_intel_20260501/pr65_archive.zip",
+  "pr65_archive_sha256": "b331cb4f6df9d8929db966b943b8c73624cdf3b6db71acbde361570852e59e68",
+  "qpost_streams": {
+    "bias": {
+      "active": true,
+      "bytes": 102,
+      "original_bytes": 223,
+      "original_sha256": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b",
+      "sha256": "dc42bd9e1c4cf091ee92b46341207100fac6d82bbf71d1dfae509c91f6497301"
+    },
+    "frac": {
+      "active": true,
+      "bytes": 64,
+      "original_bytes": 106,
+      "original_sha256": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992",
+      "sha256": "d8ede3c423e2ec59887ee1ccf1fee1dfb6e9e9da1af316e109c1d1a4b46bfdc5"
+    },
+    "frac2": {
+      "active": true,
+      "bytes": 76,
+      "original_bytes": 149,
+      "original_sha256": "3a01c7546d89d9d3ca846da37a20add7d456421e9211a6339850d946b856026b",
+      "sha256": "67a5d2f2fa1577c19575c518652efb0abf6981ae16df9f34a6b9e63417e66985"
+    },
+    "frac3": {
+      "active": true,
+      "bytes": 71,
+      "original_bytes": 154,
+      "original_sha256": "d725b01b604566c5a76a06b821c644c8d5d5bb9a57ab0597d3bdabc8389858b5",
+      "sha256": "28305460d362256a5e469e8323b40eae41f859d2f5082f0d250400025161650d"
+    },
+    "post": {
+      "active": true,
+      "bytes": 394,
+      "original_bytes": 1400,
+      "original_sha256": "c3dc88e0fb5a1e48aec49eeacefeea20685e3c02598933deb1ff22dc09892575",
+      "sha256": "7183af02a104f5ca5b6876c8a7af15a65b2f5e73dd21b5c12126e0e54883fae3"
+    },
+    "randmulti": {
+      "active": false,
+      "bytes": 0,
+      "original_bytes": 3731,
+      "original_sha256": "dddf4b4fec32190b219d3e916e05bba5d1711d4208d16966929fa09cbc39349e",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "region": {
+      "active": true,
+      "bytes": 100,
+      "original_bytes": 273,
+      "original_sha256": "4a7c16094fab281c30e27621a58577c095c4b1153c232518c9adbaba2a2b2392",
+      "sha256": "72e831e4570c320f909f644db5f9320771e1447a31e9459669f4fa15de559ddd"
+    },
+    "shift": {
+      "active": true,
+      "bytes": 81,
+      "original_bytes": 226,
+      "original_sha256": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4",
+      "sha256": "3f14b7c7cc4d0810df174d375c5d1180c3f9d0de7ba11ad43058fa09066fcc8f"
+    }
+  },
+  "schema_version": 1,
+  "score_claim": false,
+  "source_archive": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_qzs3_b32_maskfirst_qp1_fix1_t4_20260502T0331Z/archive.zip",
+  "source_archive_bytes": 276347,
+  "source_archive_sha256": "cf44aa7fdb13b9ab6236aefde1f5f58e915d7dfa99128246235443841396c6ab",
+  "source_policy_expected_net_utility": 0.000619504387509875,
+  "source_policy_expected_scorer_utility": 0.0007265745071719201,
+  "source_policy_name": "public_pose_manifold_transfer_top064",
+  "source_policy_selected_count": 64,
+  "tool": "experiments/build_qzs3_postprocess_candidate.py"
+}

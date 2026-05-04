@@ -1,0 +1,611 @@
+{
+  "archive_byte_profile": {
+    "archive_name": "archive.zip",
+    "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr77_tile_action_transplant_stream_mix_20260503_worker/pr77_actions_on_pr75_public/archive.zip",
+    "archive_sha256": "adc468ddd260184638a415b30aa0e7dc3c66cc004a269d0a3b906c40a23dbbde",
+    "duplicate_detection": {
+      "duplicate_member_names": [],
+      "duplicate_payload_hashes": [],
+      "has_duplicate_member_names": false,
+      "has_duplicate_payload_hashes": false
+    },
+    "evidence_grade": "byte_profile_only",
+    "extension_totals": [
+      {
+        "compressed_size": 276730,
+        "member_count": 1,
+        "name": "(no_extension)",
+        "rate_term": 0.184263148097,
+        "uncompressed_size": 276730
+      }
+    ],
+    "member_count": 1,
+    "members": [
+      {
+        "central_directory_header_bytes_estimate": 47,
+        "compressed_size": 276730,
+        "compression_ratio": 1.0,
+        "crc32": "0b313892",
+        "extension_group": "(no_extension)",
+        "header_offset": 0,
+        "histogram": {
+          "histogram_counts": [
+            1286,
+            1123,
+            1077,
+            1023,
+            1139,
+            1058,
+            1077,
+            1103,
+            1129,
+            1072,
+            1132,
+            1096,
+            1125,
+            1054,
+            1045,
+            1080,
+            1072,
+            1078,
+            1038,
+            1068,
+            1065,
+            1029,
+            1048,
+            1135,
+            1089,
+            1105,
+            1070,
+            1062,
+            1029,
+            1041,
+            1108,
+            1120,
+            1146,
+            1030,
+            1052,
+            1113,
+            1057,
+            1086,
+            1107,
+            1059,
+            1075,
+            1115,
+            1075,
+            1034,
+            1124,
+            1141,
+            1116,
+            1061,
+            1132,
+            1153,
+            1056,
+            1104,
+            1118,
+            1120,
+            1110,
+            1015,
+            1099,
+            1125,
+            996,
+            1062,
+            1094,
+            1134,
+            1063,
+            1118,
+            1082,
+            1081,
+            1053,
+            1060,
+            1058,
+            1108,
+            1110,
+            1089,
+            1006,
+            1075,
+            1095,
+            1051,
+            1133,
+            1068,
+            1112,
+            1098,
+            1086,
+            1068,
+            1050,
+            1032,
+            1008,
+            1022,
+            1080,
+            1025,
+            1136,
+            1061,
+            1047,
+            1109,
+            1027,
+            1117,
+            1099,
+            1109,
+            1100,
+            1087,
+            1143,
+            1139,
+            1055,
+            1133,
+            1075,
+            1146,
+            1071,
+            1057,
+            1077,
+            1080,
+            1101,
+            1114,
+            1090,
+            1081,
+            1070,
+            1031,
+            1017,
+            1007,
+            1086,
+            1086,
+            1067,
+            1090,
+            1107,
+            1082,
+            1076,
+            1100,
+            1050,
+            1100,
+            1096,
+            1133,
+            1178,
+            1071,
+            1053,
+            1079,
+            1104,
+            1027,
+            1114,
+            1117,
+            1068,
+            1029,
+            1042,
+            1101,
+            1123,
+            1102,
+            1074,
+            1079,
+            1101,
+            1089,
+            1057,
+            1034,
+            1067,
+            1077,
+            1151,
+            1111,
+            1048,
+            1119,
+            1122,
+            1040,
+            1061,
+            1079,
+            1071,
+            1142,
+            1129,
+            1054,
+            1080,
+            1047,
+            1067,
+            1035,
+            1134,
+            1060,
+            1056,
+            1073,
+            1068,
+            1106,
+            1035,
+            1040,
+            1044,
+            1056,
+            1072,
+            1045,
+            1042,
+            1046,
+            1047,
+            1053,
+            1045,
+            1076,
+            1051,
+            979,
+            1062,
+            1051,
+            1062,
+            1057,
+            1032,
+            1095,
+            1117,
+            1082,
+            1071,
+            1042,
+            1221,
+            1037,
+            1064,
+            1079,
+            1056,
+            1096,
+            1061,
+            1062,
+            1103,
+            1089,
+            1068,
+            1120,
+            1117,
+            1058,
+            1109,
+            1102,
+            1081,
+            1088,
+            1058,
+            1064,
+            1088,
+            1040,
+            1109,
+            1096,
+            1062,
+            1121,
+            1059,
+            1072,
+            1107,
+            1040,
+            1046,
+            1114,
+            1069,
+            1048,
+            1066,
+            1126,
+            1070,
+            1082,
+            1065,
+            1096,
+            1071,
+            1083,
+            1071,
+            1090,
+            1098,
+            1049,
+            1020,
+            1044,
+            1128,
+            1044,
+            1127,
+            1100,
+            1083,
+            1057,
+            1123,
+            1028,
+            1156,
+            1166,
+            1092,
+            1082
+          ],
+          "printable_ascii_fraction": 0.371694431395,
+          "shannon_entropy_bits_per_byte": 7.999124215287,
+          "top_bytes": [
+            {
+              "byte": 0,
+              "count": 1286,
+              "fraction": 0.00464712897,
+              "hex": "0x00"
+            },
+            {
+              "byte": 196,
+              "count": 1221,
+              "fraction": 0.004412242981,
+              "hex": "0xc4"
+            },
+            {
+              "byte": 128,
+              "count": 1178,
+              "fraction": 0.004256856864,
+              "hex": "0x80"
+            },
+            {
+              "byte": 253,
+              "count": 1166,
+              "fraction": 0.004213493297,
+              "hex": "0xfd"
+            },
+            {
+              "byte": 252,
+              "count": 1156,
+              "fraction": 0.004177356991,
+              "hex": "0xfc"
+            },
+            {
+              "byte": 49,
+              "count": 1153,
+              "fraction": 0.004166516099,
+              "hex": "0x31"
+            },
+            {
+              "byte": 150,
+              "count": 1151,
+              "fraction": 0.004159288837,
+              "hex": "0x96"
+            },
+            {
+              "byte": 32,
+              "count": 1146,
+              "fraction": 0.004141220684,
+              "hex": "0x20"
+            },
+            {
+              "byte": 103,
+              "count": 1146,
+              "fraction": 0.004141220684,
+              "hex": "0x67"
+            },
+            {
+              "byte": 98,
+              "count": 1143,
+              "fraction": 0.004130379793,
+              "hex": "0x62"
+            }
+          ],
+          "unique_byte_count": 256,
+          "zero_byte_count": 1286,
+          "zero_byte_fraction": 0.00464712897,
+          "zero_order_entropy_bytes": 276700
+        },
+        "is_dir": false,
+        "local_header_bytes_estimate": 31,
+        "method": "stored",
+        "method_id": 0,
+        "name": "p",
+        "occurrence": 1,
+        "path_group": "(root)",
+        "rate_term": 0.184263148097,
+        "sha256": "1eef9001f42da9e20e22fe79627627af220d1aec7630b6bc96f17aebbc41daa4",
+        "uncompressed_size": 276730
+      }
+    ],
+    "path_group_totals": [
+      {
+        "compressed_size": 276730,
+        "member_count": 1,
+        "name": "(root)",
+        "rate_term": 0.184263148097,
+        "uncompressed_size": 276730
+      }
+    ],
+    "rate_term": 0.184329733993,
+    "schema": "archive_byte_profile_v1",
+    "score_claim": false,
+    "tool": "experiments/profile_archive_bytes.py",
+    "top_contributors": [
+      {
+        "compressed_size": 276730,
+        "method": "stored",
+        "name": "p",
+        "occurrence": 1,
+        "rate_term": 0.184263148097,
+        "uncompressed_size": 276730
+      }
+    ],
+    "total_bytes": 276830,
+    "valid_profile": true,
+    "zip_overhead_estimate": {
+      "archive_non_payload_bytes": 100,
+      "central_directory_header_bytes_estimate": 47,
+      "compressed_payload_bytes": 276730,
+      "local_header_bytes_estimate": 31,
+      "rate_term": 6.6585895e-05,
+      "unassigned_overhead_bytes_estimate": 22
+    }
+  },
+  "candidate_id": "pr77_actions_on_pr75_public",
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda after lane claim",
+  "compatibility": {
+    "non_action_segments_vs_pr77": {
+      "masks.mkv": {
+        "decoded_equal_to_pr77": true,
+        "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "pr77_decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "pr77_raw_sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87",
+        "raw_equal_to_pr77": true,
+        "raw_sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+      },
+      "optimized_poses.qp1": {
+        "decoded_equal_to_pr77": true,
+        "decoded_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+        "pr77_decoded_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+        "pr77_raw_sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082",
+        "raw_equal_to_pr77": false,
+        "raw_sha256": "83767bbd10ae72c3237e468351eb9c465a954e25a6af04a0e0cb84d1f7af9b51"
+      },
+      "renderer.bin": {
+        "decoded_equal_to_pr77": false,
+        "decoded_sha256": "2333284a73446c3b323948fb883ade0f677baf9ad5d9d06aa1da7bec337bd9c9",
+        "pr77_decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+        "pr77_raw_sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf",
+        "raw_equal_to_pr77": false,
+        "raw_sha256": "d769fd8940410fca70f4a5392167a4377e1ab42be2a752281770551586399585"
+      }
+    },
+    "required_preflight_before_dispatch": "Do not dispatch on byte closure alone. Parent must claim lane, run exact CUDA auth eval on identical bytes, and inspect component gates; renderer mismatches should also get pose/output parity review before promotion.",
+    "semantic_status": "runtime_parse_only_non_action_mismatch"
+  },
+  "delta_vs_pr77_archive": {
+    "archive_bytes": 279,
+    "payload_bytes": 279
+  },
+  "delta_vs_target_archive": {
+    "archive_bytes": 89,
+    "payload_bytes": 89
+  },
+  "evidence_grade": "empirical_byte_screen_only",
+  "output_archive": {
+    "bytes": 276830,
+    "path": "/Users/adpena/Projects/pact/experiments/results/pr77_tile_action_transplant_stream_mix_20260503_worker/pr77_actions_on_pr75_public/archive.zip",
+    "sha256": "adc468ddd260184638a415b30aa0e7dc3c66cc004a269d0a3b906c40a23dbbde"
+  },
+  "payload": {
+    "bytes": 276730,
+    "format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+    "member": "p",
+    "sha256": "1eef9001f42da9e20e22fe79627627af220d1aec7630b6bc96f17aebbc41daa4"
+  },
+  "promotion_eligible": false,
+  "raw_segment_sources": {
+    "masks.mkv": {
+      "bytes": 219472,
+      "source_archive_sha256": "cc1dfa346811dade15044910fa0143e73a7a049b98aeec39b96a53481a0788bd",
+      "source_label": "pr75_public",
+      "source_segment_sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+    },
+    "optimized_poses.qp1": {
+      "bytes": 899,
+      "source_archive_sha256": "cc1dfa346811dade15044910fa0143e73a7a049b98aeec39b96a53481a0788bd",
+      "source_label": "pr75_public",
+      "source_segment_sha256": "83767bbd10ae72c3237e468351eb9c465a954e25a6af04a0e0cb84d1f7af9b51"
+    },
+    "renderer.bin": {
+      "bytes": 56034,
+      "source_archive_sha256": "cc1dfa346811dade15044910fa0143e73a7a049b98aeec39b96a53481a0788bd",
+      "source_label": "pr75_public",
+      "source_segment_sha256": "d769fd8940410fca70f4a5392167a4377e1ab42be2a752281770551586399585"
+    },
+    "seg_tile_actions.bin": {
+      "bytes": 325,
+      "source_archive_sha256": "f90880383c95e14d82704f99db9b20944786ae6452a844348638b06c439972af",
+      "source_label": "pr77",
+      "source_segment_sha256": "d8c75e4f3725bbcf608434f0a78f5b37a9ce86bd8177c71092fd727d7e2af75a"
+    }
+  },
+  "runtime_parse_validation": {
+    "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+    "runtime_parser": "/Users/adpena/Projects/pact/submissions/robust_current/unpack_renderer_payload.py",
+    "segments": {
+      "masks.mkv": {
+        "decoded_bytes": 223385,
+        "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "raw_bytes": 219472,
+        "raw_sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87",
+        "source_label": "pr75_public"
+      },
+      "optimized_poses.qp1": {
+        "decoded_bytes": 1140,
+        "decoded_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+        "raw_bytes": 899,
+        "raw_sha256": "83767bbd10ae72c3237e468351eb9c465a954e25a6af04a0e0cb84d1f7af9b51",
+        "source_label": "pr75_public"
+      },
+      "renderer.bin": {
+        "decoded_bytes": 59288,
+        "decoded_sha256": "2333284a73446c3b323948fb883ade0f677baf9ad5d9d06aa1da7bec337bd9c9",
+        "raw_bytes": 56034,
+        "raw_sha256": "d769fd8940410fca70f4a5392167a4377e1ab42be2a752281770551586399585",
+        "source_label": "pr75_public"
+      },
+      "seg_tile_actions.bin": {
+        "decoded_bytes": 588,
+        "decoded_sha256": "8ac9a01caad973096c58b42daf2b1a8e476ad68cf285d443baa4ac94fdb42255",
+        "raw_bytes": 325,
+        "raw_sha256": "d8c75e4f3725bbcf608434f0a78f5b37a9ce86bd8177c71092fd727d7e2af75a",
+        "source_label": "pr77"
+      }
+    }
+  },
+  "schema": "pr77_tile_action_transplant_candidate_manifest_v1",
+  "score_claim": false,
+  "source_archives": {
+    "pr77": {
+      "archive_bytes": 276551,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/top_submission_reverse_engineering_20260503_pr77/archive.zip",
+      "archive_sha256": "f90880383c95e14d82704f99db9b20944786ae6452a844348638b06c439972af",
+      "decoded_segments": {
+        "masks.mkv": {
+          "bytes": 223385,
+          "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "optimized_poses.qp1": {
+          "bytes": 1140,
+          "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+        },
+        "renderer.bin": {
+          "bytes": 59288,
+          "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 588,
+          "sha256": "8ac9a01caad973096c58b42daf2b1a8e476ad68cf285d443baa4ac94fdb42255"
+        }
+      },
+      "payload_bytes": 276451,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+      "payload_sha256": "3be6a58673133db2dd14d9f1f0903d528e452bd2e930d57fb4adb02bf264f8ec",
+      "raw_segments": {
+        "masks.mkv": {
+          "bytes": 219472,
+          "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+        },
+        "optimized_poses.qp1": {
+          "bytes": 898,
+          "sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082"
+        },
+        "renderer.bin": {
+          "bytes": 55756,
+          "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 325,
+          "sha256": "d8c75e4f3725bbcf608434f0a78f5b37a9ce86bd8177c71092fd727d7e2af75a"
+        }
+      }
+    },
+    "target": {
+      "archive_bytes": 276741,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/top_submission_reverse_engineering_20260503_pr75/archive.zip",
+      "archive_sha256": "cc1dfa346811dade15044910fa0143e73a7a049b98aeec39b96a53481a0788bd",
+      "decoded_segments": {
+        "masks.mkv": {
+          "bytes": 223385,
+          "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "optimized_poses.qp1": {
+          "bytes": 1140,
+          "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+        },
+        "renderer.bin": {
+          "bytes": 59288,
+          "sha256": "2333284a73446c3b323948fb883ade0f677baf9ad5d9d06aa1da7bec337bd9c9"
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 268,
+          "sha256": "bfd46b2b481a5064cc1f64b7b1288640c51b89ad6aeb5598408150f7945eac15"
+        }
+      },
+      "payload_bytes": 276641,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+      "payload_sha256": "959124abd97042983a47163f70c80fd4c0c751dd5e4cf6b5f0f434d9d2fcd66c",
+      "raw_segments": {
+        "masks.mkv": {
+          "bytes": 219472,
+          "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+        },
+        "optimized_poses.qp1": {
+          "bytes": 899,
+          "sha256": "83767bbd10ae72c3237e468351eb9c465a954e25a6af04a0e0cb84d1f7af9b51"
+        },
+        "renderer.bin": {
+          "bytes": 56034,
+          "sha256": "d769fd8940410fca70f4a5392167a4377e1ab42be2a752281770551586399585"
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 236,
+          "sha256": "f172ef412c72e6056b0d720184d67c08fe9f28b1a0720fd01dd1d64c9ace932b"
+        }
+      }
+    }
+  },
+  "tool": "experiments/build_pr77_tile_action_transplant_candidates.py"
+}

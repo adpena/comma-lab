@@ -1,0 +1,1454 @@
+{
+  "atoms": [
+    {
+      "delta": 1,
+      "dim_index": 15,
+      "dispatchable": false,
+      "expected_old_value": 98,
+      "kind": "latent_uint8_delta",
+      "pair_index": 263,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 17,
+      "dispatchable": false,
+      "expected_old_value": 80,
+      "kind": "latent_uint8_delta",
+      "pair_index": 263,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 21,
+      "dispatchable": false,
+      "expected_old_value": 43,
+      "kind": "latent_uint8_delta",
+      "pair_index": 282,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 6,
+      "dispatchable": false,
+      "expected_old_value": 158,
+      "kind": "latent_uint8_delta",
+      "pair_index": 282,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 7,
+      "dispatchable": false,
+      "expected_old_value": 100,
+      "kind": "latent_uint8_delta",
+      "pair_index": 156,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 21,
+      "dispatchable": false,
+      "expected_old_value": 71,
+      "kind": "latent_uint8_delta",
+      "pair_index": 156,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 0,
+      "dispatchable": false,
+      "expected_old_value": 208,
+      "kind": "latent_uint8_delta",
+      "pair_index": 355,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 8,
+      "dispatchable": false,
+      "expected_old_value": 126,
+      "kind": "latent_uint8_delta",
+      "pair_index": 355,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 14,
+      "dispatchable": false,
+      "expected_old_value": 241,
+      "kind": "latent_uint8_delta",
+      "pair_index": 235,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 10,
+      "dispatchable": false,
+      "expected_old_value": 132,
+      "kind": "latent_uint8_delta",
+      "pair_index": 235,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 8,
+      "dispatchable": false,
+      "expected_old_value": 47,
+      "kind": "latent_uint8_delta",
+      "pair_index": 270,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 17,
+      "dispatchable": false,
+      "expected_old_value": 170,
+      "kind": "latent_uint8_delta",
+      "pair_index": 270,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 11,
+      "dispatchable": false,
+      "expected_old_value": 105,
+      "kind": "latent_uint8_delta",
+      "pair_index": 522,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 0,
+      "dispatchable": false,
+      "expected_old_value": 231,
+      "kind": "latent_uint8_delta",
+      "pair_index": 522,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 2,
+      "dispatchable": false,
+      "expected_old_value": 108,
+      "kind": "latent_uint8_delta",
+      "pair_index": 471,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 6,
+      "dispatchable": false,
+      "expected_old_value": 99,
+      "kind": "latent_uint8_delta",
+      "pair_index": 471,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 3,
+      "dispatchable": false,
+      "expected_old_value": 115,
+      "kind": "latent_uint8_delta",
+      "pair_index": 592,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 16,
+      "dispatchable": false,
+      "expected_old_value": 176,
+      "kind": "latent_uint8_delta",
+      "pair_index": 592,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 0,
+      "dispatchable": false,
+      "expected_old_value": 182,
+      "kind": "latent_uint8_delta",
+      "pair_index": 343,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 26,
+      "dispatchable": false,
+      "expected_old_value": 118,
+      "kind": "latent_uint8_delta",
+      "pair_index": 343,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 0,
+      "dispatchable": false,
+      "expected_old_value": 214,
+      "kind": "latent_uint8_delta",
+      "pair_index": 510,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 8,
+      "dispatchable": false,
+      "expected_old_value": 12,
+      "kind": "latent_uint8_delta",
+      "pair_index": 510,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 2,
+      "dispatchable": false,
+      "expected_old_value": 119,
+      "kind": "latent_uint8_delta",
+      "pair_index": 365,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 19,
+      "dispatchable": false,
+      "expected_old_value": 83,
+      "kind": "latent_uint8_delta",
+      "pair_index": 365,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 4,
+      "dispatchable": false,
+      "expected_old_value": 161,
+      "kind": "latent_uint8_delta",
+      "pair_index": 350,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 24,
+      "dispatchable": false,
+      "expected_old_value": 74,
+      "kind": "latent_uint8_delta",
+      "pair_index": 350,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 25,
+      "dispatchable": false,
+      "expected_old_value": 69,
+      "kind": "latent_uint8_delta",
+      "pair_index": 221,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 18,
+      "dispatchable": false,
+      "expected_old_value": 129,
+      "kind": "latent_uint8_delta",
+      "pair_index": 221,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 18,
+      "dispatchable": false,
+      "expected_old_value": 187,
+      "kind": "latent_uint8_delta",
+      "pair_index": 294,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 22,
+      "dispatchable": false,
+      "expected_old_value": 204,
+      "kind": "latent_uint8_delta",
+      "pair_index": 294,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 14,
+      "dispatchable": false,
+      "expected_old_value": 234,
+      "kind": "latent_uint8_delta",
+      "pair_index": 410,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 15,
+      "dispatchable": false,
+      "expected_old_value": 92,
+      "kind": "latent_uint8_delta",
+      "pair_index": 410,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 17,
+      "dispatchable": false,
+      "expected_old_value": 165,
+      "kind": "latent_uint8_delta",
+      "pair_index": 275,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 21,
+      "dispatchable": false,
+      "expected_old_value": 18,
+      "kind": "latent_uint8_delta",
+      "pair_index": 275,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 18,
+      "dispatchable": false,
+      "expected_old_value": 70,
+      "kind": "latent_uint8_delta",
+      "pair_index": 71,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 20,
+      "dispatchable": false,
+      "expected_old_value": 205,
+      "kind": "latent_uint8_delta",
+      "pair_index": 71,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 19,
+      "dispatchable": false,
+      "expected_old_value": 22,
+      "kind": "latent_uint8_delta",
+      "pair_index": 445,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 25,
+      "dispatchable": false,
+      "expected_old_value": 10,
+      "kind": "latent_uint8_delta",
+      "pair_index": 445,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 14,
+      "dispatchable": false,
+      "expected_old_value": 90,
+      "kind": "latent_uint8_delta",
+      "pair_index": 425,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 1,
+      "dispatchable": false,
+      "expected_old_value": 91,
+      "kind": "latent_uint8_delta",
+      "pair_index": 425,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 26,
+      "dispatchable": false,
+      "expected_old_value": 102,
+      "kind": "latent_uint8_delta",
+      "pair_index": 527,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 0,
+      "dispatchable": false,
+      "expected_old_value": 137,
+      "kind": "latent_uint8_delta",
+      "pair_index": 527,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 15,
+      "dispatchable": false,
+      "expected_old_value": 40,
+      "kind": "latent_uint8_delta",
+      "pair_index": 386,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 0,
+      "dispatchable": false,
+      "expected_old_value": 80,
+      "kind": "latent_uint8_delta",
+      "pair_index": 386,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 26,
+      "dispatchable": false,
+      "expected_old_value": 9,
+      "kind": "latent_uint8_delta",
+      "pair_index": 344,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 4,
+      "dispatchable": false,
+      "expected_old_value": 83,
+      "kind": "latent_uint8_delta",
+      "pair_index": 344,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 3,
+      "dispatchable": false,
+      "expected_old_value": 77,
+      "kind": "latent_uint8_delta",
+      "pair_index": 545,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 24,
+      "dispatchable": false,
+      "expected_old_value": 54,
+      "kind": "latent_uint8_delta",
+      "pair_index": 545,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 11,
+      "dispatchable": false,
+      "expected_old_value": 111,
+      "kind": "latent_uint8_delta",
+      "pair_index": 515,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 3,
+      "dispatchable": false,
+      "expected_old_value": 76,
+      "kind": "latent_uint8_delta",
+      "pair_index": 515,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 14,
+      "dispatchable": false,
+      "expected_old_value": 139,
+      "kind": "latent_uint8_delta",
+      "pair_index": 6,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 20,
+      "dispatchable": false,
+      "expected_old_value": 210,
+      "kind": "latent_uint8_delta",
+      "pair_index": 6,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 24,
+      "dispatchable": false,
+      "expected_old_value": 126,
+      "kind": "latent_uint8_delta",
+      "pair_index": 84,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 26,
+      "dispatchable": false,
+      "expected_old_value": 246,
+      "kind": "latent_uint8_delta",
+      "pair_index": 84,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 13,
+      "dispatchable": false,
+      "expected_old_value": 42,
+      "kind": "latent_uint8_delta",
+      "pair_index": 517,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 24,
+      "dispatchable": false,
+      "expected_old_value": 17,
+      "kind": "latent_uint8_delta",
+      "pair_index": 517,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 15,
+      "dispatchable": false,
+      "expected_old_value": 36,
+      "kind": "latent_uint8_delta",
+      "pair_index": 536,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 20,
+      "dispatchable": false,
+      "expected_old_value": 107,
+      "kind": "latent_uint8_delta",
+      "pair_index": 536,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 13,
+      "dispatchable": false,
+      "expected_old_value": 136,
+      "kind": "latent_uint8_delta",
+      "pair_index": 136,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 10,
+      "dispatchable": false,
+      "expected_old_value": 223,
+      "kind": "latent_uint8_delta",
+      "pair_index": 136,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 11,
+      "dispatchable": false,
+      "expected_old_value": 170,
+      "kind": "latent_uint8_delta",
+      "pair_index": 107,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 22,
+      "dispatchable": false,
+      "expected_old_value": 118,
+      "kind": "latent_uint8_delta",
+      "pair_index": 107,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 0,
+      "dispatchable": false,
+      "expected_old_value": 108,
+      "kind": "latent_uint8_delta",
+      "pair_index": 356,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 15,
+      "dispatchable": false,
+      "expected_old_value": 72,
+      "kind": "latent_uint8_delta",
+      "pair_index": 356,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 24,
+      "dispatchable": false,
+      "expected_old_value": 161,
+      "kind": "latent_uint8_delta",
+      "pair_index": 72,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 15,
+      "dispatchable": false,
+      "expected_old_value": 137,
+      "kind": "latent_uint8_delta",
+      "pair_index": 72,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 0,
+      "dispatchable": false,
+      "expected_old_value": 238,
+      "kind": "latent_uint8_delta",
+      "pair_index": 464,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 26,
+      "dispatchable": false,
+      "expected_old_value": 45,
+      "kind": "latent_uint8_delta",
+      "pair_index": 464,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 26,
+      "dispatchable": false,
+      "expected_old_value": 30,
+      "kind": "latent_uint8_delta",
+      "pair_index": 357,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 15,
+      "dispatchable": false,
+      "expected_old_value": 179,
+      "kind": "latent_uint8_delta",
+      "pair_index": 357,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 12,
+      "dispatchable": false,
+      "expected_old_value": 150,
+      "kind": "latent_uint8_delta",
+      "pair_index": 199,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 14,
+      "dispatchable": false,
+      "expected_old_value": 64,
+      "kind": "latent_uint8_delta",
+      "pair_index": 199,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 26,
+      "dispatchable": false,
+      "expected_old_value": 109,
+      "kind": "latent_uint8_delta",
+      "pair_index": 540,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 6,
+      "dispatchable": false,
+      "expected_old_value": 107,
+      "kind": "latent_uint8_delta",
+      "pair_index": 540,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 17,
+      "dispatchable": false,
+      "expected_old_value": 182,
+      "kind": "latent_uint8_delta",
+      "pair_index": 399,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 15,
+      "dispatchable": false,
+      "expected_old_value": 181,
+      "kind": "latent_uint8_delta",
+      "pair_index": 399,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 26,
+      "dispatchable": false,
+      "expected_old_value": 244,
+      "kind": "latent_uint8_delta",
+      "pair_index": 441,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 16,
+      "dispatchable": false,
+      "expected_old_value": 125,
+      "kind": "latent_uint8_delta",
+      "pair_index": 441,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 17,
+      "dispatchable": false,
+      "expected_old_value": 108,
+      "kind": "latent_uint8_delta",
+      "pair_index": 246,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 18,
+      "dispatchable": false,
+      "expected_old_value": 43,
+      "kind": "latent_uint8_delta",
+      "pair_index": 246,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 0,
+      "dispatchable": false,
+      "expected_old_value": 183,
+      "kind": "latent_uint8_delta",
+      "pair_index": 380,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 20,
+      "dispatchable": false,
+      "expected_old_value": 205,
+      "kind": "latent_uint8_delta",
+      "pair_index": 380,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 22,
+      "dispatchable": false,
+      "expected_old_value": 137,
+      "kind": "latent_uint8_delta",
+      "pair_index": 429,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 15,
+      "dispatchable": false,
+      "expected_old_value": 101,
+      "kind": "latent_uint8_delta",
+      "pair_index": 429,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 20,
+      "dispatchable": false,
+      "expected_old_value": 128,
+      "kind": "latent_uint8_delta",
+      "pair_index": 279,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 1,
+      "dispatchable": false,
+      "expected_old_value": 96,
+      "kind": "latent_uint8_delta",
+      "pair_index": 279,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 24,
+      "dispatchable": false,
+      "expected_old_value": 25,
+      "kind": "latent_uint8_delta",
+      "pair_index": 122,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 16,
+      "dispatchable": false,
+      "expected_old_value": 112,
+      "kind": "latent_uint8_delta",
+      "pair_index": 122,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 17,
+      "dispatchable": false,
+      "expected_old_value": 224,
+      "kind": "latent_uint8_delta",
+      "pair_index": 523,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 11,
+      "dispatchable": false,
+      "expected_old_value": 230,
+      "kind": "latent_uint8_delta",
+      "pair_index": 523,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 26,
+      "dispatchable": false,
+      "expected_old_value": 83,
+      "kind": "latent_uint8_delta",
+      "pair_index": 403,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 25,
+      "dispatchable": false,
+      "expected_old_value": 68,
+      "kind": "latent_uint8_delta",
+      "pair_index": 403,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 14,
+      "dispatchable": false,
+      "expected_old_value": 161,
+      "kind": "latent_uint8_delta",
+      "pair_index": 514,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 20,
+      "dispatchable": false,
+      "expected_old_value": 112,
+      "kind": "latent_uint8_delta",
+      "pair_index": 514,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 12,
+      "dispatchable": false,
+      "expected_old_value": 96,
+      "kind": "latent_uint8_delta",
+      "pair_index": 162,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 0,
+      "dispatchable": false,
+      "expected_old_value": 151,
+      "kind": "latent_uint8_delta",
+      "pair_index": 162,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 12,
+      "dispatchable": false,
+      "expected_old_value": 116,
+      "kind": "latent_uint8_delta",
+      "pair_index": 507,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 21,
+      "dispatchable": false,
+      "expected_old_value": 213,
+      "kind": "latent_uint8_delta",
+      "pair_index": 507,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 26,
+      "dispatchable": false,
+      "expected_old_value": 165,
+      "kind": "latent_uint8_delta",
+      "pair_index": 589,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 24,
+      "dispatchable": false,
+      "expected_old_value": 108,
+      "kind": "latent_uint8_delta",
+      "pair_index": 589,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 26,
+      "dispatchable": false,
+      "expected_old_value": 129,
+      "kind": "latent_uint8_delta",
+      "pair_index": 519,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 3,
+      "dispatchable": false,
+      "expected_old_value": 30,
+      "kind": "latent_uint8_delta",
+      "pair_index": 519,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 20,
+      "dispatchable": false,
+      "expected_old_value": 80,
+      "kind": "latent_uint8_delta",
+      "pair_index": 90,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 14,
+      "dispatchable": false,
+      "expected_old_value": 99,
+      "kind": "latent_uint8_delta",
+      "pair_index": 90,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 26,
+      "dispatchable": false,
+      "expected_old_value": 88,
+      "kind": "latent_uint8_delta",
+      "pair_index": 291,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 21,
+      "dispatchable": false,
+      "expected_old_value": 7,
+      "kind": "latent_uint8_delta",
+      "pair_index": 291,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 21,
+      "dispatchable": false,
+      "expected_old_value": 77,
+      "kind": "latent_uint8_delta",
+      "pair_index": 65,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 1,
+      "dispatchable": false,
+      "expected_old_value": 227,
+      "kind": "latent_uint8_delta",
+      "pair_index": 65,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 0,
+      "dispatchable": false,
+      "expected_old_value": 87,
+      "kind": "latent_uint8_delta",
+      "pair_index": 248,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 6,
+      "dispatchable": false,
+      "expected_old_value": 55,
+      "kind": "latent_uint8_delta",
+      "pair_index": 248,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 27,
+      "dispatchable": false,
+      "expected_old_value": 157,
+      "kind": "latent_uint8_delta",
+      "pair_index": 287,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 13,
+      "dispatchable": false,
+      "expected_old_value": 158,
+      "kind": "latent_uint8_delta",
+      "pair_index": 287,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 24,
+      "dispatchable": false,
+      "expected_old_value": 137,
+      "kind": "latent_uint8_delta",
+      "pair_index": 185,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 25,
+      "dispatchable": false,
+      "expected_old_value": 111,
+      "kind": "latent_uint8_delta",
+      "pair_index": 185,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 10,
+      "dispatchable": false,
+      "expected_old_value": 164,
+      "kind": "latent_uint8_delta",
+      "pair_index": 237,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 21,
+      "dispatchable": false,
+      "expected_old_value": 195,
+      "kind": "latent_uint8_delta",
+      "pair_index": 237,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 5,
+      "dispatchable": false,
+      "expected_old_value": 195,
+      "kind": "latent_uint8_delta",
+      "pair_index": 70,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 7,
+      "dispatchable": false,
+      "expected_old_value": 185,
+      "kind": "latent_uint8_delta",
+      "pair_index": 70,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 15,
+      "dispatchable": false,
+      "expected_old_value": 131,
+      "kind": "latent_uint8_delta",
+      "pair_index": 396,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 14,
+      "dispatchable": false,
+      "expected_old_value": 208,
+      "kind": "latent_uint8_delta",
+      "pair_index": 396,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 21,
+      "dispatchable": false,
+      "expected_old_value": 39,
+      "kind": "latent_uint8_delta",
+      "pair_index": 196,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 0,
+      "dispatchable": false,
+      "expected_old_value": 96,
+      "kind": "latent_uint8_delta",
+      "pair_index": 196,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 20,
+      "dispatchable": false,
+      "expected_old_value": 107,
+      "kind": "latent_uint8_delta",
+      "pair_index": 66,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 21,
+      "dispatchable": false,
+      "expected_old_value": 133,
+      "kind": "latent_uint8_delta",
+      "pair_index": 66,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 12,
+      "dispatchable": false,
+      "expected_old_value": 58,
+      "kind": "latent_uint8_delta",
+      "pair_index": 431,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 0,
+      "dispatchable": false,
+      "expected_old_value": 157,
+      "kind": "latent_uint8_delta",
+      "pair_index": 431,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 26,
+      "dispatchable": false,
+      "expected_old_value": 49,
+      "kind": "latent_uint8_delta",
+      "pair_index": 518,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 24,
+      "dispatchable": false,
+      "expected_old_value": 145,
+      "kind": "latent_uint8_delta",
+      "pair_index": 518,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 26,
+      "dispatchable": false,
+      "expected_old_value": 54,
+      "kind": "latent_uint8_delta",
+      "pair_index": 487,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 25,
+      "dispatchable": false,
+      "expected_old_value": 92,
+      "kind": "latent_uint8_delta",
+      "pair_index": 487,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 15,
+      "dispatchable": false,
+      "expected_old_value": 29,
+      "kind": "latent_uint8_delta",
+      "pair_index": 508,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 24,
+      "dispatchable": false,
+      "expected_old_value": 75,
+      "kind": "latent_uint8_delta",
+      "pair_index": 508,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 17,
+      "dispatchable": false,
+      "expected_old_value": 107,
+      "kind": "latent_uint8_delta",
+      "pair_index": 252,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 15,
+      "dispatchable": false,
+      "expected_old_value": 67,
+      "kind": "latent_uint8_delta",
+      "pair_index": 252,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 25,
+      "dispatchable": false,
+      "expected_old_value": 0,
+      "kind": "latent_uint8_delta",
+      "pair_index": 534,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 26,
+      "dispatchable": false,
+      "expected_old_value": 65,
+      "kind": "latent_uint8_delta",
+      "pair_index": 534,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 8,
+      "dispatchable": false,
+      "expected_old_value": 78,
+      "kind": "latent_uint8_delta",
+      "pair_index": 105,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 16,
+      "dispatchable": false,
+      "expected_old_value": 129,
+      "kind": "latent_uint8_delta",
+      "pair_index": 105,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 22,
+      "dispatchable": false,
+      "expected_old_value": 222,
+      "kind": "latent_uint8_delta",
+      "pair_index": 358,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 24,
+      "dispatchable": false,
+      "expected_old_value": 9,
+      "kind": "latent_uint8_delta",
+      "pair_index": 358,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 26,
+      "dispatchable": false,
+      "expected_old_value": 83,
+      "kind": "latent_uint8_delta",
+      "pair_index": 516,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 3,
+      "dispatchable": false,
+      "expected_old_value": 154,
+      "kind": "latent_uint8_delta",
+      "pair_index": 516,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 15,
+      "dispatchable": false,
+      "expected_old_value": 151,
+      "kind": "latent_uint8_delta",
+      "pair_index": 194,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 14,
+      "dispatchable": false,
+      "expected_old_value": 78,
+      "kind": "latent_uint8_delta",
+      "pair_index": 194,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 18,
+      "dispatchable": false,
+      "expected_old_value": 178,
+      "kind": "latent_uint8_delta",
+      "pair_index": 201,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 0,
+      "dispatchable": false,
+      "expected_old_value": 211,
+      "kind": "latent_uint8_delta",
+      "pair_index": 201,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 0,
+      "dispatchable": false,
+      "expected_old_value": 63,
+      "kind": "latent_uint8_delta",
+      "pair_index": 88,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 4,
+      "dispatchable": false,
+      "expected_old_value": 112,
+      "kind": "latent_uint8_delta",
+      "pair_index": 88,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 26,
+      "dispatchable": false,
+      "expected_old_value": 125,
+      "kind": "latent_uint8_delta",
+      "pair_index": 158,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 24,
+      "dispatchable": false,
+      "expected_old_value": 93,
+      "kind": "latent_uint8_delta",
+      "pair_index": 158,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 25,
+      "dispatchable": false,
+      "expected_old_value": 161,
+      "kind": "latent_uint8_delta",
+      "pair_index": 138,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 15,
+      "dispatchable": false,
+      "expected_old_value": 74,
+      "kind": "latent_uint8_delta",
+      "pair_index": 138,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 22,
+      "dispatchable": false,
+      "expected_old_value": 97,
+      "kind": "latent_uint8_delta",
+      "pair_index": 28,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 20,
+      "dispatchable": false,
+      "expected_old_value": 201,
+      "kind": "latent_uint8_delta",
+      "pair_index": 28,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 0,
+      "dispatchable": false,
+      "expected_old_value": 240,
+      "kind": "latent_uint8_delta",
+      "pair_index": 433,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 26,
+      "dispatchable": false,
+      "expected_old_value": 96,
+      "kind": "latent_uint8_delta",
+      "pair_index": 433,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 22,
+      "dispatchable": false,
+      "expected_old_value": 127,
+      "kind": "latent_uint8_delta",
+      "pair_index": 460,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 11,
+      "dispatchable": false,
+      "expected_old_value": 222,
+      "kind": "latent_uint8_delta",
+      "pair_index": 460,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 21,
+      "dispatchable": false,
+      "expected_old_value": 111,
+      "kind": "latent_uint8_delta",
+      "pair_index": 283,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    },
+    {
+      "delta": 1,
+      "dim_index": 7,
+      "dispatchable": false,
+      "expected_old_value": 169,
+      "kind": "latent_uint8_delta",
+      "pair_index": 283,
+      "reason": "proxy-ranked perturbation only; requires component-trace or optimizer sign evidence"
+    }
+  ],
+  "exact_eval_ready": false,
+  "forbid_sidecars": true,
+  "notes": [
+    "Proxy atom signs are not dispatchable. Use this as an optimizer template, not as score evidence.",
+    "Set exact_eval_ready only after component-trace or optimizer evidence chooses atom values."
+  ],
+  "schema_version": 1,
+  "source_archive_sha256": "2b9b471358f5bba97ea809dcca544ecca26b504fde770a9002046830f469368b",
+  "source_member_sha256": "d9fa160d366d0aed105d14458e289f88ec5b71ec4d5de318ddb2ec0d44b50bf5",
+  "tool": "build_pr95_hnerv_residual_atom_plan.py"
+}

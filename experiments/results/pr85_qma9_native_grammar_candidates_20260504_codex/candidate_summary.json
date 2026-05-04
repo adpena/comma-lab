@@ -1,0 +1,558 @@
+{
+  "best_byte_delta": null,
+  "best_candidate": null,
+  "blockers": [
+    "alternate_qma9_grammar_magics_require_runtime_edits_and_are_planning_only",
+    "decoded_token_sha_mismatch",
+    "no_byte_positive_runtime_supported_qma9_native_grammar_candidate",
+    "no_deterministic_byte_closed_pr85_qma9_native_run_or_table_candidate",
+    "source_qma9_declared_bitstream_has_no_trailing_zero_bytes",
+    "source_qma9_segment_has_no_bytes_after_declared_bitstream"
+  ],
+  "candidate_count": 0,
+  "candidates": [],
+  "dispatch_gate": {
+    "candidate_archive_exists": false,
+    "exact_eval_dispatch_allowed": false,
+    "reason": "No GPU/remote dispatch or score claim is allowed by this task.",
+    "safe_for_remote_dispatch": false
+  },
+  "dispatch_performed": false,
+  "family_resolution": {
+    "blocker": "no_deterministic_byte_closed_pr85_qma9_native_run_or_table_candidate",
+    "candidate_archive_paths": [],
+    "candidate_count": 0,
+    "dispatch_performed": false,
+    "family_id": "qma9_native_run_grammar_or_table_reduction",
+    "max_decode_proven_prefix_trim_bytes_screened": 16,
+    "minimal_missing_implementation": [
+      "A full-stream QMA9-compatible encoder that emits fewer than 159011 charged mask bytes while the submitted range_mask_codec.cpp decoder reproduces token SHA c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a.",
+      "Or, if the winning payload uses a new magic/table/run grammar, a charged robust_current runtime decoder plus raw-token SHA parity and runtime output parity before any later exact CUDA eval.",
+      "A deterministic archive builder that writes exactly one stored member 'x' and records archive bytes/SHA after the payload change."
+    ],
+    "related_screen_status": {
+      "alternate_table_grammar": "no_byte_positive_alt_table_candidate",
+      "cpp_mode_sweep": "no_exposed_cpp_mode_beats_adaptive9bin",
+      "macro_prior_screen": "no_macro_prior_payload_beats_source_qma9",
+      "qrg1_row_run_grammar": "no_byte_positive_qrg1_row_run_candidate"
+    },
+    "safe_for_remote_dispatch": false,
+    "score_claim": false,
+    "source_mask_bytes": 159011,
+    "status": "fail_closed_no_byte_positive_runtime_supported_or_screened_run_table_candidate",
+    "top_matrix_blocker_converted": true
+  },
+  "gpu_required": false,
+  "planning_only": true,
+  "related_full_stream_screens": {
+    "alternate_table_grammar": {
+      "available": true,
+      "best_delta_bytes_vs_source_qma9": 2023,
+      "best_mode": "adaptive9up2left2",
+      "best_payload_bytes": 161034,
+      "byte_positive_candidate_count": 0,
+      "fail_closed_reason": "no screened alternate grammar was byte-positive; runtime edits are not economically justified",
+      "path": "experiments/results/pr85_qma9_alt_grammar_candidates_20260504/candidate_summary.json",
+      "runtime_supported_byte_positive_candidate_count": 0,
+      "schema": "pr85_qma9_alt_grammar_candidates_v1",
+      "status": "no_byte_positive_alt_table_candidate"
+    },
+    "cpp_mode_sweep": {
+      "accepted_candidate_count": 0,
+      "available": true,
+      "best_mode_by_bytes": "adaptive9bin",
+      "best_runtime_compatible_nonbaseline": "adaptive8prpdup2",
+      "min_delta_bytes_vs_pr85_qma9": 0,
+      "mode_count": 12,
+      "path": "experiments/results/pr85_qma9_mode_sweep_20260504_codex/pr85_qma9_cpp_mode_sweep_summary.json",
+      "schema": "pr85_qma9_cpp_mode_sweep_v1",
+      "status": "no_exposed_cpp_mode_beats_adaptive9bin",
+      "summary": "No exposed PR85 C++ QMA mode beats the submitted adaptive9bin QMA9 payload. Some alternates are runtime-compatible but larger; QMA9 alternate modes are larger and not decoded by the submitted QMA9 runtime path as token-parity equivalents."
+    },
+    "macro_prior_screen": {
+      "available": true,
+      "best_payload": {
+        "bytes": 159011,
+        "delta_bytes_vs_source_qma9": 0,
+        "path": "experiments/results/pr85_qma9_macro_prior_screen_20260504_codex/adaptive9bin_base.qma9",
+        "sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179"
+      },
+      "byte_positive_payload_count": 0,
+      "path": "experiments/results/pr85_qma9_macro_prior_screen_20260504_codex",
+      "payload_count": 11,
+      "status": "no_macro_prior_payload_beats_source_qma9"
+    },
+    "qrg1_row_run_grammar": {
+      "available": true,
+      "best_delta_bytes_vs_pr85_qma9": 303165,
+      "best_mode": "row_rle_lzma6",
+      "best_payload_bytes": 462176,
+      "blockers": [
+        "dispatch_locked_until_qrg1_runtime_output_parity_and_fresh_lane_claim",
+        "no_byte_positive_qrg1_row_run_candidate",
+        "qma9_adaptive9bin_beats_screened_row_run_payloads",
+        "robust_current_runtime_does_not_accept_qrg1_run_grammar"
+      ],
+      "byte_positive_candidate_count": 0,
+      "path": "experiments/results/pr85_qma9_run_grammar_candidates_20260504_worker/candidate_summary.json",
+      "runtime_supported_byte_positive_candidate_count": 0,
+      "schema": "pr85_qma9_run_grammar_candidates_v1",
+      "status": "no_byte_positive_qrg1_row_run_candidate"
+    }
+  },
+  "runtime_supported_grammar": {
+    "accepted_magic": "QMA9",
+    "charged_model_or_table_bytes_in_qma9_payload": 0,
+    "header_bytes": 20,
+    "unsupported_without_runtime_edit": [
+      "QMB1 vertical block escape",
+      "QMF1 first-row specialization",
+      "QMH1 horizontal run escape",
+      "external context tables",
+      "alternate adaptive-model initialization tables"
+    ]
+  },
+  "schema": "pr85_qma9_native_grammar_candidates_v1",
+  "score_claim": false,
+  "screen_results": [
+    {
+      "archive_written": false,
+      "candidate_id": "qma9_declared_payload_prefix",
+      "observed_declared_packed_bytes": 159011,
+      "observed_segment_bytes": 159011,
+      "rejection_reasons": [
+        "source_qma9_segment_has_no_bytes_after_declared_bitstream"
+      ],
+      "safe_for_remote_dispatch": false,
+      "screen": "trim_bytes_after_declared_qma9_bitstream"
+    },
+    {
+      "archive_written": false,
+      "candidate_id": "qma9_declared_bitstream_trim",
+      "observed_trailing_zero_bytes": 0,
+      "rejection_reasons": [
+        "source_qma9_declared_bitstream_has_no_trailing_zero_bytes"
+      ],
+      "safe_for_remote_dispatch": false,
+      "screen": "trim_trailing_zero_bytes_from_declared_qma9_bitstream"
+    },
+    {
+      "archive_written": false,
+      "candidate_id": "qma9_decode_proven_prefix_trim1",
+      "candidate_mask_bytes": 159010,
+      "decoded_token_sha256": "cd628c6e62427a4a2ba974955c8f0cb153e3dfc5b6ff38a4b85215abd9255faf",
+      "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "mask_delta_bytes_vs_source": -1,
+      "planning_basis": "The runtime bit reader pads exhausted input with zero bits, so every nonzero suffix trim must prove full decoded-token SHA parity.",
+      "proposed_mask_delta_bytes": -1,
+      "rejection_reasons": [
+        "decoded_token_sha_mismatch"
+      ],
+      "runtime_compatibility": {
+        "decode_attempted": true,
+        "decode_implementation": "submissions/robust_current/range_mask_codec.cpp",
+        "decoded_token_sha_matches_source": false
+      },
+      "safe_for_remote_dispatch": false,
+      "screen": "decode_proven_nonzero_suffix_byte_trim",
+      "source_mask_bytes": 159011,
+      "trimmed_suffix_bytes": 1
+    },
+    {
+      "archive_written": false,
+      "candidate_id": "qma9_decode_proven_prefix_trim2",
+      "candidate_mask_bytes": 159009,
+      "decoded_token_sha256": "b135a7f18236a042901a03257a7c1a12ea488cc87e14e5b9431897e13341637d",
+      "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "mask_delta_bytes_vs_source": -2,
+      "planning_basis": "The runtime bit reader pads exhausted input with zero bits, so every nonzero suffix trim must prove full decoded-token SHA parity.",
+      "proposed_mask_delta_bytes": -2,
+      "rejection_reasons": [
+        "decoded_token_sha_mismatch"
+      ],
+      "runtime_compatibility": {
+        "decode_attempted": true,
+        "decode_implementation": "submissions/robust_current/range_mask_codec.cpp",
+        "decoded_token_sha_matches_source": false
+      },
+      "safe_for_remote_dispatch": false,
+      "screen": "decode_proven_nonzero_suffix_byte_trim",
+      "source_mask_bytes": 159011,
+      "trimmed_suffix_bytes": 2
+    },
+    {
+      "archive_written": false,
+      "candidate_id": "qma9_decode_proven_prefix_trim3",
+      "candidate_mask_bytes": 159008,
+      "decoded_token_sha256": "c4fe67d16d47c81205e61fdb10caf79c8a0492ffb23acfdf5b69c4319d838b89",
+      "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "mask_delta_bytes_vs_source": -3,
+      "planning_basis": "The runtime bit reader pads exhausted input with zero bits, so every nonzero suffix trim must prove full decoded-token SHA parity.",
+      "proposed_mask_delta_bytes": -3,
+      "rejection_reasons": [
+        "decoded_token_sha_mismatch"
+      ],
+      "runtime_compatibility": {
+        "decode_attempted": true,
+        "decode_implementation": "submissions/robust_current/range_mask_codec.cpp",
+        "decoded_token_sha_matches_source": false
+      },
+      "safe_for_remote_dispatch": false,
+      "screen": "decode_proven_nonzero_suffix_byte_trim",
+      "source_mask_bytes": 159011,
+      "trimmed_suffix_bytes": 3
+    },
+    {
+      "archive_written": false,
+      "candidate_id": "qma9_decode_proven_prefix_trim4",
+      "candidate_mask_bytes": 159007,
+      "decoded_token_sha256": "d906001ece9bba21893b2f2b2aa576fc893718b329edb6091e88ffbd8480b4de",
+      "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "mask_delta_bytes_vs_source": -4,
+      "planning_basis": "The runtime bit reader pads exhausted input with zero bits, so every nonzero suffix trim must prove full decoded-token SHA parity.",
+      "proposed_mask_delta_bytes": -4,
+      "rejection_reasons": [
+        "decoded_token_sha_mismatch"
+      ],
+      "runtime_compatibility": {
+        "decode_attempted": true,
+        "decode_implementation": "submissions/robust_current/range_mask_codec.cpp",
+        "decoded_token_sha_matches_source": false
+      },
+      "safe_for_remote_dispatch": false,
+      "screen": "decode_proven_nonzero_suffix_byte_trim",
+      "source_mask_bytes": 159011,
+      "trimmed_suffix_bytes": 4
+    },
+    {
+      "archive_written": false,
+      "candidate_id": "qma9_decode_proven_prefix_trim5",
+      "candidate_mask_bytes": 159006,
+      "decoded_token_sha256": "b78097676ba9e65ad08576f6ddc6ae6f67abb77a6bed4d38b988f6cb6b51f89c",
+      "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "mask_delta_bytes_vs_source": -5,
+      "planning_basis": "The runtime bit reader pads exhausted input with zero bits, so every nonzero suffix trim must prove full decoded-token SHA parity.",
+      "proposed_mask_delta_bytes": -5,
+      "rejection_reasons": [
+        "decoded_token_sha_mismatch"
+      ],
+      "runtime_compatibility": {
+        "decode_attempted": true,
+        "decode_implementation": "submissions/robust_current/range_mask_codec.cpp",
+        "decoded_token_sha_matches_source": false
+      },
+      "safe_for_remote_dispatch": false,
+      "screen": "decode_proven_nonzero_suffix_byte_trim",
+      "source_mask_bytes": 159011,
+      "trimmed_suffix_bytes": 5
+    },
+    {
+      "archive_written": false,
+      "candidate_id": "qma9_decode_proven_prefix_trim6",
+      "candidate_mask_bytes": 159005,
+      "decoded_token_sha256": "8f621a5df44bcc2da82ca25370fc1f0a9adce155ad230d404a4e1e37237f1cfa",
+      "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "mask_delta_bytes_vs_source": -6,
+      "planning_basis": "The runtime bit reader pads exhausted input with zero bits, so every nonzero suffix trim must prove full decoded-token SHA parity.",
+      "proposed_mask_delta_bytes": -6,
+      "rejection_reasons": [
+        "decoded_token_sha_mismatch"
+      ],
+      "runtime_compatibility": {
+        "decode_attempted": true,
+        "decode_implementation": "submissions/robust_current/range_mask_codec.cpp",
+        "decoded_token_sha_matches_source": false
+      },
+      "safe_for_remote_dispatch": false,
+      "screen": "decode_proven_nonzero_suffix_byte_trim",
+      "source_mask_bytes": 159011,
+      "trimmed_suffix_bytes": 6
+    },
+    {
+      "archive_written": false,
+      "candidate_id": "qma9_decode_proven_prefix_trim7",
+      "candidate_mask_bytes": 159004,
+      "decoded_token_sha256": "9e2cb862743b855426fd6a1c89e0e278422617e3ca9d9005f5002aee9af75eb1",
+      "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "mask_delta_bytes_vs_source": -7,
+      "planning_basis": "The runtime bit reader pads exhausted input with zero bits, so every nonzero suffix trim must prove full decoded-token SHA parity.",
+      "proposed_mask_delta_bytes": -7,
+      "rejection_reasons": [
+        "decoded_token_sha_mismatch"
+      ],
+      "runtime_compatibility": {
+        "decode_attempted": true,
+        "decode_implementation": "submissions/robust_current/range_mask_codec.cpp",
+        "decoded_token_sha_matches_source": false
+      },
+      "safe_for_remote_dispatch": false,
+      "screen": "decode_proven_nonzero_suffix_byte_trim",
+      "source_mask_bytes": 159011,
+      "trimmed_suffix_bytes": 7
+    },
+    {
+      "archive_written": false,
+      "candidate_id": "qma9_decode_proven_prefix_trim8",
+      "candidate_mask_bytes": 159003,
+      "decoded_token_sha256": "011fb8e64b5c9b2a14f908e989d3c9b67f43e2ce07239d234b6fdb5d0358f5bb",
+      "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "mask_delta_bytes_vs_source": -8,
+      "planning_basis": "The runtime bit reader pads exhausted input with zero bits, so every nonzero suffix trim must prove full decoded-token SHA parity.",
+      "proposed_mask_delta_bytes": -8,
+      "rejection_reasons": [
+        "decoded_token_sha_mismatch"
+      ],
+      "runtime_compatibility": {
+        "decode_attempted": true,
+        "decode_implementation": "submissions/robust_current/range_mask_codec.cpp",
+        "decoded_token_sha_matches_source": false
+      },
+      "safe_for_remote_dispatch": false,
+      "screen": "decode_proven_nonzero_suffix_byte_trim",
+      "source_mask_bytes": 159011,
+      "trimmed_suffix_bytes": 8
+    },
+    {
+      "archive_written": false,
+      "candidate_id": "qma9_decode_proven_prefix_trim9",
+      "candidate_mask_bytes": 159002,
+      "decoded_token_sha256": "bf2298fa9beeeb8579e43d2fbf3b16186e89a4dc2157815cc82bd4f4c801f307",
+      "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "mask_delta_bytes_vs_source": -9,
+      "planning_basis": "The runtime bit reader pads exhausted input with zero bits, so every nonzero suffix trim must prove full decoded-token SHA parity.",
+      "proposed_mask_delta_bytes": -9,
+      "rejection_reasons": [
+        "decoded_token_sha_mismatch"
+      ],
+      "runtime_compatibility": {
+        "decode_attempted": true,
+        "decode_implementation": "submissions/robust_current/range_mask_codec.cpp",
+        "decoded_token_sha_matches_source": false
+      },
+      "safe_for_remote_dispatch": false,
+      "screen": "decode_proven_nonzero_suffix_byte_trim",
+      "source_mask_bytes": 159011,
+      "trimmed_suffix_bytes": 9
+    },
+    {
+      "archive_written": false,
+      "candidate_id": "qma9_decode_proven_prefix_trim10",
+      "candidate_mask_bytes": 159001,
+      "decoded_token_sha256": "5244ea28d822b09b366ef9c6c5701cc89c4f768ee37b883bb3ba5c5570219526",
+      "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "mask_delta_bytes_vs_source": -10,
+      "planning_basis": "The runtime bit reader pads exhausted input with zero bits, so every nonzero suffix trim must prove full decoded-token SHA parity.",
+      "proposed_mask_delta_bytes": -10,
+      "rejection_reasons": [
+        "decoded_token_sha_mismatch"
+      ],
+      "runtime_compatibility": {
+        "decode_attempted": true,
+        "decode_implementation": "submissions/robust_current/range_mask_codec.cpp",
+        "decoded_token_sha_matches_source": false
+      },
+      "safe_for_remote_dispatch": false,
+      "screen": "decode_proven_nonzero_suffix_byte_trim",
+      "source_mask_bytes": 159011,
+      "trimmed_suffix_bytes": 10
+    },
+    {
+      "archive_written": false,
+      "candidate_id": "qma9_decode_proven_prefix_trim11",
+      "candidate_mask_bytes": 159000,
+      "decoded_token_sha256": "1fc3073702a3e2b09f266de46552153b6521adb7b4a92ef17fdb0c39765273b3",
+      "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "mask_delta_bytes_vs_source": -11,
+      "planning_basis": "The runtime bit reader pads exhausted input with zero bits, so every nonzero suffix trim must prove full decoded-token SHA parity.",
+      "proposed_mask_delta_bytes": -11,
+      "rejection_reasons": [
+        "decoded_token_sha_mismatch"
+      ],
+      "runtime_compatibility": {
+        "decode_attempted": true,
+        "decode_implementation": "submissions/robust_current/range_mask_codec.cpp",
+        "decoded_token_sha_matches_source": false
+      },
+      "safe_for_remote_dispatch": false,
+      "screen": "decode_proven_nonzero_suffix_byte_trim",
+      "source_mask_bytes": 159011,
+      "trimmed_suffix_bytes": 11
+    },
+    {
+      "archive_written": false,
+      "candidate_id": "qma9_decode_proven_prefix_trim12",
+      "candidate_mask_bytes": 158999,
+      "decoded_token_sha256": "b120c840ace2bcc6b0e39b18de62e9a48971bcc1961bb39cd412b036849f5fec",
+      "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "mask_delta_bytes_vs_source": -12,
+      "planning_basis": "The runtime bit reader pads exhausted input with zero bits, so every nonzero suffix trim must prove full decoded-token SHA parity.",
+      "proposed_mask_delta_bytes": -12,
+      "rejection_reasons": [
+        "decoded_token_sha_mismatch"
+      ],
+      "runtime_compatibility": {
+        "decode_attempted": true,
+        "decode_implementation": "submissions/robust_current/range_mask_codec.cpp",
+        "decoded_token_sha_matches_source": false
+      },
+      "safe_for_remote_dispatch": false,
+      "screen": "decode_proven_nonzero_suffix_byte_trim",
+      "source_mask_bytes": 159011,
+      "trimmed_suffix_bytes": 12
+    },
+    {
+      "archive_written": false,
+      "candidate_id": "qma9_decode_proven_prefix_trim13",
+      "candidate_mask_bytes": 158998,
+      "decoded_token_sha256": "a261b377f0702ffce8a15aa2b403dacf3b4c60be1f809e7b963394759b35c758",
+      "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "mask_delta_bytes_vs_source": -13,
+      "planning_basis": "The runtime bit reader pads exhausted input with zero bits, so every nonzero suffix trim must prove full decoded-token SHA parity.",
+      "proposed_mask_delta_bytes": -13,
+      "rejection_reasons": [
+        "decoded_token_sha_mismatch"
+      ],
+      "runtime_compatibility": {
+        "decode_attempted": true,
+        "decode_implementation": "submissions/robust_current/range_mask_codec.cpp",
+        "decoded_token_sha_matches_source": false
+      },
+      "safe_for_remote_dispatch": false,
+      "screen": "decode_proven_nonzero_suffix_byte_trim",
+      "source_mask_bytes": 159011,
+      "trimmed_suffix_bytes": 13
+    },
+    {
+      "archive_written": false,
+      "candidate_id": "qma9_decode_proven_prefix_trim14",
+      "candidate_mask_bytes": 158997,
+      "decoded_token_sha256": "33453f59aed15d9f4c6ec21d67407f06532c1843cf1a7b08a2d56eb31666ba81",
+      "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "mask_delta_bytes_vs_source": -14,
+      "planning_basis": "The runtime bit reader pads exhausted input with zero bits, so every nonzero suffix trim must prove full decoded-token SHA parity.",
+      "proposed_mask_delta_bytes": -14,
+      "rejection_reasons": [
+        "decoded_token_sha_mismatch"
+      ],
+      "runtime_compatibility": {
+        "decode_attempted": true,
+        "decode_implementation": "submissions/robust_current/range_mask_codec.cpp",
+        "decoded_token_sha_matches_source": false
+      },
+      "safe_for_remote_dispatch": false,
+      "screen": "decode_proven_nonzero_suffix_byte_trim",
+      "source_mask_bytes": 159011,
+      "trimmed_suffix_bytes": 14
+    },
+    {
+      "archive_written": false,
+      "candidate_id": "qma9_decode_proven_prefix_trim15",
+      "candidate_mask_bytes": 158996,
+      "decoded_token_sha256": "9b1054810e1e4ca98e0dff34d1dba37d96bddaba0df0f5277f656fedf7a0fdf4",
+      "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "mask_delta_bytes_vs_source": -15,
+      "planning_basis": "The runtime bit reader pads exhausted input with zero bits, so every nonzero suffix trim must prove full decoded-token SHA parity.",
+      "proposed_mask_delta_bytes": -15,
+      "rejection_reasons": [
+        "decoded_token_sha_mismatch"
+      ],
+      "runtime_compatibility": {
+        "decode_attempted": true,
+        "decode_implementation": "submissions/robust_current/range_mask_codec.cpp",
+        "decoded_token_sha_matches_source": false
+      },
+      "safe_for_remote_dispatch": false,
+      "screen": "decode_proven_nonzero_suffix_byte_trim",
+      "source_mask_bytes": 159011,
+      "trimmed_suffix_bytes": 15
+    },
+    {
+      "archive_written": false,
+      "candidate_id": "qma9_decode_proven_prefix_trim16",
+      "candidate_mask_bytes": 158995,
+      "decoded_token_sha256": "d6f4142112de83991ff3fbadf226bc189bb9ff1ceb420081deb092753e90ea29",
+      "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "mask_delta_bytes_vs_source": -16,
+      "planning_basis": "The runtime bit reader pads exhausted input with zero bits, so every nonzero suffix trim must prove full decoded-token SHA parity.",
+      "proposed_mask_delta_bytes": -16,
+      "rejection_reasons": [
+        "decoded_token_sha_mismatch"
+      ],
+      "runtime_compatibility": {
+        "decode_attempted": true,
+        "decode_implementation": "submissions/robust_current/range_mask_codec.cpp",
+        "decoded_token_sha_matches_source": false
+      },
+      "safe_for_remote_dispatch": false,
+      "screen": "decode_proven_nonzero_suffix_byte_trim",
+      "source_mask_bytes": 159011,
+      "trimmed_suffix_bytes": 16
+    }
+  ],
+  "screened_variant_count": 18,
+  "source_archive": {
+    "archive_bytes": 236328,
+    "archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+    "member_bytes": 236228,
+    "member_name": "x",
+    "member_sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+    "path": "experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+    "zip_overhead_bytes": 100
+  },
+  "source_qma9": {
+    "declared_bitstream_trailing_zero_bytes": 0,
+    "declared_packed_bytes_equals_segment_bytes": true,
+    "header": {
+      "bitstream_bytes": 158991,
+      "bitstream_sha256": "77196f31a8fdfbf8f91c9c30600945473376534f15245bfb7622ddd77d17e3af",
+      "decoded_mask_bytes": 117964800,
+      "frame_count": 600,
+      "header_bytes": 20,
+      "height": 384,
+      "magic": "QMA9",
+      "packed_bytes": 159011,
+      "payload_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+      "width": 512
+    },
+    "segment_bytes": 159011,
+    "segment_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+    "source_decode": {
+      "compile_command": [
+        "/usr/bin/c++",
+        "-O3",
+        "-std=c++17",
+        "/Users/adpena/Projects/pact/submissions/robust_current/range_mask_codec.cpp",
+        "-o",
+        "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/pr85-qma9-source-decode-iwdvbgba/qma9_runtime_decoder"
+      ],
+      "header": {
+        "bitstream_bytes": 158991,
+        "bitstream_sha256": "77196f31a8fdfbf8f91c9c30600945473376534f15245bfb7622ddd77d17e3af",
+        "decoded_mask_bytes": 117964800,
+        "frame_count": 600,
+        "header_bytes": 20,
+        "height": 384,
+        "magic": "QMA9",
+        "packed_bytes": 159011,
+        "payload_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+        "width": 512
+      },
+      "implementation": "submissions/robust_current/range_mask_codec.cpp",
+      "run_returncode": 0,
+      "source": "submissions/robust_current/range_mask_codec.cpp",
+      "stderr": "",
+      "stdout": "",
+      "storage_order": "frame_major_header_width_by_header_height"
+    },
+    "source_decoded_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+    "source_decoded_token_sha_matches_expected": true
+  },
+  "token_source": {
+    "bytes": 117964800,
+    "expected_bytes": 117964800,
+    "expected_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+    "path": "experiments/results/public_pr85_intake_20260503_codex/qma9_token_source/pr85_qma9_tokens_u8_storage_order.bin",
+    "sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a"
+  },
+  "tool": "experiments/build_pr85_qma9_native_grammar_candidates.py"
+}

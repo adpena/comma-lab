@@ -1,0 +1,150 @@
+{
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
+  "output_archive": {
+    "bytes": 276862,
+    "delta_bytes_vs_source_archive": 476,
+    "formula_only_rate_delta_vs_source_archive": 0.0003169488616861536,
+    "path": "/Users/adpena/Projects/pact/experiments/results/sjkl_pr75_qp1_sub314_20260503_worker/builds/trace_positive9_deflated/archive.zip",
+    "sha256": "f4884003a245ac740ced190d374d8e8cc8421c23c687879fbb49a535eb667932"
+  },
+  "packed_payload": {
+    "archive_layout": "top_level_sibling",
+    "brotli_quality": 11,
+    "compression_selection": {
+      "candidate_count": 1,
+      "chosen_member_order": [
+        "p",
+        "sjkl.bin"
+      ],
+      "header_minimized": false,
+      "layout_summary": {
+        "archive_delta_bytes_vs_source_archive": 476,
+        "formula_only_rate_delta_vs_source_archive": 0.0003169488616861536,
+        "layout": "top_level_sjkl_sibling",
+        "preserves_source_payload_bytes": true,
+        "sjkl_zip_compression": "deflated",
+        "source_payload_member": "p",
+        "zip_members": [
+          {
+            "compress_size": 276286,
+            "compress_type": 0,
+            "date_time": [
+              1980,
+              1,
+              1,
+              0,
+              0,
+              0
+            ],
+            "external_attr_mode": 420,
+            "file_size": 276286,
+            "name": "p"
+          },
+          {
+            "compress_size": 384,
+            "compress_type": 8,
+            "date_time": [
+              1980,
+              1,
+              1,
+              0,
+              0,
+              0
+            ],
+            "external_attr_mode": 420,
+            "file_size": 387,
+            "name": "sjkl.bin"
+          }
+        ]
+      },
+      "member_order_optimized": false
+    },
+    "header": {
+      "members": [
+        {
+          "bytes": 276286,
+          "codec": "preserved_source_member",
+          "name": "p",
+          "sha256": "93250610cbb819241d1356554149738af7de55e83a006396883fc7a18f51eff5"
+        },
+        {
+          "bytes": 387,
+          "codec": "top_level_archive_member",
+          "name": "sjkl.bin",
+          "sha256": "49ff4c73cce806bb76cb95ef187b9781eb6778dcf3970eb26380654b4030900e"
+        }
+      ],
+      "schema": "source_payload_preserved_plus_top_level_sjkl_v1"
+    },
+    "payload_compressed_bytes": 0,
+    "payload_format": "preserve_source_payload_plus_top_level_sjkl",
+    "payload_member": "p",
+    "payload_raw_bytes": 0,
+    "source_archive_sha256_recorded_in_manifest": "9feef7ffaa254f9e5408996a122682757a054144a3000539553786c5292b7d0a"
+  },
+  "payload_member_names": {
+    "output_archive_members": [
+      "p",
+      "sjkl.bin"
+    ],
+    "output_logical_runtime_members": [
+      "renderer.bin",
+      "masks.mkv",
+      "optimized_poses.qp1",
+      "seg_tile_actions.bin",
+      "sjkl.bin"
+    ],
+    "output_packed_payload_member": "p",
+    "sjkl_member": "sjkl.bin"
+  },
+  "promotion_eligible": false,
+  "runtime_contract": {
+    "inflate_loader": "submissions/robust_current/inflate_renderer.py::_load_sjkl_residual_from_archive_dir",
+    "require_runtime_apply_proof": true,
+    "runtime_apply_proof": {
+      "path": "/Users/adpena/Projects/pact/submissions/robust_current/inflate_renderer.py",
+      "proof_tokens": [
+        "SJKL_REQUIRE_APPLIED",
+        "_finalize_sjkl_application_contract",
+        "_apply_sjkl_residual_to_pairs",
+        "applied_pair_count",
+        "charged sjkl.bin did not affect"
+      ],
+      "require_env": "SJKL_REQUIRE_APPLIED=1",
+      "sha256": "57eff4e2d7c4de0ef20c8e0cea66e9464684ed14956872e603bb4a65e8c39d9e",
+      "verified": true
+    },
+    "score_affecting_payload_charged_in_archive": true,
+    "sidecars_required": false,
+    "unpacker": "submissions/robust_current/unpack_renderer_payload.py"
+  },
+  "schema": "sjkl_c067_archive_builder_v1",
+  "score_claim": false,
+  "sjkl_payload": {
+    "bytes": 387,
+    "max_bytes": 1024,
+    "member_name": "sjkl.bin",
+    "path": "/Users/adpena/Projects/pact/experiments/results/sjkl_c067_trace_selected_repack_20260502T_local/old_selected_positive9/repack/sjkl.bin",
+    "replaced_existing": false,
+    "sha256": "49ff4c73cce806bb76cb95ef187b9781eb6778dcf3970eb26380654b4030900e"
+  },
+  "source_archive": {
+    "bytes": 276386,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/archive.zip",
+    "sha256": "9feef7ffaa254f9e5408996a122682757a054144a3000539553786c5292b7d0a",
+    "source_archive_packaging": "packed_renderer_payload",
+    "source_logical_member_names": [
+      "renderer.bin",
+      "masks.mkv",
+      "optimized_poses.qp1",
+      "seg_tile_actions.bin"
+    ],
+    "source_payload_header_payload_format": "public_pr75_qzs3_qp1_segactions_p3",
+    "source_payload_header_schema": "renderer_payload_pr64_len_table_v1",
+    "source_payload_member": "p",
+    "source_zip_members": [
+      "p"
+    ]
+  }
+}

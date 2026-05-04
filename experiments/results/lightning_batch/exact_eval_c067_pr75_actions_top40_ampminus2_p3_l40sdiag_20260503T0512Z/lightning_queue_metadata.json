@@ -1,0 +1,37 @@
+{
+  "adjudication": {
+    "allow_component_gate_forensic_success": true,
+    "allow_sane_score_forensic_success": true,
+    "baseline_archive_size_bytes": 276386,
+    "baseline_posenet_dist": 0.00049633,
+    "baseline_score": 0.3155226919767294,
+    "baseline_segnet_dist": 0.00061038,
+    "component_reference_label": "c088_pr75_top40_t4_frontier",
+    "delta_key": "score_delta_vs_c088",
+    "max_posenet_dist": null,
+    "max_posenet_relative": null,
+    "max_sane_score": 60.0,
+    "max_segnet_dist": null,
+    "max_segnet_relative": null,
+    "predicted_band_high": 0.5,
+    "predicted_band_low": 0.25,
+    "provenance_name": "adjudication_provenance.json",
+    "regression_threshold": 60.0,
+    "required_device": "cuda",
+    "required_samples": 600,
+    "result_copy_name": "contest_auth_eval.adjudicated.json"
+  },
+  "artifact_recorded_at_utc": "2026-05-03T05:23:25Z",
+  "expected_archive_sha256": "b37163dec8afe5e22fbe04cd1929576dbd73bca6975d61c74b4f7fc5145c9de7",
+  "expected_archive_size_bytes": 276385,
+  "job_name": "exact_eval_c067_pr75_actions_top40_ampminus2_p3_l40sdiag_20260503T0512Z",
+  "queue_metadata": {
+    "lane": "c067_pr75_actions_top40_ampminus2_p3_l40sdiag",
+    "score_claim": "false",
+    "source_family": "pr75_tile_action_amp_l40s_hedge"
+  },
+  "role": "exact_cuda_eval",
+  "schema_version": 1,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

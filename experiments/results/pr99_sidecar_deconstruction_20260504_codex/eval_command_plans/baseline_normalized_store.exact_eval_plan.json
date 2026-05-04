@@ -1,0 +1,32 @@
+{
+  "archive": "experiments/results/pr99_sidecar_deconstruction_20260504_codex/candidates/archive.baseline_normalized_store.zip",
+  "archive_bytes": 178546,
+  "archive_sha256": "249e53bc9ffeacaea8b233cbcdcd13f134a841bd014a91d2620d0201432edec1",
+  "claim_required_before_dispatch": true,
+  "command": [
+    ".venv/bin/python",
+    "scripts/launch_lightning_batch_job.py",
+    "exact-eval",
+    "--state-path",
+    ".omx/state/lightning_batch_jobs.json",
+    "--job-name",
+    "exact_eval_pr99_sidecar_baseline_normalized_store_t4_YYYYMMDDTHHMMSSZ",
+    "--archive",
+    "/Users/adpena/Projects/pact/experiments/results/pr99_sidecar_deconstruction_20260504_codex/candidates/archive.baseline_normalized_store.zip",
+    "--inflate-sh",
+    "/Users/adpena/Projects/pact/experiments/results/pr99_sidecar_deconstruction_20260504_codex/runtime_variants/baseline_normalized_store/inflate.sh",
+    "--machine",
+    "T4_SMALL",
+    "--adjudicate",
+    "--expected-archive-sha256",
+    "249e53bc9ffeacaea8b233cbcdcd13f134a841bd014a91d2620d0201432edec1",
+    "--expected-archive-size-bytes",
+    "178546"
+  ],
+  "dispatch_performed": false,
+  "runtime_root": "experiments/results/pr99_sidecar_deconstruction_20260504_codex/runtime_variants/baseline_normalized_store",
+  "runtime_tree_sha256": "04583e3b64e7dc8b71a986e93b0ed685a5709355d5ab920bbde7b50b28fef0a3",
+  "schema": "pr99_sidecar_no_dispatch_exact_eval_plan_v1",
+  "suggested_job_name": "exact_eval_pr99_sidecar_baseline_normalized_store_t4_YYYYMMDDTHHMMSSZ",
+  "suggested_lane_id": "pr99_sidecar_baseline_normalized_store_t4_screen"
+}

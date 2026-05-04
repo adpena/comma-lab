@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-05-02T01:57:00Z",
+  "archive_label": "archive_eval_line_search_qzs3_qp1_basis_r13_fix1_20260502T0156Z",
+  "archive_path": "/workspace/pact/experiments/results/line_search_qzs3_qp1_basis_r13_fix1_20260502T0143Z_archive.zip",
+  "custody_archive_path": "/workspace/pact/experiments/results/archive_eval_line_search_qzs3_qp1_basis_r13_fix1_20260502T0156Z/archive.zip",
+  "archive_size_bytes": 276423,
+  "archive_sha256": "63e6213ae154b5b5ce164829c15e675ad6d7819a9bdb1e8c9b2f099374fa7009"
+}

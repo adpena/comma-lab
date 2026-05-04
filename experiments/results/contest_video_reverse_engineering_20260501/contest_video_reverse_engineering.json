@@ -1,0 +1,446 @@
+{
+  "camera_model": {
+    "extrinsics_prior": {
+      "height_m": 1.2,
+      "pitch_rad": -0.02
+    },
+    "horizon_band_scorer_y": [
+      155,
+      195
+    ],
+    "native_height": 874,
+    "native_intrinsics": {
+      "cx": 582.0,
+      "cy": 437.0,
+      "fx": 910.0,
+      "fy": 910.0
+    },
+    "native_width": 1164,
+    "scorer_height": 384,
+    "scorer_width": 512,
+    "source": "repo tac.camera plus upstream frame_utils constants",
+    "vanishing_point": {
+      "native_x": 582.0,
+      "native_y": 396.03125,
+      "scale_x": 2.2734375,
+      "scale_y": 2.2760416666666665,
+      "scorer_x": 256.0,
+      "scorer_y": 174.0
+    }
+  },
+  "contest_contract": {
+    "expected_raw_rgb_bytes_per_video": 3662409600,
+    "official_gpu_class_for_gpu_inflate": "Tesla T4 equivalent",
+    "official_inflate_budget_seconds": 1800,
+    "original_size_bytes": 37545489,
+    "public_test_video_names": [
+      "0.mkv"
+    ],
+    "samples": 600,
+    "score_formula": "100*segnet_dist + sqrt(10*posenet_dist) + 25*archive_bytes/original_bytes",
+    "seq_len": 2,
+    "upstream_git": {
+      "head": "11ad728f563d8970929e8947a1cf6124ee6303e4",
+      "head_summary": "11ad728 ci: update leaderboard tables",
+      "remote": "https://github.com/commaai/comma_video_compression_challenge.git"
+    },
+    "upstream_repo": "https://github.com/commaai/comma_video_compression_challenge"
+  },
+  "environment": {
+    "platform": "macOS-26.4-arm64-arm-64bit",
+    "python": "/Users/adpena/Projects/pact/.venv/bin/python",
+    "python_version": "3.12.13 (main, Mar 10 2026, 18:18:07) [Clang 21.1.4 ]"
+  },
+  "evidence_grade": "empirical_video_anatomy",
+  "luma_motion_anatomy": {
+    "frame_count_decoded": 1200,
+    "luma_mean": {
+      "count": 1200,
+      "max": 44.911746978759766,
+      "mean": 34.00110161622365,
+      "min": 30.106128692626953,
+      "std": 2.3648488539428842
+    },
+    "luma_std": {
+      "count": 1200,
+      "max": 25.92812728881836,
+      "mean": 17.98421450773875,
+      "min": 14.277098655700684,
+      "std": 2.0256056507361553
+    },
+    "pair_count_analyzed": 600,
+    "pair_mean_abs_luma_delta": {
+      "count": 600,
+      "max": 6.0819993019104,
+      "mean": 2.3112798257668814,
+      "min": 1.5060521364212036,
+      "std": 0.4103515130284133
+    },
+    "pair_radial_inner_minus_outer_delta": {
+      "count": 600,
+      "max": 17.540607690811157,
+      "mean": -0.15588737567265828,
+      "min": -4.346657872200012,
+      "std": 1.557931233297066
+    },
+    "ring_pair_delta": {
+      "horizon_band": {
+        "count": 600,
+        "max": 9.921575546264648,
+        "mean": 3.1736036384105684,
+        "min": 1.7096974849700928,
+        "std": 1.2094702291786783
+      },
+      "r_0_80": {
+        "count": 600,
+        "max": 14.466730117797852,
+        "mean": 2.4800574441750842,
+        "min": 1.069977045059204,
+        "std": 1.267917602026057
+      },
+      "r_160_260": {
+        "count": 600,
+        "max": 11.254626274108887,
+        "mean": 1.7737969026962916,
+        "min": 1.013071894645691,
+        "std": 0.7415847791212498
+      },
+      "r_260_400": {
+        "count": 600,
+        "max": 7.185931205749512,
+        "mean": 1.990420434474945,
+        "min": 1.168778419494629,
+        "std": 0.5253232693829667
+      },
+      "r_400_max": {
+        "count": 600,
+        "max": 4.601961612701416,
+        "mean": 2.658141476114591,
+        "min": 1.643688678741455,
+        "std": 0.3927605563985974
+      },
+      "r_80_160": {
+        "count": 600,
+        "max": 9.470402717590332,
+        "mean": 2.0126170907417933,
+        "min": 1.219449520111084,
+        "std": 0.7493278637326882
+      }
+    },
+    "top_motion_pairs_by_luma_delta": [
+      {
+        "horizon_band_delta": 6.698453426361084,
+        "mean_abs_luma_delta": 6.0819993019104,
+        "pair_index": 523,
+        "radial_inner_minus_outer_delta": 9.288901805877686
+      },
+      {
+        "horizon_band_delta": 7.092188835144043,
+        "mean_abs_luma_delta": 5.972390651702881,
+        "pair_index": 514,
+        "radial_inner_minus_outer_delta": 5.770525932312012
+      },
+      {
+        "horizon_band_delta": 7.798402786254883,
+        "mean_abs_luma_delta": 4.573449611663818,
+        "pair_index": 515,
+        "radial_inner_minus_outer_delta": 3.4384708404541016
+      },
+      {
+        "horizon_band_delta": 9.921575546264648,
+        "mean_abs_luma_delta": 4.440291881561279,
+        "pair_index": 516,
+        "radial_inner_minus_outer_delta": 10.79887080192566
+      },
+      {
+        "horizon_band_delta": 9.379375457763672,
+        "mean_abs_luma_delta": 4.2121148109436035,
+        "pair_index": 521,
+        "radial_inner_minus_outer_delta": 17.540607690811157
+      },
+      {
+        "horizon_band_delta": 7.39776611328125,
+        "mean_abs_luma_delta": 3.7809081077575684,
+        "pair_index": 517,
+        "radial_inner_minus_outer_delta": 1.4252614974975586
+      },
+      {
+        "horizon_band_delta": 2.417922258377075,
+        "mean_abs_luma_delta": 3.7073209285736084,
+        "pair_index": 245,
+        "radial_inner_minus_outer_delta": -3.9572060108184814
+      },
+      {
+        "horizon_band_delta": 4.302631855010986,
+        "mean_abs_luma_delta": 3.6826682090759277,
+        "pair_index": 522,
+        "radial_inner_minus_outer_delta": 0.5326023101806641
+      },
+      {
+        "horizon_band_delta": 3.5045316219329834,
+        "mean_abs_luma_delta": 3.6262238025665283,
+        "pair_index": 524,
+        "radial_inner_minus_outer_delta": -0.7294588088989258
+      },
+      {
+        "horizon_band_delta": 4.548922061920166,
+        "mean_abs_luma_delta": 3.5851566791534424,
+        "pair_index": 0,
+        "radial_inner_minus_outer_delta": -2.610351324081421
+      },
+      {
+        "horizon_band_delta": 1.913466215133667,
+        "mean_abs_luma_delta": 3.355940341949463,
+        "pair_index": 244,
+        "radial_inner_minus_outer_delta": -4.346657872200012
+      },
+      {
+        "horizon_band_delta": 9.77699089050293,
+        "mean_abs_luma_delta": 3.350433826446533,
+        "pair_index": 547,
+        "radial_inner_minus_outer_delta": 0.18822479248046875
+      },
+      {
+        "horizon_band_delta": 5.207639217376709,
+        "mean_abs_luma_delta": 3.305283546447754,
+        "pair_index": 135,
+        "radial_inner_minus_outer_delta": -1.1490750312805176
+      },
+      {
+        "horizon_band_delta": 5.178222179412842,
+        "mean_abs_luma_delta": 3.2800559997558594,
+        "pair_index": 1,
+        "radial_inner_minus_outer_delta": -1.7667334079742432
+      },
+      {
+        "horizon_band_delta": 6.753870487213135,
+        "mean_abs_luma_delta": 3.2469046115875244,
+        "pair_index": 520,
+        "radial_inner_minus_outer_delta": 1.2068512439727783
+      },
+      {
+        "horizon_band_delta": 6.021572113037109,
+        "mean_abs_luma_delta": 3.2326998710632324,
+        "pair_index": 127,
+        "radial_inner_minus_outer_delta": -1.5475196838378906
+      },
+      {
+        "horizon_band_delta": 6.213568210601807,
+        "mean_abs_luma_delta": 3.0979676246643066,
+        "pair_index": 575,
+        "radial_inner_minus_outer_delta": 0.8858952522277832
+      },
+      {
+        "horizon_band_delta": 4.533977031707764,
+        "mean_abs_luma_delta": 3.075249433517456,
+        "pair_index": 554,
+        "radial_inner_minus_outer_delta": 2.260524034500122
+      },
+      {
+        "horizon_band_delta": 3.827414035797119,
+        "mean_abs_luma_delta": 2.993978500366211,
+        "pair_index": 577,
+        "radial_inner_minus_outer_delta": -1.5441553592681885
+      },
+      {
+        "horizon_band_delta": 9.44471549987793,
+        "mean_abs_luma_delta": 2.989222764968872,
+        "pair_index": 548,
+        "radial_inner_minus_outer_delta": 1.4152610301971436
+      }
+    ]
+  },
+  "mask_proxy_anatomy": {
+    "bytes": 79071,
+    "class_pixel_counts": [
+      855869,
+      21416,
+      1859042,
+      44612,
+      905461
+    ],
+    "class_pixel_fractions": [
+      0.23216932508680554,
+      0.0058094618055555556,
+      0.5042974175347222,
+      0.012101779513888888,
+      0.24562201605902778
+    ],
+    "lane_mark_fraction": 0.0058094618055555556,
+    "log_zoom_abs_summary": {
+      "count": 600,
+      "max": 0.036078616976737976,
+      "mean": 0.007995044269573176,
+      "min": 2.513788558644592e-06,
+      "std": 0.0063128571333592905
+    },
+    "log_zoom_summary": {
+      "count": 600,
+      "max": 0.03563818335533142,
+      "mean": -0.00040297049149292736,
+      "min": -0.036078616976737976,
+      "std": 0.010178924935454928
+    },
+    "path": "/Users/adpena/Projects/pact/submissions/robust_current/masks.mkv",
+    "sha256": "16c95d40ec2ff4db9e0ae21dfafe04b3c322668290e9f7e545b9c151914c11dd",
+    "shape": [
+      1200,
+      48,
+      64
+    ],
+    "top_pairs_by_abs_log_zoom": [
+      {
+        "abs_log_zoom": 0.036078616976737976,
+        "log_zoom": -0.036078616976737976,
+        "pair_index": 559
+      },
+      {
+        "abs_log_zoom": 0.03563818335533142,
+        "log_zoom": 0.03563818335533142,
+        "pair_index": 528
+      },
+      {
+        "abs_log_zoom": 0.030838603153824806,
+        "log_zoom": 0.030838603153824806,
+        "pair_index": 515
+      },
+      {
+        "abs_log_zoom": 0.029708756133913994,
+        "log_zoom": 0.029708756133913994,
+        "pair_index": 422
+      },
+      {
+        "abs_log_zoom": 0.028958678245544434,
+        "log_zoom": 0.028958678245544434,
+        "pair_index": 514
+      },
+      {
+        "abs_log_zoom": 0.028892604634165764,
+        "log_zoom": -0.028892604634165764,
+        "pair_index": 549
+      },
+      {
+        "abs_log_zoom": 0.028648823499679565,
+        "log_zoom": -0.028648823499679565,
+        "pair_index": 214
+      },
+      {
+        "abs_log_zoom": 0.026475097984075546,
+        "log_zoom": -0.026475097984075546,
+        "pair_index": 485
+      },
+      {
+        "abs_log_zoom": 0.025981705635786057,
+        "log_zoom": -0.025981705635786057,
+        "pair_index": 213
+      },
+      {
+        "abs_log_zoom": 0.025891419500112534,
+        "log_zoom": 0.025891419500112534,
+        "pair_index": 523
+      },
+      {
+        "abs_log_zoom": 0.025868112221360207,
+        "log_zoom": -0.025868112221360207,
+        "pair_index": 424
+      },
+      {
+        "abs_log_zoom": 0.02580270916223526,
+        "log_zoom": -0.02580270916223526,
+        "pair_index": 237
+      },
+      {
+        "abs_log_zoom": 0.02552916668355465,
+        "log_zoom": -0.02552916668355465,
+        "pair_index": 412
+      },
+      {
+        "abs_log_zoom": 0.025351088494062424,
+        "log_zoom": 0.025351088494062424,
+        "pair_index": 434
+      },
+      {
+        "abs_log_zoom": 0.02496018446981907,
+        "log_zoom": -0.02496018446981907,
+        "pair_index": 306
+      },
+      {
+        "abs_log_zoom": 0.02435716986656189,
+        "log_zoom": 0.02435716986656189,
+        "pair_index": 448
+      },
+      {
+        "abs_log_zoom": 0.022696563974022865,
+        "log_zoom": -0.022696563974022865,
+        "pair_index": 208
+      },
+      {
+        "abs_log_zoom": 0.022694632411003113,
+        "log_zoom": -0.022694632411003113,
+        "pair_index": 531
+      },
+      {
+        "abs_log_zoom": 0.022635934874415398,
+        "log_zoom": -0.022635934874415398,
+        "pair_index": 119
+      },
+      {
+        "abs_log_zoom": 0.02241605706512928,
+        "log_zoom": 0.02241605706512928,
+        "pair_index": 204
+      }
+    ],
+    "zero_cost_pose_dim0_summary": {
+      "count": 600,
+      "max": 31.58010482788086,
+      "mean": 31.291776269276937,
+      "min": 31.006370544433594,
+      "std": 0.08143135286847154
+    }
+  },
+  "overfit_hypotheses": [
+    {
+      "description": "Use the known EON/openpilot-style pinhole geometry and fixed FoE to parameterize Telescope/hyperbolic foveation atoms.",
+      "evidence_type": "hypothesis_from_video_anatomy",
+      "id": "hardware_calibrated_foveation_atoms",
+      "required_next_evidence": "exact CUDA archive eval of concrete foveation archive"
+    },
+    {
+      "description": "Use high luma-delta, horizon-band, and lane-mark log-zoom pairs as PoseNet-sensitive pair atoms.",
+      "evidence_type": "empirical_video_prior",
+      "id": "ego_motion_pair_atoms",
+      "required_next_evidence": "component-manifold probe or exact archive eval"
+    },
+    {
+      "description": "Use openpilot/supercombo or classical calibrated flow only at compress time to seed pose/foveation/latent atoms; ship only charged compact outputs.",
+      "evidence_type": "contest-compliant hypothesis",
+      "id": "openpilot_compress_time_prior",
+      "required_next_evidence": "deterministic archive closure and exact CUDA eval"
+    }
+  ],
+  "producer": "experiments/reverse_engineer_contest_video.py",
+  "promotion_eligible": false,
+  "recorded_at_utc": "2026-05-01T17:06:06Z",
+  "schema": "contest_video_reverse_engineering_v1",
+  "score_claim": false,
+  "score_claim_warning": "This artifact is source-video and rule anatomy only. It is not score evidence and cannot promote, rank, kill, or retire a lane.",
+  "video": {
+    "bytes": 37545489,
+    "ffprobe": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "avg_frame_rate": "20/1",
+          "codec_name": "hevc",
+          "height": 874,
+          "pix_fmt": "yuv420p",
+          "r_frame_rate": "20/1",
+          "width": 1164
+        }
+      ]
+    },
+    "path": "/Users/adpena/Projects/pact/upstream/videos/0.mkv",
+    "sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9"
+  }
+}

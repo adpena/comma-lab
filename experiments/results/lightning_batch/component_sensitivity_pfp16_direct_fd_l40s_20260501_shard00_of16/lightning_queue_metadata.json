@@ -1,0 +1,23 @@
+{
+  "adjudication": null,
+  "artifact_recorded_at_utc": "2026-05-01T08:01:35Z",
+  "expected_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+  "expected_archive_size_bytes": 686635,
+  "expected_baseline_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+  "expected_baseline_archive_size_bytes": 686635,
+  "finite_difference_shard_count": 16,
+  "finite_difference_shard_index": 0,
+  "job_name": "component_sensitivity_pfp16_direct_fd_l40s_20260501_shard00_of16",
+  "promotion_eligible": false,
+  "queue_metadata": {
+    "baseline": "pfp16_a_plus_plus",
+    "deadline": "2026-05-03T00:00:00-05:00",
+    "lane": "beta_direct_fd_component_sensitivity",
+    "purpose": "score_allocation_signal_for_owv3_nwcs_alpha"
+  },
+  "role": "diagnostic_component_sensitivity",
+  "schema_version": 1,
+  "score_claim": false,
+  "score_source": "none:diagnostic_component_sensitivity_non_promotable",
+  "status_source": "lightning_sdk_job_attributes"
+}

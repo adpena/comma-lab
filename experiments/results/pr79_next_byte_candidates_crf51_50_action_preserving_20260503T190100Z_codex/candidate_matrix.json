@@ -1,0 +1,573 @@
+{
+  "build_options": {
+    "action_sources": [
+      "pr79"
+    ],
+    "candidate_families": [
+      "brotli_rpk1_flatpack"
+    ],
+    "include_source_control": false,
+    "mask_crfs": [
+      51,
+      50
+    ],
+    "require_action_parity_for_dispatch": true
+  },
+  "candidate_count": 3,
+  "candidates": [
+    {
+      "archive_bytes": 270941,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_50_action_preserving_20260503T190100Z_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51__pr79_public_raw4_action_wire_br__brotli_rpk1_flatpack/archive.zip",
+      "archive_sha256": "45d821206fef0f173036d959c78a0db620ef92e975ee6941430404daf8d60c71",
+      "body_byte_profile": {
+        "archive_bytes": 270941,
+        "archive_delta_bytes_vs_current_s2_frontier": -6380,
+        "archive_delta_bytes_vs_pr79_public": -6447,
+        "parsed_member_total_bytes": 282334,
+        "parsed_members": {
+          "masks.mkv": {
+            "bytes": 220744,
+            "delta_bytes_vs_pr79_decoded": -2641,
+            "sha256": "b03302ddfd750959d0a5f96e6d1f54116bc341e5c6b1af0043bc70897fdb9e10"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 1140,
+            "delta_bytes_vs_pr79_decoded": 0,
+            "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+          },
+          "renderer.bin": {
+            "bytes": 59288,
+            "delta_bytes_vs_pr79_decoded": 0,
+            "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+          },
+          "seg_tile_actions.br": {
+            "bytes": 1162,
+            "delta_bytes_vs_pr79_decoded": null,
+            "sha256": "3fdf6320b77685606283438e1a9bea4df3c83ecb525deb4750dade60c8e7dbdc"
+          }
+        },
+        "payload_decode_for_parse_bytes": 282999,
+        "payload_decode_for_parse_sha256": "196b96806c22b2cca3d1f6aed442d3b86717b2bdd671edd441a31dbf6d93d4be",
+        "payload_member_bytes": 270841,
+        "payload_member_sha256": "d0bb0e8730aa8ef7b24af612161c314c9eaeed56b82b6059d942e49d05dff1dd",
+        "top_level_brotli_flatpack": true,
+        "zip_overhead_bytes": 100
+      },
+      "candidate_family": "brotli_rpk1_flatpack",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51__pr79_public_raw4_action_wire_br__brotli_rpk1_flatpack",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": true
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": -6380,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": true,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "local byte-closed candidate preserves renderer/pose and passes direct action-loader checks",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": false
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_50_action_preserving_20260503T190100Z_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51__pr79_public_raw4_action_wire_br__brotli_rpk1_flatpack/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv"
+      },
+      "provenance": {
+        "build_options": {
+          "action_sources": [
+            "pr79"
+          ],
+          "candidate_families": [
+            "brotli_rpk1_flatpack"
+          ],
+          "include_source_control": false,
+          "mask_crfs": [
+            51,
+            50
+          ],
+          "require_action_parity_for_dispatch": true
+        },
+        "canonical_score_source_required": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "no_remote_dispatch_performed": true,
+        "source_action": {
+          "action_id": "pr79_public_raw4_action_wire_br",
+          "source_archive_sha256": "01dc02badf851d99108fd92c570271f36f74cc5424c6d2a8f1b499cb4d1c3446",
+          "source_label": "pr79_public",
+          "source_payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+          "wire_sha256": "3fdf6320b77685606283438e1a9bea4df3c83ecb525deb4750dade60c8e7dbdc"
+        },
+        "source_mask_candidate": {
+          "archive_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51/archive.zip",
+          "archive_sha256": "231abfc8fe92fe5bf29a7c67b37da581dab8375840b66a1e5a41e5a79b95981b",
+          "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51",
+          "manifest_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51/manifest.json",
+          "manifest_sha256": "2be6a905869328daf241ee85c7a5821d7aaa8d2d5673dabfd5ffa4396355dda9",
+          "mask_crf": 51,
+          "mask_sha256": "b03302ddfd750959d0a5f96e6d1f54116bc341e5c6b1af0043bc70897fdb9e10"
+        },
+        "source_pr79": {
+          "archive_path": "experiments/results/top_submission_reverse_engineering_20260503_pr79/archive.zip",
+          "archive_sha256": "01dc02badf851d99108fd92c570271f36f74cc5424c6d2a8f1b499cb4d1c3446",
+          "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices"
+        },
+        "tool": "experiments/build_pr79_next_byte_candidates.py"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": -6380,
+        "rate_score_delta_vs_s2_frontier": -0.004248180120919453,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.3102853734522669,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 271421,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_50_action_preserving_20260503T190100Z_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf51__pr79_public_raw4_action_wire_br__brotli_rpk1_flatpack/archive.zip",
+      "archive_sha256": "20b007286216517c7e505316904d7d057478ee99580557b178108954c4d72593",
+      "body_byte_profile": {
+        "archive_bytes": 271421,
+        "archive_delta_bytes_vs_current_s2_frontier": -5900,
+        "archive_delta_bytes_vs_pr79_public": -5967,
+        "parsed_member_total_bytes": 282758,
+        "parsed_members": {
+          "masks.mkv": {
+            "bytes": 221168,
+            "delta_bytes_vs_pr79_decoded": -2217,
+            "sha256": "77aad7c06eb0a6ad72d31d7b416bb9037635cd01c06bd9da333f6e7cb7b76f06"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 1140,
+            "delta_bytes_vs_pr79_decoded": 0,
+            "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+          },
+          "renderer.bin": {
+            "bytes": 59288,
+            "delta_bytes_vs_pr79_decoded": 0,
+            "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+          },
+          "seg_tile_actions.br": {
+            "bytes": 1162,
+            "delta_bytes_vs_pr79_decoded": null,
+            "sha256": "3fdf6320b77685606283438e1a9bea4df3c83ecb525deb4750dade60c8e7dbdc"
+          }
+        },
+        "payload_decode_for_parse_bytes": 283423,
+        "payload_decode_for_parse_sha256": "ca267081afc78b5e3f643867616e22401a1fac19f031c66b5bf3e60669c5d4e4",
+        "payload_member_bytes": 271321,
+        "payload_member_sha256": "8198f96b6fb74fafd3d5416d85ed14948b5a266525152a1b656b82dda585eb05",
+        "top_level_brotli_flatpack": true,
+        "zip_overhead_bytes": 100
+      },
+      "candidate_family": "brotli_rpk1_flatpack",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf51__pr79_public_raw4_action_wire_br__brotli_rpk1_flatpack",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": true
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": -5900,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": true,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "local byte-closed candidate preserves renderer/pose and passes direct action-loader checks",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": false
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_50_action_preserving_20260503T190100Z_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf51__pr79_public_raw4_action_wire_br__brotli_rpk1_flatpack/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv"
+      },
+      "provenance": {
+        "build_options": {
+          "action_sources": [
+            "pr79"
+          ],
+          "candidate_families": [
+            "brotli_rpk1_flatpack"
+          ],
+          "include_source_control": false,
+          "mask_crfs": [
+            51,
+            50
+          ],
+          "require_action_parity_for_dispatch": true
+        },
+        "canonical_score_source_required": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "no_remote_dispatch_performed": true,
+        "source_action": {
+          "action_id": "pr79_public_raw4_action_wire_br",
+          "source_archive_sha256": "01dc02badf851d99108fd92c570271f36f74cc5424c6d2a8f1b499cb4d1c3446",
+          "source_label": "pr79_public",
+          "source_payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+          "wire_sha256": "3fdf6320b77685606283438e1a9bea4df3c83ecb525deb4750dade60c8e7dbdc"
+        },
+        "source_mask_candidate": {
+          "archive_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf51/archive.zip",
+          "archive_sha256": "b252d661874076e7e7402c69c5e3117786c4953022c6136fa39551ffae548561",
+          "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf51",
+          "manifest_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf51/manifest.json",
+          "manifest_sha256": "aa24365cbfadc248d20be39a5d6c2bedb34922f908a9361efd83c44dc3319368",
+          "mask_crf": 51,
+          "mask_sha256": "77aad7c06eb0a6ad72d31d7b416bb9037635cd01c06bd9da333f6e7cb7b76f06"
+        },
+        "source_pr79": {
+          "archive_path": "experiments/results/top_submission_reverse_engineering_20260503_pr79/archive.zip",
+          "archive_sha256": "01dc02badf851d99108fd92c570271f36f74cc5424c6d2a8f1b499cb4d1c3446",
+          "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices"
+        },
+        "tool": "experiments/build_pr79_next_byte_candidates.py"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": -5900,
+        "rate_score_delta_vs_s2_frontier": -0.003928567823420812,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.3106049857497655,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 285389,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_50_action_preserving_20260503T190100Z_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50__pr79_public_raw4_action_wire_br__brotli_rpk1_flatpack/archive.zip",
+      "archive_sha256": "701f6f6156c0e93b42155228eab7c1e8783310320d1e3d911a1bf7d1f1a4b8c6",
+      "body_byte_profile": {
+        "archive_bytes": 285389,
+        "archive_delta_bytes_vs_current_s2_frontier": 8068,
+        "archive_delta_bytes_vs_pr79_public": 8001,
+        "parsed_member_total_bytes": 296768,
+        "parsed_members": {
+          "masks.mkv": {
+            "bytes": 235178,
+            "delta_bytes_vs_pr79_decoded": 11793,
+            "sha256": "c8fd0030db7b6cc18594ab0ae262bb97fce8de30b38c662872e925cc4e525354"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 1140,
+            "delta_bytes_vs_pr79_decoded": 0,
+            "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+          },
+          "renderer.bin": {
+            "bytes": 59288,
+            "delta_bytes_vs_pr79_decoded": 0,
+            "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+          },
+          "seg_tile_actions.br": {
+            "bytes": 1162,
+            "delta_bytes_vs_pr79_decoded": null,
+            "sha256": "3fdf6320b77685606283438e1a9bea4df3c83ecb525deb4750dade60c8e7dbdc"
+          }
+        },
+        "payload_decode_for_parse_bytes": 297433,
+        "payload_decode_for_parse_sha256": "c8581cc66c7cf1e990897b9be8dbb03e8ce2ebf72905f661664beb012fe37ec7",
+        "payload_member_bytes": 285289,
+        "payload_member_sha256": "69628a6af8f96281a67ee44302819ed8f98400e9a960a97cf994483c8ee610ed",
+        "top_level_brotli_flatpack": true,
+        "zip_overhead_bytes": 100
+      },
+      "candidate_family": "brotli_rpk1_flatpack",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50__pr79_public_raw4_action_wire_br__brotli_rpk1_flatpack",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": true
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": 8068,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": true,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "local byte-closed candidate preserves renderer/pose and passes direct action-loader checks",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": false
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_50_action_preserving_20260503T190100Z_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50__pr79_public_raw4_action_wire_br__brotli_rpk1_flatpack/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv"
+      },
+      "provenance": {
+        "build_options": {
+          "action_sources": [
+            "pr79"
+          ],
+          "candidate_families": [
+            "brotli_rpk1_flatpack"
+          ],
+          "include_source_control": false,
+          "mask_crfs": [
+            51,
+            50
+          ],
+          "require_action_parity_for_dispatch": true
+        },
+        "canonical_score_source_required": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "no_remote_dispatch_performed": true,
+        "source_action": {
+          "action_id": "pr79_public_raw4_action_wire_br",
+          "source_archive_sha256": "01dc02badf851d99108fd92c570271f36f74cc5424c6d2a8f1b499cb4d1c3446",
+          "source_label": "pr79_public",
+          "source_payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+          "wire_sha256": "3fdf6320b77685606283438e1a9bea4df3c83ecb525deb4750dade60c8e7dbdc"
+        },
+        "source_mask_candidate": {
+          "archive_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50/archive.zip",
+          "archive_sha256": "35225daed676e053bde7e600d8e57e4d907713d0faf34a7962dd0fba2503866f",
+          "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50",
+          "manifest_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50/manifest.json",
+          "manifest_sha256": "f9e5df4f00444a0497d47fdf492f72c45e9d23e7414764f1c5e133c42270ec64",
+          "mask_crf": 50,
+          "mask_sha256": "c8fd0030db7b6cc18594ab0ae262bb97fce8de30b38c662872e925cc4e525354"
+        },
+        "source_pr79": {
+          "archive_path": "experiments/results/top_submission_reverse_engineering_20260503_pr79/archive.zip",
+          "archive_sha256": "01dc02badf851d99108fd92c570271f36f74cc5424c6d2a8f1b499cb4d1c3446",
+          "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices"
+        },
+        "tool": "experiments/build_pr79_next_byte_candidates.py"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": 8068,
+        "rate_score_delta_vs_s2_frontier": 0.0053721500337896785,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.319905703606976,
+        "unchanged_component_estimate_only": true
+      }
+    }
+  ],
+  "canonical_score_source_required": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+  "current_s2_frontier": {
+    "archive_bytes": 277321,
+    "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+    "score": 0.31453355357318635,
+    "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+  },
+  "evidence_grade": "empirical_local_byte_screen_only",
+  "mask_candidate_sources": [
+    {
+      "archive_bytes": 284626,
+      "archive_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51/archive.zip",
+      "archive_sha256": "231abfc8fe92fe5bf29a7c67b37da581dab8375840b66a1e5a41e5a79b95981b",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51",
+      "exact_eval_ready_after_lane_claim": false,
+      "mask_crf": 51,
+      "matrix_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/candidate_matrix.json",
+      "plausibility_gate_passed": true
+    },
+    {
+      "archive_bytes": 285050,
+      "archive_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf51/archive.zip",
+      "archive_sha256": "b252d661874076e7e7402c69c5e3117786c4953022c6136fa39551ffae548561",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf51",
+      "exact_eval_ready_after_lane_claim": false,
+      "mask_crf": 51,
+      "matrix_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/candidate_matrix.json",
+      "plausibility_gate_passed": true
+    },
+    {
+      "archive_bytes": 299060,
+      "archive_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50/archive.zip",
+      "archive_sha256": "35225daed676e053bde7e600d8e57e4d907713d0faf34a7962dd0fba2503866f",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50",
+      "exact_eval_ready_after_lane_claim": false,
+      "mask_crf": 50,
+      "matrix_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/candidate_matrix.json",
+      "plausibility_gate_passed": true
+    }
+  ],
+  "no_remote_dispatch_performed": true,
+  "recommendation": {
+    "candidate": {
+      "archive_bytes": 270941,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_50_action_preserving_20260503T190100Z_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51__pr79_public_raw4_action_wire_br__brotli_rpk1_flatpack/archive.zip",
+      "archive_sha256": "45d821206fef0f173036d959c78a0db620ef92e975ee6941430404daf8d60c71",
+      "body_byte_profile": {
+        "archive_bytes": 270941,
+        "archive_delta_bytes_vs_current_s2_frontier": -6380,
+        "archive_delta_bytes_vs_pr79_public": -6447,
+        "parsed_member_total_bytes": 282334,
+        "parsed_members": {
+          "masks.mkv": {
+            "bytes": 220744,
+            "delta_bytes_vs_pr79_decoded": -2641,
+            "sha256": "b03302ddfd750959d0a5f96e6d1f54116bc341e5c6b1af0043bc70897fdb9e10"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 1140,
+            "delta_bytes_vs_pr79_decoded": 0,
+            "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+          },
+          "renderer.bin": {
+            "bytes": 59288,
+            "delta_bytes_vs_pr79_decoded": 0,
+            "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+          },
+          "seg_tile_actions.br": {
+            "bytes": 1162,
+            "delta_bytes_vs_pr79_decoded": null,
+            "sha256": "3fdf6320b77685606283438e1a9bea4df3c83ecb525deb4750dade60c8e7dbdc"
+          }
+        },
+        "payload_decode_for_parse_bytes": 282999,
+        "payload_decode_for_parse_sha256": "196b96806c22b2cca3d1f6aed442d3b86717b2bdd671edd441a31dbf6d93d4be",
+        "payload_member_bytes": 270841,
+        "payload_member_sha256": "d0bb0e8730aa8ef7b24af612161c314c9eaeed56b82b6059d942e49d05dff1dd",
+        "top_level_brotli_flatpack": true,
+        "zip_overhead_bytes": 100
+      },
+      "candidate_family": "brotli_rpk1_flatpack",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51__pr79_public_raw4_action_wire_br__brotli_rpk1_flatpack",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": true
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": -6380,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": true,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "local byte-closed candidate preserves renderer/pose and passes direct action-loader checks",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": false
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_50_action_preserving_20260503T190100Z_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51__pr79_public_raw4_action_wire_br__brotli_rpk1_flatpack/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv"
+      },
+      "provenance": {
+        "build_options": {
+          "action_sources": [
+            "pr79"
+          ],
+          "candidate_families": [
+            "brotli_rpk1_flatpack"
+          ],
+          "include_source_control": false,
+          "mask_crfs": [
+            51,
+            50
+          ],
+          "require_action_parity_for_dispatch": true
+        },
+        "canonical_score_source_required": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "no_remote_dispatch_performed": true,
+        "source_action": {
+          "action_id": "pr79_public_raw4_action_wire_br",
+          "source_archive_sha256": "01dc02badf851d99108fd92c570271f36f74cc5424c6d2a8f1b499cb4d1c3446",
+          "source_label": "pr79_public",
+          "source_payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+          "wire_sha256": "3fdf6320b77685606283438e1a9bea4df3c83ecb525deb4750dade60c8e7dbdc"
+        },
+        "source_mask_candidate": {
+          "archive_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51/archive.zip",
+          "archive_sha256": "231abfc8fe92fe5bf29a7c67b37da581dab8375840b66a1e5a41e5a79b95981b",
+          "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51",
+          "manifest_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51/manifest.json",
+          "manifest_sha256": "2be6a905869328daf241ee85c7a5821d7aaa8d2d5673dabfd5ffa4396355dda9",
+          "mask_crf": 51,
+          "mask_sha256": "b03302ddfd750959d0a5f96e6d1f54116bc341e5c6b1af0043bc70897fdb9e10"
+        },
+        "source_pr79": {
+          "archive_path": "experiments/results/top_submission_reverse_engineering_20260503_pr79/archive.zip",
+          "archive_sha256": "01dc02badf851d99108fd92c570271f36f74cc5424c6d2a8f1b499cb4d1c3446",
+          "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices"
+        },
+        "tool": "experiments/build_pr79_next_byte_candidates.py"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": -6380,
+        "rate_score_delta_vs_s2_frontier": -0.004248180120919453,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.3102853734522669,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    "decision": "recommend_exact_cuda_screen_after_lane_claim",
+    "reason": "highest-ranked local byte candidate preserves PR79 renderer/pose and is byte-closed for future exact CUDA screening"
+  },
+  "schema": "pr79_next_byte_candidate_matrix_v1",
+  "score_claim": false,
+  "source_archives": {
+    "pr77": {
+      "action_wire_bytes": 325,
+      "archive_bytes": 276551,
+      "archive_path": "experiments/results/top_submission_reverse_engineering_20260503_pr77/archive.zip",
+      "archive_sha256": "f90880383c95e14d82704f99db9b20944786ae6452a844348638b06c439972af"
+    },
+    "pr79": {
+      "action_wire_bytes": 1162,
+      "archive_bytes": 277388,
+      "archive_path": "experiments/results/top_submission_reverse_engineering_20260503_pr79/archive.zip",
+      "archive_sha256": "01dc02badf851d99108fd92c570271f36f74cc5424c6d2a8f1b499cb4d1c3446"
+    }
+  },
+  "tool": "experiments/build_pr79_next_byte_candidates.py"
+}

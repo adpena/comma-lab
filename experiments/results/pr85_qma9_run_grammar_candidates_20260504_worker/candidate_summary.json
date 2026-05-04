@@ -1,0 +1,745 @@
+{
+  "best_byte_positive_candidate": null,
+  "best_bytes_vs_pr85_qma9_159011B": {
+    "best_delta_bytes": 303165,
+    "best_mode": "row_rle_lzma6",
+    "best_payload_bytes": 462176,
+    "reference_bytes": 159011
+  },
+  "best_payload_candidate": {
+    "archive": null,
+    "archive_rejection_reasons": [
+      "no_local_byte_win_vs_pr85_qma9_159011B",
+      "robust_current_runtime_does_not_decode_qrg1"
+    ],
+    "archive_relevant_state_change": true,
+    "candidate_id": "row_rle_lzma6",
+    "decoded_header": {
+      "body_bytes": 462152,
+      "body_sha256": "a1839fd45ec85f7cd145273e4c0ade282639c478fd06a647aa3cc4574aa41fe9",
+      "decoded_mask_bytes": 117964800,
+      "frame_count": 600,
+      "height": 384,
+      "magic": "QRG1",
+      "mode_id": 3,
+      "mode_name": "row_rle_lzma6",
+      "payload_bytes": 462176,
+      "payload_sha256": "7a0b5c716a809b2c0bb80ef236cee8014df6cf6112ede942c871f22b6fe25d2b",
+      "width": 512
+    },
+    "decoded_stats": {
+      "copy_prev_frame_rows": 0,
+      "copy_up_rows": 0,
+      "rle_rows": 307200,
+      "rows": 307200
+    },
+    "delta_bytes_vs_pr85_qma9_159011B": 303165,
+    "dispatch_unlocked": false,
+    "encoded_stats": {
+      "average_runs_per_rle_row": 5.15853515625,
+      "command_bytes": 2929255,
+      "compressed_body_bytes": 462152,
+      "copy_prev_frame_rows": 0,
+      "copy_row_fraction": 0.0,
+      "copy_up_rows": 0,
+      "one_run_rows": 0,
+      "payload_bytes": 462176,
+      "rle_rows": 307200,
+      "rows": 307200,
+      "run_pixels": 117964800,
+      "runs": 1584702
+    },
+    "local_byte_win": false,
+    "mode": "row_rle_lzma6",
+    "payload_bytes": 462176,
+    "payload_changed_vs_source_qma9": true,
+    "payload_magic": "QRG1",
+    "payload_path": null,
+    "payload_sha256": "7a0b5c716a809b2c0bb80ef236cee8014df6cf6112ede942c871f22b6fe25d2b",
+    "projected_archive_bytes_if_other_streams_unchanged": 539493,
+    "projected_archive_delta_bytes_vs_pr85": 303165,
+    "rate_score_delta_if_components_unchanged_formula_only": 0.2018651295232831,
+    "runtime_custody_contract": {
+      "current_live_runtime_contract": {
+        "accepted_mask_magic": "QMA9",
+        "accepted_mode": "adaptive9bin range_mask_codec.cpp path",
+        "qrg1_supported": false
+      },
+      "dispatch_unlocked": false,
+      "live_runtime_supported": false,
+      "required_runtime_changes_before_dispatch": [
+        "add a reviewed QRG1 row-run decoder to the robust_current inflate path",
+        "extend mask payload detection to admit QRG1 without changing PR85 fixed-slice custody",
+        "preserve PR85 QMA9 token storage order, 600x512x384 source shape, transpose behavior, and _half_frame_only metadata",
+        "add raw-token SHA parity tests against the exact PR85 token source before any exact eval",
+        "add runtime output parity against the baseline PR85 inflate masks tensor before any exact eval",
+        "record the updated inflate runtime tree SHA in contest_auth_eval provenance",
+        "open a fresh Level-2 dispatch claim before any later CUDA exact-eval run"
+      ],
+      "safe_for_remote_dispatch": false
+    },
+    "runtime_supported": false,
+    "safe_for_remote_dispatch": false,
+    "token_parity": {
+      "decoded_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "method": "src/tac/qma9_run_grammar.py decode_qrg1_run_grammar",
+      "verified": true
+    }
+  },
+  "best_runtime_supported_candidate": null,
+  "blockers": [
+    "dispatch_locked_until_qrg1_runtime_output_parity_and_fresh_lane_claim",
+    "no_byte_positive_qrg1_row_run_candidate",
+    "qma9_adaptive9bin_beats_screened_row_run_payloads",
+    "robust_current_runtime_does_not_accept_qrg1_run_grammar"
+  ],
+  "byte_positive_candidate_count": 0,
+  "candidate_count": 7,
+  "candidates": [
+    {
+      "archive": null,
+      "archive_rejection_reasons": [
+        "no_local_byte_win_vs_pr85_qma9_159011B",
+        "robust_current_runtime_does_not_decode_qrg1"
+      ],
+      "archive_relevant_state_change": true,
+      "candidate_id": "row_rle_zlib9",
+      "decoded_header": {
+        "body_bytes": 723794,
+        "body_sha256": "e9f84c6796ee677aba776697a8c7d34c7807763c4d7654dd3976a1f7b75262ed",
+        "decoded_mask_bytes": 117964800,
+        "frame_count": 600,
+        "height": 384,
+        "magic": "QRG1",
+        "mode_id": 1,
+        "mode_name": "row_rle_zlib9",
+        "payload_bytes": 723818,
+        "payload_sha256": "f2fe45ffb9e4bf1c64f3f64c89244744a556fb8f45d15f5adf8a1091b3a1ed80",
+        "width": 512
+      },
+      "decoded_stats": {
+        "copy_prev_frame_rows": 0,
+        "copy_up_rows": 0,
+        "rle_rows": 307200,
+        "rows": 307200
+      },
+      "delta_bytes_vs_pr85_qma9_159011B": 564807,
+      "dispatch_unlocked": false,
+      "encoded_stats": {
+        "average_runs_per_rle_row": 5.15853515625,
+        "command_bytes": 2929255,
+        "compressed_body_bytes": 723794,
+        "copy_prev_frame_rows": 0,
+        "copy_row_fraction": 0.0,
+        "copy_up_rows": 0,
+        "one_run_rows": 0,
+        "payload_bytes": 723818,
+        "rle_rows": 307200,
+        "rows": 307200,
+        "run_pixels": 117964800,
+        "runs": 1584702
+      },
+      "local_byte_win": false,
+      "mode": "row_rle_zlib9",
+      "payload_bytes": 723818,
+      "payload_changed_vs_source_qma9": true,
+      "payload_magic": "QRG1",
+      "payload_path": null,
+      "payload_sha256": "f2fe45ffb9e4bf1c64f3f64c89244744a556fb8f45d15f5adf8a1091b3a1ed80",
+      "projected_archive_bytes_if_other_streams_unchanged": 801135,
+      "projected_archive_delta_bytes_vs_pr85": 564807,
+      "rate_score_delta_if_components_unchanged_formula_only": 0.37608179773607425,
+      "runtime_custody_contract": {
+        "current_live_runtime_contract": {
+          "accepted_mask_magic": "QMA9",
+          "accepted_mode": "adaptive9bin range_mask_codec.cpp path",
+          "qrg1_supported": false
+        },
+        "dispatch_unlocked": false,
+        "live_runtime_supported": false,
+        "required_runtime_changes_before_dispatch": [
+          "add a reviewed QRG1 row-run decoder to the robust_current inflate path",
+          "extend mask payload detection to admit QRG1 without changing PR85 fixed-slice custody",
+          "preserve PR85 QMA9 token storage order, 600x512x384 source shape, transpose behavior, and _half_frame_only metadata",
+          "add raw-token SHA parity tests against the exact PR85 token source before any exact eval",
+          "add runtime output parity against the baseline PR85 inflate masks tensor before any exact eval",
+          "record the updated inflate runtime tree SHA in contest_auth_eval provenance",
+          "open a fresh Level-2 dispatch claim before any later CUDA exact-eval run"
+        ],
+        "safe_for_remote_dispatch": false
+      },
+      "runtime_supported": false,
+      "safe_for_remote_dispatch": false,
+      "token_parity": {
+        "decoded_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+        "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+        "method": "src/tac/qma9_run_grammar.py decode_qrg1_run_grammar",
+        "verified": true
+      }
+    },
+    {
+      "archive": null,
+      "archive_rejection_reasons": [
+        "no_local_byte_win_vs_pr85_qma9_159011B",
+        "robust_current_runtime_does_not_decode_qrg1"
+      ],
+      "archive_relevant_state_change": true,
+      "candidate_id": "row_rle_bz2_9",
+      "decoded_header": {
+        "body_bytes": 583890,
+        "body_sha256": "f5c5676994d9fffecd36a4a227a7de2cab79b1967a1a2455fdb3d8d1385d691d",
+        "decoded_mask_bytes": 117964800,
+        "frame_count": 600,
+        "height": 384,
+        "magic": "QRG1",
+        "mode_id": 2,
+        "mode_name": "row_rle_bz2_9",
+        "payload_bytes": 583914,
+        "payload_sha256": "abb55acbb1c14ce0f81a60aee5222d41bd4063808e8fb469df34bd51644fde1b",
+        "width": 512
+      },
+      "decoded_stats": {
+        "copy_prev_frame_rows": 0,
+        "copy_up_rows": 0,
+        "rle_rows": 307200,
+        "rows": 307200
+      },
+      "delta_bytes_vs_pr85_qma9_159011B": 424903,
+      "dispatch_unlocked": false,
+      "encoded_stats": {
+        "average_runs_per_rle_row": 5.15853515625,
+        "command_bytes": 2929255,
+        "compressed_body_bytes": 583890,
+        "copy_prev_frame_rows": 0,
+        "copy_row_fraction": 0.0,
+        "copy_up_rows": 0,
+        "one_run_rows": 0,
+        "payload_bytes": 583914,
+        "rle_rows": 307200,
+        "rows": 307200,
+        "run_pixels": 117964800,
+        "runs": 1584702
+      },
+      "local_byte_win": false,
+      "mode": "row_rle_bz2_9",
+      "payload_bytes": 583914,
+      "payload_changed_vs_source_qma9": true,
+      "payload_magic": "QRG1",
+      "payload_path": null,
+      "payload_sha256": "abb55acbb1c14ce0f81a60aee5222d41bd4063808e8fb469df34bd51644fde1b",
+      "projected_archive_bytes_if_other_streams_unchanged": 661231,
+      "projected_archive_delta_bytes_vs_pr85": 424903,
+      "rate_score_delta_if_components_unchanged_formula_only": 0.28292546675846997,
+      "runtime_custody_contract": {
+        "current_live_runtime_contract": {
+          "accepted_mask_magic": "QMA9",
+          "accepted_mode": "adaptive9bin range_mask_codec.cpp path",
+          "qrg1_supported": false
+        },
+        "dispatch_unlocked": false,
+        "live_runtime_supported": false,
+        "required_runtime_changes_before_dispatch": [
+          "add a reviewed QRG1 row-run decoder to the robust_current inflate path",
+          "extend mask payload detection to admit QRG1 without changing PR85 fixed-slice custody",
+          "preserve PR85 QMA9 token storage order, 600x512x384 source shape, transpose behavior, and _half_frame_only metadata",
+          "add raw-token SHA parity tests against the exact PR85 token source before any exact eval",
+          "add runtime output parity against the baseline PR85 inflate masks tensor before any exact eval",
+          "record the updated inflate runtime tree SHA in contest_auth_eval provenance",
+          "open a fresh Level-2 dispatch claim before any later CUDA exact-eval run"
+        ],
+        "safe_for_remote_dispatch": false
+      },
+      "runtime_supported": false,
+      "safe_for_remote_dispatch": false,
+      "token_parity": {
+        "decoded_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+        "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+        "method": "src/tac/qma9_run_grammar.py decode_qrg1_run_grammar",
+        "verified": true
+      }
+    },
+    {
+      "archive": null,
+      "archive_rejection_reasons": [
+        "no_local_byte_win_vs_pr85_qma9_159011B",
+        "robust_current_runtime_does_not_decode_qrg1"
+      ],
+      "archive_relevant_state_change": true,
+      "candidate_id": "row_rle_lzma6",
+      "decoded_header": {
+        "body_bytes": 462152,
+        "body_sha256": "a1839fd45ec85f7cd145273e4c0ade282639c478fd06a647aa3cc4574aa41fe9",
+        "decoded_mask_bytes": 117964800,
+        "frame_count": 600,
+        "height": 384,
+        "magic": "QRG1",
+        "mode_id": 3,
+        "mode_name": "row_rle_lzma6",
+        "payload_bytes": 462176,
+        "payload_sha256": "7a0b5c716a809b2c0bb80ef236cee8014df6cf6112ede942c871f22b6fe25d2b",
+        "width": 512
+      },
+      "decoded_stats": {
+        "copy_prev_frame_rows": 0,
+        "copy_up_rows": 0,
+        "rle_rows": 307200,
+        "rows": 307200
+      },
+      "delta_bytes_vs_pr85_qma9_159011B": 303165,
+      "dispatch_unlocked": false,
+      "encoded_stats": {
+        "average_runs_per_rle_row": 5.15853515625,
+        "command_bytes": 2929255,
+        "compressed_body_bytes": 462152,
+        "copy_prev_frame_rows": 0,
+        "copy_row_fraction": 0.0,
+        "copy_up_rows": 0,
+        "one_run_rows": 0,
+        "payload_bytes": 462176,
+        "rle_rows": 307200,
+        "rows": 307200,
+        "run_pixels": 117964800,
+        "runs": 1584702
+      },
+      "local_byte_win": false,
+      "mode": "row_rle_lzma6",
+      "payload_bytes": 462176,
+      "payload_changed_vs_source_qma9": true,
+      "payload_magic": "QRG1",
+      "payload_path": null,
+      "payload_sha256": "7a0b5c716a809b2c0bb80ef236cee8014df6cf6112ede942c871f22b6fe25d2b",
+      "projected_archive_bytes_if_other_streams_unchanged": 539493,
+      "projected_archive_delta_bytes_vs_pr85": 303165,
+      "rate_score_delta_if_components_unchanged_formula_only": 0.2018651295232831,
+      "runtime_custody_contract": {
+        "current_live_runtime_contract": {
+          "accepted_mask_magic": "QMA9",
+          "accepted_mode": "adaptive9bin range_mask_codec.cpp path",
+          "qrg1_supported": false
+        },
+        "dispatch_unlocked": false,
+        "live_runtime_supported": false,
+        "required_runtime_changes_before_dispatch": [
+          "add a reviewed QRG1 row-run decoder to the robust_current inflate path",
+          "extend mask payload detection to admit QRG1 without changing PR85 fixed-slice custody",
+          "preserve PR85 QMA9 token storage order, 600x512x384 source shape, transpose behavior, and _half_frame_only metadata",
+          "add raw-token SHA parity tests against the exact PR85 token source before any exact eval",
+          "add runtime output parity against the baseline PR85 inflate masks tensor before any exact eval",
+          "record the updated inflate runtime tree SHA in contest_auth_eval provenance",
+          "open a fresh Level-2 dispatch claim before any later CUDA exact-eval run"
+        ],
+        "safe_for_remote_dispatch": false
+      },
+      "runtime_supported": false,
+      "safe_for_remote_dispatch": false,
+      "token_parity": {
+        "decoded_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+        "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+        "method": "src/tac/qma9_run_grammar.py decode_qrg1_run_grammar",
+        "verified": true
+      }
+    },
+    {
+      "archive": null,
+      "archive_rejection_reasons": [
+        "no_local_byte_win_vs_pr85_qma9_159011B",
+        "robust_current_runtime_does_not_decode_qrg1"
+      ],
+      "archive_relevant_state_change": true,
+      "candidate_id": "row_copy_up_rle_zlib9",
+      "decoded_header": {
+        "body_bytes": 732658,
+        "body_sha256": "91c04a3a52f058111338f11f0d278ecbb4b014c88e0d07f2b8d90517e7ba7fab",
+        "decoded_mask_bytes": 117964800,
+        "frame_count": 600,
+        "height": 384,
+        "magic": "QRG1",
+        "mode_id": 4,
+        "mode_name": "row_copy_up_rle_zlib9",
+        "payload_bytes": 732682,
+        "payload_sha256": "44748d858361051e496a90143258811f209cc425f32a24bf69b1bd1787ebef2d",
+        "width": 512
+      },
+      "decoded_stats": {
+        "copy_prev_frame_rows": 0,
+        "copy_up_rows": 117061,
+        "rle_rows": 190139,
+        "rows": 307200
+      },
+      "delta_bytes_vs_pr85_qma9_159011B": 573671,
+      "dispatch_unlocked": false,
+      "encoded_stats": {
+        "average_runs_per_rle_row": 5.567868769689543,
+        "command_bytes": 2028504,
+        "compressed_body_bytes": 732658,
+        "copy_prev_frame_rows": 0,
+        "copy_row_fraction": 0.3810579427083333,
+        "copy_up_rows": 117061,
+        "one_run_rows": 0,
+        "payload_bytes": 732682,
+        "rle_rows": 190139,
+        "rows": 307200,
+        "run_pixels": 73013376,
+        "runs": 1058669
+      },
+      "local_byte_win": false,
+      "mode": "row_copy_up_rle_zlib9",
+      "payload_bytes": 732682,
+      "payload_changed_vs_source_qma9": true,
+      "payload_magic": "QRG1",
+      "payload_path": null,
+      "payload_sha256": "44748d858361051e496a90143258811f209cc425f32a24bf69b1bd1787ebef2d",
+      "projected_archive_bytes_if_other_streams_unchanged": 809999,
+      "projected_archive_delta_bytes_vs_pr85": 573671,
+      "rate_score_delta_if_components_unchanged_formula_only": 0.38198397149654917,
+      "runtime_custody_contract": {
+        "current_live_runtime_contract": {
+          "accepted_mask_magic": "QMA9",
+          "accepted_mode": "adaptive9bin range_mask_codec.cpp path",
+          "qrg1_supported": false
+        },
+        "dispatch_unlocked": false,
+        "live_runtime_supported": false,
+        "required_runtime_changes_before_dispatch": [
+          "add a reviewed QRG1 row-run decoder to the robust_current inflate path",
+          "extend mask payload detection to admit QRG1 without changing PR85 fixed-slice custody",
+          "preserve PR85 QMA9 token storage order, 600x512x384 source shape, transpose behavior, and _half_frame_only metadata",
+          "add raw-token SHA parity tests against the exact PR85 token source before any exact eval",
+          "add runtime output parity against the baseline PR85 inflate masks tensor before any exact eval",
+          "record the updated inflate runtime tree SHA in contest_auth_eval provenance",
+          "open a fresh Level-2 dispatch claim before any later CUDA exact-eval run"
+        ],
+        "safe_for_remote_dispatch": false
+      },
+      "runtime_supported": false,
+      "safe_for_remote_dispatch": false,
+      "token_parity": {
+        "decoded_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+        "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+        "method": "src/tac/qma9_run_grammar.py decode_qrg1_run_grammar",
+        "verified": true
+      }
+    },
+    {
+      "archive": null,
+      "archive_rejection_reasons": [
+        "no_local_byte_win_vs_pr85_qma9_159011B",
+        "robust_current_runtime_does_not_decode_qrg1"
+      ],
+      "archive_relevant_state_change": true,
+      "candidate_id": "row_copy_up_rle_bz2_9",
+      "decoded_header": {
+        "body_bytes": 561381,
+        "body_sha256": "96793a924e1b790dcaa05c8a5c5e85b7646999efbb010a87f61ac9c6e0edbf23",
+        "decoded_mask_bytes": 117964800,
+        "frame_count": 600,
+        "height": 384,
+        "magic": "QRG1",
+        "mode_id": 5,
+        "mode_name": "row_copy_up_rle_bz2_9",
+        "payload_bytes": 561405,
+        "payload_sha256": "3f40e45a82d51ce476d35b3283ba6669b3f9128be601fba24a3e79ff812f2cca",
+        "width": 512
+      },
+      "decoded_stats": {
+        "copy_prev_frame_rows": 0,
+        "copy_up_rows": 117061,
+        "rle_rows": 190139,
+        "rows": 307200
+      },
+      "delta_bytes_vs_pr85_qma9_159011B": 402394,
+      "dispatch_unlocked": false,
+      "encoded_stats": {
+        "average_runs_per_rle_row": 5.567868769689543,
+        "command_bytes": 2028504,
+        "compressed_body_bytes": 561381,
+        "copy_prev_frame_rows": 0,
+        "copy_row_fraction": 0.3810579427083333,
+        "copy_up_rows": 117061,
+        "one_run_rows": 0,
+        "payload_bytes": 561405,
+        "rle_rows": 190139,
+        "rows": 307200,
+        "run_pixels": 73013376,
+        "runs": 1058669
+      },
+      "local_byte_win": false,
+      "mode": "row_copy_up_rle_bz2_9",
+      "payload_bytes": 561405,
+      "payload_changed_vs_source_qma9": true,
+      "payload_magic": "QRG1",
+      "payload_path": null,
+      "payload_sha256": "3f40e45a82d51ce476d35b3283ba6669b3f9128be601fba24a3e79ff812f2cca",
+      "projected_archive_bytes_if_other_streams_unchanged": 638722,
+      "projected_archive_delta_bytes_vs_pr85": 402394,
+      "rate_score_delta_if_components_unchanged_formula_only": 0.267937647582643,
+      "runtime_custody_contract": {
+        "current_live_runtime_contract": {
+          "accepted_mask_magic": "QMA9",
+          "accepted_mode": "adaptive9bin range_mask_codec.cpp path",
+          "qrg1_supported": false
+        },
+        "dispatch_unlocked": false,
+        "live_runtime_supported": false,
+        "required_runtime_changes_before_dispatch": [
+          "add a reviewed QRG1 row-run decoder to the robust_current inflate path",
+          "extend mask payload detection to admit QRG1 without changing PR85 fixed-slice custody",
+          "preserve PR85 QMA9 token storage order, 600x512x384 source shape, transpose behavior, and _half_frame_only metadata",
+          "add raw-token SHA parity tests against the exact PR85 token source before any exact eval",
+          "add runtime output parity against the baseline PR85 inflate masks tensor before any exact eval",
+          "record the updated inflate runtime tree SHA in contest_auth_eval provenance",
+          "open a fresh Level-2 dispatch claim before any later CUDA exact-eval run"
+        ],
+        "safe_for_remote_dispatch": false
+      },
+      "runtime_supported": false,
+      "safe_for_remote_dispatch": false,
+      "token_parity": {
+        "decoded_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+        "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+        "method": "src/tac/qma9_run_grammar.py decode_qrg1_run_grammar",
+        "verified": true
+      }
+    },
+    {
+      "archive": null,
+      "archive_rejection_reasons": [
+        "no_local_byte_win_vs_pr85_qma9_159011B",
+        "robust_current_runtime_does_not_decode_qrg1"
+      ],
+      "archive_relevant_state_change": true,
+      "candidate_id": "row_copy_up_prev_rle_bz2_9",
+      "decoded_header": {
+        "body_bytes": 562823,
+        "body_sha256": "21c364ada4a14b7f1dd9b593022f0efc31e940169454609326d21e07d9d0e864",
+        "decoded_mask_bytes": 117964800,
+        "frame_count": 600,
+        "height": 384,
+        "magic": "QRG1",
+        "mode_id": 6,
+        "mode_name": "row_copy_up_prev_rle_bz2_9",
+        "payload_bytes": 562847,
+        "payload_sha256": "8228f3bed615af6d49d24304861bdc85120dcbe312c78747d7e60e209f656360",
+        "width": 512
+      },
+      "decoded_stats": {
+        "copy_prev_frame_rows": 4307,
+        "copy_up_rows": 117061,
+        "rle_rows": 185832,
+        "rows": 307200
+      },
+      "delta_bytes_vs_pr85_qma9_159011B": 403836,
+      "dispatch_unlocked": false,
+      "encoded_stats": {
+        "average_runs_per_rle_row": 5.589527099746007,
+        "command_bytes": 1995007,
+        "compressed_body_bytes": 562823,
+        "copy_prev_frame_rows": 4307,
+        "copy_row_fraction": 0.395078125,
+        "copy_up_rows": 117061,
+        "one_run_rows": 0,
+        "payload_bytes": 562847,
+        "rle_rows": 185832,
+        "rows": 307200,
+        "run_pixels": 71359488,
+        "runs": 1038713
+      },
+      "local_byte_win": false,
+      "mode": "row_copy_up_prev_rle_bz2_9",
+      "payload_bytes": 562847,
+      "payload_changed_vs_source_qma9": true,
+      "payload_magic": "QRG1",
+      "payload_path": null,
+      "payload_sha256": "8228f3bed615af6d49d24304861bdc85120dcbe312c78747d7e60e209f656360",
+      "projected_archive_bytes_if_other_streams_unchanged": 640164,
+      "projected_archive_delta_bytes_vs_pr85": 403836,
+      "rate_score_delta_if_components_unchanged_formula_only": 0.2688978161930452,
+      "runtime_custody_contract": {
+        "current_live_runtime_contract": {
+          "accepted_mask_magic": "QMA9",
+          "accepted_mode": "adaptive9bin range_mask_codec.cpp path",
+          "qrg1_supported": false
+        },
+        "dispatch_unlocked": false,
+        "live_runtime_supported": false,
+        "required_runtime_changes_before_dispatch": [
+          "add a reviewed QRG1 row-run decoder to the robust_current inflate path",
+          "extend mask payload detection to admit QRG1 without changing PR85 fixed-slice custody",
+          "preserve PR85 QMA9 token storage order, 600x512x384 source shape, transpose behavior, and _half_frame_only metadata",
+          "add raw-token SHA parity tests against the exact PR85 token source before any exact eval",
+          "add runtime output parity against the baseline PR85 inflate masks tensor before any exact eval",
+          "record the updated inflate runtime tree SHA in contest_auth_eval provenance",
+          "open a fresh Level-2 dispatch claim before any later CUDA exact-eval run"
+        ],
+        "safe_for_remote_dispatch": false
+      },
+      "runtime_supported": false,
+      "safe_for_remote_dispatch": false,
+      "token_parity": {
+        "decoded_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+        "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+        "method": "src/tac/qma9_run_grammar.py decode_qrg1_run_grammar",
+        "verified": true
+      }
+    },
+    {
+      "archive": null,
+      "archive_rejection_reasons": [
+        "no_local_byte_win_vs_pr85_qma9_159011B",
+        "robust_current_runtime_does_not_decode_qrg1"
+      ],
+      "archive_relevant_state_change": true,
+      "candidate_id": "row_copy_up_prev_rle_lzma6",
+      "decoded_header": {
+        "body_bytes": 501236,
+        "body_sha256": "11dbe31fac76c8a00250bf2404855bc903c5cf2ae6bc533d6d29df906164b5cb",
+        "decoded_mask_bytes": 117964800,
+        "frame_count": 600,
+        "height": 384,
+        "magic": "QRG1",
+        "mode_id": 7,
+        "mode_name": "row_copy_up_prev_rle_lzma6",
+        "payload_bytes": 501260,
+        "payload_sha256": "fd3426f911064560d1ca5d3a9163a16a8c48cc4923ae7213d683c81bda547fdf",
+        "width": 512
+      },
+      "decoded_stats": {
+        "copy_prev_frame_rows": 4307,
+        "copy_up_rows": 117061,
+        "rle_rows": 185832,
+        "rows": 307200
+      },
+      "delta_bytes_vs_pr85_qma9_159011B": 342249,
+      "dispatch_unlocked": false,
+      "encoded_stats": {
+        "average_runs_per_rle_row": 5.589527099746007,
+        "command_bytes": 1995007,
+        "compressed_body_bytes": 501236,
+        "copy_prev_frame_rows": 4307,
+        "copy_row_fraction": 0.395078125,
+        "copy_up_rows": 117061,
+        "one_run_rows": 0,
+        "payload_bytes": 501260,
+        "rle_rows": 185832,
+        "rows": 307200,
+        "run_pixels": 71359488,
+        "runs": 1038713
+      },
+      "local_byte_win": false,
+      "mode": "row_copy_up_prev_rle_lzma6",
+      "payload_bytes": 501260,
+      "payload_changed_vs_source_qma9": true,
+      "payload_magic": "QRG1",
+      "payload_path": null,
+      "payload_sha256": "fd3426f911064560d1ca5d3a9163a16a8c48cc4923ae7213d683c81bda547fdf",
+      "projected_archive_bytes_if_other_streams_unchanged": 578577,
+      "projected_archive_delta_bytes_vs_pr85": 342249,
+      "rate_score_delta_if_components_unchanged_formula_only": 0.22788956084711,
+      "runtime_custody_contract": {
+        "current_live_runtime_contract": {
+          "accepted_mask_magic": "QMA9",
+          "accepted_mode": "adaptive9bin range_mask_codec.cpp path",
+          "qrg1_supported": false
+        },
+        "dispatch_unlocked": false,
+        "live_runtime_supported": false,
+        "required_runtime_changes_before_dispatch": [
+          "add a reviewed QRG1 row-run decoder to the robust_current inflate path",
+          "extend mask payload detection to admit QRG1 without changing PR85 fixed-slice custody",
+          "preserve PR85 QMA9 token storage order, 600x512x384 source shape, transpose behavior, and _half_frame_only metadata",
+          "add raw-token SHA parity tests against the exact PR85 token source before any exact eval",
+          "add runtime output parity against the baseline PR85 inflate masks tensor before any exact eval",
+          "record the updated inflate runtime tree SHA in contest_auth_eval provenance",
+          "open a fresh Level-2 dispatch claim before any later CUDA exact-eval run"
+        ],
+        "safe_for_remote_dispatch": false
+      },
+      "runtime_supported": false,
+      "safe_for_remote_dispatch": false,
+      "token_parity": {
+        "decoded_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+        "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+        "method": "src/tac/qma9_run_grammar.py decode_qrg1_run_grammar",
+        "verified": true
+      }
+    }
+  ],
+  "dispatch_gate": {
+    "candidate_archive_exists": false,
+    "dispatch_unlocked": false,
+    "exact_eval_dispatch_allowed": false,
+    "reason": "Local-only QRG1 byte screen; current runtime cannot decode QRG1.",
+    "safe_for_remote_dispatch": false
+  },
+  "dispatch_performed": false,
+  "dispatch_unlocked": false,
+  "fail_closed": {
+    "best_byte_positive_mode": null,
+    "best_delta_bytes_vs_pr85_qma9_159011B": 303165,
+    "best_payload_bytes": 462176,
+    "best_payload_mode": "row_rle_lzma6",
+    "best_runtime_supported_mode": null,
+    "byte_economics": {
+      "archive_bytes_change_equals_mask_payload_delta_for_pr85_v5": true,
+      "best_rate_score_delta_if_components_unchanged": 0.2018651295232831,
+      "points_per_byte": 6.658589531221714e-07
+    },
+    "emitted": true,
+    "reason": "no screened QRG1 row-run payload beat the PR85 QMA9 159011B mask segment",
+    "source_qma9_payload_bytes": 159011
+  },
+  "gpu_required": false,
+  "mode_count": 7,
+  "planning_only": true,
+  "required_runtime_changes_if_byte_positive": [
+    "add a reviewed QRG1 row-run decoder to the robust_current inflate path",
+    "extend mask payload detection to admit QRG1 without changing PR85 fixed-slice custody",
+    "preserve PR85 QMA9 token storage order, 600x512x384 source shape, transpose behavior, and _half_frame_only metadata",
+    "add raw-token SHA parity tests against the exact PR85 token source before any exact eval",
+    "add runtime output parity against the baseline PR85 inflate masks tensor before any exact eval",
+    "record the updated inflate runtime tree SHA in contest_auth_eval provenance",
+    "open a fresh Level-2 dispatch claim before any later CUDA exact-eval run"
+  ],
+  "runtime_supported_byte_positive_candidate_count": 0,
+  "schema": "pr85_qma9_run_grammar_candidates_v1",
+  "score_claim": false,
+  "source_archive": {
+    "archive_bytes": 236328,
+    "archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+    "member_bytes": 236228,
+    "member_name": "x",
+    "member_sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+    "path": "experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+    "zip_overhead_bytes": 100
+  },
+  "source_qma9": {
+    "bundle_format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+    "bundle_header_bytes": 24,
+    "header": {
+      "bitstream_bytes": 158991,
+      "bitstream_sha256": "77196f31a8fdfbf8f91c9c30600945473376534f15245bfb7622ddd77d17e3af",
+      "decoded_mask_bytes": 117964800,
+      "frame_count": 600,
+      "header_bytes": 20,
+      "height": 384,
+      "magic": "QMA9",
+      "packed_bytes": 159011,
+      "payload_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+      "width": 512
+    },
+    "reference_label": "PR85 QMA9 159011B",
+    "segment_bytes": 159011,
+    "segment_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179"
+  },
+  "token_source": {
+    "bytes": 117964800,
+    "dtype": "uint8",
+    "expected_bytes": 117964800,
+    "expected_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+    "path": "experiments/results/public_pr85_intake_20260503_codex/qma9_token_source/pr85_qma9_tokens_u8_storage_order.bin",
+    "semantic": "PR85 QMA9 decoded mask class token ids",
+    "sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a"
+  },
+  "tool": "experiments/build_pr85_qma9_run_grammar_candidates.py"
+}

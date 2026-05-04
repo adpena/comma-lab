@@ -1,0 +1,110 @@
+{
+  "candidate_id": "qzs3_b0512_c091_p3_preserved_minp_slices",
+  "non_renderer_preservation": {
+    "all_non_renderer_members_preserved": true,
+    "members": {
+      "masks.mkv": {
+        "bytes": 223385,
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      "optimized_poses.qp1": {
+        "bytes": 1140,
+        "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 432,
+        "sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a"
+      }
+    }
+  },
+  "output_archive": {
+    "bytes": 272340,
+    "delta_bytes_vs_source_archive": -4141,
+    "formula_only_rate_delta_vs_source_archive": -0.002757321924878912,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c091_renderer_self_compression_bigmove_20260503_worker/qzs3_reblock_candidates/qzs3_b0512_c091_p3_preserved_minp_slices/archive.zip",
+    "sha256": "7960d7abfb53750eddfc1658e183335a37d19cb639414247a1ea9a4af601efa1"
+  },
+  "payload": {
+    "actions_slice_bytes": 255,
+    "brotli_quality": 11,
+    "bytes": 272240,
+    "mask_slice_bytes": 219472,
+    "member_name": "p",
+    "payload_format": "c091_p3_preserve_minp_slices",
+    "pose_slice_bytes": 898,
+    "renderer_slice_bytes": 51605,
+    "renderer_slice_sha256": "78e36f9cbc3dcdfb83d7c4949328a7239e8cba766cbe458fac7face4680492f2",
+    "sha256": "0602a89ab1681d5572e39f19ecde65ce2b2d2f29095db7181c5940f7b9acae19",
+    "source_payload_format": "c091_pr75_minp_fixed_slices"
+  },
+  "promotion_eligible": false,
+  "remote_gpu_dispatch_performed": false,
+  "renderer_transform": {
+    "codec": "QZS3",
+    "output_block_size": 512,
+    "output_bytes": 58814,
+    "output_same_as_source_renderer": false,
+    "output_sha256": "99af87475a58e5bddad69d009415885c06d0bbb66f9acdc3fab68f3b6a2709f2",
+    "source_block_size": 32,
+    "source_bytes": 59288,
+    "source_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+  },
+  "runtime_contract": {
+    "byte_closed": true,
+    "pose_safety_preflight_required_before_dispatch": true,
+    "renderer_only_transplant": true,
+    "runtime_unpack_summary": {
+      "members": [
+        {
+          "bytes": 58814,
+          "name": "renderer.bin",
+          "sha256": "99af87475a58e5bddad69d009415885c06d0bbb66f9acdc3fab68f3b6a2709f2"
+        },
+        {
+          "bytes": 223385,
+          "name": "masks.mkv",
+          "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        {
+          "bytes": 1140,
+          "name": "optimized_poses.qp1",
+          "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+        },
+        {
+          "bytes": 432,
+          "name": "seg_tile_actions.bin",
+          "sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a"
+        }
+      ],
+      "payload_bytes": 272240,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p3",
+      "schema": "renderer_payload_pr64_len_table_v1",
+      "source_archive_sha256": null
+    },
+    "runtime_unpack_verified": true,
+    "single_payload_member": true
+  },
+  "schema": "c091_renderer_self_compression_candidate_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 276481,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_pr75_minp_public_replay_t4_20260503T1049Z/archive.zip",
+    "sha256": "03a2afd5fe92c93a9b7b7e43625158a73b455f0cfbca82d278008a728db78746",
+    "source_archive_packaging": "packed_renderer_payload",
+    "source_logical_member_names": [
+      "renderer.bin",
+      "masks.mkv",
+      "optimized_poses.qp1",
+      "seg_tile_actions.bin"
+    ],
+    "source_payload_header_payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+    "source_payload_header_schema": "renderer_payload_pr64_len_table_v1",
+    "source_payload_member": "p",
+    "source_payload_member_bytes": 276381,
+    "source_payload_member_sha256": "f78c71d3086773e417c672734082a49ceb0ef5a0016cf406a920be7978fff252",
+    "source_zip_members": [
+      "p"
+    ]
+  },
+  "tool": "experiments/plan_c091_renderer_self_compression_bigmove.py"
+}

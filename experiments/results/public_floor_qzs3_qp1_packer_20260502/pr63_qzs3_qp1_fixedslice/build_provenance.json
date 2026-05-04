@@ -1,0 +1,30 @@
+{
+  "archive": "experiments/results/public_floor_qzs3_qp1_packer_20260502/pr63_qzs3_qp1_fixedslice/archive.zip",
+  "archive_bytes": 276213,
+  "archive_sha256": "cda95e70440e9ef295985a042fda2d74715ef6a0e665a1c37871cddd051cd908",
+  "evidence_grade": "empirical_byte_only_until_cuda_auth_eval",
+  "parts": {
+    "mask_obu_br": {
+      "bytes": 219472,
+      "sha256": "b59080359dbf18277d66a03d8105c3ff0df807cc49b396ce736ee5057da28ce0"
+    },
+    "model_qzs3_br": {
+      "bytes": 55965,
+      "sha256": "e7db844ed72457a2a07bda73c48f65628613384b539da04f775ef242aa9e4c43"
+    },
+    "pose_qp1_br": {
+      "bytes": 676,
+      "sha256": "6c264b0c390328e879591c2a3313f41623603b314e333ccdba812c386afccdc3"
+    }
+  },
+  "payload_bytes": 276113,
+  "payload_format": "pr67_fixed_slice_like_mask_qzs3_qp1",
+  "rate_score_vs_pvl1_t4": -0.007155986169203975,
+  "raw": {
+    "mask_bytes": 223385,
+    "qp1_bytes": 1138,
+    "qp1_decoded_pose_sha256": "cc99e99c28b2ea686439b226ee504ba3a0d82fd8eb8550f4fed05d35ece5dc40",
+    "renderer_bytes": 59288
+  },
+  "score_claim": false
+}

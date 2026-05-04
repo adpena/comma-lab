@@ -1,0 +1,120 @@
+{
+  "archive_bytes": 218873,
+  "archive_path": "experiments/results/pr84_pr82_henosis_stack_20260503_codex/pr84_qma9_pr82_qps1_controls_all600/archive.zip",
+  "archive_sha256": "e8b4c250c0efc1250ef5a93ec3d875d950b00c457b8f55af9bc66a5532035b79",
+  "candidate_id": "pr84_qma9_pr82_qps1_controls_all600",
+  "candidate_kind": "pr84_expanded_qma9_qzs3_qp1_plus_pr82_qps1_control_sidecar",
+  "dispatch_gate": {
+    "dispatch_ready_now": true,
+    "lane_claim_required_before_any_exact_eval": true,
+    "no_remote_dispatch": true,
+    "reason": "ready_for_exact_cuda_eval_after_lane_claim",
+    "remote_dispatch_performed": false,
+    "score_claim": false
+  },
+  "evidence_grade": "empirical_local_archive_build_and_runtime_preflight_only",
+  "manifest_schema": "pr84_pr82_henosis_stack_candidate_v1",
+  "no_op_detection": {
+    "changed_atom_count": 2936,
+    "is_noop": false
+  },
+  "output_archive": {
+    "bytes": 218873,
+    "members": [
+      "masks.qma9",
+      "optimized_poses.qp1",
+      "qpost.bin",
+      "renderer.bin"
+    ],
+    "path": "experiments/results/pr84_pr82_henosis_stack_20260503_codex/pr84_qma9_pr82_qps1_controls_all600/archive.zip",
+    "sha256": "e8b4c250c0efc1250ef5a93ec3d875d950b00c457b8f55af9bc66a5532035b79"
+  },
+  "qpost": {
+    "bytes": 2567,
+    "runtime_contract": "QPS1/post_shift_frac_bias_region_without_randmulti",
+    "sha256": "217828665a70c7628ab66c186618483f575ca3606ee518a5f97b454cb2d863c9"
+  },
+  "raw_output_delta_proof": {
+    "after_bytes": 6104016,
+    "after_sha256": "48698009ef7499a60fad38015c8b84005c42a4666816f028edf4758511aecb33",
+    "archive_bytes": 218873,
+    "archive_path": "experiments/results/pr84_pr82_henosis_stack_20260503_codex/pr84_qma9_pr82_qps1_controls_all600/archive.zip",
+    "archive_sha256": "e8b4c250c0efc1250ef5a93ec3d875d950b00c457b8f55af9bc66a5532035b79",
+    "before_bytes": 6104016,
+    "before_sha256": "9de4dbd737ff76bedf09dc1c12481a149057b3b463572e2354bf1250b6772c5d",
+    "changed_values": 3036104,
+    "compared_values": 6104016,
+    "device": "cpu",
+    "exact_equal": false,
+    "height": 874,
+    "max_abs_delta": 185,
+    "mean_abs_delta": 25.391295992671054,
+    "proof_pair_index": 367,
+    "proof_scope": "synthetic_raw_noop_guard_only_not_component_parity",
+    "proof_type": "runtime_apply_qzs3_postprocess_synthetic_raw_pair",
+    "qpost_path": "experiments/results/pr84_pr82_henosis_stack_20260503_codex/pr84_qma9_pr82_qps1_controls_all600/qpost_for_raw_delta_proof.bin",
+    "qpost_sha256": "217828665a70c7628ab66c186618483f575ca3606ee518a5f97b454cb2d863c9",
+    "runtime_helper": "submissions/robust_current/apply_qzs3_postprocess.py",
+    "runtime_helper_sha256": "fba70482c8c0a1078cb95b7c03e8140b3043a9e849bc69314c48a191b10c2e62",
+    "width": 1164
+  },
+  "score_claim": false,
+  "source_pr84_archive": {
+    "bytes": 215735,
+    "path": "experiments/results/top_submission_reverse_engineering_20260503_pr84/archive.zip",
+    "reported_score_external": 0.2751402303839512,
+    "sha256": "a607a6c3ae9b610e6edfb546c3206004ae40fc348ecaef2446b7134a19b8e07f"
+  },
+  "source_pr84_payload_preflight": {
+    "payload_bytes": 215635,
+    "payload_contract": {
+      "base_payload_bytes_without_router": 215635,
+      "contract": "pr84_qma9_reordered_qzs3_qp1_no_router",
+      "expected_pr84_no_router": true,
+      "router_action_bytes": 0,
+      "stale_pr81_packed_payload_bytes_avoided": true
+    },
+    "payload_sha256": "35b14e37ee34eeb2197117d52d805afb7aff8b33378b367685476dc4097e324d",
+    "pose": {
+      "decoded_pose_bytes": 1140,
+      "decoded_pose_count": 600,
+      "decoded_pose_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+      "encoded_pose_bytes": 899,
+      "encoded_pose_sha256": "83767bbd10ae72c3237e468351eb9c465a954e25a6af04a0e0cb84d1f7af9b51",
+      "magic": "QP1",
+      "status": "passed"
+    },
+    "qma9": {
+      "decoded_mask_bytes": 117964800,
+      "frame_count": 600,
+      "height": 384,
+      "packed_bytes": 159011,
+      "width": 512
+    },
+    "runtime_restore_preflight": {
+      "input_model_payload_bytes": 55725,
+      "input_model_payload_sha256": "b649b0dacb1dcc93fd7da2e7f5c6d398fa933d2fe3087520359612afc8e4832d",
+      "restored_block_size": 32,
+      "restored_model_bytes": 59288,
+      "restored_model_sha256": "2333284a73446c3b323948fb883ade0f677baf9ad5d9d06aa1da7bec337bd9c9",
+      "runtime_inflate_renderer": "submissions/robust_current/inflate_renderer.py",
+      "runtime_inflate_renderer_sha256": "5465cd34a2d86e8f708d458c416c0e579c4747edc1fba9c9ba3208b6f13d1291",
+      "status": "passed"
+    },
+    "source_inflate": "experiments/results/top_submission_reverse_engineering_20260503_pr84/sources/inflate.py",
+    "source_inflate_sha256": "10b74030ffd9d55a068a5f6862b88053296685b1b79a723da3d59093f68057e3"
+  },
+  "static_score_band_if_pr82_components_carried": {
+    "archive_bytes": 218873,
+    "bytes_delta_vs_pr84_public_archive": 3138,
+    "component_assumption": "PR82 exact T4 components copied unchanged; planning-only lower bound, not evidence",
+    "expected_score": 0.2464436569406869,
+    "pr82_posenet_dist": 0.0001894,
+    "pr82_segnet_dist": 0.00057185
+  },
+  "stream_delta": {
+    "archive_delta_bytes_vs_pr84_public_archive": 3138,
+    "qpost_charged_member_bytes": 2567
+  },
+  "tool": "experiments/build_pr84_pr82_henosis_stack_candidate.py"
+}

@@ -1,0 +1,106 @@
+{
+  "allowed_use": [
+    "forensic",
+    "no_rank_frontier",
+    "no_promotion"
+  ],
+  "archive_delta_bytes": -100106,
+  "baseline_archive_bytes": 276214,
+  "completed_at_utc": "2026-05-02T12:36:34Z",
+  "component_gate_triggered": true,
+  "component_gate_violations": [
+    {
+      "component": "posenet",
+      "max_absolute": 0.01,
+      "metric": "avg_posenet_dist",
+      "observed": 46.52362823,
+      "reason": "absolute_component_gate"
+    },
+    {
+      "component": "posenet",
+      "max_relative": 30.0,
+      "metric": "avg_posenet_dist",
+      "observed": 46.52362823,
+      "reason": "relative_component_gate",
+      "reference": 0.00049637,
+      "reference_label": "C-067_T4_reference",
+      "relative_to_reference": 93727.71970505873
+    },
+    {
+      "component": "segnet",
+      "max_absolute": 0.005,
+      "metric": "avg_segnet_dist",
+      "observed": 0.04919839,
+      "reason": "absolute_component_gate"
+    },
+    {
+      "component": "segnet",
+      "max_relative": 10.0,
+      "metric": "avg_segnet_dist",
+      "observed": 0.04919839,
+      "reason": "relative_component_gate",
+      "reference": 0.00061244,
+      "reference_label": "C-067_T4_reference",
+      "relative_to_reference": 80.33177127555352
+    }
+  ],
+  "component_gates": [
+    {
+      "component": "posenet",
+      "max_absolute": 0.01,
+      "max_relative": 30.0,
+      "metric": "avg_posenet_dist",
+      "observed": 46.52362823,
+      "passed": false,
+      "reference": 0.00049637,
+      "reference_label": "C-067_T4_reference",
+      "relative_to_reference": 93727.71970505873
+    },
+    {
+      "component": "segnet",
+      "max_absolute": 0.005,
+      "max_relative": 10.0,
+      "metric": "avg_segnet_dist",
+      "observed": 0.04919839,
+      "passed": false,
+      "reference": 0.00061244,
+      "reference_label": "C-067_T4_reference",
+      "relative_to_reference": 80.33177127555352
+    }
+  ],
+  "contest_cuda_archive_bytes": 176108,
+  "contest_cuda_archive_sha256": "4164132d26840db05124d341e02ebf72b5df171d90f9a413c2239f33112e61eb",
+  "contest_cuda_avg_posenet_dist": 46.52362823,
+  "contest_cuda_avg_segnet_dist": 0.04919839,
+  "contest_cuda_device": "cuda",
+  "contest_cuda_gpu_model": "NVIDIA L40S",
+  "contest_cuda_gpu_t4_match": false,
+  "contest_cuda_n_samples": 600,
+  "contest_cuda_result_json": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_c067_cmg3_rowspan_stride2_l40sdiag_20260502T1225Z/contest_auth_eval.adjudicated.json",
+  "contest_cuda_score": 26.606438621695162,
+  "contest_cuda_score_recomputed": 26.606438621695162,
+  "contest_cuda_score_reported_rounded": 26.61,
+  "contest_cuda_score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "distillation_policy_active": false,
+  "distillation_policy_gate_triggered": false,
+  "distillation_policy_gate_violations": [],
+  "distillation_policy_sha256": null,
+  "distillation_policy_sha256_expected": null,
+  "evidence_grade": "A score-grade",
+  "final_archive_bytes": 176108,
+  "lane_status": "REGRESSION_AND_COMPONENT_GATE_REVIEW_REQUIRED",
+  "max_sane_score": 40.0,
+  "paper_claim_grade": "A-negative scoped forensic",
+  "promotion_eligible": false,
+  "regression_scope": "measured_implementation_config_only_pending_review",
+  "regression_threshold": 0.2,
+  "regression_threshold_mode": "delta_vs_baseline",
+  "regression_triggered": true,
+  "result_tag": "[contest-CUDA]",
+  "sane_score_gate_triggered": false,
+  "sane_score_gate_violation": null,
+  "score_delta_vs_baseline": 26.290821590910678,
+  "score_delta_vs_c067_l40sdiag": 26.290821590910678,
+  "score_tag": "[contest-CUDA]",
+  "stacked_archive_bytes": 176108
+}

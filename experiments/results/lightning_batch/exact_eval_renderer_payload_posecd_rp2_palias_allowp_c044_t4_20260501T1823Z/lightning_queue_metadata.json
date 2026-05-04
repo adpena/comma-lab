@@ -1,0 +1,40 @@
+{
+  "adjudication": {
+    "allow_component_gate_forensic_success": true,
+    "baseline_archive_size_bytes": 594456,
+    "baseline_posenet_dist": 0.00357305,
+    "baseline_score": 0.9872158806043723,
+    "baseline_segnet_dist": 0.00402367,
+    "component_reference_label": "c049_renderer_payload_posecd_t4_frontier",
+    "delta_key": "score_delta_vs_c049_renderer_payload_posecd_t4_frontier",
+    "max_posenet_dist": null,
+    "max_posenet_relative": 1.01,
+    "max_sane_score": 2.0,
+    "max_segnet_dist": null,
+    "max_segnet_relative": 1.01,
+    "predicted_band_high": 0.9873,
+    "predicted_band_low": 0.9867,
+    "provenance_name": "adjudication_provenance.json",
+    "regression_threshold": 1.0,
+    "required_device": "cuda",
+    "required_samples": 600,
+    "result_copy_name": "contest_auth_eval.adjudicated.json"
+  },
+  "artifact_recorded_at_utc": "2026-05-01T18:34:18Z",
+  "expected_archive_sha256": "090541612003c4f153e448925cc9152787b0842338ae08ec0f1420e997c7ed11",
+  "expected_archive_size_bytes": 594111,
+  "job_name": "exact_eval_renderer_payload_posecd_rp2_palias_allowp_c044_t4_20260501T1823Z",
+  "queue_metadata": {
+    "harness_fix": "allow_exact_p_basename",
+    "lane": "renderer_payload_c044_rp2_posecd_palias_allowp",
+    "payload_format": "rp2_fixed3",
+    "payload_member": "p",
+    "pose_codec": "pose_fp16_col_delta_v1",
+    "prior_frontier_sha256": "f8b13737ea226524869b40132a31ca77ffdaa887ca8571e51e408861e27ecb54",
+    "source_manifest": ".omx/state/renderer_payload_rp2_allowp_t4_20260501T1821Z_manifest.json"
+  },
+  "role": "exact_cuda_eval",
+  "schema_version": 1,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

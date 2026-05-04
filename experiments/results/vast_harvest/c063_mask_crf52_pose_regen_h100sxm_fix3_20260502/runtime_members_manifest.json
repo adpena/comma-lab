@@ -1,0 +1,18 @@
+{
+  "members": {
+    "masks.mkv": {
+      "bytes": 216317,
+      "sha256": "3c84b3dcc09d11d0d108d8aaef6d375478644a854fa2985429f676542d7a51b3"
+    },
+    "optimized_poses.bin": {
+      "bytes": 7200,
+      "sha256": "18d10d919faddcc7ad7bd4dc3e41119e6a41b2c4117ce8eef2d7ccb9b6d0ceb6"
+    },
+    "renderer.bin": {
+      "bytes": 59288,
+      "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+    }
+  },
+  "runtime_zip_bytes": 274722,
+  "runtime_zip_sha256": "4dcd64e6ec1a40d7a35548e676124e26e0d8544bb6300f378ed6cb49bbc9657a"
+}

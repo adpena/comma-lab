@@ -1,0 +1,326 @@
+{
+  "baseline_pr79_s2": {
+    "archive_bytes": 277321,
+    "avg_posenet_dist": 0.00049415,
+    "avg_segnet_dist": 0.00059581,
+    "n_samples": 600,
+    "path": "experiments/results/lightning_batch/exact_eval_pr79_s2_fixed_adaptive_actions_t4_20260503T173023Z/contest_auth_eval.adjudicated.json",
+    "score": 0.31453355357318635,
+    "score_pose_contribution": 0.07029580357318635,
+    "score_rate_contribution": 0.18465675,
+    "score_seg_contribution": 0.059581,
+    "status": "loaded"
+  },
+  "candidate_count": 4,
+  "candidates": [
+    {
+      "archive_bytes": 276474,
+      "archive_path": "experiments/results/pr77_tile_delta_transfer_20260503_worker/replace_pr79_with_pr77_pair_overlap_s2_p3_on_pr79/archive.zip",
+      "archive_sha256": "9140ea901f85dde755cb448109c9225700822515fccb1eb40f57230face04835",
+      "break_even_vs_pr79_s2": {
+        "archive_delta_bytes_vs_pr79_s2": -847,
+        "baseline_archive_bytes": 277321,
+        "baseline_score": 0.31453355357318635,
+        "break_even_component_delta_vs_pr79_s2": 0.0005639825332944791,
+        "break_even_component_delta_vs_pr79_s2_fraction": "21175/37545489",
+        "max_component_regression_to_tie_s2": 0.0005639825332944791,
+        "rate_score_delta_vs_pr79_s2": -0.0005639825332944791,
+        "rate_score_delta_vs_pr79_s2_fraction": "-21175/37545489",
+        "required_component_improvement_to_tie_s2": 0.0,
+        "score_if_components_unchanged": 0.31396957103989187,
+        "would_beat_pr79_s2_if_components_unchanged": true
+      },
+      "candidate_id": "replace_pr79_with_pr77_pair_overlap_s2_p3_on_pr79",
+      "changed_members": [
+        "seg_tile_actions.bin"
+      ],
+      "dispatch_recommendation": {
+        "dispatch_ready_now": false,
+        "exact_eval_justified_after_lane_claim": true,
+        "lane_claim_required": true,
+        "reason": "local byte screen beats PR79 S2 if components are unchanged, but exact CUDA auth eval is still required",
+        "recommended": true,
+        "remote_dispatch_performed": false,
+        "required_before_any_dispatch": [
+          "verify archive bytes and SHA-256 match this manifest",
+          "claim lane with tools/claim_lane_dispatch.py claim",
+          "run exact CUDA auth eval through experiments/contest_auth_eval.py --device cuda",
+          "record contest_auth_eval.json, runtime tree hash, n_samples, and component gates"
+        ]
+      },
+      "manifest_path": "experiments/results/pr77_tile_delta_transfer_20260503_worker/replace_pr79_with_pr77_pair_overlap_s2_p3_on_pr79/manifest.json",
+      "payload_bytes": 276374,
+      "payload_sha256": "f462aa3f910482a6eee9dcc09c43668f819776795c90bd9c1a928d853af99b65",
+      "raw_output_proof_status": "source_baseline_only",
+      "s2_action_wire_bytes": 238,
+      "s2_action_wire_sha256": "842a1a2f4d778490d97add27d9f954c368a6ccc3692edc09f81a87f946e5eb11",
+      "score_claim": false,
+      "selected_record_count": 101
+    },
+    {
+      "archive_bytes": 276526,
+      "archive_path": "experiments/results/pr77_tile_delta_transfer_20260503_worker/replace_pr79_with_pr77_tile_overlap_s2_p3_on_pr79/archive.zip",
+      "archive_sha256": "1043991267ff9ce33df05cdfb7ff865debb907c5f0b4b3a23f57aab553f9806c",
+      "break_even_vs_pr79_s2": {
+        "archive_delta_bytes_vs_pr79_s2": -795,
+        "baseline_archive_bytes": 277321,
+        "baseline_score": 0.31453355357318635,
+        "break_even_component_delta_vs_pr79_s2": 0.0005293578677321262,
+        "break_even_component_delta_vs_pr79_s2_fraction": "6625/12515163",
+        "max_component_regression_to_tie_s2": 0.0005293578677321262,
+        "rate_score_delta_vs_pr79_s2": -0.0005293578677321262,
+        "rate_score_delta_vs_pr79_s2_fraction": "-6625/12515163",
+        "required_component_improvement_to_tie_s2": 0.0,
+        "score_if_components_unchanged": 0.31400419570545424,
+        "would_beat_pr79_s2_if_components_unchanged": true
+      },
+      "candidate_id": "replace_pr79_with_pr77_tile_overlap_s2_p3_on_pr79",
+      "changed_members": [
+        "seg_tile_actions.bin"
+      ],
+      "dispatch_recommendation": {
+        "dispatch_ready_now": false,
+        "exact_eval_justified_after_lane_claim": true,
+        "lane_claim_required": true,
+        "reason": "local byte screen beats PR79 S2 if components are unchanged, but exact CUDA auth eval is still required",
+        "recommended": true,
+        "remote_dispatch_performed": false,
+        "required_before_any_dispatch": [
+          "verify archive bytes and SHA-256 match this manifest",
+          "claim lane with tools/claim_lane_dispatch.py claim",
+          "run exact CUDA auth eval through experiments/contest_auth_eval.py --device cuda",
+          "record contest_auth_eval.json, runtime tree hash, n_samples, and component gates"
+        ]
+      },
+      "manifest_path": "experiments/results/pr77_tile_delta_transfer_20260503_worker/replace_pr79_with_pr77_tile_overlap_s2_p3_on_pr79/manifest.json",
+      "payload_bytes": 276426,
+      "payload_sha256": "f75cac159938d7e6853daace8cd616d2b4c2565ea945ab87039834dcbab3e8a1",
+      "raw_output_proof_status": "source_baseline_only",
+      "s2_action_wire_bytes": 290,
+      "s2_action_wire_sha256": "db467384370c8cf17efef3e77893ad1103dfa916a2a819bac4eac9d74eea7527",
+      "score_claim": false,
+      "selected_record_count": 144
+    },
+    {
+      "archive_bytes": 276535,
+      "archive_path": "experiments/results/pr77_tile_delta_transfer_20260503_worker/replace_pr79_with_pr77_all_s2_p3_on_pr79/archive.zip",
+      "archive_sha256": "0300f8baa75b7cb864a8c91dc77fd057a38bde2ecd4d736bff3d92c6fcde78f1",
+      "break_even_vs_pr79_s2": {
+        "archive_delta_bytes_vs_pr79_s2": -786,
+        "baseline_archive_bytes": 277321,
+        "baseline_score": 0.31453355357318635,
+        "break_even_component_delta_vs_pr79_s2": 0.0005233651371540267,
+        "break_even_component_delta_vs_pr79_s2_fraction": "6550/12515163",
+        "max_component_regression_to_tie_s2": 0.0005233651371540267,
+        "rate_score_delta_vs_pr79_s2": -0.0005233651371540267,
+        "rate_score_delta_vs_pr79_s2_fraction": "-6550/12515163",
+        "required_component_improvement_to_tie_s2": 0.0,
+        "score_if_components_unchanged": 0.31401018843603234,
+        "would_beat_pr79_s2_if_components_unchanged": true
+      },
+      "candidate_id": "replace_pr79_with_pr77_all_s2_p3_on_pr79",
+      "changed_members": [
+        "seg_tile_actions.bin"
+      ],
+      "dispatch_recommendation": {
+        "dispatch_ready_now": false,
+        "exact_eval_justified_after_lane_claim": true,
+        "lane_claim_required": true,
+        "reason": "local byte screen beats PR79 S2 if components are unchanged, but exact CUDA auth eval is still required",
+        "recommended": true,
+        "remote_dispatch_performed": false,
+        "required_before_any_dispatch": [
+          "verify archive bytes and SHA-256 match this manifest",
+          "claim lane with tools/claim_lane_dispatch.py claim",
+          "run exact CUDA auth eval through experiments/contest_auth_eval.py --device cuda",
+          "record contest_auth_eval.json, runtime tree hash, n_samples, and component gates"
+        ]
+      },
+      "manifest_path": "experiments/results/pr77_tile_delta_transfer_20260503_worker/replace_pr79_with_pr77_all_s2_p3_on_pr79/manifest.json",
+      "payload_bytes": 276435,
+      "payload_sha256": "7a1fcb86d2c7039925611fabdc4aeb2f06cb6374781434b2b48bcdef7e73b810",
+      "raw_output_proof_status": "source_baseline_only",
+      "s2_action_wire_bytes": 299,
+      "s2_action_wire_sha256": "a6886195127814eaa2c8151dafb3c9f903efc3f679a9c52bacf89d97051a8b6f",
+      "score_claim": false,
+      "selected_record_count": 147
+    },
+    {
+      "archive_bytes": 277464,
+      "archive_path": "experiments/results/pr77_tile_delta_transfer_20260503_worker/augment_pr79_with_pr77_unique_s2_p3_on_pr79/archive.zip",
+      "archive_sha256": "69100ecac99490637f193cd2d9572f967e30bbe73f4cf81465ba3970f8abdc17",
+      "break_even_vs_pr79_s2": {
+        "archive_delta_bytes_vs_pr79_s2": 143,
+        "baseline_archive_bytes": 277321,
+        "baseline_score": 0.31453355357318635,
+        "break_even_component_delta_vs_pr79_s2": -9.52178302964705e-05,
+        "break_even_component_delta_vs_pr79_s2_fraction": "-3575/37545489",
+        "max_component_regression_to_tie_s2": 0.0,
+        "rate_score_delta_vs_pr79_s2": 9.52178302964705e-05,
+        "rate_score_delta_vs_pr79_s2_fraction": "3575/37545489",
+        "required_component_improvement_to_tie_s2": 9.52178302964705e-05,
+        "score_if_components_unchanged": 0.31462877140348283,
+        "would_beat_pr79_s2_if_components_unchanged": false
+      },
+      "candidate_id": "augment_pr79_with_pr77_unique_s2_p3_on_pr79",
+      "changed_members": [
+        "seg_tile_actions.bin"
+      ],
+      "dispatch_recommendation": {
+        "dispatch_ready_now": false,
+        "exact_eval_justified_after_lane_claim": false,
+        "lane_claim_required": true,
+        "reason": "local byte/no-op screen alone is insufficient to justify dispatch",
+        "recommended": false,
+        "remote_dispatch_performed": false,
+        "required_before_any_dispatch": [
+          "verify archive bytes and SHA-256 match this manifest",
+          "claim lane with tools/claim_lane_dispatch.py claim",
+          "run exact CUDA auth eval through experiments/contest_auth_eval.py --device cuda",
+          "record contest_auth_eval.json, runtime tree hash, n_samples, and component gates"
+        ]
+      },
+      "manifest_path": "experiments/results/pr77_tile_delta_transfer_20260503_worker/augment_pr79_with_pr77_unique_s2_p3_on_pr79/manifest.json",
+      "payload_bytes": 277364,
+      "payload_sha256": "134742261848875c53d439e265a0ddcd7c55c7d304b29f9b4bf9c1345bef7757",
+      "raw_output_proof_status": "source_baseline_only",
+      "s2_action_wire_bytes": 1228,
+      "s2_action_wire_sha256": "28d61a0ff9a5a60ee65f55be696664886e8177c496f986db856f948f90f55549",
+      "score_claim": false,
+      "selected_record_count": 757
+    }
+  ],
+  "canonical_score_source_required": "No GPU dispatch or score claim from this worker. Before any exact eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim and run archive.zip -> inflate.sh -> upstream/evaluate.py through experiments/contest_auth_eval.py --device cuda on the identical archive SHA-256 and byte count.",
+  "evidence_grade": "empirical_archive_closed_byte_screen",
+  "pr77_action_anatomy": {
+    "action_max": 107,
+    "action_min": 2,
+    "duplicate_exact_record_count": 0,
+    "duplicate_pair_tile_group_count": 0,
+    "nondecreasing_pair_order": false,
+    "pair_max": 599,
+    "pair_min": 11,
+    "record_count": 147,
+    "records_canonical_sha256": "6f139bae1e27c16162eed3bd497bbcf192468c47d6c2d96c5fa78a15c1ae2644",
+    "records_source_order_sha256": "8ac9a01caad973096c58b42daf2b1a8e476ad68cf285d443baa4ac94fdb42255",
+    "tile_max": 140,
+    "tile_min": 82,
+    "unique_action_count": 73,
+    "unique_pair_count": 121,
+    "unique_pair_tile_count": 147,
+    "unique_tile_count": 24
+  },
+  "pr79_s2_action_anatomy": {
+    "action_max": 107,
+    "action_min": 0,
+    "duplicate_exact_record_count": 0,
+    "duplicate_pair_tile_group_count": 19,
+    "nondecreasing_pair_order": false,
+    "pair_max": 598,
+    "pair_min": 0,
+    "record_count": 672,
+    "records_canonical_sha256": "6f25e370e656fdb9bc82eb80b24c241d2641e286b969efc6de44be1e2b78c33b",
+    "records_source_order_sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f",
+    "tile_max": 140,
+    "tile_min": 80,
+    "unique_action_count": 99,
+    "unique_pair_count": 295,
+    "unique_pair_tile_count": 653,
+    "unique_tile_count": 45
+  },
+  "remote_dispatch_performed": false,
+  "schema": "pr77_tile_delta_transfer_candidate_matrix_v1",
+  "score_claim": false,
+  "skipped_policies": [],
+  "source_archives": {
+    "pr77": {
+      "archive_bytes": 276551,
+      "archive_path": "experiments/results/top_submission_reverse_engineering_20260503_pr77/archive.zip",
+      "archive_sha256": "f90880383c95e14d82704f99db9b20944786ae6452a844348638b06c439972af",
+      "decoded_segments": {
+        "masks.mkv": {
+          "bytes": 223385,
+          "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "optimized_poses.qp1": {
+          "bytes": 1140,
+          "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+        },
+        "renderer.bin": {
+          "bytes": 59288,
+          "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 588,
+          "sha256": "8ac9a01caad973096c58b42daf2b1a8e476ad68cf285d443baa4ac94fdb42255"
+        }
+      },
+      "payload_bytes": 276451,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+      "payload_sha256": "3be6a58673133db2dd14d9f1f0903d528e452bd2e930d57fb4adb02bf264f8ec",
+      "raw_segments": {
+        "masks.mkv": {
+          "bytes": 219472,
+          "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+        },
+        "optimized_poses.qp1": {
+          "bytes": 898,
+          "sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082"
+        },
+        "renderer.bin": {
+          "bytes": 55756,
+          "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 325,
+          "sha256": "d8c75e4f3725bbcf608434f0a78f5b37a9ce86bd8177c71092fd727d7e2af75a"
+        }
+      }
+    },
+    "pr79_s2": {
+      "archive_bytes": 277321,
+      "archive_path": "experiments/results/pr79_action_dictionary_repack_v2_20260503_codex/pr79_s2_fixed_adaptive_actions/archive.zip",
+      "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+      "decoded_segments": {
+        "masks.mkv": {
+          "bytes": 223385,
+          "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "optimized_poses.qp1": {
+          "bytes": 1140,
+          "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+        },
+        "renderer.bin": {
+          "bytes": 59288,
+          "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 2688,
+          "sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f"
+        }
+      },
+      "payload_bytes": 277221,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+      "payload_sha256": "c52308a335087e7a41e7353a4395269bddb0377b6fbad2b739aa8e283db22b72",
+      "raw_segments": {
+        "masks.mkv": {
+          "bytes": 219472,
+          "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+        },
+        "optimized_poses.qp1": {
+          "bytes": 898,
+          "sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082"
+        },
+        "renderer.bin": {
+          "bytes": 55756,
+          "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 1095,
+          "sha256": "abbc8d26375d60e52bc4ab801f2e241e56bd47564fe48ff1edefc5e1bdf60273"
+        }
+      }
+    }
+  },
+  "tool": "experiments/build_pr77_tile_delta_transfer_candidates.py"
+}

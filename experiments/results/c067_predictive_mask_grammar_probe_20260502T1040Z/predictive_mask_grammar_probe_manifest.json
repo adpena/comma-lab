@@ -1,0 +1,909 @@
+{
+  "artifacts": {
+    "manifest": {
+      "path": "/Users/adpena/Projects/pact/experiments/results/c067_predictive_mask_grammar_probe_20260502T1040Z/predictive_mask_grammar_probe_manifest.json"
+    }
+  },
+  "baseline": {
+    "bytes": 219472,
+    "path": null,
+    "role": "charged_current_mask_stream",
+    "sha256": null,
+    "source": "experiments/results/c063_trace_weighted_mask_grammar_plan_20260502_codex/cmg2_lossless_probe_charged_pr67_20260502T0950Z/cmg2_mask_codec_probe_manifest.json"
+  },
+  "best_candidate_by_compressed_size": {
+    "assumptions": [
+      "overlap conflicts and unsampled rows require a deterministic future fill rule",
+      "int16 spans assume mask width and height fit signed 16-bit coordinates"
+    ],
+    "best_compression": {
+      "beats_baseline_bytescreen": true,
+      "compressed_sha256": "fdbb91f15ebf26583a139ecf2e622448543e151f2f7c5dbae644ee978a977e66",
+      "compressed_size_bytes": 63212,
+      "compressor": "lzma6",
+      "delta_bytes_vs_baseline": -156260
+    },
+    "candidate_id": "row_span_stride4_class_predictor",
+    "charged_payload_estimate_scope": "compressed probe payload bytes only; excludes future inflate decoder, validator, archive wrapper, and packed-submission overhead",
+    "compression": [
+      {
+        "beats_baseline_bytescreen": true,
+        "compressed_sha256": "fdbb91f15ebf26583a139ecf2e622448543e151f2f7c5dbae644ee978a977e66",
+        "compressed_size_bytes": 63212,
+        "compressor": "lzma6",
+        "delta_bytes_vs_baseline": -156260
+      },
+      {
+        "beats_baseline_bytescreen": true,
+        "compressed_sha256": "836cf9a4bd37d7f29b41dfd59713c99dafa21cbc345972596b9ed91b021a2c9a",
+        "compressed_size_bytes": 64243,
+        "compressor": "bz2_9",
+        "delta_bytes_vs_baseline": -155229
+      },
+      {
+        "beats_baseline_bytescreen": true,
+        "compressed_sha256": "add629e0dfd788b2ec872fd709fa4f0df9204af1c0c89f84315f18f09787c26e",
+        "compressed_size_bytes": 94422,
+        "compressor": "zlib9",
+        "delta_bytes_vs_baseline": -125050
+      }
+    ],
+    "description": "Store per-frame per-class horizontal spans every 4 row(s).",
+    "evidence_grade": "empirical_byte_probe_only",
+    "exact_evaluable_now": false,
+    "exact_evaluable_reason": "not exact-evaluable from this byte probe: no contest archive member, reviewed inflate decoder, archive validator coverage, or exact CUDA auth eval artifact exists",
+    "family": "low_rank_row_column_spans",
+    "geometry_preservation": "preserves row-wise class extents and lane/horizon geometry at the sampled rows",
+    "lossless_under_probe_model": false,
+    "payload_component_raw_bytes": {
+      "row_spans_int16": 1152000
+    },
+    "promotion_eligible": false,
+    "raw_payload_sha256": "50ff7f67e903e6c27c797e5ad1b8492211bb1df14e9ddce9a538404368dda42c",
+    "raw_payload_size_bytes": 1152367,
+    "score_claim": false,
+    "transform_stats": {
+      "missing_span_records": 203020,
+      "span_shape": [
+        600,
+        5,
+        96,
+        2
+      ],
+      "valid_span_records": 84980
+    }
+  },
+  "candidate_table": [
+    {
+      "assumptions": [
+        "overlap conflicts and unsampled rows require a deterministic future fill rule",
+        "int16 spans assume mask width and height fit signed 16-bit coordinates"
+      ],
+      "best_compression": {
+        "beats_baseline_bytescreen": true,
+        "compressed_sha256": "fdbb91f15ebf26583a139ecf2e622448543e151f2f7c5dbae644ee978a977e66",
+        "compressed_size_bytes": 63212,
+        "compressor": "lzma6",
+        "delta_bytes_vs_baseline": -156260
+      },
+      "candidate_id": "row_span_stride4_class_predictor",
+      "charged_payload_estimate_scope": "compressed probe payload bytes only; excludes future inflate decoder, validator, archive wrapper, and packed-submission overhead",
+      "compression": [
+        {
+          "beats_baseline_bytescreen": true,
+          "compressed_sha256": "fdbb91f15ebf26583a139ecf2e622448543e151f2f7c5dbae644ee978a977e66",
+          "compressed_size_bytes": 63212,
+          "compressor": "lzma6",
+          "delta_bytes_vs_baseline": -156260
+        },
+        {
+          "beats_baseline_bytescreen": true,
+          "compressed_sha256": "836cf9a4bd37d7f29b41dfd59713c99dafa21cbc345972596b9ed91b021a2c9a",
+          "compressed_size_bytes": 64243,
+          "compressor": "bz2_9",
+          "delta_bytes_vs_baseline": -155229
+        },
+        {
+          "beats_baseline_bytescreen": true,
+          "compressed_sha256": "add629e0dfd788b2ec872fd709fa4f0df9204af1c0c89f84315f18f09787c26e",
+          "compressed_size_bytes": 94422,
+          "compressor": "zlib9",
+          "delta_bytes_vs_baseline": -125050
+        }
+      ],
+      "description": "Store per-frame per-class horizontal spans every 4 row(s).",
+      "evidence_grade": "empirical_byte_probe_only",
+      "exact_evaluable_now": false,
+      "exact_evaluable_reason": "not exact-evaluable from this byte probe: no contest archive member, reviewed inflate decoder, archive validator coverage, or exact CUDA auth eval artifact exists",
+      "family": "low_rank_row_column_spans",
+      "geometry_preservation": "preserves row-wise class extents and lane/horizon geometry at the sampled rows",
+      "lossless_under_probe_model": false,
+      "payload_component_raw_bytes": {
+        "row_spans_int16": 1152000
+      },
+      "promotion_eligible": false,
+      "raw_payload_sha256": "50ff7f67e903e6c27c797e5ad1b8492211bb1df14e9ddce9a538404368dda42c",
+      "raw_payload_size_bytes": 1152367,
+      "score_claim": false,
+      "transform_stats": {
+        "missing_span_records": 203020,
+        "span_shape": [
+          600,
+          5,
+          96,
+          2
+        ],
+        "valid_span_records": 84980
+      }
+    },
+    {
+      "assumptions": [
+        "overlap conflicts and unsampled columns require a deterministic future fill rule",
+        "int16 spans assume mask width and height fit signed 16-bit coordinates"
+      ],
+      "best_compression": {
+        "beats_baseline_bytescreen": true,
+        "compressed_sha256": "cdde5d517294a2e50c10dbfe0d0f50235cda1c59f68dd0becda8300728aa4f32",
+        "compressed_size_bytes": 132095,
+        "compressor": "bz2_9",
+        "delta_bytes_vs_baseline": -87377
+      },
+      "candidate_id": "column_span_stride4_class_predictor",
+      "charged_payload_estimate_scope": "compressed probe payload bytes only; excludes future inflate decoder, validator, archive wrapper, and packed-submission overhead",
+      "compression": [
+        {
+          "beats_baseline_bytescreen": true,
+          "compressed_sha256": "cdde5d517294a2e50c10dbfe0d0f50235cda1c59f68dd0becda8300728aa4f32",
+          "compressed_size_bytes": 132095,
+          "compressor": "bz2_9",
+          "delta_bytes_vs_baseline": -87377
+        },
+        {
+          "beats_baseline_bytescreen": true,
+          "compressed_sha256": "7435b971aebd55c4e2053571ef1fd70d290d1059f392eb8eec6e789733807f03",
+          "compressed_size_bytes": 143104,
+          "compressor": "lzma6",
+          "delta_bytes_vs_baseline": -76368
+        },
+        {
+          "beats_baseline_bytescreen": false,
+          "compressed_sha256": "fd27c58cb3d92e7b79a7e1e99ab5349ab7fb267c75ae60121bb574f8472e497d",
+          "compressed_size_bytes": 244073,
+          "compressor": "zlib9",
+          "delta_bytes_vs_baseline": 24601
+        }
+      ],
+      "description": "Store per-frame per-class vertical spans every 4 columns.",
+      "evidence_grade": "empirical_byte_probe_only",
+      "exact_evaluable_now": false,
+      "exact_evaluable_reason": "not exact-evaluable from this byte probe: no contest archive member, reviewed inflate decoder, archive validator coverage, or exact CUDA auth eval artifact exists",
+      "family": "low_rank_row_column_spans",
+      "geometry_preservation": "preserves column-wise vertical extents at sampled columns",
+      "lossless_under_probe_model": false,
+      "payload_component_raw_bytes": {
+        "column_spans_int16": 1536000
+      },
+      "promotion_eligible": false,
+      "raw_payload_sha256": "0bb776def1ef28a513f28282d016d5fd8e6ef84cae4ce554a7c600e4b23925be",
+      "raw_payload_size_bytes": 1536376,
+      "score_claim": false,
+      "transform_stats": {
+        "missing_span_records": 82757,
+        "span_shape": [
+          600,
+          5,
+          128,
+          2
+        ],
+        "valid_span_records": 301243
+      }
+    },
+    {
+      "assumptions": [
+        "overlap conflicts and unsampled rows require a deterministic future fill rule",
+        "int16 spans assume mask width and height fit signed 16-bit coordinates"
+      ],
+      "best_compression": {
+        "beats_baseline_bytescreen": true,
+        "compressed_sha256": "23888c2e7b4fc6503d85711c70a43a3503786f28ba376c952b28d4c01a45fd6b",
+        "compressed_size_bytes": 186188,
+        "compressor": "lzma6",
+        "delta_bytes_vs_baseline": -33284
+      },
+      "candidate_id": "row_span_stride1_class_predictor",
+      "charged_payload_estimate_scope": "compressed probe payload bytes only; excludes future inflate decoder, validator, archive wrapper, and packed-submission overhead",
+      "compression": [
+        {
+          "beats_baseline_bytescreen": true,
+          "compressed_sha256": "23888c2e7b4fc6503d85711c70a43a3503786f28ba376c952b28d4c01a45fd6b",
+          "compressed_size_bytes": 186188,
+          "compressor": "lzma6",
+          "delta_bytes_vs_baseline": -33284
+        },
+        {
+          "beats_baseline_bytescreen": true,
+          "compressed_sha256": "8585ad1038ff68437df8e952db638b7fb482c0ed25b613ae2dfef1aa234ab9a7",
+          "compressed_size_bytes": 202775,
+          "compressor": "bz2_9",
+          "delta_bytes_vs_baseline": -16697
+        },
+        {
+          "beats_baseline_bytescreen": false,
+          "compressed_sha256": "a5507d5ef9fe57bd3eed9df54a3691777a25f1abd02ad4a6a120392503da5569",
+          "compressed_size_bytes": 324489,
+          "compressor": "zlib9",
+          "delta_bytes_vs_baseline": 105017
+        }
+      ],
+      "description": "Store per-frame per-class horizontal spans every 1 row(s).",
+      "evidence_grade": "empirical_byte_probe_only",
+      "exact_evaluable_now": false,
+      "exact_evaluable_reason": "not exact-evaluable from this byte probe: no contest archive member, reviewed inflate decoder, archive validator coverage, or exact CUDA auth eval artifact exists",
+      "family": "low_rank_row_column_spans",
+      "geometry_preservation": "preserves row-wise class extents and lane/horizon geometry at the sampled rows",
+      "lossless_under_probe_model": false,
+      "payload_component_raw_bytes": {
+        "row_spans_int16": 4608000
+      },
+      "promotion_eligible": false,
+      "raw_payload_sha256": "86b1955f14a1248a0c0f782c17db568bc091094480d7fce4d0ff3b363030a5b4",
+      "raw_payload_size_bytes": 4608367,
+      "score_claim": false,
+      "transform_stats": {
+        "missing_span_records": 812141,
+        "span_shape": [
+          600,
+          5,
+          384,
+          2
+        ],
+        "valid_span_records": 339859
+      }
+    },
+    {
+      "assumptions": [
+        "nearest/block-mode reconstruction is only a geometry proxy until exact eval",
+        "candidate excludes archive wrapper and runtime decoder bytes"
+      ],
+      "best_compression": {
+        "beats_baseline_bytescreen": true,
+        "compressed_sha256": "c19498f87864d0e5e559b73ab21a793d1ee61f123f74fd769fff16b366f3709b",
+        "compressed_size_bytes": 197348,
+        "compressor": "lzma6",
+        "delta_bytes_vs_baseline": -22124
+      },
+      "candidate_id": "anisotropic_downsample_2x1_mode",
+      "charged_payload_estimate_scope": "compressed probe payload bytes only; excludes future inflate decoder, validator, archive wrapper, and packed-submission overhead",
+      "compression": [
+        {
+          "beats_baseline_bytescreen": true,
+          "compressed_sha256": "c19498f87864d0e5e559b73ab21a793d1ee61f123f74fd769fff16b366f3709b",
+          "compressed_size_bytes": 197348,
+          "compressor": "lzma6",
+          "delta_bytes_vs_baseline": -22124
+        },
+        {
+          "beats_baseline_bytescreen": true,
+          "compressed_sha256": "1c47f55d4a8672cc34f059470cb8a62f6ff596d613dad6d11b430153618ec6d0",
+          "compressed_size_bytes": 201089,
+          "compressor": "bz2_9",
+          "delta_bytes_vs_baseline": -18383
+        },
+        {
+          "beats_baseline_bytescreen": false,
+          "compressed_sha256": "432527f183e35417506805f888ccdddc5383741f0006ab913cba7368f60310e3",
+          "compressed_size_bytes": 322740,
+          "compressor": "zlib9",
+          "delta_bytes_vs_baseline": 103268
+        }
+      ],
+      "description": "Block-mode downsample with scale_y=2, scale_x=1.",
+      "evidence_grade": "empirical_byte_probe_only",
+      "exact_evaluable_now": false,
+      "exact_evaluable_reason": "not exact-evaluable from this byte probe: no contest archive member, reviewed inflate decoder, archive validator coverage, or exact CUDA auth eval artifact exists",
+      "family": "anisotropic_foveal",
+      "geometry_preservation": "keeps one spatial axis at full resolution while lossy-compressing the other",
+      "lossless_under_probe_model": false,
+      "payload_component_raw_bytes": {
+        "low_mode_symbols": 22118400
+      },
+      "promotion_eligible": false,
+      "raw_payload_sha256": "419963b4e6e11e2d3065cfcd2f2935ae2c2d403503f704a378e4784c361ce4ce",
+      "raw_payload_size_bytes": 22118746,
+      "score_claim": false,
+      "transform_stats": {
+        "low_shape": [
+          600,
+          192,
+          512
+        ],
+        "pixel_disagreement_vs_source": 0.005343195597330729,
+        "reconstructed_tensor_sha256": "9630e659a0288aa66135b2fc4503466a810cab229e82ec5e9f4f775e8e9c5cc8"
+      }
+    },
+    {
+      "assumptions": [
+        "nearest/block-mode reconstruction is only a geometry proxy until exact eval",
+        "candidate excludes archive wrapper and runtime decoder bytes"
+      ],
+      "best_compression": {
+        "beats_baseline_bytescreen": false,
+        "compressed_sha256": "fce4b45d2ccc9e17b4e0f56bf043df3b242a603d77c4dea9b960a4689c60e0a6",
+        "compressed_size_bytes": 270856,
+        "compressor": "lzma6",
+        "delta_bytes_vs_baseline": 51384
+      },
+      "candidate_id": "anisotropic_downsample_1x2_mode",
+      "charged_payload_estimate_scope": "compressed probe payload bytes only; excludes future inflate decoder, validator, archive wrapper, and packed-submission overhead",
+      "compression": [
+        {
+          "beats_baseline_bytescreen": false,
+          "compressed_sha256": "fce4b45d2ccc9e17b4e0f56bf043df3b242a603d77c4dea9b960a4689c60e0a6",
+          "compressed_size_bytes": 270856,
+          "compressor": "lzma6",
+          "delta_bytes_vs_baseline": 51384
+        },
+        {
+          "beats_baseline_bytescreen": false,
+          "compressed_sha256": "2c5e57a958280ecd91be02fd3530d6ddca903cb798bcf27ef9d29c1b540d6e6f",
+          "compressed_size_bytes": 311675,
+          "compressor": "bz2_9",
+          "delta_bytes_vs_baseline": 92203
+        },
+        {
+          "beats_baseline_bytescreen": false,
+          "compressed_sha256": "bd688e1d11b11c7900fd0b0adf4e93b75d27faae7aecaae00f2fad1e1456dffb",
+          "compressed_size_bytes": 489035,
+          "compressor": "zlib9",
+          "delta_bytes_vs_baseline": 269563
+        }
+      ],
+      "description": "Block-mode downsample with scale_y=1, scale_x=2.",
+      "evidence_grade": "empirical_byte_probe_only",
+      "exact_evaluable_now": false,
+      "exact_evaluable_reason": "not exact-evaluable from this byte probe: no contest archive member, reviewed inflate decoder, archive validator coverage, or exact CUDA auth eval artifact exists",
+      "family": "anisotropic_foveal",
+      "geometry_preservation": "keeps one spatial axis at full resolution while lossy-compressing the other",
+      "lossless_under_probe_model": false,
+      "payload_component_raw_bytes": {
+        "low_mode_symbols": 22118400
+      },
+      "promotion_eligible": false,
+      "raw_payload_sha256": "8855ab564f162a35df2f89e4f3181faaa68bb688bec599f372adecf8f41f45a4",
+      "raw_payload_size_bytes": 22118746,
+      "score_claim": false,
+      "transform_stats": {
+        "low_shape": [
+          600,
+          384,
+          256
+        ],
+        "pixel_disagreement_vs_source": 0.0014242892795138888,
+        "reconstructed_tensor_sha256": "c0d22813cf0b94257ad503af0cc165b9103c9588a42461b99453a243d6ef3b47"
+      }
+    },
+    {
+      "assumptions": [
+        "future decoder would need a deterministic fill or class predictor for changed pixels",
+        "screen estimates payload bytes only and excludes decoder/model bytes"
+      ],
+      "best_compression": {
+        "beats_baseline_bytescreen": false,
+        "compressed_sha256": "29830fdcbcd89d34862c7afc3e6359fcf8e5125c1fcb3f5a1411a592f83f1645",
+        "compressed_size_bytes": 434280,
+        "compressor": "lzma6",
+        "delta_bytes_vs_baseline": 214808
+      },
+      "candidate_id": "keyframe16_change_map_lossy",
+      "charged_payload_estimate_scope": "compressed probe payload bytes only; excludes future inflate decoder, validator, archive wrapper, and packed-submission overhead",
+      "compression": [
+        {
+          "beats_baseline_bytescreen": false,
+          "compressed_sha256": "29830fdcbcd89d34862c7afc3e6359fcf8e5125c1fcb3f5a1411a592f83f1645",
+          "compressed_size_bytes": 434280,
+          "compressor": "lzma6",
+          "delta_bytes_vs_baseline": 214808
+        },
+        {
+          "beats_baseline_bytescreen": false,
+          "compressed_sha256": "ae2d985e6637911b2e52a25a4e8b8d2a48a1e6220b8473ead23d2681bde20127",
+          "compressed_size_bytes": 467548,
+          "compressor": "bz2_9",
+          "delta_bytes_vs_baseline": 248076
+        },
+        {
+          "beats_baseline_bytescreen": false,
+          "compressed_sha256": "6d701292855655eaf396c575e4c3db25ba5aacb853f13dab9b32d8efba2c4578",
+          "compressed_size_bytes": 636458,
+          "compressor": "zlib9",
+          "delta_bytes_vs_baseline": 416986
+        }
+      ],
+      "description": "Store 16-frame keyframes plus changed-pixel masks without changed class values.",
+      "evidence_grade": "empirical_byte_probe_only",
+      "exact_evaluable_now": false,
+      "exact_evaluable_reason": "not exact-evaluable from this byte probe: no contest archive member, reviewed inflate decoder, archive validator coverage, or exact CUDA auth eval artifact exists",
+      "family": "keyframe_residual_schedule",
+      "geometry_preservation": "preserves temporal change geometry but not all class identities",
+      "lossless_under_probe_model": false,
+      "payload_component_raw_bytes": {
+        "keyframe_symbols": 2801664,
+        "nonkey_change_bits": 13811712
+      },
+      "promotion_eligible": false,
+      "raw_payload_sha256": "0b99b0f4f6182d89d294552d39ff977ff792e1b63e232abec84ed27f4155e96e",
+      "raw_payload_size_bytes": 16613869,
+      "score_claim": false,
+      "transform_stats": {
+        "changed_pixel_fraction": 0.01248458554594825,
+        "residual_frame_count": 562
+      }
+    },
+    {
+      "assumptions": [
+        "boundary deltas are measured at frame-pair level",
+        "future decoder would need class/interior reconstruction rules"
+      ],
+      "best_compression": {
+        "beats_baseline_bytescreen": false,
+        "compressed_sha256": "163db712dacdbd99809be643fcacfbec214e54f9d9bb1ed3ffabe6b7d8668591",
+        "compressed_size_bytes": 484456,
+        "compressor": "lzma6",
+        "delta_bytes_vs_baseline": 264984
+      },
+      "candidate_id": "class_boundary_pair_delta",
+      "charged_payload_estimate_scope": "compressed probe payload bytes only; excludes future inflate decoder, validator, archive wrapper, and packed-submission overhead",
+      "compression": [
+        {
+          "beats_baseline_bytescreen": false,
+          "compressed_sha256": "163db712dacdbd99809be643fcacfbec214e54f9d9bb1ed3ffabe6b7d8668591",
+          "compressed_size_bytes": 484456,
+          "compressor": "lzma6",
+          "delta_bytes_vs_baseline": 264984
+        },
+        {
+          "beats_baseline_bytescreen": false,
+          "compressed_sha256": "99c98b87ce40dedccdc1caa15bf4312173e212017abe6ee11b908135ab662016",
+          "compressed_size_bytes": 573561,
+          "compressor": "bz2_9",
+          "delta_bytes_vs_baseline": 354089
+        },
+        {
+          "beats_baseline_bytescreen": false,
+          "compressed_sha256": "18abc6dd08199bdc6eca25be51104064657c0d63be4979c76b10dfedfe56f44c",
+          "compressed_size_bytes": 765656,
+          "compressor": "zlib9",
+          "delta_bytes_vs_baseline": 546184
+        }
+      ],
+      "description": "Store even-frame boundaries plus pairwise XOR deltas for odd-frame boundaries.",
+      "evidence_grade": "empirical_byte_probe_only",
+      "exact_evaluable_now": false,
+      "exact_evaluable_reason": "not exact-evaluable from this byte probe: no contest archive member, reviewed inflate decoder, archive validator coverage, or exact CUDA auth eval artifact exists",
+      "family": "class_boundary_maps",
+      "geometry_preservation": "preserves temporal boundary movement, not full masks",
+      "lossless_under_probe_model": false,
+      "payload_component_raw_bytes": {
+        "even_boundary_bits": 7372800,
+        "odd_boundary_xor_bits": 7372800
+      },
+      "promotion_eligible": false,
+      "raw_payload_sha256": "f38614ec3ff80a8253f467bdc79b5274a5f3cb6df73de383d530e1e0cdadb28b",
+      "raw_payload_size_bytes": 14746068,
+      "score_claim": false,
+      "transform_stats": {
+        "delta_boundary_fraction": 0.014356180826822917,
+        "delta_boundary_frames": 300,
+        "even_boundary_frames": 300
+      }
+    },
+    {
+      "assumptions": [
+        "decoder reconstructs odd frame i+1 as anchor_i XOR residual_i",
+        "XOR operates on class-id symbols, not scorer features"
+      ],
+      "best_compression": {
+        "beats_baseline_bytescreen": false,
+        "compressed_sha256": "151349a54c816d89b7b6520b639f0b0b9a710680c7191bc95a5150795c97d3cd",
+        "compressed_size_bytes": 499780,
+        "compressor": "lzma6",
+        "delta_bytes_vs_baseline": 280308
+      },
+      "candidate_id": "temporal_pair_anchor_xor_lossless",
+      "charged_payload_estimate_scope": "compressed probe payload bytes only; excludes future inflate decoder, validator, archive wrapper, and packed-submission overhead",
+      "compression": [
+        {
+          "beats_baseline_bytescreen": false,
+          "compressed_sha256": "151349a54c816d89b7b6520b639f0b0b9a710680c7191bc95a5150795c97d3cd",
+          "compressed_size_bytes": 499780,
+          "compressor": "lzma6",
+          "delta_bytes_vs_baseline": 280308
+        },
+        {
+          "beats_baseline_bytescreen": false,
+          "compressed_sha256": "65f3935dc38ff992235f237a89e36bcdbad6ffb33327eb4404f3b9ea1708721f",
+          "compressed_size_bytes": 501464,
+          "compressor": "bz2_9",
+          "delta_bytes_vs_baseline": 281992
+        },
+        {
+          "beats_baseline_bytescreen": false,
+          "compressed_sha256": "33b76c98b7c21b2a8580992dce841b22023998edd7de74aeb75ac37dc75022e2",
+          "compressed_size_bytes": 773822,
+          "compressor": "zlib9",
+          "delta_bytes_vs_baseline": 554350
+        }
+      ],
+      "description": "Store even frame-pair anchors and XOR class residuals for odd frames.",
+      "evidence_grade": "empirical_byte_probe_only",
+      "exact_evaluable_now": false,
+      "exact_evaluable_reason": "not exact-evaluable from this byte probe: no contest archive member, reviewed inflate decoder, archive validator coverage, or exact CUDA auth eval artifact exists",
+      "family": "temporal_pair_delta",
+      "geometry_preservation": "lossless frame-pair geometry under the probe decoder model",
+      "lossless_under_probe_model": true,
+      "payload_component_raw_bytes": {
+        "odd_frame_xor_symbols": 22118400,
+        "pair_anchor_symbols": 22118400
+      },
+      "promotion_eligible": false,
+      "raw_payload_sha256": "650c4151055788894c0d95c70c5dc044f32e0a8703550e2515c4f109383e4588",
+      "raw_payload_size_bytes": 44237288,
+      "score_claim": false,
+      "transform_stats": {
+        "anchor_frames": 300,
+        "nonzero_residual_fraction": 0.012367062038845486,
+        "residual_frames": 300
+      }
+    },
+    {
+      "assumptions": [
+        "band ratios are deterministic but not scorer-optimized",
+        "future decoder must prove the full-resolution band is consumed at inflate time"
+      ],
+      "best_compression": {
+        "beats_baseline_bytescreen": false,
+        "compressed_sha256": "867657d6772dc33aa6c34dd95291db200d8fd62121d4c85aadfbb8f6b738e2bc",
+        "compressed_size_bytes": 513588,
+        "compressor": "lzma6",
+        "delta_bytes_vs_baseline": 294116
+      },
+      "candidate_id": "foveal_band_exact_2x2_periphery_mode",
+      "charged_payload_estimate_scope": "compressed probe payload bytes only; excludes future inflate decoder, validator, archive wrapper, and packed-submission overhead",
+      "compression": [
+        {
+          "beats_baseline_bytescreen": false,
+          "compressed_sha256": "867657d6772dc33aa6c34dd95291db200d8fd62121d4c85aadfbb8f6b738e2bc",
+          "compressed_size_bytes": 513588,
+          "compressor": "lzma6",
+          "delta_bytes_vs_baseline": 294116
+        },
+        {
+          "beats_baseline_bytescreen": false,
+          "compressed_sha256": "4245afaa31db993b141992c23f1bab074eef534e646475cfb212cf6fdad25dbf",
+          "compressed_size_bytes": 557001,
+          "compressor": "bz2_9",
+          "delta_bytes_vs_baseline": 337529
+        },
+        {
+          "beats_baseline_bytescreen": false,
+          "compressed_sha256": "e506949f1e4f5b6b6cb16be74c38078cbe2207f00693637e964c4cdb8bbdad7d",
+          "compressed_size_bytes": 828108,
+          "compressor": "zlib9",
+          "delta_bytes_vs_baseline": 608636
+        }
+      ],
+      "description": "Store a full-resolution road/horizon band plus 2x2 block-mode periphery.",
+      "evidence_grade": "empirical_byte_probe_only",
+      "exact_evaluable_now": false,
+      "exact_evaluable_reason": "not exact-evaluable from this byte probe: no contest archive member, reviewed inflate decoder, archive validator coverage, or exact CUDA auth eval artifact exists",
+      "family": "anisotropic_foveal",
+      "geometry_preservation": "keeps the central driving band exact and only downsamples periphery",
+      "lossless_under_probe_model": false,
+      "payload_component_raw_bytes": {
+        "exact_foveal_band_symbols": 19123200,
+        "periphery_low_mode_symbols": 11059200
+      },
+      "promotion_eligible": false,
+      "raw_payload_sha256": "6de54a5ea69316ed5510abca01d5e4d23c164baf5813ff2dcdb6a8b4cc9d931a",
+      "raw_payload_size_bytes": 30182877,
+      "score_claim": false,
+      "transform_stats": {
+        "exact_band_pixel_fraction": 0.4322916666666667,
+        "exact_band_y0_y1": [
+          134,
+          300
+        ],
+        "pixel_disagreement_vs_source": 0.0,
+        "reconstructed_tensor_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+        "scale": [
+          2,
+          2
+        ]
+      }
+    },
+    {
+      "assumptions": [
+        "keyframe cadence is fixed and deterministic",
+        "non-key frames decode from the immediately previous reconstructed frame"
+      ],
+      "best_compression": {
+        "beats_baseline_bytescreen": false,
+        "compressed_sha256": "a4df7371e824ef0b3e3d0d36e187e1d9e9b6090360dcbe738017cb30bf1ca9eb",
+        "compressed_size_bytes": 536460,
+        "compressor": "lzma6",
+        "delta_bytes_vs_baseline": 316988
+      },
+      "candidate_id": "keyframe8_prev_xor_lossless",
+      "charged_payload_estimate_scope": "compressed probe payload bytes only; excludes future inflate decoder, validator, archive wrapper, and packed-submission overhead",
+      "compression": [
+        {
+          "beats_baseline_bytescreen": false,
+          "compressed_sha256": "a4df7371e824ef0b3e3d0d36e187e1d9e9b6090360dcbe738017cb30bf1ca9eb",
+          "compressed_size_bytes": 536460,
+          "compressor": "lzma6",
+          "delta_bytes_vs_baseline": 316988
+        },
+        {
+          "beats_baseline_bytescreen": false,
+          "compressed_sha256": "9febfe4532300a9fe5b19e26e135d89b435fb08a85e4b57ff1a8041d72a43b82",
+          "compressed_size_bytes": 542034,
+          "compressor": "bz2_9",
+          "delta_bytes_vs_baseline": 322562
+        },
+        {
+          "beats_baseline_bytescreen": false,
+          "compressed_sha256": "d830810b7b26bebcf03523aa945eec9ddea12e576e104c73441e33ce5e19c178",
+          "compressed_size_bytes": 853559,
+          "compressor": "zlib9",
+          "delta_bytes_vs_baseline": 634087
+        }
+      ],
+      "description": "Store every 8th frame as a keyframe plus previous-frame XOR residuals.",
+      "evidence_grade": "empirical_byte_probe_only",
+      "exact_evaluable_now": false,
+      "exact_evaluable_reason": "not exact-evaluable from this byte probe: no contest archive member, reviewed inflate decoder, archive validator coverage, or exact CUDA auth eval artifact exists",
+      "family": "keyframe_residual_schedule",
+      "geometry_preservation": "lossless scheduled temporal geometry under the probe decoder model",
+      "lossless_under_probe_model": true,
+      "payload_component_raw_bytes": {
+        "keyframe_symbols": 5529600,
+        "nonkey_prev_xor_symbols": 38707200
+      },
+      "promotion_eligible": false,
+      "raw_payload_sha256": "0917df19b0a5b6221a337d899e475d86d89f8f25a7668ef6a2d759f459201267",
+      "raw_payload_size_bytes": 44237297,
+      "score_claim": false,
+      "transform_stats": {
+        "keyframe_count": 75,
+        "nonzero_residual_fraction": 0.012482745458209325,
+        "residual_frame_count": 525
+      }
+    },
+    {
+      "assumptions": [
+        "keyframe cadence is fixed and deterministic",
+        "non-key frames decode from the immediately previous reconstructed frame"
+      ],
+      "best_compression": {
+        "beats_baseline_bytescreen": false,
+        "compressed_sha256": "dc9b062830dd3886bbb2347ac53112d83dcf1f0562eefe897a0c85a0b84189cc",
+        "compressed_size_bytes": 540788,
+        "compressor": "lzma6",
+        "delta_bytes_vs_baseline": 321316
+      },
+      "candidate_id": "keyframe16_prev_xor_lossless",
+      "charged_payload_estimate_scope": "compressed probe payload bytes only; excludes future inflate decoder, validator, archive wrapper, and packed-submission overhead",
+      "compression": [
+        {
+          "beats_baseline_bytescreen": false,
+          "compressed_sha256": "dc9b062830dd3886bbb2347ac53112d83dcf1f0562eefe897a0c85a0b84189cc",
+          "compressed_size_bytes": 540788,
+          "compressor": "lzma6",
+          "delta_bytes_vs_baseline": 321316
+        },
+        {
+          "beats_baseline_bytescreen": false,
+          "compressed_sha256": "0a5e7cf93bbeec1bc80a3219dbaa9db43b34ec1a3cc1683adfea6d12413f1cb8",
+          "compressed_size_bytes": 547813,
+          "compressor": "bz2_9",
+          "delta_bytes_vs_baseline": 328341
+        },
+        {
+          "beats_baseline_bytescreen": false,
+          "compressed_sha256": "69d55a2f5d2c87f20d854e4c8fa41cdb23da36e7b01888bcadd5547c021d22e9",
+          "compressed_size_bytes": 865979,
+          "compressor": "zlib9",
+          "delta_bytes_vs_baseline": 646507
+        }
+      ],
+      "description": "Store every 16th frame as a keyframe plus previous-frame XOR residuals.",
+      "evidence_grade": "empirical_byte_probe_only",
+      "exact_evaluable_now": false,
+      "exact_evaluable_reason": "not exact-evaluable from this byte probe: no contest archive member, reviewed inflate decoder, archive validator coverage, or exact CUDA auth eval artifact exists",
+      "family": "keyframe_residual_schedule",
+      "geometry_preservation": "lossless scheduled temporal geometry under the probe decoder model",
+      "lossless_under_probe_model": true,
+      "payload_component_raw_bytes": {
+        "keyframe_symbols": 2801664,
+        "nonkey_prev_xor_symbols": 41435136
+      },
+      "promotion_eligible": false,
+      "raw_payload_sha256": "90472e609a253b4f086cb3f2ecbed16973a4999420a851cd6078c65f1c80501d",
+      "raw_payload_size_bytes": 44237299,
+      "score_claim": false,
+      "transform_stats": {
+        "keyframe_count": 38,
+        "nonzero_residual_fraction": 0.01248458554594825,
+        "residual_frame_count": 562
+      }
+    },
+    {
+      "assumptions": [
+        "decoder maintains exact previous decoded frame state",
+        "payload excludes future decoder code bytes"
+      ],
+      "best_compression": {
+        "beats_baseline_bytescreen": false,
+        "compressed_sha256": "6df997a1ac620fbadaa0198352ace68d04480bcefeaa82454f5c13cf9698dffb",
+        "compressed_size_bytes": 545760,
+        "compressor": "lzma6",
+        "delta_bytes_vs_baseline": 326288
+      },
+      "candidate_id": "temporal_prev_frame_xor_lossless",
+      "charged_payload_estimate_scope": "compressed probe payload bytes only; excludes future inflate decoder, validator, archive wrapper, and packed-submission overhead",
+      "compression": [
+        {
+          "beats_baseline_bytescreen": false,
+          "compressed_sha256": "6df997a1ac620fbadaa0198352ace68d04480bcefeaa82454f5c13cf9698dffb",
+          "compressed_size_bytes": 545760,
+          "compressor": "lzma6",
+          "delta_bytes_vs_baseline": 326288
+        },
+        {
+          "beats_baseline_bytescreen": false,
+          "compressed_sha256": "e399ae241b1aa45ad9aa5812ae336f2b944fa0a2c9b2fb0803af75dba6ad9b17",
+          "compressed_size_bytes": 550530,
+          "compressor": "bz2_9",
+          "delta_bytes_vs_baseline": 331058
+        },
+        {
+          "beats_baseline_bytescreen": false,
+          "compressed_sha256": "a5f5d2ed78b343dcce792ae91668ec8be71cd8b09dd2682e11cfa17ef057d7a0",
+          "compressed_size_bytes": 878457,
+          "compressor": "zlib9",
+          "delta_bytes_vs_baseline": 658985
+        }
+      ],
+      "description": "Store frame 0 and previous-frame XOR residuals for every later frame.",
+      "evidence_grade": "empirical_byte_probe_only",
+      "exact_evaluable_now": false,
+      "exact_evaluable_reason": "not exact-evaluable from this byte probe: no contest archive member, reviewed inflate decoder, archive validator coverage, or exact CUDA auth eval artifact exists",
+      "family": "temporal_delta",
+      "geometry_preservation": "lossless temporal geometry under the probe decoder model",
+      "lossless_under_probe_model": true,
+      "payload_component_raw_bytes": {
+        "frame0_symbols": 73728,
+        "prev_frame_xor_symbols": 44163072
+      },
+      "promotion_eligible": false,
+      "raw_payload_sha256": "f38ac6886dffb24f4d2fe9bef5f87c3e1ff203813e25809e7d0f225ec7b63c75",
+      "raw_payload_size_bytes": 44237255,
+      "score_claim": false,
+      "transform_stats": {
+        "nonzero_residual_fraction": 0.012458856462702594,
+        "residual_frames": 599
+      }
+    },
+    {
+      "assumptions": [
+        "a future grammar decoder would need interior fill seeds/rules",
+        "class-boundary maps are a byte screen for geometry-carrying side information"
+      ],
+      "best_compression": {
+        "beats_baseline_bytescreen": false,
+        "compressed_sha256": "f1ccd5330e7ce9d605a75d15010cd4cecdae9b0a487437b02d424864c3c11e5f",
+        "compressed_size_bytes": 610999,
+        "compressor": "bz2_9",
+        "delta_bytes_vs_baseline": 391527
+      },
+      "candidate_id": "class_boundary_planes_all_frames",
+      "charged_payload_estimate_scope": "compressed probe payload bytes only; excludes future inflate decoder, validator, archive wrapper, and packed-submission overhead",
+      "compression": [
+        {
+          "beats_baseline_bytescreen": false,
+          "compressed_sha256": "f1ccd5330e7ce9d605a75d15010cd4cecdae9b0a487437b02d424864c3c11e5f",
+          "compressed_size_bytes": 610999,
+          "compressor": "bz2_9",
+          "delta_bytes_vs_baseline": 391527
+        },
+        {
+          "beats_baseline_bytescreen": false,
+          "compressed_sha256": "0f5b2351971104acc52d09349a64c77bbfa78c42a85374b966e7db517f331e73",
+          "compressed_size_bytes": 643384,
+          "compressor": "lzma6",
+          "delta_bytes_vs_baseline": 423912
+        },
+        {
+          "beats_baseline_bytescreen": false,
+          "compressed_sha256": "d6a72965be7163664a2ff62d33438d963e6d2a176a88e4697a33b133b9069acc",
+          "compressed_size_bytes": 1028586,
+          "compressor": "zlib9",
+          "delta_bytes_vs_baseline": 809114
+        }
+      ],
+      "description": "Store per-class boundary planes for every frame.",
+      "evidence_grade": "empirical_byte_probe_only",
+      "exact_evaluable_now": false,
+      "exact_evaluable_reason": "not exact-evaluable from this byte probe: no contest archive member, reviewed inflate decoder, archive validator coverage, or exact CUDA auth eval artifact exists",
+      "family": "class_boundary_maps",
+      "geometry_preservation": "preserves class-labeled boundary geometry, not interior fill",
+      "lossless_under_probe_model": false,
+      "payload_component_raw_bytes": {
+        "class0_boundary_bits": 14745600,
+        "class1_boundary_bits": 14745600,
+        "class2_boundary_bits": 14745600,
+        "class3_boundary_bits": 14745600,
+        "class4_boundary_bits": 14745600
+      },
+      "promotion_eligible": false,
+      "raw_payload_sha256": "fb8fb18c5b8ca413ad2090098861da97d8bf221932a187c7356f91dde67f7076",
+      "raw_payload_size_bytes": 73728853,
+      "score_claim": false,
+      "transform_stats": {
+        "boundary_pixel_fraction": 0.01236728244357639,
+        "boundary_pixels": 1458904
+      }
+    }
+  ],
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "cloud_jobs_dispatched": false,
+  "command": [
+    "probe_predictive_mask_grammar.py",
+    "--output-dir",
+    "experiments/results/c067_predictive_mask_grammar_probe_20260502T1040Z",
+    "--force"
+  ],
+  "environment": {
+    "numpy": "2.4.4",
+    "platform": "macOS-26.4-arm64-arm-64bit",
+    "python": "3.12.13"
+  },
+  "evidence_grade": "empirical_byte_probe_only",
+  "local_probe_only": true,
+  "probe_config": {
+    "candidate_count": 13,
+    "compressors": [
+      "zlib9",
+      "lzma6",
+      "bz2_9"
+    ]
+  },
+  "promotion_eligible": false,
+  "required_next_steps_for_score_claim": [
+    "choose a candidate whose byte screen leaves room for decoder and archive wrapper bytes",
+    "define a reviewed deterministic archive member envelope and inflate decoder",
+    "prove runtime consumption with local unpack/inflate smoke and validator allowlist parity",
+    "run exact CUDA auth eval on the exact archive bytes before ranking or promotion"
+  ],
+  "schema": "predictive_mask_grammar_byte_probe_v1",
+  "score_claim": false,
+  "score_claim_warning": "No score claim is made by this probe. Predictive/lossy byte screens are planning evidence only; exact CUDA auth eval on exact archive bytes is the only score truth.",
+  "scorer_network_loaded": false,
+  "source": {
+    "class_max": 4,
+    "class_min": 0,
+    "decoded_mask_array_npy_sha256": "13f81851ae206f6142cd3348db5537eda4ea832665052824816f4d1bf432de0c",
+    "decoded_mask_array_path": "/Users/adpena/Projects/pact/experiments/results/c063_trace_weighted_mask_grammar_plan_20260502_codex/decoded_mask_array.npy",
+    "decoded_mask_tensor_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+    "dtype": "uint8",
+    "pixel_count": 117964800,
+    "raw_u8_bytes": 117964800,
+    "shape": [
+      600,
+      384,
+      512
+    ],
+    "symbol_bits": 3
+  },
+  "tool": "experiments/probe_predictive_mask_grammar.py"
+}

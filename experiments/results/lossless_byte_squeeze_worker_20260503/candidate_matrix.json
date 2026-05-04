@@ -1,0 +1,363 @@
+{
+  "anchor": {
+    "archive_bytes": 276481,
+    "archive_sha256": "03a2afd5fe92c93a9b7b7e43625158a73b455f0cfbca82d278008a728db78746",
+    "payload_bytes": 276381,
+    "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+    "payload_sha256": "f78c71d3086773e417c672734082a49ceb0ef5a0016cf406a920be7978fff252",
+    "score": 0.31516575028285976,
+    "sub314_gap_bytes_at_unchanged_components": 1751
+  },
+  "candidate_count": 9,
+  "candidates": [
+    {
+      "archive_bytes": 273695,
+      "archive_delta_bytes_vs_anchor": -2786,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/lossless_byte_squeeze_worker_20260503/anchor_p3_qzs3_block128_nonparity_probe/archive.zip",
+      "archive_sha256": "409524e95afe1de5e34b2280a93fdde9fef34e4c9f707f0eeb714dd06bae8156",
+      "candidate_id": "anchor_p3_qzs3_block128_nonparity_probe",
+      "changed_decoded_members_vs_anchor": [
+        "renderer.bin"
+      ],
+      "changed_payload_members": [
+        "P3_header",
+        "masks.mkv.br",
+        "renderer.bin.br",
+        "seg_tile_actions.br"
+      ],
+      "dispatch_status": "not_raw_parity_exact_cuda_required_before_any_score_claim",
+      "formula_only_score_if_components_unchanged": 0.3133106672394614,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/lossless_byte_squeeze_worker_20260503/anchor_p3_qzs3_block128_nonparity_probe/manifest.json",
+      "next_gate": "claim-ready only after operator approval: first run any desired local CPU render sanity/parity screens, then claim lane and exact CUDA auth eval",
+      "payload_bytes": 273595,
+      "payload_identical_to_anchor": false,
+      "runtime_parse_status": "passed",
+      "score_claim": false,
+      "semantic_contract": "contest_parseable_qzs3_reblock_probe_not_raw_parity"
+    },
+    {
+      "archive_bytes": 274158,
+      "archive_delta_bytes_vs_anchor": -2323,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/lossless_byte_squeeze_worker_20260503/anchor_p3_qzs3_block96_nonparity_probe/archive.zip",
+      "archive_sha256": "815d396c9e7732adde18837c920706c5029f785fef5826888e5128ff15c26cf1",
+      "candidate_id": "anchor_p3_qzs3_block96_nonparity_probe",
+      "changed_decoded_members_vs_anchor": [
+        "renderer.bin"
+      ],
+      "changed_payload_members": [
+        "P3_header",
+        "masks.mkv.br",
+        "renderer.bin.br",
+        "seg_tile_actions.br"
+      ],
+      "dispatch_status": "not_raw_parity_exact_cuda_required_before_any_score_claim",
+      "formula_only_score_if_components_unchanged": 0.31361895993475697,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/lossless_byte_squeeze_worker_20260503/anchor_p3_qzs3_block96_nonparity_probe/manifest.json",
+      "next_gate": "claim-ready only after operator approval: first run any desired local CPU render sanity/parity screens, then claim lane and exact CUDA auth eval",
+      "payload_bytes": 274058,
+      "payload_identical_to_anchor": false,
+      "runtime_parse_status": "passed",
+      "score_claim": false,
+      "semantic_contract": "contest_parseable_qzs3_reblock_probe_not_raw_parity"
+    },
+    {
+      "archive_bytes": 274832,
+      "archive_delta_bytes_vs_anchor": -1649,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/lossless_byte_squeeze_worker_20260503/anchor_p3_qzs3_block64_nonparity_probe/archive.zip",
+      "archive_sha256": "e9427d322b4f865a378d895c18a83c6538d9852160953800c8aa369794f699c0",
+      "candidate_id": "anchor_p3_qzs3_block64_nonparity_probe",
+      "changed_decoded_members_vs_anchor": [
+        "renderer.bin"
+      ],
+      "changed_payload_members": [
+        "P3_header",
+        "masks.mkv.br",
+        "renderer.bin.br",
+        "seg_tile_actions.br"
+      ],
+      "dispatch_status": "not_raw_parity_exact_cuda_required_before_any_score_claim",
+      "formula_only_score_if_components_unchanged": 0.3140677488691613,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/lossless_byte_squeeze_worker_20260503/anchor_p3_qzs3_block64_nonparity_probe/manifest.json",
+      "next_gate": "claim-ready only after operator approval: first run any desired local CPU render sanity/parity screens, then claim lane and exact CUDA auth eval",
+      "payload_bytes": 274732,
+      "payload_identical_to_anchor": false,
+      "runtime_parse_status": "passed",
+      "score_claim": false,
+      "semantic_contract": "contest_parseable_qzs3_reblock_probe_not_raw_parity"
+    },
+    {
+      "archive_bytes": 275491,
+      "archive_delta_bytes_vs_anchor": -990,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/lossless_byte_squeeze_worker_20260503/anchor_p3_qzs3_block48_nonparity_probe/archive.zip",
+      "archive_sha256": "12617efc12be1e4250431ea273804ded51f2d7212c5221b01f7cfc4d1a761416",
+      "candidate_id": "anchor_p3_qzs3_block48_nonparity_probe",
+      "changed_decoded_members_vs_anchor": [
+        "renderer.bin"
+      ],
+      "changed_payload_members": [
+        "P3_header",
+        "masks.mkv.br",
+        "renderer.bin.br",
+        "seg_tile_actions.br"
+      ],
+      "dispatch_status": "not_raw_parity_exact_cuda_required_before_any_score_claim",
+      "formula_only_score_if_components_unchanged": 0.3145065499192688,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/lossless_byte_squeeze_worker_20260503/anchor_p3_qzs3_block48_nonparity_probe/manifest.json",
+      "next_gate": "claim-ready only after operator approval: first run any desired local CPU render sanity/parity screens, then claim lane and exact CUDA auth eval",
+      "payload_bytes": 275391,
+      "payload_identical_to_anchor": false,
+      "runtime_parse_status": "passed",
+      "score_claim": false,
+      "semantic_contract": "contest_parseable_qzs3_reblock_probe_not_raw_parity"
+    },
+    {
+      "archive_bytes": 276473,
+      "archive_delta_bytes_vs_anchor": -8,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/lossless_byte_squeeze_worker_20260503/anchor_raw_fixedslice_short_streams_parser_rejected/archive.zip",
+      "archive_sha256": "7594f59fb70ec7100b4bb43b9b8e0f86165477d89ab06eda49695ca65fe5e399",
+      "candidate_id": "anchor_raw_fixedslice_short_streams_parser_rejected",
+      "changed_decoded_members_vs_anchor": null,
+      "changed_payload_members": [
+        "masks.mkv.br",
+        "seg_tile_actions.br"
+      ],
+      "dispatch_status": "not_contest_faithful_parser_rejected_do_not_dispatch",
+      "formula_only_score_if_components_unchanged": 0.3151604234112348,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/lossless_byte_squeeze_worker_20260503/anchor_raw_fixedslice_short_streams_parser_rejected/manifest.json",
+      "next_gate": "requires reviewed runtime support and parser tests before any exact eval; not recommended for this 8-byte ceiling",
+      "payload_bytes": 276373,
+      "payload_identical_to_anchor": false,
+      "runtime_parse_status": "failed_parser_rejected",
+      "score_claim": false,
+      "semantic_contract": "invalid_headerless_short_fixedslice_probe"
+    },
+    {
+      "archive_bytes": 276481,
+      "archive_delta_bytes_vs_anchor": 0,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/lossless_byte_squeeze_worker_20260503/anchor_stored_zip_rewrite_payload_identical/archive.zip",
+      "archive_sha256": "2227c1cdc64defc88e88a31c2410a1ba88edac204274624d2aeae6ca9b4b1b3f",
+      "candidate_id": "anchor_stored_zip_rewrite_payload_identical",
+      "changed_decoded_members_vs_anchor": [],
+      "changed_payload_members": [],
+      "dispatch_status": "do_not_dispatch_no_byte_win_payload_identical",
+      "formula_only_score_if_components_unchanged": 0.31516575028285976,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/lossless_byte_squeeze_worker_20260503/anchor_stored_zip_rewrite_payload_identical/manifest.json",
+      "next_gate": "none; no-op byte screen control",
+      "payload_bytes": 276381,
+      "payload_identical_to_anchor": true,
+      "runtime_parse_status": "passed",
+      "score_claim": false,
+      "semantic_contract": "zip_metadata_rewrite_only_payload_identical"
+    },
+    {
+      "archive_bytes": 276483,
+      "archive_delta_bytes_vs_anchor": 2,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/lossless_byte_squeeze_worker_20260503/anchor_p3_best_lossless_streams_negative/archive.zip",
+      "archive_sha256": "33d36fcc79dc3fbd567286f099b37e293bdab951f224114f64fdcdaa5b01e5db",
+      "candidate_id": "anchor_p3_best_lossless_streams_negative",
+      "changed_decoded_members_vs_anchor": [],
+      "changed_payload_members": [
+        "P3_header",
+        "masks.mkv.br",
+        "seg_tile_actions.br"
+      ],
+      "dispatch_status": "do_not_dispatch_byte_regression",
+      "formula_only_score_if_components_unchanged": 0.315167082000766,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/lossless_byte_squeeze_worker_20260503/anchor_p3_best_lossless_streams_negative/manifest.json",
+      "next_gate": "none; P3 header dominates the 8 bytes of stream savings",
+      "payload_bytes": 276383,
+      "payload_identical_to_anchor": false,
+      "runtime_parse_status": "passed",
+      "score_claim": false,
+      "semantic_contract": "self_describing_p3_decoded_stream_parity_vs_anchor"
+    },
+    {
+      "archive_bytes": 276486,
+      "archive_delta_bytes_vs_anchor": 5,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/lossless_byte_squeeze_worker_20260503/anchor_outer_brotli_fixed_payload_negative/archive.zip",
+      "archive_sha256": "11d3896d69967965587a7357954d8138db6dbd557cc83aea2a08fe6ed1e3e706",
+      "candidate_id": "anchor_outer_brotli_fixed_payload_negative",
+      "changed_decoded_members_vs_anchor": [],
+      "changed_payload_members": [
+        "p_outer_brotli_wrapper"
+      ],
+      "dispatch_status": "do_not_dispatch_byte_regression",
+      "formula_only_score_if_components_unchanged": 0.31516907957762536,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/lossless_byte_squeeze_worker_20260503/anchor_outer_brotli_fixed_payload_negative/manifest.json",
+      "next_gate": "none; outer Brotli wrapper is larger than raw fixed slices",
+      "payload_bytes": 276386,
+      "payload_identical_to_anchor": false,
+      "runtime_parse_status": "passed",
+      "score_claim": false,
+      "semantic_contract": "outer_brotli_wrapper_decodes_to_anchor_fixed_slices"
+    },
+    {
+      "archive_bytes": 276566,
+      "archive_delta_bytes_vs_anchor": 85,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/lossless_byte_squeeze_worker_20260503/anchor_zip_deflate_payload_identical_negative/archive.zip",
+      "archive_sha256": "c8e57bc8187ee506d4ac3b3c71d7ad728d2d1dd1871e4e370a8e3dfd46e6038e",
+      "candidate_id": "anchor_zip_deflate_payload_identical_negative",
+      "changed_decoded_members_vs_anchor": [],
+      "changed_payload_members": [],
+      "dispatch_status": "do_not_dispatch_byte_regression",
+      "formula_only_score_if_components_unchanged": 0.31522234829387513,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/lossless_byte_squeeze_worker_20260503/anchor_zip_deflate_payload_identical_negative/manifest.json",
+      "next_gate": "none; ZIP deflate is larger on this payload",
+      "payload_bytes": 276381,
+      "payload_identical_to_anchor": true,
+      "runtime_parse_status": "passed",
+      "score_claim": false,
+      "semantic_contract": "zip_deflate_payload_identical_negative_probe"
+    }
+  ],
+  "canonical_score_source_required": "No score claim: exact CUDA auth eval on the exact archive bytes is required via archive.zip -> inflate.sh -> upstream/evaluate.py, preferably experiments/contest_auth_eval.py --device cuda, after a dispatch claim.",
+  "evidence_grade": "empirical_local_byte_screen",
+  "include_qzs3_reblock": true,
+  "promotion_eligible": false,
+  "qzs3_reblock_screen": {
+    "included": true,
+    "qzs3_reblock_summaries": [
+      {
+        "block_size": 48,
+        "renderer_brotli_bytes": 54764,
+        "renderer_brotli_delta_vs_anchor": -992,
+        "renderer_brotli_params": {
+          "lgblock": 0,
+          "lgwin": 10,
+          "mode": 2,
+          "quality": 11
+        },
+        "renderer_brotli_sha256": "32ff68e277c844a9a4e3c128d8480746eb99ddfb424f449c0a81d792631e63ba",
+        "renderer_raw_bytes": 58128,
+        "renderer_raw_delta_vs_anchor": -1160,
+        "renderer_raw_identical_to_anchor": false,
+        "renderer_raw_sha256": "6cef37f3a32ae2513f5d39196743ab74014939afc6361fa65629f38b7562a591"
+      },
+      {
+        "block_size": 64,
+        "renderer_brotli_bytes": 54105,
+        "renderer_brotli_delta_vs_anchor": -1651,
+        "renderer_brotli_params": {
+          "lgblock": 0,
+          "lgwin": 16,
+          "mode": 0,
+          "quality": 11
+        },
+        "renderer_brotli_sha256": "d0e8045db220f80282e500c5a41a2360691f4553aa00ffa875d23111211d8c4e",
+        "renderer_raw_bytes": 56962,
+        "renderer_raw_delta_vs_anchor": -2326,
+        "renderer_raw_identical_to_anchor": false,
+        "renderer_raw_sha256": "932a65cb0412d5727fb1170506535733f942813125af882295c8063e9e34e49d"
+      },
+      {
+        "block_size": 96,
+        "renderer_brotli_bytes": 53431,
+        "renderer_brotli_delta_vs_anchor": -2325,
+        "renderer_brotli_params": {
+          "lgblock": 0,
+          "lgwin": 16,
+          "mode": 0,
+          "quality": 11
+        },
+        "renderer_brotli_sha256": "0c6d15d02e8cf5b790e9d6b325d4ebf94b4a49f255a704b0c08fdf5ce851f0ab",
+        "renderer_raw_bytes": 57052,
+        "renderer_raw_delta_vs_anchor": -2236,
+        "renderer_raw_identical_to_anchor": false,
+        "renderer_raw_sha256": "5853972fb76f81722ba62e96311bf25e209a8a899397534f4964c04fa4c058a9"
+      },
+      {
+        "block_size": 128,
+        "renderer_brotli_bytes": 52968,
+        "renderer_brotli_delta_vs_anchor": -2788,
+        "renderer_brotli_params": {
+          "lgblock": 0,
+          "lgwin": 16,
+          "mode": 0,
+          "quality": 11
+        },
+        "renderer_brotli_sha256": "39ba87ae8c8bb91cbeaa804e4177569f068fb8beb12e0fa18576131eda1bdcae",
+        "renderer_raw_bytes": 56300,
+        "renderer_raw_delta_vs_anchor": -2988,
+        "renderer_raw_identical_to_anchor": false,
+        "renderer_raw_sha256": "464df34846a5cb17549c80e8fa700bcf05adaa56a649dc77610cd352c4086ae0"
+      }
+    ]
+  },
+  "schema": "lossless_byte_squeeze_worker_20260503_v1",
+  "score_claim": false,
+  "source_decoded_members": {
+    "masks.mkv": {
+      "bytes": 223385,
+      "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+    },
+    "optimized_poses.qp1": {
+      "bytes": 1140,
+      "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+    },
+    "renderer.bin": {
+      "bytes": 59288,
+      "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+    },
+    "seg_tile_actions.bin": {
+      "bytes": 432,
+      "sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a"
+    }
+  },
+  "stream_screen": {
+    "actions_wire": {
+      "best_bytes": 254,
+      "best_delta": -1,
+      "best_params": {
+        "lgblock": 0,
+        "lgwin": 16,
+        "mode": 0,
+        "quality": 4
+      },
+      "best_sha256": "df69b463c6ffa88c47894a50f496ad44ae5eb15ab2633f3ddfc285169a491d6e",
+      "source_bytes": 255,
+      "source_sha256": "e2f8a113ee9e4d009448fec2497602ef67cabb8a13ef8d3fa9e11d69ff8ceed6",
+      "wire_raw_bytes": 281,
+      "wire_raw_sha256": "b0a4d55d19a534f223512c07920c46f1a52dc2409951a7f7c5ea9ce0e70acddc"
+    },
+    "masks": {
+      "best_bytes": 219465,
+      "best_delta": -7,
+      "best_params": {
+        "lgblock": 17,
+        "lgwin": 19,
+        "mode": 0,
+        "quality": 11
+      },
+      "best_sha256": "1ddf03dad8466797397ead26a0d481766e22e26cbc936251c1e3ed5d2f6eda99",
+      "source_bytes": 219472,
+      "source_sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+    },
+    "optimized_poses_qp1": {
+      "best_bytes": 898,
+      "best_delta": 0,
+      "best_params": "source",
+      "best_sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082",
+      "source_bytes": 898,
+      "source_sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082"
+    },
+    "renderer": {
+      "best_bytes": 55756,
+      "best_delta": 0,
+      "best_params": "source",
+      "best_sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf",
+      "source_bytes": 55756,
+      "source_sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+    }
+  },
+  "tool": "experiments/build_lossless_byte_squeeze_worker_20260503.py",
+  "zip_wrapper_screen": {
+    "best_raw_deflate_estimate": {
+      "archive_bytes_estimate": 276511,
+      "compressed_bytes": 276411,
+      "level": 0,
+      "sha256": "73439d3d0c81fa7c201f2cabf22978280dfbf44ec448c27620d3714529cb8cd7",
+      "strategy": "DEFAULT"
+    },
+    "source_archive_bytes": 276481
+  }
+}

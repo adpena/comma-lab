@@ -1,0 +1,290 @@
+{
+  "all_archive_manifest_sha_size_match": true,
+  "all_payload_parse_ok": true,
+  "all_single_member_p": true,
+  "archives_checked": 9,
+  "frontier_anchor": {
+    "archive_bytes": 276386,
+    "archive_path": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/archive.zip",
+    "archive_sha256": "9feef7ffaa254f9e5408996a122682757a054144a3000539553786c5292b7d0a",
+    "label": "C088_PR75_top40_p3_T4_A++",
+    "score": 0.3155226919767294
+  },
+  "generated_at_utc": "2026-05-03T06:30:32Z",
+  "json_validated": true,
+  "schema_version": 1,
+  "scope": "pr75_qp1_nextwave_sub314_20260503_worker_local_no_remote_dispatch",
+  "validations": [
+    {
+      "archive": "experiments/results/pr75_qp1_nextwave_sub314_20260503_worker/action_compiler_candidates/c067_pr75_actions_positive_poseharm_ampminus1_p6/archive.zip",
+      "archive_sha256": "244c366a7d07ff185091dbbcf7ecb1e0308d11d9e7467bc2ae2eb2f8b6bd0a6a",
+      "archive_stat_bytes": 276389,
+      "candidate_id": "c067_pr75_actions_positive_poseharm_ampminus1_p6",
+      "decoded_member_bytes": {
+        "masks.mkv": 223385,
+        "optimized_poses.qp1": 1140,
+        "renderer.bin": 59288,
+        "seg_tile_actions.bin": 240
+      },
+      "logical_members": [
+        "renderer.bin",
+        "masks.mkv",
+        "seg_tile_actions.bin",
+        "optimized_poses.qp1"
+      ],
+      "manifest_bytes_match": true,
+      "manifest_sha_match": true,
+      "parse_ok": true,
+      "payload_compressed_before_parse": false,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+      "single_member_p": true,
+      "zip_member_p_bytes": 276289,
+      "zip_member_p_sha256": "c9b795654a4d6921b1ee216917c34e29038459dec82aa274b1055d5bf45f80ac",
+      "zip_members": [
+        "p"
+      ],
+      "zip_method": "stored"
+    },
+    {
+      "archive": "experiments/results/pr75_qp1_nextwave_sub314_20260503_worker/action_compiler_candidates/c067_pr75_actions_pose_safe_positive_ampminus1_p6/archive.zip",
+      "archive_sha256": "6e6ec4609c6da581b4113c5c06e67970542a9d8e22c4866959fe618aaff2c796",
+      "archive_stat_bytes": 276317,
+      "candidate_id": "c067_pr75_actions_pose_safe_positive_ampminus1_p6",
+      "decoded_member_bytes": {
+        "masks.mkv": 223385,
+        "optimized_poses.qp1": 1140,
+        "renderer.bin": 59288,
+        "seg_tile_actions.bin": 116
+      },
+      "logical_members": [
+        "renderer.bin",
+        "masks.mkv",
+        "seg_tile_actions.bin",
+        "optimized_poses.qp1"
+      ],
+      "manifest_bytes_match": true,
+      "manifest_sha_match": true,
+      "parse_ok": true,
+      "payload_compressed_before_parse": false,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+      "single_member_p": true,
+      "zip_member_p_bytes": 276217,
+      "zip_member_p_sha256": "636be6c4fca0eccf77dbec966c7d3524da04fea05e3c23b286c34b9d1715c1a9",
+      "zip_members": [
+        "p"
+      ],
+      "zip_method": "stored"
+    },
+    {
+      "archive": "experiments/results/pr75_qp1_nextwave_sub314_20260503_worker/action_compiler_candidates/c067_pr75_actions_lag_eval_top40_signedposemix1_p6/archive.zip",
+      "archive_sha256": "0486e9f2adb8f883160599ed3bccd371b2c1ffdf23585edbcd4308435451e9f4",
+      "archive_stat_bytes": 276416,
+      "candidate_id": "c067_pr75_actions_lag_eval_top40_signedposemix1_p6",
+      "decoded_member_bytes": {
+        "masks.mkv": 223385,
+        "optimized_poses.qp1": 1140,
+        "renderer.bin": 59288,
+        "seg_tile_actions.bin": 308
+      },
+      "logical_members": [
+        "renderer.bin",
+        "masks.mkv",
+        "seg_tile_actions.bin",
+        "optimized_poses.qp1"
+      ],
+      "manifest_bytes_match": true,
+      "manifest_sha_match": true,
+      "parse_ok": true,
+      "payload_compressed_before_parse": false,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+      "single_member_p": true,
+      "zip_member_p_bytes": 276316,
+      "zip_member_p_sha256": "82c249bd4cca45c8ffbc49effa9de1a50c48c95fcd79b56e846b8ec0af59d100",
+      "zip_members": [
+        "p"
+      ],
+      "zip_method": "stored"
+    },
+    {
+      "archive": "experiments/results/pr75_qp1_nextwave_sub314_20260503_worker/action_compiler_candidates/c067_pr75_actions_top67_ampfit_p6/archive.zip",
+      "archive_sha256": "ef790959626ceb2736ece906938e671708fd5357fcd4db8944018e301789a97e",
+      "archive_stat_bytes": 276421,
+      "candidate_id": "c067_pr75_actions_top67_ampfit_p6",
+      "decoded_member_bytes": {
+        "masks.mkv": 223385,
+        "optimized_poses.qp1": 1140,
+        "renderer.bin": 59288,
+        "seg_tile_actions.bin": 268
+      },
+      "logical_members": [
+        "renderer.bin",
+        "masks.mkv",
+        "seg_tile_actions.bin",
+        "optimized_poses.qp1"
+      ],
+      "manifest_bytes_match": true,
+      "manifest_sha_match": true,
+      "parse_ok": true,
+      "payload_compressed_before_parse": false,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+      "single_member_p": true,
+      "zip_member_p_bytes": 276321,
+      "zip_member_p_sha256": "ff16e386063324df627520636a92b1984ce65b899188babfe4b88cf2099db53e",
+      "zip_members": [
+        "p"
+      ],
+      "zip_method": "stored"
+    },
+    {
+      "archive": "experiments/results/pr75_qp1_nextwave_sub314_20260503_worker/action_compiler_candidates/c067_pr75_actions_all_ampminus1_p6/archive.zip",
+      "archive_sha256": "09a4896554447b94e430a7b07814cb017a999e7d5267c9021455f95127be51a7",
+      "archive_stat_bytes": 276424,
+      "candidate_id": "c067_pr75_actions_all_ampminus1_p6",
+      "decoded_member_bytes": {
+        "masks.mkv": 223385,
+        "optimized_poses.qp1": 1140,
+        "renderer.bin": 59288,
+        "seg_tile_actions.bin": 268
+      },
+      "logical_members": [
+        "renderer.bin",
+        "masks.mkv",
+        "seg_tile_actions.bin",
+        "optimized_poses.qp1"
+      ],
+      "manifest_bytes_match": true,
+      "manifest_sha_match": true,
+      "parse_ok": true,
+      "payload_compressed_before_parse": false,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+      "single_member_p": true,
+      "zip_member_p_bytes": 276324,
+      "zip_member_p_sha256": "ce380c08dc4ab9780db695d012f73dd968aad01d098930c18dc6f6cb5c854839",
+      "zip_members": [
+        "p"
+      ],
+      "zip_method": "stored"
+    },
+    {
+      "archive": "experiments/results/pr75_qp1_nextwave_sub314_20260503_worker/action_compiler_candidates/c067_pr75_actions_poseharm_ampminus1_p6/archive.zip",
+      "archive_sha256": "002ef3335a8d66b10240024b670d0a143e278d38ec939c20b689d33848f2fe9c",
+      "archive_stat_bytes": 276425,
+      "candidate_id": "c067_pr75_actions_poseharm_ampminus1_p6",
+      "decoded_member_bytes": {
+        "masks.mkv": 223385,
+        "optimized_poses.qp1": 1140,
+        "renderer.bin": 59288,
+        "seg_tile_actions.bin": 268
+      },
+      "logical_members": [
+        "renderer.bin",
+        "masks.mkv",
+        "seg_tile_actions.bin",
+        "optimized_poses.qp1"
+      ],
+      "manifest_bytes_match": true,
+      "manifest_sha_match": true,
+      "parse_ok": true,
+      "payload_compressed_before_parse": false,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+      "single_member_p": true,
+      "zip_member_p_bytes": 276325,
+      "zip_member_p_sha256": "fc914e327aa6a9fb1c72bd06050f30436aa27c135f9eb4084ed2c14182ba9c47",
+      "zip_members": [
+        "p"
+      ],
+      "zip_method": "stored"
+    },
+    {
+      "archive": "experiments/results/pr75_qp1_nextwave_sub314_20260503_worker/action_compiler_candidates/c067_pr75_actions_positive_poseharm_ampminus1_p3/archive.zip",
+      "archive_sha256": "2ea3bc61262a3e0e225458ec165483ce8f4d61d4b12ae26d4bd0f50257a40e92",
+      "archive_stat_bytes": 276447,
+      "candidate_id": "c067_pr75_actions_positive_poseharm_ampminus1_p3",
+      "decoded_member_bytes": {
+        "masks.mkv": 223385,
+        "optimized_poses.qp1": 1140,
+        "renderer.bin": 59288,
+        "seg_tile_actions.bin": 240
+      },
+      "logical_members": [
+        "renderer.bin",
+        "masks.mkv",
+        "seg_tile_actions.bin",
+        "optimized_poses.qp1"
+      ],
+      "manifest_bytes_match": true,
+      "manifest_sha_match": true,
+      "parse_ok": true,
+      "payload_compressed_before_parse": false,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p3",
+      "single_member_p": true,
+      "zip_member_p_bytes": 276347,
+      "zip_member_p_sha256": "a2ad8f3737f992cbb7fb6e1685f3ceb3c85968d707efcd0dab04fac55201ab0a",
+      "zip_members": [
+        "p"
+      ],
+      "zip_method": "stored"
+    },
+    {
+      "archive": "experiments/results/pr75_qp1_nextwave_sub314_20260503_worker/action_compiler_candidates/c067_pr75_actions_top67_custompose125_p5/archive.zip",
+      "archive_sha256": "d5b3061cfb31fdaf954cb2b4f8ee3db3d1a7565196495fa15e99b3d0102d8c3f",
+      "archive_stat_bytes": 276706,
+      "candidate_id": "c067_pr75_actions_top67_custompose125_p5",
+      "decoded_member_bytes": {
+        "masks.mkv": 223385,
+        "optimized_poses.qp1": 1140,
+        "renderer.bin": 59288,
+        "seg_tile_action_dict.bin": 680,
+        "seg_tile_actions.bin": 268
+      },
+      "logical_members": [
+        "renderer.bin",
+        "masks.mkv",
+        "seg_tile_actions.bin",
+        "seg_tile_action_dict.bin",
+        "optimized_poses.qp1"
+      ],
+      "manifest_bytes_match": true,
+      "manifest_sha_match": true,
+      "parse_ok": true,
+      "payload_compressed_before_parse": false,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p5_packed_custom_dict",
+      "single_member_p": true,
+      "zip_member_p_bytes": 276606,
+      "zip_member_p_sha256": "2ba6ab0f26db4f771550b008bc4a4b0b27e9284d247a47ba5ec47da279c11e98",
+      "zip_members": [
+        "p"
+      ],
+      "zip_method": "stored"
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/pr75_qp1_nextwave_sub314_20260503_worker/cmg3_yf_top1base_top0064/archive.zip",
+      "archive_sha256": "97d0bbb02ef1c19f0db907054e3af94f2d25bf5a1264d2c520caa46bbaef5663",
+      "archive_stat_bytes": 129257,
+      "candidate_id": "cmg3_yf_top1base_top0064",
+      "decoded_member_bytes": {
+        "masks.cmg3": 74599,
+        "optimized_poses.bin": 7200,
+        "renderer.bin": 59288
+      },
+      "deterministic_rebuild_sha_matched": true,
+      "logical_members": [
+        "renderer.bin",
+        "masks.cmg3",
+        "optimized_poses.bin"
+      ],
+      "manifest_bytes_match": true,
+      "manifest_sha_match": true,
+      "parse_ok": true,
+      "payload_compressed_before_parse": true,
+      "payload_format": "renderer_payload_v1",
+      "single_member_p": true,
+      "zip_member_p_bytes": 129157,
+      "zip_member_p_sha256": "965a1078e9c40ba7ab861c7d44196756a3e876f0e7f2ba8836faf1e076734b8f",
+      "zip_members": [
+        "p"
+      ],
+      "zip_method": "stored"
+    }
+  ]
+}

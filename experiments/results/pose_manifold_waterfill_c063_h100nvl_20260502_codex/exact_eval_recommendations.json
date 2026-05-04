@@ -1,0 +1,60 @@
+{
+  "dispatch_recommendations": [
+    {
+      "archive": {
+        "path": "/Users/adpena/Projects/pact/experiments/results/vast_harvest/archive_eval_ls_c059_weighted_pairs_top32_h100_20260502/archive.zip",
+        "sha256": "877fc5ac13e9fbd5c4158a9c7fa9dec3354057522b086004a4a28c6822456fe8",
+        "size_bytes": 276423
+      },
+      "candidate_id": "ls_c059_weighted_pairs_top32_h100",
+      "candidate_kind": "already_built_pose_manifold_archive",
+      "conflict_guard": "Before dispatch, claim a lane with tools/claim_lane_dispatch.py and confirm no active Lightning T4 promotion already covers this archive SHA.",
+      "diagnostic_delta_vs_frontier": {
+        "archive_bytes_delta_vs_frontier": 200,
+        "avg_posenet_delta_vs_frontier": 2.0000000000098064e-08,
+        "avg_segnet_delta_vs_frontier": 0.0,
+        "formula_score_delta_vs_frontier": 0.00013459903736734447,
+        "pose_score_term_delta_vs_frontier": 1.427246742860544e-06,
+        "rate_score_term_delta_vs_frontier": 0.0001331717906244423,
+        "score_delta_vs_frontier": 0.00013467724674287584,
+        "seg_score_term_delta_vs_frontier": 0.0
+      },
+      "diagnostic_eval": {
+        "path": "/Users/adpena/Projects/pact/experiments/results/vast_harvest/archive_eval_ls_c059_weighted_pairs_top32_h100_20260502/contest_auth_eval.json",
+        "sha256": "0611ccbc17c7796ff69abf776b0fd7530341f0f4460e1a959a47ce2a42e01a49",
+        "size_bytes": 3283
+      },
+      "diagnostic_hardware": {
+        "device": "cuda",
+        "gpu_model": "NVIDIA H100 NVL",
+        "gpu_t4_match": false
+      },
+      "dispatch_priority": "normal",
+      "exact_eval_command": [
+        ".venv/bin/python",
+        "-u",
+        "experiments/contest_auth_eval.py",
+        "--archive",
+        "/Users/adpena/Projects/pact/experiments/results/vast_harvest/archive_eval_ls_c059_weighted_pairs_top32_h100_20260502/archive.zip",
+        "--inflate-sh",
+        "submissions/robust_current/inflate.sh",
+        "--upstream-dir",
+        "upstream",
+        "--device",
+        "cuda",
+        "--keep-work-dir",
+        "--work-dir",
+        "experiments/results/pose_manifold_waterfill_c063_h100nvl_20260502_codex/ls_c059_weighted_pairs_top32_h100_t4_eval_work"
+      ],
+      "promotion_eligible": false,
+      "requires_t4_confirmation": true,
+      "score_claim": false,
+      "status": "ready_for_t4_confirmation"
+    }
+  ],
+  "promotion_eligible": false,
+  "required_promotion_eval": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "schema_version": 1,
+  "score_claim": false,
+  "tool": "experiments/plan_pose_manifold_waterfill_candidates.py"
+}

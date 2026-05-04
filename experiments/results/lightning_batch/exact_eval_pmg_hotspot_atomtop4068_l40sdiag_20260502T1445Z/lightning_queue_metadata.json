@@ -1,0 +1,40 @@
+{
+  "adjudication": {
+    "allow_component_gate_forensic_success": true,
+    "allow_sane_score_forensic_success": true,
+    "baseline_archive_size_bytes": 276214,
+    "baseline_posenet_dist": 0.00049637,
+    "baseline_score": 0.31561703078448233,
+    "baseline_segnet_dist": 0.00061244,
+    "component_reference_label": "C067_PMG_ATOMTOP4068",
+    "delta_key": "score_delta_vs_c067_t4",
+    "max_posenet_dist": 1.5,
+    "max_posenet_relative": 4000.0,
+    "max_sane_score": 50.0,
+    "max_segnet_dist": 0.05,
+    "max_segnet_relative": 100.0,
+    "predicted_band_high": 50.0,
+    "predicted_band_low": 0.2,
+    "provenance_name": "adjudication_provenance.json",
+    "regression_threshold": 0.2,
+    "required_device": "cuda",
+    "required_samples": 600,
+    "result_copy_name": "contest_auth_eval.adjudicated.json"
+  },
+  "artifact_recorded_at_utc": "2026-05-02T14:53:30Z",
+  "expected_archive_sha256": "2567dc04185cf20775f1f6c088395aa8df9e4484daa8b25001e940d62a5d6497",
+  "expected_archive_size_bytes": 195762,
+  "job_name": "exact_eval_pmg_hotspot_atomtop4068_l40sdiag_20260502T1445Z",
+  "queue_metadata": {
+    "baseline": "C067",
+    "candidate": "pmg_hotspot_atomtop4068",
+    "candidate_archive_bytes": "195762",
+    "candidate_archive_sha256": "2567dc04185cf20775f1f6c088395aa8df9e4484daa8b25001e940d62a5d6497",
+    "candidate_manifest": "experiments/results/pmg_hotspot_candidate_c067_atomtop4068_20260502/build_manifest.json",
+    "evidence_grade_before_eval": "empirical_byte_atom_ledger"
+  },
+  "role": "exact_cuda_eval",
+  "schema_version": 1,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

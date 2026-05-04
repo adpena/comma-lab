@@ -1,0 +1,139 @@
+{
+  "agreement": {
+    "pixel_disagreement_after": 0.005473548041,
+    "pixel_disagreement_before": 0.005475446913,
+    "residual_pixels_after": 645686,
+    "residual_pixels_before": 645910
+  },
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "evidence_grade": "empirical",
+  "mask_tensor_shas": {
+    "cmg2_candidate_sha256": "52fd799b8fd10ceea86ce9a0fce8f739fcbab296a02de4f9bfd2c9a23d8e8964",
+    "repaired_candidate_sha256": "1adec83cc9fb77c250fd1121cfe2807a7fe99d840eb704b15551d1ece02159b1",
+    "target_frontier_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45"
+  },
+  "output_archive": {
+    "bytes": 194996,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c067_cmg2_foveated_repair_candidates_20260502T1005Z/top002_foveated_hardpair_atoms/archive.zip",
+    "sha256": "4ce8678dbaad4147bac24996813777f2439b2d3b19e68b0a100756a621a34dd0"
+  },
+  "packed_payload": {
+    "brotli_quality": 11,
+    "evidence_grade": "empirical",
+    "formula_only_rate_delta": -0.0035969700647659696,
+    "header": {
+      "members": [
+        {
+          "bytes": 59288,
+          "codec": "raw",
+          "name": "renderer.bin",
+          "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+        },
+        {
+          "bytes": 132610,
+          "codec": "raw",
+          "name": "masks.cmg2",
+          "sha256": "7305f3148bb441654014a13b7e164d2e48e3679ac85535d09b68ad77209136f4"
+        },
+        {
+          "bytes": 1140,
+          "codec": "pose_qp1_v1",
+          "decoded_bytes": 7200,
+          "decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f",
+          "lossy": true,
+          "name": "optimized_poses.bin",
+          "pose_error_stats": {
+            "max_abs_by_dim": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "pose_dim": 6,
+            "rmse_by_dim": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "rows": 600
+          },
+          "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583",
+          "source_decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+        },
+        {
+          "bytes": 832,
+          "codec": "raw",
+          "name": "alpha4_residual_repair.amr1.xz",
+          "sha256": "a8440c7b8341792343858c8a2158ed0392dcceb0261d35378c4ce02d507f905f"
+        }
+      ],
+      "schema": "renderer_payload_v1",
+      "source_archive_sha256": "3d45549ca1d18dfdef9d44bcf7b9326ac89e667a97c77f65fc2ce3e7e1a07d4d"
+    },
+    "output_archive": "/Users/adpena/Projects/pact/experiments/results/c067_cmg2_foveated_repair_candidates_20260502T1005Z/top002_foveated_hardpair_atoms/archive.zip",
+    "output_archive_bytes": 194996,
+    "output_archive_sha256": "4ce8678dbaad4147bac24996813777f2439b2d3b19e68b0a100756a621a34dd0",
+    "payload_compressed_bytes": 194896,
+    "payload_format": "rpk1_json",
+    "payload_member": "p",
+    "payload_raw_bytes": 194891,
+    "pose_codec": "pose_qp1_v1",
+    "pose_residual_topk": 0,
+    "savings_bytes": 5402,
+    "score_claim": false,
+    "source_archive": "/Users/adpena/Projects/pact/experiments/results/c067_cmg2_foveated_repair_candidates_20260502T1005Z/top002_foveated_hardpair_atoms/cmg2_repair_source_members.zip",
+    "source_archive_bytes": 200398,
+    "source_archive_sha256": "3d45549ca1d18dfdef9d44bcf7b9326ac89e667a97c77f65fc2ce3e7e1a07d4d"
+  },
+  "policy_name": "top002_foveated_hardpair_atoms",
+  "promotion_eligible": false,
+  "repair": {
+    "archive_member": "alpha4_residual_repair.amr1.xz",
+    "compressed_bytes": 832,
+    "compressed_sha256": "a8440c7b8341792343858c8a2158ed0392dcceb0261d35378c4ce02d507f905f",
+    "compressor": "lzma_xz",
+    "raw_amr1_bytes": 1679,
+    "raw_amr1_sha256": "859695ee16d624601e2d7e831e6a916f04c126f735345b75621fd28e43995191",
+    "selection": {
+      "fail_on_partial_repair": false,
+      "partial_repair": true,
+      "policy_kind": "ranked_pair_class_fovea_atoms",
+      "policy_name": "top002_foveated_hardpair_atoms",
+      "residual_pixel_coverage": 0.000346797541,
+      "score_claim": false,
+      "selected_atom_count": 2,
+      "selected_atoms": [
+        {
+          "atom_id": "pair164_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 164
+        },
+        {
+          "atom_id": "pair164_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 164
+        }
+      ],
+      "selected_repair_pixels": 224,
+      "selected_repair_runs": 61,
+      "strategy": "cmg2_foveated_hard_pair_residual_repair_v1",
+      "total_residual_pixels": 645910,
+      "total_residual_runs": 218211
+    }
+  },
+  "schema": "cmg2_foveated_repair_candidate_builder_v1.candidate",
+  "score_claim": false,
+  "score_claim_warning": "No score claim is made by this builder. Atom rankings are byte/prior planning signals only; every emitted archive requires exact CUDA auth eval before ranking, promotion, retirement, or paper claims.",
+  "source_archive": {
+    "bytes": 200398,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c067_cmg2_foveated_repair_candidates_20260502T1005Z/top002_foveated_hardpair_atoms/cmg2_repair_source_members.zip",
+    "sha256": "3d45549ca1d18dfdef9d44bcf7b9326ac89e667a97c77f65fc2ce3e7e1a07d4d"
+  }
+}

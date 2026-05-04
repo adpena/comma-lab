@@ -1,0 +1,22 @@
+{
+  "members": [
+    {
+      "bytes": 91582,
+      "name": "renderer.bin",
+      "sha256": "d97849d15859ae013ec983de8c1e2f638e63f3876fef658a8b7781bcfaa16a5f"
+    },
+    {
+      "bytes": 223385,
+      "name": "masks.mkv",
+      "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+    },
+    {
+      "bytes": 7200,
+      "name": "optimized_poses.bin",
+      "sha256": "feb06921cb839e94780c4af8a1576babfcbc5e646e17272b56dd863d98f0129a"
+    }
+  ],
+  "payload_bytes": 316179,
+  "schema": "renderer_payload_pr64_len_table_v1",
+  "source_archive_sha256": null
+}

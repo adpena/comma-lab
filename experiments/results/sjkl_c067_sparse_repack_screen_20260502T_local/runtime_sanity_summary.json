@@ -1,0 +1,36 @@
+{
+  "checks": [
+    {
+      "alpha_bits": 3,
+      "archive_bytes": 277455,
+      "archive_sha256": "f4146e137d9e2e12d1f7c8d26609f24e0e2bd0d19e5c0534f90c761c35658825",
+      "format": "sparse_bitpacked_v2",
+      "k": 1,
+      "name": "k1_g08x06_p32_a3_gain003125",
+      "rows": 32,
+      "sjkl_bytes": 467
+    },
+    {
+      "alpha_bits": 3,
+      "archive_bytes": 277918,
+      "archive_sha256": "a034cd1f37d8a8d38b95cd04ca68d7df7ae99dde622afcf7513b0585be918544",
+      "format": "sparse_bitpacked_v2",
+      "k": 1,
+      "name": "k1_g12x09_p48_a3_gain00625",
+      "rows": 48,
+      "sjkl_bytes": 859
+    },
+    {
+      "alpha_bits": 4,
+      "archive_bytes": 279553,
+      "archive_sha256": "00210f674fe34d2dd2243e81bf7ac02c374de2cd9c0c70e0810577bf4c8f4109",
+      "format": "sparse_bitpacked_v2",
+      "k": 2,
+      "name": "k2_g16x12_p64_a4_gain0125",
+      "rows": 64,
+      "sjkl_bytes": 2565
+    }
+  ],
+  "schema": "sjkl_sparse_runtime_sanity_v1",
+  "score_claim": false
+}

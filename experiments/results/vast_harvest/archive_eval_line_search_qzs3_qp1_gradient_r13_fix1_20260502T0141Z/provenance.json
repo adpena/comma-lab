@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "started_at_utc": "2026-05-02T01:40:53Z",
+  "git_hash": "no-git",
+  "gpu_name": "NVIDIA H100 NVL",
+  "driver_version": "580.82.07",
+  "lane_script": "scripts/remote_archive_only_eval.sh",
+  "tag": "line_search_qzs3_qp1_gradient_r13_fix1_20260502T0141Z",
+  "archive_path": "experiments/results/line_search_qzs3_qp1_gradient_r13_fix1_20260502T0134Z/archive.zip",
+  "predicted_band": [0.314, 0.318],
+  "controlled_baseline": "C-056 qzs3_qp1_r8_t4 score 0.3159064496962538",
+  "no_training": true,
+  "no_build": true,
+  "strict_scorer_rule_compliant": true,
+  "design_memo": "scripts/remote_archive_only_eval.sh"
+}

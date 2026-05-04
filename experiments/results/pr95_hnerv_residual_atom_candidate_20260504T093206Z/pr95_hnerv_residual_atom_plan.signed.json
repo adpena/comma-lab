@@ -1,0 +1,387 @@
+{
+  "atoms": [
+    {
+      "component_trace": {
+        "score_combined_contribution_first_order": 0.0004423473496349662,
+        "score_pose_contribution_first_order": 0.0003372312407368928,
+        "score_seg_contribution_exact": 0.00010511610889807343
+      },
+      "delta": 1,
+      "dim_index": 15,
+      "dispatchable_after_lane_claim": true,
+      "expected_old_value": 98,
+      "kind": "latent_uint8_delta",
+      "pair_index": 263,
+      "previous_pair_value": 223,
+      "requires_exact_cuda_eval": true,
+      "sign_rule": "shrink_pair_delta_toward_previous_latent_by_one_uint8",
+      "source_delta_from_previous_pair": -125
+    },
+    {
+      "component_trace": {
+        "score_combined_contribution_first_order": 0.0004423473496349662,
+        "score_pose_contribution_first_order": 0.0003372312407368928,
+        "score_seg_contribution_exact": 0.00010511610889807343
+      },
+      "delta": 1,
+      "dim_index": 17,
+      "dispatchable_after_lane_claim": true,
+      "expected_old_value": 80,
+      "kind": "latent_uint8_delta",
+      "pair_index": 263,
+      "previous_pair_value": 189,
+      "requires_exact_cuda_eval": true,
+      "sign_rule": "shrink_pair_delta_toward_previous_latent_by_one_uint8",
+      "source_delta_from_previous_pair": -109
+    },
+    {
+      "component_trace": {
+        "score_combined_contribution_first_order": 0.00043815257795158105,
+        "score_pose_contribution_first_order": 0.0003135391339411644,
+        "score_seg_contribution_exact": 0.00012461344401041666
+      },
+      "delta": 1,
+      "dim_index": 21,
+      "dispatchable_after_lane_claim": true,
+      "expected_old_value": 43,
+      "kind": "latent_uint8_delta",
+      "pair_index": 282,
+      "previous_pair_value": 131,
+      "requires_exact_cuda_eval": true,
+      "sign_rule": "shrink_pair_delta_toward_previous_latent_by_one_uint8",
+      "source_delta_from_previous_pair": -88
+    },
+    {
+      "component_trace": {
+        "score_combined_contribution_first_order": 0.00043815257795158105,
+        "score_pose_contribution_first_order": 0.0003135391339411644,
+        "score_seg_contribution_exact": 0.00012461344401041666
+      },
+      "delta": 1,
+      "dim_index": 6,
+      "dispatchable_after_lane_claim": true,
+      "expected_old_value": 158,
+      "kind": "latent_uint8_delta",
+      "pair_index": 282,
+      "previous_pair_value": 235,
+      "requires_exact_cuda_eval": true,
+      "sign_rule": "shrink_pair_delta_toward_previous_latent_by_one_uint8",
+      "source_delta_from_previous_pair": -77
+    },
+    {
+      "component_trace": {
+        "score_combined_contribution_first_order": 0.0003915252022420044,
+        "score_pose_contribution_first_order": 0.0002897999418253377,
+        "score_seg_contribution_exact": 0.00010172526041666667
+      },
+      "delta": 1,
+      "dim_index": 7,
+      "dispatchable_after_lane_claim": true,
+      "expected_old_value": 100,
+      "kind": "latent_uint8_delta",
+      "pair_index": 156,
+      "previous_pair_value": 180,
+      "requires_exact_cuda_eval": true,
+      "sign_rule": "shrink_pair_delta_toward_previous_latent_by_one_uint8",
+      "source_delta_from_previous_pair": -80
+    },
+    {
+      "component_trace": {
+        "score_combined_contribution_first_order": 0.0003915252022420044,
+        "score_pose_contribution_first_order": 0.0002897999418253377,
+        "score_seg_contribution_exact": 0.00010172526041666667
+      },
+      "delta": 1,
+      "dim_index": 21,
+      "dispatchable_after_lane_claim": true,
+      "expected_old_value": 71,
+      "kind": "latent_uint8_delta",
+      "pair_index": 156,
+      "previous_pair_value": 131,
+      "requires_exact_cuda_eval": true,
+      "sign_rule": "shrink_pair_delta_toward_previous_latent_by_one_uint8",
+      "source_delta_from_previous_pair": -60
+    },
+    {
+      "component_trace": {
+        "score_combined_contribution_first_order": 0.00037940992339085086,
+        "score_pose_contribution_first_order": 0.0002768369460031941,
+        "score_seg_contribution_exact": 0.00010257297738765676
+      },
+      "delta": -1,
+      "dim_index": 0,
+      "dispatchable_after_lane_claim": true,
+      "expected_old_value": 208,
+      "kind": "latent_uint8_delta",
+      "pair_index": 355,
+      "previous_pair_value": 106,
+      "requires_exact_cuda_eval": true,
+      "sign_rule": "shrink_pair_delta_toward_previous_latent_by_one_uint8",
+      "source_delta_from_previous_pair": 102
+    },
+    {
+      "component_trace": {
+        "score_combined_contribution_first_order": 0.00037940992339085086,
+        "score_pose_contribution_first_order": 0.0002768369460031941,
+        "score_seg_contribution_exact": 0.00010257297738765676
+      },
+      "delta": -1,
+      "dim_index": 8,
+      "dispatchable_after_lane_claim": true,
+      "expected_old_value": 126,
+      "kind": "latent_uint8_delta",
+      "pair_index": 355,
+      "previous_pair_value": 64,
+      "requires_exact_cuda_eval": true,
+      "sign_rule": "shrink_pair_delta_toward_previous_latent_by_one_uint8",
+      "source_delta_from_previous_pair": 62
+    },
+    {
+      "component_trace": {
+        "score_combined_contribution_first_order": 0.00033774963688712576,
+        "score_pose_contribution_first_order": 0.0002606079794542741,
+        "score_seg_contribution_exact": 7.714165743285169e-05
+      },
+      "delta": -1,
+      "dim_index": 14,
+      "dispatchable_after_lane_claim": true,
+      "expected_old_value": 241,
+      "kind": "latent_uint8_delta",
+      "pair_index": 235,
+      "previous_pair_value": 156,
+      "requires_exact_cuda_eval": true,
+      "sign_rule": "shrink_pair_delta_toward_previous_latent_by_one_uint8",
+      "source_delta_from_previous_pair": 85
+    },
+    {
+      "component_trace": {
+        "score_combined_contribution_first_order": 0.00033774963688712576,
+        "score_pose_contribution_first_order": 0.0002606079794542741,
+        "score_seg_contribution_exact": 7.714165743285169e-05
+      },
+      "delta": -1,
+      "dim_index": 10,
+      "dispatchable_after_lane_claim": true,
+      "expected_old_value": 132,
+      "kind": "latent_uint8_delta",
+      "pair_index": 235,
+      "previous_pair_value": 58,
+      "requires_exact_cuda_eval": true,
+      "sign_rule": "shrink_pair_delta_toward_previous_latent_by_one_uint8",
+      "source_delta_from_previous_pair": 74
+    },
+    {
+      "component_trace": {
+        "score_combined_contribution_first_order": 0.00033701989259825896,
+        "score_pose_contribution_first_order": 0.0002412286024721389,
+        "score_seg_contribution_exact": 9.579129012612005e-05
+      },
+      "delta": 1,
+      "dim_index": 8,
+      "dispatchable_after_lane_claim": true,
+      "expected_old_value": 47,
+      "kind": "latent_uint8_delta",
+      "pair_index": 270,
+      "previous_pair_value": 137,
+      "requires_exact_cuda_eval": true,
+      "sign_rule": "shrink_pair_delta_toward_previous_latent_by_one_uint8",
+      "source_delta_from_previous_pair": -90
+    },
+    {
+      "component_trace": {
+        "score_combined_contribution_first_order": 0.00033701989259825896,
+        "score_pose_contribution_first_order": 0.0002412286024721389,
+        "score_seg_contribution_exact": 9.579129012612005e-05
+      },
+      "delta": -1,
+      "dim_index": 17,
+      "dispatchable_after_lane_claim": true,
+      "expected_old_value": 170,
+      "kind": "latent_uint8_delta",
+      "pair_index": 270,
+      "previous_pair_value": 95,
+      "requires_exact_cuda_eval": true,
+      "sign_rule": "shrink_pair_delta_toward_previous_latent_by_one_uint8",
+      "source_delta_from_previous_pair": 75
+    },
+    {
+      "component_trace": {
+        "score_combined_contribution_first_order": 0.00033171137928488957,
+        "score_pose_contribution_first_order": 0.00015453987112415939,
+        "score_seg_contribution_exact": 0.0001771715081607302
+      },
+      "delta": 1,
+      "dim_index": 11,
+      "dispatchable_after_lane_claim": true,
+      "expected_old_value": 105,
+      "kind": "latent_uint8_delta",
+      "pair_index": 522,
+      "previous_pair_value": 187,
+      "requires_exact_cuda_eval": true,
+      "sign_rule": "shrink_pair_delta_toward_previous_latent_by_one_uint8",
+      "source_delta_from_previous_pair": -82
+    },
+    {
+      "component_trace": {
+        "score_combined_contribution_first_order": 0.00033171137928488957,
+        "score_pose_contribution_first_order": 0.00015453987112415939,
+        "score_seg_contribution_exact": 0.0001771715081607302
+      },
+      "delta": -1,
+      "dim_index": 0,
+      "dispatchable_after_lane_claim": true,
+      "expected_old_value": 231,
+      "kind": "latent_uint8_delta",
+      "pair_index": 522,
+      "previous_pair_value": 150,
+      "requires_exact_cuda_eval": true,
+      "sign_rule": "shrink_pair_delta_toward_previous_latent_by_one_uint8",
+      "source_delta_from_previous_pair": 81
+    },
+    {
+      "component_trace": {
+        "score_combined_contribution_first_order": 0.0003300819207789946,
+        "score_pose_contribution_first_order": 0.00018512342468524458,
+        "score_seg_contribution_exact": 0.00014495849609375
+      },
+      "delta": 1,
+      "dim_index": 2,
+      "dispatchable_after_lane_claim": true,
+      "expected_old_value": 108,
+      "kind": "latent_uint8_delta",
+      "pair_index": 471,
+      "previous_pair_value": 191,
+      "requires_exact_cuda_eval": true,
+      "sign_rule": "shrink_pair_delta_toward_previous_latent_by_one_uint8",
+      "source_delta_from_previous_pair": -83
+    },
+    {
+      "component_trace": {
+        "score_combined_contribution_first_order": 0.0003300819207789946,
+        "score_pose_contribution_first_order": 0.00018512342468524458,
+        "score_seg_contribution_exact": 0.00014495849609375
+      },
+      "delta": -1,
+      "dim_index": 6,
+      "dispatchable_after_lane_claim": true,
+      "expected_old_value": 99,
+      "kind": "latent_uint8_delta",
+      "pair_index": 471,
+      "previous_pair_value": 17,
+      "requires_exact_cuda_eval": true,
+      "sign_rule": "shrink_pair_delta_toward_previous_latent_by_one_uint8",
+      "source_delta_from_previous_pair": 82
+    },
+    {
+      "component_trace": {
+        "score_combined_contribution_first_order": 0.0003272073355581926,
+        "score_pose_contribution_first_order": 0.00018563967824457251,
+        "score_seg_contribution_exact": 0.00014156765731362006
+      },
+      "delta": 1,
+      "dim_index": 3,
+      "dispatchable_after_lane_claim": true,
+      "expected_old_value": 115,
+      "kind": "latent_uint8_delta",
+      "pair_index": 592,
+      "previous_pair_value": 193,
+      "requires_exact_cuda_eval": true,
+      "sign_rule": "shrink_pair_delta_toward_previous_latent_by_one_uint8",
+      "source_delta_from_previous_pair": -78
+    },
+    {
+      "component_trace": {
+        "score_combined_contribution_first_order": 0.0003272073355581926,
+        "score_pose_contribution_first_order": 0.00018563967824457251,
+        "score_seg_contribution_exact": 0.00014156765731362006
+      },
+      "delta": -1,
+      "dim_index": 16,
+      "dispatchable_after_lane_claim": true,
+      "expected_old_value": 176,
+      "kind": "latent_uint8_delta",
+      "pair_index": 592,
+      "previous_pair_value": 102,
+      "requires_exact_cuda_eval": true,
+      "sign_rule": "shrink_pair_delta_toward_previous_latent_by_one_uint8",
+      "source_delta_from_previous_pair": 74
+    },
+    {
+      "component_trace": {
+        "score_combined_contribution_first_order": 0.00031937979870824197,
+        "score_pose_contribution_first_order": 0.00021595911405087193,
+        "score_seg_contribution_exact": 0.00010342068465737005
+      },
+      "delta": -1,
+      "dim_index": 0,
+      "dispatchable_after_lane_claim": true,
+      "expected_old_value": 182,
+      "kind": "latent_uint8_delta",
+      "pair_index": 343,
+      "previous_pair_value": 97,
+      "requires_exact_cuda_eval": true,
+      "sign_rule": "shrink_pair_delta_toward_previous_latent_by_one_uint8",
+      "source_delta_from_previous_pair": 85
+    },
+    {
+      "component_trace": {
+        "score_combined_contribution_first_order": 0.00031937979870824197,
+        "score_pose_contribution_first_order": 0.00021595911405087193,
+        "score_seg_contribution_exact": 0.00010342068465737005
+      },
+      "delta": -1,
+      "dim_index": 26,
+      "dispatchable_after_lane_claim": true,
+      "expected_old_value": 118,
+      "kind": "latent_uint8_delta",
+      "pair_index": 343,
+      "previous_pair_value": 43,
+      "requires_exact_cuda_eval": true,
+      "sign_rule": "shrink_pair_delta_toward_previous_latent_by_one_uint8",
+      "source_delta_from_previous_pair": 75
+    }
+  ],
+  "evidence_grade": "component_trace_signed_policy_until_exact_cuda_eval",
+  "exact_eval_ready": true,
+  "forbid_sidecars": true,
+  "notes": [
+    "Signed here means deterministic atom direction, not score evidence.",
+    "This policy is byte-closed input for local candidate building; promotion still requires exact CUDA auth eval."
+  ],
+  "policy_id": "pr95_hnerv_signed_shrink_v1_abab411514a1bc76",
+  "policy_schema": "pr95_hnerv_residual_atom_signed_policy_v1",
+  "safety": {
+    "duplicate_pair_dim_rewrites_rejected": true,
+    "no_op_atoms_rejected": true,
+    "requires_exact_cuda_eval": true,
+    "requires_lane_claim_before_remote_eval": true,
+    "sidecars_allowed": false,
+    "source_preserving_atoms_rejected": true
+  },
+  "schema_version": 1,
+  "score_claim": false,
+  "selection": {
+    "excluded_initial_anchor_pair": true,
+    "ranking_mode": "component_trace_first_order_score",
+    "selected_pairs": [
+      263,
+      282,
+      156,
+      355,
+      235,
+      270,
+      522,
+      471,
+      592,
+      343
+    ],
+    "sign_rule": "shrink_pair_delta_toward_previous_latent_by_one_uint8",
+    "signed_policy_dims_per_pair": 2,
+    "signed_policy_pairs": 10
+  },
+  "source_archive_sha256": "2b9b471358f5bba97ea809dcca544ecca26b504fde770a9002046830f469368b",
+  "source_component_trace_json": "experiments/results/lightning_batch/exact_eval_pr95_hnerv_muon_repack_component_trace_t4_20260504T0914Z/component_trace.json",
+  "source_component_trace_json_sha256": "d2bc6c7122c27d4409352bb775c45f66dc2c913915a3c9179a8363c7c0558f89",
+  "source_member_sha256": "d9fa160d366d0aed105d14458e289f88ec5b71ec4d5de318ddb2ec0d44b50bf5",
+  "tool": "build_pr95_hnerv_residual_atom_plan.py"
+}

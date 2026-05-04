@@ -1,0 +1,4604 @@
+{
+  "best_by_archive_bytes": {
+    "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_all_fp4_0.1/archive.zip",
+    "archive_bytes": 272069,
+    "archive_sha256": "623e764ae1feeb11aba31d3be8c825ecf4e74948c8a5f5bb756ac92e8f91905a",
+    "byte_only_crosses_target": true,
+    "candidate_id": "zero_fp4_all_fp4_0.1",
+    "delta_bytes_vs_source_archive": -4283,
+    "frontier_score_if_only_bytes_change": 0.31264609116520303,
+    "pose_safety": {
+      "fail_closed_reasons": [
+        "render_output_parity_unsafe"
+      ],
+      "failure_class": "renderer_transplant_pose_safety_failed",
+      "output_parity": {
+        "aggregate": {
+          "failures": [
+            "mean_abs_delta_exceeds_threshold",
+            "rms_delta_exceeds_threshold",
+            "max_abs_delta_exceeds_threshold"
+          ],
+          "max_abs_delta": 231.69529724121094,
+          "mean_abs_delta": 8.58510971069336,
+          "ok": false,
+          "rms_delta": 13.47567592192445,
+          "same_uint8_hash": false,
+          "thresholds": {
+            "max_max_abs_delta": 80.0,
+            "max_mean_abs_delta": 3.0,
+            "max_rms_delta": 8.0
+          }
+        },
+        "candidate_output_summary": {
+          "label": "candidate",
+          "max": 255.0,
+          "mean": 108.41972351074219,
+          "min": 5.8890173022518866e-06,
+          "shape": [
+            5,
+            2,
+            384,
+            512,
+            3
+          ],
+          "std": 47.751548767089844,
+          "uint8_sha256": "73abc81f8bca378fcdec1b48f4678b6f9db92ef020d2b41992c524eb9f1e4b64"
+        },
+        "failure_class": "render_output_parity_unsafe",
+        "ok": false,
+        "pair_count_available": 600,
+        "per_pair": [
+          {
+            "failures": [
+              "mean_abs_delta_exceeds_threshold",
+              "rms_delta_exceeds_threshold",
+              "max_abs_delta_exceeds_threshold"
+            ],
+            "max_abs_delta": 217.65118408203125,
+            "mean_abs_delta": 8.530783653259277,
+            "ok": false,
+            "pair_index": 0,
+            "rms_delta": 13.564018762168857,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          {
+            "failures": [
+              "mean_abs_delta_exceeds_threshold",
+              "rms_delta_exceeds_threshold",
+              "max_abs_delta_exceeds_threshold"
+            ],
+            "max_abs_delta": 231.69529724121094,
+            "mean_abs_delta": 8.58051872253418,
+            "ok": false,
+            "pair_index": 150,
+            "rms_delta": 13.392685080739971,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          {
+            "failures": [
+              "mean_abs_delta_exceeds_threshold",
+              "rms_delta_exceeds_threshold",
+              "max_abs_delta_exceeds_threshold"
+            ],
+            "max_abs_delta": 216.32835388183594,
+            "mean_abs_delta": 8.548515319824219,
+            "ok": false,
+            "pair_index": 300,
+            "rms_delta": 13.378879447965854,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          {
+            "failures": [
+              "mean_abs_delta_exceeds_threshold",
+              "rms_delta_exceeds_threshold",
+              "max_abs_delta_exceeds_threshold"
+            ],
+            "max_abs_delta": 202.979736328125,
+            "mean_abs_delta": 8.692903518676758,
+            "ok": false,
+            "pair_index": 449,
+            "rms_delta": 13.660959370157205,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          {
+            "failures": [
+              "mean_abs_delta_exceeds_threshold",
+              "rms_delta_exceeds_threshold",
+              "max_abs_delta_exceeds_threshold"
+            ],
+            "max_abs_delta": 229.4771728515625,
+            "mean_abs_delta": 8.572831153869629,
+            "ok": false,
+            "pair_index": 599,
+            "rms_delta": 13.379324240733231,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          }
+        ],
+        "sampled_pair_indices": [
+          0,
+          150,
+          300,
+          449,
+          599
+        ],
+        "source_output_summary": {
+          "label": "source",
+          "max": 255.0,
+          "mean": 109.79087829589844,
+          "min": 4.066184374096338e-06,
+          "shape": [
+            5,
+            2,
+            384,
+            512,
+            3
+          ],
+          "std": 48.80172348022461,
+          "uint8_sha256": "78b73e1ed8957004568790011d1c2c1af5a4f4caca7fd3fd15673c5105e78630"
+        }
+      },
+      "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_all_fp4_0.1/pose_safety_preflight.json",
+      "preflight_ran": true,
+      "safe_for_exact_eval_dispatch": false
+    },
+    "promotion_eligible": false,
+    "renderer_wire_format": "QZS3",
+    "score_claim": false,
+    "transform_spec": "zero-fp4-prefix:all_fp4:0.1"
+  },
+  "byte_delta_needed_to_cross_target_if_components_unchanged": -2250,
+  "candidate_count": 28,
+  "candidates": [
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_all_fp4_0.1/archive.zip",
+      "archive_bytes": 272069,
+      "archive_sha256": "623e764ae1feeb11aba31d3be8c825ecf4e74948c8a5f5bb756ac92e8f91905a",
+      "byte_only_crosses_target": true,
+      "candidate_id": "zero_fp4_all_fp4_0.1",
+      "delta_bytes_vs_source_archive": -4283,
+      "frontier_score_if_only_bytes_change": 0.31264609116520303,
+      "pose_safety": {
+        "fail_closed_reasons": [
+          "render_output_parity_unsafe"
+        ],
+        "failure_class": "renderer_transplant_pose_safety_failed",
+        "output_parity": {
+          "aggregate": {
+            "failures": [
+              "mean_abs_delta_exceeds_threshold",
+              "rms_delta_exceeds_threshold",
+              "max_abs_delta_exceeds_threshold"
+            ],
+            "max_abs_delta": 231.69529724121094,
+            "mean_abs_delta": 8.58510971069336,
+            "ok": false,
+            "rms_delta": 13.47567592192445,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          "candidate_output_summary": {
+            "label": "candidate",
+            "max": 255.0,
+            "mean": 108.41972351074219,
+            "min": 5.8890173022518866e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 47.751548767089844,
+            "uint8_sha256": "73abc81f8bca378fcdec1b48f4678b6f9db92ef020d2b41992c524eb9f1e4b64"
+          },
+          "failure_class": "render_output_parity_unsafe",
+          "ok": false,
+          "pair_count_available": 600,
+          "per_pair": [
+            {
+              "failures": [
+                "mean_abs_delta_exceeds_threshold",
+                "rms_delta_exceeds_threshold",
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 217.65118408203125,
+              "mean_abs_delta": 8.530783653259277,
+              "ok": false,
+              "pair_index": 0,
+              "rms_delta": 13.564018762168857,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "mean_abs_delta_exceeds_threshold",
+                "rms_delta_exceeds_threshold",
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 231.69529724121094,
+              "mean_abs_delta": 8.58051872253418,
+              "ok": false,
+              "pair_index": 150,
+              "rms_delta": 13.392685080739971,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "mean_abs_delta_exceeds_threshold",
+                "rms_delta_exceeds_threshold",
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 216.32835388183594,
+              "mean_abs_delta": 8.548515319824219,
+              "ok": false,
+              "pair_index": 300,
+              "rms_delta": 13.378879447965854,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "mean_abs_delta_exceeds_threshold",
+                "rms_delta_exceeds_threshold",
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 202.979736328125,
+              "mean_abs_delta": 8.692903518676758,
+              "ok": false,
+              "pair_index": 449,
+              "rms_delta": 13.660959370157205,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "mean_abs_delta_exceeds_threshold",
+                "rms_delta_exceeds_threshold",
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 229.4771728515625,
+              "mean_abs_delta": 8.572831153869629,
+              "ok": false,
+              "pair_index": 599,
+              "rms_delta": 13.379324240733231,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            }
+          ],
+          "sampled_pair_indices": [
+            0,
+            150,
+            300,
+            449,
+            599
+          ],
+          "source_output_summary": {
+            "label": "source",
+            "max": 255.0,
+            "mean": 109.79087829589844,
+            "min": 4.066184374096338e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.80172348022461,
+            "uint8_sha256": "78b73e1ed8957004568790011d1c2c1af5a4f4caca7fd3fd15673c5105e78630"
+          }
+        },
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_all_fp4_0.1/pose_safety_preflight.json",
+        "preflight_ran": true,
+        "safe_for_exact_eval_dispatch": false
+      },
+      "promotion_eligible": false,
+      "renderer_wire_format": "QZS3",
+      "score_claim": false,
+      "transform_spec": "zero-fp4-prefix:all_fp4:0.1"
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_all_fp4_0.075/archive.zip",
+      "archive_bytes": 273722,
+      "archive_sha256": "8ae527985b36f92c8d0e409844fb8a4901662ce8dfbb65497349e5e9f23942d4",
+      "byte_only_crosses_target": true,
+      "candidate_id": "zero_fp4_all_fp4_0.075",
+      "delta_bytes_vs_source_archive": -2630,
+      "frontier_score_if_only_bytes_change": 0.31374675601471397,
+      "pose_safety": {
+        "fail_closed_reasons": [
+          "render_output_parity_unsafe"
+        ],
+        "failure_class": "renderer_transplant_pose_safety_failed",
+        "output_parity": {
+          "aggregate": {
+            "failures": [
+              "mean_abs_delta_exceeds_threshold",
+              "rms_delta_exceeds_threshold",
+              "max_abs_delta_exceeds_threshold"
+            ],
+            "max_abs_delta": 197.95152282714844,
+            "mean_abs_delta": 7.168813228607178,
+            "ok": false,
+            "rms_delta": 11.267663609865963,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          "candidate_output_summary": {
+            "label": "candidate",
+            "max": 255.0,
+            "mean": 108.59294891357422,
+            "min": 7.59674776418251e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.782325744628906,
+            "uint8_sha256": "229d1241a4a0a14018ac8a14b1f8bd6543dea9c35fea614744b2712af42263af"
+          },
+          "failure_class": "render_output_parity_unsafe",
+          "ok": false,
+          "pair_count_available": 600,
+          "per_pair": [
+            {
+              "failures": [
+                "mean_abs_delta_exceeds_threshold",
+                "rms_delta_exceeds_threshold",
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 185.8295440673828,
+              "mean_abs_delta": 7.141386032104492,
+              "ok": false,
+              "pair_index": 0,
+              "rms_delta": 11.26552612430604,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "mean_abs_delta_exceeds_threshold",
+                "rms_delta_exceeds_threshold",
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 197.95152282714844,
+              "mean_abs_delta": 7.16502571105957,
+              "ok": false,
+              "pair_index": 150,
+              "rms_delta": 11.24870801500492,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "mean_abs_delta_exceeds_threshold",
+                "rms_delta_exceeds_threshold",
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 186.68560791015625,
+              "mean_abs_delta": 7.158918380737305,
+              "ok": false,
+              "pair_index": 300,
+              "rms_delta": 11.224662901440585,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "mean_abs_delta_exceeds_threshold",
+                "rms_delta_exceeds_threshold",
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 190.1017608642578,
+              "mean_abs_delta": 7.2248992919921875,
+              "ok": false,
+              "pair_index": 449,
+              "rms_delta": 11.37707567664681,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "mean_abs_delta_exceeds_threshold",
+                "rms_delta_exceeds_threshold",
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 188.6366424560547,
+              "mean_abs_delta": 7.153835773468018,
+              "ok": false,
+              "pair_index": 599,
+              "rms_delta": 11.22162083524131,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            }
+          ],
+          "sampled_pair_indices": [
+            0,
+            150,
+            300,
+            449,
+            599
+          ],
+          "source_output_summary": {
+            "label": "source",
+            "max": 255.0,
+            "mean": 109.79087829589844,
+            "min": 4.066184374096338e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.80172348022461,
+            "uint8_sha256": "78b73e1ed8957004568790011d1c2c1af5a4f4caca7fd3fd15673c5105e78630"
+          }
+        },
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_all_fp4_0.075/pose_safety_preflight.json",
+        "preflight_ran": true,
+        "safe_for_exact_eval_dispatch": false
+      },
+      "promotion_eligible": false,
+      "renderer_wire_format": "QZS3",
+      "score_claim": false,
+      "transform_spec": "zero-fp4-prefix:all_fp4:0.075"
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_shared_trunk_0.1/archive.zip",
+      "archive_bytes": 273951,
+      "archive_sha256": "9cf86ac92f3d7a97190a0abbb86b7d65277e3333b6f168ff547cd934c38c7ce9",
+      "byte_only_crosses_target": true,
+      "candidate_id": "zero_fp4_shared_trunk_0.1",
+      "delta_bytes_vs_source_archive": -2401,
+      "frontier_score_if_only_bytes_change": 0.31389923771497896,
+      "pose_safety": {
+        "fail_closed_reasons": [
+          "render_output_parity_unsafe"
+        ],
+        "failure_class": "renderer_transplant_pose_safety_failed",
+        "output_parity": {
+          "aggregate": {
+            "failures": [
+              "mean_abs_delta_exceeds_threshold",
+              "rms_delta_exceeds_threshold",
+              "max_abs_delta_exceeds_threshold"
+            ],
+            "max_abs_delta": 224.2159881591797,
+            "mean_abs_delta": 6.819228649139404,
+            "ok": false,
+            "rms_delta": 11.356843312058524,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          "candidate_output_summary": {
+            "label": "candidate",
+            "max": 255.0,
+            "mean": 109.48162078857422,
+            "min": 1.5042206541693304e-05,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.257568359375,
+            "uint8_sha256": "00b68e0cd09f6d7595b86166d0ba43a2ad21b298a43c2f037be2bd5e820d1519"
+          },
+          "failure_class": "render_output_parity_unsafe",
+          "ok": false,
+          "pair_count_available": 600,
+          "per_pair": [
+            {
+              "failures": [
+                "mean_abs_delta_exceeds_threshold",
+                "rms_delta_exceeds_threshold",
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 204.55300903320312,
+              "mean_abs_delta": 6.78336238861084,
+              "ok": false,
+              "pair_index": 0,
+              "rms_delta": 11.393064135709524,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "mean_abs_delta_exceeds_threshold",
+                "rms_delta_exceeds_threshold",
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 223.10128784179688,
+              "mean_abs_delta": 6.818772315979004,
+              "ok": false,
+              "pair_index": 150,
+              "rms_delta": 11.326586641235137,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "mean_abs_delta_exceeds_threshold",
+                "rms_delta_exceeds_threshold",
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 224.2159881591797,
+              "mean_abs_delta": 6.798396587371826,
+              "ok": false,
+              "pair_index": 300,
+              "rms_delta": 11.328507536644556,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "mean_abs_delta_exceeds_threshold",
+                "rms_delta_exceeds_threshold",
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 206.9049072265625,
+              "mean_abs_delta": 6.891327857971191,
+              "ok": false,
+              "pair_index": 449,
+              "rms_delta": 11.448414415409372,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "mean_abs_delta_exceeds_threshold",
+                "rms_delta_exceeds_threshold",
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 203.00344848632812,
+              "mean_abs_delta": 6.804285526275635,
+              "ok": false,
+              "pair_index": 599,
+              "rms_delta": 11.286927715000763,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            }
+          ],
+          "sampled_pair_indices": [
+            0,
+            150,
+            300,
+            449,
+            599
+          ],
+          "source_output_summary": {
+            "label": "source",
+            "max": 255.0,
+            "mean": 109.79087829589844,
+            "min": 4.066184374096338e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.80172348022461,
+            "uint8_sha256": "78b73e1ed8957004568790011d1c2c1af5a4f4caca7fd3fd15673c5105e78630"
+          }
+        },
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_shared_trunk_0.1/pose_safety_preflight.json",
+        "preflight_ran": true,
+        "safe_for_exact_eval_dispatch": false
+      },
+      "promotion_eligible": false,
+      "renderer_wire_format": "QZS3",
+      "score_claim": false,
+      "transform_spec": "zero-fp4-prefix:shared_trunk:0.1"
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_shared_trunk_0.075/archive.zip",
+      "archive_bytes": 274883,
+      "archive_sha256": "c6b1733ba80b73e8b6228dcf7234da695a93067b6bedd0cc47bb0bb6d8d05bcc",
+      "byte_only_crosses_target": false,
+      "candidate_id": "zero_fp4_shared_trunk_0.075",
+      "delta_bytes_vs_source_archive": -1469,
+      "frontier_score_if_only_bytes_change": 0.3145198182592888,
+      "pose_safety": {
+        "fail_closed_reasons": [
+          "render_output_parity_unsafe"
+        ],
+        "failure_class": "renderer_transplant_pose_safety_failed",
+        "output_parity": {
+          "aggregate": {
+            "failures": [
+              "mean_abs_delta_exceeds_threshold",
+              "rms_delta_exceeds_threshold",
+              "max_abs_delta_exceeds_threshold"
+            ],
+            "max_abs_delta": 213.1269989013672,
+            "mean_abs_delta": 5.580816745758057,
+            "ok": false,
+            "rms_delta": 9.410773219448581,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          "candidate_output_summary": {
+            "label": "candidate",
+            "max": 255.0,
+            "mean": 109.51127624511719,
+            "min": 1.2992518350074533e-05,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.10424041748047,
+            "uint8_sha256": "c3001a5f971605e08ba916814a7e25d3640278173a025e5f1b6c7fd8a9a92a91"
+          },
+          "failure_class": "render_output_parity_unsafe",
+          "ok": false,
+          "pair_count_available": 600,
+          "per_pair": [
+            {
+              "failures": [
+                "mean_abs_delta_exceeds_threshold",
+                "rms_delta_exceeds_threshold",
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 169.2853546142578,
+              "mean_abs_delta": 5.56912088394165,
+              "ok": false,
+              "pair_index": 0,
+              "rms_delta": 9.398539376915627,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "mean_abs_delta_exceeds_threshold",
+                "rms_delta_exceeds_threshold",
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 164.98802185058594,
+              "mean_abs_delta": 5.561811447143555,
+              "ok": false,
+              "pair_index": 150,
+              "rms_delta": 9.389257956730518,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "mean_abs_delta_exceeds_threshold",
+                "rms_delta_exceeds_threshold",
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 170.36474609375,
+              "mean_abs_delta": 5.557278633117676,
+              "ok": false,
+              "pair_index": 300,
+              "rms_delta": 9.369762534406721,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "mean_abs_delta_exceeds_threshold",
+                "rms_delta_exceeds_threshold",
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 190.7637176513672,
+              "mean_abs_delta": 5.685673236846924,
+              "ok": false,
+              "pair_index": 449,
+              "rms_delta": 9.557792751609277,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "mean_abs_delta_exceeds_threshold",
+                "rms_delta_exceeds_threshold",
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 213.1269989013672,
+              "mean_abs_delta": 5.530201435089111,
+              "ok": false,
+              "pair_index": 599,
+              "rms_delta": 9.336954458863689,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            }
+          ],
+          "sampled_pair_indices": [
+            0,
+            150,
+            300,
+            449,
+            599
+          ],
+          "source_output_summary": {
+            "label": "source",
+            "max": 255.0,
+            "mean": 109.79087829589844,
+            "min": 4.066184374096338e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.80172348022461,
+            "uint8_sha256": "78b73e1ed8957004568790011d1c2c1af5a4f4caca7fd3fd15673c5105e78630"
+          }
+        },
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_shared_trunk_0.075/pose_safety_preflight.json",
+        "preflight_ran": true,
+        "safe_for_exact_eval_dispatch": false
+      },
+      "promotion_eligible": false,
+      "renderer_wire_format": "QZS3",
+      "score_claim": false,
+      "transform_spec": "zero-fp4-prefix:shared_trunk:0.075"
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame2_head_0.1/archive.zip",
+      "archive_bytes": 275403,
+      "archive_sha256": "a3fb6666963ea8ebfbb792a0528a04c022fde199891877bee2e30d27af744063",
+      "byte_only_crosses_target": false,
+      "candidate_id": "zero_fp4_frame2_head_0.1",
+      "delta_bytes_vs_source_archive": -949,
+      "frontier_score_if_only_bytes_change": 0.31486606491491237,
+      "pose_safety": {
+        "fail_closed_reasons": [
+          "render_output_parity_unsafe"
+        ],
+        "failure_class": "renderer_transplant_pose_safety_failed",
+        "output_parity": {
+          "aggregate": {
+            "failures": [
+              "mean_abs_delta_exceeds_threshold",
+              "max_abs_delta_exceeds_threshold"
+            ],
+            "max_abs_delta": 173.17578125,
+            "mean_abs_delta": 3.3420138359069824,
+            "ok": false,
+            "rms_delta": 6.7960951083636125,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          "candidate_output_summary": {
+            "label": "candidate",
+            "max": 255.0,
+            "mean": 108.79882049560547,
+            "min": 1.468606910748349e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.179100036621094,
+            "uint8_sha256": "affd2c6367a96f90b7c3eb8a574c9c2e3efc00d23f8a0023671454f970bbedb0"
+          },
+          "failure_class": "render_output_parity_unsafe",
+          "ok": false,
+          "pair_count_available": 600,
+          "per_pair": [
+            {
+              "failures": [
+                "mean_abs_delta_exceeds_threshold",
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 161.2298583984375,
+              "mean_abs_delta": 3.359558582305908,
+              "ok": false,
+              "pair_index": 0,
+              "rms_delta": 6.867488016924213,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "mean_abs_delta_exceeds_threshold",
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 173.17578125,
+              "mean_abs_delta": 3.314406156539917,
+              "ok": false,
+              "pair_index": 150,
+              "rms_delta": 6.722759806817883,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "mean_abs_delta_exceeds_threshold",
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 168.09463500976562,
+              "mean_abs_delta": 3.3206117153167725,
+              "ok": false,
+              "pair_index": 300,
+              "rms_delta": 6.732388161269663,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "mean_abs_delta_exceeds_threshold",
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 164.00466918945312,
+              "mean_abs_delta": 3.3809854984283447,
+              "ok": false,
+              "pair_index": 449,
+              "rms_delta": 6.860922532400834,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "mean_abs_delta_exceeds_threshold",
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 152.94271850585938,
+              "mean_abs_delta": 3.334507703781128,
+              "ok": false,
+              "pair_index": 599,
+              "rms_delta": 6.795539110816788,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            }
+          ],
+          "sampled_pair_indices": [
+            0,
+            150,
+            300,
+            449,
+            599
+          ],
+          "source_output_summary": {
+            "label": "source",
+            "max": 255.0,
+            "mean": 109.79087829589844,
+            "min": 4.066184374096338e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.80172348022461,
+            "uint8_sha256": "78b73e1ed8957004568790011d1c2c1af5a4f4caca7fd3fd15673c5105e78630"
+          }
+        },
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame2_head_0.1/pose_safety_preflight.json",
+        "preflight_ran": true,
+        "safe_for_exact_eval_dispatch": false
+      },
+      "promotion_eligible": false,
+      "renderer_wire_format": "QZS3",
+      "score_claim": false,
+      "transform_spec": "zero-fp4-prefix:frame2_head:0.1"
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame2_head_0.075/archive.zip",
+      "archive_bytes": 275670,
+      "archive_sha256": "4c91208f75a4978f7c7586bdd21703732ec8062306a3d243b3434ac376ba0319",
+      "byte_only_crosses_target": false,
+      "candidate_id": "zero_fp4_frame2_head_0.075",
+      "delta_bytes_vs_source_archive": -682,
+      "frontier_score_if_only_bytes_change": 0.31504384925539597,
+      "pose_safety": {
+        "fail_closed_reasons": [
+          "render_output_parity_unsafe"
+        ],
+        "failure_class": "renderer_transplant_pose_safety_failed",
+        "output_parity": {
+          "aggregate": {
+            "failures": [
+              "max_abs_delta_exceeds_threshold"
+            ],
+            "max_abs_delta": 147.39671325683594,
+            "mean_abs_delta": 2.6883537769317627,
+            "ok": false,
+            "rms_delta": 5.412942437464011,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          "candidate_output_summary": {
+            "label": "candidate",
+            "max": 255.0,
+            "mean": 108.74676513671875,
+            "min": 2.074214535241481e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 49.161529541015625,
+            "uint8_sha256": "0bec6ea232afb5cdcbffba9507c99f08d8cdfd75ce67b958fe295fb7dfe4459f"
+          },
+          "failure_class": "render_output_parity_unsafe",
+          "ok": false,
+          "pair_count_available": 600,
+          "per_pair": [
+            {
+              "failures": [
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 124.4870376586914,
+              "mean_abs_delta": 2.6926956176757812,
+              "ok": false,
+              "pair_index": 0,
+              "rms_delta": 5.454485442091516,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 134.1454315185547,
+              "mean_abs_delta": 2.6698052883148193,
+              "ok": false,
+              "pair_index": 150,
+              "rms_delta": 5.353949734143692,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 131.13442993164062,
+              "mean_abs_delta": 2.668036937713623,
+              "ok": false,
+              "pair_index": 300,
+              "rms_delta": 5.366990442559262,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 147.39671325683594,
+              "mean_abs_delta": 2.7343521118164062,
+              "ok": false,
+              "pair_index": 449,
+              "rms_delta": 5.483365827346265,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 133.79388427734375,
+              "mean_abs_delta": 2.6768798828125,
+              "ok": false,
+              "pair_index": 599,
+              "rms_delta": 5.404780546491902,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            }
+          ],
+          "sampled_pair_indices": [
+            0,
+            150,
+            300,
+            449,
+            599
+          ],
+          "source_output_summary": {
+            "label": "source",
+            "max": 255.0,
+            "mean": 109.79087829589844,
+            "min": 4.066184374096338e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.80172348022461,
+            "uint8_sha256": "78b73e1ed8957004568790011d1c2c1af5a4f4caca7fd3fd15673c5105e78630"
+          }
+        },
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame2_head_0.075/pose_safety_preflight.json",
+        "preflight_ran": true,
+        "safe_for_exact_eval_dispatch": false
+      },
+      "promotion_eligible": false,
+      "renderer_wire_format": "QZS3",
+      "score_claim": false,
+      "transform_spec": "zero-fp4-prefix:frame2_head:0.075"
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_all_fp4_0.05/archive.zip",
+      "archive_bytes": 275817,
+      "archive_sha256": "1e0552e76f83c439f227a9676af49b3ae28a12d328404d46d7a121076a337630",
+      "byte_only_crosses_target": false,
+      "candidate_id": "zero_fp4_all_fp4_0.05",
+      "delta_bytes_vs_source_archive": -535,
+      "frontier_score_if_only_bytes_change": 0.31514173052150496,
+      "pose_safety": {
+        "fail_closed_reasons": [
+          "render_output_parity_unsafe"
+        ],
+        "failure_class": "renderer_transplant_pose_safety_failed",
+        "output_parity": {
+          "aggregate": {
+            "failures": [
+              "max_abs_delta_exceeds_threshold"
+            ],
+            "max_abs_delta": 138.0963592529297,
+            "mean_abs_delta": 2.6340067386627197,
+            "ok": false,
+            "rms_delta": 4.03357954508563,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          "candidate_output_summary": {
+            "label": "candidate",
+            "max": 255.0,
+            "mean": 109.58235931396484,
+            "min": 1.3457173508868436e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.74938201904297,
+            "uint8_sha256": "43fe0c8d5b11441366f92aac08f237a7a3bbc7c92c4025b6d7e2845ffa1a8a59"
+          },
+          "failure_class": "render_output_parity_unsafe",
+          "ok": false,
+          "pair_count_available": 600,
+          "per_pair": [
+            {
+              "failures": [
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 86.32182312011719,
+              "mean_abs_delta": 2.622251272201538,
+              "ok": false,
+              "pair_index": 0,
+              "rms_delta": 4.034328970436003,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 138.0963592529297,
+              "mean_abs_delta": 2.6289823055267334,
+              "ok": false,
+              "pair_index": 150,
+              "rms_delta": 4.012658830868173,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 124.8379898071289,
+              "mean_abs_delta": 2.614088773727417,
+              "ok": false,
+              "pair_index": 300,
+              "rms_delta": 4.01258158853358,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 117.34925842285156,
+              "mean_abs_delta": 2.6818490028381348,
+              "ok": false,
+              "pair_index": 449,
+              "rms_delta": 4.086609648347729,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 103.7791976928711,
+              "mean_abs_delta": 2.6228625774383545,
+              "ok": false,
+              "pair_index": 599,
+              "rms_delta": 4.021242242816894,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            }
+          ],
+          "sampled_pair_indices": [
+            0,
+            150,
+            300,
+            449,
+            599
+          ],
+          "source_output_summary": {
+            "label": "source",
+            "max": 255.0,
+            "mean": 109.79087829589844,
+            "min": 4.066184374096338e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.80172348022461,
+            "uint8_sha256": "78b73e1ed8957004568790011d1c2c1af5a4f4caca7fd3fd15673c5105e78630"
+          }
+        },
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_all_fp4_0.05/pose_safety_preflight.json",
+        "preflight_ran": true,
+        "safe_for_exact_eval_dispatch": false
+      },
+      "promotion_eligible": false,
+      "renderer_wire_format": "QZS3",
+      "score_claim": false,
+      "transform_spec": "zero-fp4-prefix:all_fp4:0.05"
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame1_head_0.1/archive.zip",
+      "archive_bytes": 275900,
+      "archive_sha256": "bb8d1835303478183465e15b28fd9af8776b4ea1c07cdd6cfe0895032a267b64",
+      "byte_only_crosses_target": false,
+      "candidate_id": "zero_fp4_frame1_head_0.1",
+      "delta_bytes_vs_source_archive": -452,
+      "frontier_score_if_only_bytes_change": 0.3151969968146141,
+      "pose_safety": {
+        "fail_closed_reasons": [],
+        "failure_class": null,
+        "output_parity": {
+          "aggregate": {
+            "failures": [],
+            "max_abs_delta": 45.092079162597656,
+            "mean_abs_delta": 1.236077904701233,
+            "ok": true,
+            "rms_delta": 2.478089352287593,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          "candidate_output_summary": {
+            "label": "candidate",
+            "max": 255.0,
+            "mean": 109.74594116210938,
+            "min": 4.066184374096338e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.89625930786133,
+            "uint8_sha256": "5a954fb2409347edc46b76d93650a371055171b5e65d044b0cb4b76eb360c7f7"
+          },
+          "failure_class": null,
+          "ok": true,
+          "pair_count_available": 600,
+          "per_pair": [
+            {
+              "failures": [],
+              "max_abs_delta": 41.544097900390625,
+              "mean_abs_delta": 1.212138056755066,
+              "ok": true,
+              "pair_index": 0,
+              "rms_delta": 2.435411487722859,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 39.37678527832031,
+              "mean_abs_delta": 1.2483994960784912,
+              "ok": true,
+              "pair_index": 150,
+              "rms_delta": 2.4972203060091402,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 42.938636779785156,
+              "mean_abs_delta": 1.2399144172668457,
+              "ok": true,
+              "pair_index": 300,
+              "rms_delta": 2.4790150144552436,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 39.227874755859375,
+              "mean_abs_delta": 1.2327054738998413,
+              "ok": true,
+              "pair_index": 449,
+              "rms_delta": 2.476464110143849,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 45.092079162597656,
+              "mean_abs_delta": 1.2472319602966309,
+              "ok": true,
+              "pair_index": 599,
+              "rms_delta": 2.5017807340528617,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            }
+          ],
+          "sampled_pair_indices": [
+            0,
+            150,
+            300,
+            449,
+            599
+          ],
+          "source_output_summary": {
+            "label": "source",
+            "max": 255.0,
+            "mean": 109.79087829589844,
+            "min": 4.066184374096338e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.80172348022461,
+            "uint8_sha256": "78b73e1ed8957004568790011d1c2c1af5a4f4caca7fd3fd15673c5105e78630"
+          }
+        },
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame1_head_0.1/pose_safety_preflight.json",
+        "preflight_ran": true,
+        "safe_for_exact_eval_dispatch": true
+      },
+      "promotion_eligible": false,
+      "renderer_wire_format": "QZS3",
+      "score_claim": false,
+      "transform_spec": "zero-fp4-prefix:frame1_head:0.1"
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame2_head.block2_0.1/archive.zip",
+      "archive_bytes": 275991,
+      "archive_sha256": "5ddc4d57c7efbade2f308c008661cf456122bfb5fe33b5b5e74067da56fc041c",
+      "byte_only_crosses_target": false,
+      "candidate_id": "zero_fp4_frame2_head.block2_0.1",
+      "delta_bytes_vs_source_archive": -361,
+      "frontier_score_if_only_bytes_change": 0.3152575899793482,
+      "pose_safety": {
+        "fail_closed_reasons": [
+          "render_output_parity_unsafe"
+        ],
+        "failure_class": "renderer_transplant_pose_safety_failed",
+        "output_parity": {
+          "aggregate": {
+            "failures": [
+              "max_abs_delta_exceeds_threshold"
+            ],
+            "max_abs_delta": 116.40441131591797,
+            "mean_abs_delta": 1.3812111616134644,
+            "ok": false,
+            "rms_delta": 3.0082833057868696,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          "candidate_output_summary": {
+            "label": "candidate",
+            "max": 255.0,
+            "mean": 109.98960876464844,
+            "min": 3.042938487851643e-07,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.734596252441406,
+            "uint8_sha256": "5af35ec5819a81406d5859c82da8120eb52226aedc734f8351bb013591467301"
+          },
+          "failure_class": "render_output_parity_unsafe",
+          "ok": false,
+          "pair_count_available": 600,
+          "per_pair": [
+            {
+              "failures": [],
+              "max_abs_delta": 78.53541564941406,
+              "mean_abs_delta": 1.3883516788482666,
+              "ok": true,
+              "pair_index": 0,
+              "rms_delta": 3.024158165181217,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 86.42121887207031,
+              "mean_abs_delta": 1.343865990638733,
+              "ok": false,
+              "pair_index": 150,
+              "rms_delta": 2.9352424550032183,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 83.96533203125,
+              "mean_abs_delta": 1.364088535308838,
+              "ok": false,
+              "pair_index": 300,
+              "rms_delta": 2.9797868060970467,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 90.76042175292969,
+              "mean_abs_delta": 1.4675068855285645,
+              "ok": false,
+              "pair_index": 449,
+              "rms_delta": 3.1779007824149477,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 116.40441131591797,
+              "mean_abs_delta": 1.34224271774292,
+              "ok": false,
+              "pair_index": 599,
+              "rms_delta": 2.9171013826021532,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            }
+          ],
+          "sampled_pair_indices": [
+            0,
+            150,
+            300,
+            449,
+            599
+          ],
+          "source_output_summary": {
+            "label": "source",
+            "max": 255.0,
+            "mean": 109.79087829589844,
+            "min": 4.066184374096338e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.80172348022461,
+            "uint8_sha256": "78b73e1ed8957004568790011d1c2c1af5a4f4caca7fd3fd15673c5105e78630"
+          }
+        },
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame2_head.block2_0.1/pose_safety_preflight.json",
+        "preflight_ran": true,
+        "safe_for_exact_eval_dispatch": false
+      },
+      "promotion_eligible": false,
+      "renderer_wire_format": "QZS3",
+      "score_claim": false,
+      "transform_spec": "zero-fp4-prefix:frame2_head.block2:0.1"
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_shared_trunk_0.05/archive.zip",
+      "archive_bytes": 276035,
+      "archive_sha256": "c272030c81ee1bb7e0fb7ba411ead9202e904d733c3f04851f3d62c077de8d86",
+      "byte_only_crosses_target": false,
+      "candidate_id": "zero_fp4_shared_trunk_0.05",
+      "delta_bytes_vs_source_archive": -317,
+      "frontier_score_if_only_bytes_change": 0.31528688777328556,
+      "pose_safety": {
+        "fail_closed_reasons": [
+          "render_output_parity_unsafe"
+        ],
+        "failure_class": "renderer_transplant_pose_safety_failed",
+        "output_parity": {
+          "aggregate": {
+            "failures": [
+              "max_abs_delta_exceeds_threshold"
+            ],
+            "max_abs_delta": 109.9447250366211,
+            "mean_abs_delta": 2.2246954441070557,
+            "ok": false,
+            "rms_delta": 3.4847377707996614,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          "candidate_output_summary": {
+            "label": "candidate",
+            "max": 255.0,
+            "mean": 109.64730834960938,
+            "min": 2.3593356672790833e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.6786003112793,
+            "uint8_sha256": "0eed3a1e3483e0c471c8656cbae506f2542ea1ecb855bfba5f987fe43022ca27"
+          },
+          "failure_class": "render_output_parity_unsafe",
+          "ok": false,
+          "pair_count_available": 600,
+          "per_pair": [
+            {
+              "failures": [
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 88.0643081665039,
+              "mean_abs_delta": 2.214212417602539,
+              "ok": false,
+              "pair_index": 0,
+              "rms_delta": 3.479092686641333,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 97.64656066894531,
+              "mean_abs_delta": 2.2201194763183594,
+              "ok": false,
+              "pair_index": 150,
+              "rms_delta": 3.467534032543257,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 84.20198822021484,
+              "mean_abs_delta": 2.213634729385376,
+              "ok": false,
+              "pair_index": 300,
+              "rms_delta": 3.4763610095666775,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 109.9447250366211,
+              "mean_abs_delta": 2.2599782943725586,
+              "ok": false,
+              "pair_index": 449,
+              "rms_delta": 3.529668403158416,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 89.606201171875,
+              "mean_abs_delta": 2.2155327796936035,
+              "ok": false,
+              "pair_index": 599,
+              "rms_delta": 3.4706576488737744,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            }
+          ],
+          "sampled_pair_indices": [
+            0,
+            150,
+            300,
+            449,
+            599
+          ],
+          "source_output_summary": {
+            "label": "source",
+            "max": 255.0,
+            "mean": 109.79087829589844,
+            "min": 4.066184374096338e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.80172348022461,
+            "uint8_sha256": "78b73e1ed8957004568790011d1c2c1af5a4f4caca7fd3fd15673c5105e78630"
+          }
+        },
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_shared_trunk_0.05/pose_safety_preflight.json",
+        "preflight_ran": true,
+        "safe_for_exact_eval_dispatch": false
+      },
+      "promotion_eligible": false,
+      "renderer_wire_format": "QZS3",
+      "score_claim": false,
+      "transform_spec": "zero-fp4-prefix:shared_trunk:0.05"
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame2_head.pre_0.1/archive.zip",
+      "archive_bytes": 276055,
+      "archive_sha256": "5b8b2f3ba5f20e7b75a2bff7cc75b18fed58d0ddfe25f3922a1ee680cc83214e",
+      "byte_only_crosses_target": false,
+      "candidate_id": "zero_fp4_frame2_head.pre_0.1",
+      "delta_bytes_vs_source_archive": -297,
+      "frontier_score_if_only_bytes_change": 0.315300204952348,
+      "pose_safety": {
+        "fail_closed_reasons": [
+          "render_output_parity_unsafe"
+        ],
+        "failure_class": "renderer_transplant_pose_safety_failed",
+        "output_parity": {
+          "aggregate": {
+            "failures": [
+              "max_abs_delta_exceeds_threshold"
+            ],
+            "max_abs_delta": 131.44595336914062,
+            "mean_abs_delta": 2.334723472595215,
+            "ok": false,
+            "rms_delta": 4.754243661634251,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          "candidate_output_summary": {
+            "label": "candidate",
+            "max": 255.0,
+            "mean": 108.71078491210938,
+            "min": 1.1669365449051838e-05,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.66121292114258,
+            "uint8_sha256": "8efd4ee2c015502442de7624d93b923e53a5ee8a48dfebca608de933bc1f2806"
+          },
+          "failure_class": "render_output_parity_unsafe",
+          "ok": false,
+          "pair_count_available": 600,
+          "per_pair": [
+            {
+              "failures": [
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 102.87310028076172,
+              "mean_abs_delta": 2.331784963607788,
+              "ok": false,
+              "pair_index": 0,
+              "rms_delta": 4.7780118461069225,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 125.1566390991211,
+              "mean_abs_delta": 2.333683490753174,
+              "ok": false,
+              "pair_index": 150,
+              "rms_delta": 4.7382250953107965,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 131.44595336914062,
+              "mean_abs_delta": 2.32659649848938,
+              "ok": false,
+              "pair_index": 300,
+              "rms_delta": 4.731356927225289,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 117.19597625732422,
+              "mean_abs_delta": 2.338888168334961,
+              "ok": false,
+              "pair_index": 449,
+              "rms_delta": 4.748813480958029,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 114.06015014648438,
+              "mean_abs_delta": 2.3426637649536133,
+              "ok": false,
+              "pair_index": 599,
+              "rms_delta": 4.774623292773015,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            }
+          ],
+          "sampled_pair_indices": [
+            0,
+            150,
+            300,
+            449,
+            599
+          ],
+          "source_output_summary": {
+            "label": "source",
+            "max": 255.0,
+            "mean": 109.79087829589844,
+            "min": 4.066184374096338e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.80172348022461,
+            "uint8_sha256": "78b73e1ed8957004568790011d1c2c1af5a4f4caca7fd3fd15673c5105e78630"
+          }
+        },
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame2_head.pre_0.1/pose_safety_preflight.json",
+        "preflight_ran": true,
+        "safe_for_exact_eval_dispatch": false
+      },
+      "promotion_eligible": false,
+      "renderer_wire_format": "QZS3",
+      "score_claim": false,
+      "transform_spec": "zero-fp4-prefix:frame2_head.pre:0.1"
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame2_head.block2_0.075/archive.zip",
+      "archive_bytes": 276146,
+      "archive_sha256": "ff0b0ed562357980f82ac4f5d07358bf339df154dc4a16533e928f81b1a1cbf4",
+      "byte_only_crosses_target": false,
+      "candidate_id": "zero_fp4_frame2_head.block2_0.075",
+      "delta_bytes_vs_source_archive": -206,
+      "frontier_score_if_only_bytes_change": 0.3153607981170821,
+      "pose_safety": {
+        "fail_closed_reasons": [
+          "render_output_parity_unsafe"
+        ],
+        "failure_class": "renderer_transplant_pose_safety_failed",
+        "output_parity": {
+          "aggregate": {
+            "failures": [
+              "max_abs_delta_exceeds_threshold"
+            ],
+            "max_abs_delta": 104.95649719238281,
+            "mean_abs_delta": 0.8910066485404968,
+            "ok": false,
+            "rms_delta": 2.0604949221457045,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          "candidate_output_summary": {
+            "label": "candidate",
+            "max": 255.0,
+            "mean": 109.8902359008789,
+            "min": 2.0156769551249454e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.77752685546875,
+            "uint8_sha256": "b0bc7b72543090787fd0516c291e2e9481fd4b10796b6dd6bc52028846f22065"
+          },
+          "failure_class": "render_output_parity_unsafe",
+          "ok": false,
+          "pair_count_available": 600,
+          "per_pair": [
+            {
+              "failures": [],
+              "max_abs_delta": 62.525367736816406,
+              "mean_abs_delta": 0.8997560143470764,
+              "ok": true,
+              "pair_index": 0,
+              "rms_delta": 2.0943201911332188,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 76.97970581054688,
+              "mean_abs_delta": 0.8807243704795837,
+              "ok": true,
+              "pair_index": 150,
+              "rms_delta": 2.033101104023636,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 77.22177124023438,
+              "mean_abs_delta": 0.8861261010169983,
+              "ok": true,
+              "pair_index": 300,
+              "rms_delta": 2.0441550317187716,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 87.32728576660156,
+              "mean_abs_delta": 0.9087187647819519,
+              "ok": false,
+              "pair_index": 449,
+              "rms_delta": 2.096742683249602,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 104.95649719238281,
+              "mean_abs_delta": 0.8797075748443604,
+              "ok": false,
+              "pair_index": 599,
+              "rms_delta": 2.0331304209203305,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            }
+          ],
+          "sampled_pair_indices": [
+            0,
+            150,
+            300,
+            449,
+            599
+          ],
+          "source_output_summary": {
+            "label": "source",
+            "max": 255.0,
+            "mean": 109.79087829589844,
+            "min": 4.066184374096338e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.80172348022461,
+            "uint8_sha256": "78b73e1ed8957004568790011d1c2c1af5a4f4caca7fd3fd15673c5105e78630"
+          }
+        },
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame2_head.block2_0.075/pose_safety_preflight.json",
+        "preflight_ran": true,
+        "safe_for_exact_eval_dispatch": false
+      },
+      "promotion_eligible": false,
+      "renderer_wire_format": "QZS3",
+      "score_claim": false,
+      "transform_spec": "zero-fp4-prefix:frame2_head.block2:0.075"
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame2_head.pre_0.075/archive.zip",
+      "archive_bytes": 276213,
+      "archive_sha256": "1b4da91659c9e351f07ed09ec537a9ccb01416f0386e38beace13d6f9be66839",
+      "byte_only_crosses_target": false,
+      "candidate_id": "zero_fp4_frame2_head.pre_0.075",
+      "delta_bytes_vs_source_archive": -139,
+      "frontier_score_if_only_bytes_change": 0.31540541066694133,
+      "pose_safety": {
+        "fail_closed_reasons": [
+          "render_output_parity_unsafe"
+        ],
+        "failure_class": "renderer_transplant_pose_safety_failed",
+        "output_parity": {
+          "aggregate": {
+            "failures": [
+              "max_abs_delta_exceeds_threshold"
+            ],
+            "max_abs_delta": 109.64814758300781,
+            "mean_abs_delta": 2.152756690979004,
+            "ok": false,
+            "rms_delta": 4.387281780847971,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          "candidate_output_summary": {
+            "label": "candidate",
+            "max": 255.0,
+            "mean": 108.67407989501953,
+            "min": 4.218986759951804e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 49.263492584228516,
+            "uint8_sha256": "8ce7fffded69c1bd4294f38fc371fce654ff8c8fab993433fcb10d52d3cc9a36"
+          },
+          "failure_class": "render_output_parity_unsafe",
+          "ok": false,
+          "pair_count_available": 600,
+          "per_pair": [
+            {
+              "failures": [
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 80.2125244140625,
+              "mean_abs_delta": 2.144526243209839,
+              "ok": false,
+              "pair_index": 0,
+              "rms_delta": 4.393592781737775,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 88.41967010498047,
+              "mean_abs_delta": 2.1496193408966064,
+              "ok": false,
+              "pair_index": 150,
+              "rms_delta": 4.379031912015508,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 109.64814758300781,
+              "mean_abs_delta": 2.1456379890441895,
+              "ok": false,
+              "pair_index": 300,
+              "rms_delta": 4.375592000962466,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 95.48765563964844,
+              "mean_abs_delta": 2.166307210922241,
+              "ok": false,
+              "pair_index": 449,
+              "rms_delta": 4.376605801843086,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [
+                "max_abs_delta_exceeds_threshold"
+              ],
+              "max_abs_delta": 95.77627563476562,
+              "mean_abs_delta": 2.1576926708221436,
+              "ok": false,
+              "pair_index": 599,
+              "rms_delta": 4.411479254818982,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            }
+          ],
+          "sampled_pair_indices": [
+            0,
+            150,
+            300,
+            449,
+            599
+          ],
+          "source_output_summary": {
+            "label": "source",
+            "max": 255.0,
+            "mean": 109.79087829589844,
+            "min": 4.066184374096338e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.80172348022461,
+            "uint8_sha256": "78b73e1ed8957004568790011d1c2c1af5a4f4caca7fd3fd15673c5105e78630"
+          }
+        },
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame2_head.pre_0.075/pose_safety_preflight.json",
+        "preflight_ran": true,
+        "safe_for_exact_eval_dispatch": false
+      },
+      "promotion_eligible": false,
+      "renderer_wire_format": "QZS3",
+      "score_claim": false,
+      "transform_spec": "zero-fp4-prefix:frame2_head.pre:0.075"
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame2_head_0.05/archive.zip",
+      "archive_bytes": 276222,
+      "archive_sha256": "efccff1fbfb5f9dcc38c05a79e1ab5ebe2f90d13fcae5fdc0e0f8465e79b6ed6",
+      "byte_only_crosses_target": false,
+      "candidate_id": "zero_fp4_frame2_head_0.05",
+      "delta_bytes_vs_source_archive": -130,
+      "frontier_score_if_only_bytes_change": 0.31541140339751944,
+      "pose_safety": {
+        "fail_closed_reasons": [],
+        "failure_class": null,
+        "output_parity": {
+          "aggregate": {
+            "failures": [],
+            "max_abs_delta": 75.78392028808594,
+            "mean_abs_delta": 0.9484355449676514,
+            "ok": true,
+            "rms_delta": 2.0316283827260455,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          "candidate_output_summary": {
+            "label": "candidate",
+            "max": 255.0,
+            "mean": 109.73011779785156,
+            "min": 1.5668375681343605e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.87076950073242,
+            "uint8_sha256": "78c1eb05b241091dd08d2f82972e96180bc6d77f473348fb6c444d663d91ca25"
+          },
+          "failure_class": null,
+          "ok": true,
+          "pair_count_available": 600,
+          "per_pair": [
+            {
+              "failures": [],
+              "max_abs_delta": 59.953041076660156,
+              "mean_abs_delta": 0.9513795375823975,
+              "ok": true,
+              "pair_index": 0,
+              "rms_delta": 2.0480450496487195,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 70.75914001464844,
+              "mean_abs_delta": 0.9450867772102356,
+              "ok": true,
+              "pair_index": 150,
+              "rms_delta": 2.009143314086097,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 56.65962219238281,
+              "mean_abs_delta": 0.9412260055541992,
+              "ok": true,
+              "pair_index": 300,
+              "rms_delta": 2.0168576278860413,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 49.101646423339844,
+              "mean_abs_delta": 0.963485062122345,
+              "ok": true,
+              "pair_index": 449,
+              "rms_delta": 2.0613019526997634,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 75.78392028808594,
+              "mean_abs_delta": 0.9409997463226318,
+              "ok": true,
+              "pair_index": 599,
+              "rms_delta": 2.022311689100148,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            }
+          ],
+          "sampled_pair_indices": [
+            0,
+            150,
+            300,
+            449,
+            599
+          ],
+          "source_output_summary": {
+            "label": "source",
+            "max": 255.0,
+            "mean": 109.79087829589844,
+            "min": 4.066184374096338e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.80172348022461,
+            "uint8_sha256": "78b73e1ed8957004568790011d1c2c1af5a4f4caca7fd3fd15673c5105e78630"
+          }
+        },
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame2_head_0.05/pose_safety_preflight.json",
+        "preflight_ran": true,
+        "safe_for_exact_eval_dispatch": true
+      },
+      "promotion_eligible": false,
+      "renderer_wire_format": "QZS3",
+      "score_claim": false,
+      "transform_spec": "zero-fp4-prefix:frame2_head:0.05"
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame1_head_0.075/archive.zip",
+      "archive_bytes": 276226,
+      "archive_sha256": "7814f529ae964b5aa787134d114eca7734fbcaff3c85fcc6e2ed23b50edd072d",
+      "byte_only_crosses_target": false,
+      "candidate_id": "zero_fp4_frame1_head_0.075",
+      "delta_bytes_vs_source_archive": -126,
+      "frontier_score_if_only_bytes_change": 0.3154140668333319,
+      "pose_safety": {
+        "fail_closed_reasons": [],
+        "failure_class": null,
+        "output_parity": {
+          "aggregate": {
+            "failures": [],
+            "max_abs_delta": 36.80555725097656,
+            "mean_abs_delta": 1.0668259859085083,
+            "ok": true,
+            "rms_delta": 2.128714736583682,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          "candidate_output_summary": {
+            "label": "candidate",
+            "max": 255.0,
+            "mean": 109.91529083251953,
+            "min": 4.066184374096338e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 49.02592849731445,
+            "uint8_sha256": "c58463c4585e5e8336f21e46d08b8c7db12492bb0749878e95f4380ad46112cc"
+          },
+          "failure_class": null,
+          "ok": true,
+          "pair_count_available": 600,
+          "per_pair": [
+            {
+              "failures": [],
+              "max_abs_delta": 36.80555725097656,
+              "mean_abs_delta": 1.0384800434112549,
+              "ok": true,
+              "pair_index": 0,
+              "rms_delta": 2.072731303708478,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 29.74658203125,
+              "mean_abs_delta": 1.0731794834136963,
+              "ok": true,
+              "pair_index": 150,
+              "rms_delta": 2.143329220951262,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 29.553192138671875,
+              "mean_abs_delta": 1.065169095993042,
+              "ok": true,
+              "pair_index": 300,
+              "rms_delta": 2.11583224342241,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 31.112014770507812,
+              "mean_abs_delta": 1.0883173942565918,
+              "ok": true,
+              "pair_index": 449,
+              "rms_delta": 2.175667066334533,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 36.121124267578125,
+              "mean_abs_delta": 1.0689841508865356,
+              "ok": true,
+              "pair_index": 599,
+              "rms_delta": 2.1346624267428003,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            }
+          ],
+          "sampled_pair_indices": [
+            0,
+            150,
+            300,
+            449,
+            599
+          ],
+          "source_output_summary": {
+            "label": "source",
+            "max": 255.0,
+            "mean": 109.79087829589844,
+            "min": 4.066184374096338e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.80172348022461,
+            "uint8_sha256": "78b73e1ed8957004568790011d1c2c1af5a4f4caca7fd3fd15673c5105e78630"
+          }
+        },
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame1_head_0.075/pose_safety_preflight.json",
+        "preflight_ran": true,
+        "safe_for_exact_eval_dispatch": true
+      },
+      "promotion_eligible": false,
+      "renderer_wire_format": "QZS3",
+      "score_claim": false,
+      "transform_spec": "zero-fp4-prefix:frame1_head:0.075"
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_shared_trunk_0.04/archive.zip",
+      "archive_bytes": 276282,
+      "archive_sha256": "074c38d67e1ba927800c8ccdd735b027045fe60401e724c702ea6c9d4ba0f62d",
+      "byte_only_crosses_target": false,
+      "candidate_id": "zero_fp4_shared_trunk_0.04",
+      "delta_bytes_vs_source_archive": -70,
+      "frontier_score_if_only_bytes_change": 0.3154513549347068,
+      "pose_safety": {
+        "fail_closed_reasons": [],
+        "failure_class": null,
+        "output_parity": {
+          "aggregate": {
+            "failures": [],
+            "max_abs_delta": 72.1895980834961,
+            "mean_abs_delta": 0.9723898768424988,
+            "ok": true,
+            "rms_delta": 1.5254677571077875,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          "candidate_output_summary": {
+            "label": "candidate",
+            "max": 255.0,
+            "mean": 109.86662292480469,
+            "min": 2.797012484734296e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.81047821044922,
+            "uint8_sha256": "f5fa3a725b0698bfd153c4bdd0f78574721973e2709ab51fa79cbf3d18d9ab9a"
+          },
+          "failure_class": null,
+          "ok": true,
+          "pair_count_available": 600,
+          "per_pair": [
+            {
+              "failures": [],
+              "max_abs_delta": 39.45391845703125,
+              "mean_abs_delta": 0.965591311454773,
+              "ok": true,
+              "pair_index": 0,
+              "rms_delta": 1.5260210090080943,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 39.479759216308594,
+              "mean_abs_delta": 0.9763518571853638,
+              "ok": true,
+              "pair_index": 150,
+              "rms_delta": 1.523221983704084,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 40.76756286621094,
+              "mean_abs_delta": 0.9699487686157227,
+              "ok": true,
+              "pair_index": 300,
+              "rms_delta": 1.5160205757435752,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 37.47389221191406,
+              "mean_abs_delta": 0.9773246049880981,
+              "ok": true,
+              "pair_index": 449,
+              "rms_delta": 1.5398345405074834,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 72.1895980834961,
+              "mean_abs_delta": 0.9727330803871155,
+              "ok": true,
+              "pair_index": 599,
+              "rms_delta": 1.5221383056961284,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            }
+          ],
+          "sampled_pair_indices": [
+            0,
+            150,
+            300,
+            449,
+            599
+          ],
+          "source_output_summary": {
+            "label": "source",
+            "max": 255.0,
+            "mean": 109.79087829589844,
+            "min": 4.066184374096338e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.80172348022461,
+            "uint8_sha256": "78b73e1ed8957004568790011d1c2c1af5a4f4caca7fd3fd15673c5105e78630"
+          }
+        },
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_shared_trunk_0.04/pose_safety_preflight.json",
+        "preflight_ran": true,
+        "safe_for_exact_eval_dispatch": true
+      },
+      "promotion_eligible": false,
+      "renderer_wire_format": "QZS3",
+      "score_claim": false,
+      "transform_spec": "zero-fp4-prefix:shared_trunk:0.04"
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_all_fp4_0.03/archive.zip",
+      "archive_bytes": 276300,
+      "archive_sha256": "30e8c2051c977742cbd617aea990400cec53d2c502fd12a515590ad25faef044",
+      "byte_only_crosses_target": false,
+      "candidate_id": "zero_fp4_all_fp4_0.03",
+      "delta_bytes_vs_source_archive": -52,
+      "frontier_score_if_only_bytes_change": 0.31546334039586293,
+      "pose_safety": {
+        "fail_closed_reasons": [],
+        "failure_class": null,
+        "output_parity": {
+          "aggregate": {
+            "failures": [],
+            "max_abs_delta": 24.794830322265625,
+            "mean_abs_delta": 0.337311714887619,
+            "ok": true,
+            "rms_delta": 0.6211091285577061,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          "candidate_output_summary": {
+            "label": "candidate",
+            "max": 255.0,
+            "mean": 109.8446044921875,
+            "min": 3.955049123760546e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.814300537109375,
+            "uint8_sha256": "e74a9f46c5bb5feaf6ab8041481be4b35a45ca913ea916231779a4b18299c113"
+          },
+          "failure_class": null,
+          "ok": true,
+          "pair_count_available": 600,
+          "per_pair": [
+            {
+              "failures": [],
+              "max_abs_delta": 21.857925415039062,
+              "mean_abs_delta": 0.3320581912994385,
+              "ok": true,
+              "pair_index": 0,
+              "rms_delta": 0.617392228370604,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 17.896400451660156,
+              "mean_abs_delta": 0.33911579847335815,
+              "ok": true,
+              "pair_index": 150,
+              "rms_delta": 0.6208333363202327,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 18.70128631591797,
+              "mean_abs_delta": 0.33359384536743164,
+              "ok": true,
+              "pair_index": 300,
+              "rms_delta": 0.6159389276357331,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 24.794830322265625,
+              "mean_abs_delta": 0.34712278842926025,
+              "ok": true,
+              "pair_index": 449,
+              "rms_delta": 0.6356543320571143,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 22.067222595214844,
+              "mean_abs_delta": 0.33466795086860657,
+              "ok": true,
+              "pair_index": 599,
+              "rms_delta": 0.6154984164926471,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            }
+          ],
+          "sampled_pair_indices": [
+            0,
+            150,
+            300,
+            449,
+            599
+          ],
+          "source_output_summary": {
+            "label": "source",
+            "max": 255.0,
+            "mean": 109.79087829589844,
+            "min": 4.066184374096338e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.80172348022461,
+            "uint8_sha256": "78b73e1ed8957004568790011d1c2c1af5a4f4caca7fd3fd15673c5105e78630"
+          }
+        },
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_all_fp4_0.03/pose_safety_preflight.json",
+        "preflight_ran": true,
+        "safe_for_exact_eval_dispatch": true
+      },
+      "promotion_eligible": false,
+      "renderer_wire_format": "QZS3",
+      "score_claim": false,
+      "transform_spec": "zero-fp4-prefix:all_fp4:0.03"
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame2_head.pre_0.03/archive.zip",
+      "archive_bytes": 276300,
+      "archive_sha256": "c74663f0b5c7f4fb7dc4232cf2c3ccdce9f3eb654f911726b125793ab3ce5f97",
+      "byte_only_crosses_target": false,
+      "candidate_id": "zero_fp4_frame2_head.pre_0.03",
+      "delta_bytes_vs_source_archive": -52,
+      "frontier_score_if_only_bytes_change": 0.31546334039586293,
+      "pose_safety": {
+        "fail_closed_reasons": [],
+        "failure_class": null,
+        "output_parity": {
+          "aggregate": {
+            "failures": [],
+            "max_abs_delta": 23.058547973632812,
+            "mean_abs_delta": 0.29769715666770935,
+            "ok": true,
+            "rms_delta": 0.6196995327426219,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          "candidate_output_summary": {
+            "label": "candidate",
+            "max": 255.0,
+            "mean": 109.84632873535156,
+            "min": 3.87316276828642e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.8040657043457,
+            "uint8_sha256": "27732bc0dc80e0d2a68a8fa8d4744b50e31093ac5e8dc2819d423a2455bb9579"
+          },
+          "failure_class": null,
+          "ok": true,
+          "pair_count_available": 600,
+          "per_pair": [
+            {
+              "failures": [],
+              "max_abs_delta": 20.75408172607422,
+              "mean_abs_delta": 0.29369503259658813,
+              "ok": true,
+              "pair_index": 0,
+              "rms_delta": 0.616662949366148,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 15.740180969238281,
+              "mean_abs_delta": 0.298930287361145,
+              "ok": true,
+              "pair_index": 150,
+              "rms_delta": 0.6192901623283772,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 19.204551696777344,
+              "mean_abs_delta": 0.2940136194229126,
+              "ok": true,
+              "pair_index": 300,
+              "rms_delta": 0.6148586760942506,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 23.058547973632812,
+              "mean_abs_delta": 0.3073767423629761,
+              "ok": true,
+              "pair_index": 449,
+              "rms_delta": 0.6343129113542074,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 19.170501708984375,
+              "mean_abs_delta": 0.2944701015949249,
+              "ok": true,
+              "pair_index": 599,
+              "rms_delta": 0.6131394580765703,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            }
+          ],
+          "sampled_pair_indices": [
+            0,
+            150,
+            300,
+            449,
+            599
+          ],
+          "source_output_summary": {
+            "label": "source",
+            "max": 255.0,
+            "mean": 109.79087829589844,
+            "min": 4.066184374096338e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.80172348022461,
+            "uint8_sha256": "78b73e1ed8957004568790011d1c2c1af5a4f4caca7fd3fd15673c5105e78630"
+          }
+        },
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame2_head.pre_0.03/pose_safety_preflight.json",
+        "preflight_ran": true,
+        "safe_for_exact_eval_dispatch": true
+      },
+      "promotion_eligible": false,
+      "renderer_wire_format": "QZS3",
+      "score_claim": false,
+      "transform_spec": "zero-fp4-prefix:frame2_head.pre:0.03"
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame2_head_0.03/archive.zip",
+      "archive_bytes": 276300,
+      "archive_sha256": "ede8b7d5082c60aa57d7a51aaa7300400bd027254d01cb887d90c55d424faf44",
+      "byte_only_crosses_target": false,
+      "candidate_id": "zero_fp4_frame2_head_0.03",
+      "delta_bytes_vs_source_archive": -52,
+      "frontier_score_if_only_bytes_change": 0.31546334039586293,
+      "pose_safety": {
+        "fail_closed_reasons": [],
+        "failure_class": null,
+        "output_parity": {
+          "aggregate": {
+            "failures": [],
+            "max_abs_delta": 23.085861206054688,
+            "mean_abs_delta": 0.297209769487381,
+            "ok": true,
+            "rms_delta": 0.6188250197583223,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          "candidate_output_summary": {
+            "label": "candidate",
+            "max": 255.0,
+            "mean": 109.84624481201172,
+            "min": 3.865840881189797e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.804351806640625,
+            "uint8_sha256": "d5e5f31a58429ed1c945cd64887614bd4581ded04d7eeab58e708e71241756ec"
+          },
+          "failure_class": null,
+          "ok": true,
+          "pair_count_available": 600,
+          "per_pair": [
+            {
+              "failures": [],
+              "max_abs_delta": 20.81304168701172,
+              "mean_abs_delta": 0.2931738495826721,
+              "ok": true,
+              "pair_index": 0,
+              "rms_delta": 0.6158952584532106,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 15.319244384765625,
+              "mean_abs_delta": 0.298507958650589,
+              "ok": true,
+              "pair_index": 150,
+              "rms_delta": 0.6185360191715257,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 19.002838134765625,
+              "mean_abs_delta": 0.29350602626800537,
+              "ok": true,
+              "pair_index": 300,
+              "rms_delta": 0.6138020873255211,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 23.085861206054688,
+              "mean_abs_delta": 0.30687078833580017,
+              "ok": true,
+              "pair_index": 449,
+              "rms_delta": 0.6333870810573724,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 20.16900634765625,
+              "mean_abs_delta": 0.2939901351928711,
+              "ok": true,
+              "pair_index": 599,
+              "rms_delta": 0.6122712243288831,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            }
+          ],
+          "sampled_pair_indices": [
+            0,
+            150,
+            300,
+            449,
+            599
+          ],
+          "source_output_summary": {
+            "label": "source",
+            "max": 255.0,
+            "mean": 109.79087829589844,
+            "min": 4.066184374096338e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.80172348022461,
+            "uint8_sha256": "78b73e1ed8957004568790011d1c2c1af5a4f4caca7fd3fd15673c5105e78630"
+          }
+        },
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame2_head_0.03/pose_safety_preflight.json",
+        "preflight_ran": true,
+        "safe_for_exact_eval_dispatch": true
+      },
+      "promotion_eligible": false,
+      "renderer_wire_format": "QZS3",
+      "score_claim": false,
+      "transform_spec": "zero-fp4-prefix:frame2_head:0.03"
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame2_head_0.04/archive.zip",
+      "archive_bytes": 276314,
+      "archive_sha256": "a1849c86abc50eefd7beff4ab021dab54916168cfb7bef80d7265a52ecd13339",
+      "byte_only_crosses_target": false,
+      "candidate_id": "zero_fp4_frame2_head_0.04",
+      "delta_bytes_vs_source_archive": -38,
+      "frontier_score_if_only_bytes_change": 0.31547266242120664,
+      "pose_safety": {
+        "fail_closed_reasons": [],
+        "failure_class": null,
+        "output_parity": {
+          "aggregate": {
+            "failures": [],
+            "max_abs_delta": 47.853057861328125,
+            "mean_abs_delta": 0.6493923664093018,
+            "ok": true,
+            "rms_delta": 1.382483577941155,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          "candidate_output_summary": {
+            "label": "candidate",
+            "max": 255.0,
+            "mean": 109.76293182373047,
+            "min": 2.682027343325899e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.787986755371094,
+            "uint8_sha256": "4fb245f2c6cd244902eb7a921311253c7faff16346166a9eddf1fff7e4e6de30"
+          },
+          "failure_class": null,
+          "ok": true,
+          "pair_count_available": 600,
+          "per_pair": [
+            {
+              "failures": [],
+              "max_abs_delta": 33.891448974609375,
+              "mean_abs_delta": 0.6495746970176697,
+              "ok": true,
+              "pair_index": 0,
+              "rms_delta": 1.3801467545885673,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 35.88307189941406,
+              "mean_abs_delta": 0.648911714553833,
+              "ok": true,
+              "pair_index": 150,
+              "rms_delta": 1.3792944083546914,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 33.58912658691406,
+              "mean_abs_delta": 0.6454413533210754,
+              "ok": true,
+              "pair_index": 300,
+              "rms_delta": 1.3797141239971469,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 39.48625183105469,
+              "mean_abs_delta": 0.6608136892318726,
+              "ok": true,
+              "pair_index": 449,
+              "rms_delta": 1.4012096356338561,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 47.853057861328125,
+              "mean_abs_delta": 0.6422206163406372,
+              "ok": true,
+              "pair_index": 599,
+              "rms_delta": 1.3718768977888531,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            }
+          ],
+          "sampled_pair_indices": [
+            0,
+            150,
+            300,
+            449,
+            599
+          ],
+          "source_output_summary": {
+            "label": "source",
+            "max": 255.0,
+            "mean": 109.79087829589844,
+            "min": 4.066184374096338e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.80172348022461,
+            "uint8_sha256": "78b73e1ed8957004568790011d1c2c1af5a4f4caca7fd3fd15673c5105e78630"
+          }
+        },
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame2_head_0.04/pose_safety_preflight.json",
+        "preflight_ran": true,
+        "safe_for_exact_eval_dispatch": true
+      },
+      "promotion_eligible": false,
+      "renderer_wire_format": "QZS3",
+      "score_claim": false,
+      "transform_spec": "zero-fp4-prefix:frame2_head:0.04"
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_all_fp4_0.04/archive.zip",
+      "archive_bytes": 276323,
+      "archive_sha256": "dc10478e269ab45a668c3b1173c13db9f8bbb4e960ea68bce930c7552ed085fb",
+      "byte_only_crosses_target": false,
+      "candidate_id": "zero_fp4_all_fp4_0.04",
+      "delta_bytes_vs_source_archive": -29,
+      "frontier_score_if_only_bytes_change": 0.31547865515178475,
+      "pose_safety": {
+        "fail_closed_reasons": [],
+        "failure_class": null,
+        "output_parity": {
+          "aggregate": {
+            "failures": [],
+            "max_abs_delta": 66.5770034790039,
+            "mean_abs_delta": 1.2862918376922607,
+            "ok": true,
+            "rms_delta": 2.0150721775124376,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          "candidate_output_summary": {
+            "label": "candidate",
+            "max": 255.0,
+            "mean": 109.84019470214844,
+            "min": 1.8769122789308312e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.79267883300781,
+            "uint8_sha256": "f5675fdcc78ebf5f50ba5106487bf133af1007b2f7f330e73752308543dd5d96"
+          },
+          "failure_class": null,
+          "ok": true,
+          "pair_count_available": 600,
+          "per_pair": [
+            {
+              "failures": [],
+              "max_abs_delta": 48.563194274902344,
+              "mean_abs_delta": 1.2793813943862915,
+              "ok": true,
+              "pair_index": 0,
+              "rms_delta": 2.016825946581338,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 50.35191345214844,
+              "mean_abs_delta": 1.290901780128479,
+              "ok": true,
+              "pair_index": 150,
+              "rms_delta": 2.0125439182962666,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 54.10643005371094,
+              "mean_abs_delta": 1.281760334968567,
+              "ok": true,
+              "pair_index": 300,
+              "rms_delta": 2.0067602584194577,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 51.24885559082031,
+              "mean_abs_delta": 1.2938812971115112,
+              "ok": true,
+              "pair_index": 449,
+              "rms_delta": 2.023386715284813,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 66.5770034790039,
+              "mean_abs_delta": 1.285534143447876,
+              "ok": true,
+              "pair_index": 599,
+              "rms_delta": 2.015807387505798,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            }
+          ],
+          "sampled_pair_indices": [
+            0,
+            150,
+            300,
+            449,
+            599
+          ],
+          "source_output_summary": {
+            "label": "source",
+            "max": 255.0,
+            "mean": 109.79087829589844,
+            "min": 4.066184374096338e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.80172348022461,
+            "uint8_sha256": "78b73e1ed8957004568790011d1c2c1af5a4f4caca7fd3fd15673c5105e78630"
+          }
+        },
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_all_fp4_0.04/pose_safety_preflight.json",
+        "preflight_ran": true,
+        "safe_for_exact_eval_dispatch": true
+      },
+      "promotion_eligible": false,
+      "renderer_wire_format": "QZS3",
+      "score_claim": false,
+      "transform_spec": "zero-fp4-prefix:all_fp4:0.04"
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame2_head.block2_0.05/archive.zip",
+      "archive_bytes": 276323,
+      "archive_sha256": "e9c14d5fbac43f7f44c25a01297f22e5e4568d2606ef3692d05ac560cba1ed46",
+      "byte_only_crosses_target": false,
+      "candidate_id": "zero_fp4_frame2_head.block2_0.05",
+      "delta_bytes_vs_source_archive": -29,
+      "frontier_score_if_only_bytes_change": 0.31547865515178475,
+      "pose_safety": {
+        "fail_closed_reasons": [],
+        "failure_class": null,
+        "output_parity": {
+          "aggregate": {
+            "failures": [],
+            "max_abs_delta": 40.24254608154297,
+            "mean_abs_delta": 0.4164085388183594,
+            "ok": true,
+            "rms_delta": 0.8804922078755596,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          "candidate_output_summary": {
+            "label": "candidate",
+            "max": 255.0,
+            "mean": 109.8775405883789,
+            "min": 2.5210169951606076e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.816184997558594,
+            "uint8_sha256": "c29c8d94c67064230d40fe607269186577ca9b0db4fa0f38eafa0ccc0e03c7c0"
+          },
+          "failure_class": null,
+          "ok": true,
+          "pair_count_available": 600,
+          "per_pair": [
+            {
+              "failures": [],
+              "max_abs_delta": 40.24254608154297,
+              "mean_abs_delta": 0.4222739040851593,
+              "ok": true,
+              "pair_index": 0,
+              "rms_delta": 0.8996100362360351,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 34.16847229003906,
+              "mean_abs_delta": 0.41515663266181946,
+              "ok": true,
+              "pair_index": 150,
+              "rms_delta": 0.8678408043448658,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 26.11614227294922,
+              "mean_abs_delta": 0.4116646349430084,
+              "ok": true,
+              "pair_index": 300,
+              "rms_delta": 0.8682891103413773,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 32.672691345214844,
+              "mean_abs_delta": 0.42042484879493713,
+              "ok": true,
+              "pair_index": 449,
+              "rms_delta": 0.8958765766145361,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 32.27345275878906,
+              "mean_abs_delta": 0.4125227928161621,
+              "ok": true,
+              "pair_index": 599,
+              "rms_delta": 0.8702677073157995,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            }
+          ],
+          "sampled_pair_indices": [
+            0,
+            150,
+            300,
+            449,
+            599
+          ],
+          "source_output_summary": {
+            "label": "source",
+            "max": 255.0,
+            "mean": 109.79087829589844,
+            "min": 4.066184374096338e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.80172348022461,
+            "uint8_sha256": "78b73e1ed8957004568790011d1c2c1af5a4f4caca7fd3fd15673c5105e78630"
+          }
+        },
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame2_head.block2_0.05/pose_safety_preflight.json",
+        "preflight_ran": true,
+        "safe_for_exact_eval_dispatch": true
+      },
+      "promotion_eligible": false,
+      "renderer_wire_format": "QZS3",
+      "score_claim": false,
+      "transform_spec": "zero-fp4-prefix:frame2_head.block2:0.05"
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame2_head.block2_0.04/archive.zip",
+      "archive_bytes": 276340,
+      "archive_sha256": "eead8037e1de22c91ff1c3460d511550a23bdb5de730322dbfcbf2364cc925a7",
+      "byte_only_crosses_target": false,
+      "candidate_id": "zero_fp4_frame2_head.block2_0.04",
+      "delta_bytes_vs_source_archive": -12,
+      "frontier_score_if_only_bytes_change": 0.3154899747539878,
+      "pose_safety": {
+        "fail_closed_reasons": [],
+        "failure_class": null,
+        "output_parity": {
+          "aggregate": {
+            "failures": [],
+            "max_abs_delta": 15.594940185546875,
+            "mean_abs_delta": 0.1447925865650177,
+            "ok": true,
+            "rms_delta": 0.32470944052354533,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          "candidate_output_summary": {
+            "label": "candidate",
+            "max": 255.0,
+            "mean": 109.76758575439453,
+            "min": 3.7774486827402143e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.8046989440918,
+            "uint8_sha256": "5353ade046bb197c57c9d02ecb209bcb7df31bdd4ace22f5767e29c441d48d6e"
+          },
+          "failure_class": null,
+          "ok": true,
+          "pair_count_available": 600,
+          "per_pair": [
+            {
+              "failures": [],
+              "max_abs_delta": 12.49029541015625,
+              "mean_abs_delta": 0.147209033370018,
+              "ok": true,
+              "pair_index": 0,
+              "rms_delta": 0.3311821121249809,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 15.594940185546875,
+              "mean_abs_delta": 0.1417224407196045,
+              "ok": true,
+              "pair_index": 150,
+              "rms_delta": 0.31704052587694875,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 12.53070068359375,
+              "mean_abs_delta": 0.14217980206012726,
+              "ok": true,
+              "pair_index": 300,
+              "rms_delta": 0.31839629117213963,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 12.033554077148438,
+              "mean_abs_delta": 0.15107624232769012,
+              "ok": true,
+              "pair_index": 449,
+              "rms_delta": 0.33961827921333765,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 14.155845642089844,
+              "mean_abs_delta": 0.14177542924880981,
+              "ok": true,
+              "pair_index": 599,
+              "rms_delta": 0.31665122591612915,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            }
+          ],
+          "sampled_pair_indices": [
+            0,
+            150,
+            300,
+            449,
+            599
+          ],
+          "source_output_summary": {
+            "label": "source",
+            "max": 255.0,
+            "mean": 109.79087829589844,
+            "min": 4.066184374096338e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.80172348022461,
+            "uint8_sha256": "78b73e1ed8957004568790011d1c2c1af5a4f4caca7fd3fd15673c5105e78630"
+          }
+        },
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame2_head.block2_0.04/pose_safety_preflight.json",
+        "preflight_ran": true,
+        "safe_for_exact_eval_dispatch": true
+      },
+      "promotion_eligible": false,
+      "renderer_wire_format": "QZS3",
+      "score_claim": false,
+      "transform_spec": "zero-fp4-prefix:frame2_head.block2:0.04"
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_shared_trunk_0.03/archive.zip",
+      "archive_bytes": 276344,
+      "archive_sha256": "ee1e421e4a4bb22297a314a58dbea806ce3ca947f269c4d54f5a69bf09c90de6",
+      "byte_only_crosses_target": false,
+      "candidate_id": "zero_fp4_shared_trunk_0.03",
+      "delta_bytes_vs_source_archive": -8,
+      "frontier_score_if_only_bytes_change": 0.31549263818980033,
+      "pose_safety": {
+        "fail_closed_reasons": [],
+        "failure_class": null,
+        "output_parity": {
+          "aggregate": {
+            "failures": [],
+            "max_abs_delta": 7.026588439941406,
+            "mean_abs_delta": 0.09275303035974503,
+            "ok": true,
+            "rms_delta": 0.1633024719811405,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          "candidate_output_summary": {
+            "label": "candidate",
+            "max": 255.0,
+            "mean": 109.78944396972656,
+            "min": 4.160848220635671e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.81162643432617,
+            "uint8_sha256": "044da7743f9759694bf5ad3bda64fedc4fc24ccd203d8661c2da72c84d27cd00"
+          },
+          "failure_class": null,
+          "ok": true,
+          "pair_count_available": 600,
+          "per_pair": [
+            {
+              "failures": [],
+              "max_abs_delta": 4.6579742431640625,
+              "mean_abs_delta": 0.09011312574148178,
+              "ok": true,
+              "pair_index": 0,
+              "rms_delta": 0.15928470914967716,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 7.026588439941406,
+              "mean_abs_delta": 0.09452544152736664,
+              "ok": true,
+              "pair_index": 150,
+              "rms_delta": 0.166347396544025,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 4.8828277587890625,
+              "mean_abs_delta": 0.09305368363857269,
+              "ok": true,
+              "pair_index": 300,
+              "rms_delta": 0.1637190163670816,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 4.9782257080078125,
+              "mean_abs_delta": 0.09239072352647781,
+              "ok": true,
+              "pair_index": 449,
+              "rms_delta": 0.1626976324422047,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 4.736778259277344,
+              "mean_abs_delta": 0.0936821848154068,
+              "ok": true,
+              "pair_index": 599,
+              "rms_delta": 0.1643805769692238,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            }
+          ],
+          "sampled_pair_indices": [
+            0,
+            150,
+            300,
+            449,
+            599
+          ],
+          "source_output_summary": {
+            "label": "source",
+            "max": 255.0,
+            "mean": 109.79087829589844,
+            "min": 4.066184374096338e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.80172348022461,
+            "uint8_sha256": "78b73e1ed8957004568790011d1c2c1af5a4f4caca7fd3fd15673c5105e78630"
+          }
+        },
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_shared_trunk_0.03/pose_safety_preflight.json",
+        "preflight_ran": true,
+        "safe_for_exact_eval_dispatch": true
+      },
+      "promotion_eligible": false,
+      "renderer_wire_format": "QZS3",
+      "score_claim": false,
+      "transform_spec": "zero-fp4-prefix:shared_trunk:0.03"
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame2_head.pre_0.05/archive.zip",
+      "archive_bytes": 276346,
+      "archive_sha256": "b4998e8fba0b8451dafa3dd7cbcb1f2a4da7bd39f6640a34d3f5647d489de3c8",
+      "byte_only_crosses_target": false,
+      "candidate_id": "zero_fp4_frame2_head.pre_0.05",
+      "delta_bytes_vs_source_archive": -6,
+      "frontier_score_if_only_bytes_change": 0.31549396990770656,
+      "pose_safety": {
+        "fail_closed_reasons": [],
+        "failure_class": null,
+        "output_parity": {
+          "aggregate": {
+            "failures": [],
+            "max_abs_delta": 49.446533203125,
+            "mean_abs_delta": 0.7418808937072754,
+            "ok": true,
+            "rms_delta": 1.5563799210209341,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          "candidate_output_summary": {
+            "label": "candidate",
+            "max": 255.0,
+            "mean": 109.64791870117188,
+            "min": 4.183879354968667e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.81201171875,
+            "uint8_sha256": "b2f409471a265adef97dcada630f3b92712204a627ee944dd883ae3bb932e60e"
+          },
+          "failure_class": null,
+          "ok": true,
+          "pair_count_available": 600,
+          "per_pair": [
+            {
+              "failures": [],
+              "max_abs_delta": 45.97236633300781,
+              "mean_abs_delta": 0.7442715167999268,
+              "ok": true,
+              "pair_index": 0,
+              "rms_delta": 1.5576220090785484,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 49.446533203125,
+              "mean_abs_delta": 0.7432956695556641,
+              "ok": true,
+              "pair_index": 150,
+              "rms_delta": 1.5633213173432279,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 42.678985595703125,
+              "mean_abs_delta": 0.7417218089103699,
+              "ok": true,
+              "pair_index": 300,
+              "rms_delta": 1.556074357749363,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 46.64630889892578,
+              "mean_abs_delta": 0.7409102320671082,
+              "ok": true,
+              "pair_index": 449,
+              "rms_delta": 1.5427107583215145,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 36.73350524902344,
+              "mean_abs_delta": 0.7392050623893738,
+              "ok": true,
+              "pair_index": 599,
+              "rms_delta": 1.5620843716008537,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            }
+          ],
+          "sampled_pair_indices": [
+            0,
+            150,
+            300,
+            449,
+            599
+          ],
+          "source_output_summary": {
+            "label": "source",
+            "max": 255.0,
+            "mean": 109.79087829589844,
+            "min": 4.066184374096338e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.80172348022461,
+            "uint8_sha256": "78b73e1ed8957004568790011d1c2c1af5a4f4caca7fd3fd15673c5105e78630"
+          }
+        },
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame2_head.pre_0.05/pose_safety_preflight.json",
+        "preflight_ran": true,
+        "safe_for_exact_eval_dispatch": true
+      },
+      "promotion_eligible": false,
+      "renderer_wire_format": "QZS3",
+      "score_claim": false,
+      "transform_spec": "zero-fp4-prefix:frame2_head.pre:0.05"
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame1_head_0.05/archive.zip",
+      "archive_bytes": 276349,
+      "archive_sha256": "15af04b4042b303d7985f15561b3686158a1f0286f491ec40ca4458b19a3dd75",
+      "byte_only_crosses_target": false,
+      "candidate_id": "zero_fp4_frame1_head_0.05",
+      "delta_bytes_vs_source_archive": -3,
+      "frontier_score_if_only_bytes_change": 0.31549596748456593,
+      "pose_safety": {
+        "fail_closed_reasons": [],
+        "failure_class": null,
+        "output_parity": {
+          "aggregate": {
+            "failures": [],
+            "max_abs_delta": 4.884918212890625,
+            "mean_abs_delta": 0.09319256991147995,
+            "ok": true,
+            "rms_delta": 0.20753423302127436,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          "candidate_output_summary": {
+            "label": "candidate",
+            "max": 255.0,
+            "mean": 109.77777862548828,
+            "min": 4.066184374096338e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.80128479003906,
+            "uint8_sha256": "b04510e77b6b5c672f38bf61784bbe8c19894e44675485d5e00b2931925706e5"
+          },
+          "failure_class": null,
+          "ok": true,
+          "pair_count_available": 600,
+          "per_pair": [
+            {
+              "failures": [],
+              "max_abs_delta": 4.174629211425781,
+              "mean_abs_delta": 0.08579333126544952,
+              "ok": true,
+              "pair_index": 0,
+              "rms_delta": 0.1908017167993797,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 4.1941680908203125,
+              "mean_abs_delta": 0.0959082618355751,
+              "ok": true,
+              "pair_index": 150,
+              "rms_delta": 0.21415993498700736,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 4.884918212890625,
+              "mean_abs_delta": 0.09372908622026443,
+              "ok": true,
+              "pair_index": 300,
+              "rms_delta": 0.20869172185035872,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 4.123374938964844,
+              "mean_abs_delta": 0.09406694769859314,
+              "ok": true,
+              "pair_index": 449,
+              "rms_delta": 0.20828662686515506,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 4.083854675292969,
+              "mean_abs_delta": 0.09646517038345337,
+              "ok": true,
+              "pair_index": 599,
+              "rms_delta": 0.21481843279009133,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            }
+          ],
+          "sampled_pair_indices": [
+            0,
+            150,
+            300,
+            449,
+            599
+          ],
+          "source_output_summary": {
+            "label": "source",
+            "max": 255.0,
+            "mean": 109.79087829589844,
+            "min": 4.066184374096338e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.80172348022461,
+            "uint8_sha256": "78b73e1ed8957004568790011d1c2c1af5a4f4caca7fd3fd15673c5105e78630"
+          }
+        },
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame1_head_0.05/pose_safety_preflight.json",
+        "preflight_ran": true,
+        "safe_for_exact_eval_dispatch": true
+      },
+      "promotion_eligible": false,
+      "renderer_wire_format": "QZS3",
+      "score_claim": false,
+      "transform_spec": "zero-fp4-prefix:frame1_head:0.05"
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame2_head.block2_0.03/archive.zip",
+      "archive_bytes": 276350,
+      "archive_sha256": "50f56f70b5ac2f0674013d034d7fcbf223a57d8abbd7b4b39a9d8b2a1749cb91",
+      "byte_only_crosses_target": false,
+      "candidate_id": "zero_fp4_frame2_head.block2_0.03",
+      "delta_bytes_vs_source_archive": -2,
+      "frontier_score_if_only_bytes_change": 0.3154966333435191,
+      "pose_safety": {
+        "fail_closed_reasons": [],
+        "failure_class": null,
+        "output_parity": {
+          "aggregate": {
+            "failures": [],
+            "max_abs_delta": 2.0606231689453125,
+            "mean_abs_delta": 0.006542072631418705,
+            "ok": true,
+            "rms_delta": 0.027757401335223926,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          "candidate_output_summary": {
+            "label": "candidate",
+            "max": 255.0,
+            "mean": 109.79077911376953,
+            "min": 4.056872512592236e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.802040100097656,
+            "uint8_sha256": "3a0bc95b1834b5c02d1677224c94a56febb8fde592d54a26bc50c2e0a7a45242"
+          },
+          "failure_class": null,
+          "ok": true,
+          "pair_count_available": 600,
+          "per_pair": [
+            {
+              "failures": [],
+              "max_abs_delta": 1.9898834228515625,
+              "mean_abs_delta": 0.006836183834820986,
+              "ok": true,
+              "pair_index": 0,
+              "rms_delta": 0.02877471536083414,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 1.9763641357421875,
+              "mean_abs_delta": 0.006588995922356844,
+              "ok": true,
+              "pair_index": 150,
+              "rms_delta": 0.027585062160489213,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 2.0606231689453125,
+              "mean_abs_delta": 0.006434828042984009,
+              "ok": true,
+              "pair_index": 300,
+              "rms_delta": 0.02688687720322046,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 1.989715576171875,
+              "mean_abs_delta": 0.006194266024976969,
+              "ok": true,
+              "pair_index": 449,
+              "rms_delta": 0.027012471199243705,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 2.0,
+              "mean_abs_delta": 0.006656089797616005,
+              "ok": true,
+              "pair_index": 599,
+              "rms_delta": 0.028475750027226323,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            }
+          ],
+          "sampled_pair_indices": [
+            0,
+            150,
+            300,
+            449,
+            599
+          ],
+          "source_output_summary": {
+            "label": "source",
+            "max": 255.0,
+            "mean": 109.79087829589844,
+            "min": 4.066184374096338e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.80172348022461,
+            "uint8_sha256": "78b73e1ed8957004568790011d1c2c1af5a4f4caca7fd3fd15673c5105e78630"
+          }
+        },
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame2_head.block2_0.03/pose_safety_preflight.json",
+        "preflight_ran": true,
+        "safe_for_exact_eval_dispatch": true
+      },
+      "promotion_eligible": false,
+      "renderer_wire_format": "QZS3",
+      "score_claim": false,
+      "transform_spec": "zero-fp4-prefix:frame2_head.block2:0.03"
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame2_head.pre_0.04/archive.zip",
+      "archive_bytes": 276400,
+      "archive_sha256": "0b7e1902a36dcafab253a302eb9fa7c66e5509c5431e073699a57b27a6fcf510",
+      "byte_only_crosses_target": false,
+      "candidate_id": "zero_fp4_frame2_head.pre_0.04",
+      "delta_bytes_vs_source_archive": 48,
+      "frontier_score_if_only_bytes_change": 0.31552992629117516,
+      "pose_safety": {
+        "failure_class": "pose_safety_preflight_not_run",
+        "preflight_ran": false,
+        "safe_for_exact_eval_dispatch": false
+      },
+      "promotion_eligible": false,
+      "renderer_wire_format": "QZS3",
+      "score_claim": false,
+      "transform_spec": "zero-fp4-prefix:frame2_head.pre:0.04"
+    }
+  ],
+  "dispatch_recommendation": {
+    "candidate": {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame1_head_0.1/archive.zip",
+      "archive_bytes": 275900,
+      "archive_sha256": "bb8d1835303478183465e15b28fd9af8776b4ea1c07cdd6cfe0895032a267b64",
+      "byte_only_crosses_target": false,
+      "candidate_id": "zero_fp4_frame1_head_0.1",
+      "delta_bytes_vs_source_archive": -452,
+      "frontier_score_if_only_bytes_change": 0.3151969968146141,
+      "pose_safety": {
+        "fail_closed_reasons": [],
+        "failure_class": null,
+        "output_parity": {
+          "aggregate": {
+            "failures": [],
+            "max_abs_delta": 45.092079162597656,
+            "mean_abs_delta": 1.236077904701233,
+            "ok": true,
+            "rms_delta": 2.478089352287593,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          "candidate_output_summary": {
+            "label": "candidate",
+            "max": 255.0,
+            "mean": 109.74594116210938,
+            "min": 4.066184374096338e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.89625930786133,
+            "uint8_sha256": "5a954fb2409347edc46b76d93650a371055171b5e65d044b0cb4b76eb360c7f7"
+          },
+          "failure_class": null,
+          "ok": true,
+          "pair_count_available": 600,
+          "per_pair": [
+            {
+              "failures": [],
+              "max_abs_delta": 41.544097900390625,
+              "mean_abs_delta": 1.212138056755066,
+              "ok": true,
+              "pair_index": 0,
+              "rms_delta": 2.435411487722859,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 39.37678527832031,
+              "mean_abs_delta": 1.2483994960784912,
+              "ok": true,
+              "pair_index": 150,
+              "rms_delta": 2.4972203060091402,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 42.938636779785156,
+              "mean_abs_delta": 1.2399144172668457,
+              "ok": true,
+              "pair_index": 300,
+              "rms_delta": 2.4790150144552436,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 39.227874755859375,
+              "mean_abs_delta": 1.2327054738998413,
+              "ok": true,
+              "pair_index": 449,
+              "rms_delta": 2.476464110143849,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            },
+            {
+              "failures": [],
+              "max_abs_delta": 45.092079162597656,
+              "mean_abs_delta": 1.2472319602966309,
+              "ok": true,
+              "pair_index": 599,
+              "rms_delta": 2.5017807340528617,
+              "same_uint8_hash": false,
+              "thresholds": {
+                "max_max_abs_delta": 80.0,
+                "max_mean_abs_delta": 3.0,
+                "max_rms_delta": 8.0
+              }
+            }
+          ],
+          "sampled_pair_indices": [
+            0,
+            150,
+            300,
+            449,
+            599
+          ],
+          "source_output_summary": {
+            "label": "source",
+            "max": 255.0,
+            "mean": 109.79087829589844,
+            "min": 4.066184374096338e-06,
+            "shape": [
+              5,
+              2,
+              384,
+              512,
+              3
+            ],
+            "std": 48.80172348022461,
+            "uint8_sha256": "78b73e1ed8957004568790011d1c2c1af5a4f4caca7fd3fd15673c5105e78630"
+          }
+        },
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame1_head_0.1/pose_safety_preflight.json",
+        "preflight_ran": true,
+        "safe_for_exact_eval_dispatch": true
+      },
+      "promotion_eligible": false,
+      "renderer_wire_format": "QZS3",
+      "score_claim": false,
+      "transform_spec": "zero-fp4-prefix:frame1_head:0.1"
+    },
+    "claim_required_before_dispatch": true,
+    "reason": "at least one candidate passed local pose-safety, but byte-only rate math does not cross target 0.314",
+    "recommendation": "do_not_dispatch_yet_safe_but_too_small",
+    "remote_gpu_dispatch_performed": false
+  },
+  "frontier_score": 0.3154979650614253,
+  "max_preflight_candidates": 30,
+  "output_dir": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker",
+  "preflight_thresholds": {
+    "max_max_abs_delta": 80.0,
+    "max_mean_abs_delta": 3.0,
+    "max_pairs": 5,
+    "max_rms_delta": 8.0
+  },
+  "promotion_eligible": false,
+  "rejected_candidate_count": 0,
+  "rejected_candidates": [],
+  "remote_gpu_dispatch_performed": false,
+  "schema": "renderer_parity_shrink_search_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 276352,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_lag_eval_top67_p6_t4_20260503T0608Z/archive.zip",
+    "sha256": "d73f0957cf2d8da0526c1786613443331ccb913f5648131cfaaac5e6f7eae972"
+  },
+  "source_evidence": {
+    "bytes": 36586,
+    "exists": true,
+    "json_parseable": true,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_lag_eval_top67_p6_t4_20260503T0608Z/contest_auth_eval.json",
+    "sha256": "41583056146e935c38a2c4ab0477dd33e0db51089f49efeb40dd8100bd86d90c",
+    "summary": {
+      "archive_size_bytes": 276352,
+      "avg_posenet_dist": 0.0004962,
+      "avg_segnet_dist": 0.00061045,
+      "canonical_score": 0.3154979650614253,
+      "n_samples": 600,
+      "provenance_archive_sha256": "d73f0957cf2d8da0526c1786613443331ccb913f5648131cfaaac5e6f7eae972",
+      "provenance_archive_size_bytes": 276352,
+      "provenance_device": "cuda",
+      "provenance_gpu_model": "Tesla T4\nTesla T4\nTesla T4\nTesla T4",
+      "score_recomputed_from_components": 0.3154979650614253
+    }
+  },
+  "source_sha_warning": null,
+  "target_score": 0.314,
+  "transform_specs": [
+    "zero-fp4-prefix:all_fp4:0.03",
+    "zero-fp4-prefix:all_fp4:0.04",
+    "zero-fp4-prefix:all_fp4:0.05",
+    "zero-fp4-prefix:all_fp4:0.075",
+    "zero-fp4-prefix:all_fp4:0.1",
+    "zero-fp4-prefix:shared_trunk:0.03",
+    "zero-fp4-prefix:shared_trunk:0.04",
+    "zero-fp4-prefix:shared_trunk:0.05",
+    "zero-fp4-prefix:shared_trunk:0.075",
+    "zero-fp4-prefix:shared_trunk:0.1",
+    "zero-fp4-prefix:frame2_head:0.03",
+    "zero-fp4-prefix:frame2_head:0.04",
+    "zero-fp4-prefix:frame2_head:0.05",
+    "zero-fp4-prefix:frame2_head:0.075",
+    "zero-fp4-prefix:frame2_head:0.1",
+    "zero-fp4-prefix:frame2_head.block2:0.03",
+    "zero-fp4-prefix:frame2_head.block2:0.04",
+    "zero-fp4-prefix:frame2_head.block2:0.05",
+    "zero-fp4-prefix:frame2_head.block2:0.075",
+    "zero-fp4-prefix:frame2_head.block2:0.1",
+    "zero-fp4-prefix:frame2_head.pre:0.03",
+    "zero-fp4-prefix:frame2_head.pre:0.04",
+    "zero-fp4-prefix:frame2_head.pre:0.05",
+    "zero-fp4-prefix:frame2_head.pre:0.075",
+    "zero-fp4-prefix:frame2_head.pre:0.1",
+    "zero-fp4-prefix:frame1_head:0.05",
+    "zero-fp4-prefix:frame1_head:0.075",
+    "zero-fp4-prefix:frame1_head:0.1"
+  ]
+}

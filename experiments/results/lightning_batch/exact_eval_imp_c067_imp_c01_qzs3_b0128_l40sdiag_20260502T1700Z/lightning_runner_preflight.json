@@ -1,0 +1,16 @@
+{
+  "cuda_available": true,
+  "device_count": 1,
+  "device_name": "NVIDIA L40S",
+  "gpu_t4_match": false,
+  "nvidia_dali_fn_module": "nvidia.dali.fn",
+  "nvidia_smi": "/usr/bin/nvidia-smi",
+  "nvidia_smi_head": [
+    "NVIDIA L40S, 580.126.09, 46068 MiB"
+  ],
+  "python": "/teamspace/studios/this_studio/pact/.venv/bin/python",
+  "recorded_at_utc": "2026-05-02T17:23:24Z",
+  "schema_version": 1,
+  "tool": "lightning_exact_eval_runner_preflight",
+  "torch_version": "2.11.0+cu130"
+}

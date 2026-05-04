@@ -1,0 +1,512 @@
+{
+  "archive": {
+    "artifact_relative_path": "archive.zip",
+    "path": "experiments/results/lightning_batch/exact_eval_public_pr98_hnerv_adapter_t4_20260504T0958Z/archive.zip",
+    "sha256": "7ecb0df1c4627d55d88e03eff3d890b7a7a5b047c62515acff20232cf29310eb",
+    "size_bytes": 178392
+  },
+  "archive_copied": true,
+  "archive_integrity": {
+    "bad_crc_member": null,
+    "duplicate_members": [],
+    "members": [
+      {
+        "compress_size": 178284,
+        "file_size": 178284,
+        "flag_bits": 0,
+        "local_header_flag_bits": 0,
+        "local_header_name": "0.bin",
+        "name": "0.bin",
+        "sha256": "fce200db2fe087cc6a051945b3fda2c37f5bbb3e19b8f20a1aea7201db0c9f5f"
+      }
+    ],
+    "packed_payload_members": []
+  },
+  "archive_payload_contracts": {
+    "amr1": {
+      "present": false,
+      "present_members": [],
+      "required_log": "auth_eval.log",
+      "score_claim": false
+    },
+    "cdo1": {
+      "present": false,
+      "present_members": [],
+      "required_log": "auth_eval.log",
+      "score_claim": false
+    },
+    "sjkl": {
+      "present": false,
+      "required_log": "auth_eval.log",
+      "score_claim": false
+    }
+  },
+  "claim_policy": {
+    "promotion_claim": false,
+    "ranking_claim": false,
+    "score_authority": "contest_auth_eval.adjudicated.json",
+    "score_claim": false,
+    "score_fields_are_custody_metadata_only": true
+  },
+  "contest_auth_eval": {
+    "artifact_relative_path": "contest_auth_eval.adjudicated.json",
+    "path": "experiments/results/lightning_batch/exact_eval_public_pr98_hnerv_adapter_t4_20260504T0958Z/contest_auth_eval.adjudicated.json",
+    "sha256": "4285804446c0e8e88a1276ebf75e7353662bacab459a91c0354e081595eec30e",
+    "size_bytes": 9851,
+    "validated_fields": {
+      "component_fields": {
+        "archive_size_bytes": 178392,
+        "avg_posenet_dist": 0.00017394,
+        "avg_segnet_dist": 0.00068841,
+        "n_samples": 600,
+        "rate_unscaled": 0.00475136
+      },
+      "provenance_fields": {
+        "archive_path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_public_pr98_hnerv_adapter_t4_20260504T0958Z/archive.zip",
+        "archive_sha256": "7ecb0df1c4627d55d88e03eff3d890b7a7a5b047c62515acff20232cf29310eb",
+        "archive_size_bytes": 178392,
+        "cuda_available": true,
+        "cuda_device_count": 1,
+        "device": "cuda",
+        "evaluate_timeout_seconds": 1800,
+        "gpu_model": "Tesla T4",
+        "gpu_t4_match": true,
+        "inflate_script": "/teamspace/studios/this_studio/pact/experiments/results/public_runtime_adapters_20260504_codex/pr98_runtime_adapter/inflate.sh",
+        "inflate_script_sha256": "a24c0d11d18eca1e9680f2e46c800222115bf02f8c70e1c78c18aa2f0a8953f7",
+        "inflate_timeout_seconds": 1800,
+        "pact_commit": "<error:CalledProcessError(128, ['git', 'rev-parse', 'HEAD'])>",
+        "started_at_utc": "2026-05-04T10:08:36Z",
+        "sys_argv": [
+          "experiments/contest_auth_eval.py",
+          "--archive",
+          "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_public_pr98_hnerv_adapter_t4_20260504T0958Z/archive.zip",
+          "--inflate-sh",
+          "experiments/results/public_runtime_adapters_20260504_codex/pr98_runtime_adapter/inflate.sh",
+          "--upstream-dir",
+          "/teamspace/studios/this_studio/upstream",
+          "--device",
+          "cuda",
+          "--keep-work-dir",
+          "--work-dir",
+          "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_public_pr98_hnerv_adapter_t4_20260504T0958Z/eval_work"
+        ],
+        "tool": "experiments/contest_auth_eval.py",
+        "upstream_commit": "c5e1274e54e47f81b121bc3bf75eaa9a432b1837"
+      },
+      "runtime_fields": {
+        "contest_auth_eval_elapsed_seconds": 60.97283506400004,
+        "evaluate_elapsed_seconds": 38.409402081999815,
+        "inflate_elapsed_seconds": 22.56099836599992
+      },
+      "score_fields": {
+        "final_score": 0.23,
+        "score_pose_contribution": 0.041706114659603576,
+        "score_rate_contribution": 0.11878399999999999,
+        "score_recomputed_from_components": 0.22933111465960354,
+        "score_seg_contribution": 0.068841
+      }
+    }
+  },
+  "copied_payloads": [
+    "archive.zip",
+    "report.txt"
+  ],
+  "evidence_grade": {
+    "basis": "cuda_t4_full_sample_adjudicated_fields",
+    "blockers": [],
+    "grade": "A++",
+    "reasons": [
+      "contest_auth_eval provenance reports device=cuda",
+      "contest_auth_eval reports n_samples=600",
+      "contest_auth_eval provenance reports cuda_available=true",
+      "contest_auth_eval provenance reports gpu_t4_match=true",
+      "adjudication JSON and adjudication provenance are present"
+    ]
+  },
+  "frontier_summary": {
+    "archive_sha256": "7ecb0df1c4627d55d88e03eff3d890b7a7a5b047c62515acff20232cf29310eb",
+    "archive_size_bytes": 178392,
+    "avg_posenet_dist": 0.00017394,
+    "avg_segnet_dist": 0.00068841,
+    "device": "cuda",
+    "evidence_grade": "A++",
+    "gpu_model": "Tesla T4",
+    "gpu_t4_match": true,
+    "n_samples": 600,
+    "promotion_claim": false,
+    "ranking_claim": false,
+    "score_authority": "contest_auth_eval.adjudicated.json",
+    "score_claim": false,
+    "score_recomputed_from_components": 0.22933111465960354
+  },
+  "metadata_only": false,
+  "optional_artifacts": {
+    "adjudication_provenance.json": {
+      "artifact_relative_path": "adjudication_provenance.json",
+      "path": "experiments/results/lightning_batch/exact_eval_public_pr98_hnerv_adapter_t4_20260504T0958Z/adjudication_provenance.json",
+      "present": true,
+      "sha256": "81dc5071f8836a8d0d140714718b98a16a4903ec299d36b7f7c17247b98fe843",
+      "size_bytes": 2723,
+      "validated_fields": {
+        "result_copy": null,
+        "schema_version": null,
+        "status": null
+      }
+    },
+    "auth_eval.log": {
+      "artifact_relative_path": "auth_eval.log",
+      "path": "experiments/results/lightning_batch/exact_eval_public_pr98_hnerv_adapter_t4_20260504T0958Z/auth_eval.log",
+      "present": true,
+      "sha256": "c903b1ffb2bee3fb446c09a6f7e8095d351e434c9795b350ae6c1547d6c33223",
+      "size_bytes": 11577
+    },
+    "component_trace.json": {
+      "present": false
+    },
+    "contest_auth_eval.adjudicated.json": {
+      "artifact_relative_path": "contest_auth_eval.adjudicated.json",
+      "path": "experiments/results/lightning_batch/exact_eval_public_pr98_hnerv_adapter_t4_20260504T0958Z/contest_auth_eval.adjudicated.json",
+      "present": true,
+      "sha256": "4285804446c0e8e88a1276ebf75e7353662bacab459a91c0354e081595eec30e",
+      "size_bytes": 9851,
+      "validated_fields": {
+        "archive_sha256": "7ecb0df1c4627d55d88e03eff3d890b7a7a5b047c62515acff20232cf29310eb",
+        "archive_size_bytes": 178392,
+        "device": "cuda",
+        "gpu_t4_match": true,
+        "n_samples": 600,
+        "score_recomputed_from_components": 0.22933111465960354
+      }
+    },
+    "eval_provenance.json": {
+      "artifact_relative_path": "eval_provenance.json",
+      "path": "experiments/results/lightning_batch/exact_eval_public_pr98_hnerv_adapter_t4_20260504T0958Z/eval_provenance.json",
+      "present": true,
+      "sha256": "935612509c715714a546149cb969c4c6e619ca695f6de09d8a91d2b112293a62",
+      "size_bytes": 8343,
+      "validated_fields": {
+        "archive_sha256": "7ecb0df1c4627d55d88e03eff3d890b7a7a5b047c62515acff20232cf29310eb",
+        "archive_size_bytes": 178392,
+        "device": "cuda",
+        "gpu_model": "Tesla T4",
+        "gpu_t4_match": true,
+        "tool": "experiments/contest_auth_eval.py"
+      }
+    },
+    "report.txt": {
+      "artifact_relative_path": "report.txt",
+      "path": "experiments/results/lightning_batch/exact_eval_public_pr98_hnerv_adapter_t4_20260504T0958Z/report.txt",
+      "present": true,
+      "sha256": "8a2963e70c20f9b42f3fbb1bbaa82bd580b5b9bc9e5c28814036ce6793157eb3",
+      "size_bytes": 899
+    }
+  },
+  "outputs": {
+    "checklist": "experiments/results/submission_packet_pr98_adapter_20260504/submission_packet_checklist.md",
+    "manifest": "experiments/results/submission_packet_pr98_adapter_20260504/submission_packet_manifest.json"
+  },
+  "packet_kind": "contest_faithful_submission_packet",
+  "raw_frames_copied": false,
+  "schema_version": 1,
+  "source_artifact_dir": "experiments/results/lightning_batch/exact_eval_public_pr98_hnerv_adapter_t4_20260504T0958Z",
+  "submission": {
+    "archive_copied": true,
+    "archive_manifest": {
+      "mode_octal": "0o644",
+      "path": "experiments/results/submission_packet_pr98_adapter_20260504/apogee_pr98_hnerv_adapter/archive_manifest.json",
+      "sha256": "53a40763c305eb4cd111e3ddd13fa3b9f34afe7563007936f73d50fdfb338edd",
+      "size_bytes": 342,
+      "submission_relative_path": "archive_manifest.json"
+    },
+    "file_count": 22,
+    "path": "experiments/results/submission_packet_pr98_adapter_20260504/apogee_pr98_hnerv_adapter",
+    "raw_frames_copied": false,
+    "report_copied": true,
+    "required_files": {
+      "archive.zip": {
+        "mode_octal": "0o644",
+        "path": "experiments/results/submission_packet_pr98_adapter_20260504/apogee_pr98_hnerv_adapter/archive.zip",
+        "sha256": "7ecb0df1c4627d55d88e03eff3d890b7a7a5b047c62515acff20232cf29310eb",
+        "size_bytes": 178392,
+        "submission_relative_path": "archive.zip"
+      },
+      "report.txt": {
+        "mode_octal": "0o644",
+        "path": "experiments/results/submission_packet_pr98_adapter_20260504/apogee_pr98_hnerv_adapter/report.txt",
+        "sha256": "fbdb2d06f92472467b0ceb46b9791d3b85fc7518e77ae46717b6ed9817f08df7",
+        "size_bytes": 1292,
+        "submission_relative_path": "report.txt"
+      }
+    },
+    "runtime_files": [
+      {
+        "mode_octal": "0o644",
+        "path": "experiments/results/submission_packet_pr98_adapter_20260504/apogee_pr98_hnerv_adapter/inflate.py",
+        "sha256": "fdfbfec9bebae59424ad3fd56191074369d3958e77ccd8e645559d28d3d252cd",
+        "size_bytes": 2375,
+        "submission_relative_path": "inflate.py"
+      },
+      {
+        "mode_octal": "0o755",
+        "path": "experiments/results/submission_packet_pr98_adapter_20260504/apogee_pr98_hnerv_adapter/inflate.sh",
+        "sha256": "a24c0d11d18eca1e9680f2e46c800222115bf02f8c70e1c78c18aa2f0a8953f7",
+        "size_bytes": 542,
+        "submission_relative_path": "inflate.sh"
+      },
+      {
+        "mode_octal": "0o644",
+        "path": "experiments/results/submission_packet_pr98_adapter_20260504/apogee_pr98_hnerv_adapter/src/codec.py",
+        "sha256": "d9f2825a416e66c4c60b0ed506e87afcc080342809f2af73c3c6efb2b3c16f4a",
+        "size_bytes": 9010,
+        "submission_relative_path": "src/codec.py"
+      },
+      {
+        "mode_octal": "0o644",
+        "path": "experiments/results/submission_packet_pr98_adapter_20260504/apogee_pr98_hnerv_adapter/src/data.py",
+        "sha256": "db0016ba8e854daa0d01563108ab1c76b6046578fe5f54af479abd34c600ab42",
+        "size_bytes": 6721,
+        "submission_relative_path": "src/data.py"
+      },
+      {
+        "mode_octal": "0o644",
+        "path": "experiments/results/submission_packet_pr98_adapter_20260504/apogee_pr98_hnerv_adapter/src/losses.py",
+        "sha256": "757725dc64681d90ebd83057c956ca3d72e02e06f778571b599d99fac7b17368",
+        "size_bytes": 6892,
+        "submission_relative_path": "src/losses.py"
+      },
+      {
+        "mode_octal": "0o644",
+        "path": "experiments/results/submission_packet_pr98_adapter_20260504/apogee_pr98_hnerv_adapter/src/model.py",
+        "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b",
+        "size_bytes": 2197,
+        "submission_relative_path": "src/model.py"
+      },
+      {
+        "mode_octal": "0o644",
+        "path": "experiments/results/submission_packet_pr98_adapter_20260504/apogee_pr98_hnerv_adapter/src/optim.py",
+        "sha256": "6c79f7559e4fdf23ec1ab60fcdad29f785f8e223dc6cf426d9cf0bc38555d3c6",
+        "size_bytes": 3785,
+        "submission_relative_path": "src/optim.py"
+      },
+      {
+        "mode_octal": "0o644",
+        "path": "experiments/results/submission_packet_pr98_adapter_20260504/apogee_pr98_hnerv_adapter/src/score.py",
+        "sha256": "c8c4421fd26faa5c97ebade2919f9ba02c916bca3806fa95ba5159f221c4ef7f",
+        "size_bytes": 4661,
+        "submission_relative_path": "src/score.py"
+      },
+      {
+        "mode_octal": "0o644",
+        "path": "experiments/results/submission_packet_pr98_adapter_20260504/apogee_pr98_hnerv_adapter/src/stages/codec_stage.py",
+        "sha256": "1ddd7ccac9427a4679f0bf884409cd22173219412f1962f92ed711cef2d54c55",
+        "size_bytes": 2870,
+        "submission_relative_path": "src/stages/codec_stage.py"
+      },
+      {
+        "mode_octal": "0o644",
+        "path": "experiments/results/submission_packet_pr98_adapter_20260504/apogee_pr98_hnerv_adapter/src/stages/common.py",
+        "sha256": "ad766d0639269eba70af5e5c26ef71267dfe8350e0335cdc506b198a08febdef",
+        "size_bytes": 11658,
+        "submission_relative_path": "src/stages/common.py"
+      },
+      {
+        "mode_octal": "0o644",
+        "path": "experiments/results/submission_packet_pr98_adapter_20260504/apogee_pr98_hnerv_adapter/src/stages/stage1_v328_ce.py",
+        "sha256": "a43a44fa4cdc17d83e81f94006228268fed78f2b641c73b9562124bfc995c2b7",
+        "size_bytes": 1456,
+        "submission_relative_path": "src/stages/stage1_v328_ce.py"
+      },
+      {
+        "mode_octal": "0o644",
+        "path": "experiments/results/submission_packet_pr98_adapter_20260504/apogee_pr98_hnerv_adapter/src/stages/stage2_v331_softplus.py",
+        "sha256": "1203339dc5319f81d2f571a11be166a034bcb9b1a9bb346f823d68a9331aec20",
+        "size_bytes": 1216,
+        "submission_relative_path": "src/stages/stage2_v331_softplus.py"
+      },
+      {
+        "mode_octal": "0o644",
+        "path": "experiments/results/submission_packet_pr98_adapter_20260504/apogee_pr98_hnerv_adapter/src/stages/stage3_v332_smooth.py",
+        "sha256": "119fe4e1718502973c38fcd94163ea935e2ce7776ada833c4d41661225a73695",
+        "size_bytes": 1206,
+        "submission_relative_path": "src/stages/stage3_v332_smooth.py"
+      },
+      {
+        "mode_octal": "0o644",
+        "path": "experiments/results/submission_packet_pr98_adapter_20260504/apogee_pr98_hnerv_adapter/src/stages/stage4_v332_qat.py",
+        "sha256": "aaf7f704f0fcf3a7860bca1be589cfd6b90a217b529d77ffc7abc826d42114af",
+        "size_bytes": 1233,
+        "submission_relative_path": "src/stages/stage4_v332_qat.py"
+      },
+      {
+        "mode_octal": "0o644",
+        "path": "experiments/results/submission_packet_pr98_adapter_20260504/apogee_pr98_hnerv_adapter/src/stages/stage5_c1a_l7.py",
+        "sha256": "6e1c4f8a1abdde16d6086f5c38dc523207ca1ca04b89cc72a0a2f58fe0ea0dbf",
+        "size_bytes": 1329,
+        "submission_relative_path": "src/stages/stage5_c1a_l7.py"
+      },
+      {
+        "mode_octal": "0o644",
+        "path": "experiments/results/submission_packet_pr98_adapter_20260504/apogee_pr98_hnerv_adapter/src/stages/stage6_lambda_sweep.py",
+        "sha256": "fe3893d388d7820d365d0b088a0800df800c6963e2e101e6e451b1172e6d453b",
+        "size_bytes": 1208,
+        "submission_relative_path": "src/stages/stage6_lambda_sweep.py"
+      },
+      {
+        "mode_octal": "0o644",
+        "path": "experiments/results/submission_packet_pr98_adapter_20260504/apogee_pr98_hnerv_adapter/src/stages/stage7_sigma_sweep.py",
+        "sha256": "8b8b812bb4bc49e560e6fe2e1dd6b3fecb36c60bcdaeb1a5411e5697653e4443",
+        "size_bytes": 1255,
+        "submission_relative_path": "src/stages/stage7_sigma_sweep.py"
+      },
+      {
+        "mode_octal": "0o644",
+        "path": "experiments/results/submission_packet_pr98_adapter_20260504/apogee_pr98_hnerv_adapter/src/stages/stage8_muon_finetune.py",
+        "sha256": "9e036c99b7fc58fa24f954be251bebb5af4cddd3b84fe408b9ebc2b94b58ed5f",
+        "size_bytes": 1866,
+        "submission_relative_path": "src/stages/stage8_muon_finetune.py"
+      },
+      {
+        "mode_octal": "0o644",
+        "path": "experiments/results/submission_packet_pr98_adapter_20260504/apogee_pr98_hnerv_adapter/src/train.py",
+        "sha256": "d88610929db7f42b7a3522a77ded29b2a9a4e7abe63eae7bc5915fa4b8e58b79",
+        "size_bytes": 2488,
+        "submission_relative_path": "src/train.py"
+      }
+    ],
+    "runtime_manifest_source": "contest_auth_eval.provenance.inflate_runtime_manifest.files",
+    "source_runtime_dir": "experiments/results/public_runtime_adapters_20260504_codex/pr98_runtime_adapter"
+  },
+  "supporting_artifacts": {
+    "claim_policy": {
+      "promotion_claim": false,
+      "ranking_claim": false,
+      "score_claim": false,
+      "supporting_artifacts_are_not_score_authorities": true
+    },
+    "next_action_tranches": [
+      {
+        "artifact_relative_path": null,
+        "evidence_use": "roadmap_only",
+        "path": "experiments/results/pr98_channel_ablation_candidates_20260504_codex/candidates_manifest.json",
+        "promotion_claim": false,
+        "ranking_claim": false,
+        "score_claim": false,
+        "sha256": "f68fe868f9080b050fde66f89a54faa6e14c6ac95eca319ea911907eee4fc94b",
+        "size_bytes": 93041
+      }
+    ],
+    "planner_ledgers": [
+      {
+        "artifact_relative_path": null,
+        "evidence_use": "planning_or_proxy_only",
+        "path": ".omx/research/public_hnerv_adapter_replays_20260504_codex.md",
+        "promotion_claim": false,
+        "ranking_claim": false,
+        "score_claim": false,
+        "sha256": "b1e7926b7b3defd898fed1a234b18c754f7d67f78f70dd1c68dc5befcf26be3a",
+        "size_bytes": 4205
+      }
+    ],
+    "visualizations": []
+  },
+  "validation": {
+    "checks": [
+      {
+        "details": "bad_crc_member=None",
+        "name": "archive_crc_ok",
+        "passed": true
+      },
+      {
+        "details": "duplicates=[]",
+        "name": "archive_no_duplicate_members",
+        "passed": true
+      },
+      {
+        "details": "packed_payload_members=[]",
+        "name": "archive_packed_payload_singleton",
+        "passed": true
+      },
+      {
+        "details": "safe member name",
+        "name": "archive_member_safe:0.bin",
+        "passed": true
+      },
+      {
+        "details": "local='0.bin' central='0.bin'",
+        "name": "archive_local_central_name_match:0.bin",
+        "passed": true
+      },
+      {
+        "details": "local=0 central=0",
+        "name": "archive_local_central_flag_bits_match:0.bin",
+        "passed": true
+      },
+      {
+        "details": "archive.zip sha256=7ecb0df1c4627d55d88e03eff3d890b7a7a5b047c62515acff20232cf29310eb",
+        "name": "archive_sha256_matches_contest_auth_eval",
+        "passed": true
+      },
+      {
+        "details": "archive.zip bytes=178392",
+        "name": "archive_bytes_matches_contest_auth_eval",
+        "passed": true
+      },
+      {
+        "details": "contest_auth_eval provenance archive_size_bytes matches archive.zip",
+        "name": "provenance_archive_bytes_matches_archive",
+        "passed": true
+      },
+      {
+        "details": "formula=0.22933102502497396 json=0.22933111465960354",
+        "name": "score_recomputes_from_components",
+        "passed": true
+      },
+      {
+        "details": "expected=7ecb0df1c4627d55d88e03eff3d890b7a7a5b047c62515acff20232cf29310eb",
+        "name": "expected_archive_sha256",
+        "passed": true
+      },
+      {
+        "details": "expected=178392",
+        "name": "expected_archive_size_bytes",
+        "passed": true
+      },
+      {
+        "details": "expected=600",
+        "name": "expected_samples",
+        "passed": true
+      },
+      {
+        "details": "eval_provenance archive_sha256 matches archive.zip",
+        "name": "eval_provenance_archive_sha256",
+        "passed": true
+      },
+      {
+        "details": "eval_provenance archive_size_bytes matches archive.zip",
+        "name": "eval_provenance_archive_bytes",
+        "passed": true
+      },
+      {
+        "details": "eval_provenance device matches contest_auth_eval provenance",
+        "name": "eval_provenance_device",
+        "passed": true
+      },
+      {
+        "details": "adjudicated JSON archive_sha256 matches archive.zip",
+        "name": "adjudicated_archive_sha256",
+        "passed": true
+      },
+      {
+        "details": "adjudicated JSON archive_size_bytes matches archive.zip",
+        "name": "adjudicated_archive_bytes",
+        "passed": true
+      },
+      {
+        "details": "adjudicated JSON n_samples matches contest_auth_eval.json",
+        "name": "adjudicated_n_samples",
+        "passed": true
+      }
+    ],
+    "status": "passed"
+  }
+}

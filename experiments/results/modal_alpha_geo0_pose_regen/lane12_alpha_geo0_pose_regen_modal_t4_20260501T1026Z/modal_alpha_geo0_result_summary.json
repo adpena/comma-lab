@@ -1,0 +1,21 @@
+{
+  "allowed_use": [
+    "debug",
+    "no_score_claim",
+    "no_promotion"
+  ],
+  "app": "comma-alpha-geo0-pose-regen",
+  "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda",
+  "passed": false,
+  "promotion_eligible": false,
+  "result_dir": "/Users/adpena/Projects/pact/experiments/results/modal_alpha_geo0_pose_regen/lane12_alpha_geo0_pose_regen_modal_t4_20260501T1026Z",
+  "returncode": 6,
+  "saved_artifacts": 3,
+  "schema_version": 1,
+  "score_claim": false,
+  "stage": "cuda_dali_nvdec_preflight",
+  "tool": "experiments/modal_alpha_geo0_pose_regen.py",
+  "validation_errors": [
+    "NVDEC/DALI video probe failed; upstream/evaluate.py CUDA path is unsafe"
+  ]
+}

@@ -1,0 +1,154 @@
+{
+  "archive": {
+    "blockers": [],
+    "bytes": 178546,
+    "member_count": 1,
+    "members": [
+      {
+        "compress_size": 178438,
+        "compress_type": 0,
+        "crc32": "379392bc",
+        "date_time": [
+          2026,
+          5,
+          4,
+          5,
+          21,
+          38
+        ],
+        "file_size": 178438,
+        "name": "0.bin",
+        "sha256": "79b9f89e709c2892560822284a4465f17d5df8c6148b923e889683ab04bdb1d5"
+      }
+    ],
+    "readiness_copy_path": "experiments/results/final_packet_readiness_pr98_pr99_20260504_codex/archives/pr99_archive.zip",
+    "sha256": "278b1c7a1bd6b03a5bceddafcb3489b2624c558ad22825d9211b701333b6eefb",
+    "source_path": "experiments/results/leaderboard_intel_20260504_codex/pr99_archive.zip"
+  },
+  "checks": {
+    "all_local_checks_passed": true,
+    "archive_bytes_match_expected": true,
+    "archive_sha256_matches_expected": true,
+    "archive_zip_has_no_blockers": true,
+    "blockers": [],
+    "runtime_has_no_absolute_path_hits": true,
+    "runtime_has_no_hidden_or_cache_files": true,
+    "runtime_has_no_secret_like_hits": true,
+    "runtime_tree_sha256_matches_expected": true
+  },
+  "dispatch": {
+    "duplicate_job": "exact_eval_public_pr99_hnerv_muon_lc_t4_dup_20260504T0944Z",
+    "duplicate_lane": "public_pr99_hnerv_muon_lc_t4_replay_dup",
+    "gpu_dispatch_performed_by_this_tool": false,
+    "original_job": "exact_eval_public_pr99_hnerv_muon_lc_t4_20260504T0940Z",
+    "original_lane": "public_pr99_hnerv_muon_lc_t4_replay"
+  },
+  "generated_utc": "2026-05-04T09:49:27Z",
+  "pr": 99,
+  "runtime": {
+    "copy_sanitization": {
+      "copied": [
+        {
+          "bytes": 2197,
+          "mode": "0o644",
+          "relative_path": "hnerv_model.py",
+          "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+        },
+        {
+          "bytes": 4965,
+          "mode": "0o644",
+          "relative_path": "inflate.py",
+          "sha256": "2b4bcc6024433284b731b980145b1aa56b336a5a6b9ec71c3281b3dd00903c5b"
+        },
+        {
+          "bytes": 137,
+          "mode": "0o755",
+          "relative_path": "inflate.sh",
+          "sha256": "202e9d917c1a2f56ece729193de92c32f11a23ec341d3a44cf5cac1d4a8b19a7"
+        },
+        {
+          "bytes": 1081,
+          "mode": "0o644",
+          "relative_path": "schema.py",
+          "sha256": "bc434bd596e753dbeae97c0ddce4d9cf98a50cfe862a451834864d83620d6a0a"
+        },
+        {
+          "bytes": 1837,
+          "mode": "0o644",
+          "relative_path": "sidecar.py",
+          "sha256": "52955000fe673914307b481bff29377a015bf7a0fe9dc38652e29153c033af75"
+        }
+      ],
+      "skipped": [
+        {
+          "path": "__pycache__",
+          "reason": "skip_cache_dir"
+        },
+        {
+          "path": "__pycache__/hnerv_model.cpython-312.pyc",
+          "reason": "skip_cache_dir"
+        },
+        {
+          "path": "__pycache__/inflate.cpython-312.pyc",
+          "reason": "skip_cache_dir"
+        },
+        {
+          "path": "__pycache__/schema.cpython-312.pyc",
+          "reason": "skip_cache_dir"
+        },
+        {
+          "path": "__pycache__/sidecar.cpython-312.pyc",
+          "reason": "skip_cache_dir"
+        },
+        {
+          "path": "archive.zip",
+          "reason": "skip_non_runtime_sidecar_suffix"
+        }
+      ]
+    },
+    "expected_runtime_tree_sha256": "67fa8ef36f732be73d29053bc050a86a597b23d394ea07538451a8eb8303817f",
+    "manifest": {
+      "absolute_path_hits": [],
+      "files": [
+        {
+          "bytes": 2197,
+          "mode": "0o644",
+          "relative_path": "hnerv_model.py",
+          "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+        },
+        {
+          "bytes": 4965,
+          "mode": "0o644",
+          "relative_path": "inflate.py",
+          "sha256": "2b4bcc6024433284b731b980145b1aa56b336a5a6b9ec71c3281b3dd00903c5b"
+        },
+        {
+          "bytes": 137,
+          "mode": "0o755",
+          "relative_path": "inflate.sh",
+          "sha256": "202e9d917c1a2f56ece729193de92c32f11a23ec341d3a44cf5cac1d4a8b19a7"
+        },
+        {
+          "bytes": 1081,
+          "mode": "0o644",
+          "relative_path": "schema.py",
+          "sha256": "bc434bd596e753dbeae97c0ddce4d9cf98a50cfe862a451834864d83620d6a0a"
+        },
+        {
+          "bytes": 1837,
+          "mode": "0o644",
+          "relative_path": "sidecar.py",
+          "sha256": "52955000fe673914307b481bff29377a015bf7a0fe9dc38652e29153c033af75"
+        }
+      ],
+      "runtime_file_count": 5,
+      "secret_like_hits": [],
+      "skipped_non_runtime_files": [],
+      "source_bytes": 10217
+    },
+    "runtime_tree_sha256": "67fa8ef36f732be73d29053bc050a86a597b23d394ea07538451a8eb8303817f",
+    "snapshot_root": "experiments/results/final_packet_readiness_pr98_pr99_20260504_codex/runtime_snapshots/pr99_runtime",
+    "source_root": "experiments/results/leaderboard_intel_20260504_codex/pr99_runtime"
+  },
+  "schema": "final_packet_readiness_pr98_pr99_candidate_v1"
+}

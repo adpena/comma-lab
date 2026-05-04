@@ -1,0 +1,2855 @@
+{
+  "action_record_inputs": [],
+  "archive": {
+    "bytes": 276342,
+    "lambda_rate": 6.658589531221714e-07,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/archive.zip",
+    "rate_score_contribution": 0.184004794824,
+    "sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8",
+    "target_score": 0.314
+  },
+  "byte_ledger": [
+    {
+      "atom_id": "archive",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": null,
+      "break_even_bytes_at_rate_only": null,
+      "byte_delta": null,
+      "bytes": 276342,
+      "known_posenet_delta": null,
+      "known_score_delta": null,
+      "known_segnet_delta": null,
+      "name": "archive.zip",
+      "rate_score_cost": 0.184004794824,
+      "rate_score_delta": null,
+      "row_type": "archive",
+      "sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/archive.zip",
+      "source_sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8"
+    },
+    {
+      "atom_id": "component_trace_pair:105",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.0004259296165359442,
+      "break_even_bytes_at_rate_only": 639,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        210,
+        211
+      ],
+      "frame_start": 210,
+      "known_posenet_delta": 0.002603838685899973,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.0007069905987009406,
+      "name": "pair_105",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:106",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.0003926256389011673,
+      "break_even_bytes_at_rate_only": 589,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        212,
+        213
+      ],
+      "frame_start": 212,
+      "known_posenet_delta": 0.0024728255812078714,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.0006001790752634406,
+      "name": "pair_106",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:108",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.00036473904081813093,
+      "break_even_bytes_at_rate_only": 547,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        216,
+        217
+      ],
+      "frame_start": 216,
+      "known_posenet_delta": 0.0019434108398854733,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.0008087158203125,
+      "name": "pair_108",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:125",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.000333211143313009,
+      "break_even_bytes_at_rate_only": 500,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        250,
+        251
+      ],
+      "frame_start": 250,
+      "known_posenet_delta": 0.0019921865314245224,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.0005849202862009406,
+      "name": "pair_125",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:128",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.00040405626880251396,
+      "break_even_bytes_at_rate_only": 606,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        256,
+        257
+      ],
+      "frame_start": 256,
+      "known_posenet_delta": 0.002404651138931513,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.0007171630859375,
+      "name": "pair_128",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:130",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.00036547776596155564,
+      "break_even_bytes_at_rate_only": 548,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        260,
+        261
+      ],
+      "frame_start": 260,
+      "known_posenet_delta": 0.0021359254606068134,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.0006764730205759406,
+      "name": "pair_130",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:134",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.0003294524004397511,
+      "break_even_bytes_at_rate_only": 494,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        268,
+        269
+      ],
+      "frame_start": 268,
+      "known_posenet_delta": 0.0017454915214329958,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.0007375081768259406,
+      "name": "pair_134",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:136",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.0003610328275947418,
+      "break_even_bytes_at_rate_only": 542,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        272,
+        273
+      ],
+      "frame_start": 272,
+      "known_posenet_delta": 0.0019908954855054617,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.0007527669658884406,
+      "name": "pair_136",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:148",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.0003170847389065846,
+      "break_even_bytes_at_rate_only": 476,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        296,
+        297
+      ],
+      "frame_start": 296,
+      "known_posenet_delta": 0.0017269396921619773,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.0006764730205759406,
+      "name": "pair_148",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:164",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.00045343069335650145,
+      "break_even_bytes_at_rate_only": 680,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        328,
+        329
+      ],
+      "frame_start": 328,
+      "known_posenet_delta": 0.0025855095591396093,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.000885009765625,
+      "name": "pair_164",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:165",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.0003187161194279438,
+      "break_even_bytes_at_rate_only": 478,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        330,
+        331
+      ],
+      "frame_start": 330,
+      "known_posenet_delta": 0.001583112752996385,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.0007883707876317203,
+      "name": "pair_165",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:192",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.00032001031921767293,
+      "break_even_bytes_at_rate_only": 480,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        384,
+        385
+      ],
+      "frame_start": 384,
+      "known_posenet_delta": 0.0015367361484095454,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.0008290609112009406,
+      "name": "pair_192",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:197",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.00034965336954767795,
+      "break_even_bytes_at_rate_only": 525,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        394,
+        395
+      ],
+      "frame_start": 394,
+      "known_posenet_delta": 0.002217116765677929,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.0005238851299509406,
+      "name": "pair_197",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:420",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.0003077584020168254,
+      "break_even_bytes_at_rate_only": 462,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        840,
+        841
+      ],
+      "frame_start": 840,
+      "known_posenet_delta": 0.0016982697416096926,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.000640869140625,
+      "name": "pair_420",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:423",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.000310573552388506,
+      "break_even_bytes_at_rate_only": 466,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        846,
+        847
+      ],
+      "frame_start": 846,
+      "known_posenet_delta": 0.0018581829499453306,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.0005442301626317203,
+      "name": "pair_423",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:60",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.00038256662629821905,
+      "break_even_bytes_at_rate_only": 574,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        120,
+        121
+      ],
+      "frame_start": 120,
+      "known_posenet_delta": 0.0022946777753531933,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.0006663004751317203,
+      "name": "pair_60",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:64",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.00037226510927979256,
+      "break_even_bytes_at_rate_only": 559,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        128,
+        129
+      ],
+      "frame_start": 128,
+      "known_posenet_delta": 0.0023509019520133734,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.0005645751953125,
+      "name": "pair_64",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:67",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.0003725717398457716,
+      "break_even_bytes_at_rate_only": 559,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        134,
+        135
+      ],
+      "frame_start": 134,
+      "known_posenet_delta": 0.0022961790673434734,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.0006052653188817203,
+      "name": "pair_67",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:69",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.0003829481306097995,
+      "break_even_bytes_at_rate_only": 575,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        138,
+        139
+      ],
+      "frame_start": 138,
+      "known_posenet_delta": 0.0024698448833078146,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.0005442301626317203,
+      "name": "pair_69",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:70",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.0003294517530249951,
+      "break_even_bytes_at_rate_only": 494,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        140,
+        141
+      ],
+      "frame_start": 140,
+      "known_posenet_delta": 0.00174548604991287,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.0007375081768259406,
+      "name": "pair_70",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "packed_stream:masks.mkv",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": null,
+      "break_even_bytes_at_rate_only": null,
+      "byte_delta": null,
+      "byte_savings_estimate": 0,
+      "bytes": 219472,
+      "codec": "brotli_av1_obu",
+      "known_posenet_delta": null,
+      "known_score_delta": null,
+      "known_segnet_delta": null,
+      "name": "masks.mkv",
+      "rate_score_cost": 0.14613739616,
+      "rate_score_delta": null,
+      "row_type": "packed_stream",
+      "sha256": "d51dee7777581ca0cb8c819480d11595f9fb4e03975e6db3930cc62a4e406916",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/archive.zip",
+      "source_sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8"
+    },
+    {
+      "atom_id": "packed_stream:renderer.bin",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": null,
+      "break_even_bytes_at_rate_only": null,
+      "byte_delta": null,
+      "byte_savings_estimate": 0,
+      "bytes": 55965,
+      "codec": "brotli_qzs3",
+      "known_posenet_delta": null,
+      "known_score_delta": null,
+      "known_segnet_delta": null,
+      "name": "renderer.bin",
+      "rate_score_cost": 0.037264796311,
+      "rate_score_delta": null,
+      "row_type": "packed_stream",
+      "sha256": "a8eced022f580d135c964d0c13766fa8339a3b757856043d6f1fbd5e16a2de38",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/archive.zip",
+      "source_sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8"
+    },
+    {
+      "atom_id": "packed_stream:optimized_poses.qp1",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": null,
+      "break_even_bytes_at_rate_only": null,
+      "byte_delta": null,
+      "byte_savings_estimate": 0,
+      "bytes": 677,
+      "codec": "public_qp1_brotli",
+      "known_posenet_delta": null,
+      "known_score_delta": null,
+      "known_segnet_delta": null,
+      "name": "optimized_poses.qp1",
+      "rate_score_cost": 0.000450786511,
+      "rate_score_delta": null,
+      "row_type": "packed_stream",
+      "sha256": "d3eaccb6e25330bedf112a4d0dea00b0ec2b6dcf039ccfe1b0a795291b68d31b",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/archive.zip",
+      "source_sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8"
+    },
+    {
+      "atom_id": "packed_stream:seg_tile_actions.bin",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": null,
+      "break_even_bytes_at_rate_only": null,
+      "byte_delta": null,
+      "byte_savings_estimate": 0,
+      "bytes": 116,
+      "codec": "brotli_seg_tile_actions_delta_varint_v1",
+      "known_posenet_delta": null,
+      "known_score_delta": null,
+      "known_segnet_delta": null,
+      "name": "seg_tile_actions.bin",
+      "rate_score_cost": 7.7239639e-05,
+      "rate_score_delta": null,
+      "row_type": "packed_stream",
+      "sha256": "9d6d812ea4fb215d2b99b0c6c2f4731d38d127571206e4a3f1b4b84db41dbc57",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/archive.zip",
+      "source_sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8"
+    },
+    {
+      "atom_id": "payload_internal_overhead",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": null,
+      "break_even_bytes_at_rate_only": null,
+      "byte_delta": null,
+      "bytes": 12,
+      "known_posenet_delta": null,
+      "known_score_delta": null,
+      "known_segnet_delta": null,
+      "name": "payload_internal_overhead",
+      "rate_score_cost": 7.990307e-06,
+      "rate_score_delta": null,
+      "row_type": "payload_overhead",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/archive.zip",
+      "source_sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8"
+    },
+    {
+      "atom_id": "zip_member:p",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": null,
+      "break_even_bytes_at_rate_only": null,
+      "byte_delta": null,
+      "bytes": 276242,
+      "known_posenet_delta": null,
+      "known_score_delta": null,
+      "known_segnet_delta": null,
+      "name": "p",
+      "rate_score_cost": 0.183938208928,
+      "rate_score_delta": null,
+      "row_type": "zip_member",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/archive.zip",
+      "source_sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8"
+    },
+    {
+      "atom_id": "zip_overhead",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": null,
+      "break_even_bytes_at_rate_only": null,
+      "byte_delta": null,
+      "bytes": 100,
+      "known_posenet_delta": null,
+      "known_score_delta": null,
+      "known_segnet_delta": null,
+      "name": "zip_overhead",
+      "rate_score_cost": 6.6585895e-05,
+      "rate_score_delta": null,
+      "row_type": "zip_overhead",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/archive.zip",
+      "source_sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8"
+    }
+  ],
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py on CUDA",
+  "component_trace": {
+    "archive_sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8",
+    "archive_size_bytes": 276342,
+    "avg_posenet_dist": 0.0004960075904136829,
+    "avg_segnet_dist": 0.0006103770123202897,
+    "evidence_grade": "diagnostic_component_trace",
+    "hard_pair_atoms": [
+      {
+        "break_even_bytes_at_rate_only": 680,
+        "frame_indices": [
+          328,
+          329
+        ],
+        "frame_start": 328,
+        "pair_index": 164,
+        "posenet_dist": 0.0025855095591396093,
+        "score_combined_contribution_first_order": 0.00045343069335650145,
+        "score_pose_contribution_first_order": 0.00030592906575233476,
+        "score_seg_contribution_exact": 0.00014750162760416666,
+        "segnet_dist": 0.000885009765625
+      },
+      {
+        "break_even_bytes_at_rate_only": 639,
+        "frame_indices": [
+          210,
+          211
+        ],
+        "frame_start": 210,
+        "pair_index": 105,
+        "posenet_dist": 0.002603838685899973,
+        "score_combined_contribution_first_order": 0.0004259296165359442,
+        "score_pose_contribution_first_order": 0.0003080978500857875,
+        "score_seg_contribution_exact": 0.00011783176645015676,
+        "segnet_dist": 0.0007069905987009406
+      },
+      {
+        "break_even_bytes_at_rate_only": 606,
+        "frame_indices": [
+          256,
+          257
+        ],
+        "frame_start": 256,
+        "pair_index": 128,
+        "posenet_dist": 0.002404651138931513,
+        "score_combined_contribution_first_order": 0.00040405626880251396,
+        "score_pose_contribution_first_order": 0.00028452908781293065,
+        "score_seg_contribution_exact": 0.00011952718098958333,
+        "segnet_dist": 0.0007171630859375
+      },
+      {
+        "break_even_bytes_at_rate_only": 589,
+        "frame_indices": [
+          212,
+          213
+        ],
+        "frame_start": 212,
+        "pair_index": 106,
+        "posenet_dist": 0.0024728255812078714,
+        "score_combined_contribution_first_order": 0.0003926256389011673,
+        "score_pose_contribution_first_order": 0.00029259579302392717,
+        "score_seg_contribution_exact": 0.0001000298458772401,
+        "segnet_dist": 0.0006001790752634406
+      },
+      {
+        "break_even_bytes_at_rate_only": 575,
+        "frame_indices": [
+          138,
+          139
+        ],
+        "frame_start": 138,
+        "pair_index": 69,
+        "posenet_dist": 0.0024698448833078146,
+        "score_combined_contribution_first_order": 0.0003829481306097995,
+        "score_pose_contribution_first_order": 0.00029224310350451277,
+        "score_seg_contribution_exact": 9.070502710528672e-05,
+        "segnet_dist": 0.0005442301626317203
+      },
+      {
+        "break_even_bytes_at_rate_only": 574,
+        "frame_indices": [
+          120,
+          121
+        ],
+        "frame_start": 120,
+        "pair_index": 60,
+        "posenet_dist": 0.0022946777753531933,
+        "score_combined_contribution_first_order": 0.00038256662629821905,
+        "score_pose_contribution_first_order": 0.000271516547109599,
+        "score_seg_contribution_exact": 0.00011105007918862005,
+        "segnet_dist": 0.0006663004751317203
+      },
+      {
+        "break_even_bytes_at_rate_only": 559,
+        "frame_indices": [
+          134,
+          135
+        ],
+        "frame_start": 134,
+        "pair_index": 67,
+        "posenet_dist": 0.0022961790673434734,
+        "score_combined_contribution_first_order": 0.0003725717398457716,
+        "score_pose_contribution_first_order": 0.0002716941866988182,
+        "score_seg_contribution_exact": 0.00010087755314695339,
+        "segnet_dist": 0.0006052653188817203
+      },
+      {
+        "break_even_bytes_at_rate_only": 559,
+        "frame_indices": [
+          128,
+          129
+        ],
+        "frame_start": 128,
+        "pair_index": 64,
+        "posenet_dist": 0.0023509019520133734,
+        "score_combined_contribution_first_order": 0.00037226510927979256,
+        "score_pose_contribution_first_order": 0.0002781692433943759,
+        "score_seg_contribution_exact": 9.409586588541667e-05,
+        "segnet_dist": 0.0005645751953125
+      },
+      {
+        "break_even_bytes_at_rate_only": 548,
+        "frame_indices": [
+          260,
+          261
+        ],
+        "frame_start": 260,
+        "pair_index": 130,
+        "posenet_dist": 0.0021359254606068134,
+        "score_combined_contribution_first_order": 0.00036547776596155564,
+        "score_pose_contribution_first_order": 0.0002527322625322322,
+        "score_seg_contribution_exact": 0.00011274550342932343,
+        "segnet_dist": 0.0006764730205759406
+      },
+      {
+        "break_even_bytes_at_rate_only": 547,
+        "frame_indices": [
+          216,
+          217
+        ],
+        "frame_start": 216,
+        "pair_index": 108,
+        "posenet_dist": 0.0019434108398854733,
+        "score_combined_contribution_first_order": 0.00036473904081813093,
+        "score_pose_contribution_first_order": 0.0002299530707660476,
+        "score_seg_contribution_exact": 0.00013478597005208334,
+        "segnet_dist": 0.0008087158203125
+      },
+      {
+        "break_even_bytes_at_rate_only": 542,
+        "frame_indices": [
+          272,
+          273
+        ],
+        "frame_start": 272,
+        "pair_index": 136,
+        "posenet_dist": 0.0019908954855054617,
+        "score_combined_contribution_first_order": 0.0003610328275947418,
+        "score_pose_contribution_first_order": 0.00023557166661333502,
+        "score_seg_contribution_exact": 0.00012546116098140678,
+        "segnet_dist": 0.0007527669658884406
+      },
+      {
+        "break_even_bytes_at_rate_only": 525,
+        "frame_indices": [
+          394,
+          395
+        ],
+        "frame_start": 394,
+        "pair_index": 197,
+        "posenet_dist": 0.002217116765677929,
+        "score_combined_contribution_first_order": 0.00034965336954767795,
+        "score_pose_contribution_first_order": 0.0002623391812225212,
+        "score_seg_contribution_exact": 8.731418832515676e-05,
+        "segnet_dist": 0.0005238851299509406
+      },
+      {
+        "break_even_bytes_at_rate_only": 500,
+        "frame_indices": [
+          250,
+          251
+        ],
+        "frame_start": 250,
+        "pair_index": 125,
+        "posenet_dist": 0.0019921865314245224,
+        "score_combined_contribution_first_order": 0.000333211143313009,
+        "score_pose_contribution_first_order": 0.00023572442894618557,
+        "score_seg_contribution_exact": 9.748671436682343e-05,
+        "segnet_dist": 0.0005849202862009406
+      },
+      {
+        "break_even_bytes_at_rate_only": 494,
+        "frame_indices": [
+          268,
+          269
+        ],
+        "frame_start": 268,
+        "pair_index": 134,
+        "posenet_dist": 0.0017454915214329958,
+        "score_combined_contribution_first_order": 0.0003294524004397511,
+        "score_pose_contribution_first_order": 0.00020653437096876102,
+        "score_seg_contribution_exact": 0.0001229180294709901,
+        "segnet_dist": 0.0007375081768259406
+      },
+      {
+        "break_even_bytes_at_rate_only": 494,
+        "frame_indices": [
+          140,
+          141
+        ],
+        "frame_start": 140,
+        "pair_index": 70,
+        "posenet_dist": 0.00174548604991287,
+        "score_combined_contribution_first_order": 0.0003294517530249951,
+        "score_pose_contribution_first_order": 0.000206533723554005,
+        "score_seg_contribution_exact": 0.0001229180294709901,
+        "segnet_dist": 0.0007375081768259406
+      },
+      {
+        "break_even_bytes_at_rate_only": 480,
+        "frame_indices": [
+          384,
+          385
+        ],
+        "frame_start": 384,
+        "pair_index": 192,
+        "posenet_dist": 0.0015367361484095454,
+        "score_combined_contribution_first_order": 0.00032001031921767293,
+        "score_pose_contribution_first_order": 0.00018183350068418287,
+        "score_seg_contribution_exact": 0.0001381768185334901,
+        "segnet_dist": 0.0008290609112009406
+      },
+      {
+        "break_even_bytes_at_rate_only": 478,
+        "frame_indices": [
+          330,
+          331
+        ],
+        "frame_start": 330,
+        "pair_index": 165,
+        "posenet_dist": 0.001583112752996385,
+        "score_combined_contribution_first_order": 0.0003187161194279438,
+        "score_pose_contribution_first_order": 0.00018732098815599043,
+        "score_seg_contribution_exact": 0.00013139513127195338,
+        "segnet_dist": 0.0007883707876317203
+      },
+      {
+        "break_even_bytes_at_rate_only": 476,
+        "frame_indices": [
+          296,
+          297
+        ],
+        "frame_start": 296,
+        "pair_index": 148,
+        "posenet_dist": 0.0017269396921619773,
+        "score_combined_contribution_first_order": 0.0003170847389065846,
+        "score_pose_contribution_first_order": 0.00020433923547726114,
+        "score_seg_contribution_exact": 0.00011274550342932343,
+        "segnet_dist": 0.0006764730205759406
+      },
+      {
+        "break_even_bytes_at_rate_only": 466,
+        "frame_indices": [
+          846,
+          847
+        ],
+        "frame_start": 846,
+        "pair_index": 423,
+        "posenet_dist": 0.0018581829499453306,
+        "score_combined_contribution_first_order": 0.000310573552388506,
+        "score_pose_contribution_first_order": 0.0002198685252832193,
+        "score_seg_contribution_exact": 9.070502710528672e-05,
+        "segnet_dist": 0.0005442301626317203
+      },
+      {
+        "break_even_bytes_at_rate_only": 462,
+        "frame_indices": [
+          840,
+          841
+        ],
+        "frame_start": 840,
+        "pair_index": 420,
+        "posenet_dist": 0.0016982697416096926,
+        "score_combined_contribution_first_order": 0.0003077584020168254,
+        "score_pose_contribution_first_order": 0.0002009468785793254,
+        "score_seg_contribution_exact": 0.0001068115234375,
+        "segnet_dist": 0.000640869140625
+      }
+    ],
+    "matches_profiled_archive": true,
+    "n_samples": 600,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+    "profiled_archive_sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8",
+    "profiled_archive_size_bytes": 276342,
+    "promotion_policy": "Non-promotable by itself; use only after averages match canonical CUDA contest_auth_eval.json for identical archive bytes.",
+    "reference_warning": null,
+    "schema_version": 1,
+    "score_claim": false,
+    "score_pose_contribution": 0.07042780632773414,
+    "score_rate_contribution": 0.1840047948236871,
+    "score_recomputed_from_components": 0.3154703023834502,
+    "score_seg_contribution": 0.06103770123202897,
+    "sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+  },
+  "eval_json": {
+    "archive_sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8",
+    "archive_size_bytes": 276342,
+    "avg_posenet_dist": 0.00049601,
+    "avg_segnet_dist": 0.00061038,
+    "gpu_model": "Tesla T4",
+    "gpu_t4_match": true,
+    "matches_profiled_archive": true,
+    "n_samples": 600,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/contest_auth_eval.json",
+    "profiled_archive_sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8",
+    "profiled_archive_size_bytes": 276342,
+    "reference_warning": null,
+    "score_recomputed_from_components": 0.3154707273953505,
+    "target_gap": {
+      "available": true,
+      "buffered_bytes_to_remove_if_distortion_unchanged": 2210,
+      "buffered_target_archive_size_bytes_if_distortion_unchanged": 274132,
+      "buffered_target_score_if_distortion_unchanged": 0.3139991791089505,
+      "bytes_to_remove_if_distortion_unchanged": 2209,
+      "current_archive_size_bytes": 276342,
+      "current_distortion_score": 0.1314659325716634,
+      "current_rate_score": 0.1840047948236871,
+      "profiled_archive_sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8",
+      "profiled_archive_size_bytes": 276342,
+      "reference_archive_sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8",
+      "reference_archive_size_bytes": 276342,
+      "reference_matches_profiled_archive": true,
+      "reference_warning": null,
+      "score": 0.3154707273953505,
+      "score_gap": 0.0014707273953504796,
+      "score_source": "score_recomputed_from_components",
+      "target_archive_size_bytes_if_distortion_unchanged": 274133,
+      "target_rate_score_if_distortion_unchanged": 0.1825339123962402,
+      "target_score": 0.314
+    }
+  },
+  "evidence_grade": "empirical_byte_profile",
+  "promotion_eligible": false,
+  "ranked_self_compression_opportunities": [
+    {
+      "best_decoded_reencode_savings_vs_current_encoded_bytes": 0,
+      "best_encoded_recompression_delta": 0,
+      "best_nested_recompression_savings_bytes": 0,
+      "decoded_zero_order_entropy_bytes": 223008,
+      "encoded_bytes": 219472,
+      "opportunity": "largest stream; attack only with scorer-trust-region mask grammar, multimask subset repair, or learned decoder",
+      "priority": 1,
+      "rate_score_contribution": 0.14613739616,
+      "risk": "very_high_pose_seg_cliff",
+      "stream": "masks.mkv",
+      "target_gap_percent_of_stream": 0.010065065248
+    },
+    {
+      "best_decoded_reencode_savings_vs_current_encoded_bytes": 0,
+      "best_encoded_recompression_delta": 0,
+      "best_nested_recompression_savings_bytes": 0,
+      "decoded_zero_order_entropy_bytes": 58261,
+      "encoded_bytes": 55965,
+      "opportunity": "self-compress JFG/QZS/QBF only after local byte win and loader parity",
+      "priority": 2,
+      "rate_score_contribution": 0.037264796311,
+      "risk": "medium_pose_seg_runtime_contract",
+      "stream": "renderer.bin",
+      "target_gap_percent_of_stream": 0.039471098008
+    },
+    {
+      "best_decoded_reencode_savings_vs_current_encoded_bytes": 0,
+      "best_encoded_recompression_delta": 0,
+      "best_nested_recompression_savings_bytes": 0,
+      "decoded_zero_order_entropy_bytes": 746,
+      "encoded_bytes": 677,
+      "opportunity": "inspect before dispatch",
+      "priority": 9,
+      "rate_score_contribution": 0.000450786511,
+      "risk": "unknown",
+      "stream": "optimized_poses.qp1",
+      "target_gap_percent_of_stream": 3.262924667651
+    },
+    {
+      "best_decoded_reencode_savings_vs_current_encoded_bytes": -40,
+      "best_encoded_recompression_delta": 0,
+      "best_nested_recompression_savings_bytes": 0,
+      "decoded_zero_order_entropy_bytes": 111,
+      "encoded_bytes": 116,
+      "opportunity": "inspect before dispatch",
+      "priority": 9,
+      "rate_score_contribution": 7.7239639e-05,
+      "risk": "unknown",
+      "stream": "seg_tile_actions.bin",
+      "target_gap_percent_of_stream": 19.043103448276
+    }
+  ],
+  "rate_distortion_atom_table": [
+    {
+      "atom_id": "archive",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": null,
+      "break_even_bytes_at_rate_only": null,
+      "byte_delta": null,
+      "bytes": 276342,
+      "known_posenet_delta": null,
+      "known_score_delta": null,
+      "known_segnet_delta": null,
+      "name": "archive.zip",
+      "rate_score_cost": 0.184004794824,
+      "rate_score_delta": null,
+      "row_type": "archive",
+      "sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/archive.zip",
+      "source_sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8"
+    },
+    {
+      "atom_id": "component_trace_pair:105",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.0004259296165359442,
+      "break_even_bytes_at_rate_only": 639,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        210,
+        211
+      ],
+      "frame_start": 210,
+      "known_posenet_delta": 0.002603838685899973,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.0007069905987009406,
+      "name": "pair_105",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:106",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.0003926256389011673,
+      "break_even_bytes_at_rate_only": 589,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        212,
+        213
+      ],
+      "frame_start": 212,
+      "known_posenet_delta": 0.0024728255812078714,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.0006001790752634406,
+      "name": "pair_106",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:108",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.00036473904081813093,
+      "break_even_bytes_at_rate_only": 547,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        216,
+        217
+      ],
+      "frame_start": 216,
+      "known_posenet_delta": 0.0019434108398854733,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.0008087158203125,
+      "name": "pair_108",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:125",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.000333211143313009,
+      "break_even_bytes_at_rate_only": 500,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        250,
+        251
+      ],
+      "frame_start": 250,
+      "known_posenet_delta": 0.0019921865314245224,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.0005849202862009406,
+      "name": "pair_125",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:128",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.00040405626880251396,
+      "break_even_bytes_at_rate_only": 606,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        256,
+        257
+      ],
+      "frame_start": 256,
+      "known_posenet_delta": 0.002404651138931513,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.0007171630859375,
+      "name": "pair_128",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:130",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.00036547776596155564,
+      "break_even_bytes_at_rate_only": 548,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        260,
+        261
+      ],
+      "frame_start": 260,
+      "known_posenet_delta": 0.0021359254606068134,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.0006764730205759406,
+      "name": "pair_130",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:134",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.0003294524004397511,
+      "break_even_bytes_at_rate_only": 494,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        268,
+        269
+      ],
+      "frame_start": 268,
+      "known_posenet_delta": 0.0017454915214329958,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.0007375081768259406,
+      "name": "pair_134",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:136",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.0003610328275947418,
+      "break_even_bytes_at_rate_only": 542,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        272,
+        273
+      ],
+      "frame_start": 272,
+      "known_posenet_delta": 0.0019908954855054617,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.0007527669658884406,
+      "name": "pair_136",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:148",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.0003170847389065846,
+      "break_even_bytes_at_rate_only": 476,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        296,
+        297
+      ],
+      "frame_start": 296,
+      "known_posenet_delta": 0.0017269396921619773,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.0006764730205759406,
+      "name": "pair_148",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:164",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.00045343069335650145,
+      "break_even_bytes_at_rate_only": 680,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        328,
+        329
+      ],
+      "frame_start": 328,
+      "known_posenet_delta": 0.0025855095591396093,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.000885009765625,
+      "name": "pair_164",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:165",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.0003187161194279438,
+      "break_even_bytes_at_rate_only": 478,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        330,
+        331
+      ],
+      "frame_start": 330,
+      "known_posenet_delta": 0.001583112752996385,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.0007883707876317203,
+      "name": "pair_165",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:192",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.00032001031921767293,
+      "break_even_bytes_at_rate_only": 480,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        384,
+        385
+      ],
+      "frame_start": 384,
+      "known_posenet_delta": 0.0015367361484095454,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.0008290609112009406,
+      "name": "pair_192",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:197",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.00034965336954767795,
+      "break_even_bytes_at_rate_only": 525,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        394,
+        395
+      ],
+      "frame_start": 394,
+      "known_posenet_delta": 0.002217116765677929,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.0005238851299509406,
+      "name": "pair_197",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:420",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.0003077584020168254,
+      "break_even_bytes_at_rate_only": 462,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        840,
+        841
+      ],
+      "frame_start": 840,
+      "known_posenet_delta": 0.0016982697416096926,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.000640869140625,
+      "name": "pair_420",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:423",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.000310573552388506,
+      "break_even_bytes_at_rate_only": 466,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        846,
+        847
+      ],
+      "frame_start": 846,
+      "known_posenet_delta": 0.0018581829499453306,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.0005442301626317203,
+      "name": "pair_423",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:60",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.00038256662629821905,
+      "break_even_bytes_at_rate_only": 574,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        120,
+        121
+      ],
+      "frame_start": 120,
+      "known_posenet_delta": 0.0022946777753531933,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.0006663004751317203,
+      "name": "pair_60",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:64",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.00037226510927979256,
+      "break_even_bytes_at_rate_only": 559,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        128,
+        129
+      ],
+      "frame_start": 128,
+      "known_posenet_delta": 0.0023509019520133734,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.0005645751953125,
+      "name": "pair_64",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:67",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.0003725717398457716,
+      "break_even_bytes_at_rate_only": 559,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        134,
+        135
+      ],
+      "frame_start": 134,
+      "known_posenet_delta": 0.0022961790673434734,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.0006052653188817203,
+      "name": "pair_67",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:69",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.0003829481306097995,
+      "break_even_bytes_at_rate_only": 575,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        138,
+        139
+      ],
+      "frame_start": 138,
+      "known_posenet_delta": 0.0024698448833078146,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.0005442301626317203,
+      "name": "pair_69",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "component_trace_pair:70",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": 0.0003294517530249951,
+      "break_even_bytes_at_rate_only": 494,
+      "byte_delta": null,
+      "bytes": null,
+      "frame_indices": [
+        140,
+        141
+      ],
+      "frame_start": 140,
+      "known_posenet_delta": 0.00174548604991287,
+      "known_score_delta": null,
+      "known_segnet_delta": 0.0007375081768259406,
+      "name": "pair_70",
+      "rate_score_cost": null,
+      "rate_score_delta": null,
+      "row_type": "component_trace_pair",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+      "source_sha256": "205c912fe30c298558f6b412668546ced14f5fe5ff5d352d6951596a7a6d9843"
+    },
+    {
+      "atom_id": "packed_stream:masks.mkv",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": null,
+      "break_even_bytes_at_rate_only": null,
+      "byte_delta": null,
+      "byte_savings_estimate": 0,
+      "bytes": 219472,
+      "codec": "brotli_av1_obu",
+      "known_posenet_delta": null,
+      "known_score_delta": null,
+      "known_segnet_delta": null,
+      "name": "masks.mkv",
+      "rate_score_cost": 0.14613739616,
+      "rate_score_delta": null,
+      "row_type": "packed_stream",
+      "sha256": "d51dee7777581ca0cb8c819480d11595f9fb4e03975e6db3930cc62a4e406916",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/archive.zip",
+      "source_sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8"
+    },
+    {
+      "atom_id": "packed_stream:renderer.bin",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": null,
+      "break_even_bytes_at_rate_only": null,
+      "byte_delta": null,
+      "byte_savings_estimate": 0,
+      "bytes": 55965,
+      "codec": "brotli_qzs3",
+      "known_posenet_delta": null,
+      "known_score_delta": null,
+      "known_segnet_delta": null,
+      "name": "renderer.bin",
+      "rate_score_cost": 0.037264796311,
+      "rate_score_delta": null,
+      "row_type": "packed_stream",
+      "sha256": "a8eced022f580d135c964d0c13766fa8339a3b757856043d6f1fbd5e16a2de38",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/archive.zip",
+      "source_sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8"
+    },
+    {
+      "atom_id": "packed_stream:optimized_poses.qp1",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": null,
+      "break_even_bytes_at_rate_only": null,
+      "byte_delta": null,
+      "byte_savings_estimate": 0,
+      "bytes": 677,
+      "codec": "public_qp1_brotli",
+      "known_posenet_delta": null,
+      "known_score_delta": null,
+      "known_segnet_delta": null,
+      "name": "optimized_poses.qp1",
+      "rate_score_cost": 0.000450786511,
+      "rate_score_delta": null,
+      "row_type": "packed_stream",
+      "sha256": "d3eaccb6e25330bedf112a4d0dea00b0ec2b6dcf039ccfe1b0a795291b68d31b",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/archive.zip",
+      "source_sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8"
+    },
+    {
+      "atom_id": "packed_stream:seg_tile_actions.bin",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": null,
+      "break_even_bytes_at_rate_only": null,
+      "byte_delta": null,
+      "byte_savings_estimate": 0,
+      "bytes": 116,
+      "codec": "brotli_seg_tile_actions_delta_varint_v1",
+      "known_posenet_delta": null,
+      "known_score_delta": null,
+      "known_segnet_delta": null,
+      "name": "seg_tile_actions.bin",
+      "rate_score_cost": 7.7239639e-05,
+      "rate_score_delta": null,
+      "row_type": "packed_stream",
+      "sha256": "9d6d812ea4fb215d2b99b0c6c2f4731d38d127571206e4a3f1b4b84db41dbc57",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/archive.zip",
+      "source_sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8"
+    },
+    {
+      "atom_id": "payload_internal_overhead",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": null,
+      "break_even_bytes_at_rate_only": null,
+      "byte_delta": null,
+      "bytes": 12,
+      "known_posenet_delta": null,
+      "known_score_delta": null,
+      "known_segnet_delta": null,
+      "name": "payload_internal_overhead",
+      "rate_score_cost": 7.990307e-06,
+      "rate_score_delta": null,
+      "row_type": "payload_overhead",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/archive.zip",
+      "source_sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8"
+    },
+    {
+      "atom_id": "zip_member:p",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": null,
+      "break_even_bytes_at_rate_only": null,
+      "byte_delta": null,
+      "bytes": 276242,
+      "known_posenet_delta": null,
+      "known_score_delta": null,
+      "known_segnet_delta": null,
+      "name": "p",
+      "rate_score_cost": 0.183938208928,
+      "rate_score_delta": null,
+      "row_type": "zip_member",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/archive.zip",
+      "source_sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8"
+    },
+    {
+      "atom_id": "zip_overhead",
+      "benefit_per_byte_estimate": null,
+      "benefit_score_estimate": null,
+      "break_even_bytes_at_rate_only": null,
+      "byte_delta": null,
+      "bytes": 100,
+      "known_posenet_delta": null,
+      "known_score_delta": null,
+      "known_segnet_delta": null,
+      "name": "zip_overhead",
+      "rate_score_cost": 6.6585895e-05,
+      "rate_score_delta": null,
+      "row_type": "zip_overhead",
+      "sha256": null,
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/archive.zip",
+      "source_sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8"
+    }
+  ],
+  "schema": "archive_byte_accounting_profile_v1",
+  "score_claim": false,
+  "single_payload": {
+    "finite_container_probe": {
+      "best_option": {
+        "archive_bytes": 276342,
+        "archive_delta_bytes_vs_source": 0,
+        "archive_sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8",
+        "dispatch_status": "dispatchable_if_decoded_stream_parity_matches_source",
+        "note": "Single stored member p; this is the strict baseline container.",
+        "option_id": "zip_stored_raw_p",
+        "payload_container_codec": "raw",
+        "runtime_supported_by_current_unpacker": true,
+        "score_claim": false,
+        "zip_method": "stored"
+      },
+      "options": [
+        {
+          "archive_bytes": 276342,
+          "archive_delta_bytes_vs_source": 0,
+          "archive_sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8",
+          "dispatch_status": "dispatchable_if_decoded_stream_parity_matches_source",
+          "note": "Single stored member p; this is the strict baseline container.",
+          "option_id": "zip_stored_raw_p",
+          "payload_container_codec": "raw",
+          "runtime_supported_by_current_unpacker": true,
+          "score_claim": false,
+          "zip_method": "stored"
+        },
+        {
+          "archive_bytes": 276347,
+          "archive_delta_bytes_vs_source": 5,
+          "archive_sha256": "ce9fa51734db8af6f17e5ac8a5c51c456804939c6cbb338f363ee3666ef5d59f",
+          "dispatch_status": "dispatchable_if_archive_size_wins_and_p_brotli_unwrap_preflight_passes",
+          "note": "Current unpacker treats single-member p as Brotli when decompression succeeds.",
+          "option_id": "zip_stored_outer_brotli_q0_p",
+          "payload_container_codec": "outer_brotli:q0",
+          "runtime_supported_by_current_unpacker": true,
+          "score_claim": false,
+          "zip_method": "stored"
+        },
+        {
+          "archive_bytes": 276347,
+          "archive_delta_bytes_vs_source": 5,
+          "archive_sha256": "ce9fa51734db8af6f17e5ac8a5c51c456804939c6cbb338f363ee3666ef5d59f",
+          "dispatch_status": "dispatchable_if_archive_size_wins_and_p_brotli_unwrap_preflight_passes",
+          "note": "Current unpacker treats single-member p as Brotli when decompression succeeds.",
+          "option_id": "zip_stored_outer_brotli_q11_p",
+          "payload_container_codec": "outer_brotli:q11",
+          "runtime_supported_by_current_unpacker": true,
+          "score_claim": false,
+          "zip_method": "stored"
+        },
+        {
+          "archive_bytes": 276347,
+          "archive_delta_bytes_vs_source": 5,
+          "archive_sha256": "ce9fa51734db8af6f17e5ac8a5c51c456804939c6cbb338f363ee3666ef5d59f",
+          "dispatch_status": "dispatchable_if_archive_size_wins_and_p_brotli_unwrap_preflight_passes",
+          "note": "Current unpacker treats single-member p as Brotli when decompression succeeds.",
+          "option_id": "zip_stored_outer_brotli_q5_p",
+          "payload_container_codec": "outer_brotli:q5",
+          "runtime_supported_by_current_unpacker": true,
+          "score_claim": false,
+          "zip_method": "stored"
+        },
+        {
+          "archive_bytes": 276347,
+          "archive_delta_bytes_vs_source": 5,
+          "archive_sha256": "ce9fa51734db8af6f17e5ac8a5c51c456804939c6cbb338f363ee3666ef5d59f",
+          "dispatch_status": "dispatchable_if_archive_size_wins_and_p_brotli_unwrap_preflight_passes",
+          "note": "Current unpacker treats single-member p as Brotli when decompression succeeds.",
+          "option_id": "zip_stored_outer_brotli_q9_p",
+          "payload_container_codec": "outer_brotli:q9",
+          "runtime_supported_by_current_unpacker": true,
+          "score_claim": false,
+          "zip_method": "stored"
+        },
+        {
+          "archive_bytes": 276361,
+          "archive_delta_bytes_vs_source": 19,
+          "archive_sha256": "8a502809065d3b24539b7eeae37964a29a3f18b5a72e4c2f10857a88c9b840db",
+          "dispatch_status": "blocked_runtime_support_required",
+          "note": "zstd is analysis-only here; robust_current does not decode zstd p payloads.",
+          "option_id": "zip_stored_outer_zstd_19_p",
+          "payload_container_codec": "outer_zstd:19",
+          "runtime_supported_by_current_unpacker": false,
+          "score_claim": false,
+          "zip_method": "stored"
+        },
+        {
+          "archive_bytes": 276361,
+          "archive_delta_bytes_vs_source": 19,
+          "archive_sha256": "8a502809065d3b24539b7eeae37964a29a3f18b5a72e4c2f10857a88c9b840db",
+          "dispatch_status": "blocked_runtime_support_required",
+          "note": "zstd is analysis-only here; robust_current does not decode zstd p payloads.",
+          "option_id": "zip_stored_outer_zstd_22_p",
+          "payload_container_codec": "outer_zstd:22",
+          "runtime_supported_by_current_unpacker": false,
+          "score_claim": false,
+          "zip_method": "stored"
+        },
+        {
+          "archive_bytes": 276361,
+          "archive_delta_bytes_vs_source": 19,
+          "archive_sha256": "c7048942027f9814e7fb590c9947c251bc764f090c40f09f1ea673c51a8f16d4",
+          "dispatch_status": "blocked_runtime_support_required",
+          "note": "zstd is analysis-only here; robust_current does not decode zstd p payloads.",
+          "option_id": "zip_stored_outer_zstd_3_p",
+          "payload_container_codec": "outer_zstd:3",
+          "runtime_supported_by_current_unpacker": false,
+          "score_claim": false,
+          "zip_method": "stored"
+        },
+        {
+          "archive_bytes": 276361,
+          "archive_delta_bytes_vs_source": 19,
+          "archive_sha256": "2d39455215ac4a58f3f620d1ba1c3715243a50b6207da0a3cd14481af41ff8b0",
+          "dispatch_status": "blocked_runtime_support_required",
+          "note": "zstd is analysis-only here; robust_current does not decode zstd p payloads.",
+          "option_id": "zip_stored_outer_zstd_9_p",
+          "payload_container_codec": "outer_zstd:9",
+          "runtime_supported_by_current_unpacker": false,
+          "score_claim": false,
+          "zip_method": "stored"
+        },
+        {
+          "archive_bytes": 276427,
+          "archive_delta_bytes_vs_source": 85,
+          "archive_sha256": "3c5adc7c51c8b9c8004506096a848af63332750b514a094462dadc309a91518a",
+          "dispatch_status": "dispatchable_if_archive_size_wins_and_unzip_preflight_passes",
+          "note": "ZIP deflate preserves the p payload after extraction; exact eval still required.",
+          "option_id": "zip_deflate0_raw_p",
+          "payload_container_codec": "raw",
+          "runtime_supported_by_current_unpacker": true,
+          "score_claim": false,
+          "zip_method": "deflate:0"
+        },
+        {
+          "archive_bytes": 276427,
+          "archive_delta_bytes_vs_source": 85,
+          "archive_sha256": "3c5adc7c51c8b9c8004506096a848af63332750b514a094462dadc309a91518a",
+          "dispatch_status": "dispatchable_if_archive_size_wins_and_unzip_preflight_passes",
+          "note": "ZIP deflate preserves the p payload after extraction; exact eval still required.",
+          "option_id": "zip_deflate1_raw_p",
+          "payload_container_codec": "raw",
+          "runtime_supported_by_current_unpacker": true,
+          "score_claim": false,
+          "zip_method": "deflate:1"
+        },
+        {
+          "archive_bytes": 276427,
+          "archive_delta_bytes_vs_source": 85,
+          "archive_sha256": "3c5adc7c51c8b9c8004506096a848af63332750b514a094462dadc309a91518a",
+          "dispatch_status": "dispatchable_if_archive_size_wins_and_unzip_preflight_passes",
+          "note": "ZIP deflate preserves the p payload after extraction; exact eval still required.",
+          "option_id": "zip_deflate6_raw_p",
+          "payload_container_codec": "raw",
+          "runtime_supported_by_current_unpacker": true,
+          "score_claim": false,
+          "zip_method": "deflate:6"
+        },
+        {
+          "archive_bytes": 276427,
+          "archive_delta_bytes_vs_source": 85,
+          "archive_sha256": "3c5adc7c51c8b9c8004506096a848af63332750b514a094462dadc309a91518a",
+          "dispatch_status": "dispatchable_if_archive_size_wins_and_unzip_preflight_passes",
+          "note": "ZIP deflate preserves the p payload after extraction; exact eval still required.",
+          "option_id": "zip_deflate9_raw_p",
+          "payload_container_codec": "raw",
+          "runtime_supported_by_current_unpacker": true,
+          "score_claim": false,
+          "zip_method": "deflate:9"
+        },
+        {
+          "archive_bytes": 277993,
+          "archive_delta_bytes_vs_source": 1651,
+          "archive_sha256": "2a00e282b24825b166541a6cb4297737275f7fe1921c0629b887e7d3f5c7672c",
+          "dispatch_status": "blocked_until_contest_unzip_support_is_preflighted",
+          "note": "Analysis-only container screen; do not dispatch without archive extraction compatibility proof.",
+          "option_id": "zip_bzip2_1_raw_p",
+          "payload_container_codec": "raw",
+          "runtime_supported_by_current_unpacker": false,
+          "score_claim": false,
+          "zip_method": "bzip2:1"
+        },
+        {
+          "archive_bytes": 277993,
+          "archive_delta_bytes_vs_source": 1651,
+          "archive_sha256": "2a00e282b24825b166541a6cb4297737275f7fe1921c0629b887e7d3f5c7672c",
+          "dispatch_status": "blocked_until_contest_unzip_support_is_preflighted",
+          "note": "Analysis-only container screen; do not dispatch without archive extraction compatibility proof.",
+          "option_id": "zip_bzip2_9_raw_p",
+          "payload_container_codec": "raw",
+          "runtime_supported_by_current_unpacker": false,
+          "score_claim": false,
+          "zip_method": "bzip2:9"
+        },
+        {
+          "archive_bytes": 280066,
+          "archive_delta_bytes_vs_source": 3724,
+          "archive_sha256": "17a03e899ccab45c4e0e3a46f7fdc804dbbfda865cf0e73a24c3a9458ee975ca",
+          "dispatch_status": "blocked_until_contest_unzip_support_is_preflighted",
+          "note": "Analysis-only container screen; do not dispatch without archive extraction compatibility proof.",
+          "option_id": "zip_lzma_raw_p",
+          "payload_container_codec": "raw",
+          "runtime_supported_by_current_unpacker": false,
+          "score_claim": false,
+          "zip_method": "zip_lzma"
+        }
+      ],
+      "schema": "finite_lossless_container_probe_v1",
+      "score_claim": false,
+      "source_archive_bytes": 276342
+    },
+    "payload_bytes": 276242,
+    "payload_container_codec": "raw",
+    "payload_entropy": {
+      "bytes": 276242,
+      "entropy_bits_per_byte": 7.999088638712,
+      "unique_byte_count": 256,
+      "zero_order_entropy_bytes": 276211,
+      "zero_order_entropy_ratio": 0.999887779556
+    },
+    "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+    "payload_internal_overhead_bytes": 12,
+    "payload_schema": "renderer_payload_pr64_len_table_v1",
+    "payload_self_compression_probe": {
+      "best_probe": {
+        "bytes": 276242,
+        "codec": "input_bytes"
+      },
+      "best_probe_delta_vs_input": 0,
+      "brotli_q11_bytes": 276247,
+      "brotli_q5_bytes": 276247,
+      "brotli_q9_bytes": 276247,
+      "input_bytes": 276242,
+      "lzma_preset9_bytes": 276316,
+      "zlib_9_bytes": 276333,
+      "zstd_19_bytes": 276261,
+      "zstd_22_bytes": 276261,
+      "zstd_3_bytes": 276261,
+      "zstd_9_bytes": 276261
+    },
+    "payload_sha256": "fcc3fddb3a4182182bbfca1d1064544c87e58a5a9f76ea6fddfcfe4eb0b453c1",
+    "payload_stream_encoded_bytes_sum": 276230,
+    "zip_member_name": "p",
+    "zip_member_payload_bytes": 276242,
+    "zip_member_payload_entropy": {
+      "bytes": 276242,
+      "entropy_bits_per_byte": 7.999088638712,
+      "unique_byte_count": 256,
+      "zero_order_entropy_bytes": 276211,
+      "zero_order_entropy_ratio": 0.999887779556
+    },
+    "zip_member_payload_self_compression_probe": {
+      "best_probe": {
+        "bytes": 276242,
+        "codec": "input_bytes"
+      },
+      "best_probe_delta_vs_input": 0,
+      "brotli_q11_bytes": 276247,
+      "brotli_q5_bytes": 276247,
+      "brotli_q9_bytes": 276247,
+      "input_bytes": 276242,
+      "lzma_preset9_bytes": 276316,
+      "zlib_9_bytes": 276333,
+      "zstd_19_bytes": 276261,
+      "zstd_22_bytes": 276261,
+      "zstd_3_bytes": 276261,
+      "zstd_9_bytes": 276261
+    },
+    "zip_member_payload_sha256": "fcc3fddb3a4182182bbfca1d1064544c87e58a5a9f76ea6fddfcfe4eb0b453c1"
+  },
+  "streams": [
+    {
+      "attackability": {
+        "codec": "brotli_av1_obu",
+        "decoded_to_encoded_ratio": 1.017829153605,
+        "opportunity": "largest stream; attack only with scorer-trust-region mask grammar, multimask subset repair, or learned decoder",
+        "priority": 1,
+        "rate_score_contribution": 0.14613739616,
+        "risk": "very_high_pose_seg_cliff"
+      },
+      "codec": "brotli_av1_obu",
+      "decoded_bitplanes": {
+        "bits": 1787080,
+        "bytes": 223385,
+        "planes_lsb0": [
+          {
+            "bit": 0,
+            "entropy_bits_per_symbol": 0.999664831847,
+            "one_count": 109285,
+            "one_fraction": 0.489222642523,
+            "zero_count": 114100,
+            "zero_order_entropy_bits": 223310.128462
+          },
+          {
+            "bit": 1,
+            "entropy_bits_per_symbol": 0.999843430197,
+            "one_count": 110047,
+            "one_fraction": 0.492633793675,
+            "zero_count": 113338,
+            "zero_order_entropy_bits": 223350.024655
+          },
+          {
+            "bit": 2,
+            "entropy_bits_per_symbol": 0.999378781667,
+            "one_count": 108415,
+            "one_fraction": 0.485328021129,
+            "zero_count": 114970,
+            "zero_order_entropy_bits": 223246.229143
+          },
+          {
+            "bit": 3,
+            "entropy_bits_per_symbol": 0.999442999074,
+            "one_count": 108589,
+            "one_fraction": 0.486106945408,
+            "zero_count": 114796,
+            "zero_order_entropy_bits": 223260.574348
+          },
+          {
+            "bit": 4,
+            "entropy_bits_per_symbol": 0.999841904036,
+            "one_count": 110039,
+            "one_fraction": 0.492597981064,
+            "zero_count": 113346,
+            "zero_order_entropy_bits": 223349.683733
+          },
+          {
+            "bit": 5,
+            "entropy_bits_per_symbol": 0.999684851023,
+            "one_count": 109358,
+            "one_fraction": 0.489549432594,
+            "zero_count": 114027,
+            "zero_order_entropy_bits": 223314.600446
+          },
+          {
+            "bit": 6,
+            "entropy_bits_per_symbol": 0.999422713804,
+            "one_count": 108533,
+            "one_fraction": 0.485856257135,
+            "zero_count": 114852,
+            "zero_order_entropy_bits": 223256.042923
+          },
+          {
+            "bit": 7,
+            "entropy_bits_per_symbol": 0.999660081339,
+            "one_count": 109268,
+            "one_fraction": 0.489146540726,
+            "zero_count": 114117,
+            "zero_order_entropy_bits": 223309.06727
+          }
+        ],
+        "zero_order_bitplane_entropy_bits": 1786396.35098,
+        "zero_order_bitplane_entropy_bytes": 223300,
+        "zero_order_bitplane_entropy_ratio": 0.999619491013
+      },
+      "decoded_bytes": 223385,
+      "decoded_entropy": {
+        "bytes": 223385,
+        "entropy_bits_per_byte": 7.98648203499,
+        "unique_byte_count": 256,
+        "zero_order_entropy_bytes": 223008,
+        "zero_order_entropy_ratio": 0.998312330729
+      },
+      "decoded_self_compression_probe": {
+        "best_probe": {
+          "bytes": 219472,
+          "codec": "brotli_q11_bytes"
+        },
+        "best_probe_delta_vs_input": -3913,
+        "brotli_q11_bytes": 219472,
+        "brotli_q5_bytes": 223390,
+        "brotli_q9_bytes": 220355,
+        "input_bytes": 223385,
+        "lzma_preset9_bytes": 222200,
+        "zlib_9_bytes": 222226,
+        "zstd_19_bytes": 220141,
+        "zstd_22_bytes": 220141,
+        "zstd_3_bytes": 223401,
+        "zstd_9_bytes": 221940
+      },
+      "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+      "encoded_bitplanes": {
+        "bits": 1755776,
+        "bytes": 219472,
+        "planes_lsb0": [
+          {
+            "bit": 0,
+            "entropy_bits_per_symbol": 0.999997814689,
+            "one_count": 109927,
+            "one_fraction": 0.500870270467,
+            "zero_count": 109545,
+            "zero_order_entropy_bits": 219471.520385
+          },
+          {
+            "bit": 1,
+            "entropy_bits_per_symbol": 0.999998080657,
+            "one_count": 109915,
+            "one_fraction": 0.500815593789,
+            "zero_count": 109557,
+            "zero_order_entropy_bits": 219471.578758
+          },
+          {
+            "bit": 2,
+            "entropy_bits_per_symbol": 0.999988402809,
+            "one_count": 110176,
+            "one_fraction": 0.502004811548,
+            "zero_count": 109296,
+            "zero_order_entropy_bits": 219469.454741
+          },
+          {
+            "bit": 3,
+            "entropy_bits_per_symbol": 0.999993196901,
+            "one_count": 110073,
+            "one_fraction": 0.50153550339,
+            "zero_count": 109399,
+            "zero_order_entropy_bits": 219470.50691
+          },
+          {
+            "bit": 4,
+            "entropy_bits_per_symbol": 0.999998289119,
+            "one_count": 109567,
+            "one_fraction": 0.49922997011,
+            "zero_count": 109905,
+            "zero_order_entropy_bits": 219471.624509
+          },
+          {
+            "bit": 5,
+            "entropy_bits_per_symbol": 0.999996165686,
+            "one_count": 109483,
+            "one_fraction": 0.49884723336,
+            "zero_count": 109989,
+            "zero_order_entropy_bits": 219471.158475
+          },
+          {
+            "bit": 6,
+            "entropy_bits_per_symbol": 0.999986935844,
+            "one_count": 110203,
+            "one_fraction": 0.502127834075,
+            "zero_count": 109269,
+            "zero_order_entropy_bits": 219469.132784
+          },
+          {
+            "bit": 7,
+            "entropy_bits_per_symbol": 0.999993711647,
+            "one_count": 110060,
+            "one_fraction": 0.501476270321,
+            "zero_count": 109412,
+            "zero_order_entropy_bits": 219470.619882
+          }
+        ],
+        "zero_order_bitplane_entropy_bits": 1755765.596446,
+        "zero_order_bitplane_entropy_bytes": 219471,
+        "zero_order_bitplane_entropy_ratio": 0.99999544361
+      },
+      "encoded_bytes": 219472,
+      "encoded_entropy": {
+        "bytes": 219472,
+        "entropy_bits_per_byte": 7.999101909606,
+        "unique_byte_count": 256,
+        "zero_order_entropy_bytes": 219448,
+        "zero_order_entropy_ratio": 0.999890646643
+      },
+      "encoded_offset": 55965,
+      "encoded_payload_order": 1,
+      "encoded_self_compression_probe": {
+        "best_probe": {
+          "bytes": 219472,
+          "codec": "input_bytes"
+        },
+        "best_probe_delta_vs_input": 0,
+        "brotli_q11_bytes": 219477,
+        "brotli_q5_bytes": 219477,
+        "brotli_q9_bytes": 219477,
+        "input_bytes": 219472,
+        "lzma_preset9_bytes": 219544,
+        "zlib_9_bytes": 219548,
+        "zstd_19_bytes": 219488,
+        "zstd_22_bytes": 219488,
+        "zstd_3_bytes": 219488,
+        "zstd_9_bytes": 219488
+      },
+      "encoded_sha256": "d51dee7777581ca0cb8c819480d11595f9fb4e03975e6db3930cc62a4e406916",
+      "name": "masks.mkv",
+      "self_compression_signal": {
+        "best_decoded_reencode_savings_vs_current_encoded_bytes": 0,
+        "best_nested_recompression_savings_bytes": 0,
+        "decoded_probe_is_directly_deployable": false,
+        "deployability_note": "Compression probes are attack-surface signals only. A deployed saving requires a decoder/unpacker contract that consumes the new bytes and an exact CUDA auth eval.",
+        "encoded_probe_is_directly_deployable": false
+      },
+      "target_gap_pressure": {
+        "buffered_bytes_to_remove_if_distortion_unchanged": 2210,
+        "bytes_to_remove_if_distortion_unchanged": 2209,
+        "percent_of_this_stream": 0.010065065248,
+        "stream_bytes_after_gap_if_alone": 217263,
+        "stream_can_close_gap_alone_by_bytes": true
+      }
+    },
+    {
+      "attackability": {
+        "codec": "brotli_qzs3",
+        "decoded_to_encoded_ratio": 1.059376395962,
+        "opportunity": "self-compress JFG/QZS/QBF only after local byte win and loader parity",
+        "priority": 2,
+        "rate_score_contribution": 0.037264796311,
+        "risk": "medium_pose_seg_runtime_contract"
+      },
+      "codec": "brotli_qzs3",
+      "decoded_bitplanes": {
+        "bits": 474304,
+        "bytes": 59288,
+        "planes_lsb0": [
+          {
+            "bit": 0,
+            "entropy_bits_per_symbol": 0.999999959778,
+            "one_count": 29637,
+            "one_fraction": 0.499881932263,
+            "zero_count": 29651,
+            "zero_order_entropy_bits": 59287.997615
+          },
+          {
+            "bit": 1,
+            "entropy_bits_per_symbol": 0.999165789369,
+            "one_count": 28636,
+            "one_fraction": 0.482998245851,
+            "zero_count": 30652,
+            "zero_order_entropy_bits": 59238.54132
+          },
+          {
+            "bit": 2,
+            "entropy_bits_per_symbol": 0.997676427731,
+            "one_count": 31326,
+            "one_fraction": 0.528369990555,
+            "zero_count": 27962,
+            "zero_order_entropy_bits": 59150.240047
+          },
+          {
+            "bit": 3,
+            "entropy_bits_per_symbol": 0.999937469,
+            "one_count": 29368,
+            "one_fraction": 0.495344757792,
+            "zero_count": 29920,
+            "zero_order_entropy_bits": 59284.292662
+          },
+          {
+            "bit": 4,
+            "entropy_bits_per_symbol": 0.998925439599,
+            "one_count": 28500,
+            "one_fraction": 0.480704358386,
+            "zero_count": 30788,
+            "zero_order_entropy_bits": 59224.291463
+          },
+          {
+            "bit": 5,
+            "entropy_bits_per_symbol": 0.997458689379,
+            "one_count": 31403,
+            "one_fraction": 0.529668735663,
+            "zero_count": 27885,
+            "zero_order_entropy_bits": 59137.330776
+          },
+          {
+            "bit": 6,
+            "entropy_bits_per_symbol": 0.999392804181,
+            "one_count": 28784,
+            "one_fraction": 0.48549453515,
+            "zero_count": 30504,
+            "zero_order_entropy_bits": 59252.000574
+          },
+          {
+            "bit": 7,
+            "entropy_bits_per_symbol": 0.99302325272,
+            "one_count": 26731,
+            "one_fraction": 0.450866954527,
+            "zero_count": 32557,
+            "zero_order_entropy_bits": 58874.362607
+          }
+        ],
+        "zero_order_bitplane_entropy_bits": 473449.057065,
+        "zero_order_bitplane_entropy_bytes": 59182,
+        "zero_order_bitplane_entropy_ratio": 0.998212117123
+      },
+      "decoded_bytes": 59288,
+      "decoded_entropy": {
+        "bytes": 59288,
+        "entropy_bits_per_byte": 7.861381999313,
+        "unique_byte_count": 256,
+        "zero_order_entropy_bytes": 58261,
+        "zero_order_entropy_ratio": 0.982677776279
+      },
+      "decoded_self_compression_probe": {
+        "best_probe": {
+          "bytes": 55965,
+          "codec": "brotli_q11_bytes"
+        },
+        "best_probe_delta_vs_input": -3323,
+        "brotli_q11_bytes": 55965,
+        "brotli_q5_bytes": 56849,
+        "brotli_q9_bytes": 56910,
+        "input_bytes": 59288,
+        "lzma_preset9_bytes": 57380,
+        "zlib_9_bytes": 57615,
+        "zstd_19_bytes": 57961,
+        "zstd_22_bytes": 57961,
+        "zstd_3_bytes": 59301,
+        "zstd_9_bytes": 59301
+      },
+      "decoded_sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb",
+      "encoded_bitplanes": {
+        "bits": 447720,
+        "bytes": 55965,
+        "planes_lsb0": [
+          {
+            "bit": 0,
+            "entropy_bits_per_symbol": 0.999821235498,
+            "one_count": 27542,
+            "one_fraction": 0.492129009202,
+            "zero_count": 28423,
+            "zero_order_entropy_bits": 55954.995445
+          },
+          {
+            "bit": 1,
+            "entropy_bits_per_symbol": 0.999872854231,
+            "one_count": 27611,
+            "one_fraction": 0.49336192263,
+            "zero_count": 28354,
+            "zero_order_entropy_bits": 55957.884287
+          },
+          {
+            "bit": 2,
+            "entropy_bits_per_symbol": 0.999962595369,
+            "one_count": 27781,
+            "one_fraction": 0.496399535424,
+            "zero_count": 28184,
+            "zero_order_entropy_bits": 55962.90665
+          },
+          {
+            "bit": 3,
+            "entropy_bits_per_symbol": 0.999915141095,
+            "one_count": 27679,
+            "one_fraction": 0.494576967748,
+            "zero_count": 28286,
+            "zero_order_entropy_bits": 55960.250871
+          },
+          {
+            "bit": 4,
+            "entropy_bits_per_symbol": 0.999742671834,
+            "one_count": 27454,
+            "one_fraction": 0.490556597874,
+            "zero_count": 28511,
+            "zero_order_entropy_bits": 55950.598629
+          },
+          {
+            "bit": 5,
+            "entropy_bits_per_symbol": 0.999838646409,
+            "one_count": 27564,
+            "one_fraction": 0.492522112034,
+            "zero_count": 28401,
+            "zero_order_entropy_bits": 55955.969846
+          },
+          {
+            "bit": 6,
+            "entropy_bits_per_symbol": 0.999813855765,
+            "one_count": 27533,
+            "one_fraction": 0.491968194407,
+            "zero_count": 28432,
+            "zero_order_entropy_bits": 55954.582438
+          },
+          {
+            "bit": 7,
+            "entropy_bits_per_symbol": 0.999716728394,
+            "one_count": 27428,
+            "one_fraction": 0.490092021799,
+            "zero_count": 28537,
+            "zero_order_entropy_bits": 55949.146705
+          }
+        ],
+        "zero_order_bitplane_entropy_bits": 447646.334871,
+        "zero_order_bitplane_entropy_bytes": 55956,
+        "zero_order_bitplane_entropy_ratio": 0.999839185205
+      },
+      "encoded_bytes": 55965,
+      "encoded_entropy": {
+        "bytes": 55965,
+        "entropy_bits_per_byte": 7.993924528845,
+        "unique_byte_count": 256,
+        "zero_order_entropy_bytes": 55923,
+        "zero_order_entropy_ratio": 0.999249530957
+      },
+      "encoded_offset": 0,
+      "encoded_payload_order": 0,
+      "encoded_self_compression_probe": {
+        "best_probe": {
+          "bytes": 55965,
+          "codec": "input_bytes"
+        },
+        "best_probe_delta_vs_input": 0,
+        "brotli_q11_bytes": 55969,
+        "brotli_q5_bytes": 55969,
+        "brotli_q9_bytes": 55969,
+        "input_bytes": 55965,
+        "lzma_preset9_bytes": 56028,
+        "zlib_9_bytes": 55991,
+        "zstd_19_bytes": 55978,
+        "zstd_22_bytes": 55978,
+        "zstd_3_bytes": 55978,
+        "zstd_9_bytes": 55978
+      },
+      "encoded_sha256": "a8eced022f580d135c964d0c13766fa8339a3b757856043d6f1fbd5e16a2de38",
+      "name": "renderer.bin",
+      "self_compression_signal": {
+        "best_decoded_reencode_savings_vs_current_encoded_bytes": 0,
+        "best_nested_recompression_savings_bytes": 0,
+        "decoded_probe_is_directly_deployable": false,
+        "deployability_note": "Compression probes are attack-surface signals only. A deployed saving requires a decoder/unpacker contract that consumes the new bytes and an exact CUDA auth eval.",
+        "encoded_probe_is_directly_deployable": false
+      },
+      "target_gap_pressure": {
+        "buffered_bytes_to_remove_if_distortion_unchanged": 2210,
+        "bytes_to_remove_if_distortion_unchanged": 2209,
+        "percent_of_this_stream": 0.039471098008,
+        "stream_bytes_after_gap_if_alone": 53756,
+        "stream_can_close_gap_alone_by_bytes": true
+      }
+    },
+    {
+      "attackability": {
+        "codec": "public_qp1_brotli",
+        "decoded_to_encoded_ratio": 1.683899556869,
+        "opportunity": "inspect before dispatch",
+        "priority": 9,
+        "rate_score_contribution": 0.000450786511,
+        "risk": "unknown"
+      },
+      "codec": "public_qp1_brotli",
+      "decoded_bitplanes": {
+        "bits": 9120,
+        "bytes": 1140,
+        "planes_lsb0": [
+          {
+            "bit": 0,
+            "entropy_bits_per_symbol": 0.999564794298,
+            "one_count": 556,
+            "one_fraction": 0.487719298246,
+            "zero_count": 584,
+            "zero_order_entropy_bits": 1139.503865
+          },
+          {
+            "bit": 1,
+            "entropy_bits_per_symbol": 0.999624751303,
+            "one_count": 557,
+            "one_fraction": 0.488596491228,
+            "zero_count": 583,
+            "zero_order_entropy_bits": 1139.572216
+          },
+          {
+            "bit": 2,
+            "entropy_bits_per_symbol": 0.99662041477,
+            "one_count": 531,
+            "one_fraction": 0.465789473684,
+            "zero_count": 609,
+            "zero_order_entropy_bits": 1136.147273
+          },
+          {
+            "bit": 3,
+            "entropy_bits_per_symbol": 0.973946206297,
+            "one_count": 462,
+            "one_fraction": 0.405263157895,
+            "zero_count": 678,
+            "zero_order_entropy_bits": 1110.298675
+          },
+          {
+            "bit": 4,
+            "entropy_bits_per_symbol": 0.889700674699,
+            "one_count": 350,
+            "one_fraction": 0.30701754386,
+            "zero_count": 790,
+            "zero_order_entropy_bits": 1014.258769
+          },
+          {
+            "bit": 5,
+            "entropy_bits_per_symbol": 0.84422020343,
+            "one_count": 310,
+            "one_fraction": 0.271929824561,
+            "zero_count": 830,
+            "zero_order_entropy_bits": 962.411032
+          },
+          {
+            "bit": 6,
+            "entropy_bits_per_symbol": 0.811278124459,
+            "one_count": 285,
+            "one_fraction": 0.25,
+            "zero_count": 855,
+            "zero_order_entropy_bits": 924.857062
+          },
+          {
+            "bit": 7,
+            "entropy_bits_per_symbol": 0.997431908493,
+            "one_count": 536,
+            "one_fraction": 0.470175438596,
+            "zero_count": 604,
+            "zero_order_entropy_bits": 1137.072376
+          }
+        ],
+        "zero_order_bitplane_entropy_bits": 8564.121269,
+        "zero_order_bitplane_entropy_bytes": 1071,
+        "zero_order_bitplane_entropy_ratio": 0.939473684211
+      },
+      "decoded_bytes": 1140,
+      "decoded_entropy": {
+        "bytes": 1140,
+        "entropy_bits_per_byte": 5.229017915936,
+        "unique_byte_count": 60,
+        "zero_order_entropy_bytes": 746,
+        "zero_order_entropy_ratio": 0.654385964912
+      },
+      "decoded_self_compression_probe": {
+        "best_probe": {
+          "bytes": 677,
+          "codec": "brotli_q11_bytes"
+        },
+        "best_probe_delta_vs_input": -463,
+        "brotli_q11_bytes": 677,
+        "brotli_q5_bytes": 837,
+        "brotli_q9_bytes": 852,
+        "input_bytes": 1140,
+        "lzma_preset9_bytes": 932,
+        "zlib_9_bytes": 821,
+        "zstd_19_bytes": 830,
+        "zstd_22_bytes": 830,
+        "zstd_3_bytes": 826,
+        "zstd_9_bytes": 826
+      },
+      "decoded_sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583",
+      "encoded_bitplanes": {
+        "bits": 5416,
+        "bytes": 677,
+        "planes_lsb0": [
+          {
+            "bit": 0,
+            "entropy_bits_per_symbol": 0.998675975275,
+            "one_count": 353,
+            "one_fraction": 0.521418020679,
+            "zero_count": 324,
+            "zero_order_entropy_bits": 676.103635
+          },
+          {
+            "bit": 1,
+            "entropy_bits_per_symbol": 0.998486987688,
+            "one_count": 354,
+            "one_fraction": 0.522895125554,
+            "zero_count": 323,
+            "zero_order_entropy_bits": 675.975691
+          },
+          {
+            "bit": 2,
+            "entropy_bits_per_symbol": 0.999998426135,
+            "one_count": 338,
+            "one_fraction": 0.499261447563,
+            "zero_count": 339,
+            "zero_order_entropy_bits": 676.998934
+          },
+          {
+            "bit": 3,
+            "entropy_bits_per_symbol": 0.999809554074,
+            "one_count": 344,
+            "one_fraction": 0.508124076809,
+            "zero_count": 333,
+            "zero_order_entropy_bits": 676.871068
+          },
+          {
+            "bit": 4,
+            "entropy_bits_per_symbol": 0.999809554074,
+            "one_count": 344,
+            "one_fraction": 0.508124076809,
+            "zero_count": 333,
+            "zero_order_entropy_bits": 676.871068
+          },
+          {
+            "bit": 5,
+            "entropy_bits_per_symbol": 0.998852348785,
+            "one_count": 325,
+            "one_fraction": 0.480059084195,
+            "zero_count": 352,
+            "zero_order_entropy_bits": 676.22304
+          },
+          {
+            "bit": 6,
+            "entropy_bits_per_symbol": 0.997604827044,
+            "one_count": 358,
+            "one_fraction": 0.528803545052,
+            "zero_count": 319,
+            "zero_order_entropy_bits": 675.378468
+          },
+          {
+            "bit": 7,
+            "entropy_bits_per_symbol": 0.999985835178,
+            "one_count": 340,
+            "one_fraction": 0.502215657312,
+            "zero_count": 337,
+            "zero_order_entropy_bits": 676.99041
+          }
+        ],
+        "zero_order_bitplane_entropy_bits": 5411.412315,
+        "zero_order_bitplane_entropy_bytes": 677,
+        "zero_order_bitplane_entropy_ratio": 1.0
+      },
+      "encoded_bytes": 677,
+      "encoded_entropy": {
+        "bytes": 677,
+        "entropy_bits_per_byte": 7.675934096635,
+        "unique_byte_count": 233,
+        "zero_order_entropy_bytes": 650,
+        "zero_order_entropy_ratio": 0.96011816839
+      },
+      "encoded_offset": 275553,
+      "encoded_payload_order": 3,
+      "encoded_self_compression_probe": {
+        "best_probe": {
+          "bytes": 677,
+          "codec": "input_bytes"
+        },
+        "best_probe_delta_vs_input": 0,
+        "brotli_q11_bytes": 681,
+        "brotli_q5_bytes": 681,
+        "brotli_q9_bytes": 681,
+        "input_bytes": 677,
+        "lzma_preset9_bytes": 740,
+        "zlib_9_bytes": 688,
+        "zstd_probe_skipped_reason": "input_below_1024_bytes"
+      },
+      "encoded_sha256": "d3eaccb6e25330bedf112a4d0dea00b0ec2b6dcf039ccfe1b0a795291b68d31b",
+      "name": "optimized_poses.qp1",
+      "self_compression_signal": {
+        "best_decoded_reencode_savings_vs_current_encoded_bytes": 0,
+        "best_nested_recompression_savings_bytes": 0,
+        "decoded_probe_is_directly_deployable": false,
+        "deployability_note": "Compression probes are attack-surface signals only. A deployed saving requires a decoder/unpacker contract that consumes the new bytes and an exact CUDA auth eval.",
+        "encoded_probe_is_directly_deployable": false
+      },
+      "target_gap_pressure": {
+        "buffered_bytes_to_remove_if_distortion_unchanged": 2210,
+        "bytes_to_remove_if_distortion_unchanged": 2209,
+        "percent_of_this_stream": 3.262924667651,
+        "stream_bytes_after_gap_if_alone": -1532,
+        "stream_can_close_gap_alone_by_bytes": false
+      }
+    },
+    {
+      "attackability": {
+        "codec": "brotli_seg_tile_actions_delta_varint_v1",
+        "decoded_to_encoded_ratio": 1.379310344828,
+        "opportunity": "inspect before dispatch",
+        "priority": 9,
+        "rate_score_contribution": 7.7239639e-05,
+        "risk": "unknown"
+      },
+      "codec": "brotli_seg_tile_actions_delta_varint_v1",
+      "decoded_bitplanes": {
+        "bits": 1280,
+        "bytes": 160,
+        "planes_lsb0": [
+          {
+            "bit": 0,
+            "entropy_bits_per_symbol": 0.970950594455,
+            "one_count": 64,
+            "one_fraction": 0.4,
+            "zero_count": 96,
+            "zero_order_entropy_bits": 155.352095
+          },
+          {
+            "bit": 1,
+            "entropy_bits_per_symbol": 0.999887286515,
+            "one_count": 79,
+            "one_fraction": 0.49375,
+            "zero_count": 81,
+            "zero_order_entropy_bits": 159.981966
+          },
+          {
+            "bit": 2,
+            "entropy_bits_per_symbol": 0.974489403398,
+            "one_count": 65,
+            "one_fraction": 0.40625,
+            "zero_count": 95,
+            "zero_order_entropy_bits": 155.918305
+          },
+          {
+            "bit": 3,
+            "entropy_bits_per_symbol": 0.916198397158,
+            "one_count": 53,
+            "one_fraction": 0.33125,
+            "zero_count": 107,
+            "zero_order_entropy_bits": 146.591744
+          },
+          {
+            "bit": 4,
+            "entropy_bits_per_symbol": 0.963167245092,
+            "one_count": 62,
+            "one_fraction": 0.3875,
+            "zero_count": 98,
+            "zero_order_entropy_bits": 154.106759
+          },
+          {
+            "bit": 5,
+            "entropy_bits_per_symbol": 0.811278124459,
+            "one_count": 40,
+            "one_fraction": 0.25,
+            "zero_count": 120,
+            "zero_order_entropy_bits": 129.8045
+          },
+          {
+            "bit": 6,
+            "entropy_bits_per_symbol": 0.995938607632,
+            "one_count": 74,
+            "one_fraction": 0.4625,
+            "zero_count": 86,
+            "zero_order_entropy_bits": 159.350177
+          },
+          {
+            "bit": 7,
+            "entropy_bits_per_symbol": 0.593976092669,
+            "one_count": 23,
+            "one_fraction": 0.14375,
+            "zero_count": 137,
+            "zero_order_entropy_bits": 95.036175
+          }
+        ],
+        "zero_order_bitplane_entropy_bits": 1156.14172,
+        "zero_order_bitplane_entropy_bytes": 145,
+        "zero_order_bitplane_entropy_ratio": 0.90625
+      },
+      "decoded_bytes": 160,
+      "decoded_entropy": {
+        "bytes": 160,
+        "entropy_bits_per_byte": 5.549393675243,
+        "unique_byte_count": 82,
+        "zero_order_entropy_bytes": 111,
+        "zero_order_entropy_ratio": 0.69375
+      },
+      "decoded_self_compression_probe": {
+        "best_probe": {
+          "bytes": 156,
+          "codec": "brotli_q5_bytes"
+        },
+        "best_probe_delta_vs_input": -4,
+        "brotli_q11_bytes": 160,
+        "brotli_q5_bytes": 156,
+        "brotli_q9_bytes": 157,
+        "input_bytes": 160,
+        "lzma_preset9_bytes": 212,
+        "zlib_9_bytes": 171,
+        "zstd_probe_skipped_reason": "input_below_1024_bytes"
+      },
+      "decoded_sha256": "50e997db4fd1b7642d9a2cd67b55802a4f7f9bd7a6603d0ca2eaf42e7fe7e320",
+      "encoded_bitplanes": {
+        "bits": 928,
+        "bytes": 116,
+        "planes_lsb0": [
+          {
+            "bit": 0,
+            "entropy_bits_per_symbol": 0.999142103992,
+            "one_count": 56,
+            "one_fraction": 0.48275862069,
+            "zero_count": 60,
+            "zero_order_entropy_bits": 115.900484
+          },
+          {
+            "bit": 1,
+            "entropy_bits_per_symbol": 0.994632553125,
+            "one_count": 63,
+            "one_fraction": 0.543103448276,
+            "zero_count": 53,
+            "zero_order_entropy_bits": 115.377376
+          },
+          {
+            "bit": 2,
+            "entropy_bits_per_symbol": 0.994632553125,
+            "one_count": 63,
+            "one_fraction": 0.543103448276,
+            "zero_count": 53,
+            "zero_order_entropy_bits": 115.377376
+          },
+          {
+            "bit": 3,
+            "entropy_bits_per_symbol": 0.998069255169,
+            "one_count": 55,
+            "one_fraction": 0.474137931034,
+            "zero_count": 61,
+            "zero_order_entropy_bits": 115.776034
+          },
+          {
+            "bit": 4,
+            "entropy_bits_per_symbol": 0.982560666487,
+            "one_count": 49,
+            "one_fraction": 0.422413793103,
+            "zero_count": 67,
+            "zero_order_entropy_bits": 113.977037
+          },
+          {
+            "bit": 5,
+            "entropy_bits_per_symbol": 0.989467199547,
+            "one_count": 65,
+            "one_fraction": 0.560344827586,
+            "zero_count": 51,
+            "zero_order_entropy_bits": 114.778195
+          },
+          {
+            "bit": 6,
+            "entropy_bits_per_symbol": 0.996566371327,
+            "one_count": 54,
+            "one_fraction": 0.465517241379,
+            "zero_count": 62,
+            "zero_order_entropy_bits": 115.601699
+          },
+          {
+            "bit": 7,
+            "entropy_bits_per_symbol": 0.994632553125,
+            "one_count": 53,
+            "one_fraction": 0.456896551724,
+            "zero_count": 63,
+            "zero_order_entropy_bits": 115.377376
+          }
+        ],
+        "zero_order_bitplane_entropy_bits": 922.165578,
+        "zero_order_bitplane_entropy_bytes": 116,
+        "zero_order_bitplane_entropy_ratio": 1.0
+      },
+      "encoded_bytes": 116,
+      "encoded_entropy": {
+        "bytes": 116,
+        "entropy_bits_per_byte": 6.454921620109,
+        "unique_byte_count": 94,
+        "zero_order_entropy_bytes": 94,
+        "zero_order_entropy_ratio": 0.810344827586
+      },
+      "encoded_offset": 275437,
+      "encoded_payload_order": 2,
+      "encoded_self_compression_probe": {
+        "best_probe": {
+          "bytes": 116,
+          "codec": "input_bytes"
+        },
+        "best_probe_delta_vs_input": 0,
+        "brotli_q11_bytes": 120,
+        "brotli_q5_bytes": 120,
+        "brotli_q9_bytes": 120,
+        "input_bytes": 116,
+        "lzma_preset9_bytes": 176,
+        "zlib_9_bytes": 127,
+        "zstd_probe_skipped_reason": "input_below_1024_bytes"
+      },
+      "encoded_sha256": "9d6d812ea4fb215d2b99b0c6c2f4731d38d127571206e4a3f1b4b84db41dbc57",
+      "name": "seg_tile_actions.bin",
+      "self_compression_signal": {
+        "best_decoded_reencode_savings_vs_current_encoded_bytes": -40,
+        "best_nested_recompression_savings_bytes": 0,
+        "decoded_probe_is_directly_deployable": false,
+        "deployability_note": "Compression probes are attack-surface signals only. A deployed saving requires a decoder/unpacker contract that consumes the new bytes and an exact CUDA auth eval.",
+        "encoded_probe_is_directly_deployable": false
+      },
+      "target_gap_pressure": {
+        "buffered_bytes_to_remove_if_distortion_unchanged": 2210,
+        "bytes_to_remove_if_distortion_unchanged": 2209,
+        "percent_of_this_stream": 19.043103448276,
+        "stream_bytes_after_gap_if_alone": -2093,
+        "stream_can_close_gap_alone_by_bytes": false
+      }
+    }
+  ],
+  "target_gap": {
+    "available": true,
+    "buffered_bytes_to_remove_if_distortion_unchanged": 2210,
+    "buffered_target_archive_size_bytes_if_distortion_unchanged": 274132,
+    "buffered_target_score_if_distortion_unchanged": 0.3139991791089505,
+    "bytes_to_remove_if_distortion_unchanged": 2209,
+    "current_archive_size_bytes": 276342,
+    "current_distortion_score": 0.1314659325716634,
+    "current_rate_score": 0.1840047948236871,
+    "profiled_archive_sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8",
+    "profiled_archive_size_bytes": 276342,
+    "reference_archive_sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8",
+    "reference_archive_size_bytes": 276342,
+    "reference_matches_profiled_archive": true,
+    "reference_warning": null,
+    "score": 0.3154707273953505,
+    "score_gap": 0.0014707273953504796,
+    "score_source": "score_recomputed_from_components",
+    "target_archive_size_bytes_if_distortion_unchanged": 274133,
+    "target_rate_score_if_distortion_unchanged": 0.1825339123962402,
+    "target_score": 0.314
+  },
+  "thirty_k_foot_summary": {
+    "archive_is_single_blob": true,
+    "bytes_to_remove_if_distortion_unchanged": 2209,
+    "largest_stream": "masks.mkv",
+    "primary_attack_surface": "mask stream with scorer-constrained learned/grammar repair, not human visual smoothing",
+    "secondary_attack_surface": "renderer self-compression only after local byte win",
+    "tertiary_attack_surface": "pose bytes and archive overhead are too small to close the full sub-0.300 gap alone",
+    "zip_overhead_is_material": false
+  },
+  "tool": "experiments/profile_archive_byte_accounting.py",
+  "zip_container": {
+    "member_count": 1,
+    "members": [
+      {
+        "central_directory_header_bytes": 47,
+        "compress_size": 276242,
+        "compress_type": 0,
+        "crc": "e01cf965",
+        "file_size": 276242,
+        "filename": "p",
+        "header_offset": 0,
+        "local_header_bytes": 31
+      }
+    ],
+    "overhead_bytes": 100,
+    "overhead_rate_score": 6.6585895e-05
+  }
+}

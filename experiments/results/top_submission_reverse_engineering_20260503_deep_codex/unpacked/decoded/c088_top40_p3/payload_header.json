@@ -1,0 +1,38 @@
+{
+  "members": [
+    {
+      "bytes": 55965,
+      "codec": "brotli_qzs3",
+      "decoded_bytes": 59288,
+      "decoded_sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb",
+      "name": "renderer.bin",
+      "sha256": "2544dfe50d2631a56600cbfc7342e4a18c97f953526fc51425be0d62f97e22ad"
+    },
+    {
+      "bytes": 219472,
+      "codec": "brotli_av1_obu",
+      "decoded_bytes": 223385,
+      "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+      "name": "masks.mkv",
+      "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+    },
+    {
+      "bytes": 162,
+      "codec": "brotli_seg_tile_actions_v1",
+      "decoded_bytes": 160,
+      "decoded_sha256": "8b34ef134e6551c83d170f07c8f6672870f09df5d38551ab24320f4a2f20a373",
+      "name": "seg_tile_actions.bin",
+      "sha256": "7e30ebbff8290644d9ead95b47f58f968df57dca416606b00ac6af43dd76e9aa"
+    },
+    {
+      "bytes": 677,
+      "codec": "public_qp1_brotli",
+      "decoded_bytes": 7200,
+      "decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f",
+      "name": "optimized_poses.bin",
+      "sha256": "c998610e82bb46a686a073e8a1847987de1346f86852a1c60cfa3244a1ad43c5"
+    }
+  ],
+  "payload_format": "public_pr75_qzs3_qp1_segactions_p3",
+  "schema": "renderer_payload_pr64_len_table_v1"
+}

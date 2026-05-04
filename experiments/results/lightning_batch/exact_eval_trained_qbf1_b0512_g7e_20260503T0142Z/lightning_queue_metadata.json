@@ -1,0 +1,40 @@
+{
+  "adjudication": {
+    "allow_component_gate_forensic_success": true,
+    "allow_sane_score_forensic_success": true,
+    "baseline_archive_size_bytes": 276214,
+    "baseline_posenet_dist": 0.00049637,
+    "baseline_score": 0.31561703078448233,
+    "baseline_segnet_dist": 0.00061244,
+    "component_reference_label": "C067_Aplusplus_T4",
+    "delta_key": "score_delta_vs_C067_Aplusplus",
+    "max_posenet_dist": null,
+    "max_posenet_relative": 20.0,
+    "max_sane_score": 10.0,
+    "max_segnet_dist": null,
+    "max_segnet_relative": 20.0,
+    "predicted_band_high": 10.0,
+    "predicted_band_low": 0.0,
+    "provenance_name": "adjudication_provenance.json",
+    "regression_threshold": 10.0,
+    "required_device": "cuda",
+    "required_samples": 600,
+    "result_copy_name": "contest_auth_eval.adjudicated.json"
+  },
+  "artifact_recorded_at_utc": "2026-05-03T01:47:18Z",
+  "expected_archive_sha256": "6174424516a93aa35852cd4dc22b9132516fc38f824b77562b3f91b3f55f58dc",
+  "expected_archive_size_bytes": 283432,
+  "job_name": "exact_eval_trained_qbf1_b0512_g7e_20260503T0142Z",
+  "queue_metadata": {
+    "candidate_id": "trained_qbf1_b0512",
+    "lane_id": "c067_trained_renderer_self_compression_blockfp",
+    "purpose": "trained_renderer_blockfp_g7e_diagnostic",
+    "source_archive_sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+    "source_manifest": ".omx/state/trained_qbf1_b0512_h100diag_20260503T0200Z_manifest.json",
+    "trained_renderer_sha256": "00ce395fc6495a47d26e3844537859fdc2a1bc38d121ea5f4fb2610179d26e46"
+  },
+  "role": "exact_cuda_eval",
+  "schema_version": 1,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

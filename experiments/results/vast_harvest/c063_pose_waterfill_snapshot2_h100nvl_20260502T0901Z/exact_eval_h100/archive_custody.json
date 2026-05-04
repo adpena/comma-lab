@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-05-02T09:01:14Z",
+  "archive_label": "c063_pose_waterfill_048_accepted_snapshot2_h100nvl_20260502T0901Z",
+  "archive_path": "experiments/results/c063_breakthrough_candidate_matrix_20260502/h100_dispatch_matrix/c063_pose_waterfill_048_accepted_snapshot2_h100nvl_20260502T0901Z/input/archive.accepted_latest.zip",
+  "custody_archive_path": "experiments/results/c063_breakthrough_candidate_matrix_20260502/h100_dispatch_matrix/c063_pose_waterfill_048_accepted_snapshot2_h100nvl_20260502T0901Z/exact_eval_h100/archive.zip",
+  "archive_size_bytes": 276250,
+  "archive_sha256": "40d98eb8c4ae00d326b749a738278cf49f0409b85ae6c5da7943259dd34dba69"
+}

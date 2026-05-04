@@ -1,0 +1,168 @@
+{
+  "decision": {
+    "accepted_candidate_count": 0,
+    "best_mode_by_bytes": "adaptive9bin",
+    "best_runtime_compatible_nonbaseline": "adaptive8prpdup2",
+    "summary": "No exposed PR85 C++ QMA mode beats the submitted adaptive9bin QMA9 payload. Some alternates are runtime-compatible but larger; QMA9 alternate modes are larger and not decoded by the submitted QMA9 runtime path as token-parity equivalents."
+  },
+  "dispatch_performed": false,
+  "gpu_required": false,
+  "modes": [
+    {
+      "accepted_for_archive_replacement": false,
+      "decoded_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "delta_bytes_vs_pr85_qma9": 0,
+      "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "magic": "QMA9",
+      "mode": "adaptive9bin",
+      "payload_bytes": 159011,
+      "payload_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+      "rate_score_delta_if_components_unchanged": 0.0,
+      "runtime_decode_token_parity": true
+    },
+    {
+      "accepted_for_archive_replacement": false,
+      "decoded_token_sha256": "e52811f32c7f987299712683ee4f06d1838c11b5dbf571048ebc555f4d4acde9",
+      "delta_bytes_vs_pr85_qma9": 2023,
+      "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "magic": "QMA9",
+      "mode": "adaptive9up2left2",
+      "payload_bytes": 161034,
+      "payload_sha256": "da17f28d5226d71ebdc060e494ce96167bbe3d3627bde4412100fc88895de173",
+      "rate_score_delta_if_components_unchanged": 0.0013470326621661526,
+      "runtime_decode_token_parity": false
+    },
+    {
+      "accepted_for_archive_replacement": false,
+      "decoded_token_sha256": "552d6d33263ff4679e59c26b2f4414857bf7ceacf674319ddf3d0e81f712e252",
+      "delta_bytes_vs_pr85_qma9": 3866,
+      "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "magic": "QMA9",
+      "mode": "adaptive9up2pl",
+      "payload_bytes": 162877,
+      "payload_sha256": "94b9938bb10fbb7b8209abcb24df43aae769d8e035f8b95b6d543b72828b4e1b",
+      "rate_score_delta_if_components_unchanged": 0.0025742107127703145,
+      "runtime_decode_token_parity": false
+    },
+    {
+      "accepted_for_archive_replacement": false,
+      "decoded_token_sha256": "d29a74ad36ea91cdbf0ff5bc1d05087fc36ce914e7eb8e50f0804092ab3610e8",
+      "delta_bytes_vs_pr85_qma9": 4185,
+      "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "magic": "QMA9",
+      "mode": "adaptive9up2pu",
+      "payload_bytes": 163196,
+      "payload_sha256": "72b3f0bd7990018261eee43b80d89d8c52315e05ccaae9991cb263bde9a2975d",
+      "rate_score_delta_if_components_unchanged": 0.002786619718816287,
+      "runtime_decode_token_parity": false
+    },
+    {
+      "accepted_for_archive_replacement": false,
+      "decoded_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "delta_bytes_vs_pr85_qma9": 4477,
+      "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "magic": "QMA8",
+      "mode": "adaptive8prpdup2",
+      "payload_bytes": 163488,
+      "payload_sha256": "a23d02e7bbfa04e17911a4bf28c16bd6a658d139b1a51e67e96b4a4923f1b2c2",
+      "rate_score_delta_if_components_unchanged": 0.0029810505331279613,
+      "runtime_decode_token_parity": true
+    },
+    {
+      "accepted_for_archive_replacement": false,
+      "decoded_token_sha256": "4e71d7c5d9d20f9d935f12090e8862b7a39f6965a8691fc481f1d5ebf8c2bade",
+      "delta_bytes_vs_pr85_qma9": 7729,
+      "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "magic": "QMA8",
+      "mode": "adaptive8prpdleft2",
+      "payload_bytes": 166740,
+      "payload_sha256": "0f49457f1e8397c0aef19c34203d8e41df536734a2b995b9d9823823b22b147e",
+      "rate_score_delta_if_components_unchanged": 0.005146423848681262,
+      "runtime_decode_token_parity": false
+    },
+    {
+      "accepted_for_archive_replacement": false,
+      "decoded_token_sha256": "efd15593d2f6e03f7abb1827a3b47963813097a2ddfadf985a8259a2b13189ba",
+      "delta_bytes_vs_pr85_qma9": 8844,
+      "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "magic": "QMA8",
+      "mode": "adaptive8prpdpdl",
+      "payload_bytes": 167855,
+      "payload_sha256": "ad7333c33599c3a705d4b52dc8a6f5ad3100ec9e622d457586ef186e8502192a",
+      "rate_score_delta_if_components_unchanged": 0.005888856581412484,
+      "runtime_decode_token_parity": false
+    },
+    {
+      "accepted_for_archive_replacement": false,
+      "decoded_token_sha256": "4fdf92bf77937297b0e41008c67dee00236e33c4fab273844db335c2bd471980",
+      "delta_bytes_vs_pr85_qma9": 8900,
+      "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "magic": "QMA8",
+      "mode": "adaptive8prpdpdr",
+      "payload_bytes": 167911,
+      "payload_sha256": "1a4199eb2e039d7d5a1226857fe1ea23f418329d817a4f2b440bbab36243bd94",
+      "rate_score_delta_if_components_unchanged": 0.005926144682787325,
+      "runtime_decode_token_parity": false
+    },
+    {
+      "accepted_for_archive_replacement": false,
+      "decoded_token_sha256": "c4d43d56144738917322bbcc3d16cc88839a8c83b9e478f3d2b9fe08c27da965",
+      "delta_bytes_vs_pr85_qma9": 9201,
+      "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "magic": "QMA8",
+      "mode": "adaptive8prpdpu",
+      "payload_bytes": 168212,
+      "payload_sha256": "04444878bb6bc05005ced51677ea61f0ce8579e67e52782bd14b0edd861d271a",
+      "rate_score_delta_if_components_unchanged": 0.006126568227677098,
+      "runtime_decode_token_parity": false
+    },
+    {
+      "accepted_for_archive_replacement": false,
+      "decoded_token_sha256": "8bbbbb4020e312f32a55ec85a40332bf628f3bc68c5cd71d9cbd3fa9f310d989",
+      "delta_bytes_vs_pr85_qma9": 9285,
+      "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "magic": "QMA8",
+      "mode": "adaptive8prpdpl",
+      "payload_bytes": 168296,
+      "payload_sha256": "81e1c0056363db84d30e0c2115e0f1c857500734bf8c969eef7bb1e53b832d23",
+      "rate_score_delta_if_components_unchanged": 0.006182500379739361,
+      "runtime_decode_token_parity": false
+    },
+    {
+      "accepted_for_archive_replacement": false,
+      "decoded_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "delta_bytes_vs_pr85_qma9": 9979,
+      "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "magic": "QMA7",
+      "mode": "adaptive7prpd",
+      "payload_bytes": 168990,
+      "payload_sha256": "0382ae2a0b36b5af38fdb7f17c051620b2adbd4ae5d6f102a8e125cc4b31712e",
+      "rate_score_delta_if_components_unchanged": 0.006644606493206148,
+      "runtime_decode_token_parity": true
+    },
+    {
+      "accepted_for_archive_replacement": false,
+      "decoded_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "delta_bytes_vs_pr85_qma9": 14765,
+      "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "magic": "QMA6",
+      "mode": "adaptive6pr",
+      "payload_bytes": 173776,
+      "payload_sha256": "e39c86a70393803402774a564fbf8f657ae0c17eee15f75c2c912310240ea934",
+      "rate_score_delta_if_components_unchanged": 0.00983140744284886,
+      "runtime_decode_token_parity": true
+    }
+  ],
+  "planning_only": true,
+  "recorded_at_utc": "2026-05-04T02:58:50Z",
+  "schema": "pr85_qma9_cpp_mode_sweep_v1",
+  "score_claim": false,
+  "source": {
+    "raw_token_path": "experiments/results/public_pr85_intake_20260503_codex/qma9_token_source/pr85_qma9_tokens_u8_storage_order.bin",
+    "raw_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+    "source_qma9_bytes": 159011,
+    "source_qma9_path": "experiments/results/public_pr85_intake_20260503_codex/qma9_token_source/pr85_mask_segment.qma9",
+    "source_qma9_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179"
+  },
+  "tool": "manual_cxx_range_mask_codec_mode_sweep"
+}

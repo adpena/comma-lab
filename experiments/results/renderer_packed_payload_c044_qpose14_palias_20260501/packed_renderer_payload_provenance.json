@@ -1,0 +1,66 @@
+{
+  "brotli_quality": 11,
+  "evidence_grade": "empirical",
+  "formula_only_rate_delta": -0.010324143068159267,
+  "header": {
+    "members": [
+      {
+        "bytes": 211903,
+        "codec": "raw",
+        "name": "renderer.bin",
+        "sha256": "97bde7ac1de7f78ce60a2d68f747aca5d76d1ce7fd1d024680f8d61247ccf142"
+      },
+      {
+        "bytes": 421483,
+        "codec": "raw",
+        "name": "masks.mkv",
+        "sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9"
+      },
+      {
+        "bytes": 7208,
+        "codec": "pose_qpose14_col_delta_v1",
+        "decoded_bytes": 7200,
+        "decoded_sha256": "41a49841ea779f4e2ed0ae985d7a985eca347cbae06a143ade15fbceb25daba8",
+        "lossy": true,
+        "name": "optimized_poses.bin",
+        "pose_error_stats": {
+          "max_abs_by_dim": [
+            0.0,
+            0.000244140625,
+            0.000244140625,
+            0.000244140625,
+            0.000244140625,
+            0.000244140625
+          ],
+          "pose_dim": 6,
+          "rmse_by_dim": [
+            0.0,
+            6.680778449025996e-05,
+            6.137387592527654e-05,
+            0.00012990785240266816,
+            0.00013485824848258422,
+            9.788806045682417e-05
+          ],
+          "rows": 600
+        },
+        "sha256": "9d84d3e4549623b9d1b0a57def7c6defead77390e1ab9cdc1a91e1954f0bb556",
+        "source_decoded_sha256": "4b3d8cd58965971ad518a970441f5e9cc53ce361a62d51e95c1cdd2056be4449"
+      }
+    ],
+    "schema": "renderer_payload_v1",
+    "source_archive_sha256": "1e9195cb6e0e08fc98ee393590770e2b22905a2ee2718edb8b737cada125f279"
+  },
+  "output_archive": "experiments/results/renderer_packed_payload_c044_qpose14_palias_20260501/archive.zip",
+  "output_archive_bytes": 594458,
+  "output_archive_sha256": "33cf2d63647bca34302789aa5bbf779b2453b38bfb812054c65599cd7999971d",
+  "payload_compressed_bytes": 594358,
+  "payload_member": "p",
+  "payload_raw_bytes": 641632,
+  "pose_codec": "pose_qpose14_col_delta_v1",
+  "pose_residual_topk": 0,
+  "savings_bytes": 15505,
+  "score_claim": false,
+  "source_archive": "experiments/results/lightning_batch/exact_eval_owv3_0120_stack_t4_20260501T150652Z/archive.zip",
+  "source_archive_bytes": 609963,
+  "source_archive_sha256": "1e9195cb6e0e08fc98ee393590770e2b22905a2ee2718edb8b737cada125f279"
+}

@@ -1,0 +1,1148 @@
+{
+  "clearance_packet_path": ".omx/state/lane12_nerv_l2_clearance.json",
+  "clearance_state_written": false,
+  "clearance_write_request": {
+    "clean_passes_ok": false,
+    "clearance_lane_id": "lane_12_nerv_mask_codec",
+    "eligible_to_create_clearance_packet": false,
+    "evidence_paths": [],
+    "grand_council_clean_passes": 0,
+    "requested": false,
+    "state_write_performed": false,
+    "written_packet": null
+  },
+  "current_frontier_context": {
+    "archive_sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+    "archive_size_bytes": 276214,
+    "evidence_grade": "A++",
+    "label": "C067",
+    "score": 0.31561703078448233,
+    "source": "operator mission context 2026-05-02"
+  },
+  "deterministic_report": true,
+  "evidence_buckets": {
+    "empirical_evidence": {
+      "geometry_jsons": [
+        {
+          "baseline_archive_sha256": null,
+          "blockers": [
+            "inputs.baseline_source source SHA-256 must be recorded",
+            "inputs.candidate_source archive member must resolve to masks.nrv",
+            "inputs.candidate_source source SHA-256 must be recorded",
+            "pass_fail.overall_pass must be true",
+            "pass_fail.thresholds must match promotion preset"
+          ],
+          "boundary_2px_disagreement": null,
+          "candidate_archive_sha256": null,
+          "candidate_member": null,
+          "device": "cpu",
+          "diagnostic": "alpha_geo_0_nerv_geometry",
+          "expected_shape": [
+            1200,
+            384,
+            512
+          ],
+          "failed_checks": [],
+          "geometry_gate_passed": false,
+          "global_disagreement": 0.012303928799099393,
+          "kind": "geometry_json",
+          "overall_pass": null,
+          "pair_transition_disagreement": 0.009507171571470149,
+          "path": {
+            "diagnostic": "alpha_geo_0_nerv_geometry",
+            "exists": true,
+            "is_file": true,
+            "json_object": true,
+            "path": "experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_0_vs_lane_a_base.json",
+            "schema": null,
+            "schema_version": 1,
+            "sha256": "0b3ecfb1ecea39efd250182df9660c968047c2ef3da8bf117d0f1ca0719bfb05",
+            "size_bytes": 10361
+          },
+          "promotion_thresholds_passed": false,
+          "promotion_thresholds_required": true,
+          "score_evidence_grade": "empirical",
+          "scorer_proxy": false,
+          "shape": [
+            1200,
+            384,
+            512
+          ],
+          "threshold_preset": null,
+          "thresholds": null
+        },
+        {
+          "baseline_archive_sha256": null,
+          "blockers": [
+            "inputs.baseline_source source SHA-256 must be recorded",
+            "inputs.candidate_source archive member must resolve to masks.nrv",
+            "inputs.candidate_source source SHA-256 must be recorded",
+            "pass_fail.overall_pass must be true",
+            "pass_fail.thresholds must match promotion preset"
+          ],
+          "boundary_2px_disagreement": null,
+          "candidate_archive_sha256": null,
+          "candidate_member": null,
+          "device": "cpu",
+          "diagnostic": "alpha_geo_0_nerv_geometry",
+          "expected_shape": [
+            1200,
+            384,
+            512
+          ],
+          "failed_checks": [],
+          "geometry_gate_passed": false,
+          "global_disagreement": 0.012303928799099393,
+          "kind": "geometry_json",
+          "overall_pass": null,
+          "pair_transition_disagreement": 0.009507171571470149,
+          "path": {
+            "diagnostic": "alpha_geo_0_nerv_geometry",
+            "exists": true,
+            "is_file": true,
+            "json_object": true,
+            "path": "experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_0_vs_lane_g_v3.json",
+            "schema": null,
+            "schema_version": 1,
+            "sha256": "a4fa280b4e1188a2c7e13580979722ecce8eb9653ff9886bc1ba04680928d262",
+            "size_bytes": 10374
+          },
+          "promotion_thresholds_passed": false,
+          "promotion_thresholds_required": true,
+          "score_evidence_grade": "empirical",
+          "scorer_proxy": false,
+          "shape": [
+            1200,
+            384,
+            512
+          ],
+          "threshold_preset": null,
+          "thresholds": null
+        },
+        {
+          "baseline_archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
+          "blockers": [
+            "diagnostic_config.threshold_preset must be promotion",
+            "failed check: boundary_band_1px_disagreement",
+            "failed check: boundary_band_2px_disagreement",
+            "failed check: boundary_band_3px_disagreement",
+            "failed check: boundary_band_5px_disagreement",
+            "failed check: global_disagreement",
+            "failed check: max_component_centroid_jump_px",
+            "failed check: missing_component_rate",
+            "failed check: pair_transition_disagreement_rate",
+            "pass_fail.overall_pass must be true"
+          ],
+          "boundary_2px_disagreement": 0.14883144511692872,
+          "candidate_archive_sha256": "864549cc648f0b3a023076c11812ccd0f10b1d013ed3fd6bb24d20bbcde85c97",
+          "candidate_member": "masks.nrv",
+          "device": "cpu",
+          "diagnostic": "alpha_geo_0_nerv_geometry",
+          "expected_shape": [
+            1200,
+            384,
+            512
+          ],
+          "failed_checks": [
+            "boundary_band_1px_disagreement",
+            "boundary_band_2px_disagreement",
+            "boundary_band_3px_disagreement",
+            "boundary_band_5px_disagreement",
+            "global_disagreement",
+            "max_component_centroid_jump_px",
+            "missing_component_rate",
+            "pair_transition_disagreement_rate"
+          ],
+          "geometry_gate_passed": false,
+          "global_disagreement": 0.012303928799099393,
+          "kind": "geometry_json",
+          "overall_pass": false,
+          "pair_transition_disagreement": 0.009507171571470149,
+          "path": {
+            "diagnostic": "alpha_geo_0_nerv_geometry",
+            "exists": true,
+            "is_file": true,
+            "json_object": true,
+            "path": "experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_0_vs_lane_g_v3_codex_2px_hashes.json",
+            "schema": null,
+            "schema_version": 1,
+            "sha256": "72dbb6e98c5ac9fa598b84d44381e72d9c4ae8e2c7e504907281f038f99c3b45",
+            "size_bytes": 16358
+          },
+          "promotion_thresholds_passed": false,
+          "promotion_thresholds_required": true,
+          "score_evidence_grade": "empirical",
+          "scorer_proxy": false,
+          "shape": [
+            1200,
+            384,
+            512
+          ],
+          "threshold_preset": "exploratory",
+          "thresholds": {
+            "boundary_band_disagreement_max": {
+              "1": 0.005,
+              "2": 0.005,
+              "3": 0.005,
+              "5": 0.005
+            },
+            "class_recall_min": {},
+            "global_disagreement_max": 0.003,
+            "max_component_centroid_jump_px": 1.0,
+            "missing_component_rate_max": 0.0,
+            "pair_transition_disagreement_max": 0.004,
+            "pair_transition_f1_min": null,
+            "stable_region_false_flip_rate_max": 0.004,
+            "tiny_speckle_rate_max": 0.0005
+          }
+        },
+        {
+          "baseline_archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
+          "blockers": [
+            "diagnostic_config.threshold_preset must be promotion",
+            "failed check: boundary_band_1px_disagreement",
+            "failed check: boundary_band_2px_disagreement",
+            "failed check: boundary_band_3px_disagreement",
+            "failed check: boundary_band_5px_disagreement",
+            "failed check: global_disagreement",
+            "failed check: max_component_centroid_jump_px",
+            "failed check: missing_component_rate",
+            "failed check: pair_transition_disagreement_rate",
+            "pass_fail.overall_pass must be true"
+          ],
+          "boundary_2px_disagreement": 0.14883144511692872,
+          "candidate_archive_sha256": "864549cc648f0b3a023076c11812ccd0f10b1d013ed3fd6bb24d20bbcde85c97",
+          "candidate_member": "masks.nrv",
+          "device": "cpu",
+          "diagnostic": "alpha_geo_0_nerv_geometry",
+          "expected_shape": [
+            1200,
+            384,
+            512
+          ],
+          "failed_checks": [
+            "boundary_band_1px_disagreement",
+            "boundary_band_2px_disagreement",
+            "boundary_band_3px_disagreement",
+            "boundary_band_5px_disagreement",
+            "global_disagreement",
+            "max_component_centroid_jump_px",
+            "missing_component_rate",
+            "pair_transition_disagreement_rate"
+          ],
+          "geometry_gate_passed": false,
+          "global_disagreement": 0.012303928799099393,
+          "kind": "geometry_json",
+          "overall_pass": false,
+          "pair_transition_disagreement": 0.009507171571470149,
+          "path": {
+            "diagnostic": "alpha_geo_0_nerv_geometry",
+            "exists": true,
+            "is_file": true,
+            "json_object": true,
+            "path": "experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_0_vs_lane_g_v3_codex_current_20260501.json",
+            "schema": null,
+            "schema_version": 1,
+            "sha256": "6b17b004d238ada62180077aa072f02594954ef02f5a5c610bc70e65619fa80d",
+            "size_bytes": 123656
+          },
+          "promotion_thresholds_passed": false,
+          "promotion_thresholds_required": true,
+          "score_evidence_grade": "empirical",
+          "scorer_proxy": false,
+          "shape": [
+            1200,
+            384,
+            512
+          ],
+          "threshold_preset": "exploratory",
+          "thresholds": {
+            "boundary_band_disagreement_max": {
+              "1": 0.005,
+              "2": 0.005,
+              "3": 0.005,
+              "5": 0.005
+            },
+            "class_recall_min": {},
+            "global_disagreement_max": 0.003,
+            "max_component_centroid_jump_px": 1.0,
+            "missing_component_rate_max": 0.0,
+            "pair_transition_disagreement_max": 0.004,
+            "pair_transition_f1_min": null,
+            "stable_region_false_flip_rate_max": 0.004,
+            "tiny_speckle_rate_max": 0.0005
+          }
+        },
+        {
+          "baseline_archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
+          "blockers": [
+            "diagnostic_config.threshold_preset must be promotion",
+            "failed check: boundary_band_1px_disagreement",
+            "failed check: boundary_band_2px_disagreement",
+            "failed check: boundary_band_3px_disagreement",
+            "failed check: boundary_band_5px_disagreement",
+            "failed check: global_disagreement",
+            "failed check: max_component_centroid_jump_px",
+            "failed check: missing_component_rate",
+            "failed check: pair_transition_disagreement_rate",
+            "pass_fail.overall_pass must be true"
+          ],
+          "boundary_2px_disagreement": 0.14883144511692872,
+          "candidate_archive_sha256": "864549cc648f0b3a023076c11812ccd0f10b1d013ed3fd6bb24d20bbcde85c97",
+          "candidate_member": "masks.nrv",
+          "device": "cpu",
+          "diagnostic": "alpha_geo_0_nerv_geometry",
+          "expected_shape": [
+            1200,
+            384,
+            512
+          ],
+          "failed_checks": [
+            "boundary_band_1px_disagreement",
+            "boundary_band_2px_disagreement",
+            "boundary_band_3px_disagreement",
+            "boundary_band_5px_disagreement",
+            "global_disagreement",
+            "max_component_centroid_jump_px",
+            "missing_component_rate",
+            "pair_transition_disagreement_rate"
+          ],
+          "geometry_gate_passed": false,
+          "global_disagreement": 0.012303928799099393,
+          "kind": "geometry_json",
+          "overall_pass": false,
+          "pair_transition_disagreement": 0.009507171571470149,
+          "path": {
+            "diagnostic": "alpha_geo_0_nerv_geometry",
+            "exists": true,
+            "is_file": true,
+            "json_object": true,
+            "path": "experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_0_vs_lane_g_v3_residual_regions_20260430.json",
+            "schema": null,
+            "schema_version": 1,
+            "sha256": "99a5747ff2ceca745845a1316df8acf906969a7109d0f1a4400e29bc653f8a9c",
+            "size_bytes": 71490
+          },
+          "promotion_thresholds_passed": false,
+          "promotion_thresholds_required": true,
+          "score_evidence_grade": "empirical",
+          "scorer_proxy": false,
+          "shape": [
+            1200,
+            384,
+            512
+          ],
+          "threshold_preset": "exploratory",
+          "thresholds": {
+            "boundary_band_disagreement_max": {
+              "1": 0.005,
+              "2": 0.005,
+              "3": 0.005,
+              "5": 0.005
+            },
+            "class_recall_min": {},
+            "global_disagreement_max": 0.003,
+            "max_component_centroid_jump_px": 1.0,
+            "missing_component_rate_max": 0.0,
+            "pair_transition_disagreement_max": 0.004,
+            "pair_transition_f1_min": null,
+            "stable_region_false_flip_rate_max": 0.004,
+            "tiny_speckle_rate_max": 0.0005
+          }
+        },
+        {
+          "baseline_archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
+          "blockers": [
+            "diagnostic_config.threshold_preset must be promotion",
+            "failed check: boundary_band_1px_disagreement",
+            "failed check: boundary_band_2px_disagreement",
+            "failed check: boundary_band_3px_disagreement",
+            "failed check: boundary_band_5px_disagreement",
+            "failed check: global_disagreement",
+            "failed check: max_component_centroid_jump_px",
+            "failed check: missing_component_rate",
+            "failed check: pair_transition_disagreement_rate",
+            "pass_fail.overall_pass must be true"
+          ],
+          "boundary_2px_disagreement": 0.14883144511692872,
+          "candidate_archive_sha256": "864549cc648f0b3a023076c11812ccd0f10b1d013ed3fd6bb24d20bbcde85c97",
+          "candidate_member": "masks.nrv",
+          "device": "cpu",
+          "diagnostic": "alpha_geo_0_nerv_geometry",
+          "expected_shape": [
+            1200,
+            384,
+            512
+          ],
+          "failed_checks": [
+            "boundary_band_1px_disagreement",
+            "boundary_band_2px_disagreement",
+            "boundary_band_3px_disagreement",
+            "boundary_band_5px_disagreement",
+            "global_disagreement",
+            "max_component_centroid_jump_px",
+            "missing_component_rate",
+            "pair_transition_disagreement_rate"
+          ],
+          "geometry_gate_passed": false,
+          "global_disagreement": 0.012303928799099393,
+          "kind": "geometry_json",
+          "overall_pass": false,
+          "pair_transition_disagreement": 0.009507171571470149,
+          "path": {
+            "diagnostic": "alpha_geo_0_nerv_geometry",
+            "exists": true,
+            "is_file": true,
+            "json_object": true,
+            "path": "experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_0_vs_lane_g_v3_worker3_20260430.json",
+            "schema": null,
+            "schema_version": 1,
+            "sha256": "95549ace15e86512bb425ca5ec3983e4023fb384a7683abf6901fcd177cdff12",
+            "size_bytes": 16404
+          },
+          "promotion_thresholds_passed": false,
+          "promotion_thresholds_required": true,
+          "score_evidence_grade": "empirical",
+          "scorer_proxy": false,
+          "shape": [
+            1200,
+            384,
+            512
+          ],
+          "threshold_preset": "exploratory",
+          "thresholds": {
+            "boundary_band_disagreement_max": {
+              "1": 0.005,
+              "2": 0.005,
+              "3": 0.005,
+              "5": 0.005
+            },
+            "class_recall_min": {},
+            "global_disagreement_max": 0.003,
+            "max_component_centroid_jump_px": 1.0,
+            "missing_component_rate_max": 0.0,
+            "pair_transition_disagreement_max": 0.004,
+            "pair_transition_f1_min": null,
+            "stable_region_false_flip_rate_max": 0.004,
+            "tiny_speckle_rate_max": 0.0005
+          }
+        },
+        {
+          "baseline_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+          "blockers": [
+            "diagnostic_config.threshold_preset must be promotion",
+            "pass_fail.overall_pass must be true"
+          ],
+          "boundary_2px_disagreement": 0.14883144511692872,
+          "candidate_archive_sha256": "864549cc648f0b3a023076c11812ccd0f10b1d013ed3fd6bb24d20bbcde85c97",
+          "candidate_member": "masks.nrv",
+          "device": "cpu",
+          "diagnostic": "alpha_geo_0_nerv_geometry",
+          "expected_shape": [
+            1200,
+            384,
+            512
+          ],
+          "failed_checks": [],
+          "geometry_gate_passed": false,
+          "global_disagreement": 0.012303928799099393,
+          "kind": "geometry_json",
+          "overall_pass": null,
+          "pair_transition_disagreement": 0.009507171571470149,
+          "path": {
+            "diagnostic": "alpha_geo_0_nerv_geometry",
+            "exists": true,
+            "is_file": true,
+            "json_object": true,
+            "path": "experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_0_vs_pfp16_residual_regions_20260501T073504Z.json",
+            "schema": null,
+            "schema_version": 1,
+            "sha256": "c020027e944e06eb7378ef61c2c91ce7e726e8238791d8e3504d3542f6a8ce77",
+            "size_bytes": 465954
+          },
+          "promotion_thresholds_passed": false,
+          "promotion_thresholds_required": true,
+          "score_evidence_grade": "empirical",
+          "scorer_proxy": false,
+          "shape": [
+            1200,
+            384,
+            512
+          ],
+          "threshold_preset": "none",
+          "thresholds": null
+        },
+        {
+          "baseline_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+          "blockers": [
+            "diagnostic_config.threshold_preset must be promotion",
+            "pass_fail.overall_pass must be true"
+          ],
+          "boundary_2px_disagreement": 0.14883144511692872,
+          "candidate_archive_sha256": "864549cc648f0b3a023076c11812ccd0f10b1d013ed3fd6bb24d20bbcde85c97",
+          "candidate_member": "masks.nrv",
+          "device": "cpu",
+          "diagnostic": "alpha_geo_0_nerv_geometry",
+          "expected_shape": [
+            1200,
+            384,
+            512
+          ],
+          "failed_checks": [],
+          "geometry_gate_passed": false,
+          "global_disagreement": 0.012303928799099393,
+          "kind": "geometry_json",
+          "overall_pass": null,
+          "pair_transition_disagreement": 0.009507171571470149,
+          "path": {
+            "diagnostic": "alpha_geo_0_nerv_geometry",
+            "exists": true,
+            "is_file": true,
+            "json_object": true,
+            "path": "experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_0_vs_pfp16_visual_primitives_bounded_20260501.json",
+            "schema": null,
+            "schema_version": 1,
+            "sha256": "46886238809a7c76c82ad162744fb24aa3126defe0d61250b87b6712524f2050",
+            "size_bytes": 63752
+          },
+          "promotion_thresholds_passed": false,
+          "promotion_thresholds_required": true,
+          "score_evidence_grade": "empirical",
+          "scorer_proxy": false,
+          "shape": [
+            1200,
+            384,
+            512
+          ],
+          "threshold_preset": "none",
+          "thresholds": null
+        },
+        {
+          "baseline_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+          "blockers": [
+            "diagnostic_config.threshold_preset must be promotion",
+            "pass_fail.overall_pass must be true"
+          ],
+          "boundary_2px_disagreement": 0.14883144511692872,
+          "candidate_archive_sha256": "864549cc648f0b3a023076c11812ccd0f10b1d013ed3fd6bb24d20bbcde85c97",
+          "candidate_member": "masks.nrv",
+          "device": "cpu",
+          "diagnostic": "alpha_geo_0_nerv_geometry",
+          "expected_shape": [
+            1200,
+            384,
+            512
+          ],
+          "failed_checks": [],
+          "geometry_gate_passed": false,
+          "global_disagreement": 0.012303928799099393,
+          "kind": "geometry_json",
+          "overall_pass": null,
+          "pair_transition_disagreement": 0.009507171571470149,
+          "path": {
+            "diagnostic": "alpha_geo_0_nerv_geometry",
+            "exists": true,
+            "is_file": true,
+            "json_object": true,
+            "path": "experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_1_vs_pfp16_repair_regions_20260501T080036Z.json",
+            "schema": null,
+            "schema_version": 1,
+            "sha256": "fcc7fcf9e22518cd95a5af4cb36aff189249c6248b5298f377ecc8ca66991a3e",
+            "size_bytes": 2044465
+          },
+          "promotion_thresholds_passed": false,
+          "promotion_thresholds_required": true,
+          "score_evidence_grade": "empirical",
+          "scorer_proxy": false,
+          "shape": [
+            1200,
+            384,
+            512
+          ],
+          "threshold_preset": "none",
+          "thresholds": null
+        },
+        {
+          "baseline_archive_sha256": null,
+          "blockers": [
+            "diagnostic is not alpha_geo_0_nerv_geometry",
+            "inputs.baseline_source source SHA-256 must be recorded",
+            "inputs.candidate_source archive member must resolve to masks.nrv",
+            "inputs.candidate_source source SHA-256 must be recorded",
+            "pass_fail.overall_pass must be true",
+            "pass_fail.thresholds must match promotion preset"
+          ],
+          "boundary_2px_disagreement": null,
+          "candidate_archive_sha256": null,
+          "candidate_member": null,
+          "device": "cpu",
+          "diagnostic": "alpha_geo_primitive_contract_v1",
+          "expected_shape": [
+            1200,
+            384,
+            512
+          ],
+          "failed_checks": [],
+          "geometry_gate_passed": false,
+          "global_disagreement": null,
+          "kind": "geometry_json",
+          "overall_pass": null,
+          "pair_transition_disagreement": null,
+          "path": {
+            "diagnostic": "alpha_geo_primitive_contract_v1",
+            "exists": true,
+            "is_file": true,
+            "json_object": true,
+            "path": "experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_1_vs_pfp16_repair_regions_20260501T080036Z.primitive_contract.json",
+            "schema": null,
+            "schema_version": 1,
+            "sha256": "e5da815b680ba5c02bf653dae8c77b4f6d12500461e45b06d0cfb0881be5c16e",
+            "size_bytes": 1062314
+          },
+          "promotion_thresholds_passed": false,
+          "promotion_thresholds_required": true,
+          "score_evidence_grade": "empirical",
+          "scorer_proxy": false,
+          "shape": [
+            1200,
+            384,
+            512
+          ],
+          "threshold_preset": null,
+          "thresholds": null
+        }
+      ],
+      "pose_regeneration_provenance": [
+        {
+          "archive_sha256": null,
+          "archive_size_bytes": null,
+          "baseline_archive_sha256": null,
+          "blockers": [
+            "alpha_geo0_pose_regen archive_sha256 must be a SHA-256 hex digest",
+            "alpha_geo0_pose_regen archive_size_bytes must be a positive integer",
+            "alpha_geo0_pose_regen commands missing: adjudicate_contest_auth_eval, contest_auth_eval, optimize_poses",
+            "alpha_geo0_pose_regen inputs.candidate_archive.sha256 must be a SHA-256 hex digest",
+            "alpha_geo0_pose_regen score_claim must be true after exact CUDA eval",
+            "alpha_geo0_pose_regen stage must be done",
+            "alpha_geo0_pose_regen summary passed must be true"
+          ],
+          "candidate_archive_sha256": null,
+          "command_names": [
+            "diagnose_nerv_geometry",
+            "probe_nvdec"
+          ],
+          "diagnostic": null,
+          "kind": "pose_regeneration_provenance",
+          "passed": false,
+          "path": {
+            "diagnostic": null,
+            "exists": true,
+            "is_file": true,
+            "json_object": true,
+            "path": "experiments/results/lightning_batch/alpha_geo0_pose_regen_lightning_t4_20260501T103952Z/alpha_geo0_summary.json",
+            "schema": null,
+            "schema_version": 1,
+            "sha256": "7a66b3d5a1d7c478877b77a4c8b8caa75f4f57df40b248ec73b47fb8f0bc4f42",
+            "size_bytes": 3018
+          },
+          "promotion_eligible": false,
+          "schema": null,
+          "schema_version": 1,
+          "score_claim": false,
+          "stage": "decode_candidate_masks",
+          "tool": "experiments/alpha_geo0_pose_regen.py",
+          "usable_for_exact_eval_dispatch": false
+        },
+        {
+          "archive_sha256": null,
+          "archive_size_bytes": null,
+          "baseline_archive_sha256": null,
+          "blockers": [
+            "alpha_geo0_pose_regen archive_sha256 must be a SHA-256 hex digest",
+            "alpha_geo0_pose_regen archive_size_bytes must be a positive integer",
+            "alpha_geo0_pose_regen commands missing: adjudicate_contest_auth_eval, contest_auth_eval, optimize_poses",
+            "alpha_geo0_pose_regen inputs.candidate_archive.sha256 must be a SHA-256 hex digest",
+            "alpha_geo0_pose_regen score_claim must be true after exact CUDA eval",
+            "alpha_geo0_pose_regen stage must be done",
+            "alpha_geo0_pose_regen summary passed must be true"
+          ],
+          "candidate_archive_sha256": null,
+          "command_names": [
+            "diagnose_nerv_geometry",
+            "probe_nvdec"
+          ],
+          "diagnostic": null,
+          "kind": "pose_regeneration_provenance",
+          "passed": false,
+          "path": {
+            "diagnostic": null,
+            "exists": true,
+            "is_file": true,
+            "json_object": true,
+            "path": "experiments/results/lightning_batch/alpha_geo0_pose_regen_lightning_t4_ffmpegfix_20260501T110126Z/alpha_geo0_summary.json",
+            "schema": null,
+            "schema_version": 1,
+            "sha256": "71f647ac39981ce2386316f08caed9c425210af2e2ef71930ae07551f2a0fbc6",
+            "size_bytes": 3089
+          },
+          "promotion_eligible": false,
+          "schema": null,
+          "schema_version": 1,
+          "score_claim": false,
+          "stage": "decode_candidate_masks",
+          "tool": "experiments/alpha_geo0_pose_regen.py",
+          "usable_for_exact_eval_dispatch": false
+        },
+        {
+          "archive_sha256": null,
+          "archive_size_bytes": null,
+          "baseline_archive_sha256": null,
+          "blockers": [
+            "modal validation error: NVDEC/DALI video probe failed; upstream/evaluate.py CUDA path is unsafe",
+            "modal_alpha_geo0_pose_regen promotion_eligible must be true",
+            "modal_alpha_geo0_pose_regen score_claim must be true after exact CUDA eval",
+            "modal_alpha_geo0_pose_regen stage must be done",
+            "modal_alpha_geo0_pose_regen summary passed must be true"
+          ],
+          "candidate_archive_sha256": null,
+          "command_names": [],
+          "diagnostic": null,
+          "kind": "pose_regeneration_provenance",
+          "passed": false,
+          "path": {
+            "diagnostic": null,
+            "exists": true,
+            "is_file": true,
+            "json_object": true,
+            "path": "experiments/results/modal_alpha_geo0_pose_regen/lane12_alpha_geo0_pose_regen_modal_t4_20260501T1026Z/modal_alpha_geo0_result_summary.json",
+            "schema": null,
+            "schema_version": 1,
+            "sha256": "6a0a141dbaaabb2bbab524c3b8f584372f33b875f4afa5de684c184a96f1c401",
+            "size_bytes": 700
+          },
+          "promotion_eligible": false,
+          "schema": null,
+          "schema_version": 1,
+          "score_claim": false,
+          "stage": "cuda_dali_nvdec_preflight",
+          "tool": "experiments/modal_alpha_geo0_pose_regen.py",
+          "usable_for_exact_eval_dispatch": false
+        },
+        {
+          "archive_sha256": null,
+          "archive_size_bytes": null,
+          "baseline_archive_sha256": null,
+          "blockers": [
+            "modal validation error: NVDEC/DALI video probe failed; upstream/evaluate.py CUDA path is unsafe",
+            "modal_alpha_geo0_pose_regen promotion_eligible must be true",
+            "modal_alpha_geo0_pose_regen score_claim must be true after exact CUDA eval",
+            "modal_alpha_geo0_pose_regen stage must be done",
+            "modal_alpha_geo0_pose_regen summary passed must be true"
+          ],
+          "candidate_archive_sha256": null,
+          "command_names": [],
+          "diagnostic": null,
+          "kind": "pose_regeneration_provenance",
+          "passed": false,
+          "path": {
+            "diagnostic": null,
+            "exists": true,
+            "is_file": true,
+            "json_object": true,
+            "path": "experiments/results/modal_alpha_geo0_pose_regen/lane12_alpha_geo0_pose_regen_modal_t4_20260501T1030Z_pinned_dali/modal_alpha_geo0_result_summary.json",
+            "schema": null,
+            "schema_version": 1,
+            "sha256": "fe9cd2216fc100eeb75444e485ffb1fd75cbd72dfea6ac77d0531af1524eb3fb",
+            "size_bytes": 712
+          },
+          "promotion_eligible": false,
+          "schema": null,
+          "schema_version": 1,
+          "score_claim": false,
+          "stage": "cuda_dali_nvdec_preflight",
+          "tool": "experiments/modal_alpha_geo0_pose_regen.py",
+          "usable_for_exact_eval_dispatch": false
+        }
+      ],
+      "primitive_contracts": [
+        {
+          "baseline_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+          "baseline_member": "masks.mkv",
+          "blockers": [],
+          "decoded_mask_dtype": "torch.uint8",
+          "decoded_mask_sha256": "cce3a986341c40df9b9ebca24ff96e16c4b41b40b388dc2af86161ba76e2b4e9",
+          "decoded_mask_sha256_algo": "sha256(shape,dtype,contiguous-raw-bytes)",
+          "diagnostic": "alpha_geo_primitive_contract_v1",
+          "exact_eval_claim": false,
+          "expected_shape": [
+            1200,
+            384,
+            512
+          ],
+          "kind": "primitive_contract",
+          "path": {
+            "diagnostic": "alpha_geo_primitive_contract_v1",
+            "exists": true,
+            "is_file": true,
+            "json_object": true,
+            "path": "experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_1_vs_pfp16_repair_regions_20260501T080036Z.primitive_contract.json",
+            "schema": null,
+            "schema_version": 1,
+            "sha256": "e5da815b680ba5c02bf653dae8c77b4f6d12500461e45b06d0cfb0881be5c16e",
+            "size_bytes": 1062314
+          },
+          "promotion_eligible": false,
+          "score_claim_eligible": false,
+          "score_evidence_grade": "empirical",
+          "shape": [
+            1200,
+            384,
+            512
+          ],
+          "threshold_gates": {
+            "exact_eval_spend_gate": {
+              "blockers": [
+                "global_disagreement",
+                "boundary_2px_disagreement",
+                "pair_transition_disagreement",
+                "critical_missing_rate",
+                "critical_missing_area_rate"
+              ],
+              "observed": {
+                "boundary_2px_disagreement": 0.14883144511692872,
+                "critical_missing_area_rate": 0.004038536840025019,
+                "critical_missing_rate": 0.6452857808237408,
+                "global_disagreement": 0.012303928799099393,
+                "pair_transition_disagreement": 0.009507171571470149
+              },
+              "passed": false,
+              "thresholds": {
+                "boundary_2px_disagreement_max": 0.002,
+                "critical_missing_area_rate_max": 0.0005,
+                "critical_missing_rate_max": 0.001,
+                "global_disagreement_max": 0.001,
+                "pair_transition_disagreement_max": 0.002
+              }
+            },
+            "exploratory_retrain_gate": {
+              "blockers": [
+                "global_disagreement",
+                "boundary_2px_disagreement",
+                "pair_transition_disagreement",
+                "critical_missing_rate"
+              ],
+              "observed": {
+                "boundary_2px_disagreement": 0.14883144511692872,
+                "critical_missing_area_rate": 0.004038536840025019,
+                "critical_missing_rate": 0.6452857808237408,
+                "global_disagreement": 0.012303928799099393,
+                "pair_transition_disagreement": 0.009507171571470149
+              },
+              "passed": false,
+              "thresholds": {
+                "boundary_2px_disagreement_max": 0.005,
+                "critical_missing_area_rate_max": 0.01,
+                "critical_missing_rate_max": 0.02,
+                "global_disagreement_max": 0.003,
+                "pair_transition_disagreement_max": 0.004
+              }
+            }
+          },
+          "usable_for_decoded_baseline_training": true
+        }
+      ]
+    },
+    "exact_evidence": [
+      {
+        "allowed_use": [
+          "negative_evidence",
+          "forensic",
+          "no_clearance_by_itself",
+          "no_promotion"
+        ],
+        "archive_sha256": "864549cc648f0b3a023076c11812ccd0f10b1d013ed3fd6bb24d20bbcde85c97",
+        "archive_size_bytes": 296478,
+        "avg_posenet_dist": 49.7784996,
+        "avg_segnet_dist": 0.03528685,
+        "canonical_tool": true,
+        "device": "cuda",
+        "exact_cuda": true,
+        "gpu_model": "NVIDIA GeForce RTX 4090",
+        "gpu_t4_match": false,
+        "kind": "exact_evidence_json",
+        "n_samples": 600,
+        "outcome_vs_current_frontier": "worse_than_current_frontier",
+        "path": {
+          "diagnostic": null,
+          "exists": true,
+          "is_file": true,
+          "json_object": true,
+          "path": "experiments/results/lane_12_nerv_20260430_codex_jsonfix40/adjudicated_contest_auth_eval.json",
+          "schema": null,
+          "schema_version": 1,
+          "sha256": "f94f31238cf7caf2859393a6bf2a46539e71c52fe5325ba73e130d9c2331d533",
+          "size_bytes": 2363
+        },
+        "score_claim_source": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+        "score_delta_vs_current_frontier": 25.721576273769806,
+        "score_recomputed_from_components": 26.03719330455429
+      },
+      {
+        "allowed_use": [
+          "negative_evidence",
+          "forensic",
+          "no_clearance_by_itself",
+          "no_promotion"
+        ],
+        "archive_sha256": "864549cc648f0b3a023076c11812ccd0f10b1d013ed3fd6bb24d20bbcde85c97",
+        "archive_size_bytes": 296478,
+        "avg_posenet_dist": 49.7784996,
+        "avg_segnet_dist": 0.03528685,
+        "canonical_tool": true,
+        "device": "cuda",
+        "exact_cuda": true,
+        "gpu_model": "NVIDIA GeForce RTX 4090",
+        "gpu_t4_match": false,
+        "kind": "exact_evidence_json",
+        "n_samples": 600,
+        "outcome_vs_current_frontier": "worse_than_current_frontier",
+        "path": {
+          "diagnostic": null,
+          "exists": true,
+          "is_file": true,
+          "json_object": true,
+          "path": "experiments/results/lane_12_nerv_20260430_codex_jsonfix40/contest_auth_eval.json",
+          "schema": null,
+          "schema_version": 1,
+          "sha256": "3e69ad27b29f398c1a40b7914bd1ae9db39b4310f2299c983313cf4bbdd2365f",
+          "size_bytes": 2362
+        },
+        "score_claim_source": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+        "score_delta_vs_current_frontier": 25.721576273769806,
+        "score_recomputed_from_components": 26.03719330455429
+      }
+    ],
+    "missing_prerequisites": [
+      {
+        "code": "no_passing_alpha_geo_geometry",
+        "detail": "Need Alpha-Geo geometry JSON with diagnostic=alpha_geo_0_nerv_geometry, empirical non-proxy evidence, full 1200x384x512 shape, diagnostic_config.threshold_preset=promotion, and pass_fail.overall_pass=true.",
+        "severity": "blocks_retraining_unblock"
+      },
+      {
+        "code": "pose_regeneration_provenance_missing",
+        "detail": "Pose-regeneration provenance exists, but no record passed completion/custody gates. Inspect evidence_buckets.empirical_evidence.pose_regeneration_provenance.",
+        "severity": "blocks_exact_eval_dispatch"
+      },
+      {
+        "code": "clearance_packet_invalid_or_missing",
+        "detail": "missing or unreadable Lane 12 L2 clearance packet: .omx/state/lane12_nerv_l2_clearance.json",
+        "severity": "blocks_retraining_unblock"
+      }
+    ],
+    "provenance_closure": {
+      "alpha_geo_pose_candidate_match": {
+        "match_count": 0,
+        "matches": [],
+        "passed": false,
+        "unmatched_passing_geometry": [],
+        "usable_pose_candidate_archive_sha256": []
+      }
+    }
+  },
+  "inputs": {
+    "exact_evidence_jsons": [
+      "experiments/results/lane_12_nerv_20260430_codex_jsonfix40/adjudicated_contest_auth_eval.json",
+      "experiments/results/lane_12_nerv_20260430_codex_jsonfix40/contest_auth_eval.json"
+    ],
+    "geometry_jsons": [
+      "experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_0_vs_lane_a_base.json",
+      "experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_0_vs_lane_g_v3.json",
+      "experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_0_vs_lane_g_v3_codex_2px_hashes.json",
+      "experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_0_vs_lane_g_v3_codex_current_20260501.json",
+      "experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_0_vs_lane_g_v3_residual_regions_20260430.json",
+      "experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_0_vs_lane_g_v3_worker3_20260430.json",
+      "experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_0_vs_pfp16_residual_regions_20260501T073504Z.json",
+      "experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_0_vs_pfp16_visual_primitives_bounded_20260501.json",
+      "experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_1_vs_pfp16_repair_regions_20260501T080036Z.json",
+      "experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_1_vs_pfp16_repair_regions_20260501T080036Z.primitive_contract.json"
+    ],
+    "pose_regeneration_provenance": [
+      "experiments/results/lightning_batch/alpha_geo0_pose_regen_lightning_t4_20260501T103952Z/alpha_geo0_summary.json",
+      "experiments/results/lightning_batch/alpha_geo0_pose_regen_lightning_t4_ffmpegfix_20260501T110126Z/alpha_geo0_summary.json",
+      "experiments/results/modal_alpha_geo0_pose_regen/lane12_alpha_geo0_pose_regen_modal_t4_20260501T1026Z/modal_alpha_geo0_result_summary.json",
+      "experiments/results/modal_alpha_geo0_pose_regen/lane12_alpha_geo0_pose_regen_modal_t4_20260501T1030Z_pinned_dali/modal_alpha_geo0_result_summary.json"
+    ],
+    "primitive_contract_jsons": [
+      "experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_1_vs_pfp16_repair_regions_20260501T080036Z.primitive_contract.json"
+    ],
+    "repo_root": "/Users/adpena/Projects/pact"
+  },
+  "launcher_criteria": {
+    "checks": {},
+    "evidence_paths": [],
+    "passed": false,
+    "path": {
+      "exists": false,
+      "is_file": false,
+      "json_error": "missing",
+      "path": ".omx/state/lane12_nerv_l2_clearance.json"
+    },
+    "violations": [
+      "missing or unreadable Lane 12 L2 clearance packet: .omx/state/lane12_nerv_l2_clearance.json"
+    ]
+  },
+  "promotion_eligible": false,
+  "provenance": {
+    "command": [
+      "experiments/plan_lane12_l2_unblock.py",
+      "--output-json",
+      "experiments/results/lane12_l2_unblock_readiness_20260503_resume/lane12_l2_unblock_readiness.codex_refresh_20260503T121317Z.json"
+    ],
+    "tool": "experiments/plan_lane12_l2_unblock.py"
+  },
+  "readiness_summary": {
+    "blockers": [
+      "Need Alpha-Geo geometry JSON with diagnostic=alpha_geo_0_nerv_geometry, empirical non-proxy evidence, full 1200x384x512 shape, diagnostic_config.threshold_preset=promotion, and pass_fail.overall_pass=true.",
+      "missing or unreadable Lane 12 L2 clearance packet: .omx/state/lane12_nerv_l2_clearance.json"
+    ],
+    "eligible_to_create_clearance_packet": false,
+    "exact_cuda_evidence_count": 2,
+    "exact_eval_dispatch_blockers": [
+      "Pose-regeneration provenance exists, but no record passed completion/custody gates. Inspect evidence_buckets.empirical_evidence.pose_regeneration_provenance."
+    ],
+    "matched_alpha_geo_pose_candidate_count": 0,
+    "passing_geometry_count": 0,
+    "ready_for_exact_eval_dispatch": false,
+    "ready_for_retraining_unblock": false,
+    "state_write_performed": false,
+    "usable_pose_regeneration_provenance_count": 0,
+    "usable_primitive_contract_count": 1,
+    "write_clearance_packet": false
+  },
+  "redesign_recipe": {
+    "dispatch_claim_required_before_remote_job": {
+      "lane_id": "lane_12_nerv_mask_codec",
+      "required": true,
+      "tool": "tools/claim_lane_dispatch.py claim"
+    },
+    "eval_custody": {
+      "exact_score_source": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+      "promotion_requires": [
+        "exact CUDA auth eval JSON",
+        "component gates not collapsed",
+        "archive bytes and SHA-256 recorded",
+        "recomputed score from components"
+      ],
+      "run_auth_eval_requires": [
+        "POSE_REGEN_PROVENANCE for the candidate mask stream",
+        "ALPHA_GEO_PROVENANCE with diagnostic_config.threshold_preset=promotion and pass_fail.overall_pass=true for the exact archive",
+        "archive SHA match between Alpha-Geo provenance and built archive",
+        "runtime tree hash from contest_auth_eval.py"
+      ]
+    },
+    "geometry_gate": {
+      "diagnostic_tool": "experiments/diagnose_nerv_geometry.py",
+      "required_command_shape": {
+        "--baseline-member": "masks.mkv",
+        "--candidate-member": "masks.nrv",
+        "--height": 384,
+        "--num-frames": 1200,
+        "--width": 512
+      },
+      "required_overall_pass": true,
+      "threshold_preset": "promotion",
+      "thresholds": {
+        "boundary_band_disagreement_max": {
+          "1": 0.002,
+          "2": 0.002,
+          "3": 0.002,
+          "5": 0.002
+        },
+        "class_recall_min": {
+          "1": 0.999,
+          "2": 0.999
+        },
+        "global_disagreement_max": 0.001,
+        "max_component_centroid_jump_px": 1.0,
+        "missing_component_rate_max": 0.0,
+        "pair_transition_disagreement_max": 0.002,
+        "stable_region_false_flip_rate_max": 0.002,
+        "tiny_speckle_rate_max": 0.0001
+      }
+    },
+    "primitive_contract": {
+      "required_diagnostic": "alpha_geo_primitive_contract_v1",
+      "required_fields": {
+        "exact_eval_claim": false,
+        "promotion_eligible": false,
+        "score_claim_eligible": false,
+        "source.baseline.decoded_mask_shape": [
+          1200,
+          384,
+          512
+        ]
+      },
+      "required_for_production_retraining": true,
+      "trainer_consumes": "--alpha-primitive-contract"
+    },
+    "recipe_id": "lane12_alpha_geo1_decoded_baseline_l2_unblock_v1",
+    "remote_dispatch_now": false,
+    "score_claim": false,
+    "training_custody": {
+      "provenance_must_record": [
+        "git_hash",
+        "gpu_name",
+        "profile",
+        "gt_masks_source=decoded-baseline",
+        "target_mask_sha256",
+        "alpha_primitive_contract.sha256",
+        "masks.nrv bytes and sha256"
+      ],
+      "required_env": {
+        "ALPHA_PRIMITIVE_CONTRACT": "<alpha_geo_primitive_contract_v1.json>",
+        "DECODED_BASELINE_MEMBER": "masks.mkv",
+        "GT_MASKS_SOURCE": "decoded-baseline",
+        "L2_CLEARANCE_PATH": ".omx/state/lane12_nerv_l2_clearance.json"
+      },
+      "run_auth_eval_default": "RUN_AUTH_EVAL=0",
+      "script": "scripts/remote_lane_nerv.sh",
+      "trainer_command_core": [
+        "experiments/train_nerv_mask.py",
+        "--device",
+        "cuda",
+        "--gt-masks-source",
+        "decoded-baseline",
+        "--decoded-baseline-member",
+        "masks.mkv",
+        "--alpha-primitive-contract",
+        "<alpha_geo_primitive_contract_v1.json>"
+      ]
+    },
+    "training_target": {
+      "decoded_baseline_member": "masks.mkv",
+      "decoded_baseline_path": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
+      "expected_shape": [
+        1200,
+        384,
+        512
+      ],
+      "gt_masks_source": "decoded-baseline",
+      "segnet_forensic_escape_hatch": {
+        "allowed_use": [
+          "forensic_debug",
+          "no_clearance",
+          "no_promotion"
+        ],
+        "remote_env": "ALLOW_RETIRED_SEGNET_TARGET=1",
+        "required_note": "Only for documented reproduction of the retired jsonfix40 target path.",
+        "trainer_flag": "--allow-forensic-segnet-target"
+      },
+      "segnet_target_default_allowed": false
+    }
+  },
+  "remote_job_launched": false,
+  "report_id": "lane12_l2_unblock_readiness_20260502",
+  "schema": "lane12_l2_unblock_readiness_v1",
+  "score_claim": false,
+  "training_performed": false
+}

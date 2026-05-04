@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="220" viewBox="0 0 980 220">
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="20" y="30" font-family="Arial, sans-serif" font-size="18" font-weight="700">Sub-0.300 target gap</text>
+<text x="20" y="72" font-family="Arial, sans-serif" font-size="12">anchor C067</text>
+<rect x="170" y="58" width="258.707" height="28" fill="#ef4444"/>
+<rect x="428.707" y="58" width="361.293" height="28" fill="#22c55e"/>
+<line x1="759.322" x2="759.322" y1="48" y2="102" stroke="#111827" stroke-width="2"/>
+<text x="765.322" y="56" font-family="Arial, sans-serif" font-size="11">target 0.300</text>
+<text x="802" y="76" font-family="Arial, sans-serif" font-size="12">0.315617031</text>
+<text x="20" y="130" font-family="Arial, sans-serif" font-size="14">Need 23,455 bytes removed at unchanged distortion; score gap 0.015617031.</text>
+<rect x="20" y="158" width="12" height="12" fill="#ef4444"/>
+<text x="38" y="169" font-family="Arial, sans-serif" font-size="12">SegNet + PoseNet distortion</text>
+<rect x="245" y="158" width="12" height="12" fill="#22c55e"/>
+<text x="263" y="169" font-family="Arial, sans-serif" font-size="12">Rate</text>
+</svg>

@@ -1,0 +1,230 @@
+{
+  "archives": {
+    "85": {
+      "duplicate_member_names": [],
+      "members": [
+        {
+          "compress_size": 236228,
+          "compress_type": 0,
+          "file_size": 236228,
+          "magic_hex": "236d02f2de00cf0500780500e200006a",
+          "name": "x",
+          "sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50"
+        }
+      ],
+      "path": "experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+      "sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+      "size_bytes": 236328
+    },
+    "91": {
+      "duplicate_member_names": [],
+      "members": [
+        {
+          "compress_size": 222304,
+          "compress_type": 0,
+          "file_size": 222304,
+          "magic_hex": "bf3602f2de00cf0500780500e200006a",
+          "name": "x",
+          "sha256": "5c213c61cc4d29b62286063bfdcb97e812af6b06c0021aeaecc8bc46644e17bf"
+        }
+      ],
+      "path": "experiments/results/public_pr91_intake_20260504_worker/archive.zip",
+      "sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f",
+      "size_bytes": 222404
+    },
+    "92": {
+      "duplicate_member_names": [],
+      "members": [
+        {
+          "compress_size": 235952,
+          "compress_type": 0,
+          "file_size": 235952,
+          "magic_hex": "236d02f2de00cf0500780500e200006a",
+          "name": "x",
+          "sha256": "89f14d331063125c88db0b4e3e51a92f21d2edc175a64d5c9cb6f873130763d8"
+        },
+        {
+          "compress_size": 386,
+          "compress_type": 0,
+          "file_size": 386,
+          "magic_hex": "52534231580201001b5702f8c5cfe1ab",
+          "name": "a",
+          "sha256": "5422d47b4092e7304649cc49f4d4c8c7efa9c3d5a4fc7d39ab63cf2518e0897e"
+        }
+      ],
+      "path": "experiments/results/public_pr92_intake_20260504_codex/archive.zip",
+      "sha256": "f0dedeb7ad3c019ab3f4e2dea317f3192408e47a573897adb208030709d01490",
+      "size_bytes": 236516
+    },
+    "95": {
+      "duplicate_member_names": [],
+      "hnerv_single_blob": {
+        "decoder_brotli_len": 162349,
+        "decoder_sha256": "fbeaf706e9d8c38cf39fd36b7f6c6312b66eae6c9a4f25a99708d8fbb3cdaf2e",
+        "latents_brotli_len": 15868,
+        "latents_sha256": "863634aba9a956d13eab8708133239ee861bb797cbad4ff2f39a46939987c709",
+        "meta": {
+          "base_channels": 36,
+          "eval_size": [
+            384,
+            512
+          ],
+          "latent_dim": 28,
+          "n_pairs": 600
+        },
+        "meta_len": 80,
+        "trailing": 0
+      },
+      "members": [
+        {
+          "compress_size": 178309,
+          "compress_type": 0,
+          "file_size": 178309,
+          "magic_hex": "500000001b4f00201d076eacc64e2370",
+          "name": "0.bin",
+          "sha256": "4b8013fb1168e21b12fc7ee6c395e032660d88daded48a0b845085e7d5eb11c4"
+        }
+      ],
+      "path": "experiments/results/public_pr95_intake_20260504_codex/archive.zip",
+      "sha256": "e976acd5fe565c94fb9a8c62e5200c949919f76150e84599f268d6a58588440a",
+      "size_bytes": 178417
+    },
+    "96": {
+      "duplicate_member_names": [],
+      "members": [
+        {
+          "compress_size": 169272,
+          "compress_type": 8,
+          "file_size": 169242,
+          "magic_hex": "5ab20000250300006600000014000000",
+          "name": "decoder.bin",
+          "sha256": "940d2328ad5384c99b51872cc5f87b6153befa20c10c1c2564b08ba469c97868"
+        },
+        {
+          "compress_size": 16133,
+          "compress_type": 8,
+          "file_size": 16920,
+          "magic_hex": "580200001c00000069c0f7c196c168c1",
+          "name": "latents.bin",
+          "sha256": "be4ed381db136baf114701fe6a9bba4f604dac18e79244c9f657383578a6ff71"
+        },
+        {
+          "compress_size": 930,
+          "compress_type": 0,
+          "file_size": 930,
+          "magic_hex": "00000000000000000000000000000000",
+          "name": "p",
+          "sha256": "bf04a4e2dd69ca32e3b1bd1a3c64481d7f6930096b552d49d175eec8768d1c43"
+        }
+      ],
+      "path": "experiments/results/leaderboard_intel_20260504_codex/pr96_archive.zip",
+      "sha256": "2ecbd2118bebdb5566f719ed538a89c4608ccab19c9edc7ae7a6de778bd42b46",
+      "size_bytes": 186631
+    }
+  },
+  "official_leaderboard_source": "https://comma.ai/leaderboard",
+  "our_best_a_plus_plus": {
+    "archive_bytes": 229756,
+    "archive_sha256": "c6f004d444ed32c628611a2f21f567c666af6bcbcceba618cc089ec024a0cda6",
+    "artifact": "experiments/results/lightning_batch/exact_eval_pr85_stbm1br_stbm_runtime_t4_g4dn2x_20260504T0613Z/contest_auth_eval.adjudicated.json",
+    "gpu_model": "Tesla T4",
+    "pose": 0.0001894,
+    "rate_term": 0.15298499999999998,
+    "score": 0.25369011029397787,
+    "seg": 0.00057185
+  },
+  "prs": {
+    "85": {
+      "archive_url": "https://github.com/user-attachments/files/27326003/archive.zip",
+      "head_repo": "ottokunkel/comma_video_compression_challenge",
+      "head_sha": "515abfbac1dc6ef42499d5b912e424319f982fb2",
+      "html_url": "https://github.com/commaai/comma_video_compression_challenge/pull/85",
+      "merged_at": null,
+      "reported": {
+        "additional_exact_lower": 0.25806622496743437,
+        "bytes": 236328,
+        "device": "cuda",
+        "final_display": 0.26,
+        "pose": 0.0001894,
+        "recomputed_score": 0.25806622496743437,
+        "seg": 0.00057185
+      },
+      "state": "closed",
+      "title": "Adaptive masking joint frame model",
+      "user": "ottokunkel"
+    },
+    "91": {
+      "archive_url": "https://github.com/user-attachments/files/27329777/archive.zip",
+      "head_repo": "ottokunkel/comma_video_compression_challenge",
+      "head_sha": "77f958d24e55980d95e01e3e9767b5a94320ed43",
+      "html_url": "https://github.com/commaai/comma_video_compression_challenge/pull/91",
+      "merged_at": null,
+      "reported": {
+        "bytes": 222404,
+        "device": "cuda",
+        "exact": 0.24879480490416128,
+        "final_display": 0.25,
+        "pose": 0.0001894,
+        "recomputed_score": 0.24879480490416128,
+        "seg": 0.00057185
+      },
+      "state": "open",
+      "title": "Hpac coder hybrid",
+      "user": "ottokunkel"
+    },
+    "92": {
+      "archive_url": "https://github.com/nick-neely/comma_video_compression_challenge/releases/download/qzs3-range-joint-r258/archive.zip",
+      "head_repo": "nick-neely/comma_video_compression_challenge",
+      "head_sha": "95c711e8ec7a55e6cb066a0b4e20090391ccd2c2",
+      "html_url": "https://github.com/commaai/comma_video_compression_challenge/pull/92",
+      "merged_at": null,
+      "reported": {
+        "bytes": 236516,
+        "device": "cuda",
+        "final_display": 0.26,
+        "pose": 0.00018963,
+        "recomputed_score": 0.2587078229986317,
+        "seg": 0.00057675
+      },
+      "state": "open",
+      "title": "qzs3_range_joint_r258 (0.26)",
+      "user": "nick-neely"
+    },
+    "95": {
+      "archive_url": "https://github.com/user-attachments/files/27332334/archive.zip",
+      "head_repo": "AaronLeslie138/comma_video_compression_challenge",
+      "head_sha": "9bdce26f2a4f996828c4e3fa2b87c454a0e8fcc9",
+      "html_url": "https://github.com/commaai/comma_video_compression_challenge/pull/95",
+      "merged_at": null,
+      "reported": {
+        "bytes": 178417,
+        "final_display": 0.2,
+        "pose": 3.494e-05,
+        "recomputed_score": 0.1987048012202245,
+        "seg": 0.00061212
+      },
+      "state": "open",
+      "title": "hnerv_muon submission (0.20)",
+      "user": "AaronLeslie138"
+    },
+    "96": {
+      "archive_url": "https://github.com/user-attachments/files/27339615/archive.zip",
+      "head_repo": "rem2/comma_video_compression_challenge",
+      "head_sha": "c692688419e8960d62201903c908f56b6c16c13d",
+      "html_url": "https://github.com/commaai/comma_video_compression_challenge/pull/96",
+      "merged_at": null,
+      "reported": {
+        "bytes": 186631,
+        "device": "cpu",
+        "final_display": 0.21,
+        "pose": 3.675e-05,
+        "recomputed_score": 0.20567121179282477,
+        "seg": 0.00062231
+      },
+      "state": "open",
+      "title": "rem2_HNeRV submission (0.21)",
+      "user": "rem2"
+    }
+  },
+  "recorded_at_utc": "2026-05-04T08:38:37.425496+00:00"
+}

@@ -1,0 +1,73 @@
+{
+  "candidate_count": 17,
+  "candidate_policies_json": "experiments/results/pr85_randmulti_group_waterfill_20260504_codex/candidate_policies.json",
+  "evidence_grade": "planning_only_from_exact_negative_cuda_traces",
+  "exact_negative_segment_values": {
+    "minus_motion": {
+      "archive_byte_delta_vs_baseline": -581,
+      "component_score_delta_minus_vs_baseline": 0.105931554133,
+      "exact_negative_component_value_of_removed_segment": 0.105931554133,
+      "rate_score_delta_minus_vs_baseline": -0.00038675,
+      "score_delta_minus_vs_baseline": 0.105544804133,
+      "score_delta_recomposition_residual": 0.0,
+      "score_direction": "worse_when_removed"
+    },
+    "minus_post": {
+      "archive_byte_delta_vs_baseline": -1387,
+      "component_score_delta_minus_vs_baseline": 0.052213473556,
+      "exact_negative_component_value_of_removed_segment": 0.052213473556,
+      "rate_score_delta_minus_vs_baseline": -0.0009235,
+      "score_delta_minus_vs_baseline": 0.051289973556,
+      "score_delta_recomposition_residual": 0.0,
+      "score_direction": "worse_when_removed"
+    },
+    "minus_randmulti": {
+      "archive_byte_delta_vs_baseline": -16089,
+      "component_score_delta_minus_vs_baseline": 0.035320965186,
+      "exact_negative_component_value_of_removed_segment": 0.035320965186,
+      "rate_score_delta_minus_vs_baseline": -0.010713,
+      "score_delta_minus_vs_baseline": 0.024607965186,
+      "score_delta_recomposition_residual": 0.0,
+      "score_direction": "worse_when_removed"
+    }
+  },
+  "group_ledger_json": "experiments/results/pr85_randmulti_group_waterfill_20260504_codex/randmulti_group_ledger.json",
+  "notes": [
+    "Group values are estimates, not score claims.",
+    "No remote jobs were dispatched.",
+    "Future exact eval requires lane claim and archive construction from a selected policy."
+  ],
+  "planning_only": true,
+  "remote_jobs_dispatched": false,
+  "schema": "pr85_randmulti_group_waterfill_plan_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 236328,
+    "member_compress_size": 236228,
+    "member_crc32_hex": "c6356353",
+    "member_file_size": 236228,
+    "member_name": "x",
+    "member_sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+    "path": "/Users/adpena/Projects/pact/experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+    "sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e"
+  },
+  "tool": "experiments/plan_pr85_randmulti_group_waterfill.py",
+  "top_group_ids_by_waterfill": [
+    0,
+    19,
+    63,
+    20,
+    21,
+    65,
+    62,
+    64,
+    66,
+    22,
+    61,
+    27,
+    33,
+    26,
+    28,
+    31
+  ]
+}

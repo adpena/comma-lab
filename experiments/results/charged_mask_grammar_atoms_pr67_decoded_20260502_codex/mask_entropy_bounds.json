@@ -1,0 +1,57 @@
+{
+  "public_pr67_mask_stream_bytes": 219472,
+  "records": [
+    {
+      "bits_per_symbol": 1.6154624483511193,
+      "counts": [
+        27408427,
+        690063,
+        58413695,
+        1459867,
+        29992748
+      ],
+      "lower_bound_bytes": 23820963.078406263,
+      "name": "global_class_entropy"
+    },
+    {
+      "changed_fraction": 0.012458856462702617,
+      "name": "temporal_same_fraction",
+      "same_fraction": 0.9875411435372974
+    },
+    {
+      "bits_per_pixel_pair": 1.6990940676384194,
+      "lower_bound_bytes": 25012404.547962796,
+      "name": "temporal_pair_joint_entropy"
+    },
+    {
+      "bits_per_pixel": 0.08355955719528582,
+      "lower_bound_bytes": 1230082.2469011752,
+      "name": "temporal_cond_entropy_curr_given_prev"
+    },
+    {
+      "bits_per_symbol": 0.024196381922152226,
+      "lower_bound_bytes": 356093.31347192987,
+      "name": "x_left_cond_entropy"
+    },
+    {
+      "bits_per_symbol": 0.0764773872149315,
+      "lower_bound_bytes": 1124768.2292474406,
+      "name": "y_up_cond_entropy"
+    },
+    {
+      "max": 9212,
+      "mean": 2449.5108514190315,
+      "median": 2322.0,
+      "min": 1424,
+      "name": "temporal_change_pixels_per_frame"
+    }
+  ],
+  "schema_version": 1,
+  "score_claim": false,
+  "shape": [
+    600,
+    384,
+    512
+  ],
+  "source": "/tmp/pact_cmg/pr67_decoded_mask_array_20260502T0632Z.npy"
+}

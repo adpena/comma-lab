@@ -1,0 +1,140 @@
+{
+  "candidates": [
+    {
+      "actions": [
+        {
+          "op": "set",
+          "pair_index": 60,
+          "rationale": "PR90 QRGB frame0 global RGB residual sign transferred to PR85 frame0 bias choice",
+          "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+          "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0060",
+          "source_value": 24,
+          "stream": "bias",
+          "value": 5
+        },
+        {
+          "op": "set",
+          "pair_index": 164,
+          "rationale": "PR90 QRGB frame0 global RGB residual sign transferred to PR85 frame0 bias choice",
+          "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+          "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0164",
+          "source_value": 3,
+          "stream": "bias",
+          "value": 21
+        }
+      ],
+      "candidate_id": "pr85_qrgb_combo_f1_bias_pair_0060__f1_bias_pair_0164",
+      "combo_source_candidate_ids": [
+        "pr85_qrgb_f1_bias_pair_0060",
+        "pr85_qrgb_f1_bias_pair_0164"
+      ],
+      "header_mode": "explicit_30"
+    },
+    {
+      "actions": [
+        {
+          "op": "set",
+          "pair_index": 60,
+          "rationale": "PR90 QRGB frame0 global RGB residual sign transferred to PR85 frame0 bias choice",
+          "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+          "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0060",
+          "source_value": 24,
+          "stream": "bias",
+          "value": 5
+        },
+        {
+          "op": "set",
+          "pair_index": 197,
+          "rationale": "PR90 QRGB frame0 half-band residual transferred to PR85 frame0 region bias choice",
+          "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+          "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0197",
+          "source_value": 60,
+          "stream": "region",
+          "value": 45
+        }
+      ],
+      "candidate_id": "pr85_qrgb_combo_f1_bias_pair_0060__f1_region_pair_0197",
+      "combo_source_candidate_ids": [
+        "pr85_qrgb_f1_bias_pair_0060",
+        "pr85_qrgb_f1_region_pair_0197"
+      ],
+      "header_mode": "explicit_30"
+    },
+    {
+      "actions": [
+        {
+          "op": "set",
+          "pair_index": 164,
+          "rationale": "PR90 QRGB frame0 global RGB residual sign transferred to PR85 frame0 bias choice",
+          "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+          "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0164",
+          "source_value": 3,
+          "stream": "bias",
+          "value": 21
+        },
+        {
+          "op": "set",
+          "pair_index": 197,
+          "rationale": "PR90 QRGB frame0 half-band residual transferred to PR85 frame0 region bias choice",
+          "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+          "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0197",
+          "source_value": 60,
+          "stream": "region",
+          "value": 45
+        }
+      ],
+      "candidate_id": "pr85_qrgb_combo_f1_bias_pair_0164__f1_region_pair_0197",
+      "combo_source_candidate_ids": [
+        "pr85_qrgb_f1_bias_pair_0164",
+        "pr85_qrgb_f1_region_pair_0197"
+      ],
+      "header_mode": "explicit_30"
+    },
+    {
+      "actions": [
+        {
+          "op": "set",
+          "pair_index": 60,
+          "rationale": "PR90 QRGB frame0 global RGB residual sign transferred to PR85 frame0 bias choice",
+          "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+          "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0060",
+          "source_value": 24,
+          "stream": "bias",
+          "value": 5
+        },
+        {
+          "op": "set",
+          "pair_index": 164,
+          "rationale": "PR90 QRGB frame0 global RGB residual sign transferred to PR85 frame0 bias choice",
+          "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+          "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0164",
+          "source_value": 3,
+          "stream": "bias",
+          "value": 21
+        },
+        {
+          "op": "set",
+          "pair_index": 197,
+          "rationale": "PR90 QRGB frame0 half-band residual transferred to PR85 frame0 region bias choice",
+          "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+          "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0197",
+          "source_value": 60,
+          "stream": "region",
+          "value": 45
+        }
+      ],
+      "candidate_id": "pr85_qrgb_combo_f1_bias_pair_0060__f1_bias_pair_0164__f1_region_pair_0197",
+      "combo_source_candidate_ids": [
+        "pr85_qrgb_f1_bias_pair_0060",
+        "pr85_qrgb_f1_bias_pair_0164",
+        "pr85_qrgb_f1_region_pair_0197"
+      ],
+      "header_mode": "explicit_30"
+    }
+  ],
+  "dispatch_performed": false,
+  "inflate_time_scorer_load_allowed": false,
+  "remote_jobs_dispatched": false,
+  "schema": "pr85_pair_atom_action_spec_v1",
+  "score_claim": false
+}

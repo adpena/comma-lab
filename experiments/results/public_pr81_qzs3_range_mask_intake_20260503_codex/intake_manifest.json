@@ -1,0 +1,20 @@
+{
+  "archive_bytes": 215960,
+  "archive_sha256": "cd01378a52688fe00ee1bfb898c67695aed89a7b3ded602b597eb7fc3031d7fc",
+  "dir": "experiments/results/public_pr81_qzs3_range_mask_intake_20260503_codex",
+  "pr81.patch_bytes": 42819,
+  "pr81.patch_sha256": "c26d558e0d2c6cdd226dc973a8f0548ec6f34e43a5bc42f8cd4553f27a2a4be1",
+  "range_mask_codec.cpp_bytes": 11693,
+  "range_mask_codec.cpp_sha256": "26b44194c9b364ae3e4b7a30832204c008324df91bc12281d30cee30c43b4676",
+  "zip_members": [
+    {
+      "compress_size": 215860,
+      "compress_type": 0,
+      "file_size": 215860,
+      "filename": "p",
+      "magic16_ascii": "QMA9X...........",
+      "magic16_hex": "514d4139580200000002000080010000",
+      "sha256": "c59524610474c89e5a41433f47d2bb881f878e694f853db1377272699f9eb3e9"
+    }
+  ]
+}

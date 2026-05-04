@@ -1,0 +1,364 @@
+{
+  "candidates": [
+    {
+      "agreement": {
+        "argmax_agreement": 1.0,
+        "argmax_disagreement": 0.0,
+        "candidate_class_id_u8_sha256": "f1973d42b59933f787ad2b7dfcfc21e507fec7c3d6f8ca03cbcada91e26f37d1",
+        "candidate_shape": [
+          1200,
+          384,
+          512
+        ],
+        "different_pixels": 0,
+        "equal_pixels": 235929600,
+        "exact_reconstruction": true,
+        "num_pixels": 235929600,
+        "shape_match": true,
+        "source_shape": [
+          1200,
+          384,
+          512
+        ]
+      },
+      "artifact": {
+        "candidate_archive_member": "coco_rle_runs.amcrle",
+        "path": "experiments/results/alpha_mask_codec_candidate_matrix_pfp16_20260501_full/coco_rle_runs.amcrle",
+        "role": "coco_rle",
+        "sha256": "8413a65b638e53ac66a60391fc1939ca46e7d1a0cfdf6e9ca7bb405709192832",
+        "size_bytes": 902161
+      },
+      "bytes_vs_source_mask_member": {
+        "candidate_payload_size_bytes": 902161,
+        "delta_bytes": 480678,
+        "source_mask_member_size_bytes": 421483,
+        "under_source_mask_member": false
+      },
+      "charged_representation": true,
+      "details": {
+        "encoded_class_ids": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "implicit_class_id": 0,
+        "source_mask_u8_sha256": "f1973d42b59933f787ad2b7dfcfc21e507fec7c3d6f8ca03cbcada91e26f37d1"
+      },
+      "diagnostic_reference": false,
+      "evidence_grade": "empirical",
+      "exact_reconstruction": true,
+      "family": "coco_rle",
+      "name": "coco_rle_per_frame_foreground_runs",
+      "payload_format": "alpha_mask_coco_rle_runs_v1",
+      "promotion_eligible": false,
+      "runtime_decoder_integration_required": true,
+      "score_claim": false
+    },
+    {
+      "agreement": {
+        "argmax_agreement": 1.0,
+        "argmax_disagreement": 0.0,
+        "candidate_class_id_u8_sha256": "f1973d42b59933f787ad2b7dfcfc21e507fec7c3d6f8ca03cbcada91e26f37d1",
+        "candidate_shape": [
+          1200,
+          384,
+          512
+        ],
+        "different_pixels": 0,
+        "equal_pixels": 235929600,
+        "exact_reconstruction": true,
+        "num_pixels": 235929600,
+        "shape_match": true,
+        "source_shape": [
+          1200,
+          384,
+          512
+        ]
+      },
+      "artifact": {
+        "candidate_archive_member": "component_boundary_delta.amccb",
+        "path": "experiments/results/alpha_mask_codec_candidate_matrix_pfp16_20260501_full/component_boundary_delta.amccb",
+        "role": "component_boundary_delta",
+        "sha256": "30278c5c6dafa8f3e2bbc609cfecda25a8d6ec86ee6595db98984aeb132f6c61",
+        "size_bytes": 1476543
+      },
+      "bytes_vs_source_mask_member": {
+        "candidate_payload_size_bytes": 1476543,
+        "delta_bytes": 1055060,
+        "source_mask_member_size_bytes": 421483,
+        "under_source_mask_member": false
+      },
+      "charged_representation": true,
+      "details": {
+        "connectivity": "4-connected",
+        "encoded_class_ids": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "implicit_class_id": 0,
+        "source_mask_u8_sha256": "f1973d42b59933f787ad2b7dfcfc21e507fec7c3d6f8ca03cbcada91e26f37d1"
+      },
+      "diagnostic_reference": false,
+      "evidence_grade": "empirical",
+      "exact_reconstruction": true,
+      "family": "component_boundary_delta",
+      "name": "connected_component_boundary_delta_packets",
+      "payload_format": "alpha_mask_connected_component_boundary_delta_v1",
+      "promotion_eligible": false,
+      "runtime_decoder_integration_required": true,
+      "score_claim": false
+    },
+    {
+      "agreement": {
+        "argmax_agreement": 1.0,
+        "argmax_disagreement": 0.0,
+        "candidate_class_id_u8_sha256": "f1973d42b59933f787ad2b7dfcfc21e507fec7c3d6f8ca03cbcada91e26f37d1",
+        "candidate_shape": [
+          1200,
+          384,
+          512
+        ],
+        "different_pixels": 0,
+        "equal_pixels": 235929600,
+        "exact_reconstruction": true,
+        "num_pixels": 235929600,
+        "shape_match": true,
+        "source_shape": [
+          1200,
+          384,
+          512
+        ]
+      },
+      "artifact": {
+        "candidate_archive_member": "class_transition_endpoints.amcte",
+        "path": "experiments/results/alpha_mask_codec_candidate_matrix_pfp16_20260501_full/class_transition_endpoints.amcte",
+        "role": "transition_endpoints",
+        "sha256": "d08b868c6742860bb2b19fcfcaea73811081b208a0c379944ca41c576f28ea8d",
+        "size_bytes": 997410
+      },
+      "bytes_vs_source_mask_member": {
+        "candidate_payload_size_bytes": 997410,
+        "delta_bytes": 575927,
+        "source_mask_member_size_bytes": 421483,
+        "under_source_mask_member": false
+      },
+      "charged_representation": true,
+      "details": {
+        "scan_order": "frame,row,left-to-right",
+        "source_mask_u8_sha256": "f1973d42b59933f787ad2b7dfcfc21e507fec7c3d6f8ca03cbcada91e26f37d1"
+      },
+      "diagnostic_reference": false,
+      "evidence_grade": "empirical",
+      "exact_reconstruction": true,
+      "family": "transition_endpoints",
+      "name": "class_transition_endpoint_packets",
+      "payload_format": "alpha_mask_class_transition_endpoints_v1",
+      "promotion_eligible": false,
+      "runtime_decoder_integration_required": true,
+      "score_claim": false
+    }
+  ],
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "evidence_grade": "empirical",
+  "local_planning_only": true,
+  "matrix_config": {
+    "av1_crf": 50,
+    "av1_fps": 20,
+    "compression": "zlib",
+    "families": [
+      "coco_rle",
+      "component_boundary_delta",
+      "transition_endpoints"
+    ],
+    "max_frames": null,
+    "nrv_shape": null,
+    "zlib_level": 9
+  },
+  "promotion_eligible": false,
+  "provenance": {
+    "command": [
+      "experiments/alpha_mask_codec_candidate_matrix.py",
+      "--archive",
+      "experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+      "--output-dir",
+      "experiments/results/alpha_mask_codec_candidate_matrix_pfp16_20260501_full",
+      "--all-frames",
+      "--families",
+      "coco_rle,component_boundary_delta,transition_endpoints",
+      "--compression",
+      "zlib",
+      "--zlib-level",
+      "9",
+      "--force"
+    ],
+    "cwd": "/Users/adpena/Projects/pact",
+    "module_available": {
+      "numpy": true,
+      "pillow_palette_png": true,
+      "tac_mask_codec": true,
+      "tac_mask_grayscale_lut": true,
+      "tac_nerv_mask_codec": true,
+      "torch": true
+    },
+    "path_ffmpeg": "/opt/homebrew/bin/ffmpeg",
+    "path_ffprobe": "/opt/homebrew/bin/ffprobe",
+    "platform": "macOS-26.4-arm64-arm-64bit",
+    "python_executable": "/Users/adpena/Projects/pact/.venv/bin/python",
+    "python_version": "3.12.13",
+    "repo_root": "/Users/adpena/Projects/pact",
+    "selected_environment": {},
+    "tool": "experiments/alpha_mask_codec_candidate_matrix.py"
+  },
+  "purpose": "rank deterministic Alpha mask codec representation candidates by charged payload bytes and exact reconstruction or diagnostic agreement",
+  "rankings": {
+    "all_candidates_by_bytes_then_agreement": [
+      {
+        "argmax_agreement": 1.0,
+        "candidate_archive_member": "coco_rle_runs.amcrle",
+        "diagnostic_reference": false,
+        "different_pixels": 0,
+        "exact_reconstruction": true,
+        "family": "coco_rle",
+        "name": "coco_rle_per_frame_foreground_runs",
+        "path": "experiments/results/alpha_mask_codec_candidate_matrix_pfp16_20260501_full/coco_rle_runs.amcrle",
+        "sha256": "8413a65b638e53ac66a60391fc1939ca46e7d1a0cfdf6e9ca7bb405709192832",
+        "size_bytes": 902161
+      },
+      {
+        "argmax_agreement": 1.0,
+        "candidate_archive_member": "class_transition_endpoints.amcte",
+        "diagnostic_reference": false,
+        "different_pixels": 0,
+        "exact_reconstruction": true,
+        "family": "transition_endpoints",
+        "name": "class_transition_endpoint_packets",
+        "path": "experiments/results/alpha_mask_codec_candidate_matrix_pfp16_20260501_full/class_transition_endpoints.amcte",
+        "sha256": "d08b868c6742860bb2b19fcfcaea73811081b208a0c379944ca41c576f28ea8d",
+        "size_bytes": 997410
+      },
+      {
+        "argmax_agreement": 1.0,
+        "candidate_archive_member": "component_boundary_delta.amccb",
+        "diagnostic_reference": false,
+        "different_pixels": 0,
+        "exact_reconstruction": true,
+        "family": "component_boundary_delta",
+        "name": "connected_component_boundary_delta_packets",
+        "path": "experiments/results/alpha_mask_codec_candidate_matrix_pfp16_20260501_full/component_boundary_delta.amccb",
+        "sha256": "30278c5c6dafa8f3e2bbc609cfecda25a8d6ec86ee6595db98984aeb132f6c61",
+        "size_bytes": 1476543
+      }
+    ],
+    "diagnostic_references_by_bytes": [],
+    "exact_reconstruction_by_bytes": [
+      {
+        "argmax_agreement": 1.0,
+        "candidate_archive_member": "coco_rle_runs.amcrle",
+        "diagnostic_reference": false,
+        "different_pixels": 0,
+        "exact_reconstruction": true,
+        "family": "coco_rle",
+        "name": "coco_rle_per_frame_foreground_runs",
+        "path": "experiments/results/alpha_mask_codec_candidate_matrix_pfp16_20260501_full/coco_rle_runs.amcrle",
+        "sha256": "8413a65b638e53ac66a60391fc1939ca46e7d1a0cfdf6e9ca7bb405709192832",
+        "size_bytes": 902161
+      },
+      {
+        "argmax_agreement": 1.0,
+        "candidate_archive_member": "class_transition_endpoints.amcte",
+        "diagnostic_reference": false,
+        "different_pixels": 0,
+        "exact_reconstruction": true,
+        "family": "transition_endpoints",
+        "name": "class_transition_endpoint_packets",
+        "path": "experiments/results/alpha_mask_codec_candidate_matrix_pfp16_20260501_full/class_transition_endpoints.amcte",
+        "sha256": "d08b868c6742860bb2b19fcfcaea73811081b208a0c379944ca41c576f28ea8d",
+        "size_bytes": 997410
+      },
+      {
+        "argmax_agreement": 1.0,
+        "candidate_archive_member": "component_boundary_delta.amccb",
+        "diagnostic_reference": false,
+        "different_pixels": 0,
+        "exact_reconstruction": true,
+        "family": "component_boundary_delta",
+        "name": "connected_component_boundary_delta_packets",
+        "path": "experiments/results/alpha_mask_codec_candidate_matrix_pfp16_20260501_full/component_boundary_delta.amccb",
+        "sha256": "30278c5c6dafa8f3e2bbc609cfecda25a8d6ec86ee6595db98984aeb132f6c61",
+        "size_bytes": 1476543
+      }
+    ]
+  },
+  "schema": "alpha_mask_codec_candidate_matrix_v1",
+  "score_claim": false,
+  "score_claim_warning": "No score claim is made by this matrix. Candidate artifacts are byte and round-trip planning evidence only; a deterministic finalist archive and exact CUDA auth eval are required before promotion, ranking, retirement, or score claims.",
+  "scorer_network_loaded": false,
+  "source": {
+    "archive_path": "experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+    "archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+    "archive_size_bytes": 686635,
+    "decode": {
+      "decoded_frames": 1200,
+      "decoder": "tac.mask_codec.decode_masks",
+      "max_frames": null,
+      "member_suffix": ".mkv",
+      "truncated_by_matrix": false
+    },
+    "decoded_masks": {
+      "class_fractions": {
+        "0": 0.232577145894,
+        "1": 0.005748816596,
+        "2": 0.495173962911,
+        "3": 0.012248908149,
+        "4": 0.25425116645
+      },
+      "class_histogram": {
+        "0": 54871833,
+        "1": 1356316,
+        "2": 116826195,
+        "3": 2889880,
+        "4": 59985376
+      },
+      "class_id_u8_sha256": "f1973d42b59933f787ad2b7dfcfc21e507fec7c3d6f8ca03cbcada91e26f37d1",
+      "dtype": "torch.int64",
+      "num_pixels": 235929600,
+      "shape": [
+        1200,
+        384,
+        512
+      ],
+      "spatial_boundary_edges_4conn": 3378720,
+      "temporal_changed_pixels": 2054333
+    },
+    "mask_member": {
+      "compressed_size_bytes": 412169,
+      "crc32": "e144d6ac",
+      "name": "masks.mkv",
+      "sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9",
+      "size_bytes": 421483
+    },
+    "member_inventory": [
+      {
+        "compressed_size_bytes": 412169,
+        "crc32": "e144d6ac",
+        "name": "masks.mkv",
+        "size_bytes": 421483
+      },
+      {
+        "compressed_size_bytes": 6734,
+        "crc32": "686cbfbf",
+        "name": "optimized_poses.bin",
+        "size_bytes": 7200
+      },
+      {
+        "compressed_size_bytes": 267402,
+        "crc32": "1827a837",
+        "name": "renderer.bin",
+        "size_bytes": 296776
+      }
+    ]
+  }
+}

@@ -1,0 +1,193 @@
+{
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "decoded_mask_array": {
+    "npy_sha256": "13f81851ae206f6142cd3348db5537eda4ea832665052824816f4d1bf432de0c",
+    "path": "/Users/adpena/Projects/pact/experiments/results/c063_trace_weighted_mask_grammar_plan_20260502_codex/decoded_mask_array.npy",
+    "shape": [
+      600,
+      384,
+      512
+    ],
+    "tensor_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45"
+  },
+  "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
+  "frontier_archive": {
+    "bytes": 276214,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip",
+    "sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a"
+  },
+  "output_archive": {
+    "bytes": 203974,
+    "delta_bytes_vs_frontier": -72240,
+    "formula_only_rate_delta_vs_frontier": -0.04810165077354566,
+    "path": "/Users/adpena/Projects/pact/experiments/results/pmg_hotspot_candidate_c067_protect_top20_20260502/archive.zip",
+    "score_claim": false,
+    "sha256": "cc178ea606ea12b373fa8df2776030b77c9eb8eedcc082bed73a2a516726eac9"
+  },
+  "packed_payload": {
+    "brotli_quality": 11,
+    "evidence_grade": "empirical",
+    "formula_only_rate_delta": -0.003602296936390947,
+    "header": {
+      "members": [
+        {
+          "bytes": 59288,
+          "codec": "raw",
+          "name": "renderer.bin",
+          "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+        },
+        {
+          "bytes": 142564,
+          "codec": "raw",
+          "name": "masks.cmg3",
+          "sha256": "0b063766480b0b38b4adfd580438b8830a44b9ea0b2c31a265b670bea4806ac1"
+        },
+        {
+          "bytes": 1140,
+          "codec": "pose_qp1_v1",
+          "decoded_bytes": 7200,
+          "decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f",
+          "lossy": true,
+          "name": "optimized_poses.bin",
+          "pose_error_stats": {
+            "max_abs_by_dim": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "pose_dim": 6,
+            "rmse_by_dim": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "rows": 600
+          },
+          "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583",
+          "source_decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+        }
+      ],
+      "schema": "renderer_payload_v1",
+      "source_archive_sha256": "389a3100083e2dea4cf658127ade5abfb5d0ec717f8d649edd0e594d105318d5"
+    },
+    "output_archive": "/Users/adpena/Projects/pact/experiments/results/pmg_hotspot_candidate_c067_protect_top20_20260502/archive.zip",
+    "output_archive_bytes": 203974,
+    "output_archive_sha256": "cc178ea606ea12b373fa8df2776030b77c9eb8eedcc082bed73a2a516726eac9",
+    "payload_compressed_bytes": 203874,
+    "payload_format": "rpk1_json",
+    "payload_member": "p",
+    "payload_raw_bytes": 203869,
+    "pose_codec": "pose_qp1_v1",
+    "pose_residual_topk": 0,
+    "savings_bytes": 5410,
+    "score_claim": false,
+    "source_archive": "/Users/adpena/Projects/pact/experiments/results/pmg_hotspot_candidate_c067_protect_top20_20260502/pmg_hotspot_source_members.zip",
+    "source_archive_bytes": 209384,
+    "source_archive_sha256": "389a3100083e2dea4cf658127ade5abfb5d0ec717f8d649edd0e594d105318d5"
+  },
+  "pmg_hotspot_cmg3": {
+    "base_pixel_disagreement_vs_source_count": 1823949,
+    "base_pixel_disagreement_vs_source_fraction": 0.015461807250976562,
+    "base_reconstructed_mask_u8_sha256": "1f63521140bac04c2e2cc969c9ab7c880c99dcf244dbb191fb83818cb4fbe7df",
+    "body_bytes": 141240,
+    "body_raw_bytes": 2380455,
+    "body_raw_sha256": "12173d3c95a7f8abf6b27b43ce30427e961d588ac0281513b8534855a5bbb410",
+    "body_sha256": "6d461bbacbd20f41945a446f36a40ed7fb020f8428836dc72cc6afe05c745f9a",
+    "candidate_id": "pmg_hotspot_rowspan_stride2",
+    "class_count": 5,
+    "compressor": "lzma_xz",
+    "default_class": 0,
+    "draw_order": [
+      1,
+      3,
+      2,
+      0,
+      4
+    ],
+    "final_pixel_disagreement_vs_source_count": 1712868,
+    "final_pixel_disagreement_vs_source_fraction": 0.014520161946614584,
+    "frame_count": 600,
+    "height": 384,
+    "mode": "row_span_stride_class_predictor_hotspot_residual_v1",
+    "pair_protection": {
+      "additional_residual_pixels_touched": 81443,
+      "additional_residual_record_count": 6253,
+      "additional_residual_stream_sha256": "b12d1bcafd4ae434b88f49098f3c61df4ab90cfe70f2b4415e488b22e1b2521a",
+      "indexing": "contest_pair_index_maps_to_half_frame_mask_index",
+      "plan_residual_pixels_touched": 29638,
+      "plan_residual_record_count": 2242,
+      "protected_pair_indices": [
+        368,
+        405,
+        410,
+        411,
+        438,
+        440,
+        483,
+        490,
+        495,
+        496,
+        502,
+        503,
+        505,
+        506,
+        507,
+        508,
+        512,
+        513,
+        522,
+        575
+      ],
+      "schema": "pmg_hotspot_pair_protection_v1",
+      "score_claim": false
+    },
+    "payload_bytes": 142564,
+    "payload_sha256": "0b063766480b0b38b4adfd580438b8830a44b9ea0b2c31a265b670bea4806ac1",
+    "pmg_hotspot_plan_sha256": "48fa20c153c016b955015dac1cfe1bbbc395b328be8eae106210caa4b410a9d3",
+    "promotion_eligible": false,
+    "reconstructed_mask_u8_sha256": "cf87a87cbb75a6c5cf2b6a44202e5278b7d884489dd29b33ce473a3920dd3fa7",
+    "residual_pixels_touched": 111081,
+    "residual_record_bytes": 76455,
+    "residual_record_count": 8495,
+    "residual_record_struct": "u16_frame_u16_y_u16_x0_u16_x1_u8_class_le",
+    "residual_stream_sha256": "6ea08d9a8fd784d2f4340ea351e24c98ae236ded02f942a7c28577b646b11f29",
+    "row_fill": "linear",
+    "row_stride": 2,
+    "schema": "pmg_hotspot_cmg3_candidate_v1",
+    "score_claim": false,
+    "source_mask_u8_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+    "span_shape": [
+      600,
+      5,
+      192,
+      2
+    ],
+    "span_tensor_bytes": 2304000,
+    "span_tensor_sha256": "5d565c2438c9f31a9702bc38d27fec5c112c7dae3236bd6880503030e03a0175",
+    "width": 512
+  },
+  "pmg_hotspot_plan": {
+    "candidate_id": "pmg_hotspot_rowspan_stride2",
+    "path": "/Users/adpena/Projects/pact/experiments/results/pmg_hotspot_v1_20260502_codex/pmg_hotspot_plan.json",
+    "sha256": "48fa20c153c016b955015dac1cfe1bbbc395b328be8eae106210caa4b410a9d3"
+  },
+  "promotion_eligible": false,
+  "required_next_steps": [
+    "focused local runtime-loader and packed-payload tests must stay green",
+    "run exact CUDA diagnostic on the archive bytes only after dispatch claim",
+    "T4 promotion only if diagnostic components survive"
+  ],
+  "schema": "pmg_hotspot_cmg3_candidate_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 209384,
+    "path": "/Users/adpena/Projects/pact/experiments/results/pmg_hotspot_candidate_c067_protect_top20_20260502/pmg_hotspot_source_members.zip",
+    "sha256": "389a3100083e2dea4cf658127ade5abfb5d0ec717f8d649edd0e594d105318d5"
+  }
+}

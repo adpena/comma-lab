@@ -1,0 +1,149 @@
+{
+  "byte_delta_vs_source_archive": 353,
+  "candidate": {
+    "archive_bytes": 236681,
+    "archive_path": "experiments/results/magic_codec_pr85_qma9_prefix_20260504_codex/pr85_sidechannel_recodes/randmulti_best/archive.zip",
+    "archive_sha256": "1ce9343629cc85357e781e0bd50c2ffcc5ea3ffe25bc1438503f2a5bc597ddf7",
+    "member_bytes": 236581,
+    "member_name": "x",
+    "member_sha256": "50a9ad2ec1f8bc1566c0a1867e48800080e591a753e06be4fe8ae4dff8ed21c5",
+    "zip_stored": true
+  },
+  "candidate_bundle_validation": {
+    "bundle_format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+    "fixed_length_segments": {
+      "bias": 223,
+      "region": 273
+    },
+    "header_bytes": 24,
+    "mismatched_segments": [],
+    "segment_lengths": {
+      "bias": 223,
+      "frac": 106,
+      "frac2": 149,
+      "frac3": 154,
+      "mask": 159011,
+      "model": 57074,
+      "pose": 1487,
+      "post": 1400,
+      "randmulti": 16454,
+      "region": 273,
+      "shift": 226
+    },
+    "status": "passed"
+  },
+  "changed_segments": [
+    "randmulti"
+  ],
+  "decoded_parity_metadata": {
+    "segments_checked": [
+      "randmulti"
+    ],
+    "semantic_hash_fields": [
+      "source_semantic_sha256",
+      "candidate_semantic_sha256"
+    ],
+    "status": "passed"
+  },
+  "dispatch_gate": "planning_only/no_remote_dispatch",
+  "dispatch_performed": false,
+  "evidence_grade": "empirical_lossless_decoded_semantics_recode",
+  "fixed_length_parser_safety": {
+    "explicit_30byte_header_used": false,
+    "reason": "bias/region fixed v5 lengths preserved",
+    "status": "passed",
+    "v5_fixed_lengths_preserved": true
+  },
+  "formula_only_rate_score_delta_vs_source": 0.0002350482104521265,
+  "header_mode": "v5",
+  "next_gate": "Before exact eval, claim the lane with tools/claim_lane_dispatch.py and run PR85 public-runtime CUDA auth eval on this exact archive.",
+  "noop": false,
+  "policy_id": "randmulti_best",
+  "runtime_dependency_closure": {
+    "closure_scope": "candidate archive contains only member x; replay runtime files are external exact-eval custody inputs",
+    "hidden_archive_sidecars": false,
+    "missing_files": [],
+    "required_files": [
+      {
+        "bytes": 228,
+        "name": "inflate.sh",
+        "sha256": "2c37f19e210f97c8926b70594e4d57fd8b0256dadace0cd55c28bbe6995ff027"
+      },
+      {
+        "bytes": 85145,
+        "name": "inflate.py",
+        "sha256": "ff534ee0ef7a51dd4ec7a24570d812b32ce966e8b98b2dfdbe347ce9fa4ff3e7"
+      },
+      {
+        "bytes": 53975,
+        "name": "range_mask_codec.cpp",
+        "sha256": "94cd1a86111fb6d34b6e12d37c624bd5938df0fbc6c4c24c8d40c5a83fcb016b"
+      }
+    ],
+    "runtime_dir": "/Users/adpena/Projects/pact/experiments/results/public_pr85_intake_20260503_codex/replay_submission",
+    "status": "passed"
+  },
+  "schema": "pr85_sidechannel_recode_candidate_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 236328,
+    "member_compress_size": 236228,
+    "member_crc32_hex": "c6356353",
+    "member_file_size": 236228,
+    "member_name": "x",
+    "member_sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+    "path": "experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+    "sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e"
+  },
+  "source_bundle": {
+    "fixed_length_segments": {
+      "bias": 223,
+      "region": 273
+    },
+    "format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+    "header_bytes": 24,
+    "segment_lengths": {
+      "bias": 223,
+      "frac": 106,
+      "frac2": 149,
+      "frac3": 154,
+      "mask": 159011,
+      "model": 57074,
+      "pose": 1487,
+      "post": 1400,
+      "randmulti": 16101,
+      "region": 273,
+      "shift": 226
+    }
+  },
+  "source_frontier": {
+    "archive_bytes": 236328,
+    "archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+    "score": 0.25806611029397786,
+    "score_source": "exact T4 PR85 replay; included for comparison only"
+  },
+  "tool": "experiments/build_pr85_sidechannel_recode_candidates.py",
+  "transforms": [
+    {
+      "brotli_params": {
+        "lgwin": 18,
+        "quality": 11
+      },
+      "candidate_decoded_bytes": 27105,
+      "candidate_segment_bytes": 16454,
+      "candidate_segment_sha256": "3a93ae8a4cec2537440b877bc0d1505a7a234fabc6461210537fe199081e6efb",
+      "candidate_semantic_sha256": "295e949475a2437fb9f73ae9dcedb09d94b5486130892c352bb9444730d1d80c",
+      "decoded_parity_status": "passed",
+      "noop_segment": false,
+      "runtime_supported": true,
+      "segment": "randmulti",
+      "segment_byte_delta": 353,
+      "source_decoded_bytes": 27105,
+      "source_segment_bytes": 16101,
+      "source_segment_sha256": "c624372e60a0851c4c427dc333a60dcc5d6657ba8ed56951612e7c9d7be7629f",
+      "source_semantic_sha256": "295e949475a2437fb9f73ae9dcedb09d94b5486130892c352bb9444730d1d80c",
+      "support_reason": "public runtime supports PR85 headerless randmulti sparse tables",
+      "variant": "headerless_sparse_canonical"
+    }
+  ]
+}

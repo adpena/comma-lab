@@ -1,0 +1,194 @@
+[
+  {
+    "archive": "experiments/results/public_pr101_hnerv_ft_microcodec_intake_20260504_codex/archive.zip",
+    "archive_bytes": 178258,
+    "archive_sha256": "b83bf3488625dbd73adeddff91712994197ab53098e578e91327a0c6e49efb3e",
+    "evidence_grade": "forensic_byte_profile",
+    "kind": "pr101_microcodec",
+    "member_bytes": 178158,
+    "member_name": "x",
+    "member_sha256": "5f1948f9572e65f71c614d2ff15764ee416522e25cb1b06c8b1299c1306e8aaf",
+    "score_claim": false,
+    "sections": [
+      {
+        "bytes": 162164,
+        "end": 162164,
+        "entropy_bits_per_byte": 7.998425,
+        "name": "decoder_compact_brotli_streams",
+        "sha256": "836d1876bffd74f77f30e387a3b4cac1dbb25929cc4d348830d36cfa2a6d48a6",
+        "start": 0
+      },
+      {
+        "bytes": 15387,
+        "end": 177551,
+        "entropy_bits_per_byte": 7.988287,
+        "name": "latents_raw_lzma_delta_u8",
+        "sha256": "de8a0da594f073efc43849334573ba06438bb37d53f9343ee6367659c0106bbe",
+        "start": 162164
+      },
+      {
+        "bytes": 607,
+        "end": 178158,
+        "entropy_bits_per_byte": 7.710458,
+        "name": "sidecar_dim_delta_huffman_enum",
+        "sha256": "6c2946e323bbbc6f8d906ef6c68989e8acbd8d60332c87da8fe8147f1ea7b12f",
+        "start": 177551
+      }
+    ],
+    "zip_overhead_bytes": 100
+  },
+  {
+    "archive": "experiments/results/public_pr103_intake_20260504_codex/archive.zip",
+    "archive_bytes": 178223,
+    "archive_sha256": "31881b2d23d027e6619f2d8df2fe35d4d207d08882ec673d6c1b7ff119f18c30",
+    "evidence_grade": "forensic_byte_profile",
+    "kind": "pr103_lc_ac",
+    "member_bytes": 178123,
+    "member_name": "x",
+    "member_sha256": "dd92b065b8fbd2bfe9de837eb110a971c2675ecca4247e2658b4628b464d72ec",
+    "score_claim": false,
+    "sections": [
+      {
+        "bytes": 56,
+        "end": 56,
+        "entropy_bits_per_byte": 5.022102,
+        "name": "scales_fp16",
+        "sha256": "778f6dc4f27ef44b4fd197a3e22fe8b0bc07acdc72475ec36bed0f218182ce94",
+        "start": 0
+      },
+      {
+        "bytes": 7097,
+        "end": 7153,
+        "entropy_bits_per_byte": 7.972998,
+        "name": "non_ac_weights_brotli",
+        "sha256": "1a25a07b4c9e24b6497a193dd80a3c67086bb3a70e14f56b7b2384ae697a7002",
+        "start": 56
+      },
+      {
+        "bytes": 895,
+        "end": 8048,
+        "entropy_bits_per_byte": 7.780318,
+        "name": "ac_histograms_brotli",
+        "sha256": "ce7c9a404015b19ef1b8e70de61da4aa3dbdb952a78e38e6c25cbaeb32078a95",
+        "start": 7153
+      },
+      {
+        "bytes": 153856,
+        "end": 161904,
+        "entropy_bits_per_byte": 7.998795,
+        "name": "merged_range_coded_weights_and_hi_latents",
+        "sha256": "08f0a219b395e6783c522bacc8239f01dcb3d27d9f7f8d2291a7478d04859de7",
+        "start": 8048
+      },
+      {
+        "bytes": 112,
+        "end": 162016,
+        "entropy_bits_per_byte": 4.998226,
+        "name": "latent_min_scale_fp16",
+        "sha256": "7cf743ec1151536cd6cab55ebf3041dc8311cd08362208fb347b5bdb4b3c40b6",
+        "start": 161904
+      },
+      {
+        "bytes": 15537,
+        "end": 177553,
+        "entropy_bits_per_byte": 7.986907,
+        "name": "latent_low_bytes_brotli",
+        "sha256": "5f33edaf176f52572b0406f8bfd1ef658f731125109b8284e1089b564f1ce896",
+        "start": 162016
+      },
+      {
+        "bytes": 15,
+        "end": 177568,
+        "entropy_bits_per_byte": 3.773557,
+        "name": "latent_hi_histogram_brotli",
+        "sha256": "1bbb4815aa10e8709b9bcce908f498d6bd15cc5274ffb9ce55e293dfe8390a19",
+        "start": 177553
+      },
+      {
+        "bytes": 555,
+        "end": 178123,
+        "entropy_bits_per_byte": 7.646035,
+        "name": "sidecar_corrections_brotli",
+        "sha256": "91d819d805a0640dd706b29228372d0a09d7a03275066b7b5659200c04afc198",
+        "start": 177568
+      }
+    ],
+    "zip_overhead_bytes": 100
+  },
+  {
+    "archive": "experiments/results/public_pr105_kitchen_sink_intake_20260504_codex/archive.zip",
+    "archive_bytes": 177857,
+    "archive_sha256": "597ba0732810eba08cdae619b679d211d398bc0249b8831898f7096d5beece1d",
+    "evidence_grade": "forensic_byte_profile",
+    "kind": "ff_packed_brotli_hnerv",
+    "member_bytes": 177749,
+    "member_name": "0.bin",
+    "member_sha256": "5f88fa8ed26816cf6e86a00cf3c88915963c2a84f899173fd6820359df29aad0",
+    "score_claim": false,
+    "sections": [
+      {
+        "bytes": 4,
+        "end": 4,
+        "entropy_bits_per_byte": 2.0,
+        "name": "packed_header_ff_len24",
+        "sha256": "837b877d82478a79a5d8cb14387c8f994c1b4e76d606b38c282175e3ad103478",
+        "start": 0
+      },
+      {
+        "bytes": 161891,
+        "end": 161895,
+        "entropy_bits_per_byte": 7.998095,
+        "name": "decoder_packed_brotli",
+        "sha256": "e241db1c2cbfb53aa4dd32a0dc41ccc511259b44223a25666e026ec78aeb0934",
+        "start": 4
+      },
+      {
+        "bytes": 15854,
+        "end": 177749,
+        "entropy_bits_per_byte": 7.985312,
+        "name": "latents_and_sidecar_brotli",
+        "sha256": "aeea25a3116b44570dcb74927ba250b68b7ddea524207f8968688ac885f3b286",
+        "start": 161895
+      }
+    ],
+    "zip_overhead_bytes": 108
+  },
+  {
+    "archive": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip",
+    "archive_bytes": 186239,
+    "archive_sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58",
+    "evidence_grade": "forensic_byte_profile",
+    "kind": "ff_packed_brotli_hnerv",
+    "member_bytes": 186131,
+    "member_name": "0.bin",
+    "member_sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7",
+    "score_claim": false,
+    "sections": [
+      {
+        "bytes": 4,
+        "end": 4,
+        "entropy_bits_per_byte": 2.0,
+        "name": "packed_header_ff_len24",
+        "sha256": "7939f08db7d18dd4176e8e11b1232a9be6b2371db7a4e63c1c0871fb520148b6",
+        "start": 0
+      },
+      {
+        "bytes": 170278,
+        "end": 170282,
+        "entropy_bits_per_byte": 7.998152,
+        "name": "decoder_packed_brotli",
+        "sha256": "654999f81f0552fb7568e6977e73aa329661c10c79a6ab6cddc3171302352004",
+        "start": 4
+      },
+      {
+        "bytes": 15849,
+        "end": 186131,
+        "entropy_bits_per_byte": 7.985386,
+        "name": "latents_and_sidecar_brotli",
+        "sha256": "94257b33cf3083c5daa0f3b1e127cb7c51bee42a6416b19763eea7bf9ecc3c32",
+        "start": 170282
+      }
+    ],
+    "zip_overhead_bytes": 108
+  }
+]

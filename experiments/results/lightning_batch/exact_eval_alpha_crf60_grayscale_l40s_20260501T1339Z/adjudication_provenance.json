@@ -1,0 +1,88 @@
+{
+  "allowed_use": [
+    "forensic",
+    "no_rank_frontier",
+    "no_promotion"
+  ],
+  "archive_delta_bytes": -41012,
+  "baseline_archive_bytes": 686635,
+  "completed_at_utc": "2026-05-01T13:48:45Z",
+  "component_gate_triggered": true,
+  "component_gate_violations": [
+    {
+      "component": "posenet",
+      "max_relative": 1.25,
+      "metric": "avg_posenet_dist",
+      "observed": 0.57232893,
+      "reason": "relative_component_gate",
+      "reference": 0.00346442,
+      "reference_label": "pfp16_a_plus_plus_t4",
+      "relative_to_reference": 165.20194722348904
+    },
+    {
+      "component": "segnet",
+      "max_relative": 1.25,
+      "metric": "avg_segnet_dist",
+      "observed": 0.00574289,
+      "reason": "relative_component_gate",
+      "reference": 0.00400656,
+      "reference_label": "pfp16_a_plus_plus_t4",
+      "relative_to_reference": 1.4333717702967133
+    }
+  ],
+  "component_gates": [
+    {
+      "component": "posenet",
+      "max_absolute": null,
+      "max_relative": 1.25,
+      "metric": "avg_posenet_dist",
+      "observed": 0.57232893,
+      "passed": false,
+      "reference": 0.00346442,
+      "reference_label": "pfp16_a_plus_plus_t4",
+      "relative_to_reference": 165.20194722348904
+    },
+    {
+      "component": "segnet",
+      "max_absolute": null,
+      "max_relative": 1.25,
+      "metric": "avg_segnet_dist",
+      "observed": 0.00574289,
+      "passed": false,
+      "reference": 0.00400656,
+      "reference_label": "pfp16_a_plus_plus_t4",
+      "relative_to_reference": 1.4333717702967133
+    }
+  ],
+  "contest_cuda_archive_bytes": 645623,
+  "contest_cuda_archive_sha256": "f83e17f136afd651e866ca4b564ad28681c3db36f15fd911c0a07e45fe9ac8ae",
+  "contest_cuda_avg_posenet_dist": 0.57232893,
+  "contest_cuda_avg_segnet_dist": 0.00574289,
+  "contest_cuda_device": "cuda",
+  "contest_cuda_gpu_model": "NVIDIA L40S",
+  "contest_cuda_gpu_t4_match": false,
+  "contest_cuda_n_samples": 600,
+  "contest_cuda_result_json": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_alpha_crf60_grayscale_l40s_20260501T1339Z/contest_auth_eval.adjudicated.json",
+  "contest_cuda_score": 3.3965224624990418,
+  "contest_cuda_score_recomputed": 3.3965224624990418,
+  "contest_cuda_score_reported_rounded": 3.4,
+  "contest_cuda_score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "distillation_policy_active": false,
+  "distillation_policy_gate_triggered": false,
+  "distillation_policy_gate_violations": [],
+  "distillation_policy_sha256": null,
+  "distillation_policy_sha256_expected": null,
+  "evidence_grade": "A score-grade",
+  "final_archive_bytes": 645623,
+  "lane_status": "COMPONENT_GATE_REVIEW_REQUIRED",
+  "paper_claim_grade": "A-negative scoped forensic",
+  "promotion_eligible": false,
+  "regression_scope": "measured_implementation_config_only_pending_review",
+  "regression_threshold": 30.0,
+  "regression_triggered": false,
+  "result_tag": "[contest-CUDA]",
+  "score_delta_vs_baseline": 2.35253493770515,
+  "score_delta_vs_pfp16_a_plus_plus": 2.35253493770515,
+  "score_tag": "[contest-CUDA]",
+  "stacked_archive_bytes": 645623
+}

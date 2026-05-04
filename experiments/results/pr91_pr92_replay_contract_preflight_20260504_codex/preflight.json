@@ -1,0 +1,105 @@
+{
+  "dispatch_performed": false,
+  "next_actions": [
+    "Recover or rebuild a byte-exact PR91/PR86 HPAC encoder-decoder probability trace before any PR91-derived exact eval.",
+    ".venv/bin/python experiments/build_pr85_stbm1br_pr92_rmb1_randmulti_candidate.py --stdout",
+    "claim lane first, then exact-eval the rebuilt bytes with `experiments/results/pr85_stbm1br_pr92_rmb1_randmulti_20260504_worker/pr85_stbm1br_plus_pr92_rmb1_randmulti_recode/archive.zip` and custom inflate `experiments/results/pr85_stbm1br_pr92_rmb1_randmulti_20260504_worker/replay_submission_stbm_rmb1/inflate.sh`; skip if archive SHA still equals the already validated exact JSON."
+  ],
+  "pr91_hpm1": {
+    "blockers": [],
+    "checks": {
+      "all_variants_failed_closed": true,
+      "dispatch_locked": true,
+      "known_blocker_class": true,
+      "known_failure_reason": true,
+      "no_decode_variant_succeeded": true,
+      "probability_report_failed_closed": true,
+      "ready_for_exact_eval_false": true,
+      "source_contract_decoded_count_recorded": true,
+      "source_contract_fails_at_recorded_coordinate": true
+    },
+    "classification": {
+      "blocker_class": "real_invalid_entropy_or_probability_model_contract_mismatch",
+      "bug_class": "hpm1_probability_range_contract_mismatch",
+      "decoded_symbol_count_before_failure_by_variant": {
+        "source_float32_perfect_false": 30513,
+        "source_float32_perfect_true": 12479,
+        "source_float64_perfect_false": 5951,
+        "source_float64_perfect_true": 13822
+      },
+      "failed_variants": [
+        "source_float64_perfect_false",
+        "source_float32_perfect_false",
+        "source_float64_perfect_true",
+        "source_float32_perfect_true"
+      ],
+      "failure_reason": "no_probability_variant_decodes_pr91_hpm1_prefix"
+    },
+    "dispatch_allowed": false,
+    "evidence_grade": "local_fail_closed_preflight",
+    "safe_next_action": "Recover or rebuild a byte-exact PR91/PR86 HPAC encoder-decoder probability trace before any PR91-derived exact eval.",
+    "score_claim": false,
+    "source": {
+      "archive": "experiments/results/public_pr91_intake_20260504_codex/archive.zip",
+      "dispatch_performed": false,
+      "mode": "read_existing_report",
+      "report_path": "experiments/results/public_pr91_intake_20260504_codex/diagnostics/pr91_hpm1_probability_variant_matrix_frame0_20260504_current_codex.json",
+      "report_sha256": "b890401aab5691a30f7ff2333da507b6fde6907492a33d863416bceef2151326",
+      "score_claim": false
+    },
+    "status": "blocked_hpm1_probability_range_contract_mismatch"
+  },
+  "pr92_rmb1_stack": {
+    "blockers": [],
+    "checks": {
+      "candidate_archive_exists": true,
+      "candidate_bytes_matches_exact": true,
+      "candidate_sha_matches_exact": true,
+      "changed_only_randmulti": true,
+      "exact_cuda": true,
+      "exact_full_sample_count": true,
+      "exact_runtime_root_is_correct_replay_runtime": true,
+      "exact_runtime_tree_recorded": true,
+      "exact_score_recomputes": true,
+      "exact_t4_match": true,
+      "manifest_dispatch_performed_false": true,
+      "manifest_score_claim_false": true,
+      "randmulti_decoded_rows_match": true,
+      "required_inflate_sh_exists": true,
+      "runtime_no_blockers": true,
+      "runtime_ready": true,
+      "strict_zip_valid": true
+    },
+    "dispatch_allowed": false,
+    "evidence_grade": "A++",
+    "exact_eval": {
+      "archive_bytes": 229480,
+      "archive_sha256": "f8d2dff12004fe15bdedefcd3f9574fab97f22c302fa1417a265c325468ad774",
+      "avg_posenet_dist": 0.0001894,
+      "avg_segnet_dist": 0.00057185,
+      "n_samples": 600,
+      "path": "experiments/results/lightning_batch/exact_eval_pr85_stbm1br_pr92_rmb1_t4_20260504T082220Z/contest_auth_eval.adjudicated.json",
+      "rounded_component_recompute": 0.25350642285645375,
+      "rounded_component_recompute_drift": 6.256247586655661e-08,
+      "runtime_root": "/teamspace/studios/this_studio/pact/experiments/results/pr85_stbm1br_pr92_rmb1_randmulti_20260504_worker/replay_submission_stbm_rmb1",
+      "runtime_tree_sha256": "9a9a71afefe7c154ecc188068bea26f01212369883c4b32c9706b32951e267ba",
+      "score": 0.2535063602939779,
+      "score_recomputed_by_preflight": 0.2535063602939779,
+      "sha256": "9bfc1f6a4b0a7edc465c530bdc693ec0e03cbed6251f64a5ba3df9e7de45fdfb"
+    },
+    "manifest": {
+      "path": "experiments/results/pr85_stbm1br_pr92_rmb1_randmulti_20260504_worker/pr85_stbm1br_plus_pr92_rmb1_randmulti_recode/manifest.json",
+      "sha256": "44de82e3e1ac72a0878cc13b920725a21342691bb95cf64efbdc46736076f3f3"
+    },
+    "next_safe_build_command": ".venv/bin/python experiments/build_pr85_stbm1br_pr92_rmb1_randmulti_candidate.py --stdout",
+    "next_safe_exact_eval_command_if_rebuilt": "claim lane first, then exact-eval the rebuilt bytes with `experiments/results/pr85_stbm1br_pr92_rmb1_randmulti_20260504_worker/pr85_stbm1br_plus_pr92_rmb1_randmulti_recode/archive.zip` and custom inflate `experiments/results/pr85_stbm1br_pr92_rmb1_randmulti_20260504_worker/replay_submission_stbm_rmb1/inflate.sh`; skip if archive SHA still equals the already validated exact JSON.",
+    "score_claim": true,
+    "status": "passed_t4_exact_pr92_rmb1_stack_validated"
+  },
+  "recorded_at_utc": "2026-05-04T08:52:55+00:00",
+  "remote_jobs_dispatched": false,
+  "schema": "pr91_pr92_replay_contract_preflight_v1",
+  "score_claim": true,
+  "status": "passed_pr92_a_plus_plus_pr91_fail_closed",
+  "tool": "experiments/preflight_pr91_pr92_replay_contracts.py"
+}

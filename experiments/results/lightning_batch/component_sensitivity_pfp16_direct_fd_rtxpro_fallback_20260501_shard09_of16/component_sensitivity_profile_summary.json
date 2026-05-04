@@ -1,0 +1,3125 @@
+{
+  "aggregate": "sum",
+  "canonical_scorer_path": false,
+  "certification_handoff_eligible": false,
+  "checkpoint": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_rtxpro_fallback_20260501_shard09_of16/extracted/renderer.bin",
+  "component_response_path": "direct_renderer_tensor_inprocess_scorer",
+  "device": "cuda",
+  "elapsed_s": 965.918128219,
+  "evidence_grade": "diagnostic_cuda_direct_renderer_finite_difference",
+  "excluded_layer_reasons": {
+    "renderer.film_bottleneck.scale.weight": "protected_linear",
+    "renderer.film_bottleneck.shift.weight": "protected_linear",
+    "renderer.film_decoder.scale.weight": "protected_linear",
+    "renderer.film_decoder.shift.weight": "protected_linear"
+  },
+  "finite_difference_epsilon": 0.001,
+  "finite_difference_merge": null,
+  "finite_difference_shard": {
+    "all_channel_count": 717,
+    "all_channel_refs": [
+      {
+        "channel": 0,
+        "key": "motion.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 1,
+        "key": "motion.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 2,
+        "key": "motion.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 3,
+        "key": "motion.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 4,
+        "key": "motion.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 5,
+        "key": "motion.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 6,
+        "key": "motion.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 7,
+        "key": "motion.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 8,
+        "key": "motion.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 9,
+        "key": "motion.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 10,
+        "key": "motion.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 11,
+        "key": "motion.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 12,
+        "key": "motion.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 13,
+        "key": "motion.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 14,
+        "key": "motion.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 15,
+        "key": "motion.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 16,
+        "key": "motion.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 17,
+        "key": "motion.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 18,
+        "key": "motion.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 19,
+        "key": "motion.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 20,
+        "key": "motion.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 21,
+        "key": "motion.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 22,
+        "key": "motion.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 23,
+        "key": "motion.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 24,
+        "key": "motion.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 25,
+        "key": "motion.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 26,
+        "key": "motion.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 27,
+        "key": "motion.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 28,
+        "key": "motion.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 29,
+        "key": "motion.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 30,
+        "key": "motion.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 31,
+        "key": "motion.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 0,
+        "key": "motion.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 1,
+        "key": "motion.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 2,
+        "key": "motion.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 3,
+        "key": "motion.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 4,
+        "key": "motion.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 5,
+        "key": "motion.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 6,
+        "key": "motion.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 7,
+        "key": "motion.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 8,
+        "key": "motion.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 9,
+        "key": "motion.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 10,
+        "key": "motion.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 11,
+        "key": "motion.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 12,
+        "key": "motion.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 13,
+        "key": "motion.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 14,
+        "key": "motion.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 15,
+        "key": "motion.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 16,
+        "key": "motion.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 17,
+        "key": "motion.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 18,
+        "key": "motion.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 19,
+        "key": "motion.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 20,
+        "key": "motion.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 21,
+        "key": "motion.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 22,
+        "key": "motion.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 23,
+        "key": "motion.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 24,
+        "key": "motion.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 25,
+        "key": "motion.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 26,
+        "key": "motion.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 27,
+        "key": "motion.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 28,
+        "key": "motion.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 29,
+        "key": "motion.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 30,
+        "key": "motion.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 31,
+        "key": "motion.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 0,
+        "key": "motion.down.0.weight"
+      },
+      {
+        "channel": 1,
+        "key": "motion.down.0.weight"
+      },
+      {
+        "channel": 2,
+        "key": "motion.down.0.weight"
+      },
+      {
+        "channel": 3,
+        "key": "motion.down.0.weight"
+      },
+      {
+        "channel": 4,
+        "key": "motion.down.0.weight"
+      },
+      {
+        "channel": 5,
+        "key": "motion.down.0.weight"
+      },
+      {
+        "channel": 6,
+        "key": "motion.down.0.weight"
+      },
+      {
+        "channel": 7,
+        "key": "motion.down.0.weight"
+      },
+      {
+        "channel": 8,
+        "key": "motion.down.0.weight"
+      },
+      {
+        "channel": 9,
+        "key": "motion.down.0.weight"
+      },
+      {
+        "channel": 10,
+        "key": "motion.down.0.weight"
+      },
+      {
+        "channel": 11,
+        "key": "motion.down.0.weight"
+      },
+      {
+        "channel": 12,
+        "key": "motion.down.0.weight"
+      },
+      {
+        "channel": 13,
+        "key": "motion.down.0.weight"
+      },
+      {
+        "channel": 14,
+        "key": "motion.down.0.weight"
+      },
+      {
+        "channel": 15,
+        "key": "motion.down.0.weight"
+      },
+      {
+        "channel": 16,
+        "key": "motion.down.0.weight"
+      },
+      {
+        "channel": 17,
+        "key": "motion.down.0.weight"
+      },
+      {
+        "channel": 18,
+        "key": "motion.down.0.weight"
+      },
+      {
+        "channel": 19,
+        "key": "motion.down.0.weight"
+      },
+      {
+        "channel": 20,
+        "key": "motion.down.0.weight"
+      },
+      {
+        "channel": 21,
+        "key": "motion.down.0.weight"
+      },
+      {
+        "channel": 22,
+        "key": "motion.down.0.weight"
+      },
+      {
+        "channel": 23,
+        "key": "motion.down.0.weight"
+      },
+      {
+        "channel": 24,
+        "key": "motion.down.0.weight"
+      },
+      {
+        "channel": 25,
+        "key": "motion.down.0.weight"
+      },
+      {
+        "channel": 26,
+        "key": "motion.down.0.weight"
+      },
+      {
+        "channel": 27,
+        "key": "motion.down.0.weight"
+      },
+      {
+        "channel": 28,
+        "key": "motion.down.0.weight"
+      },
+      {
+        "channel": 29,
+        "key": "motion.down.0.weight"
+      },
+      {
+        "channel": 30,
+        "key": "motion.down.0.weight"
+      },
+      {
+        "channel": 31,
+        "key": "motion.down.0.weight"
+      },
+      {
+        "channel": 0,
+        "key": "motion.fuse.weight"
+      },
+      {
+        "channel": 1,
+        "key": "motion.fuse.weight"
+      },
+      {
+        "channel": 2,
+        "key": "motion.fuse.weight"
+      },
+      {
+        "channel": 3,
+        "key": "motion.fuse.weight"
+      },
+      {
+        "channel": 4,
+        "key": "motion.fuse.weight"
+      },
+      {
+        "channel": 5,
+        "key": "motion.fuse.weight"
+      },
+      {
+        "channel": 6,
+        "key": "motion.fuse.weight"
+      },
+      {
+        "channel": 7,
+        "key": "motion.fuse.weight"
+      },
+      {
+        "channel": 8,
+        "key": "motion.fuse.weight"
+      },
+      {
+        "channel": 9,
+        "key": "motion.fuse.weight"
+      },
+      {
+        "channel": 10,
+        "key": "motion.fuse.weight"
+      },
+      {
+        "channel": 11,
+        "key": "motion.fuse.weight"
+      },
+      {
+        "channel": 12,
+        "key": "motion.fuse.weight"
+      },
+      {
+        "channel": 13,
+        "key": "motion.fuse.weight"
+      },
+      {
+        "channel": 14,
+        "key": "motion.fuse.weight"
+      },
+      {
+        "channel": 15,
+        "key": "motion.fuse.weight"
+      },
+      {
+        "channel": 16,
+        "key": "motion.fuse.weight"
+      },
+      {
+        "channel": 17,
+        "key": "motion.fuse.weight"
+      },
+      {
+        "channel": 18,
+        "key": "motion.fuse.weight"
+      },
+      {
+        "channel": 19,
+        "key": "motion.fuse.weight"
+      },
+      {
+        "channel": 20,
+        "key": "motion.fuse.weight"
+      },
+      {
+        "channel": 21,
+        "key": "motion.fuse.weight"
+      },
+      {
+        "channel": 22,
+        "key": "motion.fuse.weight"
+      },
+      {
+        "channel": 23,
+        "key": "motion.fuse.weight"
+      },
+      {
+        "channel": 24,
+        "key": "motion.fuse.weight"
+      },
+      {
+        "channel": 25,
+        "key": "motion.fuse.weight"
+      },
+      {
+        "channel": 26,
+        "key": "motion.fuse.weight"
+      },
+      {
+        "channel": 27,
+        "key": "motion.fuse.weight"
+      },
+      {
+        "channel": 28,
+        "key": "motion.fuse.weight"
+      },
+      {
+        "channel": 29,
+        "key": "motion.fuse.weight"
+      },
+      {
+        "channel": 30,
+        "key": "motion.fuse.weight"
+      },
+      {
+        "channel": 31,
+        "key": "motion.fuse.weight"
+      },
+      {
+        "channel": 0,
+        "key": "motion.head.weight"
+      },
+      {
+        "channel": 1,
+        "key": "motion.head.weight"
+      },
+      {
+        "channel": 2,
+        "key": "motion.head.weight"
+      },
+      {
+        "channel": 3,
+        "key": "motion.head.weight"
+      },
+      {
+        "channel": 4,
+        "key": "motion.head.weight"
+      },
+      {
+        "channel": 5,
+        "key": "motion.head.weight"
+      },
+      {
+        "channel": 0,
+        "key": "motion.stem.0.weight"
+      },
+      {
+        "channel": 1,
+        "key": "motion.stem.0.weight"
+      },
+      {
+        "channel": 2,
+        "key": "motion.stem.0.weight"
+      },
+      {
+        "channel": 3,
+        "key": "motion.stem.0.weight"
+      },
+      {
+        "channel": 4,
+        "key": "motion.stem.0.weight"
+      },
+      {
+        "channel": 5,
+        "key": "motion.stem.0.weight"
+      },
+      {
+        "channel": 6,
+        "key": "motion.stem.0.weight"
+      },
+      {
+        "channel": 7,
+        "key": "motion.stem.0.weight"
+      },
+      {
+        "channel": 8,
+        "key": "motion.stem.0.weight"
+      },
+      {
+        "channel": 9,
+        "key": "motion.stem.0.weight"
+      },
+      {
+        "channel": 10,
+        "key": "motion.stem.0.weight"
+      },
+      {
+        "channel": 11,
+        "key": "motion.stem.0.weight"
+      },
+      {
+        "channel": 12,
+        "key": "motion.stem.0.weight"
+      },
+      {
+        "channel": 13,
+        "key": "motion.stem.0.weight"
+      },
+      {
+        "channel": 14,
+        "key": "motion.stem.0.weight"
+      },
+      {
+        "channel": 15,
+        "key": "motion.stem.0.weight"
+      },
+      {
+        "channel": 16,
+        "key": "motion.stem.0.weight"
+      },
+      {
+        "channel": 17,
+        "key": "motion.stem.0.weight"
+      },
+      {
+        "channel": 18,
+        "key": "motion.stem.0.weight"
+      },
+      {
+        "channel": 19,
+        "key": "motion.stem.0.weight"
+      },
+      {
+        "channel": 20,
+        "key": "motion.stem.0.weight"
+      },
+      {
+        "channel": 21,
+        "key": "motion.stem.0.weight"
+      },
+      {
+        "channel": 22,
+        "key": "motion.stem.0.weight"
+      },
+      {
+        "channel": 23,
+        "key": "motion.stem.0.weight"
+      },
+      {
+        "channel": 24,
+        "key": "motion.stem.0.weight"
+      },
+      {
+        "channel": 25,
+        "key": "motion.stem.0.weight"
+      },
+      {
+        "channel": 26,
+        "key": "motion.stem.0.weight"
+      },
+      {
+        "channel": 27,
+        "key": "motion.stem.0.weight"
+      },
+      {
+        "channel": 28,
+        "key": "motion.stem.0.weight"
+      },
+      {
+        "channel": 29,
+        "key": "motion.stem.0.weight"
+      },
+      {
+        "channel": 30,
+        "key": "motion.stem.0.weight"
+      },
+      {
+        "channel": 31,
+        "key": "motion.stem.0.weight"
+      },
+      {
+        "channel": 0,
+        "key": "motion.up_conv.weight"
+      },
+      {
+        "channel": 1,
+        "key": "motion.up_conv.weight"
+      },
+      {
+        "channel": 2,
+        "key": "motion.up_conv.weight"
+      },
+      {
+        "channel": 3,
+        "key": "motion.up_conv.weight"
+      },
+      {
+        "channel": 4,
+        "key": "motion.up_conv.weight"
+      },
+      {
+        "channel": 5,
+        "key": "motion.up_conv.weight"
+      },
+      {
+        "channel": 6,
+        "key": "motion.up_conv.weight"
+      },
+      {
+        "channel": 7,
+        "key": "motion.up_conv.weight"
+      },
+      {
+        "channel": 8,
+        "key": "motion.up_conv.weight"
+      },
+      {
+        "channel": 9,
+        "key": "motion.up_conv.weight"
+      },
+      {
+        "channel": 10,
+        "key": "motion.up_conv.weight"
+      },
+      {
+        "channel": 11,
+        "key": "motion.up_conv.weight"
+      },
+      {
+        "channel": 12,
+        "key": "motion.up_conv.weight"
+      },
+      {
+        "channel": 13,
+        "key": "motion.up_conv.weight"
+      },
+      {
+        "channel": 14,
+        "key": "motion.up_conv.weight"
+      },
+      {
+        "channel": 15,
+        "key": "motion.up_conv.weight"
+      },
+      {
+        "channel": 16,
+        "key": "motion.up_conv.weight"
+      },
+      {
+        "channel": 17,
+        "key": "motion.up_conv.weight"
+      },
+      {
+        "channel": 18,
+        "key": "motion.up_conv.weight"
+      },
+      {
+        "channel": 19,
+        "key": "motion.up_conv.weight"
+      },
+      {
+        "channel": 20,
+        "key": "motion.up_conv.weight"
+      },
+      {
+        "channel": 21,
+        "key": "motion.up_conv.weight"
+      },
+      {
+        "channel": 22,
+        "key": "motion.up_conv.weight"
+      },
+      {
+        "channel": 23,
+        "key": "motion.up_conv.weight"
+      },
+      {
+        "channel": 24,
+        "key": "motion.up_conv.weight"
+      },
+      {
+        "channel": 25,
+        "key": "motion.up_conv.weight"
+      },
+      {
+        "channel": 26,
+        "key": "motion.up_conv.weight"
+      },
+      {
+        "channel": 27,
+        "key": "motion.up_conv.weight"
+      },
+      {
+        "channel": 28,
+        "key": "motion.up_conv.weight"
+      },
+      {
+        "channel": 29,
+        "key": "motion.up_conv.weight"
+      },
+      {
+        "channel": 30,
+        "key": "motion.up_conv.weight"
+      },
+      {
+        "channel": 31,
+        "key": "motion.up_conv.weight"
+      },
+      {
+        "channel": 0,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 1,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 2,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 3,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 4,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 5,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 6,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 7,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 8,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 9,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 10,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 11,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 12,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 13,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 14,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 15,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 16,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 17,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 18,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 19,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 20,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 21,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 22,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 23,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 24,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 25,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 26,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 27,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 28,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 29,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 30,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 31,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 32,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 33,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 34,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 35,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 36,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 37,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 38,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 39,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 40,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 41,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 42,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 43,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 44,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 45,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 46,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 47,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 48,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 49,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 50,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 51,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 52,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 53,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 54,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 55,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 56,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 57,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 58,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 59,
+        "key": "renderer.bottleneck.conv1.weight"
+      },
+      {
+        "channel": 0,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 1,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 2,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 3,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 4,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 5,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 6,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 7,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 8,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 9,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 10,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 11,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 12,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 13,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 14,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 15,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 16,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 17,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 18,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 19,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 20,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 21,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 22,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 23,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 24,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 25,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 26,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 27,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 28,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 29,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 30,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 31,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 32,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 33,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 34,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 35,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 36,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 37,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 38,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 39,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 40,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 41,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 42,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 43,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 44,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 45,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 46,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 47,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 48,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 49,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 50,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 51,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 52,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 53,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 54,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 55,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 56,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 57,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 58,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 59,
+        "key": "renderer.bottleneck.conv2.weight"
+      },
+      {
+        "channel": 0,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 1,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 2,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 3,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 4,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 5,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 6,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 7,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 8,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 9,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 10,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 11,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 12,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 13,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 14,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 15,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 16,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 17,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 18,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 19,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 20,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 21,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 22,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 23,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 24,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 25,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 26,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 27,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 28,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 29,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 30,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 31,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 32,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 33,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 34,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 35,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 36,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 37,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 38,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 39,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 40,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 41,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 42,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 43,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 44,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 45,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 46,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 47,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 48,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 49,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 50,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 51,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 52,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 53,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 54,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 55,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 56,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 57,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 58,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 59,
+        "key": "renderer.down_conv.weight"
+      },
+      {
+        "channel": 0,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 1,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 2,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 3,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 4,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 5,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 6,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 7,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 8,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 9,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 10,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 11,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 12,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 13,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 14,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 15,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 16,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 17,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 18,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 19,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 20,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 21,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 22,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 23,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 24,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 25,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 26,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 27,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 28,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 29,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 30,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 31,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 32,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 33,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 34,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 35,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 36,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 37,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 38,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 39,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 40,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 41,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 42,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 43,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 44,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 45,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 46,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 47,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 48,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 49,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 50,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 51,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 52,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 53,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 54,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 55,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 56,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 57,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 58,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 59,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 0,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 1,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 2,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 3,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 4,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 5,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 6,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 7,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 8,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 9,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 10,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 11,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 12,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 13,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 14,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 15,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 16,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 17,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 18,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 19,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 20,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 21,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 22,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 23,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 24,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 25,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 26,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 27,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 28,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 29,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 30,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 31,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 32,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 33,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 34,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 35,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 36,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 37,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 38,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 39,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 40,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 41,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 42,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 43,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 44,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 45,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 46,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 47,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 48,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 49,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 50,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 51,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 52,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 53,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 54,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 55,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 56,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 57,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 58,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 59,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 0,
+        "key": "renderer.fuse_conv.weight"
+      },
+      {
+        "channel": 1,
+        "key": "renderer.fuse_conv.weight"
+      },
+      {
+        "channel": 2,
+        "key": "renderer.fuse_conv.weight"
+      },
+      {
+        "channel": 3,
+        "key": "renderer.fuse_conv.weight"
+      },
+      {
+        "channel": 4,
+        "key": "renderer.fuse_conv.weight"
+      },
+      {
+        "channel": 5,
+        "key": "renderer.fuse_conv.weight"
+      },
+      {
+        "channel": 6,
+        "key": "renderer.fuse_conv.weight"
+      },
+      {
+        "channel": 7,
+        "key": "renderer.fuse_conv.weight"
+      },
+      {
+        "channel": 8,
+        "key": "renderer.fuse_conv.weight"
+      },
+      {
+        "channel": 9,
+        "key": "renderer.fuse_conv.weight"
+      },
+      {
+        "channel": 10,
+        "key": "renderer.fuse_conv.weight"
+      },
+      {
+        "channel": 11,
+        "key": "renderer.fuse_conv.weight"
+      },
+      {
+        "channel": 12,
+        "key": "renderer.fuse_conv.weight"
+      },
+      {
+        "channel": 13,
+        "key": "renderer.fuse_conv.weight"
+      },
+      {
+        "channel": 14,
+        "key": "renderer.fuse_conv.weight"
+      },
+      {
+        "channel": 15,
+        "key": "renderer.fuse_conv.weight"
+      },
+      {
+        "channel": 16,
+        "key": "renderer.fuse_conv.weight"
+      },
+      {
+        "channel": 17,
+        "key": "renderer.fuse_conv.weight"
+      },
+      {
+        "channel": 18,
+        "key": "renderer.fuse_conv.weight"
+      },
+      {
+        "channel": 19,
+        "key": "renderer.fuse_conv.weight"
+      },
+      {
+        "channel": 20,
+        "key": "renderer.fuse_conv.weight"
+      },
+      {
+        "channel": 21,
+        "key": "renderer.fuse_conv.weight"
+      },
+      {
+        "channel": 22,
+        "key": "renderer.fuse_conv.weight"
+      },
+      {
+        "channel": 23,
+        "key": "renderer.fuse_conv.weight"
+      },
+      {
+        "channel": 24,
+        "key": "renderer.fuse_conv.weight"
+      },
+      {
+        "channel": 25,
+        "key": "renderer.fuse_conv.weight"
+      },
+      {
+        "channel": 26,
+        "key": "renderer.fuse_conv.weight"
+      },
+      {
+        "channel": 27,
+        "key": "renderer.fuse_conv.weight"
+      },
+      {
+        "channel": 28,
+        "key": "renderer.fuse_conv.weight"
+      },
+      {
+        "channel": 29,
+        "key": "renderer.fuse_conv.weight"
+      },
+      {
+        "channel": 30,
+        "key": "renderer.fuse_conv.weight"
+      },
+      {
+        "channel": 31,
+        "key": "renderer.fuse_conv.weight"
+      },
+      {
+        "channel": 32,
+        "key": "renderer.fuse_conv.weight"
+      },
+      {
+        "channel": 33,
+        "key": "renderer.fuse_conv.weight"
+      },
+      {
+        "channel": 34,
+        "key": "renderer.fuse_conv.weight"
+      },
+      {
+        "channel": 35,
+        "key": "renderer.fuse_conv.weight"
+      },
+      {
+        "channel": 0,
+        "key": "renderer.head.weight"
+      },
+      {
+        "channel": 1,
+        "key": "renderer.head.weight"
+      },
+      {
+        "channel": 2,
+        "key": "renderer.head.weight"
+      },
+      {
+        "channel": 0,
+        "key": "renderer.stem_conv.weight"
+      },
+      {
+        "channel": 1,
+        "key": "renderer.stem_conv.weight"
+      },
+      {
+        "channel": 2,
+        "key": "renderer.stem_conv.weight"
+      },
+      {
+        "channel": 3,
+        "key": "renderer.stem_conv.weight"
+      },
+      {
+        "channel": 4,
+        "key": "renderer.stem_conv.weight"
+      },
+      {
+        "channel": 5,
+        "key": "renderer.stem_conv.weight"
+      },
+      {
+        "channel": 6,
+        "key": "renderer.stem_conv.weight"
+      },
+      {
+        "channel": 7,
+        "key": "renderer.stem_conv.weight"
+      },
+      {
+        "channel": 8,
+        "key": "renderer.stem_conv.weight"
+      },
+      {
+        "channel": 9,
+        "key": "renderer.stem_conv.weight"
+      },
+      {
+        "channel": 10,
+        "key": "renderer.stem_conv.weight"
+      },
+      {
+        "channel": 11,
+        "key": "renderer.stem_conv.weight"
+      },
+      {
+        "channel": 12,
+        "key": "renderer.stem_conv.weight"
+      },
+      {
+        "channel": 13,
+        "key": "renderer.stem_conv.weight"
+      },
+      {
+        "channel": 14,
+        "key": "renderer.stem_conv.weight"
+      },
+      {
+        "channel": 15,
+        "key": "renderer.stem_conv.weight"
+      },
+      {
+        "channel": 16,
+        "key": "renderer.stem_conv.weight"
+      },
+      {
+        "channel": 17,
+        "key": "renderer.stem_conv.weight"
+      },
+      {
+        "channel": 18,
+        "key": "renderer.stem_conv.weight"
+      },
+      {
+        "channel": 19,
+        "key": "renderer.stem_conv.weight"
+      },
+      {
+        "channel": 20,
+        "key": "renderer.stem_conv.weight"
+      },
+      {
+        "channel": 21,
+        "key": "renderer.stem_conv.weight"
+      },
+      {
+        "channel": 22,
+        "key": "renderer.stem_conv.weight"
+      },
+      {
+        "channel": 23,
+        "key": "renderer.stem_conv.weight"
+      },
+      {
+        "channel": 24,
+        "key": "renderer.stem_conv.weight"
+      },
+      {
+        "channel": 25,
+        "key": "renderer.stem_conv.weight"
+      },
+      {
+        "channel": 26,
+        "key": "renderer.stem_conv.weight"
+      },
+      {
+        "channel": 27,
+        "key": "renderer.stem_conv.weight"
+      },
+      {
+        "channel": 28,
+        "key": "renderer.stem_conv.weight"
+      },
+      {
+        "channel": 29,
+        "key": "renderer.stem_conv.weight"
+      },
+      {
+        "channel": 30,
+        "key": "renderer.stem_conv.weight"
+      },
+      {
+        "channel": 31,
+        "key": "renderer.stem_conv.weight"
+      },
+      {
+        "channel": 32,
+        "key": "renderer.stem_conv.weight"
+      },
+      {
+        "channel": 33,
+        "key": "renderer.stem_conv.weight"
+      },
+      {
+        "channel": 34,
+        "key": "renderer.stem_conv.weight"
+      },
+      {
+        "channel": 35,
+        "key": "renderer.stem_conv.weight"
+      },
+      {
+        "channel": 0,
+        "key": "renderer.stem_res.conv1.weight"
+      },
+      {
+        "channel": 1,
+        "key": "renderer.stem_res.conv1.weight"
+      },
+      {
+        "channel": 2,
+        "key": "renderer.stem_res.conv1.weight"
+      },
+      {
+        "channel": 3,
+        "key": "renderer.stem_res.conv1.weight"
+      },
+      {
+        "channel": 4,
+        "key": "renderer.stem_res.conv1.weight"
+      },
+      {
+        "channel": 5,
+        "key": "renderer.stem_res.conv1.weight"
+      },
+      {
+        "channel": 6,
+        "key": "renderer.stem_res.conv1.weight"
+      },
+      {
+        "channel": 7,
+        "key": "renderer.stem_res.conv1.weight"
+      },
+      {
+        "channel": 8,
+        "key": "renderer.stem_res.conv1.weight"
+      },
+      {
+        "channel": 9,
+        "key": "renderer.stem_res.conv1.weight"
+      },
+      {
+        "channel": 10,
+        "key": "renderer.stem_res.conv1.weight"
+      },
+      {
+        "channel": 11,
+        "key": "renderer.stem_res.conv1.weight"
+      },
+      {
+        "channel": 12,
+        "key": "renderer.stem_res.conv1.weight"
+      },
+      {
+        "channel": 13,
+        "key": "renderer.stem_res.conv1.weight"
+      },
+      {
+        "channel": 14,
+        "key": "renderer.stem_res.conv1.weight"
+      },
+      {
+        "channel": 15,
+        "key": "renderer.stem_res.conv1.weight"
+      },
+      {
+        "channel": 16,
+        "key": "renderer.stem_res.conv1.weight"
+      },
+      {
+        "channel": 17,
+        "key": "renderer.stem_res.conv1.weight"
+      },
+      {
+        "channel": 18,
+        "key": "renderer.stem_res.conv1.weight"
+      },
+      {
+        "channel": 19,
+        "key": "renderer.stem_res.conv1.weight"
+      },
+      {
+        "channel": 20,
+        "key": "renderer.stem_res.conv1.weight"
+      },
+      {
+        "channel": 21,
+        "key": "renderer.stem_res.conv1.weight"
+      },
+      {
+        "channel": 22,
+        "key": "renderer.stem_res.conv1.weight"
+      },
+      {
+        "channel": 23,
+        "key": "renderer.stem_res.conv1.weight"
+      },
+      {
+        "channel": 24,
+        "key": "renderer.stem_res.conv1.weight"
+      },
+      {
+        "channel": 25,
+        "key": "renderer.stem_res.conv1.weight"
+      },
+      {
+        "channel": 26,
+        "key": "renderer.stem_res.conv1.weight"
+      },
+      {
+        "channel": 27,
+        "key": "renderer.stem_res.conv1.weight"
+      },
+      {
+        "channel": 28,
+        "key": "renderer.stem_res.conv1.weight"
+      },
+      {
+        "channel": 29,
+        "key": "renderer.stem_res.conv1.weight"
+      },
+      {
+        "channel": 30,
+        "key": "renderer.stem_res.conv1.weight"
+      },
+      {
+        "channel": 31,
+        "key": "renderer.stem_res.conv1.weight"
+      },
+      {
+        "channel": 32,
+        "key": "renderer.stem_res.conv1.weight"
+      },
+      {
+        "channel": 33,
+        "key": "renderer.stem_res.conv1.weight"
+      },
+      {
+        "channel": 34,
+        "key": "renderer.stem_res.conv1.weight"
+      },
+      {
+        "channel": 35,
+        "key": "renderer.stem_res.conv1.weight"
+      },
+      {
+        "channel": 0,
+        "key": "renderer.stem_res.conv2.weight"
+      },
+      {
+        "channel": 1,
+        "key": "renderer.stem_res.conv2.weight"
+      },
+      {
+        "channel": 2,
+        "key": "renderer.stem_res.conv2.weight"
+      },
+      {
+        "channel": 3,
+        "key": "renderer.stem_res.conv2.weight"
+      },
+      {
+        "channel": 4,
+        "key": "renderer.stem_res.conv2.weight"
+      },
+      {
+        "channel": 5,
+        "key": "renderer.stem_res.conv2.weight"
+      },
+      {
+        "channel": 6,
+        "key": "renderer.stem_res.conv2.weight"
+      },
+      {
+        "channel": 7,
+        "key": "renderer.stem_res.conv2.weight"
+      },
+      {
+        "channel": 8,
+        "key": "renderer.stem_res.conv2.weight"
+      },
+      {
+        "channel": 9,
+        "key": "renderer.stem_res.conv2.weight"
+      },
+      {
+        "channel": 10,
+        "key": "renderer.stem_res.conv2.weight"
+      },
+      {
+        "channel": 11,
+        "key": "renderer.stem_res.conv2.weight"
+      },
+      {
+        "channel": 12,
+        "key": "renderer.stem_res.conv2.weight"
+      },
+      {
+        "channel": 13,
+        "key": "renderer.stem_res.conv2.weight"
+      },
+      {
+        "channel": 14,
+        "key": "renderer.stem_res.conv2.weight"
+      },
+      {
+        "channel": 15,
+        "key": "renderer.stem_res.conv2.weight"
+      },
+      {
+        "channel": 16,
+        "key": "renderer.stem_res.conv2.weight"
+      },
+      {
+        "channel": 17,
+        "key": "renderer.stem_res.conv2.weight"
+      },
+      {
+        "channel": 18,
+        "key": "renderer.stem_res.conv2.weight"
+      },
+      {
+        "channel": 19,
+        "key": "renderer.stem_res.conv2.weight"
+      },
+      {
+        "channel": 20,
+        "key": "renderer.stem_res.conv2.weight"
+      },
+      {
+        "channel": 21,
+        "key": "renderer.stem_res.conv2.weight"
+      },
+      {
+        "channel": 22,
+        "key": "renderer.stem_res.conv2.weight"
+      },
+      {
+        "channel": 23,
+        "key": "renderer.stem_res.conv2.weight"
+      },
+      {
+        "channel": 24,
+        "key": "renderer.stem_res.conv2.weight"
+      },
+      {
+        "channel": 25,
+        "key": "renderer.stem_res.conv2.weight"
+      },
+      {
+        "channel": 26,
+        "key": "renderer.stem_res.conv2.weight"
+      },
+      {
+        "channel": 27,
+        "key": "renderer.stem_res.conv2.weight"
+      },
+      {
+        "channel": 28,
+        "key": "renderer.stem_res.conv2.weight"
+      },
+      {
+        "channel": 29,
+        "key": "renderer.stem_res.conv2.weight"
+      },
+      {
+        "channel": 30,
+        "key": "renderer.stem_res.conv2.weight"
+      },
+      {
+        "channel": 31,
+        "key": "renderer.stem_res.conv2.weight"
+      },
+      {
+        "channel": 32,
+        "key": "renderer.stem_res.conv2.weight"
+      },
+      {
+        "channel": 33,
+        "key": "renderer.stem_res.conv2.weight"
+      },
+      {
+        "channel": 34,
+        "key": "renderer.stem_res.conv2.weight"
+      },
+      {
+        "channel": 35,
+        "key": "renderer.stem_res.conv2.weight"
+      },
+      {
+        "channel": 0,
+        "key": "renderer.up_res.conv1.weight"
+      },
+      {
+        "channel": 1,
+        "key": "renderer.up_res.conv1.weight"
+      },
+      {
+        "channel": 2,
+        "key": "renderer.up_res.conv1.weight"
+      },
+      {
+        "channel": 3,
+        "key": "renderer.up_res.conv1.weight"
+      },
+      {
+        "channel": 4,
+        "key": "renderer.up_res.conv1.weight"
+      },
+      {
+        "channel": 5,
+        "key": "renderer.up_res.conv1.weight"
+      },
+      {
+        "channel": 6,
+        "key": "renderer.up_res.conv1.weight"
+      },
+      {
+        "channel": 7,
+        "key": "renderer.up_res.conv1.weight"
+      },
+      {
+        "channel": 8,
+        "key": "renderer.up_res.conv1.weight"
+      },
+      {
+        "channel": 9,
+        "key": "renderer.up_res.conv1.weight"
+      },
+      {
+        "channel": 10,
+        "key": "renderer.up_res.conv1.weight"
+      },
+      {
+        "channel": 11,
+        "key": "renderer.up_res.conv1.weight"
+      },
+      {
+        "channel": 12,
+        "key": "renderer.up_res.conv1.weight"
+      },
+      {
+        "channel": 13,
+        "key": "renderer.up_res.conv1.weight"
+      },
+      {
+        "channel": 14,
+        "key": "renderer.up_res.conv1.weight"
+      },
+      {
+        "channel": 15,
+        "key": "renderer.up_res.conv1.weight"
+      },
+      {
+        "channel": 16,
+        "key": "renderer.up_res.conv1.weight"
+      },
+      {
+        "channel": 17,
+        "key": "renderer.up_res.conv1.weight"
+      },
+      {
+        "channel": 18,
+        "key": "renderer.up_res.conv1.weight"
+      },
+      {
+        "channel": 19,
+        "key": "renderer.up_res.conv1.weight"
+      },
+      {
+        "channel": 20,
+        "key": "renderer.up_res.conv1.weight"
+      },
+      {
+        "channel": 21,
+        "key": "renderer.up_res.conv1.weight"
+      },
+      {
+        "channel": 22,
+        "key": "renderer.up_res.conv1.weight"
+      },
+      {
+        "channel": 23,
+        "key": "renderer.up_res.conv1.weight"
+      },
+      {
+        "channel": 24,
+        "key": "renderer.up_res.conv1.weight"
+      },
+      {
+        "channel": 25,
+        "key": "renderer.up_res.conv1.weight"
+      },
+      {
+        "channel": 26,
+        "key": "renderer.up_res.conv1.weight"
+      },
+      {
+        "channel": 27,
+        "key": "renderer.up_res.conv1.weight"
+      },
+      {
+        "channel": 28,
+        "key": "renderer.up_res.conv1.weight"
+      },
+      {
+        "channel": 29,
+        "key": "renderer.up_res.conv1.weight"
+      },
+      {
+        "channel": 30,
+        "key": "renderer.up_res.conv1.weight"
+      },
+      {
+        "channel": 31,
+        "key": "renderer.up_res.conv1.weight"
+      },
+      {
+        "channel": 32,
+        "key": "renderer.up_res.conv1.weight"
+      },
+      {
+        "channel": 33,
+        "key": "renderer.up_res.conv1.weight"
+      },
+      {
+        "channel": 34,
+        "key": "renderer.up_res.conv1.weight"
+      },
+      {
+        "channel": 35,
+        "key": "renderer.up_res.conv1.weight"
+      },
+      {
+        "channel": 0,
+        "key": "renderer.up_res.conv2.weight"
+      },
+      {
+        "channel": 1,
+        "key": "renderer.up_res.conv2.weight"
+      },
+      {
+        "channel": 2,
+        "key": "renderer.up_res.conv2.weight"
+      },
+      {
+        "channel": 3,
+        "key": "renderer.up_res.conv2.weight"
+      },
+      {
+        "channel": 4,
+        "key": "renderer.up_res.conv2.weight"
+      },
+      {
+        "channel": 5,
+        "key": "renderer.up_res.conv2.weight"
+      },
+      {
+        "channel": 6,
+        "key": "renderer.up_res.conv2.weight"
+      },
+      {
+        "channel": 7,
+        "key": "renderer.up_res.conv2.weight"
+      },
+      {
+        "channel": 8,
+        "key": "renderer.up_res.conv2.weight"
+      },
+      {
+        "channel": 9,
+        "key": "renderer.up_res.conv2.weight"
+      },
+      {
+        "channel": 10,
+        "key": "renderer.up_res.conv2.weight"
+      },
+      {
+        "channel": 11,
+        "key": "renderer.up_res.conv2.weight"
+      },
+      {
+        "channel": 12,
+        "key": "renderer.up_res.conv2.weight"
+      },
+      {
+        "channel": 13,
+        "key": "renderer.up_res.conv2.weight"
+      },
+      {
+        "channel": 14,
+        "key": "renderer.up_res.conv2.weight"
+      },
+      {
+        "channel": 15,
+        "key": "renderer.up_res.conv2.weight"
+      },
+      {
+        "channel": 16,
+        "key": "renderer.up_res.conv2.weight"
+      },
+      {
+        "channel": 17,
+        "key": "renderer.up_res.conv2.weight"
+      },
+      {
+        "channel": 18,
+        "key": "renderer.up_res.conv2.weight"
+      },
+      {
+        "channel": 19,
+        "key": "renderer.up_res.conv2.weight"
+      },
+      {
+        "channel": 20,
+        "key": "renderer.up_res.conv2.weight"
+      },
+      {
+        "channel": 21,
+        "key": "renderer.up_res.conv2.weight"
+      },
+      {
+        "channel": 22,
+        "key": "renderer.up_res.conv2.weight"
+      },
+      {
+        "channel": 23,
+        "key": "renderer.up_res.conv2.weight"
+      },
+      {
+        "channel": 24,
+        "key": "renderer.up_res.conv2.weight"
+      },
+      {
+        "channel": 25,
+        "key": "renderer.up_res.conv2.weight"
+      },
+      {
+        "channel": 26,
+        "key": "renderer.up_res.conv2.weight"
+      },
+      {
+        "channel": 27,
+        "key": "renderer.up_res.conv2.weight"
+      },
+      {
+        "channel": 28,
+        "key": "renderer.up_res.conv2.weight"
+      },
+      {
+        "channel": 29,
+        "key": "renderer.up_res.conv2.weight"
+      },
+      {
+        "channel": 30,
+        "key": "renderer.up_res.conv2.weight"
+      },
+      {
+        "channel": 31,
+        "key": "renderer.up_res.conv2.weight"
+      },
+      {
+        "channel": 32,
+        "key": "renderer.up_res.conv2.weight"
+      },
+      {
+        "channel": 33,
+        "key": "renderer.up_res.conv2.weight"
+      },
+      {
+        "channel": 34,
+        "key": "renderer.up_res.conv2.weight"
+      },
+      {
+        "channel": 35,
+        "key": "renderer.up_res.conv2.weight"
+      }
+    ],
+    "all_channel_sha256": "d083b41a14fd1eb567fb2c54b1b7c2def2395972f18fc82cd57c9d527e0cc552",
+    "assigned_channel_count": 45,
+    "assigned_channel_refs": [
+      {
+        "channel": 25,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 26,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 27,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 28,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 29,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 30,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 31,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 32,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 33,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 34,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 35,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 36,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 37,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 38,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 39,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 40,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 41,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 42,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 43,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 44,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 45,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 46,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 47,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 48,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 49,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 50,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 51,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 52,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 53,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 54,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 55,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 56,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 57,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 58,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 59,
+        "key": "renderer.down_res.conv1.weight"
+      },
+      {
+        "channel": 0,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 1,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 2,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 3,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 4,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 5,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 6,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 7,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 8,
+        "key": "renderer.down_res.conv2.weight"
+      },
+      {
+        "channel": 9,
+        "key": "renderer.down_res.conv2.weight"
+      }
+    ],
+    "assigned_channel_sha256": "9009097c342a42f8e603fc7617fd747128c1f05e57b2dd4950ec7081a9e07bf9",
+    "is_shard": true,
+    "merge_required_for_certification_handoff": true,
+    "partition": "contiguous_sorted_conv_channel_refs_v1",
+    "schema": "component_sensitivity_direct_fd_shard_v1",
+    "shard_count": 16,
+    "shard_index": 9
+  },
+  "git_hash": "no-git",
+  "holdout_map_paths": {
+    "combined": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_rtxpro_fallback_20260501_shard09_of16/combined_holdout_sensitivity_map.pt",
+    "posenet": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_rtxpro_fallback_20260501_shard09_of16/posenet_holdout_sensitivity_map.pt",
+    "segnet": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_rtxpro_fallback_20260501_shard09_of16/segnet_holdout_sensitivity_map.pt"
+  },
+  "include_protected_conv2d": true,
+  "map_paths": {
+    "combined": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_rtxpro_fallback_20260501_shard09_of16/combined_sensitivity_map.pt",
+    "posenet": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_rtxpro_fallback_20260501_shard09_of16/posenet_sensitivity_map.pt",
+    "segnet": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_rtxpro_fallback_20260501_shard09_of16/segnet_sensitivity_map.pt"
+  },
+  "masks_mkv": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_rtxpro_fallback_20260501_shard09_of16/extracted/masks.mkv",
+  "n_pairs_calibration": 480,
+  "n_pairs_holdout": 120,
+  "n_pairs_selected": 600,
+  "n_pairs_total": 600,
+  "official_component_response": false,
+  "pair_weights": null,
+  "perturbation_basis_json": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_rtxpro_fallback_20260501_shard09_of16/perturbation_basis_v1.json",
+  "poses": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_rtxpro_fallback_20260501_shard09_of16/extracted/optimized_poses.bin",
+  "promotion_blockers": [
+    {
+      "code": "not_canonical_inflate_eval_path",
+      "mathematical_explanation": "This profiler measures finite differences by rendering float tensors in process and calling scorer modules directly. Promotion-grade component sensitivity must perturb exact archive bytes and measure component response through archive.zip -> inflate.sh -> upstream/evaluate.py."
+    }
+  ],
+  "promotion_eligible": false,
+  "promotion_requested": true,
+  "response_curve_paths": {
+    "combined": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_rtxpro_fallback_20260501_shard09_of16/combined_response_curve.json",
+    "posenet": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_rtxpro_fallback_20260501_shard09_of16/posenet_response_curve.json",
+    "segnet": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_rtxpro_fallback_20260501_shard09_of16/segnet_response_curve.json"
+  },
+  "sample_plan_json": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_rtxpro_fallback_20260501_shard09_of16/sample_plan.json",
+  "schema_version": 1,
+  "score_claim": false,
+  "sensitivity_source": "direct_renderer_cuda_finite_difference_component_response",
+  "stability_json": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_rtxpro_fallback_20260501_shard09_of16/stability.json",
+  "tool": "experiments/profile_component_sensitivity.py",
+  "torch_version": "2.11.0+cu130",
+  "upstream_dir": "/teamspace/studios/this_studio/pact/upstream",
+  "video_mkv": "/teamspace/studios/this_studio/pact/upstream/videos/0.mkv"
+}

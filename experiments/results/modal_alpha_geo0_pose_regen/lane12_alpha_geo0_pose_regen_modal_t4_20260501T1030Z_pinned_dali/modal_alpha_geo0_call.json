@@ -1,0 +1,47 @@
+{
+  "app": "comma-alpha-geo0-pose-regen",
+  "call_id": "fc-01KQHHFXYWRY8184K37992EPXZ",
+  "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda",
+  "dispatched_at_utc": "2026-05-01T10:31:32Z",
+  "gpu": "T4",
+  "inputs": {
+    "baseline_archive": {
+      "bytes": 686635,
+      "sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    "candidate_archive": {
+      "bytes": 296478,
+      "sha256": "864549cc648f0b3a023076c11812ccd0f10b1d013ed3fd6bb24d20bbcde85c97"
+    },
+    "gt_pose_targets": {
+      "bytes": 15620,
+      "sha256": "9b8d6c63e44be105f4d81c17b344b272ca4585337c767af3e0af0aaeffbb83c5"
+    },
+    "warm_poses": {
+      "bytes": 15620,
+      "sha256": "cb8517f7a7e3c9382e952ff278dc3f8de44ba066db07746f16354c1dbe2cbca4"
+    }
+  },
+  "label": "lane12_alpha_geo0_pose_regen_modal_t4_20260501T1030Z_pinned_dali",
+  "params": {
+    "evaluate_timeout": 1800,
+    "inflate_timeout": 1800,
+    "max_seconds": 21600,
+    "n_frames": 1200,
+    "pose_batch_pairs": 8,
+    "pose_lr": 0.01,
+    "pose_seg_weight": 100.0,
+    "pose_steps": 500,
+    "pose_weight": 10.0
+  },
+  "paths": {
+    "baseline_archive": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+    "candidate_archive": "/Users/adpena/Projects/pact/experiments/results/lane_12_nerv_20260430_codex_jsonfix40/archive_lane_12_nerv.zip",
+    "gt_pose_targets": "/Users/adpena/Projects/pact/experiments/results/lane_a_landed/gt_pose_targets.pt",
+    "warm_poses": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_landed/iter_0/optimized_poses.pt"
+  },
+  "promotion_eligible": false,
+  "recover_command": ".venv/bin/python experiments/modal_alpha_geo0_pose_regen.py recover --label lane12_alpha_geo0_pose_regen_modal_t4_20260501T1030Z_pinned_dali",
+  "schema_version": 1,
+  "score_claim": false
+}

@@ -1,0 +1,395 @@
+{
+  "dispatch_state_touched": false,
+  "excluded_parent_queued": [
+    {
+      "archive": {
+        "bytes": 276489,
+        "path": "experiments/results/c091_pose_manifold_bigmove_20260503_worker/c091_native_cem_pose_waterfill_top128_s025/archive.zip",
+        "sha256": "1c9be2dd14b2607b9a86ecc071d6a37842896d18d62449885dac58d55afbbd64"
+      },
+      "component_gain_proxy": 0.0014904868358843566,
+      "economics_vs_c091": {
+        "delta_bytes_vs_frontier": 8,
+        "rate_score_delta_vs_frontier": 5.326871624977371e-06,
+        "score_if_components_unchanged": 0.3151710771544847,
+        "strict_sub314_at_unchanged_components": false,
+        "sub314_component_score_gain_needed": 0.0011710771544847232,
+        "sub314_equivalent_bytes_needed_after_candidate": 1759
+      },
+      "evidence_grade": "empirical_proxy_plus_local_roundtrip",
+      "exact_eval_path": null,
+      "exact_eval_recommended": false,
+      "exact_score_if_already_measured": null,
+      "excluded_rank": 1,
+      "fail_reasons": [
+        "already queued by parent; do not duplicate"
+      ],
+      "next_unblock": "wait for exact T4 result and update the frontier from structured JSON",
+      "opportunity_id": "c091_native_cem_pose_waterfill_top128_s025",
+      "parent_queued": true,
+      "promotion_eligible": false,
+      "rank_group": 5,
+      "safety": {},
+      "score_claim": false,
+      "source_artifacts": [
+        "experiments/results/c091_pose_manifold_bigmove_20260503_worker/exact_eval_recommendations.json"
+      ],
+      "status": "excluded_parent_queued",
+      "title": "parent-queued C091-native CEM pose/manifold top128"
+    },
+    {
+      "archive": {
+        "bytes": 276346,
+        "path": "experiments/results/pr65_henosis_stream_transfer_20260503_codex/c091_pr65_pose_qp1_c089_actions_p6/archive.zip",
+        "sha256": "d3913ec75bd1917f16f2bca5e672313f66f81da5446405fc8eccbba757eed79d"
+      },
+      "component_gain_proxy": 0.0,
+      "economics_vs_c091": {
+        "delta_bytes_vs_frontier": -135,
+        "rate_score_delta_vs_frontier": -8.989095867149314e-05,
+        "score_if_components_unchanged": 0.31507585932418825,
+        "strict_sub314_at_unchanged_components": false,
+        "sub314_component_score_gain_needed": 0.0010758593241882441,
+        "sub314_equivalent_bytes_needed_after_candidate": 1616
+      },
+      "evidence_grade": "empirical_local_roundtrip_no_score",
+      "exact_eval_path": null,
+      "exact_eval_recommended": false,
+      "exact_score_if_already_measured": null,
+      "excluded_rank": 2,
+      "fail_reasons": [
+        "already queued by parent; do not duplicate"
+      ],
+      "next_unblock": "wait for exact T4 result; current local trace proxy is not positive",
+      "opportunity_id": "c091_pr65_pose_qp1_c089_actions_p6",
+      "parent_queued": true,
+      "promotion_eligible": false,
+      "rank_group": 6,
+      "safety": {},
+      "score_claim": false,
+      "source_artifacts": [
+        "experiments/results/pr65_henosis_stream_transfer_20260503_codex/candidate_matrix.json"
+      ],
+      "status": "excluded_parent_queued",
+      "title": "parent-queued PR65 pose fix1 stream transfer"
+    }
+  ],
+  "frontier": {
+    "archive": {
+      "bytes": 276481,
+      "expected_bytes": 276481,
+      "expected_sha256": "03a2afd5fe92c93a9b7b7e43625158a73b455f0cfbca82d278008a728db78746",
+      "path": "experiments/results/lightning_batch/exact_eval_pr75_minp_public_replay_t4_20260503T1049Z/archive.zip",
+      "sha256": "03a2afd5fe92c93a9b7b7e43625158a73b455f0cfbca82d278008a728db78746"
+    },
+    "eval_json": {
+      "path": "experiments/results/lightning_batch/exact_eval_pr75_minp_public_replay_t4_20260503T1049Z/contest_auth_eval.adjudicated.json",
+      "score": 0.31516575028285976,
+      "strict_unchanged_component_bytes_needed": 1751,
+      "target_score": 0.314
+    },
+    "failures": [],
+    "ok": true
+  },
+  "generated_date": "2026-05-03",
+  "no_archive_emitted": true,
+  "promotion_eligible": false,
+  "ranked_opportunities": [
+    {
+      "archive": {
+        "bytes": 274840,
+        "path": "experiments/results/c091_renderer_self_compression_bigmove_20260503_worker/qzs3_reblock_candidates/qzs3_b0064_c091_p3_preserved_minp_slices/archive.zip",
+        "sha256": "1af9c5db6e9990e368c600c8246111e53de81aff9b72c3feb0a94b01b86c896b"
+      },
+      "component_gain_proxy": null,
+      "economics_vs_c091": {
+        "delta_bytes_vs_frontier": -1641,
+        "rate_score_delta_vs_frontier": -0.0010926745420734832,
+        "score_if_components_unchanged": 0.3140730757407863,
+        "strict_sub314_at_unchanged_components": false,
+        "sub314_component_score_gain_needed": 7.307574078629919e-05,
+        "sub314_equivalent_bytes_needed_after_candidate": 110
+      },
+      "evidence_grade": "empirical_local_preflight_no_score",
+      "exact_eval_path": null,
+      "exact_eval_recommended": false,
+      "exact_score_if_already_measured": null,
+      "fail_reasons": [
+        "needs 110 more byte-equivalent savings or component gain after rate",
+        "renderer output parity failed local pose-safety"
+      ],
+      "next_unblock": "requires a parity-aware renderer encoder or recovery training; do not exact-eval the raw reblock",
+      "opportunity_id": "qzs3_b0064_c091_p3_preserved_minp_slices",
+      "parent_queued": false,
+      "promotion_eligible": false,
+      "rank": 1,
+      "rank_group": 10,
+      "safety": {
+        "fail_closed_reasons": [
+          "render_output_parity_unsafe"
+        ],
+        "failure_class": "renderer_transplant_pose_safety_failed",
+        "max_abs_delta": 198.90521240234375,
+        "mean_abs_delta": 7.243117809295654,
+        "path": "experiments/results/public_floor_next_breakthrough_worker_20260503/qzs3_b0064_pose_safety_preflight.json",
+        "preflight_ran": true,
+        "rms_delta": 11.985550127767786,
+        "safe_for_exact_eval_dispatch": false,
+        "same_uint8_hash": false
+      },
+      "score_claim": false,
+      "source_artifacts": [
+        "experiments/results/c091_renderer_self_compression_bigmove_20260503_worker/plan.json"
+      ],
+      "status": "blocked_pose_safety",
+      "title": "near-miss C091 QZS3 block64 renderer reblock"
+    },
+    {
+      "archive": {
+        "bytes": 274166,
+        "path": "experiments/results/c091_renderer_self_compression_bigmove_20260503_worker/qzs3_reblock_candidates/qzs3_b0096_c091_p3_preserved_minp_slices/archive.zip",
+        "sha256": "711af4b78976f9302d1d01c5ef0359faab9316f2a1df20e9e240a0170061c516"
+      },
+      "component_gain_proxy": null,
+      "economics_vs_c091": {
+        "delta_bytes_vs_frontier": -2315,
+        "rate_score_delta_vs_frontier": -0.0015414634764778267,
+        "score_if_components_unchanged": 0.31362428680638194,
+        "strict_sub314_at_unchanged_components": true,
+        "sub314_component_score_gain_needed": 0.0,
+        "sub314_equivalent_bytes_needed_after_candidate": 0
+      },
+      "evidence_grade": "empirical_local_preflight_no_score",
+      "exact_eval_path": null,
+      "exact_eval_recommended": false,
+      "exact_score_if_already_measured": null,
+      "fail_reasons": [
+        "renderer output parity failed local pose-safety"
+      ],
+      "next_unblock": "requires a parity-aware renderer encoder or recovery training; do not exact-eval the raw reblock",
+      "opportunity_id": "qzs3_b0096_c091_p3_preserved_minp_slices",
+      "parent_queued": false,
+      "promotion_eligible": false,
+      "rank": 2,
+      "rank_group": 20,
+      "safety": {
+        "fail_closed_reasons": [
+          "render_output_parity_unsafe"
+        ],
+        "failure_class": "renderer_transplant_pose_safety_failed",
+        "max_abs_delta": 231.69911193847656,
+        "mean_abs_delta": 8.704894065856934,
+        "path": "experiments/results/c091_renderer_self_compression_bigmove_20260503_worker/qzs3_reblock_candidates/qzs3_b0096_c091_p3_preserved_minp_slices/pose_safety_preflight.json",
+        "preflight_ran": true,
+        "rms_delta": 14.295000730970163,
+        "safe_for_exact_eval_dispatch": false,
+        "same_uint8_hash": false
+      },
+      "score_claim": false,
+      "source_artifacts": [
+        "experiments/results/c091_renderer_self_compression_bigmove_20260503_worker/plan.json"
+      ],
+      "status": "blocked_pose_safety",
+      "title": "byte-sufficient C091 QZS3 block96 renderer reblock"
+    },
+    {
+      "archive": {
+        "bytes": 276124,
+        "path": "experiments/results/pr75_lossless_micro_packer_worker_20260503/public_renderer_c089_p6_lossless_stream_resweep/archive.zip",
+        "sha256": "337b04040bee1316375bae8b2cfc2f08acddc235e4ee02d37ecfd62c0c831d95"
+      },
+      "component_gain_proxy": null,
+      "economics_vs_c091": {
+        "delta_bytes_vs_frontier": -357,
+        "rate_score_delta_vs_frontier": -0.0002377116462646152,
+        "score_if_components_unchanged": 0.31492803863659513,
+        "strict_sub314_at_unchanged_components": false,
+        "sub314_component_score_gain_needed": 0.0009280386365951299,
+        "sub314_equivalent_bytes_needed_after_candidate": 1394
+      },
+      "evidence_grade": "empirical_byte_screen_only",
+      "exact_eval_path": null,
+      "exact_eval_recommended": false,
+      "exact_score_if_already_measured": null,
+      "fail_reasons": [
+        "saves only 357 bytes versus C091",
+        "still needs about 0.000928 component-score gain",
+        "renderer transplant gate remains unresolved"
+      ],
+      "next_unblock": "only revisit if a renderer-safety proof and component-positive trace exist",
+      "opportunity_id": "public_renderer_c089_p6_lossless_stream_resweep",
+      "parent_queued": false,
+      "promotion_eligible": false,
+      "rank": 3,
+      "rank_group": 40,
+      "safety": {},
+      "score_claim": false,
+      "source_artifacts": [
+        "experiments/results/c091_mask_packer_bigmove_20260503_codex/plan.json"
+      ],
+      "status": "blocked_break_even_and_renderer_gate",
+      "title": "public renderer plus C089 P6 lossless stream resweep"
+    },
+    {
+      "archive": {
+        "bytes": 276317,
+        "path": null,
+        "sha256": null
+      },
+      "component_gain_proxy": 0.00012712011530774194,
+      "economics_vs_c091": {
+        "delta_bytes_vs_frontier": -164,
+        "rate_score_delta_vs_frontier": -0.00010920086831203611,
+        "score_if_components_unchanged": 0.31505654941454775,
+        "strict_sub314_at_unchanged_components": false,
+        "sub314_component_score_gain_needed": 0.0010565494145477472,
+        "sub314_equivalent_bytes_needed_after_candidate": 1587
+      },
+      "evidence_grade": "exact_trace_feedback_planning_only",
+      "exact_eval_path": null,
+      "exact_eval_recommended": false,
+      "exact_score_if_already_measured": null,
+      "fail_reasons": [
+        "component proxy upper bound 0.000127120115 is below needed 0.001056549415",
+        "no exact-eval dispatch: all observed exact global action candidates are worse than C091, PR77/C089-pose fixed-slice is strongly pose-toxic, and the conservative atom upper bound does not clear the sub-0.314 component break-even"
+      ],
+      "next_unblock": "needs new non-action byte move or a measured C091-native component response larger than this upper bound",
+      "opportunity_id": "c091_native_action_atom_upper_bound",
+      "parent_queued": false,
+      "promotion_eligible": false,
+      "rank": 4,
+      "rank_group": 50,
+      "safety": {},
+      "score_claim": false,
+      "source_artifacts": [
+        "experiments/results/c091_native_action_atoms_20260503_codex/ranked_atom_policy.json"
+      ],
+      "status": "blocked_component_break_even",
+      "title": "C091-native action atom policy upper bound"
+    },
+    {
+      "archive": {
+        "bytes": 276474,
+        "path": null,
+        "sha256": null
+      },
+      "component_gain_proxy": null,
+      "economics_vs_c091": {
+        "delta_bytes_vs_frontier": -7,
+        "rate_score_delta_vs_frontier": -4.6610126718552e-06,
+        "score_if_components_unchanged": 0.3151610892701879,
+        "strict_sub314_at_unchanged_components": false,
+        "sub314_component_score_gain_needed": 0.0011610892701878761,
+        "sub314_equivalent_bytes_needed_after_candidate": 1744
+      },
+      "evidence_grade": "empirical_lossless_byte_screen",
+      "exact_eval_path": null,
+      "exact_eval_recommended": false,
+      "exact_score_if_already_measured": null,
+      "fail_reasons": [
+        "saves only 7 mask-stream bytes",
+        "self-describing header overhead dominates standalone use"
+      ],
+      "next_unblock": "bundle only as polish behind a larger byte move",
+      "opportunity_id": "c091_mask_lossless_brotli_resweep",
+      "parent_queued": false,
+      "promotion_eligible": false,
+      "rank": 5,
+      "rank_group": 60,
+      "safety": {},
+      "score_claim": false,
+      "source_artifacts": [
+        "experiments/results/c091_mask_packer_bigmove_20260503_codex/plan.json"
+      ],
+      "status": "safe_but_too_small",
+      "title": "exact-lossless PR75 mask Brotli resweep"
+    },
+    {
+      "archive": {
+        "bytes": 133099,
+        "path": "experiments/results/geometry_safe_mask_overlay_search_20260503_worker/bounded_mask_reencode_crf60_preset13_g9999/archive.zip",
+        "sha256": "912b391a3199b6bc4358cd2b04bfbcf632e5255d454e70a5f0b22c3ba98f7f44"
+      },
+      "component_gain_proxy": null,
+      "economics_vs_c091": {
+        "delta_bytes_vs_frontier": -143382,
+        "rate_score_delta_vs_frontier": -0.09547218841656317,
+        "score_if_components_unchanged": 0.21969356186629657,
+        "strict_sub314_at_unchanged_components": true,
+        "sub314_component_score_gain_needed": 0.0,
+        "sub314_equivalent_bytes_needed_after_candidate": 0
+      },
+      "evidence_grade": "empirical_geometry_negative",
+      "exact_eval_path": null,
+      "exact_eval_recommended": false,
+      "exact_score_if_already_measured": null,
+      "fail_reasons": [
+        "large byte saves change decoded mask classes",
+        "exact CDO1 repair overlays cost hundreds of KB after compression"
+      ],
+      "next_unblock": "needs a geometry-preserving mask coder, not another lossy AV1 transcode",
+      "opportunity_id": "geometry_bounded_mask_reencode_family",
+      "parent_queued": false,
+      "promotion_eligible": false,
+      "rank": 6,
+      "rank_group": 70,
+      "safety": {},
+      "score_claim": false,
+      "source_artifacts": [
+        "experiments/results/geometry_safe_mask_overlay_search_20260503_worker/candidate_matrix.json"
+      ],
+      "status": "blocked_geometry_safety",
+      "title": "large mask byte-cut family with decoded class flips"
+    },
+    {
+      "archive": {
+        "bytes": 276329,
+        "path": null,
+        "sha256": "27866172e76d27113e86a30f722588fd668f81a949be3acbe1e92cddc9a6a1d8"
+      },
+      "component_gain_proxy": null,
+      "economics_vs_c091": {
+        "delta_bytes_vs_frontier": -152,
+        "rate_score_delta_vs_frontier": -0.00010121056087457006,
+        "score_if_components_unchanged": 0.31506453972198517,
+        "strict_sub314_at_unchanged_components": false,
+        "sub314_component_score_gain_needed": 0.0010645397219851693,
+        "sub314_equivalent_bytes_needed_after_candidate": 1599
+      },
+      "evidence_grade": "A++_exact_negative",
+      "exact_eval_path": "experiments/results/lightning_batch/exact_eval_pr77_action_pose_fixedslice_t4_20260503T114254Z/contest_auth_eval.adjudicated.json",
+      "exact_eval_recommended": false,
+      "exact_score_if_already_measured": 0.318426107391119,
+      "fail_reasons": [
+        "exact T4 score is worse than C091 by more than 0.003"
+      ],
+      "next_unblock": "use only as pose-toxicity feedback for atom planners",
+      "opportunity_id": "pr77_actions_c089_pose_fixedslice_exact_negative",
+      "parent_queued": false,
+      "promotion_eligible": false,
+      "rank": 7,
+      "rank_group": 80,
+      "safety": {},
+      "score_claim": false,
+      "source_artifacts": [
+        "experiments/results/lightning_batch/exact_eval_pr77_action_pose_fixedslice_t4_20260503T114254Z/contest_auth_eval.adjudicated.json"
+      ],
+      "status": "measured_negative",
+      "title": "PR77 action stream with C089 pose exact-negative"
+    }
+  ],
+  "rate_score_per_byte": 6.658589531221714e-07,
+  "recommendation": {
+    "candidate": null,
+    "claim_required_before_dispatch": true,
+    "dispatch_state_touched": false,
+    "reason": "no new non-queued opportunity is both byte-sufficient or component-break-even and locally safe; parent-queued lanes are explicitly excluded",
+    "recommendation": "do_not_dispatch",
+    "remote_gpu_dispatch_performed": false
+  },
+  "remote_gpu_dispatch_performed": false,
+  "schema": "public_floor_next_breakthrough_worker_plan_v1",
+  "score_claim": false,
+  "target_score": 0.314,
+  "tool": "experiments/plan_public_floor_next_breakthrough_worker.py"
+}

@@ -1,0 +1,60 @@
+{
+  "archive_identity": {
+    "archive_sha256": "c6f004d444ed32c628611a2f21f567c666af6bcbcceba618cc089ec024a0cda6",
+    "archive_size_bytes": 229756
+  },
+  "auth_eval_log_classification": "precise_pre_score_failure",
+  "auth_eval_log_snippet_tail": "[contest_auth_eval] provenance saved: /teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_pr85_stbm1br_lossless_mask_recode_t4_20260504T0549Z/eval_work/provenance.json\n[contest_auth_eval] archive sha256: c6f004d444ed32c628611a2f21f567c666af6bcbcceba618cc089ec024a0cda6\n[contest_auth_eval] extracted 1 member(s): ['x']\n[contest_auth_eval] archive members validated against whitelist\n[inflate] cmd: bash /teamspace/studios/this_studio/pact/experiments/results/public_pr85_intake_20260503_codex/replay_submission/inflate.sh /teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_pr85_stbm1br_lossless_mask_recode_t4_20260504T0549Z/eval_work/extracted /teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_pr85_stbm1br_lossless_mask_recode_t4_20260504T0549Z/eval_work/inflated /teamspace/studios/this_studio/pact/upstream/public_test_video_names.txt\n[inflate] timeout: 1800s (30.0 min)\nTraceback (most recent call last):\n  File \"/teamspace/studios/this_studio/pact/experiments/results/public_pr85_intake_20260503_codex/replay_submission/inflate.py\", line 1509, in <module>\n    main()\n  File \"/teamspace/studios/this_studio/pact/experiments/results/public_pr85_intake_20260503_codex/replay_submission/inflate.py\", line 889, in main\n    tmp_obu.write(brotli.decompress(bundle[\"mask\"]))\n                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nbrotli.error: brotli: decoder failed\n[inflate] returncode=1 elapsed=3.3s\nTraceback (most recent call last):\n  File \"/teamspace/studios/this_studio/pact/experiments/contest_auth_eval.py\", line 1216, in <module>\n    raise SystemExit(main())\n                     ^^^^^^\n  File \"/teamspace/studios/this_studio/pact/experiments/contest_auth_eval.py\", line 1170, in main\n    inflate_elapsed_seconds = _run_inflate(\n                              ^^^^^^^^^^^^^\n  File \"/teamspace/studios/this_studio/pact/experiments/contest_auth_eval.py\", line 746, in _run_inflate\n    raise RuntimeError(f\"[inflate] FAILED with returncode={result.returncode}\")\nRuntimeError: [inflate] FAILED with returncode=1\n",
+  "classified_at_utc": "2026-05-04T06:05:19Z",
+  "evidence_grade": "invalid",
+  "expected_archive_sha256": "c6f004d444ed32c628611a2f21f567c666af6bcbcceba618cc089ec024a0cda6",
+  "expected_archive_size_bytes": 229756,
+  "failure_class": "inflate_failure_before_score",
+  "job_artifact_files": [
+    "archive.zip",
+    "auth_eval.log",
+    "lightning_dali_bootstrap.json",
+    "lightning_dali_requirements.txt",
+    "lightning_inflate_runtime_bootstrap.json",
+    "lightning_inflate_runtime_static_preflight.json",
+    "lightning_queue_metadata.json",
+    "lightning_runner_preflight.json",
+    "lightning_supply_chain_scan.json",
+    "lightning_supply_chain_scan_pre.json"
+  ],
+  "method_evidence": false,
+  "missing_required_files": [
+    "contest_auth_eval.json",
+    "eval_provenance.json",
+    "report.txt",
+    "adjudication_provenance.json",
+    "contest_auth_eval.adjudicated.json"
+  ],
+  "promotion_eligible": false,
+  "reason": "auth_eval.log shows inflate.sh or the inflate stage returned non-zero before contest_auth_eval.json could be written",
+  "recommended_action": "Preserve the partial artifacts and logs as a pre-score exact-eval failure. Do not rank, retire, promote, or claim score without contest_auth_eval.json.",
+  "refined_from_terminal_class": "exact_eval_missing_score_json",
+  "schema_version": 1,
+  "score_claim": false,
+  "score_source": "none:inflate_returncode_failure",
+  "ssh_source": {
+    "copied_files": [
+      "lightning_queue_metadata.json",
+      "archive.zip",
+      "lightning_dali_bootstrap.json",
+      "lightning_dali_requirements.txt",
+      "lightning_runner_preflight.json",
+      "lightning_supply_chain_scan_pre.json",
+      "lightning_supply_chain_scan.json",
+      "auth_eval.log",
+      "lightning_inflate_runtime_bootstrap.json",
+      "lightning_inflate_runtime_static_preflight.json"
+    ],
+    "mirror_dir": "experiments/results/lightning_batch/exact_eval_pr85_stbm1br_lossless_mask_recode_t4_20260504T0549Z",
+    "remote_dir": "/teamspace/jobs/exact-eval-pr85-stbm1br-lossless-mask-recode-t4-20260504t0549z/artifacts/pact/experiments/results/lightning_batch/exact_eval_pr85_stbm1br_lossless_mask_recode_t4_20260504T0549Z",
+    "ssh_connect_timeout": 15,
+    "ssh_target": "s_01knw7wnzbe79wfq5mqqbx1mbz@ssh.lightning.ai"
+  },
+  "status": "ARTIFACT_INFRA_FAILURE",
+  "terminal_class": "inflate_returncode_failure"
+}

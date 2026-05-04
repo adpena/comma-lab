@@ -1,0 +1,12 @@
+{
+  "adjudication_required": true,
+  "app": "comma-auth-eval",
+  "archive_path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_byte_plan_sweep_20260501_r8_post_beta_fisher/archives/owv3_0134_bbr0p5_protect0p005_aggr1em05.zip",
+  "archive_sha256": "e28d86f479f8da6b0b244f5e6780c14f078629acbb9a088bacd17c8d0dee9626",
+  "archive_size_bytes": 571617,
+  "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda",
+  "promotion_eligible": false,
+  "schema_version": 1,
+  "score_claim": false,
+  "tool": "experiments/modal_auth_eval.py"
+}

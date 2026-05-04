@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "started_at_utc": "2026-05-02T01:58:42Z",
+  "git_hash": "no-git",
+  "gpu_name": "NVIDIA H100 NVL",
+  "driver_version": "580.82.07",
+  "lane_script": "scripts/remote_archive_only_eval.sh",
+  "tag": "archive_eval_qpost_r13_frac_20260502T0158Z",
+  "archive_path": "/workspace/pact/experiments/results/qzs3_postprocess_ablation_r13_20260502T0158Z/frac/archive.zip",
+  "predicted_band": [0.28, 0.38],
+  "controlled_baseline": "qzs3_qp1_r13_t4 score 0.31576692529496814 bytes 276423 qpost stream subset frac",
+  "no_training": true,
+  "no_build": true,
+  "strict_scorer_rule_compliant": true,
+  "design_memo": "scripts/remote_archive_only_eval.sh"
+}

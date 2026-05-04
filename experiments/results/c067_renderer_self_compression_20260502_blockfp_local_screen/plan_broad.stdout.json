@@ -1,0 +1,4477 @@
+{
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "dispatch_recommendation": {
+    "best_concrete_candidate": {
+      "archive_builder_hint": "experiments/repack_quantizr_faithful_qzs3_archive.py",
+      "candidate_id": "qzs3_b4096",
+      "delta_vs_current_stream_bytes": -5398,
+      "family": "qzs3_block_search",
+      "projected_renderer_stream_bytes": 50567,
+      "raw_bytes": 100552,
+      "sha256": "6630979e7e7946d6bdfdc9c8c6979dd33b01c81f7605d4a663a7a808694c1fb6",
+      "wire_format": "QZS3"
+    },
+    "dispatch_prerequisites": [
+      "claim lane with tools/claim_lane_dispatch.py before any exact eval",
+      "build a deterministic archive with all score-affecting bytes charged",
+      "record archive bytes/SHA, runtime manifest, source archive custody, and build provenance",
+      "run experiments/contest_auth_eval.py --device cuda on archive.zip -> inflate.sh -> upstream/evaluate.py",
+      "treat the result as non-promotable until component gates and score recomputation pass"
+    ],
+    "exact_cuda_dispatch_warranted": true,
+    "promotion_eligible": false,
+    "qbf1_dispatch_warranted": false,
+    "reason": "best concrete candidate qzs3_b4096 locally beats the current renderer stream by 5398 bytes; exact CUDA is warranted only after building a deterministic archive and claiming the lane",
+    "score_claim": false
+  },
+  "evidence_grade": "empirical_planning_only",
+  "imp_sparsity_prior": {
+    "available": true,
+    "bridge_builder_invoked": false,
+    "cycle_priors": [
+      {
+        "beats_dense_fp4_prunable_proxy": false,
+        "cycle": 1,
+        "dense_fp4_prunable_proxy_bytes": 38108,
+        "expected_prunable_nnz": 60973,
+        "expected_sparsity": 0.19999999999999996,
+        "proxy_delta_vs_dense_fp4_prunable_bytes": 114325,
+        "sparse_csr_fp4_proxy_bytes": 152433
+      },
+      {
+        "beats_dense_fp4_prunable_proxy": false,
+        "cycle": 2,
+        "dense_fp4_prunable_proxy_bytes": 38108,
+        "expected_prunable_nnz": 48779,
+        "expected_sparsity": 0.3599999999999999,
+        "proxy_delta_vs_dense_fp4_prunable_bytes": 83840,
+        "sparse_csr_fp4_proxy_bytes": 121948
+      },
+      {
+        "beats_dense_fp4_prunable_proxy": false,
+        "cycle": 5,
+        "dense_fp4_prunable_proxy_bytes": 38108,
+        "expected_prunable_nnz": 24975,
+        "expected_sparsity": 0.6723199999999999,
+        "proxy_delta_vs_dense_fp4_prunable_bytes": 24330,
+        "sparse_csr_fp4_proxy_bytes": 62438
+      },
+      {
+        "beats_dense_fp4_prunable_proxy": true,
+        "cycle": 10,
+        "dense_fp4_prunable_proxy_bytes": 38108,
+        "expected_prunable_nnz": 8184,
+        "expected_sparsity": 0.8926258175999999,
+        "proxy_delta_vs_dense_fp4_prunable_bytes": -17648,
+        "sparse_csr_fp4_proxy_bytes": 20460
+      }
+    ],
+    "dispatchable_candidate": false,
+    "first_cycle_beating_dense_fp4_proxy": 10,
+    "helper": "tac.iterative_magnitude_pruning.iter_prunable_parameters",
+    "non_prunable_value_count": 11620,
+    "promotion_eligible": false,
+    "prunable_tensor_count": 42,
+    "prunable_value_count": 76216,
+    "risk": "Sparse bytes are not enough; trained IMP or sparse export still needs a charged decoder contract and exact CUDA component gates.",
+    "score_claim": false,
+    "sparsity_increment": 0.2,
+    "total_param_count": 87836,
+    "use": "sparsity prior only: rank tensor groups or future atoms; do not treat no-train pruning as scorer evidence"
+  },
+  "mixed_local_block_candidates": {
+    "available": true,
+    "best": {
+      "archive_builder_hint": "experiments/build_mixed_qzs_block_candidate.py",
+      "block_meta": {
+        "block_size_counts": {
+          "32": 30,
+          "64": 10
+        },
+        "charged_header_format": "compact_fp4_block_sizes_v1",
+        "charged_policy": {
+          "name": "component_aware_v1_frame2_all64",
+          "spec": "component-aware-v1:frame2_all64"
+        },
+        "fp4_block_sizes": [
+          32,
+          32,
+          32,
+          32,
+          32,
+          32,
+          32,
+          32,
+          32,
+          32,
+          32,
+          32,
+          32,
+          32,
+          32,
+          32,
+          32,
+          32,
+          32,
+          32,
+          32,
+          32,
+          32,
+          32,
+          32,
+          32,
+          32,
+          32,
+          32,
+          32,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64
+        ],
+        "fp4_tensor_order": "joint_frame_generator_state_dict_fp4_order_v1",
+        "fp4_tensors": [
+          {
+            "block_size": 32,
+            "name": "shared_trunk.stem_conv.dw.weight",
+            "numel": 72,
+            "packed_bytes": 48,
+            "scale_bytes": 6,
+            "shape": [
+              8,
+              1,
+              3,
+              3
+            ]
+          },
+          {
+            "block_size": 32,
+            "name": "shared_trunk.stem_conv.pw.weight",
+            "numel": 448,
+            "packed_bytes": 224,
+            "scale_bytes": 28,
+            "shape": [
+              56,
+              8,
+              1,
+              1
+            ]
+          },
+          {
+            "block_size": 32,
+            "name": "shared_trunk.stem_block.conv1.dw.weight",
+            "numel": 504,
+            "packed_bytes": 256,
+            "scale_bytes": 32,
+            "shape": [
+              56,
+              1,
+              3,
+              3
+            ]
+          },
+          {
+            "block_size": 32,
+            "name": "shared_trunk.stem_block.conv1.pw.weight",
+            "numel": 3136,
+            "packed_bytes": 1568,
+            "scale_bytes": 196,
+            "shape": [
+              56,
+              56,
+              1,
+              1
+            ]
+          },
+          {
+            "block_size": 32,
+            "name": "shared_trunk.stem_block.conv2.dw.weight",
+            "numel": 504,
+            "packed_bytes": 256,
+            "scale_bytes": 32,
+            "shape": [
+              56,
+              1,
+              3,
+              3
+            ]
+          },
+          {
+            "block_size": 32,
+            "name": "shared_trunk.stem_block.conv2.pw.weight",
+            "numel": 3136,
+            "packed_bytes": 1568,
+            "scale_bytes": 196,
+            "shape": [
+              56,
+              56,
+              1,
+              1
+            ]
+          },
+          {
+            "block_size": 32,
+            "name": "shared_trunk.down_conv.dw.weight",
+            "numel": 504,
+            "packed_bytes": 256,
+            "scale_bytes": 32,
+            "shape": [
+              56,
+              1,
+              3,
+              3
+            ]
+          },
+          {
+            "block_size": 32,
+            "name": "shared_trunk.down_conv.pw.weight",
+            "numel": 3584,
+            "packed_bytes": 1792,
+            "scale_bytes": 224,
+            "shape": [
+              64,
+              56,
+              1,
+              1
+            ]
+          },
+          {
+            "block_size": 32,
+            "name": "shared_trunk.down_block.conv1.dw.weight",
+            "numel": 576,
+            "packed_bytes": 288,
+            "scale_bytes": 36,
+            "shape": [
+              64,
+              1,
+              3,
+              3
+            ]
+          },
+          {
+            "block_size": 32,
+            "name": "shared_trunk.down_block.conv1.pw.weight",
+            "numel": 4096,
+            "packed_bytes": 2048,
+            "scale_bytes": 256,
+            "shape": [
+              64,
+              64,
+              1,
+              1
+            ]
+          },
+          {
+            "block_size": 32,
+            "name": "shared_trunk.down_block.conv2.dw.weight",
+            "numel": 576,
+            "packed_bytes": 288,
+            "scale_bytes": 36,
+            "shape": [
+              64,
+              1,
+              3,
+              3
+            ]
+          },
+          {
+            "block_size": 32,
+            "name": "shared_trunk.down_block.conv2.pw.weight",
+            "numel": 4096,
+            "packed_bytes": 2048,
+            "scale_bytes": 256,
+            "shape": [
+              64,
+              64,
+              1,
+              1
+            ]
+          },
+          {
+            "block_size": 32,
+            "name": "shared_trunk.up.1.dw.weight",
+            "numel": 576,
+            "packed_bytes": 288,
+            "scale_bytes": 36,
+            "shape": [
+              64,
+              1,
+              3,
+              3
+            ]
+          },
+          {
+            "block_size": 32,
+            "name": "shared_trunk.up.1.pw.weight",
+            "numel": 3584,
+            "packed_bytes": 1792,
+            "scale_bytes": 224,
+            "shape": [
+              56,
+              64,
+              1,
+              1
+            ]
+          },
+          {
+            "block_size": 32,
+            "name": "shared_trunk.fuse.dw.weight",
+            "numel": 1008,
+            "packed_bytes": 512,
+            "scale_bytes": 64,
+            "shape": [
+              112,
+              1,
+              3,
+              3
+            ]
+          },
+          {
+            "block_size": 32,
+            "name": "shared_trunk.fuse.pw.weight",
+            "numel": 6272,
+            "packed_bytes": 3136,
+            "scale_bytes": 392,
+            "shape": [
+              56,
+              112,
+              1,
+              1
+            ]
+          },
+          {
+            "block_size": 32,
+            "name": "shared_trunk.fuse_block.conv1.dw.weight",
+            "numel": 504,
+            "packed_bytes": 256,
+            "scale_bytes": 32,
+            "shape": [
+              56,
+              1,
+              3,
+              3
+            ]
+          },
+          {
+            "block_size": 32,
+            "name": "shared_trunk.fuse_block.conv1.pw.weight",
+            "numel": 3136,
+            "packed_bytes": 1568,
+            "scale_bytes": 196,
+            "shape": [
+              56,
+              56,
+              1,
+              1
+            ]
+          },
+          {
+            "block_size": 32,
+            "name": "shared_trunk.fuse_block.conv2.dw.weight",
+            "numel": 504,
+            "packed_bytes": 256,
+            "scale_bytes": 32,
+            "shape": [
+              56,
+              1,
+              3,
+              3
+            ]
+          },
+          {
+            "block_size": 32,
+            "name": "shared_trunk.fuse_block.conv2.pw.weight",
+            "numel": 3136,
+            "packed_bytes": 1568,
+            "scale_bytes": 196,
+            "shape": [
+              56,
+              56,
+              1,
+              1
+            ]
+          },
+          {
+            "block_size": 32,
+            "name": "frame1_head.block1.conv1.dw.weight",
+            "numel": 504,
+            "packed_bytes": 256,
+            "scale_bytes": 32,
+            "shape": [
+              56,
+              1,
+              3,
+              3
+            ]
+          },
+          {
+            "block_size": 32,
+            "name": "frame1_head.block1.conv1.pw.weight",
+            "numel": 3136,
+            "packed_bytes": 1568,
+            "scale_bytes": 196,
+            "shape": [
+              56,
+              56,
+              1,
+              1
+            ]
+          },
+          {
+            "block_size": 32,
+            "name": "frame1_head.block1.conv2.dw.weight",
+            "numel": 504,
+            "packed_bytes": 256,
+            "scale_bytes": 32,
+            "shape": [
+              56,
+              1,
+              3,
+              3
+            ]
+          },
+          {
+            "block_size": 32,
+            "name": "frame1_head.block1.conv2.pw.weight",
+            "numel": 3136,
+            "packed_bytes": 1568,
+            "scale_bytes": 196,
+            "shape": [
+              56,
+              56,
+              1,
+              1
+            ]
+          },
+          {
+            "block_size": 32,
+            "name": "frame1_head.block2.conv1.dw.weight",
+            "numel": 504,
+            "packed_bytes": 256,
+            "scale_bytes": 32,
+            "shape": [
+              56,
+              1,
+              3,
+              3
+            ]
+          },
+          {
+            "block_size": 32,
+            "name": "frame1_head.block2.conv1.pw.weight",
+            "numel": 3136,
+            "packed_bytes": 1568,
+            "scale_bytes": 196,
+            "shape": [
+              56,
+              56,
+              1,
+              1
+            ]
+          },
+          {
+            "block_size": 32,
+            "name": "frame1_head.block2.conv2.dw.weight",
+            "numel": 504,
+            "packed_bytes": 256,
+            "scale_bytes": 32,
+            "shape": [
+              56,
+              1,
+              3,
+              3
+            ]
+          },
+          {
+            "block_size": 32,
+            "name": "frame1_head.block2.conv2.pw.weight",
+            "numel": 3136,
+            "packed_bytes": 1568,
+            "scale_bytes": 196,
+            "shape": [
+              56,
+              56,
+              1,
+              1
+            ]
+          },
+          {
+            "block_size": 32,
+            "name": "frame1_head.pre.dw.weight",
+            "numel": 504,
+            "packed_bytes": 256,
+            "scale_bytes": 32,
+            "shape": [
+              56,
+              1,
+              3,
+              3
+            ]
+          },
+          {
+            "block_size": 32,
+            "name": "frame1_head.pre.pw.weight",
+            "numel": 2912,
+            "packed_bytes": 1456,
+            "scale_bytes": 182,
+            "shape": [
+              52,
+              56,
+              1,
+              1
+            ]
+          },
+          {
+            "block_size": 64,
+            "name": "frame2_head.block1.conv1.dw.weight",
+            "numel": 504,
+            "packed_bytes": 256,
+            "scale_bytes": 16,
+            "shape": [
+              56,
+              1,
+              3,
+              3
+            ]
+          },
+          {
+            "block_size": 64,
+            "name": "frame2_head.block1.conv1.pw.weight",
+            "numel": 3136,
+            "packed_bytes": 1568,
+            "scale_bytes": 98,
+            "shape": [
+              56,
+              56,
+              1,
+              1
+            ]
+          },
+          {
+            "block_size": 64,
+            "name": "frame2_head.block1.conv2.dw.weight",
+            "numel": 504,
+            "packed_bytes": 256,
+            "scale_bytes": 16,
+            "shape": [
+              56,
+              1,
+              3,
+              3
+            ]
+          },
+          {
+            "block_size": 64,
+            "name": "frame2_head.block1.conv2.pw.weight",
+            "numel": 3136,
+            "packed_bytes": 1568,
+            "scale_bytes": 98,
+            "shape": [
+              56,
+              56,
+              1,
+              1
+            ]
+          },
+          {
+            "block_size": 64,
+            "name": "frame2_head.block2.conv1.dw.weight",
+            "numel": 504,
+            "packed_bytes": 256,
+            "scale_bytes": 16,
+            "shape": [
+              56,
+              1,
+              3,
+              3
+            ]
+          },
+          {
+            "block_size": 64,
+            "name": "frame2_head.block2.conv1.pw.weight",
+            "numel": 3136,
+            "packed_bytes": 1568,
+            "scale_bytes": 98,
+            "shape": [
+              56,
+              56,
+              1,
+              1
+            ]
+          },
+          {
+            "block_size": 64,
+            "name": "frame2_head.block2.conv2.dw.weight",
+            "numel": 504,
+            "packed_bytes": 256,
+            "scale_bytes": 16,
+            "shape": [
+              56,
+              1,
+              3,
+              3
+            ]
+          },
+          {
+            "block_size": 64,
+            "name": "frame2_head.block2.conv2.pw.weight",
+            "numel": 3136,
+            "packed_bytes": 1568,
+            "scale_bytes": 98,
+            "shape": [
+              56,
+              56,
+              1,
+              1
+            ]
+          },
+          {
+            "block_size": 64,
+            "name": "frame2_head.pre.dw.weight",
+            "numel": 504,
+            "packed_bytes": 256,
+            "scale_bytes": 16,
+            "shape": [
+              56,
+              1,
+              3,
+              3
+            ]
+          },
+          {
+            "block_size": 64,
+            "name": "frame2_head.pre.pw.weight",
+            "numel": 2912,
+            "packed_bytes": 1472,
+            "scale_bytes": 92,
+            "shape": [
+              52,
+              56,
+              1,
+              1
+            ]
+          }
+        ],
+        "header_bytes": 577,
+        "payload_bytes": 59321,
+        "payload_sha256": "b9ebb12a8cddf519112fcfd415ada5d3668c70ad19bca3eda9fab5ac7d79cfc8",
+        "policy": {
+          "component_awareness": {
+            "aggressive_block_size": 64,
+            "aggressive_prefixes": [
+              {
+                "block_size": 64,
+                "prefix": "frame2_head",
+                "reason": "frame2-only static head tensor group; lower direct PoseNet risk than shared trunk, frame1 FiLM head, or pose MLP"
+              }
+            ],
+            "baseline_block_size": 32,
+            "policy_family": "component-aware-v1",
+            "protected_prefixes": [
+              {
+                "block_size": 32,
+                "prefix": "shared_trunk",
+                "reason": "shared representation feeds both frames; prior MQZ1 default-64 candidate showed PoseNet collapse"
+              },
+              {
+                "block_size": 32,
+                "prefix": "frame1_head",
+                "reason": "pose-conditioned frame head; keep at source QZS3 block size"
+              },
+              {
+                "block_size": 32,
+                "prefix": "pose_mlp",
+                "reason": "direct pose-conditioning path; never made more aggressive in this policy"
+              }
+            ],
+            "schema": "component_aware_mixed_qzs_policy_v1",
+            "selection_rule": "default to the exact-evaluated QZS3 b32 block size, protect all pose-critical prefixes, and shrink only frame2-only tensor groups",
+            "tier": "frame2_all64"
+          },
+          "default_block_size": 32,
+          "exact_evaluable_archive": true,
+          "name": "component_aware_v1_frame2_all64",
+          "prefix_overrides": [
+            {
+              "block_size": 64,
+              "prefix": "frame2_head"
+            }
+          ],
+          "spec": "component-aware-v1:frame2_all64"
+        },
+        "runtime_decoder_available": true,
+        "schema": "mixed_qzs_block_screen_v1",
+        "segment_bytes": {
+          "bias": 2284,
+          "dense_fp": 3104,
+          "dense_other": 0,
+          "fp_weight": 684,
+          "packed": 38048,
+          "qv": 10424,
+          "scales": 4192
+        },
+        "source_codec_family": "QZS3",
+        "wire_format": "MQZ1"
+      },
+      "brotli_q11_bytes": 55878,
+      "candidate_id": "mixed_local_component_aware_v1_frame2_all64",
+      "delta_vs_current_stream_bytes": -87,
+      "delta_vs_source_raw_renderer_bytes": 33,
+      "exact_evaluable_archive": true,
+      "family": "mixed_local_qzs_blocks",
+      "formula_only_rate_delta_vs_current_stream": -5.792972892162891e-05,
+      "policy": {
+        "component_awareness": {
+          "aggressive_block_size": 64,
+          "aggressive_prefixes": [
+            {
+              "block_size": 64,
+              "prefix": "frame2_head",
+              "reason": "frame2-only static head tensor group; lower direct PoseNet risk than shared trunk, frame1 FiLM head, or pose MLP"
+            }
+          ],
+          "baseline_block_size": 32,
+          "policy_family": "component-aware-v1",
+          "protected_prefixes": [
+            {
+              "block_size": 32,
+              "prefix": "shared_trunk",
+              "reason": "shared representation feeds both frames; prior MQZ1 default-64 candidate showed PoseNet collapse"
+            },
+            {
+              "block_size": 32,
+              "prefix": "frame1_head",
+              "reason": "pose-conditioned frame head; keep at source QZS3 block size"
+            },
+            {
+              "block_size": 32,
+              "prefix": "pose_mlp",
+              "reason": "direct pose-conditioning path; never made more aggressive in this policy"
+            }
+          ],
+          "schema": "component_aware_mixed_qzs_policy_v1",
+          "selection_rule": "default to the exact-evaluated QZS3 b32 block size, protect all pose-critical prefixes, and shrink only frame2-only tensor groups",
+          "tier": "frame2_all64"
+        },
+        "default_block_size": 32,
+        "exact_evaluable_archive": true,
+        "name": "component_aware_v1_frame2_all64",
+        "prefix_overrides": [
+          {
+            "block_size": 64,
+            "prefix": "frame2_head"
+          }
+        ],
+        "spec": "component-aware-v1:frame2_all64"
+      },
+      "projected_renderer_stream_bytes": 55878,
+      "projected_stream_basis": "brotli_q11_to_match_source_brotli_stream",
+      "promotion_eligible": false,
+      "raw_bytes": 59321,
+      "runtime_loader_ready": true,
+      "score_claim": false,
+      "sha256": "b9ebb12a8cddf519112fcfd415ada5d3668c70ad19bca3eda9fab5ac7d79cfc8",
+      "state_change_vs_source_renderer": true,
+      "wire_format": "MQZ1",
+      "zlib9_bytes": 57542
+    },
+    "candidate_count": 3,
+    "candidates": [
+      {
+        "archive_builder_hint": "experiments/build_mixed_qzs_block_candidate.py",
+        "block_meta": {
+          "block_size_counts": {
+            "32": 30,
+            "64": 10
+          },
+          "charged_header_format": "compact_fp4_block_sizes_v1",
+          "charged_policy": {
+            "name": "component_aware_v1_frame2_all64",
+            "spec": "component-aware-v1:frame2_all64"
+          },
+          "fp4_block_sizes": [
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            64,
+            64,
+            64,
+            64,
+            64,
+            64,
+            64,
+            64,
+            64,
+            64
+          ],
+          "fp4_tensor_order": "joint_frame_generator_state_dict_fp4_order_v1",
+          "fp4_tensors": [
+            {
+              "block_size": 32,
+              "name": "shared_trunk.stem_conv.dw.weight",
+              "numel": 72,
+              "packed_bytes": 48,
+              "scale_bytes": 6,
+              "shape": [
+                8,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.stem_conv.pw.weight",
+              "numel": 448,
+              "packed_bytes": 224,
+              "scale_bytes": 28,
+              "shape": [
+                56,
+                8,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.stem_block.conv1.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 32,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.stem_block.conv1.pw.weight",
+              "numel": 3136,
+              "packed_bytes": 1568,
+              "scale_bytes": 196,
+              "shape": [
+                56,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.stem_block.conv2.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 32,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.stem_block.conv2.pw.weight",
+              "numel": 3136,
+              "packed_bytes": 1568,
+              "scale_bytes": 196,
+              "shape": [
+                56,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.down_conv.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 32,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.down_conv.pw.weight",
+              "numel": 3584,
+              "packed_bytes": 1792,
+              "scale_bytes": 224,
+              "shape": [
+                64,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.down_block.conv1.dw.weight",
+              "numel": 576,
+              "packed_bytes": 288,
+              "scale_bytes": 36,
+              "shape": [
+                64,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.down_block.conv1.pw.weight",
+              "numel": 4096,
+              "packed_bytes": 2048,
+              "scale_bytes": 256,
+              "shape": [
+                64,
+                64,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.down_block.conv2.dw.weight",
+              "numel": 576,
+              "packed_bytes": 288,
+              "scale_bytes": 36,
+              "shape": [
+                64,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.down_block.conv2.pw.weight",
+              "numel": 4096,
+              "packed_bytes": 2048,
+              "scale_bytes": 256,
+              "shape": [
+                64,
+                64,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.up.1.dw.weight",
+              "numel": 576,
+              "packed_bytes": 288,
+              "scale_bytes": 36,
+              "shape": [
+                64,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.up.1.pw.weight",
+              "numel": 3584,
+              "packed_bytes": 1792,
+              "scale_bytes": 224,
+              "shape": [
+                56,
+                64,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.fuse.dw.weight",
+              "numel": 1008,
+              "packed_bytes": 512,
+              "scale_bytes": 64,
+              "shape": [
+                112,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.fuse.pw.weight",
+              "numel": 6272,
+              "packed_bytes": 3136,
+              "scale_bytes": 392,
+              "shape": [
+                56,
+                112,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.fuse_block.conv1.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 32,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.fuse_block.conv1.pw.weight",
+              "numel": 3136,
+              "packed_bytes": 1568,
+              "scale_bytes": 196,
+              "shape": [
+                56,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.fuse_block.conv2.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 32,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.fuse_block.conv2.pw.weight",
+              "numel": 3136,
+              "packed_bytes": 1568,
+              "scale_bytes": 196,
+              "shape": [
+                56,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame1_head.block1.conv1.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 32,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame1_head.block1.conv1.pw.weight",
+              "numel": 3136,
+              "packed_bytes": 1568,
+              "scale_bytes": 196,
+              "shape": [
+                56,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame1_head.block1.conv2.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 32,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame1_head.block1.conv2.pw.weight",
+              "numel": 3136,
+              "packed_bytes": 1568,
+              "scale_bytes": 196,
+              "shape": [
+                56,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame1_head.block2.conv1.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 32,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame1_head.block2.conv1.pw.weight",
+              "numel": 3136,
+              "packed_bytes": 1568,
+              "scale_bytes": 196,
+              "shape": [
+                56,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame1_head.block2.conv2.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 32,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame1_head.block2.conv2.pw.weight",
+              "numel": 3136,
+              "packed_bytes": 1568,
+              "scale_bytes": 196,
+              "shape": [
+                56,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame1_head.pre.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 32,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame1_head.pre.pw.weight",
+              "numel": 2912,
+              "packed_bytes": 1456,
+              "scale_bytes": 182,
+              "shape": [
+                52,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 64,
+              "name": "frame2_head.block1.conv1.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 16,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 64,
+              "name": "frame2_head.block1.conv1.pw.weight",
+              "numel": 3136,
+              "packed_bytes": 1568,
+              "scale_bytes": 98,
+              "shape": [
+                56,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 64,
+              "name": "frame2_head.block1.conv2.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 16,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 64,
+              "name": "frame2_head.block1.conv2.pw.weight",
+              "numel": 3136,
+              "packed_bytes": 1568,
+              "scale_bytes": 98,
+              "shape": [
+                56,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 64,
+              "name": "frame2_head.block2.conv1.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 16,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 64,
+              "name": "frame2_head.block2.conv1.pw.weight",
+              "numel": 3136,
+              "packed_bytes": 1568,
+              "scale_bytes": 98,
+              "shape": [
+                56,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 64,
+              "name": "frame2_head.block2.conv2.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 16,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 64,
+              "name": "frame2_head.block2.conv2.pw.weight",
+              "numel": 3136,
+              "packed_bytes": 1568,
+              "scale_bytes": 98,
+              "shape": [
+                56,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 64,
+              "name": "frame2_head.pre.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 16,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 64,
+              "name": "frame2_head.pre.pw.weight",
+              "numel": 2912,
+              "packed_bytes": 1472,
+              "scale_bytes": 92,
+              "shape": [
+                52,
+                56,
+                1,
+                1
+              ]
+            }
+          ],
+          "header_bytes": 577,
+          "payload_bytes": 59321,
+          "payload_sha256": "b9ebb12a8cddf519112fcfd415ada5d3668c70ad19bca3eda9fab5ac7d79cfc8",
+          "policy": {
+            "component_awareness": {
+              "aggressive_block_size": 64,
+              "aggressive_prefixes": [
+                {
+                  "block_size": 64,
+                  "prefix": "frame2_head",
+                  "reason": "frame2-only static head tensor group; lower direct PoseNet risk than shared trunk, frame1 FiLM head, or pose MLP"
+                }
+              ],
+              "baseline_block_size": 32,
+              "policy_family": "component-aware-v1",
+              "protected_prefixes": [
+                {
+                  "block_size": 32,
+                  "prefix": "shared_trunk",
+                  "reason": "shared representation feeds both frames; prior MQZ1 default-64 candidate showed PoseNet collapse"
+                },
+                {
+                  "block_size": 32,
+                  "prefix": "frame1_head",
+                  "reason": "pose-conditioned frame head; keep at source QZS3 block size"
+                },
+                {
+                  "block_size": 32,
+                  "prefix": "pose_mlp",
+                  "reason": "direct pose-conditioning path; never made more aggressive in this policy"
+                }
+              ],
+              "schema": "component_aware_mixed_qzs_policy_v1",
+              "selection_rule": "default to the exact-evaluated QZS3 b32 block size, protect all pose-critical prefixes, and shrink only frame2-only tensor groups",
+              "tier": "frame2_all64"
+            },
+            "default_block_size": 32,
+            "exact_evaluable_archive": true,
+            "name": "component_aware_v1_frame2_all64",
+            "prefix_overrides": [
+              {
+                "block_size": 64,
+                "prefix": "frame2_head"
+              }
+            ],
+            "spec": "component-aware-v1:frame2_all64"
+          },
+          "runtime_decoder_available": true,
+          "schema": "mixed_qzs_block_screen_v1",
+          "segment_bytes": {
+            "bias": 2284,
+            "dense_fp": 3104,
+            "dense_other": 0,
+            "fp_weight": 684,
+            "packed": 38048,
+            "qv": 10424,
+            "scales": 4192
+          },
+          "source_codec_family": "QZS3",
+          "wire_format": "MQZ1"
+        },
+        "brotli_q11_bytes": 55878,
+        "candidate_id": "mixed_local_component_aware_v1_frame2_all64",
+        "delta_vs_current_stream_bytes": -87,
+        "delta_vs_source_raw_renderer_bytes": 33,
+        "exact_evaluable_archive": true,
+        "family": "mixed_local_qzs_blocks",
+        "formula_only_rate_delta_vs_current_stream": -5.792972892162891e-05,
+        "policy": {
+          "component_awareness": {
+            "aggressive_block_size": 64,
+            "aggressive_prefixes": [
+              {
+                "block_size": 64,
+                "prefix": "frame2_head",
+                "reason": "frame2-only static head tensor group; lower direct PoseNet risk than shared trunk, frame1 FiLM head, or pose MLP"
+              }
+            ],
+            "baseline_block_size": 32,
+            "policy_family": "component-aware-v1",
+            "protected_prefixes": [
+              {
+                "block_size": 32,
+                "prefix": "shared_trunk",
+                "reason": "shared representation feeds both frames; prior MQZ1 default-64 candidate showed PoseNet collapse"
+              },
+              {
+                "block_size": 32,
+                "prefix": "frame1_head",
+                "reason": "pose-conditioned frame head; keep at source QZS3 block size"
+              },
+              {
+                "block_size": 32,
+                "prefix": "pose_mlp",
+                "reason": "direct pose-conditioning path; never made more aggressive in this policy"
+              }
+            ],
+            "schema": "component_aware_mixed_qzs_policy_v1",
+            "selection_rule": "default to the exact-evaluated QZS3 b32 block size, protect all pose-critical prefixes, and shrink only frame2-only tensor groups",
+            "tier": "frame2_all64"
+          },
+          "default_block_size": 32,
+          "exact_evaluable_archive": true,
+          "name": "component_aware_v1_frame2_all64",
+          "prefix_overrides": [
+            {
+              "block_size": 64,
+              "prefix": "frame2_head"
+            }
+          ],
+          "spec": "component-aware-v1:frame2_all64"
+        },
+        "projected_renderer_stream_bytes": 55878,
+        "projected_stream_basis": "brotli_q11_to_match_source_brotli_stream",
+        "promotion_eligible": false,
+        "raw_bytes": 59321,
+        "runtime_loader_ready": true,
+        "score_claim": false,
+        "sha256": "b9ebb12a8cddf519112fcfd415ada5d3668c70ad19bca3eda9fab5ac7d79cfc8",
+        "state_change_vs_source_renderer": true,
+        "wire_format": "MQZ1",
+        "zlib9_bytes": 57542
+      },
+      {
+        "archive_builder_hint": "experiments/build_mixed_qzs_block_candidate.py",
+        "block_meta": {
+          "block_size_counts": {
+            "32": 34,
+            "64": 6
+          },
+          "charged_header_format": "compact_fp4_block_sizes_v1",
+          "charged_policy": {
+            "name": "component_aware_v1_frame2_block2_pre64",
+            "spec": "component-aware-v1:frame2_block2_pre64"
+          },
+          "fp4_block_sizes": [
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            64,
+            64,
+            64,
+            64,
+            64,
+            64
+          ],
+          "fp4_tensor_order": "joint_frame_generator_state_dict_fp4_order_v1",
+          "fp4_tensors": [
+            {
+              "block_size": 32,
+              "name": "shared_trunk.stem_conv.dw.weight",
+              "numel": 72,
+              "packed_bytes": 48,
+              "scale_bytes": 6,
+              "shape": [
+                8,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.stem_conv.pw.weight",
+              "numel": 448,
+              "packed_bytes": 224,
+              "scale_bytes": 28,
+              "shape": [
+                56,
+                8,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.stem_block.conv1.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 32,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.stem_block.conv1.pw.weight",
+              "numel": 3136,
+              "packed_bytes": 1568,
+              "scale_bytes": 196,
+              "shape": [
+                56,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.stem_block.conv2.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 32,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.stem_block.conv2.pw.weight",
+              "numel": 3136,
+              "packed_bytes": 1568,
+              "scale_bytes": 196,
+              "shape": [
+                56,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.down_conv.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 32,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.down_conv.pw.weight",
+              "numel": 3584,
+              "packed_bytes": 1792,
+              "scale_bytes": 224,
+              "shape": [
+                64,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.down_block.conv1.dw.weight",
+              "numel": 576,
+              "packed_bytes": 288,
+              "scale_bytes": 36,
+              "shape": [
+                64,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.down_block.conv1.pw.weight",
+              "numel": 4096,
+              "packed_bytes": 2048,
+              "scale_bytes": 256,
+              "shape": [
+                64,
+                64,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.down_block.conv2.dw.weight",
+              "numel": 576,
+              "packed_bytes": 288,
+              "scale_bytes": 36,
+              "shape": [
+                64,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.down_block.conv2.pw.weight",
+              "numel": 4096,
+              "packed_bytes": 2048,
+              "scale_bytes": 256,
+              "shape": [
+                64,
+                64,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.up.1.dw.weight",
+              "numel": 576,
+              "packed_bytes": 288,
+              "scale_bytes": 36,
+              "shape": [
+                64,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.up.1.pw.weight",
+              "numel": 3584,
+              "packed_bytes": 1792,
+              "scale_bytes": 224,
+              "shape": [
+                56,
+                64,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.fuse.dw.weight",
+              "numel": 1008,
+              "packed_bytes": 512,
+              "scale_bytes": 64,
+              "shape": [
+                112,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.fuse.pw.weight",
+              "numel": 6272,
+              "packed_bytes": 3136,
+              "scale_bytes": 392,
+              "shape": [
+                56,
+                112,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.fuse_block.conv1.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 32,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.fuse_block.conv1.pw.weight",
+              "numel": 3136,
+              "packed_bytes": 1568,
+              "scale_bytes": 196,
+              "shape": [
+                56,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.fuse_block.conv2.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 32,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.fuse_block.conv2.pw.weight",
+              "numel": 3136,
+              "packed_bytes": 1568,
+              "scale_bytes": 196,
+              "shape": [
+                56,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame1_head.block1.conv1.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 32,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame1_head.block1.conv1.pw.weight",
+              "numel": 3136,
+              "packed_bytes": 1568,
+              "scale_bytes": 196,
+              "shape": [
+                56,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame1_head.block1.conv2.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 32,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame1_head.block1.conv2.pw.weight",
+              "numel": 3136,
+              "packed_bytes": 1568,
+              "scale_bytes": 196,
+              "shape": [
+                56,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame1_head.block2.conv1.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 32,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame1_head.block2.conv1.pw.weight",
+              "numel": 3136,
+              "packed_bytes": 1568,
+              "scale_bytes": 196,
+              "shape": [
+                56,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame1_head.block2.conv2.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 32,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame1_head.block2.conv2.pw.weight",
+              "numel": 3136,
+              "packed_bytes": 1568,
+              "scale_bytes": 196,
+              "shape": [
+                56,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame1_head.pre.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 32,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame1_head.pre.pw.weight",
+              "numel": 2912,
+              "packed_bytes": 1456,
+              "scale_bytes": 182,
+              "shape": [
+                52,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame2_head.block1.conv1.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 32,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame2_head.block1.conv1.pw.weight",
+              "numel": 3136,
+              "packed_bytes": 1568,
+              "scale_bytes": 196,
+              "shape": [
+                56,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame2_head.block1.conv2.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 32,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame2_head.block1.conv2.pw.weight",
+              "numel": 3136,
+              "packed_bytes": 1568,
+              "scale_bytes": 196,
+              "shape": [
+                56,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 64,
+              "name": "frame2_head.block2.conv1.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 16,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 64,
+              "name": "frame2_head.block2.conv1.pw.weight",
+              "numel": 3136,
+              "packed_bytes": 1568,
+              "scale_bytes": 98,
+              "shape": [
+                56,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 64,
+              "name": "frame2_head.block2.conv2.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 16,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 64,
+              "name": "frame2_head.block2.conv2.pw.weight",
+              "numel": 3136,
+              "packed_bytes": 1568,
+              "scale_bytes": 98,
+              "shape": [
+                56,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 64,
+              "name": "frame2_head.pre.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 16,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 64,
+              "name": "frame2_head.pre.pw.weight",
+              "numel": 2912,
+              "packed_bytes": 1472,
+              "scale_bytes": 92,
+              "shape": [
+                52,
+                56,
+                1,
+                1
+              ]
+            }
+          ],
+          "header_bytes": 590,
+          "payload_bytes": 59562,
+          "payload_sha256": "05ae8247f92bf2a4f8af46a8d0816161c174847e702e893d77065f03aba13d4f",
+          "policy": {
+            "component_awareness": {
+              "aggressive_block_size": 64,
+              "aggressive_prefixes": [
+                {
+                  "block_size": 64,
+                  "prefix": "frame2_head.block2",
+                  "reason": "frame2-only static head tensor group; lower direct PoseNet risk than shared trunk, frame1 FiLM head, or pose MLP"
+                },
+                {
+                  "block_size": 64,
+                  "prefix": "frame2_head.pre",
+                  "reason": "frame2-only static head tensor group; lower direct PoseNet risk than shared trunk, frame1 FiLM head, or pose MLP"
+                }
+              ],
+              "baseline_block_size": 32,
+              "policy_family": "component-aware-v1",
+              "protected_prefixes": [
+                {
+                  "block_size": 32,
+                  "prefix": "shared_trunk",
+                  "reason": "shared representation feeds both frames; prior MQZ1 default-64 candidate showed PoseNet collapse"
+                },
+                {
+                  "block_size": 32,
+                  "prefix": "frame1_head",
+                  "reason": "pose-conditioned frame head; keep at source QZS3 block size"
+                },
+                {
+                  "block_size": 32,
+                  "prefix": "pose_mlp",
+                  "reason": "direct pose-conditioning path; never made more aggressive in this policy"
+                }
+              ],
+              "schema": "component_aware_mixed_qzs_policy_v1",
+              "selection_rule": "default to the exact-evaluated QZS3 b32 block size, protect all pose-critical prefixes, and shrink only frame2-only tensor groups",
+              "tier": "frame2_block2_pre64"
+            },
+            "default_block_size": 32,
+            "exact_evaluable_archive": true,
+            "name": "component_aware_v1_frame2_block2_pre64",
+            "prefix_overrides": [
+              {
+                "block_size": 64,
+                "prefix": "frame2_head.block2"
+              },
+              {
+                "block_size": 64,
+                "prefix": "frame2_head.pre"
+              }
+            ],
+            "spec": "component-aware-v1:frame2_block2_pre64"
+          },
+          "runtime_decoder_available": true,
+          "schema": "mixed_qzs_block_screen_v1",
+          "segment_bytes": {
+            "bias": 2284,
+            "dense_fp": 3104,
+            "dense_other": 0,
+            "fp_weight": 684,
+            "packed": 38048,
+            "qv": 10424,
+            "scales": 4420
+          },
+          "source_codec_family": "QZS3",
+          "wire_format": "MQZ1"
+        },
+        "brotli_q11_bytes": 56108,
+        "candidate_id": "mixed_local_component_aware_v1_frame2_block2_pre64",
+        "delta_vs_current_stream_bytes": 143,
+        "delta_vs_source_raw_renderer_bytes": 274,
+        "exact_evaluable_archive": true,
+        "family": "mixed_local_qzs_blocks",
+        "formula_only_rate_delta_vs_current_stream": 9.521783029647051e-05,
+        "policy": {
+          "component_awareness": {
+            "aggressive_block_size": 64,
+            "aggressive_prefixes": [
+              {
+                "block_size": 64,
+                "prefix": "frame2_head.block2",
+                "reason": "frame2-only static head tensor group; lower direct PoseNet risk than shared trunk, frame1 FiLM head, or pose MLP"
+              },
+              {
+                "block_size": 64,
+                "prefix": "frame2_head.pre",
+                "reason": "frame2-only static head tensor group; lower direct PoseNet risk than shared trunk, frame1 FiLM head, or pose MLP"
+              }
+            ],
+            "baseline_block_size": 32,
+            "policy_family": "component-aware-v1",
+            "protected_prefixes": [
+              {
+                "block_size": 32,
+                "prefix": "shared_trunk",
+                "reason": "shared representation feeds both frames; prior MQZ1 default-64 candidate showed PoseNet collapse"
+              },
+              {
+                "block_size": 32,
+                "prefix": "frame1_head",
+                "reason": "pose-conditioned frame head; keep at source QZS3 block size"
+              },
+              {
+                "block_size": 32,
+                "prefix": "pose_mlp",
+                "reason": "direct pose-conditioning path; never made more aggressive in this policy"
+              }
+            ],
+            "schema": "component_aware_mixed_qzs_policy_v1",
+            "selection_rule": "default to the exact-evaluated QZS3 b32 block size, protect all pose-critical prefixes, and shrink only frame2-only tensor groups",
+            "tier": "frame2_block2_pre64"
+          },
+          "default_block_size": 32,
+          "exact_evaluable_archive": true,
+          "name": "component_aware_v1_frame2_block2_pre64",
+          "prefix_overrides": [
+            {
+              "block_size": 64,
+              "prefix": "frame2_head.block2"
+            },
+            {
+              "block_size": 64,
+              "prefix": "frame2_head.pre"
+            }
+          ],
+          "spec": "component-aware-v1:frame2_block2_pre64"
+        },
+        "projected_renderer_stream_bytes": 56108,
+        "projected_stream_basis": "brotli_q11_to_match_source_brotli_stream",
+        "promotion_eligible": false,
+        "raw_bytes": 59562,
+        "runtime_loader_ready": true,
+        "score_claim": false,
+        "sha256": "05ae8247f92bf2a4f8af46a8d0816161c174847e702e893d77065f03aba13d4f",
+        "state_change_vs_source_renderer": true,
+        "wire_format": "MQZ1",
+        "zlib9_bytes": 57719
+      },
+      {
+        "archive_builder_hint": "experiments/build_mixed_qzs_block_candidate.py",
+        "block_meta": {
+          "block_size_counts": {
+            "32": 38,
+            "64": 2
+          },
+          "charged_header_format": "compact_fp4_block_sizes_v1",
+          "charged_policy": {
+            "name": "component_aware_v1_frame2_pre64",
+            "spec": "component-aware-v1:frame2_pre64"
+          },
+          "fp4_block_sizes": [
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            32,
+            64,
+            64
+          ],
+          "fp4_tensor_order": "joint_frame_generator_state_dict_fp4_order_v1",
+          "fp4_tensors": [
+            {
+              "block_size": 32,
+              "name": "shared_trunk.stem_conv.dw.weight",
+              "numel": 72,
+              "packed_bytes": 48,
+              "scale_bytes": 6,
+              "shape": [
+                8,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.stem_conv.pw.weight",
+              "numel": 448,
+              "packed_bytes": 224,
+              "scale_bytes": 28,
+              "shape": [
+                56,
+                8,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.stem_block.conv1.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 32,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.stem_block.conv1.pw.weight",
+              "numel": 3136,
+              "packed_bytes": 1568,
+              "scale_bytes": 196,
+              "shape": [
+                56,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.stem_block.conv2.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 32,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.stem_block.conv2.pw.weight",
+              "numel": 3136,
+              "packed_bytes": 1568,
+              "scale_bytes": 196,
+              "shape": [
+                56,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.down_conv.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 32,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.down_conv.pw.weight",
+              "numel": 3584,
+              "packed_bytes": 1792,
+              "scale_bytes": 224,
+              "shape": [
+                64,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.down_block.conv1.dw.weight",
+              "numel": 576,
+              "packed_bytes": 288,
+              "scale_bytes": 36,
+              "shape": [
+                64,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.down_block.conv1.pw.weight",
+              "numel": 4096,
+              "packed_bytes": 2048,
+              "scale_bytes": 256,
+              "shape": [
+                64,
+                64,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.down_block.conv2.dw.weight",
+              "numel": 576,
+              "packed_bytes": 288,
+              "scale_bytes": 36,
+              "shape": [
+                64,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.down_block.conv2.pw.weight",
+              "numel": 4096,
+              "packed_bytes": 2048,
+              "scale_bytes": 256,
+              "shape": [
+                64,
+                64,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.up.1.dw.weight",
+              "numel": 576,
+              "packed_bytes": 288,
+              "scale_bytes": 36,
+              "shape": [
+                64,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.up.1.pw.weight",
+              "numel": 3584,
+              "packed_bytes": 1792,
+              "scale_bytes": 224,
+              "shape": [
+                56,
+                64,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.fuse.dw.weight",
+              "numel": 1008,
+              "packed_bytes": 512,
+              "scale_bytes": 64,
+              "shape": [
+                112,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.fuse.pw.weight",
+              "numel": 6272,
+              "packed_bytes": 3136,
+              "scale_bytes": 392,
+              "shape": [
+                56,
+                112,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.fuse_block.conv1.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 32,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.fuse_block.conv1.pw.weight",
+              "numel": 3136,
+              "packed_bytes": 1568,
+              "scale_bytes": 196,
+              "shape": [
+                56,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.fuse_block.conv2.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 32,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "shared_trunk.fuse_block.conv2.pw.weight",
+              "numel": 3136,
+              "packed_bytes": 1568,
+              "scale_bytes": 196,
+              "shape": [
+                56,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame1_head.block1.conv1.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 32,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame1_head.block1.conv1.pw.weight",
+              "numel": 3136,
+              "packed_bytes": 1568,
+              "scale_bytes": 196,
+              "shape": [
+                56,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame1_head.block1.conv2.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 32,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame1_head.block1.conv2.pw.weight",
+              "numel": 3136,
+              "packed_bytes": 1568,
+              "scale_bytes": 196,
+              "shape": [
+                56,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame1_head.block2.conv1.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 32,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame1_head.block2.conv1.pw.weight",
+              "numel": 3136,
+              "packed_bytes": 1568,
+              "scale_bytes": 196,
+              "shape": [
+                56,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame1_head.block2.conv2.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 32,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame1_head.block2.conv2.pw.weight",
+              "numel": 3136,
+              "packed_bytes": 1568,
+              "scale_bytes": 196,
+              "shape": [
+                56,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame1_head.pre.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 32,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame1_head.pre.pw.weight",
+              "numel": 2912,
+              "packed_bytes": 1456,
+              "scale_bytes": 182,
+              "shape": [
+                52,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame2_head.block1.conv1.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 32,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame2_head.block1.conv1.pw.weight",
+              "numel": 3136,
+              "packed_bytes": 1568,
+              "scale_bytes": 196,
+              "shape": [
+                56,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame2_head.block1.conv2.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 32,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame2_head.block1.conv2.pw.weight",
+              "numel": 3136,
+              "packed_bytes": 1568,
+              "scale_bytes": 196,
+              "shape": [
+                56,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame2_head.block2.conv1.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 32,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame2_head.block2.conv1.pw.weight",
+              "numel": 3136,
+              "packed_bytes": 1568,
+              "scale_bytes": 196,
+              "shape": [
+                56,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame2_head.block2.conv2.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 32,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 32,
+              "name": "frame2_head.block2.conv2.pw.weight",
+              "numel": 3136,
+              "packed_bytes": 1568,
+              "scale_bytes": 196,
+              "shape": [
+                56,
+                56,
+                1,
+                1
+              ]
+            },
+            {
+              "block_size": 64,
+              "name": "frame2_head.pre.dw.weight",
+              "numel": 504,
+              "packed_bytes": 256,
+              "scale_bytes": 16,
+              "shape": [
+                56,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "block_size": 64,
+              "name": "frame2_head.pre.pw.weight",
+              "numel": 2912,
+              "packed_bytes": 1472,
+              "scale_bytes": 92,
+              "shape": [
+                52,
+                56,
+                1,
+                1
+              ]
+            }
+          ],
+          "header_bytes": 576,
+          "payload_bytes": 59776,
+          "payload_sha256": "5d6e9aa336cfd05b6959223ad994738df6ec39e73043ad9b245c71cc6c6a7395",
+          "policy": {
+            "component_awareness": {
+              "aggressive_block_size": 64,
+              "aggressive_prefixes": [
+                {
+                  "block_size": 64,
+                  "prefix": "frame2_head.pre",
+                  "reason": "frame2-only static head tensor group; lower direct PoseNet risk than shared trunk, frame1 FiLM head, or pose MLP"
+                }
+              ],
+              "baseline_block_size": 32,
+              "policy_family": "component-aware-v1",
+              "protected_prefixes": [
+                {
+                  "block_size": 32,
+                  "prefix": "shared_trunk",
+                  "reason": "shared representation feeds both frames; prior MQZ1 default-64 candidate showed PoseNet collapse"
+                },
+                {
+                  "block_size": 32,
+                  "prefix": "frame1_head",
+                  "reason": "pose-conditioned frame head; keep at source QZS3 block size"
+                },
+                {
+                  "block_size": 32,
+                  "prefix": "pose_mlp",
+                  "reason": "direct pose-conditioning path; never made more aggressive in this policy"
+                }
+              ],
+              "schema": "component_aware_mixed_qzs_policy_v1",
+              "selection_rule": "default to the exact-evaluated QZS3 b32 block size, protect all pose-critical prefixes, and shrink only frame2-only tensor groups",
+              "tier": "frame2_pre64"
+            },
+            "default_block_size": 32,
+            "exact_evaluable_archive": true,
+            "name": "component_aware_v1_frame2_pre64",
+            "prefix_overrides": [
+              {
+                "block_size": 64,
+                "prefix": "frame2_head.pre"
+              }
+            ],
+            "spec": "component-aware-v1:frame2_pre64"
+          },
+          "runtime_decoder_available": true,
+          "schema": "mixed_qzs_block_screen_v1",
+          "segment_bytes": {
+            "bias": 2284,
+            "dense_fp": 3104,
+            "dense_other": 0,
+            "fp_weight": 684,
+            "packed": 38048,
+            "qv": 10424,
+            "scales": 4648
+          },
+          "source_codec_family": "QZS3",
+          "wire_format": "MQZ1"
+        },
+        "brotli_q11_bytes": 56352,
+        "candidate_id": "mixed_local_component_aware_v1_frame2_pre64",
+        "delta_vs_current_stream_bytes": 387,
+        "delta_vs_source_raw_renderer_bytes": 488,
+        "exact_evaluable_archive": true,
+        "family": "mixed_local_qzs_blocks",
+        "formula_only_rate_delta_vs_current_stream": 0.0002576874148582803,
+        "policy": {
+          "component_awareness": {
+            "aggressive_block_size": 64,
+            "aggressive_prefixes": [
+              {
+                "block_size": 64,
+                "prefix": "frame2_head.pre",
+                "reason": "frame2-only static head tensor group; lower direct PoseNet risk than shared trunk, frame1 FiLM head, or pose MLP"
+              }
+            ],
+            "baseline_block_size": 32,
+            "policy_family": "component-aware-v1",
+            "protected_prefixes": [
+              {
+                "block_size": 32,
+                "prefix": "shared_trunk",
+                "reason": "shared representation feeds both frames; prior MQZ1 default-64 candidate showed PoseNet collapse"
+              },
+              {
+                "block_size": 32,
+                "prefix": "frame1_head",
+                "reason": "pose-conditioned frame head; keep at source QZS3 block size"
+              },
+              {
+                "block_size": 32,
+                "prefix": "pose_mlp",
+                "reason": "direct pose-conditioning path; never made more aggressive in this policy"
+              }
+            ],
+            "schema": "component_aware_mixed_qzs_policy_v1",
+            "selection_rule": "default to the exact-evaluated QZS3 b32 block size, protect all pose-critical prefixes, and shrink only frame2-only tensor groups",
+            "tier": "frame2_pre64"
+          },
+          "default_block_size": 32,
+          "exact_evaluable_archive": true,
+          "name": "component_aware_v1_frame2_pre64",
+          "prefix_overrides": [
+            {
+              "block_size": 64,
+              "prefix": "frame2_head.pre"
+            }
+          ],
+          "spec": "component-aware-v1:frame2_pre64"
+        },
+        "projected_renderer_stream_bytes": 56352,
+        "projected_stream_basis": "brotli_q11_to_match_source_brotli_stream",
+        "promotion_eligible": false,
+        "raw_bytes": 59776,
+        "runtime_loader_ready": true,
+        "score_claim": false,
+        "sha256": "5d6e9aa336cfd05b6959223ad994738df6ec39e73043ad9b245c71cc6c6a7395",
+        "state_change_vs_source_renderer": true,
+        "wire_format": "MQZ1",
+        "zlib9_bytes": 57934
+      }
+    ],
+    "helper": "experiments/build_mixed_qzs_block_candidate.py",
+    "policy_errors": [],
+    "policy_specs": [
+      "component-aware-v1:frame2_pre64",
+      "component-aware-v1:frame2_block2_pre64",
+      "component-aware-v1:frame2_all64"
+    ]
+  },
+  "planning_constraints": {
+    "build_planning_only": true,
+    "candidate_archives_written": false,
+    "deterministic_json": true,
+    "dispatch_gate_renderer_stream_bytes": 55965,
+    "gpu_required": false,
+    "imp_bridge_builder_invoked": false,
+    "no_score_claim": true,
+    "scorers_loaded": false
+  },
+  "promotion_eligible": false,
+  "qbf1_negative_evidence": {
+    "available": true,
+    "best": {
+      "existing_qzs3_block_policy": {
+        "beats_current_encoded_stream_by_raw_bytes": false,
+        "beats_reference_raw": true,
+        "block_size": 128,
+        "deflate9_nbytes": 54241,
+        "deterministic_bytes": true,
+        "family": "existing_qzs3_block_policy_reference",
+        "implemented_loader": true,
+        "is_qbf1_v2": false,
+        "metadata_nbytes": 6,
+        "notes": [
+          "existing QZS3/QZS4-compatible policy reference",
+          "included to separate renderer-packer byte wins from QBF1-v2 work"
+        ],
+        "payload_nbytes": 56294,
+        "pickle_free": true,
+        "promotion_eligible": false,
+        "raw_delta_vs_current_encoded_stream_bytes": 335,
+        "raw_delta_vs_reference": -2988,
+        "raw_nbytes": 56300,
+        "score_claim": false,
+        "strict_pickle_free_loader_ready": true,
+        "variant_id": "existing_qzs3_b128",
+        "wire_format": "QZS3"
+      },
+      "qbf1_v1": {
+        "beats_current_encoded_stream_by_raw_bytes": false,
+        "beats_reference_raw": false,
+        "block_size": 4096,
+        "deflate9_nbytes": 82886,
+        "deterministic_bytes": true,
+        "family": "qbf1_v1_int8_f32_scales",
+        "header_nbytes": 20,
+        "implemented_loader": true,
+        "is_qbf1_v2": false,
+        "metadata_nbytes": 33310,
+        "notes": [
+          "implemented strict QBF1 loader path",
+          "one int8 byte per value plus float32 block scales and JSON tensor metadata"
+        ],
+        "payload_nbytes": 88288,
+        "pickle_free": true,
+        "promotion_eligible": false,
+        "raw_delta_vs_current_encoded_stream_bytes": 65653,
+        "raw_delta_vs_reference": 62330,
+        "raw_nbytes": 121618,
+        "score_claim": false,
+        "strict_pickle_free_loader_ready": true,
+        "tensor_payload_nbytes": 88288,
+        "variant_id": "qbf1_v1_int8_f32_b4096",
+        "wire_format": "QBF1"
+      },
+      "qbf1_v2_self_describing": {
+        "beats_current_encoded_stream_by_raw_bytes": false,
+        "beats_reference_raw": false,
+        "block_size": 128,
+        "deflate9_nbytes": 55777,
+        "deterministic_bytes": true,
+        "family": "qbf1_v2_self_describing_fp4_f16_qv",
+        "header_nbytes": 20,
+        "implemented_loader": false,
+        "is_qbf1_v2": true,
+        "metadata_nbytes": 15933,
+        "notes": [
+          "planning-only compact self-describing FP4/fp16/QV model",
+          "uses QZS3-equivalent tensor payload bytes but charges QBF1-style header and tensor metadata",
+          "no reviewed decoder or inflate dispatch exists"
+        ],
+        "payload_nbytes": 56294,
+        "pickle_free": true,
+        "promotion_eligible": false,
+        "raw_delta_vs_current_encoded_stream_bytes": 16282,
+        "raw_delta_vs_reference": 12959,
+        "raw_nbytes": 72247,
+        "score_claim": false,
+        "segment_bytes": {
+          "bias": 2284,
+          "dense_fp": 3104,
+          "dense_other": 0,
+          "fp_weight": 684,
+          "packed": 38592,
+          "qv": 10424,
+          "scales": 1206
+        },
+        "strict_pickle_free_loader_ready": false,
+        "variant_id": "qbf1_v2_self_describing_fp4_f16_qv_b128",
+        "wire_format": "QBF1v2-planning-only"
+      }
+    },
+    "block_sizes": [
+      16,
+      24,
+      32,
+      48,
+      64,
+      96,
+      128,
+      256,
+      512,
+      1024,
+      2048,
+      4096
+    ],
+    "candidate_families": {
+      "existing_qzs3_block_policy_reference": [
+        {
+          "beats_reference_raw": false,
+          "block_size": 16,
+          "deflate9_nbytes": 61014,
+          "deterministic_bytes": true,
+          "family": "existing_qzs3_block_policy_reference",
+          "implemented_loader": true,
+          "is_qbf1_v2": false,
+          "metadata_nbytes": 6,
+          "notes": [
+            "existing QZS3/QZS4-compatible policy reference",
+            "included to separate renderer-packer byte wins from QBF1-v2 work"
+          ],
+          "payload_nbytes": 64016,
+          "pickle_free": true,
+          "promotion_eligible": false,
+          "raw_delta_vs_reference": 4734,
+          "raw_nbytes": 64022,
+          "score_claim": false,
+          "strict_pickle_free_loader_ready": true,
+          "variant_id": "existing_qzs3_b16",
+          "wire_format": "QZS3"
+        },
+        {
+          "beats_reference_raw": false,
+          "block_size": 24,
+          "deflate9_nbytes": 58779,
+          "deterministic_bytes": true,
+          "family": "existing_qzs3_block_policy_reference",
+          "implemented_loader": true,
+          "is_qbf1_v2": false,
+          "metadata_nbytes": 6,
+          "notes": [
+            "existing QZS3/QZS4-compatible policy reference",
+            "included to separate renderer-packer byte wins from QBF1-v2 work"
+          ],
+          "payload_nbytes": 60890,
+          "pickle_free": true,
+          "promotion_eligible": false,
+          "raw_delta_vs_reference": 1608,
+          "raw_nbytes": 60896,
+          "score_claim": false,
+          "strict_pickle_free_loader_ready": true,
+          "variant_id": "existing_qzs3_b24",
+          "wire_format": "QZS3"
+        },
+        {
+          "beats_reference_raw": false,
+          "block_size": 32,
+          "deflate9_nbytes": 57615,
+          "deterministic_bytes": true,
+          "family": "existing_qzs3_block_policy_reference",
+          "implemented_loader": true,
+          "is_qbf1_v2": false,
+          "metadata_nbytes": 6,
+          "notes": [
+            "existing QZS3/QZS4-compatible policy reference",
+            "included to separate renderer-packer byte wins from QBF1-v2 work"
+          ],
+          "payload_nbytes": 59282,
+          "pickle_free": true,
+          "promotion_eligible": false,
+          "raw_delta_vs_reference": 0,
+          "raw_nbytes": 59288,
+          "score_claim": false,
+          "strict_pickle_free_loader_ready": true,
+          "variant_id": "existing_qzs3_b32",
+          "wire_format": "QZS3"
+        },
+        {
+          "beats_reference_raw": true,
+          "block_size": 48,
+          "deflate9_nbytes": 56255,
+          "deterministic_bytes": true,
+          "family": "existing_qzs3_block_policy_reference",
+          "implemented_loader": true,
+          "is_qbf1_v2": false,
+          "metadata_nbytes": 6,
+          "notes": [
+            "existing QZS3/QZS4-compatible policy reference",
+            "included to separate renderer-packer byte wins from QBF1-v2 work"
+          ],
+          "payload_nbytes": 58122,
+          "pickle_free": true,
+          "promotion_eligible": false,
+          "raw_delta_vs_reference": -1160,
+          "raw_nbytes": 58128,
+          "score_claim": false,
+          "strict_pickle_free_loader_ready": true,
+          "variant_id": "existing_qzs3_b48",
+          "wire_format": "QZS3"
+        },
+        {
+          "beats_reference_raw": true,
+          "block_size": 64,
+          "deflate9_nbytes": 55472,
+          "deterministic_bytes": true,
+          "family": "existing_qzs3_block_policy_reference",
+          "implemented_loader": true,
+          "is_qbf1_v2": false,
+          "metadata_nbytes": 6,
+          "notes": [
+            "existing QZS3/QZS4-compatible policy reference",
+            "included to separate renderer-packer byte wins from QBF1-v2 work"
+          ],
+          "payload_nbytes": 56956,
+          "pickle_free": true,
+          "promotion_eligible": false,
+          "raw_delta_vs_reference": -2326,
+          "raw_nbytes": 56962,
+          "score_claim": false,
+          "strict_pickle_free_loader_ready": true,
+          "variant_id": "existing_qzs3_b64",
+          "wire_format": "QZS3"
+        },
+        {
+          "beats_reference_raw": true,
+          "block_size": 96,
+          "deflate9_nbytes": 54740,
+          "deterministic_bytes": true,
+          "family": "existing_qzs3_block_policy_reference",
+          "implemented_loader": true,
+          "is_qbf1_v2": false,
+          "metadata_nbytes": 6,
+          "notes": [
+            "existing QZS3/QZS4-compatible policy reference",
+            "included to separate renderer-packer byte wins from QBF1-v2 work"
+          ],
+          "payload_nbytes": 57046,
+          "pickle_free": true,
+          "promotion_eligible": false,
+          "raw_delta_vs_reference": -2236,
+          "raw_nbytes": 57052,
+          "score_claim": false,
+          "strict_pickle_free_loader_ready": true,
+          "variant_id": "existing_qzs3_b96",
+          "wire_format": "QZS3"
+        },
+        {
+          "beats_reference_raw": true,
+          "block_size": 128,
+          "deflate9_nbytes": 54241,
+          "deterministic_bytes": true,
+          "family": "existing_qzs3_block_policy_reference",
+          "implemented_loader": true,
+          "is_qbf1_v2": false,
+          "metadata_nbytes": 6,
+          "notes": [
+            "existing QZS3/QZS4-compatible policy reference",
+            "included to separate renderer-packer byte wins from QBF1-v2 work"
+          ],
+          "payload_nbytes": 56294,
+          "pickle_free": true,
+          "promotion_eligible": false,
+          "raw_delta_vs_reference": -2988,
+          "raw_nbytes": 56300,
+          "score_claim": false,
+          "strict_pickle_free_loader_ready": true,
+          "variant_id": "existing_qzs3_b128",
+          "wire_format": "QZS3"
+        },
+        {
+          "beats_reference_raw": true,
+          "block_size": 256,
+          "deflate9_nbytes": 53430,
+          "deterministic_bytes": true,
+          "family": "existing_qzs3_block_policy_reference",
+          "implemented_loader": true,
+          "is_qbf1_v2": false,
+          "metadata_nbytes": 6,
+          "notes": [
+            "existing QZS3/QZS4-compatible policy reference",
+            "included to separate renderer-packer byte wins from QBF1-v2 work"
+          ],
+          "payload_nbytes": 56926,
+          "pickle_free": true,
+          "promotion_eligible": false,
+          "raw_delta_vs_reference": -2356,
+          "raw_nbytes": 56932,
+          "score_claim": false,
+          "strict_pickle_free_loader_ready": true,
+          "variant_id": "existing_qzs3_b256",
+          "wire_format": "QZS3"
+        },
+        {
+          "beats_reference_raw": true,
+          "block_size": 512,
+          "deflate9_nbytes": 52889,
+          "deterministic_bytes": true,
+          "family": "existing_qzs3_block_policy_reference",
+          "implemented_loader": true,
+          "is_qbf1_v2": false,
+          "metadata_nbytes": 6,
+          "notes": [
+            "existing QZS3/QZS4-compatible policy reference",
+            "included to separate renderer-packer byte wins from QBF1-v2 work"
+          ],
+          "payload_nbytes": 58808,
+          "pickle_free": true,
+          "promotion_eligible": false,
+          "raw_delta_vs_reference": -474,
+          "raw_nbytes": 58814,
+          "score_claim": false,
+          "strict_pickle_free_loader_ready": true,
+          "variant_id": "existing_qzs3_b512",
+          "wire_format": "QZS3"
+        },
+        {
+          "beats_reference_raw": false,
+          "block_size": 1024,
+          "deflate9_nbytes": 52626,
+          "deterministic_bytes": true,
+          "family": "existing_qzs3_block_policy_reference",
+          "implemented_loader": true,
+          "is_qbf1_v2": false,
+          "metadata_nbytes": 6,
+          "notes": [
+            "existing QZS3/QZS4-compatible policy reference",
+            "included to separate renderer-packer byte wins from QBF1-v2 work"
+          ],
+          "payload_nbytes": 66868,
+          "pickle_free": true,
+          "promotion_eligible": false,
+          "raw_delta_vs_reference": 7586,
+          "raw_nbytes": 66874,
+          "score_claim": false,
+          "strict_pickle_free_loader_ready": true,
+          "variant_id": "existing_qzs3_b1024",
+          "wire_format": "QZS3"
+        },
+        {
+          "beats_reference_raw": false,
+          "block_size": 2048,
+          "deflate9_nbytes": 52446,
+          "deterministic_bytes": true,
+          "family": "existing_qzs3_block_policy_reference",
+          "implemented_loader": true,
+          "is_qbf1_v2": false,
+          "metadata_nbytes": 6,
+          "notes": [
+            "existing QZS3/QZS4-compatible policy reference",
+            "included to separate renderer-packer byte wins from QBF1-v2 work"
+          ],
+          "payload_nbytes": 79082,
+          "pickle_free": true,
+          "promotion_eligible": false,
+          "raw_delta_vs_reference": 19800,
+          "raw_nbytes": 79088,
+          "score_claim": false,
+          "strict_pickle_free_loader_ready": true,
+          "variant_id": "existing_qzs3_b2048",
+          "wire_format": "QZS3"
+        },
+        {
+          "beats_reference_raw": false,
+          "block_size": 4096,
+          "deflate9_nbytes": 52317,
+          "deterministic_bytes": true,
+          "family": "existing_qzs3_block_policy_reference",
+          "implemented_loader": true,
+          "is_qbf1_v2": false,
+          "metadata_nbytes": 6,
+          "notes": [
+            "existing QZS3/QZS4-compatible policy reference",
+            "included to separate renderer-packer byte wins from QBF1-v2 work"
+          ],
+          "payload_nbytes": 100546,
+          "pickle_free": true,
+          "promotion_eligible": false,
+          "raw_delta_vs_reference": 41264,
+          "raw_nbytes": 100552,
+          "score_claim": false,
+          "strict_pickle_free_loader_ready": true,
+          "variant_id": "existing_qzs3_b4096",
+          "wire_format": "QZS3"
+        }
+      ],
+      "qbf1_v1_int8_f32_scales": [
+        {
+          "beats_reference_raw": false,
+          "block_size": 16,
+          "deflate9_nbytes": 79857,
+          "deterministic_bytes": true,
+          "family": "qbf1_v1_int8_f32_scales",
+          "header_nbytes": 20,
+          "implemented_loader": true,
+          "is_qbf1_v2": false,
+          "metadata_nbytes": 33337,
+          "notes": [
+            "implemented strict QBF1 loader path",
+            "one int8 byte per value plus float32 block scales and JSON tensor metadata"
+          ],
+          "payload_nbytes": 109944,
+          "pickle_free": true,
+          "promotion_eligible": false,
+          "raw_delta_vs_reference": 84013,
+          "raw_nbytes": 143301,
+          "score_claim": false,
+          "strict_pickle_free_loader_ready": true,
+          "tensor_payload_nbytes": 109944,
+          "variant_id": "qbf1_v1_int8_f32_b16",
+          "wire_format": "QBF1"
+        },
+        {
+          "beats_reference_raw": false,
+          "block_size": 24,
+          "deflate9_nbytes": 83389,
+          "deterministic_bytes": true,
+          "family": "qbf1_v1_int8_f32_scales",
+          "header_nbytes": 20,
+          "implemented_loader": true,
+          "is_qbf1_v2": false,
+          "metadata_nbytes": 33283,
+          "notes": [
+            "implemented strict QBF1 loader path",
+            "one int8 byte per value plus float32 block scales and JSON tensor metadata"
+          ],
+          "payload_nbytes": 102676,
+          "pickle_free": true,
+          "promotion_eligible": false,
+          "raw_delta_vs_reference": 76691,
+          "raw_nbytes": 135979,
+          "score_claim": false,
+          "strict_pickle_free_loader_ready": true,
+          "tensor_payload_nbytes": 102676,
+          "variant_id": "qbf1_v1_int8_f32_b24",
+          "wire_format": "QBF1"
+        },
+        {
+          "beats_reference_raw": false,
+          "block_size": 32,
+          "deflate9_nbytes": 71657,
+          "deterministic_bytes": true,
+          "family": "qbf1_v1_int8_f32_scales",
+          "header_nbytes": 20,
+          "implemented_loader": true,
+          "is_qbf1_v2": false,
+          "metadata_nbytes": 33205,
+          "notes": [
+            "implemented strict QBF1 loader path",
+            "one int8 byte per value plus float32 block scales and JSON tensor metadata"
+          ],
+          "payload_nbytes": 98904,
+          "pickle_free": true,
+          "promotion_eligible": false,
+          "raw_delta_vs_reference": 72841,
+          "raw_nbytes": 132129,
+          "score_claim": false,
+          "strict_pickle_free_loader_ready": true,
+          "tensor_payload_nbytes": 98904,
+          "variant_id": "qbf1_v1_int8_f32_b32",
+          "wire_format": "QBF1"
+        },
+        {
+          "beats_reference_raw": false,
+          "block_size": 48,
+          "deflate9_nbytes": 83455,
+          "deterministic_bytes": true,
+          "family": "qbf1_v1_int8_f32_scales",
+          "header_nbytes": 20,
+          "implemented_loader": true,
+          "is_qbf1_v2": false,
+          "metadata_nbytes": 33199,
+          "notes": [
+            "implemented strict QBF1 loader path",
+            "one int8 byte per value plus float32 block scales and JSON tensor metadata"
+          ],
+          "payload_nbytes": 95448,
+          "pickle_free": true,
+          "promotion_eligible": false,
+          "raw_delta_vs_reference": 69379,
+          "raw_nbytes": 128667,
+          "score_claim": false,
+          "strict_pickle_free_loader_ready": true,
+          "tensor_payload_nbytes": 95448,
+          "variant_id": "qbf1_v1_int8_f32_b48",
+          "wire_format": "QBF1"
+        },
+        {
+          "beats_reference_raw": false,
+          "block_size": 64,
+          "deflate9_nbytes": 82643,
+          "deterministic_bytes": true,
+          "family": "qbf1_v1_int8_f32_scales",
+          "header_nbytes": 20,
+          "implemented_loader": true,
+          "is_qbf1_v2": false,
+          "metadata_nbytes": 33176,
+          "notes": [
+            "implemented strict QBF1 loader path",
+            "one int8 byte per value plus float32 block scales and JSON tensor metadata"
+          ],
+          "payload_nbytes": 93388,
+          "pickle_free": true,
+          "promotion_eligible": false,
+          "raw_delta_vs_reference": 67296,
+          "raw_nbytes": 126584,
+          "score_claim": false,
+          "strict_pickle_free_loader_ready": true,
+          "tensor_payload_nbytes": 93388,
+          "variant_id": "qbf1_v1_int8_f32_b64",
+          "wire_format": "QBF1"
+        },
+        {
+          "beats_reference_raw": false,
+          "block_size": 96,
+          "deflate9_nbytes": 84333,
+          "deterministic_bytes": true,
+          "family": "qbf1_v1_int8_f32_scales",
+          "header_nbytes": 20,
+          "implemented_loader": true,
+          "is_qbf1_v2": false,
+          "metadata_nbytes": 33173,
+          "notes": [
+            "implemented strict QBF1 loader path",
+            "one int8 byte per value plus float32 block scales and JSON tensor metadata"
+          ],
+          "payload_nbytes": 91696,
+          "pickle_free": true,
+          "promotion_eligible": false,
+          "raw_delta_vs_reference": 65601,
+          "raw_nbytes": 124889,
+          "score_claim": false,
+          "strict_pickle_free_loader_ready": true,
+          "tensor_payload_nbytes": 91696,
+          "variant_id": "qbf1_v1_int8_f32_b96",
+          "wire_format": "QBF1"
+        },
+        {
+          "beats_reference_raw": false,
+          "block_size": 128,
+          "deflate9_nbytes": 84986,
+          "deterministic_bytes": true,
+          "family": "qbf1_v1_int8_f32_scales",
+          "header_nbytes": 20,
+          "implemented_loader": true,
+          "is_qbf1_v2": false,
+          "metadata_nbytes": 33281,
+          "notes": [
+            "implemented strict QBF1 loader path",
+            "one int8 byte per value plus float32 block scales and JSON tensor metadata"
+          ],
+          "payload_nbytes": 90780,
+          "pickle_free": true,
+          "promotion_eligible": false,
+          "raw_delta_vs_reference": 64793,
+          "raw_nbytes": 124081,
+          "score_claim": false,
+          "strict_pickle_free_loader_ready": true,
+          "tensor_payload_nbytes": 90780,
+          "variant_id": "qbf1_v1_int8_f32_b128",
+          "wire_format": "QBF1"
+        },
+        {
+          "beats_reference_raw": false,
+          "block_size": 256,
+          "deflate9_nbytes": 84997,
+          "deterministic_bytes": true,
+          "family": "qbf1_v1_int8_f32_scales",
+          "header_nbytes": 20,
+          "implemented_loader": true,
+          "is_qbf1_v2": false,
+          "metadata_nbytes": 33245,
+          "notes": [
+            "implemented strict QBF1 loader path",
+            "one int8 byte per value plus float32 block scales and JSON tensor metadata"
+          ],
+          "payload_nbytes": 89480,
+          "pickle_free": true,
+          "promotion_eligible": false,
+          "raw_delta_vs_reference": 63457,
+          "raw_nbytes": 122745,
+          "score_claim": false,
+          "strict_pickle_free_loader_ready": true,
+          "tensor_payload_nbytes": 89480,
+          "variant_id": "qbf1_v1_int8_f32_b256",
+          "wire_format": "QBF1"
+        },
+        {
+          "beats_reference_raw": false,
+          "block_size": 512,
+          "deflate9_nbytes": 84454,
+          "deterministic_bytes": true,
+          "family": "qbf1_v1_int8_f32_scales",
+          "header_nbytes": 20,
+          "implemented_loader": true,
+          "is_qbf1_v2": false,
+          "metadata_nbytes": 33222,
+          "notes": [
+            "implemented strict QBF1 loader path",
+            "one int8 byte per value plus float32 block scales and JSON tensor metadata"
+          ],
+          "payload_nbytes": 88832,
+          "pickle_free": true,
+          "promotion_eligible": false,
+          "raw_delta_vs_reference": 62786,
+          "raw_nbytes": 122074,
+          "score_claim": false,
+          "strict_pickle_free_loader_ready": true,
+          "tensor_payload_nbytes": 88832,
+          "variant_id": "qbf1_v1_int8_f32_b512",
+          "wire_format": "QBF1"
+        },
+        {
+          "beats_reference_raw": false,
+          "block_size": 1024,
+          "deflate9_nbytes": 83943,
+          "deterministic_bytes": true,
+          "family": "qbf1_v1_int8_f32_scales",
+          "header_nbytes": 20,
+          "implemented_loader": true,
+          "is_qbf1_v2": false,
+          "metadata_nbytes": 33331,
+          "notes": [
+            "implemented strict QBF1 loader path",
+            "one int8 byte per value plus float32 block scales and JSON tensor metadata"
+          ],
+          "payload_nbytes": 88540,
+          "pickle_free": true,
+          "promotion_eligible": false,
+          "raw_delta_vs_reference": 62603,
+          "raw_nbytes": 121891,
+          "score_claim": false,
+          "strict_pickle_free_loader_ready": true,
+          "tensor_payload_nbytes": 88540,
+          "variant_id": "qbf1_v1_int8_f32_b1024",
+          "wire_format": "QBF1"
+        },
+        {
+          "beats_reference_raw": false,
+          "block_size": 2048,
+          "deflate9_nbytes": 83522,
+          "deterministic_bytes": true,
+          "family": "qbf1_v1_int8_f32_scales",
+          "header_nbytes": 20,
+          "implemented_loader": true,
+          "is_qbf1_v2": false,
+          "metadata_nbytes": 33312,
+          "notes": [
+            "implemented strict QBF1 loader path",
+            "one int8 byte per value plus float32 block scales and JSON tensor metadata"
+          ],
+          "payload_nbytes": 88376,
+          "pickle_free": true,
+          "promotion_eligible": false,
+          "raw_delta_vs_reference": 62420,
+          "raw_nbytes": 121708,
+          "score_claim": false,
+          "strict_pickle_free_loader_ready": true,
+          "tensor_payload_nbytes": 88376,
+          "variant_id": "qbf1_v1_int8_f32_b2048",
+          "wire_format": "QBF1"
+        },
+        {
+          "beats_reference_raw": false,
+          "block_size": 4096,
+          "deflate9_nbytes": 82886,
+          "deterministic_bytes": true,
+          "family": "qbf1_v1_int8_f32_scales",
+          "header_nbytes": 20,
+          "implemented_loader": true,
+          "is_qbf1_v2": false,
+          "metadata_nbytes": 33310,
+          "notes": [
+            "implemented strict QBF1 loader path",
+            "one int8 byte per value plus float32 block scales and JSON tensor metadata"
+          ],
+          "payload_nbytes": 88288,
+          "pickle_free": true,
+          "promotion_eligible": false,
+          "raw_delta_vs_reference": 62330,
+          "raw_nbytes": 121618,
+          "score_claim": false,
+          "strict_pickle_free_loader_ready": true,
+          "tensor_payload_nbytes": 88288,
+          "variant_id": "qbf1_v1_int8_f32_b4096",
+          "wire_format": "QBF1"
+        }
+      ],
+      "qbf1_v2_self_describing_fp4_f16_qv": [
+        {
+          "beats_reference_raw": false,
+          "block_size": 16,
+          "deflate9_nbytes": 62618,
+          "deterministic_bytes": true,
+          "family": "qbf1_v2_self_describing_fp4_f16_qv",
+          "header_nbytes": 20,
+          "implemented_loader": false,
+          "is_qbf1_v2": true,
+          "metadata_nbytes": 15968,
+          "notes": [
+            "planning-only compact self-describing FP4/fp16/QV model",
+            "uses QZS3-equivalent tensor payload bytes but charges QBF1-style header and tensor metadata",
+            "no reviewed decoder or inflate dispatch exists"
+          ],
+          "payload_nbytes": 64016,
+          "pickle_free": true,
+          "promotion_eligible": false,
+          "raw_delta_vs_reference": 20716,
+          "raw_nbytes": 80004,
+          "score_claim": false,
+          "segment_bytes": {
+            "bias": 2284,
+            "dense_fp": 3104,
+            "dense_other": 0,
+            "fp_weight": 684,
+            "packed": 38016,
+            "qv": 10424,
+            "scales": 9504
+          },
+          "strict_pickle_free_loader_ready": false,
+          "variant_id": "qbf1_v2_self_describing_fp4_f16_qv_b16",
+          "wire_format": "QBF1v2-planning-only"
+        },
+        {
+          "beats_reference_raw": false,
+          "block_size": 24,
+          "deflate9_nbytes": 60354,
+          "deterministic_bytes": true,
+          "family": "qbf1_v2_self_describing_fp4_f16_qv",
+          "header_nbytes": 20,
+          "implemented_loader": false,
+          "is_qbf1_v2": true,
+          "metadata_nbytes": 15966,
+          "notes": [
+            "planning-only compact self-describing FP4/fp16/QV model",
+            "uses QZS3-equivalent tensor payload bytes but charges QBF1-style header and tensor metadata",
+            "no reviewed decoder or inflate dispatch exists"
+          ],
+          "payload_nbytes": 60890,
+          "pickle_free": true,
+          "promotion_eligible": false,
+          "raw_delta_vs_reference": 17588,
+          "raw_nbytes": 76876,
+          "score_claim": false,
+          "segment_bytes": {
+            "bias": 2284,
+            "dense_fp": 3104,
+            "dense_other": 0,
+            "fp_weight": 684,
+            "packed": 38052,
+            "qv": 10424,
+            "scales": 6342
+          },
+          "strict_pickle_free_loader_ready": false,
+          "variant_id": "qbf1_v2_self_describing_fp4_f16_qv_b24",
+          "wire_format": "QBF1v2-planning-only"
+        },
+        {
+          "beats_reference_raw": false,
+          "block_size": 32,
+          "deflate9_nbytes": 59120,
+          "deterministic_bytes": true,
+          "family": "qbf1_v2_self_describing_fp4_f16_qv",
+          "header_nbytes": 20,
+          "implemented_loader": false,
+          "is_qbf1_v2": true,
+          "metadata_nbytes": 15952,
+          "notes": [
+            "planning-only compact self-describing FP4/fp16/QV model",
+            "uses QZS3-equivalent tensor payload bytes but charges QBF1-style header and tensor metadata",
+            "no reviewed decoder or inflate dispatch exists"
+          ],
+          "payload_nbytes": 59282,
+          "pickle_free": true,
+          "promotion_eligible": false,
+          "raw_delta_vs_reference": 15966,
+          "raw_nbytes": 75254,
+          "score_claim": false,
+          "segment_bytes": {
+            "bias": 2284,
+            "dense_fp": 3104,
+            "dense_other": 0,
+            "fp_weight": 684,
+            "packed": 38032,
+            "qv": 10424,
+            "scales": 4754
+          },
+          "strict_pickle_free_loader_ready": false,
+          "variant_id": "qbf1_v2_self_describing_fp4_f16_qv_b32",
+          "wire_format": "QBF1v2-planning-only"
+        },
+        {
+          "beats_reference_raw": false,
+          "block_size": 48,
+          "deflate9_nbytes": 57777,
+          "deterministic_bytes": true,
+          "family": "qbf1_v2_self_describing_fp4_f16_qv",
+          "header_nbytes": 20,
+          "implemented_loader": false,
+          "is_qbf1_v2": true,
+          "metadata_nbytes": 15948,
+          "notes": [
+            "planning-only compact self-describing FP4/fp16/QV model",
+            "uses QZS3-equivalent tensor payload bytes but charges QBF1-style header and tensor metadata",
+            "no reviewed decoder or inflate dispatch exists"
+          ],
+          "payload_nbytes": 58122,
+          "pickle_free": true,
+          "promotion_eligible": false,
+          "raw_delta_vs_reference": 14802,
+          "raw_nbytes": 74090,
+          "score_claim": false,
+          "segment_bytes": {
+            "bias": 2284,
+            "dense_fp": 3104,
+            "dense_other": 0,
+            "fp_weight": 684,
+            "packed": 38424,
+            "qv": 10424,
+            "scales": 3202
+          },
+          "strict_pickle_free_loader_ready": false,
+          "variant_id": "qbf1_v2_self_describing_fp4_f16_qv_b48",
+          "wire_format": "QBF1v2-planning-only"
+        },
+        {
+          "beats_reference_raw": false,
+          "block_size": 64,
+          "deflate9_nbytes": 56993,
+          "deterministic_bytes": true,
+          "family": "qbf1_v2_self_describing_fp4_f16_qv",
+          "header_nbytes": 20,
+          "implemented_loader": false,
+          "is_qbf1_v2": true,
+          "metadata_nbytes": 15914,
+          "notes": [
+            "planning-only compact self-describing FP4/fp16/QV model",
+            "uses QZS3-equivalent tensor payload bytes but charges QBF1-style header and tensor metadata",
+            "no reviewed decoder or inflate dispatch exists"
+          ],
+          "payload_nbytes": 56956,
+          "pickle_free": true,
+          "promotion_eligible": false,
+          "raw_delta_vs_reference": 13602,
+          "raw_nbytes": 72890,
+          "score_claim": false,
+          "segment_bytes": {
+            "bias": 2284,
+            "dense_fp": 3104,
+            "dense_other": 0,
+            "fp_weight": 684,
+            "packed": 38080,
+            "qv": 10424,
+            "scales": 2380
+          },
+          "strict_pickle_free_loader_ready": false,
+          "variant_id": "qbf1_v2_self_describing_fp4_f16_qv_b64",
+          "wire_format": "QBF1v2-planning-only"
+        },
+        {
+          "beats_reference_raw": false,
+          "block_size": 96,
+          "deflate9_nbytes": 56248,
+          "deterministic_bytes": true,
+          "family": "qbf1_v2_self_describing_fp4_f16_qv",
+          "header_nbytes": 20,
+          "implemented_loader": false,
+          "is_qbf1_v2": true,
+          "metadata_nbytes": 15910,
+          "notes": [
+            "planning-only compact self-describing FP4/fp16/QV model",
+            "uses QZS3-equivalent tensor payload bytes but charges QBF1-style header and tensor metadata",
+            "no reviewed decoder or inflate dispatch exists"
+          ],
+          "payload_nbytes": 57046,
+          "pickle_free": true,
+          "promotion_eligible": false,
+          "raw_delta_vs_reference": 13688,
+          "raw_nbytes": 72976,
+          "score_claim": false,
+          "segment_bytes": {
+            "bias": 2284,
+            "dense_fp": 3104,
+            "dense_other": 0,
+            "fp_weight": 684,
+            "packed": 38928,
+            "qv": 10424,
+            "scales": 1622
+          },
+          "strict_pickle_free_loader_ready": false,
+          "variant_id": "qbf1_v2_self_describing_fp4_f16_qv_b96",
+          "wire_format": "QBF1v2-planning-only"
+        },
+        {
+          "beats_reference_raw": false,
+          "block_size": 128,
+          "deflate9_nbytes": 55777,
+          "deterministic_bytes": true,
+          "family": "qbf1_v2_self_describing_fp4_f16_qv",
+          "header_nbytes": 20,
+          "implemented_loader": false,
+          "is_qbf1_v2": true,
+          "metadata_nbytes": 15933,
+          "notes": [
+            "planning-only compact self-describing FP4/fp16/QV model",
+            "uses QZS3-equivalent tensor payload bytes but charges QBF1-style header and tensor metadata",
+            "no reviewed decoder or inflate dispatch exists"
+          ],
+          "payload_nbytes": 56294,
+          "pickle_free": true,
+          "promotion_eligible": false,
+          "raw_delta_vs_reference": 12959,
+          "raw_nbytes": 72247,
+          "score_claim": false,
+          "segment_bytes": {
+            "bias": 2284,
+            "dense_fp": 3104,
+            "dense_other": 0,
+            "fp_weight": 684,
+            "packed": 38592,
+            "qv": 10424,
+            "scales": 1206
+          },
+          "strict_pickle_free_loader_ready": false,
+          "variant_id": "qbf1_v2_self_describing_fp4_f16_qv_b128",
+          "wire_format": "QBF1v2-planning-only"
+        },
+        {
+          "beats_reference_raw": false,
+          "block_size": 256,
+          "deflate9_nbytes": 54959,
+          "deterministic_bytes": true,
+          "family": "qbf1_v2_self_describing_fp4_f16_qv",
+          "header_nbytes": 20,
+          "implemented_loader": false,
+          "is_qbf1_v2": true,
+          "metadata_nbytes": 15929,
+          "notes": [
+            "planning-only compact self-describing FP4/fp16/QV model",
+            "uses QZS3-equivalent tensor payload bytes but charges QBF1-style header and tensor metadata",
+            "no reviewed decoder or inflate dispatch exists"
+          ],
+          "payload_nbytes": 56926,
+          "pickle_free": true,
+          "promotion_eligible": false,
+          "raw_delta_vs_reference": 13587,
+          "raw_nbytes": 72875,
+          "score_claim": false,
+          "segment_bytes": {
+            "bias": 2284,
+            "dense_fp": 3104,
+            "dense_other": 0,
+            "fp_weight": 684,
+            "packed": 39808,
+            "qv": 10424,
+            "scales": 622
+          },
+          "strict_pickle_free_loader_ready": false,
+          "variant_id": "qbf1_v2_self_describing_fp4_f16_qv_b256",
+          "wire_format": "QBF1v2-planning-only"
+        },
+        {
+          "beats_reference_raw": false,
+          "block_size": 512,
+          "deflate9_nbytes": 54385,
+          "deterministic_bytes": true,
+          "family": "qbf1_v2_self_describing_fp4_f16_qv",
+          "header_nbytes": 20,
+          "implemented_loader": false,
+          "is_qbf1_v2": true,
+          "metadata_nbytes": 15911,
+          "notes": [
+            "planning-only compact self-describing FP4/fp16/QV model",
+            "uses QZS3-equivalent tensor payload bytes but charges QBF1-style header and tensor metadata",
+            "no reviewed decoder or inflate dispatch exists"
+          ],
+          "payload_nbytes": 58808,
+          "pickle_free": true,
+          "promotion_eligible": false,
+          "raw_delta_vs_reference": 15451,
+          "raw_nbytes": 74739,
+          "score_claim": false,
+          "segment_bytes": {
+            "bias": 2284,
+            "dense_fp": 3104,
+            "dense_other": 0,
+            "fp_weight": 684,
+            "packed": 41984,
+            "qv": 10424,
+            "scales": 328
+          },
+          "strict_pickle_free_loader_ready": false,
+          "variant_id": "qbf1_v2_self_describing_fp4_f16_qv_b512",
+          "wire_format": "QBF1v2-planning-only"
+        },
+        {
+          "beats_reference_raw": false,
+          "block_size": 1024,
+          "deflate9_nbytes": 54113,
+          "deterministic_bytes": true,
+          "family": "qbf1_v2_self_describing_fp4_f16_qv",
+          "header_nbytes": 20,
+          "implemented_loader": false,
+          "is_qbf1_v2": true,
+          "metadata_nbytes": 15933,
+          "notes": [
+            "planning-only compact self-describing FP4/fp16/QV model",
+            "uses QZS3-equivalent tensor payload bytes but charges QBF1-style header and tensor metadata",
+            "no reviewed decoder or inflate dispatch exists"
+          ],
+          "payload_nbytes": 66868,
+          "pickle_free": true,
+          "promotion_eligible": false,
+          "raw_delta_vs_reference": 23533,
+          "raw_nbytes": 82821,
+          "score_claim": false,
+          "segment_bytes": {
+            "bias": 2284,
+            "dense_fp": 3104,
+            "dense_other": 0,
+            "fp_weight": 684,
+            "packed": 50176,
+            "qv": 10424,
+            "scales": 196
+          },
+          "strict_pickle_free_loader_ready": false,
+          "variant_id": "qbf1_v2_self_describing_fp4_f16_qv_b1024",
+          "wire_format": "QBF1v2-planning-only"
+        },
+        {
+          "beats_reference_raw": false,
+          "block_size": 2048,
+          "deflate9_nbytes": 53926,
+          "deterministic_bytes": true,
+          "family": "qbf1_v2_self_describing_fp4_f16_qv",
+          "header_nbytes": 20,
+          "implemented_loader": false,
+          "is_qbf1_v2": true,
+          "metadata_nbytes": 15953,
+          "notes": [
+            "planning-only compact self-describing FP4/fp16/QV model",
+            "uses QZS3-equivalent tensor payload bytes but charges QBF1-style header and tensor metadata",
+            "no reviewed decoder or inflate dispatch exists"
+          ],
+          "payload_nbytes": 79082,
+          "pickle_free": true,
+          "promotion_eligible": false,
+          "raw_delta_vs_reference": 35767,
+          "raw_nbytes": 95055,
+          "score_claim": false,
+          "segment_bytes": {
+            "bias": 2284,
+            "dense_fp": 3104,
+            "dense_other": 0,
+            "fp_weight": 684,
+            "packed": 62464,
+            "qv": 10424,
+            "scales": 122
+          },
+          "strict_pickle_free_loader_ready": false,
+          "variant_id": "qbf1_v2_self_describing_fp4_f16_qv_b2048",
+          "wire_format": "QBF1v2-planning-only"
+        },
+        {
+          "beats_reference_raw": false,
+          "block_size": 4096,
+          "deflate9_nbytes": 53826,
+          "deterministic_bytes": true,
+          "family": "qbf1_v2_self_describing_fp4_f16_qv",
+          "header_nbytes": 20,
+          "implemented_loader": false,
+          "is_qbf1_v2": true,
+          "metadata_nbytes": 15953,
+          "notes": [
+            "planning-only compact self-describing FP4/fp16/QV model",
+            "uses QZS3-equivalent tensor payload bytes but charges QBF1-style header and tensor metadata",
+            "no reviewed decoder or inflate dispatch exists"
+          ],
+          "payload_nbytes": 100546,
+          "pickle_free": true,
+          "promotion_eligible": false,
+          "raw_delta_vs_reference": 57231,
+          "raw_nbytes": 116519,
+          "score_claim": false,
+          "segment_bytes": {
+            "bias": 2284,
+            "dense_fp": 3104,
+            "dense_other": 0,
+            "fp_weight": 684,
+            "packed": 83968,
+            "qv": 10424,
+            "scales": 82
+          },
+          "strict_pickle_free_loader_ready": false,
+          "variant_id": "qbf1_v2_self_describing_fp4_f16_qv_b4096",
+          "wire_format": "QBF1v2-planning-only"
+        }
+      ]
+    },
+    "decision": {
+      "qbf1_dispatch_warranted": false,
+      "reason": "QBF1 remains negative evidence unless a concrete loader-ready layout beats both the decoded QZS3 renderer bytes and the current encoded renderer stream before exact CUDA is queued."
+    },
+    "helper": "tac.qbf1_renderer_codec.profile_qbf1_v2_renderer_bytes",
+    "promotion_eligible": false,
+    "readiness": {
+      "next_gate": "Only implement a QBF1-v2 decoder/inflate path if a self-describing layout beats the current QZS3 renderer slice locally before exact CUDA auth eval is considered.",
+      "no_go_reasons": [
+        "implemented QBF1-v1 best raw bytes 121618 exceed reference 59288 by 62330",
+        "self-describing QBF1-v2 byte model best raw bytes 72247 exceed reference 59288 by 12959",
+        "QBF1-v2 FP4/fp16/QV layout is profiling-only; no reviewed decoder or inflate dispatch exists",
+        "the only local raw byte win in this screen is an existing QZS3 block policy (existing_qzs3_b128), not a QBF1-v2 wire-format improvement"
+      ],
+      "promotion_eligible": false,
+      "qbf1_v2_dispatchable": false,
+      "qbf1_v2_go": false,
+      "score_claim": false
+    },
+    "reference": {
+      "actual_local_raw_nbytes": 59288,
+      "matches_default_c067_qzs3_reference": true,
+      "name": "current_qzs3_b32",
+      "raw_nbytes": 59288,
+      "reference_block_size": 32,
+      "wire_format": "QZS3"
+    },
+    "schema": "qbf1.renderer.v2_byte_profile.v1",
+    "score_claim": false
+  },
+  "qzs3_block_search": {
+    "available": true,
+    "best": {
+      "archive_builder_hint": "experiments/repack_quantizr_faithful_qzs3_archive.py",
+      "brotli_q11_bytes": 50567,
+      "candidate_id": "qzs3_b4096",
+      "delta_vs_current_stream_bytes": -5398,
+      "delta_vs_source_raw_renderer_bytes": 41264,
+      "exact_evaluable_archive": true,
+      "family": "qzs3_block_search",
+      "formula_only_rate_delta_vs_current_stream": -0.003594306628953481,
+      "projected_renderer_stream_bytes": 50567,
+      "projected_stream_basis": "brotli_q11_to_match_source_brotli_stream",
+      "promotion_eligible": false,
+      "qzs3_block_size": 4096,
+      "raw_bytes": 100552,
+      "runtime_loader_ready": true,
+      "score_claim": false,
+      "sha256": "6630979e7e7946d6bdfdc9c8c6979dd33b01c81f7605d4a663a7a808694c1fb6",
+      "state_change_vs_source_renderer": true,
+      "wire_format": "QZS3",
+      "zlib9_bytes": 52317
+    },
+    "candidate_count": 12,
+    "candidates": [
+      {
+        "archive_builder_hint": "experiments/repack_quantizr_faithful_qzs3_archive.py",
+        "brotli_q11_bytes": 50567,
+        "candidate_id": "qzs3_b4096",
+        "delta_vs_current_stream_bytes": -5398,
+        "delta_vs_source_raw_renderer_bytes": 41264,
+        "exact_evaluable_archive": true,
+        "family": "qzs3_block_search",
+        "formula_only_rate_delta_vs_current_stream": -0.003594306628953481,
+        "projected_renderer_stream_bytes": 50567,
+        "projected_stream_basis": "brotli_q11_to_match_source_brotli_stream",
+        "promotion_eligible": false,
+        "qzs3_block_size": 4096,
+        "raw_bytes": 100552,
+        "runtime_loader_ready": true,
+        "score_claim": false,
+        "sha256": "6630979e7e7946d6bdfdc9c8c6979dd33b01c81f7605d4a663a7a808694c1fb6",
+        "state_change_vs_source_renderer": true,
+        "wire_format": "QZS3",
+        "zlib9_bytes": 52317
+      },
+      {
+        "archive_builder_hint": "experiments/repack_quantizr_faithful_qzs3_archive.py",
+        "brotli_q11_bytes": 50949,
+        "candidate_id": "qzs3_b2048",
+        "delta_vs_current_stream_bytes": -5016,
+        "delta_vs_source_raw_renderer_bytes": 19800,
+        "exact_evaluable_archive": true,
+        "family": "qzs3_block_search",
+        "formula_only_rate_delta_vs_current_stream": -0.0033399485088608117,
+        "projected_renderer_stream_bytes": 50949,
+        "projected_stream_basis": "brotli_q11_to_match_source_brotli_stream",
+        "promotion_eligible": false,
+        "qzs3_block_size": 2048,
+        "raw_bytes": 79088,
+        "runtime_loader_ready": true,
+        "score_claim": false,
+        "sha256": "0851321f2b77f20dbca11f474d4d93f9ae76804a285a98ceaf10d025e49dfb7a",
+        "state_change_vs_source_renderer": true,
+        "wire_format": "QZS3",
+        "zlib9_bytes": 52446
+      },
+      {
+        "archive_builder_hint": "experiments/repack_quantizr_faithful_qzs3_archive.py",
+        "brotli_q11_bytes": 51261,
+        "candidate_id": "qzs3_b1024",
+        "delta_vs_current_stream_bytes": -4704,
+        "delta_vs_source_raw_renderer_bytes": 7586,
+        "exact_evaluable_archive": true,
+        "family": "qzs3_block_search",
+        "formula_only_rate_delta_vs_current_stream": -0.003132200515486694,
+        "projected_renderer_stream_bytes": 51261,
+        "projected_stream_basis": "brotli_q11_to_match_source_brotli_stream",
+        "promotion_eligible": false,
+        "qzs3_block_size": 1024,
+        "raw_bytes": 66874,
+        "runtime_loader_ready": true,
+        "score_claim": false,
+        "sha256": "363edfc1c4f403d8dc55fd80ea6f684b0b27448e829c6fa3e17d803399944f3a",
+        "state_change_vs_source_renderer": true,
+        "wire_format": "QZS3",
+        "zlib9_bytes": 52626
+      },
+      {
+        "archive_builder_hint": "experiments/repack_quantizr_faithful_qzs3_archive.py",
+        "brotli_q11_bytes": 51611,
+        "candidate_id": "qzs3_b0512",
+        "delta_vs_current_stream_bytes": -4354,
+        "delta_vs_source_raw_renderer_bytes": -474,
+        "exact_evaluable_archive": true,
+        "family": "qzs3_block_search",
+        "formula_only_rate_delta_vs_current_stream": -0.0028991498818939344,
+        "projected_renderer_stream_bytes": 51611,
+        "projected_stream_basis": "brotli_q11_to_match_source_brotli_stream",
+        "promotion_eligible": false,
+        "qzs3_block_size": 512,
+        "raw_bytes": 58814,
+        "runtime_loader_ready": true,
+        "score_claim": false,
+        "sha256": "13b6cf642500bdb4719fd08c55175f40a196098fccd04847264c5001e5ed777a",
+        "state_change_vs_source_renderer": true,
+        "wire_format": "QZS3",
+        "zlib9_bytes": 52889
+      },
+      {
+        "archive_builder_hint": "experiments/repack_quantizr_faithful_qzs3_archive.py",
+        "brotli_q11_bytes": 52109,
+        "candidate_id": "qzs3_b0256",
+        "delta_vs_current_stream_bytes": -3856,
+        "delta_vs_source_raw_renderer_bytes": -2356,
+        "exact_evaluable_archive": true,
+        "family": "qzs3_block_search",
+        "formula_only_rate_delta_vs_current_stream": -0.002567552123239093,
+        "projected_renderer_stream_bytes": 52109,
+        "projected_stream_basis": "brotli_q11_to_match_source_brotli_stream",
+        "promotion_eligible": false,
+        "qzs3_block_size": 256,
+        "raw_bytes": 56932,
+        "runtime_loader_ready": true,
+        "score_claim": false,
+        "sha256": "d8c7d417e9049e6e5e1aa8e37f8464a8abc4a84ec7695bdc81f662b19bbe474d",
+        "state_change_vs_source_renderer": true,
+        "wire_format": "QZS3",
+        "zlib9_bytes": 53430
+      },
+      {
+        "archive_builder_hint": "experiments/repack_quantizr_faithful_qzs3_archive.py",
+        "brotli_q11_bytes": 52994,
+        "candidate_id": "qzs3_b0128",
+        "delta_vs_current_stream_bytes": -2971,
+        "delta_vs_source_raw_renderer_bytes": -2988,
+        "exact_evaluable_archive": true,
+        "family": "qzs3_block_search",
+        "formula_only_rate_delta_vs_current_stream": -0.0019782669497259713,
+        "projected_renderer_stream_bytes": 52994,
+        "projected_stream_basis": "brotli_q11_to_match_source_brotli_stream",
+        "promotion_eligible": false,
+        "qzs3_block_size": 128,
+        "raw_bytes": 56300,
+        "runtime_loader_ready": true,
+        "score_claim": false,
+        "sha256": "8707591b67235e2e5e8e0b9c9feab1c1f03bd95ae42f8714f38e903a140a45d2",
+        "state_change_vs_source_renderer": true,
+        "wire_format": "QZS3",
+        "zlib9_bytes": 54241
+      },
+      {
+        "archive_builder_hint": "experiments/repack_quantizr_faithful_qzs3_archive.py",
+        "brotli_q11_bytes": 53400,
+        "candidate_id": "qzs3_b0096",
+        "delta_vs_current_stream_bytes": -2565,
+        "delta_vs_source_raw_renderer_bytes": -2236,
+        "exact_evaluable_archive": true,
+        "family": "qzs3_block_search",
+        "formula_only_rate_delta_vs_current_stream": -0.0017079282147583696,
+        "projected_renderer_stream_bytes": 53400,
+        "projected_stream_basis": "brotli_q11_to_match_source_brotli_stream",
+        "promotion_eligible": false,
+        "qzs3_block_size": 96,
+        "raw_bytes": 57052,
+        "runtime_loader_ready": true,
+        "score_claim": false,
+        "sha256": "482de787197e3036f3c58552586c3b6c7801923b31fae72585dd7756c402e734",
+        "state_change_vs_source_renderer": true,
+        "wire_format": "QZS3",
+        "zlib9_bytes": 54740
+      },
+      {
+        "archive_builder_hint": "experiments/repack_quantizr_faithful_qzs3_archive.py",
+        "brotli_q11_bytes": 54159,
+        "candidate_id": "qzs3_b0064",
+        "delta_vs_current_stream_bytes": -1806,
+        "delta_vs_source_raw_renderer_bytes": -2326,
+        "exact_evaluable_archive": true,
+        "family": "qzs3_block_search",
+        "formula_only_rate_delta_vs_current_stream": -0.0012025412693386416,
+        "projected_renderer_stream_bytes": 54159,
+        "projected_stream_basis": "brotli_q11_to_match_source_brotli_stream",
+        "promotion_eligible": false,
+        "qzs3_block_size": 64,
+        "raw_bytes": 56962,
+        "runtime_loader_ready": true,
+        "score_claim": false,
+        "sha256": "87a4bf1ba0622cac759968169216e9447b3ba9e5bb16f0ac399f433002cba2af",
+        "state_change_vs_source_renderer": true,
+        "wire_format": "QZS3",
+        "zlib9_bytes": 55472
+      },
+      {
+        "archive_builder_hint": "experiments/repack_quantizr_faithful_qzs3_archive.py",
+        "brotli_q11_bytes": 54892,
+        "candidate_id": "qzs3_b0048",
+        "delta_vs_current_stream_bytes": -1073,
+        "delta_vs_source_raw_renderer_bytes": -1160,
+        "exact_evaluable_archive": true,
+        "family": "qzs3_block_search",
+        "formula_only_rate_delta_vs_current_stream": -0.0007144666567000899,
+        "projected_renderer_stream_bytes": 54892,
+        "projected_stream_basis": "brotli_q11_to_match_source_brotli_stream",
+        "promotion_eligible": false,
+        "qzs3_block_size": 48,
+        "raw_bytes": 58128,
+        "runtime_loader_ready": true,
+        "score_claim": false,
+        "sha256": "0f13ef302463b6004835a9cbb2acddc3f761d4d041d2012472b83f58c4ba1c2c",
+        "state_change_vs_source_renderer": true,
+        "wire_format": "QZS3",
+        "zlib9_bytes": 56255
+      },
+      {
+        "archive_builder_hint": "experiments/repack_quantizr_faithful_qzs3_archive.py",
+        "brotli_q11_bytes": 55965,
+        "candidate_id": "qzs3_b0032",
+        "delta_vs_current_stream_bytes": 0,
+        "delta_vs_source_raw_renderer_bytes": 0,
+        "exact_evaluable_archive": true,
+        "family": "qzs3_block_search",
+        "formula_only_rate_delta_vs_current_stream": 0.0,
+        "projected_renderer_stream_bytes": 55965,
+        "projected_stream_basis": "brotli_q11_to_match_source_brotli_stream",
+        "promotion_eligible": false,
+        "qzs3_block_size": 32,
+        "raw_bytes": 59288,
+        "runtime_loader_ready": true,
+        "score_claim": false,
+        "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb",
+        "state_change_vs_source_renderer": false,
+        "wire_format": "QZS3",
+        "zlib9_bytes": 57615
+      },
+      {
+        "archive_builder_hint": "experiments/repack_quantizr_faithful_qzs3_archive.py",
+        "brotli_q11_bytes": 56811,
+        "candidate_id": "qzs3_b0024",
+        "delta_vs_current_stream_bytes": 846,
+        "delta_vs_source_raw_renderer_bytes": 1608,
+        "exact_evaluable_archive": true,
+        "family": "qzs3_block_search",
+        "formula_only_rate_delta_vs_current_stream": 0.000563316674341357,
+        "projected_renderer_stream_bytes": 56811,
+        "projected_stream_basis": "brotli_q11_to_match_source_brotli_stream",
+        "promotion_eligible": false,
+        "qzs3_block_size": 24,
+        "raw_bytes": 60896,
+        "runtime_loader_ready": true,
+        "score_claim": false,
+        "sha256": "0a07d331e0ea8660603349fbc0c8e224a2856f20f12d3ccf766355cf135a5a4f",
+        "state_change_vs_source_renderer": true,
+        "wire_format": "QZS3",
+        "zlib9_bytes": 58779
+      },
+      {
+        "archive_builder_hint": "experiments/repack_quantizr_faithful_qzs3_archive.py",
+        "brotli_q11_bytes": 58739,
+        "candidate_id": "qzs3_b0016",
+        "delta_vs_current_stream_bytes": 2774,
+        "delta_vs_source_raw_renderer_bytes": 4734,
+        "exact_evaluable_archive": true,
+        "family": "qzs3_block_search",
+        "formula_only_rate_delta_vs_current_stream": 0.0018470927359609034,
+        "projected_renderer_stream_bytes": 58739,
+        "projected_stream_basis": "brotli_q11_to_match_source_brotli_stream",
+        "promotion_eligible": false,
+        "qzs3_block_size": 16,
+        "raw_bytes": 64022,
+        "runtime_loader_ready": true,
+        "score_claim": false,
+        "sha256": "bc2d8f416fcdf588390c5a39e501d7a063bc3fa580830e3f7e3265e26ddc55b1",
+        "state_change_vs_source_renderer": true,
+        "wire_format": "QZS3",
+        "zlib9_bytes": 61014
+      }
+    ],
+    "helper": "tac.quantizr_qzs3_codec.encode_qzs4_block_search_state_dict",
+    "qzs4_helper_meta": {
+      "candidates": [
+        {
+          "block_size": 16,
+          "deflated_bytes": 61014,
+          "raw_bytes": 64022,
+          "selected": false
+        },
+        {
+          "block_size": 24,
+          "deflated_bytes": 58779,
+          "raw_bytes": 60896,
+          "selected": false
+        },
+        {
+          "block_size": 32,
+          "deflated_bytes": 57615,
+          "raw_bytes": 59288,
+          "selected": false
+        },
+        {
+          "block_size": 48,
+          "deflated_bytes": 56255,
+          "raw_bytes": 58128,
+          "selected": false
+        },
+        {
+          "block_size": 64,
+          "deflated_bytes": 55472,
+          "raw_bytes": 56962,
+          "selected": false
+        },
+        {
+          "block_size": 96,
+          "deflated_bytes": 54740,
+          "raw_bytes": 57052,
+          "selected": false
+        },
+        {
+          "block_size": 128,
+          "deflated_bytes": 54241,
+          "raw_bytes": 56300,
+          "selected": false
+        },
+        {
+          "block_size": 256,
+          "deflated_bytes": 53430,
+          "raw_bytes": 56932,
+          "selected": false
+        },
+        {
+          "block_size": 512,
+          "deflated_bytes": 52889,
+          "raw_bytes": 58814,
+          "selected": false
+        },
+        {
+          "block_size": 1024,
+          "deflated_bytes": 52626,
+          "raw_bytes": 66874,
+          "selected": false
+        },
+        {
+          "block_size": 2048,
+          "deflated_bytes": 52446,
+          "raw_bytes": 79088,
+          "selected": false
+        },
+        {
+          "block_size": 4096,
+          "deflated_bytes": 52317,
+          "raw_bytes": 100552,
+          "selected": true
+        }
+      ],
+      "packer_policy": "qzs4_block_search",
+      "selected_block_size": 4096,
+      "selected_deflated_bytes": 52317,
+      "selected_raw_bytes": 100552,
+      "wire_format": "QZS3"
+    }
+  },
+  "remote_or_gpu_dispatch": false,
+  "schema": "c067_renderer_self_compression_v2_plan_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 276214,
+    "logical_members": {
+      "masks.mkv": {
+        "bytes": 223385,
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      "optimized_poses.bin": {
+        "bytes": 7200,
+        "sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+      },
+      "renderer.bin": {
+        "bytes": 59288,
+        "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+      }
+    },
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip",
+    "renderer_stream": {
+      "codec": "brotli_qzs3",
+      "decoded_bytes": 59288,
+      "decoded_sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb",
+      "encoded_bytes": 55965,
+      "encoded_sha256": "2544dfe50d2631a56600cbfc7342e4a18c97f953526fc51425be0d62f97e22ad",
+      "payload_format": "public_pr67_qzs3_qp1_fixed_slices",
+      "payload_member": "p",
+      "payload_schema": "renderer_payload_pr64_len_table_v1",
+      "source_stream_packaging": "packed_payload_member"
+    },
+    "runtime_packaging": {
+      "source_archive_packaging": "packed_renderer_payload",
+      "source_logical_member_names": [
+        "renderer.bin",
+        "masks.mkv",
+        "optimized_poses.bin"
+      ],
+      "source_payload_header_payload_format": "public_pr67_qzs3_qp1_fixed_slices",
+      "source_payload_header_schema": "renderer_payload_pr64_len_table_v1",
+      "source_payload_member": "p",
+      "source_payload_member_bytes": 276114,
+      "source_payload_member_sha256": "1f0aaaa9d06967552df6f22d39905a48349239dee4731b093067951a20adc2af",
+      "source_zip_members": [
+        "p"
+      ]
+    },
+    "sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a"
+  },
+  "source_renderer": {
+    "current_c067_reference_raw_bytes": 59288,
+    "current_c067_reference_stream_bytes": 55965,
+    "encoded_stream_bytes_used_for_gate": 55965,
+    "encoded_stream_reference_source": "archive_metadata",
+    "matches_current_c067_raw_reference": true,
+    "matches_current_c067_stream_reference": true,
+    "member_name": "renderer.bin",
+    "qzs3_block_size": 32,
+    "raw_bytes": 59288,
+    "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb",
+    "state_tensor_count": 111,
+    "wire_format": "QZS3"
+  },
+  "tool": "experiments/plan_c067_renderer_self_compression_v2.py"
+}

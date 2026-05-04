@@ -1,0 +1,17 @@
+{
+    "programs": [
+
+    ],
+    "stream_groups": [
+
+    ],
+    "streams": [
+        {
+            "codec_name": "av1",
+            "width": 512,
+            "height": 384,
+            "pix_fmt": "gray",
+            "nb_read_frames": "600"
+        }
+    ]
+}

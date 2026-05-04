@@ -1,0 +1,73 @@
+{
+  "archive": "/Users/adpena/Projects/pact/experiments/results/pr65_qpost_atom_v2_worker_20260503/candidates/v2_pr65_qpost_bias_shift_poseadv_top024/archive.zip",
+  "archive_bytes": 276598,
+  "archive_sha256": "8e53e5e9fe9d5a46858ce973d6aee872dbff1889c409d4fd1527df68493aadf8",
+  "candidate_id": "v2_pr65_qpost_bias_shift_poseadv_top024",
+  "evidence_grade": "byte_trace_planning_only_until_exact_cuda",
+  "exact_eval_command_template": ".venv/bin/python -u experiments/contest_auth_eval.py --archive /Users/adpena/Projects/pact/experiments/results/pr65_qpost_atom_v2_worker_20260503/candidates/v2_pr65_qpost_bias_shift_poseadv_top024/archive.zip --inflate-sh submissions/robust_current/inflate.sh --upstream-dir upstream --device cuda --keep-work-dir --work-dir /Users/adpena/Projects/pact/experiments/results/pr65_qpost_atom_v2_worker_20260503/exact_eval_work/v2_pr65_qpost_bias_shift_poseadv_top024",
+  "remote_dispatch": {
+    "dispatched": false,
+    "note": "No remote GPU, training, or eval job was dispatched by this worker.",
+    "requires_lane_claim": true
+  },
+  "schema_version": 2,
+  "score_claim": false,
+  "tool": "experiments/build_pr65_qpost_atom_candidates_v2.py",
+  "v2_screen": {
+    "archive": "/Users/adpena/Projects/pact/experiments/results/pr65_qpost_atom_v2_worker_20260503/candidates/v2_pr65_qpost_bias_shift_poseadv_top024/archive.zip",
+    "archive_byte_delta": 256,
+    "archive_bytes": 276598,
+    "archive_sha256": "8e53e5e9fe9d5a46858ce973d6aee872dbff1889c409d4fd1527df68493aadf8",
+    "baseline_score": 0.3154707273953505,
+    "break_even_component_gain_for_target": 0.0016411872873497554,
+    "built": true,
+    "candidate_id": "v2_pr65_qpost_bias_shift_poseadv_top024",
+    "core_dispatch_blockers": [
+      "contains motion/fractional shift stream; global exact ablations were pose-negative",
+      "public-trace opportunity bound 0.001519491 is below sub-0.314 break-even 0.001641187"
+    ],
+    "core_dispatch_recommendation": "do_not_dispatch",
+    "dispatch_class": "diagnostic_motion",
+    "evidence_grade": "byte_trace_planning_only_until_exact_cuda",
+    "include_streams": [
+      "bias",
+      "shift"
+    ],
+    "public_trace_opportunity_bound": 0.0015194911451614957,
+    "qpost_bytes": 162,
+    "rate_score_delta": 0.00017045989199927588,
+    "recommendation_class": "do_not_dispatch",
+    "recommendation_reason": "core risk classifier has blockers",
+    "score_claim": false,
+    "selected_active_atoms_total": 33,
+    "selected_pair_count": 24,
+    "selected_pairs": [
+      105,
+      64,
+      60,
+      435,
+      164,
+      420,
+      90,
+      67,
+      106,
+      68,
+      423,
+      310,
+      309,
+      430,
+      367,
+      136,
+      70,
+      130,
+      101,
+      120,
+      63,
+      166,
+      425,
+      305
+    ],
+    "target_score": 0.314,
+    "trace_slack_vs_target": -0.00012169614218825978
+  }
+}

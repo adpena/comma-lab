@@ -1,0 +1,146 @@
+{
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
+  "output_archive": {
+    "bytes": 276617,
+    "delta_bytes_vs_source_archive": 403,
+    "formula_only_rate_delta_vs_source_archive": 0.00026834115810823507,
+    "path": "/Users/adpena/Projects/pact/experiments/results/sjkl_c067_consensus_top32_g0046875_sibling_20260503/archive.zip",
+    "sha256": "8e10d635d55edaaf809d28b1a4259a891d8abb4630ca874b973d77775ffcbdbf"
+  },
+  "packed_payload": {
+    "archive_layout": "top_level_sibling",
+    "brotli_quality": 11,
+    "compression_selection": {
+      "candidate_count": 1,
+      "chosen_member_order": [
+        "p",
+        "sjkl.bin"
+      ],
+      "header_minimized": false,
+      "layout_summary": {
+        "archive_delta_bytes_vs_source_archive": 403,
+        "formula_only_rate_delta_vs_source_archive": 0.00026834115810823507,
+        "layout": "top_level_sjkl_sibling",
+        "preserves_source_payload_bytes": true,
+        "sjkl_zip_compression": "stored",
+        "source_payload_member": "p",
+        "zip_members": [
+          {
+            "compress_size": 276114,
+            "compress_type": 0,
+            "date_time": [
+              1980,
+              1,
+              1,
+              0,
+              0,
+              0
+            ],
+            "external_attr_mode": 420,
+            "file_size": 276114,
+            "name": "p"
+          },
+          {
+            "compress_size": 311,
+            "compress_type": 0,
+            "date_time": [
+              1980,
+              1,
+              1,
+              0,
+              0,
+              0
+            ],
+            "external_attr_mode": 420,
+            "file_size": 311,
+            "name": "sjkl.bin"
+          }
+        ]
+      },
+      "member_order_optimized": false
+    },
+    "header": {
+      "members": [
+        {
+          "bytes": 276114,
+          "codec": "preserved_source_member",
+          "name": "p",
+          "sha256": "1f0aaaa9d06967552df6f22d39905a48349239dee4731b093067951a20adc2af"
+        },
+        {
+          "bytes": 311,
+          "codec": "top_level_archive_member",
+          "name": "sjkl.bin",
+          "sha256": "1e9325a8fb337edc50169d7ab8804463d654f1af16eab6422f459118988e1280"
+        }
+      ],
+      "schema": "source_payload_preserved_plus_top_level_sjkl_v1"
+    },
+    "payload_compressed_bytes": 0,
+    "payload_format": "preserve_source_payload_plus_top_level_sjkl",
+    "payload_member": "p",
+    "payload_raw_bytes": 0,
+    "source_archive_sha256_recorded_in_manifest": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a"
+  },
+  "payload_member_names": {
+    "output_archive_members": [
+      "p",
+      "sjkl.bin"
+    ],
+    "output_logical_runtime_members": [
+      "p",
+      "sjkl.bin"
+    ],
+    "output_packed_payload_member": "p",
+    "sjkl_member": "sjkl.bin"
+  },
+  "promotion_eligible": false,
+  "runtime_contract": {
+    "inflate_loader": "submissions/robust_current/inflate_renderer.py::_load_sjkl_residual_from_archive_dir",
+    "require_runtime_apply_proof": true,
+    "runtime_apply_proof": {
+      "path": "/Users/adpena/Projects/pact/submissions/robust_current/inflate_renderer.py",
+      "proof_tokens": [
+        "SJKL_REQUIRE_APPLIED",
+        "_finalize_sjkl_application_contract",
+        "_apply_sjkl_residual_to_pairs",
+        "applied_pair_count",
+        "charged sjkl.bin did not affect"
+      ],
+      "require_env": "SJKL_REQUIRE_APPLIED=1",
+      "sha256": "c017b8d3086aceda7cb9ef1012aeb3ab3eb8998d60ad155d788929290f320eaa",
+      "verified": true
+    },
+    "score_affecting_payload_charged_in_archive": true,
+    "sidecars_required": false,
+    "unpacker": "submissions/robust_current/unpack_renderer_payload.py"
+  },
+  "schema": "sjkl_c067_archive_builder_v1",
+  "score_claim": false,
+  "sjkl_payload": {
+    "bytes": 311,
+    "max_bytes": 2048,
+    "member_name": "sjkl.bin",
+    "path": "/Users/adpena/Projects/pact/experiments/results/sjkl_c067_consensus_top32_g0046875_sibling_20260503/repack/sjkl.bin",
+    "replaced_existing": false,
+    "sha256": "1e9325a8fb337edc50169d7ab8804463d654f1af16eab6422f459118988e1280"
+  },
+  "source_archive": {
+    "bytes": 276214,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c067_breakthrough_candidate_matrix_20260502T1030Z/line_search_source_c067_fixedslice/archive.zip",
+    "sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+    "source_archive_packaging": "packed_renderer_payload",
+    "source_logical_member_names": [
+      "renderer.bin",
+      "masks.mkv",
+      "optimized_poses.bin"
+    ],
+    "source_payload_header_payload_format": "public_pr67_qzs3_qp1_fixed_slices",
+    "source_payload_header_schema": "renderer_payload_pr64_len_table_v1",
+    "source_payload_member": "p",
+    "source_zip_members": [
+      "p"
+    ]
+  }
+}

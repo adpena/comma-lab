@@ -1,0 +1,199 @@
+{
+  "best_by_archive_bytes": {
+    "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_shrink_pr75_c088_20260503_worker/qzs3_b0128_pr75_preserved_slices/archive.zip",
+    "archive_bytes": 273415,
+    "archive_sha256": "9d2148772ded7c21d30db0033c33c0cd951ac32a0c828a110cc44a80e0ca2978",
+    "candidate_id": "qzs3_b0128_pr75_preserved_slices",
+    "delta_bytes_vs_source_archive": -2971,
+    "manifest": "/Users/adpena/Projects/pact/experiments/results/renderer_shrink_pr75_c088_20260503_worker/qzs3_b0128_pr75_preserved_slices/build_manifest.json",
+    "payload_format": "pr75_p3_preserve_slices",
+    "promotion_eligible": false,
+    "qzs3_block_size": 128,
+    "renderer_bytes": 56300,
+    "renderer_sha256": "8707591b67235e2e5e8e0b9c9feab1c1f03bd95ae42f8714f38e903a140a45d2",
+    "score_claim": false
+  },
+  "candidate_count": 10,
+  "candidates": [
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_shrink_pr75_c088_20260503_worker/qzs3_b0033_pr75_preserved_slices/archive.zip",
+      "archive_bytes": 276349,
+      "archive_sha256": "908fa78bb7f9f26cff53935a6cbd9d575dbc505cb7be5d941aa9992c87a0d086",
+      "candidate_id": "qzs3_b0033_pr75_preserved_slices",
+      "delta_bytes_vs_source_archive": -37,
+      "manifest": "/Users/adpena/Projects/pact/experiments/results/renderer_shrink_pr75_c088_20260503_worker/qzs3_b0033_pr75_preserved_slices/build_manifest.json",
+      "payload_format": "pr75_p3_preserve_slices",
+      "promotion_eligible": false,
+      "qzs3_block_size": 33,
+      "renderer_bytes": 59630,
+      "renderer_sha256": "31485a17a5e626506e1d6f930fb2d14b263fe8286fefe0047fd97062777fae5f",
+      "score_claim": false
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_shrink_pr75_c088_20260503_worker/qzs3_b0036_pr75_preserved_slices/archive.zip",
+      "archive_bytes": 276085,
+      "archive_sha256": "ab90c6c78dd180f27b18d57c7529d844e3c965265a8df93ae9605c804475366d",
+      "candidate_id": "qzs3_b0036_pr75_preserved_slices",
+      "delta_bytes_vs_source_archive": -301,
+      "manifest": "/Users/adpena/Projects/pact/experiments/results/renderer_shrink_pr75_c088_20260503_worker/qzs3_b0036_pr75_preserved_slices/build_manifest.json",
+      "payload_format": "pr75_p3_preserve_slices",
+      "promotion_eligible": false,
+      "qzs3_block_size": 36,
+      "renderer_bytes": 58942,
+      "renderer_sha256": "863ff5331431f98aee698bc7569f1893124d8b63059be32ef185d99ec9edc928",
+      "score_claim": false
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_shrink_pr75_c088_20260503_worker/qzs3_b0040_pr75_preserved_slices/archive.zip",
+      "archive_bytes": 275828,
+      "archive_sha256": "df5a8414cc8211f6b03545c29370eae93d209882188424aac943e739e630ddc4",
+      "candidate_id": "qzs3_b0040_pr75_preserved_slices",
+      "delta_bytes_vs_source_archive": -558,
+      "manifest": "/Users/adpena/Projects/pact/experiments/results/renderer_shrink_pr75_c088_20260503_worker/qzs3_b0040_pr75_preserved_slices/build_manifest.json",
+      "payload_format": "pr75_p3_preserve_slices",
+      "promotion_eligible": false,
+      "qzs3_block_size": 40,
+      "renderer_bytes": 58676,
+      "renderer_sha256": "0c7ef9a736926cc8c8327a9a1621aef853eeb0e43035213b0cfe711840875627",
+      "score_claim": false
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_shrink_pr75_c088_20260503_worker/qzs3_b0044_pr75_preserved_slices/archive.zip",
+      "archive_bytes": 275572,
+      "archive_sha256": "15417c3161d19222ec2f3ef0d1e69883e89399da58bbc9816f57e64ca1a8ea88",
+      "candidate_id": "qzs3_b0044_pr75_preserved_slices",
+      "delta_bytes_vs_source_archive": -814,
+      "manifest": "/Users/adpena/Projects/pact/experiments/results/renderer_shrink_pr75_c088_20260503_worker/qzs3_b0044_pr75_preserved_slices/build_manifest.json",
+      "payload_format": "pr75_p3_preserve_slices",
+      "promotion_eligible": false,
+      "qzs3_block_size": 44,
+      "renderer_bytes": 58526,
+      "renderer_sha256": "f46984d560f38e617234d149c974c852ef63630ca636d3be8c3d8832de6edc87",
+      "score_claim": false
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_shrink_pr75_c088_20260503_worker/qzs3_b0046_pr75_preserved_slices/archive.zip",
+      "archive_bytes": 275481,
+      "archive_sha256": "38dc790ca0df41af333db3785b1c0623449398ef71565c3db74450dfe6ea4f92",
+      "candidate_id": "qzs3_b0046_pr75_preserved_slices",
+      "delta_bytes_vs_source_archive": -905,
+      "manifest": "/Users/adpena/Projects/pact/experiments/results/renderer_shrink_pr75_c088_20260503_worker/qzs3_b0046_pr75_preserved_slices/build_manifest.json",
+      "payload_format": "pr75_p3_preserve_slices",
+      "promotion_eligible": false,
+      "qzs3_block_size": 46,
+      "renderer_bytes": 58177,
+      "renderer_sha256": "b1873072efd7c0f669143076bb0d39e7c5de61c0117ef22a4eeddf8c471dbae9",
+      "score_claim": false
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_shrink_pr75_c088_20260503_worker/qzs3_b0047_pr75_preserved_slices/archive.zip",
+      "archive_bytes": 275395,
+      "archive_sha256": "3623c37b5843a0433725b314c960c63d8aa7dd4a42c02111d8f01e383d0be9e6",
+      "candidate_id": "qzs3_b0047_pr75_preserved_slices",
+      "delta_bytes_vs_source_archive": -991,
+      "manifest": "/Users/adpena/Projects/pact/experiments/results/renderer_shrink_pr75_c088_20260503_worker/qzs3_b0047_pr75_preserved_slices/build_manifest.json",
+      "payload_format": "pr75_p3_preserve_slices",
+      "promotion_eligible": false,
+      "qzs3_block_size": 47,
+      "renderer_bytes": 58083,
+      "renderer_sha256": "e7b407ea4d27570eede62aa99393d97e444dbba86c6ece868941a582f435b517",
+      "score_claim": false
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_shrink_pr75_c088_20260503_worker/qzs3_b0048_pr75_preserved_slices/archive.zip",
+      "archive_bytes": 275313,
+      "archive_sha256": "368387a5d360951fe4df002219d86c2fd9e6643681322743edd66ed829fdbdab",
+      "candidate_id": "qzs3_b0048_pr75_preserved_slices",
+      "delta_bytes_vs_source_archive": -1073,
+      "manifest": "/Users/adpena/Projects/pact/experiments/results/renderer_shrink_pr75_c088_20260503_worker/qzs3_b0048_pr75_preserved_slices/build_manifest.json",
+      "payload_format": "pr75_p3_preserve_slices",
+      "promotion_eligible": false,
+      "qzs3_block_size": 48,
+      "renderer_bytes": 58128,
+      "renderer_sha256": "0f13ef302463b6004835a9cbb2acddc3f761d4d041d2012472b83f58c4ba1c2c",
+      "score_claim": false
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_shrink_pr75_c088_20260503_worker/qzs3_b0064_pr75_preserved_slices/archive.zip",
+      "archive_bytes": 274580,
+      "archive_sha256": "35b7400b4fae8f64bf41b7af2c03ffe86290fe30833adf191e46ae702eb9dfbd",
+      "candidate_id": "qzs3_b0064_pr75_preserved_slices",
+      "delta_bytes_vs_source_archive": -1806,
+      "manifest": "/Users/adpena/Projects/pact/experiments/results/renderer_shrink_pr75_c088_20260503_worker/qzs3_b0064_pr75_preserved_slices/build_manifest.json",
+      "payload_format": "pr75_p3_preserve_slices",
+      "promotion_eligible": false,
+      "qzs3_block_size": 64,
+      "renderer_bytes": 56962,
+      "renderer_sha256": "87a4bf1ba0622cac759968169216e9447b3ba9e5bb16f0ac399f433002cba2af",
+      "score_claim": false
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_shrink_pr75_c088_20260503_worker/qzs3_b0096_pr75_preserved_slices/archive.zip",
+      "archive_bytes": 273821,
+      "archive_sha256": "fcb5945f1865a342f29c48cbe7ad1a86625e81b447256f8a35aabb5511354c64",
+      "candidate_id": "qzs3_b0096_pr75_preserved_slices",
+      "delta_bytes_vs_source_archive": -2565,
+      "manifest": "/Users/adpena/Projects/pact/experiments/results/renderer_shrink_pr75_c088_20260503_worker/qzs3_b0096_pr75_preserved_slices/build_manifest.json",
+      "payload_format": "pr75_p3_preserve_slices",
+      "promotion_eligible": false,
+      "qzs3_block_size": 96,
+      "renderer_bytes": 57052,
+      "renderer_sha256": "482de787197e3036f3c58552586c3b6c7801923b31fae72585dd7756c402e734",
+      "score_claim": false
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_shrink_pr75_c088_20260503_worker/qzs3_b0128_pr75_preserved_slices/archive.zip",
+      "archive_bytes": 273415,
+      "archive_sha256": "9d2148772ded7c21d30db0033c33c0cd951ac32a0c828a110cc44a80e0ca2978",
+      "candidate_id": "qzs3_b0128_pr75_preserved_slices",
+      "delta_bytes_vs_source_archive": -2971,
+      "manifest": "/Users/adpena/Projects/pact/experiments/results/renderer_shrink_pr75_c088_20260503_worker/qzs3_b0128_pr75_preserved_slices/build_manifest.json",
+      "payload_format": "pr75_p3_preserve_slices",
+      "promotion_eligible": false,
+      "qzs3_block_size": 128,
+      "renderer_bytes": 56300,
+      "renderer_sha256": "8707591b67235e2e5e8e0b9c9feab1c1f03bd95ae42f8714f38e903a140a45d2",
+      "score_claim": false
+    }
+  ],
+  "promotion_eligible": false,
+  "qzs3_block_sizes": [
+    33,
+    36,
+    40,
+    44,
+    46,
+    47,
+    48,
+    64,
+    96,
+    128
+  ],
+  "remote_gpu_dispatch_performed": false,
+  "schema": "renderer_shrink_candidate_summary_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 276386,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/archive.zip",
+    "sha256": "9feef7ffaa254f9e5408996a122682757a054144a3000539553786c5292b7d0a"
+  },
+  "source_members": {
+    "masks.mkv": {
+      "bytes": 223385,
+      "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+    },
+    "optimized_poses.qp1": {
+      "bytes": 1140,
+      "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+    },
+    "renderer.bin": {
+      "bytes": 59288,
+      "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+    },
+    "seg_tile_actions.bin": {
+      "bytes": 160,
+      "sha256": "8b34ef134e6551c83d170f07c8f6672870f09df5d38551ab24320f4a2f20a373"
+    }
+  },
+  "source_payload_layout": "pr75_preserved_slices"
+}

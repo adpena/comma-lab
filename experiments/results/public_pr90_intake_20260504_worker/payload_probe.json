@@ -1,0 +1,111 @@
+{
+  "payload_sha256": "b48ba0ea138e4f3b12c02e320528a53ce92ed6540d71b8554249ee7bdcad6d34",
+  "payload_len": 217980,
+  "split_mode": "compact_fixed_offsets_len_lt_260000",
+  "compact_constants": {
+    "mask_body_bytes": 152431,
+    "model_body_bytes": 56385,
+    "rgb_compact_control_bytes": 5058
+  },
+  "slices": {
+    "mask_body": {
+      "offset": 0,
+      "len": 152431,
+      "runtime_magic": "STBM1BR\\0"
+    },
+    "model_body": {
+      "offset": 152431,
+      "len": 56385,
+      "runtime_magic": "QFQ4\\0"
+    },
+    "pose_qrgb_body": {
+      "offset": 208816,
+      "len": 9164
+    },
+    "base_pose_bias_control": {
+      "offset": 208816,
+      "len": 5058
+    },
+    "qrgb_residual_br": {
+      "offset": 213874,
+      "len": 4106
+    }
+  },
+  "magic_detection": {
+    "payload_first8_hex": "f0ff6f32dd1c2fb7",
+    "mask_data_magic_hex": "5354424d31425200",
+    "model_data_magic_hex": "5146513400b1",
+    "pose_data_first8_hex": "e2196446924eeb37"
+  },
+  "control_decode": {
+    "poses_shape": [
+      600,
+      6
+    ],
+    "biases_shape": [
+      600,
+      50
+    ],
+    "base_control_compressed_bytes": 5058,
+    "base_control_raw_bytes": 8400,
+    "qrgb_residual_compressed_bytes": 4106,
+    "qrgb_residual_raw_bytes": 8614,
+    "qrgb_nonzero_values": 4307,
+    "pose_min": [
+      23.38671875,
+      -0.14208984375,
+      -0.12744140625,
+      -0.12353515625,
+      -0.125,
+      -0.1181640625
+    ],
+    "pose_max": [
+      34.91015625,
+      0.16796875,
+      0.1328125,
+      0.12744140625,
+      0.15234375,
+      0.1728515625
+    ],
+    "bias_min": -24.0,
+    "bias_max": 24.0
+  },
+  "mask_decode": {
+    "compressed_body_bytes": 152431,
+    "brotli_raw_bytes": 160839,
+    "shape": [
+      600,
+      384,
+      512
+    ],
+    "dtype": "uint8",
+    "class_counts": {
+      "0": 27408427,
+      "1": 690063,
+      "2": 58413695,
+      "3": 1459867,
+      "4": 29992748
+    }
+  },
+  "model_decode": {
+    "compressed_body_bytes": 56385,
+    "decoded_state_tensors": 111,
+    "state_total_numel": 87836,
+    "float_tensors": 111,
+    "nonfloat_tensors": 0,
+    "sample_keys": [
+      "shared_trunk.stem_conv.dw.weight",
+      "shared_trunk.stem_conv.pw.weight",
+      "shared_trunk.stem_block.conv1.dw.weight",
+      "shared_trunk.stem_block.conv1.pw.weight",
+      "shared_trunk.stem_block.conv2.dw.weight",
+      "shared_trunk.stem_block.conv2.pw.weight",
+      "shared_trunk.down_conv.dw.weight",
+      "shared_trunk.down_conv.pw.weight",
+      "shared_trunk.down_block.conv1.dw.weight",
+      "shared_trunk.down_block.conv1.pw.weight",
+      "shared_trunk.down_block.conv2.dw.weight",
+      "shared_trunk.down_block.conv2.pw.weight"
+    ]
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "archive_delta_bytes": 11,
+  "brotli_params": {
+    "lgblock": 0,
+    "lgwin": 18,
+    "mode": 2,
+    "mode_name": "font",
+    "quality": 11
+  },
+  "determinism": {
+    "single_member_order": [
+      "p"
+    ],
+    "zip_compress_type": "ZIP_STORED",
+    "zip_permissions": "0644",
+    "zip_timestamp": [
+      1980,
+      1,
+      1,
+      0,
+      0,
+      0
+    ]
+  },
+  "evidence_grade": "empirical_lossless_byte_transform",
+  "formula_only_rate_score_delta": 7.324448484343885e-06,
+  "lossless_payload_roundtrip": true,
+  "member_name": "p",
+  "non_promotable_warning": "This is a lossless byte transform only. It cannot move the frontier until exact CUDA auth eval validates the closed archive.",
+  "output_archive": {
+    "bytes": 263436,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c063_mask_av1_reencode_sweep_20260502/crf52/archive.zip",
+    "sha256": "7896970afae44d3c1c24068abc73b1adaa153a4b201028b3ea22ab9fb397a5c2"
+  },
+  "payload_delta_bytes": 11,
+  "promotion_eligible": false,
+  "raw_payload": {
+    "bytes": 276757,
+    "sha256": "095207155750658cb1efee5ccaf0dda171973513504e735f8b7a1b92fa58b6ef"
+  },
+  "repacked_payload": {
+    "bytes": 263336,
+    "sha256": "52f8bc68588851467d2ed4de66bb357c5501b1c225034986b4424f8dc2cbbe0d"
+  },
+  "required_score_truth": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "schema_version": 1,
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 263425,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c063_mask_av1_reencode_sweep_20260502/crf52/build/archive.zip",
+    "sha256": "f5a305193ec45db4ad4fc4102fecef37b65e39b0eb196faf761498834faf04ae"
+  },
+  "source_payload": {
+    "bytes": 263325,
+    "sha256": "cc40252247ddeef3efd79ca548d1694139f074eaa32d24bfb93f98e2eecb91c4"
+  },
+  "source_payload_decompresses": true,
+  "tool": "experiments/repack_single_payload_brotli.py"
+}

@@ -1,0 +1,17 @@
+{
+  "byte_delta": -8,
+  "compress_type": 0,
+  "compression": "preserve",
+  "evidence_grade": "byte_repack_only",
+  "input": "experiments/results/public_pr105_kitchen_sink_intake_20260504_codex/archive.zip",
+  "input_bytes": 177857,
+  "input_sha256": "597ba0732810eba08cdae619b679d211d398bc0249b8831898f7096d5beece1d",
+  "output": "experiments/results/public_pr105_kitchen_sink_xrepack_20260504_codex/archive.zip",
+  "output_bytes": 177849,
+  "output_sha256": "692a46931f66416ab71270661f580a4b5bb2e5a887b19c51aabbb8851493feab",
+  "score_claim": false,
+  "source_member_bytes": 177749,
+  "source_member_name": "0.bin",
+  "source_member_sha256": "5f88fa8ed26816cf6e86a00cf3c88915963c2a84f899173fd6820359df29aad0",
+  "target_member_name": "x"
+}

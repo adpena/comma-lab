@@ -1,0 +1,83 @@
+{
+  "candidate_id": "c067mask_pr67renderer_c067pose",
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "output_archive": {
+    "bytes": 276342,
+    "path": "/Users/adpena/Projects/pact/experiments/results/fixedslice_segment_mix_c067_pr67_20260502T1530Z/c067mask_pr67renderer_c067pose/archive.zip",
+    "sha256": "6a4f91c456be06ac78cf189160354e7176ed5abcad2020f82dfcdfb2ccdc78f3"
+  },
+  "payload": {
+    "bytes": 276242,
+    "format": "public_pr67_qzs3_qp1_fixed_slices",
+    "member": "p",
+    "sha256": "ce1615f1eeb7aaf1c4ead2cc11b199e0d74e224f1815bd614da71002698964bf"
+  },
+  "promotion_eligible": false,
+  "schema": "fixedslice_segment_mix_candidate_manifest_v1",
+  "score_claim": false,
+  "segment_sources": {
+    "masks.mkv": {
+      "bytes": 219472,
+      "source_archive_sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+      "source_label": "c067",
+      "source_segment_sha256": "418de0cf0d7b1aa9cbe0f6c13b3f8a6a7d82f09cd36c164e56f503a430909953"
+    },
+    "optimized_poses.bin": {
+      "bytes": 677,
+      "source_archive_sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+      "source_label": "c067",
+      "source_segment_sha256": "c998610e82bb46a686a073e8a1847987de1346f86852a1c60cfa3244a1ad43c5"
+    },
+    "renderer.bin": {
+      "bytes": 56093,
+      "source_archive_sha256": "a5ed8da0d9988943c986b231b4cd33cea0ab878a8e1628134341db5f7f41c765",
+      "source_label": "pr67",
+      "source_segment_sha256": "fd8520dfd0980c3004d5c49f4f91581f7b2ff9f5e971e2bf981e1d43c6c85fb3"
+    }
+  },
+  "sources": {
+    "c067": {
+      "archive_bytes": 276214,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/c067_breakthrough_candidate_matrix_20260502T1030Z/line_search_source_c067_fixedslice/archive.zip",
+      "archive_sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+      "payload_format": "public_pr67_qzs3_qp1_fixed_slices",
+      "payload_sha256": "1f0aaaa9d06967552df6f22d39905a48349239dee4731b093067951a20adc2af",
+      "segments": {
+        "masks.mkv": {
+          "bytes": 219472,
+          "sha256": "418de0cf0d7b1aa9cbe0f6c13b3f8a6a7d82f09cd36c164e56f503a430909953"
+        },
+        "optimized_poses.bin": {
+          "bytes": 677,
+          "sha256": "c998610e82bb46a686a073e8a1847987de1346f86852a1c60cfa3244a1ad43c5"
+        },
+        "renderer.bin": {
+          "bytes": 55965,
+          "sha256": "4fd18d59a6dc946e941c8439e0795c30ff6580037aacb3a1d8344d6607dd4d2d"
+        }
+      }
+    },
+    "pr67": {
+      "archive_bytes": 276564,
+      "archive_path": "/Users/adpena/Projects/pact/reports/raw/leaderboard_intel_20260501/pr67_archive.zip",
+      "archive_sha256": "a5ed8da0d9988943c986b231b4cd33cea0ab878a8e1628134341db5f7f41c765",
+      "payload_format": "public_pr67_qzs3_qp1_fixed_slices",
+      "payload_sha256": "a64523528fad2adee466f948ad29839e8581ccfa70caf934b5e4b4a6d733f76f",
+      "segments": {
+        "masks.mkv": {
+          "bytes": 219472,
+          "sha256": "ec87ec151c6db55a9e42fb56c19ce606a593fc436fa995169713796b23c24e90"
+        },
+        "optimized_poses.bin": {
+          "bytes": 899,
+          "sha256": "83767bbd10ae72c3237e468351eb9c465a954e25a6af04a0e0cb84d1f7af9b51"
+        },
+        "renderer.bin": {
+          "bytes": 56093,
+          "sha256": "fd8520dfd0980c3004d5c49f4f91581f7b2ff9f5e971e2bf981e1d43c6c85fb3"
+        }
+      }
+    }
+  },
+  "tool": "experiments/build_fixedslice_segment_mix_candidates.py"
+}

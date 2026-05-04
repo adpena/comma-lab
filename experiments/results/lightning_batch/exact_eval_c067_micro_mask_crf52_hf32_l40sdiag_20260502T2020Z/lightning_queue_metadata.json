@@ -1,0 +1,42 @@
+{
+  "adjudication": {
+    "allow_component_gate_forensic_success": true,
+    "allow_sane_score_forensic_success": true,
+    "baseline_archive_size_bytes": 276214,
+    "baseline_posenet_dist": 0.00049637,
+    "baseline_score": 0.31561703078448233,
+    "baseline_segnet_dist": 0.00061244,
+    "component_reference_label": "C067_MICRO_MASK",
+    "delta_key": "score_delta_vs_baseline",
+    "max_posenet_dist": 1.5,
+    "max_posenet_relative": 4000.0,
+    "max_sane_score": 5.0,
+    "max_segnet_dist": 0.05,
+    "max_segnet_relative": 100.0,
+    "predicted_band_high": 2.5,
+    "predicted_band_low": 0.29,
+    "provenance_name": "adjudication_provenance.json",
+    "regression_threshold": 3.8,
+    "required_device": "cuda",
+    "required_samples": 600,
+    "result_copy_name": "contest_auth_eval.adjudicated.json"
+  },
+  "artifact_recorded_at_utc": "2026-05-02T20:34:45Z",
+  "expected_archive_sha256": "4c8c37752766ecc1d44cd3582286d446fdda008abc8bd75a7b1e5f29f1f8c272",
+  "expected_archive_size_bytes": 242718,
+  "job_name": "exact_eval_c067_micro_mask_crf52_hf32_l40sdiag_20260502T2020Z",
+  "queue_metadata": {
+    "archive_rel": "experiments/results/c067_micro_mask_reencode_hardframes32_20260502/crf52/packed_pr64_maskfirst_qp1/archive.zip",
+    "baseline_json": "experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/contest_auth_eval.adjudicated.json",
+    "evidence": "diagnostic_l40s",
+    "lane": "c067_micro_mask_reencode_hardframes32_crf52",
+    "local_supply_chain_scan": ".omx/state/exact_eval_c067_micro_mask_crf52_hf32_l40sdiag_20260502T2020Z_local_lightning_supply_chain_scan.json",
+    "run_id": "exact_eval_c067_micro_mask_crf52_hf32_l40sdiag_20260502T2020Z",
+    "source_manifest": ".omx/state/exact_eval_c067_micro_mask_crf52_hf32_l40sdiag_20260502T2020Z_manifest.json",
+    "wrapper": "scripts/lightning_exact_eval_repro.py"
+  },
+  "role": "exact_cuda_eval",
+  "schema_version": 1,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

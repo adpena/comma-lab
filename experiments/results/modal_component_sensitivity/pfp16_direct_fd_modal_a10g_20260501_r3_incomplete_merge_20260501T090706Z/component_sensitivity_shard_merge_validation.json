@@ -1,0 +1,165 @@
+{
+  "all_channel_count": 717,
+  "all_channel_sha256": "d083b41a14fd1eb567fb2c54b1b7c2def2395972f18fc82cd57c9d527e0cc552",
+  "allow_incomplete": true,
+  "artifact_dir": "experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3_incomplete_merge_20260501T090706Z",
+  "certification_handoff_eligible": false,
+  "coverage": "incomplete",
+  "covered_channel_count": 403,
+  "covered_channel_sha256": "a2ff1a2c8935c4b703f5e5e8fe8faeb6e8a93d78829060cb4dbe14206df5c6a0",
+  "declared_shard_count": 16,
+  "expected_shard_count": 16,
+  "finite_difference_merge": {
+    "all_channel_count": 717,
+    "all_channel_sha256": "d083b41a14fd1eb567fb2c54b1b7c2def2395972f18fc82cd57c9d527e0cc552",
+    "allow_incomplete": true,
+    "assigned_channel_sha256_by_shard": [
+      "668121dc876b0e9817077f7e010786195f5b5a93e365fd9300b0e1309093d1de",
+      "c92377695b9fd06dfee69c86763aac5b6850f768353876059741ef9461241b34",
+      "2e2df45d7bf9b56e442cfb16c51a6351ba47e7fb270ab7456a98e0259f8932c7",
+      "78ec9a9336eefe4d288e4a3a78d702f60f6a54efeed002bf41777a060255c4a6",
+      "e897ff4cc5d55e7402a570a7b810241cd00c9ea0b3d33539a84531e5de4e1120",
+      "2757b315ed7e4ff346ab2b0d634727fe63576e6d760d612a098217afadc32641",
+      "f7738a88c91498bc2f35aa987780c44e9271b7b4bc1a1a1e2d09b9aaf1604bc4",
+      "35ca7f9b2fb2b8ee81a4b0dc0bcf7a9664d3325662ee2c39709a46c3b445ec54",
+      "9009097c342a42f8e603fc7617fd747128c1f05e57b2dd4950ec7081a9e07bf9"
+    ],
+    "certification_handoff_eligible": false,
+    "coverage": "incomplete",
+    "covered_channel_count": 403,
+    "covered_channel_sha256": "a2ff1a2c8935c4b703f5e5e8fe8faeb6e8a93d78829060cb4dbe14206df5c6a0",
+    "declared_shard_count": 16,
+    "expected_shard_count": 16,
+    "missing_channel_count": 314,
+    "missing_channel_sha256": "cd8d368295a6251ba05e64a2f4a1ab65988f3bb01780c3df3949a06f4f5cfac0",
+    "missing_shard_indices": [
+      1,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15
+    ],
+    "promotion_eligible": false,
+    "schema": "component_sensitivity_direct_fd_merge_v1",
+    "score_claim": false,
+    "source_shard_count": 9,
+    "source_shard_dirs": [
+      "experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3/shard_00",
+      "experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3/shard_02",
+      "experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3/shard_03",
+      "experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3/shard_04",
+      "experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3/shard_05",
+      "experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3/shard_06",
+      "experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3/shard_07",
+      "experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3/shard_08",
+      "experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3/shard_09"
+    ],
+    "source_shard_indices": [
+      0,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ]
+  },
+  "format": "component_sensitivity_shard_merge_validation_v1",
+  "holdout_map_paths": {
+    "combined": "experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3_incomplete_merge_20260501T090706Z/combined_holdout_sensitivity_map.pt",
+    "posenet": "experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3_incomplete_merge_20260501T090706Z/posenet_holdout_sensitivity_map.pt",
+    "segnet": "experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3_incomplete_merge_20260501T090706Z/segnet_holdout_sensitivity_map.pt"
+  },
+  "map_paths": {
+    "combined": "experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3_incomplete_merge_20260501T090706Z/combined_sensitivity_map.pt",
+    "posenet": "experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3_incomplete_merge_20260501T090706Z/posenet_sensitivity_map.pt",
+    "segnet": "experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3_incomplete_merge_20260501T090706Z/segnet_sensitivity_map.pt"
+  },
+  "missing_channel_count": 314,
+  "missing_channel_sha256": "cd8d368295a6251ba05e64a2f4a1ab65988f3bb01780c3df3949a06f4f5cfac0",
+  "missing_shard_indices": [
+    1,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15
+  ],
+  "promotion_eligible": false,
+  "provided_shard_count": 9,
+  "provided_shard_indices": [
+    0,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "score_claim": false,
+  "source_shards": [
+    {
+      "assigned_channel_count": 44,
+      "assigned_channel_sha256": "668121dc876b0e9817077f7e010786195f5b5a93e365fd9300b0e1309093d1de",
+      "path": "experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3/shard_00",
+      "shard_index": 0
+    },
+    {
+      "assigned_channel_count": 45,
+      "assigned_channel_sha256": "c92377695b9fd06dfee69c86763aac5b6850f768353876059741ef9461241b34",
+      "path": "experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3/shard_02",
+      "shard_index": 2
+    },
+    {
+      "assigned_channel_count": 45,
+      "assigned_channel_sha256": "2e2df45d7bf9b56e442cfb16c51a6351ba47e7fb270ab7456a98e0259f8932c7",
+      "path": "experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3/shard_03",
+      "shard_index": 3
+    },
+    {
+      "assigned_channel_count": 45,
+      "assigned_channel_sha256": "78ec9a9336eefe4d288e4a3a78d702f60f6a54efeed002bf41777a060255c4a6",
+      "path": "experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3/shard_04",
+      "shard_index": 4
+    },
+    {
+      "assigned_channel_count": 44,
+      "assigned_channel_sha256": "e897ff4cc5d55e7402a570a7b810241cd00c9ea0b3d33539a84531e5de4e1120",
+      "path": "experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3/shard_05",
+      "shard_index": 5
+    },
+    {
+      "assigned_channel_count": 45,
+      "assigned_channel_sha256": "2757b315ed7e4ff346ab2b0d634727fe63576e6d760d612a098217afadc32641",
+      "path": "experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3/shard_06",
+      "shard_index": 6
+    },
+    {
+      "assigned_channel_count": 45,
+      "assigned_channel_sha256": "f7738a88c91498bc2f35aa987780c44e9271b7b4bc1a1a1e2d09b9aaf1604bc4",
+      "path": "experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3/shard_07",
+      "shard_index": 7
+    },
+    {
+      "assigned_channel_count": 45,
+      "assigned_channel_sha256": "35ca7f9b2fb2b8ee81a4b0dc0bcf7a9664d3325662ee2c39709a46c3b445ec54",
+      "path": "experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3/shard_08",
+      "shard_index": 8
+    },
+    {
+      "assigned_channel_count": 45,
+      "assigned_channel_sha256": "9009097c342a42f8e603fc7617fd747128c1f05e57b2dd4950ec7081a9e07bf9",
+      "path": "experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3/shard_09",
+      "shard_index": 9
+    }
+  ],
+  "summary_path": "experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3_incomplete_merge_20260501T090706Z/component_sensitivity_profile_summary.json",
+  "tool": "experiments/merge_component_sensitivity_shards.py"
+}

@@ -1,0 +1,49 @@
+{
+  "evidence_grade": "build_tensor_prep_only",
+  "inputs": {
+    "gt_video": {
+      "bytes": 37545489,
+      "path": "upstream/videos/0.mkv",
+      "sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9"
+    },
+    "renderer_source": {
+      "bytes": 2831157066,
+      "path": "experiments/results/renderer_output_for_postfilter.pt",
+      "sha256": "d3eeb53d58963e3585161605b38c7a3d3e12b78fc8c4fcf264433e7f16b7f60b"
+    }
+  },
+  "next_command_template": "PYTHONPATH=src:upstream .venv/bin/python experiments/build_sjkl_residual.py --renderer-output experiments/results/sjkl_tensor_prep_c067_full_20260502/renderer_target_slot_chw.pt --gt-pairs experiments/results/sjkl_tensor_prep_c067_full_20260502/gt_pairs_btchw.pt --target-slot 0 --out experiments/results/sjkl_tensor_prep_c067_full_20260502/sjkl.bin --manifest experiments/results/sjkl_tensor_prep_c067_full_20260502/sjkl_manifest.json --device cuda",
+  "outputs": {
+    "gt_pairs_btchw": {
+      "bytes": 707790490,
+      "dtype": "torch.uint8",
+      "path": "experiments/results/sjkl_tensor_prep_c067_full_20260502/gt_pairs_btchw.pt",
+      "sha256": "e0ec6826bf7737923b8a547ba87ba3915ba6d61de64bfda3e370a64ff84c0500",
+      "shape": [
+        600,
+        2,
+        3,
+        384,
+        512
+      ]
+    },
+    "renderer_target_slot_chw": {
+      "bytes": 1415579424,
+      "dtype": "torch.float32",
+      "path": "experiments/results/sjkl_tensor_prep_c067_full_20260502/renderer_target_slot_chw.pt",
+      "sha256": "31c7564b1bcbcade5e2fe19d164b1db3f993b5a2cf84114dd39ff1bfaa4a02df",
+      "shape": [
+        600,
+        3,
+        384,
+        512
+      ]
+    }
+  },
+  "promotion_eligible": false,
+  "runtime_target": "robust_current JointFrameGenerator pair slot 0 / fake1",
+  "schema": "sjkl_pair_tensor_prep_v1",
+  "score_claim": false,
+  "target_slot": 0,
+  "tool": "experiments/prepare_sjkl_pair_tensors.py"
+}

@@ -1,0 +1,235 @@
+{
+  "baseline_archive": {
+    "bytes": 686635,
+    "path": "/teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+    "sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+  },
+  "baseline_contest_auth_eval_json": {
+    "bytes": 4287,
+    "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_response_alpha_primitive_pfp16_crf63_l40s_20260501T131540Z/evals/point_000_eps_p0/contest_auth_eval.json",
+    "sha256": "b84e7352165cf0d2be0631a177d8404c3a1e5f27633d82d48990552b9ef382ab"
+  },
+  "device": "cuda",
+  "external_baseline_component_values": null,
+  "external_baseline_contest_auth_eval_json": {
+    "bytes": 4287,
+    "path": "/teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_pfp16/pfp16_a_plus_plus_t4_20260430T1620Z_codex/contest_auth_eval.json",
+    "sha256": "b84e7352165cf0d2be0631a177d8404c3a1e5f27633d82d48990552b9ef382ab"
+  },
+  "format": "official_component_response_summary_v1",
+  "gate_spec": {
+    "external_baseline_repro_tolerance": 1e-07,
+    "holdout_error_max": 0.35,
+    "observed_delta_min": 1e-12,
+    "require_prediction_deltas": true,
+    "zero_repro_tolerance": 1e-07
+  },
+  "perturbation_plan": {
+    "bytes": 32609,
+    "path": "/teamspace/studios/this_studio/pact/experiments/results/alpha_mask_primitive_response_plan_pfp16_20260501_r1/alpha_mask_primitive_response_plan.json",
+    "sha256": "51478649a6ac947b34a7b3fd50e1cb5dc34aba44df9cd8c78a148bb10c10619a"
+  },
+  "points": [
+    {
+      "archive": {
+        "bytes": 686635,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+        "sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+      },
+      "contest_auth_eval_json": {
+        "bytes": 4287,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_response_alpha_primitive_pfp16_crf63_l40s_20260501T131540Z/evals/point_000_eps_p0/contest_auth_eval.json",
+        "sha256": "b84e7352165cf0d2be0631a177d8404c3a1e5f27633d82d48990552b9ef382ab"
+      },
+      "epsilon": 0.0,
+      "values": {
+        "combined": 0.5867855247938919,
+        "posenet": 0.00346442,
+        "segnet": 0.00400656
+      }
+    },
+    {
+      "archive": {
+        "bytes": 369707,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/alpha_mask_primitive_response_plan_pfp16_20260501_r1/archives/point_001_connected_component_set_component_to_neighbor_class_connected_component_set_component_.zip",
+        "sha256": "2fa4bc52a373b0907a6f03197f38d5328d0699630350baa2a11ac0859c38d021"
+      },
+      "contest_auth_eval_json": {
+        "bytes": 5430,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_response_alpha_primitive_pfp16_crf63_l40s_20260501T131540Z/evals/point_001_eps_p1/contest_auth_eval.json",
+        "sha256": "048520ad81fa1612cfc3b8f6b2341efcb3bbc42ebde0c2a69490bed093413a61"
+      },
+      "epsilon": 1.0,
+      "values": {
+        "combined": 12.332055319743125,
+        "posenet": 8.35668087,
+        "segnet": 0.03190567
+      }
+    },
+    {
+      "archive": {
+        "bytes": 369713,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/alpha_mask_primitive_response_plan_pfp16_20260501_r1/archives/point_002_connected_component_set_component_to_neighbor_class_connected_component_set_component_.zip",
+        "sha256": "4aaaec8e2b8416cc988285bdd23cec53643340fb1b48d9ab78d8af671a3ecbe7"
+      },
+      "contest_auth_eval_json": {
+        "bytes": 5423,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_response_alpha_primitive_pfp16_crf63_l40s_20260501T131540Z/evals/point_002_eps_p2/contest_auth_eval.json",
+        "sha256": "ad7715ea3ea84ace24e439f21f45a95dde2d51aa733483b606167dfdd4847933"
+      },
+      "epsilon": 2.0,
+      "values": {
+        "combined": 12.33567479366085,
+        "posenet": 8.36321735,
+        "segnet": 0.03190612
+      }
+    },
+    {
+      "archive": {
+        "bytes": 369658,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/alpha_mask_primitive_response_plan_pfp16_20260501_r1/archives/point_003_boundary_band_set_source_boundary_band_to_target_class_boundary_band_set_source_bounda.zip",
+        "sha256": "a44944cc538766c6b37c20be67cb1c4f006bc5399f9a0916e52cffa76e4022b1"
+      },
+      "contest_auth_eval_json": {
+        "bytes": 5411,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_response_alpha_primitive_pfp16_crf63_l40s_20260501T131540Z/evals/point_003_eps_p3/contest_auth_eval.json",
+        "sha256": "f14a90ef77bc6036f23638c47d64687463b6d427d308a040f0c32a07b8c9287f"
+      },
+      "epsilon": 3.0,
+      "values": {
+        "combined": 12.348557873091721,
+        "posenet": 8.38652802,
+        "segnet": 0.03190759
+      }
+    },
+    {
+      "archive": {
+        "bytes": 369664,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/alpha_mask_primitive_response_plan_pfp16_20260501_r1/archives/point_004_boundary_band_set_source_boundary_band_to_target_class_boundary_band_set_source_bounda.zip",
+        "sha256": "7affa1782a4f807c0fe2193f698f04e5e3c22c6b123c101a4497d4f8790ab1e7"
+      },
+      "contest_auth_eval_json": {
+        "bytes": 5420,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_response_alpha_primitive_pfp16_crf63_l40s_20260501T131540Z/evals/point_004_eps_p4/contest_auth_eval.json",
+        "sha256": "015a2bfb7d084e0592a2bba1789112e2a6dc2755f465d40b1a5075a5152df7ad"
+      },
+      "epsilon": 4.0,
+      "values": {
+        "combined": 12.329552334808607,
+        "posenet": 8.35204315,
+        "segnet": 0.03190601
+      }
+    },
+    {
+      "archive": {
+        "bytes": 369707,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/alpha_mask_primitive_response_plan_pfp16_20260501_r1/archives/point_005_class_flip_set_source_class_prefix_to_target_class_class_flip_set_source_class_prefix_.zip",
+        "sha256": "be0ac8de2aa95611e257f77ebcd40515f417c848994890c537dcc4c1fa2ff373"
+      },
+      "contest_auth_eval_json": {
+        "bytes": 5432,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_response_alpha_primitive_pfp16_crf63_l40s_20260501T131540Z/evals/point_005_eps_p5/contest_auth_eval.json",
+        "sha256": "b658309f7e140b104c52cff37a30ed8b7c245037a2c82a59912abb45823ba226"
+      },
+      "epsilon": 5.0,
+      "values": {
+        "combined": 12.332055319743125,
+        "posenet": 8.35668087,
+        "segnet": 0.03190567
+      }
+    },
+    {
+      "archive": {
+        "bytes": 369658,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/alpha_mask_primitive_response_plan_pfp16_20260501_r1/archives/point_006_morphology_erode_erode_source_class_toward_target_class_morphology_erode_erode_source_.zip",
+        "sha256": "0350526b9e850a190467ea06a9f03f01b4df9cdc9f295d93150f7145dcf752d1"
+      },
+      "contest_auth_eval_json": {
+        "bytes": 5418,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_response_alpha_primitive_pfp16_crf63_l40s_20260501T131540Z/evals/point_006_eps_p6/contest_auth_eval.json",
+        "sha256": "cae277627c870d4f88363317c72b2f322d1f9f0590bc9528e40828e38dd16de2"
+      },
+      "epsilon": 6.0,
+      "values": {
+        "combined": 12.348557873091721,
+        "posenet": 8.38652802,
+        "segnet": 0.03190759
+      }
+    },
+    {
+      "archive": {
+        "bytes": 369658,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/alpha_mask_primitive_response_plan_pfp16_20260501_r1/archives/point_007_morphology_dilate_dilate_source_class_into_target_class_morphology_dilate_dilate_sourc.zip",
+        "sha256": "1c3b452d7119da5b5fee1baadc3f34d03f82bf7ec5cf74510ee68a0e39b5c8f1"
+      },
+      "contest_auth_eval_json": {
+        "bytes": 5417,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_response_alpha_primitive_pfp16_crf63_l40s_20260501T131540Z/evals/point_007_eps_p7/contest_auth_eval.json",
+        "sha256": "8a1979ea0647eb54f2ac31810444539344bb06899a71f0af4b3e6fbf1e64f703"
+      },
+      "epsilon": 7.0,
+      "values": {
+        "combined": 12.348557873091721,
+        "posenet": 8.38652802,
+        "segnet": 0.03190759
+      }
+    },
+    {
+      "archive": {
+        "bytes": 369674,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/alpha_mask_primitive_response_plan_pfp16_20260501_r1/archives/point_008_transition_endpoint_advance_previous_endpoint_to_current_class_transition_endpoint_adv.zip",
+        "sha256": "4e1dc2d1c3c927a7d975fb7823dcdd9e508266e9d8def14b9f137cc5cc818e0a"
+      },
+      "contest_auth_eval_json": {
+        "bytes": 5421,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_response_alpha_primitive_pfp16_crf63_l40s_20260501T131540Z/evals/point_008_eps_p8/contest_auth_eval.json",
+        "sha256": "49bd2aa35ea969fdfce28fd5cdf3a97aa31661de243d4c3dec2e2aaed14a69e7"
+      },
+      "epsilon": 8.0,
+      "values": {
+        "combined": 12.332993761197695,
+        "posenet": 8.35833454,
+        "segnet": 0.03190601
+      }
+    }
+  ],
+  "promotion_eligible": false,
+  "require_passed_mode": false,
+  "response_coverage": {
+    "directional_action": {
+      "action": "archive_perturbation_plan_directional_response",
+      "epsilon_values": [
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0,
+        7.0,
+        8.0
+      ]
+    },
+    "epsilon_ladder": [
+      0.0,
+      1.0,
+      2.0,
+      3.0,
+      4.0,
+      5.0,
+      6.0,
+      7.0,
+      8.0
+    ],
+    "response_kind": "directional"
+  },
+  "response_coverage_passed": true,
+  "response_curve_paths": {
+    "combined": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_response_alpha_primitive_pfp16_crf63_l40s_20260501T131540Z/combined_official_response_curve.json",
+    "posenet": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_response_alpha_primitive_pfp16_crf63_l40s_20260501T131540Z/posenet_official_response_curve.json",
+    "segnet": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_response_alpha_primitive_pfp16_crf63_l40s_20260501T131540Z/segnet_official_response_curve.json"
+  },
+  "same_run_zero_baseline": false,
+  "schema_version": 1,
+  "tool": "experiments/profile_component_sensitivity_official.py"
+}

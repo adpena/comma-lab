@@ -1,0 +1,34 @@
+{
+  "crf52": {
+    "pt": "experiments/results/c063_mask_pose_regen_20260502/crf52_masks_repeat2_1200_uint8.pt",
+    "pt_bytes": 235931466,
+    "pt_dtype": "uint8",
+    "pt_sha256": "d700fa7c5e5c57d43ff2ab242b5d44dc0b6935c812879ae057d7f31d98f9fe83",
+    "repeat2_half_frame_contract": true,
+    "score_claim": false,
+    "shape": [
+      1200,
+      384,
+      512
+    ],
+    "source_mkv": "experiments/results/c063_mask_av1_reencode_sweep_20260502/runtime/masks.crf52.mkv",
+    "source_mkv_bytes": 216317,
+    "source_mkv_sha256": "3c84b3dcc09d11d0d108d8aaef6d375478644a854fa2985429f676542d7a51b3"
+  },
+  "crf56": {
+    "pt": "experiments/results/c063_mask_pose_regen_20260502/crf56_masks_repeat2_1200_uint8.pt",
+    "pt_bytes": 235931466,
+    "pt_dtype": "uint8",
+    "pt_sha256": "95d393fef60e7c430d0a3c822f9e94ac7444bb5421bddf0b1cd8c04504cc30d7",
+    "repeat2_half_frame_contract": true,
+    "score_claim": false,
+    "shape": [
+      1200,
+      384,
+      512
+    ],
+    "source_mkv": "experiments/results/c063_mask_av1_reencode_sweep_20260502/runtime/masks.crf56.mkv",
+    "source_mkv_bytes": 157123,
+    "source_mkv_sha256": "2499a6bd2f689adbfb12e1daabdb81c920c4d776b4c30e91e0c619f35c8d560c"
+  }
+}

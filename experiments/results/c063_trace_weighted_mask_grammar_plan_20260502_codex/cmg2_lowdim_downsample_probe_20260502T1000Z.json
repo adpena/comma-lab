@@ -1,0 +1,590 @@
+{
+  "baseline_charged_mask_bytes": 219472,
+  "schema": "cmg2_lowdim_downsample_probe_v1",
+  "score_claim": false,
+  "source_shape": [
+    600,
+    384,
+    512
+  ],
+  "top_by_bytes": [
+    {
+      "bytes": 12359,
+      "compressor": "bz2_9",
+      "delta_vs_219472": -207113,
+      "low_shape": [
+        600,
+        48,
+        64
+      ],
+      "pixel_disagreement": 0.017352286444769965,
+      "scale": [
+        8,
+        8
+      ],
+      "seconds": 0.008386749948840588,
+      "sha256": "e4b41f82c87632021c67177de5cb3b08e677dfc978a84072ee3de8f99df08bd9",
+      "stream": "raw_u8"
+    },
+    {
+      "bytes": 12368,
+      "compressor": "brotli11",
+      "delta_vs_219472": -207104,
+      "low_shape": [
+        600,
+        48,
+        64
+      ],
+      "pixel_disagreement": 0.017352286444769965,
+      "scale": [
+        8,
+        8
+      ],
+      "seconds": 0.23645745898829773,
+      "sha256": "fd6a3ae04a2a3c5f302dd24fa91bbae1c054d14330c7acd458c330bf18f61878",
+      "stream": "packed3"
+    },
+    {
+      "bytes": 12644,
+      "compressor": "bz2_9",
+      "delta_vs_219472": -206828,
+      "low_shape": [
+        600,
+        48,
+        64
+      ],
+      "pixel_disagreement": 0.017352286444769965,
+      "scale": [
+        8,
+        8
+      ],
+      "seconds": 0.049962291959673166,
+      "sha256": "960612711504048fe9e45d701e05652f507c49085799e53cfde97cefc0c53d2d",
+      "stream": "packed3"
+    },
+    {
+      "bytes": 12696,
+      "compressor": "lzma9",
+      "delta_vs_219472": -206776,
+      "low_shape": [
+        600,
+        48,
+        64
+      ],
+      "pixel_disagreement": 0.017352286444769965,
+      "scale": [
+        8,
+        8
+      ],
+      "seconds": 0.13667891698423773,
+      "sha256": "dff0083dd6741a2e3eadd94e45e9ff340e5160906da2b3e297d63c2082394bdf",
+      "stream": "packed3"
+    },
+    {
+      "bytes": 13772,
+      "compressor": "lzma9",
+      "delta_vs_219472": -205700,
+      "low_shape": [
+        600,
+        48,
+        64
+      ],
+      "pixel_disagreement": 0.017352286444769965,
+      "scale": [
+        8,
+        8
+      ],
+      "seconds": 0.31814233295153826,
+      "sha256": "d52ea85f42c012405b714f99ac7599ae059400058ac87cbb5a70b9cf9d608519",
+      "stream": "raw_u8"
+    },
+    {
+      "bytes": 14403,
+      "compressor": "brotli11",
+      "delta_vs_219472": -205069,
+      "low_shape": [
+        600,
+        48,
+        64
+      ],
+      "pixel_disagreement": 0.017352286444769965,
+      "scale": [
+        8,
+        8
+      ],
+      "seconds": 0.5058155419537798,
+      "sha256": "334ef7b6f608196f1aece06928e6813a4347255c70d21c6f82477d634ee290b4",
+      "stream": "raw_u8"
+    },
+    {
+      "bytes": 19195,
+      "compressor": "zlib9",
+      "delta_vs_219472": -200277,
+      "low_shape": [
+        600,
+        48,
+        64
+      ],
+      "pixel_disagreement": 0.017352286444769965,
+      "scale": [
+        8,
+        8
+      ],
+      "seconds": 0.035977708001155406,
+      "sha256": "193ac7fd28fe3d4409ba971ceada83aadbc996ceb28fc3101579bcafd1038b2b",
+      "stream": "packed3"
+    },
+    {
+      "bytes": 20114,
+      "compressor": "bz2_9",
+      "delta_vs_219472": -199358,
+      "low_shape": [
+        600,
+        64,
+        85
+      ],
+      "pixel_disagreement": 0.013874393039279514,
+      "scale": [
+        6,
+        6
+      ],
+      "seconds": 0.013245875015854836,
+      "sha256": "db3b206d95ca226c26823f5e7e10ca25b1b9f6201661e3c5781178428be1f994",
+      "stream": "raw_u8"
+    },
+    {
+      "bytes": 20616,
+      "compressor": "zlib9",
+      "delta_vs_219472": -198856,
+      "low_shape": [
+        600,
+        48,
+        64
+      ],
+      "pixel_disagreement": 0.017352286444769965,
+      "scale": [
+        8,
+        8
+      ],
+      "seconds": 0.045294374984223396,
+      "sha256": "b725ddd4d9410945ef4d03155ce7d8e7144bce592f3888b5ecc6822e5ca051f0",
+      "stream": "raw_u8"
+    },
+    {
+      "bytes": 21579,
+      "compressor": "brotli11",
+      "delta_vs_219472": -197893,
+      "low_shape": [
+        600,
+        64,
+        85
+      ],
+      "pixel_disagreement": 0.013874393039279514,
+      "scale": [
+        6,
+        6
+      ],
+      "seconds": 0.3995697500067763,
+      "sha256": "1e27d8be33dac2ea463ed41521c0fd461b0b09df7621e05c91051953e1c45c2d",
+      "stream": "packed3"
+    },
+    {
+      "bytes": 21724,
+      "compressor": "lzma9",
+      "delta_vs_219472": -197748,
+      "low_shape": [
+        600,
+        64,
+        85
+      ],
+      "pixel_disagreement": 0.013874393039279514,
+      "scale": [
+        6,
+        6
+      ],
+      "seconds": 0.1933479580329731,
+      "sha256": "45dc1e07f43b2490847ce0bc8293e13516c3bbc93c888cd166a490cb0f0ec47a",
+      "stream": "packed3"
+    },
+    {
+      "bytes": 22566,
+      "compressor": "bz2_9",
+      "delta_vs_219472": -196906,
+      "low_shape": [
+        600,
+        64,
+        85
+      ],
+      "pixel_disagreement": 0.013874393039279514,
+      "scale": [
+        6,
+        6
+      ],
+      "seconds": 0.09173924999777228,
+      "sha256": "6375680fe68a802d6f0c00dd2ebefebf8022244845392d53d0cd596fdf265b8d",
+      "stream": "packed3"
+    },
+    {
+      "bytes": 23264,
+      "compressor": "lzma9",
+      "delta_vs_219472": -196208,
+      "low_shape": [
+        600,
+        64,
+        85
+      ],
+      "pixel_disagreement": 0.013874393039279514,
+      "scale": [
+        6,
+        6
+      ],
+      "seconds": 0.4442353339982219,
+      "sha256": "f1c325f02601d8fcf47e5fe9850d56cc1009e17db026bc032ce3165320543525",
+      "stream": "raw_u8"
+    },
+    {
+      "bytes": 24708,
+      "compressor": "brotli11",
+      "delta_vs_219472": -194764,
+      "low_shape": [
+        600,
+        64,
+        85
+      ],
+      "pixel_disagreement": 0.013874393039279514,
+      "scale": [
+        6,
+        6
+      ],
+      "seconds": 1.0705149580026045,
+      "sha256": "4ec9c00e735f8ec767c28b6e9f23827ed0c93f0d5017edd772a0f342c690e231",
+      "stream": "raw_u8"
+    },
+    {
+      "bytes": 34093,
+      "compressor": "zlib9",
+      "delta_vs_219472": -185379,
+      "low_shape": [
+        600,
+        64,
+        85
+      ],
+      "pixel_disagreement": 0.013874393039279514,
+      "scale": [
+        6,
+        6
+      ],
+      "seconds": 0.07147191697731614,
+      "sha256": "7878bfaac2651b68b2c2a51ce751c1a293b2fde83ef8ae8ea99bdced52bb246e",
+      "stream": "packed3"
+    },
+    {
+      "bytes": 34560,
+      "compressor": "zlib9",
+      "delta_vs_219472": -184912,
+      "low_shape": [
+        600,
+        64,
+        85
+      ],
+      "pixel_disagreement": 0.013874393039279514,
+      "scale": [
+        6,
+        6
+      ],
+      "seconds": 0.07440325000789016,
+      "sha256": "5db983bfcebeaba4b985eb3e2bfe69852b591604e8817b536c0989402c1ec935",
+      "stream": "raw_u8"
+    }
+  ],
+  "top_by_disagreement": [
+    {
+      "bytes": 132195,
+      "compressor": "bz2_9",
+      "delta_vs_219472": -87277,
+      "low_shape": [
+        600,
+        192,
+        256
+      ],
+      "pixel_disagreement": 0.005475446912977431,
+      "scale": [
+        2,
+        2
+      ],
+      "seconds": 0.191800584027078,
+      "sha256": "07ad9b683a148e4c69e5995c3cf58c0519e47e281894d930f12234dac2512f97",
+      "stream": "raw_u8"
+    },
+    {
+      "bytes": 145220,
+      "compressor": "lzma9",
+      "delta_vs_219472": -74252,
+      "low_shape": [
+        600,
+        192,
+        256
+      ],
+      "pixel_disagreement": 0.005475446912977431,
+      "scale": [
+        2,
+        2
+      ],
+      "seconds": 1.096362583048176,
+      "sha256": "b512d9a524fc97c5f56a7970214fe4d8c0f4c00a2b33137c0b800be3ef90d264",
+      "stream": "packed3"
+    },
+    {
+      "bytes": 149870,
+      "compressor": "brotli11",
+      "delta_vs_219472": -69602,
+      "low_shape": [
+        600,
+        192,
+        256
+      ],
+      "pixel_disagreement": 0.005475446912977431,
+      "scale": [
+        2,
+        2
+      ],
+      "seconds": 3.5757341670105234,
+      "sha256": "cbc95153476e13087e211dae9538a1468782d34179cbc655482d521f57f5be54",
+      "stream": "packed3"
+    },
+    {
+      "bytes": 153160,
+      "compressor": "brotli11",
+      "delta_vs_219472": -66312,
+      "low_shape": [
+        600,
+        192,
+        256
+      ],
+      "pixel_disagreement": 0.005475446912977431,
+      "scale": [
+        2,
+        2
+      ],
+      "seconds": 12.720550291007385,
+      "sha256": "cde41e0db492bed3bdae5f8f3978d9cd6e6d5c135dd3c4ce312f77ee7e920eee",
+      "stream": "raw_u8"
+    },
+    {
+      "bytes": 153336,
+      "compressor": "lzma9",
+      "delta_vs_219472": -66136,
+      "low_shape": [
+        600,
+        192,
+        256
+      ],
+      "pixel_disagreement": 0.005475446912977431,
+      "scale": [
+        2,
+        2
+      ],
+      "seconds": 3.798313707986381,
+      "sha256": "4a4fac48d778efd2e649b5179cc9f74b5ec377525b482e912b7714916440c2fc",
+      "stream": "raw_u8"
+    },
+    {
+      "bytes": 155081,
+      "compressor": "bz2_9",
+      "delta_vs_219472": -64391,
+      "low_shape": [
+        600,
+        192,
+        256
+      ],
+      "pixel_disagreement": 0.005475446912977431,
+      "scale": [
+        2,
+        2
+      ],
+      "seconds": 0.7346087920013815,
+      "sha256": "5c1946ab9f6ac44d9e7d8a382489bb98f8e858bfc44cec8a3e93721bfd11f415",
+      "stream": "packed3"
+    },
+    {
+      "bytes": 230183,
+      "compressor": "zlib9",
+      "delta_vs_219472": 10711,
+      "low_shape": [
+        600,
+        192,
+        256
+      ],
+      "pixel_disagreement": 0.005475446912977431,
+      "scale": [
+        2,
+        2
+      ],
+      "seconds": 0.3515980420052074,
+      "sha256": "178ea4e4f1be12f90b8b051e3fbcdfc58eba569c7620e97767db7790c87fc8eb",
+      "stream": "raw_u8"
+    },
+    {
+      "bytes": 238722,
+      "compressor": "zlib9",
+      "delta_vs_219472": 19250,
+      "low_shape": [
+        600,
+        192,
+        256
+      ],
+      "pixel_disagreement": 0.005475446912977431,
+      "scale": [
+        2,
+        2
+      ],
+      "seconds": 0.37798937503248453,
+      "sha256": "a277c0cccd7a463b837da62e24c974c5af7af7ab5552b8835fc2c79a6cdf1e4b",
+      "stream": "packed3"
+    },
+    {
+      "bytes": 97940,
+      "compressor": "lzma9",
+      "delta_vs_219472": -121532,
+      "low_shape": [
+        600,
+        192,
+        128
+      ],
+      "pixel_disagreement": 0.006091206868489583,
+      "scale": [
+        2,
+        4
+      ],
+      "seconds": 0.5787517499993555,
+      "sha256": "feacfcf05373802d48d5767c7f6a75cc0089537f739b68878786c3d7dd13658a",
+      "stream": "packed3"
+    },
+    {
+      "bytes": 98185,
+      "compressor": "bz2_9",
+      "delta_vs_219472": -121287,
+      "low_shape": [
+        600,
+        192,
+        128
+      ],
+      "pixel_disagreement": 0.006091206868489583,
+      "scale": [
+        2,
+        4
+      ],
+      "seconds": 0.11783437500707805,
+      "sha256": "1b42ad84575a08c0e52eca0c313c314d3b98a193e5c48591b6774d2774cc8f89",
+      "stream": "raw_u8"
+    },
+    {
+      "bytes": 101175,
+      "compressor": "brotli11",
+      "delta_vs_219472": -118297,
+      "low_shape": [
+        600,
+        192,
+        128
+      ],
+      "pixel_disagreement": 0.006091206868489583,
+      "scale": [
+        2,
+        4
+      ],
+      "seconds": 1.7190864580334164,
+      "sha256": "a14e8de25efecf42f18ddb1228e5d682d7dc5a78666b519deca3b7456a49997f",
+      "stream": "packed3"
+    },
+    {
+      "bytes": 104205,
+      "compressor": "brotli11",
+      "delta_vs_219472": -115267,
+      "low_shape": [
+        600,
+        192,
+        128
+      ],
+      "pixel_disagreement": 0.006091206868489583,
+      "scale": [
+        2,
+        4
+      ],
+      "seconds": 5.952128582983278,
+      "sha256": "7c9fcb0f5c805e6940211079c3cb89e705cb7aad890f3b5395490bcd2b892ea5",
+      "stream": "raw_u8"
+    },
+    {
+      "bytes": 104848,
+      "compressor": "lzma9",
+      "delta_vs_219472": -114624,
+      "low_shape": [
+        600,
+        192,
+        128
+      ],
+      "pixel_disagreement": 0.006091206868489583,
+      "scale": [
+        2,
+        4
+      ],
+      "seconds": 1.6236392079736106,
+      "sha256": "96b89349b05ad9a230be45a82b19eb066709e76b63db12b9b57ada105c47b38d",
+      "stream": "raw_u8"
+    },
+    {
+      "bytes": 112591,
+      "compressor": "bz2_9",
+      "delta_vs_219472": -106881,
+      "low_shape": [
+        600,
+        192,
+        128
+      ],
+      "pixel_disagreement": 0.006091206868489583,
+      "scale": [
+        2,
+        4
+      ],
+      "seconds": 0.3928396249539219,
+      "sha256": "cc4223138238746e16bdee64ebdf9424483df5d2223b98446c110b2b85d4fbd2",
+      "stream": "packed3"
+    },
+    {
+      "bytes": 166727,
+      "compressor": "zlib9",
+      "delta_vs_219472": -52745,
+      "low_shape": [
+        600,
+        192,
+        128
+      ],
+      "pixel_disagreement": 0.006091206868489583,
+      "scale": [
+        2,
+        4
+      ],
+      "seconds": 0.32045587501488626,
+      "sha256": "5db7c805634c821bedf0fca8b5b93156eae4d457a7b036377b2d33007a2c8127",
+      "stream": "packed3"
+    },
+    {
+      "bytes": 174294,
+      "compressor": "zlib9",
+      "delta_vs_219472": -45178,
+      "low_shape": [
+        600,
+        192,
+        128
+      ],
+      "pixel_disagreement": 0.006091206868489583,
+      "scale": [
+        2,
+        4
+      ],
+      "seconds": 0.34392429201398045,
+      "sha256": "49f6194bca0c76a6afe04178edd45f2423d90e00b14933fd18cd7afb2ba68325",
+      "stream": "raw_u8"
+    }
+  ]
+}

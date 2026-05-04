@@ -1,0 +1,68 @@
+{
+  "brotli_quality": 11,
+  "evidence_grade": "empirical",
+  "formula_only_rate_delta": -0.005228324499915289,
+  "header": {
+    "members": [
+      {
+        "bytes": 59288,
+        "codec": "raw",
+        "name": "renderer.bin",
+        "sha256": "00ce395fc6495a47d26e3844537859fdc2a1bc38d121ea5f4fb2610179d26e46"
+      },
+      {
+        "bytes": 223738,
+        "codec": "raw",
+        "name": "masks.mkv",
+        "sha256": "568439a26dbb9e240cf2c385ff350ddc2cb81f5bc514577498446d6043b21178"
+      },
+      {
+        "bytes": 7208,
+        "codec": "pose_qpose14_col_delta_v1",
+        "decoded_bytes": 7200,
+        "decoded_sha256": "6f9f64e1352eb36f804d963b32dbc0d6795cda403c981599ea011f483e9f3d08",
+        "lossy": true,
+        "name": "optimized_poses.bin",
+        "pose_error_stats": {
+          "max_abs_by_dim": [
+            0.0,
+            0.000244140625,
+            0.000244140625,
+            0.000244140625,
+            0.000244140625,
+            0.000244140625
+          ],
+          "pose_dim": 6,
+          "rmse_by_dim": [
+            0.0,
+            0.00014389319101632456,
+            0.0001431707046712938,
+            0.000145808010963383,
+            0.00013782911735806325,
+            0.00014371661703877636
+          ],
+          "rows": 600
+        },
+        "sha256": "7d816bbd2cf3a9838b971ee1f32e29c267df6509d2b370e86c038eda40110de6",
+        "source_decoded_sha256": "399c0898d110911979c8b1343be3f16420a30b27a072e1c61d4d0a552e6ec1e3"
+      }
+    ],
+    "payload_format": "pr64_len_table",
+    "schema": "renderer_payload_pr64_len_table_v1",
+    "source_archive_sha256": "1a901b7ee79357755d3c7f9a533c89f4a6aa9c099b7919016c248cef8e99f7df"
+  },
+  "output_archive": "/workspace/pact/lane_q_faithful_results/postprocess_fixed_snapshot_20260501T2146Z_fix1/qzs3_pr64_qpose14/archive.zip",
+  "output_archive_bytes": 276636,
+  "output_archive_sha256": "d907101ff70524d3244ac9a66fb2a85d501cc02c0f45bfcb25eae06fc962d39c",
+  "payload_compressed_bytes": 276536,
+  "payload_format": "pr64_len_table",
+  "payload_member": "p",
+  "payload_raw_bytes": 290246,
+  "pose_codec": "pose_qpose14_col_delta_v1",
+  "pose_residual_topk": 0,
+  "savings_bytes": 7852,
+  "score_claim": false,
+  "source_archive": "/workspace/pact/lane_q_faithful_results/postprocess_fixed_snapshot_20260501T2146Z_fix1/qzs3_half_posebin/archive.zip",
+  "source_archive_bytes": 284488,
+  "source_archive_sha256": "1a901b7ee79357755d3c7f9a533c89f4a6aa9c099b7919016c248cef8e99f7df"
+}

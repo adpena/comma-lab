@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "started_at_utc": "2026-05-02T05:04:49Z",
+  "git_hash": "no-git",
+  "gpu_name": "NVIDIA H100 NVL",
+  "driver_version": "580.82.07",
+  "lane_script": "scripts/remote_archive_only_eval.sh",
+  "tag": "ls_c059_weighted_pairs_top32_h100_20260502",
+  "archive_path": "/workspace/pact/experiments/results/line_search_c059_weighted_pairs_top32_20260502T0410Z/archive.zip",
+  "predicted_band": [0.3147, 0.3160],
+  "controlled_baseline": "C-059 A++ exact T4 frontier score=0.3157055307844823 sha=cf44aa7fdb13b9ab6236aefde1f5f58e915d7dfa99128246235443841396c6ab bytes=276347; candidate is weighted-pair top32 QP1 line-search archive sha=cda95e70440e9ef295985a042fda2d74715ef6a0e665a1c37871cddd051cd908 bytes=276423.",
+  "no_training": true,
+  "no_build": true,
+  "strict_scorer_rule_compliant": true,
+  "design_memo": "scripts/remote_archive_only_eval.sh"
+}

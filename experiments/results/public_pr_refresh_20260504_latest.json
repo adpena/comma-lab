@@ -1,0 +1,58 @@
+[
+  {
+    "number": 89,
+    "state": "open",
+    "title": "henosis_final_bias (0.28)",
+    "user": "henosis-us",
+    "updated_at": "2026-05-04T00:55:37Z"
+  },
+  {
+    "number": 88,
+    "state": "closed",
+    "title": "qzs3 range mask gpu preflight",
+    "user": "erichasinternet",
+    "updated_at": "2026-05-04T00:34:26Z"
+  },
+  {
+    "number": 87,
+    "state": "open",
+    "title": "Add 100_bytes submission",
+    "user": "manthedan",
+    "updated_at": "2026-05-04T00:24:02Z"
+  },
+  {
+    "number": 86,
+    "state": "open",
+    "title": "jas0xf_adversarial_neural_representation (0.27)",
+    "user": "jas0xf",
+    "updated_at": "2026-05-03T23:55:59Z"
+  },
+  {
+    "number": 82,
+    "state": "closed",
+    "title": "henosis_frontier (0.30)",
+    "user": "henosis-us",
+    "updated_at": "2026-05-03T23:30:30Z"
+  },
+  {
+    "number": 85,
+    "state": "open",
+    "title": "Adaptive masking joint frame model",
+    "user": "ottokunkel",
+    "updated_at": "2026-05-03T23:08:08Z"
+  },
+  {
+    "number": 84,
+    "state": "open",
+    "title": "Rang Mask Optimizations (0.275)",
+    "user": "ottokunkel",
+    "updated_at": "2026-05-03T21:53:49Z"
+  },
+  {
+    "number": 83,
+    "state": "closed",
+    "title": "Ottokunkel/adaptive range mask submission",
+    "user": "ottokunkel",
+    "updated_at": "2026-05-03T20:18:12Z"
+  }
+]

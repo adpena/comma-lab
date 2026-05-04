@@ -1,0 +1,22 @@
+{
+  "README.md_bytes": 221,
+  "README.md_sha256": "7901e56808956e4de0866bfeecf4b8a4188bfeef30215139b5730b31255f54d5",
+  "archive_bytes": 296789,
+  "archive_sha256": "a0e07c360223c1dd3d3b92263225d38d542e218e83d095ad9b91bf872f94c6e4",
+  "dir": "experiments/results/public_pr82_henosis_frontier_intake_20260503_codex",
+  "inflate.py_bytes": 82936,
+  "inflate.py_sha256": "0809f704f1623d0e694621129abced77eaac052ae35469e207ef06938e4be1ad",
+  "pr82.patch_bytes": 86363,
+  "pr82.patch_sha256": "589b4d550bf80f865509686fa6f03d51bdfdc7b16b9a5ccdbc34a8c289e6783c",
+  "zip_members": [
+    {
+      "compress_size": 296689,
+      "compress_type": 0,
+      "file_size": 296689,
+      "filename": "x",
+      "magic16_ascii": "PY.......x.....j",
+      "magic16_hex": "505903f2de00cf0500780500e200006a",
+      "sha256": "1c3377d09ddfddea488be791875605d1877003da4b0bd4d5c752e82d45fd8077"
+    }
+  ]
+}

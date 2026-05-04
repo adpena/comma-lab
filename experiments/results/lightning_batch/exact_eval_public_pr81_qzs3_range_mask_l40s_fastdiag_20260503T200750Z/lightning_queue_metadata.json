@@ -1,0 +1,40 @@
+{
+  "adjudication": {
+    "allow_component_gate_forensic_success": true,
+    "allow_sane_score_forensic_success": true,
+    "baseline_archive_size_bytes": 277321,
+    "baseline_posenet_dist": 0.00049415,
+    "baseline_score": 0.31453355357318635,
+    "baseline_segnet_dist": 0.00059581,
+    "component_reference_label": "pr79_s2_frontier",
+    "delta_key": "score_delta_vs_pr79_s2",
+    "max_posenet_dist": 0.005,
+    "max_posenet_relative": null,
+    "max_sane_score": 1.0,
+    "max_segnet_dist": 0.005,
+    "max_segnet_relative": null,
+    "predicted_band_high": 0.35,
+    "predicted_band_low": 0.24,
+    "provenance_name": "adjudication_provenance.json",
+    "regression_threshold": 0.11,
+    "required_device": "cuda",
+    "required_samples": 600,
+    "result_copy_name": "contest_auth_eval.adjudicated.json"
+  },
+  "artifact_recorded_at_utc": "2026-05-03T20:16:35Z",
+  "expected_archive_sha256": "cd01378a52688fe00ee1bfb898c67695aed89a7b3ded602b597eb7fc3031d7fc",
+  "expected_archive_size_bytes": 215960,
+  "job_name": "exact_eval_public_pr81_qzs3_range_mask_l40s_fastdiag_20260503T200750Z",
+  "queue_metadata": {
+    "diagnostic_hardware": "L40S_nonpromotion",
+    "public_claimed_score": "0.2878245063016197",
+    "runtime_dependency_fix": "lightning_inflate_runtime_bootstrap_brotli",
+    "source_commit": "854b397e9fca912fb864614387912f25805fd669",
+    "source_manifest": ".omx/state/public_pr81_pr82_replay_depsfix_t4_20260503T195657Z_manifest.json",
+    "source_pr": "81"
+  },
+  "role": "exact_cuda_eval",
+  "schema_version": 1,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

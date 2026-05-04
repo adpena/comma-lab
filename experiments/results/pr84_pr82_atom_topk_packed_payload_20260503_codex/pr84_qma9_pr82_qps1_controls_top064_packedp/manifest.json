@@ -1,0 +1,241 @@
+{
+  "archive_bytes": 216821,
+  "archive_path": "experiments/results/pr84_pr82_atom_topk_packed_payload_20260503_codex/pr84_qma9_pr82_qps1_controls_top064_packedp/archive.zip",
+  "archive_sha256": "ce1f12177d607ef63d7fbcb45018286056cbcc78bd98f1266aeec77b8320a116",
+  "atom_filter": {
+    "filter_kind": "rank_pairs_by_pr82_control_activity",
+    "include_streams": [
+      "post",
+      "shift",
+      "frac",
+      "frac2",
+      "frac3",
+      "bias",
+      "region"
+    ],
+    "selected_pair_count": 64,
+    "selected_pairs": [
+      67,
+      68,
+      79,
+      99,
+      102,
+      103,
+      105,
+      106,
+      108,
+      110,
+      112,
+      115,
+      116,
+      117,
+      118,
+      120,
+      121,
+      122,
+      123,
+      125,
+      127,
+      128,
+      130,
+      132,
+      135,
+      143,
+      144,
+      157,
+      161,
+      164,
+      166,
+      175,
+      183,
+      186,
+      205,
+      285,
+      290,
+      301,
+      303,
+      304,
+      307,
+      310,
+      311,
+      315,
+      318,
+      321,
+      363,
+      365,
+      366,
+      367,
+      391,
+      406,
+      411,
+      413,
+      422,
+      426,
+      431,
+      435,
+      436,
+      441,
+      445,
+      450,
+      500,
+      550
+    ],
+    "topk": 64
+  },
+  "candidate_id": "pr84_qma9_pr82_qps1_controls_top064_packedp",
+  "candidate_kind": "pr84_public_payload_p_plus_pr82_qps1_control_pair_topk_sidecar",
+  "dispatch_gate": {
+    "dispatch_ready_now": true,
+    "lane_claim_required_before_any_exact_eval": true,
+    "no_remote_dispatch": true,
+    "reason": "ready_for_exact_cuda_eval_after_lane_claim",
+    "remote_dispatch_performed": false,
+    "score_claim": false
+  },
+  "evidence_grade": "empirical_local_archive_build_and_runtime_preflight_only",
+  "manifest_schema": "pr84_pr82_henosis_stack_candidate_v1",
+  "no_op_detection": {
+    "changed_atom_count": 520,
+    "is_noop": false
+  },
+  "output_archive": {
+    "bytes": 216821,
+    "layout": "public_payload_plus_qpost",
+    "member_table": [
+      {
+        "bytes": 215635,
+        "name": "p",
+        "sha256": "35b14e37ee34eeb2197117d52d805afb7aff8b33378b367685476dc4097e324d"
+      },
+      {
+        "bytes": 992,
+        "name": "qpost.bin",
+        "sha256": "f65406b7eee27e90d90e4b2645afb70fd4f381825d31f097b9c0c1c7ea857280"
+      }
+    ],
+    "members": [
+      "p",
+      "qpost.bin"
+    ],
+    "path": "experiments/results/pr84_pr82_atom_topk_packed_payload_20260503_codex/pr84_qma9_pr82_qps1_controls_top064_packedp/archive.zip",
+    "sha256": "ce1f12177d607ef63d7fbcb45018286056cbcc78bd98f1266aeec77b8320a116"
+  },
+  "payload_packing_parity": {
+    "archive_layout": "public_payload_plus_qpost",
+    "exact_pr84_public_payload_preserved": true,
+    "output_p_member_bytes": 215635,
+    "output_p_member_sha256": "35b14e37ee34eeb2197117d52d805afb7aff8b33378b367685476dc4097e324d",
+    "source_pr84_payload_bytes": 215635,
+    "source_pr84_payload_sha256": "35b14e37ee34eeb2197117d52d805afb7aff8b33378b367685476dc4097e324d",
+    "source_runtime_unpack_preflight": {
+      "members": {
+        "masks.qma9": {
+          "bytes": 159011,
+          "sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179"
+        },
+        "optimized_poses.qp1": {
+          "bytes": 1140,
+          "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+        },
+        "renderer.bin": {
+          "bytes": 55729,
+          "sha256": "c3edab24d22a0fea3c162ca1ccf7ed3eb9d963f2b3725f8ee4a3ac63acf2ad2f"
+        }
+      },
+      "payload_bytes": 215635,
+      "payload_format": "public_qma9_reordered_qzs3_qp1_no_router_fixed_slices",
+      "runtime_unpacker": "submissions/robust_current/unpack_renderer_payload.py",
+      "runtime_unpacker_sha256": "abef476e2bff31cc410dcac42d4c3c62123c10d26e6c34b718d65014fadd9d5c",
+      "schema": "renderer_payload_pr64_len_table_v1",
+      "status": "passed"
+    }
+  },
+  "qpost": {
+    "bytes": 992,
+    "runtime_contract": "QPS1/top064_control_pair_filter",
+    "sha256": "f65406b7eee27e90d90e4b2645afb70fd4f381825d31f097b9c0c1c7ea857280"
+  },
+  "raw_output_delta_proof": {
+    "after_bytes": 6104016,
+    "after_sha256": "531710dc1537cf060fcaa5452bc5691bdefabef3f8eca4072bbeb8a06e340676",
+    "archive_bytes": 216821,
+    "archive_path": "experiments/results/pr84_pr82_atom_topk_packed_payload_20260503_codex/pr84_qma9_pr82_qps1_controls_top064_packedp/archive.zip",
+    "archive_sha256": "ce1f12177d607ef63d7fbcb45018286056cbcc78bd98f1266aeec77b8320a116",
+    "before_bytes": 6104016,
+    "before_sha256": "cc9874de7e36f776c79e19959df157466bf13f9f2dfa99affdb578aabe254abc",
+    "changed_values": 3035991,
+    "compared_values": 6104016,
+    "device": "cpu",
+    "exact_equal": false,
+    "height": 874,
+    "max_abs_delta": 178,
+    "mean_abs_delta": 25.39784545125701,
+    "proof_pair_index": 367,
+    "proof_scope": "synthetic_raw_noop_guard_only_not_component_parity",
+    "proof_type": "runtime_apply_qzs3_postprocess_synthetic_raw_pair",
+    "qpost_path": "experiments/results/pr84_pr82_atom_topk_packed_payload_20260503_codex/pr84_qma9_pr82_qps1_controls_top064_packedp/qpost_for_raw_delta_proof.bin",
+    "qpost_sha256": "f65406b7eee27e90d90e4b2645afb70fd4f381825d31f097b9c0c1c7ea857280",
+    "runtime_helper": "submissions/robust_current/apply_qzs3_postprocess.py",
+    "runtime_helper_sha256": "fba70482c8c0a1078cb95b7c03e8140b3043a9e849bc69314c48a191b10c2e62",
+    "width": 1164
+  },
+  "score_claim": false,
+  "source_pr84_archive": {
+    "bytes": 215735,
+    "path": "experiments/results/top_submission_reverse_engineering_20260503_pr84/archive.zip",
+    "reported_score_external": 0.2751402303839512,
+    "sha256": "a607a6c3ae9b610e6edfb546c3206004ae40fc348ecaef2446b7134a19b8e07f"
+  },
+  "source_pr84_payload_preflight": {
+    "payload_bytes": 215635,
+    "payload_contract": {
+      "base_payload_bytes_without_router": 215635,
+      "contract": "pr84_qma9_reordered_qzs3_qp1_no_router",
+      "expected_pr84_no_router": true,
+      "router_action_bytes": 0,
+      "stale_pr81_packed_payload_bytes_avoided": true
+    },
+    "payload_sha256": "35b14e37ee34eeb2197117d52d805afb7aff8b33378b367685476dc4097e324d",
+    "pose": {
+      "decoded_pose_bytes": 1140,
+      "decoded_pose_count": 600,
+      "decoded_pose_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+      "encoded_pose_bytes": 899,
+      "encoded_pose_sha256": "83767bbd10ae72c3237e468351eb9c465a954e25a6af04a0e0cb84d1f7af9b51",
+      "magic": "QP1",
+      "status": "passed"
+    },
+    "qma9": {
+      "decoded_mask_bytes": 117964800,
+      "frame_count": 600,
+      "height": 384,
+      "packed_bytes": 159011,
+      "width": 512
+    },
+    "runtime_restore_preflight": {
+      "input_model_payload_bytes": 55725,
+      "input_model_payload_sha256": "b649b0dacb1dcc93fd7da2e7f5c6d398fa933d2fe3087520359612afc8e4832d",
+      "restored_block_size": 32,
+      "restored_model_bytes": 59288,
+      "restored_model_sha256": "2333284a73446c3b323948fb883ade0f677baf9ad5d9d06aa1da7bec337bd9c9",
+      "runtime_inflate_renderer": "submissions/robust_current/inflate_renderer.py",
+      "runtime_inflate_renderer_sha256": "636e48a8fed29159853d8096bc28a36d419819f501aad075463138b6205470eb",
+      "status": "passed"
+    },
+    "source_inflate": "experiments/results/top_submission_reverse_engineering_20260503_pr84/sources/inflate.py",
+    "source_inflate_sha256": "10b74030ffd9d55a068a5f6862b88053296685b1b79a723da3d59093f68057e3"
+  },
+  "static_score_band_if_pr82_components_carried": {
+    "archive_bytes": 216821,
+    "bytes_delta_vs_pr84_public_archive": 1086,
+    "component_assumption": "PR82 exact T4 components copied unchanged; planning-only lower bound, not evidence",
+    "expected_score": 0.2450773143688802,
+    "pr82_posenet_dist": 0.0001894,
+    "pr82_segnet_dist": 0.00057185
+  },
+  "stream_delta": {
+    "archive_delta_bytes_vs_pr84_public_archive": 1086,
+    "qpost_charged_member_bytes": 992
+  },
+  "tool": "experiments/build_pr84_pr82_henosis_stack_candidate.py"
+}

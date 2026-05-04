@@ -1,0 +1,234 @@
+{
+  "archive": {
+    "archive_bytes": 215960,
+    "archive_path": "/Users/adpena/Projects/pact/experiments/results/public_pr81_qzs3_range_mask_intake_20260503_codex/archive.zip",
+    "archive_sha256": "cd01378a52688fe00ee1bfb898c67695aed89a7b3ded602b597eb7fc3031d7fc",
+    "member_bytes": 215860,
+    "member_name": "p",
+    "member_sha256": "c59524610474c89e5a41433f47d2bb881f878e694f853db1377272699f9eb3e9",
+    "zip_overhead_bytes": 100
+  },
+  "best_local_byte_win": null,
+  "candidates": [
+    {
+      "accepted_for_exact_eval_candidate": false,
+      "archive_relevant_state_change": true,
+      "delta_bytes_vs_source_range_mask": 0,
+      "error": null,
+      "mode_family": "qma9",
+      "mode_id": "qma9_reference_reencode",
+      "no_op_status": "state_changed",
+      "payload_bytes": 1221,
+      "payload_sha256": "fcf143230da1c30885969b7490dba9549397a352bdf347efdfa706f6bcf6ffe3",
+      "planning_only_reason": "reference mode only; exact-eval selection requires a non-reference local byte win",
+      "projected_archive_bytes_if_other_streams_unchanged": 215960,
+      "rate_score_delta_if_components_unchanged": 0.0,
+      "raw_mask_parity": true,
+      "rejection_reasons": [
+        "no_local_byte_screen_win"
+      ],
+      "role": "reference",
+      "selectable": false
+    },
+    {
+      "accepted_for_exact_eval_candidate": false,
+      "archive_relevant_state_change": true,
+      "delta_bytes_vs_source_range_mask": 3,
+      "error": null,
+      "header": {
+        "bitstream_bytes": 1200,
+        "bitstream_sha256": "b3261d74c7b89923ae0d7c7905800b31dce8383e8ab86ea4b6ad347741ff0827",
+        "decoded_mask_bytes": 786432,
+        "frame_count": 4,
+        "header_bytes": 24,
+        "height": 384,
+        "magic": "QMF1",
+        "mode_id": 1,
+        "mode_name": "skip_static_up_gate_full_context",
+        "packed_bytes": 1224,
+        "payload_sha256": "eb9ac13feb0458de0e06b3ce0786efc7e8115c12fa97b492b8dede5594215731",
+        "width": 512
+      },
+      "mode_family": "qmf1_first_row_specialization",
+      "mode_id": "qmf1_first_row_1_skip_static_up_gate_full_context",
+      "no_op_status": "state_changed",
+      "payload_bytes": 1224,
+      "payload_sha256": "eb9ac13feb0458de0e06b3ce0786efc7e8115c12fa97b492b8dede5594215731",
+      "planning_only_reason": "local first-row/context specialization byte screen only; runtime integration, lane claim, archive closure, and CUDA auth eval are still required",
+      "projected_archive_bytes_if_other_streams_unchanged": 215963,
+      "rate_score_delta_if_components_unchanged": 1.997576859366514e-06,
+      "raw_mask_parity": true,
+      "rejection_reasons": [
+        "no_local_byte_screen_win"
+      ],
+      "selectable": false,
+      "specialization": {
+        "first_row_pixels": 1536,
+        "mode_name": "skip_static_up_gate_full_context",
+        "modified_rows_per_frame": 1,
+        "skips_static_up_gate": true
+      }
+    },
+    {
+      "accepted_for_exact_eval_candidate": false,
+      "archive_relevant_state_change": true,
+      "delta_bytes_vs_source_range_mask": 4,
+      "error": null,
+      "header": {
+        "bitstream_bytes": 1201,
+        "bitstream_sha256": "e08817476c78a83b1991a32a839ee8a0a25c4b08f7cd4e6be909945db585a037",
+        "decoded_mask_bytes": 786432,
+        "frame_count": 4,
+        "header_bytes": 24,
+        "height": 384,
+        "magic": "QMF1",
+        "mode_id": 2,
+        "mode_name": "skip_static_up_gate_prev_left_context",
+        "packed_bytes": 1225,
+        "payload_sha256": "0d0ac243a86cd2f45c853b507d07a81e0f25636accde95b0ec6cbe907d7b9f9f",
+        "width": 512
+      },
+      "mode_family": "qmf1_first_row_specialization",
+      "mode_id": "qmf1_first_row_2_skip_static_up_gate_prev_left_context",
+      "no_op_status": "state_changed",
+      "payload_bytes": 1225,
+      "payload_sha256": "0d0ac243a86cd2f45c853b507d07a81e0f25636accde95b0ec6cbe907d7b9f9f",
+      "planning_only_reason": "local first-row/context specialization byte screen only; runtime integration, lane claim, archive closure, and CUDA auth eval are still required",
+      "projected_archive_bytes_if_other_streams_unchanged": 215964,
+      "rate_score_delta_if_components_unchanged": 2.6634358124886856e-06,
+      "raw_mask_parity": true,
+      "rejection_reasons": [
+        "no_local_byte_screen_win"
+      ],
+      "selectable": false,
+      "specialization": {
+        "first_row_pixels": 1536,
+        "mode_name": "skip_static_up_gate_prev_left_context",
+        "modified_rows_per_frame": 1,
+        "skips_static_up_gate": true
+      }
+    },
+    {
+      "accepted_for_exact_eval_candidate": false,
+      "archive_relevant_state_change": true,
+      "delta_bytes_vs_source_range_mask": 20,
+      "error": null,
+      "header": {
+        "bitstream_bytes": 1217,
+        "bitstream_sha256": "fa0d55b7669dcc8aa0e50141e21afa88d6867b96db329b573cf929982415642d",
+        "decoded_mask_bytes": 786432,
+        "frame_count": 4,
+        "header_bytes": 24,
+        "height": 384,
+        "magic": "QMF1",
+        "mode_id": 3,
+        "mode_name": "skip_static_up_gate_left_context",
+        "packed_bytes": 1241,
+        "payload_sha256": "df063a8485eb49995e2e0947339f45de87cee272ac744b2d40102747e9b56f07",
+        "width": 512
+      },
+      "mode_family": "qmf1_first_row_specialization",
+      "mode_id": "qmf1_first_row_3_skip_static_up_gate_left_context",
+      "no_op_status": "state_changed",
+      "payload_bytes": 1241,
+      "payload_sha256": "df063a8485eb49995e2e0947339f45de87cee272ac744b2d40102747e9b56f07",
+      "planning_only_reason": "local first-row/context specialization byte screen only; runtime integration, lane claim, archive closure, and CUDA auth eval are still required",
+      "projected_archive_bytes_if_other_streams_unchanged": 215980,
+      "rate_score_delta_if_components_unchanged": 1.3317179062443427e-05,
+      "raw_mask_parity": true,
+      "rejection_reasons": [
+        "no_local_byte_screen_win"
+      ],
+      "selectable": false,
+      "specialization": {
+        "first_row_pixels": 1536,
+        "mode_name": "skip_static_up_gate_left_context",
+        "modified_rows_per_frame": 1,
+        "skips_static_up_gate": true
+      }
+    }
+  ],
+  "dispatch_performed": false,
+  "evidence_grade": "empirical/local_byte_screen",
+  "gpu_required": false,
+  "mode_matrix": {
+    "accepted_local_byte_wins": 0,
+    "candidate_count": 4,
+    "qmb1_block_widths": [],
+    "qmf1_first_row_modes": [
+      1,
+      2,
+      3
+    ],
+    "reference_mode": "qma9_reference_reencode"
+  },
+  "raw_mask": {
+    "decoded_by_tool": true,
+    "frames": 4,
+    "raw_bytes": 786432,
+    "raw_sha256": "e763e118ec695f667eccda8b987420b167fd2ba263e382ff2d9348c578e51a46",
+    "source": "archive_range_mask.qma9",
+    "source_kind": "prefix_qma9_decode"
+  },
+  "schema": "qma9_range_mask_byte_search_profile_v1",
+  "score_claim": false,
+  "segments": [
+    {
+      "codec": "qma9_adaptive9_binary_range_mask",
+      "name": "range_mask.qma9",
+      "offset": 0,
+      "sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+      "size_bytes": 159011
+    },
+    {
+      "codec": "brotli_reordered_qzs3_model_bundle",
+      "name": "split_model_reordered.br_bundle",
+      "offset": 159011,
+      "sha256": "b649b0dacb1dcc93fd7da2e7f5c6d398fa933d2fe3087520359612afc8e4832d",
+      "size_bytes": 55725
+    },
+    {
+      "codec": "brotli_qp1_pose_stream",
+      "name": "optimized_poses.qp1.br",
+      "offset": 214736,
+      "sha256": "83767bbd10ae72c3237e468351eb9c465a954e25a6af04a0e0cb84d1f7af9b51",
+      "size_bytes": 899
+    },
+    {
+      "codec": "packed_3bit_pair_router_actions",
+      "name": "router_actions.3bit",
+      "offset": 215635,
+      "sha256": "d282d9228f84e3316a50dfde9bba2b811f4fd377e6e32773ce070c2beba46f80",
+      "size_bytes": 225
+    }
+  ],
+  "selection_guard": {
+    "required_before_dispatch": [
+      "candidate accepted_for_exact_eval_candidate=true",
+      "runtime consumes the candidate payload from archive bytes",
+      "dispatch lane claim exists before any remote/GPU eval",
+      "exact CUDA auth eval through archive.zip -> inflate.sh -> upstream/evaluate.py"
+    ],
+    "safe_to_choose_exact_eval_candidate_after_local_screen_win": false
+  },
+  "source_qma9_header": {
+    "bitstream_bytes": 158991,
+    "bitstream_sha256": "77196f31a8fdfbf8f91c9c30600945473376534f15245bfb7622ddd77d17e3af",
+    "decoded_mask_bytes": 117964800,
+    "frame_count": 600,
+    "header_bytes": 20,
+    "height": 384,
+    "magic": "QMA9",
+    "packed_bytes": 159011,
+    "payload_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+    "width": 512
+  },
+  "split_constants": {
+    "PACKED_PAYLOAD_BYTES": 215860,
+    "POSE_STREAM_BYTES": 899,
+    "RANGE_MASK_BYTES": 159011,
+    "ROUTER_ACTION_BYTES": 225,
+    "SPLIT_MODEL_REORDERED_BYTES": 55725
+  },
+  "tool": "experiments/profile_qma9_range_mask_bitstream.py"
+}

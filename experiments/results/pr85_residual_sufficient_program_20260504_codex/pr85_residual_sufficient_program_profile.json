@@ -1,0 +1,653 @@
+{
+  "axis_convention": {
+    "input_storage": "N,W,H from PR85 QMA9 token source",
+    "profile_order": "N,H,W render order"
+  },
+  "charged_baseline": {
+    "contest_rate_lambda_points_per_byte": 6.658589531221714e-07,
+    "mask_segment_bytes": 159011,
+    "mask_segment_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+    "qma9_bits_per_token_charged": 0.010783623589409722
+  },
+  "dispatch_performed": false,
+  "evidence_grade": "empirical/local_residual_sufficient_statistics",
+  "input_profile": {
+    "path": "/Users/adpena/Projects/pact/experiments/results/public_pr85_intake_20260503_codex/qma9_token_source/pr85_qma9_token_source_profile.json",
+    "schema": "pr85_qma9_mask_token_source_profile_v1",
+    "sha256": "6126ebe0e25cf3d13a282287977583c6db144e67832de2f5b74475929f36f1e5"
+  },
+  "input_token_source": {
+    "bytes": 117964800,
+    "dtype": "uint8",
+    "path": "/Users/adpena/Projects/pact/experiments/results/public_pr85_intake_20260503_codex/qma9_token_source/pr85_qma9_tokens_u8_storage_order.bin",
+    "render_order_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+    "render_shape": [
+      600,
+      384,
+      512
+    ],
+    "sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+    "storage_shape": [
+      600,
+      512,
+      384
+    ]
+  },
+  "planning_only": true,
+  "recommendations": [
+    {
+      "action": "do_not_dispatch_residual_program_without_model_or_atom_refinement",
+      "basis": "best deterministic residual sufficient-statistic lower bound comes from left_zero_border",
+      "dispatch_unlocked": false,
+      "predictor": "left_zero_border",
+      "score_claim": false
+    },
+    {
+      "action": "if_training_on_fast_gpu_use_this_profile_as_lossless_target_density",
+      "basis": "top changed frames, row spans, and residual nonzero maps provide a non-arbitrary curriculum/atom density field for learned mask coders",
+      "dispatch_unlocked": false,
+      "score_claim": false
+    }
+  ],
+  "recorded_at_utc": "2026-05-04T07:09:19Z",
+  "residual_programs": [
+    {
+      "best_lower_bound_bytes": 721370.0252622243,
+      "charged_mask_bytes": 159011,
+      "counts": {
+        "0": 117445609,
+        "1": 132527,
+        "2": 151844,
+        "3": 42506,
+        "4": 192314
+      },
+      "dispatch_unlocked": false,
+      "estimated_bytes_saved_vs_charged_mask": -562359.0252622243,
+      "evidence_grade": "empirical/local_residual_sufficient_statistics",
+      "non_arbitrary_basis": "exact decoded PR85 QMA9 token tensor plus deterministic predictor 'left_zero_border'",
+      "nonzero_fraction": 0.0044012366400824655,
+      "nonzero_symbol_entropy_bits": 1.8479023262143266,
+      "planning_only": true,
+      "predictor": "left_zero_border",
+      "rate_score_delta_lower_bound": 0.3744517918399094,
+      "raw_residual_entropy_bits_per_token": 0.04892103578438478,
+      "raw_residual_entropy_bytes": 721370.0252622243,
+      "row_span_atoms": {
+        "changed_pixels_per_frame": {
+          "max": 1114.0,
+          "mean": 865.3183333333334,
+          "p050": 866.0,
+          "p090": 962.0,
+          "p099": 1039.09
+        },
+        "frame_count": 600,
+        "height": 384,
+        "row_span_count": 222328,
+        "row_span_width_quantiles": {
+          "max": 512.0,
+          "mean": 77.73752743694001,
+          "p050": 1.0,
+          "p090": 366.0,
+          "p099": 484.0
+        },
+        "rows_per_frame_quantiles": {
+          "max": 384.0,
+          "mean": 370.5466666666667,
+          "p050": 374.0,
+          "p090": 384.0,
+          "p099": 384.0
+        },
+        "top_changed_frames": [
+          {
+            "changed_pixels": 1114,
+            "frame": 517,
+            "rows_with_changes": 384
+          },
+          {
+            "changed_pixels": 1082,
+            "frame": 518,
+            "rows_with_changes": 384
+          },
+          {
+            "changed_pixels": 1064,
+            "frame": 519,
+            "rows_with_changes": 384
+          },
+          {
+            "changed_pixels": 1054,
+            "frame": 177,
+            "rows_with_changes": 384
+          },
+          {
+            "changed_pixels": 1050,
+            "frame": 592,
+            "rows_with_changes": 384
+          },
+          {
+            "changed_pixels": 1048,
+            "frame": 470,
+            "rows_with_changes": 384
+          },
+          {
+            "changed_pixels": 1039,
+            "frame": 133,
+            "rows_with_changes": 384
+          },
+          {
+            "changed_pixels": 1037,
+            "frame": 569,
+            "rows_with_changes": 371
+          },
+          {
+            "changed_pixels": 1035,
+            "frame": 506,
+            "rows_with_changes": 384
+          },
+          {
+            "changed_pixels": 1034,
+            "frame": 522,
+            "rows_with_changes": 382
+          },
+          {
+            "changed_pixels": 1026,
+            "frame": 570,
+            "rows_with_changes": 384
+          },
+          {
+            "changed_pixels": 1016,
+            "frame": 534,
+            "rows_with_changes": 384
+          }
+        ],
+        "width": 512
+      },
+      "score_claim": false,
+      "span_program_fixed16_lower_bound_bytes": 1453894.7820811928,
+      "span_program_fixed16_overhead_bytes": 1333968,
+      "span_program_fixed16_payload_entropy_bytes": 119926.78208119281,
+      "sparse_split_entropy_bytes": 721370.0252622244,
+      "sparse_zero_map_entropy_bits_per_token": 0.04078798035895667,
+      "token_count": 117964800,
+      "zero_fraction": 0.9955987633599175
+    },
+    {
+      "best_lower_bound_bytes": 787567.4556800732,
+      "charged_mask_bytes": 159011,
+      "counts": {
+        "0": 116380098,
+        "1": 355321,
+        "2": 360880,
+        "3": 262520,
+        "4": 605981
+      },
+      "dispatch_unlocked": false,
+      "estimated_bytes_saved_vs_charged_mask": -628556.4556800732,
+      "evidence_grade": "empirical/local_residual_sufficient_statistics",
+      "non_arbitrary_basis": "exact decoded PR85 QMA9 token tensor plus deterministic predictor 'up_zero_border'",
+      "nonzero_fraction": 0.013433685302734375,
+      "nonzero_symbol_entropy_bits": 1.9297581787872966,
+      "planning_only": true,
+      "predictor": "up_zero_border",
+      "rate_score_delta_lower_bound": 0.4185299435573161,
+      "raw_residual_entropy_bits_per_token": 0.12870438054025352,
+      "raw_residual_entropy_bytes": 1897823.3136943623,
+      "row_span_atoms": {
+        "changed_pixels_per_frame": {
+          "max": 3219.0,
+          "mean": 2641.17,
+          "p050": 2652.5,
+          "p090": 2848.4,
+          "p099": 3137.02
+        },
+        "frame_count": 600,
+        "height": 384,
+        "row_span_count": 67551,
+        "row_span_width_quantiles": {
+          "max": 512.0,
+          "mean": 211.5479859661589,
+          "p050": 223.0,
+          "p090": 430.0,
+          "p099": 511.0
+        },
+        "rows_per_frame_quantiles": {
+          "max": 137.0,
+          "mean": 112.585,
+          "p050": 115.0,
+          "p090": 128.0,
+          "p099": 135.0
+        },
+        "top_changed_frames": [
+          {
+            "changed_pixels": 3219,
+            "frame": 196,
+            "rows_with_changes": 127
+          },
+          {
+            "changed_pixels": 3211,
+            "frame": 518,
+            "rows_with_changes": 129
+          },
+          {
+            "changed_pixels": 3202,
+            "frame": 506,
+            "rows_with_changes": 131
+          },
+          {
+            "changed_pixels": 3159,
+            "frame": 502,
+            "rows_with_changes": 131
+          },
+          {
+            "changed_pixels": 3142,
+            "frame": 519,
+            "rows_with_changes": 130
+          },
+          {
+            "changed_pixels": 3139,
+            "frame": 517,
+            "rows_with_changes": 128
+          },
+          {
+            "changed_pixels": 3137,
+            "frame": 497,
+            "rows_with_changes": 131
+          },
+          {
+            "changed_pixels": 3119,
+            "frame": 505,
+            "rows_with_changes": 104
+          },
+          {
+            "changed_pixels": 3117,
+            "frame": 504,
+            "rows_with_changes": 114
+          },
+          {
+            "changed_pixels": 3103,
+            "frame": 499,
+            "rows_with_changes": 128
+          },
+          {
+            "changed_pixels": 3076,
+            "frame": 191,
+            "rows_with_changes": 133
+          },
+          {
+            "changed_pixels": 3071,
+            "frame": 503,
+            "rows_with_changes": 130
+          }
+        ],
+        "width": 512
+      },
+      "score_claim": false,
+      "span_program_fixed16_lower_bound_bytes": 787567.4556800732,
+      "span_program_fixed16_overhead_bytes": 405306,
+      "span_program_fixed16_payload_entropy_bytes": 382261.4556800733,
+      "sparse_split_entropy_bytes": 1897823.3136943623,
+      "sparse_zero_map_entropy_bits_per_token": 0.10278061645604716,
+      "token_count": 117964800,
+      "zero_fraction": 0.9865663146972656
+    },
+    {
+      "best_lower_bound_bytes": 807767.4913966346,
+      "charged_mask_bytes": 159011,
+      "counts": {
+        "0": 116348106,
+        "1": 570301,
+        "2": 258741,
+        "3": 165112,
+        "4": 622540
+      },
+      "dispatch_unlocked": false,
+      "estimated_bytes_saved_vs_charged_mask": -648756.4913966346,
+      "evidence_grade": "empirical/local_residual_sufficient_statistics",
+      "non_arbitrary_basis": "exact decoded PR85 QMA9 token tensor plus deterministic predictor 'time_prev_then_left_border'",
+      "nonzero_fraction": 0.013704884847005208,
+      "nonzero_symbol_entropy_bits": 1.8196813566284513,
+      "planning_only": true,
+      "predictor": "time_prev_then_left_border",
+      "rate_score_delta_lower_bound": 0.4319803181925761,
+      "raw_residual_entropy_bits_per_token": 0.12939619045959763,
+      "raw_residual_entropy_bytes": 1908024.466041043,
+      "row_span_atoms": {
+        "changed_pixels_per_frame": {
+          "max": 152161.0,
+          "mean": 2694.49,
+          "p050": 2319.5,
+          "p090": 3191.2000000000003,
+          "p099": 5189.199999999998
+        },
+        "frame_count": 600,
+        "height": 384,
+        "row_span_count": 73339,
+        "row_span_width_quantiles": {
+          "max": 511.0,
+          "mean": 247.86611489112204,
+          "p050": 265.0,
+          "p090": 435.0,
+          "p099": 503.0
+        },
+        "rows_per_frame_quantiles": {
+          "max": 380.0,
+          "mean": 122.23166666666667,
+          "p050": 122.0,
+          "p090": 130.0,
+          "p099": 136.0
+        },
+        "top_changed_frames": [
+          {
+            "changed_pixels": 152161,
+            "frame": 0,
+            "rows_with_changes": 380
+          },
+          {
+            "changed_pixels": 9130,
+            "frame": 133,
+            "rows_with_changes": 133
+          },
+          {
+            "changed_pixels": 8959,
+            "frame": 134,
+            "rows_with_changes": 132
+          },
+          {
+            "changed_pixels": 6374,
+            "frame": 518,
+            "rows_with_changes": 127
+          },
+          {
+            "changed_pixels": 6020,
+            "frame": 517,
+            "rows_with_changes": 128
+          },
+          {
+            "changed_pixels": 5407,
+            "frame": 523,
+            "rows_with_changes": 128
+          },
+          {
+            "changed_pixels": 5187,
+            "frame": 522,
+            "rows_with_changes": 129
+          },
+          {
+            "changed_pixels": 5008,
+            "frame": 139,
+            "rows_with_changes": 127
+          },
+          {
+            "changed_pixels": 4723,
+            "frame": 520,
+            "rows_with_changes": 128
+          },
+          {
+            "changed_pixels": 4369,
+            "frame": 332,
+            "rows_with_changes": 116
+          },
+          {
+            "changed_pixels": 4244,
+            "frame": 515,
+            "rows_with_changes": 127
+          },
+          {
+            "changed_pixels": 4094,
+            "frame": 158,
+            "rows_with_changes": 136
+          }
+        ],
+        "width": 512
+      },
+      "score_claim": false,
+      "span_program_fixed16_lower_bound_bytes": 807767.4913966346,
+      "span_program_fixed16_overhead_bytes": 440034,
+      "span_program_fixed16_payload_entropy_bytes": 367733.49139663466,
+      "sparse_split_entropy_bytes": 1908024.4660410427,
+      "sparse_zero_map_entropy_bits_per_token": 0.10445766700876248,
+      "token_count": 117964800,
+      "zero_fraction": 0.9862951151529948
+    },
+    {
+      "best_lower_bound_bytes": 808820.7711548873,
+      "charged_mask_bytes": 159011,
+      "counts": {
+        "0": 116345067,
+        "1": 571287,
+        "2": 259327,
+        "3": 165496,
+        "4": 623623
+      },
+      "dispatch_unlocked": false,
+      "estimated_bytes_saved_vs_charged_mask": -649809.7711548873,
+      "evidence_grade": "empirical/local_residual_sufficient_statistics",
+      "non_arbitrary_basis": "exact decoded PR85 QMA9 token tensor plus deterministic predictor 'time_prev_zero_first'",
+      "nonzero_fraction": 0.01373064676920573,
+      "nonzero_symbol_entropy_bits": 1.819839547159376,
+      "planning_only": true,
+      "predictor": "time_prev_zero_first",
+      "rate_score_delta_lower_bound": 0.432681653949751,
+      "raw_residual_entropy_bits_per_token": 0.1296041375377379,
+      "raw_residual_entropy_bytes": 1911090.770476468,
+      "row_span_atoms": {
+        "changed_pixels_per_frame": {
+          "max": 152476.0,
+          "mean": 2699.555,
+          "p050": 2324.0,
+          "p090": 3193.8,
+          "p099": 5207.029999999998
+        },
+        "frame_count": 600,
+        "height": 384,
+        "row_span_count": 73394,
+        "row_span_width_quantiles": {
+          "max": 512.0,
+          "mean": 247.86106493718833,
+          "p050": 265.0,
+          "p090": 435.0,
+          "p099": 504.0
+        },
+        "rows_per_frame_quantiles": {
+          "max": 380.0,
+          "mean": 122.32333333333334,
+          "p050": 122.0,
+          "p090": 130.0,
+          "p099": 136.0
+        },
+        "top_changed_frames": [
+          {
+            "changed_pixels": 152476,
+            "frame": 0,
+            "rows_with_changes": 380
+          },
+          {
+            "changed_pixels": 9212,
+            "frame": 133,
+            "rows_with_changes": 134
+          },
+          {
+            "changed_pixels": 9040,
+            "frame": 134,
+            "rows_with_changes": 132
+          },
+          {
+            "changed_pixels": 6400,
+            "frame": 518,
+            "rows_with_changes": 127
+          },
+          {
+            "changed_pixels": 6028,
+            "frame": 517,
+            "rows_with_changes": 128
+          },
+          {
+            "changed_pixels": 5408,
+            "frame": 523,
+            "rows_with_changes": 128
+          },
+          {
+            "changed_pixels": 5205,
+            "frame": 522,
+            "rows_with_changes": 129
+          },
+          {
+            "changed_pixels": 5014,
+            "frame": 139,
+            "rows_with_changes": 127
+          },
+          {
+            "changed_pixels": 4762,
+            "frame": 520,
+            "rows_with_changes": 128
+          },
+          {
+            "changed_pixels": 4373,
+            "frame": 332,
+            "rows_with_changes": 116
+          },
+          {
+            "changed_pixels": 4247,
+            "frame": 515,
+            "rows_with_changes": 128
+          },
+          {
+            "changed_pixels": 4102,
+            "frame": 158,
+            "rows_with_changes": 136
+          }
+        ],
+        "width": 512
+      },
+      "score_claim": false,
+      "span_program_fixed16_lower_bound_bytes": 808820.7711548873,
+      "span_program_fixed16_overhead_bytes": 440364,
+      "span_program_fixed16_payload_entropy_bytes": 368456.7711548872,
+      "sparse_split_entropy_bytes": 1911090.770476468,
+      "sparse_zero_map_entropy_bits_per_token": 0.1046165635390612,
+      "token_count": 117964800,
+      "zero_fraction": 0.9862693532307942
+    },
+    {
+      "best_lower_bound_bytes": 13622761.631982412,
+      "charged_mask_bytes": 159011,
+      "counts": {
+        "0": 27408427,
+        "1": 690063,
+        "2": 58413695,
+        "3": 1459867,
+        "4": 29992748
+      },
+      "dispatch_unlocked": false,
+      "estimated_bytes_saved_vs_charged_mask": -13463750.631982412,
+      "evidence_grade": "empirical/local_residual_sufficient_statistics",
+      "non_arbitrary_basis": "exact decoded PR85 QMA9 token tensor plus deterministic predictor 'absolute_zero'",
+      "nonzero_fraction": 0.7676558854844835,
+      "nonzero_symbol_entropy_bits": 1.085625956506223,
+      "planning_only": true,
+      "predictor": "absolute_zero",
+      "rate_score_delta_lower_bound": 8.964958900909782,
+      "raw_residual_entropy_bits_per_token": 1.6154624483511193,
+      "raw_residual_entropy_bytes": 23820963.078406263,
+      "row_span_atoms": {
+        "changed_pixels_per_frame": {
+          "max": 158127.0,
+          "mean": 150927.28833333333,
+          "p050": 150967.0,
+          "p090": 153577.6,
+          "p099": 156419.15
+        },
+        "frame_count": 600,
+        "height": 384,
+        "row_span_count": 222328,
+        "row_span_width_quantiles": {
+          "max": 512.0,
+          "mean": 456.8524837177504,
+          "p050": 512.0,
+          "p090": 512.0,
+          "p099": 512.0
+        },
+        "rows_per_frame_quantiles": {
+          "max": 384.0,
+          "mean": 370.5466666666667,
+          "p050": 374.0,
+          "p090": 384.0,
+          "p099": 384.0
+        },
+        "top_changed_frames": [
+          {
+            "changed_pixels": 158127,
+            "frame": 451,
+            "rows_with_changes": 384
+          },
+          {
+            "changed_pixels": 157421,
+            "frame": 446,
+            "rows_with_changes": 384
+          },
+          {
+            "changed_pixels": 157247,
+            "frame": 447,
+            "rows_with_changes": 384
+          },
+          {
+            "changed_pixels": 157112,
+            "frame": 452,
+            "rows_with_changes": 384
+          },
+          {
+            "changed_pixels": 156794,
+            "frame": 454,
+            "rows_with_changes": 384
+          },
+          {
+            "changed_pixels": 156434,
+            "frame": 450,
+            "rows_with_changes": 371
+          },
+          {
+            "changed_pixels": 156419,
+            "frame": 441,
+            "rows_with_changes": 384
+          },
+          {
+            "changed_pixels": 156373,
+            "frame": 448,
+            "rows_with_changes": 364
+          },
+          {
+            "changed_pixels": 156330,
+            "frame": 456,
+            "rows_with_changes": 384
+          },
+          {
+            "changed_pixels": 156251,
+            "frame": 455,
+            "rows_with_changes": 384
+          },
+          {
+            "changed_pixels": 156248,
+            "frame": 449,
+            "rows_with_changes": 384
+          },
+          {
+            "changed_pixels": 156223,
+            "frame": 440,
+            "rows_with_changes": 374
+          }
+        ],
+        "width": 512
+      },
+      "score_claim": false,
+      "span_program_fixed16_lower_bound_bytes": 13622761.631982412,
+      "span_program_fixed16_overhead_bytes": 1333968,
+      "span_program_fixed16_payload_entropy_bytes": 12288793.631982412,
+      "sparse_split_entropy_bytes": 23820963.078406263,
+      "sparse_zero_map_entropy_bits_per_token": 0.7820752934043953,
+      "token_count": 117964800,
+      "zero_fraction": 0.23234411451551648
+    }
+  ],
+  "schema": "pr85_residual_sufficient_program_profile_v1",
+  "score_claim": false,
+  "tool": "experiments/profile_pr85_residual_sufficient_program.py"
+}

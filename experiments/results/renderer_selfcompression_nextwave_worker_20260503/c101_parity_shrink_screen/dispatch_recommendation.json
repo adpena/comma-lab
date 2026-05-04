@@ -1,0 +1,153 @@
+{
+  "candidate": {
+    "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_selfcompression_nextwave_worker_20260503/c101_parity_shrink_screen/zero_fp4_frame1_head_0.125/archive.zip",
+    "archive_bytes": 275907,
+    "archive_sha256": "3f0da62a8fc037e2614ed910b938e319012b2b3c66d8718a72d935ce0c7ae538",
+    "byte_only_crosses_target": false,
+    "candidate_id": "zero_fp4_frame1_head_0.125",
+    "delta_bytes_vs_source_archive": -582,
+    "frontier_score_if_only_bytes_change": 0.3151104351507082,
+    "pose_safety": {
+      "fail_closed_reasons": [],
+      "failure_class": null,
+      "output_parity": {
+        "aggregate": {
+          "failures": [],
+          "max_abs_delta": 65.60861206054688,
+          "mean_abs_delta": 1.8776012659072876,
+          "ok": true,
+          "rms_delta": 3.4336590201951873,
+          "same_uint8_hash": false,
+          "thresholds": {
+            "max_max_abs_delta": 80.0,
+            "max_mean_abs_delta": 3.0,
+            "max_rms_delta": 8.0
+          }
+        },
+        "candidate_output_summary": {
+          "label": "candidate",
+          "max": 255.0,
+          "mean": 109.81989288330078,
+          "min": 4.13098132412415e-06,
+          "shape": [
+            5,
+            2,
+            384,
+            512,
+            3
+          ],
+          "std": 48.59418487548828,
+          "uint8_sha256": "87b411480858004b12001f3fa260732f5394dd775619e4f39faaad1f40045dfd"
+        },
+        "failure_class": null,
+        "ok": true,
+        "pair_count_available": 600,
+        "per_pair": [
+          {
+            "failures": [],
+            "max_abs_delta": 47.32316589355469,
+            "mean_abs_delta": 1.8356709480285645,
+            "ok": true,
+            "pair_index": 0,
+            "rms_delta": 3.3191702998629324,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          {
+            "failures": [],
+            "max_abs_delta": 53.09413146972656,
+            "mean_abs_delta": 1.9034184217453003,
+            "ok": true,
+            "pair_index": 150,
+            "rms_delta": 3.498794348007387,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          {
+            "failures": [],
+            "max_abs_delta": 51.57965087890625,
+            "mean_abs_delta": 1.8884800672531128,
+            "ok": true,
+            "pair_index": 300,
+            "rms_delta": 3.4412602059143347,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          {
+            "failures": [],
+            "max_abs_delta": 52.51268768310547,
+            "mean_abs_delta": 1.8613324165344238,
+            "ok": true,
+            "pair_index": 449,
+            "rms_delta": 3.408211239693062,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          {
+            "failures": [],
+            "max_abs_delta": 65.60861206054688,
+            "mean_abs_delta": 1.8991045951843262,
+            "ok": true,
+            "pair_index": 599,
+            "rms_delta": 3.497634633372167,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          }
+        ],
+        "sampled_pair_indices": [
+          0,
+          150,
+          300,
+          449,
+          599
+        ],
+        "source_output_summary": {
+          "label": "source",
+          "max": 255.0,
+          "mean": 109.76480865478516,
+          "min": 4.13098132412415e-06,
+          "shape": [
+            5,
+            2,
+            384,
+            512,
+            3
+          ],
+          "std": 48.789894104003906,
+          "uint8_sha256": "a3d5b3af8327b695d8477ccf7b2d48131a1ca8f29e31b91cb3588cb5cd91c57b"
+        }
+      },
+      "path": "/Users/adpena/Projects/pact/experiments/results/renderer_selfcompression_nextwave_worker_20260503/c101_parity_shrink_screen/zero_fp4_frame1_head_0.125/pose_safety_preflight.json",
+      "preflight_ran": true,
+      "safe_for_exact_eval_dispatch": true
+    },
+    "promotion_eligible": false,
+    "renderer_wire_format": "QZS3",
+    "score_claim": false,
+    "transform_spec": "zero-fp4-prefix:frame1_head:0.125"
+  },
+  "claim_required_before_dispatch": true,
+  "reason": "at least one candidate passed local pose-safety, but byte-only rate math does not cross target 0.314",
+  "recommendation": "do_not_dispatch_yet_safe_but_too_small",
+  "remote_gpu_dispatch_performed": false
+}

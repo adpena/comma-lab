@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-05-02T01:58:50Z",
+  "archive_label": "archive_eval_qpost_r13_frac_20260502T0158Z",
+  "archive_path": "/workspace/pact/experiments/results/qzs3_postprocess_ablation_r13_20260502T0158Z/frac/archive.zip",
+  "custody_archive_path": "/workspace/pact/experiments/results/archive_eval_qpost_r13_frac_20260502T0158Z/archive.zip",
+  "archive_size_bytes": 276659,
+  "archive_sha256": "1803ebd3a79583824a49f12ba65cae7e7bfdde4abacafb959cb54360963d36e1"
+}

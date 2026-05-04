@@ -1,0 +1,75 @@
+{
+  "baseline_archive": {
+    "bytes": 686635,
+    "path": "/teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+    "sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+    "zip_member_count": 3
+  },
+  "baseline_contest_auth_eval_json": {
+    "bytes": 4287,
+    "path": "/teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/eval/contest_auth_eval.json",
+    "sha256": "b84e7352165cf0d2be0631a177d8404c3a1e5f27633d82d48990552b9ef382ab"
+  },
+  "nonzero_point_count": 4,
+  "perturbation_plan": {
+    "bytes": 14424,
+    "path": "/teamspace/studios/this_studio/pact/experiments/results/official_component_response_pfp16_direct_fd_mixed_complete_response_only_20260501/official_response_plan/official_component_response_plan.json",
+    "sha256": "d0026cf7ec5f22ff3de4e8402d3f3a660767eb64e890d779cb466933ed60c23f"
+  },
+  "point_count": 5,
+  "points": [
+    {
+      "archive": {
+        "bytes": 686632,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/official_component_response_pfp16_direct_fd_mixed_complete_response_only_20260501/official_response_plan/archives/point_000_eps_m2.zip",
+        "sha256": "d561b8bf1367619e6c6e1d9b9d09213da6bdfdfd894be518866ef5119cba2927",
+        "zip_member_count": 3
+      },
+      "epsilon": -2.0,
+      "index": 0
+    },
+    {
+      "archive": {
+        "bytes": 686632,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/official_component_response_pfp16_direct_fd_mixed_complete_response_only_20260501/official_response_plan/archives/point_001_eps_m1.zip",
+        "sha256": "d69e45edd20bbe1a69a171098a9dbfce71673aad2c7b6a95d55ebd9b60cf0803",
+        "zip_member_count": 3
+      },
+      "epsilon": -1.0,
+      "index": 1
+    },
+    {
+      "archive": {
+        "bytes": 686635,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+        "sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+        "zip_member_count": 3
+      },
+      "epsilon": 0.0,
+      "index": 2
+    },
+    {
+      "archive": {
+        "bytes": 686628,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/official_component_response_pfp16_direct_fd_mixed_complete_response_only_20260501/official_response_plan/archives/point_003_eps_p1.zip",
+        "sha256": "dccb3ebcac49e7046a53896335561d8d54fa6a41986287f91c43cced71020f6f",
+        "zip_member_count": 3
+      },
+      "epsilon": 1.0,
+      "index": 3
+    },
+    {
+      "archive": {
+        "bytes": 686632,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/official_component_response_pfp16_direct_fd_mixed_complete_response_only_20260501/official_response_plan/archives/point_004_eps_p2.zip",
+        "sha256": "c61a1201ac84d37a81aaa9dd9ea27a4d6a4bb22e58c2f44c01c798f53590a35c",
+        "zip_member_count": 3
+      },
+      "epsilon": 2.0,
+      "index": 4
+    }
+  ],
+  "recorded_at_utc": "2026-05-01T10:01:43Z",
+  "schema_version": 1,
+  "tool": "lightning_official_component_response_input_preflight"
+}

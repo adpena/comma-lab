@@ -1,0 +1,68 @@
+{
+  "brotli_quality": 11,
+  "evidence_grade": "empirical",
+  "formula_only_rate_delta": -0.011279650665889583,
+  "header": {
+    "members": [
+      {
+        "bytes": 110479,
+        "codec": "raw",
+        "name": "renderer.bin",
+        "sha256": "44e0a1eb789b44afd1a1a476f167fbcf16c2cb88b8e4fefb3cb79d995183b713"
+      },
+      {
+        "bytes": 223738,
+        "codec": "raw",
+        "name": "masks.mkv",
+        "sha256": "568439a26dbb9e240cf2c385ff350ddc2cb81f5bc514577498446d6043b21178"
+      },
+      {
+        "bytes": 1149,
+        "codec": "pose_qp1_v1",
+        "decoded_bytes": 7200,
+        "decoded_sha256": "2086abfa4e4fd080056a54af3635ec8d010cd401f049006949d17b53302109b3",
+        "lossy": true,
+        "name": "optimized_poses.bin",
+        "pose_error_stats": {
+          "max_abs_by_dim": [
+            0.0,
+            0.1629638671875,
+            0.1409912109375,
+            0.10931396484375,
+            0.109130859375,
+            0.144775390625
+          ],
+          "pose_dim": 6,
+          "rmse_by_dim": [
+            0.0,
+            0.05349101180528938,
+            0.05115329625900634,
+            0.050976581395891195,
+            0.05077096223757539,
+            0.06023301742614757
+          ],
+          "rows": 600
+        },
+        "sha256": "caa85e498665d875d1a49463a68a14fc93b2897b26279e3922c800d8d9330d25",
+        "source_decoded_sha256": "399c0898d110911979c8b1343be3f16420a30b27a072e1c61d4d0a552e6ec1e3"
+      }
+    ],
+    "payload_format": "pr64_len_table",
+    "schema": "renderer_payload_pr64_len_table_v1",
+    "source_archive_sha256": "85bb5ce5116572232058f1b6bbc3473485c78f5a8d2215a76f3f6e655b919569"
+  },
+  "output_archive": "lane_q_faithful_results/postprocess_fixed_snapshot_20260501T2131Z_fix1/torchfp4_pr64_qp1/archive.zip",
+  "output_archive_bytes": 285383,
+  "output_archive_sha256": "e476b3bb758e401969ea462307aa50da4b08291e30a77c7a1c22744bd287b07b",
+  "payload_compressed_bytes": 285283,
+  "payload_format": "pr64_len_table",
+  "payload_member": "p",
+  "payload_raw_bytes": 335378,
+  "pose_codec": "pose_qp1_v1",
+  "pose_residual_topk": 0,
+  "savings_bytes": 16940,
+  "score_claim": false,
+  "source_archive": "lane_q_faithful_results/postprocess_fixed_snapshot_20260501T2131Z_fix1/torchfp4_half_posebin/archive.zip",
+  "source_archive_bytes": 302323,
+  "source_archive_sha256": "85bb5ce5116572232058f1b6bbc3473485c78f5a8d2215a76f3f6e655b919569"
+}

@@ -1,0 +1,263 @@
+{
+  "archive_size_bytes": 187144,
+  "avg_posenet_dist": 69.20815277,
+  "avg_segnet_dist": 0.04498317,
+  "contest_auth_eval_elapsed_seconds": 147.49609921200044,
+  "evaluate_elapsed_seconds": 38.849548543999845,
+  "final_score": 30.93,
+  "inflate_elapsed_seconds": 108.64441446899946,
+  "n_samples": 600,
+  "provenance": {
+    "archive_path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_pmg_hotspot_c067_t4_20260502T1402Z/archive.zip",
+    "archive_sha256": "3ab4d0c85ae15325b61b7838c375383a460e7ad1b911b677101fda50e2611c53",
+    "archive_size_bytes": 187144,
+    "cuda_available": true,
+    "cuda_device_count": 1,
+    "cuda_version": "13.0",
+    "device": "cuda",
+    "env_vars": {
+      "CONFIG_ENV_PATH": null,
+      "CUBLAS_WORKSPACE_CONFIG": null,
+      "CUDA_VISIBLE_DEVICES": null,
+      "INFLATE_AV_SPEC": null,
+      "INFLATE_BROTLI_SPEC": null,
+      "INFLATE_NUMPY_SPEC": null,
+      "INFLATE_TORCH_SPEC": "torch==2.5.1+cu124",
+      "LANE_MM_SIGMA": null,
+      "LD_LIBRARY_PATH": "/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda/lib64",
+      "PYTHONHASHSEED": null,
+      "PYTHONPATH": null,
+      "PYTHON_INFLATE": null,
+      "PYTORCH_CUDA_ALLOC_CONF": null,
+      "UV_BIN": "/usr/local/bin/uv",
+      "UV_PROJECT_ENVIRONMENT": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_pmg_hotspot_c067_t4_20260502T1402Z/uv_project_env"
+    },
+    "evaluate_timeout_seconds": 1800,
+    "ffmpeg_version": "ffmpeg version 8.0.1 Copyright (c) 2000-2025 the FFmpeg developers",
+    "gpu_driver": "580.126.09",
+    "gpu_model": "Tesla T4",
+    "gpu_t4_match": true,
+    "inflate_runtime_manifest": {
+      "files": [
+        {
+          "bytes": 189,
+          "relative_path": "analyze_roi.py",
+          "sha256": "722ea96bc14e013fc4260f24dd86431d11966419292ea546d31a8f644d4dd16c"
+        },
+        {
+          "bytes": 22091,
+          "relative_path": "apply_qzs3_postprocess.py",
+          "sha256": "83a06ca93119dea43b74a8b466b417a5f99d6a8d64d772fdc85e0c3ea155abe0"
+        },
+        {
+          "bytes": 13406,
+          "relative_path": "auth_eval_renderer_fp4.json",
+          "sha256": "8a404a5bb720cf25b8ddb1b29cc1c095889d03225f8f8a9cbebdb3553680f368"
+        },
+        {
+          "bytes": 34739,
+          "relative_path": "compress.sh",
+          "sha256": "0e01e902f3dc40be1f5fd7daadcd349d783adb9a5767a123a2b0aec3a4660d81"
+        },
+        {
+          "bytes": 16563,
+          "relative_path": "compress_archive.py",
+          "sha256": "eafec2c7c93bee473daa84f903cbbdcd8de9f92e62ce4825eadd663c5b5b4eb3"
+        },
+        {
+          "bytes": 11756,
+          "relative_path": "compress_masks.py",
+          "sha256": "8b25972521621e6b94396a8f1a0353b9ea10982a82043f456b9cc9f621347389"
+        },
+        {
+          "bytes": 507,
+          "relative_path": "config.env",
+          "sha256": "3b160a6747e6eec3588456e4ca3a5cb91613d2acce38557a31ea330ec0fa1e09"
+        },
+        {
+          "bytes": 1657,
+          "relative_path": "config_env.py",
+          "sha256": "1ed6df5bc08a9db4eed8c2d1f935e7cacf60b3b3f14e4b44c15bcf48608e40cc"
+        },
+        {
+          "bytes": 516,
+          "relative_path": "contest_eval_archive.json",
+          "sha256": "8579f49de350222abb35dd1958ea12bc11207cb0de90f2ac499445b95b943941"
+        },
+        {
+          "bytes": 516,
+          "relative_path": "contest_eval_result.json",
+          "sha256": "048e5f759b5230ac34914e455c02673054ac348e622e61e81c83bd2cb647ae34"
+        },
+        {
+          "bytes": 11255,
+          "relative_path": "diagnose_scorer.py",
+          "sha256": "2af6e9d93127e5c74cce7d8fc72ccc87f1af64bdf53f4c35af0829c175e24643"
+        },
+        {
+          "bytes": 3812,
+          "relative_path": "download_and_eval.sh",
+          "sha256": "aa2ecbb00f93bab0f8c8655ac5be7b1f1ff90829b5cbfa899ff48b5f057d362b"
+        },
+        {
+          "bytes": 509,
+          "relative_path": "eval_runs/crf_32/config.env",
+          "sha256": "04399bddaf1f5dc9a314c41d44299fb3dcc3d8ef50c42cd6f40eae9f167302ac"
+        },
+        {
+          "bytes": 382,
+          "relative_path": "eval_runs/crf_32/state.json",
+          "sha256": "d36c7498dd6f8ae14be81a37952dde8395f89ba07f92cb5841998b34fddf4398"
+        },
+        {
+          "bytes": 509,
+          "relative_path": "eval_runs/verify_136_original/config.env",
+          "sha256": "04399bddaf1f5dc9a314c41d44299fb3dcc3d8ef50c42cd6f40eae9f167302ac"
+        },
+        {
+          "bytes": 1417,
+          "relative_path": "eval_runs/verify_136_original/experiment_record.json",
+          "sha256": "8f4c28e9d43d80050db2594d3e1d3f469dd2224a108a58ceccb9a910126e0cc6"
+        },
+        {
+          "bytes": 1058,
+          "relative_path": "eval_runs/verify_136_original/report.json",
+          "sha256": "15f6c61e1bfc1767fa634f9ad2a745bc72c150489a872d9dd1af7cdd70948179"
+        },
+        {
+          "bytes": 882,
+          "relative_path": "eval_runs/verify_136_original/report.txt",
+          "sha256": "71465ba837bb11f29e6d6e1bf69b023d4a81d96135cefabd3e0113940698abc2"
+        },
+        {
+          "bytes": 467,
+          "relative_path": "eval_runs/verify_136_original/state.json",
+          "sha256": "09b078ec408eb1caab979e22cbff0afbaff0fcb95ccafe9147c9aa9f660aeb59"
+        },
+        {
+          "bytes": 509,
+          "relative_path": "eval_runs/verify_correct_ckpt/config.env",
+          "sha256": "04399bddaf1f5dc9a314c41d44299fb3dcc3d8ef50c42cd6f40eae9f167302ac"
+        },
+        {
+          "bytes": 1449,
+          "relative_path": "eval_runs/verify_correct_ckpt/experiment_record.json",
+          "sha256": "de190ee0a8d98c64958374ccb97dacb883bc76a316de1a38dd16715666e124ae"
+        },
+        {
+          "bytes": 1058,
+          "relative_path": "eval_runs/verify_correct_ckpt/report.json",
+          "sha256": "df1cdcfddb03a9ce85b29e3c20ad2ecb0c86f9bd3cd0dbd12ee57e0cc0cbae3e"
+        },
+        {
+          "bytes": 882,
+          "relative_path": "eval_runs/verify_correct_ckpt/report.txt",
+          "sha256": "8a2e009c501dcd4c0f24c2fbd1d58160fff421bb895c786539171e6ee29df5e0"
+        },
+        {
+          "bytes": 674,
+          "relative_path": "eval_runs/verify_correct_ckpt/state.json",
+          "sha256": "600399b6654c5cb0364a89a97f85409437a4b2f56d8910204322134316be4734"
+        },
+        {
+          "bytes": 19270,
+          "relative_path": "inflate.sh",
+          "sha256": "86449a1f52ac6b2be120d47287b8410f915dce7e562c69f480103f6e527c6017"
+        },
+        {
+          "bytes": 54486,
+          "relative_path": "inflate_postfilter.py",
+          "sha256": "89cb5ff35f3490f2d425c2353181857826fe54dc99b9b991eb299d394ba4376f"
+        },
+        {
+          "bytes": 267171,
+          "relative_path": "inflate_renderer.py",
+          "sha256": "ba334748b365fbf0055323177fb21842528dbe37a2b0ef5a303260da00a09f40"
+        },
+        {
+          "bytes": 16076,
+          "relative_path": "inflate_renderer_grayscale.py",
+          "sha256": "383407e20aff8a5b7791f61d3cdfd7516ef870bab99145854ff2f399471b8f69"
+        },
+        {
+          "bytes": 11005,
+          "relative_path": "inflate_segmap.py",
+          "sha256": "1899c5a5226f767762c54e19e7689cedabd8b3f6b77793765b0dfd63236948ed"
+        },
+        {
+          "bytes": 8080,
+          "relative_path": "inflate_segmap_arithmetic.py",
+          "sha256": "e7a71d6f1d8e23c3a08269e5234a4738a9a1fcc860207419c561f6f379165321"
+        },
+        {
+          "bytes": 9758,
+          "relative_path": "inflate_segmap_film_canvas.py",
+          "sha256": "eefb8806e8a9e16cec3771649aefa86724d2c54080784d8997509684dc3dfa90"
+        },
+        {
+          "bytes": 890,
+          "relative_path": "report.txt",
+          "sha256": "db613ab30f714010e6de0edca4874abd4a441abccadb86ac5a80359c2eb42c66"
+        },
+        {
+          "bytes": 55860,
+          "relative_path": "runner.py",
+          "sha256": "f3d8c3712b2b8c85c0da1e502dad0fbcedaef569a5665b329a2a5ac049d60689"
+        },
+        {
+          "bytes": 9625,
+          "relative_path": "sky_degrade.py",
+          "sha256": "a9e6561235d8179368e934486356bc3eab8a2950765e47516ea7594759d8b289"
+        },
+        {
+          "bytes": 34313,
+          "relative_path": "unpack_renderer_payload.py",
+          "sha256": "3c31a4fbf5c11956ab9a301e735f6b3a5f7bc5034bddd67da0f956c04f0cd1a4"
+        }
+      ],
+      "runtime_file_count": 35,
+      "runtime_root": "/teamspace/studios/this_studio/pact/submissions/robust_current",
+      "runtime_tree_sha256": "6bebc38b65c2bd24547582c4dd22b2c0eabdc3aa80ac0ebf19a0806fadcfe3b6",
+      "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+      "upstream_evaluate_py": {
+        "bytes": 6005,
+        "relative_path": "evaluate.py",
+        "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+      }
+    },
+    "inflate_script": "/teamspace/studios/this_studio/pact/submissions/robust_current/inflate.sh",
+    "inflate_script_sha256": "86449a1f52ac6b2be120d47287b8410f915dce7e562c69f480103f6e527c6017",
+    "inflate_timeout_seconds": 1800,
+    "libsvtav1_version": "configuration: --prefix=/home/zeus/miniconda3/envs/cloudspace --cc=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/x86_64-conda-linux-gnu-cc --cxx=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/x86_64-conda-linux-gnu-c++ --nm=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/x86_64-conda-linux-gnu-nm --ar=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/x86_64-conda-linux-gnu-ar --enable-openssl --enable-demuxer=dash --enable-hardcoded-tables --enable-libfreetype --enable-libharfbuzz --enable-libfontconfig --enable-libopenh264 --enable-libdav1d --enable-libmp3lame --enable-libaom --enable-libsvtav1 --enable-libxml2 --enable-pic --enable-shared --enable-version3 --enable-zlib --enable-libvorbis --enable-libopus --enable-libwebp --enable-libshaderc --disable-ffplay --disable-static --disable-gpl --disable-doc --pkg-config=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/pkg-config --arch=x86_64 --target-os=linux --cross-prefix=x86_64-conda-linux-gnu- --host-cc=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/x86_64-conda-linux-gnu-cc --disable-gnutls --enable-libvpx --enable-pthreads --enable-alsa --enable-libpulse --enable-libdrm --enable-libvpl --enable-vaapi --enable-libtesseract --enable-libvpx --enable-libass --enable-librsvg",
+    "pact_commit": "<error:CalledProcessError(128, ['git', 'rev-parse', 'HEAD'])>",
+    "schema_version": 1,
+    "started_at_utc": "2026-05-02T14:14:50Z",
+    "sys_argv": [
+      "experiments/contest_auth_eval.py",
+      "--archive",
+      "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_pmg_hotspot_c067_t4_20260502T1402Z/archive.zip",
+      "--inflate-sh",
+      "submissions/robust_current/inflate.sh",
+      "--upstream-dir",
+      "/teamspace/studios/this_studio/pact/upstream",
+      "--device",
+      "cuda",
+      "--keep-work-dir",
+      "--work-dir",
+      "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_pmg_hotspot_c067_t4_20260502T1402Z/eval_work"
+    ],
+    "tool": "experiments/contest_auth_eval.py",
+    "torch_version": "2.11.0+cu130",
+    "upstream_commit": "11ad728f563d8970929e8947a1cf6124ee6303e4",
+    "upstream_dir": "/teamspace/studios/this_studio/pact/upstream",
+    "video_names_file": "upstream/public_test_video_names.txt"
+  },
+  "rate_unscaled": 0.00498446,
+  "report_path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_pmg_hotspot_c067_t4_20260502T1402Z/eval_work/report.txt",
+  "schema_version": 1,
+  "score_pose_contribution": 26.307442439355444,
+  "score_rate_contribution": 0.12461149999999999,
+  "score_recomputed_from_components": 30.930370939355445,
+  "score_seg_contribution": 4.498317,
+  "work_dir": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_pmg_hotspot_c067_t4_20260502T1402Z/eval_work"
+}

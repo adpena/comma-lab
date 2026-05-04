@@ -1,0 +1,21 @@
+{
+  "archive_bytes": 276564,
+  "archive_path": "reports/raw/leaderboard_intel_20260501/pr67_archive.zip",
+  "archive_sha256": "a5ed8da0d9988943c986b231b4cd33cea0ab878a8e1628134341db5f7f41c765",
+  "blob_bytes": 276464,
+  "blob_sha256": "a64523528fad2adee466f948ad29839e8581ccfa70caf934b5e4b4a6d733f76f",
+  "evidence_grade": "external_metadata_for_pose_search",
+  "external_attribution_required": true,
+  "mask_br_bytes": 219472,
+  "mask_br_sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87",
+  "model_br_bytes": 56093,
+  "model_br_sha256": "8d8863c32a264f28f199898a689b4d49ce96ebd12831164882b6babec93cbb9b",
+  "payload_format": "pr67_fixed_slice_qpose14_qzs3_filmq9g_slsb1_r55",
+  "pose_br_bytes": 899,
+  "pose_br_sha256": "83767bbd10ae72c3237e468351eb9c465a954e25a6af04a0e0cb84d1f7af9b51",
+  "pose_codec": "qp1",
+  "schema_version": 1,
+  "score_claim": false,
+  "source": "github_pr_67_public_archive",
+  "tool": "manual_pr67_metadata_for_line_search_pose_refinement"
+}

@@ -1,0 +1,19 @@
+{
+  "archive": "experiments/results/c067_pr75_flatpack_rpk1_byte_screen_20260503/c067_pr75_actions_rpk1_single_brotli/archive.zip",
+  "archive_bytes": 276733,
+  "archive_sha256": "7d08c67b379431498c224031965e8dc4a8f36defffd00330c4d11859475e7b49",
+  "container": "brotli_rpk1_single_stream_permuted",
+  "delta_bytes_vs_c067": 519,
+  "evidence": "byte_only_until_exact_cuda",
+  "name": "c067_pr75_actions_rpk1_single_brotli",
+  "order": [
+    "optimized_poses.bin",
+    "seg_tile_actions.bin",
+    "masks.mkv",
+    "renderer.bin"
+  ],
+  "payload_bytes": 276633,
+  "payload_sha256": "5b9530883341bb818d2b77e12a94922ce6676fd14aed47a1c08f05cdc1095161",
+  "rpk1_bytes": 284684,
+  "score_claim": false
+}

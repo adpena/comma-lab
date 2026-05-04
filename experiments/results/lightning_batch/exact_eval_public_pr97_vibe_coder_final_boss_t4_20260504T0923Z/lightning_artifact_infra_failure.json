@@ -1,0 +1,60 @@
+{
+  "archive_identity": {
+    "archive_sha256": "6785a84879d3e3395bbf990b980fe32182fca7255c5b8559dcdaac9da7516642",
+    "archive_size_bytes": 197160
+  },
+  "auth_eval_log_classification": "precise_pre_score_failure",
+  "auth_eval_log_snippet_tail": "12/150 [00:37<00:12,  3.03it/s]\ngen 0.mkv:  75%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258c  | 113/150 [00:37<00:12,  3.06it/s]\ngen 0.mkv:  76%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258c  | 114/150 [00:37<00:11,  3.13it/s]\ngen 0.mkv:  77%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b  | 115/150 [00:38<00:11,  3.18it/s]\ngen 0.mkv:  77%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b  | 116/150 [00:38<00:10,  3.21it/s]\ngen 0.mkv:  78%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258a  | 117/150 [00:38<00:10,  3.26it/s]\ngen 0.mkv:  79%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258a  | 118/150 [00:39<00:09,  3.27it/s]\ngen 0.mkv:  79%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2589  | 119/150 [00:39<00:09,  3.29it/s]\ngen 0.mkv:  80%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588  | 120/150 [00:39<00:09,  3.25it/s]\ngen 0.mkv:  81%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588  | 121/150 [00:40<00:09,  3.21it/s]\ngen 0.mkv:  81%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258f | 122/150 [00:40<00:08,  3.23it/s]\ngen 0.mkv:  82%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258f | 123/150 [00:40<00:08,  3.27it/s]\ngen 0.mkv:  83%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258e | 124/150 [00:41<00:07,  3.30it/s]\ngen 0.mkv:  83%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258e | 125/150 [00:41<00:07,  3.29it/s]\ngen 0.mkv:  84%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258d | 126/150 [00:41<00:07,  3.30it/s]\ngen 0.mkv:  85%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258d | 127/150 [00:41<00:06,  3.30it/s]\ngen 0.mkv:  85%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258c | 128/150 [00:42<00:06,  3.30it/s]\ngen 0.mkv:  86%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258c | 129/150 [00:42<00:06,  3.32it/s]\ngen 0.mkv:  87%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b | 130/150 [00:42<00:06,  3.25it/s]\ngen 0.mkv:  87%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b | 131/150 [00:43<00:05,  3.27it/s]\ngen 0.mkv:  88%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258a | 132/150 [00:43<00:05,  3.31it/s]\ngen 0.mkv:  89%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258a | 133/150 [00:43<00:05,  3.32it/s]\ngen 0.mkv:  89%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2589 | 134/150 [00:44<00:04,  3.35it/s]\ngen 0.mkv:  90%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588 | 135/150 [00:44<00:04,  3.38it/s]\ngen 0.mkv:  91%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588 | 136/150 [00:44<00:04,  3.39it/s]\ngen 0.mkv:  91%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258f| 137/150 [00:44<00:03,  3.30it/s]\ngen 0.mkv:  92%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258f| 138/150 [00:45<00:03,  3.31it/s]\ngen 0.mkv:  93%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258e| 139/150 [00:45<00:03,  3.22it/s]\ngen 0.mkv:  93%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258e| 140/150 [00:45<00:03,  3.21it/s]\ngen 0.mkv:  94%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258d| 141/150 [00:46<00:02,  3.17it/s]\ngen 0.mkv:  95%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258d| 142/150 [00:46<00:02,  3.15it/s]\ngen 0.mkv:  95%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258c| 143/150 [00:46<00:02,  3.16it/s]\ngen 0.mkv:  96%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258c| 144/150 [00:47<00:01,  3.17it/s]\ngen 0.mkv:  97%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b| 145/150 [00:47<00:01,  3.17it/s]\ngen 0.mkv:  97%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b| 146/150 [00:47<00:01,  3.16it/s]\ngen 0.mkv:  98%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258a| 147/150 [00:48<00:00,  3.17it/s]\ngen 0.mkv:  99%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258a| 148/150 [00:48<00:00,  3.09it/s]\ngen 0.mkv:  99%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2589| 149/150 [00:48<00:00,  3.05it/s]\ngen 0.mkv: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 150/150 [00:49<00:00,  3.06it/s]\ngen 0.mkv: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 150/150 [00:49<00:00,  3.05it/s]\n[inflate] applied 227 f1 warps\n[inflate] wrote /teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_public_pr97_vibe_coder_final_boss_t4_20260504T0923Z/eval_work/inflated/0.raw 3662409600 bytes\n[inflate] returncode=0 elapsed=84.1s\n[inflate] produced 1 .raw file(s), each 3,662,409,600 bytes \u2014 STRICT validation passed.\n[evaluate] cmd: /teamspace/studios/this_studio/pact/.venv/bin/python /teamspace/studios/this_studio/upstream/evaluate.py --submission-dir /teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_public_pr97_vibe_coder_final_boss_t4_20260504T0923Z/eval_work --uncompressed-dir /teamspace/studios/this_studio/upstream/videos --video-names-file /teamspace/studios/this_studio/pact/upstream/public_test_video_names.txt --device cuda --report /teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_public_pr97_vibe_coder_final_boss_t4_20260504T0923Z/eval_work/report.txt\n",
+  "classified_at_utc": "2026-05-04T09:41:27Z",
+  "evidence_grade": "invalid",
+  "expected_archive_sha256": "6785a84879d3e3395bbf990b980fe32182fca7255c5b8559dcdaac9da7516642",
+  "expected_archive_size_bytes": 197160,
+  "failure_class": "inflate_failure_before_score",
+  "job_artifact_files": [
+    "archive.zip",
+    "auth_eval.log",
+    "lightning_dali_bootstrap.json",
+    "lightning_dali_requirements.txt",
+    "lightning_inflate_runtime_bootstrap.json",
+    "lightning_inflate_runtime_static_preflight.json",
+    "lightning_queue_metadata.json",
+    "lightning_runner_preflight.json",
+    "lightning_supply_chain_scan.json",
+    "lightning_supply_chain_scan_pre.json"
+  ],
+  "method_evidence": false,
+  "missing_required_files": [
+    "contest_auth_eval.json",
+    "eval_provenance.json",
+    "report.txt",
+    "adjudication_provenance.json",
+    "contest_auth_eval.adjudicated.json"
+  ],
+  "promotion_eligible": false,
+  "reason": "auth_eval.log shows inflate.sh or the inflate stage returned non-zero before contest_auth_eval.json could be written",
+  "recommended_action": "Preserve the partial artifacts and logs as a pre-score exact-eval failure. Do not rank, retire, promote, or claim score without contest_auth_eval.json.",
+  "refined_from_terminal_class": "exact_eval_missing_score_json",
+  "schema_version": 1,
+  "score_claim": false,
+  "score_source": "none:inflate_returncode_failure",
+  "ssh_source": {
+    "copied_files": [
+      "lightning_queue_metadata.json",
+      "archive.zip",
+      "lightning_dali_bootstrap.json",
+      "lightning_dali_requirements.txt",
+      "lightning_runner_preflight.json",
+      "lightning_supply_chain_scan_pre.json",
+      "lightning_supply_chain_scan.json",
+      "auth_eval.log",
+      "lightning_inflate_runtime_bootstrap.json",
+      "lightning_inflate_runtime_static_preflight.json"
+    ],
+    "mirror_dir": "experiments/results/lightning_batch/exact_eval_public_pr97_vibe_coder_final_boss_t4_20260504T0923Z",
+    "remote_dir": "/teamspace/jobs/exact-eval-public-pr97-vibe-coder-final-boss-t4-20260504t0923z/artifacts/pact/experiments/results/lightning_batch/exact_eval_public_pr97_vibe_coder_final_boss_t4_20260504T0923Z",
+    "ssh_connect_timeout": 15,
+    "ssh_target": "lightning-pact"
+  },
+  "status": "ARTIFACT_INFRA_FAILURE",
+  "terminal_class": "inflate_returncode_failure"
+}

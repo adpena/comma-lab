@@ -1,0 +1,175 @@
+{
+  "candidate": {
+    "archive": "/Users/adpena/Projects/pact/experiments/results/renderer_selfcompression_nextwave_worker_20260503/c101_triple_zero_screen/f1_0135_f2block006_all003/archive.zip",
+    "archive_bytes": 275687,
+    "archive_sha256": "649e1c51111386e060a1ff20d11b4020f1afa589e97cfe2aac04ae9ad0a014a5",
+    "byte_sufficient_for_sub314_if_components_unchanged": false,
+    "candidate_id": "f1_0135_f2block006_all003",
+    "delta_bytes_vs_source_archive": -802,
+    "manifest": "/Users/adpena/Projects/pact/experiments/results/renderer_selfcompression_nextwave_worker_20260503/c101_triple_zero_screen/f1_0135_f2block006_all003/build_manifest.json",
+    "no_op_check": {
+      "archive_bytes_changed": true,
+      "archive_sha_changed": true,
+      "changed_value_count": 3588,
+      "non_renderer_members_preserved": true,
+      "renderer_changed": true,
+      "runtime_unpack_verified": true,
+      "transform_is_noop": false
+    },
+    "pose_safety": {
+      "fail_closed_reasons": [],
+      "failure_class": null,
+      "output_parity": {
+        "aggregate": {
+          "failures": [],
+          "max_abs_delta": 73.02064514160156,
+          "mean_abs_delta": 2.963364362716675,
+          "ok": true,
+          "rms_delta": 4.4585012006202955,
+          "same_uint8_hash": false,
+          "thresholds": {
+            "max_max_abs_delta": 80.0,
+            "max_mean_abs_delta": 3.0,
+            "max_rms_delta": 8.0
+          }
+        },
+        "candidate_output_summary": {
+          "label": "candidate",
+          "max": 255.0,
+          "mean": 110.08534240722656,
+          "min": 2.669314881131868e-06,
+          "shape": [
+            5,
+            2,
+            384,
+            512,
+            3
+          ],
+          "std": 48.75493240356445,
+          "uint8_sha256": "06ce20f0089b730dda85a9d82aa9fffbc1fa6ded4139360d76b70924e7205b2f"
+        },
+        "failure_class": null,
+        "ok": true,
+        "pair_count_available": 600,
+        "per_pair": [
+          {
+            "failures": [],
+            "max_abs_delta": 71.7184829711914,
+            "mean_abs_delta": 2.9189138412475586,
+            "ok": true,
+            "pair_index": 0,
+            "rms_delta": 4.350843168075972,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          {
+            "failures": [],
+            "max_abs_delta": 64.5614013671875,
+            "mean_abs_delta": 2.9815540313720703,
+            "ok": true,
+            "pair_index": 150,
+            "rms_delta": 4.514133721909149,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          {
+            "failures": [],
+            "max_abs_delta": 58.493980407714844,
+            "mean_abs_delta": 2.956397771835327,
+            "ok": true,
+            "pair_index": 300,
+            "rms_delta": 4.4501977769427565,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          {
+            "failures": [],
+            "max_abs_delta": 63.623016357421875,
+            "mean_abs_delta": 2.9919469356536865,
+            "ok": true,
+            "pair_index": 449,
+            "rms_delta": 4.474600210392731,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          },
+          {
+            "failures": [],
+            "max_abs_delta": 73.02064514160156,
+            "mean_abs_delta": 2.9680089950561523,
+            "ok": true,
+            "pair_index": 599,
+            "rms_delta": 4.500845723682779,
+            "same_uint8_hash": false,
+            "thresholds": {
+              "max_max_abs_delta": 80.0,
+              "max_mean_abs_delta": 3.0,
+              "max_rms_delta": 8.0
+            }
+          }
+        ],
+        "sampled_pair_indices": [
+          0,
+          150,
+          300,
+          449,
+          599
+        ],
+        "source_output_summary": {
+          "label": "source",
+          "max": 255.0,
+          "mean": 109.76480865478516,
+          "min": 4.13098132412415e-06,
+          "shape": [
+            5,
+            2,
+            384,
+            512,
+            3
+          ],
+          "std": 48.789894104003906,
+          "uint8_sha256": "a3d5b3af8327b695d8477ccf7b2d48131a1ca8f29e31b91cb3588cb5cd91c57b"
+        }
+      },
+      "path": "/Users/adpena/Projects/pact/experiments/results/renderer_selfcompression_nextwave_worker_20260503/c101_triple_zero_screen/f1_0135_f2block006_all003/pose_safety_preflight.json",
+      "preflight_ran": true,
+      "safe_for_exact_eval_dispatch": true
+    },
+    "promotion_eligible": false,
+    "score_claim": false,
+    "score_if_components_unchanged_vs_c101": 0.3146180156588446,
+    "transforms": [
+      {
+        "prefix": "frame1_head",
+        "threshold": 0.135
+      },
+      {
+        "prefix": "frame2_head.block2",
+        "threshold": 0.06
+      },
+      {
+        "prefix": "all_fp4",
+        "threshold": 0.03
+      }
+    ]
+  },
+  "claim_required_before_dispatch": true,
+  "reason": "best local-safe combined candidate does not reach the C-101 byte target",
+  "recommendation": "do_not_dispatch_yet_safe_but_too_small",
+  "remote_gpu_dispatch_performed": false
+}

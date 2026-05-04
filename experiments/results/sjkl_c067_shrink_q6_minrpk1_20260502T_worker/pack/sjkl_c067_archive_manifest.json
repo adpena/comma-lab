@@ -1,0 +1,198 @@
+{
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
+  "output_archive": {
+    "bytes": 276999,
+    "delta_bytes_vs_source_archive": 785,
+    "formula_only_rate_delta_vs_source_archive": 0.0005226992782009045,
+    "path": "/Users/adpena/Projects/pact/experiments/results/sjkl_c067_shrink_q6_minrpk1_20260502T_worker/pack/archive.zip",
+    "sha256": "7977f3ee5d6d744f5818d358c13424a1f19f6bf8b6604af56d37c13912159922"
+  },
+  "packed_payload": {
+    "brotli_quality": 11,
+    "compression_selection": {
+      "candidate_count": 24,
+      "candidates": [
+        {
+          "member_order": [
+            "optimized_poses.bin",
+            "sjkl.bin",
+            "masks.mkv",
+            "renderer.bin"
+          ],
+          "payload_compressed_bytes": 276899,
+          "payload_raw_bytes": 290629
+        },
+        {
+          "member_order": [
+            "renderer.bin",
+            "optimized_poses.bin",
+            "masks.mkv",
+            "sjkl.bin"
+          ],
+          "payload_compressed_bytes": 276959,
+          "payload_raw_bytes": 290629
+        },
+        {
+          "member_order": [
+            "renderer.bin",
+            "sjkl.bin",
+            "optimized_poses.bin",
+            "masks.mkv"
+          ],
+          "payload_compressed_bytes": 276984,
+          "payload_raw_bytes": 290629
+        },
+        {
+          "member_order": [
+            "masks.mkv",
+            "renderer.bin",
+            "sjkl.bin",
+            "optimized_poses.bin"
+          ],
+          "payload_compressed_bytes": 276986,
+          "payload_raw_bytes": 290629
+        },
+        {
+          "member_order": [
+            "sjkl.bin",
+            "masks.mkv",
+            "optimized_poses.bin",
+            "renderer.bin"
+          ],
+          "payload_compressed_bytes": 276986,
+          "payload_raw_bytes": 290629
+        },
+        {
+          "member_order": [
+            "optimized_poses.bin",
+            "sjkl.bin",
+            "renderer.bin",
+            "masks.mkv"
+          ],
+          "payload_compressed_bytes": 276996,
+          "payload_raw_bytes": 290629
+        },
+        {
+          "member_order": [
+            "optimized_poses.bin",
+            "masks.mkv",
+            "renderer.bin",
+            "sjkl.bin"
+          ],
+          "payload_compressed_bytes": 277001,
+          "payload_raw_bytes": 290629
+        },
+        {
+          "member_order": [
+            "sjkl.bin",
+            "optimized_poses.bin",
+            "masks.mkv",
+            "renderer.bin"
+          ],
+          "payload_compressed_bytes": 277007,
+          "payload_raw_bytes": 290629
+        }
+      ],
+      "chosen_member_order": [
+        "optimized_poses.bin",
+        "sjkl.bin",
+        "masks.mkv",
+        "renderer.bin"
+      ],
+      "header_minimized": true,
+      "member_order_optimized": true
+    },
+    "header": {
+      "members": [
+        {
+          "bytes": 7200,
+          "name": "optimized_poses.bin",
+          "sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+        },
+        {
+          "bytes": 250,
+          "name": "sjkl.bin",
+          "sha256": "13f605bfd9ad950807d410c8371f20fd2b1c3d9c04bb59cc6bf07d474dcc78bb"
+        },
+        {
+          "bytes": 223385,
+          "name": "masks.mkv",
+          "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        {
+          "bytes": 59288,
+          "name": "renderer.bin",
+          "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+        }
+      ],
+      "schema": "renderer_payload_v1"
+    },
+    "payload_compressed_bytes": 276899,
+    "payload_format": "rpk1_json",
+    "payload_member": "p",
+    "payload_raw_bytes": 290629,
+    "source_archive_sha256_recorded_in_manifest": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a"
+  },
+  "payload_member_names": {
+    "output_archive_members": [
+      "p"
+    ],
+    "output_logical_runtime_members": [
+      "optimized_poses.bin",
+      "sjkl.bin",
+      "masks.mkv",
+      "renderer.bin"
+    ],
+    "output_packed_payload_member": "p",
+    "sjkl_member": "sjkl.bin"
+  },
+  "promotion_eligible": false,
+  "runtime_contract": {
+    "inflate_loader": "submissions/robust_current/inflate_renderer.py::_load_sjkl_residual_from_archive_dir",
+    "require_runtime_apply_proof": true,
+    "runtime_apply_proof": {
+      "path": "/Users/adpena/Projects/pact/submissions/robust_current/inflate_renderer.py",
+      "proof_tokens": [
+        "SJKL_REQUIRE_APPLIED",
+        "_finalize_sjkl_application_contract",
+        "_apply_sjkl_residual_to_pairs",
+        "applied_pair_count",
+        "charged sjkl.bin did not affect"
+      ],
+      "require_env": "SJKL_REQUIRE_APPLIED=1",
+      "sha256": "c017b8d3086aceda7cb9ef1012aeb3ab3eb8998d60ad155d788929290f320eaa",
+      "verified": true
+    },
+    "score_affecting_payload_charged_in_archive": true,
+    "sidecars_required": false,
+    "unpacker": "submissions/robust_current/unpack_renderer_payload.py"
+  },
+  "schema": "sjkl_c067_archive_builder_v1",
+  "score_claim": false,
+  "sjkl_payload": {
+    "bytes": 250,
+    "max_bytes": 2048,
+    "member_name": "sjkl.bin",
+    "path": "/Users/adpena/Projects/pact/experiments/results/sjkl_c067_shrink_q6_minrpk1_20260502T_worker/repack/sjkl.bin",
+    "replaced_existing": false,
+    "sha256": "13f605bfd9ad950807d410c8371f20fd2b1c3d9c04bb59cc6bf07d474dcc78bb"
+  },
+  "source_archive": {
+    "bytes": 276214,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c067_breakthrough_candidate_matrix_20260502T1030Z/line_search_source_c067_fixedslice/archive.zip",
+    "sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+    "source_archive_packaging": "packed_renderer_payload",
+    "source_logical_member_names": [
+      "renderer.bin",
+      "masks.mkv",
+      "optimized_poses.bin"
+    ],
+    "source_payload_header_payload_format": "public_pr67_qzs3_qp1_fixed_slices",
+    "source_payload_header_schema": "renderer_payload_pr64_len_table_v1",
+    "source_payload_member": "p",
+    "source_zip_members": [
+      "p"
+    ]
+  }
+}

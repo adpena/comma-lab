@@ -1,0 +1,16 @@
+{
+  "cuda_available": true,
+  "device_count": 1,
+  "device_name": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+  "gpu_t4_match": false,
+  "nvidia_dali_fn_module": "nvidia.dali.fn",
+  "nvidia_smi": "/usr/bin/nvidia-smi",
+  "nvidia_smi_head": [
+    "NVIDIA RTX PRO 6000 Blackwell Server Edition, 580.126.20, 97887 MiB"
+  ],
+  "python": "/teamspace/studios/this_studio/pact/.venv/bin/python",
+  "recorded_at_utc": "2026-05-03T00:01:37Z",
+  "schema_version": 1,
+  "tool": "lightning_exact_eval_runner_preflight",
+  "torch_version": "2.11.0+cu130"
+}

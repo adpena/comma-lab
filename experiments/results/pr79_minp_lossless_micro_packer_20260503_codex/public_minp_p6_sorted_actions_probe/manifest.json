@@ -1,0 +1,338 @@
+{
+  "archive_delta_bytes_vs_c089": 1195,
+  "baseline_score_if_components_unchanged": 0.3162664288443315,
+  "candidate_id": "public_minp_p6_sorted_actions_probe",
+  "canonical_score_source_required": "claim lane via tools/claim_lane_dispatch.py, then exact CUDA auth eval: archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "decoded_change_summary_vs_c089": {
+    "changed_decoded_streams_vs_c089": [
+      "optimized_poses.qp1",
+      "renderer.bin",
+      "seg_tile_actions.bin"
+    ],
+    "decoded_streams": {
+      "masks.mkv": {
+        "c089_bytes": 223385,
+        "c089_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "candidate_bytes": 223385,
+        "candidate_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "changed_vs_c089": false
+      },
+      "optimized_poses.qp1": {
+        "c089_bytes": 1140,
+        "c089_sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583",
+        "candidate_bytes": 1140,
+        "candidate_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+        "changed_vs_c089": true
+      },
+      "renderer.bin": {
+        "c089_bytes": 59288,
+        "c089_sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb",
+        "candidate_bytes": 59288,
+        "candidate_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+        "changed_vs_c089": true
+      },
+      "seg_tile_actions.bin": {
+        "c089_bytes": 160,
+        "c089_sha256": "50e997db4fd1b7642d9a2cd67b55802a4f7f9bd7a6603d0ca2eaf42e7fe7e320",
+        "candidate_bytes": 2688,
+        "candidate_sha256": "6f25e370e656fdb9bc82eb80b24c241d2641e286b969efc6de44be1e2b78c33b",
+        "changed_vs_c089": true
+      }
+    },
+    "status": "decoded_stream_changed_vs_c089"
+  },
+  "dispatch_safety": {
+    "dispatchable_after_gate": false,
+    "next_dispatch_safety_gate": "run local robust_current unpack/runtime raw-output parity against the named source archive; only then claim lane and run exact CUDA auth eval",
+    "reason_not_dispatchable_now": "parser/parity gate failed or candidate is an explicit non-dispatchable probe"
+  },
+  "evidence_grade": "empirical_byte_screen_only",
+  "formula_only_rate_score_delta_vs_c089": 0.0007957014489809949,
+  "noop": false,
+  "noop_status": "non_noop_payload",
+  "notes": [
+    "Public/minp source actions are not pair-sorted; sorting enables P6 but changes decoded action record order.",
+    "Duplicate pair/tile entries make commutation unsafe without runtime output parity."
+  ],
+  "output_archive": {
+    "bytes": 277537,
+    "path": "/Users/adpena/Projects/pact/experiments/results/pr79_minp_lossless_micro_packer_20260503_codex/public_minp_p6_sorted_actions_probe/archive.zip",
+    "sha256": "3189a4d36a62303d8db9c2e3e05136ee89ed79a6123e3b491bf9c701a379b28a"
+  },
+  "payload": {
+    "bytes": 277437,
+    "member": "p",
+    "sha256": "014e8534c5ce98c677bde59e92f8db227a2d2cc712c7f83d7025310c2df80f33"
+  },
+  "promotion_eligible": false,
+  "runtime_parse_validation": {
+    "decoded_parity_status": "passed",
+    "members": {
+      "masks.mkv": {
+        "bytes": 219465,
+        "codec": "brotli_av1_obu",
+        "decoded_bytes": 223385,
+        "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "sha256": "1ddf03dad8466797397ead26a0d481766e22e26cbc936251c1e3ed5d2f6eda99"
+      },
+      "optimized_poses.qp1": {
+        "bytes": 898,
+        "codec": "public_qp1_brotli",
+        "decoded_bytes": 1140,
+        "decoded_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+        "sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082"
+      },
+      "renderer.bin": {
+        "bytes": 55756,
+        "codec": "brotli_qzs3",
+        "decoded_bytes": 59288,
+        "decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+        "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 1306,
+        "codec": "brotli_seg_tile_actions_delta_varint_v1",
+        "decoded_bytes": 2688,
+        "decoded_sha256": "6f25e370e656fdb9bc82eb80b24c241d2641e286b969efc6de44be1e2b78c33b",
+        "sha256": "b155774a41d7db0103e59df0bcefaa5b7b2a4729f54c04a4c3a6dd78fa4b1a0b"
+      }
+    },
+    "members_compared": [
+      "masks.mkv",
+      "optimized_poses.qp1",
+      "renderer.bin",
+      "seg_tile_actions.bin"
+    ],
+    "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+    "status": "passed"
+  },
+  "schema": "pr75_lossless_micro_candidate_manifest_v1",
+  "score_claim": false,
+  "selected_sources": {
+    "actions": "public_pr75_minp_sorted_probe",
+    "mask": "public_pr75_minp_resweep",
+    "pose": "public_pr75_minp",
+    "renderer": "public_pr75_minp"
+  },
+  "semantic_contract": "non_dispatchable_public_actions_ordering_probe_p6_sorted_delta_varint",
+  "source_archives": {
+    "c089": {
+      "archive_bytes": 276342,
+      "archive_sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8",
+      "decoded_members": {
+        "masks.mkv": {
+          "bytes": 223385,
+          "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "optimized_poses.qp1": {
+          "bytes": 1140,
+          "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+        },
+        "renderer.bin": {
+          "bytes": 59288,
+          "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 160,
+          "sha256": "50e997db4fd1b7642d9a2cd67b55802a4f7f9bd7a6603d0ca2eaf42e7fe7e320"
+        }
+      },
+      "encoded_streams": {
+        "actions": {
+          "bytes": 116,
+          "record_count": 40,
+          "sha256": "2f270cba1207030026353794196e2425de1c8aa85cff4de12d544a30346034da"
+        },
+        "mask": {
+          "bytes": 219472,
+          "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+        },
+        "pose": {
+          "bytes": 677,
+          "sha256": "c998610e82bb46a686a073e8a1847987de1346f86852a1c60cfa3244a1ad43c5"
+        },
+        "renderer": {
+          "bytes": 55965,
+          "sha256": "2544dfe50d2631a56600cbfc7342e4a18c97f953526fc51425be0d62f97e22ad"
+        }
+      },
+      "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/archive.zip",
+      "payload_bytes": 276242,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+      "payload_sha256": "fcc3fddb3a4182182bbfca1d1064544c87e58a5a9f76ea6fddfcfe4eb0b453c1"
+    },
+    "public_pr75_minp": {
+      "archive_bytes": 277388,
+      "archive_sha256": "01dc02badf851d99108fd92c570271f36f74cc5424c6d2a8f1b499cb4d1c3446",
+      "decoded_members": {
+        "masks.mkv": {
+          "bytes": 223385,
+          "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "optimized_poses.qp1": {
+          "bytes": 1140,
+          "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+        },
+        "renderer.bin": {
+          "bytes": 59288,
+          "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 2688,
+          "sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f"
+        }
+      },
+      "encoded_streams": {
+        "actions": {
+          "bytes": 1162,
+          "record_count": null,
+          "sha256": "3fdf6320b77685606283438e1a9bea4df3c83ecb525deb4750dade60c8e7dbdc"
+        },
+        "mask": {
+          "bytes": 219472,
+          "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+        },
+        "pose": {
+          "bytes": 898,
+          "sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082"
+        },
+        "renderer": {
+          "bytes": 55756,
+          "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+        }
+      },
+      "path": "/Users/adpena/Projects/pact/experiments/results/top_submission_reverse_engineering_20260503_pr79/archive.zip",
+      "payload_bytes": 277288,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+      "payload_sha256": "026c2a5801dc42e369ad9533736645488ef9183c0789d9c961adb23c1740e688"
+    }
+  },
+  "source_preservation": {
+    "archive_byte_identical_to_c089": false,
+    "payload_byte_identical_to_c089": false,
+    "source_preserving_vs_c089": false
+  },
+  "stream_packing": {
+    "actions_sorted_delta_varint": {
+      "brotli": {
+        "bytes": 1306,
+        "params": {
+          "lgblock": 0,
+          "lgwin": 16,
+          "mode": 0,
+          "quality": 11
+        },
+        "sha256": "b155774a41d7db0103e59df0bcefaa5b7b2a4729f54c04a4c3a6dd78fa4b1a0b"
+      },
+      "raw_bytes": 2016,
+      "raw_sha256": "b8aa03c0a17011f7fc95bbad8ec2a36ea71f94f717d2dd73b34682a44f09e6b2",
+      "sort_summary": {
+        "duplicate_pair_tile_count": 19,
+        "duplicate_pair_tiles": [
+          {
+            "pair": 0,
+            "tile": 93
+          },
+          {
+            "pair": 5,
+            "tile": 93
+          },
+          {
+            "pair": 9,
+            "tile": 112
+          },
+          {
+            "pair": 11,
+            "tile": 88
+          },
+          {
+            "pair": 11,
+            "tile": 98
+          },
+          {
+            "pair": 15,
+            "tile": 84
+          },
+          {
+            "pair": 16,
+            "tile": 87
+          },
+          {
+            "pair": 21,
+            "tile": 113
+          },
+          {
+            "pair": 30,
+            "tile": 87
+          },
+          {
+            "pair": 39,
+            "tile": 132
+          },
+          {
+            "pair": 65,
+            "tile": 89
+          },
+          {
+            "pair": 67,
+            "tile": 88
+          },
+          {
+            "pair": 79,
+            "tile": 128
+          },
+          {
+            "pair": 109,
+            "tile": 86
+          },
+          {
+            "pair": 132,
+            "tile": 86
+          },
+          {
+            "pair": 151,
+            "tile": 112
+          },
+          {
+            "pair": 158,
+            "tile": 86
+          },
+          {
+            "pair": 450,
+            "tile": 108
+          },
+          {
+            "pair": 519,
+            "tile": 89
+          }
+        ],
+        "original_record_sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f",
+        "record_count": 672,
+        "sorted_record_sha256": "6f25e370e656fdb9bc82eb80b24c241d2641e286b969efc6de44be1e2b78c33b"
+      }
+    },
+    "choices": {
+      "masks.mkv": {
+        "bytes": 219465,
+        "params": {
+          "lgblock": 17,
+          "lgwin": 19,
+          "mode": 0,
+          "quality": 11
+        },
+        "sha256": "1ddf03dad8466797397ead26a0d481766e22e26cbc936251c1e3ed5d2f6eda99"
+      },
+      "optimized_poses.qp1": {
+        "bytes": 898,
+        "params": "source",
+        "sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082"
+      },
+      "renderer.bin": {
+        "bytes": 55756,
+        "params": "source",
+        "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+      }
+    }
+  },
+  "tool": "experiments/build_pr75_minp_lossless_micro_candidates.py"
+}

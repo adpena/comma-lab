@@ -1,0 +1,69 @@
+{
+  "brotli_quality": 11,
+  "evidence_grade": "empirical",
+  "formula_only_rate_delta": -0.006414219295425877,
+  "header": {
+    "members": [
+      {
+        "bytes": 91582,
+        "codec": "raw",
+        "name": "renderer.bin",
+        "sha256": "d97849d15859ae013ec983de8c1e2f638e63f3876fef658a8b7781bcfaa16a5f"
+      },
+      {
+        "bytes": 223385,
+        "codec": "raw",
+        "name": "masks.mkv",
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      {
+        "bytes": 2244,
+        "codec": "pose_fp16_velocity_residual_topk_v1",
+        "decoded_bytes": 7200,
+        "decoded_sha256": "feb06921cb839e94780c4af8a1576babfcbc5e646e17272b56dd863d98f0129a",
+        "lossy": true,
+        "name": "optimized_poses.bin",
+        "pose_error_stats": {
+          "max_abs_by_dim": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pose_dim": 6,
+          "rmse_by_dim": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rows": 600
+        },
+        "pose_residual_topk": 256,
+        "sha256": "54cc4df5ee332d4cd01e968b76b8457ba11d79a518c3755d8db45ab83c1a7381",
+        "source_decoded_sha256": "feb06921cb839e94780c4af8a1576babfcbc5e646e17272b56dd863d98f0129a"
+      }
+    ],
+    "payload_format": "pr64_len_table",
+    "schema": "renderer_payload_pr64_len_table_v1",
+    "source_archive_sha256": "976f5fcfedcab3ee78b878134fc9514ce751bb67232bf44340392d4c5b3b6ffb"
+  },
+  "output_archive": "experiments/results/public_floor_contract_variants_20260501/pr64_pr64_pvr1_top256/archive.zip",
+  "output_archive_bytes": 287505,
+  "output_archive_sha256": "97cfd00c408af47a462ee13b22751f2bfde1acac5b27bdd41ca106a3529c04a8",
+  "payload_compressed_bytes": 287405,
+  "payload_format": "pr64_len_table",
+  "payload_member": "p",
+  "payload_raw_bytes": 317223,
+  "pose_codec": "pose_fp16_velocity_residual_topk_v1",
+  "pose_residual_topk": 256,
+  "savings_bytes": 9633,
+  "score_claim": false,
+  "source_archive": "/tmp/pact_pr64_contract/source_runtime/archive.zip",
+  "source_archive_bytes": 297138,
+  "source_archive_sha256": "976f5fcfedcab3ee78b878134fc9514ce751bb67232bf44340392d4c5b3b6ffb"
+}

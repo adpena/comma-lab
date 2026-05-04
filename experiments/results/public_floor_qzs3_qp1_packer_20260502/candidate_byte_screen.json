@@ -1,0 +1,38 @@
+[
+  {
+    "archive": "experiments/results/public_floor_qzs3_qp1_packer_20260502/pr63_qzs3_publicmask_pose_qp1_v1/archive.zip",
+    "bytes": 276296,
+    "label": "pr63_qzs3_publicmask_pose_qp1_v1",
+    "payload_compressed_bytes": 276196,
+    "pose_codec": "pose_qp1_v1",
+    "rate_score_vs_pvl1_t4": -0.007100719876094835,
+    "sha256": "c5260473c26c4d4537d99d4a6a18b8ff0d9d1a901f6db17cd2208559e1010362"
+  },
+  {
+    "archive": "experiments/results/public_floor_qzs3_qp1_packer_20260502/pr63_qzs3_publicmask_pose_fp16_velocity_only_v1/archive.zip",
+    "bytes": 276340,
+    "label": "pr63_qzs3_publicmask_pose_fp16_velocity_only_v1",
+    "payload_compressed_bytes": 276240,
+    "pose_codec": "pose_fp16_velocity_only_v1",
+    "rate_score_vs_pvl1_t4": -0.00707142208215746,
+    "sha256": "1ae07c4092bef56183af53459e045cb9f33fa012aa26f457fe0b73158c86f01f"
+  },
+  {
+    "archive": "experiments/results/public_floor_qzs3_qp1_packer_20260502/pr63_qzs3_publicmask_pose_public_pr64_velocity_delta_v1/archive.zip",
+    "bytes": 276439,
+    "label": "pr63_qzs3_publicmask_pose_public_pr64_velocity_delta_v1",
+    "payload_compressed_bytes": 276339,
+    "pose_codec": "pose_public_pr64_velocity_delta_v1",
+    "rate_score_vs_pvl1_t4": -0.0070055020457983645,
+    "sha256": "22ee2b67da887212af919daadf9edc91dbdf5e911a290959a78442eeb60e3727"
+  },
+  {
+    "archive": "experiments/results/public_floor_qzs3_qp1_packer_20260502/pr63_qzs3_publicmask_raw/archive.zip",
+    "bytes": 276674,
+    "label": "pr63_qzs3_publicmask_raw",
+    "payload_compressed_bytes": 276574,
+    "pose_codec": "raw",
+    "rate_score_vs_pvl1_t4": -0.006849025191814654,
+    "sha256": "a64ae6d44432b91a8d7a7d55bef62a8fd01e6ca6e0e50754833c6037ff2b2a3f"
+  }
+]

@@ -1,0 +1,2008 @@
+{
+  "archives": [
+    {
+      "archive": {
+        "bytes": 236328,
+        "path": "experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+        "rate_term": 0.1573611146734565,
+        "sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e"
+      },
+      "byte_accounting": {
+        "archive_zip_overhead_bytes": 100,
+        "primary_member_bytes": 236228,
+        "side_info_member_bytes": 0
+      },
+      "decision_support": {
+        "blockers": [],
+        "valid_for_byte_decision": true
+      },
+      "label": "PR85",
+      "primary_member": {
+        "bundle_format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+        "bundle_header_bytes": 24,
+        "bytes": 236228,
+        "magic_ascii": "#m......",
+        "magic_hex": "236d02f2de00cf05",
+        "name": "x",
+        "occurrence": 1,
+        "segment_lengths": {
+          "bias": 223,
+          "frac": 106,
+          "frac2": 149,
+          "frac3": 154,
+          "mask": 159011,
+          "model": 57074,
+          "pose": 1487,
+          "post": 1400,
+          "randmulti": 16101,
+          "region": 273,
+          "shift": 226
+        },
+        "segments": [
+          {
+            "bytes": 159011,
+            "codec": "QMA9_range_mask",
+            "entropy_bits_per_byte": 7.998762344619,
+            "magic_ascii": "QMA9X...",
+            "magic_hex": "514d413958020000",
+            "name": "mask",
+            "offset": 24,
+            "sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+            "validation": {
+              "actual_bitstream_bytes": 158991,
+              "bitstream_sha256": "77196f31a8fdfbf8f91c9c30600945473376534f15245bfb7622ddd77d17e3af",
+              "blockers": [],
+              "declared_bitstream_bytes": 158991,
+              "frames": 600,
+              "header_bytes": 20,
+              "height": 384,
+              "status": "ok",
+              "width": 512
+            }
+          },
+          {
+            "bytes": 57074,
+            "codec": "brotli_qh_model",
+            "entropy_bits_per_byte": 7.995683133524,
+            "magic_ascii": "...?...b",
+            "magic_hex": "b1a8843f8097a162",
+            "name": "model",
+            "offset": 159035,
+            "sha256": "c9194c19d44d3c32c4e588bbe4f9986ed0c562779078f0f4d6b073f0799b5dbc",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 61590,
+              "decoded_magic_ascii": "QH0...?*",
+              "decoded_magic_hex": "51483000fcd63f2a",
+              "decoded_sha256": "503d666ec4c1b3e0ce09fa9dcb963b049de185eac0ddd82318578a7732439ed4",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "QH0",
+                "QH1"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 1487,
+            "codec": "brotli_p1d1_pose",
+            "entropy_bits_per_byte": 7.86188685951,
+            "magic_ascii": ".. ..4c.",
+            "magic_hex": "a2e120a29a3463fe",
+            "name": "pose",
+            "offset": 216109,
+            "sha256": "2b6e03e02fb17f662e3f3f9ce47daf2fc33bf1f76c96e34ffac005f1c5c4054c",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 1806,
+              "decoded_magic_ascii": "P1D1..q.",
+              "decoded_magic_hex": "5031443102007104",
+              "decoded_sha256": "5121f50f598da361e57820482cfaf47785ba18651ad18291b4201719fa624f5d",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "P1D1"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 1400,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 7.847004918663,
+            "magic_ascii": ".+aFJ.g.",
+            "magic_hex": "e22b61464ace67fc",
+            "name": "post",
+            "offset": 217596,
+            "sha256": "c3dc88e0fb5a1e48aec49eeacefeea20685e3c02598933deb1ff22dc09892575",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 2400,
+              "decoded_magic_ascii": "........",
+              "decoded_magic_hex": "080a00060b090b02",
+              "decoded_sha256": "ce067fec132d1a314ad93cee8d39b17e7dd01a523db9a08ae797dfb1bd9a6b86",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": 2400,
+              "expected_magic_match": true,
+              "expected_magics": [],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 226,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 6.904546426986,
+            "magic_ascii": "BK.. .:.",
+            "magic_hex": "424b00ff20803ad5",
+            "name": "shift",
+            "offset": 218996,
+            "sha256": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 603,
+              "decoded_magic_ascii": "SD4\"....",
+              "decoded_magic_hex": "5344342200000000",
+              "decoded_sha256": "19e1bf816c8f19dd58e986647413a6f71f36a30e8da2d085ccf7e475d1cb3b43",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "SD4"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 106,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 6.298582954522,
+            "magic_ascii": "B....6..",
+            "magic_hex": "421600009836dc8d",
+            "name": "frac",
+            "offset": 219222,
+            "sha256": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 179,
+              "decoded_magic_ascii": "FV1W.C..",
+              "decoded_magic_hex": "4656315700430017",
+              "decoded_sha256": "05c785af21cbf5a5f11613dd5e23b8191b4c8477a57354d6b1060340a5fd901a",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "FV1"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 149,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 6.479620109104,
+            "magic_ascii": "BK...rut",
+            "magic_hex": "424b00bf91727574",
+            "name": "frac2",
+            "offset": 219328,
+            "sha256": "3a01c7546d89d9d3ca846da37a20add7d456421e9211a6339850d946b856026b",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 603,
+              "decoded_magic_ascii": "FH2.....",
+              "decoded_magic_hex": "4648320404040404",
+              "decoded_sha256": "e880b2f23eae84b87c6e7f566265003dec54650a8e98fdfa8e01ce0d536a584b",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "FH2"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 154,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 6.464399323712,
+            "magic_ascii": "BK....5.",
+            "magic_hex": "424b00ff919235bc",
+            "name": "frac3",
+            "offset": 219477,
+            "sha256": "d725b01b604566c5a76a06b821c644c8d5d5bb9a57ab0597d3bdabc8389858b5",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 603,
+              "decoded_magic_ascii": "FD3.....",
+              "decoded_magic_hex": "4644330900000000",
+              "decoded_sha256": "434ab5abbfec6cdf38e762eacc5382a04688c8bbef7592e9f2fd20ec5e6cdab4",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "FD3"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 223,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 7.076465482783,
+            "magic_ascii": "BK....5.",
+            "magic_hex": "424b00ff919235bc",
+            "name": "bias",
+            "offset": 219631,
+            "sha256": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 603,
+              "decoded_magic_ascii": "BD1.....",
+              "decoded_magic_hex": "4244310000000000",
+              "decoded_sha256": "67751d89e4825a6a71d4e74a0aa6f0246a861c0f96fc11184eec407e9caf8d7c",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "BD1"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 273,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 7.102950673806,
+            "magic_ascii": "BK...P.}",
+            "magic_hex": "424b00fff050b57d",
+            "name": "region",
+            "offset": 219854,
+            "sha256": "4a7c16094fab281c30e27621a58577c095c4b1153c232518c9adbaba2a2b2392",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 603,
+              "decoded_magic_ascii": "RH1.....",
+              "decoded_magic_hex": "5248310000000000",
+              "decoded_sha256": "8018b15bf5029b8bbf224b4ed1581afa2c51ae4e814e327183ffe8a697deb7e0",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "RH1"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 16101,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 7.986005115109,
+            "magic_ascii": "..O+Q..N",
+            "magic_hex": "b1004f2b51c6d84e",
+            "name": "randmulti",
+            "offset": 220127,
+            "sha256": "c624372e60a0851c4c427dc333a60dcc5d6657ba8ed56951612e7c9d7be7629f",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 27105,
+              "decoded_magic_ascii": "........",
+              "decoded_magic_hex": "ff1c010002020007",
+              "decoded_sha256": "87bcc720c1e80afb9adad5ee01477423ced526f31c54d461d69dbf26e08eecc9",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [],
+              "status": "ok"
+            }
+          }
+        ],
+        "sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50"
+      },
+      "side_info": {
+        "charged_bytes": 0,
+        "member_count": 0,
+        "members": [],
+        "rate_term": 0.0,
+        "requires_runtime_contract_review": false
+      },
+      "strict_zip": {
+        "blockers": [],
+        "compressed_payload_bytes": 236228,
+        "member_count": 1,
+        "members": [
+          {
+            "blockers": [],
+            "bytes": 236228,
+            "central_local_name_match": true,
+            "compressed_bytes": 236228,
+            "crc32": "c6356353",
+            "header_offset": 0,
+            "local_header_name": "x",
+            "method_id": 0,
+            "name": "x",
+            "occurrence": 1,
+            "sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50"
+          }
+        ],
+        "valid": true,
+        "zip_overhead_bytes": 100
+      }
+    },
+    {
+      "archive": {
+        "bytes": 229756,
+        "path": "experiments/results/pr85_stbm1br_mask_recode_20260504_worker/pr90_stbm1br_lossless_pr85_mask_recode/archive.zip",
+        "rate_term": 0.1529850896335376,
+        "sha256": "c6f004d444ed32c628611a2f21f567c666af6bcbcceba618cc089ec024a0cda6"
+      },
+      "byte_accounting": {
+        "archive_zip_overhead_bytes": 100,
+        "primary_member_bytes": 229656,
+        "side_info_member_bytes": 0
+      },
+      "decision_support": {
+        "blockers": [],
+        "valid_for_byte_decision": true
+      },
+      "label": "PR85_STBM1BR",
+      "primary_member": {
+        "bundle_format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+        "bundle_header_bytes": 24,
+        "bytes": 229656,
+        "magic_ascii": "wS......",
+        "magic_hex": "775302f2de00cf05",
+        "name": "x",
+        "occurrence": 1,
+        "segment_lengths": {
+          "bias": 223,
+          "frac": 106,
+          "frac2": 149,
+          "frac3": 154,
+          "mask": 152439,
+          "model": 57074,
+          "pose": 1487,
+          "post": 1400,
+          "randmulti": 16101,
+          "region": 273,
+          "shift": 226
+        },
+        "segments": [
+          {
+            "bytes": 152439,
+            "codec": "STBM1BR_lossless_mask_recode",
+            "entropy_bits_per_byte": 7.998882617875,
+            "magic_ascii": "STBM1BR.",
+            "magic_hex": "5354424d31425200",
+            "name": "mask",
+            "offset": 24,
+            "sha256": "1b1ec60b64e284aae11e838dc3d9996bce00125df5712a8ba9c3e8f739c9d313",
+            "validation": {
+              "brotli_body_bytes": 152431,
+              "brotli_body_sha256": "420f74e5a02b7d559954c2920e2617846e52ad9d75d46111a3e224cc7d2c14ee",
+              "height": 384,
+              "m5_table_bytes": 4961,
+              "n_pairs": 600,
+              "precision": 16,
+              "qtbm_blob_bytes": 160839,
+              "qtbm_blob_sha256": "609b41fbd0f7c395c1ea6f6e3359a72c5cdc95dba73d090d0fa109a8b55b2d94",
+              "qtbm_magic": "QTBM5\u0000",
+              "residual_bitstream_bytes": 133925,
+              "road_payload_bytes": 13096,
+              "sparse_table_bytes": 8178,
+              "spatial_table_bytes": 347,
+              "status": "ok",
+              "top_payload_bytes": 283,
+              "width": 512
+            }
+          },
+          {
+            "bytes": 57074,
+            "codec": "brotli_qh_model",
+            "entropy_bits_per_byte": 7.995683133524,
+            "magic_ascii": "...?...b",
+            "magic_hex": "b1a8843f8097a162",
+            "name": "model",
+            "offset": 152463,
+            "sha256": "c9194c19d44d3c32c4e588bbe4f9986ed0c562779078f0f4d6b073f0799b5dbc",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 61590,
+              "decoded_magic_ascii": "QH0...?*",
+              "decoded_magic_hex": "51483000fcd63f2a",
+              "decoded_sha256": "503d666ec4c1b3e0ce09fa9dcb963b049de185eac0ddd82318578a7732439ed4",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "QH0",
+                "QH1"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 1487,
+            "codec": "brotli_p1d1_pose",
+            "entropy_bits_per_byte": 7.86188685951,
+            "magic_ascii": ".. ..4c.",
+            "magic_hex": "a2e120a29a3463fe",
+            "name": "pose",
+            "offset": 209537,
+            "sha256": "2b6e03e02fb17f662e3f3f9ce47daf2fc33bf1f76c96e34ffac005f1c5c4054c",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 1806,
+              "decoded_magic_ascii": "P1D1..q.",
+              "decoded_magic_hex": "5031443102007104",
+              "decoded_sha256": "5121f50f598da361e57820482cfaf47785ba18651ad18291b4201719fa624f5d",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "P1D1"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 1400,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 7.847004918663,
+            "magic_ascii": ".+aFJ.g.",
+            "magic_hex": "e22b61464ace67fc",
+            "name": "post",
+            "offset": 211024,
+            "sha256": "c3dc88e0fb5a1e48aec49eeacefeea20685e3c02598933deb1ff22dc09892575",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 2400,
+              "decoded_magic_ascii": "........",
+              "decoded_magic_hex": "080a00060b090b02",
+              "decoded_sha256": "ce067fec132d1a314ad93cee8d39b17e7dd01a523db9a08ae797dfb1bd9a6b86",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": 2400,
+              "expected_magic_match": true,
+              "expected_magics": [],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 226,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 6.904546426986,
+            "magic_ascii": "BK.. .:.",
+            "magic_hex": "424b00ff20803ad5",
+            "name": "shift",
+            "offset": 212424,
+            "sha256": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 603,
+              "decoded_magic_ascii": "SD4\"....",
+              "decoded_magic_hex": "5344342200000000",
+              "decoded_sha256": "19e1bf816c8f19dd58e986647413a6f71f36a30e8da2d085ccf7e475d1cb3b43",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "SD4"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 106,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 6.298582954522,
+            "magic_ascii": "B....6..",
+            "magic_hex": "421600009836dc8d",
+            "name": "frac",
+            "offset": 212650,
+            "sha256": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 179,
+              "decoded_magic_ascii": "FV1W.C..",
+              "decoded_magic_hex": "4656315700430017",
+              "decoded_sha256": "05c785af21cbf5a5f11613dd5e23b8191b4c8477a57354d6b1060340a5fd901a",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "FV1"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 149,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 6.479620109104,
+            "magic_ascii": "BK...rut",
+            "magic_hex": "424b00bf91727574",
+            "name": "frac2",
+            "offset": 212756,
+            "sha256": "3a01c7546d89d9d3ca846da37a20add7d456421e9211a6339850d946b856026b",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 603,
+              "decoded_magic_ascii": "FH2.....",
+              "decoded_magic_hex": "4648320404040404",
+              "decoded_sha256": "e880b2f23eae84b87c6e7f566265003dec54650a8e98fdfa8e01ce0d536a584b",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "FH2"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 154,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 6.464399323712,
+            "magic_ascii": "BK....5.",
+            "magic_hex": "424b00ff919235bc",
+            "name": "frac3",
+            "offset": 212905,
+            "sha256": "d725b01b604566c5a76a06b821c644c8d5d5bb9a57ab0597d3bdabc8389858b5",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 603,
+              "decoded_magic_ascii": "FD3.....",
+              "decoded_magic_hex": "4644330900000000",
+              "decoded_sha256": "434ab5abbfec6cdf38e762eacc5382a04688c8bbef7592e9f2fd20ec5e6cdab4",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "FD3"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 223,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 7.076465482783,
+            "magic_ascii": "BK....5.",
+            "magic_hex": "424b00ff919235bc",
+            "name": "bias",
+            "offset": 213059,
+            "sha256": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 603,
+              "decoded_magic_ascii": "BD1.....",
+              "decoded_magic_hex": "4244310000000000",
+              "decoded_sha256": "67751d89e4825a6a71d4e74a0aa6f0246a861c0f96fc11184eec407e9caf8d7c",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "BD1"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 273,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 7.102950673806,
+            "magic_ascii": "BK...P.}",
+            "magic_hex": "424b00fff050b57d",
+            "name": "region",
+            "offset": 213282,
+            "sha256": "4a7c16094fab281c30e27621a58577c095c4b1153c232518c9adbaba2a2b2392",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 603,
+              "decoded_magic_ascii": "RH1.....",
+              "decoded_magic_hex": "5248310000000000",
+              "decoded_sha256": "8018b15bf5029b8bbf224b4ed1581afa2c51ae4e814e327183ffe8a697deb7e0",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "RH1"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 16101,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 7.986005115109,
+            "magic_ascii": "..O+Q..N",
+            "magic_hex": "b1004f2b51c6d84e",
+            "name": "randmulti",
+            "offset": 213555,
+            "sha256": "c624372e60a0851c4c427dc333a60dcc5d6657ba8ed56951612e7c9d7be7629f",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 27105,
+              "decoded_magic_ascii": "........",
+              "decoded_magic_hex": "ff1c010002020007",
+              "decoded_sha256": "87bcc720c1e80afb9adad5ee01477423ced526f31c54d461d69dbf26e08eecc9",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [],
+              "status": "ok"
+            }
+          }
+        ],
+        "sha256": "c7586795bb29fb0ef611ad44715aec77e0e815370e19674d4c89ef2a54b417b5"
+      },
+      "side_info": {
+        "charged_bytes": 0,
+        "member_count": 0,
+        "members": [],
+        "rate_term": 0.0,
+        "requires_runtime_contract_review": false
+      },
+      "strict_zip": {
+        "blockers": [],
+        "compressed_payload_bytes": 229656,
+        "member_count": 1,
+        "members": [
+          {
+            "blockers": [],
+            "bytes": 229656,
+            "central_local_name_match": true,
+            "compressed_bytes": 229656,
+            "crc32": "8c543411",
+            "header_offset": 0,
+            "local_header_name": "x",
+            "method_id": 0,
+            "name": "x",
+            "occurrence": 1,
+            "sha256": "c7586795bb29fb0ef611ad44715aec77e0e815370e19674d4c89ef2a54b417b5"
+          }
+        ],
+        "valid": true,
+        "zip_overhead_bytes": 100
+      }
+    },
+    {
+      "archive": {
+        "bytes": 222404,
+        "path": "experiments/results/public_pr91_intake_20260504_codex/archive.zip",
+        "rate_term": 0.1480896946101834,
+        "sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f"
+      },
+      "byte_accounting": {
+        "archive_zip_overhead_bytes": 100,
+        "primary_member_bytes": 222304,
+        "side_info_member_bytes": 0
+      },
+      "decision_support": {
+        "blockers": [],
+        "valid_for_byte_decision": true
+      },
+      "label": "PR91_HPM1",
+      "primary_member": {
+        "bundle_format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+        "bundle_header_bytes": 24,
+        "bytes": 222304,
+        "magic_ascii": ".6......",
+        "magic_hex": "bf3602f2de00cf05",
+        "name": "x",
+        "occurrence": 1,
+        "segment_lengths": {
+          "bias": 223,
+          "frac": 106,
+          "frac2": 149,
+          "frac3": 154,
+          "mask": 145087,
+          "model": 57074,
+          "pose": 1487,
+          "post": 1400,
+          "randmulti": 16101,
+          "region": 273,
+          "shift": 226
+        },
+        "segments": [
+          {
+            "bytes": 145087,
+            "codec": "HPM1_hpac_mask",
+            "entropy_bits_per_byte": 7.998748150588,
+            "magic_ascii": "HPM1X...",
+            "magic_hex": "48504d3158020000",
+            "name": "mask",
+            "offset": 24,
+            "sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+            "validation": {
+              "H": 384,
+              "N": 600,
+              "P": 32,
+              "W": 512,
+              "ch": 64,
+              "delta": 2,
+              "header_bytes": 48,
+              "hpac_d_film": 8,
+              "hpac_len": 28243,
+              "hpac_ppmd_sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+              "ppmd_order": 4,
+              "runtime_contract": "HPM1_pr91_hpac_mask_stream",
+              "status": "ok",
+              "tail_bytes": 0,
+              "tokens_len": 116796,
+              "tokens_sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+              "tokens_uint32_aligned": true,
+              "tokens_uint32_words": 29199,
+              "use_spm": 1
+            }
+          },
+          {
+            "bytes": 57074,
+            "codec": "brotli_qh_model",
+            "entropy_bits_per_byte": 7.995683133524,
+            "magic_ascii": "...?...b",
+            "magic_hex": "b1a8843f8097a162",
+            "name": "model",
+            "offset": 145111,
+            "sha256": "c9194c19d44d3c32c4e588bbe4f9986ed0c562779078f0f4d6b073f0799b5dbc",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 61590,
+              "decoded_magic_ascii": "QH0...?*",
+              "decoded_magic_hex": "51483000fcd63f2a",
+              "decoded_sha256": "503d666ec4c1b3e0ce09fa9dcb963b049de185eac0ddd82318578a7732439ed4",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "QH0",
+                "QH1"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 1487,
+            "codec": "brotli_p1d1_pose",
+            "entropy_bits_per_byte": 7.86188685951,
+            "magic_ascii": ".. ..4c.",
+            "magic_hex": "a2e120a29a3463fe",
+            "name": "pose",
+            "offset": 202185,
+            "sha256": "2b6e03e02fb17f662e3f3f9ce47daf2fc33bf1f76c96e34ffac005f1c5c4054c",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 1806,
+              "decoded_magic_ascii": "P1D1..q.",
+              "decoded_magic_hex": "5031443102007104",
+              "decoded_sha256": "5121f50f598da361e57820482cfaf47785ba18651ad18291b4201719fa624f5d",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "P1D1"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 1400,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 7.847004918663,
+            "magic_ascii": ".+aFJ.g.",
+            "magic_hex": "e22b61464ace67fc",
+            "name": "post",
+            "offset": 203672,
+            "sha256": "c3dc88e0fb5a1e48aec49eeacefeea20685e3c02598933deb1ff22dc09892575",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 2400,
+              "decoded_magic_ascii": "........",
+              "decoded_magic_hex": "080a00060b090b02",
+              "decoded_sha256": "ce067fec132d1a314ad93cee8d39b17e7dd01a523db9a08ae797dfb1bd9a6b86",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": 2400,
+              "expected_magic_match": true,
+              "expected_magics": [],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 226,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 6.904546426986,
+            "magic_ascii": "BK.. .:.",
+            "magic_hex": "424b00ff20803ad5",
+            "name": "shift",
+            "offset": 205072,
+            "sha256": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 603,
+              "decoded_magic_ascii": "SD4\"....",
+              "decoded_magic_hex": "5344342200000000",
+              "decoded_sha256": "19e1bf816c8f19dd58e986647413a6f71f36a30e8da2d085ccf7e475d1cb3b43",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "SD4"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 106,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 6.298582954522,
+            "magic_ascii": "B....6..",
+            "magic_hex": "421600009836dc8d",
+            "name": "frac",
+            "offset": 205298,
+            "sha256": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 179,
+              "decoded_magic_ascii": "FV1W.C..",
+              "decoded_magic_hex": "4656315700430017",
+              "decoded_sha256": "05c785af21cbf5a5f11613dd5e23b8191b4c8477a57354d6b1060340a5fd901a",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "FV1"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 149,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 6.479620109104,
+            "magic_ascii": "BK...rut",
+            "magic_hex": "424b00bf91727574",
+            "name": "frac2",
+            "offset": 205404,
+            "sha256": "3a01c7546d89d9d3ca846da37a20add7d456421e9211a6339850d946b856026b",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 603,
+              "decoded_magic_ascii": "FH2.....",
+              "decoded_magic_hex": "4648320404040404",
+              "decoded_sha256": "e880b2f23eae84b87c6e7f566265003dec54650a8e98fdfa8e01ce0d536a584b",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "FH2"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 154,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 6.464399323712,
+            "magic_ascii": "BK....5.",
+            "magic_hex": "424b00ff919235bc",
+            "name": "frac3",
+            "offset": 205553,
+            "sha256": "d725b01b604566c5a76a06b821c644c8d5d5bb9a57ab0597d3bdabc8389858b5",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 603,
+              "decoded_magic_ascii": "FD3.....",
+              "decoded_magic_hex": "4644330900000000",
+              "decoded_sha256": "434ab5abbfec6cdf38e762eacc5382a04688c8bbef7592e9f2fd20ec5e6cdab4",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "FD3"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 223,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 7.076465482783,
+            "magic_ascii": "BK....5.",
+            "magic_hex": "424b00ff919235bc",
+            "name": "bias",
+            "offset": 205707,
+            "sha256": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 603,
+              "decoded_magic_ascii": "BD1.....",
+              "decoded_magic_hex": "4244310000000000",
+              "decoded_sha256": "67751d89e4825a6a71d4e74a0aa6f0246a861c0f96fc11184eec407e9caf8d7c",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "BD1"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 273,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 7.102950673806,
+            "magic_ascii": "BK...P.}",
+            "magic_hex": "424b00fff050b57d",
+            "name": "region",
+            "offset": 205930,
+            "sha256": "4a7c16094fab281c30e27621a58577c095c4b1153c232518c9adbaba2a2b2392",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 603,
+              "decoded_magic_ascii": "RH1.....",
+              "decoded_magic_hex": "5248310000000000",
+              "decoded_sha256": "8018b15bf5029b8bbf224b4ed1581afa2c51ae4e814e327183ffe8a697deb7e0",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "RH1"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 16101,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 7.986005115109,
+            "magic_ascii": "..O+Q..N",
+            "magic_hex": "b1004f2b51c6d84e",
+            "name": "randmulti",
+            "offset": 206203,
+            "sha256": "c624372e60a0851c4c427dc333a60dcc5d6657ba8ed56951612e7c9d7be7629f",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 27105,
+              "decoded_magic_ascii": "........",
+              "decoded_magic_hex": "ff1c010002020007",
+              "decoded_sha256": "87bcc720c1e80afb9adad5ee01477423ced526f31c54d461d69dbf26e08eecc9",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [],
+              "status": "ok"
+            }
+          }
+        ],
+        "sha256": "5c213c61cc4d29b62286063bfdcb97e812af6b06c0021aeaecc8bc46644e17bf"
+      },
+      "side_info": {
+        "charged_bytes": 0,
+        "member_count": 0,
+        "members": [],
+        "rate_term": 0.0,
+        "requires_runtime_contract_review": false
+      },
+      "strict_zip": {
+        "blockers": [],
+        "compressed_payload_bytes": 222304,
+        "member_count": 1,
+        "members": [
+          {
+            "blockers": [],
+            "bytes": 222304,
+            "central_local_name_match": true,
+            "compressed_bytes": 222304,
+            "crc32": "c57d54c8",
+            "header_offset": 0,
+            "local_header_name": "x",
+            "method_id": 0,
+            "name": "x",
+            "occurrence": 1,
+            "sha256": "5c213c61cc4d29b62286063bfdcb97e812af6b06c0021aeaecc8bc46644e17bf"
+          }
+        ],
+        "valid": true,
+        "zip_overhead_bytes": 100
+      }
+    },
+    {
+      "archive": {
+        "bytes": 236516,
+        "path": "experiments/results/public_pr92_intake_20260504_codex/archive.zip",
+        "rate_term": 0.15748629615664347,
+        "sha256": "f0dedeb7ad3c019ab3f4e2dea317f3192408e47a573897adb208030709d01490"
+      },
+      "byte_accounting": {
+        "archive_zip_overhead_bytes": 178,
+        "primary_member_bytes": 235952,
+        "side_info_member_bytes": 386
+      },
+      "decision_support": {
+        "blockers": [],
+        "valid_for_byte_decision": true
+      },
+      "label": "PR92_RSB1",
+      "primary_member": {
+        "bundle_format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+        "bundle_header_bytes": 24,
+        "bytes": 235952,
+        "magic_ascii": "#m......",
+        "magic_hex": "236d02f2de00cf05",
+        "name": "x",
+        "occurrence": 1,
+        "segment_lengths": {
+          "bias": 223,
+          "frac": 106,
+          "frac2": 149,
+          "frac3": 154,
+          "mask": 159011,
+          "model": 57074,
+          "pose": 1487,
+          "post": 1400,
+          "randmulti": 15825,
+          "region": 273,
+          "shift": 226
+        },
+        "segments": [
+          {
+            "bytes": 159011,
+            "codec": "QMA9_range_mask",
+            "entropy_bits_per_byte": 7.998762344619,
+            "magic_ascii": "QMA9X...",
+            "magic_hex": "514d413958020000",
+            "name": "mask",
+            "offset": 24,
+            "sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+            "validation": {
+              "actual_bitstream_bytes": 158991,
+              "bitstream_sha256": "77196f31a8fdfbf8f91c9c30600945473376534f15245bfb7622ddd77d17e3af",
+              "blockers": [],
+              "declared_bitstream_bytes": 158991,
+              "frames": 600,
+              "header_bytes": 20,
+              "height": 384,
+              "status": "ok",
+              "width": 512
+            }
+          },
+          {
+            "bytes": 57074,
+            "codec": "brotli_qh_model",
+            "entropy_bits_per_byte": 7.995683133524,
+            "magic_ascii": "...?...b",
+            "magic_hex": "b1a8843f8097a162",
+            "name": "model",
+            "offset": 159035,
+            "sha256": "c9194c19d44d3c32c4e588bbe4f9986ed0c562779078f0f4d6b073f0799b5dbc",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 61590,
+              "decoded_magic_ascii": "QH0...?*",
+              "decoded_magic_hex": "51483000fcd63f2a",
+              "decoded_sha256": "503d666ec4c1b3e0ce09fa9dcb963b049de185eac0ddd82318578a7732439ed4",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "QH0",
+                "QH1"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 1487,
+            "codec": "brotli_p1d1_pose",
+            "entropy_bits_per_byte": 7.86188685951,
+            "magic_ascii": ".. ..4c.",
+            "magic_hex": "a2e120a29a3463fe",
+            "name": "pose",
+            "offset": 216109,
+            "sha256": "2b6e03e02fb17f662e3f3f9ce47daf2fc33bf1f76c96e34ffac005f1c5c4054c",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 1806,
+              "decoded_magic_ascii": "P1D1..q.",
+              "decoded_magic_hex": "5031443102007104",
+              "decoded_sha256": "5121f50f598da361e57820482cfaf47785ba18651ad18291b4201719fa624f5d",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "P1D1"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 1400,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 7.847004918663,
+            "magic_ascii": ".+aFJ.g.",
+            "magic_hex": "e22b61464ace67fc",
+            "name": "post",
+            "offset": 217596,
+            "sha256": "c3dc88e0fb5a1e48aec49eeacefeea20685e3c02598933deb1ff22dc09892575",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 2400,
+              "decoded_magic_ascii": "........",
+              "decoded_magic_hex": "080a00060b090b02",
+              "decoded_sha256": "ce067fec132d1a314ad93cee8d39b17e7dd01a523db9a08ae797dfb1bd9a6b86",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": 2400,
+              "expected_magic_match": true,
+              "expected_magics": [],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 226,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 6.904546426986,
+            "magic_ascii": "BK.. .:.",
+            "magic_hex": "424b00ff20803ad5",
+            "name": "shift",
+            "offset": 218996,
+            "sha256": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 603,
+              "decoded_magic_ascii": "SD4\"....",
+              "decoded_magic_hex": "5344342200000000",
+              "decoded_sha256": "19e1bf816c8f19dd58e986647413a6f71f36a30e8da2d085ccf7e475d1cb3b43",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "SD4"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 106,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 6.298582954522,
+            "magic_ascii": "B....6..",
+            "magic_hex": "421600009836dc8d",
+            "name": "frac",
+            "offset": 219222,
+            "sha256": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 179,
+              "decoded_magic_ascii": "FV1W.C..",
+              "decoded_magic_hex": "4656315700430017",
+              "decoded_sha256": "05c785af21cbf5a5f11613dd5e23b8191b4c8477a57354d6b1060340a5fd901a",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "FV1"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 149,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 6.479620109104,
+            "magic_ascii": "BK...rut",
+            "magic_hex": "424b00bf91727574",
+            "name": "frac2",
+            "offset": 219328,
+            "sha256": "3a01c7546d89d9d3ca846da37a20add7d456421e9211a6339850d946b856026b",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 603,
+              "decoded_magic_ascii": "FH2.....",
+              "decoded_magic_hex": "4648320404040404",
+              "decoded_sha256": "e880b2f23eae84b87c6e7f566265003dec54650a8e98fdfa8e01ce0d536a584b",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "FH2"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 154,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 6.464399323712,
+            "magic_ascii": "BK....5.",
+            "magic_hex": "424b00ff919235bc",
+            "name": "frac3",
+            "offset": 219477,
+            "sha256": "d725b01b604566c5a76a06b821c644c8d5d5bb9a57ab0597d3bdabc8389858b5",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 603,
+              "decoded_magic_ascii": "FD3.....",
+              "decoded_magic_hex": "4644330900000000",
+              "decoded_sha256": "434ab5abbfec6cdf38e762eacc5382a04688c8bbef7592e9f2fd20ec5e6cdab4",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "FD3"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 223,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 7.076465482783,
+            "magic_ascii": "BK....5.",
+            "magic_hex": "424b00ff919235bc",
+            "name": "bias",
+            "offset": 219631,
+            "sha256": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 603,
+              "decoded_magic_ascii": "BD1.....",
+              "decoded_magic_hex": "4244310000000000",
+              "decoded_sha256": "67751d89e4825a6a71d4e74a0aa6f0246a861c0f96fc11184eec407e9caf8d7c",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "BD1"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 273,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 7.102950673806,
+            "magic_ascii": "BK...P.}",
+            "magic_hex": "424b00fff050b57d",
+            "name": "region",
+            "offset": 219854,
+            "sha256": "4a7c16094fab281c30e27621a58577c095c4b1153c232518c9adbaba2a2b2392",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 603,
+              "decoded_magic_ascii": "RH1.....",
+              "decoded_magic_hex": "5248310000000000",
+              "decoded_sha256": "8018b15bf5029b8bbf224b4ed1581afa2c51ae4e814e327183ffe8a697deb7e0",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "RH1"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 15825,
+            "codec": "RMB1_bitmask_randmulti",
+            "entropy_bits_per_byte": 7.986945571797,
+            "magic_ascii": "RMB1~...",
+            "magic_hex": "524d42317e11020a",
+            "name": "randmulti",
+            "offset": 220127,
+            "sha256": "4b10018eab64d8755da3def355881f51f2d450c9f19dd1457a6ec813cddd6f7c",
+            "validation": {
+              "blockers": [],
+              "expected_row_count": 83,
+              "mask_brotli_bytes": 4478,
+              "mask_raw_bytes": 6225,
+              "mask_raw_sha256": "f6c8dd6a347ab493a7d39688972a23ee9f6aed457fed8b2670d1ed252311dc6d",
+              "row_count": 83,
+              "selected_value_count": 13496,
+              "status": "ok",
+              "values_brotli_bytes": 11341,
+              "values_raw_bytes": 13496,
+              "values_raw_sha256": "41a9a86c3bd1d2554a9b847af7084270688aa3e0b03d35ebb8981b76ce56f6aa"
+            }
+          }
+        ],
+        "sha256": "89f14d331063125c88db0b4e3e51a92f21d2edc175a64d5c9cb6f873130763d8"
+      },
+      "side_info": {
+        "charged_bytes": 386,
+        "member_count": 1,
+        "members": [
+          {
+            "bytes": 386,
+            "codec": "RSB1_router_side_actions",
+            "entropy_bits_per_byte": 7.461123287431,
+            "magic_ascii": "RSB1X...",
+            "magic_hex": "5253423158020100",
+            "name": "a",
+            "occurrence": 1,
+            "sha256": "5422d47b4092e7304649cc49f4d4c8c7efa9c3d5a4fc7d39ab63cf2518e0897e",
+            "validation": {
+              "blockers": [],
+              "brotli_body_bytes": 378,
+              "count": 600,
+              "raw_action_bytes": 600,
+              "raw_action_sha256": "f23e859a1a5daee89c5edd6840010bf04d89b71bef7b3215ffc819493f6d02c6",
+              "reserved": 0,
+              "status": "ok",
+              "table_id": 1,
+              "top_actions": [
+                {
+                  "action": 35,
+                  "count": 77
+                },
+                {
+                  "action": 0,
+                  "count": 67
+                },
+                {
+                  "action": 8,
+                  "count": 42
+                },
+                {
+                  "action": 9,
+                  "count": 32
+                },
+                {
+                  "action": 45,
+                  "count": 31
+                },
+                {
+                  "action": 12,
+                  "count": 28
+                },
+                {
+                  "action": 24,
+                  "count": 27
+                },
+                {
+                  "action": 13,
+                  "count": 24
+                },
+                {
+                  "action": 44,
+                  "count": 23
+                },
+                {
+                  "action": 21,
+                  "count": 20
+                },
+                {
+                  "action": 34,
+                  "count": 20
+                },
+                {
+                  "action": 25,
+                  "count": 19
+                }
+              ],
+              "unique_action_count": 40
+            }
+          }
+        ],
+        "rate_term": 0.00025702155590515813,
+        "requires_runtime_contract_review": true
+      },
+      "strict_zip": {
+        "blockers": [],
+        "compressed_payload_bytes": 236338,
+        "member_count": 2,
+        "members": [
+          {
+            "blockers": [],
+            "bytes": 235952,
+            "central_local_name_match": true,
+            "compressed_bytes": 235952,
+            "crc32": "f09f047d",
+            "header_offset": 0,
+            "local_header_name": "x",
+            "method_id": 0,
+            "name": "x",
+            "occurrence": 1,
+            "sha256": "89f14d331063125c88db0b4e3e51a92f21d2edc175a64d5c9cb6f873130763d8"
+          },
+          {
+            "blockers": [],
+            "bytes": 386,
+            "central_local_name_match": true,
+            "compressed_bytes": 386,
+            "crc32": "984525f1",
+            "header_offset": 235983,
+            "local_header_name": "a",
+            "method_id": 0,
+            "name": "a",
+            "occurrence": 1,
+            "sha256": "5422d47b4092e7304649cc49f4d4c8c7efa9c3d5a4fc7d39ab63cf2518e0897e"
+          }
+        ],
+        "valid": true,
+        "zip_overhead_bytes": 178
+      }
+    },
+    {
+      "archive": {
+        "bytes": 229480,
+        "path": "experiments/results/pr85_stbm1br_rmb1_randmulti_20260504_codex/pr85_stbm1br_plus_pr92_rmb1_randmulti/archive.zip",
+        "rate_term": 0.1528013125624759,
+        "sha256": "f8d2dff12004fe15bdedefcd3f9574fab97f22c302fa1417a265c325468ad774"
+      },
+      "byte_accounting": {
+        "archive_zip_overhead_bytes": 100,
+        "primary_member_bytes": 229380,
+        "side_info_member_bytes": 0
+      },
+      "decision_support": {
+        "blockers": [],
+        "valid_for_byte_decision": true
+      },
+      "label": "STBM1BR_RMB1",
+      "primary_member": {
+        "bundle_format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+        "bundle_header_bytes": 24,
+        "bytes": 229380,
+        "magic_ascii": "wS......",
+        "magic_hex": "775302f2de00cf05",
+        "name": "x",
+        "occurrence": 1,
+        "segment_lengths": {
+          "bias": 223,
+          "frac": 106,
+          "frac2": 149,
+          "frac3": 154,
+          "mask": 152439,
+          "model": 57074,
+          "pose": 1487,
+          "post": 1400,
+          "randmulti": 15825,
+          "region": 273,
+          "shift": 226
+        },
+        "segments": [
+          {
+            "bytes": 152439,
+            "codec": "STBM1BR_lossless_mask_recode",
+            "entropy_bits_per_byte": 7.998882617875,
+            "magic_ascii": "STBM1BR.",
+            "magic_hex": "5354424d31425200",
+            "name": "mask",
+            "offset": 24,
+            "sha256": "1b1ec60b64e284aae11e838dc3d9996bce00125df5712a8ba9c3e8f739c9d313",
+            "validation": {
+              "brotli_body_bytes": 152431,
+              "brotli_body_sha256": "420f74e5a02b7d559954c2920e2617846e52ad9d75d46111a3e224cc7d2c14ee",
+              "height": 384,
+              "m5_table_bytes": 4961,
+              "n_pairs": 600,
+              "precision": 16,
+              "qtbm_blob_bytes": 160839,
+              "qtbm_blob_sha256": "609b41fbd0f7c395c1ea6f6e3359a72c5cdc95dba73d090d0fa109a8b55b2d94",
+              "qtbm_magic": "QTBM5\u0000",
+              "residual_bitstream_bytes": 133925,
+              "road_payload_bytes": 13096,
+              "sparse_table_bytes": 8178,
+              "spatial_table_bytes": 347,
+              "status": "ok",
+              "top_payload_bytes": 283,
+              "width": 512
+            }
+          },
+          {
+            "bytes": 57074,
+            "codec": "brotli_qh_model",
+            "entropy_bits_per_byte": 7.995683133524,
+            "magic_ascii": "...?...b",
+            "magic_hex": "b1a8843f8097a162",
+            "name": "model",
+            "offset": 152463,
+            "sha256": "c9194c19d44d3c32c4e588bbe4f9986ed0c562779078f0f4d6b073f0799b5dbc",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 61590,
+              "decoded_magic_ascii": "QH0...?*",
+              "decoded_magic_hex": "51483000fcd63f2a",
+              "decoded_sha256": "503d666ec4c1b3e0ce09fa9dcb963b049de185eac0ddd82318578a7732439ed4",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "QH0",
+                "QH1"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 1487,
+            "codec": "brotli_p1d1_pose",
+            "entropy_bits_per_byte": 7.86188685951,
+            "magic_ascii": ".. ..4c.",
+            "magic_hex": "a2e120a29a3463fe",
+            "name": "pose",
+            "offset": 209537,
+            "sha256": "2b6e03e02fb17f662e3f3f9ce47daf2fc33bf1f76c96e34ffac005f1c5c4054c",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 1806,
+              "decoded_magic_ascii": "P1D1..q.",
+              "decoded_magic_hex": "5031443102007104",
+              "decoded_sha256": "5121f50f598da361e57820482cfaf47785ba18651ad18291b4201719fa624f5d",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "P1D1"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 1400,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 7.847004918663,
+            "magic_ascii": ".+aFJ.g.",
+            "magic_hex": "e22b61464ace67fc",
+            "name": "post",
+            "offset": 211024,
+            "sha256": "c3dc88e0fb5a1e48aec49eeacefeea20685e3c02598933deb1ff22dc09892575",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 2400,
+              "decoded_magic_ascii": "........",
+              "decoded_magic_hex": "080a00060b090b02",
+              "decoded_sha256": "ce067fec132d1a314ad93cee8d39b17e7dd01a523db9a08ae797dfb1bd9a6b86",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": 2400,
+              "expected_magic_match": true,
+              "expected_magics": [],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 226,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 6.904546426986,
+            "magic_ascii": "BK.. .:.",
+            "magic_hex": "424b00ff20803ad5",
+            "name": "shift",
+            "offset": 212424,
+            "sha256": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 603,
+              "decoded_magic_ascii": "SD4\"....",
+              "decoded_magic_hex": "5344342200000000",
+              "decoded_sha256": "19e1bf816c8f19dd58e986647413a6f71f36a30e8da2d085ccf7e475d1cb3b43",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "SD4"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 106,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 6.298582954522,
+            "magic_ascii": "B....6..",
+            "magic_hex": "421600009836dc8d",
+            "name": "frac",
+            "offset": 212650,
+            "sha256": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 179,
+              "decoded_magic_ascii": "FV1W.C..",
+              "decoded_magic_hex": "4656315700430017",
+              "decoded_sha256": "05c785af21cbf5a5f11613dd5e23b8191b4c8477a57354d6b1060340a5fd901a",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "FV1"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 149,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 6.479620109104,
+            "magic_ascii": "BK...rut",
+            "magic_hex": "424b00bf91727574",
+            "name": "frac2",
+            "offset": 212756,
+            "sha256": "3a01c7546d89d9d3ca846da37a20add7d456421e9211a6339850d946b856026b",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 603,
+              "decoded_magic_ascii": "FH2.....",
+              "decoded_magic_hex": "4648320404040404",
+              "decoded_sha256": "e880b2f23eae84b87c6e7f566265003dec54650a8e98fdfa8e01ce0d536a584b",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "FH2"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 154,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 6.464399323712,
+            "magic_ascii": "BK....5.",
+            "magic_hex": "424b00ff919235bc",
+            "name": "frac3",
+            "offset": 212905,
+            "sha256": "d725b01b604566c5a76a06b821c644c8d5d5bb9a57ab0597d3bdabc8389858b5",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 603,
+              "decoded_magic_ascii": "FD3.....",
+              "decoded_magic_hex": "4644330900000000",
+              "decoded_sha256": "434ab5abbfec6cdf38e762eacc5382a04688c8bbef7592e9f2fd20ec5e6cdab4",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "FD3"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 223,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 7.076465482783,
+            "magic_ascii": "BK....5.",
+            "magic_hex": "424b00ff919235bc",
+            "name": "bias",
+            "offset": 213059,
+            "sha256": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 603,
+              "decoded_magic_ascii": "BD1.....",
+              "decoded_magic_hex": "4244310000000000",
+              "decoded_sha256": "67751d89e4825a6a71d4e74a0aa6f0246a861c0f96fc11184eec407e9caf8d7c",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "BD1"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 273,
+            "codec": "brotli_pr85_sidechannel",
+            "entropy_bits_per_byte": 7.102950673806,
+            "magic_ascii": "BK...P.}",
+            "magic_hex": "424b00fff050b57d",
+            "name": "region",
+            "offset": 213282,
+            "sha256": "4a7c16094fab281c30e27621a58577c095c4b1153c232518c9adbaba2a2b2392",
+            "validation": {
+              "blockers": [],
+              "decoded_bytes": 603,
+              "decoded_magic_ascii": "RH1.....",
+              "decoded_magic_hex": "5248310000000000",
+              "decoded_sha256": "8018b15bf5029b8bbf224b4ed1581afa2c51ae4e814e327183ffe8a697deb7e0",
+              "decoded_size_match": true,
+              "expected_decoded_bytes": null,
+              "expected_magic_match": true,
+              "expected_magics": [
+                "RH1"
+              ],
+              "status": "ok"
+            }
+          },
+          {
+            "bytes": 15825,
+            "codec": "RMB1_bitmask_randmulti",
+            "entropy_bits_per_byte": 7.986945571797,
+            "magic_ascii": "RMB1~...",
+            "magic_hex": "524d42317e11020a",
+            "name": "randmulti",
+            "offset": 213555,
+            "sha256": "4b10018eab64d8755da3def355881f51f2d450c9f19dd1457a6ec813cddd6f7c",
+            "validation": {
+              "blockers": [],
+              "expected_row_count": 83,
+              "mask_brotli_bytes": 4478,
+              "mask_raw_bytes": 6225,
+              "mask_raw_sha256": "f6c8dd6a347ab493a7d39688972a23ee9f6aed457fed8b2670d1ed252311dc6d",
+              "row_count": 83,
+              "selected_value_count": 13496,
+              "status": "ok",
+              "values_brotli_bytes": 11341,
+              "values_raw_bytes": 13496,
+              "values_raw_sha256": "41a9a86c3bd1d2554a9b847af7084270688aa3e0b03d35ebb8981b76ce56f6aa"
+            }
+          }
+        ],
+        "sha256": "cfdb1c0d0b09aa2557aa3e61053edf7403cc99969f2ef46cd4320fbd7f4b4ae4"
+      },
+      "side_info": {
+        "charged_bytes": 0,
+        "member_count": 0,
+        "members": [],
+        "rate_term": 0.0,
+        "requires_runtime_contract_review": false
+      },
+      "strict_zip": {
+        "blockers": [],
+        "compressed_payload_bytes": 229380,
+        "member_count": 1,
+        "members": [
+          {
+            "blockers": [],
+            "bytes": 229380,
+            "central_local_name_match": true,
+            "compressed_bytes": 229380,
+            "crc32": "bdf819b4",
+            "header_offset": 0,
+            "local_header_name": "x",
+            "method_id": 0,
+            "name": "x",
+            "occurrence": 1,
+            "sha256": "cfdb1c0d0b09aa2557aa3e61053edf7403cc99969f2ef46cd4320fbd7f4b4ae4"
+          }
+        ],
+        "valid": true,
+        "zip_overhead_bytes": 100
+      }
+    }
+  ],
+  "comparisons_to_frontier": [
+    {
+      "archive_delta_bytes": 6572,
+      "candidate_label": "PR85",
+      "changed_segments": [
+        {
+          "candidate_bytes": 159011,
+          "candidate_codec": "QMA9_range_mask",
+          "candidate_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+          "candidate_validation_status": "ok",
+          "delta_bytes": 6572,
+          "frontier_bytes": 152439,
+          "frontier_codec": "STBM1BR_lossless_mask_recode",
+          "frontier_sha256": "1b1ec60b64e284aae11e838dc3d9996bce00125df5712a8ba9c3e8f739c9d313",
+          "frontier_validation_status": "ok",
+          "same_sha256": false,
+          "segment": "mask"
+        }
+      ],
+      "frontier_label": "PR85_STBM1BR",
+      "primary_member_delta_bytes": 6572,
+      "rate_term_delta": 0.00437602503991891,
+      "side_info_delta_bytes": 0,
+      "transplant_estimates": [
+        {
+          "byte_positive": false,
+          "candidate_codec": "QMA9_range_mask",
+          "dispatch_advice": "do_not_dispatch_rate_only",
+          "estimated_archive_delta_bytes": 6572,
+          "estimated_rate_term_delta": 0.00437602503991891,
+          "frontier_codec": "STBM1BR_lossless_mask_recode",
+          "included_side_info_delta_bytes": 0,
+          "included_zip_overhead_delta_bytes": 0,
+          "requires_candidate_side_info": false,
+          "runtime_blockers": [
+            "mask_codec_runtime_or_parity_change_required"
+          ],
+          "segment": "mask",
+          "segment_delta_bytes": 6572
+        }
+      ],
+      "unchanged_segment_count": 10,
+      "zip_overhead_delta_bytes": 0
+    },
+    {
+      "archive_delta_bytes": -7352,
+      "candidate_label": "PR91_HPM1",
+      "changed_segments": [
+        {
+          "candidate_bytes": 145087,
+          "candidate_codec": "HPM1_hpac_mask",
+          "candidate_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+          "candidate_validation_status": "ok",
+          "delta_bytes": -7352,
+          "frontier_bytes": 152439,
+          "frontier_codec": "STBM1BR_lossless_mask_recode",
+          "frontier_sha256": "1b1ec60b64e284aae11e838dc3d9996bce00125df5712a8ba9c3e8f739c9d313",
+          "frontier_validation_status": "ok",
+          "same_sha256": false,
+          "segment": "mask"
+        }
+      ],
+      "frontier_label": "PR85_STBM1BR",
+      "primary_member_delta_bytes": -7352,
+      "rate_term_delta": -0.004895395023354203,
+      "side_info_delta_bytes": 0,
+      "transplant_estimates": [
+        {
+          "byte_positive": true,
+          "candidate_codec": "HPM1_hpac_mask",
+          "dispatch_advice": "byte_positive_but_requires_contract_gates",
+          "estimated_archive_delta_bytes": -7352,
+          "estimated_rate_term_delta": -0.004895395023354203,
+          "frontier_codec": "STBM1BR_lossless_mask_recode",
+          "included_side_info_delta_bytes": 0,
+          "included_zip_overhead_delta_bytes": 0,
+          "requires_candidate_side_info": false,
+          "runtime_blockers": [
+            "mask_codec_runtime_or_parity_change_required"
+          ],
+          "segment": "mask",
+          "segment_delta_bytes": -7352
+        }
+      ],
+      "unchanged_segment_count": 10,
+      "zip_overhead_delta_bytes": 0
+    },
+    {
+      "archive_delta_bytes": 6760,
+      "candidate_label": "PR92_RSB1",
+      "changed_segments": [
+        {
+          "candidate_bytes": 159011,
+          "candidate_codec": "QMA9_range_mask",
+          "candidate_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+          "candidate_validation_status": "ok",
+          "delta_bytes": 6572,
+          "frontier_bytes": 152439,
+          "frontier_codec": "STBM1BR_lossless_mask_recode",
+          "frontier_sha256": "1b1ec60b64e284aae11e838dc3d9996bce00125df5712a8ba9c3e8f739c9d313",
+          "frontier_validation_status": "ok",
+          "same_sha256": false,
+          "segment": "mask"
+        },
+        {
+          "candidate_bytes": 15825,
+          "candidate_codec": "RMB1_bitmask_randmulti",
+          "candidate_sha256": "4b10018eab64d8755da3def355881f51f2d450c9f19dd1457a6ec813cddd6f7c",
+          "candidate_validation_status": "ok",
+          "delta_bytes": -276,
+          "frontier_bytes": 16101,
+          "frontier_codec": "brotli_pr85_sidechannel",
+          "frontier_sha256": "c624372e60a0851c4c427dc333a60dcc5d6657ba8ed56951612e7c9d7be7629f",
+          "frontier_validation_status": "ok",
+          "same_sha256": false,
+          "segment": "randmulti"
+        }
+      ],
+      "frontier_label": "PR85_STBM1BR",
+      "primary_member_delta_bytes": 6296,
+      "rate_term_delta": 0.004501206523105879,
+      "side_info_delta_bytes": 386,
+      "transplant_estimates": [
+        {
+          "byte_positive": false,
+          "candidate_codec": "RMB1_bitmask_randmulti",
+          "dispatch_advice": "do_not_dispatch_rate_only",
+          "estimated_archive_delta_bytes": 188,
+          "estimated_rate_term_delta": 0.00012518148318696823,
+          "frontier_codec": "brotli_pr85_sidechannel",
+          "included_side_info_delta_bytes": 386,
+          "included_zip_overhead_delta_bytes": 78,
+          "requires_candidate_side_info": true,
+          "runtime_blockers": [],
+          "segment": "randmulti",
+          "segment_delta_bytes": -276
+        },
+        {
+          "byte_positive": false,
+          "candidate_codec": "QMA9_range_mask",
+          "dispatch_advice": "do_not_dispatch_rate_only",
+          "estimated_archive_delta_bytes": 6572,
+          "estimated_rate_term_delta": 0.00437602503991891,
+          "frontier_codec": "STBM1BR_lossless_mask_recode",
+          "included_side_info_delta_bytes": 0,
+          "included_zip_overhead_delta_bytes": 0,
+          "requires_candidate_side_info": false,
+          "runtime_blockers": [
+            "mask_codec_runtime_or_parity_change_required"
+          ],
+          "segment": "mask",
+          "segment_delta_bytes": 6572
+        }
+      ],
+      "unchanged_segment_count": 9,
+      "zip_overhead_delta_bytes": 78
+    },
+    {
+      "archive_delta_bytes": -276,
+      "candidate_label": "STBM1BR_RMB1",
+      "changed_segments": [
+        {
+          "candidate_bytes": 15825,
+          "candidate_codec": "RMB1_bitmask_randmulti",
+          "candidate_sha256": "4b10018eab64d8755da3def355881f51f2d450c9f19dd1457a6ec813cddd6f7c",
+          "candidate_validation_status": "ok",
+          "delta_bytes": -276,
+          "frontier_bytes": 16101,
+          "frontier_codec": "brotli_pr85_sidechannel",
+          "frontier_sha256": "c624372e60a0851c4c427dc333a60dcc5d6657ba8ed56951612e7c9d7be7629f",
+          "frontier_validation_status": "ok",
+          "same_sha256": false,
+          "segment": "randmulti"
+        }
+      ],
+      "frontier_label": "PR85_STBM1BR",
+      "primary_member_delta_bytes": -276,
+      "rate_term_delta": -0.0001837770710617193,
+      "side_info_delta_bytes": 0,
+      "transplant_estimates": [
+        {
+          "byte_positive": true,
+          "candidate_codec": "RMB1_bitmask_randmulti",
+          "dispatch_advice": "byte_positive_but_requires_contract_gates",
+          "estimated_archive_delta_bytes": -276,
+          "estimated_rate_term_delta": -0.0001837770710617193,
+          "frontier_codec": "brotli_pr85_sidechannel",
+          "included_side_info_delta_bytes": 0,
+          "included_zip_overhead_delta_bytes": 0,
+          "requires_candidate_side_info": false,
+          "runtime_blockers": [],
+          "segment": "randmulti",
+          "segment_delta_bytes": -276
+        }
+      ],
+      "unchanged_segment_count": 10,
+      "zip_overhead_delta_bytes": 0
+    }
+  ],
+  "evidence_grade": "byte_level_decision_support_only",
+  "frontier_label": "PR85_STBM1BR",
+  "notes": [
+    "byte-only decision support; no inflate, scorer, remote dispatch, promotion, or score claim",
+    "rate deltas use only the contest archive-byte term and must not be treated as exact score evidence",
+    "exact score truth remains archive.zip -> inflate.sh -> upstream/evaluate.py on CUDA"
+  ],
+  "promotion_eligible": false,
+  "ranked_actions": [
+    {
+      "advice": "byte_positive_but_requires_contract_gates",
+      "blocked_by": [
+        "mask_codec_runtime_or_parity_change_required"
+      ],
+      "candidate_label": "PR91_HPM1",
+      "estimated_archive_delta_bytes": -7352,
+      "estimated_rate_term_delta": -0.004895395023354203,
+      "frontier_label": "PR85_STBM1BR",
+      "surface": "mask"
+    },
+    {
+      "advice": "byte_positive_but_requires_contract_gates",
+      "blocked_by": [],
+      "candidate_label": "STBM1BR_RMB1",
+      "estimated_archive_delta_bytes": -276,
+      "estimated_rate_term_delta": -0.0001837770710617193,
+      "frontier_label": "PR85_STBM1BR",
+      "surface": "randmulti"
+    },
+    {
+      "advice": "do_not_dispatch_rate_only",
+      "blocked_by": [
+        "rate_only_not_byte_positive"
+      ],
+      "candidate_label": "PR92_RSB1",
+      "estimated_archive_delta_bytes": 188,
+      "estimated_rate_term_delta": 0.00012518148318696823,
+      "frontier_label": "PR85_STBM1BR",
+      "surface": "randmulti+side_info"
+    }
+  ],
+  "schema": "endgame_archive_decision_profile_v1",
+  "score_claim": false,
+  "tool": "experiments/profile_endgame_archive_decision.py"
+}

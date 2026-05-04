@@ -1,0 +1,695 @@
+{
+  "candidate_id": "f1_013_all004_f2block006",
+  "no_op_check": {
+    "archive_bytes_changed": true,
+    "archive_sha_changed": true,
+    "changed_value_count": 4290,
+    "non_renderer_members_preserved": true,
+    "renderer_changed": true,
+    "runtime_unpack_verified": true,
+    "transform_is_noop": false
+  },
+  "non_renderer_preservation": {
+    "all_non_renderer_members_preserved": true,
+    "members": {
+      "masks.mkv": {
+        "bytes": 223385,
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      "optimized_poses.qp1": {
+        "bytes": 1140,
+        "sha256": "d3f467b734f7d34e5608521b967bcb153e76fa3938b1e8f86b893f359c2d828b"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 432,
+        "sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a"
+      }
+    }
+  },
+  "output_archive": {
+    "byte_sufficient_for_sub314_if_components_unchanged": false,
+    "bytes": 275664,
+    "delta_bytes_vs_source_archive": -825,
+    "path": "/Users/adpena/Projects/pact/experiments/results/renderer_selfcompression_nextwave_worker_20260503/c101_triple_zero_screen/f1_013_all004_f2block006/archive.zip",
+    "score_if_components_unchanged_vs_c101": 0.3146027009029228,
+    "sha256": "07820b23a8665fc9ea5cad6589b220801866a96ae11ad5d73eb777e74ad88fde"
+  },
+  "payload": {
+    "action_dict_slice_bytes": 0,
+    "actions_slice_bytes": 255,
+    "bytes": 275564,
+    "mask_slice_bytes": 219472,
+    "member_name": "p",
+    "payload_format": "pr75_p3_preserve_slices",
+    "pose_slice_bytes": 896,
+    "record_count": null,
+    "renderer_slice_bytes": 54931,
+    "renderer_slice_sha256": "e20e80faa9213e2be5e2117bae0bed9983b0095d7a520cddf9f418e8148ab51b",
+    "sha256": "44f2a42b3c25706b2a881719d9294af3686d3caaf5a59d92620ae1a48c980df0",
+    "source_payload_format": "P3"
+  },
+  "promotion_eligible": false,
+  "remote_gpu_dispatch_performed": false,
+  "renderer_transform": {
+    "changed_tensor_count": 26,
+    "changed_tensors": [
+      {
+        "changed_fraction": 0.006058673469387755,
+        "changed_values": 19,
+        "name": "shared_trunk.stem_block.conv1.pw.weight",
+        "numel": 3136
+      },
+      {
+        "changed_fraction": 0.006696428571428571,
+        "changed_values": 21,
+        "name": "shared_trunk.stem_block.conv2.pw.weight",
+        "numel": 3136
+      },
+      {
+        "changed_fraction": 0.02734375,
+        "changed_values": 98,
+        "name": "shared_trunk.down_conv.pw.weight",
+        "numel": 3584
+      },
+      {
+        "changed_fraction": 0.004638671875,
+        "changed_values": 19,
+        "name": "shared_trunk.down_block.conv1.pw.weight",
+        "numel": 4096
+      },
+      {
+        "changed_fraction": 0.0146484375,
+        "changed_values": 60,
+        "name": "shared_trunk.down_block.conv2.pw.weight",
+        "numel": 4096
+      },
+      {
+        "changed_fraction": 0.04743303571428571,
+        "changed_values": 170,
+        "name": "shared_trunk.up.1.pw.weight",
+        "numel": 3584
+      },
+      {
+        "changed_fraction": 0.02614795918367347,
+        "changed_values": 164,
+        "name": "shared_trunk.fuse.pw.weight",
+        "numel": 6272
+      },
+      {
+        "changed_fraction": 0.01211734693877551,
+        "changed_values": 38,
+        "name": "shared_trunk.fuse_block.conv1.pw.weight",
+        "numel": 3136
+      },
+      {
+        "changed_fraction": 0.010841836734693877,
+        "changed_values": 34,
+        "name": "shared_trunk.fuse_block.conv2.pw.weight",
+        "numel": 3136
+      },
+      {
+        "changed_fraction": 0.09325396825396826,
+        "changed_values": 47,
+        "name": "frame1_head.block1.conv1.dw.weight",
+        "numel": 504
+      },
+      {
+        "changed_fraction": 0.17665816326530612,
+        "changed_values": 554,
+        "name": "frame1_head.block1.conv1.pw.weight",
+        "numel": 3136
+      },
+      {
+        "changed_fraction": 0.07539682539682539,
+        "changed_values": 38,
+        "name": "frame1_head.block1.conv2.dw.weight",
+        "numel": 504
+      },
+      {
+        "changed_fraction": 0.12531887755102042,
+        "changed_values": 393,
+        "name": "frame1_head.block1.conv2.pw.weight",
+        "numel": 3136
+      },
+      {
+        "changed_fraction": 0.08928571428571429,
+        "changed_values": 45,
+        "name": "frame1_head.block2.conv1.dw.weight",
+        "numel": 504
+      },
+      {
+        "changed_fraction": 0.1434948979591837,
+        "changed_values": 450,
+        "name": "frame1_head.block2.conv1.pw.weight",
+        "numel": 3136
+      },
+      {
+        "changed_fraction": 0.07738095238095238,
+        "changed_values": 39,
+        "name": "frame1_head.block2.conv2.dw.weight",
+        "numel": 504
+      },
+      {
+        "changed_fraction": 0.1364795918367347,
+        "changed_values": 428,
+        "name": "frame1_head.block2.conv2.pw.weight",
+        "numel": 3136
+      },
+      {
+        "changed_fraction": 0.07936507936507936,
+        "changed_values": 40,
+        "name": "frame1_head.pre.dw.weight",
+        "numel": 504
+      },
+      {
+        "changed_fraction": 0.14457417582417584,
+        "changed_values": 421,
+        "name": "frame1_head.pre.pw.weight",
+        "numel": 2912
+      },
+      {
+        "changed_fraction": 0.017538265306122448,
+        "changed_values": 55,
+        "name": "frame2_head.block1.conv1.pw.weight",
+        "numel": 3136
+      },
+      {
+        "changed_fraction": 0.006058673469387755,
+        "changed_values": 19,
+        "name": "frame2_head.block1.conv2.pw.weight",
+        "numel": 3136
+      },
+      {
+        "changed_fraction": 0.007936507936507936,
+        "changed_values": 4,
+        "name": "frame2_head.block2.conv1.dw.weight",
+        "numel": 504
+      },
+      {
+        "changed_fraction": 0.109375,
+        "changed_values": 343,
+        "name": "frame2_head.block2.conv1.pw.weight",
+        "numel": 3136
+      },
+      {
+        "changed_fraction": 0.011904761904761904,
+        "changed_values": 6,
+        "name": "frame2_head.block2.conv2.dw.weight",
+        "numel": 504
+      },
+      {
+        "changed_fraction": 0.12691326530612246,
+        "changed_values": 398,
+        "name": "frame2_head.block2.conv2.pw.weight",
+        "numel": 3136
+      },
+      {
+        "changed_fraction": 0.13289835164835165,
+        "changed_values": 387,
+        "name": "frame2_head.pre.pw.weight",
+        "numel": 2912
+      }
+    ],
+    "changed_value_count": 4290,
+    "output_block_size": 32,
+    "output_bytes": 59288,
+    "output_sha256": "426c3b3d63d9083c6069c175166534624a187f46ec527e57f28693b6965005fb",
+    "source_block_size": 32,
+    "source_bytes": 59288,
+    "source_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+    "step_metas": [
+      {
+        "changed_tensor_count": 10,
+        "changed_tensors": [
+          {
+            "max_abs": 0.381591796875,
+            "name": "frame1_head.block1.conv1.dw.weight",
+            "numel": 504,
+            "zeroed_fraction": 0.1349206349206349,
+            "zeroed_values": 68
+          },
+          {
+            "max_abs": 0.216064453125,
+            "name": "frame1_head.block1.conv1.pw.weight",
+            "numel": 3136,
+            "zeroed_fraction": 0.22544642857142858,
+            "zeroed_values": 707
+          },
+          {
+            "max_abs": 0.3680419921875,
+            "name": "frame1_head.block1.conv2.dw.weight",
+            "numel": 504,
+            "zeroed_fraction": 0.1130952380952381,
+            "zeroed_values": 57
+          },
+          {
+            "max_abs": 0.19189453125,
+            "name": "frame1_head.block1.conv2.pw.weight",
+            "numel": 3136,
+            "zeroed_fraction": 0.17283163265306123,
+            "zeroed_values": 542
+          },
+          {
+            "max_abs": 0.387451171875,
+            "name": "frame1_head.block2.conv1.dw.weight",
+            "numel": 504,
+            "zeroed_fraction": 0.1349206349206349,
+            "zeroed_values": 68
+          },
+          {
+            "max_abs": 0.198486328125,
+            "name": "frame1_head.block2.conv1.pw.weight",
+            "numel": 3136,
+            "zeroed_fraction": 0.1910076530612245,
+            "zeroed_values": 599
+          },
+          {
+            "max_abs": 0.371337890625,
+            "name": "frame1_head.block2.conv2.dw.weight",
+            "numel": 504,
+            "zeroed_fraction": 0.11904761904761904,
+            "zeroed_values": 60
+          },
+          {
+            "max_abs": 0.1981201171875,
+            "name": "frame1_head.block2.conv2.pw.weight",
+            "numel": 3136,
+            "zeroed_fraction": 0.18207908163265307,
+            "zeroed_values": 571
+          },
+          {
+            "max_abs": 0.374267578125,
+            "name": "frame1_head.pre.dw.weight",
+            "numel": 504,
+            "zeroed_fraction": 0.10515873015873016,
+            "zeroed_values": 53
+          },
+          {
+            "max_abs": 0.1962890625,
+            "name": "frame1_head.pre.pw.weight",
+            "numel": 2912,
+            "zeroed_fraction": 0.1933379120879121,
+            "zeroed_values": 563
+          }
+        ],
+        "eligible_value_count": 17976,
+        "prefix": "frame1_head",
+        "threshold": 0.13,
+        "threshold_fraction_of_tensor_max_abs": 0.13,
+        "transform_family": "qzs3_same_block_fp4_threshold_zero",
+        "zeroed_fraction_of_eligible": 0.1829105473965287,
+        "zeroed_value_count": 3288
+      },
+      {
+        "changed_tensor_count": 40,
+        "changed_tensors": [
+          {
+            "max_abs": 0.64453125,
+            "name": "shared_trunk.stem_conv.dw.weight",
+            "numel": 72,
+            "zeroed_fraction": 0.041666666666666664,
+            "zeroed_values": 3
+          },
+          {
+            "max_abs": 0.736083984375,
+            "name": "shared_trunk.stem_conv.pw.weight",
+            "numel": 448,
+            "zeroed_fraction": 0.08035714285714286,
+            "zeroed_values": 36
+          },
+          {
+            "max_abs": 0.550048828125,
+            "name": "shared_trunk.stem_block.conv1.dw.weight",
+            "numel": 504,
+            "zeroed_fraction": 0.057539682539682536,
+            "zeroed_values": 29
+          },
+          {
+            "max_abs": 0.51708984375,
+            "name": "shared_trunk.stem_block.conv1.pw.weight",
+            "numel": 3136,
+            "zeroed_fraction": 0.08545918367346939,
+            "zeroed_values": 268
+          },
+          {
+            "max_abs": 0.6123046875,
+            "name": "shared_trunk.stem_block.conv2.dw.weight",
+            "numel": 504,
+            "zeroed_fraction": 0.0496031746031746,
+            "zeroed_values": 25
+          },
+          {
+            "max_abs": 0.51123046875,
+            "name": "shared_trunk.stem_block.conv2.pw.weight",
+            "numel": 3136,
+            "zeroed_fraction": 0.08450255102040816,
+            "zeroed_values": 265
+          },
+          {
+            "max_abs": 0.55810546875,
+            "name": "shared_trunk.down_conv.dw.weight",
+            "numel": 504,
+            "zeroed_fraction": 0.04365079365079365,
+            "zeroed_values": 22
+          },
+          {
+            "max_abs": 0.608642578125,
+            "name": "shared_trunk.down_conv.pw.weight",
+            "numel": 3584,
+            "zeroed_fraction": 0.103515625,
+            "zeroed_values": 371
+          },
+          {
+            "max_abs": 0.595458984375,
+            "name": "shared_trunk.down_block.conv1.dw.weight",
+            "numel": 576,
+            "zeroed_fraction": 0.04861111111111111,
+            "zeroed_values": 28
+          },
+          {
+            "max_abs": 0.513427734375,
+            "name": "shared_trunk.down_block.conv1.pw.weight",
+            "numel": 4096,
+            "zeroed_fraction": 0.082275390625,
+            "zeroed_values": 337
+          },
+          {
+            "max_abs": 0.687744140625,
+            "name": "shared_trunk.down_block.conv2.dw.weight",
+            "numel": 576,
+            "zeroed_fraction": 0.0625,
+            "zeroed_values": 36
+          },
+          {
+            "max_abs": 0.54931640625,
+            "name": "shared_trunk.down_block.conv2.pw.weight",
+            "numel": 4096,
+            "zeroed_fraction": 0.09814453125,
+            "zeroed_values": 402
+          },
+          {
+            "max_abs": 0.5478515625,
+            "name": "shared_trunk.up.1.dw.weight",
+            "numel": 576,
+            "zeroed_fraction": 0.034722222222222224,
+            "zeroed_values": 20
+          },
+          {
+            "max_abs": 0.640869140625,
+            "name": "shared_trunk.up.1.pw.weight",
+            "numel": 3584,
+            "zeroed_fraction": 0.12248883928571429,
+            "zeroed_values": 439
+          },
+          {
+            "max_abs": 0.6005859375,
+            "name": "shared_trunk.fuse.dw.weight",
+            "numel": 1008,
+            "zeroed_fraction": 0.041666666666666664,
+            "zeroed_values": 42
+          },
+          {
+            "max_abs": 0.5302734375,
+            "name": "shared_trunk.fuse.pw.weight",
+            "numel": 6272,
+            "zeroed_fraction": 0.11304209183673469,
+            "zeroed_values": 709
+          },
+          {
+            "max_abs": 0.57275390625,
+            "name": "shared_trunk.fuse_block.conv1.dw.weight",
+            "numel": 504,
+            "zeroed_fraction": 0.03968253968253968,
+            "zeroed_values": 20
+          },
+          {
+            "max_abs": 0.554443359375,
+            "name": "shared_trunk.fuse_block.conv1.pw.weight",
+            "numel": 3136,
+            "zeroed_fraction": 0.08258928571428571,
+            "zeroed_values": 259
+          },
+          {
+            "max_abs": 0.586669921875,
+            "name": "shared_trunk.fuse_block.conv2.dw.weight",
+            "numel": 504,
+            "zeroed_fraction": 0.031746031746031744,
+            "zeroed_values": 16
+          },
+          {
+            "max_abs": 0.538330078125,
+            "name": "shared_trunk.fuse_block.conv2.pw.weight",
+            "numel": 3136,
+            "zeroed_fraction": 0.08577806122448979,
+            "zeroed_values": 269
+          },
+          {
+            "max_abs": 0.381591796875,
+            "name": "frame1_head.block1.conv1.dw.weight",
+            "numel": 504,
+            "zeroed_fraction": 0.1349206349206349,
+            "zeroed_values": 68
+          },
+          {
+            "max_abs": 0.216064453125,
+            "name": "frame1_head.block1.conv1.pw.weight",
+            "numel": 3136,
+            "zeroed_fraction": 0.22544642857142858,
+            "zeroed_values": 707
+          },
+          {
+            "max_abs": 0.3680419921875,
+            "name": "frame1_head.block1.conv2.dw.weight",
+            "numel": 504,
+            "zeroed_fraction": 0.1130952380952381,
+            "zeroed_values": 57
+          },
+          {
+            "max_abs": 0.19189453125,
+            "name": "frame1_head.block1.conv2.pw.weight",
+            "numel": 3136,
+            "zeroed_fraction": 0.17283163265306123,
+            "zeroed_values": 542
+          },
+          {
+            "max_abs": 0.387451171875,
+            "name": "frame1_head.block2.conv1.dw.weight",
+            "numel": 504,
+            "zeroed_fraction": 0.1349206349206349,
+            "zeroed_values": 68
+          },
+          {
+            "max_abs": 0.198486328125,
+            "name": "frame1_head.block2.conv1.pw.weight",
+            "numel": 3136,
+            "zeroed_fraction": 0.1910076530612245,
+            "zeroed_values": 599
+          },
+          {
+            "max_abs": 0.371337890625,
+            "name": "frame1_head.block2.conv2.dw.weight",
+            "numel": 504,
+            "zeroed_fraction": 0.11904761904761904,
+            "zeroed_values": 60
+          },
+          {
+            "max_abs": 0.1981201171875,
+            "name": "frame1_head.block2.conv2.pw.weight",
+            "numel": 3136,
+            "zeroed_fraction": 0.18207908163265307,
+            "zeroed_values": 571
+          },
+          {
+            "max_abs": 0.374267578125,
+            "name": "frame1_head.pre.dw.weight",
+            "numel": 504,
+            "zeroed_fraction": 0.10515873015873016,
+            "zeroed_values": 53
+          },
+          {
+            "max_abs": 0.1962890625,
+            "name": "frame1_head.pre.pw.weight",
+            "numel": 2912,
+            "zeroed_fraction": 0.1933379120879121,
+            "zeroed_values": 563
+          },
+          {
+            "max_abs": 0.60791015625,
+            "name": "frame2_head.block1.conv1.dw.weight",
+            "numel": 504,
+            "zeroed_fraction": 0.05555555555555555,
+            "zeroed_values": 28
+          },
+          {
+            "max_abs": 0.59765625,
+            "name": "frame2_head.block1.conv1.pw.weight",
+            "numel": 3136,
+            "zeroed_fraction": 0.09215561224489796,
+            "zeroed_values": 289
+          },
+          {
+            "max_abs": 0.5361328125,
+            "name": "frame2_head.block1.conv2.dw.weight",
+            "numel": 504,
+            "zeroed_fraction": 0.0496031746031746,
+            "zeroed_values": 25
+          },
+          {
+            "max_abs": 0.509765625,
+            "name": "frame2_head.block1.conv2.pw.weight",
+            "numel": 3136,
+            "zeroed_fraction": 0.08418367346938775,
+            "zeroed_values": 264
+          },
+          {
+            "max_abs": 0.569091796875,
+            "name": "frame2_head.block2.conv1.dw.weight",
+            "numel": 504,
+            "zeroed_fraction": 0.031746031746031744,
+            "zeroed_values": 16
+          },
+          {
+            "max_abs": 0.564697265625,
+            "name": "frame2_head.block2.conv1.pw.weight",
+            "numel": 3136,
+            "zeroed_fraction": 0.09980867346938775,
+            "zeroed_values": 313
+          },
+          {
+            "max_abs": 0.552978515625,
+            "name": "frame2_head.block2.conv2.dw.weight",
+            "numel": 504,
+            "zeroed_fraction": 0.04563492063492063,
+            "zeroed_values": 23
+          },
+          {
+            "max_abs": 0.536865234375,
+            "name": "frame2_head.block2.conv2.pw.weight",
+            "numel": 3136,
+            "zeroed_fraction": 0.09056122448979592,
+            "zeroed_values": 284
+          },
+          {
+            "max_abs": 0.6328125,
+            "name": "frame2_head.pre.dw.weight",
+            "numel": 504,
+            "zeroed_fraction": 0.051587301587301584,
+            "zeroed_values": 26
+          },
+          {
+            "max_abs": 0.83056640625,
+            "name": "frame2_head.pre.pw.weight",
+            "numel": 2912,
+            "zeroed_fraction": 0.20776098901098902,
+            "zeroed_values": 605
+          }
+        ],
+        "eligible_value_count": 75904,
+        "prefix": "all_fp4",
+        "threshold": 0.04,
+        "threshold_fraction_of_tensor_max_abs": 0.04,
+        "transform_family": "qzs3_same_block_fp4_threshold_zero",
+        "zeroed_fraction_of_eligible": 0.11536941399662731,
+        "zeroed_value_count": 8757
+      },
+      {
+        "changed_tensor_count": 4,
+        "changed_tensors": [
+          {
+            "max_abs": 0.569091796875,
+            "name": "frame2_head.block2.conv1.dw.weight",
+            "numel": 504,
+            "zeroed_fraction": 0.03968253968253968,
+            "zeroed_values": 20
+          },
+          {
+            "max_abs": 0.564697265625,
+            "name": "frame2_head.block2.conv1.pw.weight",
+            "numel": 3136,
+            "zeroed_fraction": 0.1989795918367347,
+            "zeroed_values": 624
+          },
+          {
+            "max_abs": 0.552978515625,
+            "name": "frame2_head.block2.conv2.dw.weight",
+            "numel": 504,
+            "zeroed_fraction": 0.057539682539682536,
+            "zeroed_values": 29
+          },
+          {
+            "max_abs": 0.536865234375,
+            "name": "frame2_head.block2.conv2.pw.weight",
+            "numel": 3136,
+            "zeroed_fraction": 0.20471938775510204,
+            "zeroed_values": 642
+          }
+        ],
+        "eligible_value_count": 7280,
+        "prefix": "frame2_head.block2",
+        "threshold": 0.06,
+        "threshold_fraction_of_tensor_max_abs": 0.06,
+        "transform_family": "qzs3_same_block_fp4_threshold_zero",
+        "zeroed_fraction_of_eligible": 0.18063186813186813,
+        "zeroed_value_count": 1315
+      }
+    ],
+    "transforms": [
+      {
+        "prefix": "frame1_head",
+        "threshold": 0.13
+      },
+      {
+        "prefix": "all_fp4",
+        "threshold": 0.04
+      },
+      {
+        "prefix": "frame2_head.block2",
+        "threshold": 0.06
+      }
+    ],
+    "wire_format": "QZS3"
+  },
+  "runtime_contract": {
+    "byte_closed": true,
+    "pose_safety_preflight_required_before_dispatch": true,
+    "renderer_only_transplant": true,
+    "runtime_unpack_summary": {
+      "members": [
+        {
+          "bytes": 59288,
+          "name": "renderer.bin",
+          "sha256": "426c3b3d63d9083c6069c175166534624a187f46ec527e57f28693b6965005fb"
+        },
+        {
+          "bytes": 223385,
+          "name": "masks.mkv",
+          "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        {
+          "bytes": 1140,
+          "name": "optimized_poses.qp1",
+          "sha256": "d3f467b734f7d34e5608521b967bcb153e76fa3938b1e8f86b893f359c2d828b"
+        },
+        {
+          "bytes": 432,
+          "name": "seg_tile_actions.bin",
+          "sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a"
+        }
+      ],
+      "payload_bytes": 275564,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p3",
+      "schema": "renderer_payload_pr64_len_table_v1",
+      "source_archive_sha256": null
+    },
+    "runtime_unpack_verified": true,
+    "single_payload_member": true
+  },
+  "schema": "c101_combined_zero_renderer_shrink_screen_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 276489,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c091_native_pose_manifold_top128_s025_t4_20260503T122013Z/archive.zip",
+    "sha256": "1c9be2dd14b2607b9a86ecc071d6a37842896d18d62449885dac58d55afbbd64"
+  },
+  "source_evidence": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c091_native_pose_manifold_top128_s025_t4_20260503T122013Z/contest_auth_eval.adjudicated.json"
+}

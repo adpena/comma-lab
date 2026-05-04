@@ -1,0 +1,292 @@
+{
+  "auth_eval_required": true,
+  "base_archive": {
+    "bytes": 296478,
+    "members": [
+      {
+        "compressed_size_bytes": 6622,
+        "crc32": "85a9453a",
+        "name": "optimized_poses.bin",
+        "sha256": "aacbcd572abe7936c1dd438243c56a1d06bb9bbe89e90ce3eff4a23f6477867a",
+        "size_bytes": 7200
+      },
+      {
+        "compressed_size_bytes": 267399,
+        "crc32": "1827a837",
+        "name": "renderer.bin",
+        "sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529",
+        "size_bytes": 296776
+      },
+      {
+        "compressed_size_bytes": 22127,
+        "crc32": "13bed9e0",
+        "name": "masks.nrv",
+        "sha256": "b3258dad7550f5e7a496f4834ed9990a3e9900a192c9045dca951e751412a4de",
+        "size_bytes": 23594
+      }
+    ],
+    "path": "/Users/adpena/Projects/pact/experiments/results/lane_12_nerv_20260430_codex_jsonfix40/archive_lane_12_nerv.zip",
+    "runtime_member_contract": {
+      "base_archive_layout": "expanded_members",
+      "source_zip_inventory": [
+        {
+          "compressed_size_bytes": 6622,
+          "crc32": "85a9453a",
+          "name": "optimized_poses.bin",
+          "sha256": "aacbcd572abe7936c1dd438243c56a1d06bb9bbe89e90ce3eff4a23f6477867a",
+          "size_bytes": 7200
+        },
+        {
+          "compressed_size_bytes": 267399,
+          "crc32": "1827a837",
+          "name": "renderer.bin",
+          "sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529",
+          "size_bytes": 296776
+        },
+        {
+          "compressed_size_bytes": 22127,
+          "crc32": "13bed9e0",
+          "name": "masks.nrv",
+          "sha256": "b3258dad7550f5e7a496f4834ed9990a3e9900a192c9045dca951e751412a4de",
+          "size_bytes": 23594
+        }
+      ],
+      "zip_payload_members": []
+    },
+    "sha256": "864549cc648f0b3a023076c11812ccd0f10b1d013ed3fd6bb24d20bbcde85c97"
+  },
+  "cdo1_overlay": {
+    "archive_member": "masks.cdo1.xz",
+    "compressed_bytes": 5108,
+    "compressed_sha256": "66295089e474adb7f4ce97d2433f4673c952e2b1edbdabf765215df5e42fe26c",
+    "compressor": "lzma_xz",
+    "pair_index_basis": "video_frame_pair_index",
+    "payload_header": {
+      "base_mask_tensor_sha256": "af2a6e647dce7509329e7a6ea2bad439274a041364afe78c99c8118097ab44db",
+      "pair_index_basis": "video_frame_pair_index",
+      "reconstructed_mask_u8_sha256": "be81c1d6fa0cc5bd263376462ceaf76a5a323967bcaac495648e844b9597ac6b",
+      "run_count": 1955,
+      "schema": "c067_decoded_delta_overlay_payload_v1",
+      "selected_pair_indices": [
+        54,
+        70,
+        74,
+        75,
+        79,
+        84,
+        88,
+        97,
+        101,
+        106,
+        110,
+        129,
+        133,
+        152,
+        158,
+        159,
+        178,
+        358,
+        527,
+        567,
+        595,
+        596,
+        598,
+        599
+      ],
+      "selected_pixel_count": 20098,
+      "shape": [
+        1200,
+        384,
+        512
+      ]
+    },
+    "raw_bytes": 18678,
+    "raw_sha256": "fcc89f6a1779d4c31c0756ef7024f6b508b64602aca5255e2dfd992d9f572b7d",
+    "selected_pair_indices": [
+      54,
+      70,
+      74,
+      75,
+      79,
+      84,
+      88,
+      97,
+      101,
+      106,
+      110,
+      129,
+      133,
+      152,
+      158,
+      159,
+      178,
+      358,
+      527,
+      567,
+      595,
+      596,
+      598,
+      599
+    ],
+    "source": {
+      "pair_index_basis": "video_frame_pair_index",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane12_geometry_gate_repair_candidate_20260503/lane12_geometry_gate_budget_16384b/masks.cdo1",
+      "payload_bytes": 18678,
+      "payload_header": {
+        "base_mask_tensor_sha256": "af2a6e647dce7509329e7a6ea2bad439274a041364afe78c99c8118097ab44db",
+        "pair_index_basis": "video_frame_pair_index",
+        "reconstructed_mask_u8_sha256": "be81c1d6fa0cc5bd263376462ceaf76a5a323967bcaac495648e844b9597ac6b",
+        "run_count": 1955,
+        "schema": "c067_decoded_delta_overlay_payload_v1",
+        "selected_pair_indices": [
+          54,
+          70,
+          74,
+          75,
+          79,
+          84,
+          88,
+          97,
+          101,
+          106,
+          110,
+          129,
+          133,
+          152,
+          158,
+          159,
+          178,
+          358,
+          527,
+          567,
+          595,
+          596,
+          598,
+          599
+        ],
+        "selected_pixel_count": 20098,
+        "shape": [
+          1200,
+          384,
+          512
+        ]
+      },
+      "payload_sha256": "fcc89f6a1779d4c31c0756ef7024f6b508b64602aca5255e2dfd992d9f572b7d",
+      "selected_pair_indices": [
+        54,
+        70,
+        74,
+        75,
+        79,
+        84,
+        88,
+        97,
+        101,
+        106,
+        110,
+        129,
+        133,
+        152,
+        158,
+        159,
+        178,
+        358,
+        527,
+        567,
+        595,
+        596,
+        598,
+        599
+      ],
+      "source": "payload"
+    }
+  },
+  "output_archive": {
+    "bytes": 301693,
+    "delta_bytes_vs_base_archive": 5215,
+    "inventory": [
+      {
+        "compress_type": 8,
+        "compressed_size_bytes": 267399,
+        "crc32": "1827a837",
+        "date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "name": "renderer.bin",
+        "permissions_octal": "0o644",
+        "sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529",
+        "size_bytes": 296776
+      },
+      {
+        "compress_type": 8,
+        "compressed_size_bytes": 22127,
+        "crc32": "13bed9e0",
+        "date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "name": "masks.nrv",
+        "permissions_octal": "0o644",
+        "sha256": "b3258dad7550f5e7a496f4834ed9990a3e9900a192c9045dca951e751412a4de",
+        "size_bytes": 23594
+      },
+      {
+        "compress_type": 8,
+        "compressed_size_bytes": 5113,
+        "crc32": "ef035ece",
+        "date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "name": "masks.cdo1.xz",
+        "permissions_octal": "0o644",
+        "sha256": "66295089e474adb7f4ce97d2433f4673c952e2b1edbdabf765215df5e42fe26c",
+        "size_bytes": 5108
+      },
+      {
+        "compress_type": 8,
+        "compressed_size_bytes": 6622,
+        "crc32": "85a9453a",
+        "date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "name": "optimized_poses.bin",
+        "permissions_octal": "0o644",
+        "sha256": "aacbcd572abe7936c1dd438243c56a1d06bb9bbe89e90ce3eff4a23f6477867a",
+        "size_bytes": 7200
+      }
+    ],
+    "packaging": {
+      "packed_output": false
+    },
+    "path": "/Users/adpena/Projects/pact/experiments/results/lane12_geometry_gate_repair_candidate_20260503/lane12_geometry_gate_budget_16384b/archive.zip",
+    "sha256": "b4bc5a571952a595c8410f1ccb609ec0dacb511b4bae80cd1f448bc934503bc2"
+  },
+  "producer": "experiments/build_c067_decoded_delta_overlay_candidate.py",
+  "promotion_eligible": false,
+  "runtime_contract": {
+    "base_mask_sha_checked_by_cdo1_header": true,
+    "exact_score_path": "archive.zip -> inflate.sh -> upstream/evaluate.py",
+    "reconstructed_mask_sha_checked_by_cdo1_header": true
+  },
+  "schema": "c067_decoded_delta_overlay_candidate_v1",
+  "score_claim": false
+}

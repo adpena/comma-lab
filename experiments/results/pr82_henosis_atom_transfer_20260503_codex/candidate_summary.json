@@ -1,0 +1,1058 @@
+{
+  "adversarial_profile": {
+    "dispatch_policy": {
+      "lane_claim_required_before_any_future_exact_eval": true,
+      "no_remote_dispatch": true,
+      "recommendation": "do_not_dispatch_without_raw_delta_and_component_trace"
+    },
+    "known_rate_problem": {
+      "pr82_archive_bytes": 296789,
+      "source_archive_bytes": 277321,
+      "static_delta_bytes": 19468,
+      "static_rate_score_delta": 0.012962942099382433
+    },
+    "nontransferable_or_blocked_atoms": [
+      {
+        "atom_family": "randmulti",
+        "compatible_group_count": 35,
+        "compatible_representation": "QPS1/NM2 dense generic subset",
+        "nonzero_pair_count": 600,
+        "qrm1_native_group_count": 72,
+        "qrm1_native_local_parity": true,
+        "reason": "PR82 replay declares 72 headerless randmulti groups; QRM1 now represents all groups exactly at sparse row level, but robust_current apply_qzs3_postprocess.py still needs the QRM1 decoder and f2 special-branch application before dispatch",
+        "replay_only_group_count": 37,
+        "runtime_compatible": "QPS1/NM2 partial_generic_subset_only; QPS1/QRM1 local_contract_ready_not_robust_runtime_ready"
+      },
+      {
+        "atom_family": "P1D1_dim2_pose",
+        "reason": "PR79/S2 QP1 carries velocity column only; non-velocity transfer needs a separate reviewed PVR1/QP2 archive contract",
+        "runtime_compatible": false
+      }
+    ]
+  },
+  "candidate_count": 10,
+  "evidence_grade": "empirical_local_archive_build_and_atom_accounting",
+  "include_streams": [
+    "post",
+    "shift",
+    "frac",
+    "frac2",
+    "frac3",
+    "bias",
+    "region"
+  ],
+  "no_remote_dispatch": true,
+  "pair_activity_top16": [
+    {
+      "active_atom_count": 74,
+      "by_stream": {
+        "bias": 1,
+        "frac": 0,
+        "frac2": 1,
+        "frac3": 1,
+        "post": 4,
+        "randmulti": 65,
+        "region": 1,
+        "shift": 1
+      },
+      "pair_index": 164
+    },
+    {
+      "active_atom_count": 69,
+      "by_stream": {
+        "bias": 1,
+        "frac": 0,
+        "frac2": 0,
+        "frac3": 0,
+        "post": 3,
+        "randmulti": 64,
+        "region": 1,
+        "shift": 0
+      },
+      "pair_index": 60
+    },
+    {
+      "active_atom_count": 69,
+      "by_stream": {
+        "bias": 1,
+        "frac": 1,
+        "frac2": 1,
+        "frac3": 1,
+        "post": 3,
+        "randmulti": 61,
+        "region": 1,
+        "shift": 0
+      },
+      "pair_index": 105
+    },
+    {
+      "active_atom_count": 68,
+      "by_stream": {
+        "bias": 1,
+        "frac": 0,
+        "frac2": 0,
+        "frac3": 0,
+        "post": 4,
+        "randmulti": 62,
+        "region": 0,
+        "shift": 1
+      },
+      "pair_index": 418
+    },
+    {
+      "active_atom_count": 66,
+      "by_stream": {
+        "bias": 1,
+        "frac": 1,
+        "frac2": 1,
+        "frac3": 1,
+        "post": 3,
+        "randmulti": 57,
+        "region": 1,
+        "shift": 1
+      },
+      "pair_index": 67
+    },
+    {
+      "active_atom_count": 66,
+      "by_stream": {
+        "bias": 1,
+        "frac": 0,
+        "frac2": 0,
+        "frac3": 0,
+        "post": 4,
+        "randmulti": 59,
+        "region": 1,
+        "shift": 1
+      },
+      "pair_index": 423
+    },
+    {
+      "active_atom_count": 66,
+      "by_stream": {
+        "bias": 1,
+        "frac": 0,
+        "frac2": 1,
+        "frac3": 1,
+        "post": 4,
+        "randmulti": 57,
+        "region": 1,
+        "shift": 1
+      },
+      "pair_index": 435
+    },
+    {
+      "active_atom_count": 65,
+      "by_stream": {
+        "bias": 0,
+        "frac": 0,
+        "frac2": 0,
+        "frac3": 0,
+        "post": 3,
+        "randmulti": 60,
+        "region": 1,
+        "shift": 1
+      },
+      "pair_index": 63
+    },
+    {
+      "active_atom_count": 64,
+      "by_stream": {
+        "bias": 1,
+        "frac": 0,
+        "frac2": 1,
+        "frac3": 0,
+        "post": 3,
+        "randmulti": 59,
+        "region": 0,
+        "shift": 0
+      },
+      "pair_index": 64
+    },
+    {
+      "active_atom_count": 64,
+      "by_stream": {
+        "bias": 1,
+        "frac": 0,
+        "frac2": 1,
+        "frac3": 1,
+        "post": 4,
+        "randmulti": 56,
+        "region": 1,
+        "shift": 0
+      },
+      "pair_index": 99
+    },
+    {
+      "active_atom_count": 64,
+      "by_stream": {
+        "bias": 1,
+        "frac": 0,
+        "frac2": 1,
+        "frac3": 1,
+        "post": 3,
+        "randmulti": 57,
+        "region": 1,
+        "shift": 0
+      },
+      "pair_index": 420
+    },
+    {
+      "active_atom_count": 63,
+      "by_stream": {
+        "bias": 1,
+        "frac": 1,
+        "frac2": 0,
+        "frac3": 1,
+        "post": 3,
+        "randmulti": 56,
+        "region": 1,
+        "shift": 0
+      },
+      "pair_index": 108
+    },
+    {
+      "active_atom_count": 62,
+      "by_stream": {
+        "bias": 1,
+        "frac": 0,
+        "frac2": 1,
+        "frac3": 1,
+        "post": 2,
+        "randmulti": 56,
+        "region": 1,
+        "shift": 0
+      },
+      "pair_index": 119
+    },
+    {
+      "active_atom_count": 62,
+      "by_stream": {
+        "bias": 1,
+        "frac": 1,
+        "frac2": 0,
+        "frac3": 1,
+        "post": 4,
+        "randmulti": 54,
+        "region": 1,
+        "shift": 0
+      },
+      "pair_index": 310
+    },
+    {
+      "active_atom_count": 62,
+      "by_stream": {
+        "bias": 1,
+        "frac": 1,
+        "frac2": 0,
+        "frac3": 0,
+        "post": 4,
+        "randmulti": 54,
+        "region": 1,
+        "shift": 1
+      },
+      "pair_index": 426
+    },
+    {
+      "active_atom_count": 62,
+      "by_stream": {
+        "bias": 1,
+        "frac": 0,
+        "frac2": 1,
+        "frac3": 0,
+        "post": 4,
+        "randmulti": 54,
+        "region": 1,
+        "shift": 1
+      },
+      "pair_index": 441
+    }
+  ],
+  "pose_atom_top16": [
+    {
+      "abs_delta_q": 44,
+      "delta_q": 44,
+      "dimension": 0,
+      "pair_index": 54
+    },
+    {
+      "abs_delta_q": 31,
+      "delta_q": 31,
+      "dimension": 0,
+      "pair_index": 452
+    },
+    {
+      "abs_delta_q": 30,
+      "delta_q": -30,
+      "dimension": 0,
+      "pair_index": 21
+    },
+    {
+      "abs_delta_q": 30,
+      "delta_q": 30,
+      "dimension": 0,
+      "pair_index": 44
+    },
+    {
+      "abs_delta_q": 30,
+      "delta_q": 30,
+      "dimension": 0,
+      "pair_index": 90
+    },
+    {
+      "abs_delta_q": 30,
+      "delta_q": 30,
+      "dimension": 0,
+      "pair_index": 107
+    },
+    {
+      "abs_delta_q": 30,
+      "delta_q": 30,
+      "dimension": 0,
+      "pair_index": 316
+    },
+    {
+      "abs_delta_q": 30,
+      "delta_q": 30,
+      "dimension": 0,
+      "pair_index": 412
+    },
+    {
+      "abs_delta_q": 30,
+      "delta_q": 30,
+      "dimension": 0,
+      "pair_index": 501
+    },
+    {
+      "abs_delta_q": 29,
+      "delta_q": 29,
+      "dimension": 0,
+      "pair_index": 237
+    },
+    {
+      "abs_delta_q": 29,
+      "delta_q": 29,
+      "dimension": 0,
+      "pair_index": 445
+    },
+    {
+      "abs_delta_q": 28,
+      "delta_q": -28,
+      "dimension": 0,
+      "pair_index": 38
+    },
+    {
+      "abs_delta_q": 28,
+      "delta_q": -28,
+      "dimension": 0,
+      "pair_index": 64
+    },
+    {
+      "abs_delta_q": 28,
+      "delta_q": 28,
+      "dimension": 0,
+      "pair_index": 444
+    },
+    {
+      "abs_delta_q": 27,
+      "delta_q": -27,
+      "dimension": 0,
+      "pair_index": 15
+    },
+    {
+      "abs_delta_q": 27,
+      "delta_q": 27,
+      "dimension": 0,
+      "pair_index": 261
+    }
+  ],
+  "pose_candidates": [
+    {
+      "archive_bytes": 277326,
+      "archive_path": "experiments/results/pr82_henosis_atom_transfer_20260503_codex/pr82_pose_velocity_top008_on_source/archive.zip",
+      "archive_sha256": "3425686eb8ade52a407da4cf874681f6f3a09ebe2e767f61427771b00ecb65d1",
+      "candidate_id": "pr82_pose_velocity_top008_on_source",
+      "candidate_kind": "pr82_p1d1_velocity_atoms_reencoded_qp1",
+      "dispatch_gate": {
+        "component_gain_required_for_sub314": 0.0005368828679519625,
+        "component_gain_required_to_beat_pr79_s2": 3.329294765610857e-06,
+        "dispatch_ready_now": false,
+        "formula_rate_score_delta_vs_source": 3.329294765610857e-06,
+        "lane_claim_required_before_any_exact_eval": true,
+        "proxy_component_gain": 0.0,
+        "reason": "no local raw-output delta proof is attached; nearby transfer family already has negative exact T4 evidence; no component proxy clears the rate break-even against PR79/S2",
+        "recommendation": "do_not_dispatch",
+        "remote_dispatch_performed": false,
+        "score_claim": false
+      },
+      "manifest_path": "experiments/results/pr82_henosis_atom_transfer_20260503_codex/pr82_pose_velocity_top008_on_source/manifest.json",
+      "selected_active_atoms_total": 8,
+      "stream_delta": {
+        "archive_delta_bytes_vs_source": 5,
+        "pose_brotli_delta_bytes_vs_source": 5
+      }
+    },
+    {
+      "archive_bytes": 277325,
+      "archive_path": "experiments/results/pr82_henosis_atom_transfer_20260503_codex/pr82_pose_velocity_top016_on_source/archive.zip",
+      "archive_sha256": "b4c9fddad6673b1ac11d74dee225b1535d33a5117af4ba5e94e541310160f1a2",
+      "candidate_id": "pr82_pose_velocity_top016_on_source",
+      "candidate_kind": "pr82_p1d1_velocity_atoms_reencoded_qp1",
+      "dispatch_gate": {
+        "component_gain_required_for_sub314": 0.0005362170089988404,
+        "component_gain_required_to_beat_pr79_s2": 2.6634358124886856e-06,
+        "dispatch_ready_now": false,
+        "formula_rate_score_delta_vs_source": 2.6634358124886856e-06,
+        "lane_claim_required_before_any_exact_eval": true,
+        "proxy_component_gain": 0.0,
+        "reason": "no local raw-output delta proof is attached; nearby transfer family already has negative exact T4 evidence; no component proxy clears the rate break-even against PR79/S2",
+        "recommendation": "do_not_dispatch",
+        "remote_dispatch_performed": false,
+        "score_claim": false
+      },
+      "manifest_path": "experiments/results/pr82_henosis_atom_transfer_20260503_codex/pr82_pose_velocity_top016_on_source/manifest.json",
+      "selected_active_atoms_total": 16,
+      "stream_delta": {
+        "archive_delta_bytes_vs_source": 4,
+        "pose_brotli_delta_bytes_vs_source": 4
+      }
+    },
+    {
+      "archive_bytes": 277322,
+      "archive_path": "experiments/results/pr82_henosis_atom_transfer_20260503_codex/pr82_pose_velocity_top032_on_source/archive.zip",
+      "archive_sha256": "d0a3780123d25dd82727abad145995da7b382bdd3b2db5afc74b1517fbe67a25",
+      "candidate_id": "pr82_pose_velocity_top032_on_source",
+      "candidate_kind": "pr82_p1d1_velocity_atoms_reencoded_qp1",
+      "dispatch_gate": {
+        "component_gain_required_for_sub314": 0.0005342194321394738,
+        "component_gain_required_to_beat_pr79_s2": 6.658589531221714e-07,
+        "dispatch_ready_now": false,
+        "formula_rate_score_delta_vs_source": 6.658589531221714e-07,
+        "lane_claim_required_before_any_exact_eval": true,
+        "proxy_component_gain": 0.0,
+        "reason": "no local raw-output delta proof is attached; nearby transfer family already has negative exact T4 evidence; no component proxy clears the rate break-even against PR79/S2",
+        "recommendation": "do_not_dispatch",
+        "remote_dispatch_performed": false,
+        "score_claim": false
+      },
+      "manifest_path": "experiments/results/pr82_henosis_atom_transfer_20260503_codex/pr82_pose_velocity_top032_on_source/manifest.json",
+      "selected_active_atoms_total": 32,
+      "stream_delta": {
+        "archive_delta_bytes_vs_source": 1,
+        "pose_brotli_delta_bytes_vs_source": 1
+      }
+    }
+  ],
+  "pr82_profile": {
+    "archive_bytes": 296789,
+    "archive_path": "experiments/results/public_pr82_henosis_frontier_intake_20260503_codex/archive.zip",
+    "archive_sha256": "a0e07c360223c1dd3d3b92263225d38d542e218e83d095ad9b91bf872f94c6e4",
+    "contract": {
+      "fixed_bias_bytes": 223,
+      "fixed_region_bytes": 273,
+      "randmulti_group_count": 72,
+      "replay_inflate": "experiments/results/public_pr82_henosis_frontier_intake_20260503_codex/replay_submission/inflate.py",
+      "replay_inflate_sha256": "0809f704f1623d0e694621129abced77eaac052ae35469e207ef06938e4be1ad"
+    },
+    "payload_bytes": 296689,
+    "payload_sha256": "1c3377d09ddfddea488be791875605d1877003da4b0bd4d5c752e82d45fd8077"
+  },
+  "qpost_candidates": [
+    {
+      "archive_bytes": 277776,
+      "archive_path": "experiments/results/pr82_henosis_atom_transfer_20260503_codex/pr82_qpost_top008_on_source/archive.zip",
+      "archive_sha256": "d2685ef5718ffd6ef4ee9fb07029508a9e3cdb5c4ef569e7950678b39d788f01",
+      "candidate_id": "pr82_qpost_top008_on_source",
+      "candidate_kind": "pr82_runtime_compatible_qpost_pair_filter",
+      "dispatch_gate": {
+        "component_gain_required_for_sub314": 0.0008365193968569396,
+        "component_gain_required_to_beat_pr79_s2": 0.000302965823670588,
+        "dispatch_ready_now": false,
+        "formula_rate_score_delta_vs_source": 0.000302965823670588,
+        "lane_claim_required_before_any_exact_eval": true,
+        "proxy_component_gain": 0.0,
+        "reason": "no local raw-output delta proof is attached; nearby transfer family already has negative exact T4 evidence; no component proxy clears the rate break-even against PR79/S2",
+        "recommendation": "do_not_dispatch",
+        "remote_dispatch_performed": false,
+        "score_claim": false
+      },
+      "manifest_path": "experiments/results/pr82_henosis_atom_transfer_20260503_codex/pr82_qpost_top008_on_source/manifest.json",
+      "selected_active_atoms_total": 58,
+      "stream_delta": {
+        "archive_delta_bytes_vs_source": 455,
+        "qpost_charged_member_bytes": 361
+      }
+    },
+    {
+      "archive_bytes": 277886,
+      "archive_path": "experiments/results/pr82_henosis_atom_transfer_20260503_codex/pr82_qpost_top016_on_source/archive.zip",
+      "archive_sha256": "cfa53aec780d647e0cec79e9e44e702c1381c25ae7cd87854cccc63c83610ed6",
+      "candidate_id": "pr82_qpost_top016_on_source",
+      "candidate_kind": "pr82_runtime_compatible_qpost_pair_filter",
+      "dispatch_gate": {
+        "component_gain_required_for_sub314": 0.0009097638817003786,
+        "component_gain_required_to_beat_pr79_s2": 0.00037621030851402686,
+        "dispatch_ready_now": false,
+        "formula_rate_score_delta_vs_source": 0.00037621030851402686,
+        "lane_claim_required_before_any_exact_eval": true,
+        "proxy_component_gain": 0.0,
+        "reason": "no local raw-output delta proof is attached; nearby transfer family already has negative exact T4 evidence; no component proxy clears the rate break-even against PR79/S2",
+        "recommendation": "do_not_dispatch",
+        "remote_dispatch_performed": false,
+        "score_claim": false
+      },
+      "manifest_path": "experiments/results/pr82_henosis_atom_transfer_20260503_codex/pr82_qpost_top016_on_source/manifest.json",
+      "selected_active_atoms_total": 115,
+      "stream_delta": {
+        "archive_delta_bytes_vs_source": 565,
+        "qpost_charged_member_bytes": 471
+      }
+    },
+    {
+      "archive_bytes": 278007,
+      "archive_path": "experiments/results/pr82_henosis_atom_transfer_20260503_codex/pr82_qpost_top032_on_source/archive.zip",
+      "archive_sha256": "c9f18811067d6a2c22bffd90a0be5868783138dbc6db781bffbeeca699332dc7",
+      "candidate_id": "pr82_qpost_top032_on_source",
+      "candidate_kind": "pr82_runtime_compatible_qpost_pair_filter",
+      "dispatch_gate": {
+        "component_gain_required_for_sub314": 0.0009903328150281613,
+        "component_gain_required_to_beat_pr79_s2": 0.0004567792418418096,
+        "dispatch_ready_now": false,
+        "formula_rate_score_delta_vs_source": 0.0004567792418418096,
+        "lane_claim_required_before_any_exact_eval": true,
+        "proxy_component_gain": 0.0,
+        "reason": "no local raw-output delta proof is attached; nearby transfer family already has negative exact T4 evidence; no component proxy clears the rate break-even against PR79/S2",
+        "recommendation": "do_not_dispatch",
+        "remote_dispatch_performed": false,
+        "score_claim": false
+      },
+      "manifest_path": "experiments/results/pr82_henosis_atom_transfer_20260503_codex/pr82_qpost_top032_on_source/manifest.json",
+      "selected_active_atoms_total": 220,
+      "stream_delta": {
+        "archive_delta_bytes_vs_source": 686,
+        "qpost_charged_member_bytes": 592
+      }
+    }
+  ],
+  "randmulti_candidates": [
+    {
+      "archive_bytes": 278957,
+      "archive_path": "experiments/results/pr82_henosis_atom_transfer_20260503_codex/pr82_randmulti_generic_top001_on_source/archive.zip",
+      "archive_sha256": "ca861001c656c2a067d90b5e8f3b338869ae115ae3300564db25d839923841ae",
+      "candidate_id": "pr82_randmulti_generic_top001_on_source",
+      "candidate_kind": "pr82_randmulti_qps1_nm2_generic_group_transfer",
+      "dispatch_gate": {
+        "component_gain_required_for_sub314": 0.001622898820494224,
+        "component_gain_required_to_beat_pr79_s2": 0.0010893452473078723,
+        "dispatch_ready_now": false,
+        "formula_rate_score_delta_vs_source": 0.0010893452473078723,
+        "lane_claim_required_before_any_exact_eval": true,
+        "proxy_component_gain": 0.0,
+        "reason": "no local raw-output delta proof is attached; nearby transfer family already has negative exact T4 evidence; no component proxy clears the rate break-even against PR79/S2",
+        "recommendation": "do_not_dispatch",
+        "remote_dispatch_performed": false,
+        "score_claim": false
+      },
+      "manifest_path": "experiments/results/pr82_henosis_atom_transfer_20260503_codex/pr82_randmulti_generic_top001_on_source/manifest.json",
+      "selected_active_atoms_total": 1194,
+      "stream_delta": {
+        "archive_delta_bytes_vs_source": 1636,
+        "qpost_charged_member_bytes": 1542,
+        "randmulti_brotli_bytes": 1506
+      }
+    },
+    {
+      "archive_bytes": 279906,
+      "archive_path": "experiments/results/pr82_henosis_atom_transfer_20260503_codex/pr82_randmulti_generic_top004_on_source/archive.zip",
+      "archive_sha256": "9e0416111eb6046e4de8ab5a54e98030f2e68c7d60460d6bebc0be50c2004207",
+      "candidate_id": "pr82_randmulti_generic_top004_on_source",
+      "candidate_kind": "pr82_randmulti_qps1_nm2_generic_group_transfer",
+      "dispatch_gate": {
+        "component_gain_required_for_sub314": 0.002254798967007165,
+        "component_gain_required_to_beat_pr79_s2": 0.0017212453938208131,
+        "dispatch_ready_now": false,
+        "formula_rate_score_delta_vs_source": 0.0017212453938208131,
+        "lane_claim_required_before_any_exact_eval": true,
+        "proxy_component_gain": 0.0,
+        "reason": "no local raw-output delta proof is attached; nearby transfer family already has negative exact T4 evidence; no component proxy clears the rate break-even against PR79/S2",
+        "recommendation": "do_not_dispatch",
+        "remote_dispatch_performed": false,
+        "score_claim": false
+      },
+      "manifest_path": "experiments/results/pr82_henosis_atom_transfer_20260503_codex/pr82_randmulti_generic_top004_on_source/manifest.json",
+      "selected_active_atoms_total": 2153,
+      "stream_delta": {
+        "archive_delta_bytes_vs_source": 2585,
+        "qpost_charged_member_bytes": 2491,
+        "randmulti_brotli_bytes": 2455
+      }
+    },
+    {
+      "archive_bytes": 280800,
+      "archive_path": "experiments/results/pr82_henosis_atom_transfer_20260503_codex/pr82_randmulti_generic_top008_on_source/archive.zip",
+      "archive_sha256": "95aaaa35a22be5763e3ffadef6c58e54d3c3ad39ada3160bd01e9c7a4c76d303",
+      "candidate_id": "pr82_randmulti_generic_top008_on_source",
+      "candidate_kind": "pr82_randmulti_qps1_nm2_generic_group_transfer",
+      "dispatch_gate": {
+        "component_gain_required_for_sub314": 0.002850076871098386,
+        "component_gain_required_to_beat_pr79_s2": 0.0023165232979120345,
+        "dispatch_ready_now": false,
+        "formula_rate_score_delta_vs_source": 0.0023165232979120345,
+        "lane_claim_required_before_any_exact_eval": true,
+        "proxy_component_gain": 0.0,
+        "reason": "no local raw-output delta proof is attached; nearby transfer family already has negative exact T4 evidence; no component proxy clears the rate break-even against PR79/S2",
+        "recommendation": "do_not_dispatch",
+        "remote_dispatch_performed": false,
+        "score_claim": false
+      },
+      "manifest_path": "experiments/results/pr82_henosis_atom_transfer_20260503_codex/pr82_randmulti_generic_top008_on_source/manifest.json",
+      "selected_active_atoms_total": 2926,
+      "stream_delta": {
+        "archive_delta_bytes_vs_source": 3479,
+        "qpost_charged_member_bytes": 3385,
+        "randmulti_brotli_bytes": 3349
+      }
+    }
+  ],
+  "randmulti_lowlevel_profile_path": "experiments/results/pr82_henosis_atom_transfer_20260503_codex/pr82_randmulti_lowlevel_profile.json",
+  "randmulti_profile_top16_compatible_groups": [
+    {
+      "amplitude": 1,
+      "group_index": 0,
+      "height": 24,
+      "nonzero_choice_total": 1194,
+      "payload_bytes": 2407,
+      "qps1_nm2_runtime_compatible": true,
+      "scount": 12,
+      "semantic": "generic_frame0_nearest_random_pattern",
+      "width": 32
+    },
+    {
+      "amplitude": 1,
+      "group_index": 19,
+      "height": 64,
+      "nonzero_choice_total": 532,
+      "payload_bytes": 1067,
+      "qps1_nm2_runtime_compatible": true,
+      "scount": 1,
+      "semantic": "generic_frame0_nearest_random_pattern",
+      "width": 1
+    },
+    {
+      "amplitude": 1,
+      "group_index": 14,
+      "height": 8,
+      "nonzero_choice_total": 223,
+      "payload_bytes": 447,
+      "qps1_nm2_runtime_compatible": true,
+      "scount": 1,
+      "semantic": "generic_frame0_nearest_random_pattern",
+      "width": 1
+    },
+    {
+      "amplitude": 1,
+      "group_index": 18,
+      "height": 32,
+      "nonzero_choice_total": 204,
+      "payload_bytes": 409,
+      "qps1_nm2_runtime_compatible": true,
+      "scount": 1,
+      "semantic": "generic_frame0_nearest_random_pattern",
+      "width": 1
+    },
+    {
+      "amplitude": 1,
+      "group_index": 49,
+      "height": 32,
+      "nonzero_choice_total": 199,
+      "payload_bytes": 399,
+      "qps1_nm2_runtime_compatible": true,
+      "scount": 1,
+      "semantic": "generic_frame0_nearest_random_pattern",
+      "width": 2
+    },
+    {
+      "amplitude": 1,
+      "group_index": 2,
+      "height": 6,
+      "nonzero_choice_total": 193,
+      "payload_bytes": 387,
+      "qps1_nm2_runtime_compatible": true,
+      "scount": 1,
+      "semantic": "generic_frame0_nearest_random_pattern",
+      "width": 8
+    },
+    {
+      "amplitude": 1,
+      "group_index": 5,
+      "height": 8,
+      "nonzero_choice_total": 193,
+      "payload_bytes": 387,
+      "qps1_nm2_runtime_compatible": true,
+      "scount": 1,
+      "semantic": "generic_frame0_nearest_random_pattern",
+      "width": 8
+    },
+    {
+      "amplitude": 1,
+      "group_index": 1,
+      "height": 12,
+      "nonzero_choice_total": 188,
+      "payload_bytes": 377,
+      "qps1_nm2_runtime_compatible": true,
+      "scount": 1,
+      "semantic": "generic_frame0_nearest_random_pattern",
+      "width": 16
+    },
+    {
+      "amplitude": 1,
+      "group_index": 16,
+      "height": 16,
+      "nonzero_choice_total": 167,
+      "payload_bytes": 335,
+      "qps1_nm2_runtime_compatible": true,
+      "scount": 1,
+      "semantic": "generic_frame0_nearest_random_pattern",
+      "width": 1
+    },
+    {
+      "amplitude": 1,
+      "group_index": 50,
+      "height": 16,
+      "nonzero_choice_total": 167,
+      "payload_bytes": 335,
+      "qps1_nm2_runtime_compatible": true,
+      "scount": 1,
+      "semantic": "generic_frame0_nearest_random_pattern",
+      "width": 2
+    },
+    {
+      "amplitude": 1,
+      "group_index": 3,
+      "height": 3,
+      "nonzero_choice_total": 166,
+      "payload_bytes": 333,
+      "qps1_nm2_runtime_compatible": true,
+      "scount": 1,
+      "semantic": "generic_frame0_nearest_random_pattern",
+      "width": 4
+    },
+    {
+      "amplitude": 1,
+      "group_index": 51,
+      "height": 8,
+      "nonzero_choice_total": 150,
+      "payload_bytes": 301,
+      "qps1_nm2_runtime_compatible": true,
+      "scount": 1,
+      "semantic": "generic_frame0_nearest_random_pattern",
+      "width": 2
+    },
+    {
+      "amplitude": 1,
+      "group_index": 4,
+      "height": 2,
+      "nonzero_choice_total": 145,
+      "payload_bytes": 291,
+      "qps1_nm2_runtime_compatible": true,
+      "scount": 1,
+      "semantic": "generic_frame0_nearest_random_pattern",
+      "width": 2
+    },
+    {
+      "amplitude": 1,
+      "group_index": 55,
+      "height": 16,
+      "nonzero_choice_total": 126,
+      "payload_bytes": 253,
+      "qps1_nm2_runtime_compatible": true,
+      "scount": 1,
+      "semantic": "generic_frame0_nearest_random_pattern",
+      "width": 4
+    },
+    {
+      "amplitude": 1,
+      "group_index": 60,
+      "height": 32,
+      "nonzero_choice_total": 125,
+      "payload_bytes": 251,
+      "qps1_nm2_runtime_compatible": true,
+      "scount": 1,
+      "semantic": "generic_frame0_nearest_random_pattern",
+      "width": 8
+    },
+    {
+      "amplitude": 1,
+      "group_index": 54,
+      "height": 8,
+      "nonzero_choice_total": 119,
+      "payload_bytes": 239,
+      "qps1_nm2_runtime_compatible": true,
+      "scount": 1,
+      "semantic": "generic_frame0_nearest_random_pattern",
+      "width": 4
+    }
+  ],
+  "randmulti_profile_top16_replay_only_groups": [
+    {
+      "amplitude": 2,
+      "group_index": 63,
+      "height": 223,
+      "nonzero_choice_total": 380,
+      "payload_bytes": 763,
+      "qps1_nm2_runtime_compatible": false,
+      "scount": 1,
+      "semantic": "replay_special_f2_class_conditioned_channel_radius2",
+      "width": 222
+    },
+    {
+      "amplitude": 1,
+      "group_index": 21,
+      "height": 1024,
+      "nonzero_choice_total": 367,
+      "payload_bytes": 737,
+      "qps1_nm2_runtime_compatible": false,
+      "scount": 1,
+      "semantic": "generic_frame0_nearest_random_pattern",
+      "width": 1
+    },
+    {
+      "amplitude": 1,
+      "group_index": 20,
+      "height": 256,
+      "nonzero_choice_total": 349,
+      "payload_bytes": 701,
+      "qps1_nm2_runtime_compatible": false,
+      "scount": 1,
+      "semantic": "generic_frame0_nearest_random_pattern",
+      "width": 1
+    },
+    {
+      "amplitude": 4,
+      "group_index": 62,
+      "height": 222,
+      "nonzero_choice_total": 314,
+      "payload_bytes": 631,
+      "qps1_nm2_runtime_compatible": false,
+      "scount": 1,
+      "semantic": "replay_special_f2_class_conditioned_all_channel_radius4",
+      "width": 223
+    },
+    {
+      "amplitude": 4,
+      "group_index": 66,
+      "height": 223,
+      "nonzero_choice_total": 309,
+      "payload_bytes": 621,
+      "qps1_nm2_runtime_compatible": false,
+      "scount": 1,
+      "semantic": "replay_special_f2_boundary_class_channel_radius4",
+      "width": 224
+    },
+    {
+      "amplitude": 4,
+      "group_index": 65,
+      "height": 223,
+      "nonzero_choice_total": 296,
+      "payload_bytes": 595,
+      "qps1_nm2_runtime_compatible": false,
+      "scount": 1,
+      "semantic": "replay_special_f2_class_conditioned_channel_radius4",
+      "width": 221
+    },
+    {
+      "amplitude": 1,
+      "group_index": 33,
+      "height": 874,
+      "nonzero_choice_total": 289,
+      "payload_bytes": 581,
+      "qps1_nm2_runtime_compatible": false,
+      "scount": 1,
+      "semantic": "generic_frame0_nearest_random_pattern",
+      "width": 1
+    },
+    {
+      "amplitude": 1,
+      "group_index": 22,
+      "height": 2048,
+      "nonzero_choice_total": 260,
+      "payload_bytes": 523,
+      "qps1_nm2_runtime_compatible": false,
+      "scount": 1,
+      "semantic": "generic_frame0_nearest_random_pattern",
+      "width": 1
+    },
+    {
+      "amplitude": 4,
+      "group_index": 64,
+      "height": 223,
+      "nonzero_choice_total": 257,
+      "payload_bytes": 517,
+      "qps1_nm2_runtime_compatible": false,
+      "scount": 1,
+      "semantic": "replay_special_f2_boundary_all_channel_radius4",
+      "width": 223
+    },
+    {
+      "amplitude": 1,
+      "group_index": 26,
+      "height": 16384,
+      "nonzero_choice_total": 255,
+      "payload_bytes": 513,
+      "qps1_nm2_runtime_compatible": false,
+      "scount": 1,
+      "semantic": "generic_frame0_nearest_random_pattern",
+      "width": 1
+    },
+    {
+      "amplitude": 1,
+      "group_index": 27,
+      "height": 32768,
+      "nonzero_choice_total": 235,
+      "payload_bytes": 471,
+      "qps1_nm2_runtime_compatible": false,
+      "scount": 1,
+      "semantic": "generic_frame0_nearest_random_pattern",
+      "width": 1
+    },
+    {
+      "amplitude": 1,
+      "group_index": 28,
+      "height": 65536,
+      "nonzero_choice_total": 231,
+      "payload_bytes": 463,
+      "qps1_nm2_runtime_compatible": false,
+      "scount": 1,
+      "semantic": "generic_frame0_nearest_random_pattern",
+      "width": 1
+    },
+    {
+      "amplitude": 1,
+      "group_index": 31,
+      "height": 524288,
+      "nonzero_choice_total": 231,
+      "payload_bytes": 463,
+      "qps1_nm2_runtime_compatible": false,
+      "scount": 1,
+      "semantic": "generic_frame0_nearest_random_pattern",
+      "width": 1
+    },
+    {
+      "amplitude": 1,
+      "group_index": 23,
+      "height": 4096,
+      "nonzero_choice_total": 226,
+      "payload_bytes": 453,
+      "qps1_nm2_runtime_compatible": false,
+      "scount": 1,
+      "semantic": "generic_frame0_nearest_random_pattern",
+      "width": 1
+    },
+    {
+      "amplitude": 1,
+      "group_index": 34,
+      "height": 874,
+      "nonzero_choice_total": 223,
+      "payload_bytes": 447,
+      "qps1_nm2_runtime_compatible": false,
+      "scount": 1,
+      "semantic": "generic_frame0_nearest_random_pattern",
+      "width": 1
+    },
+    {
+      "amplitude": 1,
+      "group_index": 29,
+      "height": 131072,
+      "nonzero_choice_total": 220,
+      "payload_bytes": 441,
+      "qps1_nm2_runtime_compatible": false,
+      "scount": 1,
+      "semantic": "generic_frame0_nearest_random_pattern",
+      "width": 1
+    }
+  ],
+  "randmulti_qrm1_candidates": [
+    {
+      "archive_bytes": 293941,
+      "archive_path": "experiments/results/pr82_henosis_atom_transfer_20260503_codex/pr82_randmulti_qrm1_all072_on_source/archive.zip",
+      "archive_sha256": "a86166e634788eea4e2ea4acd06e7650a81f501fff2d92ca3630ce7b1af8e56d",
+      "candidate_id": "pr82_randmulti_qrm1_all072_on_source",
+      "candidate_kind": "pr82_randmulti_qps1_qrm1_native_sparse_group_transfer",
+      "dispatch_gate": {
+        "component_gain_required_for_sub314": 0.01160012937407684,
+        "component_gain_required_to_beat_pr79_s2": 0.011066575800890488,
+        "dispatch_ready_now": false,
+        "formula_rate_score_delta_vs_source": 0.011066575800890488,
+        "lane_claim_required_before_any_exact_eval": true,
+        "proxy_component_gain": 0.0,
+        "reason": "candidate is not supported by current robust runtime; no local raw-output delta proof is attached; nearby transfer family already has negative exact T4 evidence; no component proxy clears the rate break-even against PR79/S2",
+        "recommendation": "do_not_dispatch",
+        "remote_dispatch_performed": false,
+        "score_claim": false
+      },
+      "manifest_path": "experiments/results/pr82_henosis_atom_transfer_20260503_codex/pr82_randmulti_qrm1_all072_on_source/manifest.json",
+      "qrm1_local_decode_profile": {
+        "contract": "QRM1_sparse_group_id_stream",
+        "decoded_group_count": 72,
+        "encoded_brotli_bytes": 16490,
+        "encoded_decoded_bytes": 27255,
+        "encoded_sha256": "4cbde45c57bbda14034b54ab570e063cc4656d0eed1389568b5f43c48a1e09e5",
+        "exact_group_row_parity": true,
+        "extra_group_ids": [],
+        "generic_group_count": 62,
+        "missing_group_ids": [],
+        "nonzero_choice_total": 13496,
+        "qrm1_brotli_delta_bytes_vs_source_tail": 389,
+        "replay_special_group_count": 10,
+        "row_mismatch_group_ids": [],
+        "source_brotli_bytes": 16101,
+        "source_decoded_bytes": 27105,
+        "source_sha256": "c624372e60a0851c4c427dc333a60dcc5d6657ba8ed56951612e7c9d7be7629f",
+        "spec_mismatch_group_ids": []
+      },
+      "selected_active_atoms_total": 13496,
+      "stream_delta": {
+        "archive_delta_bytes_vs_source": 16620,
+        "qpost_charged_member_bytes": 16526,
+        "randmulti_brotli_bytes": 16490,
+        "randmulti_brotli_delta_bytes_vs_pr82_tail": 389
+      }
+    }
+  ],
+  "randmulti_qrm1_native_contract_profile": {
+    "contract": "QRM1_sparse_group_id_stream",
+    "decoded_group_count": 72,
+    "encoded_brotli_bytes": 16490,
+    "encoded_decoded_bytes": 27255,
+    "encoded_sha256": "4cbde45c57bbda14034b54ab570e063cc4656d0eed1389568b5f43c48a1e09e5",
+    "exact_group_row_parity": true,
+    "extra_group_ids": [],
+    "generic_group_count": 62,
+    "missing_group_ids": [],
+    "nonzero_choice_total": 13496,
+    "qrm1_brotli_delta_bytes_vs_source_tail": 389,
+    "replay_special_group_count": 10,
+    "row_mismatch_group_ids": [],
+    "source_brotli_bytes": 16101,
+    "source_decoded_bytes": 27105,
+    "source_sha256": "c624372e60a0851c4c427dc333a60dcc5d6657ba8ed56951612e7c9d7be7629f",
+    "spec_mismatch_group_ids": []
+  },
+  "schema": "pr82_henosis_atom_transfer_candidates_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 277321,
+    "path": "experiments/results/pr79_action_dictionary_repack_v2_20260503_codex/pr79_s2_fixed_adaptive_actions/archive.zip",
+    "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+    "sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68"
+  },
+  "source_exact_reference": {
+    "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+    "avg_posenet_dist": 0.00049415,
+    "avg_segnet_dist": 0.00059581,
+    "canonical_score": 0.31453355357318635,
+    "eval_json": "experiments/results/lightning_batch/exact_eval_pr79_s2_fixed_adaptive_actions_t4_20260503T173023Z/contest_auth_eval.json",
+    "n_samples": 600
+  },
+  "tool": "experiments/build_pr82_henosis_atom_transfer_candidates.py"
+}

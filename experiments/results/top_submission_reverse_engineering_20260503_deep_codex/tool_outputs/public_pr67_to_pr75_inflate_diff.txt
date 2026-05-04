@@ -1,0 +1,195 @@
+--- experiments/results/top_submission_reverse_engineering_20260503_deep_codex/sources/pr75_head/submissions/qpose14_qzs3_filmq9g_slsb1_r55/inflate.py	2026-05-02 21:29:34
++++ experiments/results/top_submission_reverse_engineering_20260503_deep_codex/sources/pr75_head/submissions/qpose14_r55_segactions_minp/inflate.py	2026-05-02 21:29:34
+@@ -1,23 +1,13 @@
+ #!/usr/bin/env python
+ import io
+ import os
++import struct
+ import sys
+ import tempfile
+ from pathlib import Path
+ 
+ import av
+-try:
+-    import brotli
+-except ImportError:
+-    class _BrotliCompat:
+-        @staticmethod
+-        def decompress(*args, **kwargs):
+-            raise RuntimeError(
+-                "Brotli decompression was requested, but the optional 'brotli' package "
+-                "is not installed in this environment."
+-            )
+-
+-    brotli = _BrotliCompat()
++import brotli
+ import einops
+ import numpy as np
+ import torch
+@@ -680,8 +670,58 @@
+         "basis": make_dct_basis(basis_k, 384, 512, device),
+         "base": base,
+     }
++
++def seg_tile_action_specs(device: torch.device):
++    specs = []
++    directions = [
++        (1.0, 1.0, 1.0),
++        (1.0, 0.0, 0.0),
++        (0.0, 1.0, 0.0),
++        (0.0, 0.0, 1.0),
++        (1.0, 1.0, 0.0),
++        (0.0, 1.0, 1.0),
++        (1.0, 0.0, 1.0),
++        (-0.35, 0.15, 0.45),
++        (0.25, 0.15, -0.20),
++    ]
++    for vec in directions:
++        v = torch.tensor(vec, dtype=torch.float32, device=device).view(3, 1, 1)
++        v = v / v.abs().max().clamp_min(1e-6)
++        for amp in (2.0, 4.0, 6.0, 8.0, 12.0, 16.0):
++            specs.append(v * amp)
++            specs.append(-v * amp)
++    return torch.stack(specs, dim=0)
++
+ 
++def load_seg_tile_actions_data(data: bytes, device: torch.device):
++    raw = brotli.decompress(data)
++    records = []
++    if len(raw) % 4 == 0:
++        for i in range(0, len(raw), 4):
++            frame = int.from_bytes(raw[i:i + 2], "little")
++            tile = raw[i + 2]
++            action = raw[i + 3]
++            records.append((frame, tile, action))
++    elif len(raw) % 5 == 0:
++        for i in range(0, len(raw), 5):
++            frame = int.from_bytes(raw[i:i + 2], "little")
++            tile = int.from_bytes(raw[i + 2:i + 4], "little")
++            action = raw[i + 4]
++            records.append((frame, tile, action))
++    else:
++        raise ValueError(f"unsupported seg tile action payload length: {len(raw)}")
++    by_frame = {}
++    for frame, tile, action in records:
++        by_frame.setdefault(frame, []).append((tile, action))
++    return {"by_frame": by_frame, "deltas": seg_tile_action_specs(device)}
+ 
++
++def load_seg_tile_actions(path: Path, device: torch.device):
++    if not path.exists():
++        return None
++    return load_seg_tile_actions_data(path.read_bytes(), device)
++
++
+ def load_smooth_pose(path: Path):
+     if not path.exists():
+         return None
+@@ -741,27 +781,51 @@
+     packed_payload = data_dir / "p"
+     color_lut_br = data_dir / "color_lut.npy.br"
+     actuator_br = data_dir / "actuator.npz.br"
++    seg_tile_actions_br = data_dir / "seg_tile_actions.br"
+     smooth_pose_br = data_dir / "smooth_pose.npz.br"
++    embedded_seg_tile_actions = None
+ 
+     if packed_payload.exists():
+         payload = packed_payload.read_bytes()
+-        mask_br_data = payload[:219472]
+-        if 276430 <= len(payload) <= 276470:
+-            model_br_len = 56093
+-        elif 276550 <= len(payload) <= 276610:
+-            model_br_len = 56221
+-        elif 278100 <= len(payload) <= 278130:
+-            model_br_len = 57757
+-        elif 277400 <= len(payload) <= 277430:
+-            model_br_len = 57053
+-        elif 277350 <= len(payload) <= 277399:
+-            model_br_len = 57031
+-        elif len(payload) == 281240:
+-            model_br_len = 60880
++        if len(payload) == 276641:
++            mask_br_data = payload[:219472]
++            model_br_data = payload[219472:275506]
++            embedded_seg_tile_actions = payload[275506:275742]
++            pose_q_br_data = payload[275742:]
++        elif payload.startswith(b"P3"):
++            mask_len, model_br_len, actions_len = struct.unpack_from("<IHH", payload, 2)
++            cursor = 10
++            mask_br_data = payload[cursor : cursor + mask_len]
++            cursor += mask_len
++            model_br_data = payload[cursor : cursor + model_br_len]
++            cursor += model_br_len
++            embedded_seg_tile_actions = payload[cursor : cursor + actions_len]
++            pose_q_br_data = payload[cursor + actions_len:]
++        elif payload.startswith(b"P2"):
++            mask_len, model_br_len = struct.unpack_from("<IH", payload, 2)
++            cursor = 8
++            mask_br_data = payload[cursor : cursor + mask_len]
++            cursor += mask_len
++            model_br_data = payload[cursor : cursor + model_br_len]
++            pose_q_br_data = payload[cursor + model_br_len:]
+         else:
+-            model_br_len = 61147
+-        model_br_data = payload[219472:219472 + model_br_len]
+-        pose_q_br_data = payload[219472 + model_br_len:]
++            mask_br_data = payload[:219472]
++            if 276430 <= len(payload) <= 276470:
++                model_br_len = 56093
++            elif 276550 <= len(payload) <= 276610:
++                model_br_len = 56221
++            elif 278100 <= len(payload) <= 278130:
++                model_br_len = 57757
++            elif 277400 <= len(payload) <= 277430:
++                model_br_len = 57053
++            elif 277350 <= len(payload) <= 277399:
++                model_br_len = 57031
++            elif len(payload) == 281240:
++                model_br_len = 60880
++            else:
++                model_br_len = 61147
++            model_br_data = payload[219472:219472 + model_br_len]
++            pose_q_br_data = payload[219472 + model_br_len:]
+     else:
+         mask_br_data = mask_br.read_bytes()
+         model_br_data = model_br.read_bytes()
+@@ -781,6 +845,9 @@
+         tmp_obu_path = tmp_obu.name
+ 
+     mask_frames_all = load_encoded_mask_video(tmp_obu_path)
++    if mask_frames_all.shape[0] < 600:
++        repeat = int(np.ceil(600 / mask_frames_all.shape[0]))
++        mask_frames_all = mask_frames_all.repeat_interleave(repeat, dim=0)[:600].contiguous()
+     os.remove(tmp_obu_path)
+ 
+     # 3. Load Pose Vectors
+@@ -830,6 +897,10 @@
+             corr = corr * smooth_pose["scale"].reshape(1, -1)
+         pose_frames_all = torch.from_numpy(pose_np + corr.astype(np.float32)).float()
+     actuator = load_actuator(actuator_br, device)
++    if embedded_seg_tile_actions is not None:
++        seg_tile_actions = load_seg_tile_actions_data(embedded_seg_tile_actions, device)
++    else:
++        seg_tile_actions = load_seg_tile_actions(seg_tile_actions_br, device)
+ 
+     color_bias = None
+     color_scale = None
+@@ -882,6 +953,18 @@
+                             fake1 = fake2 + delta
+                         else:
+                             fake1 = fake1 + delta
++                    if seg_tile_actions is not None:
++                        tile_size = 32
++                        grid_w = 512 // tile_size
++                        for batch_j in range(in_mask2.shape[0]):
++                            frame_idx = file_pair_start + i + batch_j
++                            for tile_id, action_id in seg_tile_actions["by_frame"].get(frame_idx, []):
++                                y0 = (tile_id // grid_w) * tile_size
++                                x0 = (tile_id % grid_w) * tile_size
++                                fake2[batch_j, :, y0:y0 + tile_size, x0:x0 + tile_size] = (
++                                    fake2[batch_j, :, y0:y0 + tile_size, x0:x0 + tile_size]
++                                    + seg_tile_actions["deltas"][action_id]
++                                ).clamp(0, 255)
+ 
+                     fake1_up = F.interpolate(fake1, size=(out_h, out_w), mode="bilinear", align_corners=False)
+                     fake2_up = F.interpolate(fake2, size=(out_h, out_w), mode="bilinear", align_corners=False)

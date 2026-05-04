@@ -1,0 +1,128 @@
+{
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda on T4/equivalent CUDA",
+  "current_a_plus_plus_frontier": {
+    "archive_bytes": 276394,
+    "archive_sha256": "9b78333dd39c12c986ca7fc02a4bb35a6a61ef5a1cc0c9c9c840820eb840058a",
+    "canonical_score": 0.3154889937553647,
+    "candidate_id": "c082_qp1_p6_delta_varint_actions_stream_resweep",
+    "evidence_grade": "A++"
+  },
+  "generated_utc": "2026-05-03T07:20:26Z",
+  "superseded_by_exact_source_negative": {
+    "applies_to_candidate_id": "shrink_queued_bb8d_p6_stream_resweep",
+    "decision": "do_not_dispatch",
+    "exact_source_archive_sha256": "bb8d1835303478183465e15b28fd9af8776b4ea1c07cdd6cfe0895032a267b64",
+    "reason": "Candidate is decoded-stream-identical to source archive that failed exact T4 PoseNet gate; lossless wrapper savings cannot repair inherited component collapse.",
+    "recorded_utc": "2026-05-03T07:22Z",
+    "source_exact_t4_posenet": 0.00685808,
+    "source_exact_t4_score": 0.5066348615388583
+  },
+  "ranked_dispatch_recommendations": [
+    {
+      "archive_bytes": 275890,
+      "archive_path": "experiments/results/c082_fast_packer_worker_20260503/p6_stream_resweep/shrink_queued_bb8d_p6_stream_resweep/archive.zip",
+      "archive_sha256": "002b1d0681a895aac6dbf2eb1194c9d765debdee5e3b3101e034173e21295bac",
+      "candidate_id": "shrink_queued_bb8d_p6_stream_resweep",
+      "decoded_stream_parity": true,
+      "dispatch_priority": 1,
+      "dispatch_status_current": "blocked_inherited_a_negative_source",
+      "evidence_grade": "empirical_lossless_byte_transform",
+      "expected_rate_delta_vs_current_frontier_if_components_equal": -0.0003355929123735744,
+      "expected_rate_delta_vs_source_if_components_equal": -0.000006658589531221714,
+      "exact_t4_eval_command": ".venv/bin/python -u experiments/contest_auth_eval.py --archive experiments/results/c082_fast_packer_worker_20260503/p6_stream_resweep/shrink_queued_bb8d_p6_stream_resweep/archive.zip --inflate-sh submissions/robust_current/inflate.sh --upstream-dir upstream --device cuda --keep-work-dir --work-dir experiments/results/c082_fast_packer_worker_20260503/t4_exact_eval_shrink_queued_bb8d_p6_stream_resweep",
+      "promotion_eligible": false,
+      "reactivation_dispatch_criteria": "Dispatch after claiming lane if the in-flight bb8d renderer-shrink eval has not already closed the decision, or if it passes component gates and this exact-byte 10-byte lossless resweep is needed for final T4 custody.",
+      "score_claim": false,
+      "source_archive_bytes": 275900,
+      "source_archive_sha256": "bb8d1835303478183465e15b28fd9af8776b4ea1c07cdd6cfe0895032a267b64",
+      "source_pose_safety_preflight": {
+        "safe_for_exact_eval_dispatch": true,
+        "sha256": "9b08d27540aacc42b6003195726ad326e0df0801bb236140d8db8729b8575ba0"
+      },
+      "stream_deltas_bytes": {
+        "masks.mkv": -7,
+        "optimized_poses.qp1": -1,
+        "renderer.bin": 0,
+        "seg_tile_actions.delta_varint": -2
+      }
+    },
+    {
+      "archive_bytes": 276084,
+      "archive_path": "experiments/results/c082_fast_packer_worker_20260503/p6_stream_resweep/shrink_frame1_head_0075_p6_stream_resweep/archive.zip",
+      "archive_sha256": "befe0e312377485d322735eb634fdbdad13fca9320dd66b0a8f7494ed4f69ba1",
+      "candidate_id": "shrink_frame1_head_0075_p6_stream_resweep",
+      "decoded_stream_parity": true,
+      "dispatch_priority": 2,
+      "evidence_grade": "empirical_lossless_byte_transform",
+      "expected_rate_delta_vs_current_frontier_if_components_equal": -0.00020641627546787313,
+      "exact_t4_eval_command": ".venv/bin/python -u experiments/contest_auth_eval.py --archive experiments/results/c082_fast_packer_worker_20260503/p6_stream_resweep/shrink_frame1_head_0075_p6_stream_resweep/archive.zip --inflate-sh submissions/robust_current/inflate.sh --upstream-dir upstream --device cuda --keep-work-dir --work-dir experiments/results/c082_fast_packer_worker_20260503/t4_exact_eval_shrink_frame1_head_0075_p6_stream_resweep",
+      "promotion_eligible": false,
+      "reactivation_dispatch_criteria": "Fallback T4 eval if the top bb8d-family shrink fails or queue capacity allows another pose-safe renderer-shrink byte screen.",
+      "score_claim": false,
+      "source_archive_bytes": 276226,
+      "source_archive_sha256": "7814f529ae964b5aa787134d114eca7734fbcaff3c85fcc6e2ed23b50edd072d",
+      "source_pose_safety_preflight": {
+        "safe_for_exact_eval_dispatch": true
+      },
+      "stream_deltas_bytes": {
+        "masks.mkv": -7,
+        "optimized_poses.qp1": -1,
+        "renderer.bin": -132,
+        "seg_tile_actions.delta_varint": -2
+      }
+    },
+    {
+      "archive_bytes": 276211,
+      "archive_path": "experiments/results/c082_fast_packer_worker_20260503/p6_stream_resweep/shrink_frame2_head_005_p6_stream_resweep/archive.zip",
+      "archive_sha256": "331e2d2fa54029cd9c1da860e7399197a6f94780752f484e44666c7327efea23",
+      "candidate_id": "shrink_frame2_head_005_p6_stream_resweep",
+      "decoded_stream_parity": true,
+      "dispatch_priority": 3,
+      "evidence_grade": "empirical_lossless_byte_transform",
+      "expected_rate_delta_vs_current_frontier_if_components_equal": -0.00012185218842135736,
+      "exact_t4_eval_command": ".venv/bin/python -u experiments/contest_auth_eval.py --archive experiments/results/c082_fast_packer_worker_20260503/p6_stream_resweep/shrink_frame2_head_005_p6_stream_resweep/archive.zip --inflate-sh submissions/robust_current/inflate.sh --upstream-dir upstream --device cuda --keep-work-dir --work-dir experiments/results/c082_fast_packer_worker_20260503/t4_exact_eval_shrink_frame2_head_005_p6_stream_resweep",
+      "promotion_eligible": false,
+      "reactivation_dispatch_criteria": "Fallback T4 eval only after higher-ranked pose-safe shrink candidates are resolved.",
+      "score_claim": false,
+      "source_archive_bytes": 276222,
+      "source_archive_sha256": "efccff1fbfb5f9dcc38c05a79e1ab5ebe2f90d13fcae5fdc0e0f8465e79b6ed6",
+      "source_pose_safety_preflight": {
+        "safe_for_exact_eval_dispatch": true
+      },
+      "stream_deltas_bytes": {
+        "masks.mkv": -7,
+        "optimized_poses.qp1": -1,
+        "renderer.bin": -1,
+        "seg_tile_actions.delta_varint": -2
+      }
+    },
+    {
+      "archive_bytes": 276272,
+      "archive_path": "experiments/results/c082_fast_packer_worker_20260503/p6_stream_resweep/shrink_shared_trunk_004_p6_stream_resweep/archive.zip",
+      "archive_sha256": "9a00553a2ea2646ea0336686df6cedab18c10018b651c9995f46cef22ca0b140",
+      "candidate_id": "shrink_shared_trunk_004_p6_stream_resweep",
+      "decoded_stream_parity": true,
+      "dispatch_priority": 4,
+      "evidence_grade": "empirical_lossless_byte_transform",
+      "expected_rate_delta_vs_current_frontier_if_components_equal": -0.0000812347922809049,
+      "exact_t4_eval_command": ".venv/bin/python -u experiments/contest_auth_eval.py --archive experiments/results/c082_fast_packer_worker_20260503/p6_stream_resweep/shrink_shared_trunk_004_p6_stream_resweep/archive.zip --inflate-sh submissions/robust_current/inflate.sh --upstream-dir upstream --device cuda --keep-work-dir --work-dir experiments/results/c082_fast_packer_worker_20260503/t4_exact_eval_shrink_shared_trunk_004_p6_stream_resweep",
+      "promotion_eligible": false,
+      "reactivation_dispatch_criteria": "Fallback T4 eval only after higher-ranked pose-safe shrink candidates are resolved.",
+      "score_claim": false,
+      "source_archive_bytes": 276282,
+      "source_archive_sha256": "074c38d67e1ba927800c8ccdd735b027045fe60401e724c702ea6c9d4ba0f62d",
+      "source_pose_safety_preflight": {
+        "safe_for_exact_eval_dispatch": true
+      },
+      "stream_deltas_bytes": {
+        "masks.mkv": -7,
+        "optimized_poses.qp1": -1,
+        "renderer.bin": 0,
+        "seg_tile_actions.delta_varint": -2
+      }
+    }
+  ],
+  "remote_gpu_dispatch_performed": false,
+  "schema": "c082_fast_packer_dispatch_recommendation_v1",
+  "score_claim": false
+}

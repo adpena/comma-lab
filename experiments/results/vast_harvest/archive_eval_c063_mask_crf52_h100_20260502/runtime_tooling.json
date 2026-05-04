@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-05-02T07:31:37Z",
+  "pybin": "/opt/conda/bin/python",
+  "uv_bin": "/root/.local/bin/uv",
+  "uv_project_environment": "/workspace/pact/experiments/results/vast_live_harvest/archive_eval_c063_mask_crf52_h100_20260502/uv_project_env",
+  "uv_cache_dir": "",
+  "uv_extra_index_url": "",
+  "uv_index_strategy": "",
+  "ffmpeg_bin": "/workspace/ffmpeg-btbn/bin/ffmpeg",
+  "inflate_sh": "/workspace/pact/submissions/robust_current/inflate.sh",
+  "inflate_sh_sha256": "86449a1f52ac6b2be120d47287b8410f915dce7e562c69f480103f6e527c6017",
+  "inflate_brotli_spec": "brotli==1.2.0",
+  "inflate_av_spec": "av==17.0.1",
+  "inflate_torch_spec": "torch==2.11.0",
+  "inflate_numpy_spec": "numpy==2.4.4",
+  "dali_bootstrap_dir": "/workspace/pact/experiments/results/vast_live_harvest/archive_eval_c063_mask_crf52_h100_20260502"
+}

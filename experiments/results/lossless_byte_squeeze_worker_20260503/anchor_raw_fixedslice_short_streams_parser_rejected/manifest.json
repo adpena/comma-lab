@@ -1,0 +1,101 @@
+{
+  "archive_delta_bytes_vs_anchor": -8,
+  "candidate_id": "anchor_raw_fixedslice_short_streams_parser_rejected",
+  "canonical_score_source_required": "No score claim: exact CUDA auth eval on the exact archive bytes is required via archive.zip -> inflate.sh -> upstream/evaluate.py, preferably experiments/contest_auth_eval.py --device cuda, after a dispatch claim.",
+  "changed_payload_members": [
+    "masks.mkv.br",
+    "seg_tile_actions.br"
+  ],
+  "dispatch_status": "not_contest_faithful_parser_rejected_do_not_dispatch",
+  "evidence_grade": "empirical_local_byte_screen",
+  "formula_only": {
+    "bytes_needed_for_sub314_at_candidate_components": 1743,
+    "rate_score_delta_vs_anchor": -5.326871624977371e-06,
+    "score_if_components_unchanged": 0.3151604234112348,
+    "target_score": 0.314
+  },
+  "next_gate": "requires reviewed runtime support and parser tests before any exact eval; not recommended for this 8-byte ceiling",
+  "noop": false,
+  "notes": [
+    "This removes the P3 header and keeps the shorter streams, but current robust_current fixed-slice parser assumes a 219472-byte mask segment.",
+    "The parser rejection is the expected fail-closed result."
+  ],
+  "output_archive": {
+    "bytes": 276473,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lossless_byte_squeeze_worker_20260503/anchor_raw_fixedslice_short_streams_parser_rejected/archive.zip",
+    "sha256": "7594f59fb70ec7100b4bb43b9b8e0f86165477d89ab06eda49695ca65fe5e399",
+    "zip_compress_type": 0,
+    "zip_compresslevel": null
+  },
+  "payload": {
+    "bytes": 276373,
+    "extracted_payload_sha256": "6ef0221d59af50a868a927944404aa177404c6e9db7db04a91c8ab1c27b0c7d7",
+    "member": "p",
+    "payload_identical_to_anchor": false
+  },
+  "promotion_eligible": false,
+  "runtime_parse_validation": {
+    "error": "bad renderer payload magic b'U\\x98h#'; expected b'RPK1'",
+    "p_member_encoding": "raw_p_member",
+    "payload_format": null,
+    "status": "failed_parser_rejected"
+  },
+  "score_claim": false,
+  "semantic_contract": "invalid_headerless_short_fixedslice_probe",
+  "source_anchor": {
+    "bytes": 276481,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_pr75_minp_public_replay_t4_20260503T1049Z/archive.zip",
+    "score": 0.31516575028285976,
+    "sha256": "03a2afd5fe92c93a9b7b7e43625158a73b455f0cfbca82d278008a728db78746"
+  },
+  "stream_packing": {
+    "stream_screen": {
+      "actions_wire": {
+        "best_bytes": 254,
+        "best_delta": -1,
+        "best_params": {
+          "lgblock": 0,
+          "lgwin": 16,
+          "mode": 0,
+          "quality": 4
+        },
+        "best_sha256": "df69b463c6ffa88c47894a50f496ad44ae5eb15ab2633f3ddfc285169a491d6e",
+        "source_bytes": 255,
+        "source_sha256": "e2f8a113ee9e4d009448fec2497602ef67cabb8a13ef8d3fa9e11d69ff8ceed6",
+        "wire_raw_bytes": 281,
+        "wire_raw_sha256": "b0a4d55d19a534f223512c07920c46f1a52dc2409951a7f7c5ea9ce0e70acddc"
+      },
+      "masks": {
+        "best_bytes": 219465,
+        "best_delta": -7,
+        "best_params": {
+          "lgblock": 17,
+          "lgwin": 19,
+          "mode": 0,
+          "quality": 11
+        },
+        "best_sha256": "1ddf03dad8466797397ead26a0d481766e22e26cbc936251c1e3ed5d2f6eda99",
+        "source_bytes": 219472,
+        "source_sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+      },
+      "optimized_poses_qp1": {
+        "best_bytes": 898,
+        "best_delta": 0,
+        "best_params": "source",
+        "best_sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082",
+        "source_bytes": 898,
+        "source_sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082"
+      },
+      "renderer": {
+        "best_bytes": 55756,
+        "best_delta": 0,
+        "best_params": "source",
+        "best_sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf",
+        "source_bytes": 55756,
+        "source_sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+      }
+    }
+  },
+  "tool": "experiments/build_lossless_byte_squeeze_worker_20260503.py",
+  "zip_extract_payload_match": true
+}

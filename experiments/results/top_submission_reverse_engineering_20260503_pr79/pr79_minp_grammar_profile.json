@@ -1,0 +1,458 @@
+{
+  "compare_archive": null,
+  "comparison": null,
+  "evidence_grade": "empirical_reverse_engineering_profile",
+  "implementation_implications": [
+    "current robust_current parses the PR75/minp 276381 fixed-slice payload and converts SG2 actions to runtime raw4 records.",
+    "the remaining parity risk is semantic/runtime parity, not byte-slice discovery: run raw-output parity against the public runtime before dispatch.",
+    "isolate actions-only, renderer-only, pose-only, and full-stack candidates after local stream/runtime parity is exact."
+  ],
+  "notes": [
+    "Local byte/runtime grammar profile only; exact CUDA auth eval remains the score truth.",
+    "Public current-workflow ZIP permissiveness is studied as forensics, not used as a score claim."
+  ],
+  "public_archive": {
+    "actions": {
+      "charged_brotli_bytes": 1162,
+      "charged_brotli_sha256": "3fdf6320b77685606283438e1a9bea4df3c83ecb525deb4750dade60c8e7dbdc",
+      "first_records": [
+        {
+          "action": 2,
+          "pair": 54,
+          "tile": 80
+        },
+        {
+          "action": 92,
+          "pair": 12,
+          "tile": 83
+        },
+        {
+          "action": 7,
+          "pair": 16,
+          "tile": 83
+        },
+        {
+          "action": 23,
+          "pair": 21,
+          "tile": 83
+        },
+        {
+          "action": 69,
+          "pair": 87,
+          "tile": 83
+        },
+        {
+          "action": 45,
+          "pair": 91,
+          "tile": 83
+        },
+        {
+          "action": 95,
+          "pair": 94,
+          "tile": 83
+        },
+        {
+          "action": 3,
+          "pair": 103,
+          "tile": 83
+        },
+        {
+          "action": 17,
+          "pair": 104,
+          "tile": 83
+        },
+        {
+          "action": 48,
+          "pair": 105,
+          "tile": 83
+        },
+        {
+          "action": 64,
+          "pair": 106,
+          "tile": 83
+        },
+        {
+          "action": 18,
+          "pair": 207,
+          "tile": 83
+        }
+      ],
+      "last_records": [
+        {
+          "action": 41,
+          "pair": 24,
+          "tile": 132
+        },
+        {
+          "action": 22,
+          "pair": 32,
+          "tile": 132
+        },
+        {
+          "action": 12,
+          "pair": 33,
+          "tile": 132
+        },
+        {
+          "action": 41,
+          "pair": 39,
+          "tile": 132
+        },
+        {
+          "action": 64,
+          "pair": 39,
+          "tile": 132
+        },
+        {
+          "action": 58,
+          "pair": 368,
+          "tile": 132
+        },
+        {
+          "action": 104,
+          "pair": 450,
+          "tile": 132
+        },
+        {
+          "action": 5,
+          "pair": 2,
+          "tile": 140
+        },
+        {
+          "action": 1,
+          "pair": 6,
+          "tile": 140
+        },
+        {
+          "action": 17,
+          "pair": 48,
+          "tile": 140
+        },
+        {
+          "action": 95,
+          "pair": 189,
+          "tile": 140
+        },
+        {
+          "action": 29,
+          "pair": 522,
+          "tile": 140
+        }
+      ],
+      "pair_max": 598,
+      "pair_min": 0,
+      "record_count": 672,
+      "runtime_record_bytes": 2688,
+      "runtime_record_sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f",
+      "top_actions": [
+        {
+          "count": 19,
+          "value": 1
+        },
+        {
+          "count": 19,
+          "value": 0
+        },
+        {
+          "count": 19,
+          "value": 94
+        },
+        {
+          "count": 18,
+          "value": 93
+        },
+        {
+          "count": 17,
+          "value": 95
+        },
+        {
+          "count": 17,
+          "value": 22
+        },
+        {
+          "count": 15,
+          "value": 92
+        },
+        {
+          "count": 15,
+          "value": 3
+        },
+        {
+          "count": 15,
+          "value": 47
+        },
+        {
+          "count": 15,
+          "value": 44
+        },
+        {
+          "count": 13,
+          "value": 7
+        },
+        {
+          "count": 13,
+          "value": 45
+        }
+      ],
+      "top_pairs": [
+        {
+          "count": 9,
+          "value": 39
+        },
+        {
+          "count": 8,
+          "value": 11
+        },
+        {
+          "count": 7,
+          "value": 91
+        },
+        {
+          "count": 7,
+          "value": 0
+        },
+        {
+          "count": 7,
+          "value": 42
+        },
+        {
+          "count": 7,
+          "value": 5
+        },
+        {
+          "count": 6,
+          "value": 21
+        },
+        {
+          "count": 6,
+          "value": 106
+        },
+        {
+          "count": 6,
+          "value": 13
+        },
+        {
+          "count": 6,
+          "value": 30
+        },
+        {
+          "count": 6,
+          "value": 56
+        },
+        {
+          "count": 6,
+          "value": 37
+        }
+      ],
+      "top_tiles": [
+        {
+          "count": 55,
+          "value": 86
+        },
+        {
+          "count": 55,
+          "value": 88
+        },
+        {
+          "count": 44,
+          "value": 90
+        },
+        {
+          "count": 39,
+          "value": 89
+        },
+        {
+          "count": 35,
+          "value": 87
+        },
+        {
+          "count": 35,
+          "value": 109
+        },
+        {
+          "count": 33,
+          "value": 112
+        },
+        {
+          "count": 31,
+          "value": 111
+        },
+        {
+          "count": 23,
+          "value": 98
+        },
+        {
+          "count": 22,
+          "value": 108
+        },
+        {
+          "count": 20,
+          "value": 110
+        },
+        {
+          "count": 18,
+          "value": 107
+        }
+      ],
+      "unique_action_count": 99,
+      "unique_pair_count": 295,
+      "unique_tile_count": 45,
+      "wire_kind": "SG2_grouped_tile_frame_delta_varint",
+      "wire_raw_bytes": 1451,
+      "wire_raw_sha256": "700d1ba2e11cf2c9a7729a473c0c56d374447aa7bbbbb833abb70f0ceee75f9a"
+    },
+    "archive": {
+      "bytes": 277388,
+      "path": "experiments/results/top_submission_reverse_engineering_20260503_pr79/archive.zip",
+      "sha256": "01dc02badf851d99108fd92c570271f36f74cc5424c6d2a8f1b499cb4d1c3446",
+      "zip": {
+        "member_compress_size": 277288,
+        "member_compress_type": 0,
+        "member_crc": 1344838104,
+        "member_file_size": 277288,
+        "member_name": "p"
+      }
+    },
+    "decoded_streams": {
+      "masks.mkv": {
+        "charged_bytes": 219472,
+        "charged_sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87",
+        "codec": "brotli_av1_obu",
+        "decoded_bytes": 223385,
+        "decoded_prefix_hex": "12000a0a0000000c",
+        "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "name": "masks.mkv"
+      },
+      "optimized_poses.qp1": {
+        "charged_bytes": 898,
+        "charged_sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082",
+        "codec": "brotli_qp1",
+        "decoded_bytes": 1140,
+        "decoded_prefix_hex": "5150316d1cd003c1",
+        "decoded_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+        "name": "optimized_poses.qp1"
+      },
+      "renderer.bin": {
+        "charged_bytes": 55756,
+        "charged_sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf",
+        "codec": "brotli_qzs3",
+        "decoded_bytes": 59288,
+        "decoded_prefix_hex": "515a533320001675",
+        "decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+        "name": "renderer.bin"
+      },
+      "seg_tile_actions.bin": {
+        "charged_bytes": 1162,
+        "charged_sha256": "3fdf6320b77685606283438e1a9bea4df3c83ecb525deb4750dade60c8e7dbdc",
+        "codec": "brotli_public_seg_tile_actions",
+        "decoded_bytes": 1451,
+        "decoded_prefix_hex": "50013602530b0c5c",
+        "decoded_sha256": "700d1ba2e11cf2c9a7729a473c0c56d374447aa7bbbbb833abb70f0ceee75f9a",
+        "name": "seg_tile_actions.bin"
+      }
+    },
+    "payload": {
+      "bytes": 277288,
+      "fixed_slice_plan": {
+        "actions_br_bytes": 1162,
+        "label": "pr79_minp_v2_fixed_actions1162_model55756",
+        "mask_br_bytes": 219472,
+        "payload_bytes": 277288,
+        "pose_br_bytes": 898,
+        "renderer_br_bytes": 55756
+      },
+      "member": "p",
+      "prefix_hex": "5b98684344152796",
+      "sha256": "026c2a5801dc42e369ad9533736645488ef9183c0789d9c961adb23c1740e688"
+    },
+    "pose": {
+      "codec": "QP1_col0_delta_varint",
+      "q0_first": 7277,
+      "q0_last": 5636,
+      "q0_max": 7739,
+      "q0_min": 1669,
+      "raw_bytes": 1140,
+      "raw_prefix_hex": "5150316d1cd003c1",
+      "raw_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+      "row_count": 600
+    },
+    "renderer": {
+      "magic": "QZS3",
+      "qzs3_block_size": 32
+    },
+    "robust_current_parse": {
+      "decoded_members": {
+        "masks.mkv": {
+          "decoded_bytes": 223385,
+          "decoded_prefix_hex": "12000a0a0000000c",
+          "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "optimized_poses.qp1": {
+          "decoded_bytes": 1140,
+          "decoded_prefix_hex": "5150316d1cd003c1",
+          "decoded_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+        },
+        "renderer.bin": {
+          "decoded_bytes": 59288,
+          "decoded_prefix_hex": "515a533320001675",
+          "decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+        },
+        "seg_tile_actions.bin": {
+          "decoded_bytes": 2688,
+          "decoded_prefix_hex": "360050020c00535c",
+          "decoded_sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f"
+        }
+      },
+      "members": [
+        {
+          "bytes": 55756,
+          "codec": "brotli_qzs3",
+          "decoded_bytes": 59288,
+          "decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+          "name": "renderer.bin",
+          "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+        },
+        {
+          "bytes": 219472,
+          "codec": "brotli_av1_obu",
+          "decoded_bytes": 223385,
+          "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+          "name": "masks.mkv",
+          "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+        },
+        {
+          "bytes": 1162,
+          "codec": "brotli_seg_tile_actions_v1",
+          "decoded_bytes": 2688,
+          "decoded_sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f",
+          "name": "seg_tile_actions.bin",
+          "sha256": "3fdf6320b77685606283438e1a9bea4df3c83ecb525deb4750dade60c8e7dbdc"
+        },
+        {
+          "bytes": 898,
+          "codec": "public_qp1_brotli",
+          "decoded_bytes": 1140,
+          "decoded_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+          "name": "optimized_poses.qp1",
+          "sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082"
+        }
+      ],
+      "ok": true,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices"
+    }
+  },
+  "public_pr75_source": {
+    "branch": "submission/qpose14-r55-segactions-minp",
+    "commit": "deeef56eeb915ddb3f20ee22fd947002606a8b9c",
+    "exists": true,
+    "inflate_py": {
+      "exists": true,
+      "path": "/tmp/pr75-minp/submissions/qpose14_r55_segactions_minp/inflate.py",
+      "sha256": "ea490dec83e36788dd64913650d1c265dbef1386320a5f550b5df063a71838cc"
+    },
+    "path": "/tmp/pr75-minp"
+  },
+  "schema": "pr75_minp_archive_grammar_profile_v1",
+  "score_claim": false,
+  "tool": "experiments/profile_pr75_minp_archive.py"
+}

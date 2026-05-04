@@ -1,0 +1,67 @@
+{
+  "brotli_quality": 11,
+  "evidence_grade": "empirical",
+  "formula_only_rate_delta": -0.011438125096732659,
+  "header": {
+    "members": [
+      {
+        "bytes": 211903,
+        "codec": "raw",
+        "name": "renderer.bin",
+        "sha256": "97bde7ac1de7f78ce60a2d68f747aca5d76d1ce7fd1d024680f8d61247ccf142"
+      },
+      {
+        "bytes": 421483,
+        "codec": "raw",
+        "name": "masks.mkv",
+        "sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9"
+      },
+      {
+        "bytes": 5316,
+        "codec": "pose_fp16_velocity_residual_topk_v1",
+        "decoded_bytes": 7200,
+        "decoded_sha256": "2bbf355b69843229f56ed022908ea366c9a12e302c7e3fcc50a057fea1741eea",
+        "lossy": true,
+        "name": "optimized_poses.bin",
+        "pose_error_stats": {
+          "max_abs_by_dim": [
+            0.0,
+            0.98828125,
+            0.996826171875,
+            0.99267578125,
+            0.99609375,
+            0.99737548828125
+          ],
+          "pose_dim": 6,
+          "rmse_by_dim": [
+            0.0,
+            0.40866872456102926,
+            0.32280628157439917,
+            0.38351164130984294,
+            0.37252577106034773,
+            0.4217076429604059
+          ],
+          "rows": 600
+        },
+        "pose_residual_topk": 1024,
+        "sha256": "5d79799907364cd2fdbe000aab8abe894f10c8ddbf5474e2557d55d9458398bb",
+        "source_decoded_sha256": "4b3d8cd58965971ad518a970441f5e9cc53ce361a62d51e95c1cdd2056be4449"
+      }
+    ],
+    "schema": "renderer_payload_v1",
+    "source_archive_sha256": "1e9195cb6e0e08fc98ee393590770e2b22905a2ee2718edb8b737cada125f279"
+  },
+  "output_archive": "experiments/results/renderer_packed_payload_c044_velres_top1024_20260501/archive.zip",
+  "output_archive_bytes": 592785,
+  "output_archive_sha256": "870403a1d55246b4ee6eee017b15008c5e1c1c1fafa755f2ef7f58874d2d5aed",
+  "payload_compressed_bytes": 592641,
+  "payload_member": "renderer_payload.bin.br",
+  "payload_raw_bytes": 639756,
+  "pose_codec": "pose_fp16_velocity_residual_topk_v1",
+  "pose_residual_topk": 1024,
+  "savings_bytes": 17178,
+  "score_claim": false,
+  "source_archive": "experiments/results/lightning_batch/exact_eval_owv3_0120_stack_t4_20260501T150652Z/archive.zip",
+  "source_archive_bytes": 609963,
+  "source_archive_sha256": "1e9195cb6e0e08fc98ee393590770e2b22905a2ee2718edb8b737cada125f279"
+}

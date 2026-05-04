@@ -1,0 +1,38 @@
+{
+  "expected_render_order_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+  "expected_shape": [
+    600,
+    384,
+    512
+  ],
+  "gpu_required": false,
+  "integration_gate": "Exact inflate may set PACT_STBM1BR_RUST_DECODER only when the binary is part of the fixed runtime or deliberately bundled by the experiment; otherwise Python reference remains the default path.",
+  "parity": {
+    "hashes_equal_expected": true,
+    "passed": true,
+    "rust_matches_python": true
+  },
+  "python_reference": {
+    "decoded_bytes": 117964800,
+    "elapsed_seconds": 30.820150707964785,
+    "implementation": "python_reference",
+    "render_order_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45"
+  },
+  "remote_jobs_dispatched": false,
+  "rust": {
+    "decoded_bytes": 117964800,
+    "decoder_path": "runtime-rs/target/release/stbm1br-codec",
+    "decoder_sha256": "97056f7dece7ac9da49eb88077bbca81ec40cf8410212e7bdf7d4c0ddd106299",
+    "elapsed_seconds": 0.9265687079750933,
+    "implementation": "rust_stbm1br_codec_release_cli",
+    "render_order_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+    "stderr": "stbm1br-codec: decoded 600 frames 384x512 to 117964800 bytes in 0.756s"
+  },
+  "schema": "stbm1br_rust_decode_timing_report_v1",
+  "score_claim": false,
+  "segment": {
+    "bytes": 152439,
+    "path": "experiments/results/pr85_stbm1br_mask_recode_20260504_worker/pr90_stbm1br_lossless_pr85_mask_recode/mask_segment.stbm1br",
+    "sha256": "1b1ec60b64e284aae11e838dc3d9996bce00125df5712a8ba9c3e8f739c9d313"
+  }
+}

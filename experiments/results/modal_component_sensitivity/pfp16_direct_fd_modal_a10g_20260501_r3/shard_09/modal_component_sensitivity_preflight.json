@@ -1,0 +1,16 @@
+{
+  "archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+  "archive_size_bytes": 686635,
+  "device_requested": "cuda",
+  "evidence_grade": "diagnostic_cuda_modal_direct_renderer_finite_difference",
+  "label": "pfp16_direct_fd_modal_a10g_20260501_r3",
+  "promotion_eligible": false,
+  "schema_version": 1,
+  "score_claim": false,
+  "shard_count": 16,
+  "shard_index": 9,
+  "tool": "experiments/modal_component_sensitivity_shards.py",
+  "torch_cuda_available": true,
+  "torch_device_count": 1,
+  "torch_device_name": "NVIDIA A10"
+}

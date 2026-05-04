@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="218" viewBox="0 0 980 218">
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="20" y="28" font-family="Arial, sans-serif" font-size="18" font-weight="700">Score component breakdown</text>
+<text x="20" y="66" font-family="Arial, sans-serif" font-size="12">C067</text>
+<rect x="220.000" y="46" width="1.473" height="24" fill="#3b82f6"/>
+<rect x="221.473" y="46" width="1.695" height="24" fill="#ef4444"/>
+<rect x="223.168" y="46" width="4.424" height="24" fill="#22c55e"/>
+<text x="872" y="63" font-family="Arial, sans-serif" font-size="12">0.315617</text>
+<text x="20" y="110" font-family="Arial, sans-serif" font-size="12">rowspan_stride1_T4</text>
+<rect x="220.000" y="90" width="36.088" height="24" fill="#3b82f6"/>
+<rect x="256.088" y="90" width="548.127" height="24" fill="#ef4444"/>
+<rect x="804.215" y="90" width="4.028" height="24" fill="#22c55e"/>
+<text x="872" y="107" font-family="Arial, sans-serif" font-size="12">24.454797</text>
+<text x="20" y="154" font-family="Arial, sans-serif" font-size="12">rowspan_stride2_L40S</text>
+<rect x="220.000" y="134" width="118.343" height="24" fill="#3b82f6"/>
+<rect x="338.343" y="134" width="518.836" height="24" fill="#ef4444"/>
+<rect x="857.179" y="134" width="2.821" height="24" fill="#22c55e"/>
+<text x="872" y="151" font-family="Arial, sans-serif" font-size="12">26.606439</text>
+<rect x="20" y="190" width="12" height="12" fill="#3b82f6"/>
+<text x="38" y="200" font-family="Arial, sans-serif" font-size="12">seg</text>
+<rect x="98" y="190" width="12" height="12" fill="#ef4444"/>
+<text x="116" y="200" font-family="Arial, sans-serif" font-size="12">pose</text>
+<rect x="176" y="190" width="12" height="12" fill="#22c55e"/>
+<text x="194" y="200" font-family="Arial, sans-serif" font-size="12">rate</text>
+</svg>

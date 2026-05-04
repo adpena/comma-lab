@@ -1,0 +1,18 @@
+{
+  "adjudication": null,
+  "artifact_recorded_at_utc": "2026-05-01T13:29:24Z",
+  "expected_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+  "expected_archive_size_bytes": 686635,
+  "expected_baseline_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+  "expected_baseline_archive_size_bytes": 686635,
+  "job_name": "component_response_alpha_primitive_pfp16_crf63_l40s_20260501T131540Z",
+  "queue_metadata": {
+    "acceleration": "duplicate_l40s_for_wall_clock",
+    "lane": "alpha_primitive_geometry_response",
+    "source_plan": "experiments/results/alpha_mask_primitive_response_plan_pfp16_20260501_r1/alpha_mask_primitive_response_plan.json"
+  },
+  "role": "official_component_response",
+  "schema_version": 1,
+  "score_source": "official_component_response_summary.json:contest_auth_eval_json_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

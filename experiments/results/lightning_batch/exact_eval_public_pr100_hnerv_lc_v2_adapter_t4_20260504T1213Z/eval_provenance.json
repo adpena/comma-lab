@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "started_at_utc": "2026-05-04T12:25:23Z",
+  "tool": "experiments/contest_auth_eval.py",
+  "archive_path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z/archive.zip",
+  "archive_sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+  "archive_size_bytes": 178981,
+  "inflate_script": "/teamspace/studios/this_studio/pact/experiments/results/public_runtime_adapters_20260504_codex/pr100_runtime_adapter/inflate.sh",
+  "inflate_script_sha256": "b8dd1979c49171fde4552956d0d07034646778f747ccbdc2029839a302f7a806",
+  "inflate_runtime_manifest": {
+    "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+    "runtime_root": "/teamspace/studios/this_studio/pact/experiments/results/public_runtime_adapters_20260504_codex/pr100_runtime_adapter",
+    "runtime_file_count": 5,
+    "runtime_tree_sha256": "ef6323533666c9cac1c204a9d3f7054157d44a185b16fc859fb3f0438ccd1832",
+    "files": [
+      {
+        "relative_path": "hnerv_model.py",
+        "bytes": 2197,
+        "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+      },
+      {
+        "relative_path": "inflate.py",
+        "bytes": 4963,
+        "sha256": "2b94d042f090155a19606e98f00f4bf1986974a3c3ad7059ae7b1c4ee23605db"
+      },
+      {
+        "relative_path": "inflate.sh",
+        "bytes": 543,
+        "sha256": "b8dd1979c49171fde4552956d0d07034646778f747ccbdc2029839a302f7a806"
+      },
+      {
+        "relative_path": "schema.py",
+        "bytes": 1081,
+        "sha256": "bc434bd596e753dbeae97c0ddce4d9cf98a50cfe862a451834864d83620d6a0a"
+      },
+      {
+        "relative_path": "sidecar.py",
+        "bytes": 1837,
+        "sha256": "52955000fe673914307b481bff29377a015bf7a0fe9dc38652e29153c033af75"
+      }
+    ],
+    "repo_local_tac_import_manifest": {
+      "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+      "discovery": "static_ast_recursive_import_closure",
+      "runtime_root_name": "pr100_runtime_adapter",
+      "tac_root_relative_path": "src/tac",
+      "root_import_modules": [],
+      "unresolved_modules": [],
+      "parse_errors": [],
+      "module_count": 0,
+      "file_count": 0,
+      "files": []
+    },
+    "upstream_evaluate_py": {
+      "relative_path": "evaluate.py",
+      "bytes": 6005,
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    }
+  },
+  "upstream_dir": "/teamspace/studios/this_studio/pact/upstream",
+  "device": "cuda",
+  "inflate_timeout_seconds": 1800,
+  "evaluate_timeout_seconds": 1800,
+  "video_names_file": "upstream/public_test_video_names.txt",
+  "sys_argv": [
+    "experiments/contest_auth_eval.py",
+    "--archive",
+    "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z/archive.zip",
+    "--inflate-sh",
+    "/teamspace/studios/this_studio/pact/experiments/results/public_runtime_adapters_20260504_codex/pr100_runtime_adapter/inflate.sh",
+    "--upstream-dir",
+    "/teamspace/studios/this_studio/pact/upstream",
+    "--device",
+    "cuda",
+    "--keep-work-dir",
+    "--work-dir",
+    "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z/eval_work"
+  ],
+  "env_vars": {
+    "PYTHONPATH": null,
+    "CUDA_VISIBLE_DEVICES": null,
+    "CUBLAS_WORKSPACE_CONFIG": null,
+    "PYTHONHASHSEED": null,
+    "PYTORCH_CUDA_ALLOC_CONF": null,
+    "LD_LIBRARY_PATH": "/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda/lib64",
+    "CONFIG_ENV_PATH": null,
+    "PYTHON_INFLATE": null,
+    "LANE_MM_SIGMA": null,
+    "INFLATE_BROTLI_SPEC": "brotli==1.2.0",
+    "INFLATE_AV_SPEC": null,
+    "INFLATE_TORCH_SPEC": "torch==2.5.1+cu124",
+    "INFLATE_NUMPY_SPEC": null,
+    "UV_BIN": "/usr/local/bin/uv",
+    "UV_PROJECT_ENVIRONMENT": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z/uv_project_env"
+  },
+  "gpu_model": "Tesla T4",
+  "gpu_driver": "580.126.09",
+  "gpu_t4_match": true,
+  "torch_version": "2.11.0+cu130",
+  "cuda_version": "13.0",
+  "cuda_available": true,
+  "cuda_device_count": 1,
+  "ffmpeg_version": "ffmpeg version 8.0.1 Copyright (c) 2000-2025 the FFmpeg developers",
+  "libsvtav1_version": "configuration: --prefix=/home/zeus/miniconda3/envs/cloudspace --cc=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/x86_64-conda-linux-gnu-cc --cxx=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/x86_64-conda-linux-gnu-c++ --nm=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/x86_64-conda-linux-gnu-nm --ar=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/x86_64-conda-linux-gnu-ar --enable-openssl --enable-demuxer=dash --enable-hardcoded-tables --enable-libfreetype --enable-libharfbuzz --enable-libfontconfig --enable-libopenh264 --enable-libdav1d --enable-libmp3lame --enable-libaom --enable-libsvtav1 --enable-libxml2 --enable-pic --enable-shared --enable-version3 --enable-zlib --enable-libvorbis --enable-libopus --enable-libwebp --enable-libshaderc --disable-ffplay --disable-static --disable-gpl --disable-doc --pkg-config=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/pkg-config --arch=x86_64 --target-os=linux --cross-prefix=x86_64-conda-linux-gnu- --host-cc=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/x86_64-conda-linux-gnu-cc --disable-gnutls --enable-libvpx --enable-pthreads --enable-alsa --enable-libpulse --enable-libdrm --enable-libvpl --enable-vaapi --enable-libtesseract --enable-libvpx --enable-libass --enable-librsvg",
+  "pact_commit": "<error:CalledProcessError(128, ['git', 'rev-parse', 'HEAD'])>",
+  "upstream_commit": "11ad728f563d8970929e8947a1cf6124ee6303e4"
+}

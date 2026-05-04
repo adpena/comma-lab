@@ -1,0 +1,33 @@
+{
+  "adjudication": {
+    "allow_component_gate_forensic_success": true,
+    "allow_sane_score_forensic_success": true,
+    "baseline_archive_size_bytes": 276214,
+    "baseline_posenet_dist": 0.00049637,
+    "baseline_score": 0.31561703078448233,
+    "baseline_segnet_dist": 0.00061244,
+    "component_reference_label": "C-067_T4",
+    "delta_key": "score_delta_vs_c067_t4",
+    "max_posenet_dist": 0.1,
+    "max_posenet_relative": 250.0,
+    "max_sane_score": 50.0,
+    "max_segnet_dist": 0.02,
+    "max_segnet_relative": 80.0,
+    "predicted_band_high": 50.0,
+    "predicted_band_low": 0.2,
+    "provenance_name": "adjudication_provenance.json",
+    "regression_threshold": 0.2,
+    "required_device": "cuda",
+    "required_samples": 600,
+    "result_copy_name": "contest_auth_eval.adjudicated.json"
+  },
+  "artifact_recorded_at_utc": "2026-05-02T11:52:24Z",
+  "expected_archive_sha256": "8c6569b00dc999abbbeedddfc3003ba769484fa34b3abe4555a5d56152fec594",
+  "expected_archive_size_bytes": 257676,
+  "job_name": "exact_eval_c067_cmg3a_body200_l40s_20260502T114231Z",
+  "queue_metadata": {},
+  "role": "exact_cuda_eval",
+  "schema_version": 1,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

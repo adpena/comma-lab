@@ -1,0 +1,669 @@
+{
+  "candidate_count": 15,
+  "candidates": [
+    {
+      "archive": "experiments/results/pr75_action_dict_v2_worker_20260503/c067_pr75_actions_top40_drop40_add41_p6/archive.zip",
+      "archive_sha256": "209fe4b08be802a2d960ae10aa801af32598fc9ce495016626d2f2a0f22d5266",
+      "archive_size_bytes": 276341,
+      "decoded_stream_closure": {
+        "mask_renderer_match_c067": true,
+        "member_names": [
+          "renderer.bin",
+          "masks.mkv",
+          "optimized_poses.qp1",
+          "seg_tile_actions.bin"
+        ],
+        "members": {
+          "masks.mkv": {
+            "bytes": 223385,
+            "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 1140,
+            "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+          },
+          "renderer.bin": {
+            "bytes": 59288,
+            "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+          },
+          "seg_tile_actions.bin": {
+            "bytes": 160,
+            "sha256": "3b48ee3db91d5876f37af577ceb37abe29e7be66848505ead1cc842ba8115523"
+          }
+        },
+        "ok": true,
+        "pose_qp1_matches_current_frontier": true,
+        "seg_tile_actions_decoded_bytes": 160,
+        "seg_tile_actions_decoded_sha256": "3b48ee3db91d5876f37af577ceb37abe29e7be66848505ead1cc842ba8115523",
+        "seg_tile_actions_matches_manifest_runtime_raw": true,
+        "single_zip_member_p": true
+      },
+      "name": "c067_pr75_actions_top40_drop40_add41_p6",
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint"
+    },
+    {
+      "archive": "experiments/results/pr75_action_dict_v2_worker_20260503/c067_pr75_actions_top40_drop39_add41_p6/archive.zip",
+      "archive_sha256": "2fcc1982247e5e6ab570820b5ee7e553cd53a2e26dd0dc366773d5c51d9bbd79",
+      "archive_size_bytes": 276342,
+      "decoded_stream_closure": {
+        "mask_renderer_match_c067": true,
+        "member_names": [
+          "renderer.bin",
+          "masks.mkv",
+          "optimized_poses.qp1",
+          "seg_tile_actions.bin"
+        ],
+        "members": {
+          "masks.mkv": {
+            "bytes": 223385,
+            "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 1140,
+            "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+          },
+          "renderer.bin": {
+            "bytes": 59288,
+            "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+          },
+          "seg_tile_actions.bin": {
+            "bytes": 160,
+            "sha256": "dcf8248fb5ea934bee76e5893b03e987cdec8c74cc94efc69dc96767eb27afd0"
+          }
+        },
+        "ok": true,
+        "pose_qp1_matches_current_frontier": true,
+        "seg_tile_actions_decoded_bytes": 160,
+        "seg_tile_actions_decoded_sha256": "dcf8248fb5ea934bee76e5893b03e987cdec8c74cc94efc69dc96767eb27afd0",
+        "seg_tile_actions_matches_manifest_runtime_raw": true,
+        "single_zip_member_p": true
+      },
+      "name": "c067_pr75_actions_top40_drop39_add41_p6",
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint"
+    },
+    {
+      "archive": "experiments/results/pr75_action_dict_v2_worker_20260503/c067_pr75_actions_top40_drop39_40_add41_42_p6/archive.zip",
+      "archive_sha256": "cfbcdb9e413657616b0f915c742740e4f879b0b2dcdf82b53d7819f344f3a6fc",
+      "archive_size_bytes": 276342,
+      "decoded_stream_closure": {
+        "mask_renderer_match_c067": true,
+        "member_names": [
+          "renderer.bin",
+          "masks.mkv",
+          "optimized_poses.qp1",
+          "seg_tile_actions.bin"
+        ],
+        "members": {
+          "masks.mkv": {
+            "bytes": 223385,
+            "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 1140,
+            "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+          },
+          "renderer.bin": {
+            "bytes": 59288,
+            "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+          },
+          "seg_tile_actions.bin": {
+            "bytes": 160,
+            "sha256": "ec13e8ff52a68f20d137f71b9ed92a05621db3e84dae07fc7f4dc6eea77281bc"
+          }
+        },
+        "ok": true,
+        "pose_qp1_matches_current_frontier": true,
+        "seg_tile_actions_decoded_bytes": 160,
+        "seg_tile_actions_decoded_sha256": "ec13e8ff52a68f20d137f71b9ed92a05621db3e84dae07fc7f4dc6eea77281bc",
+        "seg_tile_actions_matches_manifest_runtime_raw": true,
+        "single_zip_member_p": true
+      },
+      "name": "c067_pr75_actions_top40_drop39_40_add41_42_p6",
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint"
+    },
+    {
+      "archive": "experiments/results/pr75_action_dict_v2_worker_20260503/c067_pr75_actions_top40_drop40_p6/archive.zip",
+      "archive_sha256": "3ddae1da96ae3f2d50335b88c80abf564f64729760f40dc7fb7ee2a05266ad46",
+      "archive_size_bytes": 276340,
+      "decoded_stream_closure": {
+        "mask_renderer_match_c067": true,
+        "member_names": [
+          "renderer.bin",
+          "masks.mkv",
+          "optimized_poses.qp1",
+          "seg_tile_actions.bin"
+        ],
+        "members": {
+          "masks.mkv": {
+            "bytes": 223385,
+            "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 1140,
+            "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+          },
+          "renderer.bin": {
+            "bytes": 59288,
+            "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+          },
+          "seg_tile_actions.bin": {
+            "bytes": 156,
+            "sha256": "bd6b673c581c0ada1bd4e6ff244d0d5d74c1873aa5adb5a84069b7c6b52c95c5"
+          }
+        },
+        "ok": true,
+        "pose_qp1_matches_current_frontier": true,
+        "seg_tile_actions_decoded_bytes": 156,
+        "seg_tile_actions_decoded_sha256": "bd6b673c581c0ada1bd4e6ff244d0d5d74c1873aa5adb5a84069b7c6b52c95c5",
+        "seg_tile_actions_matches_manifest_runtime_raw": true,
+        "single_zip_member_p": true
+      },
+      "name": "c067_pr75_actions_top40_drop40_p6",
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint"
+    },
+    {
+      "archive": "experiments/results/pr75_action_dict_v2_worker_20260503/c067_pr75_actions_top40_drop39_p6/archive.zip",
+      "archive_sha256": "4adc1102af251bfdc046bdbc264e4400ed58bb369e490e3fe5e440dbf4d679ba",
+      "archive_size_bytes": 276340,
+      "decoded_stream_closure": {
+        "mask_renderer_match_c067": true,
+        "member_names": [
+          "renderer.bin",
+          "masks.mkv",
+          "optimized_poses.qp1",
+          "seg_tile_actions.bin"
+        ],
+        "members": {
+          "masks.mkv": {
+            "bytes": 223385,
+            "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 1140,
+            "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+          },
+          "renderer.bin": {
+            "bytes": 59288,
+            "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+          },
+          "seg_tile_actions.bin": {
+            "bytes": 156,
+            "sha256": "550479a18e81510936a8521c204978500d216bfe3d508a9c2db69d3b2e9de8f8"
+          }
+        },
+        "ok": true,
+        "pose_qp1_matches_current_frontier": true,
+        "seg_tile_actions_decoded_bytes": 156,
+        "seg_tile_actions_decoded_sha256": "550479a18e81510936a8521c204978500d216bfe3d508a9c2db69d3b2e9de8f8",
+        "seg_tile_actions_matches_manifest_runtime_raw": true,
+        "single_zip_member_p": true
+      },
+      "name": "c067_pr75_actions_top40_drop39_p6",
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint"
+    },
+    {
+      "archive": "experiments/results/pr75_action_dict_v2_worker_20260503/c067_pr75_actions_top40_drop39_40_p6/archive.zip",
+      "archive_sha256": "f895a5974957ac1984573f4cf32262e1facb40c9bbef83cd2804b3603a1807e1",
+      "archive_size_bytes": 276338,
+      "decoded_stream_closure": {
+        "mask_renderer_match_c067": true,
+        "member_names": [
+          "renderer.bin",
+          "masks.mkv",
+          "optimized_poses.qp1",
+          "seg_tile_actions.bin"
+        ],
+        "members": {
+          "masks.mkv": {
+            "bytes": 223385,
+            "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 1140,
+            "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+          },
+          "renderer.bin": {
+            "bytes": 59288,
+            "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+          },
+          "seg_tile_actions.bin": {
+            "bytes": 152,
+            "sha256": "81c11052fbfac315075a91e198dd06575a88655a4e6dfa1a522c6cace054c674"
+          }
+        },
+        "ok": true,
+        "pose_qp1_matches_current_frontier": true,
+        "seg_tile_actions_decoded_bytes": 152,
+        "seg_tile_actions_decoded_sha256": "81c11052fbfac315075a91e198dd06575a88655a4e6dfa1a522c6cace054c674",
+        "seg_tile_actions_matches_manifest_runtime_raw": true,
+        "single_zip_member_p": true
+      },
+      "name": "c067_pr75_actions_top40_drop39_40_p6",
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint"
+    },
+    {
+      "archive": "experiments/results/pr75_action_dict_v2_worker_20260503/c067_pr75_actions_top40_drop35_39_40_p6/archive.zip",
+      "archive_sha256": "f7eb8a1a629d43059feb5d93d708fcf79f4a3c80a52dded90c4e8c3a0f397da5",
+      "archive_size_bytes": 276336,
+      "decoded_stream_closure": {
+        "mask_renderer_match_c067": true,
+        "member_names": [
+          "renderer.bin",
+          "masks.mkv",
+          "optimized_poses.qp1",
+          "seg_tile_actions.bin"
+        ],
+        "members": {
+          "masks.mkv": {
+            "bytes": 223385,
+            "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 1140,
+            "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+          },
+          "renderer.bin": {
+            "bytes": 59288,
+            "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+          },
+          "seg_tile_actions.bin": {
+            "bytes": 148,
+            "sha256": "2b6aa0d093bcc6b780943b7aad24968719b890ee98008307c103974501179de5"
+          }
+        },
+        "ok": true,
+        "pose_qp1_matches_current_frontier": true,
+        "seg_tile_actions_decoded_bytes": 148,
+        "seg_tile_actions_decoded_sha256": "2b6aa0d093bcc6b780943b7aad24968719b890ee98008307c103974501179de5",
+        "seg_tile_actions_matches_manifest_runtime_raw": true,
+        "single_zip_member_p": true
+      },
+      "name": "c067_pr75_actions_top40_drop35_39_40_p6",
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint"
+    },
+    {
+      "archive": "experiments/results/pr75_action_dict_v2_worker_20260503/c067_pr75_actions_top40_drop37_38_39_40_p6/archive.zip",
+      "archive_sha256": "9198b1f81541dd61444b8fbce3625ec4c20abe032c918bc5997decd0a07b9b13",
+      "archive_size_bytes": 276333,
+      "decoded_stream_closure": {
+        "mask_renderer_match_c067": true,
+        "member_names": [
+          "renderer.bin",
+          "masks.mkv",
+          "optimized_poses.qp1",
+          "seg_tile_actions.bin"
+        ],
+        "members": {
+          "masks.mkv": {
+            "bytes": 223385,
+            "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 1140,
+            "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+          },
+          "renderer.bin": {
+            "bytes": 59288,
+            "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+          },
+          "seg_tile_actions.bin": {
+            "bytes": 144,
+            "sha256": "c5101ef870ba6b396037672402fe396e21888419eafddd3d0e00171ff7af0f69"
+          }
+        },
+        "ok": true,
+        "pose_qp1_matches_current_frontier": true,
+        "seg_tile_actions_decoded_bytes": 144,
+        "seg_tile_actions_decoded_sha256": "c5101ef870ba6b396037672402fe396e21888419eafddd3d0e00171ff7af0f69",
+        "seg_tile_actions_matches_manifest_runtime_raw": true,
+        "single_zip_member_p": true
+      },
+      "name": "c067_pr75_actions_top40_drop37_38_39_40_p6",
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint"
+    },
+    {
+      "archive": "experiments/results/pr75_action_dict_v2_worker_20260503/c067_pr75_actions_lag_eval_top40_p6/archive.zip",
+      "archive_sha256": "f993feb9be7db4f3d8e593c682630e22632af86fa355d6f0450efa37e545453a",
+      "archive_size_bytes": 276335,
+      "decoded_stream_closure": {
+        "mask_renderer_match_c067": true,
+        "member_names": [
+          "renderer.bin",
+          "masks.mkv",
+          "optimized_poses.qp1",
+          "seg_tile_actions.bin"
+        ],
+        "members": {
+          "masks.mkv": {
+            "bytes": 223385,
+            "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 1140,
+            "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+          },
+          "renderer.bin": {
+            "bytes": 59288,
+            "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+          },
+          "seg_tile_actions.bin": {
+            "bytes": 148,
+            "sha256": "29f31933a9cbd55225f32eca11b202b2f8c4cae4ddc281d84102c4c281e0fa13"
+          }
+        },
+        "ok": true,
+        "pose_qp1_matches_current_frontier": true,
+        "seg_tile_actions_decoded_bytes": 148,
+        "seg_tile_actions_decoded_sha256": "29f31933a9cbd55225f32eca11b202b2f8c4cae4ddc281d84102c4c281e0fa13",
+        "seg_tile_actions_matches_manifest_runtime_raw": true,
+        "single_zip_member_p": true
+      },
+      "name": "c067_pr75_actions_lag_eval_top40_p6",
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint"
+    },
+    {
+      "archive": "experiments/results/pr75_action_dict_v2_worker_20260503/c067_pr75_actions_lag_eval_pose2_top40_p6/archive.zip",
+      "archive_sha256": "a218fe5e503b3b85f5a2ff1ca9392a587aabe276179bdeb041307ea69ffa25f6",
+      "archive_size_bytes": 276335,
+      "decoded_stream_closure": {
+        "mask_renderer_match_c067": true,
+        "member_names": [
+          "renderer.bin",
+          "masks.mkv",
+          "optimized_poses.qp1",
+          "seg_tile_actions.bin"
+        ],
+        "members": {
+          "masks.mkv": {
+            "bytes": 223385,
+            "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 1140,
+            "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+          },
+          "renderer.bin": {
+            "bytes": 59288,
+            "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+          },
+          "seg_tile_actions.bin": {
+            "bytes": 140,
+            "sha256": "f33dcdf95e018b12df573556331fb6e777220d83283542b9bab8715cab1c87f8"
+          }
+        },
+        "ok": true,
+        "pose_qp1_matches_current_frontier": true,
+        "seg_tile_actions_decoded_bytes": 140,
+        "seg_tile_actions_decoded_sha256": "f33dcdf95e018b12df573556331fb6e777220d83283542b9bab8715cab1c87f8",
+        "seg_tile_actions_matches_manifest_runtime_raw": true,
+        "single_zip_member_p": true
+      },
+      "name": "c067_pr75_actions_lag_eval_pose2_top40_p6",
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint"
+    },
+    {
+      "archive": "experiments/results/pr75_action_dict_v2_worker_20260503/c067_pr75_actions_lag_eval_pose4_top40_p6/archive.zip",
+      "archive_sha256": "a7702dfa92abd279fb92b690b50f8cb6fa81a2dfc60ae07a4543ba0a8cf08ae0",
+      "archive_size_bytes": 276314,
+      "decoded_stream_closure": {
+        "mask_renderer_match_c067": true,
+        "member_names": [
+          "renderer.bin",
+          "masks.mkv",
+          "optimized_poses.qp1",
+          "seg_tile_actions.bin"
+        ],
+        "members": {
+          "masks.mkv": {
+            "bytes": 223385,
+            "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 1140,
+            "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+          },
+          "renderer.bin": {
+            "bytes": 59288,
+            "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+          },
+          "seg_tile_actions.bin": {
+            "bytes": 112,
+            "sha256": "3291171603464e26db71e0b8d4ac2a6c24265aa2da996f1ff4cfa3669aa4edc7"
+          }
+        },
+        "ok": true,
+        "pose_qp1_matches_current_frontier": true,
+        "seg_tile_actions_decoded_bytes": 112,
+        "seg_tile_actions_decoded_sha256": "3291171603464e26db71e0b8d4ac2a6c24265aa2da996f1ff4cfa3669aa4edc7",
+        "seg_tile_actions_matches_manifest_runtime_raw": true,
+        "single_zip_member_p": true
+      },
+      "name": "c067_pr75_actions_lag_eval_pose4_top40_p6",
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint"
+    },
+    {
+      "archive": "experiments/results/pr75_action_dict_v2_worker_20260503/c067_pr75_actions_top40_wilddiramp6_p5/archive.zip",
+      "archive_sha256": "a5d03ea0978bd31b4899423c6d2a670eeb8193bde95639a68d6ed58ad4e59747",
+      "archive_size_bytes": 276444,
+      "decoded_stream_closure": {
+        "mask_renderer_match_c067": true,
+        "member_names": [
+          "renderer.bin",
+          "masks.mkv",
+          "optimized_poses.qp1",
+          "seg_tile_actions.bin",
+          "seg_tile_action_dict.bin"
+        ],
+        "members": {
+          "masks.mkv": {
+            "bytes": 223385,
+            "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 1140,
+            "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+          },
+          "renderer.bin": {
+            "bytes": 59288,
+            "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+          },
+          "seg_tile_action_dict.bin": {
+            "bytes": 176,
+            "sha256": "df61ef5939d9e62efaa47ae2b432bc9de6b820b95bcd8760909dffb3aae25d0f"
+          },
+          "seg_tile_actions.bin": {
+            "bytes": 160,
+            "sha256": "755db45e5c5dcae413e2f9f12f487cdb5f09600d655ca0a8dd40b42b55a0cc07"
+          }
+        },
+        "ok": true,
+        "pose_qp1_matches_current_frontier": true,
+        "seg_tile_actions_decoded_bytes": 160,
+        "seg_tile_actions_decoded_sha256": "755db45e5c5dcae413e2f9f12f487cdb5f09600d655ca0a8dd40b42b55a0cc07",
+        "seg_tile_actions_matches_manifest_runtime_raw": true,
+        "single_zip_member_p": true
+      },
+      "name": "c067_pr75_actions_top40_wilddiramp6_p5",
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p5_packed_custom_dict"
+    },
+    {
+      "archive": "experiments/results/pr75_action_dict_v2_worker_20260503/c067_pr75_actions_top40_wilddiramp8_p5/archive.zip",
+      "archive_sha256": "c1c4bda286df2265be92a55b0ca6c701fe11b37c59b97c7d80f42f3a901376c5",
+      "archive_size_bytes": 276445,
+      "decoded_stream_closure": {
+        "mask_renderer_match_c067": true,
+        "member_names": [
+          "renderer.bin",
+          "masks.mkv",
+          "optimized_poses.qp1",
+          "seg_tile_actions.bin",
+          "seg_tile_action_dict.bin"
+        ],
+        "members": {
+          "masks.mkv": {
+            "bytes": 223385,
+            "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 1140,
+            "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+          },
+          "renderer.bin": {
+            "bytes": 59288,
+            "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+          },
+          "seg_tile_action_dict.bin": {
+            "bytes": 176,
+            "sha256": "d217b188d485fd88bcaaaea2d7653ce0f0882a42fa0f2dd30028a2dd3eeeb930"
+          },
+          "seg_tile_actions.bin": {
+            "bytes": 160,
+            "sha256": "755db45e5c5dcae413e2f9f12f487cdb5f09600d655ca0a8dd40b42b55a0cc07"
+          }
+        },
+        "ok": true,
+        "pose_qp1_matches_current_frontier": true,
+        "seg_tile_actions_decoded_bytes": 160,
+        "seg_tile_actions_decoded_sha256": "755db45e5c5dcae413e2f9f12f487cdb5f09600d655ca0a8dd40b42b55a0cc07",
+        "seg_tile_actions_matches_manifest_runtime_raw": true,
+        "single_zip_member_p": true
+      },
+      "name": "c067_pr75_actions_top40_wilddiramp8_p5",
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p5_packed_custom_dict"
+    },
+    {
+      "archive": "experiments/results/pr75_action_dict_v2_worker_20260503/c067_pr75_actions_top40_wilddirmean_p5/archive.zip",
+      "archive_sha256": "912a1fe9e39baadbacada3764c7d7020f93b8e9f3099b73941989cb5cdf73ad9",
+      "archive_size_bytes": 276481,
+      "decoded_stream_closure": {
+        "mask_renderer_match_c067": true,
+        "member_names": [
+          "renderer.bin",
+          "masks.mkv",
+          "optimized_poses.qp1",
+          "seg_tile_actions.bin",
+          "seg_tile_action_dict.bin"
+        ],
+        "members": {
+          "masks.mkv": {
+            "bytes": 223385,
+            "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 1140,
+            "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+          },
+          "renderer.bin": {
+            "bytes": 59288,
+            "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+          },
+          "seg_tile_action_dict.bin": {
+            "bytes": 176,
+            "sha256": "c2830ed2207d98dafb38795db85c5f018e11d4884d0c2cad846218f32418732a"
+          },
+          "seg_tile_actions.bin": {
+            "bytes": 160,
+            "sha256": "75491d444fc520c8117878f92a6345491521266943896e960d8e6fdfbc34a6c3"
+          }
+        },
+        "ok": true,
+        "pose_qp1_matches_current_frontier": true,
+        "seg_tile_actions_decoded_bytes": 160,
+        "seg_tile_actions_decoded_sha256": "75491d444fc520c8117878f92a6345491521266943896e960d8e6fdfbc34a6c3",
+        "seg_tile_actions_matches_manifest_runtime_raw": true,
+        "single_zip_member_p": true
+      },
+      "name": "c067_pr75_actions_top40_wilddirmean_p5",
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p5_packed_custom_dict"
+    },
+    {
+      "archive": "experiments/results/pr75_action_dict_v2_worker_20260503/c067_pr75_actions_top25_wilddirmean_p5/archive.zip",
+      "archive_sha256": "52ec686cc23ff0bdfa19dca5b5d3b45a7d64a3d5fe6905f56ee07aa5379e2ae5",
+      "archive_size_bytes": 276421,
+      "decoded_stream_closure": {
+        "mask_renderer_match_c067": true,
+        "member_names": [
+          "renderer.bin",
+          "masks.mkv",
+          "optimized_poses.qp1",
+          "seg_tile_actions.bin",
+          "seg_tile_action_dict.bin"
+        ],
+        "members": {
+          "masks.mkv": {
+            "bytes": 223385,
+            "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 1140,
+            "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+          },
+          "renderer.bin": {
+            "bytes": 59288,
+            "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+          },
+          "seg_tile_action_dict.bin": {
+            "bytes": 164,
+            "sha256": "25072d23f397a15a0ad419445128e79b79cd6cd61e0d09cb6e6803196bc25445"
+          },
+          "seg_tile_actions.bin": {
+            "bytes": 100,
+            "sha256": "2cff5e27137440dc20fc9a9a73090a44f87e3c3cafe0a210066eec1c04d7b073"
+          }
+        },
+        "ok": true,
+        "pose_qp1_matches_current_frontier": true,
+        "seg_tile_actions_decoded_bytes": 100,
+        "seg_tile_actions_decoded_sha256": "2cff5e27137440dc20fc9a9a73090a44f87e3c3cafe0a210066eec1c04d7b073",
+        "seg_tile_actions_matches_manifest_runtime_raw": true,
+        "single_zip_member_p": true
+      },
+      "name": "c067_pr75_actions_top25_wilddirmean_p5",
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p5_packed_custom_dict"
+    }
+  ],
+  "references": {
+    "c067": {
+      "archive": "experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip",
+      "members": {
+        "masks.mkv": {
+          "bytes": 223385,
+          "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "optimized_poses.bin": {
+          "bytes": 7200,
+          "sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+        },
+        "renderer.bin": {
+          "bytes": 59288,
+          "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+        }
+      },
+      "payload_format": "public_pr67_qzs3_qp1_fixed_slices"
+    },
+    "frontier_top40_p6": {
+      "archive": "experiments/results/c067_pr75_tile_action_compiler_p6_trace_ev_20260503_codex/c067_pr75_actions_top40_p6/archive.zip",
+      "members": {
+        "masks.mkv": {
+          "bytes": 223385,
+          "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "optimized_poses.qp1": {
+          "bytes": 1140,
+          "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+        },
+        "renderer.bin": {
+          "bytes": 59288,
+          "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 160,
+          "sha256": "50e997db4fd1b7642d9a2cd67b55802a4f7f9bd7a6603d0ca2eaf42e7fe7e320"
+        }
+      },
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint"
+    }
+  },
+  "schema_version": 3,
+  "tool": "submissions/robust_current/unpack_renderer_payload.py"
+}

@@ -1,0 +1,2088 @@
+{
+  "baseline_pr85_exact_eval": {
+    "archive_bytes": 236328,
+    "evidence_status": "exact_cuda_auth_eval_full_600_samples",
+    "n_samples": 600,
+    "path": "experiments/results/lightning_batch/exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z/contest_auth_eval.json",
+    "pose_dist": 0.0001894,
+    "score": 0.25806611029397786,
+    "seg_dist": 0.00057185
+  },
+  "blocked_family_ids": [
+    "pr86_hpac_pr85_mask_contract_port",
+    "pr89_final_bias_stack_on_pr85",
+    "qma9_simple_context_entropy_replacement",
+    "qma9_block_copy_escape_screens",
+    "fixed_runtime_bridge_sparse_action_deletions",
+    "whole_sidechannel_deletion_routes"
+  ],
+  "deterministic": true,
+  "dispatch_performed": false,
+  "exact_negative_sidechannel_evals": [
+    {
+      "archive_bytes": 218271,
+      "evidence_status": "exact_cuda_negative_full_600_samples",
+      "n_samples": 600,
+      "path": "experiments/results/lightning_batch/exact_eval_pr85_minus_all_safe_corrections_l40sdiag_20260503T2350Z/contest_auth_eval.json",
+      "route": "minus_all_safe_corrections_l40sdiag_20260503T2350Z",
+      "score": 0.2800192866079282,
+      "score_delta_vs_baseline": 0.021953176314
+    },
+    {
+      "archive_bytes": 235747,
+      "evidence_status": "exact_cuda_negative_full_600_samples",
+      "n_samples": 600,
+      "path": "experiments/results/lightning_batch/exact_eval_pr85_minus_motion_stack_l40sdiag_20260503T2350Z/contest_auth_eval.json",
+      "route": "minus_motion_stack_l40sdiag_20260503T2350Z",
+      "score": 0.3641375270069792,
+      "score_delta_vs_baseline": 0.106071416713
+    },
+    {
+      "archive_bytes": 235747,
+      "evidence_status": "exact_cuda_negative_full_600_samples",
+      "n_samples": 600,
+      "path": "experiments/results/lightning_batch/exact_eval_pr85_minus_motion_stack_t4_20260504T0002Z/contest_auth_eval.json",
+      "route": "minus_motion_stack_t4_20260504T0002Z",
+      "score": 0.363610914426998,
+      "score_delta_vs_baseline": 0.105544804133
+    },
+    {
+      "archive_bytes": 234360,
+      "evidence_status": "exact_cuda_negative_full_600_samples",
+      "n_samples": 600,
+      "path": "experiments/results/lightning_batch/exact_eval_pr85_minus_post_motion_t4_20260504T0002Z/contest_auth_eval.json",
+      "route": "minus_post_motion_t4_20260504T0002Z",
+      "score": 0.38432756803992785,
+      "score_delta_vs_baseline": 0.126261457746
+    },
+    {
+      "archive_bytes": 234941,
+      "evidence_status": "exact_cuda_negative_full_600_samples",
+      "n_samples": 600,
+      "path": "experiments/results/lightning_batch/exact_eval_pr85_minus_post_t4_20260504T0002Z/contest_auth_eval.json",
+      "route": "minus_post_t4_20260504T0002Z",
+      "score": 0.3093560838497741,
+      "score_delta_vs_baseline": 0.051289973556
+    },
+    {
+      "archive_bytes": 220239,
+      "evidence_status": "exact_cuda_negative_full_600_samples",
+      "n_samples": 600,
+      "path": "experiments/results/lightning_batch/exact_eval_pr85_minus_randmulti_t4_20260504T0002Z/contest_auth_eval.json",
+      "route": "minus_randmulti_t4_20260504T0002Z",
+      "score": 0.2826740754796167,
+      "score_delta_vs_baseline": 0.024607965186
+    }
+  ],
+  "gpu_required": false,
+  "input_inventory": {
+    "pr85_bit_budget": {
+      "count": 1,
+      "entries": [
+        {
+          "bytes": 26154,
+          "exists": true,
+          "path": "experiments/results/pr85_archive_bit_budget_20260504_codex/profile_pr85_archive_bit_budget.json",
+          "sha256": "3f5ad959cce84d1fec64f68b448880628971271b3be9261dd5aedab42201bd77"
+        }
+      ]
+    },
+    "pr85_bridge_sparse_action_summary": {
+      "count": 1,
+      "entries": [
+        {
+          "bytes": 197748,
+          "exists": true,
+          "path": "experiments/results/pr85_bridge_sparse_action_candidates_20260504_codex/candidate_summary.json",
+          "sha256": "e034f8daa0607143630045c5493a36b5990773e3ae5adacc9472142c52307010"
+        }
+      ]
+    },
+    "pr85_exact_eval": {
+      "count": 242,
+      "entries": [
+        {
+          "bytes": 4287,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/component_response_alpha_primitive_pfp16_crf63_l40s_20260501T131540Z/evals/point_000_eps_p0/contest_auth_eval.json",
+          "sha256": "b84e7352165cf0d2be0631a177d8404c3a1e5f27633d82d48990552b9ef382ab"
+        },
+        {
+          "bytes": 5430,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/component_response_alpha_primitive_pfp16_crf63_l40s_20260501T131540Z/evals/point_001_eps_p1/contest_auth_eval.json",
+          "sha256": "048520ad81fa1612cfc3b8f6b2341efcb3bbc42ebde0c2a69490bed093413a61"
+        },
+        {
+          "bytes": 5423,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/component_response_alpha_primitive_pfp16_crf63_l40s_20260501T131540Z/evals/point_002_eps_p2/contest_auth_eval.json",
+          "sha256": "ad7715ea3ea84ace24e439f21f45a95dde2d51aa733483b606167dfdd4847933"
+        },
+        {
+          "bytes": 5411,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/component_response_alpha_primitive_pfp16_crf63_l40s_20260501T131540Z/evals/point_003_eps_p3/contest_auth_eval.json",
+          "sha256": "f14a90ef77bc6036f23638c47d64687463b6d427d308a040f0c32a07b8c9287f"
+        },
+        {
+          "bytes": 5420,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/component_response_alpha_primitive_pfp16_crf63_l40s_20260501T131540Z/evals/point_004_eps_p4/contest_auth_eval.json",
+          "sha256": "015a2bfb7d084e0592a2bba1789112e2a6dc2755f465d40b1a5075a5152df7ad"
+        },
+        {
+          "bytes": 5432,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/component_response_alpha_primitive_pfp16_crf63_l40s_20260501T131540Z/evals/point_005_eps_p5/contest_auth_eval.json",
+          "sha256": "b658309f7e140b104c52cff37a30ed8b7c245037a2c82a59912abb45823ba226"
+        },
+        {
+          "bytes": 5418,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/component_response_alpha_primitive_pfp16_crf63_l40s_20260501T131540Z/evals/point_006_eps_p6/contest_auth_eval.json",
+          "sha256": "cae277627c870d4f88363317c72b2f322d1f9f0590bc9528e40828e38dd16de2"
+        },
+        {
+          "bytes": 5417,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/component_response_alpha_primitive_pfp16_crf63_l40s_20260501T131540Z/evals/point_007_eps_p7/contest_auth_eval.json",
+          "sha256": "8a1979ea0647eb54f2ac31810444539344bb06899a71f0af4b3e6fbf1e64f703"
+        },
+        {
+          "bytes": 5421,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/component_response_alpha_primitive_pfp16_crf63_l40s_20260501T131540Z/evals/point_008_eps_p8/contest_auth_eval.json",
+          "sha256": "49bd2aa35ea969fdfce28fd5cdf3a97aa31661de243d4c3dec2e2aaed14a69e7"
+        },
+        {
+          "bytes": 4948,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z/evals/point_000_eps_m2/contest_auth_eval.json",
+          "sha256": "074f7462df7452a6f49bcaee3aba0bde4f409fbc5573d37ad5bfa369d30e6621"
+        },
+        {
+          "bytes": 4948,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z/evals/point_001_eps_m1/contest_auth_eval.json",
+          "sha256": "a64cd4ecfab15a5d63856176606dd89a0cffc61eb5947e76e79f2c0df113c8e2"
+        },
+        {
+          "bytes": 4287,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z/evals/point_002_eps_p0/contest_auth_eval.json",
+          "sha256": "b84e7352165cf0d2be0631a177d8404c3a1e5f27633d82d48990552b9ef382ab"
+        },
+        {
+          "bytes": 4951,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z/evals/point_003_eps_p1/contest_auth_eval.json",
+          "sha256": "c9673f97880d848a91b9fd3f196959ffad50595d1defe3005a166eb3776b36be"
+        },
+        {
+          "bytes": 4956,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z/evals/point_004_eps_p2/contest_auth_eval.json",
+          "sha256": "1a11073c796016c0a9bbbc9c6849128a33c130049519ed9d197a1fcd782b2d2c"
+        },
+        {
+          "bytes": 4975,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_small_20260501T0950Z/evals/point_000_eps_m2/contest_auth_eval.json",
+          "sha256": "a105ded1d42aee8c462cdff63b4e72e159092de709495bdc6e220c0ec1fcb2aa"
+        },
+        {
+          "bytes": 4978,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_small_20260501T0950Z/evals/point_001_eps_m1/contest_auth_eval.json",
+          "sha256": "1102effceb73ba52a4e9c1fe9bc3f37275e3fe9dedca6e782222cebebeb8568d"
+        },
+        {
+          "bytes": 4287,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_small_20260501T0950Z/evals/point_002_eps_p0/contest_auth_eval.json",
+          "sha256": "b84e7352165cf0d2be0631a177d8404c3a1e5f27633d82d48990552b9ef382ab"
+        },
+        {
+          "bytes": 4969,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_small_20260501T0950Z/evals/point_003_eps_p1/contest_auth_eval.json",
+          "sha256": "050baf2f719cd9ae55aef4375e28d712e404b6b5d3c34cb1f2c653cd354455f9"
+        },
+        {
+          "bytes": 4978,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_small_20260501T0950Z/evals/point_004_eps_p2/contest_auth_eval.json",
+          "sha256": "464bc3dd2a643927e8a54194741119f739a8ca567c91eb745d189d83f51312d8"
+        },
+        {
+          "bytes": 4895,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_alpha_crf60_grayscale_l40s_20260501T1339Z/contest_auth_eval.json",
+          "sha256": "d05b4fe01a63acf833d8c037ff40c40cd9dc7add83dee960cb0547fa7338f179"
+        },
+        {
+          "bytes": 4862,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_alpha_crf62_grayscale_l40s_20260501T1339Z/contest_auth_eval.json",
+          "sha256": "f89bc1f7935010a99f17d2c318ff58644502edc430d8cb4754591c1aef4664ee"
+        },
+        {
+          "bytes": 4891,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_alpha_crf63_grayscale_t4_20260501T125258Z/contest_auth_eval.json",
+          "sha256": "9cfc73caab4caa4f3a04b80987d897d7fb2e760d3fdca18c5339fc70eac26ddf"
+        },
+        {
+          "bytes": 4975,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_alpha_repair_c044_crf62_class2_fix1_t4_20260501T1605Z/contest_auth_eval.json",
+          "sha256": "71d8feda99667c279d3400fb1437284bac558ca5c01b01fb8abbd70a9a241586"
+        },
+        {
+          "bytes": 5031,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_alpha_repair_c044_crf62_hardpairs30_fix1_l40sdiag_20260501T1615Z/contest_auth_eval.json",
+          "sha256": "87d18738cd7d4535ee586289be60301c190b44c0deb1f63d3567b24fda2d43d6"
+        },
+        {
+          "bytes": 4994,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_alpha_repair_c044_crf62_hardpairs30_fix1_t4_20260501T1615Z/contest_auth_eval.json",
+          "sha256": "b1f2165f585d44f64583aff1e9db2ecc2d15af8e7f07584ca30f6d037f3c4341"
+        },
+        {
+          "bytes": 5013,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_alpha_repair_c044_crf62_pairatom_top10_l40sdiag_20260501T1620Z/contest_auth_eval.json",
+          "sha256": "16804289fc820b438f23779dac4e601ed6a686a8f4c677f462586e24af0b65a9"
+        },
+        {
+          "bytes": 4975,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_alpha_repair_c044_crf62_pairatom_top10_t4_20260501T1620Z/contest_auth_eval.json",
+          "sha256": "94958bc8f996fd1e3f64a13e62624bfd813088c5e06774c88648e4ff2aa3be7b"
+        },
+        {
+          "bytes": 4972,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_alpha_repair_c044_crf62_pairatom_top20_t4_20260501T1620Z/contest_auth_eval.json",
+          "sha256": "85d714277d0e5399a17eb593a52eea2324fec12fbaf91de416c084070846a0a6"
+        },
+        {
+          "bytes": 5007,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_alpha_repair_c044_crf62_topgroup1_fix1_l40sdiag_20260501T1605Z/contest_auth_eval.json",
+          "sha256": "efaed4d9d2fe1e2c3721c62f1dc3f35c5d1fee720c2e90d94629edfb186b20a7"
+        },
+        {
+          "bytes": 4963,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_alpha_repair_c044_crf62_topgroup1_fix1_t4_20260501T1605Z/contest_auth_eval.json",
+          "sha256": "0fca4755e79d04e4f1fb97200a8c34380a6eeb4b6f2ac41cd0a4fbd43d761751"
+        },
+        {
+          "bytes": 4961,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_alpha_repair_c044_crf63_class2_fix1_t4_20260501T1605Z/contest_auth_eval.json",
+          "sha256": "f5ccaa39a6f0cc08179334356ad1bf2f58181ea15752071a8d0c1d75358f0028"
+        },
+        {
+          "bytes": 5020,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_alpha_repair_c044_crf63_hardpairs30_fix1_l40sdiag_20260501T1615Z/contest_auth_eval.json",
+          "sha256": "7f88e807cc42083bb78eb5854d4de2579494cb3df33808c807b5cf83852d6f15"
+        },
+        {
+          "bytes": 4984,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_alpha_repair_c044_crf63_hardpairs30_fix1_t4_20260501T1615Z/contest_auth_eval.json",
+          "sha256": "1c6d93fe7ab2a211ffa812b4dacc2c09f2b344a4b9a5aef4efa79f9eb0a61ec1"
+        },
+        {
+          "bytes": 5024,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_alpha_repair_c044_crf63_pairatom_top10_l40sdiag_20260501T1620Z/contest_auth_eval.json",
+          "sha256": "cb21e9d8899e734189de88938245e59484569f95ee6caeb98c966eab319696ce"
+        },
+        {
+          "bytes": 4991,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_alpha_repair_c044_crf63_pairatom_top10_t4_20260501T1620Z/contest_auth_eval.json",
+          "sha256": "f6478e71065cb65e5956bc0872f7627f4f1ec6e42afd87a3841010ed92f4e7fe"
+        },
+        {
+          "bytes": 4982,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_alpha_repair_c044_crf63_pairatom_top20_t4_20260501T1620Z/contest_auth_eval.json",
+          "sha256": "2ff04e1a8856f62619905756977477e89360e70d02bdbdb99d4f1435582b429c"
+        },
+        {
+          "bytes": 5010,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_alpha_repair_c044_crf63_topgroup1_fix1_l40sdiag_20260501T1605Z/contest_auth_eval.json",
+          "sha256": "74bfeba6af7531e2ddc590b2b5a249948b416111f9aea9128b66dc03bd2a26e3"
+        },
+        {
+          "bytes": 4967,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_alpha_repair_c044_crf63_topgroup1_fix1_t4_20260501T1605Z/contest_auth_eval.json",
+          "sha256": "a8ff8088f1b11c02433abc57c35a2d5d686b8284134e006eabf1dd4de51a7864"
+        },
+        {
+          "bytes": 4967,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_alpha_repair_c044_crf63_topgroup2_fix1_t4_20260501T1605Z/contest_auth_eval.json",
+          "sha256": "2c23d53720bb42107f89c2d7be4802285a118611a6d155677ef8d5601364562e"
+        },
+        {
+          "bytes": 4883,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/contest_auth_eval.json",
+          "sha256": "246ff88aa647afca60ec44b154aa24aa5a15a41abf0e1da8600542d45bd25548"
+        },
+        {
+          "bytes": 36335,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_cdo1_local_overlay_pairbasisfix_rowspan_rtxprodiag_20260503T0110Z/contest_auth_eval.json",
+          "sha256": "20b188d33225ac9b7e8e9622c9f9f8809652ab50dc78d9097a4add6ffff7a9a6"
+        },
+        {
+          "bytes": 36261,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_cdo1_local_overlay_pairs5_rtxprodiag_20260503T0038Z/contest_auth_eval.json",
+          "sha256": "bbf7b40d5dfa4264e2bc05c7aaeded7782da7a3b82d525d61004d97240532108"
+        },
+        {
+          "bytes": 12089,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_cmg2_downsample2x2_t4_20260502T1000Z/contest_auth_eval.json",
+          "sha256": "8b86d6c64aeee2bb79a6f40c83d39782497b287bb12466128ed50953241156a3"
+        },
+        {
+          "bytes": 12116,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_cmg2_foveated_top256_t4_20260502T1007Z/contest_auth_eval.json",
+          "sha256": "b3964ad405ad243964fcc5cbf60000ff12d1052b90e997fcf77232e9fd4c6280"
+        },
+        {
+          "bytes": 12107,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_cmg2_foveated_top512_t4_20260502T1007Z/contest_auth_eval.json",
+          "sha256": "6e59ec6e8d59b423b0b3329de1fc49e60cb4f5fb6fdc65dd477a0ff612a2ceb4"
+        },
+        {
+          "bytes": 12089,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_cmg3_nonzero_top1_t4_20260502T1100Z/contest_auth_eval.json",
+          "sha256": "fe20db0190378a1d11a784231c95922228738527378b530850606117afb18a8c"
+        },
+        {
+          "bytes": 12096,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_cmg3_nonzero_top2_t4_20260502T1100Z/contest_auth_eval.json",
+          "sha256": "7031c9bfba227b0af84c2642b819472d07d90fc3ad1316a5593b7366103500f5"
+        },
+        {
+          "bytes": 12116,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_cmg3_rowspan_stride1_t4_20260502T1225Z/contest_auth_eval.json",
+          "sha256": "991626a02143c688953467ecaa5e197183bb2937f2d24e95248f3a3ff463e6a3"
+        },
+        {
+          "bytes": 12139,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_cmg3_rowspan_stride2_l40sdiag_20260502T1225Z/contest_auth_eval.json",
+          "sha256": "bc8ab16daa8c0107d5212dbbad04ab4bb111cb7f40f42caf72e1b9cca9d08dde"
+        },
+        {
+          "bytes": 12073,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_cmg3a_body200_l40s_20260502T114231Z/contest_auth_eval.json",
+          "sha256": "ee6ebbe84e60ad0a10a10458258840dfbb95c18f66bb60973d70f0c2ba54040a"
+        },
+        {
+          "bytes": 36020,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_hotspot_geometry_top0128_l40sdiag_20260502T1733Z/contest_auth_eval.json",
+          "sha256": "13e7e646e580768e060bdbfda64d5fc0294dac888cd76a65fe637b696282f11b"
+        },
+        {
+          "bytes": 35962,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_micro_mask_crf52_hf32_l40sdiag_20260502T2020Z/contest_auth_eval.json",
+          "sha256": "862e64085aa2245eca060a2548af4734c12e7d0f2bca964eb1e42c58fcedc0e9"
+        },
+        {
+          "bytes": 35965,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_micro_mask_crf56_hf32_l40sdiag_20260502T2022Z/contest_auth_eval.json",
+          "sha256": "eb853e8346b0533fbf626885f2f6003d7a31794d5165ec17463e6beed82bb1fc"
+        },
+        {
+          "bytes": 36342,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_micro_mask_save05k_crf51_packed_rtxprodiag_20260503T0323Z/contest_auth_eval.json",
+          "sha256": "1f191e75f1a37f4de79d8f2b83eea2e31b24f8250f7208c62adc4ed418b34d89"
+        },
+        {
+          "bytes": 35002,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_micro_mask_save08k_l40sdiag_20260503T0313Z/contest_auth_eval.json",
+          "sha256": "9d89bb43b3330429e27aaea21215e00f7b3a09d164effdcac5f4ac03e630314f"
+        },
+        {
+          "bytes": 35947,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_micro_mask_save12k_l40sdiag_20260502T2034Z/contest_auth_eval.json",
+          "sha256": "4aace304ad0de26a617be96d35f04c51f06d9b4ca2a20d2c5d0ec53223669efb"
+        },
+        {
+          "bytes": 36102,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_multimask_reconciler_extra065k_fix1_l40sdiag_20260502T1903Z/contest_auth_eval.json",
+          "sha256": "77dc4ebac2d6ef69caced98dd35827800f8a49358a15b03c5a86d2d8233543ca"
+        },
+        {
+          "bytes": 36092,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_multimask_reconciler_extra072k_fix1_l40sdiag_20260502T1910Z/contest_auth_eval.json",
+          "sha256": "5c15de4a8fcef9dd8137017496d92240e08cdf4960b2743c2133d232c4df6aec"
+        },
+        {
+          "bytes": 34809,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_postdecode_repair_save12k_budget8000_l40sdiag_20260502T2101Z/contest_auth_eval.json",
+          "sha256": "edac153e60416dd7fdf711926f5d82ab8f23b5a4a3f814dec68b3b7afdd4361a"
+        },
+        {
+          "bytes": 34914,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_postdecode_repair_save12k_pairwaterfill16k_rtxprodiag_20260503T0021Z/contest_auth_eval.json",
+          "sha256": "da3863d67c0fe4d6309ede74a3a5edae4d3dc354c2607f5f281bf025ff913ca8"
+        },
+        {
+          "bytes": 34831,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_postdecode_repair_save12k_pairwaterfill4k_l40sdiag_20260502T2114Z/contest_auth_eval.json",
+          "sha256": "5bbb59550f9e5af495491aa8bfd04bd6fd29717a51fb46d15bcdff3695d2f68d"
+        },
+        {
+          "bytes": 34761,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_postdecode_repair_save12k_top10_l40sdiag_20260502T2054Z/contest_auth_eval.json",
+          "sha256": "ae5e6be52e17823782d1da298ee9245fff4b8443352af0ab25bab44e44224166"
+        },
+        {
+          "bytes": 36479,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_all_ampminus1_p3_diag_20260503T0410Z/contest_auth_eval.json",
+          "sha256": "6a3fa83ee958acb4be5679061a168e66c86d90696106f38005d626a12a323467"
+        },
+        {
+          "bytes": 36502,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_beam_pose2_top55_p3_l40sdiag_20260503T0530Z/contest_auth_eval.json",
+          "sha256": "92b697bfb50c67bd51ffe0d6dbfd2f13ab8e97014c78e04074c24ed73081e321"
+        },
+        {
+          "bytes": 36531,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_beam_pose4_top55_p3_l40sdiag_20260503T0530Z/contest_auth_eval.json",
+          "sha256": "502765f1518cf3fe126b65e86c4fc82de5fe5c4aaf98ae2c55ec57df1b13dd08"
+        },
+        {
+          "bytes": 36430,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_only_p3_diag_20260503T0346Z/contest_auth_eval.json",
+          "sha256": "17d2e234ec71857ae9d5d0de61891f782888c61186be5dce804ebe7388fc2e5e"
+        },
+        {
+          "bytes": 36405,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_only_p3_t4_20260503T0401Z/contest_auth_eval.json",
+          "sha256": "5550e305448a65950641c94de40a6ed4ca21b6620b00a337ebafcc6144e0e545"
+        },
+        {
+          "bytes": 36491,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_pose_safe_positive_p3_diag_20260503T0405Z/contest_auth_eval.json",
+          "sha256": "8995d946a76974ba2f2958b27f70431721fda0befa256a2495bdc77d061cbcb0"
+        },
+        {
+          "bytes": 36497,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_poseharm_ampminus1_p3_diag_20260503T0410Z/contest_auth_eval.json",
+          "sha256": "805ad160e1e10bd6921b692cf88513ad163d14777b36220067d53c7610a59e72"
+        },
+        {
+          "bytes": 36421,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_positive_p3_diag_20260503T0405Z/contest_auth_eval.json",
+          "sha256": "d718c906c54689cdf5edf2221b616c94d80eb322fb3d9bd8f516b43139f93830"
+        },
+        {
+          "bytes": 36584,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_positive_poseharm_ampminus1_p3_diag_20260503T0410Z/contest_auth_eval.json",
+          "sha256": "ff867af91cd1c3a42f43a42c01527d62b51ff9633f59dd39b5eb10823ddcdd09"
+        },
+        {
+          "bytes": 36536,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top25_ampminus1_p3_rtxprodiag_20260503T0456Z/contest_auth_eval.json",
+          "sha256": "694ae88dd0d4be84d72e3fa08dc1c3cd83c657b505a06d1ca7eea77ed3551793"
+        },
+        {
+          "bytes": 36477,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top25_ampminus1_p3_t4_20260503T0520Z/contest_auth_eval.json",
+          "sha256": "7322e4807122239cb289f726cecaab88751091fc70b679519497ff70bbf4d8fc"
+        },
+        {
+          "bytes": 36744,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top25_ampminus1_p5_rtxprodiag_20260503T0456Z/contest_auth_eval.json",
+          "sha256": "a5a9bf01bcfa5c3b5b93f07c3fb14eed5228aa274f9df6cb6f805e52ce320df7"
+        },
+        {
+          "bytes": 36433,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top25_p3_diag_20260503T0405Z/contest_auth_eval.json",
+          "sha256": "6bd0cb03576583f785ca5b8b3e79d8e35b50fe83a1ac89561619d2aa87ad2ac1"
+        },
+        {
+          "bytes": 36393,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top25_p3_t4_20260503T0440Z/contest_auth_eval.json",
+          "sha256": "bce172b9d953b75b290374685f589d79288e8aaf626a5bfb64bcc80d887cf142"
+        },
+        {
+          "bytes": 36559,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top25_signedposemix1_p3_l40sdiag_20260503T0530Z/contest_auth_eval.json",
+          "sha256": "856e8201236eaf1105ac5acdc45f4771b10ae10181d01787b8b763598e342861"
+        },
+        {
+          "bytes": 36488,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_ampminus2_p3_l40sdiag_20260503T0512Z/contest_auth_eval.json",
+          "sha256": "f7e5c74ae183e26b437dffdb8c52345a37118df5e651d96af0cc22f1ed0ab8d7"
+        },
+        {
+          "bytes": 36545,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_ampminus2_p3_rtxprodiag_20260503T0456Z/contest_auth_eval.json",
+          "sha256": "7f819dac368a97e2818dff7e8a76080b3b64ff6ae9f634aa6b98a07051289917"
+        },
+        {
+          "bytes": 36443,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_diag_20260503T0405Z/contest_auth_eval.json",
+          "sha256": "55b3c7f2f1eb93db6f7866e1f7a1a38ca0638218f948cfc66c28526c0dc455fc"
+        },
+        {
+          "bytes": 36396,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/contest_auth_eval.json",
+          "sha256": "16768f96fd2a02791eab697535ec6b7ef24bfb95120122e01fd306ad8bbc5aa1"
+        },
+        {
+          "bytes": 36234,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_pr75_model_only_fixed_diag_20260503T0346Z/contest_auth_eval.json",
+          "sha256": "fd45c67350fa44a489a891272880757c0334492ff167e320049f11b0a6ed235f"
+        },
+        {
+          "bytes": 36469,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_pr75_model_pose_actions_p3_diag_20260503T0346Z/contest_auth_eval.json",
+          "sha256": "e8d52f79cd608cf2ac6fed1a30719626e92184bddda03ef228122fdd3e0bbc99"
+        },
+        {
+          "bytes": 36435,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_pr75_model_pose_actions_p3_t4_20260503T0358Z/contest_auth_eval.json",
+          "sha256": "e6f76fef08175677891d649ff48c549e10856720f94236f41d4b1331e52b0464"
+        },
+        {
+          "bytes": 36403,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_pr75_pose_actions_p3_diag_20260503T0346Z/contest_auth_eval.json",
+          "sha256": "f1dac5d67a7e4694e5ffe923050c2eced25779e49d4a12ed214262cb2813e77d"
+        },
+        {
+          "bytes": 36188,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_pr75_pose_only_fixed_diag_20260503T0346Z/contest_auth_eval.json",
+          "sha256": "43a1f087846c737ef00556d86fcda65fc60eb3df8c87d796b069f74f99654c96"
+        },
+        {
+          "bytes": 36457,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_beam_pose2_top55_p3_t4_20260503T0608Z/contest_auth_eval.json",
+          "sha256": "a61d12c5ed3458ecb74026ef42b9cd4c755b06e6af3ac4041b8e1be718a9d73b"
+        },
+        {
+          "bytes": 36498,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_lag_eval_pose2_top67_p6_t4_20260503T0608Z/contest_auth_eval.json",
+          "sha256": "57e6d59bdeefd5f417222a0f0fa9d4f607720d0135d34e0912c105c7ae36b92b"
+        },
+        {
+          "bytes": 36511,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_lag_eval_pose4_top67_p6_t4_20260503T0626Z/contest_auth_eval.json",
+          "sha256": "c1e16e16f89bd2c56da2826c490bf8d93707c1c809fd05b21c828a183e12af8c"
+        },
+        {
+          "bytes": 36586,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_lag_eval_top67_p6_t4_20260503T0608Z/contest_auth_eval.json",
+          "sha256": "41583056146e935c38a2c4ab0477dd33e0db51089f49efeb40dd8100bd86d90c"
+        },
+        {
+          "bytes": 36561,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_pose_safe_positive_ampminus1_p6_t4_20260503T0632Z/contest_auth_eval.json",
+          "sha256": "1054498be6f19b6e34a56ff436559449603f5ce41e00ac3720c464d2b1d6a5ed"
+        },
+        {
+          "bytes": 36440,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/contest_auth_eval.json",
+          "sha256": "058e43c3f41df3e13c7ea2ff9269fa69ffcff77a811ae5dfb716a71da894e1a1"
+        },
+        {
+          "bytes": 13287,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_qzs3_b512_l40sdiag_20260502T1710Z/contest_auth_eval.json",
+          "sha256": "3f1bf6c33618b14cbc1b3fd6c55abcdb8b237bfb49317897284d15e21dd6a403"
+        },
+        {
+          "bytes": 36357,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c067_reversed_base_cdo1_top1_pairwaterfill4k_rtxprodiag_20260503T0050Z/contest_auth_eval.json",
+          "sha256": "e43e509adbbfc9eded13d71d881a57c3c7009f52a9245bbdc2dd764a9b428aa7"
+        },
+        {
+          "bytes": 36485,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c082_p6_stream_resweep_276333_l40sdiag_20260503T0708Z/contest_auth_eval.json",
+          "sha256": "893e28f7b874bb855cc31f67d217046c4817aa1ddaff74f3f494c0158b561625"
+        },
+        {
+          "bytes": 36575,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c082_p6_stream_resweep_276333_t4_20260503T0705Z/contest_auth_eval.json",
+          "sha256": "fb6b9c82e486f9c85dcfc385fdc924be66dc763ddd9489b12d9aa121ebc1b6e5"
+        },
+        {
+          "bytes": 36711,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c082_qp1_p6_delta_varint_actions_stream_resweep_t4_20260503T0626Z/contest_auth_eval.json",
+          "sha256": "a4fe8e023fbf7f6826fc94e3c19f07545a4915d6463c77b2d5b349116c075f48"
+        },
+        {
+          "bytes": 36426,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c091_current_runtime_control_t4_20260503T1204Z/contest_auth_eval.json",
+          "sha256": "a329dda51c088ec1b4944601baac1cb6b57204160e332cd28b3c4c559be68129"
+        },
+        {
+          "bytes": 36491,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c091_native_pose_manifold_top128_s025_t4_20260503T122013Z/contest_auth_eval.json",
+          "sha256": "51512feb61dd98c5a921b29e75024ff161bf0feb11057d238528bb6199d323bc"
+        },
+        {
+          "bytes": 36575,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c091_next_cem_pose_waterfill_top160_s01875_m08_t4_fix1_20260503T1302Z/contest_auth_eval.json",
+          "sha256": "6b18194fc7d0d64ad3eb27ec3a7467a715cdea5807d43e16b42cc93b1fceccb4"
+        },
+        {
+          "bytes": 36541,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c091_next_cem_pose_waterfill_top192_s0125_m06_t4_20260503T1238Z/contest_auth_eval.json",
+          "sha256": "2a75f3a7779c8f90bf1d3dd50f73f1bc6a1ca60533c67ecbdacfbbc04752a925"
+        },
+        {
+          "bytes": 36401,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_c101_renderer_x_top192_stack_t4_20260503T1540Z/contest_auth_eval.json",
+          "sha256": "26dc1480656ac46fd9e838b4f2e91fbd006879a063820722e656fea3f5e5aeab"
+        },
+        {
+          "bytes": 35960,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_cmg3a_poseguard_top0012_g7e_20260503T0200Z/contest_auth_eval.json",
+          "sha256": "bff43107c011eb83045bff135d238639cd686a7356f93c1148cd8bf13494ea42"
+        },
+        {
+          "bytes": 4875,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_component_trace_c051_l40s_20260501T2116Z/contest_auth_eval.json",
+          "sha256": "69e5e3d1f992f0c0336b12a6e4d6e55b1529c26269adef6a4d73adba7a01f6ae"
+        },
+        {
+          "bytes": 4431,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_direct_fd_m2_frontier_t4_20260501T1110Z/contest_auth_eval.json",
+          "sha256": "96bb26da02b16d0fae112d4dffd59739a446cbaa353e18d6e6f3c6ed83db9d9f"
+        },
+        {
+          "bytes": 12151,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_fixedslice_pr67pose_c067rest_fix1_l40s_20260502T1553Z/contest_auth_eval.json",
+          "sha256": "9a7a77ba91e80d7378dfd36a586314d0a403bd22b0e7933947901136433c4fc5"
+        },
+        {
+          "bytes": 12180,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_fixedslice_pr67renderer_c067rest_fix2_t4_20260502T1623Z/contest_auth_eval.json",
+          "sha256": "ac871e7b0168f329305907948beb039ed9c677d69d6b933c2f23cf7f63d67ed4"
+        },
+        {
+          "bytes": 12252,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_fixedslice_pr67renderer_pose_c067mask_fix1_rtxpro_20260502T1553Z/contest_auth_eval.json",
+          "sha256": "3d3ff773cf5c236b99075342de8b4ef136c00c85dbd591b6d87f8028200752af"
+        },
+        {
+          "bytes": 12208,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_fixedslice_pr67renderer_pose_c067mask_fix1_t4_20260502T1558Z/contest_auth_eval.json",
+          "sha256": "8ffaad377a0a261029f7661388617cd66d701715d8e540f23805174e0e32d033"
+        },
+        {
+          "bytes": 13386,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_imp_c067_imp_c01_qzs3_b0128_l40sdiag_20260502T1700Z/contest_auth_eval.json",
+          "sha256": "714a3d74ea68502a133d77346008fd0459bbefa72353465f85faa47474fba043"
+        },
+        {
+          "bytes": 13376,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_imp_c067_imp_c02_qzs3_b0128_l40sdiag_20260502T1700Z/contest_auth_eval.json",
+          "sha256": "98fc0c5e92557b50d40188305526342786d7414e5f1be06814aab036fe5814d1"
+        },
+        {
+          "bytes": 13387,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_imp_c067_imp_c05_qzs3_b0128_l40sdiag_20260502T1700Z/contest_auth_eval.json",
+          "sha256": "27fd76d1a64eaff11bc6616dd56929cd84a65b5bb8d499f270b6b24b338df45d"
+        },
+        {
+          "bytes": 13392,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_imp_c067_imp_c10_qzs3_b0128_l40sdiag_20260502T1700Z/contest_auth_eval.json",
+          "sha256": "cfc8858f232ac2b40dfb3c3ba8534745139ea778fd6572ba2b37b6bfb033504f"
+        },
+        {
+          "bytes": 4944,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_line_search_qzs3_qp1_active_fix2_t4_20260502T0250Z/contest_auth_eval.json",
+          "sha256": "455a15d697a7ae3700df55bdaef1c7d2398fafd7f3042394b8f5ba1d3c837f83"
+        },
+        {
+          "bytes": 4943,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_line_search_qzs3_qp1_basis_r13_t4_20260502T0200Z/contest_auth_eval.json",
+          "sha256": "ab7604e8e7ab3dc4c2a7d7b10812a3acbacbe6fd498392f48367c1498ee4601a"
+        },
+        {
+          "bytes": 4903,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_line_search_qzs3_qp1_r13_t4_20260502T0128Z/contest_auth_eval.json",
+          "sha256": "c02126bf13b76e7678be92369669aaeb67ec45586467e91a80943d029318c2ef"
+        },
+        {
+          "bytes": 4901,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_line_search_qzs3_qp1_r8_t4_20260502T0110Z/contest_auth_eval.json",
+          "sha256": "23bc16269a696e7a0cd2d47b3812262346e405e860876dd1e4ef7ce105dd31cd"
+        },
+        {
+          "bytes": 4891,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_line_search_qzs3_qp1_t4_20260502T0100Z/contest_auth_eval.json",
+          "sha256": "457191965bb48eba37b9d927b27204273f03464311f8755461463f5e2cbf131b"
+        },
+        {
+          "bytes": 4913,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_lossless_repack_c059_brotli_t4_20260502T0537Z/contest_auth_eval.json",
+          "sha256": "90ddd114ecb8906e45bfde9806f57b2b4d235072942a233cb364ff7c22699e55"
+        },
+        {
+          "bytes": 4920,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_ls_c059_weighted_pairs_top32_t4_20260502T0509Z/contest_auth_eval.json",
+          "sha256": "253dd025ab087a6557ded624e8f398ea609290ec98f9290e38e9e3a26e511aea"
+        },
+        {
+          "bytes": 4397,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_owv3_0000_p0013_t4_20260501T1156Z/contest_auth_eval.json",
+          "sha256": "261c0517ced5de12bd6e545ea82af5c33f0e383d6efd69869616d78af6a97193"
+        },
+        {
+          "bytes": 4399,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_owv3_0001_p00135_t4_20260501T1158Z/contest_auth_eval.json",
+          "sha256": "f61d5ba34c5d1a59ae698fcc68ede041dcfa40a34c54c3942428c1e3a4b69447"
+        },
+        {
+          "bytes": 4396,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_owv3_0011_p0013_t4_20260501T1157Z/contest_auth_eval.json",
+          "sha256": "9e43d5fd7245fce7ffcaf9999e9cf359b815ea5bb40c6b1e8cea7357a1712cb8"
+        },
+        {
+          "bytes": 4837,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_owv3_0119_wave3_t4_20260501T125143Z/contest_auth_eval.json",
+          "sha256": "71d35b353caf45723d7dbdee3f67ad79baef477a7498ef64c178857775ca2218"
+        },
+        {
+          "bytes": 4857,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_owv3_0120_stack_t4_20260501T150652Z/contest_auth_eval.json",
+          "sha256": "f0d760dc1b21fcdc228cc1f12650073bf1635e7297974c6ee4639d44d46205c4"
+        },
+        {
+          "bytes": 4875,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_owv3_0120_stack_t4aws_20260501T151050Z/contest_auth_eval.json",
+          "sha256": "f98f5067a3a3222ee7c2986ab2cec0fb7bcbcea43a01d70c6709533d469bd669"
+        },
+        {
+          "bytes": 4836,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_owv3_0120_wave3_t4_20260501T130313Z/contest_auth_eval.json",
+          "sha256": "10e8eb1f5db2fdc311a409bc259af5f75f0cefb1e30da37138cbf7e3d8605fe6"
+        },
+        {
+          "bytes": 4399,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_owv3_5c110_r7_t4_20260501T1112Z/contest_auth_eval.json",
+          "sha256": "324fbfb82103a9acb0c329c5b45dbb818736864a7ef5ce36e03a9f00d681618e"
+        },
+        {
+          "bytes": 4423,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_owv3_fisher_beta_t4_20260501T1025Z/contest_auth_eval.json",
+          "sha256": "0694d02f5ff48fa75bd09613c26665e68fd1168d7c2206cc60b70c186335eebb"
+        },
+        {
+          "bytes": 12107,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pmg_hotspot_atomtop4068_l40sdiag_20260502T1445Z/contest_auth_eval.json",
+          "sha256": "9d068bdd3a1f65431186f90a3592139be912fdd452afdb513f1fd9085242ffa6"
+        },
+        {
+          "bytes": 12065,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pmg_hotspot_c067_t4_20260502T1402Z/contest_auth_eval.json",
+          "sha256": "502748e595f6aab00341e6868d4a0d712e1bc4c54fb3c58c72db0ed61ec8bf0c"
+        },
+        {
+          "bytes": 36510,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr65_pose_qp1_c091_c089_actions_p6_t4_fix1_20260503T121925Z/contest_auth_eval.json",
+          "sha256": "4eb8da9c50d6cf7bd8dedcbbe8f379b4fb649dca8b66e401b901d875328ea3fd"
+        },
+        {
+          "bytes": 36439,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr65_qpost_bias_poseadv_top032_t4_20260503T0756Z/contest_auth_eval.json",
+          "sha256": "d9664a16242a07273a2144e7a18da668890c7ead18f29dcc060d9c0d072b0136"
+        },
+        {
+          "bytes": 36433,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr65_qpost_bias_poseadv_top064_t4_20260503T0759Z/contest_auth_eval.json",
+          "sha256": "718e178d4064032b797958807d5e9dcbac30f6bd33ae637e30f674f7bc34c283"
+        },
+        {
+          "bytes": 36463,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr65_qpost_ix_lagtop67_p6_bias_top040_t4_20260503T1035Z/contest_auth_eval.json",
+          "sha256": "56e3a2ebc1c898d8d3c37ea6dc5f94b7cb427124bf25d763c23a4986d78eb904"
+        },
+        {
+          "bytes": 36479,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr65_qpost_ix_lagtop67_p6_bias_top080_t4_20260503T1024Z/contest_auth_eval.json",
+          "sha256": "8385423de3c4901f045585a625f233ff2263e0663074203b14b08c70b868b595"
+        },
+        {
+          "bytes": 36458,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr65_qpost_v2_bias_poseadv_top040_t4_20260503T0805Z/contest_auth_eval.json",
+          "sha256": "4996c248a83a2262422743ba8d2efd996e842eb24fd6c5311822add4473bd130"
+        },
+        {
+          "bytes": 36459,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr65_qpost_v2_bias_poseadv_top080_t4_20260503T0810Z/contest_auth_eval.json",
+          "sha256": "6470e8da6cd32717978227491509657425561c0b713f1706a25af0c29b6e93fd"
+        },
+        {
+          "bytes": 36425,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr75_minp_p6_public_pose_only_t4_20260503T1120Z/contest_auth_eval.json",
+          "sha256": "a3a9596aa1a8b3091e6d32e7aed5e7cfa5c8504786c59bbcae6b1f01549668b1"
+        },
+        {
+          "bytes": 36454,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr75_minp_p6_public_renderer_pose_t4_20260503T1108Z/contest_auth_eval.json",
+          "sha256": "27251dcd47a28f98183aea02eb9b6b972580f3084a16ab0fb961ed263940975c"
+        },
+        {
+          "bytes": 36403,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr75_minp_public_actions_only_t4_20260503T1101Z/contest_auth_eval.json",
+          "sha256": "b5ce65a8556d80aa8d4df7fd56bc0a1bf4bbe1fafd6d6063be1c1a3f8bbd664d"
+        },
+        {
+          "bytes": 36449,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr75_minp_public_renderer_actions_t4_20260503T1058Z/contest_auth_eval.json",
+          "sha256": "ccf3b83a16b38cf2b4892f15e1b0ce20abab76822c74406583f02caeaf553ac3"
+        },
+        {
+          "bytes": 36428,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr75_minp_public_renderer_only_t4_20260503T1057Z/contest_auth_eval.json",
+          "sha256": "2d2416ebb0207e1bbe4feb581257e3dab56457e9d4efa04be41497de7ed73259"
+        },
+        {
+          "bytes": 36421,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr75_minp_public_renderer_pose_t4_20260503T1058Z/contest_auth_eval.json",
+          "sha256": "f374021cd8df6ff7883d0ebad1bb470e4ef5d2501a5598f1f691e11a36108a60"
+        },
+        {
+          "bytes": 36390,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr75_minp_public_replay_t4_20260503T1049Z/contest_auth_eval.json",
+          "sha256": "e671f991dd102300347b3cc2bd2fd1a9c1caeafae1b1e713122604369496c213"
+        },
+        {
+          "bytes": 36523,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr75_qp1_public_replay_t4_20260503T0608Z/contest_auth_eval.json",
+          "sha256": "919e0d55edbaf116689bf8a29c23a6c799c06911f695ae386133764cf5e52138"
+        },
+        {
+          "bytes": 36429,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr75_qpost_microstack_bias032_t4_20260503T1050Z/contest_auth_eval.json",
+          "sha256": "19d5b081e681ea07da647e75f2b962f412870f712b7c691299aa1396939b2118"
+        },
+        {
+          "bytes": 36419,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr77_action_pose_fixedslice_t4_20260503T114254Z/contest_auth_eval.json",
+          "sha256": "697615baa616b7a245f956ed1c00f538b443a4d791901cbd107bf9f31ca5f1da"
+        },
+        {
+          "bytes": 36400,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr77_all_overlap_on_pr79_s2_t4_20260503T1918Z/contest_auth_eval.json",
+          "sha256": "c3fdf58458b840354c2ca09d7b7a56043dda1f58e1a6c5c6313e221ab41fe49d"
+        },
+        {
+          "bytes": 36399,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr77_pair_overlap_on_pr79_s2_t4_20260503T1828Z/contest_auth_eval.json",
+          "sha256": "2e547f561f2a1043ac8a871c3fdb7f1aa8c038543dc09f0e24cefadb83babf5a"
+        },
+        {
+          "bytes": 36431,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr77_tile_delta_public_replay_t4_20260503T1116Z/contest_auth_eval.json",
+          "sha256": "6e9ac6e7b213217deb3bceb8a23747adff09a1302df9a6b06b2c22d5a804d1ae"
+        },
+        {
+          "bytes": 36425,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr77_tile_overlap_on_pr79_s2_t4_20260503T1918Z/contest_auth_eval.json",
+          "sha256": "689876bb8e73598934279c96b9dbafed9954d5127b3a724a1d8c81fecb2934ef"
+        },
+        {
+          "bytes": 36356,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr79_mask_body_crf52_t4_20260503T1835Z/contest_auth_eval.json",
+          "sha256": "8c6b317298fe4ce1af1cc178c9b13110b2f3867c33de5969503e416bba946a4c"
+        },
+        {
+          "bytes": 36356,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr79_mask_body_crf53_t4_20260503T1828Z/contest_auth_eval.json",
+          "sha256": "93a15365405a861401fcb7d3dffbf4861d196d56f71738ba2c7d3e0741f1bd47"
+        },
+        {
+          "bytes": 36377,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr79_mask_body_crf53_t4_2x_20260503T1824Z/contest_auth_eval.json",
+          "sha256": "37d8ad42351896bf3e155b77295d0616d6afbb7378f8efeb5cbf0f684ce7d4bb"
+        },
+        {
+          "bytes": 36401,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr79_minp_v2_public_replay_t4_20260503T1615Z/contest_auth_eval.json",
+          "sha256": "a74a186265f87db6bd2adcd2cb032cf9f3a3da1ecfd311a18cecf21bd337320d"
+        },
+        {
+          "bytes": 36493,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr79_nextbyte_crf51_pr79action_flatpack_t4_20260503T1852Z/contest_auth_eval.json",
+          "sha256": "b7661a88307b9dc969c5ef3e7e4f25c517aa651978efbc16b9f4de72351b3167"
+        },
+        {
+          "bytes": 36490,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr79_nextbyte_crf52_pr79action_flatpack_t4_20260503T1848Z/contest_auth_eval.json",
+          "sha256": "3ec670271df2aa3f1a0c7442b464faaad3ea7f53506f0b598b80251a6818f544"
+        },
+        {
+          "bytes": 36438,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr79_s1_fixed_lossless_actions_t4_20260503T171722Z/contest_auth_eval.json",
+          "sha256": "f00ba788d7caa521e5a7583a35a269a11c56944b74b59d584a678e6f66b3af86"
+        },
+        {
+          "bytes": 36444,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr79_s2_fixed_adaptive_actions_t4_20260503T173023Z/contest_auth_eval.json",
+          "sha256": "6e609387e9a2e33088f2ad9fd2430aeeff30a2693a5734cbc0b63a52c9c864d5"
+        },
+        {
+          "bytes": 36695,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr84_pr82_qrm1_all072_randmulti_packedp_fix1_g4dn_t4_20260503T2253Z/contest_auth_eval.json",
+          "sha256": "2561c524eb2ad6139ac844a7905c28b8e4980867a30109e3cdae461ead2de819"
+        },
+        {
+          "bytes": 6706,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr85_minus_all_safe_corrections_l40sdiag_20260503T2350Z/contest_auth_eval.json",
+          "sha256": "c10dbe99d1758844792847e24300e90c38a1a4becec0a61388d5feca3487ce2f"
+        },
+        {
+          "bytes": 6661,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr85_minus_motion_stack_l40sdiag_20260503T2350Z/contest_auth_eval.json",
+          "sha256": "49956f7601a9c30a4f33a36c3af0e72f0b815fc36cade591764905711860691e"
+        },
+        {
+          "bytes": 6631,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr85_minus_motion_stack_t4_20260504T0002Z/contest_auth_eval.json",
+          "sha256": "f7b342edd0d4f20088499726b22d1f441e2e5c9bcea67a5c93be7a97ed7fc47d"
+        },
+        {
+          "bytes": 6612,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr85_minus_post_motion_t4_20260504T0002Z/contest_auth_eval.json",
+          "sha256": "673bf10277139ec0ba36a1c86c86dec36dfdc469e8845fdac7dabfefb3a3eb2a"
+        },
+        {
+          "bytes": 6572,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr85_minus_post_t4_20260504T0002Z/contest_auth_eval.json",
+          "sha256": "e5d8762d85277addc1d3d51eb37bb649ffb7b10e231ec2563e3bfc8c8bbb6968"
+        },
+        {
+          "bytes": 6601,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr85_minus_randmulti_t4_20260504T0002Z/contest_auth_eval.json",
+          "sha256": "764998c310339eaea1f523a91c47d2f4ed23fc9ac2de08a7eacb085245683d6a"
+        },
+        {
+          "bytes": 6828,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr85_post23_motion_l40sdiag_20260504T0118Z/contest_auth_eval.json",
+          "sha256": "56b2835297447f845a30f21da686ea251fbbca1c7a607e1f655d736b6f02ab34"
+        },
+        {
+          "bytes": 6932,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr85_preserve_post_all_shift_frac2_frac3_t4_20260504T0242Z/contest_auth_eval.json",
+          "sha256": "2b9af395f9d695aa8fc336082a965f57347eaf64c589e23f2af0d7f63c32d2b3"
+        },
+        {
+          "bytes": 6999,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr85_preserve_post_all_shift_frac2_frac3_t4hedge_g4dn2_20260504T0246Z/contest_auth_eval.json",
+          "sha256": "66bcf19c4535a111604994b0ac03a60c28d2851de19560f6d94310233cc3b58a"
+        },
+        {
+          "bytes": 6835,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr85_randmulti_top001_l40sdiag_20260504T0049Z/contest_auth_eval.json",
+          "sha256": "28e02da522889f555fa95a74cf3a4430009afe2e907ea39d11ea0205a906ac46"
+        },
+        {
+          "bytes": 6792,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr85_randmulti_top001_t4_20260504T0047Z/contest_auth_eval.json",
+          "sha256": "b27a3a4acb01d0d1c2de4e05c5094b3800be040bb389c70a1a44e6379d3077b6"
+        },
+        {
+          "bytes": 6888,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr85_randmulti_top004_fb_allowfb_l40sdiag_20260504T0129Z/contest_auth_eval.json",
+          "sha256": "80e9d41e6f67e4fa1961bdeabec3a19ad652a536f8907fc869f02b9a501aa433"
+        },
+        {
+          "bytes": 6786,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr85_randmulti_top004_t4_20260504T0106Z/contest_auth_eval.json",
+          "sha256": "b80358dcb44d182cd28881071d0a29c6e2723a07ac247a1afc841a731033961b"
+        },
+        {
+          "bytes": 6808,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr85_randmulti_top008_t4_20260504T0106Z/contest_auth_eval.json",
+          "sha256": "26b96a471886ea901f7e3283d5385994df05510e33590f77eb75a7ee804d1f5d"
+        },
+        {
+          "bytes": 6846,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_pr85_randmulti_top016_l40sdiag_20260504T0056Z/contest_auth_eval.json",
+          "sha256": "baf597e96aad326fef7ca846b67b4df16cf4da3dc02cdba3fd235c3e95732422"
+        },
+        {
+          "bytes": 4959,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_public_floor_pr63_pr64_pvl1_t4_fix1_20260501T2353Z/contest_auth_eval.json",
+          "sha256": "cf237d3858561ae806a76a55d22b169c30cf36ef13d1dc23fb189b4085605adb"
+        },
+        {
+          "bytes": 4884,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_public_floor_qzs3_qp1_t4_20260502T0036Z/contest_auth_eval.json",
+          "sha256": "d3a0ba98f59b9ac0c832961bb11409e10431b59b0ca66f32500a5a85839fa6d7"
+        },
+        {
+          "bytes": 4913,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_public_pr63_qpose14_trace_l40s_20260501T2149Z/contest_auth_eval.json",
+          "sha256": "6d22e2e62e253795f25eca741da53a26150f7d1bbff32fd20df56f3da1e839a5"
+        },
+        {
+          "bytes": 4911,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_public_pr64_unified_trace_l40s_20260501T2150Z/contest_auth_eval.json",
+          "sha256": "2fcf7ebfbc78033e925cf5da637ccf6c4dc8298f49c78228fe94442dcf46b145"
+        },
+        {
+          "bytes": 6951,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_public_pr81_qzs3_range_mask_l40s_fastdiag_20260503T200750Z/contest_auth_eval.json",
+          "sha256": "39d651c720100f66ac62fd648f0a4969c635130db5836809c1dfd1d087047c26"
+        },
+        {
+          "bytes": 6933,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_public_pr81_qzs3_range_mask_t4_depsfix_20260503T195657Z/contest_auth_eval.json",
+          "sha256": "0dc1f7f36bd0021a16eb29b4fbdb8269b610136405d7bfea42760734314e3b61"
+        },
+        {
+          "bytes": 6974,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_public_pr82_henosis_frontier_l40s_fastdiag_20260503T200750Z/contest_auth_eval.json",
+          "sha256": "69f137961b23f18afe497c9096a510427392dcf128623399e6079bc0d517d691"
+        },
+        {
+          "bytes": 6962,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_public_pr82_henosis_frontier_t4_depsfix_20260503T195657Z/contest_auth_eval.json",
+          "sha256": "d2a42da332d2607926a4b92d16efac57835311add2d3d15b769bc78aca2ff80c"
+        },
+        {
+          "bytes": 6927,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_public_pr84_adaptive_range_mask_no_router_t4_20260503T214008Z/contest_auth_eval.json",
+          "sha256": "695e00b99793c9820e2db3a9125f25ca791c54b06d53427e7fc46cdcc9f6d74d"
+        },
+        {
+          "bytes": 6781,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_public_pr85_adaptive_masking_joint_frame_model_l40sdiag_20260503T2338Z/contest_auth_eval.json",
+          "sha256": "2ada9e2ebb6f6936aac6444236feceb452379bd61599b5ab22f6661a6932517c"
+        },
+        {
+          "bytes": 6772,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z/contest_auth_eval.json",
+          "sha256": "3cf18a19f829c632f0d430524749b1e412054916102903368b51da13bcac2ef3"
+        },
+        {
+          "bytes": 6845,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_hedge_g4dn2_20260503T2335Z/contest_auth_eval.json",
+          "sha256": "5f256daa7c9a9c371a490c0e96291ab82b4980835060f9b1218696edc99bbdd4"
+        },
+        {
+          "bytes": 35855,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_public_pr85_fixed_runtime_bridge_l40sdiag_retry1_20260504T0216Z/contest_auth_eval.json",
+          "sha256": "da0fafbe83065cf6c194acb396eb242a2b84cd415e0a4809add2129cb083ffcf"
+        },
+        {
+          "bytes": 35855,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_public_pr85_fixed_runtime_bridge_rtxprodiag_20260504T0220Z/contest_auth_eval.json",
+          "sha256": "38d4b6525f3f96ad87494777356968a866638b4d891e6a9797e2a264f68d3f8e"
+        },
+        {
+          "bytes": 4998,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_qfaithful_snapshot_2131_pr64_qpose14_l40s_20260501T2138Z/contest_auth_eval.json",
+          "sha256": "a1d897262be7fb58e743d283b83c474559a934bf6daa706588026d14178776e3"
+        },
+        {
+          "bytes": 4968,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_qfaithful_snapshot_2146_pr64_qp1_l40s_20260501T2201Z/contest_auth_eval.json",
+          "sha256": "a2651a50f3ffde6237da153ab86a7704d61666a2757b6457dd64919b5887f7a1"
+        },
+        {
+          "bytes": 4953,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_qfaithful_snapshot_qzs3_rp2_qpose14_l40s_20260501T1952Z/contest_auth_eval.json",
+          "sha256": "8dc88e26589cd14ebe01105140bd7b18c398d9f737ac7e7cc75c2768424df4db"
+        },
+        {
+          "bytes": 36441,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_qp1_active_ref_combined_top32_t4_20260503T0732Z/contest_auth_eval.json",
+          "sha256": "a4a77e6a7a6ea7cd014911b59f46214341c65edca213956a0ad3ccb8bb683176"
+        },
+        {
+          "bytes": 4923,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_qzs3_b32_maskfirst_qp1_fix1_t4_20260502T0331Z/contest_auth_eval.json",
+          "sha256": "580ee31d22aa99fa496e0f94bec64127ed023f9e1ff2eccaf969f7655fb3959d"
+        },
+        {
+          "bytes": 36219,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_qzs4_pr64_pvr1_top64_rtxprodiag_20260503T0309Z/contest_auth_eval.json",
+          "sha256": "a1927e3678745561d598cdd811e4ec3da66652842349f4fa56566bda896e36c1"
+        },
+        {
+          "bytes": 4407,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_r7_p2_canonical_t4_20260501T1020Z/contest_auth_eval.json",
+          "sha256": "d264dc4f47b53dde674e0c34a9cf6de07df075acc307e2f33ab34a18e2717e47"
+        },
+        {
+          "bytes": 4937,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_renderer_payload_posecd_c044_t4fix1_20260501T1754Z/contest_auth_eval.json",
+          "sha256": "e3126b5dfd7e29c04227f9d7ae3ac94da060cf2b2aaeba4e985065b0db8da0a0"
+        },
+        {
+          "bytes": 5031,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_renderer_payload_posecd_rp2_palias_allowp_c044_t4_20260501T1823Z/contest_auth_eval.json",
+          "sha256": "30fb5000b27d7018af8bee0ccc15caf3988dca20c2c9c21143ee072729fed2c6"
+        },
+        {
+          "bytes": 5017,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_renderer_payload_qp1_rp2_palias_c044_l40s_fix1_20260501T1935Z/contest_auth_eval.json",
+          "sha256": "26a387586365e1345064b049825d1be04ed07fb7958e19037711c81290125b7b"
+        },
+        {
+          "bytes": 5026,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_renderer_payload_qpose14_rp2_palias_allowp_c044_t4_20260501T1823Z/contest_auth_eval.json",
+          "sha256": "2f43cb72a06d16fcc072dc604695c01f59944f3fff110d14e66249183e868fe0"
+        },
+        {
+          "bytes": 4970,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_renderer_payload_velres_top1024_c044_g6e_20260501T1748Z/contest_auth_eval.json",
+          "sha256": "9637ae7bac27c2835eed947886e568d3ba003b33ffc5da623035c3d891722ac3"
+        },
+        {
+          "bytes": 4955,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_renderer_payload_velres_top512_c044_g6e_20260501T1748Z/contest_auth_eval.json",
+          "sha256": "6b672af5447d374449e23847905b9de28e2c02a9a6a520de476e127af9f6c18d"
+        },
+        {
+          "bytes": 36502,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_renderer_zero_fp4_frame1_head_010_l40sdiag_20260503T0714Z/contest_auth_eval.json",
+          "sha256": "1ea177bf53cfffd0c25c4223486b4f7c41f2026f922d1f270468d160b55a599a"
+        },
+        {
+          "bytes": 36602,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_renderer_zero_fp4_frame1_head_010_t4_20260503T0712Z/contest_auth_eval.json",
+          "sha256": "ee53c5e5efb95041b2a37a841403f2f5169c5ef59185129483b55e0451a304a2"
+        },
+        {
+          "bytes": 36113,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_sjkl_c067_consensus32_g0046875_sibling_rtxprodiag_20260502T2354Z/contest_auth_eval.json",
+          "sha256": "817dde1f136c3b279c4ba92510b26222a0cf64cab41e4abfc693c384c10192f0"
+        },
+        {
+          "bytes": 36123,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_sjkl_c067_q6_minrpk1_rtxprodiag_20260502T2327Z/contest_auth_eval.json",
+          "sha256": "d70b417109a53ea492525400837da95ee53aab84e1d3dafb4362159867f4e3dd"
+        },
+        {
+          "bytes": 35998,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_sjkl_c067_q6_sibling_rtxprodiag_20260502T2346Z/contest_auth_eval.json",
+          "sha256": "43e8b1199702bb400f57297a62258c672697ba4eaebff2ea94ca893224f6e90f"
+        },
+        {
+          "bytes": 35909,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_sjkl_c067_q6_sibling_t4_20260502T2357Z/contest_auth_eval.json",
+          "sha256": "bb03831ea9d9f05d5f191c36bd73b1adecf93d199cad746c0b98864fc4fe81fb"
+        },
+        {
+          "bytes": 36382,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_sjkl_c067_sparse_k1g08_p32_a3_rtxprodiag_20260502T2123Z/contest_auth_eval.json",
+          "sha256": "d8f333239cb1365b039fecfd3d067a96c64ede4f5f7c0bc1cd63d829a46105b2"
+        },
+        {
+          "bytes": 36169,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_sjkl_c067_tracepos9_rtxprodiag_20260502T2146Z/contest_auth_eval.json",
+          "sha256": "f97b474d661f80dae2009df384f3a047347baf2b7173cb727a677ba9a756e958"
+        },
+        {
+          "bytes": 36170,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_sjkl_c067_tracetop16_rtxprodiag_20260502T2146Z/contest_auth_eval.json",
+          "sha256": "c5ff5766156be3c72465adbe338106bf7f1e50bf44cbfef3ac347eea02482e70"
+        },
+        {
+          "bytes": 35899,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/exact_eval_trained_qbf1_b0512_g7e_20260503T0142Z/contest_auth_eval.json",
+          "sha256": "88180553ad98ecbe520c1821ec17e434ceafefa330bcc95fc39de06958e91790"
+        },
+        {
+          "bytes": 4882,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r5_explicit_baseline_t4/evals/point_000_eps_m2/contest_auth_eval.json",
+          "sha256": "8113993edea326053ec9dce73fc9cbeded82edbba1bb3a46a4d33be0423c7d68"
+        },
+        {
+          "bytes": 4882,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r5_explicit_baseline_t4/evals/point_001_eps_m1/contest_auth_eval.json",
+          "sha256": "5c5ffc188c97893dd252f5db7f585ceac5d55a6996361327ed68eb83a055278e"
+        },
+        {
+          "bytes": 4287,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r5_explicit_baseline_t4/evals/point_002_eps_p0/contest_auth_eval.json",
+          "sha256": "b84e7352165cf0d2be0631a177d8404c3a1e5f27633d82d48990552b9ef382ab"
+        },
+        {
+          "bytes": 4880,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r5_explicit_baseline_t4/evals/point_003_eps_p1/contest_auth_eval.json",
+          "sha256": "e7d6fb8dc2c575ae9f2360177a8f6256f46924117bf861b71d13dc41132c0a3c"
+        },
+        {
+          "bytes": 4891,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r5_explicit_baseline_t4/evals/point_004_eps_p2/contest_auth_eval.json",
+          "sha256": "d7a73de1085fe14f5cf47a28e44f2b66f7a5b1dc41946ff9a23a58b0daaca039"
+        },
+        {
+          "bytes": 4862,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/evals/point_000_eps_m2/contest_auth_eval.json",
+          "sha256": "c695c9fee92158a41c85fecd96b2c720e46e216602d343f72ecb213d6819a857"
+        },
+        {
+          "bytes": 4872,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/evals/point_001_eps_m1/contest_auth_eval.json",
+          "sha256": "04cf1c326b9dffd93a21083b780e11d4e891259a6dddba70951ab84513736432"
+        },
+        {
+          "bytes": 4287,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/evals/point_002_eps_p0/contest_auth_eval.json",
+          "sha256": "b84e7352165cf0d2be0631a177d8404c3a1e5f27633d82d48990552b9ef382ab"
+        },
+        {
+          "bytes": 4853,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/evals/point_003_eps_p1/contest_auth_eval.json",
+          "sha256": "1d0d0d881e77b0e7cd3ddb18c1ea6c9a9644ed0e689987f178625c82042c6384"
+        },
+        {
+          "bytes": 4854,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_codex_r6_t4_small_race/evals/point_004_eps_p2/contest_auth_eval.json",
+          "sha256": "98e1434f736cb84394ef572aa64d0dac3681f7220f7034ecd070a590fde5f734"
+        },
+        {
+          "bytes": 5041,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_r7_predicted_from_r2_l40s_codex_lightning_l40s/evals/point_000_eps_m2/contest_auth_eval.json",
+          "sha256": "1bc40cb0016a4c07571146bd241a621f897e2f646379b3772db5e2651134376e"
+        },
+        {
+          "bytes": 5052,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_r7_predicted_from_r2_l40s_codex_lightning_l40s/evals/point_001_eps_m1/contest_auth_eval.json",
+          "sha256": "bc61cc8d23d53acddf63f60f5533671cb94255459fc70370e8bbbf493f811636"
+        },
+        {
+          "bytes": 4893,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_r7_predicted_from_r2_l40s_codex_lightning_l40s/evals/point_002_eps_p0/contest_auth_eval.json",
+          "sha256": "ed7261f3493c6212ea0035875051cdf7b48dbf8e7b7e5df2882de38280902088"
+        },
+        {
+          "bytes": 5044,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_r7_predicted_from_r2_l40s_codex_lightning_l40s/evals/point_003_eps_p1/contest_auth_eval.json",
+          "sha256": "5571ba095715cd73cc4a7066401c85e91997594ab84abab03edfc883e5d6c142"
+        },
+        {
+          "bytes": 5034,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_r7_predicted_from_r2_l40s_codex_lightning_l40s/evals/point_004_eps_p2/contest_auth_eval.json",
+          "sha256": "126f234c993c29b448540ee220636787168cacf1948bb1bc90afbf6c1800ed00"
+        },
+        {
+          "bytes": 5056,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_r7_predicted_from_r2_l40s_codex_lightning_t4_parallel/evals/point_000_eps_m2/contest_auth_eval.json",
+          "sha256": "e9801d897aa13308ba401abec7f4175ecb010a0f4a185bf526fa4ace2a7b97b7"
+        },
+        {
+          "bytes": 5069,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_r7_predicted_from_r2_l40s_codex_lightning_t4_parallel/evals/point_001_eps_m1/contest_auth_eval.json",
+          "sha256": "3f4805f962551cb5dd58a86a45de95ef5ee2ded907ced7c3f4a692e0045169b3"
+        },
+        {
+          "bytes": 4904,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_r7_predicted_from_r2_l40s_codex_lightning_t4_parallel/evals/point_002_eps_p0/contest_auth_eval.json",
+          "sha256": "093d7295f9d9b47e5e42f3f1cff425c582ac9dddeb0832d3863bfecbc324306b"
+        },
+        {
+          "bytes": 5042,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_r7_predicted_from_r2_l40s_codex_lightning_t4_parallel/evals/point_003_eps_p1/contest_auth_eval.json",
+          "sha256": "c4966d9ce3f1245828c3fe930b0acd2642c5cb19c4cdc246448f5558af6cf7c7"
+        },
+        {
+          "bytes": 5043,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_r7_predicted_from_r2_l40s_codex_lightning_t4_parallel/evals/point_004_eps_p2/contest_auth_eval.json",
+          "sha256": "fc94bd6cbc246d02ede3ebcdd0be8da9eb0b47a5356809df2e809e226ad007c0"
+        },
+        {
+          "bytes": 4511,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/owv3_byte_feasible_exact_cuda_20260430_codex_lightning_t4_g4dn2x_r4/contest_auth_eval.json",
+          "sha256": "5056d8b60b00fcbee13bc1f414582f347f5bb99a848c58b85bc10d9e88fcc160"
+        },
+        {
+          "bytes": 4511,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/owv3_byte_feasible_exact_cuda_20260430_codex_lightning_t4_g4dn2x_r4/eval_work/contest_auth_eval.json",
+          "sha256": "5056d8b60b00fcbee13bc1f414582f347f5bb99a848c58b85bc10d9e88fcc160"
+        },
+        {
+          "bytes": 4508,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/owv3_r5_rank1_exact_cuda_20260430_codex_lightning_t4_r2_isolated_uv/contest_auth_eval.json",
+          "sha256": "9e777fa5d501ac5f5684505e70ae8379465d681cfcd69b1f1f9f7a16d3770fb0"
+        },
+        {
+          "bytes": 4464,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/owv3_r6_rank1_exact_cuda_20260430_codex_lightning_t4_r1/contest_auth_eval.json",
+          "sha256": "222ec41b38990269140618e3f3f17e1100c695eabcb29153b0d451f8fb66c92d"
+        },
+        {
+          "bytes": 4531,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/pfp16_paired_calibration_20260430_codex_lightning_t4_r3_isolated_uv/contest_auth_eval.json",
+          "sha256": "d1957d39b2bc9072ed9e22b553a75aa1b92ec008cc63a6a29cf484e1cc3187a1"
+        },
+        {
+          "bytes": 12227,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/sjkl_c067_l40sdiag_20260502T151434Z/contest_auth_eval.json",
+          "sha256": "45a77528df1171a64cc8718ceddb819610d54b13ee4dbd79cee384cb11d86ccb"
+        },
+        {
+          "bytes": 12227,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/sjkl_c067_l40sdiag_20260502T151434Z/exact_eval/contest_auth_eval.json",
+          "sha256": "45a77528df1171a64cc8718ceddb819610d54b13ee4dbd79cee384cb11d86ccb"
+        },
+        {
+          "bytes": 36304,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/sjkl_c067_v2_k4_a5_cap32k_l40s_20260502T181718Z/contest_auth_eval.json",
+          "sha256": "00b64a9567d3fec26e0352c9a16fd657ba7ef9b5a8a383ae4e4258fa99d1259d"
+        },
+        {
+          "bytes": 36304,
+          "exists": true,
+          "path": "experiments/results/lightning_batch/sjkl_c067_v2_k4_a5_cap32k_l40s_20260502T181718Z/exact_eval/contest_auth_eval.json",
+          "sha256": "00b64a9567d3fec26e0352c9a16fd657ba7ef9b5a8a383ae4e4258fa99d1259d"
+        }
+      ]
+    },
+    "pr85_final_bias_stack_summary": {
+      "count": 1,
+      "entries": [
+        {
+          "bytes": 12644,
+          "exists": true,
+          "path": "experiments/results/pr85_final_bias_stack_candidates_20260504_codex/candidate_summary.json",
+          "sha256": "3f4613e8450f135272efc11bf75689e014b6c3cd33a98d9785c39b62c6f6937b"
+        }
+      ]
+    },
+    "pr85_post_motion_policy_summary": {
+      "count": 1,
+      "entries": [
+        {
+          "bytes": 65784,
+          "exists": true,
+          "path": "experiments/results/pr85_post_motion_group_policy_candidates_20260504_codex/candidate_summary.json",
+          "sha256": "80918ea5e347f6454f79eda7601cc5c1f6240278b7db394ddd882cf5fa6b7190"
+        }
+      ]
+    },
+    "pr85_randmulti_policy_summary": {
+      "count": 1,
+      "entries": [
+        {
+          "bytes": 285769,
+          "exists": true,
+          "path": "experiments/results/pr85_randmulti_group_policy_candidates_20260504_codex/candidate_summary.json",
+          "sha256": "0bfbde531163184851f115e8bcdd313e4b298092f2c7e9303d82332880e25582"
+        }
+      ]
+    },
+    "pr85_sidechannel_ablation_summary": {
+      "count": 1,
+      "entries": [
+        {
+          "bytes": 14500,
+          "exists": true,
+          "path": "experiments/results/public_pr85_sidechannel_ablations_20260503_codex/candidate_summary.json",
+          "sha256": "d625c3d38427e590bc838af770af756200673128394c7439b0ff2f51bd2d12ed"
+        }
+      ]
+    },
+    "pr86_hpac_contract_plan": {
+      "count": 1,
+      "entries": [
+        {
+          "bytes": 15184,
+          "exists": true,
+          "path": "experiments/results/pr86_hpac_pr85_contract_port_20260504_codex/plan.json",
+          "sha256": "266e83db266bbfdc03dee482c70ef75813f2da43bab24e09fa322e977582a52c"
+        }
+      ]
+    },
+    "qh0_model_self_compression": {
+      "count": 1,
+      "entries": [
+        {
+          "bytes": 26388,
+          "exists": true,
+          "path": "experiments/results/pr85_model_payload_self_compression_20260504_worker/profile_pr85_model_payload_self_compression.json",
+          "sha256": "938bf9b18b1012097fb6eff8cf6ad8f2d10843a41c5ac28405489d6ad7aef58a"
+        }
+      ]
+    },
+    "qma9_context_entropy": {
+      "count": 1,
+      "entries": [
+        {
+          "bytes": 733589,
+          "exists": true,
+          "path": "experiments/results/pr85_qma9_context_entropy_20260504_worker/pr85_qma9_context_entropy_profile.json",
+          "sha256": "7817948486cd01f7349930142e9ca3dababec29675d86e4a941d5e369d9353c8"
+        }
+      ]
+    },
+    "qma9_escape_screen_manifest": {
+      "count": 10,
+      "entries": [
+        {
+          "bytes": 3925,
+          "exists": true,
+          "path": "experiments/results/pr85_qma9_escape_screens_20260504_codex/qmb1_bw16_prefix16/qmb1_bw16_prefix16/manifest.json",
+          "sha256": "8f590a83be7f59d3b19ea34fc659f387b2b206242e4cbe805fe283b9d32ea09d"
+        },
+        {
+          "bytes": 3925,
+          "exists": true,
+          "path": "experiments/results/pr85_qma9_escape_screens_20260504_codex/qmb1_bw32_prefix16/qmb1_bw32_prefix16/manifest.json",
+          "sha256": "7ae54d84f2904b6d453c105ec7817f2b3f44ea0c2f5e6f2040f724ccddf8c2d5"
+        },
+        {
+          "bytes": 3919,
+          "exists": true,
+          "path": "experiments/results/pr85_qma9_escape_screens_20260504_codex/qmb1_bw8_prefix16/qmb1_bw8_prefix16/manifest.json",
+          "sha256": "dcb0a0567349364362220cef56845fcab2e28f9af744fe5e8494449c7c5876c5"
+        },
+        {
+          "bytes": 4044,
+          "exists": true,
+          "path": "experiments/results/pr85_qma9_escape_screens_20260504_codex/qmc1_min16_prefix16/qmc1_min16_prefix16/manifest.json",
+          "sha256": "3e8ae0eb48989063814de3ef4e8d4e038bbf5a46657320a4fd98501def29abf1"
+        },
+        {
+          "bytes": 4044,
+          "exists": true,
+          "path": "experiments/results/pr85_qma9_escape_screens_20260504_codex/qmc1_min32_prefix16/qmc1_min32_prefix16/manifest.json",
+          "sha256": "7242dbdd720f23b8f7a381e09fa57c4fd83e43f54076b26153e12aa2200e8e3e"
+        },
+        {
+          "bytes": 4044,
+          "exists": true,
+          "path": "experiments/results/pr85_qma9_escape_screens_20260504_codex/qmc1_min64_prefix16/qmc1_min64_prefix16/manifest.json",
+          "sha256": "6f035e18b4d5458e64f2fbf9d2e8171f57e0d059f734ad17e3078374ae80380c"
+        },
+        {
+          "bytes": 6605,
+          "exists": true,
+          "path": "experiments/results/pr85_qma9_escape_screens_20260504_codex/qmh1_min128_prefix16/qmh1_min128_prefix16/manifest.json",
+          "sha256": "bc73b4f47516e14c463ddbb2a0baa863c7355196070fba8176514a538a304397"
+        },
+        {
+          "bytes": 6593,
+          "exists": true,
+          "path": "experiments/results/pr85_qma9_escape_screens_20260504_codex/qmh1_min32_prefix16/qmh1_min32_prefix16/manifest.json",
+          "sha256": "509a301433d673d0d86be13d1c49fc749aa438be281ef3072c10e464f015bd0b"
+        },
+        {
+          "bytes": 6666,
+          "exists": true,
+          "path": "experiments/results/pr85_qma9_escape_screens_20260504_codex/qmh1_min64_allowup_prefix16/qmh1_min64_allowup_prefix16/manifest.json",
+          "sha256": "ee029b0302154e34e1984839e1dec0b92a36fa5dde5a1a4956c884fa46e9adb8"
+        },
+        {
+          "bytes": 6595,
+          "exists": true,
+          "path": "experiments/results/pr85_qma9_escape_screens_20260504_codex/qmh1_min64_prefix16/qmh1_min64_prefix16/manifest.json",
+          "sha256": "b57ab7e8c103b83bba35a024ef0af55151ceededd00a591ac89768855a55e5d1"
+        }
+      ]
+    }
+  },
+  "opportunities": [
+    {
+      "already_refuted": false,
+      "blocked": false,
+      "bytes_at_stake": 57074,
+      "dispatch_performed": false,
+      "estimated_rate_only_score_bound": 0.03800323389,
+      "exact_evidence_status": "planning_profile_only_no_runtime_parity",
+      "family_id": "qh0_record_level_model_repack",
+      "notes": [],
+      "planning_only": true,
+      "priority": 10,
+      "recommendation": "Top byte-saving route when lossless Brotli recode is non-improving: build a deterministic QH0 record-level serializer/repacker and target low-entropy decoded model records under runtime parity.",
+      "required_gates": [
+        "reviewed deterministic QH0 serializer",
+        "decoded tensor/record parity",
+        "PR85 runtime output parity",
+        "deterministic archive byte closure",
+        "exact CUDA auth eval before any score claim"
+      ],
+      "score_claim": false,
+      "source_artifacts": [
+        "experiments/results/pr85_model_payload_self_compression_20260504_worker/profile_pr85_model_payload_self_compression.json",
+        "experiments/results/pr85_archive_bit_budget_20260504_codex/profile_pr85_archive_bit_budget.json"
+      ],
+      "stackability": "high: changes model segment only and should compose with mask/post/randmulti work after runtime parity",
+      "surface": "PR85 QH0 joint-frame model payload",
+      "synergy_antagonism_risks": [
+        "QH0 serializer errors can change renderer tensors and PoseNet/SegNet terms",
+        "generic recompression of the charged encoded segment was already non-improving"
+      ]
+    },
+    {
+      "already_refuted": false,
+      "blocked": false,
+      "bytes_at_stake": 159011,
+      "dispatch_performed": false,
+      "estimated_rate_only_score_bound": 0.105878897995,
+      "exact_evidence_status": "planning_profile_only_mask_bytes_no_candidate_archive",
+      "family_id": "qma9_native_run_grammar_or_table_reduction",
+      "notes": [
+        "best_simple_context=left_plus_up",
+        "row_run_avg=207.0266143680733"
+      ],
+      "planning_only": true,
+      "priority": 20,
+      "recommendation": "Target native run grammar/table-overhead reductions, not generic symbol/context entropy replacement.",
+      "required_gates": [
+        "full-stream deterministic QMA9-compatible encoder",
+        "decoded token SHA parity against PR85 baseline",
+        "archive byte closure and runtime output parity",
+        "exact CUDA auth eval before score promotion"
+      ],
+      "score_claim": false,
+      "source_artifacts": [
+        "experiments/results/pr85_qma9_context_entropy_20260504_worker/pr85_qma9_context_entropy_profile.json",
+        "experiments/results/pr85_archive_bit_budget_20260504_codex/profile_pr85_archive_bit_budget.json"
+      ],
+      "stackability": "medium: mask-only if decoded-token and runtime parity are preserved",
+      "surface": "PR85 QMA9 mask payload",
+      "synergy_antagonism_risks": [
+        "simple context entropy replacement is byte-negative against current QMA9",
+        "mask-token parity is necessary but not sufficient for inflate/runtime parity"
+      ]
+    },
+    {
+      "already_refuted": false,
+      "blocked": true,
+      "bytes_at_stake": 15369,
+      "dispatch_performed": false,
+      "estimated_rate_only_score_bound": 0.010233586251,
+      "exact_evidence_status": "fail_closed_planning_only_no_pr86_exact_score_or_pr85_hpac_parity",
+      "family_id": "pr86_hpac_pr85_mask_contract_port",
+      "notes": [
+        "fail_closed_gate_count=5"
+      ],
+      "planning_only": true,
+      "priority": 30,
+      "recommendation": "Do not dispatch; unblock local HPAC parity gates first.",
+      "required_gates": [
+        "PR86 full decode/reencode byte parity",
+        "PR85 HPAC decoded-token parity",
+        "PR85 runtime output parity",
+        "candidate archive byte closure",
+        "exact CUDA auth eval before score claim"
+      ],
+      "score_claim": false,
+      "source_artifacts": [
+        "experiments/results/pr86_hpac_pr85_contract_port_20260504_codex/plan.json"
+      ],
+      "stackability": "medium after parity: mask-contract replacement should compose with model and protected sidechannels",
+      "surface": "PR85 mask payload via PR86 HPAC contract",
+      "synergy_antagonism_risks": [
+        "PR86 exact-score evidence is missing or invalid in current plan",
+        "PR86 full decode/reencode and PR85 HPAC token parity are not passed"
+      ]
+    },
+    {
+      "already_refuted": false,
+      "blocked": false,
+      "bytes_at_stake": 14592,
+      "dispatch_performed": false,
+      "estimated_rate_only_score_bound": 0.009716213844,
+      "exact_evidence_status": "candidate_archive_empirical_plus_whole_stream_exact_negative_guardrail",
+      "family_id": "protected_randmulti_group_waterfill",
+      "notes": [
+        "best_policy=waterfill_top001"
+      ],
+      "planning_only": true,
+      "priority": 40,
+      "recommendation": "Best current policy is waterfill_top001 with rate-only byte saving; keep as protected group-level candidate, not whole deletion.",
+      "required_gates": [
+        "preserve exact candidate archive custody",
+        "runtime output sanity/parity where applicable",
+        "exact CUDA auth eval after lane claim",
+        "component-gate adjudication against PR85 baseline"
+      ],
+      "score_claim": false,
+      "source_artifacts": [
+        "experiments/results/pr85_randmulti_group_policy_candidates_20260504_codex/candidate_summary.json"
+      ],
+      "stackability": "high with model/mask work; medium with post/motion because scorer interactions are not proven additive",
+      "surface": "PR85 randmulti sidechannel groups",
+      "synergy_antagonism_risks": [
+        "whole randmulti deletion is exact CUDA negative",
+        "group-level rescue estimates are planning only until exact eval"
+      ]
+    },
+    {
+      "already_refuted": false,
+      "blocked": false,
+      "bytes_at_stake": 1387,
+      "dispatch_performed": false,
+      "estimated_rate_only_score_bound": 0.000923546368,
+      "exact_evidence_status": "candidate_archive_empirical_plus_whole_stream_exact_negative_guardrail",
+      "family_id": "protected_post_motion_group_policy",
+      "notes": [
+        "best_policy=preserve_motion_only"
+      ],
+      "planning_only": true,
+      "priority": 50,
+      "recommendation": "Best current protected policy is preserve_motion_only; treat as a narrow exact-eval candidate only.",
+      "required_gates": [
+        "semantic group validation remains passed",
+        "exact CUDA auth eval after lane claim",
+        "component trace comparison against baseline"
+      ],
+      "score_claim": false,
+      "source_artifacts": [
+        "experiments/results/pr85_post_motion_group_policy_candidates_20260504_codex/candidate_summary.json"
+      ],
+      "stackability": "medium: small bytes, high scorer sensitivity, likely stackable only after exact component trace",
+      "surface": "PR85 post/motion micro sidechannels",
+      "synergy_antagonism_risks": [
+        "whole post and motion deletions are exact CUDA negative",
+        "small rate wins can be dominated by PoseNet/SegNet movement"
+      ]
+    },
+    {
+      "already_refuted": false,
+      "blocked": true,
+      "bytes_at_stake": 380,
+      "dispatch_performed": false,
+      "estimated_rate_only_score_bound": 0.000253026402,
+      "exact_evidence_status": "empirical_stack_candidate_no_exact_component_benefit",
+      "family_id": "pr89_final_bias_stack_on_pr85",
+      "notes": [
+        "best_candidate=public_pr85_intake_20260503_codex_fb",
+        "charged_byte_delta=380"
+      ],
+      "planning_only": true,
+      "priority": 70,
+      "recommendation": "Do not rank by rate; keep only if exact eval can prove final-bias component gain.",
+      "required_gates": [
+        "public inflate runtime compatibility",
+        "byte-closed archive with required members",
+        "exact CUDA auth eval proves component benefit exceeds charged bytes"
+      ],
+      "score_claim": false,
+      "source_artifacts": [
+        "experiments/results/pr85_final_bias_stack_candidates_20260504_codex/candidate_summary.json"
+      ],
+      "stackability": "medium: explicit sidecar-style stack, but requires PR89 inflate family and component benefit proof",
+      "surface": "PR85 plus final-bias sidecar member",
+      "synergy_antagonism_risks": [
+        "rate-only bound is negative because the stack adds charged bytes",
+        "component benefit has not been proven for this PR85 stack"
+      ]
+    },
+    {
+      "already_refuted": true,
+      "blocked": true,
+      "bytes_at_stake": 159011,
+      "dispatch_performed": false,
+      "estimated_rate_only_score_bound": 0.105878897995,
+      "exact_evidence_status": "empirical_static_profile_refutes_byte_economics",
+      "family_id": "qma9_simple_context_entropy_replacement",
+      "notes": [
+        "best_context_byte_gap=-170921.04466651363"
+      ],
+      "planning_only": true,
+      "priority": 900,
+      "recommendation": "Already refuted for dispatch: do not build a simple entropy-context replacement as a score candidate.",
+      "required_gates": [
+        "none for dispatch; keep only as a local parity control"
+      ],
+      "score_claim": false,
+      "source_artifacts": [
+        "experiments/results/pr85_qma9_context_entropy_20260504_worker/pr85_qma9_context_entropy_profile.json"
+      ],
+      "stackability": "low: refuted as a replacement family unless it becomes a parity control",
+      "surface": "PR85 QMA9 mask payload",
+      "synergy_antagonism_risks": [
+        "estimated ideal simple-context payload exceeds charged PR85 QMA9 bytes before overhead"
+      ]
+    },
+    {
+      "already_refuted": true,
+      "blocked": true,
+      "bytes_at_stake": 159011,
+      "dispatch_performed": false,
+      "estimated_rate_only_score_bound": 0.105878897995,
+      "exact_evidence_status": "empirical_prefix_screen_negative",
+      "family_id": "qma9_block_copy_escape_screens",
+      "notes": [
+        "screen_count=10",
+        "best_subset_delta_bytes=24"
+      ],
+      "planning_only": true,
+      "priority": 910,
+      "recommendation": "Already refuted for the screened variants; revisit only with a structurally different native run grammar.",
+      "required_gates": [
+        "full-stream deterministic byte screen beats current QMA9",
+        "decode parity on all 600 frames",
+        "runtime parity before exact eval"
+      ],
+      "score_claim": false,
+      "source_artifacts": [
+        "experiments/results/pr85_qma9_escape_screens_20260504_codex/qmb1_bw16_prefix16/qmb1_bw16_prefix16/manifest.json",
+        "experiments/results/pr85_qma9_escape_screens_20260504_codex/qmb1_bw32_prefix16/qmb1_bw32_prefix16/manifest.json",
+        "experiments/results/pr85_qma9_escape_screens_20260504_codex/qmb1_bw8_prefix16/qmb1_bw8_prefix16/manifest.json",
+        "experiments/results/pr85_qma9_escape_screens_20260504_codex/qmc1_min16_prefix16/qmc1_min16_prefix16/manifest.json",
+        "experiments/results/pr85_qma9_escape_screens_20260504_codex/qmc1_min32_prefix16/qmc1_min32_prefix16/manifest.json",
+        "experiments/results/pr85_qma9_escape_screens_20260504_codex/qmc1_min64_prefix16/qmc1_min64_prefix16/manifest.json",
+        "experiments/results/pr85_qma9_escape_screens_20260504_codex/qmh1_min128_prefix16/qmh1_min128_prefix16/manifest.json",
+        "experiments/results/pr85_qma9_escape_screens_20260504_codex/qmh1_min32_prefix16/qmh1_min32_prefix16/manifest.json",
+        "experiments/results/pr85_qma9_escape_screens_20260504_codex/qmh1_min64_allowup_prefix16/qmh1_min64_allowup_prefix16/manifest.json",
+        "experiments/results/pr85_qma9_escape_screens_20260504_codex/qmh1_min64_prefix16/qmh1_min64_prefix16/manifest.json"
+      ],
+      "stackability": "low until a full-stream screen beats QMA9 and preserves decode parity",
+      "surface": "PR85 QMA9 block/copy escape variants",
+      "synergy_antagonism_risks": [
+        "prefix projection can overstate full-stream economics",
+        "block-copy flags add overhead against an already compact adaptive QMA9 stream"
+      ]
+    },
+    {
+      "already_refuted": true,
+      "blocked": true,
+      "bytes_at_stake": 16608,
+      "dispatch_performed": false,
+      "estimated_rate_only_score_bound": 0.011058585493,
+      "exact_evidence_status": "preflight_blocked_planning_only",
+      "family_id": "fixed_runtime_bridge_sparse_action_deletions",
+      "notes": [
+        "blocked_candidate_count=4",
+        "candidate_count=4"
+      ],
+      "planning_only": true,
+      "priority": 920,
+      "recommendation": "Already blocked by preflight; do not dispatch sparse-action bridge deletions without exact blocker coverage.",
+      "required_gates": [
+        "preflight blockers cleared with exact evidence override",
+        "runtime custody manifest",
+        "exact CUDA auth eval on fixed runtime"
+      ],
+      "score_claim": false,
+      "source_artifacts": [
+        "experiments/results/pr85_bridge_sparse_action_candidates_20260504_codex/candidate_summary.json"
+      ],
+      "stackability": "low until protected qpost/randmulti deletion blockers have exact evidence override",
+      "surface": "PR85 fixed-runtime bridge qpost/randmulti sparse actions",
+      "synergy_antagonism_risks": [
+        "protected qpost groups were deleted without covering exact evidence",
+        "bridge runtime changes confound archive-vs-runtime custody"
+      ]
+    },
+    {
+      "already_refuted": true,
+      "blocked": true,
+      "bytes_at_stake": 18057,
+      "dispatch_performed": false,
+      "estimated_rate_only_score_bound": 0.012023415117,
+      "exact_evidence_status": "exact_cuda_negative_full_600_samples",
+      "family_id": "whole_sidechannel_deletion_routes",
+      "notes": [],
+      "planning_only": true,
+      "priority": 930,
+      "recommendation": "Already refuted: do not pursue whole sidechannel deletion as a stack plan.",
+      "required_gates": [
+        "no dispatch; convert scoped negatives into guards"
+      ],
+      "score_claim": false,
+      "source_artifacts": [
+        "experiments/results/lightning_batch/exact_eval_pr85_minus_all_safe_corrections_l40sdiag_20260503T2350Z/contest_auth_eval.json",
+        "experiments/results/lightning_batch/exact_eval_pr85_minus_motion_stack_l40sdiag_20260503T2350Z/contest_auth_eval.json",
+        "experiments/results/lightning_batch/exact_eval_pr85_minus_motion_stack_t4_20260504T0002Z/contest_auth_eval.json",
+        "experiments/results/lightning_batch/exact_eval_pr85_minus_post_motion_t4_20260504T0002Z/contest_auth_eval.json",
+        "experiments/results/lightning_batch/exact_eval_pr85_minus_post_t4_20260504T0002Z/contest_auth_eval.json",
+        "experiments/results/lightning_batch/exact_eval_pr85_minus_randmulti_t4_20260504T0002Z/contest_auth_eval.json"
+      ],
+      "stackability": "none: deletion routes are guardrails, not candidate families",
+      "surface": "PR85 whole post/motion/randmulti sidechannel deletion",
+      "synergy_antagonism_risks": [
+        "exact eval shows score regression despite byte savings"
+      ]
+    }
+  ],
+  "planning_only": true,
+  "refuted_family_ids": [
+    "qma9_simple_context_entropy_replacement",
+    "qma9_block_copy_escape_screens",
+    "fixed_runtime_bridge_sparse_action_deletions",
+    "whole_sidechannel_deletion_routes"
+  ],
+  "remote_jobs_dispatched": false,
+  "schema": "pr85_full_stack_opportunity_matrix_v1",
+  "score_claim": false,
+  "score_rate_formula": {
+    "meaning": "rate-only lower-is-better score contribution for bytes saved when components are unchanged",
+    "original_video_bytes": 37545489,
+    "points_per_byte": 6.658589531221714e-07
+  },
+  "stable_matrix_digest_sha256": "6ca6dadad0deb596ac627c59f10c9b874df872cc54ff57a7ee05cd38d7ede25a",
+  "tool": "experiments/plan_pr85_full_stack_opportunity_matrix.py",
+  "top_stack_plans": [
+    {
+      "blocked": false,
+      "blocked_on": "reviewed deterministic QH0 serializer",
+      "bytes_at_stake": 57074,
+      "estimated_rate_only_score_bound": 0.03800323389,
+      "family_id": "qh0_record_level_model_repack",
+      "rank": 1,
+      "recommendation": "Top byte-saving route when lossless Brotli recode is non-improving: build a deterministic QH0 record-level serializer/repacker and target low-entropy decoded model records under runtime parity.",
+      "surface": "PR85 QH0 joint-frame model payload"
+    },
+    {
+      "blocked": false,
+      "blocked_on": "full-stream deterministic QMA9-compatible encoder",
+      "bytes_at_stake": 159011,
+      "estimated_rate_only_score_bound": 0.105878897995,
+      "family_id": "qma9_native_run_grammar_or_table_reduction",
+      "rank": 2,
+      "recommendation": "Target native run grammar/table-overhead reductions, not generic symbol/context entropy replacement.",
+      "surface": "PR85 QMA9 mask payload"
+    },
+    {
+      "blocked": true,
+      "blocked_on": "PR86 full decode/reencode byte parity",
+      "bytes_at_stake": 15369,
+      "estimated_rate_only_score_bound": 0.010233586251,
+      "family_id": "pr86_hpac_pr85_mask_contract_port",
+      "rank": 3,
+      "recommendation": "Do not dispatch; unblock local HPAC parity gates first.",
+      "surface": "PR85 mask payload via PR86 HPAC contract"
+    },
+    {
+      "blocked": false,
+      "blocked_on": "preserve exact candidate archive custody",
+      "bytes_at_stake": 14592,
+      "estimated_rate_only_score_bound": 0.009716213844,
+      "family_id": "protected_randmulti_group_waterfill",
+      "rank": 4,
+      "recommendation": "Best current policy is waterfill_top001 with rate-only byte saving; keep as protected group-level candidate, not whole deletion.",
+      "surface": "PR85 randmulti sidechannel groups"
+    },
+    {
+      "blocked": false,
+      "blocked_on": "semantic group validation remains passed",
+      "bytes_at_stake": 1387,
+      "estimated_rate_only_score_bound": 0.000923546368,
+      "family_id": "protected_post_motion_group_policy",
+      "rank": 5,
+      "recommendation": "Best current protected policy is preserve_motion_only; treat as a narrow exact-eval candidate only.",
+      "surface": "PR85 post/motion micro sidechannels"
+    }
+  ]
+}

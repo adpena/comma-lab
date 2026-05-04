@@ -1,0 +1,13 @@
+{
+  "constants_json": "experiments/results/pr85_qma9_escape_screens_20260504_codex/pr85_qma9_planning_fixedslice_constants.json",
+  "dispatch_performed": false,
+  "planning_only": true,
+  "reason": "Adapter for local PR81-style QMA9 byte-screen tools only; not a contest archive or dispatch candidate.",
+  "schema": "pr85_qma9_planning_fixedslice_wrapper_v1",
+  "score_claim": false,
+  "source_qma9_bytes": 159011,
+  "source_qma9_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+  "wrapper_archive": "experiments/results/pr85_qma9_escape_screens_20260504_codex/pr85_qma9_planning_fixedslice_wrapper.zip",
+  "wrapper_archive_bytes": 159172,
+  "wrapper_archive_sha256": "23337100285209b989e960134b3fdbb9a0ac76032867f82b5bc32eb6d0e60694"
+}

@@ -1,0 +1,28 @@
+{
+  "archive": {
+    "bytes": 274145,
+    "member_names": [
+      "p",
+      "zoom_scalars.bin"
+    ],
+    "members": {
+      "p": {
+        "bytes": 272891,
+        "compressed_bytes": 272891,
+        "member_name": "p",
+        "sha256": "360455dcb484f2570f55063770715a0a113d57dc890a2ececd3c4a9ffa7d21ff"
+      },
+      "zoom_scalars.bin": {
+        "bytes": 1200,
+        "compressed_bytes": 1046,
+        "member_name": "zoom_scalars.bin",
+        "sha256": "5eaa0d0ecd53568134e4fe0d20874a515c7cf96e82c2c7e0e71bdbf19fd950bb"
+      }
+    },
+    "path": "/Users/adpena/Projects/pact/experiments/results/qfaithful_geometry_closed_candidates_20260502/2146_qzs3_pr64_qp1_zoom_v2/archive.zip",
+    "sha256": "89a7ba8b9e05a09d2a28bfee1b07e52f1af2235677c240dbde3b7269403c175f"
+  },
+  "label": "zoom_v2",
+  "non_promotable_reasons": [],
+  "promotable_exact_screen_contract": true
+}

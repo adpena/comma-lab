@@ -1,0 +1,17 @@
+=== Evaluation config ===
+  batch_size: 16
+  device: cuda
+  num_threads: 2
+  prefetch_queue_depth: 4
+  report: /workspace/pact/experiments/results/archive_only_eval_c059_qpost_bias_20260502/eval_work/report.txt
+  seed: 1234
+  submission_dir: /workspace/pact/experiments/results/archive_only_eval_c059_qpost_bias_20260502/eval_work
+  uncompressed_dir: /workspace/pact/upstream/videos
+  video_names_file: /workspace/pact/upstream/public_test_video_names.txt
+=== Evaluation results over 600 samples ===
+  Average PoseNet Distortion: 0.00102822
+  Average SegNet Distortion: 0.00077973
+  Submission file size: 276,700 bytes
+  Original uncompressed size: 37,545,489 bytes
+  Compression Rate: 0.00736973
+  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 0.36

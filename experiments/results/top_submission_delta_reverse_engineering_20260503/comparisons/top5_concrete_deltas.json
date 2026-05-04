@@ -1,0 +1,81 @@
+[
+  {
+    "delta": "Recover PR67/PR75 component edge with C-089 bytes: exact pose/seg regression audit between stated cc1dfa PR67 and C-089 P6 stack",
+    "expected_score_gain_band": [
+      0.0007,
+      0.002
+    ],
+    "observed_public_signal": "PR67 body reports older cc1dfa archive: pose 0.00048653 and seg 0.00060686 at 276741B; current release URL now downloads 86c869 archive at 276620B with same action size but smaller renderer/pose slices; C-089 exact is pose 0.00049601 seg 0.00061038 at 276342B.",
+    "rank": 1,
+    "required_gates": [
+      "raw-output parity trace on C-089 vs stated PR67 archive",
+      "component trace delta localized by pair/frame",
+      "no release-SHA drift in source archive",
+      "T4 exact eval of any stack"
+    ],
+    "why": "C-089 is already 399 bytes smaller than the stated PR67 archive but scores about 0.000763 worse from components; sub-0.314 needs about 0.001471 total, so component recovery plus another ~1KB is plausible."
+  },
+  {
+    "delta": "PR75/P6 action stream dictionary-v2 or delta-varint grammar search over seg_tile_actions.bin",
+    "expected_score_gain_band": [
+      0.0002,
+      0.0018
+    ],
+    "observed_public_signal": "PR67 body/current release use 236 encoded bytes for 268 decoded SegNet tile-action bytes; C-089 P6 delta-varint uses 116 encoded bytes for 160 decoded action bytes.",
+    "rank": 2,
+    "required_gates": [
+      "decode action records and prove non-noop runtime application",
+      "local raw parity/component proxy vs PR67 records",
+      "exact T4 eval for top 1-2 variants"
+    ],
+    "why": "C-089 action stream is 160B vs public stated 268B and current release likely changed again; only 116-268B direct rate remains, but action choices move SegNet/PoseNet more than their byte cost."
+  },
+  {
+    "delta": "Renderer QZS3 self-compression/learned bit-depth transplant without zeroing pose-sensitive frame1 head",
+    "expected_score_gain_band": [
+      0.0015,
+      0.01
+    ],
+    "observed_public_signal": "QZS3 grouped qv/qbits loader in PR67; C-089 still carries 59,288B renderer slice after our P6 wrapper.",
+    "rank": 3,
+    "required_gates": [
+      "preflight_trained_renderer_transplant",
+      "preflight_renderer_transplant_pose_safety",
+      "runtime tree hash custody",
+      "T4 exact eval"
+    ],
+    "why": "Renderer remains 59,288B encoded in C-089; public PR67/QZS3 model slices are around 56KB before decode, and self-compression/block-FP lanes target multi-KB savings. Need >2.2KB byte-equivalent for sub-0.314 if components hold."
+  },
+  {
+    "delta": "Henosis postfilter atom transplant as charged, typed postprocess stream, but only after strict no-op and component gates",
+    "expected_score_gain_band": [
+      0.0005,
+      0.006
+    ],
+    "observed_public_signal": "PR65 archive x contains extra compressed post, shift, frac, frac2, frac3, bias, region, randmulti streams beyond mask/model/pose.",
+    "rank": 4,
+    "required_gates": [
+      "port as opt-in runtime member with typed manifest",
+      "prove every selected atom changes raw output",
+      "pair/frame component trace",
+      "T4 exact eval"
+    ],
+    "why": "PR65 has much better PoseNet body value (0.00035283) with worse SegNet/rate. Its post/shift/frac/bias/region/randmulti atoms are scorer-targeted pixel corrections; a small selected subset may improve pose enough to clear 0.314."
+  },
+  {
+    "delta": "Pose-stream active-subspace transfer: PR65 pose benefit without PR65 mask/SegNet tax",
+    "expected_score_gain_band": [
+      0.0005,
+      0.004
+    ],
+    "observed_public_signal": "PR65 pose 0.00035283 vs C-089 0.00049601; PR64 velocity-only hurts, so this must be low-dimensional and component-gated, not drop-rotation wholesale.",
+    "rank": 5,
+    "required_gates": [
+      "decode and compare pose trajectories",
+      "bounded active-subspace builder",
+      "preflight pose loader magic",
+      "T4 exact eval"
+    ],
+    "why": "PR65 pose distance is dramatically lower than C-089, but its SegNet is worse. A bounded QP1/low-dimensional pose perturbation can be <1KB and high leverage if it preserves SegNet."
+  }
+]

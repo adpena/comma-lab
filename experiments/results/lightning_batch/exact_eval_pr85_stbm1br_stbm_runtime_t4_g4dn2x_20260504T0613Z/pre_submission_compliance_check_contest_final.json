@@ -1,0 +1,347 @@
+{
+  "archive": {
+    "bytes": 229756,
+    "exists": true,
+    "members": [
+      {
+        "compress_size": 229656,
+        "compress_type": 0,
+        "date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "external_attr": 27525120,
+        "file_size": 229656,
+        "flag_bits": 0,
+        "is_dir": false,
+        "local_header_flag_bits": 0,
+        "local_header_name": "x",
+        "name": "x",
+        "sha256": "c7586795bb29fb0ef611ad44715aec77e0e815370e19674d4c89ef2a54b417b5"
+      }
+    ],
+    "path": "experiments/results/lightning_batch/exact_eval_pr85_stbm1br_stbm_runtime_t4_g4dn2x_20260504T0613Z/archive.zip",
+    "sha256": "c6f004d444ed32c628611a2f21f567c666af6bcbcceba618cc089ec024a0cda6"
+  },
+  "auth_eval": {
+    "archive_sha256": "c6f004d444ed32c628611a2f21f567c666af6bcbcceba618cc089ec024a0cda6",
+    "archive_size_bytes": 229756,
+    "cuda_available": true,
+    "device": "cuda",
+    "gpu_t4_match": true,
+    "n_samples": 600,
+    "path": "experiments/results/lightning_batch/exact_eval_pr85_stbm1br_stbm_runtime_t4_g4dn2x_20260504T0613Z/contest_auth_eval.adjudicated.json",
+    "payload_archive_sha256": null,
+    "payload_archive_size_bytes": 229756,
+    "payload_device": null,
+    "present": true,
+    "provenance_archive_sha256": "c6f004d444ed32c628611a2f21f567c666af6bcbcceba618cc089ec024a0cda6",
+    "provenance_archive_size_bytes": 229756,
+    "provenance_device": "cuda",
+    "runtime_tree_candidates": {
+      "provenance.inflate_runtime_manifest.runtime_tree_sha256": "d195f4ecd0743cfd146efafee6729e96ee5428bfb28bbd0ca87cbad055494440"
+    },
+    "runtime_tree_sha256": "d195f4ecd0743cfd146efafee6729e96ee5428bfb28bbd0ca87cbad055494440",
+    "score_recomputed_from_components": 0.25369011029397787,
+    "score_recomputed_independently": 0.25369011029397787
+  },
+  "checks": [
+    {
+      "details": "submissions/robust_current/archive.zip",
+      "name": "required_file_present:archive.zip",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "submissions/robust_current/inflate.sh",
+      "name": "required_file_present:inflate.sh",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "submissions/robust_current/report.txt",
+      "name": "required_file_present:report.txt",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "mode=0o755",
+      "name": "inflate_sh_executable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "archive=experiments/results/lightning_batch/exact_eval_pr85_stbm1br_stbm_runtime_t4_g4dn2x_20260504T0613Z/archive.zip",
+      "name": "archive_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "zipfile opened and CRC scan completed",
+      "name": "archive_is_valid_zip",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "bad_crc_member=None",
+      "name": "archive_crc_ok",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "duplicates=[]",
+      "name": "archive_no_duplicate_members",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=['x'] observed=['x']",
+      "name": "archive_expected_single_member",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "safe member name",
+      "name": "archive_member_safe:x",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "local='x' central='x'",
+      "name": "archive_local_central_name_match:x",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "local=0 central=0",
+      "name": "archive_local_central_flag_bits_match:x",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "submission_sha=c6f004d444ed32c628611a2f21f567c666af6bcbcceba618cc089ec024a0cda6 submission_bytes=229756 inspected_sha=c6f004d444ed32c628611a2f21f567c666af6bcbcceba618cc089ec024a0cda6 inspected_bytes=229756",
+      "name": "submission_archive_matches_inspected_archive",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected_archive_sha256='c6f004d444ed32c628611a2f21f567c666af6bcbcceba618cc089ec024a0cda6'",
+      "name": "expected_archive_sha256_format",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=c6f004d444ed32c628611a2f21f567c666af6bcbcceba618cc089ec024a0cda6 observed=c6f004d444ed32c628611a2f21f567c666af6bcbcceba618cc089ec024a0cda6",
+      "name": "expected_archive_sha256",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=229756 observed=229756",
+      "name": "expected_archive_size_bytes",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected_runtime_tree_sha256='d195f4ecd0743cfd146efafee6729e96ee5428bfb28bbd0ca87cbad055494440'",
+      "name": "expected_runtime_tree_sha256_format",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/lightning_batch/exact_eval_pr85_stbm1br_stbm_runtime_t4_g4dn2x_20260504T0613Z/contest_auth_eval.adjudicated.json",
+      "name": "auth_eval_json_present",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "payload=None provenance='c6f004d444ed32c628611a2f21f567c666af6bcbcceba618cc089ec024a0cda6'",
+      "name": "auth_eval_archive_sha256_fields_consistent",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "payload=229756 provenance=229756",
+      "name": "auth_eval_archive_size_bytes_fields_consistent",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "archive_sha256='c6f004d444ed32c628611a2f21f567c666af6bcbcceba618cc089ec024a0cda6'",
+      "name": "auth_eval_archive_sha256_format",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "archive_size_bytes=229756",
+      "name": "auth_eval_archive_size_bytes_integer",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "payload=None provenance='cuda'",
+      "name": "auth_eval_device_fields_consistent",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "auth=c6f004d444ed32c628611a2f21f567c666af6bcbcceba618cc089ec024a0cda6 archive=c6f004d444ed32c628611a2f21f567c666af6bcbcceba618cc089ec024a0cda6",
+      "name": "auth_eval_archive_sha_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "auth=229756 archive=229756",
+      "name": "auth_eval_archive_bytes_match",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "device='cuda'",
+      "name": "auth_eval_cuda_device",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "cuda_available=True",
+      "name": "auth_eval_cuda_available",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "runtime_tree_sha256='d195f4ecd0743cfd146efafee6729e96ee5428bfb28bbd0ca87cbad055494440'",
+      "name": "auth_eval_runtime_tree_recorded",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "runtime_tree_candidates={'provenance.inflate_runtime_manifest.runtime_tree_sha256': 'd195f4ecd0743cfd146efafee6729e96ee5428bfb28bbd0ca87cbad055494440'}",
+      "name": "auth_eval_runtime_tree_fields_consistent",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=600 observed=600",
+      "name": "auth_eval_expected_samples",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "gpu_t4_match=True",
+      "name": "auth_eval_t4_equivalent",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=d195f4ecd0743cfd146efafee6729e96ee5428bfb28bbd0ca87cbad055494440 observed=d195f4ecd0743cfd146efafee6729e96ee5428bfb28bbd0ca87cbad055494440",
+      "name": "auth_eval_runtime_tree_expected",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "deltas={'score_seg_contribution': 0.0, 'score_pose_contribution': 0.0, 'score_rate_contribution': 8.963353761992643e-08} tolerance=1e-06",
+      "name": "auth_eval_score_contributions_match_components",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "basis=json_contribution_fields computed=0.25369011029397787 json=0.25369011029397787 tolerance=1e-09",
+      "name": "auth_eval_score_recomputes",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "violations=0",
+      "name": "public_release_hygiene",
+      "passed": true,
+      "severity": "error"
+    }
+  ],
+  "expectations": {
+    "contest_final": true,
+    "expect_single_member": "x",
+    "expected_archive_sha256": "c6f004d444ed32c628611a2f21f567c666af6bcbcceba618cc089ec024a0cda6",
+    "expected_archive_size_bytes": 229756,
+    "expected_runtime_tree_sha256": "d195f4ecd0743cfd146efafee6729e96ee5428bfb28bbd0ca87cbad055494440",
+    "expected_samples": 600,
+    "require_auth_eval": true,
+    "require_t4_equivalent": true,
+    "required_files": [
+      "archive.zip",
+      "inflate.sh",
+      "report.txt"
+    ]
+  },
+  "failed_checks": [],
+  "provider_agnostic": true,
+  "public_hygiene": {
+    "scanned_files": [
+      "submissions/robust_current/README.md",
+      "submissions/robust_current/analyze_roi.py",
+      "submissions/robust_current/apply_qzs3_postprocess.py",
+      "submissions/robust_current/auth_eval_renderer_fp4.json",
+      "submissions/robust_current/compress.sh",
+      "submissions/robust_current/compress_archive.py",
+      "submissions/robust_current/compress_masks.py",
+      "submissions/robust_current/config_env.py",
+      "submissions/robust_current/contest_eval_archive.json",
+      "submissions/robust_current/contest_eval_result.json",
+      "submissions/robust_current/diagnose_scorer.py",
+      "submissions/robust_current/download_and_eval.sh",
+      "submissions/robust_current/eval_runs/crf_32/state.json",
+      "submissions/robust_current/eval_runs/verify_136_original/experiment_record.json",
+      "submissions/robust_current/eval_runs/verify_136_original/report.json",
+      "submissions/robust_current/eval_runs/verify_136_original/report.txt",
+      "submissions/robust_current/eval_runs/verify_136_original/state.json",
+      "submissions/robust_current/eval_runs/verify_correct_ckpt/experiment_record.json",
+      "submissions/robust_current/eval_runs/verify_correct_ckpt/report.json",
+      "submissions/robust_current/eval_runs/verify_correct_ckpt/report.txt",
+      "submissions/robust_current/eval_runs/verify_correct_ckpt/state.json",
+      "submissions/robust_current/inflate.sh",
+      "submissions/robust_current/inflate_postfilter.py",
+      "submissions/robust_current/inflate_renderer.py",
+      "submissions/robust_current/inflate_renderer_grayscale.py",
+      "submissions/robust_current/inflate_segmap.py",
+      "submissions/robust_current/inflate_segmap_arithmetic.py",
+      "submissions/robust_current/inflate_segmap_film_canvas.py",
+      "submissions/robust_current/report.txt",
+      "submissions/robust_current/runner.py",
+      "submissions/robust_current/sky_degrade.py",
+      "submissions/robust_current/unpack_renderer_payload.py"
+    ],
+    "violations": []
+  },
+  "public_submission_refs": {},
+  "schema": "pre_submission_compliance_check_v1",
+  "score_claim": false,
+  "status": "passed",
+  "submission": {
+    "path": "submissions/robust_current",
+    "required_files": {
+      "archive.zip": {
+        "bytes": 229756,
+        "exists": true,
+        "path": "submissions/robust_current/archive.zip",
+        "sha256": "c6f004d444ed32c628611a2f21f567c666af6bcbcceba618cc089ec024a0cda6"
+      },
+      "inflate.sh": {
+        "bytes": 19345,
+        "exists": true,
+        "path": "submissions/robust_current/inflate.sh",
+        "sha256": "e479b7fdfbb9686f9f9f4d7d9740d24f340b41b584b07c57dd3065f5f3923005"
+      },
+      "report.txt": {
+        "bytes": 890,
+        "exists": true,
+        "path": "submissions/robust_current/report.txt",
+        "sha256": "db613ab30f714010e6de0edca4874abd4a441abccadb86ac5a80359c2eb42c66"
+      }
+    }
+  },
+  "tool": "scripts/pre_submission_compliance_check.py",
+  "warning_checks": []
+}

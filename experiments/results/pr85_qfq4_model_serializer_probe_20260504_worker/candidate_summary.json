@@ -1,0 +1,549 @@
+{
+  "best_built_candidate": null,
+  "best_screened_candidate": {
+    "build_blockers": [
+      "decoded_model_tensor_parity_failed",
+      "pr85_runtime_missing_qfq4_loader"
+    ],
+    "buildable": false,
+    "candidate_id": "qfq4_pr85_shifted_int8_rows",
+    "candidate_outer_pr85_model_segment_bytes": 56415,
+    "candidate_outer_pr85_model_segment_sha256": "3a1a94506cd35e5338930b7dae9505ce4340f8fdb9991879438c8bb1e4cc2e0b",
+    "decoded_tensor_parity": {
+      "candidate_tensor_count": 111,
+      "decoded_tensor_parity": false,
+      "mismatch_count": 1,
+      "mismatches": [
+        {
+          "changed_elements": 4726,
+          "kind": "value",
+          "max_abs_diff": 6.103515625e-05,
+          "name": "frame1_head.block1.film_proj.weight",
+          "numel": 5376
+        }
+      ],
+      "source_tensor_count": 111
+    },
+    "inner_body_delta_bytes_vs_source_model_segment_advisory": -668,
+    "outer_pr85_archive_delta_bytes_vs_source_formula": -659,
+    "outer_pr85_model_delta_bytes_vs_source": -659,
+    "qfq4_inner_brotli_bytes": 56406,
+    "qfq4_inner_brotli_sha256": "e15dd3711ddfbfeb9278f85dac9fef2505ff82d7d88952763051b04440fac952",
+    "qfq4_raw_payload_bytes": 61768,
+    "qfq4_raw_payload_sha256": "0efd867b104d7f354970907678482d613169a7ba4ce2a2bf09f7b4124c9463d5",
+    "qrow_contract_note": "Stores every PR85 int8 row-scale row as QFQ4 uint8 rows with min=-128*scale; PR90 QFQ4 then casts reconstructed rows to fp16.",
+    "qrow_policy": "shifted_int8_rows",
+    "qrow_rows_fp16": 0,
+    "qrow_rows_quantized": 112,
+    "rate_score_delta_if_components_identical_formula_only": -0.0004388010501075109,
+    "runtime_compatibility": {
+      "blocker_class": "runtime_incompatibility",
+      "blockers": [
+        "public_pr85_replay_missing_QFQ4_model_loader",
+        "robust_current_missing_QFQ4_renderer_loader",
+        "robust_current_missing_pr85_single_x_unpacker"
+      ],
+      "dispatch_unlocked": false,
+      "minimal_runtime_implementation_needed": "Add a no-sidecar PR85 single-x QFQ4 model loader and prove output parity.",
+      "public_pr85_replay_inflate_py": "experiments/results/public_pr85_intake_20260503_codex/replay_submission/inflate.py",
+      "public_pr85_replay_qfq4_model_loader": false,
+      "public_pr85_replay_single_x_loader": true,
+      "qfq4_magic": "QFQ4\u0000",
+      "robust_current_dir": "submissions/robust_current",
+      "robust_current_qfq4_renderer_loader": false,
+      "robust_current_single_x_unpacker": false,
+      "runtime_can_decode_without_edits": false
+    }
+  },
+  "blocker": "decoded_model_tensor_parity_failed; pr85_runtime_missing_qfq4_loader",
+  "blocker_class": "tensor_parity_failed_and_runtime_incompatible",
+  "built_candidate_count": 0,
+  "candidate_manifests": [],
+  "dispatch_performed": false,
+  "dispatch_unlocked": false,
+  "exact_eval_readiness": {
+    "dispatch_unlocked": false,
+    "gpu_dispatch_performed": false,
+    "ready": false,
+    "requires_lane_claim_before_remote_eval": true
+  },
+  "planning_only": true,
+  "pr90_source_evidence": {
+    "model_body_slice": {
+      "len": 56385,
+      "offset": 152431,
+      "runtime_magic": "QFQ4\\0"
+    },
+    "model_decode": {
+      "compressed_body_bytes": 56385,
+      "decoded_state_tensors": 111,
+      "float_tensors": 111,
+      "nonfloat_tensors": 0,
+      "sample_keys": [
+        "shared_trunk.stem_conv.dw.weight",
+        "shared_trunk.stem_conv.pw.weight",
+        "shared_trunk.stem_block.conv1.dw.weight",
+        "shared_trunk.stem_block.conv1.pw.weight",
+        "shared_trunk.stem_block.conv2.dw.weight",
+        "shared_trunk.stem_block.conv2.pw.weight",
+        "shared_trunk.down_conv.dw.weight",
+        "shared_trunk.down_conv.pw.weight",
+        "shared_trunk.down_block.conv1.dw.weight",
+        "shared_trunk.down_block.conv1.pw.weight",
+        "shared_trunk.down_block.conv2.dw.weight",
+        "shared_trunk.down_block.conv2.pw.weight"
+      ],
+      "state_total_numel": 87836
+    },
+    "payload_len": 217980,
+    "payload_probe_json": "experiments/results/public_pr90_intake_20260504_worker/payload_probe.json",
+    "payload_probe_present": true,
+    "payload_sha256": "b48ba0ea138e4f3b12c02e320528a53ce92ed6540d71b8554249ee7bdcad6d34",
+    "pr90_codec_has_qfq4_decoder": true,
+    "pr90_flat_fp4_codec": "experiments/results/public_pr90_intake_20260504_worker/pr90_src/submissions/qrepro/flat_fp4_codec.py",
+    "pr90_inflate_py": "experiments/results/public_pr90_intake_20260504_worker/pr90_src/submissions/qrepro/inflate.py",
+    "pr90_runtime_has_qfq4_branch": true,
+    "split_mode": "compact_fixed_offsets_len_lt_260000"
+  },
+  "record_set": {
+    "by_category": {
+      "dense_tensor": 15790,
+      "module_bias": 2284,
+      "module_weight": 43513
+    },
+    "by_kind": {
+      "fp16": 687,
+      "fp16_bias": 2284,
+      "fp16_dense": 10189,
+      "fp4": 42826,
+      "int8_row_scale": 5601
+    },
+    "magic_bytes": 3,
+    "record_count": 111,
+    "records_plus_magic_bytes": 61590,
+    "records_total_bytes": 61587,
+    "source_bytes": 61590,
+    "source_magic": "QH0",
+    "source_sha256": "503d666ec4c1b3e0ce09fa9dcb963b049de185eac0ddd82318578a7732439ed4",
+    "top_records_by_bytes": [
+      {
+        "bytes": 5601,
+        "category": "dense_tensor",
+        "element_count": 5376,
+        "name": "frame1_head.block1.film_proj.weight",
+        "offset": 53988,
+        "record_kind": "int8_row_scale",
+        "tensor_shape": [
+          112,
+          48
+        ]
+      },
+      {
+        "bytes": 4609,
+        "category": "dense_tensor",
+        "element_count": 2304,
+        "name": "pose_mlp.2.weight",
+        "offset": 48830,
+        "record_kind": "fp16_dense",
+        "tensor_shape": [
+          48,
+          48
+        ]
+      },
+      {
+        "bytes": 3529,
+        "category": "module_weight",
+        "element_count": 6272,
+        "name": "shared_trunk.fuse.pw.weight",
+        "offset": 15797,
+        "record_kind": "fp4",
+        "tensor_shape": [
+          56,
+          112,
+          1,
+          1
+        ]
+      },
+      {
+        "bytes": 2305,
+        "category": "module_weight",
+        "element_count": 4096,
+        "name": "shared_trunk.down_block.conv1.pw.weight",
+        "offset": 7575,
+        "record_kind": "fp4",
+        "tensor_shape": [
+          64,
+          64,
+          1,
+          1
+        ]
+      },
+      {
+        "bytes": 2305,
+        "category": "module_weight",
+        "element_count": 4096,
+        "name": "shared_trunk.down_block.conv2.pw.weight",
+        "offset": 10333,
+        "record_kind": "fp4",
+        "tensor_shape": [
+          64,
+          64,
+          1,
+          1
+        ]
+      },
+      {
+        "bytes": 2017,
+        "category": "module_weight",
+        "element_count": 3584,
+        "name": "shared_trunk.down_conv.pw.weight",
+        "offset": 5105,
+        "record_kind": "fp4",
+        "tensor_shape": [
+          64,
+          56,
+          1,
+          1
+        ]
+      },
+      {
+        "bytes": 2017,
+        "category": "module_weight",
+        "element_count": 3584,
+        "name": "shared_trunk.up.1.pw.weight",
+        "offset": 13091,
+        "record_kind": "fp4",
+        "tensor_shape": [
+          56,
+          64,
+          1,
+          1
+        ]
+      },
+      {
+        "bytes": 1765,
+        "category": "module_weight",
+        "element_count": 3136,
+        "name": "shared_trunk.stem_block.conv1.pw.weight",
+        "offset": 773,
+        "record_kind": "fp4",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ]
+      },
+      {
+        "bytes": 1765,
+        "category": "module_weight",
+        "element_count": 3136,
+        "name": "shared_trunk.stem_block.conv2.pw.weight",
+        "offset": 2939,
+        "record_kind": "fp4",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ]
+      },
+      {
+        "bytes": 1765,
+        "category": "module_weight",
+        "element_count": 3136,
+        "name": "shared_trunk.fuse_block.conv1.pw.weight",
+        "offset": 19727,
+        "record_kind": "fp4",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ]
+      },
+      {
+        "bytes": 1765,
+        "category": "module_weight",
+        "element_count": 3136,
+        "name": "shared_trunk.fuse_block.conv2.pw.weight",
+        "offset": 21893,
+        "record_kind": "fp4",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ]
+      },
+      {
+        "bytes": 1765,
+        "category": "module_weight",
+        "element_count": 3136,
+        "name": "frame1_head.block1.conv1.pw.weight",
+        "offset": 24059,
+        "record_kind": "fp4",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ]
+      },
+      {
+        "bytes": 1765,
+        "category": "module_weight",
+        "element_count": 3136,
+        "name": "frame1_head.block1.conv2.pw.weight",
+        "offset": 26225,
+        "record_kind": "fp4",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ]
+      },
+      {
+        "bytes": 1765,
+        "category": "module_weight",
+        "element_count": 3136,
+        "name": "frame1_head.block2.conv1.pw.weight",
+        "offset": 28391,
+        "record_kind": "fp4",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ]
+      },
+      {
+        "bytes": 1765,
+        "category": "module_weight",
+        "element_count": 3136,
+        "name": "frame1_head.block2.conv2.pw.weight",
+        "offset": 30557,
+        "record_kind": "fp4",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ]
+      },
+      {
+        "bytes": 1765,
+        "category": "module_weight",
+        "element_count": 3136,
+        "name": "frame2_head.block1.conv1.pw.weight",
+        "offset": 35074,
+        "record_kind": "fp4",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ]
+      }
+    ]
+  },
+  "remote_gpu_dispatch_performed": false,
+  "runtime_compatibility": {
+    "blocker_class": "runtime_incompatibility",
+    "blockers": [
+      "public_pr85_replay_missing_QFQ4_model_loader",
+      "robust_current_missing_QFQ4_renderer_loader",
+      "robust_current_missing_pr85_single_x_unpacker"
+    ],
+    "dispatch_unlocked": false,
+    "minimal_runtime_implementation_needed": "Add a no-sidecar PR85 single-x QFQ4 model loader and prove output parity.",
+    "public_pr85_replay_inflate_py": "experiments/results/public_pr85_intake_20260503_codex/replay_submission/inflate.py",
+    "public_pr85_replay_qfq4_model_loader": false,
+    "public_pr85_replay_single_x_loader": true,
+    "qfq4_magic": "QFQ4\u0000",
+    "robust_current_dir": "submissions/robust_current",
+    "robust_current_qfq4_renderer_loader": false,
+    "robust_current_single_x_unpacker": false,
+    "runtime_can_decode_without_edits": false
+  },
+  "runtime_output_parity_gate": {
+    "passed": false,
+    "requirement": "PR85 no-edit runtime output must match the source archive before GPU dispatch.",
+    "status": "not_run_runtime_loader_missing_qfq4"
+  },
+  "schema": "pr85_qfq4_model_serializer_probe_v1",
+  "score_claim": false,
+  "screened_candidate_count": 2,
+  "screened_candidates": [
+    {
+      "build_blockers": [
+        "decoded_model_tensor_parity_failed",
+        "pr85_runtime_missing_qfq4_loader"
+      ],
+      "buildable": false,
+      "candidate_id": "qfq4_pr85_shifted_int8_rows",
+      "candidate_outer_pr85_model_segment_bytes": 56415,
+      "candidate_outer_pr85_model_segment_sha256": "3a1a94506cd35e5338930b7dae9505ce4340f8fdb9991879438c8bb1e4cc2e0b",
+      "decoded_tensor_parity": {
+        "candidate_tensor_count": 111,
+        "decoded_tensor_parity": false,
+        "mismatch_count": 1,
+        "mismatches": [
+          {
+            "changed_elements": 4726,
+            "kind": "value",
+            "max_abs_diff": 6.103515625e-05,
+            "name": "frame1_head.block1.film_proj.weight",
+            "numel": 5376
+          }
+        ],
+        "source_tensor_count": 111
+      },
+      "inner_body_delta_bytes_vs_source_model_segment_advisory": -668,
+      "outer_pr85_archive_delta_bytes_vs_source_formula": -659,
+      "outer_pr85_model_delta_bytes_vs_source": -659,
+      "qfq4_inner_brotli_bytes": 56406,
+      "qfq4_inner_brotli_sha256": "e15dd3711ddfbfeb9278f85dac9fef2505ff82d7d88952763051b04440fac952",
+      "qfq4_raw_payload_bytes": 61768,
+      "qfq4_raw_payload_sha256": "0efd867b104d7f354970907678482d613169a7ba4ce2a2bf09f7b4124c9463d5",
+      "qrow_contract_note": "Stores every PR85 int8 row-scale row as QFQ4 uint8 rows with min=-128*scale; PR90 QFQ4 then casts reconstructed rows to fp16.",
+      "qrow_policy": "shifted_int8_rows",
+      "qrow_rows_fp16": 0,
+      "qrow_rows_quantized": 112,
+      "rate_score_delta_if_components_identical_formula_only": -0.0004388010501075109,
+      "runtime_compatibility": {
+        "blocker_class": "runtime_incompatibility",
+        "blockers": [
+          "public_pr85_replay_missing_QFQ4_model_loader",
+          "robust_current_missing_QFQ4_renderer_loader",
+          "robust_current_missing_pr85_single_x_unpacker"
+        ],
+        "dispatch_unlocked": false,
+        "minimal_runtime_implementation_needed": "Add a no-sidecar PR85 single-x QFQ4 model loader and prove output parity.",
+        "public_pr85_replay_inflate_py": "experiments/results/public_pr85_intake_20260503_codex/replay_submission/inflate.py",
+        "public_pr85_replay_qfq4_model_loader": false,
+        "public_pr85_replay_single_x_loader": true,
+        "qfq4_magic": "QFQ4\u0000",
+        "robust_current_dir": "submissions/robust_current",
+        "robust_current_qfq4_renderer_loader": false,
+        "robust_current_single_x_unpacker": false,
+        "runtime_can_decode_without_edits": false
+      }
+    },
+    {
+      "build_blockers": [
+        "decoded_model_tensor_parity_failed",
+        "pr85_runtime_missing_qfq4_loader",
+        "no_pr85_outer_model_byte_win"
+      ],
+      "buildable": false,
+      "candidate_id": "qfq4_pr85_all_fp16_rows",
+      "candidate_outer_pr85_model_segment_bytes": 59759,
+      "candidate_outer_pr85_model_segment_sha256": "6e1b97ccbd04ce7628b5a1503c30b9437311ae42c845dbb2b3cd654340d41da5",
+      "decoded_tensor_parity": {
+        "candidate_tensor_count": 111,
+        "decoded_tensor_parity": false,
+        "mismatch_count": 1,
+        "mismatches": [
+          {
+            "changed_elements": 4726,
+            "kind": "value",
+            "max_abs_diff": 6.103515625e-05,
+            "name": "frame1_head.block1.film_proj.weight",
+            "numel": 5376
+          }
+        ],
+        "source_tensor_count": 111
+      },
+      "inner_body_delta_bytes_vs_source_model_segment_advisory": 2676,
+      "outer_pr85_archive_delta_bytes_vs_source_formula": 2685,
+      "outer_pr85_model_delta_bytes_vs_source": 2685,
+      "qfq4_inner_brotli_bytes": 59750,
+      "qfq4_inner_brotli_sha256": "dbe2c79aac49a21b9ddcb3e98a16f61a9925337e72e1fc4b984f50949e6064c7",
+      "qfq4_raw_payload_bytes": 66696,
+      "qfq4_raw_payload_sha256": "7b82441b560074a403e17d0ff29753235c5f8538428f24789815440a8703c5b0",
+      "qrow_contract_note": "Stores every PR85 special row through QFQ4's fp16 row fallback.",
+      "qrow_policy": "all_fp16_rows",
+      "qrow_rows_fp16": 112,
+      "qrow_rows_quantized": 0,
+      "rate_score_delta_if_components_identical_formula_only": 0.0017878312891330302,
+      "runtime_compatibility": {
+        "blocker_class": "runtime_incompatibility",
+        "blockers": [
+          "public_pr85_replay_missing_QFQ4_model_loader",
+          "robust_current_missing_QFQ4_renderer_loader",
+          "robust_current_missing_pr85_single_x_unpacker"
+        ],
+        "dispatch_unlocked": false,
+        "minimal_runtime_implementation_needed": "Add a no-sidecar PR85 single-x QFQ4 model loader and prove output parity.",
+        "public_pr85_replay_inflate_py": "experiments/results/public_pr85_intake_20260503_codex/replay_submission/inflate.py",
+        "public_pr85_replay_qfq4_model_loader": false,
+        "public_pr85_replay_single_x_loader": true,
+        "qfq4_magic": "QFQ4\u0000",
+        "robust_current_dir": "submissions/robust_current",
+        "robust_current_qfq4_renderer_loader": false,
+        "robust_current_single_x_unpacker": false,
+        "runtime_can_decode_without_edits": false
+      }
+    }
+  ],
+  "source_archive": {
+    "archive_bytes": 236328,
+    "archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+    "known_public_pr85_v5_match": {
+      "expected_archive_bytes": 236328,
+      "expected_archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+      "matches": true
+    },
+    "member_compress_size": 236228,
+    "member_crc32_hex": "c6356353",
+    "member_file_size": 236228,
+    "member_name": "x",
+    "member_sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+    "path": "experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+    "zip_compress_type": 0
+  },
+  "source_bundle": {
+    "format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+    "header_bytes": 24,
+    "segment_lengths": {
+      "bias": 223,
+      "frac": 106,
+      "frac2": 149,
+      "frac3": 154,
+      "mask": 159011,
+      "model": 57074,
+      "pose": 1487,
+      "post": 1400,
+      "randmulti": 16101,
+      "region": 273,
+      "shift": 226
+    }
+  },
+  "source_model_segment": {
+    "bytes": 57074,
+    "decode_report": {
+      "consumed_bytes": 61590,
+      "fp16_tensor_count": 70,
+      "int8_dense_tensor_count": 1,
+      "magic": "QH0",
+      "payload_bytes": 61590,
+      "q_fp4_tensor_count": 40,
+      "tensor_count": 111
+    },
+    "decoded_qh0_bytes": 61590,
+    "decoded_qh0_sha256": "503d666ec4c1b3e0ce09fa9dcb963b049de185eac0ddd82318578a7732439ed4",
+    "sha256": "c9194c19d44d3c32c4e588bbe4f9986ed0c562779078f0f4d6b073f0799b5dbc"
+  },
+  "tool": "experiments/analyze_or_build_pr85_qfq4_model_serializer_candidate.py",
+  "worker_g_planning_only_context": {
+    "candidate_id": "pr90_qfq4_style_pr85_model_serializer_probe",
+    "estimated_delta_bytes": -689,
+    "estimated_rate_score_delta": -0.000458776819,
+    "required_before_dispatch": [
+      "decoded_model_tensor_parity",
+      "pr85_runtime_output_parity"
+    ]
+  }
+}

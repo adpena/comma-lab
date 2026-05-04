@@ -1,0 +1,48 @@
+{
+  "adjudication_required": true,
+  "allowed_use": [
+    "debug",
+    "no_score_claim",
+    "no_promotion"
+  ],
+  "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr95_hnerv_muon_packing_profile_20260504_codex/archive.pr95_repacked.zip",
+  "archive_sha256": "2b9b471358f5bba97ea809dcca544ecca26b504fde770a9002046830f469368b",
+  "archive_size_bytes": 178321,
+  "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda",
+  "command": [
+    "/usr/local/bin/python",
+    "-u",
+    "/workspace/pact/experiments/contest_auth_eval.py",
+    "--archive",
+    "/tmp/modal_auth_eval/archive.zip",
+    "--inflate-sh",
+    "/workspace/pact/experiments/results/public_pr95_intake_20260504_codex/pr95_src/submissions/hnerv_muon/inflate.sh",
+    "--upstream-dir",
+    "/workspace/pact/upstream",
+    "--video-names-file",
+    "/workspace/pact/upstream/public_test_video_names.txt",
+    "--device",
+    "cuda",
+    "--keep-work-dir",
+    "--work-dir",
+    "/tmp/modal_auth_eval/eval_work",
+    "--inflate-timeout",
+    "2400",
+    "--evaluate-timeout",
+    "2400"
+  ],
+  "expected_archive_sha256": "2b9b471358f5bba97ea809dcca544ecca26b504fde770a9002046830f469368b",
+  "expected_archive_size_bytes": 178321,
+  "inflate_sh": "experiments/results/public_pr95_intake_20260504_codex/pr95_src/submissions/hnerv_muon/inflate.sh",
+  "inflate_sh_rel": "experiments/results/public_pr95_intake_20260504_codex/pr95_src/submissions/hnerv_muon/inflate.sh",
+  "local_output_dir": "/Users/adpena/Projects/pact/experiments/results/modal_auth_eval/pr95_hnerv_muon_repacked_h100_20260504T0850Z",
+  "modal_elapsed_seconds": 30.122551145000003,
+  "passed": false,
+  "promotion_eligible": false,
+  "returncode": 1,
+  "schema_version": 1,
+  "score_claim": false,
+  "validation_errors": [
+    "contest_auth_eval.json was not produced"
+  ]
+}

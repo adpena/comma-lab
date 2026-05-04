@@ -1,0 +1,112 @@
+{
+  "candidate_id": "qzs3_b0036_pr75_preserved_slices",
+  "evidence_grade": "empirical_archive_candidate_until_pose_safety_and_exact_cuda",
+  "non_renderer_preservation": {
+    "all_non_renderer_members_preserved": true,
+    "members": {
+      "masks.mkv": {
+        "bytes": 223385,
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      "optimized_poses.qp1": {
+        "bytes": 1140,
+        "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 160,
+        "sha256": "8b34ef134e6551c83d170f07c8f6672870f09df5d38551ab24320f4a2f20a373"
+      }
+    }
+  },
+  "output_archive": {
+    "bytes": 276085,
+    "delta_bytes_vs_source_archive": -301,
+    "formula_only_rate_delta_vs_source_archive": -0.00020042354488977358,
+    "path": "/Users/adpena/Projects/pact/experiments/results/renderer_shrink_pr75_c088_20260503_worker/qzs3_b0036_pr75_preserved_slices/archive.zip",
+    "sha256": "ab90c6c78dd180f27b18d57c7529d844e3c965265a8df93ae9605c804475366d"
+  },
+  "payload": {
+    "action_dict_slice_bytes": 0,
+    "actions_slice_bytes": 162,
+    "brotli_quality": 11,
+    "bytes": 275985,
+    "mask_slice_bytes": 219472,
+    "member_name": "p",
+    "payload_format": "pr75_p3_preserve_slices",
+    "pose_slice_bytes": 677,
+    "record_count": null,
+    "renderer_slice_bytes": 55664,
+    "renderer_slice_sha256": "ca6e87a89245f93aa41253e3a7269fd89340412494ff7ed04e5c3a3d54868876",
+    "sha256": "d87dd94cd1e262e5cd018ebcefe8e5739559591e61f624a85e66d4f2bcdf38f0",
+    "source_payload_format": "P3"
+  },
+  "promotion_eligible": false,
+  "renderer_transform": {
+    "codec": "qzs3",
+    "output_block_size": 36,
+    "output_bytes": 58942,
+    "output_sha256": "863ff5331431f98aee698bc7569f1893124d8b63059be32ef185d99ec9edc928",
+    "source_block_size": 32,
+    "source_bytes": 59288,
+    "source_sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+  },
+  "runtime_contract": {
+    "byte_closed": true,
+    "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+    "pose_safety_preflight_required_before_dispatch": true,
+    "remote_gpu_dispatch_performed": false,
+    "renderer_only_transplant": true,
+    "runtime_unpack_summary": {
+      "members": [
+        {
+          "bytes": 58942,
+          "name": "renderer.bin",
+          "sha256": "863ff5331431f98aee698bc7569f1893124d8b63059be32ef185d99ec9edc928"
+        },
+        {
+          "bytes": 223385,
+          "name": "masks.mkv",
+          "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        {
+          "bytes": 1140,
+          "name": "optimized_poses.qp1",
+          "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+        },
+        {
+          "bytes": 160,
+          "name": "seg_tile_actions.bin",
+          "sha256": "8b34ef134e6551c83d170f07c8f6672870f09df5d38551ab24320f4a2f20a373"
+        }
+      ],
+      "payload_bytes": 275985,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p3",
+      "schema": "renderer_payload_pr64_len_table_v1",
+      "source_archive_sha256": null
+    },
+    "runtime_unpack_verified": true,
+    "single_payload_member": true
+  },
+  "schema": "renderer_shrink_candidate_builder_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 276386,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/archive.zip",
+    "sha256": "9feef7ffaa254f9e5408996a122682757a054144a3000539553786c5292b7d0a",
+    "source_archive_packaging": "packed_renderer_payload",
+    "source_logical_member_names": [
+      "renderer.bin",
+      "masks.mkv",
+      "optimized_poses.qp1",
+      "seg_tile_actions.bin"
+    ],
+    "source_payload_header_payload_format": "public_pr75_qzs3_qp1_segactions_p3",
+    "source_payload_header_schema": "renderer_payload_pr64_len_table_v1",
+    "source_payload_member": "p",
+    "source_payload_member_bytes": 276286,
+    "source_payload_member_sha256": "93250610cbb819241d1356554149738af7de55e83a006396883fc7a18f51eff5",
+    "source_zip_members": [
+      "p"
+    ]
+  }
+}

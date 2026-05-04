@@ -1,0 +1,116 @@
+{
+  "decode": {
+    "prefix_frames": null,
+    "repeat": 2,
+    "storage_order": "frame_major_header_width_by_header_height",
+    "timings": [
+      {
+        "decoded_bytes": 117964800,
+        "decoded_bytes_per_second": 87853276.254887,
+        "decoded_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+        "elapsed_seconds": 1.3427478749654256,
+        "encoded_bytes_per_second": 118422.08277864105,
+        "stderr": "qma-codec: decoded 600 frame(s) from 512x384 QMA9 to 117964800 bytes",
+        "written_frames": 600
+      },
+      {
+        "decoded_bytes": 117964800,
+        "decoded_bytes_per_second": 88207684.15499765,
+        "decoded_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+        "elapsed_seconds": 1.3373528749798425,
+        "encoded_bytes_per_second": 118899.80795262936,
+        "stderr": "qma-codec: decoded 600 frame(s) from 512x384 QMA9 to 117964800 bytes",
+        "written_frames": 600
+      }
+    ]
+  },
+  "determinism": {
+    "expected_decoded_sha256": null,
+    "matches_expected_decoded_sha256": null,
+    "passed": true,
+    "unique_decoded_sha256": [
+      "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a"
+    ]
+  },
+  "gpu_required": false,
+  "input": {
+    "compact_v5_micro_header": {
+      "bias_bytes": 223,
+      "frac2_bytes": 149,
+      "frac3_bytes": 154,
+      "frac_bytes": 106,
+      "header_bytes": 24,
+      "mask_bytes": 159011,
+      "model_bytes": 57074,
+      "packed_bytes": 235952,
+      "pose_bytes": 1487,
+      "post_bytes": 1400,
+      "randmulti_bytes": 15825,
+      "region_bytes": 273,
+      "shift_bytes": 226
+    },
+    "extraction": "compact_v5_micro_mask_slice",
+    "input_format": "auto",
+    "path": "experiments/results/public_pr92_intake_20260504_codex/archive.zip",
+    "path_bytes": 236516,
+    "path_sha256": "f0dedeb7ad3c019ab3f4e2dea317f3192408e47a573897adb208030709d01490",
+    "qma9_bytes": 159011,
+    "qma9_offset": 24,
+    "zip": {
+      "all_file_members": [
+        "x",
+        "a"
+      ],
+      "archive_bytes": 236516,
+      "archive_path": "experiments/results/public_pr92_intake_20260504_codex/archive.zip",
+      "archive_sha256": "f0dedeb7ad3c019ab3f4e2dea317f3192408e47a573897adb208030709d01490",
+      "member_compress_size": 235952,
+      "member_crc32_hex": "f09f047d",
+      "member_file_size": 235952,
+      "member_name": "x",
+      "member_sha256": "89f14d331063125c88db0b4e3e51a92f21d2edc175a64d5c9cb6f873130763d8",
+      "zip_compress_type": 0
+    }
+  },
+  "metadata_timing": {
+    "elapsed_seconds": 0.1241382909938693,
+    "stderr": "",
+    "stdout": "{\"magic\":\"QMA9\",\"frame_count\":600,\"width\":512,\"height\":384,\"bitstream_bytes\":158991,\"header_bytes\":20,\"packed_bytes\":159011,\"decoded_mask_bytes\":117964800}"
+  },
+  "native_decoder": {
+    "build_profile": "release",
+    "path": "runtime-rs/target/release/qma-codec",
+    "sha256": "6850150301ff3791a92c9434b3312ef21ce1e8dbd434308e06a5e6cd5a4ef5d7"
+  },
+  "native_metadata": {
+    "bitstream_bytes": 158991,
+    "decoded_mask_bytes": 117964800,
+    "frame_count": 600,
+    "header_bytes": 20,
+    "height": 384,
+    "magic": "QMA9",
+    "packed_bytes": 159011,
+    "width": 512
+  },
+  "no_op_detection": {
+    "decoded_output_nonempty": true,
+    "decoded_sha256_equals_encoded_sha256": false
+  },
+  "qma9_payload": {
+    "bytes": 159011,
+    "header": {
+      "bitstream_bytes": 158991,
+      "decoded_mask_bytes": 117964800,
+      "frame_count": 600,
+      "header_bytes": 20,
+      "height": 384,
+      "packed_bytes": 159011,
+      "width": 512
+    },
+    "sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179"
+  },
+  "remote_jobs_dispatched": false,
+  "schema": "qma9_native_decode_timing_report_v1",
+  "score_claim": false,
+  "tool": "experiments/profile_qma9_native_decode.py"
+}

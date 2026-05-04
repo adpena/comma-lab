@@ -1,0 +1,20 @@
+{
+  "adjudication": null,
+  "artifact_recorded_at_utc": "2026-05-01T10:01:12Z",
+  "expected_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+  "expected_archive_size_bytes": 686635,
+  "expected_baseline_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+  "expected_baseline_archive_size_bytes": 686635,
+  "job_name": "component_response_pfp16_direct_fd_mixed_response_only_t4_aws_small_20260501T0950Z",
+  "queue_metadata": {
+    "duplicate_of": "component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z",
+    "evidence_grade": "diagnostic_response_only",
+    "plan_sha256": "d0026cf7ec5f22ff3de4e8402d3f3a660767eb64e890d779cb466933ed60c23f",
+    "prediction_mode": "response_only_no_prediction_deltas",
+    "sensitivity_source": "direct_fd_mixed"
+  },
+  "role": "official_component_response",
+  "schema_version": 1,
+  "score_source": "official_component_response_summary.json:contest_auth_eval_json_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

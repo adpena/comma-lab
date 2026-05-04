@@ -1,0 +1,262 @@
+{
+  "candidate_count": 4,
+  "candidates": [
+    {
+      "archive_byte_delta": -4328,
+      "component_awareness": null,
+      "exact_evaluable_archive": true,
+      "output_archive": "/Users/adpena/Projects/pact/experiments/results/lane_a_blockfp_c067_20260502_local_screen/qzs3_mqz1/global_b512/archive.zip",
+      "output_archive_bytes": 271886,
+      "output_archive_sha256": "4271b2c855fddc089ae590392caec1d92cf408228664c4a9a0249d3b375e9d43",
+      "policy": {
+        "default_block_size": 512,
+        "exact_evaluable_archive": true,
+        "name": "global_b512",
+        "prefix_overrides": [],
+        "spec": "global:512"
+      },
+      "promotion_eligible": false,
+      "score_claim": false
+    },
+    {
+      "archive_byte_delta": -5336,
+      "component_awareness": null,
+      "exact_evaluable_archive": true,
+      "output_archive": "/Users/adpena/Projects/pact/experiments/results/lane_a_blockfp_c067_20260502_local_screen/qzs3_mqz1/global_b4096/archive.zip",
+      "output_archive_bytes": 270878,
+      "output_archive_sha256": "3d78ddeeb8cb9bd3031e3d2256370f729dc5a61753d1ac5ceecb0778774d9934",
+      "policy": {
+        "default_block_size": 4096,
+        "exact_evaluable_archive": true,
+        "name": "global_b4096",
+        "prefix_overrides": [],
+        "spec": "global:4096"
+      },
+      "promotion_eligible": false,
+      "score_claim": false
+    },
+    {
+      "archive_byte_delta": 68,
+      "component_awareness": {
+        "aggressive_block_size": 64,
+        "aggressive_prefixes": [
+          {
+            "block_size": 64,
+            "prefix": "frame2_head",
+            "reason": "frame2-only static head tensor group; lower direct PoseNet risk than shared trunk, frame1 FiLM head, or pose MLP"
+          }
+        ],
+        "baseline_block_size": 32,
+        "policy_family": "component-aware-v1",
+        "protected_prefixes": [
+          {
+            "block_size": 32,
+            "prefix": "shared_trunk",
+            "reason": "shared representation feeds both frames; prior MQZ1 default-64 candidate showed PoseNet collapse"
+          },
+          {
+            "block_size": 32,
+            "prefix": "frame1_head",
+            "reason": "pose-conditioned frame head; keep at source QZS3 block size"
+          },
+          {
+            "block_size": 32,
+            "prefix": "pose_mlp",
+            "reason": "direct pose-conditioning path; never made more aggressive in this policy"
+          }
+        ],
+        "schema": "component_aware_mixed_qzs_policy_v1",
+        "selection_rule": "default to the exact-evaluated QZS3 b32 block size, protect all pose-critical prefixes, and shrink only frame2-only tensor groups",
+        "tier": "frame2_all64"
+      },
+      "exact_evaluable_archive": true,
+      "output_archive": "/Users/adpena/Projects/pact/experiments/results/lane_a_blockfp_c067_20260502_local_screen/qzs3_mqz1/component_aware_v1_frame2_all64/archive.zip",
+      "output_archive_bytes": 276282,
+      "output_archive_sha256": "86684e1eff2c111c2f266f43a762952ae64976c8d25816b8935fdfbe42d36d52",
+      "policy": {
+        "component_awareness": {
+          "aggressive_block_size": 64,
+          "aggressive_prefixes": [
+            {
+              "block_size": 64,
+              "prefix": "frame2_head",
+              "reason": "frame2-only static head tensor group; lower direct PoseNet risk than shared trunk, frame1 FiLM head, or pose MLP"
+            }
+          ],
+          "baseline_block_size": 32,
+          "policy_family": "component-aware-v1",
+          "protected_prefixes": [
+            {
+              "block_size": 32,
+              "prefix": "shared_trunk",
+              "reason": "shared representation feeds both frames; prior MQZ1 default-64 candidate showed PoseNet collapse"
+            },
+            {
+              "block_size": 32,
+              "prefix": "frame1_head",
+              "reason": "pose-conditioned frame head; keep at source QZS3 block size"
+            },
+            {
+              "block_size": 32,
+              "prefix": "pose_mlp",
+              "reason": "direct pose-conditioning path; never made more aggressive in this policy"
+            }
+          ],
+          "schema": "component_aware_mixed_qzs_policy_v1",
+          "selection_rule": "default to the exact-evaluated QZS3 b32 block size, protect all pose-critical prefixes, and shrink only frame2-only tensor groups",
+          "tier": "frame2_all64"
+        },
+        "default_block_size": 32,
+        "exact_evaluable_archive": true,
+        "name": "component_aware_v1_frame2_all64",
+        "prefix_overrides": [
+          {
+            "block_size": 64,
+            "prefix": "frame2_head"
+          }
+        ],
+        "spec": "component-aware-v1:frame2_all64"
+      },
+      "promotion_eligible": false,
+      "score_claim": false
+    },
+    {
+      "archive_byte_delta": 179,
+      "component_awareness": {
+        "aggressive_block_size": 64,
+        "aggressive_prefixes": [
+          {
+            "block_size": 64,
+            "prefix": "frame2_head.block2",
+            "reason": "frame2-only static head tensor group; lower direct PoseNet risk than shared trunk, frame1 FiLM head, or pose MLP"
+          },
+          {
+            "block_size": 64,
+            "prefix": "frame2_head.pre",
+            "reason": "frame2-only static head tensor group; lower direct PoseNet risk than shared trunk, frame1 FiLM head, or pose MLP"
+          }
+        ],
+        "baseline_block_size": 32,
+        "policy_family": "component-aware-v1",
+        "protected_prefixes": [
+          {
+            "block_size": 32,
+            "prefix": "shared_trunk",
+            "reason": "shared representation feeds both frames; prior MQZ1 default-64 candidate showed PoseNet collapse"
+          },
+          {
+            "block_size": 32,
+            "prefix": "frame1_head",
+            "reason": "pose-conditioned frame head; keep at source QZS3 block size"
+          },
+          {
+            "block_size": 32,
+            "prefix": "pose_mlp",
+            "reason": "direct pose-conditioning path; never made more aggressive in this policy"
+          }
+        ],
+        "schema": "component_aware_mixed_qzs_policy_v1",
+        "selection_rule": "default to the exact-evaluated QZS3 b32 block size, protect all pose-critical prefixes, and shrink only frame2-only tensor groups",
+        "tier": "frame2_block2_pre64"
+      },
+      "exact_evaluable_archive": true,
+      "output_archive": "/Users/adpena/Projects/pact/experiments/results/lane_a_blockfp_c067_20260502_local_screen/qzs3_mqz1/component_aware_v1_frame2_block2_pre64/archive.zip",
+      "output_archive_bytes": 276393,
+      "output_archive_sha256": "e00a28103ac42740d476646cde8eca7f87fa1628217915895e0fc81e551bb95e",
+      "policy": {
+        "component_awareness": {
+          "aggressive_block_size": 64,
+          "aggressive_prefixes": [
+            {
+              "block_size": 64,
+              "prefix": "frame2_head.block2",
+              "reason": "frame2-only static head tensor group; lower direct PoseNet risk than shared trunk, frame1 FiLM head, or pose MLP"
+            },
+            {
+              "block_size": 64,
+              "prefix": "frame2_head.pre",
+              "reason": "frame2-only static head tensor group; lower direct PoseNet risk than shared trunk, frame1 FiLM head, or pose MLP"
+            }
+          ],
+          "baseline_block_size": 32,
+          "policy_family": "component-aware-v1",
+          "protected_prefixes": [
+            {
+              "block_size": 32,
+              "prefix": "shared_trunk",
+              "reason": "shared representation feeds both frames; prior MQZ1 default-64 candidate showed PoseNet collapse"
+            },
+            {
+              "block_size": 32,
+              "prefix": "frame1_head",
+              "reason": "pose-conditioned frame head; keep at source QZS3 block size"
+            },
+            {
+              "block_size": 32,
+              "prefix": "pose_mlp",
+              "reason": "direct pose-conditioning path; never made more aggressive in this policy"
+            }
+          ],
+          "schema": "component_aware_mixed_qzs_policy_v1",
+          "selection_rule": "default to the exact-evaluated QZS3 b32 block size, protect all pose-critical prefixes, and shrink only frame2-only tensor groups",
+          "tier": "frame2_block2_pre64"
+        },
+        "default_block_size": 32,
+        "exact_evaluable_archive": true,
+        "name": "component_aware_v1_frame2_block2_pre64",
+        "prefix_overrides": [
+          {
+            "block_size": 64,
+            "prefix": "frame2_head.block2"
+          },
+          {
+            "block_size": 64,
+            "prefix": "frame2_head.pre"
+          }
+        ],
+        "spec": "component-aware-v1:frame2_block2_pre64"
+      },
+      "promotion_eligible": false,
+      "score_claim": false
+    }
+  ],
+  "evidence_grade": "empirical_byte_screen_only_until_cuda_auth_eval",
+  "output_dir": "/Users/adpena/Projects/pact/experiments/results/lane_a_blockfp_c067_20260502_local_screen/qzs3_mqz1",
+  "policy_evidence_inputs": [
+    {
+      "bytes": 13287,
+      "exists": true,
+      "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_qzs3_b512_l40sdiag_20260502T1710Z/contest_auth_eval.json",
+      "sha256": "3f1bf6c33618b14cbc1b3fd6c55abcdb8b237bfb49317897284d15e21dd6a403",
+      "summary": {
+        "archive_size_bytes": 271886,
+        "avg_posenet_dist": 0.3804819,
+        "avg_segnet_dist": 0.00108114,
+        "json_parseable": true,
+        "n_samples": 600,
+        "pose_collapse_signal": true,
+        "provenance_archive_sha256": "4271b2c855fddc089ae590392caec1d92cf408228664c4a9a0249d3b375e9d43",
+        "provenance_archive_size_bytes": 271886,
+        "provenance_device": "cuda",
+        "provenance_gpu_model": "NVIDIA L40S",
+        "schema_version": 1,
+        "score_recomputed_from_components": 2.2397462747539274
+      }
+    }
+  ],
+  "promotion_eligible": false,
+  "schema_version": 1,
+  "score_claim": false,
+  "source": {
+    "source_archive": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip",
+    "source_archive_bytes": 276214,
+    "source_archive_sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+    "source_evidence": {
+      "bytes": 4883,
+      "exists": true,
+      "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/contest_auth_eval.json",
+      "sha256": "246ff88aa647afca60ec44b154aa24aa5a15a41abf0e1da8600542d45bd25548"
+    }
+  },
+  "tool": "experiments/build_mixed_qzs_block_candidate.py"
+}

@@ -1,0 +1,161 @@
+{
+  "archive": "experiments/results/pr79_pr65_postprocess_atoms_20260503_worker/pr79_s2_pr65_qpost_bias_region_pair598/archive.zip",
+  "archive_byte_delta_vs_source": 177,
+  "archive_bytes": 277498,
+  "archive_sha256": "bf1c4bec6837447528c5b9639ae25fcbd1edf5d3e18b84421f62606ccb9d02be",
+  "candidate_id": "pr79_s2_pr65_qpost_bias_region_pair598",
+  "dispatch_recommendation": {
+    "blockers": [
+      "region stream belongs to already-negative qpost exact family",
+      "existing exact T4 qpost screens are all worse than current exact frontier",
+      "no component evidence for required sub-0.314 gain 0.001283607"
+    ],
+    "break_even_component_gain_for_sub314_vs_frontier": 0.0012836073175623809,
+    "dispatch_ready_now": false,
+    "lane_claim_required_before_any_future_exact_eval": true,
+    "qpost_exact_negative_count": 7,
+    "rate_score_delta_vs_source": 0.00011785703470262433,
+    "reason": "region stream belongs to already-negative qpost exact family; existing exact T4 qpost screens are all worse than current exact frontier; no component evidence for required sub-0.314 gain 0.001283607",
+    "recommendation": "do_not_dispatch",
+    "remote_dispatched": false,
+    "score_claim": false
+  },
+  "evidence_grade": "empirical_archive_closed_raw_delta_proof_only",
+  "exact_eval_command_template": ".venv/bin/python -u experiments/contest_auth_eval.py --archive /Users/adpena/Projects/pact/experiments/results/pr79_pr65_postprocess_atoms_20260503_worker/pr79_s2_pr65_qpost_bias_region_pair598/archive.zip --inflate-sh submissions/robust_current/inflate.sh --upstream-dir upstream --device cuda --keep-work-dir --work-dir /Users/adpena/Projects/pact/experiments/results/pr79_pr65_postprocess_atoms_20260503_worker/exact_eval_work/pr79_s2_pr65_qpost_bias_region_pair598",
+  "formula_rate_score_delta_vs_source": 0.00011785703470262433,
+  "include_streams": [
+    "bias",
+    "region"
+  ],
+  "no_op_proof": {
+    "by_stream": {
+      "bias": {
+        "selected_active_atoms": 1,
+        "selected_active_pairs": [
+          598
+        ],
+        "selected_pair_atom_counts": {
+          "598": 1
+        }
+      },
+      "region": {
+        "selected_active_atoms": 1,
+        "selected_active_pairs": [
+          598
+        ],
+        "selected_pair_atom_counts": {
+          "598": 1
+        }
+      }
+    },
+    "is_noop": false,
+    "nonselected_pairs_default_to_identity": true,
+    "selected_active_atoms_total": 2,
+    "selected_active_pair_count": 1,
+    "selected_active_pairs_any_stream": [
+      598
+    ],
+    "selected_pairs": [
+      598
+    ]
+  },
+  "qpost_bytes": 83,
+  "qpost_sha256": "9a476997dec241f00c52f4dbda710f000cba181881db717a4de93add3d98750e",
+  "qpost_streams": {
+    "bias": {
+      "active": true,
+      "bytes": 23,
+      "original_bytes": 223,
+      "original_sha256": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b",
+      "sha256": "78a5abb5121e845faefe74f7e4aba0e6386ba318094d8ddd27b0259be0074b80"
+    },
+    "frac": {
+      "active": false,
+      "bytes": 0,
+      "original_bytes": 106,
+      "original_sha256": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "frac2": {
+      "active": false,
+      "bytes": 0,
+      "original_bytes": 149,
+      "original_sha256": "3a01c7546d89d9d3ca846da37a20add7d456421e9211a6339850d946b856026b",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "frac3": {
+      "active": false,
+      "bytes": 0,
+      "original_bytes": 154,
+      "original_sha256": "d725b01b604566c5a76a06b821c644c8d5d5bb9a57ab0597d3bdabc8389858b5",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "post": {
+      "active": false,
+      "bytes": 0,
+      "original_bytes": 1400,
+      "original_sha256": "c3dc88e0fb5a1e48aec49eeacefeea20685e3c02598933deb1ff22dc09892575",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "randmulti": {
+      "active": false,
+      "bytes": 0,
+      "original_bytes": 3731,
+      "original_sha256": "dddf4b4fec32190b219d3e916e05bba5d1711d4208d16966929fa09cbc39349e",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "region": {
+      "active": true,
+      "bytes": 24,
+      "original_bytes": 273,
+      "original_sha256": "4a7c16094fab281c30e27621a58577c095c4b1153c232518c9adbaba2a2b2392",
+      "sha256": "d65c77d5039b1191ba2de53995e5844723feba38a05493053f2819ea385c40c0"
+    },
+    "shift": {
+      "active": false,
+      "bytes": 0,
+      "original_bytes": 226,
+      "original_sha256": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "raw_output_delta_proof": {
+    "after_bytes": 6104016,
+    "after_sha256": "a4927748fd470e06537d6b14141e3a0e068ec6cbc1f1aefbf1db98d86f02923a",
+    "before_bytes": 6104016,
+    "before_sha256": "39a625387bda609cc21bf4bad579a682ddea3aa83dcb6ef1aecd8bd6886a0f71",
+    "changed_values": 2373784,
+    "compared_values": 6104016,
+    "device": "cpu",
+    "exact_equal": false,
+    "height": 874,
+    "max_abs_delta": 1,
+    "mean_abs_delta": 0.3888888888888889,
+    "proof_pair_index": 598,
+    "proof_type": "runtime_apply_qzs3_postprocess_selected_raw_pair",
+    "qpost_path": "experiments/results/pr79_pr65_postprocess_atoms_20260503_worker/pr79_s2_pr65_qpost_bias_region_pair598/qpost_for_raw_delta_proof.bin",
+    "qpost_sha256": "9a476997dec241f00c52f4dbda710f000cba181881db717a4de93add3d98750e",
+    "runtime_helper": "submissions/robust_current/apply_qzs3_postprocess.py",
+    "runtime_helper_sha256": "83a06ca93119dea43b74a8b466b417a5f99d6a8d64d772fdc85e0c3ea155abe0",
+    "selected_raw_pair_indices": [
+      0,
+      12,
+      33,
+      54,
+      104,
+      598
+    ],
+    "selected_raw_path": "experiments/results/top_submission_reverse_engineering_20260503_pr79/raw_output_parity_pairs_cpu/selected_raw/robust_current_selected.raw",
+    "selected_raw_sha256": "172d469ae42d8f262681d68d8957b3fd9774706030053fe06f24d578b0dd9aec",
+    "width": 1164
+  },
+  "risk_family": "single_pair_bias_region_diagnostic",
+  "schema_version": 1,
+  "score_claim": false,
+  "selected_pairs": [
+    598
+  ],
+  "source_archive_bytes": 277321,
+  "source_archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+  "tool": "experiments/build_pr79_pr65_postprocess_atom_candidates.py"
+}

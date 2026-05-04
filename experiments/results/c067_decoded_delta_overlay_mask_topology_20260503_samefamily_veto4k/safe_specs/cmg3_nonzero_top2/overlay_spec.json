@@ -1,0 +1,58 @@
+{
+  "compressed_payloads": {
+    "lzma_xz": {
+      "bytes": 3360,
+      "sha256": "eff340064345be9662fc3d58857b99df376be8179c8cc4b32658930dc9331f3d"
+    },
+    "raw": {
+      "bytes": 9335,
+      "sha256": "23c26ed7ff5259886e3b30f6efa5b76ba8af1160154e91fcc45f5ecd5173448f"
+    },
+    "zlib": {
+      "bytes": 4454,
+      "sha256": "0ad2b9258e4c3658e56d134ef1c15042fee1d89d01303b964da501fcc9a91e20"
+    }
+  },
+  "dispatchable": false,
+  "payload_bytes": 9335,
+  "payload_header": {
+    "allowed_pair_indices": [
+      79,
+      153,
+      212,
+      216,
+      230
+    ],
+    "allowed_source_class_ids": [
+      1
+    ],
+    "base_mask_tensor_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+    "donor_mask_tensor_sha256": "8185a51c17ab3f5aea2078c11a4cebe2d2d54a0698e6402d713639f8d5529af1",
+    "producer": "experiments/plan_c067_decoded_delta_overlay_mask_topology.py",
+    "reconstructed_mask_u8_sha256": "31e7959bd99bf074d783bc198c3e875fb832a4522ee33fb7f5aedceaeb748063",
+    "run_count": 961,
+    "run_struct": "u16_frame_u16_y_u16_x0_u16_length_u8_value_le",
+    "schema": "c067_decoded_delta_overlay_payload_v1",
+    "score_claim": false,
+    "selected_pair_indices": [
+      79,
+      153,
+      212,
+      216,
+      230
+    ],
+    "selected_pixel_count": 4853,
+    "shape": [
+      600,
+      384,
+      512
+    ]
+  },
+  "payload_path": "experiments/results/c067_decoded_delta_overlay_mask_topology_20260503_samefamily_veto4k/safe_specs/cmg3_nonzero_top2/overlay_payload.cdo1",
+  "payload_sha256": "23c26ed7ff5259886e3b30f6efa5b76ba8af1160154e91fcc45f5ecd5173448f",
+  "promotion_eligible": false,
+  "reason_not_dispatchable": "local overlay payload spec only; archive runtime decoder and exact CUDA auth eval are still required",
+  "recommended_compressor": "lzma_xz",
+  "schema": "c067_decoded_delta_overlay_safe_spec_v1",
+  "score_claim": false
+}

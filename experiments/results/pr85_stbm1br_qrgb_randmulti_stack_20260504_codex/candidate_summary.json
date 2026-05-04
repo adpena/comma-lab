@@ -1,0 +1,79 @@
+{
+  "candidate_archive": {
+    "archive_bytes": 230038,
+    "archive_path": "experiments/results/pr85_stbm1br_qrgb_randmulti_stack_20260504_codex/pr85_stbm1br_plus_qrgb_f2_randglobal_pair_0192/archive.zip",
+    "archive_sha256": "bd883ed0216e97ca59bc2bb7609d473ee001b77494c8d02164d7e356eebc0e0a",
+    "member_bytes": 229938,
+    "member_name": "x",
+    "member_sha256": "03febaf612f1bf07b46bb6ebe291e488f483a7e153e31af623565e643ab1532d",
+    "zip_stored": true
+  },
+  "candidate_count": 1,
+  "candidate_manifest": "experiments/results/pr85_stbm1br_qrgb_randmulti_stack_20260504_codex/pr85_stbm1br_plus_qrgb_f2_randglobal_pair_0192/manifest.json",
+  "dispatch_performed": false,
+  "dispatch_unlocked": false,
+  "exact_eval_safe_after_standalone_exact_positives": true,
+  "fixed_runtime_preflight": {
+    "path": "experiments/results/pr85_stbm1br_qrgb_randmulti_stack_20260504_codex/pr85_stbm1br_plus_qrgb_f2_randglobal_pair_0192/fixed_runtime_preflight.json",
+    "raw_generic_preflight_path": "experiments/results/pr85_stbm1br_qrgb_randmulti_stack_20260504_codex/pr85_stbm1br_plus_qrgb_f2_randglobal_pair_0192/fixed_runtime_preflight.raw_pr85.json",
+    "readiness_status": "ready",
+    "ready_for_fixed_runtime_exact_eval_readiness": true,
+    "remote_dispatch_allowed": false
+  },
+  "orthogonality_status": "passed",
+  "qrgb_standalone_archive": {
+    "archive_bytes": 236616,
+    "archive_path": "experiments/results/pr85_qrgb_transfer_archive_candidates_20260504_codex/pr85_qrgb_f2_randglobal_pair_0192/archive.zip",
+    "archive_sha256": "228f8dff9e14bc7d3cdd445d6c7d73ed1818c0facecaa21e97ab71a523b2da40",
+    "member_bytes": 236516,
+    "member_name": "x",
+    "member_sha256": "ff3ff663f4aacd26e4b9d48ac87c900e5e62bf2fae73362ecbe6a8059c0afe6d",
+    "zip_stored": true
+  },
+  "reactivation_criteria": [
+    "STBM standalone exact CUDA positive lands for the exact STBM archive SHA",
+    "QRGB randmulti 0192 standalone exact CUDA positive lands for the exact QRGB archive SHA",
+    "A fresh lane claim is recorded before any exact eval dispatch"
+  ],
+  "remote_jobs_dispatched": false,
+  "schema": "pr85_stbm1br_qrgb_randmulti_stack_summary_v1",
+  "score_claim": false,
+  "source_archive": {
+    "archive_bytes": 236328,
+    "archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+    "known_pr85_anchor_match": {
+      "exact_t4_score_context": 0.25806611029397786,
+      "expected_archive_bytes": 236328,
+      "expected_archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+      "matches": true
+    },
+    "member_bytes": 236228,
+    "member_compress_size": 236228,
+    "member_name": "x",
+    "member_sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+    "path": "experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+    "zip_stored": true
+  },
+  "stack_source_archive": {
+    "archive_bytes": 229756,
+    "archive_sha256": "c6f004d444ed32c628611a2f21f567c666af6bcbcceba618cc089ec024a0cda6",
+    "known_pr85_anchor_match": {
+      "exact_t4_score_context": 0.25806611029397786,
+      "expected_archive_bytes": 236328,
+      "expected_archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+      "matches": false
+    },
+    "member_bytes": 229656,
+    "member_compress_size": 229656,
+    "member_name": "x",
+    "member_sha256": "c7586795bb29fb0ef611ad44715aec77e0e815370e19674d4c89ef2a54b417b5",
+    "path": "experiments/results/pr85_stbm1br_mask_recode_20260504_worker/pr90_stbm1br_lossless_pr85_mask_recode/archive.zip",
+    "zip_stored": true
+  },
+  "standalone_exact_positive_gates": {
+    "not_verified_by_this_local_builder": true,
+    "qrgb_randmulti_0192_standalone_exact_positive_required": true,
+    "stbm_standalone_exact_positive_required": true
+  },
+  "tool": "experiments/build_pr85_stbm1br_qrgb_randmulti_stack_candidate.py"
+}

@@ -1,0 +1,175 @@
+{
+  "auth_eval_required": true,
+  "base_archive": {
+    "bytes": 276214,
+    "members": [
+      {
+        "logical_source": "packed_payload_unpacked",
+        "name": "renderer.bin",
+        "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb",
+        "size_bytes": 59288
+      },
+      {
+        "logical_source": "packed_payload_unpacked",
+        "name": "masks.mkv",
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "size_bytes": 223385
+      },
+      {
+        "logical_source": "packed_payload_unpacked",
+        "name": "optimized_poses.bin",
+        "sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f",
+        "size_bytes": 7200
+      }
+    ],
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip",
+    "runtime_member_contract": {
+      "base_archive_layout": "packed_payload",
+      "source_zip_inventory": [
+        {
+          "compressed_size_bytes": 276114,
+          "crc32": "67bdee61",
+          "name": "p",
+          "sha256": "1f0aaaa9d06967552df6f22d39905a48349239dee4731b093067951a20adc2af",
+          "size_bytes": 276114
+        }
+      ],
+      "unpack_summary": {
+        "members": [
+          {
+            "bytes": 59288,
+            "name": "renderer.bin",
+            "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+          },
+          {
+            "bytes": 223385,
+            "name": "masks.mkv",
+            "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+          },
+          {
+            "bytes": 7200,
+            "name": "optimized_poses.bin",
+            "sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+          }
+        ],
+        "payload_bytes": 276114,
+        "payload_format": "public_pr67_qzs3_qp1_fixed_slices",
+        "schema": "renderer_payload_pr64_len_table_v1",
+        "source_archive_sha256": null
+      },
+      "unpacked_by": "submissions/robust_current/unpack_renderer_payload.py",
+      "zip_payload_members": [
+        "p"
+      ]
+    },
+    "sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a"
+  },
+  "cdo1_overlay": {
+    "archive_member": "masks.cdo1.xz",
+    "compressed_bytes": 2244,
+    "compressed_sha256": "12e327c801a21e8f24e04d62e6071c589baaad215927a8a28f367412f229af8d",
+    "compressor": "lzma_xz",
+    "raw_bytes": 5573,
+    "raw_sha256": "4907f62e812a8886df03b8950a79ccc758cfed401f869f84dd56bc7478c95887",
+    "source": {
+      "payload_bytes": 5573,
+      "payload_path": "/Users/adpena/Projects/pact/experiments/results/c067_decoded_delta_overlay_mask_topology_20260503_samefamily_veto4k/safe_specs/cmg3_rowspan_stride1/overlay_payload.cdo1",
+      "payload_sha256": "4907f62e812a8886df03b8950a79ccc758cfed401f869f84dd56bc7478c95887",
+      "source": "safe_spec",
+      "spec_path": "/Users/adpena/Projects/pact/experiments/results/c067_decoded_delta_overlay_mask_topology_20260503_samefamily_veto4k/safe_specs/cmg3_rowspan_stride1/overlay_spec.json",
+      "spec_sha256": "577c2a5f5562c382299b4a579d1cc201adbc3478b3d05b67ce75fdb5271d2c16"
+    }
+  },
+  "output_archive": {
+    "bytes": 279393,
+    "delta_bytes_vs_base_archive": 3179,
+    "inventory": [
+      {
+        "compress_type": 0,
+        "compressed_size_bytes": 279293,
+        "crc32": "1bf95e4d",
+        "date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "name": "p",
+        "permissions_octal": "0o600",
+        "sha256": "b7d94b67f9ccf439d66255125717cdd450a7d1a54eb9c6574957950d74850f89",
+        "size_bytes": 279293
+      }
+    ],
+    "packaging": {
+      "brotli_quality": 11,
+      "expanded_candidate_archive_bytes": 283654,
+      "expanded_candidate_archive_sha256": "f255bfa01a52d20efd5826a09e1111e97353bbc651cf0a1966de3556c7728093",
+      "packed_archive_report": {
+        "brotli_quality": 11,
+        "evidence_grade": "empirical",
+        "formula_only_rate_delta": -0.002837224999253572,
+        "header": {
+          "members": [
+            {
+              "bytes": 59288,
+              "codec": "raw",
+              "name": "renderer.bin",
+              "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+            },
+            {
+              "bytes": 223385,
+              "codec": "raw",
+              "name": "masks.mkv",
+              "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+            },
+            {
+              "bytes": 2244,
+              "codec": "raw",
+              "name": "masks.cdo1.xz",
+              "sha256": "12e327c801a21e8f24e04d62e6071c589baaad215927a8a28f367412f229af8d"
+            },
+            {
+              "bytes": 7200,
+              "codec": "raw",
+              "name": "optimized_poses.bin",
+              "sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+            }
+          ],
+          "schema": "renderer_payload_v1",
+          "source_archive_sha256": "f255bfa01a52d20efd5826a09e1111e97353bbc651cf0a1966de3556c7728093"
+        },
+        "output_archive": "experiments/results/c067_cdo1_local_overlay_candidate_20260503/cmg3_rowspan_stride1_pairs79_153_212_216_230/archive.zip",
+        "output_archive_bytes": 279393,
+        "output_archive_sha256": "a385a60bac628010040eae4db7dbb5f469402072d069586f49b21798266606ff",
+        "payload_compressed_bytes": 279293,
+        "payload_format": "rpk1_json",
+        "payload_member": "p",
+        "payload_raw_bytes": 292776,
+        "pose_codec": "raw",
+        "pose_residual_topk": 0,
+        "savings_bytes": 4261,
+        "score_claim": false,
+        "source_archive": "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/cdo1_expanded_candidate_fl9_mxua/expanded_candidate.zip",
+        "source_archive_bytes": 283654,
+        "source_archive_sha256": "f255bfa01a52d20efd5826a09e1111e97353bbc651cf0a1966de3556c7728093"
+      },
+      "packed_output": true,
+      "packer": "experiments/build_renderer_packed_payload_archive.py",
+      "payload_format": "rpk1_json",
+      "payload_member_name": "p"
+    },
+    "path": "/Users/adpena/Projects/pact/experiments/results/c067_cdo1_local_overlay_candidate_20260503/cmg3_rowspan_stride1_pairs79_153_212_216_230/archive.zip",
+    "sha256": "a385a60bac628010040eae4db7dbb5f469402072d069586f49b21798266606ff"
+  },
+  "producer": "experiments/build_c067_decoded_delta_overlay_candidate.py",
+  "promotion_eligible": false,
+  "runtime_contract": {
+    "base_mask_sha_checked_by_cdo1_header": true,
+    "exact_score_path": "archive.zip -> inflate.sh -> upstream/evaluate.py",
+    "reconstructed_mask_sha_checked_by_cdo1_header": true
+  },
+  "schema": "c067_decoded_delta_overlay_candidate_v1",
+  "score_claim": false
+}

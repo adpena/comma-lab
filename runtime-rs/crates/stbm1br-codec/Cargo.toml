@@ -1,0 +1,9 @@
+[package]
+name = "stbm1br-codec"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+brotli = "8"
+bzip2 = "0.6"
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }

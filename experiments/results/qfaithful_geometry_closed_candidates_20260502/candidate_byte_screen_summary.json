@@ -1,0 +1,72 @@
+{
+  "candidates": [
+    {
+      "archive": "experiments/results/qfaithful_geometry_closed_candidates_20260502/2146_qzs3_pr64_qp1_direct_zoom_v2/archive.zip",
+      "archive_bytes": 274257,
+      "archive_sha256": "f64dcb3d12db394efa9b0e0f924bb62b6b24f096d66baf9ed83447077d4f9b61",
+      "controlled_transform": "preserve_existing_p_payload_byte_for_byte_and_add_charged_zoom_scalars_bin",
+      "evidence_grade": "empirical_byte_only_until_cuda_auth_eval",
+      "label": "2146_qzs3_pr64_qp1_direct_zoom_v2",
+      "primary_candidate": true,
+      "promotable_exact_screen_contract": true,
+      "promotable_score_claim": false,
+      "required_next_evidence": "CUDA auth eval on exact archive bytes before ranking/promotion",
+      "score_claim": false
+    },
+    {
+      "archive": "experiments/results/qfaithful_geometry_closed_candidates_20260502/2146_qzs3_pr64_qp1_direct_zoom_v1/archive.zip",
+      "archive_bytes": 274325,
+      "archive_sha256": "8a3d4e8348f9e356dbf614d69f5fe122fdcd6dfc50160671b734b2d38a01eb75",
+      "controlled_transform": "preserve_existing_p_payload_byte_for_byte_and_add_charged_zoom_scalars_bin",
+      "evidence_grade": "empirical_byte_only_until_cuda_auth_eval",
+      "label": "2146_qzs3_pr64_qp1_direct_zoom_v1",
+      "primary_candidate": false,
+      "promotable_exact_screen_contract": true,
+      "promotable_score_claim": false,
+      "required_next_evidence": "CUDA auth eval on exact archive bytes before ranking/promotion",
+      "score_claim": false
+    },
+    {
+      "archive": "experiments/results/qfaithful_geometry_closed_candidates_20260502/2146_qzs3_pr64_qp1_zoom_v2/archive.zip",
+      "archive_bytes": 274145,
+      "archive_sha256": "89a7ba8b9e05a09d2a28bfee1b07e52f1af2235677c240dbde3b7269403c175f",
+      "controlled_transform": "repack_from_raw_qfai_with_charged_zoom",
+      "evidence_grade": "empirical_byte_only_until_cuda_auth_eval",
+      "label": "2146_qzs3_pr64_qp1_zoom_v2",
+      "primary_candidate": false,
+      "promotable_exact_screen_contract": true,
+      "promotable_score_claim": false,
+      "required_next_evidence": "CUDA auth eval on exact archive bytes before ranking/promotion",
+      "score_claim": false
+    },
+    {
+      "archive": "experiments/results/qfaithful_geometry_closed_candidates_20260502/2146_qzs3_pr64_qp1_zoom_v1/archive.zip",
+      "archive_bytes": 274213,
+      "archive_sha256": "2d45289d0bde42f046bceaa0542fdbf5cd78f8f3f54aff101b663eacbca96ec5",
+      "controlled_transform": "repack_from_raw_qfai_with_charged_zoom",
+      "evidence_grade": "empirical_byte_only_until_cuda_auth_eval",
+      "label": "2146_qzs3_pr64_qp1_zoom_v1",
+      "primary_candidate": false,
+      "promotable_exact_screen_contract": true,
+      "promotable_score_claim": false,
+      "required_next_evidence": "CUDA auth eval on exact archive bytes before ranking/promotion",
+      "score_claim": false
+    }
+  ],
+  "determinism_checks": {
+    "direct_zoom_v2_rebuild_sha256_matched": true,
+    "repack_zoom_v2_rebuild_sha256_matched": true
+  },
+  "primary_candidate": "2146_qzs3_pr64_qp1_direct_zoom_v2",
+  "prior_nozoom_l40s_exact_eval": "experiments/results/lightning_batch/exact_eval_qfaithful_snapshot_2146_pr64_qp1_l40s_20260501T2201Z/contest_auth_eval.json",
+  "result_root": "experiments/results/qfaithful_geometry_closed_candidates_20260502",
+  "runtime_unpack_smoke": {
+    "archive": "experiments/results/qfaithful_geometry_closed_candidates_20260502/2146_qzs3_pr64_qp1_direct_zoom_v2/archive.zip",
+    "summary": "experiments/results/qfaithful_geometry_closed_candidates_20260502/2146_qzs3_pr64_qp1_direct_zoom_v2/unpack_smoke_summary.json",
+    "zoom_scalars_survived_payload_unpack": true
+  },
+  "schema_version": 1,
+  "score_claim": false,
+  "source_snapshot": "postprocess_fixed_snapshot_20260501T2146Z_fix1",
+  "tool": "qfaithful_geometry_closed_candidate_byte_screen_summary"
+}

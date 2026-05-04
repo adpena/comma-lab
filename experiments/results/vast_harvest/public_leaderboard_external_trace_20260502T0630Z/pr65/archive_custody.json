@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-05-02T06:26:21Z",
+  "archive_label": "public_pr65_external_faithful_trace",
+  "archive_path": "reports/raw/leaderboard_intel_20260501/pr65_archive.zip",
+  "custody_archive_path": "experiments/results/public_leaderboard_external_trace_20260502T0630Z/pr65/archive.zip",
+  "archive_size_bytes": 284425,
+  "archive_sha256": "b331cb4f6df9d8929db966b943b8c73624cdf3b6db71acbde361570852e59e68"
+}

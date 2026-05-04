@@ -1,0 +1,691 @@
+{
+  "archive": {
+    "bytes": 197160,
+    "members": [
+      {
+        "compressed_size": 197060,
+        "crc32": "4bed3e2f",
+        "header_offset": 0,
+        "method": "stored",
+        "method_id": 0,
+        "name": "p",
+        "sha256": "3ff68e3b463498a6e054cd69ff286e5098333a24c4e187c70acd585af794a32a",
+        "uncompressed_size": 197060
+      }
+    ],
+    "path": "experiments/results/leaderboard_intel_20260504_codex/pr97_archive.zip",
+    "sha256": "6785a84879d3e3395bbf990b980fe32182fca7255c5b8559dcdaac9da7516642",
+    "zip_overhead_bytes": 100
+  },
+  "byte_opportunities": {
+    "archive_bytes_delta_vs_pr95_stemperm": 18883,
+    "pr95_stemperm_frontier_bytes": 178277,
+    "rate_score_delta_vs_pr95_stemperm": 0.012573414611805962,
+    "recommended_no_runtime_change_candidate": "pr97_pose_model_br10_deflated_p",
+    "safe_repack_candidates": [
+      {
+        "archive": "experiments/results/pr97_h3_intake_20260504_codex/archive.pr97_deflated_p.zip",
+        "archive_byte_delta": -206,
+        "archive_bytes": 196954,
+        "archive_sha256": "82650a873be918537593bc9b9165c938a663012815a3a1c5c2dbd0e37d5ef213",
+        "exact_cuda_eval_required_before_promotion": true,
+        "label": "pr97_deflated_p",
+        "member_p_compress_type": 8,
+        "member_p_compressed_bytes": 196854,
+        "member_p_sha256": "3ff68e3b463498a6e054cd69ff286e5098333a24c4e187c70acd585af794a32a",
+        "member_p_uncompressed_bytes": 197060,
+        "notes": [
+          "ZIP deflates the original p member; zf.read('p') is byte-identical to source"
+        ],
+        "rate_score_delta": -0.0001371669443431673,
+        "requires_runtime_change": false,
+        "score_claim": false
+      },
+      {
+        "archive": "experiments/results/pr97_h3_intake_20260504_codex/archive.pr97_pose_model_br10_deflated_p.zip",
+        "archive_byte_delta": -246,
+        "archive_bytes": 196914,
+        "archive_sha256": "33a70eb0cdfddb7b362c4942bd53bb2851a60dd2e7689e53db701956e83070bf",
+        "exact_cuda_eval_required_before_promotion": true,
+        "label": "pr97_pose_model_br10_deflated_p",
+        "member_p_compress_type": 8,
+        "member_p_compressed_bytes": 196814,
+        "member_p_sha256": "4a38fd76c536cb70c80580a6f687e573c859456650374b212f4ae51292f50d62",
+        "member_p_uncompressed_bytes": 197020,
+        "notes": [
+          "pose/model brotli streams decompress to the same raw bytes as source",
+          "runtime source can remain unchanged"
+        ],
+        "rate_score_delta": -0.00016380130246805414,
+        "requires_runtime_change": false,
+        "score_claim": false
+      },
+      {
+        "archive_byte_delta_estimate": -357,
+        "archive_bytes_estimate": 196803,
+        "exact_cuda_eval_required_before_promotion": true,
+        "label": "pr97_pose_model_br10_sidecar_br11_deflated_p_runtime_patch",
+        "rate_score_delta_estimate": -0.00023771164626461516,
+        "raw_sidecar_sha256_preserved": true,
+        "requires_runtime_change": true,
+        "runtime_change": "decode_sidecar_blob must brotli.decompress the sidecar raw BPGD stream instead of lzma FORMAT_XZ",
+        "score_claim": false
+      }
+    ],
+    "source_archive_bytes": 197160
+  },
+  "decision_notes": [
+    "No GPU score claim: replay exact T4 job remains the source of score truth.",
+    "The deflated-p and pose/model br10 candidates preserve decoded member semantics and need exact CUDA replay before promotion."
+  ],
+  "dispatch_performed": false,
+  "evidence_grade": "external_archive_byte_intake_only_until_exact_cuda_replay",
+  "mask": {
+    "bytes": 135120,
+    "chunk_count": 22,
+    "chunk_payload_bytes": 135028,
+    "chunks": [
+      {
+        "bytes": 63,
+        "index": 0,
+        "magic_ascii": "QMA9",
+        "magic_hex": "514d413958020000",
+        "sha256": "a04c036168c15428631be2372e1a8cb59d54b673a8018afa68aea48d4e160bf1"
+      },
+      {
+        "bytes": 21175,
+        "index": 1,
+        "magic_ascii": "QMA9",
+        "magic_hex": "514d413958020000",
+        "sha256": "f68daa333e2f89351701ae888735e88d9db80826f5327b4e31f20a046ef2fa75"
+      },
+      {
+        "bytes": 5195,
+        "index": 2,
+        "magic_ascii": "QMA9",
+        "magic_hex": "514d413958020000",
+        "sha256": "869f50939dc7ef36ac30ca6d8d2574eb5a74060472f8c0acd8489fa6031d069a"
+      },
+      {
+        "bytes": 39,
+        "index": 3,
+        "magic_ascii": "QMA9",
+        "magic_hex": "514d413958020000",
+        "sha256": "facafd1a0916c25d18c22ce3e20e3196ad9fbaf25b4355fe85255dd87fa3e17a"
+      },
+      {
+        "bytes": 39,
+        "index": 4,
+        "magic_ascii": "QMA9",
+        "magic_hex": "514d413958020000",
+        "sha256": "facafd1a0916c25d18c22ce3e20e3196ad9fbaf25b4355fe85255dd87fa3e17a"
+      },
+      {
+        "bytes": 39,
+        "index": 5,
+        "magic_ascii": "QMA9",
+        "magic_hex": "514d413958020000",
+        "sha256": "facafd1a0916c25d18c22ce3e20e3196ad9fbaf25b4355fe85255dd87fa3e17a"
+      },
+      {
+        "bytes": 15268,
+        "index": 6,
+        "magic_ascii": "QMA9",
+        "magic_hex": "514d413958020000",
+        "sha256": "7af3f793048174f50910fb0c4907cbb0def09a17a13c432c2c38a82b70ac2032"
+      },
+      {
+        "bytes": 14781,
+        "index": 7,
+        "magic_ascii": "QMA9",
+        "magic_hex": "514d413958020000",
+        "sha256": "bce17994a4bb4d89065976a89db74dee2796d4defda23ebed251a450b05d41f1"
+      },
+      {
+        "bytes": 6377,
+        "index": 8,
+        "magic_ascii": "QMA9",
+        "magic_hex": "514d413958020000",
+        "sha256": "a87936853650b06e77970443d665ad8849ea4e3808aef38c223e55661de0f37c"
+      },
+      {
+        "bytes": 915,
+        "index": 9,
+        "magic_ascii": "QMA9",
+        "magic_hex": "514d413958020000",
+        "sha256": "95fbc1e09bd156a7f6acbac18ee2e08624d9b5c10ab72e61ba76cc445de22c20"
+      },
+      {
+        "bytes": 39,
+        "index": 10,
+        "magic_ascii": "QMA9",
+        "magic_hex": "514d413958020000",
+        "sha256": "a5901e9f738a4c3fd4f353a2209da99237120ed9772a1094c4441ce450834c80"
+      },
+      {
+        "bytes": 39,
+        "index": 11,
+        "magic_ascii": "QMA9",
+        "magic_hex": "514d413958020000",
+        "sha256": "facafd1a0916c25d18c22ce3e20e3196ad9fbaf25b4355fe85255dd87fa3e17a"
+      },
+      {
+        "bytes": 39,
+        "index": 12,
+        "magic_ascii": "QMA9",
+        "magic_hex": "514d413958020000",
+        "sha256": "facafd1a0916c25d18c22ce3e20e3196ad9fbaf25b4355fe85255dd87fa3e17a"
+      },
+      {
+        "bytes": 39,
+        "index": 13,
+        "magic_ascii": "QMA9",
+        "magic_hex": "514d413958020000",
+        "sha256": "facafd1a0916c25d18c22ce3e20e3196ad9fbaf25b4355fe85255dd87fa3e17a"
+      },
+      {
+        "bytes": 20188,
+        "index": 14,
+        "magic_ascii": "QMA9",
+        "magic_hex": "514d413958020000",
+        "sha256": "e9ab1b6868f1089f922c25e9eff70b8e6fd5811c951e402980c8062917d59135"
+      },
+      {
+        "bytes": 15902,
+        "index": 15,
+        "magic_ascii": "QMA9",
+        "magic_hex": "514d413958020000",
+        "sha256": "6fe50be56ccbdf0ad412c1d153c971539df335ca7164f697ed5a047843eb0083"
+      },
+      {
+        "bytes": 5217,
+        "index": 16,
+        "magic_ascii": "QMA9",
+        "magic_hex": "514d413958020000",
+        "sha256": "f77b3344a8fd43e0ab38366fdd69df1d5e2940f267d9533115331efd73bb855d"
+      },
+      {
+        "bytes": 43,
+        "index": 17,
+        "magic_ascii": "QMA9",
+        "magic_hex": "514d413958020000",
+        "sha256": "4ec00e3c170814225c740d46aea9b00461224e89de9fbe6e7d408949e188c81b"
+      },
+      {
+        "bytes": 39,
+        "index": 18,
+        "magic_ascii": "QMA9",
+        "magic_hex": "514d413958020000",
+        "sha256": "a5901e9f738a4c3fd4f353a2209da99237120ed9772a1094c4441ce450834c80"
+      },
+      {
+        "bytes": 63,
+        "index": 19,
+        "magic_ascii": "QMA9",
+        "magic_hex": "514d413958020000",
+        "sha256": "a04c036168c15428631be2372e1a8cb59d54b673a8018afa68aea48d4e160bf1"
+      },
+      {
+        "bytes": 22785,
+        "index": 20,
+        "magic_ascii": "QMA9",
+        "magic_hex": "514d413958020000",
+        "sha256": "65a4844e87ad4c6a5a4de3d0c760a01364eb14b1855bb2fabbc926466d27ffbf"
+      },
+      {
+        "bytes": 6744,
+        "index": 21,
+        "magic_ascii": "QMA9",
+        "magic_hex": "514d413958020000",
+        "sha256": "620124a6e4857f787891bd467ec2b0a28750b1697a9814ab37219f6bc233764e"
+      }
+    ],
+    "format": "pr97_h3_tiled_range_mask",
+    "largest_chunks": [
+      {
+        "bytes": 22785,
+        "index": 20,
+        "magic_ascii": "QMA9",
+        "magic_hex": "514d413958020000",
+        "sha256": "65a4844e87ad4c6a5a4de3d0c760a01364eb14b1855bb2fabbc926466d27ffbf"
+      },
+      {
+        "bytes": 21175,
+        "index": 1,
+        "magic_ascii": "QMA9",
+        "magic_hex": "514d413958020000",
+        "sha256": "f68daa333e2f89351701ae888735e88d9db80826f5327b4e31f20a046ef2fa75"
+      },
+      {
+        "bytes": 20188,
+        "index": 14,
+        "magic_ascii": "QMA9",
+        "magic_hex": "514d413958020000",
+        "sha256": "e9ab1b6868f1089f922c25e9eff70b8e6fd5811c951e402980c8062917d59135"
+      },
+      {
+        "bytes": 15902,
+        "index": 15,
+        "magic_ascii": "QMA9",
+        "magic_hex": "514d413958020000",
+        "sha256": "6fe50be56ccbdf0ad412c1d153c971539df335ca7164f697ed5a047843eb0083"
+      },
+      {
+        "bytes": 15268,
+        "index": 6,
+        "magic_ascii": "QMA9",
+        "magic_hex": "514d413958020000",
+        "sha256": "7af3f793048174f50910fb0c4907cbb0def09a17a13c432c2c38a82b70ac2032"
+      }
+    ],
+    "length_header_bytes": 92,
+    "max_chunk_bytes": 22785,
+    "min_chunk_bytes": 39
+  },
+  "model": {
+    "brotli_ratio": 0.9358119155058531,
+    "compressed_bytes": 57238,
+    "compressed_sha256": "0ac6ff812fe3cda523960d62ddca11e96703deb44b3c212110b16923322fc472",
+    "format": "pr97_h3_flat_fp4_model_brotli",
+    "fp16_bytes": 16344,
+    "fp16_params": 8172,
+    "fp4_nibble_bytes": 39840,
+    "fp4_params": 79544,
+    "fp4_scale_bytes": 4980,
+    "kind_counts": {
+      "fp16_b": 41,
+      "fp16_w": 25,
+      "fp4_w": 36
+    },
+    "largest_raw_entries": [
+      {
+        "kind": "fp4_w",
+        "name": "h1.r1.film.conv.weight",
+        "offset": 40202,
+        "params": 7168,
+        "raw_bytes": 4032,
+        "shape": [
+          112,
+          64,
+          1,
+          1
+        ]
+      },
+      {
+        "kind": "fp4_w",
+        "name": "h1.r2.film.conv.weight",
+        "offset": 49234,
+        "params": 7168,
+        "raw_bytes": 4032,
+        "shape": [
+          112,
+          64,
+          1,
+          1
+        ]
+      },
+      {
+        "kind": "fp4_w",
+        "name": "trunk.fuse.pw.weight",
+        "offset": 17442,
+        "params": 6272,
+        "raw_bytes": 3528,
+        "shape": [
+          56,
+          112,
+          1,
+          1
+        ]
+      },
+      {
+        "kind": "fp4_w",
+        "name": "trunk.d1.c1.pw.weight",
+        "offset": 8490,
+        "params": 4096,
+        "raw_bytes": 2304,
+        "shape": [
+          64,
+          64,
+          1,
+          1
+        ]
+      },
+      {
+        "kind": "fp4_w",
+        "name": "trunk.d1.pw2.weight",
+        "offset": 11502,
+        "params": 4096,
+        "raw_bytes": 2304,
+        "shape": [
+          64,
+          64,
+          1,
+          1
+        ]
+      },
+      {
+        "kind": "fp16_w",
+        "name": "pose_mlp.2.a.weight",
+        "offset": 26978,
+        "params": 1024,
+        "raw_bytes": 2048,
+        "shape": [
+          16,
+          64
+        ]
+      },
+      {
+        "kind": "fp16_w",
+        "name": "pose_mlp.2.b.weight",
+        "offset": 29026,
+        "params": 1024,
+        "raw_bytes": 2048,
+        "shape": [
+          64,
+          16
+        ]
+      },
+      {
+        "kind": "fp16_w",
+        "name": "pose_mlp.4.a.weight",
+        "offset": 31202,
+        "params": 1024,
+        "raw_bytes": 2048,
+        "shape": [
+          16,
+          64
+        ]
+      },
+      {
+        "kind": "fp16_w",
+        "name": "pose_mlp.4.b.weight",
+        "offset": 33250,
+        "params": 1024,
+        "raw_bytes": 2048,
+        "shape": [
+          64,
+          16
+        ]
+      },
+      {
+        "kind": "fp4_w",
+        "name": "trunk.down.pw.weight",
+        "offset": 5766,
+        "params": 3584,
+        "raw_bytes": 2016,
+        "shape": [
+          64,
+          56,
+          1,
+          1
+        ]
+      }
+    ],
+    "raw_bytes": 61164,
+    "raw_sha256": "70d0244aea89280fc988fc07a3ee93c885498c5ccb8a8efab083312ff21bed2f",
+    "schema_entries": 102,
+    "schema_sha256": "e6781cbaf4137b025416852f49f255def8f9425df26a5ef28ede86a0f51ac5df"
+  },
+  "payload": {
+    "bytes": 197060,
+    "length_header_bytes": 16,
+    "member": "p",
+    "parts": {
+      "mask": {
+        "bytes": 135120,
+        "magic_ascii": "\u0016\u0000\u0000\u0000?\u0000\u0000\u0000",
+        "magic_hex": "160000003f000000",
+        "sha256": "bdf2f7a54a245e8a11d5b1ca74e7a7099c4754b3f5f8faa57e71418208031642"
+      },
+      "model": {
+        "bytes": 57238,
+        "magic_ascii": "\u001b\ufffd\ufffd\u0005\ufffdvdH",
+        "magic_hex": "1bebee05ec766448",
+        "sha256": "0ac6ff812fe3cda523960d62ddca11e96703deb44b3c212110b16923322fc472"
+      },
+      "pose": {
+        "bytes": 2310,
+        "magic_ascii": "\u001b3\n#\ufffd\ufffd\ufffd\u0002",
+        "magic_hex": "1b330a23928bd602",
+        "sha256": "c7a62b5a8feaa43ad2aa42dafec98774adea78a82c31cebb9530326302993f54"
+      },
+      "sidecar": {
+        "bytes": 2376,
+        "magic_ascii": "\ufffd7zXZ\u0000\u0000\u0004",
+        "magic_hex": "fd377a585a000004",
+        "sha256": "b8bb46e5f4e5966489ff7ea12f2b814c78548c98c886fab25818b8c71ad93045"
+      }
+    },
+    "sha256": "3ff68e3b463498a6e054cd69ff286e5098333a24c4e187c70acd585af794a32a"
+  },
+  "pose": {
+    "bits_per_dim": [
+      14,
+      4,
+      4,
+      4,
+      4,
+      4
+    ],
+    "bitstream_bytes": 2550,
+    "brotli_ratio": 0.8843797856049005,
+    "compressed_bytes": 2310,
+    "compressed_sha256": "c7a62b5a8feaa43ad2aa42dafec98774adea78a82c31cebb9530326302993f54",
+    "format": "pr97_per_dim_packed_pose_brotli",
+    "header_bytes": 62,
+    "n_dim": 6,
+    "n_pairs": 600,
+    "needed_bitstream_bytes": 2550,
+    "ranges": [
+      {
+        "bits": 14,
+        "covered_range": 11.78886839520419,
+        "dim": 0,
+        "lo": 23.264392852783203,
+        "scale": 0.0007195793441496789
+      },
+      {
+        "bits": 4,
+        "covered_range": 0.20473699551075697,
+        "dim": 1,
+        "lo": -0.13192839920520782,
+        "scale": 0.013649133034050465
+      },
+      {
+        "bits": 4,
+        "covered_range": 0.16192135401070118,
+        "dim": 2,
+        "lo": -0.09611343592405319,
+        "scale": 0.010794756934046745
+      },
+      {
+        "bits": 4,
+        "covered_range": 0.06900089560076594,
+        "dim": 3,
+        "lo": -0.033459268510341644,
+        "scale": 0.00460005970671773
+      },
+      {
+        "bits": 4,
+        "covered_range": 0.06294864462688565,
+        "dim": 4,
+        "lo": -0.02672024816274643,
+        "scale": 0.0041965763084590435
+      },
+      {
+        "bits": 4,
+        "covered_range": 0.12286527547985315,
+        "dim": 5,
+        "lo": -0.06823986768722534,
+        "scale": 0.008191018365323544
+      }
+    ],
+    "raw_bytes": 2612,
+    "raw_sha256": "472c9f63ee2482821b3d8547d36d6d0acf816e935c0c2f9f7424bfdab27cb636"
+  },
+  "runtime_static": {
+    "files": [
+      {
+        "bytes": 6200,
+        "imports": [
+          "io",
+          "math",
+          "numpy",
+          "pathlib",
+          "torch",
+          "torch"
+        ],
+        "name": "flat_fp4.py",
+        "sha256": "536d92258a4b5ff876a3cf4225e77cf6e8a2e2dd3a65feb502280e7f6d0285e7"
+      },
+      {
+        "bytes": 9976,
+        "imports": [
+          "brotli",
+          "einops",
+          "flat_fp4",
+          "io",
+          "model",
+          "numpy",
+          "os",
+          "pathlib",
+          "schema_h3",
+          "shutil",
+          "sidecar",
+          "sidecar",
+          "struct",
+          "struct",
+          "subprocess",
+          "sys",
+          "tempfile",
+          "torch",
+          "torch",
+          "tqdm"
+        ],
+        "name": "inflate.py",
+        "sha256": "c3dd6b52b3d6e607dd559c536ebc407fa7a5b5c4c869b216ccd6a612fe045884"
+      },
+      {
+        "bytes": 545,
+        "name": "inflate.sh",
+        "sha256": "c758f50750fcaba98a40c77e76f905ec1a99388361468257ebb02695f7279057"
+      },
+      {
+        "bytes": 8231,
+        "imports": [
+          "torch",
+          "torch",
+          "torch"
+        ],
+        "name": "model.py",
+        "sha256": "24bd65175027ed8d802a93960b03031350eedcbfa739461572b6c6cdea2c3b51"
+      },
+      {
+        "bytes": 60803,
+        "name": "range_mask_codec.cpp",
+        "sha256": "2ba8ed725004d9d6585dda0a307d332afe0d6a36d462cf7d3189bc178c2febbc"
+      },
+      {
+        "bytes": 4966,
+        "imports": [],
+        "name": "schema_h3.py",
+        "sha256": "e6781cbaf4137b025416852f49f255def8f9425df26a5ef28ede86a0f51ac5df"
+      },
+      {
+        "bytes": 6648,
+        "imports": [
+          "lzma",
+          "numpy",
+          "struct",
+          "torch",
+          "torch"
+        ],
+        "name": "sidecar.py",
+        "sha256": "6d9c4f7fb2d8879a7861d085cac1787c3f523920a7e482427168fd662ef15dd0"
+      }
+    ],
+    "runtime_dir": "experiments/results/leaderboard_intel_20260504_codex/pr97_runtime",
+    "runtime_file_count": 7,
+    "runtime_tree_sha256": "59f507a8cacc0113b06a11a5f4d59f877a928b0642d562b7b2e5ccd7dc5251dd",
+    "static_risks": [
+      "inflate.sh attempts pip install brotli if missing; exact replay should pin dependency closure",
+      "inflate.py compiles range_mask_codec.cpp at inflate time and requires c++/g++/clang++"
+    ],
+    "top_level_imports": [
+      "brotli",
+      "einops",
+      "flat_fp4",
+      "io",
+      "lzma",
+      "math",
+      "model",
+      "numpy",
+      "os",
+      "pathlib",
+      "schema_h3",
+      "shutil",
+      "sidecar",
+      "struct",
+      "subprocess",
+      "sys",
+      "tempfile",
+      "torch",
+      "tqdm"
+    ]
+  },
+  "schema": "pr97_h3_static_intake_profile_v1",
+  "score_claim": false,
+  "sidecar": {
+    "compressed_bytes": 2376,
+    "compressed_sha256": "b8bb46e5f4e5966489ff7ea12f2b814c78548c98c886fab25818b8c71ad93045",
+    "counts": {
+      "cmaes_pairs": 33,
+      "cmaes_patches": 60,
+      "pattern_pairs": 69,
+      "pattern_patches": 138,
+      "pose_pairs": 109,
+      "pose_values": 327,
+      "warp_nonzero": 227,
+      "warp_pairs": 227,
+      "x2_pairs": 272,
+      "x2_patches": 272
+    },
+    "flag_histogram": {
+      "1": 123,
+      "10": 2,
+      "11": 7,
+      "12": 4,
+      "13": 8,
+      "15": 5,
+      "16": 118,
+      "17": 55,
+      "2": 2,
+      "20": 8,
+      "21": 10,
+      "22": 2,
+      "23": 1,
+      "24": 13,
+      "25": 9,
+      "26": 2,
+      "27": 4,
+      "29": 3,
+      "3": 1,
+      "30": 1,
+      "31": 1,
+      "4": 8,
+      "5": 13,
+      "6": 2,
+      "7": 3,
+      "8": 21,
+      "9": 29
+    },
+    "format": "pr97_bpgd_xz_sidecar",
+    "pair_id_max": 599,
+    "pair_id_min": 1,
+    "pair_record_count": 455,
+    "raw_bytes": 3482,
+    "raw_sha256": "137361d41b66a18cbf1ccc31f23b2d5ab54c3e8176a98caa5a6d1d1e8ce9fbb3",
+    "xz_ratio": 0.6823664560597358
+  },
+  "tool": "experiments/profile_pr97_h3_intake.py"
+}

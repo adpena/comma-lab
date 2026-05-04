@@ -1,0 +1,40 @@
+{
+  "adjudication": {
+    "allow_component_gate_forensic_success": true,
+    "allow_sane_score_forensic_success": true,
+    "baseline_archive_size_bytes": 229480,
+    "baseline_posenet_dist": 0.0001894,
+    "baseline_score": 0.2535063602939779,
+    "baseline_segnet_dist": 0.00057185,
+    "component_reference_label": "pr85_stbm1br_pr92_rmb1",
+    "delta_key": "score_delta_vs_pr85_rmb1",
+    "max_posenet_dist": 0.01,
+    "max_posenet_relative": null,
+    "max_sane_score": 1.0,
+    "max_segnet_dist": 0.01,
+    "max_segnet_relative": null,
+    "predicted_band_high": 0.31,
+    "predicted_band_low": 0.18,
+    "provenance_name": "adjudication_provenance.json",
+    "regression_threshold": 0.4,
+    "required_device": "cuda",
+    "required_samples": 600,
+    "result_copy_name": "contest_auth_eval.adjudicated.json"
+  },
+  "artifact_recorded_at_utc": "2026-05-04T08:55:51Z",
+  "expected_archive_sha256": "e976acd5fe565c94fb9a8c62e5200c949919f76150e84599f268d6a58588440a",
+  "expected_archive_size_bytes": 178417,
+  "job_name": "exact_eval_public_pr95_hnerv_muon_t4_fix2_20260504T0848Z",
+  "queue_metadata": {
+    "archive_rel": "experiments/results/public_pr95_intake_20260504_codex/archive.zip",
+    "baseline_json": "experiments/results/lightning_batch/exact_eval_pr85_stbm1br_pr92_rmb1_t4_20260504T082220Z/contest_auth_eval.adjudicated.json",
+    "local_supply_chain_scan": ".omx/state/exact_eval_public_pr95_hnerv_muon_t4_fix2_20260504T0848Z_local_lightning_supply_chain_scan.json",
+    "run_id": "exact_eval_public_pr95_hnerv_muon_t4_fix2_20260504T0848Z",
+    "source_manifest": ".omx/state/exact_eval_public_pr95_hnerv_muon_t4_fix2_20260504T0848Z_manifest.json",
+    "wrapper": "scripts/lightning_exact_eval_repro.py"
+  },
+  "role": "exact_cuda_eval",
+  "schema_version": 1,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

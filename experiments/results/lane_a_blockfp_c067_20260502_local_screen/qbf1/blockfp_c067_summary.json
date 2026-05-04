@@ -1,0 +1,57 @@
+{
+  "best_by_output_archive_bytes": {
+    "bytes": 280588,
+    "candidate_id": "qbf1_b0032",
+    "delta_bytes_vs_source_archive": 4374,
+    "formula_only_rate_delta_vs_source_archive": 0.0029124670609563773,
+    "sha256": "b578afb324261dabd5492083e9ea46b3b26c0ee99b2ae1298f360d58c2a36b8a"
+  },
+  "block_sizes": [
+    32,
+    1024,
+    4096
+  ],
+  "candidates": [
+    {
+      "archive_bytes": 280588,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/lane_a_blockfp_c067_20260502_local_screen/qbf1/qbf1_b0032/archive.zip",
+      "archive_sha256": "b578afb324261dabd5492083e9ea46b3b26c0ee99b2ae1298f360d58c2a36b8a",
+      "candidate_id": "qbf1_b0032",
+      "delta_bytes_vs_source_archive": 4374,
+      "local_archive_byte_win": false,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/lane_a_blockfp_c067_20260502_local_screen/qbf1/qbf1_b0032/build_manifest.json",
+      "renderer_bytes": 132129,
+      "renderer_sha256": "08bf9d1ec326f3dd9c42ce10ba6c2b234b5c7e56cb99c88637fc0254732e0224"
+    },
+    {
+      "archive_bytes": 283869,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/lane_a_blockfp_c067_20260502_local_screen/qbf1/qbf1_b1024/archive.zip",
+      "archive_sha256": "6d331e479d961df22a2baa8b3f09722394ece7d0c194821c80c6aa354cb1449b",
+      "candidate_id": "qbf1_b1024",
+      "delta_bytes_vs_source_archive": 7655,
+      "local_archive_byte_win": false,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/lane_a_blockfp_c067_20260502_local_screen/qbf1/qbf1_b1024/build_manifest.json",
+      "renderer_bytes": 121891,
+      "renderer_sha256": "82d275e87929bfcb0c2f99c947d0d694db2229e7004379c509d3f267ac3ef2a7"
+    },
+    {
+      "archive_bytes": 284282,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/lane_a_blockfp_c067_20260502_local_screen/qbf1/qbf1_b4096/archive.zip",
+      "archive_sha256": "56a09778999b3b50c11e6e1f7559c3806341d86ccb1e78ecc28855634726db3a",
+      "candidate_id": "qbf1_b4096",
+      "delta_bytes_vs_source_archive": 8068,
+      "local_archive_byte_win": false,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/lane_a_blockfp_c067_20260502_local_screen/qbf1/qbf1_b4096/build_manifest.json",
+      "renderer_bytes": 121618,
+      "renderer_sha256": "5ebc58e11438f347699e1fe539274b510c1b02677390680bf76a907d55084413"
+    }
+  ],
+  "promotion_eligible": false,
+  "schema": "blockfp_c067_archive_summary_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 276214,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip",
+    "sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a"
+  }
+}

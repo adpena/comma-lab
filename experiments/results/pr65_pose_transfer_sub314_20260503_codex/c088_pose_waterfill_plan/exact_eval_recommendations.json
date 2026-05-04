@@ -1,0 +1,8 @@
+{
+  "dispatch_recommendations": [],
+  "promotion_eligible": false,
+  "required_promotion_eval": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "schema_version": 1,
+  "score_claim": false,
+  "tool": "experiments/plan_pose_manifold_waterfill_candidates.py"
+}

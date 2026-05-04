@@ -1,0 +1,90 @@
+{
+  "current_charged_pr67_mask_bytes": 219472,
+  "schema": "pr67_mask_brotli_recompress_probe_v1",
+  "score_claim": false,
+  "source": "experiments/results/charged_mask_grammar_atoms_pr67_decoded_20260502_codex/extracted_mask_stream.bin",
+  "source_bytes": 223385,
+  "source_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+  "top10": [
+    {
+      "bytes": 219472,
+      "lgwin": 18,
+      "mode": "generic",
+      "quality": 11,
+      "seconds": 0.3758855840424076,
+      "sha256": "2bf637eccd36dcfdf7e951d1f9e5ef988dec4baf7a34b6a3bf29885117189453"
+    },
+    {
+      "bytes": 219472,
+      "lgwin": 19,
+      "mode": "generic",
+      "quality": 11,
+      "seconds": 0.37023487500846386,
+      "sha256": "19f565a9c8c0660bb028a54ad8dc948c4f71489096670a4e74f08b408350f988"
+    },
+    {
+      "bytes": 219472,
+      "lgwin": 20,
+      "mode": "generic",
+      "quality": 11,
+      "seconds": 0.3716787500306964,
+      "sha256": "d3afdc57f915798d2b1479651113ef3b4278e7cd6a26062b2573b171b1582eae"
+    },
+    {
+      "bytes": 219472,
+      "lgwin": 21,
+      "mode": "generic",
+      "quality": 11,
+      "seconds": 0.3707323749549687,
+      "sha256": "81c55fd858f7c5bfef9cf4e1d8445ee57d6a4804e5dd7232714cd9cb7d2f0e26"
+    },
+    {
+      "bytes": 219472,
+      "lgwin": 22,
+      "mode": "generic",
+      "quality": 11,
+      "seconds": 0.372913500003051,
+      "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+    },
+    {
+      "bytes": 219472,
+      "lgwin": 23,
+      "mode": "generic",
+      "quality": 11,
+      "seconds": 0.37552887498168275,
+      "sha256": "f29c6eda3d3b37e6f7a32966720866c48487c5050e20e0509559269d8fc369e0"
+    },
+    {
+      "bytes": 219472,
+      "lgwin": 24,
+      "mode": "generic",
+      "quality": 11,
+      "seconds": 0.3703469589818269,
+      "sha256": "b59080359dbf18277d66a03d8105c3ff0df807cc49b396ce736ee5057da28ce0"
+    },
+    {
+      "bytes": 219472,
+      "lgwin": 18,
+      "mode": "text",
+      "quality": 11,
+      "seconds": 0.37417299998924136,
+      "sha256": "2bf637eccd36dcfdf7e951d1f9e5ef988dec4baf7a34b6a3bf29885117189453"
+    },
+    {
+      "bytes": 219472,
+      "lgwin": 19,
+      "mode": "text",
+      "quality": 11,
+      "seconds": 0.37340820801910013,
+      "sha256": "19f565a9c8c0660bb028a54ad8dc948c4f71489096670a4e74f08b408350f988"
+    },
+    {
+      "bytes": 219472,
+      "lgwin": 20,
+      "mode": "text",
+      "quality": 11,
+      "seconds": 0.3737821659888141,
+      "sha256": "d3afdc57f915798d2b1479651113ef3b4278e7cd6a26062b2573b171b1582eae"
+    }
+  ]
+}

@@ -1,0 +1,125 @@
+{
+  "candidate_count": 6,
+  "candidates": [
+    {
+      "archive_byte_delta": -2967,
+      "component_awareness": null,
+      "exact_evaluable_archive": true,
+      "output_archive": "/Users/adpena/Projects/pact/experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/global_qzs3_risky/global_b128/archive.zip",
+      "output_archive_bytes": 273247,
+      "output_archive_sha256": "32ce9cd3ebbbfa6b3468dc9ba7ac31f0fbd2802a8eb25f6bdd44c137d9f41c69",
+      "policy": {
+        "default_block_size": 128,
+        "exact_evaluable_archive": true,
+        "name": "global_b128",
+        "prefix_overrides": [],
+        "spec": "global:128"
+      },
+      "promotion_eligible": false,
+      "score_claim": false
+    },
+    {
+      "archive_byte_delta": -3770,
+      "component_awareness": null,
+      "exact_evaluable_archive": true,
+      "output_archive": "/Users/adpena/Projects/pact/experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/global_qzs3_risky/global_b256/archive.zip",
+      "output_archive_bytes": 272444,
+      "output_archive_sha256": "6e800416d489a2d8e73167d56583a58f94ded74544d9caaf907e6585be4da17a",
+      "policy": {
+        "default_block_size": 256,
+        "exact_evaluable_archive": true,
+        "name": "global_b256",
+        "prefix_overrides": [],
+        "spec": "global:256"
+      },
+      "promotion_eligible": false,
+      "score_claim": false
+    },
+    {
+      "archive_byte_delta": -4328,
+      "component_awareness": null,
+      "exact_evaluable_archive": true,
+      "output_archive": "/Users/adpena/Projects/pact/experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/global_qzs3_risky/global_b512/archive.zip",
+      "output_archive_bytes": 271886,
+      "output_archive_sha256": "4271b2c855fddc089ae590392caec1d92cf408228664c4a9a0249d3b375e9d43",
+      "policy": {
+        "default_block_size": 512,
+        "exact_evaluable_archive": true,
+        "name": "global_b512",
+        "prefix_overrides": [],
+        "spec": "global:512"
+      },
+      "promotion_eligible": false,
+      "score_claim": false
+    },
+    {
+      "archive_byte_delta": -4729,
+      "component_awareness": null,
+      "exact_evaluable_archive": true,
+      "output_archive": "/Users/adpena/Projects/pact/experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/global_qzs3_risky/global_b1024/archive.zip",
+      "output_archive_bytes": 271485,
+      "output_archive_sha256": "a8cb980c6ff86959517d3323030c802ccd557eb95e952aaaebaa8e5c27dfed8e",
+      "policy": {
+        "default_block_size": 1024,
+        "exact_evaluable_archive": true,
+        "name": "global_b1024",
+        "prefix_overrides": [],
+        "spec": "global:1024"
+      },
+      "promotion_eligible": false,
+      "score_claim": false
+    },
+    {
+      "archive_byte_delta": -4965,
+      "component_awareness": null,
+      "exact_evaluable_archive": true,
+      "output_archive": "/Users/adpena/Projects/pact/experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/global_qzs3_risky/global_b2048/archive.zip",
+      "output_archive_bytes": 271249,
+      "output_archive_sha256": "5a33ea23d9b1a3484500e93571e781f50ad0a714c0b17705888c346e5ef8acf1",
+      "policy": {
+        "default_block_size": 2048,
+        "exact_evaluable_archive": true,
+        "name": "global_b2048",
+        "prefix_overrides": [],
+        "spec": "global:2048"
+      },
+      "promotion_eligible": false,
+      "score_claim": false
+    },
+    {
+      "archive_byte_delta": -5336,
+      "component_awareness": null,
+      "exact_evaluable_archive": true,
+      "output_archive": "/Users/adpena/Projects/pact/experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/global_qzs3_risky/global_b4096/archive.zip",
+      "output_archive_bytes": 270878,
+      "output_archive_sha256": "3d78ddeeb8cb9bd3031e3d2256370f729dc5a61753d1ac5ceecb0778774d9934",
+      "policy": {
+        "default_block_size": 4096,
+        "exact_evaluable_archive": true,
+        "name": "global_b4096",
+        "prefix_overrides": [],
+        "spec": "global:4096"
+      },
+      "promotion_eligible": false,
+      "score_claim": false
+    }
+  ],
+  "evidence_grade": "empirical_byte_screen_only_until_cuda_auth_eval",
+  "output_dir": "/Users/adpena/Projects/pact/experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/global_qzs3_risky",
+  "policy_evidence_inputs": [],
+  "promotion_eligible": false,
+  "schema_version": 1,
+  "score_claim": false,
+  "source": {
+    "source_archive": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip",
+    "source_archive_bytes": 276214,
+    "source_archive_sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+    "source_evidence": {
+      "bytes": 4883,
+      "exists": true,
+      "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/contest_auth_eval.json",
+      "sha256": "246ff88aa647afca60ec44b154aa24aa5a15a41abf0e1da8600542d45bd25548"
+    }
+  },
+  "tool": "experiments/build_mixed_qzs_block_candidate.py"
+}

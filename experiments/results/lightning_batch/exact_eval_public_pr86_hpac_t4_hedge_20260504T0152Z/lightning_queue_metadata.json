@@ -1,0 +1,38 @@
+{
+  "adjudication": {
+    "allow_component_gate_forensic_success": true,
+    "allow_sane_score_forensic_success": true,
+    "baseline_archive_size_bytes": 236328,
+    "baseline_posenet_dist": null,
+    "baseline_score": 0.25806611029397786,
+    "baseline_segnet_dist": null,
+    "component_reference_label": "pr85_public_t4",
+    "delta_key": "score_delta_vs_pr85",
+    "max_posenet_dist": null,
+    "max_posenet_relative": null,
+    "max_sane_score": 2.0,
+    "max_segnet_dist": null,
+    "max_segnet_relative": null,
+    "predicted_band_high": 0.4,
+    "predicted_band_low": 0.2,
+    "provenance_name": "adjudication_provenance.json",
+    "regression_threshold": 1.0,
+    "required_device": "cuda",
+    "required_samples": 600,
+    "result_copy_name": "contest_auth_eval.adjudicated.json"
+  },
+  "artifact_recorded_at_utc": "2026-05-04T02:07:53Z",
+  "expected_archive_sha256": "e67b7c22240dbe33853c19d049b0044a5df16ce5f751ba8f1021cab8ceb03cef",
+  "expected_archive_size_bytes": 207579,
+  "job_name": "exact_eval_public_pr86_hpac_t4_hedge_20260504T0152Z",
+  "queue_metadata": {
+    "archive_rel": "experiments/results/public_pr86_intake_20260504_codex/archive.zip",
+    "purpose": "forensic_public_pr86_hpac_t4_exact_replay",
+    "run_id": "public_pr86_hpac_t4_hedge_20260504T0152Z",
+    "source_manifest": ".omx/state/public_pr86_hpac_l40sdiag_20260504T0139Z_manifest.json"
+  },
+  "role": "exact_cuda_eval",
+  "schema_version": 1,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

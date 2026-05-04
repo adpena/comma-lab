@@ -1,0 +1,4 @@
+candidate_policy_id,records_selected_count,expected_component_benefit_proxy,no_op_status,dispatchable,dispatchable_reason
+pr79_pose_action_top16_interactions,16,0.00011973598586931818,non_noop_proxy_atoms,False,"planning-only: proxy atoms require local archive construction, raw-output/parity checks, lane claim, and exact CUDA auth eval before any score use"
+pr79_pose_row_top32_repair,32,8.153675124063052e-05,non_noop_proxy_atoms,False,"planning-only: proxy atoms require local archive construction, raw-output/parity checks, lane claim, and exact CUDA auth eval before any score use"
+pr79_action_drop_top64_pose_toxic,23,2.6864307974128607e-05,non_noop_proxy_atoms,False,"planning-only: proxy atoms require local archive construction, raw-output/parity checks, lane claim, and exact CUDA auth eval before any score use"

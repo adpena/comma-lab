@@ -1,0 +1,33 @@
+{
+  "archive_bytes": 178417,
+  "archive_sha256": "e976acd5fe565c94fb9a8c62e5200c949919f76150e84599f268d6a58588440a",
+  "claimed_body_score_inputs": {
+    "archive_bytes": 178417,
+    "pose": 3.494e-05,
+    "recomputed_score": 0.1987048012202245,
+    "seg": 0.00061212
+  },
+  "evidence_grade": "external_static",
+  "head_sha": "9bdce26f2a4f996828c4e3fa2b87c454a0e8fcc9",
+  "members": [
+    {
+      "compress_size": 178309,
+      "compress_type": 0,
+      "date_time": [
+        2026,
+        5,
+        2,
+        17,
+        36,
+        56
+      ],
+      "file_size": 178309,
+      "name": "0.bin",
+      "sha256": "4b8013fb1168e21b12fc7ee6c395e032660d88daded48a0b845085e7d5eb11c4"
+    }
+  ],
+  "pr": 95,
+  "schema": "public_pr95_static_intake_v1",
+  "score_claim": false,
+  "title": "hnerv_muon submission (0.20)"
+}

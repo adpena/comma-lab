@@ -1,0 +1,68 @@
+{
+  "brotli_quality": 11,
+  "evidence_grade": "empirical",
+  "formula_only_rate_delta": -0.003882623555655381,
+  "header": {
+    "members": [
+      {
+        "bytes": 59288,
+        "codec": "raw",
+        "name": "renderer.bin",
+        "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+      },
+      {
+        "bytes": 159548,
+        "codec": "raw",
+        "name": "masks.mkv",
+        "sha256": "927a7d0093f43149502b2289205abb26cdc1d7124047e792ce1faaac03e114b8"
+      },
+      {
+        "bytes": 1140,
+        "codec": "pose_qp1_v1",
+        "decoded_bytes": 7200,
+        "decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f",
+        "lossy": true,
+        "name": "optimized_poses.bin",
+        "pose_error_stats": {
+          "max_abs_by_dim": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pose_dim": 6,
+          "rmse_by_dim": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rows": 600
+        },
+        "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583",
+        "source_decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+      }
+    ],
+    "payload_format": "public_pr64_mask_first_len_table",
+    "schema": "renderer_payload_pr64_len_table_v1",
+    "source_archive_sha256": "190df0fd9637af3e147d80533341f7d927c175a809ec29e5ecf83f7228cf677a"
+  },
+  "output_archive": "experiments/results/c063_protected_mask_reencode_20260502_codex/protect_boundary1_horizon_pose_top16_crf56_rawzip/build/archive.zip",
+  "output_archive_bytes": 207710,
+  "output_archive_sha256": "861b366b4becaff7eb89bbd63655488733791707202eb13992ad7e62895ede45",
+  "payload_compressed_bytes": 207610,
+  "payload_format": "public_pr64_mask_first_len_table",
+  "payload_member": "p",
+  "payload_raw_bytes": 219988,
+  "pose_codec": "pose_qp1_v1",
+  "pose_residual_topk": 0,
+  "savings_bytes": 5831,
+  "score_claim": false,
+  "source_archive": "experiments/results/c063_protected_mask_reencode_20260502_codex/protect_boundary1_horizon_pose_top16_crf56_rawzip/archive.zip",
+  "source_archive_bytes": 213541,
+  "source_archive_sha256": "190df0fd9637af3e147d80533341f7d927c175a809ec29e5ecf83f7228cf677a"
+}

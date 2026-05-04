@@ -1,0 +1,815 @@
+{
+  "archive_byte_delta": 166,
+  "archive_members": {
+    "p": {
+      "compress_size": 276413,
+      "file_size": 276413,
+      "sha256": "f6ed31da7119d0814f79b3c8f1e0858d269320cbe08b44bcf0c475e17249dacc"
+    }
+  },
+  "block_policy": {
+    "block_size_counts": {
+      "32": 38,
+      "64": 2
+    },
+    "charged_header_format": "compact_fp4_block_sizes_v1",
+    "charged_policy": {
+      "name": "component_aware_v1_frame2_pre64",
+      "spec": "component-aware-v1:frame2_pre64"
+    },
+    "fp4_block_sizes": [
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      64,
+      64
+    ],
+    "fp4_tensor_order": "joint_frame_generator_state_dict_fp4_order_v1",
+    "fp4_tensors": [
+      {
+        "block_size": 32,
+        "name": "shared_trunk.stem_conv.dw.weight",
+        "numel": 72,
+        "packed_bytes": 48,
+        "scale_bytes": 6,
+        "shape": [
+          8,
+          1,
+          3,
+          3
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "shared_trunk.stem_conv.pw.weight",
+        "numel": 448,
+        "packed_bytes": 224,
+        "scale_bytes": 28,
+        "shape": [
+          56,
+          8,
+          1,
+          1
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "shared_trunk.stem_block.conv1.dw.weight",
+        "numel": 504,
+        "packed_bytes": 256,
+        "scale_bytes": 32,
+        "shape": [
+          56,
+          1,
+          3,
+          3
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "shared_trunk.stem_block.conv1.pw.weight",
+        "numel": 3136,
+        "packed_bytes": 1568,
+        "scale_bytes": 196,
+        "shape": [
+          56,
+          56,
+          1,
+          1
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "shared_trunk.stem_block.conv2.dw.weight",
+        "numel": 504,
+        "packed_bytes": 256,
+        "scale_bytes": 32,
+        "shape": [
+          56,
+          1,
+          3,
+          3
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "shared_trunk.stem_block.conv2.pw.weight",
+        "numel": 3136,
+        "packed_bytes": 1568,
+        "scale_bytes": 196,
+        "shape": [
+          56,
+          56,
+          1,
+          1
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "shared_trunk.down_conv.dw.weight",
+        "numel": 504,
+        "packed_bytes": 256,
+        "scale_bytes": 32,
+        "shape": [
+          56,
+          1,
+          3,
+          3
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "shared_trunk.down_conv.pw.weight",
+        "numel": 3584,
+        "packed_bytes": 1792,
+        "scale_bytes": 224,
+        "shape": [
+          64,
+          56,
+          1,
+          1
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "shared_trunk.down_block.conv1.dw.weight",
+        "numel": 576,
+        "packed_bytes": 288,
+        "scale_bytes": 36,
+        "shape": [
+          64,
+          1,
+          3,
+          3
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "shared_trunk.down_block.conv1.pw.weight",
+        "numel": 4096,
+        "packed_bytes": 2048,
+        "scale_bytes": 256,
+        "shape": [
+          64,
+          64,
+          1,
+          1
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "shared_trunk.down_block.conv2.dw.weight",
+        "numel": 576,
+        "packed_bytes": 288,
+        "scale_bytes": 36,
+        "shape": [
+          64,
+          1,
+          3,
+          3
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "shared_trunk.down_block.conv2.pw.weight",
+        "numel": 4096,
+        "packed_bytes": 2048,
+        "scale_bytes": 256,
+        "shape": [
+          64,
+          64,
+          1,
+          1
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "shared_trunk.up.1.dw.weight",
+        "numel": 576,
+        "packed_bytes": 288,
+        "scale_bytes": 36,
+        "shape": [
+          64,
+          1,
+          3,
+          3
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "shared_trunk.up.1.pw.weight",
+        "numel": 3584,
+        "packed_bytes": 1792,
+        "scale_bytes": 224,
+        "shape": [
+          56,
+          64,
+          1,
+          1
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "shared_trunk.fuse.dw.weight",
+        "numel": 1008,
+        "packed_bytes": 512,
+        "scale_bytes": 64,
+        "shape": [
+          112,
+          1,
+          3,
+          3
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "shared_trunk.fuse.pw.weight",
+        "numel": 6272,
+        "packed_bytes": 3136,
+        "scale_bytes": 392,
+        "shape": [
+          56,
+          112,
+          1,
+          1
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "shared_trunk.fuse_block.conv1.dw.weight",
+        "numel": 504,
+        "packed_bytes": 256,
+        "scale_bytes": 32,
+        "shape": [
+          56,
+          1,
+          3,
+          3
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "shared_trunk.fuse_block.conv1.pw.weight",
+        "numel": 3136,
+        "packed_bytes": 1568,
+        "scale_bytes": 196,
+        "shape": [
+          56,
+          56,
+          1,
+          1
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "shared_trunk.fuse_block.conv2.dw.weight",
+        "numel": 504,
+        "packed_bytes": 256,
+        "scale_bytes": 32,
+        "shape": [
+          56,
+          1,
+          3,
+          3
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "shared_trunk.fuse_block.conv2.pw.weight",
+        "numel": 3136,
+        "packed_bytes": 1568,
+        "scale_bytes": 196,
+        "shape": [
+          56,
+          56,
+          1,
+          1
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "frame1_head.block1.conv1.dw.weight",
+        "numel": 504,
+        "packed_bytes": 256,
+        "scale_bytes": 32,
+        "shape": [
+          56,
+          1,
+          3,
+          3
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "frame1_head.block1.conv1.pw.weight",
+        "numel": 3136,
+        "packed_bytes": 1568,
+        "scale_bytes": 196,
+        "shape": [
+          56,
+          56,
+          1,
+          1
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "frame1_head.block1.conv2.dw.weight",
+        "numel": 504,
+        "packed_bytes": 256,
+        "scale_bytes": 32,
+        "shape": [
+          56,
+          1,
+          3,
+          3
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "frame1_head.block1.conv2.pw.weight",
+        "numel": 3136,
+        "packed_bytes": 1568,
+        "scale_bytes": 196,
+        "shape": [
+          56,
+          56,
+          1,
+          1
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "frame1_head.block2.conv1.dw.weight",
+        "numel": 504,
+        "packed_bytes": 256,
+        "scale_bytes": 32,
+        "shape": [
+          56,
+          1,
+          3,
+          3
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "frame1_head.block2.conv1.pw.weight",
+        "numel": 3136,
+        "packed_bytes": 1568,
+        "scale_bytes": 196,
+        "shape": [
+          56,
+          56,
+          1,
+          1
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "frame1_head.block2.conv2.dw.weight",
+        "numel": 504,
+        "packed_bytes": 256,
+        "scale_bytes": 32,
+        "shape": [
+          56,
+          1,
+          3,
+          3
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "frame1_head.block2.conv2.pw.weight",
+        "numel": 3136,
+        "packed_bytes": 1568,
+        "scale_bytes": 196,
+        "shape": [
+          56,
+          56,
+          1,
+          1
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "frame1_head.pre.dw.weight",
+        "numel": 504,
+        "packed_bytes": 256,
+        "scale_bytes": 32,
+        "shape": [
+          56,
+          1,
+          3,
+          3
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "frame1_head.pre.pw.weight",
+        "numel": 2912,
+        "packed_bytes": 1456,
+        "scale_bytes": 182,
+        "shape": [
+          52,
+          56,
+          1,
+          1
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "frame2_head.block1.conv1.dw.weight",
+        "numel": 504,
+        "packed_bytes": 256,
+        "scale_bytes": 32,
+        "shape": [
+          56,
+          1,
+          3,
+          3
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "frame2_head.block1.conv1.pw.weight",
+        "numel": 3136,
+        "packed_bytes": 1568,
+        "scale_bytes": 196,
+        "shape": [
+          56,
+          56,
+          1,
+          1
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "frame2_head.block1.conv2.dw.weight",
+        "numel": 504,
+        "packed_bytes": 256,
+        "scale_bytes": 32,
+        "shape": [
+          56,
+          1,
+          3,
+          3
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "frame2_head.block1.conv2.pw.weight",
+        "numel": 3136,
+        "packed_bytes": 1568,
+        "scale_bytes": 196,
+        "shape": [
+          56,
+          56,
+          1,
+          1
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "frame2_head.block2.conv1.dw.weight",
+        "numel": 504,
+        "packed_bytes": 256,
+        "scale_bytes": 32,
+        "shape": [
+          56,
+          1,
+          3,
+          3
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "frame2_head.block2.conv1.pw.weight",
+        "numel": 3136,
+        "packed_bytes": 1568,
+        "scale_bytes": 196,
+        "shape": [
+          56,
+          56,
+          1,
+          1
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "frame2_head.block2.conv2.dw.weight",
+        "numel": 504,
+        "packed_bytes": 256,
+        "scale_bytes": 32,
+        "shape": [
+          56,
+          1,
+          3,
+          3
+        ]
+      },
+      {
+        "block_size": 32,
+        "name": "frame2_head.block2.conv2.pw.weight",
+        "numel": 3136,
+        "packed_bytes": 1568,
+        "scale_bytes": 196,
+        "shape": [
+          56,
+          56,
+          1,
+          1
+        ]
+      },
+      {
+        "block_size": 64,
+        "name": "frame2_head.pre.dw.weight",
+        "numel": 504,
+        "packed_bytes": 256,
+        "scale_bytes": 16,
+        "shape": [
+          56,
+          1,
+          3,
+          3
+        ]
+      },
+      {
+        "block_size": 64,
+        "name": "frame2_head.pre.pw.weight",
+        "numel": 2912,
+        "packed_bytes": 1472,
+        "scale_bytes": 92,
+        "shape": [
+          52,
+          56,
+          1,
+          1
+        ]
+      }
+    ],
+    "header_bytes": 576,
+    "payload_bytes": 59776,
+    "payload_sha256": "5d6e9aa336cfd05b6959223ad994738df6ec39e73043ad9b245c71cc6c6a7395",
+    "policy": {
+      "component_awareness": {
+        "aggressive_block_size": 64,
+        "aggressive_prefixes": [
+          {
+            "block_size": 64,
+            "prefix": "frame2_head.pre",
+            "reason": "frame2-only static head tensor group; lower direct PoseNet risk than shared trunk, frame1 FiLM head, or pose MLP"
+          }
+        ],
+        "baseline_block_size": 32,
+        "policy_family": "component-aware-v1",
+        "protected_prefixes": [
+          {
+            "block_size": 32,
+            "prefix": "shared_trunk",
+            "reason": "shared representation feeds both frames; prior MQZ1 default-64 candidate showed PoseNet collapse"
+          },
+          {
+            "block_size": 32,
+            "prefix": "frame1_head",
+            "reason": "pose-conditioned frame head; keep at source QZS3 block size"
+          },
+          {
+            "block_size": 32,
+            "prefix": "pose_mlp",
+            "reason": "direct pose-conditioning path; never made more aggressive in this policy"
+          }
+        ],
+        "schema": "component_aware_mixed_qzs_policy_v1",
+        "selection_rule": "default to the exact-evaluated QZS3 b32 block size, protect all pose-critical prefixes, and shrink only frame2-only tensor groups",
+        "tier": "frame2_pre64"
+      },
+      "default_block_size": 32,
+      "exact_evaluable_archive": true,
+      "name": "component_aware_v1_frame2_pre64",
+      "prefix_overrides": [
+        {
+          "block_size": 64,
+          "prefix": "frame2_head.pre"
+        }
+      ],
+      "spec": "component-aware-v1:frame2_pre64"
+    },
+    "runtime_decoder_available": true,
+    "schema": "mixed_qzs_block_screen_v1",
+    "segment_bytes": {
+      "bias": 2284,
+      "dense_fp": 3104,
+      "dense_other": 0,
+      "fp_weight": 684,
+      "packed": 38048,
+      "qv": 10424,
+      "scales": 4648
+    },
+    "source_codec_family": "QZS3",
+    "wire_format": "MQZ1"
+  },
+  "evidence_grade": "empirical_byte_screen_only_until_cuda_auth_eval",
+  "exact_evaluable_archive": true,
+  "exact_evaluable_reason": "mixed/local QZS blocks use the MQZ1 runtime decoder; still not promotable without exact CUDA auth eval",
+  "formula_rate_score_delta": 0.00011053258621828044,
+  "output_archive": "/Users/adpena/Projects/pact/experiments/results/mixed_local_qzs_component_aware_20260502/component_aware_v1_frame2_pre64/archive.zip",
+  "output_archive_bytes": 276513,
+  "output_archive_sha256": "7f4623c5ac9efe741f724d609afa4882ec3788109ee333ebc4bffd5d618dc6d6",
+  "packed_payload_stage": {
+    "brotli_quality": 11,
+    "evidence_grade": "empirical",
+    "formula_only_rate_delta": -0.00341319299370425,
+    "header": {
+      "members": [
+        {
+          "bytes": 59776,
+          "codec": "raw",
+          "name": "renderer.bin",
+          "sha256": "5d6e9aa336cfd05b6959223ad994738df6ec39e73043ad9b245c71cc6c6a7395"
+        },
+        {
+          "bytes": 223385,
+          "codec": "raw",
+          "name": "masks.mkv",
+          "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        {
+          "bytes": 1140,
+          "codec": "pose_qp1_v1",
+          "decoded_bytes": 7200,
+          "decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f",
+          "lossy": true,
+          "name": "optimized_poses.bin",
+          "pose_error_stats": {
+            "max_abs_by_dim": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "pose_dim": 6,
+            "rmse_by_dim": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "rows": 600
+          },
+          "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583",
+          "source_decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+        }
+      ],
+      "payload_format": "public_pr64_mask_first_len_table",
+      "schema": "renderer_payload_pr64_len_table_v1",
+      "source_archive_sha256": "15a01da2760e6bb127c16dff35c7240cd0f89b271df4cec10740fc8f4b5daf97"
+    },
+    "output_archive": "/Users/adpena/Projects/pact/experiments/results/mixed_local_qzs_component_aware_20260502/component_aware_v1_frame2_pre64/archive.zip",
+    "output_archive_bytes": 276513,
+    "output_archive_sha256": "7f4623c5ac9efe741f724d609afa4882ec3788109ee333ebc4bffd5d618dc6d6",
+    "payload_compressed_bytes": 276413,
+    "payload_format": "public_pr64_mask_first_len_table",
+    "payload_member": "p",
+    "payload_raw_bytes": 284313,
+    "pose_codec": "pose_qp1_v1",
+    "pose_residual_topk": 0,
+    "savings_bytes": 5126,
+    "score_claim": false,
+    "source_archive": "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/mixed_qzs_block_rkznq0gf/runtime_members.zip",
+    "source_archive_bytes": 281639,
+    "source_archive_sha256": "15a01da2760e6bb127c16dff35c7240cd0f89b271df4cec10740fc8f4b5daf97"
+  },
+  "policy_evidence_inputs": [
+    {
+      "bytes": 3331,
+      "exists": true,
+      "path": "/Users/adpena/Projects/pact/experiments/results/vast_harvest/archive_eval_mixed_qzs_c059_20260502/contest_auth_eval.json",
+      "sha256": "7fc3e07e1099585e6d046ada53d659928216162726644174739e69d1c812cfb3",
+      "summary": {
+        "archive_size_bytes": 276095,
+        "avg_posenet_dist": 0.32721686,
+        "avg_segnet_dist": 0.00086619,
+        "json_parseable": true,
+        "n_samples": 600,
+        "pose_collapse_signal": true,
+        "provenance_archive_sha256": "f35fe2c49a891f9c5dbb816f22a82dc8ac4dc318c0f46d8bf070324dd47cb4e0",
+        "provenance_archive_size_bytes": 276095,
+        "provenance_device": "cuda",
+        "provenance_gpu_model": "NVIDIA H100 80GB HBM3",
+        "schema_version": 1,
+        "score_recomputed_from_components": 2.079372901891654
+      }
+    },
+    {
+      "bytes": 169424,
+      "exists": true,
+      "path": "/Users/adpena/Projects/pact/experiments/results/official_component_response_pfp16_direct_fd_mixed_complete_response_only_20260501/sensitivity_ranked_renderer_blob_perturbation_basis_v1.json",
+      "sha256": "457af67707093bc662a57e37361a6624016bcb33f562aa4ffb6e931aeaaf2251",
+      "summary": {
+        "atom_count": 16,
+        "format": "perturbation_basis_v1",
+        "json_parseable": true,
+        "schema_version": 1,
+        "score_claim": "none",
+        "top_atom_layers": [
+          "renderer.head",
+          "renderer.head",
+          "renderer.head",
+          "renderer.stem_res.conv1",
+          "renderer.stem_res.conv2",
+          "renderer.down_res.conv1",
+          "renderer.fuse_conv",
+          "renderer.stem_conv"
+        ]
+      }
+    }
+  ],
+  "promotion_eligible": false,
+  "renderer": {
+    "output_renderer_bytes": 59776,
+    "output_renderer_format": "MQZ1",
+    "output_renderer_sha256": "5d6e9aa336cfd05b6959223ad994738df6ec39e73043ad9b245c71cc6c6a7395",
+    "source_renderer_bytes": 59288,
+    "source_renderer_format": "QZS3",
+    "source_renderer_sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+  },
+  "schema_version": 1,
+  "score_claim": false,
+  "source_archive": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_qzs3_b32_maskfirst_qp1_fix1_t4_20260502T0331Z/archive.zip",
+  "source_archive_bytes": 276347,
+  "source_archive_sha256": "cf44aa7fdb13b9ab6236aefde1f5f58e915d7dfa99128246235443841396c6ab",
+  "source_evidence": {
+    "bytes": 4923,
+    "exists": true,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_qzs3_b32_maskfirst_qp1_fix1_t4_20260502T0331Z/contest_auth_eval.json",
+    "sha256": "580ee31d22aa99fa496e0f94bec64127ed023f9e1ff2eccaf969f7655fb3959d"
+  },
+  "source_runtime_contract": {
+    "packed_payload_member": "p",
+    "packed_payload_unpack_summary": {
+      "members": [
+        {
+          "bytes": 59288,
+          "name": "renderer.bin",
+          "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+        },
+        {
+          "bytes": 223385,
+          "name": "masks.mkv",
+          "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        {
+          "bytes": 7200,
+          "name": "optimized_poses.bin",
+          "sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+        }
+      ],
+      "payload_bytes": 283825,
+      "payload_format": "public_pr64_mask_first_len_table",
+      "schema": "renderer_payload_pr64_len_table_v1",
+      "source_archive_sha256": null
+    },
+    "source_archive_contract": "packed_payload_zip",
+    "unpacked_from_packed_payload": true
+  },
+  "tool": "experiments/build_mixed_qzs_block_candidate.py"
+}

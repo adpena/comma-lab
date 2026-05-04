@@ -1,0 +1,2962 @@
+{
+  "archive": {
+    "formula_rate_score_if_components_unchanged": 0.45515521185514457,
+    "members": [
+      {
+        "compress_type": 8,
+        "compressed_size_bytes": 57609,
+        "crc32": "a9d99871",
+        "date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "name": "renderer.bin",
+        "permissions_octal": "0o644",
+        "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb",
+        "size_bytes": 59288
+      },
+      {
+        "compress_type": 8,
+        "compressed_size_bytes": 180426,
+        "crc32": "f249deab",
+        "date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "name": "grayscale.mkv",
+        "permissions_octal": "0o644",
+        "sha256": "002be9cb1a535e8ac3e519747ec79fbdd0306bdc3613667afc59b526f2e001c8",
+        "size_bytes": 185143
+      },
+      {
+        "compress_type": 8,
+        "compressed_size_bytes": 443908,
+        "crc32": "da8394f4",
+        "date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "name": "alpha4_residual_repair.amr1.xz",
+        "permissions_octal": "0o644",
+        "sha256": "7834911c312d813a1bd60c26d87749d343a40fc285d52ef8f40827f730a31e31",
+        "size_bytes": 443768
+      },
+      {
+        "compress_type": 8,
+        "compressed_size_bytes": 1144,
+        "crc32": "6bc12c2a",
+        "date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "name": "optimized_poses.bin",
+        "permissions_octal": "0o644",
+        "sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f",
+        "size_bytes": 7200
+      }
+    ],
+    "path": "/Users/adpena/Projects/pact/experiments/results/c067_micro_mask_save12k_amr1_full_repair_20260502/runtime_archive/archive.zip",
+    "sha256": "8f859ad7b1c0c5b39f5bcd495aaadc0bf77266f84055fbd1956e9c1d60da5f5b",
+    "size_bytes": 683561
+  },
+  "candidate_after_repair": {
+    "agreement_vs_source_after_repair": {
+      "argmax_agreement": 1.0,
+      "argmax_disagreement": 0.0,
+      "candidate_shape": [
+        600,
+        384,
+        512
+      ],
+      "different_pixels": 0,
+      "different_pixels_by_candidate_class": {
+        "0": 0,
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0
+      },
+      "different_pixels_by_source_class": {
+        "0": 0,
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0
+      },
+      "equal_pixels": 117964800,
+      "num_pixels": 117964800,
+      "residual_confusion_source_to_candidate": {
+        "0": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0
+        },
+        "1": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0
+        },
+        "2": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0
+        },
+        "3": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0
+        },
+        "4": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0
+        }
+      },
+      "shape_match": true,
+      "source_shape": [
+        600,
+        384,
+        512
+      ]
+    },
+    "decoded_class_u8_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+    "decoded_stats": {
+      "class_fractions": {
+        "0": 0.232344114516,
+        "1": 0.005849736532,
+        "2": 0.495179027981,
+        "3": 0.012375445896,
+        "4": 0.254251675076
+      },
+      "class_histogram": {
+        "0": 27408427,
+        "1": 690063,
+        "2": 58413695,
+        "3": 1459867,
+        "4": 29992748
+      },
+      "class_id_u8_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+      "dtype": "torch.int64",
+      "num_pixels": 117964800,
+      "shape": [
+        600,
+        384,
+        512
+      ],
+      "spatial_boundary_edges_4conn": 1616907,
+      "temporal_changed_pixels": 1467257
+    },
+    "selected_region_agreement_after_repair": {
+      "argmax_agreement": 1.0,
+      "argmax_disagreement": 0.0,
+      "different_pixels": 0,
+      "num_pixels": 359711
+    }
+  },
+  "candidate_family": "AMR1_charged_residual_over_lossy_legacy_masks",
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "charged_member_accounting": {
+    "alpha4_residual_repair.amr1.xz": {
+      "bytes": 443768,
+      "role": "charged_amr1_residual_repair",
+      "sha256": "7834911c312d813a1bd60c26d87749d343a40fc285d52ef8f40827f730a31e31"
+    },
+    "grayscale.mkv": {
+      "bytes": 185143,
+      "role": "lossy_legacy_mask_base",
+      "sha256": "002be9cb1a535e8ac3e519747ec79fbdd0306bdc3613667afc59b526f2e001c8"
+    },
+    "optimized_poses.bin": {
+      "bytes": 7200,
+      "role": "runtime_optimized_poses",
+      "sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+    },
+    "renderer.bin": {
+      "bytes": 59288,
+      "role": "runtime_renderer",
+      "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+    }
+  },
+  "cuda_jobs_launched": false,
+  "evidence_grade": "empirical_byte_screen_non_score",
+  "exact_evaluable_archive": true,
+  "lossy_mask_base": {
+    "agreement_vs_source_before_repair": {
+      "argmax_agreement": 0.996950692071,
+      "argmax_disagreement": 0.003049307929,
+      "candidate_shape": [
+        600,
+        384,
+        512
+      ],
+      "different_pixels": 359711,
+      "different_pixels_by_candidate_class": {
+        "0": 157018,
+        "1": 140824,
+        "2": 41324,
+        "3": 18023,
+        "4": 2522
+      },
+      "different_pixels_by_source_class": {
+        "0": 125289,
+        "1": 153227,
+        "2": 38145,
+        "3": 36238,
+        "4": 6812
+      },
+      "equal_pixels": 117605089,
+      "num_pixels": 117964800,
+      "residual_confusion_source_to_candidate": {
+        "0": {
+          "0": 0,
+          "1": 116236,
+          "2": 7886,
+          "3": 636,
+          "4": 531
+        },
+        "1": {
+          "0": 152060,
+          "1": 0,
+          "2": 1023,
+          "3": 108,
+          "4": 36
+        },
+        "2": {
+          "0": 4060,
+          "1": 21441,
+          "2": 0,
+          "3": 12625,
+          "4": 19
+        },
+        "3": {
+          "0": 387,
+          "1": 2788,
+          "2": 31127,
+          "3": 0,
+          "4": 1936
+        },
+        "4": {
+          "0": 511,
+          "1": 359,
+          "2": 1288,
+          "3": 4654,
+          "4": 0
+        }
+      },
+      "shape_match": true,
+      "source_shape": [
+        600,
+        384,
+        512
+      ]
+    },
+    "archive_member": "grayscale.mkv",
+    "decode": {
+      "decoded_frames": 600,
+      "decoder": "legacy_av1_class_scaled_gray",
+      "decoder_contract": "legacy masks.mkv decode through inflate_renderer.py, then AMR1 repair hook",
+      "ffmpeg": "/opt/homebrew/Cellar/ffmpeg/8.1_1/bin/ffmpeg",
+      "ffprobe": "/opt/homebrew/Cellar/ffmpeg/8.1_1/bin/ffprobe",
+      "height": 384,
+      "max_frames": null,
+      "reported_frames": null,
+      "truncated_by_builder": false,
+      "width": 512
+    },
+    "decode_mode": "legacy",
+    "decoded_class_u8_sha256": "46c33d28505be0eae99ca26719a164fbc54005805614d5e77282b58dbc72b627",
+    "decoded_stats": {
+      "class_fractions": {
+        "0": 0.232613084581,
+        "1": 0.005744594998,
+        "2": 0.495205976698,
+        "3": 0.012221035428,
+        "4": 0.254215308295
+      },
+      "class_histogram": {
+        "0": 27440156,
+        "1": 677660,
+        "2": 58416874,
+        "3": 1441652,
+        "4": 29988458
+      },
+      "class_id_u8_sha256": "46c33d28505be0eae99ca26719a164fbc54005805614d5e77282b58dbc72b627",
+      "dtype": "torch.int64",
+      "num_pixels": 117964800,
+      "shape": [
+        600,
+        384,
+        512
+      ],
+      "spatial_boundary_edges_4conn": 1709645,
+      "temporal_changed_pixels": 1409985
+    },
+    "input_path": "/Users/adpena/Projects/pact/experiments/results/c067_micro_mask_save12k_amr1_full_repair_20260502/input/lossy_masks.mkv",
+    "sha256": "002be9cb1a535e8ac3e519747ec79fbdd0306bdc3613667afc59b526f2e001c8",
+    "size_bytes": 185143
+  },
+  "mode": "runtime_legacy_amr1_residual_repair",
+  "non_promotable_reason": "byte-screen archive only; exact CUDA auth eval has not been run",
+  "promotion_eligible": false,
+  "recorded_at_utc": "2026-05-02T20:50:29Z",
+  "repair_payload": {
+    "archive_member": "alpha4_residual_repair.amr1.xz",
+    "compressed_sha256": "7834911c312d813a1bd60c26d87749d343a40fc285d52ef8f40827f730a31e31",
+    "compressed_size_bytes": 443768,
+    "compressor": "lzma_xz",
+    "raw_amr1_sha256": "92aaa3f6b3047229734d8434eea7f59e9fec04cd7bf434c0d428f53c11f5e76b",
+    "raw_amr1_size_bytes": 2342555,
+    "record_count": 212816,
+    "selection": {
+      "budget_limited": false,
+      "class_priority": [
+        2,
+        1,
+        3,
+        4,
+        0
+      ],
+      "fail_on_partial_repair": false,
+      "max_repair_pixels": null,
+      "max_repair_runs": null,
+      "partial_reason": null,
+      "partial_repair": false,
+      "policy": {
+        "boundary_dilation": 1,
+        "class_ids": [],
+        "ego_boxes": [
+          {
+            "frames": null,
+            "name": "ego_hood_motion_region",
+            "x0": 144,
+            "x1": 368,
+            "y0": 252,
+            "y1": -1
+          }
+        ],
+        "expanded_hard_pair_frames": [],
+        "foveal_boxes": [
+          {
+            "frames": null,
+            "name": "foveal_vanish_region",
+            "x0": 160,
+            "x1": 352,
+            "y0": 96,
+            "y1": 288
+          }
+        ],
+        "hard_frame_indices": [],
+        "hard_pair_indices": [],
+        "horizon_bands": [
+          {
+            "frames": null,
+            "name": "horizon_band",
+            "x0": 0,
+            "x1": -1,
+            "y0": 150,
+            "y1": 210
+          }
+        ],
+        "label": "all_residual_pixels_amr1",
+        "repair_only_changed_pixels": true,
+        "select_all_differences": true
+      },
+      "policy_selected_repair_pixels_before_budget": 359711,
+      "policy_selected_repair_pixels_by_source_class": {
+        "0": 125289,
+        "1": 153227,
+        "2": 38145,
+        "3": 36238,
+        "4": 6812
+      },
+      "policy_selected_residual_fraction": 1.0,
+      "residual_pixel_coverage": 1.0,
+      "selected_repair_pixels": 359711,
+      "selected_repair_pixels_by_source_class": {
+        "0": 125289,
+        "1": 153227,
+        "2": 38145,
+        "3": 36238,
+        "4": 6812
+      },
+      "selected_repair_runs": 212816,
+      "strategy": "charged_mask_grammar_pose_sensitive_amr1_repair_v1",
+      "total_residual_pixels": 359711
+    }
+  },
+  "repair_selector": {
+    "actual_expanded_hard_pair_frames": [],
+    "frames_with_selected_repairs": 600,
+    "hard_pair_frame_mapping": "none",
+    "per_frame_selected_repair_pixels_nonzero": [
+      {
+        "frame": 0,
+        "selected_repair_pixels": 27
+      },
+      {
+        "frame": 1,
+        "selected_repair_pixels": 760
+      },
+      {
+        "frame": 2,
+        "selected_repair_pixels": 410
+      },
+      {
+        "frame": 3,
+        "selected_repair_pixels": 664
+      },
+      {
+        "frame": 4,
+        "selected_repair_pixels": 331
+      },
+      {
+        "frame": 5,
+        "selected_repair_pixels": 769
+      },
+      {
+        "frame": 6,
+        "selected_repair_pixels": 482
+      },
+      {
+        "frame": 7,
+        "selected_repair_pixels": 746
+      },
+      {
+        "frame": 8,
+        "selected_repair_pixels": 335
+      },
+      {
+        "frame": 9,
+        "selected_repair_pixels": 813
+      },
+      {
+        "frame": 10,
+        "selected_repair_pixels": 519
+      },
+      {
+        "frame": 11,
+        "selected_repair_pixels": 810
+      },
+      {
+        "frame": 12,
+        "selected_repair_pixels": 393
+      },
+      {
+        "frame": 13,
+        "selected_repair_pixels": 744
+      },
+      {
+        "frame": 14,
+        "selected_repair_pixels": 527
+      },
+      {
+        "frame": 15,
+        "selected_repair_pixels": 774
+      },
+      {
+        "frame": 16,
+        "selected_repair_pixels": 311
+      },
+      {
+        "frame": 17,
+        "selected_repair_pixels": 793
+      },
+      {
+        "frame": 18,
+        "selected_repair_pixels": 609
+      },
+      {
+        "frame": 19,
+        "selected_repair_pixels": 761
+      },
+      {
+        "frame": 20,
+        "selected_repair_pixels": 390
+      },
+      {
+        "frame": 21,
+        "selected_repair_pixels": 895
+      },
+      {
+        "frame": 22,
+        "selected_repair_pixels": 517
+      },
+      {
+        "frame": 23,
+        "selected_repair_pixels": 714
+      },
+      {
+        "frame": 24,
+        "selected_repair_pixels": 286
+      },
+      {
+        "frame": 25,
+        "selected_repair_pixels": 750
+      },
+      {
+        "frame": 26,
+        "selected_repair_pixels": 556
+      },
+      {
+        "frame": 27,
+        "selected_repair_pixels": 899
+      },
+      {
+        "frame": 28,
+        "selected_repair_pixels": 317
+      },
+      {
+        "frame": 29,
+        "selected_repair_pixels": 809
+      },
+      {
+        "frame": 30,
+        "selected_repair_pixels": 526
+      },
+      {
+        "frame": 31,
+        "selected_repair_pixels": 774
+      },
+      {
+        "frame": 32,
+        "selected_repair_pixels": 156
+      },
+      {
+        "frame": 33,
+        "selected_repair_pixels": 677
+      },
+      {
+        "frame": 34,
+        "selected_repair_pixels": 516
+      },
+      {
+        "frame": 35,
+        "selected_repair_pixels": 804
+      },
+      {
+        "frame": 36,
+        "selected_repair_pixels": 367
+      },
+      {
+        "frame": 37,
+        "selected_repair_pixels": 807
+      },
+      {
+        "frame": 38,
+        "selected_repair_pixels": 525
+      },
+      {
+        "frame": 39,
+        "selected_repair_pixels": 705
+      },
+      {
+        "frame": 40,
+        "selected_repair_pixels": 289
+      },
+      {
+        "frame": 41,
+        "selected_repair_pixels": 706
+      },
+      {
+        "frame": 42,
+        "selected_repair_pixels": 498
+      },
+      {
+        "frame": 43,
+        "selected_repair_pixels": 712
+      },
+      {
+        "frame": 44,
+        "selected_repair_pixels": 440
+      },
+      {
+        "frame": 45,
+        "selected_repair_pixels": 957
+      },
+      {
+        "frame": 46,
+        "selected_repair_pixels": 461
+      },
+      {
+        "frame": 47,
+        "selected_repair_pixels": 693
+      },
+      {
+        "frame": 48,
+        "selected_repair_pixels": 297
+      },
+      {
+        "frame": 49,
+        "selected_repair_pixels": 721
+      },
+      {
+        "frame": 50,
+        "selected_repair_pixels": 485
+      },
+      {
+        "frame": 51,
+        "selected_repair_pixels": 833
+      },
+      {
+        "frame": 52,
+        "selected_repair_pixels": 434
+      },
+      {
+        "frame": 53,
+        "selected_repair_pixels": 809
+      },
+      {
+        "frame": 54,
+        "selected_repair_pixels": 542
+      },
+      {
+        "frame": 55,
+        "selected_repair_pixels": 725
+      },
+      {
+        "frame": 56,
+        "selected_repair_pixels": 288
+      },
+      {
+        "frame": 57,
+        "selected_repair_pixels": 741
+      },
+      {
+        "frame": 58,
+        "selected_repair_pixels": 423
+      },
+      {
+        "frame": 59,
+        "selected_repair_pixels": 782
+      },
+      {
+        "frame": 60,
+        "selected_repair_pixels": 381
+      },
+      {
+        "frame": 61,
+        "selected_repair_pixels": 897
+      },
+      {
+        "frame": 62,
+        "selected_repair_pixels": 548
+      },
+      {
+        "frame": 63,
+        "selected_repair_pixels": 753
+      },
+      {
+        "frame": 64,
+        "selected_repair_pixels": 115
+      },
+      {
+        "frame": 65,
+        "selected_repair_pixels": 884
+      },
+      {
+        "frame": 66,
+        "selected_repair_pixels": 589
+      },
+      {
+        "frame": 67,
+        "selected_repair_pixels": 882
+      },
+      {
+        "frame": 68,
+        "selected_repair_pixels": 355
+      },
+      {
+        "frame": 69,
+        "selected_repair_pixels": 785
+      },
+      {
+        "frame": 70,
+        "selected_repair_pixels": 488
+      },
+      {
+        "frame": 71,
+        "selected_repair_pixels": 819
+      },
+      {
+        "frame": 72,
+        "selected_repair_pixels": 318
+      },
+      {
+        "frame": 73,
+        "selected_repair_pixels": 691
+      },
+      {
+        "frame": 74,
+        "selected_repair_pixels": 565
+      },
+      {
+        "frame": 75,
+        "selected_repair_pixels": 724
+      },
+      {
+        "frame": 76,
+        "selected_repair_pixels": 311
+      },
+      {
+        "frame": 77,
+        "selected_repair_pixels": 669
+      },
+      {
+        "frame": 78,
+        "selected_repair_pixels": 526
+      },
+      {
+        "frame": 79,
+        "selected_repair_pixels": 819
+      },
+      {
+        "frame": 80,
+        "selected_repair_pixels": 297
+      },
+      {
+        "frame": 81,
+        "selected_repair_pixels": 735
+      },
+      {
+        "frame": 82,
+        "selected_repair_pixels": 411
+      },
+      {
+        "frame": 83,
+        "selected_repair_pixels": 843
+      },
+      {
+        "frame": 84,
+        "selected_repair_pixels": 377
+      },
+      {
+        "frame": 85,
+        "selected_repair_pixels": 751
+      },
+      {
+        "frame": 86,
+        "selected_repair_pixels": 496
+      },
+      {
+        "frame": 87,
+        "selected_repair_pixels": 783
+      },
+      {
+        "frame": 88,
+        "selected_repair_pixels": 301
+      },
+      {
+        "frame": 89,
+        "selected_repair_pixels": 738
+      },
+      {
+        "frame": 90,
+        "selected_repair_pixels": 480
+      },
+      {
+        "frame": 91,
+        "selected_repair_pixels": 718
+      },
+      {
+        "frame": 92,
+        "selected_repair_pixels": 338
+      },
+      {
+        "frame": 93,
+        "selected_repair_pixels": 760
+      },
+      {
+        "frame": 94,
+        "selected_repair_pixels": 408
+      },
+      {
+        "frame": 95,
+        "selected_repair_pixels": 752
+      },
+      {
+        "frame": 96,
+        "selected_repair_pixels": 101
+      },
+      {
+        "frame": 97,
+        "selected_repair_pixels": 690
+      },
+      {
+        "frame": 98,
+        "selected_repair_pixels": 398
+      },
+      {
+        "frame": 99,
+        "selected_repair_pixels": 855
+      },
+      {
+        "frame": 100,
+        "selected_repair_pixels": 327
+      },
+      {
+        "frame": 101,
+        "selected_repair_pixels": 904
+      },
+      {
+        "frame": 102,
+        "selected_repair_pixels": 546
+      },
+      {
+        "frame": 103,
+        "selected_repair_pixels": 929
+      },
+      {
+        "frame": 104,
+        "selected_repair_pixels": 299
+      },
+      {
+        "frame": 105,
+        "selected_repair_pixels": 728
+      },
+      {
+        "frame": 106,
+        "selected_repair_pixels": 504
+      },
+      {
+        "frame": 107,
+        "selected_repair_pixels": 795
+      },
+      {
+        "frame": 108,
+        "selected_repair_pixels": 365
+      },
+      {
+        "frame": 109,
+        "selected_repair_pixels": 739
+      },
+      {
+        "frame": 110,
+        "selected_repair_pixels": 491
+      },
+      {
+        "frame": 111,
+        "selected_repair_pixels": 807
+      },
+      {
+        "frame": 112,
+        "selected_repair_pixels": 343
+      },
+      {
+        "frame": 113,
+        "selected_repair_pixels": 841
+      },
+      {
+        "frame": 114,
+        "selected_repair_pixels": 492
+      },
+      {
+        "frame": 115,
+        "selected_repair_pixels": 818
+      },
+      {
+        "frame": 116,
+        "selected_repair_pixels": 336
+      },
+      {
+        "frame": 117,
+        "selected_repair_pixels": 914
+      },
+      {
+        "frame": 118,
+        "selected_repair_pixels": 523
+      },
+      {
+        "frame": 119,
+        "selected_repair_pixels": 802
+      },
+      {
+        "frame": 120,
+        "selected_repair_pixels": 294
+      },
+      {
+        "frame": 121,
+        "selected_repair_pixels": 828
+      },
+      {
+        "frame": 122,
+        "selected_repair_pixels": 581
+      },
+      {
+        "frame": 123,
+        "selected_repair_pixels": 821
+      },
+      {
+        "frame": 124,
+        "selected_repair_pixels": 399
+      },
+      {
+        "frame": 125,
+        "selected_repair_pixels": 893
+      },
+      {
+        "frame": 126,
+        "selected_repair_pixels": 525
+      },
+      {
+        "frame": 127,
+        "selected_repair_pixels": 832
+      },
+      {
+        "frame": 128,
+        "selected_repair_pixels": 144
+      },
+      {
+        "frame": 129,
+        "selected_repair_pixels": 775
+      },
+      {
+        "frame": 130,
+        "selected_repair_pixels": 393
+      },
+      {
+        "frame": 131,
+        "selected_repair_pixels": 750
+      },
+      {
+        "frame": 132,
+        "selected_repair_pixels": 382
+      },
+      {
+        "frame": 133,
+        "selected_repair_pixels": 933
+      },
+      {
+        "frame": 134,
+        "selected_repair_pixels": 564
+      },
+      {
+        "frame": 135,
+        "selected_repair_pixels": 795
+      },
+      {
+        "frame": 136,
+        "selected_repair_pixels": 360
+      },
+      {
+        "frame": 137,
+        "selected_repair_pixels": 899
+      },
+      {
+        "frame": 138,
+        "selected_repair_pixels": 630
+      },
+      {
+        "frame": 139,
+        "selected_repair_pixels": 784
+      },
+      {
+        "frame": 140,
+        "selected_repair_pixels": 413
+      },
+      {
+        "frame": 141,
+        "selected_repair_pixels": 825
+      },
+      {
+        "frame": 142,
+        "selected_repair_pixels": 572
+      },
+      {
+        "frame": 143,
+        "selected_repair_pixels": 793
+      },
+      {
+        "frame": 144,
+        "selected_repair_pixels": 274
+      },
+      {
+        "frame": 145,
+        "selected_repair_pixels": 766
+      },
+      {
+        "frame": 146,
+        "selected_repair_pixels": 541
+      },
+      {
+        "frame": 147,
+        "selected_repair_pixels": 787
+      },
+      {
+        "frame": 148,
+        "selected_repair_pixels": 433
+      },
+      {
+        "frame": 149,
+        "selected_repair_pixels": 830
+      },
+      {
+        "frame": 150,
+        "selected_repair_pixels": 545
+      },
+      {
+        "frame": 151,
+        "selected_repair_pixels": 927
+      },
+      {
+        "frame": 152,
+        "selected_repair_pixels": 368
+      },
+      {
+        "frame": 153,
+        "selected_repair_pixels": 685
+      },
+      {
+        "frame": 154,
+        "selected_repair_pixels": 521
+      },
+      {
+        "frame": 155,
+        "selected_repair_pixels": 817
+      },
+      {
+        "frame": 156,
+        "selected_repair_pixels": 355
+      },
+      {
+        "frame": 157,
+        "selected_repair_pixels": 674
+      },
+      {
+        "frame": 158,
+        "selected_repair_pixels": 559
+      },
+      {
+        "frame": 159,
+        "selected_repair_pixels": 931
+      },
+      {
+        "frame": 160,
+        "selected_repair_pixels": 258
+      },
+      {
+        "frame": 161,
+        "selected_repair_pixels": 18
+      },
+      {
+        "frame": 162,
+        "selected_repair_pixels": 681
+      },
+      {
+        "frame": 163,
+        "selected_repair_pixels": 516
+      },
+      {
+        "frame": 164,
+        "selected_repair_pixels": 894
+      },
+      {
+        "frame": 165,
+        "selected_repair_pixels": 366
+      },
+      {
+        "frame": 166,
+        "selected_repair_pixels": 813
+      },
+      {
+        "frame": 167,
+        "selected_repair_pixels": 514
+      },
+      {
+        "frame": 168,
+        "selected_repair_pixels": 788
+      },
+      {
+        "frame": 169,
+        "selected_repair_pixels": 302
+      },
+      {
+        "frame": 170,
+        "selected_repair_pixels": 702
+      },
+      {
+        "frame": 171,
+        "selected_repair_pixels": 588
+      },
+      {
+        "frame": 172,
+        "selected_repair_pixels": 838
+      },
+      {
+        "frame": 173,
+        "selected_repair_pixels": 438
+      },
+      {
+        "frame": 174,
+        "selected_repair_pixels": 716
+      },
+      {
+        "frame": 175,
+        "selected_repair_pixels": 555
+      },
+      {
+        "frame": 176,
+        "selected_repair_pixels": 805
+      },
+      {
+        "frame": 177,
+        "selected_repair_pixels": 419
+      },
+      {
+        "frame": 178,
+        "selected_repair_pixels": 921
+      },
+      {
+        "frame": 179,
+        "selected_repair_pixels": 467
+      },
+      {
+        "frame": 180,
+        "selected_repair_pixels": 698
+      },
+      {
+        "frame": 181,
+        "selected_repair_pixels": 380
+      },
+      {
+        "frame": 182,
+        "selected_repair_pixels": 874
+      },
+      {
+        "frame": 183,
+        "selected_repair_pixels": 483
+      },
+      {
+        "frame": 184,
+        "selected_repair_pixels": 752
+      },
+      {
+        "frame": 185,
+        "selected_repair_pixels": 260
+      },
+      {
+        "frame": 186,
+        "selected_repair_pixels": 645
+      },
+      {
+        "frame": 187,
+        "selected_repair_pixels": 455
+      },
+      {
+        "frame": 188,
+        "selected_repair_pixels": 734
+      },
+      {
+        "frame": 189,
+        "selected_repair_pixels": 342
+      },
+      {
+        "frame": 190,
+        "selected_repair_pixels": 730
+      },
+      {
+        "frame": 191,
+        "selected_repair_pixels": 500
+      },
+      {
+        "frame": 192,
+        "selected_repair_pixels": 932
+      },
+      {
+        "frame": 193,
+        "selected_repair_pixels": 95
+      },
+      {
+        "frame": 194,
+        "selected_repair_pixels": 897
+      },
+      {
+        "frame": 195,
+        "selected_repair_pixels": 419
+      },
+      {
+        "frame": 196,
+        "selected_repair_pixels": 903
+      },
+      {
+        "frame": 197,
+        "selected_repair_pixels": 303
+      },
+      {
+        "frame": 198,
+        "selected_repair_pixels": 709
+      },
+      {
+        "frame": 199,
+        "selected_repair_pixels": 486
+      },
+      {
+        "frame": 200,
+        "selected_repair_pixels": 951
+      },
+      {
+        "frame": 201,
+        "selected_repair_pixels": 305
+      },
+      {
+        "frame": 202,
+        "selected_repair_pixels": 758
+      },
+      {
+        "frame": 203,
+        "selected_repair_pixels": 494
+      },
+      {
+        "frame": 204,
+        "selected_repair_pixels": 734
+      },
+      {
+        "frame": 205,
+        "selected_repair_pixels": 390
+      },
+      {
+        "frame": 206,
+        "selected_repair_pixels": 737
+      },
+      {
+        "frame": 207,
+        "selected_repair_pixels": 440
+      },
+      {
+        "frame": 208,
+        "selected_repair_pixels": 757
+      },
+      {
+        "frame": 209,
+        "selected_repair_pixels": 186
+      },
+      {
+        "frame": 210,
+        "selected_repair_pixels": 875
+      },
+      {
+        "frame": 211,
+        "selected_repair_pixels": 432
+      },
+      {
+        "frame": 212,
+        "selected_repair_pixels": 668
+      },
+      {
+        "frame": 213,
+        "selected_repair_pixels": 298
+      },
+      {
+        "frame": 214,
+        "selected_repair_pixels": 743
+      },
+      {
+        "frame": 215,
+        "selected_repair_pixels": 646
+      },
+      {
+        "frame": 216,
+        "selected_repair_pixels": 601
+      },
+      {
+        "frame": 217,
+        "selected_repair_pixels": 239
+      },
+      {
+        "frame": 218,
+        "selected_repair_pixels": 594
+      },
+      {
+        "frame": 219,
+        "selected_repair_pixels": 454
+      },
+      {
+        "frame": 220,
+        "selected_repair_pixels": 857
+      },
+      {
+        "frame": 221,
+        "selected_repair_pixels": 299
+      },
+      {
+        "frame": 222,
+        "selected_repair_pixels": 789
+      },
+      {
+        "frame": 223,
+        "selected_repair_pixels": 469
+      },
+      {
+        "frame": 224,
+        "selected_repair_pixels": 741
+      },
+      {
+        "frame": 225,
+        "selected_repair_pixels": 120
+      },
+      {
+        "frame": 226,
+        "selected_repair_pixels": 727
+      },
+      {
+        "frame": 227,
+        "selected_repair_pixels": 447
+      },
+      {
+        "frame": 228,
+        "selected_repair_pixels": 761
+      },
+      {
+        "frame": 229,
+        "selected_repair_pixels": 311
+      },
+      {
+        "frame": 230,
+        "selected_repair_pixels": 785
+      },
+      {
+        "frame": 231,
+        "selected_repair_pixels": 490
+      },
+      {
+        "frame": 232,
+        "selected_repair_pixels": 642
+      },
+      {
+        "frame": 233,
+        "selected_repair_pixels": 357
+      },
+      {
+        "frame": 234,
+        "selected_repair_pixels": 607
+      },
+      {
+        "frame": 235,
+        "selected_repair_pixels": 331
+      },
+      {
+        "frame": 236,
+        "selected_repair_pixels": 706
+      },
+      {
+        "frame": 237,
+        "selected_repair_pixels": 367
+      },
+      {
+        "frame": 238,
+        "selected_repair_pixels": 656
+      },
+      {
+        "frame": 239,
+        "selected_repair_pixels": 447
+      },
+      {
+        "frame": 240,
+        "selected_repair_pixels": 689
+      },
+      {
+        "frame": 241,
+        "selected_repair_pixels": 313
+      },
+      {
+        "frame": 242,
+        "selected_repair_pixels": 686
+      },
+      {
+        "frame": 243,
+        "selected_repair_pixels": 453
+      },
+      {
+        "frame": 244,
+        "selected_repair_pixels": 615
+      },
+      {
+        "frame": 245,
+        "selected_repair_pixels": 327
+      },
+      {
+        "frame": 246,
+        "selected_repair_pixels": 679
+      },
+      {
+        "frame": 247,
+        "selected_repair_pixels": 516
+      },
+      {
+        "frame": 248,
+        "selected_repair_pixels": 754
+      },
+      {
+        "frame": 249,
+        "selected_repair_pixels": 221
+      },
+      {
+        "frame": 250,
+        "selected_repair_pixels": 531
+      },
+      {
+        "frame": 251,
+        "selected_repair_pixels": 415
+      },
+      {
+        "frame": 252,
+        "selected_repair_pixels": 805
+      },
+      {
+        "frame": 253,
+        "selected_repair_pixels": 286
+      },
+      {
+        "frame": 254,
+        "selected_repair_pixels": 769
+      },
+      {
+        "frame": 255,
+        "selected_repair_pixels": 374
+      },
+      {
+        "frame": 256,
+        "selected_repair_pixels": 736
+      },
+      {
+        "frame": 257,
+        "selected_repair_pixels": 121
+      },
+      {
+        "frame": 258,
+        "selected_repair_pixels": 753
+      },
+      {
+        "frame": 259,
+        "selected_repair_pixels": 547
+      },
+      {
+        "frame": 260,
+        "selected_repair_pixels": 816
+      },
+      {
+        "frame": 261,
+        "selected_repair_pixels": 348
+      },
+      {
+        "frame": 262,
+        "selected_repair_pixels": 927
+      },
+      {
+        "frame": 263,
+        "selected_repair_pixels": 554
+      },
+      {
+        "frame": 264,
+        "selected_repair_pixels": 748
+      },
+      {
+        "frame": 265,
+        "selected_repair_pixels": 241
+      },
+      {
+        "frame": 266,
+        "selected_repair_pixels": 874
+      },
+      {
+        "frame": 267,
+        "selected_repair_pixels": 450
+      },
+      {
+        "frame": 268,
+        "selected_repair_pixels": 761
+      },
+      {
+        "frame": 269,
+        "selected_repair_pixels": 321
+      },
+      {
+        "frame": 270,
+        "selected_repair_pixels": 711
+      },
+      {
+        "frame": 271,
+        "selected_repair_pixels": 495
+      },
+      {
+        "frame": 272,
+        "selected_repair_pixels": 737
+      },
+      {
+        "frame": 273,
+        "selected_repair_pixels": 244
+      },
+      {
+        "frame": 274,
+        "selected_repair_pixels": 775
+      },
+      {
+        "frame": 275,
+        "selected_repair_pixels": 602
+      },
+      {
+        "frame": 276,
+        "selected_repair_pixels": 727
+      },
+      {
+        "frame": 277,
+        "selected_repair_pixels": 335
+      },
+      {
+        "frame": 278,
+        "selected_repair_pixels": 641
+      },
+      {
+        "frame": 279,
+        "selected_repair_pixels": 489
+      },
+      {
+        "frame": 280,
+        "selected_repair_pixels": 741
+      },
+      {
+        "frame": 281,
+        "selected_repair_pixels": 192
+      },
+      {
+        "frame": 282,
+        "selected_repair_pixels": 797
+      },
+      {
+        "frame": 283,
+        "selected_repair_pixels": 459
+      },
+      {
+        "frame": 284,
+        "selected_repair_pixels": 857
+      },
+      {
+        "frame": 285,
+        "selected_repair_pixels": 365
+      },
+      {
+        "frame": 286,
+        "selected_repair_pixels": 789
+      },
+      {
+        "frame": 287,
+        "selected_repair_pixels": 439
+      },
+      {
+        "frame": 288,
+        "selected_repair_pixels": 756
+      },
+      {
+        "frame": 289,
+        "selected_repair_pixels": 122
+      },
+      {
+        "frame": 290,
+        "selected_repair_pixels": 658
+      },
+      {
+        "frame": 291,
+        "selected_repair_pixels": 476
+      },
+      {
+        "frame": 292,
+        "selected_repair_pixels": 843
+      },
+      {
+        "frame": 293,
+        "selected_repair_pixels": 366
+      },
+      {
+        "frame": 294,
+        "selected_repair_pixels": 837
+      },
+      {
+        "frame": 295,
+        "selected_repair_pixels": 462
+      },
+      {
+        "frame": 296,
+        "selected_repair_pixels": 728
+      },
+      {
+        "frame": 297,
+        "selected_repair_pixels": 281
+      },
+      {
+        "frame": 298,
+        "selected_repair_pixels": 793
+      },
+      {
+        "frame": 299,
+        "selected_repair_pixels": 501
+      },
+      {
+        "frame": 300,
+        "selected_repair_pixels": 921
+      },
+      {
+        "frame": 301,
+        "selected_repair_pixels": 326
+      },
+      {
+        "frame": 302,
+        "selected_repair_pixels": 747
+      },
+      {
+        "frame": 303,
+        "selected_repair_pixels": 522
+      },
+      {
+        "frame": 304,
+        "selected_repair_pixels": 723
+      },
+      {
+        "frame": 305,
+        "selected_repair_pixels": 325
+      },
+      {
+        "frame": 306,
+        "selected_repair_pixels": 727
+      },
+      {
+        "frame": 307,
+        "selected_repair_pixels": 510
+      },
+      {
+        "frame": 308,
+        "selected_repair_pixels": 711
+      },
+      {
+        "frame": 309,
+        "selected_repair_pixels": 321
+      },
+      {
+        "frame": 310,
+        "selected_repair_pixels": 878
+      },
+      {
+        "frame": 311,
+        "selected_repair_pixels": 489
+      },
+      {
+        "frame": 312,
+        "selected_repair_pixels": 822
+      },
+      {
+        "frame": 313,
+        "selected_repair_pixels": 249
+      },
+      {
+        "frame": 314,
+        "selected_repair_pixels": 835
+      },
+      {
+        "frame": 315,
+        "selected_repair_pixels": 463
+      },
+      {
+        "frame": 316,
+        "selected_repair_pixels": 847
+      },
+      {
+        "frame": 317,
+        "selected_repair_pixels": 333
+      },
+      {
+        "frame": 318,
+        "selected_repair_pixels": 871
+      },
+      {
+        "frame": 319,
+        "selected_repair_pixels": 473
+      },
+      {
+        "frame": 320,
+        "selected_repair_pixels": 678
+      },
+      {
+        "frame": 321,
+        "selected_repair_pixels": 222
+      },
+      {
+        "frame": 322,
+        "selected_repair_pixels": 18
+      },
+      {
+        "frame": 323,
+        "selected_repair_pixels": 691
+      },
+      {
+        "frame": 324,
+        "selected_repair_pixels": 542
+      },
+      {
+        "frame": 325,
+        "selected_repair_pixels": 800
+      },
+      {
+        "frame": 326,
+        "selected_repair_pixels": 319
+      },
+      {
+        "frame": 327,
+        "selected_repair_pixels": 710
+      },
+      {
+        "frame": 328,
+        "selected_repair_pixels": 443
+      },
+      {
+        "frame": 329,
+        "selected_repair_pixels": 884
+      },
+      {
+        "frame": 330,
+        "selected_repair_pixels": 324
+      },
+      {
+        "frame": 331,
+        "selected_repair_pixels": 749
+      },
+      {
+        "frame": 332,
+        "selected_repair_pixels": 496
+      },
+      {
+        "frame": 333,
+        "selected_repair_pixels": 742
+      },
+      {
+        "frame": 334,
+        "selected_repair_pixels": 334
+      },
+      {
+        "frame": 335,
+        "selected_repair_pixels": 762
+      },
+      {
+        "frame": 336,
+        "selected_repair_pixels": 410
+      },
+      {
+        "frame": 337,
+        "selected_repair_pixels": 770
+      },
+      {
+        "frame": 338,
+        "selected_repair_pixels": 277
+      },
+      {
+        "frame": 339,
+        "selected_repair_pixels": 683
+      },
+      {
+        "frame": 340,
+        "selected_repair_pixels": 408
+      },
+      {
+        "frame": 341,
+        "selected_repair_pixels": 778
+      },
+      {
+        "frame": 342,
+        "selected_repair_pixels": 353
+      },
+      {
+        "frame": 343,
+        "selected_repair_pixels": 811
+      },
+      {
+        "frame": 344,
+        "selected_repair_pixels": 477
+      },
+      {
+        "frame": 345,
+        "selected_repair_pixels": 759
+      },
+      {
+        "frame": 346,
+        "selected_repair_pixels": 258
+      },
+      {
+        "frame": 347,
+        "selected_repair_pixels": 760
+      },
+      {
+        "frame": 348,
+        "selected_repair_pixels": 574
+      },
+      {
+        "frame": 349,
+        "selected_repair_pixels": 717
+      },
+      {
+        "frame": 350,
+        "selected_repair_pixels": 250
+      },
+      {
+        "frame": 351,
+        "selected_repair_pixels": 813
+      },
+      {
+        "frame": 352,
+        "selected_repair_pixels": 497
+      },
+      {
+        "frame": 353,
+        "selected_repair_pixels": 754
+      },
+      {
+        "frame": 354,
+        "selected_repair_pixels": 119
+      },
+      {
+        "frame": 355,
+        "selected_repair_pixels": 650
+      },
+      {
+        "frame": 356,
+        "selected_repair_pixels": 380
+      },
+      {
+        "frame": 357,
+        "selected_repair_pixels": 770
+      },
+      {
+        "frame": 358,
+        "selected_repair_pixels": 389
+      },
+      {
+        "frame": 359,
+        "selected_repair_pixels": 790
+      },
+      {
+        "frame": 360,
+        "selected_repair_pixels": 385
+      },
+      {
+        "frame": 361,
+        "selected_repair_pixels": 689
+      },
+      {
+        "frame": 362,
+        "selected_repair_pixels": 275
+      },
+      {
+        "frame": 363,
+        "selected_repair_pixels": 761
+      },
+      {
+        "frame": 364,
+        "selected_repair_pixels": 459
+      },
+      {
+        "frame": 365,
+        "selected_repair_pixels": 822
+      },
+      {
+        "frame": 366,
+        "selected_repair_pixels": 314
+      },
+      {
+        "frame": 367,
+        "selected_repair_pixels": 744
+      },
+      {
+        "frame": 368,
+        "selected_repair_pixels": 486
+      },
+      {
+        "frame": 369,
+        "selected_repair_pixels": 829
+      },
+      {
+        "frame": 370,
+        "selected_repair_pixels": 202
+      },
+      {
+        "frame": 371,
+        "selected_repair_pixels": 753
+      },
+      {
+        "frame": 372,
+        "selected_repair_pixels": 489
+      },
+      {
+        "frame": 373,
+        "selected_repair_pixels": 734
+      },
+      {
+        "frame": 374,
+        "selected_repair_pixels": 287
+      },
+      {
+        "frame": 375,
+        "selected_repair_pixels": 774
+      },
+      {
+        "frame": 376,
+        "selected_repair_pixels": 545
+      },
+      {
+        "frame": 377,
+        "selected_repair_pixels": 796
+      },
+      {
+        "frame": 378,
+        "selected_repair_pixels": 193
+      },
+      {
+        "frame": 379,
+        "selected_repair_pixels": 777
+      },
+      {
+        "frame": 380,
+        "selected_repair_pixels": 408
+      },
+      {
+        "frame": 381,
+        "selected_repair_pixels": 695
+      },
+      {
+        "frame": 382,
+        "selected_repair_pixels": 278
+      },
+      {
+        "frame": 383,
+        "selected_repair_pixels": 813
+      },
+      {
+        "frame": 384,
+        "selected_repair_pixels": 471
+      },
+      {
+        "frame": 385,
+        "selected_repair_pixels": 642
+      },
+      {
+        "frame": 386,
+        "selected_repair_pixels": 154
+      },
+      {
+        "frame": 387,
+        "selected_repair_pixels": 687
+      },
+      {
+        "frame": 388,
+        "selected_repair_pixels": 464
+      },
+      {
+        "frame": 389,
+        "selected_repair_pixels": 710
+      },
+      {
+        "frame": 390,
+        "selected_repair_pixels": 339
+      },
+      {
+        "frame": 391,
+        "selected_repair_pixels": 778
+      },
+      {
+        "frame": 392,
+        "selected_repair_pixels": 421
+      },
+      {
+        "frame": 393,
+        "selected_repair_pixels": 748
+      },
+      {
+        "frame": 394,
+        "selected_repair_pixels": 276
+      },
+      {
+        "frame": 395,
+        "selected_repair_pixels": 803
+      },
+      {
+        "frame": 396,
+        "selected_repair_pixels": 424
+      },
+      {
+        "frame": 397,
+        "selected_repair_pixels": 811
+      },
+      {
+        "frame": 398,
+        "selected_repair_pixels": 286
+      },
+      {
+        "frame": 399,
+        "selected_repair_pixels": 754
+      },
+      {
+        "frame": 400,
+        "selected_repair_pixels": 504
+      },
+      {
+        "frame": 401,
+        "selected_repair_pixels": 723
+      },
+      {
+        "frame": 402,
+        "selected_repair_pixels": 232
+      },
+      {
+        "frame": 403,
+        "selected_repair_pixels": 760
+      },
+      {
+        "frame": 404,
+        "selected_repair_pixels": 522
+      },
+      {
+        "frame": 405,
+        "selected_repair_pixels": 797
+      },
+      {
+        "frame": 406,
+        "selected_repair_pixels": 339
+      },
+      {
+        "frame": 407,
+        "selected_repair_pixels": 693
+      },
+      {
+        "frame": 408,
+        "selected_repair_pixels": 539
+      },
+      {
+        "frame": 409,
+        "selected_repair_pixels": 853
+      },
+      {
+        "frame": 410,
+        "selected_repair_pixels": 223
+      },
+      {
+        "frame": 411,
+        "selected_repair_pixels": 688
+      },
+      {
+        "frame": 412,
+        "selected_repair_pixels": 423
+      },
+      {
+        "frame": 413,
+        "selected_repair_pixels": 851
+      },
+      {
+        "frame": 414,
+        "selected_repair_pixels": 300
+      },
+      {
+        "frame": 415,
+        "selected_repair_pixels": 755
+      },
+      {
+        "frame": 416,
+        "selected_repair_pixels": 463
+      },
+      {
+        "frame": 417,
+        "selected_repair_pixels": 703
+      },
+      {
+        "frame": 418,
+        "selected_repair_pixels": 162
+      },
+      {
+        "frame": 419,
+        "selected_repair_pixels": 738
+      },
+      {
+        "frame": 420,
+        "selected_repair_pixels": 414
+      },
+      {
+        "frame": 421,
+        "selected_repair_pixels": 666
+      },
+      {
+        "frame": 422,
+        "selected_repair_pixels": 361
+      },
+      {
+        "frame": 423,
+        "selected_repair_pixels": 908
+      },
+      {
+        "frame": 424,
+        "selected_repair_pixels": 451
+      },
+      {
+        "frame": 425,
+        "selected_repair_pixels": 758
+      },
+      {
+        "frame": 426,
+        "selected_repair_pixels": 260
+      },
+      {
+        "frame": 427,
+        "selected_repair_pixels": 708
+      },
+      {
+        "frame": 428,
+        "selected_repair_pixels": 454
+      },
+      {
+        "frame": 429,
+        "selected_repair_pixels": 630
+      },
+      {
+        "frame": 430,
+        "selected_repair_pixels": 280
+      },
+      {
+        "frame": 431,
+        "selected_repair_pixels": 667
+      },
+      {
+        "frame": 432,
+        "selected_repair_pixels": 480
+      },
+      {
+        "frame": 433,
+        "selected_repair_pixels": 766
+      },
+      {
+        "frame": 434,
+        "selected_repair_pixels": 230
+      },
+      {
+        "frame": 435,
+        "selected_repair_pixels": 657
+      },
+      {
+        "frame": 436,
+        "selected_repair_pixels": 455
+      },
+      {
+        "frame": 437,
+        "selected_repair_pixels": 883
+      },
+      {
+        "frame": 438,
+        "selected_repair_pixels": 385
+      },
+      {
+        "frame": 439,
+        "selected_repair_pixels": 809
+      },
+      {
+        "frame": 440,
+        "selected_repair_pixels": 533
+      },
+      {
+        "frame": 441,
+        "selected_repair_pixels": 806
+      },
+      {
+        "frame": 442,
+        "selected_repair_pixels": 317
+      },
+      {
+        "frame": 443,
+        "selected_repair_pixels": 789
+      },
+      {
+        "frame": 444,
+        "selected_repair_pixels": 522
+      },
+      {
+        "frame": 445,
+        "selected_repair_pixels": 842
+      },
+      {
+        "frame": 446,
+        "selected_repair_pixels": 327
+      },
+      {
+        "frame": 447,
+        "selected_repair_pixels": 781
+      },
+      {
+        "frame": 448,
+        "selected_repair_pixels": 504
+      },
+      {
+        "frame": 449,
+        "selected_repair_pixels": 867
+      },
+      {
+        "frame": 450,
+        "selected_repair_pixels": 118
+      },
+      {
+        "frame": 451,
+        "selected_repair_pixels": 896
+      },
+      {
+        "frame": 452,
+        "selected_repair_pixels": 596
+      },
+      {
+        "frame": 453,
+        "selected_repair_pixels": 879
+      },
+      {
+        "frame": 454,
+        "selected_repair_pixels": 375
+      },
+      {
+        "frame": 455,
+        "selected_repair_pixels": 930
+      },
+      {
+        "frame": 456,
+        "selected_repair_pixels": 632
+      },
+      {
+        "frame": 457,
+        "selected_repair_pixels": 872
+      },
+      {
+        "frame": 458,
+        "selected_repair_pixels": 281
+      },
+      {
+        "frame": 459,
+        "selected_repair_pixels": 899
+      },
+      {
+        "frame": 460,
+        "selected_repair_pixels": 537
+      },
+      {
+        "frame": 461,
+        "selected_repair_pixels": 796
+      },
+      {
+        "frame": 462,
+        "selected_repair_pixels": 352
+      },
+      {
+        "frame": 463,
+        "selected_repair_pixels": 876
+      },
+      {
+        "frame": 464,
+        "selected_repair_pixels": 520
+      },
+      {
+        "frame": 465,
+        "selected_repair_pixels": 859
+      },
+      {
+        "frame": 466,
+        "selected_repair_pixels": 355
+      },
+      {
+        "frame": 467,
+        "selected_repair_pixels": 964
+      },
+      {
+        "frame": 468,
+        "selected_repair_pixels": 604
+      },
+      {
+        "frame": 469,
+        "selected_repair_pixels": 878
+      },
+      {
+        "frame": 470,
+        "selected_repair_pixels": 520
+      },
+      {
+        "frame": 471,
+        "selected_repair_pixels": 879
+      },
+      {
+        "frame": 472,
+        "selected_repair_pixels": 584
+      },
+      {
+        "frame": 473,
+        "selected_repair_pixels": 797
+      },
+      {
+        "frame": 474,
+        "selected_repair_pixels": 318
+      },
+      {
+        "frame": 475,
+        "selected_repair_pixels": 712
+      },
+      {
+        "frame": 476,
+        "selected_repair_pixels": 561
+      },
+      {
+        "frame": 477,
+        "selected_repair_pixels": 886
+      },
+      {
+        "frame": 478,
+        "selected_repair_pixels": 330
+      },
+      {
+        "frame": 479,
+        "selected_repair_pixels": 974
+      },
+      {
+        "frame": 480,
+        "selected_repair_pixels": 695
+      },
+      {
+        "frame": 481,
+        "selected_repair_pixels": 1043
+      },
+      {
+        "frame": 482,
+        "selected_repair_pixels": 237
+      },
+      {
+        "frame": 483,
+        "selected_repair_pixels": 15
+      },
+      {
+        "frame": 484,
+        "selected_repair_pixels": 810
+      },
+      {
+        "frame": 485,
+        "selected_repair_pixels": 505
+      },
+      {
+        "frame": 486,
+        "selected_repair_pixels": 773
+      },
+      {
+        "frame": 487,
+        "selected_repair_pixels": 339
+      },
+      {
+        "frame": 488,
+        "selected_repair_pixels": 907
+      },
+      {
+        "frame": 489,
+        "selected_repair_pixels": 578
+      },
+      {
+        "frame": 490,
+        "selected_repair_pixels": 835
+      },
+      {
+        "frame": 491,
+        "selected_repair_pixels": 279
+      },
+      {
+        "frame": 492,
+        "selected_repair_pixels": 929
+      },
+      {
+        "frame": 493,
+        "selected_repair_pixels": 543
+      },
+      {
+        "frame": 494,
+        "selected_repair_pixels": 888
+      },
+      {
+        "frame": 495,
+        "selected_repair_pixels": 436
+      },
+      {
+        "frame": 496,
+        "selected_repair_pixels": 852
+      },
+      {
+        "frame": 497,
+        "selected_repair_pixels": 520
+      },
+      {
+        "frame": 498,
+        "selected_repair_pixels": 840
+      },
+      {
+        "frame": 499,
+        "selected_repair_pixels": 347
+      },
+      {
+        "frame": 500,
+        "selected_repair_pixels": 752
+      },
+      {
+        "frame": 501,
+        "selected_repair_pixels": 554
+      },
+      {
+        "frame": 502,
+        "selected_repair_pixels": 874
+      },
+      {
+        "frame": 503,
+        "selected_repair_pixels": 397
+      },
+      {
+        "frame": 504,
+        "selected_repair_pixels": 850
+      },
+      {
+        "frame": 505,
+        "selected_repair_pixels": 565
+      },
+      {
+        "frame": 506,
+        "selected_repair_pixels": 886
+      },
+      {
+        "frame": 507,
+        "selected_repair_pixels": 365
+      },
+      {
+        "frame": 508,
+        "selected_repair_pixels": 841
+      },
+      {
+        "frame": 509,
+        "selected_repair_pixels": 512
+      },
+      {
+        "frame": 510,
+        "selected_repair_pixels": 901
+      },
+      {
+        "frame": 511,
+        "selected_repair_pixels": 346
+      },
+      {
+        "frame": 512,
+        "selected_repair_pixels": 806
+      },
+      {
+        "frame": 513,
+        "selected_repair_pixels": 510
+      },
+      {
+        "frame": 514,
+        "selected_repair_pixels": 877
+      },
+      {
+        "frame": 515,
+        "selected_repair_pixels": 119
+      },
+      {
+        "frame": 516,
+        "selected_repair_pixels": 853
+      },
+      {
+        "frame": 517,
+        "selected_repair_pixels": 668
+      },
+      {
+        "frame": 518,
+        "selected_repair_pixels": 1024
+      },
+      {
+        "frame": 519,
+        "selected_repair_pixels": 501
+      },
+      {
+        "frame": 520,
+        "selected_repair_pixels": 957
+      },
+      {
+        "frame": 521,
+        "selected_repair_pixels": 564
+      },
+      {
+        "frame": 522,
+        "selected_repair_pixels": 1032
+      },
+      {
+        "frame": 523,
+        "selected_repair_pixels": 262
+      },
+      {
+        "frame": 524,
+        "selected_repair_pixels": 940
+      },
+      {
+        "frame": 525,
+        "selected_repair_pixels": 600
+      },
+      {
+        "frame": 526,
+        "selected_repair_pixels": 835
+      },
+      {
+        "frame": 527,
+        "selected_repair_pixels": 397
+      },
+      {
+        "frame": 528,
+        "selected_repair_pixels": 910
+      },
+      {
+        "frame": 529,
+        "selected_repair_pixels": 657
+      },
+      {
+        "frame": 530,
+        "selected_repair_pixels": 738
+      },
+      {
+        "frame": 531,
+        "selected_repair_pixels": 318
+      },
+      {
+        "frame": 532,
+        "selected_repair_pixels": 1039
+      },
+      {
+        "frame": 533,
+        "selected_repair_pixels": 523
+      },
+      {
+        "frame": 534,
+        "selected_repair_pixels": 904
+      },
+      {
+        "frame": 535,
+        "selected_repair_pixels": 375
+      },
+      {
+        "frame": 536,
+        "selected_repair_pixels": 953
+      },
+      {
+        "frame": 537,
+        "selected_repair_pixels": 686
+      },
+      {
+        "frame": 538,
+        "selected_repair_pixels": 932
+      },
+      {
+        "frame": 539,
+        "selected_repair_pixels": 316
+      },
+      {
+        "frame": 540,
+        "selected_repair_pixels": 1086
+      },
+      {
+        "frame": 541,
+        "selected_repair_pixels": 603
+      },
+      {
+        "frame": 542,
+        "selected_repair_pixels": 964
+      },
+      {
+        "frame": 543,
+        "selected_repair_pixels": 424
+      },
+      {
+        "frame": 544,
+        "selected_repair_pixels": 766
+      },
+      {
+        "frame": 545,
+        "selected_repair_pixels": 555
+      },
+      {
+        "frame": 546,
+        "selected_repair_pixels": 891
+      },
+      {
+        "frame": 547,
+        "selected_repair_pixels": 136
+      },
+      {
+        "frame": 548,
+        "selected_repair_pixels": 730
+      },
+      {
+        "frame": 549,
+        "selected_repair_pixels": 489
+      },
+      {
+        "frame": 550,
+        "selected_repair_pixels": 790
+      },
+      {
+        "frame": 551,
+        "selected_repair_pixels": 350
+      },
+      {
+        "frame": 552,
+        "selected_repair_pixels": 850
+      },
+      {
+        "frame": 553,
+        "selected_repair_pixels": 491
+      },
+      {
+        "frame": 554,
+        "selected_repair_pixels": 842
+      },
+      {
+        "frame": 555,
+        "selected_repair_pixels": 288
+      },
+      {
+        "frame": 556,
+        "selected_repair_pixels": 848
+      },
+      {
+        "frame": 557,
+        "selected_repair_pixels": 600
+      },
+      {
+        "frame": 558,
+        "selected_repair_pixels": 854
+      },
+      {
+        "frame": 559,
+        "selected_repair_pixels": 381
+      },
+      {
+        "frame": 560,
+        "selected_repair_pixels": 904
+      },
+      {
+        "frame": 561,
+        "selected_repair_pixels": 589
+      },
+      {
+        "frame": 562,
+        "selected_repair_pixels": 913
+      },
+      {
+        "frame": 563,
+        "selected_repair_pixels": 299
+      },
+      {
+        "frame": 564,
+        "selected_repair_pixels": 892
+      },
+      {
+        "frame": 565,
+        "selected_repair_pixels": 589
+      },
+      {
+        "frame": 566,
+        "selected_repair_pixels": 925
+      },
+      {
+        "frame": 567,
+        "selected_repair_pixels": 407
+      },
+      {
+        "frame": 568,
+        "selected_repair_pixels": 909
+      },
+      {
+        "frame": 569,
+        "selected_repair_pixels": 644
+      },
+      {
+        "frame": 570,
+        "selected_repair_pixels": 838
+      },
+      {
+        "frame": 571,
+        "selected_repair_pixels": 357
+      },
+      {
+        "frame": 572,
+        "selected_repair_pixels": 968
+      },
+      {
+        "frame": 573,
+        "selected_repair_pixels": 594
+      },
+      {
+        "frame": 574,
+        "selected_repair_pixels": 891
+      },
+      {
+        "frame": 575,
+        "selected_repair_pixels": 429
+      },
+      {
+        "frame": 576,
+        "selected_repair_pixels": 853
+      },
+      {
+        "frame": 577,
+        "selected_repair_pixels": 517
+      },
+      {
+        "frame": 578,
+        "selected_repair_pixels": 789
+      },
+      {
+        "frame": 579,
+        "selected_repair_pixels": 161
+      },
+      {
+        "frame": 580,
+        "selected_repair_pixels": 747
+      },
+      {
+        "frame": 581,
+        "selected_repair_pixels": 594
+      },
+      {
+        "frame": 582,
+        "selected_repair_pixels": 938
+      },
+      {
+        "frame": 583,
+        "selected_repair_pixels": 410
+      },
+      {
+        "frame": 584,
+        "selected_repair_pixels": 994
+      },
+      {
+        "frame": 585,
+        "selected_repair_pixels": 524
+      },
+      {
+        "frame": 586,
+        "selected_repair_pixels": 786
+      },
+      {
+        "frame": 587,
+        "selected_repair_pixels": 420
+      },
+      {
+        "frame": 588,
+        "selected_repair_pixels": 864
+      },
+      {
+        "frame": 589,
+        "selected_repair_pixels": 520
+      },
+      {
+        "frame": 590,
+        "selected_repair_pixels": 743
+      },
+      {
+        "frame": 591,
+        "selected_repair_pixels": 391
+      },
+      {
+        "frame": 592,
+        "selected_repair_pixels": 833
+      },
+      {
+        "frame": 593,
+        "selected_repair_pixels": 494
+      },
+      {
+        "frame": 594,
+        "selected_repair_pixels": 858
+      },
+      {
+        "frame": 595,
+        "selected_repair_pixels": 185
+      },
+      {
+        "frame": 596,
+        "selected_repair_pixels": 810
+      },
+      {
+        "frame": 597,
+        "selected_repair_pixels": 665
+      },
+      {
+        "frame": 598,
+        "selected_repair_pixels": 768
+      },
+      {
+        "frame": 599,
+        "selected_repair_pixels": 452
+      }
+    ],
+    "per_rule_pixel_counts_before_overlap": {
+      "all_differences": 117964800,
+      "ego_boxes": 17740800,
+      "foveal_boxes": 22118400,
+      "horizon_bands": 18432000,
+      "source_boundary_dilation": 5138731
+    },
+    "policy": {
+      "boundary_dilation": 1,
+      "class_ids": [],
+      "ego_boxes": [
+        {
+          "frames": null,
+          "name": "ego_hood_motion_region",
+          "x0": 144,
+          "x1": 368,
+          "y0": 252,
+          "y1": -1
+        }
+      ],
+      "expanded_hard_pair_frames": [],
+      "foveal_boxes": [
+        {
+          "frames": null,
+          "name": "foveal_vanish_region",
+          "x0": 160,
+          "x1": 352,
+          "y0": 96,
+          "y1": 288
+        }
+      ],
+      "hard_frame_indices": [],
+      "hard_pair_indices": [],
+      "horizon_bands": [
+        {
+          "frames": null,
+          "name": "horizon_band",
+          "x0": 0,
+          "x1": -1,
+          "y0": 150,
+          "y1": 210
+        }
+      ],
+      "label": "all_residual_pixels_amr1",
+      "repair_only_changed_pixels": true,
+      "select_all_differences": true
+    },
+    "policy_selector_pixels_before_diff_intersection": 117964800,
+    "selected_repair_pixels_before_budget": 359711,
+    "selected_residual_fraction": 1.0,
+    "total_pixels": 117964800,
+    "total_residual_pixels": 359711
+  },
+  "runtime_contract": {
+    "archive_members": [
+      "renderer.bin",
+      "grayscale.mkv",
+      "alpha4_residual_repair.amr1.xz",
+      "optimized_poses.bin"
+    ],
+    "decoder_loads_scorer": false,
+    "external_sidecars_allowed": false,
+    "grayscale_runtime_member": "grayscale.mkv",
+    "inflate_auto_dispatch": "submissions/robust_current/inflate.sh selects renderer_grayscale when grayscale.mkv exists and masks.mkv is absent",
+    "legacy_masks_member": null,
+    "masks_mkv_omitted": true,
+    "repair_member_supported_by_runtime": true
+  },
+  "schema": "charged_mask_grammar_amr1_runtime_candidate_v1",
+  "score_claim": false,
+  "source_mask_stream": {
+    "decode": {
+      "decoded_frames": 600,
+      "decoder": "legacy_av1_class_scaled_gray",
+      "ffmpeg": "/opt/homebrew/Cellar/ffmpeg/8.1_1/bin/ffmpeg",
+      "ffprobe": "/opt/homebrew/Cellar/ffmpeg/8.1_1/bin/ffprobe",
+      "height": 384,
+      "max_frames": null,
+      "reported_frames": null,
+      "truncated_by_builder": false,
+      "width": 512
+    },
+    "decoded_class_u8_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+    "decoded_stats": {
+      "class_fractions": {
+        "0": 0.232344114516,
+        "1": 0.005849736532,
+        "2": 0.495179027981,
+        "3": 0.012375445896,
+        "4": 0.254251675076
+      },
+      "class_histogram": {
+        "0": 27408427,
+        "1": 690063,
+        "2": 58413695,
+        "3": 1459867,
+        "4": 29992748
+      },
+      "class_id_u8_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+      "dtype": "torch.int64",
+      "num_pixels": 117964800,
+      "shape": [
+        600,
+        384,
+        512
+      ],
+      "spatial_boundary_edges_4conn": 1616907,
+      "temporal_changed_pixels": 1467257
+    },
+    "member": "masks.mkv",
+    "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+    "size_bytes": 223385
+  },
+  "source_runtime_archive": {
+    "member_inventory": [
+      {
+        "compressed_size_bytes": 222220,
+        "crc32": "e986f7bc",
+        "name": "masks.mkv",
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "size_bytes": 223385
+      },
+      {
+        "compressed_size_bytes": 1144,
+        "crc32": "6bc12c2a",
+        "name": "optimized_poses.bin",
+        "sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f",
+        "size_bytes": 7200
+      },
+      {
+        "compressed_size_bytes": 57609,
+        "crc32": "a9d99871",
+        "name": "renderer.bin",
+        "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb",
+        "size_bytes": 59288
+      }
+    ],
+    "path": "/Users/adpena/Projects/pact/experiments/results/c067_fixedslice_unpacked_runtime_20260502/archive.zip",
+    "sha256": "886562a9f25f207c2004161fbc9d01881f28f125123e68a8582c330467e54f80",
+    "size_bytes": 281303,
+    "source_mask_member": "masks.mkv"
+  },
+  "tool": "experiments/build_charged_mask_grammar_candidate.py"
+}

@@ -1,0 +1,11 @@
+{
+  "candidate": "drop_f0_red_f1_green",
+  "commands": [
+    "# first create a dispatch claim with the concrete timestamped job name",
+    ".venv/bin/python tools/claim_lane_dispatch.py claim --lane-id pr98_channel_ablation_drop_f0_red_f1_green_t4_replay --platform lightning --instance-job-id exact_eval_pr98_channel_ablation_drop_f0_red_f1_green_t4_YYYYMMDDTHHMMSSZ --agent codex:gpt-5.5 --predicted-eta-utc YYYY-MM-DDTHH:MM:SSZ --status active --notes \"PR98 channel ablation drop_f0_red_f1_green; runtime tree fedb84920bd9a7ae683e349c27bd5ec00edda6a96cbc8ab4ad8d8891addc6e30; archive unchanged\"",
+    ".venv/bin/python scripts/launch_lightning_batch_job.py exact-eval --state-path .omx/state/lightning_batch_jobs.json --job-name exact_eval_pr98_channel_ablation_drop_f0_red_f1_green_t4_YYYYMMDDTHHMMSSZ --archive experiments/results/pr98_channel_ablation_candidates_20260504_codex/archives/pr98_archive.zip --repo-dir /teamspace/studios/this_studio/pact --upstream-dir /teamspace/studios/this_studio/pact/upstream --inflate-sh experiments/results/pr98_channel_ablation_candidates_20260504_codex/runtime_variants/drop_f0_red_f1_green/inflate.sh --machine T4_SMALL --studio pact --remote-preflight-ssh-target lightning-pact --dispatch-lane-id pr98_channel_ablation_drop_f0_red_f1_green_t4_replay --expected-archive-sha256 7ecb0df1c4627d55d88e03eff3d890b7a7a5b047c62515acff20232cf29310eb --expected-archive-size-bytes 178392 --source-manifest PATH_TO_LIGHTNING_SOURCE_MANIFEST.json --adjudicate --max-sane-score 1.0 --component-trace"
+  ],
+  "job_name_template": "exact_eval_pr98_channel_ablation_drop_f0_red_f1_green_t4_YYYYMMDDTHHMMSSZ",
+  "lane_id": "pr98_channel_ablation_drop_f0_red_f1_green_t4_replay",
+  "runtime_tree_sha256": "fedb84920bd9a7ae683e349c27bd5ec00edda6a96cbc8ab4ad8d8891addc6e30"
+}

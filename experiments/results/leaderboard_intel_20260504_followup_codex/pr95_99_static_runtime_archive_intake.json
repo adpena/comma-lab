@@ -1,0 +1,939 @@
+{
+  "95": {
+    "archive": {
+      "bytes": 178417,
+      "duplicate_names": [],
+      "hidden_or_macosx": [],
+      "members": [
+        {
+          "compress_size": 178309,
+          "compress_type": 0,
+          "file_size": 178309,
+          "name": "0.bin"
+        }
+      ],
+      "sha256": "e976acd5fe565c94fb9a8c62e5200c949919f76150e84599f268d6a58588440a",
+      "zip_slip": []
+    },
+    "archive_url": "https://github.com/user-attachments/files/27332334/archive.zip",
+    "runtime_files": [
+      {
+        "bytes": 964,
+        "path": "README.md",
+        "sha256": "1165f219544e22ef2cf1fd3f7e183f9a9e9a48225e193c0f742e7dc91d8d5174",
+        "signals": {
+          "downloads_or_networks": true,
+          "score_sidecar_words": true,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 991,
+        "path": "compress.sh",
+        "sha256": "c4c94c43d36884bc9bd5c6ff8624a8e6c3828103e3a4f4cf3fc68c8f22ba31f3",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": true,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 2158,
+        "path": "inflate.py",
+        "sha256": "fdc1e9af70a8f6b47f84c3978a29cb872dbc3dbdc6c123bda72ea494221a0e26",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": true,
+          "uses_cuda": true,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 811,
+        "path": "inflate.sh",
+        "sha256": "0cb9c3df78ad870cadd2ac6d46007b6c1aeb6a61c76b7800ae74a00addafb885",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 7455,
+        "path": "src/codec.py",
+        "sha256": "63d3ffd03c514fa5841fbf75a3eac87cc76ed40f68e0d68db50cd7cda517266f",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": true,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": true,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 6721,
+        "path": "src/data.py",
+        "sha256": "db0016ba8e854daa0d01563108ab1c76b6046578fe5f54af479abd34c600ab42",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": true,
+          "uses_cuda": true,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 6892,
+        "path": "src/losses.py",
+        "sha256": "757725dc64681d90ebd83057c956ca3d72e02e06f778571b599d99fac7b17368",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 2197,
+        "path": "src/model.py",
+        "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 3785,
+        "path": "src/optim.py",
+        "sha256": "6c79f7559e4fdf23ec1ab60fcdad29f785f8e223dc6cf426d9cf0bc38555d3c6",
+        "signals": {
+          "downloads_or_networks": true,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 4661,
+        "path": "src/score.py",
+        "sha256": "c8c4421fd26faa5c97ebade2919f9ba02c916bca3806fa95ba5159f221c4ef7f",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": true,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 2870,
+        "path": "src/stages/codec_stage.py",
+        "sha256": "1ddd7ccac9427a4679f0bf884409cd22173219412f1962f92ed711cef2d54c55",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": true,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": true,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": true
+        }
+      },
+      {
+        "bytes": 11658,
+        "path": "src/stages/common.py",
+        "sha256": "ad766d0639269eba70af5e5c26ef71267dfe8350e0335cdc506b198a08febdef",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": true,
+          "uses_cuda": true,
+          "uses_subprocess": false,
+          "uses_torch_load": true
+        }
+      },
+      {
+        "bytes": 1456,
+        "path": "src/stages/stage1_v328_ce.py",
+        "sha256": "a43a44fa4cdc17d83e81f94006228268fed78f2b641c73b9562124bfc995c2b7",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 1216,
+        "path": "src/stages/stage2_v331_softplus.py",
+        "sha256": "1203339dc5319f81d2f571a11be166a034bcb9b1a9bb346f823d68a9331aec20",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 1206,
+        "path": "src/stages/stage3_v332_smooth.py",
+        "sha256": "119fe4e1718502973c38fcd94163ea935e2ce7776ada833c4d41661225a73695",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 1233,
+        "path": "src/stages/stage4_v332_qat.py",
+        "sha256": "aaf7f704f0fcf3a7860bca1be589cfd6b90a217b529d77ffc7abc826d42114af",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 1329,
+        "path": "src/stages/stage5_c1a_l7.py",
+        "sha256": "6e1c4f8a1abdde16d6086f5c38dc523207ca1ca04b89cc72a0a2f58fe0ea0dbf",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 1208,
+        "path": "src/stages/stage6_lambda_sweep.py",
+        "sha256": "fe3893d388d7820d365d0b088a0800df800c6963e2e101e6e451b1172e6d453b",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 1255,
+        "path": "src/stages/stage7_sigma_sweep.py",
+        "sha256": "8b8b812bb4bc49e560e6fe2e1dd6b3fecb36c60bcdaeb1a5411e5697653e4443",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 1866,
+        "path": "src/stages/stage8_muon_finetune.py",
+        "sha256": "9e036c99b7fc58fa24f954be251bebb5af4cddd3b84fe408b9ebc2b94b58ed5f",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 2488,
+        "path": "src/train.py",
+        "sha256": "d88610929db7f42b7a3522a77ded29b2a9a4e7abe63eae7bc5915fa4b8e58b79",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": true,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": true,
+          "uses_cuda": true,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      }
+    ]
+  },
+  "96": {
+    "archive": {
+      "bytes": 186631,
+      "duplicate_names": [],
+      "hidden_or_macosx": [],
+      "members": [
+        {
+          "compress_size": 169272,
+          "compress_type": 8,
+          "file_size": 169242,
+          "name": "decoder.bin"
+        },
+        {
+          "compress_size": 16133,
+          "compress_type": 8,
+          "file_size": 16920,
+          "name": "latents.bin"
+        },
+        {
+          "compress_size": 930,
+          "compress_type": 0,
+          "file_size": 930,
+          "name": "p"
+        }
+      ],
+      "sha256": "2ecbd2118bebdb5566f719ed538a89c4608ccab19c9edc7ae7a6de778bd42b46",
+      "zip_slip": []
+    },
+    "archive_url": "https://github.com/user-attachments/files/27339615/archive.zip",
+    "runtime_files": [
+      {
+        "bytes": 6733,
+        "path": "inflate.py",
+        "sha256": "940e57ce0b6532db4aeb38b644bb7de75ccefdb29b92d00f8ddacaa3603829b2",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": true,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": true,
+          "uses_cuda": true,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 137,
+        "path": "inflate.sh",
+        "sha256": "202e9d917c1a2f56ece729193de92c32f11a23ec341d3a44cf5cac1d4a8b19a7",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      }
+    ]
+  },
+  "97": {
+    "archive": {
+      "bytes": 197160,
+      "duplicate_names": [],
+      "hidden_or_macosx": [],
+      "members": [
+        {
+          "compress_size": 197060,
+          "compress_type": 0,
+          "file_size": 197060,
+          "name": "p"
+        }
+      ],
+      "sha256": "6785a84879d3e3395bbf990b980fe32182fca7255c5b8559dcdaac9da7516642",
+      "zip_slip": []
+    },
+    "archive_url": "https://github.com/BradyMeighan/comma_video_compression_challenge/releases/download/vcfb-archive/archive.zip",
+    "runtime_files": [
+      {
+        "bytes": 6200,
+        "path": "flat_fp4.py",
+        "sha256": "536d92258a4b5ff876a3cf4225e77cf6e8a2e2dd3a65feb502280e7f6d0285e7",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": true,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": true,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 9976,
+        "path": "inflate.py",
+        "sha256": "c3dd6b52b3d6e607dd559c536ebc407fa7a5b5c4c869b216ccd6a612fe045884",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": true,
+          "uses_brotli": true,
+          "uses_compile_cpp": true,
+          "uses_cpu_device": true,
+          "uses_cuda": true,
+          "uses_subprocess": true,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 545,
+        "path": "inflate.sh",
+        "sha256": "c758f50750fcaba98a40c77e76f905ec1a99388361468257ebb02695f7279057",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": true,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 8231,
+        "path": "model.py",
+        "sha256": "24bd65175027ed8d802a93960b03031350eedcbfa739461572b6c6cdea2c3b51",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 60803,
+        "path": "range_mask_codec.cpp",
+        "sha256": "2ba8ed725004d9d6585dda0a307d332afe0d6a36d462cf7d3189bc178c2febbc",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 4966,
+        "path": "schema_h3.py",
+        "sha256": "e6781cbaf4137b025416852f49f255def8f9425df26a5ef28ede86a0f51ac5df",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": true,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 6648,
+        "path": "sidecar.py",
+        "sha256": "6d9c4f7fb2d8879a7861d085cac1787c3f523920a7e482427168fd662ef15dd0",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": true,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": true,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      }
+    ]
+  },
+  "98": {
+    "archive": {
+      "bytes": 178392,
+      "duplicate_names": [],
+      "hidden_or_macosx": [],
+      "members": [
+        {
+          "compress_size": 178284,
+          "compress_type": 0,
+          "file_size": 178284,
+          "name": "0.bin"
+        }
+      ],
+      "sha256": "7ecb0df1c4627d55d88e03eff3d890b7a7a5b047c62515acff20232cf29310eb",
+      "zip_slip": []
+    },
+    "archive_url": "https://github.com/EthanYangTW/comma_video_compression_challenge/releases/download/v1-hnerv-finetuned/archive.zip",
+    "runtime_files": [
+      {
+        "bytes": 632,
+        "path": "README.md",
+        "sha256": "6a56a1f12e47d15b02c1df98de1f7ca7c6d4e4d88d7d088ad55df2d086c45af0",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": true,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 2375,
+        "path": "inflate.py",
+        "sha256": "fdfbfec9bebae59424ad3fd56191074369d3958e77ccd8e645559d28d3d252cd",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": true,
+          "uses_cuda": true,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 811,
+        "path": "inflate.sh",
+        "sha256": "0cb9c3df78ad870cadd2ac6d46007b6c1aeb6a61c76b7800ae74a00addafb885",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 9010,
+        "path": "src/codec.py",
+        "sha256": "d9f2825a416e66c4c60b0ed506e87afcc080342809f2af73c3c6efb2b3c16f4a",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": true,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": true,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 6721,
+        "path": "src/data.py",
+        "sha256": "db0016ba8e854daa0d01563108ab1c76b6046578fe5f54af479abd34c600ab42",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": true,
+          "uses_cuda": true,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 6892,
+        "path": "src/losses.py",
+        "sha256": "757725dc64681d90ebd83057c956ca3d72e02e06f778571b599d99fac7b17368",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 2197,
+        "path": "src/model.py",
+        "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 3785,
+        "path": "src/optim.py",
+        "sha256": "6c79f7559e4fdf23ec1ab60fcdad29f785f8e223dc6cf426d9cf0bc38555d3c6",
+        "signals": {
+          "downloads_or_networks": true,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 4661,
+        "path": "src/score.py",
+        "sha256": "c8c4421fd26faa5c97ebade2919f9ba02c916bca3806fa95ba5159f221c4ef7f",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": true,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 2870,
+        "path": "src/stages/codec_stage.py",
+        "sha256": "1ddd7ccac9427a4679f0bf884409cd22173219412f1962f92ed711cef2d54c55",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": true,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": true,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": true
+        }
+      },
+      {
+        "bytes": 11658,
+        "path": "src/stages/common.py",
+        "sha256": "ad766d0639269eba70af5e5c26ef71267dfe8350e0335cdc506b198a08febdef",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": true,
+          "uses_cuda": true,
+          "uses_subprocess": false,
+          "uses_torch_load": true
+        }
+      },
+      {
+        "bytes": 1456,
+        "path": "src/stages/stage1_v328_ce.py",
+        "sha256": "a43a44fa4cdc17d83e81f94006228268fed78f2b641c73b9562124bfc995c2b7",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 1216,
+        "path": "src/stages/stage2_v331_softplus.py",
+        "sha256": "1203339dc5319f81d2f571a11be166a034bcb9b1a9bb346f823d68a9331aec20",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 1206,
+        "path": "src/stages/stage3_v332_smooth.py",
+        "sha256": "119fe4e1718502973c38fcd94163ea935e2ce7776ada833c4d41661225a73695",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 1233,
+        "path": "src/stages/stage4_v332_qat.py",
+        "sha256": "aaf7f704f0fcf3a7860bca1be589cfd6b90a217b529d77ffc7abc826d42114af",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 1329,
+        "path": "src/stages/stage5_c1a_l7.py",
+        "sha256": "6e1c4f8a1abdde16d6086f5c38dc523207ca1ca04b89cc72a0a2f58fe0ea0dbf",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 1208,
+        "path": "src/stages/stage6_lambda_sweep.py",
+        "sha256": "fe3893d388d7820d365d0b088a0800df800c6963e2e101e6e451b1172e6d453b",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 1255,
+        "path": "src/stages/stage7_sigma_sweep.py",
+        "sha256": "8b8b812bb4bc49e560e6fe2e1dd6b3fecb36c60bcdaeb1a5411e5697653e4443",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 1866,
+        "path": "src/stages/stage8_muon_finetune.py",
+        "sha256": "9e036c99b7fc58fa24f954be251bebb5af4cddd3b84fe408b9ebc2b94b58ed5f",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 2488,
+        "path": "src/train.py",
+        "sha256": "d88610929db7f42b7a3522a77ded29b2a9a4e7abe63eae7bc5915fa4b8e58b79",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": true,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": true,
+          "uses_cuda": true,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      }
+    ]
+  },
+  "99": {
+    "archive": {
+      "bytes": 178546,
+      "duplicate_names": [],
+      "hidden_or_macosx": [],
+      "members": [
+        {
+          "compress_size": 178438,
+          "compress_type": 0,
+          "file_size": 178438,
+          "name": "0.bin"
+        }
+      ],
+      "sha256": "278b1c7a1bd6b03a5bceddafcb3489b2624c558ad22825d9211b701333b6eefb",
+      "zip_slip": []
+    },
+    "archive_url": "https://github.com/BradyMeighan/comma_video_compression_challenge/releases/download/hnerv-muon-lc-archive/archive.zip",
+    "runtime_files": [
+      {
+        "bytes": 2197,
+        "path": "hnerv_model.py",
+        "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 4965,
+        "path": "inflate.py",
+        "sha256": "2b4bcc6024433284b731b980145b1aa56b336a5a6b9ec71c3281b3dd00903c5b",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": true,
+          "uses_brotli": true,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": true,
+          "uses_cuda": true,
+          "uses_subprocess": true,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 705,
+        "path": "inflate.sh",
+        "sha256": "aaccd126c0b1f411c81c8129add87c85f74c8f6177f1da290ee2b21645890247",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": false,
+          "uses_brotli": true,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 1081,
+        "path": "schema.py",
+        "sha256": "bc434bd596e753dbeae97c0ddce4d9cf98a50cfe862a451834864d83620d6a0a",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": true,
+          "uses_brotli": false,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      },
+      {
+        "bytes": 1837,
+        "path": "sidecar.py",
+        "sha256": "52955000fe673914307b481bff29377a015bf7a0fe9dc38652e29153c033af75",
+        "signals": {
+          "downloads_or_networks": false,
+          "score_sidecar_words": true,
+          "uses_brotli": true,
+          "uses_compile_cpp": false,
+          "uses_cpu_device": false,
+          "uses_cuda": false,
+          "uses_subprocess": false,
+          "uses_torch_load": false
+        }
+      }
+    ]
+  }
+}

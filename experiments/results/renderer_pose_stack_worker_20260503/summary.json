@@ -1,0 +1,81 @@
+{
+  "candidate_count": 2,
+  "candidates": [
+    {
+      "archive": {
+        "bytes": 275686,
+        "deterministic_zip_timestamp": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_pose_stack_worker_20260503/c101_renderer_x_top160/archive.zip",
+        "payload_bytes": 275586,
+        "payload_format": "public_pr75_qzs3_qp1_segactions_p3",
+        "payload_member": "p",
+        "payload_sha256": "6777e9a1a414b38a0c7f274108fc54310ac566f9246335dc5db4fd2428471142",
+        "repo_relative_path": "experiments/results/renderer_pose_stack_worker_20260503/c101_renderer_x_top160/archive.zip",
+        "sha256": "d3dc475fe160fcca836726db2728914dd2442d5b2e13b6f799c2d86ad409589a",
+        "zip_members": [
+          "p"
+        ]
+      },
+      "candidate_id": "c101_renderer_x_top160",
+      "changed_streams_vs_pose_source": {
+        "masks.mkv": false,
+        "optimized_poses.bin": false,
+        "renderer.bin": true,
+        "seg_tile_actions.bin": false
+      },
+      "changed_streams_vs_renderer_source": {
+        "masks.mkv": false,
+        "optimized_poses.bin": true,
+        "renderer.bin": false,
+        "seg_tile_actions.bin": false
+      }
+    },
+    {
+      "archive": {
+        "bytes": 275683,
+        "deterministic_zip_timestamp": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_pose_stack_worker_20260503/c101_renderer_x_top192/archive.zip",
+        "payload_bytes": 275583,
+        "payload_format": "public_pr75_qzs3_qp1_segactions_p3",
+        "payload_member": "p",
+        "payload_sha256": "1612b6c88f2fc1178e83be21a7fa9fa761cdad9a262a9122d084ad30dd4e9a75",
+        "repo_relative_path": "experiments/results/renderer_pose_stack_worker_20260503/c101_renderer_x_top192/archive.zip",
+        "sha256": "d79d1556b55ba7e36c5aaf91d5b04320587975f1303698d8f1089bd5f399d0f3",
+        "zip_members": [
+          "p"
+        ]
+      },
+      "candidate_id": "c101_renderer_x_top192",
+      "changed_streams_vs_pose_source": {
+        "masks.mkv": false,
+        "optimized_poses.bin": false,
+        "renderer.bin": true,
+        "seg_tile_actions.bin": false
+      },
+      "changed_streams_vs_renderer_source": {
+        "masks.mkv": false,
+        "optimized_poses.bin": true,
+        "renderer.bin": false,
+        "seg_tile_actions.bin": false
+      }
+    }
+  ],
+  "remote_dispatch_performed": false,
+  "schema": "c101_renderer_pose_stack_candidate_v1_summary",
+  "score_claim": false,
+  "tool": "experiments/build_c101_renderer_pose_stack_candidate.py"
+}

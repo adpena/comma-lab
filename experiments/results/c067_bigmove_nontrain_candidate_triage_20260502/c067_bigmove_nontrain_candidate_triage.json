@@ -1,0 +1,1290 @@
+{
+  "active_diagnostics": [
+    {
+      "diagnostic_id": "sjkl_c067_l40sdiag_existing_active_diagnostic",
+      "exact_eval": {
+        "archive_bytes": 315515,
+        "archive_path": null,
+        "archive_sha256": null,
+        "avg_posenet_dist": 0.00527809,
+        "avg_segnet_dist": 0.00061036,
+        "evidence_grade": "A_diagnostic_exact_cuda",
+        "measured_score_delta_vs_c067": 0.185248410277,
+        "n_samples": 600,
+        "path": "experiments/results/lightning_batch/sjkl_c067_l40sdiag_20260502T151434Z/contest_auth_eval.json",
+        "score_recomputed_from_components": 0.500865441062,
+        "status": "exact_negative"
+      },
+      "lane": "sjkl_existing_active_diagnostic",
+      "no_duplicate_dispatch": true,
+      "notes": [
+        "SJ-KL is preserved as existing active diagnostic context, not duplicated in ranked candidates",
+        "This planner does not dispatch. Any later remote exact eval requires a fresh lane claim and an active-eval conflict check outside this run."
+      ],
+      "score_claim": false
+    },
+    {
+      "diagnostic_id": "sjkl_c067_v2_k4_a5_cap32k_existing_active_diagnostic",
+      "exact_eval": {
+        "archive_bytes": 296999,
+        "archive_path": null,
+        "archive_sha256": null,
+        "avg_posenet_dist": 0.00323342,
+        "avg_segnet_dist": 0.00061036,
+        "evidence_grade": "A_diagnostic_exact_cuda",
+        "measured_score_delta_vs_c067": 0.122995598544,
+        "n_samples": 600,
+        "path": "experiments/results/sjkl_c067_v2_k4_a5_cap32k_l40s_20260502T181718Z/contest_auth_eval.json",
+        "score_recomputed_from_components": 0.438612629329,
+        "status": "exact_negative"
+      },
+      "lane": "sjkl_existing_active_diagnostic",
+      "no_duplicate_dispatch": true,
+      "notes": [
+        "SJ-KL is preserved as existing active diagnostic context, not duplicated in ranked candidates",
+        "This planner does not dispatch. Any later remote exact eval requires a fresh lane claim and an active-eval conflict check outside this run."
+      ],
+      "score_claim": false
+    }
+  ],
+  "candidate_count": 35,
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "dispatch_policy": {
+    "dispatch_byte_gate": 252760,
+    "dispatch_claim_required_before_any_remote_job": true,
+    "dispatchable_rule": "candidate must have archive bytes <=252760 or clear expected component benefit with evidence, and must have no fail-closed blockers",
+    "no_remote_dispatch_from_this_run": true,
+    "note": "This planner does not dispatch. Any later remote exact eval requires a fresh lane claim and an active-eval conflict check outside this run.",
+    "score_claim": false
+  },
+  "frontier": {
+    "archive_bytes": 276214,
+    "archive_sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+    "score": 0.31561703078448233,
+    "unchanged_distortion_sub0300_byte_gate": 252760
+  },
+  "grand_council_structural_lane_coverage": {
+    "cdo1_reversed_base_mask_topology": true,
+    "multiresolution_multimask_reconciliation": true,
+    "renderer_self_compression": true,
+    "scorer_weighted_mask_topology_repair_atoms": true,
+    "sjkl_existing_active_diagnostic_not_duplicated": true
+  },
+  "loaded_artifacts": [
+    {
+      "kind": "json",
+      "path": "experiments/results/c067_hotspot_mask_geometry_compiler_20260502/c067_hotspot_mask_geometry_plan.json",
+      "sha256": "8d21fc2be8e4f58090e5fd9268724b803925ad79a5acd50d7eca8a53618042f9",
+      "size_bytes": 395049
+    },
+    {
+      "kind": "json",
+      "path": "experiments/results/c067_hotspot_mask_geometry_compiler_20260502/candidate_top0128_c067_anchor/build_manifest.json",
+      "sha256": "758d98ac82d18436fcff40e74aba1ff6ddf7c7969ae26fff371d0c8357d795dd",
+      "size_bytes": 29531
+    },
+    {
+      "kind": "json",
+      "path": "experiments/results/c067_hotspot_mask_geometry_compiler_20260502/next_pose_safe_plan_after_extra065_072_negatives.json",
+      "sha256": "b14a112b4bf691ed6b23ac568463086f104b4cec94e58357f2893a37a5d7fbea",
+      "size_bytes": 378577
+    },
+    {
+      "kind": "json",
+      "path": "experiments/results/c067_micro_mask_reencode_plan_20260502/builds/c067_micro_av1_mask_reencode_save12k/packed_pr64_maskfirst_qp1/packed_renderer_payload_provenance.json",
+      "sha256": "061a266c57f980ae83f74f9729074304529ed7ccde57862c07633ccf8e08789f",
+      "size_bytes": 2357
+    },
+    {
+      "kind": "json",
+      "path": "experiments/results/c067_micro_mask_reencode_plan_20260502/micro_mask_reencode_plan.json",
+      "sha256": "a68efde16b10d9be2d6d0ff1e2221bd57aef07a19c1cadcc315f764d01b56d17",
+      "size_bytes": 150812
+    },
+    {
+      "kind": "json",
+      "path": "experiments/results/c067_multimask_reconciliation_20260502_cmg3a_reconciler_fix1/byte_screen_summary.json",
+      "sha256": "8f136dd195fb1288e06578a8a3430f1eb35d4e8cd3fe649ec6e507f09bb38e7a",
+      "size_bytes": 35427
+    },
+    {
+      "kind": "json",
+      "path": "experiments/results/c067_multimask_reconciliation_20260502_cmg3a_reconciler_threshold_fix1/byte_screen_summary.json",
+      "sha256": "e51974a6d7ce2a498c064db9e65daac7e97df5b6ccb00b8bba72f8d0fc487027",
+      "size_bytes": 80605
+    },
+    {
+      "kind": "json",
+      "path": "experiments/results/c067_multiresolution_stack_planner_20260502/c067_multiresolution_stack_plan.json",
+      "sha256": "71c280442025be778d77db050e62879abf009474cec9938a85d86a68f0dd5e3b",
+      "size_bytes": 44369
+    },
+    {
+      "kind": "json",
+      "path": "experiments/results/c067_postdecode_mask_repair_candidate_20260502/c067_postdecode_mask_repair_waterfill_pair_class_plan.json",
+      "sha256": "a60d0a71ab6e5a0c41aef5a4d272071aa68b7f88e65dbe0ddf9da7fa78074342",
+      "size_bytes": 203249
+    },
+    {
+      "kind": "json",
+      "path": "experiments/results/c067_postdecode_mask_repair_candidate_20260502/save12k_budget_sweep/budget8000/c067_postdecode_mask_repair_manifest.json",
+      "sha256": "13d6b6bb997ce1ddc7da38de3499106a6981e632c2aebcb88f120dca4aa01690",
+      "size_bytes": 14743
+    },
+    {
+      "kind": "json",
+      "path": "experiments/results/c067_postdecode_mask_repair_candidate_20260502/save12k_trace_frame_sweep/top10/c067_postdecode_mask_repair_manifest.json",
+      "sha256": "c19a30fa8b682870da1353c2a09a1d39a4312335f2036d6d9c1a5caba7e92931",
+      "size_bytes": 29326
+    },
+    {
+      "kind": "json",
+      "path": "experiments/results/c067_postdecode_mask_repair_candidate_20260502/save12k_waterfill_pair_sweep/budget4000/c067_postdecode_mask_repair_manifest.json",
+      "sha256": "fb4ba7a13c8432bfb45d67f8ba69113d6fc7288934707b03ac86c4b1ae041a09",
+      "size_bytes": 9826
+    },
+    {
+      "kind": "json",
+      "path": "experiments/results/c067_reversed_base_cdo1_overlay_economics_20260502/c067_reversed_base_cdo1_overlay_economics.json",
+      "sha256": "1d2a0003abfff57a15844fb63618f887a33b02ca16bdb785cf43baf3f241473c",
+      "size_bytes": 196653
+    },
+    {
+      "kind": "json",
+      "path": "experiments/results/lightning_batch/exact_eval_c067_hotspot_geometry_top0128_l40sdiag_20260502T1733Z/contest_auth_eval.json",
+      "sha256": "13e7e646e580768e060bdbfda64d5fc0294dac888cd76a65fe637b696282f11b",
+      "size_bytes": 36020
+    },
+    {
+      "kind": "json",
+      "path": "experiments/results/lightning_batch/exact_eval_c067_micro_mask_save12k_l40sdiag_20260502T2034Z/contest_auth_eval.json",
+      "sha256": "4aace304ad0de26a617be96d35f04c51f06d9b4ca2a20d2c5d0ec53223669efb",
+      "size_bytes": 35947
+    },
+    {
+      "kind": "json",
+      "path": "experiments/results/lightning_batch/exact_eval_c067_multimask_reconciler_extra065k_fix1_l40sdiag_20260502T1903Z/contest_auth_eval.json",
+      "sha256": "77dc4ebac2d6ef69caced98dd35827800f8a49358a15b03c5a86d2d8233543ca",
+      "size_bytes": 36102
+    },
+    {
+      "kind": "json",
+      "path": "experiments/results/lightning_batch/exact_eval_c067_multimask_reconciler_extra072k_fix1_l40sdiag_20260502T1910Z/contest_auth_eval.json",
+      "sha256": "5c15de4a8fcef9dd8137017496d92240e08cdf4960b2743c2133d232c4df6aec",
+      "size_bytes": 36092
+    },
+    {
+      "kind": "json",
+      "path": "experiments/results/lightning_batch/exact_eval_c067_postdecode_repair_save12k_budget8000_l40sdiag_20260502T2101Z/contest_auth_eval.json",
+      "sha256": "edac153e60416dd7fdf711926f5d82ab8f23b5a4a3f814dec68b3b7afdd4361a",
+      "size_bytes": 34809
+    },
+    {
+      "kind": "json",
+      "path": "experiments/results/lightning_batch/exact_eval_c067_postdecode_repair_save12k_pairwaterfill4k_l40sdiag_20260502T2114Z/contest_auth_eval.json",
+      "sha256": "5bbb59550f9e5af495491aa8bfd04bd6fd29717a51fb46d15bcdff3695d2f68d",
+      "size_bytes": 34831
+    },
+    {
+      "kind": "json",
+      "path": "experiments/results/lightning_batch/exact_eval_c067_postdecode_repair_save12k_top10_l40sdiag_20260502T2054Z/contest_auth_eval.json",
+      "sha256": "ae5e6be52e17823782d1da298ee9245fff4b8443352af0ab25bab44e44224166",
+      "size_bytes": 34761
+    },
+    {
+      "kind": "json",
+      "path": "experiments/results/lightning_batch/exact_eval_pmg_hotspot_atomtop4068_l40sdiag_20260502T1445Z/contest_auth_eval.json",
+      "sha256": "9d068bdd3a1f65431186f90a3592139be912fdd452afdb513f1fd9085242ffa6",
+      "size_bytes": 12107
+    },
+    {
+      "kind": "json",
+      "path": "experiments/results/lightning_batch/exact_eval_pmg_hotspot_c067_t4_20260502T1402Z/contest_auth_eval.json",
+      "sha256": "502748e595f6aab00341e6868d4a0d712e1bc4c54fb3c58c72db0ed61ec8bf0c",
+      "size_bytes": 12065
+    },
+    {
+      "kind": "json",
+      "path": "experiments/results/lightning_batch/sjkl_c067_l40sdiag_20260502T151434Z/contest_auth_eval.json",
+      "sha256": "45a77528df1171a64cc8718ceddb819610d54b13ee4dbd79cee384cb11d86ccb",
+      "size_bytes": 12227
+    },
+    {
+      "kind": "jsonl",
+      "path": "experiments/results/pmg_hotspot_candidate_c067_20260502_lzma/pmg_atomtop_byte_screen.jsonl",
+      "sha256": "1c60c9b08679cd180581a7c0a4326917321051a78003832add113b44e14a0c81",
+      "size_bytes": 2367
+    },
+    {
+      "kind": "json",
+      "path": "experiments/results/pmg_hotspot_candidate_c067_stride1dyn_pairs64_atoms512_20260502/build_manifest.json",
+      "sha256": "4ab55ca35ef712b7fe12fae1ebb263bdd758d780e9ff5d429660dffbc58e6906",
+      "size_bytes": 10160
+    },
+    {
+      "kind": "json",
+      "path": "experiments/results/sjkl_c067_v2_k4_a5_cap32k_l40s_20260502T181718Z/contest_auth_eval.json",
+      "sha256": "00b64a9567d3fec26e0352c9a16fd657ba7ef9b5a8a383ae4e4258fa99d1259d",
+      "size_bytes": 36304
+    },
+    {
+      "kind": "json",
+      "path": "experiments/results/trained_renderer_export_unlock_20260502_codex/trained_renderer_export_unlock_plan.json",
+      "sha256": "c333de0cd3052815a5019e786fa34385b0d8bbb68ecc87fe590123669429dee6",
+      "size_bytes": 50395
+    }
+  ],
+  "missing_artifacts": [],
+  "producer": "experiments/plan_c067_bigmove_nontrain_candidates.py",
+  "promotion_eligible": false,
+  "ranked_candidates": [
+    {
+      "archive": {
+        "bytes": 132996,
+        "delta_bytes_vs_frontier": -143218,
+        "formula_only_rate_delta_vs_frontier": -0.095362987548,
+        "path": null,
+        "sha256": null
+      },
+      "artifact_path": "experiments/results/c067_reversed_base_cdo1_overlay_economics_20260502/c067_reversed_base_cdo1_overlay_economics.json",
+      "builder_command_if_materialization_needed": [],
+      "candidate_id": "reversed_base_cdo1_cmg3_nonzero_top1__save12k_exact_trace_pair_waterfill_budget4000",
+      "dispatch": {
+        "byte_gate_passed": true,
+        "component_benefit_gate_passed": false,
+        "dispatchable": false,
+        "no_remote_dispatch_from_this_run": true,
+        "status": "no_dispatch"
+      },
+      "evidence_grade": "derivation_lower_bound_no_score",
+      "exact_eval": null,
+      "expected_value": {
+        "component_benefit_evidence": null,
+        "expectation_kind": "unchanged_distortion_byte_screen",
+        "expected_component_benefit_score": null,
+        "expected_net_score_delta_vs_c067": -0.095362987548,
+        "rate_score_delta_vs_c067": -0.095362987548,
+        "unchanged_distortion_score_if_applicable": null
+      },
+      "fail_closed_blockers": [
+        "reversed-base CDO1 rows are lower-bound economics only; no byte-closed archive was built",
+        "residual decoded-mask geometry gate failed",
+        "no joint byte+geometry gate pass for exact-eval dispatch"
+      ],
+      "family": "cdo1_overlay_over_smaller_base_lower_bound",
+      "lane": "cdo1_reversed_base_mask_topology",
+      "notes": [
+        "base=cmg3_nonzero_top1",
+        "residual_after_overlay=0.035414428711",
+        "overlay_lzma_bytes=4396"
+      ],
+      "policy_id": "save12k_exact_trace_pair_waterfill_budget4000",
+      "promotion_eligible": false,
+      "rank": 1,
+      "score_claim": false
+    },
+    {
+      "archive": {
+        "bytes": 137536,
+        "delta_bytes_vs_frontier": -138678,
+        "formula_only_rate_delta_vs_frontier": -0.092339987901,
+        "path": null,
+        "sha256": null
+      },
+      "artifact_path": "experiments/results/c067_reversed_base_cdo1_overlay_economics_20260502/c067_reversed_base_cdo1_overlay_economics.json",
+      "builder_command_if_materialization_needed": [],
+      "candidate_id": "reversed_base_cdo1_cmg3_nonzero_top1__save12k_exact_trace_pair_waterfill_budget8000",
+      "dispatch": {
+        "byte_gate_passed": true,
+        "component_benefit_gate_passed": false,
+        "dispatchable": false,
+        "no_remote_dispatch_from_this_run": true,
+        "status": "no_dispatch"
+      },
+      "evidence_grade": "derivation_lower_bound_no_score",
+      "exact_eval": null,
+      "expected_value": {
+        "component_benefit_evidence": null,
+        "expectation_kind": "unchanged_distortion_byte_screen",
+        "expected_component_benefit_score": null,
+        "expected_net_score_delta_vs_c067": -0.092339987901,
+        "rate_score_delta_vs_c067": -0.092339987901,
+        "unchanged_distortion_score_if_applicable": null
+      },
+      "fail_closed_blockers": [
+        "reversed-base CDO1 rows are lower-bound economics only; no byte-closed archive was built",
+        "residual decoded-mask geometry gate failed",
+        "no joint byte+geometry gate pass for exact-eval dispatch"
+      ],
+      "family": "cdo1_overlay_over_smaller_base_lower_bound",
+      "lane": "cdo1_reversed_base_mask_topology",
+      "notes": [
+        "base=cmg3_nonzero_top1",
+        "residual_after_overlay=0.03533674452",
+        "overlay_lzma_bytes=8936"
+      ],
+      "policy_id": "save12k_exact_trace_pair_waterfill_budget8000",
+      "promotion_eligible": false,
+      "rank": 2,
+      "score_claim": false
+    },
+    {
+      "archive": {
+        "bytes": 140504,
+        "delta_bytes_vs_frontier": -135710,
+        "formula_only_rate_delta_vs_frontier": -0.090363718528,
+        "path": null,
+        "sha256": null
+      },
+      "artifact_path": "experiments/results/c067_reversed_base_cdo1_overlay_economics_20260502/c067_reversed_base_cdo1_overlay_economics.json",
+      "builder_command_if_materialization_needed": [],
+      "candidate_id": "reversed_base_cdo1_cmg3_nonzero_top1__save12k_exact_trace_pair_waterfill_budget12000",
+      "dispatch": {
+        "byte_gate_passed": true,
+        "component_benefit_gate_passed": false,
+        "dispatchable": false,
+        "no_remote_dispatch_from_this_run": true,
+        "status": "no_dispatch"
+      },
+      "evidence_grade": "derivation_lower_bound_no_score",
+      "exact_eval": null,
+      "expected_value": {
+        "component_benefit_evidence": null,
+        "expectation_kind": "unchanged_distortion_byte_screen",
+        "expected_component_benefit_score": null,
+        "expected_net_score_delta_vs_c067": -0.090363718528,
+        "rate_score_delta_vs_c067": -0.090363718528,
+        "unchanged_distortion_score_if_applicable": null
+      },
+      "fail_closed_blockers": [
+        "reversed-base CDO1 rows are lower-bound economics only; no byte-closed archive was built",
+        "residual decoded-mask geometry gate failed",
+        "no joint byte+geometry gate pass for exact-eval dispatch"
+      ],
+      "family": "cdo1_overlay_over_smaller_base_lower_bound",
+      "lane": "cdo1_reversed_base_mask_topology",
+      "notes": [
+        "base=cmg3_nonzero_top1",
+        "residual_after_overlay=0.035279464722",
+        "overlay_lzma_bytes=11904"
+      ],
+      "policy_id": "save12k_exact_trace_pair_waterfill_budget12000",
+      "promotion_eligible": false,
+      "rank": 3,
+      "score_claim": false
+    },
+    {
+      "archive": {
+        "bytes": 144036,
+        "delta_bytes_vs_frontier": -132178,
+        "formula_only_rate_delta_vs_frontier": -0.088011904706,
+        "path": null,
+        "sha256": null
+      },
+      "artifact_path": "experiments/results/c067_reversed_base_cdo1_overlay_economics_20260502/c067_reversed_base_cdo1_overlay_economics.json",
+      "builder_command_if_materialization_needed": [],
+      "candidate_id": "reversed_base_cdo1_cmg3_nonzero_top1__save12k_exact_trace_pair_waterfill_budget16000",
+      "dispatch": {
+        "byte_gate_passed": true,
+        "component_benefit_gate_passed": false,
+        "dispatchable": false,
+        "no_remote_dispatch_from_this_run": true,
+        "status": "no_dispatch"
+      },
+      "evidence_grade": "derivation_lower_bound_no_score",
+      "exact_eval": null,
+      "expected_value": {
+        "component_benefit_evidence": null,
+        "expectation_kind": "unchanged_distortion_byte_screen",
+        "expected_component_benefit_score": null,
+        "expected_net_score_delta_vs_c067": -0.088011904706,
+        "rate_score_delta_vs_c067": -0.088011904706,
+        "unchanged_distortion_score_if_applicable": null
+      },
+      "fail_closed_blockers": [
+        "reversed-base CDO1 rows are lower-bound economics only; no byte-closed archive was built",
+        "residual decoded-mask geometry gate failed",
+        "no joint byte+geometry gate pass for exact-eval dispatch"
+      ],
+      "family": "cdo1_overlay_over_smaller_base_lower_bound",
+      "lane": "cdo1_reversed_base_mask_topology",
+      "notes": [
+        "base=cmg3_nonzero_top1",
+        "residual_after_overlay=0.035209833781",
+        "overlay_lzma_bytes=15436"
+      ],
+      "policy_id": "save12k_exact_trace_pair_waterfill_budget16000",
+      "promotion_eligible": false,
+      "rank": 4,
+      "score_claim": false
+    },
+    {
+      "archive": {
+        "bytes": 185006,
+        "delta_bytes_vs_frontier": -91208,
+        "formula_only_rate_delta_vs_frontier": -0.060731663396,
+        "path": "experiments/results/pmg_hotspot_candidate_c067_atomtop64_20260502/archive.zip",
+        "sha256": "93e11479364c3d31d0afb5ae09cb140eb36d3c66a03e9a764b64984171fa714c"
+      },
+      "artifact_path": "experiments/results/pmg_hotspot_candidate_c067_20260502_lzma/pmg_atomtop_byte_screen.jsonl",
+      "builder_command_if_materialization_needed": [],
+      "candidate_id": "pmg_hotspot_atomtop64",
+      "dispatch": {
+        "byte_gate_passed": true,
+        "component_benefit_gate_passed": false,
+        "dispatchable": false,
+        "no_remote_dispatch_from_this_run": true,
+        "status": "no_dispatch"
+      },
+      "evidence_grade": "empirical_byte_screen_with_exact_negative_family_context",
+      "exact_eval": null,
+      "expected_value": {
+        "component_benefit_evidence": null,
+        "expectation_kind": "unchanged_distortion_byte_screen",
+        "expected_component_benefit_score": null,
+        "expected_net_score_delta_vs_c067": -0.060731663396,
+        "rate_score_delta_vs_c067": -0.060731663396,
+        "unchanged_distortion_score_if_applicable": 0.254885432266
+      },
+      "fail_closed_blockers": [
+        "PMG/topology byte screens have same-family exact negatives; unchanged-distortion score is not component evidence"
+      ],
+      "family": "pmg_hotspot_atomtop_byte_screen",
+      "lane": "scorer_weighted_mask_topology_repair_atoms",
+      "notes": [
+        "residual atom records: 64",
+        "pixel disagreement proxy: 0.015121883816189237"
+      ],
+      "policy_id": "atomtop64",
+      "promotion_eligible": false,
+      "rank": 5,
+      "score_claim": false
+    },
+    {
+      "archive": {
+        "bytes": 185154,
+        "delta_bytes_vs_frontier": -91060,
+        "formula_only_rate_delta_vs_frontier": -0.060633116271,
+        "path": "experiments/results/pmg_hotspot_candidate_c067_atomtop128_20260502/archive.zip",
+        "sha256": "6d418bdc1f0f1ad5bbe70dea6cee9a4cf9fc278c52de047b0327ddbbcd803308"
+      },
+      "artifact_path": "experiments/results/pmg_hotspot_candidate_c067_20260502_lzma/pmg_atomtop_byte_screen.jsonl",
+      "builder_command_if_materialization_needed": [],
+      "candidate_id": "pmg_hotspot_atomtop128",
+      "dispatch": {
+        "byte_gate_passed": true,
+        "component_benefit_gate_passed": false,
+        "dispatchable": false,
+        "no_remote_dispatch_from_this_run": true,
+        "status": "no_dispatch"
+      },
+      "evidence_grade": "empirical_byte_screen_with_exact_negative_family_context",
+      "exact_eval": null,
+      "expected_value": {
+        "component_benefit_evidence": null,
+        "expectation_kind": "unchanged_distortion_byte_screen",
+        "expected_component_benefit_score": null,
+        "expected_net_score_delta_vs_c067": -0.060633116271,
+        "rate_score_delta_vs_c067": -0.060633116271,
+        "unchanged_distortion_score_if_applicable": 0.254983979391
+      },
+      "fail_closed_blockers": [
+        "PMG/topology byte screens have same-family exact negatives; unchanged-distortion score is not component evidence"
+      ],
+      "family": "pmg_hotspot_atomtop_byte_screen",
+      "lane": "scorer_weighted_mask_topology_repair_atoms",
+      "notes": [
+        "residual atom records: 128",
+        "pixel disagreement proxy: 0.015053320990668403"
+      ],
+      "policy_id": "atomtop128",
+      "promotion_eligible": false,
+      "rank": 6,
+      "score_claim": false
+    },
+    {
+      "archive": {
+        "bytes": 186498,
+        "delta_bytes_vs_frontier": -89716,
+        "formula_only_rate_delta_vs_frontier": -0.059738201838,
+        "path": "experiments/results/pmg_hotspot_candidate_c067_atomtop512_20260502/archive.zip",
+        "sha256": "60385c2b5814a41c34c51aef679234f87bb85476ba6ee4b6362e8c0488431bdf"
+      },
+      "artifact_path": "experiments/results/pmg_hotspot_candidate_c067_20260502_lzma/pmg_atomtop_byte_screen.jsonl",
+      "builder_command_if_materialization_needed": [],
+      "candidate_id": "pmg_hotspot_atomtop512",
+      "dispatch": {
+        "byte_gate_passed": true,
+        "component_benefit_gate_passed": false,
+        "dispatchable": false,
+        "no_remote_dispatch_from_this_run": true,
+        "status": "no_dispatch"
+      },
+      "evidence_grade": "empirical_byte_screen_with_exact_negative_family_context",
+      "exact_eval": null,
+      "expected_value": {
+        "component_benefit_evidence": null,
+        "expectation_kind": "unchanged_distortion_byte_screen",
+        "expected_component_benefit_score": null,
+        "expected_net_score_delta_vs_c067": -0.059738201838,
+        "rate_score_delta_vs_c067": -0.059738201838,
+        "unchanged_distortion_score_if_applicable": 0.255878893824
+      },
+      "fail_closed_blockers": [
+        "PMG/topology byte screens have same-family exact negatives; unchanged-distortion score is not component evidence"
+      ],
+      "family": "pmg_hotspot_atomtop_byte_screen",
+      "lane": "scorer_weighted_mask_topology_repair_atoms",
+      "notes": [
+        "residual atom records: 512",
+        "pixel disagreement proxy: 0.014680074055989584"
+      ],
+      "policy_id": "atomtop512",
+      "promotion_eligible": false,
+      "rank": 7,
+      "score_claim": false
+    },
+    {
+      "archive": {
+        "bytes": 190182,
+        "delta_bytes_vs_frontier": -86032,
+        "formula_only_rate_delta_vs_frontier": -0.057285177455,
+        "path": "experiments/results/pmg_hotspot_candidate_c067_atomtop2048_20260502/archive.zip",
+        "sha256": "38758aa1930c1766194d9afb16e91ca4b4a818eaae0ee91da9b5767dd7e2db5f"
+      },
+      "artifact_path": "experiments/results/pmg_hotspot_candidate_c067_20260502_lzma/pmg_atomtop_byte_screen.jsonl",
+      "builder_command_if_materialization_needed": [],
+      "candidate_id": "pmg_hotspot_atomtop2048",
+      "dispatch": {
+        "byte_gate_passed": true,
+        "component_benefit_gate_passed": false,
+        "dispatchable": false,
+        "no_remote_dispatch_from_this_run": true,
+        "status": "no_dispatch"
+      },
+      "evidence_grade": "empirical_byte_screen_with_exact_negative_family_context",
+      "exact_eval": null,
+      "expected_value": {
+        "component_benefit_evidence": null,
+        "expectation_kind": "unchanged_distortion_byte_screen",
+        "expected_component_benefit_score": null,
+        "expected_net_score_delta_vs_c067": -0.057285177455,
+        "rate_score_delta_vs_c067": -0.057285177455,
+        "unchanged_distortion_score_if_applicable": 0.258331918207
+      },
+      "fail_closed_blockers": [
+        "PMG/topology byte screens have same-family exact negatives; unchanged-distortion score is not component evidence"
+      ],
+      "family": "pmg_hotspot_atomtop_byte_screen",
+      "lane": "scorer_weighted_mask_topology_repair_atoms",
+      "notes": [
+        "residual atom records: 2048",
+        "pixel disagreement proxy: 0.01352399190266927"
+      ],
+      "policy_id": "atomtop2048",
+      "promotion_eligible": false,
+      "rank": 8,
+      "score_claim": false
+    },
+    {
+      "archive": {
+        "bytes": 199704,
+        "delta_bytes_vs_frontier": -76510,
+        "formula_only_rate_delta_vs_frontier": -0.050944868503,
+        "path": "experiments/results/c067_micro_mask_reencode_hardframes32_20260502/crf56/runtime_members/protected_mask_reencode_manifest.json",
+        "sha256": "43a8ed9e7f7b50e3dc761a1d8011a10359a41382a00bb009d2f2055d75917ef4"
+      },
+      "artifact_path": "experiments/results/c067_micro_mask_reencode_plan_20260502/micro_mask_reencode_plan.json",
+      "builder_command_if_materialization_needed": [],
+      "candidate_id": "micro_mask_screen_1_crf56_runtime_members",
+      "dispatch": {
+        "byte_gate_passed": true,
+        "component_benefit_gate_passed": false,
+        "dispatchable": false,
+        "no_remote_dispatch_from_this_run": true,
+        "status": "no_dispatch"
+      },
+      "evidence_grade": "planning_only",
+      "exact_eval": null,
+      "expected_value": {
+        "component_benefit_evidence": null,
+        "expectation_kind": "unchanged_distortion_byte_screen",
+        "expected_component_benefit_score": null,
+        "expected_net_score_delta_vs_c067": -0.050944868503,
+        "rate_score_delta_vs_c067": -0.050944868503,
+        "unchanged_distortion_score_if_applicable": null
+      },
+      "fail_closed_blockers": [
+        "exceeds_micro_savings_cap_broad_reencode_risk",
+        "outside_target_savings_bands"
+      ],
+      "family": "micro_mask_measured_byte_screen_refused",
+      "lane": "scorer_weighted_mask_topology_repair_atoms",
+      "notes": [
+        "refused by existing micro planner byte/trust-region screen"
+      ],
+      "policy_id": null,
+      "promotion_eligible": false,
+      "rank": 9,
+      "score_claim": false
+    },
+    {
+      "archive": {
+        "bytes": 230996,
+        "delta_bytes_vs_frontier": -45218,
+        "formula_only_rate_delta_vs_frontier": -0.030108810142,
+        "path": "experiments/results/pmg_hotspot_candidate_c067_stride1dyn_pairs64_atoms512_20260502/archive.zip",
+        "sha256": "23db0ab66eea610b2255b748cf455cac59e22fa21483a8d05405da6783f99c93"
+      },
+      "artifact_path": "experiments/results/pmg_hotspot_candidate_c067_stride1dyn_pairs64_atoms512_20260502/build_manifest.json",
+      "builder_command_if_materialization_needed": [],
+      "candidate_id": "pmg_hotspot_stride1dyn_pairs64_atoms512",
+      "dispatch": {
+        "byte_gate_passed": true,
+        "component_benefit_gate_passed": false,
+        "dispatchable": false,
+        "no_remote_dispatch_from_this_run": true,
+        "status": "no_dispatch"
+      },
+      "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
+      "exact_eval": null,
+      "expected_value": {
+        "component_benefit_evidence": null,
+        "expectation_kind": "unchanged_distortion_byte_screen",
+        "expected_component_benefit_score": null,
+        "expected_net_score_delta_vs_c067": -0.030108810142,
+        "rate_score_delta_vs_c067": -0.030108810142,
+        "unchanged_distortion_score_if_applicable": null
+      },
+      "fail_closed_blockers": [
+        "PMG/topology byte screens have same-family exact negatives; unchanged-distortion score is not component evidence"
+      ],
+      "family": "pmg_dynamic_ego_foveal_pair_protected_topology",
+      "lane": "scorer_weighted_mask_topology_repair_atoms",
+      "notes": [
+        "selected_row_run_atom_count=None",
+        "uses scorer-weighted topology and pair protection, but needs a new exact-safe shape filter"
+      ],
+      "policy_id": "stride1dyn_pairs64_atoms512",
+      "promotion_eligible": false,
+      "rank": 10,
+      "score_claim": false
+    },
+    {
+      "archive": {
+        "bytes": 246949,
+        "delta_bytes_vs_frontier": -29265,
+        "formula_only_rate_delta_vs_frontier": -0.019486362263,
+        "path": "experiments/results/c067_multimask_reconciliation_20260502_cmg3a_reconciler_threshold_fix1/extra066000/archive.zip",
+        "sha256": "8253533426bdad42f829434a92525ac04f1720ac885b563415de152207b6c390"
+      },
+      "artifact_path": "experiments/results/c067_multimask_reconciliation_20260502_cmg3a_reconciler_threshold_fix1/byte_screen_summary.json",
+      "builder_command_if_materialization_needed": [],
+      "candidate_id": "c067_multimask_threshold_fix1_extra66000",
+      "dispatch": {
+        "byte_gate_passed": true,
+        "component_benefit_gate_passed": false,
+        "dispatchable": false,
+        "no_remote_dispatch_from_this_run": true,
+        "status": "no_dispatch"
+      },
+      "evidence_grade": "empirical_byte_screen_archive_candidate_until_exact_cuda",
+      "exact_eval": null,
+      "expected_value": {
+        "component_benefit_evidence": null,
+        "expectation_kind": "unchanged_distortion_byte_screen",
+        "expected_component_benefit_score": null,
+        "expected_net_score_delta_vs_c067": -0.019486362263,
+        "rate_score_delta_vs_c067": -0.019486362263,
+        "unchanged_distortion_score_if_applicable": null
+      },
+      "fail_closed_blockers": [
+        "same-lineage multimask extra065k/extra072k exact CUDA diagnostics collapsed PoseNet; operator review required before any fresh exact eval"
+      ],
+      "family": "cmg3a_multimask_reconciler_threshold_fix1",
+      "lane": "multiresolution_multimask_reconciliation",
+      "notes": [
+        "byte-closed archive exists and is non-training",
+        "threshold_fix1 reduces bytes but has no exact component benefit yet"
+      ],
+      "policy_id": "extra66000",
+      "promotion_eligible": false,
+      "rank": 11,
+      "score_claim": false
+    },
+    {
+      "archive": {
+        "bytes": 248778,
+        "delta_bytes_vs_frontier": -27436,
+        "formula_only_rate_delta_vs_frontier": -0.018268506238,
+        "path": "experiments/results/c067_micro_mask_reencode_hardframes32_20260502/crf52/runtime_members/protected_mask_reencode_manifest.json",
+        "sha256": "980ad684cd1d29f650797bf45a9156340112f5b007ab5ee203d2ca10e776d4c5"
+      },
+      "artifact_path": "experiments/results/c067_micro_mask_reencode_plan_20260502/micro_mask_reencode_plan.json",
+      "builder_command_if_materialization_needed": [],
+      "candidate_id": "micro_mask_screen_0_crf52_runtime_members",
+      "dispatch": {
+        "byte_gate_passed": true,
+        "component_benefit_gate_passed": false,
+        "dispatchable": false,
+        "no_remote_dispatch_from_this_run": true,
+        "status": "no_dispatch"
+      },
+      "evidence_grade": "planning_only",
+      "exact_eval": null,
+      "expected_value": {
+        "component_benefit_evidence": null,
+        "expectation_kind": "unchanged_distortion_byte_screen",
+        "expected_component_benefit_score": null,
+        "expected_net_score_delta_vs_c067": -0.018268506238,
+        "rate_score_delta_vs_c067": -0.018268506238,
+        "unchanged_distortion_score_if_applicable": null
+      },
+      "fail_closed_blockers": [
+        "exceeds_micro_savings_cap_broad_reencode_risk",
+        "outside_target_savings_bands"
+      ],
+      "family": "micro_mask_measured_byte_screen_refused",
+      "lane": "scorer_weighted_mask_topology_repair_atoms",
+      "notes": [
+        "refused by existing micro planner byte/trust-region screen"
+      ],
+      "policy_id": null,
+      "promotion_eligible": false,
+      "rank": 12,
+      "score_claim": false
+    },
+    {
+      "archive": {
+        "bytes": 249462,
+        "delta_bytes_vs_frontier": -26752,
+        "formula_only_rate_delta_vs_frontier": -0.017813058714,
+        "path": "experiments/results/c067_multimask_reconciliation_20260502_cmg3a_reconciler_threshold_fix1/extra067000/archive.zip",
+        "sha256": "5d1dafe6d109da9cef9455e306f02cf062b84bba7a111ba791ebb9c4b5fecfd0"
+      },
+      "artifact_path": "experiments/results/c067_multimask_reconciliation_20260502_cmg3a_reconciler_threshold_fix1/byte_screen_summary.json",
+      "builder_command_if_materialization_needed": [],
+      "candidate_id": "c067_multimask_threshold_fix1_extra67000",
+      "dispatch": {
+        "byte_gate_passed": true,
+        "component_benefit_gate_passed": false,
+        "dispatchable": false,
+        "no_remote_dispatch_from_this_run": true,
+        "status": "no_dispatch"
+      },
+      "evidence_grade": "empirical_byte_screen_archive_candidate_until_exact_cuda",
+      "exact_eval": null,
+      "expected_value": {
+        "component_benefit_evidence": null,
+        "expectation_kind": "unchanged_distortion_byte_screen",
+        "expected_component_benefit_score": null,
+        "expected_net_score_delta_vs_c067": -0.017813058714,
+        "rate_score_delta_vs_c067": -0.017813058714,
+        "unchanged_distortion_score_if_applicable": null
+      },
+      "fail_closed_blockers": [
+        "same-lineage multimask extra065k/extra072k exact CUDA diagnostics collapsed PoseNet; operator review required before any fresh exact eval"
+      ],
+      "family": "cmg3a_multimask_reconciler_threshold_fix1",
+      "lane": "multiresolution_multimask_reconciliation",
+      "notes": [
+        "byte-closed archive exists and is non-training",
+        "threshold_fix1 reduces bytes but has no exact component benefit yet"
+      ],
+      "policy_id": "extra67000",
+      "promotion_eligible": false,
+      "rank": 13,
+      "score_claim": false
+    },
+    {
+      "archive": {
+        "bytes": 251782,
+        "delta_bytes_vs_frontier": -24432,
+        "formula_only_rate_delta_vs_frontier": -0.016268265943,
+        "path": "experiments/results/c067_multimask_reconciliation_20260502_cmg3a_reconciler_threshold_fix1/extra068000/archive.zip",
+        "sha256": "e34590923f8466e625b0514b8e9670cebda8817d8d1b2583dcb421c00102bb6c"
+      },
+      "artifact_path": "experiments/results/c067_multimask_reconciliation_20260502_cmg3a_reconciler_threshold_fix1/byte_screen_summary.json",
+      "builder_command_if_materialization_needed": [],
+      "candidate_id": "c067_multimask_threshold_fix1_extra68000",
+      "dispatch": {
+        "byte_gate_passed": true,
+        "component_benefit_gate_passed": false,
+        "dispatchable": false,
+        "no_remote_dispatch_from_this_run": true,
+        "status": "no_dispatch"
+      },
+      "evidence_grade": "empirical_byte_screen_archive_candidate_until_exact_cuda",
+      "exact_eval": null,
+      "expected_value": {
+        "component_benefit_evidence": null,
+        "expectation_kind": "unchanged_distortion_byte_screen",
+        "expected_component_benefit_score": null,
+        "expected_net_score_delta_vs_c067": -0.016268265943,
+        "rate_score_delta_vs_c067": -0.016268265943,
+        "unchanged_distortion_score_if_applicable": null
+      },
+      "fail_closed_blockers": [
+        "same-lineage multimask extra065k/extra072k exact CUDA diagnostics collapsed PoseNet; operator review required before any fresh exact eval"
+      ],
+      "family": "cmg3a_multimask_reconciler_threshold_fix1",
+      "lane": "multiresolution_multimask_reconciliation",
+      "notes": [
+        "byte-closed archive exists and is non-training",
+        "threshold_fix1 reduces bytes but has no exact component benefit yet"
+      ],
+      "policy_id": "extra68000",
+      "promotion_eligible": false,
+      "rank": 14,
+      "score_claim": false
+    },
+    {
+      "archive": {
+        "bytes": 253691,
+        "delta_bytes_vs_frontier": -22523,
+        "formula_only_rate_delta_vs_frontier": -0.014997141201,
+        "path": "experiments/results/c067_multimask_reconciliation_20260502_cmg3a_reconciler_threshold_fix1/extra069000/archive.zip",
+        "sha256": "06d01e06c4159974b6e756a2a47e84ff0548371db80a391730865c96609259fd"
+      },
+      "artifact_path": "experiments/results/c067_multimask_reconciliation_20260502_cmg3a_reconciler_threshold_fix1/byte_screen_summary.json",
+      "builder_command_if_materialization_needed": [],
+      "candidate_id": "c067_multimask_threshold_fix1_extra69000",
+      "dispatch": {
+        "byte_gate_passed": false,
+        "component_benefit_gate_passed": false,
+        "dispatchable": false,
+        "no_remote_dispatch_from_this_run": true,
+        "status": "no_dispatch"
+      },
+      "evidence_grade": "empirical_byte_screen_archive_candidate_until_exact_cuda",
+      "exact_eval": null,
+      "expected_value": {
+        "component_benefit_evidence": null,
+        "expectation_kind": "unchanged_distortion_byte_screen",
+        "expected_component_benefit_score": null,
+        "expected_net_score_delta_vs_c067": -0.014997141201,
+        "rate_score_delta_vs_c067": -0.014997141201,
+        "unchanged_distortion_score_if_applicable": null
+      },
+      "fail_closed_blockers": [
+        "same-lineage multimask extra065k/extra072k exact CUDA diagnostics collapsed PoseNet; operator review required before any fresh exact eval",
+        "archive bytes exceed 252760 and no clear expected component benefit evidence is attached"
+      ],
+      "family": "cmg3a_multimask_reconciler_threshold_fix1",
+      "lane": "multiresolution_multimask_reconciliation",
+      "notes": [
+        "byte-closed archive exists and is non-training",
+        "threshold_fix1 reduces bytes but has no exact component benefit yet"
+      ],
+      "policy_id": "extra69000",
+      "promotion_eligible": false,
+      "rank": 15,
+      "score_claim": false
+    },
+    {
+      "archive": {
+        "bytes": 255740,
+        "delta_bytes_vs_frontier": -20474,
+        "formula_only_rate_delta_vs_frontier": -0.013632796206,
+        "path": "experiments/results/c067_multimask_reconciliation_20260502_cmg3a_reconciler_threshold_fix1/extra070000/archive.zip",
+        "sha256": "08306416c02b4ee23f6d8d820747b1268bee33fecc9bfc2585bfe396aff0b464"
+      },
+      "artifact_path": "experiments/results/c067_multimask_reconciliation_20260502_cmg3a_reconciler_threshold_fix1/byte_screen_summary.json",
+      "builder_command_if_materialization_needed": [],
+      "candidate_id": "c067_multimask_threshold_fix1_extra70000",
+      "dispatch": {
+        "byte_gate_passed": false,
+        "component_benefit_gate_passed": false,
+        "dispatchable": false,
+        "no_remote_dispatch_from_this_run": true,
+        "status": "no_dispatch"
+      },
+      "evidence_grade": "empirical_byte_screen_archive_candidate_until_exact_cuda",
+      "exact_eval": null,
+      "expected_value": {
+        "component_benefit_evidence": null,
+        "expectation_kind": "unchanged_distortion_byte_screen",
+        "expected_component_benefit_score": null,
+        "expected_net_score_delta_vs_c067": -0.013632796206,
+        "rate_score_delta_vs_c067": -0.013632796206,
+        "unchanged_distortion_score_if_applicable": null
+      },
+      "fail_closed_blockers": [
+        "same-lineage multimask extra065k/extra072k exact CUDA diagnostics collapsed PoseNet; operator review required before any fresh exact eval",
+        "archive bytes exceed 252760 and no clear expected component benefit evidence is attached"
+      ],
+      "family": "cmg3a_multimask_reconciler_threshold_fix1",
+      "lane": "multiresolution_multimask_reconciliation",
+      "notes": [
+        "byte-closed archive exists and is non-training",
+        "threshold_fix1 reduces bytes but has no exact component benefit yet"
+      ],
+      "policy_id": "extra70000",
+      "promotion_eligible": false,
+      "rank": 16,
+      "score_claim": false
+    },
+    {
+      "archive": {
+        "bytes": 257529,
+        "delta_bytes_vs_frontier": -18685,
+        "formula_only_rate_delta_vs_frontier": -0.012441574539,
+        "path": "experiments/results/c067_multimask_reconciliation_20260502_cmg3a_reconciler_threshold_fix1/extra071000/archive.zip",
+        "sha256": "5032a2777ccc08e89f7338645fe13a4a6ac6adcb80439e330ccdd3453756d372"
+      },
+      "artifact_path": "experiments/results/c067_multimask_reconciliation_20260502_cmg3a_reconciler_threshold_fix1/byte_screen_summary.json",
+      "builder_command_if_materialization_needed": [],
+      "candidate_id": "c067_multimask_threshold_fix1_extra71000",
+      "dispatch": {
+        "byte_gate_passed": false,
+        "component_benefit_gate_passed": false,
+        "dispatchable": false,
+        "no_remote_dispatch_from_this_run": true,
+        "status": "no_dispatch"
+      },
+      "evidence_grade": "empirical_byte_screen_archive_candidate_until_exact_cuda",
+      "exact_eval": null,
+      "expected_value": {
+        "component_benefit_evidence": null,
+        "expectation_kind": "unchanged_distortion_byte_screen",
+        "expected_component_benefit_score": null,
+        "expected_net_score_delta_vs_c067": -0.012441574539,
+        "rate_score_delta_vs_c067": -0.012441574539,
+        "unchanged_distortion_score_if_applicable": null
+      },
+      "fail_closed_blockers": [
+        "same-lineage multimask extra065k/extra072k exact CUDA diagnostics collapsed PoseNet; operator review required before any fresh exact eval",
+        "archive bytes exceed 252760 and no clear expected component benefit evidence is attached"
+      ],
+      "family": "cmg3a_multimask_reconciler_threshold_fix1",
+      "lane": "multiresolution_multimask_reconciliation",
+      "notes": [
+        "byte-closed archive exists and is non-training",
+        "threshold_fix1 reduces bytes but has no exact component benefit yet"
+      ],
+      "policy_id": "extra71000",
+      "promotion_eligible": false,
+      "rank": 17,
+      "score_claim": false
+    },
+    {
+      "archive": {
+        "bytes": 280588,
+        "delta_bytes_vs_frontier": 4374,
+        "formula_only_rate_delta_vs_frontier": 0.002912467061,
+        "path": "experiments/results/blockfp_c067_candidate_20260502T_qbf1_sweep/qbf1_b0032/archive.zip",
+        "sha256": "b578afb324261dabd5492083e9ea46b3b26c0ee99b2ae1298f360d58c2a36b8a"
+      },
+      "artifact_path": "experiments/results/trained_renderer_export_unlock_20260502_codex/trained_renderer_export_unlock_plan.json",
+      "builder_command_if_materialization_needed": [],
+      "candidate_id": "trained_renderer_export_unlock_3_archive_without_trained_preflight_gate",
+      "dispatch": {
+        "byte_gate_passed": false,
+        "component_benefit_gate_passed": false,
+        "dispatchable": false,
+        "no_remote_dispatch_from_this_run": true,
+        "status": "no_dispatch"
+      },
+      "evidence_grade": "empirical_export_readiness_scan",
+      "exact_eval": null,
+      "expected_value": {
+        "component_benefit_evidence": null,
+        "expectation_kind": "unchanged_distortion_byte_screen",
+        "expected_component_benefit_score": null,
+        "expected_net_score_delta_vs_c067": 0.002912467061,
+        "rate_score_delta_vs_c067": 0.002912467061,
+        "unchanged_distortion_score_if_applicable": null
+      },
+      "fail_closed_blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it",
+        "no H100-ready non-surrogate trained renderer preflight exists",
+        "no non-surrogate trained JointFrameGenerator export exists",
+        "archive bytes exceed 252760 and no clear expected component benefit evidence is attached"
+      ],
+      "family": "trained_joint_frame_generator_export",
+      "lane": "renderer_self_compression",
+      "notes": [
+        "h100_ready_preflight_count=0",
+        "non_surrogate_candidate_count=0"
+      ],
+      "policy_id": "archive_without_trained_preflight_gate",
+      "promotion_eligible": false,
+      "rank": 18,
+      "score_claim": false
+    },
+    {
+      "archive": {
+        "bytes": 283869,
+        "delta_bytes_vs_frontier": 7655,
+        "formula_only_rate_delta_vs_frontier": 0.005097150286,
+        "path": "experiments/results/blockfp_c067_candidate_20260502T_local_qbf1_b1024/qbf1_b1024/archive.zip",
+        "sha256": "6d331e479d961df22a2baa8b3f09722394ece7d0c194821c80c6aa354cb1449b"
+      },
+      "artifact_path": "experiments/results/trained_renderer_export_unlock_20260502_codex/trained_renderer_export_unlock_plan.json",
+      "builder_command_if_materialization_needed": [],
+      "candidate_id": "trained_renderer_export_unlock_0_archive_without_trained_preflight_gate",
+      "dispatch": {
+        "byte_gate_passed": false,
+        "component_benefit_gate_passed": false,
+        "dispatchable": false,
+        "no_remote_dispatch_from_this_run": true,
+        "status": "no_dispatch"
+      },
+      "evidence_grade": "empirical_export_readiness_scan",
+      "exact_eval": null,
+      "expected_value": {
+        "component_benefit_evidence": null,
+        "expectation_kind": "unchanged_distortion_byte_screen",
+        "expected_component_benefit_score": null,
+        "expected_net_score_delta_vs_c067": 0.005097150286,
+        "rate_score_delta_vs_c067": 0.005097150286,
+        "unchanged_distortion_score_if_applicable": null
+      },
+      "fail_closed_blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it",
+        "no H100-ready non-surrogate trained renderer preflight exists",
+        "no non-surrogate trained JointFrameGenerator export exists",
+        "archive bytes exceed 252760 and no clear expected component benefit evidence is attached"
+      ],
+      "family": "trained_joint_frame_generator_export",
+      "lane": "renderer_self_compression",
+      "notes": [
+        "h100_ready_preflight_count=0",
+        "non_surrogate_candidate_count=0"
+      ],
+      "policy_id": "archive_without_trained_preflight_gate",
+      "promotion_eligible": false,
+      "rank": 19,
+      "score_claim": false
+    },
+    {
+      "archive": {
+        "bytes": 288112,
+        "delta_bytes_vs_frontier": 11898,
+        "formula_only_rate_delta_vs_frontier": 0.007922389824,
+        "path": "experiments/results/blockfp_c067_candidate_20260502T_qbf1_sweep/qbf1_b0016/archive.zip",
+        "sha256": "b6a51996110cea840db2d27bb014359b4ba63678ab57aac978b1af0f2c6ee38d"
+      },
+      "artifact_path": "experiments/results/trained_renderer_export_unlock_20260502_codex/trained_renderer_export_unlock_plan.json",
+      "builder_command_if_materialization_needed": [],
+      "candidate_id": "trained_renderer_export_unlock_1_archive_without_trained_preflight_gate",
+      "dispatch": {
+        "byte_gate_passed": false,
+        "component_benefit_gate_passed": false,
+        "dispatchable": false,
+        "no_remote_dispatch_from_this_run": true,
+        "status": "no_dispatch"
+      },
+      "evidence_grade": "empirical_export_readiness_scan",
+      "exact_eval": null,
+      "expected_value": {
+        "component_benefit_evidence": null,
+        "expectation_kind": "unchanged_distortion_byte_screen",
+        "expected_component_benefit_score": null,
+        "expected_net_score_delta_vs_c067": 0.007922389824,
+        "rate_score_delta_vs_c067": 0.007922389824,
+        "unchanged_distortion_score_if_applicable": null
+      },
+      "fail_closed_blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it",
+        "no H100-ready non-surrogate trained renderer preflight exists",
+        "no non-surrogate trained JointFrameGenerator export exists",
+        "archive bytes exceed 252760 and no clear expected component benefit evidence is attached"
+      ],
+      "family": "trained_joint_frame_generator_export",
+      "lane": "renderer_self_compression",
+      "notes": [
+        "h100_ready_preflight_count=0",
+        "non_surrogate_candidate_count=0"
+      ],
+      "policy_id": "archive_without_trained_preflight_gate",
+      "promotion_eligible": false,
+      "rank": 20,
+      "score_claim": false
+    },
+    {
+      "archive": {
+        "bytes": 296066,
+        "delta_bytes_vs_frontier": 19852,
+        "formula_only_rate_delta_vs_frontier": 0.013218631937,
+        "path": "experiments/results/blockfp_c067_candidate_20260502T_qbf1_sweep/qbf1_b0024/archive.zip",
+        "sha256": "46d96b873061c3736ced38be9497c3149328371cd8a88db7db3fd917675e86e2"
+      },
+      "artifact_path": "experiments/results/trained_renderer_export_unlock_20260502_codex/trained_renderer_export_unlock_plan.json",
+      "builder_command_if_materialization_needed": [],
+      "candidate_id": "trained_renderer_export_unlock_2_archive_without_trained_preflight_gate",
+      "dispatch": {
+        "byte_gate_passed": false,
+        "component_benefit_gate_passed": false,
+        "dispatchable": false,
+        "no_remote_dispatch_from_this_run": true,
+        "status": "no_dispatch"
+      },
+      "evidence_grade": "empirical_export_readiness_scan",
+      "exact_eval": null,
+      "expected_value": {
+        "component_benefit_evidence": null,
+        "expectation_kind": "unchanged_distortion_byte_screen",
+        "expected_component_benefit_score": null,
+        "expected_net_score_delta_vs_c067": 0.013218631937,
+        "rate_score_delta_vs_c067": 0.013218631937,
+        "unchanged_distortion_score_if_applicable": null
+      },
+      "fail_closed_blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it",
+        "no H100-ready non-surrogate trained renderer preflight exists",
+        "no non-surrogate trained JointFrameGenerator export exists",
+        "archive bytes exceed 252760 and no clear expected component benefit evidence is attached"
+      ],
+      "family": "trained_joint_frame_generator_export",
+      "lane": "renderer_self_compression",
+      "notes": [
+        "h100_ready_preflight_count=0",
+        "non_surrogate_candidate_count=0"
+      ],
+      "policy_id": "archive_without_trained_preflight_gate",
+      "promotion_eligible": false,
+      "rank": 21,
+      "score_claim": false
+    },
+    {
+      "archive": {
+        "bytes": 455683,
+        "delta_bytes_vs_frontier": 179469,
+        "formula_only_rate_delta_vs_frontier": 0.119501040458,
+        "path": null,
+        "sha256": null
+      },
+      "artifact_path": "experiments/results/c067_reversed_base_cdo1_overlay_economics_20260502/c067_reversed_base_cdo1_overlay_economics.json",
+      "builder_command_if_materialization_needed": [],
+      "candidate_id": "reversed_base_cdo1_cmg3a_body200__full_repair_to_c067_decoded_mask",
+      "dispatch": {
+        "byte_gate_passed": false,
+        "component_benefit_gate_passed": false,
+        "dispatchable": false,
+        "no_remote_dispatch_from_this_run": true,
+        "status": "no_dispatch"
+      },
+      "evidence_grade": "derivation_lower_bound_no_score",
+      "exact_eval": null,
+      "expected_value": {
+        "component_benefit_evidence": null,
+        "expectation_kind": "unchanged_distortion_byte_screen",
+        "expected_component_benefit_score": null,
+        "expected_net_score_delta_vs_c067": 0.119501040458,
+        "rate_score_delta_vs_c067": 0.119501040458,
+        "unchanged_distortion_score_if_applicable": null
+      },
+      "fail_closed_blockers": [
+        "reversed-base CDO1 rows are lower-bound economics only; no byte-closed archive was built",
+        "estimated bytes do not pass unchanged-distortion sub-0.30 byte gate",
+        "no joint byte+geometry gate pass for exact-eval dispatch",
+        "archive bytes exceed 252760 and no clear expected component benefit evidence is attached"
+      ],
+      "family": "cdo1_overlay_over_smaller_base_lower_bound",
+      "lane": "cdo1_reversed_base_mask_topology",
+      "notes": [
+        "base=cmg3a_body200",
+        "residual_after_overlay=0.0",
+        "overlay_lzma_bytes=196204"
+      ],
+      "policy_id": "full_repair_to_c067_decoded_mask",
+      "promotion_eligible": false,
+      "rank": 22,
+      "score_claim": false
+    },
+    {
+      "archive": {
+        "bytes": 480496,
+        "delta_bytes_vs_frontier": 204282,
+        "formula_only_rate_delta_vs_frontier": 0.136022998662,
+        "path": null,
+        "sha256": null
+      },
+      "artifact_path": "experiments/results/c067_reversed_base_cdo1_overlay_economics_20260502/c067_reversed_base_cdo1_overlay_economics.json",
+      "builder_command_if_materialization_needed": [],
+      "candidate_id": "reversed_base_cdo1_cmg3_nonzero_top2__full_repair_to_c067_decoded_mask",
+      "dispatch": {
+        "byte_gate_passed": false,
+        "component_benefit_gate_passed": false,
+        "dispatchable": false,
+        "no_remote_dispatch_from_this_run": true,
+        "status": "no_dispatch"
+      },
+      "evidence_grade": "derivation_lower_bound_no_score",
+      "exact_eval": null,
+      "expected_value": {
+        "component_benefit_evidence": null,
+        "expectation_kind": "unchanged_distortion_byte_screen",
+        "expected_component_benefit_score": null,
+        "expected_net_score_delta_vs_c067": 0.136022998662,
+        "rate_score_delta_vs_c067": 0.136022998662,
+        "unchanged_distortion_score_if_applicable": null
+      },
+      "fail_closed_blockers": [
+        "reversed-base CDO1 rows are lower-bound economics only; no byte-closed archive was built",
+        "estimated bytes do not pass unchanged-distortion sub-0.30 byte gate",
+        "no joint byte+geometry gate pass for exact-eval dispatch",
+        "archive bytes exceed 252760 and no clear expected component benefit evidence is attached"
+      ],
+      "family": "cdo1_overlay_over_smaller_base_lower_bound",
+      "lane": "cdo1_reversed_base_mask_topology",
+      "notes": [
+        "base=cmg3_nonzero_top2",
+        "residual_after_overlay=0.0",
+        "overlay_lzma_bytes=255968"
+      ],
+      "policy_id": "full_repair_to_c067_decoded_mask",
+      "promotion_eligible": false,
+      "rank": 23,
+      "score_claim": false
+    },
+    {
+      "archive": null,
+      "artifact_path": "experiments/results/c067_postdecode_mask_repair_candidate_20260502/c067_postdecode_mask_repair_waterfill_pair_class_plan.json",
+      "builder_command_if_materialization_needed": [
+        "--policy",
+        "pair_indices",
+        "--pair-indices",
+        "41,67,71,79,85,133,135,139,153,164,168,200,212,216,222,230,236,274,276,282,290",
+        "--max-repair-payload-bytes",
+        "16000"
+      ],
+      "candidate_id": "c067_postdecode_repair_save12k_exact_trace_pair_waterfill_budget16000",
+      "dispatch": {
+        "byte_gate_passed": false,
+        "component_benefit_gate_passed": true,
+        "dispatchable": false,
+        "no_remote_dispatch_from_this_run": true,
+        "status": "no_dispatch"
+      },
+      "evidence_grade": "planning_only_with_exact_negative_context",
+      "exact_eval": null,
+      "expected_value": {
+        "component_benefit_evidence": "pair/class component-trace waterfill prior",
+        "expectation_kind": "first_order_component_benefit_minus_rate",
+        "expected_component_benefit_score": 0.135609970578,
+        "expected_net_score_delta_vs_c067": -0.135609970578,
+        "rate_score_delta_vs_c067": null,
+        "unchanged_distortion_score_if_applicable": null
+      },
+      "fail_closed_blockers": [
+        "no byte-closed archive artifact is present yet"
+      ],
+      "family": "postdecode_mask_repair_waterfill_pair_class",
+      "lane": "scorer_weighted_mask_topology_repair_atoms",
+      "notes": [
+        "estimated_payload_bytes=15765.733085",
+        "selected_atom_count=24"
+      ],
+      "policy_id": "save12k_exact_trace_pair_waterfill_budget16000",
+      "promotion_eligible": false,
+      "rank": 24,
+      "score_claim": false
+    }
+  ],
+  "record_date": "2026-05-02",
+  "remote_jobs_dispatched": false,
+  "schema": "c067_bigmove_nontrain_candidate_triage_v1",
+  "score_claim": false
+}

@@ -1,0 +1,12 @@
+{
+  "expected_baseline_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+  "expected_baseline_archive_size_bytes": 686635,
+  "finite_difference_shard_count": 16,
+  "finite_difference_shard_index": 14,
+  "job_name": "pfp16_direct_fd_modal_a10g_20260501_r3_shard14_of16",
+  "promotion_eligible": false,
+  "role": "modal_diagnostic_component_sensitivity",
+  "schema_version": 1,
+  "score_claim": false,
+  "score_source": "none:modal_diagnostic_component_sensitivity_non_promotable"
+}

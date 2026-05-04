@@ -1,0 +1,1297 @@
+{
+  "basis_action_schema": {
+    "pair_action_evidence_schema": "pr85_pair_action_lowering_evidence_v1",
+    "pr85_target_streams": [
+      "bias: frame0 global RGB choice",
+      "region: frame0 half/middle-region RGB choice",
+      "randmulti group (222,222,4): frame1/f2 global RGB-bias oracle",
+      "randmulti group (224,222,4): frame1/f2 2x2 tile RGB-bias oracle"
+    ],
+    "pr90_qrgb_basis": [
+      "planes 0..5: frame0/frame1 global RGB offsets",
+      "planes 6..17: frame0/frame1 vertical half-band RGB offsets",
+      "planes 18..29: frame0/frame1 horizontal half-band RGB offsets",
+      "planes 30..35: frame0/frame1 checker/quadrant RGB offsets",
+      "planes 36..47: frame0/frame1 vertical detail alternating-band RGB offsets"
+    ]
+  },
+  "blocked_designs": [
+    {
+      "blocker_class": "incompatible_runtime_consumer",
+      "can_feed_pair_action_evidence": false,
+      "design_kind": "direct_pr90_qrgb_stream_transplant",
+      "dispatch_unlocked": false,
+      "exact_next_implementation": "Implement a PR85 local archive builder that lowers selected QRGB-like controls into existing PR85 streams, not a raw PR90 payload transplant.",
+      "reason": "PR90 QRGB is consumed as 48 renderer-bias planes by PR90 inflate; PR85 runtime has no matching QRGB consumer."
+    },
+    {
+      "blocker_class": "pair_action_schema_lacks_post_stage_selector",
+      "can_feed_pair_action_evidence": false,
+      "design_kind": "pr85_post_stage_rgb_bias",
+      "dispatch_unlocked": false,
+      "exact_next_implementation": "Extend the local pair-atom archive builder contract for post stage ids, or keep QRGB transfer on bias/region/randmulti streams.",
+      "reason": "Current pair-action evidence schema has stream/value but no post-stage field; post choices are stage-indexed in PR85 runtime."
+    },
+    {
+      "blocker_class": "ungrounded_basis_direction",
+      "can_feed_pair_action_evidence": false,
+      "design_kind": "pr85_random_lowfreq_randmulti_projection",
+      "dispatch_unlocked": false,
+      "exact_next_implementation": "Run a local non-scorer output-delta builder first, then require CUDA component-response evidence before promotion.",
+      "reason": "Generic PR85 randmulti low-frequency rows use seeded random patterns; PR90 QRGB signs do not identify which random pattern choice improves PR85 components."
+    }
+  ],
+  "blocker_class": "no_archive_changing_path",
+  "blockers": [
+    {
+      "blocker_class": "no_archive_changing_path",
+      "reason": "No byte-closed PR85 archive candidate was built or non-noop-preflighted in this planner."
+    },
+    {
+      "blocker_class": "no_gpu_dispatch_by_contract",
+      "reason": "Worker D task explicitly forbids remote GPU dispatch."
+    }
+  ],
+  "can_feed_pair_action_evidence_count": 4,
+  "candidate_count": 8,
+  "dispatch_performed": false,
+  "dispatch_unlocked": false,
+  "exact_next_implementation": "Feed pair_action_evidence.json into build_pr85_pair_action_candidates.py, then build a local PR85 candidate archive with build_pr85_pair_atom_candidates.py and require fixed-runtime non-noop custody before any lane claim or exact CUDA eval.",
+  "gpu_required": false,
+  "pair_action_evidence": {
+    "candidates": [
+      {
+        "actions": [
+          {
+            "candidate_value": 20,
+            "op": "set",
+            "pair_index": 192,
+            "rationale": "PR90 QRGB frame1 global RGB residual transferred to PR85 randmulti global f2 bias choice",
+            "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+            "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0192",
+            "source_value": 0,
+            "stream": "randmulti"
+          }
+        ],
+        "archive_changing_path": null,
+        "candidate_id": "pr85_qrgb_f2_randglobal_pair_0192",
+        "charged_bytes_proxy": {
+          "basis": "ceil(PR90 observed QRGB residual compressed bytes per frame pair); archive delta remains unproven until PR85 local recode",
+          "candidate_action_bytes": 7,
+          "pr90_qrgb_compressed_bytes": 4106,
+          "pr90_qrgb_compressed_bytes_per_pair": 6.843333333333334,
+          "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427"
+        },
+        "header_mode": "explicit_30",
+        "targeted_component": "combined"
+      },
+      {
+        "actions": [
+          {
+            "candidate_value": 5,
+            "op": "set",
+            "pair_index": 60,
+            "rationale": "PR90 QRGB frame0 global RGB residual sign transferred to PR85 frame0 bias choice",
+            "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+            "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0060",
+            "source_value": 24,
+            "stream": "bias"
+          }
+        ],
+        "archive_changing_path": null,
+        "candidate_id": "pr85_qrgb_f1_bias_pair_0060",
+        "charged_bytes_proxy": {
+          "basis": "ceil(PR90 observed QRGB residual compressed bytes per frame pair); archive delta remains unproven until PR85 local recode",
+          "candidate_action_bytes": 7,
+          "pr90_qrgb_compressed_bytes": 4106,
+          "pr90_qrgb_compressed_bytes_per_pair": 6.843333333333334,
+          "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427"
+        },
+        "header_mode": "explicit_30",
+        "targeted_component": "combined"
+      },
+      {
+        "actions": [
+          {
+            "candidate_value": 21,
+            "op": "set",
+            "pair_index": 164,
+            "rationale": "PR90 QRGB frame0 global RGB residual sign transferred to PR85 frame0 bias choice",
+            "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+            "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0164",
+            "source_value": 3,
+            "stream": "bias"
+          }
+        ],
+        "archive_changing_path": null,
+        "candidate_id": "pr85_qrgb_f1_bias_pair_0164",
+        "charged_bytes_proxy": {
+          "basis": "ceil(PR90 observed QRGB residual compressed bytes per frame pair); archive delta remains unproven until PR85 local recode",
+          "candidate_action_bytes": 7,
+          "pr90_qrgb_compressed_bytes": 4106,
+          "pr90_qrgb_compressed_bytes_per_pair": 6.843333333333334,
+          "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427"
+        },
+        "header_mode": "explicit_30",
+        "targeted_component": "combined"
+      },
+      {
+        "actions": [
+          {
+            "candidate_value": 45,
+            "op": "set",
+            "pair_index": 197,
+            "rationale": "PR90 QRGB frame0 half-band residual transferred to PR85 frame0 region bias choice",
+            "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+            "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0197",
+            "source_value": 60,
+            "stream": "region"
+          }
+        ],
+        "archive_changing_path": null,
+        "candidate_id": "pr85_qrgb_f1_region_pair_0197",
+        "charged_bytes_proxy": {
+          "basis": "ceil(PR90 observed QRGB residual compressed bytes per frame pair); archive delta remains unproven until PR85 local recode",
+          "candidate_action_bytes": 7,
+          "pr90_qrgb_compressed_bytes": 4106,
+          "pr90_qrgb_compressed_bytes_per_pair": 6.843333333333334,
+          "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427"
+        },
+        "header_mode": "explicit_30",
+        "targeted_component": "combined"
+      }
+    ],
+    "dispatch_performed": false,
+    "remote_jobs_dispatched": false,
+    "schema": "pr85_pair_action_lowering_evidence_v1",
+    "score_claim": false,
+    "thresholds": []
+  },
+  "pair_planning_source": {
+    "candidate_archive_count": 0,
+    "dispatch_unlocked": false,
+    "path": "experiments/results/pr85_pair_atom_candidates_20260504_orchestrator/planning.json",
+    "schema": "pr85_pair_atom_candidate_readiness_v1",
+    "score_claim": false,
+    "scorer_gradient_plan": {
+      "declared_sha256": "367a4205efa6304712b9466519bd59168122b278ad784a69fc269a76fce567ff",
+      "path": "/tmp/pr85_scorer_gradient_atoms_plan_baseline.json",
+      "sha256": "367a4205efa6304712b9466519bd59168122b278ad784a69fc269a76fce567ff",
+      "stable_plan_digest_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427"
+    },
+    "sha256": "f6121437f3fb89ff870bdfdd60e103f6385488191ce8479fd20337b8ee487b58",
+    "source_sha_for_pair_action": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427"
+  },
+  "pr85_segment_evidence": {
+    "bundle_format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+    "header_bytes": 24,
+    "segments": {
+      "bias": {
+        "decoded_bytes": 603,
+        "decoded_sha256": "67751d89e4825a6a71d4e74a0aa6f0246a861c0f96fc11184eec407e9caf8d7c",
+        "default_choice": 13,
+        "dominant_symbol": 13,
+        "dominant_symbol_count": 373,
+        "magic": "BD1",
+        "nondefault_count": 227,
+        "offset": 219631,
+        "raw_bytes": 223,
+        "raw_sha256": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b",
+        "unique_count": 26
+      },
+      "frac": {
+        "decoded_bytes": 179,
+        "decoded_sha256": "05c785af21cbf5a5f11613dd5e23b8191b4c8477a57354d6b1060340a5fd901a",
+        "default_choice": 4,
+        "dominant_symbol": 4,
+        "dominant_symbol_count": 513,
+        "magic": "FV1",
+        "nondefault_count": 87,
+        "offset": 219222,
+        "raw_bytes": 106,
+        "raw_sha256": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992",
+        "unique_count": 9
+      },
+      "frac2": {
+        "decoded_bytes": 603,
+        "decoded_sha256": "e880b2f23eae84b87c6e7f566265003dec54650a8e98fdfa8e01ce0d536a584b",
+        "default_choice": 4,
+        "dominant_symbol": 4,
+        "dominant_symbol_count": 452,
+        "magic": "FH2",
+        "nondefault_count": 148,
+        "offset": 219328,
+        "raw_bytes": 149,
+        "raw_sha256": "3a01c7546d89d9d3ca846da37a20add7d456421e9211a6339850d946b856026b",
+        "unique_count": 9
+      },
+      "frac3": {
+        "decoded_bytes": 603,
+        "decoded_sha256": "434ab5abbfec6cdf38e762eacc5382a04688c8bbef7592e9f2fd20ec5e6cdab4",
+        "default_choice": 4,
+        "dominant_symbol": 4,
+        "dominant_symbol_count": 437,
+        "magic": "FD3",
+        "nondefault_count": 163,
+        "offset": 219477,
+        "raw_bytes": 154,
+        "raw_sha256": "d725b01b604566c5a76a06b821c644c8d5d5bb9a57ab0597d3bdabc8389858b5",
+        "unique_count": 9
+      },
+      "mask": {
+        "offset": 24,
+        "raw_bytes": 159011,
+        "raw_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179"
+      },
+      "model": {
+        "offset": 159035,
+        "raw_bytes": 57074,
+        "raw_sha256": "c9194c19d44d3c32c4e588bbe4f9986ed0c562779078f0f4d6b073f0799b5dbc"
+      },
+      "pose": {
+        "offset": 216109,
+        "raw_bytes": 1487,
+        "raw_sha256": "2b6e03e02fb17f662e3f3f9ce47daf2fc33bf1f76c96e34ffac005f1c5c4054c"
+      },
+      "post": {
+        "decoded_bytes": 2400,
+        "decoded_sha256": "ce067fec132d1a314ad93cee8d39b17e7dd01a523db9a08ae797dfb1bd9a6b86",
+        "offset": 217596,
+        "raw_bytes": 1400,
+        "raw_sha256": "c3dc88e0fb5a1e48aec49eeacefeea20685e3c02598933deb1ff22dc09892575",
+        "stage_count": 4
+      },
+      "randmulti": {
+        "decoded_bytes": 27105,
+        "decoded_sha256": "87bcc720c1e80afb9adad5ee01477423ced526f31c54d461d69dbf26e08eecc9",
+        "group_count": 72,
+        "nonzero_entries": 13496,
+        "offset": 220127,
+        "raw_bytes": 16101,
+        "raw_sha256": "c624372e60a0851c4c427dc333a60dcc5d6657ba8ed56951612e7c9d7be7629f"
+      },
+      "region": {
+        "decoded_bytes": 603,
+        "decoded_sha256": "8018b15bf5029b8bbf224b4ed1581afa2c51ae4e814e327183ffe8a697deb7e0",
+        "default_choice": 0,
+        "dominant_symbol": 0,
+        "dominant_symbol_count": 345,
+        "magic": "RH1",
+        "nondefault_count": 255,
+        "offset": 219854,
+        "raw_bytes": 273,
+        "raw_sha256": "4a7c16094fab281c30e27621a58577c095c4b1153c232518c9adbaba2a2b2392",
+        "unique_count": 50
+      },
+      "shift": {
+        "decoded_bytes": 603,
+        "decoded_sha256": "19e1bf816c8f19dd58e986647413a6f71f36a30e8da2d085ccf7e475d1cb3b43",
+        "default_choice": 40,
+        "dominant_symbol": 40,
+        "dominant_symbol_count": 419,
+        "magic": "SD4",
+        "nondefault_count": 181,
+        "offset": 218996,
+        "raw_bytes": 226,
+        "raw_sha256": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4",
+        "unique_count": 50
+      }
+    }
+  },
+  "pr90_source": {
+    "archive_bytes": 218080,
+    "archive_sha256": "608ea0355e60faad97b046c27644205d05120ac85ab3e8a99543a75a4ab2dd2d",
+    "known_pr90_anchor_match": {
+      "expected_archive_bytes": 218080,
+      "expected_archive_sha256": "608ea0355e60faad97b046c27644205d05120ac85ab3e8a99543a75a4ab2dd2d",
+      "matches": true
+    },
+    "member_bytes": 217980,
+    "member_name": "p",
+    "member_sha256": "b48ba0ea138e4f3b12c02e320528a53ce92ed6540d71b8554249ee7bdcad6d34",
+    "path": "experiments/results/public_pr90_intake_20260504_worker/archive.zip",
+    "payload_len": 217980,
+    "payload_probe": {
+      "path": "experiments/results/public_pr90_intake_20260504_worker/payload_probe.json",
+      "sha256": "a585dd6ddb85f9fb2580d2083014e24bab875d74403a644e7046d554d21bce38"
+    },
+    "payload_sha256": "b48ba0ea138e4f3b12c02e320528a53ce92ed6540d71b8554249ee7bdcad6d34",
+    "qrgb_residual": {
+      "abs_value_mean": 2.7861620617599256,
+      "basis_planes": 48,
+      "compressed_bytes": 4106,
+      "compressed_bytes_per_nonzero": 0.9533317854655212,
+      "compressed_bytes_per_pair": 6.843333333333334,
+      "compressed_sha256": "76120dc2eb7676aa41ad49da8d9f85381d3fbb6f1af389def1aa77e2d640f901",
+      "max_edits_per_pair": 16,
+      "mean_edits_per_pair": 7.178333333333334,
+      "nonzero_values": 4307,
+      "pair_count": 600,
+      "raw_bytes": 8614,
+      "raw_sha256": "bed76923a232ad63fd2eedda15e892c6d5af745ce2918fe75db54fbf53fb5e28",
+      "value_max": 23,
+      "value_min": -24
+    },
+    "qrgb_slice": {
+      "bytes": 4106,
+      "offset": 213874
+    },
+    "zip_stored": true
+  },
+  "ranked_candidates": [
+    {
+      "actions": [
+        {
+          "candidate_value": 20,
+          "op": "set",
+          "pair_index": 192,
+          "rationale": "PR90 QRGB frame1 global RGB residual transferred to PR85 randmulti global f2 bias choice",
+          "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+          "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0192",
+          "source_value": 0,
+          "stream": "randmulti"
+        }
+      ],
+      "archive_changing": false,
+      "archive_changing_path": null,
+      "basis_action_schema": {
+        "selected_channel_index": 2,
+        "selected_value": 1,
+        "source_basis": "PR90 semantic planes 3..5: frame1 global RGB offsets",
+        "source_qrgb_rgb_values": [
+          0,
+          0,
+          1
+        ],
+        "target_randmulti_group": {
+          "amp": 4,
+          "group_index": 61,
+          "lh": 222,
+          "lw": 222,
+          "selection_row": 0
+        },
+        "target_runtime_semantics": "PR85 frame1/f2 global RGB-bias oracle stage, radius 4",
+        "target_stream": "randmulti"
+      },
+      "blockers": [
+        {
+          "blocker_class": "no_archive_changing_path",
+          "reason": "planner emitted stream/value action evidence only; no PR85 candidate archive was built"
+        },
+        {
+          "blocker_class": "no_pr85_component_response_for_direction",
+          "reason": "PR90 QRGB sign gives a transfer direction, not measured PR85 component response"
+        }
+      ],
+      "can_feed_pair_action_evidence": true,
+      "candidate_id": "pr85_qrgb_f2_randglobal_pair_0192",
+      "charged_byte_proxy": {
+        "basis": "ceil(PR90 observed QRGB residual compressed bytes per frame pair); archive delta remains unproven until PR85 local recode",
+        "candidate_action_bytes": 7,
+        "pr90_qrgb_compressed_bytes": 4106,
+        "pr90_qrgb_compressed_bytes_per_pair": 6.843333333333334,
+        "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427"
+      },
+      "design_kind": "qrgb_frame1_global_rgb_to_pr85_randmulti_global_f2",
+      "dispatch_performed": false,
+      "dispatch_unlocked": false,
+      "expected_break_even": {
+        "break_even_margin_bytes": 509.6922114573065,
+        "combined_max_charged_bytes_for_zero_net_change": 516.6922114573065,
+        "dominant_single_component": "pose",
+        "evidence_status": "formula_only_break_even_from_pr85_component_trace",
+        "formula_only_rate_score_delta": 4.6610126718552e-06,
+        "formula_rate_score_per_byte": 6.658589531221714e-07,
+        "pose_only_max_charged_bytes_for_zero_net_change": 318.08732986550973,
+        "proxy_charged_bytes": 7,
+        "seg_only_max_charged_bytes_for_zero_net_change": 198.60488159179684
+      },
+      "feed_pair_action_evidence_status": "action_spec_only_no_archive_changing_path",
+      "frame_indices": [
+        384,
+        385
+      ],
+      "pair_index": 192,
+      "pr90_source_archive_sha256": "608ea0355e60faad97b046c27644205d05120ac85ab3e8a99543a75a4ab2dd2d",
+      "pr90_source_evidence_sha256": "76120dc2eb7676aa41ad49da8d9f85381d3fbb6f1af389def1aa77e2d640f901",
+      "qrgb_pair_summary": {
+        "max_abs_qrgb_value": 4,
+        "nonzero_qrgb_edits": 6,
+        "pair_index": 192,
+        "top_semantic_planes": [
+          {
+            "semantic_plane": 23,
+            "value": 4
+          },
+          {
+            "semantic_plane": 40,
+            "value": 4
+          },
+          {
+            "semantic_plane": 13,
+            "value": -2
+          },
+          {
+            "semantic_plane": 46,
+            "value": 2
+          },
+          {
+            "semantic_plane": 5,
+            "value": 1
+          },
+          {
+            "semantic_plane": 42,
+            "value": 1
+          }
+        ]
+      },
+      "rank": 1,
+      "remote_jobs_dispatched": false,
+      "score_claim": false,
+      "source_archive_bytes": 236328,
+      "source_archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+      "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0192",
+      "targeted_component": "combined"
+    },
+    {
+      "actions": [
+        {
+          "candidate_value": 5,
+          "op": "set",
+          "pair_index": 60,
+          "rationale": "PR90 QRGB frame0 global RGB residual sign transferred to PR85 frame0 bias choice",
+          "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+          "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0060",
+          "source_value": 24,
+          "stream": "bias"
+        }
+      ],
+      "archive_changing": false,
+      "archive_changing_path": null,
+      "basis_action_schema": {
+        "candidate_rgb_signs": [
+          -1,
+          0,
+          1
+        ],
+        "source_basis": "PR90 semantic planes 0..2: frame0 global RGB offsets",
+        "source_qrgb_rgb_values": [
+          -2,
+          0,
+          13
+        ],
+        "target_runtime_semantics": "PR85 frame0 RGB bias choice; values encode {-1,0,+1} per channel",
+        "target_stream": "bias"
+      },
+      "blockers": [
+        {
+          "blocker_class": "no_archive_changing_path",
+          "reason": "planner emitted stream/value action evidence only; no PR85 candidate archive was built"
+        },
+        {
+          "blocker_class": "no_pr85_component_response_for_direction",
+          "reason": "PR90 QRGB sign gives a transfer direction, not measured PR85 component response"
+        }
+      ],
+      "can_feed_pair_action_evidence": true,
+      "candidate_id": "pr85_qrgb_f1_bias_pair_0060",
+      "charged_byte_proxy": {
+        "basis": "ceil(PR90 observed QRGB residual compressed bytes per frame pair); archive delta remains unproven until PR85 local recode",
+        "candidate_action_bytes": 7,
+        "pr90_qrgb_compressed_bytes": 4106,
+        "pr90_qrgb_compressed_bytes_per_pair": 6.843333333333334,
+        "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427"
+      },
+      "design_kind": "qrgb_frame0_global_rgb_to_pr85_bias",
+      "dispatch_performed": false,
+      "dispatch_unlocked": false,
+      "expected_break_even": {
+        "break_even_margin_bytes": 477.2862579445188,
+        "combined_max_charged_bytes_for_zero_net_change": 484.2862579445188,
+        "dominant_single_component": "pose",
+        "evidence_status": "formula_only_break_even_from_pr85_component_trace",
+        "formula_only_rate_score_delta": 4.6610126718552e-06,
+        "formula_rate_score_per_byte": 6.658589531221714e-07,
+        "pose_only_max_charged_bytes_for_zero_net_change": 334.05947882229424,
+        "proxy_charged_bytes": 7,
+        "seg_only_max_charged_bytes_for_zero_net_change": 150.22677912222454
+      },
+      "feed_pair_action_evidence_status": "action_spec_only_no_archive_changing_path",
+      "frame_indices": [
+        120,
+        121
+      ],
+      "pair_index": 60,
+      "pr90_source_archive_sha256": "608ea0355e60faad97b046c27644205d05120ac85ab3e8a99543a75a4ab2dd2d",
+      "pr90_source_evidence_sha256": "76120dc2eb7676aa41ad49da8d9f85381d3fbb6f1af389def1aa77e2d640f901",
+      "qrgb_pair_summary": {
+        "max_abs_qrgb_value": 13,
+        "nonzero_qrgb_edits": 9,
+        "pair_index": 60,
+        "top_semantic_planes": [
+          {
+            "semantic_plane": 2,
+            "value": 13
+          },
+          {
+            "semantic_plane": 18,
+            "value": 6
+          },
+          {
+            "semantic_plane": 5,
+            "value": -4
+          },
+          {
+            "semantic_plane": 0,
+            "value": -2
+          },
+          {
+            "semantic_plane": 9,
+            "value": 2
+          },
+          {
+            "semantic_plane": 21,
+            "value": -2
+          },
+          {
+            "semantic_plane": 46,
+            "value": 2
+          },
+          {
+            "semantic_plane": 25,
+            "value": 1
+          }
+        ]
+      },
+      "rank": 2,
+      "remote_jobs_dispatched": false,
+      "score_claim": false,
+      "source_archive_bytes": 236328,
+      "source_archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+      "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0060",
+      "targeted_component": "combined"
+    },
+    {
+      "actions": [
+        {
+          "candidate_value": 40,
+          "op": "set",
+          "pair_index": 60,
+          "rationale": "PR90 QRGB frame0 half-band residual transferred to PR85 frame0 region bias choice",
+          "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+          "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0060",
+          "source_value": 84,
+          "stream": "region"
+        }
+      ],
+      "archive_changing": false,
+      "archive_changing_path": null,
+      "basis_action_schema": {
+        "selected_value": 2,
+        "source_basis": "PR90 frame0 horizontal half-band RGB residual",
+        "source_qrgb_value": 6,
+        "source_semantic_plane": 18,
+        "target_channel_index": 1,
+        "target_region_mask_index": 2,
+        "target_runtime_semantics": "PR85 frame0 half/middle-region RGB or all-channel bias",
+        "target_stream": "region"
+      },
+      "blockers": [
+        {
+          "blocker_class": "no_archive_changing_path",
+          "reason": "planner emitted stream/value action evidence only; no PR85 candidate archive was built"
+        },
+        {
+          "blocker_class": "no_pr85_component_response_for_direction",
+          "reason": "PR90 QRGB sign gives a transfer direction, not measured PR85 component response"
+        }
+      ],
+      "can_feed_pair_action_evidence": true,
+      "candidate_id": "pr85_qrgb_f1_region_pair_0060",
+      "charged_byte_proxy": {
+        "basis": "ceil(PR90 observed QRGB residual compressed bytes per frame pair); archive delta remains unproven until PR85 local recode",
+        "candidate_action_bytes": 7,
+        "pr90_qrgb_compressed_bytes": 4106,
+        "pr90_qrgb_compressed_bytes_per_pair": 6.843333333333334,
+        "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427"
+      },
+      "design_kind": "qrgb_frame0_halfband_to_pr85_region",
+      "dispatch_performed": false,
+      "dispatch_unlocked": false,
+      "expected_break_even": {
+        "break_even_margin_bytes": 477.2862579445188,
+        "combined_max_charged_bytes_for_zero_net_change": 484.2862579445188,
+        "dominant_single_component": "pose",
+        "evidence_status": "formula_only_break_even_from_pr85_component_trace",
+        "formula_only_rate_score_delta": 4.6610126718552e-06,
+        "formula_rate_score_per_byte": 6.658589531221714e-07,
+        "pose_only_max_charged_bytes_for_zero_net_change": 334.05947882229424,
+        "proxy_charged_bytes": 7,
+        "seg_only_max_charged_bytes_for_zero_net_change": 150.22677912222454
+      },
+      "feed_pair_action_evidence_status": "action_spec_only_no_archive_changing_path",
+      "frame_indices": [
+        120,
+        121
+      ],
+      "pair_index": 60,
+      "pr90_source_archive_sha256": "608ea0355e60faad97b046c27644205d05120ac85ab3e8a99543a75a4ab2dd2d",
+      "pr90_source_evidence_sha256": "76120dc2eb7676aa41ad49da8d9f85381d3fbb6f1af389def1aa77e2d640f901",
+      "qrgb_pair_summary": {
+        "max_abs_qrgb_value": 13,
+        "nonzero_qrgb_edits": 9,
+        "pair_index": 60,
+        "top_semantic_planes": [
+          {
+            "semantic_plane": 2,
+            "value": 13
+          },
+          {
+            "semantic_plane": 18,
+            "value": 6
+          },
+          {
+            "semantic_plane": 5,
+            "value": -4
+          },
+          {
+            "semantic_plane": 0,
+            "value": -2
+          },
+          {
+            "semantic_plane": 9,
+            "value": 2
+          },
+          {
+            "semantic_plane": 21,
+            "value": -2
+          },
+          {
+            "semantic_plane": 46,
+            "value": 2
+          },
+          {
+            "semantic_plane": 25,
+            "value": 1
+          }
+        ]
+      },
+      "rank": 3,
+      "remote_jobs_dispatched": false,
+      "score_claim": false,
+      "source_archive_bytes": 236328,
+      "source_archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+      "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0060",
+      "targeted_component": "combined"
+    },
+    {
+      "actions": [
+        {
+          "candidate_value": 4,
+          "op": "set",
+          "pair_index": 60,
+          "rationale": "PR90 QRGB frame1 global RGB residual transferred to PR85 randmulti global f2 bias choice",
+          "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+          "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0060",
+          "source_value": 12,
+          "stream": "randmulti"
+        }
+      ],
+      "archive_changing": false,
+      "archive_changing_path": null,
+      "basis_action_schema": {
+        "selected_channel_index": 2,
+        "selected_value": -4,
+        "source_basis": "PR90 semantic planes 3..5: frame1 global RGB offsets",
+        "source_qrgb_rgb_values": [
+          0,
+          0,
+          -4
+        ],
+        "target_randmulti_group": {
+          "amp": 4,
+          "group_index": 61,
+          "lh": 222,
+          "lw": 222,
+          "selection_row": 0
+        },
+        "target_runtime_semantics": "PR85 frame1/f2 global RGB-bias oracle stage, radius 4",
+        "target_stream": "randmulti"
+      },
+      "blockers": [
+        {
+          "blocker_class": "no_archive_changing_path",
+          "reason": "planner emitted stream/value action evidence only; no PR85 candidate archive was built"
+        },
+        {
+          "blocker_class": "no_pr85_component_response_for_direction",
+          "reason": "PR90 QRGB sign gives a transfer direction, not measured PR85 component response"
+        }
+      ],
+      "can_feed_pair_action_evidence": true,
+      "candidate_id": "pr85_qrgb_f2_randglobal_pair_0060",
+      "charged_byte_proxy": {
+        "basis": "ceil(PR90 observed QRGB residual compressed bytes per frame pair); archive delta remains unproven until PR85 local recode",
+        "candidate_action_bytes": 7,
+        "pr90_qrgb_compressed_bytes": 4106,
+        "pr90_qrgb_compressed_bytes_per_pair": 6.843333333333334,
+        "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427"
+      },
+      "design_kind": "qrgb_frame1_global_rgb_to_pr85_randmulti_global_f2",
+      "dispatch_performed": false,
+      "dispatch_unlocked": false,
+      "expected_break_even": {
+        "break_even_margin_bytes": 477.2862579445188,
+        "combined_max_charged_bytes_for_zero_net_change": 484.2862579445188,
+        "dominant_single_component": "pose",
+        "evidence_status": "formula_only_break_even_from_pr85_component_trace",
+        "formula_only_rate_score_delta": 4.6610126718552e-06,
+        "formula_rate_score_per_byte": 6.658589531221714e-07,
+        "pose_only_max_charged_bytes_for_zero_net_change": 334.05947882229424,
+        "proxy_charged_bytes": 7,
+        "seg_only_max_charged_bytes_for_zero_net_change": 150.22677912222454
+      },
+      "feed_pair_action_evidence_status": "action_spec_only_no_archive_changing_path",
+      "frame_indices": [
+        120,
+        121
+      ],
+      "pair_index": 60,
+      "pr90_source_archive_sha256": "608ea0355e60faad97b046c27644205d05120ac85ab3e8a99543a75a4ab2dd2d",
+      "pr90_source_evidence_sha256": "76120dc2eb7676aa41ad49da8d9f85381d3fbb6f1af389def1aa77e2d640f901",
+      "qrgb_pair_summary": {
+        "max_abs_qrgb_value": 13,
+        "nonzero_qrgb_edits": 9,
+        "pair_index": 60,
+        "top_semantic_planes": [
+          {
+            "semantic_plane": 2,
+            "value": 13
+          },
+          {
+            "semantic_plane": 18,
+            "value": 6
+          },
+          {
+            "semantic_plane": 5,
+            "value": -4
+          },
+          {
+            "semantic_plane": 0,
+            "value": -2
+          },
+          {
+            "semantic_plane": 9,
+            "value": 2
+          },
+          {
+            "semantic_plane": 21,
+            "value": -2
+          },
+          {
+            "semantic_plane": 46,
+            "value": 2
+          },
+          {
+            "semantic_plane": 25,
+            "value": 1
+          }
+        ]
+      },
+      "rank": 4,
+      "remote_jobs_dispatched": false,
+      "score_claim": false,
+      "source_archive_bytes": 236328,
+      "source_archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+      "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0060",
+      "targeted_component": "combined"
+    },
+    {
+      "actions": [
+        {
+          "candidate_value": 21,
+          "op": "set",
+          "pair_index": 164,
+          "rationale": "PR90 QRGB frame0 global RGB residual sign transferred to PR85 frame0 bias choice",
+          "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+          "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0164",
+          "source_value": 3,
+          "stream": "bias"
+        }
+      ],
+      "archive_changing": false,
+      "archive_changing_path": null,
+      "basis_action_schema": {
+        "candidate_rgb_signs": [
+          1,
+          0,
+          -1
+        ],
+        "source_basis": "PR90 semantic planes 0..2: frame0 global RGB offsets",
+        "source_qrgb_rgb_values": [
+          2,
+          0,
+          -6
+        ],
+        "target_runtime_semantics": "PR85 frame0 RGB bias choice; values encode {-1,0,+1} per channel",
+        "target_stream": "bias"
+      },
+      "blockers": [
+        {
+          "blocker_class": "no_archive_changing_path",
+          "reason": "planner emitted stream/value action evidence only; no PR85 candidate archive was built"
+        },
+        {
+          "blocker_class": "no_pr85_component_response_for_direction",
+          "reason": "PR90 QRGB sign gives a transfer direction, not measured PR85 component response"
+        }
+      ],
+      "can_feed_pair_action_evidence": true,
+      "candidate_id": "pr85_qrgb_f1_bias_pair_0164",
+      "charged_byte_proxy": {
+        "basis": "ceil(PR90 observed QRGB residual compressed bytes per frame pair); archive delta remains unproven until PR85 local recode",
+        "candidate_action_bytes": 7,
+        "pr90_qrgb_compressed_bytes": 4106,
+        "pr90_qrgb_compressed_bytes_per_pair": 6.843333333333334,
+        "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427"
+      },
+      "design_kind": "qrgb_frame0_global_rgb_to_pr85_bias",
+      "dispatch_performed": false,
+      "dispatch_unlocked": false,
+      "expected_break_even": {
+        "break_even_margin_bytes": 458.22756469211794,
+        "combined_max_charged_bytes_for_zero_net_change": 465.22756469211794,
+        "dominant_single_component": "pose",
+        "evidence_status": "formula_only_break_even_from_pr85_component_trace",
+        "formula_only_rate_score_delta": 4.6610126718552e-06,
+        "formula_rate_score_per_byte": 6.658589531221714e-07,
+        "pose_only_max_charged_bytes_for_zero_net_change": 247.5260598703406,
+        "proxy_charged_bytes": 7,
+        "seg_only_max_charged_bytes_for_zero_net_change": 217.70150482177732
+      },
+      "feed_pair_action_evidence_status": "action_spec_only_no_archive_changing_path",
+      "frame_indices": [
+        328,
+        329
+      ],
+      "pair_index": 164,
+      "pr90_source_archive_sha256": "608ea0355e60faad97b046c27644205d05120ac85ab3e8a99543a75a4ab2dd2d",
+      "pr90_source_evidence_sha256": "76120dc2eb7676aa41ad49da8d9f85381d3fbb6f1af389def1aa77e2d640f901",
+      "qrgb_pair_summary": {
+        "max_abs_qrgb_value": 16,
+        "nonzero_qrgb_edits": 12,
+        "pair_index": 164,
+        "top_semantic_planes": [
+          {
+            "semantic_plane": 22,
+            "value": -16
+          },
+          {
+            "semantic_plane": 2,
+            "value": -6
+          },
+          {
+            "semantic_plane": 17,
+            "value": -5
+          },
+          {
+            "semantic_plane": 21,
+            "value": 4
+          },
+          {
+            "semantic_plane": 23,
+            "value": 4
+          },
+          {
+            "semantic_plane": 39,
+            "value": 3
+          },
+          {
+            "semantic_plane": 0,
+            "value": 2
+          },
+          {
+            "semantic_plane": 30,
+            "value": -2
+          }
+        ]
+      },
+      "rank": 5,
+      "remote_jobs_dispatched": false,
+      "score_claim": false,
+      "source_archive_bytes": 236328,
+      "source_archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+      "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0164",
+      "targeted_component": "combined"
+    },
+    {
+      "actions": [
+        {
+          "candidate_value": 45,
+          "op": "set",
+          "pair_index": 164,
+          "rationale": "PR90 QRGB frame0 half-band residual transferred to PR85 frame0 region bias choice",
+          "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+          "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0164",
+          "source_value": 37,
+          "stream": "region"
+        }
+      ],
+      "archive_changing": false,
+      "archive_changing_path": null,
+      "basis_action_schema": {
+        "selected_value": -2,
+        "source_basis": "PR90 frame0 horizontal half-band RGB residual",
+        "source_qrgb_value": -16,
+        "source_semantic_plane": 22,
+        "target_channel_index": 3,
+        "target_region_mask_index": 2,
+        "target_runtime_semantics": "PR85 frame0 half/middle-region RGB or all-channel bias",
+        "target_stream": "region"
+      },
+      "blockers": [
+        {
+          "blocker_class": "no_archive_changing_path",
+          "reason": "planner emitted stream/value action evidence only; no PR85 candidate archive was built"
+        },
+        {
+          "blocker_class": "no_pr85_component_response_for_direction",
+          "reason": "PR90 QRGB sign gives a transfer direction, not measured PR85 component response"
+        }
+      ],
+      "can_feed_pair_action_evidence": true,
+      "candidate_id": "pr85_qrgb_f1_region_pair_0164",
+      "charged_byte_proxy": {
+        "basis": "ceil(PR90 observed QRGB residual compressed bytes per frame pair); archive delta remains unproven until PR85 local recode",
+        "candidate_action_bytes": 7,
+        "pr90_qrgb_compressed_bytes": 4106,
+        "pr90_qrgb_compressed_bytes_per_pair": 6.843333333333334,
+        "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427"
+      },
+      "design_kind": "qrgb_frame0_halfband_to_pr85_region",
+      "dispatch_performed": false,
+      "dispatch_unlocked": false,
+      "expected_break_even": {
+        "break_even_margin_bytes": 458.22756469211794,
+        "combined_max_charged_bytes_for_zero_net_change": 465.22756469211794,
+        "dominant_single_component": "pose",
+        "evidence_status": "formula_only_break_even_from_pr85_component_trace",
+        "formula_only_rate_score_delta": 4.6610126718552e-06,
+        "formula_rate_score_per_byte": 6.658589531221714e-07,
+        "pose_only_max_charged_bytes_for_zero_net_change": 247.5260598703406,
+        "proxy_charged_bytes": 7,
+        "seg_only_max_charged_bytes_for_zero_net_change": 217.70150482177732
+      },
+      "feed_pair_action_evidence_status": "action_spec_only_no_archive_changing_path",
+      "frame_indices": [
+        328,
+        329
+      ],
+      "pair_index": 164,
+      "pr90_source_archive_sha256": "608ea0355e60faad97b046c27644205d05120ac85ab3e8a99543a75a4ab2dd2d",
+      "pr90_source_evidence_sha256": "76120dc2eb7676aa41ad49da8d9f85381d3fbb6f1af389def1aa77e2d640f901",
+      "qrgb_pair_summary": {
+        "max_abs_qrgb_value": 16,
+        "nonzero_qrgb_edits": 12,
+        "pair_index": 164,
+        "top_semantic_planes": [
+          {
+            "semantic_plane": 22,
+            "value": -16
+          },
+          {
+            "semantic_plane": 2,
+            "value": -6
+          },
+          {
+            "semantic_plane": 17,
+            "value": -5
+          },
+          {
+            "semantic_plane": 21,
+            "value": 4
+          },
+          {
+            "semantic_plane": 23,
+            "value": 4
+          },
+          {
+            "semantic_plane": 39,
+            "value": 3
+          },
+          {
+            "semantic_plane": 0,
+            "value": 2
+          },
+          {
+            "semantic_plane": 30,
+            "value": -2
+          }
+        ]
+      },
+      "rank": 6,
+      "remote_jobs_dispatched": false,
+      "score_claim": false,
+      "source_archive_bytes": 236328,
+      "source_archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+      "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0164",
+      "targeted_component": "combined"
+    },
+    {
+      "actions": [
+        {
+          "candidate_value": 16,
+          "op": "set",
+          "pair_index": 164,
+          "rationale": "PR90 QRGB frame1 global RGB residual transferred to PR85 randmulti global f2 bias choice",
+          "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+          "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0164",
+          "source_value": 18,
+          "stream": "randmulti"
+        }
+      ],
+      "archive_changing": false,
+      "archive_changing_path": null,
+      "basis_action_schema": {
+        "selected_channel_index": 2,
+        "selected_value": -1,
+        "source_basis": "PR90 semantic planes 3..5: frame1 global RGB offsets",
+        "source_qrgb_rgb_values": [
+          0,
+          0,
+          -1
+        ],
+        "target_randmulti_group": {
+          "amp": 4,
+          "group_index": 61,
+          "lh": 222,
+          "lw": 222,
+          "selection_row": 0
+        },
+        "target_runtime_semantics": "PR85 frame1/f2 global RGB-bias oracle stage, radius 4",
+        "target_stream": "randmulti"
+      },
+      "blockers": [
+        {
+          "blocker_class": "no_archive_changing_path",
+          "reason": "planner emitted stream/value action evidence only; no PR85 candidate archive was built"
+        },
+        {
+          "blocker_class": "no_pr85_component_response_for_direction",
+          "reason": "PR90 QRGB sign gives a transfer direction, not measured PR85 component response"
+        }
+      ],
+      "can_feed_pair_action_evidence": true,
+      "candidate_id": "pr85_qrgb_f2_randglobal_pair_0164",
+      "charged_byte_proxy": {
+        "basis": "ceil(PR90 observed QRGB residual compressed bytes per frame pair); archive delta remains unproven until PR85 local recode",
+        "candidate_action_bytes": 7,
+        "pr90_qrgb_compressed_bytes": 4106,
+        "pr90_qrgb_compressed_bytes_per_pair": 6.843333333333334,
+        "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427"
+      },
+      "design_kind": "qrgb_frame1_global_rgb_to_pr85_randmulti_global_f2",
+      "dispatch_performed": false,
+      "dispatch_unlocked": false,
+      "expected_break_even": {
+        "break_even_margin_bytes": 458.22756469211794,
+        "combined_max_charged_bytes_for_zero_net_change": 465.22756469211794,
+        "dominant_single_component": "pose",
+        "evidence_status": "formula_only_break_even_from_pr85_component_trace",
+        "formula_only_rate_score_delta": 4.6610126718552e-06,
+        "formula_rate_score_per_byte": 6.658589531221714e-07,
+        "pose_only_max_charged_bytes_for_zero_net_change": 247.5260598703406,
+        "proxy_charged_bytes": 7,
+        "seg_only_max_charged_bytes_for_zero_net_change": 217.70150482177732
+      },
+      "feed_pair_action_evidence_status": "action_spec_only_no_archive_changing_path",
+      "frame_indices": [
+        328,
+        329
+      ],
+      "pair_index": 164,
+      "pr90_source_archive_sha256": "608ea0355e60faad97b046c27644205d05120ac85ab3e8a99543a75a4ab2dd2d",
+      "pr90_source_evidence_sha256": "76120dc2eb7676aa41ad49da8d9f85381d3fbb6f1af389def1aa77e2d640f901",
+      "qrgb_pair_summary": {
+        "max_abs_qrgb_value": 16,
+        "nonzero_qrgb_edits": 12,
+        "pair_index": 164,
+        "top_semantic_planes": [
+          {
+            "semantic_plane": 22,
+            "value": -16
+          },
+          {
+            "semantic_plane": 2,
+            "value": -6
+          },
+          {
+            "semantic_plane": 17,
+            "value": -5
+          },
+          {
+            "semantic_plane": 21,
+            "value": 4
+          },
+          {
+            "semantic_plane": 23,
+            "value": 4
+          },
+          {
+            "semantic_plane": 39,
+            "value": 3
+          },
+          {
+            "semantic_plane": 0,
+            "value": 2
+          },
+          {
+            "semantic_plane": 30,
+            "value": -2
+          }
+        ]
+      },
+      "rank": 7,
+      "remote_jobs_dispatched": false,
+      "score_claim": false,
+      "source_archive_bytes": 236328,
+      "source_archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+      "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0164",
+      "targeted_component": "combined"
+    },
+    {
+      "actions": [
+        {
+          "candidate_value": 45,
+          "op": "set",
+          "pair_index": 197,
+          "rationale": "PR90 QRGB frame0 half-band residual transferred to PR85 frame0 region bias choice",
+          "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+          "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0197",
+          "source_value": 60,
+          "stream": "region"
+        }
+      ],
+      "archive_changing": false,
+      "archive_changing_path": null,
+      "basis_action_schema": {
+        "selected_value": -2,
+        "source_basis": "PR90 frame0 horizontal half-band RGB residual",
+        "source_qrgb_value": -5,
+        "source_semantic_plane": 22,
+        "target_channel_index": 3,
+        "target_region_mask_index": 2,
+        "target_runtime_semantics": "PR85 frame0 half/middle-region RGB or all-channel bias",
+        "target_stream": "region"
+      },
+      "blockers": [
+        {
+          "blocker_class": "no_archive_changing_path",
+          "reason": "planner emitted stream/value action evidence only; no PR85 candidate archive was built"
+        },
+        {
+          "blocker_class": "no_pr85_component_response_for_direction",
+          "reason": "PR90 QRGB sign gives a transfer direction, not measured PR85 component response"
+        }
+      ],
+      "can_feed_pair_action_evidence": true,
+      "candidate_id": "pr85_qrgb_f1_region_pair_0197",
+      "charged_byte_proxy": {
+        "basis": "ceil(PR90 observed QRGB residual compressed bytes per frame pair); archive delta remains unproven until PR85 local recode",
+        "candidate_action_bytes": 7,
+        "pr90_qrgb_compressed_bytes": 4106,
+        "pr90_qrgb_compressed_bytes_per_pair": 6.843333333333334,
+        "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427"
+      },
+      "design_kind": "qrgb_frame0_halfband_to_pr85_region",
+      "dispatch_performed": false,
+      "dispatch_unlocked": false,
+      "expected_break_even": {
+        "break_even_margin_bytes": 445.8814701277624,
+        "combined_max_charged_bytes_for_zero_net_change": 452.8814701277624,
+        "dominant_single_component": "pose",
+        "evidence_status": "formula_only_break_even_from_pr85_component_trace",
+        "formula_only_rate_score_delta": 4.6610126718552e-06,
+        "formula_rate_score_per_byte": 6.658589531221714e-07,
+        "pose_only_max_charged_bytes_for_zero_net_change": 323.0244321638952,
+        "proxy_charged_bytes": 7,
+        "seg_only_max_charged_bytes_for_zero_net_change": 129.85703796386719
+      },
+      "feed_pair_action_evidence_status": "action_spec_only_no_archive_changing_path",
+      "frame_indices": [
+        394,
+        395
+      ],
+      "pair_index": 197,
+      "pr90_source_archive_sha256": "608ea0355e60faad97b046c27644205d05120ac85ab3e8a99543a75a4ab2dd2d",
+      "pr90_source_evidence_sha256": "76120dc2eb7676aa41ad49da8d9f85381d3fbb6f1af389def1aa77e2d640f901",
+      "qrgb_pair_summary": {
+        "max_abs_qrgb_value": 6,
+        "nonzero_qrgb_edits": 14,
+        "pair_index": 197,
+        "top_semantic_planes": [
+          {
+            "semantic_plane": 5,
+            "value": -6
+          },
+          {
+            "semantic_plane": 22,
+            "value": -5
+          },
+          {
+            "semantic_plane": 17,
+            "value": 4
+          },
+          {
+            "semantic_plane": 18,
+            "value": -4
+          },
+          {
+            "semantic_plane": 36,
+            "value": 4
+          },
+          {
+            "semantic_plane": 24,
+            "value": -3
+          },
+          {
+            "semantic_plane": 16,
+            "value": -2
+          },
+          {
+            "semantic_plane": 20,
+            "value": -2
+          }
+        ]
+      },
+      "rank": 8,
+      "remote_jobs_dispatched": false,
+      "score_claim": false,
+      "source_archive_bytes": 236328,
+      "source_archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+      "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0197",
+      "targeted_component": "combined"
+    }
+  ],
+  "ready_for_exact_eval_after_lane_claim_count": 0,
+  "remote_jobs_dispatched": false,
+  "schema": "pr85_qrgb_transfer_action_plan_v1",
+  "score_claim": false,
+  "source_archive": {
+    "archive_bytes": 236328,
+    "archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+    "known_pr85_anchor_match": {
+      "exact_t4_score_context": 0.25806611029397786,
+      "expected_archive_bytes": 236328,
+      "expected_archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+      "matches": true
+    },
+    "member_bytes": 236228,
+    "member_name": "x",
+    "member_sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+    "path": "experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+    "zip_stored": true
+  },
+  "stable_plan_digest_sha256": "05f618d3db808131f83a78b509db0e7b834b3326370e518e129edf96c7563528",
+  "tool": "experiments/plan_pr85_qrgb_transfer_actions.py"
+}

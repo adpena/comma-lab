@@ -1,0 +1,1 @@
+/Users/adpena/Projects/pact/runtime-rs/target/release/stbm1br-codec: /Users/adpena/Projects/pact/runtime-rs/crates/stbm1br-codec/src/lib.rs /Users/adpena/Projects/pact/runtime-rs/crates/stbm1br-codec/src/main.rs

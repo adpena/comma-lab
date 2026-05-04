@@ -1,0 +1,39 @@
+{
+  "adjudication": {
+    "allow_component_gate_forensic_success": true,
+    "allow_sane_score_forensic_success": true,
+    "baseline_archive_size_bytes": 178277,
+    "baseline_posenet_dist": 0.00017185,
+    "baseline_score": 0.23089404465634825,
+    "baseline_segnet_dist": 0.00070732,
+    "component_reference_label": "pr95_stemperm_a++",
+    "delta_key": "score_delta_vs_pr95_stemperm",
+    "max_posenet_dist": 0.01,
+    "max_posenet_relative": null,
+    "max_sane_score": 1.0,
+    "max_segnet_dist": 0.01,
+    "max_segnet_relative": null,
+    "predicted_band_high": 0.24,
+    "predicted_band_low": 0.18,
+    "provenance_name": "adjudication_provenance.json",
+    "regression_threshold": 0.1,
+    "required_device": "cuda",
+    "required_samples": 600,
+    "result_copy_name": "contest_auth_eval.adjudicated.json"
+  },
+  "artifact_recorded_at_utc": "2026-05-04T10:08:07Z",
+  "expected_archive_sha256": "278b1c7a1bd6b03a5bceddafcb3489b2624c558ad22825d9211b701333b6eefb",
+  "expected_archive_size_bytes": 178546,
+  "job_name": "exact_eval_public_pr99_hnerv_adapter_t4_20260504T0958Z",
+  "queue_metadata": {
+    "remote_preflight_skip_reason": "Studio CPU preflight has no CUDA; manifest sync already verified and job runner performs CUDA/DALI preflight on T4.",
+    "runtime_adapter": "contest_signature_pr99_adapter",
+    "source_manifest": ".omx/state/public_hnerv_adapter_replays_20260504T0956Z_manifest.json",
+    "source_pr_urls": "https://github.com/commaai/comma_video_compression_challenge/pull/99",
+    "source_prs": "PR99"
+  },
+  "role": "exact_cuda_eval",
+  "schema_version": 1,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

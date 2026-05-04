@@ -1,0 +1,68 @@
+{
+  "brotli_quality": 11,
+  "evidence_grade": "empirical",
+  "formula_only_rate_delta": -0.008853926499665512,
+  "header": {
+    "members": [
+      {
+        "bytes": 110479,
+        "codec": "raw",
+        "name": "renderer.bin",
+        "sha256": "44e0a1eb789b44afd1a1a476f167fbcf16c2cb88b8e4fefb3cb79d995183b713"
+      },
+      {
+        "bytes": 223738,
+        "codec": "raw",
+        "name": "masks.mkv",
+        "sha256": "568439a26dbb9e240cf2c385ff350ddc2cb81f5bc514577498446d6043b21178"
+      },
+      {
+        "bytes": 7208,
+        "codec": "pose_qpose14_col_delta_v1",
+        "decoded_bytes": 7200,
+        "decoded_sha256": "6f9f64e1352eb36f804d963b32dbc0d6795cda403c981599ea011f483e9f3d08",
+        "lossy": true,
+        "name": "optimized_poses.bin",
+        "pose_error_stats": {
+          "max_abs_by_dim": [
+            0.0,
+            0.000244140625,
+            0.000244140625,
+            0.000244140625,
+            0.000244140625,
+            0.000244140625
+          ],
+          "pose_dim": 6,
+          "rmse_by_dim": [
+            0.0,
+            0.00014389319101632456,
+            0.0001431707046712938,
+            0.000145808010963383,
+            0.00013782911735806325,
+            0.00014371661703877636
+          ],
+          "rows": 600
+        },
+        "sha256": "7d816bbd2cf3a9838b971ee1f32e29c267df6509d2b370e86c038eda40110de6",
+        "source_decoded_sha256": "399c0898d110911979c8b1343be3f16420a30b27a072e1c61d4d0a552e6ec1e3"
+      }
+    ],
+    "payload_format": "rp2_fixed3",
+    "schema": "renderer_payload_fixed3_v1",
+    "source_archive_sha256": "85bb5ce5116572232058f1b6bbc3473485c78f5a8d2215a76f3f6e655b919569"
+  },
+  "output_archive": "lane_q_faithful_results/postprocess_fixed_snapshot_20260501T2131Z_fix1/torchfp4_rp2_qpose14/archive.zip",
+  "output_archive_bytes": 289026,
+  "output_archive_sha256": "3a737142be2123fb95220e1061bef0613ddcd0f654e4da770a611393cbbf2a4c",
+  "payload_compressed_bytes": 288926,
+  "payload_format": "rp2_fixed3",
+  "payload_member": "p",
+  "payload_raw_bytes": 341445,
+  "pose_codec": "pose_qpose14_col_delta_v1",
+  "pose_residual_topk": 0,
+  "savings_bytes": 13297,
+  "score_claim": false,
+  "source_archive": "lane_q_faithful_results/postprocess_fixed_snapshot_20260501T2131Z_fix1/torchfp4_half_posebin/archive.zip",
+  "source_archive_bytes": 302323,
+  "source_archive_sha256": "85bb5ce5116572232058f1b6bbc3473485c78f5a8d2215a76f3f6e655b919569"
+}

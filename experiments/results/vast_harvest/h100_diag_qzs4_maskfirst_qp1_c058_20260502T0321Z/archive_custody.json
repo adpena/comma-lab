@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-05-02T03:21:52Z",
+  "archive_label": "h100_diag_qzs4_maskfirst_qp1_c058_20260502T0321Z",
+  "archive_path": "/workspace/pact/experiments/results/h100_diag_qzs4_maskfirst_qp1_c058_20260502T0321Z/archive.zip",
+  "custody_archive_path": "/workspace/pact/experiments/results/h100_diag_qzs4_maskfirst_qp1_c058_20260502T0321Z/archive.zip",
+  "archive_size_bytes": 273247,
+  "archive_sha256": "32ce9cd3ebbbfa6b3468dc9ba7ac31f0fbd2802a8eb25f6bdd44c137d9f41c69"
+}

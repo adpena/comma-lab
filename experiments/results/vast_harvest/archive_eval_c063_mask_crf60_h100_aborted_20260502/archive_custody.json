@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-05-02T07:34:06Z",
+  "archive_label": "archive_eval_c063_mask_crf60_h100_20260502",
+  "archive_path": "/workspace/pact/experiments/results/c063_mask_av1_reencode_sweep_20260502/crf60/archive.zip",
+  "custody_archive_path": "/workspace/pact/experiments/results/vast_live_harvest/archive_eval_c063_mask_crf60_h100_20260502/archive.zip",
+  "archive_size_bytes": 156467,
+  "archive_sha256": "6a62c950090ff7657f626afb3d23ada7f5d189e551aa8c26b933b75d1aa945c6"
+}

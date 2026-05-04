@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "release_name": "Apogee PR100 HNeRV-LC-v2 adapter exact frontier",
+  "public_urls": {
+    "archive_zip": "${APOGEE_ARCHIVE_ZIP_URL}",
+    "cloudflare_pages": "${CLOUDFLARE_PAGES_URL}",
+    "lightning_notebook": "${LIGHTNING_SUPPLEMENT_URL}",
+    "release_manifest": "${APOGEE_RELEASE_MANIFEST}"
+  },
+  "frontier": {
+    "name": "Apogee / PR100 HNeRV-LC-v2 adapter",
+    "score": 0.22826947142244708,
+    "score_formula": "100 * seg_dist + sqrt(10 * pose_dist) + 25 * archive_bytes / 37545489",
+    "seg_dist": 0.00067623,
+    "pose_dist": 0.00017198,
+    "score_terms": {
+      "segnet": 0.067623,
+      "posenet": 0.04147047142244708,
+      "rate": 0.119176
+    },
+    "archive_bytes": 178981,
+    "archive_sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+    "runtime_tree_sha256": "ef6323533666c9cac1c204a9d3f7054157d44a185b16fc859fb3f0438ccd1832",
+    "samples": 600,
+    "hardware": "Tesla T4 CUDA",
+    "evidence_grade": "A++ exact Tesla T4 CUDA",
+    "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py",
+    "archive_member_summary": {
+      "member_count": 1,
+      "members": [
+        {
+          "name": "0.bin",
+          "bytes": 178873,
+          "sha256": "3234f0689164cfc95b7ee9f9cdf38ecf4d082cfb7048058e2b3ff0f54f864e43"
+        }
+      ]
+    }
+  },
+  "artifacts": {
+    "submission_packet": "experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter",
+    "score_json": "experiments/results/lightning_batch/exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z/contest_auth_eval.adjudicated.json",
+    "compliance_json": "experiments/results/submission_packet_pr100_adapter_20260504/pre_submission_compliance.pr100.json",
+    "public_source_pr": "https://github.com/commaai/comma_video_compression_challenge/pull/100",
+    "apogee_submission_pr": "https://github.com/commaai/comma_video_compression_challenge/pull/107",
+    "visual_gifs": [
+      "comma_comparison.gif",
+      "comma_comparison_full.gif",
+      "comma_baseline.gif",
+      "comma_baseline_full.gif",
+      "yuv_comparison.gif"
+    ]
+  },
+  "evidence_boundaries": [
+    "This manifest records the current exact local CUDA frontier for the archive/runtime pair, not a leaderboard scrape.",
+    "Public PR body scores, comments, and static archive anatomy are external context until exact CUDA replay lands.",
+    "Research probes, hidden-gem roadmap items, and unlimited-compute experiments cannot rank without charged bytes, contest-budget inflate, and exact CUDA auth eval.",
+    "No private provider URLs, local absolute paths, account metadata, tokens, raw state files, or job transcripts are part of this public manifest."
+  ],
+  "historical_arc": [
+    {"label": "Era 1 codec/postfilter floor", "score": 1.73, "evidence": "historical scorer-backed arc"},
+    {"label": "Era 2 neural renderer CUDA baseline", "score": 0.90, "evidence": "contest-CUDA control"},
+    {"label": "Lane G v3 KL-distill/TTO", "score": 1.05, "evidence": "contest-CUDA control"},
+    {"label": "C067 fixed-slice public-floor reproduction", "score": 0.31561703078448233, "evidence": "historical exact T4"},
+    {"label": "PR85 semantic-bundle replay", "score": 0.25806611029397786, "evidence": "superseded exact T4"},
+    {"label": "PR95 stem-permutation repack", "score": 0.23089404465634825, "evidence": "superseded exact T4"},
+    {"label": "PR99 HNeRV/Muon LC adapter", "score": 0.2297226895103603, "evidence": "superseded exact T4"},
+    {"label": "PR100 HNeRV-LC-v2 adapter", "score": 0.22826947142244708, "evidence": "current exact T4 A++"}
+  ],
+  "method_sections": {
+    "month_long_research": "AI-assisted archive forensics, exact eval custody, negative-evidence ledgers, and scoped dispatch control over roughly one month of work.",
+    "grand_council_skunkworks": "Role-assigned AI review generated objections, math checks, threat models, and next experiments; exact CUDA artifacts remained the promotion gate.",
+    "meta_lagrangian": "Every archive stream, decoder, pose atom, mask atom, residual, and wrapper decision is priced by bytes, SegNet, PoseNet, runtime, custody, and compliance risk.",
+    "hidden_gem_roadmap": "HPM1/HPAC parity, native action atoms, HNeRV adapter hardening, scorer-gradient atoms, byte self-compression, and field-policy waterfill remain next-wave research until exact-eval closure."
+  }
+}

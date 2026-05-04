@@ -1,0 +1,89 @@
+{
+  "archive": {
+    "bytes": 215960,
+    "path": "experiments/results/qma9_range_mask_transfer_20260503_codex/qma9_pr81_template_baseline_20260503_codex/archive.zip",
+    "payload_bytes": 215860,
+    "payload_sha256": "c59524610474c89e5a41433f47d2bb881f878e694f853db1377272699f9eb3e9",
+    "sha256": "cd01378a52688fe00ee1bfb898c67695aed89a7b3ded602b597eb7fc3031d7fc",
+    "zip_member": "p",
+    "zip_storage": "stored"
+  },
+  "candidate_id": "qma9_pr81_template_baseline_20260503_codex",
+  "determinism": {
+    "json_sort_keys": true,
+    "zip_compression": "stored",
+    "zip_timestamp": "1980-01-01T00:00:00"
+  },
+  "dispatch_performed": false,
+  "dispatch_readiness": {
+    "reason": "Current task forbids remote dispatch and existing robust runtime files were not edited. Future exact eval requires a lane claim, runtime integration, payload closure, and CUDA auth eval.",
+    "safe_for_remote_dispatch": false
+  },
+  "evidence_grade": "empirical/planning_only",
+  "frontier_target_score": 0.31453355357318635,
+  "inputs": {
+    "model_payload_path": null,
+    "pose_payload_path": null,
+    "qma9_payload_path": null,
+    "raw_mask_path": null,
+    "router_payload_path": null,
+    "template_pr81_archive": "experiments/results/public_pr81_qzs3_range_mask_intake_20260503_codex/archive.zip"
+  },
+  "notes": [
+    "QMA9 codec implementation is pure Python and independent from public C++ source text.",
+    "This manifest is not a component or score claim.",
+    "Rate term remains 25 * archive_bytes / 37545489 for any future exact archive."
+  ],
+  "qma9_header": {
+    "bitstream_bytes": 158991,
+    "bitstream_sha256": "77196f31a8fdfbf8f91c9c30600945473376534f15245bfb7622ddd77d17e3af",
+    "decoded_mask_bytes": 117964800,
+    "frame_count": 600,
+    "header_bytes": 20,
+    "height": 384,
+    "magic": "QMA9",
+    "packed_bytes": 159011,
+    "payload_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+    "width": 512
+  },
+  "schema": "qma9_range_mask_transfer_candidate_manifest_v1",
+  "score_claim": false,
+  "segments": [
+    {
+      "bytes": 159011,
+      "codec": "qma9_adaptive9_binary_range_mask",
+      "name": "range_mask.qma9",
+      "sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+      "source": {
+        "encoded_by": "template_bytes_not_reencoded",
+        "source": "template_pr81_archive",
+        "source_kind": "template_qma9_payload_reuse_for_profile_or_baseline"
+      }
+    },
+    {
+      "available": true,
+      "bytes": 55725,
+      "codec": "brotli_reordered_qzs3_model_bundle",
+      "name": "split_model_reordered.br_bundle",
+      "sha256": "b649b0dacb1dcc93fd7da2e7f5c6d398fa933d2fe3087520359612afc8e4832d",
+      "source": "template_pr81_archive"
+    },
+    {
+      "available": true,
+      "bytes": 899,
+      "codec": "brotli_qp1_pose_stream",
+      "name": "optimized_poses.qp1.br",
+      "sha256": "83767bbd10ae72c3237e468351eb9c465a954e25a6af04a0e0cb84d1f7af9b51",
+      "source": "template_pr81_archive"
+    },
+    {
+      "available": true,
+      "bytes": 225,
+      "codec": "packed_3bit_pair_router_actions",
+      "name": "router_actions.3bit",
+      "sha256": "d282d9228f84e3316a50dfde9bba2b811f4fd377e6e32773ce070c2beba46f80",
+      "source": "template_pr81_archive"
+    }
+  ],
+  "tool": "experiments/build_qma9_range_mask_candidate.py"
+}

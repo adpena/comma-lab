@@ -1,0 +1,12 @@
+{
+  "install_command": null,
+  "install_returncode": null,
+  "installed": false,
+  "python": ".venv/bin/python",
+  "recorded_at_utc": "2026-05-04T05:16:43Z",
+  "requested_specs": [],
+  "schema_version": 1,
+  "stderr_tail": "",
+  "stdout_tail": "",
+  "tool": "lightning_exact_eval_inflate_runtime_bootstrap"
+}

@@ -1,0 +1,197 @@
+{
+  "c089_archive": {
+    "bytes": 276342,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/archive.zip",
+    "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+    "sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8"
+  },
+  "candidates": [
+    {
+      "archive_bytes": 276171,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr75_minp_stream_ablation_20260503_codex/public_renderer_only/archive.zip",
+      "archive_sha256": "8da9ffe354923dbe34ffa45e261f824a63e21fef45a1cc29fdab6032a6402820",
+      "candidate_id": "public_renderer_only",
+      "delta_bytes_vs_c089": -171,
+      "formula_only_rate_score_delta_vs_c089": -0.0001138618809838913,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr75_minp_stream_ablation_20260503_codex/public_renderer_only/manifest.json",
+      "payload_bytes": 276071,
+      "selected_sources": {
+        "actions": "c089",
+        "mask": "c089",
+        "pose": "c089",
+        "renderer": "public"
+      },
+      "stream_bytes": {
+        "actions_br": 156,
+        "mask_br": 219472,
+        "pose_br": 677,
+        "renderer_br": 55756
+      }
+    },
+    {
+      "archive_bytes": 276270,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr75_minp_stream_ablation_20260503_codex/public_renderer_actions/archive.zip",
+      "archive_sha256": "110c3d4eca27fa45bec7bbb3ac38a872b4f0ceb97c7118de851c27d8e47f704a",
+      "candidate_id": "public_renderer_actions",
+      "delta_bytes_vs_c089": -72,
+      "formula_only_rate_score_delta_vs_c089": -4.794184462479634e-05,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr75_minp_stream_ablation_20260503_codex/public_renderer_actions/manifest.json",
+      "payload_bytes": 276170,
+      "selected_sources": {
+        "actions": "public",
+        "mask": "c089",
+        "pose": "c089",
+        "renderer": "public"
+      },
+      "stream_bytes": {
+        "actions_br": 255,
+        "mask_br": 219472,
+        "pose_br": 677,
+        "renderer_br": 55756
+      }
+    },
+    {
+      "archive_bytes": 276380,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr75_minp_stream_ablation_20260503_codex/c089_p3_repack/archive.zip",
+      "archive_sha256": "93af5f0c77e218f574fa012921d9a33b29b70e26d3572b161848973ba1088165",
+      "candidate_id": "c089_p3_repack",
+      "delta_bytes_vs_c089": 38,
+      "formula_only_rate_score_delta_vs_c089": 2.5302640218642514e-05,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr75_minp_stream_ablation_20260503_codex/c089_p3_repack/manifest.json",
+      "payload_bytes": 276280,
+      "selected_sources": {
+        "actions": "c089",
+        "mask": "c089",
+        "pose": "c089",
+        "renderer": "c089"
+      },
+      "stream_bytes": {
+        "actions_br": 156,
+        "mask_br": 219472,
+        "pose_br": 677,
+        "renderer_br": 55965
+      }
+    },
+    {
+      "archive_bytes": 276392,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr75_minp_stream_ablation_20260503_codex/public_renderer_pose/archive.zip",
+      "archive_sha256": "65796c4d072a1db94d6d243452ce8ec922e7a600a47403f6b81d92c13babde23",
+      "candidate_id": "public_renderer_pose",
+      "delta_bytes_vs_c089": 50,
+      "formula_only_rate_score_delta_vs_c089": 3.329294765610857e-05,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr75_minp_stream_ablation_20260503_codex/public_renderer_pose/manifest.json",
+      "payload_bytes": 276292,
+      "selected_sources": {
+        "actions": "c089",
+        "mask": "c089",
+        "pose": "public",
+        "renderer": "public"
+      },
+      "stream_bytes": {
+        "actions_br": 156,
+        "mask_br": 219472,
+        "pose_br": 898,
+        "renderer_br": 55756
+      }
+    },
+    {
+      "archive_bytes": 276479,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr75_minp_stream_ablation_20260503_codex/public_actions_only/archive.zip",
+      "archive_sha256": "dc9b22624b3f10e3c7cbc65047bb448ecda10cfe1dd5ad3f0e30cc990ec423d8",
+      "candidate_id": "public_actions_only",
+      "delta_bytes_vs_c089": 137,
+      "formula_only_rate_score_delta_vs_c089": 9.122267657773748e-05,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr75_minp_stream_ablation_20260503_codex/public_actions_only/manifest.json",
+      "payload_bytes": 276379,
+      "selected_sources": {
+        "actions": "public",
+        "mask": "c089",
+        "pose": "c089",
+        "renderer": "c089"
+      },
+      "stream_bytes": {
+        "actions_br": 255,
+        "mask_br": 219472,
+        "pose_br": 677,
+        "renderer_br": 55965
+      }
+    },
+    {
+      "archive_bytes": 276491,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr75_minp_stream_ablation_20260503_codex/public_all_p3/archive.zip",
+      "archive_sha256": "55813e4926c227408350358da6e64839d899e54f0fa7c3144c704905b9715758",
+      "candidate_id": "public_all_p3",
+      "delta_bytes_vs_c089": 149,
+      "formula_only_rate_score_delta_vs_c089": 9.921298401520353e-05,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr75_minp_stream_ablation_20260503_codex/public_all_p3/manifest.json",
+      "payload_bytes": 276391,
+      "selected_sources": {
+        "actions": "public",
+        "mask": "c089",
+        "pose": "public",
+        "renderer": "public"
+      },
+      "stream_bytes": {
+        "actions_br": 255,
+        "mask_br": 219472,
+        "pose_br": 898,
+        "renderer_br": 55756
+      }
+    },
+    {
+      "archive_bytes": 276601,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr75_minp_stream_ablation_20260503_codex/public_pose_only/archive.zip",
+      "archive_sha256": "1758f2cf7425dd222c1abceeffd511c2712c2171997e8b033c9a2efe1dd6b829",
+      "candidate_id": "public_pose_only",
+      "delta_bytes_vs_c089": 259,
+      "formula_only_rate_score_delta_vs_c089": 0.0001724574688586424,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr75_minp_stream_ablation_20260503_codex/public_pose_only/manifest.json",
+      "payload_bytes": 276501,
+      "selected_sources": {
+        "actions": "c089",
+        "mask": "c089",
+        "pose": "public",
+        "renderer": "c089"
+      },
+      "stream_bytes": {
+        "actions_br": 156,
+        "mask_br": 219472,
+        "pose_br": 898,
+        "renderer_br": 55965
+      }
+    },
+    {
+      "archive_bytes": 276700,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr75_minp_stream_ablation_20260503_codex/public_actions_pose/archive.zip",
+      "archive_sha256": "c3c20b486524a3b9e3eb6ab4fc088a6055b67186813ae59fea7d66973f7a3cee",
+      "candidate_id": "public_actions_pose",
+      "delta_bytes_vs_c089": 358,
+      "formula_only_rate_score_delta_vs_c089": 0.00023837750521773737,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr75_minp_stream_ablation_20260503_codex/public_actions_pose/manifest.json",
+      "payload_bytes": 276600,
+      "selected_sources": {
+        "actions": "public",
+        "mask": "c089",
+        "pose": "public",
+        "renderer": "c089"
+      },
+      "stream_bytes": {
+        "actions_br": 255,
+        "mask_br": 219472,
+        "pose_br": 898,
+        "renderer_br": 55965
+      }
+    }
+  ],
+  "evidence_grade": "empirical_stream_ablation_until_exact_cuda",
+  "promotion_eligible": false,
+  "public_archive": {
+    "bytes": 276481,
+    "path": "/Users/adpena/Projects/pact/experiments/results/top_submission_reverse_engineering_20260503_pr75_minp/archive.zip",
+    "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+    "sha256": "03a2afd5fe92c93a9b7b7e43625158a73b455f0cfbca82d278008a728db78746"
+  },
+  "schema": "pr75_minp_stream_ablation_matrix_v1",
+  "score_claim": false,
+  "tool": "experiments/build_pr75_minp_stream_ablation_candidates.py"
+}

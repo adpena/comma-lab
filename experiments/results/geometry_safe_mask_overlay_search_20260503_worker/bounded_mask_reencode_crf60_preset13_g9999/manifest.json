@@ -1,0 +1,101 @@
+{
+  "archive_delta_bytes_vs_source": -143253,
+  "candidate_id": "bounded_mask_reencode_crf60_preset13_g9999",
+  "candidate_kind": "bounded_lossy_mask_reencode",
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "dispatch_recommendation": "do_not_dispatch: decoded mask tensor changes; needs local component trace or operator-approved exact eval after dispatch claim",
+  "evidence_grade": "empirical_bounded_mask_disagreement",
+  "formula_only_rate_score_delta_vs_source": -0.09538629261161041,
+  "mask_geometry": {
+    "bounded_pixel_disagreement": true,
+    "changed_frame_count": 600,
+    "changed_pixel_count": 1093201,
+    "changed_pixel_fraction": 0.009267179701063367,
+    "max_changed_pixels_per_frame": 3483,
+    "mean_changed_pixels_per_changed_frame": 1822.0016666666668,
+    "source_to_candidate_confusion_5x5": [
+      [
+        27027494,
+        299577,
+        58124,
+        15270,
+        7962
+      ],
+      [
+        382681,
+        305029,
+        1767,
+        447,
+        139
+      ],
+      [
+        13286,
+        67978,
+        58307621,
+        24792,
+        18
+      ],
+      [
+        2871,
+        12111,
+        78339,
+        1362802,
+        3744
+      ],
+      [
+        8251,
+        13348,
+        33839,
+        68657,
+        29868653
+      ]
+    ],
+    "total_pixel_count": 117964800,
+    "zero_disagreement": false
+  },
+  "non_mask_decoded_members_preserved": {
+    "optimized_poses.qp1": true,
+    "renderer.bin": true,
+    "seg_tile_actions.bin": true
+  },
+  "output_archive": {
+    "bytes": 133099,
+    "path": "/Users/adpena/Projects/pact/experiments/results/geometry_safe_mask_overlay_search_20260503_worker/bounded_mask_reencode_crf60_preset13_g9999/archive.zip",
+    "sha256": "912b391a3199b6bc4358cd2b04bfbcf632e5255d454e70a5f0b22c3ba98f7f44"
+  },
+  "payload": {
+    "bytes": 132999,
+    "format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+    "member": "p",
+    "sha256": "40d2397e7456362877bf18b4c763176ba3ed2ba614460111867f1527f8558953"
+  },
+  "promotion_eligible": false,
+  "schema": "geometry_safe_mask_overlay_candidate_manifest_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 276352,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c067_pr75_tile_action_compiler_p6_trace_ev_20260503_codex/c067_pr75_actions_lag_eval_top67_p6/archive.zip",
+    "sha256": "d73f0957cf2d8da0526c1786613443331ccb913f5648131cfaaac5e6f7eae972"
+  },
+  "source_payload": {
+    "bytes": 276252,
+    "sha256": "b025f984becf664893d77a6b2c34be07ad941bbd01de97f27271533c6646f452"
+  },
+  "stream_choices": {
+    "masks.mkv": {
+      "brotli_bytes": 76219,
+      "brotli_params": "source",
+      "encoded_obu_bytes": 83407,
+      "encoded_obu_sha256": "dcd472a3b606e23d8c279b0721f0f1ce3a1aed8911cbc354c14c0df0ca55a595",
+      "ffmpeg_policy": {
+        "crf": 60,
+        "fps": 20,
+        "keyint": 9999,
+        "preset": 13,
+        "svt_params": "enable-restoration=0:enable-cdef=0"
+      }
+    }
+  },
+  "tool": "experiments/geometry_safe_mask_overlay_search.py",
+  "wall_time_seconds": 8.446
+}

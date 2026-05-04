@@ -1,0 +1,4141 @@
+{
+  "atom_count": 600,
+  "atom_kind": "pair",
+  "candidate_manifest": {
+    "path": "/Users/adpena/Projects/pact/experiments/results/alpha_mask_candidate_builder_pfp16_20260501_compact_crf_sweep/crf_63/alpha_mask_candidate_manifest.json",
+    "sha256": "276cc7cb253d7bda737cb4e507c3cc20a383f45d58aef38c3c2e54648becbf73"
+  },
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "compressor": "lzma_xz",
+  "environment": {
+    "platform": "macOS-26.4-arm64-arm-64bit",
+    "python": "/Users/adpena/Projects/pact/.venv/bin/python",
+    "python_version": "3.12.13 (main, Mar 10 2026, 18:18:07) [Clang 21.1.4 ]"
+  },
+  "evidence_grade": "empirical",
+  "geometry_basin_check": null,
+  "pair_weights_meta": {
+    "hardest_pair_indices": [
+      127,
+      75,
+      109,
+      133,
+      514,
+      125,
+      517,
+      522,
+      177,
+      111,
+      45,
+      584,
+      521,
+      516,
+      130,
+      289,
+      90,
+      210,
+      592,
+      512,
+      179,
+      325,
+      69,
+      549,
+      519,
+      356,
+      64,
+      150,
+      478,
+      513,
+      228,
+      67,
+      529,
+      594,
+      136,
+      135,
+      518,
+      317,
+      159,
+      164,
+      137,
+      320,
+      523,
+      117,
+      65,
+      593,
+      469,
+      116,
+      357,
+      520,
+      472,
+      70,
+      542,
+      489,
+      539,
+      141,
+      329,
+      106,
+      515,
+      165,
+      119,
+      178,
+      153,
+      524,
+      316,
+      453,
+      313,
+      400,
+      79,
+      420,
+      573,
+      378,
+      590,
+      570,
+      154,
+      471,
+      358,
+      531,
+      585,
+      390,
+      561,
+      544,
+      229,
+      169,
+      447,
+      363,
+      155,
+      142,
+      102,
+      509,
+      71,
+      559,
+      61,
+      74,
+      259,
+      373,
+      168,
+      6,
+      319,
+      552
+    ],
+    "lane": "component_trace",
+    "mode": "cuda_cross_checked_first_order_signal",
+    "pair_signal_top_k": 100,
+    "path": "experiments/results/lightning_batch/exact_eval_component_trace_c051_l40s_20260501T2116Z/component_trace.json",
+    "sha256": "dabf29a76ac390c19a83cf77d2487b7ebc39c280b00fdba8c4984ea148fe98b6",
+    "signal_source": "score_combined_contribution_first_order",
+    "source_schema": "diagnostic_component_trace",
+    "stats": {
+      "archive_size_bytes": 594047,
+      "avg_posenet_dist": 0.0035616743492755632,
+      "avg_segnet_dist": 0.004024963497067801,
+      "contest_auth_eval_cross_check_sha256": "69e5e3d1f992f0c0336b12a6e4d6e55b1529c26269adef6a4d73adba7a01f6ae",
+      "score_recomputed_from_components": 0.9867718508244918,
+      "top_signal_pair_indices": [
+        127,
+        75,
+        109,
+        133,
+        514,
+        125,
+        517,
+        522,
+        177,
+        111,
+        45,
+        584,
+        521,
+        516,
+        130,
+        289,
+        90,
+        210,
+        592,
+        512,
+        179,
+        325,
+        69,
+        549,
+        519,
+        356,
+        64,
+        150,
+        478,
+        513,
+        228,
+        67,
+        529,
+        594,
+        136,
+        135,
+        518,
+        317,
+        159,
+        164,
+        137,
+        320,
+        523,
+        117,
+        65,
+        593,
+        469,
+        116,
+        357,
+        520,
+        472,
+        70,
+        542,
+        489,
+        539,
+        141,
+        329,
+        106,
+        515,
+        165,
+        119,
+        178,
+        153,
+        524,
+        316,
+        453,
+        313,
+        400,
+        79,
+        420,
+        573,
+        378,
+        590,
+        570,
+        154,
+        471,
+        358,
+        531,
+        585,
+        390,
+        561,
+        544,
+        229,
+        169,
+        447,
+        363,
+        155,
+        142,
+        102,
+        509,
+        71,
+        559,
+        61,
+        74,
+        259,
+        373,
+        168,
+        6,
+        319,
+        552
+      ]
+    }
+  },
+  "producer": "experiments/alpha_repair_atom_planner.py",
+  "promotion_eligible": false,
+  "recommended_archive_policies": [
+    {
+      "estimated_atom_compressed_bytes_sum": 21652,
+      "estimated_atom_rate_term_sum": 0.014417178052,
+      "note": "Byte sum is atom-local only. Build a concrete archive because combined AMR1 compression is not additive.",
+      "pair_indices": [
+        127,
+        75,
+        109,
+        133,
+        514
+      ],
+      "policy_kind": "pair_indices",
+      "policy_name": "pair_indices_127_75_109_133_514",
+      "selected_atom_count": 5
+    },
+    {
+      "estimated_atom_compressed_bytes_sum": 42536,
+      "estimated_atom_rate_term_sum": 0.028322976429,
+      "note": "Byte sum is atom-local only. Build a concrete archive because combined AMR1 compression is not additive.",
+      "pair_indices": [
+        127,
+        75,
+        109,
+        133,
+        514,
+        125,
+        177,
+        111,
+        130,
+        45
+      ],
+      "policy_kind": "pair_indices",
+      "policy_name": "pair_indices_127_75_109_133_514_125_177_111_130_45",
+      "selected_atom_count": 10
+    },
+    {
+      "estimated_atom_compressed_bytes_sum": 63684,
+      "estimated_atom_rate_term_sum": 0.04240456157,
+      "note": "Byte sum is atom-local only. Build a concrete archive because combined AMR1 compression is not additive.",
+      "pair_indices": [
+        127,
+        75,
+        109,
+        133,
+        514,
+        125,
+        177,
+        111,
+        130,
+        45,
+        289,
+        64,
+        521,
+        517,
+        522
+      ],
+      "policy_kind": "pair_indices",
+      "policy_name": "pair_indices_127_75_109_133_514_125_177_111_130_45_289_64_521_517_522",
+      "selected_atom_count": 15
+    },
+    {
+      "estimated_atom_compressed_bytes_sum": 84228,
+      "estimated_atom_rate_term_sum": 0.056083967904,
+      "note": "Byte sum is atom-local only. Build a concrete archive because combined AMR1 compression is not additive.",
+      "pair_indices": [
+        127,
+        75,
+        109,
+        133,
+        514,
+        125,
+        177,
+        111,
+        130,
+        45,
+        289,
+        64,
+        521,
+        517,
+        522,
+        90,
+        584,
+        356,
+        516,
+        549
+      ],
+      "policy_kind": "pair_indices",
+      "policy_name": "pair_indices_127_75_109_133_514_125_177_111_130_45_289_64_521_517_522_90_584_356_516_549",
+      "selected_atom_count": 20
+    },
+    {
+      "estimated_atom_compressed_bytes_sum": 121784,
+      "estimated_atom_rate_term_sum": 0.081090966746,
+      "note": "Byte sum is atom-local only. Build a concrete archive because combined AMR1 compression is not additive.",
+      "pair_indices": [
+        127,
+        75,
+        109,
+        133,
+        514,
+        125,
+        177,
+        111,
+        130,
+        45,
+        289,
+        64,
+        521,
+        517,
+        522,
+        90,
+        584,
+        356,
+        516,
+        549,
+        210,
+        378,
+        322,
+        69,
+        228,
+        325,
+        179,
+        478,
+        592,
+        313
+      ],
+      "policy_kind": "pair_indices",
+      "policy_name": "pair_indices_127_75_109_133_514_125_177_111_130_45_289_64_521_517_522_90_584_356_516_549_210_378_322_69_228_325_179_478_592_313",
+      "selected_atom_count": 30
+    }
+  ],
+  "recorded_at_utc": "2026-05-01T21:28:16Z",
+  "repair_artifact": {
+    "bytes": 9521824,
+    "manifest_record": {
+      "candidate_archive_member": "alpha4_residual_repair.amr1",
+      "path": "experiments/results/alpha_mask_candidate_builder_pfp16_20260501_compact_crf_sweep/crf_63/alpha4_residual_repair.amr1",
+      "resolved_path": "/Users/adpena/Projects/pact/experiments/results/alpha_mask_candidate_builder_pfp16_20260501_compact_crf_sweep/crf_63/alpha4_residual_repair.amr1",
+      "role": "alpha4_residual_repair_payload",
+      "sha256": "2a4f290bd90c4bf1dbe7948e03e8871975eb398bc7ee12b121c2ce763bd2bcbb",
+      "size_bytes": 9521824
+    },
+    "path": "/Users/adpena/Projects/pact/experiments/results/alpha_mask_candidate_builder_pfp16_20260501_compact_crf_sweep/crf_63/alpha4_residual_repair.amr1",
+    "sha256": "2a4f290bd90c4bf1dbe7948e03e8871975eb398bc7ee12b121c2ce763bd2bcbb"
+  },
+  "repair_header": {
+    "candidate_mask_u8_sha256": "5b30ae77253e45f98e9a901f895d0849703548e4019c79cf08c217a534bb39c2",
+    "shape": [
+      1200,
+      384,
+      512
+    ],
+    "source_mask_u8_sha256": "f1973d42b59933f787ad2b7dfcfc21e507fec7c3d6f8ca03cbcada91e26f37d1",
+    "total_residual_pixels": 1800463,
+    "total_residual_runs": 865536
+  },
+  "schema": "alpha_repair_atom_plan_v1",
+  "score_claim": false,
+  "score_claim_warning": "No score claim is made by this planner. Atom rankings are byte/prior planning signals only; every selected archive requires exact CUDA auth eval before ranking, promotion, retirement, or paper claims.",
+  "top_atoms": [
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 3916,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "3442afef4c979215a6e976c0dd1cae9805288c212460e36b84d7a7bc964d697f",
+      "frame_indices": [
+        254,
+        255
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000255362615,
+      "identity": {
+        "frame_indices": [
+          254,
+          255
+        ],
+        "pair_index": 127
+      },
+      "pair_indices": [
+        127
+      ],
+      "pixels_per_compressed_byte": 0.796731358529,
+      "prior": {
+        "formula_prior_sum": 3.052176396015,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          127
+        ],
+        "pose_prior_sum": 0.372939437628,
+        "score_signal_prior_sum": 0.018335940801,
+        "seg_prior_sum": 0.011210124008
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000779411746,
+      "rate_term_cost": 0.00260750366,
+      "raw_amr1_bytes": 16360,
+      "raw_amr1_sha256": "f057bcc44df8d90cf87491b2a73803bfa86a5ec3ebef9e798c3b6e1b1eb35794",
+      "residual_pixel_coverage": 0.001732887596,
+      "score_signal_prior_per_compressed_byte": 4.682314e-06,
+      "selected_repair_pixels": 3120,
+      "selected_repair_runs": 1375
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4220,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "63441daf23ea66c15ac5ad7378a22512a22d00bde6b5ec89ea6f5d5b70687a72",
+      "frame_indices": [
+        150,
+        151
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000236966825,
+      "identity": {
+        "frame_indices": [
+          150,
+          151
+        ],
+        "pair_index": 75
+      },
+      "pair_indices": [
+        75
+      ],
+      "pixels_per_compressed_byte": 0.816113744076,
+      "prior": {
+        "formula_prior_sum": 2.113377862468,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          75
+        ],
+        "pose_prior_sum": 0.292248785496,
+        "score_signal_prior_sum": 0.013577676763,
+        "seg_prior_sum": 0.004038493149
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000500800441,
+      "rate_term_cost": 0.002809924782,
+      "raw_amr1_bytes": 18196,
+      "raw_amr1_sha256": "6217d3a7d8287080df9bc0f97b4849c23b80a76597eefe76beeabb6a80b5c933",
+      "residual_pixel_coverage": 0.001912841308,
+      "score_signal_prior_per_compressed_byte": 3.217459e-06,
+      "selected_repair_pixels": 3444,
+      "selected_repair_runs": 1542
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4244,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "82d844e77e876fed52688c952b92ecbd857200044ff9e01d4c42591c736eeb9a",
+      "frame_indices": [
+        218,
+        219
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000235626767,
+      "identity": {
+        "frame_indices": [
+          218,
+          219
+        ],
+        "pair_index": 109
+      },
+      "pair_indices": [
+        109
+      ],
+      "pixels_per_compressed_byte": 0.846606974552,
+      "prior": {
+        "formula_prior_sum": 2.2501932489,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          109
+        ],
+        "pose_prior_sum": 0.08778192848,
+        "score_signal_prior_sum": 0.006064904586,
+        "seg_prior_sum": 0.01313273143
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000530205761,
+      "rate_term_cost": 0.002825905397,
+      "raw_amr1_bytes": 18296,
+      "raw_amr1_sha256": "b92131c9b9d070779c5878ecf95284cc46180346044913f2280ef38d67766491",
+      "residual_pixel_coverage": 0.001995597799,
+      "score_signal_prior_per_compressed_byte": 1.429054e-06,
+      "selected_repair_pixels": 3593,
+      "selected_repair_runs": 1551
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4692,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "b45ae8dd1e4163e9fcaf6ad9bbfb4142bbe0f76d81925f4f46be0d769fb2c11c",
+      "frame_indices": [
+        266,
+        267
+      ],
+      "hard_pair_count_per_compressed_byte": 0.00021312873,
+      "identity": {
+        "frame_indices": [
+          266,
+          267
+        ],
+        "pair_index": 133
+      },
+      "pair_indices": [
+        133
+      ],
+      "pixels_per_compressed_byte": 0.845907928389,
+      "prior": {
+        "formula_prior_sum": 2.44741935301,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          133
+        ],
+        "pose_prior_sum": 0.000456391601,
+        "score_signal_prior_sum": 0.00398659017,
+        "seg_prior_sum": 0.023798625916
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000521615378,
+      "rate_term_cost": 0.003124210208,
+      "raw_amr1_bytes": 20617,
+      "raw_amr1_sha256": "d0f32068fbf39af64ba8d5aa55031b4d03e23dfd36fe8c2ffc784f17f78959af",
+      "residual_pixel_coverage": 0.002204432971,
+      "score_signal_prior_per_compressed_byte": 8.49657e-07,
+      "selected_repair_pixels": 3969,
+      "selected_repair_runs": 1762
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4580,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "23dea81142939eab41fe25984bee2839b5a85335906aea6c89abb60e8bfa4a3b",
+      "frame_indices": [
+        1028,
+        1029
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000218340611,
+      "identity": {
+        "frame_indices": [
+          1028,
+          1029
+        ],
+        "pair_index": 514
+      },
+      "pair_indices": [
+        514
+      ],
+      "pixels_per_compressed_byte": 0.951310043668,
+      "prior": {
+        "formula_prior_sum": 1.900868600248,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          514
+        ],
+        "pose_prior_sum": 0.038901161402,
+        "score_signal_prior_sum": 0.003846328371,
+        "seg_prior_sum": 0.012771606445
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000415036812,
+      "rate_term_cost": 0.003049634005,
+      "raw_amr1_bytes": 20223,
+      "raw_amr1_sha256": "d9c8ff9d8842c8e7015760f924c66c4058d146daffc2df89aabead6e0e4ea738",
+      "residual_pixel_coverage": 0.002419933095,
+      "score_signal_prior_per_compressed_byte": 8.3981e-07,
+      "selected_repair_pixels": 4357,
+      "selected_repair_runs": 1726
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4460,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "2540e5ca9297400f081d64b1833e0bb32a7a0a9b4f9cae35714ba90eb7a2560b",
+      "frame_indices": [
+        250,
+        251
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000224215247,
+      "identity": {
+        "frame_indices": [
+          250,
+          251
+        ],
+        "pair_index": 125
+      },
+      "pair_indices": [
+        125
+      ],
+      "pixels_per_compressed_byte": 0.774215246637,
+      "prior": {
+        "formula_prior_sum": 1.442992381033,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          125
+        ],
+        "pose_prior_sum": 0.049269706011,
+        "score_signal_prior_sum": 0.003410677037,
+        "seg_prior_sum": 0.007410685532
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000323540893,
+      "rate_term_cost": 0.002969730931,
+      "raw_amr1_bytes": 19462,
+      "raw_amr1_sha256": "d68deb00073d4fdfdef47bb3a86192758474ab0905d239515efb4bce80bae81f",
+      "residual_pixel_coverage": 0.001917840022,
+      "score_signal_prior_per_compressed_byte": 7.64726e-07,
+      "selected_repair_pixels": 3453,
+      "selected_repair_runs": 1657
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4104,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "00dcd4a8618940167eb87bf9f8c00125fbe5cc3e9eeb1f7424e62c39112dcf37",
+      "frame_indices": [
+        354,
+        355
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000243664717,
+      "identity": {
+        "frame_indices": [
+          354,
+          355
+        ],
+        "pair_index": 177
+      },
+      "pair_indices": [
+        177
+      ],
+      "pixels_per_compressed_byte": 0.795808966862,
+      "prior": {
+        "formula_prior_sum": 1.379709225693,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          177
+        ],
+        "pose_prior_sum": 0.000979865086,
+        "score_signal_prior_sum": 0.002177802266,
+        "seg_prior_sum": 0.012807210907
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000336186459,
+      "rate_term_cost": 0.002732685144,
+      "raw_amr1_bytes": 17680,
+      "raw_amr1_sha256": "4ccf4449665e4e5509678095f128f303e8150e8ec8fa13db0880e1a374f63891",
+      "residual_pixel_coverage": 0.001813977849,
+      "score_signal_prior_per_compressed_byte": 5.30654e-07,
+      "selected_repair_pixels": 3266,
+      "selected_repair_runs": 1495
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4332,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "938104a6573038b3e71a42cd41efed07a86b20f54b9118e38b751e844476231b",
+      "frame_indices": [
+        222,
+        223
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000230840259,
+      "identity": {
+        "frame_indices": [
+          222,
+          223
+        ],
+        "pair_index": 111
+      },
+      "pair_indices": [
+        111
+      ],
+      "pixels_per_compressed_byte": 0.703370267775,
+      "prior": {
+        "formula_prior_sum": 1.275499184371,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          111
+        ],
+        "pose_prior_sum": 0.014502802864,
+        "score_signal_prior_sum": 0.002131511481,
+        "seg_prior_sum": 0.008946737275
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000294436561,
+      "rate_term_cost": 0.002884500985,
+      "raw_amr1_bytes": 18582,
+      "raw_amr1_sha256": "be598b3857c5345d86ee228e078761af073c1014bb8bb8446620f6c0d059ef9d",
+      "residual_pixel_coverage": 0.00169234247,
+      "score_signal_prior_per_compressed_byte": 4.92039e-07,
+      "selected_repair_pixels": 3047,
+      "selected_repair_runs": 1577
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 3660,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "21e085df7a343f5e38e224d26e7dc2807b72aac6bc527749753ce4c950baa3eb",
+      "frame_indices": [
+        260,
+        261
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000273224044,
+      "identity": {
+        "frame_indices": [
+          260,
+          261
+        ],
+        "pair_index": 130
+      },
+      "pair_indices": [
+        130
+      ],
+      "pixels_per_compressed_byte": 0.7,
+      "prior": {
+        "formula_prior_sum": 1.124506286165,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          130
+        ],
+        "pose_prior_sum": 0.008789009415,
+        "score_signal_prior_sum": 0.001768161971,
+        "seg_prior_sum": 0.008280436508
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000307242155,
+      "rate_term_cost": 0.002437043768,
+      "raw_amr1_bytes": 15183,
+      "raw_amr1_sha256": "b39fe6b8e806a5709d9ad9f85ab69b797edc1d0fdb577c9cecc481c0f4a493a5",
+      "residual_pixel_coverage": 0.001422967315,
+      "score_signal_prior_per_compressed_byte": 4.83104e-07,
+      "selected_repair_pixels": 2562,
+      "selected_repair_runs": 1268
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4328,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "f6641407a9d3cd34b9264c4d32a99adba8a1cde7ac3a2fbc1c7d45a185da6ad5",
+      "frame_indices": [
+        90,
+        91
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000231053604,
+      "identity": {
+        "frame_indices": [
+          90,
+          91
+        ],
+        "pair_index": 45
+      },
+      "pair_indices": [
+        45
+      ],
+      "pixels_per_compressed_byte": 0.788585951941,
+      "prior": {
+        "formula_prior_sum": 1.335469520464,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          45
+        ],
+        "pose_prior_sum": 0.001448682393,
+        "score_signal_prior_sum": 0.0020891488,
+        "seg_prior_sum": 0.012151082978
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000308565046,
+      "rate_term_cost": 0.002881837549,
+      "raw_amr1_bytes": 18425,
+      "raw_amr1_sha256": "147af2213dc2f9c8b6c564e52d98e90ab8e5c0b6b9b5db2430217d8937be3441",
+      "residual_pixel_coverage": 0.001895623515,
+      "score_signal_prior_per_compressed_byte": 4.82705e-07,
+      "selected_repair_pixels": 3413,
+      "selected_repair_runs": 1563
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 3572,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "8ed9bf9fb08ee92f27ee17de89415bfa2745e538e28e9ae708f0d26d510eaad4",
+      "frame_indices": [
+        578,
+        579
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000279955207,
+      "identity": {
+        "frame_indices": [
+          578,
+          579
+        ],
+        "pair_index": 289
+      },
+      "pair_indices": [
+        289
+      ],
+      "pixels_per_compressed_byte": 0.611142217245,
+      "prior": {
+        "formula_prior_sum": 1.019767283714,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          289
+        ],
+        "pose_prior_sum": 0.01385968551,
+        "score_signal_prior_sum": 0.001691126483,
+        "seg_prior_sum": 0.006474812981
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000285489161,
+      "rate_term_cost": 0.002378448181,
+      "raw_amr1_bytes": 15040,
+      "raw_amr1_sha256": "e03a35bc1bd333e75c267ea114c87eea1afe748a6b5ceb427ba33ff5e72bf8f4",
+      "residual_pixel_coverage": 0.001212465905,
+      "score_signal_prior_per_compressed_byte": 4.7344e-07,
+      "selected_repair_pixels": 2183,
+      "selected_repair_runs": 1255
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 2824,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "c9a3711934c9a28f0587e6a9d4bfefcbdd66239ef1db0339440285d5bd651b41",
+      "frame_indices": [
+        128,
+        129
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000354107649,
+      "identity": {
+        "frame_indices": [
+          128,
+          129
+        ],
+        "pair_index": 64
+      },
+      "pair_indices": [
+        64
+      ],
+      "pixels_per_compressed_byte": 0.672450424929,
+      "prior": {
+        "formula_prior_sum": 0.882866098149,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          64
+        ],
+        "pose_prior_sum": 0.005280341022,
+        "score_signal_prior_sum": 0.001321620058,
+        "seg_prior_sum": 0.006530761719
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000312629638,
+      "rate_term_cost": 0.001880385684,
+      "raw_amr1_bytes": 10901,
+      "raw_amr1_sha256": "cd8cb8ddc9dbd3b137b682ed5b4467162c0145d644b5474bf0221c789b55e1fd",
+      "residual_pixel_coverage": 0.0010547287,
+      "score_signal_prior_per_compressed_byte": 4.67996e-07,
+      "selected_repair_pixels": 1899,
+      "selected_repair_runs": 879
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4224,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "2bdeb96f755dbc6ae10e609f938dd11327935e7ede97eaab4a2d10f5449495a9",
+      "frame_indices": [
+        1042,
+        1043
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000236742424,
+      "identity": {
+        "frame_indices": [
+          1042,
+          1043
+        ],
+        "pair_index": 521
+      },
+      "pair_indices": [
+        521
+      ],
+      "pixels_per_compressed_byte": 0.889204545455,
+      "prior": {
+        "formula_prior_sum": 1.251033916545,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          521
+        ],
+        "pose_prior_sum": 0.002984122373,
+        "score_signal_prior_sum": 0.001928913811,
+        "seg_prior_sum": 0.010782877915
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000296172802,
+      "rate_term_cost": 0.002812588218,
+      "raw_amr1_bytes": 18397,
+      "raw_amr1_sha256": "73331f2282e026b893879d16d10974925ac9e6692b64ee69aa7b86c188778318",
+      "residual_pixel_coverage": 0.002086130068,
+      "score_signal_prior_per_compressed_byte": 4.56656e-07,
+      "selected_repair_pixels": 3756,
+      "selected_repair_runs": 1560
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 5372,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "77b61aef1631b240a971e779c3d239664764bf6bceb2a03d3b23a9a8e4c3bbde",
+      "frame_indices": [
+        1034,
+        1035
+      ],
+      "hard_pair_count_per_compressed_byte": 0.00018615041,
+      "identity": {
+        "frame_indices": [
+          1034,
+          1035
+        ],
+        "pair_index": 517
+      },
+      "pair_indices": [
+        517
+      ],
+      "pixels_per_compressed_byte": 0.886262099777,
+      "prior": {
+        "formula_prior_sum": 1.50407237396,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          517
+        ],
+        "pose_prior_sum": 0.000234100153,
+        "score_signal_prior_sum": 0.002436484433,
+        "seg_prior_sum": 0.014556884766
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000279983688,
+      "rate_term_cost": 0.003576994296,
+      "raw_amr1_bytes": 25052,
+      "raw_amr1_sha256": "584a0196a271cda7c60fedebd453f0ae8e4c772804c62a8dd1c3cea89a7bceab",
+      "residual_pixel_coverage": 0.002644319822,
+      "score_signal_prior_per_compressed_byte": 4.53553e-07,
+      "selected_repair_pixels": 4761,
+      "selected_repair_runs": 2165
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 5156,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "30c9b5982db7161b4f938b4d8939114cc9af5e6351bdc68340d1cff072bf1d65",
+      "frame_indices": [
+        1044,
+        1045
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000193948798,
+      "identity": {
+        "frame_indices": [
+          1044,
+          1045
+        ],
+        "pair_index": 522
+      },
+      "pair_indices": [
+        522
+      ],
+      "pixels_per_compressed_byte": 1.000969743988,
+      "prior": {
+        "formula_prior_sum": 1.442121875673,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          522
+        ],
+        "pose_prior_sum": 0.000309208786,
+        "score_signal_prior_sum": 0.002324512368,
+        "seg_prior_sum": 0.013865153305
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000279697804,
+      "rate_term_cost": 0.003433168762,
+      "raw_amr1_bytes": 23292,
+      "raw_amr1_sha256": "e08d91ee85deeeccc0fd433623601decc8b812006d6e6c53ee7889cfc1f80e00",
+      "residual_pixel_coverage": 0.002866484899,
+      "score_signal_prior_per_compressed_byte": 4.50836e-07,
+      "selected_repair_pixels": 5161,
+      "selected_repair_runs": 2005
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 3892,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "e0989b7315d060416591a440714a671fcb961713c9188f8ed8b8069563f7b408",
+      "frame_indices": [
+        180,
+        181
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000256937307,
+      "identity": {
+        "frame_indices": [
+          180,
+          181
+        ],
+        "pair_index": 90
+      },
+      "pair_indices": [
+        90
+      ],
+      "pixels_per_compressed_byte": 0.715827338129,
+      "prior": {
+        "formula_prior_sum": 0.976496716111,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          90
+        ],
+        "pose_prior_sum": 0.015492959879,
+        "score_signal_prior_sum": 0.001655586406,
+        "seg_prior_sum": 0.005828857422
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000250898437,
+      "rate_term_cost": 0.002591523046,
+      "raw_amr1_bytes": 16931,
+      "raw_amr1_sha256": "f7d86d98d8f1fe5454bf2cfdbce5f87387113cfcbfe6767d162ea4c09d2dbac6",
+      "residual_pixel_coverage": 0.001547379757,
+      "score_signal_prior_per_compressed_byte": 4.25382e-07,
+      "selected_repair_pixels": 2786,
+      "selected_repair_runs": 1427
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4780,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "76ef1b2af9deb45156c427b8f0800cbffa0c7a1fa63464acf9bf480ef15ea4b2",
+      "frame_indices": [
+        1168,
+        1169
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000209205021,
+      "identity": {
+        "frame_indices": [
+          1168,
+          1169
+        ],
+        "pair_index": 584
+      },
+      "pair_indices": [
+        584
+      ],
+      "pixels_per_compressed_byte": 0.779916317992,
+      "prior": {
+        "formula_prior_sum": 1.277826212466,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          584
+        ],
+        "pose_prior_sum": 0.004857269116,
+        "score_signal_prior_sum": 0.001976868662,
+        "seg_prior_sum": 0.01057434082
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.00026732766,
+      "rate_term_cost": 0.003182805796,
+      "raw_amr1_bytes": 21378,
+      "raw_amr1_sha256": "49925355b8f411815562b9a60db3e162a0021443d1593a8db533ab59a007acf1",
+      "residual_pixel_coverage": 0.002070578512,
+      "score_signal_prior_per_compressed_byte": 4.13571e-07,
+      "selected_repair_pixels": 3728,
+      "selected_repair_runs": 1831
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 3268,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "f400e9a4e475f79be5920128d387a669c8920769aa62a984ced4e5a7cbbec91b",
+      "frame_indices": [
+        712,
+        713
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000305997552,
+      "identity": {
+        "frame_indices": [
+          712,
+          713
+        ],
+        "pair_index": 356
+      },
+      "pair_indices": [
+        356
+      ],
+      "pixels_per_compressed_byte": 0.664626682987,
+      "prior": {
+        "formula_prior_sum": 0.855431627217,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          356
+        ],
+        "pose_prior_sum": 0.000436174974,
+        "score_signal_prior_sum": 0.001334906632,
+        "seg_prior_sum": 0.007893880829
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000261759984,
+      "rate_term_cost": 0.002176027059,
+      "raw_amr1_bytes": 13654,
+      "raw_amr1_sha256": "205ab1208b0e5e6561daec0cb1fa9baa7d4d788dba7b39f5d922cdf148c77487",
+      "residual_pixel_coverage": 0.001206356365,
+      "score_signal_prior_per_compressed_byte": 4.08478e-07,
+      "selected_repair_pixels": 2172,
+      "selected_repair_runs": 1129
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4972,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "d0d860a17e089df7571ae8a1274b3a7a606a50e39114f2e99cc77574dbb9ac26",
+      "frame_indices": [
+        1032,
+        1033
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000201126307,
+      "identity": {
+        "frame_indices": [
+          1032,
+          1033
+        ],
+        "pair_index": 516
+      },
+      "pair_indices": [
+        516
+      ],
+      "pixels_per_compressed_byte": 0.952333065165,
+      "prior": {
+        "formula_prior_sum": 1.229941944661,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          516
+        ],
+        "pose_prior_sum": 0.001805284875,
+        "score_signal_prior_sum": 0.001905682937,
+        "seg_prior_sum": 0.010955810547
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000247373682,
+      "rate_term_cost": 0.003310650715,
+      "raw_amr1_bytes": 22555,
+      "raw_amr1_sha256": "65353e5b8071e75696adcc403cb3fcd0f30769a9eda3536d116d1b0b3c4dee2f",
+      "residual_pixel_coverage": 0.002629879092,
+      "score_signal_prior_per_compressed_byte": 3.83283e-07,
+      "selected_repair_pixels": 4735,
+      "selected_repair_runs": 1938
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 3632,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "8f3c6f2ffd87ca0f7f6525d36e80977d5aaea334f3a12ee3cc01383921822c70",
+      "frame_indices": [
+        1098,
+        1099
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000275330396,
+      "identity": {
+        "frame_indices": [
+          1098,
+          1099
+        ],
+        "pair_index": 549
+      },
+      "pair_indices": [
+        549
+      ],
+      "pixels_per_compressed_byte": 0.767621145374,
+      "prior": {
+        "formula_prior_sum": 0.875005803497,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          549
+        ],
+        "pose_prior_sum": 0.00078622764,
+        "score_signal_prior_sum": 0.001345277363,
+        "seg_prior_sum": 0.007863363251
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000240915695,
+      "rate_term_cost": 0.002418399718,
+      "raw_amr1_bytes": 15317,
+      "raw_amr1_sha256": "df174450958e5bbff0e35469ee6e2086ac9864928b203db7244433fb03288a49",
+      "residual_pixel_coverage": 0.001548490583,
+      "score_signal_prior_per_compressed_byte": 3.70396e-07,
+      "selected_repair_pixels": 2788,
+      "selected_repair_runs": 1280
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4476,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "b491b7b806b2e5348e9bae5cd29ae6e9d6efc28a2bdb870c6cc602e0f82fe93d",
+      "frame_indices": [
+        420,
+        421
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000223413762,
+      "identity": {
+        "frame_indices": [
+          420,
+          421
+        ],
+        "pair_index": 210
+      },
+      "pair_indices": [
+        210
+      ],
+      "pixels_per_compressed_byte": 0.887176050045,
+      "prior": {
+        "formula_prior_sum": 1.075416587133,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          210
+        ],
+        "pose_prior_sum": 0.003921834286,
+        "score_signal_prior_sum": 0.001635473901,
+        "seg_prior_sum": 0.008773803711
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000240262866,
+      "rate_term_cost": 0.002980384674,
+      "raw_amr1_bytes": 19792,
+      "raw_amr1_sha256": "69cf482d23ba44451dc9d479f64ba6dd2e8b93f68c29900efd5844adfdc88a75",
+      "residual_pixel_coverage": 0.002205543796,
+      "score_signal_prior_per_compressed_byte": 3.65387e-07,
+      "selected_repair_pixels": 3971,
+      "selected_repair_runs": 1687
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 3092,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "2d556f138b2224117fa793df94b0be2b0ff062e6050ae33d9c245059d378c864",
+      "frame_indices": [
+        756,
+        757
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000323415265,
+      "identity": {
+        "frame_indices": [
+          756,
+          757
+        ],
+        "pair_index": 378
+      },
+      "pair_indices": [
+        378
+      ],
+      "pixels_per_compressed_byte": 0.600905562743,
+      "prior": {
+        "formula_prior_sum": 0.644667844423,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          378
+        ],
+        "pose_prior_sum": 0.014960983768,
+        "score_signal_prior_sum": 0.001090409353,
+        "seg_prior_sum": 0.002578735352
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000208495422,
+      "rate_term_cost": 0.002058835883,
+      "raw_amr1_bytes": 12664,
+      "raw_amr1_sha256": "424a176b6bc8b3f2e929a3af867b7d6af18ad27d085f8f4cffba4b590cef0a2b",
+      "residual_pixel_coverage": 0.00103195678,
+      "score_signal_prior_per_compressed_byte": 3.52655e-07,
+      "selected_repair_pixels": 1858,
+      "selected_repair_runs": 1039
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 2280,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "c9a74f2f0cf6fec67b7866c360784989fd2dd6e29994be4885cb818ce619b991",
+      "frame_indices": [
+        644,
+        645
+      ],
+      "hard_pair_count_per_compressed_byte": 0.0,
+      "identity": {
+        "frame_indices": [
+          644,
+          645
+        ],
+        "pair_index": 322
+      },
+      "pair_indices": [
+        322
+      ],
+      "pixels_per_compressed_byte": 0.641666666667,
+      "prior": {
+        "formula_prior_sum": 0.516738331938,
+        "hard_pair_count": 0,
+        "hard_pair_indices": [],
+        "pose_prior_sum": 0.000204681593,
+        "score_signal_prior_sum": 0.000794865597,
+        "seg_prior_sum": 0.00471496582
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000226639619,
+      "rate_term_cost": 0.001518158413,
+      "raw_amr1_bytes": 8031,
+      "raw_amr1_sha256": "389bb37b22ad5338e07806933354d94b8d85d1dc41b0a03946a968e4120ac53c",
+      "residual_pixel_coverage": 0.000812568767,
+      "score_signal_prior_per_compressed_byte": 3.48625e-07,
+      "selected_repair_pixels": 1463,
+      "selected_repair_runs": 618
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 3940,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "b10de70585370648fb924b55dff5d60bcd30184fbc91a9f4125dc3071138e1a4",
+      "frame_indices": [
+        138,
+        139
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000253807107,
+      "identity": {
+        "frame_indices": [
+          138,
+          139
+        ],
+        "pair_index": 69
+      },
+      "pair_indices": [
+        69
+      ],
+      "pixels_per_compressed_byte": 0.838324873096,
+      "prior": {
+        "formula_prior_sum": 0.846915272647,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          69
+        ],
+        "pose_prior_sum": 0.012356154621,
+        "score_signal_prior_sum": 0.001371270864,
+        "seg_prior_sum": 0.004954020493
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000214953115,
+      "rate_term_cost": 0.002623484275,
+      "raw_amr1_bytes": 17041,
+      "raw_amr1_sha256": "55bda056b0735c64f784fea5805d2a5dc7de0d92e06fc6f81f8cd8ab0a246f2b",
+      "residual_pixel_coverage": 0.001834528119,
+      "score_signal_prior_per_compressed_byte": 3.48038e-07,
+      "selected_repair_pixels": 3303,
+      "selected_repair_runs": 1437
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 3728,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "f58d359e7a39dd4a76a1447b64c6f7b12fab4f179c2f507b959e9991ee173ea0",
+      "frame_indices": [
+        456,
+        457
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000268240343,
+      "identity": {
+        "frame_indices": [
+          456,
+          457
+        ],
+        "pair_index": 228
+      },
+      "pair_indices": [
+        228
+      ],
+      "pixels_per_compressed_byte": 0.769581545064,
+      "prior": {
+        "formula_prior_sum": 0.854354954316,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          228
+        ],
+        "pose_prior_sum": 0.005830304231,
+        "score_signal_prior_sum": 0.001278935263,
+        "seg_prior_sum": 0.006128947251
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000229172466,
+      "rate_term_cost": 0.002482322177,
+      "raw_amr1_bytes": 15898,
+      "raw_amr1_sha256": "c6464a107ce2f1b6252e2782b60716806ca636f9de7d06b65857f01c6d9be02f",
+      "residual_pixel_coverage": 0.001593479011,
+      "score_signal_prior_per_compressed_byte": 3.43062e-07,
+      "selected_repair_pixels": 2869,
+      "selected_repair_runs": 1333
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4036,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "236fa93e22dc08e81281e7430a29ed095c7e399f6ac9026a503df5a77dac6e07",
+      "frame_indices": [
+        650,
+        651
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000247770069,
+      "identity": {
+        "frame_indices": [
+          650,
+          651
+        ],
+        "pair_index": 325
+      },
+      "pair_indices": [
+        325
+      ],
+      "pixels_per_compressed_byte": 0.789890981169,
+      "prior": {
+        "formula_prior_sum": 0.890041611647,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          325
+        ],
+        "pose_prior_sum": 0.00059686054,
+        "score_signal_prior_sum": 0.001380996527,
+        "seg_prior_sum": 0.008127848618
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000220525672,
+      "rate_term_cost": 0.002687406735,
+      "raw_amr1_bytes": 17229,
+      "raw_amr1_sha256": "0815c135b892c5fdedf95295ec068b7baf46c8ded6c8597a686adcc748bc46b0",
+      "residual_pixel_coverage": 0.001770655659,
+      "score_signal_prior_per_compressed_byte": 3.4217e-07,
+      "selected_repair_pixels": 3188,
+      "selected_repair_runs": 1454
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4156,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "cd517a9b48beb6a1575d1bd1564e64acfdd8f6827e9161ae41e024798cb58d75",
+      "frame_indices": [
+        358,
+        359
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000240615977,
+      "identity": {
+        "frame_indices": [
+          358,
+          359
+        ],
+        "pair_index": 179
+      },
+      "pair_indices": [
+        179
+      ],
+      "pixels_per_compressed_byte": 0.869104908566,
+      "prior": {
+        "formula_prior_sum": 0.772912420105,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          179
+        ],
+        "pose_prior_sum": 0.019563399255,
+        "score_signal_prior_sum": 0.001414857127,
+        "seg_prior_sum": 0.003306071041
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000185975077,
+      "rate_term_cost": 0.002767309809,
+      "raw_amr1_bytes": 18197,
+      "raw_amr1_sha256": "8d593f7ba1e86008ddeb84ab46323d3c1fa4d886da8b09fc7a91cacd09e5ac6a",
+      "residual_pixel_coverage": 0.00200615064,
+      "score_signal_prior_per_compressed_byte": 3.40437e-07,
+      "selected_repair_pixels": 3612,
+      "selected_repair_runs": 1542
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 3852,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "cf4051db1f03650cbf9e1fb49075bd1347bade0701dcbdc39b6ee7565b45a016",
+      "frame_indices": [
+        956,
+        957
+      ],
+      "hard_pair_count_per_compressed_byte": 0.0002596054,
+      "identity": {
+        "frame_indices": [
+          956,
+          957
+        ],
+        "pair_index": 478
+      },
+      "pair_indices": [
+        478
+      ],
+      "pixels_per_compressed_byte": 0.684319833853,
+      "prior": {
+        "formula_prior_sum": 0.853238439086,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          478
+        ],
+        "pose_prior_sum": 0.008215602487,
+        "score_signal_prior_sum": 0.001307119278,
+        "seg_prior_sum": 0.00566609716
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000221505306,
+      "rate_term_cost": 0.002564888687,
+      "raw_amr1_bytes": 17141,
+      "raw_amr1_sha256": "6ddafe12426dd46e720278f6048b79d6372fc28a1954d516c8611c97a9a475fb",
+      "residual_pixel_coverage": 0.001464067854,
+      "score_signal_prior_per_compressed_byte": 3.39335e-07,
+      "selected_repair_pixels": 2636,
+      "selected_repair_runs": 1446
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4672,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "65243ef38ac31c3bfd1ebf59361d1c8c461bf06994ca8266d70b44d514459abe",
+      "frame_indices": [
+        1184,
+        1185
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000214041096,
+      "identity": {
+        "frame_indices": [
+          1184,
+          1185
+        ],
+        "pair_index": 592
+      },
+      "pair_indices": [
+        592
+      ],
+      "pixels_per_compressed_byte": 0.786386986301,
+      "prior": {
+        "formula_prior_sum": 0.966786773582,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          592
+        ],
+        "pose_prior_sum": 0.000125967868,
+        "score_signal_prior_sum": 0.001557720297,
+        "seg_prior_sum": 0.009312948212
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000206932101,
+      "rate_term_cost": 0.003110893029,
+      "raw_amr1_bytes": 20850,
+      "raw_amr1_sha256": "2c0d10d469277cb0cd683530a104f1c133e31add4ff1bd88a9646b94209c0632",
+      "residual_pixel_coverage": 0.002040586227,
+      "score_signal_prior_per_compressed_byte": 3.33416e-07,
+      "selected_repair_pixels": 3674,
+      "selected_repair_runs": 1783
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 3324,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "43b71c65ea3d8f514c989898504c24da9988f8a5a479382c395db1a03663146c",
+      "frame_indices": [
+        626,
+        627
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000300842359,
+      "identity": {
+        "frame_indices": [
+          626,
+          627
+        ],
+        "pair_index": 313
+      },
+      "pair_indices": [
+        313
+      ],
+      "pixels_per_compressed_byte": 0.694945848375,
+      "prior": {
+        "formula_prior_sum": 0.751099338192,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          313
+        ],
+        "pose_prior_sum": 0.005563034676,
+        "score_signal_prior_sum": 0.00110437324,
+        "seg_prior_sum": 0.005152384751
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000225962496,
+      "rate_term_cost": 0.00221331516,
+      "raw_amr1_bytes": 14061,
+      "raw_amr1_sha256": "6561961c0552260c1fa40629739e5e7c5679f1792906c44af642a737670cd734",
+      "residual_pixel_coverage": 0.001283003316,
+      "score_signal_prior_per_compressed_byte": 3.32242e-07,
+      "selected_repair_pixels": 2310,
+      "selected_repair_runs": 1166
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 3844,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "d9f4ef59025ee80f1bdea082ee313cc736172464d4c73e29c32a1ab089bf67a9",
+      "frame_indices": [
+        134,
+        135
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000260145682,
+      "identity": {
+        "frame_indices": [
+          134,
+          135
+        ],
+        "pair_index": 67
+      },
+      "pair_indices": [
+        67
+      ],
+      "pixels_per_compressed_byte": 0.831425598335,
+      "prior": {
+        "formula_prior_sum": 0.821062339944,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          67
+        ],
+        "pose_prior_sum": 0.00963490922,
+        "score_signal_prior_sum": 0.001276542334,
+        "seg_prior_sum": 0.005106608383
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000213595822,
+      "rate_term_cost": 0.002559561816,
+      "raw_amr1_bytes": 16689,
+      "raw_amr1_sha256": "3f373d81c755f525073bddb8b57177f04bd23e8ac0389ea48526edf05bb4c1dd",
+      "residual_pixel_coverage": 0.001775098961,
+      "score_signal_prior_per_compressed_byte": 3.32087e-07,
+      "selected_repair_pixels": 3196,
+      "selected_repair_runs": 1405
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 3288,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "a3ad00faf2b4071922d4adebd74119aa8523ed9dfdba0ff2ea15470155d192eb",
+      "frame_indices": [
+        1062,
+        1063
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000304136253,
+      "identity": {
+        "frame_indices": [
+          1062,
+          1063
+        ],
+        "pair_index": 531
+      },
+      "pair_indices": [
+        531
+      ],
+      "pixels_per_compressed_byte": 0.723540145985,
+      "prior": {
+        "formula_prior_sum": 0.714981641214,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          531
+        ],
+        "pose_prior_sum": 0.000911543844,
+        "score_signal_prior_sum": 0.001072761702,
+        "seg_prior_sum": 0.006195068359
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000217451837,
+      "rate_term_cost": 0.002189344238,
+      "raw_amr1_bytes": 13304,
+      "raw_amr1_sha256": "7f8b6d6ff16e61d4fd2dd6a27ee38126766c23796d0a6da2c4901a9aabaa2339",
+      "residual_pixel_coverage": 0.001321326792,
+      "score_signal_prior_per_compressed_byte": 3.26266e-07,
+      "selected_repair_pixels": 2379,
+      "selected_repair_runs": 1097
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4384,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "80f922a010c21979b96d2efe21e663f94ba74e7f9abadbf51c4b3035e2d1d718",
+      "frame_indices": [
+        1024,
+        1025
+      ],
+      "hard_pair_count_per_compressed_byte": 0.00022810219,
+      "identity": {
+        "frame_indices": [
+          1024,
+          1025
+        ],
+        "pair_index": 512
+      },
+      "pair_indices": [
+        512
+      ],
+      "pixels_per_compressed_byte": 0.845118613139,
+      "prior": {
+        "formula_prior_sum": 0.898963544968,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          512
+        ],
+        "pose_prior_sum": 0.000255781779,
+        "score_signal_prior_sum": 0.00142527547,
+        "seg_prior_sum": 0.008483886719
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000205055553,
+      "rate_term_cost": 0.00291912565,
+      "raw_amr1_bytes": 19849,
+      "raw_amr1_sha256": "29d260319ad28f2942e6ba313d5e2a8ca6451e2fbc70ca1e801274e4b76ad92b",
+      "residual_pixel_coverage": 0.00205780402,
+      "score_signal_prior_per_compressed_byte": 3.25108e-07,
+      "selected_repair_pixels": 3705,
+      "selected_repair_runs": 1692
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 3812,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "f7411229a3c07bebd9eed7b58177d2625b4c63ae699037c4d30a1743c4db0553",
+      "frame_indices": [
+        640,
+        641
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000262329486,
+      "identity": {
+        "frame_indices": [
+          640,
+          641
+        ],
+        "pair_index": 320
+      },
+      "pair_indices": [
+        320
+      ],
+      "pixels_per_compressed_byte": 0.891133263379,
+      "prior": {
+        "formula_prior_sum": 0.830417562295,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          320
+        ],
+        "pose_prior_sum": 0.002081690589,
+        "score_signal_prior_sum": 0.001235481058,
+        "seg_prior_sum": 0.006861369126
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000217843012,
+      "rate_term_cost": 0.002538254329,
+      "raw_amr1_bytes": 16217,
+      "raw_amr1_sha256": "91eb54097b3fd6a1cb4e0ae73615ca44a92e68d17ccff6c81db1405d22a49bbf",
+      "residual_pixel_coverage": 0.001886736912,
+      "score_signal_prior_per_compressed_byte": 3.24103e-07,
+      "selected_repair_pixels": 3397,
+      "selected_repair_runs": 1362
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 3980,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "09b8cbe70689a45d5d977e11c6c0f0cfab08be76641efd5309dad33af9630b58",
+      "frame_indices": [
+        272,
+        273
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000251256281,
+      "identity": {
+        "frame_indices": [
+          272,
+          273
+        ],
+        "pair_index": 136
+      },
+      "pair_indices": [
+        136
+      ],
+      "pixels_per_compressed_byte": 0.769095477387,
+      "prior": {
+        "formula_prior_sum": 0.844116861168,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          136
+        ],
+        "pose_prior_sum": 0.001460478525,
+        "score_signal_prior_sum": 0.001269933512,
+        "seg_prior_sum": 0.007232666016
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000212089664,
+      "rate_term_cost": 0.002650118633,
+      "raw_amr1_bytes": 16954,
+      "raw_amr1_sha256": "41730e5ba8eebb137a79affbc02b297062ad4c034c287ed4950236bdea44992a",
+      "residual_pixel_coverage": 0.001700118247,
+      "score_signal_prior_per_compressed_byte": 3.19079e-07,
+      "selected_repair_pixels": 3061,
+      "selected_repair_runs": 1429
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 3440,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "0adc599d5d1363abd7cfd55296b42a2e4d0771e33c57afd137214e9ec5ecb523",
+      "frame_indices": [
+        840,
+        841
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000290697674,
+      "identity": {
+        "frame_indices": [
+          840,
+          841
+        ],
+        "pair_index": 420
+      },
+      "pair_indices": [
+        420
+      ],
+      "pixels_per_compressed_byte": 0.807848837209,
+      "prior": {
+        "formula_prior_sum": 0.742771092558,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          420
+        ],
+        "pose_prior_sum": 0.006271057762,
+        "score_signal_prior_sum": 0.001097489873,
+        "seg_prior_sum": 0.004923502915
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000215921829,
+      "rate_term_cost": 0.002290554799,
+      "raw_amr1_bytes": 14127,
+      "raw_amr1_sha256": "c5e0089d0875ed23c926d3bb2558243cb789f0dd2abaf2bdad4c3c42c219459b",
+      "residual_pixel_coverage": 0.001543491868,
+      "score_signal_prior_per_compressed_byte": 3.19038e-07,
+      "selected_repair_pixels": 2779,
+      "selected_repair_runs": 1172
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4140,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "5956b774dd84d59fcf9e10ec0e383f74542e04a260103b1d919640f758af9eee",
+      "frame_indices": [
+        300,
+        301
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000241545894,
+      "identity": {
+        "frame_indices": [
+          300,
+          301
+        ],
+        "pair_index": 150
+      },
+      "pair_indices": [
+        150
+      ],
+      "pixels_per_compressed_byte": 0.83768115942,
+      "prior": {
+        "formula_prior_sum": 0.877729408283,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          150
+        ],
+        "pose_prior_sum": 0.001717829145,
+        "score_signal_prior_sum": 0.001320291845,
+        "seg_prior_sum": 0.00746663427
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000212011934,
+      "rate_term_cost": 0.002756656066,
+      "raw_amr1_bytes": 17801,
+      "raw_amr1_sha256": "f2b5266031639286530a14cbecb36361f9d097f2470fafdac476a14536289364",
+      "residual_pixel_coverage": 0.001926171213,
+      "score_signal_prior_per_compressed_byte": 3.18911e-07,
+      "selected_repair_pixels": 3468,
+      "selected_repair_runs": 1506
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 3788,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "20f431a99db1d21ab23a56b85cb38220ed55e6acf3614e4fd55ac329ae03fd40",
+      "frame_indices": [
+        714,
+        715
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000263991552,
+      "identity": {
+        "frame_indices": [
+          714,
+          715
+        ],
+        "pair_index": 357
+      },
+      "pair_indices": [
+        357
+      ],
+      "pixels_per_compressed_byte": 0.716209081309,
+      "prior": {
+        "formula_prior_sum": 0.76560010883,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          357
+        ],
+        "pose_prior_sum": 0.009382615797,
+        "score_signal_prior_sum": 0.001179783204,
+        "seg_prior_sum": 0.004592895508
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000202111961,
+      "rate_term_cost": 0.002522273714,
+      "raw_amr1_bytes": 16525,
+      "raw_amr1_sha256": "3102bd3dc740269010098caaca739fe9859ae825aecc7ca0124e8377d4caba8a",
+      "residual_pixel_coverage": 0.001506834631,
+      "score_signal_prior_per_compressed_byte": 3.11453e-07,
+      "selected_repair_pixels": 2713,
+      "selected_repair_runs": 1390
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4080,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "eed6f2e906ca8c537b9345ffe97ede9ac58d5e34cf79c914edfdaac666d21588",
+      "frame_indices": [
+        270,
+        271
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000245098039,
+      "identity": {
+        "frame_indices": [
+          270,
+          271
+        ],
+        "pair_index": 135
+      },
+      "pair_indices": [
+        135
+      ],
+      "pixels_per_compressed_byte": 0.841421568627,
+      "prior": {
+        "formula_prior_sum": 0.847390418759,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          135
+        ],
+        "pose_prior_sum": 0.001749318559,
+        "score_signal_prior_sum": 0.001269124272,
+        "seg_prior_sum": 0.007151286118
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.00020769373,
+      "rate_term_cost": 0.002716704529,
+      "raw_amr1_bytes": 17163,
+      "raw_amr1_sha256": "e788d7dd685663ed42ecc6bf38c7191b6046cb6db62b23fce2edbf60b6b63f2b",
+      "residual_pixel_coverage": 0.001906731768,
+      "score_signal_prior_per_compressed_byte": 3.1106e-07,
+      "selected_repair_pixels": 3433,
+      "selected_repair_runs": 1448
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4108,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "255f181a7c3394d3b3598147554a197e775049f985901a3ade9f2cab0202bfb9",
+      "frame_indices": [
+        1058,
+        1059
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000243427459,
+      "identity": {
+        "frame_indices": [
+          1058,
+          1059
+        ],
+        "pair_index": 529
+      },
+      "pair_indices": [
+        529
+      ],
+      "pixels_per_compressed_byte": 0.740993184031,
+      "prior": {
+        "formula_prior_sum": 0.851124085445,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          529
+        ],
+        "pose_prior_sum": 0.001863337355,
+        "score_signal_prior_sum": 0.001273311172,
+        "seg_prior_sum": 0.007146199699
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000207186973,
+      "rate_term_cost": 0.002735348579,
+      "raw_amr1_bytes": 17748,
+      "raw_amr1_sha256": "7d7c6c5ebb8bc27b2dda4308e892fc2a3f216ff72353c89e19bc26c1c435a84c",
+      "residual_pixel_coverage": 0.001690676232,
+      "score_signal_prior_per_compressed_byte": 3.09959e-07,
+      "selected_repair_pixels": 3044,
+      "selected_repair_runs": 1501
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 2704,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "418ac313cefcd42d4c38b2c8ada82b815e7dfe6a13adc3fc5368bd6c9a7fbf78",
+      "frame_indices": [
+        322,
+        323
+      ],
+      "hard_pair_count_per_compressed_byte": 0.0,
+      "identity": {
+        "frame_indices": [
+          322,
+          323
+        ],
+        "pair_index": 161
+      },
+      "pair_indices": [
+        161
+      ],
+      "pixels_per_compressed_byte": 0.687869822485,
+      "prior": {
+        "formula_prior_sum": 0.573334744165,
+        "hard_pair_count": 0,
+        "hard_pair_indices": [],
+        "pose_prior_sum": 0.000955880096,
+        "score_signal_prior_sum": 0.000834817401,
+        "seg_prior_sum": 0.004755656235
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.00021203208,
+      "rate_term_cost": 0.001800482609,
+      "raw_amr1_bytes": 10231,
+      "raw_amr1_sha256": "a14e5db463ff9e61332e182108e20727696f30808e81891407f614263f31dd58",
+      "residual_pixel_coverage": 0.001033067605,
+      "score_signal_prior_per_compressed_byte": 3.08734e-07,
+      "selected_repair_pixels": 1860,
+      "selected_repair_runs": 818
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4252,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "4f15c46519d5d5090798a8441e39edb361ed4abe8ac6ef40733eb720f002da70",
+      "frame_indices": [
+        1026,
+        1027
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000235183443,
+      "identity": {
+        "frame_indices": [
+          1026,
+          1027
+        ],
+        "pair_index": 513
+      },
+      "pair_indices": [
+        513
+      ],
+      "pixels_per_compressed_byte": 0.753527751646,
+      "prior": {
+        "formula_prior_sum": 0.858477224234,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          513
+        ],
+        "pose_prior_sum": 0.005493996199,
+        "score_signal_prior_sum": 0.001282734759,
+        "seg_prior_sum": 0.006240844727
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000201899629,
+      "rate_term_cost": 0.002831232269,
+      "raw_amr1_bytes": 19145,
+      "raw_amr1_sha256": "2cb0c5db8290f31162422dedfce29e449918365ed0bbf7845d804d63c1b54c22",
+      "residual_pixel_coverage": 0.001779542262,
+      "score_signal_prior_per_compressed_byte": 3.01678e-07,
+      "selected_repair_pixels": 3204,
+      "selected_repair_runs": 1628
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4188,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "91fa7f6eeb509a04fa450f442ce524dade9557bd854759795ab59e0e1d653bc6",
+      "frame_indices": [
+        634,
+        635
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000238777459,
+      "identity": {
+        "frame_indices": [
+          634,
+          635
+        ],
+        "pair_index": 317
+      },
+      "pair_indices": [
+        317
+      ],
+      "pixels_per_compressed_byte": 0.76193887297,
+      "prior": {
+        "formula_prior_sum": 0.801733196276,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          317
+        ],
+        "pose_prior_sum": 0.00028669482,
+        "score_signal_prior_sum": 0.001259641529,
+        "seg_prior_sum": 0.007481893059
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000191435816,
+      "rate_term_cost": 0.002788617296,
+      "raw_amr1_bytes": 18659,
+      "raw_amr1_sha256": "3947d1060508466c9bcaa44a898175809566bf1d31718d974ecaeb4283b6d4a8",
+      "residual_pixel_coverage": 0.001772321897,
+      "score_signal_prior_per_compressed_byte": 3.00774e-07,
+      "selected_repair_pixels": 3191,
+      "selected_repair_runs": 1584
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 3936,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "4bcdd7114f0e965d687c84da4aae86ef27d76e29ab9a7059c658c03de739f4d3",
+      "frame_indices": [
+        232,
+        233
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000254065041,
+      "identity": {
+        "frame_indices": [
+          232,
+          233
+        ],
+        "pair_index": 116
+      },
+      "pair_indices": [
+        116
+      ],
+      "pixels_per_compressed_byte": 0.728404471545,
+      "prior": {
+        "formula_prior_sum": 0.796232795422,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          116
+        ],
+        "pose_prior_sum": 0.005996712949,
+        "score_signal_prior_sum": 0.001183710242,
+        "seg_prior_sum": 0.00551350927
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000202294918,
+      "rate_term_cost": 0.002620820839,
+      "raw_amr1_bytes": 16998,
+      "raw_amr1_sha256": "d920a2313aa24db67020b3f6d666e84782224a9853171bb05eac09d4e7f9f166",
+      "residual_pixel_coverage": 0.001592368185,
+      "score_signal_prior_per_compressed_byte": 3.00739e-07,
+      "selected_repair_pixels": 2867,
+      "selected_repair_runs": 1433
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4092,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "3403b7ad427851fa2e2073086bcae25a358afda5e412f9a656f18bd9ef63838d",
+      "frame_indices": [
+        1046,
+        1047
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000244379277,
+      "identity": {
+        "frame_indices": [
+          1046,
+          1047
+        ],
+        "pair_index": 523
+      },
+      "pair_indices": [
+        523
+      ],
+      "pixels_per_compressed_byte": 0.786656891496,
+      "prior": {
+        "formula_prior_sum": 0.817253699575,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          523
+        ],
+        "pose_prior_sum": 0.006855692714,
+        "score_signal_prior_sum": 0.001228421179,
+        "seg_prior_sum": 0.005554199219
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000199719868,
+      "rate_term_cost": 0.002724694836,
+      "raw_amr1_bytes": 17825,
+      "raw_amr1_sha256": "11a8ac7066cd06f9e588f3d836fb165a16a49056e94f0c5ddbf669a0364b1534",
+      "residual_pixel_coverage": 0.001787873453,
+      "score_signal_prior_per_compressed_byte": 3.00201e-07,
+      "selected_repair_pixels": 3219,
+      "selected_repair_runs": 1508
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4560,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "02945fe6224b37c1dea0383465135549b9fecb6b1102561b578694ab68601168",
+      "frame_indices": [
+        1038,
+        1039
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000219298246,
+      "identity": {
+        "frame_indices": [
+          1038,
+          1039
+        ],
+        "pair_index": 519
+      },
+      "pair_indices": [
+        519
+      ],
+      "pixels_per_compressed_byte": 0.765570175439,
+      "prior": {
+        "formula_prior_sum": 0.837498658845,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          519
+        ],
+        "pose_prior_sum": 0.000111292131,
+        "score_signal_prior_sum": 0.001345144543,
+        "seg_prior_sum": 0.008041381836
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000183661987,
+      "rate_term_cost": 0.003036316826,
+      "raw_amr1_bytes": 20817,
+      "raw_amr1_sha256": "40ea986ddc4e4a924c755fd378680a77c13b00566105a0d23d6ef172dcb9ab19",
+      "residual_pixel_coverage": 0.001938945705,
+      "score_signal_prior_per_compressed_byte": 2.94988e-07,
+      "selected_repair_pixels": 3491,
+      "selected_repair_runs": 1780
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 3652,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "41732e07b55d1f8c794b5bcc15ab6347866fba9ade90c55402f300a0a0231b78",
+      "frame_indices": [
+        780,
+        781
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000273822563,
+      "identity": {
+        "frame_indices": [
+          780,
+          781
+        ],
+        "pair_index": 390
+      },
+      "pair_indices": [
+        390
+      ],
+      "pixels_per_compressed_byte": 0.588992332968,
+      "prior": {
+        "formula_prior_sum": 0.721872954399,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          390
+        ],
+        "pose_prior_sum": 0.001371621969,
+        "score_signal_prior_sum": 0.001068493423,
+        "seg_prior_sum": 0.006047566887
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000197665103,
+      "rate_term_cost": 0.002431716897,
+      "raw_amr1_bytes": 15546,
+      "raw_amr1_sha256": "f0bc397e1f192cdcb55a6ad3ebf50283bd1fd3ea1b0bb270e7de9efe332187fb",
+      "residual_pixel_coverage": 0.001194692698,
+      "score_signal_prior_per_compressed_byte": 2.92578e-07,
+      "selected_repair_pixels": 2151,
+      "selected_repair_runs": 1301
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 3324,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "912a51412928f84500f947dbf2ace480cb97578ffc075be592c54cffebd211f0",
+      "frame_indices": [
+        64,
+        65
+      ],
+      "hard_pair_count_per_compressed_byte": 0.0,
+      "identity": {
+        "frame_indices": [
+          64,
+          65
+        ],
+        "pair_index": 32
+      },
+      "pair_indices": [
+        32
+      ],
+      "pixels_per_compressed_byte": 0.598375451264,
+      "prior": {
+        "formula_prior_sum": 0.664620308352,
+        "hard_pair_count": 0,
+        "hard_pair_indices": [],
+        "pose_prior_sum": 0.006511485204,
+        "score_signal_prior_sum": 0.000969929396,
+        "seg_prior_sum": 0.004094441887
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000199945941,
+      "rate_term_cost": 0.00221331516,
+      "raw_amr1_bytes": 13475,
+      "raw_amr1_sha256": "ba5fbc71e5f0a53748b57138a1066362e5fe6820976ea370f387c22ce17d4586",
+      "residual_pixel_coverage": 0.001104715843,
+      "score_signal_prior_per_compressed_byte": 2.91796e-07,
+      "selected_repair_pixels": 1989,
+      "selected_repair_runs": 1113
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4400,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "89a83b820bcfa2ea2caba35fe1b10ea4615443f65936a20038b4406d1cedc5af",
+      "frame_indices": [
+        1188,
+        1189
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000227272727,
+      "identity": {
+        "frame_indices": [
+          1188,
+          1189
+        ],
+        "pair_index": 594
+      },
+      "pair_indices": [
+        594
+      ],
+      "pixels_per_compressed_byte": 0.853636363636,
+      "prior": {
+        "formula_prior_sum": 0.828250536284,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          594
+        ],
+        "pose_prior_sum": 0.000725009828,
+        "score_signal_prior_sum": 0.001270518721,
+        "seg_prior_sum": 0.007431030273
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000188238758,
+      "rate_term_cost": 0.002929779394,
+      "raw_amr1_bytes": 19398,
+      "raw_amr1_sha256": "274976406bafa36bdf1a12e62ade00e0f03ee0305facbc19dce36fc0a2f6771f",
+      "residual_pixel_coverage": 0.002086130068,
+      "score_signal_prior_per_compressed_byte": 2.88754e-07,
+      "selected_repair_pixels": 3756,
+      "selected_repair_runs": 1651
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4184,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "aff2fde3801e3b3e7fb7a4da7f3444d6c3bb5baa119ec5c00987421cf6d08c71",
+      "frame_indices": [
+        234,
+        235
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000239005736,
+      "identity": {
+        "frame_indices": [
+          234,
+          235
+        ],
+        "pair_index": 117
+      },
+      "pair_indices": [
+        117
+      ],
+      "pixels_per_compressed_byte": 0.800669216061,
+      "prior": {
+        "formula_prior_sum": 0.815127307044,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          117
+        ],
+        "pose_prior_sum": 0.004908901639,
+        "score_signal_prior_sum": 0.001206036579,
+        "seg_prior_sum": 0.005935668945
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000194820102,
+      "rate_term_cost": 0.00278595386,
+      "raw_amr1_bytes": 18461,
+      "raw_amr1_sha256": "d63b0d356ab2add72e6b61514e7157b62236ba8cf4b4496fdc9bdbfeb82d5962",
+      "residual_pixel_coverage": 0.001860632515,
+      "score_signal_prior_per_compressed_byte": 2.8825e-07,
+      "selected_repair_pixels": 3350,
+      "selected_repair_runs": 1566
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 3936,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "13a6532499ad994bf0ace2323e4e45805a1a1fbc519d58780f80650b3f350067",
+      "frame_indices": [
+        658,
+        659
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000254065041,
+      "identity": {
+        "frame_indices": [
+          658,
+          659
+        ],
+        "pair_index": 329
+      },
+      "pair_indices": [
+        329
+      ],
+      "pixels_per_compressed_byte": 0.748475609756,
+      "prior": {
+        "formula_prior_sum": 0.764938599512,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          329
+        ],
+        "pose_prior_sum": 0.00595873734,
+        "score_signal_prior_sum": 0.001131170754,
+        "seg_prior_sum": 0.005208333489
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000194344156,
+      "rate_term_cost": 0.002620820839,
+      "raw_amr1_bytes": 16734,
+      "raw_amr1_sha256": "0cbbe7661da84ca5fa96c8b09b5413b9af4c918fd3028d67b8487650a77567b7",
+      "residual_pixel_coverage": 0.001636245788,
+      "score_signal_prior_per_compressed_byte": 2.87391e-07,
+      "selected_repair_pixels": 2946,
+      "selected_repair_runs": 1409
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 3552,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "4edd74a0848f8790f9c67acef7dc38e476fbd97899928d3203b715820035fef8",
+      "frame_indices": [
+        518,
+        519
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000281531532,
+      "identity": {
+        "frame_indices": [
+          518,
+          519
+        ],
+        "pair_index": 259
+      },
+      "pair_indices": [
+        259
+      ],
+      "pixels_per_compressed_byte": 0.719876126126,
+      "prior": {
+        "formula_prior_sum": 0.688493666969,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          259
+        ],
+        "pose_prior_sum": 0.005681519862,
+        "score_signal_prior_sum": 0.001001098099,
+        "seg_prior_sum": 0.004501342773
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000193832677,
+      "rate_term_cost": 0.002365131001,
+      "raw_amr1_bytes": 14831,
+      "raw_amr1_sha256": "d20a137461c2bcc23edd89eda86afbb312cd714cf7403e78f44309b39b7144c2",
+      "residual_pixel_coverage": 0.001420190251,
+      "score_signal_prior_per_compressed_byte": 2.81841e-07,
+      "selected_repair_pixels": 2557,
+      "selected_repair_runs": 1236
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4288,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "b44ebf9a5de9583d99729af43aba143825a73455e74571000059d891bdd640b3",
+      "frame_indices": [
+        130,
+        131
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000233208955,
+      "identity": {
+        "frame_indices": [
+          130,
+          131
+        ],
+        "pair_index": 65
+      },
+      "pair_indices": [
+        65
+      ],
+      "pixels_per_compressed_byte": 0.773554104478,
+      "prior": {
+        "formula_prior_sum": 0.803462646671,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          65
+        ],
+        "pose_prior_sum": 0.006879301742,
+        "score_signal_prior_sum": 0.001205727822,
+        "seg_prior_sum": 0.005411784165
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000187374684,
+      "rate_term_cost": 0.002855203191,
+      "raw_amr1_bytes": 18658,
+      "raw_amr1_sha256": "94eb403f31d513c02a794c9fdd17bb464b33e5fc4d141ee66d35bd6516fdaf7d",
+      "residual_pixel_coverage": 0.001842303896,
+      "score_signal_prior_per_compressed_byte": 2.81187e-07,
+      "selected_repair_pixels": 3317,
+      "selected_repair_runs": 1584
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 3340,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "a2a042392c693054b5118c5be1cf9ea752bfd4aa3569ff41fc46b58b8ab6ebbd",
+      "frame_indices": [
+        164,
+        165
+      ],
+      "hard_pair_count_per_compressed_byte": 0.0,
+      "identity": {
+        "frame_indices": [
+          164,
+          165
+        ],
+        "pair_index": 82
+      },
+      "pair_indices": [
+        82
+      ],
+      "pixels_per_compressed_byte": 0.720359281437,
+      "prior": {
+        "formula_prior_sum": 0.59093414372,
+        "hard_pair_count": 0,
+        "hard_pair_indices": [],
+        "pose_prior_sum": 0.012026574463,
+        "score_signal_prior_sum": 0.000937948817,
+        "seg_prior_sum": 0.00244140625
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.00017692639,
+      "rate_term_cost": 0.002223968903,
+      "raw_amr1_bytes": 13873,
+      "raw_amr1_sha256": "a73f65de6581076c87659a9971182553a3ecf9a49eaaeb22dd32557541658897",
+      "residual_pixel_coverage": 0.001336322935,
+      "score_signal_prior_per_compressed_byte": 2.80823e-07,
+      "selected_repair_pixels": 2406,
+      "selected_repair_runs": 1149
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4448,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "7219fdcda4401cbe3314528ef4fa3bcd73cdfc8f73542b0611486cc4c45a0366",
+      "frame_indices": [
+        274,
+        275
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000224820144,
+      "identity": {
+        "frame_indices": [
+          274,
+          275
+        ],
+        "pair_index": 137
+      },
+      "pair_indices": [
+        137
+      ],
+      "pixels_per_compressed_byte": 0.83565647482,
+      "prior": {
+        "formula_prior_sum": 0.837485568484,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          137
+        ],
+        "pose_prior_sum": 0.002007457893,
+        "score_signal_prior_sum": 0.001248309672,
+        "seg_prior_sum": 0.006958007812
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000188283626,
+      "rate_term_cost": 0.002961740623,
+      "raw_amr1_bytes": 19473,
+      "raw_amr1_sha256": "afbdcfdd637ecd4016b5dc27f775b766c40062a0ce73d1aa7c2d26e54bbaef9f",
+      "residual_pixel_coverage": 0.002064468973,
+      "score_signal_prior_per_compressed_byte": 2.80645e-07,
+      "selected_repair_pixels": 3717,
+      "selected_repair_runs": 1658
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 3764,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "f7095f39efb439479543e33e4ab3f50824e54d76dbea13bfa12719a684f39a46",
+      "frame_indices": [
+        338,
+        339
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000265674814,
+      "identity": {
+        "frame_indices": [
+          338,
+          339
+        ],
+        "pair_index": 169
+      },
+      "pair_indices": [
+        169
+      ],
+      "pixels_per_compressed_byte": 0.714133900106,
+      "prior": {
+        "formula_prior_sum": 0.723827237649,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          169
+        ],
+        "pose_prior_sum": 0.004500726704,
+        "score_signal_prior_sum": 0.001051531762,
+        "seg_prior_sum": 0.005116780754
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000192302667,
+      "rate_term_cost": 0.0025062931,
+      "raw_amr1_bytes": 15854,
+      "raw_amr1_sha256": "534d454d99c5fe6b3485d11df93c7ba4acbe7ac564b9227b29caad901d5570fc",
+      "residual_pixel_coverage": 0.001492949314,
+      "score_signal_prior_per_compressed_byte": 2.79366e-07,
+      "selected_repair_pixels": 2688,
+      "selected_repair_runs": 1329
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 2672,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "4b95301836392329850a726c8526477a2c805bdd871e6d393b1dda1826380832",
+      "frame_indices": [
+        676,
+        677
+      ],
+      "hard_pair_count_per_compressed_byte": 0.0,
+      "identity": {
+        "frame_indices": [
+          676,
+          677
+        ],
+        "pair_index": 338
+      },
+      "pair_indices": [
+        338
+      ],
+      "pixels_per_compressed_byte": 0.52994011976,
+      "prior": {
+        "formula_prior_sum": 0.535459688185,
+        "hard_pair_count": 0,
+        "hard_pair_indices": [],
+        "pose_prior_sum": 0.002024687827,
+        "score_signal_prior_sum": 0.000744682783,
+        "seg_prior_sum": 0.003931681626
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.00020039659,
+      "rate_term_cost": 0.001779175123,
+      "raw_amr1_bytes": 10209,
+      "raw_amr1_sha256": "f55f73bb9624983c3fb527e5643461c63197c8590e5792fb7742b44012edbba4",
+      "residual_pixel_coverage": 0.000786464371,
+      "score_signal_prior_per_compressed_byte": 2.78699e-07,
+      "selected_repair_pixels": 1416,
+      "selected_repair_runs": 816
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4060,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "83844d866acc5476faa1cc4ce4489d4953df09848acd6fad50354108648589a1",
+      "frame_indices": [
+        1030,
+        1031
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000246305419,
+      "identity": {
+        "frame_indices": [
+          1030,
+          1031
+        ],
+        "pair_index": 515
+      },
+      "pair_indices": [
+        515
+      ],
+      "pixels_per_compressed_byte": 0.801231527094,
+      "prior": {
+        "formula_prior_sum": 0.7352491078,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          515
+        ],
+        "pose_prior_sum": 0.000525755808,
+        "score_signal_prior_sum": 0.001127782188,
+        "seg_prior_sum": 0.006627400871
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000181095839,
+      "rate_term_cost": 0.00270338735,
+      "raw_amr1_bytes": 17440,
+      "raw_amr1_sha256": "6d8fc4305a4b1860ea5e3bc262d231623360cfa19edc8919f9a136688acfd03b",
+      "residual_pixel_coverage": 0.001806757484,
+      "score_signal_prior_per_compressed_byte": 2.77779e-07,
+      "selected_repair_pixels": 3253,
+      "selected_repair_runs": 1473
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4080,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "eeae84a6ba3bbebc4fca7279697839dadb5f39c67852963a95e03d099ea86957",
+      "frame_indices": [
+        238,
+        239
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000245098039,
+      "identity": {
+        "frame_indices": [
+          238,
+          239
+        ],
+        "pair_index": 119
+      },
+      "pair_indices": [
+        119
+      ],
+      "pixels_per_compressed_byte": 0.717647058824,
+      "prior": {
+        "formula_prior_sum": 0.768798909002,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          119
+        ],
+        "pose_prior_sum": 0.004296312109,
+        "score_signal_prior_sum": 0.001125581194,
+        "seg_prior_sum": 0.005615234375
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000188431105,
+      "rate_term_cost": 0.002716704529,
+      "raw_amr1_bytes": 17702,
+      "raw_amr1_sha256": "d5708b653ad39f6289c1b5f395e4aac0e7c59c99bb21071ffbc92027d13bb555",
+      "residual_pixel_coverage": 0.001626248359,
+      "score_signal_prior_per_compressed_byte": 2.75878e-07,
+      "selected_repair_pixels": 2928,
+      "selected_repair_runs": 1497
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4084,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "375c7b2415e64f081b43759303c8f042522721556a9bf528b93c85ca717eca77",
+      "frame_indices": [
+        330,
+        331
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000244857982,
+      "identity": {
+        "frame_indices": [
+          330,
+          331
+        ],
+        "pair_index": 165
+      },
+      "pair_indices": [
+        165
+      ],
+      "pixels_per_compressed_byte": 0.866307541626,
+      "prior": {
+        "formula_prior_sum": 0.717948809303,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          165
+        ],
+        "pose_prior_sum": 0.00023616261,
+        "score_signal_prior_sum": 0.001126015117,
+        "seg_prior_sum": 0.006693522446
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000175795497,
+      "rate_term_cost": 0.002719367965,
+      "raw_amr1_bytes": 17625,
+      "raw_amr1_sha256": "95435fc558fd30a37e75bf274b7ede1a77375de07564359ec1e47eac8f2cece8",
+      "residual_pixel_coverage": 0.001965050101,
+      "score_signal_prior_per_compressed_byte": 2.75714e-07,
+      "selected_repair_pixels": 3538,
+      "selected_repair_runs": 1490
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 3296,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "6065a861418a58bc7042d524ae8cc0b9e03167e93351dfcef528d798170005d4",
+      "frame_indices": [
+        868,
+        869
+      ],
+      "hard_pair_count_per_compressed_byte": 0.0,
+      "identity": {
+        "frame_indices": [
+          868,
+          869
+        ],
+        "pair_index": 434
+      },
+      "pair_indices": [
+        434
+      ],
+      "pixels_per_compressed_byte": 0.737560679612,
+      "prior": {
+        "formula_prior_sum": 0.633612782027,
+        "hard_pair_count": 0,
+        "hard_pair_indices": [],
+        "pose_prior_sum": 0.002355289413,
+        "score_signal_prior_sum": 0.000904239387,
+        "seg_prior_sum": 0.004801432602
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000192236888,
+      "rate_term_cost": 0.002194671109,
+      "raw_amr1_bytes": 13500,
+      "raw_amr1_sha256": "68d8365cd1c930a2747fb96f27fa66c6f9180624fe88145dc4b4d5ad1de9c723",
+      "residual_pixel_coverage": 0.001350208252,
+      "score_signal_prior_per_compressed_byte": 2.74344e-07,
+      "selected_repair_pixels": 2431,
+      "selected_repair_runs": 1115
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 3856,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "b8d2f3edeadde5290f1d9a5df4004761f58d05a7a22631057a0aff01078be419",
+      "frame_indices": [
+        458,
+        459
+      ],
+      "hard_pair_count_per_compressed_byte": 0.0002593361,
+      "identity": {
+        "frame_indices": [
+          458,
+          459
+        ],
+        "pair_index": 229
+      },
+      "pair_indices": [
+        229
+      ],
+      "pixels_per_compressed_byte": 0.677645228216,
+      "prior": {
+        "formula_prior_sum": 0.720152217276,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          229
+        ],
+        "pose_prior_sum": 0.001856384217,
+        "score_signal_prior_sum": 0.001055142575,
+        "seg_prior_sum": 0.005839030258
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000186761467,
+      "rate_term_cost": 0.002567552123,
+      "raw_amr1_bytes": 16404,
+      "raw_amr1_sha256": "10477fb2583b56c718336e101d032a0d6024a0b540ac566892a81f6eecc47ecd",
+      "residual_pixel_coverage": 0.001451293362,
+      "score_signal_prior_per_compressed_byte": 2.73637e-07,
+      "selected_repair_pixels": 2613,
+      "selected_repair_runs": 1379
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 3924,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "9565e9ca3fc3a04facc0d0c35997303cf83c6dd198c35ce12d05f1c98e837f6f",
+      "frame_indices": [
+        716,
+        717
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000254841998,
+      "identity": {
+        "frame_indices": [
+          716,
+          717
+        ],
+        "pair_index": 358
+      },
+      "pair_indices": [
+        358
+      ],
+      "pixels_per_compressed_byte": 0.705912334353,
+      "prior": {
+        "formula_prior_sum": 0.719113490438,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          358
+        ],
+        "pose_prior_sum": 0.001064343145,
+        "score_signal_prior_sum": 0.001073574816,
+        "seg_prior_sum": 0.006159464829
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000183260319,
+      "rate_term_cost": 0.002612830532,
+      "raw_amr1_bytes": 17394,
+      "raw_amr1_sha256": "18550405605f8a006a2b0ad588132b3fde7bf2012921ffaae2c36f713cb54e92",
+      "residual_pixel_coverage": 0.001538493154,
+      "score_signal_prior_per_compressed_byte": 2.73592e-07,
+      "selected_repair_pixels": 2770,
+      "selected_repair_runs": 1469
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 3588,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "5e6f4154c7efc85abfb65c381e4781808c69994c5959f5bb1264fcdeddc333c9",
+      "frame_indices": [
+        872,
+        873
+      ],
+      "hard_pair_count_per_compressed_byte": 0.0,
+      "identity": {
+        "frame_indices": [
+          872,
+          873
+        ],
+        "pair_index": 436
+      },
+      "pair_indices": [
+        436
+      ],
+      "pixels_per_compressed_byte": 0.632664437012,
+      "prior": {
+        "formula_prior_sum": 0.664522560772,
+        "hard_pair_count": 0,
+        "hard_pair_indices": [],
+        "pose_prior_sum": 0.001168244402,
+        "score_signal_prior_sum": 0.000978980571,
+        "seg_prior_sum": 0.005564372055
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000185206957,
+      "rate_term_cost": 0.002389101924,
+      "raw_amr1_bytes": 15326,
+      "raw_amr1_sha256": "d6a73a9b923b3eedbc27af1744c097c5f2f189dcaec258b428f0c7408c71733d",
+      "residual_pixel_coverage": 0.001260786809,
+      "score_signal_prior_per_compressed_byte": 2.72849e-07,
+      "selected_repair_pixels": 2270,
+      "selected_repair_runs": 1281
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4300,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "bd32617149a067909df9126b2b6ae992f4e6769aa794cfe1662c72967bf73fac",
+      "frame_indices": [
+        944,
+        945
+      ],
+      "hard_pair_count_per_compressed_byte": 0.00023255814,
+      "identity": {
+        "frame_indices": [
+          944,
+          945
+        ],
+        "pair_index": 472
+      },
+      "pair_indices": [
+        472
+      ],
+      "pixels_per_compressed_byte": 0.785581395349,
+      "prior": {
+        "formula_prior_sum": 0.762924206646,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          472
+        ],
+        "pose_prior_sum": 0.000566428062,
+        "score_signal_prior_sum": 0.001171115961,
+        "seg_prior_sum": 0.006876627915
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000177424234,
+      "rate_term_cost": 0.002863193498,
+      "raw_amr1_bytes": 19099,
+      "raw_amr1_sha256": "53baf54b2d97dfbee49d062f276ff2fd856bb2b35563668603cd8721b31f6fb4",
+      "residual_pixel_coverage": 0.00187618407,
+      "score_signal_prior_per_compressed_byte": 2.72353e-07,
+      "selected_repair_pixels": 3378,
+      "selected_repair_runs": 1624
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4108,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "079de82e61ac309fcb6fb7666e024d7442beabbb9fb0a448b345fdb771a42ec5",
+      "frame_indices": [
+        906,
+        907
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000243427459,
+      "identity": {
+        "frame_indices": [
+          906,
+          907
+        ],
+        "pair_index": 453
+      },
+      "pair_indices": [
+        453
+      ],
+      "pixels_per_compressed_byte": 0.816212268744,
+      "prior": {
+        "formula_prior_sum": 0.75471614876,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          453
+        ],
+        "pose_prior_sum": 0.002113587456,
+        "score_signal_prior_sum": 0.00110888519,
+        "seg_prior_sum": 0.006093343254
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000183718634,
+      "rate_term_cost": 0.002735348579,
+      "raw_amr1_bytes": 17955,
+      "raw_amr1_sha256": "674fd76a02b044831715184d83bb05c3ad03d3ed162ba2def183528fe76c14cc",
+      "residual_pixel_coverage": 0.001862298753,
+      "score_signal_prior_per_compressed_byte": 2.69933e-07,
+      "selected_repair_pixels": 3353,
+      "selected_repair_runs": 1520
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4028,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "069a4a3efa115daa21da6b56640e7f9a8d3d9118fac7a77557a3e7218e649aab",
+      "frame_indices": [
+        1170,
+        1171
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000248262165,
+      "identity": {
+        "frame_indices": [
+          1170,
+          1171
+        ],
+        "pair_index": 585
+      },
+      "pair_indices": [
+        585
+      ],
+      "pixels_per_compressed_byte": 0.720953326713,
+      "prior": {
+        "formula_prior_sum": 0.697281665895,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          585
+        ],
+        "pose_prior_sum": 0.000470864354,
+        "score_signal_prior_sum": 0.001068561761,
+        "seg_prior_sum": 0.006286621094
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000173108656,
+      "rate_term_cost": 0.002682079863,
+      "raw_amr1_bytes": 17616,
+      "raw_amr1_sha256": "bad90cdf5079da3e40f5d50e11c0884eaa5daf64bff882a70f8e61fb7e048f5e",
+      "residual_pixel_coverage": 0.001612918455,
+      "score_signal_prior_per_compressed_byte": 2.65283e-07,
+      "selected_repair_pixels": 2904,
+      "selected_repair_runs": 1489
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4316,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "bacbbcf2de616061f9e65dfa1be3291a7fa98c00058d59392258b3d41579e9ca",
+      "frame_indices": [
+        1078,
+        1079
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000231696015,
+      "identity": {
+        "frame_indices": [
+          1078,
+          1079
+        ],
+        "pair_index": 539
+      },
+      "pair_indices": [
+        539
+      ],
+      "pixels_per_compressed_byte": 0.756487488415,
+      "prior": {
+        "formula_prior_sum": 0.741918997624,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          539
+        ],
+        "pose_prior_sum": 0.000490330975,
+        "score_signal_prior_sum": 0.001141476751,
+        "seg_prior_sum": 0.006718953606
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000171899675,
+      "rate_term_cost": 0.002873847242,
+      "raw_amr1_bytes": 18694,
+      "raw_amr1_sha256": "b70af02586888eca598888c63c9eeb580cb50b39370fd84e68f5df3820460654",
+      "residual_pixel_coverage": 0.001813422436,
+      "score_signal_prior_per_compressed_byte": 2.64476e-07,
+      "selected_repair_pixels": 3265,
+      "selected_repair_runs": 1587
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4300,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "e07d99abda4959f0d38ceebdca648b53c0d2380da180bb7b87017a5a76d6f948",
+      "frame_indices": [
+        282,
+        283
+      ],
+      "hard_pair_count_per_compressed_byte": 0.00023255814,
+      "identity": {
+        "frame_indices": [
+          282,
+          283
+        ],
+        "pair_index": 141
+      },
+      "pair_indices": [
+        141
+      ],
+      "pixels_per_compressed_byte": 0.899302325581,
+      "prior": {
+        "formula_prior_sum": 0.756707386526,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          141
+        ],
+        "pose_prior_sum": 0.001170915551,
+        "score_signal_prior_sum": 0.001132534068,
+        "seg_prior_sum": 0.006484985352
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000175978462,
+      "rate_term_cost": 0.002863193498,
+      "raw_amr1_bytes": 18648,
+      "raw_amr1_sha256": "eaf5f282f0adadc9145a42fceeef39596c94a5ab1d904636f789341213a78b43",
+      "residual_pixel_coverage": 0.002147780876,
+      "score_signal_prior_per_compressed_byte": 2.6338e-07,
+      "selected_repair_pixels": 3867,
+      "selected_repair_runs": 1583
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4436,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "9fcebe9d1dd2ad2677fd209e5315199dccf6883e24c42d3ccfef8ab7118d8ed5",
+      "frame_indices": [
+        1084,
+        1085
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000225428314,
+      "identity": {
+        "frame_indices": [
+          1084,
+          1085
+        ],
+        "pair_index": 542
+      },
+      "pair_indices": [
+        542
+      ],
+      "pixels_per_compressed_byte": 0.879170423805,
+      "prior": {
+        "formula_prior_sum": 0.760094173416,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          542
+        ],
+        "pose_prior_sum": 0.000795950356,
+        "score_signal_prior_sum": 0.001153276346,
+        "seg_prior_sum": 0.006708781235
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000171346748,
+      "rate_term_cost": 0.002953750316,
+      "raw_amr1_bytes": 19552,
+      "raw_amr1_sha256": "a5a1b9f6e7688f4777d3e8819a824e4e6c3d4479d521d15fae81f73a27471a70",
+      "residual_pixel_coverage": 0.002166109495,
+      "score_signal_prior_per_compressed_byte": 2.59981e-07,
+      "selected_repair_pixels": 3900,
+      "selected_repair_runs": 1665
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4820,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "4269e911bb1215e1e96f9b4c174bf199dd6af4df01b326fc4c80d4ef7dac93cf",
+      "frame_indices": [
+        328,
+        329
+      ],
+      "hard_pair_count_per_compressed_byte": 0.00020746888,
+      "identity": {
+        "frame_indices": [
+          328,
+          329
+        ],
+        "pair_index": 164
+      },
+      "pair_indices": [
+        164
+      ],
+      "pixels_per_compressed_byte": 0.87510373444,
+      "prior": {
+        "formula_prior_sum": 0.838591639088,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          164
+        ],
+        "pose_prior_sum": 0.001981234644,
+        "score_signal_prior_sum": 0.001250542621,
+        "seg_prior_sum": 0.00697835302
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000173981668,
+      "rate_term_cost": 0.003209440154,
+      "raw_amr1_bytes": 21607,
+      "raw_amr1_sha256": "c0e0700a5fd5e94828bd9936735e4923f22b1524cdecfa0f718fddd2af5af374",
+      "residual_pixel_coverage": 0.002342730731,
+      "score_signal_prior_per_compressed_byte": 2.59449e-07,
+      "selected_repair_pixels": 4218,
+      "selected_repair_runs": 1852
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 3568,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "8ff3179625cab79c532dcacbeb24b072be2f4c696af5fe39ffc5be6aee2bde8c",
+      "frame_indices": [
+        1094,
+        1095
+      ],
+      "hard_pair_count_per_compressed_byte": 0.0,
+      "identity": {
+        "frame_indices": [
+          1094,
+          1095
+        ],
+        "pair_index": 547
+      },
+      "pair_indices": [
+        547
+      ],
+      "pixels_per_compressed_byte": 0.768217488789,
+      "prior": {
+        "formula_prior_sum": 0.627060216884,
+        "hard_pair_count": 0,
+        "hard_pair_indices": [],
+        "pose_prior_sum": 0.000952190254,
+        "score_signal_prior_sum": 0.000924511733,
+        "seg_prior_sum": 0.005294799805
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000175745576,
+      "rate_term_cost": 0.002375784745,
+      "raw_amr1_bytes": 14646,
+      "raw_amr1_sha256": "06e65f5db7aaf03f795db6d0614bf8a535f9f86d909254127ed4e4dbde88c1dc",
+      "residual_pixel_coverage": 0.001522386186,
+      "score_signal_prior_per_compressed_byte": 2.59112e-07,
+      "selected_repair_pixels": 2741,
+      "selected_repair_runs": 1219
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4540,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "93fdf1729d6fc9ee79fb9a2a49d0fef7dba96077eefbfc99d919a15bbb075932",
+      "frame_indices": [
+        140,
+        141
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000220264317,
+      "identity": {
+        "frame_indices": [
+          140,
+          141
+        ],
+        "pair_index": 70
+      },
+      "pair_indices": [
+        70
+      ],
+      "pixels_per_compressed_byte": 0.735022026432,
+      "prior": {
+        "formula_prior_sum": 0.773141518131,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          70
+        ],
+        "pose_prior_sum": 0.008027837612,
+        "score_signal_prior_sum": 0.001170823984,
+        "seg_prior_sum": 0.004898071289
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000170295489,
+      "rate_term_cost": 0.003022999647,
+      "raw_amr1_bytes": 20451,
+      "raw_amr1_sha256": "5b4d8cc211eee2cb00e79a878d844c1e43dd716fce6ff3bd19a8ffe84c505ac7",
+      "residual_pixel_coverage": 0.00185341215,
+      "score_signal_prior_per_compressed_byte": 2.57891e-07,
+      "selected_repair_pixels": 3337,
+      "selected_repair_runs": 1747
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 3692,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "75bad2846cda459be8b017ad4fcc98581a1c56c08cd80d4aabe8d6130c173edf",
+      "frame_indices": [
+        722,
+        723
+      ],
+      "hard_pair_count_per_compressed_byte": 0.0,
+      "identity": {
+        "frame_indices": [
+          722,
+          723
+        ],
+        "pair_index": 361
+      },
+      "pair_indices": [
+        361
+      ],
+      "pixels_per_compressed_byte": 0.8255687974,
+      "prior": {
+        "formula_prior_sum": 0.663131319799,
+        "hard_pair_count": 0,
+        "hard_pair_indices": [],
+        "pose_prior_sum": 0.004536774009,
+        "score_signal_prior_sum": 0.000950550477,
+        "seg_prior_sum": 0.004501342773
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000179613034,
+      "rate_term_cost": 0.002458351255,
+      "raw_amr1_bytes": 15678,
+      "raw_amr1_sha256": "f49586d7ce01e271515c67ca4373d295849b2fd4064da7530887540bc73a948c",
+      "residual_pixel_coverage": 0.001692897882,
+      "score_signal_prior_per_compressed_byte": 2.57462e-07,
+      "selected_repair_pixels": 3048,
+      "selected_repair_runs": 1313
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 1884,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "874af0a0a5060bee2538d122acfa95725949e9a8e26dee71236452509c8f263b",
+      "frame_indices": [
+        804,
+        805
+      ],
+      "hard_pair_count_per_compressed_byte": 0.0,
+      "identity": {
+        "frame_indices": [
+          804,
+          805
+        ],
+        "pair_index": 402
+      },
+      "pair_indices": [
+        402
+      ],
+      "pixels_per_compressed_byte": 0.392250530786,
+      "prior": {
+        "formula_prior_sum": 0.374876787466,
+        "hard_pair_count": 0,
+        "hard_pair_indices": [],
+        "pose_prior_sum": 0.001695920713,
+        "score_signal_prior_sum": 0.000482634185,
+        "seg_prior_sum": 0.002446492668
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000198979187,
+      "rate_term_cost": 0.001254478268,
+      "raw_amr1_bytes": 6259,
+      "raw_amr1_sha256": "5e6a325d9ed019d8d0a86b55a81a50313713c0bb019ade047cf2bf62f5e23df9",
+      "residual_pixel_coverage": 0.000410449979,
+      "score_signal_prior_per_compressed_byte": 2.56175e-07,
+      "selected_repair_pixels": 739,
+      "selected_repair_runs": 457
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4340,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "9175ae286a94b5906543250f121b7f08eda56cfa66310c710511ed510d12c25b",
+      "frame_indices": [
+        1048,
+        1049
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000230414747,
+      "identity": {
+        "frame_indices": [
+          1048,
+          1049
+        ],
+        "pair_index": 524
+      },
+      "pair_indices": [
+        524
+      ],
+      "pixels_per_compressed_byte": 0.834101382488,
+      "prior": {
+        "formula_prior_sum": 0.745331832724,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          524
+        ],
+        "pose_prior_sum": 0.007005549036,
+        "score_signal_prior_sum": 0.00111042482,
+        "seg_prior_sum": 0.004806518555
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000171735445,
+      "rate_term_cost": 0.002889827857,
+      "raw_amr1_bytes": 19200,
+      "raw_amr1_sha256": "fd193202a47b67da259f4c4c8cfb9bb7f1685d5b74b8426c1f0d3bfba0af1987",
+      "residual_pixel_coverage": 0.002010593942,
+      "score_signal_prior_per_compressed_byte": 2.55858e-07,
+      "selected_repair_pixels": 3620,
+      "selected_repair_runs": 1633
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4656,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "874dcec47249e47c7e61042df951edf0637eec858b8ad4d5ca08eb47f3e69cf7",
+      "frame_indices": [
+        938,
+        939
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000214776632,
+      "identity": {
+        "frame_indices": [
+          938,
+          939
+        ],
+        "pair_index": 469
+      },
+      "pair_indices": [
+        469
+      ],
+      "pixels_per_compressed_byte": 0.872852233677,
+      "prior": {
+        "formula_prior_sum": 0.794751757736,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          469
+        ],
+        "pose_prior_sum": 0.001611005515,
+        "score_signal_prior_sum": 0.001184179818,
+        "seg_prior_sum": 0.006678263657
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000170694106,
+      "rate_term_cost": 0.003100239286,
+      "raw_amr1_bytes": 21079,
+      "raw_amr1_sha256": "7a57c4a327bdd83bfaf791671db47d952cdbe178dfd860af3e3508f31d9941cc",
+      "residual_pixel_coverage": 0.002257197177,
+      "score_signal_prior_per_compressed_byte": 2.54334e-07,
+      "selected_repair_pixels": 4064,
+      "selected_repair_runs": 1804
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 3924,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "1b0eb98caea82779cc9be0feaab1ab6e61bca016ccb23db55e0b88d6607b5237",
+      "frame_indices": [
+        746,
+        747
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000254841998,
+      "identity": {
+        "frame_indices": [
+          746,
+          747
+        ],
+        "pair_index": 373
+      },
+      "pair_indices": [
+        373
+      ],
+      "pixels_per_compressed_byte": 0.812436289501,
+      "prior": {
+        "formula_prior_sum": 0.671548982073,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          373
+        ],
+        "pose_prior_sum": 0.007664865814,
+        "score_signal_prior_sum": 0.000996274717,
+        "seg_prior_sum": 0.003946940415
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000171138884,
+      "rate_term_cost": 0.002612830532,
+      "raw_amr1_bytes": 17174,
+      "raw_amr1_sha256": "f4de00356eb4f3f05e93ef5620a0e766125849b3cbdf648df7437430c0a0c0aa",
+      "residual_pixel_coverage": 0.001770655659,
+      "score_signal_prior_per_compressed_byte": 2.53893e-07,
+      "selected_repair_pixels": 3188,
+      "selected_repair_runs": 1449
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 3252,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "6c5a6ba84e8d0a8463f397486e2d3bc567992172e69ced46c8be67c8af4407d8",
+      "frame_indices": [
+        490,
+        491
+      ],
+      "hard_pair_count_per_compressed_byte": 0.0,
+      "identity": {
+        "frame_indices": [
+          490,
+          491
+        ],
+        "pair_index": 245
+      },
+      "pair_indices": [
+        245
+      ],
+      "pixels_per_compressed_byte": 0.686961869619,
+      "prior": {
+        "formula_prior_sum": 0.584271850412,
+        "hard_pair_count": 0,
+        "hard_pair_indices": [],
+        "pose_prior_sum": 0.002339575673,
+        "score_signal_prior_sum": 0.00082216532,
+        "seg_prior_sum": 0.004313151352
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000179665391,
+      "rate_term_cost": 0.002165373316,
+      "raw_amr1_bytes": 13434,
+      "raw_amr1_sha256": "269f260e21a947c9d9aab93e38342605951601c70a886c8e9370615e5623781c",
+      "residual_pixel_coverage": 0.001240791952,
+      "score_signal_prior_per_compressed_byte": 2.52818e-07,
+      "selected_repair_pixels": 2234,
+      "selected_repair_runs": 1109
+    },
+    {
+      "atom_kind": "pair",
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "compressed_bytes": 4396,
+      "compressed_member_name": "alpha4_residual_repair.amr1.xz",
+      "compressed_sha256": "0996b678a61ea8b982735c827384a38308735be8d6654e547fee8268df42a37a",
+      "frame_indices": [
+        632,
+        633
+      ],
+      "hard_pair_count_per_compressed_byte": 0.000227479527,
+      "identity": {
+        "frame_indices": [
+          632,
+          633
+        ],
+        "pair_index": 316
+      },
+      "pair_indices": [
+        316
+      ],
+      "pixels_per_compressed_byte": 0.914922656961,
+      "prior": {
+        "formula_prior_sum": 0.750524505129,
+        "hard_pair_count": 1,
+        "hard_pair_indices": [
+          316
+        ],
+        "pose_prior_sum": 0.006201043259,
+        "score_signal_prior_sum": 0.001109657088,
+        "seg_prior_sum": 0.005015055649
+      },
+      "proxy_formula_prior_per_compressed_byte": 0.000170728959,
+      "rate_term_cost": 0.002927115958,
+      "raw_amr1_bytes": 19528,
+      "raw_amr1_sha256": "0bc164dbb55be8467b34b61307cb8bfda734fd9769298cc9528320b917139db1",
+      "residual_pixel_coverage": 0.002233869843,
+      "score_signal_prior_per_compressed_byte": 2.52424e-07,
+      "selected_repair_pixels": 4022,
+      "selected_repair_runs": 1663
+    }
+  ],
+  "water_filling_allowed": true,
+  "water_filling_blockers": []
+}

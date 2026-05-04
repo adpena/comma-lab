@@ -1,0 +1,8 @@
+comparison,member,lhs_bytes,rhs_bytes,byte_delta_lhs_minus_rhs,sha_equal,compared_prefix_bytes,changed_prefix_bytes,first_diff_offset
+pr77_vs_pr75_minp,masks.mkv,223385,223385,0,True,223385,0,
+pr77_vs_pr75_minp,renderer.bin,59288,59288,0,True,59288,0,
+pr77_vs_pr75_minp,optimized_poses.qp1,1140,1140,0,True,1140,0,
+pr77_vs_pr75_minp,seg_tile_actions.bin,588,432,156,False,432,339,0
+pr77_vs_c089_staged_top25_ampminus1_p3,masks.mkv,223385,223385,0,True,223385,0,
+pr77_vs_c089_staged_top25_ampminus1_p3,renderer.bin,59288,59288,0,False,59288,1948,38044
+pr77_vs_c089_staged_top25_ampminus1_p3,seg_tile_actions.bin,588,100,488,False,100,82,0

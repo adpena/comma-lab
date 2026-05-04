@@ -1,0 +1,307 @@
+{
+  "anchor": {
+    "archive_bytes": 229756,
+    "archive_sha256": "c6f004d444ed32c628611a2f21f567c666af6bcbcceba618cc089ec024a0cda6",
+    "device": "cuda",
+    "evidence_grade": "A++",
+    "gpu_model": "Tesla T4",
+    "n_samples": 600,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_pr85_stbm1br_stbm_runtime_t4_g4dn2x_20260504T0613Z/contest_auth_eval.adjudicated.json",
+    "pose_dist": 0.0001894,
+    "score": 0.25369011029397787,
+    "score_pose_contribution": 0.043520110293977884,
+    "score_rate_contribution": 0.1529850896335376,
+    "score_seg_contribution": 0.05718500000000001,
+    "seg_dist": 0.00057185
+  },
+  "anticipated_moves_top5": [
+    {
+      "best_external_score_from_report": 0.24879480490416128,
+      "counter_design": "Recover full HPM1 decode/reencode parity, then train or refit an Apogee-owned mask entropy coder over PR85/STBM token fields. Dispatch only after typed mask segment parity and runtime output parity.",
+      "custody_gates": [
+        "no local score claim from PR91 until HPM1 entropy decode succeeds",
+        "candidate must preserve archive/member SHA custody and runtime tree hash",
+        "Level-2 lane claim required before exact CUDA dispatch"
+      ],
+      "existing_files_tools": [
+        "src/tac/pr86_hpac_codec.py or runtime-rs/crates/hpac-codec",
+        "experiments/profile_pr85_residual_sufficient_program.py",
+        "experiments/preflight_pr85_fixed_runtime_readiness.py",
+        "experiments/contest_auth_eval.py"
+      ],
+      "family": "hpm1_hpac_mask_entropy",
+      "implementation_status": "blocked_on_hpm1_full_decode_reencode_parity",
+      "move": "Competitors compress PR85-style semantic masks with learned HPAC/HPM1 entropy models.",
+      "public_prs": [
+        91
+      ],
+      "public_urls": [
+        "https://github.com/commaai/comma_video_compression_challenge/pull/91"
+      ],
+      "rank": 1,
+      "score_gap_vs_anchor_if_report_true": -0.004895305389816584
+    },
+    {
+      "best_external_score_from_report": 0.2587078229986317,
+      "counter_design": "Extend the STBM1BR positive pure-rate lane into geometry-aware mask coding while keeping SegNet/PoseNet components unchanged at JSON precision.",
+      "custody_gates": [
+        "mask decode parity before archive build",
+        "pre-submission compliance pass",
+        "exact T4 eval required for any score/rank claim"
+      ],
+      "existing_files_tools": [
+        "src/tac/stbm1br_mask_codec.py",
+        "experiments/build_pr85_stbm1br_mask_recode_candidate.py",
+        "experiments/profile_pr85_residual_sufficient_program.py",
+        "scripts/pre_submission_compliance_check.py"
+      ],
+      "family": "semantic_geometry_mask_recode",
+      "implementation_status": "ready_for_planning_and_local_parity_not_dispatch",
+      "move": "Competitors decompose the semantic mask into geometry priors plus sparse residuals.",
+      "public_prs": [
+        92,
+        90
+      ],
+      "public_urls": [
+        "https://github.com/commaai/comma_video_compression_challenge/pull/92",
+        "https://github.com/commaai/comma_video_compression_challenge/pull/90"
+      ],
+      "rank": 2,
+      "score_gap_vs_anchor_if_report_true": 0.005017712704653843
+    },
+    {
+      "best_external_score_from_report": 0.2587078229986317,
+      "counter_design": "Treat PR92-style joint/range submissions as near-neighbor probes: compare exact segments against PR85/STBM, mine changed side-channel bytes, and only lower atoms that are non-noop and break-even against exact component risk.",
+      "custody_gates": [
+        "public archive must be downloaded by SHA before comparison",
+        "raw wire slices, not metadata-order slices, define charged deltas",
+        "exact eval only if formula math can beat the STBM anchor"
+      ],
+      "existing_files_tools": [
+        "src/tac/pr85_bundle.py",
+        "experiments/plan_pr85_full_stack_opportunity_matrix.py",
+        "experiments/plan_frontier_stack_reconstruction.py",
+        "experiments/preflight_pr85_fixed_runtime_readiness.py"
+      ],
+      "family": "qzs3_range_joint_sidechannel",
+      "implementation_status": "ready_for_static_diff_after_archive_intake",
+      "move": "Competitors keep the PR85/QZS3 basin and search tiny side channels around it.",
+      "public_prs": [
+        92
+      ],
+      "public_urls": [
+        "https://github.com/commaai/comma_video_compression_challenge/pull/92"
+      ],
+      "rank": 3,
+      "score_gap_vs_anchor_if_report_true": 0.005017712704653843
+    },
+    {
+      "best_external_score_from_report": 0.33425141289817706,
+      "counter_design": "Use exact pose-action deltas only as signed training labels until a charged candidate beats the byte/component break-even under local parity.",
+      "custody_gates": [
+        "MPS/CPU pose reports are invalid for promotion",
+        "QZS3 CUDA batch safety applies to any pose-regeneration support tool",
+        "do not dispatch broad qpose grids without charged archive deltas"
+      ],
+      "existing_files_tools": [
+        "experiments/build_qp1_pose_active_subspace_candidates.py",
+        "experiments/optimize_poses.py",
+        "experiments/build_pr85_pair_action_candidates.py",
+        "experiments/contest_auth_eval.py"
+      ],
+      "family": "pose_manifold_qpose_action",
+      "implementation_status": "blocked_without_grounded_action_value_evidence",
+      "move": "Competitors spend small bytes on qpose/tile-action pose manifold tweaks.",
+      "public_prs": [
+        94
+      ],
+      "public_urls": [
+        "https://github.com/commaai/comma_video_compression_challenge/pull/94"
+      ],
+      "rank": 4,
+      "score_gap_vs_anchor_if_report_true": 0.08056130260419919
+    },
+    {
+      "best_external_score_from_report": null,
+      "counter_design": "Preserve QRGB/final-bias builders as transfer machinery, but require a new target basin or exact positive singleton before stacking.",
+      "custody_gates": [
+        "do not queue combo archives after negative singleton exact evidence",
+        "new basin requires fresh local parity and exact singleton evidence"
+      ],
+      "existing_files_tools": [
+        "experiments/build_pr85_qrgb_pair_atom_archive_candidates.py",
+        "experiments/build_pr85_qrgb_pair_atom_combo_candidates.py",
+        "experiments/build_pr85_final_bias_stack_candidates.py"
+      ],
+      "family": "low_frequency_bias_or_qrgb",
+      "implementation_status": "measured_negative_on_pr85_singletons",
+      "move": "Competitors add tiny RGB/bias residual controls for hard pairs.",
+      "public_prs": [],
+      "public_urls": [],
+      "rank": 5,
+      "score_gap_vs_anchor_if_report_true": null
+    }
+  ],
+  "highest_ev_concrete_tool": {
+    "built": "experiments/plan_nostradamus_future_frontier.py",
+    "default_side_effects": "stdout only unless --json-out is supplied",
+    "why": "It turns fast-moving PR92-PR100 public claims into score math, family classification, counter-designs, and exact-eval custody gates before implementation or dispatch."
+  },
+  "public_pr_rows": [
+    {
+      "author": "Josemedinan",
+      "created_at": "2026-05-04T07:13:19Z",
+      "delta_vs_anchor": {
+        "archive_bytes": 47331,
+        "neutral_rate_score_delta": 0.031515770110225494,
+        "score": 0.08056130260419919,
+        "strict_bytes_needed_to_match_anchor": 120989
+      },
+      "families": [
+        "pose_manifold_qpose_action"
+      ],
+      "head_sha": "ae765553e9dc4bb12a93f4150a41f73ca3d9af16",
+      "merged": false,
+      "pr": 94,
+      "report": {
+        "archive_bytes": 277087,
+        "pose_dist": 0.00061985,
+        "reported_final_score": 0.33,
+        "score_claim_is_external": true,
+        "score_recomputed_from_report_components": 0.33425141289817706,
+        "seg_dist": 0.0007102
+      },
+      "score_claim_status": "external_until_local_exact_cuda_replay",
+      "score_device_class": "public_report_mps_invalid_for_promotion",
+      "state": "open",
+      "title": "optimization_qpose_josema",
+      "updated_at": "2026-05-04T07:17:11Z",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/94"
+    },
+    {
+      "author": "dllu",
+      "created_at": "2026-05-04T06:23:10Z",
+      "delta_vs_anchor": {
+        "archive_bytes": 54640,
+        "neutral_rate_score_delta": 0.03638253319859545,
+        "score": 0.06678435781365966,
+        "strict_bytes_needed_to_match_anchor": 100299
+      },
+      "families": [
+        "quantizr_flatpack"
+      ],
+      "head_sha": "887cccaccb376629829982660a1cf1ed06945bfc",
+      "merged": false,
+      "pr": 93,
+      "report": {
+        "archive_bytes": 284396,
+        "pose_dist": 0.00043391,
+        "reported_final_score": 0.32,
+        "score_claim_is_external": true,
+        "score_recomputed_from_report_components": 0.3204744681076375,
+        "seg_dist": 0.00065235
+      },
+      "score_claim_status": "external_until_local_exact_cuda_replay",
+      "score_device_class": "public_report_cuda_unverified",
+      "state": "open",
+      "title": "flatpup",
+      "updated_at": "2026-05-04T06:23:24Z",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/93"
+    },
+    {
+      "author": "nick-neely",
+      "created_at": "2026-05-04T06:23:05Z",
+      "delta_vs_anchor": {
+        "archive_bytes": 6760,
+        "neutral_rate_score_delta": 0.004501206523105879,
+        "score": 0.005017712704653843,
+        "strict_bytes_needed_to_match_anchor": 7536
+      },
+      "families": [
+        "semantic_geometry_mask_recode",
+        "qzs3_range_joint_sidechannel"
+      ],
+      "head_sha": "95c711e8ec7a55e6cb066a0b4e20090391ccd2c2",
+      "merged": false,
+      "pr": 92,
+      "report": {
+        "archive_bytes": 236516,
+        "pose_dist": 0.00018963,
+        "reported_final_score": 0.26,
+        "score_claim_is_external": true,
+        "score_recomputed_from_report_components": 0.2587078229986317,
+        "seg_dist": 0.00057675
+      },
+      "score_claim_status": "external_until_local_exact_cuda_replay",
+      "score_device_class": "public_report_cuda_unverified",
+      "state": "open",
+      "title": "qzs3_range_joint_r258 (0.26)",
+      "updated_at": "2026-05-04T06:24:44Z",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/92"
+    },
+    {
+      "author": "ottokunkel",
+      "created_at": "2026-05-04T04:42:56Z",
+      "delta_vs_anchor": {
+        "archive_bytes": -7352,
+        "neutral_rate_score_delta": -0.004895395023354204,
+        "score": -0.004895305389816584,
+        "strict_bytes_needed_to_match_anchor": 0
+      },
+      "families": [
+        "hpm1_hpac_mask_entropy"
+      ],
+      "head_sha": "77f958d24e55980d95e01e3e9767b5a94320ed43",
+      "merged": false,
+      "pr": 91,
+      "report": {
+        "archive_bytes": 222404,
+        "pose_dist": 0.0001894,
+        "reported_final_score": 0.25,
+        "score_claim_is_external": true,
+        "score_recomputed_from_report_components": 0.24879480490416128,
+        "seg_dist": 0.00057185
+      },
+      "score_claim_status": "external_until_local_exact_cuda_replay",
+      "score_device_class": "public_report_cuda_unverified",
+      "state": "open",
+      "title": "Hpac coder hybrid",
+      "updated_at": "2026-05-04T04:44:01Z",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/91"
+    },
+    {
+      "author": "SajayR",
+      "created_at": "2026-05-04T04:13:55Z",
+      "delta_vs_anchor": {
+        "archive_bytes": -11676,
+        "neutral_rate_score_delta": -0.007774569136654474,
+        "score": 0.02518206987171351,
+        "strict_bytes_needed_to_match_anchor": 37819
+      },
+      "families": [
+        "semantic_geometry_mask_recode"
+      ],
+      "head_sha": "cce857392701e73861ad513d34906faba523f719",
+      "merged": false,
+      "pr": 90,
+      "report": {
+        "archive_bytes": 218080,
+        "pose_dist": 0.00041977,
+        "reported_final_score": null,
+        "score_claim_is_external": true,
+        "score_recomputed_from_report_components": 0.2788721801656914,
+        "seg_dist": 0.00068872
+      },
+      "score_claim_status": "external_until_local_exact_cuda_replay",
+      "score_device_class": "public_report_device_unknown_unverified",
+      "state": "open",
+      "title": "add qrepro submission(0.28)",
+      "updated_at": "2026-05-04T04:16:45Z",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/90"
+    }
+  ],
+  "schema": "nostradamus_future_frontier_v1",
+  "score_formula": "100*seg_dist + sqrt(10*pose_dist) + 25*archive_bytes/37545489",
+  "score_truth": "planning_only; exact score truth remains archive.zip -> inflate.sh -> upstream/evaluate.py on CUDA",
+  "tool": "experiments/plan_nostradamus_future_frontier.py"
+}

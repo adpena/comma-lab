@@ -1,0 +1,3 @@
+row_type,archive,member,payload_format,segment,bytes,uncompressed_bytes,codec,type_guess,sha256,rate_score_contribution,best_probe_codec,best_probe_bytes,best_probe_delta
+zip_member,/Users/adpena/Projects/pact/experiments/results/public_pr105_kitchen_sink_intake_20260504_codex/archive.zip,0.bin,,,177749,177749,stored,binary_payload,5f88fa8ed26816cf6e86a00cf3c88915963c2a84f899173fd6820359df29aad0,0.118413026928,input_bytes,177749,0
+zip_member,/Users/adpena/Projects/pact/experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip,0.bin,,,186131,186131,stored,binary_payload,7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7,0.123994256674,input_bytes,186131,0

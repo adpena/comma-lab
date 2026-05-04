@@ -1,0 +1,36 @@
+{
+  "adjudication": {
+    "allow_component_gate_forensic_success": true,
+    "baseline_archive_size_bytes": 276427,
+    "baseline_posenet_dist": 0.00058608,
+    "baseline_score": 0.3218613619571356,
+    "baseline_segnet_dist": 0.00061244,
+    "component_reference_label": "qzs3_qp1_line_search_c054_t4",
+    "delta_key": "score_delta_vs_c054_line_search_t4",
+    "max_posenet_dist": 0.0007,
+    "max_posenet_relative": 1.1,
+    "max_sane_score": 0.33,
+    "max_segnet_dist": 0.0007,
+    "max_segnet_relative": 1.02,
+    "predicted_band_high": 0.32,
+    "predicted_band_low": 0.313,
+    "provenance_name": "adjudication_provenance.json",
+    "regression_threshold": 0.005,
+    "required_device": "cuda",
+    "required_samples": 600,
+    "result_copy_name": "contest_auth_eval.adjudicated.json"
+  },
+  "artifact_recorded_at_utc": "2026-05-02T01:41:15Z",
+  "expected_archive_sha256": "d3f3300531886d9dcb3553baffdd201567e3adaf7b746a7f405b15ad6c23b148",
+  "expected_archive_size_bytes": 276423,
+  "job_name": "exact_eval_line_search_qzs3_qp1_r13_t4_20260502T0128Z",
+  "queue_metadata": {
+    "baseline_json": "experiments/results/vast_harvest/archive_eval_line_search_qzs3_qp1_fixedslice_continue_r13_20260502T0123Z/contest_auth_eval.json",
+    "lane": "lane_line_search_pose_refinement",
+    "source_h100_score": "0.31514356926681697"
+  },
+  "role": "exact_cuda_eval",
+  "schema_version": 1,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

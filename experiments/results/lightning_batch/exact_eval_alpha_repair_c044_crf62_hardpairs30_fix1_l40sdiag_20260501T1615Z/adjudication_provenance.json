@@ -1,0 +1,88 @@
+{
+  "allowed_use": [
+    "forensic",
+    "no_rank_frontier",
+    "no_promotion"
+  ],
+  "archive_delta_bytes": -72443,
+  "baseline_archive_bytes": 609963,
+  "completed_at_utc": "2026-05-01T16:25:05Z",
+  "component_gate_triggered": true,
+  "component_gate_violations": [
+    {
+      "component": "posenet",
+      "max_relative": 1.25,
+      "metric": "avg_posenet_dist",
+      "observed": 0.99464434,
+      "reason": "relative_component_gate",
+      "reference": 0.00357302,
+      "reference_label": "c044_owv3_0120_stack_t4_frontier",
+      "relative_to_reference": 278.3763706892209
+    },
+    {
+      "component": "segnet",
+      "max_relative": 1.25,
+      "metric": "avg_segnet_dist",
+      "observed": 0.00726278,
+      "reason": "relative_component_gate",
+      "reference": 0.00402365,
+      "reference_label": "c044_owv3_0120_stack_t4_frontier",
+      "relative_to_reference": 1.8050228026791595
+    }
+  ],
+  "component_gates": [
+    {
+      "component": "posenet",
+      "max_absolute": null,
+      "max_relative": 1.25,
+      "metric": "avg_posenet_dist",
+      "observed": 0.99464434,
+      "passed": false,
+      "reference": 0.00357302,
+      "reference_label": "c044_owv3_0120_stack_t4_frontier",
+      "relative_to_reference": 278.3763706892209
+    },
+    {
+      "component": "segnet",
+      "max_absolute": null,
+      "max_relative": 1.25,
+      "metric": "avg_segnet_dist",
+      "observed": 0.00726278,
+      "passed": false,
+      "reference": 0.00402365,
+      "reference_label": "c044_owv3_0120_stack_t4_frontier",
+      "relative_to_reference": 1.8050228026791595
+    }
+  ],
+  "contest_cuda_archive_bytes": 537520,
+  "contest_cuda_archive_sha256": "d845c934f5cdbd2e4fca5968b50d972a4139200a8c83783aa56922ca7be0da55",
+  "contest_cuda_avg_posenet_dist": 0.99464434,
+  "contest_cuda_avg_segnet_dist": 0.00726278,
+  "contest_cuda_device": "cuda",
+  "contest_cuda_gpu_model": "NVIDIA L40S",
+  "contest_cuda_gpu_t4_match": false,
+  "contest_cuda_n_samples": 600,
+  "contest_cuda_result_json": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_alpha_repair_c044_crf62_hardpairs30_fix1_l40sdiag_20260501T1615Z/contest_auth_eval.adjudicated.json",
+  "contest_cuda_score": 4.237988749729999,
+  "contest_cuda_score_recomputed": 4.237988749729999,
+  "contest_cuda_score_reported_rounded": 4.24,
+  "contest_cuda_score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "distillation_policy_active": false,
+  "distillation_policy_gate_triggered": false,
+  "distillation_policy_gate_violations": [],
+  "distillation_policy_sha256": null,
+  "distillation_policy_sha256_expected": null,
+  "evidence_grade": "A score-grade",
+  "final_archive_bytes": 537520,
+  "lane_status": "COMPONENT_GATE_REVIEW_REQUIRED",
+  "paper_claim_grade": "A-negative scoped forensic",
+  "promotion_eligible": false,
+  "regression_scope": "measured_implementation_config_only_pending_review",
+  "regression_threshold": 50.0,
+  "regression_triggered": false,
+  "result_tag": "[contest-CUDA]",
+  "score_delta_vs_baseline": 3.240450162672571,
+  "score_delta_vs_c044_owv3_0120_stack_t4_frontier": 3.240450162672571,
+  "score_tag": "[contest-CUDA]",
+  "stacked_archive_bytes": 537520
+}

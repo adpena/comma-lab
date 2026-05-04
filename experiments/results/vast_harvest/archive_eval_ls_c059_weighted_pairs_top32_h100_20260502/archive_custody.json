@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-05-02T05:04:56Z",
+  "archive_label": "ls_c059_weighted_pairs_top32_h100_20260502",
+  "archive_path": "/workspace/pact/experiments/results/line_search_c059_weighted_pairs_top32_20260502T0410Z/archive.zip",
+  "custody_archive_path": "/workspace/pact/experiments/results/archive_eval_ls_c059_weighted_pairs_top32_h100_20260502/archive.zip",
+  "archive_size_bytes": 276423,
+  "archive_sha256": "877fc5ac13e9fbd5c4158a9c7fa9dec3354057522b086004a4a28c6822456fe8"
+}

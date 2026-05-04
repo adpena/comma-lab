@@ -1,0 +1,13 @@
+bounded_cpu_smoke=true
+exit_code=124
+timeout_seconds=90
+cuda_available=false
+mps_available=true
+inflater_device_policy=cuda_if_available_else_cpu
+raw_path_removed_after_measurement=experiments/results/public_pr90_intake_20260504_worker/smoke_cpu/output/0.raw
+raw_bytes=2026533312
+frame_bytes=3052008
+frames_written=664
+expected_full_frames=1200
+expected_full_raw_bytes=3662409600
+classification=partial_local_inflate_smoke_reached_raw_output_timeout_before_full_file

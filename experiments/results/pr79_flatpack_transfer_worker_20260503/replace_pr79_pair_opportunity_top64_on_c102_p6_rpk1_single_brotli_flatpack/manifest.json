@@ -1,0 +1,170 @@
+{
+  "break_even": {
+    "component_score_delta_needed_to_tie_c102": 0.00023837750521773737,
+    "component_score_improvement_needed_for_target_0_31": 0.005382679326892681,
+    "component_score_improvement_needed_to_tie_c102": 0.00023837750521773737,
+    "delta_bytes_vs_c102": 358,
+    "delta_bytes_vs_source": 429,
+    "rate_score_delta_vs_c102": 0.00023837750521773737,
+    "rate_score_delta_vs_source": 0.00028565349088941156,
+    "score_if_components_unchanged_vs_c102": 0.3153826793268927
+  },
+  "brotli_params": {
+    "lgblock": 0,
+    "lgwin": 22,
+    "mode": 0,
+    "quality": 11
+  },
+  "candidate": {
+    "archive_bytes": 276843,
+    "archive_path": "experiments/results/pr79_flatpack_transfer_worker_20260503/replace_pr79_pair_opportunity_top64_on_c102_p6_rpk1_single_brotli_flatpack/archive.zip",
+    "archive_sha256": "94274c349a590591cd4f2e4cb009a4c9ed61f10ecc26bb88de5581c3b9e68437",
+    "candidate_id": "replace_pr79_pair_opportunity_top64_on_c102_p6_rpk1_single_brotli_flatpack",
+    "container": "brotli_rpk1_single_stream_permuted",
+    "decode_parity_status": "passed",
+    "delta_bytes_vs_c102": 358,
+    "delta_bytes_vs_source": 429,
+    "dispatch_recommendation": {
+      "dispatch": false,
+      "reason": "byte-regressive versus its source; exact eval needs non-byte component rationale"
+    },
+    "exact_break_even_required_component_delta": {
+      "for_target_0_31_from_c102_anchor": 0.005382679326892681,
+      "vs_c102": 0.00023837750521773737
+    },
+    "manifest_path": "experiments/results/pr79_flatpack_transfer_worker_20260503/replace_pr79_pair_opportunity_top64_on_c102_p6_rpk1_single_brotli_flatpack/manifest.json",
+    "noop": false,
+    "payload_bytes": 276743,
+    "payload_changed_vs_source": true,
+    "payload_sha256": "84c3bdffb3e68bfc5708be9ee8f5b0a027de33deceb56e588a9bdb9a8698b877",
+    "rpk1_bytes": 284734,
+    "rpk1_sha256": "a0906bfc8e89bcd57a8f7abb609fa829fcdec004c890e309abc3d4de431461ee",
+    "score_claim": false,
+    "source_archive_sha256": "b70c2e269b6f79e82e3b51af657a99d1321cbf5110b522854221416f4df6ee39",
+    "source_id": "replace_pr79_pair_opportunity_top64_on_c102_p6",
+    "source_payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint"
+  },
+  "canonical_score_source_required": "No dispatch from this worker. Future dispatch requires a lane claim with tools/claim_lane_dispatch.py claim and exact CUDA auth eval on identical archive bytes via archive.zip -> inflate.sh -> upstream/evaluate.py.",
+  "determinism": {
+    "zip_compress_type": "ZIP_STORED",
+    "zip_member": "p",
+    "zip_timestamp": [
+      1980,
+      1,
+      1,
+      0,
+      0,
+      0
+    ]
+  },
+  "evidence_grade": "empirical_byte_screen_only",
+  "manifest_schema": "pr79_flatpack_transfer_candidate_manifest_v1",
+  "member_order": [
+    "masks.mkv",
+    "seg_tile_actions.bin",
+    "optimized_poses.bin",
+    "renderer.bin"
+  ],
+  "promotion_eligible": false,
+  "runtime_parse_validation": {
+    "decoded_parity_status": "passed",
+    "extra": [],
+    "members": {
+      "masks.mkv": {
+        "bytes": 223385,
+        "codec": "raw",
+        "decoded_bytes": 223385,
+        "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      "optimized_poses.bin": {
+        "bytes": 1140,
+        "codec": "raw",
+        "decoded_bytes": 1140,
+        "decoded_sha256": "80094e20f4f6cd29869e043eb6d224a6697ecd7fb0e77728ddcd6c7a05fccb9a",
+        "sha256": "80094e20f4f6cd29869e043eb6d224a6697ecd7fb0e77728ddcd6c7a05fccb9a"
+      },
+      "renderer.bin": {
+        "bytes": 59288,
+        "codec": "raw",
+        "decoded_bytes": 59288,
+        "decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+        "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 256,
+        "codec": "raw",
+        "decoded_bytes": 256,
+        "decoded_sha256": "2bacaa410ac0599b915f50b1c03ed234b710ca119c81ed53e22a1dfcbcee9a1b",
+        "sha256": "2bacaa410ac0599b915f50b1c03ed234b710ca119c81ed53e22a1dfcbcee9a1b"
+      }
+    },
+    "mismatches": [],
+    "missing": [],
+    "payload_format": "rpk1_json",
+    "runtime_parser": "submissions/robust_current/unpack_renderer_payload.py",
+    "status": "passed"
+  },
+  "score_claim": false,
+  "selected_frame_parity": {
+    "reason": "generated RPK1 candidate is decoded-byte identical to its source archive; selected-frame render parity was not rerun in this byte screen",
+    "status": "not_rerun_for_source_preserving_container_transform"
+  },
+  "source_archive": {
+    "archive_bytes": 276414,
+    "archive_path": "experiments/results/pr79_action_subset_worker_20260503/replace_pr79_pair_opportunity_top64_on_c102_p6/archive.zip",
+    "archive_sha256": "b70c2e269b6f79e82e3b51af657a99d1321cbf5110b522854221416f4df6ee39",
+    "decoded_members": {
+      "masks.mkv": {
+        "bytes": 223385,
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      "optimized_poses.qp1": {
+        "bytes": 1140,
+        "sha256": "80094e20f4f6cd29869e043eb6d224a6697ecd7fb0e77728ddcd6c7a05fccb9a"
+      },
+      "renderer.bin": {
+        "bytes": 59288,
+        "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 256,
+        "sha256": "2bacaa410ac0599b915f50b1c03ed234b710ca119c81ed53e22a1dfcbcee9a1b"
+      }
+    },
+    "payload_bytes": 276314,
+    "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+    "payload_sha256": "a913203ffaf6edd038ccaf1241160fe377e55b131630f828dd4f7bf4db2c295c",
+    "runtime_members": {
+      "masks.mkv": {
+        "bytes": 219472,
+        "codec": "brotli_av1_obu",
+        "decoded_bytes": 223385,
+        "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+      },
+      "optimized_poses.qp1": {
+        "bytes": 892,
+        "codec": "public_qp1_brotli",
+        "decoded_bytes": 1140,
+        "decoded_sha256": "80094e20f4f6cd29869e043eb6d224a6697ecd7fb0e77728ddcd6c7a05fccb9a",
+        "sha256": "c4c6e22ef870db7ede58170b14aec6a820a224b72106a411655507a534d70add"
+      },
+      "renderer.bin": {
+        "bytes": 55756,
+        "codec": "brotli_qzs3",
+        "decoded_bytes": 59288,
+        "decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+        "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 182,
+        "codec": "brotli_seg_tile_actions_delta_varint_v1",
+        "decoded_bytes": 256,
+        "decoded_sha256": "2bacaa410ac0599b915f50b1c03ed234b710ca119c81ed53e22a1dfcbcee9a1b",
+        "sha256": "659ccfaf15f829ed7eccea32a73427a03bfae2c603b7295387f8f9819275d7a2"
+      }
+    }
+  },
+  "tool": "experiments/build_pr79_flatpack_transfer_candidates.py"
+}

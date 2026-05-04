@@ -1,0 +1,171 @@
+{
+  "archive": {
+    "archive_bytes": 274257,
+    "archive_sha256": "f64dcb3d12db394efa9b0e0f924bb62b6b24f096d66baf9ed83447077d4f9b61",
+    "blockers": [],
+    "geometry_members": {
+      "zoom_scalars.bin": {
+        "bytes": 1200,
+        "sha256": "5eaa0d0ecd53568134e4fe0d20874a515c7cf96e82c2c7e0e71bdbf19fd950bb"
+      }
+    },
+    "logical_members": {
+      "masks.mkv": {
+        "bytes": 223738,
+        "sha256": "568439a26dbb9e240cf2c385ff350ddc2cb81f5bc514577498446d6043b21178"
+      },
+      "optimized_poses.bin": {
+        "bytes": 7200,
+        "sha256": "2086abfa4e4fd080056a54af3635ec8d010cd401f049006949d17b53302109b3"
+      },
+      "p": {
+        "bytes": 273003,
+        "sha256": "916e6f58c2bd5cdc1e49b016cb46c238accc77a4b8df5b62acc759f8f6958385"
+      },
+      "renderer.bin": {
+        "bytes": 59288,
+        "sha256": "00ce395fc6495a47d26e3844537859fdc2a1bc38d121ea5f4fb2610179d26e46"
+      },
+      "zoom_scalars.bin": {
+        "bytes": 1200,
+        "sha256": "5eaa0d0ecd53568134e4fe0d20874a515c7cf96e82c2c7e0e71bdbf19fd950bb"
+      }
+    },
+    "packed_payload_container": "p",
+    "path": "experiments/results/qfaithful_geometry_closed_candidates_20260502/2146_qzs3_pr64_qp1_direct_zoom_v2/archive.zip",
+    "pose_stream": {
+      "all_zero": false,
+      "blockers": [],
+      "bytes": 7200,
+      "finite": true,
+      "nonzero_elements": 600,
+      "numel": 3600,
+      "pair_count": 600,
+      "pose_dim": 6,
+      "promotable_pose_stream": true,
+      "sha256": "2086abfa4e4fd080056a54af3635ec8d010cd401f049006949d17b53302109b3"
+    },
+    "present": true,
+    "renderer_wire": {
+      "blockers": [],
+      "bytes": 59288,
+      "magic_hex": "515a5333",
+      "qzs3_block_size": 32,
+      "runtime_readable_wire_contract": true,
+      "sha256": "00ce395fc6495a47d26e3844537859fdc2a1bc38d121ea5f4fb2610179d26e46",
+      "wire_format": "QZS3"
+    },
+    "runtime_readable_output_contract": true,
+    "unpack_summary": {
+      "members": [
+        {
+          "bytes": 59288,
+          "name": "renderer.bin",
+          "sha256": "00ce395fc6495a47d26e3844537859fdc2a1bc38d121ea5f4fb2610179d26e46"
+        },
+        {
+          "bytes": 223738,
+          "name": "masks.mkv",
+          "sha256": "568439a26dbb9e240cf2c385ff350ddc2cb81f5bc514577498446d6043b21178"
+        },
+        {
+          "bytes": 7200,
+          "name": "optimized_poses.bin",
+          "sha256": "2086abfa4e4fd080056a54af3635ec8d010cd401f049006949d17b53302109b3"
+        }
+      ],
+      "payload_bytes": 284187,
+      "payload_format": "pr64_len_table",
+      "schema": "renderer_payload_pr64_len_table_v1",
+      "source_archive_sha256": null
+    },
+    "zip_members": {
+      "p": {
+        "bytes": 273003,
+        "sha256": "916e6f58c2bd5cdc1e49b016cb46c238accc77a4b8df5b62acc759f8f6958385"
+      },
+      "zoom_scalars.bin": {
+        "bytes": 1200,
+        "sha256": "5eaa0d0ecd53568134e4fe0d20874a515c7cf96e82c2c7e0e71bdbf19fd950bb"
+      }
+    }
+  },
+  "blockers": [
+    "eval_roundtrip_true_not_proven",
+    "training_pose_contract_missing",
+    "zoom_warp_geometry_not_consumed_by_runtime"
+  ],
+  "checks": {
+    "archive_output_contract": {
+      "blockers": [],
+      "passed": true
+    },
+    "eval_roundtrip": {
+      "blockers": [
+        "eval_roundtrip_true_not_proven"
+      ],
+      "passed": false,
+      "values": []
+    },
+    "geometry_contract": {
+      "archive_geometry_members": {
+        "zoom_scalars.bin": {
+          "bytes": 1200,
+          "sha256": "5eaa0d0ecd53568134e4fe0d20874a515c7cf96e82c2c7e0e71bdbf19fd950bb"
+        }
+      },
+      "blockers": [
+        "zoom_warp_geometry_not_consumed_by_runtime"
+      ],
+      "configured_geometry_members": [
+        "zoom_scalars.bin"
+      ],
+      "foveation_geometry_consumed": false,
+      "mask_frame_contract": "half",
+      "passed": false,
+      "zoom_geometry_consumed": false
+    },
+    "no_score_claim": {
+      "blockers": [],
+      "passed": true,
+      "promotion_values": [],
+      "score_claim_values": [
+        {
+          "path": "$.promotable_score_claim",
+          "value": false
+        },
+        {
+          "path": "$.score_claim",
+          "value": false
+        },
+        {
+          "path": "$.score_claim",
+          "value": false
+        }
+      ]
+    },
+    "training_pose_contract": {
+      "archive_pair_count": 600,
+      "archive_pose_sha256": "2086abfa4e4fd080056a54af3635ec8d010cd401f049006949d17b53302109b3",
+      "blockers": [
+        "training_pose_contract_missing"
+      ],
+      "candidate_count": 0,
+      "passed": false,
+      "selected_contract": null
+    }
+  },
+  "label": "qfaithful_2146_direct_zoom_v2_existing_snapshot",
+  "promotion_eligible": false,
+  "provenance_paths": [
+    "experiments/results/qfaithful_geometry_closed_candidates_20260502/2146_qzs3_pr64_qp1_direct_zoom_v2/build_provenance.json",
+    "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2146Z_fix1/export/export_provenance.json"
+  ],
+  "remote_gpu_dispatch_performed": false,
+  "required_next_step_if_allowed": null,
+  "schema": "qfaithful_successor_geometry_contract_preflight_v1",
+  "score_claim": false,
+  "tool": "experiments/preflight_qfaithful_successor_geometry_contract.py",
+  "training_dispatch_allowed": false,
+  "verdict": "blocked_no_h100_dispatch"
+}

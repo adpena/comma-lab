@@ -1,0 +1,957 @@
+{
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py on CUDA",
+  "evidence_grade": "engineering_profile",
+  "input_roots": [
+    "/Users/adpena/Projects/pact/experiments",
+    "/Users/adpena/Projects/pact/src/tac",
+    "/Users/adpena/Projects/pact/submissions/robust_current"
+  ],
+  "limit": 40,
+  "loop_count": 4606,
+  "no_score_claim": true,
+  "promotion_eligible": false,
+  "schema": "python_loop_hotpath_profile_v1",
+  "score_claim": false,
+  "tool": "experiments/profile_python_loop_hotpaths.py",
+  "top_hotpaths": [
+    {
+      "body_line_count": 43,
+      "end_line": 906,
+      "file_sha256": "75542619ff933886825d1db424acaa2105c27589a7fbb5ee8dbfd4e16a06fb9c",
+      "header": "for (_frame, _class_id), items in sorted(by_frame_class.items()):",
+      "hot_keywords": [
+        "pixel",
+        "frame",
+        "row",
+        "atom",
+        "class",
+        "run"
+      ],
+      "line": 864,
+      "loop_kind": "For",
+      "nested_loop_count": 9,
+      "path": "/Users/adpena/Projects/pact/experiments/plan_cmg3_pixel_lagrangian_atoms.py",
+      "static_hotpath_score": 53,
+      "vectorization_recommendation": "inspect for NumPy/Torch vectorization or chunked array kernels before full-resolution runs",
+      "vectorized_hint_tokens": []
+    },
+    {
+      "body_line_count": 52,
+      "end_line": 431,
+      "file_sha256": "d07c790008df49aebb857dc6d2bb2f3d28aebb542873a1367e5bbcb31f9d4d1a",
+      "header": "for pair_order, record in enumerate(hotspot_frames):",
+      "hot_keywords": [
+        "pixel",
+        "mask",
+        "frame",
+        "row",
+        "atom",
+        "pair",
+        "class",
+        "run"
+      ],
+      "line": 380,
+      "loop_kind": "For",
+      "nested_loop_count": 5,
+      "path": "/Users/adpena/Projects/pact/experiments/plan_predictive_mask_hotspot.py",
+      "static_hotpath_score": 50,
+      "vectorization_recommendation": "inspect for NumPy/Torch vectorization or chunked array kernels before full-resolution runs",
+      "vectorized_hint_tokens": [
+        "np."
+      ]
+    },
+    {
+      "body_line_count": 51,
+      "end_line": 431,
+      "file_sha256": "d07c790008df49aebb857dc6d2bb2f3d28aebb542873a1367e5bbcb31f9d4d1a",
+      "header": "for frame in record.frame_indices:",
+      "hot_keywords": [
+        "pixel",
+        "mask",
+        "frame",
+        "row",
+        "atom",
+        "pair",
+        "class",
+        "run"
+      ],
+      "line": 381,
+      "loop_kind": "For",
+      "nested_loop_count": 4,
+      "path": "/Users/adpena/Projects/pact/experiments/plan_predictive_mask_hotspot.py",
+      "static_hotpath_score": 45,
+      "vectorization_recommendation": "inspect for NumPy/Torch vectorization or chunked array kernels before full-resolution runs",
+      "vectorized_hint_tokens": [
+        "np."
+      ]
+    },
+    {
+      "body_line_count": 83,
+      "end_line": 401,
+      "file_sha256": "9a9c2b90f165f52d20329174a1f20031ca40210db10777f548fcdccb2bc7f571",
+      "header": "for scenario in scenarios:",
+      "hot_keywords": [
+        "pixel",
+        "mask",
+        "frame",
+        "row",
+        "col",
+        "class",
+        "tensor"
+      ],
+      "line": 319,
+      "loop_kind": "For",
+      "nested_loop_count": 5,
+      "path": "/Users/adpena/Projects/pact/src/tac/mask_entropy_coder.py",
+      "static_hotpath_score": 44,
+      "vectorization_recommendation": "inspect for NumPy/Torch vectorization or chunked array kernels before full-resolution runs",
+      "vectorized_hint_tokens": [
+        "np.",
+        "torch."
+      ]
+    },
+    {
+      "body_line_count": 35,
+      "end_line": 438,
+      "file_sha256": "573258083b3e44502d70abcafecc253b3e0f7c15dc32742c3b1553fb2018ef6d",
+      "header": "for frame_index, frame in enumerate(masks):",
+      "hot_keywords": [
+        "mask",
+        "frame",
+        "row",
+        "atom",
+        "candidate",
+        "policy",
+        "height",
+        "class",
+        "run"
+      ],
+      "line": 404,
+      "loop_kind": "For",
+      "nested_loop_count": 2,
+      "path": "/Users/adpena/Projects/pact/experiments/build_cmg3_adaptive_runs_candidate.py",
+      "static_hotpath_score": 43,
+      "vectorization_recommendation": "inspect for NumPy/Torch vectorization or chunked array kernels before full-resolution runs",
+      "vectorized_hint_tokens": []
+    },
+    {
+      "body_line_count": 37,
+      "end_line": 850,
+      "file_sha256": "75542619ff933886825d1db424acaa2105c27589a7fbb5ee8dbfd4e16a06fb9c",
+      "header": "for frame_index in range(frames):",
+      "hot_keywords": [
+        "pixel",
+        "frame",
+        "row",
+        "atom",
+        "candidate",
+        "height",
+        "class",
+        "span",
+        "run"
+      ],
+      "line": 814,
+      "loop_kind": "For",
+      "nested_loop_count": 2,
+      "path": "/Users/adpena/Projects/pact/experiments/plan_cmg3_pixel_lagrangian_atoms.py",
+      "static_hotpath_score": 43,
+      "vectorization_recommendation": "inspect for NumPy/Torch vectorization or chunked array kernels before full-resolution runs",
+      "vectorized_hint_tokens": []
+    },
+    {
+      "body_line_count": 49,
+      "end_line": 840,
+      "file_sha256": "4aab3e2772ea352094c8336635108bb9124f49a122564ca3ed4c9d43cf75645c",
+      "header": "for class_id in class_priority:",
+      "hot_keywords": [
+        "pixel",
+        "mask",
+        "frame",
+        "candidate",
+        "policy",
+        "pair",
+        "class",
+        "run"
+      ],
+      "line": 792,
+      "loop_kind": "For",
+      "nested_loop_count": 3,
+      "path": "/Users/adpena/Projects/pact/experiments/build_charged_mask_grammar_candidate.py",
+      "static_hotpath_score": 42,
+      "vectorization_recommendation": "inspect for NumPy/Torch vectorization or chunked array kernels before full-resolution runs",
+      "vectorized_hint_tokens": [
+        "np."
+      ]
+    },
+    {
+      "body_line_count": 48,
+      "end_line": 431,
+      "file_sha256": "d07c790008df49aebb857dc6d2bb2f3d28aebb542873a1367e5bbcb31f9d4d1a",
+      "header": "for source_class in range(class_count):",
+      "hot_keywords": [
+        "pixel",
+        "mask",
+        "frame",
+        "row",
+        "atom",
+        "pair",
+        "class",
+        "run"
+      ],
+      "line": 384,
+      "loop_kind": "For",
+      "nested_loop_count": 3,
+      "path": "/Users/adpena/Projects/pact/experiments/plan_predictive_mask_hotspot.py",
+      "static_hotpath_score": 42,
+      "vectorization_recommendation": "inspect for NumPy/Torch vectorization or chunked array kernels before full-resolution runs",
+      "vectorized_hint_tokens": [
+        "np."
+      ]
+    },
+    {
+      "body_line_count": 21,
+      "end_line": 568,
+      "file_sha256": "3d1843d40c2814d668252e0e4c882eda1fc61f847af231c2120a57c46c658630",
+      "header": "for frame_idx in range(t):",
+      "hot_keywords": [
+        "mask",
+        "frame",
+        "candidate",
+        "height",
+        "width",
+        "class",
+        "span"
+      ],
+      "line": 548,
+      "loop_kind": "For",
+      "nested_loop_count": 3,
+      "path": "/Users/adpena/Projects/pact/experiments/alpha_mask_codec_candidate_matrix.py",
+      "static_hotpath_score": 40,
+      "vectorization_recommendation": "inspect for NumPy/Torch vectorization or chunked array kernels before full-resolution runs",
+      "vectorized_hint_tokens": []
+    },
+    {
+      "body_line_count": 31,
+      "end_line": 411,
+      "file_sha256": "33b10642eafe65b5667d11c5607a299c1a8db85296a969f6c8089c06d69df9e7",
+      "header": "for frame_index in range(t):",
+      "hot_keywords": [
+        "mask",
+        "frame",
+        "atom",
+        "candidate",
+        "pair",
+        "class",
+        "run"
+      ],
+      "line": 381,
+      "loop_kind": "For",
+      "nested_loop_count": 3,
+      "path": "/Users/adpena/Projects/pact/experiments/build_c067_postdecode_mask_repair_candidate.py",
+      "static_hotpath_score": 40,
+      "vectorization_recommendation": "review if this file is on an active dispatch/build path",
+      "vectorized_hint_tokens": []
+    },
+    {
+      "body_line_count": 31,
+      "end_line": 460,
+      "file_sha256": "33b10642eafe65b5667d11c5607a299c1a8db85296a969f6c8089c06d69df9e7",
+      "header": "for frame_index in range(t):",
+      "hot_keywords": [
+        "mask",
+        "frame",
+        "atom",
+        "candidate",
+        "pair",
+        "class",
+        "run"
+      ],
+      "line": 430,
+      "loop_kind": "For",
+      "nested_loop_count": 3,
+      "path": "/Users/adpena/Projects/pact/experiments/build_c067_postdecode_mask_repair_candidate.py",
+      "static_hotpath_score": 40,
+      "vectorization_recommendation": "review if this file is on an active dispatch/build path",
+      "vectorized_hint_tokens": []
+    },
+    {
+      "body_line_count": 36,
+      "end_line": 850,
+      "file_sha256": "75542619ff933886825d1db424acaa2105c27589a7fbb5ee8dbfd4e16a06fb9c",
+      "header": "for y in range(height):",
+      "hot_keywords": [
+        "pixel",
+        "frame",
+        "row",
+        "atom",
+        "candidate",
+        "height",
+        "class",
+        "span",
+        "run"
+      ],
+      "line": 815,
+      "loop_kind": "For",
+      "nested_loop_count": 1,
+      "path": "/Users/adpena/Projects/pact/experiments/plan_cmg3_pixel_lagrangian_atoms.py",
+      "static_hotpath_score": 40,
+      "vectorization_recommendation": "inspect for NumPy/Torch vectorization or chunked array kernels before full-resolution runs",
+      "vectorized_hint_tokens": []
+    },
+    {
+      "body_line_count": 51,
+      "end_line": 673,
+      "file_sha256": "7be69ee3b62949b137292a3d064f5e9c9b95b0f7a7df7c6b35555fd78b832465",
+      "header": "for class_id in config.class_priority:",
+      "hot_keywords": [
+        "pixel",
+        "mask",
+        "frame",
+        "candidate",
+        "pair",
+        "class",
+        "run"
+      ],
+      "line": 623,
+      "loop_kind": "For",
+      "nested_loop_count": 3,
+      "path": "/Users/adpena/Projects/pact/experiments/alpha_mask_candidate_builder.py",
+      "static_hotpath_score": 39,
+      "vectorization_recommendation": "inspect for NumPy/Torch vectorization or chunked array kernels before full-resolution runs",
+      "vectorized_hint_tokens": [
+        "np."
+      ]
+    },
+    {
+      "body_line_count": 48,
+      "end_line": 840,
+      "file_sha256": "4aab3e2772ea352094c8336635108bb9124f49a122564ca3ed4c9d43cf75645c",
+      "header": "for frame_index in range(source_np.shape[0]):",
+      "hot_keywords": [
+        "pixel",
+        "mask",
+        "frame",
+        "candidate",
+        "policy",
+        "pair",
+        "class",
+        "run"
+      ],
+      "line": 793,
+      "loop_kind": "For",
+      "nested_loop_count": 2,
+      "path": "/Users/adpena/Projects/pact/experiments/build_charged_mask_grammar_candidate.py",
+      "static_hotpath_score": 39,
+      "vectorization_recommendation": "inspect for NumPy/Torch vectorization or chunked array kernels before full-resolution runs",
+      "vectorized_hint_tokens": [
+        "np."
+      ]
+    },
+    {
+      "body_line_count": 47,
+      "end_line": 431,
+      "file_sha256": "d07c790008df49aebb857dc6d2bb2f3d28aebb542873a1367e5bbcb31f9d4d1a",
+      "header": "for predicted_class in range(class_count):",
+      "hot_keywords": [
+        "pixel",
+        "mask",
+        "frame",
+        "row",
+        "atom",
+        "pair",
+        "class",
+        "run"
+      ],
+      "line": 385,
+      "loop_kind": "For",
+      "nested_loop_count": 2,
+      "path": "/Users/adpena/Projects/pact/experiments/plan_predictive_mask_hotspot.py",
+      "static_hotpath_score": 39,
+      "vectorization_recommendation": "inspect for NumPy/Torch vectorization or chunked array kernels before full-resolution runs",
+      "vectorized_hint_tokens": [
+        "np."
+      ]
+    },
+    {
+      "body_line_count": 22,
+      "end_line": 565,
+      "file_sha256": "d07c790008df49aebb857dc6d2bb2f3d28aebb542873a1367e5bbcb31f9d4d1a",
+      "header": "for row_fill in ROW_FILL_POLICIES:",
+      "hot_keywords": [
+        "pixel",
+        "mask",
+        "row",
+        "policy",
+        "height",
+        "width",
+        "class",
+        "span"
+      ],
+      "line": 544,
+      "loop_kind": "For",
+      "nested_loop_count": 2,
+      "path": "/Users/adpena/Projects/pact/experiments/plan_predictive_mask_hotspot.py",
+      "static_hotpath_score": 39,
+      "vectorization_recommendation": "inspect for NumPy/Torch vectorization or chunked array kernels before full-resolution runs",
+      "vectorized_hint_tokens": [
+        "np."
+      ]
+    },
+    {
+      "body_line_count": 151,
+      "end_line": 1506,
+      "file_sha256": "1410ec827a5e844e1c46d85734c64189c20cdcacae6a8736c7e57eb242b7f097",
+      "header": "for mkv_path in mkv_files:",
+      "hot_keywords": [
+        "frame",
+        "col",
+        "height",
+        "width",
+        "tensor"
+      ],
+      "line": 1356,
+      "loop_kind": "For",
+      "nested_loop_count": 6,
+      "path": "/Users/adpena/Projects/pact/src/tac/trick_stack.py",
+      "static_hotpath_score": 39,
+      "vectorization_recommendation": "inspect for NumPy/Torch vectorization or chunked array kernels before full-resolution runs",
+      "vectorized_hint_tokens": [
+        "np.",
+        "torch.",
+        "where",
+        "stack"
+      ]
+    },
+    {
+      "body_line_count": 19,
+      "end_line": 894,
+      "file_sha256": "82af2874fd6a8b8e7eb2cc624920bc9d689779860517da1c7e20249c817f3e45",
+      "header": "for frame_index in frame_indices:",
+      "hot_keywords": [
+        "pixel",
+        "mask",
+        "frame",
+        "row",
+        "candidate",
+        "policy",
+        "pair",
+        "width",
+        "class"
+      ],
+      "line": 876,
+      "loop_kind": "For",
+      "nested_loop_count": 1,
+      "path": "/Users/adpena/Projects/pact/experiments/build_alpha_mask_primitive_response_plan.py",
+      "static_hotpath_score": 38,
+      "vectorization_recommendation": "inspect for NumPy/Torch vectorization or chunked array kernels before full-resolution runs",
+      "vectorized_hint_tokens": []
+    },
+    {
+      "body_line_count": 1060,
+      "end_line": 3943,
+      "file_sha256": "a7329060bdafb03d8a6e995a2349027aae436eeac8dba380d67648c1a1f1cda8",
+      "header": "for epoch in range(start_epoch, args.epochs):",
+      "hot_keywords": [
+        "pixel",
+        "mask",
+        "frame",
+        "col",
+        "candidate",
+        "policy",
+        "pair",
+        "class",
+        "run",
+        "tensor"
+      ],
+      "line": 2884,
+      "loop_kind": "For",
+      "nested_loop_count": 4,
+      "path": "/Users/adpena/Projects/pact/src/tac/experiments/train_renderer.py",
+      "static_hotpath_score": 38,
+      "vectorization_recommendation": "training-control loop; use profiler traces before static rewrites",
+      "vectorized_hint_tokens": [
+        "torch.",
+        "argmax",
+        "where",
+        "stack"
+      ]
+    },
+    {
+      "body_line_count": 25,
+      "end_line": 524,
+      "file_sha256": "3d1843d40c2814d668252e0e4c882eda1fc61f847af231c2120a57c46c658630",
+      "header": "for frame_idx in range(t):",
+      "hot_keywords": [
+        "mask",
+        "frame",
+        "candidate",
+        "class",
+        "span",
+        "run"
+      ],
+      "line": 500,
+      "loop_kind": "For",
+      "nested_loop_count": 3,
+      "path": "/Users/adpena/Projects/pact/experiments/alpha_mask_codec_candidate_matrix.py",
+      "static_hotpath_score": 37,
+      "vectorization_recommendation": "wire-format loop; prefer correctness tests before micro-optimization",
+      "vectorized_hint_tokens": []
+    },
+    {
+      "body_line_count": 20,
+      "end_line": 568,
+      "file_sha256": "3d1843d40c2814d668252e0e4c882eda1fc61f847af231c2120a57c46c658630",
+      "header": "for class_id in header[\"encoded_class_ids\"]:",
+      "hot_keywords": [
+        "mask",
+        "frame",
+        "candidate",
+        "height",
+        "width",
+        "class",
+        "span"
+      ],
+      "line": 549,
+      "loop_kind": "For",
+      "nested_loop_count": 2,
+      "path": "/Users/adpena/Projects/pact/experiments/alpha_mask_codec_candidate_matrix.py",
+      "static_hotpath_score": 37,
+      "vectorization_recommendation": "inspect for NumPy/Torch vectorization or chunked array kernels before full-resolution runs",
+      "vectorized_hint_tokens": []
+    },
+    {
+      "body_line_count": 29,
+      "end_line": 411,
+      "file_sha256": "33b10642eafe65b5667d11c5607a299c1a8db85296a969f6c8089c06d69df9e7",
+      "header": "for y in range(h):",
+      "hot_keywords": [
+        "mask",
+        "frame",
+        "atom",
+        "candidate",
+        "pair",
+        "class",
+        "run"
+      ],
+      "line": 383,
+      "loop_kind": "For",
+      "nested_loop_count": 2,
+      "path": "/Users/adpena/Projects/pact/experiments/build_c067_postdecode_mask_repair_candidate.py",
+      "static_hotpath_score": 37,
+      "vectorization_recommendation": "review if this file is on an active dispatch/build path",
+      "vectorized_hint_tokens": []
+    },
+    {
+      "body_line_count": 29,
+      "end_line": 460,
+      "file_sha256": "33b10642eafe65b5667d11c5607a299c1a8db85296a969f6c8089c06d69df9e7",
+      "header": "for y in range(h):",
+      "hot_keywords": [
+        "mask",
+        "frame",
+        "atom",
+        "candidate",
+        "pair",
+        "class",
+        "run"
+      ],
+      "line": 432,
+      "loop_kind": "For",
+      "nested_loop_count": 2,
+      "path": "/Users/adpena/Projects/pact/experiments/build_c067_postdecode_mask_repair_candidate.py",
+      "static_hotpath_score": 37,
+      "vectorization_recommendation": "review if this file is on an active dispatch/build path",
+      "vectorized_hint_tokens": []
+    },
+    {
+      "body_line_count": 19,
+      "end_line": 292,
+      "file_sha256": "87d63cea307f90d5d559fb21bc654830b20bb84c21bc721e2482341db3dbf233",
+      "header": "for frame in range(frames):",
+      "hot_keywords": [
+        "frame",
+        "row",
+        "candidate",
+        "pair",
+        "height",
+        "class",
+        "run"
+      ],
+      "line": 274,
+      "loop_kind": "For",
+      "nested_loop_count": 2,
+      "path": "/Users/adpena/Projects/pact/experiments/build_cmg2_foveated_repair_candidates.py",
+      "static_hotpath_score": 37,
+      "vectorization_recommendation": "inspect for NumPy/Torch vectorization or chunked array kernels before full-resolution runs",
+      "vectorized_hint_tokens": []
+    },
+    {
+      "body_line_count": 34,
+      "end_line": 438,
+      "file_sha256": "573258083b3e44502d70abcafecc253b3e0f7c15dc32742c3b1553fb2018ef6d",
+      "header": "for y, row in enumerate(frame):",
+      "hot_keywords": [
+        "frame",
+        "row",
+        "atom",
+        "candidate",
+        "policy",
+        "height",
+        "class",
+        "run"
+      ],
+      "line": 405,
+      "loop_kind": "For",
+      "nested_loop_count": 1,
+      "path": "/Users/adpena/Projects/pact/experiments/build_cmg3_adaptive_runs_candidate.py",
+      "static_hotpath_score": 37,
+      "vectorization_recommendation": "inspect for NumPy/Torch vectorization or chunked array kernels before full-resolution runs",
+      "vectorized_hint_tokens": []
+    },
+    {
+      "body_line_count": 181,
+      "end_line": 1111,
+      "file_sha256": "c78a67cded296300d5c40e76b853a44dbd98ec3bd41c1301023576c4d64e674c",
+      "header": "for stage in search_stages:",
+      "hot_keywords": [
+        "mask",
+        "frame",
+        "col",
+        "candidate",
+        "run",
+        "tensor"
+      ],
+      "line": 931,
+      "loop_kind": "For",
+      "nested_loop_count": 4,
+      "path": "/Users/adpena/Projects/pact/experiments/line_search_pose_refinement.py",
+      "static_hotpath_score": 37,
+      "vectorization_recommendation": "inspect for NumPy/Torch vectorization or chunked array kernels before full-resolution runs",
+      "vectorized_hint_tokens": [
+        "np.",
+        "torch.",
+        "where"
+      ]
+    },
+    {
+      "body_line_count": 27,
+      "end_line": 379,
+      "file_sha256": "9f47be853defab673a4d6e69f291b238a36e0becae1cba2be83d2bdfe62f79f0",
+      "header": "for frame_index in range(frames):",
+      "hot_keywords": [
+        "mask",
+        "frame",
+        "row",
+        "height",
+        "width",
+        "run"
+      ],
+      "line": 353,
+      "loop_kind": "For",
+      "nested_loop_count": 3,
+      "path": "/Users/adpena/Projects/pact/experiments/plan_c067_decoded_delta_overlay_mask_topology.py",
+      "static_hotpath_score": 37,
+      "vectorization_recommendation": "inspect for NumPy/Torch vectorization or chunked array kernels before full-resolution runs",
+      "vectorized_hint_tokens": []
+    },
+    {
+      "body_line_count": 40,
+      "end_line": 431,
+      "file_sha256": "d07c790008df49aebb857dc6d2bb2f3d28aebb542873a1367e5bbcb31f9d4d1a",
+      "header": "for y in range(mismatch.shape[0]):",
+      "hot_keywords": [
+        "pixel",
+        "mask",
+        "frame",
+        "row",
+        "atom",
+        "pair",
+        "class",
+        "run"
+      ],
+      "line": 392,
+      "loop_kind": "For",
+      "nested_loop_count": 1,
+      "path": "/Users/adpena/Projects/pact/experiments/plan_predictive_mask_hotspot.py",
+      "static_hotpath_score": 37,
+      "vectorization_recommendation": "inspect for NumPy/Torch vectorization or chunked array kernels before full-resolution runs",
+      "vectorized_hint_tokens": []
+    },
+    {
+      "body_line_count": 137,
+      "end_line": 621,
+      "file_sha256": "4af114b3a2518ff9d697976f3c37176a68980f4db51fe760bf4b39af22afbb5a",
+      "header": "for layer_meta in header[\"layers\"]:",
+      "hot_keywords": [
+        "tensor"
+      ],
+      "line": 485,
+      "loop_kind": "For",
+      "nested_loop_count": 8,
+      "path": "/Users/adpena/Projects/pact/src/tac/renderer_export.py",
+      "static_hotpath_score": 37,
+      "vectorization_recommendation": "wire-format loop; prefer correctness tests before micro-optimization",
+      "vectorized_hint_tokens": [
+        "torch.",
+        "stack"
+      ]
+    },
+    {
+      "body_line_count": 152,
+      "end_line": 1088,
+      "file_sha256": "1410ec827a5e844e1c46d85734c64189c20cdcacae6a8736c7e57eb242b7f097",
+      "header": "for mkv_path in mkv_files:",
+      "hot_keywords": [
+        "pixel",
+        "frame",
+        "height",
+        "width",
+        "run",
+        "tensor"
+      ],
+      "line": 937,
+      "loop_kind": "For",
+      "nested_loop_count": 4,
+      "path": "/Users/adpena/Projects/pact/src/tac/trick_stack.py",
+      "static_hotpath_score": 37,
+      "vectorization_recommendation": "inspect for NumPy/Torch vectorization or chunked array kernels before full-resolution runs",
+      "vectorized_hint_tokens": [
+        "np.",
+        "torch.",
+        "stack"
+      ]
+    },
+    {
+      "body_line_count": 50,
+      "end_line": 673,
+      "file_sha256": "7be69ee3b62949b137292a3d064f5e9c9b95b0f7a7df7c6b35555fd78b832465",
+      "header": "for frame_index in range(source_np.shape[0]):",
+      "hot_keywords": [
+        "pixel",
+        "mask",
+        "frame",
+        "candidate",
+        "pair",
+        "class",
+        "run"
+      ],
+      "line": 624,
+      "loop_kind": "For",
+      "nested_loop_count": 2,
+      "path": "/Users/adpena/Projects/pact/experiments/alpha_mask_candidate_builder.py",
+      "static_hotpath_score": 36,
+      "vectorization_recommendation": "inspect for NumPy/Torch vectorization or chunked array kernels before full-resolution runs",
+      "vectorized_hint_tokens": [
+        "np."
+      ]
+    },
+    {
+      "body_line_count": 60,
+      "end_line": 304,
+      "file_sha256": "02dbab14e3a0236be6befa60273a1aee4a24c93e8807e292508d5c50170ac1c8",
+      "header": "for start_y in range(height):",
+      "hot_keywords": [
+        "pixel",
+        "mask",
+        "frame",
+        "height",
+        "width",
+        "class"
+      ],
+      "line": 245,
+      "loop_kind": "For",
+      "nested_loop_count": 3,
+      "path": "/Users/adpena/Projects/pact/experiments/alpha_primitive_mask_diagnostics.py",
+      "static_hotpath_score": 36,
+      "vectorization_recommendation": "inspect for NumPy/Torch vectorization or chunked array kernels before full-resolution runs",
+      "vectorized_hint_tokens": [
+        "stack"
+      ]
+    },
+    {
+      "body_line_count": 69,
+      "end_line": 691,
+      "file_sha256": "82af2874fd6a8b8e7eb2cc624920bc9d689779860517da1c7e20249c817f3e45",
+      "header": "for start_y in range(height):",
+      "hot_keywords": [
+        "pixel",
+        "mask",
+        "frame",
+        "height",
+        "width",
+        "class"
+      ],
+      "line": 623,
+      "loop_kind": "For",
+      "nested_loop_count": 3,
+      "path": "/Users/adpena/Projects/pact/experiments/build_alpha_mask_primitive_response_plan.py",
+      "static_hotpath_score": 36,
+      "vectorization_recommendation": "inspect for NumPy/Torch vectorization or chunked array kernels before full-resolution runs",
+      "vectorized_hint_tokens": [
+        "stack"
+      ]
+    },
+    {
+      "body_line_count": 45,
+      "end_line": 840,
+      "file_sha256": "4aab3e2772ea352094c8336635108bb9124f49a122564ca3ed4c9d43cf75645c",
+      "header": "for y in range(source_np.shape[1]):",
+      "hot_keywords": [
+        "pixel",
+        "mask",
+        "frame",
+        "candidate",
+        "policy",
+        "pair",
+        "class",
+        "run"
+      ],
+      "line": 796,
+      "loop_kind": "For",
+      "nested_loop_count": 1,
+      "path": "/Users/adpena/Projects/pact/experiments/build_charged_mask_grammar_candidate.py",
+      "static_hotpath_score": 36,
+      "vectorization_recommendation": "inspect for NumPy/Torch vectorization or chunked array kernels before full-resolution runs",
+      "vectorized_hint_tokens": [
+        "np."
+      ]
+    },
+    {
+      "body_line_count": 42,
+      "end_line": 868,
+      "file_sha256": "82af2874fd6a8b8e7eb2cc624920bc9d689779860517da1c7e20249c817f3e45",
+      "header": "for frame_index in frame_indices:",
+      "hot_keywords": [
+        "pixel",
+        "mask",
+        "frame",
+        "row",
+        "candidate",
+        "policy",
+        "class"
+      ],
+      "line": 827,
+      "loop_kind": "For",
+      "nested_loop_count": 2,
+      "path": "/Users/adpena/Projects/pact/experiments/build_alpha_mask_primitive_response_plan.py",
+      "static_hotpath_score": 35,
+      "vectorization_recommendation": "inspect for NumPy/Torch vectorization or chunked array kernels before full-resolution runs",
+      "vectorized_hint_tokens": []
+    },
+    {
+      "body_line_count": 45,
+      "end_line": 977,
+      "file_sha256": "82af2874fd6a8b8e7eb2cc624920bc9d689779860517da1c7e20249c817f3e45",
+      "header": "for frame_index in frame_indices:",
+      "hot_keywords": [
+        "pixel",
+        "mask",
+        "frame",
+        "row",
+        "policy",
+        "pair",
+        "width",
+        "class"
+      ],
+      "line": 933,
+      "loop_kind": "For",
+      "nested_loop_count": 1,
+      "path": "/Users/adpena/Projects/pact/experiments/build_alpha_mask_primitive_response_plan.py",
+      "static_hotpath_score": 35,
+      "vectorization_recommendation": "inspect for NumPy/Torch vectorization or chunked array kernels before full-resolution runs",
+      "vectorized_hint_tokens": []
+    },
+    {
+      "body_line_count": 114,
+      "end_line": 881,
+      "file_sha256": "526d859345854b2eb03d6d7ec7181fc3d17ef69ac96d47f4218cf6596e7b130b",
+      "header": "for frame_idx in range(frames):",
+      "hot_keywords": [
+        "pixel",
+        "mask",
+        "frame",
+        "candidate",
+        "pair",
+        "height",
+        "width",
+        "class"
+      ],
+      "line": 768,
+      "loop_kind": "For",
+      "nested_loop_count": 1,
+      "path": "/Users/adpena/Projects/pact/experiments/diagnose_nerv_geometry.py",
+      "static_hotpath_score": 35,
+      "vectorization_recommendation": "inspect for NumPy/Torch vectorization or chunked array kernels before full-resolution runs",
+      "vectorized_hint_tokens": [
+        "np.",
+        "bincount"
+      ]
+    },
+    {
+      "body_line_count": 60,
+      "end_line": 671,
+      "file_sha256": "e5e27fcda52560db30edf0d08e685d0845a02aa955313de191ac6d8248c42eb2",
+      "header": "for seed_y, seed_x in zip(ys.tolist(), xs.tolist()):",
+      "hot_keywords": [
+        "pixel",
+        "mask",
+        "frame",
+        "atom",
+        "height",
+        "width",
+        "class"
+      ],
+      "line": 612,
+      "loop_kind": "For",
+      "nested_loop_count": 2,
+      "path": "/Users/adpena/Projects/pact/experiments/plan_charged_mask_grammar_atoms.py",
+      "static_hotpath_score": 35,
+      "vectorization_recommendation": "inspect for NumPy/Torch vectorization or chunked array kernels before full-resolution runs",
+      "vectorized_hint_tokens": []
+    },
+    {
+      "body_line_count": 18,
+      "end_line": 568,
+      "file_sha256": "3d1843d40c2814d668252e0e4c882eda1fc61f847af231c2120a57c46c658630",
+      "header": "for _ in range(component_count):",
+      "hot_keywords": [
+        "mask",
+        "frame",
+        "candidate",
+        "height",
+        "width",
+        "class",
+        "span"
+      ],
+      "line": 551,
+      "loop_kind": "For",
+      "nested_loop_count": 1,
+      "path": "/Users/adpena/Projects/pact/experiments/alpha_mask_codec_candidate_matrix.py",
+      "static_hotpath_score": 34,
+      "vectorization_recommendation": "inspect for NumPy/Torch vectorization or chunked array kernels before full-resolution runs",
+      "vectorized_hint_tokens": []
+    },
+    {
+      "body_line_count": 17,
+      "end_line": 292,
+      "file_sha256": "87d63cea307f90d5d559fb21bc654830b20bb84c21bc721e2482341db3dbf233",
+      "header": "for y_idx in range(height):",
+      "hot_keywords": [
+        "frame",
+        "row",
+        "candidate",
+        "pair",
+        "height",
+        "class",
+        "run"
+      ],
+      "line": 276,
+      "loop_kind": "For",
+      "nested_loop_count": 1,
+      "path": "/Users/adpena/Projects/pact/experiments/build_cmg2_foveated_repair_candidates.py",
+      "static_hotpath_score": 34,
+      "vectorization_recommendation": "inspect for NumPy/Torch vectorization or chunked array kernels before full-resolution runs",
+      "vectorized_hint_tokens": []
+    }
+  ]
+}

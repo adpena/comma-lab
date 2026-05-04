@@ -1,0 +1,87 @@
+[project]
+name = "comma-video-compression-challenge"
+version = "0.1.0"
+requires-python = "~=3.11"
+dependencies = [
+  "numpy",
+  "einops",
+  "timm",
+  "safetensors",
+  "segmentation-models-pytorch",
+  "tqdm",
+  "pillow",
+  "av",
+  "charset-normalizer",
+  "requests",
+  "urllib3",
+  "brotli",
+  "constriction",
+  "pyppmd",
+]
+
+[dependency-groups]
+cpu = ["torch", "torchvision"]
+cu126 = ["torch", "torchvision", "nvidia-dali-cuda120"]
+cu128 = ["torch", "torchvision", "nvidia-dali-cuda120"]
+cu130 = ["torch", "torchvision", "nvidia-dali-cuda130"]
+mps = ["torch", "torchvision"]
+
+[tool.uv]
+conflicts = [
+  [{ group = "cpu" }, { group = "cu126" }],
+  [{ group = "cpu" }, { group = "cu128" }],
+  [{ group = "cpu" }, { group = "cu130" }],
+  [{ group = "cpu" }, { group = "mps" }],
+  [{ group = "cu126" }, { group = "cu128" }],
+  [{ group = "cu126" }, { group = "cu130" }],
+  [{ group = "cu126" }, { group = "mps" }],
+  [{ group = "cu128" }, { group = "cu130" }],
+  [{ group = "cu128" }, { group = "mps" }],
+  [{ group = "cu130" }, { group = "mps" }],
+]
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cpu", group = "cpu" },
+  { index = "pytorch-cu126", group = "cu126" },
+  { index = "pytorch-cu128", group = "cu128" },
+  { index = "pytorch-cu130", group = "cu130" },
+]
+torchvision = [
+  { index = "pytorch-cpu", group = "cpu" },
+  { index = "pytorch-cu126", group = "cu126" },
+  { index = "pytorch-cu128", group = "cu128" },
+  { index = "pytorch-cu130", group = "cu130" },
+]
+nvidia-dali-cuda120 = [
+  { index = "nvidia", group = "cu126" },
+  { index = "nvidia", group = "cu128" },
+]
+nvidia-dali-cuda130 = [
+  { index = "nvidia", group = "cu130" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu/"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126/"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128/"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130/"
+explicit = true
+
+[[tool.uv.index]]
+name = "nvidia"
+url = "https://pypi.nvidia.com"
+explicit = true

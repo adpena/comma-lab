@@ -1,0 +1,85 @@
+{
+  "allowed_use": [
+    "forensic",
+    "no_rank_frontier",
+    "no_promotion"
+  ],
+  "archive_delta_bytes": -4328,
+  "baseline_archive_bytes": 276214,
+  "completed_at_utc": "2026-05-02T17:31:06Z",
+  "component_gate_triggered": true,
+  "component_gate_violations": [
+    {
+      "component": "posenet",
+      "max_absolute": 0.002,
+      "metric": "avg_posenet_dist",
+      "observed": 0.3804819,
+      "reason": "absolute_component_gate"
+    }
+  ],
+  "component_gates": [
+    {
+      "component": "posenet",
+      "max_absolute": 0.002,
+      "max_relative": null,
+      "metric": "avg_posenet_dist",
+      "observed": 0.3804819,
+      "passed": false,
+      "reference": 0.00049637,
+      "reference_label": "C067_T4",
+      "relative_to_reference": null
+    },
+    {
+      "component": "segnet",
+      "max_absolute": 0.0015,
+      "max_relative": null,
+      "metric": "avg_segnet_dist",
+      "observed": 0.00108114,
+      "passed": true,
+      "reference": 0.00061244,
+      "reference_label": "C067_T4",
+      "relative_to_reference": null
+    }
+  ],
+  "contest_cuda_archive_bytes": 271886,
+  "contest_cuda_archive_sha256": "4271b2c855fddc089ae590392caec1d92cf408228664c4a9a0249d3b375e9d43",
+  "contest_cuda_avg_posenet_dist": 0.3804819,
+  "contest_cuda_avg_segnet_dist": 0.00108114,
+  "contest_cuda_device": "cuda",
+  "contest_cuda_gpu_model": "NVIDIA L40S",
+  "contest_cuda_gpu_t4_match": false,
+  "contest_cuda_n_samples": 600,
+  "contest_cuda_result_json": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_c067_qzs3_b512_l40sdiag_20260502T1710Z/contest_auth_eval.adjudicated.json",
+  "contest_cuda_score": 2.2397462747539274,
+  "contest_cuda_score_recomputed": 2.2397462747539274,
+  "contest_cuda_score_reported_rounded": 2.24,
+  "contest_cuda_score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "distillation_policy_active": false,
+  "distillation_policy_gate_triggered": false,
+  "distillation_policy_gate_violations": [],
+  "distillation_policy_sha256": null,
+  "distillation_policy_sha256_expected": null,
+  "evidence_grade": "A score-grade",
+  "final_archive_bytes": 271886,
+  "lane_status": "REGRESSION_AND_COMPONENT_GATE_AND_SANE_SCORE_REVIEW_REQUIRED",
+  "max_sane_score": 2.0,
+  "paper_claim_grade": "A-negative scoped forensic",
+  "promotion_eligible": false,
+  "regression_scope": "measured_implementation_config_only_pending_review",
+  "regression_threshold": 0.02,
+  "regression_threshold_mode": "delta_vs_baseline",
+  "regression_triggered": true,
+  "result_tag": "[contest-CUDA]",
+  "sane_score_gate_triggered": true,
+  "sane_score_gate_violation": {
+    "exclusive_max": 2.0,
+    "exclusive_min": 0.0,
+    "metric": "score_recomputed_from_components",
+    "observed": 2.2397462747539274,
+    "reason": "sane_score_gate"
+  },
+  "score_delta_vs_baseline": 1.924129243969445,
+  "score_delta_vs_c067_t4": 1.924129243969445,
+  "score_tag": "[contest-CUDA]",
+  "stacked_archive_bytes": 271886
+}

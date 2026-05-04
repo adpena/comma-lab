@@ -1,0 +1,179 @@
+{
+  "archive_delta_bytes_vs_source": -14,
+  "candidate_id": "c082_p3_stream_resweep",
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "decoded_members": {
+    "masks.mkv": {
+      "bytes": 223385,
+      "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+    },
+    "optimized_poses.qp1": {
+      "bytes": 1140,
+      "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+    },
+    "renderer.bin": {
+      "bytes": 59288,
+      "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+    },
+    "seg_tile_actions.bin": {
+      "bytes": 160,
+      "sha256": "8b34ef134e6551c83d170f07c8f6672870f09df5d38551ab24320f4a2f20a373"
+    }
+  },
+  "decoded_stream_parity": true,
+  "decoded_stream_parity_detail": {
+    "candidate_decoded_members": {
+      "masks.mkv": {
+        "bytes": 223385,
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      "optimized_poses.qp1": {
+        "bytes": 1140,
+        "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+      },
+      "renderer.bin": {
+        "bytes": 59288,
+        "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 160,
+        "sha256": "8b34ef134e6551c83d170f07c8f6672870f09df5d38551ab24320f4a2f20a373"
+      }
+    },
+    "members_compared": [
+      "masks.mkv",
+      "optimized_poses.qp1",
+      "renderer.bin",
+      "seg_tile_actions.bin"
+    ],
+    "source_decoded_members": {
+      "masks.mkv": {
+        "bytes": 223385,
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      "optimized_poses.qp1": {
+        "bytes": 1140,
+        "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+      },
+      "renderer.bin": {
+        "bytes": 59288,
+        "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 160,
+        "sha256": "8b34ef134e6551c83d170f07c8f6672870f09df5d38551ab24320f4a2f20a373"
+      }
+    },
+    "status": "passed"
+  },
+  "evidence_grade": "empirical_lossless_byte_transform",
+  "formula_only_rate_score_delta_vs_source": -9.3220253437104e-06,
+  "noop": false,
+  "noop_status": "not_noop_repacked_payload",
+  "output_archive": {
+    "bytes": 276372,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c067_mask_topology_sub314_c088_lossless_repack_20260503/c082_p3_stream_resweep/archive.zip",
+    "sha256": "d3f7da81683a7557102a5844f893453b2ed9e325dcf4cedd79c694c6d7b3d5d9"
+  },
+  "payload": {
+    "bytes": 276272,
+    "format": "public_pr75_qzs3_qp1_segactions_p3",
+    "member": "p",
+    "sha256": "cfee821069511ae01a94bf7460a29dd748b44cf4385e8363dad86e464749d88a"
+  },
+  "promotion_eligible": false,
+  "runtime_parse_validation": {
+    "members": {
+      "masks.mkv": {
+        "bytes": 219465,
+        "codec": "brotli_av1_obu",
+        "decoded_bytes": 223385,
+        "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "sha256": "1ddf03dad8466797397ead26a0d481766e22e26cbc936251c1e3ed5d2f6eda99"
+      },
+      "optimized_poses.qp1": {
+        "bytes": 676,
+        "codec": "public_qp1_brotli",
+        "decoded_bytes": 1140,
+        "decoded_sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583",
+        "sha256": "61732151609c5decd72a3ac2254e9ac2258dae2846464eaeb14b5ef0a32d86f5"
+      },
+      "renderer.bin": {
+        "bytes": 55965,
+        "codec": "brotli_qzs3",
+        "decoded_bytes": 59288,
+        "decoded_sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb",
+        "sha256": "2544dfe50d2631a56600cbfc7342e4a18c97f953526fc51425be0d62f97e22ad"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 156,
+        "codec": "brotli_seg_tile_actions_v1",
+        "decoded_bytes": 160,
+        "decoded_sha256": "8b34ef134e6551c83d170f07c8f6672870f09df5d38551ab24320f4a2f20a373",
+        "sha256": "aa75e521df8252e3ba16d458cbfa75e1653997e9419a8f579a77c0e4b90009e7"
+      }
+    },
+    "parser": "/Users/adpena/Projects/pact/submissions/robust_current/unpack_renderer_payload.py",
+    "payload_format": "public_pr75_qzs3_qp1_segactions_p3"
+  },
+  "schema": "pr75_lossless_repack_candidate_manifest_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 276386,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/archive.zip",
+    "sha256": "9feef7ffaa254f9e5408996a122682757a054144a3000539553786c5292b7d0a"
+  },
+  "source_payload": {
+    "bytes": 276286,
+    "sha256": "93250610cbb819241d1356554149738af7de55e83a006396883fc7a18f51eff5"
+  },
+  "source_preservation": {
+    "archive_byte_identical_to_source": false,
+    "candidate_archive_sha256": "d3f7da81683a7557102a5844f893453b2ed9e325dcf4cedd79c694c6d7b3d5d9",
+    "candidate_payload_sha256": "cfee821069511ae01a94bf7460a29dd748b44cf4385e8363dad86e464749d88a",
+    "decoded_streams_byte_identical": true,
+    "payload_byte_identical_to_source": false,
+    "source_archive_sha256": "9feef7ffaa254f9e5408996a122682757a054144a3000539553786c5292b7d0a",
+    "source_payload_sha256": "93250610cbb819241d1356554149738af7de55e83a006396883fc7a18f51eff5",
+    "status": "lossless_decoded_stream_preserving_repack"
+  },
+  "source_preserving": true,
+  "stream_choices": {
+    "masks.mkv": {
+      "bytes": 219465,
+      "params": {
+        "lgblock": 17,
+        "lgwin": 19,
+        "mode": 0,
+        "quality": 11
+      },
+      "sha256": "1ddf03dad8466797397ead26a0d481766e22e26cbc936251c1e3ed5d2f6eda99"
+    },
+    "optimized_poses.bin": {
+      "bytes": 676,
+      "params": {
+        "lgblock": 0,
+        "lgwin": 16,
+        "mode": 0,
+        "quality": 11
+      },
+      "sha256": "61732151609c5decd72a3ac2254e9ac2258dae2846464eaeb14b5ef0a32d86f5"
+    },
+    "renderer.bin": {
+      "bytes": 55965,
+      "params": "source",
+      "sha256": "2544dfe50d2631a56600cbfc7342e4a18c97f953526fc51425be0d62f97e22ad"
+    },
+    "seg_tile_actions.bin": {
+      "bytes": 156,
+      "params": {
+        "lgblock": 0,
+        "lgwin": 16,
+        "mode": 0,
+        "quality": 9
+      },
+      "sha256": "aa75e521df8252e3ba16d458cbfa75e1653997e9419a8f579a77c0e4b90009e7"
+    }
+  },
+  "tool": "experiments/build_pr75_lossless_repack_candidates.py"
+}

@@ -1,0 +1,115 @@
+{
+  "baseline_archive": {
+    "bytes": 686635,
+    "path": "/teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+    "sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+    "zip_member_count": 3
+  },
+  "baseline_contest_auth_eval_json": {
+    "bytes": 4287,
+    "path": "/teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_pfp16/pfp16_a_plus_plus_t4_20260430T1620Z_codex/contest_auth_eval.json",
+    "sha256": "b84e7352165cf0d2be0631a177d8404c3a1e5f27633d82d48990552b9ef382ab"
+  },
+  "nonzero_point_count": 8,
+  "perturbation_plan": {
+    "bytes": 32609,
+    "path": "/teamspace/studios/this_studio/pact/experiments/results/alpha_mask_primitive_response_plan_pfp16_20260501_r1/alpha_mask_primitive_response_plan.json",
+    "sha256": "51478649a6ac947b34a7b3fd50e1cb5dc34aba44df9cd8c78a148bb10c10619a"
+  },
+  "point_count": 9,
+  "points": [
+    {
+      "archive": {
+        "bytes": 686635,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+        "sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+        "zip_member_count": 3
+      },
+      "epsilon": 0.0,
+      "index": 0
+    },
+    {
+      "archive": {
+        "bytes": 369707,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/alpha_mask_primitive_response_plan_pfp16_20260501_r1/archives/point_001_connected_component_set_component_to_neighbor_class_connected_component_set_component_.zip",
+        "sha256": "2fa4bc52a373b0907a6f03197f38d5328d0699630350baa2a11ac0859c38d021",
+        "zip_member_count": 3
+      },
+      "epsilon": 1.0,
+      "index": 1
+    },
+    {
+      "archive": {
+        "bytes": 369713,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/alpha_mask_primitive_response_plan_pfp16_20260501_r1/archives/point_002_connected_component_set_component_to_neighbor_class_connected_component_set_component_.zip",
+        "sha256": "4aaaec8e2b8416cc988285bdd23cec53643340fb1b48d9ab78d8af671a3ecbe7",
+        "zip_member_count": 3
+      },
+      "epsilon": 2.0,
+      "index": 2
+    },
+    {
+      "archive": {
+        "bytes": 369658,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/alpha_mask_primitive_response_plan_pfp16_20260501_r1/archives/point_003_boundary_band_set_source_boundary_band_to_target_class_boundary_band_set_source_bounda.zip",
+        "sha256": "a44944cc538766c6b37c20be67cb1c4f006bc5399f9a0916e52cffa76e4022b1",
+        "zip_member_count": 3
+      },
+      "epsilon": 3.0,
+      "index": 3
+    },
+    {
+      "archive": {
+        "bytes": 369664,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/alpha_mask_primitive_response_plan_pfp16_20260501_r1/archives/point_004_boundary_band_set_source_boundary_band_to_target_class_boundary_band_set_source_bounda.zip",
+        "sha256": "7affa1782a4f807c0fe2193f698f04e5e3c22c6b123c101a4497d4f8790ab1e7",
+        "zip_member_count": 3
+      },
+      "epsilon": 4.0,
+      "index": 4
+    },
+    {
+      "archive": {
+        "bytes": 369707,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/alpha_mask_primitive_response_plan_pfp16_20260501_r1/archives/point_005_class_flip_set_source_class_prefix_to_target_class_class_flip_set_source_class_prefix_.zip",
+        "sha256": "be0ac8de2aa95611e257f77ebcd40515f417c848994890c537dcc4c1fa2ff373",
+        "zip_member_count": 3
+      },
+      "epsilon": 5.0,
+      "index": 5
+    },
+    {
+      "archive": {
+        "bytes": 369658,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/alpha_mask_primitive_response_plan_pfp16_20260501_r1/archives/point_006_morphology_erode_erode_source_class_toward_target_class_morphology_erode_erode_source_.zip",
+        "sha256": "0350526b9e850a190467ea06a9f03f01b4df9cdc9f295d93150f7145dcf752d1",
+        "zip_member_count": 3
+      },
+      "epsilon": 6.0,
+      "index": 6
+    },
+    {
+      "archive": {
+        "bytes": 369658,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/alpha_mask_primitive_response_plan_pfp16_20260501_r1/archives/point_007_morphology_dilate_dilate_source_class_into_target_class_morphology_dilate_dilate_sourc.zip",
+        "sha256": "1c3b452d7119da5b5fee1baadc3f34d03f82bf7ec5cf74510ee68a0e39b5c8f1",
+        "zip_member_count": 3
+      },
+      "epsilon": 7.0,
+      "index": 7
+    },
+    {
+      "archive": {
+        "bytes": 369674,
+        "path": "/teamspace/studios/this_studio/pact/experiments/results/alpha_mask_primitive_response_plan_pfp16_20260501_r1/archives/point_008_transition_endpoint_advance_previous_endpoint_to_current_class_transition_endpoint_adv.zip",
+        "sha256": "4e1dc2d1c3c927a7d975fb7823dcdd9e508266e9d8def14b9f137cc5cc818e0a",
+        "zip_member_count": 3
+      },
+      "epsilon": 8.0,
+      "index": 8
+    }
+  ],
+  "recorded_at_utc": "2026-05-01T13:29:41Z",
+  "schema_version": 1,
+  "tool": "lightning_official_component_response_input_preflight"
+}

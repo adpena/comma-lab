@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "started_at_utc": "2026-05-02T06:27:10Z",
+  "git_hash": "no-git",
+  "gpu_name": "NVIDIA H100 80GB HBM3",
+  "driver_version": "590.48.01",
+  "lane_script": "scripts/remote_archive_only_eval.sh",
+  "tag": "public_pr67_external_faithful_trace",
+  "archive_path": "reports/raw/leaderboard_intel_20260501/pr67_archive.zip",
+  "inflate_sh": "/workspace/pact/experiments/results/public_leaderboard_inflate_adapters_20260502T0630Z/pr67/inflate.sh",
+  "inflate_sh_sha256": "0649834da2c25884ca867f98e9d11b0fee43a241df9daada857b61c2c45a8be6",
+  "predicted_band": [0.30, 0.35],
+  "controlled_baseline": "external public leaderboard archive; not an own-score claim",
+  "no_training": true,
+  "no_build": true,
+  "strict_scorer_rule_compliant": true,
+  "design_memo": "scripts/remote_archive_only_eval.sh"
+}

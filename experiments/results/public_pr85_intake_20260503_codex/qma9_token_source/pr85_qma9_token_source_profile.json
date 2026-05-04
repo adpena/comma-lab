@@ -1,0 +1,239 @@
+{
+  "archive_identity": {
+    "archive_bytes": 236328,
+    "archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+    "expected_archive_bytes": 236328,
+    "expected_archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+    "known_public_pr85_v5_match": true,
+    "member_compress_size": 236228,
+    "member_crc32_hex": "c6356353",
+    "member_file_size": 236228,
+    "member_name": "x",
+    "member_sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+    "path": "experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+    "zip_compress_type": 0
+  },
+  "bundle_format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+  "decode": {
+    "compile_command": [
+      "/usr/bin/c++",
+      "-O3",
+      "-std=c++17",
+      "experiments/results/public_pr85_intake_20260503_codex/replay_submission/range_mask_codec.cpp",
+      "-o",
+      "experiments/results/public_pr85_intake_20260503_codex/qma9_token_source/pr85_qma9_token_decoder"
+    ],
+    "implementation": "pr85_replay_cpp_decode",
+    "run_command": [
+      "experiments/results/public_pr85_intake_20260503_codex/qma9_token_source/pr85_qma9_token_decoder",
+      "decode",
+      "experiments/results/public_pr85_intake_20260503_codex/qma9_token_source/pr85_mask_segment.qma9",
+      "experiments/results/public_pr85_intake_20260503_codex/qma9_token_source/pr85_qma9_tokens_u8_storage_order.bin"
+    ],
+    "source": "experiments/results/public_pr85_intake_20260503_codex/replay_submission/range_mask_codec.cpp",
+    "stderr": "",
+    "stdout": "{\"decoded_bytes\":117964800}",
+    "storage_order": "frame_major_header_width_by_header_height"
+  },
+  "dispatch_performed": false,
+  "dispatch_unlock_reason": "This artifact profiles/extracts token source only; no replacement coder, archive parity, runtime parity, or dispatch claim exists.",
+  "dispatch_unlocked": false,
+  "evidence_grade": "empirical/local_token_source_profile",
+  "exactness": {
+    "mask_segment_byte_exact": true,
+    "mask_segment_exact_basis": "single-member PR85 archive slice plus profile/known identity checks",
+    "qma9_reencode_byte_exact": false,
+    "raw_tensor_exact": true,
+    "raw_tensor_exact_basis": "decoded from charged QMA9 bytes using the selected deterministic decoder",
+    "raw_tensor_extracted": true
+  },
+  "gpu_required": false,
+  "mask_segment_identity": {
+    "bytes": 159011,
+    "expected_profile": {
+      "bytes": 159011,
+      "profile_json": "experiments/results/public_pr85_intake_20260503_codex/profile_pr85_bundle.json",
+      "sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179"
+    },
+    "expected_public_pr85_mask_bytes": 159011,
+    "extracted_qma9_path": "experiments/results/public_pr85_intake_20260503_codex/qma9_token_source/pr85_mask_segment.qma9",
+    "extracted_qma9_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+    "header": {
+      "bitstream_bytes": 158991,
+      "bitstream_sha256": "77196f31a8fdfbf8f91c9c30600945473376534f15245bfb7622ddd77d17e3af",
+      "decoded_mask_bytes": 117964800,
+      "frame_count": 600,
+      "header_bytes": 20,
+      "height": 384,
+      "magic": "QMA9",
+      "packed_bytes": 159011,
+      "payload_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+      "width": 512
+    },
+    "matches_expected_public_pr85_mask_bytes": true,
+    "matches_profile_json": true,
+    "name": "mask",
+    "offset": 24,
+    "sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179"
+  },
+  "next_gates_for_entropy_code_replacement": [
+    {
+      "gate": "fit_pr85_entropy_model_on_this_token_source",
+      "required": true,
+      "status": "blocked_until_model_artifact_exists"
+    },
+    {
+      "expected_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+      "gate": "decode_entropy_stream_to_same_token_sha256",
+      "required": true,
+      "status": "blocked_until_candidate_entropy_stream_exists"
+    },
+    {
+      "gate": "archive_replacement_changes_only_mask_stream_and_runtime_decoder",
+      "required": true,
+      "status": "blocked_until_byte_closed_candidate_archive_exists"
+    },
+    {
+      "gate": "runtime_output_parity_before_exact_eval",
+      "required": true,
+      "status": "blocked_until_candidate_runtime_consumes_archive_bytes"
+    },
+    {
+      "gate": "dispatch_claim_before_any_remote_or_gpu_eval",
+      "required": true,
+      "status": "not_unlocked_by_this_profile"
+    }
+  ],
+  "planning_only": true,
+  "recorded_at_utc": "2026-05-04T02:49:40Z",
+  "reencode_check": {
+    "byte_exact": false,
+    "performed": false,
+    "reason": "run with --verify-reencode after raw token extraction for independent QMA9 byte parity"
+  },
+  "schema": "pr85_qma9_mask_token_source_profile_v1",
+  "score_claim": false,
+  "segments": [
+    {
+      "bytes": 159011,
+      "is_mask_token_source": true,
+      "magic_hex": "514d413958020000",
+      "name": "mask",
+      "offset": 24,
+      "sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179"
+    },
+    {
+      "bytes": 57074,
+      "is_mask_token_source": false,
+      "magic_hex": "b1a8843f8097a162",
+      "name": "model",
+      "offset": 159035,
+      "sha256": "c9194c19d44d3c32c4e588bbe4f9986ed0c562779078f0f4d6b073f0799b5dbc"
+    },
+    {
+      "bytes": 1487,
+      "is_mask_token_source": false,
+      "magic_hex": "a2e120a29a3463fe",
+      "name": "pose",
+      "offset": 216109,
+      "sha256": "2b6e03e02fb17f662e3f3f9ce47daf2fc33bf1f76c96e34ffac005f1c5c4054c"
+    },
+    {
+      "bytes": 1400,
+      "is_mask_token_source": false,
+      "magic_hex": "e22b61464ace67fc",
+      "name": "post",
+      "offset": 217596,
+      "sha256": "c3dc88e0fb5a1e48aec49eeacefeea20685e3c02598933deb1ff22dc09892575"
+    },
+    {
+      "bytes": 226,
+      "is_mask_token_source": false,
+      "magic_hex": "424b00ff20803ad5",
+      "name": "shift",
+      "offset": 218996,
+      "sha256": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4"
+    },
+    {
+      "bytes": 106,
+      "is_mask_token_source": false,
+      "magic_hex": "421600009836dc8d",
+      "name": "frac",
+      "offset": 219222,
+      "sha256": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992"
+    },
+    {
+      "bytes": 149,
+      "is_mask_token_source": false,
+      "magic_hex": "424b00bf91727574",
+      "name": "frac2",
+      "offset": 219328,
+      "sha256": "3a01c7546d89d9d3ca846da37a20add7d456421e9211a6339850d946b856026b"
+    },
+    {
+      "bytes": 154,
+      "is_mask_token_source": false,
+      "magic_hex": "424b00ff919235bc",
+      "name": "frac3",
+      "offset": 219477,
+      "sha256": "d725b01b604566c5a76a06b821c644c8d5d5bb9a57ab0597d3bdabc8389858b5"
+    },
+    {
+      "bytes": 223,
+      "is_mask_token_source": false,
+      "magic_hex": "424b00ff919235bc",
+      "name": "bias",
+      "offset": 219631,
+      "sha256": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b"
+    },
+    {
+      "bytes": 273,
+      "is_mask_token_source": false,
+      "magic_hex": "424b00fff050b57d",
+      "name": "region",
+      "offset": 219854,
+      "sha256": "4a7c16094fab281c30e27621a58577c095c4b1153c232518c9adbaba2a2b2392"
+    },
+    {
+      "bytes": 16101,
+      "is_mask_token_source": false,
+      "magic_hex": "b1004f2b51c6d84e",
+      "name": "randmulti",
+      "offset": 220127,
+      "sha256": "c624372e60a0851c4c427dc333a60dcc5d6657ba8ed56951612e7c9d7be7629f"
+    }
+  ],
+  "token_source": {
+    "bytes": 117964800,
+    "class_counts": {
+      "0": 27408427,
+      "1": 690063,
+      "2": 58413695,
+      "3": 1459867,
+      "4": 29992748
+    },
+    "decode_implementation": "pr85_replay_cpp_decode",
+    "dtype": "uint8",
+    "element_count": 117964800,
+    "extracted": true,
+    "invalid_symbol_values": [],
+    "observed_range": {
+      "max": 4,
+      "min": 0
+    },
+    "path": "experiments/results/public_pr85_intake_20260503_codex/qma9_token_source/pr85_qma9_tokens_u8_storage_order.bin",
+    "range_contract": {
+      "max": 4,
+      "min": 0,
+      "sentinel_internal_only": 5
+    },
+    "semantic": "QMA9 decoded mask class token ids",
+    "sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+    "shape": [
+      600,
+      512,
+      384
+    ]
+  },
+  "tool": "experiments/profile_pr85_qma9_token_source.py"
+}

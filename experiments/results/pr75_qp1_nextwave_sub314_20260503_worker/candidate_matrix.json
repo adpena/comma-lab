@@ -1,0 +1,288 @@
+[
+  {
+    "archive_bytes": 276389,
+    "archive_path": "experiments/results/pr75_qp1_nextwave_sub314_20260503_worker/action_compiler_candidates/c067_pr75_actions_positive_poseharm_ampminus1_p6/archive.zip",
+    "archive_sha256": "244c366a7d07ff185091dbbcf7ecb1e0308d11d9e7467bc2ae2eb2f8b6bd0a6a",
+    "candidate_id": "c067_pr75_actions_positive_poseharm_ampminus1_p6",
+    "changed_action_id_record_count": 31,
+    "delta_vs_c088": {
+      "archive_bytes": 3,
+      "planning_score_delta": -4.7679265108235835e-05,
+      "rate_score_delta": 1.9975768593665143e-06
+    },
+    "dispatch_priority": 1,
+    "dispatch_status": "ready_for_future_exact_cuda_after_lane_claim_no_dispatch_in_this_run",
+    "evidence_grade": "byte_and_trace_planning_only_until_exact_cuda",
+    "exact_reason_it_could_beat_c088": "Best T4-trace-ranked component move after P6: keeps only positive PR75 action records, shrinks pose-harm records, changes 31 action ids, and preserves a single-member P6 delta-varint payload. It can beat C088 if the T4 actions-only SegNet gain survives the amplitude shrink without PoseNet collapse.",
+    "expected_score_band": {
+      "band_note": "planning-only trace/rate band; exact CUDA can reorder or reject components",
+      "high_if_trace_overfits": 0.315555012711621,
+      "low_if_trace_survives": 0.315445012711621,
+      "planning_center_from_t4_trace": 0.31547501271162115
+    },
+    "family": "pr75_tile_action_component_policy",
+    "manifest_path": "experiments/results/pr75_qp1_nextwave_sub314_20260503_worker/action_compiler_candidates/c067_pr75_actions_positive_poseharm_ampminus1_p6/manifest.json",
+    "no_remote_gpu_dispatch_performed": true,
+    "pair_tile_duplicate_record_count": 0,
+    "rank": 1,
+    "score_claim": false,
+    "selected_delta_pose_trace_sum": -3.46063383982409e-06,
+    "selected_delta_seg_trace_sum": 0.00026194259407930076,
+    "selected_record_count": 60,
+    "wire_format": "p6"
+  },
+  {
+    "archive_bytes": 276317,
+    "archive_path": "experiments/results/pr75_qp1_nextwave_sub314_20260503_worker/action_compiler_candidates/c067_pr75_actions_pose_safe_positive_ampminus1_p6/archive.zip",
+    "archive_sha256": "6e6ec4609c6da581b4113c5c06e67970542a9d8e22c4866959fe618aaff2c796",
+    "candidate_id": "c067_pr75_actions_pose_safe_positive_ampminus1_p6",
+    "changed_action_id_record_count": 28,
+    "delta_vs_c088": {
+      "archive_bytes": -69,
+      "planning_score_delta": -1.5271272373995615e-05,
+      "rate_score_delta": -4.594426776542982e-05
+    },
+    "dispatch_priority": 2,
+    "dispatch_status": "ready_for_future_exact_cuda_after_lane_claim_no_dispatch_in_this_run",
+    "evidence_grade": "byte_and_trace_planning_only_until_exact_cuda",
+    "exact_reason_it_could_beat_c088": "Lowest-rate component-moving action candidate: -69 bytes versus C088, pose-positive selected trace sum, 28 changed action ids, no duplicate pair/tile records. It can beat C088 through small rate gain plus a conservative pose-safe SegNet action subset.",
+    "expected_score_band": {
+      "band_note": "planning-only trace/rate band; exact CUDA can reorder or reject components",
+      "high_if_trace_overfits": 0.315587420704355,
+      "low_if_trace_survives": 0.315477420704355,
+      "planning_center_from_t4_trace": 0.3155074207043554
+    },
+    "family": "pr75_tile_action_component_policy",
+    "manifest_path": "experiments/results/pr75_qp1_nextwave_sub314_20260503_worker/action_compiler_candidates/c067_pr75_actions_pose_safe_positive_ampminus1_p6/manifest.json",
+    "no_remote_gpu_dispatch_performed": true,
+    "pair_tile_duplicate_record_count": 0,
+    "rank": 2,
+    "score_claim": false,
+    "selected_delta_pose_trace_sum": 4.249838735094821e-05,
+    "selected_delta_seg_trace_sum": 0.00013563373552945748,
+    "selected_record_count": 29,
+    "wire_format": "p6"
+  },
+  {
+    "archive_bytes": 276416,
+    "archive_path": "experiments/results/pr75_qp1_nextwave_sub314_20260503_worker/action_compiler_candidates/c067_pr75_actions_lag_eval_top40_signedposemix1_p6/archive.zip",
+    "archive_sha256": "0486e9f2adb8f883160599ed3bccd371b2c1ffdf23585edbcd4308435451e9f4",
+    "candidate_id": "c067_pr75_actions_lag_eval_top40_signedposemix1_p6",
+    "changed_action_id_record_count": 45,
+    "delta_vs_c088": {
+      "archive_bytes": 30,
+      "planning_score_delta": -2.837890981460811e-05,
+      "rate_score_delta": 1.997576859366514e-05
+    },
+    "dispatch_priority": 3,
+    "dispatch_status": "ready_for_future_exact_cuda_after_lane_claim_no_dispatch_in_this_run",
+    "evidence_grade": "byte_and_trace_planning_only_until_exact_cuda",
+    "exact_reason_it_could_beat_c088": "Nonlinear escape candidate: calibrated Lagrangian top40 plus signed residual atoms. It can beat C088 if same-pair signed residuals improve SegNet/PoseNet beyond the additive trace estimate; duplicate pair/tile records make it higher risk.",
+    "expected_score_band": {
+      "band_note": "planning-only trace/rate band; exact CUDA can reorder or reject components",
+      "high_if_trace_overfits": 0.315574313066915,
+      "low_if_trace_survives": 0.315464313066915,
+      "planning_center_from_t4_trace": 0.3154943130669148
+    },
+    "family": "pr75_tile_action_component_policy",
+    "manifest_path": "experiments/results/pr75_qp1_nextwave_sub314_20260503_worker/action_compiler_candidates/c067_pr75_actions_lag_eval_top40_signedposemix1_p6/manifest.json",
+    "no_remote_gpu_dispatch_performed": true,
+    "pair_tile_duplicate_record_count": 37,
+    "rank": 3,
+    "score_claim": false,
+    "selected_delta_pose_trace_sum": 4.3536706149354544e-05,
+    "selected_delta_seg_trace_sum": 0.0002136230905307457,
+    "selected_record_count": 77,
+    "wire_format": "p6"
+  },
+  {
+    "archive_bytes": 276421,
+    "archive_path": "experiments/results/pr75_qp1_nextwave_sub314_20260503_worker/action_compiler_candidates/c067_pr75_actions_top67_ampfit_p6/archive.zip",
+    "archive_sha256": "ef790959626ceb2736ece906938e671708fd5357fcd4db8944018e301789a97e",
+    "candidate_id": "c067_pr75_actions_top67_ampfit_p6",
+    "changed_action_id_record_count": 61,
+    "delta_vs_c088": {
+      "archive_bytes": 35,
+      "planning_score_delta": -1.792003945377818e-05,
+      "rate_score_delta": 2.3305063359275998e-05
+    },
+    "dispatch_priority": 4,
+    "dispatch_status": "ready_for_future_exact_cuda_after_lane_claim_no_dispatch_in_this_run",
+    "evidence_grade": "byte_and_trace_planning_only_until_exact_cuda",
+    "exact_reason_it_could_beat_c088": "Full-action amplitude-fit probe: adjusts PR75 action amplitudes by pose/seg trace sign while retaining the P6 compact action codec. It can beat C088 if top25 ampminus1 T4 improvement generalizes across the full action body.",
+    "expected_score_band": {
+      "band_note": "planning-only trace/rate band; exact CUDA can reorder or reject components",
+      "high_if_trace_overfits": 0.315584771937276,
+      "low_if_trace_survives": 0.315474771937276,
+      "planning_center_from_t4_trace": 0.3155047719372756
+    },
+    "family": "pr75_tile_action_component_policy",
+    "manifest_path": "experiments/results/pr75_qp1_nextwave_sub314_20260503_worker/action_compiler_candidates/c067_pr75_actions_top67_ampfit_p6/manifest.json",
+    "no_remote_gpu_dispatch_performed": true,
+    "pair_tile_duplicate_record_count": 0,
+    "rank": 4,
+    "score_claim": false,
+    "selected_delta_pose_trace_sum": -2.462804024778363e-05,
+    "selected_delta_seg_trace_sum": 0.00027465826133266086,
+    "selected_record_count": 67,
+    "wire_format": "p6"
+  },
+  {
+    "archive_bytes": 276424,
+    "archive_path": "experiments/results/pr75_qp1_nextwave_sub314_20260503_worker/action_compiler_candidates/c067_pr75_actions_all_ampminus1_p6/archive.zip",
+    "archive_sha256": "09a4896554447b94e430a7b07814cb017a999e7d5267c9021455f95127be51a7",
+    "candidate_id": "c067_pr75_actions_all_ampminus1_p6",
+    "changed_action_id_record_count": 66,
+    "delta_vs_c088": {
+      "archive_bytes": 38,
+      "planning_score_delta": -1.592246259440877e-05,
+      "rate_score_delta": 2.5302640218642514e-05
+    },
+    "dispatch_priority": 5,
+    "dispatch_status": "ready_for_future_exact_cuda_after_lane_claim_no_dispatch_in_this_run",
+    "evidence_grade": "byte_and_trace_planning_only_until_exact_cuda",
+    "exact_reason_it_could_beat_c088": "Full-body uniform shrink probe: tests whether the top25 ampminus1 T4 gain was amplitude-scale driven rather than subset driven. It can beat C088 if the full-action SegNet benefit survives the uniform shrink.",
+    "expected_score_band": {
+      "band_note": "planning-only trace/rate band; exact CUDA can reorder or reject components",
+      "high_if_trace_overfits": 0.315586769514135,
+      "low_if_trace_survives": 0.315476769514135,
+      "planning_center_from_t4_trace": 0.315506769514135
+    },
+    "family": "pr75_tile_action_component_policy",
+    "manifest_path": "experiments/results/pr75_qp1_nextwave_sub314_20260503_worker/action_compiler_candidates/c067_pr75_actions_all_ampminus1_p6/manifest.json",
+    "no_remote_gpu_dispatch_performed": true,
+    "pair_tile_duplicate_record_count": 0,
+    "rank": 5,
+    "score_claim": false,
+    "selected_delta_pose_trace_sum": -2.462804024778363e-05,
+    "selected_delta_seg_trace_sum": 0.00027465826133266086,
+    "selected_record_count": 67,
+    "wire_format": "p6"
+  },
+  {
+    "archive_bytes": 276425,
+    "archive_path": "experiments/results/pr75_qp1_nextwave_sub314_20260503_worker/action_compiler_candidates/c067_pr75_actions_poseharm_ampminus1_p6/archive.zip",
+    "archive_sha256": "002ef3335a8d66b10240024b670d0a143e278d38ec939c20b689d33848f2fe9c",
+    "candidate_id": "c067_pr75_actions_poseharm_ampminus1_p6",
+    "changed_action_id_record_count": 38,
+    "delta_vs_c088": {
+      "archive_bytes": 39,
+      "planning_score_delta": -1.525660364126713e-05,
+      "rate_score_delta": 2.5968499171764683e-05
+    },
+    "dispatch_priority": 6,
+    "dispatch_status": "ready_for_future_exact_cuda_after_lane_claim_no_dispatch_in_this_run",
+    "evidence_grade": "byte_and_trace_planning_only_until_exact_cuda",
+    "exact_reason_it_could_beat_c088": "Pose-harm-only shrink: isolates whether reducing only negative-pose-contribution records recovers PoseNet while retaining PR75 SegNet gains. It can beat C088 if PoseNet damage is localized to those records.",
+    "expected_score_band": {
+      "band_note": "planning-only trace/rate band; exact CUDA can reorder or reject components",
+      "high_if_trace_overfits": 0.315587435373088,
+      "low_if_trace_survives": 0.315477435373088,
+      "planning_center_from_t4_trace": 0.3155074353730881
+    },
+    "family": "pr75_tile_action_component_policy",
+    "manifest_path": "experiments/results/pr75_qp1_nextwave_sub314_20260503_worker/action_compiler_candidates/c067_pr75_actions_poseharm_ampminus1_p6/manifest.json",
+    "no_remote_gpu_dispatch_performed": true,
+    "pair_tile_duplicate_record_count": 0,
+    "rank": 6,
+    "score_claim": false,
+    "selected_delta_pose_trace_sum": -2.462804024778363e-05,
+    "selected_delta_seg_trace_sum": 0.00027465826133266086,
+    "selected_record_count": 67,
+    "wire_format": "p6"
+  },
+  {
+    "archive_bytes": 276447,
+    "archive_path": "experiments/results/pr75_qp1_nextwave_sub314_20260503_worker/action_compiler_candidates/c067_pr75_actions_positive_poseharm_ampminus1_p3/archive.zip",
+    "archive_sha256": "2ea3bc61262a3e0e225458ec165483ce8f4d61d4b12ae26d4bd0f50257a40e92",
+    "candidate_id": "c067_pr75_actions_positive_poseharm_ampminus1_p3",
+    "changed_action_id_record_count": 31,
+    "delta_vs_c088": {
+      "archive_bytes": 61,
+      "planning_score_delta": -9.05944582718643e-06,
+      "rate_score_delta": 4.061739614045245e-05
+    },
+    "dispatch_priority": 7,
+    "dispatch_status": "ready_for_future_exact_cuda_after_lane_claim_no_dispatch_in_this_run",
+    "evidence_grade": "byte_and_trace_planning_only_until_exact_cuda",
+    "exact_reason_it_could_beat_c088": "Runtime fallback for the top P6 action policy. Same decoded action intent as positive_poseharm_ampminus1_p6 but uses older P3 encoding if the active P6 wave shows runtime drift.",
+    "expected_score_band": {
+      "band_note": "planning-only trace/rate band; exact CUDA can reorder or reject components",
+      "high_if_trace_overfits": 0.315593632530902,
+      "low_if_trace_survives": 0.315483632530902,
+      "planning_center_from_t4_trace": 0.3155136325309022
+    },
+    "family": "pr75_tile_action_component_policy",
+    "manifest_path": "experiments/results/pr75_qp1_nextwave_sub314_20260503_worker/action_compiler_candidates/c067_pr75_actions_positive_poseharm_ampminus1_p3/manifest.json",
+    "no_remote_gpu_dispatch_performed": true,
+    "pair_tile_duplicate_record_count": 0,
+    "rank": 7,
+    "score_claim": false,
+    "selected_delta_pose_trace_sum": -3.46063383982409e-06,
+    "selected_delta_seg_trace_sum": 0.00026194259407930076,
+    "selected_record_count": 60,
+    "wire_format": "p3"
+  },
+  {
+    "archive_bytes": 276706,
+    "archive_path": "experiments/results/pr75_qp1_nextwave_sub314_20260503_worker/action_compiler_candidates/c067_pr75_actions_top67_custompose125_p5/archive.zip",
+    "archive_sha256": "d5b3061cfb31fdaf954cb2b4f8ee3db3d1a7565196495fa15e99b3d0102d8c3f",
+    "candidate_id": "c067_pr75_actions_top67_custompose125_p5",
+    "changed_action_id_record_count": 0,
+    "delta_vs_c088": {
+      "archive_bytes": 320,
+      "planning_score_delta": 0.0001718497621860382,
+      "rate_score_delta": 0.00021307486499909484
+    },
+    "dispatch_priority": 8,
+    "dispatch_status": "ready_for_future_exact_cuda_after_lane_claim_no_dispatch_in_this_run",
+    "evidence_grade": "byte_and_trace_planning_only_until_exact_cuda",
+    "exact_reason_it_could_beat_c088": "Charged custom-action dictionary probe. It is rate-expensive, but it tests whether custom pose-aware deltas unlock component response unavailable to fixed PR75 dictionary actions.",
+    "expected_score_band": {
+      "band_note": "planning-only trace/rate band; exact CUDA can reorder or reject components",
+      "high_if_trace_overfits": 0.315774541738915,
+      "low_if_trace_survives": 0.315664541738915,
+      "planning_center_from_t4_trace": 0.3156945417389154
+    },
+    "family": "pr75_tile_action_component_policy",
+    "manifest_path": "experiments/results/pr75_qp1_nextwave_sub314_20260503_worker/action_compiler_candidates/c067_pr75_actions_top67_custompose125_p5/manifest.json",
+    "no_remote_gpu_dispatch_performed": true,
+    "pair_tile_duplicate_record_count": 0,
+    "rank": 8,
+    "score_claim": false,
+    "selected_delta_pose_trace_sum": -2.462804024778363e-05,
+    "selected_delta_seg_trace_sum": 0.00027465826133266086,
+    "selected_record_count": 67,
+    "wire_format": "p5"
+  },
+  {
+    "archive_bytes": 129257,
+    "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr75_qp1_nextwave_sub314_20260503_worker/cmg3_yf_top1base_top0064/archive.zip",
+    "archive_sha256": "97d0bbb02ef1c19f0db907054e3af94f2d25bf5a1264d2c520caa46bbaef5663",
+    "candidate_id": "cmg3_yf_top1base_top0064",
+    "delta_vs_c088": {
+      "archive_bytes": -147129,
+      "byte_only_rate_score_delta": -0.09796716191391196,
+      "pixel_disagreement_vs_source": 0.03536205715603299
+    },
+    "dispatch_priority": "blocked",
+    "dispatch_status": "do_not_dispatch_same_family_exact_negative_until_new_pose_safety_or_geometry_escape_proof",
+    "evidence_grade": "empirical_byte_screen_archive_candidate_until_exact_cuda",
+    "exact_reason_it_could_beat_c088": "It saves 147129 bytes versus C088, far beyond the 2200-byte unchanged-distortion threshold; it would be sub-0.314 if geometry and components survived. Existing CMG3A/YF exact CUDA negatives make that condition false for current policies, so this is custody plus blocker evidence, not a dispatch candidate.",
+    "expected_score_band": {
+      "band_note": "sub-0.314 by rate only if mask geometry survives; same-family exact CUDA evidence says it does not yet survive",
+      "byte_only_unchanged_distortion_floor": 0.21755553006281741,
+      "same_family_exact_negative_observed_range": [
+        7.014092131069795,
+        29.16496751549104
+      ]
+    },
+    "family": "cmg3_yousfi_fridrich_field_policy_large_byte_screen",
+    "manifest_path": "experiments/results/pr75_qp1_nextwave_sub314_20260503_worker/cmg3_yf_top1base_top0064/build_manifest.json",
+    "no_remote_gpu_dispatch_performed": true,
+    "rank": 99,
+    "score_claim": false,
+    "selected_extra_runs": 64,
+    "wire_format": "rpk1_json_brotli_wrapped_cmg3_qp1"
+  }
+]

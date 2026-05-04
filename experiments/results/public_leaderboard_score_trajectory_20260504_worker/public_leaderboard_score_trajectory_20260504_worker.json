@@ -1,0 +1,704 @@
+{
+  "archive_members": [
+    "PR85 experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr85/archive.zip",
+    "  x bytes=236228 sha256=53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+    "PR86 experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr86/archive.zip",
+    "  master.pt.gz bytes=31144 sha256=3f3ee2b19ba5cf97017559750c0d64bc422c3f84fedaed1877741ee6c6bd5236",
+    "  slave.pt.gz bytes=32287 sha256=817294dea0d940a8ef62c190bf96338f5a756930882f0f0d7f4d7c7eb87a82a8",
+    "  hpac.pt.ppmd bytes=28243 sha256=de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+    "  tokens.bin bytes=113900 sha256=14144bde496631f89a02646496bc2e66306bba6da149ddca37e21d85d175f225",
+    "  meta.pt bytes=1499 sha256=848381e2da1b0f307670174f135a3925c43d8cdc73576b4bf05fadf833de4a08",
+    "PR87 experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr87/archive.zip",
+    "  a bytes=0 sha256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "PR88 experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr88/archive.zip",
+    "  p bytes=215860 sha256=c59524610474c89e5a41433f47d2bb881f878e694f853db1377272699f9eb3e9",
+    "PR89 experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr89/archive.zip",
+    "  x bytes=236228 sha256=53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+    "  fb bytes=300 sha256=1cac91437fd3ca3523ed6eaca4fc7f57b072fd24684fa2da9f267c42b2d0a5dc"
+  ],
+  "downloaded_artifacts": [
+    {
+      "bytes": 15819,
+      "path": "experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/master_README.md",
+      "sha256": "010021c244403ed3fc6bc5db5bf907e386d9ce37b074dce0a411a5423e97e176"
+    },
+    {
+      "bytes": 236328,
+      "path": "experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr85/archive.zip",
+      "sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e"
+    },
+    {
+      "bytes": 2736,
+      "path": "experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr85/submissions_adaptive_masking_joint_frame_model_README.md",
+      "sha256": "e3e8bbcaee44e94c60196e1cc354002ffdcfcf04414107713820990f578ff2f0"
+    },
+    {
+      "bytes": 85145,
+      "path": "experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr85/submissions_adaptive_masking_joint_frame_model_inflate.py",
+      "sha256": "ff534ee0ef7a51dd4ec7a24570d812b32ce966e8b98b2dfdbe347ce9fa4ff3e7"
+    },
+    {
+      "bytes": 228,
+      "path": "experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr85/submissions_adaptive_masking_joint_frame_model_inflate.sh",
+      "sha256": "2c37f19e210f97c8926b70594e4d57fd8b0256dadace0cd55c28bbe6995ff027"
+    },
+    {
+      "bytes": 53975,
+      "path": "experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr85/submissions_adaptive_masking_joint_frame_model_range_mask_codec.cpp",
+      "sha256": "94cd1a86111fb6d34b6e12d37c624bd5938df0fbc6c4c24c8d40c5a83fcb016b"
+    },
+    {
+      "bytes": 207579,
+      "path": "experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr86/archive.zip",
+      "sha256": "e67b7c22240dbe33853c19d049b0044a5df16ce5f751ba8f1021cab8ceb03cef"
+    },
+    {
+      "bytes": 2148,
+      "path": "experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr86/pyproject.toml",
+      "sha256": "416cc6aab264db0c0ec07d62920e2a8a85dddcf501cd7600089e403f952366b6"
+    },
+    {
+      "bytes": 698,
+      "path": "experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr86/submissions_jas0xf_adversarial_neural_representation_README.md",
+      "sha256": "a35e8042adcff9f4d784b814c0333c4a66c742491f06f3107670ad67e1f3899c"
+    },
+    {
+      "bytes": 5215,
+      "path": "experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr86/submissions_jas0xf_adversarial_neural_representation_compress.py",
+      "sha256": "fda16b6e3d32bad77bf371f198e2253678e9f91470ee191cf7a9eef6bea196eb"
+    },
+    {
+      "bytes": 297,
+      "path": "experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr86/submissions_jas0xf_adversarial_neural_representation_compress.sh",
+      "sha256": "b562a4246d527880a4ae21ec43317eabd4ea8d96ae75ac229320595bd293d5b9"
+    },
+    {
+      "bytes": 19657,
+      "path": "experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr86/submissions_jas0xf_adversarial_neural_representation_inflate.py",
+      "sha256": "f86f3067386928478d983817c9f9ee095ce6eb02aee8c0fbb7987cd0af1f9b01"
+    },
+    {
+      "bytes": 396,
+      "path": "experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr86/submissions_jas0xf_adversarial_neural_representation_inflate.sh",
+      "sha256": "8c43acac3e0959161b612d9bacd66d7e70070f412aefbed74f7b5d65e60e94ce"
+    },
+    {
+      "bytes": 3968,
+      "path": "experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr86/submissions_jas0xf_adversarial_neural_representation_training_README.md",
+      "sha256": "3474d0fc4d6b48312f494bd8b84af5f916c8da0ae44384a9e04913266e7d92a1"
+    },
+    {
+      "bytes": 11615,
+      "path": "experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr86/submissions_jas0xf_adversarial_neural_representation_training_archive.py",
+      "sha256": "f5b5ca41b50b4dfae7cb9289e07d19044a23a32f8238dc1ac0f978794b134c64"
+    },
+    {
+      "bytes": 1701,
+      "path": "experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr86/submissions_jas0xf_adversarial_neural_representation_training_data.py",
+      "sha256": "3e2055277cd255141c1db5ea6391809f31bc189201556ec05c5ff6ec41fe3549"
+    },
+    {
+      "bytes": 26408,
+      "path": "experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr86/submissions_jas0xf_adversarial_neural_representation_training_hpac.py",
+      "sha256": "2d80be4ba7df9e45e9824f0acfa489f8678aadb3014d7938ca6691449c3d0a07"
+    },
+    {
+      "bytes": 23302,
+      "path": "experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr86/submissions_jas0xf_adversarial_neural_representation_training_master.py",
+      "sha256": "289969bbad32bcb791f6548d034aa2beee83319b184ed4cb5ef51f00d279118c"
+    },
+    {
+      "bytes": 52351,
+      "path": "experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr86/submissions_jas0xf_adversarial_neural_representation_training_slave.py",
+      "sha256": "04d26c6cddeb9d36d4e95d8733ad826acb28c5a88882865bd21b07d15d2d80c0"
+    },
+    {
+      "bytes": 100,
+      "path": "experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr87/archive.zip",
+      "sha256": "360a2551cfdb609f954f2b4f40b39e5b212356e5886442511a33dcaf728a1cb6"
+    },
+    {
+      "bytes": 767055,
+      "path": "experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr87/submissions_100_bytes_inflate.py",
+      "sha256": "7fb6266b448b2a1f51f7b809e7fdf6ba4d37ec7e5f30fc0affe0d2ff6d9f267f"
+    },
+    {
+      "bytes": 418,
+      "path": "experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr87/submissions_100_bytes_inflate.sh",
+      "sha256": "6c75c76c628c1aa299d5f246c6b6b42129a6d934e7e7fd37bc5495cf9b5bad22"
+    },
+    {
+      "bytes": 215960,
+      "path": "experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr88/archive.zip",
+      "sha256": "cd01378a52688fe00ee1bfb898c67695aed89a7b3ded602b597eb7fc3031d7fc"
+    },
+    {
+      "bytes": 28275,
+      "path": "experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr88/submissions_qzs3_range_mask_gpu_preflight_inflate.py",
+      "sha256": "429f6580ce409ccf01e2e46f72149181c0e40cc889a8ebd6d0bcefbddcebdaee"
+    },
+    {
+      "bytes": 524,
+      "path": "experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr88/submissions_qzs3_range_mask_gpu_preflight_inflate.sh",
+      "sha256": "7824116e0d88c290e27b782d314de1d88611d5f99379521256af5369bb3ae74f"
+    },
+    {
+      "bytes": 11693,
+      "path": "experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr88/submissions_qzs3_range_mask_gpu_preflight_range_mask_codec.cpp",
+      "sha256": "26b44194c9b364ae3e4b7a30832204c008324df91bc12281d30cee30c43b4676"
+    },
+    {
+      "bytes": 1375,
+      "path": "experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr89/PR_BODY.md",
+      "sha256": "3bb231f62cfdbcd63bde4fb650947427361d65d5a8e233a4484305e3ca02e568"
+    },
+    {
+      "bytes": 236676,
+      "path": "experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr89/archive.zip",
+      "sha256": "2f4d38f295792bebc3e722abaad7647ecdd647b8a5948285bbe0906a6883ee98"
+    },
+    {
+      "bytes": 1122,
+      "path": "experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr89/submissions_henosis_final_bias_README.md",
+      "sha256": "04d6b9c2515504ed18f4bbbef3c33f80e40168375c04f9002db2911dc405b679"
+    },
+    {
+      "bytes": 86351,
+      "path": "experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr89/submissions_henosis_final_bias_inflate.py",
+      "sha256": "c1116e9b00fae4e8ba0c21890f46fa467749623b8d887d89839519adc233995a"
+    },
+    {
+      "bytes": 228,
+      "path": "experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr89/submissions_henosis_final_bias_inflate.sh",
+      "sha256": "2c37f19e210f97c8926b70594e4d57fd8b0256dadace0cd55c28bbe6995ff027"
+    },
+    {
+      "bytes": 53975,
+      "path": "experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr89/submissions_henosis_final_bias_range_mask_codec.cpp",
+      "sha256": "94cd1a86111fb6d34b6e12d37c624bd5938df0fbc6c4c24c8d40c5a83fcb016b"
+    },
+    {
+      "bytes": 625,
+      "path": "experiments/results/public_leaderboard_score_trajectory_20260504_worker/downloads/pr89/submissions_henosis_final_bias_report.txt",
+      "sha256": "ae8acf9005c8b3a871cfab41f39f07c6f46ae571307e1b05ad6682e2dd1b3702"
+    }
+  ],
+  "fetched_at_utc": "2026-05-04T04:11:31Z",
+  "leaderboard": {
+    "master_commit_sha": "e84851da32108fcadf243c54d091cc71dc150c0e",
+    "master_commit_url": "https://github.com/commaai/comma_video_compression_challenge/commit/e84851da32108fcadf243c54d091cc71dc150c0e",
+    "readme_download_sha256": "010021c244403ed3fc6bc5db5bf907e386d9ce37b074dce0a411a5423e97e176",
+    "readme_git_blob_sha": "a60f3aad82a2af58293bfb1cbcd796345d9bf456",
+    "readme_size_bytes": 15819,
+    "top_entries_observed": [
+      {
+        "name": "adaptive_masking_joint_frame_model",
+        "pr": 85,
+        "rank_observed": 1,
+        "score": 0.26
+      },
+      {
+        "name": "jas0xf_adversarial_neural_representation",
+        "pr": 86,
+        "rank_observed": 2,
+        "score": 0.27
+      },
+      {
+        "name": "adaptive_range_mask_no_router",
+        "pr": 84,
+        "rank_observed": 3,
+        "score": 0.28
+      },
+      {
+        "name": "qzs3_range_mask",
+        "pr": 81,
+        "rank_observed": 4,
+        "score": 0.28
+      },
+      {
+        "name": "qpose14_r55_segactions_minp",
+        "pr": 79,
+        "rank_observed": 5,
+        "score": 0.31
+      }
+    ]
+  },
+  "local_cached_evidence_used": [
+    {
+      "path": "experiments/results/public_pr85_intake_20260503_codex/profile_pr85_bundle.json",
+      "role": "PR85 internal x-bundle segment anatomy"
+    },
+    {
+      "path": "experiments/results/lightning_batch/exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z/contest_auth_eval.adjudicated.json",
+      "role": "local exact T4 replay confirming PR85 official components"
+    },
+    {
+      "path": "experiments/results/public_pr86_intake_20260504_merged_refresh/intake_summary.json",
+      "role": "PR86 merged refresh archive/merge custody"
+    }
+  ],
+  "open_prs_observed": [
+    {
+      "classification": "open but non-faithful by author note; claims 0.19 by source-embedded payload exploit",
+      "head_sha": "b08810f5c2df491459f2922fa9a7e7adb6d4fc78",
+      "html_url": "https://github.com/commaai/comma_video_compression_challenge/pull/70",
+      "number": 70,
+      "state": "open",
+      "title": "Add mask_decoder submission"
+    },
+    {
+      "classification": "open WIP; no score parsed from current body",
+      "head_sha": "5191c1ee8966c7b49fb2a11d2ba37c19b2dcbada",
+      "html_url": "https://github.com/commaai/comma_video_compression_challenge/pull/72",
+      "number": 72,
+      "state": "open",
+      "title": "WIP: neural compressor"
+    }
+  ],
+  "pr85_to_pr100": [
+    {
+      "author": "ottokunkel",
+      "base_sha": "6a1ea25129d75ce30b3fc4e35e30a05f9a93b4ba",
+      "closed_at": "2026-05-04T03:36:47Z",
+      "commits": [
+        {
+          "date": "2026-05-03T15:47:47Z",
+          "html_url": "https://github.com/commaai/comma_video_compression_challenge/commit/a77f1a22ad3d09727aa77da3aecf9952c1270c36",
+          "message": "Add qzs3 range mask decoder",
+          "sha": "a77f1a22ad3d09727aa77da3aecf9952c1270c36"
+        },
+        {
+          "date": "2026-05-03T15:47:59Z",
+          "html_url": "https://github.com/commaai/comma_video_compression_challenge/commit/fcfddba9206599c0bf57c44f92d0f568e3c9b425",
+          "message": "Add qzs3 range mask archive",
+          "sha": "fcfddba9206599c0bf57c44f92d0f568e3c9b425"
+        },
+        {
+          "date": "2026-05-03T15:48:06Z",
+          "html_url": "https://github.com/commaai/comma_video_compression_challenge/commit/3f9b42116e0cb432b5f18265f072f0f9e4daa1a5",
+          "message": "Document qzs3 range mask submission",
+          "sha": "3f9b42116e0cb432b5f18265f072f0f9e4daa1a5"
+        },
+        {
+          "date": "2026-05-03T19:28:54Z",
+          "html_url": "https://github.com/commaai/comma_video_compression_challenge/commit/b69b36f46b06d0584d0fc0869a1cb63019c9e41b",
+          "message": "add to readme",
+          "sha": "b69b36f46b06d0584d0fc0869a1cb63019c9e41b"
+        },
+        {
+          "date": "2026-05-03T22:21:35Z",
+          "html_url": "https://github.com/commaai/comma_video_compression_challenge/commit/a483d0240c67a3bdd2bc2ac1ffd8058c8d201c79",
+          "message": "update model while using range masking",
+          "sha": "a483d0240c67a3bdd2bc2ac1ffd8058c8d201c79"
+        },
+        {
+          "date": "2026-05-03T22:52:32Z",
+          "html_url": "https://github.com/commaai/comma_video_compression_challenge/commit/515abfbac1dc6ef42499d5b912e424319f982fb2",
+          "message": "delete old submission",
+          "sha": "515abfbac1dc6ef42499d5b912e424319f982fb2"
+        }
+      ],
+      "exists": true,
+      "files": [
+        {
+          "filename": "submissions/adaptive_masking_joint_frame_model/README.md",
+          "git_blob_sha": "867e928a9e0b68b52aea49c966e03870cb3d28ab",
+          "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/515abfbac1dc6ef42499d5b912e424319f982fb2/submissions%2Fadaptive_masking_joint_frame_model%2FREADME.md",
+          "status": "added"
+        },
+        {
+          "filename": "submissions/adaptive_masking_joint_frame_model/inflate.py",
+          "git_blob_sha": "21b88d4265957c416c6de3f39204dc66245ca7a0",
+          "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/515abfbac1dc6ef42499d5b912e424319f982fb2/submissions%2Fadaptive_masking_joint_frame_model%2Finflate.py",
+          "status": "added"
+        },
+        {
+          "filename": "submissions/adaptive_masking_joint_frame_model/inflate.sh",
+          "git_blob_sha": "f1fed20f30d0e77b7d9c44d161333a046b328d24",
+          "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/515abfbac1dc6ef42499d5b912e424319f982fb2/submissions%2Fadaptive_masking_joint_frame_model%2Finflate.sh",
+          "status": "added"
+        },
+        {
+          "filename": "submissions/adaptive_masking_joint_frame_model/range_mask_codec.cpp",
+          "git_blob_sha": "5a8f7a11d63e187accdb5fa204542645b058686f",
+          "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/515abfbac1dc6ef42499d5b912e424319f982fb2/submissions%2Fadaptive_masking_joint_frame_model%2Frange_mask_codec.cpp",
+          "status": "added"
+        }
+      ],
+      "head_sha": "515abfbac1dc6ef42499d5b912e424319f982fb2",
+      "html_url": "https://github.com/commaai/comma_video_compression_challenge/pull/85",
+      "merged": false,
+      "merged_at": null,
+      "number": 85,
+      "score_inputs_if_stated_or_reported": {
+        "archive_bytes": 236328,
+        "exact_stated": 0.25806622496743437,
+        "faithful_class": "leaderboard_listed_closed_unmerged; exact T4 local replay confirms official components",
+        "official_eval_comment": "https://github.com/commaai/comma_video_compression_challenge/pull/85#issuecomment-4367893489",
+        "pose": 0.0001894,
+        "seg": 0.00057185
+      },
+      "score_recomputed_from_reported_components": 0.25806622496743437,
+      "state": "closed",
+      "title": "Adaptive masking joint frame model"
+    },
+    {
+      "author": "jas0xf",
+      "base_sha": "6a1ea25129d75ce30b3fc4e35e30a05f9a93b4ba",
+      "closed_at": "2026-05-04T03:36:55Z",
+      "commits": [
+        {
+          "date": "2026-05-03T23:07:52Z",
+          "html_url": "https://github.com/commaai/comma_video_compression_challenge/commit/b326decbdc4aefdca363e1c3fa770765a5bae250",
+          "message": "submission: jas0xf_adversarial_neural_representation (0.27)",
+          "sha": "b326decbdc4aefdca363e1c3fa770765a5bae250"
+        },
+        {
+          "date": "2026-05-04T01:47:07Z",
+          "html_url": "https://github.com/commaai/comma_video_compression_challenge/commit/3dd8318a97c5e6ba56e455edf4178c84621a2e9f",
+          "message": "docs(writeup): refine misleading master training table",
+          "sha": "3dd8318a97c5e6ba56e455edf4178c84621a2e9f"
+        },
+        {
+          "date": "2026-05-04T02:55:11Z",
+          "html_url": "https://github.com/commaai/comma_video_compression_challenge/commit/0eabe354f09b7490fd1cbb2b05a9102ab528d4d4",
+          "message": "submission: move archive, assets, writeup to satellite repo",
+          "sha": "0eabe354f09b7490fd1cbb2b05a9102ab528d4d4"
+        }
+      ],
+      "exists": true,
+      "files": [
+        {
+          "filename": "pyproject.toml",
+          "git_blob_sha": "9005e4a76c6ed0045ba50f99fe71e3f00c910957",
+          "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/0eabe354f09b7490fd1cbb2b05a9102ab528d4d4/pyproject.toml",
+          "status": "modified"
+        },
+        {
+          "filename": "submissions/jas0xf_adversarial_neural_representation/README.md",
+          "git_blob_sha": "cc1c61be75454e95a193b9ba3b864ee682bba7d1",
+          "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/0eabe354f09b7490fd1cbb2b05a9102ab528d4d4/submissions%2Fjas0xf_adversarial_neural_representation%2FREADME.md",
+          "status": "added"
+        },
+        {
+          "filename": "submissions/jas0xf_adversarial_neural_representation/compress.py",
+          "git_blob_sha": "13f3967a6ece5f59b61cd6bc3ceeeab56fb84ba9",
+          "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/0eabe354f09b7490fd1cbb2b05a9102ab528d4d4/submissions%2Fjas0xf_adversarial_neural_representation%2Fcompress.py",
+          "status": "added"
+        },
+        {
+          "filename": "submissions/jas0xf_adversarial_neural_representation/compress.sh",
+          "git_blob_sha": "7d5d48526c484c03dc1c14ee721d02a10cc0b2f8",
+          "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/0eabe354f09b7490fd1cbb2b05a9102ab528d4d4/submissions%2Fjas0xf_adversarial_neural_representation%2Fcompress.sh",
+          "status": "added"
+        },
+        {
+          "filename": "submissions/jas0xf_adversarial_neural_representation/inflate.py",
+          "git_blob_sha": "3887d2ba511a163a15813844c39c57a698e32974",
+          "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/0eabe354f09b7490fd1cbb2b05a9102ab528d4d4/submissions%2Fjas0xf_adversarial_neural_representation%2Finflate.py",
+          "status": "added"
+        },
+        {
+          "filename": "submissions/jas0xf_adversarial_neural_representation/inflate.sh",
+          "git_blob_sha": "062b3cda3dfcd38dc0b5c3c7b244ff87dbde6614",
+          "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/0eabe354f09b7490fd1cbb2b05a9102ab528d4d4/submissions%2Fjas0xf_adversarial_neural_representation%2Finflate.sh",
+          "status": "added"
+        },
+        {
+          "filename": "submissions/jas0xf_adversarial_neural_representation/training/README.md",
+          "git_blob_sha": "a91b53c7f6a471c5cfe6b84b447be63e1ffdc216",
+          "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/0eabe354f09b7490fd1cbb2b05a9102ab528d4d4/submissions%2Fjas0xf_adversarial_neural_representation%2Ftraining%2FREADME.md",
+          "status": "added"
+        },
+        {
+          "filename": "submissions/jas0xf_adversarial_neural_representation/training/archive.py",
+          "git_blob_sha": "9a4c57dd2352e8e6e9823fd6fa8731cbabf2a27f",
+          "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/0eabe354f09b7490fd1cbb2b05a9102ab528d4d4/submissions%2Fjas0xf_adversarial_neural_representation%2Ftraining%2Farchive.py",
+          "status": "added"
+        },
+        {
+          "filename": "submissions/jas0xf_adversarial_neural_representation/training/data.py",
+          "git_blob_sha": "ad7b5f5a2f4e086de4d29b4434eb88b9d7242c81",
+          "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/0eabe354f09b7490fd1cbb2b05a9102ab528d4d4/submissions%2Fjas0xf_adversarial_neural_representation%2Ftraining%2Fdata.py",
+          "status": "added"
+        },
+        {
+          "filename": "submissions/jas0xf_adversarial_neural_representation/training/hpac.py",
+          "git_blob_sha": "24e42a90b2844b4ae96674e227dac4cc558d398f",
+          "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/0eabe354f09b7490fd1cbb2b05a9102ab528d4d4/submissions%2Fjas0xf_adversarial_neural_representation%2Ftraining%2Fhpac.py",
+          "status": "added"
+        },
+        {
+          "filename": "submissions/jas0xf_adversarial_neural_representation/training/master.py",
+          "git_blob_sha": "a849b8fc618f5aac700fbcdef24580340fd5a584",
+          "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/0eabe354f09b7490fd1cbb2b05a9102ab528d4d4/submissions%2Fjas0xf_adversarial_neural_representation%2Ftraining%2Fmaster.py",
+          "status": "added"
+        },
+        {
+          "filename": "submissions/jas0xf_adversarial_neural_representation/training/slave.py",
+          "git_blob_sha": "acdfca4bd7437f0b6cebe07795bac3b1ecac270a",
+          "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/0eabe354f09b7490fd1cbb2b05a9102ab528d4d4/submissions%2Fjas0xf_adversarial_neural_representation%2Ftraining%2Fslave.py",
+          "status": "added"
+        }
+      ],
+      "head_sha": "0eabe354f09b7490fd1cbb2b05a9102ab528d4d4",
+      "html_url": "https://github.com/commaai/comma_video_compression_challenge/pull/86",
+      "merged": true,
+      "merged_at": "2026-05-04T03:36:55Z",
+      "number": 86,
+      "score_inputs_if_stated_or_reported": {
+        "archive_bytes": 207579,
+        "exact_stated": null,
+        "faithful_class": "merged_public_leaderboard; official GitHub eval comment is score source",
+        "official_eval_comment": "https://github.com/commaai/comma_video_compression_challenge/pull/86#issuecomment-4367994628",
+        "pose": 0.00045701,
+        "seg": 0.00067815
+      },
+      "score_recomputed_from_reported_components": 0.2736358503762718,
+      "state": "closed",
+      "title": "jas0xf_adversarial_neural_representation (0.27)"
+    },
+    {
+      "author": "manthedan",
+      "base_sha": "6a1ea25129d75ce30b3fc4e35e30a05f9a93b4ba",
+      "closed_at": "2026-05-04T02:36:33Z",
+      "commits": [
+        {
+          "date": "2026-05-04T00:05:15Z",
+          "html_url": "https://github.com/commaai/comma_video_compression_challenge/commit/fde5153dd8472734796a1abc68843c98387328c3",
+          "message": "Add 100_bytes submission",
+          "sha": "fde5153dd8472734796a1abc68843c98387328c3"
+        }
+      ],
+      "exists": true,
+      "files": [
+        {
+          "filename": "submissions/100_bytes/inflate.py",
+          "git_blob_sha": "4c51d74abefc9f7d786d2d24cb34ccbfc7b8365f",
+          "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/fde5153dd8472734796a1abc68843c98387328c3/submissions%2F100_bytes%2Finflate.py",
+          "status": "added"
+        },
+        {
+          "filename": "submissions/100_bytes/inflate.sh",
+          "git_blob_sha": "217b0c17369c617e58a11a8717fc221660ce1d05",
+          "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/fde5153dd8472734796a1abc68843c98387328c3/submissions%2F100_bytes%2Finflate.sh",
+          "status": "added"
+        }
+      ],
+      "head_sha": "fde5153dd8472734796a1abc68843c98387328c3",
+      "html_url": "https://github.com/commaai/comma_video_compression_challenge/pull/87",
+      "merged": false,
+      "merged_at": null,
+      "number": 87,
+      "score_inputs_if_stated_or_reported": {
+        "archive_bytes": 100,
+        "exact_stated": null,
+        "faithful_class": "invalid_external_loophole; author and maintainer identify scoring-script gaming/source-embedded payload",
+        "official_eval_comment": null,
+        "pose": 0.00018542,
+        "seg": 0.00057103
+      },
+      "score_recomputed_from_reported_components": 0.10023000855928522,
+      "state": "closed",
+      "title": "Add 100_bytes submission"
+    },
+    {
+      "author": "erichasinternet",
+      "base_sha": "6a1ea25129d75ce30b3fc4e35e30a05f9a93b4ba",
+      "closed_at": "2026-05-04T00:26:06Z",
+      "commits": [
+        {
+          "date": "2026-05-04T00:25:04Z",
+          "html_url": "https://github.com/commaai/comma_video_compression_challenge/commit/b330dd75232f06ac541726fbb29de80074db8eb5",
+          "message": "chore: add qzs3 gpu preflight",
+          "sha": "b330dd75232f06ac541726fbb29de80074db8eb5"
+        }
+      ],
+      "exists": true,
+      "files": [
+        {
+          "filename": "submissions/qzs3_range_mask_gpu_preflight/inflate.py",
+          "git_blob_sha": "4da47c52e90d7d432ae3e3eaa1a48f7cabc47033",
+          "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/b330dd75232f06ac541726fbb29de80074db8eb5/submissions%2Fqzs3_range_mask_gpu_preflight%2Finflate.py",
+          "status": "added"
+        },
+        {
+          "filename": "submissions/qzs3_range_mask_gpu_preflight/inflate.sh",
+          "git_blob_sha": "cc70109e5bf4473ba6cab4af517c9891b8e621ae",
+          "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/b330dd75232f06ac541726fbb29de80074db8eb5/submissions%2Fqzs3_range_mask_gpu_preflight%2Finflate.sh",
+          "status": "added"
+        },
+        {
+          "filename": "submissions/qzs3_range_mask_gpu_preflight/range_mask_codec.cpp",
+          "git_blob_sha": "dc1be57b26e682412419b6c3e493c3aeafb79d04",
+          "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/b330dd75232f06ac541726fbb29de80074db8eb5/submissions%2Fqzs3_range_mask_gpu_preflight%2Frange_mask_codec.cpp",
+          "status": "added"
+        }
+      ],
+      "head_sha": "b330dd75232f06ac541726fbb29de80074db8eb5",
+      "html_url": "https://github.com/commaai/comma_video_compression_challenge/pull/88",
+      "merged": false,
+      "merged_at": null,
+      "number": 88,
+      "score_inputs_if_stated_or_reported": {
+        "archive_bytes": 215960,
+        "exact_stated": null,
+        "faithful_class": "withdrawn_preflight; body report is CPU and PR was closed as wrong place",
+        "official_eval_comment": null,
+        "pose": 0.00052047,
+        "seg": 0.00071882
+      },
+      "score_recomputed_from_reported_components": 0.2878245063016197,
+      "state": "closed",
+      "title": "qzs3 range mask gpu preflight"
+    },
+    {
+      "author": "henosis-us",
+      "base_sha": "6a1ea25129d75ce30b3fc4e35e30a05f9a93b4ba",
+      "closed_at": "2026-05-04T01:53:22Z",
+      "commits": [
+        {
+          "date": "2026-05-04T00:55:02Z",
+          "html_url": "https://github.com/commaai/comma_video_compression_challenge/commit/d970a0eaf5065807f75fc2f386bf5c21fd982ae1",
+          "message": "add henosis_final_bias submission",
+          "sha": "d970a0eaf5065807f75fc2f386bf5c21fd982ae1"
+        }
+      ],
+      "exists": true,
+      "files": [
+        {
+          "filename": "PR_BODY.md",
+          "git_blob_sha": "e3d5fd2a6e006d7ee3bb364f417b506265a41db8",
+          "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/d970a0eaf5065807f75fc2f386bf5c21fd982ae1/PR_BODY.md",
+          "status": "added"
+        },
+        {
+          "filename": "submissions/henosis_final_bias/README.md",
+          "git_blob_sha": "69a45e4ef35e0e97d75882acfe74f0a15c0ebbe7",
+          "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/d970a0eaf5065807f75fc2f386bf5c21fd982ae1/submissions%2Fhenosis_final_bias%2FREADME.md",
+          "status": "added"
+        },
+        {
+          "filename": "submissions/henosis_final_bias/inflate.py",
+          "git_blob_sha": "dbeb873052aba1f67659a28bdea1ef59baf7a047",
+          "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/d970a0eaf5065807f75fc2f386bf5c21fd982ae1/submissions%2Fhenosis_final_bias%2Finflate.py",
+          "status": "added"
+        },
+        {
+          "filename": "submissions/henosis_final_bias/inflate.sh",
+          "git_blob_sha": "f1fed20f30d0e77b7d9c44d161333a046b328d24",
+          "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/d970a0eaf5065807f75fc2f386bf5c21fd982ae1/submissions%2Fhenosis_final_bias%2Finflate.sh",
+          "status": "added"
+        },
+        {
+          "filename": "submissions/henosis_final_bias/range_mask_codec.cpp",
+          "git_blob_sha": "5a8f7a11d63e187accdb5fa204542645b058686f",
+          "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/d970a0eaf5065807f75fc2f386bf5c21fd982ae1/submissions%2Fhenosis_final_bias%2Frange_mask_codec.cpp",
+          "status": "added"
+        },
+        {
+          "filename": "submissions/henosis_final_bias/report.txt",
+          "git_blob_sha": "94047116e30a29029f5abb46d0d8072e356f5ac9",
+          "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/d970a0eaf5065807f75fc2f386bf5c21fd982ae1/submissions%2Fhenosis_final_bias%2Freport.txt",
+          "status": "added"
+        }
+      ],
+      "head_sha": "d970a0eaf5065807f75fc2f386bf5c21fd982ae1",
+      "html_url": "https://github.com/commaai/comma_video_compression_challenge/pull/89",
+      "merged": false,
+      "merged_at": null,
+      "number": 89,
+      "score_inputs_if_stated_or_reported": {
+        "archive_bytes": 236676,
+        "exact_stated": 0.27511,
+        "faithful_class": "withdrawn_invalid_claim; author says proper public-master CUDA evaluator scored significantly worse",
+        "official_eval_comment": null,
+        "pose": 0.00023557,
+        "seg": 0.00068982
+      },
+      "score_recomputed_from_reported_components": 0.27511038756764417,
+      "state": "closed",
+      "title": "henosis_final_bias (0.28)"
+    },
+    {
+      "api_status": "404",
+      "exists": false,
+      "number": 90,
+      "source_url": "https://api.github.com/repos/commaai/comma_video_compression_challenge/pulls/90"
+    },
+    {
+      "api_status": "404",
+      "exists": false,
+      "number": 91,
+      "source_url": "https://api.github.com/repos/commaai/comma_video_compression_challenge/pulls/91"
+    },
+    {
+      "api_status": "404",
+      "exists": false,
+      "number": 92,
+      "source_url": "https://api.github.com/repos/commaai/comma_video_compression_challenge/pulls/92"
+    },
+    {
+      "api_status": "404",
+      "exists": false,
+      "number": 93,
+      "source_url": "https://api.github.com/repos/commaai/comma_video_compression_challenge/pulls/93"
+    },
+    {
+      "api_status": "404",
+      "exists": false,
+      "number": 94,
+      "source_url": "https://api.github.com/repos/commaai/comma_video_compression_challenge/pulls/94"
+    },
+    {
+      "api_status": "404",
+      "exists": false,
+      "number": 95,
+      "source_url": "https://api.github.com/repos/commaai/comma_video_compression_challenge/pulls/95"
+    },
+    {
+      "api_status": "404",
+      "exists": false,
+      "number": 96,
+      "source_url": "https://api.github.com/repos/commaai/comma_video_compression_challenge/pulls/96"
+    },
+    {
+      "api_status": "404",
+      "exists": false,
+      "number": 97,
+      "source_url": "https://api.github.com/repos/commaai/comma_video_compression_challenge/pulls/97"
+    },
+    {
+      "api_status": "404",
+      "exists": false,
+      "number": 98,
+      "source_url": "https://api.github.com/repos/commaai/comma_video_compression_challenge/pulls/98"
+    },
+    {
+      "api_status": "404",
+      "exists": false,
+      "number": 99,
+      "source_url": "https://api.github.com/repos/commaai/comma_video_compression_challenge/pulls/99"
+    },
+    {
+      "api_status": "404",
+      "exists": false,
+      "number": 100,
+      "source_url": "https://api.github.com/repos/commaai/comma_video_compression_challenge/pulls/100"
+    }
+  ],
+  "primary_source_urls": {
+    "pulls_all_api": "https://api.github.com/repos/commaai/comma_video_compression_challenge/pulls?state=all&per_page=100&sort=created&direction=desc",
+    "readme_master": "https://github.com/commaai/comma_video_compression_challenge/blob/master/README.md",
+    "repo_api": "https://api.github.com/repos/commaai/comma_video_compression_challenge"
+  },
+  "recommendations": [
+    "Treat PR85 as the current public leaderboard floor to beat, but track it as leaderboard-listed closed-unmerged; our local exact T4 replay confirms the official components for the exact 236328-byte archive.",
+    "Port PR85 v5 bundle support into fixed runtime before manipulating atoms: QMA9 mask, QH0 model, P1D1 pose, post, shift/frac/frac2/frac3, bias/region, randmulti.",
+    "Do not copy PR87/PR70 source-embedded-payload patterns; keep the guard as a harness-forensics quarantine only.",
+    "Mine PR86 for learned HPAC/token entropy coding and master/slave renderer ideas, but first reproduce token decode/re-encode parity and dependency versions; direct HPAC-on-PR85 transfer is not established.",
+    "Use PR89 final-bias as an interaction hypothesis only: its 300-byte fb member over PR85 x is cheap, but the author withdrew the score claim after public-master CUDA mismatch."
+  ],
+  "repo": "commaai/comma_video_compression_challenge",
+  "schema_version": 1
+}

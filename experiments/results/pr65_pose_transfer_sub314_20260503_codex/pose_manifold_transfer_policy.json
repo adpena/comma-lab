@@ -1,0 +1,2571 @@
+{
+  "contest_formula_context": {
+    "rate_score_per_byte": 6.658589531221714e-07,
+    "score_claim": false,
+    "usage": "Formula terms are used only to rank non-promotable planning utility."
+  },
+  "determinism": {
+    "sort_keys": [
+      "utility_per_charged_byte desc",
+      "net_expected_utility_after_rate_and_risk desc",
+      "expected_scorer_utility desc",
+      "risk_count asc",
+      "pair_index asc"
+    ],
+    "wall_clock_fields": false
+  },
+  "evidence_grade": "diagnostic_planning_non_promotable",
+  "inputs": {
+    "archive_anatomy": {
+      "evidence_grade": "external_plus_empirical_byte_anatomy",
+      "path": "/Users/adpena/Projects/pact/experiments/results/top_submission_reverse_engineering_refresh_20260502/archive_anatomy.json",
+      "score_claim": false,
+      "sha256": "c9fa0eb6c7a14643e0b9105057ae4f7e6d8cc7daf7e26f32bfc9c42f31227c72",
+      "size_bytes": 11416
+    },
+    "atom_ledger": {
+      "evidence_grade": "derived_control_plane",
+      "path": "/Users/adpena/Projects/pact/experiments/results/top_submission_reverse_engineering_20260502T0206Z/pr65_pr67_atom_allocation_ledger.json",
+      "score_claim": false,
+      "sha256": "e1631e106905772569ec3d9eb55001fb32931a992825842b7b928a3a8be715cd",
+      "size_bytes": 1609489
+    },
+    "c059_component_trace": {
+      "evidence_grade": "diagnostic_component_trace",
+      "n_samples": 600,
+      "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_qzs3_b32_maskfirst_qp1_fix1_t4_20260502T0331Z/component_trace.json",
+      "score_claim": false,
+      "sha256": "b2808d5cbf9f30cc551787f9a1c3ded83b96d6c0a93d00cd21a3cf30a141419c",
+      "size_bytes": 399560
+    },
+    "c059_contest_auth_eval": {
+      "evidence_grade": "A++",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_qzs3_b32_maskfirst_qp1_fix1_t4_20260502T0331Z/contest_auth_eval.json",
+      "score_claim": false,
+      "sha256": "580ee31d22aa99fa496e0f94bec64127ed023f9e1ff2eccaf969f7655fb3959d",
+      "size_bytes": 4923
+    },
+    "c059_pose_plan": {
+      "evidence_grade": "diagnostic_planning_non_promotable",
+      "path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "score_claim": false,
+      "sha256": "599b5539f373264c7842b7b76a1ec443538029c696a50e0ab81dd778aa8477ac",
+      "size_bytes": 569292
+    },
+    "public_summary": {
+      "evidence_grade": "external_plus_empirical_byte_anatomy",
+      "path": "/Users/adpena/Projects/pact/experiments/results/top_submission_reverse_engineering_refresh_20260502/public_pr_summary.json",
+      "score_claim": false,
+      "sha256": "06f549ed4cdc3f9c9316e71a48ce3b726d52af6a8fa48199888f9735cbd98bd8",
+      "size_bytes": 11532
+    }
+  },
+  "no_remote_jobs_launched": true,
+  "non_promotable_warning": "Build a closed archive and run archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda on identical bytes before any score, rank, promotion, retirement, or paper claim.",
+  "pose_manifold_comparison": {
+    "deltas_to_c059": [
+      {
+        "bytes_delta_source_minus_target": 8078,
+        "evidence_grade": "formula_context_only_non_promotable",
+        "pose_dist_delta_source_minus_target": -0.00014354,
+        "rate_utility_delta_source_minus_target": 0.005378808623320901,
+        "score_claim": false,
+        "seg_dist_delta_source_minus_target": 9.652e-05,
+        "source_label": "PR65",
+        "target_label": "C-059"
+      },
+      {
+        "bytes_delta_source_minus_target": 217,
+        "evidence_grade": "formula_context_only_non_promotable",
+        "pose_dist_delta_source_minus_target": -1.0399999999999982e-05,
+        "rate_utility_delta_source_minus_target": 0.0001444913928275112,
+        "score_claim": false,
+        "seg_dist_delta_source_minus_target": -2.4400000000000376e-06,
+        "source_label": "PR67",
+        "target_label": "C-059"
+      }
+    ],
+    "manifolds": [
+      {
+        "archive_bytes": 284425,
+        "archive_sha256": "b331cb4f6df9d8929db966b943b8c73624cdf3b6db71acbde361570852e59e68",
+        "avg_posenet_dist": 0.00035283,
+        "avg_segnet_dist": 0.00070896,
+        "byte_notes": [
+          "PR65 anatomy exposes a 24-bit length-table bundle, not a pair trace."
+        ],
+        "classification": "external_strict_valid_looking",
+        "evidence_grade": "external_public_summary_plus_local_anatomy",
+        "label": "PR65",
+        "manifold_notes": [
+          "Quantizr-derived archive-counted submission",
+          "compact reconstruction side information in archive.zip",
+          "24-bit length-table bundle",
+          "excellent pose but worse SegNet than C-059"
+        ],
+        "pose_stream_bytes": null,
+        "pr_number": 65,
+        "risk_notes": [
+          "Global pose advantage is external rounded-field evidence only.",
+          "SegNet is worse than C-059 in public rounded fields.",
+          "No pair-local PR65 component trace is available to assign atoms."
+        ],
+        "score_claim": false,
+        "source": "https://github.com/commaai/comma_video_compression_challenge/pull/65"
+      },
+      {
+        "archive_bytes": 276564,
+        "archive_sha256": "a5ed8da0d9988943c986b231b4cd33cea0ab878a8e1628134341db5f7f41c765",
+        "avg_posenet_dist": 0.00048597,
+        "avg_segnet_dist": 0.00061,
+        "byte_notes": [
+          "Observed compressed pose segment is 899 bytes."
+        ],
+        "classification": "external_strict_valid_looking",
+        "evidence_grade": "external_public_summary_plus_local_anatomy",
+        "label": "PR67",
+        "manifold_notes": [
+          "QZS3 grouped quantization with variable bit-depth per layer",
+          "delta plus VLQ QP1 pose encoding",
+          "single-blob payload",
+          "87836 finite JFG parameters after QZS3 decode"
+        ],
+        "pose_stream_bytes": 899,
+        "pr_number": 67,
+        "risk_notes": [
+          "PR67 pair transfer still requires a closed C-059 stack archive."
+        ],
+        "score_claim": false,
+        "source": "https://github.com/commaai/comma_video_compression_challenge/pull/67"
+      },
+      {
+        "archive_bytes": 276347,
+        "archive_sha256": "cf44aa7fdb13b9ab6236aefde1f5f58e915d7dfa99128246235443841396c6ab",
+        "avg_posenet_dist": 0.00049637,
+        "avg_segnet_dist": 0.00061244,
+        "byte_notes": [
+          "Local C-059 archive bytes are exact auth-eval custody context."
+        ],
+        "evidence_grade": "A++",
+        "label": "C-059",
+        "manifold_notes": [
+          "Internal C-059 target; use as destination manifold for transfer planning."
+        ],
+        "pose_stream_bytes": null,
+        "risk_notes": [],
+        "score_claim": false,
+        "source": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_qzs3_b32_maskfirst_qp1_fix1_t4_20260502T0331Z/contest_auth_eval.json"
+      }
+    ],
+    "score_claim": false
+  },
+  "promotion_eligible": false,
+  "recommended_policies": [
+    {
+      "charged_bytes_estimate": 16.0,
+      "evidence_grade": "diagnostic_planning_non_promotable",
+      "expected_scorer_utility_formula_only": 0.0001825386808047858,
+      "net_expected_utility_after_rate_and_risk": 0.00016922150174234236,
+      "policy_kind": "pose_manifold_atom_transfer_pair_indices",
+      "policy_name": "public_pose_manifold_transfer_top008",
+      "promotion_eligible": false,
+      "rate_utility_cost": 1.0653743249954742e-05,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "selected_atom_ids": [
+        "transfer:C059:0164",
+        "transfer:C059:0064",
+        "transfer:C059:0130",
+        "transfer:C059:0112",
+        "transfer:C059:0097",
+        "transfer:C059:0153",
+        "transfer:C059:0070",
+        "transfer:C059:0198"
+      ],
+      "selected_count": 8,
+      "selected_pair_indices": [
+        164,
+        64,
+        130,
+        112,
+        97,
+        153,
+        70,
+        198
+      ]
+    },
+    {
+      "charged_bytes_estimate": 32.0,
+      "evidence_grade": "diagnostic_planning_non_promotable",
+      "expected_scorer_utility_formula_only": 0.0002977666888432403,
+      "net_expected_utility_after_rate_and_risk": 0.00027099915892772895,
+      "policy_kind": "pose_manifold_atom_transfer_pair_indices",
+      "policy_name": "public_pose_manifold_transfer_top016",
+      "promotion_eligible": false,
+      "rate_utility_cost": 2.1307486499909485e-05,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "interaction_risk_medium",
+        "no_positive_reference_component_delta",
+        "pose_atom_conflicts_with_candidate_segnet_advantage"
+      ],
+      "score_claim": false,
+      "selected_atom_ids": [
+        "transfer:C059:0164",
+        "transfer:C059:0064",
+        "transfer:C059:0130",
+        "transfer:C059:0112",
+        "transfer:C059:0097",
+        "transfer:C059:0153",
+        "transfer:C059:0070",
+        "transfer:C059:0198",
+        "transfer:C059:0420",
+        "transfer:C059:0289",
+        "transfer:C059:0166",
+        "transfer:C059:0435",
+        "transfer:C059:0078",
+        "transfer:public_pr67:0156",
+        "transfer:C059:0418",
+        "transfer:C059:0087"
+      ],
+      "selected_count": 16,
+      "selected_pair_indices": [
+        164,
+        64,
+        130,
+        112,
+        97,
+        153,
+        70,
+        198,
+        420,
+        289,
+        166,
+        435,
+        78,
+        156,
+        418,
+        87
+      ]
+    },
+    {
+      "charged_bytes_estimate": 64.0,
+      "evidence_grade": "diagnostic_planning_non_promotable",
+      "expected_scorer_utility_formula_only": 0.00047312073474372213,
+      "net_expected_utility_after_rate_and_risk": 0.00041971884670332396,
+      "policy_kind": "pose_manifold_atom_transfer_pair_indices",
+      "policy_name": "public_pose_manifold_transfer_top032",
+      "promotion_eligible": false,
+      "rate_utility_cost": 4.261497299981897e-05,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "interaction_risk_medium",
+        "no_positive_reference_component_delta",
+        "pose_atom_conflicts_with_candidate_segnet_advantage",
+        "reference_delta_has_segnet_antagonism"
+      ],
+      "score_claim": false,
+      "selected_atom_ids": [
+        "transfer:C059:0164",
+        "transfer:C059:0064",
+        "transfer:C059:0130",
+        "transfer:C059:0112",
+        "transfer:C059:0097",
+        "transfer:C059:0153",
+        "transfer:C059:0070",
+        "transfer:C059:0198",
+        "transfer:C059:0420",
+        "transfer:C059:0289",
+        "transfer:C059:0166",
+        "transfer:C059:0435",
+        "transfer:C059:0078",
+        "transfer:public_pr67:0156",
+        "transfer:C059:0418",
+        "transfer:C059:0087",
+        "transfer:C059:0159",
+        "transfer:C059:0067",
+        "transfer:C059:0046",
+        "transfer:C059:0496",
+        "transfer:C059:0290",
+        "transfer:C059:0037",
+        "transfer:C059:0103",
+        "transfer:C059:0143",
+        "transfer:C059:0546",
+        "transfer:C059:0191",
+        "transfer:C059:0107",
+        "transfer:C059:0129",
+        "transfer:C059:0111",
+        "transfer:C059:0221",
+        "transfer:C059:0426",
+        "transfer:C059:0406"
+      ],
+      "selected_count": 32,
+      "selected_pair_indices": [
+        164,
+        64,
+        130,
+        112,
+        97,
+        153,
+        70,
+        198,
+        420,
+        289,
+        166,
+        435,
+        78,
+        156,
+        418,
+        87,
+        159,
+        67,
+        46,
+        496,
+        290,
+        37,
+        103,
+        143,
+        546,
+        191,
+        107,
+        129,
+        111,
+        221,
+        426,
+        406
+      ]
+    }
+  ],
+  "required_promotion_eval": "Build a closed archive and run archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda on identical bytes before any score, rank, promotion, retirement, or paper claim.",
+  "schema_version": 1,
+  "score_claim": false,
+  "tool": "experiments/compare_public_pose_manifolds.py",
+  "top_transfer_opportunities": [
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 5.237109050914715e-05,
+      "expected_scorer_utility": 5.237109050914715e-05,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        328,
+        329
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 5.0706443126341724e-05,
+      "pair_index": 164,
+      "policy_atom_id": "transfer:C059:0164",
+      "promotion_eligible": false,
+      "rank": 1,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0164",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 2.5353221563170862e-05
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 2.2592941379118602e-05,
+      "expected_scorer_utility": 2.2592941379118602e-05,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        128,
+        129
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 2.092829399631317e-05,
+      "pair_index": 64,
+      "policy_atom_id": "transfer:C059:0064",
+      "promotion_eligible": false,
+      "rank": 2,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0064",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 1.0464146998156586e-05
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 2.0526946553567758e-05,
+      "expected_scorer_utility": 2.0526946553567758e-05,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        260,
+        261
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 1.8862299170762328e-05,
+      "pair_index": 130,
+      "policy_atom_id": "transfer:C059:0130",
+      "promotion_eligible": false,
+      "rank": 3,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0130",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 9.431149585381164e-06
+    },
+    {
+      "alternate_source": {
+        "expected_scorer_utility": 2.234339411955708e-06,
+        "net_expected_utility_after_rate_and_risk": 5.696920291502795e-07,
+        "rank_input_source": "pr65_pr67_atom_ledger",
+        "source_atom_id": "basis_vs_pr67_component_delta:basis_r13_h100:vs:pr67:pose:pair_0112"
+      },
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 1.9301615330652453e-05,
+      "expected_scorer_utility": 1.9301615330652453e-05,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        224,
+        225
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 1.7636967947847023e-05,
+      "pair_index": 112,
+      "policy_atom_id": "transfer:C059:0112",
+      "promotion_eligible": false,
+      "rank": 4,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0112",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 8.818483973923511e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 1.7385307176309163e-05,
+      "expected_scorer_utility": 1.7385307176309163e-05,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        194,
+        195
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 1.5720659793503732e-05,
+      "pair_index": 97,
+      "policy_atom_id": "transfer:C059:0097",
+      "promotion_eligible": false,
+      "rank": 5,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0097",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 7.860329896751866e-06
+    },
+    {
+      "alternate_source": {
+        "expected_scorer_utility": 8.472664673508309e-07,
+        "net_expected_utility_after_rate_and_risk": -8.173809154545976e-07,
+        "rank_input_source": "pr65_pr67_atom_ledger",
+        "source_atom_id": "basis_h100_vs_pr67_recut_top120:basis_r13_h100:vs:pr67:pose:pair_0153"
+      },
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_component_delta_non_promotable",
+      "expected_pose_utility": 1.5386282404854647e-05,
+      "expected_scorer_utility": 1.7081706645558035e-05,
+      "expected_seg_utility": 1.6954242407033886e-06,
+      "frame_indices": [
+        306,
+        307
+      ],
+      "measured_delta_available": true,
+      "net_expected_utility_after_rate_and_risk": 1.5417059262752605e-05,
+      "pair_index": 153,
+      "policy_atom_id": "transfer:C059:0153",
+      "promotion_eligible": false,
+      "rank": 6,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0153",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "archive_eval_pr67_public_qpose14_qzs3_filmq9g_slsb1_r55_20260502T0213Z",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 7.708529631376302e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 1.6774695333413215e-05,
+      "expected_scorer_utility": 1.6774695333413215e-05,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        140,
+        141
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 1.5110047950607785e-05,
+      "pair_index": 70,
+      "policy_atom_id": "transfer:C059:0070",
+      "promotion_eligible": false,
+      "rank": 7,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0070",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 7.5550239753038925e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 1.6504377877019422e-05,
+      "expected_scorer_utility": 1.6504377877019422e-05,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        396,
+        397
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 1.4839730494213994e-05,
+      "pair_index": 198,
+      "policy_atom_id": "transfer:C059:0198",
+      "promotion_eligible": false,
+      "rank": 8,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0198",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 7.419865247106997e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 1.632093107296906e-05,
+      "expected_scorer_utility": 1.632093107296906e-05,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        840,
+        841
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 1.465628369016363e-05,
+      "pair_index": 420,
+      "policy_atom_id": "transfer:C059:0420",
+      "promotion_eligible": false,
+      "rank": 9,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0420",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 7.328141845081815e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 1.5287413423051962e-05,
+      "expected_scorer_utility": 1.5287413423051962e-05,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        578,
+        579
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 1.3622766040246533e-05,
+      "pair_index": 289,
+      "policy_atom_id": "transfer:C059:0289",
+      "promotion_eligible": false,
+      "rank": 10,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0289",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 6.8113830201232665e-06
+    },
+    {
+      "alternate_source": {
+        "expected_scorer_utility": 1.1065568949173664e-06,
+        "net_expected_utility_after_rate_and_risk": -6.912622785124963e-07,
+        "rank_input_source": "pr65_pr67_atom_ledger",
+        "source_atom_id": "basis_vs_pr67_component_delta:basis_r13_h100:vs:pr67:pose:pair_0166"
+      },
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 1.498883462396775e-05,
+      "expected_scorer_utility": 1.498883462396775e-05,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        332,
+        333
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 1.3324187241162321e-05,
+      "pair_index": 166,
+      "policy_atom_id": "transfer:C059:0166",
+      "promotion_eligible": false,
+      "rank": 11,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0166",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 6.662093620581161e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 1.468209792989514e-05,
+      "expected_scorer_utility": 1.468209792989514e-05,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        870,
+        871
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 1.301745054708971e-05,
+      "pair_index": 435,
+      "policy_atom_id": "transfer:C059:0435",
+      "promotion_eligible": false,
+      "rank": 12,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0435",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 6.508725273544855e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 1.4298378845722016e-05,
+      "expected_scorer_utility": 1.4298378845722016e-05,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        156,
+        157
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 1.2633731462916588e-05,
+      "pair_index": 78,
+      "policy_atom_id": "transfer:C059:0078",
+      "promotion_eligible": false,
+      "rank": 13,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0078",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 6.316865731458294e-06
+    },
+    {
+      "alternate_source": {
+        "expected_scorer_utility": 1.1138150041497985e-05,
+        "net_expected_utility_after_rate_and_risk": 9.473502658692556e-06,
+        "rank_input_source": "c059_pose_atom_plan",
+        "source_atom_id": "C-059:pose_residual_pair_0156"
+      },
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from public PR67 pose byte model.",
+        "ceil(pr67 pose_qp1_br compressed bytes / n_samples)"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "derived_public_pair_delta_non_promotable",
+      "expected_pose_utility": 1.3681305146954928e-05,
+      "expected_scorer_utility": 1.3681305146954928e-05,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        312,
+        313
+      ],
+      "measured_delta_available": true,
+      "net_expected_utility_after_rate_and_risk": 1.1883485973525066e-05,
+      "pair_index": 156,
+      "policy_atom_id": "transfer:public_pr67:0156",
+      "promotion_eligible": false,
+      "rank": 14,
+      "rank_input_source": "pr65_pr67_atom_ledger",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "pose_atom_conflicts_with_candidate_segnet_advantage",
+        "interaction_risk_medium"
+      ],
+      "score_claim": false,
+      "source_atom_id": "c057_vs_pr67_recut_top120:c057_basis:vs:pr67:pose:pair_0156",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/top_submission_reverse_engineering_20260502T0206Z/pr65_pr67_atom_allocation_ledger.json",
+      "transfer_from": "pr67",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 5.941742986762533e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 1.3116335170040838e-05,
+      "expected_scorer_utility": 1.3116335170040838e-05,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        836,
+        837
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 1.145168778723541e-05,
+      "pair_index": 418,
+      "policy_atom_id": "transfer:C059:0418",
+      "promotion_eligible": false,
+      "rank": 15,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0418",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 5.725843893617705e-06
+    },
+    {
+      "alternate_source": {
+        "expected_scorer_utility": 7.316979393926396e-06,
+        "net_expected_utility_after_rate_and_risk": 5.6523320111209676e-06,
+        "rank_input_source": "pr65_pr67_atom_ledger",
+        "source_atom_id": "basis_vs_pr67_component_delta:basis_r13_h100:vs:pr67:pose:pair_0087"
+      },
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_component_delta_non_promotable",
+      "expected_pose_utility": 1.0309580315436109e-05,
+      "expected_scorer_utility": 1.285271182585278e-05,
+      "expected_seg_utility": 2.543131510416671e-06,
+      "frame_indices": [
+        174,
+        175
+      ],
+      "measured_delta_available": true,
+      "net_expected_utility_after_rate_and_risk": 1.1188064443047351e-05,
+      "pair_index": 87,
+      "policy_atom_id": "transfer:C059:0087",
+      "promotion_eligible": false,
+      "rank": 16,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0087",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "archive_eval_pr67_public_qpose14_qzs3_filmq9g_slsb1_r55_20260502T0213Z",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 5.594032221523676e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 1.252640415201344e-05,
+      "expected_scorer_utility": 1.252640415201344e-05,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        318,
+        319
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 1.0861756769208012e-05,
+      "pair_index": 159,
+      "policy_atom_id": "transfer:C059:0159",
+      "promotion_eligible": false,
+      "rank": 17,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0159",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 5.430878384604006e-06
+    },
+    {
+      "alternate_source": {
+        "expected_scorer_utility": 5.330404558716076e-06,
+        "net_expected_utility_after_rate_and_risk": 3.665757175910648e-06,
+        "rank_input_source": "pr65_pr67_atom_ledger",
+        "source_atom_id": "c057_vs_pr67_recut_top120:c057_basis:vs:pr67:pose:pair_0067"
+      },
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_component_delta_non_promotable",
+      "expected_pose_utility": 8.13005434070009e-06,
+      "expected_scorer_utility": 1.236861009182015e-05,
+      "expected_seg_utility": 4.23855575112006e-06,
+      "frame_indices": [
+        134,
+        135
+      ],
+      "measured_delta_available": true,
+      "net_expected_utility_after_rate_and_risk": 1.0703962709014721e-05,
+      "pair_index": 67,
+      "policy_atom_id": "transfer:C059:0067",
+      "promotion_eligible": false,
+      "rank": 18,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0067",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "exact_eval_public_pr63_qpose14_trace_l40s_20260501T2149Z",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 5.3519813545073605e-06
+    },
+    {
+      "alternate_source": {
+        "expected_scorer_utility": 1.6396865562599179e-06,
+        "net_expected_utility_after_rate_and_risk": -2.4960826545510617e-08,
+        "rank_input_source": "pr65_pr67_atom_ledger",
+        "source_atom_id": "basis_vs_pr67_component_delta:basis_r13_h100:vs:pr67:pose:pair_0046"
+      },
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_component_delta_non_promotable",
+      "expected_pose_utility": 8.041644685752007e-06,
+      "expected_scorer_utility": 1.2280200436872067e-05,
+      "expected_seg_utility": 4.23855575112006e-06,
+      "frame_indices": [
+        92,
+        93
+      ],
+      "measured_delta_available": true,
+      "net_expected_utility_after_rate_and_risk": 1.0615553054066638e-05,
+      "pair_index": 46,
+      "policy_atom_id": "transfer:C059:0046",
+      "promotion_eligible": false,
+      "rank": 19,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0046",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "archive_eval_pr67_public_qpose14_qzs3_filmq9g_slsb1_r55_20260502T0213Z",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 5.307776527033319e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 1.1793153954796928e-05,
+      "expected_scorer_utility": 1.1793153954796928e-05,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        992,
+        993
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 1.01285065719915e-05,
+      "pair_index": 496,
+      "policy_atom_id": "transfer:C059:0496",
+      "promotion_eligible": false,
+      "rank": 20,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0496",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 5.06425328599575e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 1.1213818992616434e-05,
+      "expected_scorer_utility": 1.1213818992616434e-05,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        580,
+        581
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 9.549171609811005e-06,
+      "pair_index": 290,
+      "policy_atom_id": "transfer:C059:0290",
+      "promotion_eligible": false,
+      "rank": 21,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0290",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 4.7745858049055025e-06
+    },
+    {
+      "alternate_source": {
+        "expected_scorer_utility": 1.0258459427860787e-05,
+        "net_expected_utility_after_rate_and_risk": 8.460640254430924e-06,
+        "rank_input_source": "pr65_pr67_atom_ledger",
+        "source_atom_id": "c057_vs_pr67_recut_top120:c057_basis:vs:pr67:pose:pair_0037"
+      },
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_component_delta_non_promotable",
+      "expected_pose_utility": 1.266524034146773e-05,
+      "expected_scorer_utility": 1.0969816100764342e-05,
+      "expected_seg_utility": -1.6954242407033886e-06,
+      "frame_indices": [
+        74,
+        75
+      ],
+      "measured_delta_available": true,
+      "net_expected_utility_after_rate_and_risk": 9.305168717958913e-06,
+      "pair_index": 37,
+      "policy_atom_id": "transfer:C059:0037",
+      "promotion_eligible": false,
+      "rank": 22,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "reference_delta_has_segnet_antagonism"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0037",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "exact_eval_public_pr64_unified_trace_l40s_20260501T2150Z",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 4.652584358979457e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 1.0954521613309753e-05,
+      "expected_scorer_utility": 1.0954521613309753e-05,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        206,
+        207
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 9.289874230504324e-06,
+      "pair_index": 103,
+      "policy_atom_id": "transfer:C059:0103",
+      "promotion_eligible": false,
+      "rank": 23,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0103",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 4.644937115252162e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 1.070869110384038e-05,
+      "expected_scorer_utility": 1.070869110384038e-05,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        286,
+        287
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 9.044043721034951e-06,
+      "pair_index": 143,
+      "policy_atom_id": "transfer:C059:0143",
+      "promotion_eligible": false,
+      "rank": 24,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0143",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 4.5220218605174755e-06
+    },
+    {
+      "alternate_source": {
+        "expected_scorer_utility": 1.2319652917606352e-06,
+        "net_expected_utility_after_rate_and_risk": -4.326820910447933e-07,
+        "rank_input_source": "pr65_pr67_atom_ledger",
+        "source_atom_id": "basis_vs_pr67_component_delta:basis_r13_h100:vs:pr67:pose:pair_0546"
+      },
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 1.059733129046454e-05,
+      "expected_scorer_utility": 1.059733129046454e-05,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        1092,
+        1093
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 8.932683907659112e-06,
+      "pair_index": 546,
+      "policy_atom_id": "transfer:C059:0546",
+      "promotion_eligible": false,
+      "rank": 25,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0546",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 4.466341953829556e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 1.0579808785030154e-05,
+      "expected_scorer_utility": 1.0579808785030154e-05,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        382,
+        383
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 8.915161402224726e-06,
+      "pair_index": 191,
+      "policy_atom_id": "transfer:C059:0191",
+      "promotion_eligible": false,
+      "rank": 26,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0191",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 4.457580701112363e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 1.052448911684242e-05,
+      "expected_scorer_utility": 1.052448911684242e-05,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        214,
+        215
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 8.859841734036992e-06,
+      "pair_index": 107,
+      "policy_atom_id": "transfer:C059:0107",
+      "promotion_eligible": false,
+      "rank": 27,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0107",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 4.429920867018496e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 1.0515861011817469e-05,
+      "expected_scorer_utility": 1.0515861011817469e-05,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        258,
+        259
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 8.85121362901204e-06,
+      "pair_index": 129,
+      "policy_atom_id": "transfer:C059:0129",
+      "promotion_eligible": false,
+      "rank": 28,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0129",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 4.42560681450602e-06
+    },
+    {
+      "alternate_source": {
+        "expected_scorer_utility": 1.1887456052305483e-06,
+        "net_expected_utility_after_rate_and_risk": -6.090735681993144e-07,
+        "rank_input_source": "pr65_pr67_atom_ledger",
+        "source_atom_id": "basis_vs_pr67_component_delta:basis_r13_h100:vs:pr67:pose:pair_0111"
+      },
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_component_delta_non_promotable",
+      "expected_pose_utility": 8.649868063560742e-06,
+      "expected_scorer_utility": 1.0345287453625725e-05,
+      "expected_seg_utility": 1.6954193900649837e-06,
+      "frame_indices": [
+        222,
+        223
+      ],
+      "measured_delta_available": true,
+      "net_expected_utility_after_rate_and_risk": 8.680640070820297e-06,
+      "pair_index": 111,
+      "policy_atom_id": "transfer:C059:0111",
+      "promotion_eligible": false,
+      "rank": 29,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0111",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "archive_eval_pr67_public_qpose14_qzs3_filmq9g_slsb1_r55_20260502T0213Z",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 4.340320035410148e-06
+    },
+    {
+      "alternate_source": {
+        "expected_scorer_utility": 8.128734827790749e-07,
+        "net_expected_utility_after_rate_and_risk": -8.517739000263535e-07,
+        "rank_input_source": "pr65_pr67_atom_ledger",
+        "source_atom_id": "basis_h100_vs_pr67_recut_top120:basis_r13_h100:vs:pr67:pose:pair_0221"
+      },
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 1.0100510390640912e-05,
+      "expected_scorer_utility": 1.0100510390640912e-05,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        442,
+        443
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 8.435863007835484e-06,
+      "pair_index": 221,
+      "policy_atom_id": "transfer:C059:0221",
+      "promotion_eligible": false,
+      "rank": 30,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0221",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 4.217931503917742e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 9.95225958710662e-06,
+      "expected_scorer_utility": 9.95225958710662e-06,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        852,
+        853
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 8.287612204301192e-06,
+      "pair_index": 426,
+      "policy_atom_id": "transfer:C059:0426",
+      "promotion_eligible": false,
+      "rank": 31,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0426",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 4.143806102150596e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 9.92328181892051e-06,
+      "expected_scorer_utility": 9.92328181892051e-06,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        812,
+        813
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 8.258634436115081e-06,
+      "pair_index": 406,
+      "policy_atom_id": "transfer:C059:0406",
+      "promotion_eligible": false,
+      "rank": 32,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0406",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 4.129317218057541e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 9.577381177973327e-06,
+      "expected_scorer_utility": 9.577381177973327e-06,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        354,
+        355
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 7.912733795167898e-06,
+      "pair_index": 177,
+      "policy_atom_id": "transfer:C059:0177",
+      "promotion_eligible": false,
+      "rank": 33,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0177",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 3.956366897583949e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 9.53691791624648e-06,
+      "expected_scorer_utility": 9.53691791624648e-06,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        358,
+        359
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 7.87227053344105e-06,
+      "pair_index": 179,
+      "policy_atom_id": "transfer:C059:0179",
+      "promotion_eligible": false,
+      "rank": 34,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0179",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 3.936135266720525e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 9.503868872880672e-06,
+      "expected_scorer_utility": 9.503868872880672e-06,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        366,
+        367
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 7.839221490075244e-06,
+      "pair_index": 183,
+      "policy_atom_id": "transfer:C059:0183",
+      "promotion_eligible": false,
+      "rank": 35,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0183",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 3.919610745037622e-06
+    },
+    {
+      "alternate_source": {
+        "expected_scorer_utility": 1.4153530053890203e-06,
+        "net_expected_utility_after_rate_and_risk": -2.4929437741640815e-07,
+        "rank_input_source": "pr65_pr67_atom_ledger",
+        "source_atom_id": "basis_vs_pr67_component_delta:basis_r13_h100:vs:pr67:pose:pair_0280"
+      },
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_component_delta_non_promotable",
+      "expected_pose_utility": 6.7276017220535705e-06,
+      "expected_scorer_utility": 9.270733232470228e-06,
+      "expected_seg_utility": 2.5431315104166576e-06,
+      "frame_indices": [
+        560,
+        561
+      ],
+      "measured_delta_available": true,
+      "net_expected_utility_after_rate_and_risk": 7.6060858496647994e-06,
+      "pair_index": 280,
+      "policy_atom_id": "transfer:C059:0280",
+      "promotion_eligible": false,
+      "rank": 36,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0280",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "archive_eval_pr67_public_qpose14_qzs3_filmq9g_slsb1_r55_20260502T0213Z",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 3.8030429248323997e-06
+    },
+    {
+      "alternate_source": {
+        "expected_scorer_utility": 6.838617696191889e-06,
+        "net_expected_utility_after_rate_and_risk": 5.173970313386461e-06,
+        "rank_input_source": "c059_pose_atom_plan",
+        "source_atom_id": "C-059:pose_residual_pair_0081"
+      },
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from public PR67 pose byte model.",
+        "ceil(pr67 pose_qp1_br compressed bytes / n_samples)"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "derived_public_pair_delta_non_promotable",
+      "expected_pose_utility": 9.381765386580407e-06,
+      "expected_scorer_utility": 9.381765386580407e-06,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        162,
+        163
+      ],
+      "measured_delta_available": true,
+      "net_expected_utility_after_rate_and_risk": 7.583946213150545e-06,
+      "pair_index": 81,
+      "policy_atom_id": "transfer:public_pr67:0081",
+      "promotion_eligible": false,
+      "rank": 37,
+      "rank_input_source": "pr65_pr67_atom_ledger",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "pose_atom_conflicts_with_candidate_segnet_advantage",
+        "interaction_risk_medium"
+      ],
+      "score_claim": false,
+      "source_atom_id": "c057_vs_pr67_recut_top120:c057_basis:vs:pr67:pose:pair_0081",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/top_submission_reverse_engineering_20260502T0206Z/pr65_pr67_atom_allocation_ledger.json",
+      "transfer_from": "pr67",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 3.7919731065752725e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 8.94285353021925e-06,
+      "expected_scorer_utility": 8.94285353021925e-06,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        862,
+        863
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 7.278206147413822e-06,
+      "pair_index": 431,
+      "policy_atom_id": "transfer:C059:0431",
+      "promotion_eligible": false,
+      "rank": 38,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0431",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 3.639103073706911e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 8.679765132515647e-06,
+      "expected_scorer_utility": 8.679765132515647e-06,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        298,
+        299
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 7.015117749710218e-06,
+      "pair_index": 149,
+      "policy_atom_id": "transfer:C059:0149",
+      "promotion_eligible": false,
+      "rank": 39,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0149",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 3.507558874855109e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 8.550192520551843e-06,
+      "expected_scorer_utility": 8.550192520551843e-06,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        228,
+        229
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 6.885545137746414e-06,
+      "pair_index": 114,
+      "policy_atom_id": "transfer:C059:0114",
+      "promotion_eligible": false,
+      "rank": 40,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0114",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 3.442772568873207e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 8.295641046524705e-06,
+      "expected_scorer_utility": 8.295641046524705e-06,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        734,
+        735
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 6.630993663719277e-06,
+      "pair_index": 367,
+      "policy_atom_id": "transfer:C059:0367",
+      "promotion_eligible": false,
+      "rank": 41,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0367",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 3.3154968318596384e-06
+    },
+    {
+      "alternate_source": {
+        "expected_scorer_utility": 6.726639182597968e-07,
+        "net_expected_utility_after_rate_and_risk": -1.1251552551700658e-06,
+        "rank_input_source": "pr65_pr67_atom_ledger",
+        "source_atom_id": "basis_h100_vs_pr67_recut_top120:basis_r13_h100:vs:pr67:pose:pair_0427"
+      },
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 8.16491160616414e-06,
+      "expected_scorer_utility": 8.16491160616414e-06,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        854,
+        855
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 6.5002642233587114e-06,
+      "pair_index": 427,
+      "policy_atom_id": "transfer:C059:0427",
+      "promotion_eligible": false,
+      "rank": 42,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0427",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 3.2501321116793557e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 8.10151315862148e-06,
+      "expected_scorer_utility": 8.10151315862148e-06,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        314,
+        315
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 6.436865775816052e-06,
+      "pair_index": 157,
+      "policy_atom_id": "transfer:C059:0157",
+      "promotion_eligible": false,
+      "rank": 43,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0157",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 3.218432887908026e-06
+    },
+    {
+      "alternate_source": {
+        "expected_scorer_utility": 2.575140105292746e-06,
+        "net_expected_utility_after_rate_and_risk": 7.773209318628831e-07,
+        "rank_input_source": "pr65_pr67_atom_ledger",
+        "source_atom_id": "basis_vs_pr67_component_delta:basis_r13_h100:vs:pr67:pose:pair_0073"
+      },
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_component_delta_non_promotable",
+      "expected_pose_utility": 6.341753581363014e-06,
+      "expected_scorer_utility": 8.037177822066402e-06,
+      "expected_seg_utility": 1.6954242407033886e-06,
+      "frame_indices": [
+        146,
+        147
+      ],
+      "measured_delta_available": true,
+      "net_expected_utility_after_rate_and_risk": 6.372530439260974e-06,
+      "pair_index": 73,
+      "policy_atom_id": "transfer:C059:0073",
+      "promotion_eligible": false,
+      "rank": 44,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0073",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "exact_eval_public_pr63_qpose14_trace_l40s_20260501T2149Z",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 3.186265219630487e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 8.027636128134878e-06,
+      "expected_scorer_utility": 8.027636128134878e-06,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        1018,
+        1019
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 6.362988745329449e-06,
+      "pair_index": 509,
+      "policy_atom_id": "transfer:C059:0509",
+      "promotion_eligible": false,
+      "rank": 45,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0509",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 3.1814943726647246e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 7.902498397955164e-06,
+      "expected_scorer_utility": 7.902498397955164e-06,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        244,
+        245
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 6.237851015149736e-06,
+      "pair_index": 122,
+      "policy_atom_id": "transfer:C059:0122",
+      "promotion_eligible": false,
+      "rank": 46,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0122",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 3.118925507574868e-06
+    },
+    {
+      "alternate_source": {
+        "expected_scorer_utility": 6.1306098385385864e-06,
+        "net_expected_utility_after_rate_and_risk": 4.465962455733158e-06,
+        "rank_input_source": "pr65_pr67_atom_ledger",
+        "source_atom_id": "c057_vs_pr67_recut_top120:c057_basis:vs:pr67:pose:pair_0256"
+      },
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_component_delta_non_promotable",
+      "expected_pose_utility": 6.130599265571716e-06,
+      "expected_scorer_utility": 7.826013804998281e-06,
+      "expected_seg_utility": 1.6954145394265652e-06,
+      "frame_indices": [
+        512,
+        513
+      ],
+      "measured_delta_available": true,
+      "net_expected_utility_after_rate_and_risk": 6.161366422192853e-06,
+      "pair_index": 256,
+      "policy_atom_id": "transfer:C059:0256",
+      "promotion_eligible": false,
+      "rank": 47,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0256",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "archive_eval_pr67_public_qpose14_qzs3_filmq9g_slsb1_r55_20260502T0213Z",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 3.0806832110964264e-06
+    },
+    {
+      "alternate_source": {
+        "expected_scorer_utility": 6.1291881127482755e-06,
+        "net_expected_utility_after_rate_and_risk": 4.464540729942847e-06,
+        "rank_input_source": "pr65_pr67_atom_ledger",
+        "source_atom_id": "c057_vs_pr67_recut_top120:c057_basis:vs:pr67:pose:pair_0267"
+      },
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_component_delta_non_promotable",
+      "expected_pose_utility": 6.1291775422333395e-06,
+      "expected_scorer_utility": 7.824601782936715e-06,
+      "expected_seg_utility": 1.695424240703375e-06,
+      "frame_indices": [
+        534,
+        535
+      ],
+      "measured_delta_available": true,
+      "net_expected_utility_after_rate_and_risk": 6.159954400131286e-06,
+      "pair_index": 267,
+      "policy_atom_id": "transfer:C059:0267",
+      "promotion_eligible": false,
+      "rank": 48,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0267",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "archive_eval_pr67_public_qpose14_qzs3_filmq9g_slsb1_r55_20260502T0213Z",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 3.079977200065643e-06
+    },
+    {
+      "alternate_source": {
+        "expected_scorer_utility": 6.440048285092076e-07,
+        "net_expected_utility_after_rate_and_risk": -1.1538143449206552e-06,
+        "rank_input_source": "pr65_pr67_atom_ledger",
+        "source_atom_id": "basis_h100_vs_pr67_recut_top120:basis_r13_h100:vs:pr67:pose:pair_0382"
+      },
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from public PR67 pose byte model.",
+        "ceil(pr67 pose_qp1_br compressed bytes / n_samples)"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "derived_public_pair_delta_non_promotable",
+      "expected_pose_utility": 7.743112812880741e-06,
+      "expected_scorer_utility": 7.743112812880741e-06,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        764,
+        765
+      ],
+      "measured_delta_available": true,
+      "net_expected_utility_after_rate_and_risk": 6.078465430075313e-06,
+      "pair_index": 382,
+      "policy_atom_id": "transfer:public_pr67:0382",
+      "promotion_eligible": false,
+      "rank": 49,
+      "rank_input_source": "pr65_pr67_atom_ledger",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [],
+      "score_claim": false,
+      "source_atom_id": "c057_vs_pr67_recut_top120:c057_basis:vs:pr67:pose:pair_0382",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/top_submission_reverse_engineering_20260502T0206Z/pr65_pr67_atom_allocation_ledger.json",
+      "transfer_from": "pr67",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 3.0392327150376564e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 7.645473280228575e-06,
+      "expected_scorer_utility": 7.645473280228575e-06,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        204,
+        205
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 5.980825897423146e-06,
+      "pair_index": 102,
+      "policy_atom_id": "transfer:C059:0102",
+      "promotion_eligible": false,
+      "rank": 50,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0102",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 2.990412948711573e-06
+    },
+    {
+      "alternate_source": {
+        "expected_scorer_utility": 6.8425560617433765e-06,
+        "net_expected_utility_after_rate_and_risk": 5.177908678937948e-06,
+        "rank_input_source": "c059_pose_atom_plan",
+        "source_atom_id": "C-059:pose_residual_pair_0184"
+      },
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from public PR67 pose byte model.",
+        "ceil(pr67 pose_qp1_br compressed bytes / n_samples)"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "derived_public_pair_delta_non_promotable",
+      "expected_pose_utility": 7.690276594254605e-06,
+      "expected_scorer_utility": 7.690276594254605e-06,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        368,
+        369
+      ],
+      "measured_delta_available": true,
+      "net_expected_utility_after_rate_and_risk": 5.8924574208247425e-06,
+      "pair_index": 184,
+      "policy_atom_id": "transfer:public_pr67:0184",
+      "promotion_eligible": false,
+      "rank": 51,
+      "rank_input_source": "pr65_pr67_atom_ledger",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "pose_atom_conflicts_with_candidate_segnet_advantage",
+        "interaction_risk_medium"
+      ],
+      "score_claim": false,
+      "source_atom_id": "c057_vs_pr67_recut_top120:c057_basis:vs:pr67:pose:pair_0184",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/top_submission_reverse_engineering_20260502T0206Z/pr65_pr67_atom_allocation_ledger.json",
+      "transfer_from": "pr67",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 2.9462287104123712e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 7.554816084646438e-06,
+      "expected_scorer_utility": 7.554816084646438e-06,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        504,
+        505
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 5.8901687018410095e-06,
+      "pair_index": 252,
+      "policy_atom_id": "transfer:C059:0252",
+      "promotion_eligible": false,
+      "rank": 52,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0252",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 2.9450843509205048e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 7.395654845401133e-06,
+      "expected_scorer_utility": 7.395654845401133e-06,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        462,
+        463
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 5.731007462595705e-06,
+      "pair_index": 231,
+      "policy_atom_id": "transfer:C059:0231",
+      "promotion_eligible": false,
+      "rank": 53,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0231",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 2.8655037312978524e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 7.28174920292863e-06,
+      "expected_scorer_utility": 7.28174920292863e-06,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        770,
+        771
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 5.617101820123201e-06,
+      "pair_index": 385,
+      "policy_atom_id": "transfer:C059:0385",
+      "promotion_eligible": false,
+      "rank": 54,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0385",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 2.8085509100616006e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 7.254756726802525e-06,
+      "expected_scorer_utility": 7.254756726802525e-06,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        226,
+        227
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 5.5901093439970964e-06,
+      "pair_index": 113,
+      "policy_atom_id": "transfer:C059:0113",
+      "promotion_eligible": false,
+      "rank": 55,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0113",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 2.7950546719985482e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 7.2366664591416104e-06,
+      "expected_scorer_utility": 7.2366664591416104e-06,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        1100,
+        1101
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 5.572019076336182e-06,
+      "pair_index": 550,
+      "policy_atom_id": "transfer:C059:0550",
+      "promotion_eligible": false,
+      "rank": 56,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0550",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 2.786009538168091e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 7.1372922147651394e-06,
+      "expected_scorer_utility": 7.1372922147651394e-06,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        808,
+        809
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 5.472644831959711e-06,
+      "pair_index": 404,
+      "policy_atom_id": "transfer:C059:0404",
+      "promotion_eligible": false,
+      "rank": 57,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0404",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 2.7363224159798554e-06
+    },
+    {
+      "alternate_source": {
+        "expected_scorer_utility": 6.338127181841304e-06,
+        "net_expected_utility_after_rate_and_risk": 4.6734797990358756e-06,
+        "rank_input_source": "c059_pose_atom_plan",
+        "source_atom_id": "C-059:pose_residual_pair_0171"
+      },
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from public PR67 pose byte model.",
+        "ceil(pr67 pose_qp1_br compressed bytes / n_samples)"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "derived_public_pair_delta_non_promotable",
+      "expected_pose_utility": 7.185856545696917e-06,
+      "expected_scorer_utility": 7.185856545696917e-06,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        342,
+        343
+      ],
+      "measured_delta_available": true,
+      "net_expected_utility_after_rate_and_risk": 5.388037372267055e-06,
+      "pair_index": 171,
+      "policy_atom_id": "transfer:public_pr67:0171",
+      "promotion_eligible": false,
+      "rank": 58,
+      "rank_input_source": "pr65_pr67_atom_ledger",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "pose_atom_conflicts_with_candidate_segnet_advantage",
+        "interaction_risk_medium"
+      ],
+      "score_claim": false,
+      "source_atom_id": "c057_vs_pr67_recut_top120:c057_basis:vs:pr67:pose:pair_0171",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/top_submission_reverse_engineering_20260502T0206Z/pr65_pr67_atom_allocation_ledger.json",
+      "transfer_from": "pr67",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 2.6940186861335273e-06
+    },
+    {
+      "alternate_source": {
+        "expected_scorer_utility": 5.3484188227855665e-06,
+        "net_expected_utility_after_rate_and_risk": 3.6837714399801383e-06,
+        "rank_input_source": "pr65_pr67_atom_ledger",
+        "source_atom_id": "c057_vs_pr67_recut_top120:c057_basis:vs:pr67:pose:pair_0326"
+      },
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_component_delta_non_promotable",
+      "expected_pose_utility": 5.348409598800268e-06,
+      "expected_scorer_utility": 7.043824138226833e-06,
+      "expected_seg_utility": 1.6954145394265652e-06,
+      "frame_indices": [
+        652,
+        653
+      ],
+      "measured_delta_available": true,
+      "net_expected_utility_after_rate_and_risk": 5.3791767554214046e-06,
+      "pair_index": 326,
+      "policy_atom_id": "transfer:C059:0326",
+      "promotion_eligible": false,
+      "rank": 59,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0326",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "archive_eval_pr67_public_qpose14_qzs3_filmq9g_slsb1_r55_20260502T0213Z",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 2.6895883777107023e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_component_delta_non_promotable",
+      "expected_pose_utility": 1.0827679708460187e-06,
+      "expected_scorer_utility": 7.016743112031042e-06,
+      "expected_seg_utility": 5.933975141185023e-06,
+      "frame_indices": [
+        418,
+        419
+      ],
+      "measured_delta_available": true,
+      "net_expected_utility_after_rate_and_risk": 5.352095729225613e-06,
+      "pair_index": 209,
+      "policy_atom_id": "transfer:C059:0209",
+      "promotion_eligible": false,
+      "rank": 60,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0209",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "archive_eval_pr67_public_qpose14_qzs3_filmq9g_slsb1_r55_20260502T0213Z",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 2.6760478646128066e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 6.9940491132655584e-06,
+      "expected_scorer_utility": 6.9940491132655584e-06,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        1000,
+        1001
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 5.32940173046013e-06,
+      "pair_index": 500,
+      "policy_atom_id": "transfer:C059:0500",
+      "promotion_eligible": false,
+      "rank": 61,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0500",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 2.664700865230065e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_component_delta_non_promotable",
+      "expected_pose_utility": 1.8467084588098215e-07,
+      "expected_scorer_utility": 6.9663581074176996e-06,
+      "expected_seg_utility": 6.781687261536717e-06,
+      "frame_indices": [
+        1196,
+        1197
+      ],
+      "measured_delta_available": true,
+      "net_expected_utility_after_rate_and_risk": 5.301710724612271e-06,
+      "pair_index": 598,
+      "policy_atom_id": "transfer:C059:0598",
+      "promotion_eligible": false,
+      "rank": 62,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0598",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "archive_eval_pr67_public_qpose14_qzs3_filmq9g_slsb1_r55_20260502T0213Z",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 2.6508553623061355e-06
+    },
+    {
+      "alternate_source": {
+        "expected_scorer_utility": 9.402964445398923e-07,
+        "net_expected_utility_after_rate_and_risk": -7.243509382655363e-07,
+        "rank_input_source": "pr65_pr67_atom_ledger",
+        "source_atom_id": "basis_vs_pr67_component_delta:basis_r13_h100:vs:pr67:pose:pair_0058"
+      },
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 6.849691697372195e-06,
+      "expected_scorer_utility": 6.849691697372195e-06,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        116,
+        117
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 5.185044314566767e-06,
+      "pair_index": 58,
+      "policy_atom_id": "transfer:C059:0058",
+      "promotion_eligible": false,
+      "rank": 63,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0058",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 2.5925221572833833e-06
+    },
+    {
+      "byte_notes": [
+        "Charged byte estimate: 2 bytes from C-059 pose plan.",
+        "minimum pose_pair_bytes from atom ledger"
+      ],
+      "charged_bytes_estimate": 2.0,
+      "evidence_grade": "diagnostic_prior_non_promotable",
+      "expected_pose_utility": 6.833979976298813e-06,
+      "expected_scorer_utility": 6.833979976298813e-06,
+      "expected_seg_utility": 0.0,
+      "frame_indices": [
+        602,
+        603
+      ],
+      "measured_delta_available": false,
+      "net_expected_utility_after_rate_and_risk": 5.169332593493385e-06,
+      "pair_index": 301,
+      "policy_atom_id": "transfer:C059:0301",
+      "promotion_eligible": false,
+      "rank": 64,
+      "rank_input_source": "c059_pose_atom_plan",
+      "rate_utility_cost": 1.3317179062443428e-06,
+      "requires_exact_cuda_stack_eval": true,
+      "risk_notes": [
+        "no_positive_reference_component_delta"
+      ],
+      "score_claim": false,
+      "source_atom_id": "C-059:pose_residual_pair_0301",
+      "source_path": "/Users/adpena/Projects/pact/experiments/results/pose_atom_plan_c059_20260502/pose_atom_policies.json",
+      "transfer_from": "C-059 hard-pair prior",
+      "transfer_to": "C-059",
+      "utility_per_charged_byte": 2.5846662967466923e-06
+    }
+  ],
+  "transfer_opportunity_count": 64
+}

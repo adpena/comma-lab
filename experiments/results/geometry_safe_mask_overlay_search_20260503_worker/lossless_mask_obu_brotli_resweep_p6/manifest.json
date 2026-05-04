@@ -1,0 +1,98 @@
+{
+  "archive_delta_bytes_vs_source": -7,
+  "candidate_id": "lossless_mask_obu_brotli_resweep_p6",
+  "candidate_kind": "lossless_mask_stream_rebrotli",
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "dispatch_recommendation": "exact-ready but standalone value is too small; only dispatch if bundled with a larger exact-safe change",
+  "evidence_grade": "empirical_lossless_byte_transform",
+  "formula_only_rate_score_delta_vs_source": -4.6610126718552e-06,
+  "mask_geometry": {
+    "bounded_pixel_disagreement": false,
+    "changed_frame_count": 0,
+    "changed_pixel_count": 0,
+    "changed_pixel_fraction": 0.0,
+    "max_changed_pixels_per_frame": 0,
+    "mean_changed_pixels_per_changed_frame": 0.0,
+    "source_to_candidate_confusion_5x5": [
+      [
+        27408427,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        690063,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        58413695,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        1459867,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        29992748
+      ]
+    ],
+    "total_pixel_count": 117964800,
+    "zero_disagreement": true
+  },
+  "non_mask_decoded_members_preserved": {
+    "optimized_poses.qp1": true,
+    "renderer.bin": true,
+    "seg_tile_actions.bin": true
+  },
+  "output_archive": {
+    "bytes": 276345,
+    "path": "/Users/adpena/Projects/pact/experiments/results/geometry_safe_mask_overlay_search_20260503_worker/lossless_mask_obu_brotli_resweep_p6/archive.zip",
+    "sha256": "7d294d4c8923648ae0c56f918b0bd13576eac098c74d400c2becf311a415ee02"
+  },
+  "payload": {
+    "bytes": 276245,
+    "format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+    "member": "p",
+    "sha256": "bed3c55976049df588e709e0b19985bd45909d38b31e4e98b19d98b1dcf82728"
+  },
+  "promotion_eligible": false,
+  "schema": "geometry_safe_mask_overlay_candidate_manifest_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 276352,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c067_pr75_tile_action_compiler_p6_trace_ev_20260503_codex/c067_pr75_actions_lag_eval_top67_p6/archive.zip",
+    "sha256": "d73f0957cf2d8da0526c1786613443331ccb913f5648131cfaaac5e6f7eae972"
+  },
+  "source_payload": {
+    "bytes": 276252,
+    "sha256": "b025f984becf664893d77a6b2c34be07ad941bbd01de97f27271533c6646f452"
+  },
+  "stream_choices": {
+    "masks.mkv": {
+      "brotli_bytes": 219465,
+      "brotli_params": {
+        "lgblock": 17,
+        "lgwin": 19,
+        "mode": 0,
+        "quality": 11
+      },
+      "raw_bytes": 223385,
+      "raw_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+    }
+  },
+  "tool": "experiments/geometry_safe_mask_overlay_search.py"
+}

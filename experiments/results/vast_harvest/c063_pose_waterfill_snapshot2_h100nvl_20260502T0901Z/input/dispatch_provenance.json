@@ -1,0 +1,20 @@
+{
+  "gpu_probe": "NVIDIA H100 80GB HBM3, 590.48.01, 81559 MiB",
+  "instance_job_id": "35995649:c063_pose_waterfill_048_fixedslice_20260502T0838Z",
+  "lane_id": "c063_pose_waterfill_048_frontier_fixedslice_h100sxm",
+  "promotion_eligible": false,
+  "purpose": "H100 pose-waterfill line search from a C-063-derived fixed-slice source; exact H100 eval is diagnostic, T4 required for promotion.",
+  "recorded_at_utc": "2026-05-02T08:46:45Z",
+  "schema_version": 1,
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 276214,
+    "path": "/workspace/pact/experiments/results/c063_breakthrough_candidate_matrix_20260502/line_search_source_c063_fixedslice/archive.zip",
+    "sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a"
+  },
+  "source_metadata": {
+    "bytes": 1877,
+    "path": "/workspace/pact/experiments/results/c063_breakthrough_candidate_matrix_20260502/line_search_source_c063_fixedslice/metadata.json",
+    "sha256": "7397c4128e4219c1c43a89b5a47b060c12af9aa87aedd6e3e69caf68d6365411"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "archive": "lane_q_faithful_results/postprocess_fixed_snapshot_20260501T2131Z_fix1/raw_qfai_half_posebin/archive.zip",
+  "archive_bytes": 563099,
+  "archive_sha256": "336ac3ea31c367ce5dcba2cf10f5f04c8f142ee6d47b20026687d91d0f87fb26",
+  "recorded_at_utc": "2026-05-01T21:32:23Z",
+  "schema_version": 1,
+  "score_claim": false,
+  "tool": "remote_q_faithful_postprocess_fixed:raw_qfai_half_posebin",
+  "validation": {
+    "archive_bytes": 563099,
+    "archive_path": "lane_q_faithful_results/postprocess_fixed_snapshot_20260501T2131Z_fix1/raw_qfai_half_posebin/archive.zip",
+    "errors": [],
+    "files_found": {
+      "masks.mkv": 223738,
+      "optimized_poses.bin": 7200,
+      "renderer.bin": 389756
+    },
+    "files_missing": [],
+    "files_unexpected": [],
+    "md5": "c415c9770d41f4a74ee1ad8a429bc9a3",
+    "rate_term": 0.3749445106441416,
+    "valid": true,
+    "warnings": []
+  }
+}

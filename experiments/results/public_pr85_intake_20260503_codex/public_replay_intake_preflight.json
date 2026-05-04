@@ -1,0 +1,318 @@
+{
+  "archive": {
+    "bytes": 236328,
+    "charged_member_allowlist": "passed",
+    "duplicate_member_names": [],
+    "member_names": [
+      "x"
+    ],
+    "members": [
+      {
+        "compress_size": 236228,
+        "compress_type": 0,
+        "crc32_hex": "c6356353",
+        "decode_smoke": {
+          "bytes": 236228,
+          "format": {
+            "fixed_length_segments": {
+              "bias": 223,
+              "region": 273
+            },
+            "format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+            "header_bytes": 24,
+            "recognized": true,
+            "segment_lengths": {
+              "bias": 223,
+              "frac": 106,
+              "frac2": 149,
+              "frac3": 154,
+              "mask": 159011,
+              "model": 57074,
+              "pose": 1487,
+              "post": 1400,
+              "randmulti": 16101,
+              "region": 273,
+              "shift": 226
+            },
+            "segments": [
+              {
+                "bytes": 159011,
+                "codec": "QMA9",
+                "magic": "QMA9",
+                "metadata": {},
+                "name": "mask",
+                "sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179"
+              },
+              {
+                "brotli_decode": {
+                  "attempted": true,
+                  "decoded_bytes": 61590,
+                  "decoded_magic_ascii": "QH0\u0000\ufffd\ufffd?*",
+                  "decoded_magic_hex": "51483000fcd63f2a",
+                  "decoded_sha256": "503d666ec4c1b3e0ce09fa9dcb963b049de185eac0ddd82318578a7732439ed4",
+                  "ok": true
+                },
+                "bytes": 57074,
+                "codec": "brotli_qh_model",
+                "decoded_magic_ascii": "QH0\u0000\ufffd\ufffd?*",
+                "decoded_magic_hex": "51483000fcd63f2a",
+                "magic": "b1a8843f",
+                "metadata": {},
+                "name": "model",
+                "sha256": "c9194c19d44d3c32c4e588bbe4f9986ed0c562779078f0f4d6b073f0799b5dbc"
+              },
+              {
+                "brotli_decode": {
+                  "attempted": true,
+                  "decoded_bytes": 1806,
+                  "decoded_magic_ascii": "P1D1\u0002\u0000q\u0004",
+                  "decoded_magic_hex": "5031443102007104",
+                  "decoded_sha256": "5121f50f598da361e57820482cfaf47785ba18651ad18291b4201719fa624f5d",
+                  "ok": true
+                },
+                "bytes": 1487,
+                "codec": "brotli_p1d1_pose",
+                "decoded_magic_ascii": "P1D1\u0002\u0000q\u0004",
+                "decoded_magic_hex": "5031443102007104",
+                "magic": "a2e120a2",
+                "metadata": {},
+                "name": "pose",
+                "sha256": "2b6e03e02fb17f662e3f3f9ce47daf2fc33bf1f76c96e34ffac005f1c5c4054c"
+              },
+              {
+                "brotli_decode": {
+                  "attempted": true,
+                  "decoded_bytes": 2400,
+                  "decoded_magic_ascii": "\b\n\u0000\u0006\u000b\t\u000b\u0002",
+                  "decoded_magic_hex": "080a00060b090b02",
+                  "decoded_sha256": "ce067fec132d1a314ad93cee8d39b17e7dd01a523db9a08ae797dfb1bd9a6b86",
+                  "ok": true
+                },
+                "bytes": 1400,
+                "codec": "brotli_qpost_sidechannel",
+                "decoded_magic_ascii": "\b\n\u0000\u0006\u000b\t\u000b\u0002",
+                "decoded_magic_hex": "080a00060b090b02",
+                "magic": "e22b6146",
+                "metadata": {},
+                "name": "post",
+                "sha256": "c3dc88e0fb5a1e48aec49eeacefeea20685e3c02598933deb1ff22dc09892575"
+              },
+              {
+                "brotli_decode": {
+                  "attempted": true,
+                  "decoded_bytes": 603,
+                  "decoded_magic_ascii": "SD4\"\u0000\u0000\u0000\u0000",
+                  "decoded_magic_hex": "5344342200000000",
+                  "decoded_sha256": "19e1bf816c8f19dd58e986647413a6f71f36a30e8da2d085ccf7e475d1cb3b43",
+                  "ok": true
+                },
+                "bytes": 226,
+                "codec": "brotli_qpost_sidechannel",
+                "decoded_magic_ascii": "SD4\"\u0000\u0000\u0000\u0000",
+                "decoded_magic_hex": "5344342200000000",
+                "magic": "424b00ff",
+                "metadata": {},
+                "name": "shift",
+                "sha256": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4"
+              },
+              {
+                "brotli_decode": {
+                  "attempted": true,
+                  "decoded_bytes": 179,
+                  "decoded_magic_ascii": "FV1W\u0000C\u0000\u0017",
+                  "decoded_magic_hex": "4656315700430017",
+                  "decoded_sha256": "05c785af21cbf5a5f11613dd5e23b8191b4c8477a57354d6b1060340a5fd901a",
+                  "ok": true
+                },
+                "bytes": 106,
+                "codec": "brotli_qpost_sidechannel",
+                "decoded_magic_ascii": "FV1W\u0000C\u0000\u0017",
+                "decoded_magic_hex": "4656315700430017",
+                "magic": "42160000",
+                "metadata": {},
+                "name": "frac",
+                "sha256": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992"
+              },
+              {
+                "brotli_decode": {
+                  "attempted": true,
+                  "decoded_bytes": 603,
+                  "decoded_magic_ascii": "FH2\u0004\u0004\u0004\u0004\u0004",
+                  "decoded_magic_hex": "4648320404040404",
+                  "decoded_sha256": "e880b2f23eae84b87c6e7f566265003dec54650a8e98fdfa8e01ce0d536a584b",
+                  "ok": true
+                },
+                "bytes": 149,
+                "codec": "brotli_qpost_sidechannel",
+                "decoded_magic_ascii": "FH2\u0004\u0004\u0004\u0004\u0004",
+                "decoded_magic_hex": "4648320404040404",
+                "magic": "424b00bf",
+                "metadata": {},
+                "name": "frac2",
+                "sha256": "3a01c7546d89d9d3ca846da37a20add7d456421e9211a6339850d946b856026b"
+              },
+              {
+                "brotli_decode": {
+                  "attempted": true,
+                  "decoded_bytes": 603,
+                  "decoded_magic_ascii": "FD3\t\u0000\u0000\u0000\u0000",
+                  "decoded_magic_hex": "4644330900000000",
+                  "decoded_sha256": "434ab5abbfec6cdf38e762eacc5382a04688c8bbef7592e9f2fd20ec5e6cdab4",
+                  "ok": true
+                },
+                "bytes": 154,
+                "codec": "brotli_qpost_sidechannel",
+                "decoded_magic_ascii": "FD3\t\u0000\u0000\u0000\u0000",
+                "decoded_magic_hex": "4644330900000000",
+                "magic": "424b00ff",
+                "metadata": {},
+                "name": "frac3",
+                "sha256": "d725b01b604566c5a76a06b821c644c8d5d5bb9a57ab0597d3bdabc8389858b5"
+              },
+              {
+                "brotli_decode": {
+                  "attempted": true,
+                  "decoded_bytes": 603,
+                  "decoded_magic_ascii": "BD1\u0000\u0000\u0000\u0000\u0000",
+                  "decoded_magic_hex": "4244310000000000",
+                  "decoded_sha256": "67751d89e4825a6a71d4e74a0aa6f0246a861c0f96fc11184eec407e9caf8d7c",
+                  "ok": true
+                },
+                "bytes": 223,
+                "codec": "brotli_qpost_sidechannel",
+                "decoded_magic_ascii": "BD1\u0000\u0000\u0000\u0000\u0000",
+                "decoded_magic_hex": "4244310000000000",
+                "magic": "424b00ff",
+                "metadata": {},
+                "name": "bias",
+                "sha256": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b"
+              },
+              {
+                "brotli_decode": {
+                  "attempted": true,
+                  "decoded_bytes": 603,
+                  "decoded_magic_ascii": "RH1\u0000\u0000\u0000\u0000\u0000",
+                  "decoded_magic_hex": "5248310000000000",
+                  "decoded_sha256": "8018b15bf5029b8bbf224b4ed1581afa2c51ae4e814e327183ffe8a697deb7e0",
+                  "ok": true
+                },
+                "bytes": 273,
+                "codec": "brotli_qpost_sidechannel",
+                "decoded_magic_ascii": "RH1\u0000\u0000\u0000\u0000\u0000",
+                "decoded_magic_hex": "5248310000000000",
+                "magic": "424b00ff",
+                "metadata": {},
+                "name": "region",
+                "sha256": "4a7c16094fab281c30e27621a58577c095c4b1153c232518c9adbaba2a2b2392"
+              },
+              {
+                "brotli_decode": {
+                  "attempted": true,
+                  "decoded_bytes": 27105,
+                  "decoded_magic_ascii": "\ufffd\u001c\u0001\u0000\u0002\u0002\u0000\u0007",
+                  "decoded_magic_hex": "ff1c010002020007",
+                  "decoded_sha256": "87bcc720c1e80afb9adad5ee01477423ced526f31c54d461d69dbf26e08eecc9",
+                  "ok": true
+                },
+                "bytes": 16101,
+                "codec": "brotli_qpost_sidechannel",
+                "decoded_magic_ascii": "\ufffd\u001c\u0001\u0000\u0002\u0002\u0000\u0007",
+                "decoded_magic_hex": "ff1c010002020007",
+                "magic": "b1004f2b",
+                "metadata": {},
+                "name": "randmulti",
+                "sha256": "c624372e60a0851c4c427dc333a60dcc5d6657ba8ed56951612e7c9d7be7629f"
+              }
+            ]
+          },
+          "magic_ascii": "#m\u0002\ufffd\ufffd\u0000\ufffd\u0005",
+          "magic_hex": "236d02f2de00cf05",
+          "name": "x",
+          "sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+          "status": "passed"
+        },
+        "file_size": 236228,
+        "name": "x",
+        "name_grammar": "passed"
+      }
+    ],
+    "path": "experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+    "sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+    "status": "passed",
+    "zip_container_integrity": "passed"
+  },
+  "blockers": [],
+  "cuda_required_for_score": true,
+  "dispatch_performed": false,
+  "evidence_grade": "external/local_preflight_non_score_until_cuda",
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": true,
+  "runtime": {
+    "inflate_sh": "experiments/results/public_pr85_intake_20260503_codex/replay_submission/inflate.sh",
+    "inflate_sh_sha256": "2c37f19e210f97c8926b70594e4d57fd8b0256dadace0cd55c28bbe6995ff027",
+    "runtime_manifest": {
+      "files": [
+        {
+          "bytes": 85145,
+          "relative_path": "inflate.py",
+          "sha256": "ff534ee0ef7a51dd4ec7a24570d812b32ce966e8b98b2dfdbe347ce9fa4ff3e7"
+        },
+        {
+          "bytes": 228,
+          "relative_path": "inflate.sh",
+          "sha256": "2c37f19e210f97c8926b70594e4d57fd8b0256dadace0cd55c28bbe6995ff027"
+        },
+        {
+          "bytes": 53975,
+          "relative_path": "range_mask_codec.cpp",
+          "sha256": "94cd1a86111fb6d34b6e12d37c624bd5938df0fbc6c4c24c8d40c5a83fcb016b"
+        }
+      ],
+      "repo_local_tac_import_manifest": {
+        "discovery": "static_ast_recursive_import_closure",
+        "file_count": 0,
+        "files": [],
+        "module_count": 0,
+        "parse_errors": [],
+        "root_import_modules": [],
+        "runtime_root_name": "replay_submission",
+        "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+        "tac_root_relative_path": "src/tac",
+        "unresolved_modules": []
+      },
+      "runtime_file_count": 3,
+      "runtime_root": "/Users/adpena/Projects/pact/experiments/results/public_pr85_intake_20260503_codex/replay_submission",
+      "runtime_tree_sha256": "8fd3e7fffeaa8a719117b9fb5e013cb905151c5196064b082ab88f3c1b95ed4b",
+      "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+      "upstream_evaluate_py": {
+        "bytes": 6005,
+        "relative_path": "evaluate.py",
+        "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+      }
+    },
+    "runtime_root": "/Users/adpena/Projects/pact/experiments/results/public_pr85_intake_20260503_codex/replay_submission",
+    "runtime_tree_sha256": "8fd3e7fffeaa8a719117b9fb5e013cb905151c5196064b082ab88f3c1b95ed4b",
+    "source_payload_scan": {
+      "files": [
+        {
+          "bytes": 85145,
+          "path": "inflate.py",
+          "sha256": "ff534ee0ef7a51dd4ec7a24570d812b32ce966e8b98b2dfdbe347ce9fa4ff3e7"
+        },
+        {
+          "bytes": 228,
+          "path": "inflate.sh",
+          "sha256": "2c37f19e210f97c8926b70594e4d57fd8b0256dadace0cd55c28bbe6995ff027"
+        }
+      ],
+      "runtime_root": "experiments/results/public_pr85_intake_20260503_codex/replay_submission",
+      "source_bytes_py_sh": 85373,
+      "status": "passed",
+      "violations": []
+    },
+    "status": "passed"
+  },
+  "schema": "public_replay_intake_preflight_v1",
+  "score_claim": false,
+  "tool": "experiments/preflight_public_replay_intake.py"
+}

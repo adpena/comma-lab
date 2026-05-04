@@ -1,0 +1,60 @@
+{
+  "alpha_bits": 3,
+  "alpha_block_format": "sparse_bitpacked_v2",
+  "basis_bytes": 308,
+  "basis_grid_h": 8,
+  "basis_grid_w": 6,
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "coefficient_block_bytes": 71,
+  "evidence_grade": "deterministic_repack_no_score",
+  "k": 1,
+  "max_encoded_pairs": null,
+  "out": {
+    "bytes": 387,
+    "path": "experiments/results/sjkl_c067_trace_selected_repack_20260502T_local/old_selected_positive9/repack/sjkl.bin",
+    "sha256": "49ff4c73cce806bb76cb95ef187b9781eb6778dcf3970eb26380654b4030900e"
+  },
+  "out_bytes": 387,
+  "pair_selection": "explicit",
+  "promotion_eligible": false,
+  "rate_contribution": 0.0002576874148582803,
+  "requested_pair_indices": [
+    332,
+    555,
+    553,
+    376,
+    352,
+    320,
+    576,
+    556,
+    244
+  ],
+  "residual_gain": 0.03125,
+  "schema": "sjkl_repack_manifest_v1",
+  "score_claim": false,
+  "selected_pair_count": 9,
+  "selected_pair_indices": [
+    332,
+    555,
+    553,
+    376,
+    352,
+    320,
+    576,
+    556,
+    244
+  ],
+  "source_sjkl": {
+    "bytes": 38515,
+    "path": "experiments/results/lightning_batch/sjkl_c067_rtxprodiag_20260502T151756Z/build/sjkl.bin",
+    "sha256": "04e95e588d6ec874809994856c56a5940e7b8e93e1d9e531056ff1505fb94e9f",
+    "source_alpha_bits": 6,
+    "source_k": 8,
+    "source_pair_indices": "implicit_sequential",
+    "source_rows": 600
+  },
+  "target_h": 384,
+  "target_w": 512,
+  "total_bytes": 387,
+  "total_sha256": "49ff4c73cce806bb76cb95ef187b9781eb6778dcf3970eb26380654b4030900e"
+}

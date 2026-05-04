@@ -1,0 +1,11 @@
+{
+  "baseline_archive": {
+    "bytes": 686635,
+    "sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+    "source": "modal_function_argument"
+  },
+  "promotion_eligible": false,
+  "role": "modal_diagnostic_component_sensitivity",
+  "schema_version": 1,
+  "score_claim": false
+}

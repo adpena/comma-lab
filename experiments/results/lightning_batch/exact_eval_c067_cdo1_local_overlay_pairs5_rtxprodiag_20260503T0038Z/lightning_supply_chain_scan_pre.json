@@ -1,0 +1,18 @@
+{
+  "hostname": "ip-10-192-10-143",
+  "package_versions": {
+    "lightning": null,
+    "lightning-sdk": null,
+    "lightning_sdk": null,
+    "pytorch-lightning": null
+  },
+  "python": "/teamspace/studios/this_studio/pact/.venv/bin/python",
+  "recorded_at_utc": "2026-05-03T00:46:36Z",
+  "repo_root": "/teamspace/studios/this_studio/pact",
+  "schema_version": 1,
+  "status": "OK",
+  "strict": true,
+  "tool": "scripts/scan_lightning_supply_chain.py",
+  "violation_count": 0,
+  "violations": []
+}

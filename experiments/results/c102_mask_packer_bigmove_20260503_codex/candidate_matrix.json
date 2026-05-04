@@ -1,0 +1,1129 @@
+{
+  "candidates": [
+    {
+      "active_elsewhere": false,
+      "archive_bytes": 276124,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr75_lossless_micro_packer_worker_20260503/public_renderer_c089_p6_lossless_stream_resweep/archive.zip",
+      "archive_sha256": "337b04040bee1316375bae8b2cfc2f08acddc235e4ee02d37ecfd62c0c831d95",
+      "break_even_vs_c091": {
+        "delta_bytes_vs_frontier": -361,
+        "rate_score_delta_vs_frontier": -0.00024037508207710388,
+        "score_if_components_unchanged": 0.3149039267395979,
+        "sub314_component_score_improvement_needed": 0.004903926739597886,
+        "sub314_equivalent_bytes_needed_after_candidate": 7365,
+        "target_component_score_improvement_needed": 0.004903926739597886,
+        "target_equivalent_bytes_needed_after_candidate": 7365,
+        "target_score": 0.31
+      },
+      "candidate_id": "public_renderer_c089_p6_lossless_stream_resweep",
+      "dispatchable_after_gate": true,
+      "exact_eval_justified_from_this_plan": false,
+      "exact_eval_status": "not_target_without_component_gain",
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr75_lossless_micro_packer_worker_20260503/public_renderer_c089_p6_lossless_stream_resweep/manifest.json",
+      "manifest_runtime_parse_status": "passed",
+      "manifest_stream_packing": {
+        "choices": {
+          "masks.mkv": {
+            "bytes": 219465,
+            "params": {
+              "lgblock": 17,
+              "lgwin": 19,
+              "mode": 0,
+              "quality": 11
+            },
+            "sha256": "1ddf03dad8466797397ead26a0d481766e22e26cbc936251c1e3ed5d2f6eda99"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 676,
+            "params": {
+              "lgblock": 0,
+              "lgwin": 16,
+              "mode": 0,
+              "quality": 11
+            },
+            "sha256": "61732151609c5decd72a3ac2254e9ac2258dae2846464eaeb14b5ef0a32d86f5"
+          },
+          "renderer.bin": {
+            "bytes": 55756,
+            "params": "source",
+            "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+          },
+          "seg_tile_actions.delta_varint": {
+            "bytes": 115,
+            "params": {
+              "lgblock": 0,
+              "lgwin": 10,
+              "mode": 0,
+              "quality": 9
+            },
+            "sha256": "72a9444d03990e04c5a38832a7e5564beb60ad190fc0d8a2238a609d3cdaf70f"
+          }
+        }
+      },
+      "next_dispatch_safety_gate": "run experiments/preflight_renderer_transplant_pose_safety.py against the exact C089 source archive SHA and candidate archive SHA; only dispatch if safe_for_exact_eval_dispatch=true, then claim lane and run exact CUDA auth eval",
+      "noop": false,
+      "score_claim": false,
+      "semantic_contract": "renderer_transplant_probe_public_renderer_only_c089_other_streams_byte_identical",
+      "source_matrix": "experiments/results/pr75_lossless_micro_packer_worker_20260503/candidate_matrix.json"
+    },
+    {
+      "active_elsewhere": false,
+      "archive_bytes": 276132,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr75_minp_p6_stream_mix_worker_20260503/p6_public_renderer_only/archive.zip",
+      "archive_sha256": "189301b6b7b8bc7f166ee7ec835bb71ed61ac56570133ac2bfea975b4377dec7",
+      "break_even_vs_c091": {
+        "delta_bytes_vs_frontier": -353,
+        "rate_score_delta_vs_frontier": -0.0002350482104521265,
+        "score_if_components_unchanged": 0.31490925361122285,
+        "sub314_component_score_improvement_needed": 0.004909253611222852,
+        "sub314_equivalent_bytes_needed_after_candidate": 7373,
+        "target_component_score_improvement_needed": 0.004909253611222852,
+        "target_equivalent_bytes_needed_after_candidate": 7373,
+        "target_score": 0.31
+      },
+      "candidate_id": "p6_public_renderer_only",
+      "dispatchable_after_gate": false,
+      "exact_eval_justified_from_this_plan": false,
+      "exact_eval_status": "not_ready_or_noop",
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr75_minp_p6_stream_mix_worker_20260503/p6_public_renderer_only/manifest.json",
+      "manifest_runtime_parse_status": null,
+      "manifest_stream_packing": {
+        "actions_delta_varint": {
+          "brotli_bytes": 115,
+          "brotli_params": {
+            "lgblock": 0,
+            "lgwin": 10,
+            "mode": 0,
+            "quality": 9
+          },
+          "brotli_sha256": "72a9444d03990e04c5a38832a7e5564beb60ad190fc0d8a2238a609d3cdaf70f",
+          "decoded_runtime_records_sha256": "50e997db4fd1b7642d9a2cd67b55802a4f7f9bd7a6603d0ca2eaf42e7fe7e320",
+          "raw_bytes": 120,
+          "raw_sha256": "b6250395c6a05a2a4f83a65cffe58debf18207af5c714f3146d8a8ae7470528a",
+          "record_count": 40,
+          "source_encoded_sha256": "2f270cba1207030026353794196e2425de1c8aa85cff4de12d544a30346034da"
+        }
+      },
+      "next_dispatch_safety_gate": null,
+      "noop": false,
+      "score_claim": false,
+      "semantic_contract": null,
+      "source_matrix": "experiments/results/pr75_minp_p6_stream_mix_worker_20260503/candidate_matrix.json"
+    },
+    {
+      "active_elsewhere": false,
+      "archive_bytes": 276321,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr75_lossless_micro_packer_worker_20260503/c089_raw_no_header_fixedslice_probe/archive.zip",
+      "archive_sha256": "da92eea8b59ba1e377bc83bdc5483abd9d89bd6393783338e51b0da718230bd4",
+      "break_even_vs_c091": {
+        "delta_bytes_vs_frontier": -164,
+        "rate_score_delta_vs_frontier": -0.00010920086831203611,
+        "score_if_components_unchanged": 0.31503510095336296,
+        "sub314_component_score_improvement_needed": 0.005035100953362959,
+        "sub314_equivalent_bytes_needed_after_candidate": 7562,
+        "target_component_score_improvement_needed": 0.005035100953362959,
+        "target_equivalent_bytes_needed_after_candidate": 7562,
+        "target_score": 0.31
+      },
+      "candidate_id": "c089_raw_no_header_fixedslice_probe",
+      "dispatchable_after_gate": false,
+      "exact_eval_justified_from_this_plan": false,
+      "exact_eval_status": "not_ready_or_noop",
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr75_lossless_micro_packer_worker_20260503/c089_raw_no_header_fixedslice_probe/manifest.json",
+      "manifest_runtime_parse_status": "failed_parser_rejected",
+      "manifest_stream_packing": {
+        "choices": {
+          "masks.mkv": {
+            "bytes": 219465,
+            "params": {
+              "lgblock": 17,
+              "lgwin": 19,
+              "mode": 0,
+              "quality": 11
+            },
+            "sha256": "1ddf03dad8466797397ead26a0d481766e22e26cbc936251c1e3ed5d2f6eda99"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 676,
+            "params": {
+              "lgblock": 0,
+              "lgwin": 16,
+              "mode": 0,
+              "quality": 11
+            },
+            "sha256": "61732151609c5decd72a3ac2254e9ac2258dae2846464eaeb14b5ef0a32d86f5"
+          },
+          "renderer.bin": {
+            "bytes": 55965,
+            "params": "source",
+            "sha256": "2544dfe50d2631a56600cbfc7342e4a18c97f953526fc51425be0d62f97e22ad"
+          },
+          "seg_tile_actions.delta_varint": {
+            "bytes": 115,
+            "params": {
+              "lgblock": 0,
+              "lgwin": 10,
+              "mode": 0,
+              "quality": 9
+            },
+            "sha256": "72a9444d03990e04c5a38832a7e5564beb60ad190fc0d8a2238a609d3cdaf70f"
+          }
+        },
+        "unsupported_raw_payload_contract": {
+          "reason": "robust_current fixed PR75 slice table has no C089 tuple for mask/model/actions/pose lengths",
+          "would_remove_p6_header_bytes": 10
+        }
+      },
+      "next_dispatch_safety_gate": "non-dispatchable byte probe; requires runtime support and tests before any exact eval",
+      "noop": false,
+      "score_claim": false,
+      "semantic_contract": "invalid_current_runtime_raw_fixedslice_header_removal_probe",
+      "source_matrix": "experiments/results/pr75_lossless_micro_packer_worker_20260503/candidate_matrix.json"
+    },
+    {
+      "active_elsewhere": true,
+      "archive_bytes": 276329,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr77_action_pose_mixed_container_20260503_codex/pr77_actions_pr75mask_renderer_c089pose_fixedslice/archive.zip",
+      "archive_sha256": "27866172e76d27113e86a30f722588fd668f81a949be3acbe1e92cddc9a6a1d8",
+      "break_even_vs_c091": {
+        "delta_bytes_vs_frontier": -156,
+        "rate_score_delta_vs_frontier": -0.00010387399668705873,
+        "score_if_components_unchanged": 0.3150404278249879,
+        "sub314_component_score_improvement_needed": 0.005040427824987925,
+        "sub314_equivalent_bytes_needed_after_candidate": 7570,
+        "target_component_score_improvement_needed": 0.005040427824987925,
+        "target_equivalent_bytes_needed_after_candidate": 7570,
+        "target_score": 0.31
+      },
+      "candidate_id": "pr77_actions_pr75mask_renderer_c089pose_fixedslice",
+      "dispatchable_after_gate": true,
+      "exact_eval_justified_from_this_plan": false,
+      "exact_eval_status": "already_active_do_not_touch_or_duplicate",
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr77_action_pose_mixed_container_20260503_codex/pr77_actions_pr75mask_renderer_c089pose_fixedslice/manifest.json",
+      "manifest_runtime_parse_status": "passed",
+      "manifest_stream_packing": {
+        "c089_pose_choice": {
+          "bytes": 676,
+          "params": {
+            "lgblock": 0,
+            "lgwin": 16,
+            "mode": 0,
+            "quality": 11
+          },
+          "sha256": "61732151609c5decd72a3ac2254e9ac2258dae2846464eaeb14b5ef0a32d86f5"
+        },
+        "pr77_actions_encoded": {
+          "bytes": 325,
+          "sha256": "d8c75e4f3725bbcf608434f0a78f5b37a9ce86bd8177c71092fd727d7e2af75a"
+        }
+      },
+      "next_dispatch_safety_gate": null,
+      "noop": false,
+      "score_claim": false,
+      "semantic_contract": "current_runtime_fixedslice_pr77_actions_with_c089_pose",
+      "source_matrix": "experiments/results/pr77_action_pose_mixed_container_20260503_codex/candidate_matrix.json"
+    },
+    {
+      "active_elsewhere": false,
+      "archive_bytes": 276332,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr77_action_pose_mixed_container_20260503_codex/pr77_actions_c089mask_pr75renderer_c089pose_p3/archive.zip",
+      "archive_sha256": "a0e4b86baf01838d42083d66841a037bca7c6d98ab38c139085a23287cab3b37",
+      "break_even_vs_c091": {
+        "delta_bytes_vs_frontier": -153,
+        "rate_score_delta_vs_frontier": -0.00010187641982769222,
+        "score_if_components_unchanged": 0.3150424254018473,
+        "sub314_component_score_improvement_needed": 0.005042425401847295,
+        "sub314_equivalent_bytes_needed_after_candidate": 7573,
+        "target_component_score_improvement_needed": 0.005042425401847295,
+        "target_equivalent_bytes_needed_after_candidate": 7573,
+        "target_score": 0.31
+      },
+      "candidate_id": "pr77_actions_c089mask_pr75renderer_c089pose_p3",
+      "dispatchable_after_gate": true,
+      "exact_eval_justified_from_this_plan": false,
+      "exact_eval_status": "not_target_without_component_gain",
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr77_action_pose_mixed_container_20260503_codex/pr77_actions_c089mask_pr75renderer_c089pose_p3/manifest.json",
+      "manifest_runtime_parse_status": "passed",
+      "manifest_stream_packing": {
+        "c089_mask_choice": {
+          "bytes": 219465,
+          "params": {
+            "lgblock": 17,
+            "lgwin": 19,
+            "mode": 0,
+            "quality": 11
+          },
+          "sha256": "1ddf03dad8466797397ead26a0d481766e22e26cbc936251c1e3ed5d2f6eda99"
+        },
+        "c089_pose_choice": {
+          "bytes": 676,
+          "params": {
+            "lgblock": 0,
+            "lgwin": 16,
+            "mode": 0,
+            "quality": 11
+          },
+          "sha256": "61732151609c5decd72a3ac2254e9ac2258dae2846464eaeb14b5ef0a32d86f5"
+        },
+        "pr77_actions_encoded": {
+          "bytes": 325,
+          "sha256": "d8c75e4f3725bbcf608434f0a78f5b37a9ce86bd8177c71092fd727d7e2af75a"
+        }
+      },
+      "next_dispatch_safety_gate": null,
+      "noop": false,
+      "score_claim": false,
+      "semantic_contract": "self_describing_p3_pr77_actions_with_c089_mask_pose",
+      "source_matrix": "experiments/results/pr77_action_pose_mixed_container_20260503_codex/candidate_matrix.json"
+    },
+    {
+      "active_elsewhere": false,
+      "archive_bytes": 276333,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr75_lossless_micro_packer_worker_20260503/c089_p6_lossless_stream_resweep/archive.zip",
+      "archive_sha256": "3de0d1546c909404df2f9b40a9ab8218100be36650b6bfcb3132bac50400ec7f",
+      "break_even_vs_c091": {
+        "delta_bytes_vs_frontier": -152,
+        "rate_score_delta_vs_frontier": -0.00010121056087457006,
+        "score_if_components_unchanged": 0.3150430912608004,
+        "sub314_component_score_improvement_needed": 0.005043091260800381,
+        "sub314_equivalent_bytes_needed_after_candidate": 7574,
+        "target_component_score_improvement_needed": 0.005043091260800381,
+        "target_equivalent_bytes_needed_after_candidate": 7574,
+        "target_score": 0.31
+      },
+      "candidate_id": "c089_p6_lossless_stream_resweep",
+      "dispatchable_after_gate": true,
+      "exact_eval_justified_from_this_plan": false,
+      "exact_eval_status": "not_target_without_component_gain",
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr75_lossless_micro_packer_worker_20260503/c089_p6_lossless_stream_resweep/manifest.json",
+      "manifest_runtime_parse_status": "passed",
+      "manifest_stream_packing": {
+        "actions_delta_varint_raw": {
+          "bytes": 120,
+          "sha256": "b6250395c6a05a2a4f83a65cffe58debf18207af5c714f3146d8a8ae7470528a"
+        },
+        "choices": {
+          "masks.mkv": {
+            "bytes": 219465,
+            "params": {
+              "lgblock": 17,
+              "lgwin": 19,
+              "mode": 0,
+              "quality": 11
+            },
+            "sha256": "1ddf03dad8466797397ead26a0d481766e22e26cbc936251c1e3ed5d2f6eda99"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 676,
+            "params": {
+              "lgblock": 0,
+              "lgwin": 16,
+              "mode": 0,
+              "quality": 11
+            },
+            "sha256": "61732151609c5decd72a3ac2254e9ac2258dae2846464eaeb14b5ef0a32d86f5"
+          },
+          "renderer.bin": {
+            "bytes": 55965,
+            "params": "source",
+            "sha256": "2544dfe50d2631a56600cbfc7342e4a18c97f953526fc51425be0d62f97e22ad"
+          },
+          "seg_tile_actions.delta_varint": {
+            "bytes": 115,
+            "params": {
+              "lgblock": 0,
+              "lgwin": 10,
+              "mode": 0,
+              "quality": 9
+            },
+            "sha256": "72a9444d03990e04c5a38832a7e5564beb60ad190fc0d8a2238a609d3cdaf70f"
+          }
+        }
+      },
+      "next_dispatch_safety_gate": "claim lane via tools/claim_lane_dispatch.py, then exact CUDA auth eval: archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+      "noop": false,
+      "score_claim": false,
+      "semantic_contract": "strict_decoded_byte_parity_vs_c089_all_streams_rebrotli",
+      "source_matrix": "experiments/results/pr75_lossless_micro_packer_worker_20260503/candidate_matrix.json"
+    },
+    {
+      "active_elsewhere": false,
+      "archive_bytes": 276337,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr77_action_pose_mixed_container_20260503_codex/pr77_actions_sorted_c089mask_pr75renderer_c089pose_p6_probe/archive.zip",
+      "archive_sha256": "686af16796bc3f3a8f3e8d050492ba77a86237ae2b4eb9df0238b221329619c8",
+      "break_even_vs_c091": {
+        "delta_bytes_vs_frontier": -148,
+        "rate_score_delta_vs_frontier": -9.854712506208137e-05,
+        "score_if_components_unchanged": 0.3150457546966129,
+        "sub314_component_score_improvement_needed": 0.005045754696612892,
+        "sub314_equivalent_bytes_needed_after_candidate": 7578,
+        "target_component_score_improvement_needed": 0.005045754696612892,
+        "target_equivalent_bytes_needed_after_candidate": 7578,
+        "target_score": 0.31
+      },
+      "candidate_id": "pr77_actions_sorted_c089mask_pr75renderer_c089pose_p6_probe",
+      "dispatchable_after_gate": false,
+      "exact_eval_justified_from_this_plan": false,
+      "exact_eval_status": "not_ready_or_noop",
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr77_action_pose_mixed_container_20260503_codex/pr77_actions_sorted_c089mask_pr75renderer_c089pose_p6_probe/manifest.json",
+      "manifest_runtime_parse_status": "passed",
+      "manifest_stream_packing": {
+        "action_order_probe": {
+          "encoded_delta_varint": {
+            "brotli_bytes": 328,
+            "brotli_params": "brotli_quality_11_default",
+            "brotli_sha256": "1b4ec570ce32ad9fe69ce358befcf12dca81e6ad6e0bae9bc115d2897e61a75b",
+            "raw_bytes": 441,
+            "raw_sha256": "8f2026c14e73067b45f2ed318aa187debaea1625a8d7ba61b6bf6fbd830a4b5d"
+          },
+          "original_action_stats": {
+            "action_max": 107,
+            "action_min": 2,
+            "duplicate_pair_tile_count": 0,
+            "duplicate_pair_tiles_first10": [],
+            "nondecreasing_pair_order": false,
+            "pair_max": 599,
+            "pair_min": 11,
+            "record_count": 147,
+            "records_sha256": "8ac9a01caad973096c58b42daf2b1a8e476ad68cf285d443baa4ac94fdb42255",
+            "tile_max": 140,
+            "tile_min": 82,
+            "unique_actions": 73,
+            "unique_pairs": 121,
+            "unique_tiles": 24
+          },
+          "proof_status": "structural_disjoint_pair_tile_targets_only",
+          "sorted_action_stats": {
+            "action_max": 107,
+            "action_min": 2,
+            "duplicate_pair_tile_count": 0,
+            "duplicate_pair_tiles_first10": [],
+            "nondecreasing_pair_order": true,
+            "pair_max": 599,
+            "pair_min": 11,
+            "record_count": 147,
+            "records_sha256": "6f139bae1e27c16162eed3bd497bbcf192468c47d6c2d96c5fa78a15c1ae2644",
+            "tile_max": 140,
+            "tile_min": 82,
+            "unique_actions": 73,
+            "unique_pairs": 121,
+            "unique_tiles": 24
+          },
+          "sorted_records_sha256": "6f139bae1e27c16162eed3bd497bbcf192468c47d6c2d96c5fa78a15c1ae2644"
+        },
+        "c089_mask_choice": {
+          "bytes": 219465,
+          "params": {
+            "lgblock": 17,
+            "lgwin": 19,
+            "mode": 0,
+            "quality": 11
+          },
+          "sha256": "1ddf03dad8466797397ead26a0d481766e22e26cbc936251c1e3ed5d2f6eda99"
+        },
+        "c089_pose_choice": {
+          "bytes": 676,
+          "params": {
+            "lgblock": 0,
+            "lgwin": 16,
+            "mode": 0,
+            "quality": 11
+          },
+          "sha256": "61732151609c5decd72a3ac2254e9ac2258dae2846464eaeb14b5ef0a32d86f5"
+        }
+      },
+      "next_dispatch_safety_gate": null,
+      "noop": false,
+      "score_claim": false,
+      "semantic_contract": "non_dispatchable_sorted_pr77_actions_p6_probe",
+      "source_matrix": "experiments/results/pr77_action_pose_mixed_container_20260503_codex/candidate_matrix.json"
+    },
+    {
+      "active_elsewhere": false,
+      "archive_bytes": 276341,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr75_lossless_micro_packer_worker_20260503/c089_p6_action_resweep/archive.zip",
+      "archive_sha256": "428757d21a6237d284e80f2a0305e0aff99ef0523c3cbcbd476254c84948787b",
+      "break_even_vs_c091": {
+        "delta_bytes_vs_frontier": -144,
+        "rate_score_delta_vs_frontier": -9.588368924959268e-05,
+        "score_if_components_unchanged": 0.3150484181324254,
+        "sub314_component_score_improvement_needed": 0.005048418132425403,
+        "sub314_equivalent_bytes_needed_after_candidate": 7582,
+        "target_component_score_improvement_needed": 0.005048418132425403,
+        "target_equivalent_bytes_needed_after_candidate": 7582,
+        "target_score": 0.31
+      },
+      "candidate_id": "c089_p6_action_resweep",
+      "dispatchable_after_gate": true,
+      "exact_eval_justified_from_this_plan": false,
+      "exact_eval_status": "not_target_without_component_gain",
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr75_lossless_micro_packer_worker_20260503/c089_p6_action_resweep/manifest.json",
+      "manifest_runtime_parse_status": "passed",
+      "manifest_stream_packing": {
+        "actions_delta_varint": {
+          "bytes": 115,
+          "params": {
+            "lgblock": 0,
+            "lgwin": 10,
+            "mode": 0,
+            "quality": 9
+          },
+          "raw_bytes": 120,
+          "raw_sha256": "b6250395c6a05a2a4f83a65cffe58debf18207af5c714f3146d8a8ae7470528a",
+          "sha256": "72a9444d03990e04c5a38832a7e5564beb60ad190fc0d8a2238a609d3cdaf70f"
+        }
+      },
+      "next_dispatch_safety_gate": "claim lane via tools/claim_lane_dispatch.py, then exact CUDA auth eval: archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+      "noop": false,
+      "score_claim": false,
+      "semantic_contract": "strict_decoded_byte_parity_vs_c089_actions_rebrotli_only",
+      "source_matrix": "experiments/results/pr75_lossless_micro_packer_worker_20260503/candidate_matrix.json"
+    },
+    {
+      "active_elsewhere": false,
+      "archive_bytes": 276341,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr75_minp_p6_stream_mix_worker_20260503/p6_c089_action_resweep/archive.zip",
+      "archive_sha256": "428757d21a6237d284e80f2a0305e0aff99ef0523c3cbcbd476254c84948787b",
+      "break_even_vs_c091": {
+        "delta_bytes_vs_frontier": -144,
+        "rate_score_delta_vs_frontier": -9.588368924959268e-05,
+        "score_if_components_unchanged": 0.3150484181324254,
+        "sub314_component_score_improvement_needed": 0.005048418132425403,
+        "sub314_equivalent_bytes_needed_after_candidate": 7582,
+        "target_component_score_improvement_needed": 0.005048418132425403,
+        "target_equivalent_bytes_needed_after_candidate": 7582,
+        "target_score": 0.31
+      },
+      "candidate_id": "p6_c089_action_resweep",
+      "dispatchable_after_gate": false,
+      "exact_eval_justified_from_this_plan": false,
+      "exact_eval_status": "not_ready_or_noop",
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr75_minp_p6_stream_mix_worker_20260503/p6_c089_action_resweep/manifest.json",
+      "manifest_runtime_parse_status": null,
+      "manifest_stream_packing": {
+        "actions_delta_varint": {
+          "brotli_bytes": 115,
+          "brotli_params": {
+            "lgblock": 0,
+            "lgwin": 10,
+            "mode": 0,
+            "quality": 9
+          },
+          "brotli_sha256": "72a9444d03990e04c5a38832a7e5564beb60ad190fc0d8a2238a609d3cdaf70f",
+          "decoded_runtime_records_sha256": "50e997db4fd1b7642d9a2cd67b55802a4f7f9bd7a6603d0ca2eaf42e7fe7e320",
+          "raw_bytes": 120,
+          "raw_sha256": "b6250395c6a05a2a4f83a65cffe58debf18207af5c714f3146d8a8ae7470528a",
+          "record_count": 40,
+          "source_encoded_sha256": "2f270cba1207030026353794196e2425de1c8aa85cff4de12d544a30346034da"
+        }
+      },
+      "next_dispatch_safety_gate": null,
+      "noop": false,
+      "score_claim": false,
+      "semantic_contract": null,
+      "source_matrix": "experiments/results/pr75_minp_p6_stream_mix_worker_20260503/candidate_matrix.json"
+    },
+    {
+      "active_elsewhere": false,
+      "archive_bytes": 276342,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr75_lossless_micro_packer_worker_20260503/c089_zip_rewrite_noop/archive.zip",
+      "archive_sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8",
+      "break_even_vs_c091": {
+        "delta_bytes_vs_frontier": -143,
+        "rate_score_delta_vs_frontier": -9.521783029647051e-05,
+        "score_if_components_unchanged": 0.3150490839913785,
+        "sub314_component_score_improvement_needed": 0.005049083991378489,
+        "sub314_equivalent_bytes_needed_after_candidate": 7583,
+        "target_component_score_improvement_needed": 0.005049083991378489,
+        "target_equivalent_bytes_needed_after_candidate": 7583,
+        "target_score": 0.31
+      },
+      "candidate_id": "c089_zip_rewrite_noop",
+      "dispatchable_after_gate": false,
+      "exact_eval_justified_from_this_plan": false,
+      "exact_eval_status": "not_ready_or_noop",
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr75_lossless_micro_packer_worker_20260503/c089_zip_rewrite_noop/manifest.json",
+      "manifest_runtime_parse_status": "passed",
+      "manifest_stream_packing": {
+        "source_payload_sha256": "fcc3fddb3a4182182bbfca1d1064544c87e58a5a9f76ea6fddfcfe4eb0b453c1"
+      },
+      "next_dispatch_safety_gate": "do not dispatch: no-op control",
+      "noop": true,
+      "score_claim": false,
+      "semantic_contract": "strict_source_payload_noop_control",
+      "source_matrix": "experiments/results/pr75_lossless_micro_packer_worker_20260503/candidate_matrix.json"
+    },
+    {
+      "active_elsewhere": false,
+      "archive_bytes": 276346,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr75_lossless_micro_packer_worker_20260503/public_renderer_pose_c089_p6_lossless_stream_resweep/archive.zip",
+      "archive_sha256": "6f9cc5406f4b2d57409b940699b0d06f21154ae69382caa08d90f31f14cf4b18",
+      "break_even_vs_c091": {
+        "delta_bytes_vs_frontier": -139,
+        "rate_score_delta_vs_frontier": -9.255439448398183e-05,
+        "score_if_components_unchanged": 0.315051747427191,
+        "sub314_component_score_improvement_needed": 0.005051747427191,
+        "sub314_equivalent_bytes_needed_after_candidate": 7587,
+        "target_component_score_improvement_needed": 0.005051747427191,
+        "target_equivalent_bytes_needed_after_candidate": 7587,
+        "target_score": 0.31
+      },
+      "candidate_id": "public_renderer_pose_c089_p6_lossless_stream_resweep",
+      "dispatchable_after_gate": false,
+      "exact_eval_justified_from_this_plan": false,
+      "exact_eval_status": "not_ready_or_noop",
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr75_lossless_micro_packer_worker_20260503/public_renderer_pose_c089_p6_lossless_stream_resweep/manifest.json",
+      "manifest_runtime_parse_status": "passed",
+      "manifest_stream_packing": {
+        "choices": {
+          "masks.mkv": {
+            "bytes": 219465,
+            "params": {
+              "lgblock": 17,
+              "lgwin": 19,
+              "mode": 0,
+              "quality": 11
+            },
+            "sha256": "1ddf03dad8466797397ead26a0d481766e22e26cbc936251c1e3ed5d2f6eda99"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 898,
+            "params": "source",
+            "sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082"
+          },
+          "renderer.bin": {
+            "bytes": 55756,
+            "params": "source",
+            "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+          },
+          "seg_tile_actions.delta_varint": {
+            "bytes": 115,
+            "params": {
+              "lgblock": 0,
+              "lgwin": 10,
+              "mode": 0,
+              "quality": 9
+            },
+            "sha256": "72a9444d03990e04c5a38832a7e5564beb60ad190fc0d8a2238a609d3cdaf70f"
+          }
+        }
+      },
+      "next_dispatch_safety_gate": "run local robust_current unpack/runtime raw-output parity against the named source archive; only then claim lane and run exact CUDA auth eval",
+      "noop": false,
+      "score_claim": false,
+      "semantic_contract": "renderer_pose_transplant_probe_public_renderer_pose_c089_actions_masks",
+      "source_matrix": "experiments/results/pr75_lossless_micro_packer_worker_20260503/candidate_matrix.json"
+    },
+    {
+      "active_elsewhere": false,
+      "archive_bytes": 276353,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr75_minp_p6_stream_mix_worker_20260503/p6_public_renderer_pose/archive.zip",
+      "archive_sha256": "c5d2d83cdfc128cafe4ae59278ba872cc9ef423d5dd32a6ab31b95648343439a",
+      "break_even_vs_c091": {
+        "delta_bytes_vs_frontier": -132,
+        "rate_score_delta_vs_frontier": -8.789338181212663e-05,
+        "score_if_components_unchanged": 0.3150564084398628,
+        "sub314_component_score_improvement_needed": 0.005056408439862825,
+        "sub314_equivalent_bytes_needed_after_candidate": 7594,
+        "target_component_score_improvement_needed": 0.005056408439862825,
+        "target_equivalent_bytes_needed_after_candidate": 7594,
+        "target_score": 0.31
+      },
+      "candidate_id": "p6_public_renderer_pose",
+      "dispatchable_after_gate": false,
+      "exact_eval_justified_from_this_plan": false,
+      "exact_eval_status": "not_ready_or_noop",
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr75_minp_p6_stream_mix_worker_20260503/p6_public_renderer_pose/manifest.json",
+      "manifest_runtime_parse_status": null,
+      "manifest_stream_packing": {
+        "actions_delta_varint": {
+          "brotli_bytes": 115,
+          "brotli_params": {
+            "lgblock": 0,
+            "lgwin": 10,
+            "mode": 0,
+            "quality": 9
+          },
+          "brotli_sha256": "72a9444d03990e04c5a38832a7e5564beb60ad190fc0d8a2238a609d3cdaf70f",
+          "decoded_runtime_records_sha256": "50e997db4fd1b7642d9a2cd67b55802a4f7f9bd7a6603d0ca2eaf42e7fe7e320",
+          "raw_bytes": 120,
+          "raw_sha256": "b6250395c6a05a2a4f83a65cffe58debf18207af5c714f3146d8a8ae7470528a",
+          "record_count": 40,
+          "source_encoded_sha256": "2f270cba1207030026353794196e2425de1c8aa85cff4de12d544a30346034da"
+        }
+      },
+      "next_dispatch_safety_gate": null,
+      "noop": false,
+      "score_claim": false,
+      "semantic_contract": null,
+      "source_matrix": "experiments/results/pr75_minp_p6_stream_mix_worker_20260503/candidate_matrix.json"
+    },
+    {
+      "active_elsewhere": false,
+      "archive_bytes": 276371,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr75_lossless_micro_packer_worker_20260503/c089_p3_raw_actions_probe/archive.zip",
+      "archive_sha256": "4723425564d8310deea4fae7234298c8b84ed7e1ead4d3560ccb94ef3de3778c",
+      "break_even_vs_c091": {
+        "delta_bytes_vs_frontier": -114,
+        "rate_score_delta_vs_frontier": -7.590792065592754e-05,
+        "score_if_components_unchanged": 0.31506839390101904,
+        "sub314_component_score_improvement_needed": 0.0050683939010190415,
+        "sub314_equivalent_bytes_needed_after_candidate": 7612,
+        "target_component_score_improvement_needed": 0.0050683939010190415,
+        "target_equivalent_bytes_needed_after_candidate": 7612,
+        "target_score": 0.31
+      },
+      "candidate_id": "c089_p3_raw_actions_probe",
+      "dispatchable_after_gate": false,
+      "exact_eval_justified_from_this_plan": false,
+      "exact_eval_status": "not_ready_or_noop",
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr75_lossless_micro_packer_worker_20260503/c089_p3_raw_actions_probe/manifest.json",
+      "manifest_runtime_parse_status": "passed",
+      "manifest_stream_packing": {
+        "actions_raw_brotli": {
+          "bytes": 155,
+          "params": {
+            "lgblock": 0,
+            "lgwin": 16,
+            "mode": 0,
+            "quality": 8
+          },
+          "raw_bytes": 160,
+          "raw_sha256": "50e997db4fd1b7642d9a2cd67b55802a4f7f9bd7a6603d0ca2eaf42e7fe7e320",
+          "sha256": "642095e89d95769ea0f78cabb20c9cbf1d109fcb503173d4704f8fb39878a766"
+        },
+        "choices": {
+          "masks.mkv": {
+            "bytes": 219465,
+            "params": {
+              "lgblock": 17,
+              "lgwin": 19,
+              "mode": 0,
+              "quality": 11
+            },
+            "sha256": "1ddf03dad8466797397ead26a0d481766e22e26cbc936251c1e3ed5d2f6eda99"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 676,
+            "params": {
+              "lgblock": 0,
+              "lgwin": 16,
+              "mode": 0,
+              "quality": 11
+            },
+            "sha256": "61732151609c5decd72a3ac2254e9ac2258dae2846464eaeb14b5ef0a32d86f5"
+          },
+          "renderer.bin": {
+            "bytes": 55965,
+            "params": "source",
+            "sha256": "2544dfe50d2631a56600cbfc7342e4a18c97f953526fc51425be0d62f97e22ad"
+          }
+        }
+      },
+      "next_dispatch_safety_gate": "do not dispatch unless a byte win appears; exact CUDA auth eval would still be required",
+      "noop": false,
+      "score_claim": false,
+      "semantic_contract": "strict_decoded_byte_parity_vs_c089_p3_raw_actions_probe",
+      "source_matrix": "experiments/results/pr75_lossless_micro_packer_worker_20260503/candidate_matrix.json"
+    },
+    {
+      "active_elsewhere": false,
+      "archive_bytes": 276481,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr77_action_pose_mixed_container_20260503_codex/c091_pr75_replay_noop_control/archive.zip",
+      "archive_sha256": "2227c1cdc64defc88e88a31c2410a1ba88edac204274624d2aeae6ca9b4b1b3f",
+      "break_even_vs_c091": {
+        "delta_bytes_vs_frontier": -4,
+        "rate_score_delta_vs_frontier": -2.6634358124886856e-06,
+        "score_if_components_unchanged": 0.31514163838586245,
+        "sub314_component_score_improvement_needed": 0.005141638385862457,
+        "sub314_equivalent_bytes_needed_after_candidate": 7722,
+        "target_component_score_improvement_needed": 0.005141638385862457,
+        "target_equivalent_bytes_needed_after_candidate": 7722,
+        "target_score": 0.31
+      },
+      "candidate_id": "c091_pr75_replay_noop_control",
+      "dispatchable_after_gate": false,
+      "exact_eval_justified_from_this_plan": false,
+      "exact_eval_status": "not_ready_or_noop",
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr77_action_pose_mixed_container_20260503_codex/c091_pr75_replay_noop_control/manifest.json",
+      "manifest_runtime_parse_status": "passed",
+      "manifest_stream_packing": {
+        "source_payload_sha256": "f78c71d3086773e417c672734082a49ceb0ef5a0016cf406a920be7978fff252"
+      },
+      "next_dispatch_safety_gate": null,
+      "noop": true,
+      "score_claim": false,
+      "semantic_contract": "byte_identical_c091_noop_control",
+      "source_matrix": "experiments/results/pr77_action_pose_mixed_container_20260503_codex/candidate_matrix.json"
+    },
+    {
+      "active_elsewhere": false,
+      "archive_bytes": 276490,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr75_lossless_micro_packer_worker_20260503/public_minp_p6_sorted_actions_probe/archive.zip",
+      "archive_sha256": "1cdbfd3d9963e1eeaa6bb1914b93f3652b6631b03b5ee5711456fb1178949e47",
+      "break_even_vs_c091": {
+        "delta_bytes_vs_frontier": 5,
+        "rate_score_delta_vs_frontier": 3.329294765610857e-06,
+        "score_if_components_unchanged": 0.31514763111644056,
+        "sub314_component_score_improvement_needed": 0.005147631116440565,
+        "sub314_equivalent_bytes_needed_after_candidate": 7731,
+        "target_component_score_improvement_needed": 0.005147631116440565,
+        "target_equivalent_bytes_needed_after_candidate": 7731,
+        "target_score": 0.31
+      },
+      "candidate_id": "public_minp_p6_sorted_actions_probe",
+      "dispatchable_after_gate": false,
+      "exact_eval_justified_from_this_plan": false,
+      "exact_eval_status": "not_ready_or_noop",
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr75_lossless_micro_packer_worker_20260503/public_minp_p6_sorted_actions_probe/manifest.json",
+      "manifest_runtime_parse_status": "passed",
+      "manifest_stream_packing": {
+        "actions_sorted_delta_varint": {
+          "brotli": {
+            "bytes": 259,
+            "params": {
+              "lgblock": 0,
+              "lgwin": 16,
+              "mode": 0,
+              "quality": 9
+            },
+            "sha256": "7baaa112355b9e96df1ad6671972cf7c4aef910b2865e62093ab1b70cb3ea8b2"
+          },
+          "raw_bytes": 324,
+          "raw_sha256": "4f76ca8d0749a9ec362d5d3f625f88afd19fd11103a12ed2b73cd05aa1ca3ee0",
+          "sort_summary": {
+            "duplicate_pair_tile_count": 1,
+            "duplicate_pair_tiles": [
+              {
+                "pair": 519,
+                "tile": 89
+              }
+            ],
+            "original_record_sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a",
+            "record_count": 108,
+            "sorted_record_sha256": "93b3b7b02b2996fc393ee4e676073dfc83c9d7b5263800693484c4b3e63e71f1"
+          }
+        },
+        "choices": {
+          "masks.mkv": {
+            "bytes": 219465,
+            "params": {
+              "lgblock": 17,
+              "lgwin": 19,
+              "mode": 0,
+              "quality": 11
+            },
+            "sha256": "1ddf03dad8466797397ead26a0d481766e22e26cbc936251c1e3ed5d2f6eda99"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 898,
+            "params": "source",
+            "sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082"
+          },
+          "renderer.bin": {
+            "bytes": 55756,
+            "params": "source",
+            "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+          }
+        }
+      },
+      "next_dispatch_safety_gate": "run local robust_current unpack/runtime raw-output parity against the named source archive; only then claim lane and run exact CUDA auth eval",
+      "noop": false,
+      "score_claim": false,
+      "semantic_contract": "non_dispatchable_public_actions_ordering_probe_p6_sorted_delta_varint",
+      "source_matrix": "experiments/results/pr75_lossless_micro_packer_worker_20260503/candidate_matrix.json"
+    },
+    {
+      "active_elsewhere": false,
+      "archive_bytes": 276519,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr75_lossless_micro_packer_worker_20260503/c089_p5_action_dict_probe/archive.zip",
+      "archive_sha256": "6b4eba54366d62631efe6462b80cd091f8b951784f82dd90e28300c5caf595f6",
+      "break_even_vs_c091": {
+        "delta_bytes_vs_frontier": 34,
+        "rate_score_delta_vs_frontier": 2.263920440615383e-05,
+        "score_if_components_unchanged": 0.3151669410260811,
+        "sub314_component_score_improvement_needed": 0.005166941026081118,
+        "sub314_equivalent_bytes_needed_after_candidate": 7760,
+        "target_component_score_improvement_needed": 0.005166941026081118,
+        "target_equivalent_bytes_needed_after_candidate": 7760,
+        "target_score": 0.31
+      },
+      "candidate_id": "c089_p5_action_dict_probe",
+      "dispatchable_after_gate": false,
+      "exact_eval_justified_from_this_plan": false,
+      "exact_eval_status": "not_ready_or_noop",
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr75_lossless_micro_packer_worker_20260503/c089_p5_action_dict_probe/manifest.json",
+      "manifest_runtime_parse_status": "passed",
+      "manifest_stream_packing": {
+        "action_dict": {
+          "brotli": {
+            "bytes": 175,
+            "params": {
+              "lgblock": 0,
+              "lgwin": 16,
+              "mode": 0,
+              "quality": 11
+            },
+            "sha256": "9acce904ff662e3f06197da8290ea6b4110e0f06e838c8425201f471501c8293"
+          },
+          "raw_bytes": 428,
+          "raw_sha256": "9a016bf47fa7318ec2e38ba452304efa41b2b2ef1cd328efdb459a765f80459b"
+        },
+        "actions_p5_packed": {
+          "brotli": {
+            "bytes": 124,
+            "params": {
+              "lgblock": 0,
+              "lgwin": 16,
+              "mode": 0,
+              "quality": 11
+            },
+            "sha256": "717b10b611f2454025f5747fcfc279e9a443d363e4152f28f815afeedfd8b94c"
+          },
+          "raw_bytes": 120,
+          "raw_sha256": "bd0415c803e17c2496acdebe4c603eaf4884073d48def499b57e1f41b1a911e6"
+        },
+        "semantic_summary": {
+          "original_action_ids": [
+            2,
+            6,
+            7,
+            9,
+            10,
+            11,
+            15,
+            17,
+            18,
+            20,
+            21,
+            23,
+            29,
+            33,
+            38,
+            44,
+            46,
+            51,
+            64,
+            67,
+            71,
+            79,
+            81,
+            83,
+            86,
+            90,
+            91,
+            92,
+            93,
+            94,
+            95,
+            101,
+            102,
+            104,
+            106
+          ],
+          "original_record_sha256": "50e997db4fd1b7642d9a2cd67b55802a4f7f9bd7a6603d0ca2eaf42e7fe7e320",
+          "record_count": 40,
+          "remapped_record_sha256": "6c921161cd6bf1f913ce084b1b27875cbd07685ea523407902110670ee84a79a",
+          "semantic_equivalence_basis": "custom TAD1 dictionary stores default runtime action vectors for used original action ids",
+          "unique_action_count": 35
+        }
+      },
+      "next_dispatch_safety_gate": "run local robust_current unpack/runtime raw-output parity against the named source archive; only then claim lane and run exact CUDA auth eval",
+      "noop": false,
+      "score_claim": false,
+      "semantic_contract": "non_dispatchable_p5_action_dictionary_remap_probe",
+      "source_matrix": "experiments/results/pr75_lossless_micro_packer_worker_20260503/candidate_matrix.json"
+    },
+    {
+      "active_elsewhere": false,
+      "archive_bytes": 276541,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr77_action_pose_mixed_container_20260503_codex/pr77_actions_c089mask_renderer_pose_p3_isolation/archive.zip",
+      "archive_sha256": "ab27e04e28e86a558b5089ccce3fee3508608b2b3ca0eef7d4e18ed5c6ec7020",
+      "break_even_vs_c091": {
+        "delta_bytes_vs_frontier": 56,
+        "rate_score_delta_vs_frontier": 3.72881013748416e-05,
+        "score_if_components_unchanged": 0.3151815899230498,
+        "sub314_component_score_improvement_needed": 0.00518158992304979,
+        "sub314_equivalent_bytes_needed_after_candidate": 7782,
+        "target_component_score_improvement_needed": 0.00518158992304979,
+        "target_equivalent_bytes_needed_after_candidate": 7782,
+        "target_score": 0.31
+      },
+      "candidate_id": "pr77_actions_c089mask_renderer_pose_p3_isolation",
+      "dispatchable_after_gate": true,
+      "exact_eval_justified_from_this_plan": false,
+      "exact_eval_status": "not_target_without_component_gain",
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr77_action_pose_mixed_container_20260503_codex/pr77_actions_c089mask_renderer_pose_p3_isolation/manifest.json",
+      "manifest_runtime_parse_status": "passed",
+      "manifest_stream_packing": {
+        "c089_mask_choice": {
+          "bytes": 219465,
+          "params": {
+            "lgblock": 17,
+            "lgwin": 19,
+            "mode": 0,
+            "quality": 11
+          },
+          "sha256": "1ddf03dad8466797397ead26a0d481766e22e26cbc936251c1e3ed5d2f6eda99"
+        },
+        "c089_pose_choice": {
+          "bytes": 676,
+          "params": {
+            "lgblock": 0,
+            "lgwin": 16,
+            "mode": 0,
+            "quality": 11
+          },
+          "sha256": "61732151609c5decd72a3ac2254e9ac2258dae2846464eaeb14b5ef0a32d86f5"
+        },
+        "pr77_actions_encoded": {
+          "bytes": 325,
+          "sha256": "d8c75e4f3725bbcf608434f0a78f5b37a9ce86bd8177c71092fd727d7e2af75a"
+        }
+      },
+      "next_dispatch_safety_gate": null,
+      "noop": false,
+      "score_claim": false,
+      "semantic_contract": "action_only_vs_c089_isolation_p3",
+      "source_matrix": "experiments/results/pr77_action_pose_mixed_container_20260503_codex/candidate_matrix.json"
+    },
+    {
+      "active_elsewhere": false,
+      "archive_bytes": 276541,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr75_lossless_micro_packer_worker_20260503/public_minp_p3_raw_actions_probe/archive.zip",
+      "archive_sha256": "911a0e8547dccc12281576b35c11267dcf71ca239e493adc3f645265418f30a0",
+      "break_even_vs_c091": {
+        "delta_bytes_vs_frontier": 56,
+        "rate_score_delta_vs_frontier": 3.72881013748416e-05,
+        "score_if_components_unchanged": 0.3151815899230498,
+        "sub314_component_score_improvement_needed": 0.00518158992304979,
+        "sub314_equivalent_bytes_needed_after_candidate": 7782,
+        "target_component_score_improvement_needed": 0.00518158992304979,
+        "target_equivalent_bytes_needed_after_candidate": 7782,
+        "target_score": 0.31
+      },
+      "candidate_id": "public_minp_p3_raw_actions_probe",
+      "dispatchable_after_gate": false,
+      "exact_eval_justified_from_this_plan": false,
+      "exact_eval_status": "not_ready_or_noop",
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr75_lossless_micro_packer_worker_20260503/public_minp_p3_raw_actions_probe/manifest.json",
+      "manifest_runtime_parse_status": "passed",
+      "manifest_stream_packing": {
+        "actions_raw_brotli": {
+          "bytes": 312,
+          "params": {
+            "lgblock": 0,
+            "lgwin": 16,
+            "mode": 0,
+            "quality": 9
+          },
+          "raw_bytes": 432,
+          "raw_sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a",
+          "sha256": "dbcb75b3ae4a8a2b36d6810e1202264f26e35b1d2e55642abc5e59b538033732"
+        },
+        "choices": {
+          "masks.mkv": {
+            "bytes": 219465,
+            "params": {
+              "lgblock": 17,
+              "lgwin": 19,
+              "mode": 0,
+              "quality": 11
+            },
+            "sha256": "1ddf03dad8466797397ead26a0d481766e22e26cbc936251c1e3ed5d2f6eda99"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 898,
+            "params": "source",
+            "sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082"
+          },
+          "renderer.bin": {
+            "bytes": 55756,
+            "params": "source",
+            "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+          }
+        }
+      },
+      "next_dispatch_safety_gate": "do not dispatch: byte regression versus C089 and public fixed-slice source",
+      "noop": false,
+      "score_claim": false,
+      "semantic_contract": "strict_decoded_byte_parity_vs_public_minp_p3_raw_actions_probe",
+      "source_matrix": "experiments/results/pr75_lossless_micro_packer_worker_20260503/candidate_matrix.json"
+    },
+    {
+      "active_elsewhere": false,
+      "archive_bytes": 276551,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr77_action_pose_mixed_container_20260503_codex/pr77_replay_noop_control/archive.zip",
+      "archive_sha256": "8f60c64b9dff70a0f53387ca108d69c768157d2deec8c8f25bfe953a9a39a360",
+      "break_even_vs_c091": {
+        "delta_bytes_vs_frontier": 66,
+        "rate_score_delta_vs_frontier": 4.3946690906063314e-05,
+        "score_if_components_unchanged": 0.31518824851258104,
+        "sub314_component_score_improvement_needed": 0.00518824851258104,
+        "sub314_equivalent_bytes_needed_after_candidate": 7792,
+        "target_component_score_improvement_needed": 0.00518824851258104,
+        "target_equivalent_bytes_needed_after_candidate": 7792,
+        "target_score": 0.31
+      },
+      "candidate_id": "pr77_replay_noop_control",
+      "dispatchable_after_gate": false,
+      "exact_eval_justified_from_this_plan": false,
+      "exact_eval_status": "not_ready_or_noop",
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr77_action_pose_mixed_container_20260503_codex/pr77_replay_noop_control/manifest.json",
+      "manifest_runtime_parse_status": "passed",
+      "manifest_stream_packing": {
+        "source_payload_sha256": "3be6a58673133db2dd14d9f1f0903d528e452bd2e930d57fb4adb02bf264f8ec"
+      },
+      "next_dispatch_safety_gate": null,
+      "noop": true,
+      "score_claim": false,
+      "semantic_contract": "byte_identical_pr77_noop_control",
+      "source_matrix": "experiments/results/pr77_action_pose_mixed_container_20260503_codex/candidate_matrix.json"
+    },
+    {
+      "active_elsewhere": false,
+      "archive_bytes": 276562,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr75_minp_p6_stream_mix_worker_20260503/p6_public_pose_only/archive.zip",
+      "archive_sha256": "5e339c212a2cfdee239145a8bebf978177a0770d413fad87c9d62190d0988239",
+      "break_even_vs_c091": {
+        "delta_bytes_vs_frontier": 77,
+        "rate_score_delta_vs_frontier": 5.12711393904072e-05,
+        "score_if_components_unchanged": 0.3151955729610654,
+        "sub314_component_score_improvement_needed": 0.005195572961065376,
+        "sub314_equivalent_bytes_needed_after_candidate": 7803,
+        "target_component_score_improvement_needed": 0.005195572961065376,
+        "target_equivalent_bytes_needed_after_candidate": 7803,
+        "target_score": 0.31
+      },
+      "candidate_id": "p6_public_pose_only",
+      "dispatchable_after_gate": false,
+      "exact_eval_justified_from_this_plan": false,
+      "exact_eval_status": "not_ready_or_noop",
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr75_minp_p6_stream_mix_worker_20260503/p6_public_pose_only/manifest.json",
+      "manifest_runtime_parse_status": null,
+      "manifest_stream_packing": {
+        "actions_delta_varint": {
+          "brotli_bytes": 115,
+          "brotli_params": {
+            "lgblock": 0,
+            "lgwin": 10,
+            "mode": 0,
+            "quality": 9
+          },
+          "brotli_sha256": "72a9444d03990e04c5a38832a7e5564beb60ad190fc0d8a2238a609d3cdaf70f",
+          "decoded_runtime_records_sha256": "50e997db4fd1b7642d9a2cd67b55802a4f7f9bd7a6603d0ca2eaf42e7fe7e320",
+          "raw_bytes": 120,
+          "raw_sha256": "b6250395c6a05a2a4f83a65cffe58debf18207af5c714f3146d8a8ae7470528a",
+          "record_count": 40,
+          "source_encoded_sha256": "2f270cba1207030026353794196e2425de1c8aa85cff4de12d544a30346034da"
+        }
+      },
+      "next_dispatch_safety_gate": null,
+      "noop": false,
+      "score_claim": false,
+      "semantic_contract": null,
+      "source_matrix": "experiments/results/pr75_minp_p6_stream_mix_worker_20260503/candidate_matrix.json"
+    }
+  ],
+  "schema": "c091_mask_packer_bigmove_plan_v1"
+}

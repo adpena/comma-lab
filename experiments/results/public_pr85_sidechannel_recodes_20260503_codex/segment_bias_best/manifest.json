@@ -1,0 +1,125 @@
+{
+  "byte_delta_vs_source_archive": 0,
+  "candidate": {
+    "archive_bytes": 236328,
+    "archive_path": "experiments/results/public_pr85_sidechannel_recodes_20260503_codex/segment_bias_best/archive.zip",
+    "archive_sha256": "51782e32cc4a355abb1f6ffe742f5ea31ab7bb2e80655803efff7f218cece2b8",
+    "member_bytes": 236228,
+    "member_name": "x",
+    "member_sha256": "b4de6823d04eee1c4086a5c013ee9b94a5f3a7013b5c231d41c286abd1926d8c",
+    "zip_stored": true
+  },
+  "candidate_bundle_validation": {
+    "bundle_format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+    "fixed_length_segments": {
+      "bias": 223,
+      "region": 273
+    },
+    "header_bytes": 24,
+    "mismatched_segments": [],
+    "segment_lengths": {
+      "bias": 223,
+      "frac": 106,
+      "frac2": 149,
+      "frac3": 154,
+      "mask": 159011,
+      "model": 57074,
+      "pose": 1487,
+      "post": 1400,
+      "randmulti": 16101,
+      "region": 273,
+      "shift": 226
+    },
+    "status": "passed"
+  },
+  "changed_segments": [
+    "bias"
+  ],
+  "decoded_parity_metadata": {
+    "segments_checked": [
+      "bias"
+    ],
+    "semantic_hash_fields": [
+      "source_semantic_sha256",
+      "candidate_semantic_sha256"
+    ],
+    "status": "passed"
+  },
+  "dispatch_gate": "planning_only/no_remote_dispatch",
+  "dispatch_performed": false,
+  "evidence_grade": "empirical_lossless_decoded_semantics_recode",
+  "fixed_length_parser_safety": {
+    "explicit_30byte_header_used": false,
+    "reason": "bias/region fixed v5 lengths preserved",
+    "status": "passed",
+    "v5_fixed_lengths_preserved": true
+  },
+  "formula_only_rate_score_delta_vs_source": 0.0,
+  "header_mode": "v5",
+  "next_gate": "Before exact eval, claim the lane with tools/claim_lane_dispatch.py and run PR85 public-runtime CUDA auth eval on this exact archive.",
+  "noop": false,
+  "policy_id": "segment_bias_best",
+  "schema": "pr85_sidechannel_recode_candidate_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 236328,
+    "member_compress_size": 236228,
+    "member_crc32_hex": "c6356353",
+    "member_file_size": 236228,
+    "member_name": "x",
+    "member_sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+    "path": "experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+    "sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e"
+  },
+  "source_bundle": {
+    "fixed_length_segments": {
+      "bias": 223,
+      "region": 273
+    },
+    "format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+    "header_bytes": 24,
+    "segment_lengths": {
+      "bias": 223,
+      "frac": 106,
+      "frac2": 149,
+      "frac3": 154,
+      "mask": 159011,
+      "model": 57074,
+      "pose": 1487,
+      "post": 1400,
+      "randmulti": 16101,
+      "region": 273,
+      "shift": 226
+    }
+  },
+  "source_frontier": {
+    "archive_bytes": 236328,
+    "archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+    "score": 0.25806611029397786,
+    "score_source": "exact T4 PR85 replay; included for comparison only"
+  },
+  "tool": "experiments/build_pr85_sidechannel_recode_candidates.py",
+  "transforms": [
+    {
+      "brotli_params": {
+        "lgwin": 18,
+        "quality": 11
+      },
+      "candidate_decoded_bytes": 603,
+      "candidate_segment_bytes": 223,
+      "candidate_segment_sha256": "a9bd13f794b24f0617575a85cf8d13a9e65a3bc6e64326abc085b4dcc0e04128",
+      "candidate_semantic_sha256": "605d2796b1808ab3257474cd569a244d349fc0c2b9a9d3870a7fa3927afd8f30",
+      "decoded_parity_status": "passed",
+      "noop_segment": false,
+      "runtime_supported": true,
+      "segment": "bias",
+      "segment_byte_delta": 0,
+      "source_decoded_bytes": 603,
+      "source_segment_bytes": 223,
+      "source_segment_sha256": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b",
+      "source_semantic_sha256": "605d2796b1808ab3257474cd569a244d349fc0c2b9a9d3870a7fa3927afd8f30",
+      "support_reason": "requires explicit 30-byte bundle header if compressed length changes",
+      "variant": "BD1_delta_center13_explicit_header"
+    }
+  ]
+}

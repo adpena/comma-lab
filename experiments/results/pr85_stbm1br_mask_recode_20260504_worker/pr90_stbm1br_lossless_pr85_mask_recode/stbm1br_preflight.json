@@ -1,0 +1,61 @@
+{
+  "checks": {
+    "candidate_archive_byte_positive": true,
+    "candidate_mask_byte_positive": true,
+    "candidate_non_noop_at_byte_level": true,
+    "decoded_mask_equal": true,
+    "decoded_render_order_sha_matches_expected": true,
+    "no_scorer_load": true,
+    "remote_dispatch_not_performed": true,
+    "runtime_support_present": true,
+    "single_member_x_only": true
+  },
+  "exact_eval_requires_explicit_pr85_replay_runtime": true,
+  "exact_eval_requires_lane_claim": true,
+  "next_gate": "main_must_claim_lane_before_any_exact_eval_dispatch",
+  "parity": {
+    "candidate_class_counts": {
+      "0": 27408427,
+      "1": 690063,
+      "2": 58413695,
+      "3": 1459867,
+      "4": 29992748
+    },
+    "candidate_render_order_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+    "decoded_mask_equal": true,
+    "diff_pixels": 0,
+    "expected_render_order_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+    "pr85_render_order_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+    "pr85_token_source": {
+      "method": "predecoded_pr85_qma9_token_source",
+      "path": "experiments/results/public_pr85_intake_20260503_codex/qma9_token_source/pr85_qma9_tokens_u8_storage_order.bin",
+      "qma9_header": {
+        "bitstream_bytes": 158991,
+        "bitstream_sha256": "77196f31a8fdfbf8f91c9c30600945473376534f15245bfb7622ddd77d17e3af",
+        "frame_count": 600,
+        "height": 384,
+        "payload_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+        "width": 512
+      },
+      "render_order_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+      "render_order_shape": [
+        600,
+        384,
+        512
+      ],
+      "storage_order": "frame_major_header_width_by_header_height",
+      "storage_order_bytes": 117964800,
+      "storage_order_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a"
+    },
+    "render_order_shape": [
+      600,
+      384,
+      512
+    ]
+  },
+  "readiness_status": "ready",
+  "ready_for_exact_eval_after_lane_claim": true,
+  "remaining_exact_eval_blockers": [],
+  "remote_dispatch_allowed": false,
+  "status": "passed"
+}

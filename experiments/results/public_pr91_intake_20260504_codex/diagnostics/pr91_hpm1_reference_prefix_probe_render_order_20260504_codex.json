@@ -1,0 +1,294 @@
+{
+  "archive": {
+    "bytes": 222404,
+    "duplicate_member_names": [],
+    "expected_bytes": 222404,
+    "expected_sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f",
+    "matches_expected_pr91_archive": true,
+    "member_count": 1,
+    "member_x": {
+      "bytes": 222304,
+      "compress_size": 222304,
+      "compress_type": 0,
+      "expected_bytes": 222304,
+      "expected_sha256": "5c213c61cc4d29b62286063bfdcb97e812af6b06c0021aeaecc8bc46644e17bf",
+      "file_size": 222304,
+      "matches_expected_pr91_member": true,
+      "sha256": "5c213c61cc4d29b62286063bfdcb97e812af6b06c0021aeaecc8bc46644e17bf"
+    },
+    "path": "experiments/results/public_pr91_intake_20260504_codex/archive.zip",
+    "sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f"
+  },
+  "blocker_class": "hpm1_reference_identity_unproven",
+  "bundle": {
+    "fixed_length_segments": {
+      "bias": 223,
+      "region": 273
+    },
+    "format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+    "header_bytes": 24,
+    "mask_expected_bytes": 145087,
+    "mask_expected_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+    "mask_matches_expected_pr91_hpm1": true,
+    "mask_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+    "segment_lengths": {
+      "bias": 223,
+      "frac": 106,
+      "frac2": 149,
+      "frac3": 154,
+      "mask": 145087,
+      "model": 57074,
+      "pose": 1487,
+      "post": 1400,
+      "randmulti": 16101,
+      "region": 273,
+      "shift": 226
+    }
+  },
+  "dependency_contract": {
+    "behavior_self_test": {
+      "compressed_dtype": "uint32",
+      "compressed_sha256": "7e5eceaf3fd016605aa6e45d8a0afd29f662f7dee75c8957ea4319999a4708ae",
+      "compressed_word_count": 19,
+      "decoded_symbols_sha256": "6cfe2f6c5763d2179ab869cf1668e41a36c1a1050021f5ecdaf3447b8edb1b31",
+      "encoded_symbols_sha256": "6cfe2f6c5763d2179ab869cf1668e41a36c1a1050021f5ecdaf3447b8edb1b31",
+      "get_compressed_tobytes_available": true,
+      "model_api": "constriction.stream.model.Categorical(..., perfect=False)",
+      "queue_api": "constriction.stream.queue.RangeEncoder/RangeDecoder",
+      "same_order_roundtrip_ok": true
+    },
+    "expected_versions": {
+      "constriction": "0.4.2",
+      "numpy": "2.4.4",
+      "pyppmd": "1.3.1",
+      "python": "3.12.13",
+      "torch": "2.11.0"
+    },
+    "installed_versions": {
+      "constriction": "0.4.2",
+      "numpy": "2.4.4",
+      "pyppmd": "1.3.1",
+      "python": "3.12.13",
+      "torch": "2.11.0"
+    },
+    "missing_required_packages": [],
+    "status": "passed",
+    "version_drift": [],
+    "version_matches_recorded": {
+      "constriction": true,
+      "numpy": true,
+      "pyppmd": true,
+      "python": true,
+      "torch": true
+    }
+  },
+  "device": "cpu",
+  "dispatch_performed": false,
+  "dispatch_unlocked": false,
+  "elapsed_sec": 10.025,
+  "failure_reason": "no_local_probability_variant_proves_pr91_hpm1_pr85_reference_prefix",
+  "gpu_or_remote_work": false,
+  "hpac_model": {
+    "compressed_bytes": 28243,
+    "compressed_sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+    "config": {
+      "N": 600,
+      "P": 32,
+      "ch": 64,
+      "delta": 2,
+      "hpac_d_film": 8,
+      "use_spm": true
+    },
+    "decompressed_bytes": 55856,
+    "decompressed_sha256": "0710789f72200a640c1f3b2f6bc0d2f037affaa086f73b2c9e5034e006e80ac1",
+    "load_state_dict_strict": false,
+    "member_name": "hpac.pt.ppmd",
+    "missing_keys": [],
+    "packed_state_key_count": 34,
+    "ppmd_max_order": 4,
+    "ppmd_mem_size": 16777216,
+    "reconstructed_state_key_count": 25,
+    "status": "passed",
+    "unexpected_keys": []
+  },
+  "hpm1_static_contract": {
+    "failures": [],
+    "hpac_ppmd": {
+      "bytes": 28243,
+      "sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd"
+    },
+    "mask": {
+      "bytes": 145087,
+      "magic": "HPM1",
+      "metadata": {
+        "H": 384,
+        "N": 600,
+        "P": 32,
+        "W": 512,
+        "ch": 64,
+        "delta": 2,
+        "header_bytes": 48,
+        "hpac_d_film": 8,
+        "hpac_len": 28243,
+        "hpac_ppmd_sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+        "ppmd_order": 4,
+        "runtime_contract": "HPM1_pr91_hpac_mask_stream",
+        "tail_bytes": 0,
+        "tokens_len": 116796,
+        "tokens_sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+        "tokens_uint32_aligned": true,
+        "tokens_uint32_words": 29199,
+        "use_spm": 1
+      },
+      "sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc"
+    },
+    "status": "passed",
+    "tokens": {
+      "bytes": 116796,
+      "sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+      "uint32_words": 29199
+    }
+  },
+  "local_only": true,
+  "max_frames": 1,
+  "pr91_ready_for_exact_eval": false,
+  "recorded_at_utc": "2026-05-04T06:43:37+00:00",
+  "reference_layout": "qma9_storage_wh_to_render_hw",
+  "reference_tokens": {
+    "bytes": 117964800,
+    "expected_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+    "layout": "qma9_storage_wh_to_render_hw",
+    "matches_expected_pr85_qma9_token_source": true,
+    "observed_range": {
+      "max": 4,
+      "min": 0
+    },
+    "path": "experiments/results/public_pr85_intake_20260503_codex/qma9_token_source/pr85_qma9_tokens_u8_storage_order.bin",
+    "render_order_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+    "render_transform": "reshape_NWH_transpose_to_NHW",
+    "returned_shape": [
+      600,
+      384,
+      512
+    ],
+    "sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+    "storage_order": "frame_major_header_width_by_header_height",
+    "storage_shape": [
+      600,
+      512,
+      384
+    ]
+  },
+  "reference_tokens_path": "experiments/results/public_pr85_intake_20260503_codex/qma9_token_source/pr85_qma9_tokens_u8_storage_order.bin",
+  "schema_version": 1,
+  "score_claim": false,
+  "source_contract_summary": {
+    "decoded_symbol_count_before_failure": 5951,
+    "failure_context": {
+      "failed_at": {
+        "frame": 0,
+        "group": 10,
+        "symbol_in_group": 191
+      },
+      "pixel_yx": {
+        "x": 480,
+        "y": 37
+      },
+      "probability_row_at_failure": {
+        "argmax": 2,
+        "categorical_perfect": false,
+        "max": 0.9667295673977898,
+        "min": 2.0598076907271897e-05,
+        "probability_dtype": "float64",
+        "reference_probability": 0.9667295673977898,
+        "reference_symbol": 2,
+        "values": [
+          0.032410533766438016,
+          5.810932545209993e-05,
+          0.9667295673977898,
+          0.0007811914334127637,
+          2.0598076907271897e-05
+        ],
+        "variant": "source_float64_perfect_false"
+      },
+      "reference_symbol_at_failure": 2
+    },
+    "first_reference_mismatch": {
+      "decoded": 4,
+      "frame": 0,
+      "global_symbol": 33,
+      "group": 0,
+      "pixel_yx": {
+        "x": 32,
+        "y": 64
+      },
+      "reference": 2,
+      "symbol_in_group": 33
+    },
+    "prefix_matches_reference_until_failure": false,
+    "status": "failed_closed"
+  },
+  "status": "failed_closed",
+  "tool": "tac.pr91_hpm1_codec.run_pr91_hpm1_reference_prefix_probe",
+  "variant_results": [
+    {
+      "decoded_prefix_sha256": "0d04ff1da42e4ce7a445519ab335e12f284b43efc8ec9a039dbece544eb42ff8",
+      "decoded_symbol_count_before_failure": 5951,
+      "dispatch_performed": false,
+      "error": "Tried to decode from compressed data that is invalid for the employed entropy model.",
+      "error_type": "AssertionError",
+      "failure_context": {
+        "failed_at": {
+          "frame": 0,
+          "group": 10,
+          "symbol_in_group": 191
+        },
+        "pixel_yx": {
+          "x": 480,
+          "y": 37
+        },
+        "probability_row_at_failure": {
+          "argmax": 2,
+          "categorical_perfect": false,
+          "max": 0.9667295673977898,
+          "min": 2.0598076907271897e-05,
+          "probability_dtype": "float64",
+          "reference_probability": 0.9667295673977898,
+          "reference_symbol": 2,
+          "values": [
+            0.032410533766438016,
+            5.810932545209993e-05,
+            0.9667295673977898,
+            0.0007811914334127637,
+            2.0598076907271897e-05
+          ],
+          "variant": "source_float64_perfect_false"
+        },
+        "reference_symbol_at_failure": 2
+      },
+      "failure_reason": "hpac_entropy_decode_contract_mismatch",
+      "failure_stage": "submitted_tokens_decode",
+      "first_reference_mismatch": {
+        "decoded": 4,
+        "frame": 0,
+        "global_symbol": 33,
+        "group": 0,
+        "pixel_yx": {
+          "x": 32,
+          "y": 64
+        },
+        "reference": 2,
+        "symbol_in_group": 33
+      },
+      "local_only": true,
+      "prefix_matches_reference_until_failure": false,
+      "reference_prefix_sha256": "0b4e70236eaa190a7baa4e42b18a7816405d5b51777b9be16108f3a7578d0dea",
+      "score_claim": false,
+      "status": "failed_closed",
+      "variant": "source_float64_perfect_false"
+    }
+  ],
+  "variants": [
+    "source_float64_perfect_false"
+  ]
+}

@@ -1,0 +1,772 @@
+{
+  "archive_byte_profile": {
+    "archive_name": "archive.zip",
+    "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr79_pr65_selective_pose_candidates_20260503_worker/pr79_s2_pr65_pose_atoms_top040/archive.zip",
+    "archive_sha256": "ad5f44fc945646ae5be583745870327c071b722e19895585e5272b696dd02a15",
+    "duplicate_detection": {
+      "duplicate_member_names": [],
+      "duplicate_payload_hashes": [],
+      "has_duplicate_member_names": false,
+      "has_duplicate_payload_hashes": false
+    },
+    "evidence_grade": "byte_profile_only",
+    "extension_totals": [
+      {
+        "compressed_size": 277219,
+        "member_count": 1,
+        "name": "(no_extension)",
+        "rate_term": 0.184588753126,
+        "uncompressed_size": 277219
+      }
+    ],
+    "member_count": 1,
+    "members": [
+      {
+        "central_directory_header_bytes_estimate": 47,
+        "compressed_size": 277219,
+        "compression_ratio": 1.0,
+        "crc32": "6cd7f038",
+        "extension_group": "(no_extension)",
+        "header_offset": 0,
+        "histogram": {
+          "histogram_counts": [
+            1268,
+            1140,
+            1094,
+            1018,
+            1105,
+            1077,
+            1087,
+            1114,
+            1119,
+            1057,
+            1151,
+            1126,
+            1111,
+            1033,
+            1059,
+            1101,
+            1094,
+            1085,
+            1044,
+            1056,
+            1073,
+            1039,
+            1044,
+            1115,
+            1101,
+            1081,
+            1046,
+            1072,
+            1048,
+            1052,
+            1090,
+            1095,
+            1128,
+            1017,
+            1067,
+            1116,
+            1054,
+            1069,
+            1113,
+            1079,
+            1059,
+            1148,
+            1085,
+            1053,
+            1131,
+            1131,
+            1090,
+            1040,
+            1145,
+            1157,
+            1029,
+            1050,
+            1113,
+            1088,
+            1104,
+            1059,
+            1118,
+            1100,
+            1032,
+            1089,
+            1095,
+            1140,
+            1029,
+            1141,
+            1085,
+            1083,
+            1069,
+            1088,
+            1068,
+            1071,
+            1069,
+            1109,
+            1034,
+            1091,
+            1068,
+            1069,
+            1120,
+            1082,
+            1107,
+            1069,
+            1106,
+            1047,
+            1042,
+            997,
+            1025,
+            999,
+            1097,
+            1048,
+            1151,
+            1077,
+            1054,
+            1095,
+            1069,
+            1121,
+            1111,
+            1127,
+            1105,
+            1085,
+            1108,
+            1116,
+            1046,
+            1101,
+            1052,
+            1116,
+            1068,
+            1057,
+            1077,
+            1101,
+            1100,
+            1081,
+            1109,
+            1089,
+            1063,
+            1073,
+            1058,
+            1021,
+            1098,
+            1119,
+            1104,
+            1098,
+            1117,
+            1121,
+            1087,
+            1091,
+            1008,
+            1067,
+            1089,
+            1133,
+            1174,
+            1061,
+            1030,
+            1118,
+            1099,
+            1014,
+            1116,
+            1121,
+            1061,
+            1061,
+            1037,
+            1110,
+            1145,
+            1089,
+            1083,
+            1055,
+            1131,
+            1071,
+            1097,
+            1033,
+            1111,
+            1038,
+            1137,
+            1091,
+            1045,
+            1094,
+            1144,
+            1080,
+            1077,
+            1078,
+            1068,
+            1100,
+            1150,
+            1049,
+            1061,
+            1048,
+            1099,
+            1063,
+            1109,
+            1056,
+            1068,
+            1037,
+            1047,
+            1062,
+            1079,
+            1038,
+            1047,
+            1046,
+            1084,
+            1047,
+            1056,
+            1028,
+            1071,
+            1074,
+            1051,
+            1082,
+            1037,
+            1011,
+            1047,
+            1065,
+            1084,
+            1063,
+            1057,
+            1120,
+            1098,
+            1085,
+            1045,
+            1013,
+            1214,
+            1070,
+            1088,
+            1107,
+            1069,
+            1102,
+            1083,
+            1125,
+            1058,
+            1088,
+            1077,
+            1120,
+            1104,
+            1027,
+            1067,
+            1115,
+            1089,
+            1098,
+            1061,
+            1069,
+            1116,
+            1070,
+            1137,
+            1095,
+            1084,
+            1105,
+            1074,
+            1087,
+            1089,
+            960,
+            1049,
+            1147,
+            1090,
+            1046,
+            1050,
+            1136,
+            1043,
+            1111,
+            1099,
+            1104,
+            1097,
+            1073,
+            1086,
+            1124,
+            1064,
+            1047,
+            1030,
+            1030,
+            1129,
+            1056,
+            1144,
+            1081,
+            1050,
+            1073,
+            1136,
+            1067,
+            1143,
+            1124,
+            1084,
+            1142
+          ],
+          "printable_ascii_fraction": 0.371338183891,
+          "shannon_entropy_bits_per_byte": 7.999132944616,
+          "top_bytes": [
+            {
+              "byte": 0,
+              "count": 1268,
+              "fraction": 0.004574001061,
+              "hex": "0x00"
+            },
+            {
+              "byte": 196,
+              "count": 1214,
+              "fraction": 0.004379209217,
+              "hex": "0xc4"
+            },
+            {
+              "byte": 128,
+              "count": 1174,
+              "fraction": 0.004234918963,
+              "hex": "0x80"
+            },
+            {
+              "byte": 49,
+              "count": 1157,
+              "fraction": 0.004173595605,
+              "hex": "0x31"
+            },
+            {
+              "byte": 10,
+              "count": 1151,
+              "fraction": 0.004151952067,
+              "hex": "0x0a"
+            },
+            {
+              "byte": 88,
+              "count": 1151,
+              "fraction": 0.004151952067,
+              "hex": "0x58"
+            },
+            {
+              "byte": 160,
+              "count": 1150,
+              "fraction": 0.00414834481,
+              "hex": "0xa0"
+            },
+            {
+              "byte": 41,
+              "count": 1148,
+              "fraction": 0.004141130298,
+              "hex": "0x29"
+            },
+            {
+              "byte": 227,
+              "count": 1147,
+              "fraction": 0.004137523041,
+              "hex": "0xe3"
+            },
+            {
+              "byte": 48,
+              "count": 1145,
+              "fraction": 0.004130308529,
+              "hex": "0x30"
+            }
+          ],
+          "unique_byte_count": 256,
+          "zero_byte_count": 1268,
+          "zero_byte_fraction": 0.004574001061,
+          "zero_order_entropy_bytes": 277189
+        },
+        "is_dir": false,
+        "local_header_bytes_estimate": 31,
+        "method": "stored",
+        "method_id": 0,
+        "name": "p",
+        "occurrence": 1,
+        "path_group": "(root)",
+        "rate_term": 0.184588753126,
+        "sha256": "e20e056fb8fca7a04e8413d655fd6327891e092635c59929dab9389a95aa53e1",
+        "uncompressed_size": 277219
+      }
+    ],
+    "path_group_totals": [
+      {
+        "compressed_size": 277219,
+        "member_count": 1,
+        "name": "(root)",
+        "rate_term": 0.184588753126,
+        "uncompressed_size": 277219
+      }
+    ],
+    "rate_term": 0.184655339021,
+    "schema": "archive_byte_profile_v1",
+    "score_claim": false,
+    "tool": "experiments/profile_archive_bytes.py",
+    "top_contributors": [
+      {
+        "compressed_size": 277219,
+        "method": "stored",
+        "name": "p",
+        "occurrence": 1,
+        "rate_term": 0.184588753126,
+        "uncompressed_size": 277219
+      }
+    ],
+    "total_bytes": 277319,
+    "valid_profile": true,
+    "zip_overhead_estimate": {
+      "archive_non_payload_bytes": 100,
+      "central_directory_header_bytes_estimate": 47,
+      "compressed_payload_bytes": 277219,
+      "local_header_bytes_estimate": 31,
+      "rate_term": 6.6585895e-05,
+      "unassigned_overhead_bytes_estimate": 22
+    }
+  },
+  "candidate_id": "pr79_s2_pr65_pose_atoms_top040",
+  "candidate_kind": "selective_pr65_qp1_velocity_atoms",
+  "evidence_grade": "empirical_local_archive_valid_byte_and_proxy_screen",
+  "manifest_schema": "pr79_pr65_selective_pose_manifest_v1",
+  "nearby_pr65_pose_exact_negative": {
+    "archive_bytes": 276346,
+    "archive_sha256": "d3913ec75bd1917f16f2bca5e672313f66f81da5446405fc8eccbba757eed79d",
+    "avg_posenet_dist": 0.00054426,
+    "avg_segnet_dist": 0.00061044,
+    "canonical_score": 0.318825479152544,
+    "n_samples": 600,
+    "path": "experiments/results/lightning_batch/exact_eval_pr65_pose_qp1_c091_c089_actions_p6_t4_fix1_20260503T121925Z/contest_auth_eval.json"
+  },
+  "no_remote_dispatch": true,
+  "output_archive": {
+    "bytes": 277319,
+    "path": "/Users/adpena/Projects/pact/experiments/results/pr79_pr65_selective_pose_candidates_20260503_worker/pr79_s2_pr65_pose_atoms_top040/archive.zip",
+    "repo_relative_path": "experiments/results/pr79_pr65_selective_pose_candidates_20260503_worker/pr79_s2_pr65_pose_atoms_top040/archive.zip",
+    "sha256": "ad5f44fc945646ae5be583745870327c071b722e19895585e5272b696dd02a15"
+  },
+  "payload": {
+    "bytes": 277219,
+    "member": "p",
+    "sha256": "e20e056fb8fca7a04e8413d655fd6327891e092635c59929dab9389a95aa53e1"
+  },
+  "pose_change": {
+    "base_pose_raw_brotli_bytes": 898,
+    "base_pose_raw_brotli_sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082",
+    "candidate_pose_brotli_bytes": 896,
+    "candidate_pose_brotli_params": {
+      "lgwin": 16,
+      "mode": 0,
+      "quality": 11
+    },
+    "candidate_pose_brotli_sha256": "2bb715e173bd0465d697a0750bf7b8dd7a70ebfbae58e9c1c8477a51baa89af7",
+    "changed_pose_word_count": 40,
+    "pose_brotli_delta_bytes_vs_pr79_s2": -2,
+    "pose_brotli_source": "scaled_from_public_pose_manifold_compare public_difference_pr65 expected_benefit_proxy by abs(delta_q) prefix mass",
+    "selected_atoms": [
+      {
+        "delta_q": -1,
+        "delta_velocity": -0.001953125,
+        "pair_index": 164,
+        "raw_basis_delta_q": -4.0
+      },
+      {
+        "delta_q": 1,
+        "delta_velocity": 0.001953125,
+        "pair_index": 105,
+        "raw_basis_delta_q": 4.0
+      },
+      {
+        "delta_q": -1,
+        "delta_velocity": -0.001953125,
+        "pair_index": 128,
+        "raw_basis_delta_q": -8.0
+      },
+      {
+        "delta_q": 2,
+        "delta_velocity": 0.00390625,
+        "pair_index": 106,
+        "raw_basis_delta_q": 13.0
+      },
+      {
+        "delta_q": -3,
+        "delta_velocity": -0.005859375,
+        "pair_index": 64,
+        "raw_basis_delta_q": -26.0
+      },
+      {
+        "delta_q": 1,
+        "delta_velocity": 0.001953125,
+        "pair_index": 69,
+        "raw_basis_delta_q": 2.0
+      },
+      {
+        "delta_q": 1,
+        "delta_velocity": 0.001953125,
+        "pair_index": 60,
+        "raw_basis_delta_q": 11.0
+      },
+      {
+        "delta_q": -1,
+        "delta_velocity": -0.001953125,
+        "pair_index": 67,
+        "raw_basis_delta_q": -8.0
+      },
+      {
+        "delta_q": -1,
+        "delta_velocity": -0.001953125,
+        "pair_index": 130,
+        "raw_basis_delta_q": -9.0
+      },
+      {
+        "delta_q": 1,
+        "delta_velocity": 0.001953125,
+        "pair_index": 197,
+        "raw_basis_delta_q": 9.0
+      },
+      {
+        "delta_q": 1,
+        "delta_velocity": 0.001953125,
+        "pair_index": 108,
+        "raw_basis_delta_q": 4.0
+      },
+      {
+        "delta_q": -1,
+        "delta_velocity": -0.001953125,
+        "pair_index": 136,
+        "raw_basis_delta_q": -2.0
+      },
+      {
+        "delta_q": 1,
+        "delta_velocity": 0.001953125,
+        "pair_index": 125,
+        "raw_basis_delta_q": 1.0
+      },
+      {
+        "delta_q": 3,
+        "delta_velocity": 0.005859375,
+        "pair_index": 423,
+        "raw_basis_delta_q": 24.0
+      },
+      {
+        "delta_q": -2,
+        "delta_velocity": -0.00390625,
+        "pair_index": 148,
+        "raw_basis_delta_q": -16.0
+      },
+      {
+        "delta_q": 1,
+        "delta_velocity": 0.001953125,
+        "pair_index": 70,
+        "raw_basis_delta_q": 2.0
+      },
+      {
+        "delta_q": -2,
+        "delta_velocity": -0.00390625,
+        "pair_index": 165,
+        "raw_basis_delta_q": -19.0
+      },
+      {
+        "delta_q": 1,
+        "delta_velocity": 0.001953125,
+        "pair_index": 134,
+        "raw_basis_delta_q": 5.0
+      },
+      {
+        "delta_q": 2,
+        "delta_velocity": 0.00390625,
+        "pair_index": 420,
+        "raw_basis_delta_q": 20.0
+      },
+      {
+        "delta_q": 1,
+        "delta_velocity": 0.001953125,
+        "pair_index": 59,
+        "raw_basis_delta_q": 8.0
+      },
+      {
+        "delta_q": -1,
+        "delta_velocity": -0.001953125,
+        "pair_index": 192,
+        "raw_basis_delta_q": -1.0
+      },
+      {
+        "delta_q": 2,
+        "delta_velocity": 0.00390625,
+        "pair_index": 78,
+        "raw_basis_delta_q": 19.0
+      },
+      {
+        "delta_q": 2,
+        "delta_velocity": 0.00390625,
+        "pair_index": 434,
+        "raw_basis_delta_q": 17.0
+      },
+      {
+        "delta_q": 2,
+        "delta_velocity": 0.00390625,
+        "pair_index": 496,
+        "raw_basis_delta_q": 19.0
+      },
+      {
+        "delta_q": 1,
+        "delta_velocity": 0.001953125,
+        "pair_index": 97,
+        "raw_basis_delta_q": 2.0
+      },
+      {
+        "delta_q": -1,
+        "delta_velocity": -0.001953125,
+        "pair_index": 198,
+        "raw_basis_delta_q": -2.0
+      },
+      {
+        "delta_q": -2,
+        "delta_velocity": -0.00390625,
+        "pair_index": 166,
+        "raw_basis_delta_q": -13.0
+      },
+      {
+        "delta_q": -1,
+        "delta_velocity": -0.001953125,
+        "pair_index": 131,
+        "raw_basis_delta_q": -1.0
+      },
+      {
+        "delta_q": 3,
+        "delta_velocity": 0.005859375,
+        "pair_index": 418,
+        "raw_basis_delta_q": 23.0
+      },
+      {
+        "delta_q": 2,
+        "delta_velocity": 0.00390625,
+        "pair_index": 68,
+        "raw_basis_delta_q": 14.0
+      },
+      {
+        "delta_q": -1,
+        "delta_velocity": -0.001953125,
+        "pair_index": 141,
+        "raw_basis_delta_q": -11.0
+      },
+      {
+        "delta_q": 1,
+        "delta_velocity": 0.001953125,
+        "pair_index": 289,
+        "raw_basis_delta_q": 8.0
+      },
+      {
+        "delta_q": -1,
+        "delta_velocity": -0.001953125,
+        "pair_index": 99,
+        "raw_basis_delta_q": -4.0
+      },
+      {
+        "delta_q": -1,
+        "delta_velocity": -0.001953125,
+        "pair_index": 138,
+        "raw_basis_delta_q": -4.0
+      },
+      {
+        "delta_q": 3,
+        "delta_velocity": 0.005859375,
+        "pair_index": 435,
+        "raw_basis_delta_q": 27.0
+      },
+      {
+        "delta_q": 1,
+        "delta_velocity": 0.001953125,
+        "pair_index": 120,
+        "raw_basis_delta_q": 4.0
+      },
+      {
+        "delta_q": 2,
+        "delta_velocity": 0.00390625,
+        "pair_index": 121,
+        "raw_basis_delta_q": 15.0
+      },
+      {
+        "delta_q": -1,
+        "delta_velocity": -0.001953125,
+        "pair_index": 62,
+        "raw_basis_delta_q": -5.0
+      },
+      {
+        "delta_q": -1,
+        "delta_velocity": -0.001953125,
+        "pair_index": 74,
+        "raw_basis_delta_q": -8.0
+      },
+      {
+        "delta_q": 1,
+        "delta_velocity": 0.001953125,
+        "pair_index": 310,
+        "raw_basis_delta_q": 3.0
+      }
+    ]
+  },
+  "pose_summary": {
+    "label": "pr79_s2_pr65_pose_atoms_top040",
+    "pose_float32_sha256": "f388a62f24e7d402153a6f0da93000d2926627dc11569b5566fffa0380be635e",
+    "pose_qp1_bytes": 1140,
+    "pose_qp1_sha256": "f4fb535285cb7e498f5dab0cd9bd69dbc0ea30922875c0e0cc534d235b1ff89e",
+    "pose_word_count": 600,
+    "pose_words_sha256": "fd92cb5615160da94691b2cdea6a46857d28e375faf3b1b4b97cd8bff5b737fe"
+  },
+  "proxy_screen": {
+    "component_gain_required_for_sub314": 0.0005322218552801073,
+    "component_gain_required_to_beat_pr79_s2": 0.0,
+    "dispatch_recommendation": {
+      "dispatch_ready_now": false,
+      "lane_claim_required_before_any_exact_eval": true,
+      "reason": "local archive-valid candidate does not clear the PR79/S2 proxy and risk screen",
+      "recommended": false,
+      "remote_dispatch_performed": false
+    },
+    "formula_rate_score_delta_vs_pr79_s2": -1.3317179062443428e-06,
+    "high_ev_enough_for_exact_eval": false,
+    "proxy_benefit": 0.00021706743190596148,
+    "proxy_margin_vs_pr79_s2": 0.00021706743190596148,
+    "proxy_margin_vs_sub314": -0.00031515442337414585
+  },
+  "risk_flags": [
+    "planning_proxy_not_score_evidence",
+    "pr65_direct_transfer_exact_negative_exists",
+    "qp1_velocity_col0_only"
+  ],
+  "runtime_parse_validation": {
+    "changed_decoded_streams_vs_source": [
+      "optimized_poses.qp1"
+    ],
+    "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+    "runtime_members": {
+      "masks.mkv": {
+        "bytes": 219472,
+        "codec": "brotli_av1_obu",
+        "decoded_bytes": 223385,
+        "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+      },
+      "optimized_poses.qp1": {
+        "bytes": 896,
+        "codec": "public_qp1_brotli",
+        "decoded_bytes": 1140,
+        "decoded_sha256": "f4fb535285cb7e498f5dab0cd9bd69dbc0ea30922875c0e0cc534d235b1ff89e",
+        "sha256": "2bb715e173bd0465d697a0750bf7b8dd7a70ebfbae58e9c1c8477a51baa89af7"
+      },
+      "renderer.bin": {
+        "bytes": 55756,
+        "codec": "brotli_qzs3",
+        "decoded_bytes": 59288,
+        "decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+        "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 1095,
+        "codec": "seg_tile_actions_split_s2_adaptive_arith_v1",
+        "decoded_bytes": 2688,
+        "decoded_sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f",
+        "sha256": "abbc8d26375d60e52bc4ab801f2e241e56bd47564fe48ff1edefc5e1bdf60273"
+      }
+    },
+    "runtime_parser": "submissions/robust_current/unpack_renderer_payload.py",
+    "status": "passed"
+  },
+  "schema": "pr79_pr65_selective_pose_candidates_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 277321,
+    "exact_score": 0.31453355357318635,
+    "path": "experiments/results/pr79_action_dictionary_repack_v2_20260503_codex/pr79_s2_fixed_adaptive_actions/archive.zip",
+    "sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68"
+  },
+  "stream_closure": {
+    "decoded_actions_sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f",
+    "decoded_mask_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+    "decoded_renderer_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+    "non_pose_streams_preserved": true
+  },
+  "stream_delta": {
+    "archive_delta_bytes_vs_pr79_s2": -2,
+    "payload_delta_bytes_vs_pr79_s2": -2
+  },
+  "tool": "experiments/build_pr79_pr65_selective_pose_candidates.py"
+}

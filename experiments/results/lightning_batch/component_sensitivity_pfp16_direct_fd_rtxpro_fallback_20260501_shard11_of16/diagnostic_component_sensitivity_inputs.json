@@ -1,0 +1,58 @@
+{
+  "baseline_archive": {
+    "bytes": 686635,
+    "member_names": [
+      "renderer.bin",
+      "masks.mkv",
+      "optimized_poses.bin"
+    ],
+    "path": "/teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+    "required_members": [
+      "renderer.bin",
+      "masks.mkv",
+      "optimized_poses.bin"
+    ],
+    "sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+    "zip_member_count": 3
+  },
+  "diagnostic": true,
+  "extracted_dir": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_rtxpro_fallback_20260501_shard11_of16/extracted",
+  "extracted_members": {
+    "masks.mkv": {
+      "bytes": 421483,
+      "member": "masks.mkv",
+      "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_rtxpro_fallback_20260501_shard11_of16/extracted/masks.mkv",
+      "sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9",
+      "zip_compress_size": 412169,
+      "zip_crc": 3779385004,
+      "zip_file_size": 421483
+    },
+    "optimized_poses.bin": {
+      "bytes": 7200,
+      "member": "optimized_poses.bin",
+      "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_rtxpro_fallback_20260501_shard11_of16/extracted/optimized_poses.bin",
+      "sha256": "4b3d8cd58965971ad518a970441f5e9cc53ce361a62d51e95c1cdd2056be4449",
+      "zip_compress_size": 6734,
+      "zip_crc": 1751957439,
+      "zip_file_size": 7200
+    },
+    "renderer.bin": {
+      "bytes": 296776,
+      "member": "renderer.bin",
+      "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_rtxpro_fallback_20260501_shard11_of16/extracted/renderer.bin",
+      "sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529",
+      "zip_compress_size": 267402,
+      "zip_crc": 405252151,
+      "zip_file_size": 296776
+    }
+  },
+  "pair_weights": null,
+  "promotion_blockers": [
+    "profile_component_sensitivity.py emits diagnostic direct-renderer/Fisher artifacts, not canonical archive.zip -> inflate.sh -> upstream/evaluate.py component-response evidence"
+  ],
+  "promotion_eligible": false,
+  "recorded_at_utc": "2026-05-01T08:29:52Z",
+  "schema_version": 1,
+  "score_claim": false,
+  "tool": "lightning_diagnostic_component_sensitivity_input_preflight"
+}

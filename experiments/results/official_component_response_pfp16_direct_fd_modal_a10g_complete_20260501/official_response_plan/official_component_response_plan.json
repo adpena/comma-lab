@@ -1,0 +1,584 @@
+{
+  "baseline_archive": {
+    "bytes": 686635,
+    "path": "../../lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+    "sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+  },
+  "baseline_contest_auth_eval": {
+    "bytes": 4287,
+    "path": "../../lane_g_v3_pfp16/final_deploy_bundle_20260430/eval/contest_auth_eval.json",
+    "sha256": "b84e7352165cf0d2be0631a177d8404c3a1e5f27633d82d48990552b9ef382ab"
+  },
+  "baseline_contest_auth_eval_json": "../../lane_g_v3_pfp16/final_deploy_bundle_20260430/eval/contest_auth_eval.json",
+  "format": "official_component_response_plan_v1",
+  "perturbation": {
+    "archive_variants_manifest": "archive_variants_manifest.json",
+    "archive_variants_manifest_sha256": "0811946690fa657efe9b683061169bd49b8bbb1ec8a1410cc35a49182f6599fc",
+    "auth_eval_required": "cuda",
+    "basis_id": "58a5004dab56094a54954bd42800542f3f2adc9b172a0162d7a17f9dcc53a617",
+    "basis_kind": "archive_byte_additive",
+    "basis_path": "perturbation_basis_v1.json",
+    "basis_sha256": "bbba7cfd9ac071da39f46594dfed4ad17f4b40b16dd165dde5beb135249151b1",
+    "canonical_response_eval_path": "archive.zip -> inflate.sh -> upstream/evaluate.py",
+    "epsilon_units": "signed_integer_step",
+    "format": "perturbation_basis_v1",
+    "mutation_policy": {
+      "allow_renderer_magic_mutation": false,
+      "allowed_mutation_members": [
+        "renderer.bin"
+      ],
+      "byte_delta_formula": "new_byte = old_byte + round(epsilon * delta_per_epsilon)",
+      "byte_range": [
+        0,
+        255
+      ],
+      "max_abs_byte_delta": 32,
+      "max_mutated_bytes": 1024,
+      "max_raw_l1_delta": 4096,
+      "out_of_range": "fail_closed"
+    },
+    "predicted_deltas_source": {
+      "bytes": 558347,
+      "path": "../official_component_response_prediction_deltas.json",
+      "sha256": "5b17482d543d2e88f829393212e752158d427debe0299e0fb9b7d70651737994"
+    },
+    "prediction_model": {
+      "equation": "predicted_delta[component] = sum_atoms round(epsilon * delta_per_epsilon)^2 * component_sensitivity[layer_name.weight][channel_index]",
+      "model": "quadratic_archive_byte_channel_sensitivity_projection_v1",
+      "prediction_delta_semantics": "nonnegative_component_delta_magnitude",
+      "prediction_error_mode": "absolute_magnitude",
+      "sign_policy": "nonnegative component-delta magnitude from nonnegative sensitivity maps; signed improvement/degradation claims require a future signed-map artifact",
+      "uses_official_response_observations": false
+    }
+  },
+  "points": [
+    {
+      "archive": "archives/point_000_eps_m2.zip",
+      "archive_bytes": 686632,
+      "archive_sha256": "345c8409efb02e5f71130540d4a3f78ab67c59264095322947e4c017bbadfafa",
+      "changed_member_bytes": 16,
+      "epsilon": -2.0,
+      "max_abs_byte_delta": 2,
+      "member_mutations": [
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 88,
+          "offset": 10536,
+          "original_byte": 90
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 69,
+          "offset": 11350,
+          "original_byte": 71
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 115,
+          "offset": 12016,
+          "original_byte": 117
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 169,
+          "offset": 12590,
+          "original_byte": 171
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 102,
+          "offset": 14546,
+          "original_byte": 104
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 67,
+          "offset": 18784,
+          "original_byte": 69
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 124,
+          "offset": 23348,
+          "original_byte": 126
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 124,
+          "offset": 25638,
+          "original_byte": 126
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 88,
+          "offset": 30528,
+          "original_byte": 90
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 91,
+          "offset": 155746,
+          "original_byte": 93
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 119,
+          "offset": 156288,
+          "original_byte": 121
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 147,
+          "offset": 223716,
+          "original_byte": 149
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 136,
+          "offset": 244144,
+          "original_byte": 138
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 16,
+          "offset": 246942,
+          "original_byte": 18
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 96,
+          "offset": 246980,
+          "original_byte": 98
+        },
+        {
+          "delta": -2,
+          "member": "renderer.bin",
+          "mutated_byte": 94,
+          "offset": 247018,
+          "original_byte": 96
+        }
+      ],
+      "predicted_delta": {
+        "combined": 13847.865997314453,
+        "posenet": 683.9974765777588,
+        "segnet": 18.713277764618397
+      },
+      "raw_l1_byte_delta": 32
+    },
+    {
+      "archive": "archives/point_001_eps_m1.zip",
+      "archive_bytes": 686632,
+      "archive_sha256": "e4f789bc20a3919325af7fb86842548023f43a6c00e499c1bc1a3950125e17fa",
+      "changed_member_bytes": 16,
+      "epsilon": -1.0,
+      "max_abs_byte_delta": 1,
+      "member_mutations": [
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 89,
+          "offset": 10536,
+          "original_byte": 90
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 70,
+          "offset": 11350,
+          "original_byte": 71
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 116,
+          "offset": 12016,
+          "original_byte": 117
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 170,
+          "offset": 12590,
+          "original_byte": 171
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 103,
+          "offset": 14546,
+          "original_byte": 104
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 68,
+          "offset": 18784,
+          "original_byte": 69
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 125,
+          "offset": 23348,
+          "original_byte": 126
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 125,
+          "offset": 25638,
+          "original_byte": 126
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 89,
+          "offset": 30528,
+          "original_byte": 90
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 92,
+          "offset": 155746,
+          "original_byte": 93
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 120,
+          "offset": 156288,
+          "original_byte": 121
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 148,
+          "offset": 223716,
+          "original_byte": 149
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 137,
+          "offset": 244144,
+          "original_byte": 138
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 17,
+          "offset": 246942,
+          "original_byte": 18
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 97,
+          "offset": 246980,
+          "original_byte": 98
+        },
+        {
+          "delta": -1,
+          "member": "renderer.bin",
+          "mutated_byte": 95,
+          "offset": 247018,
+          "original_byte": 96
+        }
+      ],
+      "predicted_delta": {
+        "combined": 3461.9664993286133,
+        "posenet": 170.9993691444397,
+        "segnet": 4.678319441154599
+      },
+      "raw_l1_byte_delta": 16
+    },
+    {
+      "archive": "../../lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+      "archive_bytes": 686635,
+      "archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+      "changed_member_bytes": 0,
+      "epsilon": 0.0,
+      "max_abs_byte_delta": 0,
+      "predicted_delta": {
+        "combined": 0.0,
+        "posenet": 0.0,
+        "segnet": 0.0
+      },
+      "raw_l1_byte_delta": 0
+    },
+    {
+      "archive": "archives/point_003_eps_p1.zip",
+      "archive_bytes": 686632,
+      "archive_sha256": "85bd7d35a3600f02c9bf94fcf79b640d3846c7ecd89b9fd663f3b22103b2c019",
+      "changed_member_bytes": 16,
+      "epsilon": 1.0,
+      "max_abs_byte_delta": 1,
+      "member_mutations": [
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 91,
+          "offset": 10536,
+          "original_byte": 90
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 72,
+          "offset": 11350,
+          "original_byte": 71
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 118,
+          "offset": 12016,
+          "original_byte": 117
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 172,
+          "offset": 12590,
+          "original_byte": 171
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 105,
+          "offset": 14546,
+          "original_byte": 104
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 70,
+          "offset": 18784,
+          "original_byte": 69
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 127,
+          "offset": 23348,
+          "original_byte": 126
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 127,
+          "offset": 25638,
+          "original_byte": 126
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 91,
+          "offset": 30528,
+          "original_byte": 90
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 94,
+          "offset": 155746,
+          "original_byte": 93
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 122,
+          "offset": 156288,
+          "original_byte": 121
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 150,
+          "offset": 223716,
+          "original_byte": 149
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 139,
+          "offset": 244144,
+          "original_byte": 138
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 19,
+          "offset": 246942,
+          "original_byte": 18
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 99,
+          "offset": 246980,
+          "original_byte": 98
+        },
+        {
+          "delta": 1,
+          "member": "renderer.bin",
+          "mutated_byte": 97,
+          "offset": 247018,
+          "original_byte": 96
+        }
+      ],
+      "predicted_delta": {
+        "combined": 3461.9664993286133,
+        "posenet": 170.9993691444397,
+        "segnet": 4.678319441154599
+      },
+      "raw_l1_byte_delta": 16
+    },
+    {
+      "archive": "archives/point_004_eps_p2.zip",
+      "archive_bytes": 686632,
+      "archive_sha256": "b0246e0b4196e628bf023dabbbecb6a5100405f5dddd9f966c776bbaa82667eb",
+      "changed_member_bytes": 16,
+      "epsilon": 2.0,
+      "max_abs_byte_delta": 2,
+      "member_mutations": [
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 92,
+          "offset": 10536,
+          "original_byte": 90
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 73,
+          "offset": 11350,
+          "original_byte": 71
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 119,
+          "offset": 12016,
+          "original_byte": 117
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 173,
+          "offset": 12590,
+          "original_byte": 171
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 106,
+          "offset": 14546,
+          "original_byte": 104
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 71,
+          "offset": 18784,
+          "original_byte": 69
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 128,
+          "offset": 23348,
+          "original_byte": 126
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 128,
+          "offset": 25638,
+          "original_byte": 126
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 92,
+          "offset": 30528,
+          "original_byte": 90
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 95,
+          "offset": 155746,
+          "original_byte": 93
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 123,
+          "offset": 156288,
+          "original_byte": 121
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 151,
+          "offset": 223716,
+          "original_byte": 149
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 140,
+          "offset": 244144,
+          "original_byte": 138
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 20,
+          "offset": 246942,
+          "original_byte": 18
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 100,
+          "offset": 246980,
+          "original_byte": 98
+        },
+        {
+          "delta": 2,
+          "member": "renderer.bin",
+          "mutated_byte": 98,
+          "offset": 247018,
+          "original_byte": 96
+        }
+      ],
+      "predicted_delta": {
+        "combined": 13847.865997314453,
+        "posenet": 683.9974765777588,
+        "segnet": 18.713277764618397
+      },
+      "raw_l1_byte_delta": 32
+    }
+  ],
+  "producer": "experiments/build_component_response_perturbation_plan.py",
+  "schema_version": 1
+}

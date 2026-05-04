@@ -1,0 +1,333 @@
+{
+  "candidates": [
+    {
+      "archive_bytes": 275890,
+      "archive_delta_bytes_vs_source": -10,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/c082_fast_packer_worker_20260503/p6_stream_resweep/shrink_queued_bb8d_p6_stream_resweep/archive.zip",
+      "archive_sha256": "002b1d0681a895aac6dbf2eb1194c9d765debdee5e3b3101e034173e21295bac",
+      "candidate_id": "shrink_queued_bb8d_p6_stream_resweep",
+      "decoded_stream_parity": true,
+      "formula_only_rate_score_delta_vs_source": -6.658589531221714e-06,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/c082_fast_packer_worker_20260503/p6_stream_resweep/shrink_queued_bb8d_p6_stream_resweep/manifest.json",
+      "negative_container_checks": {
+        "outer_brotli": {
+          "best_bytes": 275790,
+          "delta_bytes_vs_stream_resweep_payload": 0,
+          "params": "source",
+          "would_write_candidate": false
+        },
+        "zip_deflated_member": {
+          "archive_bytes": 275975,
+          "delta_bytes_vs_stored_archive": 85,
+          "would_write_candidate": false
+        }
+      },
+      "noop": false,
+      "noop_status": "not_noop_repacked_payload",
+      "payload_bytes": 275790,
+      "payload_delta_bytes_vs_source": -10,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+      "pose_safety_preflight": {
+        "failure_class": null,
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame1_head_0.1/pose_safety_preflight.json",
+        "safe_for_exact_eval_dispatch": true,
+        "sha256": "9b08d27540aacc42b6003195726ad326e0df0801bb236140d8db8729b8575ba0"
+      },
+      "score_claim": false,
+      "source_archive": {
+        "bytes": 275900,
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame1_head_0.1/archive.zip",
+        "sha256": "bb8d1835303478183465e15b28fd9af8776b4ea1c07cdd6cfe0895032a267b64"
+      },
+      "source_payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+      "source_preservation_status": "lossless_decoded_stream_preserving_repack",
+      "stream_deltas": {
+        "masks.mkv": -7,
+        "optimized_poses.qp1": -1,
+        "renderer.bin": 0,
+        "seg_tile_actions.delta_varint": -2
+      }
+    },
+    {
+      "archive_bytes": 276084,
+      "archive_delta_bytes_vs_source": -142,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/c082_fast_packer_worker_20260503/p6_stream_resweep/shrink_frame1_head_0075_p6_stream_resweep/archive.zip",
+      "archive_sha256": "befe0e312377485d322735eb634fdbdad13fca9320dd66b0a8f7494ed4f69ba1",
+      "candidate_id": "shrink_frame1_head_0075_p6_stream_resweep",
+      "decoded_stream_parity": true,
+      "formula_only_rate_score_delta_vs_source": -9.455197134334833e-05,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/c082_fast_packer_worker_20260503/p6_stream_resweep/shrink_frame1_head_0075_p6_stream_resweep/manifest.json",
+      "negative_container_checks": {
+        "outer_brotli": {
+          "best_bytes": 275984,
+          "delta_bytes_vs_stream_resweep_payload": 0,
+          "params": "source",
+          "would_write_candidate": false
+        },
+        "zip_deflated_member": {
+          "archive_bytes": 276169,
+          "delta_bytes_vs_stored_archive": 85,
+          "would_write_candidate": false
+        }
+      },
+      "noop": false,
+      "noop_status": "not_noop_repacked_payload",
+      "payload_bytes": 275984,
+      "payload_delta_bytes_vs_source": -142,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+      "pose_safety_preflight": {
+        "failure_class": null,
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame1_head_0.075/pose_safety_preflight.json",
+        "safe_for_exact_eval_dispatch": true,
+        "sha256": "dccf3d3e07baaca704f999e72b3786c33ef00f9502068cd0c1b14412959321e7"
+      },
+      "score_claim": false,
+      "source_archive": {
+        "bytes": 276226,
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame1_head_0.075/archive.zip",
+        "sha256": "7814f529ae964b5aa787134d114eca7734fbcaff3c85fcc6e2ed23b50edd072d"
+      },
+      "source_payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+      "source_preservation_status": "lossless_decoded_stream_preserving_repack",
+      "stream_deltas": {
+        "masks.mkv": -7,
+        "optimized_poses.qp1": -1,
+        "renderer.bin": -132,
+        "seg_tile_actions.delta_varint": -2
+      }
+    },
+    {
+      "archive_bytes": 276211,
+      "archive_delta_bytes_vs_source": -11,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/c082_fast_packer_worker_20260503/p6_stream_resweep/shrink_frame2_head_005_p6_stream_resweep/archive.zip",
+      "archive_sha256": "331e2d2fa54029cd9c1da860e7399197a6f94780752f484e44666c7327efea23",
+      "candidate_id": "shrink_frame2_head_005_p6_stream_resweep",
+      "decoded_stream_parity": true,
+      "formula_only_rate_score_delta_vs_source": -7.324448484343885e-06,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/c082_fast_packer_worker_20260503/p6_stream_resweep/shrink_frame2_head_005_p6_stream_resweep/manifest.json",
+      "negative_container_checks": {
+        "outer_brotli": {
+          "best_bytes": 276111,
+          "delta_bytes_vs_stream_resweep_payload": 0,
+          "params": "source",
+          "would_write_candidate": false
+        },
+        "zip_deflated_member": {
+          "archive_bytes": 276296,
+          "delta_bytes_vs_stored_archive": 85,
+          "would_write_candidate": false
+        }
+      },
+      "noop": false,
+      "noop_status": "not_noop_repacked_payload",
+      "payload_bytes": 276111,
+      "payload_delta_bytes_vs_source": -11,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+      "pose_safety_preflight": {
+        "failure_class": null,
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame2_head_0.05/pose_safety_preflight.json",
+        "safe_for_exact_eval_dispatch": true,
+        "sha256": "9d6c2685fb1668b1aff216187d83e9bf6835c332ae301692e9c4051594a896ca"
+      },
+      "score_claim": false,
+      "source_archive": {
+        "bytes": 276222,
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame2_head_0.05/archive.zip",
+        "sha256": "efccff1fbfb5f9dcc38c05a79e1ab5ebe2f90d13fcae5fdc0e0f8465e79b6ed6"
+      },
+      "source_payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+      "source_preservation_status": "lossless_decoded_stream_preserving_repack",
+      "stream_deltas": {
+        "masks.mkv": -7,
+        "optimized_poses.qp1": -1,
+        "renderer.bin": -1,
+        "seg_tile_actions.delta_varint": -2
+      }
+    },
+    {
+      "archive_bytes": 276272,
+      "archive_delta_bytes_vs_source": -10,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/c082_fast_packer_worker_20260503/p6_stream_resweep/shrink_shared_trunk_004_p6_stream_resweep/archive.zip",
+      "archive_sha256": "9a00553a2ea2646ea0336686df6cedab18c10018b651c9995f46cef22ca0b140",
+      "candidate_id": "shrink_shared_trunk_004_p6_stream_resweep",
+      "decoded_stream_parity": true,
+      "formula_only_rate_score_delta_vs_source": -6.658589531221714e-06,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/c082_fast_packer_worker_20260503/p6_stream_resweep/shrink_shared_trunk_004_p6_stream_resweep/manifest.json",
+      "negative_container_checks": {
+        "outer_brotli": {
+          "best_bytes": 276172,
+          "delta_bytes_vs_stream_resweep_payload": 0,
+          "params": "source",
+          "would_write_candidate": false
+        },
+        "zip_deflated_member": {
+          "archive_bytes": 276357,
+          "delta_bytes_vs_stored_archive": 85,
+          "would_write_candidate": false
+        }
+      },
+      "noop": false,
+      "noop_status": "not_noop_repacked_payload",
+      "payload_bytes": 276172,
+      "payload_delta_bytes_vs_source": -10,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+      "pose_safety_preflight": {
+        "failure_class": null,
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_shared_trunk_0.04/pose_safety_preflight.json",
+        "safe_for_exact_eval_dispatch": true,
+        "sha256": "648e7f649d2c43f850e67cdf5a4873aed8d74d9f05a8ccc88e336393f3cfe230"
+      },
+      "score_claim": false,
+      "source_archive": {
+        "bytes": 276282,
+        "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_shared_trunk_0.04/archive.zip",
+        "sha256": "074c38d67e1ba927800c8ccdd735b027045fe60401e724c702ea6c9d4ba0f62d"
+      },
+      "source_payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+      "source_preservation_status": "lossless_decoded_stream_preserving_repack",
+      "stream_deltas": {
+        "masks.mkv": -7,
+        "optimized_poses.qp1": -1,
+        "renderer.bin": 0,
+        "seg_tile_actions.delta_varint": -2
+      }
+    },
+    {
+      "archive_bytes": 276333,
+      "archive_delta_bytes_vs_source": 0,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/c082_fast_packer_worker_20260503/p6_stream_resweep/c082_top40_30932_p6_stream_resweep/archive.zip",
+      "archive_sha256": "30932c684c6b09a7bd2bd248e17fd66a4bc448ed2fe5747f92e74bcceec66681",
+      "candidate_id": "c082_top40_30932_p6_stream_resweep",
+      "decoded_stream_parity": true,
+      "formula_only_rate_score_delta_vs_source": 0.0,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/c082_fast_packer_worker_20260503/p6_stream_resweep/c082_top40_30932_p6_stream_resweep/manifest.json",
+      "negative_container_checks": {
+        "outer_brotli": {
+          "best_bytes": 276233,
+          "delta_bytes_vs_stream_resweep_payload": 0,
+          "params": "source",
+          "would_write_candidate": false
+        },
+        "zip_deflated_member": {
+          "archive_bytes": 276418,
+          "delta_bytes_vs_stored_archive": 85,
+          "would_write_candidate": false
+        }
+      },
+      "noop": true,
+      "noop_status": "byte_identical_to_source_payload",
+      "payload_bytes": 276233,
+      "payload_delta_bytes_vs_source": 0,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+      "pose_safety_preflight": null,
+      "score_claim": false,
+      "source_archive": {
+        "bytes": 276333,
+        "path": "/Users/adpena/Projects/pact/experiments/results/mask_bytecut_c088_20260503/lossless_repack_exhaustive/c082_p6_delta_varint_actions_stream_resweep/archive.zip",
+        "sha256": "30932c684c6b09a7bd2bd248e17fd66a4bc448ed2fe5747f92e74bcceec66681"
+      },
+      "source_payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+      "source_preservation_status": "byte_identical_noop",
+      "stream_deltas": {
+        "masks.mkv": 0,
+        "optimized_poses.qp1": 0,
+        "renderer.bin": 0,
+        "seg_tile_actions.delta_varint": 0
+      }
+    },
+    {
+      "archive_bytes": 276342,
+      "archive_delta_bytes_vs_source": -10,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/c082_fast_packer_worker_20260503/p6_stream_resweep/c067_lag67_p6_source_p6_stream_resweep/archive.zip",
+      "archive_sha256": "3bba4bde6b39c553d73dda89c838388ea2dfb10b5c42b78ecd4e259bb316b0e9",
+      "candidate_id": "c067_lag67_p6_source_p6_stream_resweep",
+      "decoded_stream_parity": true,
+      "formula_only_rate_score_delta_vs_source": -6.658589531221714e-06,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/c082_fast_packer_worker_20260503/p6_stream_resweep/c067_lag67_p6_source_p6_stream_resweep/manifest.json",
+      "negative_container_checks": {
+        "outer_brotli": {
+          "best_bytes": 276242,
+          "delta_bytes_vs_stream_resweep_payload": 0,
+          "params": "source",
+          "would_write_candidate": false
+        },
+        "zip_deflated_member": {
+          "archive_bytes": 276427,
+          "delta_bytes_vs_stored_archive": 85,
+          "would_write_candidate": false
+        }
+      },
+      "noop": false,
+      "noop_status": "not_noop_repacked_payload",
+      "payload_bytes": 276242,
+      "payload_delta_bytes_vs_source": -10,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+      "pose_safety_preflight": null,
+      "score_claim": false,
+      "source_archive": {
+        "bytes": 276352,
+        "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_lag_eval_top67_p6_t4_20260503T0608Z/archive.zip",
+        "sha256": "d73f0957cf2d8da0526c1786613443331ccb913f5648131cfaaac5e6f7eae972"
+      },
+      "source_payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+      "source_preservation_status": "lossless_decoded_stream_preserving_repack",
+      "stream_deltas": {
+        "masks.mkv": -7,
+        "optimized_poses.qp1": -1,
+        "renderer.bin": 0,
+        "seg_tile_actions.delta_varint": -2
+      }
+    },
+    {
+      "archive_bytes": 276394,
+      "archive_delta_bytes_vs_source": 0,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/c082_fast_packer_worker_20260503/p6_stream_resweep/c082_current_9b_p6_stream_resweep/archive.zip",
+      "archive_sha256": "9b78333dd39c12c986ca7fc02a4bb35a6a61ef5a1cc0c9c9c840820eb840058a",
+      "candidate_id": "c082_current_9b_p6_stream_resweep",
+      "decoded_stream_parity": true,
+      "formula_only_rate_score_delta_vs_source": 0.0,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/c082_fast_packer_worker_20260503/p6_stream_resweep/c082_current_9b_p6_stream_resweep/manifest.json",
+      "negative_container_checks": {
+        "outer_brotli": {
+          "best_bytes": 276294,
+          "delta_bytes_vs_stream_resweep_payload": 0,
+          "params": "source",
+          "would_write_candidate": false
+        },
+        "zip_deflated_member": {
+          "archive_bytes": 276479,
+          "delta_bytes_vs_stored_archive": 85,
+          "would_write_candidate": false
+        }
+      },
+      "noop": true,
+      "noop_status": "byte_identical_to_source_payload",
+      "payload_bytes": 276294,
+      "payload_delta_bytes_vs_source": 0,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+      "pose_safety_preflight": null,
+      "score_claim": false,
+      "source_archive": {
+        "bytes": 276394,
+        "path": "/Users/adpena/Projects/pact/experiments/results/c082_pr75_lossless_repack_20260503_worker/c082_p6_delta_varint_actions_stream_resweep/archive.zip",
+        "sha256": "9b78333dd39c12c986ca7fc02a4bb35a6a61ef5a1cc0c9c9c840820eb840058a"
+      },
+      "source_payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+      "source_preservation_status": "byte_identical_noop",
+      "stream_deltas": {
+        "masks.mkv": 0,
+        "optimized_poses.qp1": 0,
+        "renderer.bin": 0,
+        "seg_tile_actions.delta_varint": 0
+      }
+    }
+  ],
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "evidence_grade": "empirical_lossless_byte_transform",
+  "promotion_eligible": false,
+  "remote_gpu_dispatch_performed": false,
+  "schema": "c082_fast_p6_repack_screen_v1",
+  "score_claim": false,
+  "source_count": 7,
+  "tool": "experiments/results/c082_fast_packer_worker_20260503/search_p6_fast_repack.py"
+}

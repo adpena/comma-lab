@@ -1,0 +1,27 @@
+=== Evaluation config ===
+  batch_size: 16
+  device: cuda
+  num_threads: 2
+  prefetch_queue_depth: 4
+  report: /teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z/eval_work/report.txt
+  seed: 1234
+  submission_dir: /teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z/eval_work
+  uncompressed_dir: /teamspace/studios/this_studio/pact/upstream/videos
+  video_names_file: /teamspace/studios/this_studio/pact/upstream/public_test_video_names.txt
+=== Evaluation results over 600 samples ===
+  Average PoseNet Distortion: 0.00017198
+  Average SegNet Distortion: 0.00067623
+  Submission file size: 178,981 bytes
+  Original uncompressed size: 37,545,489 bytes
+  Compression Rate: 0.00476704
+  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 0.23
+
+## Exact Custody
+archive_sha256: afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641
+archive_size_bytes: 178981
+score_recomputed_from_components: 0.22826947142244708
+n_samples: 600
+avg_segnet_dist: 0.00067623
+avg_posenet_dist: 0.00017198
+dispatch_lane_id: public_pr100_hnerv_lc_v2_t4_adapter_replay
+dispatch_job_id: exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z

@@ -1,0 +1,730 @@
+{
+  "best_built_candidate": null,
+  "best_screened_candidate": {
+    "candidate_archive_delta_bytes_vs_source_formula": 0,
+    "candidate_id": "qh0_canonical_source_passthrough",
+    "candidate_model_brotli_lgwin": null,
+    "candidate_model_brotli_quality": null,
+    "candidate_model_bytes": 57074,
+    "candidate_model_codec": "source_passthrough",
+    "candidate_model_delta_bytes_vs_source": 0,
+    "candidate_model_sha256": "c9194c19d44d3c32c4e588bbe4f9986ed0c562779078f0f4d6b073f0799b5dbc",
+    "decoded_tensor_parity": true,
+    "duplicate_stream": false,
+    "rate_score_delta_if_components_identical_formula_only": 0.0,
+    "runtime_compatibility": {
+      "blocker_class": null,
+      "blockers": [
+        "robust_current_missing_pr85_single_x_unpacker"
+      ],
+      "dispatch_unlocked": true,
+      "magic": "QH0",
+      "minimal_runtime_implementation_needed": null,
+      "public_pr85_replay_inflate_py": "experiments/results/pr85_stbm1br_mask_recode_20260504_worker/replay_submission_stbm/inflate.py",
+      "public_pr85_replay_single_x_can_decode": true,
+      "robust_current_dir": "submissions/robust_current",
+      "robust_current_renderer_member_can_decode": true,
+      "robust_current_single_x_can_unpack": false,
+      "runtime_can_decode_without_edits": true
+    },
+    "serializer_magic": "QH0",
+    "serializer_payload_bytes": 61590,
+    "serializer_payload_sha256": "503d666ec4c1b3e0ce09fa9dcb963b049de185eac0ddd82318578a7732439ed4",
+    "serializer_variant": "qh0_canonical"
+  },
+  "blocker": "all runtime-compatible serialized model streams were byte-neutral or byte-negative",
+  "blocker_class": "no_real_byte_win",
+  "built_candidate_count": 0,
+  "candidate_manifests": [],
+  "dispatch_performed": false,
+  "dispatch_unlocked": false,
+  "planning_only": true,
+  "record_set": {
+    "by_category": {
+      "dense_tensor": 15790,
+      "module_bias": 2284,
+      "module_weight": 43513
+    },
+    "by_kind": {
+      "fp16": 687,
+      "fp16_bias": 2284,
+      "fp16_dense": 10189,
+      "fp4": 42826,
+      "int8_row_scale": 5601
+    },
+    "magic_bytes": 3,
+    "record_count": 111,
+    "records_plus_magic_bytes": 61590,
+    "records_total_bytes": 61587,
+    "source_bytes": 61590,
+    "source_magic": "QH0",
+    "source_sha256": "503d666ec4c1b3e0ce09fa9dcb963b049de185eac0ddd82318578a7732439ed4",
+    "top_records_by_bytes": [
+      {
+        "bytes": 5601,
+        "category": "dense_tensor",
+        "element_count": 5376,
+        "name": "frame1_head.block1.film_proj.weight",
+        "offset": 53988,
+        "record_kind": "int8_row_scale",
+        "tensor_shape": [
+          112,
+          48
+        ]
+      },
+      {
+        "bytes": 4609,
+        "category": "dense_tensor",
+        "element_count": 2304,
+        "name": "pose_mlp.2.weight",
+        "offset": 48830,
+        "record_kind": "fp16_dense",
+        "tensor_shape": [
+          48,
+          48
+        ]
+      },
+      {
+        "bytes": 3529,
+        "category": "module_weight",
+        "element_count": 6272,
+        "name": "shared_trunk.fuse.pw.weight",
+        "offset": 15797,
+        "record_kind": "fp4",
+        "tensor_shape": [
+          56,
+          112,
+          1,
+          1
+        ]
+      },
+      {
+        "bytes": 2305,
+        "category": "module_weight",
+        "element_count": 4096,
+        "name": "shared_trunk.down_block.conv1.pw.weight",
+        "offset": 7575,
+        "record_kind": "fp4",
+        "tensor_shape": [
+          64,
+          64,
+          1,
+          1
+        ]
+      },
+      {
+        "bytes": 2305,
+        "category": "module_weight",
+        "element_count": 4096,
+        "name": "shared_trunk.down_block.conv2.pw.weight",
+        "offset": 10333,
+        "record_kind": "fp4",
+        "tensor_shape": [
+          64,
+          64,
+          1,
+          1
+        ]
+      },
+      {
+        "bytes": 2017,
+        "category": "module_weight",
+        "element_count": 3584,
+        "name": "shared_trunk.down_conv.pw.weight",
+        "offset": 5105,
+        "record_kind": "fp4",
+        "tensor_shape": [
+          64,
+          56,
+          1,
+          1
+        ]
+      },
+      {
+        "bytes": 2017,
+        "category": "module_weight",
+        "element_count": 3584,
+        "name": "shared_trunk.up.1.pw.weight",
+        "offset": 13091,
+        "record_kind": "fp4",
+        "tensor_shape": [
+          56,
+          64,
+          1,
+          1
+        ]
+      },
+      {
+        "bytes": 1765,
+        "category": "module_weight",
+        "element_count": 3136,
+        "name": "shared_trunk.stem_block.conv1.pw.weight",
+        "offset": 773,
+        "record_kind": "fp4",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ]
+      },
+      {
+        "bytes": 1765,
+        "category": "module_weight",
+        "element_count": 3136,
+        "name": "shared_trunk.stem_block.conv2.pw.weight",
+        "offset": 2939,
+        "record_kind": "fp4",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ]
+      },
+      {
+        "bytes": 1765,
+        "category": "module_weight",
+        "element_count": 3136,
+        "name": "shared_trunk.fuse_block.conv1.pw.weight",
+        "offset": 19727,
+        "record_kind": "fp4",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ]
+      },
+      {
+        "bytes": 1765,
+        "category": "module_weight",
+        "element_count": 3136,
+        "name": "shared_trunk.fuse_block.conv2.pw.weight",
+        "offset": 21893,
+        "record_kind": "fp4",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ]
+      },
+      {
+        "bytes": 1765,
+        "category": "module_weight",
+        "element_count": 3136,
+        "name": "frame1_head.block1.conv1.pw.weight",
+        "offset": 24059,
+        "record_kind": "fp4",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ]
+      },
+      {
+        "bytes": 1765,
+        "category": "module_weight",
+        "element_count": 3136,
+        "name": "frame1_head.block1.conv2.pw.weight",
+        "offset": 26225,
+        "record_kind": "fp4",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ]
+      },
+      {
+        "bytes": 1765,
+        "category": "module_weight",
+        "element_count": 3136,
+        "name": "frame1_head.block2.conv1.pw.weight",
+        "offset": 28391,
+        "record_kind": "fp4",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ]
+      },
+      {
+        "bytes": 1765,
+        "category": "module_weight",
+        "element_count": 3136,
+        "name": "frame1_head.block2.conv2.pw.weight",
+        "offset": 30557,
+        "record_kind": "fp4",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ]
+      },
+      {
+        "bytes": 1765,
+        "category": "module_weight",
+        "element_count": 3136,
+        "name": "frame2_head.block1.conv1.pw.weight",
+        "offset": 35074,
+        "record_kind": "fp4",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ]
+      }
+    ]
+  },
+  "remote_gpu_dispatch_performed": false,
+  "schema": "pr85_qh0_serializer_candidates_v1",
+  "score_claim": false,
+  "screened_candidate_count": 13,
+  "screened_candidates": [
+    {
+      "candidate_archive_delta_bytes_vs_source_formula": 0,
+      "candidate_id": "qh0_canonical_source_passthrough",
+      "candidate_model_brotli_lgwin": null,
+      "candidate_model_brotli_quality": null,
+      "candidate_model_bytes": 57074,
+      "candidate_model_codec": "source_passthrough",
+      "candidate_model_delta_bytes_vs_source": 0,
+      "candidate_model_sha256": "c9194c19d44d3c32c4e588bbe4f9986ed0c562779078f0f4d6b073f0799b5dbc",
+      "decoded_tensor_parity": true,
+      "duplicate_stream": false,
+      "rate_score_delta_if_components_identical_formula_only": 0.0,
+      "runtime_compatibility": {
+        "blocker_class": null,
+        "blockers": [
+          "robust_current_missing_pr85_single_x_unpacker"
+        ],
+        "dispatch_unlocked": true,
+        "magic": "QH0",
+        "minimal_runtime_implementation_needed": null,
+        "public_pr85_replay_inflate_py": "experiments/results/pr85_stbm1br_mask_recode_20260504_worker/replay_submission_stbm/inflate.py",
+        "public_pr85_replay_single_x_can_decode": true,
+        "robust_current_dir": "submissions/robust_current",
+        "robust_current_renderer_member_can_decode": true,
+        "robust_current_single_x_can_unpack": false,
+        "runtime_can_decode_without_edits": true
+      },
+      "serializer_magic": "QH0",
+      "serializer_payload_bytes": 61590,
+      "serializer_payload_sha256": "503d666ec4c1b3e0ce09fa9dcb963b049de185eac0ddd82318578a7732439ed4",
+      "serializer_variant": "qh0_canonical"
+    },
+    {
+      "candidate_archive_delta_bytes_vs_source_formula": 91,
+      "candidate_id": "qh0_canonical_brq10_lg18",
+      "candidate_model_brotli_lgwin": 18,
+      "candidate_model_brotli_quality": 10,
+      "candidate_model_bytes": 57165,
+      "candidate_model_codec": "brotli",
+      "candidate_model_delta_bytes_vs_source": 91,
+      "candidate_model_sha256": "435f8f6cf79d5bfe44eb315d615106dcb0a7f32fcceee44f62cec7aebfb6d55e",
+      "decoded_tensor_parity": true,
+      "duplicate_stream": false,
+      "rate_score_delta_if_components_identical_formula_only": 6.059316473411759e-05,
+      "runtime_compatibility": {
+        "blocker_class": null,
+        "blockers": [
+          "robust_current_missing_pr85_single_x_unpacker"
+        ],
+        "dispatch_unlocked": true,
+        "magic": "QH0",
+        "minimal_runtime_implementation_needed": null,
+        "public_pr85_replay_inflate_py": "experiments/results/pr85_stbm1br_mask_recode_20260504_worker/replay_submission_stbm/inflate.py",
+        "public_pr85_replay_single_x_can_decode": true,
+        "robust_current_dir": "submissions/robust_current",
+        "robust_current_renderer_member_can_decode": true,
+        "robust_current_single_x_can_unpack": false,
+        "runtime_can_decode_without_edits": true
+      },
+      "serializer_magic": "QH0",
+      "serializer_payload_bytes": 61590,
+      "serializer_payload_sha256": "503d666ec4c1b3e0ce09fa9dcb963b049de185eac0ddd82318578a7732439ed4",
+      "serializer_variant": "qh0_canonical"
+    },
+    {
+      "candidate_archive_delta_bytes_vs_source_formula": 91,
+      "candidate_id": "qh0_canonical_brq10_lg24",
+      "candidate_model_brotli_lgwin": 24,
+      "candidate_model_brotli_quality": 10,
+      "candidate_model_bytes": 57165,
+      "candidate_model_codec": "brotli",
+      "candidate_model_delta_bytes_vs_source": 91,
+      "candidate_model_sha256": "9d693c7e0d9320f2329c7685e4cffb7e4cbe7fbc38a65435e62865479ba52d32",
+      "decoded_tensor_parity": true,
+      "duplicate_stream": false,
+      "rate_score_delta_if_components_identical_formula_only": 6.059316473411759e-05,
+      "runtime_compatibility": {
+        "blocker_class": null,
+        "blockers": [
+          "robust_current_missing_pr85_single_x_unpacker"
+        ],
+        "dispatch_unlocked": true,
+        "magic": "QH0",
+        "minimal_runtime_implementation_needed": null,
+        "public_pr85_replay_inflate_py": "experiments/results/pr85_stbm1br_mask_recode_20260504_worker/replay_submission_stbm/inflate.py",
+        "public_pr85_replay_single_x_can_decode": true,
+        "robust_current_dir": "submissions/robust_current",
+        "robust_current_renderer_member_can_decode": true,
+        "robust_current_single_x_can_unpack": false,
+        "runtime_can_decode_without_edits": true
+      },
+      "serializer_magic": "QH0",
+      "serializer_payload_bytes": 61590,
+      "serializer_payload_sha256": "503d666ec4c1b3e0ce09fa9dcb963b049de185eac0ddd82318578a7732439ed4",
+      "serializer_variant": "qh0_canonical"
+    },
+    {
+      "candidate_archive_delta_bytes_vs_source_formula": 153,
+      "candidate_id": "qh0_canonical_brq11_lg18",
+      "candidate_model_brotli_lgwin": 18,
+      "candidate_model_brotli_quality": 11,
+      "candidate_model_bytes": 57227,
+      "candidate_model_codec": "brotli",
+      "candidate_model_delta_bytes_vs_source": 153,
+      "candidate_model_sha256": "ead9fd19d1e10f710f6dbe207284cb7712d5cdaf1e199b0a515fbaa04c3d6a55",
+      "decoded_tensor_parity": true,
+      "duplicate_stream": false,
+      "rate_score_delta_if_components_identical_formula_only": 0.00010187641982769222,
+      "runtime_compatibility": {
+        "blocker_class": null,
+        "blockers": [
+          "robust_current_missing_pr85_single_x_unpacker"
+        ],
+        "dispatch_unlocked": true,
+        "magic": "QH0",
+        "minimal_runtime_implementation_needed": null,
+        "public_pr85_replay_inflate_py": "experiments/results/pr85_stbm1br_mask_recode_20260504_worker/replay_submission_stbm/inflate.py",
+        "public_pr85_replay_single_x_can_decode": true,
+        "robust_current_dir": "submissions/robust_current",
+        "robust_current_renderer_member_can_decode": true,
+        "robust_current_single_x_can_unpack": false,
+        "runtime_can_decode_without_edits": true
+      },
+      "serializer_magic": "QH0",
+      "serializer_payload_bytes": 61590,
+      "serializer_payload_sha256": "503d666ec4c1b3e0ce09fa9dcb963b049de185eac0ddd82318578a7732439ed4",
+      "serializer_variant": "qh0_canonical"
+    },
+    {
+      "candidate_archive_delta_bytes_vs_source_formula": 153,
+      "candidate_id": "qh0_canonical_brq11_lg24",
+      "candidate_model_brotli_lgwin": 24,
+      "candidate_model_brotli_quality": 11,
+      "candidate_model_bytes": 57227,
+      "candidate_model_codec": "brotli",
+      "candidate_model_delta_bytes_vs_source": 153,
+      "candidate_model_sha256": "e3bedefa9e594e1342f4cb8e2dd77e56b3242eb7a6ef53ca1fd509275dd23d5e",
+      "decoded_tensor_parity": true,
+      "duplicate_stream": false,
+      "rate_score_delta_if_components_identical_formula_only": 0.00010187641982769222,
+      "runtime_compatibility": {
+        "blocker_class": null,
+        "blockers": [
+          "robust_current_missing_pr85_single_x_unpacker"
+        ],
+        "dispatch_unlocked": true,
+        "magic": "QH0",
+        "minimal_runtime_implementation_needed": null,
+        "public_pr85_replay_inflate_py": "experiments/results/pr85_stbm1br_mask_recode_20260504_worker/replay_submission_stbm/inflate.py",
+        "public_pr85_replay_single_x_can_decode": true,
+        "robust_current_dir": "submissions/robust_current",
+        "robust_current_renderer_member_can_decode": true,
+        "robust_current_single_x_can_unpack": false,
+        "runtime_can_decode_without_edits": true
+      },
+      "serializer_magic": "QH0",
+      "serializer_payload_bytes": 61590,
+      "serializer_payload_sha256": "503d666ec4c1b3e0ce09fa9dcb963b049de185eac0ddd82318578a7732439ed4",
+      "serializer_variant": "qh0_canonical"
+    },
+    {
+      "candidate_archive_delta_bytes_vs_source_formula": 279,
+      "candidate_id": "qm0_direct_brq10_lg18",
+      "candidate_model_brotli_lgwin": 18,
+      "candidate_model_brotli_quality": 10,
+      "candidate_model_bytes": 57353,
+      "candidate_model_codec": "brotli",
+      "candidate_model_delta_bytes_vs_source": 279,
+      "candidate_model_sha256": "3107bb24bbe1fe083863638c32683d94f9dd3aea9aa1301695d03cc91984ea37",
+      "decoded_tensor_parity": true,
+      "duplicate_stream": false,
+      "rate_score_delta_if_components_identical_formula_only": 0.0001857746479210858,
+      "runtime_compatibility": {
+        "blocker_class": null,
+        "blockers": [
+          "robust_current_missing_pr85_single_x_unpacker"
+        ],
+        "dispatch_unlocked": true,
+        "magic": "QM0",
+        "minimal_runtime_implementation_needed": null,
+        "public_pr85_replay_inflate_py": "experiments/results/pr85_stbm1br_mask_recode_20260504_worker/replay_submission_stbm/inflate.py",
+        "public_pr85_replay_single_x_can_decode": true,
+        "robust_current_dir": "submissions/robust_current",
+        "robust_current_renderer_member_can_decode": true,
+        "robust_current_single_x_can_unpack": false,
+        "runtime_can_decode_without_edits": true
+      },
+      "serializer_magic": "QM0",
+      "serializer_payload_bytes": 61590,
+      "serializer_payload_sha256": "7fbcbdf0a707f2888f8a3eb714063b11ba45e9b6359e820d2da26e96ecfa2ecb",
+      "serializer_variant": "qm0_direct"
+    },
+    {
+      "candidate_archive_delta_bytes_vs_source_formula": 279,
+      "candidate_id": "qm0_direct_brq10_lg24",
+      "candidate_model_brotli_lgwin": 24,
+      "candidate_model_brotli_quality": 10,
+      "candidate_model_bytes": 57353,
+      "candidate_model_codec": "brotli",
+      "candidate_model_delta_bytes_vs_source": 279,
+      "candidate_model_sha256": "4015c257138edfd08ab772f222891e77c86dca589eeafe4302f558bd2170d994",
+      "decoded_tensor_parity": true,
+      "duplicate_stream": false,
+      "rate_score_delta_if_components_identical_formula_only": 0.0001857746479210858,
+      "runtime_compatibility": {
+        "blocker_class": null,
+        "blockers": [
+          "robust_current_missing_pr85_single_x_unpacker"
+        ],
+        "dispatch_unlocked": true,
+        "magic": "QM0",
+        "minimal_runtime_implementation_needed": null,
+        "public_pr85_replay_inflate_py": "experiments/results/pr85_stbm1br_mask_recode_20260504_worker/replay_submission_stbm/inflate.py",
+        "public_pr85_replay_single_x_can_decode": true,
+        "robust_current_dir": "submissions/robust_current",
+        "robust_current_renderer_member_can_decode": true,
+        "robust_current_single_x_can_unpack": false,
+        "runtime_can_decode_without_edits": true
+      },
+      "serializer_magic": "QM0",
+      "serializer_payload_bytes": 61590,
+      "serializer_payload_sha256": "7fbcbdf0a707f2888f8a3eb714063b11ba45e9b6359e820d2da26e96ecfa2ecb",
+      "serializer_variant": "qm0_direct"
+    },
+    {
+      "candidate_archive_delta_bytes_vs_source_formula": 308,
+      "candidate_id": "qm0_direct_brq11_lg18",
+      "candidate_model_brotli_lgwin": 18,
+      "candidate_model_brotli_quality": 11,
+      "candidate_model_bytes": 57382,
+      "candidate_model_codec": "brotli",
+      "candidate_model_delta_bytes_vs_source": 308,
+      "candidate_model_sha256": "19e61979f8c88c7e816570bef0cf8782d9a443c3663a50d73b0445015b4dbbfc",
+      "decoded_tensor_parity": true,
+      "duplicate_stream": false,
+      "rate_score_delta_if_components_identical_formula_only": 0.00020508455756162877,
+      "runtime_compatibility": {
+        "blocker_class": null,
+        "blockers": [
+          "robust_current_missing_pr85_single_x_unpacker"
+        ],
+        "dispatch_unlocked": true,
+        "magic": "QM0",
+        "minimal_runtime_implementation_needed": null,
+        "public_pr85_replay_inflate_py": "experiments/results/pr85_stbm1br_mask_recode_20260504_worker/replay_submission_stbm/inflate.py",
+        "public_pr85_replay_single_x_can_decode": true,
+        "robust_current_dir": "submissions/robust_current",
+        "robust_current_renderer_member_can_decode": true,
+        "robust_current_single_x_can_unpack": false,
+        "runtime_can_decode_without_edits": true
+      },
+      "serializer_magic": "QM0",
+      "serializer_payload_bytes": 61590,
+      "serializer_payload_sha256": "7fbcbdf0a707f2888f8a3eb714063b11ba45e9b6359e820d2da26e96ecfa2ecb",
+      "serializer_variant": "qm0_direct"
+    },
+    {
+      "candidate_archive_delta_bytes_vs_source_formula": 308,
+      "candidate_id": "qm0_direct_brq11_lg24",
+      "candidate_model_brotli_lgwin": 24,
+      "candidate_model_brotli_quality": 11,
+      "candidate_model_bytes": 57382,
+      "candidate_model_codec": "brotli",
+      "candidate_model_delta_bytes_vs_source": 308,
+      "candidate_model_sha256": "6fb3fa0ea8a57ca8bda4d0978d35e8144740112783df18d01f654f1ca01ddc13",
+      "decoded_tensor_parity": true,
+      "duplicate_stream": false,
+      "rate_score_delta_if_components_identical_formula_only": 0.00020508455756162877,
+      "runtime_compatibility": {
+        "blocker_class": null,
+        "blockers": [
+          "robust_current_missing_pr85_single_x_unpacker"
+        ],
+        "dispatch_unlocked": true,
+        "magic": "QM0",
+        "minimal_runtime_implementation_needed": null,
+        "public_pr85_replay_inflate_py": "experiments/results/pr85_stbm1br_mask_recode_20260504_worker/replay_submission_stbm/inflate.py",
+        "public_pr85_replay_single_x_can_decode": true,
+        "robust_current_dir": "submissions/robust_current",
+        "robust_current_renderer_member_can_decode": true,
+        "robust_current_single_x_can_unpack": false,
+        "runtime_can_decode_without_edits": true
+      },
+      "serializer_magic": "QM0",
+      "serializer_payload_bytes": 61590,
+      "serializer_payload_sha256": "7fbcbdf0a707f2888f8a3eb714063b11ba45e9b6359e820d2da26e96ecfa2ecb",
+      "serializer_variant": "qm0_direct"
+    },
+    {
+      "candidate_archive_delta_bytes_vs_source_formula": 3582,
+      "candidate_id": "qh0_canonical_brq0_lg18",
+      "candidate_model_brotli_lgwin": 18,
+      "candidate_model_brotli_quality": 0,
+      "candidate_model_bytes": 60656,
+      "candidate_model_codec": "brotli",
+      "candidate_model_delta_bytes_vs_source": 3582,
+      "candidate_model_sha256": "328a90c557e8c72460b117dee42f020b1b8872f20a61e8b114cb8f84c13bc31d",
+      "decoded_tensor_parity": true,
+      "duplicate_stream": false,
+      "rate_score_delta_if_components_identical_formula_only": 0.0023851067700836177,
+      "runtime_compatibility": {
+        "blocker_class": null,
+        "blockers": [
+          "robust_current_missing_pr85_single_x_unpacker"
+        ],
+        "dispatch_unlocked": true,
+        "magic": "QH0",
+        "minimal_runtime_implementation_needed": null,
+        "public_pr85_replay_inflate_py": "experiments/results/pr85_stbm1br_mask_recode_20260504_worker/replay_submission_stbm/inflate.py",
+        "public_pr85_replay_single_x_can_decode": true,
+        "robust_current_dir": "submissions/robust_current",
+        "robust_current_renderer_member_can_decode": true,
+        "robust_current_single_x_can_unpack": false,
+        "runtime_can_decode_without_edits": true
+      },
+      "serializer_magic": "QH0",
+      "serializer_payload_bytes": 61590,
+      "serializer_payload_sha256": "503d666ec4c1b3e0ce09fa9dcb963b049de185eac0ddd82318578a7732439ed4",
+      "serializer_variant": "qh0_canonical"
+    },
+    {
+      "candidate_archive_delta_bytes_vs_source_formula": 3582,
+      "candidate_id": "qh0_canonical_brq0_lg24",
+      "candidate_model_brotli_lgwin": 24,
+      "candidate_model_brotli_quality": 0,
+      "candidate_model_bytes": 60656,
+      "candidate_model_codec": "brotli",
+      "candidate_model_delta_bytes_vs_source": 3582,
+      "candidate_model_sha256": "281727b35ad9f7c25dfa1005d2f51e4a3368eccf0e130b2383ae72fed2a905e2",
+      "decoded_tensor_parity": true,
+      "duplicate_stream": false,
+      "rate_score_delta_if_components_identical_formula_only": 0.0023851067700836177,
+      "runtime_compatibility": {
+        "blocker_class": null,
+        "blockers": [
+          "robust_current_missing_pr85_single_x_unpacker"
+        ],
+        "dispatch_unlocked": true,
+        "magic": "QH0",
+        "minimal_runtime_implementation_needed": null,
+        "public_pr85_replay_inflate_py": "experiments/results/pr85_stbm1br_mask_recode_20260504_worker/replay_submission_stbm/inflate.py",
+        "public_pr85_replay_single_x_can_decode": true,
+        "robust_current_dir": "submissions/robust_current",
+        "robust_current_renderer_member_can_decode": true,
+        "robust_current_single_x_can_unpack": false,
+        "runtime_can_decode_without_edits": true
+      },
+      "serializer_magic": "QH0",
+      "serializer_payload_bytes": 61590,
+      "serializer_payload_sha256": "503d666ec4c1b3e0ce09fa9dcb963b049de185eac0ddd82318578a7732439ed4",
+      "serializer_variant": "qh0_canonical"
+    },
+    {
+      "candidate_archive_delta_bytes_vs_source_formula": 4170,
+      "candidate_id": "qm0_direct_brq0_lg18",
+      "candidate_model_brotli_lgwin": 18,
+      "candidate_model_brotli_quality": 0,
+      "candidate_model_bytes": 61244,
+      "candidate_model_codec": "brotli",
+      "candidate_model_delta_bytes_vs_source": 4170,
+      "candidate_model_sha256": "024f3a1b3ae2754f17e0fbf111bc20f3ef47cede230c38de554f165e00fce122",
+      "decoded_tensor_parity": true,
+      "duplicate_stream": false,
+      "rate_score_delta_if_components_identical_formula_only": 0.0027766318345194547,
+      "runtime_compatibility": {
+        "blocker_class": null,
+        "blockers": [
+          "robust_current_missing_pr85_single_x_unpacker"
+        ],
+        "dispatch_unlocked": true,
+        "magic": "QM0",
+        "minimal_runtime_implementation_needed": null,
+        "public_pr85_replay_inflate_py": "experiments/results/pr85_stbm1br_mask_recode_20260504_worker/replay_submission_stbm/inflate.py",
+        "public_pr85_replay_single_x_can_decode": true,
+        "robust_current_dir": "submissions/robust_current",
+        "robust_current_renderer_member_can_decode": true,
+        "robust_current_single_x_can_unpack": false,
+        "runtime_can_decode_without_edits": true
+      },
+      "serializer_magic": "QM0",
+      "serializer_payload_bytes": 61590,
+      "serializer_payload_sha256": "7fbcbdf0a707f2888f8a3eb714063b11ba45e9b6359e820d2da26e96ecfa2ecb",
+      "serializer_variant": "qm0_direct"
+    },
+    {
+      "candidate_archive_delta_bytes_vs_source_formula": 4170,
+      "candidate_id": "qm0_direct_brq0_lg24",
+      "candidate_model_brotli_lgwin": 24,
+      "candidate_model_brotli_quality": 0,
+      "candidate_model_bytes": 61244,
+      "candidate_model_codec": "brotli",
+      "candidate_model_delta_bytes_vs_source": 4170,
+      "candidate_model_sha256": "dd2022361bef0d6bb05d195704b17974692b8ed7ddbdb8fca0a5ebccb13eb5af",
+      "decoded_tensor_parity": true,
+      "duplicate_stream": false,
+      "rate_score_delta_if_components_identical_formula_only": 0.0027766318345194547,
+      "runtime_compatibility": {
+        "blocker_class": null,
+        "blockers": [
+          "robust_current_missing_pr85_single_x_unpacker"
+        ],
+        "dispatch_unlocked": true,
+        "magic": "QM0",
+        "minimal_runtime_implementation_needed": null,
+        "public_pr85_replay_inflate_py": "experiments/results/pr85_stbm1br_mask_recode_20260504_worker/replay_submission_stbm/inflate.py",
+        "public_pr85_replay_single_x_can_decode": true,
+        "robust_current_dir": "submissions/robust_current",
+        "robust_current_renderer_member_can_decode": true,
+        "robust_current_single_x_can_unpack": false,
+        "runtime_can_decode_without_edits": true
+      },
+      "serializer_magic": "QM0",
+      "serializer_payload_bytes": 61590,
+      "serializer_payload_sha256": "7fbcbdf0a707f2888f8a3eb714063b11ba45e9b6359e820d2da26e96ecfa2ecb",
+      "serializer_variant": "qm0_direct"
+    }
+  ],
+  "source_archive": {
+    "archive_bytes": 229756,
+    "archive_sha256": "c6f004d444ed32c628611a2f21f567c666af6bcbcceba618cc089ec024a0cda6",
+    "known_public_pr85_v5_match": {
+      "expected_archive_bytes": 236328,
+      "expected_archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+      "matches": false
+    },
+    "member_compress_size": 229656,
+    "member_crc32_hex": "8c543411",
+    "member_file_size": 229656,
+    "member_name": "x",
+    "member_sha256": "c7586795bb29fb0ef611ad44715aec77e0e815370e19674d4c89ef2a54b417b5",
+    "path": "experiments/results/pr85_stbm1br_mask_recode_20260504_worker/pr90_stbm1br_lossless_pr85_mask_recode/archive.zip",
+    "zip_compress_type": 0
+  },
+  "source_model_segment": {
+    "bytes": 57074,
+    "decoded_qh0_bytes": 61590,
+    "decoded_qh0_sha256": "503d666ec4c1b3e0ce09fa9dcb963b049de185eac0ddd82318578a7732439ed4",
+    "sha256": "c9194c19d44d3c32c4e588bbe4f9986ed0c562779078f0f4d6b073f0799b5dbc"
+  },
+  "tool": "experiments/build_pr85_qh0_serializer_candidates.py"
+}

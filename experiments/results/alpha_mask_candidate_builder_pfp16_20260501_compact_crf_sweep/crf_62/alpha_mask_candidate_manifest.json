@@ -1,0 +1,486 @@
+{
+  "builder_config": {
+    "alpha4_crf": 62,
+    "alpha4_fps": 20,
+    "class_priority": [
+      2,
+      1,
+      3,
+      4,
+      0
+    ],
+    "fail_on_partial_repair": false,
+    "max_frames": null,
+    "max_repair_pixels": 2000000,
+    "max_repair_runs": 1000000
+  },
+  "candidate": {
+    "alpha4": {
+      "agreement_before_repair": {
+        "argmax_agreement": 0.994034733242,
+        "argmax_disagreement": 0.005965266758,
+        "candidate_shape": [
+          1200,
+          384,
+          512
+        ],
+        "different_pixels": 1407383,
+        "different_pixels_by_candidate_class": {
+          "0": 126439,
+          "1": 15938,
+          "2": 625622,
+          "3": 235982,
+          "4": 403402
+        },
+        "different_pixels_by_source_class": {
+          "0": 641922,
+          "1": 428575,
+          "2": 137331,
+          "3": 116477,
+          "4": 83078
+        },
+        "equal_pixels": 234522217,
+        "num_pixels": 235929600,
+        "residual_confusion_source_to_candidate": {
+          "0": {
+            "0": 0,
+            "1": 9442,
+            "2": 467298,
+            "3": 26678,
+            "4": 138504
+          },
+          "1": {
+            "0": 47760,
+            "1": 0,
+            "2": 81733,
+            "3": 190632,
+            "4": 108450
+          },
+          "2": {
+            "0": 53511,
+            "1": 705,
+            "2": 0,
+            "3": 15172,
+            "4": 67943
+          },
+          "3": {
+            "0": 2443,
+            "1": 5424,
+            "2": 20105,
+            "3": 0,
+            "4": 88505
+          },
+          "4": {
+            "0": 22725,
+            "1": 367,
+            "2": 56486,
+            "3": 3500,
+            "4": 0
+          }
+        },
+        "shape_match": true,
+        "source_shape": [
+          1200,
+          384,
+          512
+        ]
+      },
+      "class_to_gray": {
+        "0": 0,
+        "1": 255,
+        "2": 64,
+        "3": 192,
+        "4": 128
+      },
+      "crf": 62,
+      "decoded_candidate_masks": {
+        "class_fractions": {
+          "0": 0.230392244127,
+          "1": 0.003999833001,
+          "2": 0.497243609958,
+          "3": 0.012755436367,
+          "4": 0.255608876546
+        },
+        "class_histogram": {
+          "0": 54356350,
+          "1": 943679,
+          "2": 117314486,
+          "3": 3009385,
+          "4": 60305700
+        },
+        "class_id_u8_sha256": "27c0510b524c30b9b948c8f65ff17676b1cfe34a1ebc1b2950587789530594ea",
+        "dtype": "torch.int64",
+        "num_pixels": 235929600,
+        "shape": [
+          1200,
+          384,
+          512
+        ],
+        "spatial_boundary_edges_4conn": 4781940,
+        "temporal_changed_pixels": 2805248
+      },
+      "encode_command": [
+        "/opt/homebrew/Cellar/ffmpeg/8.1_1/bin/ffmpeg",
+        "-y",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-fflags",
+        "+bitexact",
+        "-flags",
+        "+bitexact",
+        "-f",
+        "rawvideo",
+        "-vcodec",
+        "rawvideo",
+        "-s",
+        "512x384",
+        "-pix_fmt",
+        "gray",
+        "-r",
+        "20",
+        "-i",
+        "pipe:0",
+        "-map_metadata",
+        "-1",
+        "-c:v",
+        "libsvtav1",
+        "-crf",
+        "62",
+        "-preset",
+        "6",
+        "-svtav1-params",
+        "enable-restoration=0:enable-cdef=0:lp=1",
+        "-pix_fmt",
+        "gray",
+        "-an",
+        "experiments/results/alpha_mask_candidate_builder_pfp16_20260501_compact_crf_sweep/crf_62/grayscale.mkv"
+      ],
+      "fps": 20,
+      "payload_format": "grayscale_lut_av1_mask_video"
+    },
+    "archive_member_plan": [
+      {
+        "candidate_archive_member": "grayscale.mkv",
+        "required": true,
+        "source_artifact_role": "alpha4_grayscale_lut_video"
+      },
+      {
+        "candidate_archive_member": "alpha4_residual_repair.amr1",
+        "required": true,
+        "runtime_integration_required": true,
+        "source_artifact_role": "alpha4_residual_repair_payload"
+      }
+    ],
+    "artifacts": [
+      {
+        "candidate_archive_member": "grayscale.mkv",
+        "path": "experiments/results/alpha_mask_candidate_builder_pfp16_20260501_compact_crf_sweep/crf_62/grayscale.mkv",
+        "raw_payload_sha256": "e184e6a43c953860dae38f764fb0050827a4658d6779607aab5707c0d1bb87ef",
+        "role": "alpha4_grayscale_lut_video",
+        "sha256": "e184e6a43c953860dae38f764fb0050827a4658d6779607aab5707c0d1bb87ef",
+        "size_bytes": 267238
+      },
+      {
+        "candidate_archive_member": "alpha4_residual_repair.amr1",
+        "path": "experiments/results/alpha_mask_candidate_builder_pfp16_20260501_compact_crf_sweep/crf_62/alpha4_residual_repair.amr1",
+        "role": "alpha4_residual_repair_payload",
+        "sha256": "6ec45000cfe0863b636d8996afa6ef46ce09d4fe53999297e48112c142d320db",
+        "size_bytes": 8705941
+      }
+    ],
+    "candidate_archive_readiness": {
+      "artifacts_complete_for_selected_frames": true,
+      "exact_cuda_auth_eval_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+      "exact_eval_archive_builder_required": true,
+      "full_sequence_candidate": true,
+      "ready_for_exact_eval_finalist_archive_assembly": true,
+      "residual_repair_full_coverage": true
+    },
+    "evidence_grade": "empirical",
+    "name": "alpha4_grayscale_lut_with_residual_runs",
+    "promotion_eligible": false,
+    "repair": {
+      "agreement_after_repair": {
+        "argmax_agreement": 1.0,
+        "argmax_disagreement": 0.0,
+        "candidate_shape": [
+          1200,
+          384,
+          512
+        ],
+        "different_pixels": 0,
+        "different_pixels_by_candidate_class": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0
+        },
+        "different_pixels_by_source_class": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0
+        },
+        "equal_pixels": 235929600,
+        "num_pixels": 235929600,
+        "residual_confusion_source_to_candidate": {
+          "0": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0
+          },
+          "1": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0
+          },
+          "2": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0
+          },
+          "3": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0
+          },
+          "4": {
+            "0": 0,
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0
+          }
+        },
+        "shape_match": true,
+        "source_shape": [
+          1200,
+          384,
+          512
+        ]
+      },
+      "header": {
+        "candidate_mask_u8_sha256": "27c0510b524c30b9b948c8f65ff17676b1cfe34a1ebc1b2950587789530594ea",
+        "magic": "AMR1",
+        "operation": "set decoded_candidate[frame,y,x0:x0+length] = class_id for each record",
+        "record_count": 791365,
+        "record_struct": ">IHHHB",
+        "schema": "alpha4_residual_repair_amr1_v1",
+        "selection": {
+          "class_priority": [
+            2,
+            1,
+            3,
+            4,
+            0
+          ],
+          "fail_on_partial_repair": false,
+          "max_repair_pixels": 2000000,
+          "max_repair_runs": 1000000,
+          "partial_reason": null,
+          "partial_repair": false,
+          "residual_pixel_coverage": 1.0,
+          "selected_repair_pixels": 1407383,
+          "selected_repair_pixels_by_source_class": {
+            "0": 641922,
+            "1": 428575,
+            "2": 137331,
+            "3": 116477,
+            "4": 83078
+          },
+          "strategy": "alpha4_residual_runs_by_source_class_priority",
+          "total_residual_pixels": 1407383,
+          "total_residual_pixels_by_source_class": {
+            "0": 641922,
+            "1": 428575,
+            "2": 137331,
+            "3": 116477,
+            "4": 83078
+          }
+        },
+        "shape": [
+          1200,
+          384,
+          512
+        ],
+        "source_mask_u8_sha256": "f1973d42b59933f787ad2b7dfcfc21e507fec7c3d6f8ca03cbcada91e26f37d1"
+      },
+      "payload_format": "alpha4_residual_repair_amr1_v1",
+      "selection": {
+        "class_priority": [
+          2,
+          1,
+          3,
+          4,
+          0
+        ],
+        "fail_on_partial_repair": false,
+        "max_repair_pixels": 2000000,
+        "max_repair_runs": 1000000,
+        "partial_reason": null,
+        "partial_repair": false,
+        "residual_pixel_coverage": 1.0,
+        "selected_repair_pixels": 1407383,
+        "selected_repair_pixels_by_source_class": {
+          "0": 641922,
+          "1": 428575,
+          "2": 137331,
+          "3": 116477,
+          "4": 83078
+        },
+        "strategy": "alpha4_residual_runs_by_source_class_priority",
+        "total_residual_pixels": 1407383,
+        "total_residual_pixels_by_source_class": {
+          "0": 641922,
+          "1": 428575,
+          "2": 137331,
+          "3": 116477,
+          "4": 83078
+        }
+      }
+    },
+    "score_claim": false
+  },
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "evidence_grade": "empirical",
+  "frame_subset": {
+    "decoded_frames": 1200,
+    "max_frames": null,
+    "reported_source_frames": null,
+    "truncated": false
+  },
+  "local_builder_only": true,
+  "promotion_eligible": false,
+  "provenance": {
+    "command": [
+      "experiments/alpha_mask_candidate_builder.py",
+      "--all-frames",
+      "--alpha4-crf-sweep",
+      "52,55,58,60,62,63",
+      "--max-repair-pixels",
+      "2000000",
+      "--max-repair-runs",
+      "1000000",
+      "--allow-partial-repair",
+      "--output-dir",
+      "experiments/results/alpha_mask_candidate_builder_pfp16_20260501_compact_crf_sweep"
+    ],
+    "cwd": "/Users/adpena/Projects/pact",
+    "ffmpeg_resolution": {
+      "TAC_FFMPEG": null,
+      "TAC_FFPROBE": null,
+      "path_ffmpeg": "/opt/homebrew/bin/ffmpeg",
+      "path_ffprobe": "/opt/homebrew/bin/ffprobe",
+      "resolved_ffmpeg": {
+        "exists": true,
+        "path": "/opt/homebrew/Cellar/ffmpeg/8.1_1/bin/ffmpeg",
+        "sha256": "e88d7b5f23040dc44b8194bbd670010ef815a19938662ed2a91d66daa4e3d1c7",
+        "size_bytes": 441728
+      },
+      "resolved_ffprobe": {
+        "exists": true,
+        "path": "/opt/homebrew/Cellar/ffmpeg/8.1_1/bin/ffprobe",
+        "sha256": "0ab5ca9cef81c4fc53633f3257f6c7e290a2f8d6c60c332bf98c97171337370b",
+        "size_bytes": 253536
+      },
+      "upstream_ffmpeg_new": "/Users/adpena/Projects/pact/upstream/ffmpeg-new",
+      "upstream_ffmpeg_new_exists": true
+    },
+    "module_available": {
+      "alpha4_grayscale_lut": true,
+      "numpy": true,
+      "torch": true
+    },
+    "platform": "macOS-26.4-arm64-arm-64bit",
+    "python_executable": "/Users/adpena/Projects/pact/.venv/bin/python3",
+    "python_version": "3.12.13",
+    "repo_root": "/Users/adpena/Projects/pact",
+    "selected_environment": {},
+    "tool": "experiments/alpha_mask_candidate_builder.py"
+  },
+  "purpose": "build Alpha4 grayscale-LUT plus deterministic residual repair artifacts for later exact-eval finalist archive assembly",
+  "schema": "alpha_mask_candidate_builder_v1",
+  "score_claim": false,
+  "score_claim_warning": "No score claim is made by this builder. A deterministic finalist archive and exact CUDA auth eval are required before any score claim, promotion, ranking, or method retirement.",
+  "scorer_network_loaded": false,
+  "source": {
+    "archive_path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+    "archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+    "archive_size_bytes": 686635,
+    "decode": {
+      "decoded_frames": 1200,
+      "decoder": "legacy_av1_class_scaled_gray",
+      "ffmpeg": "/opt/homebrew/Cellar/ffmpeg/8.1_1/bin/ffmpeg",
+      "ffprobe": "/opt/homebrew/Cellar/ffmpeg/8.1_1/bin/ffprobe",
+      "height": 384,
+      "max_frames": null,
+      "reported_frames": null,
+      "truncated_by_builder": false,
+      "width": 512
+    },
+    "decoded_masks": {
+      "class_fractions": {
+        "0": 0.232577145894,
+        "1": 0.005748816596,
+        "2": 0.495173962911,
+        "3": 0.012248908149,
+        "4": 0.25425116645
+      },
+      "class_histogram": {
+        "0": 54871833,
+        "1": 1356316,
+        "2": 116826195,
+        "3": 2889880,
+        "4": 59985376
+      },
+      "class_id_u8_sha256": "f1973d42b59933f787ad2b7dfcfc21e507fec7c3d6f8ca03cbcada91e26f37d1",
+      "dtype": "torch.int64",
+      "num_pixels": 235929600,
+      "shape": [
+        1200,
+        384,
+        512
+      ],
+      "spatial_boundary_edges_4conn": 3378720,
+      "temporal_changed_pixels": 2054333
+    },
+    "mask_member": {
+      "compressed_size_bytes": 412169,
+      "crc32": "e144d6ac",
+      "name": "masks.mkv",
+      "sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9",
+      "size_bytes": 421483
+    },
+    "member_inventory": [
+      {
+        "compressed_size_bytes": 412169,
+        "crc32": "e144d6ac",
+        "name": "masks.mkv",
+        "size_bytes": 421483
+      },
+      {
+        "compressed_size_bytes": 6734,
+        "crc32": "686cbfbf",
+        "name": "optimized_poses.bin",
+        "size_bytes": 7200
+      },
+      {
+        "compressed_size_bytes": 267402,
+        "crc32": "1827a837",
+        "name": "renderer.bin",
+        "size_bytes": 296776
+      }
+    ]
+  }
+}

@@ -1,0 +1,343 @@
+{
+  "auth_eval_required": true,
+  "base_archive": {
+    "bytes": 296478,
+    "members": [
+      "optimized_poses.bin",
+      "renderer.bin",
+      "masks.nrv"
+    ],
+    "path": "/Users/adpena/Projects/pact/experiments/results/lane_12_nerv_20260430_codex_jsonfix40/archive_lane_12_nerv.zip",
+    "sha256": "864549cc648f0b3a023076c11812ccd0f10b1d013ed3fd6bb24d20bbcde85c97"
+  },
+  "cdo1_builder_report": {
+    "auth_eval_required": true,
+    "base_archive": {
+      "bytes": 296478,
+      "members": [
+        {
+          "compressed_size_bytes": 6622,
+          "crc32": "85a9453a",
+          "name": "optimized_poses.bin",
+          "sha256": "aacbcd572abe7936c1dd438243c56a1d06bb9bbe89e90ce3eff4a23f6477867a",
+          "size_bytes": 7200
+        },
+        {
+          "compressed_size_bytes": 267399,
+          "crc32": "1827a837",
+          "name": "renderer.bin",
+          "sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529",
+          "size_bytes": 296776
+        },
+        {
+          "compressed_size_bytes": 22127,
+          "crc32": "13bed9e0",
+          "name": "masks.nrv",
+          "sha256": "b3258dad7550f5e7a496f4834ed9990a3e9900a192c9045dca951e751412a4de",
+          "size_bytes": 23594
+        }
+      ],
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_12_nerv_20260430_codex_jsonfix40/archive_lane_12_nerv.zip",
+      "runtime_member_contract": {
+        "base_archive_layout": "expanded_members",
+        "source_zip_inventory": [
+          {
+            "compressed_size_bytes": 6622,
+            "crc32": "85a9453a",
+            "name": "optimized_poses.bin",
+            "sha256": "aacbcd572abe7936c1dd438243c56a1d06bb9bbe89e90ce3eff4a23f6477867a",
+            "size_bytes": 7200
+          },
+          {
+            "compressed_size_bytes": 267399,
+            "crc32": "1827a837",
+            "name": "renderer.bin",
+            "sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529",
+            "size_bytes": 296776
+          },
+          {
+            "compressed_size_bytes": 22127,
+            "crc32": "13bed9e0",
+            "name": "masks.nrv",
+            "sha256": "b3258dad7550f5e7a496f4834ed9990a3e9900a192c9045dca951e751412a4de",
+            "size_bytes": 23594
+          }
+        ],
+        "zip_payload_members": []
+      },
+      "sha256": "864549cc648f0b3a023076c11812ccd0f10b1d013ed3fd6bb24d20bbcde85c97"
+    },
+    "cdo1_overlay": {
+      "archive_member": "masks.cdo1.xz",
+      "compressed_bytes": 852,
+      "compressed_sha256": "e5313481300058799d97b6bc5e8d0b3fc92d7bd0e08f51fe17eb743d1295a74a",
+      "compressor": "lzma_xz",
+      "pair_index_basis": "video_frame_pair_index",
+      "payload_header": {
+        "base_mask_tensor_sha256": "af2a6e647dce7509329e7a6ea2bad439274a041364afe78c99c8118097ab44db",
+        "pair_index_basis": "video_frame_pair_index",
+        "reconstructed_mask_u8_sha256": "ef24120a15a4ea203b2dd5c523c7d174b4929bdd1d9c9e81081d2d732f9d507c",
+        "run_count": 51,
+        "schema": "c067_decoded_delta_overlay_payload_v1",
+        "selected_pair_indices": [
+          79
+        ],
+        "selected_pixel_count": 432,
+        "shape": [
+          1200,
+          384,
+          512
+        ]
+      },
+      "raw_bytes": 1450,
+      "raw_sha256": "34961d245992c70c0295d0df4ddfbccc37322d080c4faaa34b34d91d5b2a7978",
+      "selected_pair_indices": [
+        79
+      ],
+      "source": {
+        "pair_index_basis": "video_frame_pair_index",
+        "path": "/Users/adpena/Projects/pact/experiments/results/lane12_geometry_gate_repair_candidate_20260503/lane12_geometry_gate_budget_512b/masks.cdo1",
+        "payload_bytes": 1450,
+        "payload_header": {
+          "base_mask_tensor_sha256": "af2a6e647dce7509329e7a6ea2bad439274a041364afe78c99c8118097ab44db",
+          "pair_index_basis": "video_frame_pair_index",
+          "reconstructed_mask_u8_sha256": "ef24120a15a4ea203b2dd5c523c7d174b4929bdd1d9c9e81081d2d732f9d507c",
+          "run_count": 51,
+          "schema": "c067_decoded_delta_overlay_payload_v1",
+          "selected_pair_indices": [
+            79
+          ],
+          "selected_pixel_count": 432,
+          "shape": [
+            1200,
+            384,
+            512
+          ]
+        },
+        "payload_sha256": "34961d245992c70c0295d0df4ddfbccc37322d080c4faaa34b34d91d5b2a7978",
+        "selected_pair_indices": [
+          79
+        ],
+        "source": "payload"
+      }
+    },
+    "output_archive": {
+      "bytes": 297437,
+      "delta_bytes_vs_base_archive": 959,
+      "inventory": [
+        {
+          "compress_type": 8,
+          "compressed_size_bytes": 267399,
+          "crc32": "1827a837",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "renderer.bin",
+          "permissions_octal": "0o644",
+          "sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529",
+          "size_bytes": 296776
+        },
+        {
+          "compress_type": 8,
+          "compressed_size_bytes": 22127,
+          "crc32": "13bed9e0",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "masks.nrv",
+          "permissions_octal": "0o644",
+          "sha256": "b3258dad7550f5e7a496f4834ed9990a3e9900a192c9045dca951e751412a4de",
+          "size_bytes": 23594
+        },
+        {
+          "compress_type": 8,
+          "compressed_size_bytes": 857,
+          "crc32": "f760d69e",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "masks.cdo1.xz",
+          "permissions_octal": "0o644",
+          "sha256": "e5313481300058799d97b6bc5e8d0b3fc92d7bd0e08f51fe17eb743d1295a74a",
+          "size_bytes": 852
+        },
+        {
+          "compress_type": 8,
+          "compressed_size_bytes": 6622,
+          "crc32": "85a9453a",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "optimized_poses.bin",
+          "permissions_octal": "0o644",
+          "sha256": "aacbcd572abe7936c1dd438243c56a1d06bb9bbe89e90ce3eff4a23f6477867a",
+          "size_bytes": 7200
+        }
+      ],
+      "packaging": {
+        "packed_output": false
+      },
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane12_geometry_gate_repair_candidate_20260503/lane12_geometry_gate_budget_512b/archive.zip",
+      "sha256": "83705efae5c1c1c04362f6e984b38a03d7bb59b2065db65394bf5837ce913dc1"
+    },
+    "producer": "experiments/build_c067_decoded_delta_overlay_candidate.py",
+    "promotion_eligible": false,
+    "runtime_contract": {
+      "base_mask_sha_checked_by_cdo1_header": true,
+      "exact_score_path": "archive.zip -> inflate.sh -> upstream/evaluate.py",
+      "reconstructed_mask_sha_checked_by_cdo1_header": true
+    },
+    "schema": "c067_decoded_delta_overlay_candidate_v1",
+    "score_claim": false
+  },
+  "dispatch_allowed": false,
+  "dispatch_gate": {
+    "exact_cuda_auth_eval_still_required": true,
+    "gate": "local_decoded_mask_global_residual_disagreement",
+    "max_residual_disagreement_fraction": 0.001,
+    "passed": false
+  },
+  "exact_eval_claim": false,
+  "exact_score_path": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "geometry_metrics": {
+    "candidate_disagreement_pixels_before": 2902861,
+    "global_disagreement_after": 0.012302097744411893,
+    "global_disagreement_before": 0.012303928799099393,
+    "repaired_disagreement_pixels": 432,
+    "residual_disagreement_pixels_after": 2902429,
+    "residual_frame_count": 1200,
+    "residual_pair_count": 600,
+    "selected_frame_count": 1,
+    "selected_frames": [
+      159
+    ],
+    "selected_pair_indices": [
+      79
+    ],
+    "selected_repair_pixels": 432,
+    "total_pixels": 235929600
+  },
+  "output_archive": {
+    "bytes": 297437,
+    "delta_bytes_vs_base": 959,
+    "delta_rate_score_vs_base": 0.0006385587360441624,
+    "members": [
+      "renderer.bin",
+      "masks.nrv",
+      "masks.cdo1.xz",
+      "optimized_poses.bin"
+    ],
+    "path": "experiments/results/lane12_geometry_gate_repair_candidate_20260503/lane12_geometry_gate_budget_512b/archive.zip",
+    "rate_score_cost": 0.19805108943979927,
+    "sha256": "83705efae5c1c1c04362f6e984b38a03d7bb59b2065db65394bf5837ce913dc1"
+  },
+  "overlay_payload": {
+    "bytes": 1450,
+    "compressor": "lzma_xz",
+    "header": {
+      "base_mask_tensor_sha256": "af2a6e647dce7509329e7a6ea2bad439274a041364afe78c99c8118097ab44db",
+      "pair_index_basis": "video_frame_pair_index",
+      "policy_id": "lane12_geometry_gate_budget_512b",
+      "producer": "experiments/build_lane12_geometry_gate_repair_candidate.py",
+      "reconstructed_mask_u8_sha256": "ef24120a15a4ea203b2dd5c523c7d174b4929bdd1d9c9e81081d2d732f9d507c",
+      "run_count": 51,
+      "run_struct": "u16_frame_u16_y_u16_x0_u16_length_u8_value_le",
+      "schema": "c067_decoded_delta_overlay_payload_v1",
+      "score_claim": false,
+      "selected_atom_count": 1,
+      "selected_pair_indices": [
+        79
+      ],
+      "selected_pixel_count": 432,
+      "shape": [
+        1200,
+        384,
+        512
+      ],
+      "source_plan": {
+        "path": "/Users/adpena/Projects/pact/experiments/results/lane12_geometry_gate_repair_atoms_20260503/lane12_geometry_gate_repair_atoms.json",
+        "schema": "lane12_geometry_gate_repair_atom_plan_v1",
+        "sha256": "2e0d465603f4c035d14a7a7d2e1776f95a611f5faf883d4b4b4051fb2f600a00"
+      },
+      "target_mask_tensor_sha256": "f1973d42b59933f787ad2b7dfcfc21e507fec7c3d6f8ca03cbcada91e26f37d1"
+    },
+    "path": "experiments/results/lane12_geometry_gate_repair_candidate_20260503/lane12_geometry_gate_budget_512b/masks.cdo1",
+    "sha256": "34961d245992c70c0295d0df4ddfbccc37322d080c4faaa34b34d91d5b2a7978"
+  },
+  "plan": {
+    "path": "/Users/adpena/Projects/pact/experiments/results/lane12_geometry_gate_repair_atoms_20260503/lane12_geometry_gate_repair_atoms.json",
+    "policy": {
+      "budget_estimated_charged_bytes": 512,
+      "builder_status": "not_byte_closed_no_archive_emitted",
+      "dispatch_allowed": false,
+      "estimated_charged_bytes": 438,
+      "estimated_rate_score_cost": 0.00029164622146751106,
+      "exact_eval_claim": false,
+      "planning_signal_total": 2700.0,
+      "policy_id": "lane12_geometry_gate_budget_512b",
+      "policy_kind": "planning_atom_selection",
+      "promotion_eligible": false,
+      "score_claim": false,
+      "selected_atom_count": 1,
+      "selected_atom_ids": [
+        "lane12_critical_box_0007_f0159_c1"
+      ]
+    },
+    "policy_id": "lane12_geometry_gate_budget_512b",
+    "selected_atom_ids": [
+      "lane12_critical_box_0007_f0159_c1"
+    ],
+    "sha256": "2e0d465603f4c035d14a7a7d2e1776f95a611f5faf883d4b4b4051fb2f600a00"
+  },
+  "producer": "experiments/build_lane12_geometry_gate_repair_candidate.py",
+  "promotion_eligible": false,
+  "schema": "lane12_geometry_gate_repair_candidate_v1",
+  "score_claim": false,
+  "selection": {
+    "run_count": 51,
+    "selected_atoms": [
+      {
+        "atom_id": "lane12_critical_box_0007_f0159_c1",
+        "atom_kind": "critical_component_box_patch",
+        "cumulative_selected_pixels": 432,
+        "identity": {
+          "box_xyxy": [
+            400,
+            235,
+            512,
+            285
+          ],
+          "class_id": 1,
+          "class_name": "lane_marking",
+          "failure_type": "missing_component",
+          "frame": 159,
+          "pose_sensitive": true,
+          "rank": 7
+        },
+        "new_selected_pixels": 432,
+        "overlap_pixels": 0
+      }
+    ],
+    "selected_pixel_count": 432
+  }
+}

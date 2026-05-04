@@ -1,0 +1,68 @@
+{
+  "brotli_quality": 11,
+  "evidence_grade": "empirical",
+  "formula_only_rate_delta": -0.014250047455767589,
+  "header": {
+    "members": [
+      {
+        "bytes": 211903,
+        "codec": "raw",
+        "name": "renderer.bin",
+        "sha256": "97bde7ac1de7f78ce60a2d68f747aca5d76d1ce7fd1d024680f8d61247ccf142"
+      },
+      {
+        "bytes": 421483,
+        "codec": "raw",
+        "name": "masks.mkv",
+        "sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9"
+      },
+      {
+        "bytes": 1169,
+        "codec": "pose_qp1_v1",
+        "decoded_bytes": 7200,
+        "decoded_sha256": "9cca09641008f5fce304a8ad2f4eb2128aa11a47063dfadac26ed04551e95785",
+        "lossy": true,
+        "name": "optimized_poses.bin",
+        "pose_error_stats": {
+          "max_abs_by_dim": [
+            0.0,
+            5.82421875,
+            6.515625,
+            2.703125,
+            5.70703125,
+            4.484375
+          ],
+          "pose_dim": 6,
+          "rmse_by_dim": [
+            0.0,
+            1.8114857819776313,
+            2.292061485218177,
+            0.6008699221645807,
+            0.8167798773084576,
+            1.242146877429067
+          ],
+          "rows": 600
+        },
+        "sha256": "974f0f02900628fc2b66c2ac06293f0f79f5944ba05ae70b4148d5922139dd90",
+        "source_decoded_sha256": "4b3d8cd58965971ad518a970441f5e9cc53ce361a62d51e95c1cdd2056be4449"
+      }
+    ],
+    "payload_format": "rp2_fixed3",
+    "schema": "renderer_payload_fixed3_v1",
+    "source_archive_sha256": "1e9195cb6e0e08fc98ee393590770e2b22905a2ee2718edb8b737cada125f279"
+  },
+  "output_archive": "experiments/results/renderer_packed_payload_c044_qp1_rp2_palias_20260501/archive.zip",
+  "output_archive_bytes": 588562,
+  "output_archive_sha256": "2a080314233011b0f82d20cec304d4931eb9d105d8063cb7c56f1b0a1b11b8b9",
+  "payload_compressed_bytes": 588462,
+  "payload_format": "rp2_fixed3",
+  "payload_member": "p",
+  "payload_raw_bytes": 634575,
+  "pose_codec": "pose_qp1_v1",
+  "pose_residual_topk": 0,
+  "savings_bytes": 21401,
+  "score_claim": false,
+  "source_archive": "experiments/results/lightning_batch/exact_eval_owv3_0120_stack_t4_20260501T150652Z/archive.zip",
+  "source_archive_bytes": 609963,
+  "source_archive_sha256": "1e9195cb6e0e08fc98ee393590770e2b22905a2ee2718edb8b737cada125f279"
+}

@@ -1,0 +1,43 @@
+{
+  "adjudication": {
+    "allow_component_gate_forensic_success": true,
+    "allow_sane_score_forensic_success": true,
+    "baseline_archive_size_bytes": 215735,
+    "baseline_posenet_dist": 0.00049341,
+    "baseline_score": 0.2751401491321396,
+    "baseline_segnet_dist": 0.00061248,
+    "component_reference_label": "pr84_qma9_no_router_t4",
+    "delta_key": "score_delta_vs_pr84",
+    "max_posenet_dist": 0.005,
+    "max_posenet_relative": null,
+    "max_sane_score": 1.0,
+    "max_segnet_dist": 0.005,
+    "max_segnet_relative": null,
+    "predicted_band_high": 0.36,
+    "predicted_band_low": 0.2,
+    "provenance_name": "adjudication_provenance.json",
+    "regression_threshold": 0.36,
+    "required_device": "cuda",
+    "required_samples": 600,
+    "result_copy_name": "contest_auth_eval.adjudicated.json"
+  },
+  "artifact_recorded_at_utc": "2026-05-03T22:37:42Z",
+  "expected_archive_sha256": "3ccea52612fa038bd0d2ce9d0b6389e97ad03a41be5562610e55f54ce912786a",
+  "expected_archive_size_bytes": 234886,
+  "job_name": "exact_eval_pr84_pr82_controls_qrm1_all072_packedp_g4dn_t4_20260503T2222Z",
+  "queue_metadata": {
+    "archive_rel": "experiments/results/pr84_qma9_qpost_packed_payload_20260503_codex/pr84_qma9_pr82_qps1_controls_qrm1_all072_packedp/archive.zip",
+    "baseline_json": "experiments/results/lightning_batch/exact_eval_public_pr84_adaptive_range_mask_no_router_t4_20260503T214008Z/contest_auth_eval.adjudicated.json",
+    "candidate_id": "pr84_qma9_pr82_qps1_controls_qrm1_all072_packedp",
+    "expected_archive_bytes": "234886",
+    "expected_archive_sha256": "3ccea52612fa038bd0d2ce9d0b6389e97ad03a41be5562610e55f54ce912786a",
+    "run_id": "pr84_pr82_controls_qrm1_all072_packedp_g4dn_t4_20260503T2222Z",
+    "source_frontier": "PR84_QMA9_NO_ROUTER_A++",
+    "source_manifest": ".omx/state/pr84_pr82_controls_qrm1_all072_packedp_g4dn_t4_20260503T2222Z_manifest.json",
+    "wrapper": "scripts/lightning_exact_eval_repro.py"
+  },
+  "role": "exact_cuda_eval",
+  "schema_version": 1,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

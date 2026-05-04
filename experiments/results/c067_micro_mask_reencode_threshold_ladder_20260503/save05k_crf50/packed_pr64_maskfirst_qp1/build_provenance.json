@@ -1,0 +1,237 @@
+{
+  "archive_byte_delta": -5942,
+  "evidence_grade": "empirical_byte_only_until_cuda_auth_eval",
+  "formula_rate_score_delta": -0.0039565338994519425,
+  "geometry_preservation": {
+    "archive_member_order": null,
+    "optional_geometry_member_names": [
+      "zoom_scalars.bin"
+    ],
+    "output_geometry_members": {},
+    "preservation_mode": null,
+    "preserved": true,
+    "source_geometry_members": {}
+  },
+  "output_archive": "/Users/adpena/Projects/pact/experiments/results/c067_micro_mask_reencode_threshold_ladder_20260503/save05k_crf50/packed_pr64_maskfirst_qp1/archive.zip",
+  "output_archive_bytes": 283989,
+  "output_archive_sha256": "63c6dc10c01b87d311356e4635dd615076839b06126da640d9b83f5296e682ed",
+  "packed_payload_stage": {
+    "brotli_quality": 11,
+    "evidence_grade": "empirical",
+    "formula_only_rate_delta": -0.003967853501655019,
+    "header": {
+      "members": [
+        {
+          "bytes": 59288,
+          "codec": "raw",
+          "name": "renderer.bin",
+          "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+        },
+        {
+          "bytes": 235178,
+          "codec": "raw",
+          "name": "masks.mkv",
+          "sha256": "c8fd0030db7b6cc18594ab0ae262bb97fce8de30b38c662872e925cc4e525354"
+        },
+        {
+          "bytes": 1140,
+          "codec": "pose_qp1_v1",
+          "decoded_bytes": 7200,
+          "decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f",
+          "lossy": true,
+          "name": "optimized_poses.bin",
+          "pose_error_stats": {
+            "max_abs_by_dim": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "pose_dim": 6,
+            "rmse_by_dim": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "rows": 600
+          },
+          "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583",
+          "source_decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+        }
+      ],
+      "payload_format": "public_pr64_mask_first_len_table",
+      "schema": "renderer_payload_pr64_len_table_v1",
+      "source_archive_sha256": "b21b54510e36c4531ca516792db4d9de14c8187c736e037a9a536a9533d1100c"
+    },
+    "output_archive": "experiments/results/c067_micro_mask_reencode_threshold_ladder_20260503/save05k_crf50/packed_pr64_maskfirst_qp1/archive.zip",
+    "output_archive_bytes": 283989,
+    "output_archive_sha256": "63c6dc10c01b87d311356e4635dd615076839b06126da640d9b83f5296e682ed",
+    "payload_compressed_bytes": 283889,
+    "payload_format": "public_pr64_mask_first_len_table",
+    "payload_member": "p",
+    "payload_raw_bytes": 295618,
+    "pose_codec": "pose_qp1_v1",
+    "pose_residual_topk": 0,
+    "savings_bytes": 5959,
+    "score_claim": false,
+    "source_archive": "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/qzs_repack_g69rhfjl/runtime_members.zip",
+    "source_archive_bytes": 289948,
+    "source_archive_sha256": "b21b54510e36c4531ca516792db4d9de14c8187c736e037a9a536a9533d1100c"
+  },
+  "renderer_stage": {
+    "archive_byte_delta": 17,
+    "evidence_grade": "empirical_byte_only_until_cuda_auth_eval",
+    "formula_rate_score_delta": 1.1319602203076913e-05,
+    "geometry_preservation": {
+      "optional_geometry_member_names": [
+        "zoom_scalars.bin"
+      ],
+      "output_geometry_members": {},
+      "preserved": true,
+      "source_geometry_members": {}
+    },
+    "members": {
+      "masks.mkv": {
+        "bytes": 235178,
+        "member_name": "masks.mkv",
+        "sha256": "c8fd0030db7b6cc18594ab0ae262bb97fce8de30b38c662872e925cc4e525354"
+      },
+      "optimized_poses.bin": {
+        "bytes": 7200,
+        "member_name": "optimized_poses.bin",
+        "sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+      },
+      "renderer.bin": {
+        "bytes": 59288,
+        "member_name": "renderer.bin",
+        "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+      }
+    },
+    "output_archive": "/private/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/qzs_repack_g69rhfjl/runtime_members.zip",
+    "output_archive_bytes": 289948,
+    "output_archive_sha256": "b21b54510e36c4531ca516792db4d9de14c8187c736e037a9a536a9533d1100c",
+    "renderer": {
+      "action": "validated_existing_qzs3",
+      "block_size": 32,
+      "output_renderer_bytes": 59288,
+      "output_renderer_sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb",
+      "renderer_codec": "qzs3",
+      "source_block_size": 32,
+      "source_bytes": 59288,
+      "source_renderer_format": "QZS3",
+      "source_sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+    },
+    "runtime_member_order": [
+      "renderer.bin",
+      "masks.mkv",
+      "optimized_poses.bin"
+    ],
+    "schema_version": 1,
+    "score_claim": false,
+    "source_archive": "/Users/adpena/Projects/pact/experiments/results/c067_micro_mask_reencode_threshold_ladder_20260503/save05k_crf50/archive.zip",
+    "source_archive_bytes": 289931,
+    "source_archive_sha256": "62026c1befe0450036b9640095c926e1d562d0bf791a2c19686aeac1027c567e",
+    "source_runtime_contract": {
+      "optional_geometry_members": {},
+      "required_runtime_members": {
+        "masks.mkv": {
+          "bytes": 235178,
+          "member_name": "masks.mkv",
+          "sha256": "c8fd0030db7b6cc18594ab0ae262bb97fce8de30b38c662872e925cc4e525354"
+        },
+        "optimized_poses.bin": {
+          "bytes": 7200,
+          "member_name": "optimized_poses.bin",
+          "sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+        },
+        "renderer.bin": {
+          "bytes": 59288,
+          "member_name": "renderer.bin",
+          "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+        }
+      },
+      "source_archive_contract": "runtime_member_zip",
+      "unpacked_from_packed_payload": false
+    },
+    "submission_path": {
+      "charged_accounting": {
+        "all_score_affecting_bits_inside_archive": true,
+        "archive_bytes": 289948,
+        "archive_sha256": "b21b54510e36c4531ca516792db4d9de14c8187c736e037a9a536a9533d1100c",
+        "pose_codec": "raw",
+        "pose_residual_topk": 0,
+        "score_claim": false
+      },
+      "full_pipeline_hooks": {
+        "archive_member_overhead_screen": true,
+        "deterministic_runtime_simplification_screen": true,
+        "rl_bandit_multipass_atom_selection_ready": true,
+        "single_blob_layout_screen": false
+      },
+      "layout": "multi_member",
+      "stackability": {
+        "mask_grammar_lanes": "stackable_if_mask_member_contract_and_decoder_are_inside_archive",
+        "pose_atoms": "stackable_with_qp1_col0_or_pvr1_residual_atoms_after_exact_eval",
+        "pr65_postprocess_qpost_sidecar": "stackable_if_qpost.bin_is_charged_and_runtime_reads_it",
+        "renderer_atoms": "qzs4_keeps_QZS3_wire_format_for_existing_decoder"
+      },
+      "zip_overhead": {
+        "archive_bytes": 289948,
+        "compressed_member_bytes": 289618,
+        "member_count": 3,
+        "member_names": [
+          "renderer.bin",
+          "masks.mkv",
+          "optimized_poses.bin"
+        ],
+        "uncompressed_member_bytes": 301666,
+        "zip_container_overhead_bytes": 330
+      }
+    },
+    "tool": "repack_quantizr_faithful_qzs3_archive"
+  },
+  "schema_version": 1,
+  "score_claim": false,
+  "source_archive": "/Users/adpena/Projects/pact/experiments/results/c067_micro_mask_reencode_threshold_ladder_20260503/save05k_crf50/archive.zip",
+  "source_archive_bytes": 289931,
+  "source_archive_sha256": "62026c1befe0450036b9640095c926e1d562d0bf791a2c19686aeac1027c567e",
+  "submission_path": {
+    "charged_accounting": {
+      "all_score_affecting_bits_inside_archive": true,
+      "archive_bytes": 283989,
+      "archive_sha256": "63c6dc10c01b87d311356e4635dd615076839b06126da640d9b83f5296e682ed",
+      "pose_codec": "pose_qp1_v1",
+      "pose_residual_topk": 0,
+      "score_claim": false
+    },
+    "full_pipeline_hooks": {
+      "archive_member_overhead_screen": true,
+      "deterministic_runtime_simplification_screen": true,
+      "rl_bandit_multipass_atom_selection_ready": true,
+      "single_blob_layout_screen": true
+    },
+    "layout": "pr64_mask_first_single_blob",
+    "stackability": {
+      "mask_grammar_lanes": "stackable_if_mask_member_contract_and_decoder_are_inside_archive",
+      "pose_atoms": "stackable_with_qp1_col0_or_pvr1_residual_atoms_after_exact_eval",
+      "pr65_postprocess_qpost_sidecar": "stackable_if_qpost.bin_is_charged_and_runtime_reads_it",
+      "renderer_atoms": "qzs4_keeps_QZS3_wire_format_for_existing_decoder"
+    },
+    "zip_overhead": {
+      "archive_bytes": 283989,
+      "compressed_member_bytes": 283889,
+      "member_count": 1,
+      "member_names": [
+        "p"
+      ],
+      "uncompressed_member_bytes": 283889,
+      "zip_container_overhead_bytes": 100
+    }
+  },
+  "tool": "repack_quantizr_faithful_qzs3_archive"
+}

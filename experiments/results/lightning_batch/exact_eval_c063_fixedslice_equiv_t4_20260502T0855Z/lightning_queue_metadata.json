@@ -1,0 +1,37 @@
+{
+  "adjudication": {
+    "allow_component_gate_forensic_success": true,
+    "baseline_archive_size_bytes": 276223,
+    "baseline_posenet_dist": 0.00049637,
+    "baseline_score": 0.3156230307844823,
+    "baseline_segnet_dist": 0.00061244,
+    "component_reference_label": "C-063_T4",
+    "delta_key": "score_delta_vs_c063_t4",
+    "max_posenet_dist": 0.00075,
+    "max_posenet_relative": 1.25,
+    "max_sane_score": 0.34,
+    "max_segnet_dist": 0.0007,
+    "max_segnet_relative": 1.05,
+    "predicted_band_high": 0.316,
+    "predicted_band_low": 0.314,
+    "provenance_name": "adjudication_provenance.json",
+    "regression_threshold": 0.004,
+    "required_device": "cuda",
+    "required_samples": 600,
+    "result_copy_name": "contest_auth_eval.adjudicated.json"
+  },
+  "artifact_recorded_at_utc": "2026-05-02T09:04:31Z",
+  "expected_archive_sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+  "expected_archive_size_bytes": 276214,
+  "job_name": "exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z",
+  "queue_metadata": {
+    "baseline": "C-063",
+    "candidate": "c063_fixedslice_equiv",
+    "h100_artifact": "experiments/results/vast_harvest/c063_fixedslice_equiv_h100nvl_fix1_20260502T0850Z/contest_auth_eval.json",
+    "h100_score": "0.31498875622241346"
+  },
+  "role": "exact_cuda_eval",
+  "schema_version": 1,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

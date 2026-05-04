@@ -1,0 +1,7 @@
+{
+  "eval_roundtrip": true,
+  "env_var_name": "TAC_ALLOW_NO_ROUNDTRIP",
+  "env_var_present": false,
+  "env_var_value": null,
+  "proceeded_via_escape_hatch": false
+}

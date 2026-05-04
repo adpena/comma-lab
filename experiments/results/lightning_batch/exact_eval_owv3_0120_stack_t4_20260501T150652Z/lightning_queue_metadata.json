@@ -1,0 +1,43 @@
+{
+  "adjudication": {
+    "allow_component_gate_forensic_success": true,
+    "baseline_archive_size_bytes": 617410,
+    "baseline_posenet_dist": 0.00356094,
+    "baseline_score": 1.0021175309471926,
+    "baseline_segnet_dist": 0.00402305,
+    "component_reference_label": "owv3_0120_wave3_t4_frontier",
+    "delta_key": "score_delta_vs_owv3_0120_wave3_t4_frontier",
+    "max_posenet_dist": null,
+    "max_posenet_relative": 1.01,
+    "max_sane_score": 2.0,
+    "max_segnet_dist": null,
+    "max_segnet_relative": 1.01,
+    "predicted_band_high": 1.01,
+    "predicted_band_low": 0.99,
+    "provenance_name": "adjudication_provenance.json",
+    "regression_threshold": 1.02,
+    "required_device": "cuda",
+    "required_samples": 600,
+    "result_copy_name": "contest_auth_eval.adjudicated.json"
+  },
+  "artifact_recorded_at_utc": "2026-05-01T15:21:42Z",
+  "expected_archive_sha256": "1e9195cb6e0e08fc98ee393590770e2b22905a2ee2718edb8b737cada125f279",
+  "expected_archive_size_bytes": 609963,
+  "job_name": "exact_eval_owv3_0120_stack_t4_20260501T150652Z",
+  "queue_metadata": {
+    "archive_rel": "experiments/results/vast_harvest/owv3_0120_stack_rtx4090_20260501T1501Z/owv3_0120_stack_archive.zip",
+    "baseline_json": "experiments/results/lightning_batch/exact_eval_owv3_0120_wave3_t4_20260501T130313Z/contest_auth_eval.json",
+    "lane": "owv3_0120_stack",
+    "local_supply_chain_scan": ".omx/state/exact_eval_owv3_0120_stack_t4_20260501T150652Z_local_lightning_supply_chain_scan.json",
+    "run_id": "exact_eval_owv3_0120_stack_t4_20260501T150652Z",
+    "source": "vast_35959478_rtx4090",
+    "source_archive_sha256": "1e9195cb6e0e08fc98ee393590770e2b22905a2ee2718edb8b737cada125f279",
+    "source_manifest": ".omx/state/exact_eval_owv3_0120_stack_t4_20260501T150652Z_manifest.json",
+    "source_score_recomputed": "0.997430122363832",
+    "wrapper": "scripts/lightning_exact_eval_repro.py"
+  },
+  "role": "exact_cuda_eval",
+  "schema_version": 1,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

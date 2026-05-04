@@ -1,0 +1,181 @@
+{
+  "archive_bytes": 276562,
+  "archive_path": "experiments/results/line_search_pr67_public_basis_hardpairs_20260502T0608Z/archive.accepted_latest.zip",
+  "archive_sha256": "3ab3dd64252414d9f721455c8bac4a13a88d6d30e463ad14fe8309ae48ccb296",
+  "blob_bytes": 276462,
+  "blob_sha256": "afd490795d246058a7630ea3f0613cf1632fa76bc59aab98dcd8778efde62205",
+  "evidence_grade": "external_metadata_for_pose_search",
+  "external_attribution_required": true,
+  "mask_br_bytes": 219472,
+  "mask_br_sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87",
+  "model_br_bytes": 56093,
+  "model_br_sha256": "8d8863c32a264f28f199898a689b4d49ce96ebd12831164882b6babec93cbb9b",
+  "payload_format": "pr67_fixed_slice_qpose14_qzs3_filmq9g_slsb1_r55",
+  "pose_br_bytes": 897,
+  "pose_br_sha256": "4432f31105c655110896f82cddafcd0f260562076cf4c0bae6d27c4dac4c8020",
+  "pose_codec": "qp1",
+  "pose_uncompressed_bytes": 1140,
+  "refinement": {
+    "basis_delta_set_index": 2,
+    "basis_delta_sets": [
+      {
+        "basis_delta_set_index": 1,
+        "kind": "dct",
+        "magnitudes": [
+          1,
+          2,
+          3,
+          5,
+          8,
+          13,
+          21
+        ]
+      },
+      {
+        "basis_delta_set_index": 2,
+        "kind": "pair_window",
+        "magnitudes": [
+          1,
+          2,
+          3,
+          5
+        ]
+      }
+    ],
+    "basis_index": 2,
+    "basis_kind": "pair_window",
+    "basis_modes": [
+      0,
+      1,
+      2,
+      3,
+      5,
+      8,
+      13,
+      21,
+      34
+    ],
+    "basis_pair_indices": [
+      164,
+      64,
+      130,
+      112,
+      97,
+      153,
+      70,
+      198,
+      420,
+      289,
+      166,
+      435,
+      78,
+      418,
+      87,
+      159
+    ],
+    "basis_signed_magnitude": -2,
+    "basis_vector_count": 13,
+    "basis_window_radius": 2,
+    "best_archive_size": 276562,
+    "best_obj": 0.25386439023148105,
+    "best_pose_bytes": 897,
+    "best_pose_mse": 0.00048599172092508527,
+    "checkpoint": "accepted_latest",
+    "delta_sets": null,
+    "device": "cuda:0",
+    "gradient_backtrack_deltas": [
+      1
+    ],
+    "gradient_delta_sets": null,
+    "pass": 1,
+    "passes": 2,
+    "pose_atom_selection": {
+      "atom_count": 6,
+      "atoms": [
+        {
+          "delta_q": -1,
+          "frame_in_pair": 0,
+          "frame_index": 258,
+          "pair_index": 129,
+          "refined_q": 5767,
+          "source_q": 5768
+        },
+        {
+          "delta_q": -1,
+          "frame_in_pair": 1,
+          "frame_index": 259,
+          "pair_index": 129,
+          "refined_q": 5205,
+          "source_q": 5206
+        },
+        {
+          "delta_q": -2,
+          "frame_in_pair": 0,
+          "frame_index": 260,
+          "pair_index": 130,
+          "refined_q": 5752,
+          "source_q": 5754
+        },
+        {
+          "delta_q": -2,
+          "frame_in_pair": 1,
+          "frame_index": 261,
+          "pair_index": 130,
+          "refined_q": 5746,
+          "source_q": 5748
+        },
+        {
+          "delta_q": -1,
+          "frame_in_pair": 0,
+          "frame_index": 262,
+          "pair_index": 131,
+          "refined_q": 5968,
+          "source_q": 5969
+        },
+        {
+          "delta_q": -1,
+          "frame_in_pair": 1,
+          "frame_index": 263,
+          "pair_index": 131,
+          "refined_q": 4891,
+          "source_q": 4892
+        }
+      ],
+      "charged_accounting": {
+        "all_score_affecting_bits_inside_archive": true,
+        "archive_bytes": 276562,
+        "pose_br_bytes": 897,
+        "sidecar_bytes": 0
+      },
+      "policy": "coordinate_descent_qp1_col0",
+      "pose_codec": "pose_qp1_v1",
+      "schema_version": 1,
+      "selection_hooks": {
+        "acceptance_rule": "complete rounded archive objective strictly improves",
+        "proposal_score_is_non_promotable_until_archive_eval": true,
+        "supports_bandit_or_rl_proposal_ordering": true,
+        "supports_multipass": true
+      },
+      "wire_format": "QP1+brotli"
+    },
+    "radii": [
+      1,
+      2,
+      3,
+      5,
+      8
+    ],
+    "reference": "pr67_line_search.py",
+    "search_stage_kind": "basis_delta_set",
+    "search_stage_label": "basis_delta_set=2 kind=pair_window",
+    "tool": "experiments/line_search_pose_refinement.py"
+  },
+  "schema_version": 1,
+  "score_claim": false,
+  "source": "github_pr_67_public_archive",
+  "source_archive_path": "experiments/results/pr67_public_metadata_for_pose_search_20260502/archive.zip",
+  "source_archive_sha256": "a5ed8da0d9988943c986b231b4cd33cea0ab878a8e1628134341db5f7f41c765",
+  "source_metadata_archive_path": "reports/raw/leaderboard_intel_20260501/pr67_archive.zip",
+  "source_metadata_archive_sha256": "a5ed8da0d9988943c986b231b4cd33cea0ab878a8e1628134341db5f7f41c765",
+  "tool": "manual_pr67_metadata_for_line_search_pose_refinement"
+}

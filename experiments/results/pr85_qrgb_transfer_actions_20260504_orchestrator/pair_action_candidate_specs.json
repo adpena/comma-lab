@@ -1,0 +1,774 @@
+{
+  "action_evidence": {
+    "blocker_class": "none",
+    "blockers": [],
+    "candidate_count": 4,
+    "path": "experiments/results/pr85_qrgb_transfer_actions_20260504_worker/pair_action_evidence.json",
+    "schema": "pr85_pair_action_lowering_evidence_v1",
+    "sha256": "45a9dddc977c89056b8637e7e626427deb53e55e017679ce69f8d7120bfe6e4d",
+    "size_bytes": 4712,
+    "status": "passed"
+  },
+  "blocker_class": "no_archive_changing_path",
+  "blockers": [
+    {
+      "blocker_class": "no_archive_changing_path",
+      "reason": "no built archive-changing path was supplied"
+    }
+  ],
+  "candidate_count": 4,
+  "candidates": [
+    {
+      "actions": [
+        {
+          "candidate_value": 20,
+          "no_op_status": {
+            "candidate_value": 20,
+            "is_noop": false,
+            "source_value": 0,
+            "status": "non_noop_value_change"
+          },
+          "op": "set",
+          "pair_index": 192,
+          "rationale": "PR90 QRGB frame1 global RGB residual transferred to PR85 randmulti global f2 bias choice",
+          "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+          "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0192",
+          "source_value": 0,
+          "stream": "randmulti",
+          "value": 20
+        }
+      ],
+      "archive_changing_path": {
+        "archive_changing_path_exists": false,
+        "dispatch_unlocked": false,
+        "status": "missing"
+      },
+      "blocker_class": "no_archive_changing_path",
+      "blockers": [
+        {
+          "blocker_class": "no_archive_changing_path",
+          "reason": "no built archive-changing path was supplied"
+        }
+      ],
+      "candidate_id": "pr85_qrgb_f2_randglobal_pair_0192",
+      "charged_bytes_proxy": {
+        "basis": "ceil(PR90 observed QRGB residual compressed bytes per frame pair); archive delta remains unproven until PR85 local recode",
+        "candidate_action_bytes": 7,
+        "formula_only_rate_score_delta": 4.6610126718552e-06,
+        "formula_rate_score_per_byte": 6.658589531221714e-07,
+        "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+        "status": "passed"
+      },
+      "dispatch_performed": false,
+      "dispatch_unlocked": false,
+      "input_archive": {
+        "archive_bytes": 236328,
+        "archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e"
+      },
+      "lowering_status": "action_spec_emitted",
+      "next_action": "Run experiments/build_pr85_pair_atom_candidates.py with this action spec and a reviewed runtime contract.",
+      "no_op_status": {
+        "is_noop": false,
+        "status": "non_noop_value_change"
+      },
+      "pair_atom_action_spec": {
+        "actions": [
+          {
+            "pair_index": 192,
+            "rationale": "PR90 QRGB frame1 global RGB residual transferred to PR85 randmulti global f2 bias choice",
+            "stream": "randmulti",
+            "value": 20
+          }
+        ],
+        "candidate_id": "pr85_qrgb_f2_randglobal_pair_0192",
+        "dispatch_performed": false,
+        "header_mode": "explicit_30",
+        "inflate_time_scorer_load_allowed": false,
+        "schema": "pr85_pair_atom_action_spec_v1",
+        "score_claim": false
+      },
+      "ready_for_exact_eval_after_lane_claim": false,
+      "ready_for_pair_atom_archive_build": true,
+      "remote_jobs_dispatched": false,
+      "schema": "pr85_pair_action_candidate_spec_v1",
+      "score_claim": false,
+      "selected_pair_indices": [
+        192
+      ],
+      "selected_pairs": [
+        {
+          "atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0192",
+          "component_signal": {
+            "combined_break_even_bytes": 516.6922114573065,
+            "dominant_single_component": "pose",
+            "pose_break_even_bytes": 318.08732986550973,
+            "seg_break_even_bytes": 198.60488159179684
+          },
+          "dispatch_gate": {
+            "blockers": [
+              "planner_output_is_not_an_archive",
+              "no_remote_or_gpu_dispatch_from_this_tool",
+              "closed_archive_exact_cuda_auth_eval_required",
+              "raw_output_or_payload_change_must_be_proven_non_noop",
+              "posenet_segnet_sensitivity_placeholders_must_be_resolved",
+              "no_measured_atom_component_response"
+            ],
+            "dispatchable": false,
+            "status": "blocked_planning_only"
+          },
+          "frame_indices": [
+            384,
+            385
+          ],
+          "pair_index": 192,
+          "rank": 1,
+          "ranking_score": 0.00034404413500734173,
+          "targeted_component": "combined"
+        }
+      ],
+      "source_artifacts": {
+        "known_source_sha256s": [
+          "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+          "367a4205efa6304712b9466519bd59168122b278ad784a69fc269a76fce567ff",
+          "f6121437f3fb89ff870bdfdd60e103f6385488191ce8479fd20337b8ee487b58"
+        ]
+      },
+      "targeted_component": "combined"
+    },
+    {
+      "actions": [
+        {
+          "candidate_value": 5,
+          "no_op_status": {
+            "candidate_value": 5,
+            "is_noop": false,
+            "source_value": 24,
+            "status": "non_noop_value_change"
+          },
+          "op": "set",
+          "pair_index": 60,
+          "rationale": "PR90 QRGB frame0 global RGB residual sign transferred to PR85 frame0 bias choice",
+          "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+          "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0060",
+          "source_value": 24,
+          "stream": "bias",
+          "value": 5
+        }
+      ],
+      "archive_changing_path": {
+        "archive_changing_path_exists": false,
+        "dispatch_unlocked": false,
+        "status": "missing"
+      },
+      "blocker_class": "no_archive_changing_path",
+      "blockers": [
+        {
+          "blocker_class": "no_archive_changing_path",
+          "reason": "no built archive-changing path was supplied"
+        }
+      ],
+      "candidate_id": "pr85_qrgb_f1_bias_pair_0060",
+      "charged_bytes_proxy": {
+        "basis": "ceil(PR90 observed QRGB residual compressed bytes per frame pair); archive delta remains unproven until PR85 local recode",
+        "candidate_action_bytes": 7,
+        "formula_only_rate_score_delta": 4.6610126718552e-06,
+        "formula_rate_score_per_byte": 6.658589531221714e-07,
+        "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+        "status": "passed"
+      },
+      "dispatch_performed": false,
+      "dispatch_unlocked": false,
+      "input_archive": {
+        "archive_bytes": 236328,
+        "archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e"
+      },
+      "lowering_status": "action_spec_emitted",
+      "next_action": "Run experiments/build_pr85_pair_atom_candidates.py with this action spec and a reviewed runtime contract.",
+      "no_op_status": {
+        "is_noop": false,
+        "status": "non_noop_value_change"
+      },
+      "pair_atom_action_spec": {
+        "actions": [
+          {
+            "pair_index": 60,
+            "rationale": "PR90 QRGB frame0 global RGB residual sign transferred to PR85 frame0 bias choice",
+            "stream": "bias",
+            "value": 5
+          }
+        ],
+        "candidate_id": "pr85_qrgb_f1_bias_pair_0060",
+        "dispatch_performed": false,
+        "header_mode": "explicit_30",
+        "inflate_time_scorer_load_allowed": false,
+        "schema": "pr85_pair_atom_action_spec_v1",
+        "score_claim": false
+      },
+      "ready_for_exact_eval_after_lane_claim": false,
+      "ready_for_pair_atom_archive_build": true,
+      "remote_jobs_dispatched": false,
+      "schema": "pr85_pair_action_candidate_spec_v1",
+      "score_claim": false,
+      "selected_pair_indices": [
+        60
+      ],
+      "selected_pairs": [
+        {
+          "atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0060",
+          "component_signal": {
+            "combined_break_even_bytes": 484.2862579445188,
+            "dominant_single_component": "pose",
+            "pose_break_even_bytes": 334.05947882229424,
+            "seg_break_even_bytes": 150.22677912222454
+          },
+          "dispatch_gate": {
+            "blockers": [
+              "planner_output_is_not_an_archive",
+              "no_remote_or_gpu_dispatch_from_this_tool",
+              "closed_archive_exact_cuda_auth_eval_required",
+              "raw_output_or_payload_change_must_be_proven_non_noop",
+              "posenet_segnet_sensitivity_placeholders_must_be_resolved",
+              "no_measured_atom_component_response"
+            ],
+            "dispatchable": false,
+            "status": "blocked_planning_only"
+          },
+          "frame_indices": [
+            120,
+            121
+          ],
+          "pair_index": 60,
+          "rank": 1,
+          "ranking_score": 0.00032246634072639115,
+          "targeted_component": "combined"
+        }
+      ],
+      "source_artifacts": {
+        "known_source_sha256s": [
+          "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+          "367a4205efa6304712b9466519bd59168122b278ad784a69fc269a76fce567ff",
+          "f6121437f3fb89ff870bdfdd60e103f6385488191ce8479fd20337b8ee487b58"
+        ]
+      },
+      "targeted_component": "combined"
+    },
+    {
+      "actions": [
+        {
+          "candidate_value": 21,
+          "no_op_status": {
+            "candidate_value": 21,
+            "is_noop": false,
+            "source_value": 3,
+            "status": "non_noop_value_change"
+          },
+          "op": "set",
+          "pair_index": 164,
+          "rationale": "PR90 QRGB frame0 global RGB residual sign transferred to PR85 frame0 bias choice",
+          "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+          "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0164",
+          "source_value": 3,
+          "stream": "bias",
+          "value": 21
+        }
+      ],
+      "archive_changing_path": {
+        "archive_changing_path_exists": false,
+        "dispatch_unlocked": false,
+        "status": "missing"
+      },
+      "blocker_class": "no_archive_changing_path",
+      "blockers": [
+        {
+          "blocker_class": "no_archive_changing_path",
+          "reason": "no built archive-changing path was supplied"
+        }
+      ],
+      "candidate_id": "pr85_qrgb_f1_bias_pair_0164",
+      "charged_bytes_proxy": {
+        "basis": "ceil(PR90 observed QRGB residual compressed bytes per frame pair); archive delta remains unproven until PR85 local recode",
+        "candidate_action_bytes": 7,
+        "formula_only_rate_score_delta": 4.6610126718552e-06,
+        "formula_rate_score_per_byte": 6.658589531221714e-07,
+        "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+        "status": "passed"
+      },
+      "dispatch_performed": false,
+      "dispatch_unlocked": false,
+      "input_archive": {
+        "archive_bytes": 236328,
+        "archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e"
+      },
+      "lowering_status": "action_spec_emitted",
+      "next_action": "Run experiments/build_pr85_pair_atom_candidates.py with this action spec and a reviewed runtime contract.",
+      "no_op_status": {
+        "is_noop": false,
+        "status": "non_noop_value_change"
+      },
+      "pair_atom_action_spec": {
+        "actions": [
+          {
+            "pair_index": 164,
+            "rationale": "PR90 QRGB frame0 global RGB residual sign transferred to PR85 frame0 bias choice",
+            "stream": "bias",
+            "value": 21
+          }
+        ],
+        "candidate_id": "pr85_qrgb_f1_bias_pair_0164",
+        "dispatch_performed": false,
+        "header_mode": "explicit_30",
+        "inflate_time_scorer_load_allowed": false,
+        "schema": "pr85_pair_atom_action_spec_v1",
+        "score_claim": false
+      },
+      "ready_for_exact_eval_after_lane_claim": false,
+      "ready_for_pair_atom_archive_build": true,
+      "remote_jobs_dispatched": false,
+      "schema": "pr85_pair_action_candidate_spec_v1",
+      "score_claim": false,
+      "selected_pair_indices": [
+        164
+      ],
+      "selected_pairs": [
+        {
+          "atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0164",
+          "component_signal": {
+            "combined_break_even_bytes": 465.22756469211794,
+            "dominant_single_component": "pose",
+            "pose_break_even_bytes": 247.5260598703406,
+            "seg_break_even_bytes": 217.70150482177732
+          },
+          "dispatch_gate": {
+            "blockers": [
+              "planner_output_is_not_an_archive",
+              "no_remote_or_gpu_dispatch_from_this_tool",
+              "closed_archive_exact_cuda_auth_eval_required",
+              "raw_output_or_payload_change_must_be_proven_non_noop",
+              "posenet_segnet_sensitivity_placeholders_must_be_resolved",
+              "no_measured_atom_component_response"
+            ],
+            "dispatchable": false,
+            "status": "blocked_planning_only"
+          },
+          "frame_indices": [
+            328,
+            329
+          ],
+          "pair_index": 164,
+          "rank": 1,
+          "ranking_score": 0.0003097759391894709,
+          "targeted_component": "combined"
+        }
+      ],
+      "source_artifacts": {
+        "known_source_sha256s": [
+          "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+          "367a4205efa6304712b9466519bd59168122b278ad784a69fc269a76fce567ff",
+          "f6121437f3fb89ff870bdfdd60e103f6385488191ce8479fd20337b8ee487b58"
+        ]
+      },
+      "targeted_component": "combined"
+    },
+    {
+      "actions": [
+        {
+          "candidate_value": 45,
+          "no_op_status": {
+            "candidate_value": 45,
+            "is_noop": false,
+            "source_value": 60,
+            "status": "non_noop_value_change"
+          },
+          "op": "set",
+          "pair_index": 197,
+          "rationale": "PR90 QRGB frame0 half-band residual transferred to PR85 frame0 region bias choice",
+          "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+          "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0197",
+          "source_value": 60,
+          "stream": "region",
+          "value": 45
+        }
+      ],
+      "archive_changing_path": {
+        "archive_changing_path_exists": false,
+        "dispatch_unlocked": false,
+        "status": "missing"
+      },
+      "blocker_class": "no_archive_changing_path",
+      "blockers": [
+        {
+          "blocker_class": "no_archive_changing_path",
+          "reason": "no built archive-changing path was supplied"
+        }
+      ],
+      "candidate_id": "pr85_qrgb_f1_region_pair_0197",
+      "charged_bytes_proxy": {
+        "basis": "ceil(PR90 observed QRGB residual compressed bytes per frame pair); archive delta remains unproven until PR85 local recode",
+        "candidate_action_bytes": 7,
+        "formula_only_rate_score_delta": 4.6610126718552e-06,
+        "formula_rate_score_per_byte": 6.658589531221714e-07,
+        "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+        "status": "passed"
+      },
+      "dispatch_performed": false,
+      "dispatch_unlocked": false,
+      "input_archive": {
+        "archive_bytes": 236328,
+        "archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e"
+      },
+      "lowering_status": "action_spec_emitted",
+      "next_action": "Run experiments/build_pr85_pair_atom_candidates.py with this action spec and a reviewed runtime contract.",
+      "no_op_status": {
+        "is_noop": false,
+        "status": "non_noop_value_change"
+      },
+      "pair_atom_action_spec": {
+        "actions": [
+          {
+            "pair_index": 197,
+            "rationale": "PR90 QRGB frame0 half-band residual transferred to PR85 frame0 region bias choice",
+            "stream": "region",
+            "value": 45
+          }
+        ],
+        "candidate_id": "pr85_qrgb_f1_region_pair_0197",
+        "dispatch_performed": false,
+        "header_mode": "explicit_30",
+        "inflate_time_scorer_load_allowed": false,
+        "schema": "pr85_pair_atom_action_spec_v1",
+        "score_claim": false
+      },
+      "ready_for_exact_eval_after_lane_claim": false,
+      "ready_for_pair_atom_archive_build": true,
+      "remote_jobs_dispatched": false,
+      "schema": "pr85_pair_action_candidate_spec_v1",
+      "score_claim": false,
+      "selected_pair_indices": [
+        197
+      ],
+      "selected_pairs": [
+        {
+          "atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0197",
+          "component_signal": {
+            "combined_break_even_bytes": 452.8814701277624,
+            "dominant_single_component": "pose",
+            "pose_break_even_bytes": 323.0244321638952,
+            "seg_break_even_bytes": 129.85703796386719
+          },
+          "dispatch_gate": {
+            "blockers": [
+              "planner_output_is_not_an_archive",
+              "no_remote_or_gpu_dispatch_from_this_tool",
+              "closed_archive_exact_cuda_auth_eval_required",
+              "raw_output_or_payload_change_must_be_proven_non_noop",
+              "posenet_segnet_sensitivity_placeholders_must_be_resolved",
+              "no_measured_atom_component_response"
+            ],
+            "dispatchable": false,
+            "status": "blocked_planning_only"
+          },
+          "frame_indices": [
+            394,
+            395
+          ],
+          "pair_index": 197,
+          "rank": 1,
+          "ranking_score": 0.0003015551815877018,
+          "targeted_component": "combined"
+        }
+      ],
+      "source_artifacts": {
+        "known_source_sha256s": [
+          "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+          "367a4205efa6304712b9466519bd59168122b278ad784a69fc269a76fce567ff",
+          "f6121437f3fb89ff870bdfdd60e103f6385488191ce8479fd20337b8ee487b58"
+        ]
+      },
+      "targeted_component": "combined"
+    }
+  ],
+  "dispatch_performed": false,
+  "dispatch_rule": "No exact eval dispatch is unlocked unless a non-noop archive-changing path is present and a lane claim is made first.",
+  "dispatch_unlocked": false,
+  "dispatch_unlocked_count": 0,
+  "gpu_required": false,
+  "pair_atom_planning": {
+    "blocker_class": "none",
+    "blockers": [],
+    "candidate_archive_count": 0,
+    "dispatch_unlocked": false,
+    "path": "experiments/results/pr85_pair_atom_candidates_20260504_orchestrator/planning.json",
+    "schema": "pr85_pair_atom_candidate_readiness_v1",
+    "sha256": "f6121437f3fb89ff870bdfdd60e103f6385488191ce8479fd20337b8ee487b58",
+    "size_bytes": 11666,
+    "status": "passed"
+  },
+  "ready_for_exact_eval_after_lane_claim_count": 0,
+  "ready_for_pair_atom_archive_build_count": 4,
+  "remote_jobs_dispatched": false,
+  "schema": "pr85_pair_action_candidate_specs_v1",
+  "score_claim": false,
+  "scorer_gradient_plan": {
+    "atom_count": 64,
+    "blocker_class": "none",
+    "blockers": [],
+    "computed_stable_plan_digest_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+    "path": "/tmp/pr85_scorer_gradient_atoms_plan_baseline.json",
+    "schema": "pr85_scorer_gradient_atom_opportunity_v1",
+    "sha256": "367a4205efa6304712b9466519bd59168122b278ad784a69fc269a76fce567ff",
+    "size_bytes": 199326,
+    "stable_plan_digest_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+    "status": "passed",
+    "top_atoms": [
+      {
+        "atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0192",
+        "component_signal": {
+          "combined_break_even_bytes": 516.6922114573065,
+          "dominant_single_component": "pose",
+          "pose_break_even_bytes": 318.08732986550973,
+          "seg_break_even_bytes": 198.60488159179684
+        },
+        "dispatch_gate": {
+          "blockers": [
+            "planner_output_is_not_an_archive",
+            "no_remote_or_gpu_dispatch_from_this_tool",
+            "closed_archive_exact_cuda_auth_eval_required",
+            "raw_output_or_payload_change_must_be_proven_non_noop",
+            "posenet_segnet_sensitivity_placeholders_must_be_resolved",
+            "no_measured_atom_component_response"
+          ],
+          "dispatchable": false,
+          "status": "blocked_planning_only"
+        },
+        "frame_indices": [
+          384,
+          385
+        ],
+        "pair_index": 192,
+        "rank": 1,
+        "ranking_score": 0.00034404413500734173,
+        "targeted_component": "combined"
+      },
+      {
+        "atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0060",
+        "component_signal": {
+          "combined_break_even_bytes": 484.2862579445188,
+          "dominant_single_component": "pose",
+          "pose_break_even_bytes": 334.05947882229424,
+          "seg_break_even_bytes": 150.22677912222454
+        },
+        "dispatch_gate": {
+          "blockers": [
+            "planner_output_is_not_an_archive",
+            "no_remote_or_gpu_dispatch_from_this_tool",
+            "closed_archive_exact_cuda_auth_eval_required",
+            "raw_output_or_payload_change_must_be_proven_non_noop",
+            "posenet_segnet_sensitivity_placeholders_must_be_resolved",
+            "no_measured_atom_component_response"
+          ],
+          "dispatchable": false,
+          "status": "blocked_planning_only"
+        },
+        "frame_indices": [
+          120,
+          121
+        ],
+        "pair_index": 60,
+        "rank": 2,
+        "ranking_score": 0.00032246634072639115,
+        "targeted_component": "combined"
+      },
+      {
+        "atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0164",
+        "component_signal": {
+          "combined_break_even_bytes": 465.22756469211794,
+          "dominant_single_component": "pose",
+          "pose_break_even_bytes": 247.5260598703406,
+          "seg_break_even_bytes": 217.70150482177732
+        },
+        "dispatch_gate": {
+          "blockers": [
+            "planner_output_is_not_an_archive",
+            "no_remote_or_gpu_dispatch_from_this_tool",
+            "closed_archive_exact_cuda_auth_eval_required",
+            "raw_output_or_payload_change_must_be_proven_non_noop",
+            "posenet_segnet_sensitivity_placeholders_must_be_resolved",
+            "no_measured_atom_component_response"
+          ],
+          "dispatchable": false,
+          "status": "blocked_planning_only"
+        },
+        "frame_indices": [
+          328,
+          329
+        ],
+        "pair_index": 164,
+        "rank": 3,
+        "ranking_score": 0.0003097759391894709,
+        "targeted_component": "combined"
+      },
+      {
+        "atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0197",
+        "component_signal": {
+          "combined_break_even_bytes": 452.8814701277624,
+          "dominant_single_component": "pose",
+          "pose_break_even_bytes": 323.0244321638952,
+          "seg_break_even_bytes": 129.85703796386719
+        },
+        "dispatch_gate": {
+          "blockers": [
+            "planner_output_is_not_an_archive",
+            "no_remote_or_gpu_dispatch_from_this_tool",
+            "closed_archive_exact_cuda_auth_eval_required",
+            "raw_output_or_payload_change_must_be_proven_non_noop",
+            "posenet_segnet_sensitivity_placeholders_must_be_resolved",
+            "no_measured_atom_component_response"
+          ],
+          "dispatchable": false,
+          "status": "blocked_planning_only"
+        },
+        "frame_indices": [
+          394,
+          395
+        ],
+        "pair_index": 197,
+        "rank": 4,
+        "ranking_score": 0.0003015551815877018,
+        "targeted_component": "combined"
+      },
+      {
+        "atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0070",
+        "component_signal": {
+          "combined_break_even_bytes": 448.6622211777276,
+          "dominant_single_component": "pose",
+          "pose_break_even_bytes": 275.5194941795265,
+          "seg_break_even_bytes": 173.1427269982011
+        },
+        "dispatch_gate": {
+          "blockers": [
+            "planner_output_is_not_an_archive",
+            "no_remote_or_gpu_dispatch_from_this_tool",
+            "closed_archive_exact_cuda_auth_eval_required",
+            "raw_output_or_payload_change_must_be_proven_non_noop",
+            "posenet_segnet_sensitivity_placeholders_must_be_resolved",
+            "no_measured_atom_component_response"
+          ],
+          "dispatchable": false,
+          "status": "blocked_planning_only"
+        },
+        "frame_indices": [
+          140,
+          141
+        ],
+        "pair_index": 70,
+        "rank": 5,
+        "ranking_score": 0.0002987457568988698,
+        "targeted_component": "combined"
+      },
+      {
+        "atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0496",
+        "component_signal": {
+          "combined_break_even_bytes": 447.820449774858,
+          "dominant_single_component": "seg",
+          "pose_break_even_bytes": 219.934074373902,
+          "seg_break_even_bytes": 227.886375400956
+        },
+        "dispatch_gate": {
+          "blockers": [
+            "planner_output_is_not_an_archive",
+            "no_remote_or_gpu_dispatch_from_this_tool",
+            "closed_archive_exact_cuda_auth_eval_required",
+            "raw_output_or_payload_change_must_be_proven_non_noop",
+            "posenet_segnet_sensitivity_placeholders_must_be_resolved",
+            "no_measured_atom_component_response"
+          ],
+          "dispatchable": false,
+          "status": "blocked_planning_only"
+        },
+        "frame_indices": [
+          992,
+          993
+        ],
+        "pair_index": 496,
+        "rank": 6,
+        "ranking_score": 0.00029818525587378686,
+        "targeted_component": "combined"
+      },
+      {
+        "atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0106",
+        "component_signal": {
+          "combined_break_even_bytes": 437.8045133683296,
+          "dominant_single_component": "pose",
+          "pose_break_even_bytes": 283.75840960010896,
+          "seg_break_even_bytes": 154.04610376822063
+        },
+        "dispatch_gate": {
+          "blockers": [
+            "planner_output_is_not_an_archive",
+            "no_remote_or_gpu_dispatch_from_this_tool",
+            "closed_archive_exact_cuda_auth_eval_required",
+            "raw_output_or_payload_change_must_be_proven_non_noop",
+            "posenet_segnet_sensitivity_placeholders_must_be_resolved",
+            "no_measured_atom_component_response"
+          ],
+          "dispatchable": false,
+          "status": "blocked_planning_only"
+        },
+        "frame_indices": [
+          212,
+          213
+        ],
+        "pair_index": 106,
+        "rank": 7,
+        "ranking_score": 0.00029151605494359765,
+        "targeted_component": "combined"
+      },
+      {
+        "atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0522",
+        "component_signal": {
+          "combined_break_even_bytes": 432.0508240749086,
+          "dominant_single_component": "seg",
+          "pose_break_even_bytes": 46.29903482930312,
+          "seg_break_even_bytes": 385.75178924560544
+        },
+        "dispatch_gate": {
+          "blockers": [
+            "planner_output_is_not_an_archive",
+            "no_remote_or_gpu_dispatch_from_this_tool",
+            "closed_archive_exact_cuda_auth_eval_required",
+            "raw_output_or_payload_change_must_be_proven_non_noop",
+            "posenet_segnet_sensitivity_placeholders_must_be_resolved",
+            "no_measured_atom_component_response"
+          ],
+          "dispatchable": false,
+          "status": "blocked_planning_only"
+        },
+        "frame_indices": [
+          1044,
+          1045
+        ],
+        "pair_index": 522,
+        "rank": 8,
+        "ranking_score": 0.00028768490941409006,
+        "targeted_component": "combined"
+      }
+    ]
+  },
+  "scorer_load_performed": false,
+  "sidecars_required": false,
+  "source_archive": {
+    "archive_bytes": 236328,
+    "archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+    "evidence_context": {
+      "runtime_tree_sha256": "d008db50f8a8165a9c7a5954e8eeec443878dbeb7a892e1d455515b4586b1a73",
+      "scorer_exact_eval_device": "cuda",
+      "scorer_exact_eval_gpu_model": "Tesla T4",
+      "scorer_exact_eval_samples": 600,
+      "scorer_exact_eval_score": 0.25806611029397786
+    },
+    "member_sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+    "path": "experiments/results/public_pr85_intake_20260503_codex/archive.zip"
+  },
+  "tool": "experiments/build_pr85_pair_action_candidates.py",
+  "top_n": 8
+}

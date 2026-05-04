@@ -1,0 +1,38 @@
+{
+  "adjudication": {
+    "allow_component_gate_forensic_success": true,
+    "allow_sane_score_forensic_success": true,
+    "baseline_archive_size_bytes": 276214,
+    "baseline_posenet_dist": 0.00049637,
+    "baseline_score": 0.31561703078448233,
+    "baseline_segnet_dist": 0.00061244,
+    "component_reference_label": "C067_T4",
+    "delta_key": "score_delta_vs_c067_t4",
+    "max_posenet_dist": 0.0015,
+    "max_posenet_relative": null,
+    "max_sane_score": 0.6,
+    "max_segnet_dist": 0.001,
+    "max_segnet_relative": null,
+    "predicted_band_high": 0.34,
+    "predicted_band_low": 0.3,
+    "provenance_name": "adjudication_provenance.json",
+    "regression_threshold": 0.01,
+    "required_device": "cuda",
+    "required_samples": 600,
+    "result_copy_name": "contest_auth_eval.adjudicated.json"
+  },
+  "artifact_recorded_at_utc": "2026-05-02T16:04:51Z",
+  "expected_archive_sha256": "434ed7c8e084854a53a96ab8e64b6cb3f59535a3839f1485e95f4df7fe6799ab",
+  "expected_archive_size_bytes": 276436,
+  "job_name": "exact_eval_fixedslice_pr67pose_c067rest_fix1_l40s_20260502T1553Z",
+  "queue_metadata": {
+    "baseline": "C067_A++",
+    "candidate": "c067mask_c067renderer_pr67pose",
+    "lane": "fixedslice_segment_mix_fix1",
+    "purpose": "corrected_pr67_pose_attribution"
+  },
+  "role": "exact_cuda_eval",
+  "schema_version": 1,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

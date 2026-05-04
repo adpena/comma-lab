@@ -1,0 +1,433 @@
+{
+  "anchor": {
+    "archive_bytes": 276481,
+    "archive_sha256": "03a2afd5fe92c93a9b7b7e43625158a73b455f0cfbca82d278008a728db78746",
+    "score": 0.31516575028285976,
+    "score_component": 0.13106850028285977
+  },
+  "candidate_count": 5,
+  "candidates": [
+    {
+      "archive_bytes": 276329,
+      "archive_path": "experiments/results/pr77_action_pose_mixed_container_20260503_codex/pr77_actions_pr75mask_renderer_c089pose_fixedslice/archive.zip",
+      "archive_sha256": "27866172e76d27113e86a30f722588fd668f81a949be3acbe1e92cddc9a6a1d8",
+      "break_even_vs_c091": {
+        "anchor": "c091_pr75_public_replay",
+        "archive_delta_bytes_vs_c091": -152,
+        "rate_score_delta_vs_c091": -0.00010121056087457006,
+        "score_if_components_unchanged": 0.31506453972198517,
+        "sub314_component_score_improvement_needed": 0.0010645397219851693,
+        "sub314_equivalent_bytes_needed_after_candidate": 1599
+      },
+      "candidate_id": "pr77_actions_pr75mask_renderer_c089pose_fixedslice",
+      "component_basin_prior": "PR77 public exact replay was component-negative vs C091; this row changes pose packing too, so exact eval is required but sub-0.314 is not supported by local math.",
+      "evidence_grade": "empirical_byte_screen_and_prior_exact_eval_context",
+      "exact_dispatch_readiness": "ready_after_lane_claim; currently queued separately as exact_eval_pr77_action_pose_fixedslice_t4_20260503T114254Z",
+      "family": "pr77_action_pose_mixed_container",
+      "local_readiness": "runtime_parse_validation_passed_in_source_manifest",
+      "manifest_path": "experiments/results/pr77_action_pose_mixed_container_20260503_codex/pr77_actions_pr75mask_renderer_c089pose_fixedslice/manifest.json",
+      "no_remote_gpu_dispatch_performed": true,
+      "rank_notes": [
+        "best existing PR77 mixed byte count",
+        "preserves PR77 source action order",
+        "needs 1599 byte-equivalent component gain after rate saving"
+      ],
+      "score_claim": false,
+      "source_manifest_summary": {
+        "noop": false,
+        "noop_status": "non_noop_payload",
+        "source_manifest_dispatch_safety": {
+          "dispatchable_after_gate": true,
+          "next_dispatch_safety_gate": "claim lane via tools/claim_lane_dispatch.py, then exact CUDA auth eval: archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda"
+        }
+      },
+      "source_streams": {
+        "actions": "pr77_public_action_delta_source_order",
+        "mask": "c091_pr75_public",
+        "pose": "c089_qp1_lossless_resweep",
+        "renderer": "c091_pr75_public"
+      },
+      "sub314_dispatch_worthy": false,
+      "top3_exact_eval_candidate_rank": 1,
+      "zip_profile": {
+        "archive_bytes": 276329,
+        "duplicate_names": [],
+        "member_count": 1,
+        "members": [
+          {
+            "compress_size": 276229,
+            "compress_type": 0,
+            "date_time": [
+              1980,
+              1,
+              1,
+              0,
+              0,
+              0
+            ],
+            "external_attr": 27525120,
+            "file_size": 276229,
+            "filename": "p"
+          }
+        ],
+        "single_stored_member_p": true,
+        "status": "passed"
+      }
+    },
+    {
+      "archive_bytes": 276317,
+      "archive_path": "experiments/results/pr75_qp1_nextwave_sub314_20260503_worker/action_compiler_candidates/c067_pr75_actions_pose_safe_positive_ampminus1_p6/archive.zip",
+      "archive_sha256": "6e6ec4609c6da581b4113c5c06e67970542a9d8e22c4866959fe618aaff2c796",
+      "break_even_vs_c091": {
+        "anchor": "c091_pr75_public_replay",
+        "archive_delta_bytes_vs_c091": -164,
+        "rate_score_delta_vs_c091": -0.00010920086831203611,
+        "score_if_components_unchanged": 0.31505654941454775,
+        "sub314_component_score_improvement_needed": 0.0010565494145477472,
+        "sub314_equivalent_bytes_needed_after_candidate": 1587
+      },
+      "candidate_id": "c067_pr75_actions_pose_safe_positive_ampminus1_p6",
+      "component_basin_prior": "real action-id changes with positive local trace sums, but trace gain is far below the C091 sub-0.314 break-even.",
+      "evidence_grade": "empirical_byte_screen_and_prior_exact_eval_context",
+      "exact_dispatch_readiness": "ready_after_lane_claim_no_remote_dispatch_from_this_tool",
+      "family": "pr75_action_policy_p6",
+      "local_readiness": "manifest guard passed: changed actions, no exact duplicates, no pair/tile duplicates",
+      "manifest_path": "experiments/results/pr75_qp1_nextwave_sub314_20260503_worker/action_compiler_candidates/c067_pr75_actions_pose_safe_positive_ampminus1_p6/manifest.json",
+      "no_remote_gpu_dispatch_performed": true,
+      "rank_notes": [
+        "lowest-byte real action-policy candidate in the local PR75/QP1 nextwave matrix",
+        "28 changed action ids and positive pose trace",
+        "not enough modeled component gain for sub-0.314"
+      ],
+      "score_claim": false,
+      "source_manifest_summary": {
+        "action_selection_guard": {
+          "changed_action_id_record_count": 28,
+          "custom_delta_record_count": 0,
+          "exact_duplicate_record_count": 0,
+          "pair_tile_duplicate_record_count": 0,
+          "record_count": 29,
+          "transformed_record_count": 29
+        },
+        "encoded_action_brotli_bytes": 91,
+        "encoded_action_codec": "brotli_delta_varint_pair_tile_action",
+        "noop": false,
+        "noop_status": "not_noop_action_payload_nonempty",
+        "policy": "pose_safe_positive_ampminus1",
+        "runtime_action_raw_bytes": 116,
+        "selected_delta_combined_trace_sum": 0.0001781321228804055,
+        "selected_delta_pose_trace_sum": 4.249838735094821e-05,
+        "selected_delta_seg_trace_sum": 0.00013563373552945748,
+        "selected_record_count": 29,
+        "wire_format": "p6"
+      },
+      "source_streams": {
+        "actions": "PR75 records filtered to positive pose-safe atoms, ampminus1 transform",
+        "mask": "C067/C089 baseline source",
+        "pose": "C067/C089 QP1 source",
+        "renderer": "C067/C089 renderer source"
+      },
+      "sub314_dispatch_worthy": false,
+      "top3_exact_eval_candidate_rank": 2,
+      "zip_profile": {
+        "archive_bytes": 276317,
+        "duplicate_names": [],
+        "member_count": 1,
+        "members": [
+          {
+            "compress_size": 276217,
+            "compress_type": 0,
+            "date_time": [
+              1980,
+              1,
+              1,
+              0,
+              0,
+              0
+            ],
+            "external_attr": 27525120,
+            "file_size": 276217,
+            "filename": "p"
+          }
+        ],
+        "single_stored_member_p": true,
+        "status": "passed"
+      }
+    },
+    {
+      "archive_bytes": 276389,
+      "archive_path": "experiments/results/pr75_qp1_nextwave_sub314_20260503_worker/action_compiler_candidates/c067_pr75_actions_positive_poseharm_ampminus1_p6/archive.zip",
+      "archive_sha256": "244c366a7d07ff185091dbbcf7ecb1e0308d11d9e7467bc2ae2eb2f8b6bd0a6a",
+      "break_even_vs_c091": {
+        "anchor": "c091_pr75_public_replay",
+        "archive_delta_bytes_vs_c091": -92,
+        "rate_score_delta_vs_c091": -6.125902368723977e-05,
+        "score_if_components_unchanged": 0.3151044912591725,
+        "sub314_component_score_improvement_needed": 0.001104491259172502,
+        "sub314_equivalent_bytes_needed_after_candidate": 1659
+      },
+      "candidate_id": "c067_pr75_actions_positive_poseharm_ampminus1_p6",
+      "component_basin_prior": "larger selected SegNet trace than the pose-safe row, but exact PR75 action probes have not shown sub-0.314-scale gains.",
+      "evidence_grade": "empirical_byte_screen_and_prior_exact_eval_context",
+      "exact_dispatch_readiness": "ready_after_lane_claim_no_remote_dispatch_from_this_tool",
+      "family": "pr75_action_policy_p6",
+      "local_readiness": "manifest guard passed: changed actions, no exact duplicates, no pair/tile duplicates",
+      "manifest_path": "experiments/results/pr75_qp1_nextwave_sub314_20260503_worker/action_compiler_candidates/c067_pr75_actions_positive_poseharm_ampminus1_p6/manifest.json",
+      "no_remote_gpu_dispatch_performed": true,
+      "rank_notes": [
+        "60 selected records and 31 changed action ids",
+        "larger selected trace sum than pose-safe row",
+        "slightly worse byte count than the best PR77 mixed candidate"
+      ],
+      "score_claim": false,
+      "source_manifest_summary": {
+        "action_selection_guard": {
+          "changed_action_id_record_count": 31,
+          "custom_delta_record_count": 0,
+          "exact_duplicate_record_count": 0,
+          "pair_tile_duplicate_record_count": 0,
+          "record_count": 60,
+          "transformed_record_count": 31
+        },
+        "encoded_action_brotli_bytes": 163,
+        "encoded_action_codec": "brotli_delta_varint_pair_tile_action",
+        "noop": false,
+        "noop_status": "not_noop_action_payload_nonempty",
+        "policy": "positive_poseharm_ampminus1",
+        "runtime_action_raw_bytes": 240,
+        "selected_delta_combined_trace_sum": 0.0002584819602394765,
+        "selected_delta_pose_trace_sum": -3.46063383982409e-06,
+        "selected_delta_seg_trace_sum": 0.00026194259407930076,
+        "selected_record_count": 60,
+        "wire_format": "p6"
+      },
+      "source_streams": {
+        "actions": "PR75 positive atoms with pose-harm ampminus1 shrink",
+        "mask": "C067/C089 baseline source",
+        "pose": "C067/C089 QP1 source",
+        "renderer": "C067/C089 renderer source"
+      },
+      "sub314_dispatch_worthy": false,
+      "top3_exact_eval_candidate_rank": 3,
+      "zip_profile": {
+        "archive_bytes": 276389,
+        "duplicate_names": [],
+        "member_count": 1,
+        "members": [
+          {
+            "compress_size": 276289,
+            "compress_type": 0,
+            "date_time": [
+              1980,
+              1,
+              1,
+              0,
+              0,
+              0
+            ],
+            "external_attr": 27525120,
+            "file_size": 276289,
+            "filename": "p"
+          }
+        ],
+        "single_stored_member_p": true,
+        "status": "passed"
+      }
+    },
+    {
+      "archive_bytes": 276332,
+      "archive_path": "experiments/results/pr77_action_pose_mixed_container_20260503_codex/pr77_actions_c089mask_pr75renderer_c089pose_p3/archive.zip",
+      "archive_sha256": "a0e4b86baf01838d42083d66841a037bca7c6d98ab38c139085a23287cab3b37",
+      "break_even_vs_c091": {
+        "anchor": "c091_pr75_public_replay",
+        "archive_delta_bytes_vs_c091": -149,
+        "rate_score_delta_vs_c091": -9.921298401520353e-05,
+        "score_if_components_unchanged": 0.31506653729884454,
+        "sub314_component_score_improvement_needed": 0.0010665372988445387,
+        "sub314_equivalent_bytes_needed_after_candidate": 1602
+      },
+      "candidate_id": "pr77_actions_c089mask_pr75renderer_c089pose_p3",
+      "component_basin_prior": "same PR77 action basin as the queued fixed-slice candidate; use only as parser-risk fallback.",
+      "evidence_grade": "empirical_byte_screen_and_prior_exact_eval_context",
+      "exact_dispatch_readiness": "fallback_ready_after_lane_claim_if_fixedslice_candidate_fails",
+      "family": "pr77_action_pose_mixed_container",
+      "local_readiness": "runtime_parse_validation_passed_in_source_manifest",
+      "manifest_path": "experiments/results/pr77_action_pose_mixed_container_20260503_codex/pr77_actions_c089mask_pr75renderer_c089pose_p3/manifest.json",
+      "no_remote_gpu_dispatch_performed": true,
+      "rank_notes": [
+        "self-describing P3 fallback",
+        "3 bytes larger than fixed-slice row",
+        "not an independent component experiment"
+      ],
+      "score_claim": false,
+      "source_manifest_summary": {
+        "noop": false,
+        "noop_status": "non_noop_payload",
+        "source_manifest_dispatch_safety": {
+          "dispatchable_after_gate": true,
+          "next_dispatch_safety_gate": "claim lane via tools/claim_lane_dispatch.py, then exact CUDA auth eval: archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda"
+        }
+      },
+      "source_streams": {
+        "actions": "pr77_public_action_delta_source_order",
+        "mask": "c089_lossless_resweep",
+        "pose": "c089_qp1_lossless_resweep",
+        "renderer": "c091_pr75_public"
+      },
+      "sub314_dispatch_worthy": false,
+      "top3_exact_eval_candidate_rank": null,
+      "zip_profile": {
+        "archive_bytes": 276332,
+        "duplicate_names": [],
+        "member_count": 1,
+        "members": [
+          {
+            "compress_size": 276232,
+            "compress_type": 0,
+            "date_time": [
+              1980,
+              1,
+              1,
+              0,
+              0,
+              0
+            ],
+            "external_attr": 27525120,
+            "file_size": 276232,
+            "filename": "p"
+          }
+        ],
+        "single_stored_member_p": true,
+        "status": "passed"
+      }
+    },
+    {
+      "archive_bytes": 276337,
+      "archive_path": "experiments/results/pr77_action_pose_mixed_container_20260503_codex/pr77_actions_sorted_c089mask_pr75renderer_c089pose_p6_probe/archive.zip",
+      "archive_sha256": "686af16796bc3f3a8f3e8d050492ba77a86237ae2b4eb9df0238b221329619c8",
+      "break_even_vs_c091": {
+        "anchor": "c091_pr75_public_replay",
+        "archive_delta_bytes_vs_c091": -144,
+        "rate_score_delta_vs_c091": -9.588368924959268e-05,
+        "score_if_components_unchanged": 0.3150698665936102,
+        "sub314_component_score_improvement_needed": 0.0010698665936101914,
+        "sub314_equivalent_bytes_needed_after_candidate": 1607
+      },
+      "candidate_id": "pr77_actions_sorted_c089mask_pr75renderer_c089pose_p6_probe",
+      "component_basin_prior": "changes action record order; not dispatchable until parity proves runtime output equivalence.",
+      "evidence_grade": "empirical_byte_screen_and_prior_exact_eval_context",
+      "exact_dispatch_readiness": "not_ready; requires local action-order raw-output parity proof",
+      "family": "pr77_action_order_probe",
+      "local_readiness": "fail_closed_before_exact_eval",
+      "manifest_path": "experiments/results/pr77_action_pose_mixed_container_20260503_codex/pr77_actions_sorted_c089mask_pr75renderer_c089pose_p6_probe/manifest.json",
+      "no_remote_gpu_dispatch_performed": true,
+      "rank_notes": [
+        "P6 byte probe only",
+        "decoded action order changes",
+        "do not dispatch from this matrix"
+      ],
+      "score_claim": false,
+      "source_manifest_summary": {
+        "noop": false,
+        "noop_status": "non_noop_payload",
+        "source_manifest_dispatch_safety": {
+          "dispatchable_after_gate": false,
+          "next_dispatch_safety_gate": "non-dispatchable until a local PR75 action-order raw-output parity proof or equivalent reviewed runtime proof shows sorted action records are output-equivalent; then claim lane and run exact CUDA auth eval"
+        }
+      },
+      "source_streams": {
+        "actions": "pr77_public_actions_sorted_for_p6_probe",
+        "mask": "c089_lossless_resweep",
+        "pose": "c089_qp1_lossless_resweep",
+        "renderer": "c091_pr75_public"
+      },
+      "sub314_dispatch_worthy": false,
+      "top3_exact_eval_candidate_rank": null,
+      "zip_profile": {
+        "archive_bytes": 276337,
+        "duplicate_names": [],
+        "member_count": 1,
+        "members": [
+          {
+            "compress_size": 276237,
+            "compress_type": 0,
+            "date_time": [
+              1980,
+              1,
+              1,
+              0,
+              0,
+              0
+            ],
+            "external_attr": 27525120,
+            "file_size": 276237,
+            "filename": "p"
+          }
+        ],
+        "single_stored_member_p": true,
+        "status": "passed"
+      }
+    }
+  ],
+  "component_evidence": {
+    "c091_anchor": {
+      "archive_bytes": 276481,
+      "archive_sha256": "03a2afd5fe92c93a9b7b7e43625158a73b455f0cfbca82d278008a728db78746",
+      "avg_posenet_dist": 0.00049371,
+      "avg_segnet_dist": 0.00060804,
+      "component_score": 0.13106850028285977,
+      "component_score_delta_vs_c091": 0.0,
+      "path": "experiments/results/lightning_batch/exact_eval_pr75_minp_public_replay_t4_20260503T1049Z/contest_auth_eval.json",
+      "score_recomputed_from_components": 0.31516575028285976
+    },
+    "pr75_minp_public_actions_only_t4": {
+      "archive_bytes": 276479,
+      "archive_sha256": "dc9b22624b3f10e3c7cbc65047bb448ecda10cfe1dd5ad3f0e30cc990ec423d8",
+      "avg_posenet_dist": 0.00049676,
+      "avg_segnet_dist": 0.00060817,
+      "component_score": 0.13129820316793692,
+      "component_score_delta_vs_c091": 0.00022970288507714876,
+      "path": "experiments/results/lightning_batch/exact_eval_pr75_minp_public_actions_only_t4_20260503T1101Z/contest_auth_eval.json",
+      "score_recomputed_from_components": 0.3153942031679369
+    },
+    "pr75_top25_ampminus1_p3_t4": {
+      "archive_bytes": 276328,
+      "archive_sha256": "bdc966be526bb8f5ddcd433eaff2e3708779fd291eb40deea5539df5a7bc2386",
+      "avg_posenet_dist": 0.00049626,
+      "avg_segnet_dist": 0.00061154,
+      "component_score": 0.1315997237878922,
+      "component_score_delta_vs_c091": 0.0005312235050324299,
+      "path": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top25_ampminus1_p3_t4_20260503T0520Z/contest_auth_eval.json",
+      "score_recomputed_from_components": 0.3155952237878922
+    },
+    "pr75_top40_p3_t4": {
+      "archive_bytes": 276386,
+      "archive_sha256": "9feef7ffaa254f9e5408996a122682757a054144a3000539553786c5292b7d0a",
+      "avg_posenet_dist": 0.00049633,
+      "avg_segnet_dist": 0.00061038,
+      "component_score": 0.13148869197672938,
+      "component_score_delta_vs_c091": 0.00042019169386961486,
+      "path": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/contest_auth_eval.json",
+      "score_recomputed_from_components": 0.3155226919767294
+    },
+    "pr77_public_replay": {
+      "archive_bytes": 276551,
+      "archive_sha256": "f90880383c95e14d82704f99db9b20944786ae6452a844348638b06c439972af",
+      "avg_posenet_dist": 0.00049588,
+      "avg_segnet_dist": 0.00060816,
+      "component_score": 0.131234747503772,
+      "component_score_delta_vs_c091": 0.0001662472209122412,
+      "path": "experiments/results/lightning_batch/exact_eval_pr77_tile_delta_public_replay_t4_20260503T1116Z/contest_auth_eval.json",
+      "score_recomputed_from_components": 0.31537874750377204
+    }
+  },
+  "finding": {
+    "mathematical_blocker": "Best local rows save only 152-164 bytes versus C091, worth about 0.00010 score. Crossing 0.314 still needs about 0.00106 component-score improvement, while observed PR77 replay and PR75 action exact probes are component-negative or far smaller.",
+    "no_new_sub314_dispatch_worthy_candidate": true
+  },
+  "promotion_eligible": false,
+  "schema": "c091_relative_pr75_pr77_action_pose_candidate_matrix_v1",
+  "score_claim": false,
+  "sub314_target": 0.314,
+  "tool": "experiments/build_c091_relative_pr75_pr77_action_pose_matrix.py"
+}

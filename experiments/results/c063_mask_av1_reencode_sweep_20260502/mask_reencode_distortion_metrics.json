@@ -1,0 +1,108 @@
+{
+  "records": [
+    {
+      "archive_bytes": 263436,
+      "archive_sha256": "7896970afae44d3c1c24068abc73b1adaa153a4b201028b3ea22ab9fb397a5c2",
+      "changed_pixels_total": 484196,
+      "label": "crf52",
+      "mask_stream_bytes": 216317,
+      "max_abs_gray_delta": 255,
+      "max_frame_disagreement_fraction": 0.0071868896484375,
+      "mean_abs_gray_delta": 0.530285169813368,
+      "median_frame_disagreement_fraction": 0.004435221354166667,
+      "per_class_candidate_counts": [
+        27424643,
+        702819,
+        58421430,
+        1450902,
+        29965006
+      ],
+      "per_class_source_counts": [
+        27408427,
+        690063,
+        58413695,
+        1459867,
+        29992748
+      ],
+      "pixel_disagreement_fraction": 0.004104580349392361
+    },
+    {
+      "archive_bytes": 204383,
+      "archive_sha256": "b4adeecd9f25f3ab24324eed7fd2bd4a3d00305adb3c2fae7ae1a985a437464c",
+      "changed_pixels_total": 600117,
+      "label": "crf56",
+      "mask_stream_bytes": 157123,
+      "max_abs_gray_delta": 255,
+      "max_frame_disagreement_fraction": 0.00921630859375,
+      "mean_abs_gray_delta": 0.5873038313123915,
+      "median_frame_disagreement_fraction": 0.005304972330729167,
+      "per_class_candidate_counts": [
+        27438491,
+        691917,
+        58429403,
+        1449140,
+        29955849
+      ],
+      "per_class_source_counts": [
+        27408427,
+        690063,
+        58413695,
+        1459867,
+        29992748
+      ],
+      "pixel_disagreement_fraction": 0.0050872548421223955
+    },
+    {
+      "archive_bytes": 156467,
+      "archive_sha256": "6a62c950090ff7657f626afb3d23ada7f5d189e551aa8c26b933b75d1aa945c6",
+      "changed_pixels_total": 739705,
+      "label": "crf60",
+      "mask_stream_bytes": 109183,
+      "max_abs_gray_delta": 255,
+      "max_frame_disagreement_fraction": 0.011606852213541666,
+      "mean_abs_gray_delta": 0.6591709899902344,
+      "median_frame_disagreement_fraction": 0.00653076171875,
+      "per_class_candidate_counts": [
+        27475485,
+        659272,
+        58438553,
+        1442421,
+        29949069
+      ],
+      "per_class_source_counts": [
+        27408427,
+        690063,
+        58413695,
+        1459867,
+        29992748
+      ],
+      "pixel_disagreement_fraction": 0.006270556979709201
+    },
+    {
+      "archive_bytes": 110304,
+      "archive_sha256": "593d1825546c0ba6d254dfb849d72318bf426c0610fb34a205619d92aeb91d83",
+      "changed_pixels_total": 1057051,
+      "label": "crf63",
+      "mask_stream_bytes": 63150,
+      "max_abs_gray_delta": 255,
+      "max_frame_disagreement_fraction": 0.021840413411458332,
+      "mean_abs_gray_delta": 0.9063947380913628,
+      "median_frame_disagreement_fraction": 0.009112040201822916,
+      "per_class_candidate_counts": [
+        27487631,
+        654844,
+        58470185,
+        1426197,
+        29925943
+      ],
+      "per_class_source_counts": [
+        27408427,
+        690063,
+        58413695,
+        1459867,
+        29992748
+      ],
+      "pixel_disagreement_fraction": 0.00896073235405816
+    }
+  ]
+}

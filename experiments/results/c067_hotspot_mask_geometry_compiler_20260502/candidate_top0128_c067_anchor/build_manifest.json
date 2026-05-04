@@ -1,0 +1,1052 @@
+{
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "cmg3": {
+    "body_bytes": 71307,
+    "body_sha256": "a5b9b05a4b7cc85a3d8e36bc418c3e937316bd07846e3ed8279799a027c50886",
+    "class_count": 5,
+    "compression_candidates": [
+      {
+        "body_bytes": 71307,
+        "body_sha256": "a5b9b05a4b7cc85a3d8e36bc418c3e937316bd07846e3ed8279799a027c50886",
+        "compressor": "bz2"
+      },
+      {
+        "body_bytes": 79812,
+        "body_sha256": "330d76d91e5c2cf8524eed6efbe40088425fd1d4b12fa6f907650f6a42a20d99",
+        "compressor": "lzma_xz"
+      },
+      {
+        "body_bytes": 142070,
+        "body_sha256": "26e3d0e1f283c5655a17c02b3e3a11f179cb561aa438311a53b4e47852205d3d",
+        "compressor": "zlib"
+      },
+      {
+        "body_bytes": 1342590,
+        "body_sha256": "1d83d4fe66673bb340dd1d1adc70baa3c446dee876d72f073d037939d761c0ae",
+        "compressor": "raw"
+      }
+    ],
+    "compressor": "bz2",
+    "default_class": 0,
+    "frame_count": 600,
+    "height": 384,
+    "lossless_under_builder": false,
+    "max_runs_per_row": 3,
+    "mode": "nonzero_row_runs_topk_v1",
+    "payload_bytes": 76249,
+    "payload_sha256": "4bf80a5829a9b53e5bd0ab3411395564e96f10c69ca4a027e09555f3ee607bc1",
+    "pixel_disagreement_count_vs_source": 4173778,
+    "pixel_disagreement_vs_source": 0.03538155449761285,
+    "promotion_eligible": false,
+    "reconstructed_mask_u8_sha256": "0d40f59feed063a8cc60799fbbc8d9dee56193e5123c743a72c1e78056390cc2",
+    "record_struct": "u8_count_then_u8_class_u16_start_u16_end_le",
+    "run_stats": {
+      "available_rank_histogram": {
+        "1": 222328,
+        "10": 643,
+        "11": 441,
+        "12": 200,
+        "13": 120,
+        "14": 49,
+        "15": 30,
+        "16": 14,
+        "17": 4,
+        "18": 1,
+        "19": 1,
+        "2": 50412,
+        "3": 35409,
+        "4": 25847,
+        "5": 18189,
+        "6": 10749,
+        "7": 5745,
+        "8": 2272,
+        "9": 1275
+      },
+      "base_required_runs": 222328,
+      "base_runs_per_row": 1,
+      "base_top1_runs": 222328,
+      "body_search": {
+        "baseline_body_bytes": 70493,
+        "body_search_mode": "auto",
+        "cap_body_bytes": 71307,
+        "coarse_step": null,
+        "coarse_steps": 192,
+        "effective_extra_run_cap": 110,
+        "evaluated_prefix_count": 111,
+        "evaluations": [
+          {
+            "body_bytes": 70493,
+            "extra_runs": 0
+          },
+          {
+            "body_bytes": 70457,
+            "extra_runs": 1
+          },
+          {
+            "body_bytes": 70589,
+            "extra_runs": 2
+          },
+          {
+            "body_bytes": 70468,
+            "extra_runs": 3
+          },
+          {
+            "body_bytes": 70600,
+            "extra_runs": 4
+          },
+          {
+            "body_bytes": 70726,
+            "extra_runs": 5
+          },
+          {
+            "body_bytes": 70722,
+            "extra_runs": 6
+          },
+          {
+            "body_bytes": 70917,
+            "extra_runs": 7
+          },
+          {
+            "body_bytes": 70562,
+            "extra_runs": 8
+          },
+          {
+            "body_bytes": 70727,
+            "extra_runs": 9
+          },
+          {
+            "body_bytes": 70734,
+            "extra_runs": 10
+          },
+          {
+            "body_bytes": 70754,
+            "extra_runs": 11
+          },
+          {
+            "body_bytes": 70756,
+            "extra_runs": 12
+          },
+          {
+            "body_bytes": 70781,
+            "extra_runs": 13
+          },
+          {
+            "body_bytes": 70720,
+            "extra_runs": 14
+          },
+          {
+            "body_bytes": 70656,
+            "extra_runs": 15
+          },
+          {
+            "body_bytes": 70678,
+            "extra_runs": 16
+          },
+          {
+            "body_bytes": 70612,
+            "extra_runs": 17
+          },
+          {
+            "body_bytes": 70940,
+            "extra_runs": 18
+          },
+          {
+            "body_bytes": 70503,
+            "extra_runs": 19
+          },
+          {
+            "body_bytes": 70657,
+            "extra_runs": 20
+          },
+          {
+            "body_bytes": 70701,
+            "extra_runs": 21
+          },
+          {
+            "body_bytes": 70636,
+            "extra_runs": 22
+          },
+          {
+            "body_bytes": 70724,
+            "extra_runs": 23
+          },
+          {
+            "body_bytes": 70750,
+            "extra_runs": 24
+          },
+          {
+            "body_bytes": 70749,
+            "extra_runs": 25
+          },
+          {
+            "body_bytes": 70736,
+            "extra_runs": 26
+          },
+          {
+            "body_bytes": 70835,
+            "extra_runs": 27
+          },
+          {
+            "body_bytes": 70820,
+            "extra_runs": 28
+          },
+          {
+            "body_bytes": 70868,
+            "extra_runs": 29
+          },
+          {
+            "body_bytes": 70800,
+            "extra_runs": 30
+          },
+          {
+            "body_bytes": 71200,
+            "extra_runs": 31
+          },
+          {
+            "body_bytes": 71181,
+            "extra_runs": 32
+          },
+          {
+            "body_bytes": 71174,
+            "extra_runs": 33
+          },
+          {
+            "body_bytes": 71147,
+            "extra_runs": 34
+          },
+          {
+            "body_bytes": 70818,
+            "extra_runs": 35
+          },
+          {
+            "body_bytes": 70908,
+            "extra_runs": 36
+          },
+          {
+            "body_bytes": 70872,
+            "extra_runs": 37
+          },
+          {
+            "body_bytes": 70987,
+            "extra_runs": 38
+          },
+          {
+            "body_bytes": 70995,
+            "extra_runs": 39
+          },
+          {
+            "body_bytes": 70968,
+            "extra_runs": 40
+          },
+          {
+            "body_bytes": 70970,
+            "extra_runs": 41
+          },
+          {
+            "body_bytes": 70890,
+            "extra_runs": 42
+          },
+          {
+            "body_bytes": 70912,
+            "extra_runs": 43
+          },
+          {
+            "body_bytes": 70928,
+            "extra_runs": 44
+          },
+          {
+            "body_bytes": 70987,
+            "extra_runs": 45
+          },
+          {
+            "body_bytes": 70821,
+            "extra_runs": 46
+          },
+          {
+            "body_bytes": 70811,
+            "extra_runs": 47
+          },
+          {
+            "body_bytes": 70806,
+            "extra_runs": 48
+          },
+          {
+            "body_bytes": 71029,
+            "extra_runs": 49
+          },
+          {
+            "body_bytes": 71053,
+            "extra_runs": 50
+          },
+          {
+            "body_bytes": 71083,
+            "extra_runs": 51
+          },
+          {
+            "body_bytes": 71097,
+            "extra_runs": 52
+          },
+          {
+            "body_bytes": 71086,
+            "extra_runs": 53
+          },
+          {
+            "body_bytes": 71043,
+            "extra_runs": 54
+          },
+          {
+            "body_bytes": 71133,
+            "extra_runs": 55
+          },
+          {
+            "body_bytes": 71099,
+            "extra_runs": 56
+          },
+          {
+            "body_bytes": 71036,
+            "extra_runs": 57
+          },
+          {
+            "body_bytes": 71110,
+            "extra_runs": 58
+          },
+          {
+            "body_bytes": 71123,
+            "extra_runs": 59
+          },
+          {
+            "body_bytes": 71103,
+            "extra_runs": 60
+          },
+          {
+            "body_bytes": 71097,
+            "extra_runs": 61
+          },
+          {
+            "body_bytes": 71037,
+            "extra_runs": 62
+          },
+          {
+            "body_bytes": 71122,
+            "extra_runs": 63
+          },
+          {
+            "body_bytes": 70909,
+            "extra_runs": 64
+          },
+          {
+            "body_bytes": 70986,
+            "extra_runs": 65
+          },
+          {
+            "body_bytes": 70839,
+            "extra_runs": 66
+          },
+          {
+            "body_bytes": 70847,
+            "extra_runs": 67
+          },
+          {
+            "body_bytes": 70987,
+            "extra_runs": 68
+          },
+          {
+            "body_bytes": 71100,
+            "extra_runs": 69
+          },
+          {
+            "body_bytes": 71196,
+            "extra_runs": 70
+          },
+          {
+            "body_bytes": 71033,
+            "extra_runs": 71
+          },
+          {
+            "body_bytes": 71300,
+            "extra_runs": 72
+          },
+          {
+            "body_bytes": 70910,
+            "extra_runs": 73
+          },
+          {
+            "body_bytes": 71102,
+            "extra_runs": 74
+          },
+          {
+            "body_bytes": 71087,
+            "extra_runs": 75
+          },
+          {
+            "body_bytes": 71105,
+            "extra_runs": 76
+          },
+          {
+            "body_bytes": 71171,
+            "extra_runs": 77
+          },
+          {
+            "body_bytes": 71084,
+            "extra_runs": 78
+          },
+          {
+            "body_bytes": 71282,
+            "extra_runs": 79
+          },
+          {
+            "body_bytes": 71233,
+            "extra_runs": 80
+          },
+          {
+            "body_bytes": 71269,
+            "extra_runs": 81
+          },
+          {
+            "body_bytes": 71197,
+            "extra_runs": 82
+          },
+          {
+            "body_bytes": 71142,
+            "extra_runs": 83
+          },
+          {
+            "body_bytes": 71004,
+            "extra_runs": 84
+          },
+          {
+            "body_bytes": 71139,
+            "extra_runs": 85
+          },
+          {
+            "body_bytes": 71381,
+            "extra_runs": 86
+          },
+          {
+            "body_bytes": 71198,
+            "extra_runs": 87
+          },
+          {
+            "body_bytes": 71187,
+            "extra_runs": 88
+          },
+          {
+            "body_bytes": 71088,
+            "extra_runs": 89
+          },
+          {
+            "body_bytes": 71075,
+            "extra_runs": 90
+          },
+          {
+            "body_bytes": 71099,
+            "extra_runs": 91
+          },
+          {
+            "body_bytes": 71138,
+            "extra_runs": 92
+          },
+          {
+            "body_bytes": 71166,
+            "extra_runs": 93
+          },
+          {
+            "body_bytes": 71260,
+            "extra_runs": 94
+          },
+          {
+            "body_bytes": 71260,
+            "extra_runs": 95
+          },
+          {
+            "body_bytes": 71210,
+            "extra_runs": 96
+          },
+          {
+            "body_bytes": 71254,
+            "extra_runs": 97
+          },
+          {
+            "body_bytes": 71161,
+            "extra_runs": 98
+          },
+          {
+            "body_bytes": 71243,
+            "extra_runs": 99
+          },
+          {
+            "body_bytes": 71188,
+            "extra_runs": 100
+          },
+          {
+            "body_bytes": 71295,
+            "extra_runs": 101
+          },
+          {
+            "body_bytes": 71227,
+            "extra_runs": 102
+          },
+          {
+            "body_bytes": 71070,
+            "extra_runs": 103
+          },
+          {
+            "body_bytes": 71079,
+            "extra_runs": 104
+          },
+          {
+            "body_bytes": 71055,
+            "extra_runs": 105
+          },
+          {
+            "body_bytes": 71303,
+            "extra_runs": 106
+          },
+          {
+            "body_bytes": 71296,
+            "extra_runs": 107
+          },
+          {
+            "body_bytes": 71263,
+            "extra_runs": 108
+          },
+          {
+            "body_bytes": 71090,
+            "extra_runs": 109
+          },
+          {
+            "body_bytes": 71307,
+            "extra_runs": 110
+          }
+        ],
+        "exact_limit": 4096,
+        "exhaustive_prefix_search": true,
+        "local_radius": 12,
+        "monotonic_binary_search": false,
+        "note": "Compressed body size is explicitly treated as nonmonotonic over priority prefixes. Exhaustive mode is exact over all prefixes; coarse mode records sampled-prefix coverage and must not be described as an exact optimizer.",
+        "selected_body_bytes_during_search": 71307,
+        "selected_by": "largest_exhaustive_priority_prefix_under_target_body_bytes",
+        "target_body_bytes": 166000,
+        "target_met": true,
+        "unevaluated_prefix_count": 0
+      },
+      "candidate_extra_runs": 148623,
+      "max_available_runs_per_row": 19,
+      "max_selected_runs_per_row": 3,
+      "pixel_disagreement": 0.03538155449761285,
+      "pixel_disagreement_count": 4173778,
+      "reconstructed_tensor_sha256": "0d40f59feed063a8cc60799fbbc8d9dee56193e5123c743a72c1e78056390cc2",
+      "rows_with_extra_runs": 108,
+      "selected_class_histogram": {
+        "1": 28923,
+        "2": 124747,
+        "3": 7660,
+        "4": 61108
+      },
+      "selected_extra_class_histogram": {
+        "2": 110
+      },
+      "selected_extra_priority_max": 59.26263281250001,
+      "selected_extra_priority_min": 13.450108056328125,
+      "selected_extra_rank_histogram": {
+        "2": 59,
+        "3": 44,
+        "4": 7
+      },
+      "selected_extra_runs": 110,
+      "selected_rank_histogram": {
+        "1": 222328,
+        "2": 59,
+        "3": 44,
+        "4": 7
+      },
+      "selected_rows_by_run_count": {
+        "0": 8072,
+        "1": 222220,
+        "2": 106,
+        "3": 2
+      },
+      "selected_run_fraction": 0.5951852813134652,
+      "selected_runs": 222438,
+      "total_nonzero_runs": 373729
+    },
+    "run_stream_bytes": 1342590,
+    "run_stream_sha256": "1d83d4fe66673bb340dd1d1adc70baa3c446dee876d72f073d037939d761c0ae",
+    "schema": "cmg3a_adaptive_nonzero_row_runs_candidate_v1",
+    "score_claim": false,
+    "selection_policy": {
+      "adaptive_max_runs_per_row": 8,
+      "base_runs_per_row": 1,
+      "effective_extra_run_cap": 148623,
+      "effective_field_candidate_pool": {
+        "candidate_extra_runs_available": 110,
+        "selected_extra_runs_from_field_pool": 110
+      },
+      "evidence_boundary": "Policy is a deterministic byte-screen prior. It is not scorer, promotion, or retirement evidence without exact CUDA auth eval.",
+      "field_atom_policy": {
+        "already_base_atom_count": 18,
+        "already_base_atoms": [
+          {
+            "class_id": 2,
+            "frame_index": 587,
+            "x0": 218,
+            "x1_exclusive": 505,
+            "y": 171
+          },
+          {
+            "class_id": 2,
+            "frame_index": 588,
+            "x0": 216,
+            "x1_exclusive": 503,
+            "y": 171
+          },
+          {
+            "class_id": 2,
+            "frame_index": 587,
+            "x0": 216,
+            "x1_exclusive": 509,
+            "y": 170
+          },
+          {
+            "class_id": 2,
+            "frame_index": 104,
+            "x0": 108,
+            "x1_exclusive": 323,
+            "y": 169
+          },
+          {
+            "class_id": 2,
+            "frame_index": 586,
+            "x0": 217,
+            "x1_exclusive": 484,
+            "y": 170
+          },
+          {
+            "class_id": 2,
+            "frame_index": 572,
+            "x0": 269,
+            "x1_exclusive": 406,
+            "y": 173
+          },
+          {
+            "class_id": 2,
+            "frame_index": 86,
+            "x0": 124,
+            "x1_exclusive": 344,
+            "y": 167
+          },
+          {
+            "class_id": 2,
+            "frame_index": 573,
+            "x0": 114,
+            "x1_exclusive": 235,
+            "y": 178
+          },
+          {
+            "class_id": 2,
+            "frame_index": 572,
+            "x0": 272,
+            "x1_exclusive": 402,
+            "y": 174
+          },
+          {
+            "class_id": 2,
+            "frame_index": 573,
+            "x0": 270,
+            "x1_exclusive": 396,
+            "y": 176
+          },
+          {
+            "class_id": 2,
+            "frame_index": 86,
+            "x0": 124,
+            "x1_exclusive": 341,
+            "y": 168
+          },
+          {
+            "class_id": 2,
+            "frame_index": 86,
+            "x0": 124,
+            "x1_exclusive": 339,
+            "y": 169
+          },
+          {
+            "class_id": 2,
+            "frame_index": 572,
+            "x0": 272,
+            "x1_exclusive": 394,
+            "y": 176
+          },
+          {
+            "class_id": 2,
+            "frame_index": 572,
+            "x0": 272,
+            "x1_exclusive": 397,
+            "y": 175
+          },
+          {
+            "class_id": 2,
+            "frame_index": 573,
+            "x0": 113,
+            "x1_exclusive": 233,
+            "y": 179
+          },
+          {
+            "class_id": 2,
+            "frame_index": 585,
+            "x0": 267,
+            "x1_exclusive": 490,
+            "y": 171
+          },
+          {
+            "class_id": 2,
+            "frame_index": 573,
+            "x0": 275,
+            "x1_exclusive": 395,
+            "y": 177
+          },
+          {
+            "class_id": 2,
+            "frame_index": 140,
+            "x0": 10,
+            "x1_exclusive": 182,
+            "y": 177
+          }
+        ],
+        "contract": "selected_row_run_atoms identify source row-run atoms by frame_index,y,x0,x1_exclusive,class_id. Atoms already present in the mandatory base_runs_per_row prefix are recorded and not re-encoded.",
+        "duplicate_selected_atom_count": 0,
+        "expected_base_runs_per_row": null,
+        "matched_extra_atom_count": 110,
+        "policy_id": "c067_hotspot_geometry_top0128",
+        "requested_row_run_atom_count": 128,
+        "source_basename": "c067_hotspot_mask_geometry_plan.json",
+        "source_mode": null,
+        "source_schema": "yousfi_fridrich_atom_field_allocator_v1",
+        "source_sha256": "8d21fc2be8e4f58090e5fd9268724b803925ad79a5acd50d7eca8a53618042f9",
+        "unmatched_atom_count": 0,
+        "unmatched_atoms": []
+      },
+      "hard_frame_indices": {
+        "frame_count": 0,
+        "frames": [],
+        "sources": []
+      },
+      "priority_formula": "After base_runs_per_row ranked nonzero row runs are kept, extra atoms are ranked by length * class_weight * (1 + foveal_row_weight*row_center + foveal_col_weight*col_center) * hard_frame_multiplier_if_selected * (1 + boundary_detail_weight*short_run_prior) * rank_decay**max(0, rank-2) / raw_bytes_per_extra_atom",
+      "raw_bytes_per_extra_atom": 5.0,
+      "row_rank_prefix_required": false,
+      "schema": "cmg3a_adaptive_global_nonzero_row_run_policy_v1",
+      "selected_extra_runs": 110,
+      "selected_max_runs_per_row": 3,
+      "selector": "field_equation_explicit_row_run_policy_after_base_runs_per_row",
+      "sort_order": "priority_desc_then_frame_row_rank_start_end_class",
+      "target_body_bytes": 166000,
+      "target_extra_runs": null,
+      "weights": {
+        "boundary_detail_weight": 0.08,
+        "boundary_reference_run_length": 64,
+        "class_weight_note": "Explicit byte-screen priors only: class-id preference for likely vehicle/lane/boundary/source-sensitive mask structure. Not score evidence.",
+        "class_weights": {
+          "1": 1.08,
+          "2": 1.3,
+          "3": 1.22,
+          "4": 1.16
+        },
+        "foveal_col_weight": 0.2,
+        "foveal_row_weight": 0.2,
+        "hard_frame_multiplier": 1.35,
+        "rank_decay": 0.92
+      },
+      "wire_mode": "nonzero_row_runs_topk_v1"
+    },
+    "selector": "cmg3a_adaptive_global_budget",
+    "source_mask_u8_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+    "width": 512
+  },
+  "decoded_mask_array": {
+    "npy_sha256": "13f81851ae206f6142cd3348db5537eda4ea832665052824816f4d1bf432de0c",
+    "path": "/Users/adpena/Projects/pact/experiments/results/c063_trace_weighted_mask_grammar_plan_20260502_codex/decoded_mask_array.npy",
+    "shape": [
+      600,
+      384,
+      512
+    ],
+    "tensor_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45"
+  },
+  "evidence_grade": "empirical_byte_screen_archive_candidate_until_exact_cuda",
+  "frontier_archive": {
+    "bytes": 276214,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip",
+    "sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a"
+  },
+  "output_archive": {
+    "bytes": 129857,
+    "delta_bytes_vs_frontier": -146357,
+    "formula_only_rate_delta_vs_frontier": -0.09745311880210163,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c067_hotspot_mask_geometry_compiler_20260502/candidate_top0128_c067_anchor/archive.zip",
+    "sha256": "e8bd5b202efd9bc4f60f83a2a14879449ec2b4d9b241ed8a7cfe682dd567eb0b"
+  },
+  "packed_payload": {
+    "brotli_quality": 11,
+    "evidence_grade": "empirical",
+    "formula_only_rate_delta": -0.008797328488650127,
+    "header": {
+      "members": [
+        {
+          "bytes": 59288,
+          "codec": "raw",
+          "name": "renderer.bin",
+          "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+        },
+        {
+          "bytes": 76249,
+          "codec": "raw",
+          "name": "masks.cmg3",
+          "sha256": "4bf80a5829a9b53e5bd0ab3411395564e96f10c69ca4a027e09555f3ee607bc1"
+        },
+        {
+          "bytes": 1140,
+          "codec": "pose_qp1_v1",
+          "decoded_bytes": 7200,
+          "decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f",
+          "lossy": true,
+          "name": "optimized_poses.bin",
+          "pose_error_stats": {
+            "max_abs_by_dim": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "pose_dim": 6,
+            "rmse_by_dim": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "rows": 600
+          },
+          "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583",
+          "source_decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+        }
+      ],
+      "schema": "renderer_payload_v1",
+      "source_archive_sha256": "bb0f8eb905ccdc3e1d90e86d36fabb2a8f814d44da4d75a9ac832a2b21e28752"
+    },
+    "output_archive": "/Users/adpena/Projects/pact/experiments/results/c067_hotspot_mask_geometry_compiler_20260502/candidate_top0128_c067_anchor/archive.zip",
+    "output_archive_bytes": 129857,
+    "output_archive_sha256": "e8bd5b202efd9bc4f60f83a2a14879449ec2b4d9b241ed8a7cfe682dd567eb0b",
+    "payload_compressed_bytes": 129757,
+    "payload_format": "rpk1_json",
+    "payload_member": "p",
+    "payload_raw_bytes": 137553,
+    "pose_codec": "pose_qp1_v1",
+    "pose_residual_topk": 0,
+    "savings_bytes": 13212,
+    "score_claim": false,
+    "source_archive": "/Users/adpena/Projects/pact/experiments/results/c067_hotspot_mask_geometry_compiler_20260502/candidate_top0128_c067_anchor/cmg3a_adaptive_runs_source_members.zip",
+    "source_archive_bytes": 143069,
+    "source_archive_sha256": "bb0f8eb905ccdc3e1d90e86d36fabb2a8f814d44da4d75a9ac832a2b21e28752"
+  },
+  "policy": {
+    "adaptive_max_runs_per_row": 8,
+    "base_runs_per_row": 1,
+    "effective_extra_run_cap": 148623,
+    "effective_field_candidate_pool": {
+      "candidate_extra_runs_available": 110,
+      "selected_extra_runs_from_field_pool": 110
+    },
+    "evidence_boundary": "Policy is a deterministic byte-screen prior. It is not scorer, promotion, or retirement evidence without exact CUDA auth eval.",
+    "field_atom_policy": {
+      "already_base_atom_count": 18,
+      "already_base_atoms": [
+        {
+          "class_id": 2,
+          "frame_index": 587,
+          "x0": 218,
+          "x1_exclusive": 505,
+          "y": 171
+        },
+        {
+          "class_id": 2,
+          "frame_index": 588,
+          "x0": 216,
+          "x1_exclusive": 503,
+          "y": 171
+        },
+        {
+          "class_id": 2,
+          "frame_index": 587,
+          "x0": 216,
+          "x1_exclusive": 509,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 104,
+          "x0": 108,
+          "x1_exclusive": 323,
+          "y": 169
+        },
+        {
+          "class_id": 2,
+          "frame_index": 586,
+          "x0": 217,
+          "x1_exclusive": 484,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 572,
+          "x0": 269,
+          "x1_exclusive": 406,
+          "y": 173
+        },
+        {
+          "class_id": 2,
+          "frame_index": 86,
+          "x0": 124,
+          "x1_exclusive": 344,
+          "y": 167
+        },
+        {
+          "class_id": 2,
+          "frame_index": 573,
+          "x0": 114,
+          "x1_exclusive": 235,
+          "y": 178
+        },
+        {
+          "class_id": 2,
+          "frame_index": 572,
+          "x0": 272,
+          "x1_exclusive": 402,
+          "y": 174
+        },
+        {
+          "class_id": 2,
+          "frame_index": 573,
+          "x0": 270,
+          "x1_exclusive": 396,
+          "y": 176
+        },
+        {
+          "class_id": 2,
+          "frame_index": 86,
+          "x0": 124,
+          "x1_exclusive": 341,
+          "y": 168
+        },
+        {
+          "class_id": 2,
+          "frame_index": 86,
+          "x0": 124,
+          "x1_exclusive": 339,
+          "y": 169
+        },
+        {
+          "class_id": 2,
+          "frame_index": 572,
+          "x0": 272,
+          "x1_exclusive": 394,
+          "y": 176
+        },
+        {
+          "class_id": 2,
+          "frame_index": 572,
+          "x0": 272,
+          "x1_exclusive": 397,
+          "y": 175
+        },
+        {
+          "class_id": 2,
+          "frame_index": 573,
+          "x0": 113,
+          "x1_exclusive": 233,
+          "y": 179
+        },
+        {
+          "class_id": 2,
+          "frame_index": 585,
+          "x0": 267,
+          "x1_exclusive": 490,
+          "y": 171
+        },
+        {
+          "class_id": 2,
+          "frame_index": 573,
+          "x0": 275,
+          "x1_exclusive": 395,
+          "y": 177
+        },
+        {
+          "class_id": 2,
+          "frame_index": 140,
+          "x0": 10,
+          "x1_exclusive": 182,
+          "y": 177
+        }
+      ],
+      "contract": "selected_row_run_atoms identify source row-run atoms by frame_index,y,x0,x1_exclusive,class_id. Atoms already present in the mandatory base_runs_per_row prefix are recorded and not re-encoded.",
+      "duplicate_selected_atom_count": 0,
+      "expected_base_runs_per_row": null,
+      "matched_extra_atom_count": 110,
+      "policy_id": "c067_hotspot_geometry_top0128",
+      "requested_row_run_atom_count": 128,
+      "source_basename": "c067_hotspot_mask_geometry_plan.json",
+      "source_mode": null,
+      "source_schema": "yousfi_fridrich_atom_field_allocator_v1",
+      "source_sha256": "8d21fc2be8e4f58090e5fd9268724b803925ad79a5acd50d7eca8a53618042f9",
+      "unmatched_atom_count": 0,
+      "unmatched_atoms": []
+    },
+    "hard_frame_indices": {
+      "frame_count": 0,
+      "frames": [],
+      "sources": []
+    },
+    "priority_formula": "After base_runs_per_row ranked nonzero row runs are kept, extra atoms are ranked by length * class_weight * (1 + foveal_row_weight*row_center + foveal_col_weight*col_center) * hard_frame_multiplier_if_selected * (1 + boundary_detail_weight*short_run_prior) * rank_decay**max(0, rank-2) / raw_bytes_per_extra_atom",
+    "raw_bytes_per_extra_atom": 5.0,
+    "row_rank_prefix_required": false,
+    "schema": "cmg3a_adaptive_global_nonzero_row_run_policy_v1",
+    "selected_extra_runs": 110,
+    "selected_max_runs_per_row": 3,
+    "selector": "field_equation_explicit_row_run_policy_after_base_runs_per_row",
+    "sort_order": "priority_desc_then_frame_row_rank_start_end_class",
+    "target_body_bytes": 166000,
+    "target_extra_runs": null,
+    "weights": {
+      "boundary_detail_weight": 0.08,
+      "boundary_reference_run_length": 64,
+      "class_weight_note": "Explicit byte-screen priors only: class-id preference for likely vehicle/lane/boundary/source-sensitive mask structure. Not score evidence.",
+      "class_weights": {
+        "1": 1.08,
+        "2": 1.3,
+        "3": 1.22,
+        "4": 1.16
+      },
+      "foveal_col_weight": 0.2,
+      "foveal_row_weight": 0.2,
+      "hard_frame_multiplier": 1.35,
+      "rank_decay": 0.92
+    },
+    "wire_mode": "nonzero_row_runs_topk_v1"
+  },
+  "promotion_eligible": false,
+  "required_next_steps": [
+    "local unpack/inflate smoke to prove masks.cmg3 routes through runtime",
+    "exact CUDA diagnostic on the archive bytes",
+    "T4 promotion only if component gates are near or below C-067"
+  ],
+  "schema": "cmg3a_adaptive_nonzero_row_runs_candidate_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 143069,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c067_hotspot_mask_geometry_compiler_20260502/candidate_top0128_c067_anchor/cmg3a_adaptive_runs_source_members.zip",
+    "sha256": "bb0f8eb905ccdc3e1d90e86d36fabb2a8f814d44da4d75a9ac832a2b21e28752"
+  }
+}

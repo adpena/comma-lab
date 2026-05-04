@@ -1,0 +1,51 @@
+{
+  "candidate": {
+    "archive_bytes": 237204,
+    "archive_delta_bytes_vs_source": 876,
+    "archive_path": "experiments/results/pr85_qh1_model_candidates_20260504_codex/qh1_top1_minsaving16/archive.zip",
+    "archive_sha256": "31bfb8e35c6cf2b6b77a8a5ad9a0c37d48c02e277c97c26712071cab8a6cbeb2",
+    "candidate_id": "qh1_top1_minsaving16",
+    "model_segment_bytes": 57950,
+    "model_segment_delta_bytes_vs_source": 876,
+    "qh1": {
+      "base_codec": "brotli",
+      "base_encoded_bytes": 53379,
+      "header_bytes": 682,
+      "qh1_bytes": 57946,
+      "qh1_sha256": "124172f809e5bdd234ff57af22e6c744d5a0ec7a7032289a345fbd8d15a18c50",
+      "reconstructs_exact_qh0": true,
+      "selected_record_count": 1,
+      "selected_records": [
+        {
+          "codec": "brotli",
+          "decoded_sha256": "9624f3afe25158283d16e0bc10f0bb0a37e60254769994f1e362400d39019fec",
+          "encoded_bytes": 3878,
+          "encoded_sha256": "da71a4f21ce0b1dd01d8d93c0049e923f9dbbc1dfaa39d0e6d6b8fd7887e758c",
+          "name": "pose_mlp.2.weight",
+          "nbytes": 4609,
+          "offset": 48830,
+          "source_probe_delta_vs_record_bytes": -731
+        }
+      ],
+      "source_qh0_bytes": 61590,
+      "source_qh0_sha256": "503d666ec4c1b3e0ce09fa9dcb963b049de185eac0ddd82318578a7732439ed4"
+    },
+    "rate_score_delta_if_components_identical_formula_only": 0.0005832924429350221,
+    "runtime_compatibility": {
+      "blocker": "QH1 single-x candidate needs a scored runtime tree that parses PR85 x and QH1; byte screen only.",
+      "current_public_pr85_inflate_unmodified": false,
+      "dispatchable_now": false,
+      "robust_current_qh1_loader": true,
+      "single_x_requires_qh1_aware_pr85_runtime": true
+    }
+  },
+  "schema": "pr85_qh1_model_candidate_v1",
+  "source_archive": {
+    "archive_bytes": 236328,
+    "archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+    "member_bytes": 236228,
+    "member_name": "x",
+    "member_sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+    "path": "experiments/results/public_pr85_intake_20260503_codex/archive.zip"
+  }
+}

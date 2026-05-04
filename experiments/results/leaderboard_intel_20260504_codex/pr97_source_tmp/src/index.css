@@ -1,0 +1,125 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  background: #000;
+  color: #fff;
+  font-family: "Inter", system-ui, sans-serif;
+  letter-spacing: -0.04em;
+  font-feature-settings: "ss01", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-height: 100vh;
+  background: #000;
+}
+
+::selection {
+  background: #51FF00;
+  color: #000;
+}
+
+/* Pixel-block letter rendering, used by <PixelText /> */
+.pixel-cell {
+  background-color: currentColor;
+  display: block;
+}
+
+/* Pixel-by-pixel reveal animation. Final opacity is read from --reveal-final-opacity
+   so we can use the same keyframes for "on" cells (target 1) and faint "off" cells
+   (target ~0.04). Slight scale-up gives the pop-in feel. */
+@keyframes pixelReveal {
+  0%   { opacity: 0; transform: scale(0.4); filter: brightness(2); }
+  60%  { opacity: var(--reveal-final-opacity, 1); transform: scale(1.08); filter: brightness(1.4); }
+  100% { opacity: var(--reveal-final-opacity, 1); transform: scale(1); filter: brightness(1); }
+}
+
+/* Hero grid boot-up: bright wash that fades back to the normal pulse. Layered
+   on top of the existing cellPulse animation so the grid feels "powered on"
+   when the page loads. */
+@keyframes gridBoot {
+  0%   { opacity: 0; }
+  10%  { opacity: 1.4; }
+  100% { opacity: 1; }
+}
+.grid-boot { animation: gridBoot 1400ms ease-out both; }
+
+/* Soft scanline sweep that runs once after page load. Pure cosmetic. */
+@keyframes scanSweep {
+  0%   { transform: translateY(-30%); opacity: 0; }
+  20%  { opacity: 0.6; }
+  100% { transform: translateY(100vh); opacity: 0; }
+}
+.scan-sweep {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg,
+    transparent 0%,
+    rgba(81, 255, 0, 0.12) 49%,
+    rgba(81, 255, 0, 0.45) 50%,
+    rgba(81, 255, 0, 0.12) 51%,
+    transparent 100%);
+  animation: scanSweep 1500ms ease-out 200ms both;
+  z-index: 3;
+}
+
+/* Scanline overlay (CRT vibe) */
+.crt-scanlines::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.02) 0px,
+    rgba(255, 255, 255, 0.02) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  z-index: 2;
+}
+
+/* Hover glow on green underlines */
+.link-green {
+  color: #51FF00;
+  border-bottom: 1px solid rgba(81, 255, 0, 0.4);
+  transition: border-color 120ms ease, color 120ms ease;
+}
+.link-green:hover {
+  border-bottom-color: #51FF00;
+  text-shadow: 0 0 8px rgba(81, 255, 0, 0.6);
+}
+
+/* Code block / inline code */
+.mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+
+/* Soft grid background card */
+.card {
+  background: #0A0A0A;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 20px 24px;
+}
+.card:hover {
+  border-color: rgba(81, 255, 0, 0.35);
+}
+
+/* Section headings */
+.h-display {
+  font-family: "Inter", sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 0.95;
+  text-transform: uppercase;
+}

@@ -1,0 +1,271 @@
+{
+  "archive": {
+    "bytes": 178392,
+    "charged_member_allowlist": "passed",
+    "duplicate_member_names": [],
+    "member_names": [
+      "0.bin"
+    ],
+    "members": [
+      {
+        "compress_size": 178284,
+        "compress_type": 0,
+        "crc32_hex": "f4a2e754",
+        "decode_smoke": {
+          "bytes": 178284,
+          "magic_ascii": "P\u0000\u0000\u0000\u001bO\u0000 ",
+          "magic_hex": "500000001b4f0020",
+          "name": "0.bin",
+          "sha256": "fce200db2fe087cc6a051945b3fda2c37f5bbb3e19b8f20a1aea7201db0c9f5f",
+          "status": "passed"
+        },
+        "file_size": 178284,
+        "name": "0.bin",
+        "name_grammar": "passed"
+      }
+    ],
+    "path": "experiments/results/pr98_channel_ablation_candidates_20260504_codex/archives/pr98_archive.zip",
+    "sha256": "7ecb0df1c4627d55d88e03eff3d890b7a7a5b047c62515acff20232cf29310eb",
+    "status": "passed",
+    "zip_container_integrity": "passed"
+  },
+  "blockers": [],
+  "cuda_required_for_score": true,
+  "dispatch_performed": false,
+  "evidence_grade": "external/local_preflight_non_score_until_cuda",
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": true,
+  "runtime": {
+    "inflate_sh": "experiments/results/pr98_channel_ablation_candidates_20260504_codex/runtime_variants/drop_f0_red_f1_green/inflate.sh",
+    "inflate_sh_sha256": "202e9d917c1a2f56ece729193de92c32f11a23ec341d3a44cf5cac1d4a8b19a7",
+    "runtime_manifest": {
+      "files": [
+        {
+          "bytes": 2447,
+          "relative_path": "inflate.py",
+          "sha256": "29988e03c3874e158e5cf3d28dd93fd22cc2b51ac0a6b1aa072097926383de03"
+        },
+        {
+          "bytes": 137,
+          "relative_path": "inflate.sh",
+          "sha256": "202e9d917c1a2f56ece729193de92c32f11a23ec341d3a44cf5cac1d4a8b19a7"
+        },
+        {
+          "bytes": 9010,
+          "relative_path": "src/codec.py",
+          "sha256": "d9f2825a416e66c4c60b0ed506e87afcc080342809f2af73c3c6efb2b3c16f4a"
+        },
+        {
+          "bytes": 6721,
+          "relative_path": "src/data.py",
+          "sha256": "db0016ba8e854daa0d01563108ab1c76b6046578fe5f54af479abd34c600ab42"
+        },
+        {
+          "bytes": 6892,
+          "relative_path": "src/losses.py",
+          "sha256": "757725dc64681d90ebd83057c956ca3d72e02e06f778571b599d99fac7b17368"
+        },
+        {
+          "bytes": 2197,
+          "relative_path": "src/model.py",
+          "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+        },
+        {
+          "bytes": 3785,
+          "relative_path": "src/optim.py",
+          "sha256": "6c79f7559e4fdf23ec1ab60fcdad29f785f8e223dc6cf426d9cf0bc38555d3c6"
+        },
+        {
+          "bytes": 4661,
+          "relative_path": "src/score.py",
+          "sha256": "c8c4421fd26faa5c97ebade2919f9ba02c916bca3806fa95ba5159f221c4ef7f"
+        },
+        {
+          "bytes": 2870,
+          "relative_path": "src/stages/codec_stage.py",
+          "sha256": "1ddd7ccac9427a4679f0bf884409cd22173219412f1962f92ed711cef2d54c55"
+        },
+        {
+          "bytes": 11658,
+          "relative_path": "src/stages/common.py",
+          "sha256": "ad766d0639269eba70af5e5c26ef71267dfe8350e0335cdc506b198a08febdef"
+        },
+        {
+          "bytes": 1456,
+          "relative_path": "src/stages/stage1_v328_ce.py",
+          "sha256": "a43a44fa4cdc17d83e81f94006228268fed78f2b641c73b9562124bfc995c2b7"
+        },
+        {
+          "bytes": 1216,
+          "relative_path": "src/stages/stage2_v331_softplus.py",
+          "sha256": "1203339dc5319f81d2f571a11be166a034bcb9b1a9bb346f823d68a9331aec20"
+        },
+        {
+          "bytes": 1206,
+          "relative_path": "src/stages/stage3_v332_smooth.py",
+          "sha256": "119fe4e1718502973c38fcd94163ea935e2ce7776ada833c4d41661225a73695"
+        },
+        {
+          "bytes": 1233,
+          "relative_path": "src/stages/stage4_v332_qat.py",
+          "sha256": "aaf7f704f0fcf3a7860bca1be589cfd6b90a217b529d77ffc7abc826d42114af"
+        },
+        {
+          "bytes": 1329,
+          "relative_path": "src/stages/stage5_c1a_l7.py",
+          "sha256": "6e1c4f8a1abdde16d6086f5c38dc523207ca1ca04b89cc72a0a2f58fe0ea0dbf"
+        },
+        {
+          "bytes": 1208,
+          "relative_path": "src/stages/stage6_lambda_sweep.py",
+          "sha256": "fe3893d388d7820d365d0b088a0800df800c6963e2e101e6e451b1172e6d453b"
+        },
+        {
+          "bytes": 1255,
+          "relative_path": "src/stages/stage7_sigma_sweep.py",
+          "sha256": "8b8b812bb4bc49e560e6fe2e1dd6b3fecb36c60bcdaeb1a5411e5697653e4443"
+        },
+        {
+          "bytes": 1866,
+          "relative_path": "src/stages/stage8_muon_finetune.py",
+          "sha256": "9e036c99b7fc58fa24f954be251bebb5af4cddd3b84fe408b9ebc2b94b58ed5f"
+        },
+        {
+          "bytes": 2488,
+          "relative_path": "src/train.py",
+          "sha256": "d88610929db7f42b7a3522a77ded29b2a9a4e7abe63eae7bc5915fa4b8e58b79"
+        }
+      ],
+      "repo_local_tac_import_manifest": {
+        "discovery": "static_ast_recursive_import_closure",
+        "file_count": 0,
+        "files": [],
+        "module_count": 0,
+        "parse_errors": [],
+        "root_import_modules": [],
+        "runtime_root_name": "drop_f0_red_f1_green",
+        "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+        "tac_root_relative_path": "src/tac",
+        "unresolved_modules": []
+      },
+      "runtime_file_count": 19,
+      "runtime_root": "/Users/adpena/Projects/pact/experiments/results/pr98_channel_ablation_candidates_20260504_codex/runtime_variants/drop_f0_red_f1_green",
+      "runtime_tree_sha256": "fedb84920bd9a7ae683e349c27bd5ec00edda6a96cbc8ab4ad8d8891addc6e30",
+      "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+      "upstream_evaluate_py": {
+        "bytes": 6005,
+        "relative_path": "evaluate.py",
+        "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+      }
+    },
+    "runtime_root": "/Users/adpena/Projects/pact/experiments/results/pr98_channel_ablation_candidates_20260504_codex/runtime_variants/drop_f0_red_f1_green",
+    "runtime_tree_sha256": "fedb84920bd9a7ae683e349c27bd5ec00edda6a96cbc8ab4ad8d8891addc6e30",
+    "source_payload_scan": {
+      "files": [
+        {
+          "bytes": 2447,
+          "path": "inflate.py",
+          "sha256": "29988e03c3874e158e5cf3d28dd93fd22cc2b51ac0a6b1aa072097926383de03"
+        },
+        {
+          "bytes": 137,
+          "path": "inflate.sh",
+          "sha256": "202e9d917c1a2f56ece729193de92c32f11a23ec341d3a44cf5cac1d4a8b19a7"
+        },
+        {
+          "bytes": 9010,
+          "path": "src/codec.py",
+          "sha256": "d9f2825a416e66c4c60b0ed506e87afcc080342809f2af73c3c6efb2b3c16f4a"
+        },
+        {
+          "bytes": 6721,
+          "path": "src/data.py",
+          "sha256": "db0016ba8e854daa0d01563108ab1c76b6046578fe5f54af479abd34c600ab42"
+        },
+        {
+          "bytes": 6892,
+          "path": "src/losses.py",
+          "sha256": "757725dc64681d90ebd83057c956ca3d72e02e06f778571b599d99fac7b17368"
+        },
+        {
+          "bytes": 2197,
+          "path": "src/model.py",
+          "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+        },
+        {
+          "bytes": 3785,
+          "path": "src/optim.py",
+          "sha256": "6c79f7559e4fdf23ec1ab60fcdad29f785f8e223dc6cf426d9cf0bc38555d3c6"
+        },
+        {
+          "bytes": 4661,
+          "path": "src/score.py",
+          "sha256": "c8c4421fd26faa5c97ebade2919f9ba02c916bca3806fa95ba5159f221c4ef7f"
+        },
+        {
+          "bytes": 2870,
+          "path": "src/stages/codec_stage.py",
+          "sha256": "1ddd7ccac9427a4679f0bf884409cd22173219412f1962f92ed711cef2d54c55"
+        },
+        {
+          "bytes": 11658,
+          "path": "src/stages/common.py",
+          "sha256": "ad766d0639269eba70af5e5c26ef71267dfe8350e0335cdc506b198a08febdef"
+        },
+        {
+          "bytes": 1456,
+          "path": "src/stages/stage1_v328_ce.py",
+          "sha256": "a43a44fa4cdc17d83e81f94006228268fed78f2b641c73b9562124bfc995c2b7"
+        },
+        {
+          "bytes": 1216,
+          "path": "src/stages/stage2_v331_softplus.py",
+          "sha256": "1203339dc5319f81d2f571a11be166a034bcb9b1a9bb346f823d68a9331aec20"
+        },
+        {
+          "bytes": 1206,
+          "path": "src/stages/stage3_v332_smooth.py",
+          "sha256": "119fe4e1718502973c38fcd94163ea935e2ce7776ada833c4d41661225a73695"
+        },
+        {
+          "bytes": 1233,
+          "path": "src/stages/stage4_v332_qat.py",
+          "sha256": "aaf7f704f0fcf3a7860bca1be589cfd6b90a217b529d77ffc7abc826d42114af"
+        },
+        {
+          "bytes": 1329,
+          "path": "src/stages/stage5_c1a_l7.py",
+          "sha256": "6e1c4f8a1abdde16d6086f5c38dc523207ca1ca04b89cc72a0a2f58fe0ea0dbf"
+        },
+        {
+          "bytes": 1208,
+          "path": "src/stages/stage6_lambda_sweep.py",
+          "sha256": "fe3893d388d7820d365d0b088a0800df800c6963e2e101e6e451b1172e6d453b"
+        },
+        {
+          "bytes": 1255,
+          "path": "src/stages/stage7_sigma_sweep.py",
+          "sha256": "8b8b812bb4bc49e560e6fe2e1dd6b3fecb36c60bcdaeb1a5411e5697653e4443"
+        },
+        {
+          "bytes": 1866,
+          "path": "src/stages/stage8_muon_finetune.py",
+          "sha256": "9e036c99b7fc58fa24f954be251bebb5af4cddd3b84fe408b9ebc2b94b58ed5f"
+        },
+        {
+          "bytes": 2488,
+          "path": "src/train.py",
+          "sha256": "d88610929db7f42b7a3522a77ded29b2a9a4e7abe63eae7bc5915fa4b8e58b79"
+        }
+      ],
+      "runtime_root": "experiments/results/pr98_channel_ablation_candidates_20260504_codex/runtime_variants/drop_f0_red_f1_green",
+      "source_bytes_py_sh": 63635,
+      "status": "passed",
+      "violations": []
+    },
+    "status": "passed"
+  },
+  "schema": "public_replay_intake_preflight_v1",
+  "score_claim": false,
+  "tool": "experiments/preflight_public_replay_intake.py"
+}

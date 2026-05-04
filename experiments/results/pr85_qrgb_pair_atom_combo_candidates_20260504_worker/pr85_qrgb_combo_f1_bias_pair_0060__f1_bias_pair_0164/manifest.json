@@ -1,0 +1,183 @@
+{
+  "action_proofs": [
+    {
+      "candidate_value": 5,
+      "changed": true,
+      "pair_index": 60,
+      "rationale": "PR90 QRGB frame0 global RGB residual sign transferred to PR85 frame0 bias choice",
+      "scorer_gradient_atom": {
+        "atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0060",
+        "break_even_bytes": 484.2862579445188,
+        "frame_indices": [
+          120,
+          121
+        ],
+        "ranking_score": 0.00032246634072639115
+      },
+      "source_value": 24,
+      "stream": "bias"
+    },
+    {
+      "candidate_value": 21,
+      "changed": true,
+      "pair_index": 164,
+      "rationale": "PR90 QRGB frame0 global RGB residual sign transferred to PR85 frame0 bias choice",
+      "scorer_gradient_atom": {
+        "atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0164",
+        "break_even_bytes": 465.22756469211794,
+        "frame_indices": [
+          328,
+          329
+        ],
+        "ranking_score": 0.0003097759391894709
+      },
+      "source_value": 3,
+      "stream": "bias"
+    }
+  ],
+  "build_status": "built",
+  "candidate_archive": {
+    "archive_bytes": 236336,
+    "archive_path": "experiments/results/pr85_qrgb_pair_atom_combo_candidates_20260504_worker/pr85_qrgb_combo_f1_bias_pair_0060__f1_bias_pair_0164/archive.zip",
+    "archive_sha256": "90de17b17a946671c6e3aac36cc6773dd37ef10a0e064a80283caf9820bdd013",
+    "member_bytes": 236236,
+    "member_name": "x",
+    "member_sha256": "1f6785e9105642f9623d0793b83a60ee9993dbb3345b5f30b9bb50a3690d5280",
+    "zip_stored": true
+  },
+  "candidate_bundle": {
+    "header_mode": "explicit_30",
+    "member_bytes": 236236,
+    "member_sha256": "1f6785e9105642f9623d0793b83a60ee9993dbb3345b5f30b9bb50a3690d5280",
+    "segment_lengths": {
+      "bias": 225,
+      "frac": 106,
+      "frac2": 149,
+      "frac3": 154,
+      "mask": 159011,
+      "model": 57074,
+      "pose": 1487,
+      "post": 1400,
+      "randmulti": 16101,
+      "region": 273,
+      "shift": 226
+    }
+  },
+  "candidate_id": "pr85_qrgb_combo_f1_bias_pair_0060__f1_bias_pair_0164",
+  "changed_segments": [
+    "bias"
+  ],
+  "charged_bytes": {
+    "byte_delta_vs_source_archive": 8,
+    "candidate_archive_bytes": 236336,
+    "formula_only_rate_score_delta_vs_source": 5.326871624977371e-06,
+    "source_archive_bytes": 236328
+  },
+  "dispatch_gate": "eligible_for_exact_eval_after_lane_claim",
+  "dispatch_performed": false,
+  "dispatch_unlocked": true,
+  "evidence_grade": "empirical_local_archive_build_only",
+  "fixed_runtime_combo_preflight": {
+    "blocker_count": 0,
+    "path": "experiments/results/pr85_qrgb_pair_atom_combo_candidates_20260504_worker/pr85_qrgb_combo_f1_bias_pair_0060__f1_bias_pair_0164/fixed_runtime_combo_preflight.json",
+    "ready_for_fixed_runtime_exact_eval": true
+  },
+  "lane_claim_required_before_exact_eval": true,
+  "next_gate": "Claim the lane with tools/claim_lane_dispatch.py before any exact CUDA auth eval dispatch.",
+  "non_noop_proof": {
+    "candidate_member_sha256": "1f6785e9105642f9623d0793b83a60ee9993dbb3345b5f30b9bb50a3690d5280",
+    "changed_segments": [
+      "bias"
+    ],
+    "decoded_sidechannel_semantics_changed": true,
+    "payload_changed": true,
+    "source_member_sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+    "status": "passed"
+  },
+  "remote_jobs_dispatched": false,
+  "runtime_contract": {
+    "archive_member_contract": "single_member_x",
+    "schema": "pr85_pair_atom_runtime_contract_v1",
+    "scorer_load_allowed": false,
+    "sidecars_allowed": false,
+    "supported_header_modes": [
+      "explicit_30"
+    ],
+    "supported_streams": [
+      "bias",
+      "region"
+    ]
+  },
+  "schema": "pr85_pair_atom_candidate_v1",
+  "score_claim": false,
+  "selected_pair_indices": [
+    60,
+    164
+  ],
+  "selected_streams": [
+    "bias"
+  ],
+  "source_archive": {
+    "archive_bytes": 236328,
+    "archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+    "known_pr85_anchor_match": {
+      "exact_t4_score_context": 0.25806611029397786,
+      "expected_archive_bytes": 236328,
+      "expected_archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+      "matches": true
+    },
+    "member_bytes": 236228,
+    "member_compress_size": 236228,
+    "member_name": "x",
+    "member_sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+    "path": "experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+    "zip_stored": true
+  },
+  "source_bundle": {
+    "fixed_length_segments": {
+      "bias": 223,
+      "region": 273
+    },
+    "format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+    "header_bytes": 24,
+    "member_sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+    "segment_lengths": {
+      "bias": 223,
+      "frac": 106,
+      "frac2": 149,
+      "frac3": 154,
+      "mask": 159011,
+      "model": 57074,
+      "pose": 1487,
+      "post": 1400,
+      "randmulti": 16101,
+      "region": 273,
+      "shift": 226
+    }
+  },
+  "tool": "experiments/build_pr85_pair_atom_candidates.py",
+  "transforms": [
+    {
+      "brotli_lgwin": 24,
+      "brotli_quality": 11,
+      "candidate_raw_bytes": 603,
+      "candidate_raw_sha256": "6d256d538e6f9721ca67ee8dfb1c730b0e33f815f9ed51767b4827aad0b57d59",
+      "candidate_segment_bytes": 225,
+      "candidate_segment_sha256": "17c680e3ae606d1a2df51f5e7d8d1b64c187612132424bc7b3c653e5256cb3e7",
+      "changed_pair_indices": [
+        60,
+        164
+      ],
+      "codec": "BD1",
+      "default_symbol": 13,
+      "segment_byte_delta": 2,
+      "semantic_sha256_after": "7f24ee3bc2c1f9644dcc1154677dccdfa543bf542e6f74eee0fb16dc2b9f355c",
+      "semantic_sha256_before": "605d2796b1808ab3257474cd569a244d349fc0c2b9a9d3870a7fa3927afd8f30",
+      "source_raw_bytes": 603,
+      "source_raw_sha256": "67751d89e4825a6a71d4e74a0aa6f0246a861c0f96fc11184eec407e9caf8d7c",
+      "source_segment_bytes": 223,
+      "source_segment_sha256": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b",
+      "stream": "bias"
+    }
+  ]
+}

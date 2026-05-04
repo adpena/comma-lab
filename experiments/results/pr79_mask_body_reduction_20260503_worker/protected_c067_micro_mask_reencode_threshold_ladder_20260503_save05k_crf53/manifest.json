@@ -1,0 +1,233 @@
+{
+  "archive": {
+    "bytes": 260866,
+    "delta_bytes_vs_pr79": -16522,
+    "path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf53/archive.zip",
+    "sha256": "5e49a972ab5d77d8a8eeedc9dd36a309bf8533ad2d2e2b9b96ad30448691d338"
+  },
+  "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf53",
+  "canonical_score_source_required": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+  "dispatch_recommendation": {
+    "exact_cuda_eval_justified_after_lane_claim": true,
+    "lane_claim_required_before_dispatch": true,
+    "reason": "local PR79/S2 mask-body candidate passes byte, plausibility, and runtime preflight gates",
+    "remote_dispatch_performed": false
+  },
+  "evidence_grade": "empirical_local_byte_screen",
+  "mask_stream": {
+    "decoded_bytes": 196984,
+    "decoded_sha256": "49eedf22801b610603275d21dc5b1ae3668cd4decc9349d083ad8cef933837ef",
+    "delta_wire_bytes_vs_pr79_mask_slice": -22488,
+    "member": "masks.mkv",
+    "wire_brotli_params": {
+      "brotli_params": {
+        "lgwin": 18,
+        "mode": 2,
+        "quality": 11
+      },
+      "lossless_vs_candidate_mask_decoded": true,
+      "rpk1_raw_mask_member": true,
+      "unused_p3_brotli_wire_bytes": 188394
+    },
+    "wire_bytes": 196984,
+    "wire_sha256": "49eedf22801b610603275d21dc5b1ae3668cd4decc9349d083ad8cef933837ef"
+  },
+  "no_remote_dispatch_performed": true,
+  "payload": {
+    "bytes": 260766,
+    "format": "rpk1_json_raw_mkv_with_pr79_decoded_actions",
+    "member": "p",
+    "sha256": "cd2b857f6bed22c5dfbbddf0014290e64670061f95b810f144ea7fc757ad0584"
+  },
+  "plausibility_gate": {
+    "minimum_overall_argmax_agreement": 0.997,
+    "minimum_protected_argmax_agreement": 0.99,
+    "overall_argmax_agreement": 0.997173487345,
+    "passed": true,
+    "protected_argmax_agreement": 0.992559116516,
+    "reason": "protected-mask candidate clears local plausibility agreement thresholds"
+  },
+  "runtime_preflight": {
+    "archive_validation_errors": [],
+    "candidate_mask_decoded_sha256": "49eedf22801b610603275d21dc5b1ae3668cd4decc9349d083ad8cef933837ef",
+    "candidate_mask_sha_matches_expected": true,
+    "non_mask_runtime_member_checks": {
+      "actions_decoded_preserved": true,
+      "pose_decoded_preserved": true,
+      "renderer_decoded_preserved": true
+    },
+    "non_mask_runtime_members_preserved": true,
+    "payload_format": null,
+    "runtime_member_headers": {
+      "masks.mkv": {
+        "bytes": 196984,
+        "codec": "raw",
+        "decoded_bytes": null,
+        "decoded_sha256": null,
+        "sha256": "49eedf22801b610603275d21dc5b1ae3668cd4decc9349d083ad8cef933837ef"
+      },
+      "optimized_poses.qp1": {
+        "bytes": 1140,
+        "codec": "raw",
+        "decoded_bytes": null,
+        "decoded_sha256": null,
+        "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+      },
+      "renderer.bin": {
+        "bytes": 59288,
+        "codec": "raw",
+        "decoded_bytes": null,
+        "decoded_sha256": null,
+        "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 2688,
+        "codec": "raw",
+        "decoded_bytes": null,
+        "decoded_sha256": null,
+        "sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f"
+      }
+    },
+    "runtime_parser": "submissions/robust_current/unpack_renderer_payload.py",
+    "runtime_parser_ok": true
+  },
+  "schema": "pr79_mask_body_reduction_candidate_manifest_v1",
+  "score_claim": false,
+  "source": {
+    "existing_manifest": {
+      "archive_path": "experiments/results/c067_micro_mask_reencode_threshold_ladder_20260503/save05k_crf53/archive.zip",
+      "manifest_path": "experiments/results/c067_micro_mask_reencode_threshold_ladder_20260503/save05k_crf53/protected_mask_reencode_manifest.json",
+      "manifest_sha256": "70ec866e8758c1f112e40dc1bd93b26ff24bdd74088dd9895890e2fd6012cf1a",
+      "source_mask_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+    },
+    "kind": "existing_protected_mask_reencode_manifest",
+    "mask_agreement": {
+      "overall": {
+        "argmax_agreement": 0.997173487345,
+        "argmax_disagreement": 0.002826512655,
+        "candidate_shape": [
+          600,
+          384,
+          512
+        ],
+        "different_pixels": 333429,
+        "different_pixels_by_candidate_class": {
+          "0": 146459,
+          "1": 130354,
+          "2": 37577,
+          "3": 16606,
+          "4": 2433
+        },
+        "different_pixels_by_source_class": {
+          "0": 115260,
+          "1": 143300,
+          "2": 35567,
+          "3": 33251,
+          "4": 6051
+        },
+        "equal_pixels": 117631371,
+        "num_pixels": 117964800,
+        "residual_confusion_source_to_candidate": {
+          "0": {
+            "0": 0,
+            "1": 107405,
+            "2": 6932,
+            "3": 525,
+            "4": 398
+          },
+          "1": {
+            "0": 142147,
+            "1": 0,
+            "2": 1038,
+            "3": 84,
+            "4": 31
+          },
+          "2": {
+            "0": 3598,
+            "1": 20215,
+            "2": 0,
+            "3": 11732,
+            "4": 22
+          },
+          "3": {
+            "0": 340,
+            "1": 2401,
+            "2": 28528,
+            "3": 0,
+            "4": 1982
+          },
+          "4": {
+            "0": 374,
+            "1": 333,
+            "2": 1079,
+            "3": 4265,
+            "4": 0
+          }
+        },
+        "shape_match": true,
+        "source_shape": [
+          600,
+          384,
+          512
+        ]
+      },
+      "protected": {
+        "argmax_agreement": 0.992559116516,
+        "argmax_disagreement": 0.007440883484,
+        "different_pixels": 320688,
+        "num_pixels": 43098108
+      },
+      "unprotected": {
+        "argmax_agreement": 0.999829817511,
+        "argmax_disagreement": 0.000170182489,
+        "different_pixels": 12741,
+        "num_pixels": 74866692
+      }
+    }
+  },
+  "source_pr79": {
+    "archive_bytes": 277388,
+    "archive_path": "experiments/results/top_submission_reverse_engineering_20260503_pr79/archive.zip",
+    "archive_sha256": "01dc02badf851d99108fd92c570271f36f74cc5424c6d2a8f1b499cb4d1c3446",
+    "mask_decoded_bytes": 223385,
+    "mask_decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+    "mask_wire_bytes": 219472,
+    "mask_wire_sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87",
+    "payload_bytes": 277288,
+    "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+    "payload_sha256": "026c2a5801dc42e369ad9533736645488ef9183c0789d9c961adb23c1740e688"
+  },
+  "strict_compliance": {
+    "deterministic_single_stored_p_zip": true,
+    "external_sidecars_required": false,
+    "fixed_runtime_streams_preserved_except_mask": true,
+    "hidden_or_duplicate_members": false,
+    "scorer_loaded_by_tool": false
+  },
+  "tool": "experiments/profile_pr79_mask_body_reduction_candidates.py",
+  "zip_profile": {
+    "archive_bytes": 260866,
+    "archive_sha256": "5e49a972ab5d77d8a8eeedc9dd36a309bf8533ad2d2e2b9b96ad30448691d338",
+    "duplicate_member_names": [],
+    "member_count": 1,
+    "members": [
+      {
+        "compress_size": 260766,
+        "compress_type": 0,
+        "date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "external_attr": 27525120,
+        "file_size": 260766,
+        "filename": "p"
+      }
+    ],
+    "single_stored_p": true,
+    "strict_zip_overhead_bytes": 100
+  }
+}

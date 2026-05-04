@@ -1,0 +1,256 @@
+{
+  "active_modal_call_ids": [
+    "fc-01KQP9K42CAWJH7XEV4KC0V28M"
+  ],
+  "commands": {
+    "build_candidate_archives": {
+      "argv": [
+        ".venv/bin/python",
+        "experiments/build_renderer_shrink_candidate.py",
+        "--source-archive",
+        "experiments/results/lightning_batch/exact_eval_pr75_minp_public_replay_t4_20260503T1049Z/archive.zip",
+        "--renderer-export",
+        "<recovered_renderer_qzs3.bin>",
+        "--output-dir",
+        "experiments/results/trained_renderer_transplant_recovery_worker_20260503/c091_readiness/preflight",
+        "--qzs3-block-sizes",
+        "32,48,64,96,128",
+        "--force"
+      ],
+      "text": ".venv/bin/python experiments/build_renderer_shrink_candidate.py --source-archive experiments/results/lightning_batch/exact_eval_pr75_minp_public_replay_t4_20260503T1049Z/archive.zip --renderer-export '<recovered_renderer_qzs3.bin>' --output-dir experiments/results/trained_renderer_transplant_recovery_worker_20260503/c091_readiness/preflight --qzs3-block-sizes 32,48,64,96,128 --force"
+    },
+    "dispatch_claim_command": {
+      "argv": [
+        ".venv/bin/python",
+        "tools/claim_lane_dispatch.py",
+        "claim",
+        "--lane-id",
+        "c091_trained_renderer_self_compression_transplant",
+        "--platform",
+        "lightning",
+        "--instance-job-id",
+        "exact_eval_${CANDIDATE_ID}_trained_transplant_READY",
+        "--agent",
+        "codex:gpt-5",
+        "--status",
+        "eval",
+        "--notes",
+        "trained_renderer_transplant candidate=${CANDIDATE_ID} archive_sha256=${ARCHIVE_SHA256}"
+      ],
+      "text": ".venv/bin/python tools/claim_lane_dispatch.py claim --lane-id c091_trained_renderer_self_compression_transplant --platform lightning --instance-job-id 'exact_eval_${CANDIDATE_ID}_trained_transplant_READY' --agent codex:gpt-5 --status eval --notes 'trained_renderer_transplant candidate=${CANDIDATE_ID} archive_sha256=${ARCHIVE_SHA256}'"
+    },
+    "lightning_exact_eval_dry_run_command": {
+      "argv": [
+        ".venv/bin/python",
+        "scripts/launch_lightning_batch_job.py",
+        "exact-eval",
+        "--job-name",
+        "exact_eval_${CANDIDATE_ID}_trained_transplant_READY",
+        "--archive",
+        "${CANDIDATE_ARCHIVE}",
+        "--repo-dir",
+        "/teamspace/studios/this_studio/pact",
+        "--upstream-dir",
+        "/teamspace/studios/this_studio/pact/upstream",
+        "--machine",
+        "g7e.4xlarge",
+        "--adjudicate",
+        "--baseline-score",
+        "0.31516575028285976",
+        "--baseline-archive-bytes",
+        "276481",
+        "--predicted-band",
+        "0.0",
+        "10.0",
+        "--regression-threshold",
+        "10.0",
+        "--infer-expected-archive",
+        "--dispatch-lane-id",
+        "c091_trained_renderer_self_compression_transplant",
+        "--queue-metadata",
+        "lane_id=c091_trained_renderer_self_compression_transplant",
+        "--queue-metadata",
+        "candidate_id=${CANDIDATE_ID}",
+        "--queue-metadata",
+        "source_archive_sha256=03a2afd5fe92c93a9b7b7e43625158a73b455f0cfbca82d278008a728db78746",
+        "--queue-metadata",
+        "trained_renderer_sha256=${RENDERER_SHA256}",
+        "--queue-metadata",
+        "purpose=trained_renderer_transplant_dispatch",
+        "--component-trace",
+        "--component-trace-top-k",
+        "80",
+        "--max-sane-score",
+        "10.0",
+        "--dry-run"
+      ],
+      "text": ".venv/bin/python scripts/launch_lightning_batch_job.py exact-eval --job-name 'exact_eval_${CANDIDATE_ID}_trained_transplant_READY' --archive '${CANDIDATE_ARCHIVE}' --repo-dir /teamspace/studios/this_studio/pact --upstream-dir /teamspace/studios/this_studio/pact/upstream --machine g7e.4xlarge --adjudicate --baseline-score 0.31516575028285976 --baseline-archive-bytes 276481 --predicted-band 0.0 10.0 --regression-threshold 10.0 --infer-expected-archive --dispatch-lane-id c091_trained_renderer_self_compression_transplant --queue-metadata lane_id=c091_trained_renderer_self_compression_transplant --queue-metadata 'candidate_id=${CANDIDATE_ID}' --queue-metadata source_archive_sha256=03a2afd5fe92c93a9b7b7e43625158a73b455f0cfbca82d278008a728db78746 --queue-metadata 'trained_renderer_sha256=${RENDERER_SHA256}' --queue-metadata purpose=trained_renderer_transplant_dispatch --component-trace --component-trace-top-k 80 --max-sane-score 10.0 --dry-run"
+    },
+    "lightning_exact_eval_submit_command_shape_after_claim": {
+      "argv": [
+        ".venv/bin/python",
+        "scripts/launch_lightning_batch_job.py",
+        "exact-eval",
+        "--job-name",
+        "exact_eval_${CANDIDATE_ID}_trained_transplant_READY",
+        "--archive",
+        "${CANDIDATE_ARCHIVE}",
+        "--repo-dir",
+        "/teamspace/studios/this_studio/pact",
+        "--upstream-dir",
+        "/teamspace/studios/this_studio/pact/upstream",
+        "--machine",
+        "g7e.4xlarge",
+        "--adjudicate",
+        "--baseline-score",
+        "0.31516575028285976",
+        "--baseline-archive-bytes",
+        "276481",
+        "--predicted-band",
+        "0.0",
+        "10.0",
+        "--regression-threshold",
+        "10.0",
+        "--infer-expected-archive",
+        "--dispatch-lane-id",
+        "c091_trained_renderer_self_compression_transplant",
+        "--queue-metadata",
+        "lane_id=c091_trained_renderer_self_compression_transplant",
+        "--queue-metadata",
+        "candidate_id=${CANDIDATE_ID}",
+        "--queue-metadata",
+        "source_archive_sha256=03a2afd5fe92c93a9b7b7e43625158a73b455f0cfbca82d278008a728db78746",
+        "--queue-metadata",
+        "trained_renderer_sha256=${RENDERER_SHA256}",
+        "--queue-metadata",
+        "purpose=trained_renderer_transplant_dispatch",
+        "--component-trace",
+        "--component-trace-top-k",
+        "80",
+        "--max-sane-score",
+        "10.0",
+        "--studio",
+        "${LIGHTNING_STUDIO}",
+        "--source-manifest",
+        "${LIGHTNING_SOURCE_MANIFEST_JSON}",
+        "--remote-preflight-ssh-target",
+        "${LIGHTNING_PREFLIGHT_SSH_TARGET}"
+      ],
+      "text": ".venv/bin/python scripts/launch_lightning_batch_job.py exact-eval --job-name 'exact_eval_${CANDIDATE_ID}_trained_transplant_READY' --archive '${CANDIDATE_ARCHIVE}' --repo-dir /teamspace/studios/this_studio/pact --upstream-dir /teamspace/studios/this_studio/pact/upstream --machine g7e.4xlarge --adjudicate --baseline-score 0.31516575028285976 --baseline-archive-bytes 276481 --predicted-band 0.0 10.0 --regression-threshold 10.0 --infer-expected-archive --dispatch-lane-id c091_trained_renderer_self_compression_transplant --queue-metadata lane_id=c091_trained_renderer_self_compression_transplant --queue-metadata 'candidate_id=${CANDIDATE_ID}' --queue-metadata source_archive_sha256=03a2afd5fe92c93a9b7b7e43625158a73b455f0cfbca82d278008a728db78746 --queue-metadata 'trained_renderer_sha256=${RENDERER_SHA256}' --queue-metadata purpose=trained_renderer_transplant_dispatch --component-trace --component-trace-top-k 80 --max-sane-score 10.0 --studio '${LIGHTNING_STUDIO}' --source-manifest '${LIGHTNING_SOURCE_MANIFEST_JSON}' --remote-preflight-ssh-target '${LIGHTNING_PREFLIGHT_SSH_TARGET}'"
+    },
+    "recover_modal_exports": [
+      {
+        "argv": [
+          ".venv/bin/python",
+          "experiments/modal_recover_lane.py",
+          "--call-id",
+          "fc-01KQP9K42CAWJH7XEV4KC0V28M"
+        ],
+        "text": ".venv/bin/python experiments/modal_recover_lane.py --call-id fc-01KQP9K42CAWJH7XEV4KC0V28M"
+      }
+    ],
+    "run_pose_safety_preflight": {
+      "argv": [
+        ".venv/bin/python",
+        "experiments/preflight_renderer_transplant_pose_safety.py",
+        "--source-archive",
+        "experiments/results/lightning_batch/exact_eval_pr75_minp_public_replay_t4_20260503T1049Z/archive.zip",
+        "--candidate-archive",
+        "${CANDIDATE_ARCHIVE}",
+        "--output-json",
+        "experiments/results/trained_renderer_transplant_recovery_worker_20260503/c091_readiness/pose_safety/${CANDIDATE_ID}.json"
+      ],
+      "text": ".venv/bin/python experiments/preflight_renderer_transplant_pose_safety.py --source-archive experiments/results/lightning_batch/exact_eval_pr75_minp_public_replay_t4_20260503T1049Z/archive.zip --candidate-archive '${CANDIDATE_ARCHIVE}' --output-json 'experiments/results/trained_renderer_transplant_recovery_worker_20260503/c091_readiness/pose_safety/${CANDIDATE_ID}.json'"
+    }
+  },
+  "contest_faithful_constraints": {
+    "canonical_eval_path": "archive.zip -> inflate.sh -> upstream/evaluate.py",
+    "hidden_sidecars_allowed": false,
+    "requires_cuda_auth_eval_for_score": true,
+    "requires_dispatch_claim_before_remote_exact_eval": true,
+    "requires_pose_safety_json_before_exact_eval_ready": true
+  },
+  "deterministic_dry_run": true,
+  "exact_eval_dispatch_blockers": [
+    "candidate archive is not available yet",
+    "no terminal Modal renderer export is available locally",
+    "recover the active Modal call, then provide the recovered QZS3 renderer export path",
+    "run transplant preflight to build candidate archive"
+  ],
+  "exact_eval_dispatch_ready": false,
+  "handoff_order": [
+    "recover_modal_exports",
+    "build_candidate_archives",
+    "run_pose_safety_preflight",
+    "dispatch_claim_command",
+    "lightning_exact_eval_dry_run_command",
+    "lightning_exact_eval_submit_command_shape_after_claim"
+  ],
+  "lane_id": "c091_trained_renderer_self_compression_transplant",
+  "missing_prerequisites": [
+    "candidate archive is not available yet",
+    "no terminal Modal renderer export is available locally",
+    "recover the active Modal call, then provide the recovered QZS3 renderer export path",
+    "run transplant preflight to build candidate archive"
+  ],
+  "pose_safety_gate": {
+    "blockers": [
+      "candidate archive is not available yet"
+    ],
+    "matching_report_path": null,
+    "required": true,
+    "safe_for_exact_eval_dispatch": false,
+    "status": "waiting_for_candidate_archive"
+  },
+  "preflight_summary": {
+    "exists": false,
+    "path": "/Users/adpena/Projects/pact/experiments/results/trained_renderer_transplant_recovery_worker_20260503/c091_readiness/preflight/summary.json"
+  },
+  "promotion_eligible": false,
+  "remote_gpu_dispatch_performed": false,
+  "renderer_export": {
+    "blockers": [
+      "no terminal Modal renderer export is available locally",
+      "recover the active Modal call, then provide the recovered QZS3 renderer export path"
+    ],
+    "bytes": null,
+    "exists": false,
+    "magic4_hex": null,
+    "missing": true,
+    "path": null,
+    "repo_relative_path": null,
+    "sha256": null
+  },
+  "schema": "trained_renderer_transplant_dispatch_prepare_v1",
+  "score_break_even": {
+    "bytes_to_save_at_unchanged_distortion": 1751,
+    "current_score": 0.31516575028285976,
+    "max_archive_bytes_for_byte_only_crossing": 274730,
+    "rate_score_per_byte": 6.658589531221714e-07,
+    "score_at_max_archive_bytes": 0.31399983125594283,
+    "score_gap": 0.0011657502828597566,
+    "target_score_strictly_below": 0.314
+  },
+  "score_claim": false,
+  "selected_candidate": null,
+  "source_archive": {
+    "bytes": 276481,
+    "eval_json": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_pr75_minp_public_replay_t4_20260503T1049Z/contest_auth_eval.adjudicated.json",
+    "eval_score": {
+      "archive_size_bytes": 276481,
+      "avg_posenet_dist": 0.00049371,
+      "avg_segnet_dist": 0.00060804,
+      "device": "cuda",
+      "sample_count": 600,
+      "score_recomputed_from_components": 0.31516575028285976
+    },
+    "expected_bytes": 276481,
+    "expected_sha256": "03a2afd5fe92c93a9b7b7e43625158a73b455f0cfbca82d278008a728db78746",
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_pr75_minp_public_replay_t4_20260503T1049Z/archive.zip",
+    "repo_relative_path": "experiments/results/lightning_batch/exact_eval_pr75_minp_public_replay_t4_20260503T1049Z/archive.zip",
+    "sha256": "03a2afd5fe92c93a9b7b7e43625158a73b455f0cfbca82d278008a728db78746",
+    "verified": true
+  },
+  "terminal_exports_exist": false,
+  "tool": "experiments/prepare_trained_renderer_transplant_dispatch.py"
+}

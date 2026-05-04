@@ -1,0 +1,54 @@
+{
+  "blockers": [],
+  "checks": {
+    "candidate_atom_edit_is_randmulti_vs_stbm": true,
+    "candidate_custody_expectations_pass": true,
+    "fixed_runtime_bridge_expansion_passes": true,
+    "generic_preflight_has_no_unexpected_blockers": true,
+    "orthogonality_proof_passed": true,
+    "remote_dispatch_not_performed": true,
+    "robust_current_stbm_loader_support_present": true,
+    "score_claim_not_made": true,
+    "stbm_lineage_parity_manifest_passed": true,
+    "stbm_mask_member_is_materialized_for_runtime": true
+  },
+  "dispatch_performed": false,
+  "exact_eval_allowed_only_after": [
+    "STBM standalone exact CUDA positive lands for the exact STBM archive SHA",
+    "QRGB randmulti 0192 standalone exact CUDA positive lands for the exact QRGB archive SHA",
+    "A fresh lane claim is recorded before any exact eval dispatch"
+  ],
+  "generic_pr85_preflight": {
+    "blocker_codes": [
+      "pr85_segment_probe_failed"
+    ],
+    "expected_stbm_mask_probe_blocker_waived": true,
+    "readiness_status": "blocked",
+    "ready_for_fixed_runtime_exact_eval": false
+  },
+  "planning_only": true,
+  "readiness_status": "ready",
+  "ready_for_fixed_runtime_exact_eval_readiness": true,
+  "remote_dispatch_allowed": false,
+  "remote_jobs_dispatched": false,
+  "runtime_stbm_support": {
+    "checks": {
+      "canonical_masks_stbm1br_fallback_present": true,
+      "inflate_renderer_present": true,
+      "qma9_content_sniffs_stbm": true,
+      "stbm_loader_present": true,
+      "stbm_magic_declared": true
+    },
+    "remaining_blockers": [],
+    "runtime_dir": "submissions/robust_current",
+    "status": "passed"
+  },
+  "schema": "pr85_stbm1br_qrgb_stack_fixed_runtime_preflight_v1",
+  "score_claim": false,
+  "standalone_exact_positive_gates": {
+    "not_verified_by_this_local_builder": true,
+    "qrgb_randmulti_0192_standalone_exact_positive_required": true,
+    "stbm_standalone_exact_positive_required": true
+  },
+  "tool": "experiments/build_pr85_stbm1br_qrgb_randmulti_stack_candidate.py"
+}

@@ -1,0 +1,21 @@
+{
+  "install_command": [
+    "/usr/local/bin/uv",
+    "pip",
+    "install",
+    "--python",
+    "/teamspace/studios/this_studio/pact/.venv/bin/python",
+    "brotli==1.2.0"
+  ],
+  "install_returncode": 0,
+  "installed": true,
+  "python": "/teamspace/studios/this_studio/pact/.venv/bin/python",
+  "recorded_at_utc": "2026-05-04T08:58:35Z",
+  "requested_specs": [
+    "brotli==1.2.0"
+  ],
+  "schema_version": 1,
+  "stderr_tail": "Audited 1 package in 6ms\n",
+  "stdout_tail": "",
+  "tool": "lightning_exact_eval_inflate_runtime_bootstrap"
+}

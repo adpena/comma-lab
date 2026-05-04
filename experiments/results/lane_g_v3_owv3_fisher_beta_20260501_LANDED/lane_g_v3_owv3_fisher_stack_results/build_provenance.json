@@ -1,0 +1,233 @@
+{
+  "format": "lane_g_v3_owv3_stack_provenance_v1",
+  "lane_id": "lane_g_v3_owv3_stack",
+  "build_started_iso": "2026-05-01T09:59:07Z",
+  "build_completed_iso": "2026-05-01T09:59:11Z",
+  "anchors": {
+    "renderer": {
+      "path": "/workspace/pact/experiments/results/lane_g_v3_landed/iter_0/renderer.bin",
+      "size_bytes": 296776,
+      "sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529"
+    },
+    "masks": {
+      "path": "/workspace/pact/experiments/results/lane_g_v3_landed/iter_0/masks.mkv",
+      "size_bytes": 421483,
+      "sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9"
+    },
+    "poses": {
+      "path": "/workspace/pact/experiments/results/lane_g_v3_landed/iter_0/optimized_poses.pt",
+      "size_bytes": 15620,
+      "sha256": "cb8517f7a7e3c9382e952ff278dc3f8de44ba066db07746f16354c1dbe2cbca4"
+    },
+    "archive": {
+      "path": "/workspace/pact/experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
+      "size_bytes": 694074,
+      "sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b"
+    }
+  },
+  "sensitivity_map": {
+    "path": "/workspace/pact/lane_g_v3_owv3_fisher_stack_results/owv3_sensitivity_map.pt",
+    "sha256": "68fe08fab3e73503cdb3c4a966e5bd2a14be41e4b44a1230d486af4f37d3e5cb",
+    "metadata": {
+      "format": "owv3_channel_sensitivity_from_fisher_v1",
+      "checkpoint": "experiments/results/lane_g_v3_landed/iter_0/renderer.bin",
+      "checkpoint_sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529",
+      "fisher": "/workspace/pact/lane_g_v3_owv3_fisher_stack_results/hessian_per_weight.pt",
+      "fisher_sha256": "40e7dfa39fb39e3ac8c12de3551cfa567a16db77a32dee7cd46fa9ddb3ee8aa3",
+      "source_metadata": {
+        "checkpoint": "experiments/results/lane_g_v3_landed/iter_0/renderer.bin",
+        "poses": "experiments/results/lane_g_v3_landed/iter_0/optimized_poses.pt",
+        "masks_mkv": "experiments/results/lane_g_v3_landed/iter_0/masks.mkv",
+        "video_mkv": "upstream/videos/0.mkv",
+        "pair_weights": null,
+        "top_k": 30,
+        "n_pairs_seen": 600,
+        "n_eligible_layers": 19,
+        "n_eligible_weights": 247388,
+        "eligible_layer_names": [
+          "motion.bottleneck.conv1.weight",
+          "motion.bottleneck.conv2.weight",
+          "motion.down.0.weight",
+          "motion.fuse.weight",
+          "motion.head.weight",
+          "motion.stem.0.weight",
+          "motion.up_conv.weight",
+          "renderer.bottleneck.conv1.weight",
+          "renderer.bottleneck.conv2.weight",
+          "renderer.down_conv.weight",
+          "renderer.down_res.conv1.weight",
+          "renderer.down_res.conv2.weight",
+          "renderer.fuse_conv.weight",
+          "renderer.head.weight",
+          "renderer.stem_conv.weight",
+          "renderer.stem_res.conv1.weight",
+          "renderer.stem_res.conv2.weight",
+          "renderer.up_res.conv1.weight",
+          "renderer.up_res.conv2.weight"
+        ],
+        "excluded_layer_reasons": {
+          "renderer.film_bottleneck.scale.weight": "protected_linear",
+          "renderer.film_bottleneck.shift.weight": "protected_linear",
+          "renderer.film_decoder.scale.weight": "protected_linear",
+          "renderer.film_decoder.shift.weight": "protected_linear"
+        },
+        "include_protected_conv2d": true,
+        "git_hash": "no-git",
+        "torch_version": "2.5.1+cu124",
+        "device": "cuda",
+        "elapsed_s": 63.933072397019714,
+        "imp_min": 1.6095682091238904e-12,
+        "imp_max": 0.03169245882075877,
+        "imp_mean": 1.6848334974214845e-05,
+        "imp_median": 5.269719130026083e-07,
+        "imp_p95": 1.971426499072704e-05,
+        "imp_p99": 0.0001740039336140008
+      },
+      "source_device": "cuda",
+      "authoritative_cuda": true,
+      "non_authoritative_allowed": false,
+      "aggregate": "sum",
+      "missing_policy": "error",
+      "protected_missing_policy": "error",
+      "missing_value": 0.01,
+      "protected_missing_conv_weight_keys": [],
+      "protected_missing_conv_weight_count": 0,
+      "nonprotected_missing_conv_weight_keys": [],
+      "n_layers": 19,
+      "n_channels": 717,
+      "min_value": 3.0435594453592785e-06,
+      "max_value": 0.8853516578674316,
+      "elapsed_s": 0.123730432940647,
+      "evidence_label": "authoritative-cuda-artifact"
+    },
+    "stats": {
+      "n_layers": 19,
+      "n_channels": 717,
+      "min_value": 3.0435594453592785e-06,
+      "max_value": 0.8853516578674316
+    }
+  },
+  "owv3": {
+    "renderer_bytes": 234120,
+    "renderer_delta_vs_asym": -62656,
+    "bit_budget_ratio": 0.7,
+    "protect_threshold": 0.001,
+    "aggressive_threshold": 1e-05,
+    "fallback_action": "keep_asym",
+    "decode_verified": true,
+    "byte_plan": {
+      "fallback_action": "keep_asym",
+      "asym_bits": 8,
+      "promotion_eligible": true,
+      "charged_body_bytes": 217606,
+      "action_counts": {
+        "owv2_low_bit_layers": 13,
+        "owv2_low_bit_channels": 429,
+        "keep_asym_layers": 28,
+        "keep_asym_channels": 324,
+        "diagnostic_fp16_layers": 0,
+        "fp16_protect_channels": 0
+      }
+    },
+    "layer_action_summary": {
+      "owv2_low_bit_layers": 13,
+      "owv2_low_bit_channels": 429,
+      "keep_asym_layers": 28,
+      "keep_asym_channels": 324,
+      "diagnostic_fp16_layers": 0,
+      "fp16_protect_channels": 0
+    }
+  },
+  "stacked_archive": {
+    "path": "/workspace/pact/lane_g_v3_owv3_fisher_stack_results/archive_lane_g_v3_owv3.zip",
+    "size_bytes": 638165,
+    "sha256": "57abe0fdf786d95b38325334b568e7a947143afe097ba189f214f2208492cb8f",
+    "manifest": [
+      {
+        "name": "renderer.bin",
+        "raw_bytes": 234120,
+        "compressed_bytes": 211485,
+        "crc32": "377d4eb3",
+        "date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "permissions_octal": "0o644",
+        "sha256": "c970ea6af0569002beabcd79190d429abcba94a5c98f5883942479bc77ad5a24"
+      },
+      {
+        "name": "masks.mkv",
+        "raw_bytes": 421483,
+        "compressed_bytes": 412169,
+        "crc32": "e144d6ac",
+        "date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "permissions_octal": "0o644",
+        "sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9"
+      },
+      {
+        "name": "optimized_poses.pt",
+        "raw_bytes": 15620,
+        "compressed_bytes": 14183,
+        "crc32": "8272fa8a",
+        "date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "permissions_octal": "0o644",
+        "sha256": "cb8517f7a7e3c9382e952ff278dc3f8de44ba066db07746f16354c1dbe2cbca4"
+      }
+    ],
+    "deterministic_rebuild": true,
+    "deterministic_rebuild_sha256": "57abe0fdf786d95b38325334b568e7a947143afe097ba189f214f2208492cb8f"
+  },
+  "size_delta_vs_lane_g_v3": -55909,
+  "lane_g_v3_baseline_score": 1.05,
+  "predicted_score_derivation": 1.0127724917898926,
+  "frontier_comparator": {
+    "label": "PFP16_A++",
+    "archive_bytes": 686635,
+    "archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+    "score": 1.043987524793892,
+    "archive_delta_bytes": -48470,
+    "rate_delta": -0.032274183457831646,
+    "rate_only_score_derivation": 1.0117133413360602,
+    "byte_gate": {
+      "candidate_label": "Lane G v3 OWV3 archive",
+      "comparator_label": "PFP16_A++",
+      "candidate_bytes": 638165,
+      "comparator_bytes": 686635,
+      "delta_bytes": -48470,
+      "allow_size_regression": false,
+      "has_distortion_justification": false,
+      "accepted": true
+    }
+  },
+  "predicted_score_tag": "[derivation]",
+  "score_validation_required": "contest-CUDA via experiments/contest_auth_eval.py",
+  "strict_scorer_rule": "compliant - no scorer load at OWV3 decode/inflate",
+  "evidence_label": "implementation-smoke until exact CUDA contest eval",
+  "size_regression_guard": {
+    "baseline_archive_size_bytes": 694074,
+    "archive_delta_bytes": -55909,
+    "blocked_by_default": false,
+    "allow_size_regression": false,
+    "frontier_blocked_by_default": false,
+    "frontier_blocked_effective": false,
+    "allow_frontier_regression": false
+  }
+}

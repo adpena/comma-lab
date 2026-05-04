@@ -1,0 +1,416 @@
+{
+  "build_policy_manifests": [
+    {
+      "archive_path": null,
+      "blocker_reasons": [
+        "no runnable standalone builder step exists for this policy",
+        "pass3 component pass3_archive_bit_budget_profile is planning/profile input only; no charged builder is available",
+        "planner marks dispatchable_from_this_plan=false; remote or exact eval dispatch must not be launched from this manifest",
+        "policy has existing_builder_can_consume_full_stack=false; no byte-closed stack builder consumes this composition"
+      ],
+      "byte_closed_stack_archive_emitted": false,
+      "dispatchable": false,
+      "evidence_grade": "planning_to_build_non_promotable",
+      "exact_eval_branch_rule": {
+        "branch": "implement byte-closed stack composer -> verify archive bytes, payload closure, runtime tree hash, and no sidecars -> claim lane -> exact CUDA auth eval",
+        "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+        "dispatch_claim_required_before_remote_job": true,
+        "required_before_any_score_claim": true,
+        "score_claim": false
+      },
+      "full_stack_status": "blocked",
+      "policy_id": "c067_multires_p00_anchor_entropy_guard",
+      "promotion_eligible": false,
+      "runnable_standalone_steps": [],
+      "score_claim": false,
+      "unsupported_components": [
+        {
+          "component_id": "pass0_c067_fixedslice_anchor_exact",
+          "pass_index": 0,
+          "reason": "anchor is existing custody/eval input, not a new builder step",
+          "schema": null,
+          "score_claim": false
+        },
+        {
+          "component_id": "pass3_archive_bit_budget_profile",
+          "pass_index": 3,
+          "reason": "component has no byte-closed standalone builder command in the planner artifact",
+          "schema": "archive_bit_budget_profile_v1",
+          "score_claim": false
+        }
+      ]
+    },
+    {
+      "archive_path": null,
+      "blocker_reasons": [
+        "pass3 component pass3_archive_bit_budget_profile is planning/profile input only; no charged builder is available",
+        "planner marks dispatchable_from_this_plan=false; remote or exact eval dispatch must not be launched from this manifest",
+        "policy has existing_builder_can_consume_full_stack=false; no byte-closed stack builder consumes this composition",
+        "unsupported score-affecting member composition on masks.mkv: pass1_pmg_hotspot_lzma, pass2_hotspot_geometry_plan"
+      ],
+      "byte_closed_stack_archive_emitted": false,
+      "dispatchable": false,
+      "evidence_grade": "planning_to_build_non_promotable",
+      "exact_eval_branch_rule": {
+        "branch": "implement byte-closed stack composer -> verify archive bytes, payload closure, runtime tree hash, and no sidecars -> claim lane -> exact CUDA auth eval",
+        "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+        "dispatch_claim_required_before_remote_job": true,
+        "required_before_any_score_claim": true,
+        "score_claim": false
+      },
+      "full_stack_status": "blocked",
+      "policy_id": "c067_multires_p01_coarse_global_with_highres_repair",
+      "promotion_eligible": false,
+      "runnable_standalone_steps": [
+        {
+          "builder_script": "experiments/build_pmg_hotspot_candidate.py",
+          "command": [
+            "python",
+            "experiments/build_pmg_hotspot_candidate.py",
+            "--plan-json",
+            "experiments/results/pmg_hotspot_v1_20260502_codex/pmg_hotspot_plan.json",
+            "--frontier-archive",
+            "experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip",
+            "--decoded-mask-array",
+            "experiments/results/c063_trace_weighted_mask_grammar_plan_20260502_codex/decoded_mask_array.npy",
+            "--output-dir",
+            "experiments/results/c067_multiresolution_stack_builder_20260502/standalone_steps/c067_multires_p01_coarse_global_with_highres_repair/pass1_pmg_hotspot_lzma",
+            "--candidate-id",
+            "pmg_hotspot_rowspan_stride2",
+            "--compressor",
+            "lzma_xz",
+            "--force"
+          ],
+          "command_status": "argparse_valid",
+          "component_id": "pass1_pmg_hotspot_lzma",
+          "output_dir": "experiments/results/c067_multiresolution_stack_builder_20260502/standalone_steps/c067_multires_p01_coarse_global_with_highres_repair/pass1_pmg_hotspot_lzma",
+          "part_of_byte_closed_stack": false,
+          "pass_index": 1,
+          "reason": "standalone PMG-HOTSPOT pass rebuild from existing manifest parameters",
+          "score_claim": false,
+          "source_artifact": {
+            "path": "experiments/results/pmg_hotspot_candidate_c067_20260502_lzma/build_manifest.json",
+            "schema": "pmg_hotspot_cmg3_candidate_v1",
+            "score_claim": false,
+            "sha256": "7c360b838db04b99568fc6a9f9a1e0a68f20424acd28095649f995638f452cfe"
+          },
+          "standalone_only": true,
+          "step_id": "c067_multires_p01_coarse_global_with_highres_repair__pass1_pmg_hotspot_lzma",
+          "validation": {
+            "argparse_validated": true,
+            "score_claim": false,
+            "validated_arg_count": 13,
+            "validated_script": "experiments/build_pmg_hotspot_candidate.py"
+          }
+        },
+        {
+          "builder_script": "experiments/build_cmg3_adaptive_runs_candidate.py",
+          "command": [
+            "python",
+            "experiments/build_cmg3_adaptive_runs_candidate.py",
+            "--frontier-archive",
+            "experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip",
+            "--decoded-mask-array",
+            "experiments/results/c063_trace_weighted_mask_grammar_plan_20260502_codex/decoded_mask_array.npy",
+            "--output-dir",
+            "experiments/results/c067_multiresolution_stack_builder_20260502/standalone_steps/c067_multires_p01_coarse_global_with_highres_repair/pass2_hotspot_geometry_plan",
+            "--field-policy-json",
+            "experiments/results/c067_hotspot_mask_geometry_compiler_20260502/c067_hotspot_mask_geometry_plan.json",
+            "--field-policy-id",
+            "c067_hotspot_geometry_top0128",
+            "--body-search-mode",
+            "auto",
+            "--force",
+            "--target-body-bytes",
+            "166000"
+          ],
+          "command_status": "argparse_valid",
+          "component_id": "pass2_hotspot_geometry_plan",
+          "output_dir": "experiments/results/c067_multiresolution_stack_builder_20260502/standalone_steps/c067_multires_p01_coarse_global_with_highres_repair/pass2_hotspot_geometry_plan",
+          "part_of_byte_closed_stack": false,
+          "pass_index": 2,
+          "reason": "standalone CMG3 adaptive field-policy pass from planner concrete command",
+          "score_claim": false,
+          "source_artifact": {
+            "path": "experiments/results/c067_hotspot_mask_geometry_compiler_20260502/c067_hotspot_mask_geometry_plan.json",
+            "schema": "c067_hotspot_mask_geometry_compiler_v1",
+            "score_claim": false,
+            "sha256": "8d21fc2be8e4f58090e5fd9268724b803925ad79a5acd50d7eca8a53618042f9"
+          },
+          "standalone_only": true,
+          "step_id": "c067_multires_p01_coarse_global_with_highres_repair__pass2_hotspot_geometry_plan",
+          "validation": {
+            "argparse_validated": true,
+            "score_claim": false,
+            "validated_arg_count": 15,
+            "validated_script": "experiments/build_cmg3_adaptive_runs_candidate.py"
+          }
+        }
+      ],
+      "score_claim": false,
+      "unsupported_components": [
+        {
+          "component_id": "pass0_c067_fixedslice_anchor_exact",
+          "pass_index": 0,
+          "reason": "anchor is existing custody/eval input, not a new builder step",
+          "schema": null,
+          "score_claim": false
+        },
+        {
+          "component_id": "pass3_archive_bit_budget_profile",
+          "pass_index": 3,
+          "reason": "component has no byte-closed standalone builder command in the planner artifact",
+          "schema": "archive_bit_budget_profile_v1",
+          "score_claim": false
+        }
+      ]
+    },
+    {
+      "archive_path": null,
+      "blocker_reasons": [
+        "planner marks dispatchable_from_this_plan=false; remote or exact eval dispatch must not be launched from this manifest",
+        "policy has existing_builder_can_consume_full_stack=false; no byte-closed stack builder consumes this composition",
+        "unsupported score-affecting member composition on masks.mkv: pass1_cmg2_downsample2x2, pass2_multimask_reconciliation_plan"
+      ],
+      "byte_closed_stack_archive_emitted": false,
+      "dispatchable": false,
+      "evidence_grade": "planning_to_build_non_promotable",
+      "exact_eval_branch_rule": {
+        "branch": "implement byte-closed stack composer -> verify archive bytes, payload closure, runtime tree hash, and no sidecars -> claim lane -> exact CUDA auth eval",
+        "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+        "dispatch_claim_required_before_remote_job": true,
+        "required_before_any_score_claim": true,
+        "score_claim": false
+      },
+      "full_stack_status": "blocked",
+      "policy_id": "c067_multires_p02_conservative_mask_grammar_recovery",
+      "promotion_eligible": false,
+      "runnable_standalone_steps": [
+        {
+          "builder_script": "experiments/build_cmg2_downsample_candidate.py",
+          "command": [
+            "python",
+            "experiments/build_cmg2_downsample_candidate.py",
+            "--frontier-archive",
+            "experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip",
+            "--decoded-mask-array",
+            "experiments/results/c063_trace_weighted_mask_grammar_plan_20260502_codex/decoded_mask_array.npy",
+            "--output-dir",
+            "experiments/results/c067_multiresolution_stack_builder_20260502/standalone_steps/c067_multires_p02_conservative_mask_grammar_recovery/pass1_cmg2_downsample2x2",
+            "--scale-y",
+            "2",
+            "--scale-x",
+            "2",
+            "--compressor",
+            "bz2",
+            "--force"
+          ],
+          "command_status": "argparse_valid",
+          "component_id": "pass1_cmg2_downsample2x2",
+          "output_dir": "experiments/results/c067_multiresolution_stack_builder_20260502/standalone_steps/c067_multires_p02_conservative_mask_grammar_recovery/pass1_cmg2_downsample2x2",
+          "part_of_byte_closed_stack": false,
+          "pass_index": 1,
+          "reason": "standalone CMG2 pass rebuild from existing manifest parameters",
+          "score_claim": false,
+          "source_artifact": {
+            "path": "experiments/results/c067_cmg2_downsample2x2_candidate_20260502T1010Z/build_manifest.json",
+            "schema": "cmg2_downsample_candidate_v1",
+            "score_claim": false,
+            "sha256": "4b3fd84cdba7c020bc4d55a6b03b1c704f5b39a655beb1784681894a13b669aa"
+          },
+          "standalone_only": true,
+          "step_id": "c067_multires_p02_conservative_mask_grammar_recovery__pass1_cmg2_downsample2x2",
+          "validation": {
+            "argparse_validated": true,
+            "score_claim": false,
+            "validated_arg_count": 13,
+            "validated_script": "experiments/build_cmg2_downsample_candidate.py"
+          }
+        }
+      ],
+      "score_claim": false,
+      "unsupported_components": [
+        {
+          "component_id": "pass0_c067_fixedslice_anchor_exact",
+          "pass_index": 0,
+          "reason": "anchor is existing custody/eval input, not a new builder step",
+          "schema": null,
+          "score_claim": false
+        },
+        {
+          "component_id": "pass2_multimask_reconciliation_plan",
+          "pass_index": 2,
+          "reason": "component has no byte-closed standalone builder command in the planner artifact",
+          "schema": null,
+          "score_claim": false
+        }
+      ]
+    },
+    {
+      "archive_path": null,
+      "blocker_reasons": [
+        "pass4 component pass4_ego_motion_field_plan is planning/profile input only; no charged builder is available",
+        "planner marks dispatchable_from_this_plan=false; remote or exact eval dispatch must not be launched from this manifest",
+        "policy has existing_builder_can_consume_full_stack=false; no byte-closed stack builder consumes this composition",
+        "unsupported score-affecting member composition on masks.mkv: pass1_pmg_hotspot_lzma, pass2_hotspot_geometry_plan"
+      ],
+      "byte_closed_stack_archive_emitted": false,
+      "dispatchable": false,
+      "evidence_grade": "planning_to_build_non_promotable",
+      "exact_eval_branch_rule": {
+        "branch": "implement byte-closed stack composer -> verify archive bytes, payload closure, runtime tree hash, and no sidecars -> claim lane -> exact CUDA auth eval",
+        "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+        "dispatch_claim_required_before_remote_job": true,
+        "required_before_any_score_claim": true,
+        "score_claim": false
+      },
+      "full_stack_status": "blocked",
+      "policy_id": "c067_multires_p03_optional_pose_runtime_coadaptation",
+      "promotion_eligible": false,
+      "runnable_standalone_steps": [
+        {
+          "builder_script": "experiments/build_pmg_hotspot_candidate.py",
+          "command": [
+            "python",
+            "experiments/build_pmg_hotspot_candidate.py",
+            "--plan-json",
+            "experiments/results/pmg_hotspot_v1_20260502_codex/pmg_hotspot_plan.json",
+            "--frontier-archive",
+            "experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip",
+            "--decoded-mask-array",
+            "experiments/results/c063_trace_weighted_mask_grammar_plan_20260502_codex/decoded_mask_array.npy",
+            "--output-dir",
+            "experiments/results/c067_multiresolution_stack_builder_20260502/standalone_steps/c067_multires_p03_optional_pose_runtime_coadaptation/pass1_pmg_hotspot_lzma",
+            "--candidate-id",
+            "pmg_hotspot_rowspan_stride2",
+            "--compressor",
+            "lzma_xz",
+            "--force"
+          ],
+          "command_status": "argparse_valid",
+          "component_id": "pass1_pmg_hotspot_lzma",
+          "output_dir": "experiments/results/c067_multiresolution_stack_builder_20260502/standalone_steps/c067_multires_p03_optional_pose_runtime_coadaptation/pass1_pmg_hotspot_lzma",
+          "part_of_byte_closed_stack": false,
+          "pass_index": 1,
+          "reason": "standalone PMG-HOTSPOT pass rebuild from existing manifest parameters",
+          "score_claim": false,
+          "source_artifact": {
+            "path": "experiments/results/pmg_hotspot_candidate_c067_20260502_lzma/build_manifest.json",
+            "schema": "pmg_hotspot_cmg3_candidate_v1",
+            "score_claim": false,
+            "sha256": "7c360b838db04b99568fc6a9f9a1e0a68f20424acd28095649f995638f452cfe"
+          },
+          "standalone_only": true,
+          "step_id": "c067_multires_p03_optional_pose_runtime_coadaptation__pass1_pmg_hotspot_lzma",
+          "validation": {
+            "argparse_validated": true,
+            "score_claim": false,
+            "validated_arg_count": 13,
+            "validated_script": "experiments/build_pmg_hotspot_candidate.py"
+          }
+        },
+        {
+          "builder_script": "experiments/build_cmg3_adaptive_runs_candidate.py",
+          "command": [
+            "python",
+            "experiments/build_cmg3_adaptive_runs_candidate.py",
+            "--frontier-archive",
+            "experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip",
+            "--decoded-mask-array",
+            "experiments/results/c063_trace_weighted_mask_grammar_plan_20260502_codex/decoded_mask_array.npy",
+            "--output-dir",
+            "experiments/results/c067_multiresolution_stack_builder_20260502/standalone_steps/c067_multires_p03_optional_pose_runtime_coadaptation/pass2_hotspot_geometry_plan",
+            "--field-policy-json",
+            "experiments/results/c067_hotspot_mask_geometry_compiler_20260502/c067_hotspot_mask_geometry_plan.json",
+            "--field-policy-id",
+            "c067_hotspot_geometry_top0128",
+            "--body-search-mode",
+            "auto",
+            "--force",
+            "--target-body-bytes",
+            "166000"
+          ],
+          "command_status": "argparse_valid",
+          "component_id": "pass2_hotspot_geometry_plan",
+          "output_dir": "experiments/results/c067_multiresolution_stack_builder_20260502/standalone_steps/c067_multires_p03_optional_pose_runtime_coadaptation/pass2_hotspot_geometry_plan",
+          "part_of_byte_closed_stack": false,
+          "pass_index": 2,
+          "reason": "standalone CMG3 adaptive field-policy pass from planner concrete command",
+          "score_claim": false,
+          "source_artifact": {
+            "path": "experiments/results/c067_hotspot_mask_geometry_compiler_20260502/c067_hotspot_mask_geometry_plan.json",
+            "schema": "c067_hotspot_mask_geometry_compiler_v1",
+            "score_claim": false,
+            "sha256": "8d21fc2be8e4f58090e5fd9268724b803925ad79a5acd50d7eca8a53618042f9"
+          },
+          "standalone_only": true,
+          "step_id": "c067_multires_p03_optional_pose_runtime_coadaptation__pass2_hotspot_geometry_plan",
+          "validation": {
+            "argparse_validated": true,
+            "score_claim": false,
+            "validated_arg_count": 15,
+            "validated_script": "experiments/build_cmg3_adaptive_runs_candidate.py"
+          }
+        }
+      ],
+      "score_claim": false,
+      "unsupported_components": [
+        {
+          "component_id": "pass0_c067_fixedslice_anchor_exact",
+          "pass_index": 0,
+          "reason": "anchor is existing custody/eval input, not a new builder step",
+          "schema": null,
+          "score_claim": false
+        },
+        {
+          "component_id": "pass4_ego_motion_field_plan",
+          "pass_index": 4,
+          "reason": "component has no byte-closed standalone builder command in the planner artifact",
+          "schema": "ego_motion_field_atom_plan_v1",
+          "score_claim": false
+        }
+      ]
+    }
+  ],
+  "byte_closed_stack_archive_emitted": false,
+  "candidate_policy_count": 4,
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "cuda_jobs_launched": false,
+  "evidence_grade": "planning_to_build_non_promotable",
+  "global_blocker_reasons": [
+    "no runnable standalone builder step exists for this policy",
+    "pass3 component pass3_archive_bit_budget_profile is planning/profile input only; no charged builder is available",
+    "pass4 component pass4_ego_motion_field_plan is planning/profile input only; no charged builder is available",
+    "planner marks dispatchable_from_this_plan=false; remote or exact eval dispatch must not be launched from this manifest",
+    "policy has existing_builder_can_consume_full_stack=false; no byte-closed stack builder consumes this composition",
+    "unsupported score-affecting member composition on masks.mkv: pass1_cmg2_downsample2x2, pass2_multimask_reconciliation_plan",
+    "unsupported score-affecting member composition on masks.mkv: pass1_pmg_hotspot_lzma, pass2_hotspot_geometry_plan"
+  ],
+  "manifest_json": "experiments/results/c067_multiresolution_stack_builder_20260502/c067_multiresolution_stack_build_manifest.json",
+  "no_score_claim": true,
+  "output_dir": "experiments/results/c067_multiresolution_stack_builder_20260502",
+  "plan_json": {
+    "path": "experiments/results/c067_multiresolution_stack_planner_20260502/c067_multiresolution_stack_plan.json",
+    "schema": "c067_multiresolution_stack_planner_v1",
+    "score_claim": false,
+    "sha256": "71c280442025be778d77db050e62879abf009474cec9938a85d86a68f0dd5e3b"
+  },
+  "planning_to_build_bridge": true,
+  "producer": "experiments/build_c067_multiresolution_stack_candidate.py",
+  "promotion_eligible": false,
+  "remote_jobs_dispatched": false,
+  "required_next_steps": [
+    "Use emitted commands only as standalone byte-screen rebuilds; they are not a stacked archive.",
+    "Add a reviewed byte-closed composer before combining score-affecting mask, pose, runtime, or packer passes.",
+    "After a byte-closed stack exists, claim the lane before any remote job and run exact CUDA auth eval on the exact archive bytes."
+  ],
+  "runnable_standalone_step_count": 5,
+  "schema": "c067_multiresolution_stack_build_manifest_v1",
+  "score_claim": false,
+  "selected_policy_ids": [
+    "c067_multires_p00_anchor_entropy_guard",
+    "c067_multires_p01_coarse_global_with_highres_repair",
+    "c067_multires_p02_conservative_mask_grammar_recovery",
+    "c067_multires_p03_optional_pose_runtime_coadaptation"
+  ]
+}

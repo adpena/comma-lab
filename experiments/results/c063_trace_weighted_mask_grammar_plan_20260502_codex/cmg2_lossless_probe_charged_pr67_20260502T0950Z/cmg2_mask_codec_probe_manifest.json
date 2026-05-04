@@ -1,0 +1,296 @@
+{
+  "artifacts": {
+    "best_payload": {
+      "bytes": 340315,
+      "path": "/Users/adpena/Projects/pact/experiments/results/c063_trace_weighted_mask_grammar_plan_20260502_codex/cmg2_lossless_probe_charged_pr67_20260502T0950Z/best_payload.cmg2probe",
+      "reason": "probe payload lacks a reviewed CMG2 archive/runtime envelope",
+      "runtime_ready": false,
+      "sha256": "fae91d8d641fd06a4bc7d3e801fb100c439a4684b2bdf2b034054e5866e2c3d1",
+      "variant_id": "raw_u8_bz2_9"
+    },
+    "manifest": {
+      "path": "/Users/adpena/Projects/pact/experiments/results/c063_trace_weighted_mask_grammar_plan_20260502_codex/cmg2_lossless_probe_charged_pr67_20260502T0950Z/cmg2_mask_codec_probe_manifest.json"
+    }
+  },
+  "baseline": {
+    "bytes": 219472,
+    "role": "charged_current_mask_stream"
+  },
+  "best_variant": {
+    "baseline_delta_bytes": 120843,
+    "beats_baseline": false,
+    "compressed_sha256": "fae91d8d641fd06a4bc7d3e801fb100c439a4684b2bdf2b034054e5866e2c3d1",
+    "compressed_size_bytes": 340315,
+    "compressor": "bz2_9",
+    "seconds": 0.6709285409888253,
+    "transform": "raw_u8",
+    "uncompressed_size_bytes": 117964800,
+    "variant_id": "raw_u8_bz2_9"
+  },
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "command": [
+    "probe_cmg2_mask_codecs.py",
+    "--decoded-mask-array",
+    "experiments/results/c063_trace_weighted_mask_grammar_plan_20260502_codex/decoded_mask_array.npy",
+    "--baseline-bytes",
+    "219472",
+    "--output-dir",
+    "experiments/results/c063_trace_weighted_mask_grammar_plan_20260502_codex/cmg2_lossless_probe_charged_pr67_20260502T0950Z",
+    "--compressors",
+    "zlib9,lzma9,bz2_9",
+    "--transforms",
+    "raw_u8,symbol_packed3,bitplane_packed3,frame_xor_symbol_packed3,pair_xor_symbol_packed3,class_planes_packed5",
+    "--write-best-payload",
+    "--force"
+  ],
+  "environment": {
+    "numpy": "2.4.4",
+    "platform": "macOS-26.4-arm64-arm-64bit",
+    "python": "3.12.13"
+  },
+  "evidence_grade": "empirical_byte_probe_only",
+  "local_probe_only": true,
+  "probe_config": {
+    "compressors": [
+      "zlib9",
+      "lzma9",
+      "bz2_9"
+    ],
+    "transforms": [
+      "raw_u8",
+      "symbol_packed3",
+      "bitplane_packed3",
+      "frame_xor_symbol_packed3",
+      "pair_xor_symbol_packed3",
+      "class_planes_packed5"
+    ],
+    "write_best_payload": true
+  },
+  "promotion_eligible": false,
+  "required_next_steps_for_score_claim": [
+    "define a reviewed CMG2 archive member envelope and deterministic decoder",
+    "add archive validator and local-smoke allowlist parity for the new suffix",
+    "build an exact archive that carries every score-affecting byte",
+    "run exact CUDA auth eval on the exact archive bytes"
+  ],
+  "schema": "cmg2_mask_codec_probe_v1",
+  "score_claim": false,
+  "score_claim_warning": "No score claim is made by this probe. Byte wins here are lossless codec design evidence only; a deterministic archive, runtime decoder, and exact CUDA auth eval on the exact archive bytes are required before ranking or promotion.",
+  "scorer_network_loaded": false,
+  "source": {
+    "class_max": 4,
+    "class_min": 0,
+    "decoded_mask_array_npy_sha256": "13f81851ae206f6142cd3348db5537eda4ea832665052824816f4d1bf432de0c",
+    "decoded_mask_array_path": "/Users/adpena/Projects/pact/experiments/results/c063_trace_weighted_mask_grammar_plan_20260502_codex/decoded_mask_array.npy",
+    "decoded_mask_tensor_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+    "dtype": "uint8",
+    "pixel_count": 117964800,
+    "raw_u8_bytes": 117964800,
+    "shape": [
+      600,
+      384,
+      512
+    ]
+  },
+  "tool": "experiments/probe_cmg2_mask_codecs.py",
+  "variants": [
+    {
+      "baseline_delta_bytes": 120843,
+      "beats_baseline": false,
+      "compressed_sha256": "fae91d8d641fd06a4bc7d3e801fb100c439a4684b2bdf2b034054e5866e2c3d1",
+      "compressed_size_bytes": 340315,
+      "compressor": "bz2_9",
+      "seconds": 0.6709285409888253,
+      "transform": "raw_u8",
+      "uncompressed_size_bytes": 117964800,
+      "variant_id": "raw_u8_bz2_9"
+    },
+    {
+      "baseline_delta_bytes": 126015,
+      "beats_baseline": false,
+      "compressed_sha256": "a15dbeedc66a83940284494fc82caa8deb2e08499447c017d0dd27059df3bcaa",
+      "compressed_size_bytes": 345487,
+      "compressor": "bz2_9",
+      "seconds": 0.35198558401316404,
+      "transform": "bitplane_packed3",
+      "uncompressed_size_bytes": 44236800,
+      "variant_id": "bitplane_packed3_bz2_9"
+    },
+    {
+      "baseline_delta_bytes": 137372,
+      "beats_baseline": false,
+      "compressed_sha256": "a9cbc1a48e1a9c4fce9f653aa6d90dafc78dd5580ee318fdfbec68aaf9a89292",
+      "compressed_size_bytes": 356844,
+      "compressor": "lzma9",
+      "seconds": 2.6647789999842644,
+      "transform": "bitplane_packed3",
+      "uncompressed_size_bytes": 44236800,
+      "variant_id": "bitplane_packed3_lzma9"
+    },
+    {
+      "baseline_delta_bytes": 175992,
+      "beats_baseline": false,
+      "compressed_sha256": "730707f2da67246662cf3898234fd81e0fa284335defe263df2bfe1d206c3372",
+      "compressed_size_bytes": 395464,
+      "compressor": "lzma9",
+      "seconds": 4.8946054999832995,
+      "transform": "symbol_packed3",
+      "uncompressed_size_bytes": 44236800,
+      "variant_id": "symbol_packed3_lzma9"
+    },
+    {
+      "baseline_delta_bytes": 192560,
+      "beats_baseline": false,
+      "compressed_sha256": "43279f74490cd212f09d9619fda9fc705b46402411332cd002e79cff8112afc7",
+      "compressed_size_bytes": 412032,
+      "compressor": "lzma9",
+      "seconds": 12.236598666000646,
+      "transform": "raw_u8",
+      "uncompressed_size_bytes": 117964800,
+      "variant_id": "raw_u8_lzma9"
+    },
+    {
+      "baseline_delta_bytes": 207853,
+      "beats_baseline": false,
+      "compressed_sha256": "d74e19d30a04bcd94802681077dcf85a678cf0236d1f208a37e06b6f373c1403",
+      "compressed_size_bytes": 427325,
+      "compressor": "bz2_9",
+      "seconds": 2.77772295800969,
+      "transform": "symbol_packed3",
+      "uncompressed_size_bytes": 44236800,
+      "variant_id": "symbol_packed3_bz2_9"
+    },
+    {
+      "baseline_delta_bytes": 239176,
+      "beats_baseline": false,
+      "compressed_sha256": "25ea13af130ab70f0d897bef364b83a85a22688901cb20ab6f1be8e43f4fbbab",
+      "compressed_size_bytes": 458648,
+      "compressor": "lzma9",
+      "seconds": 5.227882417035289,
+      "transform": "pair_xor_symbol_packed3",
+      "uncompressed_size_bytes": 44236800,
+      "variant_id": "pair_xor_symbol_packed3_lzma9"
+    },
+    {
+      "baseline_delta_bytes": 290369,
+      "beats_baseline": false,
+      "compressed_sha256": "8e87359550f66e727ebb4aa0c67121c251a5a214fb8155f600f8ab97aa18083a",
+      "compressed_size_bytes": 509841,
+      "compressor": "bz2_9",
+      "seconds": 1.5793158749584109,
+      "transform": "pair_xor_symbol_packed3",
+      "uncompressed_size_bytes": 44236800,
+      "variant_id": "pair_xor_symbol_packed3_bz2_9"
+    },
+    {
+      "baseline_delta_bytes": 323872,
+      "beats_baseline": false,
+      "compressed_sha256": "bde51172d56958a6d32300dc70c45de89788c9dc5e48a3f07ec61f7e069aa2f2",
+      "compressed_size_bytes": 543344,
+      "compressor": "lzma9",
+      "seconds": 5.855741582985502,
+      "transform": "frame_xor_symbol_packed3",
+      "uncompressed_size_bytes": 44236800,
+      "variant_id": "frame_xor_symbol_packed3_lzma9"
+    },
+    {
+      "baseline_delta_bytes": 330349,
+      "beats_baseline": false,
+      "compressed_sha256": "492aaaa334e5871fb89b8bdf14c3a7012b7e405d26da6bed57195a8dd5508c82",
+      "compressed_size_bytes": 549821,
+      "compressor": "bz2_9",
+      "seconds": 0.4081945000216365,
+      "transform": "frame_xor_symbol_packed3",
+      "uncompressed_size_bytes": 44236800,
+      "variant_id": "frame_xor_symbol_packed3_bz2_9"
+    },
+    {
+      "baseline_delta_bytes": 361912,
+      "beats_baseline": false,
+      "compressed_sha256": "e87037840adc835871309224ac4e7b3ffb1778ab43816a8940f6da7dbe3e4316",
+      "compressed_size_bytes": 581384,
+      "compressor": "zlib9",
+      "seconds": 1.3373230419820175,
+      "transform": "raw_u8",
+      "uncompressed_size_bytes": 117964800,
+      "variant_id": "raw_u8_zlib9"
+    },
+    {
+      "baseline_delta_bytes": 374195,
+      "beats_baseline": false,
+      "compressed_sha256": "3aed619fb02b149de21e3c5c6640ed729f0ce594824b9eb83791eee3e9e821a5",
+      "compressed_size_bytes": 593667,
+      "compressor": "zlib9",
+      "seconds": 0.8968549589626491,
+      "transform": "bitplane_packed3",
+      "uncompressed_size_bytes": 44236800,
+      "variant_id": "bitplane_packed3_zlib9"
+    },
+    {
+      "baseline_delta_bytes": 392536,
+      "beats_baseline": false,
+      "compressed_sha256": "b57c640ed808b592e9a41d6c6accc480111769057f4b60f1d82b701cb83fd7d6",
+      "compressed_size_bytes": 612008,
+      "compressor": "bz2_9",
+      "seconds": 0.6000810830155388,
+      "transform": "class_planes_packed5",
+      "uncompressed_size_bytes": 73728000,
+      "variant_id": "class_planes_packed5_bz2_9"
+    },
+    {
+      "baseline_delta_bytes": 427164,
+      "beats_baseline": false,
+      "compressed_sha256": "f2e4f0003b04617d60bffe5bcf8bda4f9ccccfdb8942071294fad87a07f15152",
+      "compressed_size_bytes": 646636,
+      "compressor": "lzma9",
+      "seconds": 4.734312291024253,
+      "transform": "class_planes_packed5",
+      "uncompressed_size_bytes": 73728000,
+      "variant_id": "class_planes_packed5_lzma9"
+    },
+    {
+      "baseline_delta_bytes": 448046,
+      "beats_baseline": false,
+      "compressed_sha256": "41abe4fe5e057efcc74a052efac746840aef0926b6bcd905bb52ab914e2c772b",
+      "compressed_size_bytes": 667518,
+      "compressor": "zlib9",
+      "seconds": 0.7835817919694819,
+      "transform": "symbol_packed3",
+      "uncompressed_size_bytes": 44236800,
+      "variant_id": "symbol_packed3_zlib9"
+    },
+    {
+      "baseline_delta_bytes": 567680,
+      "beats_baseline": false,
+      "compressed_sha256": "b2612c28b17022dd409b39b83c9f9c27983a4be8c1d03e11b563ba17b32cad3f",
+      "compressed_size_bytes": 787152,
+      "compressor": "zlib9",
+      "seconds": 0.998935709008947,
+      "transform": "pair_xor_symbol_packed3",
+      "uncompressed_size_bytes": 44236800,
+      "variant_id": "pair_xor_symbol_packed3_zlib9"
+    },
+    {
+      "baseline_delta_bytes": 658372,
+      "beats_baseline": false,
+      "compressed_sha256": "ba676bfb33503e9bbd914c6041472a644327f891021da13763190145c0401e14",
+      "compressed_size_bytes": 877844,
+      "compressor": "zlib9",
+      "seconds": 1.1837513750069775,
+      "transform": "frame_xor_symbol_packed3",
+      "uncompressed_size_bytes": 44236800,
+      "variant_id": "frame_xor_symbol_packed3_zlib9"
+    },
+    {
+      "baseline_delta_bytes": 828223,
+      "beats_baseline": false,
+      "compressed_sha256": "4c38ec9088475ee50844078ad479854455fcb9a7568aaec8390738258a485deb",
+      "compressed_size_bytes": 1047695,
+      "compressor": "zlib9",
+      "seconds": 1.6259138339664787,
+      "transform": "class_planes_packed5",
+      "uncompressed_size_bytes": 73728000,
+      "variant_id": "class_planes_packed5_zlib9"
+    }
+  ]
+}

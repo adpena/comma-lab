@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "scope": "pr65_pose_transfer_sub314_local_planning_no_remote_dispatch",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "no_remote_gpu_jobs_dispatched": true,
+  "frontier_anchor": {
+    "label": "C088_PR75_top40_p3_T4",
+    "archive": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/archive.zip",
+    "archive_bytes": 276386,
+    "archive_sha256": "9feef7ffaa254f9e5408996a122682757a054144a3000539553786c5292b7d0a",
+    "score_recomputed_from_components": 0.3155226919767294,
+    "avg_posenet_dist": 0.00049633,
+    "avg_segnet_dist": 0.00061038,
+    "evidence_grade": "A++",
+    "gpu": "Tesla T4"
+  },
+  "public_pose_signal": {
+    "pr65_global_pose_advantage_vs_c059": {
+      "pose_dist_delta_source_minus_target": -0.00014354,
+      "seg_dist_delta_source_minus_target": 0.00009652,
+      "bytes_delta_source_minus_target": 8078,
+      "rate_utility_delta_source_minus_target": 0.005378808623320901,
+      "evidence_grade": "external_public_summary_plus_local_anatomy",
+      "use": "planning signal only; PR65 lacks a compatible pair-local pose stream for direct archive transfer"
+    },
+    "pr75_qp1_precision_fix_status": {
+      "raw_parity_report": "experiments/results/pr75_raw_output_parity_20260503_codex/pr75_raw_output_parity.json",
+      "finding": "robust runtime must preserve public QP1 float32 pose precision; selected public/robust renders match when public QP1 float32 poses are fed directly",
+      "evidence_grade": "empirical_local_raw_parity"
+    }
+  },
+  "built_candidate": {
+    "candidate_id": "c067_pr75_actions_lag_eval_pose4_top67_p6",
+    "archive": "experiments/results/pr65_pose_transfer_sub314_20260503_codex/pr75_lag_eval_pose4_top67_p6_rebuild/c067_pr75_actions_lag_eval_pose4_top67_p6/archive.zip",
+    "archive_bytes": 276338,
+    "archive_sha256": "de7d549ec4437b3ed9508c1f62f8a79bef88440ba3db0f4a7de5a2c83fe160ef",
+    "wire_format": "p6",
+    "selected_record_count": 38,
+    "selected_unique_source_record_count": 38,
+    "source_preserving": false,
+    "noop": false,
+    "estimated_score_recomputed_from_c067_trace": 0.3154606501519654,
+    "expected_score_delta_vs_c088": -0.00006204182476397995,
+    "archive_byte_delta_vs_c088": -48,
+    "rate_score_delta_vs_c088": -0.00003196122974986422,
+    "selected_delta_pose_trace_sum": 0.00006510502935348066,
+    "selected_delta_seg_trace_sum": 0.0001737806839325155,
+    "selected_delta_combined_trace_sum": 0.00023888571328599617,
+    "evidence_grade": "byte_and_trace_planning_only_until_exact_cuda",
+    "exact_eval_command": [
+      ".venv/bin/python",
+      "-u",
+      "experiments/contest_auth_eval.py",
+      "--archive",
+      "experiments/results/pr65_pose_transfer_sub314_20260503_codex/pr75_lag_eval_pose4_top67_p6_rebuild/c067_pr75_actions_lag_eval_pose4_top67_p6/archive.zip",
+      "--inflate-sh",
+      "submissions/robust_current/inflate.sh",
+      "--upstream-dir",
+      "upstream",
+      "--device",
+      "cuda",
+      "--keep-work-dir",
+      "--work-dir",
+      "experiments/results/pr65_pose_transfer_sub314_20260503_codex/exact_eval_work_c067_pr75_actions_lag_eval_pose4_top67_p6"
+    ]
+  },
+  "pose_macro_specs": [
+    {
+      "candidate_id": "c_059_pose_atoms_top016_macro_build_spec",
+      "selected_pair_count": 16,
+      "estimated_charged_payload_bytes": 32.0,
+      "expected_score_saved_formula_only": 0.00029661178784829876,
+      "expected_net_score_utility_formula_only": 0.00027530430134838925,
+      "selected_pair_indices": [164, 64, 130, 112, 97, 153, 70, 198, 420, 289, 166, 435, 78, 418, 87, 159]
+    },
+    {
+      "candidate_id": "public_pose_manifold_transfer_top016",
+      "selected_pair_count": 16,
+      "estimated_charged_payload_bytes": 32.0,
+      "expected_scorer_utility_formula_only": 0.0002977666888432403,
+      "net_expected_utility_after_rate_and_risk": 0.00027099915892772895,
+      "selected_pair_indices": [164, 64, 130, 112, 97, 153, 70, 198, 420, 289, 166, 435, 78, 156, 418, 87]
+    }
+  ],
+  "failure_risks": [
+    "PR65 has strong global PoseNet signal but no compatible pair-local charged pose stream; direct transfer would be an ungrounded transplant.",
+    "Direct public PR75 pose-only replay regressed PoseNet on L40S diagnostic evidence, so wholesale pose stream copying is not recommended.",
+    "The built P6 candidate is trace-calibrated, not exact CUDA scored; PR75 tile-action trace ordering can fail under exact T4 auth eval.",
+    "SegNet/PoseNet interactions are non-additive; stacked pose macro specs require a closed builder and exact eval before promotion.",
+    "Remote dispatch remains blocked until a lane claim is made; this run intentionally did not claim or dispatch."
+  ],
+  "artifacts": {
+    "pose_transfer_policy": "experiments/results/pr65_pose_transfer_sub314_20260503_codex/pose_manifold_transfer_policy.json",
+    "c088_waterfill_plan": "experiments/results/pr65_pose_transfer_sub314_20260503_codex/c088_pose_waterfill_plan/pose_manifold_waterfill_plan.json",
+    "p6_candidate_matrix": "experiments/results/pr65_pose_transfer_sub314_20260503_codex/pr75_lag_eval_pose4_top67_p6_rebuild/candidate_matrix.json",
+    "p6_candidate_manifest": "experiments/results/pr65_pose_transfer_sub314_20260503_codex/pr75_lag_eval_pose4_top67_p6_rebuild/c067_pr75_actions_lag_eval_pose4_top67_p6/manifest.json"
+  }
+}

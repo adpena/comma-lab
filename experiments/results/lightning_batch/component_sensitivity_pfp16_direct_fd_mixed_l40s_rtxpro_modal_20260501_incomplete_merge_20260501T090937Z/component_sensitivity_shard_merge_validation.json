@@ -1,0 +1,213 @@
+{
+  "all_channel_count": 717,
+  "all_channel_sha256": "d083b41a14fd1eb567fb2c54b1b7c2def2395972f18fc82cd57c9d527e0cc552",
+  "allow_incomplete": true,
+  "artifact_dir": "experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_mixed_l40s_rtxpro_modal_20260501_incomplete_merge_20260501T090937Z",
+  "certification_handoff_eligible": false,
+  "coverage": "incomplete",
+  "covered_channel_count": 673,
+  "covered_channel_sha256": "74d1b8f12993a5921e25f717f0cdf0a5ff1aee7bcfa787d62f6589143539c3aa",
+  "declared_shard_count": 16,
+  "expected_shard_count": 16,
+  "finite_difference_merge": {
+    "all_channel_count": 717,
+    "all_channel_sha256": "d083b41a14fd1eb567fb2c54b1b7c2def2395972f18fc82cd57c9d527e0cc552",
+    "allow_incomplete": true,
+    "assigned_channel_sha256_by_shard": [
+      "668121dc876b0e9817077f7e010786195f5b5a93e365fd9300b0e1309093d1de",
+      "572df9891b402a74f3139087a192f68c9d56914edb5fd198c5932d2849716441",
+      "c92377695b9fd06dfee69c86763aac5b6850f768353876059741ef9461241b34",
+      "2e2df45d7bf9b56e442cfb16c51a6351ba47e7fb270ab7456a98e0259f8932c7",
+      "78ec9a9336eefe4d288e4a3a78d702f60f6a54efeed002bf41777a060255c4a6",
+      "e897ff4cc5d55e7402a570a7b810241cd00c9ea0b3d33539a84531e5de4e1120",
+      "2757b315ed7e4ff346ab2b0d634727fe63576e6d760d612a098217afadc32641",
+      "f7738a88c91498bc2f35aa987780c44e9271b7b4bc1a1a1e2d09b9aaf1604bc4",
+      "35ca7f9b2fb2b8ee81a4b0dc0bcf7a9664d3325662ee2c39709a46c3b445ec54",
+      "9009097c342a42f8e603fc7617fd747128c1f05e57b2dd4950ec7081a9e07bf9",
+      "4b965963cec3feed612cc8632f6c88ab4440c811f4d11850859486641b69e55e",
+      "ddfa43584154a924ee87f9230bcaf200dae0ae1f312ba3acc609b105e47358cd",
+      "6b27769533f60a02abc630ab459c94d4314304b25ed0ae216681ecda6173a96c",
+      "a3e666110f835f959b00f80d6f648ba244d656aa3feb7c0e9f38b5da539f298d",
+      "e782c26627282dc6fc7469001272cabe2133439624aa074f60e0af17c46f5e50"
+    ],
+    "certification_handoff_eligible": false,
+    "coverage": "incomplete",
+    "covered_channel_count": 673,
+    "covered_channel_sha256": "74d1b8f12993a5921e25f717f0cdf0a5ff1aee7bcfa787d62f6589143539c3aa",
+    "declared_shard_count": 16,
+    "expected_shard_count": 16,
+    "missing_channel_count": 44,
+    "missing_channel_sha256": "3bb58096fe1eca59decb5dfc3882dbcb514ba7ba295f79053ff8ea87d4863e6e",
+    "missing_shard_indices": [
+      10
+    ],
+    "promotion_eligible": false,
+    "schema": "component_sensitivity_direct_fd_merge_v1",
+    "score_claim": false,
+    "source_shard_count": 15,
+    "source_shard_dirs": [
+      "experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_l40s_20260501_shard00_of16",
+      "experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_l40s_20260501_shard01_of16",
+      "experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3/shard_02",
+      "experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_l40s_20260501_shard03_of16",
+      "experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_l40s_20260501_shard04_of16",
+      "experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_l40s_20260501_shard05_of16",
+      "experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3/shard_06",
+      "experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_l40s_20260501_shard07_of16",
+      "experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_rtxpro_fallback_20260501_shard08_of16",
+      "experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3/shard_09",
+      "experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_rtxpro_fallback_20260501_shard11_of16",
+      "experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_rtxpro_fallback_20260501_shard12_of16",
+      "experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_rtxpro_fallback_20260501_shard13_of16",
+      "experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_rtxpro_fallback_20260501_shard14_of16",
+      "experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_rtxpro_fallback_20260501_shard15_of16"
+    ],
+    "source_shard_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      11,
+      12,
+      13,
+      14,
+      15
+    ]
+  },
+  "format": "component_sensitivity_shard_merge_validation_v1",
+  "holdout_map_paths": {
+    "combined": "experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_mixed_l40s_rtxpro_modal_20260501_incomplete_merge_20260501T090937Z/combined_holdout_sensitivity_map.pt",
+    "posenet": "experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_mixed_l40s_rtxpro_modal_20260501_incomplete_merge_20260501T090937Z/posenet_holdout_sensitivity_map.pt",
+    "segnet": "experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_mixed_l40s_rtxpro_modal_20260501_incomplete_merge_20260501T090937Z/segnet_holdout_sensitivity_map.pt"
+  },
+  "map_paths": {
+    "combined": "experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_mixed_l40s_rtxpro_modal_20260501_incomplete_merge_20260501T090937Z/combined_sensitivity_map.pt",
+    "posenet": "experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_mixed_l40s_rtxpro_modal_20260501_incomplete_merge_20260501T090937Z/posenet_sensitivity_map.pt",
+    "segnet": "experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_mixed_l40s_rtxpro_modal_20260501_incomplete_merge_20260501T090937Z/segnet_sensitivity_map.pt"
+  },
+  "missing_channel_count": 44,
+  "missing_channel_sha256": "3bb58096fe1eca59decb5dfc3882dbcb514ba7ba295f79053ff8ea87d4863e6e",
+  "missing_shard_indices": [
+    10
+  ],
+  "promotion_eligible": false,
+  "provided_shard_count": 15,
+  "provided_shard_indices": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    11,
+    12,
+    13,
+    14,
+    15
+  ],
+  "score_claim": false,
+  "source_shards": [
+    {
+      "assigned_channel_count": 44,
+      "assigned_channel_sha256": "668121dc876b0e9817077f7e010786195f5b5a93e365fd9300b0e1309093d1de",
+      "path": "experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_l40s_20260501_shard00_of16",
+      "shard_index": 0
+    },
+    {
+      "assigned_channel_count": 45,
+      "assigned_channel_sha256": "572df9891b402a74f3139087a192f68c9d56914edb5fd198c5932d2849716441",
+      "path": "experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_l40s_20260501_shard01_of16",
+      "shard_index": 1
+    },
+    {
+      "assigned_channel_count": 45,
+      "assigned_channel_sha256": "c92377695b9fd06dfee69c86763aac5b6850f768353876059741ef9461241b34",
+      "path": "experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3/shard_02",
+      "shard_index": 2
+    },
+    {
+      "assigned_channel_count": 45,
+      "assigned_channel_sha256": "2e2df45d7bf9b56e442cfb16c51a6351ba47e7fb270ab7456a98e0259f8932c7",
+      "path": "experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_l40s_20260501_shard03_of16",
+      "shard_index": 3
+    },
+    {
+      "assigned_channel_count": 45,
+      "assigned_channel_sha256": "78ec9a9336eefe4d288e4a3a78d702f60f6a54efeed002bf41777a060255c4a6",
+      "path": "experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_l40s_20260501_shard04_of16",
+      "shard_index": 4
+    },
+    {
+      "assigned_channel_count": 44,
+      "assigned_channel_sha256": "e897ff4cc5d55e7402a570a7b810241cd00c9ea0b3d33539a84531e5de4e1120",
+      "path": "experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_l40s_20260501_shard05_of16",
+      "shard_index": 5
+    },
+    {
+      "assigned_channel_count": 45,
+      "assigned_channel_sha256": "2757b315ed7e4ff346ab2b0d634727fe63576e6d760d612a098217afadc32641",
+      "path": "experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3/shard_06",
+      "shard_index": 6
+    },
+    {
+      "assigned_channel_count": 45,
+      "assigned_channel_sha256": "f7738a88c91498bc2f35aa987780c44e9271b7b4bc1a1a1e2d09b9aaf1604bc4",
+      "path": "experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_l40s_20260501_shard07_of16",
+      "shard_index": 7
+    },
+    {
+      "assigned_channel_count": 45,
+      "assigned_channel_sha256": "35ca7f9b2fb2b8ee81a4b0dc0bcf7a9664d3325662ee2c39709a46c3b445ec54",
+      "path": "experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_rtxpro_fallback_20260501_shard08_of16",
+      "shard_index": 8
+    },
+    {
+      "assigned_channel_count": 45,
+      "assigned_channel_sha256": "9009097c342a42f8e603fc7617fd747128c1f05e57b2dd4950ec7081a9e07bf9",
+      "path": "experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3/shard_09",
+      "shard_index": 9
+    },
+    {
+      "assigned_channel_count": 45,
+      "assigned_channel_sha256": "4b965963cec3feed612cc8632f6c88ab4440c811f4d11850859486641b69e55e",
+      "path": "experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_rtxpro_fallback_20260501_shard11_of16",
+      "shard_index": 11
+    },
+    {
+      "assigned_channel_count": 45,
+      "assigned_channel_sha256": "ddfa43584154a924ee87f9230bcaf200dae0ae1f312ba3acc609b105e47358cd",
+      "path": "experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_rtxpro_fallback_20260501_shard12_of16",
+      "shard_index": 12
+    },
+    {
+      "assigned_channel_count": 45,
+      "assigned_channel_sha256": "6b27769533f60a02abc630ab459c94d4314304b25ed0ae216681ecda6173a96c",
+      "path": "experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_rtxpro_fallback_20260501_shard13_of16",
+      "shard_index": 13
+    },
+    {
+      "assigned_channel_count": 45,
+      "assigned_channel_sha256": "a3e666110f835f959b00f80d6f648ba244d656aa3feb7c0e9f38b5da539f298d",
+      "path": "experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_rtxpro_fallback_20260501_shard14_of16",
+      "shard_index": 14
+    },
+    {
+      "assigned_channel_count": 45,
+      "assigned_channel_sha256": "e782c26627282dc6fc7469001272cabe2133439624aa074f60e0af17c46f5e50",
+      "path": "experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_rtxpro_fallback_20260501_shard15_of16",
+      "shard_index": 15
+    }
+  ],
+  "summary_path": "experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_mixed_l40s_rtxpro_modal_20260501_incomplete_merge_20260501T090937Z/component_sensitivity_profile_summary.json",
+  "tool": "experiments/merge_component_sensitivity_shards.py"
+}

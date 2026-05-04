@@ -1,0 +1,571 @@
+{
+  "archive": "/Users/adpena/Projects/pact/experiments/results/pr65_henosis_stream_transfer_20260503_codex/c091_pr65_post_bias_segadv_top016/archive.zip",
+  "archive_byte_delta_vs_c091": 316,
+  "archive_bytes": 276797,
+  "archive_sha256": "72a47f3e7cad156e9321f846b49a7c34d9269c8a3ce3f7f15eb4f73e5502392e",
+  "builder_meta": {
+    "archive_byte_delta": 316,
+    "evidence_grade": "empirical_byte_only_until_cuda_auth_eval",
+    "formula_rate_score_delta": 0.00021041142918660615,
+    "include_streams": [
+      "post",
+      "bias"
+    ],
+    "members": {
+      "p": {
+        "bytes": 276381,
+        "sha256": "f78c71d3086773e417c672734082a49ceb0ef5a0016cf406a920be7978fff252"
+      },
+      "qpost.bin": {
+        "bytes": 222,
+        "sha256": "b72c828c5d8663376a89b4174754fdbe501b46b54cbe969625e7989667427872"
+      }
+    },
+    "omitted_streams": [
+      "shift",
+      "frac",
+      "frac2",
+      "frac3",
+      "region",
+      "randmulti"
+    ],
+    "output_archive": "/Users/adpena/Projects/pact/experiments/results/pr65_henosis_stream_transfer_20260503_codex/c091_pr65_post_bias_segadv_top016/archive.zip",
+    "output_archive_bytes": 276797,
+    "output_archive_sha256": "72a47f3e7cad156e9321f846b49a7c34d9269c8a3ce3f7f15eb4f73e5502392e",
+    "pair_filter": {
+      "nonselected_pairs_default_to_identity": true,
+      "pair_count": 16,
+      "pair_indices": [
+        0,
+        104,
+        149,
+        417,
+        1,
+        82,
+        46,
+        302,
+        238,
+        240,
+        56,
+        286,
+        445,
+        234,
+        492,
+        38
+      ],
+      "randmulti_supported": false
+    },
+    "pr65_archive": "/Users/adpena/Projects/pact/experiments/results/top_submission_delta_reverse_engineering_20260503/sources/pr65_henosis_archive.zip",
+    "pr65_archive_sha256": "b331cb4f6df9d8929db966b943b8c73624cdf3b6db71acbde361570852e59e68",
+    "qpost_streams": {
+      "bias": {
+        "active": true,
+        "bytes": 46,
+        "original_bytes": 223,
+        "original_sha256": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b",
+        "sha256": "43d288defd8fcca8362246ce638370a21c29903fbd0c92576fbf502def1e4a76"
+      },
+      "frac": {
+        "active": false,
+        "bytes": 0,
+        "original_bytes": 106,
+        "original_sha256": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "frac2": {
+        "active": false,
+        "bytes": 0,
+        "original_bytes": 149,
+        "original_sha256": "3a01c7546d89d9d3ca846da37a20add7d456421e9211a6339850d946b856026b",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "frac3": {
+        "active": false,
+        "bytes": 0,
+        "original_bytes": 154,
+        "original_sha256": "d725b01b604566c5a76a06b821c644c8d5d5bb9a57ab0597d3bdabc8389858b5",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "post": {
+        "active": true,
+        "bytes": 140,
+        "original_bytes": 1400,
+        "original_sha256": "c3dc88e0fb5a1e48aec49eeacefeea20685e3c02598933deb1ff22dc09892575",
+        "sha256": "a4f52796594796ee8cd4a9937b289c316b6f4012d2d9c5cf73261a1a0aac9620"
+      },
+      "randmulti": {
+        "active": false,
+        "bytes": 0,
+        "original_bytes": 3731,
+        "original_sha256": "dddf4b4fec32190b219d3e916e05bba5d1711d4208d16966929fa09cbc39349e",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "region": {
+        "active": false,
+        "bytes": 0,
+        "original_bytes": 273,
+        "original_sha256": "4a7c16094fab281c30e27621a58577c095c4b1153c232518c9adbaba2a2b2392",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "shift": {
+        "active": false,
+        "bytes": 0,
+        "original_bytes": 226,
+        "original_sha256": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    "schema_version": 1,
+    "score_claim": false,
+    "source_archive": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_pr75_minp_public_replay_t4_20260503T1049Z/archive.zip",
+    "source_archive_bytes": 276481,
+    "source_archive_sha256": "03a2afd5fe92c93a9b7b7e43625158a73b455f0cfbca82d278008a728db78746",
+    "tool": "experiments/build_qzs3_postprocess_candidate.py"
+  },
+  "candidate_family": "pr65_qpost_sidecar",
+  "candidate_id": "c091_pr65_post_bias_segadv_top016",
+  "component_gain_required_for_sub314": 0.0013761617120463627,
+  "component_gain_required_to_beat_c091": 0.00021041142918660615,
+  "dispatch_recommendation": {
+    "class": "non_dispatchable_planning_artifact",
+    "reason": "This slice does not dispatch GPU work. PR65 qpost bias has existing C089/C091-adjacent exact-negative evidence, and component traces are only pair-ranking signal.",
+    "required_before_exact_eval": [
+      "operator selects candidate after reviewing qpost exact-negative artifacts",
+      "claim lane with tools/claim_lane_dispatch.py",
+      "run experiments/contest_auth_eval.py --device cuda on exact archive bytes"
+    ]
+  },
+  "exact_eval_command_template": ".venv/bin/python -u experiments/contest_auth_eval.py --archive /Users/adpena/Projects/pact/experiments/results/pr65_henosis_stream_transfer_20260503_codex/c091_pr65_post_bias_segadv_top016/archive.zip --inflate-sh submissions/robust_current/inflate.sh --upstream-dir upstream --device cuda --keep-work-dir --work-dir /Users/adpena/Projects/pact/experiments/results/pr65_henosis_stream_transfer_20260503_codex/exact_eval_work/c091_pr65_post_bias_segadv_top016",
+  "formula_rate_score_delta_vs_c091": 0.00021041142918660615,
+  "include_streams": [
+    "post",
+    "bias"
+  ],
+  "pr65_archive": "/Users/adpena/Projects/pact/experiments/results/top_submission_delta_reverse_engineering_20260503/sources/pr65_henosis_archive.zip",
+  "promotion_eligible": false,
+  "qpost_bin": {
+    "bytes": 222,
+    "magic_hex": "515053318c00000000000000",
+    "sha256": "b72c828c5d8663376a89b4174754fdbe501b46b54cbe969625e7989667427872"
+  },
+  "rank_metric": "seg",
+  "remote_dispatch": {
+    "dispatched": false,
+    "lightning_state_touched": false
+  },
+  "risk_family": "post_bias_high_risk_nonbias_stream",
+  "schema_version": 1,
+  "score_claim": false,
+  "selected_pair_count": 16,
+  "selected_pair_indices": [
+    0,
+    104,
+    149,
+    417,
+    1,
+    82,
+    46,
+    302,
+    238,
+    240,
+    56,
+    286,
+    445,
+    234,
+    492,
+    38
+  ],
+  "selected_pair_rank_records": [
+    {
+      "advantage": {
+        "combined": -6.9342759795481185e-06,
+        "pose": -4.391144469131442e-06,
+        "seg": -2.543131510416671e-06
+      },
+      "pair_index": 0,
+      "pr65_trace_contribution": {
+        "combined": 9.392578080675582e-05,
+        "pose": 1.5088703983839148e-05,
+        "seg": 7.883707682291667e-05
+      },
+      "rank_advantage": -2.543131510416671e-06,
+      "rank_metric": "seg",
+      "rank_metric_positive": false,
+      "source_contribution": {
+        "combined": 8.69915048272077e-05,
+        "pose": 1.0697559514707706e-05,
+        "seg": 7.62939453125e-05
+      }
+    },
+    {
+      "advantage": {
+        "combined": -2.9208355370273216e-06,
+        "pose": -3.777040266105962e-07,
+        "seg": -2.5431315104166847e-06
+      },
+      "pair_index": 104,
+      "pr65_trace_contribution": {
+        "combined": 0.00025045468896311583,
+        "pose": 8.684655532545903e-05,
+        "seg": 0.00016360813363765678
+      },
+      "rank_advantage": -2.5431315104166847e-06,
+      "rank_metric": "seg",
+      "rank_metric_positive": false,
+      "source_contribution": {
+        "combined": 0.0002475338534260885,
+        "pose": 8.646885129884843e-05,
+        "seg": 0.0001610650021272401
+      }
+    },
+    {
+      "advantage": {
+        "combined": -3.081241469387653e-05,
+        "pose": -2.5726151673043202e-05,
+        "seg": -5.086263020833329e-06
+      },
+      "pair_index": 149,
+      "pr65_trace_contribution": {
+        "combined": 0.0002328285548697114,
+        "pose": 0.0001336464259634614,
+        "seg": 9.918212890625e-05
+      },
+      "rank_advantage": -5.086263020833329e-06,
+      "rank_metric": "seg",
+      "rank_metric_positive": false,
+      "source_contribution": {
+        "combined": 0.00020201614017583487,
+        "pose": 0.0001079202742904182,
+        "seg": 9.409586588541667e-05
+      }
+    },
+    {
+      "advantage": {
+        "combined": 5.016569384827584e-06,
+        "pose": 1.0102832405660916e-05,
+        "seg": -5.086263020833329e-06
+      },
+      "pair_index": 417,
+      "pr65_trace_contribution": {
+        "combined": 0.00010780736348924336,
+        "pose": 1.710233638395664e-05,
+        "seg": 9.070502710528672e-05
+      },
+      "rank_advantage": -5.086263020833329e-06,
+      "rank_metric": "seg",
+      "rank_metric_positive": false,
+      "source_contribution": {
+        "combined": 0.00011282393287407095,
+        "pose": 2.7205168789617555e-05,
+        "seg": 8.561876408445339e-05
+      }
+    },
+    {
+      "advantage": {
+        "combined": -6.40149129730775e-06,
+        "pose": -4.675210067611247e-07,
+        "seg": -5.933970290546625e-06
+      },
+      "pair_index": 1,
+      "pr65_trace_contribution": {
+        "combined": 0.00016705833670336686,
+        "pose": 1.0231890327246799e-05,
+        "seg": 0.00015682644637612006
+      },
+      "rank_advantage": -5.933970290546625e-06,
+      "rank_metric": "seg",
+      "rank_metric_positive": false,
+      "source_contribution": {
+        "combined": 0.0001606568454060591,
+        "pose": 9.764369320485674e-06,
+        "seg": 0.00015089247608557343
+      }
+    },
+    {
+      "advantage": {
+        "combined": -2.5764794777564405e-05,
+        "pose": -1.8983107516027674e-05,
+        "seg": -6.781687261536717e-06
+      },
+      "pair_index": 82,
+      "pr65_trace_contribution": {
+        "combined": 0.00016950900735757097,
+        "pose": 6.439289845949752e-05,
+        "seg": 0.00010511610889807343
+      },
+      "rank_advantage": -6.781687261536717e-06,
+      "rank_metric": "seg",
+      "rank_metric_positive": false,
+      "source_contribution": {
+        "combined": 0.00014374421258000656,
+        "pose": 4.540979094346984e-05,
+        "seg": 9.833442163653672e-05
+      }
+    },
+    {
+      "advantage": {
+        "combined": -2.5732068081473283e-05,
+        "pose": -1.8102673550223273e-05,
+        "seg": -7.62939453125e-06
+      },
+      "pair_index": 46,
+      "pr65_trace_contribution": {
+        "combined": 0.00011964131953579914,
+        "pose": 2.2154605168975694e-05,
+        "seg": 9.748671436682343e-05
+      },
+      "rank_advantage": -7.62939453125e-06,
+      "rank_metric": "seg",
+      "rank_metric_positive": false,
+      "source_contribution": {
+        "combined": 9.390925145432585e-05,
+        "pose": 4.05193161875242e-06,
+        "seg": 8.985731983557343e-05
+      }
+    },
+    {
+      "advantage": {
+        "combined": 1.8478939352587246e-05,
+        "pose": 2.6108333883837273e-05,
+        "seg": -7.62939453125e-06
+      },
+      "pair_index": 302,
+      "pr65_trace_contribution": {
+        "combined": 0.00015329397324556355,
+        "pose": 3.6309923766396867e-05,
+        "seg": 0.00011698404947916667
+      },
+      "rank_advantage": -7.62939453125e-06,
+      "rank_metric": "seg",
+      "rank_metric_positive": false,
+      "source_contribution": {
+        "combined": 0.0001717729125981508,
+        "pose": 6.241825765023414e-05,
+        "seg": 0.00010935465494791667
+      }
+    },
+    {
+      "advantage": {
+        "combined": -0.00015461151924980884,
+        "pose": -0.00014613441744884556,
+        "seg": -8.477101800963283e-06
+      },
+      "pair_index": 238,
+      "pr65_trace_contribution": {
+        "combined": 0.0002717438872290927,
+        "pose": 0.00017256175832284267,
+        "seg": 9.918212890625e-05
+      },
+      "rank_advantage": -8.477101800963283e-06,
+      "rank_metric": "seg",
+      "rank_metric_positive": false,
+      "source_contribution": {
+        "combined": 0.00011713236797928383,
+        "pose": 2.6427340873997116e-05,
+        "seg": 9.070502710528672e-05
+      }
+    },
+    {
+      "advantage": {
+        "combined": -1.8501332081518836e-06,
+        "pose": 6.6269734434498174e-06,
+        "seg": -8.477106651601701e-06
+      },
+      "pair_index": 240,
+      "pr65_trace_contribution": {
+        "combined": 9.451772728836498e-05,
+        "pose": 8.898963203911594e-06,
+        "seg": 8.561876408445339e-05
+      },
+      "rank_advantage": -8.477106651601701e-06,
+      "rank_metric": "seg",
+      "rank_metric_positive": false,
+      "source_contribution": {
+        "combined": 9.26675940802131e-05,
+        "pose": 1.552593664736141e-05,
+        "seg": 7.714165743285169e-05
+      }
+    },
+    {
+      "advantage": {
+        "combined": -2.4032340295036727e-06,
+        "pose": 6.073877472736433e-06,
+        "seg": -8.477111502240092e-06
+      },
+      "pair_index": 56,
+      "pr65_trace_contribution": {
+        "combined": 0.00015434315052474437,
+        "pose": 2.3795726522504272e-05,
+        "seg": 0.0001305474240022401
+      },
+      "rank_advantage": -8.477111502240092e-06,
+      "rank_metric": "seg",
+      "rank_metric_positive": false,
+      "source_contribution": {
+        "combined": 0.0001519399164952407,
+        "pose": 2.9869603995240705e-05,
+        "seg": 0.0001220703125
+      }
+    },
+    {
+      "advantage": {
+        "combined": -2.794649470538074e-05,
+        "pose": -1.946938320314062e-05,
+        "seg": -8.477111502240106e-06
+      },
+      "pair_index": 286,
+      "pr65_trace_contribution": {
+        "combined": 0.00019543597471587126,
+        "pose": 8.777673430738114e-05,
+        "seg": 0.0001076592404084901
+      },
+      "rank_advantage": -8.477111502240106e-06,
+      "rank_metric": "seg",
+      "rank_metric_positive": false,
+      "source_contribution": {
+        "combined": 0.00016748948001049052,
+        "pose": 6.830735110424052e-05,
+        "seg": 9.918212890625e-05
+      }
+    },
+    {
+      "advantage": {
+        "combined": 3.806205428019837e-05,
+        "pose": 4.653916578243845e-05,
+        "seg": -8.477111502240106e-06
+      },
+      "pair_index": 445,
+      "pr65_trace_contribution": {
+        "combined": 0.0001497864924870046,
+        "pose": 4.212725207851451e-05,
+        "seg": 0.0001076592404084901
+      },
+      "rank_advantage": -8.477111502240106e-06,
+      "rank_metric": "seg",
+      "rank_metric_positive": false,
+      "source_contribution": {
+        "combined": 0.00018784854676720297,
+        "pose": 8.866641786095296e-05,
+        "seg": 9.918212890625e-05
+      }
+    },
+    {
+      "advantage": {
+        "combined": -0.00018433131398369788,
+        "pose": -0.00017500650491302134,
+        "seg": -9.324809070676565e-06
+      },
+      "pair_index": 234,
+      "pr65_trace_contribution": {
+        "combined": 0.00029459127181283914,
+        "pose": 0.00018777974837533916,
+        "seg": 0.0001068115234375
+      },
+      "rank_advantage": -9.324809070676565e-06,
+      "rank_metric": "seg",
+      "rank_metric_positive": false,
+      "source_contribution": {
+        "combined": 0.00011025995782914125,
+        "pose": 1.2773243462317826e-05,
+        "seg": 9.748671436682343e-05
+      }
+    },
+    {
+      "advantage": {
+        "combined": -5.972400590575065e-06,
+        "pose": 4.200125451091593e-06,
+        "seg": -1.0172526041666658e-05
+      },
+      "pair_index": 492,
+      "pr65_trace_contribution": {
+        "combined": 0.0002281901498651849,
+        "pose": 7.390683499948154e-05,
+        "seg": 0.00015428331486570338
+      },
+      "rank_advantage": -1.0172526041666658e-05,
+      "rank_metric": "seg",
+      "rank_metric_positive": false,
+      "source_contribution": {
+        "combined": 0.00022221774927460984,
+        "pose": 7.810696045057313e-05,
+        "seg": 0.00014411078882403672
+      }
+    },
+    {
+      "advantage": {
+        "combined": -5.892843264323663e-05,
+        "pose": -4.8755906601569957e-05,
+        "seg": -1.0172526041666671e-05
+      },
+      "pair_index": 38,
+      "pr65_trace_contribution": {
+        "combined": 0.00017561367483074963,
+        "pose": 5.4391069600462914e-05,
+        "seg": 0.00012122260523028672
+      },
+      "rank_advantage": -1.0172526041666671e-05,
+      "rank_metric": "seg",
+      "rank_metric_positive": false,
+      "source_contribution": {
+        "combined": 0.000116685242187513,
+        "pose": 5.635162998892956e-06,
+        "seg": 0.00011105007918862005
+      }
+    }
+  ],
+  "selected_pair_trace_positive_advantage_sum": {
+    "combined": 6.15575630176132e-05,
+    "pose": 9.965130843921449e-05,
+    "seg": 0.0
+  },
+  "selected_positive_pair_count": 0,
+  "selected_trace_combined_advantage_minus_sub314_requirement": -0.0013146041490287494,
+  "source_archive": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_pr75_minp_public_replay_t4_20260503T1049Z/archive.zip",
+  "source_archive_id": "c091",
+  "strict_zip_inventory": {
+    "members": [
+      {
+        "bytes": 276381,
+        "compress_size": 276381,
+        "compress_type": 0,
+        "date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "external_attr": 27525120,
+        "file_size": 276381,
+        "local_central_name_match": true,
+        "local_header_name": "p",
+        "name": "p",
+        "sha256": "f78c71d3086773e417c672734082a49ceb0ef5a0016cf406a920be7978fff252"
+      },
+      {
+        "bytes": 222,
+        "compress_size": 222,
+        "compress_type": 0,
+        "date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "external_attr": 27525120,
+        "file_size": 222,
+        "local_central_name_match": true,
+        "local_header_name": "qpost.bin",
+        "name": "qpost.bin",
+        "sha256": "b72c828c5d8663376a89b4174754fdbe501b46b54cbe969625e7989667427872"
+      }
+    ],
+    "strict_zip": true
+  },
+  "tool": "experiments/plan_pr65_henosis_stream_transfer.py",
+  "top_pairs_requested": 16,
+  "trace_is_promotable_evidence": false
+}

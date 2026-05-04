@@ -1,0 +1,35 @@
+{
+  "calls": [
+    {
+      "artifacts_saved": 0,
+      "call_id": "fc-01KQP9K42CAWJH7XEV4KC0V28M",
+      "gpu": "H100",
+      "label": "c067_fixed_renderer_burn_fix3_modal_h100_20260503T0659Z",
+      "lane_id": "c067_fixed_renderer_burn_qfaithful_fix3_modal_h100",
+      "output_dir": "experiments/results/trained_renderer_transplant_recovery_worker_20260503/modal_recovery/h100",
+      "status": "running",
+      "terminal": false
+    },
+    {
+      "artifacts_saved": 0,
+      "call_id": "fc-01KQP9T1VD14785MG63H7JM5VK",
+      "gpu": "A100",
+      "label": "c067_fixed_renderer_burn_fix3_modal_a100_20260503T0702Z",
+      "lane_id": "c067_fixed_renderer_burn_qfaithful_fix3_modal_a100",
+      "output_dir": "experiments/results/trained_renderer_transplant_recovery_worker_20260503/modal_recovery/a100",
+      "status": "running",
+      "terminal": false
+    },
+    {
+      "artifacts_saved": 0,
+      "call_id": "fc-01KQP9T19Y7PMDETDN99WDMF2W",
+      "gpu": "A10G",
+      "label": "c067_fixed_renderer_burn_fix3_modal_a10g_20260503T0702Z",
+      "lane_id": "c067_fixed_renderer_burn_qfaithful_fix3_modal_a10g",
+      "output_dir": "experiments/results/trained_renderer_transplant_recovery_worker_20260503/modal_recovery/a10g",
+      "status": "running",
+      "terminal": false
+    }
+  ],
+  "polled_at_utc": "2026-05-03T11:09:08Z"
+}

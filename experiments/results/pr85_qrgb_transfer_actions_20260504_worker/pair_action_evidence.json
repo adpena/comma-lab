@@ -1,0 +1,109 @@
+{
+  "candidates": [
+    {
+      "actions": [
+        {
+          "candidate_value": 20,
+          "op": "set",
+          "pair_index": 192,
+          "rationale": "PR90 QRGB frame1 global RGB residual transferred to PR85 randmulti global f2 bias choice",
+          "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+          "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0192",
+          "source_value": 0,
+          "stream": "randmulti"
+        }
+      ],
+      "archive_changing_path": null,
+      "candidate_id": "pr85_qrgb_f2_randglobal_pair_0192",
+      "charged_bytes_proxy": {
+        "basis": "ceil(PR90 observed QRGB residual compressed bytes per frame pair); archive delta remains unproven until PR85 local recode",
+        "candidate_action_bytes": 7,
+        "pr90_qrgb_compressed_bytes": 4106,
+        "pr90_qrgb_compressed_bytes_per_pair": 6.843333333333334,
+        "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427"
+      },
+      "header_mode": "explicit_30",
+      "targeted_component": "combined"
+    },
+    {
+      "actions": [
+        {
+          "candidate_value": 5,
+          "op": "set",
+          "pair_index": 60,
+          "rationale": "PR90 QRGB frame0 global RGB residual sign transferred to PR85 frame0 bias choice",
+          "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+          "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0060",
+          "source_value": 24,
+          "stream": "bias"
+        }
+      ],
+      "archive_changing_path": null,
+      "candidate_id": "pr85_qrgb_f1_bias_pair_0060",
+      "charged_bytes_proxy": {
+        "basis": "ceil(PR90 observed QRGB residual compressed bytes per frame pair); archive delta remains unproven until PR85 local recode",
+        "candidate_action_bytes": 7,
+        "pr90_qrgb_compressed_bytes": 4106,
+        "pr90_qrgb_compressed_bytes_per_pair": 6.843333333333334,
+        "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427"
+      },
+      "header_mode": "explicit_30",
+      "targeted_component": "combined"
+    },
+    {
+      "actions": [
+        {
+          "candidate_value": 21,
+          "op": "set",
+          "pair_index": 164,
+          "rationale": "PR90 QRGB frame0 global RGB residual sign transferred to PR85 frame0 bias choice",
+          "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+          "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0164",
+          "source_value": 3,
+          "stream": "bias"
+        }
+      ],
+      "archive_changing_path": null,
+      "candidate_id": "pr85_qrgb_f1_bias_pair_0164",
+      "charged_bytes_proxy": {
+        "basis": "ceil(PR90 observed QRGB residual compressed bytes per frame pair); archive delta remains unproven until PR85 local recode",
+        "candidate_action_bytes": 7,
+        "pr90_qrgb_compressed_bytes": 4106,
+        "pr90_qrgb_compressed_bytes_per_pair": 6.843333333333334,
+        "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427"
+      },
+      "header_mode": "explicit_30",
+      "targeted_component": "combined"
+    },
+    {
+      "actions": [
+        {
+          "candidate_value": 45,
+          "op": "set",
+          "pair_index": 197,
+          "rationale": "PR90 QRGB frame0 half-band residual transferred to PR85 frame0 region bias choice",
+          "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+          "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0197",
+          "source_value": 60,
+          "stream": "region"
+        }
+      ],
+      "archive_changing_path": null,
+      "candidate_id": "pr85_qrgb_f1_region_pair_0197",
+      "charged_bytes_proxy": {
+        "basis": "ceil(PR90 observed QRGB residual compressed bytes per frame pair); archive delta remains unproven until PR85 local recode",
+        "candidate_action_bytes": 7,
+        "pr90_qrgb_compressed_bytes": 4106,
+        "pr90_qrgb_compressed_bytes_per_pair": 6.843333333333334,
+        "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427"
+      },
+      "header_mode": "explicit_30",
+      "targeted_component": "combined"
+    }
+  ],
+  "dispatch_performed": false,
+  "remote_jobs_dispatched": false,
+  "schema": "pr85_pair_action_lowering_evidence_v1",
+  "score_claim": false,
+  "thresholds": []
+}

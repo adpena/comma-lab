@@ -1,0 +1,219 @@
+{
+  "action_proofs": [
+    {
+      "basis_action_schema": {
+        "selected_channel_index": 2,
+        "selected_value": 1,
+        "source_basis": "PR90 semantic planes 3..5: frame1 global RGB offsets",
+        "source_qrgb_rgb_values": [
+          0,
+          0,
+          1
+        ],
+        "target_randmulti_group": {
+          "amp": 4,
+          "group_index": 61,
+          "lh": 222,
+          "lw": 222,
+          "selection_row": 0
+        },
+        "target_runtime_semantics": "PR85 frame1/f2 global RGB-bias oracle stage, radius 4",
+        "target_stream": "randmulti"
+      },
+      "candidate_value": 20,
+      "changed": true,
+      "pair_index": 192,
+      "randmulti_target": {
+        "amp": 4,
+        "group_index": 61,
+        "lh": 222,
+        "lw": 222,
+        "selection_row": 0
+      },
+      "rationale": "PR90 QRGB frame1 global RGB residual transferred to PR85 randmulti global f2 bias choice",
+      "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+      "source_value": 0,
+      "stream": "randmulti"
+    }
+  ],
+  "build_status": "built",
+  "candidate_archive": {
+    "archive_bytes": 230038,
+    "archive_path": "experiments/results/pr85_stbm1br_qrgb_randmulti_stack_20260504_codex/pr85_qrgb_f2_randglobal_pair_0192/archive.zip",
+    "archive_sha256": "bd883ed0216e97ca59bc2bb7609d473ee001b77494c8d02164d7e356eebc0e0a",
+    "member_bytes": 229938,
+    "member_name": "x",
+    "member_sha256": "03febaf612f1bf07b46bb6ebe291e488f483a7e153e31af623565e643ab1532d",
+    "zip_stored": true
+  },
+  "candidate_bundle": {
+    "header_mode": "v5",
+    "member_bytes": 229938,
+    "member_sha256": "03febaf612f1bf07b46bb6ebe291e488f483a7e153e31af623565e643ab1532d",
+    "segment_lengths": {
+      "bias": 223,
+      "frac": 106,
+      "frac2": 149,
+      "frac3": 154,
+      "mask": 152439,
+      "model": 57074,
+      "pose": 1487,
+      "post": 1400,
+      "randmulti": 16383,
+      "region": 273,
+      "shift": 226
+    }
+  },
+  "candidate_id": "pr85_qrgb_f2_randglobal_pair_0192",
+  "changed_segments": [
+    "randmulti"
+  ],
+  "charged_bytes": {
+    "byte_delta_vs_source_archive": 282,
+    "candidate_archive_bytes": 230038,
+    "formula_only_rate_score_delta_vs_source": 0.00018777222478045234,
+    "source_archive_bytes": 229756
+  },
+  "dispatch_gate": "blocked_fixed_runtime_preflight_not_run",
+  "dispatch_performed": false,
+  "dispatch_unlocked": false,
+  "evidence_grade": "empirical_local_archive_build_only",
+  "fixed_runtime_preflight": null,
+  "grounding": {
+    "expected_break_even": {
+      "break_even_margin_bytes": 509.6922114573065,
+      "combined_max_charged_bytes_for_zero_net_change": 516.6922114573065,
+      "dominant_single_component": "pose",
+      "evidence_status": "formula_only_break_even_from_pr85_component_trace",
+      "formula_only_rate_score_delta": 4.6610126718552e-06,
+      "formula_rate_score_per_byte": 6.658589531221714e-07,
+      "pose_only_max_charged_bytes_for_zero_net_change": 318.08732986550973,
+      "proxy_charged_bytes": 7,
+      "seg_only_max_charged_bytes_for_zero_net_change": 198.60488159179684
+    },
+    "planning_candidate_id": "pr85_qrgb_f2_randglobal_pair_0192",
+    "planning_rank": 1,
+    "pr90_source_archive_sha256": "608ea0355e60faad97b046c27644205d05120ac85ab3e8a99543a75a4ab2dd2d",
+    "pr90_source_evidence_sha256": "76120dc2eb7676aa41ad49da8d9f85381d3fbb6f1af389def1aa77e2d640f901",
+    "qrgb_pair_summary": {
+      "max_abs_qrgb_value": 4,
+      "nonzero_qrgb_edits": 6,
+      "pair_index": 192,
+      "top_semantic_planes": [
+        {
+          "semantic_plane": 23,
+          "value": 4
+        },
+        {
+          "semantic_plane": 40,
+          "value": 4
+        },
+        {
+          "semantic_plane": 13,
+          "value": -2
+        },
+        {
+          "semantic_plane": 46,
+          "value": 2
+        },
+        {
+          "semantic_plane": 5,
+          "value": 1
+        },
+        {
+          "semantic_plane": 42,
+          "value": 1
+        }
+      ]
+    },
+    "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0192"
+  },
+  "lane_claim_required_before_exact_eval": true,
+  "next_gate": "Run/pass fixed-runtime preflight, then claim the lane before exact CUDA auth eval.",
+  "non_noop_proof": {
+    "candidate_member_sha256": "03febaf612f1bf07b46bb6ebe291e488f483a7e153e31af623565e643ab1532d",
+    "changed_segments": [
+      "randmulti"
+    ],
+    "decoded_sidechannel_semantics_changed": true,
+    "payload_changed": true,
+    "source_member_sha256": "c7586795bb29fb0ef611ad44715aec77e0e815370e19674d4c89ef2a54b417b5",
+    "status": "passed"
+  },
+  "rank": 1,
+  "remote_jobs_dispatched": false,
+  "schema": "pr85_qrgb_transfer_archive_candidate_v1",
+  "score_claim": false,
+  "selected_pair_indices": [
+    192
+  ],
+  "selected_streams": [
+    "randmulti"
+  ],
+  "source_archive": {
+    "archive_bytes": 229756,
+    "archive_sha256": "c6f004d444ed32c628611a2f21f567c666af6bcbcceba618cc089ec024a0cda6",
+    "known_pr85_anchor_match": {
+      "exact_t4_score_context": 0.25806611029397786,
+      "expected_archive_bytes": 236328,
+      "expected_archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+      "matches": false
+    },
+    "member_bytes": 229656,
+    "member_compress_size": 229656,
+    "member_name": "x",
+    "member_sha256": "c7586795bb29fb0ef611ad44715aec77e0e815370e19674d4c89ef2a54b417b5",
+    "path": "experiments/results/pr85_stbm1br_mask_recode_20260504_worker/pr90_stbm1br_lossless_pr85_mask_recode/archive.zip",
+    "zip_stored": true
+  },
+  "source_bundle": {
+    "fixed_length_segments": {
+      "bias": 223,
+      "region": 273
+    },
+    "format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+    "header_bytes": 24,
+    "member_sha256": "c7586795bb29fb0ef611ad44715aec77e0e815370e19674d4c89ef2a54b417b5",
+    "segment_lengths": {
+      "bias": 223,
+      "frac": 106,
+      "frac2": 149,
+      "frac3": 154,
+      "mask": 152439,
+      "model": 57074,
+      "pose": 1487,
+      "post": 1400,
+      "randmulti": 16101,
+      "region": 273,
+      "shift": 226
+    }
+  },
+  "tool": "experiments/build_pr85_qrgb_transfer_archive_candidates.py",
+  "transforms": [
+    {
+      "brotli_lgwin": 24,
+      "brotli_quality": 11,
+      "candidate_nonzero_entries": 13497,
+      "candidate_raw_bytes": 27107,
+      "candidate_raw_sha256": "4a8e788ac320ef9aaa8681dd7c91c5ea553cc03dcfbd7cfac2ed715fc867a8e5",
+      "candidate_segment_bytes": 16383,
+      "candidate_segment_sha256": "0b09871ac3c0d8e3ce002ef5dbb98ad379e504bc2335c7a9a577f266b53deda9",
+      "changed_groups": [
+        61
+      ],
+      "changed_pair_indices": [
+        192
+      ],
+      "codec": "pr85_headerless_sparse_randmulti",
+      "group_count": 72,
+      "nonzero_entries": 13496,
+      "row_count": 83,
+      "segment_byte_delta": 282,
+      "source_raw_bytes": 27105,
+      "source_raw_sha256": "87bcc720c1e80afb9adad5ee01477423ced526f31c54d461d69dbf26e08eecc9",
+      "source_segment_bytes": 16101,
+      "source_segment_sha256": "c624372e60a0851c4c427dc333a60dcc5d6657ba8ed56951612e7c9d7be7629f",
+      "stream": "randmulti"
+    }
+  ]
+}

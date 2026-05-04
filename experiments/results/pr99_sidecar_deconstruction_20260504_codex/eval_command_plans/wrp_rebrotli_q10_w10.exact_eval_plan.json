@@ -1,0 +1,32 @@
+{
+  "archive": "experiments/results/pr99_sidecar_deconstruction_20260504_codex/candidates/archive.wrp_rebrotli_q10_w10.zip",
+  "archive_bytes": 178546,
+  "archive_sha256": "adbb563802014276fff3efa311ce3be23e56006e8b5e26966d0616841ffafd41",
+  "claim_required_before_dispatch": true,
+  "command": [
+    ".venv/bin/python",
+    "scripts/launch_lightning_batch_job.py",
+    "exact-eval",
+    "--state-path",
+    ".omx/state/lightning_batch_jobs.json",
+    "--job-name",
+    "exact_eval_pr99_sidecar_wrp_rebrotli_q10_w10_t4_YYYYMMDDTHHMMSSZ",
+    "--archive",
+    "/Users/adpena/Projects/pact/experiments/results/pr99_sidecar_deconstruction_20260504_codex/candidates/archive.wrp_rebrotli_q10_w10.zip",
+    "--inflate-sh",
+    "/Users/adpena/Projects/pact/experiments/results/pr99_sidecar_deconstruction_20260504_codex/runtime_variants/wrp_rebrotli_q10_w10/inflate.sh",
+    "--machine",
+    "T4_SMALL",
+    "--adjudicate",
+    "--expected-archive-sha256",
+    "adbb563802014276fff3efa311ce3be23e56006e8b5e26966d0616841ffafd41",
+    "--expected-archive-size-bytes",
+    "178546"
+  ],
+  "dispatch_performed": false,
+  "runtime_root": "experiments/results/pr99_sidecar_deconstruction_20260504_codex/runtime_variants/wrp_rebrotli_q10_w10",
+  "runtime_tree_sha256": "851ebe864b5ef148a9a4928855fd883650dcc09654dcc1db9a76bb39ac506f0c",
+  "schema": "pr99_sidecar_no_dispatch_exact_eval_plan_v1",
+  "suggested_job_name": "exact_eval_pr99_sidecar_wrp_rebrotli_q10_w10_t4_YYYYMMDDTHHMMSSZ",
+  "suggested_lane_id": "pr99_sidecar_wrp_rebrotli_q10_w10_t4_screen"
+}

@@ -1,0 +1,687 @@
+{
+  "archive_byte_profile": {
+    "archive_name": "archive.zip",
+    "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr77_tile_delta_transfer_20260503_worker/replace_pr79_with_pr77_all_s2_p3_on_pr79/archive.zip",
+    "archive_sha256": "0300f8baa75b7cb864a8c91dc77fd057a38bde2ecd4d736bff3d92c6fcde78f1",
+    "duplicate_detection": {
+      "duplicate_member_names": [],
+      "duplicate_payload_hashes": [],
+      "has_duplicate_member_names": false,
+      "has_duplicate_payload_hashes": false
+    },
+    "evidence_grade": "byte_profile_only",
+    "extension_totals": [
+      {
+        "compressed_size": 276435,
+        "member_count": 1,
+        "name": "(no_extension)",
+        "rate_term": 0.184066719706,
+        "uncompressed_size": 276435
+      }
+    ],
+    "member_count": 1,
+    "members": [
+      {
+        "central_directory_header_bytes_estimate": 47,
+        "compressed_size": 276435,
+        "compression_ratio": 1.0,
+        "crc32": "bd6bfdc2",
+        "extension_group": "(no_extension)",
+        "header_offset": 0,
+        "histogram": {
+          "histogram_counts": [
+            1264,
+            1141,
+            1092,
+            1012,
+            1106,
+            1072,
+            1085,
+            1113,
+            1116,
+            1054,
+            1138,
+            1119,
+            1107,
+            1027,
+            1059,
+            1101,
+            1091,
+            1081,
+            1045,
+            1050,
+            1072,
+            1036,
+            1041,
+            1116,
+            1096,
+            1078,
+            1040,
+            1070,
+            1044,
+            1046,
+            1091,
+            1092,
+            1125,
+            1016,
+            1056,
+            1109,
+            1051,
+            1073,
+            1108,
+            1066,
+            1051,
+            1146,
+            1078,
+            1050,
+            1124,
+            1131,
+            1086,
+            1038,
+            1136,
+            1153,
+            1034,
+            1043,
+            1110,
+            1083,
+            1105,
+            1052,
+            1110,
+            1099,
+            1032,
+            1083,
+            1090,
+            1142,
+            1025,
+            1133,
+            1084,
+            1080,
+            1057,
+            1080,
+            1065,
+            1068,
+            1065,
+            1105,
+            1037,
+            1090,
+            1066,
+            1069,
+            1118,
+            1082,
+            1104,
+            1065,
+            1106,
+            1042,
+            1044,
+            997,
+            1024,
+            998,
+            1090,
+            1043,
+            1143,
+            1074,
+            1049,
+            1095,
+            1065,
+            1120,
+            1103,
+            1120,
+            1109,
+            1082,
+            1099,
+            1110,
+            1043,
+            1104,
+            1049,
+            1114,
+            1059,
+            1056,
+            1078,
+            1094,
+            1094,
+            1079,
+            1111,
+            1082,
+            1064,
+            1068,
+            1053,
+            1022,
+            1095,
+            1114,
+            1094,
+            1099,
+            1118,
+            1116,
+            1077,
+            1090,
+            1010,
+            1067,
+            1084,
+            1132,
+            1172,
+            1055,
+            1029,
+            1114,
+            1099,
+            1023,
+            1111,
+            1115,
+            1055,
+            1059,
+            1039,
+            1115,
+            1136,
+            1084,
+            1084,
+            1054,
+            1119,
+            1068,
+            1094,
+            1023,
+            1111,
+            1034,
+            1138,
+            1089,
+            1040,
+            1092,
+            1146,
+            1080,
+            1074,
+            1079,
+            1064,
+            1099,
+            1144,
+            1048,
+            1056,
+            1046,
+            1098,
+            1062,
+            1107,
+            1052,
+            1059,
+            1037,
+            1043,
+            1059,
+            1073,
+            1036,
+            1048,
+            1037,
+            1079,
+            1044,
+            1057,
+            1023,
+            1068,
+            1062,
+            1048,
+            1077,
+            1039,
+            1006,
+            1046,
+            1063,
+            1085,
+            1053,
+            1053,
+            1119,
+            1094,
+            1079,
+            1041,
+            1018,
+            1211,
+            1068,
+            1085,
+            1101,
+            1070,
+            1096,
+            1079,
+            1123,
+            1053,
+            1090,
+            1074,
+            1124,
+            1107,
+            1021,
+            1064,
+            1107,
+            1086,
+            1091,
+            1061,
+            1059,
+            1111,
+            1062,
+            1140,
+            1094,
+            1081,
+            1099,
+            1073,
+            1083,
+            1084,
+            959,
+            1045,
+            1142,
+            1087,
+            1046,
+            1049,
+            1135,
+            1043,
+            1108,
+            1091,
+            1094,
+            1100,
+            1069,
+            1085,
+            1117,
+            1065,
+            1044,
+            1025,
+            1032,
+            1126,
+            1054,
+            1142,
+            1083,
+            1046,
+            1072,
+            1135,
+            1067,
+            1137,
+            1124,
+            1080,
+            1136
+          ],
+          "printable_ascii_fraction": 0.371226508944,
+          "shannon_entropy_bits_per_byte": 7.999144370575,
+          "top_bytes": [
+            {
+              "byte": 0,
+              "count": 1264,
+              "fraction": 0.004572503482,
+              "hex": "0x00"
+            },
+            {
+              "byte": 196,
+              "count": 1211,
+              "fraction": 0.004380776674,
+              "hex": "0xc4"
+            },
+            {
+              "byte": 128,
+              "count": 1172,
+              "fraction": 0.004239694684,
+              "hex": "0x80"
+            },
+            {
+              "byte": 49,
+              "count": 1153,
+              "fraction": 0.004170962432,
+              "hex": "0x31"
+            },
+            {
+              "byte": 41,
+              "count": 1146,
+              "fraction": 0.004145640024,
+              "hex": "0x29"
+            },
+            {
+              "byte": 154,
+              "count": 1146,
+              "fraction": 0.004145640024,
+              "hex": "0x9a"
+            },
+            {
+              "byte": 160,
+              "count": 1144,
+              "fraction": 0.00413840505,
+              "hex": "0xa0"
+            },
+            {
+              "byte": 88,
+              "count": 1143,
+              "fraction": 0.004134787563,
+              "hex": "0x58"
+            },
+            {
+              "byte": 61,
+              "count": 1142,
+              "fraction": 0.004131170076,
+              "hex": "0x3d"
+            },
+            {
+              "byte": 227,
+              "count": 1142,
+              "fraction": 0.004131170076,
+              "hex": "0xe3"
+            }
+          ],
+          "unique_byte_count": 256,
+          "zero_byte_count": 1264,
+          "zero_byte_fraction": 0.004572503482,
+          "zero_order_entropy_bytes": 276406
+        },
+        "is_dir": false,
+        "local_header_bytes_estimate": 31,
+        "method": "stored",
+        "method_id": 0,
+        "name": "p",
+        "occurrence": 1,
+        "path_group": "(root)",
+        "rate_term": 0.184066719706,
+        "sha256": "7a1fcb86d2c7039925611fabdc4aeb2f06cb6374781434b2b48bcdef7e73b810",
+        "uncompressed_size": 276435
+      }
+    ],
+    "path_group_totals": [
+      {
+        "compressed_size": 276435,
+        "member_count": 1,
+        "name": "(root)",
+        "rate_term": 0.184066719706,
+        "uncompressed_size": 276435
+      }
+    ],
+    "rate_term": 0.184133305602,
+    "schema": "archive_byte_profile_v1",
+    "score_claim": false,
+    "tool": "experiments/profile_archive_bytes.py",
+    "top_contributors": [
+      {
+        "compressed_size": 276435,
+        "method": "stored",
+        "name": "p",
+        "occurrence": 1,
+        "rate_term": 0.184066719706,
+        "uncompressed_size": 276435
+      }
+    ],
+    "total_bytes": 276535,
+    "valid_profile": true,
+    "zip_overhead_estimate": {
+      "archive_non_payload_bytes": 100,
+      "central_directory_header_bytes_estimate": 47,
+      "compressed_payload_bytes": 276435,
+      "local_header_bytes_estimate": 31,
+      "rate_term": 6.6585895e-05,
+      "unassigned_overhead_bytes_estimate": 22
+    }
+  },
+  "break_even_vs_pr79_s2": {
+    "archive_delta_bytes_vs_pr79_s2": -786,
+    "baseline_archive_bytes": 277321,
+    "baseline_score": 0.31453355357318635,
+    "break_even_component_delta_vs_pr79_s2": 0.0005233651371540267,
+    "break_even_component_delta_vs_pr79_s2_fraction": "6550/12515163",
+    "max_component_regression_to_tie_s2": 0.0005233651371540267,
+    "rate_score_delta_vs_pr79_s2": -0.0005233651371540267,
+    "rate_score_delta_vs_pr79_s2_fraction": "-6550/12515163",
+    "required_component_improvement_to_tie_s2": 0.0,
+    "score_if_components_unchanged": 0.31401018843603234,
+    "would_beat_pr79_s2_if_components_unchanged": true
+  },
+  "candidate_id": "replace_pr79_with_pr77_all_s2_p3_on_pr79",
+  "canonical_score_source_required": "No GPU dispatch or score claim from this worker. Before any exact eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim and run archive.zip -> inflate.sh -> upstream/evaluate.py through experiments/contest_auth_eval.py --device cuda on the identical archive SHA-256 and byte count.",
+  "changed_members": {
+    "archive_members_changed": [
+      "p"
+    ],
+    "logical_runtime_members": {
+      "masks.mkv": {
+        "decoded_equal_to_pr79_s2": true,
+        "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "pr79_s2_decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "pr79_s2_raw_sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87",
+        "raw_equal_to_pr79_s2": true,
+        "raw_sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+      },
+      "optimized_poses.qp1": {
+        "decoded_equal_to_pr79_s2": true,
+        "decoded_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+        "pr79_s2_decoded_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+        "pr79_s2_raw_sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082",
+        "raw_equal_to_pr79_s2": true,
+        "raw_sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082"
+      },
+      "renderer.bin": {
+        "decoded_equal_to_pr79_s2": true,
+        "decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+        "pr79_s2_decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+        "pr79_s2_raw_sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf",
+        "raw_equal_to_pr79_s2": true,
+        "raw_sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+      },
+      "seg_tile_actions.bin": {
+        "decoded_equal_to_pr79_s2": false,
+        "decoded_sha256": "8ac9a01caad973096c58b42daf2b1a8e476ad68cf285d443baa4ac94fdb42255",
+        "pr79_s2_decoded_sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f",
+        "pr79_s2_raw_sha256": "abbc8d26375d60e52bc4ab801f2e241e56bd47564fe48ff1edefc5e1bdf60273",
+        "raw_equal_to_pr79_s2": false,
+        "raw_sha256": "a6886195127814eaa2c8151dafb3c9f903efc3f679a9c52bacf89d97051a8b6f"
+      }
+    },
+    "logical_runtime_members_changed": [
+      "seg_tile_actions.bin"
+    ],
+    "payload_container_changed": true
+  },
+  "dispatch_recommendation": {
+    "dispatch_ready_now": false,
+    "exact_eval_justified_after_lane_claim": true,
+    "lane_claim_required": true,
+    "reason": "local byte screen beats PR79 S2 if components are unchanged, but exact CUDA auth eval is still required",
+    "recommended": true,
+    "remote_dispatch_performed": false,
+    "required_before_any_dispatch": [
+      "verify archive bytes and SHA-256 match this manifest",
+      "claim lane with tools/claim_lane_dispatch.py claim",
+      "run exact CUDA auth eval through experiments/contest_auth_eval.py --device cuda",
+      "record contest_auth_eval.json, runtime tree hash, n_samples, and component gates"
+    ]
+  },
+  "evidence_grade": "empirical_archive_closed_byte_screen",
+  "no_score_claim": true,
+  "output_archive": {
+    "bytes": 276535,
+    "path": "/Users/adpena/Projects/pact/experiments/results/pr77_tile_delta_transfer_20260503_worker/replace_pr79_with_pr77_all_s2_p3_on_pr79/archive.zip",
+    "repo_relative_path": "experiments/results/pr77_tile_delta_transfer_20260503_worker/replace_pr79_with_pr77_all_s2_p3_on_pr79/archive.zip",
+    "sha256": "0300f8baa75b7cb864a8c91dc77fd057a38bde2ecd4d736bff3d92c6fcde78f1"
+  },
+  "payload": {
+    "bytes": 276435,
+    "format": "public_pr75_qzs3_qp1_segactions_p3",
+    "member": "p",
+    "sha256": "7a1fcb86d2c7039925611fabdc4aeb2f06cb6374781434b2b48bcdef7e73b810"
+  },
+  "policy": {
+    "policy": "replace_pr79_with_pr77_all",
+    "rationale": "Replace PR79 action semantics with all 147 PR77 tile-delta records.",
+    "selected_record_count": 147,
+    "source_pr77_record_count": 147,
+    "source_pr79_record_count": 672
+  },
+  "raw_output_proof": {
+    "candidate_id": "replace_pr79_with_pr77_all_s2_p3_on_pr79",
+    "candidate_raw_output_proof_available": false,
+    "candidate_raw_output_proof_reason": "candidate changes decoded seg_tile_actions.bin; no local raw-output render was run",
+    "source_pr79_parity_artifact": {
+      "all_pairs_completed": true,
+      "device": "cpu",
+      "evidence_grade": "empirical_local_raw_parity",
+      "path": "experiments/results/top_submission_reverse_engineering_20260503_pr79/raw_output_parity_all600_cpu_codex_20260503T1728Z/pr75_raw_output_parity.json",
+      "raw_after_actions_exact_equal": true,
+      "raw_after_actions_sha256": "77e4ced3ada16a7263eae6f71d77976bcc360c470098a3c851dbb0f79b87b4e3",
+      "schema": "pr75_raw_output_parity_v1",
+      "score_claim": false
+    },
+    "status": "source_baseline_only"
+  },
+  "remote_dispatch_performed": false,
+  "runtime_parse_validation": {
+    "action_record_multiset_equal_to_pr77": true,
+    "action_record_multiset_equal_to_pr79_s2": false,
+    "action_wire_bytes": 299,
+    "action_wire_sha256": "a6886195127814eaa2c8151dafb3c9f903efc3f679a9c52bacf89d97051a8b6f",
+    "decoded_action_bytes": 588,
+    "decoded_action_sha256": "8ac9a01caad973096c58b42daf2b1a8e476ad68cf285d443baa4ac94fdb42255",
+    "decoded_record_stats": {
+      "action_max": 107,
+      "action_min": 2,
+      "duplicate_exact_record_count": 0,
+      "duplicate_pair_tile_group_count": 0,
+      "nondecreasing_pair_order": false,
+      "pair_max": 599,
+      "pair_min": 11,
+      "record_count": 147,
+      "records_canonical_sha256": "6f139bae1e27c16162eed3bd497bbcf192468c47d6c2d96c5fa78a15c1ae2644",
+      "records_source_order_sha256": "8ac9a01caad973096c58b42daf2b1a8e476ad68cf285d443baa4ac94fdb42255",
+      "tile_max": 140,
+      "tile_min": 82,
+      "unique_action_count": 73,
+      "unique_pair_count": 121,
+      "unique_pair_tile_count": 147,
+      "unique_tile_count": 24
+    },
+    "no_op_status": "changes_pr79_s2_action_record_set",
+    "non_action_streams_preserved": true,
+    "payload_format": "public_pr75_qzs3_qp1_segactions_p3",
+    "runtime_members": {
+      "masks.mkv": {
+        "bytes": 219472,
+        "codec": "brotli_av1_obu",
+        "decoded_bytes": 223385,
+        "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+      },
+      "optimized_poses.qp1": {
+        "bytes": 898,
+        "codec": "public_qp1_brotli",
+        "decoded_bytes": 1140,
+        "decoded_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+        "sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082"
+      },
+      "renderer.bin": {
+        "bytes": 55756,
+        "codec": "brotli_qzs3",
+        "decoded_bytes": 59288,
+        "decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+        "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 299,
+        "codec": "seg_tile_actions_split_s2_adaptive_arith_v1",
+        "decoded_bytes": 588,
+        "decoded_sha256": "8ac9a01caad973096c58b42daf2b1a8e476ad68cf285d443baa4ac94fdb42255",
+        "sha256": "a6886195127814eaa2c8151dafb3c9f903efc3f679a9c52bacf89d97051a8b6f"
+      }
+    },
+    "runtime_parser": "submissions/robust_current/unpack_renderer_payload.py",
+    "s2_decoded_order_changes_selected_source_order": false,
+    "selected_records_canonical_sha256": "6f139bae1e27c16162eed3bd497bbcf192468c47d6c2d96c5fa78a15c1ae2644"
+  },
+  "s2_action_stream": {
+    "action_arithmetic_bytes": 126,
+    "action_arithmetic_nbits": 1003,
+    "actions_raw_bytes": 147,
+    "actions_raw_sha256": "9c060c68dd16d0e9d73f2d463f458b8c7196d1d74a16494b41d55d43c9120d7c",
+    "meta_and_deltas_brotli_bytes": 166,
+    "meta_and_deltas_brotli_params": {
+      "lgblock": 0,
+      "lgwin": 16,
+      "mode": 0,
+      "quality": 4
+    },
+    "meta_and_deltas_raw_bytes": 223,
+    "meta_and_deltas_raw_sha256": "b535ff81621f84f95cdb803c3dd1c26f7a7e2e6f55e128d2dc720d92568458b1",
+    "wire_bytes": 299,
+    "wire_sha256": "a6886195127814eaa2c8151dafb3c9f903efc3f679a9c52bacf89d97051a8b6f"
+  },
+  "schema": "pr77_tile_delta_transfer_candidate_manifest_v1",
+  "score_claim": false,
+  "source_archives": {
+    "pr77": {
+      "archive_bytes": 276551,
+      "archive_path": "experiments/results/top_submission_reverse_engineering_20260503_pr77/archive.zip",
+      "archive_sha256": "f90880383c95e14d82704f99db9b20944786ae6452a844348638b06c439972af",
+      "decoded_segments": {
+        "masks.mkv": {
+          "bytes": 223385,
+          "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "optimized_poses.qp1": {
+          "bytes": 1140,
+          "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+        },
+        "renderer.bin": {
+          "bytes": 59288,
+          "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 588,
+          "sha256": "8ac9a01caad973096c58b42daf2b1a8e476ad68cf285d443baa4ac94fdb42255"
+        }
+      },
+      "payload_bytes": 276451,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+      "payload_sha256": "3be6a58673133db2dd14d9f1f0903d528e452bd2e930d57fb4adb02bf264f8ec",
+      "raw_segments": {
+        "masks.mkv": {
+          "bytes": 219472,
+          "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+        },
+        "optimized_poses.qp1": {
+          "bytes": 898,
+          "sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082"
+        },
+        "renderer.bin": {
+          "bytes": 55756,
+          "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 325,
+          "sha256": "d8c75e4f3725bbcf608434f0a78f5b37a9ce86bd8177c71092fd727d7e2af75a"
+        }
+      }
+    },
+    "pr79_s2": {
+      "archive_bytes": 277321,
+      "archive_path": "experiments/results/pr79_action_dictionary_repack_v2_20260503_codex/pr79_s2_fixed_adaptive_actions/archive.zip",
+      "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+      "decoded_segments": {
+        "masks.mkv": {
+          "bytes": 223385,
+          "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "optimized_poses.qp1": {
+          "bytes": 1140,
+          "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+        },
+        "renderer.bin": {
+          "bytes": 59288,
+          "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 2688,
+          "sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f"
+        }
+      },
+      "payload_bytes": 277221,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+      "payload_sha256": "c52308a335087e7a41e7353a4395269bddb0377b6fbad2b739aa8e283db22b72",
+      "raw_segments": {
+        "masks.mkv": {
+          "bytes": 219472,
+          "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+        },
+        "optimized_poses.qp1": {
+          "bytes": 898,
+          "sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082"
+        },
+        "renderer.bin": {
+          "bytes": 55756,
+          "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 1095,
+          "sha256": "abbc8d26375d60e52bc4ab801f2e241e56bd47564fe48ff1edefc5e1bdf60273"
+        }
+      }
+    }
+  },
+  "tool": "experiments/build_pr77_tile_delta_transfer_candidates.py"
+}

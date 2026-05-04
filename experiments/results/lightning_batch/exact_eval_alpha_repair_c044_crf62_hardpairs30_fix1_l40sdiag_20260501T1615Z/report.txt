@@ -1,0 +1,17 @@
+=== Evaluation config ===
+  batch_size: 16
+  device: cuda
+  num_threads: 2
+  prefetch_queue_depth: 4
+  report: /teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_alpha_repair_c044_crf62_hardpairs30_fix1_l40sdiag_20260501T1615Z/eval_work/report.txt
+  seed: 1234
+  submission_dir: /teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_alpha_repair_c044_crf62_hardpairs30_fix1_l40sdiag_20260501T1615Z/eval_work
+  uncompressed_dir: /teamspace/studios/this_studio/pact/upstream/videos
+  video_names_file: /teamspace/studios/this_studio/pact/upstream/public_test_video_names.txt
+=== Evaluation results over 600 samples ===
+  Average PoseNet Distortion: 0.99464434
+  Average SegNet Distortion: 0.00726278
+  Submission file size: 537,520 bytes
+  Original uncompressed size: 37,545,489 bytes
+  Compression Rate: 0.01431650
+  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 4.24

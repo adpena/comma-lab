@@ -1,0 +1,118 @@
+{
+  "candidate_id": "trained_qbf1_b0064",
+  "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
+  "output_archive": {
+    "bytes": 285210,
+    "delta_bytes_vs_source_archive": 8996,
+    "formula_only_rate_delta_vs_source_archive": 0.005990067142287054,
+    "path": "experiments/results/trained_renderer_blockfp_preflight_20260502_codex/trained_qbf1_b0064/archive.zip",
+    "sha256": "c581bb0729e5937ac78343e3b6891a19d70b2f9a3dab19e02a37710fc32b8cec"
+  },
+  "packed_payload": {
+    "brotli_quality": 11,
+    "header": {
+      "members": [
+        {
+          "bytes": 126584,
+          "codec": "raw",
+          "name": "renderer.bin",
+          "sha256": "9fe75265cfd38bce56e76d2d4dc5c25c0064ddf30ecbb8b4f4f11cd66209a289"
+        },
+        {
+          "bytes": 223385,
+          "codec": "raw",
+          "name": "masks.mkv",
+          "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        {
+          "bytes": 7200,
+          "codec": "raw",
+          "name": "optimized_poses.bin",
+          "sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+        }
+      ],
+      "payload_format": "public_pr64_mask_first_len_table",
+      "schema": "renderer_payload_pr64_len_table_v1",
+      "source_archive_sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a"
+    },
+    "output_archive_members": [
+      "p"
+    ],
+    "payload_compressed_bytes": 285110,
+    "payload_format": "public_pr64_mask_first_len_table",
+    "payload_member": "p",
+    "payload_raw_bytes": 357181,
+    "runtime_parse_header_schema": "renderer_payload_pr64_len_table_v1",
+    "runtime_parse_logical_members": [
+      "renderer.bin",
+      "masks.mkv",
+      "optimized_poses.bin"
+    ],
+    "runtime_parse_payload_format": "public_pr64_mask_first_len_table"
+  },
+  "promotion_eligible": false,
+  "renderer_export": {
+    "bytes": 59288,
+    "dispatchable_trained_export": false,
+    "mode": "source_renderer_surrogate",
+    "path": null,
+    "reason": "surrogate proves archive/runtime plumbing only; it is not a trained transplant",
+    "same_as_source_renderer": true,
+    "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+  },
+  "renderer_export_format": "QZS3",
+  "runtime_contract": {
+    "byte_closed": true,
+    "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+    "inflate_loader": "submissions/robust_current/inflate_renderer.py::_load_renderer QBF1 branch",
+    "qbf1_runtime_load_verified_cpu": true,
+    "runtime_unpack_verified": true,
+    "score_affecting_payload_charged_in_archive": true,
+    "scorer_imports_at_inflate_time": false,
+    "sidecars_required": false
+  },
+  "schema": "trained_renderer_blockfp_candidate_manifest_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 276214,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip",
+    "sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+    "source_archive_packaging": "packed_renderer_payload",
+    "source_logical_member_names": [
+      "renderer.bin",
+      "masks.mkv",
+      "optimized_poses.bin"
+    ],
+    "source_payload_header_payload_format": "public_pr67_qzs3_qp1_fixed_slices",
+    "source_payload_header_schema": "renderer_payload_pr64_len_table_v1",
+    "source_payload_member": "p",
+    "source_payload_member_bytes": 276114,
+    "source_payload_member_sha256": "1f0aaaa9d06967552df6f22d39905a48349239dee4731b093067951a20adc2af",
+    "source_zip_members": [
+      "p"
+    ]
+  },
+  "state_contract": {
+    "compatible": true,
+    "extra": [],
+    "missing": [],
+    "nonfinite_tensors": [],
+    "shape_mismatches": [],
+    "state_tensor_count": 111,
+    "template_tensor_count": 111
+  },
+  "transformed_renderer_payload": {
+    "block_size": 64,
+    "byte_accounting": {
+      "header_nbytes": 20,
+      "metadata_nbytes": 33176,
+      "payload_nbytes": 93388,
+      "tensor_payload_nbytes": 93388,
+      "total_nbytes": 126584
+    },
+    "bytes": 126584,
+    "member_name": "renderer.bin",
+    "sha256": "9fe75265cfd38bce56e76d2d4dc5c25c0064ddf30ecbb8b4f4f11cd66209a289",
+    "wire_format": "QBF1"
+  }
+}

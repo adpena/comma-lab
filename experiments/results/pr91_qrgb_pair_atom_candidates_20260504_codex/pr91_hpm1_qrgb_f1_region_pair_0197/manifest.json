@@ -1,0 +1,164 @@
+{
+  "action_proofs": [
+    {
+      "candidate_value": 45,
+      "changed": true,
+      "pair_index": 197,
+      "rationale": "PR90 QRGB frame0 half-band residual transferred to PR85 frame0 region bias choice",
+      "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+      "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0197",
+      "source_value": 60,
+      "stream": "region"
+    }
+  ],
+  "build_status": "built",
+  "candidate_archive": {
+    "archive_bytes": 222411,
+    "archive_path": "experiments/results/pr91_qrgb_pair_atom_candidates_20260504_codex/pr91_hpm1_qrgb_f1_region_pair_0197/archive.zip",
+    "archive_sha256": "186c9645eb67dc3b2dec9c59c429ad4380bc272204c6852084982359e50fd567",
+    "member_bytes": 222311,
+    "member_name": "x",
+    "member_sha256": "13cfcc8aca3ad331cff5e78d5758be18aadfdd9bd3577e1a53f28e5f09600a7e",
+    "zip_stored": true
+  },
+  "candidate_bundle": {
+    "header_mode": "explicit_30",
+    "mask_contract_preserved": true,
+    "member_bytes": 222311,
+    "member_sha256": "13cfcc8aca3ad331cff5e78d5758be18aadfdd9bd3577e1a53f28e5f09600a7e",
+    "segment_lengths": {
+      "bias": 223,
+      "frac": 106,
+      "frac2": 149,
+      "frac3": 154,
+      "mask": 145087,
+      "model": 57074,
+      "pose": 1487,
+      "post": 1400,
+      "randmulti": 16101,
+      "region": 274,
+      "shift": 226
+    }
+  },
+  "candidate_id": "pr91_hpm1_qrgb_f1_region_pair_0197",
+  "changed_segments": [
+    "region"
+  ],
+  "charged_bytes": {
+    "byte_delta_vs_pr91_source_archive": 7,
+    "candidate_archive_bytes": 222411,
+    "formula_only_rate_score_delta_vs_pr91": 4.6610126718552e-06,
+    "source_archive_bytes": 222404
+  },
+  "dispatch_gate": "blocked_pr91_hpm1_runtime_preflight_and_exact_evidence",
+  "dispatch_performed": false,
+  "dispatch_unlocked": false,
+  "evidence_grade": "empirical_local_archive_build_only",
+  "next_gate": "Add reviewed PR91 HPM1 inflate support, run local runtime parity/preflight, then claim lane before exact CUDA auth eval.",
+  "non_noop_proof": {
+    "changed_segments": [
+      "region"
+    ],
+    "decoded_sidechannel_semantics_changed": true,
+    "hpm1_mask_unchanged": true,
+    "payload_changed": true,
+    "status": "passed"
+  },
+  "pr91_scorer_gradient_consumed": false,
+  "remote_jobs_dispatched": false,
+  "schema": "pr91_hpm1_qrgb_pair_atom_candidate_v1",
+  "score_claim": false,
+  "scorer_gradient_claim": false,
+  "selected_pair_indices": [
+    197
+  ],
+  "selected_streams": [
+    "region"
+  ],
+  "source_archive": {
+    "archive_bytes": 222404,
+    "archive_sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f",
+    "known_pr91_anchor_match": {
+      "expected_archive_bytes": 222404,
+      "expected_archive_sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f",
+      "matches": true
+    },
+    "member_bytes": 222304,
+    "member_name": "x",
+    "member_sha256": "5c213c61cc4d29b62286063bfdcb97e812af6b06c0021aeaecc8bc46644e17bf",
+    "path": "experiments/results/public_pr91_intake_20260504_worker/archive.zip",
+    "zip_stored": true
+  },
+  "source_bundle": {
+    "format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+    "header_bytes": 24,
+    "mask_contract": {
+      "codec": "HPM1",
+      "metadata": {
+        "H": 384,
+        "N": 600,
+        "P": 32,
+        "W": 512,
+        "ch": 64,
+        "delta": 2,
+        "header_bytes": 48,
+        "hpac_d_film": 8,
+        "hpac_len": 28243,
+        "hpac_ppmd_sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+        "ppmd_order": 4,
+        "runtime_contract": "HPM1_pr91_hpac_mask_stream",
+        "tail_bytes": 0,
+        "tokens_len": 116796,
+        "tokens_sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+        "tokens_uint32_aligned": true,
+        "tokens_uint32_words": 29199,
+        "use_spm": 1
+      },
+      "sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc"
+    },
+    "member_sha256": "5c213c61cc4d29b62286063bfdcb97e812af6b06c0021aeaecc8bc46644e17bf",
+    "segment_lengths": {
+      "bias": 223,
+      "frac": 106,
+      "frac2": 149,
+      "frac3": 154,
+      "mask": 145087,
+      "model": 57074,
+      "pose": 1487,
+      "post": 1400,
+      "randmulti": 16101,
+      "region": 273,
+      "shift": 226
+    }
+  },
+  "source_pr85_candidate_id": "pr85_qrgb_f1_region_pair_0197",
+  "tool": "experiments/build_pr91_qrgb_pair_atom_candidates.py",
+  "transfer_basis": {
+    "action_spec_source": "experiments/results/pr85_qrgb_pair_atom_archive_candidates_20260504_codex/action_spec_bias_region.json",
+    "no_pr91_gradient_synthesized": true,
+    "source": "PR85 explicit QRGB action spec transferred only over PR85-identical PR91 side-channel streams"
+  },
+  "transforms": [
+    {
+      "brotli_lgwin": 24,
+      "brotli_quality": 11,
+      "candidate_raw_bytes": 603,
+      "candidate_raw_sha256": "df64dc3dd58d088db3267911500e846587de4febc12909551485703bbf7f3a7b",
+      "candidate_segment_bytes": 274,
+      "candidate_segment_sha256": "2ac27e71a2bd346e3d7ea0e69fed9da834831c61d308a0a542c056fb3e26dcd3",
+      "changed_pair_indices": [
+        197
+      ],
+      "codec": "RH1",
+      "default_symbol": 0,
+      "segment_byte_delta": 1,
+      "semantic_sha256_after": "1e8973e7fdd2504bcb633c8cbee4ccd894b1a88db3e3618015fa09fbe420e19e",
+      "semantic_sha256_before": "62510a8f06b52c02622546cc6f364212217a720f3162250dddd46cdf01c0ad2e",
+      "source_raw_bytes": 603,
+      "source_raw_sha256": "8018b15bf5029b8bbf224b4ed1581afa2c51ae4e814e327183ffe8a697deb7e0",
+      "source_segment_bytes": 273,
+      "source_segment_sha256": "4a7c16094fab281c30e27621a58577c095c4b1153c232518c9adbaba2a2b2392",
+      "stream": "region"
+    }
+  ]
+}

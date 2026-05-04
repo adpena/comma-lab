@@ -1,0 +1,1070 @@
+{
+  "alternate_candidate_count": 11,
+  "best_alt_candidate": {
+    "archive": null,
+    "archive_rejection_reasons": [
+      "no_local_byte_win"
+    ],
+    "archive_relevant_state_change": true,
+    "bitstream_bytes": 161014,
+    "candidate_id": "adaptive9up2left2",
+    "codec_stdout": {
+      "bitstream_bytes": 161014,
+      "mode": "adaptive9up2left2",
+      "model_bytes": 20,
+      "packed_bytes": 161034,
+      "raw_bytes": 117964800
+    },
+    "delta_bytes_vs_source_qma9": 2023,
+    "dispatch_unlocked": false,
+    "local_byte_win": false,
+    "mode": "adaptive9up2left2",
+    "mode_family": "qma9_neighbor_table_variant",
+    "model_or_header_bytes": 20,
+    "payload_bytes": 161034,
+    "payload_changed_vs_source_qma9": true,
+    "payload_magic": "QMA9",
+    "payload_path": "experiments/results/pr85_qma9_alt_grammar_candidates_20260504/payloads/adaptive9up2left2.bin",
+    "payload_sha256": "da17f28d5226d71ebdc060e494ce96167bbe3d3627bde4412100fc88895de173",
+    "pr85_bundle_header_mode_if_archive_written": null,
+    "projected_archive_bytes_if_other_streams_unchanged": 238351,
+    "projected_archive_delta_bytes_vs_pr85": 2023,
+    "rate_score_delta_if_components_unchanged_formula_only": 0.0013470326621661526,
+    "run_command": [
+      "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/pr85-qma9-alt-dc5_2xjq/qma9_alt_grammar_codec",
+      "/Users/adpena/Projects/pact/experiments/results/public_pr85_intake_20260503_codex/qma9_token_source/pr85_qma9_tokens_u8_storage_order.bin",
+      "600",
+      "512",
+      "384",
+      "experiments/results/pr85_qma9_alt_grammar_candidates_20260504/payloads/adaptive9up2left2.bin",
+      "adaptive9up2left2"
+    ],
+    "runtime_custody_contract": {
+      "current_live_runtime_contract": {
+        "accepted_magic": "QMA9",
+        "accepted_mode": "adaptive9bin",
+        "charged_mode_id_header": false,
+        "source": "/Users/adpena/Projects/pact/submissions/robust_current/range_mask_codec.cpp",
+        "source_sha256": "26b44194c9b364ae3e4b7a30832204c008324df91bc12281d30cee30c43b4676"
+      },
+      "dispatch_unlocked": false,
+      "live_runtime_supported": false,
+      "required_runtime_changes_before_dispatch": [
+        "allocate a new magic or charged mode-id header; current robust runtime interprets QMA9 as adaptive9bin",
+        "add runtime output-parity tests against the exact raw token SHA before any score eval",
+        "record the updated inflate runtime tree SHA in exact-eval provenance",
+        "only dispatch after a fresh Level-2 lane claim and archive.zip -> inflate.sh -> upstream/evaluate.py CUDA gate"
+      ],
+      "safe_for_remote_dispatch": false,
+      "screen_codec_contract": {
+        "local_token_parity": "codec self-decode must equal raw token input before payload is accepted",
+        "mode": "adaptive9up2left2",
+        "payload_magic": "QMA9",
+        "source": "/Users/adpena/Projects/pact/experiments/results/public_pr85_intake_20260503_codex/replay_submission/range_mask_codec.cpp",
+        "source_sha256": "94cd1a86111fb6d34b6e12d37c624bd5938df0fbc6c4c24c8d40c5a83fcb016b"
+      }
+    },
+    "runtime_supported": false,
+    "safe_for_remote_dispatch": false,
+    "source_archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+    "token_parity": {
+      "method": "compiled replay codec self-decode equality before payload write",
+      "raw_bytes": 117964800,
+      "verified": true
+    }
+  },
+  "best_byte_positive_candidate": null,
+  "best_runtime_supported_candidate": null,
+  "blockers": [
+    "no_byte_positive_alt_grammar_candidate",
+    "no_runtime_supported_byte_positive_alt_grammar_candidate",
+    "qma9_adaptive9bin_remains_smallest_observed_full_stream",
+    "robust_current_runtime_accepts_only_qma9_adaptive9bin"
+  ],
+  "byte_positive_candidate_count": 0,
+  "candidate_count": 12,
+  "candidates": [
+    {
+      "archive": null,
+      "archive_rejection_reasons": [
+        "no_local_byte_win"
+      ],
+      "archive_relevant_state_change": true,
+      "bitstream_bytes": 173756,
+      "candidate_id": "adaptive6pr",
+      "codec_stdout": {
+        "bitstream_bytes": 173756,
+        "mode": "adaptive6pr",
+        "model_bytes": 20,
+        "packed_bytes": 173776,
+        "raw_bytes": 117964800
+      },
+      "delta_bytes_vs_source_qma9": 14765,
+      "dispatch_unlocked": false,
+      "local_byte_win": false,
+      "mode": "adaptive6pr",
+      "mode_family": "table_reduction_context_family",
+      "model_or_header_bytes": 20,
+      "payload_bytes": 173776,
+      "payload_changed_vs_source_qma9": true,
+      "payload_magic": "QMA6",
+      "payload_path": "experiments/results/pr85_qma9_alt_grammar_candidates_20260504/payloads/adaptive6pr.bin",
+      "payload_sha256": "e39c86a70393803402774a564fbf8f657ae0c17eee15f75c2c912310240ea934",
+      "pr85_bundle_header_mode_if_archive_written": null,
+      "projected_archive_bytes_if_other_streams_unchanged": 251093,
+      "projected_archive_delta_bytes_vs_pr85": 14765,
+      "rate_score_delta_if_components_unchanged_formula_only": 0.00983140744284886,
+      "run_command": [
+        "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/pr85-qma9-alt-dc5_2xjq/qma9_alt_grammar_codec",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr85_intake_20260503_codex/qma9_token_source/pr85_qma9_tokens_u8_storage_order.bin",
+        "600",
+        "512",
+        "384",
+        "experiments/results/pr85_qma9_alt_grammar_candidates_20260504/payloads/adaptive6pr.bin",
+        "adaptive6pr"
+      ],
+      "runtime_custody_contract": {
+        "current_live_runtime_contract": {
+          "accepted_magic": "QMA9",
+          "accepted_mode": "adaptive9bin",
+          "charged_mode_id_header": false,
+          "source": "/Users/adpena/Projects/pact/submissions/robust_current/range_mask_codec.cpp",
+          "source_sha256": "26b44194c9b364ae3e4b7a30832204c008324df91bc12281d30cee30c43b4676"
+        },
+        "dispatch_unlocked": false,
+        "live_runtime_supported": false,
+        "required_runtime_changes_before_dispatch": [
+          "extend robust_current range_mask_codec.cpp to recognize QMA6 and decode mode adaptive6pr",
+          "extend inflate/unpack QMA9 mask detection to admit QMA6 without changing fixed-slice custody",
+          "add runtime output-parity tests against the exact raw token SHA before any score eval",
+          "record the updated inflate runtime tree SHA in exact-eval provenance",
+          "only dispatch after a fresh Level-2 lane claim and archive.zip -> inflate.sh -> upstream/evaluate.py CUDA gate"
+        ],
+        "safe_for_remote_dispatch": false,
+        "screen_codec_contract": {
+          "local_token_parity": "codec self-decode must equal raw token input before payload is accepted",
+          "mode": "adaptive6pr",
+          "payload_magic": "QMA6",
+          "source": "/Users/adpena/Projects/pact/experiments/results/public_pr85_intake_20260503_codex/replay_submission/range_mask_codec.cpp",
+          "source_sha256": "94cd1a86111fb6d34b6e12d37c624bd5938df0fbc6c4c24c8d40c5a83fcb016b"
+        }
+      },
+      "runtime_supported": false,
+      "safe_for_remote_dispatch": false,
+      "source_archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+      "token_parity": {
+        "method": "compiled replay codec self-decode equality before payload write",
+        "raw_bytes": 117964800,
+        "verified": true
+      }
+    },
+    {
+      "archive": null,
+      "archive_rejection_reasons": [
+        "no_local_byte_win"
+      ],
+      "archive_relevant_state_change": true,
+      "bitstream_bytes": 168970,
+      "candidate_id": "adaptive7prpd",
+      "codec_stdout": {
+        "bitstream_bytes": 168970,
+        "mode": "adaptive7prpd",
+        "model_bytes": 20,
+        "packed_bytes": 168990,
+        "raw_bytes": 117964800
+      },
+      "delta_bytes_vs_source_qma9": 9979,
+      "dispatch_unlocked": false,
+      "local_byte_win": false,
+      "mode": "adaptive7prpd",
+      "mode_family": "table_reduction_context_family",
+      "model_or_header_bytes": 20,
+      "payload_bytes": 168990,
+      "payload_changed_vs_source_qma9": true,
+      "payload_magic": "QMA7",
+      "payload_path": "experiments/results/pr85_qma9_alt_grammar_candidates_20260504/payloads/adaptive7prpd.bin",
+      "payload_sha256": "0382ae2a0b36b5af38fdb7f17c051620b2adbd4ae5d6f102a8e125cc4b31712e",
+      "pr85_bundle_header_mode_if_archive_written": null,
+      "projected_archive_bytes_if_other_streams_unchanged": 246307,
+      "projected_archive_delta_bytes_vs_pr85": 9979,
+      "rate_score_delta_if_components_unchanged_formula_only": 0.006644606493206148,
+      "run_command": [
+        "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/pr85-qma9-alt-dc5_2xjq/qma9_alt_grammar_codec",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr85_intake_20260503_codex/qma9_token_source/pr85_qma9_tokens_u8_storage_order.bin",
+        "600",
+        "512",
+        "384",
+        "experiments/results/pr85_qma9_alt_grammar_candidates_20260504/payloads/adaptive7prpd.bin",
+        "adaptive7prpd"
+      ],
+      "runtime_custody_contract": {
+        "current_live_runtime_contract": {
+          "accepted_magic": "QMA9",
+          "accepted_mode": "adaptive9bin",
+          "charged_mode_id_header": false,
+          "source": "/Users/adpena/Projects/pact/submissions/robust_current/range_mask_codec.cpp",
+          "source_sha256": "26b44194c9b364ae3e4b7a30832204c008324df91bc12281d30cee30c43b4676"
+        },
+        "dispatch_unlocked": false,
+        "live_runtime_supported": false,
+        "required_runtime_changes_before_dispatch": [
+          "extend robust_current range_mask_codec.cpp to recognize QMA7 and decode mode adaptive7prpd",
+          "extend inflate/unpack QMA9 mask detection to admit QMA7 without changing fixed-slice custody",
+          "add runtime output-parity tests against the exact raw token SHA before any score eval",
+          "record the updated inflate runtime tree SHA in exact-eval provenance",
+          "only dispatch after a fresh Level-2 lane claim and archive.zip -> inflate.sh -> upstream/evaluate.py CUDA gate"
+        ],
+        "safe_for_remote_dispatch": false,
+        "screen_codec_contract": {
+          "local_token_parity": "codec self-decode must equal raw token input before payload is accepted",
+          "mode": "adaptive7prpd",
+          "payload_magic": "QMA7",
+          "source": "/Users/adpena/Projects/pact/experiments/results/public_pr85_intake_20260503_codex/replay_submission/range_mask_codec.cpp",
+          "source_sha256": "94cd1a86111fb6d34b6e12d37c624bd5938df0fbc6c4c24c8d40c5a83fcb016b"
+        }
+      },
+      "runtime_supported": false,
+      "safe_for_remote_dispatch": false,
+      "source_archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+      "token_parity": {
+        "method": "compiled replay codec self-decode equality before payload write",
+        "raw_bytes": 117964800,
+        "verified": true
+      }
+    },
+    {
+      "archive": null,
+      "archive_rejection_reasons": [
+        "no_local_byte_win"
+      ],
+      "archive_relevant_state_change": true,
+      "bitstream_bytes": 168276,
+      "candidate_id": "adaptive8prpdpl",
+      "codec_stdout": {
+        "bitstream_bytes": 168276,
+        "mode": "adaptive8prpdpl",
+        "model_bytes": 20,
+        "packed_bytes": 168296,
+        "raw_bytes": 117964800
+      },
+      "delta_bytes_vs_source_qma9": 9285,
+      "dispatch_unlocked": false,
+      "local_byte_win": false,
+      "mode": "adaptive8prpdpl",
+      "mode_family": "table_reduction_context_family",
+      "model_or_header_bytes": 20,
+      "payload_bytes": 168296,
+      "payload_changed_vs_source_qma9": true,
+      "payload_magic": "QMA8",
+      "payload_path": "experiments/results/pr85_qma9_alt_grammar_candidates_20260504/payloads/adaptive8prpdpl.bin",
+      "payload_sha256": "81e1c0056363db84d30e0c2115e0f1c857500734bf8c969eef7bb1e53b832d23",
+      "pr85_bundle_header_mode_if_archive_written": null,
+      "projected_archive_bytes_if_other_streams_unchanged": 245613,
+      "projected_archive_delta_bytes_vs_pr85": 9285,
+      "rate_score_delta_if_components_unchanged_formula_only": 0.006182500379739361,
+      "run_command": [
+        "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/pr85-qma9-alt-dc5_2xjq/qma9_alt_grammar_codec",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr85_intake_20260503_codex/qma9_token_source/pr85_qma9_tokens_u8_storage_order.bin",
+        "600",
+        "512",
+        "384",
+        "experiments/results/pr85_qma9_alt_grammar_candidates_20260504/payloads/adaptive8prpdpl.bin",
+        "adaptive8prpdpl"
+      ],
+      "runtime_custody_contract": {
+        "current_live_runtime_contract": {
+          "accepted_magic": "QMA9",
+          "accepted_mode": "adaptive9bin",
+          "charged_mode_id_header": false,
+          "source": "/Users/adpena/Projects/pact/submissions/robust_current/range_mask_codec.cpp",
+          "source_sha256": "26b44194c9b364ae3e4b7a30832204c008324df91bc12281d30cee30c43b4676"
+        },
+        "dispatch_unlocked": false,
+        "live_runtime_supported": false,
+        "required_runtime_changes_before_dispatch": [
+          "extend robust_current range_mask_codec.cpp to recognize QMA8 and decode mode adaptive8prpdpl",
+          "extend inflate/unpack QMA9 mask detection to admit QMA8 without changing fixed-slice custody",
+          "add runtime output-parity tests against the exact raw token SHA before any score eval",
+          "record the updated inflate runtime tree SHA in exact-eval provenance",
+          "only dispatch after a fresh Level-2 lane claim and archive.zip -> inflate.sh -> upstream/evaluate.py CUDA gate"
+        ],
+        "safe_for_remote_dispatch": false,
+        "screen_codec_contract": {
+          "local_token_parity": "codec self-decode must equal raw token input before payload is accepted",
+          "mode": "adaptive8prpdpl",
+          "payload_magic": "QMA8",
+          "source": "/Users/adpena/Projects/pact/experiments/results/public_pr85_intake_20260503_codex/replay_submission/range_mask_codec.cpp",
+          "source_sha256": "94cd1a86111fb6d34b6e12d37c624bd5938df0fbc6c4c24c8d40c5a83fcb016b"
+        }
+      },
+      "runtime_supported": false,
+      "safe_for_remote_dispatch": false,
+      "source_archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+      "token_parity": {
+        "method": "compiled replay codec self-decode equality before payload write",
+        "raw_bytes": 117964800,
+        "verified": true
+      }
+    },
+    {
+      "archive": null,
+      "archive_rejection_reasons": [
+        "no_local_byte_win"
+      ],
+      "archive_relevant_state_change": true,
+      "bitstream_bytes": 168192,
+      "candidate_id": "adaptive8prpdpu",
+      "codec_stdout": {
+        "bitstream_bytes": 168192,
+        "mode": "adaptive8prpdpu",
+        "model_bytes": 20,
+        "packed_bytes": 168212,
+        "raw_bytes": 117964800
+      },
+      "delta_bytes_vs_source_qma9": 9201,
+      "dispatch_unlocked": false,
+      "local_byte_win": false,
+      "mode": "adaptive8prpdpu",
+      "mode_family": "table_reduction_context_family",
+      "model_or_header_bytes": 20,
+      "payload_bytes": 168212,
+      "payload_changed_vs_source_qma9": true,
+      "payload_magic": "QMA8",
+      "payload_path": "experiments/results/pr85_qma9_alt_grammar_candidates_20260504/payloads/adaptive8prpdpu.bin",
+      "payload_sha256": "04444878bb6bc05005ced51677ea61f0ce8579e67e52782bd14b0edd861d271a",
+      "pr85_bundle_header_mode_if_archive_written": null,
+      "projected_archive_bytes_if_other_streams_unchanged": 245529,
+      "projected_archive_delta_bytes_vs_pr85": 9201,
+      "rate_score_delta_if_components_unchanged_formula_only": 0.006126568227677098,
+      "run_command": [
+        "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/pr85-qma9-alt-dc5_2xjq/qma9_alt_grammar_codec",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr85_intake_20260503_codex/qma9_token_source/pr85_qma9_tokens_u8_storage_order.bin",
+        "600",
+        "512",
+        "384",
+        "experiments/results/pr85_qma9_alt_grammar_candidates_20260504/payloads/adaptive8prpdpu.bin",
+        "adaptive8prpdpu"
+      ],
+      "runtime_custody_contract": {
+        "current_live_runtime_contract": {
+          "accepted_magic": "QMA9",
+          "accepted_mode": "adaptive9bin",
+          "charged_mode_id_header": false,
+          "source": "/Users/adpena/Projects/pact/submissions/robust_current/range_mask_codec.cpp",
+          "source_sha256": "26b44194c9b364ae3e4b7a30832204c008324df91bc12281d30cee30c43b4676"
+        },
+        "dispatch_unlocked": false,
+        "live_runtime_supported": false,
+        "required_runtime_changes_before_dispatch": [
+          "extend robust_current range_mask_codec.cpp to recognize QMA8 and decode mode adaptive8prpdpu",
+          "extend inflate/unpack QMA9 mask detection to admit QMA8 without changing fixed-slice custody",
+          "add runtime output-parity tests against the exact raw token SHA before any score eval",
+          "record the updated inflate runtime tree SHA in exact-eval provenance",
+          "only dispatch after a fresh Level-2 lane claim and archive.zip -> inflate.sh -> upstream/evaluate.py CUDA gate"
+        ],
+        "safe_for_remote_dispatch": false,
+        "screen_codec_contract": {
+          "local_token_parity": "codec self-decode must equal raw token input before payload is accepted",
+          "mode": "adaptive8prpdpu",
+          "payload_magic": "QMA8",
+          "source": "/Users/adpena/Projects/pact/experiments/results/public_pr85_intake_20260503_codex/replay_submission/range_mask_codec.cpp",
+          "source_sha256": "94cd1a86111fb6d34b6e12d37c624bd5938df0fbc6c4c24c8d40c5a83fcb016b"
+        }
+      },
+      "runtime_supported": false,
+      "safe_for_remote_dispatch": false,
+      "source_archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+      "token_parity": {
+        "method": "compiled replay codec self-decode equality before payload write",
+        "raw_bytes": 117964800,
+        "verified": true
+      }
+    },
+    {
+      "archive": null,
+      "archive_rejection_reasons": [
+        "no_local_byte_win"
+      ],
+      "archive_relevant_state_change": true,
+      "bitstream_bytes": 166720,
+      "candidate_id": "adaptive8prpdleft2",
+      "codec_stdout": {
+        "bitstream_bytes": 166720,
+        "mode": "adaptive8prpdleft2",
+        "model_bytes": 20,
+        "packed_bytes": 166740,
+        "raw_bytes": 117964800
+      },
+      "delta_bytes_vs_source_qma9": 7729,
+      "dispatch_unlocked": false,
+      "local_byte_win": false,
+      "mode": "adaptive8prpdleft2",
+      "mode_family": "table_reduction_context_family",
+      "model_or_header_bytes": 20,
+      "payload_bytes": 166740,
+      "payload_changed_vs_source_qma9": true,
+      "payload_magic": "QMA8",
+      "payload_path": "experiments/results/pr85_qma9_alt_grammar_candidates_20260504/payloads/adaptive8prpdleft2.bin",
+      "payload_sha256": "0f49457f1e8397c0aef19c34203d8e41df536734a2b995b9d9823823b22b147e",
+      "pr85_bundle_header_mode_if_archive_written": null,
+      "projected_archive_bytes_if_other_streams_unchanged": 244057,
+      "projected_archive_delta_bytes_vs_pr85": 7729,
+      "rate_score_delta_if_components_unchanged_formula_only": 0.005146423848681262,
+      "run_command": [
+        "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/pr85-qma9-alt-dc5_2xjq/qma9_alt_grammar_codec",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr85_intake_20260503_codex/qma9_token_source/pr85_qma9_tokens_u8_storage_order.bin",
+        "600",
+        "512",
+        "384",
+        "experiments/results/pr85_qma9_alt_grammar_candidates_20260504/payloads/adaptive8prpdleft2.bin",
+        "adaptive8prpdleft2"
+      ],
+      "runtime_custody_contract": {
+        "current_live_runtime_contract": {
+          "accepted_magic": "QMA9",
+          "accepted_mode": "adaptive9bin",
+          "charged_mode_id_header": false,
+          "source": "/Users/adpena/Projects/pact/submissions/robust_current/range_mask_codec.cpp",
+          "source_sha256": "26b44194c9b364ae3e4b7a30832204c008324df91bc12281d30cee30c43b4676"
+        },
+        "dispatch_unlocked": false,
+        "live_runtime_supported": false,
+        "required_runtime_changes_before_dispatch": [
+          "extend robust_current range_mask_codec.cpp to recognize QMA8 and decode mode adaptive8prpdleft2",
+          "extend inflate/unpack QMA9 mask detection to admit QMA8 without changing fixed-slice custody",
+          "add runtime output-parity tests against the exact raw token SHA before any score eval",
+          "record the updated inflate runtime tree SHA in exact-eval provenance",
+          "only dispatch after a fresh Level-2 lane claim and archive.zip -> inflate.sh -> upstream/evaluate.py CUDA gate"
+        ],
+        "safe_for_remote_dispatch": false,
+        "screen_codec_contract": {
+          "local_token_parity": "codec self-decode must equal raw token input before payload is accepted",
+          "mode": "adaptive8prpdleft2",
+          "payload_magic": "QMA8",
+          "source": "/Users/adpena/Projects/pact/experiments/results/public_pr85_intake_20260503_codex/replay_submission/range_mask_codec.cpp",
+          "source_sha256": "94cd1a86111fb6d34b6e12d37c624bd5938df0fbc6c4c24c8d40c5a83fcb016b"
+        }
+      },
+      "runtime_supported": false,
+      "safe_for_remote_dispatch": false,
+      "source_archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+      "token_parity": {
+        "method": "compiled replay codec self-decode equality before payload write",
+        "raw_bytes": 117964800,
+        "verified": true
+      }
+    },
+    {
+      "archive": null,
+      "archive_rejection_reasons": [
+        "no_local_byte_win"
+      ],
+      "archive_relevant_state_change": true,
+      "bitstream_bytes": 163468,
+      "candidate_id": "adaptive8prpdup2",
+      "codec_stdout": {
+        "bitstream_bytes": 163468,
+        "mode": "adaptive8prpdup2",
+        "model_bytes": 20,
+        "packed_bytes": 163488,
+        "raw_bytes": 117964800
+      },
+      "delta_bytes_vs_source_qma9": 4477,
+      "dispatch_unlocked": false,
+      "local_byte_win": false,
+      "mode": "adaptive8prpdup2",
+      "mode_family": "table_reduction_context_family",
+      "model_or_header_bytes": 20,
+      "payload_bytes": 163488,
+      "payload_changed_vs_source_qma9": true,
+      "payload_magic": "QMA8",
+      "payload_path": "experiments/results/pr85_qma9_alt_grammar_candidates_20260504/payloads/adaptive8prpdup2.bin",
+      "payload_sha256": "a23d02e7bbfa04e17911a4bf28c16bd6a658d139b1a51e67e96b4a4923f1b2c2",
+      "pr85_bundle_header_mode_if_archive_written": null,
+      "projected_archive_bytes_if_other_streams_unchanged": 240805,
+      "projected_archive_delta_bytes_vs_pr85": 4477,
+      "rate_score_delta_if_components_unchanged_formula_only": 0.0029810505331279613,
+      "run_command": [
+        "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/pr85-qma9-alt-dc5_2xjq/qma9_alt_grammar_codec",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr85_intake_20260503_codex/qma9_token_source/pr85_qma9_tokens_u8_storage_order.bin",
+        "600",
+        "512",
+        "384",
+        "experiments/results/pr85_qma9_alt_grammar_candidates_20260504/payloads/adaptive8prpdup2.bin",
+        "adaptive8prpdup2"
+      ],
+      "runtime_custody_contract": {
+        "current_live_runtime_contract": {
+          "accepted_magic": "QMA9",
+          "accepted_mode": "adaptive9bin",
+          "charged_mode_id_header": false,
+          "source": "/Users/adpena/Projects/pact/submissions/robust_current/range_mask_codec.cpp",
+          "source_sha256": "26b44194c9b364ae3e4b7a30832204c008324df91bc12281d30cee30c43b4676"
+        },
+        "dispatch_unlocked": false,
+        "live_runtime_supported": false,
+        "required_runtime_changes_before_dispatch": [
+          "extend robust_current range_mask_codec.cpp to recognize QMA8 and decode mode adaptive8prpdup2",
+          "extend inflate/unpack QMA9 mask detection to admit QMA8 without changing fixed-slice custody",
+          "add runtime output-parity tests against the exact raw token SHA before any score eval",
+          "record the updated inflate runtime tree SHA in exact-eval provenance",
+          "only dispatch after a fresh Level-2 lane claim and archive.zip -> inflate.sh -> upstream/evaluate.py CUDA gate"
+        ],
+        "safe_for_remote_dispatch": false,
+        "screen_codec_contract": {
+          "local_token_parity": "codec self-decode must equal raw token input before payload is accepted",
+          "mode": "adaptive8prpdup2",
+          "payload_magic": "QMA8",
+          "source": "/Users/adpena/Projects/pact/experiments/results/public_pr85_intake_20260503_codex/replay_submission/range_mask_codec.cpp",
+          "source_sha256": "94cd1a86111fb6d34b6e12d37c624bd5938df0fbc6c4c24c8d40c5a83fcb016b"
+        }
+      },
+      "runtime_supported": false,
+      "safe_for_remote_dispatch": false,
+      "source_archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+      "token_parity": {
+        "method": "compiled replay codec self-decode equality before payload write",
+        "raw_bytes": 117964800,
+        "verified": true
+      }
+    },
+    {
+      "archive": null,
+      "archive_rejection_reasons": [
+        "no_local_byte_win"
+      ],
+      "archive_relevant_state_change": true,
+      "bitstream_bytes": 167835,
+      "candidate_id": "adaptive8prpdpdl",
+      "codec_stdout": {
+        "bitstream_bytes": 167835,
+        "mode": "adaptive8prpdpdl",
+        "model_bytes": 20,
+        "packed_bytes": 167855,
+        "raw_bytes": 117964800
+      },
+      "delta_bytes_vs_source_qma9": 8844,
+      "dispatch_unlocked": false,
+      "local_byte_win": false,
+      "mode": "adaptive8prpdpdl",
+      "mode_family": "table_reduction_context_family",
+      "model_or_header_bytes": 20,
+      "payload_bytes": 167855,
+      "payload_changed_vs_source_qma9": true,
+      "payload_magic": "QMA8",
+      "payload_path": "experiments/results/pr85_qma9_alt_grammar_candidates_20260504/payloads/adaptive8prpdpdl.bin",
+      "payload_sha256": "ad7333c33599c3a705d4b52dc8a6f5ad3100ec9e622d457586ef186e8502192a",
+      "pr85_bundle_header_mode_if_archive_written": null,
+      "projected_archive_bytes_if_other_streams_unchanged": 245172,
+      "projected_archive_delta_bytes_vs_pr85": 8844,
+      "rate_score_delta_if_components_unchanged_formula_only": 0.005888856581412484,
+      "run_command": [
+        "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/pr85-qma9-alt-dc5_2xjq/qma9_alt_grammar_codec",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr85_intake_20260503_codex/qma9_token_source/pr85_qma9_tokens_u8_storage_order.bin",
+        "600",
+        "512",
+        "384",
+        "experiments/results/pr85_qma9_alt_grammar_candidates_20260504/payloads/adaptive8prpdpdl.bin",
+        "adaptive8prpdpdl"
+      ],
+      "runtime_custody_contract": {
+        "current_live_runtime_contract": {
+          "accepted_magic": "QMA9",
+          "accepted_mode": "adaptive9bin",
+          "charged_mode_id_header": false,
+          "source": "/Users/adpena/Projects/pact/submissions/robust_current/range_mask_codec.cpp",
+          "source_sha256": "26b44194c9b364ae3e4b7a30832204c008324df91bc12281d30cee30c43b4676"
+        },
+        "dispatch_unlocked": false,
+        "live_runtime_supported": false,
+        "required_runtime_changes_before_dispatch": [
+          "extend robust_current range_mask_codec.cpp to recognize QMA8 and decode mode adaptive8prpdpdl",
+          "extend inflate/unpack QMA9 mask detection to admit QMA8 without changing fixed-slice custody",
+          "add runtime output-parity tests against the exact raw token SHA before any score eval",
+          "record the updated inflate runtime tree SHA in exact-eval provenance",
+          "only dispatch after a fresh Level-2 lane claim and archive.zip -> inflate.sh -> upstream/evaluate.py CUDA gate"
+        ],
+        "safe_for_remote_dispatch": false,
+        "screen_codec_contract": {
+          "local_token_parity": "codec self-decode must equal raw token input before payload is accepted",
+          "mode": "adaptive8prpdpdl",
+          "payload_magic": "QMA8",
+          "source": "/Users/adpena/Projects/pact/experiments/results/public_pr85_intake_20260503_codex/replay_submission/range_mask_codec.cpp",
+          "source_sha256": "94cd1a86111fb6d34b6e12d37c624bd5938df0fbc6c4c24c8d40c5a83fcb016b"
+        }
+      },
+      "runtime_supported": false,
+      "safe_for_remote_dispatch": false,
+      "source_archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+      "token_parity": {
+        "method": "compiled replay codec self-decode equality before payload write",
+        "raw_bytes": 117964800,
+        "verified": true
+      }
+    },
+    {
+      "archive": null,
+      "archive_rejection_reasons": [
+        "no_local_byte_win"
+      ],
+      "archive_relevant_state_change": true,
+      "bitstream_bytes": 167891,
+      "candidate_id": "adaptive8prpdpdr",
+      "codec_stdout": {
+        "bitstream_bytes": 167891,
+        "mode": "adaptive8prpdpdr",
+        "model_bytes": 20,
+        "packed_bytes": 167911,
+        "raw_bytes": 117964800
+      },
+      "delta_bytes_vs_source_qma9": 8900,
+      "dispatch_unlocked": false,
+      "local_byte_win": false,
+      "mode": "adaptive8prpdpdr",
+      "mode_family": "table_reduction_context_family",
+      "model_or_header_bytes": 20,
+      "payload_bytes": 167911,
+      "payload_changed_vs_source_qma9": true,
+      "payload_magic": "QMA8",
+      "payload_path": "experiments/results/pr85_qma9_alt_grammar_candidates_20260504/payloads/adaptive8prpdpdr.bin",
+      "payload_sha256": "1a4199eb2e039d7d5a1226857fe1ea23f418329d817a4f2b440bbab36243bd94",
+      "pr85_bundle_header_mode_if_archive_written": null,
+      "projected_archive_bytes_if_other_streams_unchanged": 245228,
+      "projected_archive_delta_bytes_vs_pr85": 8900,
+      "rate_score_delta_if_components_unchanged_formula_only": 0.005926144682787325,
+      "run_command": [
+        "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/pr85-qma9-alt-dc5_2xjq/qma9_alt_grammar_codec",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr85_intake_20260503_codex/qma9_token_source/pr85_qma9_tokens_u8_storage_order.bin",
+        "600",
+        "512",
+        "384",
+        "experiments/results/pr85_qma9_alt_grammar_candidates_20260504/payloads/adaptive8prpdpdr.bin",
+        "adaptive8prpdpdr"
+      ],
+      "runtime_custody_contract": {
+        "current_live_runtime_contract": {
+          "accepted_magic": "QMA9",
+          "accepted_mode": "adaptive9bin",
+          "charged_mode_id_header": false,
+          "source": "/Users/adpena/Projects/pact/submissions/robust_current/range_mask_codec.cpp",
+          "source_sha256": "26b44194c9b364ae3e4b7a30832204c008324df91bc12281d30cee30c43b4676"
+        },
+        "dispatch_unlocked": false,
+        "live_runtime_supported": false,
+        "required_runtime_changes_before_dispatch": [
+          "extend robust_current range_mask_codec.cpp to recognize QMA8 and decode mode adaptive8prpdpdr",
+          "extend inflate/unpack QMA9 mask detection to admit QMA8 without changing fixed-slice custody",
+          "add runtime output-parity tests against the exact raw token SHA before any score eval",
+          "record the updated inflate runtime tree SHA in exact-eval provenance",
+          "only dispatch after a fresh Level-2 lane claim and archive.zip -> inflate.sh -> upstream/evaluate.py CUDA gate"
+        ],
+        "safe_for_remote_dispatch": false,
+        "screen_codec_contract": {
+          "local_token_parity": "codec self-decode must equal raw token input before payload is accepted",
+          "mode": "adaptive8prpdpdr",
+          "payload_magic": "QMA8",
+          "source": "/Users/adpena/Projects/pact/experiments/results/public_pr85_intake_20260503_codex/replay_submission/range_mask_codec.cpp",
+          "source_sha256": "94cd1a86111fb6d34b6e12d37c624bd5938df0fbc6c4c24c8d40c5a83fcb016b"
+        }
+      },
+      "runtime_supported": false,
+      "safe_for_remote_dispatch": false,
+      "source_archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+      "token_parity": {
+        "method": "compiled replay codec self-decode equality before payload write",
+        "raw_bytes": 117964800,
+        "verified": true
+      }
+    },
+    {
+      "archive": null,
+      "archive_rejection_reasons": [
+        "no_local_byte_win"
+      ],
+      "archive_relevant_state_change": true,
+      "bitstream_bytes": 161014,
+      "candidate_id": "adaptive9up2left2",
+      "codec_stdout": {
+        "bitstream_bytes": 161014,
+        "mode": "adaptive9up2left2",
+        "model_bytes": 20,
+        "packed_bytes": 161034,
+        "raw_bytes": 117964800
+      },
+      "delta_bytes_vs_source_qma9": 2023,
+      "dispatch_unlocked": false,
+      "local_byte_win": false,
+      "mode": "adaptive9up2left2",
+      "mode_family": "qma9_neighbor_table_variant",
+      "model_or_header_bytes": 20,
+      "payload_bytes": 161034,
+      "payload_changed_vs_source_qma9": true,
+      "payload_magic": "QMA9",
+      "payload_path": "experiments/results/pr85_qma9_alt_grammar_candidates_20260504/payloads/adaptive9up2left2.bin",
+      "payload_sha256": "da17f28d5226d71ebdc060e494ce96167bbe3d3627bde4412100fc88895de173",
+      "pr85_bundle_header_mode_if_archive_written": null,
+      "projected_archive_bytes_if_other_streams_unchanged": 238351,
+      "projected_archive_delta_bytes_vs_pr85": 2023,
+      "rate_score_delta_if_components_unchanged_formula_only": 0.0013470326621661526,
+      "run_command": [
+        "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/pr85-qma9-alt-dc5_2xjq/qma9_alt_grammar_codec",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr85_intake_20260503_codex/qma9_token_source/pr85_qma9_tokens_u8_storage_order.bin",
+        "600",
+        "512",
+        "384",
+        "experiments/results/pr85_qma9_alt_grammar_candidates_20260504/payloads/adaptive9up2left2.bin",
+        "adaptive9up2left2"
+      ],
+      "runtime_custody_contract": {
+        "current_live_runtime_contract": {
+          "accepted_magic": "QMA9",
+          "accepted_mode": "adaptive9bin",
+          "charged_mode_id_header": false,
+          "source": "/Users/adpena/Projects/pact/submissions/robust_current/range_mask_codec.cpp",
+          "source_sha256": "26b44194c9b364ae3e4b7a30832204c008324df91bc12281d30cee30c43b4676"
+        },
+        "dispatch_unlocked": false,
+        "live_runtime_supported": false,
+        "required_runtime_changes_before_dispatch": [
+          "allocate a new magic or charged mode-id header; current robust runtime interprets QMA9 as adaptive9bin",
+          "add runtime output-parity tests against the exact raw token SHA before any score eval",
+          "record the updated inflate runtime tree SHA in exact-eval provenance",
+          "only dispatch after a fresh Level-2 lane claim and archive.zip -> inflate.sh -> upstream/evaluate.py CUDA gate"
+        ],
+        "safe_for_remote_dispatch": false,
+        "screen_codec_contract": {
+          "local_token_parity": "codec self-decode must equal raw token input before payload is accepted",
+          "mode": "adaptive9up2left2",
+          "payload_magic": "QMA9",
+          "source": "/Users/adpena/Projects/pact/experiments/results/public_pr85_intake_20260503_codex/replay_submission/range_mask_codec.cpp",
+          "source_sha256": "94cd1a86111fb6d34b6e12d37c624bd5938df0fbc6c4c24c8d40c5a83fcb016b"
+        }
+      },
+      "runtime_supported": false,
+      "safe_for_remote_dispatch": false,
+      "source_archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+      "token_parity": {
+        "method": "compiled replay codec self-decode equality before payload write",
+        "raw_bytes": 117964800,
+        "verified": true
+      }
+    },
+    {
+      "archive": null,
+      "archive_rejection_reasons": [
+        "no_local_byte_win"
+      ],
+      "archive_relevant_state_change": true,
+      "bitstream_bytes": 163176,
+      "candidate_id": "adaptive9up2pu",
+      "codec_stdout": {
+        "bitstream_bytes": 163176,
+        "mode": "adaptive9up2pu",
+        "model_bytes": 20,
+        "packed_bytes": 163196,
+        "raw_bytes": 117964800
+      },
+      "delta_bytes_vs_source_qma9": 4185,
+      "dispatch_unlocked": false,
+      "local_byte_win": false,
+      "mode": "adaptive9up2pu",
+      "mode_family": "qma9_neighbor_table_variant",
+      "model_or_header_bytes": 20,
+      "payload_bytes": 163196,
+      "payload_changed_vs_source_qma9": true,
+      "payload_magic": "QMA9",
+      "payload_path": "experiments/results/pr85_qma9_alt_grammar_candidates_20260504/payloads/adaptive9up2pu.bin",
+      "payload_sha256": "72b3f0bd7990018261eee43b80d89d8c52315e05ccaae9991cb263bde9a2975d",
+      "pr85_bundle_header_mode_if_archive_written": null,
+      "projected_archive_bytes_if_other_streams_unchanged": 240513,
+      "projected_archive_delta_bytes_vs_pr85": 4185,
+      "rate_score_delta_if_components_unchanged_formula_only": 0.002786619718816287,
+      "run_command": [
+        "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/pr85-qma9-alt-dc5_2xjq/qma9_alt_grammar_codec",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr85_intake_20260503_codex/qma9_token_source/pr85_qma9_tokens_u8_storage_order.bin",
+        "600",
+        "512",
+        "384",
+        "experiments/results/pr85_qma9_alt_grammar_candidates_20260504/payloads/adaptive9up2pu.bin",
+        "adaptive9up2pu"
+      ],
+      "runtime_custody_contract": {
+        "current_live_runtime_contract": {
+          "accepted_magic": "QMA9",
+          "accepted_mode": "adaptive9bin",
+          "charged_mode_id_header": false,
+          "source": "/Users/adpena/Projects/pact/submissions/robust_current/range_mask_codec.cpp",
+          "source_sha256": "26b44194c9b364ae3e4b7a30832204c008324df91bc12281d30cee30c43b4676"
+        },
+        "dispatch_unlocked": false,
+        "live_runtime_supported": false,
+        "required_runtime_changes_before_dispatch": [
+          "allocate a new magic or charged mode-id header; current robust runtime interprets QMA9 as adaptive9bin",
+          "add runtime output-parity tests against the exact raw token SHA before any score eval",
+          "record the updated inflate runtime tree SHA in exact-eval provenance",
+          "only dispatch after a fresh Level-2 lane claim and archive.zip -> inflate.sh -> upstream/evaluate.py CUDA gate"
+        ],
+        "safe_for_remote_dispatch": false,
+        "screen_codec_contract": {
+          "local_token_parity": "codec self-decode must equal raw token input before payload is accepted",
+          "mode": "adaptive9up2pu",
+          "payload_magic": "QMA9",
+          "source": "/Users/adpena/Projects/pact/experiments/results/public_pr85_intake_20260503_codex/replay_submission/range_mask_codec.cpp",
+          "source_sha256": "94cd1a86111fb6d34b6e12d37c624bd5938df0fbc6c4c24c8d40c5a83fcb016b"
+        }
+      },
+      "runtime_supported": false,
+      "safe_for_remote_dispatch": false,
+      "source_archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+      "token_parity": {
+        "method": "compiled replay codec self-decode equality before payload write",
+        "raw_bytes": 117964800,
+        "verified": true
+      }
+    },
+    {
+      "archive": null,
+      "archive_rejection_reasons": [
+        "no_local_byte_win"
+      ],
+      "archive_relevant_state_change": true,
+      "bitstream_bytes": 162857,
+      "candidate_id": "adaptive9up2pl",
+      "codec_stdout": {
+        "bitstream_bytes": 162857,
+        "mode": "adaptive9up2pl",
+        "model_bytes": 20,
+        "packed_bytes": 162877,
+        "raw_bytes": 117964800
+      },
+      "delta_bytes_vs_source_qma9": 3866,
+      "dispatch_unlocked": false,
+      "local_byte_win": false,
+      "mode": "adaptive9up2pl",
+      "mode_family": "qma9_neighbor_table_variant",
+      "model_or_header_bytes": 20,
+      "payload_bytes": 162877,
+      "payload_changed_vs_source_qma9": true,
+      "payload_magic": "QMA9",
+      "payload_path": "experiments/results/pr85_qma9_alt_grammar_candidates_20260504/payloads/adaptive9up2pl.bin",
+      "payload_sha256": "94b9938bb10fbb7b8209abcb24df43aae769d8e035f8b95b6d543b72828b4e1b",
+      "pr85_bundle_header_mode_if_archive_written": null,
+      "projected_archive_bytes_if_other_streams_unchanged": 240194,
+      "projected_archive_delta_bytes_vs_pr85": 3866,
+      "rate_score_delta_if_components_unchanged_formula_only": 0.0025742107127703145,
+      "run_command": [
+        "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/pr85-qma9-alt-dc5_2xjq/qma9_alt_grammar_codec",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr85_intake_20260503_codex/qma9_token_source/pr85_qma9_tokens_u8_storage_order.bin",
+        "600",
+        "512",
+        "384",
+        "experiments/results/pr85_qma9_alt_grammar_candidates_20260504/payloads/adaptive9up2pl.bin",
+        "adaptive9up2pl"
+      ],
+      "runtime_custody_contract": {
+        "current_live_runtime_contract": {
+          "accepted_magic": "QMA9",
+          "accepted_mode": "adaptive9bin",
+          "charged_mode_id_header": false,
+          "source": "/Users/adpena/Projects/pact/submissions/robust_current/range_mask_codec.cpp",
+          "source_sha256": "26b44194c9b364ae3e4b7a30832204c008324df91bc12281d30cee30c43b4676"
+        },
+        "dispatch_unlocked": false,
+        "live_runtime_supported": false,
+        "required_runtime_changes_before_dispatch": [
+          "allocate a new magic or charged mode-id header; current robust runtime interprets QMA9 as adaptive9bin",
+          "add runtime output-parity tests against the exact raw token SHA before any score eval",
+          "record the updated inflate runtime tree SHA in exact-eval provenance",
+          "only dispatch after a fresh Level-2 lane claim and archive.zip -> inflate.sh -> upstream/evaluate.py CUDA gate"
+        ],
+        "safe_for_remote_dispatch": false,
+        "screen_codec_contract": {
+          "local_token_parity": "codec self-decode must equal raw token input before payload is accepted",
+          "mode": "adaptive9up2pl",
+          "payload_magic": "QMA9",
+          "source": "/Users/adpena/Projects/pact/experiments/results/public_pr85_intake_20260503_codex/replay_submission/range_mask_codec.cpp",
+          "source_sha256": "94cd1a86111fb6d34b6e12d37c624bd5938df0fbc6c4c24c8d40c5a83fcb016b"
+        }
+      },
+      "runtime_supported": false,
+      "safe_for_remote_dispatch": false,
+      "source_archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+      "token_parity": {
+        "method": "compiled replay codec self-decode equality before payload write",
+        "raw_bytes": 117964800,
+        "verified": true
+      }
+    },
+    {
+      "archive": null,
+      "archive_rejection_reasons": [
+        "no_local_byte_win"
+      ],
+      "archive_relevant_state_change": false,
+      "bitstream_bytes": 158991,
+      "candidate_id": "adaptive9bin",
+      "codec_stdout": {
+        "bitstream_bytes": 158991,
+        "mode": "adaptive9bin",
+        "model_bytes": 20,
+        "packed_bytes": 159011,
+        "raw_bytes": 117964800
+      },
+      "delta_bytes_vs_source_qma9": 0,
+      "dispatch_unlocked": false,
+      "local_byte_win": false,
+      "mode": "adaptive9bin",
+      "mode_family": "current_qma9_runtime_reference",
+      "model_or_header_bytes": 20,
+      "payload_bytes": 159011,
+      "payload_changed_vs_source_qma9": false,
+      "payload_magic": "QMA9",
+      "payload_path": "experiments/results/pr85_qma9_alt_grammar_candidates_20260504/payloads/adaptive9bin.bin",
+      "payload_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+      "pr85_bundle_header_mode_if_archive_written": null,
+      "projected_archive_bytes_if_other_streams_unchanged": 236328,
+      "projected_archive_delta_bytes_vs_pr85": 0,
+      "rate_score_delta_if_components_unchanged_formula_only": 0.0,
+      "run_command": [
+        "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/pr85-qma9-alt-dc5_2xjq/qma9_alt_grammar_codec",
+        "/Users/adpena/Projects/pact/experiments/results/public_pr85_intake_20260503_codex/qma9_token_source/pr85_qma9_tokens_u8_storage_order.bin",
+        "600",
+        "512",
+        "384",
+        "experiments/results/pr85_qma9_alt_grammar_candidates_20260504/payloads/adaptive9bin.bin",
+        "adaptive9bin"
+      ],
+      "runtime_custody_contract": {
+        "current_live_runtime_contract": {
+          "accepted_magic": "QMA9",
+          "accepted_mode": "adaptive9bin",
+          "charged_mode_id_header": false,
+          "source": "/Users/adpena/Projects/pact/submissions/robust_current/range_mask_codec.cpp",
+          "source_sha256": "26b44194c9b364ae3e4b7a30832204c008324df91bc12281d30cee30c43b4676"
+        },
+        "dispatch_unlocked": false,
+        "live_runtime_supported": true,
+        "required_runtime_changes_before_dispatch": [],
+        "safe_for_remote_dispatch": false,
+        "screen_codec_contract": {
+          "local_token_parity": "codec self-decode must equal raw token input before payload is accepted",
+          "mode": "adaptive9bin",
+          "payload_magic": "QMA9",
+          "source": "/Users/adpena/Projects/pact/experiments/results/public_pr85_intake_20260503_codex/replay_submission/range_mask_codec.cpp",
+          "source_sha256": "94cd1a86111fb6d34b6e12d37c624bd5938df0fbc6c4c24c8d40c5a83fcb016b"
+        }
+      },
+      "runtime_supported": true,
+      "safe_for_remote_dispatch": false,
+      "source_archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+      "token_parity": {
+        "method": "compiled replay codec self-decode equality before payload write",
+        "raw_bytes": 117964800,
+        "verified": true
+      }
+    }
+  ],
+  "dispatch_gate": {
+    "candidate_archive_exists": false,
+    "dispatch_unlocked": false,
+    "exact_eval_dispatch_allowed": false,
+    "reason": "Local-only task; no GPU/remote dispatch or score claim is allowed.",
+    "safe_for_remote_dispatch": false
+  },
+  "dispatch_performed": false,
+  "dispatch_unlocked": false,
+  "fail_closed": {
+    "best_alt_delta_bytes_vs_source_qma9": 2023,
+    "best_alt_mode": "adaptive9up2left2",
+    "best_alt_payload_bytes": 161034,
+    "best_byte_positive_mode": null,
+    "best_runtime_supported_mode": null,
+    "byte_economics": {
+      "archive_bytes_change_equals_mask_payload_delta_for_pr85_v5": true,
+      "best_alt_rate_score_delta_if_components_unchanged": 0.0013470326621661526,
+      "points_per_byte": 6.658589531221714e-07
+    },
+    "emitted": true,
+    "reason": "no screened alternate grammar was byte-positive; runtime edits are not economically justified",
+    "required_runtime_change_if_future_byte_win_exists": [
+      "port the selected alternate grammar decoder into submissions/robust_current/range_mask_codec.cpp",
+      "use a distinct magic or charged mode-id so QMA9 adaptive9bin custody cannot silently misdecode alternate bits",
+      "extend robust_current inflate/unpack mask detection for the selected magic",
+      "add exact raw-token SHA parity tests before any GPU eval",
+      "record updated runtime tree SHA in contest_auth_eval provenance"
+    ],
+    "source_qma9_payload_bytes": 159011
+  },
+  "gpu_required": false,
+  "input_artifacts": {
+    "opportunity_matrix": {
+      "bytes": 110813,
+      "exists": true,
+      "path": "experiments/results/pr85_full_stack_opportunity_matrix_20260504_orchestrator_final2/pr85_full_stack_opportunity_matrix.json",
+      "sha256": "24366b8b645bf4e43242f25127bd2d6a23d865eec1440a5a05f32afceae50aa7"
+    },
+    "runtime_supported_trim_screen": {
+      "bytes": 4735,
+      "exists": true,
+      "path": "experiments/results/pr85_qma9_native_grammar_candidates_20260504_orchestrator/candidate_summary.json",
+      "sha256": "32dd3b9392eee07ee7c630335f6d1bb91e06c56683424d6b4509976625b82095"
+    }
+  },
+  "live_runtime": {
+    "accepted_current_contract": "QMA9 adaptive9bin only",
+    "source": "submissions/robust_current/range_mask_codec.cpp",
+    "source_sha256": "26b44194c9b364ae3e4b7a30832204c008324df91bc12281d30cee30c43b4676"
+  },
+  "local_screen_codec": {
+    "compile_command": [
+      "/usr/bin/c++",
+      "-O3",
+      "-std=c++17",
+      "/Users/adpena/Projects/pact/experiments/results/public_pr85_intake_20260503_codex/replay_submission/range_mask_codec.cpp",
+      "-o",
+      "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/pr85-qma9-alt-dc5_2xjq/qma9_alt_grammar_codec"
+    ],
+    "source": "experiments/results/public_pr85_intake_20260503_codex/replay_submission/range_mask_codec.cpp",
+    "source_sha256": "94cd1a86111fb6d34b6e12d37c624bd5938df0fbc6c4c24c8d40c5a83fcb016b"
+  },
+  "mode_count": 12,
+  "planning_only": true,
+  "runtime_supported_byte_positive_candidate_count": 0,
+  "schema": "pr85_qma9_alt_grammar_candidates_v1",
+  "score_claim": false,
+  "source_archive": {
+    "archive_bytes": 236328,
+    "archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+    "member_bytes": 236228,
+    "member_name": "x",
+    "member_sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+    "path": "experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+    "zip_overhead_bytes": 100
+  },
+  "source_qma9": {
+    "bundle_format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+    "bundle_header_bytes": 24,
+    "header": {
+      "bitstream_bytes": 158991,
+      "bitstream_sha256": "77196f31a8fdfbf8f91c9c30600945473376534f15245bfb7622ddd77d17e3af",
+      "decoded_mask_bytes": 117964800,
+      "frame_count": 600,
+      "header_bytes": 20,
+      "height": 384,
+      "magic": "QMA9",
+      "packed_bytes": 159011,
+      "payload_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+      "width": 512
+    },
+    "segment_bytes": 159011,
+    "segment_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179"
+  },
+  "token_source": {
+    "bytes": 117964800,
+    "expected_bytes": 117964800,
+    "expected_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+    "path": "experiments/results/public_pr85_intake_20260503_codex/qma9_token_source/pr85_qma9_tokens_u8_storage_order.bin",
+    "sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a"
+  },
+  "tool": "experiments/build_pr85_qma9_alt_grammar_candidates.py"
+}

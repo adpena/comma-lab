@@ -1,0 +1,17 @@
+=== Evaluation config ===
+  batch_size: 16
+  device: cuda
+  num_threads: 2
+  prefetch_queue_depth: 4
+  report: /teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_c067_micro_mask_save05k_crf51_packed_rtxprodiag_20260503T0323Z/eval_work/report.txt
+  seed: 1234
+  submission_dir: /teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_c067_micro_mask_save05k_crf51_packed_rtxprodiag_20260503T0323Z/eval_work
+  uncompressed_dir: /teamspace/studios/this_studio/pact/upstream/videos
+  video_names_file: /teamspace/studios/this_studio/pact/upstream/public_test_video_names.txt
+=== Evaluation results over 600 samples ===
+  Average PoseNet Distortion: 0.10406547
+  Average SegNet Distortion: 0.00222261
+  Submission file size: 269,885 bytes
+  Original uncompressed size: 37,545,489 bytes
+  Compression Rate: 0.00718821
+  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 1.42

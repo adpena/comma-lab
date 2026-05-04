@@ -1,0 +1,124 @@
+{
+  "best_byte_delta": null,
+  "best_candidate": null,
+  "blockers": [
+    "alternate_qma9_grammar_magics_require_runtime_edits_and_are_planning_only",
+    "no_byte_positive_runtime_supported_qma9_native_grammar_candidate",
+    "source_qma9_declared_bitstream_has_no_trailing_zero_bytes",
+    "source_qma9_segment_has_no_bytes_after_declared_bitstream"
+  ],
+  "candidate_count": 0,
+  "candidates": [],
+  "dispatch_gate": {
+    "candidate_archive_exists": false,
+    "exact_eval_dispatch_allowed": false,
+    "reason": "No GPU/remote dispatch or score claim is allowed by this task.",
+    "safe_for_remote_dispatch": false
+  },
+  "dispatch_performed": false,
+  "gpu_required": false,
+  "planning_only": true,
+  "runtime_supported_grammar": {
+    "accepted_magic": "QMA9",
+    "charged_model_or_table_bytes_in_qma9_payload": 0,
+    "header_bytes": 20,
+    "unsupported_without_runtime_edit": [
+      "QMB1 vertical block escape",
+      "QMF1 first-row specialization",
+      "QMH1 horizontal run escape",
+      "external context tables",
+      "alternate adaptive-model initialization tables"
+    ]
+  },
+  "schema": "pr85_qma9_native_grammar_candidates_v1",
+  "score_claim": false,
+  "screen_results": [
+    {
+      "archive_written": false,
+      "candidate_id": "qma9_declared_payload_prefix",
+      "observed_declared_packed_bytes": 159011,
+      "observed_segment_bytes": 159011,
+      "rejection_reasons": [
+        "source_qma9_segment_has_no_bytes_after_declared_bitstream"
+      ],
+      "safe_for_remote_dispatch": false,
+      "screen": "trim_bytes_after_declared_qma9_bitstream"
+    },
+    {
+      "archive_written": false,
+      "candidate_id": "qma9_declared_bitstream_trim",
+      "observed_trailing_zero_bytes": 0,
+      "rejection_reasons": [
+        "source_qma9_declared_bitstream_has_no_trailing_zero_bytes"
+      ],
+      "safe_for_remote_dispatch": false,
+      "screen": "trim_trailing_zero_bytes_from_declared_qma9_bitstream"
+    }
+  ],
+  "screened_variant_count": 2,
+  "source_archive": {
+    "archive_bytes": 236328,
+    "archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+    "member_bytes": 236228,
+    "member_name": "x",
+    "member_sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+    "path": "experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+    "zip_overhead_bytes": 100
+  },
+  "source_qma9": {
+    "declared_bitstream_trailing_zero_bytes": 0,
+    "declared_packed_bytes_equals_segment_bytes": true,
+    "header": {
+      "bitstream_bytes": 158991,
+      "bitstream_sha256": "77196f31a8fdfbf8f91c9c30600945473376534f15245bfb7622ddd77d17e3af",
+      "decoded_mask_bytes": 117964800,
+      "frame_count": 600,
+      "header_bytes": 20,
+      "height": 384,
+      "magic": "QMA9",
+      "packed_bytes": 159011,
+      "payload_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+      "width": 512
+    },
+    "segment_bytes": 159011,
+    "segment_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+    "source_decode": {
+      "compile_command": [
+        "/usr/bin/c++",
+        "-O3",
+        "-std=c++17",
+        "/Users/adpena/Projects/pact/submissions/robust_current/range_mask_codec.cpp",
+        "-o",
+        "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/pr85-qma9-source-decode-sfs3xtrj/qma9_runtime_decoder"
+      ],
+      "header": {
+        "bitstream_bytes": 158991,
+        "bitstream_sha256": "77196f31a8fdfbf8f91c9c30600945473376534f15245bfb7622ddd77d17e3af",
+        "decoded_mask_bytes": 117964800,
+        "frame_count": 600,
+        "header_bytes": 20,
+        "height": 384,
+        "magic": "QMA9",
+        "packed_bytes": 159011,
+        "payload_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+        "width": 512
+      },
+      "implementation": "submissions/robust_current/range_mask_codec.cpp",
+      "run_returncode": 0,
+      "source": "submissions/robust_current/range_mask_codec.cpp",
+      "stderr": "",
+      "stdout": "",
+      "storage_order": "frame_major_header_width_by_header_height"
+    },
+    "source_decoded_token_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+    "source_decoded_token_sha_matches_expected": true
+  },
+  "token_source": {
+    "bytes": 117964800,
+    "expected_bytes": 117964800,
+    "expected_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+    "path": "experiments/results/public_pr85_intake_20260503_codex/qma9_token_source/pr85_qma9_tokens_u8_storage_order.bin",
+    "sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a"
+  },
+  "tool": "experiments/build_pr85_qma9_native_grammar_candidates.py"
+}

@@ -1,0 +1,42 @@
+{
+  "archive_candidates": [
+    {
+      "archive_byte_delta_vs_c063": 59,
+      "candidate_id": "c063_mqz_component_aware_v1_frame2_all64",
+      "output_archive": "/Users/adpena/Projects/pact/experiments/results/c063_breakthrough_candidate_matrix_20260502/archives/c063_mqz_component_aware_v1_frame2_all64/archive.zip",
+      "output_archive_bytes": 276282,
+      "output_archive_sha256": "86684e1eff2c111c2f266f43a762952ae64976c8d25816b8935fdfbe42d36d52"
+    },
+    {
+      "archive_byte_delta_vs_c063": 170,
+      "candidate_id": "c063_mqz_component_aware_v1_frame2_block2_pre64",
+      "output_archive": "/Users/adpena/Projects/pact/experiments/results/c063_breakthrough_candidate_matrix_20260502/archives/c063_mqz_component_aware_v1_frame2_block2_pre64/archive.zip",
+      "output_archive_bytes": 276393,
+      "output_archive_sha256": "e00a28103ac42740d476646cde8eca7f87fa1628217915895e0fc81e551bb95e"
+    },
+    {
+      "archive_byte_delta_vs_c063": 185,
+      "candidate_id": "c063_qpost_bias_top016",
+      "output_archive": "/Users/adpena/Projects/pact/experiments/results/c063_breakthrough_candidate_matrix_20260502/archives/c063_qpost_bias_top016/archive.zip",
+      "output_archive_bytes": 276408,
+      "output_archive_sha256": "3a9aff357b17772e58fff81cad4d45b41d466e8e655dfc3888f70a69bbe762e1"
+    },
+    {
+      "archive_byte_delta_vs_c063": 208,
+      "candidate_id": "c063_qpost_bias_top032",
+      "output_archive": "/Users/adpena/Projects/pact/experiments/results/c063_breakthrough_candidate_matrix_20260502/archives/c063_qpost_bias_top032/archive.zip",
+      "output_archive_bytes": 276431,
+      "output_archive_sha256": "2d7ee3579fa4ced4c4e82870c1d3f69c077da3697fbe04a5ebbb610794e5aee1"
+    },
+    {
+      "archive_byte_delta_vs_c063": 283,
+      "candidate_id": "c063_qpost_region_bias_top032",
+      "output_archive": "/Users/adpena/Projects/pact/experiments/results/c063_breakthrough_candidate_matrix_20260502/archives/c063_qpost_region_bias_top032/archive.zip",
+      "output_archive_bytes": 276506,
+      "output_archive_sha256": "689f417742ca7374fdf95d6712464400d20aff81827c11d866be2ed002b98fbc"
+    }
+  ],
+  "promotion_eligible": false,
+  "schema_version": 1,
+  "score_claim": false
+}

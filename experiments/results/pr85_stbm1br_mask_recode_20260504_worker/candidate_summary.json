@@ -1,0 +1,45 @@
+{
+  "archive_byte_delta": -6572,
+  "artifacts": {
+    "manifest": "/private/tmp/pr85_stbm_contract_probe/pr90_stbm1br_lossless_pr85_mask_recode/manifest.json",
+    "mask_segment": "/private/tmp/pr85_stbm_contract_probe/pr90_stbm1br_lossless_pr85_mask_recode/mask_segment.stbm1br",
+    "preflight": "/private/tmp/pr85_stbm_contract_probe/pr90_stbm1br_lossless_pr85_mask_recode/stbm1br_preflight.json"
+  },
+  "candidate_archive": {
+    "archive_bytes": 229756,
+    "archive_sha256": "c6f004d444ed32c628611a2f21f567c666af6bcbcceba618cc089ec024a0cda6",
+    "deterministic_rewrite_identical": true,
+    "member_bytes": 229656,
+    "member_name": "x",
+    "member_sha256": "c7586795bb29fb0ef611ad44715aec77e0e815370e19674d4c89ef2a54b417b5",
+    "path": "/private/tmp/pr85_stbm_contract_probe/pr90_stbm1br_lossless_pr85_mask_recode/archive.zip",
+    "zip_overhead_bytes": 100,
+    "zip_storage": "stored"
+  },
+  "candidate_count": 1,
+  "dispatch_performed": false,
+  "exact_eval_readiness_status": "ready",
+  "exact_eval_runtime_contract": {
+    "remaining_blockers": [],
+    "runtime_dir": "experiments/results/pr85_stbm1br_mask_recode_20260504_worker/replay_submission_stbm",
+    "runtime_tree_sha256": "bff13d56e69fbf79195fb14074595518878b1d2ade1465235e771532ffe4977a",
+    "status": "passed"
+  },
+  "mask_byte_delta": -6572,
+  "ready_for_exact_eval_after_lane_claim": true,
+  "remote_jobs_dispatched": false,
+  "render_order_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+  "schema": "pr85_stbm1br_mask_recode_candidate_summary_v1",
+  "score_claim": false,
+  "source_archive": {
+    "archive_bytes": 236328,
+    "archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+    "member_bytes": 236228,
+    "member_name": "x",
+    "member_sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+    "path": "experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+    "zip_compress_type": 0,
+    "zip_overhead_bytes": 100
+  },
+  "tool": "experiments/build_pr85_stbm1br_mask_recode_candidate.py"
+}

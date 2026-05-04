@@ -1,0 +1,88 @@
+{
+  "allowed_use": [
+    "forensic",
+    "no_rank_frontier",
+    "no_promotion"
+  ],
+  "archive_delta_bytes": -169762,
+  "baseline_archive_bytes": 609963,
+  "completed_at_utc": "2026-05-01T16:31:17Z",
+  "component_gate_triggered": true,
+  "component_gate_violations": [
+    {
+      "component": "posenet",
+      "max_relative": 1.25,
+      "metric": "avg_posenet_dist",
+      "observed": 1.38460469,
+      "reason": "relative_component_gate",
+      "reference": 0.00357302,
+      "reference_label": "c044_owv3_0120_stack_t4_frontier",
+      "relative_to_reference": 387.51663578709326
+    },
+    {
+      "component": "segnet",
+      "max_relative": 1.25,
+      "metric": "avg_segnet_dist",
+      "observed": 0.00922456,
+      "reason": "relative_component_gate",
+      "reference": 0.00402365,
+      "reference_label": "c044_owv3_0120_stack_t4_frontier",
+      "relative_to_reference": 2.2925850906515226
+    }
+  ],
+  "component_gates": [
+    {
+      "component": "posenet",
+      "max_absolute": null,
+      "max_relative": 1.25,
+      "metric": "avg_posenet_dist",
+      "observed": 1.38460469,
+      "passed": false,
+      "reference": 0.00357302,
+      "reference_label": "c044_owv3_0120_stack_t4_frontier",
+      "relative_to_reference": 387.51663578709326
+    },
+    {
+      "component": "segnet",
+      "max_absolute": null,
+      "max_relative": 1.25,
+      "metric": "avg_segnet_dist",
+      "observed": 0.00922456,
+      "passed": false,
+      "reference": 0.00402365,
+      "reference_label": "c044_owv3_0120_stack_t4_frontier",
+      "relative_to_reference": 2.2925850906515226
+    }
+  ],
+  "contest_cuda_archive_bytes": 440201,
+  "contest_cuda_archive_sha256": "e2ceaed6d7a35f8ad638c7ce9200f5fad85d6ea6266b4d2c61b6269ae1ba9dd3",
+  "contest_cuda_avg_posenet_dist": 1.38460469,
+  "contest_cuda_avg_segnet_dist": 0.00922456,
+  "contest_cuda_device": "cuda",
+  "contest_cuda_gpu_model": "Tesla T4",
+  "contest_cuda_gpu_t4_match": true,
+  "contest_cuda_n_samples": 600,
+  "contest_cuda_result_json": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_alpha_repair_c044_crf63_pairatom_top20_t4_20260501T1620Z/contest_auth_eval.adjudicated.json",
+  "contest_cuda_score": 4.93659541719088,
+  "contest_cuda_score_recomputed": 4.93659541719088,
+  "contest_cuda_score_reported_rounded": 4.94,
+  "contest_cuda_score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "distillation_policy_active": false,
+  "distillation_policy_gate_triggered": false,
+  "distillation_policy_gate_violations": [],
+  "distillation_policy_sha256": null,
+  "distillation_policy_sha256_expected": null,
+  "evidence_grade": "A++ contest T4",
+  "final_archive_bytes": 440201,
+  "lane_status": "COMPONENT_GATE_REVIEW_REQUIRED",
+  "paper_claim_grade": "A-negative scoped forensic",
+  "promotion_eligible": false,
+  "regression_scope": "measured_implementation_config_only_pending_review",
+  "regression_threshold": 50.0,
+  "regression_triggered": false,
+  "result_tag": "[contest-CUDA]",
+  "score_delta_vs_baseline": 3.939056830133452,
+  "score_delta_vs_c044_owv3_0120_stack_t4_frontier": 3.939056830133452,
+  "score_tag": "[contest-CUDA]",
+  "stacked_archive_bytes": 440201
+}

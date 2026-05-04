@@ -1,0 +1,610 @@
+{
+  "generated_utc": "2026-05-04T09:41:36Z",
+  "prs": [
+    {
+      "active_dispatch_claim": {
+        "job_name": "exact_eval_public_pr98_hnerv_muon_finetuned_t4_20260504T0940Z",
+        "lane_id": "public_pr98_hnerv_muon_finetuned_t4_replay",
+        "present": true,
+        "source": ".omx/state/active_lane_dispatch_claims.md"
+      },
+      "archive": {
+        "bytes": 178392,
+        "path": "experiments/results/leaderboard_intel_20260504_codex/pr98_archive.zip",
+        "rate_term": 0.1187839103653704,
+        "release_download_matches_archive": true,
+        "release_download_path": "experiments/results/leaderboard_intel_20260504_codex/pr98_release_archive.zip",
+        "release_download_sha256": "7ecb0df1c4627d55d88e03eff3d890b7a7a5b047c62515acff20232cf29310eb",
+        "sha256": "7ecb0df1c4627d55d88e03eff3d890b7a7a5b047c62515acff20232cf29310eb"
+      },
+      "claimed_external": {
+        "body_display_score": "0.20",
+        "report_archive_bytes": 178392,
+        "report_device": "cuda",
+        "report_pose_dist": 3.489e-05,
+        "report_recomputed_score": 0.19625777542725248,
+        "report_seg_dist": 0.00058795,
+        "requires_gpu_inflation": "yes",
+        "title_score_hint": "0.1963"
+      },
+      "evidence_grade": "external_public_archive_static_preflight_only",
+      "generated_utc": "2026-05-04T09:41:36Z",
+      "github": {
+        "body_and_comment_urls": [
+          "https://github.com/EthanYangTW/comma_video_compression_challenge/releases/download/v1-hnerv-finetuned/archive.zip"
+        ],
+        "commit_count": 1,
+        "created_at": "2026-05-04T09:31:37Z",
+        "file_count": 20,
+        "head_repo": "EthanYangTW/comma_video_compression_challenge",
+        "head_sha": "1be9eff48c696ca04ae0613346fd383d20637325",
+        "issue_comment_count": 2,
+        "pr_api": "https://api.github.com/repos/commaai/comma_video_compression_challenge/pulls/98",
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/98",
+        "release_api_path": "experiments/results/leaderboard_intel_20260504_codex/pr98_release_api.json",
+        "review_comment_count": 0,
+        "state": "open",
+        "title": "hnerv_muon_finetuned_from_pr95 (0.1963)",
+        "updated_at": "2026-05-04T09:33:17Z"
+      },
+      "next_commands": {
+        "claim_if_needed_after_stale_or_terminal": ".venv/bin/python tools/claim_lane_dispatch.py claim --lane-id public_pr98_hnerv_muon_finetuned_t4_replay --platform lightning --instance-job-id exact_eval_public_pr98_hnerv_muon_finetuned_t4_20260504T0940Z --agent codex:gpt-5.5 --predicted-eta-utc 2026-05-04T10:25Z --status active_exact_eval --notes \"Exact T4 replay of PR98 public archive; bytes=178392 sha=7ecb0df1c4627d55d88e03eff3d890b7a7a5b047c62515acff20232cf29310eb; static preflight ready.\"",
+        "claim_note": "Active claim already exists; do not create a duplicate claim unless the current claim is terminal or stale.",
+        "lightning_submit_after_source_manifest": ".venv/bin/python scripts/launch_lightning_batch_job.py exact-eval --job-name exact_eval_public_pr98_hnerv_muon_finetuned_t4_20260504T0940Z --archive /teamspace/studios/this_studio/pact/experiments/results/leaderboard_intel_20260504_codex/pr98_archive.zip --repo-dir /teamspace/studios/this_studio/pact --upstream-dir /teamspace/studios/this_studio/pact/upstream --inflate-sh /teamspace/studios/this_studio/pact/experiments/results/leaderboard_intel_20260504_codex/pr98_runtime/inflate.sh --machine T4 --studio lossy-compression-challenge --teamspace comma-lab --user adpena --python-bin .venv/bin/python --local-artifact-dir experiments/results/lightning_batch/exact_eval_public_pr98_hnerv_muon_finetuned_t4_20260504T0940Z --source-manifest .omx/state/exact_eval_public_pr98_hnerv_muon_finetuned_t4_20260504T0940Z_manifest.json --dispatch-lane-id public_pr98_hnerv_muon_finetuned_t4_replay --expected-archive-sha256 7ecb0df1c4627d55d88e03eff3d890b7a7a5b047c62515acff20232cf29310eb --expected-archive-size-bytes 178392 --adjudicate --baseline-score 0.23089404465634825 --baseline-archive-bytes 178277 --predicted-band 0.18 0.24 --max-posenet-dist 0.01 --max-segnet-dist 0.01 --max-sane-score 1.0 --component-reference-label pr95_stemperm_a++ --delta-key score_delta_vs_pr95_stemperm",
+        "local_cuda_exact_eval": ".venv/bin/python experiments/contest_auth_eval.py --archive experiments/results/leaderboard_intel_20260504_codex/pr98_archive.zip --inflate-sh experiments/results/leaderboard_intel_20260504_codex/pr98_runtime/inflate.sh --upstream-dir upstream --device cuda --keep-work-dir --work-dir experiments/results/leaderboard_intel_20260504_codex/pr98_exact_eval_work"
+      },
+      "no_dispatch_in_this_pass": true,
+      "payload_anatomy": {
+        "decoder": {
+          "compact_magic": "CD1",
+          "scale_bits": 16,
+          "tensor_count": 28
+        },
+        "format": "hnerv_muon_pr98_compact_cd1",
+        "latents": {
+          "latent_dim": 28,
+          "n_pairs": 600
+        },
+        "meta": {
+          "base_channels": 36,
+          "eval_size": [
+            384,
+            512
+          ],
+          "latent_dim": 28,
+          "n_pairs": 600
+        },
+        "sections": [
+          {
+            "bytes": 80,
+            "name": "meta_brotli",
+            "raw_bytes": 80,
+            "sha256": "49385dd99c02228dd0ed7649586fe5026940573a5675911ee7cb24ab2e8bdca7"
+          },
+          {
+            "bytes": 162343,
+            "name": "decoder_brotli",
+            "raw_bytes": 229022,
+            "raw_magic": "434431101c000000",
+            "sha256": "825485793ee85c7c419130fdb1b6c12a2d44d95f7acc67a97778a07f921229c7"
+          },
+          {
+            "bytes": 15849,
+            "name": "latents_brotli",
+            "raw_bytes": 33720,
+            "sha256": "a1841a326b5a0cb886df27de318002cf42badea0446589c8c9ef6e45d16e4392"
+          }
+        ],
+        "trailing_bytes": 0
+      },
+      "pr": 98,
+      "runtime": {
+        "adapted_runtime_root": "experiments/results/leaderboard_intel_20260504_codex/pr98_runtime",
+        "contest_auth_eval_runtime_tree_sha256": "4d71b5769e9c886e8a4e1be8997014ec47fe5d5ce5519619bf16bff0ae7f2738",
+        "manifest": {
+          "files": [
+            {
+              "bytes": 632,
+              "path": "pr98_runtime/README.md",
+              "sha256": "6a56a1f12e47d15b02c1df98de1f7ca7c6d4e4d88d7d088ad55df2d086c45af0"
+            },
+            {
+              "bytes": 4236,
+              "path": "pr98_runtime/__pycache__/inflate.cpython-312.pyc",
+              "sha256": "8f70e8351f93c4e6715498a7155c0096c0cdb3aa15f0978a86e1bd64e95dd615"
+            },
+            {
+              "bytes": 2375,
+              "path": "pr98_runtime/inflate.py",
+              "sha256": "fdfbfec9bebae59424ad3fd56191074369d3958e77ccd8e645559d28d3d252cd"
+            },
+            {
+              "bytes": 137,
+              "path": "pr98_runtime/inflate.sh",
+              "sha256": "202e9d917c1a2f56ece729193de92c32f11a23ec341d3a44cf5cac1d4a8b19a7"
+            },
+            {
+              "bytes": 16489,
+              "path": "pr98_runtime/src/__pycache__/codec.cpython-312.pyc",
+              "sha256": "8e1419c294f5042d07da9eee61ece83ae0620814dd1e535c495dbee57d8d0906"
+            },
+            {
+              "bytes": 4319,
+              "path": "pr98_runtime/src/__pycache__/model.cpython-312.pyc",
+              "sha256": "75fc533b0d9dcdcf9cf729314107a1e3b888ba495a16203875351f098178e91f"
+            },
+            {
+              "bytes": 9010,
+              "path": "pr98_runtime/src/codec.py",
+              "sha256": "d9f2825a416e66c4c60b0ed506e87afcc080342809f2af73c3c6efb2b3c16f4a"
+            },
+            {
+              "bytes": 6721,
+              "path": "pr98_runtime/src/data.py",
+              "sha256": "db0016ba8e854daa0d01563108ab1c76b6046578fe5f54af479abd34c600ab42"
+            },
+            {
+              "bytes": 6892,
+              "path": "pr98_runtime/src/losses.py",
+              "sha256": "757725dc64681d90ebd83057c956ca3d72e02e06f778571b599d99fac7b17368"
+            },
+            {
+              "bytes": 2197,
+              "path": "pr98_runtime/src/model.py",
+              "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+            },
+            {
+              "bytes": 3785,
+              "path": "pr98_runtime/src/optim.py",
+              "sha256": "6c79f7559e4fdf23ec1ab60fcdad29f785f8e223dc6cf426d9cf0bc38555d3c6"
+            },
+            {
+              "bytes": 4661,
+              "path": "pr98_runtime/src/score.py",
+              "sha256": "c8c4421fd26faa5c97ebade2919f9ba02c916bca3806fa95ba5159f221c4ef7f"
+            },
+            {
+              "bytes": 2870,
+              "path": "pr98_runtime/src/stages/codec_stage.py",
+              "sha256": "1ddd7ccac9427a4679f0bf884409cd22173219412f1962f92ed711cef2d54c55"
+            },
+            {
+              "bytes": 11658,
+              "path": "pr98_runtime/src/stages/common.py",
+              "sha256": "ad766d0639269eba70af5e5c26ef71267dfe8350e0335cdc506b198a08febdef"
+            },
+            {
+              "bytes": 1456,
+              "path": "pr98_runtime/src/stages/stage1_v328_ce.py",
+              "sha256": "a43a44fa4cdc17d83e81f94006228268fed78f2b641c73b9562124bfc995c2b7"
+            },
+            {
+              "bytes": 1216,
+              "path": "pr98_runtime/src/stages/stage2_v331_softplus.py",
+              "sha256": "1203339dc5319f81d2f571a11be166a034bcb9b1a9bb346f823d68a9331aec20"
+            },
+            {
+              "bytes": 1206,
+              "path": "pr98_runtime/src/stages/stage3_v332_smooth.py",
+              "sha256": "119fe4e1718502973c38fcd94163ea935e2ce7776ada833c4d41661225a73695"
+            },
+            {
+              "bytes": 1233,
+              "path": "pr98_runtime/src/stages/stage4_v332_qat.py",
+              "sha256": "aaf7f704f0fcf3a7860bca1be589cfd6b90a217b529d77ffc7abc826d42114af"
+            },
+            {
+              "bytes": 1329,
+              "path": "pr98_runtime/src/stages/stage5_c1a_l7.py",
+              "sha256": "6e1c4f8a1abdde16d6086f5c38dc523207ca1ca04b89cc72a0a2f58fe0ea0dbf"
+            },
+            {
+              "bytes": 1208,
+              "path": "pr98_runtime/src/stages/stage6_lambda_sweep.py",
+              "sha256": "fe3893d388d7820d365d0b088a0800df800c6963e2e101e6e451b1172e6d453b"
+            },
+            {
+              "bytes": 1255,
+              "path": "pr98_runtime/src/stages/stage7_sigma_sweep.py",
+              "sha256": "8b8b812bb4bc49e560e6fe2e1dd6b3fecb36c60bcdaeb1a5411e5697653e4443"
+            },
+            {
+              "bytes": 1866,
+              "path": "pr98_runtime/src/stages/stage8_muon_finetune.py",
+              "sha256": "9e036c99b7fc58fa24f954be251bebb5af4cddd3b84fe408b9ebc2b94b58ed5f"
+            },
+            {
+              "bytes": 2488,
+              "path": "pr98_runtime/src/train.py",
+              "sha256": "d88610929db7f42b7a3522a77ded29b2a9a4e7abe63eae7bc5915fa4b8e58b79"
+            }
+          ],
+          "root": "experiments/results/leaderboard_intel_20260504_codex/pr98_runtime",
+          "tree_sha256_custom": "a1e126b4cabbc785740cd352049bf35dc0e7697975eb24b2f31f5b9fd27d07a5"
+        },
+        "preflight_blockers": [],
+        "preflight_json": "experiments/results/leaderboard_intel_20260504_codex/pr98_public_replay_intake_preflight.json",
+        "preflight_ready_for_exact_eval_dispatch": true,
+        "raw_submission_root": "experiments/results/leaderboard_intel_20260504_codex/pr98_submission",
+        "risk_notes": [
+          "External PR body claim only until exact CUDA replay of these archive bytes lands in local custody.",
+          "Requires GPU for inflation per PR body; runtime chooses cuda when available, so T4 exact replay is required.",
+          "Archive is a GitHub release asset, not a committed PR file; release API custody and SHA match the downloaded local artifact.",
+          "Raw PR inflate.sh assumes submissions/<name> package layout; pr98_runtime/inflate.sh is an adapted local wrapper with payload code unchanged.",
+          "Runtime depends on brotli, numpy, and torch; dependency closure must be staged for Lightning/T4.",
+          "Postprocess subtracts one RGB count from selected channels after upsample; cross-device rounding drift remains possible until exact replay."
+        ],
+        "source_files": [
+          {
+            "bytes": 632,
+            "path": "pr98_submission/README.md",
+            "sha256": "6a56a1f12e47d15b02c1df98de1f7ca7c6d4e4d88d7d088ad55df2d086c45af0"
+          },
+          {
+            "bytes": 2375,
+            "path": "pr98_submission/inflate.py",
+            "sha256": "fdfbfec9bebae59424ad3fd56191074369d3958e77ccd8e645559d28d3d252cd"
+          },
+          {
+            "bytes": 811,
+            "path": "pr98_submission/inflate.sh",
+            "sha256": "0cb9c3df78ad870cadd2ac6d46007b6c1aeb6a61c76b7800ae74a00addafb885"
+          },
+          {
+            "bytes": 9010,
+            "path": "pr98_submission/src/codec.py",
+            "sha256": "d9f2825a416e66c4c60b0ed506e87afcc080342809f2af73c3c6efb2b3c16f4a"
+          },
+          {
+            "bytes": 6721,
+            "path": "pr98_submission/src/data.py",
+            "sha256": "db0016ba8e854daa0d01563108ab1c76b6046578fe5f54af479abd34c600ab42"
+          },
+          {
+            "bytes": 6892,
+            "path": "pr98_submission/src/losses.py",
+            "sha256": "757725dc64681d90ebd83057c956ca3d72e02e06f778571b599d99fac7b17368"
+          },
+          {
+            "bytes": 2197,
+            "path": "pr98_submission/src/model.py",
+            "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+          },
+          {
+            "bytes": 3785,
+            "path": "pr98_submission/src/optim.py",
+            "sha256": "6c79f7559e4fdf23ec1ab60fcdad29f785f8e223dc6cf426d9cf0bc38555d3c6"
+          },
+          {
+            "bytes": 4661,
+            "path": "pr98_submission/src/score.py",
+            "sha256": "c8c4421fd26faa5c97ebade2919f9ba02c916bca3806fa95ba5159f221c4ef7f"
+          },
+          {
+            "bytes": 2870,
+            "path": "pr98_submission/src/stages/codec_stage.py",
+            "sha256": "1ddd7ccac9427a4679f0bf884409cd22173219412f1962f92ed711cef2d54c55"
+          },
+          {
+            "bytes": 11658,
+            "path": "pr98_submission/src/stages/common.py",
+            "sha256": "ad766d0639269eba70af5e5c26ef71267dfe8350e0335cdc506b198a08febdef"
+          },
+          {
+            "bytes": 1456,
+            "path": "pr98_submission/src/stages/stage1_v328_ce.py",
+            "sha256": "a43a44fa4cdc17d83e81f94006228268fed78f2b641c73b9562124bfc995c2b7"
+          },
+          {
+            "bytes": 1216,
+            "path": "pr98_submission/src/stages/stage2_v331_softplus.py",
+            "sha256": "1203339dc5319f81d2f571a11be166a034bcb9b1a9bb346f823d68a9331aec20"
+          },
+          {
+            "bytes": 1206,
+            "path": "pr98_submission/src/stages/stage3_v332_smooth.py",
+            "sha256": "119fe4e1718502973c38fcd94163ea935e2ce7776ada833c4d41661225a73695"
+          },
+          {
+            "bytes": 1233,
+            "path": "pr98_submission/src/stages/stage4_v332_qat.py",
+            "sha256": "aaf7f704f0fcf3a7860bca1be589cfd6b90a217b529d77ffc7abc826d42114af"
+          },
+          {
+            "bytes": 1329,
+            "path": "pr98_submission/src/stages/stage5_c1a_l7.py",
+            "sha256": "6e1c4f8a1abdde16d6086f5c38dc523207ca1ca04b89cc72a0a2f58fe0ea0dbf"
+          },
+          {
+            "bytes": 1208,
+            "path": "pr98_submission/src/stages/stage6_lambda_sweep.py",
+            "sha256": "fe3893d388d7820d365d0b088a0800df800c6963e2e101e6e451b1172e6d453b"
+          },
+          {
+            "bytes": 1255,
+            "path": "pr98_submission/src/stages/stage7_sigma_sweep.py",
+            "sha256": "8b8b812bb4bc49e560e6fe2e1dd6b3fecb36c60bcdaeb1a5411e5697653e4443"
+          },
+          {
+            "bytes": 1866,
+            "path": "pr98_submission/src/stages/stage8_muon_finetune.py",
+            "sha256": "9e036c99b7fc58fa24f954be251bebb5af4cddd3b84fe408b9ebc2b94b58ed5f"
+          },
+          {
+            "bytes": 2488,
+            "path": "pr98_submission/src/train.py",
+            "sha256": "d88610929db7f42b7a3522a77ded29b2a9a4e7abe63eae7bc5915fa4b8e58b79"
+          }
+        ],
+        "static_preflight": {
+          "bash_n": "passed",
+          "local_cuda_available": false,
+          "local_imports": "brotli torch numpy available in .venv",
+          "py_compile": "passed"
+        }
+      },
+      "schema": "public_frontier_pr98_pr99_intake_v1",
+      "score_claim": false,
+      "strict_zip": {
+        "blockers": [],
+        "member_count": 1,
+        "members": [
+          {
+            "blockers": [],
+            "bytes": 178284,
+            "central_local_name_match": true,
+            "compressed_bytes": 178284,
+            "crc32": "f4a2e754",
+            "header_offset": 0,
+            "local_header_name": "0.bin",
+            "magic_hex": "500000001b4f00201d076eacc64e2370",
+            "method": "stored",
+            "method_id": 0,
+            "name": "0.bin",
+            "sha256": "fce200db2fe087cc6a051945b3fda2c37f5bbb3e19b8f20a1aea7201db0c9f5f"
+          }
+        ],
+        "valid": true
+      }
+    },
+    {
+      "active_dispatch_claim": {
+        "job_name": "exact_eval_public_pr99_hnerv_muon_lc_t4_20260504T0940Z",
+        "lane_id": "public_pr99_hnerv_muon_lc_t4_replay",
+        "present": true,
+        "source": ".omx/state/active_lane_dispatch_claims.md"
+      },
+      "archive": {
+        "bytes": 178546,
+        "path": "experiments/results/leaderboard_intel_20260504_codex/pr99_archive.zip",
+        "rate_term": 0.11888645264415121,
+        "release_download_matches_archive": true,
+        "release_download_path": "experiments/results/leaderboard_intel_20260504_codex/pr99_release_archive.zip",
+        "release_download_sha256": "278b1c7a1bd6b03a5bceddafcb3489b2624c558ad22825d9211b701333b6eefb",
+        "sha256": "278b1c7a1bd6b03a5bceddafcb3489b2624c558ad22825d9211b701333b6eefb"
+      },
+      "claimed_external": {
+        "body_display_score": "0.20",
+        "exact_ci_score_claim": 0.19667,
+        "report_archive_bytes": 178546,
+        "report_device": "cpu",
+        "report_pose_dist": 3.349e-05,
+        "report_recomputed_score": 0.19668072586615531,
+        "report_seg_dist": 0.00059494,
+        "requires_gpu_inflation": "no",
+        "title_score_hint": "0.20"
+      },
+      "evidence_grade": "external_public_archive_static_preflight_only",
+      "generated_utc": "2026-05-04T09:41:36Z",
+      "github": {
+        "body_and_comment_urls": [
+          "https://github.com/BradyMeighan/comma_video_compression_challenge/actions/runs/25311463434",
+          "https://github.com/BradyMeighan/comma_video_compression_challenge/releases/download/hnerv-muon-lc-archive/archive.zip",
+          "https://github.com/BradyMeighan/comma_video_compression_challenge/tree/submission/hnerv_muon_lc"
+        ],
+        "commit_count": 1,
+        "created_at": "2026-05-04T09:35:44Z",
+        "file_count": 6,
+        "head_repo": "BradyMeighan/comma_video_compression_challenge",
+        "head_sha": "6badd2506c1ce07751236fc299d0b14f2702ac29",
+        "issue_comment_count": 1,
+        "pr_api": "https://api.github.com/repos/commaai/comma_video_compression_challenge/pulls/99",
+        "pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/99",
+        "release_api_path": "experiments/results/leaderboard_intel_20260504_codex/pr99_release_api.json",
+        "review_comment_count": 0,
+        "state": "open",
+        "title": "hnerv_muon_lc submission (0.20)",
+        "updated_at": "2026-05-04T09:36:00Z"
+      },
+      "next_commands": {
+        "claim_if_needed_after_stale_or_terminal": ".venv/bin/python tools/claim_lane_dispatch.py claim --lane-id public_pr99_hnerv_muon_lc_t4_replay --platform lightning --instance-job-id exact_eval_public_pr99_hnerv_muon_lc_t4_20260504T0940Z --agent codex:gpt-5.5 --predicted-eta-utc 2026-05-04T10:25Z --status active_exact_eval --notes \"Exact T4 replay of PR99 public archive; bytes=178546 sha=278b1c7a1bd6b03a5bceddafcb3489b2624c558ad22825d9211b701333b6eefb; static preflight ready.\"",
+        "claim_note": "Active claim already exists; do not create a duplicate claim unless the current claim is terminal or stale.",
+        "lightning_submit_after_source_manifest": ".venv/bin/python scripts/launch_lightning_batch_job.py exact-eval --job-name exact_eval_public_pr99_hnerv_muon_lc_t4_20260504T0940Z --archive /teamspace/studios/this_studio/pact/experiments/results/leaderboard_intel_20260504_codex/pr99_archive.zip --repo-dir /teamspace/studios/this_studio/pact --upstream-dir /teamspace/studios/this_studio/pact/upstream --inflate-sh /teamspace/studios/this_studio/pact/experiments/results/leaderboard_intel_20260504_codex/pr99_runtime/inflate.sh --machine T4 --studio lossy-compression-challenge --teamspace comma-lab --user adpena --python-bin .venv/bin/python --local-artifact-dir experiments/results/lightning_batch/exact_eval_public_pr99_hnerv_muon_lc_t4_20260504T0940Z --source-manifest .omx/state/exact_eval_public_pr99_hnerv_muon_lc_t4_20260504T0940Z_manifest.json --dispatch-lane-id public_pr99_hnerv_muon_lc_t4_replay --expected-archive-sha256 278b1c7a1bd6b03a5bceddafcb3489b2624c558ad22825d9211b701333b6eefb --expected-archive-size-bytes 178546 --adjudicate --baseline-score 0.23089404465634825 --baseline-archive-bytes 178277 --predicted-band 0.18 0.24 --max-posenet-dist 0.01 --max-segnet-dist 0.01 --max-sane-score 1.0 --component-reference-label pr95_stemperm_a++ --delta-key score_delta_vs_pr95_stemperm",
+        "local_cuda_exact_eval": ".venv/bin/python experiments/contest_auth_eval.py --archive experiments/results/leaderboard_intel_20260504_codex/pr99_archive.zip --inflate-sh experiments/results/leaderboard_intel_20260504_codex/pr99_runtime/inflate.sh --upstream-dir upstream --device cuda --keep-work-dir --work-dir experiments/results/leaderboard_intel_20260504_codex/pr99_exact_eval_work"
+      },
+      "no_dispatch_in_this_pass": true,
+      "payload_anatomy": {
+        "corrections": {
+          "n_pairs": 600,
+          "non_noop_pairs": 598,
+          "raw_bytes": 1202
+        },
+        "decoder": {
+          "code_bytes_raw": 228958,
+          "scale_count": 28
+        },
+        "format": "hnerv_muon_lc_schema_int8_plus_latent_correction",
+        "latents": {
+          "latent_dim": 28,
+          "n_pairs": 600,
+          "raw_bytes": 33720
+        },
+        "sections": [
+          {
+            "bytes": 161883,
+            "magic_hex": "5b5d7e7345d9f601",
+            "name": "decoder_brotli",
+            "raw_bytes": 228958,
+            "sha256": "52e8ebbc900955b1e9981be1b85d02c244b3197c8da710971426802e45a0bd0a"
+          },
+          {
+            "bytes": 56,
+            "magic_hex": "26224024db1cfa1e",
+            "name": "scales_fp16",
+            "sha256": "6a07396d717befc30bd971556129d5aa383d0f0005fda7bbe949a2d1723ee019"
+          },
+          {
+            "bytes": 15868,
+            "magic_hex": "1bb783608e932572",
+            "name": "latents_brotli",
+            "raw_bytes": 33720,
+            "sha256": "863634aba9a956d13eab8708133239ee861bb797cbad4ff2f39a46939987c709"
+          },
+          {
+            "bytes": 615,
+            "magic_hex": "1bb104f89f09bc09",
+            "name": "corrections_brotli",
+            "raw_bytes": 1202,
+            "sha256": "acf78b2a8c3f0a601ffd8927d5201d763c20f6eda69bd447df0d3df914d738f0"
+          }
+        ],
+        "trailing_bytes": 0
+      },
+      "pr": 99,
+      "runtime": {
+        "adapted_runtime_root": "experiments/results/leaderboard_intel_20260504_codex/pr99_runtime",
+        "contest_auth_eval_runtime_tree_sha256": "67fa8ef36f732be73d29053bc050a86a597b23d394ea07538451a8eb8303817f",
+        "manifest": {
+          "files": [
+            {
+              "bytes": 4321,
+              "path": "pr99_runtime/__pycache__/hnerv_model.cpython-312.pyc",
+              "sha256": "eda4be7d5c15990e4f701a8e0e87892a88d9ce05c62e20a82b90d683b99caeee"
+            },
+            {
+              "bytes": 9795,
+              "path": "pr99_runtime/__pycache__/inflate.cpython-312.pyc",
+              "sha256": "680de7d456e7b6eba95f02b934493dc107dfe965661db8be7ef978923b70cc89"
+            },
+            {
+              "bytes": 1143,
+              "path": "pr99_runtime/__pycache__/schema.cpython-312.pyc",
+              "sha256": "05a61f473cab073d8b03bc4c242d85c84e0ab9ab5e22e0ec96432a68b549102c"
+            },
+            {
+              "bytes": 3021,
+              "path": "pr99_runtime/__pycache__/sidecar.cpython-312.pyc",
+              "sha256": "a7c6662a0ca6ad0344e8a05b8592763f43f51ca04a3e544079bc129e5d4235af"
+            },
+            {
+              "bytes": 178546,
+              "path": "pr99_runtime/archive.zip",
+              "sha256": "278b1c7a1bd6b03a5bceddafcb3489b2624c558ad22825d9211b701333b6eefb"
+            },
+            {
+              "bytes": 2197,
+              "path": "pr99_runtime/hnerv_model.py",
+              "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+            },
+            {
+              "bytes": 4965,
+              "path": "pr99_runtime/inflate.py",
+              "sha256": "2b4bcc6024433284b731b980145b1aa56b336a5a6b9ec71c3281b3dd00903c5b"
+            },
+            {
+              "bytes": 137,
+              "path": "pr99_runtime/inflate.sh",
+              "sha256": "202e9d917c1a2f56ece729193de92c32f11a23ec341d3a44cf5cac1d4a8b19a7"
+            },
+            {
+              "bytes": 1081,
+              "path": "pr99_runtime/schema.py",
+              "sha256": "bc434bd596e753dbeae97c0ddce4d9cf98a50cfe862a451834864d83620d6a0a"
+            },
+            {
+              "bytes": 1837,
+              "path": "pr99_runtime/sidecar.py",
+              "sha256": "52955000fe673914307b481bff29377a015bf7a0fe9dc38652e29153c033af75"
+            }
+          ],
+          "root": "experiments/results/leaderboard_intel_20260504_codex/pr99_runtime",
+          "tree_sha256_custom": "b44f0570f5d82ecbabc551ee26981ff5cd1ac36b53652523b035defde9ce8032"
+        },
+        "preflight_blockers": [],
+        "preflight_json": "experiments/results/leaderboard_intel_20260504_codex/pr99_public_replay_intake_preflight.json",
+        "preflight_ready_for_exact_eval_dispatch": true,
+        "raw_submission_root": "experiments/results/leaderboard_intel_20260504_codex/pr99_submission",
+        "risk_notes": [
+          "External PR body/CI claim only until exact CUDA replay of these archive bytes lands in local custody.",
+          "PR body says no GPU inflation and CI ran CPU, but runtime selects cuda when available; CUDA replay can drift from CPU CI.",
+          "Archive is both committed in the PR and available as a GitHub release asset; committed archive, release download, and local artifact SHA match.",
+          "Original inflate.sh can pip install brotli if missing; exact replay should stage dependency closure so inflate does not depend on network.",
+          "Latent-correction sidecar is charged inside 0.bin, not external, but it is inference-time score-affecting side information.",
+          "Author-linked CI run head SHA differs from the PR head SHA in API metadata, so CI success is provenance context, not exact archive custody."
+        ],
+        "source_files": [
+          {
+            "bytes": 178546,
+            "path": "pr99_submission/archive.zip",
+            "sha256": "278b1c7a1bd6b03a5bceddafcb3489b2624c558ad22825d9211b701333b6eefb"
+          },
+          {
+            "bytes": 2197,
+            "path": "pr99_submission/hnerv_model.py",
+            "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+          },
+          {
+            "bytes": 4965,
+            "path": "pr99_submission/inflate.py",
+            "sha256": "2b4bcc6024433284b731b980145b1aa56b336a5a6b9ec71c3281b3dd00903c5b"
+          },
+          {
+            "bytes": 705,
+            "path": "pr99_submission/inflate.sh",
+            "sha256": "aaccd126c0b1f411c81c8129add87c85f74c8f6177f1da290ee2b21645890247"
+          },
+          {
+            "bytes": 1081,
+            "path": "pr99_submission/schema.py",
+            "sha256": "bc434bd596e753dbeae97c0ddce4d9cf98a50cfe862a451834864d83620d6a0a"
+          },
+          {
+            "bytes": 1837,
+            "path": "pr99_submission/sidecar.py",
+            "sha256": "52955000fe673914307b481bff29377a015bf7a0fe9dc38652e29153c033af75"
+          }
+        ],
+        "static_preflight": {
+          "bash_n": "passed",
+          "local_cuda_available": false,
+          "local_imports": "brotli torch numpy available in .venv",
+          "py_compile": "passed"
+        }
+      },
+      "schema": "public_frontier_pr98_pr99_intake_v1",
+      "score_claim": false,
+      "strict_zip": {
+        "blockers": [],
+        "member_count": 1,
+        "members": [
+          {
+            "blockers": [],
+            "bytes": 178438,
+            "central_local_name_match": true,
+            "compressed_bytes": 178438,
+            "crc32": "379392bc",
+            "header_offset": 0,
+            "local_header_name": "0.bin",
+            "magic_hex": "5b7802005b5d7e7345d9f6016a81ee00",
+            "method": "stored",
+            "method_id": 0,
+            "name": "0.bin",
+            "sha256": "79b9f89e709c2892560822284a4465f17d5df8c6148b923e889683ab04bdb1d5"
+          }
+        ],
+        "valid": true
+      }
+    }
+  ],
+  "schema": "public_frontier_pr98_pr99_summary_v1"
+}

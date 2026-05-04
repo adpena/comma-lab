@@ -1,0 +1,39 @@
+{
+  "adjudication": {
+    "allow_component_gate_forensic_success": true,
+    "allow_sane_score_forensic_success": true,
+    "baseline_archive_size_bytes": 215735,
+    "baseline_posenet_dist": 0.00049341,
+    "baseline_score": 0.2751401491321396,
+    "baseline_segnet_dist": 0.00061248,
+    "component_reference_label": "pr84_qma9_no_router_t4",
+    "delta_key": "score_delta_vs_pr84",
+    "max_posenet_dist": 0.005,
+    "max_posenet_relative": null,
+    "max_sane_score": 1.0,
+    "max_segnet_dist": 0.005,
+    "max_segnet_relative": null,
+    "predicted_band_high": 0.36,
+    "predicted_band_low": 0.2,
+    "provenance_name": "adjudication_provenance.json",
+    "regression_threshold": 0.36,
+    "required_device": "cuda",
+    "required_samples": 600,
+    "result_copy_name": "contest_auth_eval.adjudicated.json"
+  },
+  "artifact_recorded_at_utc": "2026-05-03T23:03:16Z",
+  "expected_archive_sha256": "d82bc774de93c073b31c1acc9dd24c57b28d14b554cee53c7b7be3404c8f2e2c",
+  "expected_archive_size_bytes": 232355,
+  "job_name": "exact_eval_pr84_pr82_qrm1_all072_randmulti_packedp_fix1_g4dn_t4_20260503T2253Z",
+  "queue_metadata": {
+    "candidate_id": "pr84_qma9_pr82_qps1_qrm1_all072_randmulti_packedp",
+    "expected_archive_bytes": "232355",
+    "expected_archive_sha256": "d82bc774de93c073b31c1acc9dd24c57b28d14b554cee53c7b7be3404c8f2e2c",
+    "source_frontier": "PR84_QMA9_NO_ROUTER_A++",
+    "source_manifest": ".omx/state/pr84_pr82_packedp_fix1_wave_g4dn_t4_20260503T2252Z_manifest.json"
+  },
+  "role": "exact_cuda_eval",
+  "schema_version": 1,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

@@ -1,0 +1,15 @@
+{
+  "crf": 62,
+  "runtime_mask_bytes": 70499,
+  "runtime_mask_sha": "4000f17413a16dbe58cb289fce00ec7f5cd272c3f2713cb503c311e8fa295ca0",
+  "disagreement_fraction": null,
+  "protected_agreement": null,
+  "unprotected_agreement": null,
+  "protected_pixels": 6291456,
+  "protected_fraction": 0.053333333333,
+  "packed_bytes": 119019,
+  "packed_sha": "813c89bcca2b6a5dadd5c9318d34955ec2c71e1ecab07b0e6e5ea1044164e42d",
+  "delta_vs_c067": -157195,
+  "formula_rate_delta_vs_c067": -0.10466969813603973,
+  "archive_path": "experiments/results/c067_micro_mask_reencode_hardframes32_20260502/crf62/packed_pr64_maskfirst_qp1/archive.zip"
+}

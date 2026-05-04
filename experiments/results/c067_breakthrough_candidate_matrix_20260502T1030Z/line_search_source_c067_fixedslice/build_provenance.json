@@ -1,0 +1,40 @@
+{
+  "determinism": {
+    "brotli_quality": null,
+    "single_member_order": [
+      "p"
+    ],
+    "zip_compress_type": "ZIP_STORED",
+    "zip_permissions": "0644",
+    "zip_timestamp": [
+      1980,
+      1,
+      1,
+      0,
+      0,
+      0
+    ]
+  },
+  "output_archive": {
+    "exists": true,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c067_breakthrough_candidate_matrix_20260502T1030Z/line_search_source_c067_fixedslice/archive.zip",
+    "sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+    "size_bytes": 276214
+  },
+  "output_metadata": {
+    "exists": true,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c067_breakthrough_candidate_matrix_20260502T1030Z/line_search_source_c067_fixedslice/metadata.json",
+    "sha256": "448f5745c9265f6c94d3862e2472bfd90a516c48e53975367e762ecddb6f04be",
+    "size_bytes": 1824
+  },
+  "payload_format": "frontier_public_pr67_fixedslice_reused_for_line_search",
+  "schema_version": 1,
+  "score_claim": false,
+  "source_archive": {
+    "exists": true,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip",
+    "sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+    "size_bytes": 276214
+  },
+  "tool": "experiments/build_c063_breakthrough_candidate_matrix.py"
+}

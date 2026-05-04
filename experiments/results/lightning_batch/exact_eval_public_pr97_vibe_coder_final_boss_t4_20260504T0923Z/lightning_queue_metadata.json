@@ -1,0 +1,38 @@
+{
+  "adjudication": {
+    "allow_component_gate_forensic_success": true,
+    "allow_sane_score_forensic_success": true,
+    "baseline_archive_size_bytes": 178321,
+    "baseline_posenet_dist": 0.00017185,
+    "baseline_score": 0.23091954465634829,
+    "baseline_segnet_dist": 0.00070728,
+    "component_reference_label": "pr95_repack_a++",
+    "delta_key": "score_delta_vs_pr95_repack",
+    "max_posenet_dist": 0.02,
+    "max_posenet_relative": null,
+    "max_sane_score": 1.0,
+    "max_segnet_dist": 0.02,
+    "max_segnet_relative": null,
+    "predicted_band_high": 0.27,
+    "predicted_band_low": 0.2,
+    "provenance_name": "adjudication_provenance.json",
+    "regression_threshold": 0.1,
+    "required_device": "cuda",
+    "required_samples": 600,
+    "result_copy_name": "contest_auth_eval.adjudicated.json"
+  },
+  "artifact_recorded_at_utc": "2026-05-04T09:38:18Z",
+  "expected_archive_sha256": "6785a84879d3e3395bbf990b980fe32182fca7255c5b8559dcdaac9da7516642",
+  "expected_archive_size_bytes": 197160,
+  "job_name": "exact_eval_public_pr97_vibe_coder_final_boss_t4_20260504T0923Z",
+  "queue_metadata": {
+    "archive_rel": "experiments/results/leaderboard_intel_20260504_codex/pr97_archive.zip",
+    "source_manifest": ".omx/state/exact_eval_public_pr97_vibe_coder_final_boss_t4_20260504T0923Z_manifest.json",
+    "source_pr_urls": "https://github.com/commaai/comma_video_compression_challenge/pull/97",
+    "source_prs": "PR97"
+  },
+  "role": "exact_cuda_eval",
+  "schema_version": 1,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

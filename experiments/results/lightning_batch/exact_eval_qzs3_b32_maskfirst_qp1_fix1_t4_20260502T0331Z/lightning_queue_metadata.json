@@ -1,0 +1,35 @@
+{
+  "adjudication": {
+    "allow_component_gate_forensic_success": true,
+    "baseline_archive_size_bytes": 276422,
+    "baseline_posenet_dist": 0.00049637,
+    "baseline_score": 0.3157555307844823,
+    "baseline_segnet_dist": 0.00061244,
+    "component_reference_label": "c058_t4",
+    "delta_key": "score_delta_vs_c058_t4",
+    "max_posenet_dist": 0.00075,
+    "max_posenet_relative": 1.25,
+    "max_sane_score": 0.34,
+    "max_segnet_dist": 0.0007,
+    "max_segnet_relative": 1.03,
+    "predicted_band_high": 0.3165,
+    "predicted_band_low": 0.313,
+    "provenance_name": "adjudication_provenance.json",
+    "regression_threshold": 0.004,
+    "required_device": "cuda",
+    "required_samples": 600,
+    "result_copy_name": "contest_auth_eval.adjudicated.json"
+  },
+  "artifact_recorded_at_utc": "2026-05-02T03:45:26Z",
+  "expected_archive_sha256": "cf44aa7fdb13b9ab6236aefde1f5f58e915d7dfa99128246235443841396c6ab",
+  "expected_archive_size_bytes": 276347,
+  "job_name": "exact_eval_qzs3_b32_maskfirst_qp1_fix1_t4_20260502T0331Z",
+  "queue_metadata": {
+    "lane": "lane_qzs3_qp1_packer",
+    "purpose": "t4_promotion_for_h100_positive_qzs3_b32_control"
+  },
+  "role": "exact_cuda_eval",
+  "schema_version": 1,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

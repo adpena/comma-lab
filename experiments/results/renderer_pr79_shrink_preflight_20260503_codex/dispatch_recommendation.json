@@ -1,0 +1,6 @@
+{
+  "claim_required_before_dispatch": true,
+  "reason": "no byte-saving candidate passed local renderer-transplant pose-safety",
+  "recommendation": "do_not_dispatch",
+  "remote_gpu_dispatch_performed": false
+}

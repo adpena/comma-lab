@@ -1,0 +1,41 @@
+{
+  "adjudication": {
+    "allow_component_gate_forensic_success": true,
+    "allow_sane_score_forensic_success": true,
+    "baseline_archive_size_bytes": 178321,
+    "baseline_posenet_dist": 0.00017185,
+    "baseline_score": 0.23091954465634829,
+    "baseline_segnet_dist": 0.00070728,
+    "component_reference_label": "pr95_repack_a++",
+    "delta_key": "score_delta_vs_pr95_repack",
+    "max_posenet_dist": 0.01,
+    "max_posenet_relative": null,
+    "max_sane_score": 1.0,
+    "max_segnet_dist": 0.01,
+    "max_segnet_relative": null,
+    "predicted_band_high": 0.25,
+    "predicted_band_low": 0.2,
+    "provenance_name": "adjudication_provenance.json",
+    "regression_threshold": 0.08,
+    "required_device": "cuda",
+    "required_samples": 600,
+    "result_copy_name": "contest_auth_eval.adjudicated.json"
+  },
+  "artifact_recorded_at_utc": "2026-05-04T09:27:46Z",
+  "expected_archive_sha256": "2ecbd2118bebdb5566f719ed538a89c4608ccab19c9edc7ae7a6de778bd42b46",
+  "expected_archive_size_bytes": 186631,
+  "job_name": "exact_eval_public_pr96_rem2_hnerv_t4_20260504T0916Z",
+  "queue_metadata": {
+    "archive_rel": "experiments/results/leaderboard_intel_20260504_codex/pr96_archive.zip",
+    "baseline_json": "experiments/results/lightning_batch/exact_eval_pr95_hnerv_muon_repacked_t4_fix2_20260504T0848Z/contest_auth_eval.adjudicated.json",
+    "run_id": "exact_eval_public_pr96_rem2_hnerv_t4_20260504T0916Z",
+    "source_manifest": ".omx/state/exact_eval_public_pr96_rem2_hnerv_t4_20260504T0916Z_manifest.json",
+    "source_pr_urls": "https://github.com/commaai/comma_video_compression_challenge/pull/96",
+    "source_prs": "PR96",
+    "wrapper": "scripts/lightning_exact_eval_repro.py"
+  },
+  "role": "exact_cuda_eval",
+  "schema_version": 1,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

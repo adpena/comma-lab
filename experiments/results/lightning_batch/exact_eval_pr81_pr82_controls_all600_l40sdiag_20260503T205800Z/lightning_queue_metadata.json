@@ -1,0 +1,43 @@
+{
+  "adjudication": {
+    "allow_component_gate_forensic_success": true,
+    "allow_sane_score_forensic_success": true,
+    "baseline_archive_size_bytes": 215960,
+    "baseline_posenet_dist": 0.000584,
+    "baseline_score": 0.2812078926981712,
+    "baseline_segnet_dist": 0.00060989,
+    "component_reference_label": "public_pr81_qma9_t4",
+    "delta_key": "score_delta_vs_baseline",
+    "max_posenet_dist": null,
+    "max_posenet_relative": 4.0,
+    "max_sane_score": 5.0,
+    "max_segnet_dist": null,
+    "max_segnet_relative": 4.0,
+    "predicted_band_high": 0.36,
+    "predicted_band_low": 0.2,
+    "provenance_name": "adjudication_provenance.json",
+    "regression_threshold": 0.36,
+    "required_device": "cuda",
+    "required_samples": 600,
+    "result_copy_name": "contest_auth_eval.adjudicated.json"
+  },
+  "artifact_recorded_at_utc": "2026-05-03T21:08:21Z",
+  "expected_archive_sha256": "9fe02888361924c247039e9c8ec99fcb83a85f7556e89b045b978a761f444609",
+  "expected_archive_size_bytes": 218621,
+  "job_name": "exact_eval_pr81_pr82_controls_all600_l40sdiag_20260503T205800Z",
+  "queue_metadata": {
+    "archive_rel": "experiments/results/pr81_pr82_henosis_stack_20260503_codex/pr81_qma9_pr82_qps1_controls_all600/archive.zip",
+    "candidate_id": "pr81_qma9_pr82_qps1_controls_all600",
+    "evidence_role": "L40S_diagnostic_not_promotion",
+    "lane": "lane_qzs3_postprocess_sidecar",
+    "local_supply_chain_scan": ".omx/state/exact_eval_pr81_pr82_controls_all600_l40sdiag_20260503T205800Z_local_lightning_supply_chain_scan.json",
+    "run_id": "exact_eval_pr81_pr82_controls_all600_l40sdiag_20260503T205800Z",
+    "source_frontier": "PR81_QMA9_A++",
+    "source_manifest": ".omx/state/pr81_pr82_controls_all600_l40sdiag_20260503T205800Z_manifest.json",
+    "wrapper": "scripts/lightning_exact_eval_repro.py"
+  },
+  "role": "exact_cuda_eval",
+  "schema_version": 1,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

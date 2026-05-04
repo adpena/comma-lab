@@ -1,0 +1,42 @@
+{
+  "adjudication_required": true,
+  "allowed_use": [
+    "debug",
+    "no_score_claim",
+    "no_promotion"
+  ],
+  "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda",
+  "command": [
+    "/usr/local/bin/python",
+    "-u",
+    "/workspace/pact/experiments/contest_auth_eval.py",
+    "--archive",
+    "/tmp/modal_auth_eval/archive.zip",
+    "--inflate-sh",
+    "/workspace/pact/submissions/robust_current/inflate.sh",
+    "--upstream-dir",
+    "/workspace/pact/upstream",
+    "--video-names-file",
+    "/workspace/pact/upstream/public_test_video_names.txt",
+    "--device",
+    "cuda",
+    "--keep-work-dir",
+    "--work-dir",
+    "/tmp/modal_auth_eval/eval_work",
+    "--inflate-timeout",
+    "1800",
+    "--evaluate-timeout",
+    "1800"
+  ],
+  "expected_archive_sha256": "e28d86f479f8da6b0b244f5e6780c14f078629acbb9a088bacd17c8d0dee9626",
+  "expected_archive_size_bytes": 571617,
+  "modal_elapsed_seconds": 121.05463522,
+  "passed": false,
+  "promotion_eligible": false,
+  "returncode": 1,
+  "schema_version": 1,
+  "score_claim": false,
+  "validation_errors": [
+    "contest_auth_eval.json was not produced"
+  ]
+}

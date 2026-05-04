@@ -1,0 +1,66 @@
+{
+  "schema": "sjkl_c067_exact_eval_recommendation_v1",
+  "score_claim": false,
+  "promotion_eligible": false,
+  "source_frontier": {
+    "label": "C067 A++ frontier",
+    "archive_bytes": 276214,
+    "score": 0.31561703078448233
+  },
+  "blockers": [
+    {
+      "class": "measured_pose_regression",
+      "evidence": "SJ-KL v2 k=4 alpha_bits=5 L40S diagnostic exact eval",
+      "archive_bytes": 296999,
+      "sjkl_bytes": 19957,
+      "score_recomputed_from_components": 0.4386126293286599,
+      "avg_segnet_dist": 0.00061036,
+      "avg_posenet_dist": 0.00323342,
+      "reason": "Full residual path worsened PoseNet enough that bytes plus pose contribution cannot stack toward sub-0.3."
+    },
+    {
+      "class": "byte_cap_failure",
+      "evidence": "SJ-KL v3 cap8k pre-score guard",
+      "sjkl_bytes": 10724,
+      "max_sjkl_bytes": 8192,
+      "reason": "Legacy dense basis/alpha contract exceeded the intended 8KB charged side-info cap before exact score."
+    }
+  ],
+  "local_candidates": [
+    {
+      "rank": 1,
+      "name": "k1_g08x06_p32_a3_gain003125",
+      "archive": "experiments/results/sjkl_c067_sparse_repack_screen_20260502T_local/k1_g08x06_p32_a3_gain003125/pack/archive.zip",
+      "archive_bytes": 277455,
+      "archive_sha256": "f4146e137d9e2e12d1f7c8d26609f24e0e2bd0d19e5c0534f90c761c35658825",
+      "sjkl_bytes": 467,
+      "selected_pair_count": 32,
+      "break_even_component_delta": 0.0008263309608246147,
+      "recommendation": "Evaluate first as a strict canary only. It has the lowest byte risk and tests whether sparse attenuated SJ-KL has any positive component signal."
+    },
+    {
+      "rank": 2,
+      "name": "k1_g12x09_p48_a3_gain00625",
+      "archive": "experiments/results/sjkl_c067_sparse_repack_screen_20260502T_local/k1_g12x09_p48_a3_gain00625/pack/archive.zip",
+      "archive_bytes": 277918,
+      "archive_sha256": "a034cd1f37d8a8d38b95cd04ca68d7df7ae99dde622afcf7513b0585be918544",
+      "sjkl_bytes": 859,
+      "selected_pair_count": 48,
+      "break_even_component_delta": 0.00113462365612018,
+      "recommendation": "Evaluate only if rank 1 is neutral or positive on PoseNet/SegNet components."
+    },
+    {
+      "rank": 3,
+      "name": "k2_g16x12_p64_a4_gain0125",
+      "archive": "experiments/results/sjkl_c067_sparse_repack_screen_20260502T_local/k2_g16x12_p64_a4_gain0125/pack/archive.zip",
+      "archive_bytes": 279553,
+      "archive_sha256": "00210f674fe34d2dd2243e81bf7ac02c374de2cd9c0c70e0810577bf4c8f4109",
+      "sjkl_bytes": 2565,
+      "selected_pair_count": 64,
+      "break_even_component_delta": 0.00222330304447493,
+      "recommendation": "Hold unless the first two show real component benefit; it spends more bytes and more residual amplitude."
+    }
+  ],
+  "exact_eval_command_template": "SJKL_REQUIRE_APPLIED=1 PYTHONPATH=src:upstream .venv/bin/python experiments/contest_auth_eval.py --archive {archive} --inflate-sh submissions/robust_current/inflate.sh --device cuda --output-dir {exact_eval_dir}",
+  "fail_closed_rule": "If rank 1 exact CUDA auth eval is component-neutral or worse after recomputing score from JSON, stop this repacked-v2 SJ-KL path for C067 and require a new basis/selector derived from component-response evidence before another dispatch."
+}

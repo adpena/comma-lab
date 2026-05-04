@@ -1,0 +1,15 @@
+{
+  "archive_bytes": 274112,
+  "archive_sha256": "4d0cf75a3ccc6e72daf6fd903ddc4b942f243b4788d86b7b8e927aa9446a91b3",
+  "candidate_family": "packed_rpk1_charged_amr1_budget4096_over_crf52_mask_base",
+  "members": [
+    {
+      "compressed_size_bytes": 274012,
+      "crc": "b11ee682",
+      "name": "p",
+      "size_bytes": 274012
+    }
+  ],
+  "promotion_eligible": false,
+  "score_claim": false
+}

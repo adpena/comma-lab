@@ -1,0 +1,263 @@
+{
+  "schema_version": 1,
+  "final_score": 2.29,
+  "avg_posenet_dist": 0.30416307,
+  "avg_segnet_dist": 0.00421524,
+  "rate_unscaled": 0.0051676,
+  "score_pose_contribution": 1.7440271500180264,
+  "score_seg_contribution": 0.421524,
+  "score_rate_contribution": 0.12919,
+  "score_recomputed_from_components": 2.294741150018026,
+  "archive_size_bytes": 194020,
+  "n_samples": 600,
+  "report_path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_c067_cmg2_downsample2x2_t4_20260502T1000Z/eval_work/report.txt",
+  "evaluate_elapsed_seconds": 38.54095378599959,
+  "inflate_elapsed_seconds": 103.56394284199996,
+  "contest_auth_eval_elapsed_seconds": 142.1070484339998,
+  "provenance": {
+    "schema_version": 1,
+    "started_at_utc": "2026-05-02T10:07:27Z",
+    "tool": "experiments/contest_auth_eval.py",
+    "archive_path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_c067_cmg2_downsample2x2_t4_20260502T1000Z/archive.zip",
+    "archive_sha256": "e695829a9c45e827b8abc430b87c4871f7d563ff5b26767a6776483613fff3b1",
+    "archive_size_bytes": 194020,
+    "inflate_script": "/teamspace/studios/this_studio/pact/submissions/robust_current/inflate.sh",
+    "inflate_script_sha256": "86449a1f52ac6b2be120d47287b8410f915dce7e562c69f480103f6e527c6017",
+    "inflate_runtime_manifest": {
+      "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+      "runtime_root": "/teamspace/studios/this_studio/pact/submissions/robust_current",
+      "runtime_file_count": 35,
+      "runtime_tree_sha256": "0e356bde4df817ea7c6557d67823bfaa5393ca4c38ae6fd4d3414732e6f459a0",
+      "files": [
+        {
+          "relative_path": "analyze_roi.py",
+          "bytes": 189,
+          "sha256": "722ea96bc14e013fc4260f24dd86431d11966419292ea546d31a8f644d4dd16c"
+        },
+        {
+          "relative_path": "apply_qzs3_postprocess.py",
+          "bytes": 22091,
+          "sha256": "83a06ca93119dea43b74a8b466b417a5f99d6a8d64d772fdc85e0c3ea155abe0"
+        },
+        {
+          "relative_path": "auth_eval_renderer_fp4.json",
+          "bytes": 13406,
+          "sha256": "8a404a5bb720cf25b8ddb1b29cc1c095889d03225f8f8a9cbebdb3553680f368"
+        },
+        {
+          "relative_path": "compress.sh",
+          "bytes": 34739,
+          "sha256": "0e01e902f3dc40be1f5fd7daadcd349d783adb9a5767a123a2b0aec3a4660d81"
+        },
+        {
+          "relative_path": "compress_archive.py",
+          "bytes": 16563,
+          "sha256": "eafec2c7c93bee473daa84f903cbbdcd8de9f92e62ce4825eadd663c5b5b4eb3"
+        },
+        {
+          "relative_path": "compress_masks.py",
+          "bytes": 11756,
+          "sha256": "8b25972521621e6b94396a8f1a0353b9ea10982a82043f456b9cc9f621347389"
+        },
+        {
+          "relative_path": "config.env",
+          "bytes": 507,
+          "sha256": "3b160a6747e6eec3588456e4ca3a5cb91613d2acce38557a31ea330ec0fa1e09"
+        },
+        {
+          "relative_path": "config_env.py",
+          "bytes": 1657,
+          "sha256": "1ed6df5bc08a9db4eed8c2d1f935e7cacf60b3b3f14e4b44c15bcf48608e40cc"
+        },
+        {
+          "relative_path": "contest_eval_archive.json",
+          "bytes": 516,
+          "sha256": "8579f49de350222abb35dd1958ea12bc11207cb0de90f2ac499445b95b943941"
+        },
+        {
+          "relative_path": "contest_eval_result.json",
+          "bytes": 516,
+          "sha256": "048e5f759b5230ac34914e455c02673054ac348e622e61e81c83bd2cb647ae34"
+        },
+        {
+          "relative_path": "diagnose_scorer.py",
+          "bytes": 11255,
+          "sha256": "2af6e9d93127e5c74cce7d8fc72ccc87f1af64bdf53f4c35af0829c175e24643"
+        },
+        {
+          "relative_path": "download_and_eval.sh",
+          "bytes": 3812,
+          "sha256": "aa2ecbb00f93bab0f8c8655ac5be7b1f1ff90829b5cbfa899ff48b5f057d362b"
+        },
+        {
+          "relative_path": "eval_runs/crf_32/config.env",
+          "bytes": 509,
+          "sha256": "04399bddaf1f5dc9a314c41d44299fb3dcc3d8ef50c42cd6f40eae9f167302ac"
+        },
+        {
+          "relative_path": "eval_runs/crf_32/state.json",
+          "bytes": 382,
+          "sha256": "d36c7498dd6f8ae14be81a37952dde8395f89ba07f92cb5841998b34fddf4398"
+        },
+        {
+          "relative_path": "eval_runs/verify_136_original/config.env",
+          "bytes": 509,
+          "sha256": "04399bddaf1f5dc9a314c41d44299fb3dcc3d8ef50c42cd6f40eae9f167302ac"
+        },
+        {
+          "relative_path": "eval_runs/verify_136_original/experiment_record.json",
+          "bytes": 1417,
+          "sha256": "8f4c28e9d43d80050db2594d3e1d3f469dd2224a108a58ceccb9a910126e0cc6"
+        },
+        {
+          "relative_path": "eval_runs/verify_136_original/report.json",
+          "bytes": 1058,
+          "sha256": "15f6c61e1bfc1767fa634f9ad2a745bc72c150489a872d9dd1af7cdd70948179"
+        },
+        {
+          "relative_path": "eval_runs/verify_136_original/report.txt",
+          "bytes": 882,
+          "sha256": "71465ba837bb11f29e6d6e1bf69b023d4a81d96135cefabd3e0113940698abc2"
+        },
+        {
+          "relative_path": "eval_runs/verify_136_original/state.json",
+          "bytes": 467,
+          "sha256": "09b078ec408eb1caab979e22cbff0afbaff0fcb95ccafe9147c9aa9f660aeb59"
+        },
+        {
+          "relative_path": "eval_runs/verify_correct_ckpt/config.env",
+          "bytes": 509,
+          "sha256": "04399bddaf1f5dc9a314c41d44299fb3dcc3d8ef50c42cd6f40eae9f167302ac"
+        },
+        {
+          "relative_path": "eval_runs/verify_correct_ckpt/experiment_record.json",
+          "bytes": 1449,
+          "sha256": "de190ee0a8d98c64958374ccb97dacb883bc76a316de1a38dd16715666e124ae"
+        },
+        {
+          "relative_path": "eval_runs/verify_correct_ckpt/report.json",
+          "bytes": 1058,
+          "sha256": "df1cdcfddb03a9ce85b29e3c20ad2ecb0c86f9bd3cd0dbd12ee57e0cc0cbae3e"
+        },
+        {
+          "relative_path": "eval_runs/verify_correct_ckpt/report.txt",
+          "bytes": 882,
+          "sha256": "8a2e009c501dcd4c0f24c2fbd1d58160fff421bb895c786539171e6ee29df5e0"
+        },
+        {
+          "relative_path": "eval_runs/verify_correct_ckpt/state.json",
+          "bytes": 674,
+          "sha256": "600399b6654c5cb0364a89a97f85409437a4b2f56d8910204322134316be4734"
+        },
+        {
+          "relative_path": "inflate.sh",
+          "bytes": 19270,
+          "sha256": "86449a1f52ac6b2be120d47287b8410f915dce7e562c69f480103f6e527c6017"
+        },
+        {
+          "relative_path": "inflate_postfilter.py",
+          "bytes": 54486,
+          "sha256": "89cb5ff35f3490f2d425c2353181857826fe54dc99b9b991eb299d394ba4376f"
+        },
+        {
+          "relative_path": "inflate_renderer.py",
+          "bytes": 247185,
+          "sha256": "543fe39d31736c80983519729175794d3646e03397f5c3651a1679318874dd2f"
+        },
+        {
+          "relative_path": "inflate_renderer_grayscale.py",
+          "bytes": 16076,
+          "sha256": "383407e20aff8a5b7791f61d3cdfd7516ef870bab99145854ff2f399471b8f69"
+        },
+        {
+          "relative_path": "inflate_segmap.py",
+          "bytes": 11005,
+          "sha256": "1899c5a5226f767762c54e19e7689cedabd8b3f6b77793765b0dfd63236948ed"
+        },
+        {
+          "relative_path": "inflate_segmap_arithmetic.py",
+          "bytes": 8080,
+          "sha256": "e7a71d6f1d8e23c3a08269e5234a4738a9a1fcc860207419c561f6f379165321"
+        },
+        {
+          "relative_path": "inflate_segmap_film_canvas.py",
+          "bytes": 9758,
+          "sha256": "eefb8806e8a9e16cec3771649aefa86724d2c54080784d8997509684dc3dfa90"
+        },
+        {
+          "relative_path": "report.txt",
+          "bytes": 890,
+          "sha256": "db613ab30f714010e6de0edca4874abd4a441abccadb86ac5a80359c2eb42c66"
+        },
+        {
+          "relative_path": "runner.py",
+          "bytes": 55860,
+          "sha256": "f3d8c3712b2b8c85c0da1e502dad0fbcedaef569a5665b329a2a5ac049d60689"
+        },
+        {
+          "relative_path": "sky_degrade.py",
+          "bytes": 9625,
+          "sha256": "a9e6561235d8179368e934486356bc3eab8a2950765e47516ea7594759d8b289"
+        },
+        {
+          "relative_path": "unpack_renderer_payload.py",
+          "bytes": 34259,
+          "sha256": "980ba7b43f9d55dbae2cc2f5497c2b08956bf9ff522e7119dae4290db5c4ab8c"
+        }
+      ],
+      "upstream_evaluate_py": {
+        "relative_path": "evaluate.py",
+        "bytes": 6005,
+        "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+      }
+    },
+    "upstream_dir": "/teamspace/studios/this_studio/pact/upstream",
+    "device": "cuda",
+    "inflate_timeout_seconds": 1800,
+    "evaluate_timeout_seconds": 1800,
+    "video_names_file": "upstream/public_test_video_names.txt",
+    "sys_argv": [
+      "experiments/contest_auth_eval.py",
+      "--archive",
+      "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_c067_cmg2_downsample2x2_t4_20260502T1000Z/archive.zip",
+      "--inflate-sh",
+      "submissions/robust_current/inflate.sh",
+      "--upstream-dir",
+      "/teamspace/studios/this_studio/pact/upstream",
+      "--device",
+      "cuda",
+      "--keep-work-dir",
+      "--work-dir",
+      "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_c067_cmg2_downsample2x2_t4_20260502T1000Z/eval_work"
+    ],
+    "env_vars": {
+      "PYTHONPATH": null,
+      "CUDA_VISIBLE_DEVICES": null,
+      "CUBLAS_WORKSPACE_CONFIG": null,
+      "PYTHONHASHSEED": null,
+      "PYTORCH_CUDA_ALLOC_CONF": null,
+      "LD_LIBRARY_PATH": "/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda/lib64",
+      "CONFIG_ENV_PATH": null,
+      "PYTHON_INFLATE": null,
+      "LANE_MM_SIGMA": null,
+      "INFLATE_BROTLI_SPEC": null,
+      "INFLATE_AV_SPEC": null,
+      "INFLATE_TORCH_SPEC": "torch==2.5.1+cu124",
+      "INFLATE_NUMPY_SPEC": null,
+      "UV_BIN": "/usr/local/bin/uv",
+      "UV_PROJECT_ENVIRONMENT": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_c067_cmg2_downsample2x2_t4_20260502T1000Z/uv_project_env"
+    },
+    "gpu_model": "Tesla T4",
+    "gpu_driver": "580.126.09",
+    "gpu_t4_match": true,
+    "torch_version": "2.11.0+cu130",
+    "cuda_version": "13.0",
+    "cuda_available": true,
+    "cuda_device_count": 1,
+    "ffmpeg_version": "ffmpeg version 8.0.1 Copyright (c) 2000-2025 the FFmpeg developers",
+    "libsvtav1_version": "configuration: --prefix=/home/zeus/miniconda3/envs/cloudspace --cc=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/x86_64-conda-linux-gnu-cc --cxx=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/x86_64-conda-linux-gnu-c++ --nm=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/x86_64-conda-linux-gnu-nm --ar=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/x86_64-conda-linux-gnu-ar --enable-openssl --enable-demuxer=dash --enable-hardcoded-tables --enable-libfreetype --enable-libharfbuzz --enable-libfontconfig --enable-libopenh264 --enable-libdav1d --enable-libmp3lame --enable-libaom --enable-libsvtav1 --enable-libxml2 --enable-pic --enable-shared --enable-version3 --enable-zlib --enable-libvorbis --enable-libopus --enable-libwebp --enable-libshaderc --disable-ffplay --disable-static --disable-gpl --disable-doc --pkg-config=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/pkg-config --arch=x86_64 --target-os=linux --cross-prefix=x86_64-conda-linux-gnu- --host-cc=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/x86_64-conda-linux-gnu-cc --disable-gnutls --enable-libvpx --enable-pthreads --enable-alsa --enable-libpulse --enable-libdrm --enable-libvpl --enable-vaapi --enable-libtesseract --enable-libvpx --enable-libass --enable-librsvg",
+    "pact_commit": "<error:CalledProcessError(128, ['git', 'rev-parse', 'HEAD'])>",
+    "upstream_commit": "11ad728f563d8970929e8947a1cf6124ee6303e4"
+  },
+  "work_dir": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_c067_cmg2_downsample2x2_t4_20260502T1000Z/eval_work"
+}

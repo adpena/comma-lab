@@ -1,0 +1,61 @@
+{
+  "archive": {
+    "bytes": 186239,
+    "bytes_delta_candidate_minus_baseline": 0,
+    "path": "experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip",
+    "rate_term": 0.12400890557052006,
+    "sha256": "3fefbe5dfdd738179a55ca5c995ff8f63ec2755662d60684706f20d313913f58"
+  },
+  "baseline_diffs": [],
+  "baselines": {},
+  "evidence_grade": "external_archive_byte_intake_only",
+  "label": "PR106_belt_and_suspenders",
+  "notes": [
+    "byte-only intake; no inflate, scorer, dispatch, promotion, or score claim",
+    "public-reported components remain external until exact CUDA auth replay"
+  ],
+  "primary_member": null,
+  "promotion_eligible": false,
+  "schema": "public_frontier_archive_intake_v1",
+  "score_claim": false,
+  "side_info": {
+    "charged_bytes": 186131,
+    "member_count": 1,
+    "members": [
+      {
+        "bytes": 186131,
+        "container_probe_error": "pr85_v5_micro_24bit_lengths_fixed_bias_region segment 'mask' is truncated: end=10037015 raw=186131",
+        "entropy_bits_per_byte": 7.998129500211,
+        "magic_ascii": ".&..[.~s",
+        "magic_hex": "ff2699025bcd7e73",
+        "name": "0.bin",
+        "recognized_container": null,
+        "sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7"
+      }
+    ],
+    "rate_score_cost": 0.12393699280358288,
+    "requires_runtime_contract_review": true
+  },
+  "strict_zip": {
+    "blockers": [
+      "no_pr85_family_primary_member_detected"
+    ],
+    "member_count": 1,
+    "members": [
+      {
+        "blockers": [],
+        "bytes": 186131,
+        "central_local_name_match": true,
+        "compressed_bytes": 186131,
+        "crc32": "aab0e853",
+        "header_offset": 0,
+        "local_header_name": "0.bin",
+        "method_id": 0,
+        "name": "0.bin",
+        "sha256": "7f2cc905b7611ae8d7bced72be24e2266b0aa341f90cfeccbb0854fd8fc01eb7"
+      }
+    ],
+    "valid": false
+  },
+  "tool": "experiments/profile_public_frontier_intake.py"
+}

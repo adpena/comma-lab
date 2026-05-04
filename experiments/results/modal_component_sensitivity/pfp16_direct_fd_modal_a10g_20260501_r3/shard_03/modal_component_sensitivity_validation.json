@@ -1,0 +1,18 @@
+{
+  "baseline_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+  "baseline_archive_size_bytes": 686635,
+  "certification_handoff_eligible": false,
+  "elapsed_seconds": 2388.8356635190003,
+  "evidence_grade": "diagnostic_cuda_modal_direct_renderer_finite_difference",
+  "label": "pfp16_direct_fd_modal_a10g_20260501_r3",
+  "promotion_eligible": false,
+  "returncode": 0,
+  "schema_version": 1,
+  "score_claim": false,
+  "shard_count": 16,
+  "shard_index": 3,
+  "summary_device": "cuda",
+  "summary_sensitivity_source": "direct_renderer_cuda_finite_difference_component_response",
+  "timed_out": false,
+  "tool": "experiments/modal_component_sensitivity_shards.py"
+}

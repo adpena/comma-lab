@@ -1,0 +1,407 @@
+{
+  "alpha_primitive_contract": {
+    "blockers": [],
+    "consumption_gates": {
+      "blockers": [],
+      "contract_path": "/Users/adpena/Projects/pact/experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_1_vs_pfp16_repair_regions_20260501T080036Z.primitive_contract.json",
+      "contract_sha256": "e5da815b680ba5c02bf653dae8c77b4f6d12500461e45b06d0cfb0881be5c16e",
+      "exact_eval_claim": false,
+      "gates": {
+        "decoded_mask_sha256_match": {
+          "expected": "cce3a986341c40df9b9ebca24ff96e16c4b41b40b388dc2af86161ba76e2b4e9",
+          "observed": "cce3a986341c40df9b9ebca24ff96e16c4b41b40b388dc2af86161ba76e2b4e9",
+          "passed": true,
+          "required": true,
+          "skipped": false
+        },
+        "decoded_mask_shape_match": {
+          "expected": [
+            1200,
+            384,
+            512
+          ],
+          "observed": [
+            1200,
+            384,
+            512
+          ],
+          "passed": true,
+          "required": true,
+          "skipped": false
+        },
+        "exact_eval_claim_false": {
+          "expected": false,
+          "observed": false,
+          "passed": true,
+          "required": true,
+          "skipped": false
+        },
+        "promotion_eligible_false": {
+          "expected": false,
+          "observed": false,
+          "passed": true,
+          "required": true,
+          "skipped": false
+        },
+        "schema_diagnostic": {
+          "expected": "alpha_geo_primitive_contract_v1",
+          "observed": "alpha_geo_primitive_contract_v1",
+          "passed": true,
+          "required": true,
+          "skipped": false
+        },
+        "schema_version": {
+          "expected": 1,
+          "observed": 1,
+          "passed": true,
+          "required": true,
+          "skipped": false
+        },
+        "score_claim_eligible_false": {
+          "expected": false,
+          "observed": false,
+          "passed": true,
+          "required": true,
+          "skipped": false
+        },
+        "source_archive_member_match": {
+          "expected": "masks.mkv",
+          "observed": "masks.mkv",
+          "passed": true,
+          "required": false,
+          "skipped": false
+        },
+        "source_archive_member_sha256_match": {
+          "expected": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9",
+          "observed": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9",
+          "passed": true,
+          "required": false,
+          "skipped": false
+        },
+        "source_archive_sha256_match": {
+          "expected": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+          "observed": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+          "passed": true,
+          "required": false,
+          "skipped": false
+        }
+      },
+      "overall_passed": true,
+      "promotion_eligible": false,
+      "schema": "alpha_primitive_contract_consumption_gates_v1",
+      "score_claim_eligible": false,
+      "target_decoded_mask_sha256": "cce3a986341c40df9b9ebca24ff96e16c4b41b40b388dc2af86161ba76e2b4e9",
+      "target_decoded_mask_shape": [
+        1200,
+        384,
+        512
+      ]
+    },
+    "metadata": {
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_1_vs_pfp16_repair_regions_20260501T080036Z.primitive_contract.json",
+      "sha256": "e5da815b680ba5c02bf653dae8c77b4f6d12500461e45b06d0cfb0881be5c16e",
+      "size_bytes": 1062314
+    },
+    "path": {
+      "exists": true,
+      "is_file": true,
+      "path": "experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_1_vs_pfp16_repair_regions_20260501T080036Z.primitive_contract.json",
+      "size_bytes": 1062314
+    },
+    "sampling_pool": {
+      "applied_to_training": true,
+      "components": [
+        {
+          "active": true,
+          "flat_index_count": null,
+          "name": "uniform_base",
+          "source": "implicit_full_mask_uniform",
+          "weight": 1.0
+        },
+        {
+          "active": true,
+          "flat_index_count": 49779,
+          "name": "critical_boxes",
+          "source": "contract.ranked_critical_boxes",
+          "weight": 3.0
+        },
+        {
+          "active": true,
+          "flat_index_count": 48800,
+          "name": "boundary_bands",
+          "source": "contract.decoded_baseline_boundary_recipes",
+          "weight": 2.0
+        },
+        {
+          "active": true,
+          "flat_index_count": 24992,
+          "name": "transition_endpoints",
+          "source": "contract.worst_transition_pairs",
+          "weight": 1.5
+        }
+      ],
+      "config": {
+        "boundary_bands_weight": 2.0,
+        "critical_boxes_weight": 3.0,
+        "max_boundary_band_indices": 50000,
+        "max_boundary_frames": 256,
+        "max_critical_box_indices": 50000,
+        "max_critical_boxes": 64,
+        "max_transition_endpoint_indices": 25000,
+        "max_transition_pairs": 64,
+        "transition_endpoints_weight": 1.5,
+        "uniform_base_weight": 1.0
+      },
+      "contract_sha256": "e5da815b680ba5c02bf653dae8c77b4f6d12500461e45b06d0cfb0881be5c16e",
+      "deterministic": true,
+      "exact_eval_claim": false,
+      "mode": "alpha_primitive_contract_weighted",
+      "promotion_eligible": false,
+      "schema": "alpha_geo_weighted_sampling_pool_scaffold_v1",
+      "score_claim_eligible": false,
+      "seed": 12
+    }
+  },
+  "clearance_state_written": false,
+  "decoded_baseline": {
+    "blockers": [],
+    "metadata": {
+      "archive_member_compressed_bytes": 412169,
+      "archive_member_requested": "masks.mkv",
+      "archive_member_resolved": "masks.mkv",
+      "archive_member_sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9",
+      "archive_member_size_bytes": 421483,
+      "decoded_mask_dtype": "torch.uint8",
+      "decoded_mask_sha256": "cce3a986341c40df9b9ebca24ff96e16c4b41b40b388dc2af86161ba76e2b4e9",
+      "decoded_mask_sha256_algo": "sha256(shape,dtype,contiguous-raw-bytes)",
+      "decoded_mask_shape": [
+        1200,
+        384,
+        512
+      ],
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_pfp16/archive_lane_g_v3_pfp16.zip",
+      "source_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+      "source_size_bytes": 686635
+    },
+    "path": {
+      "exists": true,
+      "is_file": true,
+      "path": "experiments/results/lane_g_v3_pfp16/archive_lane_g_v3_pfp16.zip",
+      "size_bytes": 686635
+    },
+    "target_mask_sha256": "cce3a986341c40df9b9ebca24ff96e16c4b41b40b388dc2af86161ba76e2b4e9",
+    "target_mask_shape": [
+      1200,
+      384,
+      512
+    ]
+  },
+  "decoded_baseline_contract_preflight_passed": true,
+  "deterministic_report": true,
+  "inputs": {
+    "alpha_primitive_contract": "experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_1_vs_pfp16_repair_regions_20260501T080036Z.primitive_contract.json",
+    "clearance_json": ".omx/state/lane12_nerv_l2_clearance.json",
+    "decoded_baseline_member": "masks.mkv",
+    "decoded_baseline_path": "experiments/results/lane_g_v3_pfp16/archive_lane_g_v3_pfp16.zip",
+    "expected_shape": [
+      1200,
+      384,
+      512
+    ],
+    "remote_lane_script": "scripts/remote_lane_nerv.sh",
+    "repo_root": "/Users/adpena/Projects/pact"
+  },
+  "l2_unblock_readiness": {
+    "blockers": [
+      "Need Alpha-Geo geometry JSON with diagnostic=alpha_geo_0_nerv_geometry, empirical non-proxy evidence, full 1200x384x512 shape, diagnostic_config.threshold_preset=promotion, and pass_fail.overall_pass=true.",
+      "missing or unreadable Lane 12 L2 clearance packet: .omx/state/lane12_nerv_l2_clearance.json"
+    ],
+    "missing_prerequisites": [
+      {
+        "code": "no_passing_alpha_geo_geometry",
+        "detail": "Need Alpha-Geo geometry JSON with diagnostic=alpha_geo_0_nerv_geometry, empirical non-proxy evidence, full 1200x384x512 shape, diagnostic_config.threshold_preset=promotion, and pass_fail.overall_pass=true.",
+        "severity": "blocks_retraining_unblock"
+      },
+      {
+        "code": "pose_regeneration_provenance_missing",
+        "detail": "Pose-regeneration provenance exists, but no record passed completion/custody gates. Inspect evidence_buckets.empirical_evidence.pose_regeneration_provenance.",
+        "severity": "blocks_exact_eval_dispatch"
+      },
+      {
+        "code": "clearance_packet_invalid_or_missing",
+        "detail": "missing or unreadable Lane 12 L2 clearance packet: .omx/state/lane12_nerv_l2_clearance.json",
+        "severity": "blocks_retraining_unblock"
+      }
+    ],
+    "ready_for_exact_eval_dispatch": false,
+    "ready_for_retraining_unblock": false
+  },
+  "launcher_guards": {
+    "blockers": [],
+    "checks": {
+      "build_only_default": {
+        "needle": "RUN_AUTH_EVAL=\"${RUN_AUTH_EVAL:-0}\"",
+        "passed": true
+      },
+      "defaults_decoded_baseline": {
+        "needle": "GT_MASKS_SOURCE=\"${GT_MASKS_SOURCE:-decoded-baseline}\"",
+        "passed": true
+      },
+      "forbids_retired_segnet_default": {
+        "needle": "ALLOW_RETIRED_SEGNET_TARGET",
+        "passed": true
+      },
+      "l2_clearance_fail_closed": {
+        "needle": "No new NeRV retraining is allowed until this packet is valid",
+        "passed": true
+      },
+      "requires_alpha_contract": {
+        "needle": "requires ALPHA_PRIMITIVE_CONTRACT",
+        "passed": true
+      },
+      "run_auth_eval_requires_promotion_geometry": {
+        "needle": "Alpha-Geo threshold_preset must be promotion",
+        "passed": true
+      },
+      "trainer_uses_alpha_contract": {
+        "needle": "--alpha-primitive-contract",
+        "passed": true
+      }
+    },
+    "passed": true,
+    "path": {
+      "exists": true,
+      "is_file": true,
+      "path": "scripts/remote_lane_nerv.sh",
+      "size_bytes": 21368
+    }
+  },
+  "next_action_if_green": {
+    "command_template": [
+      "WORKSPACE=/workspace/pact",
+      "LOG_DIR=/workspace/pact/lane_12_nerv_decoded_baseline_results",
+      "RUN_AUTH_EVAL=0",
+      "GT_MASKS_SOURCE=decoded-baseline",
+      "DECODED_BASELINE_PATH=/workspace/pact/experiments/results/lane_g_v3_pfp16/archive_lane_g_v3_pfp16.zip",
+      "DECODED_BASELINE_MEMBER=masks.mkv",
+      "ALPHA_PRIMITIVE_CONTRACT=/workspace/pact/experiments/results/lane_12_nerv_20260430_codex_jsonfix40/alpha_geo_1_vs_pfp16_repair_regions_20260501T080036Z.primitive_contract.json",
+      "bash scripts/remote_lane_nerv.sh"
+    ],
+    "requires_dispatch_claim": true,
+    "score_claim": false,
+    "training_performed_by_this_tool": false
+  },
+  "promotion_eligible": false,
+  "provenance": {
+    "command": [
+      "experiments/preflight_lane12_decoded_baseline_build.py",
+      "--output-json",
+      "experiments/results/lane12_l2_unblock_readiness_20260503_current/decoded_baseline_build_preflight.json"
+    ],
+    "tool": "experiments/preflight_lane12_decoded_baseline_build.py"
+  },
+  "ready_for_build_only_remote_training": false,
+  "ready_for_exact_eval_dispatch": false,
+  "remote_job_launched": false,
+  "remote_training_blockers": [
+    "Need Alpha-Geo geometry JSON with diagnostic=alpha_geo_0_nerv_geometry, empirical non-proxy evidence, full 1200x384x512 shape, diagnostic_config.threshold_preset=promotion, and pass_fail.overall_pass=true.",
+    "missing or unreadable Lane 12 L2 clearance packet: .omx/state/lane12_nerv_l2_clearance.json"
+  ],
+  "report_id": "lane12_decoded_baseline_build_preflight_20260502",
+  "runtime_closure": {
+    "blockers": [],
+    "checks": {
+      "inflate_renderer:archive_default_mask_source": {
+        "passed": true,
+        "token": "os.environ.get(\"INFLATE_MASK_SOURCE\", \"archive\")"
+      },
+      "inflate_renderer:nrv_mask_loader": {
+        "passed": true,
+        "token": "def _load_masks_from_nrv"
+      },
+      "inflate_renderer:nrv_member_candidate": {
+        "passed": true,
+        "token": "archive / \"masks.nrv\""
+      },
+      "inflate_renderer:segnet_default": {
+        "forbidden_token": "os.environ.get(\"INFLATE_MASK_SOURCE\", \"segnet\")",
+        "passed": true
+      },
+      "inflate_renderer:segnet_fallback_explicit_only": {
+        "passed": true,
+        "token": "INFLATE_MASK_SOURCE=archive"
+      },
+      "inflate_renderer:strict_scorer_banner": {
+        "passed": true,
+        "token": "[strict-scorer-rule]"
+      },
+      "inflate_renderer:tto_default_off": {
+        "passed": true,
+        "token": "os.environ.get(\"INFLATE_TTO\", \"0\") == \"1\""
+      },
+      "inflate_renderer:tto_default_on": {
+        "forbidden_token": "os.environ.get(\"INFLATE_TTO\", \"1\") == \"1\"",
+        "passed": true
+      },
+      "inflate_sh:packed_payload_unpack": {
+        "passed": true,
+        "token": "unpack_renderer_payload.py"
+      },
+      "inflate_sh:unpack_summary_json": {
+        "passed": true,
+        "token": "renderer_payload_unpack_summary.json"
+      },
+      "unpack_renderer_payload:nrv_magic": {
+        "passed": true,
+        "token": "NERV_MAGIC = b\"NRV1\""
+      },
+      "unpack_renderer_payload:nrv_qzs3_payload_format": {
+        "passed": true,
+        "token": "public_pr67_nerv_qzs3_qp1_fixed_slices"
+      },
+      "unpack_renderer_payload:nrv_qzs3_qp1_parser": {
+        "passed": true,
+        "token": "_parse_public_pr67_nerv_qzs3_qp1_payload"
+      },
+      "unpack_renderer_payload:qp1_pose_content_validation": {
+        "passed": true,
+        "token": "pose_qp1.startswith(b\"QP1\")"
+      },
+      "unpack_renderer_payload:qzs3_renderer_content_validation": {
+        "passed": true,
+        "token": "renderer.startswith(b\"QZS3\")"
+      },
+      "unpack_renderer_payload:self_describing_nrv_length": {
+        "passed": true,
+        "token": "_parse_nerv_member_length"
+      }
+    },
+    "passed": true,
+    "paths": {
+      "inflate_renderer": {
+        "exists": true,
+        "is_file": true,
+        "path": "submissions/robust_current/inflate_renderer.py",
+        "size_bytes": 300988
+      },
+      "inflate_sh": {
+        "exists": true,
+        "is_file": true,
+        "path": "submissions/robust_current/inflate.sh",
+        "size_bytes": 19345
+      },
+      "unpack_renderer_payload": {
+        "exists": true,
+        "is_file": true,
+        "path": "submissions/robust_current/unpack_renderer_payload.py",
+        "size_bytes": 61733
+      }
+    },
+    "promotion_eligible": false,
+    "schema": "lane12_runtime_closure_static_preflight_v1",
+    "score_claim": false
+  },
+  "schema": "lane12_decoded_baseline_build_preflight_v1",
+  "score_claim": false,
+  "training_performed": false
+}

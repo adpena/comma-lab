@@ -1,0 +1,72 @@
+{
+  "adversarial_decision": "The current QFQ4 byte win is formula-only. It is fail-closed because decoded tensor parity fails and the scored runtime lacks QFQ4 support.",
+  "best_formula_only_candidate": {
+    "build_blockers": [
+      "decoded_model_tensor_parity_failed",
+      "pr85_runtime_missing_qfq4_loader"
+    ],
+    "candidate_id": "qfq4_pr85_shifted_int8_rows",
+    "candidate_outer_pr85_model_segment_bytes": 56415,
+    "candidate_outer_pr85_model_segment_sha256": "3a1a94506cd35e5338930b7dae9505ce4340f8fdb9991879438c8bb1e4cc2e0b",
+    "outer_pr85_model_delta_bytes_vs_source": -659
+  },
+  "blocker": "decoded_model_tensor_parity_failed; pr85_runtime_missing_qfq4_loader",
+  "blocker_class": "tensor_parity_failed_and_runtime_incompatible",
+  "blockers": [
+    "decoded_model_tensor_parity_failed",
+    "pr85_runtime_missing_qfq4_loader"
+  ],
+  "candidate_archive_emitted": false,
+  "decoded_tensor_parity_gate": {
+    "candidate_tensor_count": 111,
+    "decoded_tensor_parity": false,
+    "mismatch_count": 1,
+    "mismatches": [
+      {
+        "changed_elements": 4726,
+        "kind": "value",
+        "max_abs_diff": 6.103515625e-05,
+        "name": "frame1_head.block1.film_proj.weight",
+        "numel": 5376
+      }
+    ],
+    "source_tensor_count": 111
+  },
+  "dispatch": false,
+  "remote_gpu_dispatch_performed": false,
+  "required_before_dispatch": [
+    "decoded_model_tensor_parity_or_reviewed_runtime_output_parity",
+    "robust_current_pr85_single_x_QFQ4_model_loader",
+    "local_renderer_output_parity_on_source_vs_candidate",
+    "model_only_archive_audit_preserves_mask_pose_post_shift_frac_bias_region_randmulti",
+    "fresh_lane_claim_before_any_remote_exact_eval"
+  ],
+  "runtime_compatibility_gate": {
+    "blocker_class": "runtime_incompatibility",
+    "blockers": [
+      "public_pr85_replay_missing_QFQ4_model_loader",
+      "robust_current_missing_QFQ4_renderer_loader",
+      "robust_current_missing_pr85_single_x_unpacker"
+    ],
+    "dispatch_unlocked": false,
+    "minimal_runtime_implementation_needed": "Add a no-sidecar PR85 single-x QFQ4 model loader and prove output parity.",
+    "public_pr85_replay_inflate_py": "experiments/results/pr85_stbm1br_mask_recode_20260504_worker/replay_submission_stbm/inflate.py",
+    "public_pr85_replay_qfq4_model_loader": false,
+    "public_pr85_replay_single_x_loader": true,
+    "qfq4_magic": "QFQ4\u0000",
+    "robust_current_dir": "submissions/robust_current",
+    "robust_current_qfq4_renderer_loader": false,
+    "robust_current_single_x_unpacker": false,
+    "runtime_can_decode_without_edits": false
+  },
+  "runtime_output_parity_gate": {
+    "passed": false,
+    "required": true,
+    "requirement": "QFQ4 may only become dispatchable after the scored PR85/STBM runtime can decode the model and a local renderer/output parity gate passes.",
+    "status": "not_run_fail_closed_before_runtime_loader"
+  },
+  "schema": "pr85_qfq4_model_serializer_dispatch_blocker_v1",
+  "score_claim": false,
+  "screened_candidate_count": 1,
+  "tool": "experiments/analyze_or_build_pr85_qfq4_model_serializer_candidate.py"
+}

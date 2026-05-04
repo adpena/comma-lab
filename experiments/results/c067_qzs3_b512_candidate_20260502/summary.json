@@ -1,0 +1,40 @@
+{
+  "candidate_count": 1,
+  "candidates": [
+    {
+      "archive_byte_delta": -4328,
+      "component_awareness": null,
+      "exact_evaluable_archive": true,
+      "output_archive": "/Users/adpena/Projects/pact/experiments/results/c067_qzs3_b512_candidate_20260502/global_b512/archive.zip",
+      "output_archive_bytes": 271886,
+      "output_archive_sha256": "4271b2c855fddc089ae590392caec1d92cf408228664c4a9a0249d3b375e9d43",
+      "policy": {
+        "default_block_size": 512,
+        "exact_evaluable_archive": true,
+        "name": "global_b512",
+        "prefix_overrides": [],
+        "spec": "global:512"
+      },
+      "promotion_eligible": false,
+      "score_claim": false
+    }
+  ],
+  "evidence_grade": "empirical_byte_screen_only_until_cuda_auth_eval",
+  "output_dir": "/Users/adpena/Projects/pact/experiments/results/c067_qzs3_b512_candidate_20260502",
+  "policy_evidence_inputs": [],
+  "promotion_eligible": false,
+  "schema_version": 1,
+  "score_claim": false,
+  "source": {
+    "source_archive": "/Users/adpena/Projects/pact/experiments/results/c067_breakthrough_candidate_matrix_20260502T1030Z/line_search_source_c067_fixedslice/archive.zip",
+    "source_archive_bytes": 276214,
+    "source_archive_sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+    "source_evidence": {
+      "bytes": 4883,
+      "exists": true,
+      "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/contest_auth_eval.json",
+      "sha256": "246ff88aa647afca60ec44b154aa24aa5a15a41abf0e1da8600542d45bd25548"
+    }
+  },
+  "tool": "experiments/build_mixed_qzs_block_candidate.py"
+}

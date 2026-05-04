@@ -1,0 +1,306 @@
+{
+  "archives": [
+    {
+      "bytes": 276481,
+      "member_count": 1,
+      "members": [
+        {
+          "central_directory_header_bytes": 47,
+          "compress_type": 0,
+          "compress_type_name": "stored",
+          "compressed_bytes": 276381,
+          "compression_probe_uncompressed": {
+            "best_probe": {
+              "bytes": 276381,
+              "codec": "input_bytes"
+            },
+            "best_probe_delta_vs_input": 0,
+            "best_probe_ratio": 1.0,
+            "brotli_q11_bytes": 276386,
+            "brotli_q5_bytes": 276386,
+            "brotli_q9_bytes": 276386,
+            "input_bytes": 276381,
+            "lzma_preset9_bytes": 276456,
+            "zlib_9_bytes": 276472
+          },
+          "crc32": "ea40ae68",
+          "entropy_uncompressed": {
+            "bytes": 276381,
+            "entropy_bits_per_byte": 7.999149643643,
+            "unique_byte_count": 256,
+            "zero_order_entropy_bytes": 276352,
+            "zero_order_entropy_ratio": 0.999895072382
+          },
+          "fixed_slice_or_payload_anatomy": {
+            "decoded_payload_bytes": null,
+            "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+            "segment_count": 4,
+            "segments": [
+              {
+                "codec": "brotli_av1_obu",
+                "compression_probe": {
+                  "best_probe": {
+                    "bytes": 219472,
+                    "codec": "input_bytes"
+                  },
+                  "best_probe_delta_vs_input": 0,
+                  "best_probe_ratio": 1.0,
+                  "brotli_q11_bytes": 219477,
+                  "brotli_q5_bytes": 219477,
+                  "brotli_q9_bytes": 219477,
+                  "input_bytes": 219472,
+                  "lzma_preset9_bytes": 219544,
+                  "zlib_9_bytes": 219548
+                },
+                "decoded_bytes_estimate": 223385,
+                "encoded_bytes": 219472,
+                "entropy": {
+                  "bytes": 219472,
+                  "entropy_bits_per_byte": 7.998591976459,
+                  "unique_byte_count": 256,
+                  "zero_order_entropy_bytes": 219434,
+                  "zero_order_entropy_ratio": 0.999826857185
+                },
+                "index": 0,
+                "name": "masks.mkv",
+                "notes": "PR75 mask segment",
+                "offset": 0,
+                "payload_type_guess": {
+                  "brotli_decodable": true,
+                  "brotli_decoded_bytes": 223385,
+                  "brotli_decoded_magic_hex": "12000a0a0000000c",
+                  "guess": "brotli_av1_obu_mask_stream",
+                  "magic_hex": "5b98684344152796",
+                  "name_hint": "mkv"
+                },
+                "rate_score_contribution": 0.14613739616,
+                "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+              },
+              {
+                "codec": "brotli_qzs3",
+                "compression_probe": {
+                  "best_probe": {
+                    "bytes": 55756,
+                    "codec": "input_bytes"
+                  },
+                  "best_probe_delta_vs_input": 0,
+                  "best_probe_ratio": 1.0,
+                  "brotli_q11_bytes": 55760,
+                  "brotli_q5_bytes": 55760,
+                  "brotli_q9_bytes": 55760,
+                  "input_bytes": 55756,
+                  "lzma_preset9_bytes": 55816,
+                  "zlib_9_bytes": 55782
+                },
+                "decoded_bytes_estimate": 59288,
+                "encoded_bytes": 55756,
+                "entropy": {
+                  "bytes": 55756,
+                  "entropy_bits_per_byte": 7.992730680027,
+                  "unique_byte_count": 256,
+                  "zero_order_entropy_bytes": 55706,
+                  "zero_order_entropy_ratio": 0.999103235526
+                },
+                "index": 1,
+                "name": "renderer.bin",
+                "notes": "PR75 renderer segment",
+                "offset": 219472,
+                "payload_type_guess": {
+                  "brotli_decodable": true,
+                  "brotli_decoded_bytes": 59288,
+                  "brotli_decoded_magic_hex": "515a533320001675",
+                  "guess": "brotli_qzs3_renderer",
+                  "magic_hex": "e2f2bcec00c3609e",
+                  "name_hint": "bin"
+                },
+                "rate_score_contribution": 0.03712563179,
+                "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+              },
+              {
+                "codec": "brotli_seg_tile_actions_v1",
+                "compression_probe": {
+                  "best_probe": {
+                    "bytes": 255,
+                    "codec": "input_bytes"
+                  },
+                  "best_probe_delta_vs_input": 0,
+                  "best_probe_ratio": 1.0,
+                  "brotli_q11_bytes": 259,
+                  "brotli_q5_bytes": 259,
+                  "brotli_q9_bytes": 259,
+                  "input_bytes": 255,
+                  "lzma_preset9_bytes": 316,
+                  "zlib_9_bytes": 266
+                },
+                "decoded_bytes_estimate": 432,
+                "encoded_bytes": 255,
+                "entropy": {
+                  "bytes": 255,
+                  "entropy_bits_per_byte": 7.205989442831,
+                  "unique_byte_count": 165,
+                  "zero_order_entropy_bytes": 230,
+                  "zero_order_entropy_ratio": 0.901960784314
+                },
+                "index": 2,
+                "name": "seg_tile_actions.bin",
+                "notes": "PR75 charged tile-action segment",
+                "offset": 275228,
+                "payload_type_guess": {
+                  "brotli_decodable": true,
+                  "brotli_decoded_bytes": 281,
+                  "brotli_decoded_magic_hex": "5302681102405402",
+                  "guess": "binary_payload",
+                  "magic_hex": "1b1801f8e5605dfd",
+                  "name_hint": "bin"
+                },
+                "rate_score_contribution": 0.000169794033,
+                "sha256": "e2f8a113ee9e4d009448fec2497602ef67cabb8a13ef8d3fa9e11d69ff8ceed6"
+              },
+              {
+                "codec": "public_qp1_brotli",
+                "compression_probe": {
+                  "best_probe": {
+                    "bytes": 898,
+                    "codec": "input_bytes"
+                  },
+                  "best_probe_delta_vs_input": 0,
+                  "best_probe_ratio": 1.0,
+                  "brotli_q11_bytes": 902,
+                  "brotli_q5_bytes": 902,
+                  "brotli_q9_bytes": 902,
+                  "input_bytes": 898,
+                  "lzma_preset9_bytes": 960,
+                  "zlib_9_bytes": 909
+                },
+                "decoded_bytes_estimate": 1140,
+                "encoded_bytes": 898,
+                "entropy": {
+                  "bytes": 898,
+                  "entropy_bits_per_byte": 7.811697516431,
+                  "unique_byte_count": 250,
+                  "zero_order_entropy_bytes": 877,
+                  "zero_order_entropy_ratio": 0.976614699332
+                },
+                "index": 3,
+                "name": "optimized_poses.qp1",
+                "notes": "PR75 QP1 pose segment",
+                "offset": 275483,
+                "payload_type_guess": {
+                  "brotli_decodable": true,
+                  "brotli_decoded_bytes": 1140,
+                  "brotli_decoded_magic_hex": "5150316d1cd003c1",
+                  "guess": "brotli_qp1_pose",
+                  "magic_hex": "628e00ffe3203787",
+                  "name_hint": "qp1"
+                },
+                "rate_score_contribution": 0.00059794134,
+                "sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082"
+              }
+            ],
+            "source_payload_bytes": null
+          },
+          "header_offset": 0,
+          "index": 0,
+          "local_header_bytes": 31,
+          "member_rate_score_estimate": 0.184082700321,
+          "member_zip_bytes_estimate": 276459,
+          "name": "p",
+          "payload_type_guess": {
+            "brotli_decodable": false,
+            "brotli_decoded_bytes": null,
+            "brotli_decoded_magic_hex": null,
+            "guess": "json_like",
+            "magic_hex": "5b98684344152796",
+            "name_hint": null
+          },
+          "self_compression_signal": {
+            "best_probe": {
+              "bytes": 276381,
+              "codec": "input_bytes"
+            },
+            "best_probe_delta_vs_current_bytes": 0,
+            "best_probe_savings_bytes": 0,
+            "best_probe_savings_rate_score": 0.0,
+            "compliance_note": "A self-compression opportunity is dispatchable only after the archive contains all decoder/runtime bits and exact CUDA auth eval validates the identical bytes.",
+            "directly_deployable": false,
+            "directly_replaceable_zip_member": true,
+            "priority": "low",
+            "reason": "generic nested probes do not beat current byte count"
+          },
+          "sha256_uncompressed": "f78c71d3086773e417c672734082a49ceb0ef5a0016cf406a920be7978fff252",
+          "uncompressed_bytes": 276381
+        }
+      ],
+      "path": "/Users/adpena/Projects/pact/experiments/results/top_submission_reverse_engineering_20260503_pr75_minp/archive.zip",
+      "rate_score_contribution": 0.184097349218,
+      "sha256": "03a2afd5fe92c93a9b7b7e43625158a73b455f0cfbca82d278008a728db78746",
+      "zip_global_overhead_bytes": 22,
+      "zip_member_header_bytes": 78,
+      "zip_payload_compressed_bytes": 276381
+    }
+  ],
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py on CUDA",
+  "compliance_note": "This profile is byte/compressibility evidence only. It is not score evidence, not promotion evidence, and not a method retirement signal.",
+  "contest_formula_rate_term": {
+    "archive_rate_contribution": "25 * archive_bytes / 37,545,489",
+    "original_video_bytes": 37545489,
+    "rate_lambda": 6.658589531221714e-07
+  },
+  "evidence_grade": "empirical_byte_profile",
+  "promotion_eligible": false,
+  "ranked_self_compression_opportunities": [
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/top_submission_reverse_engineering_20260503_pr75_minp/archive.zip",
+      "best_probe_savings_bytes": 0,
+      "bytes": 219472,
+      "directly_deployable": false,
+      "name": "masks.mkv",
+      "priority": "medium",
+      "reason": "segment-level planning signal only; requires charged repack/decoder",
+      "scope": "payload_segment"
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/top_submission_reverse_engineering_20260503_pr75_minp/archive.zip",
+      "best_probe_savings_bytes": 0,
+      "bytes": 898,
+      "directly_deployable": false,
+      "name": "optimized_poses.qp1",
+      "priority": "medium",
+      "reason": "segment-level planning signal only; requires charged repack/decoder",
+      "scope": "payload_segment"
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/top_submission_reverse_engineering_20260503_pr75_minp/archive.zip",
+      "best_probe_savings_bytes": 0,
+      "bytes": 55756,
+      "directly_deployable": false,
+      "name": "renderer.bin",
+      "priority": "medium",
+      "reason": "segment-level planning signal only; requires charged repack/decoder",
+      "scope": "payload_segment"
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/top_submission_reverse_engineering_20260503_pr75_minp/archive.zip",
+      "best_probe_savings_bytes": 0,
+      "bytes": 255,
+      "directly_deployable": false,
+      "name": "seg_tile_actions.bin",
+      "priority": "medium",
+      "reason": "segment-level planning signal only; requires charged repack/decoder",
+      "scope": "payload_segment"
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/top_submission_reverse_engineering_20260503_pr75_minp/archive.zip",
+      "best_probe_savings_bytes": 0,
+      "bytes": 276381,
+      "directly_deployable": false,
+      "name": "p",
+      "priority": "low",
+      "reason": "generic nested probes do not beat current byte count",
+      "scope": "zip_member"
+    }
+  ],
+  "schema": "archive_bit_budget_profile_v1",
+  "score_claim": false,
+  "tool": "experiments/archive_bit_budget_profiler.py"
+}

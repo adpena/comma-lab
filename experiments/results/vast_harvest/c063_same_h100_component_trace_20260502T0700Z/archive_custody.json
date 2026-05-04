@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-05-02T07:09:01Z",
+  "archive_label": "c063_lossless_repack_same_h100_trace",
+  "archive_path": "/workspace/pact/experiments/results/lightning_batch/exact_eval_lossless_repack_c059_brotli_t4_20260502T0537Z/archive.zip",
+  "custody_archive_path": "/workspace/pact/experiments/results/c063_same_h100_component_trace_20260502T0700Z/archive.zip",
+  "archive_size_bytes": 276223,
+  "archive_sha256": "83615afd130afa08e972e4a02476612397bffea53327caf3591891f8317aa52d"
+}

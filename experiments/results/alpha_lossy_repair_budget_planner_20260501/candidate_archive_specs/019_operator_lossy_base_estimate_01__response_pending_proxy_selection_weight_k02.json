@@ -1,0 +1,141 @@
+{
+  "archive_path": null,
+  "build_recipe_after_component_response": [
+    "choose final sparse repair atoms from official CUDA component-response evidence",
+    "encode a charged lossy geometry base plus sparse repair payload inside archive.zip",
+    "record deterministic archive manifest, payload hashes, decoder contract, and source manifest",
+    "run exact CUDA auth eval before any score, rank, promotion, or retirement claim"
+  ],
+  "candidate_archive_built": false,
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "component_response_handoff": {
+    "allowed_sources": [
+      "official CUDA component-response curves with archive.zip -> inflate.sh -> upstream/evaluate.py custody"
+    ],
+    "required_before_build": true,
+    "selection_rule_after_response": "replace proxy selected point ids with response-safe sparse repair atoms that satisfy PoseNet/SegNet gates under the recorded byte budget",
+    "status": "pending"
+  },
+  "config": {
+    "lossy_base_bytes": [
+      60000,
+      80000,
+      100000,
+      150000,
+      250000
+    ],
+    "max_policy_points": 8,
+    "max_primitive_points": 64,
+    "max_specs": 24,
+    "repair_bits_per_pixel": 3.0,
+    "repair_compression_ratio": 0.7,
+    "repair_global_header_bytes": 32,
+    "repair_pixels_per_run": 64,
+    "repair_point_header_bytes": 24,
+    "repair_primitive_ref_bytes": 2,
+    "repair_run_record_bytes": 6,
+    "target_mask_member_bytes": null
+  },
+  "estimated_payload": {
+    "current_mask_member_size_bytes": 421483,
+    "delta_vs_current_mask_member_bytes": -338736,
+    "estimated_mask_stream_bytes": 82747,
+    "lossy_base": {
+      "base_id": "operator_lossy_base_estimate_01",
+      "details": {
+        "assumption": "explicit operator-provided lossy-base byte hypothesis; not measured score evidence",
+        "operator_supplied_bytes": 80000
+      },
+      "estimated_mask_member_bytes": 80000,
+      "source": "operator_cli_lossy_base_bytes"
+    },
+    "repair_estimate": {
+      "estimated_encoded_bytes": 2747,
+      "estimated_raw_bytes": 3924,
+      "estimated_runs": 128,
+      "point_estimates": [
+        {
+          "changed_pixels": 4096,
+          "estimated_raw_bytes": 1946,
+          "estimated_runs": 64,
+          "frame_index": 719,
+          "index": 5,
+          "kind": "class_flip",
+          "operation": "set_source_class_prefix_to_target_class",
+          "primitive_id": "class_flip_set_source_class_prefix_to_target_class_719_2_0_9a7c415f05669a42",
+          "selection_weight": 0.503702799479,
+          "source_class": 2,
+          "target_class": 0
+        },
+        {
+          "changed_pixels": 4096,
+          "estimated_raw_bytes": 1946,
+          "estimated_runs": 64,
+          "frame_index": 719,
+          "index": 1,
+          "kind": "connected_component",
+          "operation": "set_component_to_neighbor_class",
+          "primitive_id": "connected_component_set_component_to_neighbor_class_719_2_0_935e2f9806e317d4",
+          "selection_weight": 0.503631591797,
+          "source_class": 2,
+          "target_class": 0
+        }
+      ],
+      "selected_changed_pixels": 8192,
+      "selected_point_count": 2
+    },
+    "repair_policy": {
+      "details": {
+        "component_response_required_before_final_selection": true,
+        "final_selection_source": "official_cuda_component_response_pending",
+        "proxy_ordering": "primitive selection_weight descending",
+        "proxy_ordering_only": true,
+        "selected_count_for_estimate": 2
+      },
+      "policy_id": "response_pending_proxy_selection_weight_k02",
+      "policy_kind": "component_response_top_k_pending_proxy",
+      "selected_point_indices_for_proxy_estimate": [
+        5,
+        1
+      ]
+    },
+    "target_mask_member_bytes": 421483,
+    "target_mask_member_pass": true
+  },
+  "evidence_grade": "empirical",
+  "parent_report": {
+    "note": "parent report is written after spec generation and records this spec's SHA-256",
+    "path": "experiments/results/alpha_lossy_repair_budget_planner_20260501/alpha_lossy_repair_budget_plan.json"
+  },
+  "producer": "experiments/alpha_lossy_repair_budget_planner.py",
+  "prohibited_uses": [
+    "score_claim",
+    "promotion",
+    "ranking",
+    "method_retirement",
+    "paper empirical claim without later exact CUDA archive evidence"
+  ],
+  "promotion_eligible": false,
+  "requires_exact_cuda_auth_eval": true,
+  "schema": "alpha_lossy_sparse_repair_archive_build_spec_v1",
+  "score_claim": false,
+  "score_claim_warning": "No score claim is made by this planner. All byte budgets are empirical planning estimates. A concrete archive, payload closure, and exact CUDA auth eval are required before ranking, promotion, retirement, or any score claim.",
+  "source_hashes": {
+    "matrix_manifest": {
+      "path": "experiments/results/alpha_mask_codec_candidate_matrix_pfp16_20260501_full/alpha_mask_codec_candidate_matrix.json",
+      "sha256": "c098d820e0a04b7d73d691181c02d21b6e788b81d4f130b36f8ac6c647753b38",
+      "size_bytes": 12939
+    },
+    "primitive_plan": {
+      "path": "experiments/results/alpha_mask_primitive_response_plan_pfp16_20260501_r1/alpha_mask_primitive_response_plan.json",
+      "sha256": "51478649a6ac947b34a7b3fd50e1cb5dc34aba44df9cd8c78a148bb10c10619a",
+      "size_bytes": 32609
+    },
+    "primitive_variants_manifest": {
+      "path": "experiments/results/alpha_mask_primitive_response_plan_pfp16_20260501_r1/alpha_mask_primitive_archive_variants_manifest.json",
+      "sha256": "da95f033e570990e557f52a0819d4356877d80b753c4b0be935aa58345dc1768",
+      "size_bytes": 29192,
+      "validated_against_manifest": true
+    }
+  }
+}

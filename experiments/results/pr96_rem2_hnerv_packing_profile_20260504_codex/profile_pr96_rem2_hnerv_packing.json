@@ -1,0 +1,622 @@
+{
+  "byte_opportunities": {
+    "unused_members": [
+      "p"
+    ],
+    "zip_method_changes": [
+      {
+        "chosen_compressed_size": 169242,
+        "chosen_compresslevel": null,
+        "chosen_method": "stored",
+        "name": "decoder.bin",
+        "payload_byte_delta": -30,
+        "source_compressed_size": 169272,
+        "source_method": "deflated"
+      },
+      {
+        "chosen_compressed_size": 11,
+        "chosen_compresslevel": 4,
+        "chosen_method": "deflated",
+        "name": "p",
+        "payload_byte_delta": -919,
+        "source_compressed_size": 930,
+        "source_method": "stored"
+      }
+    ]
+  },
+  "candidates": [
+    {
+      "archive": "experiments/results/pr96_rem2_hnerv_packing_profile_20260504_codex/archive.pr96_member_preserving_repack.zip",
+      "archive_byte_delta": -949,
+      "archive_bytes": 185682,
+      "archive_sha256": "615b5125314ee5c8c55f34a21766c7e6835767796ff490fd4c59a91586fb2f9b",
+      "compression_plan": {
+        "decoder.bin": {
+          "compressed_size": 169242,
+          "compresslevel": null,
+          "method": "stored",
+          "method_id": 0,
+          "strategy": "stored_uncompressed"
+        },
+        "latents.bin": {
+          "compressed_size": 16133,
+          "compresslevel": null,
+          "method": "deflated",
+          "method_id": 8,
+          "strategy": "source_raw_copy"
+        },
+        "p": {
+          "compressed_size": 11,
+          "compresslevel": 4,
+          "method": "deflated",
+          "method_id": 8,
+          "strategy": "deflate_recompressed"
+        }
+      },
+      "evidence_grade": "byte_exact_repack_candidate_until_exact_cuda_eval",
+      "kept_members": [
+        "decoder.bin",
+        "latents.bin",
+        "p"
+      ],
+      "label": "member_preserving_repack",
+      "member_payload_identity_checked": true,
+      "members": [
+        {
+          "compressed_size": 169242,
+          "method": "stored",
+          "method_id": 0,
+          "name": "decoder.bin",
+          "payload_identity_checked": true,
+          "sha256": "940d2328ad5384c99b51872cc5f87b6153befa20c10c1c2564b08ba469c97868",
+          "uncompressed_size": 169242
+        },
+        {
+          "compressed_size": 16133,
+          "method": "deflated",
+          "method_id": 8,
+          "name": "latents.bin",
+          "payload_identity_checked": true,
+          "sha256": "be4ed381db136baf114701fe6a9bba4f604dac18e79244c9f657383578a6ff71",
+          "uncompressed_size": 16920
+        },
+        {
+          "compressed_size": 11,
+          "method": "deflated",
+          "method_id": 8,
+          "name": "p",
+          "payload_identity_checked": true,
+          "sha256": "bf04a4e2dd69ca32e3b1bd1a3c64481d7f6930096b552d49d175eec8768d1c43",
+          "uncompressed_size": 930
+        }
+      ],
+      "rate_term": 0.123638022134,
+      "rate_term_delta": -0.000631900147,
+      "removed_members": [],
+      "requires_exact_cuda_eval": true,
+      "score_claim": false,
+      "source_archive": "experiments/results/leaderboard_intel_20260504_codex/pr96_archive.zip"
+    },
+    {
+      "archive": "experiments/results/pr96_rem2_hnerv_packing_profile_20260504_codex/archive.pr96_drop_unused_repack.zip",
+      "archive_byte_delta": -1038,
+      "archive_bytes": 185593,
+      "archive_sha256": "b1d8ee040f462d5623d77ed5941a01933c0d88c93a5f3664bf25a7363a85b779",
+      "compression_plan": {
+        "decoder.bin": {
+          "compressed_size": 169242,
+          "compresslevel": null,
+          "method": "stored",
+          "method_id": 0,
+          "strategy": "stored_uncompressed"
+        },
+        "latents.bin": {
+          "compressed_size": 16133,
+          "compresslevel": null,
+          "method": "deflated",
+          "method_id": 8,
+          "strategy": "source_raw_copy"
+        }
+      },
+      "evidence_grade": "byte_exact_repack_candidate_until_exact_cuda_eval",
+      "kept_members": [
+        "decoder.bin",
+        "latents.bin"
+      ],
+      "label": "drop_statically_unused_members_repack",
+      "member_payload_identity_checked": true,
+      "members": [
+        {
+          "compressed_size": 169242,
+          "method": "stored",
+          "method_id": 0,
+          "name": "decoder.bin",
+          "payload_identity_checked": true,
+          "sha256": "940d2328ad5384c99b51872cc5f87b6153befa20c10c1c2564b08ba469c97868",
+          "uncompressed_size": 169242
+        },
+        {
+          "compressed_size": 16133,
+          "method": "deflated",
+          "method_id": 8,
+          "name": "latents.bin",
+          "payload_identity_checked": true,
+          "sha256": "be4ed381db136baf114701fe6a9bba4f604dac18e79244c9f657383578a6ff71",
+          "uncompressed_size": 16920
+        }
+      ],
+      "rate_term": 0.123578760687,
+      "rate_term_delta": -0.000691161593,
+      "removed_members": [
+        "p"
+      ],
+      "requires_exact_cuda_eval": true,
+      "score_claim": false,
+      "source_archive": "experiments/results/leaderboard_intel_20260504_codex/pr96_archive.zip"
+    }
+  ],
+  "evidence_grade": "byte_exact_repack_candidate_until_exact_cuda_eval",
+  "next_exact_eval_action": "After public PR96 baseline replay and local raw-byte parity, claim a PR96 repack exact-eval lane and evaluate recommended_candidate_archive with experiments/contest_auth_eval.py --device cuda using the unchanged pr96_runtime/inflate.sh.",
+  "pr96_payloads": {
+    "decoder": {
+      "brotli_records": {
+        "count": 24,
+        "quantized_bytes": 52270,
+        "raw_bytes": 53088,
+        "records": [
+          {
+            "index": 0,
+            "name": "stem.bias",
+            "quantized_bytes": 1728,
+            "scale": 0.01630389131605625,
+            "sha256": "73d11408d7bea4f6d16b9dc72977038052d142a330c5302a486e8e94609017ae",
+            "shape": [
+              1728
+            ]
+          },
+          {
+            "index": 1,
+            "name": "blocks.0.bias",
+            "quantized_bytes": 144,
+            "scale": 0.006868008524179459,
+            "sha256": "e5417b9b721191fdae16c91c2187e857e10b08bbcacc41d6fbd7e917d45cbfaf",
+            "shape": [
+              144
+            ]
+          },
+          {
+            "index": 2,
+            "name": "blocks.1.bias",
+            "quantized_bytes": 144,
+            "scale": 0.007019021548330784,
+            "sha256": "2b04684fe0ab74f66370a92bee8d8a7fdfd195f1b0c4b848273f94de3939a431",
+            "shape": [
+              144
+            ]
+          },
+          {
+            "index": 3,
+            "name": "blocks.2.bias",
+            "quantized_bytes": 108,
+            "scale": 0.006066210102289915,
+            "sha256": "16761eb714961c96a8d5ebb32a70fad248daf18c7ed0f78e0156957dc8f13c6d",
+            "shape": [
+              108
+            ]
+          },
+          {
+            "index": 4,
+            "name": "blocks.3.weight",
+            "quantized_bytes": 19440,
+            "scale": 0.0031950243283063173,
+            "sha256": "0a57619ad6b978aec3e5081a280c92e9592d57ae95ac0bbb897dea3381ac4007",
+            "shape": [
+              80,
+              27,
+              3,
+              3
+            ]
+          },
+          {
+            "index": 5,
+            "name": "blocks.3.bias",
+            "quantized_bytes": 80,
+            "scale": 0.011559945531189442,
+            "sha256": "0b16150727a865320f302ad55f52a4e9e1241412757669a9dcb3ffd037a2e7e7",
+            "shape": [
+              80
+            ]
+          },
+          {
+            "index": 6,
+            "name": "blocks.4.weight",
+            "quantized_bytes": 12960,
+            "scale": 0.0025631242897361517,
+            "sha256": "6e5e6ee0a3206361848bbed78a8a967085a5ec66e4161df7a9d824458e93a579",
+            "shape": [
+              72,
+              20,
+              3,
+              3
+            ]
+          },
+          {
+            "index": 7,
+            "name": "blocks.4.bias",
+            "quantized_bytes": 72,
+            "scale": 0.009600081481039524,
+            "sha256": "6a0231e283b776de00ba89d7d6889ee62374be9d7f59402a3ff4b68d744b6710",
+            "shape": [
+              72
+            ]
+          },
+          {
+            "index": 8,
+            "name": "blocks.5.weight",
+            "quantized_bytes": 11664,
+            "scale": 0.00634454982355237,
+            "sha256": "60876a3cab2616ea4f8a19e4f9a1974899565c80961667f893bee1e3fe2a4f30",
+            "shape": [
+              72,
+              18,
+              3,
+              3
+            ]
+          },
+          {
+            "index": 9,
+            "name": "blocks.5.bias",
+            "quantized_bytes": 72,
+            "scale": 0.016315536573529243,
+            "sha256": "1423d37d224fc50c0fb271e2592e18e205e97877e429ff7f88f4a24806a491c6",
+            "shape": [
+              72
+            ]
+          },
+          {
+            "index": 10,
+            "name": "skips.2.weight",
+            "quantized_bytes": 972,
+            "scale": 0.003783124964684248,
+            "sha256": "4a4b83418774d2c3d738c20981d711fd8c7132a5f4d49d8da90d05fa74623b34",
+            "shape": [
+              27,
+              36,
+              1,
+              1
+            ]
+          },
+          {
+            "index": 11,
+            "name": "skips.2.bias",
+            "quantized_bytes": 27,
+            "scale": 0.005374855827540159,
+            "sha256": "871eb9dec894c7bbcde3cc40e22cd8f7e64230978d87a75434d4ee606e4e19a7",
+            "shape": [
+              27
+            ]
+          },
+          {
+            "index": 12,
+            "name": "skips.3.weight",
+            "quantized_bytes": 540,
+            "scale": 0.003020721720531583,
+            "sha256": "7897add9c06676d35b0dbc1a980a9bcb1ae212b261fed11ebe00a2b914c5b9f1",
+            "shape": [
+              20,
+              27,
+              1,
+              1
+            ]
+          },
+          {
+            "index": 13,
+            "name": "skips.3.bias",
+            "quantized_bytes": 20,
+            "scale": 0.007371119223535061,
+            "sha256": "d25d7567c1ddb8c81bab9e87468ba24cae767c713097954a6a443d43a3cb3c9f",
+            "shape": [
+              20
+            ]
+          },
+          {
+            "index": 14,
+            "name": "skips.4.weight",
+            "quantized_bytes": 360,
+            "scale": 0.002799408743157983,
+            "sha256": "545128c346f819c6fbba8276ee638a640c2d8c9ff0e3a4f6da45fb26b232b9e6",
+            "shape": [
+              18,
+              20,
+              1,
+              1
+            ]
+          },
+          {
+            "index": 15,
+            "name": "skips.4.bias",
+            "quantized_bytes": 18,
+            "scale": 0.00606657937169075,
+            "sha256": "cc25ac828c429eb8f75c28886575c49169159545717929334959fda1f4c4df33",
+            "shape": [
+              18
+            ]
+          },
+          {
+            "index": 16,
+            "name": "refine.0.weight",
+            "quantized_bytes": 1458,
+            "scale": 0.008006862364709377,
+            "sha256": "bb4fe5a14f0a6b2e7056ead771b63a9b5e2ae7d3eb57593aec321c1de73ec8d7",
+            "shape": [
+              9,
+              18,
+              3,
+              3
+            ]
+          },
+          {
+            "index": 17,
+            "name": "refine.0.bias",
+            "quantized_bytes": 9,
+            "scale": 0.007597390562295914,
+            "sha256": "d270aa2aabcbf6e48c1ad1d4a120a15cc0496710f17b79cf5cbf4c7549295768",
+            "shape": [
+              9
+            ]
+          },
+          {
+            "index": 18,
+            "name": "refine.1.weight",
+            "quantized_bytes": 1458,
+            "scale": 0.0033413583878427744,
+            "sha256": "fae40fa085e07afb9399a39460b72346c599ae7938f406e2c73e0e1e06586755",
+            "shape": [
+              18,
+              9,
+              3,
+              3
+            ]
+          },
+          {
+            "index": 19,
+            "name": "refine.1.bias",
+            "quantized_bytes": 18,
+            "scale": 0.014179954305291176,
+            "sha256": "d20656e13d0f771c6a66b34541c1058bf4fff3a2d512418d7e5fe06f8400944e",
+            "shape": [
+              18
+            ]
+          },
+          {
+            "index": 20,
+            "name": "rgb_0.weight",
+            "quantized_bytes": 486,
+            "scale": 0.006931073497980833,
+            "sha256": "888b127332066f8aa5c4fd525583feecc9224b38f4462ef17e9e49eb46c063e7",
+            "shape": [
+              3,
+              18,
+              3,
+              3
+            ]
+          },
+          {
+            "index": 21,
+            "name": "rgb_0.bias",
+            "quantized_bytes": 3,
+            "scale": 0.009923132136464119,
+            "sha256": "da213eb0c8696705b69aab9462b13a188fda69ddbde06c4993c1229f7c2d5866",
+            "shape": [
+              3
+            ]
+          },
+          {
+            "index": 22,
+            "name": "rgb_1.weight",
+            "quantized_bytes": 486,
+            "scale": 0.0054871030151844025,
+            "sha256": "9d29a289082e0ddeafcd2704efeb037f78a2c6b910d3751ee5840ec1a129809d",
+            "shape": [
+              3,
+              18,
+              3,
+              3
+            ]
+          },
+          {
+            "index": 23,
+            "name": "rgb_1.bias",
+            "quantized_bytes": 3,
+            "scale": 0.0060979886911809444,
+            "sha256": "88db966e9da13f518deb7b459d833d278baaedc1efb42895a004416b73f9fa89",
+            "shape": [
+              3
+            ]
+          }
+        ]
+      },
+      "format": "pr96_rem2_hnerv_decoder_v1",
+      "header": {
+        "br_len": 45658,
+        "coded_bytes": 122640,
+        "comp_id": 2,
+        "hist_len": 805,
+        "lengths_len": 20,
+        "meta_len": 102
+      },
+      "range_coded_records": {
+        "coded_bytes_consumed": 122640,
+        "coded_bytes_trailing": 0,
+        "count": 4,
+        "histogram_codec": "brotli",
+        "histogram_count": 4,
+        "histogram_raw_bytes": 2048,
+        "lengths": [
+          31920,
+          32420,
+          32632,
+          25668
+        ],
+        "lengths_raw_bytes": 16,
+        "meta_raw_bytes": 180,
+        "records": [
+          {
+            "coded_bytes": 31920,
+            "index": 0,
+            "name": "stem.weight",
+            "quantized_count": 48384,
+            "scale": 0.011266391724348068,
+            "shape": [
+              1728,
+              28
+            ]
+          },
+          {
+            "coded_bytes": 32420,
+            "index": 1,
+            "name": "blocks.0.weight",
+            "quantized_count": 46656,
+            "scale": 0.00481184059754014,
+            "shape": [
+              144,
+              36,
+              3,
+              3
+            ]
+          },
+          {
+            "coded_bytes": 32632,
+            "index": 2,
+            "name": "blocks.1.weight",
+            "quantized_count": 46656,
+            "scale": 0.004099966958165169,
+            "shape": [
+              144,
+              36,
+              3,
+              3
+            ]
+          },
+          {
+            "coded_bytes": 25668,
+            "index": 3,
+            "name": "blocks.2.weight",
+            "quantized_count": 34992,
+            "scale": 0.0032781227491796017,
+            "shape": [
+              108,
+              36,
+              3,
+              3
+            ]
+          }
+        ]
+      },
+      "sha256": "940d2328ad5384c99b51872cc5f87b6153befa20c10c1c2564b08ba469c97868",
+      "total_bytes": 169242
+    },
+    "latents": {
+      "format": "pr96_rem2_hnerv_latents_v1",
+      "mins_f16_bytes": 56,
+      "n_dim": 28,
+      "n_rows": 600,
+      "quantized_bytes": 16800,
+      "quantized_sha256": "70cdaac319a8eae4c2b0531e3d00410d3bae684219340114cec95277adf5b29e",
+      "scales_f16_bytes": 56,
+      "sha256": "be4ed381db136baf114701fe6a9bba4f604dac18e79244c9f657383578a6ff71",
+      "total_bytes": 16920
+    }
+  },
+  "recommended_candidate": "drop_statically_unused_members_repack",
+  "recommended_candidate_archive": "experiments/results/pr96_rem2_hnerv_packing_profile_20260504_codex/archive.pr96_drop_unused_repack.zip",
+  "recommended_candidate_byte_delta": -1038,
+  "recommended_candidate_bytes": 185593,
+  "recommended_candidate_sha256": "b1d8ee040f462d5623d77ed5941a01933c0d88c93a5f3664bf25a7363a85b779",
+  "runtime_static_read_set": {
+    "dynamic_archive_access": false,
+    "notes": [],
+    "read_members": [
+      "decoder.bin",
+      "latents.bin"
+    ],
+    "runtime_py": "experiments/results/leaderboard_intel_20260504_codex/pr96_runtime/inflate.py",
+    "runtime_py_exists": true,
+    "runtime_py_sha256": "940e57ce0b6532db4aeb38b644bb7de75ccefdb29b92d00f8ddacaa3603829b2",
+    "safe_for_unused_member_removal": true
+  },
+  "safety": {
+    "does_not_launch_remote_jobs": true,
+    "does_not_load_scorers": true,
+    "member_payload_bytes_preserved_for_kept_members": true,
+    "no_runtime_code_change": true,
+    "no_tensor_requantization": true,
+    "requires_exact_cuda_eval_before_score_claim": true,
+    "requires_raw_output_parity_before_rate_only_interpretation": true,
+    "unused_member_removal_basis": "static archive_dir read_bytes analysis",
+    "unused_member_removal_enabled": true
+  },
+  "schema": "pr96_rem2_hnerv_packing_profile_v1",
+  "score_claim": false,
+  "source_archive": "experiments/results/leaderboard_intel_20260504_codex/pr96_archive.zip",
+  "source_archive_bytes": 186631,
+  "source_archive_sha256": "2ecbd2118bebdb5566f719ed538a89c4608ccab19c9edc7ae7a6de778bd42b46",
+  "source_members": [
+    {
+      "compressed_size": 169272,
+      "crc32": "6441e8c2",
+      "date_time": [
+        2026,
+        5,
+        1,
+        6,
+        52,
+        36
+      ],
+      "header_offset": 0,
+      "method": "deflated",
+      "method_id": 8,
+      "name": "decoder.bin",
+      "sha256": "940d2328ad5384c99b51872cc5f87b6153befa20c10c1c2564b08ba469c97868",
+      "uncompressed_size": 169242
+    },
+    {
+      "compressed_size": 16133,
+      "crc32": "20790805",
+      "date_time": [
+        2026,
+        5,
+        1,
+        6,
+        52,
+        36
+      ],
+      "header_offset": 169313,
+      "method": "deflated",
+      "method_id": 8,
+      "name": "latents.bin",
+      "sha256": "be4ed381db136baf114701fe6a9bba4f604dac18e79244c9f657383578a6ff71",
+      "uncompressed_size": 16920
+    },
+    {
+      "compressed_size": 930,
+      "crc32": "dba8aa54",
+      "date_time": [
+        2026,
+        5,
+        3,
+        23,
+        29,
+        20
+      ],
+      "header_offset": 185487,
+      "method": "stored",
+      "method_id": 0,
+      "name": "p",
+      "sha256": "bf04a4e2dd69ca32e3b1bd1a3c64481d7f6930096b552d49d175eec8768d1c43",
+      "uncompressed_size": 930
+    }
+  ],
+  "source_rate_term": 0.12426992228,
+  "tool": "experiments/profile_pr96_rem2_hnerv_packing.py"
+}

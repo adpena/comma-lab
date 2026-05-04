@@ -1,0 +1,3176 @@
+{
+  "architecture_transfer_candidates": [
+    {
+      "archive_builder_action": "prototype a PR85 decoded-QH0 to QFQ4/grouped-FP serializer and paired runtime loader",
+      "candidate_id": "pr90_qfq4_style_pr85_model_serializer_probe",
+      "dispatchable_now": false,
+      "expected_archive_delta_bytes_formula_only": -689,
+      "expected_rate_score_delta_formula_only": -0.000458776819,
+      "identity_preserving": false,
+      "next_gate": "build a local serializer parity harness; do not exact-eval until runtime output parity passes",
+      "no_op": false,
+      "runtime_risk": "high",
+      "runtime_risk_reason": "different model grammar; requires tensor/output parity and exact CUDA component gates",
+      "source_basis": "PR90 model body is smaller than PR85 model segment, but not byte-identical or runtime-compatible",
+      "state_change_required": true,
+      "surface": "PR85 model segment"
+    },
+    {
+      "archive_builder_action": "lower PR90-style compact pose plus sparse QRGB/control actions into an explicit PR85-family qpost candidate",
+      "candidate_id": "pr90_qrgb_control_stack_recode_probe",
+      "dispatchable_now": false,
+      "expected_archive_delta_bytes_formula_only": -10955,
+      "expected_rate_score_delta_formula_only": -0.007294484831,
+      "identity_preserving": false,
+      "next_gate": "build local non-noop candidate with raw-output/runtime parity diagnostics before any eval claim",
+      "no_op": false,
+      "runtime_risk": "high",
+      "runtime_risk_reason": "changes pose/color/control semantics; component deltas can dominate byte savings",
+      "source_basis": "PR90 compact control body is smaller than the PR85 non-mask control stack, but semantics are different",
+      "state_change_required": true,
+      "surface": "PR85 pose/post/motion/bias/region/randmulti control stack"
+    }
+  ],
+  "archive": {
+    "archive_bytes": 236328,
+    "archive_path": "experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+    "archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+    "member_compress_size": 236228,
+    "member_crc32_hex": "c6356353",
+    "member_file_size": 236228,
+    "member_name": "x",
+    "member_sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+    "zip_stored": true
+  },
+  "bundle": {
+    "fixed_length_segments": {
+      "bias": 223,
+      "region": 273
+    },
+    "format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+    "header_bytes": 24,
+    "mask_segment_excluded_from_candidate_search": {
+      "bytes": 159011,
+      "reason": "task scope is non-mask self-compression",
+      "sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179"
+    },
+    "nonmask_segments_audited": [
+      "model",
+      "pose",
+      "post",
+      "shift",
+      "frac",
+      "frac2",
+      "frac3",
+      "bias",
+      "region",
+      "randmulti"
+    ],
+    "segment_lengths": {
+      "bias": 223,
+      "frac": 106,
+      "frac2": 149,
+      "frac3": 154,
+      "mask": 159011,
+      "model": 57074,
+      "pose": 1487,
+      "post": 1400,
+      "randmulti": 16101,
+      "region": 273,
+      "shift": 226
+    },
+    "segment_offsets": {
+      "bias": 219631,
+      "frac": 219222,
+      "frac2": 219328,
+      "frac3": 219477,
+      "mask": 24,
+      "model": 159035,
+      "pose": 216109,
+      "post": 217596,
+      "randmulti": 220127,
+      "region": 219854,
+      "shift": 218996
+    },
+    "segment_order": [
+      "mask",
+      "model",
+      "pose",
+      "post",
+      "shift",
+      "frac",
+      "frac2",
+      "frac3",
+      "bias",
+      "region",
+      "randmulti"
+    ]
+  },
+  "comparisons": {
+    "pr90_nonidentity_size_signal": {
+      "architecture_transfer_candidates": [
+        {
+          "archive_builder_action": "prototype a PR85 decoded-QH0 to QFQ4/grouped-FP serializer and paired runtime loader",
+          "candidate_id": "pr90_qfq4_style_pr85_model_serializer_probe",
+          "dispatchable_now": false,
+          "expected_archive_delta_bytes_formula_only": -689,
+          "expected_rate_score_delta_formula_only": -0.000458776819,
+          "identity_preserving": false,
+          "next_gate": "build a local serializer parity harness; do not exact-eval until runtime output parity passes",
+          "no_op": false,
+          "runtime_risk": "high",
+          "runtime_risk_reason": "different model grammar; requires tensor/output parity and exact CUDA component gates",
+          "source_basis": "PR90 model body is smaller than PR85 model segment, but not byte-identical or runtime-compatible",
+          "state_change_required": true,
+          "surface": "PR85 model segment"
+        },
+        {
+          "archive_builder_action": "lower PR90-style compact pose plus sparse QRGB/control actions into an explicit PR85-family qpost candidate",
+          "candidate_id": "pr90_qrgb_control_stack_recode_probe",
+          "dispatchable_now": false,
+          "expected_archive_delta_bytes_formula_only": -10955,
+          "expected_rate_score_delta_formula_only": -0.007294484831,
+          "identity_preserving": false,
+          "next_gate": "build local non-noop candidate with raw-output/runtime parity diagnostics before any eval claim",
+          "no_op": false,
+          "runtime_risk": "high",
+          "runtime_risk_reason": "changes pose/color/control semantics; component deltas can dominate byte savings",
+          "source_basis": "PR90 compact control body is smaller than the PR85 non-mask control stack, but semantics are different",
+          "state_change_required": true,
+          "surface": "PR85 pose/post/motion/bias/region/randmulti control stack"
+        }
+      ],
+      "available": true,
+      "deltas_vs_pr85": {
+        "model_body_vs_pr85_model_bytes": -689,
+        "pose_qrgb_vs_pr85_control_stack_bytes": -10955,
+        "total_nonmask_vs_pr85_nonmask_bytes": -11644
+      },
+      "identity_preserving": false,
+      "path": "experiments/results/public_pr90_intake_20260504_worker/payload_probe.json",
+      "payload_len": 217980,
+      "slice_sizes": {
+        "model_body": 56385,
+        "pose_qrgb_body": 9164,
+        "pr85_control_stack_nonmodel_nonmask": 20119,
+        "pr85_model_segment": 57074,
+        "pr85_total_nonmask": 77193,
+        "pr90_model_plus_pose_qrgb": 65549
+      },
+      "split_mode": "compact_fixed_offsets_len_lt_260000",
+      "useful_conclusion": "PR90 is a non-identity architecture signal, not a PR85 self-compression proof."
+    },
+    "pr91_nonmask_identity": {
+      "archive": {
+        "archive_bytes": 222404,
+        "archive_path": "experiments/results/public_pr91_intake_20260504_worker/archive.zip",
+        "archive_sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f",
+        "member_compress_size": 222304,
+        "member_crc32_hex": "c57d54c8",
+        "member_file_size": 222304,
+        "member_name": "x",
+        "member_sha256": "5c213c61cc4d29b62286063bfdcb97e812af6b06c0021aeaecc8bc46644e17bf",
+        "zip_stored": true
+      },
+      "available": true,
+      "nonmask_all_identity": true,
+      "segments": [
+        {
+          "byte_delta_vs_pr85": 0,
+          "name": "model",
+          "pr85_bytes": 57074,
+          "pr85_sha256": "c9194c19d44d3c32c4e588bbe4f9986ed0c562779078f0f4d6b073f0799b5dbc",
+          "pr91_bytes": 57074,
+          "pr91_sha256": "c9194c19d44d3c32c4e588bbe4f9986ed0c562779078f0f4d6b073f0799b5dbc",
+          "sha_equal": true
+        },
+        {
+          "byte_delta_vs_pr85": 0,
+          "name": "pose",
+          "pr85_bytes": 1487,
+          "pr85_sha256": "2b6e03e02fb17f662e3f3f9ce47daf2fc33bf1f76c96e34ffac005f1c5c4054c",
+          "pr91_bytes": 1487,
+          "pr91_sha256": "2b6e03e02fb17f662e3f3f9ce47daf2fc33bf1f76c96e34ffac005f1c5c4054c",
+          "sha_equal": true
+        },
+        {
+          "byte_delta_vs_pr85": 0,
+          "name": "post",
+          "pr85_bytes": 1400,
+          "pr85_sha256": "c3dc88e0fb5a1e48aec49eeacefeea20685e3c02598933deb1ff22dc09892575",
+          "pr91_bytes": 1400,
+          "pr91_sha256": "c3dc88e0fb5a1e48aec49eeacefeea20685e3c02598933deb1ff22dc09892575",
+          "sha_equal": true
+        },
+        {
+          "byte_delta_vs_pr85": 0,
+          "name": "shift",
+          "pr85_bytes": 226,
+          "pr85_sha256": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4",
+          "pr91_bytes": 226,
+          "pr91_sha256": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4",
+          "sha_equal": true
+        },
+        {
+          "byte_delta_vs_pr85": 0,
+          "name": "frac",
+          "pr85_bytes": 106,
+          "pr85_sha256": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992",
+          "pr91_bytes": 106,
+          "pr91_sha256": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992",
+          "sha_equal": true
+        },
+        {
+          "byte_delta_vs_pr85": 0,
+          "name": "frac2",
+          "pr85_bytes": 149,
+          "pr85_sha256": "3a01c7546d89d9d3ca846da37a20add7d456421e9211a6339850d946b856026b",
+          "pr91_bytes": 149,
+          "pr91_sha256": "3a01c7546d89d9d3ca846da37a20add7d456421e9211a6339850d946b856026b",
+          "sha_equal": true
+        },
+        {
+          "byte_delta_vs_pr85": 0,
+          "name": "frac3",
+          "pr85_bytes": 154,
+          "pr85_sha256": "d725b01b604566c5a76a06b821c644c8d5d5bb9a57ab0597d3bdabc8389858b5",
+          "pr91_bytes": 154,
+          "pr91_sha256": "d725b01b604566c5a76a06b821c644c8d5d5bb9a57ab0597d3bdabc8389858b5",
+          "sha_equal": true
+        },
+        {
+          "byte_delta_vs_pr85": 0,
+          "name": "bias",
+          "pr85_bytes": 223,
+          "pr85_sha256": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b",
+          "pr91_bytes": 223,
+          "pr91_sha256": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b",
+          "sha_equal": true
+        },
+        {
+          "byte_delta_vs_pr85": 0,
+          "name": "region",
+          "pr85_bytes": 273,
+          "pr85_sha256": "4a7c16094fab281c30e27621a58577c095c4b1153c232518c9adbaba2a2b2392",
+          "pr91_bytes": 273,
+          "pr91_sha256": "4a7c16094fab281c30e27621a58577c095c4b1153c232518c9adbaba2a2b2392",
+          "sha_equal": true
+        },
+        {
+          "byte_delta_vs_pr85": 0,
+          "name": "randmulti",
+          "pr85_bytes": 16101,
+          "pr85_sha256": "c624372e60a0851c4c427dc333a60dcc5d6657ba8ed56951612e7c9d7be7629f",
+          "pr91_bytes": 16101,
+          "pr91_sha256": "c624372e60a0851c4c427dc333a60dcc5d6657ba8ed56951612e7c9d7be7629f",
+          "sha_equal": true
+        }
+      ],
+      "useful_conclusion": "PR91 changes the mask segment only; any true PR85 non-mask byte reduction should stack byte-for-byte with PR91."
+    }
+  },
+  "cuda_score_truth": "archive.zip -> inflate.sh -> upstream/evaluate.py on CUDA",
+  "deterministic": true,
+  "dispatch_performed": false,
+  "evidence_grade": "planning_only_static_nonmask_self_compression_audit",
+  "fail_closed_summary": {
+    "architecture_transfer_candidate_count": 2,
+    "direct_lossless_candidate_count": 0,
+    "dispatch_performed": false,
+    "no_op_recommendations_promoted": 0,
+    "score_claim": false
+  },
+  "inputs": {
+    "archive": "experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+    "pr90_probe_json": "experiments/results/public_pr90_intake_20260504_worker/payload_probe.json",
+    "pr91_archive": "experiments/results/public_pr91_intake_20260504_worker/archive.zip"
+  },
+  "local_only": true,
+  "lossless_archive_builder_candidates": [],
+  "nonmask_segments": [
+    {
+      "bit_range": {
+        "end_exclusive": 1728872,
+        "start": 1272280
+      },
+      "candidate_assessment": {
+        "blocked_or_rejected_reasons": [
+          "decoded Brotli recode is non-improving or unavailable",
+          "wrapping encoded bytes in zlib/brotli/lzma is a no-op or larger"
+        ],
+        "lossless_decoded_recode_candidate": null
+      },
+      "container": {
+        "brotli_decodable": true,
+        "brotli_decode_error": null,
+        "decoded_magic_ascii": "QH0...?*.3xz",
+        "decoded_magic_hex": "51483000fcd63f2aeb33787a",
+        "decoded_payload_kind": "pr85_joint_frame_model"
+      },
+      "decoded": {
+        "bytes": 61590,
+        "entropy_bits_per_byte": 7.824505803306,
+        "ff_byte_fraction": 0.002143205066,
+        "longest_equal_byte_run": {
+          "byte": 20,
+          "length": 29,
+          "start": 59560
+        },
+        "magic_ascii": "QH0...?*.3xz",
+        "magic_hex": "51483000fcd63f2aeb33787a",
+        "sha256": "503d666ec4c1b3e0ce09fa9dcb963b049de185eac0ddd82318578a7732439ed4",
+        "top_byte_frequencies": [
+          {
+            "byte": 60,
+            "count": 1019,
+            "fraction": 0.016544893652,
+            "hex": "3c"
+          },
+          {
+            "byte": 44,
+            "count": 883,
+            "fraction": 0.014336742978,
+            "hex": "2c"
+          },
+          {
+            "byte": 42,
+            "count": 828,
+            "fraction": 0.013443740867,
+            "hex": "2a"
+          },
+          {
+            "byte": 43,
+            "count": 761,
+            "fraction": 0.012355901932,
+            "hex": "2b"
+          },
+          {
+            "byte": 0,
+            "count": 753,
+            "fraction": 0.012226010716,
+            "hex": "00"
+          },
+          {
+            "byte": 45,
+            "count": 676,
+            "fraction": 0.010975807761,
+            "hex": "2d"
+          },
+          {
+            "byte": 41,
+            "count": 614,
+            "fraction": 0.009969150836,
+            "hex": "29"
+          },
+          {
+            "byte": 38,
+            "count": 561,
+            "fraction": 0.009108621529,
+            "hex": "26"
+          }
+        ],
+        "unique_byte_count": 256,
+        "zero_byte_fraction": 0.012226010716,
+        "zero_order_entropy_bytes": 60239,
+        "zero_order_entropy_delta_vs_input_bytes": -1351
+      },
+      "decoded_brotli_recode_baselines": {
+        "best_probe": {
+          "bytes": 57227,
+          "codec": "brotli_q11",
+          "roundtrip_decoded_sha256": "503d666ec4c1b3e0ce09fa9dcb963b049de185eac0ddd82318578a7732439ed4",
+          "roundtrip_error": null,
+          "roundtrip_ok": true,
+          "sha256": "b30d9e8d8a8cde1eb2ee4155a15c224b4c07e0e27b661c83e799fa35edcc0d26"
+        },
+        "probes": [
+          {
+            "bytes": 60291,
+            "codec": "brotli_q1",
+            "roundtrip_decoded_sha256": "503d666ec4c1b3e0ce09fa9dcb963b049de185eac0ddd82318578a7732439ed4",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "883043d82777508b69e9c4d20c8a966903cee3e9c8e1eb735ea28f80746032e2"
+          },
+          {
+            "bytes": 58709,
+            "codec": "brotli_q5",
+            "roundtrip_decoded_sha256": "503d666ec4c1b3e0ce09fa9dcb963b049de185eac0ddd82318578a7732439ed4",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "27a5ca2c8e9dda63eb6277b89082cafe5bc22c9c02bc650e59ddfcbdd858ae6d"
+          },
+          {
+            "bytes": 58330,
+            "codec": "brotli_q9",
+            "roundtrip_decoded_sha256": "503d666ec4c1b3e0ce09fa9dcb963b049de185eac0ddd82318578a7732439ed4",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "1da0ca6066931d09e82718a3b4b84e1a6c1fb2d158511227ce727359316cff90"
+          },
+          {
+            "bytes": 57227,
+            "codec": "brotli_q11",
+            "roundtrip_decoded_sha256": "503d666ec4c1b3e0ce09fa9dcb963b049de185eac0ddd82318578a7732439ed4",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "b30d9e8d8a8cde1eb2ee4155a15c224b4c07e0e27b661c83e799fa35edcc0d26"
+          }
+        ]
+      },
+      "encoded": {
+        "bytes": 57074,
+        "entropy_bits_per_byte": 7.995683133524,
+        "ff_byte_fraction": 0.004292672671,
+        "longest_equal_byte_run": {
+          "byte": 221,
+          "length": 4,
+          "start": 5283
+        },
+        "magic_ascii": "...?...b.?..",
+        "magic_hex": "b1a8843f8097a1622e3fe27f",
+        "sha256": "c9194c19d44d3c32c4e588bbe4f9986ed0c562779078f0f4d6b073f0799b5dbc",
+        "top_byte_frequencies": [
+          {
+            "byte": 218,
+            "count": 267,
+            "fraction": 0.004678137155,
+            "hex": "da"
+          },
+          {
+            "byte": 187,
+            "count": 265,
+            "fraction": 0.004643094929,
+            "hex": "bb"
+          },
+          {
+            "byte": 123,
+            "count": 258,
+            "fraction": 0.004520447139,
+            "hex": "7b"
+          },
+          {
+            "byte": 141,
+            "count": 258,
+            "fraction": 0.004520447139,
+            "hex": "8d"
+          },
+          {
+            "byte": 175,
+            "count": 258,
+            "fraction": 0.004520447139,
+            "hex": "af"
+          },
+          {
+            "byte": 181,
+            "count": 257,
+            "fraction": 0.004502926026,
+            "hex": "b5"
+          },
+          {
+            "byte": 249,
+            "count": 257,
+            "fraction": 0.004502926026,
+            "hex": "f9"
+          },
+          {
+            "byte": 238,
+            "count": 256,
+            "fraction": 0.004485404913,
+            "hex": "ee"
+          }
+        ],
+        "unique_byte_count": 256,
+        "zero_byte_fraction": 0.00357430704,
+        "zero_order_entropy_bytes": 57044,
+        "zero_order_entropy_delta_vs_input_bytes": -30
+      },
+      "encoded_recompression_baselines": {
+        "best_probe": {
+          "bytes": 57078,
+          "codec": "brotli_q1",
+          "delta_vs_input_bytes": 4,
+          "ratio": 1.000070084452,
+          "sha256": "f764ddc32662c8c5095e669d548df4661189a33f4fc7ba82a6f51dd0c731064a"
+        },
+        "best_probe_delta_vs_input_bytes": 4,
+        "brotli_available": true,
+        "generic_recompression_improves": false,
+        "input_bytes": 57074,
+        "probes": [
+          {
+            "bytes": 57100,
+            "codec": "zlib_9",
+            "delta_vs_input_bytes": 26,
+            "ratio": 1.000455548936,
+            "sha256": "98d544193df9a5d96597b47c4189183740806f1a6abd532df7bace00778e3ffe"
+          },
+          {
+            "bytes": 57136,
+            "codec": "lzma_preset9",
+            "delta_vs_input_bytes": 62,
+            "ratio": 1.001086309002,
+            "sha256": "e9ebc5c74ef2edb80a36638f36e6dabedd84281315f39a26f0ebab7133990848"
+          },
+          {
+            "bytes": 57078,
+            "codec": "brotli_q1",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.000070084452,
+            "sha256": "f764ddc32662c8c5095e669d548df4661189a33f4fc7ba82a6f51dd0c731064a"
+          },
+          {
+            "bytes": 57078,
+            "codec": "brotli_q5",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.000070084452,
+            "sha256": "f764ddc32662c8c5095e669d548df4661189a33f4fc7ba82a6f51dd0c731064a"
+          },
+          {
+            "bytes": 57078,
+            "codec": "brotli_q9",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.000070084452,
+            "sha256": "f764ddc32662c8c5095e669d548df4661189a33f4fc7ba82a6f51dd0c731064a"
+          },
+          {
+            "bytes": 57078,
+            "codec": "brotli_q11",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.000070084452,
+            "sha256": "f764ddc32662c8c5095e669d548df4661189a33f4fc7ba82a6f51dd0c731064a"
+          }
+        ]
+      },
+      "fixed_constant_signal": {
+        "decoded_default_or_constant_heavy": false,
+        "decoded_longest_run_fraction": 0.000470855658,
+        "decoded_single_byte_constant": false,
+        "encoded_longest_run_fraction": 7.0084452e-05,
+        "encoded_single_byte_constant": false,
+        "public_runtime_fixed_length_constant": false
+      },
+      "fixed_length_bytes": null,
+      "fixed_length_public_v5": false,
+      "name": "model",
+      "offset_in_x_member": 159035
+    },
+    {
+      "bit_range": {
+        "end_exclusive": 1740768,
+        "start": 1728872
+      },
+      "candidate_assessment": {
+        "blocked_or_rejected_reasons": [
+          "decoded Brotli recode is non-improving or unavailable",
+          "wrapping encoded bytes in zlib/brotli/lzma is a no-op or larger"
+        ],
+        "lossless_decoded_recode_candidate": null
+      },
+      "container": {
+        "brotli_decodable": true,
+        "brotli_decode_error": null,
+        "decoded_magic_ascii": "P1D1..q.....",
+        "decoded_magic_hex": "5031443102007104029202e0",
+        "decoded_payload_kind": "pr85_p1d1_pose"
+      },
+      "decoded": {
+        "bytes": 1806,
+        "entropy_bits_per_byte": 7.155242584285,
+        "ff_byte_fraction": 0.003322259136,
+        "longest_equal_byte_run": {
+          "byte": 25,
+          "length": 2,
+          "start": 1377
+        },
+        "magic_ascii": "P1D1..q.....",
+        "magic_hex": "5031443102007104029202e0",
+        "sha256": "5121f50f598da361e57820482cfaf47785ba18651ad18291b4201719fa624f5d",
+        "top_byte_frequencies": [
+          {
+            "byte": 1,
+            "count": 118,
+            "fraction": 0.065337763012,
+            "hex": "01"
+          },
+          {
+            "byte": 2,
+            "count": 72,
+            "fraction": 0.039867109635,
+            "hex": "02"
+          },
+          {
+            "byte": 5,
+            "count": 59,
+            "fraction": 0.032668881506,
+            "hex": "05"
+          },
+          {
+            "byte": 4,
+            "count": 55,
+            "fraction": 0.030454042082,
+            "hex": "04"
+          },
+          {
+            "byte": 6,
+            "count": 53,
+            "fraction": 0.02934662237,
+            "hex": "06"
+          },
+          {
+            "byte": 3,
+            "count": 52,
+            "fraction": 0.028792912514,
+            "hex": "03"
+          },
+          {
+            "byte": 8,
+            "count": 51,
+            "fraction": 0.028239202658,
+            "hex": "08"
+          },
+          {
+            "byte": 7,
+            "count": 39,
+            "fraction": 0.021594684385,
+            "hex": "07"
+          }
+        ],
+        "unique_byte_count": 251,
+        "zero_byte_fraction": 0.004429678848,
+        "zero_order_entropy_bytes": 1616,
+        "zero_order_entropy_delta_vs_input_bytes": -190
+      },
+      "decoded_brotli_recode_baselines": {
+        "best_probe": {
+          "bytes": 1539,
+          "codec": "brotli_q11",
+          "roundtrip_decoded_sha256": "5121f50f598da361e57820482cfaf47785ba18651ad18291b4201719fa624f5d",
+          "roundtrip_error": null,
+          "roundtrip_ok": true,
+          "sha256": "9917efece78059846196fd0795f0745a260122f2f8c3456176ea4eb4ce0f6073"
+        },
+        "probes": [
+          {
+            "bytes": 1757,
+            "codec": "brotli_q1",
+            "roundtrip_decoded_sha256": "5121f50f598da361e57820482cfaf47785ba18651ad18291b4201719fa624f5d",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "b18f596e7a0752c5fe5e7cc601b2ae9ad8bac3bab9060732efda755d554dbe81"
+          },
+          {
+            "bytes": 1673,
+            "codec": "brotli_q5",
+            "roundtrip_decoded_sha256": "5121f50f598da361e57820482cfaf47785ba18651ad18291b4201719fa624f5d",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "5c0b29aba1851b5eaa9bbb478dcc4f7d87f037fe89cc482c8bb9d3858ee7dc67"
+          },
+          {
+            "bytes": 1690,
+            "codec": "brotli_q9",
+            "roundtrip_decoded_sha256": "5121f50f598da361e57820482cfaf47785ba18651ad18291b4201719fa624f5d",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "fa865457cda5e7419f8b768662eed86d05811dc5f0094e6ee5da86268586585d"
+          },
+          {
+            "bytes": 1539,
+            "codec": "brotli_q11",
+            "roundtrip_decoded_sha256": "5121f50f598da361e57820482cfaf47785ba18651ad18291b4201719fa624f5d",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "9917efece78059846196fd0795f0745a260122f2f8c3456176ea4eb4ce0f6073"
+          }
+        ]
+      },
+      "encoded": {
+        "bytes": 1487,
+        "entropy_bits_per_byte": 7.86188685951,
+        "ff_byte_fraction": 0.006724949563,
+        "longest_equal_byte_run": {
+          "byte": 157,
+          "length": 2,
+          "start": 77
+        },
+        "magic_ascii": ".. ..4c.....",
+        "magic_hex": "a2e120a29a3463fe9f07b6cd",
+        "sha256": "2b6e03e02fb17f662e3f3f9ce47daf2fc33bf1f76c96e34ffac005f1c5c4054c",
+        "top_byte_frequencies": [
+          {
+            "byte": 139,
+            "count": 15,
+            "fraction": 0.010087424344,
+            "hex": "8b"
+          },
+          {
+            "byte": 101,
+            "count": 12,
+            "fraction": 0.008069939475,
+            "hex": "65"
+          },
+          {
+            "byte": 108,
+            "count": 12,
+            "fraction": 0.008069939475,
+            "hex": "6c"
+          },
+          {
+            "byte": 118,
+            "count": 12,
+            "fraction": 0.008069939475,
+            "hex": "76"
+          },
+          {
+            "byte": 170,
+            "count": 12,
+            "fraction": 0.008069939475,
+            "hex": "aa"
+          },
+          {
+            "byte": 16,
+            "count": 11,
+            "fraction": 0.007397444519,
+            "hex": "10"
+          },
+          {
+            "byte": 36,
+            "count": 11,
+            "fraction": 0.007397444519,
+            "hex": "24"
+          },
+          {
+            "byte": 40,
+            "count": 11,
+            "fraction": 0.007397444519,
+            "hex": "28"
+          }
+        ],
+        "unique_byte_count": 256,
+        "zero_byte_fraction": 0.002017484869,
+        "zero_order_entropy_bytes": 1462,
+        "zero_order_entropy_delta_vs_input_bytes": -25
+      },
+      "encoded_recompression_baselines": {
+        "best_probe": {
+          "bytes": 1491,
+          "codec": "brotli_q1",
+          "delta_vs_input_bytes": 4,
+          "ratio": 1.002689979825,
+          "sha256": "ff99df06c81e565be3257c3dd917473413004d77b5473960875ed8657086d385"
+        },
+        "best_probe_delta_vs_input_bytes": 4,
+        "brotli_available": true,
+        "generic_recompression_improves": false,
+        "input_bytes": 1487,
+        "probes": [
+          {
+            "bytes": 1498,
+            "codec": "zlib_9",
+            "delta_vs_input_bytes": 11,
+            "ratio": 1.007397444519,
+            "sha256": "6700a4f55766edaa5e36df336939aed4e34c6659e25da927c21a08de2df0a998"
+          },
+          {
+            "bytes": 1548,
+            "codec": "lzma_preset9",
+            "delta_vs_input_bytes": 61,
+            "ratio": 1.041022192334,
+            "sha256": "6b79be439fb236c77506b8ee1e2545e3b4774d9a2008fa50e026c806267edd60"
+          },
+          {
+            "bytes": 1491,
+            "codec": "brotli_q1",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.002689979825,
+            "sha256": "ff99df06c81e565be3257c3dd917473413004d77b5473960875ed8657086d385"
+          },
+          {
+            "bytes": 1491,
+            "codec": "brotli_q5",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.002689979825,
+            "sha256": "ff99df06c81e565be3257c3dd917473413004d77b5473960875ed8657086d385"
+          },
+          {
+            "bytes": 1491,
+            "codec": "brotli_q9",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.002689979825,
+            "sha256": "ff99df06c81e565be3257c3dd917473413004d77b5473960875ed8657086d385"
+          },
+          {
+            "bytes": 1491,
+            "codec": "brotli_q11",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.002689979825,
+            "sha256": "ff99df06c81e565be3257c3dd917473413004d77b5473960875ed8657086d385"
+          }
+        ]
+      },
+      "fixed_constant_signal": {
+        "decoded_default_or_constant_heavy": false,
+        "decoded_longest_run_fraction": 0.001107419712,
+        "decoded_single_byte_constant": false,
+        "encoded_longest_run_fraction": 0.001344989913,
+        "encoded_single_byte_constant": false,
+        "public_runtime_fixed_length_constant": false
+      },
+      "fixed_length_bytes": null,
+      "fixed_length_public_v5": false,
+      "name": "pose",
+      "offset_in_x_member": 216109
+    },
+    {
+      "bit_range": {
+        "end_exclusive": 1751968,
+        "start": 1740768
+      },
+      "candidate_assessment": {
+        "blocked_or_rejected_reasons": [
+          "decoded Brotli recode is non-improving or unavailable",
+          "wrapping encoded bytes in zlib/brotli/lzma is a no-op or larger"
+        ],
+        "lossless_decoded_recode_candidate": null
+      },
+      "container": {
+        "brotli_decodable": true,
+        "brotli_decode_error": null,
+        "decoded_magic_ascii": "............",
+        "decoded_magic_hex": "080a00060b090b0209010b06",
+        "decoded_payload_kind": "pr85_qpost_\b\n\u0000"
+      },
+      "decoded": {
+        "bytes": 2400,
+        "entropy_bits_per_byte": 5.542255416846,
+        "ff_byte_fraction": 0.0,
+        "longest_equal_byte_run": {
+          "byte": 0,
+          "length": 63,
+          "start": 1819
+        },
+        "magic_ascii": "............",
+        "magic_hex": "080a00060b090b0209010b06",
+        "sha256": "ce067fec132d1a314ad93cee8d39b17e7dd01a523db9a08ae797dfb1bd9a6b86",
+        "top_byte_frequencies": [
+          {
+            "byte": 0,
+            "count": 525,
+            "fraction": 0.21875,
+            "hex": "00"
+          },
+          {
+            "byte": 3,
+            "count": 108,
+            "fraction": 0.045,
+            "hex": "03"
+          },
+          {
+            "byte": 8,
+            "count": 76,
+            "fraction": 0.031666666667,
+            "hex": "08"
+          },
+          {
+            "byte": 6,
+            "count": 70,
+            "fraction": 0.029166666667,
+            "hex": "06"
+          },
+          {
+            "byte": 1,
+            "count": 67,
+            "fraction": 0.027916666667,
+            "hex": "01"
+          },
+          {
+            "byte": 5,
+            "count": 66,
+            "fraction": 0.0275,
+            "hex": "05"
+          },
+          {
+            "byte": 10,
+            "count": 63,
+            "fraction": 0.02625,
+            "hex": "0a"
+          },
+          {
+            "byte": 4,
+            "count": 60,
+            "fraction": 0.025,
+            "hex": "04"
+          }
+        ],
+        "unique_byte_count": 119,
+        "zero_byte_fraction": 0.21875,
+        "zero_order_entropy_bytes": 1663,
+        "zero_order_entropy_delta_vs_input_bytes": -737
+      },
+      "decoded_brotli_recode_baselines": {
+        "best_probe": {
+          "bytes": 1439,
+          "codec": "brotli_q11",
+          "roundtrip_decoded_sha256": "ce067fec132d1a314ad93cee8d39b17e7dd01a523db9a08ae797dfb1bd9a6b86",
+          "roundtrip_error": null,
+          "roundtrip_ok": true,
+          "sha256": "1ac30aae1ea8d16690f4fa88fd98d5d870621059c626abe6998386e7ec4585de"
+        },
+        "probes": [
+          {
+            "bytes": 1705,
+            "codec": "brotli_q1",
+            "roundtrip_decoded_sha256": "ce067fec132d1a314ad93cee8d39b17e7dd01a523db9a08ae797dfb1bd9a6b86",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "cc400e1feafcadeee14dea6cbfb54b10ad8cce2ee8171568be44adcb3bd33491"
+          },
+          {
+            "bytes": 1553,
+            "codec": "brotli_q5",
+            "roundtrip_decoded_sha256": "ce067fec132d1a314ad93cee8d39b17e7dd01a523db9a08ae797dfb1bd9a6b86",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "faf3c053cc2d4ab4da049507dcee135f4ec17e1011ffab1e6a4fa52a1b0b0dbf"
+          },
+          {
+            "bytes": 1505,
+            "codec": "brotli_q9",
+            "roundtrip_decoded_sha256": "ce067fec132d1a314ad93cee8d39b17e7dd01a523db9a08ae797dfb1bd9a6b86",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "d03ee5d21d0bf8bd49faf67295911a125cd405a5829b912385a169dd84a581bc"
+          },
+          {
+            "bytes": 1439,
+            "codec": "brotli_q11",
+            "roundtrip_decoded_sha256": "ce067fec132d1a314ad93cee8d39b17e7dd01a523db9a08ae797dfb1bd9a6b86",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "1ac30aae1ea8d16690f4fa88fd98d5d870621059c626abe6998386e7ec4585de"
+          }
+        ]
+      },
+      "encoded": {
+        "bytes": 1400,
+        "entropy_bits_per_byte": 7.847004918663,
+        "ff_byte_fraction": 0.003571428571,
+        "longest_equal_byte_run": {
+          "byte": 0,
+          "length": 3,
+          "start": 1374
+        },
+        "magic_ascii": ".+aFJ.g..s!.",
+        "magic_hex": "e22b61464ace67fcaa73219b",
+        "sha256": "c3dc88e0fb5a1e48aec49eeacefeea20685e3c02598933deb1ff22dc09892575",
+        "top_byte_frequencies": [
+          {
+            "byte": 0,
+            "count": 16,
+            "fraction": 0.011428571429,
+            "hex": "00"
+          },
+          {
+            "byte": 7,
+            "count": 13,
+            "fraction": 0.009285714286,
+            "hex": "07"
+          },
+          {
+            "byte": 195,
+            "count": 13,
+            "fraction": 0.009285714286,
+            "hex": "c3"
+          },
+          {
+            "byte": 29,
+            "count": 11,
+            "fraction": 0.007857142857,
+            "hex": "1d"
+          },
+          {
+            "byte": 51,
+            "count": 11,
+            "fraction": 0.007857142857,
+            "hex": "33"
+          },
+          {
+            "byte": 150,
+            "count": 11,
+            "fraction": 0.007857142857,
+            "hex": "96"
+          },
+          {
+            "byte": 183,
+            "count": 11,
+            "fraction": 0.007857142857,
+            "hex": "b7"
+          },
+          {
+            "byte": 48,
+            "count": 10,
+            "fraction": 0.007142857143,
+            "hex": "30"
+          }
+        ],
+        "unique_byte_count": 255,
+        "zero_byte_fraction": 0.011428571429,
+        "zero_order_entropy_bytes": 1374,
+        "zero_order_entropy_delta_vs_input_bytes": -26
+      },
+      "encoded_recompression_baselines": {
+        "best_probe": {
+          "bytes": 1404,
+          "codec": "brotli_q1",
+          "delta_vs_input_bytes": 4,
+          "ratio": 1.002857142857,
+          "sha256": "5832d03abacf65cee6a45e99d62488b2c155523c7f1a4d4f10f3f6373c62ef73"
+        },
+        "best_probe_delta_vs_input_bytes": 4,
+        "brotli_available": true,
+        "generic_recompression_improves": false,
+        "input_bytes": 1400,
+        "probes": [
+          {
+            "bytes": 1411,
+            "codec": "zlib_9",
+            "delta_vs_input_bytes": 11,
+            "ratio": 1.007857142857,
+            "sha256": "8016b05353e06bf55097b8b1ac197f8112bac8544a179920523c604c6c3b7a91"
+          },
+          {
+            "bytes": 1460,
+            "codec": "lzma_preset9",
+            "delta_vs_input_bytes": 60,
+            "ratio": 1.042857142857,
+            "sha256": "8758bd0417a321a533bc24a65fd7171b516491386125c5a8de082b0107346e2e"
+          },
+          {
+            "bytes": 1404,
+            "codec": "brotli_q1",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.002857142857,
+            "sha256": "5832d03abacf65cee6a45e99d62488b2c155523c7f1a4d4f10f3f6373c62ef73"
+          },
+          {
+            "bytes": 1404,
+            "codec": "brotli_q5",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.002857142857,
+            "sha256": "5832d03abacf65cee6a45e99d62488b2c155523c7f1a4d4f10f3f6373c62ef73"
+          },
+          {
+            "bytes": 1404,
+            "codec": "brotli_q9",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.002857142857,
+            "sha256": "5832d03abacf65cee6a45e99d62488b2c155523c7f1a4d4f10f3f6373c62ef73"
+          },
+          {
+            "bytes": 1404,
+            "codec": "brotli_q11",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.002857142857,
+            "sha256": "5832d03abacf65cee6a45e99d62488b2c155523c7f1a4d4f10f3f6373c62ef73"
+          }
+        ]
+      },
+      "fixed_constant_signal": {
+        "decoded_default_or_constant_heavy": false,
+        "decoded_longest_run_fraction": 0.02625,
+        "decoded_single_byte_constant": false,
+        "encoded_longest_run_fraction": 0.002142857143,
+        "encoded_single_byte_constant": false,
+        "public_runtime_fixed_length_constant": false
+      },
+      "fixed_length_bytes": null,
+      "fixed_length_public_v5": false,
+      "name": "post",
+      "offset_in_x_member": 217596
+    },
+    {
+      "bit_range": {
+        "end_exclusive": 1753776,
+        "start": 1751968
+      },
+      "candidate_assessment": {
+        "blocked_or_rejected_reasons": [
+          "decoded Brotli recode is non-improving or unavailable",
+          "wrapping encoded bytes in zlib/brotli/lzma is a no-op or larger"
+        ],
+        "lossless_decoded_recode_candidate": null
+      },
+      "container": {
+        "brotli_decodable": true,
+        "brotli_decode_error": null,
+        "decoded_magic_ascii": "SD4\"........",
+        "decoded_magic_hex": "534434220000000000000000",
+        "decoded_payload_kind": "pr85_qpost_SD4"
+      },
+      "decoded": {
+        "bytes": 603,
+        "entropy_bits_per_byte": 2.478860779086,
+        "ff_byte_fraction": 0.0,
+        "longest_equal_byte_run": {
+          "byte": 0,
+          "length": 19,
+          "start": 17
+        },
+        "magic_ascii": "SD4\"........",
+        "magic_hex": "534434220000000000000000",
+        "sha256": "19e1bf816c8f19dd58e986647413a6f71f36a30e8da2d085ccf7e475d1cb3b43",
+        "top_byte_frequencies": [
+          {
+            "byte": 0,
+            "count": 419,
+            "fraction": 0.694859038143,
+            "hex": "00"
+          },
+          {
+            "byte": 33,
+            "count": 13,
+            "fraction": 0.021558872305,
+            "hex": "21"
+          },
+          {
+            "byte": 42,
+            "count": 12,
+            "fraction": 0.019900497512,
+            "hex": "2a"
+          },
+          {
+            "byte": 15,
+            "count": 10,
+            "fraction": 0.016583747927,
+            "hex": "0f"
+          },
+          {
+            "byte": 23,
+            "count": 10,
+            "fraction": 0.016583747927,
+            "hex": "17"
+          },
+          {
+            "byte": 25,
+            "count": 9,
+            "fraction": 0.014925373134,
+            "hex": "19"
+          },
+          {
+            "byte": 27,
+            "count": 8,
+            "fraction": 0.013266998342,
+            "hex": "1b"
+          },
+          {
+            "byte": 32,
+            "count": 8,
+            "fraction": 0.013266998342,
+            "hex": "20"
+          }
+        ],
+        "unique_byte_count": 51,
+        "zero_byte_fraction": 0.694859038143,
+        "zero_order_entropy_bytes": 187,
+        "zero_order_entropy_delta_vs_input_bytes": -416
+      },
+      "decoded_brotli_recode_baselines": {
+        "best_probe": {
+          "bytes": 227,
+          "codec": "brotli_q11",
+          "roundtrip_decoded_sha256": "19e1bf816c8f19dd58e986647413a6f71f36a30e8da2d085ccf7e475d1cb3b43",
+          "roundtrip_error": null,
+          "roundtrip_ok": true,
+          "sha256": "76ddec0ad3c7fc5b55f0a4d0f15609a5f9e0b7242f2224241dea8d11f2d1e3fa"
+        },
+        "probes": [
+          {
+            "bytes": 311,
+            "codec": "brotli_q1",
+            "roundtrip_decoded_sha256": "19e1bf816c8f19dd58e986647413a6f71f36a30e8da2d085ccf7e475d1cb3b43",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "e34180f2a779e88d5cd1c6934a039bb513c0005c14a18a5c9172711889b76fa3"
+          },
+          {
+            "bytes": 285,
+            "codec": "brotli_q5",
+            "roundtrip_decoded_sha256": "19e1bf816c8f19dd58e986647413a6f71f36a30e8da2d085ccf7e475d1cb3b43",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "1f6d96f2b03f03fdbc1565fbb8405c8b8ceeab38d23a9273a0cf0580514d49eb"
+          },
+          {
+            "bytes": 284,
+            "codec": "brotli_q9",
+            "roundtrip_decoded_sha256": "19e1bf816c8f19dd58e986647413a6f71f36a30e8da2d085ccf7e475d1cb3b43",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "997ca20692ae4cbccfee8dc6d43286f676b1ec2516b2b6511fc7133f438df11c"
+          },
+          {
+            "bytes": 227,
+            "codec": "brotli_q11",
+            "roundtrip_decoded_sha256": "19e1bf816c8f19dd58e986647413a6f71f36a30e8da2d085ccf7e475d1cb3b43",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "76ddec0ad3c7fc5b55f0a4d0f15609a5f9e0b7242f2224241dea8d11f2d1e3fa"
+          }
+        ]
+      },
+      "encoded": {
+        "bytes": 226,
+        "entropy_bits_per_byte": 6.904546426986,
+        "ff_byte_fraction": 0.008849557522,
+        "longest_equal_byte_run": {
+          "byte": 0,
+          "length": 2,
+          "start": 32
+        },
+        "magic_ascii": "BK.. .:.5 ..",
+        "magic_hex": "424b00ff20803ad53520a718",
+        "sha256": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4",
+        "top_byte_frequencies": [
+          {
+            "byte": 0,
+            "count": 12,
+            "fraction": 0.053097345133,
+            "hex": "00"
+          },
+          {
+            "byte": 3,
+            "count": 5,
+            "fraction": 0.022123893805,
+            "hex": "03"
+          },
+          {
+            "byte": 32,
+            "count": 4,
+            "fraction": 0.017699115044,
+            "hex": "20"
+          },
+          {
+            "byte": 112,
+            "count": 4,
+            "fraction": 0.017699115044,
+            "hex": "70"
+          },
+          {
+            "byte": 115,
+            "count": 4,
+            "fraction": 0.017699115044,
+            "hex": "73"
+          },
+          {
+            "byte": 160,
+            "count": 4,
+            "fraction": 0.017699115044,
+            "hex": "a0"
+          },
+          {
+            "byte": 228,
+            "count": 4,
+            "fraction": 0.017699115044,
+            "hex": "e4"
+          },
+          {
+            "byte": 2,
+            "count": 3,
+            "fraction": 0.013274336283,
+            "hex": "02"
+          }
+        ],
+        "unique_byte_count": 144,
+        "zero_byte_fraction": 0.053097345133,
+        "zero_order_entropy_bytes": 196,
+        "zero_order_entropy_delta_vs_input_bytes": -30
+      },
+      "encoded_recompression_baselines": {
+        "best_probe": {
+          "bytes": 230,
+          "codec": "brotli_q1",
+          "delta_vs_input_bytes": 4,
+          "ratio": 1.017699115044,
+          "sha256": "ee5d3a505d1bdeae758a4d423be7a4ec72cd34f370be920ec8e2f76a67710b48"
+        },
+        "best_probe_delta_vs_input_bytes": 4,
+        "brotli_available": true,
+        "generic_recompression_improves": false,
+        "input_bytes": 226,
+        "probes": [
+          {
+            "bytes": 237,
+            "codec": "zlib_9",
+            "delta_vs_input_bytes": 11,
+            "ratio": 1.048672566372,
+            "sha256": "5f72981f2a043ee4834145154006a665a82782acec6b1e86431e3d666f05048d"
+          },
+          {
+            "bytes": 288,
+            "codec": "lzma_preset9",
+            "delta_vs_input_bytes": 62,
+            "ratio": 1.274336283186,
+            "sha256": "9b2299af53f39dfbcc9913da8a96b8996c59447dd5cb6e21ac53de70d84bf28c"
+          },
+          {
+            "bytes": 230,
+            "codec": "brotli_q1",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.017699115044,
+            "sha256": "ee5d3a505d1bdeae758a4d423be7a4ec72cd34f370be920ec8e2f76a67710b48"
+          },
+          {
+            "bytes": 230,
+            "codec": "brotli_q5",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.017699115044,
+            "sha256": "ee5d3a505d1bdeae758a4d423be7a4ec72cd34f370be920ec8e2f76a67710b48"
+          },
+          {
+            "bytes": 230,
+            "codec": "brotli_q9",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.017699115044,
+            "sha256": "ee5d3a505d1bdeae758a4d423be7a4ec72cd34f370be920ec8e2f76a67710b48"
+          },
+          {
+            "bytes": 230,
+            "codec": "brotli_q11",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.017699115044,
+            "sha256": "ee5d3a505d1bdeae758a4d423be7a4ec72cd34f370be920ec8e2f76a67710b48"
+          }
+        ]
+      },
+      "fixed_constant_signal": {
+        "decoded_default_or_constant_heavy": false,
+        "decoded_longest_run_fraction": 0.031509121061,
+        "decoded_single_byte_constant": false,
+        "encoded_longest_run_fraction": 0.008849557522,
+        "encoded_single_byte_constant": false,
+        "public_runtime_fixed_length_constant": false
+      },
+      "fixed_length_bytes": null,
+      "fixed_length_public_v5": false,
+      "name": "shift",
+      "offset_in_x_member": 218996
+    },
+    {
+      "bit_range": {
+        "end_exclusive": 1754624,
+        "start": 1753776
+      },
+      "candidate_assessment": {
+        "blocked_or_rejected_reasons": [
+          "decoded Brotli recode is non-improving or unavailable",
+          "wrapping encoded bytes in zlib/brotli/lzma is a no-op or larger"
+        ],
+        "lossless_decoded_recode_candidate": null
+      },
+      "container": {
+        "brotli_decodable": true,
+        "brotli_decode_error": null,
+        "decoded_magic_ascii": "FV1W.C......",
+        "decoded_magic_hex": "465631570043001707020101",
+        "decoded_payload_kind": "pr85_qpost_FV1"
+      },
+      "decoded": {
+        "bytes": 179,
+        "entropy_bits_per_byte": 3.634701303708,
+        "ff_byte_fraction": 0.0,
+        "longest_equal_byte_run": {
+          "byte": 6,
+          "length": 6,
+          "start": 142
+        },
+        "magic_ascii": "FV1W.C......",
+        "magic_hex": "465631570043001707020101",
+        "sha256": "05c785af21cbf5a5f11613dd5e23b8191b4c8477a57354d6b1060340a5fd901a",
+        "top_byte_frequencies": [
+          {
+            "byte": 1,
+            "count": 30,
+            "fraction": 0.167597765363,
+            "hex": "01"
+          },
+          {
+            "byte": 3,
+            "count": 29,
+            "fraction": 0.162011173184,
+            "hex": "03"
+          },
+          {
+            "byte": 2,
+            "count": 26,
+            "fraction": 0.145251396648,
+            "hex": "02"
+          },
+          {
+            "byte": 6,
+            "count": 21,
+            "fraction": 0.117318435754,
+            "hex": "06"
+          },
+          {
+            "byte": 0,
+            "count": 17,
+            "fraction": 0.094972067039,
+            "hex": "00"
+          },
+          {
+            "byte": 9,
+            "count": 11,
+            "fraction": 0.061452513966,
+            "hex": "09"
+          },
+          {
+            "byte": 7,
+            "count": 8,
+            "fraction": 0.04469273743,
+            "hex": "07"
+          },
+          {
+            "byte": 4,
+            "count": 7,
+            "fraction": 0.039106145251,
+            "hex": "04"
+          }
+        ],
+        "unique_byte_count": 26,
+        "zero_byte_fraction": 0.094972067039,
+        "zero_order_entropy_bytes": 82,
+        "zero_order_entropy_delta_vs_input_bytes": -97
+      },
+      "decoded_brotli_recode_baselines": {
+        "best_probe": {
+          "bytes": 113,
+          "codec": "brotli_q5",
+          "roundtrip_decoded_sha256": "05c785af21cbf5a5f11613dd5e23b8191b4c8477a57354d6b1060340a5fd901a",
+          "roundtrip_error": null,
+          "roundtrip_ok": true,
+          "sha256": "827e0ab789142177788a22c2921ed462f210b71b74de7b9c99a3f5471154780a"
+        },
+        "probes": [
+          {
+            "bytes": 126,
+            "codec": "brotli_q1",
+            "roundtrip_decoded_sha256": "05c785af21cbf5a5f11613dd5e23b8191b4c8477a57354d6b1060340a5fd901a",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "bfc5837d8f50613c72ff59cf2c7954c95f42704f06c562e8919d2e01c948d14f"
+          },
+          {
+            "bytes": 113,
+            "codec": "brotli_q5",
+            "roundtrip_decoded_sha256": "05c785af21cbf5a5f11613dd5e23b8191b4c8477a57354d6b1060340a5fd901a",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "827e0ab789142177788a22c2921ed462f210b71b74de7b9c99a3f5471154780a"
+          },
+          {
+            "bytes": 120,
+            "codec": "brotli_q9",
+            "roundtrip_decoded_sha256": "05c785af21cbf5a5f11613dd5e23b8191b4c8477a57354d6b1060340a5fd901a",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "602f33cf120e4a7902d7193f5a0495737d9db0872202c7e65268d1a3f0d40964"
+          },
+          {
+            "bytes": 116,
+            "codec": "brotli_q11",
+            "roundtrip_decoded_sha256": "05c785af21cbf5a5f11613dd5e23b8191b4c8477a57354d6b1060340a5fd901a",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "24a700253dbc383cb53580adbac93d8300e7fac2300d8220328adb7a14f0e4bc"
+          }
+        ]
+      },
+      "encoded": {
+        "bytes": 106,
+        "entropy_bits_per_byte": 6.298582954522,
+        "ff_byte_fraction": 0.009433962264,
+        "longest_equal_byte_run": {
+          "byte": 0,
+          "length": 2,
+          "start": 2
+        },
+        "magic_ascii": "B....6......",
+        "magic_hex": "421600009836dc8dfef5cb08",
+        "sha256": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992",
+        "top_byte_frequencies": [
+          {
+            "byte": 123,
+            "count": 3,
+            "fraction": 0.028301886792,
+            "hex": "7b"
+          },
+          {
+            "byte": 177,
+            "count": 3,
+            "fraction": 0.028301886792,
+            "hex": "b1"
+          },
+          {
+            "byte": 0,
+            "count": 2,
+            "fraction": 0.018867924528,
+            "hex": "00"
+          },
+          {
+            "byte": 4,
+            "count": 2,
+            "fraction": 0.018867924528,
+            "hex": "04"
+          },
+          {
+            "byte": 18,
+            "count": 2,
+            "fraction": 0.018867924528,
+            "hex": "12"
+          },
+          {
+            "byte": 22,
+            "count": 2,
+            "fraction": 0.018867924528,
+            "hex": "16"
+          },
+          {
+            "byte": 50,
+            "count": 2,
+            "fraction": 0.018867924528,
+            "hex": "32"
+          },
+          {
+            "byte": 69,
+            "count": 2,
+            "fraction": 0.018867924528,
+            "hex": "45"
+          }
+        ],
+        "unique_byte_count": 84,
+        "zero_byte_fraction": 0.018867924528,
+        "zero_order_entropy_bytes": 84,
+        "zero_order_entropy_delta_vs_input_bytes": -22
+      },
+      "encoded_recompression_baselines": {
+        "best_probe": {
+          "bytes": 110,
+          "codec": "brotli_q1",
+          "delta_vs_input_bytes": 4,
+          "ratio": 1.037735849057,
+          "sha256": "13226f11002ddb6584b107c0a66390d08e865d0cb9b169f0a7028d3cf7f06452"
+        },
+        "best_probe_delta_vs_input_bytes": 4,
+        "brotli_available": true,
+        "generic_recompression_improves": false,
+        "input_bytes": 106,
+        "probes": [
+          {
+            "bytes": 117,
+            "codec": "zlib_9",
+            "delta_vs_input_bytes": 11,
+            "ratio": 1.103773584906,
+            "sha256": "5b699e9bd6de9f86352a25487ab87a74a7fa2515def870130743d56a372821bc"
+          },
+          {
+            "bytes": 168,
+            "codec": "lzma_preset9",
+            "delta_vs_input_bytes": 62,
+            "ratio": 1.584905660377,
+            "sha256": "aa869422357e1a23f235e783e5f294457b64351e27b7ff704a92456398a9c94f"
+          },
+          {
+            "bytes": 110,
+            "codec": "brotli_q1",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.037735849057,
+            "sha256": "13226f11002ddb6584b107c0a66390d08e865d0cb9b169f0a7028d3cf7f06452"
+          },
+          {
+            "bytes": 110,
+            "codec": "brotli_q5",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.037735849057,
+            "sha256": "13226f11002ddb6584b107c0a66390d08e865d0cb9b169f0a7028d3cf7f06452"
+          },
+          {
+            "bytes": 110,
+            "codec": "brotli_q9",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.037735849057,
+            "sha256": "13226f11002ddb6584b107c0a66390d08e865d0cb9b169f0a7028d3cf7f06452"
+          },
+          {
+            "bytes": 110,
+            "codec": "brotli_q11",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.037735849057,
+            "sha256": "13226f11002ddb6584b107c0a66390d08e865d0cb9b169f0a7028d3cf7f06452"
+          }
+        ]
+      },
+      "fixed_constant_signal": {
+        "decoded_default_or_constant_heavy": false,
+        "decoded_longest_run_fraction": 0.033519553073,
+        "decoded_single_byte_constant": false,
+        "encoded_longest_run_fraction": 0.018867924528,
+        "encoded_single_byte_constant": false,
+        "public_runtime_fixed_length_constant": false
+      },
+      "fixed_length_bytes": null,
+      "fixed_length_public_v5": false,
+      "name": "frac",
+      "offset_in_x_member": 219222
+    },
+    {
+      "bit_range": {
+        "end_exclusive": 1755816,
+        "start": 1754624
+      },
+      "candidate_assessment": {
+        "blocked_or_rejected_reasons": [
+          "decoded Brotli recode is non-improving or unavailable",
+          "wrapping encoded bytes in zlib/brotli/lzma is a no-op or larger"
+        ],
+        "lossless_decoded_recode_candidate": null
+      },
+      "container": {
+        "brotli_decodable": true,
+        "brotli_decode_error": null,
+        "decoded_magic_ascii": "FH2.........",
+        "decoded_magic_hex": "464832040404040404040404",
+        "decoded_payload_kind": "pr85_qpost_FH2"
+      },
+      "decoded": {
+        "bytes": 603,
+        "entropy_bits_per_byte": 1.539690030656,
+        "ff_byte_fraction": 0.0,
+        "longest_equal_byte_run": {
+          "byte": 4,
+          "length": 33,
+          "start": 3
+        },
+        "magic_ascii": "FH2.........",
+        "magic_hex": "464832040404040404040404",
+        "sha256": "e880b2f23eae84b87c6e7f566265003dec54650a8e98fdfa8e01ce0d536a584b",
+        "top_byte_frequencies": [
+          {
+            "byte": 4,
+            "count": 452,
+            "fraction": 0.749585406302,
+            "hex": "04"
+          },
+          {
+            "byte": 2,
+            "count": 34,
+            "fraction": 0.056384742952,
+            "hex": "02"
+          },
+          {
+            "byte": 3,
+            "count": 29,
+            "fraction": 0.048092868988,
+            "hex": "03"
+          },
+          {
+            "byte": 5,
+            "count": 24,
+            "fraction": 0.039800995025,
+            "hex": "05"
+          },
+          {
+            "byte": 0,
+            "count": 18,
+            "fraction": 0.029850746269,
+            "hex": "00"
+          },
+          {
+            "byte": 1,
+            "count": 17,
+            "fraction": 0.028192371476,
+            "hex": "01"
+          },
+          {
+            "byte": 8,
+            "count": 15,
+            "fraction": 0.024875621891,
+            "hex": "08"
+          },
+          {
+            "byte": 7,
+            "count": 6,
+            "fraction": 0.009950248756,
+            "hex": "07"
+          }
+        ],
+        "unique_byte_count": 12,
+        "zero_byte_fraction": 0.029850746269,
+        "zero_order_entropy_bytes": 117,
+        "zero_order_entropy_delta_vs_input_bytes": -486
+      },
+      "decoded_brotli_recode_baselines": {
+        "best_probe": {
+          "bytes": 150,
+          "codec": "brotli_q11",
+          "roundtrip_decoded_sha256": "e880b2f23eae84b87c6e7f566265003dec54650a8e98fdfa8e01ce0d536a584b",
+          "roundtrip_error": null,
+          "roundtrip_ok": true,
+          "sha256": "cb11a8b7227129375f1d7cd40c8b7d9ff66237034a9dc7223a2bf3e107535b2c"
+        },
+        "probes": [
+          {
+            "bytes": 225,
+            "codec": "brotli_q1",
+            "roundtrip_decoded_sha256": "e880b2f23eae84b87c6e7f566265003dec54650a8e98fdfa8e01ce0d536a584b",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "83311ba8bcdfa68668d861c7890a5cf541390a573a9f51a7680d90ba929fe7cb"
+          },
+          {
+            "bytes": 198,
+            "codec": "brotli_q5",
+            "roundtrip_decoded_sha256": "e880b2f23eae84b87c6e7f566265003dec54650a8e98fdfa8e01ce0d536a584b",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "1160e61fab4c71a79f69a508a287c84c0a64a54b305bc59a8e0cfd02e9e82d93"
+          },
+          {
+            "bytes": 195,
+            "codec": "brotli_q9",
+            "roundtrip_decoded_sha256": "e880b2f23eae84b87c6e7f566265003dec54650a8e98fdfa8e01ce0d536a584b",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "83240f155e19a1681115aabe5a46cd92258b43c4b0e6bb99d80087c39e53ef49"
+          },
+          {
+            "bytes": 150,
+            "codec": "brotli_q11",
+            "roundtrip_decoded_sha256": "e880b2f23eae84b87c6e7f566265003dec54650a8e98fdfa8e01ce0d536a584b",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "cb11a8b7227129375f1d7cd40c8b7d9ff66237034a9dc7223a2bf3e107535b2c"
+          }
+        ]
+      },
+      "encoded": {
+        "bytes": 149,
+        "entropy_bits_per_byte": 6.479620109104,
+        "ff_byte_fraction": 0.0,
+        "longest_equal_byte_run": {
+          "byte": 0,
+          "length": 2,
+          "start": 132
+        },
+        "magic_ascii": "BK...rut.q..",
+        "magic_hex": "424b00bf917275740b71a808",
+        "sha256": "3a01c7546d89d9d3ca846da37a20add7d456421e9211a6339850d946b856026b",
+        "top_byte_frequencies": [
+          {
+            "byte": 0,
+            "count": 11,
+            "fraction": 0.073825503356,
+            "hex": "00"
+          },
+          {
+            "byte": 128,
+            "count": 5,
+            "fraction": 0.03355704698,
+            "hex": "80"
+          },
+          {
+            "byte": 7,
+            "count": 3,
+            "fraction": 0.020134228188,
+            "hex": "07"
+          },
+          {
+            "byte": 14,
+            "count": 3,
+            "fraction": 0.020134228188,
+            "hex": "0e"
+          },
+          {
+            "byte": 33,
+            "count": 3,
+            "fraction": 0.020134228188,
+            "hex": "21"
+          },
+          {
+            "byte": 112,
+            "count": 3,
+            "fraction": 0.020134228188,
+            "hex": "70"
+          },
+          {
+            "byte": 192,
+            "count": 3,
+            "fraction": 0.020134228188,
+            "hex": "c0"
+          },
+          {
+            "byte": 252,
+            "count": 3,
+            "fraction": 0.020134228188,
+            "hex": "fc"
+          }
+        ],
+        "unique_byte_count": 107,
+        "zero_byte_fraction": 0.073825503356,
+        "zero_order_entropy_bytes": 121,
+        "zero_order_entropy_delta_vs_input_bytes": -28
+      },
+      "encoded_recompression_baselines": {
+        "best_probe": {
+          "bytes": 153,
+          "codec": "brotli_q1",
+          "delta_vs_input_bytes": 4,
+          "ratio": 1.026845637584,
+          "sha256": "c01ada26a92635596873bee646ad7231b223b008e1b81919857d7c44ebcf4fd8"
+        },
+        "best_probe_delta_vs_input_bytes": 4,
+        "brotli_available": true,
+        "generic_recompression_improves": false,
+        "input_bytes": 149,
+        "probes": [
+          {
+            "bytes": 160,
+            "codec": "zlib_9",
+            "delta_vs_input_bytes": 11,
+            "ratio": 1.073825503356,
+            "sha256": "da65dd73a7d3556f4d19579cd9efe04e056146a7335fae7c7f890f0804f60c87"
+          },
+          {
+            "bytes": 212,
+            "codec": "lzma_preset9",
+            "delta_vs_input_bytes": 63,
+            "ratio": 1.422818791946,
+            "sha256": "bff9da68ff76f53948d7d83a044741c5137455290720c20e2fbef21cd7a9e97f"
+          },
+          {
+            "bytes": 153,
+            "codec": "brotli_q1",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.026845637584,
+            "sha256": "c01ada26a92635596873bee646ad7231b223b008e1b81919857d7c44ebcf4fd8"
+          },
+          {
+            "bytes": 153,
+            "codec": "brotli_q5",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.026845637584,
+            "sha256": "c01ada26a92635596873bee646ad7231b223b008e1b81919857d7c44ebcf4fd8"
+          },
+          {
+            "bytes": 153,
+            "codec": "brotli_q9",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.026845637584,
+            "sha256": "c01ada26a92635596873bee646ad7231b223b008e1b81919857d7c44ebcf4fd8"
+          },
+          {
+            "bytes": 153,
+            "codec": "brotli_q11",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.026845637584,
+            "sha256": "c01ada26a92635596873bee646ad7231b223b008e1b81919857d7c44ebcf4fd8"
+          }
+        ]
+      },
+      "fixed_constant_signal": {
+        "decoded_default_or_constant_heavy": true,
+        "decoded_longest_run_fraction": 0.054726368159,
+        "decoded_single_byte_constant": false,
+        "encoded_longest_run_fraction": 0.013422818792,
+        "encoded_single_byte_constant": false,
+        "public_runtime_fixed_length_constant": false
+      },
+      "fixed_length_bytes": null,
+      "fixed_length_public_v5": false,
+      "name": "frac2",
+      "offset_in_x_member": 219328
+    },
+    {
+      "bit_range": {
+        "end_exclusive": 1757048,
+        "start": 1755816
+      },
+      "candidate_assessment": {
+        "blocked_or_rejected_reasons": [
+          "decoded Brotli recode is non-improving or unavailable",
+          "wrapping encoded bytes in zlib/brotli/lzma is a no-op or larger"
+        ],
+        "lossless_decoded_recode_candidate": null
+      },
+      "container": {
+        "brotli_decodable": true,
+        "brotli_decode_error": null,
+        "decoded_magic_ascii": "FD3.........",
+        "decoded_magic_hex": "464433090000000000000000",
+        "decoded_payload_kind": "pr85_qpost_FD3"
+      },
+      "decoded": {
+        "bytes": 603,
+        "entropy_bits_per_byte": 1.67086125629,
+        "ff_byte_fraction": 0.0,
+        "longest_equal_byte_run": {
+          "byte": 0,
+          "length": 54,
+          "start": 4
+        },
+        "magic_ascii": "FD3.........",
+        "magic_hex": "464433090000000000000000",
+        "sha256": "434ab5abbfec6cdf38e762eacc5382a04688c8bbef7592e9f2fd20ec5e6cdab4",
+        "top_byte_frequencies": [
+          {
+            "byte": 0,
+            "count": 437,
+            "fraction": 0.724709784411,
+            "hex": "00"
+          },
+          {
+            "byte": 2,
+            "count": 33,
+            "fraction": 0.054726368159,
+            "hex": "02"
+          },
+          {
+            "byte": 3,
+            "count": 30,
+            "fraction": 0.049751243781,
+            "hex": "03"
+          },
+          {
+            "byte": 6,
+            "count": 26,
+            "fraction": 0.04311774461,
+            "hex": "06"
+          },
+          {
+            "byte": 1,
+            "count": 20,
+            "fraction": 0.033167495854,
+            "hex": "01"
+          },
+          {
+            "byte": 4,
+            "count": 20,
+            "fraction": 0.033167495854,
+            "hex": "04"
+          },
+          {
+            "byte": 8,
+            "count": 14,
+            "fraction": 0.023217247098,
+            "hex": "08"
+          },
+          {
+            "byte": 7,
+            "count": 11,
+            "fraction": 0.01824212272,
+            "hex": "07"
+          }
+        ],
+        "unique_byte_count": 12,
+        "zero_byte_fraction": 0.724709784411,
+        "zero_order_entropy_bytes": 126,
+        "zero_order_entropy_delta_vs_input_bytes": -477
+      },
+      "decoded_brotli_recode_baselines": {
+        "best_probe": {
+          "bytes": 155,
+          "codec": "brotli_q11",
+          "roundtrip_decoded_sha256": "434ab5abbfec6cdf38e762eacc5382a04688c8bbef7592e9f2fd20ec5e6cdab4",
+          "roundtrip_error": null,
+          "roundtrip_ok": true,
+          "sha256": "3561ba4adc3c9688b7ba66609f0409b98bde4803b9b327ab0e4745c922e2cc63"
+        },
+        "probes": [
+          {
+            "bytes": 225,
+            "codec": "brotli_q1",
+            "roundtrip_decoded_sha256": "434ab5abbfec6cdf38e762eacc5382a04688c8bbef7592e9f2fd20ec5e6cdab4",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "46ba59ce06fcf3e129e26f8cec8fa41524e4269adab5373b44494d2020b36834"
+          },
+          {
+            "bytes": 199,
+            "codec": "brotli_q5",
+            "roundtrip_decoded_sha256": "434ab5abbfec6cdf38e762eacc5382a04688c8bbef7592e9f2fd20ec5e6cdab4",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "a75b8abacb3564be7bfc723dd155e755a31ef1525c24ceee3a8c1322d7702d4b"
+          },
+          {
+            "bytes": 199,
+            "codec": "brotli_q9",
+            "roundtrip_decoded_sha256": "434ab5abbfec6cdf38e762eacc5382a04688c8bbef7592e9f2fd20ec5e6cdab4",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "a617e5beac71c002afe6d3bbbf18a1e868c2a008874ab79193d4771efc154a32"
+          },
+          {
+            "bytes": 155,
+            "codec": "brotli_q11",
+            "roundtrip_decoded_sha256": "434ab5abbfec6cdf38e762eacc5382a04688c8bbef7592e9f2fd20ec5e6cdab4",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "3561ba4adc3c9688b7ba66609f0409b98bde4803b9b327ab0e4745c922e2cc63"
+          }
+        ]
+      },
+      "encoded": {
+        "bytes": 154,
+        "entropy_bits_per_byte": 6.464399323712,
+        "ff_byte_fraction": 0.012987012987,
+        "longest_equal_byte_run": {
+          "byte": 0,
+          "length": 2,
+          "start": 78
+        },
+        "magic_ascii": "BK....5.....",
+        "magic_hex": "424b00ff919235bc13d195ae",
+        "sha256": "d725b01b604566c5a76a06b821c644c8d5d5bb9a57ab0597d3bdabc8389858b5",
+        "top_byte_frequencies": [
+          {
+            "byte": 0,
+            "count": 14,
+            "fraction": 0.090909090909,
+            "hex": "00"
+          },
+          {
+            "byte": 1,
+            "count": 4,
+            "fraction": 0.025974025974,
+            "hex": "01"
+          },
+          {
+            "byte": 112,
+            "count": 4,
+            "fraction": 0.025974025974,
+            "hex": "70"
+          },
+          {
+            "byte": 2,
+            "count": 3,
+            "fraction": 0.019480519481,
+            "hex": "02"
+          },
+          {
+            "byte": 53,
+            "count": 3,
+            "fraction": 0.019480519481,
+            "hex": "35"
+          },
+          {
+            "byte": 128,
+            "count": 3,
+            "fraction": 0.019480519481,
+            "hex": "80"
+          },
+          {
+            "byte": 14,
+            "count": 2,
+            "fraction": 0.012987012987,
+            "hex": "0e"
+          },
+          {
+            "byte": 16,
+            "count": 2,
+            "fraction": 0.012987012987,
+            "hex": "10"
+          }
+        ],
+        "unique_byte_count": 109,
+        "zero_byte_fraction": 0.090909090909,
+        "zero_order_entropy_bytes": 125,
+        "zero_order_entropy_delta_vs_input_bytes": -29
+      },
+      "encoded_recompression_baselines": {
+        "best_probe": {
+          "bytes": 158,
+          "codec": "brotli_q1",
+          "delta_vs_input_bytes": 4,
+          "ratio": 1.025974025974,
+          "sha256": "880669099741cdbb6896dade740ebd46a700c0bfa194ebc28cb477af5bb0166e"
+        },
+        "best_probe_delta_vs_input_bytes": 4,
+        "brotli_available": true,
+        "generic_recompression_improves": false,
+        "input_bytes": 154,
+        "probes": [
+          {
+            "bytes": 165,
+            "codec": "zlib_9",
+            "delta_vs_input_bytes": 11,
+            "ratio": 1.071428571429,
+            "sha256": "8f87ce912270b233227dbe8958c54db00173e823bc47a3136135c528998b6280"
+          },
+          {
+            "bytes": 216,
+            "codec": "lzma_preset9",
+            "delta_vs_input_bytes": 62,
+            "ratio": 1.402597402597,
+            "sha256": "643216e6cd07741c996fd124710d767eb28746c01d1584afff476033c001ddb4"
+          },
+          {
+            "bytes": 158,
+            "codec": "brotli_q1",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.025974025974,
+            "sha256": "880669099741cdbb6896dade740ebd46a700c0bfa194ebc28cb477af5bb0166e"
+          },
+          {
+            "bytes": 158,
+            "codec": "brotli_q5",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.025974025974,
+            "sha256": "880669099741cdbb6896dade740ebd46a700c0bfa194ebc28cb477af5bb0166e"
+          },
+          {
+            "bytes": 158,
+            "codec": "brotli_q9",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.025974025974,
+            "sha256": "880669099741cdbb6896dade740ebd46a700c0bfa194ebc28cb477af5bb0166e"
+          },
+          {
+            "bytes": 158,
+            "codec": "brotli_q11",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.025974025974,
+            "sha256": "880669099741cdbb6896dade740ebd46a700c0bfa194ebc28cb477af5bb0166e"
+          }
+        ]
+      },
+      "fixed_constant_signal": {
+        "decoded_default_or_constant_heavy": true,
+        "decoded_longest_run_fraction": 0.089552238806,
+        "decoded_single_byte_constant": false,
+        "encoded_longest_run_fraction": 0.012987012987,
+        "encoded_single_byte_constant": false,
+        "public_runtime_fixed_length_constant": false
+      },
+      "fixed_length_bytes": null,
+      "fixed_length_public_v5": false,
+      "name": "frac3",
+      "offset_in_x_member": 219477
+    },
+    {
+      "bit_range": {
+        "end_exclusive": 1758832,
+        "start": 1757048
+      },
+      "candidate_assessment": {
+        "blocked_or_rejected_reasons": [
+          "decoded Brotli recode is non-improving or unavailable",
+          "wrapping encoded bytes in zlib/brotli/lzma is a no-op or larger"
+        ],
+        "lossless_decoded_recode_candidate": null
+      },
+      "container": {
+        "brotli_decodable": true,
+        "brotli_decode_error": null,
+        "decoded_magic_ascii": "BD1.........",
+        "decoded_magic_hex": "424431000000000000000000",
+        "decoded_payload_kind": "pr85_qpost_BD1"
+      },
+      "decoded": {
+        "bytes": 603,
+        "entropy_bits_per_byte": 2.611263071118,
+        "ff_byte_fraction": 0.0,
+        "longest_equal_byte_run": {
+          "byte": 0,
+          "length": 59,
+          "start": 3
+        },
+        "magic_ascii": "BD1.........",
+        "magic_hex": "424431000000000000000000",
+        "sha256": "67751d89e4825a6a71d4e74a0aa6f0246a861c0f96fc11184eec407e9caf8d7c",
+        "top_byte_frequencies": [
+          {
+            "byte": 0,
+            "count": 373,
+            "fraction": 0.618573797678,
+            "hex": "00"
+          },
+          {
+            "byte": 25,
+            "count": 25,
+            "fraction": 0.041459369818,
+            "hex": "19"
+          },
+          {
+            "byte": 6,
+            "count": 22,
+            "fraction": 0.036484245439,
+            "hex": "06"
+          },
+          {
+            "byte": 27,
+            "count": 19,
+            "fraction": 0.031509121061,
+            "hex": "1b"
+          },
+          {
+            "byte": 3,
+            "count": 18,
+            "fraction": 0.029850746269,
+            "hex": "03"
+          },
+          {
+            "byte": 26,
+            "count": 18,
+            "fraction": 0.029850746269,
+            "hex": "1a"
+          },
+          {
+            "byte": 4,
+            "count": 14,
+            "fraction": 0.023217247098,
+            "hex": "04"
+          },
+          {
+            "byte": 12,
+            "count": 11,
+            "fraction": 0.01824212272,
+            "hex": "0c"
+          }
+        ],
+        "unique_byte_count": 29,
+        "zero_byte_fraction": 0.618573797678,
+        "zero_order_entropy_bytes": 197,
+        "zero_order_entropy_delta_vs_input_bytes": -406
+      },
+      "decoded_brotli_recode_baselines": {
+        "best_probe": {
+          "bytes": 223,
+          "codec": "brotli_q11",
+          "roundtrip_decoded_sha256": "67751d89e4825a6a71d4e74a0aa6f0246a861c0f96fc11184eec407e9caf8d7c",
+          "roundtrip_error": null,
+          "roundtrip_ok": true,
+          "sha256": "2eb7d2fede7df5271d4124ff824c7060228076b43f7deeb39538eeed4b9b868d"
+        },
+        "probes": [
+          {
+            "bytes": 289,
+            "codec": "brotli_q1",
+            "roundtrip_decoded_sha256": "67751d89e4825a6a71d4e74a0aa6f0246a861c0f96fc11184eec407e9caf8d7c",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "159bf2acf8f42e52c5f7861c7bced5afcf7b132317b02cb0580ca19cbe80384e"
+          },
+          {
+            "bytes": 269,
+            "codec": "brotli_q5",
+            "roundtrip_decoded_sha256": "67751d89e4825a6a71d4e74a0aa6f0246a861c0f96fc11184eec407e9caf8d7c",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "6c11f91651acaf54aa8f5b5677ef14454b31a3b1bce0ad404e8e849381912383"
+          },
+          {
+            "bytes": 273,
+            "codec": "brotli_q9",
+            "roundtrip_decoded_sha256": "67751d89e4825a6a71d4e74a0aa6f0246a861c0f96fc11184eec407e9caf8d7c",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "a8c1e1aaadac38a4bde4a2d75585b9f2bafb56345ec1a14010a228ee9b41d10a"
+          },
+          {
+            "bytes": 223,
+            "codec": "brotli_q11",
+            "roundtrip_decoded_sha256": "67751d89e4825a6a71d4e74a0aa6f0246a861c0f96fc11184eec407e9caf8d7c",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "2eb7d2fede7df5271d4124ff824c7060228076b43f7deeb39538eeed4b9b868d"
+          }
+        ]
+      },
+      "encoded": {
+        "bytes": 223,
+        "entropy_bits_per_byte": 7.076465482783,
+        "ff_byte_fraction": 0.004484304933,
+        "longest_equal_byte_run": {
+          "byte": 0,
+          "length": 2,
+          "start": 193
+        },
+        "magic_ascii": "BK....5..A.a",
+        "magic_hex": "424b00ff919235bc1341ad61",
+        "sha256": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b",
+        "top_byte_frequencies": [
+          {
+            "byte": 0,
+            "count": 6,
+            "fraction": 0.026905829596,
+            "hex": "00"
+          },
+          {
+            "byte": 9,
+            "count": 4,
+            "fraction": 0.017937219731,
+            "hex": "09"
+          },
+          {
+            "byte": 23,
+            "count": 4,
+            "fraction": 0.017937219731,
+            "hex": "17"
+          },
+          {
+            "byte": 64,
+            "count": 4,
+            "fraction": 0.017937219731,
+            "hex": "40"
+          },
+          {
+            "byte": 99,
+            "count": 4,
+            "fraction": 0.017937219731,
+            "hex": "63"
+          },
+          {
+            "byte": 36,
+            "count": 3,
+            "fraction": 0.013452914798,
+            "hex": "24"
+          },
+          {
+            "byte": 43,
+            "count": 3,
+            "fraction": 0.013452914798,
+            "hex": "2b"
+          },
+          {
+            "byte": 76,
+            "count": 3,
+            "fraction": 0.013452914798,
+            "hex": "4c"
+          }
+        ],
+        "unique_byte_count": 152,
+        "zero_byte_fraction": 0.026905829596,
+        "zero_order_entropy_bytes": 198,
+        "zero_order_entropy_delta_vs_input_bytes": -25
+      },
+      "encoded_recompression_baselines": {
+        "best_probe": {
+          "bytes": 227,
+          "codec": "brotli_q1",
+          "delta_vs_input_bytes": 4,
+          "ratio": 1.017937219731,
+          "sha256": "f9fa2246430dceb923b782bd12a359b0058dfa50e92f0c2dd5dd9b7d3c418caf"
+        },
+        "best_probe_delta_vs_input_bytes": 4,
+        "brotli_available": true,
+        "generic_recompression_improves": false,
+        "input_bytes": 223,
+        "probes": [
+          {
+            "bytes": 234,
+            "codec": "zlib_9",
+            "delta_vs_input_bytes": 11,
+            "ratio": 1.04932735426,
+            "sha256": "a987b8fceec10ce8b7bae3bfaee01bca2ff2e249276a2c464da8dcf92ff1b555"
+          },
+          {
+            "bytes": 284,
+            "codec": "lzma_preset9",
+            "delta_vs_input_bytes": 61,
+            "ratio": 1.273542600897,
+            "sha256": "83076198d37b0d8128de1a2ff0391ab341a398834e0eb450ad61bb78b25aec91"
+          },
+          {
+            "bytes": 227,
+            "codec": "brotli_q1",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.017937219731,
+            "sha256": "f9fa2246430dceb923b782bd12a359b0058dfa50e92f0c2dd5dd9b7d3c418caf"
+          },
+          {
+            "bytes": 227,
+            "codec": "brotli_q5",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.017937219731,
+            "sha256": "f9fa2246430dceb923b782bd12a359b0058dfa50e92f0c2dd5dd9b7d3c418caf"
+          },
+          {
+            "bytes": 227,
+            "codec": "brotli_q9",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.017937219731,
+            "sha256": "f9fa2246430dceb923b782bd12a359b0058dfa50e92f0c2dd5dd9b7d3c418caf"
+          },
+          {
+            "bytes": 227,
+            "codec": "brotli_q11",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.017937219731,
+            "sha256": "f9fa2246430dceb923b782bd12a359b0058dfa50e92f0c2dd5dd9b7d3c418caf"
+          }
+        ]
+      },
+      "fixed_constant_signal": {
+        "decoded_default_or_constant_heavy": false,
+        "decoded_longest_run_fraction": 0.097844112769,
+        "decoded_single_byte_constant": false,
+        "encoded_longest_run_fraction": 0.008968609865,
+        "encoded_single_byte_constant": false,
+        "public_runtime_fixed_length_constant": true
+      },
+      "fixed_length_bytes": 223,
+      "fixed_length_public_v5": true,
+      "name": "bias",
+      "offset_in_x_member": 219631
+    },
+    {
+      "bit_range": {
+        "end_exclusive": 1761016,
+        "start": 1758832
+      },
+      "candidate_assessment": {
+        "blocked_or_rejected_reasons": [
+          "decoded Brotli recode is non-improving or unavailable",
+          "wrapping encoded bytes in zlib/brotli/lzma is a no-op or larger"
+        ],
+        "lossless_decoded_recode_candidate": null
+      },
+      "container": {
+        "brotli_decodable": true,
+        "brotli_decode_error": null,
+        "decoded_magic_ascii": "RH1.........",
+        "decoded_magic_hex": "524831000000000000000000",
+        "decoded_payload_kind": "pr85_qpost_RH1"
+      },
+      "decoded": {
+        "bytes": 603,
+        "entropy_bits_per_byte": 3.106309167177,
+        "ff_byte_fraction": 0.0,
+        "longest_equal_byte_run": {
+          "byte": 0,
+          "length": 57,
+          "start": 3
+        },
+        "magic_ascii": "RH1.........",
+        "magic_hex": "524831000000000000000000",
+        "sha256": "8018b15bf5029b8bbf224b4ed1581afa2c51ae4e814e327183ffe8a697deb7e0",
+        "top_byte_frequencies": [
+          {
+            "byte": 0,
+            "count": 345,
+            "fraction": 0.572139303483,
+            "hex": "00"
+          },
+          {
+            "byte": 36,
+            "count": 30,
+            "fraction": 0.049751243781,
+            "hex": "24"
+          },
+          {
+            "byte": 52,
+            "count": 27,
+            "fraction": 0.044776119403,
+            "hex": "34"
+          },
+          {
+            "byte": 51,
+            "count": 17,
+            "fraction": 0.028192371476,
+            "hex": "33"
+          },
+          {
+            "byte": 44,
+            "count": 11,
+            "fraction": 0.01824212272,
+            "hex": "2c"
+          },
+          {
+            "byte": 82,
+            "count": 11,
+            "fraction": 0.01824212272,
+            "hex": "52"
+          },
+          {
+            "byte": 33,
+            "count": 10,
+            "fraction": 0.016583747927,
+            "hex": "21"
+          },
+          {
+            "byte": 35,
+            "count": 10,
+            "fraction": 0.016583747927,
+            "hex": "23"
+          }
+        ],
+        "unique_byte_count": 51,
+        "zero_byte_fraction": 0.572139303483,
+        "zero_order_entropy_bytes": 235,
+        "zero_order_entropy_delta_vs_input_bytes": -368
+      },
+      "decoded_brotli_recode_baselines": {
+        "best_probe": {
+          "bytes": 274,
+          "codec": "brotli_q11",
+          "roundtrip_decoded_sha256": "8018b15bf5029b8bbf224b4ed1581afa2c51ae4e814e327183ffe8a697deb7e0",
+          "roundtrip_error": null,
+          "roundtrip_ok": true,
+          "sha256": "aed7532ccbe9a95f19e64723942d5d179667f970802b15aed6a168bb6cee726e"
+        },
+        "probes": [
+          {
+            "bytes": 334,
+            "codec": "brotli_q1",
+            "roundtrip_decoded_sha256": "8018b15bf5029b8bbf224b4ed1581afa2c51ae4e814e327183ffe8a697deb7e0",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "81cea744b080e39415d666f3318c71fc6a4081a829854162b9611075662a5bc9"
+          },
+          {
+            "bytes": 314,
+            "codec": "brotli_q5",
+            "roundtrip_decoded_sha256": "8018b15bf5029b8bbf224b4ed1581afa2c51ae4e814e327183ffe8a697deb7e0",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "cf069ccf3d62f19227eb51ae1a355428cdeb2952e439fbebd054fae55986a858"
+          },
+          {
+            "bytes": 314,
+            "codec": "brotli_q9",
+            "roundtrip_decoded_sha256": "8018b15bf5029b8bbf224b4ed1581afa2c51ae4e814e327183ffe8a697deb7e0",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "b731075599d40790381c5dd2bdf39654dfa60a1ce9d1a87ed0504d5d0b84d96d"
+          },
+          {
+            "bytes": 274,
+            "codec": "brotli_q11",
+            "roundtrip_decoded_sha256": "8018b15bf5029b8bbf224b4ed1581afa2c51ae4e814e327183ffe8a697deb7e0",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "aed7532ccbe9a95f19e64723942d5d179667f970802b15aed6a168bb6cee726e"
+          }
+        ]
+      },
+      "encoded": {
+        "bytes": 273,
+        "entropy_bits_per_byte": 7.102950673806,
+        "ff_byte_fraction": 0.007326007326,
+        "longest_equal_byte_run": {
+          "byte": 0,
+          "length": 2,
+          "start": 269
+        },
+        "magic_ascii": "BK...P.}.5..",
+        "magic_hex": "424b00fff050b57dbe35bbc5",
+        "sha256": "4a7c16094fab281c30e27621a58577c095c4b1153c232518c9adbaba2a2b2392",
+        "top_byte_frequencies": [
+          {
+            "byte": 0,
+            "count": 8,
+            "fraction": 0.029304029304,
+            "hex": "00"
+          },
+          {
+            "byte": 128,
+            "count": 6,
+            "fraction": 0.021978021978,
+            "hex": "80"
+          },
+          {
+            "byte": 187,
+            "count": 5,
+            "fraction": 0.018315018315,
+            "hex": "bb"
+          },
+          {
+            "byte": 41,
+            "count": 4,
+            "fraction": 0.014652014652,
+            "hex": "29"
+          },
+          {
+            "byte": 116,
+            "count": 4,
+            "fraction": 0.014652014652,
+            "hex": "74"
+          },
+          {
+            "byte": 2,
+            "count": 3,
+            "fraction": 0.010989010989,
+            "hex": "02"
+          },
+          {
+            "byte": 12,
+            "count": 3,
+            "fraction": 0.010989010989,
+            "hex": "0c"
+          },
+          {
+            "byte": 28,
+            "count": 3,
+            "fraction": 0.010989010989,
+            "hex": "1c"
+          }
+        ],
+        "unique_byte_count": 157,
+        "zero_byte_fraction": 0.029304029304,
+        "zero_order_entropy_bytes": 243,
+        "zero_order_entropy_delta_vs_input_bytes": -30
+      },
+      "encoded_recompression_baselines": {
+        "best_probe": {
+          "bytes": 277,
+          "codec": "brotli_q1",
+          "delta_vs_input_bytes": 4,
+          "ratio": 1.014652014652,
+          "sha256": "eaaa5bc8b3758cb15a4da785586f587c87243fbefee15c2a53a99f2b1a326a4f"
+        },
+        "best_probe_delta_vs_input_bytes": 4,
+        "brotli_available": true,
+        "generic_recompression_improves": false,
+        "input_bytes": 273,
+        "probes": [
+          {
+            "bytes": 284,
+            "codec": "zlib_9",
+            "delta_vs_input_bytes": 11,
+            "ratio": 1.040293040293,
+            "sha256": "cfc76229811e5366e146049f862bde5ea617cb61913eb5023663b42faf3c12f5"
+          },
+          {
+            "bytes": 336,
+            "codec": "lzma_preset9",
+            "delta_vs_input_bytes": 63,
+            "ratio": 1.230769230769,
+            "sha256": "d8bebbef13b028d217f0f57d1acd8e951e9aa661182f1463d066603e0cfe8001"
+          },
+          {
+            "bytes": 277,
+            "codec": "brotli_q1",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.014652014652,
+            "sha256": "eaaa5bc8b3758cb15a4da785586f587c87243fbefee15c2a53a99f2b1a326a4f"
+          },
+          {
+            "bytes": 277,
+            "codec": "brotli_q5",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.014652014652,
+            "sha256": "eaaa5bc8b3758cb15a4da785586f587c87243fbefee15c2a53a99f2b1a326a4f"
+          },
+          {
+            "bytes": 277,
+            "codec": "brotli_q9",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.014652014652,
+            "sha256": "eaaa5bc8b3758cb15a4da785586f587c87243fbefee15c2a53a99f2b1a326a4f"
+          },
+          {
+            "bytes": 277,
+            "codec": "brotli_q11",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.014652014652,
+            "sha256": "eaaa5bc8b3758cb15a4da785586f587c87243fbefee15c2a53a99f2b1a326a4f"
+          }
+        ]
+      },
+      "fixed_constant_signal": {
+        "decoded_default_or_constant_heavy": false,
+        "decoded_longest_run_fraction": 0.094527363184,
+        "decoded_single_byte_constant": false,
+        "encoded_longest_run_fraction": 0.007326007326,
+        "encoded_single_byte_constant": false,
+        "public_runtime_fixed_length_constant": true
+      },
+      "fixed_length_bytes": 273,
+      "fixed_length_public_v5": true,
+      "name": "region",
+      "offset_in_x_member": 219854
+    },
+    {
+      "bit_range": {
+        "end_exclusive": 1889824,
+        "start": 1761016
+      },
+      "candidate_assessment": {
+        "blocked_or_rejected_reasons": [
+          "decoded Brotli recode is non-improving or unavailable",
+          "wrapping encoded bytes in zlib/brotli/lzma is a no-op or larger"
+        ],
+        "lossless_decoded_recode_candidate": null
+      },
+      "container": {
+        "brotli_decodable": true,
+        "brotli_decode_error": null,
+        "decoded_magic_ascii": "............",
+        "decoded_magic_hex": "ff1c01000202000704080800",
+        "decoded_payload_kind": "pr85_headerless_sparse_randmulti"
+      },
+      "decoded": {
+        "bytes": 27105,
+        "entropy_bits_per_byte": 5.58839431372,
+        "ff_byte_fraction": 0.000516509869,
+        "longest_equal_byte_run": {
+          "byte": 0,
+          "length": 69,
+          "start": 152
+        },
+        "magic_ascii": "............",
+        "magic_hex": "ff1c01000202000704080800",
+        "sha256": "87bcc720c1e80afb9adad5ee01477423ced526f31c54d461d69dbf26e08eecc9",
+        "top_byte_frequencies": [
+          {
+            "byte": 0,
+            "count": 6656,
+            "fraction": 0.245563549161,
+            "hex": "00"
+          },
+          {
+            "byte": 1,
+            "count": 2742,
+            "fraction": 0.101162147205,
+            "hex": "01"
+          },
+          {
+            "byte": 2,
+            "count": 1458,
+            "fraction": 0.053790813503,
+            "hex": "02"
+          },
+          {
+            "byte": 3,
+            "count": 895,
+            "fraction": 0.033019738056,
+            "hex": "03"
+          },
+          {
+            "byte": 4,
+            "count": 699,
+            "fraction": 0.025788599889,
+            "hex": "04"
+          },
+          {
+            "byte": 5,
+            "count": 504,
+            "fraction": 0.018594355285,
+            "hex": "05"
+          },
+          {
+            "byte": 7,
+            "count": 348,
+            "fraction": 0.012838959602,
+            "hex": "07"
+          },
+          {
+            "byte": 6,
+            "count": 319,
+            "fraction": 0.011769046301,
+            "hex": "06"
+          }
+        ],
+        "unique_byte_count": 252,
+        "zero_byte_fraction": 0.245563549161,
+        "zero_order_entropy_bytes": 18935,
+        "zero_order_entropy_delta_vs_input_bytes": -8170
+      },
+      "decoded_brotli_recode_baselines": {
+        "best_probe": {
+          "bytes": 16454,
+          "codec": "brotli_q11",
+          "roundtrip_decoded_sha256": "87bcc720c1e80afb9adad5ee01477423ced526f31c54d461d69dbf26e08eecc9",
+          "roundtrip_error": null,
+          "roundtrip_ok": true,
+          "sha256": "dd74f7df336c68ff5e5ac2931018502011d612af4a05fe66150e8f656897af19"
+        },
+        "probes": [
+          {
+            "bytes": 18877,
+            "codec": "brotli_q1",
+            "roundtrip_decoded_sha256": "87bcc720c1e80afb9adad5ee01477423ced526f31c54d461d69dbf26e08eecc9",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "83378ccc2c88743479d4f5381b4275265ba4a636cf611bd6bcb30e808562f9bd"
+          },
+          {
+            "bytes": 18006,
+            "codec": "brotli_q5",
+            "roundtrip_decoded_sha256": "87bcc720c1e80afb9adad5ee01477423ced526f31c54d461d69dbf26e08eecc9",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "c0c0f8f18d4e6fc84d69510d8c2d13f7093bff805b7c97b3404ca5b55813e1f9"
+          },
+          {
+            "bytes": 17873,
+            "codec": "brotli_q9",
+            "roundtrip_decoded_sha256": "87bcc720c1e80afb9adad5ee01477423ced526f31c54d461d69dbf26e08eecc9",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "5470553a0394fda6d528c2731b9e544623d7a890dca7795045c918991cecccc1"
+          },
+          {
+            "bytes": 16454,
+            "codec": "brotli_q11",
+            "roundtrip_decoded_sha256": "87bcc720c1e80afb9adad5ee01477423ced526f31c54d461d69dbf26e08eecc9",
+            "roundtrip_error": null,
+            "roundtrip_ok": true,
+            "sha256": "dd74f7df336c68ff5e5ac2931018502011d612af4a05fe66150e8f656897af19"
+          }
+        ]
+      },
+      "encoded": {
+        "bytes": 16101,
+        "entropy_bits_per_byte": 7.986005115109,
+        "ff_byte_fraction": 0.002856965406,
+        "longest_equal_byte_run": {
+          "byte": 2,
+          "length": 3,
+          "start": 8589
+        },
+        "magic_ascii": "..O+Q..Nh.M.",
+        "magic_hex": "b1004f2b51c6d84e68ba4d04",
+        "sha256": "c624372e60a0851c4c427dc333a60dcc5d6657ba8ed56951612e7c9d7be7629f",
+        "top_byte_frequencies": [
+          {
+            "byte": 197,
+            "count": 101,
+            "fraction": 0.006272902304,
+            "hex": "c5"
+          },
+          {
+            "byte": 98,
+            "count": 90,
+            "fraction": 0.005589714925,
+            "hex": "62"
+          },
+          {
+            "byte": 189,
+            "count": 86,
+            "fraction": 0.00534128315,
+            "hex": "bd"
+          },
+          {
+            "byte": 25,
+            "count": 83,
+            "fraction": 0.005154959319,
+            "hex": "19"
+          },
+          {
+            "byte": 40,
+            "count": 82,
+            "fraction": 0.005092851376,
+            "hex": "28"
+          },
+          {
+            "byte": 236,
+            "count": 82,
+            "fraction": 0.005092851376,
+            "hex": "ec"
+          },
+          {
+            "byte": 145,
+            "count": 81,
+            "fraction": 0.005030743432,
+            "hex": "91"
+          },
+          {
+            "byte": 52,
+            "count": 80,
+            "fraction": 0.004968635488,
+            "hex": "34"
+          }
+        ],
+        "unique_byte_count": 256,
+        "zero_byte_fraction": 0.003912800447,
+        "zero_order_entropy_bytes": 16073,
+        "zero_order_entropy_delta_vs_input_bytes": -28
+      },
+      "encoded_recompression_baselines": {
+        "best_probe": {
+          "bytes": 16105,
+          "codec": "brotli_q1",
+          "delta_vs_input_bytes": 4,
+          "ratio": 1.000248431774,
+          "sha256": "3b9095a8bf2f16923cf2c5918a924d2c4f0cda1997693239cf133077a6fe72f8"
+        },
+        "best_probe_delta_vs_input_bytes": 4,
+        "brotli_available": true,
+        "generic_recompression_improves": false,
+        "input_bytes": 16101,
+        "probes": [
+          {
+            "bytes": 16112,
+            "codec": "zlib_9",
+            "delta_vs_input_bytes": 11,
+            "ratio": 1.00068318738,
+            "sha256": "703a1335b7141991ac4667108f70d2298ffb5176abb5a27ccb52b1bdcb4a20c2"
+          },
+          {
+            "bytes": 16164,
+            "codec": "lzma_preset9",
+            "delta_vs_input_bytes": 63,
+            "ratio": 1.003912800447,
+            "sha256": "8add0119ca4496b930f8f1eb3c40480a67fca9ff5909cab170d2bdadc88bf426"
+          },
+          {
+            "bytes": 16105,
+            "codec": "brotli_q1",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.000248431774,
+            "sha256": "3b9095a8bf2f16923cf2c5918a924d2c4f0cda1997693239cf133077a6fe72f8"
+          },
+          {
+            "bytes": 16105,
+            "codec": "brotli_q5",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.000248431774,
+            "sha256": "3b9095a8bf2f16923cf2c5918a924d2c4f0cda1997693239cf133077a6fe72f8"
+          },
+          {
+            "bytes": 16105,
+            "codec": "brotli_q9",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.000248431774,
+            "sha256": "3b9095a8bf2f16923cf2c5918a924d2c4f0cda1997693239cf133077a6fe72f8"
+          },
+          {
+            "bytes": 16105,
+            "codec": "brotli_q11",
+            "delta_vs_input_bytes": 4,
+            "ratio": 1.000248431774,
+            "sha256": "3b9095a8bf2f16923cf2c5918a924d2c4f0cda1997693239cf133077a6fe72f8"
+          }
+        ]
+      },
+      "fixed_constant_signal": {
+        "decoded_default_or_constant_heavy": false,
+        "decoded_longest_run_fraction": 0.002545655783,
+        "decoded_single_byte_constant": false,
+        "encoded_longest_run_fraction": 0.000186323831,
+        "encoded_single_byte_constant": false,
+        "public_runtime_fixed_length_constant": false
+      },
+      "fixed_length_bytes": null,
+      "fixed_length_public_v5": false,
+      "name": "randmulti",
+      "offset_in_x_member": 220127
+    }
+  ],
+  "planning_only": true,
+  "recorded_at_utc": "2026-05-04T05:29:46Z",
+  "rejected_noop_or_blocked_recommendations": [
+    {
+      "best_runtime_compatible_recode_bytes": 57227,
+      "reasons": [
+        "decoded Brotli recode is non-improving or unavailable",
+        "wrapping encoded bytes in zlib/brotli/lzma is a no-op or larger"
+      ],
+      "rejected_as_noop_or_blocked": true,
+      "source_bytes": 57074,
+      "surface": "segment:model"
+    },
+    {
+      "best_runtime_compatible_recode_bytes": 1539,
+      "reasons": [
+        "decoded Brotli recode is non-improving or unavailable",
+        "wrapping encoded bytes in zlib/brotli/lzma is a no-op or larger"
+      ],
+      "rejected_as_noop_or_blocked": true,
+      "source_bytes": 1487,
+      "surface": "segment:pose"
+    },
+    {
+      "best_runtime_compatible_recode_bytes": 1439,
+      "reasons": [
+        "decoded Brotli recode is non-improving or unavailable",
+        "wrapping encoded bytes in zlib/brotli/lzma is a no-op or larger"
+      ],
+      "rejected_as_noop_or_blocked": true,
+      "source_bytes": 1400,
+      "surface": "segment:post"
+    },
+    {
+      "best_runtime_compatible_recode_bytes": 227,
+      "reasons": [
+        "decoded Brotli recode is non-improving or unavailable",
+        "wrapping encoded bytes in zlib/brotli/lzma is a no-op or larger"
+      ],
+      "rejected_as_noop_or_blocked": true,
+      "source_bytes": 226,
+      "surface": "segment:shift"
+    },
+    {
+      "best_runtime_compatible_recode_bytes": 113,
+      "reasons": [
+        "decoded Brotli recode is non-improving or unavailable",
+        "wrapping encoded bytes in zlib/brotli/lzma is a no-op or larger"
+      ],
+      "rejected_as_noop_or_blocked": true,
+      "source_bytes": 106,
+      "surface": "segment:frac"
+    },
+    {
+      "best_runtime_compatible_recode_bytes": 150,
+      "reasons": [
+        "decoded Brotli recode is non-improving or unavailable",
+        "wrapping encoded bytes in zlib/brotli/lzma is a no-op or larger"
+      ],
+      "rejected_as_noop_or_blocked": true,
+      "source_bytes": 149,
+      "surface": "segment:frac2"
+    },
+    {
+      "best_runtime_compatible_recode_bytes": 155,
+      "reasons": [
+        "decoded Brotli recode is non-improving or unavailable",
+        "wrapping encoded bytes in zlib/brotli/lzma is a no-op or larger"
+      ],
+      "rejected_as_noop_or_blocked": true,
+      "source_bytes": 154,
+      "surface": "segment:frac3"
+    },
+    {
+      "best_runtime_compatible_recode_bytes": 223,
+      "reasons": [
+        "decoded Brotli recode is non-improving or unavailable",
+        "wrapping encoded bytes in zlib/brotli/lzma is a no-op or larger"
+      ],
+      "rejected_as_noop_or_blocked": true,
+      "source_bytes": 223,
+      "surface": "segment:bias"
+    },
+    {
+      "best_runtime_compatible_recode_bytes": 274,
+      "reasons": [
+        "decoded Brotli recode is non-improving or unavailable",
+        "wrapping encoded bytes in zlib/brotli/lzma is a no-op or larger"
+      ],
+      "rejected_as_noop_or_blocked": true,
+      "source_bytes": 273,
+      "surface": "segment:region"
+    },
+    {
+      "best_runtime_compatible_recode_bytes": 16454,
+      "reasons": [
+        "decoded Brotli recode is non-improving or unavailable",
+        "wrapping encoded bytes in zlib/brotli/lzma is a no-op or larger"
+      ],
+      "rejected_as_noop_or_blocked": true,
+      "source_bytes": 16101,
+      "surface": "segment:randmulti"
+    },
+    {
+      "best_runtime_compatible_recode_bytes": 236328,
+      "reasons": [
+        "deterministic stored/deflated ZIP baselines do not reduce archive bytes"
+      ],
+      "rejected_as_noop_or_blocked": true,
+      "source_bytes": null,
+      "surface": "single_blob_zip_container"
+    }
+  ],
+  "schema": "pr85_nonmask_self_compression_audit_v1",
+  "score_claim": false,
+  "score_rate_formula": {
+    "formula_only": true,
+    "original_video_bytes": 37545489,
+    "rate_score_per_byte": 6.658589531221714e-07,
+    "score_claim_from_this_profile": false
+  },
+  "single_blob_container_overhead": {
+    "arbitrary_extra_zip_overhead_bytes": 0,
+    "best_outer_container_baseline": {
+      "archive_bytes": 236328,
+      "container": "zip_stored",
+      "delta_vs_source_archive_bytes": 0,
+      "formula_only_rate_score_delta": 0.0,
+      "member_payload_after_unzip_identical": true,
+      "runtime_risk": "low"
+    },
+    "bundle_header_bits": 192,
+    "bundle_header_bytes": 24,
+    "outer_container_baselines": [
+      {
+        "archive_bytes": 236328,
+        "container": "zip_stored",
+        "delta_vs_source_archive_bytes": 0,
+        "formula_only_rate_score_delta": 0.0,
+        "member_payload_after_unzip_identical": true,
+        "runtime_risk": "low"
+      },
+      {
+        "archive_bytes": 236403,
+        "container": "zip_deflated",
+        "delta_vs_source_archive_bytes": 75,
+        "formula_only_rate_score_delta": 4.9939421e-05,
+        "member_payload_after_unzip_identical": true,
+        "runtime_risk": "low"
+      },
+      {
+        "archive_bytes": 237785,
+        "container": "zip_bzip2",
+        "delta_vs_source_archive_bytes": 1457,
+        "formula_only_rate_score_delta": 0.000970156495,
+        "member_payload_after_unzip_identical": true,
+        "runtime_risk": "medium"
+      },
+      {
+        "archive_bytes": 239548,
+        "container": "zip_lzma",
+        "delta_vs_source_archive_bytes": 3220,
+        "formula_only_rate_score_delta": 0.002144065829,
+        "member_payload_after_unzip_identical": true,
+        "runtime_risk": "medium"
+      }
+    ],
+    "overhead_recommendation": "No direct single-blob overhead candidate: current one-byte member name and no extra/comment fields are already at the 100-byte ZIP structural floor.",
+    "theoretical_min_single_member_zip_overhead_bytes": 100,
+    "v5_header_saves_bytes_vs_explicit_30": 6,
+    "zip_container_overhead_bits": 800,
+    "zip_container_overhead_bytes": 100,
+    "zip_has_extra_fields": false,
+    "zip_member_comment_bytes": 0,
+    "zip_structural_breakdown_bytes": {
+      "accounted_total": 100,
+      "central_directory_header": 47,
+      "end_of_central_directory": 22,
+      "local_file_header": 31
+    }
+  },
+  "tool": "experiments/profile_pr85_nonmask_self_compression.py",
+  "top_implementable_byte_saving_candidates": [
+    {
+      "archive_builder_action": "prototype a PR85 decoded-QH0 to QFQ4/grouped-FP serializer and paired runtime loader",
+      "candidate_id": "pr90_qfq4_style_pr85_model_serializer_probe",
+      "dispatchable_now": false,
+      "expected_archive_delta_bytes_formula_only": -689,
+      "expected_rate_score_delta_formula_only": -0.000458776819,
+      "identity_preserving": false,
+      "next_gate": "build a local serializer parity harness; do not exact-eval until runtime output parity passes",
+      "no_op": false,
+      "runtime_risk": "high",
+      "runtime_risk_reason": "different model grammar; requires tensor/output parity and exact CUDA component gates",
+      "source_basis": "PR90 model body is smaller than PR85 model segment, but not byte-identical or runtime-compatible",
+      "state_change_required": true,
+      "surface": "PR85 model segment"
+    },
+    {
+      "archive_builder_action": "lower PR90-style compact pose plus sparse QRGB/control actions into an explicit PR85-family qpost candidate",
+      "candidate_id": "pr90_qrgb_control_stack_recode_probe",
+      "dispatchable_now": false,
+      "expected_archive_delta_bytes_formula_only": -10955,
+      "expected_rate_score_delta_formula_only": -0.007294484831,
+      "identity_preserving": false,
+      "next_gate": "build local non-noop candidate with raw-output/runtime parity diagnostics before any eval claim",
+      "no_op": false,
+      "runtime_risk": "high",
+      "runtime_risk_reason": "changes pose/color/control semantics; component deltas can dominate byte savings",
+      "source_basis": "PR90 compact control body is smaller than the PR85 non-mask control stack, but semantics are different",
+      "state_change_required": true,
+      "surface": "PR85 pose/post/motion/bias/region/randmulti control stack"
+    }
+  ]
+}

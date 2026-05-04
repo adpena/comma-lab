@@ -1,0 +1,32 @@
+{
+  "archives": [
+    {
+      "archive": "/workspace/pact/lane_q_faithful_results/postprocess_fixed_snapshot_20260501T1947Z_fix3/raw_qfai_half_posebin/archive.zip",
+      "archive_bytes": 563206,
+      "archive_sha256": "8ad1b494e03fba010a663d18f5d9b5b530e3fdcbd5fccf7633b0db295f4ad33e",
+      "label": "raw_qfai_half_posebin"
+    },
+    {
+      "archive": "/workspace/pact/lane_q_faithful_results/postprocess_fixed_snapshot_20260501T1947Z_fix3/qzs3_half_posebin/archive.zip",
+      "archive_bytes": 284486,
+      "archive_sha256": "751f4f9105a3479548685b2a70041b222ddae35ec25bae601b33284e76e48bf3",
+      "label": "qzs3_half_posebin"
+    },
+    {
+      "archive": "/workspace/pact/lane_q_faithful_results/postprocess_fixed_snapshot_20260501T1947Z_fix3/qzs3_rp2_qpose14/archive.zip",
+      "archive_bytes": 276651,
+      "archive_sha256": "1d5d5e86cb0902f306f1e0968385033172c97ab2b882866beffbf9b26a2acca4",
+      "label": "qzs3_rp2_qpose14"
+    },
+    {
+      "archive": "/workspace/pact/lane_q_faithful_results/postprocess_fixed_snapshot_20260501T1947Z_fix3/qzs3_rp2_qp1/archive.zip",
+      "archive_bytes": 273048,
+      "archive_sha256": "e70bb3fbda789e4fb8880e80b672a608e318bc0084415958c52fc6631a6a20f4",
+      "label": "qzs3_rp2_qp1"
+    }
+  ],
+  "recorded_at_utc": "2026-05-01T19:49:35Z",
+  "schema_version": 1,
+  "score_claim": false,
+  "tool": "remote_q_faithful_postprocess_fixed"
+}

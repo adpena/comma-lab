@@ -1,0 +1,64 @@
+{
+  "candidates": [
+    {
+      "alpha_bits": 3,
+      "archive_bytes": 277455,
+      "archive_sha256": "f4146e137d9e2e12d1f7c8d26609f24e0e2bd0d19e5c0534f90c761c35658825",
+      "basis_bytes": 308,
+      "basis_grid": [
+        8,
+        6
+      ],
+      "coefficient_block_bytes": 151,
+      "delta_bytes": 1241,
+      "k": 1,
+      "name": "k1_g08x06_p32_a3_gain003125",
+      "rate_delta": 0.0008263309608246147,
+      "residual_gain": 0.03125,
+      "score_claim": false,
+      "selected_pair_count": 32,
+      "sjkl_bytes": 467
+    },
+    {
+      "alpha_bits": 3,
+      "archive_bytes": 277918,
+      "archive_sha256": "a034cd1f37d8a8d38b95cd04ca68d7df7ae99dde622afcf7513b0585be918544",
+      "basis_bytes": 649,
+      "basis_grid": [
+        12,
+        9
+      ],
+      "coefficient_block_bytes": 202,
+      "delta_bytes": 1704,
+      "k": 1,
+      "name": "k1_g12x09_p48_a3_gain00625",
+      "rate_delta": 0.00113462365612018,
+      "residual_gain": 0.0625,
+      "score_claim": false,
+      "selected_pair_count": 48,
+      "sjkl_bytes": 859
+    },
+    {
+      "alpha_bits": 4,
+      "archive_bytes": 279553,
+      "archive_sha256": "00210f674fe34d2dd2243e81bf7ac02c374de2cd9c0c70e0810577bf4c8f4109",
+      "basis_bytes": 2173,
+      "basis_grid": [
+        16,
+        12
+      ],
+      "coefficient_block_bytes": 384,
+      "delta_bytes": 3339,
+      "k": 2,
+      "name": "k2_g16x12_p64_a4_gain0125",
+      "rate_delta": 0.00222330304447493,
+      "residual_gain": 0.125,
+      "score_claim": false,
+      "selected_pair_count": 64,
+      "sjkl_bytes": 2565
+    }
+  ],
+  "schema": "sjkl_c067_sparse_repack_byte_screen_v1",
+  "score_claim": false,
+  "source_score_truth": "C067 source archive plus local deterministic SJ-KL sparse repacks; no exact eval run"
+}

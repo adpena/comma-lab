@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-05-02T01:58:45Z",
+  "pybin": "/opt/conda/bin/python",
+  "uv_bin": "/usr/local/bin/uv",
+  "uv_project_environment": "/workspace/pact/experiments/results/archive_eval_qpost_r13_frac_20260502T0158Z/uv_project_env",
+  "uv_cache_dir": "",
+  "uv_extra_index_url": "",
+  "uv_index_strategy": "",
+  "ffmpeg_bin": "/workspace/ffmpeg-btbn/bin/ffmpeg",
+  "inflate_brotli_spec": "brotli==1.2.0",
+  "inflate_av_spec": "av==17.0.1",
+  "inflate_torch_spec": "torch==2.11.0",
+  "inflate_numpy_spec": "numpy==2.4.4",
+  "dali_bootstrap_dir": "/workspace/pact/experiments/results/archive_eval_qpost_r13_frac_20260502T0158Z"
+}

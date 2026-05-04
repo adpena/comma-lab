@@ -1,0 +1,80 @@
+{
+  "allowed_use": [
+    "promotion_review",
+    "rank_frontier_candidate"
+  ],
+  "archive_bytes": 686632,
+  "archive_sha256": "d561b8bf1367619e6c6e1d9b9d09213da6bdfdfd894be518866ef5119cba2927",
+  "avg_posenet_dist": 0.00311743,
+  "avg_segnet_dist": 0.00401873,
+  "candidate_name": "frontier_candidate_direct_fd_m2_pfp16_20260501",
+  "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda",
+  "component_gate_triggered": false,
+  "component_gates": [
+    {
+      "component": "posenet",
+      "max_absolute": null,
+      "max_relative": 1.002,
+      "metric": "avg_posenet_dist",
+      "observed": 0.00311743,
+      "passed": true,
+      "reference": 0.00346442,
+      "reference_label": "pfp16_a_plus_plus_t4_same_run_baseline",
+      "relative_to_reference": 0.8998418205644811
+    },
+    {
+      "component": "segnet",
+      "max_absolute": null,
+      "max_relative": 1.004,
+      "metric": "avg_segnet_dist",
+      "observed": 0.00401873,
+      "passed": true,
+      "reference": 0.00400656,
+      "reference_label": "pfp16_a_plus_plus_t4_same_run_baseline",
+      "relative_to_reference": 1.0030375184697096
+    }
+  ],
+  "evidence_grade": "A++ contest T4",
+  "files": [
+    {
+      "bytes": 686632,
+      "path": "experiments/results/frontier_candidate_direct_fd_m2_pfp16_20260501/archive/archive.zip",
+      "sha256": "d561b8bf1367619e6c6e1d9b9d09213da6bdfdfd894be518866ef5119cba2927"
+    },
+    {
+      "bytes": 4948,
+      "path": "experiments/results/frontier_candidate_direct_fd_m2_pfp16_20260501/eval/contest_auth_eval.json",
+      "sha256": "074f7462df7452a6f49bcaee3aba0bde4f409fbc5573d37ad5bfa369d30e6621"
+    },
+    {
+      "bytes": 4949,
+      "path": "experiments/results/frontier_candidate_direct_fd_m2_pfp16_20260501/eval/contest_auth_eval.adjudicated.json",
+      "sha256": "dcb135f49adb25c3b5af733cb526006151bba5657380afda50d5fec09f457683"
+    },
+    {
+      "bytes": 6408,
+      "path": "experiments/results/frontier_candidate_direct_fd_m2_pfp16_20260501/eval/provenance.json",
+      "sha256": "3da3344fe732bc51f6421e93d44641ac1cbab8f36bac2705b99ff136e25e666d"
+    },
+    {
+      "bytes": 974,
+      "path": "experiments/results/frontier_candidate_direct_fd_m2_pfp16_20260501/eval/report.txt",
+      "sha256": "36caa1c5369103f6b7111466e90c46f8488762e93e3340f7995b9281177e7eb5"
+    }
+  ],
+  "gpu_model": "Tesla T4",
+  "gpu_t4_match": true,
+  "lane_status": "IN_PREDICTED_BAND",
+  "n_samples": 600,
+  "paper_claim_grade": "A++ contest T4",
+  "promotion_eligible": true,
+  "recorded_at_utc": "2026-05-01T11:07:56Z",
+  "schema_version": 1,
+  "score_delta_vs_pfp16_a_plus_plus": -0.008352071254075,
+  "score_formula": "100*seg_dist + sqrt(10*pose_dist) + 25*archive_bytes/37545489",
+  "score_recomputed": 1.035635453539817,
+  "source_archive": "experiments/results/official_component_response_pfp16_direct_fd_mixed_complete_response_only_20260501/official_response_plan/archives/point_000_eps_m2.zip",
+  "source_eval_dir": "experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z/evals/point_000_eps_m2",
+  "source_job": "component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z",
+  "source_point": "point_000_eps_m2"
+}

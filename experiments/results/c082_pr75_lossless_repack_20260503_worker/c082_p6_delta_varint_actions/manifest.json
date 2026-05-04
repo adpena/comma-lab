@@ -1,0 +1,177 @@
+{
+  "actions_delta_varint": {
+    "brotli_bytes": 176,
+    "brotli_sha256": "be3dfbd53d930474f75958e24723ccc5a7f78cbcc737cba9675e5350b9f9aa2d",
+    "decoded_runtime_records_sha256": "bfd46b2b481a5064cc1f64b7b1288640c51b89ad6aeb5598408150f7945eac15",
+    "raw_bytes": 201,
+    "raw_sha256": "f701b009d6c85d8210e4f2cfab21be3c20bec8291dfe88bf351e06f7c3bedf4b",
+    "record_count": 67
+  },
+  "archive_delta_bytes_vs_source": -58,
+  "candidate_id": "c082_p6_delta_varint_actions",
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "decoded_members": {
+    "masks.mkv": {
+      "bytes": 223385,
+      "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+    },
+    "optimized_poses.bin": {
+      "bytes": 7200,
+      "sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+    },
+    "renderer.bin": {
+      "bytes": 59288,
+      "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+    },
+    "seg_tile_actions.bin": {
+      "bytes": 268,
+      "sha256": "bfd46b2b481a5064cc1f64b7b1288640c51b89ad6aeb5598408150f7945eac15"
+    }
+  },
+  "decoded_stream_parity": true,
+  "decoded_stream_parity_detail": {
+    "candidate_decoded_members": {
+      "masks.mkv": {
+        "bytes": 223385,
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      "optimized_poses.bin": {
+        "bytes": 7200,
+        "sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+      },
+      "renderer.bin": {
+        "bytes": 59288,
+        "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 268,
+        "sha256": "bfd46b2b481a5064cc1f64b7b1288640c51b89ad6aeb5598408150f7945eac15"
+      }
+    },
+    "members_compared": [
+      "masks.mkv",
+      "optimized_poses.bin",
+      "renderer.bin",
+      "seg_tile_actions.bin"
+    ],
+    "source_decoded_members": {
+      "masks.mkv": {
+        "bytes": 223385,
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      "optimized_poses.bin": {
+        "bytes": 7200,
+        "sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+      },
+      "renderer.bin": {
+        "bytes": 59288,
+        "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 268,
+        "sha256": "bfd46b2b481a5064cc1f64b7b1288640c51b89ad6aeb5598408150f7945eac15"
+      }
+    },
+    "status": "passed"
+  },
+  "evidence_grade": "empirical_lossless_byte_transform",
+  "formula_only_rate_score_delta_vs_source": -3.861981928108594e-05,
+  "noop": false,
+  "noop_status": "not_noop_repacked_payload",
+  "output_archive": {
+    "bytes": 276402,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c082_pr75_lossless_repack_20260503_worker/c082_p6_delta_varint_actions/archive.zip",
+    "sha256": "1e0f44a4b199560f4b629fe2599c6ae682b5ed19c03adc620f4bd81771899034"
+  },
+  "payload": {
+    "bytes": 276302,
+    "format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+    "member": "p",
+    "sha256": "420ef95be84282ec71ceb2c183af2b7f932d594661d2f81e879276c204394330"
+  },
+  "promotion_eligible": false,
+  "runtime_parse_validation": {
+    "members": {
+      "masks.mkv": {
+        "bytes": 219472,
+        "codec": "brotli_av1_obu",
+        "decoded_bytes": 223385,
+        "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+      },
+      "optimized_poses.bin": {
+        "bytes": 677,
+        "codec": "public_qp1_brotli",
+        "decoded_bytes": 7200,
+        "decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f",
+        "sha256": "c998610e82bb46a686a073e8a1847987de1346f86852a1c60cfa3244a1ad43c5"
+      },
+      "renderer.bin": {
+        "bytes": 55965,
+        "codec": "brotli_qzs3",
+        "decoded_bytes": 59288,
+        "decoded_sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb",
+        "sha256": "2544dfe50d2631a56600cbfc7342e4a18c97f953526fc51425be0d62f97e22ad"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 176,
+        "codec": "brotli_seg_tile_actions_delta_varint_v1",
+        "decoded_bytes": 268,
+        "decoded_sha256": "bfd46b2b481a5064cc1f64b7b1288640c51b89ad6aeb5598408150f7945eac15",
+        "sha256": "be3dfbd53d930474f75958e24723ccc5a7f78cbcc737cba9675e5350b9f9aa2d"
+      }
+    },
+    "parser": "/Users/adpena/Projects/pact/submissions/robust_current/unpack_renderer_payload.py",
+    "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint"
+  },
+  "schema": "pr75_lossless_repack_candidate_manifest_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 276460,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_actions_only_p3_t4_20260503T0401Z/archive.zip",
+    "sha256": "851a61ddd88c0ddb4a05762f11e900f132fb771fd9dba743ac2026637ddf15d9"
+  },
+  "source_payload": {
+    "bytes": 276360,
+    "sha256": "a50045d4c29fa0efc9b57eac3c14349f262526ba19546615b14cfb728e216014"
+  },
+  "source_preservation": {
+    "archive_byte_identical_to_source": false,
+    "candidate_archive_sha256": "1e0f44a4b199560f4b629fe2599c6ae682b5ed19c03adc620f4bd81771899034",
+    "candidate_payload_sha256": "420ef95be84282ec71ceb2c183af2b7f932d594661d2f81e879276c204394330",
+    "decoded_streams_byte_identical": true,
+    "payload_byte_identical_to_source": false,
+    "source_archive_sha256": "851a61ddd88c0ddb4a05762f11e900f132fb771fd9dba743ac2026637ddf15d9",
+    "source_payload_sha256": "a50045d4c29fa0efc9b57eac3c14349f262526ba19546615b14cfb728e216014",
+    "status": "lossless_decoded_stream_preserving_repack"
+  },
+  "source_preserving": true,
+  "stream_choices": {
+    "masks.mkv": {
+      "bytes": 219472,
+      "params": "source",
+      "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+    },
+    "optimized_poses.bin": {
+      "bytes": 677,
+      "params": "source",
+      "sha256": "c998610e82bb46a686a073e8a1847987de1346f86852a1c60cfa3244a1ad43c5"
+    },
+    "renderer.bin": {
+      "bytes": 55965,
+      "params": "source",
+      "sha256": "2544dfe50d2631a56600cbfc7342e4a18c97f953526fc51425be0d62f97e22ad"
+    },
+    "seg_tile_actions.delta_varint": {
+      "bytes": 176,
+      "params": {
+        "lgblock": 0,
+        "lgwin": 16,
+        "mode": 0,
+        "quality": 9
+      },
+      "sha256": "be3dfbd53d930474f75958e24723ccc5a7f78cbcc737cba9675e5350b9f9aa2d"
+    }
+  },
+  "tool": "experiments/build_pr75_lossless_repack_candidates.py"
+}

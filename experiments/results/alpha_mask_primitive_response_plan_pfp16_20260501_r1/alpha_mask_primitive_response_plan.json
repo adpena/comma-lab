@@ -1,0 +1,838 @@
+{
+  "alpha_plan_format": "alpha_mask_primitive_component_response_plan_v1",
+  "baseline_archive": {
+    "bytes": 686635,
+    "path_hint": "experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+    "sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+  },
+  "baseline_archive_required_at_eval_time": true,
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "evidence_grade": "empirical",
+  "format": "official_component_response_plan_v1",
+  "generation_config": {
+    "boundary_width": 1,
+    "mask_crf": 63,
+    "mask_fps": 20,
+    "max_boundary_points": 2,
+    "max_class_flip_points": 1,
+    "max_component_points": 2,
+    "max_components_per_class": 1,
+    "max_frames": null,
+    "max_morph_points": 2,
+    "max_pixels_per_point": 4096,
+    "max_points": 8,
+    "max_transition_points": 1,
+    "scan_frame_count": 16
+  },
+  "local_diagnostic_only": true,
+  "official_component_response": false,
+  "path_policy": {
+    "absolute_point_paths_allowed": false,
+    "hidden_or_system_paths_allowed": false,
+    "plan_point_paths": "relative_to_plan_json_parent",
+    "traversal_point_paths_allowed": false
+  },
+  "perturbation": {
+    "archive_variants_manifest": "alpha_mask_primitive_archive_variants_manifest.json",
+    "archive_variants_manifest_sha256": "da95f033e570990e557f52a0819d4356877d80b753c4b0be935aa58345dc1768",
+    "auth_eval_required": "cuda",
+    "basis_kind": "alpha_mask_geometry_primitive",
+    "canonical_response_eval_path": "archive.zip -> inflate.sh -> upstream/evaluate.py",
+    "epsilon_units": "ordinal_primitive_point_index",
+    "format": "alpha_mask_primitive_component_response_plan_v1",
+    "primitive_count": 8,
+    "primitive_generation": {
+      "class_ids": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "connectivity": 4,
+      "frame_sampling": "deterministic_linspace_over_decoded_frames",
+      "partial_decode": false,
+      "partial_decode_non_promotable": false,
+      "selection_cap_pixels_per_point": 4096
+    },
+    "primitive_ids": [
+      "connected_component_set_component_to_neighbor_class_719_2_0_935e2f9806e317d4",
+      "connected_component_set_component_to_neighbor_class_799_2_0_2895a6419d41f0d9",
+      "boundary_band_set_source_boundary_band_to_target_class_1039_0_1_1c4bf7d7e9642207",
+      "boundary_band_set_source_boundary_band_to_target_class_560_0_1_45492e6e935d4dd8",
+      "class_flip_set_source_class_prefix_to_target_class_719_2_0_9a7c415f05669a42",
+      "morphology_erode_erode_source_class_toward_target_class_1039_0_1_b37a434ce392a09a",
+      "morphology_dilate_dilate_source_class_into_target_class_1039_1_0_da3904667da2e5aa",
+      "transition_endpoint_advance_previous_endpoint_to_current_class_266_0_3_1999443ce02efa4b"
+    ]
+  },
+  "points": [
+    {
+      "archive_bytes": 686635,
+      "archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+      "epsilon": 0.0,
+      "epsilon_semantics": "ordinal_alpha_primitive_point_index_not_metric_magnitude",
+      "index": 0,
+      "official_component_response": false,
+      "predicted_delta": {
+        "combined": 0.0,
+        "posenet": 0.0,
+        "segnet": 0.0
+      },
+      "promotion_eligible": false,
+      "role": "baseline",
+      "score_claim": false
+    },
+    {
+      "archive": "archives/point_001_connected_component_set_component_to_neighbor_class_connected_component_set_component_.zip",
+      "archive_byte_delta_vs_baseline": -316928,
+      "archive_bytes": 369707,
+      "archive_sha256": "2fa4bc52a373b0907a6f03197f38d5328d0699630350baa2a11ac0859c38d021",
+      "epsilon": 1.0,
+      "epsilon_semantics": "ordinal_alpha_primitive_point_index_not_metric_magnitude",
+      "index": 1,
+      "mask_delta": {
+        "changed_fraction": 1.7361111e-05,
+        "changed_pixels": 4096,
+        "pixel_selection_policy": "row_major_within_component_after_exact_component_selection",
+        "selected_pixels_after_cap": 4096,
+        "selected_pixels_before_cap": 99018,
+        "selection_was_capped": true,
+        "source_class_histogram_in_selection": {
+          "0": 0,
+          "1": 0,
+          "2": 4096,
+          "3": 0,
+          "4": 0
+        },
+        "target_class_written": 0
+      },
+      "mask_member": {
+        "crf": 63,
+        "encoder": "tac.mask_codec.encode_masks",
+        "fps": 20,
+        "name": "masks.mkv",
+        "sha256": "b3a13e6306a8165261a9995b93981560cdd6eff71cc6efdcebbc617bac10faef",
+        "size_bytes": 108790
+      },
+      "official_component_response": false,
+      "predicted_delta": null,
+      "primitive": {
+        "description": "flip one 4-connected component to its dominant neighboring class",
+        "frame_index": 719,
+        "kind": "connected_component",
+        "operation": "set_component_to_neighbor_class",
+        "params": {
+          "bbox_xyxy_exclusive": [
+            0,
+            0,
+            512,
+            218
+          ],
+          "boundary_edges_4conn": 1540,
+          "boundary_pixels_4conn": 1453,
+          "component_area": 99018,
+          "component_centroid_xy": [
+            257.875962,
+            96.52652
+          ],
+          "neighbor_histogram": {
+            "0": 348,
+            "1": 167,
+            "2": 0,
+            "3": 91,
+            "4": 0
+          },
+          "pixel_cap_policy": "row_major_within_component_after_exact_component_selection",
+          "scan_index": 0,
+          "seed_x": 0,
+          "seed_y": 0
+        },
+        "primitive_id": "connected_component_set_component_to_neighbor_class_719_2_0_935e2f9806e317d4",
+        "rank_pixels": 99018,
+        "selection_weight": 0.503631591796875,
+        "source_class": 2,
+        "target_class": 0
+      },
+      "primitive_id": "connected_component_set_component_to_neighbor_class_719_2_0_935e2f9806e317d4",
+      "promotion_eligible": false,
+      "score_claim": false,
+      "selection_weight": 0.503631591796875
+    },
+    {
+      "archive": "archives/point_002_connected_component_set_component_to_neighbor_class_connected_component_set_component_.zip",
+      "archive_byte_delta_vs_baseline": -316922,
+      "archive_bytes": 369713,
+      "archive_sha256": "4aaaec8e2b8416cc988285bdd23cec53643340fb1b48d9ab78d8af671a3ecbe7",
+      "epsilon": 2.0,
+      "epsilon_semantics": "ordinal_alpha_primitive_point_index_not_metric_magnitude",
+      "index": 2,
+      "mask_delta": {
+        "changed_fraction": 1.7361111e-05,
+        "changed_pixels": 4096,
+        "pixel_selection_policy": "row_major_within_component_after_exact_component_selection",
+        "selected_pixels_after_cap": 4096,
+        "selected_pixels_before_cap": 98800,
+        "selection_was_capped": true,
+        "source_class_histogram_in_selection": {
+          "0": 0,
+          "1": 0,
+          "2": 4096,
+          "3": 0,
+          "4": 0
+        },
+        "target_class_written": 0
+      },
+      "mask_member": {
+        "crf": 63,
+        "encoder": "tac.mask_codec.encode_masks",
+        "fps": 20,
+        "name": "masks.mkv",
+        "sha256": "d3a83ebb28312ca1396b93d53532c2d5216af6577c11c43581cafe647f837880",
+        "size_bytes": 108790
+      },
+      "official_component_response": false,
+      "predicted_delta": null,
+      "primitive": {
+        "description": "flip one 4-connected component to its dominant neighboring class",
+        "frame_index": 799,
+        "kind": "connected_component",
+        "operation": "set_component_to_neighbor_class",
+        "params": {
+          "bbox_xyxy_exclusive": [
+            0,
+            0,
+            512,
+            216
+          ],
+          "boundary_edges_4conn": 1550,
+          "boundary_pixels_4conn": 1460,
+          "component_area": 98800,
+          "component_centroid_xy": [
+            257.075071,
+            96.333623
+          ],
+          "neighbor_histogram": {
+            "0": 382,
+            "1": 101,
+            "2": 0,
+            "3": 134,
+            "4": 0
+          },
+          "pixel_cap_policy": "row_major_within_component_after_exact_component_selection",
+          "scan_index": 0,
+          "seed_x": 0,
+          "seed_y": 0
+        },
+        "primitive_id": "connected_component_set_component_to_neighbor_class_799_2_0_2895a6419d41f0d9",
+        "rank_pixels": 98800,
+        "selection_weight": 0.5025227864583334,
+        "source_class": 2,
+        "target_class": 0
+      },
+      "primitive_id": "connected_component_set_component_to_neighbor_class_799_2_0_2895a6419d41f0d9",
+      "promotion_eligible": false,
+      "score_claim": false,
+      "selection_weight": 0.5025227864583334
+    },
+    {
+      "archive": "archives/point_003_boundary_band_set_source_boundary_band_to_target_class_boundary_band_set_source_bounda.zip",
+      "archive_byte_delta_vs_baseline": -316977,
+      "archive_bytes": 369658,
+      "archive_sha256": "a44944cc538766c6b37c20be67cb1c4f006bc5399f9a0916e52cffa76e4022b1",
+      "epsilon": 3.0,
+      "epsilon_semantics": "ordinal_alpha_primitive_point_index_not_metric_magnitude",
+      "index": 3,
+      "mask_delta": {
+        "changed_fraction": 6.366306e-06,
+        "changed_pixels": 1502,
+        "pixel_selection_policy": "row_major_within_boundary_band",
+        "selected_pixels_after_cap": 1502,
+        "selected_pixels_before_cap": 1502,
+        "selection_was_capped": false,
+        "source_class_histogram_in_selection": {
+          "0": 1502,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0
+        },
+        "target_class_written": 1
+      },
+      "mask_member": {
+        "crf": 63,
+        "encoder": "tac.mask_codec.encode_masks",
+        "fps": 20,
+        "name": "masks.mkv",
+        "sha256": "832c0ef67ccee5ceb5ca6761162dd647de829103e711538b63fa0f5a55199b89",
+        "size_bytes": 108744
+      },
+      "official_component_response": false,
+      "predicted_delta": null,
+      "primitive": {
+        "description": "flip a one-sided class boundary band to the adjacent target class",
+        "frame_index": 1039,
+        "kind": "boundary_band",
+        "operation": "set_source_boundary_band_to_target_class",
+        "params": {
+          "boundary_pair_pixels": 1502,
+          "boundary_width": 1,
+          "pixel_cap_policy": "row_major_within_boundary_band"
+        },
+        "primitive_id": "boundary_band_set_source_boundary_band_to_target_class_1039_0_1_1c4bf7d7e9642207",
+        "rank_pixels": 1502,
+        "selection_weight": 0.007639567057291667,
+        "source_class": 0,
+        "target_class": 1
+      },
+      "primitive_id": "boundary_band_set_source_boundary_band_to_target_class_1039_0_1_1c4bf7d7e9642207",
+      "promotion_eligible": false,
+      "score_claim": false,
+      "selection_weight": 0.007639567057291667
+    },
+    {
+      "archive": "archives/point_004_boundary_band_set_source_boundary_band_to_target_class_boundary_band_set_source_bounda.zip",
+      "archive_byte_delta_vs_baseline": -316971,
+      "archive_bytes": 369664,
+      "archive_sha256": "7affa1782a4f807c0fe2193f698f04e5e3c22c6b123c101a4497d4f8790ab1e7",
+      "epsilon": 4.0,
+      "epsilon_semantics": "ordinal_alpha_primitive_point_index_not_metric_magnitude",
+      "index": 4,
+      "mask_delta": {
+        "changed_fraction": 6.116231e-06,
+        "changed_pixels": 1443,
+        "pixel_selection_policy": "row_major_within_boundary_band",
+        "selected_pixels_after_cap": 1443,
+        "selected_pixels_before_cap": 1443,
+        "selection_was_capped": false,
+        "source_class_histogram_in_selection": {
+          "0": 1443,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0
+        },
+        "target_class_written": 1
+      },
+      "mask_member": {
+        "crf": 63,
+        "encoder": "tac.mask_codec.encode_masks",
+        "fps": 20,
+        "name": "masks.mkv",
+        "sha256": "12a8e22889169d6794cac1208a34aee60386710af9ebcfc282abbc943fca74a5",
+        "size_bytes": 108748
+      },
+      "official_component_response": false,
+      "predicted_delta": null,
+      "primitive": {
+        "description": "flip a one-sided class boundary band to the adjacent target class",
+        "frame_index": 560,
+        "kind": "boundary_band",
+        "operation": "set_source_boundary_band_to_target_class",
+        "params": {
+          "boundary_pair_pixels": 1443,
+          "boundary_width": 1,
+          "pixel_cap_policy": "row_major_within_boundary_band"
+        },
+        "primitive_id": "boundary_band_set_source_boundary_band_to_target_class_560_0_1_45492e6e935d4dd8",
+        "rank_pixels": 1443,
+        "selection_weight": 0.0073394775390625,
+        "source_class": 0,
+        "target_class": 1
+      },
+      "primitive_id": "boundary_band_set_source_boundary_band_to_target_class_560_0_1_45492e6e935d4dd8",
+      "promotion_eligible": false,
+      "score_claim": false,
+      "selection_weight": 0.0073394775390625
+    },
+    {
+      "archive": "archives/point_005_class_flip_set_source_class_prefix_to_target_class_class_flip_set_source_class_prefix_.zip",
+      "archive_byte_delta_vs_baseline": -316928,
+      "archive_bytes": 369707,
+      "archive_sha256": "be0ac8de2aa95611e257f77ebcd40515f417c848994890c537dcc4c1fa2ff373",
+      "epsilon": 5.0,
+      "epsilon_semantics": "ordinal_alpha_primitive_point_index_not_metric_magnitude",
+      "index": 5,
+      "mask_delta": {
+        "changed_fraction": 1.7361111e-05,
+        "changed_pixels": 4096,
+        "pixel_selection_policy": "row_major_prefix_of_source_class",
+        "selected_pixels_after_cap": 4096,
+        "selected_pixels_before_cap": 99032,
+        "selection_was_capped": true,
+        "source_class_histogram_in_selection": {
+          "0": 0,
+          "1": 0,
+          "2": 4096,
+          "3": 0,
+          "4": 0
+        },
+        "target_class_written": 0
+      },
+      "mask_member": {
+        "crf": 63,
+        "encoder": "tac.mask_codec.encode_masks",
+        "fps": 20,
+        "name": "masks.mkv",
+        "sha256": "a0f5db9da24e7de566481aea8f5ef51d405f7c9787aedd85c5b8f206028a8e5c",
+        "size_bytes": 108790
+      },
+      "official_component_response": false,
+      "predicted_delta": null,
+      "primitive": {
+        "description": "flip a bounded row-major prefix of one frame/class to its dominant neighboring class",
+        "frame_index": 719,
+        "kind": "class_flip",
+        "operation": "set_source_class_prefix_to_target_class",
+        "params": {
+          "pixel_cap_policy": "row_major_prefix_of_source_class",
+          "source_class_pixels_in_frame": 99032
+        },
+        "primitive_id": "class_flip_set_source_class_prefix_to_target_class_719_2_0_9a7c415f05669a42",
+        "rank_pixels": 99032,
+        "selection_weight": 0.5037027994791666,
+        "source_class": 2,
+        "target_class": 0
+      },
+      "primitive_id": "class_flip_set_source_class_prefix_to_target_class_719_2_0_9a7c415f05669a42",
+      "promotion_eligible": false,
+      "score_claim": false,
+      "selection_weight": 0.5037027994791666
+    },
+    {
+      "archive": "archives/point_006_morphology_erode_erode_source_class_toward_target_class_morphology_erode_erode_source_.zip",
+      "archive_byte_delta_vs_baseline": -316977,
+      "archive_bytes": 369658,
+      "archive_sha256": "0350526b9e850a190467ea06a9f03f01b4df9cdc9f295d93150f7145dcf752d1",
+      "epsilon": 6.0,
+      "epsilon_semantics": "ordinal_alpha_primitive_point_index_not_metric_magnitude",
+      "index": 6,
+      "mask_delta": {
+        "changed_fraction": 6.366306e-06,
+        "changed_pixels": 1502,
+        "pixel_selection_policy": "row_major_within_source_boundary",
+        "selected_pixels_after_cap": 1502,
+        "selected_pixels_before_cap": 1502,
+        "selection_was_capped": false,
+        "source_class_histogram_in_selection": {
+          "0": 1502,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0
+        },
+        "target_class_written": 1
+      },
+      "mask_member": {
+        "crf": 63,
+        "encoder": "tac.mask_codec.encode_masks",
+        "fps": 20,
+        "name": "masks.mkv",
+        "sha256": "53fa1ed62a76614af1decdb17bd4f42684dde1ec73f9b2a21d2291022af9649b",
+        "size_bytes": 108744
+      },
+      "official_component_response": false,
+      "predicted_delta": null,
+      "primitive": {
+        "description": "erode source-class boundary pixels into an adjacent target class",
+        "frame_index": 1039,
+        "kind": "morphology_erode",
+        "operation": "erode_source_class_toward_target_class",
+        "params": {
+          "boundary_pair_pixels": 1502,
+          "boundary_width": 1,
+          "pixel_cap_policy": "row_major_within_source_boundary"
+        },
+        "primitive_id": "morphology_erode_erode_source_class_toward_target_class_1039_0_1_b37a434ce392a09a",
+        "rank_pixels": 1502,
+        "selection_weight": 0.007639567057291667,
+        "source_class": 0,
+        "target_class": 1
+      },
+      "primitive_id": "morphology_erode_erode_source_class_toward_target_class_1039_0_1_b37a434ce392a09a",
+      "promotion_eligible": false,
+      "score_claim": false,
+      "selection_weight": 0.007639567057291667
+    },
+    {
+      "archive": "archives/point_007_morphology_dilate_dilate_source_class_into_target_class_morphology_dilate_dilate_sourc.zip",
+      "archive_byte_delta_vs_baseline": -316977,
+      "archive_bytes": 369658,
+      "archive_sha256": "1c3b452d7119da5b5fee1baadc3f34d03f82bf7ec5cf74510ee68a0e39b5c8f1",
+      "epsilon": 7.0,
+      "epsilon_semantics": "ordinal_alpha_primitive_point_index_not_metric_magnitude",
+      "index": 7,
+      "mask_delta": {
+        "changed_fraction": 6.366306e-06,
+        "changed_pixels": 1502,
+        "pixel_selection_policy": "row_major_within_adjacent_target_pixels",
+        "selected_pixels_after_cap": 1502,
+        "selected_pixels_before_cap": 1502,
+        "selection_was_capped": false,
+        "source_class_histogram_in_selection": {
+          "0": 1502,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0
+        },
+        "target_class_written": 1
+      },
+      "mask_member": {
+        "crf": 63,
+        "encoder": "tac.mask_codec.encode_masks",
+        "fps": 20,
+        "name": "masks.mkv",
+        "sha256": "94618a696d3261e72b7c1eec5b9c18388a03c4cbe3d68f2a89b28f26aa5a3154",
+        "size_bytes": 108744
+      },
+      "official_component_response": false,
+      "predicted_delta": null,
+      "primitive": {
+        "description": "dilate source class into adjacent target-class pixels",
+        "frame_index": 1039,
+        "kind": "morphology_dilate",
+        "operation": "dilate_source_class_into_target_class",
+        "params": {
+          "boundary_width": 1,
+          "pixel_cap_policy": "row_major_within_adjacent_target_pixels",
+          "target_pixels_adjacent_to_source": 1502
+        },
+        "primitive_id": "morphology_dilate_dilate_source_class_into_target_class_1039_1_0_da3904667da2e5aa",
+        "rank_pixels": 1502,
+        "selection_weight": 0.007639567057291667,
+        "source_class": 1,
+        "target_class": 0
+      },
+      "primitive_id": "morphology_dilate_dilate_source_class_into_target_class_1039_1_0_da3904667da2e5aa",
+      "promotion_eligible": false,
+      "score_claim": false,
+      "selection_weight": 0.007639567057291667
+    },
+    {
+      "archive": "archives/point_008_transition_endpoint_advance_previous_endpoint_to_current_class_transition_endpoint_adv.zip",
+      "archive_byte_delta_vs_baseline": -316961,
+      "archive_bytes": 369674,
+      "archive_sha256": "4e1dc2d1c3c927a7d975fb7823dcdd9e508266e9d8def14b9f137cc5cc818e0a",
+      "epsilon": 8.0,
+      "epsilon_semantics": "ordinal_alpha_primitive_point_index_not_metric_magnitude",
+      "index": 8,
+      "mask_delta": {
+        "changed_fraction": 1.6487969e-05,
+        "changed_pixels": 3890,
+        "pixel_selection_policy": "row_major_within_transition_pair",
+        "selected_pixels_after_cap": 3890,
+        "selected_pixels_before_cap": 3890,
+        "selection_was_capped": false,
+        "source_class_histogram_in_selection": {
+          "0": 3890,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0
+        },
+        "target_class_written": 3
+      },
+      "mask_member": {
+        "crf": 63,
+        "encoder": "tac.mask_codec.encode_masks",
+        "fps": 20,
+        "name": "masks.mkv",
+        "sha256": "d17b75c2c1a96231dcae41235c6e314690e220f5482e3d0f3f8be2bdbeeb9cf7",
+        "size_bytes": 108761
+      },
+      "official_component_response": false,
+      "predicted_delta": null,
+      "primitive": {
+        "description": "set changed pixels in the earlier endpoint forward to their next-frame class",
+        "frame_index": 266,
+        "kind": "transition_endpoint",
+        "operation": "advance_previous_endpoint_to_current_class",
+        "params": {
+          "changed_pixels_for_pair": 3890,
+          "current_class": 3,
+          "from_frame": 266,
+          "pixel_cap_policy": "row_major_within_transition_pair",
+          "previous_class": 0,
+          "to_frame": 267
+        },
+        "primitive_id": "transition_endpoint_advance_previous_endpoint_to_current_class_266_0_3_1999443ce02efa4b",
+        "rank_pixels": 3890,
+        "selection_weight": 0.019785563151041668,
+        "source_class": 0,
+        "target_class": 3
+      },
+      "primitive_id": "transition_endpoint_advance_previous_endpoint_to_current_class_266_0_3_1999443ce02efa4b",
+      "promotion_eligible": false,
+      "score_claim": false,
+      "selection_weight": 0.019785563151041668
+    }
+  ],
+  "producer": "experiments/build_alpha_mask_primitive_response_plan.py",
+  "promotion_eligible": false,
+  "provenance": {
+    "command": [
+      "experiments/build_alpha_mask_primitive_response_plan.py",
+      "--baseline-archive",
+      "experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+      "--output-dir",
+      "experiments/results/alpha_mask_primitive_response_plan_pfp16_20260501_r1",
+      "--scan-frame-count",
+      "16",
+      "--max-points",
+      "8",
+      "--max-component-points",
+      "2",
+      "--max-boundary-points",
+      "2",
+      "--max-class-flip-points",
+      "1",
+      "--max-morph-points",
+      "2",
+      "--max-transition-points",
+      "1",
+      "--max-components-per-class",
+      "1",
+      "--max-pixels-per-point",
+      "4096",
+      "--boundary-width",
+      "1",
+      "--mask-crf",
+      "63",
+      "--mask-fps",
+      "20",
+      "--force"
+    ],
+    "cwd_hint": ".",
+    "git": {
+      "dirty_tracked_files": true,
+      "head": "5821d6dc3260960cc91a66b4806e4058abaf25f5",
+      "status_short_tracked": [
+        "M .omx/research/component_sensitivity_map_certification_20260501_codex.md",
+        " M .omx/research/shannon_floor_claim_matrix_20260430_codex.md",
+        " M .omx/research/shannon_floor_nextwave_telemetry_and_research_20260430_codex.md",
+        "MM .omx/state/lane_registry.json",
+        " M .omx/state/lightning_batch_jobs.json",
+        " M .omx/state/review_tracker.duckdb",
+        " M .omx/state/review_tracker.json",
+        " M .omx/state/vastai_active_instances.json",
+        "MM AGENTS.md",
+        "MM CLAUDE.md",
+        " M experiments/build_component_response_perturbation_plan.py",
+        " M experiments/build_component_response_plan_from_sensitivity_artifacts.py",
+        " M experiments/build_component_response_prediction_deltas.py",
+        " M experiments/contest_auth_eval.py",
+        " M experiments/modal_auth_eval.py",
+        " M experiments/modal_train_lane.py",
+        " M experiments/paradigm_alpha_real_archive_eval.py",
+        "D  experiments/results/lane_g_v3_owv3_REGRESSED_20260501/owv3_0089_contest_auth_eval.json",
+        "D  experiments/results/lane_g_v3_owv3_REGRESSED_20260501/owv3_0134_contest_auth_eval.json",
+        "D  experiments/results/lane_g_v3_owv3_r7_LANDED_1_013_20260501/contest_auth_eval.json",
+        "D  experiments/results/lane_g_v3_owv3_r7_LANDED_1_013_20260501/provenance.json",
+        "D  experiments/results/lane_g_v3_owv3_wave3_LANDED_20260501/owv3_wave3_owv3_0032_bbr0p7_protect0p002_aggr1em05_results/contest_auth_eval.json",
+        "D  experiments/results/lane_g_v3_owv3_wave3_LANDED_20260501/owv3_wave3_owv3_0065_bbr0p685_protect0p002_aggr1em05_results/contest_auth_eval.json",
+        "D  experiments/results/lane_g_v3_owv3_wave3_LANDED_20260501/owv3_wave3_owv3_0076_bbr0p68_protect0p002_aggr1em05_results/contest_auth_eval.json",
+        "D  experiments/results/lane_g_v3_owv3_wave3_LANDED_20260501/owv3_wave3_owv3_0119_bbr0p66_protect0p0018_aggr1em05_results/contest_auth_eval.json",
+        "D  experiments/results/lane_g_v3_owv3_wave3_LANDED_20260501/owv3_wave3_owv3_0120_bbr0p66_protect0p002_aggr1em05_results/contest_auth_eval.json",
+        "D  experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/wave3_chain_driver.sh",
+        "D  experiments/results/lane_g_v3_owv3_wave3_refinement_20260501/wave3_chain_selection.json",
+        "D  experiments/results/lane_g_v3_owv3_wave4_REGRESSED_20260501/owv3_wave4_results/owv3_0023_bbr0p6_protect0p05_aggr1em05/contest_auth_eval.json",
+        "D  experiments/results/lane_g_v3_owv3_wave4_REGRESSED_20260501/owv3_wave4_results/owv3_0038_bbr0p55_protect0p03_aggr1em05/contest_auth_eval.json",
+        "D  experiments/results/lane_g_v3_owv3_wave4_REGRESSED_20260501/owv3_wave4_results/owv3_0039_bbr0p55_protect0p05_aggr1em05/contest_auth_eval.json",
+        "D  experiments/results/lane_g_v3_owv3_wave4_REGRESSED_20260501/owv3_wave4_results/owv3_0070_bbr0p45_protect0p03_aggr1em05/contest_auth_eval.json",
+        "D  experiments/results/lane_g_v3_owv3_wave4_REGRESSED_20260501/owv3_wave4_results/owv3_0071_bbr0p45_protect0p05_aggr1em05/contest_auth_eval.json",
+        "D  experiments/results/lane_g_v3_owv3_wave4_deepfrontier_20260501/wave4_chain_selection.json",
+        " M experiments/results/lightning_batch/official_component_response_pfp16_a_plus_plus_20260501_r7_predicted_from_r2_l40s_codex_lightning_t4_parallel/evals/point_004_eps_p2/provenance.json",
+        " M experiments/select_renderer_blob_perturbation_basis.py",
+        " M reports/silent_defaults.md",
+        " M scripts/bootstrap_dali_hash_pinned.py",
+        "MM scripts/check_vastai.py",
+        " M scripts/configure_lightning_ssh.py",
+        "D  scripts/ensure_remote_pip.sh",
+        "MM scripts/launch_lane_on_vastai.py",
+        "D  scripts/launch_lightning_alpha_geo0_pose_regen.py",
+        " M scripts/lightning_repro_workspace.py",
+        "MM scripts/probe_nvdec.sh",
+        "D  scripts/remote_archive_only_eval.sh",
+        "MM scripts/remote_lane_nwc.sh",
+        " M scripts/remote_pose_tto_bootstrap.sh",
+        " M scripts/remote_pose_tto_only_bootstrap.sh",
+        " M src/tac.egg-info/PKG-INFO",
+        " M src/tac.egg-info/SOURCES.txt",
+        " M src/tac.egg-info/requires.txt",
+        " M src/tac.egg-info/top_level.txt",
+        "MM src/tac/deploy/base.py",
+        " M src/tac/deploy/lightning/batch_jobs.py",
+        " M src/tac/losses.py",
+        " M src/tac/mask_codec.py",
+        "MM src/tac/preflight.py",
+        " M src/tac/submission_archive.py",
+        " M src/tac/tests/test_bootstrap_pose_tto_only.py",
+        " M src/tac/tests/test_build_component_response_perturbation_plan.py",
+        "D  src/tac/tests/test_check_loop_session_extinction_pcc5_pcc8.py",
+        " M src/tac/tests/test_configure_lightning_ssh.py",
+        " M src/tac/tests/test_inflate_sh_brotli_clean_env.py",
+        " M src/tac/tests/test_lightning_batch_jobs.py",
+        " M src/tac/tests/test_lightning_repro_workspace.py",
+        " M src/tac/tests/test_modal_auth_eval.py",
+        " M src/tac/tests/test_select_renderer_blob_perturbation_basis.py",
+        " M src/tac/training.py",
+        " M submissions/robust_current/inflate.sh"
+      ]
+    },
+    "platform": "macOS-26.4-arm64-arm-64bit",
+    "python_executable": "/Users/adpena/Projects/pact/.venv/bin/python",
+    "python_version": "3.12.13",
+    "repo_root_hint": "pact",
+    "selected_environment": {},
+    "source_files": [
+      {
+        "bytes": 69228,
+        "path": "experiments/build_alpha_mask_primitive_response_plan.py",
+        "sha256": "82af2874fd6a8b8e7eb2cc624920bc9d689779860517da1c7e20249c817f3e45"
+      },
+      {
+        "bytes": 53345,
+        "path": "experiments/alpha_mask_candidate_builder.py",
+        "sha256": "7be69ee3b62949b137292a3d064f5e9c9b95b0f7a7df7c6b35555fd78b832465"
+      },
+      {
+        "bytes": 23841,
+        "path": "experiments/alpha_primitive_mask_diagnostics.py",
+        "sha256": "02dbab14e3a0236be6befa60273a1aee4a24c93e8807e292508d5c50170ac1c8"
+      },
+      {
+        "bytes": 35944,
+        "path": "experiments/alpha_mask_residual_planner.py",
+        "sha256": "92ca0a89306083d0e1eabe42a438e1eed59f53d918cd1a74738882ddb6db1a93"
+      },
+      {
+        "bytes": 38743,
+        "path": "src/tac/submission_archive.py",
+        "sha256": "bafa3defad1b0131c735054ea5211007cd8049fb5d1d813267d8dad691ecf1e7"
+      }
+    ],
+    "tool": "experiments/build_alpha_mask_primitive_response_plan.py"
+  },
+  "purpose": "build deterministic Alpha mask primitive archive variants for later SegNet/PoseNet CUDA component-response exact eval",
+  "schema_version": 1,
+  "score_claim": false,
+  "score_claim_warning": "No score claim is made by this plan. Exact CUDA auth eval must be attached before any score claim, promotion, ranking, or method retirement.",
+  "scorer_network_loaded": false,
+  "source": {
+    "baseline_archive": {
+      "bytes": 686635,
+      "path_hint": "experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+      "sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    "decode": {
+      "decoded_frames": 1200,
+      "decoder": "legacy_av1_class_scaled_gray",
+      "ffmpeg": "/opt/homebrew/Cellar/ffmpeg/8.1_1/bin/ffmpeg",
+      "ffprobe": "/opt/homebrew/Cellar/ffmpeg/8.1_1/bin/ffprobe",
+      "height": 384,
+      "max_frames": null,
+      "reported_frames": null,
+      "truncated_by_builder": false,
+      "width": 512
+    },
+    "decoded_masks": {
+      "class_fractions": {
+        "0": 0.232577145894,
+        "1": 0.005748816596,
+        "2": 0.495173962911,
+        "3": 0.012248908149,
+        "4": 0.25425116645
+      },
+      "class_histogram": {
+        "0": 54871833,
+        "1": 1356316,
+        "2": 116826195,
+        "3": 2889880,
+        "4": 59985376
+      },
+      "class_id_u8_sha256": "f1973d42b59933f787ad2b7dfcfc21e507fec7c3d6f8ca03cbcada91e26f37d1",
+      "dtype": "uint8_class_ids",
+      "num_pixels": 235929600,
+      "shape": [
+        1200,
+        384,
+        512
+      ],
+      "spatial_boundary_edges_4conn": 3378720,
+      "temporal_changed_pixels": 2054333
+    },
+    "mask_member": {
+      "compress_type": 8,
+      "compressed_bytes": 412169,
+      "crc32": "e144d6ac",
+      "date_time": [
+        1980,
+        1,
+        1,
+        0,
+        0,
+        0
+      ],
+      "name": "masks.mkv",
+      "permissions_octal": "0o644",
+      "raw_bytes": 421483,
+      "sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9"
+    },
+    "source_kind": "baseline_archive_mask_member",
+    "source_members": [
+      {
+        "compress_type": 8,
+        "compressed_bytes": 412169,
+        "crc32": "e144d6ac",
+        "date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "name": "masks.mkv",
+        "permissions_octal": "0o644",
+        "raw_bytes": 421483,
+        "sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9"
+      },
+      {
+        "compress_type": 8,
+        "compressed_bytes": 6734,
+        "crc32": "686cbfbf",
+        "date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "name": "optimized_poses.bin",
+        "permissions_octal": "0o644",
+        "raw_bytes": 7200,
+        "sha256": "4b3d8cd58965971ad518a970441f5e9cc53ce361a62d51e95c1cdd2056be4449"
+      },
+      {
+        "compress_type": 8,
+        "compressed_bytes": 267402,
+        "crc32": "1827a837",
+        "date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "name": "renderer.bin",
+        "permissions_octal": "0o644",
+        "raw_bytes": 296776,
+        "sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529"
+      }
+    ],
+    "validated_zip_safety": true
+  }
+}

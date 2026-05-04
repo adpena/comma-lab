@@ -1,0 +1,237 @@
+{
+  "candidate_count": 3,
+  "candidates": [
+    {
+      "archive": "experiments/results/pr79_pr65_postprocess_atoms_20260503_worker/pr79_s2_pr65_qpost_bias_pair598/archive.zip",
+      "archive_byte_delta_vs_source": 153,
+      "archive_bytes": 277474,
+      "archive_sha256": "81fff847a0507642b2f7f24b3555ba769bf73dae05fc42d8591416f3f1fe945e",
+      "candidate_id": "pr79_s2_pr65_qpost_bias_pair598",
+      "dispatch_recommendation": {
+        "blockers": [
+          "existing exact T4 qpost screens are all worse than current exact frontier",
+          "no component evidence for required sub-0.314 gain 0.001267627"
+        ],
+        "break_even_component_gain_for_sub314_vs_frontier": 0.0012676267026874488,
+        "dispatch_ready_now": false,
+        "lane_claim_required_before_any_future_exact_eval": true,
+        "qpost_exact_negative_count": 7,
+        "rate_score_delta_vs_source": 0.00010187641982769222,
+        "reason": "existing exact T4 qpost screens are all worse than current exact frontier; no component evidence for required sub-0.314 gain 0.001267627",
+        "recommendation": "do_not_dispatch",
+        "remote_dispatched": false,
+        "score_claim": false
+      },
+      "include_streams": [
+        "bias"
+      ],
+      "qpost_bytes": 59,
+      "raw_changed_values": 2034672,
+      "selected_pairs": [
+        598
+      ]
+    },
+    {
+      "archive": "experiments/results/pr79_pr65_postprocess_atoms_20260503_worker/pr79_s2_pr65_qpost_bias_region_pair598/archive.zip",
+      "archive_byte_delta_vs_source": 177,
+      "archive_bytes": 277498,
+      "archive_sha256": "bf1c4bec6837447528c5b9639ae25fcbd1edf5d3e18b84421f62606ccb9d02be",
+      "candidate_id": "pr79_s2_pr65_qpost_bias_region_pair598",
+      "dispatch_recommendation": {
+        "blockers": [
+          "region stream belongs to already-negative qpost exact family",
+          "existing exact T4 qpost screens are all worse than current exact frontier",
+          "no component evidence for required sub-0.314 gain 0.001283607"
+        ],
+        "break_even_component_gain_for_sub314_vs_frontier": 0.0012836073175623809,
+        "dispatch_ready_now": false,
+        "lane_claim_required_before_any_future_exact_eval": true,
+        "qpost_exact_negative_count": 7,
+        "rate_score_delta_vs_source": 0.00011785703470262433,
+        "reason": "region stream belongs to already-negative qpost exact family; existing exact T4 qpost screens are all worse than current exact frontier; no component evidence for required sub-0.314 gain 0.001283607",
+        "recommendation": "do_not_dispatch",
+        "remote_dispatched": false,
+        "score_claim": false
+      },
+      "include_streams": [
+        "bias",
+        "region"
+      ],
+      "qpost_bytes": 83,
+      "raw_changed_values": 2373784,
+      "selected_pairs": [
+        598
+      ]
+    },
+    {
+      "archive": "experiments/results/pr79_pr65_postprocess_atoms_20260503_worker/pr79_s2_pr65_qpost_post_pair104/archive.zip",
+      "archive_byte_delta_vs_source": 154,
+      "archive_bytes": 277475,
+      "archive_sha256": "92a8c418045466a21b11afc138b3dfe4a0b9024ce3f425e9c981b379b4333d78",
+      "candidate_id": "pr79_s2_pr65_qpost_post_pair104",
+      "dispatch_recommendation": {
+        "blockers": [
+          "post stream belongs to already-negative qpost exact family",
+          "existing exact T4 qpost screens are all worse than current exact frontier",
+          "no component evidence for required sub-0.314 gain 0.001268293"
+        ],
+        "break_even_component_gain_for_sub314_vs_frontier": 0.001268292561640571,
+        "dispatch_ready_now": false,
+        "lane_claim_required_before_any_future_exact_eval": true,
+        "qpost_exact_negative_count": 7,
+        "rate_score_delta_vs_source": 0.00010254227878081439,
+        "reason": "post stream belongs to already-negative qpost exact family; existing exact T4 qpost screens are all worse than current exact frontier; no component evidence for required sub-0.314 gain 0.001268293",
+        "recommendation": "do_not_dispatch",
+        "remote_dispatched": false,
+        "score_claim": false
+      },
+      "include_streams": [
+        "post"
+      ],
+      "qpost_bytes": 60,
+      "raw_changed_values": 3051750,
+      "selected_pairs": [
+        104
+      ]
+    }
+  ],
+  "custody": {
+    "pr65_archive": "experiments/results/top_submission_delta_reverse_engineering_20260503/sources/pr65_henosis_archive.zip",
+    "pr65_archive_bytes": 284425,
+    "pr65_archive_sha256": "b331cb4f6df9d8929db966b943b8c73624cdf3b6db71acbde361570852e59e68",
+    "source_archive": "experiments/results/pr79_action_dictionary_repack_v2_20260503_codex/pr79_s2_fixed_adaptive_actions/archive.zip",
+    "source_archive_bytes": 277321,
+    "source_archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68"
+  },
+  "dispatch_summary": {
+    "reason": "Candidates are archive-closed and raw-output-changing, but the known qpost exact T4 screens are negative and no local component evidence supports spending another exact-eval slot.",
+    "recommendation": "do_not_dispatch",
+    "remote_dispatched": false
+  },
+  "evidence_grade": "empirical_archive_closed_raw_delta_proof_only",
+  "exact_qpost_negative_evidence": [
+    {
+      "avg_posenet_dist": 0.00049626,
+      "avg_segnet_dist": 0.00061038,
+      "canonical_score": 0.31562772378789217,
+      "evidence_grade": "A++_exact_t4_negative_for_qpost_family",
+      "n_samples": 600,
+      "run_dir": "experiments/results/lightning_batch/exact_eval_pr65_qpost_bias_poseadv_top032_t4_20260503T0756Z",
+      "score_pose_contribution": 0.0704457237878922,
+      "score_rate_contribution": 0.184144,
+      "score_seg_contribution": 0.061038
+    },
+    {
+      "avg_posenet_dist": 0.0004967,
+      "avg_segnet_dist": 0.00061038,
+      "canonical_score": 0.3156849465853906,
+      "evidence_grade": "A++_exact_t4_negative_for_qpost_family",
+      "n_samples": 600,
+      "run_dir": "experiments/results/lightning_batch/exact_eval_pr65_qpost_bias_poseadv_top064_t4_20260503T0759Z",
+      "score_pose_contribution": 0.0704769465853906,
+      "score_rate_contribution": 0.18417,
+      "score_seg_contribution": 0.061038
+    },
+    {
+      "avg_posenet_dist": 0.00049651,
+      "avg_segnet_dist": 0.00061045,
+      "canonical_score": 0.3156657157109626,
+      "evidence_grade": "A++_exact_t4_negative_for_qpost_family",
+      "n_samples": 600,
+      "run_dir": "experiments/results/lightning_batch/exact_eval_pr65_qpost_ix_lagtop67_p6_bias_top040_t4_20260503T1035Z",
+      "score_pose_contribution": 0.07046346571096258,
+      "score_rate_contribution": 0.18415725,
+      "score_seg_contribution": 0.061045
+    },
+    {
+      "avg_posenet_dist": 0.00049712,
+      "avg_segnet_dist": 0.00061045,
+      "canonical_score": 0.3157349872667322,
+      "evidence_grade": "A++_exact_t4_negative_for_qpost_family",
+      "n_samples": 600,
+      "run_dir": "experiments/results/lightning_batch/exact_eval_pr65_qpost_ix_lagtop67_p6_bias_top080_t4_20260503T1024Z",
+      "score_pose_contribution": 0.07050673726673218,
+      "score_rate_contribution": 0.18418325,
+      "score_seg_contribution": 0.061045
+    },
+    {
+      "avg_posenet_dist": 0.00049632,
+      "avg_segnet_dist": 0.00061038,
+      "canonical_score": 0.3156384822569176,
+      "evidence_grade": "A++_exact_t4_negative_for_qpost_family",
+      "n_samples": 600,
+      "run_dir": "experiments/results/lightning_batch/exact_eval_pr65_qpost_v2_bias_poseadv_top040_t4_20260503T0805Z",
+      "score_pose_contribution": 0.07044998225691756,
+      "score_rate_contribution": 0.1841505,
+      "score_seg_contribution": 0.061038
+    },
+    {
+      "avg_posenet_dist": 0.00049693,
+      "avg_segnet_dist": 0.00061038,
+      "canonical_score": 0.3157077620893657,
+      "evidence_grade": "A++_exact_t4_negative_for_qpost_family",
+      "n_samples": 600,
+      "run_dir": "experiments/results/lightning_batch/exact_eval_pr65_qpost_v2_bias_poseadv_top080_t4_20260503T0810Z",
+      "score_pose_contribution": 0.07049326208936568,
+      "score_rate_contribution": 0.1841765,
+      "score_seg_contribution": 0.061038
+    },
+    {
+      "avg_posenet_dist": 0.00049626,
+      "avg_segnet_dist": 0.00061038,
+      "canonical_score": 0.3156217237878922,
+      "evidence_grade": "A++_exact_t4_negative_for_qpost_family",
+      "n_samples": 600,
+      "run_dir": "experiments/results/lightning_batch/exact_eval_pr75_qpost_microstack_bias032_t4_20260503T1050Z",
+      "score_pose_contribution": 0.0704457237878922,
+      "score_rate_contribution": 0.18413800000000002,
+      "score_seg_contribution": 0.061038
+    }
+  ],
+  "frontier_reference": {
+    "archive_sha256": "03a2afd5fe92c93a9b7b7e43625158a73b455f0cfbca82d278008a728db78746",
+    "avg_posenet_dist": 0.00049371,
+    "avg_segnet_dist": 0.00060804,
+    "eval_json": "experiments/results/lightning_batch/exact_eval_pr75_minp_public_replay_t4_20260503T1049Z/contest_auth_eval.json",
+    "n_samples": 600,
+    "score": 0.31516575028285976,
+    "score_pose_contribution": 0.07026450028285976,
+    "score_rate_contribution": 0.18409725,
+    "score_seg_contribution": 0.060804000000000004,
+    "target_score": 0.314
+  },
+  "schema_version": 1,
+  "score_claim": false,
+  "source_runtime_probe": {
+    "member_names": [
+      "p"
+    ],
+    "payload_bytes": 277221,
+    "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+    "payload_member": "p",
+    "payload_sha256": "c52308a335087e7a41e7353a4395269bddb0377b6fbad2b739aa8e283db22b72",
+    "pose_present": true,
+    "runtime_members": {
+      "masks.mkv": {
+        "bytes": 223385,
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      "optimized_poses.qp1": {
+        "bytes": 1140,
+        "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+      },
+      "renderer.bin": {
+        "bytes": 59288,
+        "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 2688,
+        "sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f"
+      }
+    },
+    "runtime_parse_supported": true,
+    "seg_tile_actions_decoded_sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f",
+    "seg_tile_actions_present": true
+  },
+  "tool": "experiments/build_pr79_pr65_postprocess_atom_candidates.py"
+}

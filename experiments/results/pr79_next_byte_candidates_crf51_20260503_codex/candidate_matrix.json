@@ -1,0 +1,1914 @@
+{
+  "candidate_count": 36,
+  "candidates": [
+    {
+      "archive_bytes": 245979,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf53__pr77_public_raw4_action_wire_br__brotli_rpk1_flatpack/archive.zip",
+      "archive_sha256": "0ac2d316aada3f3d55b90bb42fd45d3f51fa9e04a709aa72e8991adcdf629192",
+      "candidate_family": "brotli_rpk1_flatpack",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf53__pr77_public_raw4_action_wire_br__brotli_rpk1_flatpack",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv",
+          "seg_tile_actions"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": false
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": -31342,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": true,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "local byte-closed candidate preserves renderer/pose and passes direct action-loader checks",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": true
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf53__pr77_public_raw4_action_wire_br__brotli_rpk1_flatpack/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv_seg_tile_actions"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": -31342,
+        "rate_score_delta_vs_s2_frontier": -0.020869351308755096,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.29366420226443124,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 246788,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf53__pr79_public_raw4_action_wire_br__brotli_rpk1_flatpack/archive.zip",
+      "archive_sha256": "e8244d5825d4987bff71a1b166fafafa0bd151fc4a55100cd1b06dd58a1a8079",
+      "candidate_family": "brotli_rpk1_flatpack",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf53__pr79_public_raw4_action_wire_br__brotli_rpk1_flatpack",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": true
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": -30533,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": true,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "local byte-closed candidate preserves renderer/pose and passes direct action-loader checks",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": true
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf53__pr79_public_raw4_action_wire_br__brotli_rpk1_flatpack/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": -30533,
+        "rate_score_delta_vs_s2_frontier": -0.02033067141567926,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.2942028821575071,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 258501,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf53__pr77_public_raw4_action_wire_br__stored_rpk1/archive.zip",
+      "archive_sha256": "02a24eea5d00e8e9df964e8cfa25e95a95c23efbc01588ebd4976bcdc258e1fa",
+      "candidate_family": "stored_rpk1",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf53__pr77_public_raw4_action_wire_br__stored_rpk1",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv",
+          "seg_tile_actions"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": false
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": -18820,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": true,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "local byte-closed candidate preserves renderer/pose and passes direct action-loader checks",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": true
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf53__pr77_public_raw4_action_wire_br__stored_rpk1/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv_seg_tile_actions"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": -18820,
+        "rate_score_delta_vs_s2_frontier": -0.012531465497759266,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.3020020880754271,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 258591,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf52__pr77_public_raw4_action_wire_br__brotli_rpk1_flatpack/archive.zip",
+      "archive_sha256": "6a4d1745698df05be34d0f5d0f2df21baf64b4624f4773e61704852406ad1bf7",
+      "candidate_family": "brotli_rpk1_flatpack",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf52__pr77_public_raw4_action_wire_br__brotli_rpk1_flatpack",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv",
+          "seg_tile_actions"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": false
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": -18730,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": true,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "local byte-closed candidate preserves renderer/pose and passes direct action-loader checks",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": true
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf52__pr77_public_raw4_action_wire_br__brotli_rpk1_flatpack/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv_seg_tile_actions"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": -18730,
+        "rate_score_delta_vs_s2_frontier": -0.01247153819197827,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.3020620153812081,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 259288,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf52__pr79_public_raw4_action_wire_br__brotli_rpk1_flatpack/archive.zip",
+      "archive_sha256": "6aa256d0f855f950cb03bc25358ce23929eecb2f60ce33eafffad87581d1907a",
+      "candidate_family": "brotli_rpk1_flatpack",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf52__pr79_public_raw4_action_wire_br__brotli_rpk1_flatpack",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": true
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": -18033,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": true,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "local byte-closed candidate preserves renderer/pose and passes direct action-loader checks",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": true
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf52__pr79_public_raw4_action_wire_br__brotli_rpk1_flatpack/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": -18033,
+        "rate_score_delta_vs_s2_frontier": -0.012007434501652117,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.30252611907153426,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 259339,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf53__pr79_public_raw4_action_wire_br__stored_rpk1/archive.zip",
+      "archive_sha256": "8199d1f85eeeda199b331810c7e2bb0e6d5b893c640edbb92ab6f8e6ba5ece6d",
+      "candidate_family": "stored_rpk1",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf53__pr79_public_raw4_action_wire_br__stored_rpk1",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": true
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": -17982,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": true,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "local byte-closed candidate preserves renderer/pose and passes direct action-loader checks",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": true
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf53__pr79_public_raw4_action_wire_br__stored_rpk1/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": -17982,
+        "rate_score_delta_vs_s2_frontier": -0.011973475695042887,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.3025600778781435,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 260866,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf53__pr79_decoded_actions_bin__stored_rpk1_control/archive.zip",
+      "archive_sha256": "5e49a972ab5d77d8a8eeedc9dd36a309bf8533ad2d2e2b9b96ad30448691d338",
+      "candidate_family": "stored_rpk1_raw_action_control",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf53__pr79_decoded_actions_bin__stored_rpk1_control",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": true
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": -16455,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": true,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "local byte-closed candidate preserves renderer/pose and passes direct action-loader checks",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": true
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf53__pr79_decoded_actions_bin__stored_rpk1_control/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": -16455,
+        "rate_score_delta_vs_s2_frontier": -0.01095670907362533,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.303576844499561,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 270272,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51__pr77_public_raw4_action_wire_br__brotli_rpk1_flatpack/archive.zip",
+      "archive_sha256": "439c17165f31a99739d19d42bc4b9aefdc6532e0a5a48960e43cadc2375bd347",
+      "candidate_family": "brotli_rpk1_flatpack",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51__pr77_public_raw4_action_wire_br__brotli_rpk1_flatpack",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv",
+          "seg_tile_actions"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": false
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": -7049,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": true,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "local byte-closed candidate preserves renderer/pose and passes direct action-loader checks",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": false
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51__pr77_public_raw4_action_wire_br__brotli_rpk1_flatpack/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv_seg_tile_actions"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": -7049,
+        "rate_score_delta_vs_s2_frontier": -0.004693639760558186,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.30983991381262815,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 270713,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf51__pr77_public_raw4_action_wire_br__brotli_rpk1_flatpack/archive.zip",
+      "archive_sha256": "0f60aeb9f2c45fd1ba2a6cc7c76a7f9fd3e8785891af013e36009b1ccc01a5ca",
+      "candidate_family": "brotli_rpk1_flatpack",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf51__pr77_public_raw4_action_wire_br__brotli_rpk1_flatpack",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv",
+          "seg_tile_actions"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": false
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": -6608,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": true,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "local byte-closed candidate preserves renderer/pose and passes direct action-loader checks",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": false
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf51__pr77_public_raw4_action_wire_br__brotli_rpk1_flatpack/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv_seg_tile_actions"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": -6608,
+        "rate_score_delta_vs_s2_frontier": -0.004399995962231309,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.31013355761095507,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 270776,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf52__pr77_public_raw4_action_wire_br__stored_rpk1/archive.zip",
+      "archive_sha256": "3b0590a3a0cbd35e9d4410418d539031cd45c7ce227dca7765082153334b6a48",
+      "candidate_family": "stored_rpk1",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf52__pr77_public_raw4_action_wire_br__stored_rpk1",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv",
+          "seg_tile_actions"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": false
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": -6545,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": true,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "local byte-closed candidate preserves renderer/pose and passes direct action-loader checks",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": true
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf52__pr77_public_raw4_action_wire_br__stored_rpk1/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv_seg_tile_actions"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": -6545,
+        "rate_score_delta_vs_s2_frontier": -0.004358046848184612,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.3101755067250017,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 270941,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51__pr79_public_raw4_action_wire_br__brotli_rpk1_flatpack/archive.zip",
+      "archive_sha256": "45d821206fef0f173036d959c78a0db620ef92e975ee6941430404daf8d60c71",
+      "candidate_family": "brotli_rpk1_flatpack",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51__pr79_public_raw4_action_wire_br__brotli_rpk1_flatpack",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": true
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": -6380,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": true,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "local byte-closed candidate preserves renderer/pose and passes direct action-loader checks",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": false
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51__pr79_public_raw4_action_wire_br__brotli_rpk1_flatpack/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": -6380,
+        "rate_score_delta_vs_s2_frontier": -0.004248180120919453,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.3102853734522669,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 271421,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf51__pr79_public_raw4_action_wire_br__brotli_rpk1_flatpack/archive.zip",
+      "archive_sha256": "20b007286216517c7e505316904d7d057478ee99580557b178108954c4d72593",
+      "candidate_family": "brotli_rpk1_flatpack",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf51__pr79_public_raw4_action_wire_br__brotli_rpk1_flatpack",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": true
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": -5900,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": true,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "local byte-closed candidate preserves renderer/pose and passes direct action-loader checks",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": false
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf51__pr79_public_raw4_action_wire_br__brotli_rpk1_flatpack/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": -5900,
+        "rate_score_delta_vs_s2_frontier": -0.003928567823420812,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.3106049857497655,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 271614,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf52__pr79_public_raw4_action_wire_br__stored_rpk1/archive.zip",
+      "archive_sha256": "077cd38edfb4798626dd094487ef0cc69470ad60e4e01e5cee3aba075c1a601f",
+      "candidate_family": "stored_rpk1",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf52__pr79_public_raw4_action_wire_br__stored_rpk1",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": true
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": -5707,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": true,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "local byte-closed candidate preserves renderer/pose and passes direct action-loader checks",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": true
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf52__pr79_public_raw4_action_wire_br__stored_rpk1/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": -5707,
+        "rate_score_delta_vs_s2_frontier": -0.003800057045468232,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.31073349652771814,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 273141,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf52__pr79_decoded_actions_bin__stored_rpk1_control/archive.zip",
+      "archive_sha256": "bc11b5e06f66571f9476dab3ad965f28cb42c63612ce2e0feb42d91c0e1aad27",
+      "candidate_family": "stored_rpk1_raw_action_control",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf52__pr79_decoded_actions_bin__stored_rpk1_control",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": true
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": -4180,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": true,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "local byte-closed candidate preserves renderer/pose and passes direct action-loader checks",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": true
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf52__pr79_decoded_actions_bin__stored_rpk1_control/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": -4180,
+        "rate_score_delta_vs_s2_frontier": -0.0027832904240506764,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.3117502631491357,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 282261,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51__pr77_public_raw4_action_wire_br__stored_rpk1/archive.zip",
+      "archive_sha256": "dcf2d6acec06bdf7aac06310f5af1d5369a1b274cb10c966765410c96862ddd0",
+      "candidate_family": "stored_rpk1",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51__pr77_public_raw4_action_wire_br__stored_rpk1",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv",
+          "seg_tile_actions"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": false
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": 4940,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": true,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "local byte-closed candidate preserves renderer/pose and passes direct action-loader checks",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": false
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51__pr77_public_raw4_action_wire_br__stored_rpk1/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv_seg_tile_actions"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": 4940,
+        "rate_score_delta_vs_s2_frontier": 0.0032893432284235267,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.31782289680160986,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 282685,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf51__pr77_public_raw4_action_wire_br__stored_rpk1/archive.zip",
+      "archive_sha256": "912e445b132e9714cbff89149b09f9db32240d09fa587545d1fd1d3c8fd4eae3",
+      "candidate_family": "stored_rpk1",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf51__pr77_public_raw4_action_wire_br__stored_rpk1",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv",
+          "seg_tile_actions"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": false
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": 5364,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": true,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "local byte-closed candidate preserves renderer/pose and passes direct action-loader checks",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": false
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf51__pr77_public_raw4_action_wire_br__stored_rpk1/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv_seg_tile_actions"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": 5364,
+        "rate_score_delta_vs_s2_frontier": 0.0035716674245473276,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.3181052209977337,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 283099,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51__pr79_public_raw4_action_wire_br__stored_rpk1/archive.zip",
+      "archive_sha256": "ef9ed7c5bfa16a374e4792b184fb3ecb419ae1ac025474f47d0282eeced6da88",
+      "candidate_family": "stored_rpk1",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51__pr79_public_raw4_action_wire_br__stored_rpk1",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": true
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": 5778,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": true,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "local byte-closed candidate preserves renderer/pose and passes direct action-loader checks",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": false
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51__pr79_public_raw4_action_wire_br__stored_rpk1/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": 5778,
+        "rate_score_delta_vs_s2_frontier": 0.0038473330311399063,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.3183808866043263,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 283523,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf51__pr79_public_raw4_action_wire_br__stored_rpk1/archive.zip",
+      "archive_sha256": "6f141d0e90c3ba443776fee5def94a1aa0c1efc804de5362977aed5f5fa16a82",
+      "candidate_family": "stored_rpk1",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf51__pr79_public_raw4_action_wire_br__stored_rpk1",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": true
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": 6202,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": true,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "local byte-closed candidate preserves renderer/pose and passes direct action-loader checks",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": false
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf51__pr79_public_raw4_action_wire_br__stored_rpk1/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": 6202,
+        "rate_score_delta_vs_s2_frontier": 0.004129657227263707,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.31866321080045007,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 284619,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50__pr77_public_raw4_action_wire_br__brotli_rpk1_flatpack/archive.zip",
+      "archive_sha256": "17043320afd8cee3643f3bdc514108dbee3463b704f35fbe369fe19584d8eb05",
+      "candidate_family": "brotli_rpk1_flatpack",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50__pr77_public_raw4_action_wire_br__brotli_rpk1_flatpack",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv",
+          "seg_tile_actions"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": false
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": 7298,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": true,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "local byte-closed candidate preserves renderer/pose and passes direct action-loader checks",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": false
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50__pr77_public_raw4_action_wire_br__brotli_rpk1_flatpack/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv_seg_tile_actions"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": 7298,
+        "rate_score_delta_vs_s2_frontier": 0.004859438639885607,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.31939299221307194,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 284626,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51__pr79_decoded_actions_bin__stored_rpk1_control/archive.zip",
+      "archive_sha256": "231abfc8fe92fe5bf29a7c67b37da581dab8375840b66a1e5a41e5a79b95981b",
+      "candidate_family": "stored_rpk1_raw_action_control",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51__pr79_decoded_actions_bin__stored_rpk1_control",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": true
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": 7305,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": true,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "local byte-closed candidate preserves renderer/pose and passes direct action-loader checks",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": false
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51__pr79_decoded_actions_bin__stored_rpk1_control/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": 7305,
+        "rate_score_delta_vs_s2_frontier": 0.004864099652557462,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.3193976532257438,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 285050,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf51__pr79_decoded_actions_bin__stored_rpk1_control/archive.zip",
+      "archive_sha256": "b252d661874076e7e7402c69c5e3117786c4953022c6136fa39551ffae548561",
+      "candidate_family": "stored_rpk1_raw_action_control",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf51__pr79_decoded_actions_bin__stored_rpk1_control",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": true
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": 7729,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": true,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "local byte-closed candidate preserves renderer/pose and passes direct action-loader checks",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": false
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf51__pr79_decoded_actions_bin__stored_rpk1_control/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": 7729,
+        "rate_score_delta_vs_s2_frontier": 0.005146423848681263,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.3196799774218676,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 285389,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50__pr79_public_raw4_action_wire_br__brotli_rpk1_flatpack/archive.zip",
+      "archive_sha256": "701f6f6156c0e93b42155228eab7c1e8783310320d1e3d911a1bf7d1f1a4b8c6",
+      "candidate_family": "brotli_rpk1_flatpack",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50__pr79_public_raw4_action_wire_br__brotli_rpk1_flatpack",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": true
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": 8068,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": true,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "local byte-closed candidate preserves renderer/pose and passes direct action-loader checks",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": false
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50__pr79_public_raw4_action_wire_br__brotli_rpk1_flatpack/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": 8068,
+        "rate_score_delta_vs_s2_frontier": 0.0053721500337896785,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.319905703606976,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 296695,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50__pr77_public_raw4_action_wire_br__stored_rpk1/archive.zip",
+      "archive_sha256": "c9e69fb4d678e007035c3c3bae81ed9f652dd567217b00ce911290ad346aec27",
+      "candidate_family": "stored_rpk1",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50__pr77_public_raw4_action_wire_br__stored_rpk1",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv",
+          "seg_tile_actions"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": false
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": 19374,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": true,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "local byte-closed candidate preserves renderer/pose and passes direct action-loader checks",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": false
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50__pr77_public_raw4_action_wire_br__stored_rpk1/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv_seg_tile_actions"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": 19374,
+        "rate_score_delta_vs_s2_frontier": 0.012900351357788949,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.3274339049309753,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 297533,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50__pr79_public_raw4_action_wire_br__stored_rpk1/archive.zip",
+      "archive_sha256": "bd314f1a36bc6f43cee18aec4b1b2f090e3eb8a1c44055b51b57b9733ca2dc71",
+      "candidate_family": "stored_rpk1",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50__pr79_public_raw4_action_wire_br__stored_rpk1",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": true
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": 20212,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": true,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "local byte-closed candidate preserves renderer/pose and passes direct action-loader checks",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": false
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50__pr79_public_raw4_action_wire_br__stored_rpk1/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": 20212,
+        "rate_score_delta_vs_s2_frontier": 0.013458341160505328,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.32799189473369167,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 299060,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50__pr79_decoded_actions_bin__stored_rpk1_control/archive.zip",
+      "archive_sha256": "35225daed676e053bde7e600d8e57e4d907713d0faf34a7962dd0fba2503866f",
+      "candidate_family": "stored_rpk1_raw_action_control",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50__pr79_decoded_actions_bin__stored_rpk1_control",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": true
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": 21739,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": true,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "local byte-closed candidate preserves renderer/pose and passes direct action-loader checks",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": false
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50__pr79_decoded_actions_bin__stored_rpk1_control/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": 21739,
+        "rate_score_delta_vs_s2_frontier": 0.014475107781922883,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.32900866135510926,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 246804,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf53__pr79_s2_frontier_wire_br_parser_only__brotli_rpk1_flatpack/archive.zip",
+      "archive_sha256": "0ce38b4d17d4a6e4bdf7c9ec83b2c8c5f7b9727e93e249619d291bfc6156cb08",
+      "candidate_family": "brotli_rpk1_flatpack",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf53__pr79_s2_frontier_wire_br_parser_only__brotli_rpk1_flatpack",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv",
+          "seg_tile_actions"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": false
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": -30517,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": false,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "brotli decode failed: brotli: decoder failed",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": true
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf53__pr79_s2_frontier_wire_br_parser_only__brotli_rpk1_flatpack/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv_seg_tile_actions"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": -30517,
+        "rate_score_delta_vs_s2_frontier": -0.020320017672429306,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.29421353590075705,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 259272,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf53__pr79_s2_frontier_wire_br_parser_only__stored_rpk1/archive.zip",
+      "archive_sha256": "c7c11e92fb0984f198012109392f619840b728b66bacaae1abafd23a96dd29d2",
+      "candidate_family": "stored_rpk1",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf53__pr79_s2_frontier_wire_br_parser_only__stored_rpk1",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv",
+          "seg_tile_actions"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": false
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": -18049,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": false,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "brotli decode failed: brotli: decoder failed",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": true
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf53__pr79_s2_frontier_wire_br_parser_only__stored_rpk1/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv_seg_tile_actions"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": -18049,
+        "rate_score_delta_vs_s2_frontier": -0.012018088244902072,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.30251546532828427,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 259341,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf52__pr79_s2_frontier_wire_br_parser_only__brotli_rpk1_flatpack/archive.zip",
+      "archive_sha256": "c2c01201eac1aafc263a063c05d99fc21d8783ca8a2a2ab95ae76284fdf37ae5",
+      "candidate_family": "brotli_rpk1_flatpack",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf52__pr79_s2_frontier_wire_br_parser_only__brotli_rpk1_flatpack",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv",
+          "seg_tile_actions"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": false
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": -17980,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": false,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "brotli decode failed: brotli: decoder failed",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": true
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf52__pr79_s2_frontier_wire_br_parser_only__brotli_rpk1_flatpack/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv_seg_tile_actions"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": -17980,
+        "rate_score_delta_vs_s2_frontier": -0.011972143977136642,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.3025614095960497,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 270954,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51__pr79_s2_frontier_wire_br_parser_only__brotli_rpk1_flatpack/archive.zip",
+      "archive_sha256": "fb4690e52ccf36029d72730eb070980d98c1f829ac0a00ef306c64eb9af0d15c",
+      "candidate_family": "brotli_rpk1_flatpack",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51__pr79_s2_frontier_wire_br_parser_only__brotli_rpk1_flatpack",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv",
+          "seg_tile_actions"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": false
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": -6367,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": false,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "brotli decode failed: brotli: decoder failed",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": false
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51__pr79_s2_frontier_wire_br_parser_only__brotli_rpk1_flatpack/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv_seg_tile_actions"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": -6367,
+        "rate_score_delta_vs_s2_frontier": -0.004239523954528865,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.3102940296186575,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 271547,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf52__pr79_s2_frontier_wire_br_parser_only__stored_rpk1/archive.zip",
+      "archive_sha256": "979334074d6ea92d86c704272f9ba27badb78b1d4443ca33bb0fc43352598349",
+      "candidate_family": "stored_rpk1",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf52__pr79_s2_frontier_wire_br_parser_only__stored_rpk1",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv",
+          "seg_tile_actions"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": false
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": -5774,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": false,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "brotli decode failed: brotli: decoder failed",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": true
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf52__pr79_s2_frontier_wire_br_parser_only__stored_rpk1/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv_seg_tile_actions"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": -5774,
+        "rate_score_delta_vs_s2_frontier": -0.0038446695953274178,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.31068888397785893,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 271581,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf51__pr79_s2_frontier_wire_br_parser_only__brotli_rpk1_flatpack/archive.zip",
+      "archive_sha256": "ea8c7f0fe971bea3eb7f1ff2b013c8fcaefde729dbde42f88db908d988ab23cd",
+      "candidate_family": "brotli_rpk1_flatpack",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf51__pr79_s2_frontier_wire_br_parser_only__brotli_rpk1_flatpack",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv",
+          "seg_tile_actions"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": false
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": -5740,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": false,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "brotli decode failed: brotli: decoder failed",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": false
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf51__pr79_s2_frontier_wire_br_parser_only__brotli_rpk1_flatpack/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv_seg_tile_actions"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": -5740,
+        "rate_score_delta_vs_s2_frontier": -0.003822030390921264,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.3107115231822651,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 277388,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/source_pr79_noop_control/archive.zip",
+      "archive_sha256": "346f411f6e36e7ee7e69e578c136299755dd75d36c96cb5221a2d64d9828b9b9",
+      "candidate_family": "source_control",
+      "candidate_id": "source_pr79_noop_control",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": true,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": true
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": 67,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": false,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "no-op source control",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": null
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/source_pr79_noop_control/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": true,
+        "payload_sha_equal_to_pr79": true,
+        "status": "payload_identical_container_reemit_noop"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": 67,
+        "rate_score_delta_vs_s2_frontier": 4.4612549859185486e-05,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.31457816612304557,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 283032,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51__pr79_s2_frontier_wire_br_parser_only__stored_rpk1/archive.zip",
+      "archive_sha256": "5ff649dbb613cb5c0274778766a35bcb8b630a23db0a6317ed9eebcdf878c877",
+      "candidate_family": "stored_rpk1",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51__pr79_s2_frontier_wire_br_parser_only__stored_rpk1",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv",
+          "seg_tile_actions"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": false
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": 5711,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": false,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "brotli decode failed: brotli: decoder failed",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": false
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51__pr79_s2_frontier_wire_br_parser_only__stored_rpk1/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv_seg_tile_actions"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": 5711,
+        "rate_score_delta_vs_s2_frontier": 0.003802720481280721,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.31833627405446707,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 283456,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf51__pr79_s2_frontier_wire_br_parser_only__stored_rpk1/archive.zip",
+      "archive_sha256": "3e0821f2d828a1327d795fe891bed15a98e96560e05313f54a1b6a9bca900ea3",
+      "candidate_family": "stored_rpk1",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf51__pr79_s2_frontier_wire_br_parser_only__stored_rpk1",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv",
+          "seg_tile_actions"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": false
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": 6135,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": false,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "brotli decode failed: brotli: decoder failed",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": false
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf51__pr79_s2_frontier_wire_br_parser_only__stored_rpk1/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv_seg_tile_actions"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": 6135,
+        "rate_score_delta_vs_s2_frontier": 0.004085044677404522,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.31861859825059086,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 285423,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50__pr79_s2_frontier_wire_br_parser_only__brotli_rpk1_flatpack/archive.zip",
+      "archive_sha256": "7b34f62768afb82de988548fe584986dbd844e8e04471f93a3d64f2f0c229ddf",
+      "candidate_family": "brotli_rpk1_flatpack",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50__pr79_s2_frontier_wire_br_parser_only__brotli_rpk1_flatpack",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv",
+          "seg_tile_actions"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": false
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": 8102,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": false,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "brotli decode failed: brotli: decoder failed",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": false
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50__pr79_s2_frontier_wire_br_parser_only__brotli_rpk1_flatpack/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv_seg_tile_actions"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": 8102,
+        "rate_score_delta_vs_s2_frontier": 0.0053947892381958325,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.31992834281138216,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    {
+      "archive_bytes": 297466,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50__pr79_s2_frontier_wire_br_parser_only__stored_rpk1/archive.zip",
+      "archive_sha256": "2d3c9077e5ef9d24d1133384b9b52da7255b550eb837222cfa8dd1dc1f11f61e",
+      "candidate_family": "stored_rpk1",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50__pr79_s2_frontier_wire_br_parser_only__stored_rpk1",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv",
+          "seg_tile_actions"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": false
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": 20145,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": false,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "brotli decode failed: brotli: decoder failed",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": false
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50__pr79_s2_frontier_wire_br_parser_only__stored_rpk1/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv_seg_tile_actions"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": 20145,
+        "rate_score_delta_vs_s2_frontier": 0.013413728610646143,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.3279472821838325,
+        "unchanged_component_estimate_only": true
+      }
+    }
+  ],
+  "canonical_score_source_required": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+  "current_s2_frontier": {
+    "archive_bytes": 277321,
+    "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+    "score": 0.31453355357318635,
+    "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+  },
+  "evidence_grade": "empirical_local_byte_screen_only",
+  "mask_candidate_sources": [
+    {
+      "archive_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf53/archive.zip",
+      "archive_sha256": "5e49a972ab5d77d8a8eeedc9dd36a309bf8533ad2d2e2b9b96ad30448691d338",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf53",
+      "exact_eval_ready_after_lane_claim": true,
+      "mask_crf": 53,
+      "matrix_path": "experiments/results/pr79_next_byte_candidates_crf52_20260503_codex/crf51_mask_matrix.json",
+      "plausibility_gate_passed": true
+    },
+    {
+      "archive_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf52/archive.zip",
+      "archive_sha256": "bc11b5e06f66571f9476dab3ad965f28cb42c63612ce2e0feb42d91c0e1aad27",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf52",
+      "exact_eval_ready_after_lane_claim": true,
+      "mask_crf": 52,
+      "matrix_path": "experiments/results/pr79_next_byte_candidates_crf52_20260503_codex/crf51_mask_matrix.json",
+      "plausibility_gate_passed": true
+    },
+    {
+      "archive_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51/archive.zip",
+      "archive_sha256": "231abfc8fe92fe5bf29a7c67b37da581dab8375840b66a1e5a41e5a79b95981b",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51",
+      "exact_eval_ready_after_lane_claim": false,
+      "mask_crf": 51,
+      "matrix_path": "experiments/results/pr79_next_byte_candidates_crf52_20260503_codex/crf51_mask_matrix.json",
+      "plausibility_gate_passed": true
+    },
+    {
+      "archive_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf51/archive.zip",
+      "archive_sha256": "b252d661874076e7e7402c69c5e3117786c4953022c6136fa39551ffae548561",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf51",
+      "exact_eval_ready_after_lane_claim": false,
+      "mask_crf": 51,
+      "matrix_path": "experiments/results/pr79_next_byte_candidates_crf52_20260503_codex/crf51_mask_matrix.json",
+      "plausibility_gate_passed": true
+    },
+    {
+      "archive_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50/archive.zip",
+      "archive_sha256": "35225daed676e053bde7e600d8e57e4d907713d0faf34a7962dd0fba2503866f",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50",
+      "exact_eval_ready_after_lane_claim": false,
+      "mask_crf": 50,
+      "matrix_path": "experiments/results/pr79_next_byte_candidates_crf52_20260503_codex/crf51_mask_matrix.json",
+      "plausibility_gate_passed": true
+    }
+  ],
+  "no_remote_dispatch_performed": true,
+  "recommendation": {
+    "candidate": {
+      "archive_bytes": 245979,
+      "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf53__pr77_public_raw4_action_wire_br__brotli_rpk1_flatpack/archive.zip",
+      "archive_sha256": "0ac2d316aada3f3d55b90bb42fd45d3f51fa9e04a709aa72e8991adcdf629192",
+      "candidate_family": "brotli_rpk1_flatpack",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf53__pr77_public_raw4_action_wire_br__brotli_rpk1_flatpack",
+      "changed_members": {
+        "changed_vs_pr79_decoded": [
+          "masks.mkv",
+          "seg_tile_actions"
+        ],
+        "preserved_renderer_and_pose": true,
+        "semantic_equalities_vs_pr79": {
+          "masks.mkv": false,
+          "optimized_poses.qp1": true,
+          "renderer.bin": true,
+          "seg_tile_actions": false
+        }
+      },
+      "delta_bytes_vs_current_s2_frontier": -31342,
+      "dispatchability": {
+        "exact_screen_dispatchable_after_lane_claim": true,
+        "lane_claim_required_before_dispatch": true,
+        "reason": "local byte-closed candidate preserves renderer/pose and passes direct action-loader checks",
+        "remote_dispatch_performed": false,
+        "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+        "source_mask_body_exact_eval_ready_after_lane_claim": true
+      },
+      "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf53__pr77_public_raw4_action_wire_br__brotli_rpk1_flatpack/manifest.json",
+      "no_op_detection": {
+        "archive_sha_equal_to_pr79": false,
+        "decoded_members_equal_to_pr79": false,
+        "payload_sha_equal_to_pr79": false,
+        "status": "non_noop_changed_masks.mkv_seg_tile_actions"
+      },
+      "score_claim": false,
+      "score_estimate_vs_current_s2_frontier": {
+        "anchor": {
+          "archive_bytes": 277321,
+          "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+          "score": 0.31453355357318635,
+          "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+        },
+        "candidate_delta_bytes_vs_s2_frontier": -31342,
+        "rate_score_delta_vs_s2_frontier": -0.020869351308755096,
+        "score_claim": false,
+        "score_if_components_unchanged_vs_current_s2_frontier": 0.29366420226443124,
+        "unchanged_component_estimate_only": true
+      }
+    },
+    "decision": "recommend_exact_cuda_screen_after_lane_claim",
+    "reason": "highest-ranked local byte candidate preserves PR79 renderer/pose and is byte-closed for future exact CUDA screening"
+  },
+  "schema": "pr79_next_byte_candidate_matrix_v1",
+  "score_claim": false,
+  "source_archives": {
+    "pr77": {
+      "action_wire_bytes": 325,
+      "archive_bytes": 276551,
+      "archive_path": "experiments/results/top_submission_reverse_engineering_20260503_pr77/archive.zip",
+      "archive_sha256": "f90880383c95e14d82704f99db9b20944786ae6452a844348638b06c439972af"
+    },
+    "pr79": {
+      "action_wire_bytes": 1162,
+      "archive_bytes": 277388,
+      "archive_path": "experiments/results/top_submission_reverse_engineering_20260503_pr79/archive.zip",
+      "archive_sha256": "01dc02badf851d99108fd92c570271f36f74cc5424c6d2a8f1b499cb4d1c3446"
+    }
+  },
+  "tool": "experiments/build_pr79_next_byte_candidates.py"
+}

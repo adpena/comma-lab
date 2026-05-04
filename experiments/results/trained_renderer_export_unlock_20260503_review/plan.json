@@ -1,0 +1,2782 @@
+{
+  "byte_targets": {
+    "frontier": {
+      "archive_bytes": 276214,
+      "archive_sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+      "component_score_at_frontier": 0.13169746590679487,
+      "rate_score": 0.18391956487768746,
+      "score": 0.31561703078448233
+    },
+    "rate_score_per_archive_byte": 6.658589531221714e-07,
+    "score_formula": "score = 100*seg_dist + sqrt(10*pose_dist) + 25*archive_bytes/37545489",
+    "targets": [
+      {
+        "frontier_score_gap": 0.015617030784482,
+        "required_archive_byte_savings_vs_c067_if_components_unchanged": 23454,
+        "required_component_score_improvement_if_archive_bytes_unchanged": 0.015617030784482,
+        "target_score": 0.3,
+        "unchanged_component_max_archive_bytes": 252760
+      },
+      {
+        "frontier_score_gap": 0.075617030784482,
+        "required_archive_byte_savings_vs_c067_if_components_unchanged": 113564,
+        "required_component_score_improvement_if_archive_bytes_unchanged": 0.075617030784482,
+        "target_score": 0.24,
+        "unchanged_component_max_archive_bytes": 162650
+      }
+    ]
+  },
+  "candidate_count": 131,
+  "candidates": [
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 283869,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/blockfp_c067_candidate_20260502T_local_qbf1_b1024/qbf1_b1024/archive.zip",
+      "sha256": "6d331e479d961df22a2baa8b3f09722394ece7d0c194821c80c6aa354cb1449b"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 288112,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/blockfp_c067_candidate_20260502T_qbf1_sweep/qbf1_b0016/archive.zip",
+      "sha256": "b6a51996110cea840db2d27bb014359b4ba63678ab57aac978b1af0f2c6ee38d"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 296066,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/blockfp_c067_candidate_20260502T_qbf1_sweep/qbf1_b0024/archive.zip",
+      "sha256": "46d96b873061c3736ced38be9497c3149328371cd8a88db7db3fd917675e86e2"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 280588,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/blockfp_c067_candidate_20260502T_qbf1_sweep/qbf1_b0032/archive.zip",
+      "sha256": "b578afb324261dabd5492083e9ea46b3b26c0ee99b2ae1298f360d58c2a36b8a"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 292274,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/blockfp_c067_candidate_20260502T_qbf1_sweep/qbf1_b0048/archive.zip",
+      "sha256": "03ea61c98fa5be25ec843f48abedd8f4c726fd59d7d6daf30a4757da8c5ec72f"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 285210,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/blockfp_c067_candidate_20260502T_qbf1_sweep/qbf1_b0064/archive.zip",
+      "sha256": "c581bb0729e5937ac78343e3b6891a19d70b2f9a3dab19e02a37710fc32b8cec"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 288131,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/blockfp_c067_candidate_20260502T_qbf1_sweep/qbf1_b0096/archive.zip",
+      "sha256": "84d794b48585df4ae5f3b33d4e0241b6cf50e4327aa6da8d7213dcebef0d40b7"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 284606,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/blockfp_c067_candidate_20260502T_qbf1_sweep/qbf1_b0128/archive.zip",
+      "sha256": "29681c834e22ed6420d01cc75b9ccb2f281437ba5672d4692b8d6e4ac3af91c9"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 285126,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/blockfp_c067_candidate_20260502T_qbf1_sweep/qbf1_b0256/archive.zip",
+      "sha256": "bbf8c99d95bcfe7767c99a9623a8dde736dd446e46008ee5345c39480b1d8e52"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 283957,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/blockfp_c067_candidate_20260502T_qbf1_sweep/qbf1_b0512/archive.zip",
+      "sha256": "670a3eb118114096e284599dbc0b11625ee922baadd584b4e37c370b4b63f275"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 283869,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/blockfp_c067_candidate_20260502T_qbf1_sweep/qbf1_b1024/archive.zip",
+      "sha256": "6d331e479d961df22a2baa8b3f09722394ece7d0c194821c80c6aa354cb1449b"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 276282,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/component_aware_mqz1/component_aware_v1_frame2_all64/archive.zip",
+      "sha256": "86684e1eff2c111c2f266f43a762952ae64976c8d25816b8935fdfbe42d36d52"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 276393,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/component_aware_mqz1/component_aware_v1_frame2_block2_pre64/archive.zip",
+      "sha256": "e00a28103ac42740d476646cde8eca7f87fa1628217915895e0fc81e551bb95e"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 276513,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/component_aware_mqz1/component_aware_v1_frame2_pre64/archive.zip",
+      "sha256": "7f4623c5ac9efe741f724d609afa4882ec3788109ee333ebc4bffd5d618dc6d6"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 271485,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/global_qzs3_risky/global_b1024/archive.zip",
+      "sha256": "a8cb980c6ff86959517d3323030c802ccd557eb95e952aaaebaa8e5c27dfed8e"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 273247,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/global_qzs3_risky/global_b128/archive.zip",
+      "sha256": "32ce9cd3ebbbfa6b3468dc9ba7ac31f0fbd2802a8eb25f6bdd44c137d9f41c69"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 271249,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/global_qzs3_risky/global_b2048/archive.zip",
+      "sha256": "5a33ea23d9b1a3484500e93571e781f50ad0a714c0b17705888c346e5ef8acf1"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 272444,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/global_qzs3_risky/global_b256/archive.zip",
+      "sha256": "6e800416d489a2d8e73167d56583a58f94ded74544d9caaf907e6585be4da17a"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 270878,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/global_qzs3_risky/global_b4096/archive.zip",
+      "sha256": "3d78ddeeb8cb9bd3031e3d2256370f729dc5a61753d1ac5ceecb0778774d9934"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 271886,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/global_qzs3_risky/global_b512/archive.zip",
+      "sha256": "4271b2c855fddc089ae590392caec1d92cf408228664c4a9a0249d3b375e9d43"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 288112,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b0016/archive.zip",
+      "sha256": "b6a51996110cea840db2d27bb014359b4ba63678ab57aac978b1af0f2c6ee38d"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 296066,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b0024/archive.zip",
+      "sha256": "46d96b873061c3736ced38be9497c3149328371cd8a88db7db3fd917675e86e2"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 280588,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b0032/archive.zip",
+      "sha256": "b578afb324261dabd5492083e9ea46b3b26c0ee99b2ae1298f360d58c2a36b8a"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 292274,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b0048/archive.zip",
+      "sha256": "03ea61c98fa5be25ec843f48abedd8f4c726fd59d7d6daf30a4757da8c5ec72f"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 285210,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b0064/archive.zip",
+      "sha256": "c581bb0729e5937ac78343e3b6891a19d70b2f9a3dab19e02a37710fc32b8cec"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 288131,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b0096/archive.zip",
+      "sha256": "84d794b48585df4ae5f3b33d4e0241b6cf50e4327aa6da8d7213dcebef0d40b7"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 284606,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b0128/archive.zip",
+      "sha256": "29681c834e22ed6420d01cc75b9ccb2f281437ba5672d4692b8d6e4ac3af91c9"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 285126,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b0256/archive.zip",
+      "sha256": "bbf8c99d95bcfe7767c99a9623a8dde736dd446e46008ee5345c39480b1d8e52"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 283957,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b0512/archive.zip",
+      "sha256": "670a3eb118114096e284599dbc0b11625ee922baadd584b4e37c370b4b63f275"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 283869,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b1024/archive.zip",
+      "sha256": "6d331e479d961df22a2baa8b3f09722394ece7d0c194821c80c6aa354cb1449b"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 283547,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b2048/archive.zip",
+      "sha256": "a8351f70563c9c4097d9efeec16a1bea43846df06e17ffc22744759ac8c0890b"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 284282,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b4096/archive.zip",
+      "sha256": "56a09778999b3b50c11e6e1f7559c3806341d86ccb1e78ecc28855634726db3a"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 280588,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_a_blockfp_c067_20260502_local_screen/qbf1/qbf1_b0032/archive.zip",
+      "sha256": "b578afb324261dabd5492083e9ea46b3b26c0ee99b2ae1298f360d58c2a36b8a"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 283869,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_a_blockfp_c067_20260502_local_screen/qbf1/qbf1_b1024/archive.zip",
+      "sha256": "6d331e479d961df22a2baa8b3f09722394ece7d0c194821c80c6aa354cb1449b"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 284282,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_a_blockfp_c067_20260502_local_screen/qbf1/qbf1_b4096/archive.zip",
+      "sha256": "56a09778999b3b50c11e6e1f7559c3806341d86ccb1e78ecc28855634726db3a"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 276282,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_a_blockfp_c067_20260502_local_screen/qzs3_mqz1/component_aware_v1_frame2_all64/archive.zip",
+      "sha256": "86684e1eff2c111c2f266f43a762952ae64976c8d25816b8935fdfbe42d36d52"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 276393,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_a_blockfp_c067_20260502_local_screen/qzs3_mqz1/component_aware_v1_frame2_block2_pre64/archive.zip",
+      "sha256": "e00a28103ac42740d476646cde8eca7f87fa1628217915895e0fc81e551bb95e"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 270878,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_a_blockfp_c067_20260502_local_screen/qzs3_mqz1/global_b4096/archive.zip",
+      "sha256": "3d78ddeeb8cb9bd3031e3d2256370f729dc5a61753d1ac5ceecb0778774d9934"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 271886,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_a_blockfp_c067_20260502_local_screen/qzs3_mqz1/global_b512/archive.zip",
+      "sha256": "4271b2c855fddc089ae590392caec1d92cf408228664c4a9a0249d3b375e9d43"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 284486,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T1947Z_fix3/qzs3_half_posebin/archive.zip",
+      "sha256": "751f4f9105a3479548685b2a70041b222ddae35ec25bae601b33284e76e48bf3"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 273057,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T1947Z_fix3/qzs3_pr64_qp1/archive.zip",
+      "sha256": "043166e87d685acf817513ef28eae170aa045f4ebbe00fb8f7550863718e903b"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 276610,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T1947Z_fix3/qzs3_pr64_qpose14/archive.zip",
+      "sha256": "dcaedb62a3b3f57fdd3808efbc229fb55ec87aac861cb8f83457459b10d18fd8"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 273048,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T1947Z_fix3/qzs3_rp2_qp1/archive.zip",
+      "sha256": "e70bb3fbda789e4fb8880e80b672a608e318bc0084415958c52fc6631a6a20f4"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 276651,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T1947Z_fix3/qzs3_rp2_qpose14/archive.zip",
+      "sha256": "1d5d5e86cb0902f306f1e0968385033172c97ab2b882866beffbf9b26a2acca4"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 563206,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T1947Z_fix3/raw_qfai_half_posebin/archive.zip",
+      "sha256": "8ad1b494e03fba010a663d18f5d9b5b530e3fdcbd5fccf7633b0db295f4ad33e"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 302294,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T1947Z_fix3/torchfp4_half_posebin/archive.zip",
+      "sha256": "036740fc447314a08475ee338ce6df6f0d01f5a3c5fcf68c27b764f631c6cf02"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 285482,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T1947Z_fix3/torchfp4_pr64_qp1/archive.zip",
+      "sha256": "cb6563fe399a99fe61debce2a9ea6896ceb294c85ce56350873f0d7f505061f5"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 289042,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T1947Z_fix3/torchfp4_pr64_qpose14/archive.zip",
+      "sha256": "b98b9bb84b1709ee9b3bea1bc4dc3ddade1aa761b4871c68ca87e6b43e0926ef"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 285346,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T1947Z_fix3/torchfp4_rp2_qp1/archive.zip",
+      "sha256": "1c07e522235014a743314d3f853619083f54f1b4f8166946ab693c47f33c6bc2"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 288889,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T1947Z_fix3/torchfp4_rp2_qpose14/archive.zip",
+      "sha256": "9e31e23cb6a66d5c070df73e3e0cb261efea8878706ee76be89bc4bbdc695ba6"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 284461,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2131Z_fix1/qzs3_half_posebin/archive.zip",
+      "sha256": "9590e45187d24925c5c78b656c5707d4a9d56af3d98b10ed5dc0aa389ea7261a"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 272995,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2131Z_fix1/qzs3_pr64_qp1/archive.zip",
+      "sha256": "1a35d4d8899afa47602137efd36a427cdadc6e3a25615c4c54ec51c1ac73374f"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 276542,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2131Z_fix1/qzs3_pr64_qpose14/archive.zip",
+      "sha256": "70ac01f7446db7766577829a7ec0fc7ab633676408ad8c3ffdd662f2e66a0f3d"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 273069,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2131Z_fix1/qzs3_rp2_qp1/archive.zip",
+      "sha256": "7dbdc8e9e7b2fe4c348e483bff4f319f58019ed3d4dc154af0f1118e28d87492"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 276629,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2131Z_fix1/qzs3_rp2_qpose14/archive.zip",
+      "sha256": "fd5a462551e1a52b56690a7bc055a9a281c6c6f12dca2258aa18b71333c3a81f"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 563099,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2131Z_fix1/raw_qfai_half_posebin/archive.zip",
+      "sha256": "336ac3ea31c367ce5dcba2cf10f5f04c8f142ee6d47b20026687d91d0f87fb26"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 302323,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2131Z_fix1/torchfp4_half_posebin/archive.zip",
+      "sha256": "85bb5ce5116572232058f1b6bbc3473485c78f5a8d2215a76f3f6e655b919569"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 285383,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2131Z_fix1/torchfp4_pr64_qp1/archive.zip",
+      "sha256": "e476b3bb758e401969ea462307aa50da4b08291e30a77c7a1c22744bd287b07b"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 288984,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2131Z_fix1/torchfp4_pr64_qpose14/archive.zip",
+      "sha256": "6b41aba2614dac935e01671ee4b8f4455ba0ad329fe545bb8673af8a1d5bb2ed"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 285375,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2131Z_fix1/torchfp4_rp2_qp1/archive.zip",
+      "sha256": "5dea2702a752aa6fb96eb01c777bcabfd5a50a5a64733dad561a7c4f2feb3830"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 289026,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2131Z_fix1/torchfp4_rp2_qpose14/archive.zip",
+      "sha256": "3a737142be2123fb95220e1061bef0613ddcd0f654e4da770a611393cbbf2a4c"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 284488,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2146Z_fix1/qzs3_half_posebin/archive.zip",
+      "sha256": "1a901b7ee79357755d3c7f9a533c89f4a6aa9c099b7919016c248cef8e99f7df"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 273103,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2146Z_fix1/qzs3_pr64_qp1/archive.zip",
+      "sha256": "a34f493b77e3a2ccba7e059134127e9b3cb6e774a41862143d369fa3f5fc81af"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 276636,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2146Z_fix1/qzs3_pr64_qpose14/archive.zip",
+      "sha256": "d907101ff70524d3244ac9a66fb2a85d501cc02c0f45bfcb25eae06fc962d39c"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 272986,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2146Z_fix1/qzs3_rp2_qp1/archive.zip",
+      "sha256": "d90a937da2127086f28b66f7df58a027c8c565488eb8e765e468808361602128"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 276588,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2146Z_fix1/qzs3_rp2_qpose14/archive.zip",
+      "sha256": "1e382f5db96eac98ff8df34c8ff53f440e04d6940559915eb25a6c0dbc75024a"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 563025,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2146Z_fix1/raw_qfai_half_posebin/archive.zip",
+      "sha256": "470604181772cc31136e427549ffe0aacdfdff57522487a3195badbe72c6a7db"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 302341,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2146Z_fix1/torchfp4_half_posebin/archive.zip",
+      "sha256": "35e8506ea878a503d9b63d3116928b6875f7dfaf566c14545b6ac253f50b0e6a"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 285620,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2146Z_fix1/torchfp4_pr64_qp1/archive.zip",
+      "sha256": "4f2edc3265614dfab2ca346b3fa4d0564ed0bd2f49801e1d97d524c5bbdd71bc"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 289006,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2146Z_fix1/torchfp4_pr64_qpose14/archive.zip",
+      "sha256": "1fb06990188c39d12d0a7149a5535c12ca3a68c33c06331a201c76ea9315e5fb"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 285350,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2146Z_fix1/torchfp4_rp2_qp1/archive.zip",
+      "sha256": "21f51d63f7c63ef65141b564ba44e1dbfaae0f1a7d0d1c462962fd75b75c73f3"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 289260,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2146Z_fix1/torchfp4_rp2_qpose14/archive.zip",
+      "sha256": "111b9a566e3612dc77a00c20915386067194317a33e05107fe7f7cceb6c37180"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 285210,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/trained_renderer_blockfp_preflight_20260502_codex/trained_qbf1_b0064/archive.zip",
+      "sha256": "c581bb0729e5937ac78343e3b6891a19d70b2f9a3dab19e02a37710fc32b8cec"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 284606,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/trained_renderer_blockfp_preflight_20260502_codex/trained_qbf1_b0128/archive.zip",
+      "sha256": "29681c834e22ed6420d01cc75b9ccb2f281437ba5672d4692b8d6e4ac3af91c9"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 285126,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/trained_renderer_blockfp_preflight_20260502_codex/trained_qbf1_b0256/archive.zip",
+      "sha256": "bbf8c99d95bcfe7767c99a9623a8dde736dd446e46008ee5345c39480b1d8e52"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 283957,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/trained_renderer_blockfp_preflight_20260502_codex/trained_qbf1_b0512/archive.zip",
+      "sha256": "670a3eb118114096e284599dbc0b11625ee922baadd584b4e37c370b4b63f275"
+    },
+    {
+      "blockers": [
+        "archive file exists but no non-surrogate trained-renderer preflight summary gates it"
+      ],
+      "bytes": 283869,
+      "h100_ready": false,
+      "kind": "archive_without_trained_preflight_gate",
+      "path": "experiments/results/trained_renderer_blockfp_preflight_20260502_codex/trained_qbf1_b1024/archive.zip",
+      "sha256": "6d331e479d961df22a2baa8b3f09722394ece7d0c194821c80c6aa354cb1449b"
+    },
+    {
+      "archive_bytes": 283869,
+      "archive_sha256": "6d331e479d961df22a2baa8b3f09722394ece7d0c194821c80c6aa354cb1449b",
+      "blockers": [
+        "Block-FP summary repacks the source renderer; it is not a trained export preflight",
+        "best archive bytes are above the C067 frontier"
+      ],
+      "candidate_id": "qbf1_b1024",
+      "commands_if_ready": null,
+      "h100_ready": false,
+      "kind": "blockfp_source_renderer_summary",
+      "non_surrogate_export": false,
+      "path": "experiments/results/blockfp_c067_candidate_20260502T_local_qbf1_b1024/blockfp_c067_summary.json",
+      "promotion_eligible": false,
+      "schema": "blockfp_c067_archive_summary_v1",
+      "score_claim": false,
+      "stacking_requirements": {
+        "archive_bytes": 283869,
+        "targets": [
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 31109,
+            "candidate_archive_bytes": 283869,
+            "candidate_rate_score_if_components_unchanged": 0.18901671516383767,
+            "component_score_improvement_needed_at_candidate_bytes": 0.020714181070633,
+            "score_if_components_unchanged": 0.32071418107063254,
+            "target_score": 0.3
+          },
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 121219,
+            "candidate_archive_bytes": 283869,
+            "candidate_rate_score_if_components_unchanged": 0.18901671516383767,
+            "component_score_improvement_needed_at_candidate_bytes": 0.080714181070633,
+            "score_if_components_unchanged": 0.32071418107063254,
+            "target_score": 0.24
+          }
+        ]
+      }
+    },
+    {
+      "archive_bytes": 280588,
+      "archive_sha256": "b578afb324261dabd5492083e9ea46b3b26c0ee99b2ae1298f360d58c2a36b8a",
+      "blockers": [
+        "Block-FP summary repacks the source renderer; it is not a trained export preflight",
+        "best archive bytes are above the C067 frontier"
+      ],
+      "candidate_id": "qbf1_b0032",
+      "commands_if_ready": null,
+      "h100_ready": false,
+      "kind": "blockfp_source_renderer_summary",
+      "non_surrogate_export": false,
+      "path": "experiments/results/blockfp_c067_candidate_20260502T_qbf1_sweep/blockfp_c067_summary.json",
+      "promotion_eligible": false,
+      "schema": "blockfp_c067_archive_summary_v1",
+      "score_claim": false,
+      "stacking_requirements": {
+        "archive_bytes": 280588,
+        "targets": [
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 27828,
+            "candidate_archive_bytes": 280588,
+            "candidate_rate_score_if_components_unchanged": 0.18683203193864384,
+            "component_score_improvement_needed_at_candidate_bytes": 0.018529497845439,
+            "score_if_components_unchanged": 0.3185294978454387,
+            "target_score": 0.3
+          },
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 117938,
+            "candidate_archive_bytes": 280588,
+            "candidate_rate_score_if_components_unchanged": 0.18683203193864384,
+            "component_score_improvement_needed_at_candidate_bytes": 0.078529497845439,
+            "score_if_components_unchanged": 0.3185294978454387,
+            "target_score": 0.24
+          }
+        ]
+      }
+    },
+    {
+      "archive_bytes": 280588,
+      "archive_sha256": "b578afb324261dabd5492083e9ea46b3b26c0ee99b2ae1298f360d58c2a36b8a",
+      "blockers": [
+        "Block-FP summary repacks the source renderer; it is not a trained export preflight",
+        "best archive bytes are above the C067 frontier"
+      ],
+      "candidate_id": "qbf1_b0032",
+      "commands_if_ready": null,
+      "h100_ready": false,
+      "kind": "blockfp_source_renderer_summary",
+      "non_surrogate_export": false,
+      "path": "experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep.stdout.json",
+      "promotion_eligible": false,
+      "schema": "blockfp_c067_archive_summary_v1",
+      "score_claim": false,
+      "stacking_requirements": {
+        "archive_bytes": 280588,
+        "targets": [
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 27828,
+            "candidate_archive_bytes": 280588,
+            "candidate_rate_score_if_components_unchanged": 0.18683203193864384,
+            "component_score_improvement_needed_at_candidate_bytes": 0.018529497845439,
+            "score_if_components_unchanged": 0.3185294978454387,
+            "target_score": 0.3
+          },
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 117938,
+            "candidate_archive_bytes": 280588,
+            "candidate_rate_score_if_components_unchanged": 0.18683203193864384,
+            "component_score_improvement_needed_at_candidate_bytes": 0.078529497845439,
+            "score_if_components_unchanged": 0.3185294978454387,
+            "target_score": 0.24
+          }
+        ]
+      }
+    },
+    {
+      "archive_bytes": 280588,
+      "archive_sha256": "b578afb324261dabd5492083e9ea46b3b26c0ee99b2ae1298f360d58c2a36b8a",
+      "blockers": [
+        "Block-FP summary repacks the source renderer; it is not a trained export preflight",
+        "best archive bytes are above the C067 frontier"
+      ],
+      "candidate_id": "qbf1_b0032",
+      "commands_if_ready": null,
+      "h100_ready": false,
+      "kind": "blockfp_source_renderer_summary",
+      "non_surrogate_export": false,
+      "path": "experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/blockfp_c067_summary.json",
+      "promotion_eligible": false,
+      "schema": "blockfp_c067_archive_summary_v1",
+      "score_claim": false,
+      "stacking_requirements": {
+        "archive_bytes": 280588,
+        "targets": [
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 27828,
+            "candidate_archive_bytes": 280588,
+            "candidate_rate_score_if_components_unchanged": 0.18683203193864384,
+            "component_score_improvement_needed_at_candidate_bytes": 0.018529497845439,
+            "score_if_components_unchanged": 0.3185294978454387,
+            "target_score": 0.3
+          },
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 117938,
+            "candidate_archive_bytes": 280588,
+            "candidate_rate_score_if_components_unchanged": 0.18683203193864384,
+            "component_score_improvement_needed_at_candidate_bytes": 0.078529497845439,
+            "score_if_components_unchanged": 0.3185294978454387,
+            "target_score": 0.24
+          }
+        ]
+      }
+    },
+    {
+      "archive_bytes": 280588,
+      "archive_sha256": "b578afb324261dabd5492083e9ea46b3b26c0ee99b2ae1298f360d58c2a36b8a",
+      "blockers": [
+        "Block-FP summary repacks the source renderer; it is not a trained export preflight",
+        "best archive bytes are above the C067 frontier"
+      ],
+      "candidate_id": "qbf1_b0032",
+      "commands_if_ready": null,
+      "h100_ready": false,
+      "kind": "blockfp_source_renderer_summary",
+      "non_surrogate_export": false,
+      "path": "experiments/results/lane_a_blockfp_c067_20260502_local_screen/qbf1/blockfp_c067_summary.json",
+      "promotion_eligible": false,
+      "schema": "blockfp_c067_archive_summary_v1",
+      "score_claim": false,
+      "stacking_requirements": {
+        "archive_bytes": 280588,
+        "targets": [
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 27828,
+            "candidate_archive_bytes": 280588,
+            "candidate_rate_score_if_components_unchanged": 0.18683203193864384,
+            "component_score_improvement_needed_at_candidate_bytes": 0.018529497845439,
+            "score_if_components_unchanged": 0.3185294978454387,
+            "target_score": 0.3
+          },
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 117938,
+            "candidate_archive_bytes": 280588,
+            "candidate_rate_score_if_components_unchanged": 0.18683203193864384,
+            "component_score_improvement_needed_at_candidate_bytes": 0.078529497845439,
+            "score_if_components_unchanged": 0.3185294978454387,
+            "target_score": 0.24
+          }
+        ]
+      }
+    },
+    {
+      "blockers": [
+        "checkpoint is not a pickle-free QZS3/MQZ1/QBF1 renderer export",
+        "run an export step, then experiments/preflight_trained_renderer_transplant.py locally"
+      ],
+      "bytes": 3527610,
+      "h100_ready": false,
+      "kind": "checkpoint_requires_export",
+      "path": "experiments/results/fridrich_renderer/renderer_best.pt",
+      "sha256": "d8e85f86422e0ba190d64b9b145c93edcef872baeebcf2ec889def4f556f1f63"
+    },
+    {
+      "blockers": [
+        "checkpoint is not a pickle-free QZS3/MQZ1/QBF1 renderer export",
+        "run an export step, then experiments/preflight_trained_renderer_transplant.py locally"
+      ],
+      "bytes": 3557791,
+      "h100_ready": false,
+      "kind": "checkpoint_requires_export",
+      "path": "experiments/results/fridrich_renderer/renderer_epoch00004.pt",
+      "sha256": "6cc85a2b341472d42fe59e869888b3519f723c60cb49293575dc33bba1a144ad"
+    },
+    {
+      "blockers": [
+        "checkpoint is not a pickle-free QZS3/MQZ1/QBF1 renderer export",
+        "run an export step, then experiments/preflight_trained_renderer_transplant.py locally"
+      ],
+      "bytes": 336509,
+      "h100_ready": false,
+      "kind": "checkpoint_requires_export",
+      "path": "experiments/results/fridrich_renderer/renderer_epoch00049_killed.pt",
+      "sha256": "f9e91525897f867d84afb0bf73d37a4b400b18cd7f811e1b13b9b2876ecc29c2"
+    },
+    {
+      "blockers": [
+        "checkpoint is not a pickle-free QZS3/MQZ1/QBF1 renderer export",
+        "run an export step, then experiments/preflight_trained_renderer_transplant.py locally"
+      ],
+      "bytes": 392332,
+      "h100_ready": false,
+      "kind": "checkpoint_requires_export",
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/stopped_out_of_basin_20260501T2316Z/renderer_q_faithful_modal_best_fp32.pt",
+      "sha256": "b25249670fc7bd8deaa769a05db65a57641b42a9b0d3c92f9870af4a068428a3"
+    },
+    {
+      "blockers": [
+        "checkpoint is not a pickle-free QZS3/MQZ1/QBF1 renderer export",
+        "run an export step, then experiments/preflight_trained_renderer_transplant.py locally"
+      ],
+      "bytes": 121979,
+      "h100_ready": false,
+      "kind": "checkpoint_requires_export",
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/stopped_out_of_basin_20260501T2316Z/renderer_q_faithful_modal_best_fp4.pt",
+      "sha256": "9717e160e83856175142cca491eef81f939ff66900444865fe2fcc97d9e5ca9d"
+    },
+    {
+      "blockers": [
+        "checkpoint is not a pickle-free QZS3/MQZ1/QBF1 renderer export",
+        "run an export step, then experiments/preflight_trained_renderer_transplant.py locally"
+      ],
+      "bytes": 1587860,
+      "h100_ready": false,
+      "kind": "checkpoint_requires_export",
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/stopped_out_of_basin_20260501T2316Z/training_state_q_faithful_modal.pt",
+      "sha256": "871dfe65ddbd11e19ba5cb723e9a2dffb8bc35f3f82927d45a0c9f135dd6924b"
+    },
+    {
+      "blockers": [
+        "checkpoint is not a pickle-free QZS3/MQZ1/QBF1 renderer export",
+        "run an export step, then experiments/preflight_trained_renderer_transplant.py locally"
+      ],
+      "bytes": 1566802,
+      "h100_ready": false,
+      "kind": "checkpoint_requires_export",
+      "path": "experiments/results/small_renderer_trained/distill_latest.pt",
+      "sha256": "d718fff8da6ef085a263bb09b12a0dae3b20ef93c793f2aa2eed80d53c450774"
+    },
+    {
+      "blockers": [
+        "checkpoint is not a pickle-free QZS3/MQZ1/QBF1 renderer export",
+        "run an export step, then experiments/preflight_trained_renderer_transplant.py locally"
+      ],
+      "bytes": 1568554,
+      "h100_ready": false,
+      "kind": "checkpoint_requires_export",
+      "path": "experiments/results/small_renderer_trained/distill_phase2_best.pt",
+      "sha256": "52c79670c7dae33ba6c3262cd8934c469ae5167ed0fb042c7f84559c535f0f88"
+    },
+    {
+      "archive_bytes": 285210,
+      "archive_path": "experiments/results/trained_renderer_blockfp_preflight_20260502_codex/trained_qbf1_b0064/archive.zip",
+      "archive_sha256": "c581bb0729e5937ac78343e3b6891a19d70b2f9a3dab19e02a37710fc32b8cec",
+      "blockers": [
+        "candidate manifest alone is not the preflight summary H100 gate",
+        "candidate manifest is surrogate/no-op or missing trained export metadata"
+      ],
+      "candidate_id": "trained_qbf1_b0064",
+      "commands_if_ready": null,
+      "h100_ready": false,
+      "kind": "preflight_candidate_manifest",
+      "non_surrogate_export": false,
+      "path": "experiments/results/trained_renderer_blockfp_preflight_20260502_codex/trained_qbf1_b0064/preflight_manifest.json",
+      "promotion_eligible": false,
+      "renderer_export": {
+        "bytes": 59288,
+        "dispatchable_trained_export": false,
+        "mode": "source_renderer_surrogate",
+        "path": null,
+        "reason": "surrogate proves archive/runtime plumbing only; it is not a trained transplant",
+        "same_as_source_renderer": true,
+        "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+      },
+      "schema": "trained_renderer_blockfp_candidate_manifest_v1",
+      "score_claim": false,
+      "stacking_requirements": {
+        "archive_bytes": 285210,
+        "targets": [
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 32450,
+            "candidate_archive_bytes": 285210,
+            "candidate_rate_score_if_components_unchanged": 0.18990963201997452,
+            "component_score_improvement_needed_at_candidate_bytes": 0.021607097926769,
+            "score_if_components_unchanged": 0.3216070979267694,
+            "target_score": 0.3
+          },
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 122560,
+            "candidate_archive_bytes": 285210,
+            "candidate_rate_score_if_components_unchanged": 0.18990963201997452,
+            "component_score_improvement_needed_at_candidate_bytes": 0.081607097926769,
+            "score_if_components_unchanged": 0.3216070979267694,
+            "target_score": 0.24
+          }
+        ]
+      }
+    },
+    {
+      "archive_bytes": 284606,
+      "archive_path": "experiments/results/trained_renderer_blockfp_preflight_20260502_codex/trained_qbf1_b0128/archive.zip",
+      "archive_sha256": "29681c834e22ed6420d01cc75b9ccb2f281437ba5672d4692b8d6e4ac3af91c9",
+      "blockers": [
+        "candidate manifest alone is not the preflight summary H100 gate",
+        "candidate manifest is surrogate/no-op or missing trained export metadata"
+      ],
+      "candidate_id": "trained_qbf1_b0128",
+      "commands_if_ready": null,
+      "h100_ready": false,
+      "kind": "preflight_candidate_manifest",
+      "non_surrogate_export": false,
+      "path": "experiments/results/trained_renderer_blockfp_preflight_20260502_codex/trained_qbf1_b0128/preflight_manifest.json",
+      "promotion_eligible": false,
+      "renderer_export": {
+        "bytes": 59288,
+        "dispatchable_trained_export": false,
+        "mode": "source_renderer_surrogate",
+        "path": null,
+        "reason": "surrogate proves archive/runtime plumbing only; it is not a trained transplant",
+        "same_as_source_renderer": true,
+        "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+      },
+      "schema": "trained_renderer_blockfp_candidate_manifest_v1",
+      "score_claim": false,
+      "stacking_requirements": {
+        "archive_bytes": 284606,
+        "targets": [
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 31846,
+            "candidate_archive_bytes": 284606,
+            "candidate_rate_score_if_components_unchanged": 0.1895074532122887,
+            "component_score_improvement_needed_at_candidate_bytes": 0.021204919119084,
+            "score_if_components_unchanged": 0.32120491911908355,
+            "target_score": 0.3
+          },
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 121956,
+            "candidate_archive_bytes": 284606,
+            "candidate_rate_score_if_components_unchanged": 0.1895074532122887,
+            "component_score_improvement_needed_at_candidate_bytes": 0.081204919119084,
+            "score_if_components_unchanged": 0.32120491911908355,
+            "target_score": 0.24
+          }
+        ]
+      }
+    },
+    {
+      "archive_bytes": 285126,
+      "archive_path": "experiments/results/trained_renderer_blockfp_preflight_20260502_codex/trained_qbf1_b0256/archive.zip",
+      "archive_sha256": "bbf8c99d95bcfe7767c99a9623a8dde736dd446e46008ee5345c39480b1d8e52",
+      "blockers": [
+        "candidate manifest alone is not the preflight summary H100 gate",
+        "candidate manifest is surrogate/no-op or missing trained export metadata"
+      ],
+      "candidate_id": "trained_qbf1_b0256",
+      "commands_if_ready": null,
+      "h100_ready": false,
+      "kind": "preflight_candidate_manifest",
+      "non_surrogate_export": false,
+      "path": "experiments/results/trained_renderer_blockfp_preflight_20260502_codex/trained_qbf1_b0256/preflight_manifest.json",
+      "promotion_eligible": false,
+      "renderer_export": {
+        "bytes": 59288,
+        "dispatchable_trained_export": false,
+        "mode": "source_renderer_surrogate",
+        "path": null,
+        "reason": "surrogate proves archive/runtime plumbing only; it is not a trained transplant",
+        "same_as_source_renderer": true,
+        "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+      },
+      "schema": "trained_renderer_blockfp_candidate_manifest_v1",
+      "score_claim": false,
+      "stacking_requirements": {
+        "archive_bytes": 285126,
+        "targets": [
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 32366,
+            "candidate_archive_bytes": 285126,
+            "candidate_rate_score_if_components_unchanged": 0.18985369986791223,
+            "component_score_improvement_needed_at_candidate_bytes": 0.021551165774707,
+            "score_if_components_unchanged": 0.3215511657747071,
+            "target_score": 0.3
+          },
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 122476,
+            "candidate_archive_bytes": 285126,
+            "candidate_rate_score_if_components_unchanged": 0.18985369986791223,
+            "component_score_improvement_needed_at_candidate_bytes": 0.081551165774707,
+            "score_if_components_unchanged": 0.3215511657747071,
+            "target_score": 0.24
+          }
+        ]
+      }
+    },
+    {
+      "archive_bytes": 283957,
+      "archive_path": "experiments/results/trained_renderer_blockfp_preflight_20260502_codex/trained_qbf1_b0512/archive.zip",
+      "archive_sha256": "670a3eb118114096e284599dbc0b11625ee922baadd584b4e37c370b4b63f275",
+      "blockers": [
+        "candidate manifest alone is not the preflight summary H100 gate",
+        "candidate manifest is surrogate/no-op or missing trained export metadata"
+      ],
+      "candidate_id": "trained_qbf1_b0512",
+      "commands_if_ready": null,
+      "h100_ready": false,
+      "kind": "preflight_candidate_manifest",
+      "non_surrogate_export": false,
+      "path": "experiments/results/trained_renderer_blockfp_preflight_20260502_codex/trained_qbf1_b0512/preflight_manifest.json",
+      "promotion_eligible": false,
+      "renderer_export": {
+        "bytes": 59288,
+        "dispatchable_trained_export": false,
+        "mode": "source_renderer_surrogate",
+        "path": null,
+        "reason": "surrogate proves archive/runtime plumbing only; it is not a trained transplant",
+        "same_as_source_renderer": true,
+        "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+      },
+      "schema": "trained_renderer_blockfp_candidate_manifest_v1",
+      "score_claim": false,
+      "stacking_requirements": {
+        "archive_bytes": 283957,
+        "targets": [
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 31197,
+            "candidate_archive_bytes": 283957,
+            "candidate_rate_score_if_components_unchanged": 0.1890753107517124,
+            "component_score_improvement_needed_at_candidate_bytes": 0.020772776658507,
+            "score_if_components_unchanged": 0.3207727766585073,
+            "target_score": 0.3
+          },
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 121307,
+            "candidate_archive_bytes": 283957,
+            "candidate_rate_score_if_components_unchanged": 0.1890753107517124,
+            "component_score_improvement_needed_at_candidate_bytes": 0.080772776658507,
+            "score_if_components_unchanged": 0.3207727766585073,
+            "target_score": 0.24
+          }
+        ]
+      }
+    },
+    {
+      "archive_bytes": 283869,
+      "archive_path": "experiments/results/trained_renderer_blockfp_preflight_20260502_codex/trained_qbf1_b1024/archive.zip",
+      "archive_sha256": "6d331e479d961df22a2baa8b3f09722394ece7d0c194821c80c6aa354cb1449b",
+      "blockers": [
+        "candidate manifest alone is not the preflight summary H100 gate",
+        "candidate manifest is surrogate/no-op or missing trained export metadata"
+      ],
+      "candidate_id": "trained_qbf1_b1024",
+      "commands_if_ready": null,
+      "h100_ready": false,
+      "kind": "preflight_candidate_manifest",
+      "non_surrogate_export": false,
+      "path": "experiments/results/trained_renderer_blockfp_preflight_20260502_codex/trained_qbf1_b1024/preflight_manifest.json",
+      "promotion_eligible": false,
+      "renderer_export": {
+        "bytes": 59288,
+        "dispatchable_trained_export": false,
+        "mode": "source_renderer_surrogate",
+        "path": null,
+        "reason": "surrogate proves archive/runtime plumbing only; it is not a trained transplant",
+        "same_as_source_renderer": true,
+        "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+      },
+      "schema": "trained_renderer_blockfp_candidate_manifest_v1",
+      "score_claim": false,
+      "stacking_requirements": {
+        "archive_bytes": 283869,
+        "targets": [
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 31109,
+            "candidate_archive_bytes": 283869,
+            "candidate_rate_score_if_components_unchanged": 0.18901671516383767,
+            "component_score_improvement_needed_at_candidate_bytes": 0.020714181070633,
+            "score_if_components_unchanged": 0.32071418107063254,
+            "target_score": 0.3
+          },
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 121219,
+            "candidate_archive_bytes": 283869,
+            "candidate_rate_score_if_components_unchanged": 0.18901671516383767,
+            "component_score_improvement_needed_at_candidate_bytes": 0.080714181070633,
+            "score_if_components_unchanged": 0.32071418107063254,
+            "target_score": 0.24
+          }
+        ]
+      }
+    },
+    {
+      "archive_bytes": 283869,
+      "archive_path": "experiments/results/trained_renderer_blockfp_preflight_20260502_codex/trained_qbf1_b1024/archive.zip",
+      "archive_sha256": "6d331e479d961df22a2baa8b3f09722394ece7d0c194821c80c6aa354cb1449b",
+      "blockers": [
+        "preflight did not emit H100/Lightning commands",
+        "preflight renderer export is identical to the C067 source renderer",
+        "preflight renderer export is not marked dispatchable",
+        "preflight renderer_export.mode is not trained_renderer_export",
+        "source-renderer surrogate or no-op export only proves local plumbing; wait for a trained renderer export before H100 spend"
+      ],
+      "candidate_id": "trained_qbf1_b1024",
+      "commands_if_ready": null,
+      "h100_ready": false,
+      "kind": "preflight_summary",
+      "path": "experiments/results/trained_renderer_blockfp_preflight_20260502_codex/preflight_stdout.json",
+      "promotion_eligible": false,
+      "renderer_export": {
+        "bytes": 59288,
+        "dispatchable_trained_export": false,
+        "mode": "source_renderer_surrogate",
+        "path": null,
+        "reason": "surrogate proves archive/runtime plumbing only; it is not a trained transplant",
+        "same_as_source_renderer": true,
+        "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+      },
+      "schema": "trained_renderer_blockfp_transplant_preflight_v1",
+      "score_claim": false,
+      "stacking_requirements": {
+        "archive_bytes": 283869,
+        "targets": [
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 31109,
+            "candidate_archive_bytes": 283869,
+            "candidate_rate_score_if_components_unchanged": 0.18901671516383767,
+            "component_score_improvement_needed_at_candidate_bytes": 0.020714181070633,
+            "score_if_components_unchanged": 0.32071418107063254,
+            "target_score": 0.3
+          },
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 121219,
+            "candidate_archive_bytes": 283869,
+            "candidate_rate_score_if_components_unchanged": 0.18901671516383767,
+            "component_score_improvement_needed_at_candidate_bytes": 0.080714181070633,
+            "score_if_components_unchanged": 0.32071418107063254,
+            "target_score": 0.24
+          }
+        ]
+      }
+    },
+    {
+      "archive_bytes": 283869,
+      "archive_path": "experiments/results/trained_renderer_blockfp_preflight_20260502_codex/trained_qbf1_b1024/archive.zip",
+      "archive_sha256": "6d331e479d961df22a2baa8b3f09722394ece7d0c194821c80c6aa354cb1449b",
+      "blockers": [
+        "preflight did not emit H100/Lightning commands",
+        "preflight renderer export is identical to the C067 source renderer",
+        "preflight renderer export is not marked dispatchable",
+        "preflight renderer_export.mode is not trained_renderer_export",
+        "source-renderer surrogate or no-op export only proves local plumbing; wait for a trained renderer export before H100 spend"
+      ],
+      "candidate_id": "trained_qbf1_b1024",
+      "commands_if_ready": null,
+      "h100_ready": false,
+      "kind": "preflight_summary",
+      "path": "experiments/results/trained_renderer_blockfp_preflight_20260502_codex/trained_renderer_blockfp_preflight.json",
+      "promotion_eligible": false,
+      "renderer_export": {
+        "bytes": 59288,
+        "dispatchable_trained_export": false,
+        "mode": "source_renderer_surrogate",
+        "path": null,
+        "reason": "surrogate proves archive/runtime plumbing only; it is not a trained transplant",
+        "same_as_source_renderer": true,
+        "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+      },
+      "schema": "trained_renderer_blockfp_transplant_preflight_v1",
+      "score_claim": false,
+      "stacking_requirements": {
+        "archive_bytes": 283869,
+        "targets": [
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 31109,
+            "candidate_archive_bytes": 283869,
+            "candidate_rate_score_if_components_unchanged": 0.18901671516383767,
+            "component_score_improvement_needed_at_candidate_bytes": 0.020714181070633,
+            "score_if_components_unchanged": 0.32071418107063254,
+            "target_score": 0.3
+          },
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 121219,
+            "candidate_archive_bytes": 283869,
+            "candidate_rate_score_if_components_unchanged": 0.18901671516383767,
+            "component_score_improvement_needed_at_candidate_bytes": 0.080714181070633,
+            "score_if_components_unchanged": 0.32071418107063254,
+            "target_score": 0.24
+          }
+        ]
+      }
+    },
+    {
+      "archive_bytes": 273057,
+      "archive_path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T1947Z_fix3/qzs3_pr64_qp1/archive.zip",
+      "archive_sha256": "043166e87d685acf817513ef28eae170aa045f4ebbe00fb8f7550863718e903b",
+      "blockers": [
+        "packed trained renderer has not passed the non-surrogate transplant preflight",
+        "no matching exact CUDA eval JSON found for this packed trained renderer archive"
+      ],
+      "commands_if_ready": null,
+      "exact_eval_records": [],
+      "h100_ready": false,
+      "kind": "qfaithful_packed_renderer_export",
+      "known_exact_negative": false,
+      "non_surrogate_export": true,
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T1947Z_fix3/qzs3_pr64_qp1/packed_renderer_payload_provenance.json",
+      "payload_format": "pr64_len_table",
+      "payload_member": "p",
+      "pose_codec": "pose_qp1_v1",
+      "promotion_eligible": false,
+      "renderer_sha256": "ba507efea03454af4a9d8560efb553d3b022ca7b835a74fcabd0570817009d8b",
+      "score_claim": false,
+      "stacking_requirements": {
+        "archive_bytes": 273057,
+        "targets": [
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 20297,
+            "candidate_archive_bytes": 273057,
+            "candidate_rate_score_if_components_unchanged": 0.18181744816268075,
+            "component_score_improvement_needed_at_candidate_bytes": 0.013514914069476,
+            "score_if_components_unchanged": 0.3135149140694756,
+            "target_score": 0.3
+          },
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 110407,
+            "candidate_archive_bytes": 273057,
+            "candidate_rate_score_if_components_unchanged": 0.18181744816268075,
+            "component_score_improvement_needed_at_candidate_bytes": 0.073514914069476,
+            "score_if_components_unchanged": 0.3135149140694756,
+            "target_score": 0.24
+          }
+        ]
+      },
+      "wire_format": "QZS3"
+    },
+    {
+      "archive_bytes": 276610,
+      "archive_path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T1947Z_fix3/qzs3_pr64_qpose14/archive.zip",
+      "archive_sha256": "dcaedb62a3b3f57fdd3808efbc229fb55ec87aac861cb8f83457459b10d18fd8",
+      "blockers": [
+        "packed trained renderer has not passed the non-surrogate transplant preflight",
+        "no matching exact CUDA eval JSON found for this packed trained renderer archive"
+      ],
+      "commands_if_ready": null,
+      "exact_eval_records": [],
+      "h100_ready": false,
+      "kind": "qfaithful_packed_renderer_export",
+      "known_exact_negative": false,
+      "non_surrogate_export": true,
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T1947Z_fix3/qzs3_pr64_qpose14/packed_renderer_payload_provenance.json",
+      "payload_format": "pr64_len_table",
+      "payload_member": "p",
+      "pose_codec": "pose_qpose14_col_delta_v1",
+      "promotion_eligible": false,
+      "renderer_sha256": "ba507efea03454af4a9d8560efb553d3b022ca7b835a74fcabd0570817009d8b",
+      "score_claim": false,
+      "stacking_requirements": {
+        "archive_bytes": 276610,
+        "targets": [
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 23850,
+            "candidate_archive_bytes": 276610,
+            "candidate_rate_score_if_components_unchanged": 0.18418324502312383,
+            "component_score_improvement_needed_at_candidate_bytes": 0.015880710929919,
+            "score_if_components_unchanged": 0.3158807109299187,
+            "target_score": 0.3
+          },
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 113960,
+            "candidate_archive_bytes": 276610,
+            "candidate_rate_score_if_components_unchanged": 0.18418324502312383,
+            "component_score_improvement_needed_at_candidate_bytes": 0.075880710929919,
+            "score_if_components_unchanged": 0.3158807109299187,
+            "target_score": 0.24
+          }
+        ]
+      },
+      "wire_format": "QZS3"
+    },
+    {
+      "archive_bytes": 273048,
+      "archive_path": "/workspace/pact/lane_q_faithful_results/postprocess_fixed_snapshot_20260501T1947Z_fix3/qzs3_rp2_qp1/archive.zip",
+      "archive_sha256": "e70bb3fbda789e4fb8880e80b672a608e318bc0084415958c52fc6631a6a20f4",
+      "blockers": [
+        "packed trained renderer has not passed the non-surrogate transplant preflight",
+        "no matching exact CUDA eval JSON found for this packed trained renderer archive"
+      ],
+      "commands_if_ready": null,
+      "exact_eval_records": [],
+      "h100_ready": false,
+      "kind": "qfaithful_packed_renderer_export",
+      "known_exact_negative": false,
+      "non_surrogate_export": true,
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T1947Z_fix3/qzs3_rp2_qp1/packed_renderer_payload_provenance.json",
+      "payload_format": "rp2_fixed3",
+      "payload_member": "p",
+      "pose_codec": "pose_qp1_v1",
+      "promotion_eligible": false,
+      "renderer_sha256": "ba507efea03454af4a9d8560efb553d3b022ca7b835a74fcabd0570817009d8b",
+      "score_claim": false,
+      "stacking_requirements": {
+        "archive_bytes": 273048,
+        "targets": [
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 20288,
+            "candidate_archive_bytes": 273048,
+            "candidate_rate_score_if_components_unchanged": 0.18181145543210264,
+            "component_score_improvement_needed_at_candidate_bytes": 0.013508921338898,
+            "score_if_components_unchanged": 0.3135089213388975,
+            "target_score": 0.3
+          },
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 110398,
+            "candidate_archive_bytes": 273048,
+            "candidate_rate_score_if_components_unchanged": 0.18181145543210264,
+            "component_score_improvement_needed_at_candidate_bytes": 0.073508921338898,
+            "score_if_components_unchanged": 0.3135089213388975,
+            "target_score": 0.24
+          }
+        ]
+      },
+      "wire_format": "QZS3"
+    },
+    {
+      "archive_bytes": 276651,
+      "archive_path": "/workspace/pact/lane_q_faithful_results/postprocess_fixed_snapshot_20260501T1947Z_fix3/qzs3_rp2_qpose14/archive.zip",
+      "archive_sha256": "1d5d5e86cb0902f306f1e0968385033172c97ab2b882866beffbf9b26a2acca4",
+      "blockers": [
+        "packed trained renderer has not passed the non-surrogate transplant preflight",
+        "matching Q-FAITHFUL archive has exact CUDA negative/collapse evidence"
+      ],
+      "commands_if_ready": null,
+      "exact_eval_records": [
+        {
+          "archive_sha256": null,
+          "archive_size_bytes": 276651,
+          "avg_posenet_dist": 4.47971487,
+          "avg_segnet_dist": 0.01543638,
+          "n_samples": 600,
+          "path": "experiments/results/lightning_batch/exact_eval_qfaithful_snapshot_qzs3_rp2_qpose14_l40s_20260501T1952Z/contest_auth_eval.adjudicated.json",
+          "score": 8.420915711675079,
+          "score_claim": false
+        },
+        {
+          "archive_sha256": null,
+          "archive_size_bytes": 276651,
+          "avg_posenet_dist": 4.47971487,
+          "avg_segnet_dist": 0.01543638,
+          "n_samples": 600,
+          "path": "experiments/results/lightning_batch/exact_eval_qfaithful_snapshot_qzs3_rp2_qpose14_l40s_20260501T1952Z/contest_auth_eval.json",
+          "score": 8.420915711675079,
+          "score_claim": false
+        }
+      ],
+      "h100_ready": false,
+      "kind": "qfaithful_packed_renderer_export",
+      "known_exact_negative": true,
+      "non_surrogate_export": true,
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T1947Z_fix3/qzs3_rp2_qpose14/packed_renderer_payload_provenance.json",
+      "payload_format": "rp2_fixed3",
+      "payload_member": "p",
+      "pose_codec": "pose_qpose14_col_delta_v1",
+      "promotion_eligible": false,
+      "renderer_sha256": "ba507efea03454af4a9d8560efb553d3b022ca7b835a74fcabd0570817009d8b",
+      "score_claim": false,
+      "stacking_requirements": {
+        "archive_bytes": 276651,
+        "targets": [
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 23891,
+            "candidate_archive_bytes": 276651,
+            "candidate_rate_score_if_components_unchanged": 0.18421054524020183,
+            "component_score_improvement_needed_at_candidate_bytes": 0.015908011146997,
+            "score_if_components_unchanged": 0.31590801114699674,
+            "target_score": 0.3
+          },
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 114001,
+            "candidate_archive_bytes": 276651,
+            "candidate_rate_score_if_components_unchanged": 0.18421054524020183,
+            "component_score_improvement_needed_at_candidate_bytes": 0.075908011146997,
+            "score_if_components_unchanged": 0.31590801114699674,
+            "target_score": 0.24
+          }
+        ]
+      },
+      "wire_format": "QZS3"
+    },
+    {
+      "archive_bytes": 285482,
+      "archive_path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T1947Z_fix3/torchfp4_pr64_qp1/archive.zip",
+      "archive_sha256": "cb6563fe399a99fe61debce2a9ea6896ceb294c85ce56350873f0d7f505061f5",
+      "blockers": [
+        "packed trained renderer has not passed the non-surrogate transplant preflight",
+        "no matching exact CUDA eval JSON found for this packed trained renderer archive"
+      ],
+      "commands_if_ready": null,
+      "exact_eval_records": [],
+      "h100_ready": false,
+      "kind": "qfaithful_packed_renderer_export",
+      "known_exact_negative": false,
+      "non_surrogate_export": true,
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T1947Z_fix3/torchfp4_pr64_qp1/packed_renderer_payload_provenance.json",
+      "payload_format": "pr64_len_table",
+      "payload_member": "p",
+      "pose_codec": "pose_qp1_v1",
+      "promotion_eligible": false,
+      "renderer_sha256": "5c17f937cbaea617df5dcbe870b1256f288e5b7bb2179a58c264c7b7f136598e",
+      "score_claim": false,
+      "stacking_requirements": {
+        "archive_bytes": 285482,
+        "targets": [
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 32722,
+            "candidate_archive_bytes": 285482,
+            "candidate_rate_score_if_components_unchanged": 0.19009074565522374,
+            "component_score_improvement_needed_at_candidate_bytes": 0.021788211562019,
+            "score_if_components_unchanged": 0.32178821156201864,
+            "target_score": 0.3
+          },
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 122832,
+            "candidate_archive_bytes": 285482,
+            "candidate_rate_score_if_components_unchanged": 0.19009074565522374,
+            "component_score_improvement_needed_at_candidate_bytes": 0.081788211562019,
+            "score_if_components_unchanged": 0.32178821156201864,
+            "target_score": 0.24
+          }
+        ]
+      },
+      "wire_format": "QZS3"
+    },
+    {
+      "archive_bytes": 289042,
+      "archive_path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T1947Z_fix3/torchfp4_pr64_qpose14/archive.zip",
+      "archive_sha256": "b98b9bb84b1709ee9b3bea1bc4dc3ddade1aa761b4871c68ca87e6b43e0926ef",
+      "blockers": [
+        "packed trained renderer has not passed the non-surrogate transplant preflight",
+        "no matching exact CUDA eval JSON found for this packed trained renderer archive"
+      ],
+      "commands_if_ready": null,
+      "exact_eval_records": [],
+      "h100_ready": false,
+      "kind": "qfaithful_packed_renderer_export",
+      "known_exact_negative": false,
+      "non_surrogate_export": true,
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T1947Z_fix3/torchfp4_pr64_qpose14/packed_renderer_payload_provenance.json",
+      "payload_format": "pr64_len_table",
+      "payload_member": "p",
+      "pose_codec": "pose_qpose14_col_delta_v1",
+      "promotion_eligible": false,
+      "renderer_sha256": "5c17f937cbaea617df5dcbe870b1256f288e5b7bb2179a58c264c7b7f136598e",
+      "score_claim": false,
+      "stacking_requirements": {
+        "archive_bytes": 289042,
+        "targets": [
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 36282,
+            "candidate_archive_bytes": 289042,
+            "candidate_rate_score_if_components_unchanged": 0.19246120352833868,
+            "component_score_improvement_needed_at_candidate_bytes": 0.024158669435134,
+            "score_if_components_unchanged": 0.32415866943513355,
+            "target_score": 0.3
+          },
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 126392,
+            "candidate_archive_bytes": 289042,
+            "candidate_rate_score_if_components_unchanged": 0.19246120352833868,
+            "component_score_improvement_needed_at_candidate_bytes": 0.084158669435134,
+            "score_if_components_unchanged": 0.32415866943513355,
+            "target_score": 0.24
+          }
+        ]
+      },
+      "wire_format": "QZS3"
+    },
+    {
+      "archive_bytes": 285346,
+      "archive_path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T1947Z_fix3/torchfp4_rp2_qp1/archive.zip",
+      "archive_sha256": "1c07e522235014a743314d3f853619083f54f1b4f8166946ab693c47f33c6bc2",
+      "blockers": [
+        "packed trained renderer has not passed the non-surrogate transplant preflight",
+        "no matching exact CUDA eval JSON found for this packed trained renderer archive"
+      ],
+      "commands_if_ready": null,
+      "exact_eval_records": [],
+      "h100_ready": false,
+      "kind": "qfaithful_packed_renderer_export",
+      "known_exact_negative": false,
+      "non_surrogate_export": true,
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T1947Z_fix3/torchfp4_rp2_qp1/packed_renderer_payload_provenance.json",
+      "payload_format": "rp2_fixed3",
+      "payload_member": "p",
+      "pose_codec": "pose_qp1_v1",
+      "promotion_eligible": false,
+      "renderer_sha256": "5c17f937cbaea617df5dcbe870b1256f288e5b7bb2179a58c264c7b7f136598e",
+      "score_claim": false,
+      "stacking_requirements": {
+        "archive_bytes": 285346,
+        "targets": [
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 32586,
+            "candidate_archive_bytes": 285346,
+            "candidate_rate_score_if_components_unchanged": 0.19000018883759912,
+            "component_score_improvement_needed_at_candidate_bytes": 0.021697654744394,
+            "score_if_components_unchanged": 0.321697654744394,
+            "target_score": 0.3
+          },
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 122696,
+            "candidate_archive_bytes": 285346,
+            "candidate_rate_score_if_components_unchanged": 0.19000018883759912,
+            "component_score_improvement_needed_at_candidate_bytes": 0.081697654744394,
+            "score_if_components_unchanged": 0.321697654744394,
+            "target_score": 0.24
+          }
+        ]
+      },
+      "wire_format": "QZS3"
+    },
+    {
+      "archive_bytes": 288889,
+      "archive_path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T1947Z_fix3/torchfp4_rp2_qpose14/archive.zip",
+      "archive_sha256": "9e31e23cb6a66d5c070df73e3e0cb261efea8878706ee76be89bc4bbdc695ba6",
+      "blockers": [
+        "packed trained renderer has not passed the non-surrogate transplant preflight",
+        "no matching exact CUDA eval JSON found for this packed trained renderer archive"
+      ],
+      "commands_if_ready": null,
+      "exact_eval_records": [],
+      "h100_ready": false,
+      "kind": "qfaithful_packed_renderer_export",
+      "known_exact_negative": false,
+      "non_surrogate_export": true,
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T1947Z_fix3/torchfp4_rp2_qpose14/packed_renderer_payload_provenance.json",
+      "payload_format": "rp2_fixed3",
+      "payload_member": "p",
+      "pose_codec": "pose_qpose14_col_delta_v1",
+      "promotion_eligible": false,
+      "renderer_sha256": "5c17f937cbaea617df5dcbe870b1256f288e5b7bb2179a58c264c7b7f136598e",
+      "score_claim": false,
+      "stacking_requirements": {
+        "archive_bytes": 288889,
+        "targets": [
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 36129,
+            "candidate_archive_bytes": 288889,
+            "candidate_rate_score_if_components_unchanged": 0.19235932710851097,
+            "component_score_improvement_needed_at_candidate_bytes": 0.024056793015306,
+            "score_if_components_unchanged": 0.3240567930153059,
+            "target_score": 0.3
+          },
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 126239,
+            "candidate_archive_bytes": 288889,
+            "candidate_rate_score_if_components_unchanged": 0.19235932710851097,
+            "component_score_improvement_needed_at_candidate_bytes": 0.084056793015306,
+            "score_if_components_unchanged": 0.3240567930153059,
+            "target_score": 0.24
+          }
+        ]
+      },
+      "wire_format": "QZS3"
+    },
+    {
+      "archive_bytes": 272995,
+      "archive_path": "lane_q_faithful_results/postprocess_fixed_snapshot_20260501T2131Z_fix1/qzs3_pr64_qp1/archive.zip",
+      "archive_sha256": "1a35d4d8899afa47602137efd36a427cdadc6e3a25615c4c54ec51c1ac73374f",
+      "blockers": [
+        "packed trained renderer has not passed the non-surrogate transplant preflight",
+        "matching Q-FAITHFUL archive has exact CUDA negative/collapse evidence"
+      ],
+      "commands_if_ready": null,
+      "exact_eval_records": [
+        {
+          "archive_sha256": null,
+          "archive_size_bytes": 272995,
+          "avg_posenet_dist": 41.15432739,
+          "avg_segnet_dist": 0.00489914,
+          "n_samples": 600,
+          "path": "experiments/results/vast_harvest/qfaithful_snapshot_h100_wave_20260502T055846Z/qfaithful_2131_pr64_qp1/contest_auth_eval.json",
+          "score": 20.958219620496074,
+          "score_claim": false
+        },
+        {
+          "archive_sha256": null,
+          "archive_size_bytes": 272995,
+          "avg_posenet_dist": 41.15432739,
+          "avg_segnet_dist": 0.00489914,
+          "n_samples": 600,
+          "path": "experiments/results/vast_harvest/qfaithful_snapshot_h100_wave_20260502T055846Z/qfaithful_2131_pr64_qp1/eval_work/contest_auth_eval.json",
+          "score": 20.958219620496074,
+          "score_claim": false
+        }
+      ],
+      "h100_ready": false,
+      "kind": "qfaithful_packed_renderer_export",
+      "known_exact_negative": true,
+      "non_surrogate_export": true,
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2131Z_fix1/qzs3_pr64_qp1/packed_renderer_payload_provenance.json",
+      "payload_format": "pr64_len_table",
+      "payload_member": "p",
+      "pose_codec": "pose_qp1_v1",
+      "promotion_eligible": false,
+      "renderer_sha256": "5ee0cdce1a008017129fe9a2e9940e12775cfc9976a1b19a233b8d8d8303f763",
+      "score_claim": false,
+      "stacking_requirements": {
+        "archive_bytes": 272995,
+        "targets": [
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 20235,
+            "candidate_archive_bytes": 272995,
+            "candidate_rate_score_if_components_unchanged": 0.1817761649075872,
+            "component_score_improvement_needed_at_candidate_bytes": 0.013473630814382,
+            "score_if_components_unchanged": 0.31347363081438206,
+            "target_score": 0.3
+          },
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 110345,
+            "candidate_archive_bytes": 272995,
+            "candidate_rate_score_if_components_unchanged": 0.1817761649075872,
+            "component_score_improvement_needed_at_candidate_bytes": 0.073473630814382,
+            "score_if_components_unchanged": 0.31347363081438206,
+            "target_score": 0.24
+          }
+        ]
+      },
+      "wire_format": "QZS3"
+    },
+    {
+      "archive_bytes": 276542,
+      "archive_path": "lane_q_faithful_results/postprocess_fixed_snapshot_20260501T2131Z_fix1/qzs3_pr64_qpose14/archive.zip",
+      "archive_sha256": "70ac01f7446db7766577829a7ec0fc7ab633676408ad8c3ffdd662f2e66a0f3d",
+      "blockers": [
+        "packed trained renderer has not passed the non-surrogate transplant preflight",
+        "matching Q-FAITHFUL archive has exact CUDA negative/collapse evidence"
+      ],
+      "commands_if_ready": null,
+      "exact_eval_records": [
+        {
+          "archive_sha256": null,
+          "archive_size_bytes": 276542,
+          "avg_posenet_dist": 40.93836975,
+          "avg_segnet_dist": 0.00492795,
+          "n_samples": 600,
+          "path": "experiments/results/lightning_batch/exact_eval_qfaithful_snapshot_2131_pr64_qpose14_l40s_20260501T2138Z/contest_auth_eval.json",
+          "score": 20.910165502494504,
+          "score_claim": false
+        },
+        {
+          "archive_sha256": null,
+          "archive_size_bytes": 276542,
+          "avg_posenet_dist": 41.14173126,
+          "avg_segnet_dist": 0.00489914,
+          "n_samples": 600,
+          "path": "experiments/results/vast_harvest/qfaithful_snapshot_h100_wave_20260502T055846Z/qfaithful_2131_pr64_qpose14/contest_auth_eval.json",
+          "score": 20.957476577718626,
+          "score_claim": false
+        },
+        {
+          "archive_sha256": null,
+          "archive_size_bytes": 276542,
+          "avg_posenet_dist": 41.14173126,
+          "avg_segnet_dist": 0.00489914,
+          "n_samples": 600,
+          "path": "experiments/results/vast_harvest/qfaithful_snapshot_h100_wave_20260502T055846Z/qfaithful_2131_pr64_qpose14/eval_work/contest_auth_eval.json",
+          "score": 20.957476577718626,
+          "score_claim": false
+        }
+      ],
+      "h100_ready": false,
+      "kind": "qfaithful_packed_renderer_export",
+      "known_exact_negative": true,
+      "non_surrogate_export": true,
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2131Z_fix1/qzs3_pr64_qpose14/packed_renderer_payload_provenance.json",
+      "payload_format": "pr64_len_table",
+      "payload_member": "p",
+      "pose_codec": "pose_qpose14_col_delta_v1",
+      "promotion_eligible": false,
+      "renderer_sha256": "5ee0cdce1a008017129fe9a2e9940e12775cfc9976a1b19a233b8d8d8303f763",
+      "score_claim": false,
+      "stacking_requirements": {
+        "archive_bytes": 276542,
+        "targets": [
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 23782,
+            "candidate_archive_bytes": 276542,
+            "candidate_rate_score_if_components_unchanged": 0.18413796661431153,
+            "component_score_improvement_needed_at_candidate_bytes": 0.015835432521106,
+            "score_if_components_unchanged": 0.3158354325211064,
+            "target_score": 0.3
+          },
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 113892,
+            "candidate_archive_bytes": 276542,
+            "candidate_rate_score_if_components_unchanged": 0.18413796661431153,
+            "component_score_improvement_needed_at_candidate_bytes": 0.075835432521106,
+            "score_if_components_unchanged": 0.3158354325211064,
+            "target_score": 0.24
+          }
+        ]
+      },
+      "wire_format": "QZS3"
+    },
+    {
+      "archive_bytes": 273069,
+      "archive_path": "lane_q_faithful_results/postprocess_fixed_snapshot_20260501T2131Z_fix1/qzs3_rp2_qp1/archive.zip",
+      "archive_sha256": "7dbdc8e9e7b2fe4c348e483bff4f319f58019ed3d4dc154af0f1118e28d87492",
+      "blockers": [
+        "packed trained renderer has not passed the non-surrogate transplant preflight",
+        "no matching exact CUDA eval JSON found for this packed trained renderer archive"
+      ],
+      "commands_if_ready": null,
+      "exact_eval_records": [],
+      "h100_ready": false,
+      "kind": "qfaithful_packed_renderer_export",
+      "known_exact_negative": false,
+      "non_surrogate_export": true,
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2131Z_fix1/qzs3_rp2_qp1/packed_renderer_payload_provenance.json",
+      "payload_format": "rp2_fixed3",
+      "payload_member": "p",
+      "pose_codec": "pose_qp1_v1",
+      "promotion_eligible": false,
+      "renderer_sha256": "5ee0cdce1a008017129fe9a2e9940e12775cfc9976a1b19a233b8d8d8303f763",
+      "score_claim": false,
+      "stacking_requirements": {
+        "archive_bytes": 273069,
+        "targets": [
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 20309,
+            "candidate_archive_bytes": 273069,
+            "candidate_rate_score_if_components_unchanged": 0.18182543847011823,
+            "component_score_improvement_needed_at_candidate_bytes": 0.013522904376913,
+            "score_if_components_unchanged": 0.3135229043769131,
+            "target_score": 0.3
+          },
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 110419,
+            "candidate_archive_bytes": 273069,
+            "candidate_rate_score_if_components_unchanged": 0.18182543847011823,
+            "component_score_improvement_needed_at_candidate_bytes": 0.073522904376913,
+            "score_if_components_unchanged": 0.3135229043769131,
+            "target_score": 0.24
+          }
+        ]
+      },
+      "wire_format": "QZS3"
+    },
+    {
+      "archive_bytes": 276629,
+      "archive_path": "lane_q_faithful_results/postprocess_fixed_snapshot_20260501T2131Z_fix1/qzs3_rp2_qpose14/archive.zip",
+      "archive_sha256": "fd5a462551e1a52b56690a7bc055a9a281c6c6f12dca2258aa18b71333c3a81f",
+      "blockers": [
+        "packed trained renderer has not passed the non-surrogate transplant preflight",
+        "no matching exact CUDA eval JSON found for this packed trained renderer archive"
+      ],
+      "commands_if_ready": null,
+      "exact_eval_records": [],
+      "h100_ready": false,
+      "kind": "qfaithful_packed_renderer_export",
+      "known_exact_negative": false,
+      "non_surrogate_export": true,
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2131Z_fix1/qzs3_rp2_qpose14/packed_renderer_payload_provenance.json",
+      "payload_format": "rp2_fixed3",
+      "payload_member": "p",
+      "pose_codec": "pose_qpose14_col_delta_v1",
+      "promotion_eligible": false,
+      "renderer_sha256": "5ee0cdce1a008017129fe9a2e9940e12775cfc9976a1b19a233b8d8d8303f763",
+      "score_claim": false,
+      "stacking_requirements": {
+        "archive_bytes": 276629,
+        "targets": [
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 23869,
+            "candidate_archive_bytes": 276629,
+            "candidate_rate_score_if_components_unchanged": 0.18419589634323316,
+            "component_score_improvement_needed_at_candidate_bytes": 0.015893362250028,
+            "score_if_components_unchanged": 0.31589336225002806,
+            "target_score": 0.3
+          },
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 113979,
+            "candidate_archive_bytes": 276629,
+            "candidate_rate_score_if_components_unchanged": 0.18419589634323316,
+            "component_score_improvement_needed_at_candidate_bytes": 0.075893362250028,
+            "score_if_components_unchanged": 0.31589336225002806,
+            "target_score": 0.24
+          }
+        ]
+      },
+      "wire_format": "QZS3"
+    },
+    {
+      "archive_bytes": 285383,
+      "archive_path": "lane_q_faithful_results/postprocess_fixed_snapshot_20260501T2131Z_fix1/torchfp4_pr64_qp1/archive.zip",
+      "archive_sha256": "e476b3bb758e401969ea462307aa50da4b08291e30a77c7a1c22744bd287b07b",
+      "blockers": [
+        "packed trained renderer has not passed the non-surrogate transplant preflight",
+        "no matching exact CUDA eval JSON found for this packed trained renderer archive"
+      ],
+      "commands_if_ready": null,
+      "exact_eval_records": [],
+      "h100_ready": false,
+      "kind": "qfaithful_packed_renderer_export",
+      "known_exact_negative": false,
+      "non_surrogate_export": true,
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2131Z_fix1/torchfp4_pr64_qp1/packed_renderer_payload_provenance.json",
+      "payload_format": "pr64_len_table",
+      "payload_member": "p",
+      "pose_codec": "pose_qp1_v1",
+      "promotion_eligible": false,
+      "renderer_sha256": "44e0a1eb789b44afd1a1a476f167fbcf16c2cb88b8e4fefb3cb79d995183b713",
+      "score_claim": false,
+      "stacking_requirements": {
+        "archive_bytes": 285383,
+        "targets": [
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 32623,
+            "candidate_archive_bytes": 285383,
+            "candidate_rate_score_if_components_unchanged": 0.19002482561886463,
+            "component_score_improvement_needed_at_candidate_bytes": 0.02172229152566,
+            "score_if_components_unchanged": 0.3217222915256595,
+            "target_score": 0.3
+          },
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 122733,
+            "candidate_archive_bytes": 285383,
+            "candidate_rate_score_if_components_unchanged": 0.19002482561886463,
+            "component_score_improvement_needed_at_candidate_bytes": 0.08172229152566,
+            "score_if_components_unchanged": 0.3217222915256595,
+            "target_score": 0.24
+          }
+        ]
+      },
+      "wire_format": "QZS3"
+    },
+    {
+      "archive_bytes": 288984,
+      "archive_path": "lane_q_faithful_results/postprocess_fixed_snapshot_20260501T2131Z_fix1/torchfp4_pr64_qpose14/archive.zip",
+      "archive_sha256": "6b41aba2614dac935e01671ee4b8f4455ba0ad329fe545bb8673af8a1d5bb2ed",
+      "blockers": [
+        "packed trained renderer has not passed the non-surrogate transplant preflight",
+        "no matching exact CUDA eval JSON found for this packed trained renderer archive"
+      ],
+      "commands_if_ready": null,
+      "exact_eval_records": [],
+      "h100_ready": false,
+      "kind": "qfaithful_packed_renderer_export",
+      "known_exact_negative": false,
+      "non_surrogate_export": true,
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2131Z_fix1/torchfp4_pr64_qpose14/packed_renderer_payload_provenance.json",
+      "payload_format": "pr64_len_table",
+      "payload_member": "p",
+      "pose_codec": "pose_qpose14_col_delta_v1",
+      "promotion_eligible": false,
+      "renderer_sha256": "44e0a1eb789b44afd1a1a476f167fbcf16c2cb88b8e4fefb3cb79d995183b713",
+      "score_claim": false,
+      "stacking_requirements": {
+        "archive_bytes": 288984,
+        "targets": [
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 36224,
+            "candidate_archive_bytes": 288984,
+            "candidate_rate_score_if_components_unchanged": 0.19242258370905757,
+            "component_score_improvement_needed_at_candidate_bytes": 0.024120049615852,
+            "score_if_components_unchanged": 0.32412004961585245,
+            "target_score": 0.3
+          },
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 126334,
+            "candidate_archive_bytes": 288984,
+            "candidate_rate_score_if_components_unchanged": 0.19242258370905757,
+            "component_score_improvement_needed_at_candidate_bytes": 0.084120049615852,
+            "score_if_components_unchanged": 0.32412004961585245,
+            "target_score": 0.24
+          }
+        ]
+      },
+      "wire_format": "QZS3"
+    },
+    {
+      "archive_bytes": 285375,
+      "archive_path": "lane_q_faithful_results/postprocess_fixed_snapshot_20260501T2131Z_fix1/torchfp4_rp2_qp1/archive.zip",
+      "archive_sha256": "5dea2702a752aa6fb96eb01c777bcabfd5a50a5a64733dad561a7c4f2feb3830",
+      "blockers": [
+        "packed trained renderer has not passed the non-surrogate transplant preflight",
+        "no matching exact CUDA eval JSON found for this packed trained renderer archive"
+      ],
+      "commands_if_ready": null,
+      "exact_eval_records": [],
+      "h100_ready": false,
+      "kind": "qfaithful_packed_renderer_export",
+      "known_exact_negative": false,
+      "non_surrogate_export": true,
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2131Z_fix1/torchfp4_rp2_qp1/packed_renderer_payload_provenance.json",
+      "payload_format": "rp2_fixed3",
+      "payload_member": "p",
+      "pose_codec": "pose_qp1_v1",
+      "promotion_eligible": false,
+      "renderer_sha256": "44e0a1eb789b44afd1a1a476f167fbcf16c2cb88b8e4fefb3cb79d995183b713",
+      "score_claim": false,
+      "stacking_requirements": {
+        "archive_bytes": 285375,
+        "targets": [
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 32615,
+            "candidate_archive_bytes": 285375,
+            "candidate_rate_score_if_components_unchanged": 0.19001949874723967,
+            "component_score_improvement_needed_at_candidate_bytes": 0.021716964654035,
+            "score_if_components_unchanged": 0.32171696465403454,
+            "target_score": 0.3
+          },
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 122725,
+            "candidate_archive_bytes": 285375,
+            "candidate_rate_score_if_components_unchanged": 0.19001949874723967,
+            "component_score_improvement_needed_at_candidate_bytes": 0.081716964654035,
+            "score_if_components_unchanged": 0.32171696465403454,
+            "target_score": 0.24
+          }
+        ]
+      },
+      "wire_format": "QZS3"
+    },
+    {
+      "archive_bytes": 289026,
+      "archive_path": "lane_q_faithful_results/postprocess_fixed_snapshot_20260501T2131Z_fix1/torchfp4_rp2_qpose14/archive.zip",
+      "archive_sha256": "3a737142be2123fb95220e1061bef0613ddcd0f654e4da770a611393cbbf2a4c",
+      "blockers": [
+        "packed trained renderer has not passed the non-surrogate transplant preflight",
+        "no matching exact CUDA eval JSON found for this packed trained renderer archive"
+      ],
+      "commands_if_ready": null,
+      "exact_eval_records": [],
+      "h100_ready": false,
+      "kind": "qfaithful_packed_renderer_export",
+      "known_exact_negative": false,
+      "non_surrogate_export": true,
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2131Z_fix1/torchfp4_rp2_qpose14/packed_renderer_payload_provenance.json",
+      "payload_format": "rp2_fixed3",
+      "payload_member": "p",
+      "pose_codec": "pose_qpose14_col_delta_v1",
+      "promotion_eligible": false,
+      "renderer_sha256": "44e0a1eb789b44afd1a1a476f167fbcf16c2cb88b8e4fefb3cb79d995183b713",
+      "score_claim": false,
+      "stacking_requirements": {
+        "archive_bytes": 289026,
+        "targets": [
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 36266,
+            "candidate_archive_bytes": 289026,
+            "candidate_rate_score_if_components_unchanged": 0.19245054978508871,
+            "component_score_improvement_needed_at_candidate_bytes": 0.024148015691884,
+            "score_if_components_unchanged": 0.32414801569188356,
+            "target_score": 0.3
+          },
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 126376,
+            "candidate_archive_bytes": 289026,
+            "candidate_rate_score_if_components_unchanged": 0.19245054978508871,
+            "component_score_improvement_needed_at_candidate_bytes": 0.084148015691884,
+            "score_if_components_unchanged": 0.32414801569188356,
+            "target_score": 0.24
+          }
+        ]
+      },
+      "wire_format": "QZS3"
+    },
+    {
+      "archive_bytes": 273103,
+      "archive_path": "/workspace/pact/lane_q_faithful_results/postprocess_fixed_snapshot_20260501T2146Z_fix1/qzs3_pr64_qp1/archive.zip",
+      "archive_sha256": "a34f493b77e3a2ccba7e059134127e9b3cb6e774a41862143d369fa3f5fc81af",
+      "blockers": [
+        "packed trained renderer has not passed the non-surrogate transplant preflight",
+        "matching Q-FAITHFUL archive has exact CUDA negative/collapse evidence"
+      ],
+      "commands_if_ready": null,
+      "exact_eval_records": [
+        {
+          "archive_sha256": null,
+          "archive_size_bytes": 273103,
+          "avg_posenet_dist": 46.18100739,
+          "avg_segnet_dist": 0.00393906,
+          "n_samples": 600,
+          "path": "experiments/results/lightning_batch/exact_eval_qfaithful_snapshot_2146_pr64_qp1_l40s_20260501T2201Z/contest_auth_eval.adjudicated.json",
+          "score": 22.065520725118258,
+          "score_claim": false
+        },
+        {
+          "archive_sha256": null,
+          "archive_size_bytes": 273103,
+          "avg_posenet_dist": 46.18100739,
+          "avg_segnet_dist": 0.00393906,
+          "n_samples": 600,
+          "path": "experiments/results/lightning_batch/exact_eval_qfaithful_snapshot_2146_pr64_qp1_l40s_20260501T2201Z/contest_auth_eval.json",
+          "score": 22.065520725118258,
+          "score_claim": false
+        }
+      ],
+      "h100_ready": false,
+      "kind": "qfaithful_packed_renderer_export",
+      "known_exact_negative": true,
+      "non_surrogate_export": true,
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2146Z_fix1/qzs3_pr64_qp1/packed_renderer_payload_provenance.json",
+      "payload_format": "pr64_len_table",
+      "payload_member": "p",
+      "pose_codec": "pose_qp1_v1",
+      "promotion_eligible": false,
+      "renderer_sha256": "00ce395fc6495a47d26e3844537859fdc2a1bc38d121ea5f4fb2610179d26e46",
+      "score_claim": false,
+      "stacking_requirements": {
+        "archive_bytes": 273103,
+        "targets": [
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 20343,
+            "candidate_archive_bytes": 273103,
+            "candidate_rate_score_if_components_unchanged": 0.18184807767452438,
+            "component_score_improvement_needed_at_candidate_bytes": 0.013545543581319,
+            "score_if_components_unchanged": 0.31354554358131925,
+            "target_score": 0.3
+          },
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 110453,
+            "candidate_archive_bytes": 273103,
+            "candidate_rate_score_if_components_unchanged": 0.18184807767452438,
+            "component_score_improvement_needed_at_candidate_bytes": 0.073545543581319,
+            "score_if_components_unchanged": 0.31354554358131925,
+            "target_score": 0.24
+          }
+        ]
+      },
+      "wire_format": "QZS3"
+    },
+    {
+      "archive_bytes": 276636,
+      "archive_path": "/workspace/pact/lane_q_faithful_results/postprocess_fixed_snapshot_20260501T2146Z_fix1/qzs3_pr64_qpose14/archive.zip",
+      "archive_sha256": "d907101ff70524d3244ac9a66fb2a85d501cc02c0f45bfcb25eae06fc962d39c",
+      "blockers": [
+        "packed trained renderer has not passed the non-surrogate transplant preflight",
+        "no matching exact CUDA eval JSON found for this packed trained renderer archive"
+      ],
+      "commands_if_ready": null,
+      "exact_eval_records": [],
+      "h100_ready": false,
+      "kind": "qfaithful_packed_renderer_export",
+      "known_exact_negative": false,
+      "non_surrogate_export": true,
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2146Z_fix1/qzs3_pr64_qpose14/packed_renderer_payload_provenance.json",
+      "payload_format": "pr64_len_table",
+      "payload_member": "p",
+      "pose_codec": "pose_qpose14_col_delta_v1",
+      "promotion_eligible": false,
+      "renderer_sha256": "00ce395fc6495a47d26e3844537859fdc2a1bc38d121ea5f4fb2610179d26e46",
+      "score_claim": false,
+      "stacking_requirements": {
+        "archive_bytes": 276636,
+        "targets": [
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 23876,
+            "candidate_archive_bytes": 276636,
+            "candidate_rate_score_if_components_unchanged": 0.18420055735590501,
+            "component_score_improvement_needed_at_candidate_bytes": 0.0158980232627,
+            "score_if_components_unchanged": 0.3158980232626999,
+            "target_score": 0.3
+          },
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 113986,
+            "candidate_archive_bytes": 276636,
+            "candidate_rate_score_if_components_unchanged": 0.18420055735590501,
+            "component_score_improvement_needed_at_candidate_bytes": 0.0758980232627,
+            "score_if_components_unchanged": 0.3158980232626999,
+            "target_score": 0.24
+          }
+        ]
+      },
+      "wire_format": "QZS3"
+    },
+    {
+      "archive_bytes": 272986,
+      "archive_path": "/workspace/pact/lane_q_faithful_results/postprocess_fixed_snapshot_20260501T2146Z_fix1/qzs3_rp2_qp1/archive.zip",
+      "archive_sha256": "d90a937da2127086f28b66f7df58a027c8c565488eb8e765e468808361602128",
+      "blockers": [
+        "packed trained renderer has not passed the non-surrogate transplant preflight",
+        "matching Q-FAITHFUL archive has exact CUDA negative/collapse evidence"
+      ],
+      "commands_if_ready": null,
+      "exact_eval_records": [
+        {
+          "archive_sha256": null,
+          "archive_size_bytes": 272986,
+          "avg_posenet_dist": 46.54520035,
+          "avg_segnet_dist": 0.00390678,
+          "n_samples": 600,
+          "path": "experiments/results/vast_harvest/qfaithful_snapshot_h100_wave_20260502T055846Z/qfaithful_2146_rp2_qp1/contest_auth_eval.json",
+          "score": 22.146784937370022,
+          "score_claim": false
+        },
+        {
+          "archive_sha256": null,
+          "archive_size_bytes": 272986,
+          "avg_posenet_dist": 46.54520035,
+          "avg_segnet_dist": 0.00390678,
+          "n_samples": 600,
+          "path": "experiments/results/vast_harvest/qfaithful_snapshot_h100_wave_20260502T055846Z/qfaithful_2146_rp2_qp1/eval_work/contest_auth_eval.json",
+          "score": 22.146784937370022,
+          "score_claim": false
+        }
+      ],
+      "h100_ready": false,
+      "kind": "qfaithful_packed_renderer_export",
+      "known_exact_negative": true,
+      "non_surrogate_export": true,
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2146Z_fix1/qzs3_rp2_qp1/packed_renderer_payload_provenance.json",
+      "payload_format": "rp2_fixed3",
+      "payload_member": "p",
+      "pose_codec": "pose_qp1_v1",
+      "promotion_eligible": false,
+      "renderer_sha256": "00ce395fc6495a47d26e3844537859fdc2a1bc38d121ea5f4fb2610179d26e46",
+      "score_claim": false,
+      "stacking_requirements": {
+        "archive_bytes": 272986,
+        "targets": [
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 20226,
+            "candidate_archive_bytes": 272986,
+            "candidate_rate_score_if_components_unchanged": 0.18177017217700908,
+            "component_score_improvement_needed_at_candidate_bytes": 0.013467638083804,
+            "score_if_components_unchanged": 0.31346763808380396,
+            "target_score": 0.3
+          },
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 110336,
+            "candidate_archive_bytes": 272986,
+            "candidate_rate_score_if_components_unchanged": 0.18177017217700908,
+            "component_score_improvement_needed_at_candidate_bytes": 0.073467638083804,
+            "score_if_components_unchanged": 0.31346763808380396,
+            "target_score": 0.24
+          }
+        ]
+      },
+      "wire_format": "QZS3"
+    },
+    {
+      "archive_bytes": 276588,
+      "archive_path": "/workspace/pact/lane_q_faithful_results/postprocess_fixed_snapshot_20260501T2146Z_fix1/qzs3_rp2_qpose14/archive.zip",
+      "archive_sha256": "1e382f5db96eac98ff8df34c8ff53f440e04d6940559915eb25a6c0dbc75024a",
+      "blockers": [
+        "packed trained renderer has not passed the non-surrogate transplant preflight",
+        "no matching exact CUDA eval JSON found for this packed trained renderer archive"
+      ],
+      "commands_if_ready": null,
+      "exact_eval_records": [],
+      "h100_ready": false,
+      "kind": "qfaithful_packed_renderer_export",
+      "known_exact_negative": false,
+      "non_surrogate_export": true,
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2146Z_fix1/qzs3_rp2_qpose14/packed_renderer_payload_provenance.json",
+      "payload_format": "rp2_fixed3",
+      "payload_member": "p",
+      "pose_codec": "pose_qpose14_col_delta_v1",
+      "promotion_eligible": false,
+      "renderer_sha256": "00ce395fc6495a47d26e3844537859fdc2a1bc38d121ea5f4fb2610179d26e46",
+      "score_claim": false,
+      "stacking_requirements": {
+        "archive_bytes": 276588,
+        "targets": [
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 23828,
+            "candidate_archive_bytes": 276588,
+            "candidate_rate_score_if_components_unchanged": 0.18416859612615513,
+            "component_score_improvement_needed_at_candidate_bytes": 0.01586606203295,
+            "score_if_components_unchanged": 0.31586606203295,
+            "target_score": 0.3
+          },
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 113938,
+            "candidate_archive_bytes": 276588,
+            "candidate_rate_score_if_components_unchanged": 0.18416859612615513,
+            "component_score_improvement_needed_at_candidate_bytes": 0.07586606203295,
+            "score_if_components_unchanged": 0.31586606203295,
+            "target_score": 0.24
+          }
+        ]
+      },
+      "wire_format": "QZS3"
+    },
+    {
+      "archive_bytes": 285620,
+      "archive_path": "/workspace/pact/lane_q_faithful_results/postprocess_fixed_snapshot_20260501T2146Z_fix1/torchfp4_pr64_qp1/archive.zip",
+      "archive_sha256": "4f2edc3265614dfab2ca346b3fa4d0564ed0bd2f49801e1d97d524c5bbdd71bc",
+      "blockers": [
+        "packed trained renderer has not passed the non-surrogate transplant preflight",
+        "no matching exact CUDA eval JSON found for this packed trained renderer archive"
+      ],
+      "commands_if_ready": null,
+      "exact_eval_records": [],
+      "h100_ready": false,
+      "kind": "qfaithful_packed_renderer_export",
+      "known_exact_negative": false,
+      "non_surrogate_export": true,
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2146Z_fix1/torchfp4_pr64_qp1/packed_renderer_payload_provenance.json",
+      "payload_format": "pr64_len_table",
+      "payload_member": "p",
+      "pose_codec": "pose_qp1_v1",
+      "promotion_eligible": false,
+      "renderer_sha256": "37fda2cc8ac96de971c310b7edc9ad21760a95ffaba31be8c31fc2f1821f9235",
+      "score_claim": false,
+      "stacking_requirements": {
+        "archive_bytes": 285620,
+        "targets": [
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 32860,
+            "candidate_archive_bytes": 285620,
+            "candidate_rate_score_if_components_unchanged": 0.1901826341907546,
+            "component_score_improvement_needed_at_candidate_bytes": 0.021880100097549,
+            "score_if_components_unchanged": 0.32188010009754947,
+            "target_score": 0.3
+          },
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 122970,
+            "candidate_archive_bytes": 285620,
+            "candidate_rate_score_if_components_unchanged": 0.1901826341907546,
+            "component_score_improvement_needed_at_candidate_bytes": 0.081880100097549,
+            "score_if_components_unchanged": 0.32188010009754947,
+            "target_score": 0.24
+          }
+        ]
+      },
+      "wire_format": "QZS3"
+    },
+    {
+      "archive_bytes": 289006,
+      "archive_path": "/workspace/pact/lane_q_faithful_results/postprocess_fixed_snapshot_20260501T2146Z_fix1/torchfp4_pr64_qpose14/archive.zip",
+      "archive_sha256": "1fb06990188c39d12d0a7149a5535c12ca3a68c33c06331a201c76ea9315e5fb",
+      "blockers": [
+        "packed trained renderer has not passed the non-surrogate transplant preflight",
+        "no matching exact CUDA eval JSON found for this packed trained renderer archive"
+      ],
+      "commands_if_ready": null,
+      "exact_eval_records": [],
+      "h100_ready": false,
+      "kind": "qfaithful_packed_renderer_export",
+      "known_exact_negative": false,
+      "non_surrogate_export": true,
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2146Z_fix1/torchfp4_pr64_qpose14/packed_renderer_payload_provenance.json",
+      "payload_format": "pr64_len_table",
+      "payload_member": "p",
+      "pose_codec": "pose_qpose14_col_delta_v1",
+      "promotion_eligible": false,
+      "renderer_sha256": "37fda2cc8ac96de971c310b7edc9ad21760a95ffaba31be8c31fc2f1821f9235",
+      "score_claim": false,
+      "stacking_requirements": {
+        "archive_bytes": 289006,
+        "targets": [
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 36246,
+            "candidate_archive_bytes": 289006,
+            "candidate_rate_score_if_components_unchanged": 0.19243723260602627,
+            "component_score_improvement_needed_at_candidate_bytes": 0.024134698512821,
+            "score_if_components_unchanged": 0.3241346985128212,
+            "target_score": 0.3
+          },
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 126356,
+            "candidate_archive_bytes": 289006,
+            "candidate_rate_score_if_components_unchanged": 0.19243723260602627,
+            "component_score_improvement_needed_at_candidate_bytes": 0.084134698512821,
+            "score_if_components_unchanged": 0.3241346985128212,
+            "target_score": 0.24
+          }
+        ]
+      },
+      "wire_format": "QZS3"
+    },
+    {
+      "archive_bytes": 285350,
+      "archive_path": "/workspace/pact/lane_q_faithful_results/postprocess_fixed_snapshot_20260501T2146Z_fix1/torchfp4_rp2_qp1/archive.zip",
+      "archive_sha256": "21f51d63f7c63ef65141b564ba44e1dbfaae0f1a7d0d1c462962fd75b75c73f3",
+      "blockers": [
+        "packed trained renderer has not passed the non-surrogate transplant preflight",
+        "no matching exact CUDA eval JSON found for this packed trained renderer archive"
+      ],
+      "commands_if_ready": null,
+      "exact_eval_records": [],
+      "h100_ready": false,
+      "kind": "qfaithful_packed_renderer_export",
+      "known_exact_negative": false,
+      "non_surrogate_export": true,
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2146Z_fix1/torchfp4_rp2_qp1/packed_renderer_payload_provenance.json",
+      "payload_format": "rp2_fixed3",
+      "payload_member": "p",
+      "pose_codec": "pose_qp1_v1",
+      "promotion_eligible": false,
+      "renderer_sha256": "37fda2cc8ac96de971c310b7edc9ad21760a95ffaba31be8c31fc2f1821f9235",
+      "score_claim": false,
+      "stacking_requirements": {
+        "archive_bytes": 285350,
+        "targets": [
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 32590,
+            "candidate_archive_bytes": 285350,
+            "candidate_rate_score_if_components_unchanged": 0.1900028522734116,
+            "component_score_improvement_needed_at_candidate_bytes": 0.021700318180207,
+            "score_if_components_unchanged": 0.3217003181802065,
+            "target_score": 0.3
+          },
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 122700,
+            "candidate_archive_bytes": 285350,
+            "candidate_rate_score_if_components_unchanged": 0.1900028522734116,
+            "component_score_improvement_needed_at_candidate_bytes": 0.081700318180207,
+            "score_if_components_unchanged": 0.3217003181802065,
+            "target_score": 0.24
+          }
+        ]
+      },
+      "wire_format": "QZS3"
+    },
+    {
+      "archive_bytes": 289260,
+      "archive_path": "/workspace/pact/lane_q_faithful_results/postprocess_fixed_snapshot_20260501T2146Z_fix1/torchfp4_rp2_qpose14/archive.zip",
+      "archive_sha256": "111b9a566e3612dc77a00c20915386067194317a33e05107fe7f7cceb6c37180",
+      "blockers": [
+        "packed trained renderer has not passed the non-surrogate transplant preflight",
+        "no matching exact CUDA eval JSON found for this packed trained renderer archive"
+      ],
+      "commands_if_ready": null,
+      "exact_eval_records": [],
+      "h100_ready": false,
+      "kind": "qfaithful_packed_renderer_export",
+      "known_exact_negative": false,
+      "non_surrogate_export": true,
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2146Z_fix1/torchfp4_rp2_qpose14/packed_renderer_payload_provenance.json",
+      "payload_format": "rp2_fixed3",
+      "payload_member": "p",
+      "pose_codec": "pose_qpose14_col_delta_v1",
+      "promotion_eligible": false,
+      "renderer_sha256": "37fda2cc8ac96de971c310b7edc9ad21760a95ffaba31be8c31fc2f1821f9235",
+      "score_claim": false,
+      "stacking_requirements": {
+        "archive_bytes": 289260,
+        "targets": [
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 36500,
+            "candidate_archive_bytes": 289260,
+            "candidate_rate_score_if_components_unchanged": 0.1926063607801193,
+            "component_score_improvement_needed_at_candidate_bytes": 0.024303826686914,
+            "score_if_components_unchanged": 0.32430382668691415,
+            "target_score": 0.3
+          },
+          {
+            "additional_archive_byte_savings_needed_if_components_unchanged": 126610,
+            "candidate_archive_bytes": 289260,
+            "candidate_rate_score_if_components_unchanged": 0.1926063607801193,
+            "component_score_improvement_needed_at_candidate_bytes": 0.084303826686914,
+            "score_if_components_unchanged": 0.32430382668691415,
+            "target_score": 0.24
+          }
+        ]
+      },
+      "wire_format": "QZS3"
+    },
+    {
+      "blockers": [
+        "raw QFAI trained export must be packed/transcoded to QZS3/MQZ1/QBF1 and pass transplant preflight",
+        "existing Q-FAITHFUL snapshots are exact-negative unless a successor fixes pose/geometry"
+      ],
+      "commands_if_ready": null,
+      "h100_ready": false,
+      "kind": "qfaithful_raw_export_requires_packed_preflight",
+      "non_surrogate_export": true,
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T1947Z_fix3/export/export_provenance.json",
+      "pose_shape": [
+        600,
+        6
+      ],
+      "promotion_eligible": false,
+      "renderer_bin_path": "/workspace/pact/lane_q_faithful_results/postprocess_fixed_snapshot_20260501T1947Z_fix3/export/renderer.bin",
+      "renderer_bytes": 389756,
+      "renderer_sha256": "25537387f7179d581f2219be9a1f305f5c6f80fae047cb7b1984e5802a53e70f",
+      "score_claim": false,
+      "wire_format": "QFAI"
+    },
+    {
+      "blockers": [
+        "raw QFAI trained export must be packed/transcoded to QZS3/MQZ1/QBF1 and pass transplant preflight",
+        "existing Q-FAITHFUL snapshots are exact-negative unless a successor fixes pose/geometry"
+      ],
+      "commands_if_ready": null,
+      "h100_ready": false,
+      "kind": "qfaithful_raw_export_requires_packed_preflight",
+      "non_surrogate_export": true,
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2131Z_fix1/export/export_provenance.json",
+      "pose_shape": [
+        600,
+        6
+      ],
+      "promotion_eligible": false,
+      "renderer_bin_path": "lane_q_faithful_results/postprocess_fixed_snapshot_20260501T2131Z_fix1/export/renderer.bin",
+      "renderer_bytes": 389756,
+      "renderer_sha256": "7e39d805f18556a7f630d70e7901ec8983914b1253e3ecc61a2cbc2c9c26b09c",
+      "score_claim": false,
+      "wire_format": "QFAI"
+    },
+    {
+      "blockers": [
+        "raw QFAI trained export must be packed/transcoded to QZS3/MQZ1/QBF1 and pass transplant preflight",
+        "existing Q-FAITHFUL snapshots are exact-negative unless a successor fixes pose/geometry"
+      ],
+      "commands_if_ready": null,
+      "h100_ready": false,
+      "kind": "qfaithful_raw_export_requires_packed_preflight",
+      "non_surrogate_export": true,
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2146Z_fix1/export/export_provenance.json",
+      "pose_shape": [
+        600,
+        6
+      ],
+      "promotion_eligible": false,
+      "renderer_bin_path": "/workspace/pact/lane_q_faithful_results/postprocess_fixed_snapshot_20260501T2146Z_fix1/export/renderer.bin",
+      "renderer_bytes": 389756,
+      "renderer_sha256": "86d11569d5956be778d096c6b3372144bbc14f24478a53eb22c7f648a53f51ae",
+      "score_claim": false,
+      "wire_format": "QFAI"
+    },
+    {
+      "blockers": [
+        "raw QFAI must be packed/transcoded before transplant preflight",
+        "convert/export to QZS3, MQZ1, or QBF1 before transplant preflight"
+      ],
+      "bytes": 389756,
+      "h100_ready": false,
+      "kind": "qfaithful_raw_renderer_export",
+      "non_surrogate_export": true,
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T1947Z_fix3/export/renderer.bin",
+      "sha256": "25537387f7179d581f2219be9a1f305f5c6f80fae047cb7b1984e5802a53e70f",
+      "wire_format": "QFAI"
+    },
+    {
+      "blockers": [
+        "raw QFAI must be packed/transcoded before transplant preflight",
+        "convert/export to QZS3, MQZ1, or QBF1 before transplant preflight"
+      ],
+      "bytes": 389756,
+      "h100_ready": false,
+      "kind": "qfaithful_raw_renderer_export",
+      "non_surrogate_export": true,
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2131Z_fix1/export/renderer.bin",
+      "sha256": "7e39d805f18556a7f630d70e7901ec8983914b1253e3ecc61a2cbc2c9c26b09c",
+      "wire_format": "QFAI"
+    },
+    {
+      "blockers": [
+        "raw QFAI must be packed/transcoded before transplant preflight",
+        "convert/export to QZS3, MQZ1, or QBF1 before transplant preflight"
+      ],
+      "bytes": 389756,
+      "h100_ready": false,
+      "kind": "qfaithful_raw_renderer_export",
+      "non_surrogate_export": true,
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2146Z_fix1/export/renderer.bin",
+      "sha256": "86d11569d5956be778d096c6b3372144bbc14f24478a53eb22c7f648a53f51ae",
+      "wire_format": "QFAI"
+    },
+    {
+      "blockers": [
+        "accepted renderer export magic found, but it has not passed the trained transplant preflight"
+      ],
+      "bytes": 59288,
+      "h100_ready": false,
+      "kind": "renderer_export_candidate",
+      "non_surrogate_export": true,
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2146Z_fix1/qzs3_pr64_qpose14_unpacked_20260501T2159Z/renderer.bin",
+      "same_as_c067_source_renderer": false,
+      "sha256": "00ce395fc6495a47d26e3844537859fdc2a1bc38d121ea5f4fb2610179d26e46",
+      "wire_format": "QZS3"
+    },
+    {
+      "blockers": [
+        "accepted renderer export magic found, but it has not passed the trained transplant preflight"
+      ],
+      "bytes": 59288,
+      "h100_ready": false,
+      "kind": "renderer_export_candidate",
+      "non_surrogate_export": true,
+      "path": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2146Z_fix1/qzs3_rp2_qpose14_unpacked_20260501T2159Z/renderer.bin",
+      "same_as_c067_source_renderer": false,
+      "sha256": "00ce395fc6495a47d26e3844537859fdc2a1bc38d121ea5f4fb2610179d26e46",
+      "wire_format": "QZS3"
+    },
+    {
+      "blockers": [
+        "renderer uses a legacy/non-preflight wire format",
+        "convert/export to QZS3, MQZ1, or QBF1 before transplant preflight"
+      ],
+      "bytes": 130665,
+      "h100_ready": false,
+      "kind": "unsupported_renderer_wire_format",
+      "non_surrogate_export": false,
+      "path": "experiments/results/small_renderer_trained/renderer_small.bin",
+      "sha256": "40001a2ffaa7f21fe0ac9cd199729025bba22c02cb710f8e887996525f5aea40",
+      "wire_format": "ASYM"
+    },
+    {
+      "blockers": [
+        "renderer uses a legacy/non-preflight wire format",
+        "convert/export to QZS3, MQZ1, or QBF1 before transplant preflight"
+      ],
+      "bytes": 76714,
+      "h100_ready": false,
+      "kind": "unsupported_renderer_wire_format",
+      "non_surrogate_export": false,
+      "path": "experiments/results/small_renderer_trained/renderer_small_fp4.bin",
+      "sha256": "1d39f69517eb7c45daa83aefe6b0435a273c6e4e3dfe497a511769b74ebc9531",
+      "wire_format": "FP4A"
+    }
+  ],
+  "h100_ready_preflight_count": 0,
+  "lane_id": "c067_trained_renderer_self_compression_blockfp",
+  "non_surrogate_candidate_count": 32,
+  "planning_constraints": {
+    "deterministic_json": true,
+    "local_only": true,
+    "preflight_required_for_h100_commands": true,
+    "remote_gpu_dispatch": false,
+    "scorers_loaded": false
+  },
+  "promotion_eligible": false,
+  "readiness": {
+    "blockers": [
+      "no non-surrogate trained-renderer archive passed preflight"
+    ],
+    "h100_lightning_commands": null,
+    "remote_gpu_dispatch_performed": false,
+    "selected_preflight_candidate": null,
+    "verdict": "blocked_no_h100_dispatch"
+  },
+  "remote_gpu_dispatch_performed": false,
+  "scan_dirs": [
+    "experiments/results/trained_renderer_blockfp_preflight_20260502_codex",
+    "experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen",
+    "experiments/results/blockfp_c067_candidate_20260502T_qbf1_sweep",
+    "experiments/results/blockfp_c067_candidate_20260502T_local_qbf1_b1024",
+    "experiments/results/lane_a_blockfp_c067_20260502_local_screen",
+    "experiments/results/c067_renderer_self_compression_v2_20260502",
+    "experiments/results/c067_self_compression_profile_20260502",
+    "experiments/results/fridrich_renderer",
+    "experiments/results/small_renderer_trained",
+    "experiments/results/lane_e_self_compression",
+    "experiments/results/lane_q_faithful_retrain_20260501"
+  ],
+  "schema": "trained_renderer_export_unlock_plan_v1",
+  "score_claim": false,
+  "tool": "experiments/plan_trained_renderer_export_unlock.py"
+}

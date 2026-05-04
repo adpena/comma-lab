@@ -1,0 +1,415 @@
+{
+  "adjudication_component_gate_triggered": false,
+  "adjudication_lane_status": "IN_PREDICTED_BAND",
+  "adjudication_provenance": {
+    "allowed_use": [
+      "diagnostic_score_screen",
+      "requires_t4_confirmation",
+      "no_promotion"
+    ],
+    "archive_delta_bytes": 1241,
+    "baseline_archive_bytes": 276214,
+    "completed_at_utc": "2026-05-02T21:31:08Z",
+    "component_gate_triggered": false,
+    "component_gate_violations": [],
+    "component_gates": [
+      {
+        "component": "posenet",
+        "max_absolute": 0.5,
+        "max_relative": 2000.0,
+        "metric": "avg_posenet_dist",
+        "observed": 0.00049541,
+        "passed": true,
+        "reference": 0.00049637,
+        "reference_label": "C067_SJKL_SPARSE_CANARY",
+        "relative_to_reference": 0.9980659588613332
+      },
+      {
+        "component": "segnet",
+        "max_absolute": 0.02,
+        "max_relative": 50.0,
+        "metric": "avg_segnet_dist",
+        "observed": 0.00061044,
+        "passed": true,
+        "reference": 0.00061244,
+        "reference_label": "C067_SJKL_SPARSE_CANARY",
+        "relative_to_reference": 0.9967343739794918
+      }
+    ],
+    "contest_cuda_archive_bytes": 277455,
+    "contest_cuda_archive_sha256": "f4146e137d9e2e12d1f7c8d26609f24e0e2bd0d19e5c0534f90c761c35658825",
+    "contest_cuda_avg_posenet_dist": 0.00049541,
+    "contest_cuda_avg_segnet_dist": 0.00061044,
+    "contest_cuda_device": "cuda",
+    "contest_cuda_gpu_model": "NVIDIA RTX PRO 6000 Blackwell Server Edition\nNVIDIA RTX PRO 6000 Blackwell Server Edition",
+    "contest_cuda_gpu_t4_match": false,
+    "contest_cuda_n_samples": 600,
+    "contest_cuda_result_json": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_sjkl_c067_sparse_k1g08_p32_a3_rtxprodiag_20260502T2123Z/contest_auth_eval.adjudicated.json",
+    "contest_cuda_score": 0.3161753677975756,
+    "contest_cuda_score_recomputed": 0.3161753677975756,
+    "contest_cuda_score_reported_rounded": 0.32,
+    "contest_cuda_score_source": "contest_auth_eval.json:score_recomputed_from_components",
+    "contest_equivalent_hardware": false,
+    "distillation_policy_active": false,
+    "distillation_policy_gate_triggered": false,
+    "distillation_policy_gate_violations": [],
+    "distillation_policy_sha256": null,
+    "distillation_policy_sha256_expected": null,
+    "evidence_grade": "A score-grade",
+    "final_archive_bytes": 277455,
+    "hardware_promotion_gate_triggered": true,
+    "lane_status": "IN_PREDICTED_BAND",
+    "max_sane_score": 2.2,
+    "paper_claim_grade": "A score-grade; T4/equivalent promotion required",
+    "promotion_eligible": false,
+    "regression_scope": "measured_implementation_config_only_pending_review",
+    "regression_threshold": 1.8,
+    "regression_threshold_mode": "delta_vs_baseline",
+    "regression_triggered": false,
+    "result_tag": "[contest-CUDA]",
+    "sane_score_gate_triggered": false,
+    "sane_score_gate_violation": null,
+    "scientific_score_eligible": true,
+    "score_delta_vs_baseline": 0.0005583370130932686,
+    "score_tag": "[contest-CUDA]",
+    "stacked_archive_bytes": 277455
+  },
+  "adjudication_regression_triggered": false,
+  "adjudication_sane_score_gate_triggered": false,
+  "archive_sha256": "f4146e137d9e2e12d1f7c8d26609f24e0e2bd0d19e5c0534f90c761c35658825",
+  "archive_size_bytes": 277455,
+  "artifact_dir": "experiments/results/lightning_batch/exact_eval_sjkl_c067_sparse_k1g08_p32_a3_rtxprodiag_20260502T2123Z",
+  "component_trace": {
+    "avg_posenet_dist": 0.0004954076257331507,
+    "avg_segnet_dist": 0.000610444828804854,
+    "contest_auth_eval_cross_check": {
+      "all_match": true,
+      "checks": {
+        "archive_size_bytes": {
+          "contest": 277455,
+          "match": true,
+          "trace": 277455
+        },
+        "avg_posenet_dist": {
+          "abs_diff": 2.374266849206226e-09,
+          "contest": 0.00049541,
+          "match": true,
+          "tolerance": 1e-05,
+          "trace": 0.0004954076257331507
+        },
+        "avg_segnet_dist": {
+          "abs_diff": 4.8288048540203604e-09,
+          "contest": 0.00061044,
+          "match": true,
+          "tolerance": 1e-05,
+          "trace": 0.000610444828804854
+        },
+        "n_samples": {
+          "contest": 600,
+          "match": true,
+          "trace": 600
+        },
+        "score_recomputed_from_components": {
+          "abs_diff": 2.100568331497854e-07,
+          "contest": 0.3161753677975756,
+          "match": true,
+          "tolerance": 1e-05,
+          "trace": 0.31617557785440875
+        }
+      },
+      "contest_auth_eval_json": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_sjkl_c067_sparse_k1g08_p32_a3_rtxprodiag_20260502T2123Z/contest_auth_eval.json",
+      "contest_auth_eval_json_sha256": "d8f333239cb1365b039fecfd3d067a96c64ede4f5f7c0bc1cd63d829a46105b2"
+    },
+    "n_samples": 600,
+    "path": "experiments/results/lightning_batch/exact_eval_sjkl_c067_sparse_k1g08_p32_a3_rtxprodiag_20260502T2123Z/component_trace.json",
+    "score_recomputed_from_components": 0.31617557785440875,
+    "sha256": "52716125ecb7ce402e9e8c4a81a1db16916612f10401b76df6fa447335ed592b"
+  },
+  "dali_bootstrap": {
+    "bootstrap_action": "install_hash_pinned_wheels",
+    "cuda_family": "cu130",
+    "final_probe": {
+      "dali_version": "1.52.0",
+      "installed_distributions": {
+        "nvidia-dali-cuda120": null,
+        "nvidia-dali-cuda130": "1.52.0"
+      },
+      "nvidia_dali_fn_module": "nvidia.dali.fn",
+      "python": "/teamspace/studios/this_studio/pact/.venv/bin/python"
+    },
+    "final_probe_returncode": 0,
+    "final_probe_stderr_tail": "/teamspace/studios/this_studio/pact/.venv/lib/python3.12/site-packages/nvidia/dali/types.py:433: SyntaxWarning: invalid escape sequence '\\.'\n  _cupy_array_type_regex = re.compile(\".*cupy.*\\..*ndarray.*\")  # noqa: W605\n",
+    "final_probe_stdout": "{\"dali_version\": \"1.52.0\", \"installed_distributions\": {\"nvidia-dali-cuda120\": null, \"nvidia-dali-cuda130\": \"1.52.0\"}, \"nvidia_dali_fn_module\": \"nvidia.dali.fn\", \"python\": \"/teamspace/studios/this_studio/pact/.venv/bin/python\"}",
+    "final_probe_violations": [],
+    "initial_probe": null,
+    "initial_probe_returncode": 1,
+    "initial_probe_stderr_tail": "Traceback (most recent call last):\n  File \"<string>\", line 3, in <module>\nModuleNotFoundError: No module named 'nvidia.dali'\n",
+    "initial_probe_stdout": "",
+    "initial_probe_violations": [
+      "import failed: Traceback (most recent call last):\n  File \"<string>\", line 3, in <module>\nModuleNotFoundError: No module named 'nvidia.dali'\n"
+    ],
+    "install_command": [
+      "/usr/local/bin/uv",
+      "pip",
+      "install",
+      "--python",
+      "/teamspace/studios/this_studio/pact/.venv/bin/python",
+      "--require-hashes",
+      "--no-deps",
+      "--only-binary",
+      ":all:",
+      "--strict",
+      "-r",
+      "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_sjkl_c067_sparse_k1g08_p32_a3_rtxprodiag_20260502T2123Z/lightning_dali_requirements.txt"
+    ],
+    "install_returncode": 0,
+    "install_stderr_tail": "Resolved 17 packages in 115ms\nDownloading nvidia-dali-cuda130 (182.8MiB)\nDownloading nvidia-nvcomp-cu13 (22.1MiB)\nDownloading nvidia-nvjpeg2k-cu13 (2.5MiB)\nDownloading nvidia-nvjpeg (3.5MiB)\nDownloading nvidia-nvimgcodec-cu13 (25.9MiB)\nDownloading nvidia-nvtiff-cu13 (1.5MiB)\n Downloading nvidia-nvtiff-cu13\n Downloading nvidia-nvjpeg2k-cu13\n Downloading nvidia-nvjpeg\n Downloading nvidia-nvimgcodec-cu13\n Downloading nvidia-nvcomp-cu13\n Downloading nvidia-dali-cuda130\nPrepared 17 packages in 2.22s\nUninstalled 1 package in 2ms\nInstalled 17 packages in 39ms\n + absl-py==2.3.1 (from https://files.pythonhosted.org/packages/8f/aa/ba0014cc4659328dc818a28827be78e6d97312ab0cb98105a770924dc11e/absl_py-2.3.1-py3-none-any.whl)\n + astunparse==1.6.3 (from https://files.pythonhosted.org/packages/2b/03/13dde6512ad7b4557eb792fbcf0c653af6076b81e5941d36ec61f7ce6028/astunparse-1.6.3-py2.py3-none-any.whl)\n + attrs==25.4.0 (from https://files.pythonhosted.org/packages/3a/2a/7cc015f5b9f5db42b7d48157e23356022889fc354a2813c15934b7cb5c0e/attrs-25.4.0-py3-none-any.whl)\n + dm-tree==0.1.9 (from https://files.pythonhosted.org/packages/86/52/27607a275c12858b979b8e943d2bd3bd0f9028503bb7079d5830a8b3cac0/dm_tree-0.1.9-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl)\n + gast==0.6.0 (from https://files.pythonhosted.org/packages/a3/61/8001b38461d751cd1a0c3a6ae84346796a5758123f3ed97a1b121dfbf4f3/gast-0.6.0-py3-none-any.whl)\n + makefun==1.16.0 (from https://files.pythonhosted.org/packages/b7/c0/4bc973defd1270b89ccaae04cef0d5fa3ea85b59b108ad2c08aeea9afb76/makefun-1.16.0-py2.py3-none-any.whl)\n + nvidia-dali-cuda130==1.52.0 (from https://pypi.nvidia.com/nvidia-dali-cuda130/nvidia_dali_cuda130-1.52.0-py3-none-manylinux_2_28_x86_64.whl)\n + nvidia-nvcomp-cu13==5.0.0.6 (from https://files.pythonhosted.org/packages/56/c9/f8a1b957f949ab4c4dc29e7f56316a2224b92c78cad9a66aeab2b36f8857/nvidia_nvcomp_cu13-5.0.0.6-py3-none-manylinux_2_28_x86_64.whl)\n + nvidia-nvimgcodec-cu13==0.6.1.37 (from https://files.pythonhosted.org/packages/2a/86/5a89168b14c335891e446575b04bf807c23dac37509a755d032f7e62aec7/nvidia_nvimgcodec_cu13-0.6.1.37-py3-none-manylinux2014_x86_64.whl)\n + nvidia-nvjpeg==13.0.1.86 (from https://files.pythonhosted.org/packages/b6/e6/9b96fcead7f78a5e2d5d9e726f0d0b1517faf2895146d571e006793180d7/nvidia_nvjpeg-13.0.1.86-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl)\n + nvidia-nvjpeg2k-cu13==0.9.0.43 (from https://files.pythonhosted.org/packages/ea/ed/24134897e077340eefa0e9ae61b58620b13e2f2118f896010aa7fedd6168/nvidia_nvjpeg2k_cu13-0.9.0.43-py3-none-manylinux2014_x86_64.whl)\n + nvidia-nvtiff-cu13==0.5.1.75 (from https://files.pythonhosted.org/packages/19/eb/20c5b6d9e60b6252b3d72857d6401b7ea94aa3a29098fc49f9916aabaacf/nvidia_nvtiff_cu13-0.5.1.75-py3-none-manylinux2014_x86_64.whl)\n + nvtx==0.2.13 (from https://files.pythonhosted.org/packages/12/ab/762da984e7671f7c34ae87e5b70523c3eeb4563759268bfaea07c97f32a6/nvtx-0.2.13-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl)\n - packaging==26.0\n + packaging==25.0 (from https://files.pythonhosted.org/packages/20/12/38679034af332785aac8774540895e234f4d07f7545804097de4b666afd8/packaging-25.0-py3-none-any.whl)\n + six==1.17.0 (from https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl)\n + wheel==0.45.1 (from https://files.pythonhosted.org/packages/0b/2c/87f3254fd8ffd29e4c02732eee68a83a1d3c346ae39bc6822dcbcb697f2b/wheel-0.45.1-py3-none-any.whl)\n + wrapt==2.0.0 (from https://files.pythonhosted.org/packages/ff/0c/0f565294897a72493dbafe7b46229b5f09f3776795a894d6b737e98387de/wrapt-2.0.0-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl)\n",
+    "install_stdout_tail": "",
+    "installed": true,
+    "installer_bootstrap_action": "uv_provided_by_shell_ensure_remote_uv",
+    "installer_uv_path": "/usr/local/bin/uv",
+    "nvidia-dali-cuda120_version": null,
+    "nvidia-dali-cuda130_version": "1.52.0",
+    "python": "/teamspace/studios/this_studio/pact/.venv/bin/python",
+    "recorded_at_utc": "2026-05-02T21:29:55Z",
+    "required_dali_version": "1.52.0",
+    "requirements_path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_sjkl_c067_sparse_k1g08_p32_a3_rtxprodiag_20260502T2123Z/lightning_dali_requirements.txt",
+    "schema_version": 1,
+    "selected_package": "nvidia-dali-cuda130",
+    "selected_requirement": "nvidia-dali-cuda130==1.52.0",
+    "selected_wheels": [
+      {
+        "name": "absl-py",
+        "sha256": "eeecf07f0c2a93ace0772c92e596ace6d3d3996c042b2128459aaae2a76de11d",
+        "url": "https://files.pythonhosted.org/packages/8f/aa/ba0014cc4659328dc818a28827be78e6d97312ab0cb98105a770924dc11e/absl_py-2.3.1-py3-none-any.whl",
+        "version": "2.3.1"
+      },
+      {
+        "name": "astunparse",
+        "sha256": "c2652417f2c8b5bb325c885ae329bdf3f86424075c4fd1a128674bc6fba4b8e8",
+        "url": "https://files.pythonhosted.org/packages/2b/03/13dde6512ad7b4557eb792fbcf0c653af6076b81e5941d36ec61f7ce6028/astunparse-1.6.3-py2.py3-none-any.whl",
+        "version": "1.6.3"
+      },
+      {
+        "name": "attrs",
+        "sha256": "adcf7e2a1fb3b36ac48d97835bb6d8ade15b8dcce26aba8bf1d14847b57a3373",
+        "url": "https://files.pythonhosted.org/packages/3a/2a/7cc015f5b9f5db42b7d48157e23356022889fc354a2813c15934b7cb5c0e/attrs-25.4.0-py3-none-any.whl",
+        "version": "25.4.0"
+      },
+      {
+        "name": "gast",
+        "sha256": "52b182313f7330389f72b069ba00f174cfe2a06411099547288839c6cbafbd54",
+        "url": "https://files.pythonhosted.org/packages/a3/61/8001b38461d751cd1a0c3a6ae84346796a5758123f3ed97a1b121dfbf4f3/gast-0.6.0-py3-none-any.whl",
+        "version": "0.6.0"
+      },
+      {
+        "name": "makefun",
+        "sha256": "43baa4c3e7ae2b17de9ceac20b669e9a67ceeadff31581007cca20a07bbe42c4",
+        "url": "https://files.pythonhosted.org/packages/b7/c0/4bc973defd1270b89ccaae04cef0d5fa3ea85b59b108ad2c08aeea9afb76/makefun-1.16.0-py2.py3-none-any.whl",
+        "version": "1.16.0"
+      },
+      {
+        "name": "packaging",
+        "sha256": "29572ef2b1f17581046b3a2227d5c611fb25ec70ca1ba8554b24b0e69331a484",
+        "url": "https://files.pythonhosted.org/packages/20/12/38679034af332785aac8774540895e234f4d07f7545804097de4b666afd8/packaging-25.0-py3-none-any.whl",
+        "version": "25.0"
+      },
+      {
+        "name": "six",
+        "sha256": "4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274",
+        "url": "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl",
+        "version": "1.17.0"
+      },
+      {
+        "name": "wheel",
+        "sha256": "708e7481cc80179af0e556bbf0cc00b8444c7321e2700b8d8580231d13017248",
+        "url": "https://files.pythonhosted.org/packages/0b/2c/87f3254fd8ffd29e4c02732eee68a83a1d3c346ae39bc6822dcbcb697f2b/wheel-0.45.1-py3-none-any.whl",
+        "version": "0.45.1"
+      },
+      {
+        "name": "dm-tree",
+        "sha256": "2334cfe9d2ed4293f9f1c7aefba0657deaab9ea74b5fadd966f6d01d9b6b42d9",
+        "url": "https://files.pythonhosted.org/packages/86/52/27607a275c12858b979b8e943d2bd3bd0f9028503bb7079d5830a8b3cac0/dm_tree-0.1.9-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+        "version": "0.1.9"
+      },
+      {
+        "name": "nvtx",
+        "sha256": "453d838dd1424a04303281ee57a73e2b8dca0e03039bc609a945861b8fe7d7d9",
+        "url": "https://files.pythonhosted.org/packages/12/ab/762da984e7671f7c34ae87e5b70523c3eeb4563759268bfaea07c97f32a6/nvtx-0.2.13-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+        "version": "0.2.13"
+      },
+      {
+        "name": "wrapt",
+        "sha256": "43dc0550ae15e33e6bb45a82a5e1b5495be2587fbaa996244b509921810ee49f",
+        "url": "https://files.pythonhosted.org/packages/ff/0c/0f565294897a72493dbafe7b46229b5f09f3776795a894d6b737e98387de/wrapt-2.0.0-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl",
+        "version": "2.0.0"
+      },
+      {
+        "name": "nvidia-dali-cuda130",
+        "sha256": "37369fb30e9c66f710b29836688c90abc36793bbe757cd3ad699fac76ba07119",
+        "url": "https://pypi.nvidia.com/nvidia-dali-cuda130/nvidia_dali_cuda130-1.52.0-py3-none-manylinux_2_28_x86_64.whl",
+        "version": "1.52.0"
+      },
+      {
+        "name": "nvidia-nvcomp-cu13",
+        "sha256": "91a4e4b1dc15b0f38e54a3353c917086c99c9f415e1ad79a57d5f28d62b68a4d",
+        "url": "https://files.pythonhosted.org/packages/56/c9/f8a1b957f949ab4c4dc29e7f56316a2224b92c78cad9a66aeab2b36f8857/nvidia_nvcomp_cu13-5.0.0.6-py3-none-manylinux_2_28_x86_64.whl",
+        "version": "5.0.0.6"
+      },
+      {
+        "name": "nvidia-nvimgcodec-cu13",
+        "sha256": "c9cd2f917a3b4c248296c963fa3220e544c06a7d2679c82454ba0836a352981c",
+        "url": "https://files.pythonhosted.org/packages/2a/86/5a89168b14c335891e446575b04bf807c23dac37509a755d032f7e62aec7/nvidia_nvimgcodec_cu13-0.6.1.37-py3-none-manylinux2014_x86_64.whl",
+        "version": "0.6.1.37"
+      },
+      {
+        "name": "nvidia-nvjpeg",
+        "sha256": "f658a05c48702219b3db52e194c2ea1ff0ccd3fbf2b75127b4a573074cc22fd5",
+        "url": "https://files.pythonhosted.org/packages/b6/e6/9b96fcead7f78a5e2d5d9e726f0d0b1517faf2895146d571e006793180d7/nvidia_nvjpeg-13.0.1.86-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+        "version": "13.0.1.86"
+      },
+      {
+        "name": "nvidia-nvjpeg2k-cu13",
+        "sha256": "554761474cf2e0f85d04644d08e7949a4ffd2f4be10a5318de85e46f86ad8f07",
+        "url": "https://files.pythonhosted.org/packages/ea/ed/24134897e077340eefa0e9ae61b58620b13e2f2118f896010aa7fedd6168/nvidia_nvjpeg2k_cu13-0.9.0.43-py3-none-manylinux2014_x86_64.whl",
+        "version": "0.9.0.43"
+      },
+      {
+        "name": "nvidia-nvtiff-cu13",
+        "sha256": "f71ee243369e0e65d5a55ccf27eb7c76c6b77aafb7caabeb74bab5037a3d3d09",
+        "url": "https://files.pythonhosted.org/packages/19/eb/20c5b6d9e60b6252b3d72857d6401b7ea94aa3a29098fc49f9916aabaacf/nvidia_nvtiff_cu13-0.5.1.75-py3-none-manylinux2014_x86_64.whl",
+        "version": "0.5.1.75"
+      }
+    ],
+    "tool": "lightning_exact_eval_dali_bootstrap",
+    "torch_cuda_version": "13.0",
+    "torch_version": "2.11.0+cu130",
+    "unexpected_package": "nvidia-dali-cuda120"
+  },
+  "device": "cuda",
+  "gpu_model": "NVIDIA RTX PRO 6000 Blackwell Server Edition\nNVIDIA RTX PRO 6000 Blackwell Server Edition",
+  "gpu_t4_match": false,
+  "metadata": {
+    "adjudication": {
+      "allow_component_gate_forensic_success": true,
+      "allow_sane_score_forensic_success": true,
+      "baseline_archive_size_bytes": 276214,
+      "baseline_posenet_dist": 0.00049637,
+      "baseline_score": 0.31561703078448233,
+      "baseline_segnet_dist": 0.00061244,
+      "component_reference_label": "C067_SJKL_SPARSE_CANARY",
+      "delta_key": "score_delta_vs_baseline",
+      "max_posenet_dist": 0.5,
+      "max_posenet_relative": 2000.0,
+      "max_sane_score": 2.2,
+      "max_segnet_dist": 0.02,
+      "max_segnet_relative": 50.0,
+      "predicted_band_high": 1.0,
+      "predicted_band_low": 0.25,
+      "provenance_name": "adjudication_provenance.json",
+      "regression_threshold": 1.8,
+      "required_device": "cuda",
+      "required_samples": 600,
+      "result_copy_name": "contest_auth_eval.adjudicated.json"
+    },
+    "artifact_recorded_at_utc": "2026-05-02T21:29:51Z",
+    "expected_archive_sha256": "f4146e137d9e2e12d1f7c8d26609f24e0e2bd0d19e5c0534f90c761c35658825",
+    "expected_archive_size_bytes": 277455,
+    "job_name": "exact_eval_sjkl_c067_sparse_k1g08_p32_a3_rtxprodiag_20260502T2123Z",
+    "queue_metadata": {
+      "evidence": "diagnostic_rtxpro",
+      "lane": "sjkl_c067_sparse_canary",
+      "sjkl_bytes": "467",
+      "sjkl_format": "SJK2_sparse_bitpacked_v2",
+      "source_archive_sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+      "source_manifest": ".omx/state/exact_eval_sjkl_c067_sparse_k1g08_p32_a3_l40sdiag_20260502T2122Z_manifest.json"
+    },
+    "role": "exact_cuda_eval",
+    "schema_version": 1,
+    "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+    "status_source": "lightning_sdk_job_attributes"
+  },
+  "n_samples": 600,
+  "promotion_eligible": true,
+  "runner_preflight": {
+    "cuda_available": true,
+    "device_count": 2,
+    "device_name": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+    "gpu_t4_match": false,
+    "nvidia_dali_fn_module": "nvidia.dali.fn",
+    "nvidia_smi": "/usr/bin/nvidia-smi",
+    "nvidia_smi_head": [
+      "NVIDIA RTX PRO 6000 Blackwell Server Edition, 580.126.20, 97887 MiB",
+      "NVIDIA RTX PRO 6000 Blackwell Server Edition, 580.126.20, 97887 MiB"
+    ],
+    "python": "/teamspace/studios/this_studio/pact/.venv/bin/python",
+    "recorded_at_utc": "2026-05-02T21:30:05Z",
+    "schema_version": 1,
+    "tool": "lightning_exact_eval_runner_preflight",
+    "torch_version": "2.11.0+cu130"
+  },
+  "schema_version": 1,
+  "score_recomputed_from_components": 0.3161753677975756,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "ssh_source": {
+    "copied_files": [
+      "lightning_queue_metadata.json",
+      "contest_auth_eval.json",
+      "archive.zip",
+      "eval_provenance.json",
+      "report.txt",
+      "lightning_dali_bootstrap.json",
+      "lightning_dali_requirements.txt",
+      "lightning_runner_preflight.json",
+      "lightning_supply_chain_scan_pre.json",
+      "lightning_supply_chain_scan.json",
+      "adjudication_provenance.json",
+      "contest_auth_eval.adjudicated.json",
+      "auth_eval.log",
+      "adjudication.log",
+      "component_trace.json",
+      "component_trace.log"
+    ],
+    "mirror_dir": "experiments/results/lightning_batch/exact_eval_sjkl_c067_sparse_k1g08_p32_a3_rtxprodiag_20260502T2123Z",
+    "remote_dir": "/teamspace/jobs/exact-eval-sjkl-c067-sparse-k1g08-p32-a3-rtxprodiag-20260502t2123z/artifacts/pact/experiments/results/lightning_batch/exact_eval_sjkl_c067_sparse_k1g08_p32_a3_rtxprodiag_20260502T2123Z",
+    "ssh_connect_timeout": 15,
+    "ssh_target": "lightning-pact"
+  },
+  "supply_chain_post": {
+    "hostname": "ip-10-192-10-225",
+    "package_versions": {
+      "lightning": null,
+      "lightning-sdk": null,
+      "lightning_sdk": null,
+      "pytorch-lightning": null
+    },
+    "python": "/teamspace/studios/this_studio/pact/.venv/bin/python",
+    "recorded_at_utc": "2026-05-02T21:30:02Z",
+    "repo_root": "/teamspace/studios/this_studio/pact",
+    "schema_version": 1,
+    "status": "OK",
+    "strict": true,
+    "tool": "scripts/scan_lightning_supply_chain.py",
+    "violation_count": 0,
+    "violations": []
+  },
+  "supply_chain_pre": {
+    "hostname": "ip-10-192-10-225",
+    "package_versions": {
+      "lightning": null,
+      "lightning-sdk": null,
+      "lightning_sdk": null,
+      "pytorch-lightning": null
+    },
+    "python": "/teamspace/studios/this_studio/pact/.venv/bin/python",
+    "recorded_at_utc": "2026-05-02T21:29:54Z",
+    "repo_root": "/teamspace/studios/this_studio/pact",
+    "schema_version": 1,
+    "status": "OK",
+    "strict": true,
+    "tool": "scripts/scan_lightning_supply_chain.py",
+    "violation_count": 0,
+    "violations": []
+  },
+  "validated_at_utc": "2026-05-02T21:32:17Z"
+}

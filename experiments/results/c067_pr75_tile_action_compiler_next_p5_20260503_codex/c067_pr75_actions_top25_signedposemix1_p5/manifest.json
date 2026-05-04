@@ -1,0 +1,1222 @@
+{
+  "action_selection_guard": {
+    "changed_action_id_record_count": 25,
+    "custom_delta_record_count": 0,
+    "exact_duplicate_record_count": 0,
+    "no_op_transformed_record_count": 0,
+    "pair_tile_duplicate_group_count": 25,
+    "pair_tile_duplicate_record_count": 25,
+    "record_count": 50,
+    "runtime_signature_sha256": "266fe7dccae08847ec427f6222725c99512f49ec7f8edd340c7acae5905f9cb9",
+    "transformed_record_count": 25,
+    "unique_source_record_count": 25
+  },
+  "actions_component_trace": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_only_p3_diag_20260503T0346Z/component_trace.json",
+  "archive": "experiments/results/c067_pr75_tile_action_compiler_next_p5_20260503_codex/c067_pr75_actions_top25_signedposemix1_p5/archive.zip",
+  "archive_sha256": "ba26979ecf73e3a14feac2e758fabd72c9b2129d4da8262edb148f890e0f5bdf",
+  "archive_size_bytes": 276527,
+  "base_component_trace": "experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/component_trace.json",
+  "custom_action_dictionary_brotli_bytes": 170,
+  "custom_action_dictionary_brotli_sha256": "ce66a8970fc807ac10d470377eff34047e7a4fa55173cfbac1ce59cd2c9cbcee",
+  "custom_action_dictionary_entries": [
+    {
+      "custom": false,
+      "delta_rgb": [
+        2.0,
+        2.0,
+        2.0
+      ],
+      "dictionary_action_id": 0,
+      "source_action_id": 0,
+      "source_action_ids": [
+        0
+      ]
+    },
+    {
+      "custom": false,
+      "delta_rgb": [
+        -2.0,
+        -2.0,
+        -2.0
+      ],
+      "dictionary_action_id": 1,
+      "source_action_id": 1,
+      "source_action_ids": [
+        1
+      ]
+    },
+    {
+      "custom": false,
+      "delta_rgb": [
+        4.0,
+        4.0,
+        4.0
+      ],
+      "dictionary_action_id": 2,
+      "source_action_id": 2,
+      "source_action_ids": [
+        2
+      ]
+    },
+    {
+      "custom": false,
+      "delta_rgb": [
+        8.0,
+        8.0,
+        8.0
+      ],
+      "dictionary_action_id": 3,
+      "source_action_id": 6,
+      "source_action_ids": [
+        6
+      ]
+    },
+    {
+      "custom": false,
+      "delta_rgb": [
+        -8.0,
+        -8.0,
+        -8.0
+      ],
+      "dictionary_action_id": 4,
+      "source_action_id": 7,
+      "source_action_ids": [
+        7
+      ]
+    },
+    {
+      "custom": false,
+      "delta_rgb": [
+        -12.0,
+        -12.0,
+        -12.0
+      ],
+      "dictionary_action_id": 5,
+      "source_action_id": 9,
+      "source_action_ids": [
+        9
+      ]
+    },
+    {
+      "custom": false,
+      "delta_rgb": [
+        16.0,
+        16.0,
+        16.0
+      ],
+      "dictionary_action_id": 6,
+      "source_action_id": 10,
+      "source_action_ids": [
+        10
+      ]
+    },
+    {
+      "custom": false,
+      "delta_rgb": [
+        -16.0,
+        -16.0,
+        -16.0
+      ],
+      "dictionary_action_id": 7,
+      "source_action_id": 11,
+      "source_action_ids": [
+        11
+      ]
+    },
+    {
+      "custom": false,
+      "delta_rgb": [
+        2.0,
+        0.0,
+        0.0
+      ],
+      "dictionary_action_id": 8,
+      "source_action_id": 12,
+      "source_action_ids": [
+        12
+      ]
+    },
+    {
+      "custom": false,
+      "delta_rgb": [
+        -2.0,
+        -0.0,
+        -0.0
+      ],
+      "dictionary_action_id": 9,
+      "source_action_id": 13,
+      "source_action_ids": [
+        13
+      ]
+    },
+    {
+      "custom": false,
+      "delta_rgb": [
+        -4.0,
+        -0.0,
+        -0.0
+      ],
+      "dictionary_action_id": 10,
+      "source_action_id": 15,
+      "source_action_ids": [
+        15
+      ]
+    },
+    {
+      "custom": false,
+      "delta_rgb": [
+        -6.0,
+        -0.0,
+        -0.0
+      ],
+      "dictionary_action_id": 11,
+      "source_action_id": 17,
+      "source_action_ids": [
+        17
+      ]
+    },
+    {
+      "custom": false,
+      "delta_rgb": [
+        8.0,
+        0.0,
+        0.0
+      ],
+      "dictionary_action_id": 12,
+      "source_action_id": 18,
+      "source_action_ids": [
+        18
+      ]
+    },
+    {
+      "custom": false,
+      "delta_rgb": [
+        -12.0,
+        -0.0,
+        -0.0
+      ],
+      "dictionary_action_id": 13,
+      "source_action_id": 21,
+      "source_action_ids": [
+        21
+      ]
+    },
+    {
+      "custom": false,
+      "delta_rgb": [
+        0.0,
+        2.0,
+        0.0
+      ],
+      "dictionary_action_id": 14,
+      "source_action_id": 24,
+      "source_action_ids": [
+        24
+      ]
+    },
+    {
+      "custom": false,
+      "delta_rgb": [
+        -0.0,
+        -12.0,
+        -0.0
+      ],
+      "dictionary_action_id": 15,
+      "source_action_id": 33,
+      "source_action_ids": [
+        33
+      ]
+    },
+    {
+      "custom": false,
+      "delta_rgb": [
+        0.0,
+        0.0,
+        2.0
+      ],
+      "dictionary_action_id": 16,
+      "source_action_id": 36,
+      "source_action_ids": [
+        36
+      ]
+    },
+    {
+      "custom": false,
+      "delta_rgb": [
+        0.0,
+        0.0,
+        12.0
+      ],
+      "dictionary_action_id": 17,
+      "source_action_id": 44,
+      "source_action_ids": [
+        44
+      ]
+    },
+    {
+      "custom": false,
+      "delta_rgb": [
+        -2.0,
+        -2.0,
+        -0.0
+      ],
+      "dictionary_action_id": 18,
+      "source_action_id": 49,
+      "source_action_ids": [
+        49
+      ]
+    },
+    {
+      "custom": false,
+      "delta_rgb": [
+        -4.0,
+        -4.0,
+        -0.0
+      ],
+      "dictionary_action_id": 19,
+      "source_action_id": 51,
+      "source_action_ids": [
+        51
+      ]
+    },
+    {
+      "custom": false,
+      "delta_rgb": [
+        -0.0,
+        -2.0,
+        -2.0
+      ],
+      "dictionary_action_id": 20,
+      "source_action_id": 61,
+      "source_action_ids": [
+        61
+      ]
+    },
+    {
+      "custom": false,
+      "delta_rgb": [
+        -0.0,
+        -8.0,
+        -8.0
+      ],
+      "dictionary_action_id": 21,
+      "source_action_id": 67,
+      "source_action_ids": [
+        67
+      ]
+    },
+    {
+      "custom": false,
+      "delta_rgb": [
+        -0.0,
+        -16.0,
+        -16.0
+      ],
+      "dictionary_action_id": 22,
+      "source_action_id": 71,
+      "source_action_ids": [
+        71
+      ]
+    },
+    {
+      "custom": false,
+      "delta_rgb": [
+        -2.0,
+        -0.0,
+        -2.0
+      ],
+      "dictionary_action_id": 23,
+      "source_action_id": 73,
+      "source_action_ids": [
+        73
+      ]
+    },
+    {
+      "custom": false,
+      "delta_rgb": [
+        16.0,
+        0.0,
+        16.0
+      ],
+      "dictionary_action_id": 24,
+      "source_action_id": 82,
+      "source_action_ids": [
+        82
+      ]
+    },
+    {
+      "custom": false,
+      "delta_rgb": [
+        -1.5555555555555554,
+        0.6666666666666666,
+        2.0
+      ],
+      "dictionary_action_id": 25,
+      "source_action_id": 84,
+      "source_action_ids": [
+        84
+      ]
+    },
+    {
+      "custom": false,
+      "delta_rgb": [
+        1.5555555555555554,
+        -0.6666666666666666,
+        -2.0
+      ],
+      "dictionary_action_id": 26,
+      "source_action_id": 85,
+      "source_action_ids": [
+        85
+      ]
+    },
+    {
+      "custom": false,
+      "delta_rgb": [
+        -3.1111111111111107,
+        1.3333333333333333,
+        4.0
+      ],
+      "dictionary_action_id": 27,
+      "source_action_id": 86,
+      "source_action_ids": [
+        86
+      ]
+    },
+    {
+      "custom": false,
+      "delta_rgb": [
+        -6.222222222222221,
+        2.6666666666666665,
+        8.0
+      ],
+      "dictionary_action_id": 28,
+      "source_action_id": 90,
+      "source_action_ids": [
+        90
+      ]
+    },
+    {
+      "custom": false,
+      "delta_rgb": [
+        -12.444444444444443,
+        5.333333333333333,
+        16.0
+      ],
+      "dictionary_action_id": 29,
+      "source_action_id": 94,
+      "source_action_ids": [
+        94
+      ]
+    },
+    {
+      "custom": false,
+      "delta_rgb": [
+        12.444444444444443,
+        -5.333333333333333,
+        -16.0
+      ],
+      "dictionary_action_id": 30,
+      "source_action_id": 95,
+      "source_action_ids": [
+        95
+      ]
+    },
+    {
+      "custom": false,
+      "delta_rgb": [
+        2.0,
+        1.2,
+        -1.6
+      ],
+      "dictionary_action_id": 31,
+      "source_action_id": 96,
+      "source_action_ids": [
+        96
+      ]
+    },
+    {
+      "custom": false,
+      "delta_rgb": [
+        -2.0,
+        -1.2,
+        1.6
+      ],
+      "dictionary_action_id": 32,
+      "source_action_id": 97,
+      "source_action_ids": [
+        97
+      ]
+    },
+    {
+      "custom": false,
+      "delta_rgb": [
+        -6.0,
+        -3.5999999999999996,
+        4.800000000000001
+      ],
+      "dictionary_action_id": 33,
+      "source_action_id": 101,
+      "source_action_ids": [
+        101
+      ]
+    },
+    {
+      "custom": false,
+      "delta_rgb": [
+        8.0,
+        4.8,
+        -6.4
+      ],
+      "dictionary_action_id": 34,
+      "source_action_id": 102,
+      "source_action_ids": [
+        102
+      ]
+    },
+    {
+      "custom": false,
+      "delta_rgb": [
+        12.0,
+        7.199999999999999,
+        -9.600000000000001
+      ],
+      "dictionary_action_id": 35,
+      "source_action_id": 104,
+      "source_action_ids": [
+        104
+      ]
+    }
+  ],
+  "custom_action_dictionary_raw_bytes": 440,
+  "custom_action_dictionary_raw_sha256": "076dbe1d79f9d3cfe8d7ff9b8a0f06e7806a67d131fad6cb031b61569f9afed4",
+  "delta_bytes_vs_c067": 313,
+  "encoded_action_brotli_bytes": 129,
+  "encoded_action_brotli_sha256": "bc39293c739b3736b631c2ed18bfa6420be9e298f0e66c3ebcff46b64de4bd2e",
+  "encoded_action_codec": "brotli_custom_dict_packed24_pair10_tile8_action6",
+  "encoded_action_stream_bytes": 150,
+  "encoded_action_stream_sha256": "3f98162b69075f6360f3810b25a47dc840b8535afcfcb5b07c48ec19ebb3d7fb",
+  "evidence": "byte_and_trace_planning_only_until_exact_cuda",
+  "formula_rate_delta_vs_c067": 0.00020841385232723964,
+  "name": "c067_pr75_actions_top25_signedposemix1_p5",
+  "policy": "top25_signedposemix1",
+  "runtime_action_raw_bytes": 200,
+  "runtime_action_raw_sha256": "83e70bf47bcc79b7911d541afbfa19aa843afb27185ff2cf0ecf066a6c2b737c",
+  "schema_version": 2,
+  "score_claim": false,
+  "selected_delta_combined_trace_sum": 0.00021667149893832602,
+  "selected_delta_pose_trace_sum": 3.610912289363535e-05,
+  "selected_delta_seg_trace_sum": 0.00018056237604469058,
+  "selected_record_count": 50,
+  "selected_records": [
+    {
+      "action_id": 86,
+      "custom_delta_rgb": null,
+      "delta_combined": 7.069180864894821e-06,
+      "delta_pose": 2.830625113774757e-06,
+      "delta_seg": 4.23855575112006e-06,
+      "index": 2,
+      "order_key": 20,
+      "pair_index": 46,
+      "source_action_id": 86,
+      "source_index": 2,
+      "tile_id": 108,
+      "transform": "identity"
+    },
+    {
+      "action_id": 84,
+      "custom_delta_rgb": null,
+      "delta_combined": 7.069180864894821e-06,
+      "delta_pose": 2.830625113774757e-06,
+      "delta_seg": 4.23855575112006e-06,
+      "index": 2,
+      "order_key": 21,
+      "pair_index": 46,
+      "source_action_id": 86,
+      "source_index": 2,
+      "tile_id": 108,
+      "transform": "signed_posehelp_boost_amp0"
+    },
+    {
+      "action_id": 102,
+      "custom_delta_rgb": null,
+      "delta_combined": 1.0376498547952958e-05,
+      "delta_pose": 9.528791278239676e-06,
+      "delta_seg": 8.477072697132826e-07,
+      "index": 5,
+      "order_key": 50,
+      "pair_index": 67,
+      "source_action_id": 102,
+      "source_index": 5,
+      "tile_id": 88,
+      "transform": "identity"
+    },
+    {
+      "action_id": 96,
+      "custom_delta_rgb": null,
+      "delta_combined": 1.0376498547952958e-05,
+      "delta_pose": 9.528791278239676e-06,
+      "delta_seg": 8.477072697132826e-07,
+      "index": 5,
+      "order_key": 51,
+      "pair_index": 67,
+      "source_action_id": 102,
+      "source_index": 5,
+      "tile_id": 88,
+      "transform": "signed_posehelp_boost_amp0"
+    },
+    {
+      "action_id": 7,
+      "custom_delta_rgb": null,
+      "delta_combined": 5.233836845540613e-06,
+      "delta_pose": 1.842993214772251e-06,
+      "delta_seg": 3.3908436307683587e-06,
+      "index": 8,
+      "order_key": 80,
+      "pair_index": 89,
+      "source_action_id": 7,
+      "source_index": 8,
+      "tile_id": 84,
+      "transform": "identity"
+    },
+    {
+      "action_id": 1,
+      "custom_delta_rgb": null,
+      "delta_combined": 5.233836845540613e-06,
+      "delta_pose": 1.842993214772251e-06,
+      "delta_seg": 3.3908436307683587e-06,
+      "index": 8,
+      "order_key": 81,
+      "pair_index": 89,
+      "source_action_id": 7,
+      "source_index": 8,
+      "tile_id": 84,
+      "transform": "signed_posehelp_boost_amp0"
+    },
+    {
+      "action_id": 17,
+      "custom_delta_rgb": null,
+      "delta_combined": 6.915063777936949e-06,
+      "delta_pose": -1.5620477243031026e-06,
+      "delta_seg": 8.477111502240092e-06,
+      "index": 10,
+      "order_key": 100,
+      "pair_index": 104,
+      "source_action_id": 17,
+      "source_index": 10,
+      "tile_id": 83,
+      "transform": "identity"
+    },
+    {
+      "action_id": 12,
+      "custom_delta_rgb": null,
+      "delta_combined": 6.915063777936949e-06,
+      "delta_pose": -1.5620477243031026e-06,
+      "delta_seg": 8.477111502240092e-06,
+      "index": 10,
+      "order_key": 101,
+      "pair_index": 104,
+      "source_action_id": 17,
+      "source_index": 10,
+      "tile_id": 83,
+      "transform": "signed_poseharm_shrink_amp0"
+    },
+    {
+      "action_id": 94,
+      "custom_delta_rgb": null,
+      "delta_combined": 1.545582376511395e-05,
+      "delta_pose": -5.736935587932648e-06,
+      "delta_seg": 2.119275935304661e-05,
+      "index": 11,
+      "order_key": 110,
+      "pair_index": 105,
+      "source_action_id": 94,
+      "source_index": 11,
+      "tile_id": 99,
+      "transform": "identity"
+    },
+    {
+      "action_id": 85,
+      "custom_delta_rgb": null,
+      "delta_combined": 1.545582376511395e-05,
+      "delta_pose": -5.736935587932648e-06,
+      "delta_seg": 2.119275935304661e-05,
+      "index": 11,
+      "order_key": 111,
+      "pair_index": 105,
+      "source_action_id": 94,
+      "source_index": 11,
+      "tile_id": 99,
+      "transform": "signed_poseharm_shrink_amp0"
+    },
+    {
+      "action_id": 44,
+      "custom_delta_rgb": null,
+      "delta_combined": 8.675428542265782e-06,
+      "delta_pose": 1.0460340110157815e-06,
+      "delta_seg": 7.62939453125e-06,
+      "index": 13,
+      "order_key": 130,
+      "pair_index": 119,
+      "source_action_id": 44,
+      "source_index": 13,
+      "tile_id": 86,
+      "transform": "identity"
+    },
+    {
+      "action_id": 36,
+      "custom_delta_rgb": null,
+      "delta_combined": 8.675428542265782e-06,
+      "delta_pose": 1.0460340110157815e-06,
+      "delta_seg": 7.62939453125e-06,
+      "index": 13,
+      "order_key": 131,
+      "pair_index": 119,
+      "source_action_id": 44,
+      "source_index": 13,
+      "tile_id": 86,
+      "transform": "signed_posehelp_boost_amp0"
+    },
+    {
+      "action_id": 90,
+      "custom_delta_rgb": null,
+      "delta_combined": 7.019593383134006e-06,
+      "delta_pose": 2.3790612159726787e-07,
+      "delta_seg": 6.781687261536717e-06,
+      "index": 16,
+      "order_key": 160,
+      "pair_index": 137,
+      "source_action_id": 90,
+      "source_index": 16,
+      "tile_id": 88,
+      "transform": "identity"
+    },
+    {
+      "action_id": 84,
+      "custom_delta_rgb": null,
+      "delta_combined": 7.019593383134006e-06,
+      "delta_pose": 2.3790612159726787e-07,
+      "delta_seg": 6.781687261536717e-06,
+      "index": 16,
+      "order_key": 161,
+      "pair_index": 137,
+      "source_action_id": 90,
+      "source_index": 16,
+      "tile_id": 88,
+      "transform": "signed_posehelp_boost_amp0"
+    },
+    {
+      "action_id": 9,
+      "custom_delta_rgb": null,
+      "delta_combined": 1.062406054484717e-05,
+      "delta_pose": -3.9618246780960737e-07,
+      "delta_seg": 1.1020243012656777e-05,
+      "index": 17,
+      "order_key": 170,
+      "pair_index": 141,
+      "source_action_id": 9,
+      "source_index": 17,
+      "tile_id": 86,
+      "transform": "identity"
+    },
+    {
+      "action_id": 0,
+      "custom_delta_rgb": null,
+      "delta_combined": 1.062406054484717e-05,
+      "delta_pose": -3.9618246780960737e-07,
+      "delta_seg": 1.1020243012656777e-05,
+      "index": 17,
+      "order_key": 171,
+      "pair_index": 141,
+      "source_action_id": 9,
+      "source_index": 17,
+      "tile_id": 86,
+      "transform": "signed_poseharm_shrink_amp0"
+    },
+    {
+      "action_id": 104,
+      "custom_delta_rgb": null,
+      "delta_combined": 5.381237981479271e-06,
+      "delta_pose": -3.095863819484011e-06,
+      "delta_seg": 8.477101800963283e-06,
+      "index": 18,
+      "order_key": 180,
+      "pair_index": 151,
+      "source_action_id": 104,
+      "source_index": 18,
+      "tile_id": 112,
+      "transform": "identity"
+    },
+    {
+      "action_id": 97,
+      "custom_delta_rgb": null,
+      "delta_combined": 5.381237981479271e-06,
+      "delta_pose": -3.095863819484011e-06,
+      "delta_seg": 8.477101800963283e-06,
+      "index": 18,
+      "order_key": 181,
+      "pair_index": 151,
+      "source_action_id": 104,
+      "source_index": 18,
+      "tile_id": 112,
+      "transform": "signed_poseharm_shrink_amp0"
+    },
+    {
+      "action_id": 21,
+      "custom_delta_rgb": null,
+      "delta_combined": 1.4898573359704663e-05,
+      "delta_pose": 1.3203149119001261e-05,
+      "delta_seg": 1.695424240703375e-06,
+      "index": 21,
+      "order_key": 210,
+      "pair_index": 156,
+      "source_action_id": 21,
+      "source_index": 21,
+      "tile_id": 86,
+      "transform": "identity"
+    },
+    {
+      "action_id": 13,
+      "custom_delta_rgb": null,
+      "delta_combined": 1.4898573359704663e-05,
+      "delta_pose": 1.3203149119001261e-05,
+      "delta_seg": 1.695424240703375e-06,
+      "index": 21,
+      "order_key": 211,
+      "pair_index": 156,
+      "source_action_id": 21,
+      "source_index": 21,
+      "tile_id": 86,
+      "transform": "signed_posehelp_boost_amp0"
+    },
+    {
+      "action_id": 6,
+      "custom_delta_rgb": null,
+      "delta_combined": 9.233159685834743e-06,
+      "delta_pose": 3.2991893952880914e-06,
+      "delta_seg": 5.933970290546625e-06,
+      "index": 24,
+      "order_key": 240,
+      "pair_index": 166,
+      "source_action_id": 6,
+      "source_index": 24,
+      "tile_id": 86,
+      "transform": "identity"
+    },
+    {
+      "action_id": 0,
+      "custom_delta_rgb": null,
+      "delta_combined": 9.233159685834743e-06,
+      "delta_pose": 3.2991893952880914e-06,
+      "delta_seg": 5.933970290546625e-06,
+      "index": 24,
+      "order_key": 241,
+      "pair_index": 166,
+      "source_action_id": 6,
+      "source_index": 24,
+      "tile_id": 86,
+      "transform": "signed_posehelp_boost_amp0"
+    },
+    {
+      "action_id": 2,
+      "custom_delta_rgb": null,
+      "delta_combined": 8.426664037992782e-06,
+      "delta_pose": 7.972695067427819e-07,
+      "delta_seg": 7.62939453125e-06,
+      "index": 25,
+      "order_key": 250,
+      "pair_index": 167,
+      "source_action_id": 2,
+      "source_index": 25,
+      "tile_id": 86,
+      "transform": "identity"
+    },
+    {
+      "action_id": 0,
+      "custom_delta_rgb": null,
+      "delta_combined": 8.426664037992782e-06,
+      "delta_pose": 7.972695067427819e-07,
+      "delta_seg": 7.62939453125e-06,
+      "index": 25,
+      "order_key": 251,
+      "pair_index": 167,
+      "source_action_id": 2,
+      "source_index": 25,
+      "tile_id": 86,
+      "transform": "signed_posehelp_boost_amp0"
+    },
+    {
+      "action_id": 95,
+      "custom_delta_rgb": null,
+      "delta_combined": 9.248628034810006e-06,
+      "delta_pose": 1.619233503560013e-06,
+      "delta_seg": 7.6293945312499864e-06,
+      "index": 26,
+      "order_key": 260,
+      "pair_index": 174,
+      "source_action_id": 95,
+      "source_index": 26,
+      "tile_id": 86,
+      "transform": "identity"
+    },
+    {
+      "action_id": 85,
+      "custom_delta_rgb": null,
+      "delta_combined": 9.248628034810006e-06,
+      "delta_pose": 1.619233503560013e-06,
+      "delta_seg": 7.6293945312499864e-06,
+      "index": 26,
+      "order_key": 261,
+      "pair_index": 174,
+      "source_action_id": 95,
+      "source_index": 26,
+      "tile_id": 86,
+      "transform": "signed_posehelp_boost_amp0"
+    },
+    {
+      "action_id": 101,
+      "custom_delta_rgb": null,
+      "delta_combined": 6.501718570536282e-06,
+      "delta_pose": 5.677385787128338e-07,
+      "delta_seg": 5.933979991823435e-06,
+      "index": 28,
+      "order_key": 280,
+      "pair_index": 178,
+      "source_action_id": 101,
+      "source_index": 28,
+      "tile_id": 95,
+      "transform": "identity"
+    },
+    {
+      "action_id": 97,
+      "custom_delta_rgb": null,
+      "delta_combined": 6.501718570536282e-06,
+      "delta_pose": 5.677385787128338e-07,
+      "delta_seg": 5.933979991823435e-06,
+      "index": 28,
+      "order_key": 281,
+      "pair_index": 178,
+      "source_action_id": 101,
+      "source_index": 28,
+      "tile_id": 95,
+      "transform": "signed_posehelp_boost_amp0"
+    },
+    {
+      "action_id": 15,
+      "custom_delta_rgb": null,
+      "delta_combined": 1.0064356250208211e-05,
+      "delta_pose": 7.395374782548494e-07,
+      "delta_seg": 9.324818771953375e-06,
+      "index": 32,
+      "order_key": 320,
+      "pair_index": 196,
+      "source_action_id": 15,
+      "source_index": 32,
+      "tile_id": 113,
+      "transform": "identity"
+    },
+    {
+      "action_id": 13,
+      "custom_delta_rgb": null,
+      "delta_combined": 1.0064356250208211e-05,
+      "delta_pose": 7.395374782548494e-07,
+      "delta_seg": 9.324818771953375e-06,
+      "index": 32,
+      "order_key": 321,
+      "pair_index": 196,
+      "source_action_id": 15,
+      "source_index": 32,
+      "tile_id": 113,
+      "transform": "signed_posehelp_boost_amp0"
+    },
+    {
+      "action_id": 33,
+      "custom_delta_rgb": null,
+      "delta_combined": 4.799763623357248e-06,
+      "delta_pose": -2.864993974760943e-07,
+      "delta_seg": 5.086263020833342e-06,
+      "index": 34,
+      "order_key": 340,
+      "pair_index": 198,
+      "source_action_id": 33,
+      "source_index": 34,
+      "tile_id": 107,
+      "transform": "identity"
+    },
+    {
+      "action_id": 24,
+      "custom_delta_rgb": null,
+      "delta_combined": 4.799763623357248e-06,
+      "delta_pose": -2.864993974760943e-07,
+      "delta_seg": 5.086263020833342e-06,
+      "index": 34,
+      "order_key": 341,
+      "pair_index": 198,
+      "source_action_id": 33,
+      "source_index": 34,
+      "tile_id": 107,
+      "transform": "signed_poseharm_shrink_amp0"
+    },
+    {
+      "action_id": 10,
+      "custom_delta_rgb": null,
+      "delta_combined": 5.539305349331488e-06,
+      "delta_pose": -1.2423770615668174e-06,
+      "delta_seg": 6.781682410898299e-06,
+      "index": 36,
+      "order_key": 360,
+      "pair_index": 211,
+      "source_action_id": 10,
+      "source_index": 36,
+      "tile_id": 110,
+      "transform": "identity"
+    },
+    {
+      "action_id": 1,
+      "custom_delta_rgb": null,
+      "delta_combined": 5.539305349331488e-06,
+      "delta_pose": -1.2423770615668174e-06,
+      "delta_seg": 6.781682410898299e-06,
+      "index": 36,
+      "order_key": 361,
+      "pair_index": 211,
+      "source_action_id": 10,
+      "source_index": 36,
+      "tile_id": 110,
+      "transform": "signed_poseharm_shrink_amp0"
+    },
+    {
+      "action_id": 71,
+      "custom_delta_rgb": null,
+      "delta_combined": 8.5404993937927e-06,
+      "delta_pose": 1.7588121322559687e-06,
+      "delta_seg": 6.781687261536717e-06,
+      "index": 37,
+      "order_key": 370,
+      "pair_index": 212,
+      "source_action_id": 71,
+      "source_index": 37,
+      "tile_id": 111,
+      "transform": "identity"
+    },
+    {
+      "action_id": 61,
+      "custom_delta_rgb": null,
+      "delta_combined": 8.5404993937927e-06,
+      "delta_pose": 1.7588121322559687e-06,
+      "delta_seg": 6.781687261536717e-06,
+      "index": 37,
+      "order_key": 371,
+      "pair_index": 212,
+      "source_action_id": 71,
+      "source_index": 37,
+      "tile_id": 111,
+      "transform": "signed_posehelp_boost_amp0"
+    },
+    {
+      "action_id": 11,
+      "custom_delta_rgb": null,
+      "delta_combined": 9.95315114198649e-06,
+      "delta_pose": 4.866888121153148e-06,
+      "delta_seg": 5.086263020833336e-06,
+      "index": 42,
+      "order_key": 420,
+      "pair_index": 347,
+      "source_action_id": 11,
+      "source_index": 42,
+      "tile_id": 98,
+      "transform": "identity"
+    },
+    {
+      "action_id": 1,
+      "custom_delta_rgb": null,
+      "delta_combined": 9.95315114198649e-06,
+      "delta_pose": 4.866888121153148e-06,
+      "delta_seg": 5.086263020833336e-06,
+      "index": 42,
+      "order_key": 421,
+      "pair_index": 347,
+      "source_action_id": 11,
+      "source_index": 42,
+      "tile_id": 98,
+      "transform": "signed_posehelp_boost_amp0"
+    },
+    {
+      "action_id": 82,
+      "custom_delta_rgb": null,
+      "delta_combined": 6.2231952426116e-06,
+      "delta_pose": -5.584920189251212e-07,
+      "delta_seg": 6.781687261536717e-06,
+      "index": 49,
+      "order_key": 490,
+      "pair_index": 449,
+      "source_action_id": 82,
+      "source_index": 49,
+      "tile_id": 92,
+      "transform": "identity"
+    },
+    {
+      "action_id": 73,
+      "custom_delta_rgb": null,
+      "delta_combined": 6.2231952426116e-06,
+      "delta_pose": -5.584920189251212e-07,
+      "delta_seg": 6.781687261536717e-06,
+      "index": 49,
+      "order_key": 491,
+      "pair_index": 449,
+      "source_action_id": 82,
+      "source_index": 49,
+      "tile_id": 92,
+      "transform": "signed_poseharm_shrink_amp0"
+    },
+    {
+      "action_id": 67,
+      "custom_delta_rgb": null,
+      "delta_combined": 1.2290682565590778e-05,
+      "delta_pose": 2.1181565239241174e-06,
+      "delta_seg": 1.0172526041666671e-05,
+      "index": 52,
+      "order_key": 520,
+      "pair_index": 459,
+      "source_action_id": 67,
+      "source_index": 52,
+      "tile_id": 87,
+      "transform": "identity"
+    },
+    {
+      "action_id": 61,
+      "custom_delta_rgb": null,
+      "delta_combined": 1.2290682565590778e-05,
+      "delta_pose": 2.1181565239241174e-06,
+      "delta_seg": 1.0172526041666671e-05,
+      "index": 52,
+      "order_key": 521,
+      "pair_index": 459,
+      "source_action_id": 67,
+      "source_index": 52,
+      "tile_id": 87,
+      "transform": "signed_posehelp_boost_amp0"
+    },
+    {
+      "action_id": 51,
+      "custom_delta_rgb": null,
+      "delta_combined": 1.446803526826743e-05,
+      "delta_pose": 5.6943774203862207e-08,
+      "delta_seg": 1.4411091494063527e-05,
+      "index": 54,
+      "order_key": 540,
+      "pair_index": 517,
+      "source_action_id": 51,
+      "source_index": 54,
+      "tile_id": 113,
+      "transform": "identity"
+    },
+    {
+      "action_id": 49,
+      "custom_delta_rgb": null,
+      "delta_combined": 1.446803526826743e-05,
+      "delta_pose": 5.6943774203862207e-08,
+      "delta_seg": 1.4411091494063527e-05,
+      "index": 54,
+      "order_key": 541,
+      "pair_index": 517,
+      "source_action_id": 51,
+      "source_index": 54,
+      "tile_id": 113,
+      "transform": "signed_posehelp_boost_amp0"
+    },
+    {
+      "action_id": 44,
+      "custom_delta_rgb": null,
+      "delta_combined": 6.917079212024962e-06,
+      "delta_pose": 1.8308161911916263e-06,
+      "delta_seg": 5.086263020833342e-06,
+      "index": 55,
+      "order_key": 550,
+      "pair_index": 519,
+      "source_action_id": 44,
+      "source_index": 55,
+      "tile_id": 89,
+      "transform": "identity"
+    },
+    {
+      "action_id": 36,
+      "custom_delta_rgb": null,
+      "delta_combined": 6.917079212024962e-06,
+      "delta_pose": 1.8308161911916263e-06,
+      "delta_seg": 5.086263020833342e-06,
+      "index": 55,
+      "order_key": 551,
+      "pair_index": 519,
+      "source_action_id": 44,
+      "source_index": 55,
+      "tile_id": 89,
+      "transform": "signed_posehelp_boost_amp0"
+    },
+    {
+      "action_id": 18,
+      "custom_delta_rgb": null,
+      "delta_combined": 4.999359435006766e-06,
+      "delta_pose": -8.690358582656244e-08,
+      "delta_seg": 5.086263020833329e-06,
+      "index": 59,
+      "order_key": 590,
+      "pair_index": 531,
+      "source_action_id": 18,
+      "source_index": 59,
+      "tile_id": 88,
+      "transform": "identity"
+    },
+    {
+      "action_id": 13,
+      "custom_delta_rgb": null,
+      "delta_combined": 4.999359435006766e-06,
+      "delta_pose": -8.690358582656244e-08,
+      "delta_seg": 5.086263020833329e-06,
+      "index": 59,
+      "order_key": 591,
+      "pair_index": 531,
+      "source_action_id": 18,
+      "source_index": 59,
+      "tile_id": 88,
+      "transform": "signed_poseharm_shrink_amp0"
+    },
+    {
+      "action_id": 86,
+      "custom_delta_rgb": null,
+      "delta_combined": 7.816603514104368e-06,
+      "delta_pose": 2.7303404932710253e-06,
+      "delta_seg": 5.086263020833329e-06,
+      "index": 63,
+      "order_key": 630,
+      "pair_index": 551,
+      "source_action_id": 86,
+      "source_index": 63,
+      "tile_id": 88,
+      "transform": "identity"
+    },
+    {
+      "action_id": 84,
+      "custom_delta_rgb": null,
+      "delta_combined": 7.816603514104368e-06,
+      "delta_pose": 2.7303404932710253e-06,
+      "delta_seg": 5.086263020833329e-06,
+      "index": 63,
+      "order_key": 631,
+      "pair_index": 551,
+      "source_action_id": 86,
+      "source_index": 63,
+      "tile_id": 88,
+      "transform": "signed_posehelp_boost_amp0"
+    }
+  ],
+  "selected_unique_source_record_count": 25,
+  "source_c067_archive": "experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip",
+  "source_c067_archive_sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+  "source_pr75_archive": "experiments/results/top_submission_reverse_engineering_20260503_pr75/archive.zip",
+  "source_pr75_archive_sha256": "cc1dfa346811dade15044910fa0143e73a7a049b98aeec39b96a53481a0788bd",
+  "source_record_count": 67,
+  "tool": "experiments/build_pr75_tile_action_subset_candidates.py",
+  "trace_delta_note": "Trace deltas are counted once per source PR75 record. Amplitude-shifted, custom-dictionary, and signed-combo policies require exact CUDA eval for measured effect.",
+  "wire_format": "p5"
+}

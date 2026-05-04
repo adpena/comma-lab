@@ -1,0 +1,102 @@
+[
+  {
+    "bytes": 178392,
+    "exact_text_claim": null,
+    "pose": 3.489e-05,
+    "pr": 98,
+    "recomputed_from_body": 0.19625777542725248,
+    "seg": 0.00058795,
+    "title": "hnerv_muon_finetuned_from_pr95 (0.1963)",
+    "title_claim": "0.1963"
+  },
+  {
+    "bytes": 178546,
+    "exact_text_claim": "0.19667",
+    "pose": 3.349e-05,
+    "pr": 99,
+    "recomputed_from_body": 0.19668072586615531,
+    "seg": 0.00059494,
+    "title": "hnerv_muon_lc submission (0.20)",
+    "title_claim": "0.20"
+  },
+  {
+    "bytes": 197160,
+    "exact_text_claim": null,
+    "pose": 0.00049454,
+    "pr": 97,
+    "recomputed_from_body": 0.22878228922005306,
+    "seg": 0.00027178,
+    "title": "vibe_coder_final_boss (0.23)",
+    "title_claim": "0.23"
+  },
+  {
+    "bytes": 186631,
+    "exact_text_claim": null,
+    "pose": 3.675e-05,
+    "pr": 96,
+    "recomputed_from_body": 0.20567121179282477,
+    "seg": 0.00062231,
+    "title": "rem2_HNeRV submission (0.21)",
+    "title_claim": "0.21"
+  },
+  {
+    "bytes": 178417,
+    "exact_text_claim": null,
+    "pose": 3.494e-05,
+    "pr": 95,
+    "recomputed_from_body": 0.1987048012202245,
+    "seg": 0.00061212,
+    "title": "hnerv_muon submission (0.20)",
+    "title_claim": "0.20"
+  },
+  {
+    "bytes": 277087,
+    "exact_text_claim": null,
+    "pose": 0.00061985,
+    "pr": 94,
+    "recomputed_from_body": 0.33425141289817706,
+    "seg": 0.0007102,
+    "title": "optimization_qpose_josema",
+    "title_claim": null
+  },
+  {
+    "bytes": 236516,
+    "exact_text_claim": null,
+    "pose": 0.00018963,
+    "pr": 92,
+    "recomputed_from_body": 0.2587078229986317,
+    "seg": 0.00057675,
+    "title": "qzs3_range_joint_r258 (0.26)",
+    "title_claim": "0.26"
+  },
+  {
+    "bytes": 284396,
+    "exact_text_claim": null,
+    "pose": 0.00043391,
+    "pr": 93,
+    "recomputed_from_body": 0.3204744681076375,
+    "seg": 0.00065235,
+    "title": "flatpup",
+    "title_claim": null
+  },
+  {
+    "bytes": 222404,
+    "exact_text_claim": "0.24879480490416128",
+    "pose": 0.0001894,
+    "pr": 91,
+    "recomputed_from_body": 0.24879480490416128,
+    "seg": 0.00057185,
+    "title": "Hpac coder hybrid",
+    "title_claim": null
+  },
+  {
+    "bytes": 218080,
+    "exact_text_claim": null,
+    "pose": 0.00041977,
+    "pr": 90,
+    "recomputed_from_body": 0.2788721801656914,
+    "seg": 0.00068872,
+    "title": "add qrepro submission(0.28)",
+    "title_claim": "0.28"
+  }
+]

@@ -1,0 +1,81 @@
+{
+  "archive_variants_manifest": {
+    "bytes": 18706,
+    "path": "/Users/adpena/Projects/pact/experiments/results/official_component_response_pfp16_direct_fd_mixed_complete_20260501/official_response_plan/archive_variants_manifest.json",
+    "sha256": "df5acddede35275996bc03cdef3a595754e6b9875c5b9ae4b9d9fcbd3d5c6c28"
+  },
+  "baseline_archive": {
+    "bytes": 686635,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+    "sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+  },
+  "baseline_contest_auth_eval_json": {
+    "bytes": 4287,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/eval/contest_auth_eval.json",
+    "sha256": "b84e7352165cf0d2be0631a177d8404c3a1e5f27633d82d48990552b9ef382ab"
+  },
+  "component_maps": {
+    "combined": {
+      "bytes": 78291,
+      "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_mixed_l40s_rtxpro_modal_20260501_complete_merge_20260501T091302Z/combined_sensitivity_map.pt",
+      "sha256": "1cc7d954aaeb503818fec9d9d409dc5904559ed4989a58ce4c8d072701364eb9"
+    },
+    "posenet": {
+      "bytes": 77946,
+      "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_mixed_l40s_rtxpro_modal_20260501_complete_merge_20260501T091302Z/posenet_sensitivity_map.pt",
+      "sha256": "d49edd71ed10b0d06efc0b63859f26ec8186e52860ee9b1e8f954b68fdf025cf"
+    },
+    "segnet": {
+      "bytes": 77921,
+      "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_mixed_l40s_rtxpro_modal_20260501_complete_merge_20260501T091302Z/segnet_sensitivity_map.pt",
+      "sha256": "2e76d6b54ab4b4e6ea70bfbe284506c90939dcbe8fec37dc5571df0aa2cf865a"
+    }
+  },
+  "epsilon_ladder": [
+    -2.0,
+    -1.0,
+    0.0,
+    1.0,
+    2.0
+  ],
+  "evidence_grade": "planning:pre_response_prediction_and_archive_variants",
+  "format": "official_component_response_plan_from_sensitivity_artifacts_summary_v1",
+  "official_response_next_step": {
+    "requires_device": "cuda",
+    "requires_require_passed": true,
+    "requires_same_run_zero": true,
+    "script": "experiments/profile_component_sensitivity_official.py"
+  },
+  "official_response_plan": {
+    "bytes": 15859,
+    "path": "/Users/adpena/Projects/pact/experiments/results/official_component_response_pfp16_direct_fd_mixed_complete_20260501/official_response_plan/official_component_response_plan.json",
+    "sha256": "84bc79d4af085c7f25017fa2bcea2747e1d444d37d692104d9943ac606b202ae"
+  },
+  "perturbation_basis": {
+    "basis_source": "explicit_perturbation_basis_json",
+    "bytes": 169424,
+    "path": "/Users/adpena/Projects/pact/experiments/results/official_component_response_pfp16_direct_fd_mixed_complete_20260501/sensitivity_ranked_renderer_blob_perturbation_basis_v1.json",
+    "sha256": "457af67707093bc662a57e37361a6624016bcb33f562aa4ffb6e931aeaaf2251"
+  },
+  "prediction_deltas": {
+    "bytes": 564824,
+    "path": "/Users/adpena/Projects/pact/experiments/results/official_component_response_pfp16_direct_fd_mixed_complete_20260501/official_component_response_prediction_deltas.json",
+    "sha256": "b755511f7ab39bbe71bcc6d6a8ffef213e92d81842fe043024936fdbceb77fc8"
+  },
+  "producer": "experiments/build_component_response_plan_from_sensitivity_artifacts.py",
+  "promotion_eligible": false,
+  "schema_version": 1,
+  "score_claim": false,
+  "sensitivity_artifact": {
+    "baseline_archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+    "baseline_archive_size_bytes": 686635,
+    "device": "cuda",
+    "gpu_model": "mixed_shards",
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_mixed_l40s_rtxpro_modal_20260501_complete_merge_20260501T091302Z",
+    "promotion_eligible": false,
+    "role": "diagnostic_component_sensitivity_merged_shards",
+    "score_claim": false,
+    "score_source": "none:diagnostic_component_sensitivity_merged_shards_non_promotable"
+  },
+  "summary_path": "/Users/adpena/Projects/pact/experiments/results/official_component_response_pfp16_direct_fd_mixed_complete_20260501/component_response_plan_from_sensitivity_artifacts_summary.json"
+}

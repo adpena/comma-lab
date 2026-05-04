@@ -1,0 +1,2 @@
+2026-05-03 01:49:58-05:00 fc-01KQP9K42CAWJH7XEV4KC0V28M [modal-train-lane] copying mounted source → /tmp/pact
+2026-05-03 01:50:14-05:00 fc-01KQP9K42CAWJH7XEV4KC0V28M [modal-train-lane] starting lane: scripts/remote_lane_c067_fixed_renderer_burn.sh (label=c067_fixed_renderer_burn_fix3_modal_h100_20260503T0659Z)

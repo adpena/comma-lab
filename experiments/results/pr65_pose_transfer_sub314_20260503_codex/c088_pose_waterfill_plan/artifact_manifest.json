@@ -1,0 +1,24 @@
+{
+  "artifacts": {
+    "dispatch_recommendations_json": {
+      "path": "experiments/results/pr65_pose_transfer_sub314_20260503_codex/c088_pose_waterfill_plan/exact_eval_recommendations.json",
+      "sha256": "fd44f45240d3193bed20cbfa4dff13e7036860f8f9c2e71dbb5a37d7286f8edf",
+      "size_bytes": 316
+    },
+    "ledger_md": {
+      "path": ".omx/research/pr65_pose_transfer_sub314_20260503_codex.md",
+      "sha256": "3d6b11876384ea0785465cb946ec97a01cefcc21311b54a5936860c21e80c82d",
+      "size_bytes": 1229
+    },
+    "plan_json": {
+      "path": "experiments/results/pr65_pose_transfer_sub314_20260503_codex/c088_pose_waterfill_plan/pose_manifold_waterfill_plan.json",
+      "sha256": "c5829ed1b001139977ea4efc2b81e8b3ac60234287d4d57468c4576b494a81b5",
+      "size_bytes": 18405
+    }
+  },
+  "manifest_self_hash_omitted_reason": "self-referential output",
+  "promotion_eligible": false,
+  "schema_version": 1,
+  "score_claim": false,
+  "tool": "experiments/plan_pose_manifold_waterfill_candidates.py"
+}

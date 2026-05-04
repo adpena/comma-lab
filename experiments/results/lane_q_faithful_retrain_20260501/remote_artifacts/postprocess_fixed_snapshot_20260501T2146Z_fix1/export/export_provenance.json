@@ -1,0 +1,20 @@
+{
+  "checkpoint": "/workspace/pact/lane_q_faithful_results/postprocess_snapshots/training_state_snapshot_20260501T2146Z.pt",
+  "checkpoint_sha256": "a7577f4864c9eacb6c14c67d0801cdd0c95b44dfb19795dcb16fd2d0fe0c2a97",
+  "optimized_poses_bin": "/workspace/pact/lane_q_faithful_results/postprocess_fixed_snapshot_20260501T2146Z_fix1/export/optimized_poses.bin",
+  "optimized_poses_bin_bytes": 7200,
+  "optimized_poses_bin_sha256": "399c0898d110911979c8b1343be3f16420a30b27a072e1c61d4d0a552e6ec1e3",
+  "pose_shape": [
+    600,
+    6
+  ],
+  "poses_pt": "/workspace/pact/lane_q_faithful_results/extracted/optimized_poses.pt",
+  "poses_pt_sha256": "9624b96c7304ecac9aa7c06703413893a5c467350b86b8e9c2b37449288ff3af",
+  "recorded_at_utc": "2026-05-01T21:52:58Z",
+  "renderer_bin": "/workspace/pact/lane_q_faithful_results/postprocess_fixed_snapshot_20260501T2146Z_fix1/export/renderer.bin",
+  "renderer_bin_bytes": 389756,
+  "renderer_bin_sha256": "86d11569d5956be778d096c6b3372144bbc14f24478a53eb22c7f648a53f51ae",
+  "schema_version": 1,
+  "score_claim": false,
+  "tool": "remote_q_faithful_postprocess_fixed:export_qfai_posebin"
+}

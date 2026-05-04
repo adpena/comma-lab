@@ -1,0 +1,24 @@
+{
+  "artifacts": {
+    "dispatch_recommendations_json": {
+      "path": "experiments/results/pose_manifold_waterfill_c063_h100nvl_20260502_codex/exact_eval_recommendations.json",
+      "sha256": "d087a4f9e5d22aca81eecf6f9f606adb0299649fd49e3a149d79ce59e4df17c1",
+      "size_bytes": 2677
+    },
+    "ledger_md": {
+      "path": ".omx/research/pose_manifold_waterfill_c063_h100nvl_20260502_codex.md",
+      "sha256": "b1cc101fc483d9bbeccd6f2a734269d87f952453988d193d0ea610a40e1e28a3",
+      "size_bytes": 1952
+    },
+    "plan_json": {
+      "path": "experiments/results/pose_manifold_waterfill_c063_h100nvl_20260502_codex/pose_manifold_waterfill_plan.json",
+      "sha256": "5314cb0f6dd0b7d4f952b8107974da17dcadf1c7eddeeef4910992efdb3c9c4e",
+      "size_bytes": 19091
+    }
+  },
+  "manifest_self_hash_omitted_reason": "self-referential output",
+  "promotion_eligible": false,
+  "schema_version": 1,
+  "score_claim": false,
+  "tool": "experiments/plan_pose_manifold_waterfill_candidates.py"
+}

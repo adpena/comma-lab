@@ -1,0 +1,1695 @@
+{
+  "profiles": [
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 48,
+          "raw_bytes": 52,
+          "raw_delta_vs_source": -2,
+          "scale_bytes": 4
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 64,
+          "raw_bytes": 68,
+          "raw_delta_vs_source": 14,
+          "scale_bytes": 4
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 48,
+          "raw_bytes": 50,
+          "raw_delta_vs_source": -4,
+          "scale_bytes": 2
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 64,
+          "raw_bytes": 66,
+          "raw_delta_vs_source": 12,
+          "scale_bytes": 2
+        }
+      ],
+      "group": "shared_trunk.stem_conv",
+      "name": "shared_trunk.stem_conv.dw.weight",
+      "numel": 72,
+      "risk_class": "high_risk_pose_or_shared",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 48,
+        "raw_bytes": 54,
+        "scale_bytes": 6
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 240,
+          "raw_bytes": 260,
+          "raw_delta_vs_source": 8,
+          "scale_bytes": 20
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 224,
+          "raw_bytes": 238,
+          "raw_delta_vs_source": -14,
+          "scale_bytes": 14
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 240,
+          "raw_bytes": 250,
+          "raw_delta_vs_source": -2,
+          "scale_bytes": 10
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 256,
+          "raw_bytes": 264,
+          "raw_delta_vs_source": 12,
+          "scale_bytes": 8
+        }
+      ],
+      "group": "shared_trunk.stem_conv",
+      "name": "shared_trunk.stem_conv.pw.weight",
+      "numel": 448,
+      "risk_class": "high_risk_pose_or_shared",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 224,
+        "raw_bytes": 252,
+        "scale_bytes": 28
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 264,
+          "raw_bytes": 286,
+          "raw_delta_vs_source": -2,
+          "scale_bytes": 22
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 256,
+          "raw_bytes": 272,
+          "raw_delta_vs_source": -16,
+          "scale_bytes": 16
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 288,
+          "raw_bytes": 300,
+          "raw_delta_vs_source": 12,
+          "scale_bytes": 12
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 256,
+          "raw_bytes": 264,
+          "raw_delta_vs_source": -24,
+          "scale_bytes": 8
+        }
+      ],
+      "group": "shared_trunk.stem_block",
+      "name": "shared_trunk.stem_block.conv1.dw.weight",
+      "numel": 504,
+      "risk_class": "high_risk_pose_or_shared",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 256,
+        "raw_bytes": 288,
+        "scale_bytes": 32
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 1584,
+          "raw_bytes": 1716,
+          "raw_delta_vs_source": -48,
+          "scale_bytes": 132
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 1568,
+          "raw_bytes": 1666,
+          "raw_delta_vs_source": -98,
+          "scale_bytes": 98
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 1584,
+          "raw_bytes": 1650,
+          "raw_delta_vs_source": -114,
+          "scale_bytes": 66
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 1600,
+          "raw_bytes": 1650,
+          "raw_delta_vs_source": -114,
+          "scale_bytes": 50
+        }
+      ],
+      "group": "shared_trunk.stem_block",
+      "name": "shared_trunk.stem_block.conv1.pw.weight",
+      "numel": 3136,
+      "risk_class": "high_risk_pose_or_shared",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 1568,
+        "raw_bytes": 1764,
+        "scale_bytes": 196
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 264,
+          "raw_bytes": 286,
+          "raw_delta_vs_source": -2,
+          "scale_bytes": 22
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 256,
+          "raw_bytes": 272,
+          "raw_delta_vs_source": -16,
+          "scale_bytes": 16
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 288,
+          "raw_bytes": 300,
+          "raw_delta_vs_source": 12,
+          "scale_bytes": 12
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 256,
+          "raw_bytes": 264,
+          "raw_delta_vs_source": -24,
+          "scale_bytes": 8
+        }
+      ],
+      "group": "shared_trunk.stem_block",
+      "name": "shared_trunk.stem_block.conv2.dw.weight",
+      "numel": 504,
+      "risk_class": "high_risk_pose_or_shared",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 256,
+        "raw_bytes": 288,
+        "scale_bytes": 32
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 1584,
+          "raw_bytes": 1716,
+          "raw_delta_vs_source": -48,
+          "scale_bytes": 132
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 1568,
+          "raw_bytes": 1666,
+          "raw_delta_vs_source": -98,
+          "scale_bytes": 98
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 1584,
+          "raw_bytes": 1650,
+          "raw_delta_vs_source": -114,
+          "scale_bytes": 66
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 1600,
+          "raw_bytes": 1650,
+          "raw_delta_vs_source": -114,
+          "scale_bytes": 50
+        }
+      ],
+      "group": "shared_trunk.stem_block",
+      "name": "shared_trunk.stem_block.conv2.pw.weight",
+      "numel": 3136,
+      "risk_class": "high_risk_pose_or_shared",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 1568,
+        "raw_bytes": 1764,
+        "scale_bytes": 196
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 264,
+          "raw_bytes": 286,
+          "raw_delta_vs_source": -2,
+          "scale_bytes": 22
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 256,
+          "raw_bytes": 272,
+          "raw_delta_vs_source": -16,
+          "scale_bytes": 16
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 288,
+          "raw_bytes": 300,
+          "raw_delta_vs_source": 12,
+          "scale_bytes": 12
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 256,
+          "raw_bytes": 264,
+          "raw_delta_vs_source": -24,
+          "scale_bytes": 8
+        }
+      ],
+      "group": "shared_trunk.down_conv",
+      "name": "shared_trunk.down_conv.dw.weight",
+      "numel": 504,
+      "risk_class": "high_risk_pose_or_shared",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 256,
+        "raw_bytes": 288,
+        "scale_bytes": 32
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 1800,
+          "raw_bytes": 1950,
+          "raw_delta_vs_source": -66,
+          "scale_bytes": 150
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 1792,
+          "raw_bytes": 1904,
+          "raw_delta_vs_source": -112,
+          "scale_bytes": 112
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 1824,
+          "raw_bytes": 1900,
+          "raw_delta_vs_source": -116,
+          "scale_bytes": 76
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 1792,
+          "raw_bytes": 1848,
+          "raw_delta_vs_source": -168,
+          "scale_bytes": 56
+        }
+      ],
+      "group": "shared_trunk.down_conv",
+      "name": "shared_trunk.down_conv.pw.weight",
+      "numel": 3584,
+      "risk_class": "high_risk_pose_or_shared",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 1792,
+        "raw_bytes": 2016,
+        "scale_bytes": 224
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 288,
+          "raw_bytes": 312,
+          "raw_delta_vs_source": -12,
+          "scale_bytes": 24
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 288,
+          "raw_bytes": 306,
+          "raw_delta_vs_source": -18,
+          "scale_bytes": 18
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 288,
+          "raw_bytes": 300,
+          "raw_delta_vs_source": -24,
+          "scale_bytes": 12
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 320,
+          "raw_bytes": 330,
+          "raw_delta_vs_source": 6,
+          "scale_bytes": 10
+        }
+      ],
+      "group": "shared_trunk.down_block",
+      "name": "shared_trunk.down_block.conv1.dw.weight",
+      "numel": 576,
+      "risk_class": "high_risk_pose_or_shared",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 288,
+        "raw_bytes": 324,
+        "scale_bytes": 36
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 2064,
+          "raw_bytes": 2236,
+          "raw_delta_vs_source": -68,
+          "scale_bytes": 172
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 2048,
+          "raw_bytes": 2176,
+          "raw_delta_vs_source": -128,
+          "scale_bytes": 128
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 2064,
+          "raw_bytes": 2150,
+          "raw_delta_vs_source": -154,
+          "scale_bytes": 86
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 2048,
+          "raw_bytes": 2112,
+          "raw_delta_vs_source": -192,
+          "scale_bytes": 64
+        }
+      ],
+      "group": "shared_trunk.down_block",
+      "name": "shared_trunk.down_block.conv1.pw.weight",
+      "numel": 4096,
+      "risk_class": "high_risk_pose_or_shared",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 2048,
+        "raw_bytes": 2304,
+        "scale_bytes": 256
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 288,
+          "raw_bytes": 312,
+          "raw_delta_vs_source": -12,
+          "scale_bytes": 24
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 288,
+          "raw_bytes": 306,
+          "raw_delta_vs_source": -18,
+          "scale_bytes": 18
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 288,
+          "raw_bytes": 300,
+          "raw_delta_vs_source": -24,
+          "scale_bytes": 12
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 320,
+          "raw_bytes": 330,
+          "raw_delta_vs_source": 6,
+          "scale_bytes": 10
+        }
+      ],
+      "group": "shared_trunk.down_block",
+      "name": "shared_trunk.down_block.conv2.dw.weight",
+      "numel": 576,
+      "risk_class": "high_risk_pose_or_shared",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 288,
+        "raw_bytes": 324,
+        "scale_bytes": 36
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 2064,
+          "raw_bytes": 2236,
+          "raw_delta_vs_source": -68,
+          "scale_bytes": 172
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 2048,
+          "raw_bytes": 2176,
+          "raw_delta_vs_source": -128,
+          "scale_bytes": 128
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 2064,
+          "raw_bytes": 2150,
+          "raw_delta_vs_source": -154,
+          "scale_bytes": 86
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 2048,
+          "raw_bytes": 2112,
+          "raw_delta_vs_source": -192,
+          "scale_bytes": 64
+        }
+      ],
+      "group": "shared_trunk.down_block",
+      "name": "shared_trunk.down_block.conv2.pw.weight",
+      "numel": 4096,
+      "risk_class": "high_risk_pose_or_shared",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 2048,
+        "raw_bytes": 2304,
+        "scale_bytes": 256
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 288,
+          "raw_bytes": 312,
+          "raw_delta_vs_source": -12,
+          "scale_bytes": 24
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 288,
+          "raw_bytes": 306,
+          "raw_delta_vs_source": -18,
+          "scale_bytes": 18
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 288,
+          "raw_bytes": 300,
+          "raw_delta_vs_source": -24,
+          "scale_bytes": 12
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 320,
+          "raw_bytes": 330,
+          "raw_delta_vs_source": 6,
+          "scale_bytes": 10
+        }
+      ],
+      "group": "shared_trunk.up",
+      "name": "shared_trunk.up.1.dw.weight",
+      "numel": 576,
+      "risk_class": "high_risk_pose_or_shared",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 288,
+        "raw_bytes": 324,
+        "scale_bytes": 36
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 1800,
+          "raw_bytes": 1950,
+          "raw_delta_vs_source": -66,
+          "scale_bytes": 150
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 1792,
+          "raw_bytes": 1904,
+          "raw_delta_vs_source": -112,
+          "scale_bytes": 112
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 1824,
+          "raw_bytes": 1900,
+          "raw_delta_vs_source": -116,
+          "scale_bytes": 76
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 1792,
+          "raw_bytes": 1848,
+          "raw_delta_vs_source": -168,
+          "scale_bytes": 56
+        }
+      ],
+      "group": "shared_trunk.up",
+      "name": "shared_trunk.up.1.pw.weight",
+      "numel": 3584,
+      "risk_class": "high_risk_pose_or_shared",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 1792,
+        "raw_bytes": 2016,
+        "scale_bytes": 224
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 504,
+          "raw_bytes": 546,
+          "raw_delta_vs_source": -30,
+          "scale_bytes": 42
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 512,
+          "raw_bytes": 544,
+          "raw_delta_vs_source": -32,
+          "scale_bytes": 32
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 528,
+          "raw_bytes": 550,
+          "raw_delta_vs_source": -26,
+          "scale_bytes": 22
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 512,
+          "raw_bytes": 528,
+          "raw_delta_vs_source": -48,
+          "scale_bytes": 16
+        }
+      ],
+      "group": "shared_trunk.fuse",
+      "name": "shared_trunk.fuse.dw.weight",
+      "numel": 1008,
+      "risk_class": "high_risk_pose_or_shared",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 512,
+        "raw_bytes": 576,
+        "scale_bytes": 64
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 3144,
+          "raw_bytes": 3406,
+          "raw_delta_vs_source": -122,
+          "scale_bytes": 262
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 3136,
+          "raw_bytes": 3332,
+          "raw_delta_vs_source": -196,
+          "scale_bytes": 196
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 3168,
+          "raw_bytes": 3300,
+          "raw_delta_vs_source": -228,
+          "scale_bytes": 132
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 3136,
+          "raw_bytes": 3234,
+          "raw_delta_vs_source": -294,
+          "scale_bytes": 98
+        }
+      ],
+      "group": "shared_trunk.fuse",
+      "name": "shared_trunk.fuse.pw.weight",
+      "numel": 6272,
+      "risk_class": "high_risk_pose_or_shared",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 3136,
+        "raw_bytes": 3528,
+        "scale_bytes": 392
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 264,
+          "raw_bytes": 286,
+          "raw_delta_vs_source": -2,
+          "scale_bytes": 22
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 256,
+          "raw_bytes": 272,
+          "raw_delta_vs_source": -16,
+          "scale_bytes": 16
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 288,
+          "raw_bytes": 300,
+          "raw_delta_vs_source": 12,
+          "scale_bytes": 12
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 256,
+          "raw_bytes": 264,
+          "raw_delta_vs_source": -24,
+          "scale_bytes": 8
+        }
+      ],
+      "group": "shared_trunk.fuse_block",
+      "name": "shared_trunk.fuse_block.conv1.dw.weight",
+      "numel": 504,
+      "risk_class": "high_risk_pose_or_shared",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 256,
+        "raw_bytes": 288,
+        "scale_bytes": 32
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 1584,
+          "raw_bytes": 1716,
+          "raw_delta_vs_source": -48,
+          "scale_bytes": 132
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 1568,
+          "raw_bytes": 1666,
+          "raw_delta_vs_source": -98,
+          "scale_bytes": 98
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 1584,
+          "raw_bytes": 1650,
+          "raw_delta_vs_source": -114,
+          "scale_bytes": 66
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 1600,
+          "raw_bytes": 1650,
+          "raw_delta_vs_source": -114,
+          "scale_bytes": 50
+        }
+      ],
+      "group": "shared_trunk.fuse_block",
+      "name": "shared_trunk.fuse_block.conv1.pw.weight",
+      "numel": 3136,
+      "risk_class": "high_risk_pose_or_shared",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 1568,
+        "raw_bytes": 1764,
+        "scale_bytes": 196
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 264,
+          "raw_bytes": 286,
+          "raw_delta_vs_source": -2,
+          "scale_bytes": 22
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 256,
+          "raw_bytes": 272,
+          "raw_delta_vs_source": -16,
+          "scale_bytes": 16
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 288,
+          "raw_bytes": 300,
+          "raw_delta_vs_source": 12,
+          "scale_bytes": 12
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 256,
+          "raw_bytes": 264,
+          "raw_delta_vs_source": -24,
+          "scale_bytes": 8
+        }
+      ],
+      "group": "shared_trunk.fuse_block",
+      "name": "shared_trunk.fuse_block.conv2.dw.weight",
+      "numel": 504,
+      "risk_class": "high_risk_pose_or_shared",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 256,
+        "raw_bytes": 288,
+        "scale_bytes": 32
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 1584,
+          "raw_bytes": 1716,
+          "raw_delta_vs_source": -48,
+          "scale_bytes": 132
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 1568,
+          "raw_bytes": 1666,
+          "raw_delta_vs_source": -98,
+          "scale_bytes": 98
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 1584,
+          "raw_bytes": 1650,
+          "raw_delta_vs_source": -114,
+          "scale_bytes": 66
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 1600,
+          "raw_bytes": 1650,
+          "raw_delta_vs_source": -114,
+          "scale_bytes": 50
+        }
+      ],
+      "group": "shared_trunk.fuse_block",
+      "name": "shared_trunk.fuse_block.conv2.pw.weight",
+      "numel": 3136,
+      "risk_class": "high_risk_pose_or_shared",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 1568,
+        "raw_bytes": 1764,
+        "scale_bytes": 196
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 264,
+          "raw_bytes": 286,
+          "raw_delta_vs_source": -2,
+          "scale_bytes": 22
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 256,
+          "raw_bytes": 272,
+          "raw_delta_vs_source": -16,
+          "scale_bytes": 16
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 288,
+          "raw_bytes": 300,
+          "raw_delta_vs_source": 12,
+          "scale_bytes": 12
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 256,
+          "raw_bytes": 264,
+          "raw_delta_vs_source": -24,
+          "scale_bytes": 8
+        }
+      ],
+      "group": "frame1_head.block1",
+      "name": "frame1_head.block1.conv1.dw.weight",
+      "numel": 504,
+      "risk_class": "high_risk_pose_or_shared",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 256,
+        "raw_bytes": 288,
+        "scale_bytes": 32
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 1584,
+          "raw_bytes": 1716,
+          "raw_delta_vs_source": -48,
+          "scale_bytes": 132
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 1568,
+          "raw_bytes": 1666,
+          "raw_delta_vs_source": -98,
+          "scale_bytes": 98
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 1584,
+          "raw_bytes": 1650,
+          "raw_delta_vs_source": -114,
+          "scale_bytes": 66
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 1600,
+          "raw_bytes": 1650,
+          "raw_delta_vs_source": -114,
+          "scale_bytes": 50
+        }
+      ],
+      "group": "frame1_head.block1",
+      "name": "frame1_head.block1.conv1.pw.weight",
+      "numel": 3136,
+      "risk_class": "high_risk_pose_or_shared",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 1568,
+        "raw_bytes": 1764,
+        "scale_bytes": 196
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 264,
+          "raw_bytes": 286,
+          "raw_delta_vs_source": -2,
+          "scale_bytes": 22
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 256,
+          "raw_bytes": 272,
+          "raw_delta_vs_source": -16,
+          "scale_bytes": 16
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 288,
+          "raw_bytes": 300,
+          "raw_delta_vs_source": 12,
+          "scale_bytes": 12
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 256,
+          "raw_bytes": 264,
+          "raw_delta_vs_source": -24,
+          "scale_bytes": 8
+        }
+      ],
+      "group": "frame1_head.block1",
+      "name": "frame1_head.block1.conv2.dw.weight",
+      "numel": 504,
+      "risk_class": "high_risk_pose_or_shared",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 256,
+        "raw_bytes": 288,
+        "scale_bytes": 32
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 1584,
+          "raw_bytes": 1716,
+          "raw_delta_vs_source": -48,
+          "scale_bytes": 132
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 1568,
+          "raw_bytes": 1666,
+          "raw_delta_vs_source": -98,
+          "scale_bytes": 98
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 1584,
+          "raw_bytes": 1650,
+          "raw_delta_vs_source": -114,
+          "scale_bytes": 66
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 1600,
+          "raw_bytes": 1650,
+          "raw_delta_vs_source": -114,
+          "scale_bytes": 50
+        }
+      ],
+      "group": "frame1_head.block1",
+      "name": "frame1_head.block1.conv2.pw.weight",
+      "numel": 3136,
+      "risk_class": "high_risk_pose_or_shared",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 1568,
+        "raw_bytes": 1764,
+        "scale_bytes": 196
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 264,
+          "raw_bytes": 286,
+          "raw_delta_vs_source": -2,
+          "scale_bytes": 22
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 256,
+          "raw_bytes": 272,
+          "raw_delta_vs_source": -16,
+          "scale_bytes": 16
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 288,
+          "raw_bytes": 300,
+          "raw_delta_vs_source": 12,
+          "scale_bytes": 12
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 256,
+          "raw_bytes": 264,
+          "raw_delta_vs_source": -24,
+          "scale_bytes": 8
+        }
+      ],
+      "group": "frame1_head.block2",
+      "name": "frame1_head.block2.conv1.dw.weight",
+      "numel": 504,
+      "risk_class": "high_risk_pose_or_shared",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 256,
+        "raw_bytes": 288,
+        "scale_bytes": 32
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 1584,
+          "raw_bytes": 1716,
+          "raw_delta_vs_source": -48,
+          "scale_bytes": 132
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 1568,
+          "raw_bytes": 1666,
+          "raw_delta_vs_source": -98,
+          "scale_bytes": 98
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 1584,
+          "raw_bytes": 1650,
+          "raw_delta_vs_source": -114,
+          "scale_bytes": 66
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 1600,
+          "raw_bytes": 1650,
+          "raw_delta_vs_source": -114,
+          "scale_bytes": 50
+        }
+      ],
+      "group": "frame1_head.block2",
+      "name": "frame1_head.block2.conv1.pw.weight",
+      "numel": 3136,
+      "risk_class": "high_risk_pose_or_shared",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 1568,
+        "raw_bytes": 1764,
+        "scale_bytes": 196
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 264,
+          "raw_bytes": 286,
+          "raw_delta_vs_source": -2,
+          "scale_bytes": 22
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 256,
+          "raw_bytes": 272,
+          "raw_delta_vs_source": -16,
+          "scale_bytes": 16
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 288,
+          "raw_bytes": 300,
+          "raw_delta_vs_source": 12,
+          "scale_bytes": 12
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 256,
+          "raw_bytes": 264,
+          "raw_delta_vs_source": -24,
+          "scale_bytes": 8
+        }
+      ],
+      "group": "frame1_head.block2",
+      "name": "frame1_head.block2.conv2.dw.weight",
+      "numel": 504,
+      "risk_class": "high_risk_pose_or_shared",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 256,
+        "raw_bytes": 288,
+        "scale_bytes": 32
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 1584,
+          "raw_bytes": 1716,
+          "raw_delta_vs_source": -48,
+          "scale_bytes": 132
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 1568,
+          "raw_bytes": 1666,
+          "raw_delta_vs_source": -98,
+          "scale_bytes": 98
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 1584,
+          "raw_bytes": 1650,
+          "raw_delta_vs_source": -114,
+          "scale_bytes": 66
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 1600,
+          "raw_bytes": 1650,
+          "raw_delta_vs_source": -114,
+          "scale_bytes": 50
+        }
+      ],
+      "group": "frame1_head.block2",
+      "name": "frame1_head.block2.conv2.pw.weight",
+      "numel": 3136,
+      "risk_class": "high_risk_pose_or_shared",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 1568,
+        "raw_bytes": 1764,
+        "scale_bytes": 196
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 264,
+          "raw_bytes": 286,
+          "raw_delta_vs_source": -2,
+          "scale_bytes": 22
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 256,
+          "raw_bytes": 272,
+          "raw_delta_vs_source": -16,
+          "scale_bytes": 16
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 288,
+          "raw_bytes": 300,
+          "raw_delta_vs_source": 12,
+          "scale_bytes": 12
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 256,
+          "raw_bytes": 264,
+          "raw_delta_vs_source": -24,
+          "scale_bytes": 8
+        }
+      ],
+      "group": "frame1_head.pre",
+      "name": "frame1_head.pre.dw.weight",
+      "numel": 504,
+      "risk_class": "high_risk_pose_or_shared",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 256,
+        "raw_bytes": 288,
+        "scale_bytes": 32
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 1464,
+          "raw_bytes": 1586,
+          "raw_delta_vs_source": -52,
+          "scale_bytes": 122
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 1472,
+          "raw_bytes": 1564,
+          "raw_delta_vs_source": -74,
+          "scale_bytes": 92
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 1488,
+          "raw_bytes": 1550,
+          "raw_delta_vs_source": -88,
+          "scale_bytes": 62
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 1472,
+          "raw_bytes": 1518,
+          "raw_delta_vs_source": -120,
+          "scale_bytes": 46
+        }
+      ],
+      "group": "frame1_head.pre",
+      "name": "frame1_head.pre.pw.weight",
+      "numel": 2912,
+      "risk_class": "high_risk_pose_or_shared",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 1456,
+        "raw_bytes": 1638,
+        "scale_bytes": 182
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 264,
+          "raw_bytes": 286,
+          "raw_delta_vs_source": -2,
+          "scale_bytes": 22
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 256,
+          "raw_bytes": 272,
+          "raw_delta_vs_source": -16,
+          "scale_bytes": 16
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 288,
+          "raw_bytes": 300,
+          "raw_delta_vs_source": 12,
+          "scale_bytes": 12
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 256,
+          "raw_bytes": 264,
+          "raw_delta_vs_source": -24,
+          "scale_bytes": 8
+        }
+      ],
+      "group": "frame2_head.block1",
+      "name": "frame2_head.block1.conv1.dw.weight",
+      "numel": 504,
+      "risk_class": "low_risk_frame2_only",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 256,
+        "raw_bytes": 288,
+        "scale_bytes": 32
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 1584,
+          "raw_bytes": 1716,
+          "raw_delta_vs_source": -48,
+          "scale_bytes": 132
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 1568,
+          "raw_bytes": 1666,
+          "raw_delta_vs_source": -98,
+          "scale_bytes": 98
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 1584,
+          "raw_bytes": 1650,
+          "raw_delta_vs_source": -114,
+          "scale_bytes": 66
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 1600,
+          "raw_bytes": 1650,
+          "raw_delta_vs_source": -114,
+          "scale_bytes": 50
+        }
+      ],
+      "group": "frame2_head.block1",
+      "name": "frame2_head.block1.conv1.pw.weight",
+      "numel": 3136,
+      "risk_class": "low_risk_frame2_only",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 1568,
+        "raw_bytes": 1764,
+        "scale_bytes": 196
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 264,
+          "raw_bytes": 286,
+          "raw_delta_vs_source": -2,
+          "scale_bytes": 22
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 256,
+          "raw_bytes": 272,
+          "raw_delta_vs_source": -16,
+          "scale_bytes": 16
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 288,
+          "raw_bytes": 300,
+          "raw_delta_vs_source": 12,
+          "scale_bytes": 12
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 256,
+          "raw_bytes": 264,
+          "raw_delta_vs_source": -24,
+          "scale_bytes": 8
+        }
+      ],
+      "group": "frame2_head.block1",
+      "name": "frame2_head.block1.conv2.dw.weight",
+      "numel": 504,
+      "risk_class": "low_risk_frame2_only",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 256,
+        "raw_bytes": 288,
+        "scale_bytes": 32
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 1584,
+          "raw_bytes": 1716,
+          "raw_delta_vs_source": -48,
+          "scale_bytes": 132
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 1568,
+          "raw_bytes": 1666,
+          "raw_delta_vs_source": -98,
+          "scale_bytes": 98
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 1584,
+          "raw_bytes": 1650,
+          "raw_delta_vs_source": -114,
+          "scale_bytes": 66
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 1600,
+          "raw_bytes": 1650,
+          "raw_delta_vs_source": -114,
+          "scale_bytes": 50
+        }
+      ],
+      "group": "frame2_head.block1",
+      "name": "frame2_head.block1.conv2.pw.weight",
+      "numel": 3136,
+      "risk_class": "low_risk_frame2_only",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 1568,
+        "raw_bytes": 1764,
+        "scale_bytes": 196
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 264,
+          "raw_bytes": 286,
+          "raw_delta_vs_source": -2,
+          "scale_bytes": 22
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 256,
+          "raw_bytes": 272,
+          "raw_delta_vs_source": -16,
+          "scale_bytes": 16
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 288,
+          "raw_bytes": 300,
+          "raw_delta_vs_source": 12,
+          "scale_bytes": 12
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 256,
+          "raw_bytes": 264,
+          "raw_delta_vs_source": -24,
+          "scale_bytes": 8
+        }
+      ],
+      "group": "frame2_head.block2",
+      "name": "frame2_head.block2.conv1.dw.weight",
+      "numel": 504,
+      "risk_class": "low_risk_frame2_only",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 256,
+        "raw_bytes": 288,
+        "scale_bytes": 32
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 1584,
+          "raw_bytes": 1716,
+          "raw_delta_vs_source": -48,
+          "scale_bytes": 132
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 1568,
+          "raw_bytes": 1666,
+          "raw_delta_vs_source": -98,
+          "scale_bytes": 98
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 1584,
+          "raw_bytes": 1650,
+          "raw_delta_vs_source": -114,
+          "scale_bytes": 66
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 1600,
+          "raw_bytes": 1650,
+          "raw_delta_vs_source": -114,
+          "scale_bytes": 50
+        }
+      ],
+      "group": "frame2_head.block2",
+      "name": "frame2_head.block2.conv1.pw.weight",
+      "numel": 3136,
+      "risk_class": "low_risk_frame2_only",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 1568,
+        "raw_bytes": 1764,
+        "scale_bytes": 196
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 264,
+          "raw_bytes": 286,
+          "raw_delta_vs_source": -2,
+          "scale_bytes": 22
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 256,
+          "raw_bytes": 272,
+          "raw_delta_vs_source": -16,
+          "scale_bytes": 16
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 288,
+          "raw_bytes": 300,
+          "raw_delta_vs_source": 12,
+          "scale_bytes": 12
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 256,
+          "raw_bytes": 264,
+          "raw_delta_vs_source": -24,
+          "scale_bytes": 8
+        }
+      ],
+      "group": "frame2_head.block2",
+      "name": "frame2_head.block2.conv2.dw.weight",
+      "numel": 504,
+      "risk_class": "low_risk_frame2_only",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 256,
+        "raw_bytes": 288,
+        "scale_bytes": 32
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 1584,
+          "raw_bytes": 1716,
+          "raw_delta_vs_source": -48,
+          "scale_bytes": 132
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 1568,
+          "raw_bytes": 1666,
+          "raw_delta_vs_source": -98,
+          "scale_bytes": 98
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 1584,
+          "raw_bytes": 1650,
+          "raw_delta_vs_source": -114,
+          "scale_bytes": 66
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 1600,
+          "raw_bytes": 1650,
+          "raw_delta_vs_source": -114,
+          "scale_bytes": 50
+        }
+      ],
+      "group": "frame2_head.block2",
+      "name": "frame2_head.block2.conv2.pw.weight",
+      "numel": 3136,
+      "risk_class": "low_risk_frame2_only",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 1568,
+        "raw_bytes": 1764,
+        "scale_bytes": 196
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 264,
+          "raw_bytes": 286,
+          "raw_delta_vs_source": -2,
+          "scale_bytes": 22
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 256,
+          "raw_bytes": 272,
+          "raw_delta_vs_source": -16,
+          "scale_bytes": 16
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 288,
+          "raw_bytes": 300,
+          "raw_delta_vs_source": 12,
+          "scale_bytes": 12
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 256,
+          "raw_bytes": 264,
+          "raw_delta_vs_source": -24,
+          "scale_bytes": 8
+        }
+      ],
+      "group": "frame2_head.pre",
+      "name": "frame2_head.pre.dw.weight",
+      "numel": 504,
+      "risk_class": "low_risk_frame2_only",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 256,
+        "raw_bytes": 288,
+        "scale_bytes": 32
+      }
+    },
+    {
+      "candidates": [
+        {
+          "block_size": 48,
+          "packed_bytes": 1464,
+          "raw_bytes": 1586,
+          "raw_delta_vs_source": -52,
+          "scale_bytes": 122
+        },
+        {
+          "block_size": 64,
+          "packed_bytes": 1472,
+          "raw_bytes": 1564,
+          "raw_delta_vs_source": -74,
+          "scale_bytes": 92
+        },
+        {
+          "block_size": 96,
+          "packed_bytes": 1488,
+          "raw_bytes": 1550,
+          "raw_delta_vs_source": -88,
+          "scale_bytes": 62
+        },
+        {
+          "block_size": 128,
+          "packed_bytes": 1472,
+          "raw_bytes": 1518,
+          "raw_delta_vs_source": -120,
+          "scale_bytes": 46
+        }
+      ],
+      "group": "frame2_head.pre",
+      "name": "frame2_head.pre.pw.weight",
+      "numel": 2912,
+      "risk_class": "low_risk_frame2_only",
+      "source": {
+        "block_size": 32,
+        "packed_bytes": 1456,
+        "raw_bytes": 1638,
+        "scale_bytes": 182
+      }
+    }
+  ],
+  "schema": "renderer_group_allocator_tensor_profile_v1",
+  "source_archive": {
+    "bytes": 276342,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/archive.zip",
+    "sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8"
+  },
+  "source_renderer": {
+    "block_size": 32,
+    "bytes": 59288,
+    "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+  }
+}

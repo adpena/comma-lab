@@ -1,0 +1,194 @@
+{
+  "best": {
+    "bytes": 219465,
+    "codec": "brotli",
+    "delta_bytes_vs_source": -7,
+    "params": {
+      "lgblock": 17,
+      "lgwin": 19,
+      "mode": 0,
+      "quality": 11
+    },
+    "roundtrip_equal": true,
+    "sha256": "1ddf03dad8466797397ead26a0d481766e22e26cbc936251c1e3ed5d2f6eda99"
+  },
+  "best_savings_bytes": 7,
+  "decoded_mask_obu_bytes": 223385,
+  "decoded_mask_obu_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+  "dispatch_implication": "The only exact-lossless mask-stream win in this focused grid is too small for fixed-slice public payloads because the runtime fixed-slice parser assumes a 219472-byte mask segment; self-describing P3/P6 payloads can consume the shorter stream but pay their existing header overhead.",
+  "probe_count": 15,
+  "rows": [
+    {
+      "bytes": 219465,
+      "codec": "brotli",
+      "delta_bytes_vs_source": -7,
+      "params": {
+        "lgblock": 17,
+        "lgwin": 19,
+        "mode": 0,
+        "quality": 11
+      },
+      "roundtrip_equal": true,
+      "sha256": "1ddf03dad8466797397ead26a0d481766e22e26cbc936251c1e3ed5d2f6eda99"
+    },
+    {
+      "bytes": 219465,
+      "codec": "brotli",
+      "delta_bytes_vs_source": -7,
+      "params": {
+        "lgblock": 17,
+        "lgwin": 19,
+        "mode": 1,
+        "quality": 11
+      },
+      "roundtrip_equal": true,
+      "sha256": "1ddf03dad8466797397ead26a0d481766e22e26cbc936251c1e3ed5d2f6eda99"
+    },
+    {
+      "bytes": 219470,
+      "codec": "brotli",
+      "delta_bytes_vs_source": -2,
+      "params": {
+        "lgblock": 17,
+        "lgwin": 19,
+        "mode": 2,
+        "quality": 11
+      },
+      "roundtrip_equal": true,
+      "sha256": "03533914d6d846c3c4a8b8d73325810c41cf77c283816f2d6855c245d004a8ce"
+    },
+    {
+      "bytes": 219472,
+      "codec": "brotli",
+      "delta_bytes_vs_source": 0,
+      "params": {
+        "lgblock": 0,
+        "lgwin": 24,
+        "mode": 0,
+        "quality": 11
+      },
+      "roundtrip_equal": true,
+      "sha256": "b59080359dbf18277d66a03d8105c3ff0df807cc49b396ce736ee5057da28ce0"
+    },
+    {
+      "bytes": 219472,
+      "codec": "source_brotli",
+      "delta_bytes_vs_source": 0,
+      "params": "source",
+      "roundtrip_equal": true,
+      "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+    },
+    {
+      "bytes": 219686,
+      "codec": "brotli",
+      "delta_bytes_vs_source": 214,
+      "params": {
+        "lgblock": 17,
+        "lgwin": 19,
+        "mode": 0,
+        "quality": 10
+      },
+      "roundtrip_equal": true,
+      "sha256": "66a7bc88a40295017ce18b30cc91f827c745a7e1bb138aa7cd64a227a9d01a20"
+    },
+    {
+      "bytes": 220111,
+      "codec": "brotli",
+      "delta_bytes_vs_source": 639,
+      "params": {
+        "lgblock": 0,
+        "lgwin": 16,
+        "mode": 0,
+        "quality": 11
+      },
+      "roundtrip_equal": true,
+      "sha256": "5145bb841d4520a28dd02ff1aa9ec3f5906a0f6c08cb7ff8513da8f94f7c2a46"
+    },
+    {
+      "bytes": 220355,
+      "codec": "brotli",
+      "delta_bytes_vs_source": 883,
+      "params": {
+        "lgblock": 17,
+        "lgwin": 19,
+        "mode": 0,
+        "quality": 9
+      },
+      "roundtrip_equal": true,
+      "sha256": "499004ddec876a3e914e40d11eda8d79764dfe25e439f47921cd55210622aaa0"
+    },
+    {
+      "bytes": 221062,
+      "codec": "bz2_9",
+      "delta_bytes_vs_source": 1590,
+      "params": "default_max",
+      "roundtrip_equal": true,
+      "sha256": "4d0464c07bccdfff329bbb0230aca4efd3a609993dc901ac96288d0a2a851dc5"
+    },
+    {
+      "bytes": 222204,
+      "codec": "lzma_preset9",
+      "delta_bytes_vs_source": 2732,
+      "params": "default_max",
+      "roundtrip_equal": true,
+      "sha256": "a409b710c40606f3536153ef226a41af43556f2006f73ad02d55e000eb7a2714"
+    },
+    {
+      "bytes": 222226,
+      "codec": "zlib_9",
+      "delta_bytes_vs_source": 2754,
+      "params": "default_max",
+      "roundtrip_equal": true,
+      "sha256": "34d1b2e1cdeb54b1e1fe09be7142e2a5f15a5f7dc34c3beed3d62e646d812b6a"
+    },
+    {
+      "bytes": 223385,
+      "codec": "raw_obu",
+      "delta_bytes_vs_source": 3913,
+      "params": "none",
+      "roundtrip_equal": true,
+      "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+    },
+    {
+      "bytes": 223390,
+      "codec": "brotli",
+      "delta_bytes_vs_source": 3918,
+      "params": {
+        "lgblock": 17,
+        "lgwin": 19,
+        "mode": 0,
+        "quality": 6
+      },
+      "roundtrip_equal": true,
+      "sha256": "2c7cfc47706f0b7bf21fc1fa93d5fd13a46c5c333fd5513dccdbf18c6fcde4e4"
+    },
+    {
+      "bytes": 223390,
+      "codec": "brotli",
+      "delta_bytes_vs_source": 3918,
+      "params": {
+        "lgblock": 17,
+        "lgwin": 19,
+        "mode": 0,
+        "quality": 4
+      },
+      "roundtrip_equal": true,
+      "sha256": "2c7cfc47706f0b7bf21fc1fa93d5fd13a46c5c333fd5513dccdbf18c6fcde4e4"
+    },
+    {
+      "bytes": 223390,
+      "codec": "brotli",
+      "delta_bytes_vs_source": 3918,
+      "params": {
+        "lgblock": 17,
+        "lgwin": 19,
+        "mode": 0,
+        "quality": 0
+      },
+      "roundtrip_equal": true,
+      "sha256": "2c7cfc47706f0b7bf21fc1fa93d5fd13a46c5c333fd5513dccdbf18c6fcde4e4"
+    }
+  ],
+  "source_mask_brotli_bytes": 219472,
+  "source_mask_brotli_sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+}

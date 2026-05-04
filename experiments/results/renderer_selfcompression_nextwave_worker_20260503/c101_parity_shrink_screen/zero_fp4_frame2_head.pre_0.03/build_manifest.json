@@ -1,0 +1,158 @@
+{
+  "candidate_id": "zero_fp4_frame2_head.pre_0.03",
+  "evidence_grade": "empirical_archive_candidate_until_pose_safety_and_exact_cuda",
+  "non_renderer_preservation": {
+    "all_non_renderer_members_preserved": true,
+    "members": {
+      "masks.mkv": {
+        "bytes": 223385,
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      "optimized_poses.qp1": {
+        "bytes": 1140,
+        "sha256": "d3f467b734f7d34e5608521b967bcb153e76fa3938b1e8f86b893f359c2d828b"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 432,
+        "sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a"
+      }
+    }
+  },
+  "output_archive": {
+    "byte_only_crosses_target": false,
+    "bytes": 276470,
+    "delta_bytes_vs_source_archive": -19,
+    "formula_only_rate_delta_vs_source_archive": -1.2651320109321255e-05,
+    "frontier_score_if_only_bytes_change": 0.315485313741316,
+    "frontier_score_target": 0.314,
+    "path": "/Users/adpena/Projects/pact/experiments/results/renderer_selfcompression_nextwave_worker_20260503/c101_parity_shrink_screen/zero_fp4_frame2_head.pre_0.03/archive.zip",
+    "sha256": "82e18cc5dcf071d4d137127d0c980e80a9470219b455aae81f88b59c5253ef8c"
+  },
+  "payload": {
+    "action_dict_slice_bytes": 0,
+    "actions_slice_bytes": 255,
+    "bytes": 276370,
+    "mask_slice_bytes": 219472,
+    "member_name": "p",
+    "payload_format": "pr75_p3_preserve_slices",
+    "pose_slice_bytes": 896,
+    "record_count": null,
+    "renderer_slice_bytes": 55737,
+    "renderer_slice_sha256": "4270db7d627b3ba829a0d78b6d2e6b680b82b86c9678a91f06f66c8dfa486bc8",
+    "sha256": "e72ffb82d710b5a9fb9b2457dfa118302e24afdc222dbc9e4bcafb4efa5030af",
+    "source_payload_format": "P3"
+  },
+  "promotion_eligible": false,
+  "renderer_transform": {
+    "changed_tensor_count": 2,
+    "changed_tensors": [
+      {
+        "max_abs": 0.6328125,
+        "name": "frame2_head.pre.dw.weight",
+        "numel": 504,
+        "zeroed_fraction": 0.051587301587301584,
+        "zeroed_values": 26
+      },
+      {
+        "max_abs": 0.83056640625,
+        "name": "frame2_head.pre.pw.weight",
+        "numel": 2912,
+        "zeroed_fraction": 0.1311813186813187,
+        "zeroed_values": 382
+      }
+    ],
+    "eligible_value_count": 3416,
+    "output_block_size": 32,
+    "output_bytes": 59288,
+    "output_sha256": "9cbae7fbef1baf9b0c07b292525ac809abc9a17401509b235f31916d897712bc",
+    "prefix": "frame2_head.pre",
+    "source_block_size": 32,
+    "source_bytes": 59288,
+    "source_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+    "threshold_fraction_of_tensor_max_abs": 0.03,
+    "transform_family": "qzs3_same_block_fp4_threshold_zero",
+    "wire_format": "QZS3",
+    "zeroed_fraction_of_eligible": 0.11943793911007025,
+    "zeroed_value_count": 408
+  },
+  "runtime_contract": {
+    "byte_closed": true,
+    "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+    "pose_safety_preflight_required_before_dispatch": true,
+    "remote_gpu_dispatch_performed": false,
+    "renderer_only_transplant": true,
+    "runtime_unpack_summary": {
+      "members": [
+        {
+          "bytes": 59288,
+          "name": "renderer.bin",
+          "sha256": "9cbae7fbef1baf9b0c07b292525ac809abc9a17401509b235f31916d897712bc"
+        },
+        {
+          "bytes": 223385,
+          "name": "masks.mkv",
+          "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        {
+          "bytes": 1140,
+          "name": "optimized_poses.qp1",
+          "sha256": "d3f467b734f7d34e5608521b967bcb153e76fa3938b1e8f86b893f359c2d828b"
+        },
+        {
+          "bytes": 432,
+          "name": "seg_tile_actions.bin",
+          "sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a"
+        }
+      ],
+      "payload_bytes": 276370,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p3",
+      "schema": "renderer_payload_pr64_len_table_v1",
+      "source_archive_sha256": null
+    },
+    "runtime_unpack_verified": true,
+    "single_payload_member": true
+  },
+  "schema": "renderer_parity_shrink_search_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 276489,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c091_native_pose_manifold_top128_s025_t4_20260503T122013Z/archive.zip",
+    "sha256": "1c9be2dd14b2607b9a86ecc071d6a37842896d18d62449885dac58d55afbbd64",
+    "source_archive_packaging": "packed_renderer_payload",
+    "source_logical_member_names": [
+      "renderer.bin",
+      "masks.mkv",
+      "optimized_poses.qp1",
+      "seg_tile_actions.bin"
+    ],
+    "source_payload_header_payload_format": "public_pr75_qzs3_qp1_segactions_p3",
+    "source_payload_header_schema": "renderer_payload_pr64_len_table_v1",
+    "source_payload_member": "p",
+    "source_payload_member_bytes": 276389,
+    "source_payload_member_sha256": "fc6a767cc4059b36437db6306f337a4afb21c981bb036a95a8d292ed7e4a6762",
+    "source_zip_members": [
+      "p"
+    ]
+  },
+  "source_evidence": {
+    "bytes": 36492,
+    "exists": true,
+    "json_parseable": true,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c091_native_pose_manifold_top128_s025_t4_20260503T122013Z/contest_auth_eval.adjudicated.json",
+    "sha256": "c48913abdd4bc14245ad2e0623556a0efcfee38ed99c5b187b084b3f3c077923",
+    "summary": {
+      "archive_size_bytes": 276489,
+      "avg_posenet_dist": 0.00049344,
+      "avg_segnet_dist": 0.00060804,
+      "canonical_score": 0.3151520345392486,
+      "n_samples": 600,
+      "provenance_archive_sha256": "1c9be2dd14b2607b9a86ecc071d6a37842896d18d62449885dac58d55afbbd64",
+      "provenance_archive_size_bytes": 276489,
+      "provenance_device": "cuda",
+      "provenance_gpu_model": "Tesla T4",
+      "score_recomputed_from_components": 0.3151520345392486
+    }
+  },
+  "tool": "experiments/search_renderer_parity_shrink_candidate.py",
+  "transform_spec": "zero-fp4-prefix:frame2_head.pre:0.03"
+}

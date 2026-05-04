@@ -1,0 +1,23 @@
+{
+  "artifacts": {
+    "candidate_manifest": "/Users/adpena/Projects/pact/experiments/results/pr75_qpost_microstack_worker_20260503/c089_p6_resweep_pr65_qpost_bias_top032/manifest.json",
+    "resweep_manifest": "/Users/adpena/Projects/pact/experiments/results/pr75_qpost_microstack_worker_20260503/c089_p6_lossless_resweep/manifest.json"
+  },
+  "best_candidate": {
+    "archive": "/Users/adpena/Projects/pact/experiments/results/pr75_qpost_microstack_worker_20260503/c089_p6_resweep_pr65_qpost_bias_top032/archive.zip",
+    "bytes": 276542,
+    "candidate_id": "c089_p6_resweep_pr65_qpost_bias_top032",
+    "dispatch_recommendation": "exact_cuda_eval_candidate_after_lane_claim",
+    "public_trace_opportunity_bound": 0.0017422633563209306,
+    "sha256": "3816340f572d21df56fa0ca00e64f51ae8e7f6b7556353d69c7a1453e6d3051f",
+    "sub314_break_even_component_gain": 0.0016038991859749138
+  },
+  "evidence_grade": "byte_trace_planning_only_until_exact_cuda",
+  "pr65_archive_sha256": "b331cb4f6df9d8929db966b943b8c73624cdf3b6db71acbde361570852e59e68",
+  "remote_dispatched": false,
+  "run_id": "pr75_qpost_microstack_worker_20260503",
+  "schema_version": 1,
+  "score_claim": false,
+  "source_archive_sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8",
+  "tool": "experiments/build_pr75_qpost_microstack_candidate.py"
+}

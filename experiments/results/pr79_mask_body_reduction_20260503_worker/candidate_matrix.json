@@ -1,0 +1,3079 @@
+{
+  "candidate_manifest_globs": [
+    "experiments/results/c067_micro_mask_reencode*/**/protected_mask_reencode_manifest.json"
+  ],
+  "candidate_manifest_paths_scanned": [
+    "experiments/results/c067_micro_mask_reencode_hardframes32_20260502/crf46/runtime_members/protected_mask_reencode_manifest.json",
+    "experiments/results/c067_micro_mask_reencode_hardframes32_20260502/crf52/runtime_members/protected_mask_reencode_manifest.json",
+    "experiments/results/c067_micro_mask_reencode_hardframes32_20260502/crf56/runtime_members/protected_mask_reencode_manifest.json",
+    "experiments/results/c067_micro_mask_reencode_hardframes32_20260502/crf58/runtime_members/protected_mask_reencode_manifest.json",
+    "experiments/results/c067_micro_mask_reencode_hardframes32_20260502/crf60/runtime_members/protected_mask_reencode_manifest.json",
+    "experiments/results/c067_micro_mask_reencode_hardframes32_20260502/crf62/runtime_members/protected_mask_reencode_manifest.json",
+    "experiments/results/c067_micro_mask_reencode_plan_20260502/builds/c067_micro_av1_mask_reencode_save05k/protected_mask_reencode_manifest.json",
+    "experiments/results/c067_micro_mask_reencode_plan_20260502/builds/c067_micro_av1_mask_reencode_save08k/protected_mask_reencode_manifest.json",
+    "experiments/results/c067_micro_mask_reencode_plan_20260502/builds/c067_micro_av1_mask_reencode_save12k/protected_mask_reencode_manifest.json",
+    "experiments/results/c067_micro_mask_reencode_threshold_ladder_20260503/save05k_crf50/protected_mask_reencode_manifest.json",
+    "experiments/results/c067_micro_mask_reencode_threshold_ladder_20260503/save05k_crf51/protected_mask_reencode_manifest.json",
+    "experiments/results/c067_micro_mask_reencode_threshold_ladder_20260503/save05k_crf52/protected_mask_reencode_manifest.json",
+    "experiments/results/c067_micro_mask_reencode_threshold_ladder_20260503/save05k_crf53/protected_mask_reencode_manifest.json",
+    "experiments/results/c067_micro_mask_reencode_threshold_ladder_20260503/save08k_crf51/protected_mask_reencode_manifest.json",
+    "experiments/results/c067_micro_mask_reencode_threshold_ladder_20260503/save08k_crf53/protected_mask_reencode_manifest.json",
+    "experiments/results/c067_micro_mask_reencode_threshold_ladder_20260503/save12k_crf53/protected_mask_reencode_manifest.json"
+  ],
+  "candidates": [
+    {
+      "archive_bytes": 134380,
+      "archive_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_hardframes32_20260502_crf62_runtime_members/archive.zip",
+      "archive_sha256": "0ef862d1a6f6298aa3906a5eda5ab6a440fb7b777f54292a2cd4202f00a0d251",
+      "candidate_id": "protected_c067_micro_mask_reencode_hardframes32_20260502_crf62_runtime_members",
+      "delta_bytes_vs_pr79": -143008,
+      "exact_eval_ready_after_lane_claim": false,
+      "manifest_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_hardframes32_20260502_crf62_runtime_members/manifest.json",
+      "mask_stream": {
+        "decoded_bytes": 70499,
+        "decoded_sha256": "4000f17413a16dbe58cb289fce00ec7f5cd272c3f2713cb503c311e8fa295ca0",
+        "delta_wire_bytes_vs_pr79_mask_slice": -148973,
+        "member": "masks.mkv",
+        "wire_brotli_params": {
+          "brotli_params": {
+            "lgwin": 18,
+            "mode": 2,
+            "quality": 11
+          },
+          "lossless_vs_candidate_mask_decoded": true,
+          "rpk1_raw_mask_member": true,
+          "unused_p3_brotli_wire_bytes": 62109
+        },
+        "wire_bytes": 70499,
+        "wire_sha256": "4000f17413a16dbe58cb289fce00ec7f5cd272c3f2713cb503c311e8fa295ca0"
+      },
+      "payload_format": "rpk1_json_raw_mkv_with_pr79_decoded_actions",
+      "plausibility_gate": {
+        "minimum_overall_argmax_agreement": 0.997,
+        "minimum_protected_argmax_agreement": 0.99,
+        "overall_argmax_agreement": 0.992566036648,
+        "passed": false,
+        "protected_argmax_agreement": 0.992808977763,
+        "reason": "protected-mask candidate is byte-valid but below local plausibility agreement thresholds"
+      },
+      "runtime_preflight": {
+        "archive_validation_errors": [],
+        "candidate_mask_decoded_sha256": "4000f17413a16dbe58cb289fce00ec7f5cd272c3f2713cb503c311e8fa295ca0",
+        "candidate_mask_sha_matches_expected": true,
+        "non_mask_runtime_member_checks": {
+          "actions_decoded_preserved": true,
+          "pose_decoded_preserved": true,
+          "renderer_decoded_preserved": true
+        },
+        "non_mask_runtime_members_preserved": true,
+        "payload_format": null,
+        "runtime_member_headers": {
+          "masks.mkv": {
+            "bytes": 70499,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "4000f17413a16dbe58cb289fce00ec7f5cd272c3f2713cb503c311e8fa295ca0"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 1140,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+          },
+          "renderer.bin": {
+            "bytes": 59288,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+          },
+          "seg_tile_actions.bin": {
+            "bytes": 2688,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f"
+          }
+        },
+        "runtime_parser": "submissions/robust_current/unpack_renderer_payload.py",
+        "runtime_parser_ok": true
+      },
+      "score_claim": false,
+      "source": {
+        "existing_manifest": {
+          "archive_path": "experiments/results/c067_micro_mask_reencode_hardframes32_20260502/crf62/runtime_members/archive.zip",
+          "manifest_path": "experiments/results/c067_micro_mask_reencode_hardframes32_20260502/crf62/runtime_members/protected_mask_reencode_manifest.json",
+          "manifest_sha256": "e6a8c5890c5a17fb056e1babccc46d54e879dfe00b30157bc0448f6a183c11b5",
+          "source_mask_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "kind": "existing_protected_mask_reencode_manifest",
+        "mask_agreement": {
+          "overall": {
+            "argmax_agreement": 0.992566036648,
+            "argmax_disagreement": 0.007433963352,
+            "candidate_shape": [
+              600,
+              384,
+              512
+            ],
+            "different_pixels": 876946,
+            "different_pixels_by_candidate_class": {
+              "0": 407982,
+              "1": 285185,
+              "2": 124519,
+              "3": 52147,
+              "4": 7113
+            },
+            "different_pixels_by_source_class": {
+              "0": 269071,
+              "1": 386061,
+              "2": 85725,
+              "3": 90233,
+              "4": 45856
+            },
+            "equal_pixels": 117087854,
+            "num_pixels": 117964800,
+            "residual_confusion_source_to_candidate": {
+              "0": {
+                "0": 0,
+                "1": 220748,
+                "2": 35381,
+                "3": 6927,
+                "4": 6015
+              },
+              "1": {
+                "0": 384297,
+                "1": 0,
+                "2": 1274,
+                "3": 296,
+                "4": 194
+              },
+              "2": {
+                "0": 14564,
+                "1": 48458,
+                "2": 0,
+                "3": 22672,
+                "4": 31
+              },
+              "3": {
+                "0": 2699,
+                "1": 10957,
+                "2": 75704,
+                "3": 0,
+                "4": 873
+              },
+              "4": {
+                "0": 6422,
+                "1": 5022,
+                "2": 12160,
+                "3": 22252,
+                "4": 0
+              }
+            },
+            "shape_match": true,
+            "source_shape": [
+              600,
+              384,
+              512
+            ]
+          },
+          "protected": {
+            "argmax_agreement": 0.992808977763,
+            "argmax_disagreement": 0.007191022237,
+            "different_pixels": 45242,
+            "num_pixels": 6291456
+          },
+          "unprotected": {
+            "argmax_agreement": 0.992552349825,
+            "argmax_disagreement": 0.007447650175,
+            "different_pixels": 831704,
+            "num_pixels": 111673344
+          }
+        }
+      }
+    },
+    {
+      "archive_bytes": 162756,
+      "archive_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_hardframes32_20260502_crf60_runtime_members/archive.zip",
+      "archive_sha256": "22a755d4b72e448b38fbc90a95b39bdbdb8b9f30dbf8070def63970cbfe1ded1",
+      "candidate_id": "protected_c067_micro_mask_reencode_hardframes32_20260502_crf60_runtime_members",
+      "delta_bytes_vs_pr79": -114632,
+      "exact_eval_ready_after_lane_claim": false,
+      "manifest_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_hardframes32_20260502_crf60_runtime_members/manifest.json",
+      "mask_stream": {
+        "decoded_bytes": 98875,
+        "decoded_sha256": "5d126e047bbb22a7702a7d7aecd1c955c416cb85d709b81dc6234eaa428e97c4",
+        "delta_wire_bytes_vs_pr79_mask_slice": -120597,
+        "member": "masks.mkv",
+        "wire_brotli_params": {
+          "brotli_params": {
+            "lgwin": 18,
+            "mode": 2,
+            "quality": 11
+          },
+          "lossless_vs_candidate_mask_decoded": true,
+          "rpk1_raw_mask_member": true,
+          "unused_p3_brotli_wire_bytes": 90719
+        },
+        "wire_bytes": 98875,
+        "wire_sha256": "5d126e047bbb22a7702a7d7aecd1c955c416cb85d709b81dc6234eaa428e97c4"
+      },
+      "payload_format": "rpk1_json_raw_mkv_with_pr79_decoded_actions",
+      "plausibility_gate": {
+        "minimum_overall_argmax_agreement": 0.997,
+        "minimum_protected_argmax_agreement": 0.99,
+        "overall_argmax_agreement": 0.994194200304,
+        "passed": false,
+        "protected_argmax_agreement": 0.994672934214,
+        "reason": "protected-mask candidate is byte-valid but below local plausibility agreement thresholds"
+      },
+      "runtime_preflight": {
+        "archive_validation_errors": [],
+        "candidate_mask_decoded_sha256": "5d126e047bbb22a7702a7d7aecd1c955c416cb85d709b81dc6234eaa428e97c4",
+        "candidate_mask_sha_matches_expected": true,
+        "non_mask_runtime_member_checks": {
+          "actions_decoded_preserved": true,
+          "pose_decoded_preserved": true,
+          "renderer_decoded_preserved": true
+        },
+        "non_mask_runtime_members_preserved": true,
+        "payload_format": null,
+        "runtime_member_headers": {
+          "masks.mkv": {
+            "bytes": 98875,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "5d126e047bbb22a7702a7d7aecd1c955c416cb85d709b81dc6234eaa428e97c4"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 1140,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+          },
+          "renderer.bin": {
+            "bytes": 59288,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+          },
+          "seg_tile_actions.bin": {
+            "bytes": 2688,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f"
+          }
+        },
+        "runtime_parser": "submissions/robust_current/unpack_renderer_payload.py",
+        "runtime_parser_ok": true
+      },
+      "score_claim": false,
+      "source": {
+        "existing_manifest": {
+          "archive_path": "experiments/results/c067_micro_mask_reencode_hardframes32_20260502/crf60/runtime_members/archive.zip",
+          "manifest_path": "experiments/results/c067_micro_mask_reencode_hardframes32_20260502/crf60/runtime_members/protected_mask_reencode_manifest.json",
+          "manifest_sha256": "672be78579ecc2cc9efb01fa0d61dd3ffff653a0d8e760d594108adb9f882e0e",
+          "source_mask_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "kind": "existing_protected_mask_reencode_manifest",
+        "mask_agreement": {
+          "overall": {
+            "argmax_agreement": 0.994194200304,
+            "argmax_disagreement": 0.005805799696,
+            "candidate_shape": [
+              600,
+              384,
+              512
+            ],
+            "different_pixels": 684880,
+            "different_pixels_by_candidate_class": {
+              "0": 325357,
+              "1": 229784,
+              "2": 89160,
+              "3": 35874,
+              "4": 4705
+            },
+            "different_pixels_by_source_class": {
+              "0": 209453,
+              "1": 311048,
+              "2": 70011,
+              "3": 70676,
+              "4": 23692
+            },
+            "equal_pixels": 117279920,
+            "num_pixels": 117964800,
+            "residual_confusion_source_to_candidate": {
+              "0": {
+                "0": 0,
+                "1": 180234,
+                "2": 22783,
+                "3": 3418,
+                "4": 3018
+              },
+              "1": {
+                "0": 309534,
+                "1": 0,
+                "2": 1158,
+                "3": 231,
+                "4": 125
+              },
+              "2": {
+                "0": 10959,
+                "1": 39285,
+                "2": 0,
+                "3": 19723,
+                "4": 44
+              },
+              "3": {
+                "0": 1741,
+                "1": 7965,
+                "2": 59452,
+                "3": 0,
+                "4": 1518
+              },
+              "4": {
+                "0": 3123,
+                "1": 2300,
+                "2": 5767,
+                "3": 12502,
+                "4": 0
+              }
+            },
+            "shape_match": true,
+            "source_shape": [
+              600,
+              384,
+              512
+            ]
+          },
+          "protected": {
+            "argmax_agreement": 0.994672934214,
+            "argmax_disagreement": 0.005327065786,
+            "different_pixels": 33515,
+            "num_pixels": 6291456
+          },
+          "unprotected": {
+            "argmax_agreement": 0.994167229379,
+            "argmax_disagreement": 0.005832770621,
+            "different_pixels": 651365,
+            "num_pixels": 111673344
+          }
+        }
+      }
+    },
+    {
+      "archive_bytes": 187072,
+      "archive_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_hardframes32_20260502_crf58_runtime_members/archive.zip",
+      "archive_sha256": "c844fa0eecb0106b8dfc9408ee88122c7b1e5fbb9adcda0c61147c77aa7bc904",
+      "candidate_id": "protected_c067_micro_mask_reencode_hardframes32_20260502_crf58_runtime_members",
+      "delta_bytes_vs_pr79": -90316,
+      "exact_eval_ready_after_lane_claim": false,
+      "manifest_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_hardframes32_20260502_crf58_runtime_members/manifest.json",
+      "mask_stream": {
+        "decoded_bytes": 123190,
+        "decoded_sha256": "da9a7cc159a5ed0f767c2435deb72ce468e0c2ed60bafeaf7474744bf4be5a49",
+        "delta_wire_bytes_vs_pr79_mask_slice": -96282,
+        "member": "masks.mkv",
+        "wire_brotli_params": {
+          "brotli_params": {
+            "lgwin": 18,
+            "mode": 0,
+            "quality": 11
+          },
+          "lossless_vs_candidate_mask_decoded": true,
+          "rpk1_raw_mask_member": true,
+          "unused_p3_brotli_wire_bytes": 115046
+        },
+        "wire_bytes": 123190,
+        "wire_sha256": "da9a7cc159a5ed0f767c2435deb72ce468e0c2ed60bafeaf7474744bf4be5a49"
+      },
+      "payload_format": "rpk1_json_raw_mkv_with_pr79_decoded_actions",
+      "plausibility_gate": {
+        "minimum_overall_argmax_agreement": 0.997,
+        "minimum_protected_argmax_agreement": 0.99,
+        "overall_argmax_agreement": 0.995040113661,
+        "passed": false,
+        "protected_argmax_agreement": 0.995463371277,
+        "reason": "protected-mask candidate is byte-valid but below local plausibility agreement thresholds"
+      },
+      "runtime_preflight": {
+        "archive_validation_errors": [],
+        "candidate_mask_decoded_sha256": "da9a7cc159a5ed0f767c2435deb72ce468e0c2ed60bafeaf7474744bf4be5a49",
+        "candidate_mask_sha_matches_expected": true,
+        "non_mask_runtime_member_checks": {
+          "actions_decoded_preserved": true,
+          "pose_decoded_preserved": true,
+          "renderer_decoded_preserved": true
+        },
+        "non_mask_runtime_members_preserved": true,
+        "payload_format": null,
+        "runtime_member_headers": {
+          "masks.mkv": {
+            "bytes": 123190,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "da9a7cc159a5ed0f767c2435deb72ce468e0c2ed60bafeaf7474744bf4be5a49"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 1140,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+          },
+          "renderer.bin": {
+            "bytes": 59288,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+          },
+          "seg_tile_actions.bin": {
+            "bytes": 2688,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f"
+          }
+        },
+        "runtime_parser": "submissions/robust_current/unpack_renderer_payload.py",
+        "runtime_parser_ok": true
+      },
+      "score_claim": false,
+      "source": {
+        "existing_manifest": {
+          "archive_path": "experiments/results/c067_micro_mask_reencode_hardframes32_20260502/crf58/runtime_members/archive.zip",
+          "manifest_path": "experiments/results/c067_micro_mask_reencode_hardframes32_20260502/crf58/runtime_members/protected_mask_reencode_manifest.json",
+          "manifest_sha256": "314822406ca52d25a575d6fda57aa4ace0c95da7f256f4feb5c37c6a23cb9275",
+          "source_mask_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "kind": "existing_protected_mask_reencode_manifest",
+        "mask_agreement": {
+          "overall": {
+            "argmax_agreement": 0.995040113661,
+            "argmax_disagreement": 0.004959886339,
+            "candidate_shape": [
+              600,
+              384,
+              512
+            ],
+            "different_pixels": 585092,
+            "different_pixels_by_candidate_class": {
+              "0": 275649,
+              "1": 202196,
+              "2": 72807,
+              "3": 30691,
+              "4": 3749
+            },
+            "different_pixels_by_source_class": {
+              "0": 182945,
+              "1": 265198,
+              "2": 60684,
+              "3": 58214,
+              "4": 18051
+            },
+            "equal_pixels": 117379708,
+            "num_pixels": 117964800,
+            "residual_confusion_source_to_candidate": {
+              "0": {
+                "0": 0,
+                "1": 160253,
+                "2": 18180,
+                "3": 2419,
+                "4": 2093
+              },
+              "1": {
+                "0": 263691,
+                "1": 0,
+                "2": 1191,
+                "3": 212,
+                "4": 104
+              },
+              "2": {
+                "0": 8598,
+                "1": 34229,
+                "2": 0,
+                "3": 17818,
+                "4": 39
+              },
+              "3": {
+                "0": 1184,
+                "1": 6169,
+                "2": 49348,
+                "3": 0,
+                "4": 1513
+              },
+              "4": {
+                "0": 2176,
+                "1": 1545,
+                "2": 4088,
+                "3": 10242,
+                "4": 0
+              }
+            },
+            "shape_match": true,
+            "source_shape": [
+              600,
+              384,
+              512
+            ]
+          },
+          "protected": {
+            "argmax_agreement": 0.995463371277,
+            "argmax_disagreement": 0.004536628723,
+            "different_pixels": 28542,
+            "num_pixels": 6291456
+          },
+          "unprotected": {
+            "argmax_agreement": 0.995016268162,
+            "argmax_disagreement": 0.004983731838,
+            "different_pixels": 556550,
+            "num_pixels": 111673344
+          }
+        }
+      }
+    },
+    {
+      "archive_bytes": 209652,
+      "archive_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_hardframes32_20260502_crf56_runtime_members/archive.zip",
+      "archive_sha256": "a5d04c658cdc03964674b93c2198eae7fa2c51c3a7d5def16063d94fc858dd99",
+      "candidate_id": "protected_c067_micro_mask_reencode_hardframes32_20260502_crf56_runtime_members",
+      "delta_bytes_vs_pr79": -67736,
+      "exact_eval_ready_after_lane_claim": false,
+      "manifest_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_hardframes32_20260502_crf56_runtime_members/manifest.json",
+      "mask_stream": {
+        "decoded_bytes": 145770,
+        "decoded_sha256": "d71f2e1ac1a6b371d0e17548dbff6665f61e8fc0efcd524e8b6f564771e4bb26",
+        "delta_wire_bytes_vs_pr79_mask_slice": -73702,
+        "member": "masks.mkv",
+        "wire_brotli_params": {
+          "brotli_params": {
+            "lgwin": 18,
+            "mode": 0,
+            "quality": 11
+          },
+          "lossless_vs_candidate_mask_decoded": true,
+          "rpk1_raw_mask_member": true,
+          "unused_p3_brotli_wire_bytes": 137431
+        },
+        "wire_bytes": 145770,
+        "wire_sha256": "d71f2e1ac1a6b371d0e17548dbff6665f61e8fc0efcd524e8b6f564771e4bb26"
+      },
+      "payload_format": "rpk1_json_raw_mkv_with_pr79_decoded_actions",
+      "plausibility_gate": {
+        "minimum_overall_argmax_agreement": 0.997,
+        "minimum_protected_argmax_agreement": 0.99,
+        "overall_argmax_agreement": 0.995694385105,
+        "passed": false,
+        "protected_argmax_agreement": 0.996238708496,
+        "reason": "protected-mask candidate is byte-valid but below local plausibility agreement thresholds"
+      },
+      "runtime_preflight": {
+        "archive_validation_errors": [],
+        "candidate_mask_decoded_sha256": "d71f2e1ac1a6b371d0e17548dbff6665f61e8fc0efcd524e8b6f564771e4bb26",
+        "candidate_mask_sha_matches_expected": true,
+        "non_mask_runtime_member_checks": {
+          "actions_decoded_preserved": true,
+          "pose_decoded_preserved": true,
+          "renderer_decoded_preserved": true
+        },
+        "non_mask_runtime_members_preserved": true,
+        "payload_format": null,
+        "runtime_member_headers": {
+          "masks.mkv": {
+            "bytes": 145770,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "d71f2e1ac1a6b371d0e17548dbff6665f61e8fc0efcd524e8b6f564771e4bb26"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 1140,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+          },
+          "renderer.bin": {
+            "bytes": 59288,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+          },
+          "seg_tile_actions.bin": {
+            "bytes": 2688,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f"
+          }
+        },
+        "runtime_parser": "submissions/robust_current/unpack_renderer_payload.py",
+        "runtime_parser_ok": true
+      },
+      "score_claim": false,
+      "source": {
+        "existing_manifest": {
+          "archive_path": "experiments/results/c067_micro_mask_reencode_hardframes32_20260502/crf56/runtime_members/archive.zip",
+          "manifest_path": "experiments/results/c067_micro_mask_reencode_hardframes32_20260502/crf56/runtime_members/protected_mask_reencode_manifest.json",
+          "manifest_sha256": "43a8ed9e7f7b50e3dc761a1d8011a10359a41382a00bb009d2f2055d75917ef4",
+          "source_mask_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "kind": "existing_protected_mask_reencode_manifest",
+        "mask_agreement": {
+          "overall": {
+            "argmax_agreement": 0.995694385105,
+            "argmax_disagreement": 0.004305614895,
+            "candidate_shape": [
+              600,
+              384,
+              512
+            ],
+            "different_pixels": 507911,
+            "different_pixels_by_candidate_class": {
+              "0": 235608,
+              "1": 180620,
+              "2": 62718,
+              "3": 25823,
+              "4": 3142
+            },
+            "different_pixels_by_source_class": {
+              "0": 162676,
+              "1": 227466,
+              "2": 52747,
+              "3": 51606,
+              "4": 13416
+            },
+            "equal_pixels": 117456889,
+            "num_pixels": 117964800,
+            "residual_confusion_source_to_candidate": {
+              "0": {
+                "0": 0,
+                "1": 144969,
+                "2": 14665,
+                "3": 1716,
+                "4": 1326
+              },
+              "1": {
+                "0": 225986,
+                "1": 0,
+                "2": 1234,
+                "3": 171,
+                "4": 75
+              },
+              "2": {
+                "0": 7410,
+                "1": 29402,
+                "2": 0,
+                "3": 15908,
+                "4": 27
+              },
+              "3": {
+                "0": 912,
+                "1": 5246,
+                "2": 43734,
+                "3": 0,
+                "4": 1714
+              },
+              "4": {
+                "0": 1300,
+                "1": 1003,
+                "2": 3085,
+                "3": 8028,
+                "4": 0
+              }
+            },
+            "shape_match": true,
+            "source_shape": [
+              600,
+              384,
+              512
+            ]
+          },
+          "protected": {
+            "argmax_agreement": 0.996238708496,
+            "argmax_disagreement": 0.003761291504,
+            "different_pixels": 23664,
+            "num_pixels": 6291456
+          },
+          "unprotected": {
+            "argmax_agreement": 0.995663718998,
+            "argmax_disagreement": 0.004336281002,
+            "different_pixels": 484247,
+            "num_pixels": 111673344
+          }
+        }
+      }
+    },
+    {
+      "archive_bytes": 249025,
+      "archive_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_plan_20260502_builds_c067_micro_av1_mask_reencode_save12k/archive.zip",
+      "archive_sha256": "36cbd1955c29a375ce01793754e2a5471cc5796c24990c9907c59cdb1ba4fe0e",
+      "candidate_id": "protected_c067_micro_mask_reencode_plan_20260502_builds_c067_micro_av1_mask_reencode_save12k",
+      "delta_bytes_vs_pr79": -28363,
+      "exact_eval_ready_after_lane_claim": false,
+      "manifest_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_plan_20260502_builds_c067_micro_av1_mask_reencode_save12k/manifest.json",
+      "mask_stream": {
+        "decoded_bytes": 185143,
+        "decoded_sha256": "002be9cb1a535e8ac3e519747ec79fbdd0306bdc3613667afc59b526f2e001c8",
+        "delta_wire_bytes_vs_pr79_mask_slice": -34329,
+        "member": "masks.mkv",
+        "wire_brotli_params": {
+          "brotli_params": {
+            "lgwin": 18,
+            "mode": 2,
+            "quality": 11
+          },
+          "lossless_vs_candidate_mask_decoded": true,
+          "rpk1_raw_mask_member": true,
+          "unused_p3_brotli_wire_bytes": 176710
+        },
+        "wire_bytes": 185143,
+        "wire_sha256": "002be9cb1a535e8ac3e519747ec79fbdd0306bdc3613667afc59b526f2e001c8"
+      },
+      "payload_format": "rpk1_json_raw_mkv_with_pr79_decoded_actions",
+      "plausibility_gate": {
+        "minimum_overall_argmax_agreement": 0.997,
+        "minimum_protected_argmax_agreement": 0.99,
+        "overall_argmax_agreement": 0.996950692071,
+        "passed": false,
+        "protected_argmax_agreement": 0.976638319886,
+        "reason": "protected-mask candidate is byte-valid but below local plausibility agreement thresholds"
+      },
+      "runtime_preflight": {
+        "archive_validation_errors": [],
+        "candidate_mask_decoded_sha256": "002be9cb1a535e8ac3e519747ec79fbdd0306bdc3613667afc59b526f2e001c8",
+        "candidate_mask_sha_matches_expected": true,
+        "non_mask_runtime_member_checks": {
+          "actions_decoded_preserved": true,
+          "pose_decoded_preserved": true,
+          "renderer_decoded_preserved": true
+        },
+        "non_mask_runtime_members_preserved": true,
+        "payload_format": null,
+        "runtime_member_headers": {
+          "masks.mkv": {
+            "bytes": 185143,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "002be9cb1a535e8ac3e519747ec79fbdd0306bdc3613667afc59b526f2e001c8"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 1140,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+          },
+          "renderer.bin": {
+            "bytes": 59288,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+          },
+          "seg_tile_actions.bin": {
+            "bytes": 2688,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f"
+          }
+        },
+        "runtime_parser": "submissions/robust_current/unpack_renderer_payload.py",
+        "runtime_parser_ok": true
+      },
+      "score_claim": false,
+      "source": {
+        "existing_manifest": {
+          "archive_path": "experiments/results/c067_micro_mask_reencode_plan_20260502/builds/c067_micro_av1_mask_reencode_save12k/archive.zip",
+          "manifest_path": "experiments/results/c067_micro_mask_reencode_plan_20260502/builds/c067_micro_av1_mask_reencode_save12k/protected_mask_reencode_manifest.json",
+          "manifest_sha256": "7968dcd05191bec8715fc3f077521d641fc21a4b61c64f13b8e293e604b12924",
+          "source_mask_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "kind": "existing_protected_mask_reencode_manifest",
+        "mask_agreement": {
+          "overall": {
+            "argmax_agreement": 0.996950692071,
+            "argmax_disagreement": 0.003049307929,
+            "candidate_shape": [
+              600,
+              384,
+              512
+            ],
+            "different_pixels": 359711,
+            "different_pixels_by_candidate_class": {
+              "0": 157018,
+              "1": 140824,
+              "2": 41324,
+              "3": 18023,
+              "4": 2522
+            },
+            "different_pixels_by_source_class": {
+              "0": 125289,
+              "1": 153227,
+              "2": 38145,
+              "3": 36238,
+              "4": 6812
+            },
+            "equal_pixels": 117605089,
+            "num_pixels": 117964800,
+            "residual_confusion_source_to_candidate": {
+              "0": {
+                "0": 0,
+                "1": 116236,
+                "2": 7886,
+                "3": 636,
+                "4": 531
+              },
+              "1": {
+                "0": 152060,
+                "1": 0,
+                "2": 1023,
+                "3": 108,
+                "4": 36
+              },
+              "2": {
+                "0": 4060,
+                "1": 21441,
+                "2": 0,
+                "3": 12625,
+                "4": 19
+              },
+              "3": {
+                "0": 387,
+                "1": 2788,
+                "2": 31127,
+                "3": 0,
+                "4": 1936
+              },
+              "4": {
+                "0": 511,
+                "1": 359,
+                "2": 1288,
+                "3": 4654,
+                "4": 0
+              }
+            },
+            "shape_match": true,
+            "source_shape": [
+              600,
+              384,
+              512
+            ]
+          },
+          "protected": {
+            "argmax_agreement": 0.976638319886,
+            "argmax_disagreement": 0.023361680114,
+            "different_pixels": 339460,
+            "num_pixels": 14530633
+          },
+          "unprotected": {
+            "argmax_agreement": 0.999804213631,
+            "argmax_disagreement": 0.000195786369,
+            "different_pixels": 20251,
+            "num_pixels": 103434167
+          }
+        }
+      }
+    },
+    {
+      "archive_bytes": 258267,
+      "archive_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_hardframes32_20260502_crf52_runtime_members/archive.zip",
+      "archive_sha256": "9fcd56e3810f7e84bd3418d08699a76a0d0e46101eb7809110b842a7e955af61",
+      "candidate_id": "protected_c067_micro_mask_reencode_hardframes32_20260502_crf52_runtime_members",
+      "delta_bytes_vs_pr79": -19121,
+      "exact_eval_ready_after_lane_claim": false,
+      "manifest_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_hardframes32_20260502_crf52_runtime_members/manifest.json",
+      "mask_stream": {
+        "decoded_bytes": 194385,
+        "decoded_sha256": "0f3ab5c1112839987696fbf1fe0b7bc08db3003a275c569aa74c0441dbbc287d",
+        "delta_wire_bytes_vs_pr79_mask_slice": -25087,
+        "member": "masks.mkv",
+        "wire_brotli_params": {
+          "brotli_params": {
+            "lgwin": 18,
+            "mode": 2,
+            "quality": 11
+          },
+          "lossless_vs_candidate_mask_decoded": true,
+          "rpk1_raw_mask_member": true,
+          "unused_p3_brotli_wire_bytes": 185930
+        },
+        "wire_bytes": 194385,
+        "wire_sha256": "0f3ab5c1112839987696fbf1fe0b7bc08db3003a275c569aa74c0441dbbc287d"
+      },
+      "payload_format": "rpk1_json_raw_mkv_with_pr79_decoded_actions",
+      "plausibility_gate": {
+        "minimum_overall_argmax_agreement": 0.997,
+        "minimum_protected_argmax_agreement": 0.99,
+        "overall_argmax_agreement": 0.996760169135,
+        "passed": false,
+        "protected_argmax_agreement": 0.997319857279,
+        "reason": "protected-mask candidate is byte-valid but below local plausibility agreement thresholds"
+      },
+      "runtime_preflight": {
+        "archive_validation_errors": [],
+        "candidate_mask_decoded_sha256": "0f3ab5c1112839987696fbf1fe0b7bc08db3003a275c569aa74c0441dbbc287d",
+        "candidate_mask_sha_matches_expected": true,
+        "non_mask_runtime_member_checks": {
+          "actions_decoded_preserved": true,
+          "pose_decoded_preserved": true,
+          "renderer_decoded_preserved": true
+        },
+        "non_mask_runtime_members_preserved": true,
+        "payload_format": null,
+        "runtime_member_headers": {
+          "masks.mkv": {
+            "bytes": 194385,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "0f3ab5c1112839987696fbf1fe0b7bc08db3003a275c569aa74c0441dbbc287d"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 1140,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+          },
+          "renderer.bin": {
+            "bytes": 59288,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+          },
+          "seg_tile_actions.bin": {
+            "bytes": 2688,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f"
+          }
+        },
+        "runtime_parser": "submissions/robust_current/unpack_renderer_payload.py",
+        "runtime_parser_ok": true
+      },
+      "score_claim": false,
+      "source": {
+        "existing_manifest": {
+          "archive_path": "experiments/results/c067_micro_mask_reencode_hardframes32_20260502/crf52/runtime_members/archive.zip",
+          "manifest_path": "experiments/results/c067_micro_mask_reencode_hardframes32_20260502/crf52/runtime_members/protected_mask_reencode_manifest.json",
+          "manifest_sha256": "980ad684cd1d29f650797bf45a9156340112f5b007ab5ee203d2ca10e776d4c5",
+          "source_mask_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "kind": "existing_protected_mask_reencode_manifest",
+        "mask_agreement": {
+          "overall": {
+            "argmax_agreement": 0.996760169135,
+            "argmax_disagreement": 0.003239830865,
+            "candidate_shape": [
+              600,
+              384,
+              512
+            ],
+            "different_pixels": 382186,
+            "different_pixels_by_candidate_class": {
+              "0": 178020,
+              "1": 138337,
+              "2": 44917,
+              "3": 18470,
+              "4": 2442
+            },
+            "different_pixels_by_source_class": {
+              "0": 123031,
+              "1": 172986,
+              "2": 40214,
+              "3": 38890,
+              "4": 7065
+            },
+            "equal_pixels": 117582614,
+            "num_pixels": 117964800,
+            "residual_confusion_source_to_candidate": {
+              "0": {
+                "0": 0,
+                "1": 112267,
+                "2": 9457,
+                "3": 785,
+                "4": 522
+              },
+              "1": {
+                "0": 171800,
+                "1": 0,
+                "2": 1022,
+                "3": 125,
+                "4": 39
+              },
+              "2": {
+                "0": 5147,
+                "1": 22210,
+                "2": 0,
+                "3": 12833,
+                "4": 24
+              },
+              "3": {
+                "0": 529,
+                "1": 3474,
+                "2": 33030,
+                "3": 0,
+                "4": 1857
+              },
+              "4": {
+                "0": 544,
+                "1": 386,
+                "2": 1408,
+                "3": 4727,
+                "4": 0
+              }
+            },
+            "shape_match": true,
+            "source_shape": [
+              600,
+              384,
+              512
+            ]
+          },
+          "protected": {
+            "argmax_agreement": 0.997319857279,
+            "argmax_disagreement": 0.002680142721,
+            "different_pixels": 16862,
+            "num_pixels": 6291456
+          },
+          "unprotected": {
+            "argmax_agreement": 0.996728637409,
+            "argmax_disagreement": 0.003271362591,
+            "different_pixels": 365324,
+            "num_pixels": 111673344
+          }
+        }
+      }
+    },
+    {
+      "archive_bytes": 260380,
+      "archive_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save12k_crf53/archive.zip",
+      "archive_sha256": "04b6f2312856fe3d986639effebf231ca994a1ddba8579e8baaa175458887475",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save12k_crf53",
+      "delta_bytes_vs_pr79": -17008,
+      "exact_eval_ready_after_lane_claim": false,
+      "manifest_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save12k_crf53/manifest.json",
+      "mask_stream": {
+        "decoded_bytes": 196498,
+        "decoded_sha256": "c8f393119600b57e6369fade9dd3a0f261f87df35a04547ae4d5bad352a6cab9",
+        "delta_wire_bytes_vs_pr79_mask_slice": -22974,
+        "member": "masks.mkv",
+        "wire_brotli_params": {
+          "brotli_params": {
+            "lgwin": 18,
+            "mode": 0,
+            "quality": 11
+          },
+          "lossless_vs_candidate_mask_decoded": true,
+          "rpk1_raw_mask_member": true,
+          "unused_p3_brotli_wire_bytes": 188005
+        },
+        "wire_bytes": 196498,
+        "wire_sha256": "c8f393119600b57e6369fade9dd3a0f261f87df35a04547ae4d5bad352a6cab9"
+      },
+      "payload_format": "rpk1_json_raw_mkv_with_pr79_decoded_actions",
+      "plausibility_gate": {
+        "minimum_overall_argmax_agreement": 0.997,
+        "minimum_protected_argmax_agreement": 0.99,
+        "overall_argmax_agreement": 0.997147259182,
+        "passed": false,
+        "protected_argmax_agreement": 0.978076316428,
+        "reason": "protected-mask candidate is byte-valid but below local plausibility agreement thresholds"
+      },
+      "runtime_preflight": {
+        "archive_validation_errors": [],
+        "candidate_mask_decoded_sha256": "c8f393119600b57e6369fade9dd3a0f261f87df35a04547ae4d5bad352a6cab9",
+        "candidate_mask_sha_matches_expected": true,
+        "non_mask_runtime_member_checks": {
+          "actions_decoded_preserved": true,
+          "pose_decoded_preserved": true,
+          "renderer_decoded_preserved": true
+        },
+        "non_mask_runtime_members_preserved": true,
+        "payload_format": null,
+        "runtime_member_headers": {
+          "masks.mkv": {
+            "bytes": 196498,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "c8f393119600b57e6369fade9dd3a0f261f87df35a04547ae4d5bad352a6cab9"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 1140,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+          },
+          "renderer.bin": {
+            "bytes": 59288,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+          },
+          "seg_tile_actions.bin": {
+            "bytes": 2688,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f"
+          }
+        },
+        "runtime_parser": "submissions/robust_current/unpack_renderer_payload.py",
+        "runtime_parser_ok": true
+      },
+      "score_claim": false,
+      "source": {
+        "existing_manifest": {
+          "archive_path": "experiments/results/c067_micro_mask_reencode_threshold_ladder_20260503/save12k_crf53/archive.zip",
+          "manifest_path": "experiments/results/c067_micro_mask_reencode_threshold_ladder_20260503/save12k_crf53/protected_mask_reencode_manifest.json",
+          "manifest_sha256": "fa12bb35276a009b5566b707a0a25c0e8e18de124822a493b6ef825e48a531d3",
+          "source_mask_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "kind": "existing_protected_mask_reencode_manifest",
+        "mask_agreement": {
+          "overall": {
+            "argmax_agreement": 0.997147259182,
+            "argmax_disagreement": 0.002852740818,
+            "candidate_shape": [
+              600,
+              384,
+              512
+            ],
+            "different_pixels": 336523,
+            "different_pixels_by_candidate_class": {
+              "0": 146725,
+              "1": 132580,
+              "2": 38009,
+              "3": 16938,
+              "4": 2271
+            },
+            "different_pixels_by_source_class": {
+              "0": 117665,
+              "1": 143540,
+              "2": 35874,
+              "3": 33393,
+              "4": 6051
+            },
+            "equal_pixels": 117628277,
+            "num_pixels": 117964800,
+            "residual_confusion_source_to_candidate": {
+              "0": {
+                "0": 0,
+                "1": 109786,
+                "2": 7036,
+                "3": 467,
+                "4": 376
+              },
+              "1": {
+                "0": 142373,
+                "1": 0,
+                "2": 1033,
+                "3": 103,
+                "4": 31
+              },
+              "2": {
+                "0": 3638,
+                "1": 20090,
+                "2": 0,
+                "3": 12129,
+                "4": 17
+              },
+              "3": {
+                "0": 342,
+                "1": 2391,
+                "2": 28813,
+                "3": 0,
+                "4": 1847
+              },
+              "4": {
+                "0": 372,
+                "1": 313,
+                "2": 1127,
+                "3": 4239,
+                "4": 0
+              }
+            },
+            "shape_match": true,
+            "source_shape": [
+              600,
+              384,
+              512
+            ]
+          },
+          "protected": {
+            "argmax_agreement": 0.978076316428,
+            "argmax_disagreement": 0.021923683572,
+            "different_pixels": 318565,
+            "num_pixels": 14530633
+          },
+          "unprotected": {
+            "argmax_agreement": 0.999826382321,
+            "argmax_disagreement": 0.000173617679,
+            "different_pixels": 17958,
+            "num_pixels": 103434167
+          }
+        }
+      }
+    },
+    {
+      "archive_bytes": 260409,
+      "archive_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf53/archive.zip",
+      "archive_sha256": "23db181b035e383deea95ab0b5c1a6a0a5cd8e34a918d3100830903e3c8f7b16",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf53",
+      "delta_bytes_vs_pr79": -16979,
+      "exact_eval_ready_after_lane_claim": false,
+      "manifest_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf53/manifest.json",
+      "mask_stream": {
+        "decoded_bytes": 196527,
+        "decoded_sha256": "7eb5c529b810733d262f25c7114dcf6800d49004591146faec291c0389f89840",
+        "delta_wire_bytes_vs_pr79_mask_slice": -22945,
+        "member": "masks.mkv",
+        "wire_brotli_params": {
+          "brotli_params": {
+            "lgwin": 18,
+            "mode": 0,
+            "quality": 11
+          },
+          "lossless_vs_candidate_mask_decoded": true,
+          "rpk1_raw_mask_member": true,
+          "unused_p3_brotli_wire_bytes": 188060
+        },
+        "wire_bytes": 196527,
+        "wire_sha256": "7eb5c529b810733d262f25c7114dcf6800d49004591146faec291c0389f89840"
+      },
+      "payload_format": "rpk1_json_raw_mkv_with_pr79_decoded_actions",
+      "plausibility_gate": {
+        "minimum_overall_argmax_agreement": 0.997,
+        "minimum_protected_argmax_agreement": 0.99,
+        "overall_argmax_agreement": 0.997148352729,
+        "passed": false,
+        "protected_argmax_agreement": 0.9892759375,
+        "reason": "protected-mask candidate is byte-valid but below local plausibility agreement thresholds"
+      },
+      "runtime_preflight": {
+        "archive_validation_errors": [],
+        "candidate_mask_decoded_sha256": "7eb5c529b810733d262f25c7114dcf6800d49004591146faec291c0389f89840",
+        "candidate_mask_sha_matches_expected": true,
+        "non_mask_runtime_member_checks": {
+          "actions_decoded_preserved": true,
+          "pose_decoded_preserved": true,
+          "renderer_decoded_preserved": true
+        },
+        "non_mask_runtime_members_preserved": true,
+        "payload_format": null,
+        "runtime_member_headers": {
+          "masks.mkv": {
+            "bytes": 196527,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "7eb5c529b810733d262f25c7114dcf6800d49004591146faec291c0389f89840"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 1140,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+          },
+          "renderer.bin": {
+            "bytes": 59288,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+          },
+          "seg_tile_actions.bin": {
+            "bytes": 2688,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f"
+          }
+        },
+        "runtime_parser": "submissions/robust_current/unpack_renderer_payload.py",
+        "runtime_parser_ok": true
+      },
+      "score_claim": false,
+      "source": {
+        "existing_manifest": {
+          "archive_path": "experiments/results/c067_micro_mask_reencode_threshold_ladder_20260503/save08k_crf53/archive.zip",
+          "manifest_path": "experiments/results/c067_micro_mask_reencode_threshold_ladder_20260503/save08k_crf53/protected_mask_reencode_manifest.json",
+          "manifest_sha256": "2793fd203b8982f70786c031869d15f624b09ea39b76b0acff67aa6fc7d46c28",
+          "source_mask_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "kind": "existing_protected_mask_reencode_manifest",
+        "mask_agreement": {
+          "overall": {
+            "argmax_agreement": 0.997148352729,
+            "argmax_disagreement": 0.002851647271,
+            "candidate_shape": [
+              600,
+              384,
+              512
+            ],
+            "different_pixels": 336394,
+            "different_pixels_by_candidate_class": {
+              "0": 148094,
+              "1": 131019,
+              "2": 38135,
+              "3": 16748,
+              "4": 2398
+            },
+            "different_pixels_by_source_class": {
+              "0": 116079,
+              "1": 144835,
+              "2": 35892,
+              "3": 33632,
+              "4": 5956
+            },
+            "equal_pixels": 117628406,
+            "num_pixels": 117964800,
+            "residual_confusion_source_to_candidate": {
+              "0": {
+                "0": 0,
+                "1": 108120,
+                "2": 7063,
+                "3": 508,
+                "4": 388
+              },
+              "1": {
+                "0": 143709,
+                "1": 0,
+                "2": 995,
+                "3": 96,
+                "4": 35
+              },
+              "2": {
+                "0": 3676,
+                "1": 20232,
+                "2": 0,
+                "3": 11966,
+                "4": 18
+              },
+              "3": {
+                "0": 337,
+                "1": 2366,
+                "2": 28972,
+                "3": 0,
+                "4": 1957
+              },
+              "4": {
+                "0": 372,
+                "1": 301,
+                "2": 1105,
+                "3": 4178,
+                "4": 0
+              }
+            },
+            "shape_match": true,
+            "source_shape": [
+              600,
+              384,
+              512
+            ]
+          },
+          "protected": {
+            "argmax_agreement": 0.9892759375,
+            "argmax_disagreement": 0.0107240625,
+            "different_pixels": 321099,
+            "num_pixels": 29941918
+          },
+          "unprotected": {
+            "argmax_agreement": 0.999826238364,
+            "argmax_disagreement": 0.000173761636,
+            "different_pixels": 15295,
+            "num_pixels": 88022882
+          }
+        }
+      }
+    },
+    {
+      "archive_bytes": 260866,
+      "archive_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf53/archive.zip",
+      "archive_sha256": "5e49a972ab5d77d8a8eeedc9dd36a309bf8533ad2d2e2b9b96ad30448691d338",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf53",
+      "delta_bytes_vs_pr79": -16522,
+      "exact_eval_ready_after_lane_claim": true,
+      "manifest_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf53/manifest.json",
+      "mask_stream": {
+        "decoded_bytes": 196984,
+        "decoded_sha256": "49eedf22801b610603275d21dc5b1ae3668cd4decc9349d083ad8cef933837ef",
+        "delta_wire_bytes_vs_pr79_mask_slice": -22488,
+        "member": "masks.mkv",
+        "wire_brotli_params": {
+          "brotli_params": {
+            "lgwin": 18,
+            "mode": 2,
+            "quality": 11
+          },
+          "lossless_vs_candidate_mask_decoded": true,
+          "rpk1_raw_mask_member": true,
+          "unused_p3_brotli_wire_bytes": 188394
+        },
+        "wire_bytes": 196984,
+        "wire_sha256": "49eedf22801b610603275d21dc5b1ae3668cd4decc9349d083ad8cef933837ef"
+      },
+      "payload_format": "rpk1_json_raw_mkv_with_pr79_decoded_actions",
+      "plausibility_gate": {
+        "minimum_overall_argmax_agreement": 0.997,
+        "minimum_protected_argmax_agreement": 0.99,
+        "overall_argmax_agreement": 0.997173487345,
+        "passed": true,
+        "protected_argmax_agreement": 0.992559116516,
+        "reason": "protected-mask candidate clears local plausibility agreement thresholds"
+      },
+      "runtime_preflight": {
+        "archive_validation_errors": [],
+        "candidate_mask_decoded_sha256": "49eedf22801b610603275d21dc5b1ae3668cd4decc9349d083ad8cef933837ef",
+        "candidate_mask_sha_matches_expected": true,
+        "non_mask_runtime_member_checks": {
+          "actions_decoded_preserved": true,
+          "pose_decoded_preserved": true,
+          "renderer_decoded_preserved": true
+        },
+        "non_mask_runtime_members_preserved": true,
+        "payload_format": null,
+        "runtime_member_headers": {
+          "masks.mkv": {
+            "bytes": 196984,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "49eedf22801b610603275d21dc5b1ae3668cd4decc9349d083ad8cef933837ef"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 1140,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+          },
+          "renderer.bin": {
+            "bytes": 59288,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+          },
+          "seg_tile_actions.bin": {
+            "bytes": 2688,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f"
+          }
+        },
+        "runtime_parser": "submissions/robust_current/unpack_renderer_payload.py",
+        "runtime_parser_ok": true
+      },
+      "score_claim": false,
+      "source": {
+        "existing_manifest": {
+          "archive_path": "experiments/results/c067_micro_mask_reencode_threshold_ladder_20260503/save05k_crf53/archive.zip",
+          "manifest_path": "experiments/results/c067_micro_mask_reencode_threshold_ladder_20260503/save05k_crf53/protected_mask_reencode_manifest.json",
+          "manifest_sha256": "70ec866e8758c1f112e40dc1bd93b26ff24bdd74088dd9895890e2fd6012cf1a",
+          "source_mask_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "kind": "existing_protected_mask_reencode_manifest",
+        "mask_agreement": {
+          "overall": {
+            "argmax_agreement": 0.997173487345,
+            "argmax_disagreement": 0.002826512655,
+            "candidate_shape": [
+              600,
+              384,
+              512
+            ],
+            "different_pixels": 333429,
+            "different_pixels_by_candidate_class": {
+              "0": 146459,
+              "1": 130354,
+              "2": 37577,
+              "3": 16606,
+              "4": 2433
+            },
+            "different_pixels_by_source_class": {
+              "0": 115260,
+              "1": 143300,
+              "2": 35567,
+              "3": 33251,
+              "4": 6051
+            },
+            "equal_pixels": 117631371,
+            "num_pixels": 117964800,
+            "residual_confusion_source_to_candidate": {
+              "0": {
+                "0": 0,
+                "1": 107405,
+                "2": 6932,
+                "3": 525,
+                "4": 398
+              },
+              "1": {
+                "0": 142147,
+                "1": 0,
+                "2": 1038,
+                "3": 84,
+                "4": 31
+              },
+              "2": {
+                "0": 3598,
+                "1": 20215,
+                "2": 0,
+                "3": 11732,
+                "4": 22
+              },
+              "3": {
+                "0": 340,
+                "1": 2401,
+                "2": 28528,
+                "3": 0,
+                "4": 1982
+              },
+              "4": {
+                "0": 374,
+                "1": 333,
+                "2": 1079,
+                "3": 4265,
+                "4": 0
+              }
+            },
+            "shape_match": true,
+            "source_shape": [
+              600,
+              384,
+              512
+            ]
+          },
+          "protected": {
+            "argmax_agreement": 0.992559116516,
+            "argmax_disagreement": 0.007440883484,
+            "different_pixels": 320688,
+            "num_pixels": 43098108
+          },
+          "unprotected": {
+            "argmax_agreement": 0.999829817511,
+            "argmax_disagreement": 0.000170182489,
+            "different_pixels": 12741,
+            "num_pixels": 74866692
+          }
+        }
+      }
+    },
+    {
+      "archive_bytes": 273141,
+      "archive_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf52/archive.zip",
+      "archive_sha256": "bc11b5e06f66571f9476dab3ad965f28cb42c63612ce2e0feb42d91c0e1aad27",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf52",
+      "delta_bytes_vs_pr79": -4247,
+      "exact_eval_ready_after_lane_claim": true,
+      "manifest_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf52/manifest.json",
+      "mask_stream": {
+        "decoded_bytes": 209259,
+        "decoded_sha256": "7543a23575a7e47e94eeb5477d4e2233c23fe49fe932bf6c77a9b534d36e96d0",
+        "delta_wire_bytes_vs_pr79_mask_slice": -10213,
+        "member": "masks.mkv",
+        "wire_brotli_params": {
+          "brotli_params": {
+            "lgwin": 18,
+            "mode": 2,
+            "quality": 11
+          },
+          "lossless_vs_candidate_mask_decoded": true,
+          "rpk1_raw_mask_member": true,
+          "unused_p3_brotli_wire_bytes": 200889
+        },
+        "wire_bytes": 209259,
+        "wire_sha256": "7543a23575a7e47e94eeb5477d4e2233c23fe49fe932bf6c77a9b534d36e96d0"
+      },
+      "payload_format": "rpk1_json_raw_mkv_with_pr79_decoded_actions",
+      "plausibility_gate": {
+        "minimum_overall_argmax_agreement": 0.997,
+        "minimum_protected_argmax_agreement": 0.99,
+        "overall_argmax_agreement": 0.997372351752,
+        "passed": true,
+        "protected_argmax_agreement": 0.993066284952,
+        "reason": "protected-mask candidate clears local plausibility agreement thresholds"
+      },
+      "runtime_preflight": {
+        "archive_validation_errors": [],
+        "candidate_mask_decoded_sha256": "7543a23575a7e47e94eeb5477d4e2233c23fe49fe932bf6c77a9b534d36e96d0",
+        "candidate_mask_sha_matches_expected": true,
+        "non_mask_runtime_member_checks": {
+          "actions_decoded_preserved": true,
+          "pose_decoded_preserved": true,
+          "renderer_decoded_preserved": true
+        },
+        "non_mask_runtime_members_preserved": true,
+        "payload_format": null,
+        "runtime_member_headers": {
+          "masks.mkv": {
+            "bytes": 209259,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "7543a23575a7e47e94eeb5477d4e2233c23fe49fe932bf6c77a9b534d36e96d0"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 1140,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+          },
+          "renderer.bin": {
+            "bytes": 59288,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+          },
+          "seg_tile_actions.bin": {
+            "bytes": 2688,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f"
+          }
+        },
+        "runtime_parser": "submissions/robust_current/unpack_renderer_payload.py",
+        "runtime_parser_ok": true
+      },
+      "score_claim": false,
+      "source": {
+        "existing_manifest": {
+          "archive_path": "experiments/results/c067_micro_mask_reencode_threshold_ladder_20260503/save05k_crf52/archive.zip",
+          "manifest_path": "experiments/results/c067_micro_mask_reencode_threshold_ladder_20260503/save05k_crf52/protected_mask_reencode_manifest.json",
+          "manifest_sha256": "3d3718a155f943e0b0649ab20dc7c0a9939310cca4599864b844d68e5ced0cdd",
+          "source_mask_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "kind": "existing_protected_mask_reencode_manifest",
+        "mask_agreement": {
+          "overall": {
+            "argmax_agreement": 0.997372351752,
+            "argmax_disagreement": 0.002627648248,
+            "candidate_shape": [
+              600,
+              384,
+              512
+            ],
+            "different_pixels": 309970,
+            "different_pixels_by_candidate_class": {
+              "0": 136949,
+              "1": 121311,
+              "2": 34372,
+              "3": 15189,
+              "4": 2149
+            },
+            "different_pixels_by_source_class": {
+              "0": 106965,
+              "1": 134282,
+              "2": 33132,
+              "3": 30763,
+              "4": 4828
+            },
+            "equal_pixels": 117654830,
+            "num_pixels": 117964800,
+            "residual_confusion_source_to_candidate": {
+              "0": {
+                "0": 0,
+                "1": 100211,
+                "2": 6023,
+                "3": 430,
+                "4": 301
+              },
+              "1": {
+                "0": 133218,
+                "1": 0,
+                "2": 950,
+                "3": 85,
+                "4": 29
+              },
+              "2": {
+                "0": 3143,
+                "1": 18704,
+                "2": 0,
+                "3": 11268,
+                "4": 17
+              },
+              "3": {
+                "0": 268,
+                "1": 2144,
+                "2": 26549,
+                "3": 0,
+                "4": 1802
+              },
+              "4": {
+                "0": 320,
+                "1": 252,
+                "2": 850,
+                "3": 3406,
+                "4": 0
+              }
+            },
+            "shape_match": true,
+            "source_shape": [
+              600,
+              384,
+              512
+            ]
+          },
+          "protected": {
+            "argmax_agreement": 0.993066284952,
+            "argmax_disagreement": 0.006933715048,
+            "different_pixels": 298830,
+            "num_pixels": 43098108
+          },
+          "unprotected": {
+            "argmax_agreement": 0.999851202187,
+            "argmax_disagreement": 0.000148797813,
+            "different_pixels": 11140,
+            "num_pixels": 74866692
+          }
+        }
+      }
+    },
+    {
+      "archive_bytes": 273381,
+      "archive_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_plan_20260502_builds_c067_micro_av1_mask_reencode_save08k/archive.zip",
+      "archive_sha256": "af86f8640832b0be1cc8b8d627ae45b19199ebf0f70a319ff87a937ed4ffafad",
+      "candidate_id": "protected_c067_micro_mask_reencode_plan_20260502_builds_c067_micro_av1_mask_reencode_save08k",
+      "delta_bytes_vs_pr79": -4007,
+      "exact_eval_ready_after_lane_claim": true,
+      "manifest_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_plan_20260502_builds_c067_micro_av1_mask_reencode_save08k/manifest.json",
+      "mask_stream": {
+        "decoded_bytes": 209499,
+        "decoded_sha256": "7dc7cc4682f7fa1ab7988e5ab6cb611253b906827ec0dc8204c5cc5b5da68eb9",
+        "delta_wire_bytes_vs_pr79_mask_slice": -9973,
+        "member": "masks.mkv",
+        "wire_brotli_params": {
+          "brotli_params": {
+            "lgwin": 18,
+            "mode": 2,
+            "quality": 11
+          },
+          "lossless_vs_candidate_mask_decoded": true,
+          "rpk1_raw_mask_member": true,
+          "unused_p3_brotli_wire_bytes": 201072
+        },
+        "wire_bytes": 209499,
+        "wire_sha256": "7dc7cc4682f7fa1ab7988e5ab6cb611253b906827ec0dc8204c5cc5b5da68eb9"
+      },
+      "payload_format": "rpk1_json_raw_mkv_with_pr79_decoded_actions",
+      "plausibility_gate": {
+        "minimum_overall_argmax_agreement": 0.997,
+        "minimum_protected_argmax_agreement": 0.99,
+        "overall_argmax_agreement": 0.997366773817,
+        "passed": true,
+        "protected_argmax_agreement": 0.990073448201,
+        "reason": "protected-mask candidate clears local plausibility agreement thresholds"
+      },
+      "runtime_preflight": {
+        "archive_validation_errors": [],
+        "candidate_mask_decoded_sha256": "7dc7cc4682f7fa1ab7988e5ab6cb611253b906827ec0dc8204c5cc5b5da68eb9",
+        "candidate_mask_sha_matches_expected": true,
+        "non_mask_runtime_member_checks": {
+          "actions_decoded_preserved": true,
+          "pose_decoded_preserved": true,
+          "renderer_decoded_preserved": true
+        },
+        "non_mask_runtime_members_preserved": true,
+        "payload_format": null,
+        "runtime_member_headers": {
+          "masks.mkv": {
+            "bytes": 209499,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "7dc7cc4682f7fa1ab7988e5ab6cb611253b906827ec0dc8204c5cc5b5da68eb9"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 1140,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+          },
+          "renderer.bin": {
+            "bytes": 59288,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+          },
+          "seg_tile_actions.bin": {
+            "bytes": 2688,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f"
+          }
+        },
+        "runtime_parser": "submissions/robust_current/unpack_renderer_payload.py",
+        "runtime_parser_ok": true
+      },
+      "score_claim": false,
+      "source": {
+        "existing_manifest": {
+          "archive_path": "experiments/results/c067_micro_mask_reencode_plan_20260502/builds/c067_micro_av1_mask_reencode_save08k/archive.zip",
+          "manifest_path": "experiments/results/c067_micro_mask_reencode_plan_20260502/builds/c067_micro_av1_mask_reencode_save08k/protected_mask_reencode_manifest.json",
+          "manifest_sha256": "9ecd83a58754bf822d96110caa3d95beb30b762cd15177f5a3e9a15b05729dde",
+          "source_mask_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "kind": "existing_protected_mask_reencode_manifest",
+        "mask_agreement": {
+          "overall": {
+            "argmax_agreement": 0.997366773817,
+            "argmax_disagreement": 0.002633226183,
+            "candidate_shape": [
+              600,
+              384,
+              512
+            ],
+            "different_pixels": 310628,
+            "different_pixels_by_candidate_class": {
+              "0": 135848,
+              "1": 122537,
+              "2": 35132,
+              "3": 14940,
+              "4": 2171
+            },
+            "different_pixels_by_source_class": {
+              "0": 108172,
+              "1": 133135,
+              "2": 33085,
+              "3": 31457,
+              "4": 4779
+            },
+            "equal_pixels": 117654172,
+            "num_pixels": 117964800,
+            "residual_confusion_source_to_candidate": {
+              "0": {
+                "0": 0,
+                "1": 101283,
+                "2": 6179,
+                "3": 396,
+                "4": 314
+              },
+              "1": {
+                "0": 132109,
+                "1": 0,
+                "2": 911,
+                "3": 87,
+                "4": 28
+              },
+              "2": {
+                "0": 3203,
+                "1": 18797,
+                "2": 0,
+                "3": 11067,
+                "4": 18
+              },
+              "3": {
+                "0": 254,
+                "1": 2207,
+                "2": 27185,
+                "3": 0,
+                "4": 1811
+              },
+              "4": {
+                "0": 282,
+                "1": 250,
+                "2": 857,
+                "3": 3390,
+                "4": 0
+              }
+            },
+            "shape_match": true,
+            "source_shape": [
+              600,
+              384,
+              512
+            ]
+          },
+          "protected": {
+            "argmax_agreement": 0.990073448201,
+            "argmax_disagreement": 0.009926551799,
+            "different_pixels": 297220,
+            "num_pixels": 29941918
+          },
+          "unprotected": {
+            "argmax_agreement": 0.999847675971,
+            "argmax_disagreement": 0.000152324029,
+            "different_pixels": 13408,
+            "num_pixels": 88022882
+          }
+        }
+      }
+    },
+    {
+      "archive_bytes": 277398,
+      "archive_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/p3_lossless_rebrotli_mask_control/archive.zip",
+      "archive_sha256": "652f11c8c59df3e89c816c6730bbd81e9cefc60d195cc2800212b07c4d6f03ca",
+      "candidate_id": "p3_lossless_rebrotli_mask_control",
+      "delta_bytes_vs_pr79": 10,
+      "exact_eval_ready_after_lane_claim": false,
+      "manifest_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/p3_lossless_rebrotli_mask_control/manifest.json",
+      "mask_stream": {
+        "decoded_bytes": 223385,
+        "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "delta_wire_bytes_vs_pr79_mask_slice": 0,
+        "member": "masks.mkv",
+        "wire_brotli_params": {
+          "brotli_params": {
+            "lgwin": 18,
+            "mode": 0,
+            "quality": 11
+          },
+          "lossless_vs_source_mask_decoded": true,
+          "source_mask_wire_bytes": 219472
+        },
+        "wire_bytes": 219472,
+        "wire_sha256": "2bf637eccd36dcfdf7e951d1f9e5ef988dec4baf7a34b6a3bf29885117189453"
+      },
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p3",
+      "plausibility_gate": {
+        "passed": true,
+        "reason": "lossless source-mask control"
+      },
+      "runtime_preflight": {
+        "archive_validation_errors": [],
+        "candidate_mask_decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "candidate_mask_sha_matches_expected": true,
+        "non_mask_runtime_member_checks": {
+          "actions_decoded_preserved": true,
+          "pose_decoded_preserved": true,
+          "renderer_decoded_preserved": true
+        },
+        "non_mask_runtime_members_preserved": true,
+        "payload_format": "public_pr75_qzs3_qp1_segactions_p3",
+        "runtime_member_headers": {
+          "masks.mkv": {
+            "bytes": 219472,
+            "codec": "brotli_av1_obu",
+            "decoded_bytes": 223385,
+            "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+            "sha256": "2bf637eccd36dcfdf7e951d1f9e5ef988dec4baf7a34b6a3bf29885117189453"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 898,
+            "codec": "public_qp1_brotli",
+            "decoded_bytes": 1140,
+            "decoded_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+            "sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082"
+          },
+          "renderer.bin": {
+            "bytes": 55756,
+            "codec": "brotli_qzs3",
+            "decoded_bytes": 59288,
+            "decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+            "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+          },
+          "seg_tile_actions.bin": {
+            "bytes": 1162,
+            "codec": "brotli_seg_tile_actions_v1",
+            "decoded_bytes": 2688,
+            "decoded_sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f",
+            "sha256": "3fdf6320b77685606283438e1a9bea4df3c83ecb525deb4750dade60c8e7dbdc"
+          }
+        },
+        "runtime_parser": "submissions/robust_current/unpack_renderer_payload.py",
+        "runtime_parser_ok": true
+      },
+      "score_claim": false,
+      "source": {
+        "kind": "lossless_rebrotli_control"
+      }
+    },
+    {
+      "archive_bytes": 284626,
+      "archive_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51/archive.zip",
+      "archive_sha256": "231abfc8fe92fe5bf29a7c67b37da581dab8375840b66a1e5a41e5a79b95981b",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51",
+      "delta_bytes_vs_pr79": 7238,
+      "exact_eval_ready_after_lane_claim": false,
+      "manifest_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save08k_crf51/manifest.json",
+      "mask_stream": {
+        "decoded_bytes": 220744,
+        "decoded_sha256": "b03302ddfd750959d0a5f96e6d1f54116bc341e5c6b1af0043bc70897fdb9e10",
+        "delta_wire_bytes_vs_pr79_mask_slice": 1272,
+        "member": "masks.mkv",
+        "wire_brotli_params": {
+          "brotli_params": {
+            "lgwin": 18,
+            "mode": 2,
+            "quality": 11
+          },
+          "lossless_vs_candidate_mask_decoded": true,
+          "rpk1_raw_mask_member": true,
+          "unused_p3_brotli_wire_bytes": 212580
+        },
+        "wire_bytes": 220744,
+        "wire_sha256": "b03302ddfd750959d0a5f96e6d1f54116bc341e5c6b1af0043bc70897fdb9e10"
+      },
+      "payload_format": "rpk1_json_raw_mkv_with_pr79_decoded_actions",
+      "plausibility_gate": {
+        "minimum_overall_argmax_agreement": 0.997,
+        "minimum_protected_argmax_agreement": 0.99,
+        "overall_argmax_agreement": 0.997554711236,
+        "passed": true,
+        "protected_argmax_agreement": 0.990768660845,
+        "reason": "protected-mask candidate clears local plausibility agreement thresholds"
+      },
+      "runtime_preflight": {
+        "archive_validation_errors": [],
+        "candidate_mask_decoded_sha256": "b03302ddfd750959d0a5f96e6d1f54116bc341e5c6b1af0043bc70897fdb9e10",
+        "candidate_mask_sha_matches_expected": true,
+        "non_mask_runtime_member_checks": {
+          "actions_decoded_preserved": true,
+          "pose_decoded_preserved": true,
+          "renderer_decoded_preserved": true
+        },
+        "non_mask_runtime_members_preserved": true,
+        "payload_format": null,
+        "runtime_member_headers": {
+          "masks.mkv": {
+            "bytes": 220744,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "b03302ddfd750959d0a5f96e6d1f54116bc341e5c6b1af0043bc70897fdb9e10"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 1140,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+          },
+          "renderer.bin": {
+            "bytes": 59288,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+          },
+          "seg_tile_actions.bin": {
+            "bytes": 2688,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f"
+          }
+        },
+        "runtime_parser": "submissions/robust_current/unpack_renderer_payload.py",
+        "runtime_parser_ok": true
+      },
+      "score_claim": false,
+      "source": {
+        "existing_manifest": {
+          "archive_path": "experiments/results/c067_micro_mask_reencode_threshold_ladder_20260503/save08k_crf51/archive.zip",
+          "manifest_path": "experiments/results/c067_micro_mask_reencode_threshold_ladder_20260503/save08k_crf51/protected_mask_reencode_manifest.json",
+          "manifest_sha256": "f000b532ac03678f18ce42db958ecd127c32707de76058ad332b01493e41ace7",
+          "source_mask_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "kind": "existing_protected_mask_reencode_manifest",
+        "mask_agreement": {
+          "overall": {
+            "argmax_agreement": 0.997554711236,
+            "argmax_disagreement": 0.002445288764,
+            "candidate_shape": [
+              600,
+              384,
+              512
+            ],
+            "different_pixels": 288458,
+            "different_pixels_by_candidate_class": {
+              "0": 126384,
+              "1": 114460,
+              "2": 31570,
+              "3": 14108,
+              "4": 1936
+            },
+            "different_pixels_by_source_class": {
+              "0": 101062,
+              "1": 123991,
+              "2": 30821,
+              "3": 28387,
+              "4": 4197
+            },
+            "equal_pixels": 117676342,
+            "num_pixels": 117964800,
+            "residual_confusion_source_to_candidate": {
+              "0": {
+                "0": 0,
+                "1": 95078,
+                "2": 5361,
+                "3": 362,
+                "4": 261
+              },
+              "1": {
+                "0": 122999,
+                "1": 0,
+                "2": 872,
+                "3": 94,
+                "4": 26
+              },
+              "2": {
+                "0": 2908,
+                "1": 17300,
+                "2": 0,
+                "3": 10600,
+                "4": 13
+              },
+              "3": {
+                "0": 243,
+                "1": 1884,
+                "2": 24624,
+                "3": 0,
+                "4": 1636
+              },
+              "4": {
+                "0": 234,
+                "1": 198,
+                "2": 713,
+                "3": 3052,
+                "4": 0
+              }
+            },
+            "shape_match": true,
+            "source_shape": [
+              600,
+              384,
+              512
+            ]
+          },
+          "protected": {
+            "argmax_agreement": 0.990768660845,
+            "argmax_disagreement": 0.009231339155,
+            "different_pixels": 276404,
+            "num_pixels": 29941918
+          },
+          "unprotected": {
+            "argmax_agreement": 0.999863058335,
+            "argmax_disagreement": 0.000136941665,
+            "different_pixels": 12054,
+            "num_pixels": 88022882
+          }
+        }
+      }
+    },
+    {
+      "archive_bytes": 285050,
+      "archive_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf51/archive.zip",
+      "archive_sha256": "b252d661874076e7e7402c69c5e3117786c4953022c6136fa39551ffae548561",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf51",
+      "delta_bytes_vs_pr79": 7662,
+      "exact_eval_ready_after_lane_claim": false,
+      "manifest_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf51/manifest.json",
+      "mask_stream": {
+        "decoded_bytes": 221168,
+        "decoded_sha256": "77aad7c06eb0a6ad72d31d7b416bb9037635cd01c06bd9da333f6e7cb7b76f06",
+        "delta_wire_bytes_vs_pr79_mask_slice": 1696,
+        "member": "masks.mkv",
+        "wire_brotli_params": {
+          "brotli_params": {
+            "lgwin": 18,
+            "mode": 2,
+            "quality": 11
+          },
+          "lossless_vs_candidate_mask_decoded": true,
+          "rpk1_raw_mask_member": true,
+          "unused_p3_brotli_wire_bytes": 213018
+        },
+        "wire_bytes": 221168,
+        "wire_sha256": "77aad7c06eb0a6ad72d31d7b416bb9037635cd01c06bd9da333f6e7cb7b76f06"
+      },
+      "payload_format": "rpk1_json_raw_mkv_with_pr79_decoded_actions",
+      "plausibility_gate": {
+        "minimum_overall_argmax_agreement": 0.997,
+        "minimum_protected_argmax_agreement": 0.99,
+        "overall_argmax_agreement": 0.99755660163,
+        "passed": true,
+        "protected_argmax_agreement": 0.993543660896,
+        "reason": "protected-mask candidate clears local plausibility agreement thresholds"
+      },
+      "runtime_preflight": {
+        "archive_validation_errors": [],
+        "candidate_mask_decoded_sha256": "77aad7c06eb0a6ad72d31d7b416bb9037635cd01c06bd9da333f6e7cb7b76f06",
+        "candidate_mask_sha_matches_expected": true,
+        "non_mask_runtime_member_checks": {
+          "actions_decoded_preserved": true,
+          "pose_decoded_preserved": true,
+          "renderer_decoded_preserved": true
+        },
+        "non_mask_runtime_members_preserved": true,
+        "payload_format": null,
+        "runtime_member_headers": {
+          "masks.mkv": {
+            "bytes": 221168,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "77aad7c06eb0a6ad72d31d7b416bb9037635cd01c06bd9da333f6e7cb7b76f06"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 1140,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+          },
+          "renderer.bin": {
+            "bytes": 59288,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+          },
+          "seg_tile_actions.bin": {
+            "bytes": 2688,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f"
+          }
+        },
+        "runtime_parser": "submissions/robust_current/unpack_renderer_payload.py",
+        "runtime_parser_ok": true
+      },
+      "score_claim": false,
+      "source": {
+        "existing_manifest": {
+          "archive_path": "experiments/results/c067_micro_mask_reencode_threshold_ladder_20260503/save05k_crf51/archive.zip",
+          "manifest_path": "experiments/results/c067_micro_mask_reencode_threshold_ladder_20260503/save05k_crf51/protected_mask_reencode_manifest.json",
+          "manifest_sha256": "0a716de402e8b6bec711e8bf68823552542ad7cbae0fdc68a2a5293d79987d30",
+          "source_mask_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "kind": "existing_protected_mask_reencode_manifest",
+        "mask_agreement": {
+          "overall": {
+            "argmax_agreement": 0.99755660163,
+            "argmax_disagreement": 0.00244339837,
+            "candidate_shape": [
+              600,
+              384,
+              512
+            ],
+            "different_pixels": 288235,
+            "different_pixels_by_candidate_class": {
+              "0": 126524,
+              "1": 113979,
+              "2": 31698,
+              "3": 14061,
+              "4": 1973
+            },
+            "different_pixels_by_source_class": {
+              "0": 100104,
+              "1": 124183,
+              "2": 31313,
+              "3": 28517,
+              "4": 4118
+            },
+            "equal_pixels": 117676565,
+            "num_pixels": 117964800,
+            "residual_confusion_source_to_candidate": {
+              "0": {
+                "0": 0,
+                "1": 94181,
+                "2": 5325,
+                "3": 325,
+                "4": 273
+              },
+              "1": {
+                "0": 123190,
+                "1": 0,
+                "2": 898,
+                "3": 70,
+                "4": 25
+              },
+              "2": {
+                "0": 2885,
+                "1": 17740,
+                "2": 0,
+                "3": 10675,
+                "4": 13
+              },
+              "3": {
+                "0": 229,
+                "1": 1873,
+                "2": 24753,
+                "3": 0,
+                "4": 1662
+              },
+              "4": {
+                "0": 220,
+                "1": 185,
+                "2": 722,
+                "3": 2991,
+                "4": 0
+              }
+            },
+            "shape_match": true,
+            "source_shape": [
+              600,
+              384,
+              512
+            ]
+          },
+          "protected": {
+            "argmax_agreement": 0.993543660896,
+            "argmax_disagreement": 0.006456339104,
+            "different_pixels": 278256,
+            "num_pixels": 43098108
+          },
+          "unprotected": {
+            "argmax_agreement": 0.999866709751,
+            "argmax_disagreement": 0.000133290249,
+            "different_pixels": 9979,
+            "num_pixels": 74866692
+          }
+        }
+      }
+    },
+    {
+      "archive_bytes": 299060,
+      "archive_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_plan_20260502_builds_c067_micro_av1_mask_reencode_save05k/archive.zip",
+      "archive_sha256": "58e1fcf1052484cd6ef40348410609511bcb1620009c1b151e064f6e0b455a4f",
+      "candidate_id": "protected_c067_micro_mask_reencode_plan_20260502_builds_c067_micro_av1_mask_reencode_save05k",
+      "delta_bytes_vs_pr79": 21672,
+      "exact_eval_ready_after_lane_claim": false,
+      "manifest_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_plan_20260502_builds_c067_micro_av1_mask_reencode_save05k/manifest.json",
+      "mask_stream": {
+        "decoded_bytes": 235178,
+        "decoded_sha256": "9bac1d6b62b73c3a52805e5e0a2ec1e6e5b01eb64fa41d5ef87850362106077d",
+        "delta_wire_bytes_vs_pr79_mask_slice": 15706,
+        "member": "masks.mkv",
+        "wire_brotli_params": {
+          "brotli_params": {
+            "lgwin": 18,
+            "mode": 0,
+            "quality": 11
+          },
+          "lossless_vs_candidate_mask_decoded": true,
+          "rpk1_raw_mask_member": true,
+          "unused_p3_brotli_wire_bytes": 227007
+        },
+        "wire_bytes": 235178,
+        "wire_sha256": "9bac1d6b62b73c3a52805e5e0a2ec1e6e5b01eb64fa41d5ef87850362106077d"
+      },
+      "payload_format": "rpk1_json_raw_mkv_with_pr79_decoded_actions",
+      "plausibility_gate": {
+        "minimum_overall_argmax_agreement": 0.997,
+        "minimum_protected_argmax_agreement": 0.99,
+        "overall_argmax_agreement": 0.997740325928,
+        "passed": true,
+        "protected_argmax_agreement": 0.994012498182,
+        "reason": "protected-mask candidate clears local plausibility agreement thresholds"
+      },
+      "runtime_preflight": {
+        "archive_validation_errors": [],
+        "candidate_mask_decoded_sha256": "9bac1d6b62b73c3a52805e5e0a2ec1e6e5b01eb64fa41d5ef87850362106077d",
+        "candidate_mask_sha_matches_expected": true,
+        "non_mask_runtime_member_checks": {
+          "actions_decoded_preserved": true,
+          "pose_decoded_preserved": true,
+          "renderer_decoded_preserved": true
+        },
+        "non_mask_runtime_members_preserved": true,
+        "payload_format": null,
+        "runtime_member_headers": {
+          "masks.mkv": {
+            "bytes": 235178,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "9bac1d6b62b73c3a52805e5e0a2ec1e6e5b01eb64fa41d5ef87850362106077d"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 1140,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+          },
+          "renderer.bin": {
+            "bytes": 59288,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+          },
+          "seg_tile_actions.bin": {
+            "bytes": 2688,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f"
+          }
+        },
+        "runtime_parser": "submissions/robust_current/unpack_renderer_payload.py",
+        "runtime_parser_ok": true
+      },
+      "score_claim": false,
+      "source": {
+        "existing_manifest": {
+          "archive_path": "experiments/results/c067_micro_mask_reencode_plan_20260502/builds/c067_micro_av1_mask_reencode_save05k/archive.zip",
+          "manifest_path": "experiments/results/c067_micro_mask_reencode_plan_20260502/builds/c067_micro_av1_mask_reencode_save05k/protected_mask_reencode_manifest.json",
+          "manifest_sha256": "1ce5599104337e302c6b4d7d6cca173df470cd7cd23dafeaff17a7377c6d99a5",
+          "source_mask_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "kind": "existing_protected_mask_reencode_manifest",
+        "mask_agreement": {
+          "overall": {
+            "argmax_agreement": 0.997740325928,
+            "argmax_disagreement": 0.002259674072,
+            "candidate_shape": [
+              600,
+              384,
+              512
+            ],
+            "different_pixels": 266562,
+            "different_pixels_by_candidate_class": {
+              "0": 116941,
+              "1": 105458,
+              "2": 28935,
+              "3": 13332,
+              "4": 1896
+            },
+            "different_pixels_by_source_class": {
+              "0": 92482,
+              "1": 114912,
+              "2": 28934,
+              "3": 26279,
+              "4": 3955
+            },
+            "equal_pixels": 117698238,
+            "num_pixels": 117964800,
+            "residual_confusion_source_to_candidate": {
+              "0": {
+                "0": 0,
+                "1": 87306,
+                "2": 4714,
+                "3": 262,
+                "4": 200
+              },
+              "1": {
+                "0": 114049,
+                "1": 0,
+                "2": 769,
+                "3": 65,
+                "4": 29
+              },
+              "2": {
+                "0": 2517,
+                "1": 16415,
+                "2": 0,
+                "3": 9984,
+                "4": 18
+              },
+              "3": {
+                "0": 203,
+                "1": 1571,
+                "2": 22856,
+                "3": 0,
+                "4": 1649
+              },
+              "4": {
+                "0": 172,
+                "1": 166,
+                "2": 596,
+                "3": 3021,
+                "4": 0
+              }
+            },
+            "shape_match": true,
+            "source_shape": [
+              600,
+              384,
+              512
+            ]
+          },
+          "protected": {
+            "argmax_agreement": 0.994012498182,
+            "argmax_disagreement": 0.005987501818,
+            "different_pixels": 258050,
+            "num_pixels": 43098108
+          },
+          "unprotected": {
+            "argmax_agreement": 0.99988630458,
+            "argmax_disagreement": 0.00011369542,
+            "different_pixels": 8512,
+            "num_pixels": 74866692
+          }
+        }
+      }
+    },
+    {
+      "archive_bytes": 299060,
+      "archive_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50/archive.zip",
+      "archive_sha256": "35225daed676e053bde7e600d8e57e4d907713d0faf34a7962dd0fba2503866f",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50",
+      "delta_bytes_vs_pr79": 21672,
+      "exact_eval_ready_after_lane_claim": false,
+      "manifest_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50/manifest.json",
+      "mask_stream": {
+        "decoded_bytes": 235178,
+        "decoded_sha256": "c8fd0030db7b6cc18594ab0ae262bb97fce8de30b38c662872e925cc4e525354",
+        "delta_wire_bytes_vs_pr79_mask_slice": 15706,
+        "member": "masks.mkv",
+        "wire_brotli_params": {
+          "brotli_params": {
+            "lgwin": 18,
+            "mode": 0,
+            "quality": 11
+          },
+          "lossless_vs_candidate_mask_decoded": true,
+          "rpk1_raw_mask_member": true,
+          "unused_p3_brotli_wire_bytes": 227006
+        },
+        "wire_bytes": 235178,
+        "wire_sha256": "c8fd0030db7b6cc18594ab0ae262bb97fce8de30b38c662872e925cc4e525354"
+      },
+      "payload_format": "rpk1_json_raw_mkv_with_pr79_decoded_actions",
+      "plausibility_gate": {
+        "minimum_overall_argmax_agreement": 0.997,
+        "minimum_protected_argmax_agreement": 0.99,
+        "overall_argmax_agreement": 0.997740325928,
+        "passed": true,
+        "protected_argmax_agreement": 0.994012498182,
+        "reason": "protected-mask candidate clears local plausibility agreement thresholds"
+      },
+      "runtime_preflight": {
+        "archive_validation_errors": [],
+        "candidate_mask_decoded_sha256": "c8fd0030db7b6cc18594ab0ae262bb97fce8de30b38c662872e925cc4e525354",
+        "candidate_mask_sha_matches_expected": true,
+        "non_mask_runtime_member_checks": {
+          "actions_decoded_preserved": true,
+          "pose_decoded_preserved": true,
+          "renderer_decoded_preserved": true
+        },
+        "non_mask_runtime_members_preserved": true,
+        "payload_format": null,
+        "runtime_member_headers": {
+          "masks.mkv": {
+            "bytes": 235178,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "c8fd0030db7b6cc18594ab0ae262bb97fce8de30b38c662872e925cc4e525354"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 1140,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+          },
+          "renderer.bin": {
+            "bytes": 59288,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+          },
+          "seg_tile_actions.bin": {
+            "bytes": 2688,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f"
+          }
+        },
+        "runtime_parser": "submissions/robust_current/unpack_renderer_payload.py",
+        "runtime_parser_ok": true
+      },
+      "score_claim": false,
+      "source": {
+        "existing_manifest": {
+          "archive_path": "experiments/results/c067_micro_mask_reencode_threshold_ladder_20260503/save05k_crf50/archive.zip",
+          "manifest_path": "experiments/results/c067_micro_mask_reencode_threshold_ladder_20260503/save05k_crf50/protected_mask_reencode_manifest.json",
+          "manifest_sha256": "8a9522113102ad568bd5b51bee3afe90b5247ccfcc8f34998022d1fc3589d234",
+          "source_mask_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "kind": "existing_protected_mask_reencode_manifest",
+        "mask_agreement": {
+          "overall": {
+            "argmax_agreement": 0.997740325928,
+            "argmax_disagreement": 0.002259674072,
+            "candidate_shape": [
+              600,
+              384,
+              512
+            ],
+            "different_pixels": 266562,
+            "different_pixels_by_candidate_class": {
+              "0": 116941,
+              "1": 105458,
+              "2": 28935,
+              "3": 13332,
+              "4": 1896
+            },
+            "different_pixels_by_source_class": {
+              "0": 92482,
+              "1": 114912,
+              "2": 28934,
+              "3": 26279,
+              "4": 3955
+            },
+            "equal_pixels": 117698238,
+            "num_pixels": 117964800,
+            "residual_confusion_source_to_candidate": {
+              "0": {
+                "0": 0,
+                "1": 87306,
+                "2": 4714,
+                "3": 262,
+                "4": 200
+              },
+              "1": {
+                "0": 114049,
+                "1": 0,
+                "2": 769,
+                "3": 65,
+                "4": 29
+              },
+              "2": {
+                "0": 2517,
+                "1": 16415,
+                "2": 0,
+                "3": 9984,
+                "4": 18
+              },
+              "3": {
+                "0": 203,
+                "1": 1571,
+                "2": 22856,
+                "3": 0,
+                "4": 1649
+              },
+              "4": {
+                "0": 172,
+                "1": 166,
+                "2": 596,
+                "3": 3021,
+                "4": 0
+              }
+            },
+            "shape_match": true,
+            "source_shape": [
+              600,
+              384,
+              512
+            ]
+          },
+          "protected": {
+            "argmax_agreement": 0.994012498182,
+            "argmax_disagreement": 0.005987501818,
+            "different_pixels": 258050,
+            "num_pixels": 43098108
+          },
+          "unprotected": {
+            "argmax_agreement": 0.99988630458,
+            "argmax_disagreement": 0.00011369542,
+            "different_pixels": 8512,
+            "num_pixels": 74866692
+          }
+        }
+      }
+    },
+    {
+      "archive_bytes": 351150,
+      "archive_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_hardframes32_20260502_crf46_runtime_members/archive.zip",
+      "archive_sha256": "5d86e14ba19127b7a0375666929aeb8a478e84cc84086443f0e3b5a9cba0ae15",
+      "candidate_id": "protected_c067_micro_mask_reencode_hardframes32_20260502_crf46_runtime_members",
+      "delta_bytes_vs_pr79": 73762,
+      "exact_eval_ready_after_lane_claim": false,
+      "manifest_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_hardframes32_20260502_crf46_runtime_members/manifest.json",
+      "mask_stream": {
+        "decoded_bytes": 287268,
+        "decoded_sha256": "429d27db5ed42c115303fd915ce1a0eee11d44a28d7aff87cacfb6f098f318c0",
+        "delta_wire_bytes_vs_pr79_mask_slice": 67796,
+        "member": "masks.mkv",
+        "wire_brotli_params": {
+          "brotli_params": {
+            "lgwin": 20,
+            "mode": 0,
+            "quality": 11
+          },
+          "lossless_vs_candidate_mask_decoded": true,
+          "rpk1_raw_mask_member": true,
+          "unused_p3_brotli_wire_bytes": 279329
+        },
+        "wire_bytes": 287268,
+        "wire_sha256": "429d27db5ed42c115303fd915ce1a0eee11d44a28d7aff87cacfb6f098f318c0"
+      },
+      "payload_format": "rpk1_json_raw_mkv_with_pr79_decoded_actions",
+      "plausibility_gate": {
+        "minimum_overall_argmax_agreement": 0.997,
+        "minimum_protected_argmax_agreement": 0.99,
+        "overall_argmax_agreement": 0.997854936388,
+        "passed": true,
+        "protected_argmax_agreement": 0.998324871063,
+        "reason": "protected-mask candidate clears local plausibility agreement thresholds"
+      },
+      "runtime_preflight": {
+        "archive_validation_errors": [],
+        "candidate_mask_decoded_sha256": "429d27db5ed42c115303fd915ce1a0eee11d44a28d7aff87cacfb6f098f318c0",
+        "candidate_mask_sha_matches_expected": true,
+        "non_mask_runtime_member_checks": {
+          "actions_decoded_preserved": true,
+          "pose_decoded_preserved": true,
+          "renderer_decoded_preserved": true
+        },
+        "non_mask_runtime_members_preserved": true,
+        "payload_format": null,
+        "runtime_member_headers": {
+          "masks.mkv": {
+            "bytes": 287268,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "429d27db5ed42c115303fd915ce1a0eee11d44a28d7aff87cacfb6f098f318c0"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 1140,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+          },
+          "renderer.bin": {
+            "bytes": 59288,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+          },
+          "seg_tile_actions.bin": {
+            "bytes": 2688,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f"
+          }
+        },
+        "runtime_parser": "submissions/robust_current/unpack_renderer_payload.py",
+        "runtime_parser_ok": true
+      },
+      "score_claim": false,
+      "source": {
+        "existing_manifest": {
+          "archive_path": "experiments/results/c067_micro_mask_reencode_hardframes32_20260502/crf46/runtime_members/archive.zip",
+          "manifest_path": "experiments/results/c067_micro_mask_reencode_hardframes32_20260502/crf46/runtime_members/protected_mask_reencode_manifest.json",
+          "manifest_sha256": "c7df6168e919bdb8e15874c9bdacd14d52bc1a62f3bab53ae0c372669f20ccae",
+          "source_mask_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "kind": "existing_protected_mask_reencode_manifest",
+        "mask_agreement": {
+          "overall": {
+            "argmax_agreement": 0.997854936388,
+            "argmax_disagreement": 0.002145063612,
+            "candidate_shape": [
+              600,
+              384,
+              512
+            ],
+            "different_pixels": 253042,
+            "different_pixels_by_candidate_class": {
+              "0": 115735,
+              "1": 96314,
+              "2": 26967,
+              "3": 12519,
+              "4": 1507
+            },
+            "different_pixels_by_source_class": {
+              "0": 84271,
+              "1": 113601,
+              "2": 27056,
+              "3": 24136,
+              "4": 3978
+            },
+            "equal_pixels": 117711758,
+            "num_pixels": 117964800,
+            "residual_confusion_source_to_candidate": {
+              "0": {
+                "0": 0,
+                "1": 79273,
+                "2": 4647,
+                "3": 240,
+                "4": 111
+              },
+              "1": {
+                "0": 112744,
+                "1": 0,
+                "2": 777,
+                "3": 69,
+                "4": 11
+              },
+              "2": {
+                "0": 2673,
+                "1": 15351,
+                "2": 0,
+                "3": 9019,
+                "4": 13
+              },
+              "3": {
+                "0": 187,
+                "1": 1563,
+                "2": 21014,
+                "3": 0,
+                "4": 1372
+              },
+              "4": {
+                "0": 131,
+                "1": 127,
+                "2": 529,
+                "3": 3191,
+                "4": 0
+              }
+            },
+            "shape_match": true,
+            "source_shape": [
+              600,
+              384,
+              512
+            ]
+          },
+          "protected": {
+            "argmax_agreement": 0.998324871063,
+            "argmax_disagreement": 0.001675128937,
+            "different_pixels": 10539,
+            "num_pixels": 6291456
+          },
+          "unprotected": {
+            "argmax_agreement": 0.997828461195,
+            "argmax_disagreement": 0.002171538805,
+            "different_pixels": 242503,
+            "num_pixels": 111673344
+          }
+        }
+      }
+    }
+  ],
+  "canonical_score_source_required": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+  "evidence_grade": "empirical_local_byte_screen",
+  "finite_neighborhood": {
+    "controls": [
+      "p3_lossless_rebrotli_mask_control"
+    ],
+    "matching_protected_mask_streams": 16,
+    "minimum_required_archive_savings_bytes": 3000,
+    "stream_errors": []
+  },
+  "no_remote_dispatch_performed": true,
+  "recommendation": {
+    "candidate": {
+      "archive_bytes": 260866,
+      "archive_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf53/archive.zip",
+      "archive_sha256": "5e49a972ab5d77d8a8eeedc9dd36a309bf8533ad2d2e2b9b96ad30448691d338",
+      "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf53",
+      "delta_bytes_vs_pr79": -16522,
+      "exact_eval_ready_after_lane_claim": true,
+      "manifest_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf53/manifest.json",
+      "mask_stream": {
+        "decoded_bytes": 196984,
+        "decoded_sha256": "49eedf22801b610603275d21dc5b1ae3668cd4decc9349d083ad8cef933837ef",
+        "delta_wire_bytes_vs_pr79_mask_slice": -22488,
+        "member": "masks.mkv",
+        "wire_brotli_params": {
+          "brotli_params": {
+            "lgwin": 18,
+            "mode": 2,
+            "quality": 11
+          },
+          "lossless_vs_candidate_mask_decoded": true,
+          "rpk1_raw_mask_member": true,
+          "unused_p3_brotli_wire_bytes": 188394
+        },
+        "wire_bytes": 196984,
+        "wire_sha256": "49eedf22801b610603275d21dc5b1ae3668cd4decc9349d083ad8cef933837ef"
+      },
+      "payload_format": "rpk1_json_raw_mkv_with_pr79_decoded_actions",
+      "plausibility_gate": {
+        "minimum_overall_argmax_agreement": 0.997,
+        "minimum_protected_argmax_agreement": 0.99,
+        "overall_argmax_agreement": 0.997173487345,
+        "passed": true,
+        "protected_argmax_agreement": 0.992559116516,
+        "reason": "protected-mask candidate clears local plausibility agreement thresholds"
+      },
+      "runtime_preflight": {
+        "archive_validation_errors": [],
+        "candidate_mask_decoded_sha256": "49eedf22801b610603275d21dc5b1ae3668cd4decc9349d083ad8cef933837ef",
+        "candidate_mask_sha_matches_expected": true,
+        "non_mask_runtime_member_checks": {
+          "actions_decoded_preserved": true,
+          "pose_decoded_preserved": true,
+          "renderer_decoded_preserved": true
+        },
+        "non_mask_runtime_members_preserved": true,
+        "payload_format": null,
+        "runtime_member_headers": {
+          "masks.mkv": {
+            "bytes": 196984,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "49eedf22801b610603275d21dc5b1ae3668cd4decc9349d083ad8cef933837ef"
+          },
+          "optimized_poses.qp1": {
+            "bytes": 1140,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+          },
+          "renderer.bin": {
+            "bytes": 59288,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+          },
+          "seg_tile_actions.bin": {
+            "bytes": 2688,
+            "codec": "raw",
+            "decoded_bytes": null,
+            "decoded_sha256": null,
+            "sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f"
+          }
+        },
+        "runtime_parser": "submissions/robust_current/unpack_renderer_payload.py",
+        "runtime_parser_ok": true
+      },
+      "score_claim": false,
+      "source": {
+        "existing_manifest": {
+          "archive_path": "experiments/results/c067_micro_mask_reencode_threshold_ladder_20260503/save05k_crf53/archive.zip",
+          "manifest_path": "experiments/results/c067_micro_mask_reencode_threshold_ladder_20260503/save05k_crf53/protected_mask_reencode_manifest.json",
+          "manifest_sha256": "70ec866e8758c1f112e40dc1bd93b26ff24bdd74088dd9895890e2fd6012cf1a",
+          "source_mask_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "kind": "existing_protected_mask_reencode_manifest",
+        "mask_agreement": {
+          "overall": {
+            "argmax_agreement": 0.997173487345,
+            "argmax_disagreement": 0.002826512655,
+            "candidate_shape": [
+              600,
+              384,
+              512
+            ],
+            "different_pixels": 333429,
+            "different_pixels_by_candidate_class": {
+              "0": 146459,
+              "1": 130354,
+              "2": 37577,
+              "3": 16606,
+              "4": 2433
+            },
+            "different_pixels_by_source_class": {
+              "0": 115260,
+              "1": 143300,
+              "2": 35567,
+              "3": 33251,
+              "4": 6051
+            },
+            "equal_pixels": 117631371,
+            "num_pixels": 117964800,
+            "residual_confusion_source_to_candidate": {
+              "0": {
+                "0": 0,
+                "1": 107405,
+                "2": 6932,
+                "3": 525,
+                "4": 398
+              },
+              "1": {
+                "0": 142147,
+                "1": 0,
+                "2": 1038,
+                "3": 84,
+                "4": 31
+              },
+              "2": {
+                "0": 3598,
+                "1": 20215,
+                "2": 0,
+                "3": 11732,
+                "4": 22
+              },
+              "3": {
+                "0": 340,
+                "1": 2401,
+                "2": 28528,
+                "3": 0,
+                "4": 1982
+              },
+              "4": {
+                "0": 374,
+                "1": 333,
+                "2": 1079,
+                "3": 4265,
+                "4": 0
+              }
+            },
+            "shape_match": true,
+            "source_shape": [
+              600,
+              384,
+              512
+            ]
+          },
+          "protected": {
+            "argmax_agreement": 0.992559116516,
+            "argmax_disagreement": 0.007440883484,
+            "different_pixels": 320688,
+            "num_pixels": 43098108
+          },
+          "unprotected": {
+            "argmax_agreement": 0.999829817511,
+            "argmax_disagreement": 0.000170182489,
+            "different_pixels": 12741,
+            "num_pixels": 74866692
+          }
+        }
+      }
+    },
+    "decision": "recommend_exact_cuda_eval_after_lane_claim",
+    "reason": "best local PR79/S2 mask-body candidate clears >=3KB archive savings and strict local runtime/preflight checks; no remote dispatch was performed"
+  },
+  "schema": "pr79_mask_body_reduction_profile_v1",
+  "score_claim": false,
+  "source_pr79": {
+    "archive_bytes": 277388,
+    "archive_path": "experiments/results/top_submission_reverse_engineering_20260503_pr79/archive.zip",
+    "archive_sha256": "01dc02badf851d99108fd92c570271f36f74cc5424c6d2a8f1b499cb4d1c3446",
+    "decoded_mask_bytes": 223385,
+    "decoded_mask_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+    "payload_bytes": 277288,
+    "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+    "payload_sha256": "026c2a5801dc42e369ad9533736645488ef9183c0789d9c961adb23c1740e688",
+    "raw_segment_bytes": {
+      "masks.mkv": 219472,
+      "optimized_poses.qp1": 898,
+      "renderer.bin": 55756,
+      "seg_tile_actions.bin": 1162
+    }
+  },
+  "tool": "experiments/profile_pr79_mask_body_reduction_candidates.py"
+}

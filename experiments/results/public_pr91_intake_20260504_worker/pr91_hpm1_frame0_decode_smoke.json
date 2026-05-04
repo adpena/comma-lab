@@ -1,0 +1,13 @@
+{
+  "decoded_frames_requested": 1,
+  "elapsed_sec": 6.929,
+  "error": "Tried to decode from compressed data that is invalid for the employed entropy model.",
+  "error_type": "AssertionError",
+  "evidence_grade": "empirical_local_cpu_prefix_decode",
+  "model_N": 600,
+  "python": "/Users/adpena/Projects/pact/.venv/bin/python",
+  "schema_version": 1,
+  "score_claim": false,
+  "status": "failed",
+  "tool": "bounded_pr91_hpm1_frame0_decode_manual"
+}

@@ -1,0 +1,2257 @@
+{
+  "agreement_context": {
+    "alpha4_agreement_before_repair": 0.994034733242,
+    "alpha4_different_pixels_before_repair": 1407383,
+    "alpha4_equal_pixels_before_repair": 234522217,
+    "min_agreement": 0.99,
+    "num_pixels": 235929600
+  },
+  "byte_target": {
+    "grayscale_alone_under_target": true,
+    "grayscale_size_bytes": 267238,
+    "original_mask_member_size_bytes": 421483,
+    "residual_budget_after_grayscale_bytes": 154245,
+    "target_size_bytes": 421483
+  },
+  "candidate_records": [
+    {
+      "agreement_estimate_after_selected_repair": 0.994034733242,
+      "available": true,
+      "byte_target_pass": true,
+      "byte_target_size_bytes": 421483,
+      "candidate_total_payload_bytes": 267238,
+      "compressor": "omit_repair_payload",
+      "delta_vs_original_mask_member_bytes": -154245,
+      "grayscale_size_bytes": 267238,
+      "meets_min_agreement": true,
+      "original_mask_member_size_bytes": 421483,
+      "payload_format": "none",
+      "policy_details": {
+        "description": "use Alpha4 grayscale payload without a residual repair member"
+      },
+      "policy_kind": "no_repair",
+      "policy_name": "omit_repair_payload",
+      "promotion_eligible": false,
+      "repair_full_coverage": false,
+      "residual_payload_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "residual_payload_size_bytes": 0,
+      "residual_pixel_coverage": 0.0,
+      "runtime_integration_required": true,
+      "score_claim": false,
+      "selected_repair_pixels": 0,
+      "selected_repair_runs": 0,
+      "total_residual_pixels": 1407383,
+      "total_residual_runs": 791365,
+      "under_original_mask_member_bytes": true
+    },
+    {
+      "agreement_estimate_after_selected_repair": 0.994616817898,
+      "available": true,
+      "byte_target_pass": false,
+      "byte_target_size_bytes": 421483,
+      "candidate_total_payload_bytes": 1101345,
+      "compressor": "raw_amr1",
+      "delta_vs_original_mask_member_bytes": 679862,
+      "grayscale_size_bytes": 267238,
+      "meets_min_agreement": true,
+      "original_mask_member_size_bytes": 421483,
+      "payload_format": "alpha4_residual_repair_amr1_v1",
+      "policy_details": {
+        "source_classes": [
+          2
+        ]
+      },
+      "policy_kind": "class_priority_prefix",
+      "policy_name": "class_prefix_2",
+      "promotion_eligible": false,
+      "repair_full_coverage": false,
+      "residual_payload_sha256": "36a49102fbc407a5e7e873e358fad5e414df8de7efe03aeaa911941c3343db05",
+      "residual_payload_size_bytes": 834107,
+      "residual_pixel_coverage": 0.097578981699,
+      "runtime_integration_required": false,
+      "score_claim": false,
+      "selected_repair_pixels": 137331,
+      "selected_repair_runs": 75747,
+      "total_residual_pixels": 1407383,
+      "total_residual_runs": 791365,
+      "under_original_mask_member_bytes": false
+    },
+    {
+      "agreement_estimate_after_selected_repair": 0.994616817898,
+      "available": true,
+      "byte_target_pass": false,
+      "byte_target_size_bytes": 421483,
+      "candidate_total_payload_bytes": 541251,
+      "compressor": "zlib9",
+      "delta_vs_original_mask_member_bytes": 119768,
+      "grayscale_size_bytes": 267238,
+      "meets_min_agreement": true,
+      "original_mask_member_size_bytes": 421483,
+      "payload_format": "alpha4_residual_repair_amr1_v1+zlib",
+      "policy_details": {
+        "source_classes": [
+          2
+        ]
+      },
+      "policy_kind": "class_priority_prefix",
+      "policy_name": "class_prefix_2",
+      "promotion_eligible": false,
+      "repair_full_coverage": false,
+      "residual_payload_sha256": "e5feed914b3a472a3f9e05ad350f5f006466e0d41b9f63c6cc31821567ed8f2b",
+      "residual_payload_size_bytes": 274013,
+      "residual_pixel_coverage": 0.097578981699,
+      "runtime_integration_required": true,
+      "score_claim": false,
+      "selected_repair_pixels": 137331,
+      "selected_repair_runs": 75747,
+      "total_residual_pixels": 1407383,
+      "total_residual_runs": 791365,
+      "under_original_mask_member_bytes": false
+    },
+    {
+      "agreement_estimate_after_selected_repair": 0.994616817898,
+      "available": true,
+      "byte_target_pass": true,
+      "byte_target_size_bytes": 421483,
+      "candidate_total_payload_bytes": 419070,
+      "compressor": "lzma_xz9e",
+      "delta_vs_original_mask_member_bytes": -2413,
+      "grayscale_size_bytes": 267238,
+      "meets_min_agreement": true,
+      "original_mask_member_size_bytes": 421483,
+      "payload_format": "alpha4_residual_repair_amr1_v1+lzma_xz",
+      "policy_details": {
+        "source_classes": [
+          2
+        ]
+      },
+      "policy_kind": "class_priority_prefix",
+      "policy_name": "class_prefix_2",
+      "promotion_eligible": false,
+      "repair_full_coverage": false,
+      "residual_payload_sha256": "747e202a0bf5cbf62c7231630c3bbf09b913e82958a3b67124bde8d4ee2526a2",
+      "residual_payload_size_bytes": 151832,
+      "residual_pixel_coverage": 0.097578981699,
+      "runtime_integration_required": true,
+      "score_claim": false,
+      "selected_repair_pixels": 137331,
+      "selected_repair_runs": 75747,
+      "total_residual_pixels": 1407383,
+      "total_residual_runs": 791365,
+      "under_original_mask_member_bytes": true
+    },
+    {
+      "agreement_estimate_after_selected_repair": 0.994616817898,
+      "available": true,
+      "byte_target_pass": false,
+      "byte_target_size_bytes": 421483,
+      "candidate_total_payload_bytes": 439528,
+      "compressor": "brotli11",
+      "delta_vs_original_mask_member_bytes": 18045,
+      "grayscale_size_bytes": 267238,
+      "meets_min_agreement": true,
+      "original_mask_member_size_bytes": 421483,
+      "payload_format": "alpha4_residual_repair_amr1_v1+brotli",
+      "policy_details": {
+        "source_classes": [
+          2
+        ]
+      },
+      "policy_kind": "class_priority_prefix",
+      "policy_name": "class_prefix_2",
+      "promotion_eligible": false,
+      "repair_full_coverage": false,
+      "residual_payload_sha256": "2d3d6d8befc301070ecb9e7bc2efe77a1cb843b6bd3bcf62dcaaf4a9dd21842a",
+      "residual_payload_size_bytes": 172290,
+      "residual_pixel_coverage": 0.097578981699,
+      "runtime_integration_required": true,
+      "score_claim": false,
+      "selected_repair_pixels": 137331,
+      "selected_repair_runs": 75747,
+      "total_residual_pixels": 1407383,
+      "total_residual_runs": 791365,
+      "under_original_mask_member_bytes": false
+    },
+    {
+      "agreement_estimate_after_selected_repair": 0.996433355543,
+      "available": true,
+      "byte_target_pass": false,
+      "byte_target_size_bytes": 421483,
+      "candidate_total_payload_bytes": 4271726,
+      "compressor": "raw_amr1",
+      "delta_vs_original_mask_member_bytes": 3850243,
+      "grayscale_size_bytes": 267238,
+      "meets_min_agreement": true,
+      "original_mask_member_size_bytes": 421483,
+      "payload_format": "alpha4_residual_repair_amr1_v1",
+      "policy_details": {
+        "source_classes": [
+          2,
+          1
+        ]
+      },
+      "policy_kind": "class_priority_prefix",
+      "policy_name": "class_prefix_2_1",
+      "promotion_eligible": false,
+      "repair_full_coverage": false,
+      "residual_payload_sha256": "e023ecd3ad0e9cf2d855e2a45ac8fcdc5ef1c3ef5019deebfd1e3588c10a8dd9",
+      "residual_payload_size_bytes": 4004488,
+      "residual_pixel_coverage": 0.40209807849,
+      "runtime_integration_required": false,
+      "score_claim": false,
+      "selected_repair_pixels": 565906,
+      "selected_repair_runs": 363963,
+      "total_residual_pixels": 1407383,
+      "total_residual_runs": 791365,
+      "under_original_mask_member_bytes": false
+    },
+    {
+      "agreement_estimate_after_selected_repair": 0.996433355543,
+      "available": true,
+      "byte_target_pass": false,
+      "byte_target_size_bytes": 421483,
+      "candidate_total_payload_bytes": 1530401,
+      "compressor": "zlib9",
+      "delta_vs_original_mask_member_bytes": 1108918,
+      "grayscale_size_bytes": 267238,
+      "meets_min_agreement": true,
+      "original_mask_member_size_bytes": 421483,
+      "payload_format": "alpha4_residual_repair_amr1_v1+zlib",
+      "policy_details": {
+        "source_classes": [
+          2,
+          1
+        ]
+      },
+      "policy_kind": "class_priority_prefix",
+      "policy_name": "class_prefix_2_1",
+      "promotion_eligible": false,
+      "repair_full_coverage": false,
+      "residual_payload_sha256": "074438c8b7daf8cb7a9eac9a784cd445f61c76743244d9c29163528ed27730f7",
+      "residual_payload_size_bytes": 1263163,
+      "residual_pixel_coverage": 0.40209807849,
+      "runtime_integration_required": true,
+      "score_claim": false,
+      "selected_repair_pixels": 565906,
+      "selected_repair_runs": 363963,
+      "total_residual_pixels": 1407383,
+      "total_residual_runs": 791365,
+      "under_original_mask_member_bytes": false
+    },
+    {
+      "agreement_estimate_after_selected_repair": 0.996433355543,
+      "available": true,
+      "byte_target_pass": false,
+      "byte_target_size_bytes": 421483,
+      "candidate_total_payload_bytes": 994006,
+      "compressor": "lzma_xz9e",
+      "delta_vs_original_mask_member_bytes": 572523,
+      "grayscale_size_bytes": 267238,
+      "meets_min_agreement": true,
+      "original_mask_member_size_bytes": 421483,
+      "payload_format": "alpha4_residual_repair_amr1_v1+lzma_xz",
+      "policy_details": {
+        "source_classes": [
+          2,
+          1
+        ]
+      },
+      "policy_kind": "class_priority_prefix",
+      "policy_name": "class_prefix_2_1",
+      "promotion_eligible": false,
+      "repair_full_coverage": false,
+      "residual_payload_sha256": "56e23a0dd303347d6fc3d4d2523481c8a343a6e6311556598e454b5c9cbb3828",
+      "residual_payload_size_bytes": 726768,
+      "residual_pixel_coverage": 0.40209807849,
+      "runtime_integration_required": true,
+      "score_claim": false,
+      "selected_repair_pixels": 565906,
+      "selected_repair_runs": 363963,
+      "total_residual_pixels": 1407383,
+      "total_residual_runs": 791365,
+      "under_original_mask_member_bytes": false
+    },
+    {
+      "agreement_estimate_after_selected_repair": 0.996433355543,
+      "available": true,
+      "byte_target_pass": false,
+      "byte_target_size_bytes": 421483,
+      "candidate_total_payload_bytes": 1027819,
+      "compressor": "brotli11",
+      "delta_vs_original_mask_member_bytes": 606336,
+      "grayscale_size_bytes": 267238,
+      "meets_min_agreement": true,
+      "original_mask_member_size_bytes": 421483,
+      "payload_format": "alpha4_residual_repair_amr1_v1+brotli",
+      "policy_details": {
+        "source_classes": [
+          2,
+          1
+        ]
+      },
+      "policy_kind": "class_priority_prefix",
+      "policy_name": "class_prefix_2_1",
+      "promotion_eligible": false,
+      "repair_full_coverage": false,
+      "residual_payload_sha256": "09586851ed2ccc32268fdca414cf94f8af9bdfe75e7303718059fac4b1d0c314",
+      "residual_payload_size_bytes": 760581,
+      "residual_pixel_coverage": 0.40209807849,
+      "runtime_integration_required": true,
+      "score_claim": false,
+      "selected_repair_pixels": 565906,
+      "selected_repair_runs": 363963,
+      "total_residual_pixels": 1407383,
+      "total_residual_runs": 791365,
+      "under_original_mask_member_bytes": false
+    },
+    {
+      "agreement_estimate_after_selected_repair": 0.996927049425,
+      "available": true,
+      "byte_target_pass": false,
+      "byte_target_size_bytes": 421483,
+      "candidate_total_payload_bytes": 5033712,
+      "compressor": "raw_amr1",
+      "delta_vs_original_mask_member_bytes": 4612229,
+      "grayscale_size_bytes": 267238,
+      "meets_min_agreement": true,
+      "original_mask_member_size_bytes": 421483,
+      "payload_format": "alpha4_residual_repair_amr1_v1",
+      "policy_details": {
+        "source_classes": [
+          2,
+          1,
+          3
+        ]
+      },
+      "policy_kind": "class_priority_prefix",
+      "policy_name": "class_prefix_2_1_3",
+      "promotion_eligible": false,
+      "repair_full_coverage": false,
+      "residual_payload_sha256": "01197bef6be710111fd767727cb9c35db934227aee6b6dbe497f78832fc027cd",
+      "residual_payload_size_bytes": 4766474,
+      "residual_pixel_coverage": 0.484859487432,
+      "runtime_integration_required": false,
+      "score_claim": false,
+      "selected_repair_pixels": 682383,
+      "selected_repair_runs": 433234,
+      "total_residual_pixels": 1407383,
+      "total_residual_runs": 791365,
+      "under_original_mask_member_bytes": false
+    },
+    {
+      "agreement_estimate_after_selected_repair": 0.996927049425,
+      "available": true,
+      "byte_target_pass": false,
+      "byte_target_size_bytes": 421483,
+      "candidate_total_payload_bytes": 1767876,
+      "compressor": "zlib9",
+      "delta_vs_original_mask_member_bytes": 1346393,
+      "grayscale_size_bytes": 267238,
+      "meets_min_agreement": true,
+      "original_mask_member_size_bytes": 421483,
+      "payload_format": "alpha4_residual_repair_amr1_v1+zlib",
+      "policy_details": {
+        "source_classes": [
+          2,
+          1,
+          3
+        ]
+      },
+      "policy_kind": "class_priority_prefix",
+      "policy_name": "class_prefix_2_1_3",
+      "promotion_eligible": false,
+      "repair_full_coverage": false,
+      "residual_payload_sha256": "d99e3944e4b611d5358709145d84acedfc98be773069139fd19a0e7bbfc72f70",
+      "residual_payload_size_bytes": 1500638,
+      "residual_pixel_coverage": 0.484859487432,
+      "runtime_integration_required": true,
+      "score_claim": false,
+      "selected_repair_pixels": 682383,
+      "selected_repair_runs": 433234,
+      "total_residual_pixels": 1407383,
+      "total_residual_runs": 791365,
+      "under_original_mask_member_bytes": false
+    },
+    {
+      "agreement_estimate_after_selected_repair": 0.996927049425,
+      "available": true,
+      "byte_target_pass": false,
+      "byte_target_size_bytes": 421483,
+      "candidate_total_payload_bytes": 1128202,
+      "compressor": "lzma_xz9e",
+      "delta_vs_original_mask_member_bytes": 706719,
+      "grayscale_size_bytes": 267238,
+      "meets_min_agreement": true,
+      "original_mask_member_size_bytes": 421483,
+      "payload_format": "alpha4_residual_repair_amr1_v1+lzma_xz",
+      "policy_details": {
+        "source_classes": [
+          2,
+          1,
+          3
+        ]
+      },
+      "policy_kind": "class_priority_prefix",
+      "policy_name": "class_prefix_2_1_3",
+      "promotion_eligible": false,
+      "repair_full_coverage": false,
+      "residual_payload_sha256": "d2b245e04e438f548d1255bf588cf8f0740a36768d9b97344e82cc6a720cad7a",
+      "residual_payload_size_bytes": 860964,
+      "residual_pixel_coverage": 0.484859487432,
+      "runtime_integration_required": true,
+      "score_claim": false,
+      "selected_repair_pixels": 682383,
+      "selected_repair_runs": 433234,
+      "total_residual_pixels": 1407383,
+      "total_residual_runs": 791365,
+      "under_original_mask_member_bytes": false
+    },
+    {
+      "agreement_estimate_after_selected_repair": 0.996927049425,
+      "available": true,
+      "byte_target_pass": false,
+      "byte_target_size_bytes": 421483,
+      "candidate_total_payload_bytes": 1171889,
+      "compressor": "brotli11",
+      "delta_vs_original_mask_member_bytes": 750406,
+      "grayscale_size_bytes": 267238,
+      "meets_min_agreement": true,
+      "original_mask_member_size_bytes": 421483,
+      "payload_format": "alpha4_residual_repair_amr1_v1+brotli",
+      "policy_details": {
+        "source_classes": [
+          2,
+          1,
+          3
+        ]
+      },
+      "policy_kind": "class_priority_prefix",
+      "policy_name": "class_prefix_2_1_3",
+      "promotion_eligible": false,
+      "repair_full_coverage": false,
+      "residual_payload_sha256": "59bc9e0da5efcb7b535c4a535989559b43bf9ce1862535fa9eb6e693cab75349",
+      "residual_payload_size_bytes": 904651,
+      "residual_pixel_coverage": 0.484859487432,
+      "runtime_integration_required": true,
+      "score_claim": false,
+      "selected_repair_pixels": 682383,
+      "selected_repair_runs": 433234,
+      "total_residual_pixels": 1407383,
+      "total_residual_runs": 791365,
+      "under_original_mask_member_bytes": false
+    },
+    {
+      "agreement_estimate_after_selected_repair": 0.997279179891,
+      "available": true,
+      "byte_target_pass": false,
+      "byte_target_size_bytes": 421483,
+      "candidate_total_payload_bytes": 5255938,
+      "compressor": "raw_amr1",
+      "delta_vs_original_mask_member_bytes": 4834455,
+      "grayscale_size_bytes": 267238,
+      "meets_min_agreement": true,
+      "original_mask_member_size_bytes": 421483,
+      "payload_format": "alpha4_residual_repair_amr1_v1",
+      "policy_details": {
+        "source_classes": [
+          2,
+          1,
+          3,
+          4
+        ]
+      },
+      "policy_kind": "class_priority_prefix",
+      "policy_name": "class_prefix_2_1_3_4",
+      "promotion_eligible": false,
+      "repair_full_coverage": false,
+      "residual_payload_sha256": "374433d7af2a4b070931e4829a86675fb664712d266f1633956ce6cae6ec8090",
+      "residual_payload_size_bytes": 4988700,
+      "residual_pixel_coverage": 0.543889616402,
+      "runtime_integration_required": false,
+      "score_claim": false,
+      "selected_repair_pixels": 765461,
+      "selected_repair_runs": 453436,
+      "total_residual_pixels": 1407383,
+      "total_residual_runs": 791365,
+      "under_original_mask_member_bytes": false
+    },
+    {
+      "agreement_estimate_after_selected_repair": 0.997279179891,
+      "available": true,
+      "byte_target_pass": false,
+      "byte_target_size_bytes": 421483,
+      "candidate_total_payload_bytes": 1849810,
+      "compressor": "zlib9",
+      "delta_vs_original_mask_member_bytes": 1428327,
+      "grayscale_size_bytes": 267238,
+      "meets_min_agreement": true,
+      "original_mask_member_size_bytes": 421483,
+      "payload_format": "alpha4_residual_repair_amr1_v1+zlib",
+      "policy_details": {
+        "source_classes": [
+          2,
+          1,
+          3,
+          4
+        ]
+      },
+      "policy_kind": "class_priority_prefix",
+      "policy_name": "class_prefix_2_1_3_4",
+      "promotion_eligible": false,
+      "repair_full_coverage": false,
+      "residual_payload_sha256": "4f13b68704e5c3eea164ae1671e7239eb6c4274c13a39d492ca64814dced6679",
+      "residual_payload_size_bytes": 1582572,
+      "residual_pixel_coverage": 0.543889616402,
+      "runtime_integration_required": true,
+      "score_claim": false,
+      "selected_repair_pixels": 765461,
+      "selected_repair_runs": 453436,
+      "total_residual_pixels": 1407383,
+      "total_residual_runs": 791365,
+      "under_original_mask_member_bytes": false
+    },
+    {
+      "agreement_estimate_after_selected_repair": 0.997279179891,
+      "available": true,
+      "byte_target_pass": false,
+      "byte_target_size_bytes": 421483,
+      "candidate_total_payload_bytes": 1179990,
+      "compressor": "lzma_xz9e",
+      "delta_vs_original_mask_member_bytes": 758507,
+      "grayscale_size_bytes": 267238,
+      "meets_min_agreement": true,
+      "original_mask_member_size_bytes": 421483,
+      "payload_format": "alpha4_residual_repair_amr1_v1+lzma_xz",
+      "policy_details": {
+        "source_classes": [
+          2,
+          1,
+          3,
+          4
+        ]
+      },
+      "policy_kind": "class_priority_prefix",
+      "policy_name": "class_prefix_2_1_3_4",
+      "promotion_eligible": false,
+      "repair_full_coverage": false,
+      "residual_payload_sha256": "b4fc65097382455c085566b42b3370a778af1486a6c105785b1ac63dda4fccdc",
+      "residual_payload_size_bytes": 912752,
+      "residual_pixel_coverage": 0.543889616402,
+      "runtime_integration_required": true,
+      "score_claim": false,
+      "selected_repair_pixels": 765461,
+      "selected_repair_runs": 453436,
+      "total_residual_pixels": 1407383,
+      "total_residual_runs": 791365,
+      "under_original_mask_member_bytes": false
+    },
+    {
+      "agreement_estimate_after_selected_repair": 0.997279179891,
+      "available": true,
+      "byte_target_pass": false,
+      "byte_target_size_bytes": 421483,
+      "candidate_total_payload_bytes": 1224234,
+      "compressor": "brotli11",
+      "delta_vs_original_mask_member_bytes": 802751,
+      "grayscale_size_bytes": 267238,
+      "meets_min_agreement": true,
+      "original_mask_member_size_bytes": 421483,
+      "payload_format": "alpha4_residual_repair_amr1_v1+brotli",
+      "policy_details": {
+        "source_classes": [
+          2,
+          1,
+          3,
+          4
+        ]
+      },
+      "policy_kind": "class_priority_prefix",
+      "policy_name": "class_prefix_2_1_3_4",
+      "promotion_eligible": false,
+      "repair_full_coverage": false,
+      "residual_payload_sha256": "2319614e4cc70fc857c04c36a73363d1624cbc1124a4ff0d83c67ea8f7952490",
+      "residual_payload_size_bytes": 956996,
+      "residual_pixel_coverage": 0.543889616402,
+      "runtime_integration_required": true,
+      "score_claim": false,
+      "selected_repair_pixels": 765461,
+      "selected_repair_runs": 453436,
+      "total_residual_pixels": 1407383,
+      "total_residual_runs": 791365,
+      "under_original_mask_member_bytes": false
+    },
+    {
+      "agreement_estimate_after_selected_repair": 1.0,
+      "available": true,
+      "byte_target_pass": false,
+      "byte_target_size_bytes": 421483,
+      "candidate_total_payload_bytes": 8973152,
+      "compressor": "raw_amr1",
+      "delta_vs_original_mask_member_bytes": 8551669,
+      "grayscale_size_bytes": 267238,
+      "meets_min_agreement": true,
+      "original_mask_member_size_bytes": 421483,
+      "payload_format": "alpha4_residual_repair_amr1_v1",
+      "policy_details": {
+        "source_classes": [
+          2,
+          1,
+          3,
+          4,
+          0
+        ]
+      },
+      "policy_kind": "class_priority_prefix",
+      "policy_name": "class_prefix_2_1_3_4_0",
+      "promotion_eligible": false,
+      "repair_full_coverage": true,
+      "residual_payload_sha256": "4425294cc8f1ad38ca894226090d9aab7740c5282179824a08eae983b7b33715",
+      "residual_payload_size_bytes": 8705914,
+      "residual_pixel_coverage": 1.0,
+      "runtime_integration_required": false,
+      "score_claim": false,
+      "selected_repair_pixels": 1407383,
+      "selected_repair_runs": 791365,
+      "total_residual_pixels": 1407383,
+      "total_residual_runs": 791365,
+      "under_original_mask_member_bytes": false
+    },
+    {
+      "agreement_estimate_after_selected_repair": 1.0,
+      "available": true,
+      "byte_target_pass": false,
+      "byte_target_size_bytes": 421483,
+      "candidate_total_payload_bytes": 3021479,
+      "compressor": "zlib9",
+      "delta_vs_original_mask_member_bytes": 2599996,
+      "grayscale_size_bytes": 267238,
+      "meets_min_agreement": true,
+      "original_mask_member_size_bytes": 421483,
+      "payload_format": "alpha4_residual_repair_amr1_v1+zlib",
+      "policy_details": {
+        "source_classes": [
+          2,
+          1,
+          3,
+          4,
+          0
+        ]
+      },
+      "policy_kind": "class_priority_prefix",
+      "policy_name": "class_prefix_2_1_3_4_0",
+      "promotion_eligible": false,
+      "repair_full_coverage": true,
+      "residual_payload_sha256": "fe5d9f269c96962d2eb2cece3bbfe292b85c10d76b0b7b1c6bb06468ba0ab641",
+      "residual_payload_size_bytes": 2754241,
+      "residual_pixel_coverage": 1.0,
+      "runtime_integration_required": true,
+      "score_claim": false,
+      "selected_repair_pixels": 1407383,
+      "selected_repair_runs": 791365,
+      "total_residual_pixels": 1407383,
+      "total_residual_runs": 791365,
+      "under_original_mask_member_bytes": false
+    },
+    {
+      "agreement_estimate_after_selected_repair": 1.0,
+      "available": true,
+      "byte_target_pass": false,
+      "byte_target_size_bytes": 421483,
+      "candidate_total_payload_bytes": 1871054,
+      "compressor": "lzma_xz9e",
+      "delta_vs_original_mask_member_bytes": 1449571,
+      "grayscale_size_bytes": 267238,
+      "meets_min_agreement": true,
+      "original_mask_member_size_bytes": 421483,
+      "payload_format": "alpha4_residual_repair_amr1_v1+lzma_xz",
+      "policy_details": {
+        "source_classes": [
+          2,
+          1,
+          3,
+          4,
+          0
+        ]
+      },
+      "policy_kind": "class_priority_prefix",
+      "policy_name": "class_prefix_2_1_3_4_0",
+      "promotion_eligible": false,
+      "repair_full_coverage": true,
+      "residual_payload_sha256": "628e73f08baad62c8f0129a4c676a065e2d34af12a2092f79f1aeb1a381eae53",
+      "residual_payload_size_bytes": 1603816,
+      "residual_pixel_coverage": 1.0,
+      "runtime_integration_required": true,
+      "score_claim": false,
+      "selected_repair_pixels": 1407383,
+      "selected_repair_runs": 791365,
+      "total_residual_pixels": 1407383,
+      "total_residual_runs": 791365,
+      "under_original_mask_member_bytes": false
+    },
+    {
+      "agreement_estimate_after_selected_repair": 1.0,
+      "available": true,
+      "byte_target_pass": false,
+      "byte_target_size_bytes": 421483,
+      "candidate_total_payload_bytes": 1929249,
+      "compressor": "brotli11",
+      "delta_vs_original_mask_member_bytes": 1507766,
+      "grayscale_size_bytes": 267238,
+      "meets_min_agreement": true,
+      "original_mask_member_size_bytes": 421483,
+      "payload_format": "alpha4_residual_repair_amr1_v1+brotli",
+      "policy_details": {
+        "source_classes": [
+          2,
+          1,
+          3,
+          4,
+          0
+        ]
+      },
+      "policy_kind": "class_priority_prefix",
+      "policy_name": "class_prefix_2_1_3_4_0",
+      "promotion_eligible": false,
+      "repair_full_coverage": true,
+      "residual_payload_sha256": "6b3e680861359a3b078bd21b3c27e97fb71eabbd416eed473da7438a12473740",
+      "residual_payload_size_bytes": 1662011,
+      "residual_pixel_coverage": 1.0,
+      "runtime_integration_required": true,
+      "score_claim": false,
+      "selected_repair_pixels": 1407383,
+      "selected_repair_runs": 791365,
+      "total_residual_pixels": 1407383,
+      "total_residual_runs": 791365,
+      "under_original_mask_member_bytes": false
+    },
+    {
+      "agreement_estimate_after_selected_repair": 0.994350886875,
+      "available": true,
+      "byte_target_pass": false,
+      "byte_target_size_bytes": 421483,
+      "candidate_total_payload_bytes": 709641,
+      "compressor": "raw_amr1",
+      "delta_vs_original_mask_member_bytes": 288158,
+      "grayscale_size_bytes": 267238,
+      "meets_min_agreement": true,
+      "original_mask_member_size_bytes": 421483,
+      "payload_format": "alpha4_residual_repair_amr1_v1",
+      "policy_details": {
+        "frame_group_size": 50,
+        "selected_group_count": 1,
+        "selected_group_ranges": [
+          {
+            "end_frame_exclusive": 1050,
+            "start_frame": 1000
+          }
+        ],
+        "total_group_count": 24
+      },
+      "policy_kind": "top_residual_frame_groups",
+      "policy_name": "top_residual_frame_groups_0001_of_0024",
+      "promotion_eligible": false,
+      "repair_full_coverage": false,
+      "residual_payload_sha256": "6ac9ed919d321551525f6f0c8fd1007052f4db62fd45f1a90663bdc7087e2a2a",
+      "residual_payload_size_bytes": 442403,
+      "residual_pixel_coverage": 0.05299907701,
+      "runtime_integration_required": false,
+      "score_claim": false,
+      "selected_repair_pixels": 74590,
+      "selected_repair_runs": 40124,
+      "total_residual_pixels": 1407383,
+      "total_residual_runs": 791365,
+      "under_original_mask_member_bytes": false
+    },
+    {
+      "agreement_estimate_after_selected_repair": 0.994350886875,
+      "available": true,
+      "byte_target_pass": true,
+      "byte_target_size_bytes": 421483,
+      "candidate_total_payload_bytes": 406956,
+      "compressor": "zlib9",
+      "delta_vs_original_mask_member_bytes": -14527,
+      "grayscale_size_bytes": 267238,
+      "meets_min_agreement": true,
+      "original_mask_member_size_bytes": 421483,
+      "payload_format": "alpha4_residual_repair_amr1_v1+zlib",
+      "policy_details": {
+        "frame_group_size": 50,
+        "selected_group_count": 1,
+        "selected_group_ranges": [
+          {
+            "end_frame_exclusive": 1050,
+            "start_frame": 1000
+          }
+        ],
+        "total_group_count": 24
+      },
+      "policy_kind": "top_residual_frame_groups",
+      "policy_name": "top_residual_frame_groups_0001_of_0024",
+      "promotion_eligible": false,
+      "repair_full_coverage": false,
+      "residual_payload_sha256": "5c5dd5543e8975f81950564112de0b32208b9c6f802ee00c3e564d1b9cda9745",
+      "residual_payload_size_bytes": 139718,
+      "residual_pixel_coverage": 0.05299907701,
+      "runtime_integration_required": true,
+      "score_claim": false,
+      "selected_repair_pixels": 74590,
+      "selected_repair_runs": 40124,
+      "total_residual_pixels": 1407383,
+      "total_residual_runs": 791365,
+      "under_original_mask_member_bytes": true
+    },
+    {
+      "agreement_estimate_after_selected_repair": 0.994350886875,
+      "available": true,
+      "byte_target_pass": true,
+      "byte_target_size_bytes": 421483,
+      "candidate_total_payload_bytes": 345562,
+      "compressor": "lzma_xz9e",
+      "delta_vs_original_mask_member_bytes": -75921,
+      "grayscale_size_bytes": 267238,
+      "meets_min_agreement": true,
+      "original_mask_member_size_bytes": 421483,
+      "payload_format": "alpha4_residual_repair_amr1_v1+lzma_xz",
+      "policy_details": {
+        "frame_group_size": 50,
+        "selected_group_count": 1,
+        "selected_group_ranges": [
+          {
+            "end_frame_exclusive": 1050,
+            "start_frame": 1000
+          }
+        ],
+        "total_group_count": 24
+      },
+      "policy_kind": "top_residual_frame_groups",
+      "policy_name": "top_residual_frame_groups_0001_of_0024",
+      "promotion_eligible": false,
+      "repair_full_coverage": false,
+      "residual_payload_sha256": "efd9b7cedf6fdefc1e7d8dde682b6f078299218f35ee92583aee30fc992262e4",
+      "residual_payload_size_bytes": 78324,
+      "residual_pixel_coverage": 0.05299907701,
+      "runtime_integration_required": true,
+      "score_claim": false,
+      "selected_repair_pixels": 74590,
+      "selected_repair_runs": 40124,
+      "total_residual_pixels": 1407383,
+      "total_residual_runs": 791365,
+      "under_original_mask_member_bytes": true
+    },
+    {
+      "agreement_estimate_after_selected_repair": 0.994350886875,
+      "available": true,
+      "byte_target_pass": true,
+      "byte_target_size_bytes": 421483,
+      "candidate_total_payload_bytes": 350534,
+      "compressor": "brotli11",
+      "delta_vs_original_mask_member_bytes": -70949,
+      "grayscale_size_bytes": 267238,
+      "meets_min_agreement": true,
+      "original_mask_member_size_bytes": 421483,
+      "payload_format": "alpha4_residual_repair_amr1_v1+brotli",
+      "policy_details": {
+        "frame_group_size": 50,
+        "selected_group_count": 1,
+        "selected_group_ranges": [
+          {
+            "end_frame_exclusive": 1050,
+            "start_frame": 1000
+          }
+        ],
+        "total_group_count": 24
+      },
+      "policy_kind": "top_residual_frame_groups",
+      "policy_name": "top_residual_frame_groups_0001_of_0024",
+      "promotion_eligible": false,
+      "repair_full_coverage": false,
+      "residual_payload_sha256": "4de3bbdec5ded33c9dea85c201a7816c41b3e1f9ac6c3426c17e78910e85d48b",
+      "residual_payload_size_bytes": 83296,
+      "residual_pixel_coverage": 0.05299907701,
+      "runtime_integration_required": true,
+      "score_claim": false,
+      "selected_repair_pixels": 74590,
+      "selected_repair_runs": 40124,
+      "total_residual_pixels": 1407383,
+      "total_residual_runs": 791365,
+      "under_original_mask_member_bytes": true
+    },
+    {
+      "agreement_estimate_after_selected_repair": 0.997264866299,
+      "available": true,
+      "byte_target_pass": false,
+      "byte_target_size_bytes": 421483,
+      "candidate_total_payload_bytes": 4920376,
+      "compressor": "raw_amr1",
+      "delta_vs_original_mask_member_bytes": 4498893,
+      "grayscale_size_bytes": 267238,
+      "meets_min_agreement": true,
+      "original_mask_member_size_bytes": 421483,
+      "payload_format": "alpha4_residual_repair_amr1_v1",
+      "policy_details": {
+        "frame_group_size": 50,
+        "selected_group_count": 12,
+        "selected_group_ranges": [
+          {
+            "end_frame_exclusive": 1050,
+            "start_frame": 1000
+          },
+          {
+            "end_frame_exclusive": 1100,
+            "start_frame": 1050
+          },
+          {
+            "end_frame_exclusive": 350,
+            "start_frame": 300
+          },
+          {
+            "end_frame_exclusive": 950,
+            "start_frame": 900
+          },
+          {
+            "end_frame_exclusive": 300,
+            "start_frame": 250
+          },
+          {
+            "end_frame_exclusive": 1200,
+            "start_frame": 1150
+          },
+          {
+            "end_frame_exclusive": 250,
+            "start_frame": 200
+          },
+          {
+            "end_frame_exclusive": 1150,
+            "start_frame": 1100
+          },
+          {
+            "end_frame_exclusive": 1000,
+            "start_frame": 950
+          },
+          {
+            "end_frame_exclusive": 400,
+            "start_frame": 350
+          },
+          {
+            "end_frame_exclusive": 450,
+            "start_frame": 400
+          },
+          {
+            "end_frame_exclusive": 150,
+            "start_frame": 100
+          }
+        ],
+        "total_group_count": 24
+      },
+      "policy_kind": "top_residual_frame_groups",
+      "policy_name": "top_residual_frame_groups_0012_of_0024",
+      "promotion_eligible": false,
+      "repair_full_coverage": false,
+      "residual_payload_sha256": "4108ff72921dcc59b2521ff8120f47c0d27de4cb4f3770d1984783c291deff55",
+      "residual_payload_size_bytes": 4653138,
+      "residual_pixel_coverage": 0.541490127421,
+      "runtime_integration_required": false,
+      "score_claim": false,
+      "selected_repair_pixels": 762084,
+      "selected_repair_runs": 422871,
+      "total_residual_pixels": 1407383,
+      "total_residual_runs": 791365,
+      "under_original_mask_member_bytes": false
+    },
+    {
+      "agreement_estimate_after_selected_repair": 0.997264866299,
+      "available": true,
+      "byte_target_pass": false,
+      "byte_target_size_bytes": 421483,
+      "candidate_total_payload_bytes": 1744763,
+      "compressor": "zlib9",
+      "delta_vs_original_mask_member_bytes": 1323280,
+      "grayscale_size_bytes": 267238,
+      "meets_min_agreement": true,
+      "original_mask_member_size_bytes": 421483,
+      "payload_format": "alpha4_residual_repair_amr1_v1+zlib",
+      "policy_details": {
+        "frame_group_size": 50,
+        "selected_group_count": 12,
+        "selected_group_ranges": [
+          {
+            "end_frame_exclusive": 1050,
+            "start_frame": 1000
+          },
+          {
+            "end_frame_exclusive": 1100,
+            "start_frame": 1050
+          },
+          {
+            "end_frame_exclusive": 350,
+            "start_frame": 300
+          },
+          {
+            "end_frame_exclusive": 950,
+            "start_frame": 900
+          },
+          {
+            "end_frame_exclusive": 300,
+            "start_frame": 250
+          },
+          {
+            "end_frame_exclusive": 1200,
+            "start_frame": 1150
+          },
+          {
+            "end_frame_exclusive": 250,
+            "start_frame": 200
+          },
+          {
+            "end_frame_exclusive": 1150,
+            "start_frame": 1100
+          },
+          {
+            "end_frame_exclusive": 1000,
+            "start_frame": 950
+          },
+          {
+            "end_frame_exclusive": 400,
+            "start_frame": 350
+          },
+          {
+            "end_frame_exclusive": 450,
+            "start_frame": 400
+          },
+          {
+            "end_frame_exclusive": 150,
+            "start_frame": 100
+          }
+        ],
+        "total_group_count": 24
+      },
+      "policy_kind": "top_residual_frame_groups",
+      "policy_name": "top_residual_frame_groups_0012_of_0024",
+      "promotion_eligible": false,
+      "repair_full_coverage": false,
+      "residual_payload_sha256": "56fe5adde11d29acf3be835498a30184910a4edde7890a4abfe13c9cc4d51e24",
+      "residual_payload_size_bytes": 1477525,
+      "residual_pixel_coverage": 0.541490127421,
+      "runtime_integration_required": true,
+      "score_claim": false,
+      "selected_repair_pixels": 762084,
+      "selected_repair_runs": 422871,
+      "total_residual_pixels": 1407383,
+      "total_residual_runs": 791365,
+      "under_original_mask_member_bytes": false
+    },
+    {
+      "agreement_estimate_after_selected_repair": 0.997264866299,
+      "available": true,
+      "byte_target_pass": false,
+      "byte_target_size_bytes": 421483,
+      "candidate_total_payload_bytes": 1123530,
+      "compressor": "lzma_xz9e",
+      "delta_vs_original_mask_member_bytes": 702047,
+      "grayscale_size_bytes": 267238,
+      "meets_min_agreement": true,
+      "original_mask_member_size_bytes": 421483,
+      "payload_format": "alpha4_residual_repair_amr1_v1+lzma_xz",
+      "policy_details": {
+        "frame_group_size": 50,
+        "selected_group_count": 12,
+        "selected_group_ranges": [
+          {
+            "end_frame_exclusive": 1050,
+            "start_frame": 1000
+          },
+          {
+            "end_frame_exclusive": 1100,
+            "start_frame": 1050
+          },
+          {
+            "end_frame_exclusive": 350,
+            "start_frame": 300
+          },
+          {
+            "end_frame_exclusive": 950,
+            "start_frame": 900
+          },
+          {
+            "end_frame_exclusive": 300,
+            "start_frame": 250
+          },
+          {
+            "end_frame_exclusive": 1200,
+            "start_frame": 1150
+          },
+          {
+            "end_frame_exclusive": 250,
+            "start_frame": 200
+          },
+          {
+            "end_frame_exclusive": 1150,
+            "start_frame": 1100
+          },
+          {
+            "end_frame_exclusive": 1000,
+            "start_frame": 950
+          },
+          {
+            "end_frame_exclusive": 400,
+            "start_frame": 350
+          },
+          {
+            "end_frame_exclusive": 450,
+            "start_frame": 400
+          },
+          {
+            "end_frame_exclusive": 150,
+            "start_frame": 100
+          }
+        ],
+        "total_group_count": 24
+      },
+      "policy_kind": "top_residual_frame_groups",
+      "policy_name": "top_residual_frame_groups_0012_of_0024",
+      "promotion_eligible": false,
+      "repair_full_coverage": false,
+      "residual_payload_sha256": "ef523ce2033151a1a8abe4be2c2f80a281d1c4a6d114d8be0661479f5f69a65d",
+      "residual_payload_size_bytes": 856292,
+      "residual_pixel_coverage": 0.541490127421,
+      "runtime_integration_required": true,
+      "score_claim": false,
+      "selected_repair_pixels": 762084,
+      "selected_repair_runs": 422871,
+      "total_residual_pixels": 1407383,
+      "total_residual_runs": 791365,
+      "under_original_mask_member_bytes": false
+    },
+    {
+      "agreement_estimate_after_selected_repair": 0.997264866299,
+      "available": true,
+      "byte_target_pass": false,
+      "byte_target_size_bytes": 421483,
+      "candidate_total_payload_bytes": 1150864,
+      "compressor": "brotli11",
+      "delta_vs_original_mask_member_bytes": 729381,
+      "grayscale_size_bytes": 267238,
+      "meets_min_agreement": true,
+      "original_mask_member_size_bytes": 421483,
+      "payload_format": "alpha4_residual_repair_amr1_v1+brotli",
+      "policy_details": {
+        "frame_group_size": 50,
+        "selected_group_count": 12,
+        "selected_group_ranges": [
+          {
+            "end_frame_exclusive": 1050,
+            "start_frame": 1000
+          },
+          {
+            "end_frame_exclusive": 1100,
+            "start_frame": 1050
+          },
+          {
+            "end_frame_exclusive": 350,
+            "start_frame": 300
+          },
+          {
+            "end_frame_exclusive": 950,
+            "start_frame": 900
+          },
+          {
+            "end_frame_exclusive": 300,
+            "start_frame": 250
+          },
+          {
+            "end_frame_exclusive": 1200,
+            "start_frame": 1150
+          },
+          {
+            "end_frame_exclusive": 250,
+            "start_frame": 200
+          },
+          {
+            "end_frame_exclusive": 1150,
+            "start_frame": 1100
+          },
+          {
+            "end_frame_exclusive": 1000,
+            "start_frame": 950
+          },
+          {
+            "end_frame_exclusive": 400,
+            "start_frame": 350
+          },
+          {
+            "end_frame_exclusive": 450,
+            "start_frame": 400
+          },
+          {
+            "end_frame_exclusive": 150,
+            "start_frame": 100
+          }
+        ],
+        "total_group_count": 24
+      },
+      "policy_kind": "top_residual_frame_groups",
+      "policy_name": "top_residual_frame_groups_0012_of_0024",
+      "promotion_eligible": false,
+      "repair_full_coverage": false,
+      "residual_payload_sha256": "7d1fadd4e26275c614f763698d2971467d5ed06de209b42ffe6bd06642a08ae6",
+      "residual_payload_size_bytes": 883626,
+      "residual_pixel_coverage": 0.541490127421,
+      "runtime_integration_required": true,
+      "score_claim": false,
+      "selected_repair_pixels": 762084,
+      "selected_repair_runs": 422871,
+      "total_residual_pixels": 1407383,
+      "total_residual_runs": 791365,
+      "under_original_mask_member_bytes": false
+    }
+  ],
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "config": {
+    "byte_target": 421483,
+    "frame_group_size": 50,
+    "max_payload_bytes": 64000000,
+    "max_policies": 8,
+    "max_repair_runs": 1000000,
+    "min_agreement": 0.99
+  },
+  "custody": {
+    "grayscale_artifact": {
+      "path": "/Users/adpena/Projects/pact/experiments/results/alpha_mask_candidate_builder_pfp16_20260501_compact_crf_sweep/crf_62/grayscale.mkv",
+      "sha256": "e184e6a43c953860dae38f764fb0050827a4658d6779607aab5707c0d1bb87ef",
+      "size_bytes": 267238,
+      "validated_against_manifest": true
+    },
+    "repair_artifact": {
+      "path": "/Users/adpena/Projects/pact/experiments/results/alpha_mask_candidate_builder_pfp16_20260501_compact_crf_sweep/crf_62/alpha4_residual_repair.amr1",
+      "sha256": "6ec45000cfe0863b636d8996afa6ef46ce09d4fe53999297e48112c142d320db",
+      "size_bytes": 8705941,
+      "validated_against_manifest": true
+    },
+    "repair_header_sha256": "6ede1af964f3e4470cf3e0263d8295abaa98e18f66d5ff3108cb356ccf40addc",
+    "repair_payload_sha256": "6ec45000cfe0863b636d8996afa6ef46ce09d4fe53999297e48112c142d320db",
+    "repair_payload_size_bytes": 8705941,
+    "source_archive": {
+      "archive": {
+        "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+        "sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+        "size_bytes": 686635
+      },
+      "mask_member": {
+        "compressed_size_bytes": 412169,
+        "crc32": "e144d6ac",
+        "name": "masks.mkv",
+        "sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9",
+        "size_bytes": 421483
+      },
+      "member_inventory": [
+        {
+          "compressed_size_bytes": 412169,
+          "crc32": "e144d6ac",
+          "name": "masks.mkv",
+          "size_bytes": 421483
+        },
+        {
+          "compressed_size_bytes": 6734,
+          "crc32": "686cbfbf",
+          "name": "optimized_poses.bin",
+          "size_bytes": 7200
+        },
+        {
+          "compressed_size_bytes": 267402,
+          "crc32": "1827a837",
+          "name": "renderer.bin",
+          "size_bytes": 296776
+        }
+      ],
+      "validated_zip_safety": true
+    }
+  },
+  "evidence_grade": "empirical",
+  "local_planner_only": true,
+  "planner_summary": {
+    "best_by_total_bytes": [
+      {
+        "agreement_estimate_after_selected_repair": 0.994034733242,
+        "available": true,
+        "byte_target_pass": true,
+        "byte_target_size_bytes": 421483,
+        "candidate_total_payload_bytes": 267238,
+        "compressor": "omit_repair_payload",
+        "delta_vs_original_mask_member_bytes": -154245,
+        "grayscale_size_bytes": 267238,
+        "meets_min_agreement": true,
+        "original_mask_member_size_bytes": 421483,
+        "payload_format": "none",
+        "policy_details": {
+          "description": "use Alpha4 grayscale payload without a residual repair member"
+        },
+        "policy_kind": "no_repair",
+        "policy_name": "omit_repair_payload",
+        "promotion_eligible": false,
+        "repair_full_coverage": false,
+        "residual_payload_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "residual_payload_size_bytes": 0,
+        "residual_pixel_coverage": 0.0,
+        "runtime_integration_required": true,
+        "score_claim": false,
+        "selected_repair_pixels": 0,
+        "selected_repair_runs": 0,
+        "total_residual_pixels": 1407383,
+        "total_residual_runs": 791365,
+        "under_original_mask_member_bytes": true
+      },
+      {
+        "agreement_estimate_after_selected_repair": 0.994350886875,
+        "available": true,
+        "byte_target_pass": true,
+        "byte_target_size_bytes": 421483,
+        "candidate_total_payload_bytes": 345562,
+        "compressor": "lzma_xz9e",
+        "delta_vs_original_mask_member_bytes": -75921,
+        "grayscale_size_bytes": 267238,
+        "meets_min_agreement": true,
+        "original_mask_member_size_bytes": 421483,
+        "payload_format": "alpha4_residual_repair_amr1_v1+lzma_xz",
+        "policy_details": {
+          "frame_group_size": 50,
+          "selected_group_count": 1,
+          "selected_group_ranges": [
+            {
+              "end_frame_exclusive": 1050,
+              "start_frame": 1000
+            }
+          ],
+          "total_group_count": 24
+        },
+        "policy_kind": "top_residual_frame_groups",
+        "policy_name": "top_residual_frame_groups_0001_of_0024",
+        "promotion_eligible": false,
+        "repair_full_coverage": false,
+        "residual_payload_sha256": "efd9b7cedf6fdefc1e7d8dde682b6f078299218f35ee92583aee30fc992262e4",
+        "residual_payload_size_bytes": 78324,
+        "residual_pixel_coverage": 0.05299907701,
+        "runtime_integration_required": true,
+        "score_claim": false,
+        "selected_repair_pixels": 74590,
+        "selected_repair_runs": 40124,
+        "total_residual_pixels": 1407383,
+        "total_residual_runs": 791365,
+        "under_original_mask_member_bytes": true
+      },
+      {
+        "agreement_estimate_after_selected_repair": 0.994350886875,
+        "available": true,
+        "byte_target_pass": true,
+        "byte_target_size_bytes": 421483,
+        "candidate_total_payload_bytes": 350534,
+        "compressor": "brotli11",
+        "delta_vs_original_mask_member_bytes": -70949,
+        "grayscale_size_bytes": 267238,
+        "meets_min_agreement": true,
+        "original_mask_member_size_bytes": 421483,
+        "payload_format": "alpha4_residual_repair_amr1_v1+brotli",
+        "policy_details": {
+          "frame_group_size": 50,
+          "selected_group_count": 1,
+          "selected_group_ranges": [
+            {
+              "end_frame_exclusive": 1050,
+              "start_frame": 1000
+            }
+          ],
+          "total_group_count": 24
+        },
+        "policy_kind": "top_residual_frame_groups",
+        "policy_name": "top_residual_frame_groups_0001_of_0024",
+        "promotion_eligible": false,
+        "repair_full_coverage": false,
+        "residual_payload_sha256": "4de3bbdec5ded33c9dea85c201a7816c41b3e1f9ac6c3426c17e78910e85d48b",
+        "residual_payload_size_bytes": 83296,
+        "residual_pixel_coverage": 0.05299907701,
+        "runtime_integration_required": true,
+        "score_claim": false,
+        "selected_repair_pixels": 74590,
+        "selected_repair_runs": 40124,
+        "total_residual_pixels": 1407383,
+        "total_residual_runs": 791365,
+        "under_original_mask_member_bytes": true
+      },
+      {
+        "agreement_estimate_after_selected_repair": 0.994350886875,
+        "available": true,
+        "byte_target_pass": true,
+        "byte_target_size_bytes": 421483,
+        "candidate_total_payload_bytes": 406956,
+        "compressor": "zlib9",
+        "delta_vs_original_mask_member_bytes": -14527,
+        "grayscale_size_bytes": 267238,
+        "meets_min_agreement": true,
+        "original_mask_member_size_bytes": 421483,
+        "payload_format": "alpha4_residual_repair_amr1_v1+zlib",
+        "policy_details": {
+          "frame_group_size": 50,
+          "selected_group_count": 1,
+          "selected_group_ranges": [
+            {
+              "end_frame_exclusive": 1050,
+              "start_frame": 1000
+            }
+          ],
+          "total_group_count": 24
+        },
+        "policy_kind": "top_residual_frame_groups",
+        "policy_name": "top_residual_frame_groups_0001_of_0024",
+        "promotion_eligible": false,
+        "repair_full_coverage": false,
+        "residual_payload_sha256": "5c5dd5543e8975f81950564112de0b32208b9c6f802ee00c3e564d1b9cda9745",
+        "residual_payload_size_bytes": 139718,
+        "residual_pixel_coverage": 0.05299907701,
+        "runtime_integration_required": true,
+        "score_claim": false,
+        "selected_repair_pixels": 74590,
+        "selected_repair_runs": 40124,
+        "total_residual_pixels": 1407383,
+        "total_residual_runs": 791365,
+        "under_original_mask_member_bytes": true
+      },
+      {
+        "agreement_estimate_after_selected_repair": 0.994616817898,
+        "available": true,
+        "byte_target_pass": true,
+        "byte_target_size_bytes": 421483,
+        "candidate_total_payload_bytes": 419070,
+        "compressor": "lzma_xz9e",
+        "delta_vs_original_mask_member_bytes": -2413,
+        "grayscale_size_bytes": 267238,
+        "meets_min_agreement": true,
+        "original_mask_member_size_bytes": 421483,
+        "payload_format": "alpha4_residual_repair_amr1_v1+lzma_xz",
+        "policy_details": {
+          "source_classes": [
+            2
+          ]
+        },
+        "policy_kind": "class_priority_prefix",
+        "policy_name": "class_prefix_2",
+        "promotion_eligible": false,
+        "repair_full_coverage": false,
+        "residual_payload_sha256": "747e202a0bf5cbf62c7231630c3bbf09b913e82958a3b67124bde8d4ee2526a2",
+        "residual_payload_size_bytes": 151832,
+        "residual_pixel_coverage": 0.097578981699,
+        "runtime_integration_required": true,
+        "score_claim": false,
+        "selected_repair_pixels": 137331,
+        "selected_repair_runs": 75747,
+        "total_residual_pixels": 1407383,
+        "total_residual_runs": 791365,
+        "under_original_mask_member_bytes": true
+      },
+      {
+        "agreement_estimate_after_selected_repair": 0.994616817898,
+        "available": true,
+        "byte_target_pass": false,
+        "byte_target_size_bytes": 421483,
+        "candidate_total_payload_bytes": 439528,
+        "compressor": "brotli11",
+        "delta_vs_original_mask_member_bytes": 18045,
+        "grayscale_size_bytes": 267238,
+        "meets_min_agreement": true,
+        "original_mask_member_size_bytes": 421483,
+        "payload_format": "alpha4_residual_repair_amr1_v1+brotli",
+        "policy_details": {
+          "source_classes": [
+            2
+          ]
+        },
+        "policy_kind": "class_priority_prefix",
+        "policy_name": "class_prefix_2",
+        "promotion_eligible": false,
+        "repair_full_coverage": false,
+        "residual_payload_sha256": "2d3d6d8befc301070ecb9e7bc2efe77a1cb843b6bd3bcf62dcaaf4a9dd21842a",
+        "residual_payload_size_bytes": 172290,
+        "residual_pixel_coverage": 0.097578981699,
+        "runtime_integration_required": true,
+        "score_claim": false,
+        "selected_repair_pixels": 137331,
+        "selected_repair_runs": 75747,
+        "total_residual_pixels": 1407383,
+        "total_residual_runs": 791365,
+        "under_original_mask_member_bytes": false
+      },
+      {
+        "agreement_estimate_after_selected_repair": 0.994616817898,
+        "available": true,
+        "byte_target_pass": false,
+        "byte_target_size_bytes": 421483,
+        "candidate_total_payload_bytes": 541251,
+        "compressor": "zlib9",
+        "delta_vs_original_mask_member_bytes": 119768,
+        "grayscale_size_bytes": 267238,
+        "meets_min_agreement": true,
+        "original_mask_member_size_bytes": 421483,
+        "payload_format": "alpha4_residual_repair_amr1_v1+zlib",
+        "policy_details": {
+          "source_classes": [
+            2
+          ]
+        },
+        "policy_kind": "class_priority_prefix",
+        "policy_name": "class_prefix_2",
+        "promotion_eligible": false,
+        "repair_full_coverage": false,
+        "residual_payload_sha256": "e5feed914b3a472a3f9e05ad350f5f006466e0d41b9f63c6cc31821567ed8f2b",
+        "residual_payload_size_bytes": 274013,
+        "residual_pixel_coverage": 0.097578981699,
+        "runtime_integration_required": true,
+        "score_claim": false,
+        "selected_repair_pixels": 137331,
+        "selected_repair_runs": 75747,
+        "total_residual_pixels": 1407383,
+        "total_residual_runs": 791365,
+        "under_original_mask_member_bytes": false
+      },
+      {
+        "agreement_estimate_after_selected_repair": 0.994350886875,
+        "available": true,
+        "byte_target_pass": false,
+        "byte_target_size_bytes": 421483,
+        "candidate_total_payload_bytes": 709641,
+        "compressor": "raw_amr1",
+        "delta_vs_original_mask_member_bytes": 288158,
+        "grayscale_size_bytes": 267238,
+        "meets_min_agreement": true,
+        "original_mask_member_size_bytes": 421483,
+        "payload_format": "alpha4_residual_repair_amr1_v1",
+        "policy_details": {
+          "frame_group_size": 50,
+          "selected_group_count": 1,
+          "selected_group_ranges": [
+            {
+              "end_frame_exclusive": 1050,
+              "start_frame": 1000
+            }
+          ],
+          "total_group_count": 24
+        },
+        "policy_kind": "top_residual_frame_groups",
+        "policy_name": "top_residual_frame_groups_0001_of_0024",
+        "promotion_eligible": false,
+        "repair_full_coverage": false,
+        "residual_payload_sha256": "6ac9ed919d321551525f6f0c8fd1007052f4db62fd45f1a90663bdc7087e2a2a",
+        "residual_payload_size_bytes": 442403,
+        "residual_pixel_coverage": 0.05299907701,
+        "runtime_integration_required": false,
+        "score_claim": false,
+        "selected_repair_pixels": 74590,
+        "selected_repair_runs": 40124,
+        "total_residual_pixels": 1407383,
+        "total_residual_runs": 791365,
+        "under_original_mask_member_bytes": false
+      },
+      {
+        "agreement_estimate_after_selected_repair": 0.996433355543,
+        "available": true,
+        "byte_target_pass": false,
+        "byte_target_size_bytes": 421483,
+        "candidate_total_payload_bytes": 994006,
+        "compressor": "lzma_xz9e",
+        "delta_vs_original_mask_member_bytes": 572523,
+        "grayscale_size_bytes": 267238,
+        "meets_min_agreement": true,
+        "original_mask_member_size_bytes": 421483,
+        "payload_format": "alpha4_residual_repair_amr1_v1+lzma_xz",
+        "policy_details": {
+          "source_classes": [
+            2,
+            1
+          ]
+        },
+        "policy_kind": "class_priority_prefix",
+        "policy_name": "class_prefix_2_1",
+        "promotion_eligible": false,
+        "repair_full_coverage": false,
+        "residual_payload_sha256": "56e23a0dd303347d6fc3d4d2523481c8a343a6e6311556598e454b5c9cbb3828",
+        "residual_payload_size_bytes": 726768,
+        "residual_pixel_coverage": 0.40209807849,
+        "runtime_integration_required": true,
+        "score_claim": false,
+        "selected_repair_pixels": 565906,
+        "selected_repair_runs": 363963,
+        "total_residual_pixels": 1407383,
+        "total_residual_runs": 791365,
+        "under_original_mask_member_bytes": false
+      },
+      {
+        "agreement_estimate_after_selected_repair": 0.996433355543,
+        "available": true,
+        "byte_target_pass": false,
+        "byte_target_size_bytes": 421483,
+        "candidate_total_payload_bytes": 1027819,
+        "compressor": "brotli11",
+        "delta_vs_original_mask_member_bytes": 606336,
+        "grayscale_size_bytes": 267238,
+        "meets_min_agreement": true,
+        "original_mask_member_size_bytes": 421483,
+        "payload_format": "alpha4_residual_repair_amr1_v1+brotli",
+        "policy_details": {
+          "source_classes": [
+            2,
+            1
+          ]
+        },
+        "policy_kind": "class_priority_prefix",
+        "policy_name": "class_prefix_2_1",
+        "promotion_eligible": false,
+        "repair_full_coverage": false,
+        "residual_payload_sha256": "09586851ed2ccc32268fdca414cf94f8af9bdfe75e7303718059fac4b1d0c314",
+        "residual_payload_size_bytes": 760581,
+        "residual_pixel_coverage": 0.40209807849,
+        "runtime_integration_required": true,
+        "score_claim": false,
+        "selected_repair_pixels": 565906,
+        "selected_repair_runs": 363963,
+        "total_residual_pixels": 1407383,
+        "total_residual_runs": 791365,
+        "under_original_mask_member_bytes": false
+      },
+      {
+        "agreement_estimate_after_selected_repair": 0.994616817898,
+        "available": true,
+        "byte_target_pass": false,
+        "byte_target_size_bytes": 421483,
+        "candidate_total_payload_bytes": 1101345,
+        "compressor": "raw_amr1",
+        "delta_vs_original_mask_member_bytes": 679862,
+        "grayscale_size_bytes": 267238,
+        "meets_min_agreement": true,
+        "original_mask_member_size_bytes": 421483,
+        "payload_format": "alpha4_residual_repair_amr1_v1",
+        "policy_details": {
+          "source_classes": [
+            2
+          ]
+        },
+        "policy_kind": "class_priority_prefix",
+        "policy_name": "class_prefix_2",
+        "promotion_eligible": false,
+        "repair_full_coverage": false,
+        "residual_payload_sha256": "36a49102fbc407a5e7e873e358fad5e414df8de7efe03aeaa911941c3343db05",
+        "residual_payload_size_bytes": 834107,
+        "residual_pixel_coverage": 0.097578981699,
+        "runtime_integration_required": false,
+        "score_claim": false,
+        "selected_repair_pixels": 137331,
+        "selected_repair_runs": 75747,
+        "total_residual_pixels": 1407383,
+        "total_residual_runs": 791365,
+        "under_original_mask_member_bytes": false
+      },
+      {
+        "agreement_estimate_after_selected_repair": 0.997264866299,
+        "available": true,
+        "byte_target_pass": false,
+        "byte_target_size_bytes": 421483,
+        "candidate_total_payload_bytes": 1123530,
+        "compressor": "lzma_xz9e",
+        "delta_vs_original_mask_member_bytes": 702047,
+        "grayscale_size_bytes": 267238,
+        "meets_min_agreement": true,
+        "original_mask_member_size_bytes": 421483,
+        "payload_format": "alpha4_residual_repair_amr1_v1+lzma_xz",
+        "policy_details": {
+          "frame_group_size": 50,
+          "selected_group_count": 12,
+          "selected_group_ranges": [
+            {
+              "end_frame_exclusive": 1050,
+              "start_frame": 1000
+            },
+            {
+              "end_frame_exclusive": 1100,
+              "start_frame": 1050
+            },
+            {
+              "end_frame_exclusive": 350,
+              "start_frame": 300
+            },
+            {
+              "end_frame_exclusive": 950,
+              "start_frame": 900
+            },
+            {
+              "end_frame_exclusive": 300,
+              "start_frame": 250
+            },
+            {
+              "end_frame_exclusive": 1200,
+              "start_frame": 1150
+            },
+            {
+              "end_frame_exclusive": 250,
+              "start_frame": 200
+            },
+            {
+              "end_frame_exclusive": 1150,
+              "start_frame": 1100
+            },
+            {
+              "end_frame_exclusive": 1000,
+              "start_frame": 950
+            },
+            {
+              "end_frame_exclusive": 400,
+              "start_frame": 350
+            },
+            {
+              "end_frame_exclusive": 450,
+              "start_frame": 400
+            },
+            {
+              "end_frame_exclusive": 150,
+              "start_frame": 100
+            }
+          ],
+          "total_group_count": 24
+        },
+        "policy_kind": "top_residual_frame_groups",
+        "policy_name": "top_residual_frame_groups_0012_of_0024",
+        "promotion_eligible": false,
+        "repair_full_coverage": false,
+        "residual_payload_sha256": "ef523ce2033151a1a8abe4be2c2f80a281d1c4a6d114d8be0661479f5f69a65d",
+        "residual_payload_size_bytes": 856292,
+        "residual_pixel_coverage": 0.541490127421,
+        "runtime_integration_required": true,
+        "score_claim": false,
+        "selected_repair_pixels": 762084,
+        "selected_repair_runs": 422871,
+        "total_residual_pixels": 1407383,
+        "total_residual_runs": 791365,
+        "under_original_mask_member_bytes": false
+      }
+    ],
+    "best_under_target_meeting_min_agreement": [
+      {
+        "agreement_estimate_after_selected_repair": 0.994616817898,
+        "available": true,
+        "byte_target_pass": true,
+        "byte_target_size_bytes": 421483,
+        "candidate_total_payload_bytes": 419070,
+        "compressor": "lzma_xz9e",
+        "delta_vs_original_mask_member_bytes": -2413,
+        "grayscale_size_bytes": 267238,
+        "meets_min_agreement": true,
+        "original_mask_member_size_bytes": 421483,
+        "payload_format": "alpha4_residual_repair_amr1_v1+lzma_xz",
+        "policy_details": {
+          "source_classes": [
+            2
+          ]
+        },
+        "policy_kind": "class_priority_prefix",
+        "policy_name": "class_prefix_2",
+        "promotion_eligible": false,
+        "repair_full_coverage": false,
+        "residual_payload_sha256": "747e202a0bf5cbf62c7231630c3bbf09b913e82958a3b67124bde8d4ee2526a2",
+        "residual_payload_size_bytes": 151832,
+        "residual_pixel_coverage": 0.097578981699,
+        "runtime_integration_required": true,
+        "score_claim": false,
+        "selected_repair_pixels": 137331,
+        "selected_repair_runs": 75747,
+        "total_residual_pixels": 1407383,
+        "total_residual_runs": 791365,
+        "under_original_mask_member_bytes": true
+      },
+      {
+        "agreement_estimate_after_selected_repair": 0.994350886875,
+        "available": true,
+        "byte_target_pass": true,
+        "byte_target_size_bytes": 421483,
+        "candidate_total_payload_bytes": 345562,
+        "compressor": "lzma_xz9e",
+        "delta_vs_original_mask_member_bytes": -75921,
+        "grayscale_size_bytes": 267238,
+        "meets_min_agreement": true,
+        "original_mask_member_size_bytes": 421483,
+        "payload_format": "alpha4_residual_repair_amr1_v1+lzma_xz",
+        "policy_details": {
+          "frame_group_size": 50,
+          "selected_group_count": 1,
+          "selected_group_ranges": [
+            {
+              "end_frame_exclusive": 1050,
+              "start_frame": 1000
+            }
+          ],
+          "total_group_count": 24
+        },
+        "policy_kind": "top_residual_frame_groups",
+        "policy_name": "top_residual_frame_groups_0001_of_0024",
+        "promotion_eligible": false,
+        "repair_full_coverage": false,
+        "residual_payload_sha256": "efd9b7cedf6fdefc1e7d8dde682b6f078299218f35ee92583aee30fc992262e4",
+        "residual_payload_size_bytes": 78324,
+        "residual_pixel_coverage": 0.05299907701,
+        "runtime_integration_required": true,
+        "score_claim": false,
+        "selected_repair_pixels": 74590,
+        "selected_repair_runs": 40124,
+        "total_residual_pixels": 1407383,
+        "total_residual_runs": 791365,
+        "under_original_mask_member_bytes": true
+      },
+      {
+        "agreement_estimate_after_selected_repair": 0.994350886875,
+        "available": true,
+        "byte_target_pass": true,
+        "byte_target_size_bytes": 421483,
+        "candidate_total_payload_bytes": 350534,
+        "compressor": "brotli11",
+        "delta_vs_original_mask_member_bytes": -70949,
+        "grayscale_size_bytes": 267238,
+        "meets_min_agreement": true,
+        "original_mask_member_size_bytes": 421483,
+        "payload_format": "alpha4_residual_repair_amr1_v1+brotli",
+        "policy_details": {
+          "frame_group_size": 50,
+          "selected_group_count": 1,
+          "selected_group_ranges": [
+            {
+              "end_frame_exclusive": 1050,
+              "start_frame": 1000
+            }
+          ],
+          "total_group_count": 24
+        },
+        "policy_kind": "top_residual_frame_groups",
+        "policy_name": "top_residual_frame_groups_0001_of_0024",
+        "promotion_eligible": false,
+        "repair_full_coverage": false,
+        "residual_payload_sha256": "4de3bbdec5ded33c9dea85c201a7816c41b3e1f9ac6c3426c17e78910e85d48b",
+        "residual_payload_size_bytes": 83296,
+        "residual_pixel_coverage": 0.05299907701,
+        "runtime_integration_required": true,
+        "score_claim": false,
+        "selected_repair_pixels": 74590,
+        "selected_repair_runs": 40124,
+        "total_residual_pixels": 1407383,
+        "total_residual_runs": 791365,
+        "under_original_mask_member_bytes": true
+      },
+      {
+        "agreement_estimate_after_selected_repair": 0.994350886875,
+        "available": true,
+        "byte_target_pass": true,
+        "byte_target_size_bytes": 421483,
+        "candidate_total_payload_bytes": 406956,
+        "compressor": "zlib9",
+        "delta_vs_original_mask_member_bytes": -14527,
+        "grayscale_size_bytes": 267238,
+        "meets_min_agreement": true,
+        "original_mask_member_size_bytes": 421483,
+        "payload_format": "alpha4_residual_repair_amr1_v1+zlib",
+        "policy_details": {
+          "frame_group_size": 50,
+          "selected_group_count": 1,
+          "selected_group_ranges": [
+            {
+              "end_frame_exclusive": 1050,
+              "start_frame": 1000
+            }
+          ],
+          "total_group_count": 24
+        },
+        "policy_kind": "top_residual_frame_groups",
+        "policy_name": "top_residual_frame_groups_0001_of_0024",
+        "promotion_eligible": false,
+        "repair_full_coverage": false,
+        "residual_payload_sha256": "5c5dd5543e8975f81950564112de0b32208b9c6f802ee00c3e564d1b9cda9745",
+        "residual_payload_size_bytes": 139718,
+        "residual_pixel_coverage": 0.05299907701,
+        "runtime_integration_required": true,
+        "score_claim": false,
+        "selected_repair_pixels": 74590,
+        "selected_repair_runs": 40124,
+        "total_residual_pixels": 1407383,
+        "total_residual_runs": 791365,
+        "under_original_mask_member_bytes": true
+      },
+      {
+        "agreement_estimate_after_selected_repair": 0.994034733242,
+        "available": true,
+        "byte_target_pass": true,
+        "byte_target_size_bytes": 421483,
+        "candidate_total_payload_bytes": 267238,
+        "compressor": "omit_repair_payload",
+        "delta_vs_original_mask_member_bytes": -154245,
+        "grayscale_size_bytes": 267238,
+        "meets_min_agreement": true,
+        "original_mask_member_size_bytes": 421483,
+        "payload_format": "none",
+        "policy_details": {
+          "description": "use Alpha4 grayscale payload without a residual repair member"
+        },
+        "policy_kind": "no_repair",
+        "policy_name": "omit_repair_payload",
+        "promotion_eligible": false,
+        "repair_full_coverage": false,
+        "residual_payload_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "residual_payload_size_bytes": 0,
+        "residual_pixel_coverage": 0.0,
+        "runtime_integration_required": true,
+        "score_claim": false,
+        "selected_repair_pixels": 0,
+        "selected_repair_runs": 0,
+        "total_residual_pixels": 1407383,
+        "total_residual_runs": 791365,
+        "under_original_mask_member_bytes": true
+      }
+    ],
+    "byte_agreement_pareto_frontier": [
+      {
+        "agreement_estimate_after_selected_repair": 0.994034733242,
+        "available": true,
+        "byte_target_pass": true,
+        "byte_target_size_bytes": 421483,
+        "candidate_total_payload_bytes": 267238,
+        "compressor": "omit_repair_payload",
+        "delta_vs_original_mask_member_bytes": -154245,
+        "grayscale_size_bytes": 267238,
+        "meets_min_agreement": true,
+        "original_mask_member_size_bytes": 421483,
+        "payload_format": "none",
+        "policy_details": {
+          "description": "use Alpha4 grayscale payload without a residual repair member"
+        },
+        "policy_kind": "no_repair",
+        "policy_name": "omit_repair_payload",
+        "promotion_eligible": false,
+        "repair_full_coverage": false,
+        "residual_payload_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "residual_payload_size_bytes": 0,
+        "residual_pixel_coverage": 0.0,
+        "runtime_integration_required": true,
+        "score_claim": false,
+        "selected_repair_pixels": 0,
+        "selected_repair_runs": 0,
+        "total_residual_pixels": 1407383,
+        "total_residual_runs": 791365,
+        "under_original_mask_member_bytes": true
+      },
+      {
+        "agreement_estimate_after_selected_repair": 0.994350886875,
+        "available": true,
+        "byte_target_pass": true,
+        "byte_target_size_bytes": 421483,
+        "candidate_total_payload_bytes": 345562,
+        "compressor": "lzma_xz9e",
+        "delta_vs_original_mask_member_bytes": -75921,
+        "grayscale_size_bytes": 267238,
+        "meets_min_agreement": true,
+        "original_mask_member_size_bytes": 421483,
+        "payload_format": "alpha4_residual_repair_amr1_v1+lzma_xz",
+        "policy_details": {
+          "frame_group_size": 50,
+          "selected_group_count": 1,
+          "selected_group_ranges": [
+            {
+              "end_frame_exclusive": 1050,
+              "start_frame": 1000
+            }
+          ],
+          "total_group_count": 24
+        },
+        "policy_kind": "top_residual_frame_groups",
+        "policy_name": "top_residual_frame_groups_0001_of_0024",
+        "promotion_eligible": false,
+        "repair_full_coverage": false,
+        "residual_payload_sha256": "efd9b7cedf6fdefc1e7d8dde682b6f078299218f35ee92583aee30fc992262e4",
+        "residual_payload_size_bytes": 78324,
+        "residual_pixel_coverage": 0.05299907701,
+        "runtime_integration_required": true,
+        "score_claim": false,
+        "selected_repair_pixels": 74590,
+        "selected_repair_runs": 40124,
+        "total_residual_pixels": 1407383,
+        "total_residual_runs": 791365,
+        "under_original_mask_member_bytes": true
+      },
+      {
+        "agreement_estimate_after_selected_repair": 0.994616817898,
+        "available": true,
+        "byte_target_pass": true,
+        "byte_target_size_bytes": 421483,
+        "candidate_total_payload_bytes": 419070,
+        "compressor": "lzma_xz9e",
+        "delta_vs_original_mask_member_bytes": -2413,
+        "grayscale_size_bytes": 267238,
+        "meets_min_agreement": true,
+        "original_mask_member_size_bytes": 421483,
+        "payload_format": "alpha4_residual_repair_amr1_v1+lzma_xz",
+        "policy_details": {
+          "source_classes": [
+            2
+          ]
+        },
+        "policy_kind": "class_priority_prefix",
+        "policy_name": "class_prefix_2",
+        "promotion_eligible": false,
+        "repair_full_coverage": false,
+        "residual_payload_sha256": "747e202a0bf5cbf62c7231630c3bbf09b913e82958a3b67124bde8d4ee2526a2",
+        "residual_payload_size_bytes": 151832,
+        "residual_pixel_coverage": 0.097578981699,
+        "runtime_integration_required": true,
+        "score_claim": false,
+        "selected_repair_pixels": 137331,
+        "selected_repair_runs": 75747,
+        "total_residual_pixels": 1407383,
+        "total_residual_runs": 791365,
+        "under_original_mask_member_bytes": true
+      },
+      {
+        "agreement_estimate_after_selected_repair": 0.996433355543,
+        "available": true,
+        "byte_target_pass": false,
+        "byte_target_size_bytes": 421483,
+        "candidate_total_payload_bytes": 994006,
+        "compressor": "lzma_xz9e",
+        "delta_vs_original_mask_member_bytes": 572523,
+        "grayscale_size_bytes": 267238,
+        "meets_min_agreement": true,
+        "original_mask_member_size_bytes": 421483,
+        "payload_format": "alpha4_residual_repair_amr1_v1+lzma_xz",
+        "policy_details": {
+          "source_classes": [
+            2,
+            1
+          ]
+        },
+        "policy_kind": "class_priority_prefix",
+        "policy_name": "class_prefix_2_1",
+        "promotion_eligible": false,
+        "repair_full_coverage": false,
+        "residual_payload_sha256": "56e23a0dd303347d6fc3d4d2523481c8a343a6e6311556598e454b5c9cbb3828",
+        "residual_payload_size_bytes": 726768,
+        "residual_pixel_coverage": 0.40209807849,
+        "runtime_integration_required": true,
+        "score_claim": false,
+        "selected_repair_pixels": 565906,
+        "selected_repair_runs": 363963,
+        "total_residual_pixels": 1407383,
+        "total_residual_runs": 791365,
+        "under_original_mask_member_bytes": false
+      },
+      {
+        "agreement_estimate_after_selected_repair": 0.997264866299,
+        "available": true,
+        "byte_target_pass": false,
+        "byte_target_size_bytes": 421483,
+        "candidate_total_payload_bytes": 1123530,
+        "compressor": "lzma_xz9e",
+        "delta_vs_original_mask_member_bytes": 702047,
+        "grayscale_size_bytes": 267238,
+        "meets_min_agreement": true,
+        "original_mask_member_size_bytes": 421483,
+        "payload_format": "alpha4_residual_repair_amr1_v1+lzma_xz",
+        "policy_details": {
+          "frame_group_size": 50,
+          "selected_group_count": 12,
+          "selected_group_ranges": [
+            {
+              "end_frame_exclusive": 1050,
+              "start_frame": 1000
+            },
+            {
+              "end_frame_exclusive": 1100,
+              "start_frame": 1050
+            },
+            {
+              "end_frame_exclusive": 350,
+              "start_frame": 300
+            },
+            {
+              "end_frame_exclusive": 950,
+              "start_frame": 900
+            },
+            {
+              "end_frame_exclusive": 300,
+              "start_frame": 250
+            },
+            {
+              "end_frame_exclusive": 1200,
+              "start_frame": 1150
+            },
+            {
+              "end_frame_exclusive": 250,
+              "start_frame": 200
+            },
+            {
+              "end_frame_exclusive": 1150,
+              "start_frame": 1100
+            },
+            {
+              "end_frame_exclusive": 1000,
+              "start_frame": 950
+            },
+            {
+              "end_frame_exclusive": 400,
+              "start_frame": 350
+            },
+            {
+              "end_frame_exclusive": 450,
+              "start_frame": 400
+            },
+            {
+              "end_frame_exclusive": 150,
+              "start_frame": 100
+            }
+          ],
+          "total_group_count": 24
+        },
+        "policy_kind": "top_residual_frame_groups",
+        "policy_name": "top_residual_frame_groups_0012_of_0024",
+        "promotion_eligible": false,
+        "repair_full_coverage": false,
+        "residual_payload_sha256": "ef523ce2033151a1a8abe4be2c2f80a281d1c4a6d114d8be0661479f5f69a65d",
+        "residual_payload_size_bytes": 856292,
+        "residual_pixel_coverage": 0.541490127421,
+        "runtime_integration_required": true,
+        "score_claim": false,
+        "selected_repair_pixels": 762084,
+        "selected_repair_runs": 422871,
+        "total_residual_pixels": 1407383,
+        "total_residual_runs": 791365,
+        "under_original_mask_member_bytes": false
+      },
+      {
+        "agreement_estimate_after_selected_repair": 0.997279179891,
+        "available": true,
+        "byte_target_pass": false,
+        "byte_target_size_bytes": 421483,
+        "candidate_total_payload_bytes": 1179990,
+        "compressor": "lzma_xz9e",
+        "delta_vs_original_mask_member_bytes": 758507,
+        "grayscale_size_bytes": 267238,
+        "meets_min_agreement": true,
+        "original_mask_member_size_bytes": 421483,
+        "payload_format": "alpha4_residual_repair_amr1_v1+lzma_xz",
+        "policy_details": {
+          "source_classes": [
+            2,
+            1,
+            3,
+            4
+          ]
+        },
+        "policy_kind": "class_priority_prefix",
+        "policy_name": "class_prefix_2_1_3_4",
+        "promotion_eligible": false,
+        "repair_full_coverage": false,
+        "residual_payload_sha256": "b4fc65097382455c085566b42b3370a778af1486a6c105785b1ac63dda4fccdc",
+        "residual_payload_size_bytes": 912752,
+        "residual_pixel_coverage": 0.543889616402,
+        "runtime_integration_required": true,
+        "score_claim": false,
+        "selected_repair_pixels": 765461,
+        "selected_repair_runs": 453436,
+        "total_residual_pixels": 1407383,
+        "total_residual_runs": 791365,
+        "under_original_mask_member_bytes": false
+      },
+      {
+        "agreement_estimate_after_selected_repair": 1.0,
+        "available": true,
+        "byte_target_pass": false,
+        "byte_target_size_bytes": 421483,
+        "candidate_total_payload_bytes": 1871054,
+        "compressor": "lzma_xz9e",
+        "delta_vs_original_mask_member_bytes": 1449571,
+        "grayscale_size_bytes": 267238,
+        "meets_min_agreement": true,
+        "original_mask_member_size_bytes": 421483,
+        "payload_format": "alpha4_residual_repair_amr1_v1+lzma_xz",
+        "policy_details": {
+          "source_classes": [
+            2,
+            1,
+            3,
+            4,
+            0
+          ]
+        },
+        "policy_kind": "class_priority_prefix",
+        "policy_name": "class_prefix_2_1_3_4_0",
+        "promotion_eligible": false,
+        "repair_full_coverage": true,
+        "residual_payload_sha256": "628e73f08baad62c8f0129a4c676a065e2d34af12a2092f79f1aeb1a381eae53",
+        "residual_payload_size_bytes": 1603816,
+        "residual_pixel_coverage": 1.0,
+        "runtime_integration_required": true,
+        "score_claim": false,
+        "selected_repair_pixels": 1407383,
+        "selected_repair_runs": 791365,
+        "total_residual_pixels": 1407383,
+        "total_residual_runs": 791365,
+        "under_original_mask_member_bytes": false
+      }
+    ],
+    "candidate_records_evaluated": 29,
+    "compressor_availability": {
+      "brotli11": {
+        "available": true,
+        "unavailable_reason": null
+      },
+      "lzma_xz9e": {
+        "available": true,
+        "unavailable_reason": null
+      },
+      "omit_repair_payload": {
+        "available": true,
+        "unavailable_reason": null
+      },
+      "raw_amr1": {
+        "available": true,
+        "unavailable_reason": null
+      },
+      "zlib9": {
+        "available": true,
+        "unavailable_reason": null
+      }
+    },
+    "next_step": "review best_under_target_meeting_min_agreement and build a deterministic runtime integration for the selected residual format before any exact eval.",
+    "policies_evaluated": 8
+  },
+  "promotion_eligible": false,
+  "provenance": {
+    "command": [
+      "experiments/alpha_mask_residual_planner.py",
+      "--candidate-manifest",
+      "experiments/results/alpha_mask_candidate_builder_pfp16_20260501_compact_crf_sweep/crf_62/alpha_mask_candidate_manifest.json",
+      "--output-dir",
+      "experiments/results/alpha_mask_residual_planner_pfp16_20260501_compact_crf_sweep/crf_62",
+      "--max-policies",
+      "8",
+      "--min-agreement",
+      "0.99",
+      "--byte-target",
+      "421483"
+    ],
+    "cwd": "/Users/adpena/Projects/pact",
+    "platform": "macOS-26.4-arm64-arm-64bit",
+    "python_executable": "/Users/adpena/Projects/pact/.venv/bin/python3",
+    "python_version": "3.12.13",
+    "repo_root": "/Users/adpena/Projects/pact",
+    "selected_environment": {},
+    "tool": "experiments/alpha_mask_residual_planner.py"
+  },
+  "purpose": "identify bounded Alpha residual compression and selective-repair alternatives that may reduce mask payload bytes without producing score evidence",
+  "schema": "alpha_mask_residual_planner_v1",
+  "score_claim": false,
+  "score_claim_warning": "No score claim is made by this planner. These are byte/agreement design estimates over Alpha mask residual artifacts; a deterministic finalist archive and exact CUDA auth eval are required before any score claim.",
+  "scorer_network_loaded": false,
+  "source_candidate_manifest": {
+    "path": "/Users/adpena/Projects/pact/experiments/results/alpha_mask_candidate_builder_pfp16_20260501_compact_crf_sweep/crf_62/alpha_mask_candidate_manifest.json",
+    "sha256": "dc749e38449c6f949c8fcb1505566ce58e0c7b810925638f0b716a86a8122759",
+    "size_bytes": 13796
+  }
+}

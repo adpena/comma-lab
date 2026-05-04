@@ -1,0 +1,232 @@
+{
+  "schema": "renderer_blockfp_pr75_qp1_sub314_readiness_matrix_v1",
+  "generated_at_utc": "2026-05-03T06:31:12Z",
+  "scope": "local_readiness_only_no_remote_dispatch",
+  "remote_gpu_dispatch_performed": false,
+  "write_scope": {
+    "result_dir": "experiments/results/renderer_blockfp_pr75_qp1_sub314_20260503_worker",
+    "ledger": ".omx/research/renderer_blockfp_pr75_qp1_sub314_20260503_worker.md"
+  },
+  "score_formula": "score = 100*seg_dist + sqrt(10*pose_dist) + 25*archive_bytes/37545489",
+  "rate_score_per_archive_byte": 6.658589531221714e-7,
+  "frontier": {
+    "candidate_id": "c088_c067_pr75_actions_top40_p3_t4",
+    "score_recomputed_from_components": 0.3155226919767294,
+    "archive_bytes": 276386,
+    "archive_sha256": "9feef7ffaa254f9e5408996a122682757a054144a3000539553786c5292b7d0a",
+    "archive": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/archive.zip",
+    "contest_auth_eval_json": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top40_p3_t4_20260503T0440Z/contest_auth_eval.json",
+    "evidence_grade": "A++"
+  },
+  "sub314_target": {
+    "target_score": 0.314,
+    "required_archive_byte_savings_vs_frontier_if_components_unchanged": 2287,
+    "max_archive_bytes_if_components_unchanged": 274099,
+    "note": "Renderer-byte route must save at least 2287 bytes versus C088 at unchanged components, or pair smaller byte savings with exact component improvement."
+  },
+  "local_preflights_run": [
+    {
+      "candidate_id": "qfaithful_2146_qzs3_rp2_qp1",
+      "command": ".venv/bin/python experiments/preflight_renderer_transplant_pose_safety.py --source-archive experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip --candidate-archive experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2146Z_fix1/qzs3_rp2_qp1/archive.zip --output-json experiments/results/renderer_blockfp_pr75_qp1_sub314_20260503_worker/qfaithful_2146_qzs3_rp2_qp1_pose_safety_preflight.json --max-pairs 5",
+      "exit_code": 2,
+      "output_json": "experiments/results/renderer_blockfp_pr75_qp1_sub314_20260503_worker/qfaithful_2146_qzs3_rp2_qp1_pose_safety_preflight.json",
+      "safe_for_exact_eval_dispatch": false,
+      "fail_closed_reasons": [
+        "mask_payload_changed",
+        "pose_payload_changed",
+        "render_output_parity_unsafe"
+      ],
+      "mean_abs_delta": 72.32969665527344,
+      "rms_delta": 87.7930527843035,
+      "max_abs_delta": 254.98912048339844
+    }
+  ],
+  "routes": [
+    {
+      "route_id": "existing_trained_artifact_transplant_qbf1",
+      "rank": 3,
+      "readiness": "blocked_do_not_dispatch",
+      "reason": "Best byte-closed QBF1 trained transplant is larger than C088 and has exact CUDA PoseNet collapse plus local pose-safety failure.",
+      "candidate_archives": [
+        {
+          "candidate_id": "trained_qbf1_b0064",
+          "archive": "experiments/results/trained_renderer_blockfp_preflight_20260503_qfaithful_qzs3_2146/trained_qbf1_b0064/archive.zip",
+          "archive_bytes": 286469,
+          "archive_sha256": "ecd9751e561777dd9e4b84ba2f3167822e7dd79f58aff06c7d2d8238bea17f60",
+          "byte_delta_vs_c088": 10083,
+          "score_if_c088_components_unchanged": 0.32223654780106026,
+          "pose_safety_status": "not_run_for_this_block_size_blocked_by_b0512_family_failure",
+          "dispatchable": false,
+          "exact_blocker": "QBF1 family is byte-regressive and b0512 failed local output parity and exact CUDA PoseNet gate."
+        },
+        {
+          "candidate_id": "trained_qbf1_b0128",
+          "archive": "experiments/results/trained_renderer_blockfp_preflight_20260503_qfaithful_qzs3_2146/trained_qbf1_b0128/archive.zip",
+          "archive_bytes": 284187,
+          "archive_sha256": "b1fbd339692e56cb831d396ec556c5cb07002608304dafb030b288136c049e9a",
+          "byte_delta_vs_c088": 7801,
+          "score_if_c088_components_unchanged": 0.32071705767003544,
+          "pose_safety_status": "not_run_for_this_block_size_blocked_by_b0512_family_failure",
+          "dispatchable": false,
+          "exact_blocker": "Byte-regressive versus C088 and no passing pose-safety evidence."
+        },
+        {
+          "candidate_id": "trained_qbf1_b0256",
+          "archive": "experiments/results/trained_renderer_blockfp_preflight_20260503_qfaithful_qzs3_2146/trained_qbf1_b0256/archive.zip",
+          "archive_bytes": 283940,
+          "archive_sha256": "afbe2472ef8d65159e17d3873c5c0fa23e2344a788ea65f30c380efd6d33551f",
+          "byte_delta_vs_c088": 7554,
+          "score_if_c088_components_unchanged": 0.3205525905086143,
+          "pose_safety_status": "not_run_for_this_block_size_blocked_by_b0512_family_failure",
+          "dispatchable": false,
+          "exact_blocker": "Byte-regressive versus C088 and no passing pose-safety evidence."
+        },
+        {
+          "candidate_id": "trained_qbf1_b0512",
+          "archive": "experiments/results/trained_renderer_blockfp_preflight_20260503_qfaithful_qzs3_2146/trained_qbf1_b0512/archive.zip",
+          "archive_bytes": 283432,
+          "archive_sha256": "6174424516a93aa35852cd4dc22b9132516fc38f824b77562b3f91b3f55f58dc",
+          "byte_delta_vs_c088": 7046,
+          "score_if_c088_components_unchanged": 0.3202143341604282,
+          "pose_safety_status": "failed",
+          "pose_safety_json": "experiments/results/trained_renderer_blockfp_preflight_20260503_qfaithful_qzs3_2146/trained_qbf1_b0512/pose_safety_preflight.json",
+          "safe_for_exact_eval_dispatch": false,
+          "exact_cuda_negative": {
+            "contest_auth_eval_json": "experiments/results/lightning_batch/exact_eval_trained_qbf1_b0512_g7e_20260503T0142Z/contest_auth_eval.json",
+            "score_recomputed_from_components": 17.72267562501643,
+            "avg_segnet_dist": 0.0026408,
+            "avg_posenet_dist": 29.82484055,
+            "n_samples": 600
+          },
+          "dispatchable": false,
+          "exact_blocker": "render_output_parity_unsafe and exact CUDA PoseNet collapse."
+        },
+        {
+          "candidate_id": "trained_qbf1_b1024",
+          "archive": "experiments/results/trained_renderer_blockfp_preflight_20260503_qfaithful_qzs3_2146/trained_qbf1_b1024/archive.zip",
+          "archive_bytes": 283961,
+          "archive_sha256": "a68f88a1c3c7687759434a9dc71e73a5a7571ea4b5475241797da86e1e013114",
+          "byte_delta_vs_c088": 7575,
+          "score_if_c088_components_unchanged": 0.3205665735466298,
+          "pose_safety_status": "not_run_for_this_block_size_blocked_by_b0512_family_failure",
+          "dispatchable": false,
+          "exact_blocker": "Byte-regressive versus C088 and no passing pose-safety evidence."
+        }
+      ],
+      "expected_byte_delta": "best QBF1 archive is +7046 bytes versus C088, so it cannot contribute to sub-0.314 without a large component improvement and it already collapsed PoseNet.",
+      "sub314_feasibility": "not_feasible_current_artifacts",
+      "next_command_templates": [
+        ".venv/bin/python experiments/preflight_renderer_transplant_pose_safety.py --source-archive <source_archive.zip> --candidate-archive <new_raw_or_compressed_burn_archive.zip> --output-json experiments/results/renderer_blockfp_pr75_qp1_sub314_20260503_worker/<candidate>_pose_safety_preflight.json --max-pairs 5",
+        ".venv/bin/python experiments/preflight_trained_renderer_transplant.py --source-archive <source_archive.zip> --renderer-export <new_non_surrogate_renderer.bin> --output-dir experiments/results/renderer_blockfp_pr75_qp1_sub314_20260503_worker/<candidate>_blockfp_preflight --block-sizes 256,512,1024"
+      ]
+    },
+    {
+      "route_id": "existing_qfaithful_qzs3_qp1_byte_candidates",
+      "rank": 2,
+      "readiness": "blocked_by_pose_safety_and_contract_mismatch",
+      "reason": "These are the only local renderer-family archives with enough bytes for sub-0.314 at unchanged C088 components, but they are not contest-faithful transplants and the best one failed the local safety gate.",
+      "candidate_archives": [
+        {
+          "candidate_id": "qfaithful_2146_qzs3_rp2_qp1",
+          "archive": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2146Z_fix1/qzs3_rp2_qp1/archive.zip",
+          "archive_bytes": 272986,
+          "archive_sha256": "d90a937da2127086f28b66f7df58a027c8c565488eb8e765e468808361602128",
+          "byte_delta_vs_c088": -3400,
+          "score_if_c088_components_unchanged": 0.313258771536114,
+          "renderer_sha256": "00ce395fc6495a47d26e3844537859fdc2a1bc38d121ea5f4fb2610179d26e46",
+          "pose_safety_status": "failed",
+          "pose_safety_json": "experiments/results/renderer_blockfp_pr75_qp1_sub314_20260503_worker/qfaithful_2146_qzs3_rp2_qp1_pose_safety_preflight.json",
+          "safe_for_exact_eval_dispatch": false,
+          "dispatchable": false,
+          "exact_blocker": "Changed masks and lossy QP1 poses versus C067 source, then failed render output parity with mean_abs_delta 72.3297."
+        },
+        {
+          "candidate_id": "qfaithful_2146_qzs3_pr64_qp1",
+          "archive": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2146Z_fix1/qzs3_pr64_qp1/archive.zip",
+          "archive_bytes": 273103,
+          "archive_sha256": "a34f493b77e3a2ccba7e059134127e9b3cb6e774a41862143d369fa3f5fc81af",
+          "byte_delta_vs_c088": -3283,
+          "score_if_c088_components_unchanged": 0.3133366770336293,
+          "renderer_sha256": "00ce395fc6495a47d26e3844537859fdc2a1bc38d121ea5f4fb2610179d26e46",
+          "pose_safety_status": "not_run_this_turn_same_changed_mask_pose_contract_as_rp2_qp1",
+          "safe_for_exact_eval_dispatch": false,
+          "dispatchable": false,
+          "exact_blocker": "Same provenance class as rp2_qp1: changed mask SHA and lossy QP1 pose SHA versus C067 source; must pass local pose-safety before any exact eval."
+        }
+      ],
+      "expected_byte_delta": "Would save 3283-3400 bytes versus C088, enough for formula-only sub-0.314 if components were unchanged.",
+      "sub314_feasibility": "bytes_yes_pose_no_current_artifacts",
+      "next_command_templates": [
+        ".venv/bin/python experiments/preflight_renderer_transplant_pose_safety.py --source-archive experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip --candidate-archive experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2146Z_fix1/qzs3_pr64_qp1/archive.zip --output-json experiments/results/renderer_blockfp_pr75_qp1_sub314_20260503_worker/qfaithful_2146_qzs3_pr64_qp1_pose_safety_preflight.json --max-pairs 5",
+        "Do not dispatch either Q-FAITHFUL QP1 archive unless safe_for_exact_eval_dispatch=true and masks/poses are intentionally justified by a full archive candidate, not a renderer transplant claim."
+      ]
+    },
+    {
+      "route_id": "active_fixed_renderer_burn_output_gate",
+      "rank": 1,
+      "readiness": "wait_for_existing_claimed_training_outputs",
+      "reason": "The only contest-faithful path left is to harvest the already-active fixed-mask/fixed-pose renderer burn outputs, then require raw export parity and compressed export parity before exact eval.",
+      "candidate_archives": [],
+      "active_claims": [
+        {
+          "lane_id": "c067_fixed_renderer_burn_qfaithful_fix2_h100p5",
+          "instance_job_id": "train_c067_fixed_renderer_burn_qfaithful_fix2_h100p5_20260503T0544Z",
+          "status": "training",
+          "claim_file": ".omx/state/active_lane_dispatch_claims.md",
+          "notes": "Existing active training/export producer; no new dispatch from this worker."
+        },
+        {
+          "lane_id": "c067_fixed_renderer_burn_qfaithful_fix2_a100p4d",
+          "instance_job_id": "train_c067_fixed_renderer_burn_qfaithful_fix2_a100p4d_20260503T0544Z",
+          "status": "training",
+          "claim_file": ".omx/state/active_lane_dispatch_claims.md",
+          "notes": "Existing active training/export producer; no new dispatch from this worker."
+        }
+      ],
+      "source_archive": {
+        "archive": "experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip",
+        "archive_bytes": 276214,
+        "archive_sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+        "renderer_bytes": 59288,
+        "renderer_sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb",
+        "masks_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "optimized_poses_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+      },
+      "expected_byte_delta": "unknown until burn export exists; needs at least 2287 archive-byte savings versus C088 at unchanged components, or exact component improvement plus smaller byte savings.",
+      "sub314_feasibility": "plausible_only_if_harvested_export_preserves_output_parity_and_compresses_to_archive_bytes_le_274099_or_improves_components",
+      "dispatchable": false,
+      "exact_blocker": "No harvested post-burn archive exists locally; active claims must be harvested or terminally closed first.",
+      "required_gates": [
+        "Harvest logs/training_runner_preflight.json, logs/train_renderer.log, logs/q_faithful_snapshot_loop.log, supply-chain scans, and snapshot archive.",
+        "Reject source-identical, pickle-only, sidecar-dependent, unknown-magic, or runtime-loader-incompatible renderer exports.",
+        "Run preflight_trained_renderer_transplant.py on raw exported renderer.",
+        "Run preflight_renderer_transplant_pose_safety.py on raw export archive.",
+        "Run QBF1/Block-FP compression only after raw export parity passes, then rerun pose-safety on compressed archive.",
+        "Only after both local gates pass, hand exact-eval claim and submit command to the main orchestrator."
+      ],
+      "next_command_templates": [
+        "find <harvested_burn_run_dir> -maxdepth 4 -type f | sort",
+        ".venv/bin/python experiments/preflight_trained_renderer_transplant.py --source-archive experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip --renderer-export <harvested_renderer_export.bin> --output-dir experiments/results/renderer_blockfp_pr75_qp1_sub314_20260503_worker/<burn_candidate>_raw_preflight --block-sizes 256,512,1024",
+        ".venv/bin/python experiments/preflight_renderer_transplant_pose_safety.py --source-archive experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip --candidate-archive <harvested_or_preflight_candidate_archive.zip> --output-json experiments/results/renderer_blockfp_pr75_qp1_sub314_20260503_worker/<burn_candidate>_pose_safety_preflight.json --max-pairs 5"
+      ]
+    }
+  ],
+  "pr75_qp1_context": {
+    "active_exact_eval_claims_exist": true,
+    "note": "P6/action-wire PR75 QP1 candidates currently in active claims save tens of bytes or seek component improvement; they are useful context but not enough alone for sub-0.314 by renderer bytes.",
+    "do_not_launch_more": true,
+    "harvest_next": [
+      "c067_pr75_qp1_top40_p6_t4",
+      "c082_qp1_p6_delta_varint_actions_stream_resweep_t4",
+      "c067_pr75_qp1_lag_eval_pose4_top67_p6_t4"
+    ]
+  },
+  "recommendation": {
+    "top_route": "active_fixed_renderer_burn_output_gate",
+    "decision": "Do not dispatch remote GPU jobs. Harvest the already-active H100/A100 burn outputs when visible; all existing trained/QBF1/QP1 byte artifacts are blocked for contest-faithful dispatch.",
+    "main_orchestrator_next_action": "Poll/harvest c067_fixed_renderer_burn_qfaithful_fix2_h100p5 first, then run raw-export transplant preflight and pose-safety locally before considering QBF1/Block-FP compression or exact CUDA eval.",
+    "why_not_existing_artifact": "trained_qbf1_b0512 is +7046 bytes versus C088 and exact-negative with score 17.72267562501643; qfaithful_2146_qzs3_rp2_qp1 has enough bytes but failed local safety with changed masks/poses and unsafe render parity.",
+    "score_claim": false,
+    "promotion_eligible": false
+  }
+}

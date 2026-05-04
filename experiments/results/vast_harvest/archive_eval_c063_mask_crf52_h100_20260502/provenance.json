@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "started_at_utc": "2026-05-02T07:31:34Z",
+  "git_hash": "no-git",
+  "gpu_name": "NVIDIA H100 NVL",
+  "driver_version": "580.82.07",
+  "lane_script": "scripts/remote_archive_only_eval.sh",
+  "tag": "archive_eval_c063_mask_crf52_h100_20260502",
+  "archive_path": "/workspace/pact/experiments/results/c063_mask_av1_reencode_sweep_20260502/crf52/archive.zip",
+  "inflate_sh": "/workspace/pact/submissions/robust_current/inflate.sh",
+  "inflate_sh_sha256": "86449a1f52ac6b2be120d47287b8410f915dce7e562c69f480103f6e527c6017",
+  "predicted_band": [0.28, 0.60],
+  "controlled_baseline": "C-063 lossless-repack T4 A++ score=0.3156230307844823 bytes=276223 sha=83615afd130afa08e972e4a02476612397bffea53327caf3591891f8317aa52d",
+  "no_training": true,
+  "no_build": true,
+  "strict_scorer_rule_compliant": true,
+  "design_memo": "scripts/remote_archive_only_eval.sh"
+}

@@ -1,0 +1,700 @@
+{
+  "archive_report": {
+    "auth_eval_required": true,
+    "base_archive": {
+      "bytes": 128028,
+      "members": [
+        {
+          "logical_source": "packed_payload_unpacked",
+          "name": "renderer.bin",
+          "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb",
+          "size_bytes": 59288
+        },
+        {
+          "logical_source": "packed_payload_unpacked",
+          "name": "masks.cmg3",
+          "sha256": "c3ebab2d30f7cf81b027d1c2e6f88fd7df4149f1199782c0f1c08fff5f08e71a",
+          "size_bytes": 71858
+        },
+        {
+          "logical_source": "packed_payload_unpacked",
+          "name": "optimized_poses.bin",
+          "sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f",
+          "size_bytes": 7200
+        }
+      ],
+      "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_cmg3_nonzero_top1_t4_20260502T1100Z/archive.zip",
+      "runtime_member_contract": {
+        "base_archive_layout": "packed_payload",
+        "source_zip_inventory": [
+          {
+            "compressed_size_bytes": 127928,
+            "crc32": "b0d70d2d",
+            "name": "p",
+            "sha256": "ca668fb45273e05635a3cc4651a462ab1f0d72f58d11f2b5feb5897ecbdb06ab",
+            "size_bytes": 127928
+          }
+        ],
+        "unpack_summary": {
+          "members": [
+            {
+              "bytes": 59288,
+              "name": "renderer.bin",
+              "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+            },
+            {
+              "bytes": 71858,
+              "name": "masks.cmg3",
+              "sha256": "c3ebab2d30f7cf81b027d1c2e6f88fd7df4149f1199782c0f1c08fff5f08e71a"
+            },
+            {
+              "bytes": 7200,
+              "name": "optimized_poses.bin",
+              "sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+            }
+          ],
+          "payload_bytes": 133162,
+          "payload_format": null,
+          "schema": "renderer_payload_v1",
+          "source_archive_sha256": "509a6e27f6f1e3b6c4587a81e49175ba370b9dd66222dcf8d23d6bf7b67d0bc8"
+        },
+        "unpacked_by": "submissions/robust_current/unpack_renderer_payload.py",
+        "zip_payload_members": [
+          "p"
+        ]
+      },
+      "sha256": "7b23b8e7a7076ccc5814f6a31675e9071828cebfc57e8c73ac85e39c1139d397"
+    },
+    "cdo1_overlay": {
+      "archive_member": "masks.cdo1.xz",
+      "compressed_bytes": 11904,
+      "compressed_sha256": "c6f9c73097f85cf358aa13138d4b2f29a63658117aac5ef7c6b6e91d61874ec7",
+      "compressor": "lzma_xz",
+      "raw_bytes": 39372,
+      "raw_sha256": "1490132f4e2b7dd400181f63f645a7181263eb3dfe333b4e185ed69d8f26c198",
+      "source": {
+        "path": "/private/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/reversed_base_cdo1_g77i736q/overlay.cdo1",
+        "payload_bytes": 39372,
+        "payload_sha256": "1490132f4e2b7dd400181f63f645a7181263eb3dfe333b4e185ed69d8f26c198",
+        "source": "payload"
+      }
+    },
+    "output_archive": {
+      "bytes": 140130,
+      "delta_bytes_vs_base_archive": 12102,
+      "inventory": [
+        {
+          "compress_type": 0,
+          "compressed_size_bytes": 140030,
+          "crc32": "67309eac",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "p",
+          "permissions_octal": "0o600",
+          "sha256": "3409fac4a58c200bbb7508e869426963313f2dfb187bec04ed961414c33f610d",
+          "size_bytes": 140030
+        }
+      ],
+      "packaging": {
+        "brotli_quality": 11,
+        "expanded_candidate_archive_bytes": 142447,
+        "expanded_candidate_archive_sha256": "1b5da1b790232cf85782ebad8cfc5a3597f5cee45bb3fefd2189c36e1be3bbe5",
+        "packed_archive_report": {
+          "brotli_quality": 11,
+          "evidence_grade": "empirical",
+          "formula_only_rate_delta": -0.001542795194384071,
+          "header": {
+            "members": [
+              {
+                "bytes": 59288,
+                "codec": "raw",
+                "name": "renderer.bin",
+                "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+              },
+              {
+                "bytes": 71858,
+                "codec": "raw",
+                "name": "masks.cmg3",
+                "sha256": "c3ebab2d30f7cf81b027d1c2e6f88fd7df4149f1199782c0f1c08fff5f08e71a"
+              },
+              {
+                "bytes": 11904,
+                "codec": "raw",
+                "name": "masks.cdo1.xz",
+                "sha256": "c6f9c73097f85cf358aa13138d4b2f29a63658117aac5ef7c6b6e91d61874ec7"
+              },
+              {
+                "bytes": 7200,
+                "codec": "raw",
+                "name": "optimized_poses.bin",
+                "sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+              }
+            ],
+            "schema": "renderer_payload_v1",
+            "source_archive_sha256": "1b5da1b790232cf85782ebad8cfc5a3597f5cee45bb3fefd2189c36e1be3bbe5"
+          },
+          "output_archive": "experiments/results/c067_reversed_base_cdo1_candidate_20260503/cmg3_nonzero_top1_pairwaterfill12k/archive.zip",
+          "output_archive_bytes": 140130,
+          "output_archive_sha256": "d83f5b2c9a49598ba9b34c3b3ad1008019bba9cf7ea52fc114a0155d9fb311ec",
+          "payload_compressed_bytes": 140030,
+          "payload_format": "rpk1_json",
+          "payload_member": "p",
+          "payload_raw_bytes": 150910,
+          "pose_codec": "raw",
+          "pose_residual_topk": 0,
+          "savings_bytes": 2317,
+          "score_claim": false,
+          "source_archive": "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/cdo1_expanded_candidate_r6pbynjq/expanded_candidate.zip",
+          "source_archive_bytes": 142447,
+          "source_archive_sha256": "1b5da1b790232cf85782ebad8cfc5a3597f5cee45bb3fefd2189c36e1be3bbe5"
+        },
+        "packed_output": true,
+        "packer": "experiments/build_renderer_packed_payload_archive.py",
+        "payload_format": "rpk1_json",
+        "payload_member_name": "p"
+      },
+      "path": "/Users/adpena/Projects/pact/experiments/results/c067_reversed_base_cdo1_candidate_20260503/cmg3_nonzero_top1_pairwaterfill12k/archive.zip",
+      "sha256": "d83f5b2c9a49598ba9b34c3b3ad1008019bba9cf7ea52fc114a0155d9fb311ec"
+    },
+    "producer": "experiments/build_c067_decoded_delta_overlay_candidate.py",
+    "promotion_eligible": false,
+    "runtime_contract": {
+      "base_mask_sha_checked_by_cdo1_header": true,
+      "exact_score_path": "archive.zip -> inflate.sh -> upstream/evaluate.py",
+      "reconstructed_mask_sha_checked_by_cdo1_header": true
+    },
+    "schema": "c067_decoded_delta_overlay_candidate_v1",
+    "score_claim": false
+  },
+  "auth_eval_required": true,
+  "base_archive_role": "reversed_base_mask_payload_archive",
+  "economics_json": "experiments/results/c067_reversed_base_cdo1_overlay_economics_20260502/c067_reversed_base_cdo1_overlay_economics.json",
+  "economics_json_sha256": "1d2a0003abfff57a15844fb63618f887a33b02ca16bdb785cf43baf3f241473c",
+  "producer": "experiments/build_c067_reversed_base_cdo1_candidate.py",
+  "promotion_eligible": false,
+  "rebuilt_cdo1_payload": {
+    "base_mask_array": "experiments/results/c067_multimask_reconciliation_20260502/cmg3_nonzero_top1.decoded_mask_array.npz",
+    "expected_raw_sha256": "1490132f4e2b7dd400181f63f645a7181263eb3dfe333b4e185ed69d8f26c198",
+    "max_residual_disagreement_fraction": 0.001,
+    "payload_header": {
+      "base_mask_tensor_sha256": "8340678a67e4fc5db961916dd549fba872382ad134b606626c85398c973ea113",
+      "policy_id": "save12k_exact_trace_pair_waterfill_budget12000",
+      "producer": "experiments/plan_c067_reversed_base_cdo1_overlay_economics.py",
+      "reconstructed_mask_u8_sha256": "83057cbbf245e0895cc92e769c27d7b6d15b99c718a421284fabcc3ef97ec173",
+      "run_count": 4295,
+      "run_struct": "u16_frame_u16_y_u16_x0_u16_length_u8_value_le",
+      "schema": "c067_decoded_delta_overlay_payload_v1",
+      "score_claim": false,
+      "selected_pair_indices": [
+        41,
+        71,
+        79,
+        85,
+        135,
+        139,
+        153,
+        164,
+        168,
+        212,
+        216,
+        222,
+        230,
+        274,
+        276,
+        290
+      ],
+      "selected_pixel_count": 24204,
+      "shape": [
+        600,
+        384,
+        512
+      ],
+      "target_mask_tensor_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45"
+    },
+    "rebuilt_raw_bytes": 39372,
+    "rebuilt_raw_sha256": "1490132f4e2b7dd400181f63f645a7181263eb3dfe333b4e185ed69d8f26c198",
+    "rebuilt_run_count": 4295,
+    "rebuilt_selected_pixel_count": 24204,
+    "target_mask_array": "experiments/results/c063_trace_weighted_mask_grammar_plan_20260502_codex/decoded_mask_array.npy"
+  },
+  "schema": "c067_reversed_base_cdo1_candidate_v1",
+  "score_claim": false,
+  "selected_economics_candidate": {
+    "base": {
+      "decoded_mask_array": "experiments/results/c067_multimask_reconciliation_20260502/cmg3_nonzero_top1.decoded_mask_array.npz",
+      "decoded_mask_tensor_sha256": "8340678a67e4fc5db961916dd549fba872382ad134b606626c85398c973ea113",
+      "label": "cmg3_nonzero_top1",
+      "payload_bytes": 71858,
+      "payload_path": "experiments/results/c067_multimask_reconciliation_20260502/cmg3_nonzero_top1.masks.cmg3",
+      "payload_sha256": "c3ebab2d30f7cf81b027d1c2e6f88fd7df4149f1199782c0f1c08fff5f08e71a"
+    },
+    "candidate_id": "cmg3_nonzero_top1__save12k_exact_trace_pair_waterfill_budget12000",
+    "cdo1_payload": {
+      "compressed_payloads": {
+        "lzma_xz": {
+          "bytes": 11904,
+          "sha256": "c6f9c73097f85cf358aa13138d4b2f29a63658117aac5ef7c6b6e91d61874ec7"
+        },
+        "raw": {
+          "bytes": 39372,
+          "sha256": "1490132f4e2b7dd400181f63f645a7181263eb3dfe333b4e185ed69d8f26c198"
+        },
+        "zlib": {
+          "bytes": 17828,
+          "sha256": "31442417f884e9e9608960c30f1846d536f2d67f941ca236b9fffed5348f1a49"
+        }
+      },
+      "raw_bytes": 39372,
+      "raw_sha256": "1490132f4e2b7dd400181f63f645a7181263eb3dfe333b4e185ed69d8f26c198",
+      "recommended_compressor": "lzma_xz",
+      "run_count": 4295
+    },
+    "estimated_archive": {
+      "base_payload_bytes": 71858,
+      "best_overlay_payload_bytes": 11904,
+      "c067_frontier_archive_bytes": 276214,
+      "c067_mask_stream_bytes_removed": 219472,
+      "c067_non_mask_packed_bytes": 56742,
+      "estimated_archive_bytes": 140504,
+      "estimated_delta_vs_c067": -135710,
+      "estimated_rate_delta_vs_c067": -0.09036371852820987,
+      "model": "c067_packed_non_mask_bytes_plus_base_payload_plus_cdo1_payload",
+      "unchanged_distortion_sub0240_byte_gate": 162650,
+      "unchanged_distortion_sub0300_byte_gate": 252759
+    },
+    "gates": {
+      "byte_gate_sub0240_if_distortion_unchanged": true,
+      "byte_gate_sub0300_if_distortion_unchanged": true,
+      "joint_sub0240_geometry_gate": false,
+      "joint_sub0300_geometry_gate": false,
+      "residual_geometry_gate": false
+    },
+    "mask_disagreement": {
+      "base_vs_target_count": 4185939,
+      "base_vs_target_fraction": 0.035484644572,
+      "max_residual_disagreement_fraction": 0.001,
+      "residual_vs_target_count_after_overlay": 4161735,
+      "residual_vs_target_fraction_after_overlay": 0.035279464722,
+      "selected_overlay_fraction": 0.00020517985,
+      "selected_overlay_pixels": 24204
+    },
+    "policy": {
+      "budget_payload_bytes": 12000,
+      "class_ids": [
+        0,
+        1
+      ],
+      "pair_indices": [
+        41,
+        71,
+        79,
+        85,
+        135,
+        139,
+        153,
+        164,
+        168,
+        212,
+        216,
+        222,
+        230,
+        274,
+        276,
+        290
+      ],
+      "policy_id": "save12k_exact_trace_pair_waterfill_budget12000",
+      "selected_atoms": [
+        {
+          "atom_id": "pair0041_class1",
+          "changed_pixels": 506,
+          "class_id": 1,
+          "expected_component_score_improvement_first_order": 0.004376435335,
+          "pair_indices": [
+            41
+          ]
+        },
+        {
+          "atom_id": "pair0071_class1",
+          "changed_pixels": 609,
+          "class_id": 1,
+          "expected_component_score_improvement_first_order": 0.005498911906,
+          "pair_indices": [
+            71
+          ]
+        },
+        {
+          "atom_id": "pair0079_class1",
+          "changed_pixels": 747,
+          "class_id": 1,
+          "expected_component_score_improvement_first_order": 0.011774913667,
+          "pair_indices": [
+            79
+          ]
+        },
+        {
+          "atom_id": "pair0085_class0",
+          "changed_pixels": 479,
+          "class_id": 0,
+          "expected_component_score_improvement_first_order": 0.002980601867,
+          "pair_indices": [
+            85
+          ]
+        },
+        {
+          "atom_id": "pair0085_class1",
+          "changed_pixels": 498,
+          "class_id": 1,
+          "expected_component_score_improvement_first_order": 0.003098830334,
+          "pair_indices": [
+            85
+          ]
+        },
+        {
+          "atom_id": "pair0135_class1",
+          "changed_pixels": 578,
+          "class_id": 1,
+          "expected_component_score_improvement_first_order": 0.00388242735,
+          "pair_indices": [
+            135
+          ]
+        },
+        {
+          "atom_id": "pair0139_class1",
+          "changed_pixels": 521,
+          "class_id": 1,
+          "expected_component_score_improvement_first_order": 0.005959937917,
+          "pair_indices": [
+            139
+          ]
+        },
+        {
+          "atom_id": "pair0153_class1",
+          "changed_pixels": 520,
+          "class_id": 1,
+          "expected_component_score_improvement_first_order": 0.009859683926,
+          "pair_indices": [
+            153
+          ]
+        },
+        {
+          "atom_id": "pair0164_class0",
+          "changed_pixels": 588,
+          "class_id": 0,
+          "expected_component_score_improvement_first_order": 0.004474777858,
+          "pair_indices": [
+            164
+          ]
+        },
+        {
+          "atom_id": "pair0164_class1",
+          "changed_pixels": 500,
+          "class_id": 1,
+          "expected_component_score_improvement_first_order": 0.003805083212,
+          "pair_indices": [
+            164
+          ]
+        },
+        {
+          "atom_id": "pair0168_class1",
+          "changed_pixels": 534,
+          "class_id": 1,
+          "expected_component_score_improvement_first_order": 0.003271402585,
+          "pair_indices": [
+            168
+          ]
+        },
+        {
+          "atom_id": "pair0212_class1",
+          "changed_pixels": 506,
+          "class_id": 1,
+          "expected_component_score_improvement_first_order": 0.008118326835,
+          "pair_indices": [
+            212
+          ]
+        },
+        {
+          "atom_id": "pair0216_class1",
+          "changed_pixels": 533,
+          "class_id": 1,
+          "expected_component_score_improvement_first_order": 0.008506452967,
+          "pair_indices": [
+            216
+          ]
+        },
+        {
+          "atom_id": "pair0222_class1",
+          "changed_pixels": 517,
+          "class_id": 1,
+          "expected_component_score_improvement_first_order": 0.005853676673,
+          "pair_indices": [
+            222
+          ]
+        },
+        {
+          "atom_id": "pair0230_class1",
+          "changed_pixels": 562,
+          "class_id": 1,
+          "expected_component_score_improvement_first_order": 0.021564227507,
+          "pair_indices": [
+            230
+          ]
+        },
+        {
+          "atom_id": "pair0274_class1",
+          "changed_pixels": 493,
+          "class_id": 1,
+          "expected_component_score_improvement_first_order": 0.004097726432,
+          "pair_indices": [
+            274
+          ]
+        },
+        {
+          "atom_id": "pair0276_class0",
+          "changed_pixels": 513,
+          "class_id": 0,
+          "expected_component_score_improvement_first_order": 0.003889370937,
+          "pair_indices": [
+            276
+          ]
+        },
+        {
+          "atom_id": "pair0290_class1",
+          "changed_pixels": 484,
+          "class_id": 1,
+          "expected_component_score_improvement_first_order": 0.005568850302,
+          "pair_indices": [
+            290
+          ]
+        }
+      ],
+      "selection": "trust_plan_pair_target_class",
+      "source": "experiments/results/c067_postdecode_mask_repair_candidate_20260502/c067_postdecode_mask_repair_waterfill_pair_class_plan.json"
+    },
+    "promotion_eligible": false,
+    "score_claim": false
+  },
+  "selected_policy_summary": {
+    "candidate_id": "cmg3_nonzero_top1__save12k_exact_trace_pair_waterfill_budget12000",
+    "expected_raw_sha256": "1490132f4e2b7dd400181f63f645a7181263eb3dfe333b4e185ed69d8f26c198",
+    "planner_cdo1_payload": {
+      "compressed_payloads": {
+        "lzma_xz": {
+          "bytes": 11904,
+          "sha256": "c6f9c73097f85cf358aa13138d4b2f29a63658117aac5ef7c6b6e91d61874ec7"
+        },
+        "raw": {
+          "bytes": 39372,
+          "sha256": "1490132f4e2b7dd400181f63f645a7181263eb3dfe333b4e185ed69d8f26c198"
+        },
+        "zlib": {
+          "bytes": 17828,
+          "sha256": "31442417f884e9e9608960c30f1846d536f2d67f941ca236b9fffed5348f1a49"
+        }
+      },
+      "raw_bytes": 39372,
+      "raw_sha256": "1490132f4e2b7dd400181f63f645a7181263eb3dfe333b4e185ed69d8f26c198",
+      "recommended_compressor": "lzma_xz",
+      "run_count": 4295
+    },
+    "policy_id": "save12k_exact_trace_pair_waterfill_budget12000",
+    "rebuilt_raw_bytes": 39372,
+    "rebuilt_raw_sha256": "1490132f4e2b7dd400181f63f645a7181263eb3dfe333b4e185ed69d8f26c198",
+    "rebuilt_run_count": 4295,
+    "rebuilt_selected_pixel_count": 24204,
+    "selected_atom_count": 18,
+    "selected_atoms": [
+      {
+        "atom_id": "pair0041_class1",
+        "changed_pixels": 506,
+        "class_id": 1,
+        "expected_component_score_improvement_first_order": 0.004376435335,
+        "pair_indices": [
+          41
+        ]
+      },
+      {
+        "atom_id": "pair0071_class1",
+        "changed_pixels": 609,
+        "class_id": 1,
+        "expected_component_score_improvement_first_order": 0.005498911906,
+        "pair_indices": [
+          71
+        ]
+      },
+      {
+        "atom_id": "pair0079_class1",
+        "changed_pixels": 747,
+        "class_id": 1,
+        "expected_component_score_improvement_first_order": 0.011774913667,
+        "pair_indices": [
+          79
+        ]
+      },
+      {
+        "atom_id": "pair0085_class0",
+        "changed_pixels": 479,
+        "class_id": 0,
+        "expected_component_score_improvement_first_order": 0.002980601867,
+        "pair_indices": [
+          85
+        ]
+      },
+      {
+        "atom_id": "pair0085_class1",
+        "changed_pixels": 498,
+        "class_id": 1,
+        "expected_component_score_improvement_first_order": 0.003098830334,
+        "pair_indices": [
+          85
+        ]
+      },
+      {
+        "atom_id": "pair0135_class1",
+        "changed_pixels": 578,
+        "class_id": 1,
+        "expected_component_score_improvement_first_order": 0.00388242735,
+        "pair_indices": [
+          135
+        ]
+      },
+      {
+        "atom_id": "pair0139_class1",
+        "changed_pixels": 521,
+        "class_id": 1,
+        "expected_component_score_improvement_first_order": 0.005959937917,
+        "pair_indices": [
+          139
+        ]
+      },
+      {
+        "atom_id": "pair0153_class1",
+        "changed_pixels": 520,
+        "class_id": 1,
+        "expected_component_score_improvement_first_order": 0.009859683926,
+        "pair_indices": [
+          153
+        ]
+      },
+      {
+        "atom_id": "pair0164_class0",
+        "changed_pixels": 588,
+        "class_id": 0,
+        "expected_component_score_improvement_first_order": 0.004474777858,
+        "pair_indices": [
+          164
+        ]
+      },
+      {
+        "atom_id": "pair0164_class1",
+        "changed_pixels": 500,
+        "class_id": 1,
+        "expected_component_score_improvement_first_order": 0.003805083212,
+        "pair_indices": [
+          164
+        ]
+      },
+      {
+        "atom_id": "pair0168_class1",
+        "changed_pixels": 534,
+        "class_id": 1,
+        "expected_component_score_improvement_first_order": 0.003271402585,
+        "pair_indices": [
+          168
+        ]
+      },
+      {
+        "atom_id": "pair0212_class1",
+        "changed_pixels": 506,
+        "class_id": 1,
+        "expected_component_score_improvement_first_order": 0.008118326835,
+        "pair_indices": [
+          212
+        ]
+      },
+      {
+        "atom_id": "pair0216_class1",
+        "changed_pixels": 533,
+        "class_id": 1,
+        "expected_component_score_improvement_first_order": 0.008506452967,
+        "pair_indices": [
+          216
+        ]
+      },
+      {
+        "atom_id": "pair0222_class1",
+        "changed_pixels": 517,
+        "class_id": 1,
+        "expected_component_score_improvement_first_order": 0.005853676673,
+        "pair_indices": [
+          222
+        ]
+      },
+      {
+        "atom_id": "pair0230_class1",
+        "changed_pixels": 562,
+        "class_id": 1,
+        "expected_component_score_improvement_first_order": 0.021564227507,
+        "pair_indices": [
+          230
+        ]
+      },
+      {
+        "atom_id": "pair0274_class1",
+        "changed_pixels": 493,
+        "class_id": 1,
+        "expected_component_score_improvement_first_order": 0.004097726432,
+        "pair_indices": [
+          274
+        ]
+      },
+      {
+        "atom_id": "pair0276_class0",
+        "changed_pixels": 513,
+        "class_id": 0,
+        "expected_component_score_improvement_first_order": 0.003889370937,
+        "pair_indices": [
+          276
+        ]
+      },
+      {
+        "atom_id": "pair0290_class1",
+        "changed_pixels": 484,
+        "class_id": 1,
+        "expected_component_score_improvement_first_order": 0.005568850302,
+        "pair_indices": [
+          290
+        ]
+      }
+    ],
+    "selected_class_ids": [
+      0,
+      1
+    ],
+    "selected_pair_indices": [
+      41,
+      71,
+      79,
+      85,
+      135,
+      139,
+      153,
+      164,
+      168,
+      212,
+      216,
+      222,
+      230,
+      274,
+      276,
+      290
+    ],
+    "selection": "trust_plan_pair_target_class",
+    "source": "experiments/results/c067_postdecode_mask_repair_candidate_20260502/c067_postdecode_mask_repair_waterfill_pair_class_plan.json"
+  }
+}

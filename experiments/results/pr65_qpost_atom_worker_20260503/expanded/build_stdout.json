@@ -1,0 +1,3345 @@
+{
+  "baseline": {
+    "bytes": 276342,
+    "label": "C-089 exact A++ frontier",
+    "score": 0.3154707273953505,
+    "sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8",
+    "sub314_gap": 0.0014707273953504796
+  },
+  "candidate_summary": [
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/pr65_qpost_atom_worker_20260503/expanded/pr65_qpost_bias_poseadv_top016/archive.zip",
+      "archive_byte_delta": 191,
+      "archive_bytes": 276533,
+      "archive_sha256": "aac4fdebc06354e360132cceb586071fe179ddfd430d4c943021663a7a9efc1e",
+      "built": true,
+      "candidate_id": "pr65_qpost_bias_poseadv_top016",
+      "dispatch_blockers": [
+        "public-trace opportunity bound 0.001141576 is below sub-0.314 break-even 0.001597906"
+      ],
+      "dispatch_recommendation": "do_not_dispatch",
+      "formula_rate_score_delta": 0.00012717906004633474,
+      "include_streams": [
+        "bias"
+      ],
+      "public_trace_opportunity_bound": 0.001141575829399205,
+      "qpost_bytes": 97,
+      "selected_active_atoms_total": 16,
+      "selected_pairs": [
+        105,
+        64,
+        60,
+        435,
+        164,
+        420,
+        90,
+        67,
+        106,
+        68,
+        423,
+        310,
+        309,
+        367,
+        136,
+        70
+      ]
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/pr65_qpost_atom_worker_20260503/expanded/pr65_qpost_bias_poseadv_top032/archive.zip",
+      "archive_byte_delta": 209,
+      "archive_bytes": 276551,
+      "archive_sha256": "91cd1690fdcca47eedbe12dc8bdaba8191210199169449c474730ad30831efbd",
+      "built": true,
+      "candidate_id": "pr65_qpost_bias_poseadv_top032",
+      "dispatch_blockers": [],
+      "dispatch_recommendation": "exact_cuda_eval_candidate_after_lane_claim",
+      "formula_rate_score_delta": 0.00013916452120253382,
+      "include_streams": [
+        "bias"
+      ],
+      "public_trace_opportunity_bound": 0.0017422633563209306,
+      "qpost_bytes": 115,
+      "selected_active_atoms_total": 32,
+      "selected_pairs": [
+        105,
+        64,
+        60,
+        435,
+        164,
+        420,
+        90,
+        67,
+        106,
+        68,
+        423,
+        310,
+        309,
+        367,
+        136,
+        70,
+        130,
+        101,
+        120,
+        166,
+        425,
+        305,
+        445,
+        429,
+        92,
+        127,
+        426,
+        368,
+        112,
+        396,
+        165,
+        418
+      ]
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/pr65_qpost_atom_worker_20260503/expanded/pr65_qpost_bias_poseadv_top064/archive.zip",
+      "archive_byte_delta": 248,
+      "archive_bytes": 276590,
+      "archive_sha256": "656d438c8723482e3500df33d4b7a02d3168b1f42004dfdec4d97ae37281029c",
+      "built": true,
+      "candidate_id": "pr65_qpost_bias_poseadv_top064",
+      "dispatch_blockers": [],
+      "dispatch_recommendation": "exact_cuda_eval_candidate_after_lane_claim",
+      "formula_rate_score_delta": 0.0001651330203742985,
+      "include_streams": [
+        "bias"
+      ],
+      "public_trace_opportunity_bound": 0.002247988534515191,
+      "qpost_bytes": 154,
+      "selected_active_atoms_total": 64,
+      "selected_pairs": [
+        105,
+        64,
+        60,
+        435,
+        164,
+        420,
+        90,
+        67,
+        106,
+        68,
+        423,
+        310,
+        309,
+        367,
+        136,
+        70,
+        130,
+        101,
+        120,
+        166,
+        425,
+        305,
+        445,
+        429,
+        92,
+        127,
+        426,
+        368,
+        112,
+        396,
+        165,
+        418,
+        126,
+        142,
+        125,
+        191,
+        150,
+        116,
+        205,
+        431,
+        307,
+        372,
+        550,
+        85,
+        103,
+        302,
+        152,
+        200,
+        113,
+        450,
+        129,
+        139,
+        123,
+        221,
+        119,
+        118,
+        141,
+        321,
+        171,
+        318,
+        399,
+        323,
+        304,
+        421
+      ]
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/pr65_qpost_atom_worker_20260503/expanded/pr65_qpost_bias_region_poseadv_top016/archive.zip",
+      "archive_byte_delta": 245,
+      "archive_bytes": 276587,
+      "archive_sha256": "75467167719f6301880606ad7fb88b6a927e82fe54716ee996c4a06ef6c4a115",
+      "built": true,
+      "candidate_id": "pr65_qpost_bias_region_poseadv_top016",
+      "dispatch_blockers": [
+        "contains region stream; global exact ablation was pose-negative",
+        "public-trace opportunity bound 0.001141576 is below sub-0.314 break-even 0.001633863"
+      ],
+      "dispatch_recommendation": "do_not_dispatch",
+      "formula_rate_score_delta": 0.000163135443514932,
+      "include_streams": [
+        "bias",
+        "region"
+      ],
+      "public_trace_opportunity_bound": 0.001141575829399205,
+      "qpost_bytes": 151,
+      "selected_active_atoms_total": 30,
+      "selected_pairs": [
+        105,
+        64,
+        60,
+        435,
+        164,
+        420,
+        90,
+        67,
+        106,
+        68,
+        423,
+        310,
+        309,
+        367,
+        136,
+        70
+      ]
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/pr65_qpost_atom_worker_20260503/expanded/pr65_qpost_bias_region_poseadv_top032/archive.zip",
+      "archive_byte_delta": 282,
+      "archive_bytes": 276624,
+      "archive_sha256": "4a00a549425cab15e51eb903bd5d85479091dd2e207fc76fa9f92692a087c6d1",
+      "built": true,
+      "candidate_id": "pr65_qpost_bias_region_poseadv_top032",
+      "dispatch_blockers": [
+        "contains region stream; global exact ablation was pose-negative"
+      ],
+      "dispatch_recommendation": "do_not_dispatch",
+      "formula_rate_score_delta": 0.0001877722247804523,
+      "include_streams": [
+        "bias",
+        "region"
+      ],
+      "public_trace_opportunity_bound": 0.0018161651762220522,
+      "qpost_bytes": 188,
+      "selected_active_atoms_total": 54,
+      "selected_pairs": [
+        105,
+        64,
+        60,
+        435,
+        164,
+        420,
+        90,
+        67,
+        106,
+        68,
+        423,
+        310,
+        309,
+        367,
+        136,
+        70,
+        130,
+        101,
+        120,
+        63,
+        166,
+        131,
+        425,
+        78,
+        69,
+        305,
+        197,
+        445,
+        429,
+        84,
+        92,
+        66
+      ]
+    },
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/pr65_qpost_atom_worker_20260503/expanded/pr65_qpost_post_bias_poseadv_top016/archive.zip",
+      "archive_byte_delta": 338,
+      "archive_bytes": 276680,
+      "archive_sha256": "146e038fb89934a667727cae11e35ef3c9f27f6e3907e3434d190bbd28f7dd38",
+      "built": true,
+      "candidate_id": "pr65_qpost_post_bias_poseadv_top016",
+      "dispatch_blockers": [
+        "contains post stream; global exact ablation was strongly negative",
+        "public-trace opportunity bound 0.001145783 is below sub-0.314 break-even 0.001695788"
+      ],
+      "dispatch_recommendation": "do_not_dispatch",
+      "formula_rate_score_delta": 0.00022506032615529392,
+      "include_streams": [
+        "post",
+        "bias"
+      ],
+      "public_trace_opportunity_bound": 0.00114578263065797,
+      "qpost_bytes": 244,
+      "selected_active_atoms_total": 72,
+      "selected_pairs": [
+        105,
+        64,
+        60,
+        435,
+        164,
+        420,
+        90,
+        67,
+        106,
+        68,
+        423,
+        310,
+        309,
+        430,
+        367,
+        136
+      ]
+    }
+  ],
+  "dispatch_summary": {
+    "dispatchable_candidates": [
+      {
+        "archive": "/Users/adpena/Projects/pact/experiments/results/pr65_qpost_atom_worker_20260503/expanded/pr65_qpost_bias_poseadv_top032/archive.zip",
+        "archive_byte_delta": 209,
+        "archive_bytes": 276551,
+        "archive_sha256": "91cd1690fdcca47eedbe12dc8bdaba8191210199169449c474730ad30831efbd",
+        "built": true,
+        "candidate_id": "pr65_qpost_bias_poseadv_top032",
+        "dispatch_blockers": [],
+        "dispatch_recommendation": "exact_cuda_eval_candidate_after_lane_claim",
+        "formula_rate_score_delta": 0.00013916452120253382,
+        "include_streams": [
+          "bias"
+        ],
+        "public_trace_opportunity_bound": 0.0017422633563209306,
+        "qpost_bytes": 115,
+        "selected_active_atoms_total": 32,
+        "selected_pairs": [
+          105,
+          64,
+          60,
+          435,
+          164,
+          420,
+          90,
+          67,
+          106,
+          68,
+          423,
+          310,
+          309,
+          367,
+          136,
+          70,
+          130,
+          101,
+          120,
+          166,
+          425,
+          305,
+          445,
+          429,
+          92,
+          127,
+          426,
+          368,
+          112,
+          396,
+          165,
+          418
+        ]
+      },
+      {
+        "archive": "/Users/adpena/Projects/pact/experiments/results/pr65_qpost_atom_worker_20260503/expanded/pr65_qpost_bias_poseadv_top064/archive.zip",
+        "archive_byte_delta": 248,
+        "archive_bytes": 276590,
+        "archive_sha256": "656d438c8723482e3500df33d4b7a02d3168b1f42004dfdec4d97ae37281029c",
+        "built": true,
+        "candidate_id": "pr65_qpost_bias_poseadv_top064",
+        "dispatch_blockers": [],
+        "dispatch_recommendation": "exact_cuda_eval_candidate_after_lane_claim",
+        "formula_rate_score_delta": 0.0001651330203742985,
+        "include_streams": [
+          "bias"
+        ],
+        "public_trace_opportunity_bound": 0.002247988534515191,
+        "qpost_bytes": 154,
+        "selected_active_atoms_total": 64,
+        "selected_pairs": [
+          105,
+          64,
+          60,
+          435,
+          164,
+          420,
+          90,
+          67,
+          106,
+          68,
+          423,
+          310,
+          309,
+          367,
+          136,
+          70,
+          130,
+          101,
+          120,
+          166,
+          425,
+          305,
+          445,
+          429,
+          92,
+          127,
+          426,
+          368,
+          112,
+          396,
+          165,
+          418,
+          126,
+          142,
+          125,
+          191,
+          150,
+          116,
+          205,
+          431,
+          307,
+          372,
+          550,
+          85,
+          103,
+          302,
+          152,
+          200,
+          113,
+          450,
+          129,
+          139,
+          123,
+          221,
+          119,
+          118,
+          141,
+          321,
+          171,
+          318,
+          399,
+          323,
+          304,
+          421
+        ]
+      }
+    ],
+    "reason": "At least one bias-only qpost subset clears the public-trace sub-0.314 break-even bound. This is still planning evidence: the worker did not dispatch, and any exact eval must first claim a lane and run the canonical CUDA auth path on identical bytes.",
+    "recommendation": "local_exact_eval_candidates_available_but_not_dispatched_by_worker",
+    "remote_dispatched": false
+  },
+  "evidence_grade": "byte_trace_planning_only_until_exact_cuda",
+  "original_pr65_qpost_streams": {
+    "bias": {
+      "active_atoms": 227,
+      "active_pairs": 227,
+      "decoded_bytes": 603,
+      "decoded_sha256": "67751d89e4825a6a71d4e74a0aa6f0246a861c0f96fc11184eec407e9caf8d7c",
+      "encoded_bytes": 223,
+      "encoded_sha256": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b"
+    },
+    "frac": {
+      "active_atoms": 87,
+      "active_pairs": 87,
+      "decoded_bytes": 179,
+      "decoded_sha256": "05c785af21cbf5a5f11613dd5e23b8191b4c8477a57354d6b1060340a5fd901a",
+      "encoded_bytes": 106,
+      "encoded_sha256": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992"
+    },
+    "frac2": {
+      "active_atoms": 148,
+      "active_pairs": 148,
+      "decoded_bytes": 603,
+      "decoded_sha256": "e880b2f23eae84b87c6e7f566265003dec54650a8e98fdfa8e01ce0d536a584b",
+      "encoded_bytes": 149,
+      "encoded_sha256": "3a01c7546d89d9d3ca846da37a20add7d456421e9211a6339850d946b856026b"
+    },
+    "frac3": {
+      "active_atoms": 163,
+      "active_pairs": 163,
+      "decoded_bytes": 603,
+      "decoded_sha256": "434ab5abbfec6cdf38e762eacc5382a04688c8bbef7592e9f2fd20ec5e6cdab4",
+      "encoded_bytes": 154,
+      "encoded_sha256": "d725b01b604566c5a76a06b821c644c8d5d5bb9a57ab0597d3bdabc8389858b5"
+    },
+    "post": {
+      "active_atoms": 1875,
+      "active_pairs": 600,
+      "decoded_bytes": 2400,
+      "decoded_sha256": "ce067fec132d1a314ad93cee8d39b17e7dd01a523db9a08ae797dfb1bd9a6b86",
+      "encoded_bytes": 1400,
+      "encoded_sha256": "c3dc88e0fb5a1e48aec49eeacefeea20685e3c02598933deb1ff22dc09892575"
+    },
+    "randmulti": {
+      "encoded_bytes": 3731,
+      "encoded_sha256": "dddf4b4fec32190b219d3e916e05bba5d1711d4208d16966929fa09cbc39349e",
+      "omitted_reason": "randmulti has no reviewed sparse pair-filter encoder",
+      "pair_filter_supported": false
+    },
+    "region": {
+      "active_atoms": 255,
+      "active_pairs": 255,
+      "decoded_bytes": 603,
+      "decoded_sha256": "8018b15bf5029b8bbf224b4ed1581afa2c51ae4e814e327183ffe8a697deb7e0",
+      "encoded_bytes": 273,
+      "encoded_sha256": "4a7c16094fab281c30e27621a58577c095c4b1153c232518c9adbaba2a2b2392"
+    },
+    "shift": {
+      "active_atoms": 181,
+      "active_pairs": 181,
+      "decoded_bytes": 603,
+      "decoded_sha256": "19e1bf816c8f19dd58e986647413a6f71f36a30e8da2d085ccf7e475d1cb3b43",
+      "encoded_bytes": 226,
+      "encoded_sha256": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4"
+    }
+  },
+  "ranking_inputs": {
+    "c089_trace": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/component_trace.json",
+    "positive_trace_only": true,
+    "pr65_trace": "/Users/adpena/Projects/pact/experiments/results/vast_harvest/public_external_component_trace_20260502T0642Z/pr65_torch25_compat_adapter/component_trace.json",
+    "trace_pair_count": {
+      "c089": 600,
+      "pr65": 600
+    }
+  },
+  "rankings": {
+    "pr65_qpost_bias_poseadv_top016": [
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0004259296165359442,
+        "pair_index": 105,
+        "pr65_combined_contribution": 0.00032293900969633375,
+        "public_trace_opportunity": 0.00010299060683961048,
+        "public_trace_pose_opportunity": 0.0001479192570561204,
+        "rank_score": 103.00060683961048
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00037226510927979256,
+        "pair_index": 64,
+        "pr65_combined_contribution": 0.0002794788769296003,
+        "public_trace_opportunity": 9.278623235019228e-05,
+        "public_trace_pose_opportunity": 0.00010634960687326572,
+        "rank_score": 92.79623235019228
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00038256662629821905,
+        "pair_index": 60,
+        "pr65_combined_contribution": 0.00029688651623296946,
+        "public_trace_opportunity": 8.568011006524959e-05,
+        "public_trace_pose_opportunity": 0.00010517745487886962,
+        "rank_score": 85.6901100652496
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00026130170698807645,
+        "pair_index": 435,
+        "pr65_combined_contribution": 0.00017587590803655115,
+        "public_trace_opportunity": 8.54257989515253e-05,
+        "public_trace_pose_opportunity": 0.0001091616898149886,
+        "rank_score": 85.43579895152531
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00045343069335650145,
+        "pair_index": 164,
+        "pr65_combined_contribution": 0.0003697226599212087,
+        "public_trace_opportunity": 8.370803343529272e-05,
+        "public_trace_pose_opportunity": 0.0001227027230625328,
+        "rank_score": 83.71803343529272
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0003077584020168254,
+        "pair_index": 420,
+        "pr65_combined_contribution": 0.00022612411698029033,
+        "public_trace_opportunity": 8.163428503653509e-05,
+        "public_trace_pose_opportunity": 0.00010960873165111839,
+        "rank_score": 81.6442850365351
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00024040885853256536,
+        "pair_index": 90,
+        "pr65_combined_contribution": 0.00016776248922836703,
+        "public_trace_opportunity": 7.264636930419833e-05,
+        "public_trace_pose_opportunity": 9.044828987711499e-05,
+        "rank_score": 72.65636930419834
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0003725717398457716,
+        "pair_index": 67,
+        "pr65_combined_contribution": 0.0003043102826031128,
+        "public_trace_opportunity": 6.826145724265879e-05,
+        "public_trace_pose_opportunity": 8.012940752502882e-05,
+        "rank_score": 68.2714572426588
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0003926256389011673,
+        "pair_index": 106,
+        "pr65_combined_contribution": 0.0003269113492581742,
+        "public_trace_opportunity": 6.57142896429931e-05,
+        "public_trace_pose_opportunity": 0.00011996775863145636,
+        "rank_score": 65.72428964299311
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0002882438393782593,
+        "pair_index": 68,
+        "pr65_combined_contribution": 0.00022381069842904405,
+        "public_trace_opportunity": 6.443314094921527e-05,
+        "public_trace_pose_opportunity": 7.799650577101191e-05,
+        "rank_score": 64.44314094921528
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.000310573552388506,
+        "pair_index": 423,
+        "pr65_combined_contribution": 0.0002496646880278908,
+        "public_trace_opportunity": 6.090886436061518e-05,
+        "public_trace_pose_opportunity": 9.312186672631858e-05,
+        "rank_score": 60.91886436061518
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00027219497589419723,
+        "pair_index": 310,
+        "pr65_combined_contribution": 0.00021210505247942725,
+        "public_trace_opportunity": 6.008992341476998e-05,
+        "public_trace_pose_opportunity": 8.12826827678166e-05,
+        "rank_score": 60.09992341476998
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00021022806848001188,
+        "pair_index": 309,
+        "pr65_combined_contribution": 0.00015189457843395383,
+        "public_trace_opportunity": 5.833349004605805e-05,
+        "public_trace_pose_opportunity": 7.698312758996482e-05,
+        "rank_score": 58.34349004605805
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00013689388123117624,
+        "pair_index": 367,
+        "pr65_combined_contribution": 8.223523147377582e-05,
+        "public_trace_opportunity": 5.465864975740042e-05,
+        "public_trace_pose_opportunity": 7.415599214570127e-05,
+        "rank_score": 54.668649757400416
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0003610328275947418,
+        "pair_index": 136,
+        "pr65_combined_contribution": 0.000308251883665697,
+        "public_trace_opportunity": 5.278094392904484e-05,
+        "public_trace_pose_opportunity": 9.092791658529478e-05,
+        "rank_score": 52.790943929044836
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0003294517530249951,
+        "pair_index": 70,
+        "pr65_combined_contribution": 0.0002779281189511495,
+        "public_trace_opportunity": 5.152363407384561e-05,
+        "public_trace_pose_opportunity": 6.84778376757722e-05,
+        "rank_score": 51.533634073845604
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00036547776596155564,
+        "pair_index": 130,
+        "pr65_combined_contribution": 0.00031509779865248136,
+        "public_trace_opportunity": 5.0379967309074284e-05,
+        "public_trace_pose_opportunity": 6.987730242141748e-05,
+        "rank_score": 50.38996730907428
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00024962788903029967,
+        "pair_index": 101,
+        "pr65_combined_contribution": 0.00020075080843780916,
+        "public_trace_opportunity": 4.887708059249051e-05,
+        "public_trace_pose_opportunity": 7.515610296637043e-05,
+        "rank_score": 48.88708059249051
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0002875273239095992,
+        "pair_index": 120,
+        "pr65_combined_contribution": 0.00024011019316851694,
+        "public_trace_opportunity": 4.741713074108228e-05,
+        "public_trace_pose_opportunity": 5.928508102345234e-05,
+        "rank_score": 47.42713074108227
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0002932384571258523,
+        "pair_index": 166,
+        "pr65_combined_contribution": 0.00024805950801692157,
+        "public_trace_opportunity": 4.517894910893071e-05,
+        "public_trace_pose_opportunity": 7.484881026294063e-05,
+        "rank_score": 45.18894910893071
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00019052412662376667,
+        "pair_index": 425,
+        "pr65_combined_contribution": 0.00014658454243970213,
+        "public_trace_opportunity": 4.393958418406454e-05,
+        "public_trace_pose_opportunity": 6.85231920185179e-05,
+        "rank_score": 43.94958418406454
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00023407367837422426,
+        "pair_index": 305,
+        "pr65_combined_contribution": 0.00019309270000240496,
+        "public_trace_opportunity": 4.09809783718193e-05,
+        "public_trace_pose_opportunity": 6.556458620627272e-05,
+        "rank_score": 40.990978371819295
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00018836868049247661,
+        "pair_index": 445,
+        "pr65_combined_contribution": 0.0001497864924870046,
+        "public_trace_opportunity": 3.858218800547201e-05,
+        "public_trace_pose_opportunity": 4.5363875267008705e-05,
+        "rank_score": 38.592188005472
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00017930672086469566,
+        "pair_index": 429,
+        "pr65_combined_contribution": 0.00014289772427470755,
+        "public_trace_opportunity": 3.640899658998811e-05,
+        "public_trace_pose_opportunity": 6.099260442444148e-05,
+        "rank_score": 36.41899658998811
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0002692294865253721,
+        "pair_index": 92,
+        "pr65_combined_contribution": 0.00023324251822074733,
+        "public_trace_opportunity": 3.5986968304624746e-05,
+        "public_trace_pose_opportunity": 6.39614149192081e-05,
+        "rank_score": 35.996968304624744
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0002076922616709986,
+        "pair_index": 127,
+        "pr65_combined_contribution": 0.0001739839386581483,
+        "public_trace_opportunity": 3.3708323012850296e-05,
+        "public_trace_pose_opportunity": 5.0662536316053685e-05,
+        "rank_score": 33.71832301285029
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00022086882178190962,
+        "pair_index": 426,
+        "pr65_combined_contribution": 0.0001887778749105709,
+        "public_trace_opportunity": 3.2090946871338714e-05,
+        "public_trace_pose_opportunity": 5.9217686216208774e-05,
+        "rank_score": 32.100946871338714
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0002305807590056471,
+        "pair_index": 368,
+        "pr65_combined_contribution": 0.00019942877769547126,
+        "public_trace_opportunity": 3.1151981310175846e-05,
+        "public_trace_pose_opportunity": 4.81061849121024e-05,
+        "rank_score": 31.161981310175847
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.000262670198281094,
+        "pair_index": 112,
+        "pr65_combined_contribution": 0.00023210267940811108,
+        "public_trace_opportunity": 3.0567518872982944e-05,
+        "public_trace_pose_opportunity": 5.09125709563163e-05,
+        "rank_score": 30.577518872982946
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00018929306530396476,
+        "pair_index": 396,
+        "pr65_combined_contribution": 0.0001587685112727912,
+        "public_trace_opportunity": 3.052455403117357e-05,
+        "public_trace_pose_opportunity": 4.747876733437692e-05,
+        "rank_score": 30.534554031173567
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0003187161194279438,
+        "pair_index": 165,
+        "pr65_combined_contribution": 0.0002908400651262091,
+        "public_trace_opportunity": 2.7876054301734688e-05,
+        "public_trace_pose_opportunity": 9.060663479243806e-05,
+        "rank_score": 27.88605430173469
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00028949548432616616,
+        "pair_index": 418,
+        "pr65_combined_contribution": 0.0002624791790122432,
+        "public_trace_opportunity": 2.7016305313922948e-05,
+        "public_trace_pose_opportunity": 6.0924722219052915e-05,
+        "rank_score": 27.02630531392295
+      }
+    ],
+    "pr65_qpost_bias_poseadv_top032": [
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0004259296165359442,
+        "pair_index": 105,
+        "pr65_combined_contribution": 0.00032293900969633375,
+        "public_trace_opportunity": 0.00010299060683961048,
+        "public_trace_pose_opportunity": 0.0001479192570561204,
+        "rank_score": 103.00060683961048
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00037226510927979256,
+        "pair_index": 64,
+        "pr65_combined_contribution": 0.0002794788769296003,
+        "public_trace_opportunity": 9.278623235019228e-05,
+        "public_trace_pose_opportunity": 0.00010634960687326572,
+        "rank_score": 92.79623235019228
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00038256662629821905,
+        "pair_index": 60,
+        "pr65_combined_contribution": 0.00029688651623296946,
+        "public_trace_opportunity": 8.568011006524959e-05,
+        "public_trace_pose_opportunity": 0.00010517745487886962,
+        "rank_score": 85.6901100652496
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00026130170698807645,
+        "pair_index": 435,
+        "pr65_combined_contribution": 0.00017587590803655115,
+        "public_trace_opportunity": 8.54257989515253e-05,
+        "public_trace_pose_opportunity": 0.0001091616898149886,
+        "rank_score": 85.43579895152531
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00045343069335650145,
+        "pair_index": 164,
+        "pr65_combined_contribution": 0.0003697226599212087,
+        "public_trace_opportunity": 8.370803343529272e-05,
+        "public_trace_pose_opportunity": 0.0001227027230625328,
+        "rank_score": 83.71803343529272
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0003077584020168254,
+        "pair_index": 420,
+        "pr65_combined_contribution": 0.00022612411698029033,
+        "public_trace_opportunity": 8.163428503653509e-05,
+        "public_trace_pose_opportunity": 0.00010960873165111839,
+        "rank_score": 81.6442850365351
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00024040885853256536,
+        "pair_index": 90,
+        "pr65_combined_contribution": 0.00016776248922836703,
+        "public_trace_opportunity": 7.264636930419833e-05,
+        "public_trace_pose_opportunity": 9.044828987711499e-05,
+        "rank_score": 72.65636930419834
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0003725717398457716,
+        "pair_index": 67,
+        "pr65_combined_contribution": 0.0003043102826031128,
+        "public_trace_opportunity": 6.826145724265879e-05,
+        "public_trace_pose_opportunity": 8.012940752502882e-05,
+        "rank_score": 68.2714572426588
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0003926256389011673,
+        "pair_index": 106,
+        "pr65_combined_contribution": 0.0003269113492581742,
+        "public_trace_opportunity": 6.57142896429931e-05,
+        "public_trace_pose_opportunity": 0.00011996775863145636,
+        "rank_score": 65.72428964299311
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0002882438393782593,
+        "pair_index": 68,
+        "pr65_combined_contribution": 0.00022381069842904405,
+        "public_trace_opportunity": 6.443314094921527e-05,
+        "public_trace_pose_opportunity": 7.799650577101191e-05,
+        "rank_score": 64.44314094921528
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.000310573552388506,
+        "pair_index": 423,
+        "pr65_combined_contribution": 0.0002496646880278908,
+        "public_trace_opportunity": 6.090886436061518e-05,
+        "public_trace_pose_opportunity": 9.312186672631858e-05,
+        "rank_score": 60.91886436061518
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00027219497589419723,
+        "pair_index": 310,
+        "pr65_combined_contribution": 0.00021210505247942725,
+        "public_trace_opportunity": 6.008992341476998e-05,
+        "public_trace_pose_opportunity": 8.12826827678166e-05,
+        "rank_score": 60.09992341476998
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00021022806848001188,
+        "pair_index": 309,
+        "pr65_combined_contribution": 0.00015189457843395383,
+        "public_trace_opportunity": 5.833349004605805e-05,
+        "public_trace_pose_opportunity": 7.698312758996482e-05,
+        "rank_score": 58.34349004605805
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00013689388123117624,
+        "pair_index": 367,
+        "pr65_combined_contribution": 8.223523147377582e-05,
+        "public_trace_opportunity": 5.465864975740042e-05,
+        "public_trace_pose_opportunity": 7.415599214570127e-05,
+        "rank_score": 54.668649757400416
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0003610328275947418,
+        "pair_index": 136,
+        "pr65_combined_contribution": 0.000308251883665697,
+        "public_trace_opportunity": 5.278094392904484e-05,
+        "public_trace_pose_opportunity": 9.092791658529478e-05,
+        "rank_score": 52.790943929044836
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0003294517530249951,
+        "pair_index": 70,
+        "pr65_combined_contribution": 0.0002779281189511495,
+        "public_trace_opportunity": 5.152363407384561e-05,
+        "public_trace_pose_opportunity": 6.84778376757722e-05,
+        "rank_score": 51.533634073845604
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00036547776596155564,
+        "pair_index": 130,
+        "pr65_combined_contribution": 0.00031509779865248136,
+        "public_trace_opportunity": 5.0379967309074284e-05,
+        "public_trace_pose_opportunity": 6.987730242141748e-05,
+        "rank_score": 50.38996730907428
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00024962788903029967,
+        "pair_index": 101,
+        "pr65_combined_contribution": 0.00020075080843780916,
+        "public_trace_opportunity": 4.887708059249051e-05,
+        "public_trace_pose_opportunity": 7.515610296637043e-05,
+        "rank_score": 48.88708059249051
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0002875273239095992,
+        "pair_index": 120,
+        "pr65_combined_contribution": 0.00024011019316851694,
+        "public_trace_opportunity": 4.741713074108228e-05,
+        "public_trace_pose_opportunity": 5.928508102345234e-05,
+        "rank_score": 47.42713074108227
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0002932384571258523,
+        "pair_index": 166,
+        "pr65_combined_contribution": 0.00024805950801692157,
+        "public_trace_opportunity": 4.517894910893071e-05,
+        "public_trace_pose_opportunity": 7.484881026294063e-05,
+        "rank_score": 45.18894910893071
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00019052412662376667,
+        "pair_index": 425,
+        "pr65_combined_contribution": 0.00014658454243970213,
+        "public_trace_opportunity": 4.393958418406454e-05,
+        "public_trace_pose_opportunity": 6.85231920185179e-05,
+        "rank_score": 43.94958418406454
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00023407367837422426,
+        "pair_index": 305,
+        "pr65_combined_contribution": 0.00019309270000240496,
+        "public_trace_opportunity": 4.09809783718193e-05,
+        "public_trace_pose_opportunity": 6.556458620627272e-05,
+        "rank_score": 40.990978371819295
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00018836868049247661,
+        "pair_index": 445,
+        "pr65_combined_contribution": 0.0001497864924870046,
+        "public_trace_opportunity": 3.858218800547201e-05,
+        "public_trace_pose_opportunity": 4.5363875267008705e-05,
+        "rank_score": 38.592188005472
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00017930672086469566,
+        "pair_index": 429,
+        "pr65_combined_contribution": 0.00014289772427470755,
+        "public_trace_opportunity": 3.640899658998811e-05,
+        "public_trace_pose_opportunity": 6.099260442444148e-05,
+        "rank_score": 36.41899658998811
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0002692294865253721,
+        "pair_index": 92,
+        "pr65_combined_contribution": 0.00023324251822074733,
+        "public_trace_opportunity": 3.5986968304624746e-05,
+        "public_trace_pose_opportunity": 6.39614149192081e-05,
+        "rank_score": 35.996968304624744
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0002076922616709986,
+        "pair_index": 127,
+        "pr65_combined_contribution": 0.0001739839386581483,
+        "public_trace_opportunity": 3.3708323012850296e-05,
+        "public_trace_pose_opportunity": 5.0662536316053685e-05,
+        "rank_score": 33.71832301285029
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00022086882178190962,
+        "pair_index": 426,
+        "pr65_combined_contribution": 0.0001887778749105709,
+        "public_trace_opportunity": 3.2090946871338714e-05,
+        "public_trace_pose_opportunity": 5.9217686216208774e-05,
+        "rank_score": 32.100946871338714
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0002305807590056471,
+        "pair_index": 368,
+        "pr65_combined_contribution": 0.00019942877769547126,
+        "public_trace_opportunity": 3.1151981310175846e-05,
+        "public_trace_pose_opportunity": 4.81061849121024e-05,
+        "rank_score": 31.161981310175847
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.000262670198281094,
+        "pair_index": 112,
+        "pr65_combined_contribution": 0.00023210267940811108,
+        "public_trace_opportunity": 3.0567518872982944e-05,
+        "public_trace_pose_opportunity": 5.09125709563163e-05,
+        "rank_score": 30.577518872982946
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00018929306530396476,
+        "pair_index": 396,
+        "pr65_combined_contribution": 0.0001587685112727912,
+        "public_trace_opportunity": 3.052455403117357e-05,
+        "public_trace_pose_opportunity": 4.747876733437692e-05,
+        "rank_score": 30.534554031173567
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0003187161194279438,
+        "pair_index": 165,
+        "pr65_combined_contribution": 0.0002908400651262091,
+        "public_trace_opportunity": 2.7876054301734688e-05,
+        "public_trace_pose_opportunity": 9.060663479243806e-05,
+        "rank_score": 27.88605430173469
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00028949548432616616,
+        "pair_index": 418,
+        "pr65_combined_contribution": 0.0002624791790122432,
+        "public_trace_opportunity": 2.7016305313922948e-05,
+        "public_trace_pose_opportunity": 6.0924722219052915e-05,
+        "rank_score": 27.02630531392295
+      }
+    ],
+    "pr65_qpost_bias_poseadv_top064": [
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0004259296165359442,
+        "pair_index": 105,
+        "pr65_combined_contribution": 0.00032293900969633375,
+        "public_trace_opportunity": 0.00010299060683961048,
+        "public_trace_pose_opportunity": 0.0001479192570561204,
+        "rank_score": 103.00060683961048
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00037226510927979256,
+        "pair_index": 64,
+        "pr65_combined_contribution": 0.0002794788769296003,
+        "public_trace_opportunity": 9.278623235019228e-05,
+        "public_trace_pose_opportunity": 0.00010634960687326572,
+        "rank_score": 92.79623235019228
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00038256662629821905,
+        "pair_index": 60,
+        "pr65_combined_contribution": 0.00029688651623296946,
+        "public_trace_opportunity": 8.568011006524959e-05,
+        "public_trace_pose_opportunity": 0.00010517745487886962,
+        "rank_score": 85.6901100652496
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00026130170698807645,
+        "pair_index": 435,
+        "pr65_combined_contribution": 0.00017587590803655115,
+        "public_trace_opportunity": 8.54257989515253e-05,
+        "public_trace_pose_opportunity": 0.0001091616898149886,
+        "rank_score": 85.43579895152531
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00045343069335650145,
+        "pair_index": 164,
+        "pr65_combined_contribution": 0.0003697226599212087,
+        "public_trace_opportunity": 8.370803343529272e-05,
+        "public_trace_pose_opportunity": 0.0001227027230625328,
+        "rank_score": 83.71803343529272
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0003077584020168254,
+        "pair_index": 420,
+        "pr65_combined_contribution": 0.00022612411698029033,
+        "public_trace_opportunity": 8.163428503653509e-05,
+        "public_trace_pose_opportunity": 0.00010960873165111839,
+        "rank_score": 81.6442850365351
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00024040885853256536,
+        "pair_index": 90,
+        "pr65_combined_contribution": 0.00016776248922836703,
+        "public_trace_opportunity": 7.264636930419833e-05,
+        "public_trace_pose_opportunity": 9.044828987711499e-05,
+        "rank_score": 72.65636930419834
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0003725717398457716,
+        "pair_index": 67,
+        "pr65_combined_contribution": 0.0003043102826031128,
+        "public_trace_opportunity": 6.826145724265879e-05,
+        "public_trace_pose_opportunity": 8.012940752502882e-05,
+        "rank_score": 68.2714572426588
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0003926256389011673,
+        "pair_index": 106,
+        "pr65_combined_contribution": 0.0003269113492581742,
+        "public_trace_opportunity": 6.57142896429931e-05,
+        "public_trace_pose_opportunity": 0.00011996775863145636,
+        "rank_score": 65.72428964299311
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0002882438393782593,
+        "pair_index": 68,
+        "pr65_combined_contribution": 0.00022381069842904405,
+        "public_trace_opportunity": 6.443314094921527e-05,
+        "public_trace_pose_opportunity": 7.799650577101191e-05,
+        "rank_score": 64.44314094921528
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.000310573552388506,
+        "pair_index": 423,
+        "pr65_combined_contribution": 0.0002496646880278908,
+        "public_trace_opportunity": 6.090886436061518e-05,
+        "public_trace_pose_opportunity": 9.312186672631858e-05,
+        "rank_score": 60.91886436061518
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00027219497589419723,
+        "pair_index": 310,
+        "pr65_combined_contribution": 0.00021210505247942725,
+        "public_trace_opportunity": 6.008992341476998e-05,
+        "public_trace_pose_opportunity": 8.12826827678166e-05,
+        "rank_score": 60.09992341476998
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00021022806848001188,
+        "pair_index": 309,
+        "pr65_combined_contribution": 0.00015189457843395383,
+        "public_trace_opportunity": 5.833349004605805e-05,
+        "public_trace_pose_opportunity": 7.698312758996482e-05,
+        "rank_score": 58.34349004605805
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00013689388123117624,
+        "pair_index": 367,
+        "pr65_combined_contribution": 8.223523147377582e-05,
+        "public_trace_opportunity": 5.465864975740042e-05,
+        "public_trace_pose_opportunity": 7.415599214570127e-05,
+        "rank_score": 54.668649757400416
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0003610328275947418,
+        "pair_index": 136,
+        "pr65_combined_contribution": 0.000308251883665697,
+        "public_trace_opportunity": 5.278094392904484e-05,
+        "public_trace_pose_opportunity": 9.092791658529478e-05,
+        "rank_score": 52.790943929044836
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0003294517530249951,
+        "pair_index": 70,
+        "pr65_combined_contribution": 0.0002779281189511495,
+        "public_trace_opportunity": 5.152363407384561e-05,
+        "public_trace_pose_opportunity": 6.84778376757722e-05,
+        "rank_score": 51.533634073845604
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00036547776596155564,
+        "pair_index": 130,
+        "pr65_combined_contribution": 0.00031509779865248136,
+        "public_trace_opportunity": 5.0379967309074284e-05,
+        "public_trace_pose_opportunity": 6.987730242141748e-05,
+        "rank_score": 50.38996730907428
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00024962788903029967,
+        "pair_index": 101,
+        "pr65_combined_contribution": 0.00020075080843780916,
+        "public_trace_opportunity": 4.887708059249051e-05,
+        "public_trace_pose_opportunity": 7.515610296637043e-05,
+        "rank_score": 48.88708059249051
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0002875273239095992,
+        "pair_index": 120,
+        "pr65_combined_contribution": 0.00024011019316851694,
+        "public_trace_opportunity": 4.741713074108228e-05,
+        "public_trace_pose_opportunity": 5.928508102345234e-05,
+        "rank_score": 47.42713074108227
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0002932384571258523,
+        "pair_index": 166,
+        "pr65_combined_contribution": 0.00024805950801692157,
+        "public_trace_opportunity": 4.517894910893071e-05,
+        "public_trace_pose_opportunity": 7.484881026294063e-05,
+        "rank_score": 45.18894910893071
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00019052412662376667,
+        "pair_index": 425,
+        "pr65_combined_contribution": 0.00014658454243970213,
+        "public_trace_opportunity": 4.393958418406454e-05,
+        "public_trace_pose_opportunity": 6.85231920185179e-05,
+        "rank_score": 43.94958418406454
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00023407367837422426,
+        "pair_index": 305,
+        "pr65_combined_contribution": 0.00019309270000240496,
+        "public_trace_opportunity": 4.09809783718193e-05,
+        "public_trace_pose_opportunity": 6.556458620627272e-05,
+        "rank_score": 40.990978371819295
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00018836868049247661,
+        "pair_index": 445,
+        "pr65_combined_contribution": 0.0001497864924870046,
+        "public_trace_opportunity": 3.858218800547201e-05,
+        "public_trace_pose_opportunity": 4.5363875267008705e-05,
+        "rank_score": 38.592188005472
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00017930672086469566,
+        "pair_index": 429,
+        "pr65_combined_contribution": 0.00014289772427470755,
+        "public_trace_opportunity": 3.640899658998811e-05,
+        "public_trace_pose_opportunity": 6.099260442444148e-05,
+        "rank_score": 36.41899658998811
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0002692294865253721,
+        "pair_index": 92,
+        "pr65_combined_contribution": 0.00023324251822074733,
+        "public_trace_opportunity": 3.5986968304624746e-05,
+        "public_trace_pose_opportunity": 6.39614149192081e-05,
+        "rank_score": 35.996968304624744
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0002076922616709986,
+        "pair_index": 127,
+        "pr65_combined_contribution": 0.0001739839386581483,
+        "public_trace_opportunity": 3.3708323012850296e-05,
+        "public_trace_pose_opportunity": 5.0662536316053685e-05,
+        "rank_score": 33.71832301285029
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00022086882178190962,
+        "pair_index": 426,
+        "pr65_combined_contribution": 0.0001887778749105709,
+        "public_trace_opportunity": 3.2090946871338714e-05,
+        "public_trace_pose_opportunity": 5.9217686216208774e-05,
+        "rank_score": 32.100946871338714
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0002305807590056471,
+        "pair_index": 368,
+        "pr65_combined_contribution": 0.00019942877769547126,
+        "public_trace_opportunity": 3.1151981310175846e-05,
+        "public_trace_pose_opportunity": 4.81061849121024e-05,
+        "rank_score": 31.161981310175847
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.000262670198281094,
+        "pair_index": 112,
+        "pr65_combined_contribution": 0.00023210267940811108,
+        "public_trace_opportunity": 3.0567518872982944e-05,
+        "public_trace_pose_opportunity": 5.09125709563163e-05,
+        "rank_score": 30.577518872982946
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00018929306530396476,
+        "pair_index": 396,
+        "pr65_combined_contribution": 0.0001587685112727912,
+        "public_trace_opportunity": 3.052455403117357e-05,
+        "public_trace_pose_opportunity": 4.747876733437692e-05,
+        "rank_score": 30.534554031173567
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0003187161194279438,
+        "pair_index": 165,
+        "pr65_combined_contribution": 0.0002908400651262091,
+        "public_trace_opportunity": 2.7876054301734688e-05,
+        "public_trace_pose_opportunity": 9.060663479243806e-05,
+        "rank_score": 27.88605430173469
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00028949548432616616,
+        "pair_index": 418,
+        "pr65_combined_contribution": 0.0002624791790122432,
+        "public_trace_opportunity": 2.7016305313922948e-05,
+        "public_trace_pose_opportunity": 6.0924722219052915e-05,
+        "rank_score": 27.02630531392295
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00025004157720231253,
+        "pair_index": 126,
+        "pr65_combined_contribution": 0.00022316123894030194,
+        "public_trace_opportunity": 2.6880338262010592e-05,
+        "public_trace_pose_opportunity": 5.5702492146307204e-05,
+        "rank_score": 26.890338262010594
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0002486421179285728,
+        "pair_index": 142,
+        "pr65_combined_contribution": 0.00022313102689445718,
+        "public_trace_opportunity": 2.5511091034115637e-05,
+        "public_trace_pose_opportunity": 4.585614311744895e-05,
+        "rank_score": 25.52109103411564
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.000333211143313009,
+        "pair_index": 125,
+        "pr65_combined_contribution": 0.0003082904698562546,
+        "public_trace_opportunity": 2.492067345675439e-05,
+        "public_trace_pose_opportunity": 5.289512007133776e-05,
+        "rank_score": 24.930673456754395
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00019907947618353394,
+        "pair_index": 191,
+        "pr65_combined_contribution": 0.00017456924774380454,
+        "public_trace_opportunity": 2.4510228439729394e-05,
+        "public_trace_pose_opportunity": 5.6723230805432796e-05,
+        "rank_score": 24.520228439729394
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0002645328419711399,
+        "pair_index": 150,
+        "pr65_combined_contribution": 0.00024045289673896075,
+        "public_trace_opportunity": 2.4079945232179133e-05,
+        "public_trace_pose_opportunity": 6.137921061871584e-05,
+        "rank_score": 24.089945232179137
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00018568318104362477,
+        "pair_index": 116,
+        "pr65_combined_contribution": 0.00016355016049129798,
+        "public_trace_opportunity": 2.2133020552326794e-05,
+        "public_trace_pose_opportunity": 4.1630365365946854e-05,
+        "rank_score": 22.143020552326796
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00019155716239231473,
+        "pair_index": 205,
+        "pr65_combined_contribution": 0.0001694945729752578,
+        "public_trace_opportunity": 2.206258941705693e-05,
+        "public_trace_pose_opportunity": 5.9361849952955256e-05,
+        "rank_score": 22.072589417056932
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00015673045096369052,
+        "pair_index": 431,
+        "pr65_combined_contribution": 0.00013525550066905093,
+        "public_trace_opportunity": 2.1474950294639587e-05,
+        "public_trace_pose_opportunity": 5.114481629928789e-05,
+        "rank_score": 21.48495029463959
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00017745169346354556,
+        "pair_index": 307,
+        "pr65_combined_contribution": 0.00015662735919524327,
+        "public_trace_opportunity": 2.082433426830229e-05,
+        "public_trace_pose_opportunity": 3.9473971812209054e-05,
+        "rank_score": 20.834334268302293
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00016092571255844874,
+        "pair_index": 372,
+        "pr65_combined_contribution": 0.00014058408180454723,
+        "public_trace_opportunity": 2.0341630753901503e-05,
+        "public_trace_pose_opportunity": 4.6620653127781456e-05,
+        "rank_score": 20.351630753901503
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.000213712866695477,
+        "pair_index": 550,
+        "pr65_combined_contribution": 0.00019660584718669274,
+        "public_trace_opportunity": 1.7107019508784274e-05,
+        "public_trace_pose_opportunity": 2.8974969791154355e-05,
+        "rank_score": 17.117019508784278
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00020535423501688167,
+        "pair_index": 85,
+        "pr65_combined_contribution": 0.00018847084136517657,
+        "public_trace_opportunity": 1.68833936517051e-05,
+        "public_trace_pose_opportunity": 3.214218271420511e-05,
+        "rank_score": 16.8933936517051
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00024592454895279507,
+        "pair_index": 103,
+        "pr65_combined_contribution": 0.00022921068112002668,
+        "public_trace_opportunity": 1.671386783276839e-05,
+        "public_trace_pose_opportunity": 4.468831444735173e-05,
+        "rank_score": 16.72386783276839
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0001697514052903068,
+        "pair_index": 302,
+        "pr65_combined_contribution": 0.00015329397324556355,
+        "public_trace_opportunity": 1.645743204474324e-05,
+        "public_trace_pose_opportunity": 2.5782241115419804e-05,
+        "rank_score": 16.46743204474324
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00021292658066592425,
+        "pair_index": 152,
+        "pr65_combined_contribution": 0.0001985356218431693,
+        "public_trace_opportunity": 1.4390958822754947e-05,
+        "public_trace_pose_opportunity": 3.897456665720833e-05,
+        "rank_score": 14.400958822754946
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0002532525652452744,
+        "pair_index": 200,
+        "pr65_combined_contribution": 0.0002391957504080046,
+        "public_trace_opportunity": 1.405681483726979e-05,
+        "public_trace_pose_opportunity": 4.3726675991279684e-05,
+        "rank_score": 14.06681483726979
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00019274283868066553,
+        "pair_index": 113,
+        "pr65_combined_contribution": 0.0001790728003556261,
+        "public_trace_opportunity": 1.3670038325039427e-05,
+        "public_trace_pose_opportunity": 3.401509040837274e-05,
+        "rank_score": 13.680038325039426
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0002024938643051582,
+        "pair_index": 450,
+        "pr65_combined_contribution": 0.0001892536591425565,
+        "public_trace_opportunity": 1.3240205162601699e-05,
+        "public_trace_pose_opportunity": 3.358525724593502e-05,
+        "rank_score": 13.250205162601699
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00024391450231581825,
+        "pair_index": 129,
+        "pr65_combined_contribution": 0.00023077275544321728,
+        "public_trace_opportunity": 1.3141746872600971e-05,
+        "public_trace_pose_opportunity": 5.3831851039267615e-05,
+        "rank_score": 13.15174687260097
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0002084360310273797,
+        "pair_index": 139,
+        "pr65_combined_contribution": 0.00019618291625680124,
+        "public_trace_opportunity": 1.225311477057845e-05,
+        "public_trace_pose_opportunity": 4.192298562586517e-05,
+        "rank_score": 12.26311477057845
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0001614723839070756,
+        "pair_index": 123,
+        "pr65_combined_contribution": 0.0001493476728177601,
+        "public_trace_opportunity": 1.2124711089315517e-05,
+        "public_trace_pose_opportunity": 3.755602619348216e-05,
+        "rank_score": 12.134711089315518
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00019132882790500057,
+        "pair_index": 221,
+        "pr65_combined_contribution": 0.00017921165802291776,
+        "public_trace_opportunity": 1.2117169882082813e-05,
+        "public_trace_pose_opportunity": 3.924390437631443e-05,
+        "rank_score": 12.127169882082812
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00022371937950032796,
+        "pair_index": 119,
+        "pr65_combined_contribution": 0.0002116657034756603,
+        "public_trace_opportunity": 1.2053676024667657e-05,
+        "public_trace_pose_opportunity": 6.630714501313095e-05,
+        "rank_score": 12.063676024667656
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00014026019017089822,
+        "pair_index": 118,
+        "pr65_combined_contribution": 0.00012880889823501298,
+        "public_trace_opportunity": 1.1451291935885238e-05,
+        "public_trace_pose_opportunity": 3.688260704005191e-05,
+        "rank_score": 11.461291935885239
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00028556057701012503,
+        "pair_index": 141,
+        "pr65_combined_contribution": 0.00027422665084272056,
+        "public_trace_opportunity": 1.1333926167404469e-05,
+        "public_trace_pose_opportunity": 4.948089882365444e-05,
+        "rank_score": 11.343926167404469
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0001646325236634923,
+        "pair_index": 321,
+        "pr65_combined_contribution": 0.00015424846807956418,
+        "public_trace_opportunity": 1.0384055583928113e-05,
+        "public_trace_pose_opportunity": 3.6663087659084904e-05,
+        "rank_score": 10.394055583928113
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00019270819334739304,
+        "pair_index": 171,
+        "pr65_combined_contribution": 0.00018267397487573955,
+        "public_trace_opportunity": 1.0034218471653494e-05,
+        "public_trace_pose_opportunity": 4.309492810707015e-05,
+        "rank_score": 10.044218471653494
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00015753066217765696,
+        "pair_index": 318,
+        "pr65_combined_contribution": 0.00014754842844380602,
+        "public_trace_opportunity": 9.982233733850946e-06,
+        "public_trace_pose_opportunity": 3.117499308689758e-05,
+        "rank_score": 9.992233733850945
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00011411458872651686,
+        "pair_index": 399,
+        "pr65_combined_contribution": 0.00010418699420839748,
+        "public_trace_opportunity": 9.927594518119388e-06,
+        "public_trace_pose_opportunity": 3.620661689199933e-05,
+        "rank_score": 9.937594518119388
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.0001280168431538835,
+        "pair_index": 323,
+        "pr65_combined_contribution": 0.00011831931572700952,
+        "public_trace_opportunity": 9.69752742687397e-06,
+        "public_trace_pose_opportunity": 2.834716497078075e-05,
+        "rank_score": 9.70752742687397
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00019795435158146514,
+        "pair_index": 304,
+        "pr65_combined_contribution": 0.00018954014439513843,
+        "public_trace_opportunity": 8.414207186326707e-06,
+        "public_trace_pose_opportunity": 4.1474916821743385e-05,
+        "rank_score": 8.424207186326706
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1
+        },
+        "c089_combined_contribution": 0.00023428971509049143,
+        "pair_index": 421,
+        "pr65_combined_contribution": 0.00022673854245620169,
+        "public_trace_opportunity": 7.55117263428974e-06,
+        "public_trace_pose_opportunity": 2.959163925704962e-05,
+        "rank_score": 7.56117263428974
+      }
+    ],
+    "pr65_qpost_bias_region_poseadv_top016": [
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.0004259296165359442,
+        "pair_index": 105,
+        "pr65_combined_contribution": 0.00032293900969633375,
+        "public_trace_opportunity": 0.00010299060683961048,
+        "public_trace_pose_opportunity": 0.0001479192570561204,
+        "rank_score": 103.01060683961047
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 0
+        },
+        "c089_combined_contribution": 0.00037226510927979256,
+        "pair_index": 64,
+        "pr65_combined_contribution": 0.0002794788769296003,
+        "public_trace_opportunity": 9.278623235019228e-05,
+        "public_trace_pose_opportunity": 0.00010634960687326572,
+        "rank_score": 92.79623235019228
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.00038256662629821905,
+        "pair_index": 60,
+        "pr65_combined_contribution": 0.00029688651623296946,
+        "public_trace_opportunity": 8.568011006524959e-05,
+        "public_trace_pose_opportunity": 0.00010517745487886962,
+        "rank_score": 85.70011006524959
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.00026130170698807645,
+        "pair_index": 435,
+        "pr65_combined_contribution": 0.00017587590803655115,
+        "public_trace_opportunity": 8.54257989515253e-05,
+        "public_trace_pose_opportunity": 0.0001091616898149886,
+        "rank_score": 85.4457989515253
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.00045343069335650145,
+        "pair_index": 164,
+        "pr65_combined_contribution": 0.0003697226599212087,
+        "public_trace_opportunity": 8.370803343529272e-05,
+        "public_trace_pose_opportunity": 0.0001227027230625328,
+        "rank_score": 83.72803343529272
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.0003077584020168254,
+        "pair_index": 420,
+        "pr65_combined_contribution": 0.00022612411698029033,
+        "public_trace_opportunity": 8.163428503653509e-05,
+        "public_trace_pose_opportunity": 0.00010960873165111839,
+        "rank_score": 81.65428503653509
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.00024040885853256536,
+        "pair_index": 90,
+        "pr65_combined_contribution": 0.00016776248922836703,
+        "public_trace_opportunity": 7.264636930419833e-05,
+        "public_trace_pose_opportunity": 9.044828987711499e-05,
+        "rank_score": 72.66636930419833
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.0003725717398457716,
+        "pair_index": 67,
+        "pr65_combined_contribution": 0.0003043102826031128,
+        "public_trace_opportunity": 6.826145724265879e-05,
+        "public_trace_pose_opportunity": 8.012940752502882e-05,
+        "rank_score": 68.28145724265879
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.0003926256389011673,
+        "pair_index": 106,
+        "pr65_combined_contribution": 0.0003269113492581742,
+        "public_trace_opportunity": 6.57142896429931e-05,
+        "public_trace_pose_opportunity": 0.00011996775863145636,
+        "rank_score": 65.7342896429931
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.0002882438393782593,
+        "pair_index": 68,
+        "pr65_combined_contribution": 0.00022381069842904405,
+        "public_trace_opportunity": 6.443314094921527e-05,
+        "public_trace_pose_opportunity": 7.799650577101191e-05,
+        "rank_score": 64.45314094921527
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.000310573552388506,
+        "pair_index": 423,
+        "pr65_combined_contribution": 0.0002496646880278908,
+        "public_trace_opportunity": 6.090886436061518e-05,
+        "public_trace_pose_opportunity": 9.312186672631858e-05,
+        "rank_score": 60.92886436061519
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.00027219497589419723,
+        "pair_index": 310,
+        "pr65_combined_contribution": 0.00021210505247942725,
+        "public_trace_opportunity": 6.008992341476998e-05,
+        "public_trace_pose_opportunity": 8.12826827678166e-05,
+        "rank_score": 60.10992341476999
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.00021022806848001188,
+        "pair_index": 309,
+        "pr65_combined_contribution": 0.00015189457843395383,
+        "public_trace_opportunity": 5.833349004605805e-05,
+        "public_trace_pose_opportunity": 7.698312758996482e-05,
+        "rank_score": 58.353490046058056
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.00013689388123117624,
+        "pair_index": 367,
+        "pr65_combined_contribution": 8.223523147377582e-05,
+        "public_trace_opportunity": 5.465864975740042e-05,
+        "public_trace_pose_opportunity": 7.415599214570127e-05,
+        "rank_score": 54.67864975740042
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.0003610328275947418,
+        "pair_index": 136,
+        "pr65_combined_contribution": 0.000308251883665697,
+        "public_trace_opportunity": 5.278094392904484e-05,
+        "public_trace_pose_opportunity": 9.092791658529478e-05,
+        "rank_score": 52.80094392904484
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 0
+        },
+        "c089_combined_contribution": 0.0003294517530249951,
+        "pair_index": 70,
+        "pr65_combined_contribution": 0.0002779281189511495,
+        "public_trace_opportunity": 5.152363407384561e-05,
+        "public_trace_pose_opportunity": 6.84778376757722e-05,
+        "rank_score": 51.533634073845604
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.00036547776596155564,
+        "pair_index": 130,
+        "pr65_combined_contribution": 0.00031509779865248136,
+        "public_trace_opportunity": 5.0379967309074284e-05,
+        "public_trace_pose_opportunity": 6.987730242141748e-05,
+        "rank_score": 50.399967309074285
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 0
+        },
+        "c089_combined_contribution": 0.00024962788903029967,
+        "pair_index": 101,
+        "pr65_combined_contribution": 0.00020075080843780916,
+        "public_trace_opportunity": 4.887708059249051e-05,
+        "public_trace_pose_opportunity": 7.515610296637043e-05,
+        "rank_score": 48.88708059249051
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.0002875273239095992,
+        "pair_index": 120,
+        "pr65_combined_contribution": 0.00024011019316851694,
+        "public_trace_opportunity": 4.741713074108228e-05,
+        "public_trace_pose_opportunity": 5.928508102345234e-05,
+        "rank_score": 47.43713074108228
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 0,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.00024230242436912232,
+        "pair_index": 63,
+        "pr65_combined_contribution": 0.00019689123424690403,
+        "public_trace_opportunity": 4.541119012221829e-05,
+        "public_trace_pose_opportunity": 6.999479795667168e-05,
+        "rank_score": 45.42119012221829
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.0002932384571258523,
+        "pair_index": 166,
+        "pr65_combined_contribution": 0.00024805950801692157,
+        "public_trace_opportunity": 4.517894910893071e-05,
+        "public_trace_pose_opportunity": 7.484881026294063e-05,
+        "rank_score": 45.19894910893071
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 0,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.00029787298932329573,
+        "pair_index": 131,
+        "pr65_combined_contribution": 0.00025372088903410976,
+        "public_trace_opportunity": 4.4152100289185966e-05,
+        "public_trace_pose_opportunity": 7.551738568389928e-05,
+        "rank_score": 44.162100289185965
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.00019052412662376667,
+        "pair_index": 425,
+        "pr65_combined_contribution": 0.00014658454243970213,
+        "public_trace_opportunity": 4.393958418406454e-05,
+        "public_trace_pose_opportunity": 6.85231920185179e-05,
+        "rank_score": 43.959584184064546
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 0,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.0003040490649957128,
+        "pair_index": 78,
+        "pr65_combined_contribution": 0.00026033615919098365,
+        "public_trace_opportunity": 4.3712905804729133e-05,
+        "public_trace_pose_opportunity": 6.151482637764579e-05,
+        "rank_score": 43.72290580472913
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 0,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.0003829481306097995,
+        "pair_index": 69,
+        "pr65_combined_contribution": 0.00033982131887827396,
+        "public_trace_opportunity": 4.312681173152552e-05,
+        "public_trace_pose_opportunity": 7.025355107639558e-05,
+        "rank_score": 43.13681173152552
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.00023407367837422426,
+        "pair_index": 305,
+        "pr65_combined_contribution": 0.00019309270000240496,
+        "public_trace_opportunity": 4.09809783718193e-05,
+        "public_trace_pose_opportunity": 6.556458620627272e-05,
+        "rank_score": 41.0009783718193
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 0,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.00034965336954767795,
+        "pair_index": 197,
+        "pr65_combined_contribution": 0.000309329973444256,
+        "public_trace_opportunity": 4.032339610342197e-05,
+        "public_trace_pose_opportunity": 7.253638876784853e-05,
+        "rank_score": 40.33339610342197
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.00018836868049247661,
+        "pair_index": 445,
+        "pr65_combined_contribution": 0.0001497864924870046,
+        "public_trace_opportunity": 3.858218800547201e-05,
+        "public_trace_pose_opportunity": 4.5363875267008705e-05,
+        "rank_score": 38.60218800547201
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.00017930672086469566,
+        "pair_index": 429,
+        "pr65_combined_contribution": 0.00014289772427470755,
+        "public_trace_opportunity": 3.640899658998811e-05,
+        "public_trace_pose_opportunity": 6.099260442444148e-05,
+        "rank_score": 36.42899658998812
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 0,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.0002643330015685185,
+        "pair_index": 84,
+        "pr65_combined_contribution": 0.00022824080818336468,
+        "public_trace_opportunity": 3.60921933851538e-05,
+        "public_trace_pose_opportunity": 6.0675791518330355e-05,
+        "rank_score": 36.102193385153804
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.0002692294865253721,
+        "pair_index": 92,
+        "pr65_combined_contribution": 0.00023324251822074733,
+        "public_trace_opportunity": 3.5986968304624746e-05,
+        "public_trace_pose_opportunity": 6.39614149192081e-05,
+        "rank_score": 36.00696830462475
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 0,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.0002456181149339435,
+        "pair_index": 66,
+        "pr65_combined_contribution": 0.00021159920875487767,
+        "public_trace_opportunity": 3.401890617906584e-05,
+        "public_trace_pose_opportunity": 6.02979382542226e-05,
+        "rank_score": 34.028906179065835
+      }
+    ],
+    "pr65_qpost_bias_region_poseadv_top032": [
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.0004259296165359442,
+        "pair_index": 105,
+        "pr65_combined_contribution": 0.00032293900969633375,
+        "public_trace_opportunity": 0.00010299060683961048,
+        "public_trace_pose_opportunity": 0.0001479192570561204,
+        "rank_score": 103.01060683961047
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 0
+        },
+        "c089_combined_contribution": 0.00037226510927979256,
+        "pair_index": 64,
+        "pr65_combined_contribution": 0.0002794788769296003,
+        "public_trace_opportunity": 9.278623235019228e-05,
+        "public_trace_pose_opportunity": 0.00010634960687326572,
+        "rank_score": 92.79623235019228
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.00038256662629821905,
+        "pair_index": 60,
+        "pr65_combined_contribution": 0.00029688651623296946,
+        "public_trace_opportunity": 8.568011006524959e-05,
+        "public_trace_pose_opportunity": 0.00010517745487886962,
+        "rank_score": 85.70011006524959
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.00026130170698807645,
+        "pair_index": 435,
+        "pr65_combined_contribution": 0.00017587590803655115,
+        "public_trace_opportunity": 8.54257989515253e-05,
+        "public_trace_pose_opportunity": 0.0001091616898149886,
+        "rank_score": 85.4457989515253
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.00045343069335650145,
+        "pair_index": 164,
+        "pr65_combined_contribution": 0.0003697226599212087,
+        "public_trace_opportunity": 8.370803343529272e-05,
+        "public_trace_pose_opportunity": 0.0001227027230625328,
+        "rank_score": 83.72803343529272
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.0003077584020168254,
+        "pair_index": 420,
+        "pr65_combined_contribution": 0.00022612411698029033,
+        "public_trace_opportunity": 8.163428503653509e-05,
+        "public_trace_pose_opportunity": 0.00010960873165111839,
+        "rank_score": 81.65428503653509
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.00024040885853256536,
+        "pair_index": 90,
+        "pr65_combined_contribution": 0.00016776248922836703,
+        "public_trace_opportunity": 7.264636930419833e-05,
+        "public_trace_pose_opportunity": 9.044828987711499e-05,
+        "rank_score": 72.66636930419833
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.0003725717398457716,
+        "pair_index": 67,
+        "pr65_combined_contribution": 0.0003043102826031128,
+        "public_trace_opportunity": 6.826145724265879e-05,
+        "public_trace_pose_opportunity": 8.012940752502882e-05,
+        "rank_score": 68.28145724265879
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.0003926256389011673,
+        "pair_index": 106,
+        "pr65_combined_contribution": 0.0003269113492581742,
+        "public_trace_opportunity": 6.57142896429931e-05,
+        "public_trace_pose_opportunity": 0.00011996775863145636,
+        "rank_score": 65.7342896429931
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.0002882438393782593,
+        "pair_index": 68,
+        "pr65_combined_contribution": 0.00022381069842904405,
+        "public_trace_opportunity": 6.443314094921527e-05,
+        "public_trace_pose_opportunity": 7.799650577101191e-05,
+        "rank_score": 64.45314094921527
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.000310573552388506,
+        "pair_index": 423,
+        "pr65_combined_contribution": 0.0002496646880278908,
+        "public_trace_opportunity": 6.090886436061518e-05,
+        "public_trace_pose_opportunity": 9.312186672631858e-05,
+        "rank_score": 60.92886436061519
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.00027219497589419723,
+        "pair_index": 310,
+        "pr65_combined_contribution": 0.00021210505247942725,
+        "public_trace_opportunity": 6.008992341476998e-05,
+        "public_trace_pose_opportunity": 8.12826827678166e-05,
+        "rank_score": 60.10992341476999
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.00021022806848001188,
+        "pair_index": 309,
+        "pr65_combined_contribution": 0.00015189457843395383,
+        "public_trace_opportunity": 5.833349004605805e-05,
+        "public_trace_pose_opportunity": 7.698312758996482e-05,
+        "rank_score": 58.353490046058056
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.00013689388123117624,
+        "pair_index": 367,
+        "pr65_combined_contribution": 8.223523147377582e-05,
+        "public_trace_opportunity": 5.465864975740042e-05,
+        "public_trace_pose_opportunity": 7.415599214570127e-05,
+        "rank_score": 54.67864975740042
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.0003610328275947418,
+        "pair_index": 136,
+        "pr65_combined_contribution": 0.000308251883665697,
+        "public_trace_opportunity": 5.278094392904484e-05,
+        "public_trace_pose_opportunity": 9.092791658529478e-05,
+        "rank_score": 52.80094392904484
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 0
+        },
+        "c089_combined_contribution": 0.0003294517530249951,
+        "pair_index": 70,
+        "pr65_combined_contribution": 0.0002779281189511495,
+        "public_trace_opportunity": 5.152363407384561e-05,
+        "public_trace_pose_opportunity": 6.84778376757722e-05,
+        "rank_score": 51.533634073845604
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.00036547776596155564,
+        "pair_index": 130,
+        "pr65_combined_contribution": 0.00031509779865248136,
+        "public_trace_opportunity": 5.0379967309074284e-05,
+        "public_trace_pose_opportunity": 6.987730242141748e-05,
+        "rank_score": 50.399967309074285
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 0
+        },
+        "c089_combined_contribution": 0.00024962788903029967,
+        "pair_index": 101,
+        "pr65_combined_contribution": 0.00020075080843780916,
+        "public_trace_opportunity": 4.887708059249051e-05,
+        "public_trace_pose_opportunity": 7.515610296637043e-05,
+        "rank_score": 48.88708059249051
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.0002875273239095992,
+        "pair_index": 120,
+        "pr65_combined_contribution": 0.00024011019316851694,
+        "public_trace_opportunity": 4.741713074108228e-05,
+        "public_trace_pose_opportunity": 5.928508102345234e-05,
+        "rank_score": 47.43713074108228
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 0,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.00024230242436912232,
+        "pair_index": 63,
+        "pr65_combined_contribution": 0.00019689123424690403,
+        "public_trace_opportunity": 4.541119012221829e-05,
+        "public_trace_pose_opportunity": 6.999479795667168e-05,
+        "rank_score": 45.42119012221829
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.0002932384571258523,
+        "pair_index": 166,
+        "pr65_combined_contribution": 0.00024805950801692157,
+        "public_trace_opportunity": 4.517894910893071e-05,
+        "public_trace_pose_opportunity": 7.484881026294063e-05,
+        "rank_score": 45.19894910893071
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 0,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.00029787298932329573,
+        "pair_index": 131,
+        "pr65_combined_contribution": 0.00025372088903410976,
+        "public_trace_opportunity": 4.4152100289185966e-05,
+        "public_trace_pose_opportunity": 7.551738568389928e-05,
+        "rank_score": 44.162100289185965
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.00019052412662376667,
+        "pair_index": 425,
+        "pr65_combined_contribution": 0.00014658454243970213,
+        "public_trace_opportunity": 4.393958418406454e-05,
+        "public_trace_pose_opportunity": 6.85231920185179e-05,
+        "rank_score": 43.959584184064546
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 0,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.0003040490649957128,
+        "pair_index": 78,
+        "pr65_combined_contribution": 0.00026033615919098365,
+        "public_trace_opportunity": 4.3712905804729133e-05,
+        "public_trace_pose_opportunity": 6.151482637764579e-05,
+        "rank_score": 43.72290580472913
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 0,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.0003829481306097995,
+        "pair_index": 69,
+        "pr65_combined_contribution": 0.00033982131887827396,
+        "public_trace_opportunity": 4.312681173152552e-05,
+        "public_trace_pose_opportunity": 7.025355107639558e-05,
+        "rank_score": 43.13681173152552
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.00023407367837422426,
+        "pair_index": 305,
+        "pr65_combined_contribution": 0.00019309270000240496,
+        "public_trace_opportunity": 4.09809783718193e-05,
+        "public_trace_pose_opportunity": 6.556458620627272e-05,
+        "rank_score": 41.0009783718193
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 0,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.00034965336954767795,
+        "pair_index": 197,
+        "pr65_combined_contribution": 0.000309329973444256,
+        "public_trace_opportunity": 4.032339610342197e-05,
+        "public_trace_pose_opportunity": 7.253638876784853e-05,
+        "rank_score": 40.33339610342197
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.00018836868049247661,
+        "pair_index": 445,
+        "pr65_combined_contribution": 0.0001497864924870046,
+        "public_trace_opportunity": 3.858218800547201e-05,
+        "public_trace_pose_opportunity": 4.5363875267008705e-05,
+        "rank_score": 38.60218800547201
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.00017930672086469566,
+        "pair_index": 429,
+        "pr65_combined_contribution": 0.00014289772427470755,
+        "public_trace_opportunity": 3.640899658998811e-05,
+        "public_trace_pose_opportunity": 6.099260442444148e-05,
+        "rank_score": 36.42899658998812
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 0,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.0002643330015685185,
+        "pair_index": 84,
+        "pr65_combined_contribution": 0.00022824080818336468,
+        "public_trace_opportunity": 3.60921933851538e-05,
+        "public_trace_pose_opportunity": 6.0675791518330355e-05,
+        "rank_score": 36.102193385153804
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 1,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.0002692294865253721,
+        "pair_index": 92,
+        "pr65_combined_contribution": 0.00023324251822074733,
+        "public_trace_opportunity": 3.5986968304624746e-05,
+        "public_trace_pose_opportunity": 6.39614149192081e-05,
+        "rank_score": 36.00696830462475
+      },
+      {
+        "active_atom_count": 1,
+        "active_by_stream": {
+          "bias": 0,
+          "region": 1
+        },
+        "c089_combined_contribution": 0.0002456181149339435,
+        "pair_index": 66,
+        "pr65_combined_contribution": 0.00021159920875487767,
+        "public_trace_opportunity": 3.401890617906584e-05,
+        "public_trace_pose_opportunity": 6.02979382542226e-05,
+        "rank_score": 34.028906179065835
+      }
+    ],
+    "pr65_qpost_post_bias_poseadv_top016": [
+      {
+        "active_atom_count": 4,
+        "active_by_stream": {
+          "bias": 1,
+          "post": 3
+        },
+        "c089_combined_contribution": 0.0004259296165359442,
+        "pair_index": 105,
+        "pr65_combined_contribution": 0.00032293900969633375,
+        "public_trace_opportunity": 0.00010299060683961048,
+        "public_trace_pose_opportunity": 0.0001479192570561204,
+        "rank_score": 103.03060683961048
+      },
+      {
+        "active_atom_count": 4,
+        "active_by_stream": {
+          "bias": 1,
+          "post": 3
+        },
+        "c089_combined_contribution": 0.00037226510927979256,
+        "pair_index": 64,
+        "pr65_combined_contribution": 0.0002794788769296003,
+        "public_trace_opportunity": 9.278623235019228e-05,
+        "public_trace_pose_opportunity": 0.00010634960687326572,
+        "rank_score": 92.82623235019229
+      },
+      {
+        "active_atom_count": 4,
+        "active_by_stream": {
+          "bias": 1,
+          "post": 3
+        },
+        "c089_combined_contribution": 0.00038256662629821905,
+        "pair_index": 60,
+        "pr65_combined_contribution": 0.00029688651623296946,
+        "public_trace_opportunity": 8.568011006524959e-05,
+        "public_trace_pose_opportunity": 0.00010517745487886962,
+        "rank_score": 85.7201100652496
+      },
+      {
+        "active_atom_count": 5,
+        "active_by_stream": {
+          "bias": 1,
+          "post": 4
+        },
+        "c089_combined_contribution": 0.00026130170698807645,
+        "pair_index": 435,
+        "pr65_combined_contribution": 0.00017587590803655115,
+        "public_trace_opportunity": 8.54257989515253e-05,
+        "public_trace_pose_opportunity": 0.0001091616898149886,
+        "rank_score": 85.4757989515253
+      },
+      {
+        "active_atom_count": 5,
+        "active_by_stream": {
+          "bias": 1,
+          "post": 4
+        },
+        "c089_combined_contribution": 0.00045343069335650145,
+        "pair_index": 164,
+        "pr65_combined_contribution": 0.0003697226599212087,
+        "public_trace_opportunity": 8.370803343529272e-05,
+        "public_trace_pose_opportunity": 0.0001227027230625328,
+        "rank_score": 83.75803343529272
+      },
+      {
+        "active_atom_count": 4,
+        "active_by_stream": {
+          "bias": 1,
+          "post": 3
+        },
+        "c089_combined_contribution": 0.0003077584020168254,
+        "pair_index": 420,
+        "pr65_combined_contribution": 0.00022612411698029033,
+        "public_trace_opportunity": 8.163428503653509e-05,
+        "public_trace_pose_opportunity": 0.00010960873165111839,
+        "rank_score": 81.6742850365351
+      },
+      {
+        "active_atom_count": 5,
+        "active_by_stream": {
+          "bias": 1,
+          "post": 4
+        },
+        "c089_combined_contribution": 0.00024040885853256536,
+        "pair_index": 90,
+        "pr65_combined_contribution": 0.00016776248922836703,
+        "public_trace_opportunity": 7.264636930419833e-05,
+        "public_trace_pose_opportunity": 9.044828987711499e-05,
+        "rank_score": 72.69636930419833
+      },
+      {
+        "active_atom_count": 4,
+        "active_by_stream": {
+          "bias": 1,
+          "post": 3
+        },
+        "c089_combined_contribution": 0.0003725717398457716,
+        "pair_index": 67,
+        "pr65_combined_contribution": 0.0003043102826031128,
+        "public_trace_opportunity": 6.826145724265879e-05,
+        "public_trace_pose_opportunity": 8.012940752502882e-05,
+        "rank_score": 68.3014572426588
+      },
+      {
+        "active_atom_count": 5,
+        "active_by_stream": {
+          "bias": 1,
+          "post": 4
+        },
+        "c089_combined_contribution": 0.0003926256389011673,
+        "pair_index": 106,
+        "pr65_combined_contribution": 0.0003269113492581742,
+        "public_trace_opportunity": 6.57142896429931e-05,
+        "public_trace_pose_opportunity": 0.00011996775863145636,
+        "rank_score": 65.7642896429931
+      },
+      {
+        "active_atom_count": 4,
+        "active_by_stream": {
+          "bias": 1,
+          "post": 3
+        },
+        "c089_combined_contribution": 0.0002882438393782593,
+        "pair_index": 68,
+        "pr65_combined_contribution": 0.00022381069842904405,
+        "public_trace_opportunity": 6.443314094921527e-05,
+        "public_trace_pose_opportunity": 7.799650577101191e-05,
+        "rank_score": 64.47314094921528
+      },
+      {
+        "active_atom_count": 5,
+        "active_by_stream": {
+          "bias": 1,
+          "post": 4
+        },
+        "c089_combined_contribution": 0.000310573552388506,
+        "pair_index": 423,
+        "pr65_combined_contribution": 0.0002496646880278908,
+        "public_trace_opportunity": 6.090886436061518e-05,
+        "public_trace_pose_opportunity": 9.312186672631858e-05,
+        "rank_score": 60.95886436061518
+      },
+      {
+        "active_atom_count": 5,
+        "active_by_stream": {
+          "bias": 1,
+          "post": 4
+        },
+        "c089_combined_contribution": 0.00027219497589419723,
+        "pair_index": 310,
+        "pr65_combined_contribution": 0.00021210505247942725,
+        "public_trace_opportunity": 6.008992341476998e-05,
+        "public_trace_pose_opportunity": 8.12826827678166e-05,
+        "rank_score": 60.13992341476998
+      },
+      {
+        "active_atom_count": 5,
+        "active_by_stream": {
+          "bias": 1,
+          "post": 4
+        },
+        "c089_combined_contribution": 0.00021022806848001188,
+        "pair_index": 309,
+        "pr65_combined_contribution": 0.00015189457843395383,
+        "public_trace_opportunity": 5.833349004605805e-05,
+        "public_trace_pose_opportunity": 7.698312758996482e-05,
+        "rank_score": 58.38349004605805
+      },
+      {
+        "active_atom_count": 3,
+        "active_by_stream": {
+          "bias": 0,
+          "post": 3
+        },
+        "c089_combined_contribution": 0.00022894132617614602,
+        "pair_index": 430,
+        "pr65_combined_contribution": 0.00017321089084353542,
+        "public_trace_opportunity": 5.57304353326106e-05,
+        "public_trace_pose_opportunity": 7.09892243951106e-05,
+        "rank_score": 55.760435332610605
+      },
+      {
+        "active_atom_count": 5,
+        "active_by_stream": {
+          "bias": 1,
+          "post": 4
+        },
+        "c089_combined_contribution": 0.00013689388123117624,
+        "pair_index": 367,
+        "pr65_combined_contribution": 8.223523147377582e-05,
+        "public_trace_opportunity": 5.465864975740042e-05,
+        "public_trace_pose_opportunity": 7.415599214570127e-05,
+        "rank_score": 54.708649757400416
+      },
+      {
+        "active_atom_count": 5,
+        "active_by_stream": {
+          "bias": 1,
+          "post": 4
+        },
+        "c089_combined_contribution": 0.0003610328275947418,
+        "pair_index": 136,
+        "pr65_combined_contribution": 0.000308251883665697,
+        "public_trace_opportunity": 5.278094392904484e-05,
+        "public_trace_pose_opportunity": 9.092791658529478e-05,
+        "rank_score": 52.830943929044835
+      },
+      {
+        "active_atom_count": 4,
+        "active_by_stream": {
+          "bias": 1,
+          "post": 3
+        },
+        "c089_combined_contribution": 0.0003294517530249951,
+        "pair_index": 70,
+        "pr65_combined_contribution": 0.0002779281189511495,
+        "public_trace_opportunity": 5.152363407384561e-05,
+        "public_trace_pose_opportunity": 6.84778376757722e-05,
+        "rank_score": 51.563634073845606
+      },
+      {
+        "active_atom_count": 5,
+        "active_by_stream": {
+          "bias": 1,
+          "post": 4
+        },
+        "c089_combined_contribution": 0.00036547776596155564,
+        "pair_index": 130,
+        "pr65_combined_contribution": 0.00031509779865248136,
+        "public_trace_opportunity": 5.0379967309074284e-05,
+        "public_trace_pose_opportunity": 6.987730242141748e-05,
+        "rank_score": 50.42996730907428
+      },
+      {
+        "active_atom_count": 4,
+        "active_by_stream": {
+          "bias": 1,
+          "post": 3
+        },
+        "c089_combined_contribution": 0.00024962788903029967,
+        "pair_index": 101,
+        "pr65_combined_contribution": 0.00020075080843780916,
+        "public_trace_opportunity": 4.887708059249051e-05,
+        "public_trace_pose_opportunity": 7.515610296637043e-05,
+        "rank_score": 48.917080592490514
+      },
+      {
+        "active_atom_count": 4,
+        "active_by_stream": {
+          "bias": 1,
+          "post": 3
+        },
+        "c089_combined_contribution": 0.0002875273239095992,
+        "pair_index": 120,
+        "pr65_combined_contribution": 0.00024011019316851694,
+        "public_trace_opportunity": 4.741713074108228e-05,
+        "public_trace_pose_opportunity": 5.928508102345234e-05,
+        "rank_score": 47.457130741082274
+      },
+      {
+        "active_atom_count": 3,
+        "active_by_stream": {
+          "bias": 0,
+          "post": 3
+        },
+        "c089_combined_contribution": 0.00024230242436912232,
+        "pair_index": 63,
+        "pr65_combined_contribution": 0.00019689123424690403,
+        "public_trace_opportunity": 4.541119012221829e-05,
+        "public_trace_pose_opportunity": 6.999479795667168e-05,
+        "rank_score": 45.441190122218295
+      },
+      {
+        "active_atom_count": 5,
+        "active_by_stream": {
+          "bias": 1,
+          "post": 4
+        },
+        "c089_combined_contribution": 0.0002932384571258523,
+        "pair_index": 166,
+        "pr65_combined_contribution": 0.00024805950801692157,
+        "public_trace_opportunity": 4.517894910893071e-05,
+        "public_trace_pose_opportunity": 7.484881026294063e-05,
+        "rank_score": 45.228949108930706
+      },
+      {
+        "active_atom_count": 3,
+        "active_by_stream": {
+          "bias": 0,
+          "post": 3
+        },
+        "c089_combined_contribution": 0.00029787298932329573,
+        "pair_index": 131,
+        "pr65_combined_contribution": 0.00025372088903410976,
+        "public_trace_opportunity": 4.4152100289185966e-05,
+        "public_trace_pose_opportunity": 7.551738568389928e-05,
+        "rank_score": 44.18210028918597
+      },
+      {
+        "active_atom_count": 4,
+        "active_by_stream": {
+          "bias": 1,
+          "post": 3
+        },
+        "c089_combined_contribution": 0.00019052412662376667,
+        "pair_index": 425,
+        "pr65_combined_contribution": 0.00014658454243970213,
+        "public_trace_opportunity": 4.393958418406454e-05,
+        "public_trace_pose_opportunity": 6.85231920185179e-05,
+        "rank_score": 43.97958418406454
+      },
+      {
+        "active_atom_count": 3,
+        "active_by_stream": {
+          "bias": 0,
+          "post": 3
+        },
+        "c089_combined_contribution": 0.0003040490649957128,
+        "pair_index": 78,
+        "pr65_combined_contribution": 0.00026033615919098365,
+        "public_trace_opportunity": 4.3712905804729133e-05,
+        "public_trace_pose_opportunity": 6.151482637764579e-05,
+        "rank_score": 43.74290580472913
+      },
+      {
+        "active_atom_count": 3,
+        "active_by_stream": {
+          "bias": 0,
+          "post": 3
+        },
+        "c089_combined_contribution": 0.0003829481306097995,
+        "pair_index": 69,
+        "pr65_combined_contribution": 0.00033982131887827396,
+        "public_trace_opportunity": 4.312681173152552e-05,
+        "public_trace_pose_opportunity": 7.025355107639558e-05,
+        "rank_score": 43.15681173152552
+      },
+      {
+        "active_atom_count": 5,
+        "active_by_stream": {
+          "bias": 1,
+          "post": 4
+        },
+        "c089_combined_contribution": 0.00023407367837422426,
+        "pair_index": 305,
+        "pr65_combined_contribution": 0.00019309270000240496,
+        "public_trace_opportunity": 4.09809783718193e-05,
+        "public_trace_pose_opportunity": 6.556458620627272e-05,
+        "rank_score": 41.030978371819295
+      },
+      {
+        "active_atom_count": 2,
+        "active_by_stream": {
+          "bias": 0,
+          "post": 2
+        },
+        "c089_combined_contribution": 0.00034965336954767795,
+        "pair_index": 197,
+        "pr65_combined_contribution": 0.000309329973444256,
+        "public_trace_opportunity": 4.032339610342197e-05,
+        "public_trace_pose_opportunity": 7.253638876784853e-05,
+        "rank_score": 40.34339610342197
+      },
+      {
+        "active_atom_count": 5,
+        "active_by_stream": {
+          "bias": 1,
+          "post": 4
+        },
+        "c089_combined_contribution": 0.00018836868049247661,
+        "pair_index": 445,
+        "pr65_combined_contribution": 0.0001497864924870046,
+        "public_trace_opportunity": 3.858218800547201e-05,
+        "public_trace_pose_opportunity": 4.5363875267008705e-05,
+        "rank_score": 38.632188005472
+      },
+      {
+        "active_atom_count": 5,
+        "active_by_stream": {
+          "bias": 1,
+          "post": 4
+        },
+        "c089_combined_contribution": 0.00017930672086469566,
+        "pair_index": 429,
+        "pr65_combined_contribution": 0.00014289772427470755,
+        "public_trace_opportunity": 3.640899658998811e-05,
+        "public_trace_pose_opportunity": 6.099260442444148e-05,
+        "rank_score": 36.45899658998811
+      },
+      {
+        "active_atom_count": 3,
+        "active_by_stream": {
+          "bias": 0,
+          "post": 3
+        },
+        "c089_combined_contribution": 0.0002643330015685185,
+        "pair_index": 84,
+        "pr65_combined_contribution": 0.00022824080818336468,
+        "public_trace_opportunity": 3.60921933851538e-05,
+        "public_trace_pose_opportunity": 6.0675791518330355e-05,
+        "rank_score": 36.12219338515381
+      },
+      {
+        "active_atom_count": 4,
+        "active_by_stream": {
+          "bias": 1,
+          "post": 3
+        },
+        "c089_combined_contribution": 0.0002692294865253721,
+        "pair_index": 92,
+        "pr65_combined_contribution": 0.00023324251822074733,
+        "public_trace_opportunity": 3.5986968304624746e-05,
+        "public_trace_pose_opportunity": 6.39614149192081e-05,
+        "rank_score": 36.026968304624745
+      }
+    ]
+  },
+  "runtime_hook": {
+    "inflate_sh": "/Users/adpena/Projects/pact/submissions/robust_current/inflate.sh",
+    "inflate_sh_sha256": "e479b7fdfbb9686f9f9f4d7d9740d24f340b41b584b07c57dd3065f5f3923005",
+    "qpost_runtime_hook_present": true
+  },
+  "schema_version": 1,
+  "score_claim": false,
+  "source_custody": {
+    "anatomy_json": "/Users/adpena/Projects/pact/experiments/results/top_submission_delta_reverse_engineering_20260503/archive_anatomy/public_vs_c089_anatomy.json",
+    "pr65_archive": "/Users/adpena/Projects/pact/experiments/results/top_submission_delta_reverse_engineering_20260503/sources/pr65_henosis_archive.zip",
+    "pr65_archive_bytes": 284425,
+    "pr65_archive_sha256": "b331cb4f6df9d8929db966b943b8c73624cdf3b6db71acbde361570852e59e68",
+    "pr65_head_sha256": "a8b53b5280ee8f05db65740cd48cf7c321a55497",
+    "source_archive": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/archive.zip",
+    "source_archive_bytes": 276342,
+    "source_archive_sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8"
+  },
+  "tool": "experiments/build_pr65_qpost_atom_candidates.py"
+}

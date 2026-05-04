@@ -1,0 +1,6040 @@
+{
+  "anatomy": {
+    "byte_accounting": {
+      "by_category": {
+        "dense_tensor": 15790,
+        "module_bias": 2284,
+        "module_weight": 43513
+      },
+      "by_kind": {
+        "fp16_unsplit": 10876,
+        "fp16_unsplit_implicit": 2284,
+        "fp4_hilo": 42826,
+        "int8_row_scale_unsplit": 5601
+      },
+      "magic_bytes": 3,
+      "records_plus_magic_bytes": 61590,
+      "records_total_bytes": 61587
+    },
+    "consumed_bytes": 61590,
+    "hilo_split": true,
+    "magic": "QH0",
+    "payload_bytes": 61590,
+    "payload_sha256": "503d666ec4c1b3e0ce09fa9dcb963b049de185eac0ddd82318578a7732439ed4",
+    "record_count": 111,
+    "records": [
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 61,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 65,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.065573770492,
+          "input_bytes": 61,
+          "probes": {
+            "brotli_q11": 65,
+            "lzma_preset9": 120,
+            "zlib_9": 72
+          }
+        },
+        "element_count": 30,
+        "end_offset": 64,
+        "entropy_bits_per_byte": 5.504507829366,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "shared_trunk.embedding.weight",
+        "offset": 3,
+        "payload_bytes": 60,
+        "rate_score_if_record_removed_formula_only": 4.0617396e-05,
+        "sha256": "2a998d30c237ddd4e6eaad621838deedb31c9d469d26298ee7666d68ac36658f",
+        "tensor_shape": [
+          5,
+          6
+        ],
+        "zero_fraction": 0.016393442623
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 2,
+        "block_count": 3,
+        "block_size": 32,
+        "bytes": 55,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 2,
+          "best_probe": {
+            "bytes": 57,
+            "codec": "zlib_9"
+          },
+          "best_ratio": 1.036363636364,
+          "input_bytes": 55,
+          "probes": {
+            "brotli_q11": 59,
+            "lzma_preset9": 112,
+            "zlib_9": 57
+          }
+        },
+        "element_count": 72,
+        "end_offset": 119,
+        "entropy_bits_per_byte": 4.890095167913,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "shared_trunk.stem_conv.dw.weight",
+        "offset": 64,
+        "packed_payload_bytes": 48,
+        "packed_payload_offset": 65,
+        "rate_score_if_record_removed_formula_only": 3.6622242e-05,
+        "scale_bytes": 6,
+        "scale_offset": 113,
+        "sha256": "3d345e087a1562b9b23b418fe8acc359119ba87053abd82ce29068f9303ac6df",
+        "tensor_shape": [
+          8,
+          1,
+          3,
+          3
+        ],
+        "zero_fraction": 0.218181818182
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "block_count": 14,
+        "block_size": 32,
+        "bytes": 253,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 257,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.01581027668,
+          "input_bytes": 253,
+          "probes": {
+            "brotli_q11": 257,
+            "lzma_preset9": 316,
+            "zlib_9": 264
+          }
+        },
+        "element_count": 448,
+        "end_offset": 372,
+        "entropy_bits_per_byte": 6.914941537058,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "shared_trunk.stem_conv.pw.weight",
+        "offset": 119,
+        "packed_payload_bytes": 224,
+        "packed_payload_offset": 120,
+        "rate_score_if_record_removed_formula_only": 0.000168462315,
+        "scale_bytes": 28,
+        "scale_offset": 344,
+        "sha256": "9fb340ed94d652c4d7893d89e80c1f7e85ea282212a37618064702f09548b98a",
+        "tensor_shape": [
+          56,
+          8,
+          1,
+          1
+        ],
+        "zero_fraction": 0.00395256917
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 112,
+        "category": "module_bias",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 116,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.035714285714,
+          "input_bytes": 112,
+          "probes": {
+            "brotli_q11": 116,
+            "lzma_preset9": 172,
+            "zlib_9": 123
+          }
+        },
+        "element_count": 56,
+        "end_offset": 484,
+        "entropy_bits_per_byte": 5.964465386398,
+        "kind": "fp16_unsplit_implicit",
+        "name": "shared_trunk.stem_conv.pw.bias",
+        "offset": 372,
+        "rate_score_if_record_removed_formula_only": 7.4576203e-05,
+        "sha256": "a90154dadca4dc77f19f0d1e77798d16a7bda201cf1b704502ea047b24eb8b36",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.008928571429
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "block_count": 16,
+        "block_size": 32,
+        "bytes": 289,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 293,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.01384083045,
+          "input_bytes": 289,
+          "probes": {
+            "brotli_q11": 293,
+            "lzma_preset9": 352,
+            "zlib_9": 300
+          }
+        },
+        "element_count": 504,
+        "end_offset": 773,
+        "entropy_bits_per_byte": 6.929884205412,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "shared_trunk.stem_block.conv1.dw.weight",
+        "offset": 484,
+        "packed_payload_bytes": 256,
+        "packed_payload_offset": 485,
+        "rate_score_if_record_removed_formula_only": 0.000192433237,
+        "scale_bytes": 32,
+        "scale_offset": 741,
+        "sha256": "0df638f7832df145f49913e19bca07d3d4b1e844aad73ed81fc042f03f44ae86",
+        "tensor_shape": [
+          56,
+          1,
+          3,
+          3
+        ],
+        "zero_fraction": 0.024221453287
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -42,
+        "block_count": 98,
+        "block_size": 32,
+        "bytes": 1765,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -42,
+          "best_probe": {
+            "bytes": 1723,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.976203966006,
+          "input_bytes": 1765,
+          "probes": {
+            "brotli_q11": 1723,
+            "lzma_preset9": 1820,
+            "zlib_9": 1776
+          }
+        },
+        "element_count": 3136,
+        "end_offset": 2538,
+        "entropy_bits_per_byte": 7.609196552411,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "shared_trunk.stem_block.conv1.pw.weight",
+        "offset": 773,
+        "packed_payload_bytes": 1568,
+        "packed_payload_offset": 774,
+        "rate_score_if_record_removed_formula_only": 0.001175241052,
+        "scale_bytes": 196,
+        "scale_offset": 2342,
+        "sha256": "89e82367b2f1c91326e645d2322080c8d81421d8a3c585847f5295a27b162a71",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.00566572238
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 112,
+        "category": "module_bias",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 116,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.035714285714,
+          "input_bytes": 112,
+          "probes": {
+            "brotli_q11": 116,
+            "lzma_preset9": 172,
+            "zlib_9": 123
+          }
+        },
+        "element_count": 56,
+        "end_offset": 2650,
+        "entropy_bits_per_byte": 6.055740551813,
+        "kind": "fp16_unsplit_implicit",
+        "name": "shared_trunk.stem_block.conv1.pw.bias",
+        "offset": 2538,
+        "rate_score_if_record_removed_formula_only": 7.4576203e-05,
+        "sha256": "f8f5980f02ab6c4f541a3fa67159e46bc01b64e41a2ce378e17d80e59f424ff2",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.0
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "block_count": 16,
+        "block_size": 32,
+        "bytes": 289,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 293,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.01384083045,
+          "input_bytes": 289,
+          "probes": {
+            "brotli_q11": 293,
+            "lzma_preset9": 352,
+            "zlib_9": 300
+          }
+        },
+        "element_count": 504,
+        "end_offset": 2939,
+        "entropy_bits_per_byte": 6.996732462918,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "shared_trunk.stem_block.conv2.dw.weight",
+        "offset": 2650,
+        "packed_payload_bytes": 256,
+        "packed_payload_offset": 2651,
+        "rate_score_if_record_removed_formula_only": 0.000192433237,
+        "scale_bytes": 32,
+        "scale_offset": 2907,
+        "sha256": "30e4fa60076f33c6589f84e1da916ea063008d4d8f91b2a39f0c7c119614a8e9",
+        "tensor_shape": [
+          56,
+          1,
+          3,
+          3
+        ],
+        "zero_fraction": 0.01384083045
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -15,
+        "block_count": 98,
+        "block_size": 32,
+        "bytes": 1765,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -15,
+          "best_probe": {
+            "bytes": 1750,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.991501416431,
+          "input_bytes": 1765,
+          "probes": {
+            "brotli_q11": 1750,
+            "lzma_preset9": 1800,
+            "zlib_9": 1776
+          }
+        },
+        "element_count": 3136,
+        "end_offset": 4704,
+        "entropy_bits_per_byte": 7.615954266116,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "shared_trunk.stem_block.conv2.pw.weight",
+        "offset": 2939,
+        "packed_payload_bytes": 1568,
+        "packed_payload_offset": 2940,
+        "rate_score_if_record_removed_formula_only": 0.001175241052,
+        "scale_bytes": 196,
+        "scale_offset": 4508,
+        "sha256": "9985abab1a4a97a1a31b56cff6556c774dd7a967ca4439938d63dbe1806f0755",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.005099150142
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 112,
+        "category": "module_bias",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 116,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.035714285714,
+          "input_bytes": 112,
+          "probes": {
+            "brotli_q11": 116,
+            "lzma_preset9": 172,
+            "zlib_9": 123
+          }
+        },
+        "element_count": 56,
+        "end_offset": 4816,
+        "entropy_bits_per_byte": 5.790620074014,
+        "kind": "fp16_unsplit_implicit",
+        "name": "shared_trunk.stem_block.conv2.pw.bias",
+        "offset": 4704,
+        "rate_score_if_record_removed_formula_only": 7.4576203e-05,
+        "sha256": "a4fcf74902114cff8039fd8aa7bd3baa53df1f17c277ab3f323158c020a4d065",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.008928571429
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "block_count": 16,
+        "block_size": 32,
+        "bytes": 289,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 293,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.01384083045,
+          "input_bytes": 289,
+          "probes": {
+            "brotli_q11": 293,
+            "lzma_preset9": 352,
+            "zlib_9": 300
+          }
+        },
+        "element_count": 504,
+        "end_offset": 5105,
+        "entropy_bits_per_byte": 6.901457212596,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "shared_trunk.down_conv.dw.weight",
+        "offset": 4816,
+        "packed_payload_bytes": 256,
+        "packed_payload_offset": 4817,
+        "rate_score_if_record_removed_formula_only": 0.000192433237,
+        "scale_bytes": 32,
+        "scale_offset": 5073,
+        "sha256": "87acc800be82c6b4adf832e553e3b86f583cd30e2a817ba4a55a33f229e8c2c9",
+        "tensor_shape": [
+          56,
+          1,
+          3,
+          3
+        ],
+        "zero_fraction": 0.01384083045
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -17,
+        "block_count": 112,
+        "block_size": 32,
+        "bytes": 2017,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -17,
+          "best_probe": {
+            "bytes": 2000,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.991571641051,
+          "input_bytes": 2017,
+          "probes": {
+            "brotli_q11": 2000,
+            "lzma_preset9": 2056,
+            "zlib_9": 2009
+          }
+        },
+        "element_count": 3584,
+        "end_offset": 7122,
+        "entropy_bits_per_byte": 7.622421431131,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "shared_trunk.down_conv.pw.weight",
+        "offset": 5105,
+        "packed_payload_bytes": 1792,
+        "packed_payload_offset": 5106,
+        "rate_score_if_record_removed_formula_only": 0.001343037508,
+        "scale_bytes": 224,
+        "scale_offset": 6898,
+        "sha256": "3d7563bf84b29a9f7d1a535b9544077a4b368b350f616e23b8ad45343cb36c6b",
+        "tensor_shape": [
+          64,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.005453644026
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 128,
+        "category": "module_bias",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 132,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.03125,
+          "input_bytes": 128,
+          "probes": {
+            "brotli_q11": 132,
+            "lzma_preset9": 188,
+            "zlib_9": 139
+          }
+        },
+        "element_count": 64,
+        "end_offset": 7250,
+        "entropy_bits_per_byte": 6.164111574534,
+        "kind": "fp16_unsplit_implicit",
+        "name": "shared_trunk.down_conv.pw.bias",
+        "offset": 7122,
+        "rate_score_if_record_removed_formula_only": 8.5229946e-05,
+        "sha256": "dd0935d7cc80d6f30aa62a3c4cd0a375e3367585a6b445a8713aedcf73e71b63",
+        "tensor_shape": [
+          64
+        ],
+        "zero_fraction": 0.0
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "block_count": 18,
+        "block_size": 32,
+        "bytes": 325,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 329,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.012307692308,
+          "input_bytes": 325,
+          "probes": {
+            "brotli_q11": 329,
+            "lzma_preset9": 388,
+            "zlib_9": 336
+          }
+        },
+        "element_count": 576,
+        "end_offset": 7575,
+        "entropy_bits_per_byte": 7.040385541105,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "shared_trunk.down_block.conv1.dw.weight",
+        "offset": 7250,
+        "packed_payload_bytes": 288,
+        "packed_payload_offset": 7251,
+        "rate_score_if_record_removed_formula_only": 0.00021640416,
+        "scale_bytes": 36,
+        "scale_offset": 7539,
+        "sha256": "476e4c3370fbdd091f83455a41b71be19fab35f6c38a78411d2743974fdcb608",
+        "tensor_shape": [
+          64,
+          1,
+          3,
+          3
+        ],
+        "zero_fraction": 0.003076923077
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -38,
+        "block_count": 128,
+        "block_size": 32,
+        "bytes": 2305,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -38,
+          "best_probe": {
+            "bytes": 2267,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.983514099783,
+          "input_bytes": 2305,
+          "probes": {
+            "brotli_q11": 2267,
+            "lzma_preset9": 2340,
+            "zlib_9": 2298
+          }
+        },
+        "element_count": 4096,
+        "end_offset": 9880,
+        "entropy_bits_per_byte": 7.635365917703,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "shared_trunk.down_block.conv1.pw.weight",
+        "offset": 7575,
+        "packed_payload_bytes": 2048,
+        "packed_payload_offset": 7576,
+        "rate_score_if_record_removed_formula_only": 0.001534804887,
+        "scale_bytes": 256,
+        "scale_offset": 9624,
+        "sha256": "86de59b29e1116af5424ab0d7bf1c63b12f24452a895affd3372b8411d73ffa9",
+        "tensor_shape": [
+          64,
+          64,
+          1,
+          1
+        ],
+        "zero_fraction": 0.004338394794
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 128,
+        "category": "module_bias",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 132,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.03125,
+          "input_bytes": 128,
+          "probes": {
+            "brotli_q11": 132,
+            "lzma_preset9": 188,
+            "zlib_9": 139
+          }
+        },
+        "element_count": 64,
+        "end_offset": 10008,
+        "entropy_bits_per_byte": 6.092866141106,
+        "kind": "fp16_unsplit_implicit",
+        "name": "shared_trunk.down_block.conv1.pw.bias",
+        "offset": 9880,
+        "rate_score_if_record_removed_formula_only": 8.5229946e-05,
+        "sha256": "fc330d912a9d7c482d4ed2da2bc537721994ac116783e9bfbe6357da0c089261",
+        "tensor_shape": [
+          64
+        ],
+        "zero_fraction": 0.0
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "block_count": 18,
+        "block_size": 32,
+        "bytes": 325,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 329,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.012307692308,
+          "input_bytes": 325,
+          "probes": {
+            "brotli_q11": 329,
+            "lzma_preset9": 388,
+            "zlib_9": 336
+          }
+        },
+        "element_count": 576,
+        "end_offset": 10333,
+        "entropy_bits_per_byte": 7.077723562279,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "shared_trunk.down_block.conv2.dw.weight",
+        "offset": 10008,
+        "packed_payload_bytes": 288,
+        "packed_payload_offset": 10009,
+        "rate_score_if_record_removed_formula_only": 0.00021640416,
+        "scale_bytes": 36,
+        "scale_offset": 10297,
+        "sha256": "a74b33ebbebdc09537ff8ba12aff7785fd03788770f7ca7af3290875b2ac1be6",
+        "tensor_shape": [
+          64,
+          1,
+          3,
+          3
+        ],
+        "zero_fraction": 0.003076923077
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -23,
+        "block_count": 128,
+        "block_size": 32,
+        "bytes": 2305,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -23,
+          "best_probe": {
+            "bytes": 2282,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.990021691974,
+          "input_bytes": 2305,
+          "probes": {
+            "brotli_q11": 2282,
+            "lzma_preset9": 2332,
+            "zlib_9": 2287
+          }
+        },
+        "element_count": 4096,
+        "end_offset": 12638,
+        "entropy_bits_per_byte": 7.630329184558,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "shared_trunk.down_block.conv2.pw.weight",
+        "offset": 10333,
+        "packed_payload_bytes": 2048,
+        "packed_payload_offset": 10334,
+        "rate_score_if_record_removed_formula_only": 0.001534804887,
+        "scale_bytes": 256,
+        "scale_offset": 12382,
+        "sha256": "2c69f16b33cb1cd30f533c214e43d7525cc3e56be993f8267f130b2044251409",
+        "tensor_shape": [
+          64,
+          64,
+          1,
+          1
+        ],
+        "zero_fraction": 0.006507592191
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 128,
+        "category": "module_bias",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 132,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.03125,
+          "input_bytes": 128,
+          "probes": {
+            "brotli_q11": 132,
+            "lzma_preset9": 188,
+            "zlib_9": 139
+          }
+        },
+        "element_count": 64,
+        "end_offset": 12766,
+        "entropy_bits_per_byte": 6.080089015923,
+        "kind": "fp16_unsplit_implicit",
+        "name": "shared_trunk.down_block.conv2.pw.bias",
+        "offset": 12638,
+        "rate_score_if_record_removed_formula_only": 8.5229946e-05,
+        "sha256": "59f9cd580c031ce0d64d447bd410bb4a613e151df7ed469464c20b3e84ebc290",
+        "tensor_shape": [
+          64
+        ],
+        "zero_fraction": 0.0078125
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "block_count": 18,
+        "block_size": 32,
+        "bytes": 325,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 329,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.012307692308,
+          "input_bytes": 325,
+          "probes": {
+            "brotli_q11": 329,
+            "lzma_preset9": 388,
+            "zlib_9": 336
+          }
+        },
+        "element_count": 576,
+        "end_offset": 13091,
+        "entropy_bits_per_byte": 7.034268322105,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "shared_trunk.up.1.dw.weight",
+        "offset": 12766,
+        "packed_payload_bytes": 288,
+        "packed_payload_offset": 12767,
+        "rate_score_if_record_removed_formula_only": 0.00021640416,
+        "scale_bytes": 36,
+        "scale_offset": 13055,
+        "sha256": "c5ad97a2e0ec45e6510cbccc55da6b817e48b7e4aaca4ba8621987ad239a1696",
+        "tensor_shape": [
+          64,
+          1,
+          3,
+          3
+        ],
+        "zero_fraction": 0.0
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -16,
+        "block_count": 112,
+        "block_size": 32,
+        "bytes": 2017,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -16,
+          "best_probe": {
+            "bytes": 2001,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.992067426872,
+          "input_bytes": 2017,
+          "probes": {
+            "brotli_q11": 2001,
+            "lzma_preset9": 2052,
+            "zlib_9": 2006
+          }
+        },
+        "element_count": 3584,
+        "end_offset": 15108,
+        "entropy_bits_per_byte": 7.609668559844,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "shared_trunk.up.1.pw.weight",
+        "offset": 13091,
+        "packed_payload_bytes": 1792,
+        "packed_payload_offset": 13092,
+        "rate_score_if_record_removed_formula_only": 0.001343037508,
+        "scale_bytes": 224,
+        "scale_offset": 14884,
+        "sha256": "83c3cae8aaa76d600d48e64ef4d106691c540f719464523420b392e773d82f59",
+        "tensor_shape": [
+          56,
+          64,
+          1,
+          1
+        ],
+        "zero_fraction": 0.003470500744
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 112,
+        "category": "module_bias",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 116,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.035714285714,
+          "input_bytes": 112,
+          "probes": {
+            "brotli_q11": 116,
+            "lzma_preset9": 172,
+            "zlib_9": 123
+          }
+        },
+        "element_count": 56,
+        "end_offset": 15220,
+        "entropy_bits_per_byte": 5.980539217289,
+        "kind": "fp16_unsplit_implicit",
+        "name": "shared_trunk.up.1.pw.bias",
+        "offset": 15108,
+        "rate_score_if_record_removed_formula_only": 7.4576203e-05,
+        "sha256": "9283dd5cdcca0923bc9d4ab72063d9326321040eb988077ac8daa26dcab24c38",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.0
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "block_count": 32,
+        "block_size": 32,
+        "bytes": 577,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 581,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.006932409012,
+          "input_bytes": 577,
+          "probes": {
+            "brotli_q11": 581,
+            "lzma_preset9": 640,
+            "zlib_9": 588
+          }
+        },
+        "element_count": 1008,
+        "end_offset": 15797,
+        "entropy_bits_per_byte": 7.346860247977,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "shared_trunk.fuse.dw.weight",
+        "offset": 15220,
+        "packed_payload_bytes": 512,
+        "packed_payload_offset": 15221,
+        "rate_score_if_record_removed_formula_only": 0.000384200616,
+        "scale_bytes": 64,
+        "scale_offset": 15733,
+        "sha256": "0f39d5459c63b26d7a3bc637b860cf05a39f50b0a5643f09160cd4f29776b9bc",
+        "tensor_shape": [
+          112,
+          1,
+          3,
+          3
+        ],
+        "zero_fraction": 0.019064124783
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -132,
+        "block_count": 196,
+        "block_size": 32,
+        "bytes": 3529,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -132,
+          "best_probe": {
+            "bytes": 3397,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.962595636158,
+          "input_bytes": 3529,
+          "probes": {
+            "brotli_q11": 3397,
+            "lzma_preset9": 3524,
+            "zlib_9": 3469
+          }
+        },
+        "element_count": 6272,
+        "end_offset": 19326,
+        "entropy_bits_per_byte": 7.667968450978,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "shared_trunk.fuse.pw.weight",
+        "offset": 15797,
+        "packed_payload_bytes": 3136,
+        "packed_payload_offset": 15798,
+        "rate_score_if_record_removed_formula_only": 0.002349816246,
+        "scale_bytes": 392,
+        "scale_offset": 18934,
+        "sha256": "bb1dc622dd9b420fedd101f9548fd9db1c87e7d42f011cfc565e78f3866bddbf",
+        "tensor_shape": [
+          56,
+          112,
+          1,
+          1
+        ],
+        "zero_fraction": 0.007084159819
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 112,
+        "category": "module_bias",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 116,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.035714285714,
+          "input_bytes": 112,
+          "probes": {
+            "brotli_q11": 116,
+            "lzma_preset9": 172,
+            "zlib_9": 123
+          }
+        },
+        "element_count": 56,
+        "end_offset": 19438,
+        "entropy_bits_per_byte": 6.041511729997,
+        "kind": "fp16_unsplit_implicit",
+        "name": "shared_trunk.fuse.pw.bias",
+        "offset": 19326,
+        "rate_score_if_record_removed_formula_only": 7.4576203e-05,
+        "sha256": "0516fd0eb076858dcf3420a182abffdfb700f7f5cd82c3d8997eeacffb855f69",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.0
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "block_count": 16,
+        "block_size": 32,
+        "bytes": 289,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 293,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.01384083045,
+          "input_bytes": 289,
+          "probes": {
+            "brotli_q11": 293,
+            "lzma_preset9": 352,
+            "zlib_9": 300
+          }
+        },
+        "element_count": 504,
+        "end_offset": 19727,
+        "entropy_bits_per_byte": 7.039605679269,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "shared_trunk.fuse_block.conv1.dw.weight",
+        "offset": 19438,
+        "packed_payload_bytes": 256,
+        "packed_payload_offset": 19439,
+        "rate_score_if_record_removed_formula_only": 0.000192433237,
+        "scale_bytes": 32,
+        "scale_offset": 19695,
+        "sha256": "20a4e7abd4b0ab50a07c5c4e3389af341df2cb5928c153e6ce85a7467ed9b229",
+        "tensor_shape": [
+          56,
+          1,
+          3,
+          3
+        ],
+        "zero_fraction": 0.017301038062
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -28,
+        "block_count": 98,
+        "block_size": 32,
+        "bytes": 1765,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -28,
+          "best_probe": {
+            "bytes": 1737,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.984135977337,
+          "input_bytes": 1765,
+          "probes": {
+            "brotli_q11": 1737,
+            "lzma_preset9": 1812,
+            "zlib_9": 1776
+          }
+        },
+        "element_count": 3136,
+        "end_offset": 21492,
+        "entropy_bits_per_byte": 7.624047309239,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "shared_trunk.fuse_block.conv1.pw.weight",
+        "offset": 19727,
+        "packed_payload_bytes": 1568,
+        "packed_payload_offset": 19728,
+        "rate_score_if_record_removed_formula_only": 0.001175241052,
+        "scale_bytes": 196,
+        "scale_offset": 21296,
+        "sha256": "5fea40c46288e3bb1046f9753deda6ae9b9969a3ccd86c80c4d076ec38193a00",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.00566572238
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 112,
+        "category": "module_bias",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 116,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.035714285714,
+          "input_bytes": 112,
+          "probes": {
+            "brotli_q11": 116,
+            "lzma_preset9": 172,
+            "zlib_9": 123
+          }
+        },
+        "element_count": 56,
+        "end_offset": 21604,
+        "entropy_bits_per_byte": 5.763659806079,
+        "kind": "fp16_unsplit_implicit",
+        "name": "shared_trunk.fuse_block.conv1.pw.bias",
+        "offset": 21492,
+        "rate_score_if_record_removed_formula_only": 7.4576203e-05,
+        "sha256": "4e26a56c773429e731298f6c8394136c0107b3a4e76d72474dd39cbc7e51b478",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.0
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "block_count": 16,
+        "block_size": 32,
+        "bytes": 289,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 293,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.01384083045,
+          "input_bytes": 289,
+          "probes": {
+            "brotli_q11": 293,
+            "lzma_preset9": 352,
+            "zlib_9": 300
+          }
+        },
+        "element_count": 504,
+        "end_offset": 21893,
+        "entropy_bits_per_byte": 6.947823122523,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "shared_trunk.fuse_block.conv2.dw.weight",
+        "offset": 21604,
+        "packed_payload_bytes": 256,
+        "packed_payload_offset": 21605,
+        "rate_score_if_record_removed_formula_only": 0.000192433237,
+        "scale_bytes": 32,
+        "scale_offset": 21861,
+        "sha256": "1048626eb78492b9367d4b1debc66f419a5cfb90cb77c71a8eda7236cd7ad289",
+        "tensor_shape": [
+          56,
+          1,
+          3,
+          3
+        ],
+        "zero_fraction": 0.017301038062
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 0,
+        "block_count": 98,
+        "block_size": 32,
+        "bytes": 1765,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 0,
+          "best_probe": {
+            "bytes": 1765,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.0,
+          "input_bytes": 1765,
+          "probes": {
+            "brotli_q11": 1765,
+            "lzma_preset9": 1808,
+            "zlib_9": 1776
+          }
+        },
+        "element_count": 3136,
+        "end_offset": 23658,
+        "entropy_bits_per_byte": 7.613910809804,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "shared_trunk.fuse_block.conv2.pw.weight",
+        "offset": 21893,
+        "packed_payload_bytes": 1568,
+        "packed_payload_offset": 21894,
+        "rate_score_if_record_removed_formula_only": 0.001175241052,
+        "scale_bytes": 196,
+        "scale_offset": 23462,
+        "sha256": "eeda51362a2e1064b19f2d708ad93332af2f2b0c99f741f3878eef20eabcba4c",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.009631728045
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 112,
+        "category": "module_bias",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 116,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.035714285714,
+          "input_bytes": 112,
+          "probes": {
+            "brotli_q11": 116,
+            "lzma_preset9": 172,
+            "zlib_9": 123
+          }
+        },
+        "element_count": 56,
+        "end_offset": 23770,
+        "entropy_bits_per_byte": 5.874288016129,
+        "kind": "fp16_unsplit_implicit",
+        "name": "shared_trunk.fuse_block.conv2.pw.bias",
+        "offset": 23658,
+        "rate_score_if_record_removed_formula_only": 7.4576203e-05,
+        "sha256": "2b32fe531dcb0ef335bf2367c5bcd22a96a4d6bfca9a38c1c3bd2c292e52cf84",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.0
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "block_count": 16,
+        "block_size": 32,
+        "bytes": 289,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 293,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.01384083045,
+          "input_bytes": 289,
+          "probes": {
+            "brotli_q11": 293,
+            "lzma_preset9": 352,
+            "zlib_9": 300
+          }
+        },
+        "element_count": 504,
+        "end_offset": 24059,
+        "entropy_bits_per_byte": 6.979703503434,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "frame1_head.block1.conv1.dw.weight",
+        "offset": 23770,
+        "packed_payload_bytes": 256,
+        "packed_payload_offset": 23771,
+        "rate_score_if_record_removed_formula_only": 0.000192433237,
+        "scale_bytes": 32,
+        "scale_offset": 24027,
+        "sha256": "29241e9c9f193b7e688f4d96e3513cdd1728c3caa938e5b6fa35871ec57200f8",
+        "tensor_shape": [
+          56,
+          1,
+          3,
+          3
+        ],
+        "zero_fraction": 0.01384083045
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -32,
+        "block_count": 98,
+        "block_size": 32,
+        "bytes": 1765,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -32,
+          "best_probe": {
+            "bytes": 1733,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.981869688385,
+          "input_bytes": 1765,
+          "probes": {
+            "brotli_q11": 1733,
+            "lzma_preset9": 1788,
+            "zlib_9": 1763
+          }
+        },
+        "element_count": 3136,
+        "end_offset": 25824,
+        "entropy_bits_per_byte": 7.611124928683,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "frame1_head.block1.conv1.pw.weight",
+        "offset": 24059,
+        "packed_payload_bytes": 1568,
+        "packed_payload_offset": 24060,
+        "rate_score_if_record_removed_formula_only": 0.001175241052,
+        "scale_bytes": 196,
+        "scale_offset": 25628,
+        "sha256": "e7bb7f5ce840be3217bc135456310ac858f1f6aad07d6975b54564a03065ca6d",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.0
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 112,
+        "category": "module_bias",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 116,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.035714285714,
+          "input_bytes": 112,
+          "probes": {
+            "brotli_q11": 116,
+            "lzma_preset9": 172,
+            "zlib_9": 123
+          }
+        },
+        "element_count": 56,
+        "end_offset": 25936,
+        "entropy_bits_per_byte": 5.761296747986,
+        "kind": "fp16_unsplit_implicit",
+        "name": "frame1_head.block1.conv1.pw.bias",
+        "offset": 25824,
+        "rate_score_if_record_removed_formula_only": 7.4576203e-05,
+        "sha256": "c5992a17fd04ac21046c12d369cc11fdf826f8e53ac2da5fd9ff768a6ce1e65f",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.008928571429
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 2,
+        "block_count": 16,
+        "block_size": 32,
+        "bytes": 289,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 2,
+          "best_probe": {
+            "bytes": 291,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.006920415225,
+          "input_bytes": 289,
+          "probes": {
+            "brotli_q11": 291,
+            "lzma_preset9": 352,
+            "zlib_9": 298
+          }
+        },
+        "element_count": 504,
+        "end_offset": 26225,
+        "entropy_bits_per_byte": 6.854955508194,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "frame1_head.block1.conv2.dw.weight",
+        "offset": 25936,
+        "packed_payload_bytes": 256,
+        "packed_payload_offset": 25937,
+        "rate_score_if_record_removed_formula_only": 0.000192433237,
+        "scale_bytes": 32,
+        "scale_offset": 26193,
+        "sha256": "982fce52249058b8dff82ea4eea6dff7d281c3d3c4b27ed257f2ef5c90b9043a",
+        "tensor_shape": [
+          56,
+          1,
+          3,
+          3
+        ],
+        "zero_fraction": 0.01384083045
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -34,
+        "block_count": 98,
+        "block_size": 32,
+        "bytes": 1765,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -34,
+          "best_probe": {
+            "bytes": 1731,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.980736543909,
+          "input_bytes": 1765,
+          "probes": {
+            "brotli_q11": 1731,
+            "lzma_preset9": 1784,
+            "zlib_9": 1764
+          }
+        },
+        "element_count": 3136,
+        "end_offset": 27990,
+        "entropy_bits_per_byte": 7.639981816727,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "frame1_head.block1.conv2.pw.weight",
+        "offset": 26225,
+        "packed_payload_bytes": 1568,
+        "packed_payload_offset": 26226,
+        "rate_score_if_record_removed_formula_only": 0.001175241052,
+        "scale_bytes": 196,
+        "scale_offset": 27794,
+        "sha256": "a3d1cffc63543c01275ce7fcb3dbaaeba53ac150bd0b93b39aa306eb81b29b9e",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.001699716714
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 112,
+        "category": "module_bias",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 116,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.035714285714,
+          "input_bytes": 112,
+          "probes": {
+            "brotli_q11": 116,
+            "lzma_preset9": 172,
+            "zlib_9": 123
+          }
+        },
+        "element_count": 56,
+        "end_offset": 28102,
+        "entropy_bits_per_byte": 5.756919739096,
+        "kind": "fp16_unsplit_implicit",
+        "name": "frame1_head.block1.conv2.pw.bias",
+        "offset": 27990,
+        "rate_score_if_record_removed_formula_only": 7.4576203e-05,
+        "sha256": "711b38b9fc74d702be48515718b55f09a6ab770728198d8c6297010436972539",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.0
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "block_count": 16,
+        "block_size": 32,
+        "bytes": 289,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 293,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.01384083045,
+          "input_bytes": 289,
+          "probes": {
+            "brotli_q11": 293,
+            "lzma_preset9": 352,
+            "zlib_9": 300
+          }
+        },
+        "element_count": 504,
+        "end_offset": 28391,
+        "entropy_bits_per_byte": 6.953327712742,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "frame1_head.block2.conv1.dw.weight",
+        "offset": 28102,
+        "packed_payload_bytes": 256,
+        "packed_payload_offset": 28103,
+        "rate_score_if_record_removed_formula_only": 0.000192433237,
+        "scale_bytes": 32,
+        "scale_offset": 28359,
+        "sha256": "0ceb94ea29773b57827d917e2231890f1fee0edfcba34ffadff1e82cd14d2cd5",
+        "tensor_shape": [
+          56,
+          1,
+          3,
+          3
+        ],
+        "zero_fraction": 0.01384083045
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -19,
+        "block_count": 98,
+        "block_size": 32,
+        "bytes": 1765,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -19,
+          "best_probe": {
+            "bytes": 1746,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.989235127479,
+          "input_bytes": 1765,
+          "probes": {
+            "brotli_q11": 1746,
+            "lzma_preset9": 1796,
+            "zlib_9": 1772
+          }
+        },
+        "element_count": 3136,
+        "end_offset": 30156,
+        "entropy_bits_per_byte": 7.631252462153,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "frame1_head.block2.conv1.pw.weight",
+        "offset": 28391,
+        "packed_payload_bytes": 1568,
+        "packed_payload_offset": 28392,
+        "rate_score_if_record_removed_formula_only": 0.001175241052,
+        "scale_bytes": 196,
+        "scale_offset": 29960,
+        "sha256": "9219f3ce1069a4e66b0d57bbc537d017682f2eed6ca1fb7939d198880518f854",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.001699716714
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 112,
+        "category": "module_bias",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 116,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.035714285714,
+          "input_bytes": 112,
+          "probes": {
+            "brotli_q11": 116,
+            "lzma_preset9": 172,
+            "zlib_9": 123
+          }
+        },
+        "element_count": 56,
+        "end_offset": 30268,
+        "entropy_bits_per_byte": 6.030625292953,
+        "kind": "fp16_unsplit_implicit",
+        "name": "frame1_head.block2.conv1.pw.bias",
+        "offset": 30156,
+        "rate_score_if_record_removed_formula_only": 7.4576203e-05,
+        "sha256": "75cd97ee8ab8b1ac15eed67a052cc413a3beaf03479f7162354d9cd7cc13b244",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.0
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "block_count": 16,
+        "block_size": 32,
+        "bytes": 289,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 293,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.01384083045,
+          "input_bytes": 289,
+          "probes": {
+            "brotli_q11": 293,
+            "lzma_preset9": 352,
+            "zlib_9": 300
+          }
+        },
+        "element_count": 504,
+        "end_offset": 30557,
+        "entropy_bits_per_byte": 6.935219724255,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "frame1_head.block2.conv2.dw.weight",
+        "offset": 30268,
+        "packed_payload_bytes": 256,
+        "packed_payload_offset": 30269,
+        "rate_score_if_record_removed_formula_only": 0.000192433237,
+        "scale_bytes": 32,
+        "scale_offset": 30525,
+        "sha256": "14b24e74d8b0819dd6175a6bc37bb05fdd522d854ab9972a7539a867fea1a412",
+        "tensor_shape": [
+          56,
+          1,
+          3,
+          3
+        ],
+        "zero_fraction": 0.01384083045
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -32,
+        "block_count": 98,
+        "block_size": 32,
+        "bytes": 1765,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -32,
+          "best_probe": {
+            "bytes": 1733,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.981869688385,
+          "input_bytes": 1765,
+          "probes": {
+            "brotli_q11": 1733,
+            "lzma_preset9": 1792,
+            "zlib_9": 1765
+          }
+        },
+        "element_count": 3136,
+        "end_offset": 32322,
+        "entropy_bits_per_byte": 7.600592596325,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "frame1_head.block2.conv2.pw.weight",
+        "offset": 30557,
+        "packed_payload_bytes": 1568,
+        "packed_payload_offset": 30558,
+        "rate_score_if_record_removed_formula_only": 0.001175241052,
+        "scale_bytes": 196,
+        "scale_offset": 32126,
+        "sha256": "640741a6b2b7c895b9307d0268df4e298def504b150fc7cc33665f35fc957a88",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.000566572238
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 112,
+        "category": "module_bias",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 116,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.035714285714,
+          "input_bytes": 112,
+          "probes": {
+            "brotli_q11": 116,
+            "lzma_preset9": 172,
+            "zlib_9": 123
+          }
+        },
+        "element_count": 56,
+        "end_offset": 32434,
+        "entropy_bits_per_byte": 5.922902689683,
+        "kind": "fp16_unsplit_implicit",
+        "name": "frame1_head.block2.conv2.pw.bias",
+        "offset": 32322,
+        "rate_score_if_record_removed_formula_only": 7.4576203e-05,
+        "sha256": "a421a90be25c1948c8e38604cda541dffceb2e4c5960e09784f0a908368cceb1",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.0
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "block_count": 16,
+        "block_size": 32,
+        "bytes": 289,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 293,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.01384083045,
+          "input_bytes": 289,
+          "probes": {
+            "brotli_q11": 293,
+            "lzma_preset9": 352,
+            "zlib_9": 300
+          }
+        },
+        "element_count": 504,
+        "end_offset": 32723,
+        "entropy_bits_per_byte": 6.959467634925,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "frame1_head.pre.dw.weight",
+        "offset": 32434,
+        "packed_payload_bytes": 256,
+        "packed_payload_offset": 32435,
+        "rate_score_if_record_removed_formula_only": 0.000192433237,
+        "scale_bytes": 32,
+        "scale_offset": 32691,
+        "sha256": "af83c9ba0c878f97f1499fa2fee68ff14d485899c76c258fc04af9eaff926f30",
+        "tensor_shape": [
+          56,
+          1,
+          3,
+          3
+        ],
+        "zero_fraction": 0.01384083045
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -34,
+        "block_count": 91,
+        "block_size": 32,
+        "bytes": 1639,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -34,
+          "best_probe": {
+            "bytes": 1605,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.979255643685,
+          "input_bytes": 1639,
+          "probes": {
+            "brotli_q11": 1605,
+            "lzma_preset9": 1664,
+            "zlib_9": 1636
+          }
+        },
+        "element_count": 2912,
+        "end_offset": 34362,
+        "entropy_bits_per_byte": 7.574133219346,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "frame1_head.pre.pw.weight",
+        "offset": 32723,
+        "packed_payload_bytes": 1456,
+        "packed_payload_offset": 32724,
+        "rate_score_if_record_removed_formula_only": 0.001091342824,
+        "scale_bytes": 182,
+        "scale_offset": 34180,
+        "sha256": "c44999f97a3f747d9e8cb22a429d669acc4b274102540324407c7254b3dd275f",
+        "tensor_shape": [
+          52,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.0
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 104,
+        "category": "module_bias",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 108,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.038461538462,
+          "input_bytes": 104,
+          "probes": {
+            "brotli_q11": 108,
+            "lzma_preset9": 164,
+            "zlib_9": 115
+          }
+        },
+        "element_count": 52,
+        "end_offset": 34466,
+        "entropy_bits_per_byte": 5.779780045431,
+        "kind": "fp16_unsplit_implicit",
+        "name": "frame1_head.pre.pw.bias",
+        "offset": 34362,
+        "rate_score_if_record_removed_formula_only": 6.9249331e-05,
+        "sha256": "dbf030a5da94a1f1ea1fa47a4f6978318dfc32e81202353ccd7c0541ddb65dc8",
+        "tensor_shape": [
+          52
+        ],
+        "zero_fraction": 0.0
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -1,
+        "bytes": 313,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -1,
+          "best_probe": {
+            "bytes": 312,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.996805111821,
+          "input_bytes": 313,
+          "probes": {
+            "brotli_q11": 312,
+            "lzma_preset9": 376,
+            "zlib_9": 324
+          }
+        },
+        "element_count": 156,
+        "end_offset": 34779,
+        "entropy_bits_per_byte": 6.70754148897,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "frame1_head.head.weight",
+        "offset": 34466,
+        "payload_bytes": 312,
+        "rate_score_if_record_removed_formula_only": 0.000208413852,
+        "sha256": "cbfbd160e77cbd6fc7c81a0e88fdfb25033c334d0484767dadf24fd4cc54dbda",
+        "tensor_shape": [
+          3,
+          52,
+          1,
+          1
+        ],
+        "zero_fraction": 0.003194888179
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 6,
+        "category": "module_bias",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 10,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.666666666667,
+          "input_bytes": 6,
+          "probes": {
+            "brotli_q11": 10,
+            "lzma_preset9": 64,
+            "zlib_9": 14
+          }
+        },
+        "element_count": 3,
+        "end_offset": 34785,
+        "entropy_bits_per_byte": 2.584962500721,
+        "kind": "fp16_unsplit_implicit",
+        "name": "frame1_head.head.bias",
+        "offset": 34779,
+        "rate_score_if_record_removed_formula_only": 3.995154e-06,
+        "sha256": "0e48c49698098ea9b62451ab2c9116991cbe87a3ee4cdddadfdf278ac27e7f66",
+        "tensor_shape": [
+          3
+        ],
+        "zero_fraction": 0.0
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "block_count": 16,
+        "block_size": 32,
+        "bytes": 289,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 293,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.01384083045,
+          "input_bytes": 289,
+          "probes": {
+            "brotli_q11": 293,
+            "lzma_preset9": 352,
+            "zlib_9": 300
+          }
+        },
+        "element_count": 504,
+        "end_offset": 35074,
+        "entropy_bits_per_byte": 6.985663276645,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "frame2_head.block1.conv1.dw.weight",
+        "offset": 34785,
+        "packed_payload_bytes": 256,
+        "packed_payload_offset": 34786,
+        "rate_score_if_record_removed_formula_only": 0.000192433237,
+        "scale_bytes": 32,
+        "scale_offset": 35042,
+        "sha256": "8f183158465d57d549004807d6ca50914771beb31c752c4606239ff2767cc7d6",
+        "tensor_shape": [
+          56,
+          1,
+          3,
+          3
+        ],
+        "zero_fraction": 0.01384083045
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -1,
+        "block_count": 98,
+        "block_size": 32,
+        "bytes": 1765,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -1,
+          "best_probe": {
+            "bytes": 1764,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.999433427762,
+          "input_bytes": 1765,
+          "probes": {
+            "brotli_q11": 1764,
+            "lzma_preset9": 1816,
+            "zlib_9": 1769
+          }
+        },
+        "element_count": 3136,
+        "end_offset": 36839,
+        "entropy_bits_per_byte": 7.60523615313,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "frame2_head.block1.conv1.pw.weight",
+        "offset": 35074,
+        "packed_payload_bytes": 1568,
+        "packed_payload_offset": 35075,
+        "rate_score_if_record_removed_formula_only": 0.001175241052,
+        "scale_bytes": 196,
+        "scale_offset": 36643,
+        "sha256": "3d5faea4170bb3b5fe279ca3672c8a42ef19417e07c1fd3d581be5073dde14ec",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.003966005666
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 112,
+        "category": "module_bias",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 116,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.035714285714,
+          "input_bytes": 112,
+          "probes": {
+            "brotli_q11": 116,
+            "lzma_preset9": 172,
+            "zlib_9": 123
+          }
+        },
+        "element_count": 56,
+        "end_offset": 36951,
+        "entropy_bits_per_byte": 6.024776881953,
+        "kind": "fp16_unsplit_implicit",
+        "name": "frame2_head.block1.conv1.pw.bias",
+        "offset": 36839,
+        "rate_score_if_record_removed_formula_only": 7.4576203e-05,
+        "sha256": "aa2ad6eeb3b36feeaa52d2694339c3cc5b2c8cdf960f3bd1f509a0d964da8a86",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.0
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "block_count": 16,
+        "block_size": 32,
+        "bytes": 289,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 293,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.01384083045,
+          "input_bytes": 289,
+          "probes": {
+            "brotli_q11": 293,
+            "lzma_preset9": 352,
+            "zlib_9": 300
+          }
+        },
+        "element_count": 504,
+        "end_offset": 37240,
+        "entropy_bits_per_byte": 6.982434693328,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "frame2_head.block1.conv2.dw.weight",
+        "offset": 36951,
+        "packed_payload_bytes": 256,
+        "packed_payload_offset": 36952,
+        "rate_score_if_record_removed_formula_only": 0.000192433237,
+        "scale_bytes": 32,
+        "scale_offset": 37208,
+        "sha256": "da993d166d286d0296020848d22c4a6d9b73ea2b89d2f40ed0e884b7032012d9",
+        "tensor_shape": [
+          56,
+          1,
+          3,
+          3
+        ],
+        "zero_fraction": 0.01384083045
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -25,
+        "block_count": 98,
+        "block_size": 32,
+        "bytes": 1765,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -25,
+          "best_probe": {
+            "bytes": 1740,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.985835694051,
+          "input_bytes": 1765,
+          "probes": {
+            "brotli_q11": 1740,
+            "lzma_preset9": 1804,
+            "zlib_9": 1776
+          }
+        },
+        "element_count": 3136,
+        "end_offset": 39005,
+        "entropy_bits_per_byte": 7.616028707153,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "frame2_head.block1.conv2.pw.weight",
+        "offset": 37240,
+        "packed_payload_bytes": 1568,
+        "packed_payload_offset": 37241,
+        "rate_score_if_record_removed_formula_only": 0.001175241052,
+        "scale_bytes": 196,
+        "scale_offset": 38809,
+        "sha256": "48b33089b7a6d2600b1fe1a67d12bce4fea615ffdbd14a1bb8b91c60051337d3",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.005099150142
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 112,
+        "category": "module_bias",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 116,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.035714285714,
+          "input_bytes": 112,
+          "probes": {
+            "brotli_q11": 116,
+            "lzma_preset9": 172,
+            "zlib_9": 123
+          }
+        },
+        "element_count": 56,
+        "end_offset": 39117,
+        "entropy_bits_per_byte": 6.112940301425,
+        "kind": "fp16_unsplit_implicit",
+        "name": "frame2_head.block1.conv2.pw.bias",
+        "offset": 39005,
+        "rate_score_if_record_removed_formula_only": 7.4576203e-05,
+        "sha256": "f07f6d983a115b7b5bb781543c719b570796178b06759086ac01f41db8c6a0cf",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.0
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "block_count": 16,
+        "block_size": 32,
+        "bytes": 289,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 293,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.01384083045,
+          "input_bytes": 289,
+          "probes": {
+            "brotli_q11": 293,
+            "lzma_preset9": 352,
+            "zlib_9": 300
+          }
+        },
+        "element_count": 504,
+        "end_offset": 39406,
+        "entropy_bits_per_byte": 6.997793038995,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "frame2_head.block2.conv1.dw.weight",
+        "offset": 39117,
+        "packed_payload_bytes": 256,
+        "packed_payload_offset": 39118,
+        "rate_score_if_record_removed_formula_only": 0.000192433237,
+        "scale_bytes": 32,
+        "scale_offset": 39374,
+        "sha256": "4ab2689f68cd2864abd1af277d1c37baab69317507d8619b9bc929c67601e7e7",
+        "tensor_shape": [
+          56,
+          1,
+          3,
+          3
+        ],
+        "zero_fraction": 0.01384083045
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 0,
+        "block_count": 98,
+        "block_size": 32,
+        "bytes": 1765,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 0,
+          "best_probe": {
+            "bytes": 1765,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.0,
+          "input_bytes": 1765,
+          "probes": {
+            "brotli_q11": 1765,
+            "lzma_preset9": 1816,
+            "zlib_9": 1771
+          }
+        },
+        "element_count": 3136,
+        "end_offset": 41171,
+        "entropy_bits_per_byte": 7.588477770098,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "frame2_head.block2.conv1.pw.weight",
+        "offset": 39406,
+        "packed_payload_bytes": 1568,
+        "packed_payload_offset": 39407,
+        "rate_score_if_record_removed_formula_only": 0.001175241052,
+        "scale_bytes": 196,
+        "scale_offset": 40975,
+        "sha256": "ce8b306aa9461dad5c29871c66d6438cd4fcb7bfbc2e22befc7208cb3674ca4e",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.011331444759
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 112,
+        "category": "module_bias",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 116,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.035714285714,
+          "input_bytes": 112,
+          "probes": {
+            "brotli_q11": 116,
+            "lzma_preset9": 172,
+            "zlib_9": 123
+          }
+        },
+        "element_count": 56,
+        "end_offset": 41283,
+        "entropy_bits_per_byte": 6.055222502794,
+        "kind": "fp16_unsplit_implicit",
+        "name": "frame2_head.block2.conv1.pw.bias",
+        "offset": 41171,
+        "rate_score_if_record_removed_formula_only": 7.4576203e-05,
+        "sha256": "eef91b733f6ff4c1b82289f65196a8035170a70fa2b3ffc756c021e200c2e843",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.0
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "block_count": 16,
+        "block_size": 32,
+        "bytes": 289,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 293,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.01384083045,
+          "input_bytes": 289,
+          "probes": {
+            "brotli_q11": 293,
+            "lzma_preset9": 352,
+            "zlib_9": 300
+          }
+        },
+        "element_count": 504,
+        "end_offset": 41572,
+        "entropy_bits_per_byte": 6.959778157137,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "frame2_head.block2.conv2.dw.weight",
+        "offset": 41283,
+        "packed_payload_bytes": 256,
+        "packed_payload_offset": 41284,
+        "rate_score_if_record_removed_formula_only": 0.000192433237,
+        "scale_bytes": 32,
+        "scale_offset": 41540,
+        "sha256": "a8b8b3b4ae9120db0acbd913b0390ed2bc3763b44fea2d717afb9bef368188bf",
+        "tensor_shape": [
+          56,
+          1,
+          3,
+          3
+        ],
+        "zero_fraction": 0.01384083045
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -17,
+        "block_count": 98,
+        "block_size": 32,
+        "bytes": 1765,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -17,
+          "best_probe": {
+            "bytes": 1748,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.990368271955,
+          "input_bytes": 1765,
+          "probes": {
+            "brotli_q11": 1748,
+            "lzma_preset9": 1812,
+            "zlib_9": 1771
+          }
+        },
+        "element_count": 3136,
+        "end_offset": 43337,
+        "entropy_bits_per_byte": 7.608551175724,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "frame2_head.block2.conv2.pw.weight",
+        "offset": 41572,
+        "packed_payload_bytes": 1568,
+        "packed_payload_offset": 41573,
+        "rate_score_if_record_removed_formula_only": 0.001175241052,
+        "scale_bytes": 196,
+        "scale_offset": 43141,
+        "sha256": "b66bd3e59289d061cdce3c04627630d9bd6b5d7a4b924e557db2bad8f02fff1f",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.006798866856
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 112,
+        "category": "module_bias",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 116,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.035714285714,
+          "input_bytes": 112,
+          "probes": {
+            "brotli_q11": 116,
+            "lzma_preset9": 172,
+            "zlib_9": 123
+          }
+        },
+        "element_count": 56,
+        "end_offset": 43449,
+        "entropy_bits_per_byte": 6.03825701592,
+        "kind": "fp16_unsplit_implicit",
+        "name": "frame2_head.block2.conv2.pw.bias",
+        "offset": 43337,
+        "rate_score_if_record_removed_formula_only": 7.4576203e-05,
+        "sha256": "ca4477425f7fe946c7b3d846a1a0f78ca03a70860802c42f2bb4a0b5ac8b4c05",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.0
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "block_count": 16,
+        "block_size": 32,
+        "bytes": 289,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 293,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.01384083045,
+          "input_bytes": 289,
+          "probes": {
+            "brotli_q11": 293,
+            "lzma_preset9": 352,
+            "zlib_9": 300
+          }
+        },
+        "element_count": 504,
+        "end_offset": 43738,
+        "entropy_bits_per_byte": 7.017307730028,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "frame2_head.pre.dw.weight",
+        "offset": 43449,
+        "packed_payload_bytes": 256,
+        "packed_payload_offset": 43450,
+        "rate_score_if_record_removed_formula_only": 0.000192433237,
+        "scale_bytes": 32,
+        "scale_offset": 43706,
+        "sha256": "e7222aa0fc3aacb46dd305e003c319ba8d27037be7ef7656a8a98bdc99129b27",
+        "tensor_shape": [
+          56,
+          1,
+          3,
+          3
+        ],
+        "zero_fraction": 0.017301038062
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -3,
+        "block_count": 91,
+        "block_size": 32,
+        "bytes": 1639,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -3,
+          "best_probe": {
+            "bytes": 1636,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.998169615619,
+          "input_bytes": 1639,
+          "probes": {
+            "brotli_q11": 1636,
+            "lzma_preset9": 1692,
+            "zlib_9": 1650
+          }
+        },
+        "element_count": 2912,
+        "end_offset": 45377,
+        "entropy_bits_per_byte": 7.609877089806,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "frame2_head.pre.pw.weight",
+        "offset": 43738,
+        "packed_payload_bytes": 1456,
+        "packed_payload_offset": 43739,
+        "rate_score_if_record_removed_formula_only": 0.001091342824,
+        "scale_bytes": 182,
+        "scale_offset": 45195,
+        "sha256": "159d86ffcc1988716f2420cd2a0bcb3e7804c360e9d56b6c712ba71e1a1df34b",
+        "tensor_shape": [
+          52,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.006101281269
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 104,
+        "category": "module_bias",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 108,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.038461538462,
+          "input_bytes": 104,
+          "probes": {
+            "brotli_q11": 108,
+            "lzma_preset9": 164,
+            "zlib_9": 115
+          }
+        },
+        "element_count": 52,
+        "end_offset": 45481,
+        "entropy_bits_per_byte": 5.959867121904,
+        "kind": "fp16_unsplit_implicit",
+        "name": "frame2_head.pre.pw.bias",
+        "offset": 45377,
+        "rate_score_if_record_removed_formula_only": 6.9249331e-05,
+        "sha256": "3480de3e30e3366d47e7805845405735718215216ce480c9c500f1468ba793cc",
+        "tensor_shape": [
+          52
+        ],
+        "zero_fraction": 0.009615384615
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 313,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 317,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.012779552716,
+          "input_bytes": 313,
+          "probes": {
+            "brotli_q11": 317,
+            "lzma_preset9": 376,
+            "zlib_9": 324
+          }
+        },
+        "element_count": 156,
+        "end_offset": 45794,
+        "entropy_bits_per_byte": 6.738012186478,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "frame2_head.head.weight",
+        "offset": 45481,
+        "payload_bytes": 312,
+        "rate_score_if_record_removed_formula_only": 0.000208413852,
+        "sha256": "f76e783f0ca0fae5b4c9350618693bc3f8b6988464fd6f0ef7d1e5e2739b9c36",
+        "tensor_shape": [
+          3,
+          52,
+          1,
+          1
+        ],
+        "zero_fraction": 0.003194888179
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 6,
+        "category": "module_bias",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 10,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.666666666667,
+          "input_bytes": 6,
+          "probes": {
+            "brotli_q11": 10,
+            "lzma_preset9": 64,
+            "zlib_9": 14
+          }
+        },
+        "element_count": 3,
+        "end_offset": 45800,
+        "entropy_bits_per_byte": 2.584962500721,
+        "kind": "fp16_unsplit_implicit",
+        "name": "frame2_head.head.bias",
+        "offset": 45794,
+        "rate_score_if_record_removed_formula_only": 3.995154e-06,
+        "sha256": "3c67adb920f461f4bf754bb0fae1793bfd0660f52691f550701317674a254394",
+        "tensor_shape": [
+          3
+        ],
+        "zero_fraction": 0.0
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -18,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -18,
+          "best_probe": {
+            "bytes": 95,
+            "codec": "zlib_9"
+          },
+          "best_ratio": 0.840707964602,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 109,
+            "lzma_preset9": 152,
+            "zlib_9": 95
+          }
+        },
+        "element_count": 56,
+        "end_offset": 45913,
+        "entropy_bits_per_byte": 4.312026347275,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "shared_trunk.stem_conv.norm.weight",
+        "offset": 45800,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "825b4b6db3f39df4c99bf346d56db7057cca7698cdb5e0454ef50ba2f6d03228",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.017699115044
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 117,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.035398230088,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 117,
+            "lzma_preset9": 176,
+            "zlib_9": 124
+          }
+        },
+        "element_count": 56,
+        "end_offset": 46026,
+        "entropy_bits_per_byte": 5.66080081294,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "shared_trunk.stem_conv.norm.bias",
+        "offset": 45913,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "5291640e2eaf8d2b5128cb149f7dd6c53b18ed0a6b71584da9825e594e10641e",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.008849557522
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -24,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -24,
+          "best_probe": {
+            "bytes": 89,
+            "codec": "zlib_9"
+          },
+          "best_ratio": 0.787610619469,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 117,
+            "lzma_preset9": 148,
+            "zlib_9": 89
+          }
+        },
+        "element_count": 56,
+        "end_offset": 46139,
+        "entropy_bits_per_byte": 4.248115561184,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "shared_trunk.stem_block.conv1.norm.weight",
+        "offset": 46026,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "9152443eaaf69edd64029b1e321e45ca07b913ef518fd8d923cfdcb60e2256f2",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.008849557522
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 117,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.035398230088,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 117,
+            "lzma_preset9": 176,
+            "zlib_9": 124
+          }
+        },
+        "element_count": 56,
+        "end_offset": 46252,
+        "entropy_bits_per_byte": 5.859742457876,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "shared_trunk.stem_block.conv1.norm.bias",
+        "offset": 46139,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "bad194ac6cce9a3ff1e8458b62e394a7786b0ea9580494200a927a9a8ddf59cc",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.008849557522
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -17,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -17,
+          "best_probe": {
+            "bytes": 96,
+            "codec": "zlib_9"
+          },
+          "best_ratio": 0.849557522124,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 117,
+            "lzma_preset9": 152,
+            "zlib_9": 96
+          }
+        },
+        "element_count": 56,
+        "end_offset": 46365,
+        "entropy_bits_per_byte": 4.377483347858,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "shared_trunk.stem_block.norm2.weight",
+        "offset": 46252,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "0a4c8425b8214615b3bc4765713c8c8e2490902d5b462cfadc64139a52b767b2",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.008849557522
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 117,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.035398230088,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 117,
+            "lzma_preset9": 176,
+            "zlib_9": 124
+          }
+        },
+        "element_count": 56,
+        "end_offset": 46478,
+        "entropy_bits_per_byte": 5.488902075578,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "shared_trunk.stem_block.norm2.bias",
+        "offset": 46365,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "05c7dd616b84417424f7f975460163da9d4048f9fbde80de9826cbbdb7375275",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.008849557522
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -20,
+        "bytes": 129,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -20,
+          "best_probe": {
+            "bytes": 109,
+            "codec": "zlib_9"
+          },
+          "best_ratio": 0.84496124031,
+          "input_bytes": 129,
+          "probes": {
+            "brotli_q11": 126,
+            "lzma_preset9": 168,
+            "zlib_9": 109
+          }
+        },
+        "element_count": 64,
+        "end_offset": 46607,
+        "entropy_bits_per_byte": 4.546664979555,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "shared_trunk.down_conv.norm.weight",
+        "offset": 46478,
+        "payload_bytes": 128,
+        "rate_score_if_record_removed_formula_only": 8.5895805e-05,
+        "sha256": "4a16e36918aa037f3962a526e149c658772f1ca319d248164aac4bf7c0f4092f",
+        "tensor_shape": [
+          64
+        ],
+        "zero_fraction": 0.007751937984
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 129,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 133,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.031007751938,
+          "input_bytes": 129,
+          "probes": {
+            "brotli_q11": 133,
+            "lzma_preset9": 192,
+            "zlib_9": 140
+          }
+        },
+        "element_count": 64,
+        "end_offset": 46736,
+        "entropy_bits_per_byte": 5.663890337804,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "shared_trunk.down_conv.norm.bias",
+        "offset": 46607,
+        "payload_bytes": 128,
+        "rate_score_if_record_removed_formula_only": 8.5895805e-05,
+        "sha256": "706b973db9d4ab6c1e38d40b5eded3b2d43dc27aba12a57ac18206145c0ff885",
+        "tensor_shape": [
+          64
+        ],
+        "zero_fraction": 0.007751937984
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -36,
+        "bytes": 129,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -36,
+          "best_probe": {
+            "bytes": 93,
+            "codec": "zlib_9"
+          },
+          "best_ratio": 0.720930232558,
+          "input_bytes": 129,
+          "probes": {
+            "brotli_q11": 118,
+            "lzma_preset9": 156,
+            "zlib_9": 93
+          }
+        },
+        "element_count": 64,
+        "end_offset": 46865,
+        "entropy_bits_per_byte": 4.230761580402,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "shared_trunk.down_block.conv1.norm.weight",
+        "offset": 46736,
+        "payload_bytes": 128,
+        "rate_score_if_record_removed_formula_only": 8.5895805e-05,
+        "sha256": "7bb627836d2ee444350b1ae516d48ff1703e42d476092e66f38a485eb7813dc5",
+        "tensor_shape": [
+          64
+        ],
+        "zero_fraction": 0.007751937984
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 129,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 133,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.031007751938,
+          "input_bytes": 129,
+          "probes": {
+            "brotli_q11": 133,
+            "lzma_preset9": 192,
+            "zlib_9": 140
+          }
+        },
+        "element_count": 64,
+        "end_offset": 46994,
+        "entropy_bits_per_byte": 5.830540501985,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "shared_trunk.down_block.conv1.norm.bias",
+        "offset": 46865,
+        "payload_bytes": 128,
+        "rate_score_if_record_removed_formula_only": 8.5895805e-05,
+        "sha256": "cfef5edc21112cd72e5369915b8c2a76116c64515c03b838d81c19a6e0add2d3",
+        "tensor_shape": [
+          64
+        ],
+        "zero_fraction": 0.007751937984
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -25,
+        "bytes": 129,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -25,
+          "best_probe": {
+            "bytes": 104,
+            "codec": "zlib_9"
+          },
+          "best_ratio": 0.806201550388,
+          "input_bytes": 129,
+          "probes": {
+            "brotli_q11": 120,
+            "lzma_preset9": 164,
+            "zlib_9": 104
+          }
+        },
+        "element_count": 64,
+        "end_offset": 47123,
+        "entropy_bits_per_byte": 4.475695352038,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "shared_trunk.down_block.norm2.weight",
+        "offset": 46994,
+        "payload_bytes": 128,
+        "rate_score_if_record_removed_formula_only": 8.5895805e-05,
+        "sha256": "5d6714cb142ed91b8f074b6d76b0a014e6f3079647ee358d32ea4ee06d165915",
+        "tensor_shape": [
+          64
+        ],
+        "zero_fraction": 0.007751937984
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 129,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 133,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.031007751938,
+          "input_bytes": 129,
+          "probes": {
+            "brotli_q11": 133,
+            "lzma_preset9": 192,
+            "zlib_9": 140
+          }
+        },
+        "element_count": 64,
+        "end_offset": 47252,
+        "entropy_bits_per_byte": 5.865586123802,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "shared_trunk.down_block.norm2.bias",
+        "offset": 47123,
+        "payload_bytes": 128,
+        "rate_score_if_record_removed_formula_only": 8.5895805e-05,
+        "sha256": "03f2efce6ef887b5a6e29e511c9fbec41e6b46397ebac04bab4b31e8115bb699",
+        "tensor_shape": [
+          64
+        ],
+        "zero_fraction": 0.015503875969
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -33,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -33,
+          "best_probe": {
+            "bytes": 80,
+            "codec": "zlib_9"
+          },
+          "best_ratio": 0.70796460177,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 100,
+            "lzma_preset9": 140,
+            "zlib_9": 80
+          }
+        },
+        "element_count": 56,
+        "end_offset": 47365,
+        "entropy_bits_per_byte": 4.132545471326,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "shared_trunk.up.1.norm.weight",
+        "offset": 47252,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "8df25ab554e86e5513e6168037d296d1c29200a098a5f47331c682897178d4f0",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.008849557522
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 117,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.035398230088,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 117,
+            "lzma_preset9": 176,
+            "zlib_9": 124
+          }
+        },
+        "element_count": 56,
+        "end_offset": 47478,
+        "entropy_bits_per_byte": 5.998109466932,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "shared_trunk.up.1.norm.bias",
+        "offset": 47365,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "0498d3c6ee98e83c780b8f09523f88fcee2e10e9a1e6bb1adedf89c00ffc808f",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.008849557522
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -21,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -21,
+          "best_probe": {
+            "bytes": 92,
+            "codec": "zlib_9"
+          },
+          "best_ratio": 0.814159292035,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 115,
+            "lzma_preset9": 148,
+            "zlib_9": 92
+          }
+        },
+        "element_count": 56,
+        "end_offset": 47591,
+        "entropy_bits_per_byte": 4.486918295701,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "shared_trunk.fuse.norm.weight",
+        "offset": 47478,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "fcfa17c49f02e3586ccc8ddf41504a30a6ceed208b1a972fa25add3a756edf20",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.008849557522
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 117,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.035398230088,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 117,
+            "lzma_preset9": 176,
+            "zlib_9": 124
+          }
+        },
+        "element_count": 56,
+        "end_offset": 47704,
+        "entropy_bits_per_byte": 5.638763423598,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "shared_trunk.fuse.norm.bias",
+        "offset": 47591,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "15f92efa11883f8ca3137270cc4cd295def80611b4f4052c138967e2d9dfe914",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.008849557522
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -27,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -27,
+          "best_probe": {
+            "bytes": 86,
+            "codec": "zlib_9"
+          },
+          "best_ratio": 0.761061946903,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 105,
+            "lzma_preset9": 144,
+            "zlib_9": 86
+          }
+        },
+        "element_count": 56,
+        "end_offset": 47817,
+        "entropy_bits_per_byte": 4.0932975661,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "shared_trunk.fuse_block.conv1.norm.weight",
+        "offset": 47704,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "d4fd6cc7524058d7f3ca1af1ef95b115137238c44c2bfd71080f854919c6696f",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.008849557522
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 117,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.035398230088,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 117,
+            "lzma_preset9": 176,
+            "zlib_9": 124
+          }
+        },
+        "element_count": 56,
+        "end_offset": 47930,
+        "entropy_bits_per_byte": 5.751434219313,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "shared_trunk.fuse_block.conv1.norm.bias",
+        "offset": 47817,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "662f1c0a24931d17595a83e885d403097fca80a0059b6777eed576cfdb09e4c0",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.008849557522
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -15,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -15,
+          "best_probe": {
+            "bytes": 98,
+            "codec": "zlib_9"
+          },
+          "best_ratio": 0.867256637168,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 114,
+            "lzma_preset9": 156,
+            "zlib_9": 98
+          }
+        },
+        "element_count": 56,
+        "end_offset": 48043,
+        "entropy_bits_per_byte": 4.538099296581,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "shared_trunk.fuse_block.norm2.weight",
+        "offset": 47930,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "de91ab77c520d0df95957651926e309490b0c6408a7aebbb7d11801fc89505f5",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.017699115044
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 117,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.035398230088,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 117,
+            "lzma_preset9": 176,
+            "zlib_9": 124
+          }
+        },
+        "element_count": 56,
+        "end_offset": 48156,
+        "entropy_bits_per_byte": 5.601536511949,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "shared_trunk.fuse_block.norm2.bias",
+        "offset": 48043,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "66808ea4532445b0b3dbbbfc4ad93ee47ee18903772902b938bb275b3103a407",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.008849557522
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -316,
+        "bytes": 577,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -316,
+          "best_probe": {
+            "bytes": 261,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.452339688042,
+          "input_bytes": 577,
+          "probes": {
+            "brotli_q11": 261,
+            "lzma_preset9": 328,
+            "zlib_9": 330
+          }
+        },
+        "element_count": 288,
+        "end_offset": 48733,
+        "entropy_bits_per_byte": 3.010174280625,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "pose_mlp.0.weight",
+        "offset": 48156,
+        "payload_bytes": 576,
+        "rate_score_if_record_removed_formula_only": 0.000384200616,
+        "sha256": "237e925322bbd47c1008564a22f47110f68262708a8e054ec0a1826f48492372",
+        "tensor_shape": [
+          48,
+          6
+        ],
+        "zero_fraction": 0.667244367418
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 97,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 101,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.041237113402,
+          "input_bytes": 97,
+          "probes": {
+            "brotli_q11": 101,
+            "lzma_preset9": 156,
+            "zlib_9": 108
+          }
+        },
+        "element_count": 48,
+        "end_offset": 48830,
+        "entropy_bits_per_byte": 5.648565677883,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "pose_mlp.0.bias",
+        "offset": 48733,
+        "payload_bytes": 96,
+        "rate_score_if_record_removed_formula_only": 6.4588318e-05,
+        "sha256": "0ecea30ae1add00d4aa6542a9160082ee18f72d1bcf283e310e8587a22b2cb15",
+        "tensor_shape": [
+          48
+        ],
+        "zero_fraction": 0.010309278351
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -731,
+        "bytes": 4609,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -731,
+          "best_probe": {
+            "bytes": 3878,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.841397266218,
+          "input_bytes": 4609,
+          "probes": {
+            "brotli_q11": 3878,
+            "lzma_preset9": 4036,
+            "zlib_9": 4267
+          }
+        },
+        "element_count": 2304,
+        "end_offset": 53439,
+        "entropy_bits_per_byte": 7.178516454762,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "pose_mlp.2.weight",
+        "offset": 48830,
+        "payload_bytes": 4608,
+        "rate_score_if_record_removed_formula_only": 0.003068943915,
+        "sha256": "9624f3afe25158283d16e0bc10f0bb0a37e60254769994f1e362400d39019fec",
+        "tensor_shape": [
+          48,
+          48
+        ],
+        "zero_fraction": 0.002386634845
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 97,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 101,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.041237113402,
+          "input_bytes": 97,
+          "probes": {
+            "brotli_q11": 101,
+            "lzma_preset9": 156,
+            "zlib_9": 108
+          }
+        },
+        "element_count": 48,
+        "end_offset": 53536,
+        "entropy_bits_per_byte": 5.786574151573,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "pose_mlp.2.bias",
+        "offset": 53439,
+        "payload_bytes": 96,
+        "rate_score_if_record_removed_formula_only": 6.4588318e-05,
+        "sha256": "562889de5fddcf98a81e23995fedf06f4224f1d2946a99006a4cdbd86f395d58",
+        "tensor_shape": [
+          48
+        ],
+        "zero_fraction": 0.010309278351
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -22,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -22,
+          "best_probe": {
+            "bytes": 91,
+            "codec": "zlib_9"
+          },
+          "best_ratio": 0.805309734513,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 95,
+            "lzma_preset9": 144,
+            "zlib_9": 91
+          }
+        },
+        "element_count": 56,
+        "end_offset": 53649,
+        "entropy_bits_per_byte": 4.189110383195,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "frame1_head.block1.conv1.norm.weight",
+        "offset": 53536,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "90a4455c6137994a88c62b1524ecc0841ed8b5c99b97a4091509aeef09cdb40c",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.017699115044
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 117,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.035398230088,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 117,
+            "lzma_preset9": 176,
+            "zlib_9": 124
+          }
+        },
+        "element_count": 56,
+        "end_offset": 53762,
+        "entropy_bits_per_byte": 6.084608913931,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "frame1_head.block1.conv1.norm.bias",
+        "offset": 53649,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "47df164807096639725ad74eabb644e2448f13452f14facac72691ef702f5924",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.008849557522
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -31,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -31,
+          "best_probe": {
+            "bytes": 82,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.725663716814,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 82,
+            "lzma_preset9": 136,
+            "zlib_9": 83
+          }
+        },
+        "element_count": 56,
+        "end_offset": 53875,
+        "entropy_bits_per_byte": 3.740363638317,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "frame1_head.block1.norm2.weight",
+        "offset": 53762,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "031e31248a741ed5410a7d93424822ff3e2f1588a2951798ed9a2b8f26004c8c",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.044247787611
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 117,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.035398230088,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 117,
+            "lzma_preset9": 176,
+            "zlib_9": 124
+          }
+        },
+        "element_count": 56,
+        "end_offset": 53988,
+        "entropy_bits_per_byte": 6.026827276648,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "frame1_head.block1.norm2.bias",
+        "offset": 53875,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "69fa6a5142f67e6472c862168fd618f01b8f0be012eb482026cecb0cd4695601",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.008849557522
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -68,
+        "bytes": 5601,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -68,
+          "best_probe": {
+            "bytes": 5533,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.987859310837,
+          "input_bytes": 5601,
+          "probes": {
+            "brotli_q11": 5533,
+            "lzma_preset9": 5636,
+            "zlib_9": 5549
+          }
+        },
+        "element_count": 5376,
+        "end_offset": 59589,
+        "entropy_bits_per_byte": 7.907126619204,
+        "kind": "int8_row_scale_unsplit",
+        "kind_byte": 2,
+        "name": "frame1_head.block1.film_proj.weight",
+        "offset": 53988,
+        "q_bytes": 5376,
+        "q_offset": 53989,
+        "rate_score_if_record_removed_formula_only": 0.003729475996,
+        "row_count": 112,
+        "scale_bytes": 224,
+        "scale_offset": 59365,
+        "sha256": "7013ea93e4d7fd07cdd7204d83508a34257c577bcbad707054c387b784edf433",
+        "tensor_shape": [
+          112,
+          48
+        ],
+        "zero_fraction": 0.00357079093
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 225,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 229,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.017777777778,
+          "input_bytes": 225,
+          "probes": {
+            "brotli_q11": 229,
+            "lzma_preset9": 288,
+            "zlib_9": 236
+          }
+        },
+        "element_count": 112,
+        "end_offset": 59814,
+        "entropy_bits_per_byte": 6.432890900717,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "frame1_head.block1.film_proj.bias",
+        "offset": 59589,
+        "payload_bytes": 224,
+        "rate_score_if_record_removed_formula_only": 0.000149818264,
+        "sha256": "fe08782c52319c030ebfa267c5db840d9f2d4dd596fcf0188c734675af3bb9d2",
+        "tensor_shape": [
+          112
+        ],
+        "zero_fraction": 0.008888888889
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -24,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -24,
+          "best_probe": {
+            "bytes": 89,
+            "codec": "zlib_9"
+          },
+          "best_ratio": 0.787610619469,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 92,
+            "lzma_preset9": 144,
+            "zlib_9": 89
+          }
+        },
+        "element_count": 56,
+        "end_offset": 59927,
+        "entropy_bits_per_byte": 4.171742267939,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "frame1_head.block2.conv1.norm.weight",
+        "offset": 59814,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "4b528887a24dbc69d0b264b0615925274b633691165406b3d9f50e06021fae03",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.008849557522
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 117,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.035398230088,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 117,
+            "lzma_preset9": 176,
+            "zlib_9": 124
+          }
+        },
+        "element_count": 56,
+        "end_offset": 60040,
+        "entropy_bits_per_byte": 6.041071882616,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "frame1_head.block2.conv1.norm.bias",
+        "offset": 59927,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "f8054759f5350c1f91e971e512da12f23ebde93244f597072331a19883c09787",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.008849557522
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -24,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -24,
+          "best_probe": {
+            "bytes": 89,
+            "codec": "zlib_9"
+          },
+          "best_ratio": 0.787610619469,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 98,
+            "lzma_preset9": 144,
+            "zlib_9": 89
+          }
+        },
+        "element_count": 56,
+        "end_offset": 60153,
+        "entropy_bits_per_byte": 4.136685307203,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "frame1_head.block2.norm2.weight",
+        "offset": 60040,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "b5dee3175966f9586cd556b5451efc381b2d0380464ed35a75561534522cfce1",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.008849557522
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 117,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.035398230088,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 117,
+            "lzma_preset9": 176,
+            "zlib_9": 124
+          }
+        },
+        "element_count": 56,
+        "end_offset": 60266,
+        "entropy_bits_per_byte": 5.966165745919,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "frame1_head.block2.norm2.bias",
+        "offset": 60153,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "b79617e567b95df7736129ad449ad74bbae02454286b21992f4b9b2c681bcbdf",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.008849557522
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -31,
+        "bytes": 105,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -31,
+          "best_probe": {
+            "bytes": 74,
+            "codec": "zlib_9"
+          },
+          "best_ratio": 0.704761904762,
+          "input_bytes": 105,
+          "probes": {
+            "brotli_q11": 78,
+            "lzma_preset9": 128,
+            "zlib_9": 74
+          }
+        },
+        "element_count": 52,
+        "end_offset": 60371,
+        "entropy_bits_per_byte": 3.673916553583,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "frame1_head.pre.norm.weight",
+        "offset": 60266,
+        "payload_bytes": 104,
+        "rate_score_if_record_removed_formula_only": 6.991519e-05,
+        "sha256": "e8f2bc047fdaacaad0b914a5fd033939253bf329bc252d3c42c69ea41745f0c5",
+        "tensor_shape": [
+          52
+        ],
+        "zero_fraction": 0.038095238095
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 105,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 109,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.038095238095,
+          "input_bytes": 105,
+          "probes": {
+            "brotli_q11": 109,
+            "lzma_preset9": 168,
+            "zlib_9": 116
+          }
+        },
+        "element_count": 52,
+        "end_offset": 60476,
+        "entropy_bits_per_byte": 5.835534446176,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "frame1_head.pre.norm.bias",
+        "offset": 60371,
+        "payload_bytes": 104,
+        "rate_score_if_record_removed_formula_only": 6.991519e-05,
+        "sha256": "d99450d61a2b85b8d774c01a03495add9c2565832541e96808eec3820d5e24e9",
+        "tensor_shape": [
+          52
+        ],
+        "zero_fraction": 0.009523809524
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -22,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -22,
+          "best_probe": {
+            "bytes": 91,
+            "codec": "zlib_9"
+          },
+          "best_ratio": 0.805309734513,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 109,
+            "lzma_preset9": 148,
+            "zlib_9": 91
+          }
+        },
+        "element_count": 56,
+        "end_offset": 60589,
+        "entropy_bits_per_byte": 4.355659989752,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "frame2_head.block1.conv1.norm.weight",
+        "offset": 60476,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "2efaeb226cd7fe836c9be61374b7357563c60a8e8b4f8051fc3506d6b3198fe8",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.008849557522
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 117,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.035398230088,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 117,
+            "lzma_preset9": 176,
+            "zlib_9": 124
+          }
+        },
+        "element_count": 56,
+        "end_offset": 60702,
+        "entropy_bits_per_byte": 5.905504215191,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "frame2_head.block1.conv1.norm.bias",
+        "offset": 60589,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "82644f3c50e0542bbef76dc3acba02e8a962ec7eca52e02413d59fc137a58da4",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.008849557522
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -15,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -15,
+          "best_probe": {
+            "bytes": 98,
+            "codec": "zlib_9"
+          },
+          "best_ratio": 0.867256637168,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 106,
+            "lzma_preset9": 152,
+            "zlib_9": 98
+          }
+        },
+        "element_count": 56,
+        "end_offset": 60815,
+        "entropy_bits_per_byte": 4.45166544823,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "frame2_head.block1.norm2.weight",
+        "offset": 60702,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "673160dc5dfb01e6ddac2272bb83bfacd53d78f116237e588113b270d4b8bedc",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.017699115044
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 117,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.035398230088,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 117,
+            "lzma_preset9": 176,
+            "zlib_9": 124
+          }
+        },
+        "element_count": 56,
+        "end_offset": 60928,
+        "entropy_bits_per_byte": 5.673957338763,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "frame2_head.block1.norm2.bias",
+        "offset": 60815,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "3ecff8c58eee529a01b5bc96182e11edbe635d43404476b8005d9a02d926896a",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.008849557522
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -22,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -22,
+          "best_probe": {
+            "bytes": 91,
+            "codec": "zlib_9"
+          },
+          "best_ratio": 0.805309734513,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 117,
+            "lzma_preset9": 152,
+            "zlib_9": 91
+          }
+        },
+        "element_count": 56,
+        "end_offset": 61041,
+        "entropy_bits_per_byte": 4.288089827473,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "frame2_head.block2.conv1.norm.weight",
+        "offset": 60928,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "6ecd381a136f0cb1fac07eff806cff85c3098e198c9f95cfa3d317e242abd4c0",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.017699115044
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 117,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.035398230088,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 117,
+            "lzma_preset9": 176,
+            "zlib_9": 124
+          }
+        },
+        "element_count": 56,
+        "end_offset": 61154,
+        "entropy_bits_per_byte": 5.881638144289,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "frame2_head.block2.conv1.norm.bias",
+        "offset": 61041,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "eed74ab4363f9d783cf147dabb7231fb8fd5167edab97e87171070deea4e981a",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.017699115044
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -16,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -16,
+          "best_probe": {
+            "bytes": 97,
+            "codec": "zlib_9"
+          },
+          "best_ratio": 0.858407079646,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 116,
+            "lzma_preset9": 152,
+            "zlib_9": 97
+          }
+        },
+        "element_count": 56,
+        "end_offset": 61267,
+        "entropy_bits_per_byte": 4.598536521003,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "frame2_head.block2.norm2.weight",
+        "offset": 61154,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "f2726ec42ca6df5e87d5d6197c6e9d4e73b9135028e14711a911a17e12969dca",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.008849557522
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 117,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.035398230088,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 117,
+            "lzma_preset9": 176,
+            "zlib_9": 124
+          }
+        },
+        "element_count": 56,
+        "end_offset": 61380,
+        "entropy_bits_per_byte": 5.906387980414,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "frame2_head.block2.norm2.bias",
+        "offset": 61267,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "611798ba486350c65223a49468ef5ee7f91e62da22d9317c15f27d3baf8c74c3",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.008849557522
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -16,
+        "bytes": 105,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -16,
+          "best_probe": {
+            "bytes": 89,
+            "codec": "zlib_9"
+          },
+          "best_ratio": 0.847619047619,
+          "input_bytes": 105,
+          "probes": {
+            "brotli_q11": 103,
+            "lzma_preset9": 148,
+            "zlib_9": 89
+          }
+        },
+        "element_count": 52,
+        "end_offset": 61485,
+        "entropy_bits_per_byte": 4.307348237479,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "frame2_head.pre.norm.weight",
+        "offset": 61380,
+        "payload_bytes": 104,
+        "rate_score_if_record_removed_formula_only": 6.991519e-05,
+        "sha256": "4f6919895d925400f953311b908fb5cec259a7ec474ec051a46aa1857d3618cd",
+        "tensor_shape": [
+          52
+        ],
+        "zero_fraction": 0.009523809524
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "bytes": 105,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 109,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.038095238095,
+          "input_bytes": 105,
+          "probes": {
+            "brotli_q11": 109,
+            "lzma_preset9": 168,
+            "zlib_9": 116
+          }
+        },
+        "element_count": 52,
+        "end_offset": 61590,
+        "entropy_bits_per_byte": 5.874428284643,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "frame2_head.pre.norm.bias",
+        "offset": 61485,
+        "payload_bytes": 104,
+        "rate_score_if_record_removed_formula_only": 6.991519e-05,
+        "sha256": "8e67804668d859d7d28d9753c144d69513261cf0c45aa0556fb9ed06965f41bd",
+        "tensor_shape": [
+          52
+        ],
+        "zero_fraction": 0.009523809524
+      }
+    ],
+    "top_recompressible_records": [
+      {
+        "best_probe_delta_vs_record_bytes": -731,
+        "bytes": 4609,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -731,
+          "best_probe": {
+            "bytes": 3878,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.841397266218,
+          "input_bytes": 4609,
+          "probes": {
+            "brotli_q11": 3878,
+            "lzma_preset9": 4036,
+            "zlib_9": 4267
+          }
+        },
+        "element_count": 2304,
+        "end_offset": 53439,
+        "entropy_bits_per_byte": 7.178516454762,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "pose_mlp.2.weight",
+        "offset": 48830,
+        "payload_bytes": 4608,
+        "rate_score_if_record_removed_formula_only": 0.003068943915,
+        "sha256": "9624f3afe25158283d16e0bc10f0bb0a37e60254769994f1e362400d39019fec",
+        "tensor_shape": [
+          48,
+          48
+        ],
+        "zero_fraction": 0.002386634845
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -316,
+        "bytes": 577,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -316,
+          "best_probe": {
+            "bytes": 261,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.452339688042,
+          "input_bytes": 577,
+          "probes": {
+            "brotli_q11": 261,
+            "lzma_preset9": 328,
+            "zlib_9": 330
+          }
+        },
+        "element_count": 288,
+        "end_offset": 48733,
+        "entropy_bits_per_byte": 3.010174280625,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "pose_mlp.0.weight",
+        "offset": 48156,
+        "payload_bytes": 576,
+        "rate_score_if_record_removed_formula_only": 0.000384200616,
+        "sha256": "237e925322bbd47c1008564a22f47110f68262708a8e054ec0a1826f48492372",
+        "tensor_shape": [
+          48,
+          6
+        ],
+        "zero_fraction": 0.667244367418
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -132,
+        "block_count": 196,
+        "block_size": 32,
+        "bytes": 3529,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -132,
+          "best_probe": {
+            "bytes": 3397,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.962595636158,
+          "input_bytes": 3529,
+          "probes": {
+            "brotli_q11": 3397,
+            "lzma_preset9": 3524,
+            "zlib_9": 3469
+          }
+        },
+        "element_count": 6272,
+        "end_offset": 19326,
+        "entropy_bits_per_byte": 7.667968450978,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "shared_trunk.fuse.pw.weight",
+        "offset": 15797,
+        "packed_payload_bytes": 3136,
+        "packed_payload_offset": 15798,
+        "rate_score_if_record_removed_formula_only": 0.002349816246,
+        "scale_bytes": 392,
+        "scale_offset": 18934,
+        "sha256": "bb1dc622dd9b420fedd101f9548fd9db1c87e7d42f011cfc565e78f3866bddbf",
+        "tensor_shape": [
+          56,
+          112,
+          1,
+          1
+        ],
+        "zero_fraction": 0.007084159819
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -68,
+        "bytes": 5601,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -68,
+          "best_probe": {
+            "bytes": 5533,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.987859310837,
+          "input_bytes": 5601,
+          "probes": {
+            "brotli_q11": 5533,
+            "lzma_preset9": 5636,
+            "zlib_9": 5549
+          }
+        },
+        "element_count": 5376,
+        "end_offset": 59589,
+        "entropy_bits_per_byte": 7.907126619204,
+        "kind": "int8_row_scale_unsplit",
+        "kind_byte": 2,
+        "name": "frame1_head.block1.film_proj.weight",
+        "offset": 53988,
+        "q_bytes": 5376,
+        "q_offset": 53989,
+        "rate_score_if_record_removed_formula_only": 0.003729475996,
+        "row_count": 112,
+        "scale_bytes": 224,
+        "scale_offset": 59365,
+        "sha256": "7013ea93e4d7fd07cdd7204d83508a34257c577bcbad707054c387b784edf433",
+        "tensor_shape": [
+          112,
+          48
+        ],
+        "zero_fraction": 0.00357079093
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -42,
+        "block_count": 98,
+        "block_size": 32,
+        "bytes": 1765,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -42,
+          "best_probe": {
+            "bytes": 1723,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.976203966006,
+          "input_bytes": 1765,
+          "probes": {
+            "brotli_q11": 1723,
+            "lzma_preset9": 1820,
+            "zlib_9": 1776
+          }
+        },
+        "element_count": 3136,
+        "end_offset": 2538,
+        "entropy_bits_per_byte": 7.609196552411,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "shared_trunk.stem_block.conv1.pw.weight",
+        "offset": 773,
+        "packed_payload_bytes": 1568,
+        "packed_payload_offset": 774,
+        "rate_score_if_record_removed_formula_only": 0.001175241052,
+        "scale_bytes": 196,
+        "scale_offset": 2342,
+        "sha256": "89e82367b2f1c91326e645d2322080c8d81421d8a3c585847f5295a27b162a71",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.00566572238
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -38,
+        "block_count": 128,
+        "block_size": 32,
+        "bytes": 2305,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -38,
+          "best_probe": {
+            "bytes": 2267,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.983514099783,
+          "input_bytes": 2305,
+          "probes": {
+            "brotli_q11": 2267,
+            "lzma_preset9": 2340,
+            "zlib_9": 2298
+          }
+        },
+        "element_count": 4096,
+        "end_offset": 9880,
+        "entropy_bits_per_byte": 7.635365917703,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "shared_trunk.down_block.conv1.pw.weight",
+        "offset": 7575,
+        "packed_payload_bytes": 2048,
+        "packed_payload_offset": 7576,
+        "rate_score_if_record_removed_formula_only": 0.001534804887,
+        "scale_bytes": 256,
+        "scale_offset": 9624,
+        "sha256": "86de59b29e1116af5424ab0d7bf1c63b12f24452a895affd3372b8411d73ffa9",
+        "tensor_shape": [
+          64,
+          64,
+          1,
+          1
+        ],
+        "zero_fraction": 0.004338394794
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -36,
+        "bytes": 129,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -36,
+          "best_probe": {
+            "bytes": 93,
+            "codec": "zlib_9"
+          },
+          "best_ratio": 0.720930232558,
+          "input_bytes": 129,
+          "probes": {
+            "brotli_q11": 118,
+            "lzma_preset9": 156,
+            "zlib_9": 93
+          }
+        },
+        "element_count": 64,
+        "end_offset": 46865,
+        "entropy_bits_per_byte": 4.230761580402,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "shared_trunk.down_block.conv1.norm.weight",
+        "offset": 46736,
+        "payload_bytes": 128,
+        "rate_score_if_record_removed_formula_only": 8.5895805e-05,
+        "sha256": "7bb627836d2ee444350b1ae516d48ff1703e42d476092e66f38a485eb7813dc5",
+        "tensor_shape": [
+          64
+        ],
+        "zero_fraction": 0.007751937984
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -34,
+        "block_count": 98,
+        "block_size": 32,
+        "bytes": 1765,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -34,
+          "best_probe": {
+            "bytes": 1731,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.980736543909,
+          "input_bytes": 1765,
+          "probes": {
+            "brotli_q11": 1731,
+            "lzma_preset9": 1784,
+            "zlib_9": 1764
+          }
+        },
+        "element_count": 3136,
+        "end_offset": 27990,
+        "entropy_bits_per_byte": 7.639981816727,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "frame1_head.block1.conv2.pw.weight",
+        "offset": 26225,
+        "packed_payload_bytes": 1568,
+        "packed_payload_offset": 26226,
+        "rate_score_if_record_removed_formula_only": 0.001175241052,
+        "scale_bytes": 196,
+        "scale_offset": 27794,
+        "sha256": "a3d1cffc63543c01275ce7fcb3dbaaeba53ac150bd0b93b39aa306eb81b29b9e",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.001699716714
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -34,
+        "block_count": 91,
+        "block_size": 32,
+        "bytes": 1639,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -34,
+          "best_probe": {
+            "bytes": 1605,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.979255643685,
+          "input_bytes": 1639,
+          "probes": {
+            "brotli_q11": 1605,
+            "lzma_preset9": 1664,
+            "zlib_9": 1636
+          }
+        },
+        "element_count": 2912,
+        "end_offset": 34362,
+        "entropy_bits_per_byte": 7.574133219346,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "frame1_head.pre.pw.weight",
+        "offset": 32723,
+        "packed_payload_bytes": 1456,
+        "packed_payload_offset": 32724,
+        "rate_score_if_record_removed_formula_only": 0.001091342824,
+        "scale_bytes": 182,
+        "scale_offset": 34180,
+        "sha256": "c44999f97a3f747d9e8cb22a429d669acc4b274102540324407c7254b3dd275f",
+        "tensor_shape": [
+          52,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.0
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -33,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -33,
+          "best_probe": {
+            "bytes": 80,
+            "codec": "zlib_9"
+          },
+          "best_ratio": 0.70796460177,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 100,
+            "lzma_preset9": 140,
+            "zlib_9": 80
+          }
+        },
+        "element_count": 56,
+        "end_offset": 47365,
+        "entropy_bits_per_byte": 4.132545471326,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "shared_trunk.up.1.norm.weight",
+        "offset": 47252,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "8df25ab554e86e5513e6168037d296d1c29200a098a5f47331c682897178d4f0",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.008849557522
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -32,
+        "block_count": 98,
+        "block_size": 32,
+        "bytes": 1765,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -32,
+          "best_probe": {
+            "bytes": 1733,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.981869688385,
+          "input_bytes": 1765,
+          "probes": {
+            "brotli_q11": 1733,
+            "lzma_preset9": 1788,
+            "zlib_9": 1763
+          }
+        },
+        "element_count": 3136,
+        "end_offset": 25824,
+        "entropy_bits_per_byte": 7.611124928683,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "frame1_head.block1.conv1.pw.weight",
+        "offset": 24059,
+        "packed_payload_bytes": 1568,
+        "packed_payload_offset": 24060,
+        "rate_score_if_record_removed_formula_only": 0.001175241052,
+        "scale_bytes": 196,
+        "scale_offset": 25628,
+        "sha256": "e7bb7f5ce840be3217bc135456310ac858f1f6aad07d6975b54564a03065ca6d",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.0
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -32,
+        "block_count": 98,
+        "block_size": 32,
+        "bytes": 1765,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -32,
+          "best_probe": {
+            "bytes": 1733,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.981869688385,
+          "input_bytes": 1765,
+          "probes": {
+            "brotli_q11": 1733,
+            "lzma_preset9": 1792,
+            "zlib_9": 1765
+          }
+        },
+        "element_count": 3136,
+        "end_offset": 32322,
+        "entropy_bits_per_byte": 7.600592596325,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "frame1_head.block2.conv2.pw.weight",
+        "offset": 30557,
+        "packed_payload_bytes": 1568,
+        "packed_payload_offset": 30558,
+        "rate_score_if_record_removed_formula_only": 0.001175241052,
+        "scale_bytes": 196,
+        "scale_offset": 32126,
+        "sha256": "640741a6b2b7c895b9307d0268df4e298def504b150fc7cc33665f35fc957a88",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.000566572238
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -31,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -31,
+          "best_probe": {
+            "bytes": 82,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.725663716814,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 82,
+            "lzma_preset9": 136,
+            "zlib_9": 83
+          }
+        },
+        "element_count": 56,
+        "end_offset": 53875,
+        "entropy_bits_per_byte": 3.740363638317,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "frame1_head.block1.norm2.weight",
+        "offset": 53762,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "031e31248a741ed5410a7d93424822ff3e2f1588a2951798ed9a2b8f26004c8c",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.044247787611
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -31,
+        "bytes": 105,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -31,
+          "best_probe": {
+            "bytes": 74,
+            "codec": "zlib_9"
+          },
+          "best_ratio": 0.704761904762,
+          "input_bytes": 105,
+          "probes": {
+            "brotli_q11": 78,
+            "lzma_preset9": 128,
+            "zlib_9": 74
+          }
+        },
+        "element_count": 52,
+        "end_offset": 60371,
+        "entropy_bits_per_byte": 3.673916553583,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "frame1_head.pre.norm.weight",
+        "offset": 60266,
+        "payload_bytes": 104,
+        "rate_score_if_record_removed_formula_only": 6.991519e-05,
+        "sha256": "e8f2bc047fdaacaad0b914a5fd033939253bf329bc252d3c42c69ea41745f0c5",
+        "tensor_shape": [
+          52
+        ],
+        "zero_fraction": 0.038095238095
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -28,
+        "block_count": 98,
+        "block_size": 32,
+        "bytes": 1765,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -28,
+          "best_probe": {
+            "bytes": 1737,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.984135977337,
+          "input_bytes": 1765,
+          "probes": {
+            "brotli_q11": 1737,
+            "lzma_preset9": 1812,
+            "zlib_9": 1776
+          }
+        },
+        "element_count": 3136,
+        "end_offset": 21492,
+        "entropy_bits_per_byte": 7.624047309239,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "shared_trunk.fuse_block.conv1.pw.weight",
+        "offset": 19727,
+        "packed_payload_bytes": 1568,
+        "packed_payload_offset": 19728,
+        "rate_score_if_record_removed_formula_only": 0.001175241052,
+        "scale_bytes": 196,
+        "scale_offset": 21296,
+        "sha256": "5fea40c46288e3bb1046f9753deda6ae9b9969a3ccd86c80c4d076ec38193a00",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.00566572238
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -27,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -27,
+          "best_probe": {
+            "bytes": 86,
+            "codec": "zlib_9"
+          },
+          "best_ratio": 0.761061946903,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 105,
+            "lzma_preset9": 144,
+            "zlib_9": 86
+          }
+        },
+        "element_count": 56,
+        "end_offset": 47817,
+        "entropy_bits_per_byte": 4.0932975661,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "shared_trunk.fuse_block.conv1.norm.weight",
+        "offset": 47704,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "d4fd6cc7524058d7f3ca1af1ef95b115137238c44c2bfd71080f854919c6696f",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.008849557522
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -25,
+        "block_count": 98,
+        "block_size": 32,
+        "bytes": 1765,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -25,
+          "best_probe": {
+            "bytes": 1740,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.985835694051,
+          "input_bytes": 1765,
+          "probes": {
+            "brotli_q11": 1740,
+            "lzma_preset9": 1804,
+            "zlib_9": 1776
+          }
+        },
+        "element_count": 3136,
+        "end_offset": 39005,
+        "entropy_bits_per_byte": 7.616028707153,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "frame2_head.block1.conv2.pw.weight",
+        "offset": 37240,
+        "packed_payload_bytes": 1568,
+        "packed_payload_offset": 37241,
+        "rate_score_if_record_removed_formula_only": 0.001175241052,
+        "scale_bytes": 196,
+        "scale_offset": 38809,
+        "sha256": "48b33089b7a6d2600b1fe1a67d12bce4fea615ffdbd14a1bb8b91c60051337d3",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.005099150142
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -25,
+        "bytes": 129,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -25,
+          "best_probe": {
+            "bytes": 104,
+            "codec": "zlib_9"
+          },
+          "best_ratio": 0.806201550388,
+          "input_bytes": 129,
+          "probes": {
+            "brotli_q11": 120,
+            "lzma_preset9": 164,
+            "zlib_9": 104
+          }
+        },
+        "element_count": 64,
+        "end_offset": 47123,
+        "entropy_bits_per_byte": 4.475695352038,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "shared_trunk.down_block.norm2.weight",
+        "offset": 46994,
+        "payload_bytes": 128,
+        "rate_score_if_record_removed_formula_only": 8.5895805e-05,
+        "sha256": "5d6714cb142ed91b8f074b6d76b0a014e6f3079647ee358d32ea4ee06d165915",
+        "tensor_shape": [
+          64
+        ],
+        "zero_fraction": 0.007751937984
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -24,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -24,
+          "best_probe": {
+            "bytes": 89,
+            "codec": "zlib_9"
+          },
+          "best_ratio": 0.787610619469,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 117,
+            "lzma_preset9": 148,
+            "zlib_9": 89
+          }
+        },
+        "element_count": 56,
+        "end_offset": 46139,
+        "entropy_bits_per_byte": 4.248115561184,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "shared_trunk.stem_block.conv1.norm.weight",
+        "offset": 46026,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "9152443eaaf69edd64029b1e321e45ca07b913ef518fd8d923cfdcb60e2256f2",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.008849557522
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -24,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -24,
+          "best_probe": {
+            "bytes": 89,
+            "codec": "zlib_9"
+          },
+          "best_ratio": 0.787610619469,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 92,
+            "lzma_preset9": 144,
+            "zlib_9": 89
+          }
+        },
+        "element_count": 56,
+        "end_offset": 59927,
+        "entropy_bits_per_byte": 4.171742267939,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "frame1_head.block2.conv1.norm.weight",
+        "offset": 59814,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "4b528887a24dbc69d0b264b0615925274b633691165406b3d9f50e06021fae03",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.008849557522
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -24,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -24,
+          "best_probe": {
+            "bytes": 89,
+            "codec": "zlib_9"
+          },
+          "best_ratio": 0.787610619469,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 98,
+            "lzma_preset9": 144,
+            "zlib_9": 89
+          }
+        },
+        "element_count": 56,
+        "end_offset": 60153,
+        "entropy_bits_per_byte": 4.136685307203,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "frame1_head.block2.norm2.weight",
+        "offset": 60040,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "b5dee3175966f9586cd556b5451efc381b2d0380464ed35a75561534522cfce1",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.008849557522
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -23,
+        "block_count": 128,
+        "block_size": 32,
+        "bytes": 2305,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -23,
+          "best_probe": {
+            "bytes": 2282,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.990021691974,
+          "input_bytes": 2305,
+          "probes": {
+            "brotli_q11": 2282,
+            "lzma_preset9": 2332,
+            "zlib_9": 2287
+          }
+        },
+        "element_count": 4096,
+        "end_offset": 12638,
+        "entropy_bits_per_byte": 7.630329184558,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "shared_trunk.down_block.conv2.pw.weight",
+        "offset": 10333,
+        "packed_payload_bytes": 2048,
+        "packed_payload_offset": 10334,
+        "rate_score_if_record_removed_formula_only": 0.001534804887,
+        "scale_bytes": 256,
+        "scale_offset": 12382,
+        "sha256": "2c69f16b33cb1cd30f533c214e43d7525cc3e56be993f8267f130b2044251409",
+        "tensor_shape": [
+          64,
+          64,
+          1,
+          1
+        ],
+        "zero_fraction": 0.006507592191
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -22,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -22,
+          "best_probe": {
+            "bytes": 91,
+            "codec": "zlib_9"
+          },
+          "best_ratio": 0.805309734513,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 95,
+            "lzma_preset9": 144,
+            "zlib_9": 91
+          }
+        },
+        "element_count": 56,
+        "end_offset": 53649,
+        "entropy_bits_per_byte": 4.189110383195,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "frame1_head.block1.conv1.norm.weight",
+        "offset": 53536,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "90a4455c6137994a88c62b1524ecc0841ed8b5c99b97a4091509aeef09cdb40c",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.017699115044
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -22,
+        "bytes": 113,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -22,
+          "best_probe": {
+            "bytes": 91,
+            "codec": "zlib_9"
+          },
+          "best_ratio": 0.805309734513,
+          "input_bytes": 113,
+          "probes": {
+            "brotli_q11": 109,
+            "lzma_preset9": 148,
+            "zlib_9": 91
+          }
+        },
+        "element_count": 56,
+        "end_offset": 60589,
+        "entropy_bits_per_byte": 4.355659989752,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "frame2_head.block1.conv1.norm.weight",
+        "offset": 60476,
+        "payload_bytes": 112,
+        "rate_score_if_record_removed_formula_only": 7.5242062e-05,
+        "sha256": "2efaeb226cd7fe836c9be61374b7357563c60a8e8b4f8051fc3506d6b3198fe8",
+        "tensor_shape": [
+          56
+        ],
+        "zero_fraction": 0.008849557522
+      }
+    ],
+    "top_records_by_bytes": [
+      {
+        "best_probe_delta_vs_record_bytes": -68,
+        "bytes": 5601,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -68,
+          "best_probe": {
+            "bytes": 5533,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.987859310837,
+          "input_bytes": 5601,
+          "probes": {
+            "brotli_q11": 5533,
+            "lzma_preset9": 5636,
+            "zlib_9": 5549
+          }
+        },
+        "element_count": 5376,
+        "end_offset": 59589,
+        "entropy_bits_per_byte": 7.907126619204,
+        "kind": "int8_row_scale_unsplit",
+        "kind_byte": 2,
+        "name": "frame1_head.block1.film_proj.weight",
+        "offset": 53988,
+        "q_bytes": 5376,
+        "q_offset": 53989,
+        "rate_score_if_record_removed_formula_only": 0.003729475996,
+        "row_count": 112,
+        "scale_bytes": 224,
+        "scale_offset": 59365,
+        "sha256": "7013ea93e4d7fd07cdd7204d83508a34257c577bcbad707054c387b784edf433",
+        "tensor_shape": [
+          112,
+          48
+        ],
+        "zero_fraction": 0.00357079093
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -731,
+        "bytes": 4609,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -731,
+          "best_probe": {
+            "bytes": 3878,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.841397266218,
+          "input_bytes": 4609,
+          "probes": {
+            "brotli_q11": 3878,
+            "lzma_preset9": 4036,
+            "zlib_9": 4267
+          }
+        },
+        "element_count": 2304,
+        "end_offset": 53439,
+        "entropy_bits_per_byte": 7.178516454762,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "pose_mlp.2.weight",
+        "offset": 48830,
+        "payload_bytes": 4608,
+        "rate_score_if_record_removed_formula_only": 0.003068943915,
+        "sha256": "9624f3afe25158283d16e0bc10f0bb0a37e60254769994f1e362400d39019fec",
+        "tensor_shape": [
+          48,
+          48
+        ],
+        "zero_fraction": 0.002386634845
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -132,
+        "block_count": 196,
+        "block_size": 32,
+        "bytes": 3529,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -132,
+          "best_probe": {
+            "bytes": 3397,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.962595636158,
+          "input_bytes": 3529,
+          "probes": {
+            "brotli_q11": 3397,
+            "lzma_preset9": 3524,
+            "zlib_9": 3469
+          }
+        },
+        "element_count": 6272,
+        "end_offset": 19326,
+        "entropy_bits_per_byte": 7.667968450978,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "shared_trunk.fuse.pw.weight",
+        "offset": 15797,
+        "packed_payload_bytes": 3136,
+        "packed_payload_offset": 15798,
+        "rate_score_if_record_removed_formula_only": 0.002349816246,
+        "scale_bytes": 392,
+        "scale_offset": 18934,
+        "sha256": "bb1dc622dd9b420fedd101f9548fd9db1c87e7d42f011cfc565e78f3866bddbf",
+        "tensor_shape": [
+          56,
+          112,
+          1,
+          1
+        ],
+        "zero_fraction": 0.007084159819
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -38,
+        "block_count": 128,
+        "block_size": 32,
+        "bytes": 2305,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -38,
+          "best_probe": {
+            "bytes": 2267,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.983514099783,
+          "input_bytes": 2305,
+          "probes": {
+            "brotli_q11": 2267,
+            "lzma_preset9": 2340,
+            "zlib_9": 2298
+          }
+        },
+        "element_count": 4096,
+        "end_offset": 9880,
+        "entropy_bits_per_byte": 7.635365917703,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "shared_trunk.down_block.conv1.pw.weight",
+        "offset": 7575,
+        "packed_payload_bytes": 2048,
+        "packed_payload_offset": 7576,
+        "rate_score_if_record_removed_formula_only": 0.001534804887,
+        "scale_bytes": 256,
+        "scale_offset": 9624,
+        "sha256": "86de59b29e1116af5424ab0d7bf1c63b12f24452a895affd3372b8411d73ffa9",
+        "tensor_shape": [
+          64,
+          64,
+          1,
+          1
+        ],
+        "zero_fraction": 0.004338394794
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -23,
+        "block_count": 128,
+        "block_size": 32,
+        "bytes": 2305,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -23,
+          "best_probe": {
+            "bytes": 2282,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.990021691974,
+          "input_bytes": 2305,
+          "probes": {
+            "brotli_q11": 2282,
+            "lzma_preset9": 2332,
+            "zlib_9": 2287
+          }
+        },
+        "element_count": 4096,
+        "end_offset": 12638,
+        "entropy_bits_per_byte": 7.630329184558,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "shared_trunk.down_block.conv2.pw.weight",
+        "offset": 10333,
+        "packed_payload_bytes": 2048,
+        "packed_payload_offset": 10334,
+        "rate_score_if_record_removed_formula_only": 0.001534804887,
+        "scale_bytes": 256,
+        "scale_offset": 12382,
+        "sha256": "2c69f16b33cb1cd30f533c214e43d7525cc3e56be993f8267f130b2044251409",
+        "tensor_shape": [
+          64,
+          64,
+          1,
+          1
+        ],
+        "zero_fraction": 0.006507592191
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -17,
+        "block_count": 112,
+        "block_size": 32,
+        "bytes": 2017,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -17,
+          "best_probe": {
+            "bytes": 2000,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.991571641051,
+          "input_bytes": 2017,
+          "probes": {
+            "brotli_q11": 2000,
+            "lzma_preset9": 2056,
+            "zlib_9": 2009
+          }
+        },
+        "element_count": 3584,
+        "end_offset": 7122,
+        "entropy_bits_per_byte": 7.622421431131,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "shared_trunk.down_conv.pw.weight",
+        "offset": 5105,
+        "packed_payload_bytes": 1792,
+        "packed_payload_offset": 5106,
+        "rate_score_if_record_removed_formula_only": 0.001343037508,
+        "scale_bytes": 224,
+        "scale_offset": 6898,
+        "sha256": "3d7563bf84b29a9f7d1a535b9544077a4b368b350f616e23b8ad45343cb36c6b",
+        "tensor_shape": [
+          64,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.005453644026
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -16,
+        "block_count": 112,
+        "block_size": 32,
+        "bytes": 2017,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -16,
+          "best_probe": {
+            "bytes": 2001,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.992067426872,
+          "input_bytes": 2017,
+          "probes": {
+            "brotli_q11": 2001,
+            "lzma_preset9": 2052,
+            "zlib_9": 2006
+          }
+        },
+        "element_count": 3584,
+        "end_offset": 15108,
+        "entropy_bits_per_byte": 7.609668559844,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "shared_trunk.up.1.pw.weight",
+        "offset": 13091,
+        "packed_payload_bytes": 1792,
+        "packed_payload_offset": 13092,
+        "rate_score_if_record_removed_formula_only": 0.001343037508,
+        "scale_bytes": 224,
+        "scale_offset": 14884,
+        "sha256": "83c3cae8aaa76d600d48e64ef4d106691c540f719464523420b392e773d82f59",
+        "tensor_shape": [
+          56,
+          64,
+          1,
+          1
+        ],
+        "zero_fraction": 0.003470500744
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -42,
+        "block_count": 98,
+        "block_size": 32,
+        "bytes": 1765,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -42,
+          "best_probe": {
+            "bytes": 1723,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.976203966006,
+          "input_bytes": 1765,
+          "probes": {
+            "brotli_q11": 1723,
+            "lzma_preset9": 1820,
+            "zlib_9": 1776
+          }
+        },
+        "element_count": 3136,
+        "end_offset": 2538,
+        "entropy_bits_per_byte": 7.609196552411,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "shared_trunk.stem_block.conv1.pw.weight",
+        "offset": 773,
+        "packed_payload_bytes": 1568,
+        "packed_payload_offset": 774,
+        "rate_score_if_record_removed_formula_only": 0.001175241052,
+        "scale_bytes": 196,
+        "scale_offset": 2342,
+        "sha256": "89e82367b2f1c91326e645d2322080c8d81421d8a3c585847f5295a27b162a71",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.00566572238
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -15,
+        "block_count": 98,
+        "block_size": 32,
+        "bytes": 1765,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -15,
+          "best_probe": {
+            "bytes": 1750,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.991501416431,
+          "input_bytes": 1765,
+          "probes": {
+            "brotli_q11": 1750,
+            "lzma_preset9": 1800,
+            "zlib_9": 1776
+          }
+        },
+        "element_count": 3136,
+        "end_offset": 4704,
+        "entropy_bits_per_byte": 7.615954266116,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "shared_trunk.stem_block.conv2.pw.weight",
+        "offset": 2939,
+        "packed_payload_bytes": 1568,
+        "packed_payload_offset": 2940,
+        "rate_score_if_record_removed_formula_only": 0.001175241052,
+        "scale_bytes": 196,
+        "scale_offset": 4508,
+        "sha256": "9985abab1a4a97a1a31b56cff6556c774dd7a967ca4439938d63dbe1806f0755",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.005099150142
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -28,
+        "block_count": 98,
+        "block_size": 32,
+        "bytes": 1765,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -28,
+          "best_probe": {
+            "bytes": 1737,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.984135977337,
+          "input_bytes": 1765,
+          "probes": {
+            "brotli_q11": 1737,
+            "lzma_preset9": 1812,
+            "zlib_9": 1776
+          }
+        },
+        "element_count": 3136,
+        "end_offset": 21492,
+        "entropy_bits_per_byte": 7.624047309239,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "shared_trunk.fuse_block.conv1.pw.weight",
+        "offset": 19727,
+        "packed_payload_bytes": 1568,
+        "packed_payload_offset": 19728,
+        "rate_score_if_record_removed_formula_only": 0.001175241052,
+        "scale_bytes": 196,
+        "scale_offset": 21296,
+        "sha256": "5fea40c46288e3bb1046f9753deda6ae9b9969a3ccd86c80c4d076ec38193a00",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.00566572238
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 0,
+        "block_count": 98,
+        "block_size": 32,
+        "bytes": 1765,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 0,
+          "best_probe": {
+            "bytes": 1765,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.0,
+          "input_bytes": 1765,
+          "probes": {
+            "brotli_q11": 1765,
+            "lzma_preset9": 1808,
+            "zlib_9": 1776
+          }
+        },
+        "element_count": 3136,
+        "end_offset": 23658,
+        "entropy_bits_per_byte": 7.613910809804,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "shared_trunk.fuse_block.conv2.pw.weight",
+        "offset": 21893,
+        "packed_payload_bytes": 1568,
+        "packed_payload_offset": 21894,
+        "rate_score_if_record_removed_formula_only": 0.001175241052,
+        "scale_bytes": 196,
+        "scale_offset": 23462,
+        "sha256": "eeda51362a2e1064b19f2d708ad93332af2f2b0c99f741f3878eef20eabcba4c",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.009631728045
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -32,
+        "block_count": 98,
+        "block_size": 32,
+        "bytes": 1765,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -32,
+          "best_probe": {
+            "bytes": 1733,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.981869688385,
+          "input_bytes": 1765,
+          "probes": {
+            "brotli_q11": 1733,
+            "lzma_preset9": 1788,
+            "zlib_9": 1763
+          }
+        },
+        "element_count": 3136,
+        "end_offset": 25824,
+        "entropy_bits_per_byte": 7.611124928683,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "frame1_head.block1.conv1.pw.weight",
+        "offset": 24059,
+        "packed_payload_bytes": 1568,
+        "packed_payload_offset": 24060,
+        "rate_score_if_record_removed_formula_only": 0.001175241052,
+        "scale_bytes": 196,
+        "scale_offset": 25628,
+        "sha256": "e7bb7f5ce840be3217bc135456310ac858f1f6aad07d6975b54564a03065ca6d",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.0
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -34,
+        "block_count": 98,
+        "block_size": 32,
+        "bytes": 1765,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -34,
+          "best_probe": {
+            "bytes": 1731,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.980736543909,
+          "input_bytes": 1765,
+          "probes": {
+            "brotli_q11": 1731,
+            "lzma_preset9": 1784,
+            "zlib_9": 1764
+          }
+        },
+        "element_count": 3136,
+        "end_offset": 27990,
+        "entropy_bits_per_byte": 7.639981816727,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "frame1_head.block1.conv2.pw.weight",
+        "offset": 26225,
+        "packed_payload_bytes": 1568,
+        "packed_payload_offset": 26226,
+        "rate_score_if_record_removed_formula_only": 0.001175241052,
+        "scale_bytes": 196,
+        "scale_offset": 27794,
+        "sha256": "a3d1cffc63543c01275ce7fcb3dbaaeba53ac150bd0b93b39aa306eb81b29b9e",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.001699716714
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -19,
+        "block_count": 98,
+        "block_size": 32,
+        "bytes": 1765,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -19,
+          "best_probe": {
+            "bytes": 1746,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.989235127479,
+          "input_bytes": 1765,
+          "probes": {
+            "brotli_q11": 1746,
+            "lzma_preset9": 1796,
+            "zlib_9": 1772
+          }
+        },
+        "element_count": 3136,
+        "end_offset": 30156,
+        "entropy_bits_per_byte": 7.631252462153,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "frame1_head.block2.conv1.pw.weight",
+        "offset": 28391,
+        "packed_payload_bytes": 1568,
+        "packed_payload_offset": 28392,
+        "rate_score_if_record_removed_formula_only": 0.001175241052,
+        "scale_bytes": 196,
+        "scale_offset": 29960,
+        "sha256": "9219f3ce1069a4e66b0d57bbc537d017682f2eed6ca1fb7939d198880518f854",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.001699716714
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -32,
+        "block_count": 98,
+        "block_size": 32,
+        "bytes": 1765,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -32,
+          "best_probe": {
+            "bytes": 1733,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.981869688385,
+          "input_bytes": 1765,
+          "probes": {
+            "brotli_q11": 1733,
+            "lzma_preset9": 1792,
+            "zlib_9": 1765
+          }
+        },
+        "element_count": 3136,
+        "end_offset": 32322,
+        "entropy_bits_per_byte": 7.600592596325,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "frame1_head.block2.conv2.pw.weight",
+        "offset": 30557,
+        "packed_payload_bytes": 1568,
+        "packed_payload_offset": 30558,
+        "rate_score_if_record_removed_formula_only": 0.001175241052,
+        "scale_bytes": 196,
+        "scale_offset": 32126,
+        "sha256": "640741a6b2b7c895b9307d0268df4e298def504b150fc7cc33665f35fc957a88",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.000566572238
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -1,
+        "block_count": 98,
+        "block_size": 32,
+        "bytes": 1765,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -1,
+          "best_probe": {
+            "bytes": 1764,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.999433427762,
+          "input_bytes": 1765,
+          "probes": {
+            "brotli_q11": 1764,
+            "lzma_preset9": 1816,
+            "zlib_9": 1769
+          }
+        },
+        "element_count": 3136,
+        "end_offset": 36839,
+        "entropy_bits_per_byte": 7.60523615313,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "frame2_head.block1.conv1.pw.weight",
+        "offset": 35074,
+        "packed_payload_bytes": 1568,
+        "packed_payload_offset": 35075,
+        "rate_score_if_record_removed_formula_only": 0.001175241052,
+        "scale_bytes": 196,
+        "scale_offset": 36643,
+        "sha256": "3d5faea4170bb3b5fe279ca3672c8a42ef19417e07c1fd3d581be5073dde14ec",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.003966005666
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -25,
+        "block_count": 98,
+        "block_size": 32,
+        "bytes": 1765,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -25,
+          "best_probe": {
+            "bytes": 1740,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.985835694051,
+          "input_bytes": 1765,
+          "probes": {
+            "brotli_q11": 1740,
+            "lzma_preset9": 1804,
+            "zlib_9": 1776
+          }
+        },
+        "element_count": 3136,
+        "end_offset": 39005,
+        "entropy_bits_per_byte": 7.616028707153,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "frame2_head.block1.conv2.pw.weight",
+        "offset": 37240,
+        "packed_payload_bytes": 1568,
+        "packed_payload_offset": 37241,
+        "rate_score_if_record_removed_formula_only": 0.001175241052,
+        "scale_bytes": 196,
+        "scale_offset": 38809,
+        "sha256": "48b33089b7a6d2600b1fe1a67d12bce4fea615ffdbd14a1bb8b91c60051337d3",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.005099150142
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 0,
+        "block_count": 98,
+        "block_size": 32,
+        "bytes": 1765,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 0,
+          "best_probe": {
+            "bytes": 1765,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.0,
+          "input_bytes": 1765,
+          "probes": {
+            "brotli_q11": 1765,
+            "lzma_preset9": 1816,
+            "zlib_9": 1771
+          }
+        },
+        "element_count": 3136,
+        "end_offset": 41171,
+        "entropy_bits_per_byte": 7.588477770098,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "frame2_head.block2.conv1.pw.weight",
+        "offset": 39406,
+        "packed_payload_bytes": 1568,
+        "packed_payload_offset": 39407,
+        "rate_score_if_record_removed_formula_only": 0.001175241052,
+        "scale_bytes": 196,
+        "scale_offset": 40975,
+        "sha256": "ce8b306aa9461dad5c29871c66d6438cd4fcb7bfbc2e22befc7208cb3674ca4e",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.011331444759
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -17,
+        "block_count": 98,
+        "block_size": 32,
+        "bytes": 1765,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -17,
+          "best_probe": {
+            "bytes": 1748,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.990368271955,
+          "input_bytes": 1765,
+          "probes": {
+            "brotli_q11": 1748,
+            "lzma_preset9": 1812,
+            "zlib_9": 1771
+          }
+        },
+        "element_count": 3136,
+        "end_offset": 43337,
+        "entropy_bits_per_byte": 7.608551175724,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "frame2_head.block2.conv2.pw.weight",
+        "offset": 41572,
+        "packed_payload_bytes": 1568,
+        "packed_payload_offset": 41573,
+        "rate_score_if_record_removed_formula_only": 0.001175241052,
+        "scale_bytes": 196,
+        "scale_offset": 43141,
+        "sha256": "b66bd3e59289d061cdce3c04627630d9bd6b5d7a4b924e557db2bad8f02fff1f",
+        "tensor_shape": [
+          56,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.006798866856
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -34,
+        "block_count": 91,
+        "block_size": 32,
+        "bytes": 1639,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -34,
+          "best_probe": {
+            "bytes": 1605,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.979255643685,
+          "input_bytes": 1639,
+          "probes": {
+            "brotli_q11": 1605,
+            "lzma_preset9": 1664,
+            "zlib_9": 1636
+          }
+        },
+        "element_count": 2912,
+        "end_offset": 34362,
+        "entropy_bits_per_byte": 7.574133219346,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "frame1_head.pre.pw.weight",
+        "offset": 32723,
+        "packed_payload_bytes": 1456,
+        "packed_payload_offset": 32724,
+        "rate_score_if_record_removed_formula_only": 0.001091342824,
+        "scale_bytes": 182,
+        "scale_offset": 34180,
+        "sha256": "c44999f97a3f747d9e8cb22a429d669acc4b274102540324407c7254b3dd275f",
+        "tensor_shape": [
+          52,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.0
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -3,
+        "block_count": 91,
+        "block_size": 32,
+        "bytes": 1639,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -3,
+          "best_probe": {
+            "bytes": 1636,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.998169615619,
+          "input_bytes": 1639,
+          "probes": {
+            "brotli_q11": 1636,
+            "lzma_preset9": 1692,
+            "zlib_9": 1650
+          }
+        },
+        "element_count": 2912,
+        "end_offset": 45377,
+        "entropy_bits_per_byte": 7.609877089806,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "frame2_head.pre.pw.weight",
+        "offset": 43738,
+        "packed_payload_bytes": 1456,
+        "packed_payload_offset": 43739,
+        "rate_score_if_record_removed_formula_only": 0.001091342824,
+        "scale_bytes": 182,
+        "scale_offset": 45195,
+        "sha256": "159d86ffcc1988716f2420cd2a0bcb3e7804c360e9d56b6c712ba71e1a1df34b",
+        "tensor_shape": [
+          52,
+          56,
+          1,
+          1
+        ],
+        "zero_fraction": 0.006101281269
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "block_count": 32,
+        "block_size": 32,
+        "bytes": 577,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 581,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.006932409012,
+          "input_bytes": 577,
+          "probes": {
+            "brotli_q11": 581,
+            "lzma_preset9": 640,
+            "zlib_9": 588
+          }
+        },
+        "element_count": 1008,
+        "end_offset": 15797,
+        "entropy_bits_per_byte": 7.346860247977,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "shared_trunk.fuse.dw.weight",
+        "offset": 15220,
+        "packed_payload_bytes": 512,
+        "packed_payload_offset": 15221,
+        "rate_score_if_record_removed_formula_only": 0.000384200616,
+        "scale_bytes": 64,
+        "scale_offset": 15733,
+        "sha256": "0f39d5459c63b26d7a3bc637b860cf05a39f50b0a5643f09160cd4f29776b9bc",
+        "tensor_shape": [
+          112,
+          1,
+          3,
+          3
+        ],
+        "zero_fraction": 0.019064124783
+      },
+      {
+        "best_probe_delta_vs_record_bytes": -316,
+        "bytes": 577,
+        "category": "dense_tensor",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": -316,
+          "best_probe": {
+            "bytes": 261,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 0.452339688042,
+          "input_bytes": 577,
+          "probes": {
+            "brotli_q11": 261,
+            "lzma_preset9": 328,
+            "zlib_9": 330
+          }
+        },
+        "element_count": 288,
+        "end_offset": 48733,
+        "entropy_bits_per_byte": 3.010174280625,
+        "kind": "fp16_unsplit",
+        "kind_byte": 0,
+        "name": "pose_mlp.0.weight",
+        "offset": 48156,
+        "payload_bytes": 576,
+        "rate_score_if_record_removed_formula_only": 0.000384200616,
+        "sha256": "237e925322bbd47c1008564a22f47110f68262708a8e054ec0a1826f48492372",
+        "tensor_shape": [
+          48,
+          6
+        ],
+        "zero_fraction": 0.667244367418
+      },
+      {
+        "best_probe_delta_vs_record_bytes": 4,
+        "block_count": 18,
+        "block_size": 32,
+        "bytes": 325,
+        "category": "module_weight",
+        "compression_probe": {
+          "available": true,
+          "best_delta_vs_input": 4,
+          "best_probe": {
+            "bytes": 329,
+            "codec": "brotli_q11"
+          },
+          "best_ratio": 1.012307692308,
+          "input_bytes": 325,
+          "probes": {
+            "brotli_q11": 329,
+            "lzma_preset9": 388,
+            "zlib_9": 336
+          }
+        },
+        "element_count": 576,
+        "end_offset": 7575,
+        "entropy_bits_per_byte": 7.040385541105,
+        "kind": "fp4_hilo",
+        "kind_byte": 1,
+        "name": "shared_trunk.down_block.conv1.dw.weight",
+        "offset": 7250,
+        "packed_payload_bytes": 288,
+        "packed_payload_offset": 7251,
+        "rate_score_if_record_removed_formula_only": 0.00021640416,
+        "scale_bytes": 36,
+        "scale_offset": 7539,
+        "sha256": "476e4c3370fbdd091f83455a41b71be19fab35f6c38a78411d2743974fdcb608",
+        "tensor_shape": [
+          64,
+          1,
+          3,
+          3
+        ],
+        "zero_fraction": 0.003076923077
+      }
+    ]
+  },
+  "archive": {
+    "archive_bytes": 236328,
+    "archive_path": "experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+    "archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+    "member_bytes": 236228,
+    "member_name": "x",
+    "member_sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+    "zip_stored": true
+  },
+  "dispatch_performed": false,
+  "evidence_grade": "planning_only_qh0_record_anatomy",
+  "planning_only": true,
+  "recommendations": [
+    {
+      "action": "build_qh0_record_serializer_before_any_model_byte_dispatch",
+      "basis": "outer Brotli is already tight; only record-level rewrites can target model bytes without arbitrary byte surgery",
+      "planning_only": true,
+      "required_gates": [
+        "decode_qh0_state_dict tensor parity",
+        "deterministic encode_qh0_state_dict byte closure",
+        "runtime output parity on PR85 archive",
+        "dispatch claim before exact CUDA eval"
+      ],
+      "score_claim": false
+    },
+    {
+      "action": "prioritize_top_recompressible_records_only_after_serializer_exists",
+      "basis": "record-local generic compression is a search map, not a directly composable archive format",
+      "planning_only": true,
+      "score_claim": false,
+      "summed_top_recompressible_probe_bytes": 1834,
+      "top_recompressible_record_count": 24
+    }
+  ],
+  "renderer_member": {
+    "bytes": 61590,
+    "codec": "QH0_decoded_renderer",
+    "sha256": "503d666ec4c1b3e0ce09fa9dcb963b049de185eac0ddd82318578a7732439ed4",
+    "source_encoded_bytes": 57074,
+    "source_encoded_sha256": "c9194c19d44d3c32c4e588bbe4f9986ed0c562779078f0f4d6b073f0799b5dbc"
+  },
+  "schema": "pr85_qh0_record_anatomy_profile_v1",
+  "score_claim": false,
+  "score_rate_formula": {
+    "formula_only": true,
+    "rate_score_per_byte": 6.658589531221714e-07,
+    "renderer_encoded_rate_score": 0.03800323389,
+    "score_claim_from_this_profile": false
+  },
+  "tool": "experiments/profile_pr85_qh0_record_anatomy.py"
+}

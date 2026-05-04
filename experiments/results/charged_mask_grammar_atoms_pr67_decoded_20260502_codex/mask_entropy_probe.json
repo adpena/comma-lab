@@ -1,0 +1,85 @@
+{
+  "evidence_grade": "local_entropy_probe_only",
+  "public_pr67_mask_stream_bytes": 219472,
+  "records": [
+    {
+      "bytes": 117964800,
+      "name": "raw_uint8",
+      "seconds": 1.6689300537109375e-06
+    },
+    {
+      "bytes": 44236800,
+      "name": "packed_3bit",
+      "seconds": 9.5367431640625e-07
+    },
+    {
+      "bytes": 581384,
+      "name": "raw_uint8_zlib9",
+      "seconds": 1.3370728492736816
+    },
+    {
+      "bytes": 515792,
+      "name": "raw_uint8_lzma9",
+      "seconds": 1.697396993637085
+    },
+    {
+      "bytes": 340315,
+      "name": "raw_uint8_bz2_9",
+      "seconds": 0.6717309951782227
+    },
+    {
+      "bytes": 418867,
+      "name": "raw_uint8_brotli11",
+      "seconds": 34.82130002975464
+    },
+    {
+      "bytes": 667518,
+      "name": "packed_3bit_zlib9",
+      "seconds": 0.7822988033294678
+    },
+    {
+      "bytes": 508368,
+      "name": "packed_3bit_lzma9",
+      "seconds": 1.2815639972686768
+    },
+    {
+      "bytes": 427325,
+      "name": "packed_3bit_bz2_9",
+      "seconds": 2.7663440704345703
+    },
+    {
+      "bytes": 422543,
+      "name": "packed_3bit_brotli11",
+      "seconds": 16.177228927612305
+    },
+    {
+      "bytes": 1406567,
+      "name": "row_rle_class_varint",
+      "seconds": null
+    },
+    {
+      "bytes": 519456,
+      "name": "row_rle_zlib9",
+      "seconds": 0.05301403999328613
+    },
+    {
+      "bytes": 385896,
+      "name": "row_rle_lzma9",
+      "seconds": 0.12601304054260254
+    },
+    {
+      "bytes": 422441,
+      "name": "row_rle_brotli11",
+      "seconds": 1.386497974395752
+    }
+  ],
+  "schema_version": 1,
+  "score_claim": false,
+  "source_array": "/tmp/pact_cmg/pr67_decoded_mask_array_20260502T0632Z.npy",
+  "source_sha256": "13f81851ae206f6142cd3348db5537eda4ea832665052824816f4d1bf432de0c",
+  "source_shape": [
+    600,
+    384,
+    512
+  ]
+}

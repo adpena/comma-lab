@@ -1,0 +1,1486 @@
+{
+  "actions": {
+    "c089_staged_top25_ampminus1_p3": {
+      "action_max": 102,
+      "action_min": 0,
+      "first_records": [
+        {
+          "action": 84,
+          "pair": 46,
+          "tile": 108
+        },
+        {
+          "action": 100,
+          "pair": 67,
+          "tile": 88
+        },
+        {
+          "action": 5,
+          "pair": 89,
+          "tile": 84
+        },
+        {
+          "action": 15,
+          "pair": 104,
+          "tile": 83
+        },
+        {
+          "action": 92,
+          "pair": 105,
+          "tile": 99
+        },
+        {
+          "action": 42,
+          "pair": 119,
+          "tile": 86
+        },
+        {
+          "action": 88,
+          "pair": 137,
+          "tile": 88
+        },
+        {
+          "action": 7,
+          "pair": 141,
+          "tile": 86
+        },
+        {
+          "action": 102,
+          "pair": 151,
+          "tile": 112
+        },
+        {
+          "action": 19,
+          "pair": 156,
+          "tile": 86
+        },
+        {
+          "action": 4,
+          "pair": 166,
+          "tile": 86
+        },
+        {
+          "action": 0,
+          "pair": 167,
+          "tile": 86
+        }
+      ],
+      "last_records": [
+        {
+          "action": 99,
+          "pair": 178,
+          "tile": 95
+        },
+        {
+          "action": 13,
+          "pair": 196,
+          "tile": 113
+        },
+        {
+          "action": 31,
+          "pair": 198,
+          "tile": 107
+        },
+        {
+          "action": 8,
+          "pair": 211,
+          "tile": 110
+        },
+        {
+          "action": 69,
+          "pair": 212,
+          "tile": 111
+        },
+        {
+          "action": 9,
+          "pair": 347,
+          "tile": 98
+        },
+        {
+          "action": 80,
+          "pair": 449,
+          "tile": 92
+        },
+        {
+          "action": 65,
+          "pair": 459,
+          "tile": 87
+        },
+        {
+          "action": 49,
+          "pair": 517,
+          "tile": 113
+        },
+        {
+          "action": 42,
+          "pair": 519,
+          "tile": 89
+        },
+        {
+          "action": 16,
+          "pair": 531,
+          "tile": 88
+        },
+        {
+          "action": 84,
+          "pair": 551,
+          "tile": 88
+        }
+      ],
+      "pair_max": 551,
+      "pair_min": 46,
+      "record_count": 25,
+      "records_sha256": "596e47cc6a089e6b43ee1f8df7577489ab427302f73ae170db879db09ca5759a",
+      "tile_max": 113,
+      "tile_min": 83,
+      "top_actions": [
+        {
+          "count": 2,
+          "value": 84
+        },
+        {
+          "count": 2,
+          "value": 42
+        },
+        {
+          "count": 1,
+          "value": 100
+        },
+        {
+          "count": 1,
+          "value": 5
+        },
+        {
+          "count": 1,
+          "value": 15
+        },
+        {
+          "count": 1,
+          "value": 92
+        },
+        {
+          "count": 1,
+          "value": 88
+        },
+        {
+          "count": 1,
+          "value": 7
+        },
+        {
+          "count": 1,
+          "value": 102
+        },
+        {
+          "count": 1,
+          "value": 19
+        },
+        {
+          "count": 1,
+          "value": 4
+        },
+        {
+          "count": 1,
+          "value": 0
+        }
+      ],
+      "top_pairs": [
+        {
+          "count": 1,
+          "value": 46
+        },
+        {
+          "count": 1,
+          "value": 67
+        },
+        {
+          "count": 1,
+          "value": 89
+        },
+        {
+          "count": 1,
+          "value": 104
+        },
+        {
+          "count": 1,
+          "value": 105
+        },
+        {
+          "count": 1,
+          "value": 119
+        },
+        {
+          "count": 1,
+          "value": 137
+        },
+        {
+          "count": 1,
+          "value": 141
+        },
+        {
+          "count": 1,
+          "value": 151
+        },
+        {
+          "count": 1,
+          "value": 156
+        },
+        {
+          "count": 1,
+          "value": 166
+        },
+        {
+          "count": 1,
+          "value": 167
+        }
+      ],
+      "top_tiles": [
+        {
+          "count": 6,
+          "value": 86
+        },
+        {
+          "count": 4,
+          "value": 88
+        },
+        {
+          "count": 2,
+          "value": 113
+        },
+        {
+          "count": 1,
+          "value": 108
+        },
+        {
+          "count": 1,
+          "value": 84
+        },
+        {
+          "count": 1,
+          "value": 83
+        },
+        {
+          "count": 1,
+          "value": 99
+        },
+        {
+          "count": 1,
+          "value": 112
+        },
+        {
+          "count": 1,
+          "value": 95
+        },
+        {
+          "count": 1,
+          "value": 107
+        },
+        {
+          "count": 1,
+          "value": 110
+        },
+        {
+          "count": 1,
+          "value": 111
+        }
+      ],
+      "unique_actions": 23,
+      "unique_pairs": 25,
+      "unique_tiles": 16
+    },
+    "pr75_minp": {
+      "action_max": 107,
+      "action_min": 2,
+      "first_records": [
+        {
+          "action": 17,
+          "pair": 104,
+          "tile": 83
+        },
+        {
+          "action": 64,
+          "pair": 106,
+          "tile": 83
+        },
+        {
+          "action": 7,
+          "pair": 89,
+          "tile": 84
+        },
+        {
+          "action": 58,
+          "pair": 540,
+          "tile": 84
+        },
+        {
+          "action": 75,
+          "pair": 112,
+          "tile": 85
+        },
+        {
+          "action": 56,
+          "pair": 566,
+          "tile": 85
+        },
+        {
+          "action": 40,
+          "pair": 73,
+          "tile": 86
+        },
+        {
+          "action": 92,
+          "pair": 109,
+          "tile": 86
+        },
+        {
+          "action": 94,
+          "pair": 115,
+          "tile": 86
+        },
+        {
+          "action": 44,
+          "pair": 119,
+          "tile": 86
+        },
+        {
+          "action": 6,
+          "pair": 124,
+          "tile": 86
+        },
+        {
+          "action": 38,
+          "pair": 126,
+          "tile": 86
+        }
+      ],
+      "last_records": [
+        {
+          "action": 92,
+          "pair": 33,
+          "tile": 109
+        },
+        {
+          "action": 93,
+          "pair": 36,
+          "tile": 109
+        },
+        {
+          "action": 23,
+          "pair": 227,
+          "tile": 109
+        },
+        {
+          "action": 56,
+          "pair": 71,
+          "tile": 110
+        },
+        {
+          "action": 10,
+          "pair": 211,
+          "tile": 110
+        },
+        {
+          "action": 95,
+          "pair": 218,
+          "tile": 110
+        },
+        {
+          "action": 71,
+          "pair": 212,
+          "tile": 111
+        },
+        {
+          "action": 57,
+          "pair": 234,
+          "tile": 111
+        },
+        {
+          "action": 104,
+          "pair": 151,
+          "tile": 112
+        },
+        {
+          "action": 15,
+          "pair": 196,
+          "tile": 113
+        },
+        {
+          "action": 51,
+          "pair": 517,
+          "tile": 113
+        },
+        {
+          "action": 29,
+          "pair": 522,
+          "tile": 140
+        }
+      ],
+      "pair_max": 598,
+      "pair_min": 33,
+      "record_count": 108,
+      "records_sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a",
+      "tile_max": 140,
+      "tile_min": 83,
+      "top_actions": [
+        {
+          "count": 4,
+          "value": 92
+        },
+        {
+          "count": 4,
+          "value": 94
+        },
+        {
+          "count": 4,
+          "value": 90
+        },
+        {
+          "count": 4,
+          "value": 47
+        },
+        {
+          "count": 4,
+          "value": 91
+        },
+        {
+          "count": 4,
+          "value": 93
+        },
+        {
+          "count": 3,
+          "value": 56
+        },
+        {
+          "count": 3,
+          "value": 38
+        },
+        {
+          "count": 3,
+          "value": 15
+        },
+        {
+          "count": 3,
+          "value": 22
+        },
+        {
+          "count": 3,
+          "value": 18
+        },
+        {
+          "count": 2,
+          "value": 17
+        }
+      ],
+      "top_pairs": [
+        {
+          "count": 2,
+          "value": 597
+        },
+        {
+          "count": 2,
+          "value": 519
+        },
+        {
+          "count": 1,
+          "value": 104
+        },
+        {
+          "count": 1,
+          "value": 106
+        },
+        {
+          "count": 1,
+          "value": 89
+        },
+        {
+          "count": 1,
+          "value": 540
+        },
+        {
+          "count": 1,
+          "value": 112
+        },
+        {
+          "count": 1,
+          "value": 566
+        },
+        {
+          "count": 1,
+          "value": 73
+        },
+        {
+          "count": 1,
+          "value": 109
+        },
+        {
+          "count": 1,
+          "value": 115
+        },
+        {
+          "count": 1,
+          "value": 119
+        }
+      ],
+      "top_tiles": [
+        {
+          "count": 30,
+          "value": 88
+        },
+        {
+          "count": 29,
+          "value": 86
+        },
+        {
+          "count": 11,
+          "value": 89
+        },
+        {
+          "count": 8,
+          "value": 87
+        },
+        {
+          "count": 3,
+          "value": 99
+        },
+        {
+          "count": 3,
+          "value": 109
+        },
+        {
+          "count": 3,
+          "value": 110
+        },
+        {
+          "count": 2,
+          "value": 83
+        },
+        {
+          "count": 2,
+          "value": 84
+        },
+        {
+          "count": 2,
+          "value": 85
+        },
+        {
+          "count": 2,
+          "value": 98
+        },
+        {
+          "count": 2,
+          "value": 108
+        }
+      ],
+      "unique_actions": 60,
+      "unique_pairs": 106,
+      "unique_tiles": 21
+    },
+    "pr77": {
+      "action_max": 107,
+      "action_min": 2,
+      "first_records": [
+        {
+          "action": 58,
+          "pair": 546,
+          "tile": 82
+        },
+        {
+          "action": 17,
+          "pair": 104,
+          "tile": 83
+        },
+        {
+          "action": 50,
+          "pair": 106,
+          "tile": 83
+        },
+        {
+          "action": 16,
+          "pair": 598,
+          "tile": 83
+        },
+        {
+          "action": 58,
+          "pair": 540,
+          "tile": 84
+        },
+        {
+          "action": 99,
+          "pair": 542,
+          "tile": 84
+        },
+        {
+          "action": 75,
+          "pair": 112,
+          "tile": 85
+        },
+        {
+          "action": 56,
+          "pair": 566,
+          "tile": 85
+        },
+        {
+          "action": 92,
+          "pair": 109,
+          "tile": 86
+        },
+        {
+          "action": 94,
+          "pair": 115,
+          "tile": 86
+        },
+        {
+          "action": 52,
+          "pair": 116,
+          "tile": 86
+        },
+        {
+          "action": 44,
+          "pair": 119,
+          "tile": 86
+        }
+      ],
+      "last_records": [
+        {
+          "action": 10,
+          "pair": 597,
+          "tile": 99
+        },
+        {
+          "action": 44,
+          "pair": 578,
+          "tile": 105
+        },
+        {
+          "action": 6,
+          "pair": 34,
+          "tile": 109
+        },
+        {
+          "action": 35,
+          "pair": 510,
+          "tile": 109
+        },
+        {
+          "action": 10,
+          "pair": 211,
+          "tile": 110
+        },
+        {
+          "action": 74,
+          "pair": 210,
+          "tile": 111
+        },
+        {
+          "action": 51,
+          "pair": 517,
+          "tile": 113
+        },
+        {
+          "action": 94,
+          "pair": 76,
+          "tile": 119
+        },
+        {
+          "action": 88,
+          "pair": 523,
+          "tile": 131
+        },
+        {
+          "action": 58,
+          "pair": 368,
+          "tile": 132
+        },
+        {
+          "action": 92,
+          "pair": 522,
+          "tile": 139
+        },
+        {
+          "action": 80,
+          "pair": 522,
+          "tile": 140
+        }
+      ],
+      "pair_max": 599,
+      "pair_min": 11,
+      "record_count": 147,
+      "records_sha256": "8ac9a01caad973096c58b42daf2b1a8e476ad68cf285d443baa4ac94fdb42255",
+      "tile_max": 140,
+      "tile_min": 82,
+      "top_actions": [
+        {
+          "count": 5,
+          "value": 92
+        },
+        {
+          "count": 4,
+          "value": 58
+        },
+        {
+          "count": 4,
+          "value": 94
+        },
+        {
+          "count": 4,
+          "value": 44
+        },
+        {
+          "count": 4,
+          "value": 88
+        },
+        {
+          "count": 4,
+          "value": 47
+        },
+        {
+          "count": 3,
+          "value": 17
+        },
+        {
+          "count": 3,
+          "value": 16
+        },
+        {
+          "count": 3,
+          "value": 99
+        },
+        {
+          "count": 3,
+          "value": 75
+        },
+        {
+          "count": 3,
+          "value": 6
+        },
+        {
+          "count": 3,
+          "value": 23
+        }
+      ],
+      "top_pairs": [
+        {
+          "count": 4,
+          "value": 542
+        },
+        {
+          "count": 3,
+          "value": 578
+        },
+        {
+          "count": 3,
+          "value": 514
+        },
+        {
+          "count": 3,
+          "value": 522
+        },
+        {
+          "count": 3,
+          "value": 510
+        },
+        {
+          "count": 2,
+          "value": 546
+        },
+        {
+          "count": 2,
+          "value": 598
+        },
+        {
+          "count": 2,
+          "value": 540
+        },
+        {
+          "count": 2,
+          "value": 577
+        },
+        {
+          "count": 2,
+          "value": 585
+        },
+        {
+          "count": 2,
+          "value": 592
+        },
+        {
+          "count": 2,
+          "value": 593
+        }
+      ],
+      "top_tiles": [
+        {
+          "count": 41,
+          "value": 88
+        },
+        {
+          "count": 30,
+          "value": 86
+        },
+        {
+          "count": 28,
+          "value": 89
+        },
+        {
+          "count": 16,
+          "value": 87
+        },
+        {
+          "count": 5,
+          "value": 99
+        },
+        {
+          "count": 3,
+          "value": 83
+        },
+        {
+          "count": 3,
+          "value": 96
+        },
+        {
+          "count": 2,
+          "value": 84
+        },
+        {
+          "count": 2,
+          "value": 85
+        },
+        {
+          "count": 2,
+          "value": 98
+        },
+        {
+          "count": 2,
+          "value": 109
+        },
+        {
+          "count": 1,
+          "value": 82
+        }
+      ],
+      "unique_actions": 73,
+      "unique_pairs": 121,
+      "unique_tiles": 24
+    }
+  },
+  "archives": {
+    "c089_staged_top25_ampminus1_p3": {
+      "archive_bytes": 276328,
+      "archive_sha256": "bdc966be526bb8f5ddcd433eaff2e3708779fd291eb40deea5539df5a7bc2386",
+      "payload_bytes": 276228,
+      "score_source": "experiments/results/lightning_batch/exact_eval_c067_pr75_actions_top25_ampminus1_p3_t4_20260503T0520Z/contest_auth_eval.adjudicated.json"
+    },
+    "pr75_minp": {
+      "archive_bytes": 276481,
+      "archive_path": "experiments/results/top_submission_reverse_engineering_20260503_pr75_minp/archive.zip",
+      "payload_bytes": 276381
+    },
+    "pr77": {
+      "archive_bytes": 276551,
+      "archive_path": "experiments/results/top_submission_reverse_engineering_20260503_pr77/archive.zip",
+      "archive_sha256": "f90880383c95e14d82704f99db9b20944786ae6452a844348638b06c439972af",
+      "payload_bytes": 276451,
+      "payload_sha256": "3be6a58673133db2dd14d9f1f0903d528e452bd2e930d57fb4adb02bf264f8ec",
+      "reported_public_pr_components": {
+        "archive_bytes": 276551,
+        "posenet_dist": 0.00049314,
+        "score_recomputed_from_pr_body_components": 0.3149988868909903,
+        "segnet_dist": 0.00060631
+      }
+    }
+  },
+  "comparisons": {
+    "pr77_vs_c089_staged_top25_ampminus1_p3": {
+      "actions": {
+        "exact_overlap": 0,
+        "lhs_only_first_20": [
+          {
+            "action": 58,
+            "pair": 11,
+            "tile": 88
+          },
+          {
+            "action": 6,
+            "pair": 34,
+            "tile": 109
+          },
+          {
+            "action": 13,
+            "pair": 52,
+            "tile": 88
+          },
+          {
+            "action": 75,
+            "pair": 54,
+            "tile": 88
+          },
+          {
+            "action": 94,
+            "pair": 76,
+            "tile": 119
+          },
+          {
+            "action": 17,
+            "pair": 104,
+            "tile": 83
+          },
+          {
+            "action": 94,
+            "pair": 105,
+            "tile": 99
+          },
+          {
+            "action": 50,
+            "pair": 106,
+            "tile": 83
+          },
+          {
+            "action": 92,
+            "pair": 109,
+            "tile": 86
+          },
+          {
+            "action": 75,
+            "pair": 112,
+            "tile": 85
+          },
+          {
+            "action": 94,
+            "pair": 115,
+            "tile": 86
+          },
+          {
+            "action": 52,
+            "pair": 116,
+            "tile": 86
+          },
+          {
+            "action": 44,
+            "pair": 119,
+            "tile": 86
+          },
+          {
+            "action": 6,
+            "pair": 124,
+            "tile": 86
+          },
+          {
+            "action": 76,
+            "pair": 126,
+            "tile": 86
+          },
+          {
+            "action": 44,
+            "pair": 132,
+            "tile": 86
+          },
+          {
+            "action": 17,
+            "pair": 133,
+            "tile": 98
+          },
+          {
+            "action": 71,
+            "pair": 134,
+            "tile": 89
+          },
+          {
+            "action": 88,
+            "pair": 136,
+            "tile": 86
+          },
+          {
+            "action": 56,
+            "pair": 138,
+            "tile": 88
+          }
+        ],
+        "lhs_record_count": 147,
+        "pair_tile_overlap": 13,
+        "record_delta_lhs_minus_rhs": 122,
+        "rhs_exact_subset_of_lhs": false,
+        "rhs_only_first_20": [
+          {
+            "action": 84,
+            "pair": 46,
+            "tile": 108
+          },
+          {
+            "action": 100,
+            "pair": 67,
+            "tile": 88
+          },
+          {
+            "action": 5,
+            "pair": 89,
+            "tile": 84
+          },
+          {
+            "action": 15,
+            "pair": 104,
+            "tile": 83
+          },
+          {
+            "action": 92,
+            "pair": 105,
+            "tile": 99
+          },
+          {
+            "action": 42,
+            "pair": 119,
+            "tile": 86
+          },
+          {
+            "action": 88,
+            "pair": 137,
+            "tile": 88
+          },
+          {
+            "action": 7,
+            "pair": 141,
+            "tile": 86
+          },
+          {
+            "action": 102,
+            "pair": 151,
+            "tile": 112
+          },
+          {
+            "action": 19,
+            "pair": 156,
+            "tile": 86
+          },
+          {
+            "action": 4,
+            "pair": 166,
+            "tile": 86
+          },
+          {
+            "action": 0,
+            "pair": 167,
+            "tile": 86
+          },
+          {
+            "action": 93,
+            "pair": 174,
+            "tile": 86
+          },
+          {
+            "action": 99,
+            "pair": 178,
+            "tile": 95
+          },
+          {
+            "action": 13,
+            "pair": 196,
+            "tile": 113
+          },
+          {
+            "action": 31,
+            "pair": 198,
+            "tile": 107
+          },
+          {
+            "action": 8,
+            "pair": 211,
+            "tile": 110
+          },
+          {
+            "action": 69,
+            "pair": 212,
+            "tile": 111
+          },
+          {
+            "action": 9,
+            "pair": 347,
+            "tile": 98
+          },
+          {
+            "action": 80,
+            "pair": 449,
+            "tile": 92
+          }
+        ],
+        "rhs_pair_tile_subset_of_lhs": false,
+        "rhs_record_count": 25
+      },
+      "archive_byte_delta_lhs_minus_rhs": 223,
+      "members": {
+        "masks.mkv": {
+          "byte_delta_lhs_minus_rhs": 0,
+          "changed_prefix_bytes": 0,
+          "compared_prefix_bytes": 223385,
+          "first_diff_offset": null,
+          "lhs_bytes": 223385,
+          "rhs_bytes": 223385,
+          "sha_equal": true
+        },
+        "renderer.bin": {
+          "byte_delta_lhs_minus_rhs": 0,
+          "changed_prefix_bytes": 1948,
+          "compared_prefix_bytes": 59288,
+          "first_diff_offset": 38044,
+          "lhs_bytes": 59288,
+          "rhs_bytes": 59288,
+          "sha_equal": false
+        },
+        "seg_tile_actions.bin": {
+          "byte_delta_lhs_minus_rhs": 488,
+          "changed_prefix_bytes": 82,
+          "compared_prefix_bytes": 100,
+          "first_diff_offset": 0,
+          "lhs_bytes": 588,
+          "rhs_bytes": 100,
+          "sha_equal": false
+        }
+      },
+      "payload_byte_delta_lhs_minus_rhs": 223,
+      "pose_note": "PR77 pose is QP1 raw and equals PR75/minp QP1; C089 comparison artifact stores fp16 decoded pose, so direct byte comparison is not made in this local profile."
+    },
+    "pr77_vs_pr75_minp": {
+      "actions": {
+        "exact_overlap": 56,
+        "lhs_only_first_20": [
+          {
+            "action": 58,
+            "pair": 11,
+            "tile": 88
+          },
+          {
+            "action": 6,
+            "pair": 34,
+            "tile": 109
+          },
+          {
+            "action": 13,
+            "pair": 52,
+            "tile": 88
+          },
+          {
+            "action": 94,
+            "pair": 76,
+            "tile": 119
+          },
+          {
+            "action": 50,
+            "pair": 106,
+            "tile": 83
+          },
+          {
+            "action": 52,
+            "pair": 116,
+            "tile": 86
+          },
+          {
+            "action": 76,
+            "pair": 126,
+            "tile": 86
+          },
+          {
+            "action": 44,
+            "pair": 132,
+            "tile": 86
+          },
+          {
+            "action": 71,
+            "pair": 134,
+            "tile": 89
+          },
+          {
+            "action": 8,
+            "pair": 166,
+            "tile": 86
+          },
+          {
+            "action": 64,
+            "pair": 167,
+            "tile": 86
+          },
+          {
+            "action": 87,
+            "pair": 173,
+            "tile": 86
+          },
+          {
+            "action": 23,
+            "pair": 177,
+            "tile": 86
+          },
+          {
+            "action": 23,
+            "pair": 209,
+            "tile": 88
+          },
+          {
+            "action": 74,
+            "pair": 210,
+            "tile": 111
+          },
+          {
+            "action": 26,
+            "pair": 242,
+            "tile": 88
+          },
+          {
+            "action": 104,
+            "pair": 248,
+            "tile": 96
+          },
+          {
+            "action": 65,
+            "pair": 278,
+            "tile": 89
+          },
+          {
+            "action": 99,
+            "pair": 311,
+            "tile": 89
+          },
+          {
+            "action": 90,
+            "pair": 314,
+            "tile": 89
+          }
+        ],
+        "lhs_record_count": 147,
+        "pair_tile_overlap": 67,
+        "record_delta_lhs_minus_rhs": 39,
+        "rhs_exact_subset_of_lhs": false,
+        "rhs_only_first_20": [
+          {
+            "action": 92,
+            "pair": 33,
+            "tile": 109
+          },
+          {
+            "action": 93,
+            "pair": 36,
+            "tile": 109
+          },
+          {
+            "action": 86,
+            "pair": 46,
+            "tile": 108
+          },
+          {
+            "action": 23,
+            "pair": 55,
+            "tile": 88
+          },
+          {
+            "action": 102,
+            "pair": 67,
+            "tile": 88
+          },
+          {
+            "action": 56,
+            "pair": 71,
+            "tile": 110
+          },
+          {
+            "action": 40,
+            "pair": 73,
+            "tile": 86
+          },
+          {
+            "action": 7,
+            "pair": 89,
+            "tile": 84
+          },
+          {
+            "action": 47,
+            "pair": 102,
+            "tile": 88
+          },
+          {
+            "action": 64,
+            "pair": 106,
+            "tile": 83
+          },
+          {
+            "action": 38,
+            "pair": 126,
+            "tile": 86
+          },
+          {
+            "action": 46,
+            "pair": 132,
+            "tile": 86
+          },
+          {
+            "action": 90,
+            "pair": 137,
+            "tile": 88
+          },
+          {
+            "action": 9,
+            "pair": 141,
+            "tile": 86
+          },
+          {
+            "action": 104,
+            "pair": 151,
+            "tile": 112
+          },
+          {
+            "action": 7,
+            "pair": 152,
+            "tile": 86
+          },
+          {
+            "action": 90,
+            "pair": 154,
+            "tile": 86
+          },
+          {
+            "action": 21,
+            "pair": 156,
+            "tile": 86
+          },
+          {
+            "action": 20,
+            "pair": 163,
+            "tile": 86
+          },
+          {
+            "action": 6,
+            "pair": 166,
+            "tile": 86
+          }
+        ],
+        "rhs_pair_tile_subset_of_lhs": false,
+        "rhs_record_count": 108
+      },
+      "archive_byte_delta_lhs_minus_rhs": 70,
+      "interpretation": "PR77 keeps PR75/minp mask, renderer, and QP1 pose streams byte-identical; only charged tile actions change and grow by 70 payload/archive bytes.",
+      "members": {
+        "masks.mkv": {
+          "byte_delta_lhs_minus_rhs": 0,
+          "changed_prefix_bytes": 0,
+          "compared_prefix_bytes": 223385,
+          "first_diff_offset": null,
+          "lhs_bytes": 223385,
+          "rhs_bytes": 223385,
+          "sha_equal": true
+        },
+        "optimized_poses.qp1": {
+          "byte_delta_lhs_minus_rhs": 0,
+          "changed_prefix_bytes": 0,
+          "compared_prefix_bytes": 1140,
+          "first_diff_offset": null,
+          "lhs_bytes": 1140,
+          "rhs_bytes": 1140,
+          "sha_equal": true
+        },
+        "renderer.bin": {
+          "byte_delta_lhs_minus_rhs": 0,
+          "changed_prefix_bytes": 0,
+          "compared_prefix_bytes": 59288,
+          "first_diff_offset": null,
+          "lhs_bytes": 59288,
+          "rhs_bytes": 59288,
+          "sha_equal": true
+        },
+        "seg_tile_actions.bin": {
+          "byte_delta_lhs_minus_rhs": 156,
+          "changed_prefix_bytes": 339,
+          "compared_prefix_bytes": 432,
+          "first_diff_offset": 0,
+          "lhs_bytes": 588,
+          "rhs_bytes": 432,
+          "sha_equal": false
+        }
+      },
+      "payload_byte_delta_lhs_minus_rhs": 70
+    }
+  },
+  "compliance": {
+    "pr78_withdrawn_ignored": true,
+    "replay_safety": "safe to queue exact T4 replay if using PR77 archive plus PR77 inflate.sh after claiming lane; no remote dispatch performed by this worker",
+    "single_payload_member": true,
+    "uses_pr77_inflate_source": "experiments/results/top_submission_reverse_engineering_20260503_pr77/sources/inflate.py",
+    "zip_validation": "passed local contest_auth_eval container/name/member whitelist validation; see tool_outputs/archive_validation.txt"
+  },
+  "decoded_members": {
+    "c089_staged_top25_ampminus1_p3": {
+      "masks.mkv": {
+        "bytes": 223385,
+        "path": "experiments/results/top_submission_reverse_engineering_20260503_deep_codex/unpacked/decoded/c089_staged_top25_ampminus1_p3/masks.mkv",
+        "prefix_hex": "12000a0a0000000c",
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      "optimized_poses.bin": {
+        "bytes": 7200,
+        "path": "experiments/results/top_submission_reverse_engineering_20260503_deep_codex/unpacked/decoded/c089_staged_top25_ampminus1_p3/optimized_poses.bin",
+        "prefix_hex": "4650000000000000",
+        "sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+      },
+      "renderer.bin": {
+        "bytes": 59288,
+        "path": "experiments/results/top_submission_reverse_engineering_20260503_deep_codex/unpacked/decoded/c089_staged_top25_ampminus1_p3/renderer.bin",
+        "prefix_hex": "515a533320001675",
+        "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 100,
+        "path": "experiments/results/top_submission_reverse_engineering_20260503_deep_codex/unpacked/decoded/c089_staged_top25_ampminus1_p3/seg_tile_actions.bin",
+        "prefix_hex": "2e006c5443005864",
+        "sha256": "596e47cc6a089e6b43ee1f8df7577489ab427302f73ae170db879db09ca5759a"
+      }
+    },
+    "pr75_minp": {
+      "masks.mkv": {
+        "bytes": 223385,
+        "path": "experiments/results/top_submission_reverse_engineering_20260503_pr75_minp/extracted/masks.mkv",
+        "prefix_hex": "12000a0a0000000c",
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      "optimized_poses.qp1": {
+        "bytes": 1140,
+        "path": "experiments/results/top_submission_reverse_engineering_20260503_pr75_minp/extracted/optimized_poses.qp1",
+        "prefix_hex": "5150316d1cd003c1",
+        "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+      },
+      "renderer.bin": {
+        "bytes": 59288,
+        "path": "experiments/results/top_submission_reverse_engineering_20260503_pr75_minp/extracted/renderer.bin",
+        "prefix_hex": "515a533320001675",
+        "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 432,
+        "path": "experiments/results/top_submission_reverse_engineering_20260503_pr75_minp/extracted/seg_tile_actions.bin",
+        "prefix_hex": "680053116a005340",
+        "sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a"
+      }
+    },
+    "pr77": {
+      "masks.mkv": {
+        "bytes": 223385,
+        "path": "experiments/results/top_submission_reverse_engineering_20260503_pr77/unpacked/masks.mkv",
+        "prefix_hex": "12000a0a0000000c",
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      "optimized_poses.qp1": {
+        "bytes": 1140,
+        "path": "experiments/results/top_submission_reverse_engineering_20260503_pr77/unpacked/optimized_poses.qp1",
+        "prefix_hex": "5150316d1cd003c1",
+        "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+      },
+      "renderer.bin": {
+        "bytes": 59288,
+        "path": "experiments/results/top_submission_reverse_engineering_20260503_pr77/unpacked/renderer.bin",
+        "prefix_hex": "515a533320001675",
+        "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 588,
+        "path": "experiments/results/top_submission_reverse_engineering_20260503_pr77/unpacked/seg_tile_actions.bin",
+        "prefix_hex": "2202523a68005311",
+        "sha256": "8ac9a01caad973096c58b42daf2b1a8e476ad68cf285d443baa4ac94fdb42255"
+      }
+    }
+  },
+  "evidence_grade": "empirical_reverse_engineering_profile",
+  "schema": "pr77_stream_comparison_v1",
+  "score_claim": false
+}

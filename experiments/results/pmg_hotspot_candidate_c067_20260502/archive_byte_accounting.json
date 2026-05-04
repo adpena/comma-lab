@@ -1,0 +1,778 @@
+{
+  "archive": {
+    "bytes": 187144,
+    "lambda_rate": 6.658589531221714e-07,
+    "path": "/Users/adpena/Projects/pact/experiments/results/pmg_hotspot_candidate_c067_20260502/archive.zip",
+    "rate_score_contribution": 0.124611507923,
+    "sha256": "3ab4d0c85ae15325b61b7838c375383a460e7ad1b911b677101fda50e2611c53",
+    "target_score": 0.3
+  },
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py on CUDA",
+  "eval_json": null,
+  "evidence_grade": "empirical_byte_profile",
+  "promotion_eligible": false,
+  "ranked_self_compression_opportunities": [
+    {
+      "best_decoded_reencode_savings_vs_current_encoded_bytes": 3323,
+      "best_encoded_recompression_delta": -3323,
+      "best_nested_recompression_savings_bytes": 3323,
+      "decoded_zero_order_entropy_bytes": 58261,
+      "encoded_bytes": 59288,
+      "opportunity": "self-compress JFG/QZS/QBF only after local byte win and loader parity",
+      "priority": 2,
+      "rate_score_contribution": 0.039477445613,
+      "risk": "medium_pose_seg_runtime_contract",
+      "stream": "renderer.bin",
+      "target_gap_percent_of_stream": null
+    },
+    {
+      "best_decoded_reencode_savings_vs_current_encoded_bytes": 320,
+      "best_encoded_recompression_delta": -463,
+      "best_nested_recompression_savings_bytes": 463,
+      "decoded_zero_order_entropy_bytes": 1354,
+      "encoded_bytes": 1140,
+      "opportunity": "small stream; optimize with qpose/VLQ/manifold residuals but cannot close sub-0.3 alone",
+      "priority": 3,
+      "rate_score_contribution": 0.000759079207,
+      "risk": "low_to_medium_pose_sensitive",
+      "stream": "optimized_poses.bin",
+      "target_gap_percent_of_stream": null
+    },
+    {
+      "best_decoded_reencode_savings_vs_current_encoded_bytes": 427,
+      "best_encoded_recompression_delta": -427,
+      "best_nested_recompression_savings_bytes": 427,
+      "decoded_zero_order_entropy_bytes": 125616,
+      "encoded_bytes": 125734,
+      "opportunity": "inspect before dispatch",
+      "priority": 9,
+      "rate_score_contribution": 0.083721109612,
+      "risk": "unknown",
+      "stream": "masks.cmg3",
+      "target_gap_percent_of_stream": null
+    }
+  ],
+  "schema": "archive_byte_accounting_profile_v1",
+  "score_claim": false,
+  "single_payload": {
+    "payload_bytes": 187039,
+    "payload_container_codec": "brotli",
+    "payload_container_roundtrip_required": true,
+    "payload_entropy": {
+      "bytes": 187039,
+      "entropy_bits_per_byte": 7.980416115012,
+      "unique_byte_count": 256,
+      "zero_order_entropy_bytes": 186582,
+      "zero_order_entropy_ratio": 0.997556659306
+    },
+    "payload_format": null,
+    "payload_internal_overhead_bytes": 877,
+    "payload_member_decoded_bytes": 187039,
+    "payload_member_decoded_sha256": "9858464712ac142e3c970f1989ee56bca99479ae94bc746303d2bddf4aea150b",
+    "payload_schema": "renderer_payload_v1",
+    "payload_self_compression_probe": {
+      "best_probe": {
+        "bytes": 183984,
+        "codec": "lzma_preset9_bytes"
+      },
+      "best_probe_delta_vs_input": -3055,
+      "brotli_q11_bytes": 187044,
+      "brotli_q5_bytes": 187044,
+      "brotli_q9_bytes": 187044,
+      "input_bytes": 187039,
+      "lzma_preset9_bytes": 183984,
+      "zlib_9_bytes": 184558
+    },
+    "payload_sha256": "9858464712ac142e3c970f1989ee56bca99479ae94bc746303d2bddf4aea150b",
+    "payload_stream_encoded_bytes_sum": 186162,
+    "zip_member_name": "p",
+    "zip_member_payload_bytes": 187044,
+    "zip_member_payload_entropy": {
+      "bytes": 187044,
+      "entropy_bits_per_byte": 7.980416904913,
+      "unique_byte_count": 256,
+      "zero_order_entropy_bytes": 186587,
+      "zero_order_entropy_ratio": 0.997556724621
+    },
+    "zip_member_payload_self_compression_probe": {
+      "best_probe": {
+        "bytes": 183992,
+        "codec": "lzma_preset9_bytes"
+      },
+      "best_probe_delta_vs_input": -3052,
+      "brotli_q11_bytes": 187049,
+      "brotli_q5_bytes": 187049,
+      "brotli_q9_bytes": 187049,
+      "input_bytes": 187044,
+      "lzma_preset9_bytes": 183992,
+      "zlib_9_bytes": 184564
+    },
+    "zip_member_payload_sha256": "0b829198082a38deee65da882914b4f941ca9da39ce78bfafddd9b4c16c10adc"
+  },
+  "streams": [
+    {
+      "attackability": {
+        "codec": "raw",
+        "decoded_to_encoded_ratio": 1.0,
+        "opportunity": "inspect before dispatch",
+        "priority": 9,
+        "rate_score_contribution": 0.083721109612,
+        "risk": "unknown"
+      },
+      "codec": "raw",
+      "decoded_bitplanes": {
+        "bits": 1005872,
+        "bytes": 125734,
+        "planes_lsb0": [
+          {
+            "bit": 0,
+            "entropy_bits_per_symbol": 0.999993954358,
+            "one_count": 63049,
+            "one_fraction": 0.501447500278,
+            "zero_count": 62685,
+            "zero_order_entropy_bits": 125733.239857
+          },
+          {
+            "bit": 1,
+            "entropy_bits_per_symbol": 0.999999180689,
+            "one_count": 62934,
+            "one_fraction": 0.500532870982,
+            "zero_count": 62800,
+            "zero_order_entropy_bits": 125733.896985
+          },
+          {
+            "bit": 2,
+            "entropy_bits_per_symbol": 0.999999969155,
+            "one_count": 62880,
+            "one_fraction": 0.500103392877,
+            "zero_count": 62854,
+            "zero_order_entropy_bits": 125733.996122
+          },
+          {
+            "bit": 3,
+            "entropy_bits_per_symbol": 0.999985175151,
+            "one_count": 62582,
+            "one_fraction": 0.497733310004,
+            "zero_count": 63152,
+            "zero_order_entropy_bits": 125732.136012
+          },
+          {
+            "bit": 4,
+            "entropy_bits_per_symbol": 0.99994578774,
+            "one_count": 63412,
+            "one_fraction": 0.504334547537,
+            "zero_count": 62322,
+            "zero_order_entropy_bits": 125727.183676
+          },
+          {
+            "bit": 5,
+            "entropy_bits_per_symbol": 0.99991757748,
+            "one_count": 63539,
+            "one_fraction": 0.505344616412,
+            "zero_count": 62195,
+            "zero_order_entropy_bits": 125723.636687
+          },
+          {
+            "bit": 6,
+            "entropy_bits_per_symbol": 0.999970797369,
+            "one_count": 63267,
+            "one_fraction": 0.503181319293,
+            "zero_count": 62467,
+            "zero_order_entropy_bits": 125730.328236
+          },
+          {
+            "bit": 7,
+            "entropy_bits_per_symbol": 0.999950836961,
+            "one_count": 62348,
+            "one_fraction": 0.495872238217,
+            "zero_count": 63386,
+            "zero_order_entropy_bits": 125727.818534
+          }
+        ],
+        "zero_order_bitplane_entropy_bits": 1005842.23611,
+        "zero_order_bitplane_entropy_bytes": 125731,
+        "zero_order_bitplane_entropy_ratio": 0.999976140105
+      },
+      "decoded_bytes": 125734,
+      "decoded_entropy": {
+        "bytes": 125734,
+        "entropy_bits_per_byte": 7.992436447016,
+        "unique_byte_count": 256,
+        "zero_order_entropy_bytes": 125616,
+        "zero_order_entropy_ratio": 0.999061510809
+      },
+      "decoded_self_compression_probe": {
+        "best_probe": {
+          "bytes": 125307,
+          "codec": "zlib_9_bytes"
+        },
+        "best_probe_delta_vs_input": -427,
+        "brotli_q11_bytes": 125739,
+        "brotli_q5_bytes": 125739,
+        "brotli_q9_bytes": 125739,
+        "input_bytes": 125734,
+        "lzma_preset9_bytes": 125800,
+        "zlib_9_bytes": 125307
+      },
+      "decoded_sha256": null,
+      "encoded_bitplanes": {
+        "bits": 1005872,
+        "bytes": 125734,
+        "planes_lsb0": [
+          {
+            "bit": 0,
+            "entropy_bits_per_symbol": 0.999993954358,
+            "one_count": 63049,
+            "one_fraction": 0.501447500278,
+            "zero_count": 62685,
+            "zero_order_entropy_bits": 125733.239857
+          },
+          {
+            "bit": 1,
+            "entropy_bits_per_symbol": 0.999999180689,
+            "one_count": 62934,
+            "one_fraction": 0.500532870982,
+            "zero_count": 62800,
+            "zero_order_entropy_bits": 125733.896985
+          },
+          {
+            "bit": 2,
+            "entropy_bits_per_symbol": 0.999999969155,
+            "one_count": 62880,
+            "one_fraction": 0.500103392877,
+            "zero_count": 62854,
+            "zero_order_entropy_bits": 125733.996122
+          },
+          {
+            "bit": 3,
+            "entropy_bits_per_symbol": 0.999985175151,
+            "one_count": 62582,
+            "one_fraction": 0.497733310004,
+            "zero_count": 63152,
+            "zero_order_entropy_bits": 125732.136012
+          },
+          {
+            "bit": 4,
+            "entropy_bits_per_symbol": 0.99994578774,
+            "one_count": 63412,
+            "one_fraction": 0.504334547537,
+            "zero_count": 62322,
+            "zero_order_entropy_bits": 125727.183676
+          },
+          {
+            "bit": 5,
+            "entropy_bits_per_symbol": 0.99991757748,
+            "one_count": 63539,
+            "one_fraction": 0.505344616412,
+            "zero_count": 62195,
+            "zero_order_entropy_bits": 125723.636687
+          },
+          {
+            "bit": 6,
+            "entropy_bits_per_symbol": 0.999970797369,
+            "one_count": 63267,
+            "one_fraction": 0.503181319293,
+            "zero_count": 62467,
+            "zero_order_entropy_bits": 125730.328236
+          },
+          {
+            "bit": 7,
+            "entropy_bits_per_symbol": 0.999950836961,
+            "one_count": 62348,
+            "one_fraction": 0.495872238217,
+            "zero_count": 63386,
+            "zero_order_entropy_bits": 125727.818534
+          }
+        ],
+        "zero_order_bitplane_entropy_bits": 1005842.23611,
+        "zero_order_bitplane_entropy_bytes": 125731,
+        "zero_order_bitplane_entropy_ratio": 0.999976140105
+      },
+      "encoded_bytes": 125734,
+      "encoded_entropy": {
+        "bytes": 125734,
+        "entropy_bits_per_byte": 7.992436447016,
+        "unique_byte_count": 256,
+        "zero_order_entropy_bytes": 125616,
+        "zero_order_entropy_ratio": 0.999061510809
+      },
+      "encoded_offset": 60165,
+      "encoded_payload_order": 1,
+      "encoded_self_compression_probe": {
+        "best_probe": {
+          "bytes": 125307,
+          "codec": "zlib_9_bytes"
+        },
+        "best_probe_delta_vs_input": -427,
+        "brotli_q11_bytes": 125739,
+        "brotli_q5_bytes": 125739,
+        "brotli_q9_bytes": 125739,
+        "input_bytes": 125734,
+        "lzma_preset9_bytes": 125800,
+        "zlib_9_bytes": 125307
+      },
+      "encoded_sha256": "9746df2c17c87c42bb6094e93c33ddb74f999b6c5ae8786924ad247e0c1c1a0c",
+      "name": "masks.cmg3",
+      "self_compression_signal": {
+        "best_decoded_reencode_savings_vs_current_encoded_bytes": 427,
+        "best_nested_recompression_savings_bytes": 427,
+        "decoded_probe_is_directly_deployable": false,
+        "deployability_note": "Compression probes are attack-surface signals only. A deployed saving requires a decoder/unpacker contract that consumes the new bytes and an exact CUDA auth eval.",
+        "encoded_probe_is_directly_deployable": false
+      },
+      "target_gap_pressure": null
+    },
+    {
+      "attackability": {
+        "codec": "raw",
+        "decoded_to_encoded_ratio": 1.0,
+        "opportunity": "self-compress JFG/QZS/QBF only after local byte win and loader parity",
+        "priority": 2,
+        "rate_score_contribution": 0.039477445613,
+        "risk": "medium_pose_seg_runtime_contract"
+      },
+      "codec": "raw",
+      "decoded_bitplanes": {
+        "bits": 474304,
+        "bytes": 59288,
+        "planes_lsb0": [
+          {
+            "bit": 0,
+            "entropy_bits_per_symbol": 0.999999959778,
+            "one_count": 29637,
+            "one_fraction": 0.499881932263,
+            "zero_count": 29651,
+            "zero_order_entropy_bits": 59287.997615
+          },
+          {
+            "bit": 1,
+            "entropy_bits_per_symbol": 0.999165789369,
+            "one_count": 28636,
+            "one_fraction": 0.482998245851,
+            "zero_count": 30652,
+            "zero_order_entropy_bits": 59238.54132
+          },
+          {
+            "bit": 2,
+            "entropy_bits_per_symbol": 0.997676427731,
+            "one_count": 31326,
+            "one_fraction": 0.528369990555,
+            "zero_count": 27962,
+            "zero_order_entropy_bits": 59150.240047
+          },
+          {
+            "bit": 3,
+            "entropy_bits_per_symbol": 0.999937469,
+            "one_count": 29368,
+            "one_fraction": 0.495344757792,
+            "zero_count": 29920,
+            "zero_order_entropy_bits": 59284.292662
+          },
+          {
+            "bit": 4,
+            "entropy_bits_per_symbol": 0.998925439599,
+            "one_count": 28500,
+            "one_fraction": 0.480704358386,
+            "zero_count": 30788,
+            "zero_order_entropy_bits": 59224.291463
+          },
+          {
+            "bit": 5,
+            "entropy_bits_per_symbol": 0.997458689379,
+            "one_count": 31403,
+            "one_fraction": 0.529668735663,
+            "zero_count": 27885,
+            "zero_order_entropy_bits": 59137.330776
+          },
+          {
+            "bit": 6,
+            "entropy_bits_per_symbol": 0.999392804181,
+            "one_count": 28784,
+            "one_fraction": 0.48549453515,
+            "zero_count": 30504,
+            "zero_order_entropy_bits": 59252.000574
+          },
+          {
+            "bit": 7,
+            "entropy_bits_per_symbol": 0.99302325272,
+            "one_count": 26731,
+            "one_fraction": 0.450866954527,
+            "zero_count": 32557,
+            "zero_order_entropy_bits": 58874.362607
+          }
+        ],
+        "zero_order_bitplane_entropy_bits": 473449.057065,
+        "zero_order_bitplane_entropy_bytes": 59182,
+        "zero_order_bitplane_entropy_ratio": 0.998212117123
+      },
+      "decoded_bytes": 59288,
+      "decoded_entropy": {
+        "bytes": 59288,
+        "entropy_bits_per_byte": 7.861381999313,
+        "unique_byte_count": 256,
+        "zero_order_entropy_bytes": 58261,
+        "zero_order_entropy_ratio": 0.982677776279
+      },
+      "decoded_self_compression_probe": {
+        "best_probe": {
+          "bytes": 55965,
+          "codec": "brotli_q11_bytes"
+        },
+        "best_probe_delta_vs_input": -3323,
+        "brotli_q11_bytes": 55965,
+        "brotli_q5_bytes": 56849,
+        "brotli_q9_bytes": 56910,
+        "input_bytes": 59288,
+        "lzma_preset9_bytes": 57380,
+        "zlib_9_bytes": 57615
+      },
+      "decoded_sha256": null,
+      "encoded_bitplanes": {
+        "bits": 474304,
+        "bytes": 59288,
+        "planes_lsb0": [
+          {
+            "bit": 0,
+            "entropy_bits_per_symbol": 0.999999959778,
+            "one_count": 29637,
+            "one_fraction": 0.499881932263,
+            "zero_count": 29651,
+            "zero_order_entropy_bits": 59287.997615
+          },
+          {
+            "bit": 1,
+            "entropy_bits_per_symbol": 0.999165789369,
+            "one_count": 28636,
+            "one_fraction": 0.482998245851,
+            "zero_count": 30652,
+            "zero_order_entropy_bits": 59238.54132
+          },
+          {
+            "bit": 2,
+            "entropy_bits_per_symbol": 0.997676427731,
+            "one_count": 31326,
+            "one_fraction": 0.528369990555,
+            "zero_count": 27962,
+            "zero_order_entropy_bits": 59150.240047
+          },
+          {
+            "bit": 3,
+            "entropy_bits_per_symbol": 0.999937469,
+            "one_count": 29368,
+            "one_fraction": 0.495344757792,
+            "zero_count": 29920,
+            "zero_order_entropy_bits": 59284.292662
+          },
+          {
+            "bit": 4,
+            "entropy_bits_per_symbol": 0.998925439599,
+            "one_count": 28500,
+            "one_fraction": 0.480704358386,
+            "zero_count": 30788,
+            "zero_order_entropy_bits": 59224.291463
+          },
+          {
+            "bit": 5,
+            "entropy_bits_per_symbol": 0.997458689379,
+            "one_count": 31403,
+            "one_fraction": 0.529668735663,
+            "zero_count": 27885,
+            "zero_order_entropy_bits": 59137.330776
+          },
+          {
+            "bit": 6,
+            "entropy_bits_per_symbol": 0.999392804181,
+            "one_count": 28784,
+            "one_fraction": 0.48549453515,
+            "zero_count": 30504,
+            "zero_order_entropy_bits": 59252.000574
+          },
+          {
+            "bit": 7,
+            "entropy_bits_per_symbol": 0.99302325272,
+            "one_count": 26731,
+            "one_fraction": 0.450866954527,
+            "zero_count": 32557,
+            "zero_order_entropy_bits": 58874.362607
+          }
+        ],
+        "zero_order_bitplane_entropy_bits": 473449.057065,
+        "zero_order_bitplane_entropy_bytes": 59182,
+        "zero_order_bitplane_entropy_ratio": 0.998212117123
+      },
+      "encoded_bytes": 59288,
+      "encoded_entropy": {
+        "bytes": 59288,
+        "entropy_bits_per_byte": 7.861381999313,
+        "unique_byte_count": 256,
+        "zero_order_entropy_bytes": 58261,
+        "zero_order_entropy_ratio": 0.982677776279
+      },
+      "encoded_offset": 877,
+      "encoded_payload_order": 0,
+      "encoded_self_compression_probe": {
+        "best_probe": {
+          "bytes": 55965,
+          "codec": "brotli_q11_bytes"
+        },
+        "best_probe_delta_vs_input": -3323,
+        "brotli_q11_bytes": 55965,
+        "brotli_q5_bytes": 56849,
+        "brotli_q9_bytes": 56910,
+        "input_bytes": 59288,
+        "lzma_preset9_bytes": 57380,
+        "zlib_9_bytes": 57615
+      },
+      "encoded_sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb",
+      "name": "renderer.bin",
+      "self_compression_signal": {
+        "best_decoded_reencode_savings_vs_current_encoded_bytes": 3323,
+        "best_nested_recompression_savings_bytes": 3323,
+        "decoded_probe_is_directly_deployable": false,
+        "deployability_note": "Compression probes are attack-surface signals only. A deployed saving requires a decoder/unpacker contract that consumes the new bytes and an exact CUDA auth eval.",
+        "encoded_probe_is_directly_deployable": false
+      },
+      "target_gap_pressure": null
+    },
+    {
+      "attackability": {
+        "codec": "pose_qp1_v1",
+        "decoded_to_encoded_ratio": 6.315789473684,
+        "opportunity": "small stream; optimize with qpose/VLQ/manifold residuals but cannot close sub-0.3 alone",
+        "priority": 3,
+        "rate_score_contribution": 0.000759079207,
+        "risk": "low_to_medium_pose_sensitive"
+      },
+      "codec": "pose_qp1_v1",
+      "decoded_bitplanes": {
+        "bits": 57600,
+        "bytes": 7200,
+        "planes_lsb0": [
+          {
+            "bit": 0,
+            "entropy_bits_per_symbol": 0.472069910954,
+            "one_count": 727,
+            "one_fraction": 0.100972222222,
+            "zero_count": 6473,
+            "zero_order_entropy_bits": 3398.903359
+          },
+          {
+            "bit": 1,
+            "entropy_bits_per_symbol": 0.476870678945,
+            "one_count": 738,
+            "one_fraction": 0.1025,
+            "zero_count": 6462,
+            "zero_order_entropy_bits": 3433.468888
+          },
+          {
+            "bit": 2,
+            "entropy_bits_per_symbol": 0.482927867827,
+            "one_count": 752,
+            "one_fraction": 0.104444444444,
+            "zero_count": 6448,
+            "zero_order_entropy_bits": 3477.080648
+          },
+          {
+            "bit": 3,
+            "entropy_bits_per_symbol": 0.479906623496,
+            "one_count": 745,
+            "one_fraction": 0.103472222222,
+            "zero_count": 6455,
+            "zero_order_entropy_bits": 3455.327689
+          },
+          {
+            "bit": 4,
+            "entropy_bits_per_symbol": 0.329646330996,
+            "one_count": 436,
+            "one_fraction": 0.060555555556,
+            "zero_count": 6764,
+            "zero_order_entropy_bits": 2373.453583
+          },
+          {
+            "bit": 5,
+            "entropy_bits_per_symbol": 0.241655025966,
+            "one_count": 287,
+            "one_fraction": 0.039861111111,
+            "zero_count": 6913,
+            "zero_order_entropy_bits": 1739.916187
+          },
+          {
+            "bit": 6,
+            "entropy_bits_per_symbol": 0.534528705613,
+            "one_count": 877,
+            "one_fraction": 0.121805555556,
+            "zero_count": 6323,
+            "zero_order_entropy_bits": 3848.60668
+          },
+          {
+            "bit": 7,
+            "entropy_bits_per_symbol": 0.295181743091,
+            "one_count": 375,
+            "one_fraction": 0.052083333333,
+            "zero_count": 6825,
+            "zero_order_entropy_bits": 2125.30855
+          }
+        ],
+        "zero_order_bitplane_entropy_bits": 23852.065586,
+        "zero_order_bitplane_entropy_bytes": 2982,
+        "zero_order_bitplane_entropy_ratio": 0.414166666667
+      },
+      "decoded_bytes": 7200,
+      "decoded_entropy": {
+        "bytes": 7200,
+        "entropy_bits_per_byte": 1.503786802695,
+        "unique_byte_count": 226,
+        "zero_order_entropy_bytes": 1354,
+        "zero_order_entropy_ratio": 0.188055555556
+      },
+      "decoded_self_compression_probe": {
+        "best_probe": {
+          "bytes": 820,
+          "codec": "lzma_preset9_bytes"
+        },
+        "best_probe_delta_vs_input": -6380,
+        "brotli_q11_bytes": 968,
+        "brotli_q5_bytes": 933,
+        "brotli_q9_bytes": 953,
+        "input_bytes": 7200,
+        "lzma_preset9_bytes": 820,
+        "zlib_9_bytes": 1150
+      },
+      "decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f",
+      "encoded_bitplanes": {
+        "bits": 9120,
+        "bytes": 1140,
+        "planes_lsb0": [
+          {
+            "bit": 0,
+            "entropy_bits_per_symbol": 0.999564794298,
+            "one_count": 556,
+            "one_fraction": 0.487719298246,
+            "zero_count": 584,
+            "zero_order_entropy_bits": 1139.503865
+          },
+          {
+            "bit": 1,
+            "entropy_bits_per_symbol": 0.999624751303,
+            "one_count": 557,
+            "one_fraction": 0.488596491228,
+            "zero_count": 583,
+            "zero_order_entropy_bits": 1139.572216
+          },
+          {
+            "bit": 2,
+            "entropy_bits_per_symbol": 0.99662041477,
+            "one_count": 531,
+            "one_fraction": 0.465789473684,
+            "zero_count": 609,
+            "zero_order_entropy_bits": 1136.147273
+          },
+          {
+            "bit": 3,
+            "entropy_bits_per_symbol": 0.973946206297,
+            "one_count": 462,
+            "one_fraction": 0.405263157895,
+            "zero_count": 678,
+            "zero_order_entropy_bits": 1110.298675
+          },
+          {
+            "bit": 4,
+            "entropy_bits_per_symbol": 0.889700674699,
+            "one_count": 350,
+            "one_fraction": 0.30701754386,
+            "zero_count": 790,
+            "zero_order_entropy_bits": 1014.258769
+          },
+          {
+            "bit": 5,
+            "entropy_bits_per_symbol": 0.84422020343,
+            "one_count": 310,
+            "one_fraction": 0.271929824561,
+            "zero_count": 830,
+            "zero_order_entropy_bits": 962.411032
+          },
+          {
+            "bit": 6,
+            "entropy_bits_per_symbol": 0.811278124459,
+            "one_count": 285,
+            "one_fraction": 0.25,
+            "zero_count": 855,
+            "zero_order_entropy_bits": 924.857062
+          },
+          {
+            "bit": 7,
+            "entropy_bits_per_symbol": 0.997431908493,
+            "one_count": 536,
+            "one_fraction": 0.470175438596,
+            "zero_count": 604,
+            "zero_order_entropy_bits": 1137.072376
+          }
+        ],
+        "zero_order_bitplane_entropy_bits": 8564.121269,
+        "zero_order_bitplane_entropy_bytes": 1071,
+        "zero_order_bitplane_entropy_ratio": 0.939473684211
+      },
+      "encoded_bytes": 1140,
+      "encoded_entropy": {
+        "bytes": 1140,
+        "entropy_bits_per_byte": 5.229017915936,
+        "unique_byte_count": 60,
+        "zero_order_entropy_bytes": 746,
+        "zero_order_entropy_ratio": 0.654385964912
+      },
+      "encoded_offset": 185899,
+      "encoded_payload_order": 2,
+      "encoded_self_compression_probe": {
+        "best_probe": {
+          "bytes": 677,
+          "codec": "brotli_q11_bytes"
+        },
+        "best_probe_delta_vs_input": -463,
+        "brotli_q11_bytes": 677,
+        "brotli_q5_bytes": 837,
+        "brotli_q9_bytes": 852,
+        "input_bytes": 1140,
+        "lzma_preset9_bytes": 932,
+        "zlib_9_bytes": 821
+      },
+      "encoded_sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583",
+      "name": "optimized_poses.bin",
+      "self_compression_signal": {
+        "best_decoded_reencode_savings_vs_current_encoded_bytes": 320,
+        "best_nested_recompression_savings_bytes": 463,
+        "decoded_probe_is_directly_deployable": false,
+        "deployability_note": "Compression probes are attack-surface signals only. A deployed saving requires a decoder/unpacker contract that consumes the new bytes and an exact CUDA auth eval.",
+        "encoded_probe_is_directly_deployable": false
+      },
+      "target_gap_pressure": null
+    }
+  ],
+  "target_gap": null,
+  "thirty_k_foot_summary": {
+    "archive_is_single_blob": true,
+    "bytes_to_remove_if_distortion_unchanged": null,
+    "largest_stream": "masks.cmg3",
+    "primary_attack_surface": "mask stream with scorer-constrained learned/grammar repair, not human visual smoothing",
+    "secondary_attack_surface": "renderer self-compression only after local byte win",
+    "tertiary_attack_surface": "pose bytes and archive overhead are too small to close the full sub-0.300 gap alone",
+    "zip_overhead_is_material": false
+  },
+  "tool": "experiments/profile_archive_byte_accounting.py",
+  "zip_container": {
+    "member_count": 1,
+    "members": [
+      {
+        "central_directory_header_bytes": 47,
+        "compress_size": 187044,
+        "compress_type": 0,
+        "crc": "47c7cbc2",
+        "file_size": 187044,
+        "filename": "p",
+        "header_offset": 0,
+        "local_header_bytes": 31
+      }
+    ],
+    "overhead_bytes": 100,
+    "overhead_rate_score": 6.6585895e-05
+  }
+}

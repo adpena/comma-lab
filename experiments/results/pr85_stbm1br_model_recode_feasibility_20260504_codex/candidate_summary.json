@@ -1,0 +1,467 @@
+{
+  "dispatch": false,
+  "dispatch_performed": false,
+  "exact_eval_readiness": {
+    "blockers": [
+      "no_byte_closed_model_recode_candidate_built",
+      "qh0_qm0:no_real_byte_win",
+      "qfq4:tensor_parity_failed_and_runtime_incompatible"
+    ],
+    "ready_after_lane_claim": false,
+    "remote_gpu_dispatch_performed": false,
+    "requires_lane_claim_before_remote_eval": true
+  },
+  "forbidden_surfaces": [
+    "mask",
+    "pose",
+    "post",
+    "shift",
+    "frac",
+    "frac2",
+    "frac3",
+    "bias",
+    "region",
+    "randmulti"
+  ],
+  "model_only_candidate_guard": {
+    "candidate_archive_audits": [],
+    "passed": true,
+    "requirement": "Any emitted archive must preserve mask, pose, post, shift, frac, frac2, frac3, bias, region, and randmulti bytes exactly.",
+    "violation_count": 0
+  },
+  "owned_surface": "model",
+  "planning_only": true,
+  "qfq4_screen": {
+    "best_byte_screen": {
+      "archive_delta_bytes_vs_source_formula": -659,
+      "build_blockers": [
+        "decoded_model_tensor_parity_failed",
+        "pr85_runtime_missing_qfq4_loader"
+      ],
+      "candidate_id": "qfq4_pr85_shifted_int8_rows",
+      "decoded_tensor_parity": {
+        "candidate_tensor_count": 111,
+        "decoded_tensor_parity": false,
+        "mismatch_count": 1,
+        "mismatches": [
+          {
+            "changed_elements": 4726,
+            "kind": "value",
+            "max_abs_diff": 6.103515625e-05,
+            "name": "frame1_head.block1.film_proj.weight",
+            "numel": 5376
+          }
+        ],
+        "source_tensor_count": 111
+      },
+      "model_delta_bytes_vs_source": -659,
+      "projected_archive_bytes_if_components_identical_formula_only": 229097,
+      "rate_score_delta_if_components_identical_formula_only": -0.0004388010501075109,
+      "runtime_compatibility": {
+        "blocker_class": "runtime_incompatibility",
+        "blockers": [
+          "public_pr85_replay_missing_QFQ4_model_loader",
+          "robust_current_missing_QFQ4_renderer_loader",
+          "robust_current_missing_pr85_single_x_unpacker"
+        ],
+        "dispatch_unlocked": false,
+        "minimal_runtime_implementation_needed": "Add a no-sidecar PR85 single-x QFQ4 model loader and prove output parity.",
+        "public_pr85_replay_inflate_py": "experiments/results/pr85_stbm1br_mask_recode_20260504_worker/replay_submission_stbm/inflate.py",
+        "public_pr85_replay_qfq4_model_loader": false,
+        "public_pr85_replay_single_x_loader": true,
+        "qfq4_magic": "QFQ4\u0000",
+        "robust_current_dir": "submissions/robust_current",
+        "robust_current_qfq4_renderer_loader": false,
+        "robust_current_single_x_unpacker": false,
+        "runtime_can_decode_without_edits": false
+      }
+    },
+    "blocker": "decoded_model_tensor_parity_failed; pr85_runtime_missing_qfq4_loader",
+    "blocker_class": "tensor_parity_failed_and_runtime_incompatible",
+    "built_candidate_count": 0,
+    "dispatch_unlocked": false,
+    "summary_path": "experiments/results/pr85_stbm1br_model_recode_feasibility_20260504_codex/qfq4_serializer/candidate_summary.json"
+  },
+  "qh0_qm0_screen": {
+    "best_byte_screen": {
+      "archive_delta_bytes_vs_source_formula": 0,
+      "candidate_id": "qh0_canonical_source_passthrough",
+      "decoded_tensor_parity": true,
+      "model_delta_bytes_vs_source": 0,
+      "projected_archive_bytes_if_components_identical_formula_only": 229756,
+      "rate_score_delta_if_components_identical_formula_only": 0.0,
+      "runtime_compatibility": {
+        "blocker_class": null,
+        "blockers": [
+          "robust_current_missing_pr85_single_x_unpacker"
+        ],
+        "dispatch_unlocked": true,
+        "magic": "QH0",
+        "minimal_runtime_implementation_needed": null,
+        "public_pr85_replay_inflate_py": "experiments/results/pr85_stbm1br_mask_recode_20260504_worker/replay_submission_stbm/inflate.py",
+        "public_pr85_replay_single_x_can_decode": true,
+        "robust_current_dir": "submissions/robust_current",
+        "robust_current_renderer_member_can_decode": true,
+        "robust_current_single_x_can_unpack": false,
+        "runtime_can_decode_without_edits": true
+      }
+    },
+    "blocker": "all runtime-compatible serialized model streams were byte-neutral or byte-negative",
+    "blocker_class": "no_real_byte_win",
+    "built_candidate_count": 0,
+    "dispatch_unlocked": false,
+    "summary_path": "experiments/results/pr85_stbm1br_model_recode_feasibility_20260504_codex/qh0_serializer/candidate_summary.json"
+  },
+  "remote_gpu_dispatch_performed": false,
+  "schema": "pr85_stbm1br_model_recode_feasibility_v1",
+  "score_claim": false,
+  "source_archive": {
+    "archive_bytes": 229756,
+    "archive_sha256": "c6f004d444ed32c628611a2f21f567c666af6bcbcceba618cc089ec024a0cda6",
+    "member_bytes": 229656,
+    "member_name": "x",
+    "member_sha256": "c7586795bb29fb0ef611ad44715aec77e0e815370e19674d4c89ef2a54b417b5",
+    "path": "experiments/results/pr85_stbm1br_mask_recode_20260504_worker/pr90_stbm1br_lossless_pr85_mask_recode/archive.zip",
+    "zip_compress_type": 0,
+    "zip_overhead_bytes": 100
+  },
+  "source_bundle": {
+    "format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+    "header_bytes": 24,
+    "segment_fingerprints": {
+      "bias": {
+        "bytes": 223,
+        "magic_hex": "424b00ff919235bc",
+        "sha256": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b"
+      },
+      "frac": {
+        "bytes": 106,
+        "magic_hex": "421600009836dc8d",
+        "sha256": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992"
+      },
+      "frac2": {
+        "bytes": 149,
+        "magic_hex": "424b00bf91727574",
+        "sha256": "3a01c7546d89d9d3ca846da37a20add7d456421e9211a6339850d946b856026b"
+      },
+      "frac3": {
+        "bytes": 154,
+        "magic_hex": "424b00ff919235bc",
+        "sha256": "d725b01b604566c5a76a06b821c644c8d5d5bb9a57ab0597d3bdabc8389858b5"
+      },
+      "mask": {
+        "bytes": 152439,
+        "magic_hex": "5354424d31425200",
+        "sha256": "1b1ec60b64e284aae11e838dc3d9996bce00125df5712a8ba9c3e8f739c9d313"
+      },
+      "model": {
+        "bytes": 57074,
+        "magic_hex": "b1a8843f8097a162",
+        "sha256": "c9194c19d44d3c32c4e588bbe4f9986ed0c562779078f0f4d6b073f0799b5dbc"
+      },
+      "pose": {
+        "bytes": 1487,
+        "magic_hex": "a2e120a29a3463fe",
+        "sha256": "2b6e03e02fb17f662e3f3f9ce47daf2fc33bf1f76c96e34ffac005f1c5c4054c"
+      },
+      "post": {
+        "bytes": 1400,
+        "magic_hex": "e22b61464ace67fc",
+        "sha256": "c3dc88e0fb5a1e48aec49eeacefeea20685e3c02598933deb1ff22dc09892575"
+      },
+      "randmulti": {
+        "bytes": 16101,
+        "magic_hex": "b1004f2b51c6d84e",
+        "sha256": "c624372e60a0851c4c427dc333a60dcc5d6657ba8ed56951612e7c9d7be7629f"
+      },
+      "region": {
+        "bytes": 273,
+        "magic_hex": "424b00fff050b57d",
+        "sha256": "4a7c16094fab281c30e27621a58577c095c4b1153c232518c9adbaba2a2b2392"
+      },
+      "shift": {
+        "bytes": 226,
+        "magic_hex": "424b00ff20803ad5",
+        "sha256": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4"
+      }
+    },
+    "segment_lengths": {
+      "bias": 223,
+      "frac": 106,
+      "frac2": 149,
+      "frac3": 154,
+      "mask": 152439,
+      "model": 57074,
+      "pose": 1487,
+      "post": 1400,
+      "randmulti": 16101,
+      "region": 273,
+      "shift": 226
+    }
+  },
+  "structured_blocker": {
+    "adversarial_decision": "Do not emit PR85_STBM1BR QFQ4 from the current formula-only screen. The only byte-positive QFQ4 row changes decoded model tensors and the scored runtime has no QFQ4 loader, so dispatch is false.",
+    "blocker": "no_byte_closed_model_recode_candidate_built; qh0_qm0:no_real_byte_win; qfq4:tensor_parity_failed_and_runtime_incompatible",
+    "blocker_class": "no_byte_closed_model_recode_candidate",
+    "blockers": [
+      "no_byte_closed_model_recode_candidate_built",
+      "qh0_qm0:no_real_byte_win",
+      "qfq4:tensor_parity_failed_and_runtime_incompatible"
+    ],
+    "candidate_archive_audits": [],
+    "candidate_archive_emitted": false,
+    "dispatch": false,
+    "forbidden_surfaces": [
+      "mask",
+      "pose",
+      "post",
+      "shift",
+      "frac",
+      "frac2",
+      "frac3",
+      "bias",
+      "region",
+      "randmulti"
+    ],
+    "model_only_segment_gate": {
+      "passed": true,
+      "requirement": "An emitted candidate may change only the PR85 model segment; mask, pose, post, shift, frac, frac2, frac3, bias, region, and randmulti must be byte-identical.",
+      "violation_count": 0
+    },
+    "owned_surface": "model",
+    "qfq4_contract": {
+      "best_screened_candidate": {
+        "build_blockers": [
+          "decoded_model_tensor_parity_failed",
+          "pr85_runtime_missing_qfq4_loader"
+        ],
+        "buildable": false,
+        "candidate_id": "qfq4_pr85_shifted_int8_rows",
+        "candidate_outer_pr85_model_segment_bytes": 56415,
+        "candidate_outer_pr85_model_segment_sha256": "3a1a94506cd35e5338930b7dae9505ce4340f8fdb9991879438c8bb1e4cc2e0b",
+        "decoded_tensor_parity": {
+          "candidate_tensor_count": 111,
+          "decoded_tensor_parity": false,
+          "mismatch_count": 1,
+          "mismatches": [
+            {
+              "changed_elements": 4726,
+              "kind": "value",
+              "max_abs_diff": 6.103515625e-05,
+              "name": "frame1_head.block1.film_proj.weight",
+              "numel": 5376
+            }
+          ],
+          "source_tensor_count": 111
+        },
+        "inner_body_delta_bytes_vs_source_model_segment_advisory": -668,
+        "outer_pr85_archive_delta_bytes_vs_source_formula": -659,
+        "outer_pr85_model_delta_bytes_vs_source": -659,
+        "qfq4_inner_brotli_bytes": 56406,
+        "qfq4_inner_brotli_sha256": "e15dd3711ddfbfeb9278f85dac9fef2505ff82d7d88952763051b04440fac952",
+        "qfq4_raw_payload_bytes": 61768,
+        "qfq4_raw_payload_sha256": "0efd867b104d7f354970907678482d613169a7ba4ce2a2bf09f7b4124c9463d5",
+        "qrow_contract_note": "Stores every PR85 int8 row-scale row as QFQ4 uint8 rows with min=-128*scale; PR90 QFQ4 then casts reconstructed rows to fp16.",
+        "qrow_policy": "shifted_int8_rows",
+        "qrow_rows_fp16": 0,
+        "qrow_rows_quantized": 112,
+        "rate_score_delta_if_components_identical_formula_only": -0.0004388010501075109,
+        "runtime_compatibility": {
+          "blocker_class": "runtime_incompatibility",
+          "blockers": [
+            "public_pr85_replay_missing_QFQ4_model_loader",
+            "robust_current_missing_QFQ4_renderer_loader",
+            "robust_current_missing_pr85_single_x_unpacker"
+          ],
+          "dispatch_unlocked": false,
+          "minimal_runtime_implementation_needed": "Add a no-sidecar PR85 single-x QFQ4 model loader and prove output parity.",
+          "public_pr85_replay_inflate_py": "experiments/results/pr85_stbm1br_mask_recode_20260504_worker/replay_submission_stbm/inflate.py",
+          "public_pr85_replay_qfq4_model_loader": false,
+          "public_pr85_replay_single_x_loader": true,
+          "qfq4_magic": "QFQ4\u0000",
+          "robust_current_dir": "submissions/robust_current",
+          "robust_current_qfq4_renderer_loader": false,
+          "robust_current_single_x_unpacker": false,
+          "runtime_can_decode_without_edits": false
+        }
+      },
+      "blocker": "decoded_model_tensor_parity_failed; pr85_runtime_missing_qfq4_loader",
+      "blocker_class": "tensor_parity_failed_and_runtime_incompatible",
+      "decision": "fail_closed_no_archive_candidate",
+      "decoded_tensor_parity_gate": {
+        "candidate_tensor_count": 111,
+        "decoded_tensor_parity": false,
+        "mismatch_count": 1,
+        "mismatches": [
+          {
+            "changed_elements": 4726,
+            "kind": "value",
+            "max_abs_diff": 6.103515625e-05,
+            "name": "frame1_head.block1.film_proj.weight",
+            "numel": 5376
+          }
+        ],
+        "source_tensor_count": 111
+      },
+      "runtime_compatibility_gate": {
+        "blocker_class": "runtime_incompatibility",
+        "blockers": [
+          "public_pr85_replay_missing_QFQ4_model_loader",
+          "robust_current_missing_QFQ4_renderer_loader",
+          "robust_current_missing_pr85_single_x_unpacker"
+        ],
+        "dispatch_unlocked": false,
+        "minimal_runtime_implementation_needed": "Add a no-sidecar PR85 single-x QFQ4 model loader and prove output parity.",
+        "public_pr85_replay_inflate_py": "experiments/results/pr85_stbm1br_mask_recode_20260504_worker/replay_submission_stbm/inflate.py",
+        "public_pr85_replay_qfq4_model_loader": false,
+        "public_pr85_replay_single_x_loader": true,
+        "qfq4_magic": "QFQ4\u0000",
+        "robust_current_dir": "submissions/robust_current",
+        "robust_current_qfq4_renderer_loader": false,
+        "robust_current_single_x_unpacker": false,
+        "runtime_can_decode_without_edits": false
+      }
+    },
+    "qh0_qm0_contract": {
+      "best_screened_candidate": {
+        "candidate_archive_delta_bytes_vs_source_formula": 0,
+        "candidate_id": "qh0_canonical_source_passthrough",
+        "candidate_model_brotli_lgwin": null,
+        "candidate_model_brotli_quality": null,
+        "candidate_model_bytes": 57074,
+        "candidate_model_codec": "source_passthrough",
+        "candidate_model_delta_bytes_vs_source": 0,
+        "candidate_model_sha256": "c9194c19d44d3c32c4e588bbe4f9986ed0c562779078f0f4d6b073f0799b5dbc",
+        "decoded_tensor_parity": true,
+        "duplicate_stream": false,
+        "rate_score_delta_if_components_identical_formula_only": 0.0,
+        "runtime_compatibility": {
+          "blocker_class": null,
+          "blockers": [
+            "robust_current_missing_pr85_single_x_unpacker"
+          ],
+          "dispatch_unlocked": true,
+          "magic": "QH0",
+          "minimal_runtime_implementation_needed": null,
+          "public_pr85_replay_inflate_py": "experiments/results/pr85_stbm1br_mask_recode_20260504_worker/replay_submission_stbm/inflate.py",
+          "public_pr85_replay_single_x_can_decode": true,
+          "robust_current_dir": "submissions/robust_current",
+          "robust_current_renderer_member_can_decode": true,
+          "robust_current_single_x_can_unpack": false,
+          "runtime_can_decode_without_edits": true
+        },
+        "serializer_magic": "QH0",
+        "serializer_payload_bytes": 61590,
+        "serializer_payload_sha256": "503d666ec4c1b3e0ce09fa9dcb963b049de185eac0ddd82318578a7732439ed4",
+        "serializer_variant": "qh0_canonical"
+      },
+      "blocker": "all runtime-compatible serialized model streams were byte-neutral or byte-negative",
+      "blocker_class": "no_real_byte_win",
+      "decision": "reject_as_byte_neutral"
+    },
+    "remote_gpu_dispatch_performed": false,
+    "required_before_dispatch": [
+      "byte_positive_model_recode_archive",
+      "decoded_model_tensor_parity_or_reviewed_runtime_output_parity",
+      "robust_current_compatible_QFQ4_or_QH0_QM0_loader",
+      "local_renderer_output_parity_on_source_vs_candidate",
+      "model_only_archive_audit",
+      "fresh_lane_claim_before_any_remote_exact_eval"
+    ],
+    "runtime_output_parity_gate": {
+      "passed": false,
+      "required": true,
+      "requirement": "Any QFQ4 drift-tolerant design must first add scored-runtime decode support and prove source-vs-candidate renderer output parity locally.",
+      "status": "not_run_qfq4_tensor_parity_and_runtime_loader_blocked"
+    },
+    "schema": "pr85_stbm1br_model_recode_dispatch_blocker_v1",
+    "score_claim": false,
+    "source_archive": {
+      "archive_bytes": 229756,
+      "archive_sha256": "c6f004d444ed32c628611a2f21f567c666af6bcbcceba618cc089ec024a0cda6",
+      "member_bytes": 229656,
+      "member_name": "x",
+      "member_sha256": "c7586795bb29fb0ef611ad44715aec77e0e815370e19674d4c89ef2a54b417b5",
+      "path": "experiments/results/pr85_stbm1br_mask_recode_20260504_worker/pr90_stbm1br_lossless_pr85_mask_recode/archive.zip",
+      "zip_compress_type": 0,
+      "zip_overhead_bytes": 100
+    },
+    "source_bundle": {
+      "format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+      "header_bytes": 24,
+      "segment_fingerprints": {
+        "bias": {
+          "bytes": 223,
+          "magic_hex": "424b00ff919235bc",
+          "sha256": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b"
+        },
+        "frac": {
+          "bytes": 106,
+          "magic_hex": "421600009836dc8d",
+          "sha256": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992"
+        },
+        "frac2": {
+          "bytes": 149,
+          "magic_hex": "424b00bf91727574",
+          "sha256": "3a01c7546d89d9d3ca846da37a20add7d456421e9211a6339850d946b856026b"
+        },
+        "frac3": {
+          "bytes": 154,
+          "magic_hex": "424b00ff919235bc",
+          "sha256": "d725b01b604566c5a76a06b821c644c8d5d5bb9a57ab0597d3bdabc8389858b5"
+        },
+        "mask": {
+          "bytes": 152439,
+          "magic_hex": "5354424d31425200",
+          "sha256": "1b1ec60b64e284aae11e838dc3d9996bce00125df5712a8ba9c3e8f739c9d313"
+        },
+        "model": {
+          "bytes": 57074,
+          "magic_hex": "b1a8843f8097a162",
+          "sha256": "c9194c19d44d3c32c4e588bbe4f9986ed0c562779078f0f4d6b073f0799b5dbc"
+        },
+        "pose": {
+          "bytes": 1487,
+          "magic_hex": "a2e120a29a3463fe",
+          "sha256": "2b6e03e02fb17f662e3f3f9ce47daf2fc33bf1f76c96e34ffac005f1c5c4054c"
+        },
+        "post": {
+          "bytes": 1400,
+          "magic_hex": "e22b61464ace67fc",
+          "sha256": "c3dc88e0fb5a1e48aec49eeacefeea20685e3c02598933deb1ff22dc09892575"
+        },
+        "randmulti": {
+          "bytes": 16101,
+          "magic_hex": "b1004f2b51c6d84e",
+          "sha256": "c624372e60a0851c4c427dc333a60dcc5d6657ba8ed56951612e7c9d7be7629f"
+        },
+        "region": {
+          "bytes": 273,
+          "magic_hex": "424b00fff050b57d",
+          "sha256": "4a7c16094fab281c30e27621a58577c095c4b1153c232518c9adbaba2a2b2392"
+        },
+        "shift": {
+          "bytes": 226,
+          "magic_hex": "424b00ff20803ad5",
+          "sha256": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4"
+        }
+      },
+      "segment_lengths": {
+        "bias": 223,
+        "frac": 106,
+        "frac2": 149,
+        "frac3": 154,
+        "mask": 152439,
+        "model": 57074,
+        "pose": 1487,
+        "post": 1400,
+        "randmulti": 16101,
+        "region": 273,
+        "shift": 226
+      }
+    },
+    "tool": "experiments/profile_pr85_stbm1br_model_recode_feasibility.py"
+  },
+  "structured_blocker_json": "experiments/results/pr85_stbm1br_model_recode_feasibility_20260504_codex/dispatch_blocker.json",
+  "tool": "experiments/profile_pr85_stbm1br_model_recode_feasibility.py"
+}

@@ -1,0 +1,11 @@
+{
+  "archive_delta_bytes": 106,
+  "formula_only_rate_score_delta": 7.058104903095017e-05,
+  "output_archive": {
+    "bytes": 263605,
+    "path": "/workspace/pact/experiments/results/vast_live_harvest/c063_mask_crf52_pose_regen_h100sxm_fix3_20260502T0820Z/archive.zip",
+    "sha256": "c1f635775df5e52977eb8ae4714f57fc066df5fd150ad775f3f56eae0447914c"
+  },
+  "promotion_eligible": false,
+  "score_claim": false
+}

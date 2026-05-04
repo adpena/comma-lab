@@ -1,0 +1,11 @@
+{
+  "archive_delta_bytes": 218,
+  "formula_only_rate_score_delta": 0.00014515725178063338,
+  "output_archive": {
+    "bytes": 207928,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c063_protected_mask_reencode_20260502_codex/protect_boundary1_horizon_pose_top16_crf56_rawzip/final_archive.zip",
+    "sha256": "68d0d3080aefe2e8d376ddd7074270d713b351efecf8bd98425583a76c5912bf"
+  },
+  "promotion_eligible": false,
+  "score_claim": false
+}

@@ -1,0 +1,113 @@
+{
+  "format": "owv3_0120_stack_provenance_v1",
+  "lane_id": "lane_g_v3_owv3_0120_stack",
+  "build_started_iso": "2026-05-01T13:11:20Z",
+  "build_completed_iso": "2026-05-01T13:11:20Z",
+  "champion": {
+    "path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_owv3_wave3_LANDED_20260501/archive_lane_g_v3_owv3_0120_LANDED.zip",
+    "size_bytes": 617410,
+    "sha256": "06af57f770342cde494c37839200fdda79bdadd29826009e5e107ab296b4057a",
+    "score_contest_cuda": 1.002399,
+    "components": {
+      "renderer.bin": {
+        "raw_bytes": 211903,
+        "sha256": "97bde7ac1de7f78ce60a2d68f747aca5d76d1ce7fd1d024680f8d61247ccf142"
+      },
+      "masks.mkv": {
+        "raw_bytes": 421483,
+        "sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9"
+      },
+      "optimized_poses.pt": {
+        "raw_bytes": 15620,
+        "sha256": "cb8517f7a7e3c9382e952ff278dc3f8de44ba066db07746f16354c1dbe2cbca4"
+      }
+    }
+  },
+  "stack_axes": {
+    "renderer.bin": "BIT-IDENTICAL to champion (OWV3 0120)",
+    "masks.mkv": "BIT-IDENTICAL to champion (Lane G v3 anchor)",
+    "optimized_poses": "REPLACED: optimized_poses.pt (fp32 pickle, 15,620B raw) -> optimized_poses.bin (PFP16 raw fp16, 7,200B raw)"
+  },
+  "axes_investigated_and_discarded": {
+    "PD-V1/V2_pose_delta_codec": "roundtrip max-abs error 0.54 on Lane G v3 poses (per-pair-fit-from-scratch deltas not smooth enough for int8); codec refuses to ship a regression",
+    "Learnable_Class_Targets": "requires segmap inflate path + retrained renderer; not orthogonal on a vanilla `renderer` PYTHON_INFLATE archive",
+    "Joint_ADMM_JCSP": "operates on qint streams not on already-encoded MKV/AV1 bytes; renderer.bin and masks.mkv are RAW_PASSTHROUGH from JCSP perspective; no allocation-redistribution possible",
+    "Multi_pass_inflate": "trick_stack._stage_multi_pass is a postfilter helper, not a contest-archive multi-pass primitive"
+  },
+  "pfp16": {
+    "source_path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_landed/iter_0/optimized_poses.pt",
+    "source_sha256": "cb8517f7a7e3c9382e952ff278dc3f8de44ba066db07746f16354c1dbe2cbca4",
+    "pose_shape": [
+      600,
+      6
+    ],
+    "pose_dtype_in": "torch.float32",
+    "pose_dtype_stored": "float16",
+    "raw_bytes": 7200,
+    "roundtrip_max_abs_error": 0.0155181884765625,
+    "roundtrip_mean_abs_error": 0.0010401408653706312
+  },
+  "stacked_archive": {
+    "path": "experiments/results/lane_g_v3_owv3_0120_stacked_20260501/archive.zip",
+    "size_bytes": 609963,
+    "sha256": "1e9195cb6e0e08fc98ee393590770e2b22905a2ee2718edb8b737cada125f279",
+    "manifest": [
+      {
+        "name": "renderer.bin",
+        "raw_bytes": 211903,
+        "compressed_bytes": 190730,
+        "crc32": "7f8f3808",
+        "date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "permissions_octal": "0o644",
+        "sha256": "97bde7ac1de7f78ce60a2d68f747aca5d76d1ce7fd1d024680f8d61247ccf142"
+      },
+      {
+        "name": "masks.mkv",
+        "raw_bytes": 421483,
+        "compressed_bytes": 412169,
+        "crc32": "e144d6ac",
+        "date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "permissions_octal": "0o644",
+        "sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9"
+      },
+      {
+        "name": "optimized_poses.bin",
+        "raw_bytes": 7200,
+        "compressed_bytes": 6734,
+        "crc32": "686cbfbf",
+        "date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "permissions_octal": "0o644",
+        "sha256": "4b3d8cd58965971ad518a970441f5e9cc53ce361a62d51e95c1cdd2056be4449"
+      }
+    ],
+    "deterministic_rebuild": true
+  },
+  "size_delta_vs_champion": -7447,
+  "rate_delta_vs_champion": -0.00495865162390081,
+  "predicted_score_derivation": 0.9974403483760992,
+  "predicted_score_tag": "[derivation]",
+  "score_validation_required": "contest-CUDA via experiments/contest_auth_eval.py on Vast.ai RTX 4090 (CLAUDE.md non-negotiable)",
+  "strict_scorer_rule": "compliant - no scorer load at compress or inflate",
+  "evidence_label": "implementation-smoke until exact CUDA contest eval"
+}

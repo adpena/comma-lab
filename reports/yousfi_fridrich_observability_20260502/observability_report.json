@@ -1,0 +1,725 @@
+{
+  "action_recommendations": [
+    {
+      "action": "build_repaired_or_multimask_candidates",
+      "evidence": "byte-saving exact negatives plus repeated active-subspace hotspots",
+      "first_confusions": [
+        "2->3",
+        "0->3",
+        "0->4",
+        "0->2"
+      ],
+      "first_pairs": [
+        "69",
+        "67",
+        "290",
+        "285",
+        "70",
+        "289",
+        "286",
+        "294"
+      ],
+      "why": "Raw row-span replacement saves bytes but creates a component cliff. The next mask candidate should charge only consensus repair/fusion atoms around repeated PoseNet-sensitive regions."
+    },
+    {
+      "action": "prioritize_large_rate_levers_before_micro_pose_polish",
+      "bytes_needed_at_fixed_distortion": 23455,
+      "evidence": "target gap decomposition",
+      "why": "At the current distortion level, sub-0.300 requires a material byte drop; pose-only micro-gains cannot close the full gap."
+    },
+    {
+      "action": "promote_only_exact_archive_bytes",
+      "evidence": "AGENTS exact CUDA contract",
+      "why": "Profiler, visualization, and byte-screen output are control-plane signals only. Every recommendation must resolve to a deterministic archive and exact CUDA auth eval."
+    }
+  ],
+  "atom_profile_summary": {
+    "evidence_grade": "planning_only",
+    "input": {
+      "path": "/Users/adpena/Projects/pact/experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/rowspan_static_dynamic_active_subspace_profile.json",
+      "sha256": "d11c42dd440c7705cb9dfb72edb8c2453749cd308c86ed5e795b3d05a5ad6a00",
+      "size_bytes": 323274
+    },
+    "score_claim": false,
+    "signal_surface": {
+      "action_rules": [
+        "Use consensus subspaces to propose charged repair, multimask, or learned-selector policies.",
+        "Use byte-saving exact negatives as cliff maps; do not promote or rank from profiler output.",
+        "Dispatch only after a deterministic archive builder charges the selected atoms and exact CUDA auth eval closes custody."
+      ],
+      "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py on CUDA",
+      "low_dimensional_consensus": {
+        "top_class_confusions": [
+          "2->3",
+          "0->3",
+          "0->4",
+          "0->2",
+          "4->0"
+        ],
+        "top_classes": [
+          "2",
+          "0",
+          "4"
+        ],
+        "top_pairs": [
+          69,
+          67,
+          290,
+          285,
+          70,
+          289,
+          286,
+          294,
+          292,
+          293,
+          164,
+          284,
+          272,
+          273,
+          66,
+          1
+        ]
+      },
+      "overlap_summary": {
+        "comparison_count": 6,
+        "mean_atom_id_jaccard": 0.78544775313,
+        "mean_pair_jaccard": 0.901366607249,
+        "min_pair_jaccard": 0.882352941176
+      },
+      "score_claim": false
+    },
+    "summary_source": "aggregate_subspaces",
+    "top_classes": [
+      {
+        "estimated_charged_bytes_sum": 12058.0,
+        "estimated_lagrangian_net_proxy_sum": 0.003178297772,
+        "estimated_marginal_score_saved_proxy_sum": 0.01120722503,
+        "estimated_score_saved_per_charged_byte": 9.29443e-07,
+        "hit_count": 1514,
+        "key": "2",
+        "profile_hit_count": 4,
+        "profile_paths": [
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_dynamic_ego_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_dynamic_ego_foveal_atom_ledger.json"
+        ],
+        "residual_pixels_sum": 317732,
+        "weighted_centroid": {
+          "x": 330.201781,
+          "y": 175.54226
+        }
+      },
+      {
+        "estimated_charged_bytes_sum": 3819.0,
+        "estimated_lagrangian_net_proxy_sum": 0.00169675779,
+        "estimated_marginal_score_saved_proxy_sum": 0.004239673145,
+        "estimated_score_saved_per_charged_byte": 1.110153e-06,
+        "hit_count": 496,
+        "key": "0",
+        "profile_hit_count": 4,
+        "profile_paths": [
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_dynamic_ego_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_dynamic_ego_foveal_atom_ledger.json"
+        ],
+        "residual_pixels_sum": 75910,
+        "weighted_centroid": {
+          "x": 232.408847,
+          "y": 190.31463
+        }
+      },
+      {
+        "estimated_charged_bytes_sum": 228.0,
+        "estimated_lagrangian_net_proxy_sum": 5.4142922e-05,
+        "estimated_marginal_score_saved_proxy_sum": 0.000205958758,
+        "estimated_score_saved_per_charged_byte": 9.03328e-07,
+        "hit_count": 38,
+        "key": "4",
+        "profile_hit_count": 2,
+        "profile_paths": [
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_dynamic_ego_foveal_atom_ledger.json"
+        ],
+        "residual_pixels_sum": 3430,
+        "weighted_centroid": {
+          "x": 292.630494,
+          "y": 284.071522
+        }
+      }
+    ],
+    "top_confusions": [
+      {
+        "estimated_charged_bytes_sum": 12058.0,
+        "estimated_lagrangian_net_proxy_sum": 0.003178297772,
+        "estimated_marginal_score_saved_proxy_sum": 0.01120722503,
+        "estimated_score_saved_per_charged_byte": 9.29443e-07,
+        "hit_count": 1514,
+        "key": "2->3",
+        "profile_hit_count": 4,
+        "profile_paths": [
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_dynamic_ego_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_dynamic_ego_foveal_atom_ledger.json"
+        ],
+        "residual_pixels_sum": 317732,
+        "weighted_centroid": {
+          "x": 330.201781,
+          "y": 175.54226
+        }
+      },
+      {
+        "estimated_charged_bytes_sum": 3687.0,
+        "estimated_lagrangian_net_proxy_sum": 0.001666103665,
+        "estimated_marginal_score_saved_proxy_sum": 0.00412112564,
+        "estimated_score_saved_per_charged_byte": 1.117745e-06,
+        "hit_count": 482,
+        "key": "0->3",
+        "profile_hit_count": 4,
+        "profile_paths": [
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_dynamic_ego_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_dynamic_ego_foveal_atom_ledger.json"
+        ],
+        "residual_pixels_sum": 73895,
+        "weighted_centroid": {
+          "x": 226.939107,
+          "y": 187.586988
+        }
+      },
+      {
+        "estimated_charged_bytes_sum": 132.0,
+        "estimated_lagrangian_net_proxy_sum": 3.0654125e-05,
+        "estimated_marginal_score_saved_proxy_sum": 0.000118547505,
+        "estimated_score_saved_per_charged_byte": 8.98087e-07,
+        "hit_count": 14,
+        "key": "0->4",
+        "profile_hit_count": 4,
+        "profile_paths": [
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_dynamic_ego_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_dynamic_ego_foveal_atom_ledger.json"
+        ],
+        "residual_pixels_sum": 2015,
+        "weighted_centroid": {
+          "x": 422.556115,
+          "y": 285.136988
+        }
+      },
+      {
+        "estimated_charged_bytes_sum": 380.0,
+        "estimated_lagrangian_net_proxy_sum": 0.000122180271,
+        "estimated_marginal_score_saved_proxy_sum": 0.000375206674,
+        "estimated_score_saved_per_charged_byte": 9.87386e-07,
+        "hit_count": 4,
+        "key": "0->2",
+        "profile_hit_count": 2,
+        "profile_paths": [
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_dynamic_ego_foveal_atom_ledger.json"
+        ],
+        "residual_pixels_sum": 5992,
+        "weighted_centroid": {
+          "x": 204.427659,
+          "y": 187.980619
+        }
+      },
+      {
+        "estimated_charged_bytes_sum": 228.0,
+        "estimated_lagrangian_net_proxy_sum": 5.4142922e-05,
+        "estimated_marginal_score_saved_proxy_sum": 0.000205958758,
+        "estimated_score_saved_per_charged_byte": 9.03328e-07,
+        "hit_count": 38,
+        "key": "4->0",
+        "profile_hit_count": 2,
+        "profile_paths": [
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_dynamic_ego_foveal_atom_ledger.json"
+        ],
+        "residual_pixels_sum": 3430,
+        "weighted_centroid": {
+          "x": 292.630494,
+          "y": 284.071522
+        }
+      }
+    ],
+    "top_pairs": [
+      {
+        "estimated_charged_bytes_sum": 961.0,
+        "estimated_lagrangian_net_proxy_sum": 0.000511027544,
+        "estimated_marginal_score_saved_proxy_sum": 0.001150917999,
+        "estimated_score_saved_per_charged_byte": 1.197625e-06,
+        "hit_count": 89,
+        "key": "69",
+        "profile_hit_count": 4,
+        "profile_paths": [
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_dynamic_ego_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_dynamic_ego_foveal_atom_ledger.json"
+        ],
+        "residual_pixels_sum": 18361,
+        "weighted_centroid": {
+          "x": 211.71411,
+          "y": 188.044578
+        }
+      },
+      {
+        "estimated_charged_bytes_sum": 1064.0,
+        "estimated_lagrangian_net_proxy_sum": 0.000415711967,
+        "estimated_marginal_score_saved_proxy_sum": 0.0011241859,
+        "estimated_score_saved_per_charged_byte": 1.056566e-06,
+        "hit_count": 97,
+        "key": "67",
+        "profile_hit_count": 4,
+        "profile_paths": [
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_dynamic_ego_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_dynamic_ego_foveal_atom_ledger.json"
+        ],
+        "residual_pixels_sum": 16367,
+        "weighted_centroid": {
+          "x": 233.6156,
+          "y": 184.059662
+        }
+      },
+      {
+        "estimated_charged_bytes_sum": 624.0,
+        "estimated_lagrangian_net_proxy_sum": 0.000394295266,
+        "estimated_marginal_score_saved_proxy_sum": 0.00080979126,
+        "estimated_score_saved_per_charged_byte": 1.297742e-06,
+        "hit_count": 62,
+        "key": "290",
+        "profile_hit_count": 4,
+        "profile_paths": [
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_dynamic_ego_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_dynamic_ego_foveal_atom_ledger.json"
+        ],
+        "residual_pixels_sum": 16344,
+        "weighted_centroid": {
+          "x": 360.11798,
+          "y": 179.330391
+        }
+      },
+      {
+        "estimated_charged_bytes_sum": 1080.0,
+        "estimated_lagrangian_net_proxy_sum": 0.000303319655,
+        "estimated_marginal_score_saved_proxy_sum": 0.001022447318,
+        "estimated_score_saved_per_charged_byte": 9.4671e-07,
+        "hit_count": 110,
+        "key": "285",
+        "profile_hit_count": 4,
+        "profile_paths": [
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_dynamic_ego_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_dynamic_ego_foveal_atom_ledger.json"
+        ],
+        "residual_pixels_sum": 18076,
+        "weighted_centroid": {
+          "x": 307.135453,
+          "y": 178.53176
+        }
+      },
+      {
+        "estimated_charged_bytes_sum": 444.0,
+        "estimated_lagrangian_net_proxy_sum": 0.000226599986,
+        "estimated_marginal_score_saved_proxy_sum": 0.000522241362,
+        "estimated_score_saved_per_charged_byte": 1.176219e-06,
+        "hit_count": 74,
+        "key": "70",
+        "profile_hit_count": 4,
+        "profile_paths": [
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_dynamic_ego_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_dynamic_ego_foveal_atom_ledger.json"
+        ],
+        "residual_pixels_sum": 9344,
+        "weighted_centroid": {
+          "x": 218.072661,
+          "y": 187.832884
+        }
+      },
+      {
+        "estimated_charged_bytes_sum": 528.0,
+        "estimated_lagrangian_net_proxy_sum": 0.000204619383,
+        "estimated_marginal_score_saved_proxy_sum": 0.000556192905,
+        "estimated_score_saved_per_charged_byte": 1.053396e-06,
+        "hit_count": 52,
+        "key": "289",
+        "profile_hit_count": 4,
+        "profile_paths": [
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_dynamic_ego_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_dynamic_ego_foveal_atom_ledger.json"
+        ],
+        "residual_pixels_sum": 12992,
+        "weighted_centroid": {
+          "x": 353.330178,
+          "y": 177.057733
+        }
+      },
+      {
+        "estimated_charged_bytes_sum": 696.0,
+        "estimated_lagrangian_net_proxy_sum": 0.00020092118,
+        "estimated_marginal_score_saved_proxy_sum": 0.000664359013,
+        "estimated_score_saved_per_charged_byte": 9.54539e-07,
+        "hit_count": 94,
+        "key": "286",
+        "profile_hit_count": 4,
+        "profile_paths": [
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_dynamic_ego_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_dynamic_ego_foveal_atom_ledger.json"
+        ],
+        "residual_pixels_sum": 13332,
+        "weighted_centroid": {
+          "x": 296.916149,
+          "y": 177.975321
+        }
+      },
+      {
+        "estimated_charged_bytes_sum": 558.0,
+        "estimated_lagrangian_net_proxy_sum": 0.000162183893,
+        "estimated_marginal_score_saved_proxy_sum": 0.000533733189,
+        "estimated_score_saved_per_charged_byte": 9.56511e-07,
+        "hit_count": 61,
+        "key": "294",
+        "profile_hit_count": 4,
+        "profile_paths": [
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_dynamic_ego_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_dynamic_ego_foveal_atom_ledger.json"
+        ],
+        "residual_pixels_sum": 20249,
+        "weighted_centroid": {
+          "x": 387.354278,
+          "y": 177.484876
+        }
+      },
+      {
+        "estimated_charged_bytes_sum": 708.0,
+        "estimated_lagrangian_net_proxy_sum": 0.000147768761,
+        "estimated_marginal_score_saved_proxy_sum": 0.000619196894,
+        "estimated_score_saved_per_charged_byte": 8.74572e-07,
+        "hit_count": 58,
+        "key": "292",
+        "profile_hit_count": 4,
+        "profile_paths": [
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_dynamic_ego_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_dynamic_ego_foveal_atom_ledger.json"
+        ],
+        "residual_pixels_sum": 21964,
+        "weighted_centroid": {
+          "x": 370.051334,
+          "y": 175.203376
+        }
+      },
+      {
+        "estimated_charged_bytes_sum": 438.0,
+        "estimated_lagrangian_net_proxy_sum": 0.000146685854,
+        "estimated_marginal_score_saved_proxy_sum": 0.00043833207,
+        "estimated_score_saved_per_charged_byte": 1.000758e-06,
+        "hit_count": 73,
+        "key": "293",
+        "profile_hit_count": 4,
+        "profile_paths": [
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_dynamic_ego_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_dynamic_ego_foveal_atom_ledger.json"
+        ],
+        "residual_pixels_sum": 15867,
+        "weighted_centroid": {
+          "x": 372.031995,
+          "y": 174.218297
+        }
+      },
+      {
+        "estimated_charged_bytes_sum": 216.0,
+        "estimated_lagrangian_net_proxy_sum": 0.000145137494,
+        "estimated_marginal_score_saved_proxy_sum": 0.00028896303,
+        "estimated_score_saved_per_charged_byte": 1.337792e-06,
+        "hit_count": 22,
+        "key": "164",
+        "profile_hit_count": 4,
+        "profile_paths": [
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_dynamic_ego_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_dynamic_ego_foveal_atom_ledger.json"
+        ],
+        "residual_pixels_sum": 6720,
+        "weighted_centroid": {
+          "x": 407.103196,
+          "y": 183.686985
+        }
+      },
+      {
+        "estimated_charged_bytes_sum": 480.0,
+        "estimated_lagrangian_net_proxy_sum": 0.000143918064,
+        "estimated_marginal_score_saved_proxy_sum": 0.000463530363,
+        "estimated_score_saved_per_charged_byte": 9.65688e-07,
+        "hit_count": 71,
+        "key": "284",
+        "profile_hit_count": 4,
+        "profile_paths": [
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_dynamic_ego_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_dynamic_ego_foveal_atom_ledger.json"
+        ],
+        "residual_pixels_sum": 9198,
+        "weighted_centroid": {
+          "x": 290.87908,
+          "y": 183.036726
+        }
+      },
+      {
+        "estimated_charged_bytes_sum": 312.0,
+        "estimated_lagrangian_net_proxy_sum": 0.000103181272,
+        "estimated_marginal_score_saved_proxy_sum": 0.000310929271,
+        "estimated_score_saved_per_charged_byte": 9.96568e-07,
+        "hit_count": 52,
+        "key": "272",
+        "profile_hit_count": 4,
+        "profile_paths": [
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_dynamic_ego_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_dynamic_ego_foveal_atom_ledger.json"
+        ],
+        "residual_pixels_sum": 5902,
+        "weighted_centroid": {
+          "x": 191.644109,
+          "y": 177.150217
+        }
+      },
+      {
+        "estimated_charged_bytes_sum": 288.0,
+        "estimated_lagrangian_net_proxy_sum": 9.8435818e-05,
+        "estimated_marginal_score_saved_proxy_sum": 0.000290203198,
+        "estimated_score_saved_per_charged_byte": 1.00765e-06,
+        "hit_count": 48,
+        "key": "273",
+        "profile_hit_count": 4,
+        "profile_paths": [
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_dynamic_ego_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_dynamic_ego_foveal_atom_ledger.json"
+        ],
+        "residual_pixels_sum": 7404,
+        "weighted_centroid": {
+          "x": 246.069035,
+          "y": 186.643123
+        }
+      },
+      {
+        "estimated_charged_bytes_sum": 246.0,
+        "estimated_lagrangian_net_proxy_sum": 9.7443184e-05,
+        "estimated_marginal_score_saved_proxy_sum": 0.000261244487,
+        "estimated_score_saved_per_charged_byte": 1.061969e-06,
+        "hit_count": 41,
+        "key": "66",
+        "profile_hit_count": 4,
+        "profile_paths": [
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_dynamic_ego_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_dynamic_ego_foveal_atom_ledger.json"
+        ],
+        "residual_pixels_sum": 5143,
+        "weighted_centroid": {
+          "x": 221.162956,
+          "y": 186.315797
+        }
+      },
+      {
+        "estimated_charged_bytes_sum": 472.0,
+        "estimated_lagrangian_net_proxy_sum": 9.4049093e-05,
+        "estimated_marginal_score_saved_proxy_sum": 0.00040833452,
+        "estimated_score_saved_per_charged_byte": 8.65116e-07,
+        "hit_count": 37,
+        "key": "1",
+        "profile_hit_count": 4,
+        "profile_paths": [
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride1_dynamic_ego_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_c067_trace_foveal_atom_ledger.json",
+          "experiments/results/c067_cmg3_rowspan_escape_atoms_20260502/stride2_dynamic_ego_foveal_atom_ledger.json"
+        ],
+        "residual_pixels_sum": 13399,
+        "weighted_centroid": {
+          "x": 363.508617,
+          "y": 174.46299
+        }
+      }
+    ]
+  },
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py on CUDA",
+  "created_at_utc": "2026-05-02T13:03:48.273497Z",
+  "evidence_grade": "observability",
+  "exact_evals": [
+    {
+      "archive_sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+      "archive_size_bytes": 276214,
+      "avg_posenet_dist": 0.00049637,
+      "avg_segnet_dist": 0.00061244,
+      "device": "cuda",
+      "final_score": 0.32,
+      "fridrich_yousfi_signals": {
+        "byte_delta_vs_best": 0,
+        "component_cliff": false,
+        "pose_ratio_vs_best": 1.0,
+        "reference_label": "C067",
+        "score_delta_vs_best": 0.0,
+        "seg_ratio_vs_best": 1.0,
+        "wasted_score_per_saved_byte": 0.0
+      },
+      "gpu_model": "Tesla T4",
+      "input": {
+        "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/contest_auth_eval.adjudicated.json",
+        "sha256": "8cace9e008a9559a2e2e5710742103ef1e4e9c4eb387ce879efd7173ce0da969",
+        "size_bytes": 4884
+      },
+      "label": "C067",
+      "n_samples": 600,
+      "rate_component": 0.1839195,
+      "score_claim_source": "input_exact_eval_json",
+      "score_formula_cross_check": {
+        "absolute_difference": 6.487768744456446e-08,
+        "formula_score": 0.3156170956621698,
+        "matches_within_1e_5": true
+      },
+      "score_pose_contribution": 0.07045353078448233,
+      "score_recomputed_from_components": 0.31561703078448233,
+      "score_seg_contribution": 0.061244
+    },
+    {
+      "archive_sha256": "19687285f9d8f66892670863466e4f8802dc33414e65312f2f23131389d59864",
+      "archive_size_bytes": 251500,
+      "avg_posenet_dist": 51.92496872,
+      "avg_segnet_dist": 0.01500283,
+      "device": "cuda",
+      "final_score": 24.45,
+      "fridrich_yousfi_signals": {
+        "byte_delta_vs_best": -24714,
+        "component_cliff": true,
+        "pose_ratio_vs_best": 104609.40169631525,
+        "reference_label": "C067",
+        "score_delta_vs_best": 24.139180335880997,
+        "seg_ratio_vs_best": 24.496816014630003,
+        "wasted_score_per_saved_byte": 0.00097674113198515
+      },
+      "gpu_model": "Tesla T4",
+      "input": {
+        "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_cmg3_rowspan_stride1_t4_20260502T1225Z/contest_auth_eval.adjudicated.json",
+        "sha256": "98c7070f1936220efa3f89b0d84842fe2bc79506c7781cfbeed6baa602fd4584",
+        "size_bytes": 12117
+      },
+      "label": "rowspan_stride1_T4",
+      "n_samples": 600,
+      "rate_component": 0.16746350000000002,
+      "score_claim_source": "input_exact_eval_json",
+      "score_formula_cross_check": {
+        "absolute_difference": 2.6710225142778654e-08,
+        "formula_score": 24.454797393375706,
+        "matches_within_1e_5": true
+      },
+      "score_pose_contribution": 22.78705086666548,
+      "score_recomputed_from_components": 24.45479736666548,
+      "score_seg_contribution": 1.500283
+    },
+    {
+      "archive_sha256": "4164132d26840db05124d341e02ebf72b5df171d90f9a413c2239f33112e61eb",
+      "archive_size_bytes": 176108,
+      "avg_posenet_dist": 46.52362823,
+      "avg_segnet_dist": 0.04919839,
+      "device": "cuda",
+      "final_score": 26.61,
+      "fridrich_yousfi_signals": {
+        "byte_delta_vs_best": -100106,
+        "component_cliff": true,
+        "pose_ratio_vs_best": 93727.71970505873,
+        "reference_label": "C067",
+        "score_delta_vs_best": 26.290821590910678,
+        "seg_ratio_vs_best": 80.33177127555352,
+        "wasted_score_per_saved_byte": 0.0002626298282911182
+      },
+      "gpu_model": "NVIDIA L40S",
+      "input": {
+        "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_cmg3_rowspan_stride2_l40sdiag_20260502T1225Z/contest_auth_eval.adjudicated.json",
+        "sha256": "261b449a470c19fb03f4cb577e61a87e119807de870e8cc3d016b3cab5009e53",
+        "size_bytes": 12140
+      },
+      "label": "rowspan_stride2_L40S",
+      "n_samples": 600,
+      "rate_component": 0.117263,
+      "score_claim_source": "input_exact_eval_json",
+      "score_formula_cross_check": {
+        "absolute_difference": 8.851643684693045e-08,
+        "formula_score": 26.6064387102116,
+        "matches_within_1e_5": true
+      },
+      "score_pose_contribution": 21.56933662169516,
+      "score_recomputed_from_components": 26.606438621695162,
+      "score_seg_contribution": 4.9198390000000005
+    }
+  ],
+  "figure_files": {
+    "html": "index.html",
+    "markdown": "observability_report.md",
+    "matplotlib_png": [
+      "score_breakdown.png",
+      "top_pairs.png",
+      "pair_centroid_hotspots.png",
+      "class_confusions.png"
+    ],
+    "score_breakdown_svg": "score_breakdown.svg",
+    "target_gap_svg": "target_gap.svg",
+    "top_pairs_svg": "top_pairs.svg"
+  },
+  "matplotlib": {
+    "available": true,
+    "error": null,
+    "generated_files": [
+      "score_breakdown.png",
+      "top_pairs.png",
+      "pair_centroid_hotspots.png",
+      "class_confusions.png"
+    ],
+    "purpose": "Optional report-quality PNG figures. These are observability only; score truth remains exact CUDA JSON."
+  },
+  "no_score_claim": true,
+  "promotion_eligible": false,
+  "schema": "yousfi_fridrich_observability_report_v1",
+  "score_claim": false,
+  "target_gap_analysis": {
+    "best_label": "C067",
+    "best_score": 0.31561703078448233,
+    "bytes_at_target_if_distortion_unchanged": 252759.94026416232,
+    "bytes_to_remove_if_distortion_unchanged": 23455,
+    "current_archive_size_bytes": 276214,
+    "current_distortion_score": 0.13169753078448232,
+    "current_rate_score": 0.1839195,
+    "distortion_score_room_at_current_bytes": 0.11608049999999998,
+    "score_gap_to_target": 0.015617030784482344,
+    "target_score": 0.3
+  },
+  "title": "Yousfi-Fridrich floor observability 2026-05-02",
+  "tool": "experiments/build_yf_observability_report.py"
+}

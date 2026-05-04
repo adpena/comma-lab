@@ -1,0 +1,59 @@
+{
+  "archive": "/Users/adpena/Projects/pact/experiments/results/pr65_qpost_atom_v2_worker_20260503/candidates/v2_pr65_qpost_post_region_bias_poseadv_top008/archive.zip",
+  "archive_bytes": 276644,
+  "archive_sha256": "872ba48b6601d6d29231b7f3e60a95a3a16ca47857fe5f3dd4f2c4eb3366249e",
+  "candidate_id": "v2_pr65_qpost_post_region_bias_poseadv_top008",
+  "evidence_grade": "byte_trace_planning_only_until_exact_cuda",
+  "exact_eval_command_template": ".venv/bin/python -u experiments/contest_auth_eval.py --archive /Users/adpena/Projects/pact/experiments/results/pr65_qpost_atom_v2_worker_20260503/candidates/v2_pr65_qpost_post_region_bias_poseadv_top008/archive.zip --inflate-sh submissions/robust_current/inflate.sh --upstream-dir upstream --device cuda --keep-work-dir --work-dir /Users/adpena/Projects/pact/experiments/results/pr65_qpost_atom_v2_worker_20260503/exact_eval_work/v2_pr65_qpost_post_region_bias_poseadv_top008",
+  "remote_dispatch": {
+    "dispatched": false,
+    "note": "No remote GPU, training, or eval job was dispatched by this worker.",
+    "requires_lane_claim": true
+  },
+  "schema_version": 2,
+  "score_claim": false,
+  "tool": "experiments/build_pr65_qpost_atom_candidates_v2.py",
+  "v2_screen": {
+    "archive": "/Users/adpena/Projects/pact/experiments/results/pr65_qpost_atom_v2_worker_20260503/candidates/v2_pr65_qpost_post_region_bias_poseadv_top008/archive.zip",
+    "archive_byte_delta": 302,
+    "archive_bytes": 276644,
+    "archive_sha256": "872ba48b6601d6d29231b7f3e60a95a3a16ca47857fe5f3dd4f2c4eb3366249e",
+    "baseline_score": 0.3154707273953505,
+    "break_even_component_gain_for_target": 0.0016718167991933753,
+    "built": true,
+    "candidate_id": "v2_pr65_qpost_post_region_bias_poseadv_top008",
+    "core_dispatch_blockers": [
+      "contains post stream; global exact ablation was strongly negative",
+      "contains region stream; global exact ablation was pose-negative",
+      "public-trace opportunity bound 0.000673133 is below sub-0.314 break-even 0.001671817"
+    ],
+    "core_dispatch_recommendation": "do_not_dispatch",
+    "dispatch_class": "diagnostic_post_region",
+    "evidence_grade": "byte_trace_planning_only_until_exact_cuda",
+    "include_streams": [
+      "post",
+      "region",
+      "bias"
+    ],
+    "public_trace_opportunity_bound": 0.0006731328932252625,
+    "qpost_bytes": 208,
+    "rate_score_delta": 0.00020108940384289575,
+    "recommendation_class": "do_not_dispatch",
+    "recommendation_reason": "core risk classifier has blockers",
+    "score_claim": false,
+    "selected_active_atoms_total": 42,
+    "selected_pair_count": 8,
+    "selected_pairs": [
+      105,
+      64,
+      60,
+      435,
+      164,
+      420,
+      90,
+      67
+    ],
+    "target_score": 0.314,
+    "trace_slack_vs_target": -0.0009986839059681128
+  }
+}

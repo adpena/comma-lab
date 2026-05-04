@@ -1,0 +1,91 @@
+{
+  "candidate_id": "public_renderer_only",
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py on CUDA",
+  "decoded_members": {
+    "masks.mkv": {
+      "bytes": 223385,
+      "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+    },
+    "optimized_poses.qp1": {
+      "bytes": 1140,
+      "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+    },
+    "renderer.bin": {
+      "bytes": 59288,
+      "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+    },
+    "seg_tile_actions.bin": {
+      "bytes": 160,
+      "sha256": "50e997db4fd1b7642d9a2cd67b55802a4f7f9bd7a6603d0ca2eaf42e7fe7e320"
+    }
+  },
+  "delta_vs_c089": {
+    "archive_bytes": -171,
+    "baseline_score_if_components_unchanged": 0.3153568655143666,
+    "formula_only_rate_score": -0.0001138618809838913
+  },
+  "evidence_grade": "empirical_stream_ablation_until_exact_cuda",
+  "output_archive": {
+    "bytes": 276171,
+    "path": "/Users/adpena/Projects/pact/experiments/results/pr75_minp_stream_ablation_20260503_codex/public_renderer_only/archive.zip",
+    "sha256": "8da9ffe354923dbe34ffa45e261f824a63e21fef45a1cc29fdab6032a6402820"
+  },
+  "payload": {
+    "bytes": 276071,
+    "format": "public_pr75_qzs3_qp1_segactions_p3",
+    "sha256": "4b0d64f48baef9cfb79944346b88180e3f7a5978cc13fbefc1568c93a4256dee"
+  },
+  "promotion_eligible": false,
+  "runtime_parse_validation": {
+    "members": [
+      {
+        "bytes": 55756,
+        "codec": "brotli_qzs3",
+        "decoded_bytes": 59288,
+        "decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+        "name": "renderer.bin",
+        "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+      },
+      {
+        "bytes": 219472,
+        "codec": "brotli_av1_obu",
+        "decoded_bytes": 223385,
+        "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "name": "masks.mkv",
+        "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+      },
+      {
+        "bytes": 156,
+        "codec": "brotli_seg_tile_actions_v1",
+        "decoded_bytes": 160,
+        "decoded_sha256": "50e997db4fd1b7642d9a2cd67b55802a4f7f9bd7a6603d0ca2eaf42e7fe7e320",
+        "name": "seg_tile_actions.bin",
+        "sha256": "4ee3cda7f5f98b9aa9c1b98c8088902d9e5c08fb62c2a3c80f95695d0e76b2e8"
+      },
+      {
+        "bytes": 677,
+        "codec": "public_qp1_brotli",
+        "decoded_bytes": 1140,
+        "decoded_sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583",
+        "name": "optimized_poses.qp1",
+        "sha256": "c998610e82bb46a686a073e8a1847987de1346f86852a1c60cfa3244a1ad43c5"
+      }
+    ],
+    "payload_format": "public_pr75_qzs3_qp1_segactions_p3"
+  },
+  "schema": "pr75_minp_stream_ablation_manifest_v1",
+  "score_claim": false,
+  "selected_sources": {
+    "actions": "c089",
+    "mask": "c089",
+    "pose": "c089",
+    "renderer": "public"
+  },
+  "stream_bytes": {
+    "actions_br": 156,
+    "mask_br": 219472,
+    "pose_br": 677,
+    "renderer_br": 55756
+  },
+  "tool": "experiments/build_pr75_minp_stream_ablation_candidates.py"
+}

@@ -1,0 +1,96 @@
+{
+  "archive_byte_delta": 356,
+  "evidence_grade": "empirical_byte_only_until_cuda_auth_eval",
+  "formula_rate_score_delta": 0.000237045787311493,
+  "include_streams": [
+    "shift"
+  ],
+  "members": {
+    "p": {
+      "bytes": 276323,
+      "sha256": "91d20916f596cfa756b4f7cfbba571907e6623ff54dc88d12bb53d14670fc53c"
+    },
+    "qpost.bin": {
+      "bytes": 262,
+      "sha256": "8d08f1723d13a5f8f420fdaadc6619a17931b8620ceb886cbe1cd2a6fce0cda3"
+    }
+  },
+  "omitted_streams": [
+    "post",
+    "frac",
+    "frac2",
+    "frac3",
+    "bias",
+    "region",
+    "randmulti"
+  ],
+  "output_archive": "/Users/adpena/Projects/pact/experiments/results/qzs3_postprocess_ablation_r13_20260502T0158Z/shift/archive.zip",
+  "output_archive_bytes": 276779,
+  "output_archive_sha256": "f1214db1ab5dd6183a11d92cf691cf7bf0855ad7443e5f18ccdbc8bb777dbc9f",
+  "pr65_archive": "/Users/adpena/Projects/pact/reports/raw/leaderboard_intel_20260501/pr65_archive.zip",
+  "pr65_archive_sha256": "b331cb4f6df9d8929db966b943b8c73624cdf3b6db71acbde361570852e59e68",
+  "qpost_streams": {
+    "bias": {
+      "active": false,
+      "bytes": 0,
+      "original_bytes": 223,
+      "original_sha256": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "frac": {
+      "active": false,
+      "bytes": 0,
+      "original_bytes": 106,
+      "original_sha256": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "frac2": {
+      "active": false,
+      "bytes": 0,
+      "original_bytes": 149,
+      "original_sha256": "3a01c7546d89d9d3ca846da37a20add7d456421e9211a6339850d946b856026b",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "frac3": {
+      "active": false,
+      "bytes": 0,
+      "original_bytes": 154,
+      "original_sha256": "d725b01b604566c5a76a06b821c644c8d5d5bb9a57ab0597d3bdabc8389858b5",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "post": {
+      "active": false,
+      "bytes": 0,
+      "original_bytes": 1400,
+      "original_sha256": "c3dc88e0fb5a1e48aec49eeacefeea20685e3c02598933deb1ff22dc09892575",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "randmulti": {
+      "active": false,
+      "bytes": 0,
+      "original_bytes": 3731,
+      "original_sha256": "dddf4b4fec32190b219d3e916e05bba5d1711d4208d16966929fa09cbc39349e",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "region": {
+      "active": false,
+      "bytes": 0,
+      "original_bytes": 273,
+      "original_sha256": "4a7c16094fab281c30e27621a58577c095c4b1153c232518c9adbaba2a2b2392",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "shift": {
+      "active": true,
+      "bytes": 226,
+      "original_bytes": 226,
+      "original_sha256": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4",
+      "sha256": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4"
+    }
+  },
+  "schema_version": 1,
+  "score_claim": false,
+  "source_archive": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_line_search_qzs3_qp1_r13_t4_20260502T0128Z/archive.zip",
+  "source_archive_bytes": 276423,
+  "source_archive_sha256": "d3f3300531886d9dcb3553baffdd201567e3adaf7b746a7f405b15ad6c23b148",
+  "tool": "experiments/build_qzs3_postprocess_candidate.py"
+}

@@ -1,0 +1,97 @@
+                                                                                
+ Usage: modal app logs [OPTIONS] [APP_IDENTIFIER]                               
+                                                                                
+ Fetch or stream App logs.                                                      
+                                                                                
+ By default, this command fetches the last 100 log entries and exits. Use -f to 
+ live-stream logs from a running App instead. Fetch and follow are mutually     
+ exclusive.                                                                     
+                                                                                
+ Examples:                                                                      
+                                                                                
+ Get recent logs based on an app ID:                                            
+                                                                                
+                                                                                
+  modal app logs ap-123456                                                      
+                                                                                
+                                                                                
+ Get recent logs for a currently deployed App based on its name:                
+                                                                                
+                                                                                
+  modal app logs my-app                                                         
+                                                                                
+                                                                                
+ Follow (stream) logs from a running App:                                       
+                                                                                
+                                                                                
+  modal app logs my-app -f                                                      
+                                                                                
+                                                                                
+ Fetch the last 1000 entries:                                                   
+                                                                                
+                                                                                
+  modal app logs my-app --tail 1000                                             
+                                                                                
+                                                                                
+ Fetch logs from the last 2 hours:                                              
+                                                                                
+                                                                                
+  modal app logs my-app --since 2h                                              
+                                                                                
+                                                                                
+ Fetch logs in a specific time range:                                           
+                                                                                
+                                                                                
+  modal app logs my-app --since 2026-03-01T05:00:00 --until                     
+  2026-03-01T08:00:00                                                           
+                                                                                
+                                                                                
+ Filter the logs by source and function:                                        
+                                                                                
+                                                                                
+  modal app logs my-app --source stderr --function fu-abc123                    
+                                                                                
+                                                                                
+ Include timestamps along with Function and Container IDs on each line:         
+                                                                                
+                                                                                
+  modal app logs my-app --timestamps --show-function-id --show-container-id     
+                                                                                
+                                                                                
+╭─ Arguments ──────────────────────────────────────────────────────────────────╮
+│   app_identifier      [APP_IDENTIFIER]  App name or ID                       │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭─ Options ────────────────────────────────────────────────────────────────────╮
+│ --follow                 -f               Stream log output until App stops  │
+│ --since                          TEXT     Start of time range. Accepts ISO   │
+│                                           8601 datetime or relative time,    │
+│                                           e.g. '1d' (1 day ago), '2h',       │
+│                                           '30m', etc.                        │
+│ --until                          TEXT     End of time range; accepts same    │
+│                                           argument types as --since          │
+│ --tail                   -n      INTEGER  Show only the last N log entries   │
+│ --search                         TEXT     Filter by search text              │
+│ --function                       TEXT     Filter by Function ID (fu-*)       │
+│ --function-call                  TEXT     Filter by FunctionCall ID (fc-*)   │
+│ --container                      TEXT     Filter by Container ID (ta-*)      │
+│ --source                 -s      TEXT     Filter by source: 'stdout',        │
+│                                           'stderr', or 'system'              │
+│ --timestamps                              Prefix each line with its          │
+│                                           timestamp                          │
+│ --show-function-id                        Prefix each line with its Function │
+│                                           ID                                 │
+│ --show-function-call-id                   Prefix each line with its          │
+│                                           FunctionCall ID                    │
+│ --show-container-id                       Prefix each line with its          │
+│                                           Container ID                       │
+│ --env                    -e      TEXT     Environment to interact with. If   │
+│                                           not specified, Modal will use the  │
+│                                           default environment of your        │
+│                                           current profile, or the            │
+│                                           MODAL_ENVIRONMENT variable.        │
+│                                           Otherwise, raises an error if the  │
+│                                           workspace has multiple             │
+│                                           environments.                      │
+│ --help                   -h               Show this message and exit.        │
+╰──────────────────────────────────────────────────────────────────────────────╯
+

@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "started_at_utc": "2026-05-02T08:49:42Z",
+  "git_hash": "no-git",
+  "gpu_name": "NVIDIA H100 NVL",
+  "driver_version": "580.82.07",
+  "lane_script": "scripts/remote_archive_only_eval.sh",
+  "tag": "c063_fixedslice_equiv_h100nvl_fix1_20260502T0850Z",
+  "archive_path": "/workspace/pact/experiments/results/c063_breakthrough_candidate_matrix_20260502/line_search_source_c063_fixedslice/archive.zip",
+  "inflate_sh": "/workspace/pact/submissions/robust_current/inflate.sh",
+  "inflate_sh_sha256": "86449a1f52ac6b2be120d47287b8410f915dce7e562c69f480103f6e527c6017",
+  "predicted_band": [0.31, 0.316],
+  "controlled_baseline": "C-063_T4_score_0.3156230307844823_bytes_276223",
+  "no_training": true,
+  "no_build": true,
+  "strict_scorer_rule_compliant": true,
+  "design_memo": "scripts/remote_archive_only_eval.sh"
+}

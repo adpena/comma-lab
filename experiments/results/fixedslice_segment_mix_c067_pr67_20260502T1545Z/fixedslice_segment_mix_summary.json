@@ -1,0 +1,105 @@
+{
+  "candidates": [
+    {
+      "archive_bytes": 276214,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/fixedslice_segment_mix_c067_pr67_20260502T1545Z/pr67mask_c067renderer_c067pose/archive.zip",
+      "archive_sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+      "candidate_id": "pr67mask_c067renderer_c067pose",
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/fixedslice_segment_mix_c067_pr67_20260502T1545Z/pr67mask_c067renderer_c067pose/build_manifest.json",
+      "score_claim": false,
+      "segment_sources": {
+        "masks.mkv": "pr67",
+        "optimized_poses.bin": "c067",
+        "renderer.bin": "c067"
+      }
+    },
+    {
+      "archive_bytes": 276342,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/fixedslice_segment_mix_c067_pr67_20260502T1545Z/c067mask_pr67renderer_c067pose/archive.zip",
+      "archive_sha256": "0f0b1f84f5c263f5fe8f7d79eba160afa5f8e6f37424273c409bdc560066dc4d",
+      "candidate_id": "c067mask_pr67renderer_c067pose",
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/fixedslice_segment_mix_c067_pr67_20260502T1545Z/c067mask_pr67renderer_c067pose/build_manifest.json",
+      "score_claim": false,
+      "segment_sources": {
+        "masks.mkv": "c067",
+        "optimized_poses.bin": "c067",
+        "renderer.bin": "pr67"
+      }
+    },
+    {
+      "archive_bytes": 276436,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/fixedslice_segment_mix_c067_pr67_20260502T1545Z/c067mask_c067renderer_pr67pose/archive.zip",
+      "archive_sha256": "434ed7c8e084854a53a96ab8e64b6cb3f59535a3839f1485e95f4df7fe6799ab",
+      "candidate_id": "c067mask_c067renderer_pr67pose",
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/fixedslice_segment_mix_c067_pr67_20260502T1545Z/c067mask_c067renderer_pr67pose/build_manifest.json",
+      "score_claim": false,
+      "segment_sources": {
+        "masks.mkv": "c067",
+        "optimized_poses.bin": "pr67",
+        "renderer.bin": "c067"
+      }
+    },
+    {
+      "archive_bytes": 276564,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/fixedslice_segment_mix_c067_pr67_20260502T1545Z/c067mask_pr67renderer_pr67pose/archive.zip",
+      "archive_sha256": "4f66052846429aa0048e0de6743513bcfb3ce46bcf8504977d920741eb8bbdc8",
+      "candidate_id": "c067mask_pr67renderer_pr67pose",
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/fixedslice_segment_mix_c067_pr67_20260502T1545Z/c067mask_pr67renderer_pr67pose/build_manifest.json",
+      "score_claim": false,
+      "segment_sources": {
+        "masks.mkv": "c067",
+        "optimized_poses.bin": "pr67",
+        "renderer.bin": "pr67"
+      }
+    }
+  ],
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "promotion_eligible": false,
+  "schema": "fixedslice_segment_mix_candidates_v1",
+  "score_claim": false,
+  "sources": {
+    "c067": {
+      "archive_bytes": 276214,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/c067_breakthrough_candidate_matrix_20260502T1030Z/line_search_source_c067_fixedslice/archive.zip",
+      "archive_sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+      "payload_format": "public_pr67_qzs3_qp1_fixed_slices",
+      "payload_sha256": "1f0aaaa9d06967552df6f22d39905a48349239dee4731b093067951a20adc2af",
+      "segments": {
+        "masks.mkv": {
+          "bytes": 219472,
+          "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+        },
+        "optimized_poses.bin": {
+          "bytes": 677,
+          "sha256": "c998610e82bb46a686a073e8a1847987de1346f86852a1c60cfa3244a1ad43c5"
+        },
+        "renderer.bin": {
+          "bytes": 55965,
+          "sha256": "2544dfe50d2631a56600cbfc7342e4a18c97f953526fc51425be0d62f97e22ad"
+        }
+      }
+    },
+    "pr67": {
+      "archive_bytes": 276564,
+      "archive_path": "/Users/adpena/Projects/pact/reports/raw/leaderboard_intel_20260501/pr67_archive.zip",
+      "archive_sha256": "a5ed8da0d9988943c986b231b4cd33cea0ab878a8e1628134341db5f7f41c765",
+      "payload_format": "public_pr67_qzs3_qp1_fixed_slices",
+      "payload_sha256": "a64523528fad2adee466f948ad29839e8581ccfa70caf934b5e4b4a6d733f76f",
+      "segments": {
+        "masks.mkv": {
+          "bytes": 219472,
+          "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+        },
+        "optimized_poses.bin": {
+          "bytes": 899,
+          "sha256": "83767bbd10ae72c3237e468351eb9c465a954e25a6af04a0e0cb84d1f7af9b51"
+        },
+        "renderer.bin": {
+          "bytes": 56093,
+          "sha256": "8d8863c32a264f28f199898a689b4d49ce96ebd12831164882b6babec93cbb9b"
+        }
+      }
+    }
+  },
+  "tool": "experiments/build_fixedslice_segment_mix_candidates.py"
+}

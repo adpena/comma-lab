@@ -1,0 +1,21 @@
+{
+  "compiler": "c++ -O3 -std=c++17 PR91 range_mask_codec.cpp",
+  "decoded_bytes": 117964800,
+  "evidence_grade": "empirical_local_range_decode",
+  "expected_pr85_storage_order_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+  "observed_range": {
+    "max": 4,
+    "min": 0
+  },
+  "raw_shape_assumed": [
+    600,
+    384,
+    512
+  ],
+  "raw_t_h_w_sha256": "3f26318d602aa62a459a71e2ec5629eac92f5f3eccb2fb6d246d55eae79f5aa4",
+  "schema_version": 1,
+  "score_claim": false,
+  "storage_order_match": false,
+  "tool": "pr91_range_codec_decode_pr85_qma9",
+  "transposed_t_w_h_sha256": "d40afc0efb51c08d23325549d7c876232a6efc1e3b1fad3894d836c042665528"
+}

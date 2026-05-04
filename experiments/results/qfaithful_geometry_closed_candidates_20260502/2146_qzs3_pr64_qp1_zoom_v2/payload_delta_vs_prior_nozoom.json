@@ -1,0 +1,14 @@
+{
+  "archive_byte_delta_vs_prior_nozoom": 1042,
+  "charged_zoom_bytes": 1200,
+  "charged_zoom_sha256": "5eaa0d0ecd53568134e4fe0d20874a515c7cf96e82c2c7e0e71bdbf19fd950bb",
+  "new_archive": "experiments/results/qfaithful_geometry_closed_candidates_20260502/2146_qzs3_pr64_qp1_zoom_v2/archive.zip",
+  "new_archive_bytes": 274145,
+  "new_archive_sha256": "89a7ba8b9e05a09d2a28bfee1b07e52f1af2235677c240dbde3b7269403c175f",
+  "old_archive": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2146Z_fix1/qzs3_pr64_qp1/archive.zip",
+  "old_archive_bytes": 273103,
+  "old_archive_sha256": "a34f493b77e3a2ccba7e059134127e9b3cb6e774a41862143d369fa3f5fc81af",
+  "payload_p_bytes": 272891,
+  "payload_p_identical_to_prior_nozoom": false,
+  "payload_p_sha256": "360455dcb484f2570f55063770715a0a113d57dc890a2ececd3c4a9ffa7d21ff"
+}

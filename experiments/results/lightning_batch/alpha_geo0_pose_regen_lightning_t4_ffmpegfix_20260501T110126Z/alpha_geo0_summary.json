@@ -1,0 +1,61 @@
+{
+  "commands": [
+    {
+      "command": [
+        "bash",
+        "/teamspace/studios/this_studio/pact/scripts/probe_nvdec.sh"
+      ],
+      "elapsed_seconds": 4.439574545000028,
+      "name": "probe_nvdec",
+      "passed": true,
+      "returncode": 0,
+      "stderr_log": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/alpha_geo0_pose_regen_lightning_t4_ffmpegfix_20260501T110126Z/probe_nvdec.stderr.log",
+      "stdout_log": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/alpha_geo0_pose_regen_lightning_t4_ffmpegfix_20260501T110126Z/probe_nvdec.stdout.log",
+      "timed_out": false
+    },
+    {
+      "command": [
+        "/teamspace/studios/this_studio/pact/.venv/bin/python",
+        "-u",
+        "/teamspace/studios/this_studio/pact/experiments/diagnose_nerv_geometry.py",
+        "--baseline",
+        "/teamspace/studios/this_studio/pact/experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+        "--baseline-member",
+        "masks.mkv",
+        "--candidate",
+        "/teamspace/studios/this_studio/pact/experiments/results/lane_12_nerv_20260430_codex_jsonfix40/archive_lane_12_nerv.zip",
+        "--candidate-member",
+        "masks.nrv",
+        "--output-json",
+        "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/alpha_geo0_pose_regen_lightning_t4_ffmpegfix_20260501T110126Z/alpha_geo_0_geometry.json",
+        "--primitive-contract-json",
+        "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/alpha_geo0_pose_regen_lightning_t4_ffmpegfix_20260501T110126Z/alpha_geo_0_primitive_contract.json",
+        "--mask-cache-dir",
+        "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/alpha_geo0_pose_regen_lightning_t4_ffmpegfix_20260501T110126Z/mask_cache",
+        "--threshold-preset",
+        "exploratory",
+        "--num-frames",
+        "1200",
+        "--height",
+        "384",
+        "--width",
+        "512"
+      ],
+      "elapsed_seconds": 7490.9585804260005,
+      "name": "diagnose_nerv_geometry",
+      "returncode": 2,
+      "stderr_log": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/alpha_geo0_pose_regen_lightning_t4_ffmpegfix_20260501T110126Z/diagnose_nerv_geometry.stderr.log",
+      "stdout_log": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/alpha_geo0_pose_regen_lightning_t4_ffmpegfix_20260501T110126Z/diagnose_nerv_geometry.stdout.log",
+      "timed_out": false
+    }
+  ],
+  "completed_at_utc": "2026-05-01T13:23:43Z",
+  "error": "RuntimeError: diagnose_nerv_geometry failed",
+  "passed": false,
+  "promotion_eligible": false,
+  "schema_version": 1,
+  "score_claim": false,
+  "stage": "decode_candidate_masks",
+  "tool": "experiments/alpha_geo0_pose_regen.py",
+  "traceback": "Traceback (most recent call last):\n  File \"/teamspace/studios/this_studio/pact/experiments/alpha_geo0_pose_regen.py\", line 532, in main\n    raise RuntimeError(\"diagnose_nerv_geometry failed\")\nRuntimeError: diagnose_nerv_geometry failed\n"
+}

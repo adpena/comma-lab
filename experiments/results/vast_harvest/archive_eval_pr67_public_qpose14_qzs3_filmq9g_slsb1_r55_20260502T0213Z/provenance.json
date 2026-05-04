@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "started_at_utc": "2026-05-02T02:13:23Z",
+  "git_hash": "no-git",
+  "gpu_name": "NVIDIA H100 NVL",
+  "driver_version": "580.82.07",
+  "lane_script": "scripts/remote_archive_only_eval.sh",
+  "tag": "archive_eval_pr67_public_qpose14_qzs3_filmq9g_slsb1_r55_20260502T0213Z",
+  "archive_path": "/workspace/pact/experiments/results/pr67_public_archive_20260502T0213Z.zip",
+  "predicted_band": [0.29, 0.34],
+  "controlled_baseline": "public PR67 qpose14_qzs3_filmq9g_slsb1_r55 archive, external reverse-engineering comparison, not own submission claim",
+  "no_training": true,
+  "no_build": true,
+  "strict_scorer_rule_compliant": true,
+  "design_memo": "scripts/remote_archive_only_eval.sh"
+}

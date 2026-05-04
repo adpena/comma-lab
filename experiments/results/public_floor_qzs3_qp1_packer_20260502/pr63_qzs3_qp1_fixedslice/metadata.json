@@ -1,0 +1,22 @@
+{
+  "archive_bytes": 276213,
+  "archive_path": "experiments/results/public_floor_qzs3_qp1_packer_20260502/pr63_qzs3_qp1_fixedslice/archive.zip",
+  "archive_sha256": "cda95e70440e9ef295985a042fda2d74715ef6a0e665a1c37871cddd051cd908",
+  "blob_bytes": 276113,
+  "blob_sha256": "903140926a3b25e34eb03e083cfc92be7a908301cfc1bb5e1be6e4b6de5be214",
+  "evidence_grade": "empirical_metadata_for_line_search",
+  "mask_br_bytes": 219472,
+  "mask_br_sha256": "b59080359dbf18277d66a03d8105c3ff0df807cc49b396ce736ee5057da28ce0",
+  "model_br_bytes": 55965,
+  "model_br_sha256": "e7db844ed72457a2a07bda73c48f65628613384b539da04f775ef242aa9e4c43",
+  "model_uncompressed_bytes": 59288,
+  "payload_format": "pr67_fixed_slice_like_mask_qzs3_qp1",
+  "pose_br_bytes": 676,
+  "pose_br_sha256": "6c264b0c390328e879591c2a3313f41623603b314e333ccdba812c386afccdc3",
+  "pose_codec": "qp1",
+  "pose_uncompressed_bytes": 1138,
+  "schema_version": 1,
+  "score_claim": false,
+  "source_build_provenance": "experiments/results/public_floor_qzs3_qp1_packer_20260502/pr63_qzs3_qp1_fixedslice/build_provenance.json",
+  "tool": "manual_metadata_from_pr67_fixedslice_build_provenance"
+}

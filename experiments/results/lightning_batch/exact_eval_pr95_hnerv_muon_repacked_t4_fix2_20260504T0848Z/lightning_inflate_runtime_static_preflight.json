@@ -1,0 +1,29 @@
+{
+  "compiled": [
+    "submissions/robust_current/inflate_renderer.py",
+    "submissions/robust_current/unpack_renderer_payload.py",
+    "submissions/robust_current/apply_qzs3_postprocess.py"
+  ],
+  "generate_and_write_parameters": [
+    "masks",
+    "renderer",
+    "output_path",
+    "device",
+    "batch_size",
+    "out_h",
+    "out_w",
+    "poses",
+    "gradient_corrections",
+    "gradient_alpha",
+    "zoom_warp",
+    "uniward_delta_spec",
+    "sjkl_residual",
+    "seg_tile_actions",
+    "pr81_router_actions"
+  ],
+  "no_router_qpost_guard": true,
+  "python": "/teamspace/studios/this_studio/pact/.venv/bin/python",
+  "recorded_at_utc": "2026-05-04T08:58:37Z",
+  "schema_version": 1,
+  "tool": "lightning_exact_eval_inflate_runtime_static_preflight"
+}

@@ -1,0 +1,2 @@
+[renderer] Loaded contest runtime b'QZS3': 87,836 params, pose_dim=6
+{"bounded_decode_frames": 4, "pose_dim": 6, "q_faithful": true, "renderer_magic": "QZS3", "torch_cuda_available": true}

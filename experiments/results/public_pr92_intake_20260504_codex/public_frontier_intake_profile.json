@@ -1,0 +1,287 @@
+{
+  "archive": {
+    "bytes": 236516,
+    "bytes_delta_candidate_minus_baseline": 0,
+    "path": "experiments/results/public_pr92_intake_20260504_codex/archive.zip",
+    "rate_term": 0.15748629615664347,
+    "sha256": "f0dedeb7ad3c019ab3f4e2dea317f3192408e47a573897adb208030709d01490"
+  },
+  "baseline_diffs": [
+    {
+      "baseline_archive_bytes": 236328,
+      "baseline_archive_path": "experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+      "baseline_label": "PR85",
+      "candidate_minus_baseline_archive_bytes": 188,
+      "candidate_minus_baseline_rate_score_delta": 0.00012518148318696823,
+      "changed_segments": [
+        {
+          "baseline_bytes": 16101,
+          "baseline_codec": "opaque_pr85_segment",
+          "baseline_sha256": "c624372e60a0851c4c427dc333a60dcc5d6657ba8ed56951612e7c9d7be7629f",
+          "candidate_bytes": 15825,
+          "candidate_codec": "RMB1_side_info_backed_randmulti",
+          "candidate_sha256": "4b10018eab64d8755da3def355881f51f2d450c9f19dd1457a6ec813cddd6f7c",
+          "delta_bytes": -276,
+          "same_sha256": false,
+          "segment": "randmulti"
+        }
+      ],
+      "segment_count": 11,
+      "unchanged_segment_count": 10
+    },
+    {
+      "baseline_archive_bytes": 229756,
+      "baseline_archive_path": "experiments/results/pr85_stbm1br_mask_recode_20260504_worker/pr90_stbm1br_lossless_pr85_mask_recode/archive.zip",
+      "baseline_label": "PR85_STBM1BR",
+      "candidate_minus_baseline_archive_bytes": 6760,
+      "candidate_minus_baseline_rate_score_delta": 0.004501206523105879,
+      "changed_segments": [
+        {
+          "baseline_bytes": 152439,
+          "baseline_codec": "STBM1BR_lossless_mask_recode",
+          "baseline_sha256": "1b1ec60b64e284aae11e838dc3d9996bce00125df5712a8ba9c3e8f739c9d313",
+          "candidate_bytes": 159011,
+          "candidate_codec": "QMA9_range_mask",
+          "candidate_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+          "delta_bytes": 6572,
+          "same_sha256": false,
+          "segment": "mask"
+        },
+        {
+          "baseline_bytes": 16101,
+          "baseline_codec": "opaque_pr85_segment",
+          "baseline_sha256": "c624372e60a0851c4c427dc333a60dcc5d6657ba8ed56951612e7c9d7be7629f",
+          "candidate_bytes": 15825,
+          "candidate_codec": "RMB1_side_info_backed_randmulti",
+          "candidate_sha256": "4b10018eab64d8755da3def355881f51f2d450c9f19dd1457a6ec813cddd6f7c",
+          "delta_bytes": -276,
+          "same_sha256": false,
+          "segment": "randmulti"
+        }
+      ],
+      "segment_count": 11,
+      "unchanged_segment_count": 9
+    }
+  ],
+  "baselines": {
+    "PR85": {
+      "archive": {
+        "bytes": 236328,
+        "bytes_delta_candidate_minus_baseline": -188,
+        "path": "experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+        "rate_term": 0.1573611146734565,
+        "sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e"
+      },
+      "primary_member_name": "x",
+      "side_info_charged_bytes": 0,
+      "strict_zip_valid": true
+    },
+    "PR85_STBM1BR": {
+      "archive": {
+        "bytes": 229756,
+        "bytes_delta_candidate_minus_baseline": -6760,
+        "path": "experiments/results/pr85_stbm1br_mask_recode_20260504_worker/pr90_stbm1br_lossless_pr85_mask_recode/archive.zip",
+        "rate_term": 0.1529850896335376,
+        "sha256": "c6f004d444ed32c628611a2f21f567c666af6bcbcceba618cc089ec024a0cda6"
+      },
+      "primary_member_name": "x",
+      "side_info_charged_bytes": 0,
+      "strict_zip_valid": true
+    }
+  },
+  "evidence_grade": "external_archive_byte_intake_only",
+  "label": "PR92_qzs3_range_joint_r258",
+  "notes": [
+    "byte-only intake; no inflate, scorer, dispatch, promotion, or score claim",
+    "public-reported components remain external until exact CUDA auth replay"
+  ],
+  "primary_member": {
+    "bundle_format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+    "bundle_header_bytes": 24,
+    "bytes": 235952,
+    "entropy_bits_per_byte": 7.999077194463,
+    "magic_ascii": "#m......",
+    "magic_hex": "236d02f2de00cf05",
+    "name": "x",
+    "recognized_container": "pr85_family_bundle",
+    "segment_lengths": {
+      "bias": 223,
+      "frac": 106,
+      "frac2": 149,
+      "frac3": 154,
+      "mask": 159011,
+      "model": 57074,
+      "pose": 1487,
+      "post": 1400,
+      "randmulti": 15825,
+      "region": 273,
+      "shift": 226
+    },
+    "segments": [
+      {
+        "bytes": 159011,
+        "codec": "QMA9_range_mask",
+        "entropy_bits_per_byte": 7.998762344619,
+        "magic_ascii": "QMA9X...",
+        "magic_hex": "514d413958020000",
+        "name": "mask",
+        "offset": 24,
+        "sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179"
+      },
+      {
+        "bytes": 57074,
+        "codec": "opaque_pr85_segment",
+        "entropy_bits_per_byte": 7.995683133524,
+        "magic_ascii": "...?...b",
+        "magic_hex": "b1a8843f8097a162",
+        "name": "model",
+        "offset": 159035,
+        "sha256": "c9194c19d44d3c32c4e588bbe4f9986ed0c562779078f0f4d6b073f0799b5dbc"
+      },
+      {
+        "bytes": 1487,
+        "codec": "opaque_pr85_segment",
+        "entropy_bits_per_byte": 7.86188685951,
+        "magic_ascii": ".. ..4c.",
+        "magic_hex": "a2e120a29a3463fe",
+        "name": "pose",
+        "offset": 216109,
+        "sha256": "2b6e03e02fb17f662e3f3f9ce47daf2fc33bf1f76c96e34ffac005f1c5c4054c"
+      },
+      {
+        "bytes": 1400,
+        "codec": "opaque_pr85_segment",
+        "entropy_bits_per_byte": 7.847004918663,
+        "magic_ascii": ".+aFJ.g.",
+        "magic_hex": "e22b61464ace67fc",
+        "name": "post",
+        "offset": 217596,
+        "sha256": "c3dc88e0fb5a1e48aec49eeacefeea20685e3c02598933deb1ff22dc09892575"
+      },
+      {
+        "bytes": 226,
+        "codec": "opaque_pr85_segment",
+        "entropy_bits_per_byte": 6.904546426986,
+        "magic_ascii": "BK.. .:.",
+        "magic_hex": "424b00ff20803ad5",
+        "name": "shift",
+        "offset": 218996,
+        "sha256": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4"
+      },
+      {
+        "bytes": 106,
+        "codec": "opaque_pr85_segment",
+        "entropy_bits_per_byte": 6.298582954522,
+        "magic_ascii": "B....6..",
+        "magic_hex": "421600009836dc8d",
+        "name": "frac",
+        "offset": 219222,
+        "sha256": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992"
+      },
+      {
+        "bytes": 149,
+        "codec": "opaque_pr85_segment",
+        "entropy_bits_per_byte": 6.479620109104,
+        "magic_ascii": "BK...rut",
+        "magic_hex": "424b00bf91727574",
+        "name": "frac2",
+        "offset": 219328,
+        "sha256": "3a01c7546d89d9d3ca846da37a20add7d456421e9211a6339850d946b856026b"
+      },
+      {
+        "bytes": 154,
+        "codec": "opaque_pr85_segment",
+        "entropy_bits_per_byte": 6.464399323712,
+        "magic_ascii": "BK....5.",
+        "magic_hex": "424b00ff919235bc",
+        "name": "frac3",
+        "offset": 219477,
+        "sha256": "d725b01b604566c5a76a06b821c644c8d5d5bb9a57ab0597d3bdabc8389858b5"
+      },
+      {
+        "bytes": 223,
+        "codec": "opaque_pr85_segment",
+        "entropy_bits_per_byte": 7.076465482783,
+        "magic_ascii": "BK....5.",
+        "magic_hex": "424b00ff919235bc",
+        "name": "bias",
+        "offset": 219631,
+        "sha256": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b"
+      },
+      {
+        "bytes": 273,
+        "codec": "opaque_pr85_segment",
+        "entropy_bits_per_byte": 7.102950673806,
+        "magic_ascii": "BK...P.}",
+        "magic_hex": "424b00fff050b57d",
+        "name": "region",
+        "offset": 219854,
+        "sha256": "4a7c16094fab281c30e27621a58577c095c4b1153c232518c9adbaba2a2b2392"
+      },
+      {
+        "bytes": 15825,
+        "codec": "RMB1_side_info_backed_randmulti",
+        "entropy_bits_per_byte": 7.986945571797,
+        "magic_ascii": "RMB1~...",
+        "magic_hex": "524d42317e11020a",
+        "name": "randmulti",
+        "offset": 220127,
+        "sha256": "4b10018eab64d8755da3def355881f51f2d450c9f19dd1457a6ec813cddd6f7c"
+      }
+    ],
+    "sha256": "89f14d331063125c88db0b4e3e51a92f21d2edc175a64d5c9cb6f873130763d8"
+  },
+  "promotion_eligible": false,
+  "schema": "public_frontier_archive_intake_v1",
+  "score_claim": false,
+  "side_info": {
+    "charged_bytes": 386,
+    "member_count": 1,
+    "members": [
+      {
+        "bytes": 386,
+        "container_probe_error": "pr85_v5_micro_24bit_lengths_fixed_bias_region segment 'mask' is truncated: end=4346730 raw=386",
+        "entropy_bits_per_byte": 7.461123287431,
+        "magic_ascii": "RSB1X...",
+        "magic_hex": "5253423158020100",
+        "name": "a",
+        "recognized_container": null,
+        "sha256": "5422d47b4092e7304649cc49f4d4c8c7efa9c3d5a4fc7d39ab63cf2518e0897e"
+      }
+    ],
+    "rate_score_cost": 0.00025702155590515813,
+    "requires_runtime_contract_review": true
+  },
+  "strict_zip": {
+    "blockers": [],
+    "member_count": 2,
+    "members": [
+      {
+        "blockers": [],
+        "bytes": 235952,
+        "central_local_name_match": true,
+        "compressed_bytes": 235952,
+        "crc32": "f09f047d",
+        "header_offset": 0,
+        "local_header_name": "x",
+        "method_id": 0,
+        "name": "x",
+        "sha256": "89f14d331063125c88db0b4e3e51a92f21d2edc175a64d5c9cb6f873130763d8"
+      },
+      {
+        "blockers": [],
+        "bytes": 386,
+        "central_local_name_match": true,
+        "compressed_bytes": 386,
+        "crc32": "984525f1",
+        "header_offset": 235983,
+        "local_header_name": "a",
+        "method_id": 0,
+        "name": "a",
+        "sha256": "5422d47b4092e7304649cc49f4d4c8c7efa9c3d5a4fc7d39ab63cf2518e0897e"
+      }
+    ],
+    "valid": true
+  },
+  "tool": "experiments/profile_public_frontier_intake.py"
+}

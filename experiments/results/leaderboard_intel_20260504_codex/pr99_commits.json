@@ -1,0 +1,84 @@
+[
+  {
+    "sha": "6badd2506c1ce07751236fc299d0b14f2702ac29",
+    "node_id": "C_kwDOR7k8j9oAKDZiYWRkMjUwNmMxY2UwNzc1MTIzNmZjMjk5ZDBiMTRmMjcwMmFjMjk",
+    "commit": {
+      "author": {
+        "name": "Brady Meighan",
+        "email": "69221488+BradyMeighan@users.noreply.github.com",
+        "date": "2026-05-04T09:21:50Z"
+      },
+      "committer": {
+        "name": "Brady Meighan",
+        "email": "69221488+BradyMeighan@users.noreply.github.com",
+        "date": "2026-05-04T09:21:50Z"
+      },
+      "message": "hnerv_muon_lc: schema-repack + per-pair latent corrections on @AaronLeslie138's HNeRV\n\nBit-exact re-pack of hnerv_muon (PR #95) with schema-driven INT8 codec\n(~480 B saved) plus a 612 B per-pair latent-correction sidecar that\nperturbs single dims to minimize joint SegNet+PoseNet distortion.\n\nCo-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>",
+      "tree": {
+        "sha": "770a35ddb38a438b4dcbb3a8eb23ad20f8a79516",
+        "url": "https://api.github.com/repos/commaai/comma_video_compression_challenge/git/trees/770a35ddb38a438b4dcbb3a8eb23ad20f8a79516"
+      },
+      "url": "https://api.github.com/repos/commaai/comma_video_compression_challenge/git/commits/6badd2506c1ce07751236fc299d0b14f2702ac29",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null,
+        "verified_at": null
+      }
+    },
+    "url": "https://api.github.com/repos/commaai/comma_video_compression_challenge/commits/6badd2506c1ce07751236fc299d0b14f2702ac29",
+    "html_url": "https://github.com/commaai/comma_video_compression_challenge/commit/6badd2506c1ce07751236fc299d0b14f2702ac29",
+    "comments_url": "https://api.github.com/repos/commaai/comma_video_compression_challenge/commits/6badd2506c1ce07751236fc299d0b14f2702ac29/comments",
+    "author": {
+      "login": "BradyMeighan",
+      "id": 69221488,
+      "node_id": "MDQ6VXNlcjY5MjIxNDg4",
+      "avatar_url": "https://avatars.githubusercontent.com/u/69221488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/BradyMeighan",
+      "html_url": "https://github.com/BradyMeighan",
+      "followers_url": "https://api.github.com/users/BradyMeighan/followers",
+      "following_url": "https://api.github.com/users/BradyMeighan/following{/other_user}",
+      "gists_url": "https://api.github.com/users/BradyMeighan/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/BradyMeighan/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/BradyMeighan/subscriptions",
+      "organizations_url": "https://api.github.com/users/BradyMeighan/orgs",
+      "repos_url": "https://api.github.com/users/BradyMeighan/repos",
+      "events_url": "https://api.github.com/users/BradyMeighan/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/BradyMeighan/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "BradyMeighan",
+      "id": 69221488,
+      "node_id": "MDQ6VXNlcjY5MjIxNDg4",
+      "avatar_url": "https://avatars.githubusercontent.com/u/69221488?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/BradyMeighan",
+      "html_url": "https://github.com/BradyMeighan",
+      "followers_url": "https://api.github.com/users/BradyMeighan/followers",
+      "following_url": "https://api.github.com/users/BradyMeighan/following{/other_user}",
+      "gists_url": "https://api.github.com/users/BradyMeighan/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/BradyMeighan/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/BradyMeighan/subscriptions",
+      "organizations_url": "https://api.github.com/users/BradyMeighan/orgs",
+      "repos_url": "https://api.github.com/users/BradyMeighan/repos",
+      "events_url": "https://api.github.com/users/BradyMeighan/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/BradyMeighan/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "e84851da32108fcadf243c54d091cc71dc150c0e",
+        "url": "https://api.github.com/repos/commaai/comma_video_compression_challenge/commits/e84851da32108fcadf243c54d091cc71dc150c0e",
+        "html_url": "https://github.com/commaai/comma_video_compression_challenge/commit/e84851da32108fcadf243c54d091cc71dc150c0e"
+      }
+    ]
+  }
+]

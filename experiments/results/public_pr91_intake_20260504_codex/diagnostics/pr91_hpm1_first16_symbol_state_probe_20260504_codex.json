@@ -1,0 +1,1489 @@
+{
+  "archive": {
+    "bytes": 222404,
+    "duplicate_member_names": [],
+    "expected_bytes": 222404,
+    "expected_sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f",
+    "matches_expected_pr91_archive": true,
+    "member_count": 1,
+    "member_x": {
+      "bytes": 222304,
+      "compress_size": 222304,
+      "compress_type": 0,
+      "expected_bytes": 222304,
+      "expected_sha256": "5c213c61cc4d29b62286063bfdcb97e812af6b06c0021aeaecc8bc46644e17bf",
+      "file_size": 222304,
+      "matches_expected_pr91_member": true,
+      "sha256": "5c213c61cc4d29b62286063bfdcb97e812af6b06c0021aeaecc8bc46644e17bf"
+    },
+    "path": "experiments/results/public_pr91_intake_20260504_codex/archive.zip",
+    "sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f"
+  },
+  "blocker_class": null,
+  "bundle": {
+    "fixed_length_segments": {
+      "bias": 223,
+      "region": 273
+    },
+    "format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+    "header_bytes": 24,
+    "mask_expected_bytes": 145087,
+    "mask_expected_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+    "mask_matches_expected_pr91_hpm1": true,
+    "mask_sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc",
+    "segment_lengths": {
+      "bias": 223,
+      "frac": 106,
+      "frac2": 149,
+      "frac3": 154,
+      "mask": 145087,
+      "model": 57074,
+      "pose": 1487,
+      "post": 1400,
+      "randmulti": 16101,
+      "region": 273,
+      "shift": 226
+    }
+  },
+  "dependency_contract": {
+    "behavior_self_test": {
+      "compressed_dtype": "uint32",
+      "compressed_sha256": "7e5eceaf3fd016605aa6e45d8a0afd29f662f7dee75c8957ea4319999a4708ae",
+      "compressed_word_count": 19,
+      "decoded_symbols_sha256": "6cfe2f6c5763d2179ab869cf1668e41a36c1a1050021f5ecdaf3447b8edb1b31",
+      "encoded_symbols_sha256": "6cfe2f6c5763d2179ab869cf1668e41a36c1a1050021f5ecdaf3447b8edb1b31",
+      "get_compressed_tobytes_available": true,
+      "model_api": "constriction.stream.model.Categorical(..., perfect=False)",
+      "queue_api": "constriction.stream.queue.RangeEncoder/RangeDecoder",
+      "same_order_roundtrip_ok": true
+    },
+    "expected_versions": {
+      "constriction": "0.4.2",
+      "numpy": "2.4.4",
+      "pyppmd": "1.3.1",
+      "python": "3.12.13",
+      "torch": "2.11.0"
+    },
+    "installed_versions": {
+      "constriction": "0.4.2",
+      "numpy": "2.4.4",
+      "pyppmd": "1.3.1",
+      "python": "3.12.13",
+      "torch": "2.11.0"
+    },
+    "missing_required_packages": [],
+    "status": "passed",
+    "version_drift": [],
+    "version_matches_recorded": {
+      "constriction": true,
+      "numpy": true,
+      "pyppmd": true,
+      "python": true,
+      "torch": true
+    }
+  },
+  "device": "cpu",
+  "dispatch_performed": false,
+  "dispatch_unlocked": false,
+  "elapsed_sec": 1.007,
+  "failure_reason": null,
+  "gpu_or_remote_work": false,
+  "hpac_model": {
+    "compressed_bytes": 28243,
+    "compressed_sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+    "config": {
+      "N": 600,
+      "P": 32,
+      "ch": 64,
+      "delta": 2,
+      "hpac_d_film": 8,
+      "use_spm": true
+    },
+    "decompressed_bytes": 55856,
+    "decompressed_sha256": "0710789f72200a640c1f3b2f6bc0d2f037affaa086f73b2c9e5034e006e80ac1",
+    "load_state_dict_strict": false,
+    "member_name": "hpac.pt.ppmd",
+    "missing_keys": [],
+    "packed_state_key_count": 34,
+    "ppmd_max_order": 4,
+    "ppmd_mem_size": 16777216,
+    "reconstructed_state_key_count": 25,
+    "status": "passed",
+    "unexpected_keys": []
+  },
+  "hpm1_static_contract": {
+    "failures": [],
+    "hpac_ppmd": {
+      "bytes": 28243,
+      "sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd"
+    },
+    "mask": {
+      "bytes": 145087,
+      "magic": "HPM1",
+      "metadata": {
+        "H": 384,
+        "N": 600,
+        "P": 32,
+        "W": 512,
+        "ch": 64,
+        "delta": 2,
+        "header_bytes": 48,
+        "hpac_d_film": 8,
+        "hpac_len": 28243,
+        "hpac_ppmd_sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+        "ppmd_order": 4,
+        "runtime_contract": "HPM1_pr91_hpac_mask_stream",
+        "tail_bytes": 0,
+        "tokens_len": 116796,
+        "tokens_sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+        "tokens_uint32_aligned": true,
+        "tokens_uint32_words": 29199,
+        "use_spm": 1
+      },
+      "sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc"
+    },
+    "status": "passed",
+    "tokens": {
+      "bytes": 116796,
+      "sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+      "uint32_words": 29199
+    }
+  },
+  "local_only": true,
+  "pr86_hpac_relationship": {
+    "dispatch_performed": false,
+    "hpac_model": {
+      "pr86_bytes": 28243,
+      "pr86_sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+      "pr91_bytes": 28243,
+      "pr91_sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+      "same_as_pr86_hpac_ppmd": true
+    },
+    "local_only": true,
+    "pr86_archive": "experiments/results/public_pr86_intake_20260504_codex/archive.zip",
+    "pr86_archive_report": {
+      "expected_sha256": "e67b7c22240dbe33853c19d049b0044a5df16ce5f751ba8f1021cab8ceb03cef",
+      "expected_size_bytes": 207579,
+      "identity_matches_expected": true,
+      "member_contract_status": "passed",
+      "member_count": 5,
+      "members": [
+        {
+          "compress_size": 31144,
+          "crc32_hex": "20055e9d",
+          "file_size": 31144,
+          "name": "master.pt.gz",
+          "sha256": "3f3ee2b19ba5cf97017559750c0d64bc422c3f84fedaed1877741ee6c6bd5236",
+          "zip_compress_type": 0
+        },
+        {
+          "compress_size": 32287,
+          "crc32_hex": "7b335818",
+          "file_size": 32287,
+          "name": "slave.pt.gz",
+          "sha256": "817294dea0d940a8ef62c190bf96338f5a756930882f0f0d7f4d7c7eb87a82a8",
+          "zip_compress_type": 0
+        },
+        {
+          "compress_size": 28243,
+          "crc32_hex": "1624d441",
+          "file_size": 28243,
+          "name": "hpac.pt.ppmd",
+          "sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+          "zip_compress_type": 0
+        },
+        {
+          "compress_size": 113900,
+          "crc32_hex": "9e054fa5",
+          "file_size": 113900,
+          "name": "tokens.bin",
+          "sha256": "14144bde496631f89a02646496bc2e66306bba6da149ddca37e21d85d175f225",
+          "zip_compress_type": 0
+        },
+        {
+          "compress_size": 1499,
+          "crc32_hex": "d1b75b6b",
+          "file_size": 1499,
+          "name": "meta.pt",
+          "sha256": "848381e2da1b0f307670174f135a3925c43d8cdc73576b4bf05fadf833de4a08",
+          "zip_compress_type": 0
+        }
+      ],
+      "path": "experiments/results/public_pr86_intake_20260504_codex/archive.zip",
+      "sha256": "e67b7c22240dbe33853c19d049b0044a5df16ce5f751ba8f1021cab8ceb03cef",
+      "size_bytes": 207579
+    },
+    "relationship": "pr91_reuses_pr86_hpac_model_with_distinct_hpm1_token_stream",
+    "score_claim": false,
+    "status": "passed",
+    "tokens": {
+      "common_prefix_bytes": 164,
+      "common_prefix_uint32_words": 41,
+      "expected_pr86_sha256": "14144bde496631f89a02646496bc2e66306bba6da149ddca37e21d85d175f225",
+      "first_mismatch_byte": 164,
+      "first_mismatch_uint32_word": 41,
+      "pr86_bytes": 113900,
+      "pr86_sha256": "14144bde496631f89a02646496bc2e66306bba6da149ddca37e21d85d175f225",
+      "pr91_bytes": 116796,
+      "pr91_minus_pr86_bytes": 2896,
+      "pr91_sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+      "same_as_pr86_tokens": false
+    }
+  },
+  "pr91_ready_for_exact_eval": false,
+  "prob_eps": 1e-07,
+  "recorded_at_utc": "2026-05-04T06:38:56+00:00",
+  "reference_tokens": {
+    "bytes": 117964800,
+    "expected_sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+    "matches_expected_pr85_qma9_token_source": true,
+    "observed_range": {
+      "max": 4,
+      "min": 0
+    },
+    "path": "experiments/results/public_pr85_intake_20260503_codex/qma9_token_source/pr85_qma9_tokens_u8_storage_order.bin",
+    "sha256": "c1c47434fd1e6c876cb3e44910f5ab2e124285d9dba2f300bcf322d03fb8bb5a",
+    "shape": [
+      600,
+      384,
+      512
+    ],
+    "storage_order": "frame_major_header_width_by_header_height"
+  },
+  "reference_tokens_path": "experiments/results/public_pr85_intake_20260503_codex/qma9_token_source/pr85_qma9_tokens_u8_storage_order.bin",
+  "runtime_source_contract": {
+    "dispatch_performed": false,
+    "files": {
+      "inflate.py": {
+        "bytes": 86673,
+        "path": "experiments/results/public_pr91_intake_20260504_codex/replay_submission/hpac_coder_hybrid/inflate.py",
+        "sha256": "9665d3832abd8f720617cad4e976536ef9ff4ce9a117623b9a00229c518a22ba"
+      },
+      "pr86_hpac.py": {
+        "bytes": 19657,
+        "path": "experiments/results/public_pr91_intake_20260504_codex/replay_submission/hpac_coder_hybrid/pr86_hpac.py",
+        "sha256": "f86f3067386928478d983817c9f9ee095ce6eb02aee8c0fbb7987cd0af1f9b01"
+      }
+    },
+    "hpm1_runtime_contract": {
+      "decode_device_argument": "str(device)",
+      "decode_function": "pr86_hpac.decompress_tokens_hpac",
+      "decode_passes_main_runtime_device": true,
+      "explicit_hpac_cpu_force_detected": false,
+      "fallback_on_hpm1_entropy_failure_detected": false,
+      "hpac_cpu_force_comment_detected": true,
+      "hpac_cpu_force_comment_matches_hpm1_call": false,
+      "hpm1_branch_present": true,
+      "main_device_expression_selects_cuda_when_available": true
+    },
+    "local_only": true,
+    "probability_model_contract": {
+      "categorical_perfect_false": true,
+      "explicit_16384_probability_grid": false,
+      "probability_clip_eps": "1e-7",
+      "probability_numpy_dtype": "float64",
+      "range_decoder_uint32_words": true
+    },
+    "score_claim": false,
+    "source_dir": "experiments/results/public_pr91_intake_20260504_codex/replay_submission/hpac_coder_hybrid",
+    "status": "passed"
+  },
+  "schema_version": 1,
+  "score_claim": false,
+  "source_contract_summary": {
+    "decoded_symbols": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+    ],
+    "emitted_symbol_count": 16,
+    "first_reference_mismatch": {
+      "decoded": 2,
+      "frame": 0,
+      "global_symbol": 7,
+      "group": 0,
+      "pixel_yx": {
+        "x": 224,
+        "y": 0
+      },
+      "reference": 0,
+      "symbol_in_group": 7
+    },
+    "reference_symbols": [
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      0,
+      0,
+      0,
+      4,
+      4,
+      2,
+      2,
+      2,
+      2
+    ],
+    "status": "passed",
+    "trace_sha256": "84a181def5ec7416ca7b8c9c335c8a3af2b9f7a40a8c8b08b065990a9d7c03ca"
+  },
+  "status": "passed",
+  "symbol_count": 16,
+  "token_stream": {
+    "bytes": 116796,
+    "first_16_uint32_words_hex": [
+      "9b5c86f6",
+      "c3e3f98a",
+      "f6f1efc5",
+      "12458e3f",
+      "13c6f92f",
+      "00000000",
+      "00000000",
+      "1edbc12d",
+      "41e4530f",
+      "f7cbe737",
+      "4385c7cb",
+      "eafe9e7a",
+      "698f05c5",
+      "c6825fc9",
+      "9c50feff",
+      "8d4a507b"
+    ],
+    "sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+    "uint32_words": 29199
+  },
+  "tool": "tac.pr91_hpm1_codec.run_pr91_hpm1_first_symbol_state_probe",
+  "variant_results": [
+    {
+      "dispatch_performed": false,
+      "emitted_symbol_count": 16,
+      "failure_context": {},
+      "first_reference_mismatch": {
+        "decoded": 2,
+        "frame": 0,
+        "global_symbol": 7,
+        "group": 0,
+        "pixel_yx": {
+          "x": 224,
+          "y": 0
+        },
+        "reference": 0,
+        "symbol_in_group": 7
+      },
+      "local_only": true,
+      "score_claim": false,
+      "status": "passed",
+      "trace": [
+        {
+          "context_before_decode": {
+            "current_left": null,
+            "current_up": null,
+            "current_up_left": null,
+            "current_up_right": null,
+            "previous_down": 0,
+            "previous_left": null,
+            "previous_right": 0,
+            "previous_same_pixel": 0,
+            "previous_up": null
+          },
+          "decoded_symbol": 2,
+          "frame": 0,
+          "global_symbol": 0,
+          "group": 0,
+          "matches_reference": true,
+          "pixel_yx": {
+            "x": 0,
+            "y": 0
+          },
+          "probability_state": {
+            "logits_argmax": 2,
+            "logits_float32_values": [
+              -2.356898069381714,
+              -7.132123947143555,
+              2.6474671363830566,
+              -1.4095635414123535,
+              -1.838655948638916
+            ],
+            "raw_softmax_float32_values": [
+              0.006479674484580755,
+              5.466370203066617e-05,
+              0.9658758044242859,
+              0.016709953546524048,
+              0.010879846289753914
+            ],
+            "raw_softmax_float64_sum": 0.9999999424471753,
+            "variant_rows": {
+              "source_float64_perfect_false": {
+                "argmax": 2,
+                "categorical_perfect": false,
+                "decoded_symbol_probability": 0.9658758600131699,
+                "decoded_symbol_rank": 0,
+                "probability_dtype": "float64",
+                "rank_desc": [
+                  2,
+                  3,
+                  4,
+                  0,
+                  1
+                ],
+                "reference_symbol_probability": 0.9658758600131699,
+                "reference_symbol_rank": 0,
+                "sum": 0.9999999999999999,
+                "values": [
+                  0.0064796748575043465,
+                  5.466370517671681e-05,
+                  0.9658758600131699,
+                  0.01670995450822913,
+                  0.010879846915919837
+                ]
+              }
+            }
+          },
+          "reference_symbol": 2,
+          "symbol_in_group": 0
+        },
+        {
+          "context_before_decode": {
+            "current_left": 0,
+            "current_up": null,
+            "current_up_left": null,
+            "current_up_right": null,
+            "previous_down": 0,
+            "previous_left": 0,
+            "previous_right": 0,
+            "previous_same_pixel": 0,
+            "previous_up": null
+          },
+          "decoded_symbol": 2,
+          "frame": 0,
+          "global_symbol": 1,
+          "group": 0,
+          "matches_reference": true,
+          "pixel_yx": {
+            "x": 32,
+            "y": 0
+          },
+          "probability_state": {
+            "logits_argmax": 2,
+            "logits_float32_values": [
+              -1.3864283561706543,
+              -4.976861953735352,
+              1.9438984394073486,
+              -2.233260154724121,
+              -2.5583231449127197
+            ],
+            "raw_softmax_float32_values": [
+              0.03365461528301239,
+              0.0009284087573178113,
+              0.9405614733695984,
+              0.014430133625864983,
+              0.010425507090985775
+            ],
+            "raw_softmax_float64_sum": 1.0000001381267793,
+            "variant_rows": {
+              "source_float64_perfect_false": {
+                "argmax": 2,
+                "categorical_perfect": false,
+                "decoded_symbol_probability": 0.9405613434528892,
+                "decoded_symbol_rank": 0,
+                "probability_dtype": "float64",
+                "rank_desc": [
+                  2,
+                  0,
+                  3,
+                  4,
+                  1
+                ],
+                "reference_symbol_probability": 0.9405613434528892,
+                "reference_symbol_rank": 0,
+                "sum": 1.0,
+                "values": [
+                  0.033654610634409415,
+                  0.0009284086290797174,
+                  0.9405613434528892,
+                  0.014430131632677375,
+                  0.010425505650944257
+                ]
+              }
+            }
+          },
+          "reference_symbol": 2,
+          "symbol_in_group": 1
+        },
+        {
+          "context_before_decode": {
+            "current_left": 0,
+            "current_up": null,
+            "current_up_left": null,
+            "current_up_right": null,
+            "previous_down": 0,
+            "previous_left": 0,
+            "previous_right": 0,
+            "previous_same_pixel": 0,
+            "previous_up": null
+          },
+          "decoded_symbol": 2,
+          "frame": 0,
+          "global_symbol": 2,
+          "group": 0,
+          "matches_reference": true,
+          "pixel_yx": {
+            "x": 64,
+            "y": 0
+          },
+          "probability_state": {
+            "logits_argmax": 2,
+            "logits_float32_values": [
+              -1.3678189516067505,
+              -4.973945617675781,
+              1.9405937194824219,
+              -2.239370584487915,
+              -2.5440051555633545
+            ],
+            "raw_softmax_float32_values": [
+              0.03436946123838425,
+              0.0009333654888905585,
+              0.9397190809249878,
+              0.014376816339790821,
+              0.010601355694234371
+            ],
+            "raw_softmax_float64_sum": 1.0000000796862878,
+            "variant_rows": {
+              "source_float64_perfect_false": {
+                "argmax": 2,
+                "categorical_perfect": false,
+                "decoded_symbol_probability": 0.9397190060422687,
+                "decoded_symbol_rank": 0,
+                "probability_dtype": "float64",
+                "rank_desc": [
+                  2,
+                  0,
+                  3,
+                  4,
+                  1
+                ],
+                "reference_symbol_probability": 0.9397190060422687,
+                "reference_symbol_rank": 0,
+                "sum": 1.0,
+                "values": [
+                  0.034369458499609686,
+                  0.0009333654145141334,
+                  0.9397190060422687,
+                  0.014376815194155788,
+                  0.010601354849451758
+                ]
+              }
+            }
+          },
+          "reference_symbol": 2,
+          "symbol_in_group": 2
+        },
+        {
+          "context_before_decode": {
+            "current_left": 0,
+            "current_up": null,
+            "current_up_left": null,
+            "current_up_right": null,
+            "previous_down": 0,
+            "previous_left": 0,
+            "previous_right": 0,
+            "previous_same_pixel": 0,
+            "previous_up": null
+          },
+          "decoded_symbol": 2,
+          "frame": 0,
+          "global_symbol": 3,
+          "group": 0,
+          "matches_reference": true,
+          "pixel_yx": {
+            "x": 96,
+            "y": 0
+          },
+          "probability_state": {
+            "logits_argmax": 2,
+            "logits_float32_values": [
+              -1.3678189516067505,
+              -4.973945617675781,
+              1.9405937194824219,
+              -2.239370584487915,
+              -2.5440051555633545
+            ],
+            "raw_softmax_float32_values": [
+              0.03436946123838425,
+              0.0009333654888905585,
+              0.9397190809249878,
+              0.014376816339790821,
+              0.010601355694234371
+            ],
+            "raw_softmax_float64_sum": 1.0000000796862878,
+            "variant_rows": {
+              "source_float64_perfect_false": {
+                "argmax": 2,
+                "categorical_perfect": false,
+                "decoded_symbol_probability": 0.9397190060422687,
+                "decoded_symbol_rank": 0,
+                "probability_dtype": "float64",
+                "rank_desc": [
+                  2,
+                  0,
+                  3,
+                  4,
+                  1
+                ],
+                "reference_symbol_probability": 0.9397190060422687,
+                "reference_symbol_rank": 0,
+                "sum": 1.0,
+                "values": [
+                  0.034369458499609686,
+                  0.0009333654145141334,
+                  0.9397190060422687,
+                  0.014376815194155788,
+                  0.010601354849451758
+                ]
+              }
+            }
+          },
+          "reference_symbol": 2,
+          "symbol_in_group": 3
+        },
+        {
+          "context_before_decode": {
+            "current_left": 0,
+            "current_up": null,
+            "current_up_left": null,
+            "current_up_right": null,
+            "previous_down": 0,
+            "previous_left": 0,
+            "previous_right": 0,
+            "previous_same_pixel": 0,
+            "previous_up": null
+          },
+          "decoded_symbol": 2,
+          "frame": 0,
+          "global_symbol": 4,
+          "group": 0,
+          "matches_reference": true,
+          "pixel_yx": {
+            "x": 128,
+            "y": 0
+          },
+          "probability_state": {
+            "logits_argmax": 2,
+            "logits_float32_values": [
+              -1.3678189516067505,
+              -4.973945617675781,
+              1.9405937194824219,
+              -2.239370584487915,
+              -2.5440051555633545
+            ],
+            "raw_softmax_float32_values": [
+              0.03436946123838425,
+              0.0009333654888905585,
+              0.9397190809249878,
+              0.014376816339790821,
+              0.010601355694234371
+            ],
+            "raw_softmax_float64_sum": 1.0000000796862878,
+            "variant_rows": {
+              "source_float64_perfect_false": {
+                "argmax": 2,
+                "categorical_perfect": false,
+                "decoded_symbol_probability": 0.9397190060422687,
+                "decoded_symbol_rank": 0,
+                "probability_dtype": "float64",
+                "rank_desc": [
+                  2,
+                  0,
+                  3,
+                  4,
+                  1
+                ],
+                "reference_symbol_probability": 0.9397190060422687,
+                "reference_symbol_rank": 0,
+                "sum": 1.0,
+                "values": [
+                  0.034369458499609686,
+                  0.0009333654145141334,
+                  0.9397190060422687,
+                  0.014376815194155788,
+                  0.010601354849451758
+                ]
+              }
+            }
+          },
+          "reference_symbol": 2,
+          "symbol_in_group": 4
+        },
+        {
+          "context_before_decode": {
+            "current_left": 0,
+            "current_up": null,
+            "current_up_left": null,
+            "current_up_right": null,
+            "previous_down": 0,
+            "previous_left": 0,
+            "previous_right": 0,
+            "previous_same_pixel": 0,
+            "previous_up": null
+          },
+          "decoded_symbol": 2,
+          "frame": 0,
+          "global_symbol": 5,
+          "group": 0,
+          "matches_reference": true,
+          "pixel_yx": {
+            "x": 160,
+            "y": 0
+          },
+          "probability_state": {
+            "logits_argmax": 2,
+            "logits_float32_values": [
+              -1.3678189516067505,
+              -4.973945617675781,
+              1.9405937194824219,
+              -2.239370584487915,
+              -2.5440051555633545
+            ],
+            "raw_softmax_float32_values": [
+              0.03436946123838425,
+              0.0009333654888905585,
+              0.9397190809249878,
+              0.014376816339790821,
+              0.010601355694234371
+            ],
+            "raw_softmax_float64_sum": 1.0000000796862878,
+            "variant_rows": {
+              "source_float64_perfect_false": {
+                "argmax": 2,
+                "categorical_perfect": false,
+                "decoded_symbol_probability": 0.9397190060422687,
+                "decoded_symbol_rank": 0,
+                "probability_dtype": "float64",
+                "rank_desc": [
+                  2,
+                  0,
+                  3,
+                  4,
+                  1
+                ],
+                "reference_symbol_probability": 0.9397190060422687,
+                "reference_symbol_rank": 0,
+                "sum": 1.0,
+                "values": [
+                  0.034369458499609686,
+                  0.0009333654145141334,
+                  0.9397190060422687,
+                  0.014376815194155788,
+                  0.010601354849451758
+                ]
+              }
+            }
+          },
+          "reference_symbol": 2,
+          "symbol_in_group": 5
+        },
+        {
+          "context_before_decode": {
+            "current_left": 0,
+            "current_up": null,
+            "current_up_left": null,
+            "current_up_right": null,
+            "previous_down": 0,
+            "previous_left": 0,
+            "previous_right": 0,
+            "previous_same_pixel": 0,
+            "previous_up": null
+          },
+          "decoded_symbol": 2,
+          "frame": 0,
+          "global_symbol": 6,
+          "group": 0,
+          "matches_reference": true,
+          "pixel_yx": {
+            "x": 192,
+            "y": 0
+          },
+          "probability_state": {
+            "logits_argmax": 2,
+            "logits_float32_values": [
+              -1.3678189516067505,
+              -4.973945617675781,
+              1.9405937194824219,
+              -2.239370584487915,
+              -2.5440051555633545
+            ],
+            "raw_softmax_float32_values": [
+              0.03436946123838425,
+              0.0009333654888905585,
+              0.9397190809249878,
+              0.014376816339790821,
+              0.010601355694234371
+            ],
+            "raw_softmax_float64_sum": 1.0000000796862878,
+            "variant_rows": {
+              "source_float64_perfect_false": {
+                "argmax": 2,
+                "categorical_perfect": false,
+                "decoded_symbol_probability": 0.9397190060422687,
+                "decoded_symbol_rank": 0,
+                "probability_dtype": "float64",
+                "rank_desc": [
+                  2,
+                  0,
+                  3,
+                  4,
+                  1
+                ],
+                "reference_symbol_probability": 0.9397190060422687,
+                "reference_symbol_rank": 0,
+                "sum": 1.0,
+                "values": [
+                  0.034369458499609686,
+                  0.0009333654145141334,
+                  0.9397190060422687,
+                  0.014376815194155788,
+                  0.010601354849451758
+                ]
+              }
+            }
+          },
+          "reference_symbol": 2,
+          "symbol_in_group": 6
+        },
+        {
+          "context_before_decode": {
+            "current_left": 0,
+            "current_up": null,
+            "current_up_left": null,
+            "current_up_right": null,
+            "previous_down": 0,
+            "previous_left": 0,
+            "previous_right": 0,
+            "previous_same_pixel": 0,
+            "previous_up": null
+          },
+          "decoded_symbol": 2,
+          "frame": 0,
+          "global_symbol": 7,
+          "group": 0,
+          "matches_reference": false,
+          "pixel_yx": {
+            "x": 224,
+            "y": 0
+          },
+          "probability_state": {
+            "logits_argmax": 2,
+            "logits_float32_values": [
+              -1.3678189516067505,
+              -4.973945617675781,
+              1.9405937194824219,
+              -2.239370584487915,
+              -2.5440051555633545
+            ],
+            "raw_softmax_float32_values": [
+              0.03436946123838425,
+              0.0009333654888905585,
+              0.9397190809249878,
+              0.014376816339790821,
+              0.010601355694234371
+            ],
+            "raw_softmax_float64_sum": 1.0000000796862878,
+            "variant_rows": {
+              "source_float64_perfect_false": {
+                "argmax": 2,
+                "categorical_perfect": false,
+                "decoded_symbol_probability": 0.9397190060422687,
+                "decoded_symbol_rank": 0,
+                "probability_dtype": "float64",
+                "rank_desc": [
+                  2,
+                  0,
+                  3,
+                  4,
+                  1
+                ],
+                "reference_symbol_probability": 0.034369458499609686,
+                "reference_symbol_rank": 1,
+                "sum": 1.0,
+                "values": [
+                  0.034369458499609686,
+                  0.0009333654145141334,
+                  0.9397190060422687,
+                  0.014376815194155788,
+                  0.010601354849451758
+                ]
+              }
+            }
+          },
+          "reference_symbol": 0,
+          "symbol_in_group": 7
+        },
+        {
+          "context_before_decode": {
+            "current_left": 0,
+            "current_up": null,
+            "current_up_left": null,
+            "current_up_right": null,
+            "previous_down": 0,
+            "previous_left": 0,
+            "previous_right": 0,
+            "previous_same_pixel": 0,
+            "previous_up": null
+          },
+          "decoded_symbol": 2,
+          "frame": 0,
+          "global_symbol": 8,
+          "group": 0,
+          "matches_reference": false,
+          "pixel_yx": {
+            "x": 256,
+            "y": 0
+          },
+          "probability_state": {
+            "logits_argmax": 2,
+            "logits_float32_values": [
+              -1.3678189516067505,
+              -4.973945617675781,
+              1.9405937194824219,
+              -2.239370584487915,
+              -2.5440051555633545
+            ],
+            "raw_softmax_float32_values": [
+              0.03436946123838425,
+              0.0009333654888905585,
+              0.9397190809249878,
+              0.014376816339790821,
+              0.010601355694234371
+            ],
+            "raw_softmax_float64_sum": 1.0000000796862878,
+            "variant_rows": {
+              "source_float64_perfect_false": {
+                "argmax": 2,
+                "categorical_perfect": false,
+                "decoded_symbol_probability": 0.9397190060422687,
+                "decoded_symbol_rank": 0,
+                "probability_dtype": "float64",
+                "rank_desc": [
+                  2,
+                  0,
+                  3,
+                  4,
+                  1
+                ],
+                "reference_symbol_probability": 0.034369458499609686,
+                "reference_symbol_rank": 1,
+                "sum": 1.0,
+                "values": [
+                  0.034369458499609686,
+                  0.0009333654145141334,
+                  0.9397190060422687,
+                  0.014376815194155788,
+                  0.010601354849451758
+                ]
+              }
+            }
+          },
+          "reference_symbol": 0,
+          "symbol_in_group": 8
+        },
+        {
+          "context_before_decode": {
+            "current_left": 0,
+            "current_up": null,
+            "current_up_left": null,
+            "current_up_right": null,
+            "previous_down": 0,
+            "previous_left": 0,
+            "previous_right": 0,
+            "previous_same_pixel": 0,
+            "previous_up": null
+          },
+          "decoded_symbol": 2,
+          "frame": 0,
+          "global_symbol": 9,
+          "group": 0,
+          "matches_reference": false,
+          "pixel_yx": {
+            "x": 288,
+            "y": 0
+          },
+          "probability_state": {
+            "logits_argmax": 2,
+            "logits_float32_values": [
+              -1.3678189516067505,
+              -4.973945617675781,
+              1.9405937194824219,
+              -2.239370584487915,
+              -2.5440051555633545
+            ],
+            "raw_softmax_float32_values": [
+              0.03436946123838425,
+              0.0009333654888905585,
+              0.9397190809249878,
+              0.014376816339790821,
+              0.010601355694234371
+            ],
+            "raw_softmax_float64_sum": 1.0000000796862878,
+            "variant_rows": {
+              "source_float64_perfect_false": {
+                "argmax": 2,
+                "categorical_perfect": false,
+                "decoded_symbol_probability": 0.9397190060422687,
+                "decoded_symbol_rank": 0,
+                "probability_dtype": "float64",
+                "rank_desc": [
+                  2,
+                  0,
+                  3,
+                  4,
+                  1
+                ],
+                "reference_symbol_probability": 0.034369458499609686,
+                "reference_symbol_rank": 1,
+                "sum": 1.0,
+                "values": [
+                  0.034369458499609686,
+                  0.0009333654145141334,
+                  0.9397190060422687,
+                  0.014376815194155788,
+                  0.010601354849451758
+                ]
+              }
+            }
+          },
+          "reference_symbol": 0,
+          "symbol_in_group": 9
+        },
+        {
+          "context_before_decode": {
+            "current_left": 0,
+            "current_up": null,
+            "current_up_left": null,
+            "current_up_right": null,
+            "previous_down": 0,
+            "previous_left": 0,
+            "previous_right": 0,
+            "previous_same_pixel": 0,
+            "previous_up": null
+          },
+          "decoded_symbol": 2,
+          "frame": 0,
+          "global_symbol": 10,
+          "group": 0,
+          "matches_reference": false,
+          "pixel_yx": {
+            "x": 320,
+            "y": 0
+          },
+          "probability_state": {
+            "logits_argmax": 2,
+            "logits_float32_values": [
+              -1.3678189516067505,
+              -4.973945617675781,
+              1.9405937194824219,
+              -2.239370584487915,
+              -2.5440051555633545
+            ],
+            "raw_softmax_float32_values": [
+              0.03436946123838425,
+              0.0009333654888905585,
+              0.9397190809249878,
+              0.014376816339790821,
+              0.010601355694234371
+            ],
+            "raw_softmax_float64_sum": 1.0000000796862878,
+            "variant_rows": {
+              "source_float64_perfect_false": {
+                "argmax": 2,
+                "categorical_perfect": false,
+                "decoded_symbol_probability": 0.9397190060422687,
+                "decoded_symbol_rank": 0,
+                "probability_dtype": "float64",
+                "rank_desc": [
+                  2,
+                  0,
+                  3,
+                  4,
+                  1
+                ],
+                "reference_symbol_probability": 0.010601354849451758,
+                "reference_symbol_rank": 3,
+                "sum": 1.0,
+                "values": [
+                  0.034369458499609686,
+                  0.0009333654145141334,
+                  0.9397190060422687,
+                  0.014376815194155788,
+                  0.010601354849451758
+                ]
+              }
+            }
+          },
+          "reference_symbol": 4,
+          "symbol_in_group": 10
+        },
+        {
+          "context_before_decode": {
+            "current_left": 0,
+            "current_up": null,
+            "current_up_left": null,
+            "current_up_right": null,
+            "previous_down": 0,
+            "previous_left": 0,
+            "previous_right": 0,
+            "previous_same_pixel": 0,
+            "previous_up": null
+          },
+          "decoded_symbol": 2,
+          "frame": 0,
+          "global_symbol": 11,
+          "group": 0,
+          "matches_reference": false,
+          "pixel_yx": {
+            "x": 352,
+            "y": 0
+          },
+          "probability_state": {
+            "logits_argmax": 2,
+            "logits_float32_values": [
+              -1.3678189516067505,
+              -4.973945617675781,
+              1.9405937194824219,
+              -2.239370584487915,
+              -2.5440051555633545
+            ],
+            "raw_softmax_float32_values": [
+              0.03436946123838425,
+              0.0009333654888905585,
+              0.9397190809249878,
+              0.014376816339790821,
+              0.010601355694234371
+            ],
+            "raw_softmax_float64_sum": 1.0000000796862878,
+            "variant_rows": {
+              "source_float64_perfect_false": {
+                "argmax": 2,
+                "categorical_perfect": false,
+                "decoded_symbol_probability": 0.9397190060422687,
+                "decoded_symbol_rank": 0,
+                "probability_dtype": "float64",
+                "rank_desc": [
+                  2,
+                  0,
+                  3,
+                  4,
+                  1
+                ],
+                "reference_symbol_probability": 0.010601354849451758,
+                "reference_symbol_rank": 3,
+                "sum": 1.0,
+                "values": [
+                  0.034369458499609686,
+                  0.0009333654145141334,
+                  0.9397190060422687,
+                  0.014376815194155788,
+                  0.010601354849451758
+                ]
+              }
+            }
+          },
+          "reference_symbol": 4,
+          "symbol_in_group": 11
+        },
+        {
+          "context_before_decode": {
+            "current_left": 0,
+            "current_up": null,
+            "current_up_left": null,
+            "current_up_right": null,
+            "previous_down": 0,
+            "previous_left": 0,
+            "previous_right": 0,
+            "previous_same_pixel": 0,
+            "previous_up": null
+          },
+          "decoded_symbol": 2,
+          "frame": 0,
+          "global_symbol": 12,
+          "group": 0,
+          "matches_reference": true,
+          "pixel_yx": {
+            "x": 384,
+            "y": 0
+          },
+          "probability_state": {
+            "logits_argmax": 2,
+            "logits_float32_values": [
+              -1.3678189516067505,
+              -4.973945617675781,
+              1.9405937194824219,
+              -2.239370584487915,
+              -2.5440051555633545
+            ],
+            "raw_softmax_float32_values": [
+              0.03436946123838425,
+              0.0009333654888905585,
+              0.9397190809249878,
+              0.014376816339790821,
+              0.010601355694234371
+            ],
+            "raw_softmax_float64_sum": 1.0000000796862878,
+            "variant_rows": {
+              "source_float64_perfect_false": {
+                "argmax": 2,
+                "categorical_perfect": false,
+                "decoded_symbol_probability": 0.9397190060422687,
+                "decoded_symbol_rank": 0,
+                "probability_dtype": "float64",
+                "rank_desc": [
+                  2,
+                  0,
+                  3,
+                  4,
+                  1
+                ],
+                "reference_symbol_probability": 0.9397190060422687,
+                "reference_symbol_rank": 0,
+                "sum": 1.0,
+                "values": [
+                  0.034369458499609686,
+                  0.0009333654145141334,
+                  0.9397190060422687,
+                  0.014376815194155788,
+                  0.010601354849451758
+                ]
+              }
+            }
+          },
+          "reference_symbol": 2,
+          "symbol_in_group": 12
+        },
+        {
+          "context_before_decode": {
+            "current_left": 0,
+            "current_up": null,
+            "current_up_left": null,
+            "current_up_right": null,
+            "previous_down": 0,
+            "previous_left": 0,
+            "previous_right": 0,
+            "previous_same_pixel": 0,
+            "previous_up": null
+          },
+          "decoded_symbol": 2,
+          "frame": 0,
+          "global_symbol": 13,
+          "group": 0,
+          "matches_reference": true,
+          "pixel_yx": {
+            "x": 416,
+            "y": 0
+          },
+          "probability_state": {
+            "logits_argmax": 2,
+            "logits_float32_values": [
+              -1.3678189516067505,
+              -4.973945617675781,
+              1.9405937194824219,
+              -2.239370584487915,
+              -2.5440051555633545
+            ],
+            "raw_softmax_float32_values": [
+              0.03436946123838425,
+              0.0009333654888905585,
+              0.9397190809249878,
+              0.014376816339790821,
+              0.010601355694234371
+            ],
+            "raw_softmax_float64_sum": 1.0000000796862878,
+            "variant_rows": {
+              "source_float64_perfect_false": {
+                "argmax": 2,
+                "categorical_perfect": false,
+                "decoded_symbol_probability": 0.9397190060422687,
+                "decoded_symbol_rank": 0,
+                "probability_dtype": "float64",
+                "rank_desc": [
+                  2,
+                  0,
+                  3,
+                  4,
+                  1
+                ],
+                "reference_symbol_probability": 0.9397190060422687,
+                "reference_symbol_rank": 0,
+                "sum": 1.0,
+                "values": [
+                  0.034369458499609686,
+                  0.0009333654145141334,
+                  0.9397190060422687,
+                  0.014376815194155788,
+                  0.010601354849451758
+                ]
+              }
+            }
+          },
+          "reference_symbol": 2,
+          "symbol_in_group": 13
+        },
+        {
+          "context_before_decode": {
+            "current_left": 0,
+            "current_up": null,
+            "current_up_left": null,
+            "current_up_right": null,
+            "previous_down": 0,
+            "previous_left": 0,
+            "previous_right": 0,
+            "previous_same_pixel": 0,
+            "previous_up": null
+          },
+          "decoded_symbol": 2,
+          "frame": 0,
+          "global_symbol": 14,
+          "group": 0,
+          "matches_reference": true,
+          "pixel_yx": {
+            "x": 448,
+            "y": 0
+          },
+          "probability_state": {
+            "logits_argmax": 2,
+            "logits_float32_values": [
+              -1.3634873628616333,
+              -4.9826226234436035,
+              1.933906078338623,
+              -2.2441980838775635,
+              -2.5442442893981934
+            ],
+            "raw_softmax_float32_values": [
+              0.03473380208015442,
+              0.0009310688474215567,
+              0.939273476600647,
+              0.014396746642887592,
+              0.010664882138371468
+            ],
+            "raw_softmax_float64_sum": 0.999999976309482,
+            "variant_rows": {
+              "source_float64_perfect_false": {
+                "argmax": 2,
+                "categorical_perfect": false,
+                "decoded_symbol_probability": 0.9392734988525226,
+                "decoded_symbol_rank": 0,
+                "probability_dtype": "float64",
+                "rank_desc": [
+                  2,
+                  0,
+                  3,
+                  4,
+                  1
+                ],
+                "reference_symbol_probability": 0.9392734988525226,
+                "reference_symbol_rank": 0,
+                "sum": 0.9999999999999999,
+                "values": [
+                  0.034733802903016205,
+                  0.0009310688694790605,
+                  0.9392734988525226,
+                  0.014396746983953986,
+                  0.010664882391028056
+                ]
+              }
+            }
+          },
+          "reference_symbol": 2,
+          "symbol_in_group": 14
+        },
+        {
+          "context_before_decode": {
+            "current_left": 0,
+            "current_up": null,
+            "current_up_left": null,
+            "current_up_right": null,
+            "previous_down": 0,
+            "previous_left": 0,
+            "previous_right": 0,
+            "previous_same_pixel": 0,
+            "previous_up": null
+          },
+          "decoded_symbol": 2,
+          "frame": 0,
+          "global_symbol": 15,
+          "group": 0,
+          "matches_reference": true,
+          "pixel_yx": {
+            "x": 480,
+            "y": 0
+          },
+          "probability_state": {
+            "logits_argmax": 0,
+            "logits_float32_values": [
+              0.03140556812286377,
+              -3.8888168334960938,
+              -0.33837032318115234,
+              -2.215078353881836,
+              -3.6018290519714355
+            ],
+            "raw_softmax_float32_values": [
+              0.5426151156425476,
+              0.010763685218989849,
+              0.3748869001865387,
+              0.0573926642537117,
+              0.014341619797050953
+            ],
+            "raw_softmax_float64_sum": 0.9999999850988388,
+            "variant_rows": {
+              "source_float64_perfect_false": {
+                "argmax": 0,
+                "categorical_perfect": false,
+                "decoded_symbol_probability": 0.3748869057727889,
+                "decoded_symbol_rank": 1,
+                "probability_dtype": "float64",
+                "rank_desc": [
+                  0,
+                  2,
+                  3,
+                  4,
+                  1
+                ],
+                "reference_symbol_probability": 0.3748869057727889,
+                "reference_symbol_rank": 1,
+                "sum": 0.9999999999999999,
+                "values": [
+                  0.542615123728143,
+                  0.01076368537938126,
+                  0.3748869057727889,
+                  0.057392665108929056,
+                  0.014341620010757745
+                ]
+              }
+            }
+          },
+          "reference_symbol": 2,
+          "symbol_in_group": 15
+        }
+      ],
+      "trace_sha256": "84a181def5ec7416ca7b8c9c335c8a3af2b9f7a40a8c8b08b065990a9d7c03ca",
+      "variant": "source_float64_perfect_false"
+    }
+  ],
+  "variants": [
+    "source_float64_perfect_false"
+  ]
+}

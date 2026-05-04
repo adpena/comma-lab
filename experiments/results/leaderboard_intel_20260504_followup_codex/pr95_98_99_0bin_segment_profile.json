@@ -1,0 +1,47 @@
+{
+  "95": {
+    "decoder_blob_len": 162349,
+    "latents_brotli_len": 15868,
+    "meta": {
+      "base_channels": 36,
+      "eval_size": [
+        384,
+        512
+      ],
+      "latent_dim": 28,
+      "n_pairs": 600
+    },
+    "meta_brotli_len": 80,
+    "total_member_bytes": 178309,
+    "trailing_bytes": 0,
+    "wire": "meta+decoder+latents"
+  },
+  "98": {
+    "decoder_blob_len": 162343,
+    "latents_brotli_len": 15849,
+    "meta": {
+      "base_channels": 36,
+      "eval_size": [
+        384,
+        512
+      ],
+      "latent_dim": 28,
+      "n_pairs": 600
+    },
+    "meta_brotli_len": 80,
+    "total_member_bytes": 178284,
+    "trailing_bytes": 0,
+    "wire": "meta+decoder+latents"
+  },
+  "99": {
+    "segments": {
+      "correction_brotli": 615,
+      "decoder_brotli": 161883,
+      "latents_brotli": 15868,
+      "scale_fp16": 56
+    },
+    "total_member_bytes": 178438,
+    "trailing_bytes": 0,
+    "wire": "decoder+scale+latents+latent_correction"
+  }
+}

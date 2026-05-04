@@ -1,0 +1,49 @@
+{
+  "checks": {
+    "candidate_archive_byte_positive": true,
+    "mask_bytes_unchanged": true,
+    "pr92_archive_matches_expected": true,
+    "randmulti_byte_positive": true,
+    "randmulti_decoded_rows_equal": true,
+    "randmulti_non_noop": true,
+    "remote_dispatch_not_performed": true,
+    "robust_current_runtime_support": true,
+    "score_claim_false": true,
+    "single_member_x_only": true,
+    "source_archive_matches_expected_stbm": true,
+    "source_mask_stbm1br": true,
+    "zip_stored": true
+  },
+  "exact_eval_requires_lane_claim": true,
+  "parity": {
+    "candidate_profile": {
+      "codec": "RMB1_bitmask_value_randmulti",
+      "decoded_bytes": 27105,
+      "decoded_group_count": 72,
+      "decoded_sha256": "87bcc720c1e80afb9adad5ee01477423ced526f31c54d461d69dbf26e08eecc9",
+      "encoded_bytes": 15825,
+      "encoded_sha256": "4b10018eab64d8755da3def355881f51f2d450c9f19dd1457a6ec813cddd6f7c",
+      "group_count": 72,
+      "max_nonzero_entries_in_row": 532,
+      "nonzero_entries": 13496,
+      "sparse_row_count": 83
+    },
+    "decoded_rows_bytes": 27105,
+    "decoded_rows_sha256": "87bcc720c1e80afb9adad5ee01477423ced526f31c54d461d69dbf26e08eecc9",
+    "randmulti_decoded_rows_equal": true,
+    "source_profile": {
+      "codec": "brotli_headerless_sparse_randmulti",
+      "decoded_bytes": 27105,
+      "decoded_group_count": 72,
+      "decoded_sha256": "87bcc720c1e80afb9adad5ee01477423ced526f31c54d461d69dbf26e08eecc9",
+      "encoded_bytes": 16101,
+      "encoded_sha256": "c624372e60a0851c4c427dc333a60dcc5d6657ba8ed56951612e7c9d7be7629f",
+      "group_count": 72,
+      "max_nonzero_entries_in_row": 532,
+      "nonzero_entries": 13496,
+      "sparse_row_count": 83
+    }
+  },
+  "ready_for_exact_eval_after_lane_claim": true,
+  "status": "passed"
+}

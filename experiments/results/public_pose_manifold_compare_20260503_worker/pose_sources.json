@@ -1,0 +1,76 @@
+[
+  {
+    "archive_bytes": 276485,
+    "archive_path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c091_next_cem_pose_waterfill_top192_s0125_m06_t4_20260503T1238Z/archive.zip",
+    "archive_sha256": "79091f2c3f0c30ef3ca512808f3adc0306010e7f57fed3a09b3664c16fea4ea8",
+    "available": true,
+    "decoded_by": "builder:public_pr75_qzs3_qp1_segactions_p3",
+    "label": "C102",
+    "pose_float32_sha256": "b0340d7630a482d38d271344bd4aae4b64c84b67580f1f425d890472fc2cb749",
+    "pose_stream_bytes": 1140,
+    "pose_stream_sha256": "80094e20f4f6cd29869e043eb6d224a6697ecd7fb0e77728ddcd6c7a05fccb9a",
+    "pose_words_sha256": "c1101114caf08f60bb93ef88445552a36fc564f86bae2c5e8d53bad8b35d0993",
+    "reason": null,
+    "risk_flags": [
+      "planning_only_not_score_evidence"
+    ],
+    "word_count": 600
+  },
+  {
+    "archive_bytes": 276741,
+    "archive_path": "/Users/adpena/Projects/pact/experiments/results/top_submission_reverse_engineering_20260503_pr75/archive.zip",
+    "archive_sha256": "cc1dfa346811dade15044910fa0143e73a7a049b98aeec39b96a53481a0788bd",
+    "available": true,
+    "decoded_by": "decoded_pose_path:/Users/adpena/Projects/pact/experiments/results/top_submission_reverse_engineering_20260503_pr75/pose_q_br.decoded",
+    "label": "PR75",
+    "pose_float32_sha256": "afd13805bc30e79f5a9c0587d08cc8e05fa5508c03f1a2b5e6a425058b530b66",
+    "pose_stream_bytes": 1140,
+    "pose_stream_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+    "pose_words_sha256": "2414c1f9333c18197494aa8bfd40d6eb13b99447b4542097a9543b3a1363b5b0",
+    "reason": null,
+    "risk_flags": [
+      "planning_only_not_score_evidence",
+      "public_replay_components_do_not_promote_locally",
+      "public_difference_basis_not_direct_stream_copy"
+    ],
+    "word_count": 600
+  },
+  {
+    "archive_bytes": 276551,
+    "archive_path": "/Users/adpena/Projects/pact/experiments/results/top_submission_reverse_engineering_20260503_pr77/archive.zip",
+    "archive_sha256": "f90880383c95e14d82704f99db9b20944786ae6452a844348638b06c439972af",
+    "available": true,
+    "decoded_by": "decoded_pose_path:/Users/adpena/Projects/pact/experiments/results/top_submission_reverse_engineering_20260503_pr77/unpacked/optimized_poses.qp1",
+    "label": "PR77",
+    "pose_float32_sha256": "afd13805bc30e79f5a9c0587d08cc8e05fa5508c03f1a2b5e6a425058b530b66",
+    "pose_stream_bytes": 1140,
+    "pose_stream_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+    "pose_words_sha256": "2414c1f9333c18197494aa8bfd40d6eb13b99447b4542097a9543b3a1363b5b0",
+    "reason": null,
+    "risk_flags": [
+      "planning_only_not_score_evidence",
+      "public_replay_components_do_not_promote_locally",
+      "public_difference_basis_not_direct_stream_copy"
+    ],
+    "word_count": 600
+  },
+  {
+    "archive_bytes": 284425,
+    "archive_path": "/Users/adpena/Projects/pact/experiments/results/top_submission_delta_reverse_engineering_20260503/sources/pr65_henosis_archive.zip",
+    "archive_sha256": "b331cb4f6df9d8929db966b943b8c73624cdf3b6db71acbde361570852e59e68",
+    "available": true,
+    "decoded_by": "pr65_p1d1_reencoded_to_qp1_velocity_col0",
+    "label": "PR65",
+    "pose_float32_sha256": "19d572bc3cdc50d4efac3c619acb5dff6f4823e1c585155e0e943afb31d3105e",
+    "pose_stream_bytes": 1140,
+    "pose_stream_sha256": "ce65d2798b914e09a762687e4a3f16d6e94294f73febf10c69a2ba0ff27c3390",
+    "pose_words_sha256": "706d26b6c4a1b5b988464535851545698103f2cdafc151683aaa1980029a9de4",
+    "reason": null,
+    "risk_flags": [
+      "planning_only_not_score_evidence",
+      "pr65_direct_transfer_or_qpost_exact_negatives_exist",
+      "pr65_reencoded_to_qp1_velocity_only_for_basis_comparison"
+    ],
+    "word_count": 600
+  }
+]

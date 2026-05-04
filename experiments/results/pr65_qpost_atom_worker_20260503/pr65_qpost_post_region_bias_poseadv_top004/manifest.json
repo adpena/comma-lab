@@ -1,0 +1,216 @@
+{
+  "archive_byte_delta": 252,
+  "candidate_id": "pr65_qpost_post_region_bias_poseadv_top004",
+  "component_risk_classification": {
+    "break_even_component_gain_for_sub314": 0.0016385238515372667,
+    "component_risk": "high",
+    "dispatch_blockers": [
+      "contains post stream; global exact ablation was strongly negative",
+      "contains region stream; global exact ablation was pose-negative",
+      "public-trace opportunity bound 0.000366883 is below sub-0.314 break-even 0.001638524"
+    ],
+    "dispatch_recommendation": "do_not_dispatch",
+    "evidence_grade": "byte_trace_planning_only_until_exact_cuda",
+    "inherited_exact_negative_full_qpost": false,
+    "public_trace_opportunity_bound": 0.00036688274820657766,
+    "risk_family": "high_post_region_bias_global_negative"
+  },
+  "evidence_grade": "empirical_byte_only_until_cuda_auth_eval",
+  "exact_eval_command_template": ".venv/bin/python -u experiments/contest_auth_eval.py --archive /Users/adpena/Projects/pact/experiments/results/pr65_qpost_atom_worker_20260503/pr65_qpost_post_region_bias_poseadv_top004/archive.zip --inflate-sh submissions/robust_current/inflate.sh --upstream-dir upstream --device cuda --keep-work-dir --work-dir /Users/adpena/Projects/pact/experiments/results/pr65_qpost_atom_worker_20260503/exact_eval_work/pr65_qpost_post_region_bias_poseadv_top004",
+  "formula_rate_score_delta": 0.0001677964561867872,
+  "include_streams": [
+    "post",
+    "region",
+    "bias"
+  ],
+  "members": {
+    "p": {
+      "bytes": 276242,
+      "sha256": "fcc3fddb3a4182182bbfca1d1064544c87e58a5a9f76ea6fddfcfe4eb0b453c1"
+    },
+    "qpost.bin": {
+      "bytes": 158,
+      "sha256": "d3982bc0acf44455d3024987782776a9c1566ddc232f5f2230f68b70a28ad47b"
+    }
+  },
+  "no_op_proof": {
+    "by_stream": {
+      "bias": {
+        "selected_active_atoms": 4,
+        "selected_active_pairs": 4
+      },
+      "post": {
+        "selected_active_atoms": 13,
+        "selected_active_pairs": 4
+      },
+      "region": {
+        "selected_active_atoms": 3,
+        "selected_active_pairs": 3
+      }
+    },
+    "is_noop": false,
+    "nonselected_pairs_default_to_identity": true,
+    "selected_active_atoms_total": 20,
+    "selected_pairs": [
+      105,
+      64,
+      60,
+      435
+    ]
+  },
+  "omitted_streams": [
+    "shift",
+    "frac",
+    "frac2",
+    "frac3",
+    "randmulti"
+  ],
+  "original_streams_equal_after_filter": {
+    "bias": false,
+    "post": false,
+    "region": false
+  },
+  "output_archive": "/Users/adpena/Projects/pact/experiments/results/pr65_qpost_atom_worker_20260503/pr65_qpost_post_region_bias_poseadv_top004/archive.zip",
+  "output_archive_bytes": 276594,
+  "output_archive_sha256": "7d3c639678399b3713c36d5cfcee0225056454f1741fc22159a2c8be5eaeafc5",
+  "pair_filter": {
+    "nonselected_pairs_default_to_identity": true,
+    "pair_count": 4,
+    "pair_indices": [
+      105,
+      64,
+      60,
+      435
+    ],
+    "randmulti_supported": false
+  },
+  "pr65_archive": "/Users/adpena/Projects/pact/experiments/results/top_submission_delta_reverse_engineering_20260503/sources/pr65_henosis_archive.zip",
+  "pr65_archive_sha256": "b331cb4f6df9d8929db966b943b8c73624cdf3b6db71acbde361570852e59e68",
+  "qpost_streams": {
+    "bias": {
+      "active": true,
+      "bytes": 32,
+      "original_bytes": 223,
+      "original_sha256": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b",
+      "sha256": "59dab586cbf8c8a89846f2643be8b1f3b2f9ff0b58900832dab3a2fcebd7d78f"
+    },
+    "frac": {
+      "active": false,
+      "bytes": 0,
+      "original_bytes": 106,
+      "original_sha256": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "frac2": {
+      "active": false,
+      "bytes": 0,
+      "original_bytes": 149,
+      "original_sha256": "3a01c7546d89d9d3ca846da37a20add7d456421e9211a6339850d946b856026b",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "frac3": {
+      "active": false,
+      "bytes": 0,
+      "original_bytes": 154,
+      "original_sha256": "d725b01b604566c5a76a06b821c644c8d5d5bb9a57ab0597d3bdabc8389858b5",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "post": {
+      "active": true,
+      "bytes": 59,
+      "original_bytes": 1400,
+      "original_sha256": "c3dc88e0fb5a1e48aec49eeacefeea20685e3c02598933deb1ff22dc09892575",
+      "sha256": "b5e64145eac6ab568baaca3eaf5b3ff170b1a65790c26bc896c28bfc219b701a"
+    },
+    "randmulti": {
+      "active": false,
+      "bytes": 0,
+      "original_bytes": 3731,
+      "original_sha256": "dddf4b4fec32190b219d3e916e05bba5d1711d4208d16966929fa09cbc39349e",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "region": {
+      "active": true,
+      "bytes": 31,
+      "original_bytes": 273,
+      "original_sha256": "4a7c16094fab281c30e27621a58577c095c4b1153c232518c9adbaba2a2b2392",
+      "sha256": "203611ce6ed6b005c93a046d62c3a37dfbff92a9b82513a4c5ac9c0d305fd8cf"
+    },
+    "shift": {
+      "active": false,
+      "bytes": 0,
+      "original_bytes": 226,
+      "original_sha256": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "remote_dispatch": {
+    "dispatched": false,
+    "note": "This worker is local-only; command template is not a dispatch.",
+    "requires_lane_claim": true
+  },
+  "schema_version": 1,
+  "score_claim": false,
+  "selected_pair_rank_records": [
+    {
+      "active_atom_count": 5,
+      "active_by_stream": {
+        "bias": 1,
+        "post": 3,
+        "region": 1
+      },
+      "c089_combined_contribution": 0.0004259296165359442,
+      "pair_index": 105,
+      "pr65_combined_contribution": 0.00032293900969633375,
+      "public_trace_opportunity": 0.00010299060683961048,
+      "public_trace_pose_opportunity": 0.0001479192570561204,
+      "rank_score": 103.04060683961048
+    },
+    {
+      "active_atom_count": 4,
+      "active_by_stream": {
+        "bias": 1,
+        "post": 3,
+        "region": 0
+      },
+      "c089_combined_contribution": 0.00037226510927979256,
+      "pair_index": 64,
+      "pr65_combined_contribution": 0.0002794788769296003,
+      "public_trace_opportunity": 9.278623235019228e-05,
+      "public_trace_pose_opportunity": 0.00010634960687326572,
+      "rank_score": 92.82623235019229
+    },
+    {
+      "active_atom_count": 5,
+      "active_by_stream": {
+        "bias": 1,
+        "post": 3,
+        "region": 1
+      },
+      "c089_combined_contribution": 0.00038256662629821905,
+      "pair_index": 60,
+      "pr65_combined_contribution": 0.00029688651623296946,
+      "public_trace_opportunity": 8.568011006524959e-05,
+      "public_trace_pose_opportunity": 0.00010517745487886962,
+      "rank_score": 85.73011006524959
+    },
+    {
+      "active_atom_count": 6,
+      "active_by_stream": {
+        "bias": 1,
+        "post": 4,
+        "region": 1
+      },
+      "c089_combined_contribution": 0.00026130170698807645,
+      "pair_index": 435,
+      "pr65_combined_contribution": 0.00017587590803655115,
+      "public_trace_opportunity": 8.54257989515253e-05,
+      "public_trace_pose_opportunity": 0.0001091616898149886,
+      "rank_score": 85.48579895152531
+    }
+  ],
+  "source_archive": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/archive.zip",
+  "source_archive_bytes": 276342,
+  "source_archive_sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8",
+  "tool": "experiments/build_pr65_qpost_atom_candidates.py"
+}

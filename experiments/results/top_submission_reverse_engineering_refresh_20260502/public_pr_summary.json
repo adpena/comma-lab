@@ -1,0 +1,270 @@
+{
+  "active_internal_frontier": {
+    "archive_sha256": "cf44aa7fdb13b9ab6236aefde1f5f58e915d7dfa99128246235443841396c6ab",
+    "bytes": 276347,
+    "evidence_grade": "A++",
+    "label": "C-059",
+    "posenet_dist": 0.00049637,
+    "score": 0.3157055307844823,
+    "segnet_dist": 0.00061244,
+    "source": "experiments/results/lightning_batch/exact_eval_qzs3_b32_maskfirst_qp1_fix1_t4_20260502T0331Z/contest_auth_eval.json"
+  },
+  "artifact_inputs": {
+    "archive_anatomy_json": "experiments/results/top_submission_reverse_engineering_refresh_20260502/archive_anatomy.json",
+    "ledger_markdown": ".omx/research/top_submission_reverse_engineering_refresh_20260502_codex.md"
+  },
+  "c059_vs_pr67_public_rounded_fields": {
+    "bytes_delta_pr67_minus_c059": 217,
+    "net_score_delta_pr67_minus_c059": -0.0008413667320887885,
+    "pose_contribution_delta": -0.0007419822433689938,
+    "pose_dist_delta": -0.000010399999999999982,
+    "rate_contribution_delta": 0.00014449139282751117,
+    "seg_contribution_delta": -0.00024400000000000376,
+    "seg_dist_delta": -0.0000024400000000000376
+  },
+  "evidence_grade": "external_plus_empirical_byte_anatomy",
+  "live_open_prs_observed": [
+    65,
+    67,
+    69,
+    70,
+    71
+  ],
+  "no_remote_jobs_launched": true,
+  "public_prs": [
+    {
+      "architecture_signals": [
+        "88k-param depthwise-separable FiLM-conditioned JointFrameGenerator",
+        "half-rate mask stream",
+        "scorer-contract training with upsample/round/downsample",
+        "five-stage QAT-like training script"
+      ],
+      "archive_url": "https://github.com/user-attachments/files/26863641/archive.zip",
+      "bytes": 299970,
+      "classification": "external_historical_valid_looking",
+      "formula_score_from_rounded_fields": 0.332271995510734,
+      "head_sha": "e0b643b0a7c21f62cc93b5d920bcf3fc0d5a33d9",
+      "pose": 0.0005101,
+      "pr": 55,
+      "reported_score": "0.33",
+      "seg": 0.00061113,
+      "state": "closed",
+      "title": "quantizr (0.33)",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/55"
+    },
+    {
+      "architecture_signals": [
+        "self-compression around 1.017 bits per weight",
+        "affine transformed learned image for PoseNet",
+        "simple AV1 video",
+        "useful as weight-compression prior, not current frontier"
+      ],
+      "archive_url": "https://github.com/user-attachments/files/27106535/archive.zip",
+      "bytes": 279036,
+      "classification": "external_historical_valid_looking_cpu_report",
+      "formula_score_from_rounded_fields": 0.364116043771751,
+      "head_sha": "2b2d76de6f5aa34c76352c2cc02b03ed44a03a26",
+      "pose": 0.00039717,
+      "pr": 56,
+      "reported_score": "0.36",
+      "seg": 0.00115296,
+      "state": "closed",
+      "title": "selfcomp",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/56"
+    },
+    {
+      "architecture_signals": [
+        "AV1 CRF55 brotli mask video",
+        "uint16-quantized poses",
+        "FP4-quantized 88k-param neural generator",
+        "three-stage QAT"
+      ],
+      "archive_url": "https://github.com/user-attachments/files/27186314/archive.zip",
+      "bytes": 249624,
+      "classification": "external_historical_valid_looking",
+      "formula_score_from_rounded_fields": 0.359066121006115,
+      "head_sha": "c6b1888602d096e3308a2688ffebd54877024d47",
+      "pose": 0.00063958,
+      "pr": 62,
+      "reported_score": "0.36",
+      "seg": 0.00112878,
+      "state": "closed",
+      "title": "fp4_mask_gen",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/62"
+    },
+    {
+      "architecture_signals": [
+        "rate-optimized Quantizr-style renderer",
+        "quantized pose side-channel",
+        "single-member archive packing"
+      ],
+      "archive_url": "https://github.com/user-attachments/files/27206870/archive.zip",
+      "bytes": 287573,
+      "classification": "external_historical_valid_looking",
+      "formula_score_from_rounded_fields": 0.324961783081994,
+      "head_sha": "17a3474eb2a7bbd648b850ec6c8338ef8ba15a65",
+      "pose": 0.00052154,
+      "pr": 63,
+      "reported_score": "0.32",
+      "seg": 0.00061261,
+      "state": "closed",
+      "title": "add qpose14 submission",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/63"
+    },
+    {
+      "architecture_signals": [
+        "single-stream Brotli over raw mask/model/pose",
+        "velocity-delta uint16/int16 pose stream",
+        "drops rotation from pose side-channel"
+      ],
+      "archive_url": "https://github.com/avocardio/comma_video_compression_challenge/releases/download/v1-unified_brotli/archive.zip",
+      "bytes": 287165,
+      "classification": "external_historical_valid_looking_live_body_supersedes_stale_local_score",
+      "formula_score_from_rounded_fields": 0.336126770676108,
+      "head_sha": "8e5437d923d664d88382a93be8110a25b1966348",
+      "pose": 0.00052868,
+      "pr": 64,
+      "reported_score": "0.34",
+      "seg": 0.00072205,
+      "state": "closed",
+      "title": "Add unified_brotli submission",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/64"
+    },
+    {
+      "architecture_signals": [
+        "Quantizr-derived archive-counted submission",
+        "compact reconstruction side information in archive.zip",
+        "24-bit length-table bundle",
+        "excellent pose but worse SegNet than C-059"
+      ],
+      "archive_sha256": "b331cb4f6df9d8929db966b943b8c73624cdf3b6db71acbde361570852e59e68",
+      "archive_url": "https://github.com/henosis-us/comma_video_compression_challenge/raw/henosis_qz_n3z_r25_clean_submit/submissions/henosis_qz_n3z_r25_clean/archive.zip",
+      "bytes": 284425,
+      "classification": "external_strict_valid_looking",
+      "formula_score_from_rounded_fields": 0.319682427689121,
+      "head_sha": "a8b53b5280ee8f05db65740cd48cf7c321a55497",
+      "pose": 0.00035283,
+      "pr": 65,
+      "reported_exact_approx": 0.31968005,
+      "reported_score": "0.32",
+      "seg": 0.00070896,
+      "state": "open",
+      "title": "henosis_qz_n3z_r25_clean (0.32)",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/65"
+    },
+    {
+      "architecture_signals": [
+        "QZS3 grouped quantization with variable bit-depth per layer",
+        "delta plus VLQ QP1 pose encoding",
+        "single-blob payload",
+        "87836 finite JFG parameters after QZS3 decode"
+      ],
+      "archive_sha256": "a5ed8da0d9988943c986b231b4cd33cea0ab878a8e1628134341db5f7f41c765",
+      "archive_url": "https://github.com/EthanYangTW/comma_video_compression_challenge/raw/submission/qpose14-r55/submissions/qpose14_qzs3_filmq9g_slsb1_r55/archive.zip",
+      "bytes": 276564,
+      "classification": "external_strict_valid_looking",
+      "container_segments": {
+        "mask_obu_br": 219472,
+        "model_qzs3_br": 56093,
+        "pose_qp1_br": 899
+      },
+      "formula_score_from_rounded_fields": 0.314864164052394,
+      "head_sha": "696d4a1e64a7f2d9aada3e3833be3c91ad394c21",
+      "pose": 0.00048597,
+      "pr": 67,
+      "reported_score": "0.31",
+      "seg": 0.00061,
+      "state": "open",
+      "title": "qpose14_qzs3_filmq9g_slsb1_r55 (0.31)",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/67"
+    },
+    {
+      "architecture_signals": [
+        "payload relocated from archive into inflate.py",
+        "empty or near-empty archive rate exploit"
+      ],
+      "archive_url": "https://github.com/avocardio/comma_video_compression_challenge/releases/download/v1-loophole_v2/archive.zip",
+      "bytes": 22,
+      "classification": "invalid_exploit_quarantine",
+      "formula_score_from_rounded_fields": null,
+      "head_sha": "b7a11f4d83454ce2abed9c93cf4bc81d44abfbb6",
+      "pose": null,
+      "pr": 68,
+      "reported_score": "expected around 0.13 if eval runs as-is",
+      "seg": null,
+      "state": "closed",
+      "title": "loophole_v2 (joke / proof-of-concept)",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/68"
+    },
+    {
+      "architecture_signals": [
+        "no public eval report",
+        "data-flow boundary refactor",
+        "raw inflate.py contains embedded base85 payload literal"
+      ],
+      "archive_url": "https://github.com/avocardio/comma_video_compression_challenge/releases/download/v1-houdini/archive.zip",
+      "bytes": null,
+      "classification": "external_quarantine_indeterminate",
+      "formula_score_from_rounded_fields": null,
+      "head_sha": "7b1f40aae9e1f4720273ae91b6163aa87cb064d3",
+      "pose": null,
+      "pr": 69,
+      "reported_score": null,
+      "seg": null,
+      "state": "open",
+      "title": "Add houdini submission",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/69"
+    },
+    {
+      "architecture_signals": [
+        "author states bytes were moved into inflate.py",
+        "local forensic archive is malformed under Python zipfile but unzip extracts member m",
+        "inflate.py is 1299244 bytes while archive.zip is 57329 bytes"
+      ],
+      "archive_sha256": "d5046b9b64c0982adb1bd8edf35f25bd3eb7fa0180f6744ce3bbd8c139abb142",
+      "archive_url": "https://github.com/user-attachments/files/27271580/archive.zip",
+      "bytes": 57329,
+      "classification": "invalid_exploit_quarantine",
+      "formula_score_from_rounded_fields": 0.185435672878816,
+      "head_sha": "b08810f5c2df491459f2922fa9a7e7adb6d4fc78",
+      "local_forensic_payload_member": "m",
+      "pose": 0.00048759,
+      "pr": 70,
+      "reported_score": "0.19",
+      "seg": 0.00077435,
+      "state": "open",
+      "title": "Add mask_decoder submission",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/70"
+    },
+    {
+      "architecture_signals": [
+        "extracts masks, inter-pair poses, and intra-pair poses",
+        "MaskEncoder plus FrameHead generator",
+        "depthwise-separated residual convolutions",
+        "squeeze-excitation and pixel attention",
+        "boundary loss and uncertainty visualization"
+      ],
+      "archive_url": "https://github.com/user-attachments/files/27273327/archive.zip",
+      "bytes": 290747,
+      "classification": "external_nonfrontier_validity_unconfirmed",
+      "formula_score_from_rounded_fields": 0.711366091253782,
+      "head_sha": "73bdac2671af4597c4a4d22baeb6f614b9efc999",
+      "pose": 0.00358563,
+      "pr": 71,
+      "reported_score": "0.71",
+      "seg": 0.00328412,
+      "state": "open",
+      "title": "tomasdousek - ditcher",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/71"
+    }
+  ],
+  "schema_version": 1,
+  "score_claim": false,
+  "top_c059_implications": [
+    "PR67 is the public contest-faithful component target; it beats C-059 by about 0.00084137 from public rounded fields even though it is 217 bytes larger.",
+    "C-059 already has the rate edge over PR67, so more byte-only work is low EV unless free; prioritize charged pose and SegNet atoms inside the b32 mask-first packer shape.",
+    "PR65 has much better PoseNet but worse SegNet; mine pose residual/manifold ideas only behind strict C-059 SegNet gates.",
+    "Use the live PR64 body as current public state; stale local notes that call it 0.33 should not drive target selection.",
+    "PR68, PR69, and PR70 are validator hardening inputs, not score basins; reject unmetered script payloads and malformed ZIP central/local header divergence."
+  ]
+}

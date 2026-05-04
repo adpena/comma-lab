@@ -1,0 +1,114 @@
+{
+  "byte_screen": {
+    "exact_cuda_auth_eval_required_for_score": true,
+    "local_archive_byte_win": false,
+    "local_renderer_byte_win": false,
+    "promotion_eligible": false,
+    "score_claim": false
+  },
+  "candidate_id": "qbf1_b0032",
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
+  "output_archive": {
+    "bytes": 280588,
+    "delta_bytes_vs_source_archive": 4374,
+    "formula_only_rate_delta_vs_source_archive": 0.0029124670609563773,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c067_renderer_self_compression_20260502_blockfp_local_screen/qbf1_sweep/qbf1_b0032/archive.zip",
+    "sha256": "b578afb324261dabd5492083e9ea46b3b26c0ee99b2ae1298f360d58c2a36b8a"
+  },
+  "packed_payload": {
+    "brotli_quality": 11,
+    "header": {
+      "members": [
+        {
+          "bytes": 132129,
+          "codec": "raw",
+          "name": "renderer.bin",
+          "sha256": "08bf9d1ec326f3dd9c42ce10ba6c2b234b5c7e56cb99c88637fc0254732e0224"
+        },
+        {
+          "bytes": 223385,
+          "codec": "raw",
+          "name": "masks.mkv",
+          "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        {
+          "bytes": 7200,
+          "codec": "raw",
+          "name": "optimized_poses.bin",
+          "sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+        }
+      ],
+      "payload_format": "public_pr64_mask_first_len_table",
+      "schema": "renderer_payload_pr64_len_table_v1",
+      "source_archive_sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a"
+    },
+    "output_archive_members": [
+      "p"
+    ],
+    "payload_compressed_bytes": 280488,
+    "payload_format": "public_pr64_mask_first_len_table",
+    "payload_member": "p",
+    "payload_raw_bytes": 362726,
+    "runtime_parse_header_schema": "renderer_payload_pr64_len_table_v1",
+    "runtime_parse_logical_members": [
+      "renderer.bin",
+      "masks.mkv",
+      "optimized_poses.bin"
+    ],
+    "runtime_parse_payload_format": "public_pr64_mask_first_len_table"
+  },
+  "promotion_eligible": false,
+  "renderer_source_member": {
+    "bytes": 59288,
+    "member_name": "renderer.bin",
+    "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb",
+    "state_tensor_count": 111,
+    "wire_format": "QZS3"
+  },
+  "runtime_contract": {
+    "inflate_loader": "submissions/robust_current/inflate_renderer.py::_load_renderer QBF1 branch",
+    "renderer_loader_import": "tac.qbf1_renderer_codec.load_qbf1",
+    "score_affecting_payload_charged_in_archive": true,
+    "scorer_imports_at_inflate_time": false,
+    "sidecars_required": false,
+    "unpacker": "submissions/robust_current/unpack_renderer_payload.py"
+  },
+  "schema": "blockfp_c067_archive_builder_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 276214,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip",
+    "sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+    "source_archive_packaging": "packed_renderer_payload",
+    "source_logical_member_names": [
+      "renderer.bin",
+      "masks.mkv",
+      "optimized_poses.bin"
+    ],
+    "source_payload_header_payload_format": "public_pr67_qzs3_qp1_fixed_slices",
+    "source_payload_header_schema": "renderer_payload_pr64_len_table_v1",
+    "source_payload_member": "p",
+    "source_payload_member_bytes": 276114,
+    "source_payload_member_sha256": "1f0aaaa9d06967552df6f22d39905a48349239dee4731b093067951a20adc2af",
+    "source_zip_members": [
+      "p"
+    ]
+  },
+  "transformed_renderer_payload": {
+    "block_size": 32,
+    "byte_accounting": {
+      "header_nbytes": 20,
+      "metadata_nbytes": 33205,
+      "payload_nbytes": 98904,
+      "tensor_payload_nbytes": 98904,
+      "total_nbytes": 132129
+    },
+    "bytes": 132129,
+    "delta_bytes_vs_source_renderer": 72841,
+    "member_name": "renderer.bin",
+    "sha256": "08bf9d1ec326f3dd9c42ce10ba6c2b234b5c7e56cb99c88637fc0254732e0224",
+    "transform": "qzs3_or_mqz1_or_qbf1_decoded_state_to_qbf1_block_fp",
+    "wire_format": "QBF1"
+  }
+}

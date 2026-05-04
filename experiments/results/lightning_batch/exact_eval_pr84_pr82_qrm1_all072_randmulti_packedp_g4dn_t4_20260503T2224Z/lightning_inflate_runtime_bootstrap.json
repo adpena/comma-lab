@@ -1,0 +1,21 @@
+{
+  "install_command": [
+    "/usr/local/bin/uv",
+    "pip",
+    "install",
+    "--python",
+    ".venv/bin/python",
+    "brotli==1.2.0"
+  ],
+  "install_returncode": 0,
+  "installed": true,
+  "python": ".venv/bin/python",
+  "recorded_at_utc": "2026-05-03T22:38:01Z",
+  "requested_specs": [
+    "brotli==1.2.0"
+  ],
+  "schema_version": 1,
+  "stderr_tail": "Audited 1 package in 16ms\n",
+  "stdout_tail": "",
+  "tool": "lightning_exact_eval_inflate_runtime_bootstrap"
+}

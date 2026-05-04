@@ -1,0 +1,125 @@
+{
+  "byte_delta_vs_source_archive": 7,
+  "candidate": {
+    "archive_bytes": 236335,
+    "archive_path": "experiments/results/public_pr85_sidechannel_recodes_20260503_codex/segment_frac_best/archive.zip",
+    "archive_sha256": "da742a76add4899b8e4c68ea689f246760b4069ccd69b90f23cc2b7fb11ff4a4",
+    "member_bytes": 236235,
+    "member_name": "x",
+    "member_sha256": "03b1d6f58ed0a6e7e6e50c4cfd528eb0bfa1d989024f8176c5f4bc8ccb49b8ed",
+    "zip_stored": true
+  },
+  "candidate_bundle_validation": {
+    "bundle_format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+    "fixed_length_segments": {
+      "bias": 223,
+      "region": 273
+    },
+    "header_bytes": 24,
+    "mismatched_segments": [],
+    "segment_lengths": {
+      "bias": 223,
+      "frac": 113,
+      "frac2": 149,
+      "frac3": 154,
+      "mask": 159011,
+      "model": 57074,
+      "pose": 1487,
+      "post": 1400,
+      "randmulti": 16101,
+      "region": 273,
+      "shift": 226
+    },
+    "status": "passed"
+  },
+  "changed_segments": [
+    "frac"
+  ],
+  "decoded_parity_metadata": {
+    "segments_checked": [
+      "frac"
+    ],
+    "semantic_hash_fields": [
+      "source_semantic_sha256",
+      "candidate_semantic_sha256"
+    ],
+    "status": "passed"
+  },
+  "dispatch_gate": "planning_only/no_remote_dispatch",
+  "dispatch_performed": false,
+  "evidence_grade": "empirical_lossless_decoded_semantics_recode",
+  "fixed_length_parser_safety": {
+    "explicit_30byte_header_used": false,
+    "reason": "bias/region fixed v5 lengths preserved",
+    "status": "passed",
+    "v5_fixed_lengths_preserved": true
+  },
+  "formula_only_rate_score_delta_vs_source": 4.6610126718552e-06,
+  "header_mode": "v5",
+  "next_gate": "Before exact eval, claim the lane with tools/claim_lane_dispatch.py and run PR85 public-runtime CUDA auth eval on this exact archive.",
+  "noop": false,
+  "policy_id": "segment_frac_best",
+  "schema": "pr85_sidechannel_recode_candidate_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 236328,
+    "member_compress_size": 236228,
+    "member_crc32_hex": "c6356353",
+    "member_file_size": 236228,
+    "member_name": "x",
+    "member_sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+    "path": "experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+    "sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e"
+  },
+  "source_bundle": {
+    "fixed_length_segments": {
+      "bias": 223,
+      "region": 273
+    },
+    "format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+    "header_bytes": 24,
+    "segment_lengths": {
+      "bias": 223,
+      "frac": 106,
+      "frac2": 149,
+      "frac3": 154,
+      "mask": 159011,
+      "model": 57074,
+      "pose": 1487,
+      "post": 1400,
+      "randmulti": 16101,
+      "region": 273,
+      "shift": 226
+    }
+  },
+  "source_frontier": {
+    "archive_bytes": 236328,
+    "archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+    "score": 0.25806611029397786,
+    "score_source": "exact T4 PR85 replay; included for comparison only"
+  },
+  "tool": "experiments/build_pr85_sidechannel_recode_candidates.py",
+  "transforms": [
+    {
+      "brotli_params": {
+        "lgwin": 18,
+        "quality": 5
+      },
+      "candidate_decoded_bytes": 179,
+      "candidate_segment_bytes": 113,
+      "candidate_segment_sha256": "c5d418c3dc11d1f13c88666b7103e41e2020cbb5112b060b904fe727248f9d3a",
+      "candidate_semantic_sha256": "f707e61bb70ef3c8d01b7f204e8bdbf08d3930b0d3acc49cebfd5decd798b078",
+      "decoded_parity_status": "passed",
+      "noop_segment": false,
+      "runtime_supported": true,
+      "segment": "frac",
+      "segment_byte_delta": 7,
+      "source_decoded_bytes": 179,
+      "source_segment_bytes": 106,
+      "source_segment_sha256": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992",
+      "source_semantic_sha256": "f707e61bb70ef3c8d01b7f204e8bdbf08d3930b0d3acc49cebfd5decd798b078",
+      "support_reason": "public runtime supports FV1 sparse choices",
+      "variant": "FV1_sparse_default4"
+    }
+  ]
+}

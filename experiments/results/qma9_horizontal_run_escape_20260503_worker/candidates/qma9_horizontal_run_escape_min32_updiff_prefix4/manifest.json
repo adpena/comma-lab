@@ -1,0 +1,156 @@
+{
+  "archive": {
+    "archive_bytes": 215735,
+    "archive_path": "/Users/adpena/Projects/pact/experiments/results/top_submission_reverse_engineering_20260503_pr84/archive.zip",
+    "archive_sha256": "a607a6c3ae9b610e6edfb546c3206004ae40fc348ecaef2446b7134a19b8e07f",
+    "member_bytes": 215635,
+    "member_name": "p",
+    "member_sha256": "35b14e37ee34eeb2197117d52d805afb7aff8b33378b367685476dc4097e324d",
+    "zip_overhead_bytes": 100
+  },
+  "candidate": "qma9_horizontal_run_tail_escape_qmh1",
+  "candidate_id": "qma9_horizontal_run_escape_min32_updiff_prefix4",
+  "candidate_qmh1_header": {
+    "bitstream_bytes": 1217,
+    "bitstream_sha256": "174389db2f66d23bf50084bf3d1c6fdae55a03c4724fd6e4180afbb6094bbfef",
+    "decoded_mask_bytes": 786432,
+    "flags": 1,
+    "frame_count": 4,
+    "header_bytes": 28,
+    "height": 384,
+    "magic": "QMH1",
+    "min_run_length": 32,
+    "packed_bytes": 1245,
+    "payload_sha256": "6ffeb6303c888c240a37afd3aec2ee6b985f20b867e8345088020e80152218e8",
+    "require_up_disagreement": true,
+    "width": 512
+  },
+  "decision": {
+    "accepted_for_exact_eval_candidate": false,
+    "archive_relevant_state_change": true,
+    "dispatch_gate": "planning_only/no_remote_dispatch",
+    "dispatchable": false,
+    "local_byte_win": false,
+    "local_screen_negative": true,
+    "non_dispatchable_reasons": [
+      "candidate does not beat exact subset QMA9 re-encode",
+      "planning-only bounded prefix projection",
+      "no contest runtime integration",
+      "no CUDA auth eval",
+      "worker scope forbids remote dispatch"
+    ],
+    "raw_mask_parity": true,
+    "reason": "QMH1 did not beat exact subset QMA9 re-encode; run flags/length bits exceed skipped base-symbol savings.",
+    "required_gates_before_dispatch": [
+      "full 600-frame QMH1 encode/decode raw-mask parity",
+      "runtime/inflate integration that consumes QMH1 bytes from archive",
+      "deterministic archive closure and manifest with payload/runtime SHAs",
+      "orchestrator lane claim before any remote/GPU eval",
+      "exact CUDA auth eval through archive.zip -> inflate.sh -> upstream/evaluate.py"
+    ]
+  },
+  "dispatch_performed": false,
+  "evidence_grade": "empirical/planning_only",
+  "full_stream_linear_projection": {
+    "candidate_range_mask_bytes": 186750,
+    "delta_bytes_vs_source_range_mask": 27739,
+    "dispatchable": false,
+    "projected_archive_bytes_if_other_streams_unchanged": 243474,
+    "projection": "candidate_subset_bytes * source_frame_count / subset_frames",
+    "rate_score_delta_if_components_unchanged": 0.01847026150065591,
+    "reason": "linear projection from a bounded prefix; requires full deterministic re-encode and runtime integration",
+    "reference_source_range_mask_bytes": 159011
+  },
+  "gpu_required": false,
+  "horizontal_run_escape": {
+    "base_modeled_pixels": 784592,
+    "candidate_acceptance_fraction": 0.023004059539918808,
+    "candidate_positions": 739,
+    "copied_pixel_fraction": 0.0023396809895833335,
+    "copied_pixels": 1840,
+    "escaped_runs": 17,
+    "extension_continue_symbols": 1296,
+    "extension_stop_symbols": 13,
+    "length_context_count": 8,
+    "max_escaped_tail_length": 221,
+    "min_run_length": 32,
+    "model_update_policy": "escaped horizontal tails update the base QMA9 adaptive model without emitting base symbols",
+    "rejected_positions": 722,
+    "require_up_disagreement": true,
+    "run_flag_context_count": 13,
+    "total_pixels": 786432
+  },
+  "notes": [
+    "QMH1 encodes a run flag only immediately after a horizontal transition or row-start pixel.",
+    "Accepted escapes copy the same-left tail and advance the base QMA9 adaptive model without emitting base symbols.",
+    "The default gate requires up != left, targeting horizontal tails where the dominant QMA9 up predictor is not already free.",
+    "This artifact is not a score/component claim and did not invoke CUDA or a scorer."
+  ],
+  "schema": "qma9_horizontal_run_escape_candidate_screen_v1",
+  "score_claim": false,
+  "segments": [
+    {
+      "codec": "qma9_adaptive9_binary_range_mask",
+      "name": "range_mask.qma9",
+      "offset": 0,
+      "sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+      "size_bytes": 159011
+    },
+    {
+      "codec": "brotli_reordered_qzs3_model_bundle",
+      "name": "split_model_reordered.br_bundle",
+      "offset": 159011,
+      "sha256": "b649b0dacb1dcc93fd7da2e7f5c6d398fa933d2fe3087520359612afc8e4832d",
+      "size_bytes": 55725
+    },
+    {
+      "codec": "brotli_qp1_pose_stream",
+      "name": "optimized_poses.qp1.br",
+      "offset": 214736,
+      "sha256": "83767bbd10ae72c3237e468351eb9c465a954e25a6af04a0e0cb84d1f7af9b51",
+      "size_bytes": 899
+    },
+    {
+      "codec": "absent_pr84_no_router_actions",
+      "name": "router_actions.3bit",
+      "offset": 215635,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    }
+  ],
+  "source_qma9_header": {
+    "bitstream_bytes": 158991,
+    "bitstream_sha256": "77196f31a8fdfbf8f91c9c30600945473376534f15245bfb7622ddd77d17e3af",
+    "decoded_mask_bytes": 117964800,
+    "frame_count": 600,
+    "header_bytes": 20,
+    "height": 384,
+    "magic": "QMA9",
+    "packed_bytes": 159011,
+    "payload_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+    "width": 512
+  },
+  "split_constants": {
+    "PACKED_PAYLOAD_BYTES": 215860,
+    "POSE_STREAM_BYTES": 899,
+    "RANGE_MASK_BYTES": 159011,
+    "ROUTER_ACTION_BYTES": 225,
+    "SPLIT_MODEL_REORDERED_BYTES": 55725
+  },
+  "subset": {
+    "baseline_qma9_bytes": 1221,
+    "baseline_qma9_sha256": "fcf143230da1c30885969b7490dba9549397a352bdf347efdfa706f6bcf6ffe3",
+    "baseline_subset_qma9_path": "experiments/results/qma9_horizontal_run_escape_20260503_worker/candidates/qma9_horizontal_run_escape_min32_updiff_prefix4/baseline_subset.qma9",
+    "candidate_qmh1_bytes": 1245,
+    "candidate_qmh1_sha256": "6ffeb6303c888c240a37afd3aec2ee6b985f20b867e8345088020e80152218e8",
+    "candidate_subset_qmh1_path": "experiments/results/qma9_horizontal_run_escape_20260503_worker/candidates/qma9_horizontal_run_escape_min32_updiff_prefix4/candidate_subset.qmh1",
+    "decode_parity": true,
+    "decoded_pixels": 786432,
+    "delta_bytes_vs_subset_qma9": 24,
+    "frames": 4,
+    "rate_score_delta_if_subset_scaled": 0.0023970922312398168,
+    "raw_path": "experiments/results/qma9_horizontal_run_escape_20260503_worker/candidates/qma9_horizontal_run_escape_min32_updiff_prefix4/decoded_prefix_mask.raw",
+    "raw_sha256": "e763e118ec695f667eccda8b987420b167fd2ba263e382ff2d9348c578e51a46"
+  },
+  "tool": "experiments/build_qma9_horizontal_run_escape_candidate.py"
+}

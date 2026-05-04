@@ -1,0 +1,358 @@
+{
+  "candidate_count": 6,
+  "candidates": [
+    {
+      "archive_bytes": 218621,
+      "archive_path": "experiments/results/pr81_pr82_henosis_stack_20260503_codex/pr81_qma9_pr82_qps1_controls_all600/archive.zip",
+      "candidate_id": "pr81_qma9_pr82_qps1_controls_all600",
+      "candidate_kind": "pr81_qma9_payload_plus_pr82_qps1_control_sidecar",
+      "dispatch_gate": {
+        "dispatch_ready_now": true,
+        "lane_claim_required_before_any_exact_eval": true,
+        "no_remote_dispatch": true,
+        "reason": "ready_for_exact_cuda_eval_after_lane_claim",
+        "remote_dispatch_performed": false,
+        "score_claim": false
+      },
+      "manifest_path": "experiments/results/pr81_pr82_henosis_stack_20260503_codex/pr81_qma9_pr82_qps1_controls_all600/manifest.json",
+      "qpost_bytes": 2567,
+      "score_if_pr82_components_carried": 0.24627586048450012,
+      "stream_delta": {
+        "archive_delta_bytes_vs_pr81": 2661,
+        "qpost_charged_member_bytes": 2567
+      }
+    },
+    {
+      "archive_bytes": 223392,
+      "archive_path": "experiments/results/pr81_pr82_henosis_stack_20260503_codex/pr81_qma9_pr82_qps1_nm2_generic_randmulti/archive.zip",
+      "candidate_id": "pr81_qma9_pr82_qps1_nm2_generic_randmulti",
+      "candidate_kind": "pr81_qma9_payload_plus_pr82_nm2_generic_randmulti_sidecar",
+      "dispatch_gate": {
+        "dispatch_ready_now": true,
+        "lane_claim_required_before_any_exact_eval": true,
+        "no_remote_dispatch": true,
+        "reason": "ready_for_exact_cuda_eval_after_lane_claim",
+        "remote_dispatch_performed": false,
+        "score_claim": false
+      },
+      "manifest_path": "experiments/results/pr81_pr82_henosis_stack_20260503_codex/pr81_qma9_pr82_qps1_nm2_generic_randmulti/manifest.json",
+      "qpost_bytes": 7338,
+      "score_if_pr82_components_carried": 0.249452673549846,
+      "stream_delta": {
+        "archive_delta_bytes_vs_pr81": 7432,
+        "qpost_charged_member_bytes": 7338
+      }
+    },
+    {
+      "archive_bytes": 232580,
+      "archive_path": "experiments/results/pr81_pr82_henosis_stack_20260503_codex/pr81_qma9_pr82_qps1_qrm1_all072_randmulti/archive.zip",
+      "candidate_id": "pr81_qma9_pr82_qps1_qrm1_all072_randmulti",
+      "candidate_kind": "pr81_qma9_payload_plus_pr82_qrm1_all72_randmulti_sidecar",
+      "dispatch_gate": {
+        "dispatch_ready_now": true,
+        "lane_claim_required_before_any_exact_eval": true,
+        "no_remote_dispatch": true,
+        "reason": "ready_for_exact_cuda_eval_after_lane_claim",
+        "remote_dispatch_performed": false,
+        "score_claim": false
+      },
+      "manifest_path": "experiments/results/pr81_pr82_henosis_stack_20260503_codex/pr81_qma9_pr82_qps1_qrm1_all072_randmulti/manifest.json",
+      "qpost_bytes": 16526,
+      "score_if_pr82_components_carried": 0.2555705856111325,
+      "stream_delta": {
+        "archive_delta_bytes_vs_pr81": 16620,
+        "qpost_charged_member_bytes": 16526
+      }
+    },
+    {
+      "archive_bytes": 232580,
+      "archive_path": "experiments/results/pr81_pr82_henosis_stack_20260503_codex/pr81_qma9_pr82_qps1_qrm1_supported_subset_randmulti/archive.zip",
+      "candidate_id": "pr81_qma9_pr82_qps1_qrm1_supported_subset_randmulti",
+      "candidate_kind": "pr81_qma9_payload_plus_pr82_qrm1_runtime_supported_randmulti_sidecar",
+      "dispatch_gate": {
+        "dispatch_ready_now": true,
+        "lane_claim_required_before_any_exact_eval": true,
+        "no_remote_dispatch": true,
+        "reason": "ready_for_exact_cuda_eval_after_lane_claim",
+        "remote_dispatch_performed": false,
+        "score_claim": false
+      },
+      "manifest_path": "experiments/results/pr81_pr82_henosis_stack_20260503_codex/pr81_qma9_pr82_qps1_qrm1_supported_subset_randmulti/manifest.json",
+      "qpost_bytes": 16526,
+      "score_if_pr82_components_carried": 0.2555705856111325,
+      "stream_delta": {
+        "archive_delta_bytes_vs_pr81": 16620,
+        "qpost_charged_member_bytes": 16526
+      }
+    },
+    {
+      "archive_bytes": 235111,
+      "archive_path": "experiments/results/pr81_pr82_henosis_stack_20260503_codex/pr81_qma9_pr82_qps1_controls_qrm1_supported_subset/archive.zip",
+      "candidate_id": "pr81_qma9_pr82_qps1_controls_qrm1_supported_subset",
+      "candidate_kind": "pr81_qma9_payload_plus_pr82_controls_and_qrm1_runtime_supported_subset_sidecar",
+      "dispatch_gate": {
+        "dispatch_ready_now": true,
+        "lane_claim_required_before_any_exact_eval": true,
+        "no_remote_dispatch": true,
+        "reason": "ready_for_exact_cuda_eval_after_lane_claim",
+        "remote_dispatch_performed": false,
+        "score_claim": false
+      },
+      "manifest_path": "experiments/results/pr81_pr82_henosis_stack_20260503_codex/pr81_qma9_pr82_qps1_controls_qrm1_supported_subset/manifest.json",
+      "qpost_bytes": 19057,
+      "score_if_pr82_components_carried": 0.2572558746214847,
+      "stream_delta": {
+        "archive_delta_bytes_vs_pr81": 19151,
+        "qpost_charged_member_bytes": 19057
+      }
+    },
+    {
+      "archive_bytes": 235111,
+      "archive_path": "experiments/results/pr81_pr82_henosis_stack_20260503_codex/pr81_qma9_pr82_qps1_controls_qrm1_all072/archive.zip",
+      "candidate_id": "pr81_qma9_pr82_qps1_controls_qrm1_all072",
+      "candidate_kind": "pr81_qma9_payload_plus_pr82_controls_and_qrm1_all72_sidecar",
+      "dispatch_gate": {
+        "dispatch_ready_now": true,
+        "lane_claim_required_before_any_exact_eval": true,
+        "no_remote_dispatch": true,
+        "reason": "ready_for_exact_cuda_eval_after_lane_claim",
+        "remote_dispatch_performed": false,
+        "score_claim": false
+      },
+      "manifest_path": "experiments/results/pr81_pr82_henosis_stack_20260503_codex/pr81_qma9_pr82_qps1_controls_qrm1_all072/manifest.json",
+      "qpost_bytes": 19057,
+      "score_if_pr82_components_carried": 0.2572558746214847,
+      "stream_delta": {
+        "archive_delta_bytes_vs_pr81": 19151,
+        "qpost_charged_member_bytes": 19057
+      }
+    }
+  ],
+  "evidence_grade": "empirical_local_archive_build_and_static_lower_bound",
+  "exact_scores_used_for_planning": {
+    "pr81": {
+      "archive_bytes": 215960,
+      "score": 0.2812078926981712
+    },
+    "pr82": {
+      "archive_bytes": 296789,
+      "posenet_dist": 0.0001894,
+      "score": 0.2983246102939779,
+      "segnet_dist": 0.00057185
+    }
+  },
+  "highest_ev_local_candidate": {
+    "archive_bytes": 235111,
+    "archive_path": "experiments/results/pr81_pr82_henosis_stack_20260503_codex/pr81_qma9_pr82_qps1_controls_qrm1_supported_subset/archive.zip",
+    "candidate_id": "pr81_qma9_pr82_qps1_controls_qrm1_supported_subset",
+    "candidate_kind": "pr81_qma9_payload_plus_pr82_controls_and_qrm1_runtime_supported_subset_sidecar",
+    "dispatch_gate": {
+      "dispatch_ready_now": true,
+      "lane_claim_required_before_any_exact_eval": true,
+      "no_remote_dispatch": true,
+      "reason": "ready_for_exact_cuda_eval_after_lane_claim",
+      "remote_dispatch_performed": false,
+      "score_claim": false
+    },
+    "manifest_path": "experiments/results/pr81_pr82_henosis_stack_20260503_codex/pr81_qma9_pr82_qps1_controls_qrm1_supported_subset/manifest.json",
+    "qpost_bytes": 19057,
+    "score_if_pr82_components_carried": 0.2572558746214847,
+    "stream_delta": {
+      "archive_delta_bytes_vs_pr81": 19151,
+      "qpost_charged_member_bytes": 19057
+    }
+  },
+  "highest_ev_qrm1_compatible_candidate": {
+    "archive_bytes": 235111,
+    "archive_path": "experiments/results/pr81_pr82_henosis_stack_20260503_codex/pr81_qma9_pr82_qps1_controls_qrm1_supported_subset/archive.zip",
+    "candidate_id": "pr81_qma9_pr82_qps1_controls_qrm1_supported_subset",
+    "candidate_kind": "pr81_qma9_payload_plus_pr82_controls_and_qrm1_runtime_supported_subset_sidecar",
+    "dispatch_gate": {
+      "dispatch_ready_now": true,
+      "lane_claim_required_before_any_exact_eval": true,
+      "no_remote_dispatch": true,
+      "reason": "ready_for_exact_cuda_eval_after_lane_claim",
+      "remote_dispatch_performed": false,
+      "score_claim": false
+    },
+    "manifest_path": "experiments/results/pr81_pr82_henosis_stack_20260503_codex/pr81_qma9_pr82_qps1_controls_qrm1_supported_subset/manifest.json",
+    "qpost_bytes": 19057,
+    "score_if_pr82_components_carried": 0.2572558746214847,
+    "stream_delta": {
+      "archive_delta_bytes_vs_pr81": 19151,
+      "qpost_charged_member_bytes": 19057
+    }
+  },
+  "no_remote_dispatch": true,
+  "pr81_profile": {
+    "archive_bytes": 215960,
+    "archive_sha256": "cd01378a52688fe00ee1bfb898c67695aed89a7b3ded602b597eb7fc3031d7fc",
+    "payload_bytes": 215860,
+    "payload_sha256": "c59524610474c89e5a41433f47d2bb881f878e694f853db1377272699f9eb3e9",
+    "qma9": {
+      "bitstream_bytes": 158991,
+      "bitstream_sha256": "77196f31a8fdfbf8f91c9c30600945473376534f15245bfb7622ddd77d17e3af",
+      "class_symbol_count": 5,
+      "context_symbol_count": 10077696,
+      "decoded_mask_bytes": 117964800,
+      "frame_count": 600,
+      "header_bytes": 20,
+      "height": 384,
+      "magic": "QMA9",
+      "packed_bytes": 159011,
+      "payload_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+      "sentinel": 5,
+      "width": 512
+    },
+    "segments": [
+      {
+        "bytes": 159011,
+        "codec": "qma9_adaptive9_binary_range_mask",
+        "name": "range_mask.qma9",
+        "offset": 0,
+        "sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179"
+      },
+      {
+        "bytes": 55725,
+        "codec": "brotli_reordered_qzs3_model_bundle",
+        "name": "split_model_reordered.br_bundle",
+        "offset": 159011,
+        "sha256": "b649b0dacb1dcc93fd7da2e7f5c6d398fa933d2fe3087520359612afc8e4832d"
+      },
+      {
+        "bytes": 899,
+        "codec": "brotli_qp1_pose_stream",
+        "name": "optimized_poses.qp1.br",
+        "offset": 214736,
+        "sha256": "83767bbd10ae72c3237e468351eb9c465a954e25a6af04a0e0cb84d1f7af9b51"
+      },
+      {
+        "bytes": 225,
+        "codec": "packed_3bit_pair_router_actions",
+        "name": "router_actions.3bit",
+        "offset": 215635,
+        "sha256": "d282d9228f84e3316a50dfde9bba2b811f4fd377e6e32773ce070c2beba46f80"
+      }
+    ]
+  },
+  "pr82_profile": {
+    "archive_bytes": 296789,
+    "archive_sha256": "a0e07c360223c1dd3d3b92263225d38d542e218e83d095ad9b91bf872f94c6e4",
+    "contract": {
+      "fixed_bias_bytes": 223,
+      "fixed_region_bytes": 273,
+      "randmulti_group_count": 72,
+      "replay_inflate": "experiments/results/public_pr82_henosis_frontier_intake_20260503_codex/replay_submission/inflate.py",
+      "replay_inflate_sha256": "0809f704f1623d0e694621129abced77eaac052ae35469e207ef06938e4be1ad"
+    },
+    "payload_bytes": 296689,
+    "payload_sha256": "1c3377d09ddfddea488be791875605d1877003da4b0bd4d5c752e82d45fd8077",
+    "segments": {
+      "bias": {
+        "bytes": 223,
+        "sha256": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b"
+      },
+      "frac": {
+        "bytes": 106,
+        "sha256": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992"
+      },
+      "frac2": {
+        "bytes": 149,
+        "sha256": "3a01c7546d89d9d3ca846da37a20add7d456421e9211a6339850d946b856026b"
+      },
+      "frac3": {
+        "bytes": 154,
+        "sha256": "d725b01b604566c5a76a06b821c644c8d5d5bb9a57ab0597d3bdabc8389858b5"
+      },
+      "mask": {
+        "bytes": 219472,
+        "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+      },
+      "model": {
+        "bytes": 57074,
+        "sha256": "c9194c19d44d3c32c4e588bbe4f9986ed0c562779078f0f4d6b073f0799b5dbc"
+      },
+      "pose": {
+        "bytes": 1487,
+        "sha256": "2b6e03e02fb17f662e3f3f9ce47daf2fc33bf1f76c96e34ffac005f1c5c4054c"
+      },
+      "post": {
+        "bytes": 1400,
+        "sha256": "c3dc88e0fb5a1e48aec49eeacefeea20685e3c02598933deb1ff22dc09892575"
+      },
+      "randmulti": {
+        "bytes": 16101,
+        "sha256": "c624372e60a0851c4c427dc333a60dcc5d6657ba8ed56951612e7c9d7be7629f"
+      },
+      "region": {
+        "bytes": 273,
+        "sha256": "4a7c16094fab281c30e27621a58577c095c4b1153c232518c9adbaba2a2b2392"
+      },
+      "shift": {
+        "bytes": 226,
+        "sha256": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4"
+      }
+    }
+  },
+  "schema": "pr81_pr82_henosis_stack_candidate_v1",
+  "score_claim": false,
+  "smallest_runtime_compatible_stack_candidate": {
+    "archive_bytes": 218621,
+    "archive_path": "experiments/results/pr81_pr82_henosis_stack_20260503_codex/pr81_qma9_pr82_qps1_controls_all600/archive.zip",
+    "candidate_id": "pr81_qma9_pr82_qps1_controls_all600",
+    "candidate_kind": "pr81_qma9_payload_plus_pr82_qps1_control_sidecar",
+    "dispatch_gate": {
+      "dispatch_ready_now": true,
+      "lane_claim_required_before_any_exact_eval": true,
+      "no_remote_dispatch": true,
+      "reason": "ready_for_exact_cuda_eval_after_lane_claim",
+      "remote_dispatch_performed": false,
+      "score_claim": false
+    },
+    "manifest_path": "experiments/results/pr81_pr82_henosis_stack_20260503_codex/pr81_qma9_pr82_qps1_controls_all600/manifest.json",
+    "qpost_bytes": 2567,
+    "score_if_pr82_components_carried": 0.24627586048450012,
+    "stream_delta": {
+      "archive_delta_bytes_vs_pr81": 2661,
+      "qpost_charged_member_bytes": 2567
+    }
+  },
+  "static_lower_bounds": [
+    {
+      "archive_bytes_lower_bound": 215960,
+      "expected_score_if_pr82_components_carry": 0.244504009810242,
+      "label": "ideal_pr81_archive_bytes_with_pr82_components",
+      "runtime_status": "not_a_build; component carryover assumption only"
+    },
+    {
+      "archive_bytes_lower_bound": 217696,
+      "expected_score_if_pr82_components_carry": 0.2456599409528621,
+      "label": "compact_x_pr81_mask_pr82_model_pose_only",
+      "runtime_status": "unsupported: PR82 replay contract requires control tails and PR81 QMA9 mask loader bridge"
+    },
+    {
+      "archive_bytes_lower_bound": 220227,
+      "expected_score_if_pr82_components_carry": 0.2473452299632143,
+      "label": "compact_x_pr81_mask_pr82_model_pose_post_controls",
+      "runtime_status": "unsupported: PR82 replay contract requires randmulti tail handling and QMA9 mask loader bridge"
+    },
+    {
+      "archive_bytes_lower_bound": 236328,
+      "expected_score_if_pr82_components_carry": 0.25806622496743437,
+      "label": "compact_x_pr81_mask_pr82_model_pose_post_randmulti",
+      "runtime_status": "unsupported: exact PR82 compact semantics with PR81 QMA9 mask not implemented"
+    },
+    {
+      "archive_bytes_lower_bound": 236328,
+      "expected_score_if_pr82_components_carry": 0.25806622496743437,
+      "label": "pr82_archive_with_pr81_mask_byte_substitution",
+      "runtime_status": "unsupported: static byte substitution lower bound only"
+    }
+  ],
+  "tool": "experiments/build_pr81_pr82_henosis_stack_candidate.py",
+  "unsupported_semantics_before_t4_dispatch": [
+    "all-72 PR82 QRM1 is runtime-dispatchable only when parse/apply and raw-output delta proof pass",
+    "the supported-subset QRM1 candidate remains available as a narrower control",
+    "a lane dispatch claim is required before any future exact T4 run"
+  ]
+}

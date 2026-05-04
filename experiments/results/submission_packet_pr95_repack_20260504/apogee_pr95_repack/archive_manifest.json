@@ -1,0 +1,13 @@
+{
+  "archive_sha256": "2b9b471358f5bba97ea809dcca544ecca26b504fde770a9002046830f469368b",
+  "archive_size_bytes": 178321,
+  "members": [
+    {
+      "compress_size": 178213,
+      "file_size": 178213,
+      "name": "0.bin",
+      "sha256": "d9fa160d366d0aed105d14458e289f88ec5b71ec4d5de318ddb2ec0d44b50bf5"
+    }
+  ],
+  "schema_version": 1
+}

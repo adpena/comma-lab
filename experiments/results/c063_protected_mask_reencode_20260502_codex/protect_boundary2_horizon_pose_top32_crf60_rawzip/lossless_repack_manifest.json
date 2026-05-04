@@ -1,0 +1,59 @@
+{
+  "archive_delta_bytes": 20,
+  "brotli_params": {
+    "lgblock": 0,
+    "lgwin": 18,
+    "mode": 2,
+    "mode_name": "font",
+    "quality": 11
+  },
+  "determinism": {
+    "single_member_order": [
+      "p"
+    ],
+    "zip_compress_type": "ZIP_STORED",
+    "zip_permissions": "0644",
+    "zip_timestamp": [
+      1980,
+      1,
+      1,
+      0,
+      0,
+      0
+    ]
+  },
+  "evidence_grade": "empirical_lossless_byte_transform",
+  "formula_only_rate_score_delta": 1.3317179062443427e-05,
+  "lossless_payload_roundtrip": true,
+  "member_name": "p",
+  "non_promotable_warning": "This is a lossless byte transform only. It cannot move the frontier until exact CUDA auth eval validates the closed archive.",
+  "output_archive": {
+    "bytes": 158469,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c063_protected_mask_reencode_20260502_codex/protect_boundary2_horizon_pose_top32_crf60_rawzip/final_archive.zip",
+    "sha256": "62acfea9796cec57190c233a81edefc382e2151721479a83fddc1759415fd0c4"
+  },
+  "payload_delta_bytes": 20,
+  "promotion_eligible": false,
+  "raw_payload": {
+    "bytes": 169951,
+    "sha256": "e8daebda2426356ed86f5200be48aee21c5e5e9efda8055ece06b54db1945d85"
+  },
+  "repacked_payload": {
+    "bytes": 158369,
+    "sha256": "197e26ddff7e92f9c04063372236822577a172a19c6248845248ed92ebeb9fb0"
+  },
+  "required_score_truth": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "schema_version": 1,
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 158449,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c063_protected_mask_reencode_20260502_codex/protect_boundary2_horizon_pose_top32_crf60_rawzip/build/archive.zip",
+    "sha256": "708b2530ecb526b4f9e3046b9c017d832a9bcbc738a3d05e12850343b13cdbc8"
+  },
+  "source_payload": {
+    "bytes": 158349,
+    "sha256": "8da6495224ecd05135d0972e11a1c42866f65f366555066fd0a888d03589da84"
+  },
+  "source_payload_decompresses": true,
+  "tool": "experiments/repack_single_payload_brotli.py"
+}

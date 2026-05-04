@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-05-02T01:41:01Z",
+  "archive_label": "line_search_qzs3_qp1_gradient_r13_fix1_20260502T0141Z",
+  "archive_path": "experiments/results/line_search_qzs3_qp1_gradient_r13_fix1_20260502T0134Z/archive.zip",
+  "custody_archive_path": "experiments/results/archive_eval_line_search_qzs3_qp1_gradient_r13_fix1_20260502T0141Z/archive.zip",
+  "archive_size_bytes": 276424,
+  "archive_sha256": "09f2fd06939c6e669ea6e24e75f52bf763645ab3ca1b100f5cb3ce01f3813e11"
+}

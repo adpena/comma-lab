@@ -1,0 +1,45 @@
+{
+  "candidate_count": 1,
+  "candidates": [
+    {
+      "archive": {
+        "bytes": 275530,
+        "deterministic_zip_timestamp": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "path": "/Users/adpena/Projects/pact/experiments/results/c101_renderer_native_action_stack_20260503_codex/c101_renderer_top192_x_native_actions_top64/archive.zip",
+        "payload_bytes": 275430,
+        "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+        "payload_member": "p",
+        "payload_sha256": "542db1b24d8154555bfea28b61eba13c2b012e8694907aef5ffa48a9ec954430",
+        "repo_relative_path": "experiments/results/c101_renderer_native_action_stack_20260503_codex/c101_renderer_top192_x_native_actions_top64/archive.zip",
+        "sha256": "fccd60ae2d5298c8c98e5d63e67a590847ccddad2768bae277570909c2b4ce43",
+        "zip_members": [
+          "p"
+        ]
+      },
+      "candidate_id": "c101_renderer_top192_x_native_actions_top64",
+      "changed_streams_vs_pose_source": {
+        "masks.mkv": false,
+        "optimized_poses.bin": false,
+        "renderer.bin": true,
+        "seg_tile_actions.bin": false
+      },
+      "changed_streams_vs_renderer_source": {
+        "masks.mkv": false,
+        "optimized_poses.bin": false,
+        "renderer.bin": false,
+        "seg_tile_actions.bin": true
+      }
+    }
+  ],
+  "remote_dispatch_performed": false,
+  "schema": "c101_renderer_pose_stack_candidate_v1_summary",
+  "score_claim": false,
+  "tool": "experiments/build_c101_renderer_pose_stack_candidate.py"
+}

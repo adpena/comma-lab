@@ -1,0 +1,31 @@
+                                             Apps                               
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━┳━━━━━━━━━━━━━━
+┃ App ID                    ┃ Description  ┃ State       ┃ Tasks ┃ Created at   
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━╇━━━━━━━━━━━━━━
+│ ap-RlaibbkTNTRqcm20qHJ7s3 │ test-credit… │ deployed    │ 0     │ 2026-04-22   
+│                           │              │             │       │ 13:35 CDT    
+│ ap-mdGXOBnT5XOhVDT1sP0YEM │ falcon-ocr   │ deployed    │ 0     │ 2026-04-22   
+│                           │              │             │       │ 22:55 CDT    
+│ ap-Y559uAh9yaWaTRleN85cux │ nemotron-ocr │ deployed    │ 0     │ 2026-04-22   
+│                           │              │             │       │ 23:24 CDT    
+│ ap-MjIxiTCU5enXxCCu65BLR2 │ comma-train… │ ephemeral   │ 0     │ 2026-04-29   
+│                           │              │ (detached)  │       │ 08:13 CDT    
+│ ap-aAWrpYp33ACMCZV7N7zGHJ │ comma-train… │ ephemeral   │ 0     │ 2026-04-29   
+│                           │              │ (detached)  │       │ 08:30 CDT    
+│ ap-5q2Gi7H1pVzoy5abRtj5fv │ comma-train… │ ephemeral   │ 0     │ 2026-04-29   
+│                           │              │ (detached)  │       │ 08:44 CDT    
+│ ap-Jf0TaAn1kRUXk2NevJlYQq │ comma-train… │ ephemeral   │ 0     │ 2026-04-29   
+│                           │              │ (detached)  │       │ 12:51 CDT    
+│ ap-RBhiodKuL27pB4f54C3M2B │ comma-train… │ ephemeral   │ 0     │ 2026-04-29   
+│                           │              │ (detached)  │       │ 12:51 CDT    
+│ ap-g4xJh5PFBIuvHe8BQvKJFG │ comma-train… │ ephemeral   │ 0     │ 2026-04-29   
+│                           │              │ (detached)  │       │ 17:18 CDT    
+│ ap-hfftcKoG8qB00mWqTto1oy │ comma-auth-… │ ephemeral   │ 0     │ 2026-05-01   
+│                           │              │ (detached)  │       │ 05:47 CDT    
+│ ap-tVgPQDqd9ns0I1MiXRAzV4 │ comma-train… │ ephemeral   │ 1     │ 2026-05-03   
+│                           │              │ (detached)  │       │ 01:49 CDT    
+│ ap-LsyGen7NErI9urFui6MUIo │ comma-train… │ ephemeral   │ 1     │ 2026-05-03   
+│                           │              │ (detached)  │       │ 01:53 CDT    
+│ ap-mFnRt0CeC0nmT1ZKzCIx2v │ comma-train… │ ephemeral   │ 1     │ 2026-05-03   
+│                           │              │ (detached)  │       │ 01:53 CDT    
+└───────────────────────────┴──────────────┴─────────────┴───────┴──────────────

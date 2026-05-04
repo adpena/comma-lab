@@ -1,0 +1,41 @@
+{
+  "schema": "pr85_pair_atom_action_spec_v1",
+  "score_claim": false,
+  "dispatch_performed": false,
+  "remote_jobs_dispatched": false,
+  "inflate_time_scorer_load_allowed": false,
+  "candidates": [
+    {
+      "candidate_id": "pr85_qrgb_f1_region_pair_0060",
+      "header_mode": "explicit_30",
+      "actions": [
+        {
+          "op": "set",
+          "pair_index": 60,
+          "stream": "region",
+          "source_value": 84,
+          "value": 40,
+          "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0060",
+          "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+          "rationale": "PR90 QRGB frame0 half-band residual transferred to PR85 frame0 region bias choice"
+        }
+      ]
+    },
+    {
+      "candidate_id": "pr85_qrgb_f1_region_pair_0164",
+      "header_mode": "explicit_30",
+      "actions": [
+        {
+          "op": "set",
+          "pair_index": 164,
+          "stream": "region",
+          "source_value": 37,
+          "value": 45,
+          "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0164",
+          "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+          "rationale": "PR90 QRGB frame0 half-band residual transferred to PR85 frame0 region bias choice"
+        }
+      ]
+    }
+  ]
+}

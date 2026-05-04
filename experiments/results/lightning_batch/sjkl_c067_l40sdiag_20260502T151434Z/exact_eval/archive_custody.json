@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-05-02T16:22:16Z",
+  "archive_label": "sjkl_c067_l40sdiag_20260502T151434Z",
+  "archive_path": "/teamspace/studios/this_studio/pact/experiments/results/sjkl_c067_l40sdiag_20260502T151434Z/pack/archive.zip",
+  "custody_archive_path": "/teamspace/studios/this_studio/pact/experiments/results/sjkl_c067_l40sdiag_20260502T151434Z/exact_eval/archive.zip",
+  "archive_size_bytes": 315515,
+  "archive_sha256": "2e12b9adc552a00b7c956ee2bddae139968b2fe3036bcb4aab8bb10f236ea066"
+}

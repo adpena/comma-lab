@@ -1,0 +1,1842 @@
+From 9bdce26f2a4f996828c4e3fa2b87c454a0e8fcc9 Mon Sep 17 00:00:00 2001
+From: AaronLeslie138 <aaronleslie138@gmail.com>
+Date: Mon, 4 May 2026 02:05:54 -0400
+Subject: [PATCH] hnerv_muon submission
+
+---
+ submissions/hnerv_muon/README.md              |  17 ++
+ submissions/hnerv_muon/compress.sh            |  30 ++
+ submissions/hnerv_muon/inflate.py             |  66 +++++
+ submissions/hnerv_muon/inflate.sh             |  28 ++
+ submissions/hnerv_muon/src/codec.py           | 180 ++++++++++++
+ submissions/hnerv_muon/src/data.py            | 159 ++++++++++
+ submissions/hnerv_muon/src/losses.py          | 161 ++++++++++
+ submissions/hnerv_muon/src/model.py           |  54 ++++
+ submissions/hnerv_muon/src/optim.py           | 100 +++++++
+ submissions/hnerv_muon/src/score.py           | 131 +++++++++
+ .../hnerv_muon/src/stages/codec_stage.py      |  71 +++++
+ submissions/hnerv_muon/src/stages/common.py   | 274 ++++++++++++++++++
+ .../hnerv_muon/src/stages/stage1_v328_ce.py   |  40 +++
+ .../src/stages/stage2_v331_softplus.py        |  37 +++
+ .../src/stages/stage3_v332_smooth.py          |  36 +++
+ .../hnerv_muon/src/stages/stage4_v332_qat.py  |  38 +++
+ .../hnerv_muon/src/stages/stage5_c1a_l7.py    |  40 +++
+ .../src/stages/stage6_lambda_sweep.py         |  39 +++
+ .../src/stages/stage7_sigma_sweep.py          |  39 +++
+ .../src/stages/stage8_muon_finetune.py        |  48 +++
+ submissions/hnerv_muon/src/train.py           |  78 +++++
+ 21 files changed, 1666 insertions(+)
+ create mode 100644 submissions/hnerv_muon/README.md
+ create mode 100644 submissions/hnerv_muon/compress.sh
+ create mode 100644 submissions/hnerv_muon/inflate.py
+ create mode 100644 submissions/hnerv_muon/inflate.sh
+ create mode 100644 submissions/hnerv_muon/src/codec.py
+ create mode 100644 submissions/hnerv_muon/src/data.py
+ create mode 100644 submissions/hnerv_muon/src/losses.py
+ create mode 100644 submissions/hnerv_muon/src/model.py
+ create mode 100644 submissions/hnerv_muon/src/optim.py
+ create mode 100644 submissions/hnerv_muon/src/score.py
+ create mode 100644 submissions/hnerv_muon/src/stages/codec_stage.py
+ create mode 100644 submissions/hnerv_muon/src/stages/common.py
+ create mode 100644 submissions/hnerv_muon/src/stages/stage1_v328_ce.py
+ create mode 100644 submissions/hnerv_muon/src/stages/stage2_v331_softplus.py
+ create mode 100644 submissions/hnerv_muon/src/stages/stage3_v332_smooth.py
+ create mode 100644 submissions/hnerv_muon/src/stages/stage4_v332_qat.py
+ create mode 100644 submissions/hnerv_muon/src/stages/stage5_c1a_l7.py
+ create mode 100644 submissions/hnerv_muon/src/stages/stage6_lambda_sweep.py
+ create mode 100644 submissions/hnerv_muon/src/stages/stage7_sigma_sweep.py
+ create mode 100644 submissions/hnerv_muon/src/stages/stage8_muon_finetune.py
+ create mode 100644 submissions/hnerv_muon/src/train.py
+
+diff --git a/submissions/hnerv_muon/README.md b/submissions/hnerv_muon/README.md
+new file mode 100644
+index 0000000..0f80bf5
+--- /dev/null
++++ b/submissions/hnerv_muon/README.md
+@@ -0,0 +1,17 @@
++# hnerv_muon
++
++A 178 KB archive containing a 229K-parameter HNeRV decoder + 28-d-per-frame-pair latents that, on inflation, produces a video whose frames activate the official frozen SegNet and PoseNet evaluators almost identically to the original. The pipeline is an 8-stage curriculum (CE → τ-Softplus → smooth-disagreement → +QAT → +L7+C1a → λ-sweep → σ-sweep → +Muon) ending in INT8 quantization-aware training with the C1a regularizer shaping the weight distribution for compression and the [Muon optimizer](https://github.com/KellerJordan/Muon) running on hidden conv tensors.
++
++Full writeup: https://aaronleslie.dev/blog/comma-compression
++
++## Inflate
++
++`evaluate.sh --submission-dir ./submissions/hnerv_muon` will unzip `archive.zip` and call `inflate.sh`, which iterates the video list and runs `inflate.py` per video.
++
++## Compress (reproduce)
++
++```bash
++bash submissions/hnerv_muon/compress.sh
++```
++
++~50 hours on a single GPU from random init.
+diff --git a/submissions/hnerv_muon/compress.sh b/submissions/hnerv_muon/compress.sh
+new file mode 100644
+index 0000000..d92a9c2
+--- /dev/null
++++ b/submissions/hnerv_muon/compress.sh
+@@ -0,0 +1,30 @@
++#!/usr/bin/env bash
++# Train the HNeRV decoder + latents from scratch, then build archive.zip.
++#
++# ~50 hours on a single GPU from random init.
++set -euo pipefail
++HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
++ROOT="$(cd "$HERE/../.." && pwd)"
++
++cd "$ROOT"
++python -m submissions.hnerv_muon.src.train
++
++# The training pipeline writes the final compressed file as
++# <out_root>/submission_archive/0.bin. Find the most recent run and zip it.
++LATEST_RUN=$(ls -dt "$HERE"/src/ckpts/run_*/ 2>/dev/null | head -n1)
++if [ -z "$LATEST_RUN" ]; then
++  echo "ERROR: no run dir found under $HERE/src/ckpts/" >&2
++  exit 1
++fi
++LATEST_RUN="${LATEST_RUN%/}"
++ARCHIVE_BIN="${LATEST_RUN}/submission_archive/0.bin"
++
++if [ ! -f "$ARCHIVE_BIN" ]; then
++  echo "ERROR: $ARCHIVE_BIN not found" >&2
++  exit 1
++fi
++
++cd "$(dirname "$ARCHIVE_BIN")"
++rm -f "$HERE/archive.zip"
++zip -j "$HERE/archive.zip" "0.bin"
++echo "Wrote $HERE/archive.zip ($(stat -c%s "$HERE/archive.zip" 2>/dev/null || stat -f%z "$HERE/archive.zip") bytes)"
+diff --git a/submissions/hnerv_muon/inflate.py b/submissions/hnerv_muon/inflate.py
+new file mode 100644
+index 0000000..b915c82
+--- /dev/null
++++ b/submissions/hnerv_muon/inflate.py
+@@ -0,0 +1,66 @@
++#!/usr/bin/env python
++"""Inflate a single per-video archive to raw uint8 RGB frames.
++
++Reads <src>.bin (our compressed HNeRV decoder + per-frame-pair latents),
++runs the decoder forward, bicubic-upsamples to camera resolution, rounds to
++uint8, and writes the contiguous (N, H, W, 3) bytes to <dst>.
++
++Invoked by inflate.sh as:
++    python -m submissions.hnerv_muon.inflate <data_dir>/<base>.bin <output_dir>/<base>.raw
++"""
++import sys
++from pathlib import Path
++
++import torch
++import torch.nn.functional as F
++
++HERE = Path(__file__).resolve().parent
++sys.path.insert(0, str(HERE / 'src'))
++
++from model import HNeRVDecoder
++from codec import parse_archive
++
++# Camera resolution required by the eval harness
++CAMERA_H, CAMERA_W = 874, 1164
++
++
++def inflate(src_bin: str, dst_raw: str):
++    with open(src_bin, 'rb') as f:
++        archive_bytes = f.read()
++    decoder_sd, latents, meta = parse_archive(archive_bytes)
++
++    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
++    decoder = HNeRVDecoder(
++        latent_dim=meta['latent_dim'],
++        base_channels=meta['base_channels'],
++        eval_size=tuple(meta['eval_size']),
++    ).to(device)
++    decoder.load_state_dict(decoder_sd)
++    decoder.eval()
++
++    latents = latents.to(device)
++    n_pairs = meta['n_pairs']
++    eval_h, eval_w = meta['eval_size']
++
++    n = 0
++    with torch.inference_mode(), open(dst_raw, 'wb') as fout:
++        for i in range(0, n_pairs, 16):
++            j = min(i + 16, n_pairs)
++            B = j - i
++            decoded = decoder(latents[i:j])  # (B, 2, 3, eval_h, eval_w)
++            flat = decoded.reshape(B * 2, 3, eval_h, eval_w)
++            up = F.interpolate(flat, size=(CAMERA_H, CAMERA_W),
++                               mode='bicubic', align_corners=False)
++            frames = (up.clamp(0, 255).permute(0, 2, 3, 1)
++                        .round().to(torch.uint8).cpu().numpy())
++            fout.write(frames.tobytes())
++            n += B * 2
++
++    print(f"saved {n} frames")
++    return n
++
++
++if __name__ == "__main__":
++    if len(sys.argv) != 3:
++        sys.exit("Usage: python -m submissions.hnerv_muon.inflate <src.bin> <dst.raw>")
++    inflate(sys.argv[1], sys.argv[2])
+diff --git a/submissions/hnerv_muon/inflate.sh b/submissions/hnerv_muon/inflate.sh
+new file mode 100644
+index 0000000..987dde2
+--- /dev/null
++++ b/submissions/hnerv_muon/inflate.sh
+@@ -0,0 +1,28 @@
++#!/usr/bin/env bash
++# Must produce a raw video file at `<output_dir>/<base_name>.raw`.
++# A `.raw` file is a flat binary dump of uint8 RGB frames with shape `(N, H, W, 3)`
++# where N is the number of frames, H and W match the original video dimensions, no header.
++set -euo pipefail
++
++HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
++ROOT="$(cd "$HERE/../.." && pwd)"
++SUB_NAME="$(basename "$HERE")"
++
++DATA_DIR="$1"
++OUTPUT_DIR="$2"
++FILE_LIST="$3"
++
++mkdir -p "$OUTPUT_DIR"
++
++while IFS= read -r line; do
++  [ -z "$line" ] && continue
++  BASE="${line%.*}"
++  SRC="${DATA_DIR}/${BASE}.bin"
++  DST="${OUTPUT_DIR}/${BASE}.raw"
++
++  [ ! -f "$SRC" ] && echo "ERROR: ${SRC} not found" >&2 && exit 1
++
++  printf "Inflating %s ... " "$line"
++  cd "$ROOT"
++  python -m "submissions.${SUB_NAME}.inflate" "$SRC" "$DST"
++done < "$FILE_LIST"
+diff --git a/submissions/hnerv_muon/src/codec.py b/submissions/hnerv_muon/src/codec.py
+new file mode 100644
+index 0000000..6d11250
+--- /dev/null
++++ b/submissions/hnerv_muon/src/codec.py
+@@ -0,0 +1,180 @@
++"""Compression codec for the HNeRV decoder + per-frame-pair latents.
++
++Decoder path: per-tensor symmetric INT8 quantization → zigzag → concat with
++shape/scale metadata → brotli (quality 11). We previously used a hybrid that
++added per-tensor categorical AC (via the constriction crate) for big tensors —
++that was ~217 bytes smaller (~+0.0001 to score) but added a Python dependency
++and embedded a feature-level compression choice into the inflation path. Pure
++brotli is the simpler, more transparent default.
++
++Latent path: per-dim min/max scaling to [0, 254] (uint8), then 1st-order
++temporal delta, zigzag to uint16, split into lo/hi byte streams (lo brotli's
++well, hi is mostly zero). Beats plain brotli by ~240 bytes on our latents.
++
++Round-trip verified bit-exact.
++"""
++import io
++import struct
++import numpy as np
++import torch
++import brotli
++
++
++N_QUANT = 127
++
++
++# ============================================================================
++# Quantization
++# ============================================================================
++
++def quantize_state_dict(sd, n_quant=N_QUANT):
++    """Per-tensor symmetric INT8 quant. Returns {name: (int8_flat_array, scale, shape)}."""
++    out = {}
++    for name, tensor in sd.items():
++        t = tensor.detach().cpu().float()
++        m = t.abs().max().item()
++        scale = m / n_quant if m > 0 else 1.0
++        q = (t / scale).round().clamp(-n_quant, n_quant).to(torch.int8).numpy().flatten()
++        out[name] = (q, scale, tuple(tensor.shape))
++    return out
++
++
++def zigzag_encode_i8(arr_i8):
++    arr = arr_i8.astype(np.int32)
++    return np.where(arr >= 0, 2 * arr, -2 * arr - 1).astype(np.uint8)
++
++
++def zigzag_decode_u8(arr_u8):
++    arr = arr_u8.astype(np.int32)
++    return np.where(arr % 2 == 0, arr // 2, -(arr // 2) - 1).astype(np.int8)
++
++
++# ============================================================================
++# Decoder weights: pure brotli on the entire INT8-quantized state dict.
++# We previously used a hybrid (per-tensor categorical AC for big tensors + brotli for small)
++# but switched to pure brotli for simplicity — it's only ~217 bytes worse on our
++# trained weights (~+0.0001 to score) and removes the constriction dependency.
++# ============================================================================
++
++def encode_decoder(q_sd):
++    """Encode quantized state dict to compressed bytes via zigzag + brotli."""
++    buf = io.BytesIO()
++    buf.write(struct.pack("<I", len(q_sd)))
++    for name, (q, scale, shape) in q_sd.items():
++        nb = name.encode('utf-8')
++        buf.write(struct.pack("<I", len(nb))); buf.write(nb)
++        buf.write(struct.pack("<I", len(shape)))
++        for s in shape: buf.write(struct.pack("<I", s))
++        buf.write(struct.pack("<f", scale))
++        buf.write(struct.pack("<I", q.size))
++        buf.write(zigzag_encode_i8(q).tobytes())
++    return brotli.compress(buf.getvalue(), quality=11)
++
++
++def decode_decoder(data):
++    """Inverse of encode_decoder. Returns {name: torch.Tensor (float32, dequantized)}."""
++    raw = brotli.decompress(data)
++    buf = io.BytesIO(raw)
++    n = struct.unpack("<I", buf.read(4))[0]
++    sd = {}
++    for _ in range(n):
++        nl = struct.unpack("<I", buf.read(4))[0]
++        name = buf.read(nl).decode('utf-8')
++        nd = struct.unpack("<I", buf.read(4))[0]
++        shape = tuple(struct.unpack("<I", buf.read(4))[0] for _ in range(nd))
++        scale = struct.unpack("<f", buf.read(4))[0]
++        size = struct.unpack("<I", buf.read(4))[0]
++        zz = np.frombuffer(buf.read(size), dtype=np.uint8)
++        q = zigzag_decode_u8(zz)
++        sd[name] = torch.from_numpy(q.astype(np.float32).reshape(shape)) * scale
++    return sd
++
++
++# ============================================================================
++# Latents: delta + zigzag + brotli (lo/hi byte split)
++# ============================================================================
++
++def encode_latents(latents: torch.Tensor):
++    """Encode (n_pairs, latent_dim) float tensor to bytes.
++
++    Per-dim asymmetric UINT8 (min/max scaling to [0,254]) + 1st-order temporal
++    delta + zigzag to uint16 + lo/hi byte split (lo brotli's well, hi mostly 0).
++    """
++    t = latents.detach().cpu().float()
++    n, d = t.shape
++    mins = t.min(dim=0).values
++    maxs = t.max(dim=0).values
++    scales = ((maxs - mins) / 254.0).clamp(min=1e-10)
++    q = ((t - mins.unsqueeze(0)) / scales.unsqueeze(0)).round().clamp(0, 254).to(torch.uint8).numpy()
++    delta = np.empty_like(q, dtype=np.int16)
++    delta[0] = q[0]
++    delta[1:] = q[1:].astype(np.int16) - q[:-1].astype(np.int16)
++    delta_zz = np.where(delta >= 0, 2 * delta, -2 * delta - 1).astype(np.uint16)
++    lo = (delta_zz & 0xFF).astype(np.uint8).tobytes()
++    hi = (delta_zz >> 8).astype(np.uint8).tobytes()
++    payload = struct.pack("<II", n, d)
++    payload += mins.to(torch.float16).numpy().tobytes()
++    payload += scales.to(torch.float16).numpy().tobytes()
++    payload += lo + hi
++    return payload  # caller wraps in brotli
++
++
++def decode_latents(raw):
++    buf = io.BytesIO(raw)
++    n, d = struct.unpack("<II", buf.read(8))
++    mins = torch.from_numpy(np.frombuffer(buf.read(d * 2), dtype=np.float16).copy()).float()
++    scales = torch.from_numpy(np.frombuffer(buf.read(d * 2), dtype=np.float16).copy()).float()
++    total = n * d
++    lo = np.frombuffer(buf.read(total), dtype=np.uint8).astype(np.uint16)
++    hi = np.frombuffer(buf.read(total), dtype=np.uint8).astype(np.uint16)
++    delta_zz = ((hi << 8) | lo).reshape(n, d)
++    delta = np.where(delta_zz % 2 == 0, delta_zz.astype(np.int32) // 2,
++                     -(delta_zz.astype(np.int32) // 2) - 1).astype(np.int16)
++    q = np.empty_like(delta, dtype=np.int32)
++    q[0] = delta[0]
++    for i in range(1, n):
++        q[i] = q[i - 1] + delta[i]
++    q = q.astype(np.uint8)
++    return torch.from_numpy(q.astype(np.float32)) * scales.unsqueeze(0) + mins.unsqueeze(0)
++
++
++# ============================================================================
++# Top-level archive: meta + decoder + latents
++# ============================================================================
++
++def build_archive(decoder_state_dict, latents, meta_dict):
++    """Build the final archive blob.
++
++    Layout:
++      [meta_brotli_len:u32] [meta_brotli]
++      [decoder_blob_len:u32] [decoder_blob]
++      [latents_brotli_len:u32] [latents_brotli]
++    """
++    import json
++    meta_raw = json.dumps(meta_dict).encode('utf-8')
++    meta_brotli = brotli.compress(meta_raw, quality=11)
++
++    q_sd = quantize_state_dict(decoder_state_dict)
++    decoder_blob = encode_decoder(q_sd)
++
++    latents_payload = encode_latents(latents)
++    latents_brotli = brotli.compress(latents_payload, quality=11)
++
++    out = io.BytesIO()
++    out.write(struct.pack("<I", len(meta_brotli))); out.write(meta_brotli)
++    out.write(struct.pack("<I", len(decoder_blob))); out.write(decoder_blob)
++    out.write(struct.pack("<I", len(latents_brotli))); out.write(latents_brotli)
++    return out.getvalue()
++
++
++def parse_archive(archive_bytes):
++    """Inverse of build_archive. Returns (decoder_sd, latents_tensor, meta_dict)."""
++    import json
++    buf = io.BytesIO(archive_bytes)
++    meta_len = struct.unpack("<I", buf.read(4))[0]
++    meta = json.loads(brotli.decompress(buf.read(meta_len)))
++    dec_len = struct.unpack("<I", buf.read(4))[0]
++    decoder_sd = decode_decoder(buf.read(dec_len))
++    lat_len = struct.unpack("<I", buf.read(4))[0]
++    latents = decode_latents(brotli.decompress(buf.read(lat_len)))
++    return decoder_sd, latents, meta
+diff --git a/submissions/hnerv_muon/src/data.py b/submissions/hnerv_muon/src/data.py
+new file mode 100644
+index 0000000..466261d
+--- /dev/null
++++ b/submissions/hnerv_muon/src/data.py
+@@ -0,0 +1,159 @@
++"""Video frame loading and ground-truth precompute.
++
++Reads the comma.ai challenge video (single hevc file, 1164×874, ~1200 frames),
++groups consecutive frames into pairs (n_pairs = 600), and runs the frozen
++SegNet/PoseNet (DistortionNet from the challenge repo) once to cache:
++  - seg_targets_hard:  (n_pairs, 384, 512) int64 — SegNet argmax labels
++  - pose_targets:      (n_pairs, 6) float32     — PoseNet pose vectors
++  - gt_pairs_half:     (n_pairs, 2, 3, 192, 256) float32 CPU — half-res GT for multi-res L1
++
++The challenge repo is imported as a stable third-party (provides the official
++SegNet/PoseNet weights and the YUV420 decode path that matches the eval harness).
++"""
++import sys
++from pathlib import Path
++
++import numpy as np
++import torch
++import torch.nn.functional as F
++
++
++def _resolve_challenge_root():
++    """Find the comma_video_compression_challenge repo. Search up from this file
++    and from CWD; allow override via env var COMMA_CHALLENGE_ROOT."""
++    import os
++    if 'COMMA_CHALLENGE_ROOT' in os.environ:
++        return Path(os.environ['COMMA_CHALLENGE_ROOT']).resolve()
++    here = Path(__file__).resolve()
++    for parent in [here.parent, *here.parents]:
++        cand = parent / 'comma_video_compression_challenge'
++        if (cand / 'frame_utils.py').exists():
++            return cand
++    cand = Path.cwd() / 'comma_video_compression_challenge'
++    if (cand / 'frame_utils.py').exists():
++        return cand.resolve()
++    raise FileNotFoundError(
++        "comma_video_compression_challenge/ not found. Set COMMA_CHALLENGE_ROOT or "
++        "place the challenge repo as a sibling of my_submission/.")
++
++
++CHALLENGE_ROOT = _resolve_challenge_root()
++sys.path.insert(0, str(CHALLENGE_ROOT.parent))
++sys.path.insert(0, str(CHALLENGE_ROOT))
++
++import av
++import frame_utils  # noqa: E402
++import modules  # noqa: E402
++from frame_utils import yuv420_to_rgb  # noqa: E402
++from modules import DistortionNet, segnet_sd_path, posenet_sd_path  # noqa: E402
++
++
++def _rgb_to_yuv6_differentiable(rgb_chw):
++    """Differentiable BT.601 RGB->YUV6 (matches frame_utils.rgb_to_yuv6 numerically
++    but without the @torch.no_grad() decorator and with out-of-place clamp).
++
++    The challenge's frame_utils.rgb_to_yuv6 is wrapped in @torch.no_grad() and
++    uses clamp_() in-place, which severs the autograd graph. PoseNet's
++    preprocess_input calls rgb_to_yuv6 on every forward — so without this
++    patch the pose loss gradient never reaches the decoder, and pose stays
++    pinned at its random-init value through training. This was a real bug
++    in v1/v2 (pose plateaued at 142 across 2500+ epochs).
++    """
++    H, W = rgb_chw.shape[-2], rgb_chw.shape[-1]
++    H2, W2 = H // 2, W // 2
++    rgb = rgb_chw[..., :, :2*H2, :2*W2]
++    R, G, B = rgb[..., 0, :, :], rgb[..., 1, :, :], rgb[..., 2, :, :]
++    Y = (R * 0.299 + G * 0.587 + B * 0.114).clamp(0.0, 255.0)
++    U = ((B - Y) / 1.772 + 128.0).clamp(0.0, 255.0)
++    V = ((R - Y) / 1.402 + 128.0).clamp(0.0, 255.0)
++    U_sub = (U[..., 0::2, 0::2] + U[..., 1::2, 0::2]
++             + U[..., 0::2, 1::2] + U[..., 1::2, 1::2]) * 0.25
++    V_sub = (V[..., 0::2, 0::2] + V[..., 1::2, 0::2]
++             + V[..., 0::2, 1::2] + V[..., 1::2, 1::2]) * 0.25
++    return torch.stack([Y[..., 0::2, 0::2], Y[..., 1::2, 0::2],
++                        Y[..., 0::2, 1::2], Y[..., 1::2, 1::2],
++                        U_sub, V_sub], dim=-3)
++
++
++# Apply the patch at import time. modules.py already imported rgb_to_yuv6 from
++# frame_utils, so we have to overwrite BOTH module-level references.
++frame_utils.rgb_to_yuv6 = _rgb_to_yuv6_differentiable
++modules.rgb_to_yuv6 = _rgb_to_yuv6_differentiable
++
++
++CAMERA_SIZE = (1164, 874)  # (W, H) — challenge convention
++EVAL_SIZE = (384, 512)     # (H, W) — decoder native output size
++MULTIRES_SIZE = (192, 256)
++
++
++def load_distortion_net(device):
++    net = DistortionNet().eval().to(device)
++    net.load_state_dicts(posenet_sd_path, segnet_sd_path, device)
++    for p in net.parameters():
++        p.requires_grad = False
++    return net
++
++
++def precompute_targets(video_path, device, multires_size=MULTIRES_SIZE):
++    """Stream-decode one video, compute SegNet/PoseNet targets per pair, return
++    (seg_targets_hard, pose_targets, gt_pairs_half_cpu, n_pairs).
++
++    The half-res GT pairs are kept on CPU to bound memory; per-batch transfer is
++    cheap. seg/pose targets are kept on GPU.
++    """
++    distortion_net = load_distortion_net(device)
++    container = av.open(str(video_path))
++    seg_targets_hard, pose_targets, gt_pairs_half = [], [], []
++    prev = None
++    with torch.inference_mode():
++        for frame in container.decode(container.streams.video[0]):
++            f = yuv420_to_rgb(frame)
++            if prev is None:
++                prev = f
++                continue
++            f0, f1 = prev, f
++            prev = None
++            pair = torch.stack([f0, f1]).unsqueeze(0).to(device)
++            po, so = distortion_net(pair)
++            seg_targets_hard.append(so.argmax(dim=1).squeeze(0).clone())
++            pose_targets.append(po['pose'][:, :6].float().squeeze(0).clone())
++            gt2 = torch.stack([f0, f1]).float().permute(0, 3, 1, 2).contiguous()
++            gt2_half = F.interpolate(gt2, size=multires_size, mode='bilinear',
++                                     align_corners=False)
++            gt_pairs_half.append(gt2_half)
++            del f0, f1, f, pair, po, so, gt2, gt2_half
++    container.close()
++    torch.cuda.empty_cache()
++
++    seg_targets_hard = torch.stack(seg_targets_hard)
++    pose_targets = torch.stack(pose_targets)
++    gt_pairs_half_cpu = torch.stack(gt_pairs_half).contiguous()
++    n_pairs = seg_targets_hard.shape[0]
++    return distortion_net, seg_targets_hard, pose_targets, gt_pairs_half_cpu, n_pairs
++
++
++def video_paths_from_names_file(names_file: Path, videos_dir: Path):
++    with open(names_file) as f:
++        names = [l.strip() for l in f if l.strip()]
++    return [videos_dir / n for n in names]
++
++
++def get_default_video_path():
++    """Returns the canonical first video for training (single-video memorization regime).
++
++    Tries (in order): video_names.txt, public_test_video_names.txt; else falls
++    back to the first .hevc file in videos/.
++    """
++    videos_dir = CHALLENGE_ROOT / 'videos'
++    for cand in ('video_names.txt', 'public_test_video_names.txt'):
++        names_file = CHALLENGE_ROOT / cand
++        if names_file.exists():
++            paths = video_paths_from_names_file(names_file, videos_dir)
++            existing = [p for p in paths if p.exists()]
++            if existing:
++                return existing[0]
++    # Fallback: any .hevc in videos/
++    hevcs = sorted(videos_dir.glob('*.hevc'))
++    if hevcs:
++        return hevcs[0]
++    raise FileNotFoundError(f"No videos found in {videos_dir}")
+diff --git a/submissions/hnerv_muon/src/losses.py b/submissions/hnerv_muon/src/losses.py
+new file mode 100644
+index 0000000..662ba8b
+--- /dev/null
++++ b/submissions/hnerv_muon/src/losses.py
+@@ -0,0 +1,161 @@
++"""All loss functions across the 8 training stages, plus QAT helpers + EMA helpers.
++
++Loss progression:
++  Stage 1 (CE):                ce_seg
++  Stage 2 (Softplus):          tau_softplus_seg(tau=0.3)
++  Stage 3 (Smooth):            smooth_disagreement_seg(tau=0.3)
++  Stage 4 (+QAT):              smooth_disagreement_seg + apply_qat() in forward
++  Stage 5 (+L7+C1a):           l7_softplus_seg + cat_entropy_v2(sigma=0.2) + QAT
++  Stage 6 (lambda=0.02):       same as 5, lambda=0.02
++  Stage 7 (sigma=0.1):         same as 6, sigma=0.1
++  Stage 8 (Muon):              same as 7, Muon optimizer
++
++Pose loss is sqrt(10·MSE), constant across all stages. EMA decay 0.999.
++Aggregation: loss = 100*seg + 1*pose + cat_lambda*c1a_entropy.
++"""
++import torch
++import torch.nn as nn
++import torch.nn.functional as F
++
++
++# ============================================================================
++# Segmentation losses (one per stage family)
++# ============================================================================
++
++def ce_seg_loss(seg_logits, targets_hard):
++    """Stage 1 CE seg loss."""
++    return F.cross_entropy(seg_logits, targets_hard)
++
++
++def tau_softplus_seg_loss(seg_logits, targets_hard, tau=0.3):
++    """Stage 2 tau-Softplus surrogate. Smooth in margin space."""
++    target_logits = seg_logits.gather(1, targets_hard.unsqueeze(1))
++    masked = seg_logits.clone()
++    masked.scatter_(1, targets_hard.unsqueeze(1), -1e9)
++    margin = target_logits - masked.max(dim=1, keepdim=True)[0]
++    return (tau * F.softplus(-margin / tau)).mean()
++
++
++def smooth_disagreement_seg_loss(seg_logits, targets_hard, tau=0.3):
++    """Stage 3+4 smooth disagreement loss (sigmoid-on-negative-margin).
++    Bell-curve gradient peaks at margin=0 — pushes boundary pixels across the line."""
++    target_logits = seg_logits.gather(1, targets_hard.unsqueeze(1))
++    masked = seg_logits.clone()
++    masked.scatter_(1, targets_hard.unsqueeze(1), -1e9)
++    margin = target_logits - masked.max(dim=1, keepdim=True)[0]
++    return torch.sigmoid(-margin / tau).mean()
++
++
++def l7_softplus_seg_loss(seg_logits, targets_hard,
++                         tau=0.3, l7_threshold=1.0, l7_mult=4.0):
++    """Stage 5+ L7-weighted Softplus: pixels where margin<threshold get a
++    (1 + l7_mult) boost (renormalized to mean 1). Concentrates gradient on
++    hard-to-classify pixels."""
++    target_logits = seg_logits.gather(1, targets_hard.unsqueeze(1))
++    masked = seg_logits.clone()
++    masked.scatter_(1, targets_hard.unsqueeze(1), -1e9)
++    margin = target_logits - masked.max(dim=1, keepdim=True)[0]
++    per_pixel = tau * F.softplus(-margin / tau)
++    with torch.no_grad():
++        weights = 1.0 + l7_mult * (margin < l7_threshold).float()
++        weights = weights / weights.mean()
++    return (per_pixel * weights).mean()
++
++
++# ============================================================================
++# Pose loss (constant across all stages)
++# ============================================================================
++
++def pose_loss(pose_pred, pose_target):
++    """sqrt(10·MSE) — concave-in-MSE, emphasizes small errors more than plain MSE."""
++    mse = F.mse_loss(pose_pred, pose_target)
++    return torch.sqrt(10.0 * mse + 1e-12)
++
++
++# ============================================================================
++# C1a entropy regularizer (Stage 5+)
++# ============================================================================
++
++def cat_entropy_v2(decoder, sigma=0.2, sample_size=2000, device=None):
++    """Size-weighted soft histogram entropy.
++    For each Conv2d/Linear weight tensor:
++      - quantize to {-127, ..., 127} via Gaussian soft-assignment with bandwidth sigma
++      - compute categorical entropy
++      - weight by tensor size (numel)
++    Returns: weighted mean entropy in bits/weight, averaged across all weight tensors.
++
++    Pushing this down (small sigma + big lambda) sharpens the post-INT8
++    distribution at integer grid points.
++    """
++    if device is None:
++        device = next(decoder.parameters()).device
++    bins = torch.arange(-127, 128, device=device, dtype=torch.float32)
++    total_numel = 0
++    weighted_entropy = torch.zeros((), device=device)
++    for name, mod in decoder.named_modules():
++        if isinstance(mod, (nn.Conv2d, nn.Linear)) and hasattr(mod, 'weight'):
++            w = mod.weight
++            numel = w.numel()
++            ma = w.abs().max().detach()
++            if ma.item() < 1e-12:
++                continue
++            wn = (w / (ma / 127.0)).flatten()
++            if wn.numel() > sample_size:
++                idx = torch.randperm(wn.numel(), device=wn.device)[:sample_size]
++                wn = wn[idx]
++            sa = torch.exp(-0.5 * ((wn.unsqueeze(1) - bins.unsqueeze(0)) / sigma).pow(2))
++            sa = sa / (sa.sum(dim=1, keepdim=True) + 1e-12)
++            bp = sa.mean(dim=0)
++            bp = bp / (bp.sum() + 1e-12)
++            entropy = -(bp * torch.log2(bp + 1e-12)).sum()
++            weighted_entropy = weighted_entropy + numel * entropy
++            total_numel += numel
++    return weighted_entropy / max(total_numel, 1)
++
++
++# ============================================================================
++# QAT (INT8 fake-quant with straight-through estimator)
++# ============================================================================
++
++def fake_quantize(tensor, n_levels=127):
++    """Per-tensor symmetric INT8 fake-quant. STE: forward rounds, backward passes through."""
++    ma = tensor.abs().max()
++    scale = ma / n_levels if ma > 0 else 1.0
++    q = (tensor / scale).round().clamp(-n_levels, n_levels)
++    return (q * scale - tensor).detach() + tensor
++
++
++def apply_qat(decoder):
++    """Replace Conv2d/Linear weights with fake-quantized versions IN PLACE.
++    Returns dict of originals to restore after the forward pass.
++
++    Pattern:
++        originals = apply_qat(decoder)
++        decoded = decoder(...)
++        restore_qat(decoder, originals)
++    """
++    originals = {}
++    for name, mod in decoder.named_modules():
++        if isinstance(mod, (nn.Conv2d, nn.Linear)) and hasattr(mod, 'weight'):
++            originals[name] = mod.weight.data.clone()
++            mod.weight.data = fake_quantize(mod.weight.data)
++    return originals
++
++
++def restore_qat(decoder, originals):
++    for name, mod in decoder.named_modules():
++        if name in originals:
++            mod.weight.data = originals[name]
++
++
++# ============================================================================
++# EMA helpers
++# ============================================================================
++
++def ema_update(ema_decoder, decoder, ema_latents, latents, decay=0.999):
++    """In-place EMA update."""
++    with torch.no_grad():
++        for ep, pv in zip(ema_decoder.parameters(), decoder.parameters()):
++            ep.data.mul_(decay).add_(pv.data, alpha=1 - decay)
++        if ema_latents is not None and latents is not None:
++            ema_latents.mul_(decay).add_(latents.data, alpha=1 - decay)
+diff --git a/submissions/hnerv_muon/src/model.py b/submissions/hnerv_muon/src/model.py
+new file mode 100644
+index 0000000..6708e78
+--- /dev/null
++++ b/submissions/hnerv_muon/src/model.py
+@@ -0,0 +1,54 @@
++"""HNeRV-style decoder: 229K params, single-video memorization.
++
++Per-frame-pair latent (28-d) -> 6 upsample stages -> 384x512 RGB pair.
++
++Each stage: Conv(in, out*4, 3x3) + PixelShuffle(2) + bilinear-skip + sin().
++Final: dilated-conv refine residual + sigmoid RGB heads (separate frame 0 and 1).
++"""
++import torch
++import torch.nn as nn
++import torch.nn.functional as F
++
++
++class HNeRVDecoder(nn.Module):
++    def __init__(self, latent_dim=28, base_channels=36, eval_size=(384, 512)):
++        super().__init__()
++        self.eval_size = eval_size
++        self.base_h, self.base_w = 6, 8
++        C = base_channels
++
++        # 7 stages from 6x8 to 384x512; channel taper matches HNeRV paper
++        self.channels = [C, C, C, int(C * 0.75), int(C * 0.58), int(C * 0.5), int(C * 0.5)]
++
++        self.stem = nn.Linear(latent_dim, self.channels[0] * self.base_h * self.base_w)
++
++        self.blocks = nn.ModuleList()
++        self.skips = nn.ModuleList()
++        for i in range(6):
++            in_ch = self.channels[i]
++            out_ch = self.channels[i + 1]
++            self.blocks.append(nn.Conv2d(in_ch, out_ch * 4, 3, padding=1))
++            self.skips.append(nn.Conv2d(in_ch, out_ch, 1) if in_ch != out_ch else nn.Identity())
++        self.ps = nn.PixelShuffle(2)
++
++        final_ch = self.channels[-1]
++        self.refine = nn.Sequential(
++            nn.Conv2d(final_ch, final_ch // 2, 3, padding=2, dilation=2),
++            nn.Conv2d(final_ch // 2, final_ch, 3, padding=1),
++        )
++        self.rgb_0 = nn.Conv2d(final_ch, 3, 3, padding=1)
++        self.rgb_1 = nn.Conv2d(final_ch, 3, 3, padding=1)
++
++    def forward(self, z):
++        B = z.shape[0]
++        x = self.stem(z).view(B, self.channels[0], self.base_h, self.base_w)
++        x = torch.sin(x)
++        for block, skip in zip(self.blocks, self.skips):
++            identity = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=False)
++            identity = skip(identity)
++            x = self.ps(block(x))
++            x = torch.sin(x + identity)
++        x = x + 0.1 * torch.sin(self.refine(x))
++        f0 = torch.sigmoid(self.rgb_0(x)) * 255.0
++        f1 = torch.sigmoid(self.rgb_1(x)) * 255.0
++        return torch.stack([f0, f1], dim=1)
+diff --git a/submissions/hnerv_muon/src/optim.py b/submissions/hnerv_muon/src/optim.py
+new file mode 100644
+index 0000000..236803b
+--- /dev/null
++++ b/submissions/hnerv_muon/src/optim.py
+@@ -0,0 +1,100 @@
++"""Muon optimizer (Keller Jordan, 2024). Newton-Schulz orthogonalized momentum.
++
++We add explicit decoupled weight decay (researcher-recommended; Chen-Li-Liu
++arXiv:2506.15054 — Muon's spectral-norm KKT story requires WD to be active).
++4D conv weights are flattened to 2D for the NS step.
++
++Used for hidden Conv2d weights (blocks + skips + refine + 1x1's). AdamW handles
++the stem Linear + RGB heads + biases + latents.
++
++Reference: https://github.com/KellerJordan/Muon
++"""
++import torch
++
++
++@torch.no_grad()
++def zeropower_via_newtonschulz5(G: torch.Tensor, steps: int = 5, eps: float = 1e-7) -> torch.Tensor:
++    assert G.ndim >= 2
++    a, b, c = (3.4445, -4.7750, 2.0315)
++    X = G.to(torch.bfloat16) if G.dtype == torch.float32 else G.clone()
++    if X.size(-2) > X.size(-1):
++        X = X.mT
++    X = X / (X.norm(dim=(-2, -1), keepdim=True) + eps)
++    for _ in range(steps):
++        A = X @ X.mT
++        B_ = b * A + c * A @ A
++        X = a * X + B_ @ X
++    if G.size(-2) > G.size(-1):
++        X = X.mT
++    return X.to(G.dtype)
++
++
++class Muon(torch.optim.Optimizer):
++    def __init__(self, params, lr=0.02, momentum=0.95, nesterov=True,
++                 ns_steps=5, weight_decay=0.0):
++        defaults = dict(lr=lr, momentum=momentum, nesterov=nesterov,
++                        ns_steps=ns_steps, weight_decay=weight_decay)
++        super().__init__(params, defaults)
++
++    @torch.no_grad()
++    def step(self, closure=None):
++        loss = None
++        if closure is not None:
++            with torch.enable_grad():
++                loss = closure()
++        for group in self.param_groups:
++            lr = group['lr']
++            momentum = group['momentum']
++            nesterov = group['nesterov']
++            ns_steps = group['ns_steps']
++            wd = group['weight_decay']
++            for p in group['params']:
++                if p.grad is None:
++                    continue
++                g = p.grad
++                # Decoupled weight decay applied to the parameter directly,
++                # before the orthogonalized update — matches AdamW convention.
++                if wd != 0.0:
++                    p.mul_(1.0 - lr * wd)
++                state = self.state[p]
++                if 'momentum_buffer' not in state:
++                    state['momentum_buffer'] = torch.zeros_like(g)
++                buf = state['momentum_buffer']
++                buf.mul_(momentum).add_(g)
++                gu = g.add(buf, alpha=momentum) if nesterov else buf
++
++                orig_shape = gu.shape
++                if gu.ndim == 4:
++                    g2d = gu.view(gu.size(0), -1)
++                    g_ortho = zeropower_via_newtonschulz5(g2d, steps=ns_steps)
++                    scale = max(1.0, (g2d.size(0) / g2d.size(1)) ** 0.5)
++                    g_final = (g_ortho * scale).view(orig_shape)
++                elif gu.ndim == 2:
++                    g_ortho = zeropower_via_newtonschulz5(gu, steps=ns_steps)
++                    scale = max(1.0, (gu.size(0) / gu.size(1)) ** 0.5)
++                    g_final = g_ortho * scale
++                else:
++                    g_final = gu
++
++                p.add_(g_final, alpha=-lr)
++        return loss
++
++
++def partition_params_for_muon(model):
++    """Split params into (muon, adamw):
++      - Muon: 2D+ weights NOT in stem and NOT in RGB heads
++      - AdamW: stem Linear, rgb_0/rgb_1 weights, all biases, all 1D params
++    """
++    muon_params, adamw_params = [], []
++    for name, p in model.named_parameters():
++        if not p.requires_grad:
++            continue
++        if p.ndim < 2:
++            adamw_params.append(p)
++            continue
++        low = name.lower()
++        if 'stem' in low or low.startswith('rgb') or '.rgb_' in low:
++            adamw_params.append(p)
++        else:
++            muon_params.append(p)
++    return muon_params, adamw_params
+diff --git a/submissions/hnerv_muon/src/score.py b/submissions/hnerv_muon/src/score.py
+new file mode 100644
+index 0000000..704e186
+--- /dev/null
++++ b/submissions/hnerv_muon/src/score.py
+@@ -0,0 +1,131 @@
++"""Score computation matching the official challenge metric.
++
++Score = 100 · seg_distortion + sqrt(10 · pose_distortion) + 25 · rate
++
++  - seg_distortion: from DistortionNet.compute_distortion (frozen SegNet)
++  - pose_distortion: from DistortionNet.compute_distortion (frozen PoseNet)
++  - rate: archive_bytes / sum(video file sizes) per challenge evaluate.py:65
++
++Eval runs the decoder, bicubic-upsamples (384,512) outputs to (874,1164) camera
++size, and calls DistortionNet.compute_distortion against the GT video.
++
++Stream-decoded so we never hold all 1200 full-res frames in memory at once
++(challenge frames at 1164×874×3 uint8 = ~3 MB each).
++"""
++import math
++from pathlib import Path
++
++import av
++import torch
++import torch.nn.functional as F
++
++
++CAMERA_H, CAMERA_W = 874, 1164
++EVAL_H, EVAL_W = 384, 512
++
++
++def _decoded_to_camera(decoded_native, target_h=CAMERA_H, target_w=CAMERA_W):
++    """Resample (B*2, 3, EVAL_H, EVAL_W) -> (B*2, 3, CAMERA_H, CAMERA_W) bicubic.
++    Matches eval harness resample chain."""
++    return F.interpolate(decoded_native, size=(target_h, target_w),
++                         mode='bicubic', align_corners=False)
++
++
++@torch.inference_mode()
++def evaluate_decoder(decoder, latents, distortion_net, video_path,
++                     batch_pairs=8, device='cuda'):
++    """Stream-decode the GT video and the decoder output simultaneously, accumulate
++    per-pair distortions via DistortionNet.compute_distortion.
++
++    Returns:
++        dict with seg_distortion (mean), pose_distortion (mean)
++    """
++    from frame_utils import yuv420_to_rgb
++
++    decoder.eval()
++    n_pairs = latents.shape[0]
++
++    # Stream GT pairs from video
++    container = av.open(str(video_path))
++    gt_pairs_iter_state = {'prev': None, 'pair_idx': 0}
++    seg_total = 0.0
++    pose_total = 0.0
++    count = 0
++
++    def next_gt_pair():
++        """Yield one (2, H, W, 3) uint8 GT pair from the stream, or None when done."""
++        # Drain frames into pairs lazily
++        for frame in gt_pairs_iter_state.get('frames', iter(())):
++            f = yuv420_to_rgb(frame)
++            if gt_pairs_iter_state['prev'] is None:
++                gt_pairs_iter_state['prev'] = f
++                continue
++            f0, f1 = gt_pairs_iter_state['prev'], f
++            gt_pairs_iter_state['prev'] = None
++            return torch.stack([f0, f1])
++        return None
++
++    # Build flat frame iterator
++    gt_pairs_iter_state['frames'] = container.decode(container.streams.video[0])
++
++    pair_idx = 0
++    while pair_idx < n_pairs:
++        # Collect a batch of GT pairs
++        batch_gt = []
++        for _ in range(min(batch_pairs, n_pairs - pair_idx)):
++            pair = next_gt_pair()
++            if pair is None:
++                break
++            batch_gt.append(pair)
++        if not batch_gt:
++            break
++        batch_gt = torch.stack(batch_gt).to(device)  # (B, 2, H, W, 3) uint8
++        B = batch_gt.shape[0]
++
++        # Run decoder on the matching latent batch
++        idx = torch.arange(pair_idx, pair_idx + B, device=device)
++        z = latents[idx]
++        decoded = decoder(z)  # (B, 2, 3, EVAL_H, EVAL_W) float in [0,255]
++        flat = decoded.reshape(B * 2, 3, EVAL_H, EVAL_W)
++        up = _decoded_to_camera(flat)
++        decoded_bhwc = (up.reshape(B, 2, 3, CAMERA_H, CAMERA_W)
++                          .permute(0, 1, 3, 4, 2)
++                          .clamp(0, 255).round().to(torch.uint8))
++
++        pose_d, seg_d = distortion_net.compute_distortion(batch_gt, decoded_bhwc)
++        seg_total += seg_d.sum().item()
++        pose_total += pose_d.sum().item()
++        count += B
++        pair_idx += B
++
++    container.close()
++    return {
++        'seg_distortion': seg_total / max(count, 1),
++        'pose_distortion': pose_total / max(count, 1),
++    }
++
++
++def compute_score(seg_dist, pose_dist, archive_bytes, total_video_bytes):
++    """Final challenge metric. Lower is better."""
++    rate = archive_bytes / total_video_bytes
++    seg_component = 100.0 * seg_dist
++    pose_component = math.sqrt(10.0 * pose_dist + 1e-12)
++    rate_component = 25.0 * rate
++    return {
++        'score': seg_component + pose_component + rate_component,
++        'seg_component': seg_component,
++        'pose_component': pose_component,
++        'rate_component': rate_component,
++        'seg_distortion': seg_dist,
++        'pose_distortion': pose_dist,
++        'rate': rate,
++        'archive_bytes': archive_bytes,
++    }
++
++
++def total_video_bytes(video_paths):
++    """Rate denominator per challenge eval (evaluate.py:64): sum of source video
++    file sizes."""
++    if isinstance(video_paths, (str, Path)):
++        video_paths = [video_paths]
++    return sum(Path(p).stat().st_size for p in video_paths)
+diff --git a/submissions/hnerv_muon/src/stages/codec_stage.py b/submissions/hnerv_muon/src/stages/codec_stage.py
+new file mode 100644
+index 0000000..2c9e642
+--- /dev/null
++++ b/submissions/hnerv_muon/src/stages/codec_stage.py
+@@ -0,0 +1,71 @@
++"""Codec re-encode — final archive build (no training).
++
++Reads the latest snapshot from the previous stage's output directory, runs it
++through the codec, and writes a single submission file at
++`<output_dir>/0.bin`. Round-trip is verified bit-exact for the INT8 weights.
++
++(The choice to use `0.bin` matches the file-list iteration model the challenge's
++`evaluate.sh` uses: for each video named `<base>` in `public_test_video_names.txt`,
++inflate.sh expects the corresponding `<base>.bin` in the data dir.)
++"""
++import json
++from pathlib import Path
++
++import numpy as np
++import torch
++
++from codec import build_archive, parse_archive
++from data import EVAL_SIZE
++
++
++def run_codec_stage(prev_stage_output_dir: Path, final_output_dir: Path,
++                    video_path: Path) -> dict:
++    """Read the previous stage's BEST checkpoint, re-encode via the codec, and
++    write the submission archive at <final_output_dir>/0.bin.
++
++    Note: each training stage already wrote a best_archive.bin in its output dir;
++    this codec stage is functionally a verified re-emission, plus it writes the
++    final-format file under the canonical submission name.
++    """
++    final_output_dir.mkdir(parents=True, exist_ok=True)
++
++    # Use the BEST checkpoint (lowest in-training eval score).
++    decoder_sd = torch.load(prev_stage_output_dir / "decoder_f32.pt", map_location='cpu')
++    latents = torch.load(prev_stage_output_dir / "latents_f32.pt", map_location='cpu')
++    n_pairs = latents.shape[0]
++
++    archive = build_archive(
++        decoder_sd, latents,
++        meta_dict={"n_pairs": n_pairs, "latent_dim": 28, "base_channels": 36,
++                   "eval_size": list(EVAL_SIZE)},
++    )
++    archive_bytes = len(archive)
++
++    with open(final_output_dir / "0.bin", "wb") as f:
++        f.write(archive)
++
++    # Verify round-trip: re-parse and check INT8 weight equivalence.
++    decoder_sd_dec, _, _ = parse_archive(archive)
++    for name in decoder_sd:
++        orig = decoder_sd[name].detach().cpu().float()
++        ma = orig.abs().max().item()
++        scale = ma / 127 if ma > 0 else 1.0
++        orig_q = (orig / scale).round().clamp(-127, 127)
++        dec = decoder_sd_dec[name].detach().cpu().float()
++        if scale > 0:
++            dec_q = (dec / scale).round().clamp(-127, 127)
++            if not torch.allclose(orig_q, dec_q):
++                raise RuntimeError(f"Codec round-trip FAILED for {name}")
++
++    # Copy best_meta.json forward, augmented with the final archive size.
++    meta_path = prev_stage_output_dir / "best_meta.json"
++    if meta_path.exists():
++        meta = json.load(open(meta_path))
++        meta['final_archive_bytes'] = archive_bytes
++        with open(final_output_dir / "final_meta.json", "w") as f:
++            json.dump(meta, f, indent=2)
++
++    return {
++        'final_archive_bytes': archive_bytes,
++        'archive_path': str(final_output_dir / "0.bin"),
++    }
+diff --git a/submissions/hnerv_muon/src/stages/common.py b/submissions/hnerv_muon/src/stages/common.py
+new file mode 100644
+index 0000000..243389f
+--- /dev/null
++++ b/submissions/hnerv_muon/src/stages/common.py
+@@ -0,0 +1,274 @@
++"""Shared training loop used by every stage.
++
++Per-stage variations are passed in via a `StageConfig` dataclass and a
++`compute_seg_loss` callable.
++
++Each stage writes:
++  <output_dir>/decoder_f32.pt   — EMA weights at best-eval-score epoch
++  <output_dir>/latents_f32.pt   — EMA latents at best-eval-score epoch
++  <output_dir>/best_archive.bin — built from the best EMA
++  <output_dir>/best_meta.json   — score / archive_bytes / epoch
++  <output_dir>/final_decoder.pt — EMA weights at LAST epoch (for next stage)
++  <output_dir>/final_latents.pt — EMA latents at LAST epoch (for next stage)
++
++Inter-stage transitions read `final_*.pt`; the codec stage reads `*_f32.pt`
++from the final training stage.
++"""
++from __future__ import annotations
++
++import json
++import math
++import sys
++import time
++from copy import deepcopy
++from dataclasses import dataclass
++from pathlib import Path
++from typing import Callable, Optional
++
++import torch
++import torch.nn as nn
++import torch.nn.functional as F
++
++HERE = Path(__file__).resolve()
++sys.path.insert(0, str(HERE.parent.parent))
++
++from model import HNeRVDecoder
++from optim import Muon, partition_params_for_muon
++from losses import (
++    cat_entropy_v2,
++    apply_qat, restore_qat, ema_update,
++)
++from data import precompute_targets, get_default_video_path, EVAL_SIZE
++from codec import build_archive, parse_archive
++from score import evaluate_decoder, compute_score, total_video_bytes
++
++
++@dataclass
++class StageConfig:
++    name: str
++    seg_loss_fn: Callable
++    epochs: int
++    eval_every: int = 25
++    batch_size: int = 8
++    ema_decay: float = 0.999
++
++    use_muon: bool = False
++    adamw_lr: float = 3e-5
++    muon_lr: float = 2e-4
++    muon_weight_decay: float = 0.0
++    latent_lr_mult: float = 10.0
++    grad_clip: float = 1.0
++    grad_clip_muon: Optional[float] = 1.0
++    lr_floor_ratio: float = 5e-6
++
++    seg_weight: float = 100.0
++    pose_weight: float = 1.0
++    cat_lambda: float = 0.0
++    cat_sigma: float = 0.2
++
++    use_qat: bool = False
++
++    resume_from: Optional[Path] = None
++    output_dir: Optional[Path] = None
++    init_latents_random: bool = False
++
++
++def train_stage(cfg: StageConfig, device: torch.device,
++                video_path: Optional[Path] = None,
++                shared_state: Optional[dict] = None):
++    """Train one stage. Returns dict with 'best_score', 'best_ep', 'archive_size'."""
++    if video_path is None:
++        video_path = get_default_video_path()
++
++    print(f"\n{'='*80}\n[{cfg.name}] {cfg.epochs} ep, batch={cfg.batch_size}, "
++          f"adamw_lr={cfg.adamw_lr}, muon_lr={cfg.muon_lr if cfg.use_muon else 'n/a'}, "
++          f"lambda={cfg.cat_lambda}, sigma={cfg.cat_sigma}\n{'='*80}", flush=True)
++
++    if cfg.output_dir is not None:
++        cfg.output_dir.mkdir(parents=True, exist_ok=True)
++
++    decoder = HNeRVDecoder(latent_dim=28, base_channels=36, eval_size=EVAL_SIZE).to(device)
++
++    if shared_state and 'distortion_net' in shared_state and shared_state.get('video_path') == video_path:
++        distortion_net = shared_state['distortion_net']
++        seg_targets_hard = shared_state['seg_targets_hard']
++        pose_targets = shared_state['pose_targets']
++        n_pairs = shared_state['n_pairs']
++    else:
++        distortion_net, seg_targets_hard, pose_targets, _, n_pairs = (
++            precompute_targets(video_path, device))
++        if shared_state is not None:
++            shared_state.update({
++                'distortion_net': distortion_net,
++                'seg_targets_hard': seg_targets_hard,
++                'pose_targets': pose_targets,
++                'n_pairs': n_pairs,
++                'video_path': video_path,
++            })
++
++    if cfg.resume_from is not None:
++        sd_path = cfg.resume_from / "final_decoder.pt"
++        lat_path = cfg.resume_from / "final_latents.pt"
++        if not sd_path.exists() or not lat_path.exists():
++            raise FileNotFoundError(
++                f"Inter-stage resume needs final_decoder.pt + final_latents.pt at {cfg.resume_from}")
++        decoder.load_state_dict(torch.load(sd_path, map_location=device))
++        latents = nn.Parameter(torch.load(lat_path, map_location=device))
++        print(f"  Loaded EMA from {cfg.resume_from.name}/final_*.pt", flush=True)
++    elif cfg.init_latents_random:
++        latents = nn.Parameter(torch.randn(n_pairs, 28, device=device) * 0.1)
++        print("  Random init for decoder + latents.", flush=True)
++    else:
++        raise ValueError(f"Stage {cfg.name} has no resume_from and init_latents_random=False.")
++
++    ema_decoder = deepcopy(decoder)
++    ema_latents = latents.data.clone()
++
++    if cfg.use_muon:
++        muon_params, adamw_params = partition_params_for_muon(decoder)
++        muon_opt = Muon(muon_params, lr=cfg.muon_lr, momentum=0.95, nesterov=True,
++                        ns_steps=5, weight_decay=cfg.muon_weight_decay)
++        adamw_opt = torch.optim.AdamW(
++            [{'params': adamw_params, 'lr': cfg.adamw_lr},
++             {'params': [latents], 'lr': cfg.adamw_lr * cfg.latent_lr_mult}],
++            weight_decay=0.0,
++        )
++        print(f"  Muon: {sum(p.numel() for p in muon_params):,} params"
++              f" ({len(muon_params)} tensors, wd={cfg.muon_weight_decay})", flush=True)
++        print(f"  AdamW: {sum(p.numel() for p in adamw_params):,} decoder + {latents.numel():,} latent",
++              flush=True)
++    else:
++        muon_opt = None
++        muon_params = []
++        adamw_params = list(decoder.parameters())
++        adamw_opt = torch.optim.AdamW(
++            [{'params': decoder.parameters(), 'lr': cfg.adamw_lr},
++             {'params': [latents], 'lr': cfg.adamw_lr * cfg.latent_lr_mult}],
++            weight_decay=0.0,
++        )
++        print(f"  AdamW only: {sum(p.numel() for p in decoder.parameters()):,} decoder + "
++              f"{latents.numel():,} latent params", flush=True)
++
++    eta_min_ratio = max(cfg.lr_floor_ratio / cfg.adamw_lr, 1e-3)
++    def lr_lambda(epoch):
++        return max(0.5 * (1 + math.cos(math.pi * epoch / cfg.epochs)), eta_min_ratio)
++    adamw_sched = torch.optim.lr_scheduler.LambdaLR(adamw_opt, lr_lambda)
++    muon_sched = (torch.optim.lr_scheduler.LambdaLR(muon_opt, lr_lambda)
++                  if muon_opt is not None else None)
++
++    tvb = total_video_bytes(video_path)
++
++    best_score = float('inf'); best_ep = 0; best_archive_size = 0
++    t0 = time.time()
++
++    for epoch in range(cfg.epochs):
++        epoch_loss = 0.0; epoch_pose = 0.0; nb = 0
++        pair_indices = torch.randperm(n_pairs, device=device)
++
++        for batch_start in range(0, n_pairs, cfg.batch_size):
++            idx = pair_indices[batch_start:batch_start + cfg.batch_size]
++            B = len(idx)
++
++            if cfg.use_qat:
++                originals = apply_qat(decoder)
++            decoded_pair = decoder(latents[idx])
++            if cfg.use_qat:
++                restore_qat(decoder, originals)
++
++            flat = decoded_pair.reshape(B * 2, 3, EVAL_SIZE[0], EVAL_SIZE[1])
++            up = F.interpolate(flat, size=(874, 1164), mode='bicubic', align_corners=False)
++            down = F.interpolate(up, size=(384, 512), mode='bilinear', align_corners=False)
++            decoded_bhwc = down.reshape(B, 2, 3, 384, 512).permute(0, 1, 3, 4, 2)
++
++            decoded_clamped = decoded_bhwc.clamp(0, 255)
++            decoded_rounded = decoded_clamped.round()
++            decoded_bhwc = decoded_clamped + (decoded_rounded - decoded_clamped).detach()
++
++            posenet_in, segnet_in = distortion_net.preprocess_input(decoded_bhwc)
++            seg_out = distortion_net.segnet(segnet_in)
++            pose_out = distortion_net.posenet(posenet_in)
++
++            seg_l = cfg.seg_loss_fn(seg_out, seg_targets_hard[idx])
++            pose_mse = F.mse_loss(pose_out['pose'][:, :6], pose_targets[idx])
++            pose_l = torch.sqrt(10.0 * pose_mse + 1e-12)
++
++            loss = cfg.seg_weight * seg_l + cfg.pose_weight * pose_l
++            if cfg.cat_lambda > 0:
++                ent = cat_entropy_v2(decoder, sigma=cfg.cat_sigma, sample_size=2000,
++                                     device=device)
++                loss = loss + cfg.cat_lambda * ent
++
++            adamw_opt.zero_grad()
++            if muon_opt is not None:
++                muon_opt.zero_grad()
++            loss.backward()
++            torch.nn.utils.clip_grad_norm_(adamw_params + [latents], cfg.grad_clip)
++            if muon_opt is not None and cfg.grad_clip_muon is not None:
++                torch.nn.utils.clip_grad_norm_(muon_params, cfg.grad_clip_muon)
++            adamw_opt.step()
++            if muon_opt is not None:
++                muon_opt.step()
++
++            ema_update(ema_decoder, decoder, ema_latents, latents, decay=cfg.ema_decay)
++
++            epoch_loss += loss.item()
++            epoch_pose += pose_mse.item()
++            nb += 1
++
++        adamw_sched.step()
++        if muon_opt is not None:
++            muon_sched.step()
++
++        if (epoch + 1) % 10 == 0:
++            print(f"  [{cfg.name}] ep{epoch+1}/{cfg.epochs} "
++                  f"loss={epoch_loss/nb:.4f} pose_mse={epoch_pose/nb:.6f} "
++                  f"lr={adamw_opt.param_groups[0]['lr']:.2e} ({time.time()-t0:.0f}s)", flush=True)
++
++        if (epoch + 1) % cfg.eval_every == 0:
++            archive = build_archive(
++                ema_decoder.state_dict(), ema_latents.cpu(),
++                meta_dict={"n_pairs": n_pairs, "latent_dim": 28, "base_channels": 36,
++                           "eval_size": list(EVAL_SIZE)})
++            archive_size = len(archive)
++            eval_decoder_sd, eval_lat, _ = parse_archive(archive)
++            eval_dec = HNeRVDecoder(latent_dim=28, base_channels=36, eval_size=EVAL_SIZE).to(device)
++            eval_dec.load_state_dict(eval_decoder_sd)
++            eval_dec.eval()
++            dist = evaluate_decoder(eval_dec, eval_lat.to(device), distortion_net,
++                                    video_path, batch_pairs=8, device=device)
++            result = compute_score(dist['seg_distortion'], dist['pose_distortion'],
++                                   archive_size, tvb)
++            del eval_dec
++            torch.cuda.empty_cache()
++
++            print(f"    >>> ep{epoch+1}: score={result['score']:.4f} "
++                  f"seg={result['seg_distortion']:.5f} pose={result['pose_distortion']:.6f} "
++                  f"arch={archive_size:,}", flush=True)
++
++            if result['score'] < best_score:
++                best_score = result['score']; best_ep = epoch + 1
++                best_archive_size = archive_size
++                if cfg.output_dir is not None:
++                    with open(cfg.output_dir / "best_archive.bin", "wb") as f:
++                        f.write(archive)
++                    torch.save(ema_decoder.state_dict(), cfg.output_dir / "decoder_f32.pt")
++                    torch.save(ema_latents.cpu(), cfg.output_dir / "latents_f32.pt")
++                    with open(cfg.output_dir / "best_meta.json", "w") as f:
++                        json.dump({"stage": cfg.name, "score": result['score'],
++                                   "seg_distortion": result['seg_distortion'],
++                                   "pose_distortion": result['pose_distortion'],
++                                   "archive_bytes": archive_size,
++                                   "epoch": epoch + 1}, f, indent=2)
++
++    if cfg.output_dir is not None:
++        torch.save(ema_decoder.state_dict(), cfg.output_dir / "final_decoder.pt")
++        torch.save(ema_latents.cpu(), cfg.output_dir / "final_latents.pt")
++
++    print(f"\n[{cfg.name}] BEST: {best_score:.4f} at ep{best_ep}", flush=True)
++    return {
++        'stage': cfg.name,
++        'best_score': best_score,
++        'best_ep': best_ep,
++        'archive_size': best_archive_size,
++        'output_ckpt_dir': cfg.output_dir,
++    }
+diff --git a/submissions/hnerv_muon/src/stages/stage1_v328_ce.py b/submissions/hnerv_muon/src/stages/stage1_v328_ce.py
+new file mode 100644
+index 0000000..1c06d39
+--- /dev/null
++++ b/submissions/hnerv_muon/src/stages/stage1_v328_ce.py
+@@ -0,0 +1,40 @@
++"""Stage 1: v3.28 CE phase — bulk calibration from random init with Cross-Entropy seg loss.
++
++Source: random init (the only stage with init_latents_random=True).
++Output canonical: ckpt at ep3000 of v3.28 (full v3.28 ran 10K ep, but Stage 2 resumes
++from ep3000 because that's where the loss switches from CE to Softplus).
++
++Loss: F.cross_entropy(seg_logits, hard_targets) + sqrt(10·MSE) pose.
++Optimizer: AdamW only, peak_lr=1e-3, latent_lr=1e-2 (10×). 20-ep linear warmup, then
++cosine to 5e-6.
++
++3000 epochs. **Encoded for reproducibility — not re-run for this submission**;
++we resume from canonical Stage 4 output (`e2ev332_ep10200`).
++"""
++from pathlib import Path
++
++from .common import StageConfig, train_stage
++from losses import ce_seg_loss
++
++
++def make_config(output_dir: Path, epochs: int = 3000) -> StageConfig:
++    return StageConfig(
++        name="stage1_v328_ce",
++        seg_loss_fn=lambda logits, targets: ce_seg_loss(logits, targets),
++        epochs=epochs,
++        eval_every=25,
++        batch_size=8,
++        ema_decay=0.999,
++        use_muon=False,
++        adamw_lr=1e-3,           # v3.28 peak_lr
++        latent_lr_mult=10.0,
++        grad_clip=1.0,
++        seg_weight=100.0,
++        pose_weight=1.0,
++        cat_lambda=0.0,          # no C1a yet
++        cat_sigma=0.2,           # unused (lambda=0)
++        use_qat=False,           # no QAT yet
++        resume_from=None,
++        init_latents_random=True,
++        output_dir=output_dir,
++    )
+diff --git a/submissions/hnerv_muon/src/stages/stage2_v331_softplus.py b/submissions/hnerv_muon/src/stages/stage2_v331_softplus.py
+new file mode 100644
+index 0000000..537a120
+--- /dev/null
++++ b/submissions/hnerv_muon/src/stages/stage2_v331_softplus.py
+@@ -0,0 +1,37 @@
++"""Stage 2: v3.31 Softplus L1 phase — switch CE → tau-Softplus seg loss.
++
++Source: Stage 1 output (e2ev328_ep3000).
++Loss: tau-Softplus seg (tau=0.3) + sqrt(10·MSE) pose.
++Optimizer: AdamW (continues from Stage 1 — peak_lr=1e-3 cosine, but resumed
++mid-schedule from ep3000 of 10K total). Effectively the LR is mid-cosine
++when Stage 2 starts.
++
++5650 epochs. Encoded for reproducibility — not re-run.
++"""
++from pathlib import Path
++
++from .common import StageConfig, train_stage
++from losses import tau_softplus_seg_loss
++
++
++def make_config(resume_from: Path, output_dir: Path, epochs: int = 5650) -> StageConfig:
++    return StageConfig(
++        name="stage2_v331_softplus",
++        seg_loss_fn=lambda logits, targets: tau_softplus_seg_loss(
++            logits, targets, tau=0.3),
++        epochs=epochs,
++        eval_every=25,
++        batch_size=8,
++        ema_decay=0.999,
++        use_muon=False,
++        adamw_lr=1e-3,           # peak (cosine schedule "continues" v3.28's)
++        latent_lr_mult=10.0,
++        grad_clip=1.0,
++        seg_weight=100.0,
++        pose_weight=1.0,
++        cat_lambda=0.0,
++        cat_sigma=0.2,
++        use_qat=False,
++        resume_from=resume_from,
++        output_dir=output_dir,
++    )
+diff --git a/submissions/hnerv_muon/src/stages/stage3_v332_smooth.py b/submissions/hnerv_muon/src/stages/stage3_v332_smooth.py
+new file mode 100644
+index 0000000..fa03fd2
+--- /dev/null
++++ b/submissions/hnerv_muon/src/stages/stage3_v332_smooth.py
+@@ -0,0 +1,36 @@
++"""Stage 3: v3.32 smooth disagreement — switch Softplus → sigmoid(-margin/tau).
++
++Source: Stage 2 output (e2ev331_ep8650).
++Loss: smooth_disagreement_seg (sigmoid bell-curve, peaks at margin=0).
++Optimizer: AdamW with **fresh cosine schedule** at peak_lr=1e-4 (NOT continuing
++prior schedule).
++
++1500 epochs. Encoded for reproducibility — not re-run.
++"""
++from pathlib import Path
++
++from .common import StageConfig, train_stage
++from losses import smooth_disagreement_seg_loss
++
++
++def make_config(resume_from: Path, output_dir: Path, epochs: int = 1500) -> StageConfig:
++    return StageConfig(
++        name="stage3_v332_smooth",
++        seg_loss_fn=lambda logits, targets: smooth_disagreement_seg_loss(
++            logits, targets, tau=0.3),
++        epochs=epochs,
++        eval_every=25,
++        batch_size=8,
++        ema_decay=0.999,
++        use_muon=False,
++        adamw_lr=1e-4,           # ← fresh cosine peak, lower than v3.28
++        latent_lr_mult=10.0,
++        grad_clip=1.0,
++        seg_weight=100.0,
++        pose_weight=1.0,
++        cat_lambda=0.0,
++        cat_sigma=0.2,
++        use_qat=False,           # QAT joins in Stage 4
++        resume_from=resume_from,
++        output_dir=output_dir,
++    )
+diff --git a/submissions/hnerv_muon/src/stages/stage4_v332_qat.py b/submissions/hnerv_muon/src/stages/stage4_v332_qat.py
+new file mode 100644
+index 0000000..83c7720
+--- /dev/null
++++ b/submissions/hnerv_muon/src/stages/stage4_v332_qat.py
+@@ -0,0 +1,38 @@
++"""Stage 4: v3.32 + QAT — same loss as Stage 3, INT8 fake-quant joins in forward.
++
++Source: Stage 3 output (e2ev332_ep10150).
++Loss: smooth_disagreement_seg (unchanged from Stage 3).
++Optimizer: AdamW continuing fresh cosine from Stage 3.
++
++500 epochs. Output canonical: `e2ev332_ep10650` (saved as
++`e2ev332_d28_c36_e10650_bs8_ep10200`). This is the input for Stage 5.
++
++Encoded for reproducibility — not re-run.
++"""
++from pathlib import Path
++
++from .common import StageConfig, train_stage
++from losses import smooth_disagreement_seg_loss
++
++
++def make_config(resume_from: Path, output_dir: Path, epochs: int = 500) -> StageConfig:
++    return StageConfig(
++        name="stage4_v332_qat",
++        seg_loss_fn=lambda logits, targets: smooth_disagreement_seg_loss(
++            logits, targets, tau=0.3),
++        epochs=epochs,
++        eval_every=25,
++        batch_size=8,
++        ema_decay=0.999,
++        use_muon=False,
++        adamw_lr=1e-4,           # continues Stage 3
++        latent_lr_mult=10.0,
++        grad_clip=1.0,
++        seg_weight=100.0,
++        pose_weight=1.0,
++        cat_lambda=0.0,
++        cat_sigma=0.2,
++        use_qat=True,            # ← QAT joins
++        resume_from=resume_from,
++        output_dir=output_dir,
++    )
+diff --git a/submissions/hnerv_muon/src/stages/stage5_c1a_l7.py b/submissions/hnerv_muon/src/stages/stage5_c1a_l7.py
+new file mode 100644
+index 0000000..7158bf5
+--- /dev/null
++++ b/submissions/hnerv_muon/src/stages/stage5_c1a_l7.py
+@@ -0,0 +1,40 @@
++"""Stage 5: c1a_l7_combined — adds L7-weighted Softplus seg + C1a entropy regularizer.
++
++Source: `e2ev332_ep10200` (saved Stage 4 output).
++Output canonical: `c1a_l7_ep2075` at score 0.2071.
++
++Loss change: Stage 4's smooth-disagreement seg → L7-weighted Softplus seg
++(weights = 1 + 4·𝟙[margin<1]) + C1a entropy regularizer (cat_entropy_v2,
++sigma=0.2, lambda=0.01). QAT remains active (inherited from Stage 4).
++
++Optimizer: AdamW only. LR = 3e-5 cosine.
++
++Default canonical: 6000 epochs. Our extension: 9000 epochs.
++"""
++from pathlib import Path
++
++from .common import StageConfig, train_stage
++from losses import l7_softplus_seg_loss
++
++
++def make_config(resume_from: Path, output_dir: Path, epochs: int = 9000) -> StageConfig:
++    return StageConfig(
++        name="stage5_c1a_l7",
++        seg_loss_fn=lambda logits, targets: l7_softplus_seg_loss(
++            logits, targets, tau=0.3, l7_threshold=1.0, l7_mult=4.0),
++        epochs=epochs,
++        eval_every=25,
++        batch_size=8,
++        ema_decay=0.999,
++        use_muon=False,
++        adamw_lr=3e-5,
++        latent_lr_mult=10.0,
++        grad_clip=1.0,
++        seg_weight=100.0,
++        pose_weight=1.0,
++        cat_lambda=0.01,    # canonical
++        cat_sigma=0.2,      # canonical
++        use_qat=True,
++        resume_from=resume_from,
++        output_dir=output_dir,
++    )
+diff --git a/submissions/hnerv_muon/src/stages/stage6_lambda_sweep.py b/submissions/hnerv_muon/src/stages/stage6_lambda_sweep.py
+new file mode 100644
+index 0000000..3cf2f94
+--- /dev/null
++++ b/submissions/hnerv_muon/src/stages/stage6_lambda_sweep.py
+@@ -0,0 +1,39 @@
++"""Stage 6: lambda_sweep λ=0.02 branch — tightens C1a regularization.
++
++Source: Stage 5 output (canonical: c1a_l7_ep2075).
++Output canonical: `lambda_0.02_ep475` at score 0.2054.
++
++Same loss as Stage 5 (L7 Softplus + C1a + QAT) but with C1a lambda 0.01 → 0.02.
++Sigma stays at 0.2.
++
++Optimizer: AdamW only. LR = 3e-5 cosine.
++
++Default canonical: 1000 epochs. Our extension: 2000 epochs.
++"""
++from pathlib import Path
++
++from .common import StageConfig, train_stage
++from losses import l7_softplus_seg_loss
++
++
++def make_config(resume_from: Path, output_dir: Path, epochs: int = 2000) -> StageConfig:
++    return StageConfig(
++        name="stage6_lambda_sweep",
++        seg_loss_fn=lambda logits, targets: l7_softplus_seg_loss(
++            logits, targets, tau=0.3, l7_threshold=1.0, l7_mult=4.0),
++        epochs=epochs,
++        eval_every=25,
++        batch_size=8,
++        ema_decay=0.999,
++        use_muon=False,
++        adamw_lr=3e-5,
++        latent_lr_mult=10.0,
++        grad_clip=1.0,
++        seg_weight=100.0,
++        pose_weight=1.0,
++        cat_lambda=0.02,    # ← Stage 6's change vs Stage 5
++        cat_sigma=0.2,
++        use_qat=True,
++        resume_from=resume_from,
++        output_dir=output_dir,
++    )
+diff --git a/submissions/hnerv_muon/src/stages/stage7_sigma_sweep.py b/submissions/hnerv_muon/src/stages/stage7_sigma_sweep.py
+new file mode 100644
+index 0000000..02efc39
+--- /dev/null
++++ b/submissions/hnerv_muon/src/stages/stage7_sigma_sweep.py
+@@ -0,0 +1,39 @@
++"""Stage 7: suite_9 exp4_sigma01 — sharpens C1a sigma 0.2 → 0.1.
++
++Source: Stage 6 output (canonical: lambda_0.02_ep475).
++Output canonical: `exp4_sigma01_ep975` at score 0.2042.
++
++Same loss as Stage 6 except C1a sigma changes from 0.2 to 0.1, making
++the soft histogram entropy more peaked around integer grid points.
++
++Optimizer: AdamW only. LR = 3e-5 cosine.
++
++Default canonical: 2000 epochs. Our extension: 3000 epochs.
++"""
++from pathlib import Path
++
++from .common import StageConfig, train_stage
++from losses import l7_softplus_seg_loss
++
++
++def make_config(resume_from: Path, output_dir: Path, epochs: int = 3000) -> StageConfig:
++    return StageConfig(
++        name="stage7_sigma_sweep",
++        seg_loss_fn=lambda logits, targets: l7_softplus_seg_loss(
++            logits, targets, tau=0.3, l7_threshold=1.0, l7_mult=4.0),
++        epochs=epochs,
++        eval_every=25,
++        batch_size=8,
++        ema_decay=0.999,
++        use_muon=False,
++        adamw_lr=3e-5,
++        latent_lr_mult=10.0,
++        grad_clip=1.0,
++        seg_weight=100.0,
++        pose_weight=1.0,
++        cat_lambda=0.02,
++        cat_sigma=0.1,      # ← Stage 7's change vs Stage 6 (was 0.2)
++        use_qat=True,
++        resume_from=resume_from,
++        output_dir=output_dir,
++    )
+diff --git a/submissions/hnerv_muon/src/stages/stage8_muon_finetune.py b/submissions/hnerv_muon/src/stages/stage8_muon_finetune.py
+new file mode 100644
+index 0000000..4aa6921
+--- /dev/null
++++ b/submissions/hnerv_muon/src/stages/stage8_muon_finetune.py
+@@ -0,0 +1,48 @@
++"""Stage 8: muon_finetune — switches optimizer to Muon (hidden convs) + AdamW (rest).
++
++Source: Stage 7 output (canonical: exp4_sigma01_ep975, 0.2042).
++Output canonical: `muon_ep250` at score 0.2009.
++
++Same loss as Stage 7 (L7 Softplus + C1a@σ=0.1,λ=0.02 + QAT). Optimizer
++changes: Muon on hidden Conv2d weights (11 tensors, ~177K params),
++AdamW on stem Linear, RGB heads, biases, latents (~52K decoder + 16K latent).
++
++LR drops dramatically: ADAMW_LR = 1e-5 (was 3e-5), MUON_LR = 2e-4 (new).
++
++Researcher #24 tweak applied: Muon weight_decay = 5e-4 (not in canonical).
++Theoretical justification: Chen-Li-Liu arXiv:2506.15054 — Muon's spectral-norm
++KKT mechanism requires WD to be active.
++
++Default canonical: 3000 epochs. Our extension: 5000 epochs.
++"""
++from pathlib import Path
++
++from .common import StageConfig, train_stage
++from losses import l7_softplus_seg_loss
++
++
++def make_config(resume_from: Path, output_dir: Path, epochs: int = 5000,
++                muon_weight_decay: float = 5e-4) -> StageConfig:
++    return StageConfig(
++        name="stage8_muon_finetune",
++        seg_loss_fn=lambda logits, targets: l7_softplus_seg_loss(
++            logits, targets, tau=0.3, l7_threshold=1.0, l7_mult=4.0),
++        epochs=epochs,
++        eval_every=25,
++        batch_size=8,
++        ema_decay=0.999,
++        use_muon=True,                 # ← optimizer switch
++        adamw_lr=1e-5,                 # canonical
++        muon_lr=2e-4,                  # canonical
++        muon_weight_decay=muon_weight_decay,  # researcher #24 idea 1
++        latent_lr_mult=10.0,
++        grad_clip=1.0,
++        grad_clip_muon=1.0,            # canonical kept (researcher #24 idea 3 was SKIPPED)
++        seg_weight=100.0,
++        pose_weight=1.0,
++        cat_lambda=0.02,
++        cat_sigma=0.1,
++        use_qat=True,
++        resume_from=resume_from,
++        output_dir=output_dir,
++    )
+diff --git a/submissions/hnerv_muon/src/train.py b/submissions/hnerv_muon/src/train.py
+new file mode 100644
+index 0000000..ceda89f
+--- /dev/null
++++ b/submissions/hnerv_muon/src/train.py
+@@ -0,0 +1,78 @@
++"""Run the 8-stage training curriculum from random init, then build the archive.
++
++Usage:
++  python -m submissions.hnerv_muon.src.train
++
++~50 hours on a single GPU. No resume / no mid-pipeline shortcuts — this script
++is the deterministic, from-scratch reproduction path.
++"""
++from __future__ import annotations
++
++import os
++import sys
++import time
++from datetime import datetime
++from pathlib import Path
++
++os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
++
++HERE = Path(__file__).resolve()
++sys.path.insert(0, str(HERE.parent))
++
++import torch
++
++from data import get_default_video_path
++from stages.common import train_stage
++from stages import (
++    stage1_v328_ce,
++    stage2_v331_softplus,
++    stage3_v332_smooth,
++    stage4_v332_qat,
++    stage5_c1a_l7,
++    stage6_lambda_sweep,
++    stage7_sigma_sweep,
++    stage8_muon_finetune,
++    codec_stage,
++)
++
++
++def main():
++    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
++    out_root = HERE.parent.parent / "ckpts" / f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
++    out_root.mkdir(parents=True, exist_ok=True)
++    print(f"Output root: {out_root}", flush=True)
++
++    video_path = get_default_video_path()
++    shared_state = {}
++    t0 = time.time()
++
++    prev = None
++    builders = [
++        stage1_v328_ce.make_config,
++        stage2_v331_softplus.make_config,
++        stage3_v332_smooth.make_config,
++        stage4_v332_qat.make_config,
++        stage5_c1a_l7.make_config,
++        stage6_lambda_sweep.make_config,
++        stage7_sigma_sweep.make_config,
++        stage8_muon_finetune.make_config,
++    ]
++    for i, build in enumerate(builders, start=1):
++        stage_out = out_root / f"stage{i}"
++        cfg = build(stage_out) if i == 1 else build(prev, stage_out)
++        result = train_stage(cfg, device, video_path=video_path,
++                             shared_state=shared_state)
++        print(f"[Stage {i}] best={result['best_score']:.4f} at ep{result['best_ep']} "
++              f"(archive {result['archive_size']:,} bytes)", flush=True)
++        prev = stage_out
++
++    codec_out = out_root / "submission_archive"
++    print(f"\n[codec] re-encoding from {prev}", flush=True)
++    r = codec_stage.run_codec_stage(prev, codec_out, video_path)
++    print(f"[codec] archive bytes: {r['final_archive_bytes']:,}", flush=True)
++    print(f"\nTotal wallclock: {(time.time() - t0) / 3600:.1f} hr", flush=True)
++    print(f"Final archive: {codec_out / '0.bin'}", flush=True)
++
++
++if __name__ == "__main__":
++    main()

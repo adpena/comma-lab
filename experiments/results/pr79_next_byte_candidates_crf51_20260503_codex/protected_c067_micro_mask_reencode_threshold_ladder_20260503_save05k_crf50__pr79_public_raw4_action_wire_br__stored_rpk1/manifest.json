@@ -1,0 +1,202 @@
+{
+  "action_wire": {
+    "action_id": "pr79_public_raw4_action_wire_br",
+    "compatibility_reason": "Brotli action wire decodes to direct inflate-loader-compatible records",
+    "decoded_semantics_equal_pr79": true,
+    "direct_inflate_loader_compatible": true,
+    "member_name": "seg_tile_actions.br",
+    "runtime_raw_bytes": 1451,
+    "runtime_raw_sha256": "700d1ba2e11cf2c9a7729a473c0c56d374447aa7bbbbb833abb70f0ceee75f9a",
+    "source_archive_sha256": "01dc02badf851d99108fd92c570271f36f74cc5424c6d2a8f1b499cb4d1c3446",
+    "source_label": "pr79_public",
+    "source_payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+    "wire_bytes": 1162,
+    "wire_sha256": "3fdf6320b77685606283438e1a9bea4df3c83ecb525deb4750dade60c8e7dbdc"
+  },
+  "candidate": {
+    "archive_bytes": 297533,
+    "archive_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50__pr79_public_raw4_action_wire_br__stored_rpk1/archive.zip",
+    "archive_sha256": "bd314f1a36bc6f43cee18aec4b1b2f090e3eb8a1c44055b51b57b9733ca2dc71",
+    "candidate_family": "stored_rpk1",
+    "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50__pr79_public_raw4_action_wire_br__stored_rpk1",
+    "changed_members": {
+      "changed_vs_pr79_decoded": [
+        "masks.mkv"
+      ],
+      "preserved_renderer_and_pose": true,
+      "semantic_equalities_vs_pr79": {
+        "masks.mkv": false,
+        "optimized_poses.qp1": true,
+        "renderer.bin": true,
+        "seg_tile_actions": true
+      }
+    },
+    "delta_bytes_vs_current_s2_frontier": 20212,
+    "dispatchability": {
+      "exact_screen_dispatchable_after_lane_claim": true,
+      "lane_claim_required_before_dispatch": true,
+      "reason": "local byte-closed candidate preserves renderer/pose and passes direct action-loader checks",
+      "remote_dispatch_performed": false,
+      "required_exact_gate": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+      "source_mask_body_exact_eval_ready_after_lane_claim": false
+    },
+    "manifest_path": "experiments/results/pr79_next_byte_candidates_crf51_20260503_codex/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50__pr79_public_raw4_action_wire_br__stored_rpk1/manifest.json",
+    "no_op_detection": {
+      "archive_sha_equal_to_pr79": false,
+      "decoded_members_equal_to_pr79": false,
+      "payload_sha_equal_to_pr79": false,
+      "status": "non_noop_changed_masks.mkv"
+    },
+    "score_claim": false,
+    "score_estimate_vs_current_s2_frontier": {
+      "anchor": {
+        "archive_bytes": 277321,
+        "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+        "score": 0.31453355357318635,
+        "score_source": "exact Tesla T4 auth eval, harvested canonical JSON; not rerun by this tool"
+      },
+      "candidate_delta_bytes_vs_s2_frontier": 20212,
+      "rate_score_delta_vs_s2_frontier": 0.013458341160505328,
+      "score_claim": false,
+      "score_if_components_unchanged_vs_current_s2_frontier": 0.32799189473369167,
+      "unchanged_component_estimate_only": true
+    }
+  },
+  "canonical_score_source_required": "No remote dispatch from this worker. Before any exact CUDA eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run the identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda.",
+  "evidence_grade": "empirical_local_byte_screen_only",
+  "manifest_schema": "pr79_next_byte_candidate_manifest_v1",
+  "mask_candidate": {
+    "archive_bytes": 299060,
+    "archive_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50/archive.zip",
+    "archive_sha256": "35225daed676e053bde7e600d8e57e4d907713d0faf34a7962dd0fba2503866f",
+    "candidate_id": "protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50",
+    "exact_eval_ready_after_lane_claim": false,
+    "manifest_path": "experiments/results/pr79_mask_body_reduction_20260503_worker/protected_c067_micro_mask_reencode_threshold_ladder_20260503_save05k_crf50/manifest.json",
+    "mask_bytes": 235178,
+    "mask_crf": 50,
+    "mask_sha256": "c8fd0030db7b6cc18594ab0ae262bb97fce8de30b38c662872e925cc4e525354",
+    "plausibility_gate": {
+      "minimum_overall_argmax_agreement": 0.997,
+      "minimum_protected_argmax_agreement": 0.99,
+      "overall_argmax_agreement": 0.997740325928,
+      "passed": true,
+      "protected_argmax_agreement": 0.994012498182,
+      "reason": "protected-mask candidate clears local plausibility agreement thresholds"
+    },
+    "runtime_preflight": {
+      "archive_validation_errors": [],
+      "candidate_mask_decoded_sha256": "c8fd0030db7b6cc18594ab0ae262bb97fce8de30b38c662872e925cc4e525354",
+      "candidate_mask_sha_matches_expected": true,
+      "non_mask_runtime_member_checks": {
+        "actions_decoded_preserved": true,
+        "pose_decoded_preserved": true,
+        "renderer_decoded_preserved": true
+      },
+      "non_mask_runtime_members_preserved": true,
+      "payload_format": null,
+      "runtime_member_headers": {
+        "masks.mkv": {
+          "bytes": 235178,
+          "codec": "raw",
+          "decoded_bytes": null,
+          "decoded_sha256": null,
+          "sha256": "c8fd0030db7b6cc18594ab0ae262bb97fce8de30b38c662872e925cc4e525354"
+        },
+        "optimized_poses.qp1": {
+          "bytes": 1140,
+          "codec": "raw",
+          "decoded_bytes": null,
+          "decoded_sha256": null,
+          "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+        },
+        "renderer.bin": {
+          "bytes": 59288,
+          "codec": "raw",
+          "decoded_bytes": null,
+          "decoded_sha256": null,
+          "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 2688,
+          "codec": "raw",
+          "decoded_bytes": null,
+          "decoded_sha256": null,
+          "sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f"
+        }
+      },
+      "runtime_parser": "submissions/robust_current/unpack_renderer_payload.py",
+      "runtime_parser_ok": true
+    },
+    "source_manifest_sha256": "f9e5df4f00444a0497d47fdf492f72c45e9d23e7414764f1c5e133c42270ec64"
+  },
+  "no_remote_dispatch_performed": true,
+  "payload_member": {
+    "bytes": 297433,
+    "decode_for_parse_sha256": "c8581cc66c7cf1e990897b9be8dbb03e8ce2ebf72905f661664beb012fe37ec7",
+    "sha256": "c8581cc66c7cf1e990897b9be8dbb03e8ce2ebf72905f661664beb012fe37ec7",
+    "top_level_brotli": false
+  },
+  "runtime_parse_validation": {
+    "action_loader": {
+      "compatible": true,
+      "reason": "direct action payload validates for inflate action loading",
+      "source_name": "seg_tile_actions.br",
+      "validation": {
+        "action_count": 108,
+        "encoding": "SG2",
+        "record_count": 672,
+        "record_size": 4,
+        "source_name": "seg_tile_actions.bin",
+        "tile_size": 32
+      }
+    },
+    "action_semantics_parity": {
+      "equal_pr79_decoded_actions": true,
+      "semantics_sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f"
+    },
+    "members": {
+      "masks.mkv": {
+        "bytes": 235178,
+        "sha256": "c8fd0030db7b6cc18594ab0ae262bb97fce8de30b38c662872e925cc4e525354"
+      },
+      "optimized_poses.qp1": {
+        "bytes": 1140,
+        "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+      },
+      "renderer.bin": {
+        "bytes": 59288,
+        "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+      },
+      "seg_tile_actions.br": {
+        "bytes": 1162,
+        "sha256": "3fdf6320b77685606283438e1a9bea4df3c83ecb525deb4750dade60c8e7dbdc"
+      }
+    },
+    "payload_format": null,
+    "runtime_parser": "submissions/robust_current/unpack_renderer_payload.py"
+  },
+  "score_claim": false,
+  "source_pr79": {
+    "archive_bytes": 277388,
+    "archive_path": "experiments/results/top_submission_reverse_engineering_20260503_pr79/archive.zip",
+    "archive_sha256": "01dc02badf851d99108fd92c570271f36f74cc5424c6d2a8f1b499cb4d1c3446",
+    "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices"
+  },
+  "tool": "experiments/build_pr79_next_byte_candidates.py",
+  "zip_profile": {
+    "archive_bytes": 297533,
+    "archive_sha256": "bd314f1a36bc6f43cee18aec4b1b2f090e3eb8a1c44055b51b57b9733ca2dc71",
+    "deterministic_rebuild_equal": true,
+    "deterministic_rebuild_sha256": "bd314f1a36bc6f43cee18aec4b1b2f090e3eb8a1c44055b51b57b9733ca2dc71",
+    "single_stored_p": true,
+    "zip_member": "p",
+    "zip_timestamp": [
+      1980,
+      1,
+      1,
+      0,
+      0,
+      0
+    ]
+  }
+}

@@ -1,0 +1,123 @@
+{
+  "archive_delta_bytes_vs_anchor": 85,
+  "candidate_id": "anchor_zip_deflate_payload_identical_negative",
+  "canonical_score_source_required": "No score claim: exact CUDA auth eval on the exact archive bytes is required via archive.zip -> inflate.sh -> upstream/evaluate.py, preferably experiments/contest_auth_eval.py --device cuda, after a dispatch claim.",
+  "changed_payload_members": [],
+  "dispatch_status": "do_not_dispatch_byte_regression",
+  "evidence_grade": "empirical_local_byte_screen",
+  "formula_only": {
+    "bytes_needed_for_sub314_at_candidate_components": 1836,
+    "rate_score_delta_vs_anchor": 5.659801101538457e-05,
+    "score_if_components_unchanged": 0.31522234829387513,
+    "target_score": 0.314
+  },
+  "next_gate": "none; ZIP deflate is larger on this payload",
+  "noop": false,
+  "notes": [
+    "ZIP_DEFLATED extraction returns the exact anchor p payload.",
+    "Outer ZIP deflate is a byte regression for the already-Brotli fixed-slice payload."
+  ],
+  "output_archive": {
+    "bytes": 276566,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lossless_byte_squeeze_worker_20260503/anchor_zip_deflate_payload_identical_negative/archive.zip",
+    "sha256": "c8e57bc8187ee506d4ac3b3c71d7ad728d2d1dd1871e4e370a8e3dfd46e6038e",
+    "zip_compress_type": 8,
+    "zip_compresslevel": 1
+  },
+  "payload": {
+    "bytes": 276381,
+    "extracted_payload_sha256": "f78c71d3086773e417c672734082a49ceb0ef5a0016cf406a920be7978fff252",
+    "member": "p",
+    "payload_identical_to_anchor": true
+  },
+  "promotion_eligible": false,
+  "runtime_parse_validation": {
+    "changed_decoded_members_vs_anchor": [],
+    "decoded_members": {
+      "masks.mkv": {
+        "candidate_bytes": 223385,
+        "candidate_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "changed_vs_source": false,
+        "source_bytes": 223385,
+        "source_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      "optimized_poses.qp1": {
+        "candidate_bytes": 1140,
+        "candidate_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+        "changed_vs_source": false,
+        "source_bytes": 1140,
+        "source_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+      },
+      "renderer.bin": {
+        "candidate_bytes": 59288,
+        "candidate_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+        "changed_vs_source": false,
+        "source_bytes": 59288,
+        "source_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+      },
+      "seg_tile_actions.bin": {
+        "candidate_bytes": 432,
+        "candidate_sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a",
+        "changed_vs_source": false,
+        "source_bytes": 432,
+        "source_sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a"
+      }
+    },
+    "decoded_stream_parity_vs_anchor": true,
+    "members": {
+      "masks.mkv": {
+        "bytes": 219472,
+        "codec": "brotli_av1_obu",
+        "decoded_bytes": 223385,
+        "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+      },
+      "optimized_poses.qp1": {
+        "bytes": 898,
+        "codec": "public_qp1_brotli",
+        "decoded_bytes": 1140,
+        "decoded_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+        "sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082"
+      },
+      "renderer.bin": {
+        "bytes": 55756,
+        "codec": "brotli_qzs3",
+        "decoded_bytes": 59288,
+        "decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+        "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 255,
+        "codec": "brotli_seg_tile_actions_v1",
+        "decoded_bytes": 432,
+        "decoded_sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a",
+        "sha256": "e2f8a113ee9e4d009448fec2497602ef67cabb8a13ef8d3fa9e11d69ff8ceed6"
+      }
+    },
+    "p_member_encoding": "raw_p_member",
+    "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+    "status": "passed"
+  },
+  "score_claim": false,
+  "semantic_contract": "zip_deflate_payload_identical_negative_probe",
+  "source_anchor": {
+    "bytes": 276481,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_pr75_minp_public_replay_t4_20260503T1049Z/archive.zip",
+    "score": 0.31516575028285976,
+    "sha256": "03a2afd5fe92c93a9b7b7e43625158a73b455f0cfbca82d278008a728db78746"
+  },
+  "stream_packing": {
+    "zip_wrapper_screen": {
+      "best_raw_deflate_estimate": {
+        "archive_bytes_estimate": 276511,
+        "compressed_bytes": 276411,
+        "level": 0,
+        "sha256": "73439d3d0c81fa7c201f2cabf22978280dfbf44ec448c27620d3714529cb8cd7",
+        "strategy": "DEFAULT"
+      },
+      "source_archive_bytes": 276481
+    }
+  },
+  "tool": "experiments/build_lossless_byte_squeeze_worker_20260503.py",
+  "zip_extract_payload_match": true
+}

@@ -1,0 +1,121 @@
+{
+  "candidate": {
+    "archive_bytes": 237852,
+    "archive_delta_bytes_vs_source": 1524,
+    "archive_path": "experiments/results/pr85_qh1_model_candidates_20260504_codex/qh1_top8_minsaving16/archive.zip",
+    "archive_sha256": "14a1321a0b3b54cf160cb9676f5ce01f074b2007d1997bdb7261630173ecf2c5",
+    "candidate_id": "qh1_top8_minsaving16",
+    "model_segment_bytes": 58598,
+    "model_segment_delta_bytes_vs_source": 1524,
+    "qh1": {
+      "base_codec": "brotli",
+      "base_encoded_bytes": 38624,
+      "header_bytes": 2922,
+      "qh1_bytes": 60436,
+      "qh1_sha256": "5ee2412257274fe3e0e3f2434aac754c8cce73e0d356719ac77d93ada403412e",
+      "reconstructs_exact_qh0": true,
+      "selected_record_count": 8,
+      "selected_records": [
+        {
+          "codec": "brotli",
+          "decoded_sha256": "9624f3afe25158283d16e0bc10f0bb0a37e60254769994f1e362400d39019fec",
+          "encoded_bytes": 3878,
+          "encoded_sha256": "da71a4f21ce0b1dd01d8d93c0049e923f9dbbc1dfaa39d0e6d6b8fd7887e758c",
+          "name": "pose_mlp.2.weight",
+          "nbytes": 4609,
+          "offset": 48830,
+          "source_probe_delta_vs_record_bytes": -731
+        },
+        {
+          "codec": "brotli",
+          "decoded_sha256": "237e925322bbd47c1008564a22f47110f68262708a8e054ec0a1826f48492372",
+          "encoded_bytes": 261,
+          "encoded_sha256": "a24e28a0e5c752d65a40ad39b2992089427042c415d7bcc0ae56274d10bb55d9",
+          "name": "pose_mlp.0.weight",
+          "nbytes": 577,
+          "offset": 48156,
+          "source_probe_delta_vs_record_bytes": -316
+        },
+        {
+          "codec": "brotli",
+          "decoded_sha256": "bb1dc622dd9b420fedd101f9548fd9db1c87e7d42f011cfc565e78f3866bddbf",
+          "encoded_bytes": 3397,
+          "encoded_sha256": "82d0f8ac54f51f662a1c08c7f82f13dc5ea476d85fd39a6f9322123dbf04cded",
+          "name": "shared_trunk.fuse.pw.weight",
+          "nbytes": 3529,
+          "offset": 15797,
+          "source_probe_delta_vs_record_bytes": -132
+        },
+        {
+          "codec": "brotli",
+          "decoded_sha256": "7013ea93e4d7fd07cdd7204d83508a34257c577bcbad707054c387b784edf433",
+          "encoded_bytes": 5533,
+          "encoded_sha256": "87a1eac52b4a6427271fdbdf7eea228b56e8278b17329ecddb6b6c20fd7b26cf",
+          "name": "frame1_head.block1.film_proj.weight",
+          "nbytes": 5601,
+          "offset": 53988,
+          "source_probe_delta_vs_record_bytes": -68
+        },
+        {
+          "codec": "brotli",
+          "decoded_sha256": "89e82367b2f1c91326e645d2322080c8d81421d8a3c585847f5295a27b162a71",
+          "encoded_bytes": 1723,
+          "encoded_sha256": "7a47b50a4456c612c49e23312a7fa8498c1bb0c3a7cec06255bb10db396afb98",
+          "name": "shared_trunk.stem_block.conv1.pw.weight",
+          "nbytes": 1765,
+          "offset": 773,
+          "source_probe_delta_vs_record_bytes": -42
+        },
+        {
+          "codec": "brotli",
+          "decoded_sha256": "86de59b29e1116af5424ab0d7bf1c63b12f24452a895affd3372b8411d73ffa9",
+          "encoded_bytes": 2267,
+          "encoded_sha256": "b18901cfe577a6a637009b3047d5cdbd77e7e9cdca46ab63e024b083e7ff2242",
+          "name": "shared_trunk.down_block.conv1.pw.weight",
+          "nbytes": 2305,
+          "offset": 7575,
+          "source_probe_delta_vs_record_bytes": -38
+        },
+        {
+          "codec": "zlib",
+          "decoded_sha256": "7bb627836d2ee444350b1ae516d48ff1703e42d476092e66f38a485eb7813dc5",
+          "encoded_bytes": 93,
+          "encoded_sha256": "28e73e87ab9b8ea9469481fbdb0ef5db12bf08f4891333d25c354519cae37835",
+          "name": "shared_trunk.down_block.conv1.norm.weight",
+          "nbytes": 129,
+          "offset": 46736,
+          "source_probe_delta_vs_record_bytes": -36
+        },
+        {
+          "codec": "brotli",
+          "decoded_sha256": "a3d1cffc63543c01275ce7fcb3dbaaeba53ac150bd0b93b39aa306eb81b29b9e",
+          "encoded_bytes": 1731,
+          "encoded_sha256": "47a964ec81547fcedece7469574150f04f7f99c1e78dd71bac6afaf2511ed9a5",
+          "name": "frame1_head.block1.conv2.pw.weight",
+          "nbytes": 1765,
+          "offset": 26225,
+          "source_probe_delta_vs_record_bytes": -34
+        }
+      ],
+      "source_qh0_bytes": 61590,
+      "source_qh0_sha256": "503d666ec4c1b3e0ce09fa9dcb963b049de185eac0ddd82318578a7732439ed4"
+    },
+    "rate_score_delta_if_components_identical_formula_only": 0.0010147690445581892,
+    "runtime_compatibility": {
+      "blocker": "QH1 single-x candidate needs a scored runtime tree that parses PR85 x and QH1; byte screen only.",
+      "current_public_pr85_inflate_unmodified": false,
+      "dispatchable_now": false,
+      "robust_current_qh1_loader": true,
+      "single_x_requires_qh1_aware_pr85_runtime": true
+    }
+  },
+  "schema": "pr85_qh1_model_candidate_v1",
+  "source_archive": {
+    "archive_bytes": 236328,
+    "archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+    "member_bytes": 236228,
+    "member_name": "x",
+    "member_sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+    "path": "experiments/results/public_pr85_intake_20260503_codex/archive.zip"
+  }
+}

@@ -1,0 +1,168 @@
+{
+  "archive_delta_bytes_vs_source": -9,
+  "candidate_id": "c089_p6_lossless_resweep",
+  "decoded_stream_parity": true,
+  "decoded_stream_parity_detail": {
+    "candidate_runtime_members": {
+      "masks.mkv": {
+        "bytes": 219465,
+        "codec": "brotli_av1_obu",
+        "decoded_bytes": 223385,
+        "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "sha256": "1ddf03dad8466797397ead26a0d481766e22e26cbc936251c1e3ed5d2f6eda99"
+      },
+      "optimized_poses.qp1": {
+        "bytes": 676,
+        "codec": "public_qp1_brotli",
+        "decoded_bytes": 1140,
+        "decoded_sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583",
+        "sha256": "61732151609c5decd72a3ac2254e9ac2258dae2846464eaeb14b5ef0a32d86f5"
+      },
+      "renderer.bin": {
+        "bytes": 55965,
+        "codec": "brotli_qzs3",
+        "decoded_bytes": 59288,
+        "decoded_sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb",
+        "sha256": "2544dfe50d2631a56600cbfc7342e4a18c97f953526fc51425be0d62f97e22ad"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 115,
+        "codec": "brotli_seg_tile_actions_delta_varint_v1",
+        "decoded_bytes": 160,
+        "decoded_sha256": "50e997db4fd1b7642d9a2cd67b55802a4f7f9bd7a6603d0ca2eaf42e7fe7e320",
+        "sha256": "72a9444d03990e04c5a38832a7e5564beb60ad190fc0d8a2238a609d3cdaf70f"
+      }
+    },
+    "members_compared": [
+      "masks.mkv",
+      "optimized_poses.qp1",
+      "renderer.bin",
+      "seg_tile_actions.bin"
+    ],
+    "source_decoded_members": {
+      "masks.mkv": {
+        "bytes": 223385,
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      "optimized_poses.qp1": {
+        "bytes": 1140,
+        "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+      },
+      "renderer.bin": {
+        "bytes": 59288,
+        "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 160,
+        "sha256": "50e997db4fd1b7642d9a2cd67b55802a4f7f9bd7a6603d0ca2eaf42e7fe7e320"
+      }
+    },
+    "status": "passed"
+  },
+  "evidence_grade": "empirical_lossless_byte_transform",
+  "formula_only_rate_score_delta_vs_source": -5.9927305780995425e-06,
+  "noop": false,
+  "output_archive": {
+    "bytes": 276333,
+    "path": "/Users/adpena/Projects/pact/experiments/results/pr75_qpost_microstack_worker_20260503/c089_p6_lossless_resweep/archive.zip",
+    "sha256": "3de0d1546c909404df2f9b40a9ab8218100be36650b6bfcb3132bac50400ec7f"
+  },
+  "payload": {
+    "bytes": 276233,
+    "format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+    "member": "p",
+    "sha256": "6c38275e16f5997a3f647bf54d96a0cc70e3a780bb4c1726f228545aece47a6d"
+  },
+  "runtime_parse_validation": {
+    "members": {
+      "masks.mkv": {
+        "bytes": 219465,
+        "codec": "brotli_av1_obu",
+        "decoded_bytes": 223385,
+        "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "sha256": "1ddf03dad8466797397ead26a0d481766e22e26cbc936251c1e3ed5d2f6eda99"
+      },
+      "optimized_poses.qp1": {
+        "bytes": 676,
+        "codec": "public_qp1_brotli",
+        "decoded_bytes": 1140,
+        "decoded_sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583",
+        "sha256": "61732151609c5decd72a3ac2254e9ac2258dae2846464eaeb14b5ef0a32d86f5"
+      },
+      "renderer.bin": {
+        "bytes": 55965,
+        "codec": "brotli_qzs3",
+        "decoded_bytes": 59288,
+        "decoded_sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb",
+        "sha256": "2544dfe50d2631a56600cbfc7342e4a18c97f953526fc51425be0d62f97e22ad"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 115,
+        "codec": "brotli_seg_tile_actions_delta_varint_v1",
+        "decoded_bytes": 160,
+        "decoded_sha256": "50e997db4fd1b7642d9a2cd67b55802a4f7f9bd7a6603d0ca2eaf42e7fe7e320",
+        "sha256": "72a9444d03990e04c5a38832a7e5564beb60ad190fc0d8a2238a609d3cdaf70f"
+      }
+    },
+    "parser": "/Users/adpena/Projects/pact/submissions/robust_current/unpack_renderer_payload.py",
+    "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint"
+  },
+  "schema_version": 1,
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 276342,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/archive.zip",
+    "sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8"
+  },
+  "source_payload": {
+    "bytes": 276242,
+    "format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+    "sha256": "fcc3fddb3a4182182bbfca1d1064544c87e58a5a9f76ea6fddfcfe4eb0b453c1"
+  },
+  "source_preservation": {
+    "candidate_payload_sha256": "6c38275e16f5997a3f647bf54d96a0cc70e3a780bb4c1726f228545aece47a6d",
+    "decoded_streams_byte_identical": true,
+    "payload_byte_identical_to_source": false,
+    "source_payload_sha256": "fcc3fddb3a4182182bbfca1d1064544c87e58a5a9f76ea6fddfcfe4eb0b453c1",
+    "status": "lossless_decoded_stream_preserving_repack"
+  },
+  "source_preserving": true,
+  "stream_choices": {
+    "masks.mkv": {
+      "bytes": 219465,
+      "params": {
+        "lgblock": 17,
+        "lgwin": 19,
+        "mode": 0,
+        "quality": 11
+      },
+      "sha256": "1ddf03dad8466797397ead26a0d481766e22e26cbc936251c1e3ed5d2f6eda99"
+    },
+    "optimized_poses.qp1": {
+      "bytes": 676,
+      "params": {
+        "lgblock": 0,
+        "lgwin": 16,
+        "mode": 0,
+        "quality": 11
+      },
+      "sha256": "61732151609c5decd72a3ac2254e9ac2258dae2846464eaeb14b5ef0a32d86f5"
+    },
+    "renderer.bin": {
+      "bytes": 55965,
+      "params": "source",
+      "sha256": "2544dfe50d2631a56600cbfc7342e4a18c97f953526fc51425be0d62f97e22ad"
+    },
+    "seg_tile_actions.delta_varint": {
+      "bytes": 115,
+      "params": {
+        "lgblock": 0,
+        "lgwin": 10,
+        "mode": 0,
+        "quality": 9
+      },
+      "sha256": "72a9444d03990e04c5a38832a7e5564beb60ad190fc0d8a2238a609d3cdaf70f"
+    }
+  },
+  "tool": "experiments/build_pr75_qpost_microstack_candidate.py"
+}

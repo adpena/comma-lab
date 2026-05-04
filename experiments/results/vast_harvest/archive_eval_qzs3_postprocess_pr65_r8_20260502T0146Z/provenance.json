@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "started_at_utc": "2026-05-02T01:49:36Z",
+  "git_hash": "no-git",
+  "gpu_name": "NVIDIA H100 NVL",
+  "driver_version": "580.82.07",
+  "lane_script": "scripts/remote_archive_only_eval.sh",
+  "tag": "archive_eval_qzs3_postprocess_pr65_r8_20260502T0146Z",
+  "archive_path": "/workspace/pact/experiments/results/qzs3_postprocess_sidecar_pr65_r8_20260502T0146Z_archive.zip",
+  "predicted_band": [0.285, 0.36],
+  "controlled_baseline": "qzs3_qp1_r8_t4 score 0.3159064496962538 bytes 276426 plus charged PR65 qpost sidecar",
+  "no_training": true,
+  "no_build": true,
+  "strict_scorer_rule_compliant": true,
+  "design_memo": "scripts/remote_archive_only_eval.sh"
+}

@@ -1,0 +1,38 @@
+{
+  "adjudication": {
+    "allow_component_gate_forensic_success": true,
+    "baseline_archive_size_bytes": 276347,
+    "baseline_posenet_dist": 0.00049637,
+    "baseline_score": 0.3157055307844823,
+    "baseline_segnet_dist": 0.00061244,
+    "component_reference_label": "C-059",
+    "delta_key": "score_delta_vs_c059_t4",
+    "max_posenet_dist": null,
+    "max_posenet_relative": 1.02,
+    "max_sane_score": 0.5,
+    "max_segnet_dist": null,
+    "max_segnet_relative": 1.01,
+    "predicted_band_high": 0.3157,
+    "predicted_band_low": 0.3148,
+    "provenance_name": "adjudication_provenance.json",
+    "regression_threshold": 0.316,
+    "required_device": "cuda",
+    "required_samples": 600,
+    "result_copy_name": "contest_auth_eval.adjudicated.json"
+  },
+  "artifact_recorded_at_utc": "2026-05-02T05:26:36Z",
+  "expected_archive_sha256": "877fc5ac13e9fbd5c4158a9c7fa9dec3354057522b086004a4a28c6822456fe8",
+  "expected_archive_size_bytes": 276423,
+  "job_name": "exact_eval_ls_c059_weighted_pairs_top32_t4_20260502T0509Z",
+  "queue_metadata": {
+    "baseline": "C-059",
+    "candidate": "weighted_pairs_top32",
+    "h100_score": "0.3151364334691563",
+    "inflate_torch": "torch==2.5.1+cu124",
+    "lane": "lane_line_search_pose_refinement"
+  },
+  "role": "exact_cuda_eval",
+  "schema_version": 1,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

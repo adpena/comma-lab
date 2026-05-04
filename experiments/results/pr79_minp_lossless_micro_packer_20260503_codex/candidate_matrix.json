@@ -1,0 +1,289 @@
+{
+  "baseline": {
+    "archive_bytes": 276342,
+    "archive_sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8",
+    "candidate_id": "C089/c067_pr75_qp1_top40_p6",
+    "canonical_score": 0.3154707273953505
+  },
+  "candidate_count": 10,
+  "candidates": [
+    {
+      "archive_bytes": 276124,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr79_minp_lossless_micro_packer_20260503_codex/public_renderer_c089_p6_lossless_stream_resweep/archive.zip",
+      "archive_sha256": "337b04040bee1316375bae8b2cfc2f08acddc235e4ee02d37ecfd62c0c831d95",
+      "candidate_id": "public_renderer_c089_p6_lossless_stream_resweep",
+      "delta_bytes_vs_c089": -218,
+      "dispatchable_after_gate": true,
+      "formula_only_rate_score_delta_vs_c089": -0.00014515725178063338,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr79_minp_lossless_micro_packer_20260503_codex/public_renderer_c089_p6_lossless_stream_resweep/manifest.json",
+      "next_dispatch_safety_gate": "run experiments/preflight_renderer_transplant_pose_safety.py against the exact C089 source archive SHA and candidate archive SHA; only dispatch if safe_for_exact_eval_dispatch=true, then claim lane and run exact CUDA auth eval",
+      "noop": false,
+      "noop_status": "non_noop_payload",
+      "parse_status": "passed",
+      "payload_bytes": 276024,
+      "score_claim": false,
+      "semantic_contract": "renderer_transplant_probe_public_renderer_only_c089_other_streams_byte_identical",
+      "source_preserving_vs_c089": false
+    },
+    {
+      "archive_bytes": 276321,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr79_minp_lossless_micro_packer_20260503_codex/c089_raw_no_header_fixedslice_probe/archive.zip",
+      "archive_sha256": "da92eea8b59ba1e377bc83bdc5483abd9d89bd6393783338e51b0da718230bd4",
+      "candidate_id": "c089_raw_no_header_fixedslice_probe",
+      "delta_bytes_vs_c089": -21,
+      "dispatchable_after_gate": false,
+      "formula_only_rate_score_delta_vs_c089": -1.39830380155656e-05,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr79_minp_lossless_micro_packer_20260503_codex/c089_raw_no_header_fixedslice_probe/manifest.json",
+      "next_dispatch_safety_gate": "non-dispatchable byte probe; requires runtime support and tests before any exact eval",
+      "noop": false,
+      "noop_status": "non_noop_payload",
+      "parse_status": "failed_parser_rejected",
+      "payload_bytes": 276221,
+      "score_claim": false,
+      "semantic_contract": "invalid_current_runtime_raw_fixedslice_header_removal_probe",
+      "source_preserving_vs_c089": false
+    },
+    {
+      "archive_bytes": 276333,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr79_minp_lossless_micro_packer_20260503_codex/c089_p6_lossless_stream_resweep/archive.zip",
+      "archive_sha256": "3de0d1546c909404df2f9b40a9ab8218100be36650b6bfcb3132bac50400ec7f",
+      "candidate_id": "c089_p6_lossless_stream_resweep",
+      "delta_bytes_vs_c089": -9,
+      "dispatchable_after_gate": true,
+      "formula_only_rate_score_delta_vs_c089": -5.9927305780995425e-06,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr79_minp_lossless_micro_packer_20260503_codex/c089_p6_lossless_stream_resweep/manifest.json",
+      "next_dispatch_safety_gate": "claim lane via tools/claim_lane_dispatch.py, then exact CUDA auth eval: archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+      "noop": false,
+      "noop_status": "non_noop_payload",
+      "parse_status": "passed",
+      "payload_bytes": 276233,
+      "score_claim": false,
+      "semantic_contract": "strict_decoded_byte_parity_vs_c089_all_streams_rebrotli",
+      "source_preserving_vs_c089": true
+    },
+    {
+      "archive_bytes": 276341,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr79_minp_lossless_micro_packer_20260503_codex/c089_p6_action_resweep/archive.zip",
+      "archive_sha256": "428757d21a6237d284e80f2a0305e0aff99ef0523c3cbcbd476254c84948787b",
+      "candidate_id": "c089_p6_action_resweep",
+      "delta_bytes_vs_c089": -1,
+      "dispatchable_after_gate": true,
+      "formula_only_rate_score_delta_vs_c089": -6.658589531221714e-07,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr79_minp_lossless_micro_packer_20260503_codex/c089_p6_action_resweep/manifest.json",
+      "next_dispatch_safety_gate": "claim lane via tools/claim_lane_dispatch.py, then exact CUDA auth eval: archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+      "noop": false,
+      "noop_status": "non_noop_payload",
+      "parse_status": "passed",
+      "payload_bytes": 276241,
+      "score_claim": false,
+      "semantic_contract": "strict_decoded_byte_parity_vs_c089_actions_rebrotli_only",
+      "source_preserving_vs_c089": true
+    },
+    {
+      "archive_bytes": 276342,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr79_minp_lossless_micro_packer_20260503_codex/c089_zip_rewrite_noop/archive.zip",
+      "archive_sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8",
+      "candidate_id": "c089_zip_rewrite_noop",
+      "delta_bytes_vs_c089": 0,
+      "dispatchable_after_gate": false,
+      "formula_only_rate_score_delta_vs_c089": 0.0,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr79_minp_lossless_micro_packer_20260503_codex/c089_zip_rewrite_noop/manifest.json",
+      "next_dispatch_safety_gate": "do not dispatch: no-op control",
+      "noop": true,
+      "noop_status": "byte_identical_to_c089_archive",
+      "parse_status": "passed",
+      "payload_bytes": 276242,
+      "score_claim": false,
+      "semantic_contract": "strict_source_payload_noop_control",
+      "source_preserving_vs_c089": true
+    },
+    {
+      "archive_bytes": 276346,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr79_minp_lossless_micro_packer_20260503_codex/public_renderer_pose_c089_p6_lossless_stream_resweep/archive.zip",
+      "archive_sha256": "6f9cc5406f4b2d57409b940699b0d06f21154ae69382caa08d90f31f14cf4b18",
+      "candidate_id": "public_renderer_pose_c089_p6_lossless_stream_resweep",
+      "delta_bytes_vs_c089": 4,
+      "dispatchable_after_gate": false,
+      "formula_only_rate_score_delta_vs_c089": 2.6634358124886856e-06,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr79_minp_lossless_micro_packer_20260503_codex/public_renderer_pose_c089_p6_lossless_stream_resweep/manifest.json",
+      "next_dispatch_safety_gate": "run local robust_current unpack/runtime raw-output parity against the named source archive; only then claim lane and run exact CUDA auth eval",
+      "noop": false,
+      "noop_status": "non_noop_payload",
+      "parse_status": "passed",
+      "payload_bytes": 276246,
+      "score_claim": false,
+      "semantic_contract": "renderer_pose_transplant_probe_public_renderer_pose_c089_actions_masks",
+      "source_preserving_vs_c089": false
+    },
+    {
+      "archive_bytes": 276371,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr79_minp_lossless_micro_packer_20260503_codex/c089_p3_raw_actions_probe/archive.zip",
+      "archive_sha256": "4723425564d8310deea4fae7234298c8b84ed7e1ead4d3560ccb94ef3de3778c",
+      "candidate_id": "c089_p3_raw_actions_probe",
+      "delta_bytes_vs_c089": 29,
+      "dispatchable_after_gate": false,
+      "formula_only_rate_score_delta_vs_c089": 1.930990964054297e-05,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr79_minp_lossless_micro_packer_20260503_codex/c089_p3_raw_actions_probe/manifest.json",
+      "next_dispatch_safety_gate": "do not dispatch unless a byte win appears; exact CUDA auth eval would still be required",
+      "noop": false,
+      "noop_status": "non_noop_payload",
+      "parse_status": "passed",
+      "payload_bytes": 276271,
+      "score_claim": false,
+      "semantic_contract": "strict_decoded_byte_parity_vs_c089_p3_raw_actions_probe",
+      "source_preserving_vs_c089": true
+    },
+    {
+      "archive_bytes": 276519,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr79_minp_lossless_micro_packer_20260503_codex/c089_p5_action_dict_probe/archive.zip",
+      "archive_sha256": "6b4eba54366d62631efe6462b80cd091f8b951784f82dd90e28300c5caf595f6",
+      "candidate_id": "c089_p5_action_dict_probe",
+      "delta_bytes_vs_c089": 177,
+      "dispatchable_after_gate": false,
+      "formula_only_rate_score_delta_vs_c089": 0.00011785703470262434,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr79_minp_lossless_micro_packer_20260503_codex/c089_p5_action_dict_probe/manifest.json",
+      "next_dispatch_safety_gate": "run local robust_current unpack/runtime raw-output parity against the named source archive; only then claim lane and run exact CUDA auth eval",
+      "noop": false,
+      "noop_status": "non_noop_payload",
+      "parse_status": "passed",
+      "payload_bytes": 276419,
+      "score_claim": false,
+      "semantic_contract": "non_dispatchable_p5_action_dictionary_remap_probe",
+      "source_preserving_vs_c089": false
+    },
+    {
+      "archive_bytes": 277537,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr79_minp_lossless_micro_packer_20260503_codex/public_minp_p6_sorted_actions_probe/archive.zip",
+      "archive_sha256": "3189a4d36a62303d8db9c2e3e05136ee89ed79a6123e3b491bf9c701a379b28a",
+      "candidate_id": "public_minp_p6_sorted_actions_probe",
+      "delta_bytes_vs_c089": 1195,
+      "dispatchable_after_gate": false,
+      "formula_only_rate_score_delta_vs_c089": 0.0007957014489809949,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr79_minp_lossless_micro_packer_20260503_codex/public_minp_p6_sorted_actions_probe/manifest.json",
+      "next_dispatch_safety_gate": "run local robust_current unpack/runtime raw-output parity against the named source archive; only then claim lane and run exact CUDA auth eval",
+      "noop": false,
+      "noop_status": "non_noop_payload",
+      "parse_status": "passed",
+      "payload_bytes": 277437,
+      "score_claim": false,
+      "semantic_contract": "non_dispatchable_public_actions_ordering_probe_p6_sorted_delta_varint",
+      "source_preserving_vs_c089": false
+    },
+    {
+      "archive_bytes": 277685,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/pr79_minp_lossless_micro_packer_20260503_codex/public_minp_p3_raw_actions_probe/archive.zip",
+      "archive_sha256": "3570204590b8df6f2ed10facf7374d92fd034e852a7d285eacdc9733dbe46d87",
+      "candidate_id": "public_minp_p3_raw_actions_probe",
+      "delta_bytes_vs_c089": 1343,
+      "dispatchable_after_gate": false,
+      "formula_only_rate_score_delta_vs_c089": 0.0008942485740430761,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/pr79_minp_lossless_micro_packer_20260503_codex/public_minp_p3_raw_actions_probe/manifest.json",
+      "next_dispatch_safety_gate": "do not dispatch: byte regression versus C089 and public fixed-slice source",
+      "noop": false,
+      "noop_status": "non_noop_payload",
+      "parse_status": "passed",
+      "payload_bytes": 277585,
+      "score_claim": false,
+      "semantic_contract": "strict_decoded_byte_parity_vs_public_minp_p3_raw_actions_probe",
+      "source_preserving_vs_c089": false
+    }
+  ],
+  "canonical_score_source_required": "claim lane via tools/claim_lane_dispatch.py, then exact CUDA auth eval: archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "evidence_grade": "empirical_byte_screen_only",
+  "promotion_eligible": false,
+  "schema": "pr75_lossless_micro_candidate_matrix_v1",
+  "score_claim": false,
+  "source_archives": {
+    "c089": {
+      "archive_bytes": 276342,
+      "archive_sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8",
+      "decoded_members": {
+        "masks.mkv": {
+          "bytes": 223385,
+          "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "optimized_poses.qp1": {
+          "bytes": 1140,
+          "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+        },
+        "renderer.bin": {
+          "bytes": 59288,
+          "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 160,
+          "sha256": "50e997db4fd1b7642d9a2cd67b55802a4f7f9bd7a6603d0ca2eaf42e7fe7e320"
+        }
+      },
+      "encoded_streams": {
+        "actions": {
+          "bytes": 116,
+          "record_count": 40,
+          "sha256": "2f270cba1207030026353794196e2425de1c8aa85cff4de12d544a30346034da"
+        },
+        "mask": {
+          "bytes": 219472,
+          "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+        },
+        "pose": {
+          "bytes": 677,
+          "sha256": "c998610e82bb46a686a073e8a1847987de1346f86852a1c60cfa3244a1ad43c5"
+        },
+        "renderer": {
+          "bytes": 55965,
+          "sha256": "2544dfe50d2631a56600cbfc7342e4a18c97f953526fc51425be0d62f97e22ad"
+        }
+      },
+      "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/archive.zip",
+      "payload_bytes": 276242,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+      "payload_sha256": "fcc3fddb3a4182182bbfca1d1064544c87e58a5a9f76ea6fddfcfe4eb0b453c1"
+    },
+    "public_pr75_minp": {
+      "archive_bytes": 277388,
+      "archive_sha256": "01dc02badf851d99108fd92c570271f36f74cc5424c6d2a8f1b499cb4d1c3446",
+      "decoded_members": {
+        "masks.mkv": {
+          "bytes": 223385,
+          "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "optimized_poses.qp1": {
+          "bytes": 1140,
+          "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+        },
+        "renderer.bin": {
+          "bytes": 59288,
+          "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 2688,
+          "sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f"
+        }
+      },
+      "encoded_streams": {
+        "actions": {
+          "bytes": 1162,
+          "record_count": null,
+          "sha256": "3fdf6320b77685606283438e1a9bea4df3c83ecb525deb4750dade60c8e7dbdc"
+        },
+        "mask": {
+          "bytes": 219472,
+          "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+        },
+        "pose": {
+          "bytes": 898,
+          "sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082"
+        },
+        "renderer": {
+          "bytes": 55756,
+          "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+        }
+      },
+      "path": "/Users/adpena/Projects/pact/experiments/results/top_submission_reverse_engineering_20260503_pr79/archive.zip",
+      "payload_bytes": 277288,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+      "payload_sha256": "026c2a5801dc42e369ad9533736645488ef9183c0789d9c961adb23c1740e688"
+    }
+  },
+  "tool": "experiments/build_pr75_minp_lossless_micro_candidates.py"
+}

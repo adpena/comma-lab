@@ -1,0 +1,328 @@
+{
+  "archive_anatomy_comparison": {
+    "c102": {
+      "archive_bytes": 276485,
+      "archive_path": "experiments/results/lightning_batch/exact_eval_c091_next_cem_pose_waterfill_top192_s0125_m06_t4_20260503T1238Z/archive.zip",
+      "archive_sha256": "79091f2c3f0c30ef3ca512808f3adc0306010e7f57fed3a09b3664c16fea4ea8",
+      "decoded_members": {
+        "masks.mkv": {
+          "bytes": 223385,
+          "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "optimized_poses.qp1": {
+          "bytes": 1140,
+          "sha256": "80094e20f4f6cd29869e043eb6d224a6697ecd7fb0e77728ddcd6c7a05fccb9a"
+        },
+        "renderer.bin": {
+          "bytes": 59288,
+          "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 432,
+          "sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a"
+        }
+      },
+      "payload_bytes": 276385,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p3",
+      "payload_sha256": "44128c2715ad62ae4075e3b85e23403b3700f7ca1be876fb1f939318149cb84e",
+      "runtime_members": {
+        "masks.mkv": {
+          "bytes": 219472,
+          "codec": "brotli_av1_obu",
+          "decoded_bytes": 223385,
+          "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+          "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+        },
+        "optimized_poses.qp1": {
+          "bytes": 892,
+          "codec": "public_qp1_brotli",
+          "decoded_bytes": 1140,
+          "decoded_sha256": "80094e20f4f6cd29869e043eb6d224a6697ecd7fb0e77728ddcd6c7a05fccb9a",
+          "sha256": "c4c6e22ef870db7ede58170b14aec6a820a224b72106a411655507a534d70add"
+        },
+        "renderer.bin": {
+          "bytes": 55756,
+          "codec": "brotli_qzs3",
+          "decoded_bytes": 59288,
+          "decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+          "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 255,
+          "codec": "brotli_seg_tile_actions_v1",
+          "decoded_bytes": 432,
+          "decoded_sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a",
+          "sha256": "e2f8a113ee9e4d009448fec2497602ef67cabb8a13ef8d3fa9e11d69ff8ceed6"
+        }
+      }
+    },
+    "pr79": {
+      "archive_bytes": 277388,
+      "archive_path": "experiments/results/top_submission_reverse_engineering_20260503_pr79/archive.zip",
+      "archive_sha256": "01dc02badf851d99108fd92c570271f36f74cc5424c6d2a8f1b499cb4d1c3446",
+      "decoded_members": {
+        "masks.mkv": {
+          "bytes": 223385,
+          "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "optimized_poses.qp1": {
+          "bytes": 1140,
+          "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+        },
+        "renderer.bin": {
+          "bytes": 59288,
+          "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 2688,
+          "sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f"
+        }
+      },
+      "payload_bytes": 277288,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices",
+      "payload_sha256": "026c2a5801dc42e369ad9533736645488ef9183c0789d9c961adb23c1740e688",
+      "runtime_members": {
+        "masks.mkv": {
+          "bytes": 219472,
+          "codec": "brotli_av1_obu",
+          "decoded_bytes": 223385,
+          "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+          "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+        },
+        "optimized_poses.qp1": {
+          "bytes": 898,
+          "codec": "public_qp1_brotli",
+          "decoded_bytes": 1140,
+          "decoded_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+          "sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082"
+        },
+        "renderer.bin": {
+          "bytes": 55756,
+          "codec": "brotli_qzs3",
+          "decoded_bytes": 59288,
+          "decoded_sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef",
+          "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 1162,
+          "codec": "brotli_seg_tile_actions_v1",
+          "decoded_bytes": 2688,
+          "decoded_sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f",
+          "sha256": "3fdf6320b77685606283438e1a9bea4df3c83ecb525deb4750dade60c8e7dbdc"
+        }
+      }
+    },
+    "stream_sha_equalities": {
+      "masks.mkv": true,
+      "optimized_poses.bin": false,
+      "renderer.bin": true,
+      "seg_tile_actions.bin": false
+    }
+  },
+  "candidate_count": 6,
+  "candidates": [
+    {
+      "archive_bytes": 276660,
+      "archive_path": "experiments/results/pr79_flatpack_transfer_worker_20260503/replace_pr79_pose_safe_top16_on_c102_p6_rpk1_single_brotli_flatpack/archive.zip",
+      "archive_sha256": "9100a56bed4ec4f8ddd0cc1868208e501823eda3cb07e8c580bc5afb4fa9b703",
+      "candidate_id": "replace_pr79_pose_safe_top16_on_c102_p6_rpk1_single_brotli_flatpack",
+      "container": "brotli_rpk1_single_stream_permuted",
+      "decode_parity_status": "passed",
+      "delta_bytes_vs_c102": 175,
+      "delta_bytes_vs_source": 416,
+      "dispatch_recommendation": {
+        "dispatch": false,
+        "reason": "byte-regressive versus its source; exact eval needs non-byte component rationale"
+      },
+      "exact_break_even_required_component_delta": {
+        "for_target_0_31_from_c102_anchor": 0.005260827138471369,
+        "vs_c102": 0.00011652531679638
+      },
+      "manifest_path": "experiments/results/pr79_flatpack_transfer_worker_20260503/replace_pr79_pose_safe_top16_on_c102_p6_rpk1_single_brotli_flatpack/manifest.json",
+      "noop": false,
+      "payload_bytes": 276560,
+      "payload_changed_vs_source": true,
+      "payload_sha256": "68c9e0deca558c8e17aabe614680db502683b390f9b64f7f21800a31911286e7",
+      "rpk1_bytes": 284484,
+      "rpk1_sha256": "d02770f3070acad7f9a3dd3ffad2c807b9ab5f1dd754d75cddb64d10357fb247",
+      "score_claim": false,
+      "source_archive_sha256": "9a0f85ceeac2268706e238229f03fde4f0ea05ae4ff85b5d091bd6cc1db43775",
+      "source_id": "replace_pr79_pose_safe_top16_on_c102_p6",
+      "source_payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint"
+    },
+    {
+      "archive_bytes": 276664,
+      "archive_path": "experiments/results/pr79_flatpack_transfer_worker_20260503/replace_pr79_exact_positive_top16_on_c102_p6_rpk1_single_brotli_flatpack/archive.zip",
+      "archive_sha256": "f0f628e795586c0893e4aedd011a324b109ed98b57d5e09a882675f31f08b411",
+      "candidate_id": "replace_pr79_exact_positive_top16_on_c102_p6_rpk1_single_brotli_flatpack",
+      "container": "brotli_rpk1_single_stream_permuted",
+      "decode_parity_status": "passed",
+      "delta_bytes_vs_c102": 179,
+      "delta_bytes_vs_source": 410,
+      "dispatch_recommendation": {
+        "dispatch": false,
+        "reason": "byte-regressive versus its source; exact eval needs non-byte component rationale"
+      },
+      "exact_break_even_required_component_delta": {
+        "for_target_0_31_from_c102_anchor": 0.0052634905742838245,
+        "vs_c102": 0.00011918875260886868
+      },
+      "manifest_path": "experiments/results/pr79_flatpack_transfer_worker_20260503/replace_pr79_exact_positive_top16_on_c102_p6_rpk1_single_brotli_flatpack/manifest.json",
+      "noop": false,
+      "payload_bytes": 276564,
+      "payload_changed_vs_source": true,
+      "payload_sha256": "8bad059c2e84e74a2460353c339585fac547ca616377aa784e927a8af1acd9ba",
+      "rpk1_bytes": 284497,
+      "rpk1_sha256": "abb893ca22848d3f5004bb69bb00e0176d6a7f2a4502f9acadf405c822e8b768",
+      "score_claim": false,
+      "source_archive_sha256": "6d1ff235080c8945b924ffac1b32e57bcd0b6a325624985947b2edf69f7078a9",
+      "source_id": "replace_pr79_exact_positive_top16_on_c102_p6",
+      "source_payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint"
+    },
+    {
+      "archive_bytes": 276746,
+      "archive_path": "experiments/results/pr79_flatpack_transfer_worker_20260503/replace_pr79_pair_opportunity_top32_on_c102_p6_rpk1_single_brotli_flatpack/archive.zip",
+      "archive_sha256": "584e394e3f485b83b297195a9a30bb27360ae681c0e3dfbb8838ce89d20bd16c",
+      "candidate_id": "replace_pr79_pair_opportunity_top32_on_c102_p6_rpk1_single_brotli_flatpack",
+      "container": "brotli_rpk1_single_stream_permuted",
+      "decode_parity_status": "passed",
+      "delta_bytes_vs_c102": 261,
+      "delta_bytes_vs_source": 414,
+      "dispatch_recommendation": {
+        "dispatch": false,
+        "reason": "byte-regressive versus its source; exact eval needs non-byte component rationale"
+      },
+      "exact_break_even_required_component_delta": {
+        "for_target_0_31_from_c102_anchor": 0.005318091008439829,
+        "vs_c102": 0.00017378918676488674
+      },
+      "manifest_path": "experiments/results/pr79_flatpack_transfer_worker_20260503/replace_pr79_pair_opportunity_top32_on_c102_p6_rpk1_single_brotli_flatpack/manifest.json",
+      "noop": false,
+      "payload_bytes": 276646,
+      "payload_changed_vs_source": true,
+      "payload_sha256": "af553412dc64e9102a1cf3069581933e5736823e4eebd52d61109d1b3bdd5b43",
+      "rpk1_bytes": 284606,
+      "rpk1_sha256": "5c396309b7ae2bb17a10a3cbc5fe0da5dd2329106c3713b9aa4c460bc8a5fc88",
+      "score_claim": false,
+      "source_archive_sha256": "4e268328f2a61f123c905ae30e1e740b54abd79bae5c492710e2774af3386f30",
+      "source_id": "replace_pr79_pair_opportunity_top32_on_c102_p6",
+      "source_payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint"
+    },
+    {
+      "archive_bytes": 276843,
+      "archive_path": "experiments/results/pr79_flatpack_transfer_worker_20260503/replace_pr79_pair_opportunity_top64_on_c102_p6_rpk1_single_brotli_flatpack/archive.zip",
+      "archive_sha256": "94274c349a590591cd4f2e4cb009a4c9ed61f10ecc26bb88de5581c3b9e68437",
+      "candidate_id": "replace_pr79_pair_opportunity_top64_on_c102_p6_rpk1_single_brotli_flatpack",
+      "container": "brotli_rpk1_single_stream_permuted",
+      "decode_parity_status": "passed",
+      "delta_bytes_vs_c102": 358,
+      "delta_bytes_vs_source": 429,
+      "dispatch_recommendation": {
+        "dispatch": false,
+        "reason": "byte-regressive versus its source; exact eval needs non-byte component rationale"
+      },
+      "exact_break_even_required_component_delta": {
+        "for_target_0_31_from_c102_anchor": 0.005382679326892681,
+        "vs_c102": 0.00023837750521773737
+      },
+      "manifest_path": "experiments/results/pr79_flatpack_transfer_worker_20260503/replace_pr79_pair_opportunity_top64_on_c102_p6_rpk1_single_brotli_flatpack/manifest.json",
+      "noop": false,
+      "payload_bytes": 276743,
+      "payload_changed_vs_source": true,
+      "payload_sha256": "84c3bdffb3e68bfc5708be9ee8f5b0a027de33deceb56e588a9bdb9a8698b877",
+      "rpk1_bytes": 284734,
+      "rpk1_sha256": "a0906bfc8e89bcd57a8f7abb609fa829fcdec004c890e309abc3d4de431461ee",
+      "score_claim": false,
+      "source_archive_sha256": "b70c2e269b6f79e82e3b51af657a99d1321cbf5110b522854221416f4df6ee39",
+      "source_id": "replace_pr79_pair_opportunity_top64_on_c102_p6",
+      "source_payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint"
+    },
+    {
+      "archive_bytes": 276987,
+      "archive_path": "experiments/results/pr79_flatpack_transfer_worker_20260503/c102_anchor_rpk1_single_brotli_flatpack/archive.zip",
+      "archive_sha256": "12e1c36b5a545dd4f6621ee39d93867d3f285230efcd20ccd4557b7431d4a86e",
+      "candidate_id": "c102_anchor_rpk1_single_brotli_flatpack",
+      "container": "brotli_rpk1_single_stream_permuted",
+      "decode_parity_status": "passed",
+      "delta_bytes_vs_c102": 502,
+      "delta_bytes_vs_source": 502,
+      "dispatch_recommendation": {
+        "dispatch": false,
+        "reason": "byte-regressive versus its source; exact eval needs non-byte component rationale"
+      },
+      "exact_break_even_required_component_delta": {
+        "for_target_0_31_from_c102_anchor": 0.005478563016142302,
+        "vs_c102": 0.00033426119446733
+      },
+      "manifest_path": "experiments/results/pr79_flatpack_transfer_worker_20260503/c102_anchor_rpk1_single_brotli_flatpack/manifest.json",
+      "noop": false,
+      "payload_bytes": 276887,
+      "payload_changed_vs_source": true,
+      "payload_sha256": "ee79ae4ff6dfee87e8cf20e446ae4ab750e0318b10fe0e8b67cc2b9136c7b5b0",
+      "rpk1_bytes": 284910,
+      "rpk1_sha256": "ff826444d92c4346d850a7e5faeca12c73dd709b6d247ba3cd4b18eb47adc71f",
+      "score_claim": false,
+      "source_archive_sha256": "79091f2c3f0c30ef3ca512808f3adc0306010e7f57fed3a09b3664c16fea4ea8",
+      "source_id": "c102_anchor",
+      "source_payload_format": "public_pr75_qzs3_qp1_segactions_p3"
+    },
+    {
+      "archive_bytes": 278037,
+      "archive_path": "experiments/results/pr79_flatpack_transfer_worker_20260503/pr79_public_fixed_slices_rpk1_single_brotli_flatpack/archive.zip",
+      "archive_sha256": "1cb948472115017241fd09af989f1e74ac707bf1c7004e9c6c56a9db0ece7b89",
+      "candidate_id": "pr79_public_fixed_slices_rpk1_single_brotli_flatpack",
+      "container": "brotli_rpk1_single_stream_permuted",
+      "decode_parity_status": "passed",
+      "delta_bytes_vs_c102": 1552,
+      "delta_bytes_vs_source": 649,
+      "dispatch_recommendation": {
+        "dispatch": false,
+        "reason": "byte-regressive versus its source; exact eval needs non-byte component rationale"
+      },
+      "exact_break_even_required_component_delta": {
+        "for_target_0_31_from_c102_anchor": 0.006177714916920596,
+        "vs_c102": 0.00103341309524561
+      },
+      "manifest_path": "experiments/results/pr79_flatpack_transfer_worker_20260503/pr79_public_fixed_slices_rpk1_single_brotli_flatpack/manifest.json",
+      "noop": false,
+      "payload_bytes": 277937,
+      "payload_changed_vs_source": true,
+      "payload_sha256": "a6154b20cf9da8ea87c2c3f948a0a515c3b4c74107802f5e6a504f69524b0d5d",
+      "rpk1_bytes": 287167,
+      "rpk1_sha256": "7748401a32bd86f4aa53ca1110cdaddd1301b1696ec93f4f7461820fb3a59e97",
+      "score_claim": false,
+      "source_archive_sha256": "01dc02badf851d99108fd92c570271f36f74cc5424c6d2a8f1b499cb4d1c3446",
+      "source_id": "pr79_public_fixed_slices",
+      "source_payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices"
+    }
+  ],
+  "canonical_score_source_required": "No dispatch from this worker. Future dispatch requires a lane claim with tools/claim_lane_dispatch.py claim and exact CUDA auth eval on identical archive bytes via archive.zip -> inflate.sh -> upstream/evaluate.py.",
+  "compressor_attempts": {
+    "brotli": {
+      "attempted": true,
+      "reason": "top-level p is Brotli-decompressed by robust_current before RPK1 parse",
+      "runtime_closed": true
+    },
+    "lzma2": {
+      "attempted": false,
+      "reason": "no current top-level p LZMA2 inflate closure in robust_current",
+      "runtime_closed": false
+    },
+    "zstd": {
+      "attempted": false,
+      "reason": "no current top-level p Zstd inflate closure in robust_current",
+      "runtime_closed": false
+    }
+  },
+  "evidence_grade": "empirical_byte_screen_only",
+  "existing_matrix": "experiments/results/pr79_action_subset_worker_20260503/candidate_matrix.json",
+  "max_existing_sources": 4,
+  "no_remote_dispatch_performed": true,
+  "pr79_profile": "experiments/results/top_submission_reverse_engineering_20260503_pr79/pr79_minp_grammar_profile.json",
+  "promotion_eligible": false,
+  "schema": "pr79_flatpack_transfer_candidate_matrix_v1",
+  "score_claim": false,
+  "source_count": 6,
+  "target_score": 0.31,
+  "tool": "experiments/build_pr79_flatpack_transfer_candidates.py"
+}

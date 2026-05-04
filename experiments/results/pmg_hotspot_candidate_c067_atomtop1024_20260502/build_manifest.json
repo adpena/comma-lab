@@ -1,0 +1,212 @@
+{
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "decoded_mask_array": {
+    "npy_sha256": "13f81851ae206f6142cd3348db5537eda4ea832665052824816f4d1bf432de0c",
+    "path": "/Users/adpena/Projects/pact/experiments/results/c063_trace_weighted_mask_grammar_plan_20260502_codex/decoded_mask_array.npy",
+    "shape": [
+      600,
+      384,
+      512
+    ],
+    "tensor_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45"
+  },
+  "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
+  "frontier_archive": {
+    "bytes": 276214,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip",
+    "sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a"
+  },
+  "output_archive": {
+    "bytes": 187974,
+    "delta_bytes_vs_frontier": -88240,
+    "formula_only_rate_delta_vs_frontier": -0.0587553940235004,
+    "path": "/Users/adpena/Projects/pact/experiments/results/pmg_hotspot_candidate_c067_atomtop1024_20260502/archive.zip",
+    "score_claim": false,
+    "sha256": "476e9330b7dd555a7c0db3ec7294ceb8846fc0aa2f64c90d677342af2fd3a179"
+  },
+  "packed_payload": {
+    "brotli_quality": 11,
+    "evidence_grade": "empirical",
+    "formula_only_rate_delta": -0.003602296936390947,
+    "header": {
+      "members": [
+        {
+          "bytes": 59288,
+          "codec": "raw",
+          "name": "renderer.bin",
+          "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+        },
+        {
+          "bytes": 126564,
+          "codec": "raw",
+          "name": "masks.cmg3",
+          "sha256": "1a27d01f9c31fea96626020966b0bf9738ea9872ad7b346a8062c7f152b24f34"
+        },
+        {
+          "bytes": 1140,
+          "codec": "pose_qp1_v1",
+          "decoded_bytes": 7200,
+          "decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f",
+          "lossy": true,
+          "name": "optimized_poses.bin",
+          "pose_error_stats": {
+            "max_abs_by_dim": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "pose_dim": 6,
+            "rmse_by_dim": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "rows": 600
+          },
+          "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583",
+          "source_decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+        }
+      ],
+      "schema": "renderer_payload_v1",
+      "source_archive_sha256": "2b0a936e13848a92582a78dba62453ac3e224f737770cfbadd95fae598459f11"
+    },
+    "output_archive": "/Users/adpena/Projects/pact/experiments/results/pmg_hotspot_candidate_c067_atomtop1024_20260502/archive.zip",
+    "output_archive_bytes": 187974,
+    "output_archive_sha256": "476e9330b7dd555a7c0db3ec7294ceb8846fc0aa2f64c90d677342af2fd3a179",
+    "payload_compressed_bytes": 187874,
+    "payload_format": "rpk1_json",
+    "payload_member": "p",
+    "payload_raw_bytes": 187869,
+    "pose_codec": "pose_qp1_v1",
+    "pose_residual_topk": 0,
+    "savings_bytes": 5410,
+    "score_claim": false,
+    "source_archive": "/Users/adpena/Projects/pact/experiments/results/pmg_hotspot_candidate_c067_atomtop1024_20260502/pmg_hotspot_source_members.zip",
+    "source_archive_bytes": 193384,
+    "source_archive_sha256": "2b0a936e13848a92582a78dba62453ac3e224f737770cfbadd95fae598459f11"
+  },
+  "pmg_hotspot_cmg3": {
+    "atom_ledger_selection": {
+      "ledger_atom_count": 169708,
+      "ledger_candidate_tensor_sha256": null,
+      "ledger_evidence_grade": "planning_only",
+      "ledger_path": "/Users/adpena/Projects/pact/experiments/results/pmg_hotspot_candidate_c067_20260502_lzma/pmg_vs_c067_residual_atom_ledger.json",
+      "ledger_schema": "cmg3_pixel_lagrangian_atom_ledger_v1",
+      "ledger_sha256": "79e0f4b8af9e6a606f5a35dcb5aa3ef6f721e47b97abbd020a37c71d742394f8",
+      "ledger_source_npy_sha256": "13f81851ae206f6142cd3348db5537eda4ea832665052824816f4d1bf432de0c",
+      "ledger_source_tensor_sha256": "63b114d7a18a5d8a9e8eae00d0e0368e10510fd2044cb3fec7b1cd4b0304a570",
+      "ledger_top_atom_count": 4096,
+      "requested_row_run_atom_count": 1024,
+      "schema": "pmg_hotspot_atom_ledger_selection_v1",
+      "score_claim": false,
+      "selected_atom_id_prefix": [
+        "cmg3pix_row_run_c50e30ec6d7f5f34",
+        "cmg3pix_row_run_d6e5a097f782a26d",
+        "cmg3pix_row_run_fe0c988d5e5fd19f",
+        "cmg3pix_row_run_60ea2ffc061ec775",
+        "cmg3pix_row_run_562fa341f881ea06",
+        "cmg3pix_row_run_f60303386458734d",
+        "cmg3pix_row_run_6076f05923e1ab2d",
+        "cmg3pix_row_run_cc0d6162810feedf",
+        "cmg3pix_row_run_148b8dad37565704",
+        "cmg3pix_row_run_93b06cca42e60aa4",
+        "cmg3pix_row_run_ad52a3f562e89ada",
+        "cmg3pix_row_run_3a1a823083a15605",
+        "cmg3pix_row_run_b2546f71c5d2cd68",
+        "cmg3pix_row_run_6800ae8f0c96e0c4",
+        "cmg3pix_row_run_d3792ca19bcc0c8b",
+        "cmg3pix_row_run_6b5edd9b4ad9181d"
+      ],
+      "selected_atom_ids_sha256": "aa2c08814b046dc27ea7e4c72793d9de0d28d517e123747e2efc1d0cc2f1ddf2",
+      "selected_residual_pixels_touched": 113793,
+      "selected_residual_record_count": 1024,
+      "selected_residual_stream_bytes": 9216,
+      "selected_residual_stream_sha256": "21809c8867bb07869ad99c444705b70e77c5deaa1a4ec6f6091b1aeb5ca062ce",
+      "selected_row_run_atom_count": 1024,
+      "selection_note": "Rows come from the planning-only atom ledger ordering. This is archive byte construction only; exact CUDA auth eval is required before any score, rank, or promotion claim.",
+      "skipped_non_row_run_top_atoms": 0
+    },
+    "base_pixel_disagreement_vs_source_count": 1823949,
+    "base_pixel_disagreement_vs_source_fraction": 0.015461807250976562,
+    "base_reconstructed_mask_u8_sha256": "1f63521140bac04c2e2cc969c9ab7c880c99dcf244dbb191fb83818cb4fbe7df",
+    "body_bytes": 125240,
+    "body_raw_bytes": 2333394,
+    "body_raw_sha256": "f79e74a9a7f21cc439f7f509ec6a89c59736f90cf61ddc9ff458945f24f560f3",
+    "body_sha256": "49504ab1f1aad3db461a745609d864303f9760884902ca10726d661e2dcc19a3",
+    "candidate_id": "pmg_hotspot_rowspan_stride2",
+    "class_count": 5,
+    "compressor": "lzma_xz",
+    "default_class": 0,
+    "draw_order": [
+      1,
+      3,
+      2,
+      0,
+      4
+    ],
+    "final_pixel_disagreement_vs_source_count": 1680518,
+    "final_pixel_disagreement_vs_source_fraction": 0.014245927598741319,
+    "frame_count": 600,
+    "height": 384,
+    "mode": "row_span_stride_class_predictor_hotspot_residual_v1",
+    "pair_protection": {
+      "additional_residual_pixels_touched": 0,
+      "additional_residual_record_count": 0,
+      "additional_residual_stream_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "indexing": "contest_pair_index_maps_to_half_frame_mask_index",
+      "plan_residual_pixels_touched": 29638,
+      "plan_residual_record_count": 2242,
+      "protected_pair_indices": [],
+      "schema": "pmg_hotspot_pair_protection_v1",
+      "score_claim": false
+    },
+    "payload_bytes": 126564,
+    "payload_sha256": "1a27d01f9c31fea96626020966b0bf9738ea9872ad7b346a8062c7f152b24f34",
+    "pmg_hotspot_plan_sha256": "48fa20c153c016b955015dac1cfe1bbbc395b328be8eae106210caa4b410a9d3",
+    "promotion_eligible": false,
+    "reconstructed_mask_u8_sha256": "a2246308319f383d634acc0c3fe1cf453f97a2888c987601afe416f8be567676",
+    "residual_pixels_touched": 143431,
+    "residual_record_bytes": 29394,
+    "residual_record_count": 3266,
+    "residual_record_struct": "u16_frame_u16_y_u16_x0_u16_x1_u8_class_le",
+    "residual_stream_sha256": "66ee2276d18542ff2b8e247e0692909cd1ca5f53457b07231d6dd5580549e619",
+    "row_fill": "linear",
+    "row_stride": 2,
+    "schema": "pmg_hotspot_cmg3_candidate_v1",
+    "score_claim": false,
+    "source_mask_u8_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+    "span_shape": [
+      600,
+      5,
+      192,
+      2
+    ],
+    "span_tensor_bytes": 2304000,
+    "span_tensor_sha256": "5d565c2438c9f31a9702bc38d27fec5c112c7dae3236bd6880503030e03a0175",
+    "width": 512
+  },
+  "pmg_hotspot_plan": {
+    "candidate_id": "pmg_hotspot_rowspan_stride2",
+    "path": "/Users/adpena/Projects/pact/experiments/results/pmg_hotspot_v1_20260502_codex/pmg_hotspot_plan.json",
+    "sha256": "48fa20c153c016b955015dac1cfe1bbbc395b328be8eae106210caa4b410a9d3"
+  },
+  "promotion_eligible": false,
+  "required_next_steps": [
+    "focused local runtime-loader and packed-payload tests must stay green",
+    "run exact CUDA diagnostic on the archive bytes only after dispatch claim",
+    "T4 promotion only if diagnostic components survive"
+  ],
+  "schema": "pmg_hotspot_cmg3_candidate_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 193384,
+    "path": "/Users/adpena/Projects/pact/experiments/results/pmg_hotspot_candidate_c067_atomtop1024_20260502/pmg_hotspot_source_members.zip",
+    "sha256": "2b0a936e13848a92582a78dba62453ac3e224f737770cfbadd95fae598459f11"
+  }
+}

@@ -1,0 +1,278 @@
+{
+  "archive": {
+    "bytes": 257529,
+    "delta_bytes_vs_frontier": -18685,
+    "formula_only_rate_delta_vs_frontier": -0.012441574539,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c067_multimask_reconciliation_20260502_cmg3a_reconciler_threshold_fix1/extra071000/archive.zip",
+    "sha256": "5032a2777ccc08e89f7338645fe13a4a6ac6adcb80439e330ccdd3453756d372"
+  },
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "cmg3": {
+    "body_bytes": 199885,
+    "body_sha256": "cb98bee658fc42a60dff9ebb59f6727ae4ce427034e7eb7c1d68c6119d8b22f7",
+    "class_count": 5,
+    "compression_candidates": [
+      {
+        "body_bytes": 199885,
+        "body_sha256": "cb98bee658fc42a60dff9ebb59f6727ae4ce427034e7eb7c1d68c6119d8b22f7",
+        "compressor": "bz2"
+      },
+      {
+        "body_bytes": 200832,
+        "body_sha256": "0c896be14d4d401db4b1aa7bab2af1045078f0ce89fbc48ebb12c8c26f06088b",
+        "compressor": "lzma_xz"
+      },
+      {
+        "body_bytes": 320995,
+        "body_sha256": "ddd2550a99de252b5a7a6670cda3b910fd3824f6b8d9e6a88814a5e56a893f8d",
+        "compressor": "zlib"
+      },
+      {
+        "body_bytes": 1697040,
+        "body_sha256": "c17b3749626972f9e3b95d6c2d7ce2096468244c33ad1ca930cb8496c5683add",
+        "compressor": "raw"
+      }
+    ],
+    "compressor": "bz2",
+    "default_class": 0,
+    "frame_count": 600,
+    "height": 384,
+    "lossless_under_builder": false,
+    "max_runs_per_row": 8,
+    "mode": "nonzero_row_runs_topk_v1",
+    "payload_bytes": 202741,
+    "payload_sha256": "f645241c6bb971a07a1e6265667cbd3ea9833e7fbe0f6d1821711a9b5d12122f",
+    "pixel_disagreement_count_vs_source": 95170,
+    "pixel_disagreement_vs_source": 0.0008067660861545139,
+    "promotion_eligible": false,
+    "reconstructed_mask_u8_sha256": "22cb57b570c50d18a13f3b44f95c38521a7bad86dd55efea9cb4111657a5517c",
+    "record_struct": "u8_count_then_u8_class_u16_start_u16_end_le",
+    "run_stats_vs_fused_input": {
+      "available_rank_histogram": {
+        "1": 222328,
+        "10": 10,
+        "11": 1,
+        "2": 50412,
+        "3": 21785,
+        "4": 8963,
+        "5": 4005,
+        "6": 1944,
+        "7": 825,
+        "8": 297,
+        "9": 82
+      },
+      "base_required_runs": 222328,
+      "base_runs_per_row": 1,
+      "base_top1_runs": 222328,
+      "body_search": {
+        "effective_extra_run_cap": 71000,
+        "selected_by": "target_extra_runs_only",
+        "target_body_bytes": null
+      },
+      "candidate_extra_runs": 88231,
+      "max_available_runs_per_row": 11,
+      "max_selected_runs_per_row": 8,
+      "pixel_disagreement": 0.0008067660861545139,
+      "pixel_disagreement_count": 95170,
+      "reconstructed_tensor_sha256": "22cb57b570c50d18a13f3b44f95c38521a7bad86dd55efea9cb4111657a5517c",
+      "rows_with_extra_runs": 33187,
+      "selected_class_histogram": {
+        "1": 44189,
+        "2": 153778,
+        "3": 32010,
+        "4": 63351
+      },
+      "selected_extra_class_histogram": {
+        "1": 15266,
+        "2": 29141,
+        "3": 24350,
+        "4": 2243
+      },
+      "selected_extra_priority_max": 84.8173828125,
+      "selected_extra_priority_min": 2.18601,
+      "selected_extra_rank_histogram": {
+        "2": 33181,
+        "3": 21785,
+        "4": 8963,
+        "5": 4005,
+        "6": 1944,
+        "7": 825,
+        "8": 297
+      },
+      "selected_extra_runs": 71000,
+      "selected_rank_histogram": {
+        "1": 222328,
+        "2": 33181,
+        "3": 21785,
+        "4": 8963,
+        "5": 4005,
+        "6": 1944,
+        "7": 825,
+        "8": 297
+      },
+      "selected_rows_by_run_count": {
+        "0": 8072,
+        "1": 189141,
+        "2": 11408,
+        "3": 12816,
+        "4": 4958,
+        "5": 2061,
+        "6": 1119,
+        "7": 528,
+        "8": 297
+      },
+      "selected_run_fraction": 0.9442334187450909,
+      "selected_runs": 293328,
+      "total_nonzero_runs": 310652
+    },
+    "run_stream_bytes": 1697040,
+    "run_stream_sha256": "c17b3749626972f9e3b95d6c2d7ce2096468244c33ad1ca930cb8496c5683add",
+    "schema": "cmg3a_adaptive_nonzero_row_runs_candidate_v1",
+    "score_claim": false,
+    "selection_policy": {
+      "adaptive_max_runs_per_row": 8,
+      "base_runs_per_row": 1,
+      "effective_extra_run_cap": 71000,
+      "evidence_boundary": "Policy is a deterministic byte-screen prior. It is not scorer, promotion, or retirement evidence without exact CUDA auth eval.",
+      "hard_frame_indices": {
+        "frame_count": 0,
+        "frames": [],
+        "sources": []
+      },
+      "priority_formula": "After base_runs_per_row ranked nonzero row runs are kept, extra atoms are ranked by length * class_weight * (1 + foveal_row_weight*row_center + foveal_col_weight*col_center) * hard_frame_multiplier_if_selected * (1 + boundary_detail_weight*short_run_prior) * rank_decay**max(0, rank-2) / raw_bytes_per_extra_atom",
+      "raw_bytes_per_extra_atom": 5.0,
+      "row_rank_prefix_required": false,
+      "schema": "cmg3a_adaptive_global_nonzero_row_run_policy_v1",
+      "selected_extra_runs": 71000,
+      "selected_max_runs_per_row": 8,
+      "selector": "global_weighted_budget_after_base_runs_per_row",
+      "sort_order": "priority_desc_then_frame_row_rank_start_end_class",
+      "target_body_bytes": null,
+      "target_extra_runs": 71000,
+      "weights": {
+        "boundary_detail_weight": 0.08,
+        "boundary_reference_run_length": 64,
+        "class_weight_note": "Explicit byte-screen priors only: class-id preference for likely vehicle/lane/boundary/source-sensitive mask structure. Not score evidence.",
+        "class_weights": {
+          "1": 1.08,
+          "2": 1.3,
+          "3": 1.22,
+          "4": 1.16
+        },
+        "foveal_col_weight": 0.2,
+        "foveal_row_weight": 0.2,
+        "hard_frame_multiplier": 1.35,
+        "rank_decay": 0.92
+      },
+      "wire_mode": "nonzero_row_runs_topk_v1"
+    },
+    "selector": "cmg3a_adaptive_global_budget",
+    "source_mask_u8_sha256": "d93d49ac14ba6d094760f59af6daaae987405b75466b27eaf49e65c1f3771c10",
+    "width": 512
+  },
+  "evidence_grade": "empirical_byte_screen_archive_candidate_until_exact_cuda",
+  "frontier_archive_bytes": 276214,
+  "mask_metrics": {
+    "fused_mask_sha256": "d93d49ac14ba6d094760f59af6daaae987405b75466b27eaf49e65c1f3771c10",
+    "fused_vs_source": {
+      "agreement_fraction": 0.997750456068,
+      "disagreement_count": 265367,
+      "disagreement_fraction": 0.002249543932
+    },
+    "reconstructed_mask_sha256": "22cb57b570c50d18a13f3b44f95c38521a7bad86dd55efea9cb4111657a5517c",
+    "reconstructed_vs_fused": {
+      "agreement_fraction": 0.999193233914,
+      "disagreement_count": 95170,
+      "disagreement_fraction": 0.000806766086
+    },
+    "reconstructed_vs_source": {
+      "agreement_fraction": 0.996943689982,
+      "disagreement_count": 360537,
+      "disagreement_fraction": 0.003056310018
+    }
+  },
+  "packed_payload": {
+    "brotli_quality": 11,
+    "evidence_grade": "empirical",
+    "formula_only_rate_delta": -0.008011614923965966,
+    "header": {
+      "members": [
+        {
+          "bytes": 59288,
+          "codec": "raw",
+          "name": "renderer.bin",
+          "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+        },
+        {
+          "bytes": 202741,
+          "codec": "raw",
+          "name": "masks.cmg3",
+          "sha256": "f645241c6bb971a07a1e6265667cbd3ea9833e7fbe0f6d1821711a9b5d12122f"
+        },
+        {
+          "bytes": 1140,
+          "codec": "pose_qp1_v1",
+          "decoded_bytes": 7200,
+          "decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f",
+          "lossy": true,
+          "name": "optimized_poses.bin",
+          "pose_error_stats": {
+            "max_abs_by_dim": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "pose_dim": 6,
+            "rmse_by_dim": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "rows": 600
+          },
+          "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583",
+          "source_decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+        }
+      ],
+      "schema": "renderer_payload_v1",
+      "source_archive_sha256": "5f53d0f831d120d3e05127e3c0edbd137a444b8def18ec27abc0d48a9bb49277"
+    },
+    "output_archive": "/Users/adpena/Projects/pact/experiments/results/c067_multimask_reconciliation_20260502_cmg3a_reconciler_threshold_fix1/extra071000/archive.zip",
+    "output_archive_bytes": 257529,
+    "output_archive_sha256": "5032a2777ccc08e89f7338645fe13a4a6ac6adcb80439e330ccdd3453756d372",
+    "payload_compressed_bytes": 257429,
+    "payload_format": "rpk1_json",
+    "payload_member": "p",
+    "payload_raw_bytes": 264046,
+    "pose_codec": "pose_qp1_v1",
+    "pose_residual_topk": 0,
+    "savings_bytes": 12032,
+    "score_claim": false,
+    "source_archive": "/Users/adpena/Projects/pact/experiments/results/c067_multimask_reconciliation_20260502_cmg3a_reconciler_threshold_fix1/extra071000/multimask_reconciler_source_members.zip",
+    "source_archive_bytes": 269561,
+    "source_archive_sha256": "5f53d0f831d120d3e05127e3c0edbd137a444b8def18ec27abc0d48a9bb49277"
+  },
+  "promotion_eligible": false,
+  "runtime_contract": {
+    "mask_member": "masks.cmg3",
+    "mask_mode": "nonzero_row_runs_topk_v1",
+    "payload_member": "p",
+    "sidecars_required": false,
+    "zip_safe_single_member_archive": true
+  },
+  "schema": "c067_multimask_reconciler_candidate_record_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 269561,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c067_multimask_reconciliation_20260502_cmg3a_reconciler_threshold_fix1/extra071000/multimask_reconciler_source_members.zip",
+    "sha256": "5f53d0f831d120d3e05127e3c0edbd137a444b8def18ec27abc0d48a9bb49277"
+  },
+  "target_body_bytes": null,
+  "target_extra_runs": 71000
+}

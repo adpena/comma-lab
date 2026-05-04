@@ -1,0 +1,22 @@
+{
+  "archive_optimized.zip": {
+    "bytes": 278019,
+    "sha256": "2424681de9f298c78bf16db164115bf9a6958e808daa4f0cdabb9c9a5606fcc9"
+  },
+  "base_archive": {
+    "bytes": 277388,
+    "sha256": "01dc02badf851d99108fd92c570271f36f74cc5424c6d2a8f1b499cb4d1c3446"
+  },
+  "evidence_grade": "remote_cuda_proxy_search_only_until_exact_t4_auth_eval",
+  "next_gate": "Run robust-current selected/all-pair parity where practical, then claim a T4 exact eval lane and run archive.zip -> inflate.sh -> upstream/evaluate.py on the exact archive bytes if projected score can beat 0.31.",
+  "probe_archive.zip": {
+    "bytes": 278366,
+    "sha256": "ddfddbd682dc804a0e19613fe9afa0a8c8c49b3385736da81360bb0cca2f6836"
+  },
+  "schema": "pr79_segaction_search_h100_summary_v1",
+  "score_claim": false,
+  "seg_tile_actions_probe.br": {
+    "bytes": 2140,
+    "sha256": "523d3b2e8bb699cd16256921859715fc45162ff5a50b217ab837e7b13baae2bd"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "split_constants": {
+    "PACKED_PAYLOAD_BYTES": 159072,
+    "POSE_STREAM_BYTES": 30,
+    "RANGE_MASK_BYTES": 159011,
+    "ROUTER_ACTION_BYTES": 0,
+    "SPLIT_MODEL_REORDERED_BYTES": 31
+  }
+}

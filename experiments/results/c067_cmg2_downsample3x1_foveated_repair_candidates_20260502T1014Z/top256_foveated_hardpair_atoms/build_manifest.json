@@ -1,0 +1,1663 @@
+{
+  "agreement": {
+    "pixel_disagreement_after": 0.006749140422,
+    "pixel_disagreement_before": 0.007008048164,
+    "residual_pixels_after": 796161,
+    "residual_pixels_before": 826703
+  },
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "evidence_grade": "empirical",
+  "mask_tensor_shas": {
+    "cmg2_candidate_sha256": "72f2113461de851c8d8b998b172245243b210743d8e22f6d28c401cad1f9f24e",
+    "repaired_candidate_sha256": "34401100ae3b8564b77b4a0b39af2b95d7b213670c92242c9fd7f8685357a79f",
+    "target_frontier_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45"
+  },
+  "output_archive": {
+    "bytes": 211769,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c067_cmg2_downsample3x1_foveated_repair_candidates_20260502T1014Z/top256_foveated_hardpair_atoms/archive.zip",
+    "sha256": "600d91c41942330f31016b246ec57ac64fc9ee54a4b0602e2493ba64d34e698e"
+  },
+  "packed_payload": {
+    "brotli_quality": 11,
+    "evidence_grade": "empirical",
+    "formula_only_rate_delta": -0.0035956383468597254,
+    "header": {
+      "members": [
+        {
+          "bytes": 59288,
+          "codec": "raw",
+          "name": "renderer.bin",
+          "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+        },
+        {
+          "bytes": 127053,
+          "codec": "raw",
+          "name": "masks.cmg2",
+          "sha256": "991720361047d178eba1abb2b08181a2395b2062d60e563323b02672ea694fcd"
+        },
+        {
+          "bytes": 1140,
+          "codec": "pose_qp1_v1",
+          "decoded_bytes": 7200,
+          "decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f",
+          "lossy": true,
+          "name": "optimized_poses.bin",
+          "pose_error_stats": {
+            "max_abs_by_dim": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "pose_dim": 6,
+            "rmse_by_dim": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "rows": 600
+          },
+          "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583",
+          "source_decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+        },
+        {
+          "bytes": 23160,
+          "codec": "raw",
+          "name": "alpha4_residual_repair.amr1.xz",
+          "sha256": "ef626a81cac5d8470c1a275e0ab08026a30845845e5b5b2b11f3ee1226d0a72a"
+        }
+      ],
+      "schema": "renderer_payload_v1",
+      "source_archive_sha256": "eb5047b71ebfdbecd8d721c158a6f45998bbe1af0e3e87ab45abc8a7fca0ac3c"
+    },
+    "output_archive": "/Users/adpena/Projects/pact/experiments/results/c067_cmg2_downsample3x1_foveated_repair_candidates_20260502T1014Z/top256_foveated_hardpair_atoms/archive.zip",
+    "output_archive_bytes": 211769,
+    "output_archive_sha256": "600d91c41942330f31016b246ec57ac64fc9ee54a4b0602e2493ba64d34e698e",
+    "payload_compressed_bytes": 211669,
+    "payload_format": "rpk1_json",
+    "payload_member": "p",
+    "payload_raw_bytes": 211664,
+    "pose_codec": "pose_qp1_v1",
+    "pose_residual_topk": 0,
+    "savings_bytes": 5400,
+    "score_claim": false,
+    "source_archive": "/Users/adpena/Projects/pact/experiments/results/c067_cmg2_downsample3x1_foveated_repair_candidates_20260502T1014Z/top256_foveated_hardpair_atoms/cmg2_repair_source_members.zip",
+    "source_archive_bytes": 217169,
+    "source_archive_sha256": "eb5047b71ebfdbecd8d721c158a6f45998bbe1af0e3e87ab45abc8a7fca0ac3c"
+  },
+  "policy_name": "top256_foveated_hardpair_atoms",
+  "promotion_eligible": false,
+  "repair": {
+    "archive_member": "alpha4_residual_repair.amr1.xz",
+    "compressed_bytes": 23160,
+    "compressed_sha256": "ef626a81cac5d8470c1a275e0ab08026a30845845e5b5b2b11f3ee1226d0a72a",
+    "compressor": "lzma_xz",
+    "raw_amr1_bytes": 118275,
+    "raw_amr1_sha256": "975b80049b30ec8c44da17f6292f4a04fbf1b8ede0ed0a43308238e8302719e7",
+    "selection": {
+      "fail_on_partial_repair": false,
+      "partial_repair": true,
+      "policy_kind": "ranked_pair_class_fovea_atoms",
+      "policy_name": "top256_foveated_hardpair_atoms",
+      "residual_pixel_coverage": 0.036944343978,
+      "score_claim": false,
+      "selected_atom_count": 256,
+      "selected_atoms": [
+        {
+          "atom_id": "pair164_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 164
+        },
+        {
+          "atom_id": "pair164_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 164
+        },
+        {
+          "atom_id": "pair105_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 105
+        },
+        {
+          "atom_id": "pair105_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 105
+        },
+        {
+          "atom_id": "pair130_class4_fovea",
+          "class_id": 4,
+          "fovea_band": "fovea",
+          "pair_index": 130
+        },
+        {
+          "atom_id": "pair128_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 128
+        },
+        {
+          "atom_id": "pair128_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 128
+        },
+        {
+          "atom_id": "pair106_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 106
+        },
+        {
+          "atom_id": "pair106_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 106
+        },
+        {
+          "atom_id": "pair136_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 136
+        },
+        {
+          "atom_id": "pair070_class4_fovea",
+          "class_id": 4,
+          "fovea_band": "fovea",
+          "pair_index": 70
+        },
+        {
+          "atom_id": "pair130_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 130
+        },
+        {
+          "atom_id": "pair067_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 67
+        },
+        {
+          "atom_id": "pair164_class4_mid",
+          "class_id": 4,
+          "fovea_band": "mid",
+          "pair_index": 164
+        },
+        {
+          "atom_id": "pair105_class0_fovea",
+          "class_id": 0,
+          "fovea_band": "fovea",
+          "pair_index": 105
+        },
+        {
+          "atom_id": "pair105_class1_fovea",
+          "class_id": 1,
+          "fovea_band": "fovea",
+          "pair_index": 105
+        },
+        {
+          "atom_id": "pair108_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 108
+        },
+        {
+          "atom_id": "pair130_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 130
+        },
+        {
+          "atom_id": "pair136_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 136
+        },
+        {
+          "atom_id": "pair105_class4_mid",
+          "class_id": 4,
+          "fovea_band": "mid",
+          "pair_index": 105
+        },
+        {
+          "atom_id": "pair060_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 60
+        },
+        {
+          "atom_id": "pair108_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 108
+        },
+        {
+          "atom_id": "pair069_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 69
+        },
+        {
+          "atom_id": "pair060_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 60
+        },
+        {
+          "atom_id": "pair197_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 197
+        },
+        {
+          "atom_id": "pair064_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 64
+        },
+        {
+          "atom_id": "pair164_class0_fovea",
+          "class_id": 0,
+          "fovea_band": "fovea",
+          "pair_index": 164
+        },
+        {
+          "atom_id": "pair069_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 69
+        },
+        {
+          "atom_id": "pair067_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 67
+        },
+        {
+          "atom_id": "pair105_class2_mid",
+          "class_id": 2,
+          "fovea_band": "mid",
+          "pair_index": 105
+        },
+        {
+          "atom_id": "pair064_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 64
+        },
+        {
+          "atom_id": "pair164_class2_mid",
+          "class_id": 2,
+          "fovea_band": "mid",
+          "pair_index": 164
+        },
+        {
+          "atom_id": "pair131_class4_fovea",
+          "class_id": 4,
+          "fovea_band": "fovea",
+          "pair_index": 131
+        },
+        {
+          "atom_id": "pair197_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 197
+        },
+        {
+          "atom_id": "pair165_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 165
+        },
+        {
+          "atom_id": "pair134_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 134
+        },
+        {
+          "atom_id": "pair164_class1_fovea",
+          "class_id": 1,
+          "fovea_band": "fovea",
+          "pair_index": 164
+        },
+        {
+          "atom_id": "pair134_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 134
+        },
+        {
+          "atom_id": "pair125_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 125
+        },
+        {
+          "atom_id": "pair125_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 125
+        },
+        {
+          "atom_id": "pair128_class0_fovea",
+          "class_id": 0,
+          "fovea_band": "fovea",
+          "pair_index": 128
+        },
+        {
+          "atom_id": "pair153_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 153
+        },
+        {
+          "atom_id": "pair166_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 166
+        },
+        {
+          "atom_id": "pair106_class4_mid",
+          "class_id": 4,
+          "fovea_band": "mid",
+          "pair_index": 106
+        },
+        {
+          "atom_id": "pair070_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 70
+        },
+        {
+          "atom_id": "pair128_class4_mid",
+          "class_id": 4,
+          "fovea_band": "mid",
+          "pair_index": 128
+        },
+        {
+          "atom_id": "pair148_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 148
+        },
+        {
+          "atom_id": "pair165_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 165
+        },
+        {
+          "atom_id": "pair192_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 192
+        },
+        {
+          "atom_id": "pair067_class3_mid",
+          "class_id": 3,
+          "fovea_band": "mid",
+          "pair_index": 67
+        },
+        {
+          "atom_id": "pair106_class1_fovea",
+          "class_id": 1,
+          "fovea_band": "fovea",
+          "pair_index": 106
+        },
+        {
+          "atom_id": "pair128_class2_mid",
+          "class_id": 2,
+          "fovea_band": "mid",
+          "pair_index": 128
+        },
+        {
+          "atom_id": "pair064_class3_mid",
+          "class_id": 3,
+          "fovea_band": "mid",
+          "pair_index": 64
+        },
+        {
+          "atom_id": "pair128_class1_fovea",
+          "class_id": 1,
+          "fovea_band": "fovea",
+          "pair_index": 128
+        },
+        {
+          "atom_id": "pair148_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 148
+        },
+        {
+          "atom_id": "pair069_class1_fovea",
+          "class_id": 1,
+          "fovea_band": "fovea",
+          "pair_index": 69
+        },
+        {
+          "atom_id": "pair106_class0_fovea",
+          "class_id": 0,
+          "fovea_band": "fovea",
+          "pair_index": 106
+        },
+        {
+          "atom_id": "pair153_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 153
+        },
+        {
+          "atom_id": "pair166_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 166
+        },
+        {
+          "atom_id": "pair141_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 141
+        },
+        {
+          "atom_id": "pair070_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 70
+        },
+        {
+          "atom_id": "pair067_class1_fovea",
+          "class_id": 1,
+          "fovea_band": "fovea",
+          "pair_index": 67
+        },
+        {
+          "atom_id": "pair106_class2_mid",
+          "class_id": 2,
+          "fovea_band": "mid",
+          "pair_index": 106
+        },
+        {
+          "atom_id": "pair192_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 192
+        },
+        {
+          "atom_id": "pair069_class3_mid",
+          "class_id": 3,
+          "fovea_band": "mid",
+          "pair_index": 69
+        },
+        {
+          "atom_id": "pair060_class4_mid",
+          "class_id": 4,
+          "fovea_band": "mid",
+          "pair_index": 60
+        },
+        {
+          "atom_id": "pair060_class1_fovea",
+          "class_id": 1,
+          "fovea_band": "fovea",
+          "pair_index": 60
+        },
+        {
+          "atom_id": "pair198_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 198
+        },
+        {
+          "atom_id": "pair138_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 138
+        },
+        {
+          "atom_id": "pair138_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 138
+        },
+        {
+          "atom_id": "pair067_class4_mid",
+          "class_id": 4,
+          "fovea_band": "mid",
+          "pair_index": 67
+        },
+        {
+          "atom_id": "pair069_class4_mid",
+          "class_id": 4,
+          "fovea_band": "mid",
+          "pair_index": 69
+        },
+        {
+          "atom_id": "pair141_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 141
+        },
+        {
+          "atom_id": "pair131_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 131
+        },
+        {
+          "atom_id": "pair064_class0_fovea",
+          "class_id": 0,
+          "fovea_band": "fovea",
+          "pair_index": 64
+        },
+        {
+          "atom_id": "pair064_class1_fovea",
+          "class_id": 1,
+          "fovea_band": "fovea",
+          "pair_index": 64
+        },
+        {
+          "atom_id": "pair064_class4_mid",
+          "class_id": 4,
+          "fovea_band": "mid",
+          "pair_index": 64
+        },
+        {
+          "atom_id": "pair108_class4_mid",
+          "class_id": 4,
+          "fovea_band": "mid",
+          "pair_index": 108
+        },
+        {
+          "atom_id": "pair130_class4_mid",
+          "class_id": 4,
+          "fovea_band": "mid",
+          "pair_index": 130
+        },
+        {
+          "atom_id": "pair131_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 131
+        },
+        {
+          "atom_id": "pair108_class1_fovea",
+          "class_id": 1,
+          "fovea_band": "fovea",
+          "pair_index": 108
+        },
+        {
+          "atom_id": "pair136_class0_fovea",
+          "class_id": 0,
+          "fovea_band": "fovea",
+          "pair_index": 136
+        },
+        {
+          "atom_id": "pair067_class0_fovea",
+          "class_id": 0,
+          "fovea_band": "fovea",
+          "pair_index": 67
+        },
+        {
+          "atom_id": "pair197_class0_fovea",
+          "class_id": 0,
+          "fovea_band": "fovea",
+          "pair_index": 197
+        },
+        {
+          "atom_id": "pair060_class2_mid",
+          "class_id": 2,
+          "fovea_band": "mid",
+          "pair_index": 60
+        },
+        {
+          "atom_id": "pair198_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 198
+        },
+        {
+          "atom_id": "pair108_class0_fovea",
+          "class_id": 0,
+          "fovea_band": "fovea",
+          "pair_index": 108
+        },
+        {
+          "atom_id": "pair069_class0_fovea",
+          "class_id": 0,
+          "fovea_band": "fovea",
+          "pair_index": 69
+        },
+        {
+          "atom_id": "pair060_class0_fovea",
+          "class_id": 0,
+          "fovea_band": "fovea",
+          "pair_index": 60
+        },
+        {
+          "atom_id": "pair197_class3_mid",
+          "class_id": 3,
+          "fovea_band": "mid",
+          "pair_index": 197
+        },
+        {
+          "atom_id": "pair130_class1_fovea",
+          "class_id": 1,
+          "fovea_band": "fovea",
+          "pair_index": 130
+        },
+        {
+          "atom_id": "pair097_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 97
+        },
+        {
+          "atom_id": "pair059_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 59
+        },
+        {
+          "atom_id": "pair136_class4_mid",
+          "class_id": 4,
+          "fovea_band": "mid",
+          "pair_index": 136
+        },
+        {
+          "atom_id": "pair097_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 97
+        },
+        {
+          "atom_id": "pair130_class0_fovea",
+          "class_id": 0,
+          "fovea_band": "fovea",
+          "pair_index": 130
+        },
+        {
+          "atom_id": "pair120_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 120
+        },
+        {
+          "atom_id": "pair197_class1_fovea",
+          "class_id": 1,
+          "fovea_band": "fovea",
+          "pair_index": 197
+        },
+        {
+          "atom_id": "pair197_class4_mid",
+          "class_id": 4,
+          "fovea_band": "mid",
+          "pair_index": 197
+        },
+        {
+          "atom_id": "pair130_class2_mid",
+          "class_id": 2,
+          "fovea_band": "mid",
+          "pair_index": 130
+        },
+        {
+          "atom_id": "pair099_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 99
+        },
+        {
+          "atom_id": "pair078_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 78
+        },
+        {
+          "atom_id": "pair108_class2_mid",
+          "class_id": 2,
+          "fovea_band": "mid",
+          "pair_index": 108
+        },
+        {
+          "atom_id": "pair177_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 177
+        },
+        {
+          "atom_id": "pair059_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 59
+        },
+        {
+          "atom_id": "pair136_class2_mid",
+          "class_id": 2,
+          "fovea_band": "mid",
+          "pair_index": 136
+        },
+        {
+          "atom_id": "pair120_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 120
+        },
+        {
+          "atom_id": "pair078_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 78
+        },
+        {
+          "atom_id": "pair064_class2_mid",
+          "class_id": 2,
+          "fovea_band": "mid",
+          "pair_index": 64
+        },
+        {
+          "atom_id": "pair068_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 68
+        },
+        {
+          "atom_id": "pair289_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 289
+        },
+        {
+          "atom_id": "pair192_class3_mid",
+          "class_id": 3,
+          "fovea_band": "mid",
+          "pair_index": 192
+        },
+        {
+          "atom_id": "pair067_class2_mid",
+          "class_id": 2,
+          "fovea_band": "mid",
+          "pair_index": 67
+        },
+        {
+          "atom_id": "pair069_class2_mid",
+          "class_id": 2,
+          "fovea_band": "mid",
+          "pair_index": 69
+        },
+        {
+          "atom_id": "pair099_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 99
+        },
+        {
+          "atom_id": "pair177_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 177
+        },
+        {
+          "atom_id": "pair134_class4_mid",
+          "class_id": 4,
+          "fovea_band": "mid",
+          "pair_index": 134
+        },
+        {
+          "atom_id": "pair070_class3_mid",
+          "class_id": 3,
+          "fovea_band": "mid",
+          "pair_index": 70
+        },
+        {
+          "atom_id": "pair125_class4_mid",
+          "class_id": 4,
+          "fovea_band": "mid",
+          "pair_index": 125
+        },
+        {
+          "atom_id": "pair150_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 150
+        },
+        {
+          "atom_id": "pair289_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 289
+        },
+        {
+          "atom_id": "pair068_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 68
+        },
+        {
+          "atom_id": "pair136_class1_fovea",
+          "class_id": 1,
+          "fovea_band": "fovea",
+          "pair_index": 136
+        },
+        {
+          "atom_id": "pair150_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 150
+        },
+        {
+          "atom_id": "pair125_class0_fovea",
+          "class_id": 0,
+          "fovea_band": "fovea",
+          "pair_index": 125
+        },
+        {
+          "atom_id": "pair196_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 196
+        },
+        {
+          "atom_id": "pair121_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 121
+        },
+        {
+          "atom_id": "pair070_class4_mid",
+          "class_id": 4,
+          "fovea_band": "mid",
+          "pair_index": 70
+        },
+        {
+          "atom_id": "pair196_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 196
+        },
+        {
+          "atom_id": "pair074_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 74
+        },
+        {
+          "atom_id": "pair092_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 92
+        },
+        {
+          "atom_id": "pair125_class2_mid",
+          "class_id": 2,
+          "fovea_band": "mid",
+          "pair_index": 125
+        },
+        {
+          "atom_id": "pair133_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 133
+        },
+        {
+          "atom_id": "pair112_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 112
+        },
+        {
+          "atom_id": "pair192_class4_mid",
+          "class_id": 4,
+          "fovea_band": "mid",
+          "pair_index": 192
+        },
+        {
+          "atom_id": "pair284_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 284
+        },
+        {
+          "atom_id": "pair197_class2_mid",
+          "class_id": 2,
+          "fovea_band": "mid",
+          "pair_index": 197
+        },
+        {
+          "atom_id": "pair121_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 121
+        },
+        {
+          "atom_id": "pair138_class3_mid",
+          "class_id": 3,
+          "fovea_band": "mid",
+          "pair_index": 138
+        },
+        {
+          "atom_id": "pair112_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 112
+        },
+        {
+          "atom_id": "pair133_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 133
+        },
+        {
+          "atom_id": "pair074_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 74
+        },
+        {
+          "atom_id": "pair134_class0_fovea",
+          "class_id": 0,
+          "fovea_band": "fovea",
+          "pair_index": 134
+        },
+        {
+          "atom_id": "pair165_class4_mid",
+          "class_id": 4,
+          "fovea_band": "mid",
+          "pair_index": 165
+        },
+        {
+          "atom_id": "pair092_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 92
+        },
+        {
+          "atom_id": "pair134_class2_mid",
+          "class_id": 2,
+          "fovea_band": "mid",
+          "pair_index": 134
+        },
+        {
+          "atom_id": "pair198_class0_fovea",
+          "class_id": 0,
+          "fovea_band": "fovea",
+          "pair_index": 198
+        },
+        {
+          "atom_id": "pair148_class4_mid",
+          "class_id": 4,
+          "fovea_band": "mid",
+          "pair_index": 148
+        },
+        {
+          "atom_id": "pair125_class1_fovea",
+          "class_id": 1,
+          "fovea_band": "fovea",
+          "pair_index": 125
+        },
+        {
+          "atom_id": "pair142_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 142
+        },
+        {
+          "atom_id": "pair192_class0_fovea",
+          "class_id": 0,
+          "fovea_band": "fovea",
+          "pair_index": 192
+        },
+        {
+          "atom_id": "pair065_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 65
+        },
+        {
+          "atom_id": "pair284_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 284
+        },
+        {
+          "atom_id": "pair062_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 62
+        },
+        {
+          "atom_id": "pair160_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 160
+        },
+        {
+          "atom_id": "pair126_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 126
+        },
+        {
+          "atom_id": "pair061_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 61
+        },
+        {
+          "atom_id": "pair200_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 200
+        },
+        {
+          "atom_id": "pair148_class0_fovea",
+          "class_id": 0,
+          "fovea_band": "fovea",
+          "pair_index": 148
+        },
+        {
+          "atom_id": "pair084_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 84
+        },
+        {
+          "atom_id": "pair126_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 126
+        },
+        {
+          "atom_id": "pair061_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 61
+        },
+        {
+          "atom_id": "pair159_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 159
+        },
+        {
+          "atom_id": "pair065_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 65
+        },
+        {
+          "atom_id": "pair148_class1_fovea",
+          "class_id": 1,
+          "fovea_band": "fovea",
+          "pair_index": 148
+        },
+        {
+          "atom_id": "pair070_class1_fovea",
+          "class_id": 1,
+          "fovea_band": "fovea",
+          "pair_index": 70
+        },
+        {
+          "atom_id": "pair105_class3_periphery",
+          "class_id": 3,
+          "fovea_band": "periphery",
+          "pair_index": 105
+        },
+        {
+          "atom_id": "pair062_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 62
+        },
+        {
+          "atom_id": "pair104_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 104
+        },
+        {
+          "atom_id": "pair142_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 142
+        },
+        {
+          "atom_id": "pair120_class3_mid",
+          "class_id": 3,
+          "fovea_band": "mid",
+          "pair_index": 120
+        },
+        {
+          "atom_id": "pair131_class0_fovea",
+          "class_id": 0,
+          "fovea_band": "fovea",
+          "pair_index": 131
+        },
+        {
+          "atom_id": "pair165_class2_mid",
+          "class_id": 2,
+          "fovea_band": "mid",
+          "pair_index": 165
+        },
+        {
+          "atom_id": "pair070_class0_fovea",
+          "class_id": 0,
+          "fovea_band": "fovea",
+          "pair_index": 70
+        },
+        {
+          "atom_id": "pair192_class2_mid",
+          "class_id": 2,
+          "fovea_band": "mid",
+          "pair_index": 192
+        },
+        {
+          "atom_id": "pair129_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 129
+        },
+        {
+          "atom_id": "pair166_class4_mid",
+          "class_id": 4,
+          "fovea_band": "mid",
+          "pair_index": 166
+        },
+        {
+          "atom_id": "pair078_class4_mid",
+          "class_id": 4,
+          "fovea_band": "mid",
+          "pair_index": 78
+        },
+        {
+          "atom_id": "pair059_class4_mid",
+          "class_id": 4,
+          "fovea_band": "mid",
+          "pair_index": 59
+        },
+        {
+          "atom_id": "pair138_class0_fovea",
+          "class_id": 0,
+          "fovea_band": "fovea",
+          "pair_index": 138
+        },
+        {
+          "atom_id": "pair129_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 129
+        },
+        {
+          "atom_id": "pair198_class3_mid",
+          "class_id": 3,
+          "fovea_band": "mid",
+          "pair_index": 198
+        },
+        {
+          "atom_id": "pair134_class1_fovea",
+          "class_id": 1,
+          "fovea_band": "fovea",
+          "pair_index": 134
+        },
+        {
+          "atom_id": "pair084_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 84
+        },
+        {
+          "atom_id": "pair148_class3_mid",
+          "class_id": 3,
+          "fovea_band": "mid",
+          "pair_index": 148
+        },
+        {
+          "atom_id": "pair153_class0_fovea",
+          "class_id": 0,
+          "fovea_band": "fovea",
+          "pair_index": 153
+        },
+        {
+          "atom_id": "pair165_class0_fovea",
+          "class_id": 0,
+          "fovea_band": "fovea",
+          "pair_index": 165
+        },
+        {
+          "atom_id": "pair070_class2_mid",
+          "class_id": 2,
+          "fovea_band": "mid",
+          "pair_index": 70
+        },
+        {
+          "atom_id": "pair104_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 104
+        },
+        {
+          "atom_id": "pair138_class4_mid",
+          "class_id": 4,
+          "fovea_band": "mid",
+          "pair_index": 138
+        },
+        {
+          "atom_id": "pair198_class4_mid",
+          "class_id": 4,
+          "fovea_band": "mid",
+          "pair_index": 198
+        },
+        {
+          "atom_id": "pair153_class4_mid",
+          "class_id": 4,
+          "fovea_band": "mid",
+          "pair_index": 153
+        },
+        {
+          "atom_id": "pair141_class3_mid",
+          "class_id": 3,
+          "fovea_band": "mid",
+          "pair_index": 141
+        },
+        {
+          "atom_id": "pair206_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 206
+        },
+        {
+          "atom_id": "pair131_class4_mid",
+          "class_id": 4,
+          "fovea_band": "mid",
+          "pair_index": 131
+        },
+        {
+          "atom_id": "pair062_class3_mid",
+          "class_id": 3,
+          "fovea_band": "mid",
+          "pair_index": 62
+        },
+        {
+          "atom_id": "pair192_class1_fovea",
+          "class_id": 1,
+          "fovea_band": "fovea",
+          "pair_index": 192
+        },
+        {
+          "atom_id": "pair097_class4_mid",
+          "class_id": 4,
+          "fovea_band": "mid",
+          "pair_index": 97
+        },
+        {
+          "atom_id": "pair066_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 66
+        },
+        {
+          "atom_id": "pair156_class4_fovea",
+          "class_id": 4,
+          "fovea_band": "fovea",
+          "pair_index": 156
+        },
+        {
+          "atom_id": "pair200_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 200
+        },
+        {
+          "atom_id": "pair198_class1_fovea",
+          "class_id": 1,
+          "fovea_band": "fovea",
+          "pair_index": 198
+        },
+        {
+          "atom_id": "pair103_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 103
+        },
+        {
+          "atom_id": "pair101_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 101
+        },
+        {
+          "atom_id": "pair141_class4_mid",
+          "class_id": 4,
+          "fovea_band": "mid",
+          "pair_index": 141
+        },
+        {
+          "atom_id": "pair139_class4_fovea",
+          "class_id": 4,
+          "fovea_band": "fovea",
+          "pair_index": 139
+        },
+        {
+          "atom_id": "pair166_class0_fovea",
+          "class_id": 0,
+          "fovea_band": "fovea",
+          "pair_index": 166
+        },
+        {
+          "atom_id": "pair159_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 159
+        },
+        {
+          "atom_id": "pair068_class3_mid",
+          "class_id": 3,
+          "fovea_band": "mid",
+          "pair_index": 68
+        },
+        {
+          "atom_id": "pair127_class4_fovea",
+          "class_id": 4,
+          "fovea_band": "fovea",
+          "pair_index": 127
+        },
+        {
+          "atom_id": "pair059_class1_fovea",
+          "class_id": 1,
+          "fovea_band": "fovea",
+          "pair_index": 59
+        },
+        {
+          "atom_id": "pair138_class1_fovea",
+          "class_id": 1,
+          "fovea_band": "fovea",
+          "pair_index": 138
+        },
+        {
+          "atom_id": "pair290_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 290
+        },
+        {
+          "atom_id": "pair103_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 103
+        },
+        {
+          "atom_id": "pair101_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 101
+        },
+        {
+          "atom_id": "pair120_class0_fovea",
+          "class_id": 0,
+          "fovea_band": "fovea",
+          "pair_index": 120
+        },
+        {
+          "atom_id": "pair164_class4_periphery",
+          "class_id": 4,
+          "fovea_band": "periphery",
+          "pair_index": 164
+        },
+        {
+          "atom_id": "pair144_class4_fovea",
+          "class_id": 4,
+          "fovea_band": "fovea",
+          "pair_index": 144
+        },
+        {
+          "atom_id": "pair059_class0_fovea",
+          "class_id": 0,
+          "fovea_band": "fovea",
+          "pair_index": 59
+        },
+        {
+          "atom_id": "pair148_class2_mid",
+          "class_id": 2,
+          "fovea_band": "mid",
+          "pair_index": 148
+        },
+        {
+          "atom_id": "pair166_class2_mid",
+          "class_id": 2,
+          "fovea_band": "mid",
+          "pair_index": 166
+        },
+        {
+          "atom_id": "pair068_class4_mid",
+          "class_id": 4,
+          "fovea_band": "mid",
+          "pair_index": 68
+        },
+        {
+          "atom_id": "pair160_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 160
+        },
+        {
+          "atom_id": "pair078_class1_fovea",
+          "class_id": 1,
+          "fovea_band": "fovea",
+          "pair_index": 78
+        },
+        {
+          "atom_id": "pair135_class4_fovea",
+          "class_id": 4,
+          "fovea_band": "fovea",
+          "pair_index": 135
+        },
+        {
+          "atom_id": "pair120_class4_mid",
+          "class_id": 4,
+          "fovea_band": "mid",
+          "pair_index": 120
+        },
+        {
+          "atom_id": "pair152_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 152
+        },
+        {
+          "atom_id": "pair099_class1_fovea",
+          "class_id": 1,
+          "fovea_band": "fovea",
+          "pair_index": 99
+        },
+        {
+          "atom_id": "pair078_class2_mid",
+          "class_id": 2,
+          "fovea_band": "mid",
+          "pair_index": 78
+        },
+        {
+          "atom_id": "pair074_class3_mid",
+          "class_id": 3,
+          "fovea_band": "mid",
+          "pair_index": 74
+        },
+        {
+          "atom_id": "pair097_class1_fovea",
+          "class_id": 1,
+          "fovea_band": "fovea",
+          "pair_index": 97
+        },
+        {
+          "atom_id": "pair075_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 75
+        },
+        {
+          "atom_id": "pair099_class4_mid",
+          "class_id": 4,
+          "fovea_band": "mid",
+          "pair_index": 99
+        },
+        {
+          "atom_id": "pair206_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 206
+        },
+        {
+          "atom_id": "pair179_class4_fovea",
+          "class_id": 4,
+          "fovea_band": "fovea",
+          "pair_index": 179
+        },
+        {
+          "atom_id": "pair119_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 119
+        },
+        {
+          "atom_id": "pair066_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 66
+        },
+        {
+          "atom_id": "pair090_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 90
+        },
+        {
+          "atom_id": "pair078_class0_fovea",
+          "class_id": 0,
+          "fovea_band": "fovea",
+          "pair_index": 78
+        },
+        {
+          "atom_id": "pair165_class1_fovea",
+          "class_id": 1,
+          "fovea_band": "fovea",
+          "pair_index": 165
+        },
+        {
+          "atom_id": "pair178_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 178
+        },
+        {
+          "atom_id": "pair059_class2_mid",
+          "class_id": 2,
+          "fovea_band": "mid",
+          "pair_index": 59
+        },
+        {
+          "atom_id": "pair074_class4_mid",
+          "class_id": 4,
+          "fovea_band": "mid",
+          "pair_index": 74
+        },
+        {
+          "atom_id": "pair090_class2_fovea",
+          "class_id": 2,
+          "fovea_band": "fovea",
+          "pair_index": 90
+        },
+        {
+          "atom_id": "pair107_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 107
+        },
+        {
+          "atom_id": "pair289_class4_mid",
+          "class_id": 4,
+          "fovea_band": "mid",
+          "pair_index": 289
+        },
+        {
+          "atom_id": "pair131_class2_mid",
+          "class_id": 2,
+          "fovea_band": "mid",
+          "pair_index": 131
+        },
+        {
+          "atom_id": "pair097_class2_mid",
+          "class_id": 2,
+          "fovea_band": "mid",
+          "pair_index": 97
+        },
+        {
+          "atom_id": "pair105_class4_periphery",
+          "class_id": 4,
+          "fovea_band": "periphery",
+          "pair_index": 105
+        },
+        {
+          "atom_id": "pair105_class1_mid",
+          "class_id": 1,
+          "fovea_band": "mid",
+          "pair_index": 105
+        },
+        {
+          "atom_id": "pair141_class0_fovea",
+          "class_id": 0,
+          "fovea_band": "fovea",
+          "pair_index": 141
+        },
+        {
+          "atom_id": "pair131_class1_fovea",
+          "class_id": 1,
+          "fovea_band": "fovea",
+          "pair_index": 131
+        },
+        {
+          "atom_id": "pair102_class3_fovea",
+          "class_id": 3,
+          "fovea_band": "fovea",
+          "pair_index": 102
+        },
+        {
+          "atom_id": "pair097_class0_fovea",
+          "class_id": 0,
+          "fovea_band": "fovea",
+          "pair_index": 97
+        },
+        {
+          "atom_id": "pair121_class0_fovea",
+          "class_id": 0,
+          "fovea_band": "fovea",
+          "pair_index": 121
+        },
+        {
+          "atom_id": "pair105_class2_periphery",
+          "class_id": 2,
+          "fovea_band": "periphery",
+          "pair_index": 105
+        }
+      ],
+      "selected_repair_pixels": 30542,
+      "selected_repair_runs": 8704,
+      "strategy": "cmg2_foveated_hard_pair_residual_repair_v1",
+      "total_residual_pixels": 826703,
+      "total_residual_runs": 215585
+    }
+  },
+  "schema": "cmg2_foveated_repair_candidate_builder_v1.candidate",
+  "score_claim": false,
+  "score_claim_warning": "No score claim is made by this builder. Atom rankings are byte/prior planning signals only; every emitted archive requires exact CUDA auth eval before ranking, promotion, retirement, or paper claims.",
+  "source_archive": {
+    "bytes": 217169,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c067_cmg2_downsample3x1_foveated_repair_candidates_20260502T1014Z/top256_foveated_hardpair_atoms/cmg2_repair_source_members.zip",
+    "sha256": "eb5047b71ebfdbecd8d721c158a6f45998bbe1af0e3e87ab45abc8a7fca0ac3c"
+  }
+}

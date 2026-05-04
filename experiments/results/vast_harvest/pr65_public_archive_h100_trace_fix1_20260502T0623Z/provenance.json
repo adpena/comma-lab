@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "started_at_utc": "2026-05-02T06:14:12Z",
+  "git_hash": "no-git",
+  "gpu_name": "NVIDIA H100 80GB HBM3",
+  "driver_version": "590.48.01",
+  "lane_script": "scripts/remote_archive_only_eval.sh",
+  "tag": "pr65_public_archive_h100_trace_fix1",
+  "archive_path": "/workspace/pact/experiments/results/pr65_public_archive_h100_trace_20260502T0610Z/inputs/archive.zip",
+  "predicted_band": [0.25, 0.40],
+  "controlled_baseline": "public_PR65_henosis_qz_n3z_r25_clean_external_trace_fix1",
+  "no_training": true,
+  "no_build": true,
+  "strict_scorer_rule_compliant": true,
+  "design_memo": "scripts/remote_archive_only_eval.sh"
+}

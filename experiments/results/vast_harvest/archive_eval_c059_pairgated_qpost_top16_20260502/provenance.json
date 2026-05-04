@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "started_at_utc": "2026-05-02T04:56:02Z",
+  "git_hash": "no-git",
+  "gpu_name": "NVIDIA H100 80GB HBM3",
+  "driver_version": "590.48.01",
+  "lane_script": "scripts/remote_archive_only_eval.sh",
+  "tag": "c059_pairgated_qpost_top16_20260502",
+  "archive_path": "/workspace/pact/experiments/results/qzs3_postprocess_c059_pairgated_20260502/pairgated_qpost_top016/archive.zip",
+  "predicted_band": [0.3145, 0.3185],
+  "controlled_baseline": "C-059 A++ exact T4 frontier score=0.3157055307844823 sha=cf44aa7fdb13b9ab6236aefde1f5f58e915d7dfa99128246235443841396c6ab bytes=276347; candidate charges PR65 pair-filtered qpost streams on top16 pose manifold pairs.",
+  "no_training": true,
+  "no_build": true,
+  "strict_scorer_rule_compliant": true,
+  "design_memo": "scripts/remote_archive_only_eval.sh"
+}

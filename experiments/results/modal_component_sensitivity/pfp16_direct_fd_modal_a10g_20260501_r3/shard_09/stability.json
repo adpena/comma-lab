@@ -1,0 +1,220 @@
+{
+  "component_passed": {
+    "combined": false,
+    "posenet": false,
+    "segnet": false
+  },
+  "correlation": {
+    "combined": {
+      "pearson": 0.8246173640950766,
+      "spearman": 0.9997608471571122
+    },
+    "posenet": {
+      "pearson": 0.8379207915672442,
+      "spearman": 0.999787314794094
+    },
+    "segnet": {
+      "pearson": 0.8246937041774212,
+      "spearman": 0.9997189807596233
+    }
+  },
+  "counts": {
+    "combined": {
+      "calibration": {
+        "channels": 717,
+        "layers": 19,
+        "negative": 0,
+        "nonfinite": 0,
+        "zero": 672
+      },
+      "holdout": {
+        "channels": 717,
+        "layers": 19,
+        "negative": 0,
+        "nonfinite": 0,
+        "zero": 672
+      }
+    },
+    "posenet": {
+      "calibration": {
+        "channels": 717,
+        "layers": 19,
+        "negative": 0,
+        "nonfinite": 0,
+        "zero": 672
+      },
+      "holdout": {
+        "channels": 717,
+        "layers": 19,
+        "negative": 0,
+        "nonfinite": 0,
+        "zero": 672
+      }
+    },
+    "segnet": {
+      "calibration": {
+        "channels": 717,
+        "layers": 19,
+        "negative": 0,
+        "nonfinite": 0,
+        "zero": 672
+      },
+      "holdout": {
+        "channels": 717,
+        "layers": 19,
+        "negative": 0,
+        "nonfinite": 0,
+        "zero": 672
+      }
+    }
+  },
+  "cv": {
+    "combined": 0.6610007286071777,
+    "posenet": 0.6363627910614014,
+    "segnet": 0.5313234925270081
+  },
+  "cv_by_layer": {
+    "combined": {
+      "motion.bottleneck.conv1.weight": 0.0,
+      "motion.bottleneck.conv2.weight": 0.0,
+      "motion.down.0.weight": 0.0,
+      "motion.fuse.weight": 0.0,
+      "motion.head.weight": 0.0,
+      "motion.stem.0.weight": 0.0,
+      "motion.up_conv.weight": 0.0,
+      "renderer.bottleneck.conv1.weight": 0.0,
+      "renderer.bottleneck.conv2.weight": 0.0,
+      "renderer.down_conv.weight": 0.0,
+      "renderer.down_res.conv1.weight": 0.507083535194397,
+      "renderer.down_res.conv2.weight": 0.6610007286071777,
+      "renderer.fuse_conv.weight": 0.0,
+      "renderer.head.weight": 0.0,
+      "renderer.stem_conv.weight": 0.0,
+      "renderer.stem_res.conv1.weight": 0.0,
+      "renderer.stem_res.conv2.weight": 0.0,
+      "renderer.up_res.conv1.weight": 0.0,
+      "renderer.up_res.conv2.weight": 0.0
+    },
+    "posenet": {
+      "motion.bottleneck.conv1.weight": 0.0,
+      "motion.bottleneck.conv2.weight": 0.0,
+      "motion.down.0.weight": 0.0,
+      "motion.fuse.weight": 0.0,
+      "motion.head.weight": 0.0,
+      "motion.stem.0.weight": 0.0,
+      "motion.up_conv.weight": 0.0,
+      "renderer.bottleneck.conv1.weight": 0.0,
+      "renderer.bottleneck.conv2.weight": 0.0,
+      "renderer.down_conv.weight": 0.0,
+      "renderer.down_res.conv1.weight": 0.45445942878723145,
+      "renderer.down_res.conv2.weight": 0.6363627910614014,
+      "renderer.fuse_conv.weight": 0.0,
+      "renderer.head.weight": 0.0,
+      "renderer.stem_conv.weight": 0.0,
+      "renderer.stem_res.conv1.weight": 0.0,
+      "renderer.stem_res.conv2.weight": 0.0,
+      "renderer.up_res.conv1.weight": 0.0,
+      "renderer.up_res.conv2.weight": 0.0
+    },
+    "segnet": {
+      "motion.bottleneck.conv1.weight": 0.0,
+      "motion.bottleneck.conv2.weight": 0.0,
+      "motion.down.0.weight": 0.0,
+      "motion.fuse.weight": 0.0,
+      "motion.head.weight": 0.0,
+      "motion.stem.0.weight": 0.0,
+      "motion.up_conv.weight": 0.0,
+      "renderer.bottleneck.conv1.weight": 0.0,
+      "renderer.bottleneck.conv2.weight": 0.0,
+      "renderer.down_conv.weight": 0.0,
+      "renderer.down_res.conv1.weight": 0.5313234925270081,
+      "renderer.down_res.conv2.weight": 0.44559603929519653,
+      "renderer.fuse_conv.weight": 0.0,
+      "renderer.head.weight": 0.0,
+      "renderer.stem_conv.weight": 0.0,
+      "renderer.stem_res.conv1.weight": 0.0,
+      "renderer.stem_res.conv2.weight": 0.0,
+      "renderer.up_res.conv1.weight": 0.0,
+      "renderer.up_res.conv2.weight": 0.0
+    }
+  },
+  "passed": false,
+  "rank": {
+    "combined": 0.23076923076923078,
+    "posenet": 0.14285714285714285,
+    "segnet": 0.06666666666666667
+  },
+  "thresholds": {
+    "cv_max": 0.35,
+    "pearson_min": 0.0,
+    "spearman_min": 0.3,
+    "top_decile_overlap_min": 0.5
+  },
+  "top_fraction": {
+    "combined": {
+      "top_10pct": {
+        "fraction": 0.1,
+        "k": 72,
+        "overlap": 1.0
+      },
+      "top_1pct": {
+        "fraction": 0.01,
+        "k": 8,
+        "overlap": 0.23076923076923078
+      },
+      "top_5pct": {
+        "fraction": 0.05,
+        "k": 36,
+        "overlap": 0.6363636363636364
+      }
+    },
+    "posenet": {
+      "top_10pct": {
+        "fraction": 0.1,
+        "k": 72,
+        "overlap": 1.0
+      },
+      "top_1pct": {
+        "fraction": 0.01,
+        "k": 8,
+        "overlap": 0.14285714285714285
+      },
+      "top_5pct": {
+        "fraction": 0.05,
+        "k": 36,
+        "overlap": 0.7142857142857143
+      }
+    },
+    "segnet": {
+      "top_10pct": {
+        "fraction": 0.1,
+        "k": 72,
+        "overlap": 1.0
+      },
+      "top_1pct": {
+        "fraction": 0.01,
+        "k": 8,
+        "overlap": 0.06666666666666667
+      },
+      "top_5pct": {
+        "fraction": 0.05,
+        "k": 36,
+        "overlap": 0.7142857142857143
+      }
+    }
+  },
+  "top_k": {
+    "combined": {
+      "k": 8,
+      "overlap": 0.23076923076923078
+    },
+    "posenet": {
+      "k": 8,
+      "overlap": 0.14285714285714285
+    },
+    "segnet": {
+      "k": 8,
+      "overlap": 0.06666666666666667
+    }
+  }
+}

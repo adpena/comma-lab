@@ -1,0 +1,161 @@
+{
+  "anchor_exact_eval": {
+    "archive_bytes": 277321,
+    "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+    "avg_posenet_dist": 0.00049415,
+    "avg_segnet_dist": 0.00059581,
+    "canonical_score": 0.31453355357318635,
+    "n_samples": 600,
+    "path": "experiments/results/lightning_batch/exact_eval_pr79_s2_fixed_adaptive_actions_t4_20260503T173023Z/contest_auth_eval.json"
+  },
+  "candidate_matrix": [
+    {
+      "archive_bytes": 277314,
+      "archive_path": "experiments/results/pr79_pr65_selective_pose_candidates_20260503_worker/pr79_s2_pr65_pose_wholesale_qp1/archive.zip",
+      "archive_sha256": "211d0845636126163ebc21abb66381ed531e367cb255d2c88dad2ca369706e52",
+      "candidate_id": "pr79_s2_pr65_pose_wholesale_qp1",
+      "changed_pose_word_count": 571,
+      "dispatch_recommendation": {
+        "dispatch_ready_now": false,
+        "lane_claim_required_before_any_exact_eval": true,
+        "reason": "local archive-valid candidate does not clear the PR79/S2 proxy and risk screen",
+        "recommended": false,
+        "remote_dispatch_performed": false
+      },
+      "high_ev_enough_for_exact_eval": false,
+      "manifest_path": "experiments/results/pr79_pr65_selective_pose_candidates_20260503_worker/pr79_s2_pr65_pose_wholesale_qp1/manifest.json",
+      "pose_brotli_delta_bytes_vs_pr79_s2": -7,
+      "proxy_margin_vs_pr79_s2": 0.0,
+      "proxy_margin_vs_sub314": -0.0005288925605144965,
+      "score_claim": false
+    },
+    {
+      "archive_bytes": 277321,
+      "archive_path": "experiments/results/pr79_pr65_selective_pose_candidates_20260503_worker/pr79_s2_pr65_pose_atoms_top008/archive.zip",
+      "archive_sha256": "18779ef5e2f71f3e96667078b26430ae09d0a3926b0b377a6c85fa50900da612",
+      "candidate_id": "pr79_s2_pr65_pose_atoms_top008",
+      "changed_pose_word_count": 8,
+      "dispatch_recommendation": {
+        "dispatch_ready_now": false,
+        "lane_claim_required_before_any_exact_eval": true,
+        "reason": "local archive-valid candidate does not clear the PR79/S2 proxy and risk screen",
+        "recommended": false,
+        "remote_dispatch_performed": false
+      },
+      "high_ev_enough_for_exact_eval": false,
+      "manifest_path": "experiments/results/pr79_pr65_selective_pose_candidates_20260503_worker/pr79_s2_pr65_pose_atoms_top008/manifest.json",
+      "pose_brotli_delta_bytes_vs_pr79_s2": 0,
+      "proxy_margin_vs_pr79_s2": 4.116796122354442e-05,
+      "proxy_margin_vs_sub314": -0.0004923856119628073,
+      "score_claim": false
+    },
+    {
+      "archive_bytes": 277321,
+      "archive_path": "experiments/results/pr79_pr65_selective_pose_candidates_20260503_worker/pr79_s2_pr65_pose_atoms_top016/archive.zip",
+      "archive_sha256": "64bd1cf0e37fefc07a5daeb8fe9ba8391bbb80d61c2c942a4b70f49049d3f7fa",
+      "candidate_id": "pr79_s2_pr65_pose_atoms_top016",
+      "changed_pose_word_count": 16,
+      "dispatch_recommendation": {
+        "dispatch_ready_now": false,
+        "lane_claim_required_before_any_exact_eval": true,
+        "reason": "local archive-valid candidate does not clear the PR79/S2 proxy and risk screen",
+        "recommended": false,
+        "remote_dispatch_performed": false
+      },
+      "high_ev_enough_for_exact_eval": false,
+      "manifest_path": "experiments/results/pr79_pr65_selective_pose_candidates_20260503_worker/pr79_s2_pr65_pose_atoms_top016/manifest.json",
+      "pose_brotli_delta_bytes_vs_pr79_s2": 0,
+      "proxy_margin_vs_pr79_s2": 8.233592244708884e-05,
+      "proxy_margin_vs_sub314": -0.00045121765073926284,
+      "score_claim": false
+    },
+    {
+      "archive_bytes": 277321,
+      "archive_path": "experiments/results/pr79_pr65_selective_pose_candidates_20260503_worker/pr79_s2_pr65_pose_atoms_top024/archive.zip",
+      "archive_sha256": "ef62850ae6d3a84c6f7d142790b3622e5962346a76686fb040a052df4691103a",
+      "candidate_id": "pr79_s2_pr65_pose_atoms_top024",
+      "changed_pose_word_count": 24,
+      "dispatch_recommendation": {
+        "dispatch_ready_now": false,
+        "lane_claim_required_before_any_exact_eval": true,
+        "reason": "local archive-valid candidate does not clear the PR79/S2 proxy and risk screen",
+        "recommended": false,
+        "remote_dispatch_performed": false
+      },
+      "high_ev_enough_for_exact_eval": false,
+      "manifest_path": "experiments/results/pr79_pr65_selective_pose_candidates_20260503_worker/pr79_s2_pr65_pose_atoms_top024/manifest.json",
+      "pose_brotli_delta_bytes_vs_pr79_s2": 0,
+      "proxy_margin_vs_pr79_s2": 0.0001309889675294595,
+      "proxy_margin_vs_sub314": -0.00040256460565689216,
+      "score_claim": false
+    },
+    {
+      "archive_bytes": 277319,
+      "archive_path": "experiments/results/pr79_pr65_selective_pose_candidates_20260503_worker/pr79_s2_pr65_pose_atoms_top040/archive.zip",
+      "archive_sha256": "ad5f44fc945646ae5be583745870327c071b722e19895585e5272b696dd02a15",
+      "candidate_id": "pr79_s2_pr65_pose_atoms_top040",
+      "changed_pose_word_count": 40,
+      "dispatch_recommendation": {
+        "dispatch_ready_now": false,
+        "lane_claim_required_before_any_exact_eval": true,
+        "reason": "local archive-valid candidate does not clear the PR79/S2 proxy and risk screen",
+        "recommended": false,
+        "remote_dispatch_performed": false
+      },
+      "high_ev_enough_for_exact_eval": false,
+      "manifest_path": "experiments/results/pr79_pr65_selective_pose_candidates_20260503_worker/pr79_s2_pr65_pose_atoms_top040/manifest.json",
+      "pose_brotli_delta_bytes_vs_pr79_s2": -2,
+      "proxy_margin_vs_pr79_s2": 0.00021706743190596148,
+      "proxy_margin_vs_sub314": -0.00031515442337414585,
+      "score_claim": false
+    }
+  ],
+  "dispatch_decision": {
+    "best_candidate_id": "pr79_s2_pr65_pose_atoms_top040",
+    "exact_eval_recommended": false,
+    "no_remote_dispatch_performed": true,
+    "reason": "no PR79/S2 + PR65 pose candidate cleared the local proxy/risk screen",
+    "required_before_any_exact_eval": [
+      "claim a non-conflicting lane with tools/claim_lane_dispatch.py claim",
+      "run experiments/contest_auth_eval.py --device cuda on the exact archive SHA/bytes",
+      "record contest_auth_eval.json, runtime tree hash, component gates, and terminal dispatch claim"
+    ]
+  },
+  "evidence_grade": "empirical_local_archive_valid_byte_and_proxy_screen",
+  "nearby_pr65_pose_exact_negative": {
+    "archive_bytes": 276346,
+    "archive_sha256": "d3913ec75bd1917f16f2bca5e672313f66f81da5446405fc8eccbba757eed79d",
+    "avg_posenet_dist": 0.00054426,
+    "avg_segnet_dist": 0.00061044,
+    "canonical_score": 0.318825479152544,
+    "n_samples": 600,
+    "path": "experiments/results/lightning_batch/exact_eval_pr65_pose_qp1_c091_c089_actions_p6_t4_fix1_20260503T121925Z/contest_auth_eval.json"
+  },
+  "no_remote_dispatch_performed": true,
+  "pose_sources": {
+    "pr65": {
+      "label": "pr65_p1d1_reencoded_qp1",
+      "pose_float32_sha256": "19d572bc3cdc50d4efac3c619acb5dff6f4823e1c585155e0e943afb31d3105e",
+      "pose_qp1_bytes": 1140,
+      "pose_qp1_sha256": "ce65d2798b914e09a762687e4a3f16d6e94294f73febf10c69a2ba0ff27c3390",
+      "pose_word_count": 600,
+      "pose_words_sha256": "4e9038cee23577070de6b842068e8dcfd58652e9dc4c63cc8a0b149a54be4532"
+    },
+    "pr79_s2": {
+      "label": "pr79_s2",
+      "pose_float32_sha256": "afd13805bc30e79f5a9c0587d08cc8e05fa5508c03f1a2b5e6a425058b530b66",
+      "pose_qp1_bytes": 1140,
+      "pose_qp1_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc",
+      "pose_word_count": 600,
+      "pose_words_sha256": "a875e3c9068d77d89dce961b8c44fdc50f1e123798651a28619ac83658085f55"
+    }
+  },
+  "schema": "pr79_pr65_selective_pose_candidates_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 277321,
+    "path": "experiments/results/pr79_action_dictionary_repack_v2_20260503_codex/pr79_s2_fixed_adaptive_actions/archive.zip",
+    "sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68"
+  },
+  "tool": "experiments/build_pr79_pr65_selective_pose_candidates.py"
+}

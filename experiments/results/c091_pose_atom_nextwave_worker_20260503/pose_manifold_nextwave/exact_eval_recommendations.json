@@ -1,0 +1,374 @@
+[
+  {
+    "archive": {
+      "archive_bytes": 276485,
+      "archive_sha256": "79091f2c3f0c30ef3ca512808f3adc0306010e7f57fed3a09b3664c16fea4ea8",
+      "path": "/Users/adpena/Projects/pact/experiments/results/c091_pose_atom_nextwave_worker_20260503/pose_manifold_nextwave/c091_next_cem_pose_waterfill_top192_s0125_m06/archive.zip",
+      "payload_bytes": 276385,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p3",
+      "payload_sha256": "44128c2715ad62ae4075e3b85e23403b3700f7ca1be876fb1f939318149cb84e"
+    },
+    "break_even_plausible": true,
+    "candidate_id": "c091_next_cem_pose_waterfill_top192_s0125_m06",
+    "dispatch_recommendation": {
+      "class": "exact_eval_candidate_after_claim_not_dispatched",
+      "do_not_duplicate": "exact_eval_pr65_pose_qp1_c091_c089_actions_p6_t4_20260503T1158Z",
+      "exact_eval_command_template": [
+        ".venv/bin/python",
+        "-u",
+        "experiments/contest_auth_eval.py",
+        "--archive",
+        "/Users/adpena/Projects/pact/experiments/results/c091_pose_atom_nextwave_worker_20260503/pose_manifold_nextwave/c091_next_cem_pose_waterfill_top192_s0125_m06/archive.zip",
+        "--inflate-sh",
+        "submissions/robust_current/inflate.sh",
+        "--upstream-dir",
+        "upstream",
+        "--device",
+        "cuda"
+      ],
+      "no_remote_dispatch_performed": true,
+      "reason": "Archive exists, local stream closure passed, changed pose atoms are non-noop, and the conservative affected-trace efficiency proxy clears sub-0.314 break-even.",
+      "required_before_any_remote_eval": [
+        "wait for the existing PR65 pose-transfer exact eval if it targets the same comparison slot",
+        "claim a non-conflicting lane with tools/claim_lane_dispatch.py",
+        "run exact CUDA auth eval on this exact archive SHA through contest_auth_eval.py"
+      ]
+    },
+    "economics": {
+      "affected_pose_trace_mass": 0.023147387461190442,
+      "affected_seg_trace_mass": 0.021949768696989242,
+      "affected_trace_mass": 0.045097156158179684,
+      "archive_delta_bytes_vs_c091": 4,
+      "expected_component_gain_proxy": 0.001848983402485367,
+      "planning_efficiency_assumption": 0.041,
+      "proxy_margin_vs_sub314_requirement": 0.0006805696838130995,
+      "rate_score_delta_vs_c091": 2.6634358124886856e-06,
+      "score_if_components_unchanged": 0.31516841371867227,
+      "sub314_component_gain_required": 0.0011684137186722676,
+      "sub314_equivalent_bytes_needed_after_candidate": 1755,
+      "trace_is_promotable_evidence": false
+    },
+    "local_roundtrip_gates": {
+      "actions_decoded_preserved": true,
+      "all_passed": true,
+      "candidate_pose_brotli_decodes": true,
+      "candidate_qp1_canonical_reencode": true,
+      "candidate_qp1_words_match_policy": true,
+      "copied_reference_labels": [],
+      "mask_decoded_preserved": true,
+      "no_full_public_or_prior_pose_copy": true,
+      "no_sidecars_in_archive": true,
+      "payload_format_is_self_describing": true,
+      "pose_stream_changed": true,
+      "renderer_decoded_preserved": true,
+      "single_member_zip": true,
+      "source_pose_not_copied_verbatim": true
+    }
+  },
+  {
+    "archive": {
+      "archive_bytes": 276488,
+      "archive_sha256": "26f0336ecee5f363e108f9f930def1382ea1b0734fa07d1f13822fc3d7d1721c",
+      "path": "/Users/adpena/Projects/pact/experiments/results/c091_pose_atom_nextwave_worker_20260503/pose_manifold_nextwave/c091_next_cem_pose_waterfill_top160_s01875_m08/archive.zip",
+      "payload_bytes": 276388,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p3",
+      "payload_sha256": "7c695285ba9ce5219fa828a8a48b6f1c228ea267745fa08f4d644906a265ad61"
+    },
+    "break_even_plausible": true,
+    "candidate_id": "c091_next_cem_pose_waterfill_top160_s01875_m08",
+    "dispatch_recommendation": {
+      "class": "exact_eval_candidate_after_claim_not_dispatched",
+      "do_not_duplicate": "exact_eval_pr65_pose_qp1_c091_c089_actions_p6_t4_20260503T1158Z",
+      "exact_eval_command_template": [
+        ".venv/bin/python",
+        "-u",
+        "experiments/contest_auth_eval.py",
+        "--archive",
+        "/Users/adpena/Projects/pact/experiments/results/c091_pose_atom_nextwave_worker_20260503/pose_manifold_nextwave/c091_next_cem_pose_waterfill_top160_s01875_m08/archive.zip",
+        "--inflate-sh",
+        "submissions/robust_current/inflate.sh",
+        "--upstream-dir",
+        "upstream",
+        "--device",
+        "cuda"
+      ],
+      "no_remote_dispatch_performed": true,
+      "reason": "Archive exists, local stream closure passed, changed pose atoms are non-noop, and the conservative affected-trace efficiency proxy clears sub-0.314 break-even.",
+      "required_before_any_remote_eval": [
+        "wait for the existing PR65 pose-transfer exact eval if it targets the same comparison slot",
+        "claim a non-conflicting lane with tools/claim_lane_dispatch.py",
+        "run exact CUDA auth eval on this exact archive SHA through contest_auth_eval.py"
+      ]
+    },
+    "economics": {
+      "affected_pose_trace_mass": 0.02091904102756765,
+      "affected_seg_trace_mass": 0.01840633871324826,
+      "affected_trace_mass": 0.03932537974081591,
+      "archive_delta_bytes_vs_c091": 7,
+      "expected_component_gain_proxy": 0.001690991328855084,
+      "planning_efficiency_assumption": 0.043,
+      "proxy_margin_vs_sub314_requirement": 0.000520580033323447,
+      "rate_score_delta_vs_c091": 4.6610126718552e-06,
+      "score_if_components_unchanged": 0.31517041129553164,
+      "sub314_component_gain_required": 0.001170411295531637,
+      "sub314_equivalent_bytes_needed_after_candidate": 1758,
+      "trace_is_promotable_evidence": false
+    },
+    "local_roundtrip_gates": {
+      "actions_decoded_preserved": true,
+      "all_passed": true,
+      "candidate_pose_brotli_decodes": true,
+      "candidate_qp1_canonical_reencode": true,
+      "candidate_qp1_words_match_policy": true,
+      "copied_reference_labels": [],
+      "mask_decoded_preserved": true,
+      "no_full_public_or_prior_pose_copy": true,
+      "no_sidecars_in_archive": true,
+      "payload_format_is_self_describing": true,
+      "pose_stream_changed": true,
+      "renderer_decoded_preserved": true,
+      "single_member_zip": true,
+      "source_pose_not_copied_verbatim": true
+    }
+  },
+  {
+    "archive": {
+      "archive_bytes": 276490,
+      "archive_sha256": "9a650ce4bdb77d18636893c33b4aafcb04059e89f9bc36df58feae5c200c991a",
+      "path": "/Users/adpena/Projects/pact/experiments/results/c091_pose_atom_nextwave_worker_20260503/pose_manifold_nextwave/c091_next_lowrank_pr65_pr67_top160_s025_m10/archive.zip",
+      "payload_bytes": 276390,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p3",
+      "payload_sha256": "e0eff98e2960d39f3f801b114a6c9c7b0fb2974571f6691ed4f290779b8dedf9"
+    },
+    "break_even_plausible": true,
+    "candidate_id": "c091_next_lowrank_pr65_pr67_top160_s025_m10",
+    "dispatch_recommendation": {
+      "class": "exact_eval_candidate_after_claim_not_dispatched",
+      "do_not_duplicate": "exact_eval_pr65_pose_qp1_c091_c089_actions_p6_t4_20260503T1158Z",
+      "exact_eval_command_template": [
+        ".venv/bin/python",
+        "-u",
+        "experiments/contest_auth_eval.py",
+        "--archive",
+        "/Users/adpena/Projects/pact/experiments/results/c091_pose_atom_nextwave_worker_20260503/pose_manifold_nextwave/c091_next_lowrank_pr65_pr67_top160_s025_m10/archive.zip",
+        "--inflate-sh",
+        "submissions/robust_current/inflate.sh",
+        "--upstream-dir",
+        "upstream",
+        "--device",
+        "cuda"
+      ],
+      "no_remote_dispatch_performed": true,
+      "reason": "Archive exists, local stream closure passed, changed pose atoms are non-noop, and the conservative affected-trace efficiency proxy clears sub-0.314 break-even.",
+      "required_before_any_remote_eval": [
+        "wait for the existing PR65 pose-transfer exact eval if it targets the same comparison slot",
+        "claim a non-conflicting lane with tools/claim_lane_dispatch.py",
+        "run exact CUDA auth eval on this exact archive SHA through contest_auth_eval.py"
+      ]
+    },
+    "economics": {
+      "affected_pose_trace_mass": 0.021139252618204533,
+      "affected_seg_trace_mass": 0.018184238545169745,
+      "affected_trace_mass": 0.039323491163374275,
+      "archive_delta_bytes_vs_c091": 9,
+      "expected_component_gain_proxy": 0.0015336161553715967,
+      "planning_efficiency_assumption": 0.039,
+      "proxy_margin_vs_sub314_requirement": 0.0003618731419337319,
+      "rate_score_delta_vs_c091": 5.9927305780995425e-06,
+      "score_if_components_unchanged": 0.31517174301343787,
+      "sub314_component_gain_required": 0.0011717430134378648,
+      "sub314_equivalent_bytes_needed_after_candidate": 1760,
+      "trace_is_promotable_evidence": false
+    },
+    "local_roundtrip_gates": {
+      "actions_decoded_preserved": true,
+      "all_passed": true,
+      "candidate_pose_brotli_decodes": true,
+      "candidate_qp1_canonical_reencode": true,
+      "candidate_qp1_words_match_policy": true,
+      "copied_reference_labels": [],
+      "mask_decoded_preserved": true,
+      "no_full_public_or_prior_pose_copy": true,
+      "no_sidecars_in_archive": true,
+      "payload_format_is_self_describing": true,
+      "pose_stream_changed": true,
+      "renderer_decoded_preserved": true,
+      "single_member_zip": true,
+      "source_pose_not_copied_verbatim": true
+    }
+  },
+  {
+    "archive": {
+      "archive_bytes": 276488,
+      "archive_sha256": "36f91935453d00f0fcb6d20405072dbd2bb79a4538652b450dfede6ab06713f4",
+      "path": "/Users/adpena/Projects/pact/experiments/results/c091_pose_atom_nextwave_worker_20260503/pose_manifold_nextwave/c091_next_cem_pose_waterfill_top096_s0375_m14/archive.zip",
+      "payload_bytes": 276388,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p3",
+      "payload_sha256": "a8a5b8d8d83544c7e504ea9d43ad56543e53893f61109adb2b4e03da89683ebe"
+    },
+    "break_even_plausible": true,
+    "candidate_id": "c091_next_cem_pose_waterfill_top096_s0375_m14",
+    "dispatch_recommendation": {
+      "class": "exact_eval_candidate_after_claim_not_dispatched",
+      "do_not_duplicate": "exact_eval_pr65_pose_qp1_c091_c089_actions_p6_t4_20260503T1158Z",
+      "exact_eval_command_template": [
+        ".venv/bin/python",
+        "-u",
+        "experiments/contest_auth_eval.py",
+        "--archive",
+        "/Users/adpena/Projects/pact/experiments/results/c091_pose_atom_nextwave_worker_20260503/pose_manifold_nextwave/c091_next_cem_pose_waterfill_top096_s0375_m14/archive.zip",
+        "--inflate-sh",
+        "submissions/robust_current/inflate.sh",
+        "--upstream-dir",
+        "upstream",
+        "--device",
+        "cuda"
+      ],
+      "no_remote_dispatch_performed": true,
+      "reason": "Archive exists, local stream closure passed, changed pose atoms are non-noop, and the conservative affected-trace efficiency proxy clears sub-0.314 break-even.",
+      "required_before_any_remote_eval": [
+        "wait for the existing PR65 pose-transfer exact eval if it targets the same comparison slot",
+        "claim a non-conflicting lane with tools/claim_lane_dispatch.py",
+        "run exact CUDA auth eval on this exact archive SHA through contest_auth_eval.py"
+      ]
+    },
+    "economics": {
+      "affected_pose_trace_mass": 0.01507175638751419,
+      "affected_seg_trace_mass": 0.011411879143755263,
+      "affected_trace_mass": 0.02648363553126945,
+      "archive_delta_bytes_vs_c091": 7,
+      "expected_component_gain_proxy": 0.0012182472344383947,
+      "planning_efficiency_assumption": 0.046,
+      "proxy_margin_vs_sub314_requirement": 4.783593890675766e-05,
+      "rate_score_delta_vs_c091": 4.6610126718552e-06,
+      "score_if_components_unchanged": 0.31517041129553164,
+      "sub314_component_gain_required": 0.001170411295531637,
+      "sub314_equivalent_bytes_needed_after_candidate": 1758,
+      "trace_is_promotable_evidence": false
+    },
+    "local_roundtrip_gates": {
+      "actions_decoded_preserved": true,
+      "all_passed": true,
+      "candidate_pose_brotli_decodes": true,
+      "candidate_qp1_canonical_reencode": true,
+      "candidate_qp1_words_match_policy": true,
+      "copied_reference_labels": [],
+      "mask_decoded_preserved": true,
+      "no_full_public_or_prior_pose_copy": true,
+      "no_sidecars_in_archive": true,
+      "payload_format_is_self_describing": true,
+      "pose_stream_changed": true,
+      "renderer_decoded_preserved": true,
+      "single_member_zip": true,
+      "source_pose_not_copied_verbatim": true
+    }
+  },
+  {
+    "archive": {
+      "archive_bytes": 276486,
+      "archive_sha256": "286e1bbc86d49cea2712fcc779daa1a3e358f5f8de93ea8640aab82313ef59ac",
+      "path": "/Users/adpena/Projects/pact/experiments/results/c091_pose_atom_nextwave_worker_20260503/pose_manifold_nextwave/c091_next_pr67_active_delta_top160_s075_m08/archive.zip",
+      "payload_bytes": 276386,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p3",
+      "payload_sha256": "242c44c83c5a771e8c7f9450ea0fa59bbc9ede386bafc11446fa0e4263b0a3ae"
+    },
+    "break_even_plausible": false,
+    "candidate_id": "c091_next_pr67_active_delta_top160_s075_m08",
+    "dispatch_recommendation": {
+      "class": "hold_for_more_evidence",
+      "do_not_duplicate": "exact_eval_pr65_pose_qp1_c091_c089_actions_p6_t4_20260503T1158Z",
+      "exact_eval_command_template": null,
+      "no_remote_dispatch_performed": true,
+      "reason": "Planning proxy or local gates do not clear the exact-eval recommendation threshold.",
+      "required_before_any_remote_eval": [
+        "wait for the existing PR65 pose-transfer exact eval if it targets the same comparison slot",
+        "claim a non-conflicting lane with tools/claim_lane_dispatch.py",
+        "run exact CUDA auth eval on this exact archive SHA through contest_auth_eval.py"
+      ]
+    },
+    "economics": {
+      "affected_pose_trace_mass": 0.021249531297441344,
+      "affected_seg_trace_mass": 0.017618815628035616,
+      "affected_trace_mass": 0.03886834692547696,
+      "archive_delta_bytes_vs_c091": 5,
+      "expected_component_gain_proxy": 0.0010494453669878778,
+      "planning_efficiency_assumption": 0.027,
+      "proxy_margin_vs_sub314_requirement": -0.00011963421063747597,
+      "rate_score_delta_vs_c091": 3.329294765610857e-06,
+      "score_if_components_unchanged": 0.31516907957762536,
+      "sub314_component_gain_required": 0.0011690795776253537,
+      "sub314_equivalent_bytes_needed_after_candidate": 1756,
+      "trace_is_promotable_evidence": false
+    },
+    "local_roundtrip_gates": {
+      "actions_decoded_preserved": true,
+      "all_passed": true,
+      "candidate_pose_brotli_decodes": true,
+      "candidate_qp1_canonical_reencode": true,
+      "candidate_qp1_words_match_policy": true,
+      "copied_reference_labels": [],
+      "mask_decoded_preserved": true,
+      "no_full_public_or_prior_pose_copy": true,
+      "no_sidecars_in_archive": true,
+      "payload_format_is_self_describing": true,
+      "pose_stream_changed": true,
+      "renderer_decoded_preserved": true,
+      "single_member_zip": true,
+      "source_pose_not_copied_verbatim": true
+    }
+  },
+  {
+    "archive": {
+      "archive_bytes": 276490,
+      "archive_sha256": "816805c02f24c85d177560a0df661834db0ba18e1bb8af6f1705e998944f5df6",
+      "path": "/Users/adpena/Projects/pact/experiments/results/c091_pose_atom_nextwave_worker_20260503/pose_manifold_nextwave/c091_next_pr65_residual_top128_s01875_m10/archive.zip",
+      "payload_bytes": 276390,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p3",
+      "payload_sha256": "b56973dbdfd4f3ab12eaafae51f8fc9197b177009fa6ee72156f0f7e35a1b0f9"
+    },
+    "break_even_plausible": false,
+    "candidate_id": "c091_next_pr65_residual_top128_s01875_m10",
+    "dispatch_recommendation": {
+      "class": "hold_for_more_evidence",
+      "do_not_duplicate": "exact_eval_pr65_pose_qp1_c091_c089_actions_p6_t4_20260503T1158Z",
+      "exact_eval_command_template": null,
+      "no_remote_dispatch_performed": true,
+      "reason": "Planning proxy or local gates do not clear the exact-eval recommendation threshold.",
+      "required_before_any_remote_eval": [
+        "wait for the existing PR65 pose-transfer exact eval if it targets the same comparison slot",
+        "claim a non-conflicting lane with tools/claim_lane_dispatch.py",
+        "run exact CUDA auth eval on this exact archive SHA through contest_auth_eval.py"
+      ]
+    },
+    "economics": {
+      "affected_pose_trace_mass": 0.017359785409335707,
+      "affected_seg_trace_mass": 0.015101115369664816,
+      "affected_trace_mass": 0.032460900779000525,
+      "archive_delta_bytes_vs_c091": 9,
+      "expected_component_gain_proxy": 0.0010387488249280169,
+      "planning_efficiency_assumption": 0.032,
+      "proxy_margin_vs_sub314_requirement": -0.00013299418850984792,
+      "rate_score_delta_vs_c091": 5.9927305780995425e-06,
+      "score_if_components_unchanged": 0.31517174301343787,
+      "sub314_component_gain_required": 0.0011717430134378648,
+      "sub314_equivalent_bytes_needed_after_candidate": 1760,
+      "trace_is_promotable_evidence": false
+    },
+    "local_roundtrip_gates": {
+      "actions_decoded_preserved": true,
+      "all_passed": true,
+      "candidate_pose_brotli_decodes": true,
+      "candidate_qp1_canonical_reencode": true,
+      "candidate_qp1_words_match_policy": true,
+      "copied_reference_labels": [],
+      "mask_decoded_preserved": true,
+      "no_full_public_or_prior_pose_copy": true,
+      "no_sidecars_in_archive": true,
+      "payload_format_is_self_describing": true,
+      "pose_stream_changed": true,
+      "renderer_decoded_preserved": true,
+      "single_member_zip": true,
+      "source_pose_not_copied_verbatim": true
+    }
+  }
+]

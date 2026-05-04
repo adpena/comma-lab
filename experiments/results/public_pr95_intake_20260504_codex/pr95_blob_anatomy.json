@@ -1,0 +1,20 @@
+{
+  "archive_sha256": "e976acd5fe565c94fb9a8c62e5200c949919f76150e84599f268d6a58588440a",
+  "archive_zip_bytes": 178417,
+  "decoder_brotli_len": 162349,
+  "decoder_sha256": "fbeaf706e9d8c38cf39fd36b7f6c6312b66eae6c9a4f25a99708d8fbb3cdaf2e",
+  "latents_brotli_len": 15868,
+  "latents_sha256": "863634aba9a956d13eab8708133239ee861bb797cbad4ff2f39a46939987c709",
+  "member_total": 178309,
+  "meta": {
+    "base_channels": 36,
+    "eval_size": [
+      384,
+      512
+    ],
+    "latent_dim": 28,
+    "n_pairs": 600
+  },
+  "meta_len": 80,
+  "trailing": 0
+}

@@ -1,0 +1,71 @@
+{
+  "archive": "/Users/adpena/Projects/pact/experiments/results/pr65_qpost_atom_v2_worker_20260503/candidates/v2_pr65_qpost_bias_poseadv_top024/archive.zip",
+  "archive_bytes": 276547,
+  "archive_sha256": "10037f92c2cb5b486702c8a8655511fd36dfb03ab7bb475786d1e0b2319e5a23",
+  "candidate_id": "v2_pr65_qpost_bias_poseadv_top024",
+  "evidence_grade": "byte_trace_planning_only_until_exact_cuda",
+  "exact_eval_command_template": ".venv/bin/python -u experiments/contest_auth_eval.py --archive /Users/adpena/Projects/pact/experiments/results/pr65_qpost_atom_v2_worker_20260503/candidates/v2_pr65_qpost_bias_poseadv_top024/archive.zip --inflate-sh submissions/robust_current/inflate.sh --upstream-dir upstream --device cuda --keep-work-dir --work-dir /Users/adpena/Projects/pact/experiments/results/pr65_qpost_atom_v2_worker_20260503/exact_eval_work/v2_pr65_qpost_bias_poseadv_top024",
+  "remote_dispatch": {
+    "dispatched": false,
+    "note": "No remote GPU, training, or eval job was dispatched by this worker.",
+    "requires_lane_claim": true
+  },
+  "schema_version": 2,
+  "score_claim": false,
+  "tool": "experiments/build_pr65_qpost_atom_candidates_v2.py",
+  "v2_screen": {
+    "archive": "/Users/adpena/Projects/pact/experiments/results/pr65_qpost_atom_v2_worker_20260503/candidates/v2_pr65_qpost_bias_poseadv_top024/archive.zip",
+    "archive_byte_delta": 205,
+    "archive_bytes": 276547,
+    "archive_sha256": "10037f92c2cb5b486702c8a8655511fd36dfb03ab7bb475786d1e0b2319e5a23",
+    "baseline_score": 0.3154707273953505,
+    "break_even_component_gain_for_target": 0.0016072284807405247,
+    "built": true,
+    "candidate_id": "v2_pr65_qpost_bias_poseadv_top024",
+    "core_dispatch_blockers": [
+      "public-trace opportunity bound 0.001493341 is below sub-0.314 break-even 0.001607228"
+    ],
+    "core_dispatch_recommendation": "do_not_dispatch",
+    "dispatch_class": "low_bias_only",
+    "evidence_grade": "byte_trace_planning_only_until_exact_cuda",
+    "include_streams": [
+      "bias"
+    ],
+    "public_trace_opportunity_bound": 0.0014933407043021267,
+    "qpost_bytes": 111,
+    "rate_score_delta": 0.00013650108539004513,
+    "recommendation_class": "do_not_dispatch",
+    "recommendation_reason": "core risk classifier has blockers",
+    "score_claim": false,
+    "selected_active_atoms_total": 24,
+    "selected_pair_count": 24,
+    "selected_pairs": [
+      105,
+      64,
+      60,
+      435,
+      164,
+      420,
+      90,
+      67,
+      106,
+      68,
+      423,
+      310,
+      309,
+      367,
+      136,
+      70,
+      130,
+      101,
+      120,
+      166,
+      425,
+      305,
+      445,
+      429
+    ],
+    "target_score": 0.314,
+    "trace_slack_vs_target": -0.00011388777643839797
+  }
+}

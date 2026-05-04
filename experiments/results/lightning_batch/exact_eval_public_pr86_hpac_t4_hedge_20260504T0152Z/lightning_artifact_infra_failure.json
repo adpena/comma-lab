@@ -1,0 +1,57 @@
+{
+  "archive_identity": {
+    "archive_sha256": "e67b7c22240dbe33853c19d049b0044a5df16ce5f751ba8f1021cab8ceb03cef",
+    "archive_size_bytes": 207579
+  },
+  "classified_at_utc": "2026-05-04T02:11:21Z",
+  "evidence_grade": "invalid",
+  "expected_archive_sha256": "e67b7c22240dbe33853c19d049b0044a5df16ce5f751ba8f1021cab8ceb03cef",
+  "expected_archive_size_bytes": 207579,
+  "failure_class": "runtime_or_harness_failure_before_score_json",
+  "job_artifact_files": [
+    "archive.zip",
+    "auth_eval.log",
+    "lightning_dali_bootstrap.json",
+    "lightning_dali_requirements.txt",
+    "lightning_inflate_runtime_bootstrap.json",
+    "lightning_inflate_runtime_static_preflight.json",
+    "lightning_queue_metadata.json",
+    "lightning_runner_preflight.json",
+    "lightning_supply_chain_scan.json",
+    "lightning_supply_chain_scan_pre.json"
+  ],
+  "method_evidence": false,
+  "missing_required_files": [
+    "contest_auth_eval.json",
+    "eval_provenance.json",
+    "report.txt",
+    "adjudication_provenance.json",
+    "contest_auth_eval.adjudicated.json"
+  ],
+  "promotion_eligible": false,
+  "reason": "remote Lightning exact-eval artifact directory contains partial artifacts but is missing required exact-score JSON/report files",
+  "recommended_action": "Preserve the partial artifacts and logs as a harness/runtime failure. Do not rank, retire, promote, or claim score without contest_auth_eval.json and adjudication artifacts.",
+  "schema_version": 1,
+  "score_claim": false,
+  "score_source": "none:missing_contest_auth_eval_json",
+  "ssh_source": {
+    "copied_files": [
+      "lightning_queue_metadata.json",
+      "archive.zip",
+      "lightning_dali_bootstrap.json",
+      "lightning_dali_requirements.txt",
+      "lightning_runner_preflight.json",
+      "lightning_supply_chain_scan_pre.json",
+      "lightning_supply_chain_scan.json",
+      "auth_eval.log",
+      "lightning_inflate_runtime_bootstrap.json",
+      "lightning_inflate_runtime_static_preflight.json"
+    ],
+    "mirror_dir": "experiments/results/lightning_batch/exact_eval_public_pr86_hpac_t4_hedge_20260504T0152Z",
+    "remote_dir": "/teamspace/jobs/exact-eval-public-pr86-hpac-t4-hedge-20260504t0152z/artifacts/pact/experiments/results/lightning_batch/exact_eval_public_pr86_hpac_t4_hedge_20260504T0152Z",
+    "ssh_connect_timeout": 15,
+    "ssh_target": "lightning-pact"
+  },
+  "status": "ARTIFACT_INFRA_FAILURE",
+  "terminal_class": "exact_eval_missing_score_json"
+}

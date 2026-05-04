@@ -1,0 +1,1924 @@
+### seg_tile_action_specs firstlineno 674
+674           RESUME                   0
+
+675           BUILD_LIST               0
+              STORE_FAST               1 (specs)
+
+676           BUILD_LIST               0
+              LOAD_CONST               4 (((1.0, 1.0, 1.0), (1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0), (1.0, 1.0, 0.0), (0.0, 1.0, 1.0), (1.0, 0.0, 1.0), (-0.35, 0.15, 0.45), (0.25, 0.15, -0.2)))
+              LIST_EXTEND              1
+              STORE_FAST               2 (directions)
+
+687           LOAD_FAST_BORROW         2 (directions)
+              GET_ITER
+      L1:     FOR_ITER               167 (to L4)
+              STORE_FAST               3 (vec)
+
+688           LOAD_GLOBAL              0 (torch)
+              LOAD_ATTR                2 (tensor)
+              PUSH_NULL
+              LOAD_FAST_BORROW         3 (vec)
+              LOAD_GLOBAL              0 (torch)
+              LOAD_ATTR                4 (float32)
+              LOAD_FAST_BORROW         0 (device)
+              LOAD_CONST               1 (('dtype', 'device'))
+              CALL_KW                  3
+              LOAD_ATTR                7 (view + NULL|self)
+              LOAD_SMALL_INT           3
+              LOAD_SMALL_INT           1
+              LOAD_SMALL_INT           1
+              CALL                     3
+              STORE_FAST               4 (v)
+
+689           LOAD_FAST_BORROW_LOAD_FAST_BORROW 68 (v, v)
+              LOAD_ATTR                9 (abs + NULL|self)
+              CALL                     0
+              LOAD_ATTR               11 (max + NULL|self)
+              CALL                     0
+              LOAD_ATTR               13 (clamp_min + NULL|self)
+              LOAD_CONST               2 (1e-06)
+              CALL                     1
+              BINARY_OP               11 (/)
+              STORE_FAST               4 (v)
+
+690           LOAD_CONST               5 ((2.0, 4.0, 6.0, 8.0, 12.0, 16.0))
+              GET_ITER
+      L2:     FOR_ITER                51 (to L3)
+              STORE_FAST               5 (amp)
+
+691           LOAD_FAST_BORROW         1 (specs)
+              LOAD_ATTR               15 (append + NULL|self)
+              LOAD_FAST_BORROW_LOAD_FAST_BORROW 69 (v, amp)
+              BINARY_OP                5 (*)
+              CALL                     1
+              POP_TOP
+
+692           LOAD_FAST_BORROW         1 (specs)
+              LOAD_ATTR               15 (append + NULL|self)
+              LOAD_FAST_BORROW         4 (v)
+              UNARY_NEGATIVE
+              LOAD_FAST_BORROW         5 (amp)
+              BINARY_OP                5 (*)
+              CALL                     1
+              POP_TOP
+              JUMP_BACKWARD           53 (to L2)
+
+690   L3:     END_FOR
+              POP_ITER
+              JUMP_BACKWARD          169 (to L1)
+
+687   L4:     END_FOR
+              POP_ITER
+
+693           LOAD_GLOBAL              0 (torch)
+              LOAD_ATTR               16 (stack)
+              PUSH_NULL
+              LOAD_FAST_BORROW         1 (specs)
+              LOAD_SMALL_INT           0
+              LOAD_CONST               3 (('dim',))
+              CALL_KW                  2
+              RETURN_VALUE
+### load_seg_tile_actions_data firstlineno 696
+696           RESUME                   0
+
+697           LOAD_GLOBAL              0 (brotli)
+              LOAD_ATTR                2 (decompress)
+              PUSH_NULL
+              LOAD_FAST_BORROW         0 (data)
+              CALL                     1
+              STORE_FAST               2 (raw)
+
+698           BUILD_LIST               0
+              STORE_FAST               3 (records)
+
+699           LOAD_GLOBAL              5 (len + NULL)
+              LOAD_FAST_BORROW         2 (raw)
+              CALL                     1
+              LOAD_SMALL_INT           4
+              BINARY_OP                6 (%)
+              LOAD_SMALL_INT           0
+              COMPARE_OP              88 (bool(==))
+              POP_JUMP_IF_FALSE      111 (to L3)
+              NOT_TAKEN
+
+700           LOAD_GLOBAL              7 (range + NULL)
+              LOAD_SMALL_INT           0
+              LOAD_GLOBAL              5 (len + NULL)
+              LOAD_FAST_BORROW         2 (raw)
+              CALL                     1
+              LOAD_SMALL_INT           4
+              CALL                     3
+              GET_ITER
+      L1:     FOR_ITER                83 (to L2)
+              STORE_FAST               4 (i)
+
+701           LOAD_GLOBAL              8 (int)
+              LOAD_ATTR               11 (from_bytes + NULL|self)
+              LOAD_FAST_BORROW_LOAD_FAST_BORROW 36 (raw, i)
+              LOAD_FAST_BORROW         4 (i)
+              LOAD_SMALL_INT           2
+              BINARY_OP                0 (+)
+              BINARY_SLICE
+              LOAD_CONST               1 ('little')
+              CALL                     2
+              STORE_FAST               5 (frame)
+
+702           LOAD_FAST_BORROW_LOAD_FAST_BORROW 36 (raw, i)
+              LOAD_SMALL_INT           2
+              BINARY_OP                0 (+)
+              BINARY_OP               26 ([])
+              STORE_FAST               6 (tile)
+
+703           LOAD_FAST_BORROW_LOAD_FAST_BORROW 36 (raw, i)
+              LOAD_SMALL_INT           3
+              BINARY_OP                0 (+)
+              BINARY_OP               26 ([])
+              STORE_FAST               7 (action)
+
+704           LOAD_FAST_BORROW         3 (records)
+              LOAD_ATTR               13 (append + NULL|self)
+              LOAD_FAST_BORROW_LOAD_FAST_BORROW 86 (frame, tile)
+              LOAD_FAST_BORROW         7 (action)
+              BUILD_TUPLE              3
+              CALL                     1
+              POP_TOP
+              JUMP_BACKWARD           85 (to L1)
+
+700   L2:     END_FOR
+              POP_ITER
+              JUMP_FORWARD           179 (to L7)
+
+705   L3:     LOAD_GLOBAL              5 (len + NULL)
+              LOAD_FAST_BORROW         2 (raw)
+              CALL                     1
+              LOAD_SMALL_INT           5
+              BINARY_OP                6 (%)
+              LOAD_SMALL_INT           0
+              COMPARE_OP              88 (bool(==))
+              POP_JUMP_IF_FALSE      134 (to L6)
+              NOT_TAKEN
+
+706           LOAD_GLOBAL              7 (range + NULL)
+              LOAD_SMALL_INT           0
+              LOAD_GLOBAL              5 (len + NULL)
+              LOAD_FAST_BORROW         2 (raw)
+              CALL                     1
+              LOAD_SMALL_INT           5
+              CALL                     3
+              GET_ITER
+      L4:     FOR_ITER               106 (to L5)
+              STORE_FAST               4 (i)
+
+707           LOAD_GLOBAL              8 (int)
+              LOAD_ATTR               11 (from_bytes + NULL|self)
+              LOAD_FAST_BORROW_LOAD_FAST_BORROW 36 (raw, i)
+              LOAD_FAST_BORROW         4 (i)
+              LOAD_SMALL_INT           2
+              BINARY_OP                0 (+)
+              BINARY_SLICE
+              LOAD_CONST               1 ('little')
+              CALL                     2
+              STORE_FAST               5 (frame)
+
+708           LOAD_GLOBAL              8 (int)
+              LOAD_ATTR               11 (from_bytes + NULL|self)
+              LOAD_FAST_BORROW_LOAD_FAST_BORROW 36 (raw, i)
+              LOAD_SMALL_INT           2
+              BINARY_OP                0 (+)
+              LOAD_FAST_BORROW         4 (i)
+              LOAD_SMALL_INT           4
+              BINARY_OP                0 (+)
+              BINARY_SLICE
+              LOAD_CONST               1 ('little')
+              CALL                     2
+              STORE_FAST               6 (tile)
+
+709           LOAD_FAST_BORROW_LOAD_FAST_BORROW 36 (raw, i)
+              LOAD_SMALL_INT           4
+              BINARY_OP                0 (+)
+              BINARY_OP               26 ([])
+              STORE_FAST               7 (action)
+
+710           LOAD_FAST_BORROW         3 (records)
+              LOAD_ATTR               13 (append + NULL|self)
+              LOAD_FAST_BORROW_LOAD_FAST_BORROW 86 (frame, tile)
+              LOAD_FAST_BORROW         7 (action)
+              BUILD_TUPLE              3
+              CALL                     1
+              POP_TOP
+              JUMP_BACKWARD          108 (to L4)
+
+706   L5:     END_FOR
+              POP_ITER
+              JUMP_FORWARD            23 (to L7)
+
+712   L6:     LOAD_GLOBAL             15 (ValueError + NULL)
+              LOAD_CONST               2 ('unsupported seg tile action payload length: ')
+              LOAD_GLOBAL              5 (len + NULL)
+              LOAD_FAST_BORROW         2 (raw)
+              CALL                     1
+              FORMAT_SIMPLE
+              BUILD_STRING             2
+              CALL                     1
+              RAISE_VARARGS            1
+
+713   L7:     BUILD_MAP                0
+              STORE_FAST               8 (by_frame)
+
+714           LOAD_FAST_BORROW         3 (records)
+              GET_ITER
+      L8:     FOR_ITER                40 (to L9)
+              UNPACK_SEQUENCE          3
+              STORE_FAST_STORE_FAST   86 (frame, tile)
+              STORE_FAST               7 (action)
+
+715           LOAD_FAST_BORROW         8 (by_frame)
+              LOAD_ATTR               17 (setdefault + NULL|self)
+              LOAD_FAST_BORROW         5 (frame)
+              BUILD_LIST               0
+              CALL                     2
+              LOAD_ATTR               13 (append + NULL|self)
+              LOAD_FAST_BORROW_LOAD_FAST_BORROW 103 (tile, action)
+              BUILD_TUPLE              2
+              CALL                     1
+              POP_TOP
+              JUMP_BACKWARD           42 (to L8)
+
+714   L9:     END_FOR
+              POP_ITER
+
+716           LOAD_CONST               3 ('by_frame')
+              LOAD_FAST_BORROW         8 (by_frame)
+              LOAD_CONST               4 ('deltas')
+              LOAD_GLOBAL             19 (seg_tile_action_specs + NULL)
+              LOAD_FAST_BORROW         1 (device)
+              CALL                     1
+              BUILD_MAP                2
+              RETURN_VALUE
+### load_seg_tile_actions firstlineno 719
+719           RESUME                   0
+
+720           LOAD_FAST_BORROW         0 (path)
+              LOAD_ATTR                1 (exists + NULL|self)
+              CALL                     0
+              TO_BOOL
+              POP_JUMP_IF_TRUE         3 (to L1)
+              NOT_TAKEN
+
+721           LOAD_CONST               0 (None)
+              RETURN_VALUE
+
+722   L1:     LOAD_GLOBAL              3 (load_seg_tile_actions_data + NULL)
+              LOAD_FAST_BORROW         0 (path)
+              LOAD_ATTR                5 (read_bytes + NULL|self)
+              CALL                     0
+              LOAD_FAST_BORROW         1 (device)
+              CALL                     2
+              RETURN_VALUE
+### main firstlineno 764
+ 764            RESUME                   0
+
+ 765            LOAD_GLOBAL              1 (len + NULL)
+                LOAD_GLOBAL              2 (sys)
+                LOAD_ATTR                4 (argv)
+                CALL                     1
+                LOAD_SMALL_INT           4
+                COMPARE_OP              18 (bool(<))
+                POP_JUMP_IF_FALSE       34 (to L1)
+                NOT_TAKEN
+
+ 766            LOAD_GLOBAL              7 (print + NULL)
+                LOAD_CONST               1 ('Usage: python inflate.py <data_dir> <output_dir> <file_list_txt>')
+                CALL                     1
+                POP_TOP
+
+ 767            LOAD_GLOBAL              2 (sys)
+                LOAD_ATTR                8 (exit)
+                PUSH_NULL
+                LOAD_SMALL_INT           1
+                CALL                     1
+                POP_TOP
+
+ 769    L1:     LOAD_GLOBAL             11 (Path + NULL)
+                LOAD_GLOBAL              2 (sys)
+                LOAD_ATTR                4 (argv)
+                LOAD_SMALL_INT           1
+                BINARY_OP               26 ([])
+                CALL                     1
+                STORE_FAST               0 (data_dir)
+
+ 770            LOAD_GLOBAL             11 (Path + NULL)
+                LOAD_GLOBAL              2 (sys)
+                LOAD_ATTR                4 (argv)
+                LOAD_SMALL_INT           2
+                BINARY_OP               26 ([])
+                CALL                     1
+                STORE_FAST               1 (out_dir)
+
+ 771            LOAD_GLOBAL             11 (Path + NULL)
+                LOAD_GLOBAL              2 (sys)
+                LOAD_ATTR                4 (argv)
+                LOAD_SMALL_INT           3
+                BINARY_OP               26 ([])
+                CALL                     1
+                STORE_FAST               2 (file_list_path)
+
+ 772            LOAD_FAST_BORROW         1 (out_dir)
+                LOAD_ATTR               13 (mkdir + NULL|self)
+                LOAD_CONST               2 (True)
+                LOAD_CONST               2 (True)
+                LOAD_CONST               3 (('parents', 'exist_ok'))
+                CALL_KW                  2
+                POP_TOP
+
+ 774            LOAD_GLOBAL             14 (torch)
+                LOAD_ATTR               16 (device)
+                PUSH_NULL
+                LOAD_GLOBAL             14 (torch)
+                LOAD_ATTR               18 (cuda)
+                LOAD_ATTR               21 (is_available + NULL|self)
+                CALL                     0
+                TO_BOOL
+                POP_JUMP_IF_FALSE        3 (to L2)
+                NOT_TAKEN
+                LOAD_CONST               4 ('cuda')
+                JUMP_FORWARD             1 (to L3)
+        L2:     LOAD_CONST               5 ('cpu')
+        L3:     CALL                     1
+                STORE_FAST               3 (device)
+
+ 775            LOAD_FAST_BORROW         2 (file_list_path)
+                LOAD_ATTR               23 (read_text + NULL|self)
+                CALL                     0
+                LOAD_ATTR               25 (splitlines + NULL|self)
+                CALL                     0
+                GET_ITER
+                LOAD_FAST_AND_CLEAR      4 (line)
+                SWAP                     2
+        L4:     BUILD_LIST               0
+                SWAP                     2
+        L5:     FOR_ITER                42 (to L8)
+                STORE_FAST_LOAD_FAST    68 (line, line)
+                LOAD_ATTR               27 (strip + NULL|self)
+                CALL                     0
+                TO_BOOL
+        L6:     POP_JUMP_IF_TRUE         3 (to L7)
+                NOT_TAKEN
+                JUMP_BACKWARD           26 (to L5)
+        L7:     LOAD_FAST_BORROW         4 (line)
+                LOAD_ATTR               27 (strip + NULL|self)
+                CALL                     0
+                LIST_APPEND              2
+                JUMP_BACKWARD           44 (to L5)
+        L8:     END_FOR
+                POP_ITER
+        L9:     STORE_FAST               5 (files)
+                STORE_FAST               4 (line)
+
+ 777            LOAD_FAST_BORROW         0 (data_dir)
+                LOAD_CONST               6 ('model.pt.br')
+                BINARY_OP               11 (/)
+                STORE_FAST               6 (model_br)
+
+ 778            LOAD_FAST_BORROW         0 (data_dir)
+                LOAD_CONST               7 ('mask.obu.br')
+                BINARY_OP               11 (/)
+                STORE_FAST               7 (mask_br)
+
+ 779            LOAD_FAST_BORROW         0 (data_dir)
+                LOAD_CONST               8 ('pose.npy.br')
+                BINARY_OP               11 (/)
+                STORE_FAST               8 (pose_br)
+
+ 780            LOAD_FAST_BORROW         0 (data_dir)
+                LOAD_CONST               9 ('pose_q.br')
+                BINARY_OP               11 (/)
+                STORE_FAST               9 (pose_q_br)
+
+ 781            LOAD_FAST_BORROW         0 (data_dir)
+                LOAD_CONST              10 ('p')
+                BINARY_OP               11 (/)
+                STORE_FAST              10 (packed_payload)
+
+ 782            LOAD_FAST_BORROW         0 (data_dir)
+                LOAD_CONST              11 ('color_lut.npy.br')
+                BINARY_OP               11 (/)
+                STORE_FAST              11 (color_lut_br)
+
+ 783            LOAD_FAST_BORROW         0 (data_dir)
+                LOAD_CONST              12 ('actuator.npz.br')
+                BINARY_OP               11 (/)
+                STORE_FAST              12 (actuator_br)
+
+ 784            LOAD_FAST_BORROW         0 (data_dir)
+                LOAD_CONST              13 ('seg_tile_actions.br')
+                BINARY_OP               11 (/)
+                STORE_FAST              13 (seg_tile_actions_br)
+
+ 785            LOAD_FAST_BORROW         0 (data_dir)
+                LOAD_CONST              14 ('smooth_pose.npz.br')
+                BINARY_OP               11 (/)
+                STORE_FAST              14 (smooth_pose_br)
+
+ 786            LOAD_CONST              15 (None)
+                STORE_FAST              15 (embedded_seg_tile_actions)
+
+ 788            LOAD_FAST_BORROW        10 (packed_payload)
+                LOAD_ATTR               29 (exists + NULL|self)
+                CALL                     0
+                TO_BOOL
+                EXTENDED_ARG             1
+                POP_JUMP_IF_FALSE      496 (to L30)
+                NOT_TAKEN
+
+ 789            LOAD_FAST_BORROW        10 (packed_payload)
+                LOAD_ATTR               31 (read_bytes + NULL|self)
+                CALL                     0
+                STORE_FAST              16 (payload)
+
+ 790            LOAD_GLOBAL              1 (len + NULL)
+                LOAD_FAST_BORROW        16 (payload)
+                CALL                     1
+                LOAD_CONST              16 (276641)
+                COMPARE_OP              88 (bool(==))
+                POP_JUMP_IF_FALSE       39 (to L10)
+                NOT_TAKEN
+
+ 791            LOAD_FAST_BORROW        16 (payload)
+                LOAD_CONST              17 (slice(None, 219472, None))
+                BINARY_OP               26 ([])
+                STORE_FAST              17 (mask_br_data)
+
+ 792            LOAD_FAST_BORROW        16 (payload)
+                LOAD_CONST              18 (slice(219472, 275506, None))
+                BINARY_OP               26 ([])
+                STORE_FAST              18 (model_br_data)
+
+ 793            LOAD_FAST_BORROW        16 (payload)
+                LOAD_CONST              19 (slice(275506, 275742, None))
+                BINARY_OP               26 ([])
+                STORE_FAST              15 (embedded_seg_tile_actions)
+
+ 794            LOAD_FAST_BORROW        16 (payload)
+                LOAD_CONST              20 (slice(275742, None, None))
+                BINARY_OP               26 ([])
+                STORE_FAST              19 (pose_q_br_data)
+                EXTENDED_ARG             1
+                JUMP_FORWARD           497 (to L33)
+
+ 795   L10:     LOAD_FAST_BORROW        16 (payload)
+                LOAD_ATTR               33 (startswith + NULL|self)
+                LOAD_CONST              21 (b'P3')
+                CALL                     1
+                TO_BOOL
+                POP_JUMP_IF_FALSE       99 (to L11)
+                NOT_TAKEN
+
+ 796            LOAD_GLOBAL             34 (struct)
+                LOAD_ATTR               36 (unpack_from)
+                PUSH_NULL
+                LOAD_CONST              22 ('<IHH')
+                LOAD_FAST_BORROW        16 (payload)
+                LOAD_SMALL_INT           2
+                CALL                     3
+                UNPACK_SEQUENCE          3
+                STORE_FAST              20 (mask_len)
+                STORE_FAST              21 (model_br_len)
+                STORE_FAST              22 (actions_len)
+
+ 797            LOAD_SMALL_INT          10
+                STORE_FAST              23 (cursor)
+
+ 798            LOAD_FAST_BORROW        16 (payload)
+                LOAD_FAST_BORROW        23 (cursor)
+                LOAD_FAST_BORROW        23 (cursor)
+                LOAD_FAST_BORROW        20 (mask_len)
+                BINARY_OP                0 (+)
+                BINARY_SLICE
+                STORE_FAST              17 (mask_br_data)
+
+ 799            LOAD_FAST_BORROW        23 (cursor)
+                LOAD_FAST_BORROW        20 (mask_len)
+                BINARY_OP               13 (+=)
+                STORE_FAST              23 (cursor)
+
+ 800            LOAD_FAST_BORROW        16 (payload)
+                LOAD_FAST_BORROW        23 (cursor)
+                LOAD_FAST_BORROW        23 (cursor)
+                LOAD_FAST_BORROW        21 (model_br_len)
+                BINARY_OP                0 (+)
+                BINARY_SLICE
+                STORE_FAST              18 (model_br_data)
+
+ 801            LOAD_FAST_BORROW        23 (cursor)
+                LOAD_FAST_BORROW        21 (model_br_len)
+                BINARY_OP               13 (+=)
+                STORE_FAST              23 (cursor)
+
+ 802            LOAD_FAST_BORROW        16 (payload)
+                LOAD_FAST_BORROW        23 (cursor)
+                LOAD_FAST_BORROW        23 (cursor)
+                LOAD_FAST_BORROW        22 (actions_len)
+                BINARY_OP                0 (+)
+                BINARY_SLICE
+                STORE_FAST              15 (embedded_seg_tile_actions)
+
+ 803            LOAD_FAST_BORROW        16 (payload)
+                LOAD_FAST_BORROW        23 (cursor)
+                LOAD_FAST_BORROW        22 (actions_len)
+                BINARY_OP                0 (+)
+                LOAD_CONST              15 (None)
+                BINARY_SLICE
+                STORE_FAST              19 (pose_q_br_data)
+                EXTENDED_ARG             1
+                JUMP_FORWARD           376 (to L33)
+
+ 804   L11:     LOAD_FAST_BORROW        16 (payload)
+                LOAD_ATTR               33 (startswith + NULL|self)
+                LOAD_CONST              23 (b'P2')
+                CALL                     1
+                TO_BOOL
+                POP_JUMP_IF_FALSE       77 (to L12)
+                NOT_TAKEN
+
+ 805            LOAD_GLOBAL             34 (struct)
+                LOAD_ATTR               36 (unpack_from)
+                PUSH_NULL
+                LOAD_CONST              24 ('<IH')
+                LOAD_FAST_BORROW        16 (payload)
+                LOAD_SMALL_INT           2
+                CALL                     3
+                UNPACK_SEQUENCE          2
+                STORE_FAST              20 (mask_len)
+                STORE_FAST              21 (model_br_len)
+
+ 806            LOAD_SMALL_INT           8
+                STORE_FAST              23 (cursor)
+
+ 807            LOAD_FAST_BORROW        16 (payload)
+                LOAD_FAST_BORROW        23 (cursor)
+                LOAD_FAST_BORROW        23 (cursor)
+                LOAD_FAST_BORROW        20 (mask_len)
+                BINARY_OP                0 (+)
+                BINARY_SLICE
+                STORE_FAST              17 (mask_br_data)
+
+ 808            LOAD_FAST_BORROW        23 (cursor)
+                LOAD_FAST_BORROW        20 (mask_len)
+                BINARY_OP               13 (+=)
+                STORE_FAST              23 (cursor)
+
+ 809            LOAD_FAST_BORROW        16 (payload)
+                LOAD_FAST_BORROW        23 (cursor)
+                LOAD_FAST_BORROW        23 (cursor)
+                LOAD_FAST_BORROW        21 (model_br_len)
+                BINARY_OP                0 (+)
+                BINARY_SLICE
+                STORE_FAST              18 (model_br_data)
+
+ 810            LOAD_FAST_BORROW        16 (payload)
+                LOAD_FAST_BORROW        23 (cursor)
+                LOAD_FAST_BORROW        21 (model_br_len)
+                BINARY_OP                0 (+)
+                LOAD_CONST              15 (None)
+                BINARY_SLICE
+                STORE_FAST              19 (pose_q_br_data)
+                EXTENDED_ARG             1
+                JUMP_FORWARD           277 (to L33)
+
+ 812   L12:     LOAD_FAST_BORROW        16 (payload)
+                LOAD_CONST              17 (slice(None, 219472, None))
+                BINARY_OP               26 ([])
+                STORE_FAST              17 (mask_br_data)
+
+ 813            LOAD_CONST              25 (276430)
+                LOAD_GLOBAL              1 (len + NULL)
+                LOAD_FAST_BORROW        16 (payload)
+                CALL                     1
+                SWAP                     2
+                COPY                     2
+                COMPARE_OP              58 (bool(<=))
+                POP_JUMP_IF_FALSE        8 (to L13)
+                NOT_TAKEN
+                LOAD_CONST              26 (276470)
+                COMPARE_OP              58 (bool(<=))
+                POP_JUMP_IF_FALSE        7 (to L15)
+                NOT_TAKEN
+                JUMP_FORWARD             2 (to L14)
+       L13:     POP_TOP
+                JUMP_FORWARD             3 (to L15)
+
+ 814   L14:     LOAD_CONST              27 (56093)
+                STORE_FAST              21 (model_br_len)
+                JUMP_FORWARD           141 (to L29)
+
+ 815   L15:     LOAD_CONST              28 (276550)
+                LOAD_GLOBAL              1 (len + NULL)
+                LOAD_FAST_BORROW        16 (payload)
+                CALL                     1
+                SWAP                     2
+                COPY                     2
+                COMPARE_OP              58 (bool(<=))
+                POP_JUMP_IF_FALSE        8 (to L16)
+                NOT_TAKEN
+                LOAD_CONST              29 (276610)
+                COMPARE_OP              58 (bool(<=))
+                POP_JUMP_IF_FALSE        7 (to L18)
+                NOT_TAKEN
+                JUMP_FORWARD             2 (to L17)
+       L16:     POP_TOP
+                JUMP_FORWARD             3 (to L18)
+
+ 816   L17:     LOAD_CONST              30 (56221)
+                STORE_FAST              21 (model_br_len)
+                JUMP_FORWARD           111 (to L29)
+
+ 817   L18:     LOAD_CONST              31 (278100)
+                LOAD_GLOBAL              1 (len + NULL)
+                LOAD_FAST_BORROW        16 (payload)
+                CALL                     1
+                SWAP                     2
+                COPY                     2
+                COMPARE_OP              58 (bool(<=))
+                POP_JUMP_IF_FALSE        8 (to L19)
+                NOT_TAKEN
+                LOAD_CONST              32 (278130)
+                COMPARE_OP              58 (bool(<=))
+                POP_JUMP_IF_FALSE        7 (to L21)
+                NOT_TAKEN
+                JUMP_FORWARD             2 (to L20)
+       L19:     POP_TOP
+                JUMP_FORWARD             3 (to L21)
+
+ 818   L20:     LOAD_CONST              33 (57757)
+                STORE_FAST              21 (model_br_len)
+                JUMP_FORWARD            81 (to L29)
+
+ 819   L21:     LOAD_CONST              34 (277400)
+                LOAD_GLOBAL              1 (len + NULL)
+                LOAD_FAST_BORROW        16 (payload)
+                CALL                     1
+                SWAP                     2
+                COPY                     2
+                COMPARE_OP              58 (bool(<=))
+                POP_JUMP_IF_FALSE        8 (to L22)
+                NOT_TAKEN
+                LOAD_CONST              35 (277430)
+                COMPARE_OP              58 (bool(<=))
+                POP_JUMP_IF_FALSE        7 (to L24)
+                NOT_TAKEN
+                JUMP_FORWARD             2 (to L23)
+       L22:     POP_TOP
+                JUMP_FORWARD             3 (to L24)
+
+ 820   L23:     LOAD_CONST              36 (57053)
+                STORE_FAST              21 (model_br_len)
+                JUMP_FORWARD            51 (to L29)
+
+ 821   L24:     LOAD_CONST              37 (277350)
+                LOAD_GLOBAL              1 (len + NULL)
+                LOAD_FAST_BORROW        16 (payload)
+                CALL                     1
+                SWAP                     2
+                COPY                     2
+                COMPARE_OP              58 (bool(<=))
+                POP_JUMP_IF_FALSE        8 (to L25)
+                NOT_TAKEN
+                LOAD_CONST              38 (277399)
+                COMPARE_OP              58 (bool(<=))
+                POP_JUMP_IF_FALSE        7 (to L27)
+                NOT_TAKEN
+                JUMP_FORWARD             2 (to L26)
+       L25:     POP_TOP
+                JUMP_FORWARD             3 (to L27)
+
+ 822   L26:     LOAD_CONST              39 (57031)
+                STORE_FAST              21 (model_br_len)
+                JUMP_FORWARD            21 (to L29)
+
+ 823   L27:     LOAD_GLOBAL              1 (len + NULL)
+                LOAD_FAST_BORROW        16 (payload)
+                CALL                     1
+                LOAD_CONST              40 (281240)
+                COMPARE_OP              88 (bool(==))
+                POP_JUMP_IF_FALSE        4 (to L28)
+                NOT_TAKEN
+
+ 824            LOAD_CONST              41 (60880)
+                STORE_FAST              21 (model_br_len)
+                JUMP_FORWARD             2 (to L29)
+
+ 826   L28:     LOAD_CONST              42 (61147)
+                STORE_FAST              21 (model_br_len)
+
+ 827   L29:     LOAD_FAST_BORROW        16 (payload)
+                LOAD_CONST              43 (219472)
+                LOAD_CONST              43 (219472)
+                LOAD_FAST_BORROW        21 (model_br_len)
+                BINARY_OP                0 (+)
+                BINARY_SLICE
+                STORE_FAST              18 (model_br_data)
+
+ 828            LOAD_FAST_BORROW        16 (payload)
+                LOAD_CONST              43 (219472)
+                LOAD_FAST_BORROW        21 (model_br_len)
+                BINARY_OP                0 (+)
+                LOAD_CONST              15 (None)
+                BINARY_SLICE
+                STORE_FAST              19 (pose_q_br_data)
+                JUMP_FORWARD            72 (to L33)
+
+ 830   L30:     LOAD_FAST_BORROW         7 (mask_br)
+                LOAD_ATTR               31 (read_bytes + NULL|self)
+                CALL                     0
+                STORE_FAST              17 (mask_br_data)
+
+ 831            LOAD_FAST_BORROW         6 (model_br)
+                LOAD_ATTR               31 (read_bytes + NULL|self)
+                CALL                     0
+                STORE_FAST              18 (model_br_data)
+
+ 832            LOAD_FAST_BORROW         9 (pose_q_br)
+                LOAD_ATTR               29 (exists + NULL|self)
+                CALL                     0
+                TO_BOOL
+                POP_JUMP_IF_FALSE       17 (to L31)
+                NOT_TAKEN
+                LOAD_FAST_BORROW         9 (pose_q_br)
+                LOAD_ATTR               31 (read_bytes + NULL|self)
+                CALL                     0
+                JUMP_FORWARD             1 (to L32)
+       L31:     LOAD_CONST              15 (None)
+       L32:     STORE_FAST              19 (pose_q_br_data)
+
+ 834   L33:     LOAD_GLOBAL             39 (JointFrameGenerator + NULL)
+                CALL                     0
+                LOAD_ATTR               41 (to + NULL|self)
+                LOAD_FAST_BORROW         3 (device)
+                CALL                     1
+                STORE_FAST              24 (generator)
+
+ 837            LOAD_GLOBAL             42 (brotli)
+                LOAD_ATTR               44 (decompress)
+                PUSH_NULL
+                LOAD_FAST_BORROW        18 (model_br_data)
+                CALL                     1
+                STORE_FAST              25 (weights_data)
+
+ 839            LOAD_FAST_BORROW        24 (generator)
+                LOAD_ATTR               47 (load_state_dict + NULL|self)
+                LOAD_GLOBAL             49 (get_decoded_state_dict + NULL)
+                LOAD_FAST_BORROW        25 (weights_data)
+                LOAD_FAST_BORROW         3 (device)
+                CALL                     2
+                LOAD_CONST               2 (True)
+                LOAD_CONST              44 (('strict',))
+                CALL_KW                  2
+                POP_TOP
+
+ 840            LOAD_FAST_BORROW        24 (generator)
+                LOAD_ATTR               51 (eval + NULL|self)
+                CALL                     0
+                POP_TOP
+
+ 843            LOAD_GLOBAL             52 (tempfile)
+                LOAD_ATTR               54 (NamedTemporaryFile)
+                PUSH_NULL
+                LOAD_CONST              45 ('.obu')
+                LOAD_CONST              46 (False)
+                LOAD_CONST              47 (('suffix', 'delete'))
+                CALL_KW                  2
+                COPY                     1
+                LOAD_SPECIAL             1 (__exit__)
+                SWAP                     2
+                SWAP                     3
+                LOAD_SPECIAL             0 (__enter__)
+                CALL                     0
+       L34:     STORE_FAST              26 (tmp_obu)
+
+ 844            LOAD_FAST_BORROW        26 (tmp_obu)
+                LOAD_ATTR               57 (write + NULL|self)
+                LOAD_GLOBAL             42 (brotli)
+                LOAD_ATTR               44 (decompress)
+                PUSH_NULL
+                LOAD_FAST_BORROW        17 (mask_br_data)
+                CALL                     1
+                CALL                     1
+                POP_TOP
+
+ 845            LOAD_FAST_BORROW        26 (tmp_obu)
+                LOAD_ATTR               58 (name)
+                STORE_FAST              27 (tmp_obu_path)
+
+ 843   L35:     LOAD_CONST              15 (None)
+                LOAD_CONST              15 (None)
+                LOAD_CONST              15 (None)
+                CALL                     3
+                POP_TOP
+
+ 847   L36:     LOAD_GLOBAL             61 (load_encoded_mask_video + NULL)
+                LOAD_FAST_CHECK         27 (tmp_obu_path)
+                CALL                     1
+                STORE_FAST              28 (mask_frames_all)
+
+ 848            LOAD_FAST_BORROW        28 (mask_frames_all)
+                LOAD_ATTR               62 (shape)
+                LOAD_SMALL_INT           0
+                BINARY_OP               26 ([])
+                LOAD_CONST              48 (600)
+                COMPARE_OP              18 (bool(<))
+                POP_JUMP_IF_FALSE       96 (to L37)
+                NOT_TAKEN
+
+ 849            LOAD_GLOBAL             65 (int + NULL)
+                LOAD_GLOBAL             66 (np)
+                LOAD_ATTR               68 (ceil)
+                PUSH_NULL
+                LOAD_CONST              48 (600)
+                LOAD_FAST_BORROW        28 (mask_frames_all)
+                LOAD_ATTR               62 (shape)
+                LOAD_SMALL_INT           0
+                BINARY_OP               26 ([])
+                BINARY_OP               11 (/)
+                CALL                     1
+                CALL                     1
+                STORE_FAST              29 (repeat)
+
+ 850            LOAD_FAST_BORROW        28 (mask_frames_all)
+                LOAD_ATTR               71 (repeat_interleave + NULL|self)
+                LOAD_FAST_BORROW        29 (repeat)
+                LOAD_SMALL_INT           0
+                LOAD_CONST              49 (('dim',))
+                CALL_KW                  2
+                LOAD_CONST              50 (slice(None, 600, None))
+                BINARY_OP               26 ([])
+                LOAD_ATTR               73 (contiguous + NULL|self)
+                CALL                     0
+                STORE_FAST              28 (mask_frames_all)
+
+ 851   L37:     LOAD_GLOBAL             74 (os)
+                LOAD_ATTR               76 (remove)
+                PUSH_NULL
+                LOAD_FAST_BORROW        27 (tmp_obu_path)
+                CALL                     1
+                POP_TOP
+
+ 854            LOAD_FAST_BORROW        19 (pose_q_br_data)
+                EXTENDED_ARG             2
+                POP_JUMP_IF_NONE       579 (to L45)
+                NOT_TAKEN
+
+ 855            LOAD_GLOBAL             42 (brotli)
+                LOAD_ATTR               44 (decompress)
+                PUSH_NULL
+                LOAD_FAST_BORROW        19 (pose_q_br_data)
+                CALL                     1
+                STORE_FAST              30 (pose_raw)
+
+ 856            LOAD_FAST_BORROW        30 (pose_raw)
+                LOAD_ATTR               33 (startswith + NULL|self)
+                LOAD_CONST              51 (b'QP1')
+                CALL                     1
+                TO_BOOL
+                EXTENDED_ARG             1
+                POP_JUMP_IF_FALSE      297 (to L43)
+                NOT_TAKEN
+
+ 857            LOAD_GLOBAL             66 (np)
+                LOAD_ATTR               78 (frombuffer)
+                PUSH_NULL
+                LOAD_FAST_BORROW        30 (pose_raw)
+                LOAD_CONST              52 (slice(3, 5, None))
+                BINARY_OP               26 ([])
+                LOAD_GLOBAL             66 (np)
+                LOAD_ATTR               80 (uint16)
+                LOAD_SMALL_INT           1
+                LOAD_CONST              53 (('dtype', 'count'))
+                CALL_KW                  3
+                LOAD_SMALL_INT           0
+                BINARY_OP               26 ([])
+                STORE_FAST              31 (first)
+
+ 858            LOAD_GLOBAL             65 (int + NULL)
+                LOAD_FAST_BORROW        31 (first)
+                CALL                     1
+                BUILD_LIST               1
+                STORE_FAST              32 (vals)
+
+ 859            LOAD_SMALL_INT           5
+                STORE_FAST              23 (cursor)
+
+ 860   L38:     LOAD_FAST_BORROW        23 (cursor)
+                LOAD_GLOBAL              1 (len + NULL)
+                LOAD_FAST_BORROW        30 (pose_raw)
+                CALL                     1
+                COMPARE_OP              18 (bool(<))
+                POP_JUMP_IF_FALSE      123 (to L42)
+                NOT_TAKEN
+
+ 861            LOAD_SMALL_INT           0
+                STORE_FAST              33 (shift)
+
+ 862            LOAD_SMALL_INT           0
+                STORE_FAST              34 (acc)
+
+ 863   L39:     NOP
+
+ 864            LOAD_FAST_BORROW        30 (pose_raw)
+                LOAD_FAST_BORROW        23 (cursor)
+                BINARY_OP               26 ([])
+                STORE_FAST              35 (byte)
+
+ 865            LOAD_FAST_BORROW        23 (cursor)
+                LOAD_SMALL_INT           1
+                BINARY_OP               13 (+=)
+                STORE_FAST              23 (cursor)
+
+ 866            LOAD_FAST_BORROW        34 (acc)
+                LOAD_FAST_BORROW        35 (byte)
+                LOAD_SMALL_INT         127
+                BINARY_OP                1 (&)
+                LOAD_FAST_BORROW        33 (shift)
+                BINARY_OP                3 (<<)
+                BINARY_OP               20 (|=)
+                STORE_FAST              34 (acc)
+
+ 867            LOAD_FAST_BORROW        35 (byte)
+                LOAD_SMALL_INT         128
+                COMPARE_OP              18 (bool(<))
+                POP_JUMP_IF_FALSE        2 (to L40)
+                NOT_TAKEN
+
+ 868            JUMP_FORWARD            11 (to L41)
+
+ 869   L40:     LOAD_FAST_BORROW        33 (shift)
+                LOAD_SMALL_INT           7
+                BINARY_OP               13 (+=)
+                STORE_FAST              33 (shift)
+                JUMP_BACKWARD           61 (to L39)
+
+ 870   L41:     LOAD_FAST_BORROW        34 (acc)
+                LOAD_SMALL_INT           1
+                BINARY_OP                9 (>>)
+                LOAD_FAST_BORROW        34 (acc)
+                LOAD_SMALL_INT           1
+                BINARY_OP                1 (&)
+                UNARY_NEGATIVE
+                BINARY_OP               12 (^)
+                STORE_FAST              36 (delta)
+
+ 871            LOAD_FAST_BORROW        32 (vals)
+                LOAD_ATTR               83 (append + NULL|self)
+                LOAD_FAST_BORROW        32 (vals)
+                LOAD_CONST              85 (-1)
+                BINARY_OP               26 ([])
+                LOAD_FAST_BORROW        36 (delta)
+                BINARY_OP                0 (+)
+                CALL                     1
+                POP_TOP
+                JUMP_BACKWARD          138 (to L38)
+
+ 872   L42:     LOAD_GLOBAL             66 (np)
+                LOAD_ATTR               84 (zeros)
+                PUSH_NULL
+                LOAD_GLOBAL              1 (len + NULL)
+                LOAD_FAST_BORROW        32 (vals)
+                CALL                     1
+                LOAD_SMALL_INT           6
+                BUILD_TUPLE              2
+                LOAD_GLOBAL             66 (np)
+                LOAD_ATTR               80 (uint16)
+                LOAD_CONST              54 (('dtype',))
+                CALL_KW                  2
+                STORE_FAST              37 (q_pose)
+
+ 873            LOAD_GLOBAL             66 (np)
+                LOAD_ATTR               86 (asarray)
+                PUSH_NULL
+                LOAD_FAST_BORROW        32 (vals)
+                LOAD_GLOBAL             66 (np)
+                LOAD_ATTR               80 (uint16)
+                LOAD_CONST              54 (('dtype',))
+                CALL_KW                  2
+                LOAD_FAST_BORROW        37 (q_pose)
+                LOAD_CONST              86 ((slice(None, None, None), 0))
+                STORE_SUBSCR
+                JUMP_FORWARD            54 (to L44)
+
+ 875   L43:     LOAD_GLOBAL             66 (np)
+                LOAD_ATTR               78 (frombuffer)
+                PUSH_NULL
+                LOAD_FAST_BORROW        30 (pose_raw)
+                LOAD_GLOBAL             66 (np)
+                LOAD_ATTR               80 (uint16)
+                LOAD_CONST              54 (('dtype',))
+                CALL_KW                  2
+                LOAD_ATTR               89 (reshape + NULL|self)
+                LOAD_CONST              85 (-1)
+                LOAD_SMALL_INT           6
+                CALL                     2
+                STORE_FAST              37 (q_pose)
+
+ 876   L44:     LOAD_GLOBAL             66 (np)
+                LOAD_ATTR               90 (empty)
+                PUSH_NULL
+                LOAD_FAST_BORROW        37 (q_pose)
+                LOAD_ATTR               62 (shape)
+                LOAD_GLOBAL             66 (np)
+                LOAD_ATTR               92 (float32)
+                LOAD_CONST              54 (('dtype',))
+                CALL_KW                  2
+                STORE_FAST              38 (pose_np)
+
+ 877            LOAD_FAST_BORROW        37 (q_pose)
+                LOAD_CONST              86 ((slice(None, None, None), 0))
+                BINARY_OP               26 ([])
+                LOAD_ATTR               95 (astype + NULL|self)
+                LOAD_GLOBAL             66 (np)
+                LOAD_ATTR               92 (float32)
+                CALL                     1
+                LOAD_CONST              56 (512.0)
+                BINARY_OP               11 (/)
+                LOAD_CONST              57 (20.0)
+                BINARY_OP                0 (+)
+                LOAD_FAST_BORROW        38 (pose_np)
+                LOAD_CONST              86 ((slice(None, None, None), 0))
+                STORE_SUBSCR
+
+ 878            LOAD_FAST_BORROW        37 (q_pose)
+                LOAD_CONST              87 ((slice(None, None, None), slice(1, None, None)))
+                BINARY_OP               26 ([])
+                LOAD_ATTR               97 (view + NULL|self)
+                LOAD_GLOBAL             66 (np)
+                LOAD_ATTR               98 (int16)
+                CALL                     1
+                LOAD_ATTR               95 (astype + NULL|self)
+                LOAD_GLOBAL             66 (np)
+                LOAD_ATTR               92 (float32)
+                CALL                     1
+                LOAD_CONST              58 (2048.0)
+                BINARY_OP               11 (/)
+                LOAD_FAST_BORROW        38 (pose_np)
+                LOAD_CONST              87 ((slice(None, None, None), slice(1, None, None)))
+                STORE_SUBSCR
+                EXTENDED_ARG             1
+                JUMP_FORWARD           308 (to L50)
+
+ 880   L45:     LOAD_GLOBAL            101 (open + NULL)
+                LOAD_FAST_BORROW         8 (pose_br)
+                LOAD_CONST              59 ('rb')
+                CALL                     2
+                COPY                     1
+                LOAD_SPECIAL             1 (__exit__)
+                SWAP                     2
+                SWAP                     3
+                LOAD_SPECIAL             0 (__enter__)
+                CALL                     0
+       L46:     STORE_FAST              39 (f)
+
+ 881            LOAD_GLOBAL             42 (brotli)
+                LOAD_ATTR               44 (decompress)
+                PUSH_NULL
+                LOAD_FAST_BORROW        39 (f)
+                LOAD_ATTR              103 (read + NULL|self)
+                CALL                     0
+                CALL                     1
+                STORE_FAST              40 (pose_bytes)
+
+ 880   L47:     LOAD_CONST              15 (None)
+                LOAD_CONST              15 (None)
+                LOAD_CONST              15 (None)
+                CALL                     3
+                POP_TOP
+
+ 882   L48:     LOAD_GLOBAL             66 (np)
+                LOAD_ATTR              104 (load)
+                PUSH_NULL
+                LOAD_GLOBAL            106 (io)
+                LOAD_ATTR              108 (BytesIO)
+                PUSH_NULL
+                LOAD_FAST_CHECK         40 (pose_bytes)
+                CALL                     1
+                CALL                     1
+                STORE_FAST              41 (pose_payload)
+
+ 883            LOAD_GLOBAL            111 (isinstance + NULL)
+                LOAD_FAST_BORROW        41 (pose_payload)
+                LOAD_GLOBAL             66 (np)
+                LOAD_ATTR              112 (lib)
+                LOAD_ATTR              114 (npyio)
+                LOAD_ATTR              116 (NpzFile)
+                CALL                     2
+                TO_BOOL
+                POP_JUMP_IF_FALSE      148 (to L49)
+                NOT_TAKEN
+
+ 884            LOAD_FAST_BORROW        41 (pose_payload)
+                LOAD_CONST              60 ('q')
+                BINARY_OP               26 ([])
+                LOAD_ATTR               95 (astype + NULL|self)
+                LOAD_GLOBAL             66 (np)
+                LOAD_ATTR               92 (float32)
+                CALL                     1
+                STORE_FAST              37 (q_pose)
+
+ 885            LOAD_FAST_BORROW        41 (pose_payload)
+                LOAD_CONST              61 ('min')
+                BINARY_OP               26 ([])
+                LOAD_ATTR               95 (astype + NULL|self)
+                LOAD_GLOBAL             66 (np)
+                LOAD_ATTR               92 (float32)
+                CALL                     1
+                STORE_FAST              42 (pose_min)
+
+ 886            LOAD_FAST_BORROW        41 (pose_payload)
+                LOAD_CONST              62 ('scale')
+                BINARY_OP               26 ([])
+                LOAD_ATTR               95 (astype + NULL|self)
+                LOAD_GLOBAL             66 (np)
+                LOAD_ATTR               92 (float32)
+                CALL                     1
+                STORE_FAST              43 (pose_scale)
+
+ 887            LOAD_FAST_BORROW        37 (q_pose)
+                LOAD_FAST_BORROW        43 (pose_scale)
+                BINARY_OP                5 (*)
+                LOAD_FAST_BORROW        42 (pose_min)
+                BINARY_OP                0 (+)
+                STORE_FAST              38 (pose_np)
+
+ 888            LOAD_FAST_BORROW        41 (pose_payload)
+                LOAD_ATTR              119 (close + NULL|self)
+                CALL                     0
+                POP_TOP
+                JUMP_FORWARD             2 (to L50)
+
+ 890   L49:     LOAD_FAST               41 (pose_payload)
+                STORE_FAST              38 (pose_np)
+
+ 891   L50:     LOAD_GLOBAL             14 (torch)
+                LOAD_ATTR              120 (from_numpy)
+                PUSH_NULL
+                LOAD_FAST_BORROW        38 (pose_np)
+                CALL                     1
+                LOAD_ATTR              123 (float + NULL|self)
+                CALL                     0
+                STORE_FAST              44 (pose_frames_all)
+
+ 892            LOAD_GLOBAL            125 (load_smooth_pose + NULL)
+                LOAD_FAST_BORROW        14 (smooth_pose_br)
+                CALL                     1
+                STORE_FAST              45 (smooth_pose)
+
+ 893            LOAD_FAST_BORROW        45 (smooth_pose)
+                POP_JUMP_IF_NONE       197 (to L52)
+                NOT_TAKEN
+
+ 894            LOAD_GLOBAL            127 (make_smooth_pose_basis + NULL)
+                LOAD_FAST_BORROW        38 (pose_np)
+                LOAD_ATTR               62 (shape)
+                LOAD_SMALL_INT           0
+                BINARY_OP               26 ([])
+                LOAD_FAST_BORROW        45 (smooth_pose)
+                LOAD_CONST              63 ('basis_kind')
+                BINARY_OP               26 ([])
+                CALL                     2
+                STORE_FAST              46 (basis)
+
+ 895            LOAD_FAST_BORROW        46 (basis)
+                LOAD_FAST_BORROW        45 (smooth_pose)
+                LOAD_CONST              64 ('coeff')
+                BINARY_OP               26 ([])
+                LOAD_ATTR               95 (astype + NULL|self)
+                LOAD_GLOBAL             66 (np)
+                LOAD_ATTR               92 (float32)
+                CALL                     1
+                BINARY_OP                4 (@)
+                STORE_FAST              47 (corr)
+
+ 896            LOAD_FAST_BORROW        45 (smooth_pose)
+                LOAD_CONST              62 ('scale')
+                BINARY_OP               26 ([])
+                POP_JUMP_IF_NONE        33 (to L51)
+                NOT_TAKEN
+
+ 897            LOAD_FAST_BORROW        47 (corr)
+                LOAD_FAST_BORROW        45 (smooth_pose)
+                LOAD_CONST              62 ('scale')
+                BINARY_OP               26 ([])
+                LOAD_ATTR               89 (reshape + NULL|self)
+                LOAD_SMALL_INT           1
+                LOAD_CONST              85 (-1)
+                CALL                     2
+                BINARY_OP                5 (*)
+                STORE_FAST              47 (corr)
+
+ 898   L51:     LOAD_GLOBAL             14 (torch)
+                LOAD_ATTR              120 (from_numpy)
+                PUSH_NULL
+                LOAD_FAST_BORROW        38 (pose_np)
+                LOAD_FAST_BORROW        47 (corr)
+                LOAD_ATTR               95 (astype + NULL|self)
+                LOAD_GLOBAL             66 (np)
+                LOAD_ATTR               92 (float32)
+                CALL                     1
+                BINARY_OP                0 (+)
+                CALL                     1
+                LOAD_ATTR              123 (float + NULL|self)
+                CALL                     0
+                STORE_FAST              44 (pose_frames_all)
+
+ 899   L52:     LOAD_GLOBAL            129 (load_actuator + NULL)
+                LOAD_FAST_BORROW_LOAD_FAST_BORROW 195 (actuator_br, device)
+                CALL                     2
+                STORE_FAST              48 (actuator)
+
+ 900            LOAD_FAST_BORROW        15 (embedded_seg_tile_actions)
+                POP_JUMP_IF_NONE        13 (to L53)
+                NOT_TAKEN
+
+ 901            LOAD_GLOBAL            131 (load_seg_tile_actions_data + NULL)
+                LOAD_FAST_BORROW_LOAD_FAST_BORROW 243 (embedded_seg_tile_actions, device)
+                CALL                     2
+                STORE_FAST              49 (seg_tile_actions)
+                JUMP_FORWARD            11 (to L54)
+
+ 903   L53:     LOAD_GLOBAL            133 (load_seg_tile_actions + NULL)
+                LOAD_FAST_BORROW_LOAD_FAST_BORROW 211 (seg_tile_actions_br, device)
+                CALL                     2
+                STORE_FAST              49 (seg_tile_actions)
+
+ 905   L54:     LOAD_CONST              15 (None)
+                STORE_FAST              50 (color_bias)
+
+ 906            LOAD_CONST              15 (None)
+                STORE_FAST              51 (color_scale)
+
+ 907            LOAD_FAST_BORROW        11 (color_lut_br)
+                LOAD_ATTR               29 (exists + NULL|self)
+                CALL                     0
+                TO_BOOL
+                EXTENDED_ARG             1
+                POP_JUMP_IF_FALSE      370 (to L59)
+                NOT_TAKEN
+
+ 908            LOAD_GLOBAL            101 (open + NULL)
+                LOAD_FAST_BORROW        11 (color_lut_br)
+                LOAD_CONST              59 ('rb')
+                CALL                     2
+                COPY                     1
+                LOAD_SPECIAL             1 (__exit__)
+                SWAP                     2
+                SWAP                     3
+                LOAD_SPECIAL             0 (__enter__)
+                CALL                     0
+       L55:     STORE_FAST              39 (f)
+
+ 909            LOAD_GLOBAL             66 (np)
+                LOAD_ATTR              104 (load)
+                PUSH_NULL
+                LOAD_GLOBAL            106 (io)
+                LOAD_ATTR              108 (BytesIO)
+                PUSH_NULL
+                LOAD_GLOBAL             42 (brotli)
+                LOAD_ATTR               44 (decompress)
+                PUSH_NULL
+                LOAD_FAST_BORROW        39 (f)
+                LOAD_ATTR              103 (read + NULL|self)
+                CALL                     0
+                CALL                     1
+                CALL                     1
+                CALL                     1
+                STORE_FAST              52 (lut_payload)
+
+ 908   L56:     LOAD_CONST              15 (None)
+                LOAD_CONST              15 (None)
+                LOAD_CONST              15 (None)
+                CALL                     3
+                POP_TOP
+
+ 910   L57:     LOAD_GLOBAL            111 (isinstance + NULL)
+                LOAD_FAST_CHECK         52 (lut_payload)
+                LOAD_GLOBAL             66 (np)
+                LOAD_ATTR              112 (lib)
+                LOAD_ATTR              114 (npyio)
+                LOAD_ATTR              116 (NpzFile)
+                CALL                     2
+                TO_BOOL
+                POP_JUMP_IF_FALSE      138 (to L58)
+                NOT_TAKEN
+
+ 911            LOAD_GLOBAL             14 (torch)
+                LOAD_ATTR              120 (from_numpy)
+                PUSH_NULL
+                LOAD_FAST_BORROW        52 (lut_payload)
+                LOAD_CONST              65 ('bias')
+                BINARY_OP               26 ([])
+                CALL                     1
+                LOAD_ATTR               41 (to + NULL|self)
+                LOAD_FAST_BORROW         3 (device)
+                LOAD_GLOBAL             14 (torch)
+                LOAD_ATTR               92 (float32)
+                LOAD_CONST              66 (('device', 'dtype'))
+                CALL_KW                  2
+                STORE_FAST              50 (color_bias)
+
+ 912            LOAD_GLOBAL             14 (torch)
+                LOAD_ATTR              120 (from_numpy)
+                PUSH_NULL
+                LOAD_FAST_BORROW        52 (lut_payload)
+                LOAD_CONST              62 ('scale')
+                BINARY_OP               26 ([])
+                CALL                     1
+                LOAD_ATTR               41 (to + NULL|self)
+                LOAD_FAST_BORROW         3 (device)
+                LOAD_GLOBAL             14 (torch)
+                LOAD_ATTR               92 (float32)
+                LOAD_CONST              66 (('device', 'dtype'))
+                CALL_KW                  2
+                STORE_FAST              51 (color_scale)
+
+ 913            LOAD_FAST_BORROW        52 (lut_payload)
+                LOAD_ATTR              119 (close + NULL|self)
+                CALL                     0
+                POP_TOP
+                JUMP_FORWARD            75 (to L59)
+
+ 915   L58:     LOAD_GLOBAL             14 (torch)
+                LOAD_ATTR              120 (from_numpy)
+                PUSH_NULL
+                LOAD_FAST_BORROW        52 (lut_payload)
+                CALL                     1
+                LOAD_ATTR               41 (to + NULL|self)
+                LOAD_FAST_BORROW         3 (device)
+                LOAD_GLOBAL             14 (torch)
+                LOAD_ATTR               92 (float32)
+                LOAD_CONST              66 (('device', 'dtype'))
+                CALL_KW                  2
+                STORE_FAST              50 (color_bias)
+
+ 916            LOAD_GLOBAL             14 (torch)
+                LOAD_ATTR              134 (zeros_like)
+                PUSH_NULL
+                LOAD_FAST_BORROW        50 (color_bias)
+                CALL                     1
+                STORE_FAST              51 (color_scale)
+
+ 918   L59:     LOAD_CONST              67 (874)
+                LOAD_CONST              68 (1164)
+                STORE_FAST              54 (out_w)
+                STORE_FAST              53 (out_h)
+
+ 919            LOAD_SMALL_INT           0
+                STORE_FAST              23 (cursor)
+
+ 920            LOAD_SMALL_INT           4
+                STORE_FAST              55 (batch_size)
+
+ 923            LOAD_CONST              48 (600)
+                STORE_FAST              56 (pairs_per_file)
+
+ 925            LOAD_GLOBAL             14 (torch)
+                LOAD_ATTR              136 (inference_mode)
+                PUSH_NULL
+                CALL                     0
+                COPY                     1
+                LOAD_SPECIAL             1 (__exit__)
+                SWAP                     2
+                SWAP                     3
+                LOAD_SPECIAL             0 (__enter__)
+                CALL                     0
+       L60:     POP_TOP
+
+ 926            LOAD_FAST_BORROW         5 (files)
+                GET_ITER
+       L61:     EXTENDED_ARG             3
+                FOR_ITER               968 (to L74)
+                STORE_FAST              57 (file_name)
+
+ 927            LOAD_GLOBAL             74 (os)
+                LOAD_ATTR              138 (path)
+                LOAD_ATTR              141 (splitext + NULL|self)
+                LOAD_FAST_BORROW        57 (file_name)
+                CALL                     1
+                LOAD_SMALL_INT           0
+                BINARY_OP               26 ([])
+                STORE_FAST              58 (base_name)
+
+ 928            LOAD_FAST_BORROW         1 (out_dir)
+                LOAD_FAST_BORROW        58 (base_name)
+                FORMAT_SIMPLE
+                LOAD_CONST              69 ('.raw')
+                BUILD_STRING             2
+                BINARY_OP               11 (/)
+                STORE_FAST              59 (raw_out_path)
+
+ 931            LOAD_FAST_BORROW        28 (mask_frames_all)
+                LOAD_FAST_BORROW        23 (cursor)
+                LOAD_FAST_BORROW        23 (cursor)
+                LOAD_FAST_BORROW        56 (pairs_per_file)
+                BINARY_OP                0 (+)
+                BINARY_SLICE
+                STORE_FAST              60 (file_masks)
+
+ 932            LOAD_FAST_BORROW        44 (pose_frames_all)
+                LOAD_FAST_BORROW        23 (cursor)
+                LOAD_FAST_BORROW        23 (cursor)
+                LOAD_FAST_BORROW        56 (pairs_per_file)
+                BINARY_OP                0 (+)
+                BINARY_SLICE
+                STORE_FAST              61 (file_poses)
+
+ 933            LOAD_FAST               23 (cursor)
+                STORE_FAST              62 (file_pair_start)
+
+ 934            LOAD_FAST_BORROW        23 (cursor)
+                LOAD_FAST_BORROW        56 (pairs_per_file)
+                BINARY_OP               13 (+=)
+                STORE_FAST              23 (cursor)
+
+ 936            LOAD_GLOBAL            101 (open + NULL)
+                LOAD_FAST_BORROW        59 (raw_out_path)
+                LOAD_CONST              70 ('wb')
+                CALL                     2
+                COPY                     1
+                LOAD_SPECIAL             1 (__exit__)
+                SWAP                     2
+                SWAP                     3
+                LOAD_SPECIAL             0 (__enter__)
+                CALL                     0
+       L62:     STORE_FAST              63 (f_out)
+
+ 937            LOAD_GLOBAL            143 (tqdm + NULL)
+                LOAD_GLOBAL            145 (range + NULL)
+                LOAD_SMALL_INT           0
+                LOAD_FAST_BORROW        60 (file_masks)
+                LOAD_ATTR               62 (shape)
+                LOAD_SMALL_INT           0
+                BINARY_OP               26 ([])
+                LOAD_FAST_BORROW        55 (batch_size)
+                CALL                     3
+                LOAD_CONST              71 ('Decoding ')
+                LOAD_FAST_BORROW        57 (file_name)
+                FORMAT_SIMPLE
+                BUILD_STRING             2
+                LOAD_CONST              72 (('desc',))
+                CALL_KW                  2
+                STORE_FAST              64 (pbar)
+
+ 939            LOAD_FAST_BORROW        64 (pbar)
+                GET_ITER
+       L63:     EXTENDED_ARG             3
+                FOR_ITER               799 (to L72)
+                STORE_FAST              65 (i)
+
+ 940            LOAD_FAST_BORROW        60 (file_masks)
+                LOAD_FAST_BORROW        65 (i)
+                LOAD_FAST_BORROW        65 (i)
+                LOAD_FAST_BORROW        55 (batch_size)
+                BINARY_OP                0 (+)
+                BINARY_SLICE
+                LOAD_ATTR               41 (to + NULL|self)
+                LOAD_FAST_BORROW         3 (device)
+                CALL                     1
+                LOAD_ATTR              147 (long + NULL|self)
+                CALL                     0
+                STORE_FAST              66 (in_mask2)
+
+ 941            LOAD_FAST_BORROW        61 (file_poses)
+                LOAD_FAST_BORROW        65 (i)
+                LOAD_FAST_BORROW        65 (i)
+                LOAD_FAST_BORROW        55 (batch_size)
+                BINARY_OP                0 (+)
+                BINARY_SLICE
+                LOAD_ATTR               41 (to + NULL|self)
+                LOAD_FAST_BORROW         3 (device)
+                CALL                     1
+                LOAD_ATTR              123 (float + NULL|self)
+                CALL                     0
+                STORE_FAST              67 (in_pose6)
+
+ 943            LOAD_FAST_BORROW        24 (generator)
+                PUSH_NULL
+                LOAD_FAST_BORROW        66 (in_mask2)
+                LOAD_FAST_BORROW        67 (in_pose6)
+                CALL                     2
+                UNPACK_SEQUENCE          2
+                STORE_FAST              68 (fake1)
+                STORE_FAST              69 (fake2)
+
+ 944            LOAD_FAST_BORROW        50 (color_bias)
+                POP_JUMP_IF_NONE       129 (to L64)
+                NOT_TAKEN
+
+ 945            LOAD_GLOBAL            148 (F)
+                LOAD_ATTR              150 (embedding)
+                PUSH_NULL
+                LOAD_FAST_CHECK         66 (in_mask2)
+                LOAD_FAST_BORROW        50 (color_bias)
+                CALL                     2
+                LOAD_ATTR              153 (permute + NULL|self)
+                LOAD_SMALL_INT           0
+                LOAD_SMALL_INT           3
+                LOAD_SMALL_INT           1
+                LOAD_SMALL_INT           2
+                CALL                     4
+                STORE_FAST              70 (bias)
+
+ 946            LOAD_GLOBAL            148 (F)
+                LOAD_ATTR              150 (embedding)
+                PUSH_NULL
+                LOAD_FAST_BORROW        66 (in_mask2)
+                LOAD_FAST_BORROW        51 (color_scale)
+                CALL                     2
+                LOAD_ATTR              153 (permute + NULL|self)
+                LOAD_SMALL_INT           0
+                LOAD_SMALL_INT           3
+                LOAD_SMALL_INT           1
+                LOAD_SMALL_INT           2
+                CALL                     4
+                STORE_FAST              71 (scale)
+
+ 947            LOAD_FAST_CHECK         68 (fake1)
+                LOAD_CONST              73 (1.0)
+                LOAD_FAST_BORROW        71 (scale)
+                BINARY_OP                0 (+)
+                BINARY_OP                5 (*)
+                LOAD_FAST_BORROW        70 (bias)
+                BINARY_OP                0 (+)
+                STORE_FAST              68 (fake1)
+
+ 948            LOAD_FAST_CHECK         69 (fake2)
+                LOAD_CONST              73 (1.0)
+                LOAD_FAST_BORROW        71 (scale)
+                BINARY_OP                0 (+)
+                BINARY_OP                5 (*)
+                LOAD_FAST_BORROW        70 (bias)
+                BINARY_OP                0 (+)
+                STORE_FAST              69 (fake2)
+
+ 949   L64:     LOAD_FAST_BORROW        48 (actuator)
+                POP_JUMP_IF_NONE       115 (to L66)
+                NOT_TAKEN
+
+ 950            LOAD_FAST_BORROW        48 (actuator)
+                LOAD_CONST              74 ('alpha')
+                BINARY_OP               26 ([])
+                LOAD_FAST_BORROW        62 (file_pair_start)
+                LOAD_FAST_CHECK         65 (i)
+                BINARY_OP                0 (+)
+                LOAD_FAST_BORROW        62 (file_pair_start)
+                LOAD_FAST_BORROW        65 (i)
+                BINARY_OP                0 (+)
+                LOAD_FAST_CHECK         66 (in_mask2)
+                LOAD_ATTR               62 (shape)
+                LOAD_SMALL_INT           0
+                BINARY_OP               26 ([])
+                BINARY_OP                0 (+)
+                BINARY_SLICE
+                STORE_FAST              72 (alpha)
+
+ 951            LOAD_GLOBAL             14 (torch)
+                LOAD_ATTR              154 (einsum)
+                PUSH_NULL
+                LOAD_CONST              75 ('bk,kchw->bchw')
+                LOAD_FAST_BORROW        72 (alpha)
+                LOAD_FAST_BORROW        48 (actuator)
+                LOAD_CONST              76 ('basis')
+                BINARY_OP               26 ([])
+                CALL                     3
+                STORE_FAST              36 (delta)
+
+ 952            LOAD_FAST_BORROW        48 (actuator)
+                LOAD_CONST              77 ('base')
+                BINARY_OP               26 ([])
+                LOAD_CONST              78 ('frame2')
+                COMPARE_OP              88 (bool(==))
+                POP_JUMP_IF_FALSE       11 (to L65)
+                NOT_TAKEN
+
+ 953            LOAD_FAST_CHECK         69 (fake2)
+                LOAD_FAST_BORROW        36 (delta)
+                BINARY_OP                0 (+)
+                STORE_FAST              68 (fake1)
+                JUMP_FORWARD             9 (to L66)
+
+ 955   L65:     LOAD_FAST_CHECK         68 (fake1)
+                LOAD_FAST_BORROW        36 (delta)
+                BINARY_OP                0 (+)
+                STORE_FAST              68 (fake1)
+
+ 956   L66:     LOAD_FAST_BORROW        49 (seg_tile_actions)
+                POP_JUMP_IF_NONE       223 (to L71)
+                NOT_TAKEN
+
+ 957            LOAD_SMALL_INT          32
+                STORE_FAST              73 (tile_size)
+
+ 958            LOAD_CONST              79 (512)
+                LOAD_FAST_BORROW        73 (tile_size)
+                BINARY_OP                2 (//)
+                STORE_FAST              74 (grid_w)
+
+ 959            LOAD_GLOBAL            145 (range + NULL)
+                LOAD_FAST_CHECK         66 (in_mask2)
+                LOAD_ATTR               62 (shape)
+                LOAD_SMALL_INT           0
+                BINARY_OP               26 ([])
+                CALL                     1
+                GET_ITER
+       L67:     FOR_ITER               179 (to L70)
+                STORE_FAST              75 (batch_j)
+
+ 960            LOAD_FAST_BORROW        62 (file_pair_start)
+                LOAD_FAST_CHECK         65 (i)
+                BINARY_OP                0 (+)
+                LOAD_FAST_BORROW        75 (batch_j)
+                BINARY_OP                0 (+)
+                STORE_FAST              76 (frame_idx)
+
+ 961            LOAD_FAST_BORROW        49 (seg_tile_actions)
+                LOAD_CONST              80 ('by_frame')
+                BINARY_OP               26 ([])
+                LOAD_ATTR              157 (get + NULL|self)
+                LOAD_FAST_BORROW        76 (frame_idx)
+                BUILD_LIST               0
+                CALL                     2
+                GET_ITER
+       L68:     FOR_ITER               131 (to L69)
+                UNPACK_SEQUENCE          2
+                STORE_FAST              77 (tile_id)
+                STORE_FAST              78 (action_id)
+
+ 962            LOAD_FAST_BORROW        77 (tile_id)
+                LOAD_FAST_CHECK         74 (grid_w)
+                BINARY_OP                2 (//)
+                LOAD_FAST_CHECK         73 (tile_size)
+                BINARY_OP                5 (*)
+                STORE_FAST              79 (y0)
+
+ 963            LOAD_FAST_BORROW        77 (tile_id)
+                LOAD_FAST_BORROW        74 (grid_w)
+                BINARY_OP                6 (%)
+                LOAD_FAST_BORROW        73 (tile_size)
+                BINARY_OP                5 (*)
+                STORE_FAST              80 (x0)
+
+ 965            LOAD_FAST_CHECK         69 (fake2)
+                LOAD_FAST_CHECK         75 (batch_j)
+                LOAD_CONST              55 (slice(None, None, None))
+                LOAD_FAST_BORROW        79 (y0)
+                LOAD_FAST_BORROW        79 (y0)
+                LOAD_FAST_BORROW        73 (tile_size)
+                BINARY_OP                0 (+)
+                BUILD_SLICE              2
+                LOAD_FAST_BORROW        80 (x0)
+                LOAD_FAST_BORROW        80 (x0)
+                LOAD_FAST_BORROW        73 (tile_size)
+                BINARY_OP                0 (+)
+                BUILD_SLICE              2
+                BUILD_TUPLE              4
+                BINARY_OP               26 ([])
+
+ 966            LOAD_FAST_BORROW        49 (seg_tile_actions)
+                LOAD_CONST              81 ('deltas')
+                BINARY_OP               26 ([])
+                LOAD_FAST_BORROW        78 (action_id)
+                BINARY_OP               26 ([])
+
+ 965            BINARY_OP                0 (+)
+
+ 967            LOAD_ATTR              159 (clamp + NULL|self)
+                LOAD_SMALL_INT           0
+                LOAD_SMALL_INT         255
+                CALL                     2
+
+ 964            LOAD_FAST_BORROW        69 (fake2)
+                LOAD_FAST_BORROW        75 (batch_j)
+                LOAD_CONST              55 (slice(None, None, None))
+                LOAD_FAST_BORROW        79 (y0)
+                LOAD_FAST_BORROW        79 (y0)
+                LOAD_FAST_BORROW        73 (tile_size)
+                BINARY_OP                0 (+)
+                BUILD_SLICE              2
+                LOAD_FAST_BORROW        80 (x0)
+                LOAD_FAST_BORROW        80 (x0)
+                LOAD_FAST_BORROW        73 (tile_size)
+                BINARY_OP                0 (+)
+                BUILD_SLICE              2
+                BUILD_TUPLE              4
+                STORE_SUBSCR
+                JUMP_BACKWARD          133 (to L68)
+
+ 961   L69:     END_FOR
+                POP_ITER
+                JUMP_BACKWARD          181 (to L67)
+
+ 959   L70:     END_FOR
+                POP_ITER
+
+ 969   L71:     LOAD_GLOBAL            148 (F)
+                LOAD_ATTR              160 (interpolate)
+                PUSH_NULL
+                LOAD_FAST_CHECK         68 (fake1)
+                LOAD_FAST_BORROW        53 (out_h)
+                LOAD_FAST_BORROW        54 (out_w)
+                BUILD_TUPLE              2
+                LOAD_CONST              82 ('bilinear')
+                LOAD_CONST              46 (False)
+                LOAD_CONST              83 (('size', 'mode', 'align_corners'))
+                CALL_KW                  4
+                STORE_FAST              81 (fake1_up)
+
+ 970            LOAD_GLOBAL            148 (F)
+                LOAD_ATTR              160 (interpolate)
+                PUSH_NULL
+                LOAD_FAST_CHECK         69 (fake2)
+                LOAD_FAST_BORROW        53 (out_h)
+                LOAD_FAST_BORROW        54 (out_w)
+                BUILD_TUPLE              2
+                LOAD_CONST              82 ('bilinear')
+                LOAD_CONST              46 (False)
+                LOAD_CONST              83 (('size', 'mode', 'align_corners'))
+                CALL_KW                  4
+                STORE_FAST              82 (fake2_up)
+
+ 972            LOAD_GLOBAL             14 (torch)
+                LOAD_ATTR              162 (stack)
+                PUSH_NULL
+                LOAD_FAST_BORROW        81 (fake1_up)
+                LOAD_FAST_BORROW        82 (fake2_up)
+                BUILD_LIST               2
+                LOAD_SMALL_INT           1
+                LOAD_CONST              49 (('dim',))
+                CALL_KW                  2
+                STORE_FAST              83 (batch_comp)
+
+ 973            LOAD_GLOBAL            164 (einops)
+                LOAD_ATTR              166 (rearrange)
+                PUSH_NULL
+                LOAD_FAST_BORROW        83 (batch_comp)
+                LOAD_CONST              84 ('b t c h w -> (b t) h w c')
+                CALL                     2
+                STORE_FAST              83 (batch_comp)
+
+ 975            LOAD_FAST_BORROW        83 (batch_comp)
+                LOAD_ATTR              159 (clamp + NULL|self)
+                LOAD_SMALL_INT           0
+                LOAD_SMALL_INT         255
+                CALL                     2
+                LOAD_ATTR              169 (round + NULL|self)
+                CALL                     0
+                LOAD_ATTR               41 (to + NULL|self)
+                LOAD_GLOBAL             14 (torch)
+                LOAD_ATTR              170 (uint8)
+                CALL                     1
+                STORE_FAST              84 (output_bytes)
+
+ 976            LOAD_FAST_BORROW        63 (f_out)
+                LOAD_ATTR               57 (write + NULL|self)
+                LOAD_FAST_BORROW        84 (output_bytes)
+                LOAD_ATTR              173 (cpu + NULL|self)
+                CALL                     0
+                LOAD_ATTR              175 (numpy + NULL|self)
+                CALL                     0
+                LOAD_ATTR              177 (tobytes + NULL|self)
+                CALL                     0
+                CALL                     1
+                POP_TOP
+                EXTENDED_ARG             3
+                JUMP_BACKWARD          802 (to L63)
+
+ 939   L72:     END_FOR
+                POP_ITER
+
+ 936   L73:     LOAD_CONST              15 (None)
+                LOAD_CONST              15 (None)
+                LOAD_CONST              15 (None)
+                CALL                     3
+                POP_TOP
+                EXTENDED_ARG             3
+                JUMP_BACKWARD          971 (to L61)
+
+ 926   L74:     END_FOR
+                POP_ITER
+
+ 925   L75:     LOAD_CONST              15 (None)
+                LOAD_CONST              15 (None)
+                LOAD_CONST              15 (None)
+                CALL                     3
+                POP_TOP
+                LOAD_CONST              15 (None)
+                RETURN_VALUE
+
+  --   L76:     SWAP                     2
+                POP_TOP
+
+ 775            SWAP                     2
+                STORE_FAST               4 (line)
+                RERAISE                  0
+
+ 843   L77:     PUSH_EXC_INFO
+                WITH_EXCEPT_START
+                TO_BOOL
+                POP_JUMP_IF_TRUE         2 (to L78)
+                NOT_TAKEN
+                RERAISE                  2
+       L78:     POP_TOP
+       L79:     POP_EXCEPT
+                POP_TOP
+                POP_TOP
+                POP_TOP
+                EXTENDED_ARG            10
+                JUMP_BACKWARD_NO_INTERRUPT 2771 (to L36)
+
+  --   L80:     COPY                     3
+                POP_EXCEPT
+                RERAISE                  1
+
+ 880   L81:     PUSH_EXC_INFO
+                WITH_EXCEPT_START
+                TO_BOOL
+                POP_JUMP_IF_TRUE         2 (to L82)
+                NOT_TAKEN
+                RERAISE                  2
+       L82:     POP_TOP
+       L83:     POP_EXCEPT
+                POP_TOP
+                POP_TOP
+                POP_TOP
+                EXTENDED_ARG             7
+                JUMP_BACKWARD_NO_INTERRUPT 1991 (to L48)
+
+  --   L84:     COPY                     3
+                POP_EXCEPT
+                RERAISE                  1
+
+ 908   L85:     PUSH_EXC_INFO
+                WITH_EXCEPT_START
+                TO_BOOL
+                POP_JUMP_IF_TRUE         2 (to L86)
+                NOT_TAKEN
+                RERAISE                  2
+       L86:     POP_TOP
+       L87:     POP_EXCEPT
+                POP_TOP
+                POP_TOP
+                POP_TOP
+                EXTENDED_ARG             5
+                JUMP_BACKWARD_NO_INTERRUPT 1351 (to L57)
+
+  --   L88:     COPY                     3
+                POP_EXCEPT
+                RERAISE                  1
+
+ 936   L89:     PUSH_EXC_INFO
+                WITH_EXCEPT_START
+                TO_BOOL
+                POP_JUMP_IF_TRUE         2 (to L90)
+                NOT_TAKEN
+                RERAISE                  2
+       L90:     POP_TOP
+       L91:     POP_EXCEPT
+                POP_TOP
+                POP_TOP
+                POP_TOP
+                EXTENDED_ARG             4
+                JUMP_BACKWARD         1066 (to L61)
+
+  --   L92:     COPY                     3
+                POP_EXCEPT
+                RERAISE                  1
+
+ 925   L93:     PUSH_EXC_INFO
+                WITH_EXCEPT_START
+                TO_BOOL
+                POP_JUMP_IF_TRUE         2 (to L94)
+                NOT_TAKEN
+                RERAISE                  2
+       L94:     POP_TOP
+       L95:     POP_EXCEPT
+                POP_TOP
+                POP_TOP
+                POP_TOP
+                LOAD_CONST              15 (None)
+                RETURN_VALUE
+
+  --   L96:     COPY                     3
+                POP_EXCEPT
+                RERAISE                  1
+ExceptionTable:
+  L4 to L6 -> L76 [2]
+  L7 to L9 -> L76 [2]
+  L34 to L35 -> L77 [2] lasti
+  L46 to L47 -> L81 [2] lasti
+  L55 to L56 -> L85 [2] lasti
+  L60 to L62 -> L93 [2] lasti
+  L62 to L73 -> L89 [5] lasti
+  L73 to L75 -> L93 [2] lasti
+  L77 to L79 -> L80 [4] lasti
+  L81 to L83 -> L84 [4] lasti
+  L85 to L87 -> L88 [4] lasti
+  L89 to L91 -> L92 [7] lasti
+  L91 to L93 -> L93 [2] lasti
+  L93 to L95 -> L96 [4] lasti

@@ -1,0 +1,266 @@
+{
+  "archive_byte_delta": -289974,
+  "evidence_grade": "empirical_byte_only_until_cuda_auth_eval",
+  "formula_rate_score_delta": -0.1930817840726485,
+  "geometry_preservation": {
+    "archive_member_order": [
+      "p",
+      "zoom_scalars.bin"
+    ],
+    "optional_geometry_member_names": [
+      "zoom_scalars.bin"
+    ],
+    "output_geometry_members": {
+      "zoom_scalars.bin": {
+        "bytes": 1200,
+        "member_name": "zoom_scalars.bin",
+        "sha256": "accf5b88c811d6a79707ab19b1314646bb26aa4977f77eaaf4cbfad9ea1dba76"
+      }
+    },
+    "preservation_mode": "separate_charged_archive_members",
+    "preserved": true,
+    "source_geometry_members": {
+      "zoom_scalars.bin": {
+        "bytes": 1200,
+        "member_name": "zoom_scalars.bin",
+        "sha256": "accf5b88c811d6a79707ab19b1314646bb26aa4977f77eaaf4cbfad9ea1dba76"
+      }
+    }
+  },
+  "output_archive": "/Users/adpena/Projects/pact/experiments/results/qfaithful_geometry_closed_candidates_20260502/2146_qzs3_pr64_qp1_zoom_v1/archive.zip",
+  "output_archive_bytes": 274213,
+  "output_archive_sha256": "2d45289d0bde42f046bceaa0542fdbf5cd78f8f3f54aff101b663eacbca96ec5",
+  "packed_payload_stage": {
+    "brotli_quality": 11,
+    "evidence_grade": "empirical",
+    "formula_only_rate_delta": -0.007655380384045604,
+    "header": {
+      "members": [
+        {
+          "bytes": 59288,
+          "codec": "raw",
+          "name": "renderer.bin",
+          "sha256": "00ce395fc6495a47d26e3844537859fdc2a1bc38d121ea5f4fb2610179d26e46"
+        },
+        {
+          "bytes": 223738,
+          "codec": "raw",
+          "name": "masks.mkv",
+          "sha256": "568439a26dbb9e240cf2c385ff350ddc2cb81f5bc514577498446d6043b21178"
+        },
+        {
+          "bytes": 1149,
+          "codec": "pose_qp1_v1",
+          "decoded_bytes": 7200,
+          "decoded_sha256": "2086abfa4e4fd080056a54af3635ec8d010cd401f049006949d17b53302109b3",
+          "lossy": true,
+          "name": "optimized_poses.bin",
+          "pose_error_stats": {
+            "max_abs_by_dim": [
+              0.0,
+              0.1629638671875,
+              0.1409912109375,
+              0.10931396484375,
+              0.109130859375,
+              0.144775390625
+            ],
+            "pose_dim": 6,
+            "rmse_by_dim": [
+              0.0,
+              0.05349101180528938,
+              0.05115329625900634,
+              0.050976581395891195,
+              0.05077096223757539,
+              0.06023301742614757
+            ],
+            "rows": 600
+          },
+          "sha256": "caa85e498665d875d1a49463a68a14fc93b2897b26279e3922c800d8d9330d25",
+          "source_decoded_sha256": "399c0898d110911979c8b1343be3f16420a30b27a072e1c61d4d0a552e6ec1e3"
+        }
+      ],
+      "payload_format": "public_pr64_mask_first_len_table",
+      "schema": "renderer_payload_pr64_len_table_v1",
+      "source_archive_sha256": "1a901b7ee79357755d3c7f9a533c89f4a6aa9c099b7919016c248cef8e99f7df"
+    },
+    "output_archive": "experiments/results/qfaithful_geometry_closed_candidates_20260502/2146_qzs3_pr64_qp1_zoom_v1/archive.zip",
+    "output_archive_before_geometry_bytes": 272991,
+    "output_archive_before_geometry_sha256": "3a7ff86f9cd353b75e27e019926ce74bc43f6564f5bd250323b0e2b015bf8198",
+    "output_archive_bytes": 272991,
+    "output_archive_sha256": "3a7ff86f9cd353b75e27e019926ce74bc43f6564f5bd250323b0e2b015bf8198",
+    "payload_compressed_bytes": 272891,
+    "payload_format": "public_pr64_mask_first_len_table",
+    "payload_member": "p",
+    "payload_raw_bytes": 284187,
+    "pose_codec": "pose_qp1_v1",
+    "pose_residual_topk": 0,
+    "savings_bytes": 11497,
+    "score_claim": false,
+    "source_archive": "/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/qzs_repack_jsdfmu92/runtime_members.zip",
+    "source_archive_bytes": 284488,
+    "source_archive_sha256": "1a901b7ee79357755d3c7f9a533c89f4a6aa9c099b7919016c248cef8e99f7df"
+  },
+  "renderer_stage": {
+    "archive_byte_delta": -279699,
+    "evidence_grade": "empirical_byte_only_until_cuda_auth_eval",
+    "formula_rate_score_delta": -0.1862400833293182,
+    "geometry_preservation": {
+      "optional_geometry_member_names": [
+        "zoom_scalars.bin"
+      ],
+      "output_geometry_members": {},
+      "preserved": false,
+      "source_geometry_members": {
+        "zoom_scalars.bin": {
+          "bytes": 1200,
+          "member_name": "zoom_scalars.bin",
+          "sha256": "accf5b88c811d6a79707ab19b1314646bb26aa4977f77eaaf4cbfad9ea1dba76"
+        }
+      }
+    },
+    "members": {
+      "masks.mkv": {
+        "bytes": 223738,
+        "member_name": "masks.mkv",
+        "sha256": "568439a26dbb9e240cf2c385ff350ddc2cb81f5bc514577498446d6043b21178"
+      },
+      "optimized_poses.bin": {
+        "bytes": 7200,
+        "member_name": "optimized_poses.bin",
+        "sha256": "399c0898d110911979c8b1343be3f16420a30b27a072e1c61d4d0a552e6ec1e3"
+      },
+      "renderer.bin": {
+        "bytes": 59288,
+        "member_name": "renderer.bin",
+        "sha256": "00ce395fc6495a47d26e3844537859fdc2a1bc38d121ea5f4fb2610179d26e46"
+      }
+    },
+    "output_archive": "/private/var/folders/xr/cdmnz18s68j8sybt6vcwjs200000gn/T/qzs_repack_jsdfmu92/runtime_members.zip",
+    "output_archive_bytes": 284488,
+    "output_archive_sha256": "1a901b7ee79357755d3c7f9a533c89f4a6aa9c099b7919016c248cef8e99f7df",
+    "renderer": {
+      "action": "encoded_qzs3_from_qfai_state_dict",
+      "block_size": 32,
+      "output_renderer_bytes": 59288,
+      "output_renderer_sha256": "00ce395fc6495a47d26e3844537859fdc2a1bc38d121ea5f4fb2610179d26e46",
+      "renderer_codec": "qzs3",
+      "source_bytes": 389756,
+      "source_renderer_format": "QFAI",
+      "source_sha256": "86d11569d5956be778d096c6b3372144bbc14f24478a53eb22c7f648a53f51ae"
+    },
+    "runtime_member_order": [
+      "renderer.bin",
+      "masks.mkv",
+      "optimized_poses.bin"
+    ],
+    "schema_version": 1,
+    "score_claim": false,
+    "source_archive": "/Users/adpena/Projects/pact/experiments/results/qfaithful_geometry_closed_candidates_20260502/2146_raw_qfai_half_posebin_zoom_v1/raw_with_charged_zoom/archive.zip",
+    "source_archive_bytes": 564187,
+    "source_archive_sha256": "d459fd748c32cdc08454eb713c99d9f37b15850e1e2b074937425794e2b5c460",
+    "source_runtime_contract": {
+      "optional_geometry_members": {
+        "zoom_scalars.bin": {
+          "bytes": 1200,
+          "member_name": "zoom_scalars.bin",
+          "sha256": "accf5b88c811d6a79707ab19b1314646bb26aa4977f77eaaf4cbfad9ea1dba76"
+        }
+      },
+      "required_runtime_members": {
+        "masks.mkv": {
+          "bytes": 223738,
+          "member_name": "masks.mkv",
+          "sha256": "568439a26dbb9e240cf2c385ff350ddc2cb81f5bc514577498446d6043b21178"
+        },
+        "optimized_poses.bin": {
+          "bytes": 7200,
+          "member_name": "optimized_poses.bin",
+          "sha256": "399c0898d110911979c8b1343be3f16420a30b27a072e1c61d4d0a552e6ec1e3"
+        },
+        "renderer.bin": {
+          "bytes": 389756,
+          "member_name": "renderer.bin",
+          "sha256": "86d11569d5956be778d096c6b3372144bbc14f24478a53eb22c7f648a53f51ae"
+        }
+      },
+      "source_archive_contract": "runtime_member_zip",
+      "unpacked_from_packed_payload": false
+    },
+    "submission_path": {
+      "charged_accounting": {
+        "all_score_affecting_bits_inside_archive": true,
+        "archive_bytes": 284488,
+        "archive_sha256": "1a901b7ee79357755d3c7f9a533c89f4a6aa9c099b7919016c248cef8e99f7df",
+        "pose_codec": "raw",
+        "pose_residual_topk": 0,
+        "score_claim": false
+      },
+      "full_pipeline_hooks": {
+        "archive_member_overhead_screen": true,
+        "deterministic_runtime_simplification_screen": true,
+        "rl_bandit_multipass_atom_selection_ready": true,
+        "single_blob_layout_screen": false
+      },
+      "layout": "multi_member",
+      "stackability": {
+        "mask_grammar_lanes": "stackable_if_mask_member_contract_and_decoder_are_inside_archive",
+        "pose_atoms": "stackable_with_qp1_col0_or_pvr1_residual_atoms_after_exact_eval",
+        "pr65_postprocess_qpost_sidecar": "stackable_if_qpost.bin_is_charged_and_runtime_reads_it",
+        "renderer_atoms": "qzs4_keeps_QZS3_wire_format_for_existing_decoder"
+      },
+      "zip_overhead": {
+        "archive_bytes": 284488,
+        "compressed_member_bytes": 284158,
+        "member_count": 3,
+        "member_names": [
+          "renderer.bin",
+          "masks.mkv",
+          "optimized_poses.bin"
+        ],
+        "uncompressed_member_bytes": 290226,
+        "zip_container_overhead_bytes": 330
+      }
+    },
+    "tool": "repack_quantizr_faithful_qzs3_archive"
+  },
+  "schema_version": 1,
+  "score_claim": false,
+  "source_archive": "/Users/adpena/Projects/pact/experiments/results/qfaithful_geometry_closed_candidates_20260502/2146_raw_qfai_half_posebin_zoom_v1/raw_with_charged_zoom/archive.zip",
+  "source_archive_bytes": 564187,
+  "source_archive_sha256": "d459fd748c32cdc08454eb713c99d9f37b15850e1e2b074937425794e2b5c460",
+  "submission_path": {
+    "charged_accounting": {
+      "all_score_affecting_bits_inside_archive": true,
+      "archive_bytes": 274213,
+      "archive_sha256": "2d45289d0bde42f046bceaa0542fdbf5cd78f8f3f54aff101b663eacbca96ec5",
+      "pose_codec": "pose_qp1_v1",
+      "pose_residual_topk": 0,
+      "score_claim": false
+    },
+    "full_pipeline_hooks": {
+      "archive_member_overhead_screen": true,
+      "deterministic_runtime_simplification_screen": true,
+      "rl_bandit_multipass_atom_selection_ready": true,
+      "single_blob_layout_screen": true
+    },
+    "layout": "pr64_mask_first_single_blob",
+    "stackability": {
+      "mask_grammar_lanes": "stackable_if_mask_member_contract_and_decoder_are_inside_archive",
+      "pose_atoms": "stackable_with_qp1_col0_or_pvr1_residual_atoms_after_exact_eval",
+      "pr65_postprocess_qpost_sidecar": "stackable_if_qpost.bin_is_charged_and_runtime_reads_it",
+      "renderer_atoms": "qzs4_keeps_QZS3_wire_format_for_existing_decoder"
+    },
+    "zip_overhead": {
+      "archive_bytes": 274213,
+      "compressed_member_bytes": 274005,
+      "member_count": 2,
+      "member_names": [
+        "p",
+        "zoom_scalars.bin"
+      ],
+      "uncompressed_member_bytes": 274091,
+      "zip_container_overhead_bytes": 208
+    }
+  },
+  "tool": "repack_quantizr_faithful_qzs3_archive"
+}

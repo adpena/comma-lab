@@ -1,0 +1,189 @@
+{
+  "all_pairs_parity": {
+    "enabled": false,
+    "skipped": true
+  },
+  "charged_slices": {
+    "masks.mkv.br": {
+      "bytes": 219472,
+      "magic_hex": "5b98684344152796",
+      "name": "masks.mkv.br",
+      "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+    },
+    "optimized_poses.bin.br": {
+      "bytes": 898,
+      "magic_hex": "628e00ffe3203787",
+      "name": "optimized_poses.bin.br",
+      "sha256": "7d7c35f4e7b0eb7022e56aaa76cad111b6c2e536b68080f10a536b2cb418a082"
+    },
+    "renderer.bin.br": {
+      "bytes": 55756,
+      "magic_hex": "e2f2bcec00c3609e",
+      "name": "renderer.bin.br",
+      "sha256": "e892539adec2406f87c824accc0effc80911f160ca8d324429c5d2bac175f2cf"
+    },
+    "seg_tile_actions.br": {
+      "bytes": 255,
+      "magic_hex": "1b1801f8e5605dfd",
+      "name": "seg_tile_actions.br",
+      "sha256": "e2f8a113ee9e4d009448fec2497602ef67cabb8a13ef8d3fa9e11d69ff8ceed6"
+    }
+  },
+  "decoded_streams": {
+    "public_runtime": {
+      "masks.mkv": {
+        "bytes": 223385,
+        "magic_hex": "12000a0a0000000c",
+        "name": "masks.mkv",
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      "optimized_poses.qp1": {
+        "bytes": 1140,
+        "magic_hex": "5150316d1cd003c1",
+        "name": "optimized_poses.qp1",
+        "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+      },
+      "renderer.bin": {
+        "bytes": 59288,
+        "magic_hex": "515a533320001675",
+        "name": "renderer.bin",
+        "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 281,
+        "magic_hex": "5302681102405402",
+        "name": "seg_tile_actions.bin",
+        "sha256": "b0a4d55d19a534f223512c07920c46f1a52dc2409951a7f7c5ea9ce0e70acddc"
+      }
+    },
+    "robust_unpacker": {
+      "members": {
+        "masks.mkv": {
+          "bytes": 223385,
+          "magic_hex": "12000a0a0000000c",
+          "name": "masks.mkv",
+          "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        "optimized_poses.qp1": {
+          "bytes": 1140,
+          "magic_hex": "5150316d1cd003c1",
+          "name": "optimized_poses.qp1",
+          "sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+        },
+        "renderer.bin": {
+          "bytes": 59288,
+          "magic_hex": "515a533320001675",
+          "name": "renderer.bin",
+          "sha256": "30159b6ace27a4013d1516c340d58f6d683e6847429fd3d6303a2c650aa2abef"
+        },
+        "seg_tile_actions.bin": {
+          "bytes": 432,
+          "magic_hex": "680053116a005340",
+          "name": "seg_tile_actions.bin",
+          "sha256": "5af557cdf4c8c4c3747b06c1daabfe34581b62cb9f317d41593b836c6727427a"
+        }
+      },
+      "payload_format": "public_pr75_qzs3_qp1_segactions_fixed_slices"
+    }
+  },
+  "device": "cpu",
+  "elapsed_seconds": 0.004578749998472631,
+  "evidence_grade": "empirical_local_raw_parity",
+  "inputs": {
+    "public_archive": {
+      "bytes": 276481,
+      "path": "experiments/results/top_submission_reverse_engineering_20260503_pr75_minp/archive.zip",
+      "sha256": "03a2afd5fe92c93a9b7b7e43625158a73b455f0cfbca82d278008a728db78746"
+    },
+    "public_inflate_py": {
+      "path": "/tmp/pr75-minp/submissions/qpose14_r55_segactions_minp/inflate.py",
+      "sha256": "ea490dec83e36788dd64913650d1c265dbef1386320a5f550b5df063a71838cc"
+    },
+    "robust_inflate_renderer_py": {
+      "path": "/Users/adpena/Projects/pact/submissions/robust_current/inflate_renderer.py",
+      "sha256": "57eff4e2d7c4de0ef20c8e0cea66e9464684ed14956872e603bb4a65e8c39d9e"
+    },
+    "robust_unpacker_py": {
+      "path": "/Users/adpena/Projects/pact/submissions/robust_current/unpack_renderer_payload.py",
+      "sha256": "29637a729cfd5bfcab1ae63c963a9c5cd166414d7afa1774b344393af9fa2536"
+    }
+  },
+  "pair_indices": [
+    0,
+    33,
+    36,
+    587
+  ],
+  "pose_precision": {
+    "public_float32_vs_public_fp16_roundtrip": {
+      "changed_values": 518,
+      "compared_values": 3600,
+      "exact_equal": false,
+      "first_diff_flat_index": 0,
+      "lhs_shape": [
+        600,
+        6
+      ],
+      "max_abs": 0.015625,
+      "mean_abs": 0.0007980685763888889,
+      "rhs_shape": [
+        600,
+        6
+      ],
+      "rms": 0.002471172705293586
+    },
+    "public_float32_vs_robust_fp16": {
+      "changed_values": 0,
+      "compared_values": 3600,
+      "exact_equal": true,
+      "first_diff_flat_index": null,
+      "lhs_shape": [
+        600,
+        6
+      ],
+      "max_abs": 0.0,
+      "mean_abs": 0.0,
+      "rhs_shape": [
+        600,
+        6
+      ],
+      "rms": 0.0
+    },
+    "public_qp1_float32": {
+      "dtype": "float32",
+      "sha256": "afd13805bc30e79f5a9c0587d08cc8e05fa5508c03f1a2b5e6a425058b530b66",
+      "shape": [
+        600,
+        6
+      ]
+    },
+    "robust_current_fp16_materialized": {
+      "dtype": "float32",
+      "sha256": "afd13805bc30e79f5a9c0587d08cc8e05fa5508c03f1a2b5e6a425058b530b66",
+      "shape": [
+        600,
+        6
+      ]
+    },
+    "robust_matches_public_fp16_roundtrip": false
+  },
+  "remote_gpu_dispatch": false,
+  "render_parity": {
+    "skipped": true
+  },
+  "runtime_contract": {
+    "public_pr75": {
+      "actions_runtime": "Brotli 4-byte records grouped by pair; CHW fake2 tile deltas",
+      "mask_runtime": "600 pair masks; one mask feeds each generated pair",
+      "pose_runtime": "QP1 decoded directly to float32 before JointFrameGenerator"
+    },
+    "robust_current": {
+      "actions_runtime": "decoded seg_tile_actions.bin grouped by pair; HWC fake2 tile deltas",
+      "mask_runtime": "600-frame masks.mkv detected as half-frame and duplicated to 1200 without zoom_warp",
+      "pose_runtime": "QP1 decoded directly to float32 before JointFrameGenerator"
+    }
+  },
+  "schema": "pr75_raw_output_parity_v1",
+  "score_claim": false,
+  "tool": "experiments/pr75_raw_output_parity.py"
+}

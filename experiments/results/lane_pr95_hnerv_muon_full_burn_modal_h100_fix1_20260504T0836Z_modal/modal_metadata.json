@@ -1,0 +1,14 @@
+{
+  "lane_script": "scripts/remote_lane_pr95_hnerv_muon_full_burn.sh",
+  "label": "pr95_hnerv_muon_full_burn_modal_h100_fix1_20260504T0836Z",
+  "gpu": "H100",
+  "max_seconds": 50400,
+  "call_id": "fc-01KQS22WSZ7YR3ZJYXVPPYE4VB",
+  "auth_eval_device": "cpu",
+  "auth_eval_advisory_only": true,
+  "score_claim": false,
+  "promotion_eligible": false,
+  "live_volume": "comma-train-lane-results",
+  "live_volume_prefix": "pr95_hnerv_muon_full_burn_modal_h100_fix1_20260504T0836Z/",
+  "dispatched_at": "2026-05-04T03:36:11.739509"
+}

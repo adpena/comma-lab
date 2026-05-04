@@ -1,0 +1,25 @@
+{
+  "archive": "/workspace/pact/lane_q_faithful_results/postprocess_fixed_snapshot_20260501T2146Z_fix1/raw_qfai_half_posebin/archive.zip",
+  "archive_bytes": 563025,
+  "archive_sha256": "470604181772cc31136e427549ffe0aacdfdff57522487a3195badbe72c6a7db",
+  "recorded_at_utc": "2026-05-01T21:52:59Z",
+  "schema_version": 1,
+  "score_claim": false,
+  "tool": "remote_q_faithful_postprocess_fixed:raw_qfai_half_posebin",
+  "validation": {
+    "archive_bytes": 563025,
+    "archive_path": "/workspace/pact/lane_q_faithful_results/postprocess_fixed_snapshot_20260501T2146Z_fix1/raw_qfai_half_posebin/archive.zip",
+    "errors": [],
+    "files_found": {
+      "masks.mkv": 223738,
+      "optimized_poses.bin": 7200,
+      "renderer.bin": 389756
+    },
+    "files_missing": [],
+    "files_unexpected": [],
+    "md5": "4a25c547847bfe73c9e825fe43199a8e",
+    "rate_term": 0.37489523708161054,
+    "valid": true,
+    "warnings": []
+  }
+}

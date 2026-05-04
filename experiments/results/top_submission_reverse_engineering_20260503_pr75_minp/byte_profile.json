@@ -1,0 +1,99 @@
+{
+  "archives": [
+    {
+      "bytes": 276481,
+      "member_count": 1,
+      "members": [
+        {
+          "central_directory_header_bytes": 47,
+          "compress_type": 0,
+          "compress_type_name": "stored",
+          "compressed_bytes": 276381,
+          "compression_probe_uncompressed": {
+            "best_probe": {
+              "bytes": 276381,
+              "codec": "input_bytes"
+            },
+            "best_probe_delta_vs_input": 0,
+            "best_probe_ratio": 1.0,
+            "brotli_q11_bytes": 276386,
+            "brotli_q5_bytes": 276386,
+            "brotli_q9_bytes": 276386,
+            "input_bytes": 276381,
+            "lzma_preset9_bytes": 276456,
+            "zlib_9_bytes": 276472
+          },
+          "crc32": "ea40ae68",
+          "entropy_uncompressed": {
+            "bytes": 276381,
+            "entropy_bits_per_byte": 7.999149643643,
+            "unique_byte_count": 256,
+            "zero_order_entropy_bytes": 276352,
+            "zero_order_entropy_ratio": 0.999895072382
+          },
+          "fixed_slice_or_payload_anatomy": null,
+          "header_offset": 0,
+          "index": 0,
+          "local_header_bytes": 31,
+          "member_rate_score_estimate": 0.184082700321,
+          "member_zip_bytes_estimate": 276459,
+          "name": "p",
+          "payload_type_guess": {
+            "brotli_decodable": false,
+            "brotli_decoded_bytes": null,
+            "brotli_decoded_magic_hex": null,
+            "guess": "json_like",
+            "magic_hex": "5b98684344152796",
+            "name_hint": null
+          },
+          "self_compression_signal": {
+            "best_probe": {
+              "bytes": 276381,
+              "codec": "input_bytes"
+            },
+            "best_probe_delta_vs_current_bytes": 0,
+            "best_probe_savings_bytes": 0,
+            "best_probe_savings_rate_score": 0.0,
+            "compliance_note": "A self-compression opportunity is dispatchable only after the archive contains all decoder/runtime bits and exact CUDA auth eval validates the identical bytes.",
+            "directly_deployable": false,
+            "directly_replaceable_zip_member": true,
+            "priority": "low",
+            "reason": "generic nested probes do not beat current byte count"
+          },
+          "sha256_uncompressed": "f78c71d3086773e417c672734082a49ceb0ef5a0016cf406a920be7978fff252",
+          "uncompressed_bytes": 276381
+        }
+      ],
+      "path": "/Users/adpena/Projects/pact/experiments/results/top_submission_reverse_engineering_20260503_pr75_minp/archive.zip",
+      "rate_score_contribution": 0.184097349218,
+      "sha256": "03a2afd5fe92c93a9b7b7e43625158a73b455f0cfbca82d278008a728db78746",
+      "zip_global_overhead_bytes": 22,
+      "zip_member_header_bytes": 78,
+      "zip_payload_compressed_bytes": 276381
+    }
+  ],
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py on CUDA",
+  "compliance_note": "This profile is byte/compressibility evidence only. It is not score evidence, not promotion evidence, and not a method retirement signal.",
+  "contest_formula_rate_term": {
+    "archive_rate_contribution": "25 * archive_bytes / 37,545,489",
+    "original_video_bytes": 37545489,
+    "rate_lambda": 6.658589531221714e-07
+  },
+  "evidence_grade": "empirical_byte_profile",
+  "promotion_eligible": false,
+  "ranked_self_compression_opportunities": [
+    {
+      "archive": "/Users/adpena/Projects/pact/experiments/results/top_submission_reverse_engineering_20260503_pr75_minp/archive.zip",
+      "best_probe_savings_bytes": 0,
+      "bytes": 276381,
+      "directly_deployable": false,
+      "name": "p",
+      "priority": "low",
+      "reason": "generic nested probes do not beat current byte count",
+      "scope": "zip_member"
+    }
+  ],
+  "schema": "archive_bit_budget_profile_v1",
+  "score_claim": false,
+  "tool": "experiments/archive_bit_budget_profiler.py"
+}

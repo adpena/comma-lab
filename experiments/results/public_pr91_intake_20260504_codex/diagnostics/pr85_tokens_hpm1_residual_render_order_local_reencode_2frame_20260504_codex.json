@@ -1,0 +1,69 @@
+{
+  "candidate_hpm1_segment": {
+    "bytes": 40203,
+    "hpac_len": 28243,
+    "mask_bytes_vs_pr91_hpm1": -104884,
+    "sha256": "1e1edc2cfff3efb7dbc6906975773eed96e9cd60578eff3467d634241108c1f7",
+    "tokens_len": 11912
+  },
+  "dispatch_performed": false,
+  "elapsed_sec": 122.829,
+  "frames_encoded": 2,
+  "gpu_or_remote_work": false,
+  "hpac_model": {
+    "compressed_bytes": 28243,
+    "compressed_sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+    "config": {
+      "N": 600,
+      "P": 32,
+      "ch": 64,
+      "delta": 2,
+      "hpac_d_film": 8,
+      "use_spm": true
+    },
+    "decompressed_bytes": 55856,
+    "decompressed_sha256": "0710789f72200a640c1f3b2f6bc0d2f037affaa086f73b2c9e5034e006e80ac1",
+    "load_state_dict_strict": false,
+    "member_name": "hpac.pt.ppmd",
+    "missing_keys": [],
+    "packed_state_key_count": 34,
+    "ppmd_max_order": 4,
+    "ppmd_mem_size": 16777216,
+    "reconstructed_state_key_count": 25,
+    "status": "passed",
+    "unexpected_keys": []
+  },
+  "hpm1_encode": {
+    "P": 32,
+    "compressed_bytes": 11912,
+    "compressed_dtype": "uint32",
+    "compressed_sha256": "b6267b6c4b22f070ba69c35016e998e99118bb2b384771c91d43b4d28ecdc60a",
+    "compressed_word_count": 2978,
+    "delta": 2,
+    "elapsed_sec": 122.81,
+    "encoded_symbol_count": 393216,
+    "frames_encoded": 2,
+    "height": 384,
+    "probability_variant": {
+      "categorical_perfect": false,
+      "description": "Merged PR86 source contract: clipped/renormalized numpy float64 probabilities with Categorical(..., perfect=False).",
+      "name": "source_float64_perfect_false",
+      "probability_dtype": "float64",
+      "source_contract": true
+    },
+    "status": "passed",
+    "symbol_context_contract": "symbols_nhw_conditioned_on_separate_prev_raw_tokens_nhw",
+    "width": 512
+  },
+  "input_tokens_sha256": "8262596aab0d868f0f719e2ce413f4b3e29908837ed59ef27c6f318c86f24185",
+  "local_only": true,
+  "prototype_only": true,
+  "recorded_at_utc": "2026-05-04T07:02:25+00:00",
+  "residual_roundtrip_raw_tokens_sha256": "8262596aab0d868f0f719e2ce413f4b3e29908837ed59ef27c6f318c86f24185",
+  "residual_symbols_sha256": "2c60b033b3144248fc091e9b3e7af43b55c3a849d656f5d9f2a7e4c52d1d0e36",
+  "schema_version": 1,
+  "score_claim": false,
+  "source_archive": "experiments/results/public_pr91_intake_20260504_codex/archive.zip",
+  "status": "passed",
+  "tool": "tac.pr91_hpm1_codec.prototype_reencode_hpm1_residual_from_raw_tokens"
+}

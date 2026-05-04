@@ -1,0 +1,84 @@
+[
+  {
+    "sha": "1be9eff48c696ca04ae0613346fd383d20637325",
+    "node_id": "C_kwDOR4zSxtoAKDFiZTllZmY0OGM2OTZjYTA0YWUwNjEzMzQ2ZmQzODNkMjA2MzczMjU",
+    "commit": {
+      "author": {
+        "name": "ethan",
+        "email": "yangethan970503@gmail.com",
+        "date": "2026-05-04T09:29:13Z"
+      },
+      "committer": {
+        "name": "ethan",
+        "email": "yangethan970503@gmail.com",
+        "date": "2026-05-04T09:29:13Z"
+      },
+      "message": "Add hnerv_muon_finetuned_from_pr95 submission\n\nHNeRV neural video codec fine-tuned from PR#95 pretrained weights.\nScore: 0.1963 (seg=0.00059, pose=0.0000349, rate=0.00475)",
+      "tree": {
+        "sha": "051734dd8d452c4c8fcdc426272d767d4c16974c",
+        "url": "https://api.github.com/repos/commaai/comma_video_compression_challenge/git/trees/051734dd8d452c4c8fcdc426272d767d4c16974c"
+      },
+      "url": "https://api.github.com/repos/commaai/comma_video_compression_challenge/git/commits/1be9eff48c696ca04ae0613346fd383d20637325",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null,
+        "verified_at": null
+      }
+    },
+    "url": "https://api.github.com/repos/commaai/comma_video_compression_challenge/commits/1be9eff48c696ca04ae0613346fd383d20637325",
+    "html_url": "https://github.com/commaai/comma_video_compression_challenge/commit/1be9eff48c696ca04ae0613346fd383d20637325",
+    "comments_url": "https://api.github.com/repos/commaai/comma_video_compression_challenge/commits/1be9eff48c696ca04ae0613346fd383d20637325/comments",
+    "author": {
+      "login": "EthanYangTW",
+      "id": 97958311,
+      "node_id": "U_kgDOBda5pw",
+      "avatar_url": "https://avatars.githubusercontent.com/u/97958311?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/EthanYangTW",
+      "html_url": "https://github.com/EthanYangTW",
+      "followers_url": "https://api.github.com/users/EthanYangTW/followers",
+      "following_url": "https://api.github.com/users/EthanYangTW/following{/other_user}",
+      "gists_url": "https://api.github.com/users/EthanYangTW/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/EthanYangTW/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/EthanYangTW/subscriptions",
+      "organizations_url": "https://api.github.com/users/EthanYangTW/orgs",
+      "repos_url": "https://api.github.com/users/EthanYangTW/repos",
+      "events_url": "https://api.github.com/users/EthanYangTW/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/EthanYangTW/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "EthanYangTW",
+      "id": 97958311,
+      "node_id": "U_kgDOBda5pw",
+      "avatar_url": "https://avatars.githubusercontent.com/u/97958311?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/EthanYangTW",
+      "html_url": "https://github.com/EthanYangTW",
+      "followers_url": "https://api.github.com/users/EthanYangTW/followers",
+      "following_url": "https://api.github.com/users/EthanYangTW/following{/other_user}",
+      "gists_url": "https://api.github.com/users/EthanYangTW/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/EthanYangTW/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/EthanYangTW/subscriptions",
+      "organizations_url": "https://api.github.com/users/EthanYangTW/orgs",
+      "repos_url": "https://api.github.com/users/EthanYangTW/repos",
+      "events_url": "https://api.github.com/users/EthanYangTW/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/EthanYangTW/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "ec82c291ffeae5212e9a38253791d58995518a80",
+        "url": "https://api.github.com/repos/commaai/comma_video_compression_challenge/commits/ec82c291ffeae5212e9a38253791d58995518a80",
+        "html_url": "https://github.com/commaai/comma_video_compression_challenge/commit/ec82c291ffeae5212e9a38253791d58995518a80"
+      }
+    ]
+  }
+]

@@ -1,0 +1,161 @@
+{
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "decoded_mask_array": {
+    "npy_sha256": "13f81851ae206f6142cd3348db5537eda4ea832665052824816f4d1bf432de0c",
+    "path": "/Users/adpena/Projects/pact/experiments/results/c063_trace_weighted_mask_grammar_plan_20260502_codex/decoded_mask_array.npy",
+    "shape": [
+      600,
+      384,
+      512
+    ],
+    "tensor_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45"
+  },
+  "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
+  "frontier_archive": {
+    "bytes": 276214,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip",
+    "sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a"
+  },
+  "output_archive": {
+    "bytes": 136967,
+    "delta_bytes_vs_frontier": -139247,
+    "formula_only_rate_delta_vs_frontier": -0.092718861645403,
+    "path": "/Users/adpena/Projects/pact/experiments/results/pmg_hotspot_candidate_c067_stride4_lzma_20260502/archive.zip",
+    "score_claim": false,
+    "sha256": "145c7c2358badac72f53c396ba3a456ebe8f35e7cdc88514289cc58df3d5cad4"
+  },
+  "packed_payload": {
+    "brotli_quality": 11,
+    "evidence_grade": "empirical",
+    "formula_only_rate_delta": -0.003602962795344069,
+    "header": {
+      "members": [
+        {
+          "bytes": 59288,
+          "codec": "raw",
+          "name": "renderer.bin",
+          "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+        },
+        {
+          "bytes": 75558,
+          "codec": "raw",
+          "name": "masks.cmg3",
+          "sha256": "bb1bb61b7689daefe88d22d718870bb6a192fd18539d4d3249d388309357de17"
+        },
+        {
+          "bytes": 1140,
+          "codec": "pose_qp1_v1",
+          "decoded_bytes": 7200,
+          "decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f",
+          "lossy": true,
+          "name": "optimized_poses.bin",
+          "pose_error_stats": {
+            "max_abs_by_dim": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "pose_dim": 6,
+            "rmse_by_dim": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "rows": 600
+          },
+          "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583",
+          "source_decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+        }
+      ],
+      "schema": "renderer_payload_v1",
+      "source_archive_sha256": "451d06eb8dd8bf13f6fa7dd9d7dd0e72e898f8e7450ac87c268a217df3355b79"
+    },
+    "output_archive": "/Users/adpena/Projects/pact/experiments/results/pmg_hotspot_candidate_c067_stride4_lzma_20260502/archive.zip",
+    "output_archive_bytes": 136967,
+    "output_archive_sha256": "145c7c2358badac72f53c396ba3a456ebe8f35e7cdc88514289cc58df3d5cad4",
+    "payload_compressed_bytes": 136867,
+    "payload_format": "rpk1_json",
+    "payload_member": "p",
+    "payload_raw_bytes": 136862,
+    "pose_codec": "pose_qp1_v1",
+    "pose_residual_topk": 0,
+    "savings_bytes": 5411,
+    "score_claim": false,
+    "source_archive": "/Users/adpena/Projects/pact/experiments/results/pmg_hotspot_candidate_c067_stride4_lzma_20260502/pmg_hotspot_source_members.zip",
+    "source_archive_bytes": 142378,
+    "source_archive_sha256": "451d06eb8dd8bf13f6fa7dd9d7dd0e72e898f8e7450ac87c268a217df3355b79"
+  },
+  "pmg_hotspot_cmg3": {
+    "base_pixel_disagreement_vs_source_count": 2160617,
+    "base_pixel_disagreement_vs_source_fraction": 0.018315777248806425,
+    "base_reconstructed_mask_u8_sha256": "a553968256136da21b26a5a7d819a8dd27d8b13e229531c48983f65a4f5f0a68",
+    "body_bytes": 74236,
+    "body_raw_bytes": 1174176,
+    "body_raw_sha256": "1508f093b5bfe1753b53849ca42c8fa15e33cb4d3a0f73d504db4d31ce40a166",
+    "body_sha256": "76e691adac515cc04a31b0b0373088f5f9a34a66b062bc91b34fdce0f93d4b93",
+    "candidate_id": "pmg_hotspot_rowspan_stride4",
+    "class_count": 5,
+    "compressor": "lzma_xz",
+    "default_class": 0,
+    "draw_order": [
+      3,
+      1,
+      2,
+      0,
+      4
+    ],
+    "final_pixel_disagreement_vs_source_count": 2126083,
+    "final_pixel_disagreement_vs_source_fraction": 0.018023028903537325,
+    "frame_count": 600,
+    "height": 384,
+    "mode": "row_span_stride_class_predictor_hotspot_residual_v1",
+    "payload_bytes": 75558,
+    "payload_sha256": "bb1bb61b7689daefe88d22d718870bb6a192fd18539d4d3249d388309357de17",
+    "pmg_hotspot_plan_sha256": "48fa20c153c016b955015dac1cfe1bbbc395b328be8eae106210caa4b410a9d3",
+    "promotion_eligible": false,
+    "reconstructed_mask_u8_sha256": "9ebabf4c1d13d0bc7fb629785e2902b614cdaa864be6aa260b530bee6d644432",
+    "residual_pixels_touched": 34534,
+    "residual_record_bytes": 22176,
+    "residual_record_count": 2464,
+    "residual_record_struct": "u16_frame_u16_y_u16_x0_u16_x1_u8_class_le",
+    "residual_stream_sha256": "8c9906de347430869acb69f3af0521aa4fa9b65ad304ed294464fdd76ff4e6ae",
+    "row_fill": "linear",
+    "row_stride": 4,
+    "schema": "pmg_hotspot_cmg3_candidate_v1",
+    "score_claim": false,
+    "source_mask_u8_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+    "span_shape": [
+      600,
+      5,
+      96,
+      2
+    ],
+    "span_tensor_bytes": 1152000,
+    "span_tensor_sha256": "e3355347c6b3bb8f0d2f3e660c2860aea2d889b32f94a9387d88b905de2bc083",
+    "width": 512
+  },
+  "pmg_hotspot_plan": {
+    "candidate_id": "pmg_hotspot_rowspan_stride4",
+    "path": "/Users/adpena/Projects/pact/experiments/results/pmg_hotspot_v1_20260502_codex/pmg_hotspot_plan.json",
+    "sha256": "48fa20c153c016b955015dac1cfe1bbbc395b328be8eae106210caa4b410a9d3"
+  },
+  "promotion_eligible": false,
+  "required_next_steps": [
+    "focused local runtime-loader and packed-payload tests must stay green",
+    "run exact CUDA diagnostic on the archive bytes only after dispatch claim",
+    "T4 promotion only if diagnostic components survive"
+  ],
+  "schema": "pmg_hotspot_cmg3_candidate_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 142378,
+    "path": "/Users/adpena/Projects/pact/experiments/results/pmg_hotspot_candidate_c067_stride4_lzma_20260502/pmg_hotspot_source_members.zip",
+    "sha256": "451d06eb8dd8bf13f6fa7dd9d7dd0e72e898f8e7450ac87c268a217df3355b79"
+  }
+}

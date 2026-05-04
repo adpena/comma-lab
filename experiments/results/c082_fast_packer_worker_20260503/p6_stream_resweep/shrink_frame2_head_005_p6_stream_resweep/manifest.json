@@ -1,0 +1,131 @@
+{
+  "candidate_id": "shrink_frame2_head_005_p6_stream_resweep",
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "decoded_stream_parity": true,
+  "decoded_stream_parity_detail": {
+    "members_compared": [
+      "masks.mkv",
+      "optimized_poses.qp1",
+      "renderer.bin",
+      "seg_tile_actions.bin"
+    ],
+    "source_decoded_members": {
+      "masks.mkv": {
+        "bytes": 223385,
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      "optimized_poses.qp1": {
+        "bytes": 1140,
+        "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+      },
+      "renderer.bin": {
+        "bytes": 59288,
+        "sha256": "db1c9f7fb0f958d242e5232ac6771343b4ff4cb00b563633425e4e54771a084e"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 176,
+        "sha256": "6551a4bee3a9741000dbd8e8c6de8c0ffeb6ca03b644c3ff8a47aa3078ae752b"
+      }
+    },
+    "status": "passed"
+  },
+  "determinism": {
+    "member_name": "p",
+    "zip_compress_type": "ZIP_STORED",
+    "zip_permissions": "0644",
+    "zip_timestamp": [
+      1980,
+      1,
+      1,
+      0,
+      0,
+      0
+    ]
+  },
+  "evidence_grade": "empirical_lossless_byte_transform",
+  "formula_only_rate_score_delta_vs_source": -7.324448484343885e-06,
+  "noop": false,
+  "noop_status": "not_noop_repacked_payload",
+  "output_archive": {
+    "bytes": 276211,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c082_fast_packer_worker_20260503/p6_stream_resweep/shrink_frame2_head_005_p6_stream_resweep/archive.zip",
+    "sha256": "331e2d2fa54029cd9c1da860e7399197a6f94780752f484e44666c7327efea23"
+  },
+  "payload": {
+    "bytes": 276111,
+    "format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+    "member": "p",
+    "sha256": "dd1f432e33ce90efb82c9e4226f0675671bcc2f9451fb6b95c0e53f2dba4bd07"
+  },
+  "pose_safety_preflight": {
+    "failure_class": null,
+    "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame2_head_0.05/pose_safety_preflight.json",
+    "safe_for_exact_eval_dispatch": true,
+    "sha256": "9d6c2685fb1668b1aff216187d83e9bf6835c332ae301692e9c4051594a896ca"
+  },
+  "promotion_eligible": false,
+  "schema": "c082_fast_p6_repack_manifest_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 276222,
+    "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame2_head_0.05/archive.zip",
+    "sha256": "efccff1fbfb5f9dcc38c05a79e1ab5ebe2f90d13fcae5fdc0e0f8465e79b6ed6"
+  },
+  "source_payload": {
+    "bytes": 276122,
+    "format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+    "sha256": "1bb28bd2525c15d654fdc3b295c8a6facc388e6ffb7a514e63fb6cbd11280fd5"
+  },
+  "source_preservation": {
+    "candidate_payload_sha256": "dd1f432e33ce90efb82c9e4226f0675671bcc2f9451fb6b95c0e53f2dba4bd07",
+    "decoded_streams_byte_identical": true,
+    "payload_byte_identical_to_source": false,
+    "source_payload_sha256": "1bb28bd2525c15d654fdc3b295c8a6facc388e6ffb7a514e63fb6cbd11280fd5",
+    "status": "lossless_decoded_stream_preserving_repack"
+  },
+  "stream_choices": {
+    "masks.mkv": {
+      "bytes": 219465,
+      "delta_bytes_vs_source_stream": -7,
+      "improved": true,
+      "params": "source",
+      "sha256": "1ddf03dad8466797397ead26a0d481766e22e26cbc936251c1e3ed5d2f6eda99",
+      "source_bytes": 219472
+    },
+    "optimized_poses.qp1": {
+      "bytes": 676,
+      "delta_bytes_vs_source_stream": -1,
+      "improved": true,
+      "params": "source",
+      "sha256": "61732151609c5decd72a3ac2254e9ac2258dae2846464eaeb14b5ef0a32d86f5",
+      "source_bytes": 677
+    },
+    "renderer.bin": {
+      "bytes": 55834,
+      "delta_bytes_vs_source_stream": -1,
+      "improved": true,
+      "params": {
+        "lgblock": 0,
+        "lgwin": 16,
+        "mode": 0,
+        "quality": 11
+      },
+      "sha256": "5879e78de1699343c3542da1a697cdcf47de653d1deab7a4ecaaa7db03f6d5b0",
+      "source_bytes": 55835
+    },
+    "seg_tile_actions.delta_varint": {
+      "bytes": 124,
+      "delta_bytes_vs_source_stream": -2,
+      "improved": true,
+      "params": {
+        "lgblock": 0,
+        "lgwin": 16,
+        "mode": 0,
+        "quality": 9
+      },
+      "sha256": "a7154d65d830aa47983a32ba8eec46fe4297cebb315575edeb436c0d4b9ee513",
+      "source_bytes": 126
+    }
+  },
+  "tool": "experiments/results/c082_fast_packer_worker_20260503/search_p6_fast_repack.py"
+}

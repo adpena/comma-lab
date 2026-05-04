@@ -1,0 +1,10 @@
+{
+  "artifacts_saved": 0,
+  "call_id": "fc-01KQP9T19Y7PMDETDN99WDMF2W",
+  "gpu": "A10G",
+  "label": "c067_fixed_renderer_burn_fix3_modal_a10g_20260503T0702Z",
+  "lane_id": "c067_fixed_renderer_burn_qfaithful_fix3_modal_a10g",
+  "output_dir": "experiments/results/trained_renderer_transplant_recovery_worker_20260503/modal_recovery/a10g",
+  "status": "running",
+  "terminal": false
+}

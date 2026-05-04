@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "started_at_utc": "2026-05-01T12:40:13Z",
+  "git_hash": "no-git",
+  "gpu_name": "NVIDIA GeForce RTX 4090",
+  "driver_version": "580.126.09",
+  "lane_script": "scripts/remote_archive_only_eval.sh",
+  "tag": "owv3_wave3_owv3_0065_bbr0p685_protect0p002_aggr1em05",
+  "archive_path": "/workspace/pact/wave3_archives/owv3_0065_bbr0p685_protect0p002_aggr1em05.zip",
+  "predicted_band": [0.998, 1.013],
+  "controlled_baseline": "owv3_0001_r7 (1.0134 [contest-CUDA RTX 4090])",
+  "no_training": true,
+  "no_build": true,
+  "strict_scorer_rule_compliant": true,
+  "design_memo": "scripts/remote_archive_only_eval.sh"
+}

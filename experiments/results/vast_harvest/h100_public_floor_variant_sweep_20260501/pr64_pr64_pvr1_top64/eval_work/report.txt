@@ -1,0 +1,17 @@
+=== Evaluation config ===
+  batch_size: 16
+  device: cuda
+  num_threads: 2
+  prefetch_queue_depth: 4
+  report: /workspace/pact/experiments/results/h100_public_floor_variant_sweep_20260501/pr64_pr64_pvr1_top64/eval_work/report.txt
+  seed: 1234
+  submission_dir: /workspace/pact/experiments/results/h100_public_floor_variant_sweep_20260501/pr64_pr64_pvr1_top64/eval_work
+  uncompressed_dir: /workspace/pact/upstream/videos
+  video_names_file: /workspace/pact/upstream/public_test_video_names.txt
+=== Evaluation results over 600 samples ===
+  Average PoseNet Distortion: 0.00062228
+  Average SegNet Distortion: 0.00061017
+  Submission file size: 287,011 bytes
+  Original uncompressed size: 37,545,489 bytes
+  Compression Rate: 0.00764435
+  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 0.33

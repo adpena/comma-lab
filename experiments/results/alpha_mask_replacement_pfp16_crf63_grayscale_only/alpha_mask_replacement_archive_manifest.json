@@ -1,0 +1,167 @@
+{
+  "anchor": {
+    "archive_path": "/Users/adpena/Projects/pact/experiments/results/lane_g_v3_pfp16/final_deploy_bundle_20260430/archive/archive.zip",
+    "archive_sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f",
+    "archive_size_bytes": 686635,
+    "member_inventory": [
+      {
+        "compressed_size_bytes": 267402,
+        "crc32": "1827a837",
+        "name": "renderer.bin",
+        "sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529",
+        "size_bytes": 296776
+      },
+      {
+        "compressed_size_bytes": 412169,
+        "crc32": "e144d6ac",
+        "name": "masks.mkv",
+        "sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9",
+        "size_bytes": 421483
+      },
+      {
+        "compressed_size_bytes": 6734,
+        "crc32": "686cbfbf",
+        "name": "optimized_poses.bin",
+        "sha256": "4b3d8cd58965971ad518a970441f5e9cc53ce361a62d51e95c1cdd2056be4449",
+        "size_bytes": 7200
+      }
+    ],
+    "replaced_member": {
+      "name": "masks.mkv",
+      "sha256": "d3eeb82ce28b988476a920265751cca3d9fa2ca1364de4f33a1c7e970b7895e9",
+      "size_bytes": 421483
+    },
+    "reused_members": [
+      {
+        "name": "renderer.bin",
+        "sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529"
+      },
+      {
+        "name": "optimized_poses.bin",
+        "sha256": "4b3d8cd58965971ad518a970441f5e9cc53ce361a62d51e95c1cdd2056be4449"
+      }
+    ]
+  },
+  "archive": {
+    "delta_vs_anchor_archive_bytes": -228294,
+    "members": [
+      {
+        "name": "renderer.bin",
+        "sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529",
+        "size_bytes": 296776
+      },
+      {
+        "name": "grayscale.mkv",
+        "sha256": "b92f900c069dd6a177faf4fdc200a1a065e39e0cb4d42d605cf258f7d693ed8a",
+        "size_bytes": 197382
+      },
+      {
+        "name": "optimized_poses.bin",
+        "sha256": "4b3d8cd58965971ad518a970441f5e9cc53ce361a62d51e95c1cdd2056be4449",
+        "size_bytes": 7200
+      }
+    ],
+    "path": "/Users/adpena/Projects/pact/experiments/results/alpha_mask_replacement_pfp16_crf63_grayscale_only/archive.zip",
+    "rate_term_delta_vs_anchor": -0.15201160384407297,
+    "sha256": "76bc850551269cad8bc32315959521cbd6f02c2e29f6c16e38f4c68ecd3f0eea",
+    "size_bytes": 458341
+  },
+  "candidate": {
+    "agreement_before_repair": {
+      "argmax_agreement": 0.992368643019,
+      "argmax_disagreement": 0.007631356981,
+      "candidate_shape": [
+        1200,
+        384,
+        512
+      ],
+      "different_pixels": 1800463,
+      "different_pixels_by_candidate_class": {
+        "0": 188130,
+        "1": 20243,
+        "2": 814532,
+        "3": 265077,
+        "4": 512481
+      },
+      "different_pixels_by_source_class": {
+        "0": 826430,
+        "1": 522574,
+        "2": 177142,
+        "3": 156688,
+        "4": 117629
+      },
+      "equal_pixels": 234129137,
+      "num_pixels": 235929600,
+      "residual_confusion_source_to_candidate": {
+        "0": {
+          "0": 0,
+          "1": 14280,
+          "2": 599410,
+          "3": 36721,
+          "4": 176019
+        },
+        "1": {
+          "0": 78459,
+          "1": 0,
+          "2": 101940,
+          "3": 207398,
+          "4": 134777
+        },
+        "2": {
+          "0": 74727,
+          "1": 693,
+          "2": 0,
+          "3": 17295,
+          "4": 84427
+        },
+        "3": {
+          "0": 3732,
+          "1": 4797,
+          "2": 30901,
+          "3": 0,
+          "4": 117258
+        },
+        "4": {
+          "0": 31212,
+          "1": 473,
+          "2": 82281,
+          "3": 3663,
+          "4": 0
+        }
+      },
+      "shape_match": true,
+      "source_shape": [
+        1200,
+        384,
+        512
+      ]
+    },
+    "crf": 63,
+    "grayscale_artifact": {
+      "candidate_archive_member": "grayscale.mkv",
+      "path": "experiments/results/alpha_mask_candidate_builder_pfp16_20260501_compact_crf_sweep/crf_63/grayscale.mkv",
+      "raw_payload_sha256": "b92f900c069dd6a177faf4fdc200a1a065e39e0cb4d42d605cf258f7d693ed8a",
+      "resolved_path": "/Users/adpena/Projects/pact/experiments/results/alpha_mask_candidate_builder_pfp16_20260501_compact_crf_sweep/crf_63/grayscale.mkv",
+      "role": "alpha4_grayscale_lut_video",
+      "sha256": "b92f900c069dd6a177faf4fdc200a1a065e39e0cb4d42d605cf258f7d693ed8a",
+      "size_bytes": 197382
+    },
+    "manifest_path": "/Users/adpena/Projects/pact/experiments/results/alpha_mask_candidate_builder_pfp16_20260501_compact_crf_sweep/crf_63/alpha_mask_candidate_manifest.json",
+    "manifest_sha256": "276cc7cb253d7bda737cb4e507c3cc20a383f45d58aef38c3c2e54648becbf73"
+  },
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "promotion_eligible": false,
+  "recorded_at_utc": "2026-05-01T12:42:31Z",
+  "runtime_contract": {
+    "archive_members": [
+      "renderer.bin",
+      "grayscale.mkv",
+      "optimized_poses.bin"
+    ],
+    "expected_inflate_mode": "renderer_grayscale",
+    "inflate_auto_dispatch": "submissions/robust_current/inflate.sh sets PYTHON_INFLATE=renderer_grayscale when grayscale.mkv exists and masks.mkv is absent"
+  },
+  "schema": "alpha_mask_replacement_archive_v1",
+  "score_claim": false,
+  "tool": "experiments/build_alpha_mask_replacement_archive.py"
+}

@@ -1,0 +1,733 @@
+{
+  "archive": {
+    "archive_bits": 1890624,
+    "archive_bytes": 236328,
+    "archive_path": "experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+    "archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+    "member_bits": 1889824,
+    "member_compress_size": 236228,
+    "member_crc32_hex": "c6356353",
+    "member_file_size": 236228,
+    "member_name": "x",
+    "member_sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+    "zip_container_overhead_bits": 800,
+    "zip_container_overhead_bytes": 100,
+    "zip_stored": true
+  },
+  "bundle": {
+    "fixed_length_segments": {
+      "bias": 223,
+      "region": 273
+    },
+    "format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+    "header_bits": 192,
+    "header_bytes": 24,
+    "segment_lengths": {
+      "bias": 223,
+      "frac": 106,
+      "frac2": 149,
+      "frac3": 154,
+      "mask": 159011,
+      "model": 57074,
+      "pose": 1487,
+      "post": 1400,
+      "randmulti": 16101,
+      "region": 273,
+      "shift": 226
+    },
+    "segment_offsets": {
+      "bias": 219631,
+      "frac": 219222,
+      "frac2": 219328,
+      "frac3": 219477,
+      "mask": 24,
+      "model": 159035,
+      "pose": 216109,
+      "post": 217596,
+      "randmulti": 220127,
+      "region": 219854,
+      "shift": 218996
+    }
+  },
+  "container_rows": [
+    {
+      "archive_byte_share": 0.999576859,
+      "bits": 1889824,
+      "bytes": 236228,
+      "formula_only_rate_score_contribution": 0.157294528778,
+      "kind": "zip_member",
+      "name": "x"
+    },
+    {
+      "archive_byte_share": 0.000423141,
+      "bits": 800,
+      "bytes": 100,
+      "formula_only_rate_score_contribution": 6.6585895e-05,
+      "kind": "zip_overhead",
+      "name": "zip_container_overhead"
+    },
+    {
+      "archive_byte_share": 0.000101554,
+      "bits": 192,
+      "bytes": 24,
+      "formula_only_rate_score_contribution": 1.5980615e-05,
+      "kind": "member_header",
+      "member_byte_share": 0.000101597,
+      "name": "pr85_v5_micro_header"
+    }
+  ],
+  "deterministic": true,
+  "dispatch_performed": false,
+  "evidence_grade": "planning_only_static_archive_accounting",
+  "inputs": {
+    "archive": "experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+    "profile_json": "experiments/results/public_pr85_intake_20260503_codex/profile_pr85_bundle.json",
+    "sidechannel_summaries_used": [
+      "experiments/results/public_pr85_sidechannel_ablations_20260503_codex/candidate_summary.json",
+      "experiments/results/public_pr85_sidechannel_recodes_20260503_codex/candidate_summary.json",
+      "experiments/results/pr85_randmulti_group_policy_candidates_20260504_codex/candidate_summary.json",
+      "experiments/results/pr85_post_motion_group_policy_candidates_20260504_codex/candidate_summary.json",
+      "experiments/results/pr85_bridge_sparse_action_candidates_20260504_codex/candidate_summary.json"
+    ]
+  },
+  "member_accounting": {
+    "accounted_member_bytes": 236228,
+    "header_bytes": 24,
+    "matches_member_file_size": true,
+    "member_bytes": 236228,
+    "profile_archive_mismatches": [],
+    "segment_bytes_total": 236204
+  },
+  "opportunity_rankings": [
+    {
+      "archive_byte_share": 0.67284029,
+      "best_lossless_recode_delta_bytes": null,
+      "bits": 1272088,
+      "bytes": 159011,
+      "exact_deletion_negative": false,
+      "formula_only_rate_score_contribution": 0.105878897995,
+      "non_arbitrary_basis": "QMA9 mask payload is the largest charged segment.",
+      "opportunity_class": "large_core_payload_entropy_surface",
+      "protected": false,
+      "rank": 1,
+      "segment": "mask"
+    },
+    {
+      "archive_byte_share": 0.241503334,
+      "best_lossless_recode_delta_bytes": null,
+      "bits": 456592,
+      "bytes": 57074,
+      "exact_deletion_negative": false,
+      "formula_only_rate_score_contribution": 0.03800323389,
+      "non_arbitrary_basis": "Joint frame model bytes are the second largest charged segment.",
+      "opportunity_class": "large_core_payload_model_surface",
+      "protected": false,
+      "rank": 2,
+      "segment": "model"
+    },
+    {
+      "archive_byte_share": 0.068129887,
+      "best_lossless_recode_delta_bytes": 353,
+      "bits": 128808,
+      "bytes": 16101,
+      "exact_deletion_negative": true,
+      "formula_only_rate_score_contribution": 0.010720995004,
+      "non_arbitrary_basis": "Whole randmulti deletion is negative; target group-level recoding or water-fill, not deletion.",
+      "opportunity_class": "protected_group_waterfill_surface",
+      "protected": true,
+      "rank": 3,
+      "segment": "randmulti"
+    },
+    {
+      "archive_byte_share": 0.006292103,
+      "best_lossless_recode_delta_bytes": null,
+      "bits": 11896,
+      "bytes": 1487,
+      "exact_deletion_negative": false,
+      "formula_only_rate_score_contribution": 0.000990132263,
+      "non_arbitrary_basis": "Small charged stream; only deterministic parity-preserving byte work is justified.",
+      "opportunity_class": "micro_recode_surface",
+      "protected": false,
+      "rank": 4,
+      "segment": "pose"
+    },
+    {
+      "archive_byte_share": 0.00592397,
+      "best_lossless_recode_delta_bytes": 39,
+      "bits": 11200,
+      "bytes": 1400,
+      "exact_deletion_negative": true,
+      "formula_only_rate_score_contribution": 0.000932202534,
+      "non_arbitrary_basis": "Deletion/preflight negatives protect this stream; only parity-preserving recodes are planning-safe.",
+      "opportunity_class": "protected_recode_only_surface",
+      "protected": true,
+      "rank": 5,
+      "segment": "post"
+    },
+    {
+      "archive_byte_share": 0.001155174,
+      "best_lossless_recode_delta_bytes": 7,
+      "bits": 2184,
+      "bytes": 273,
+      "exact_deletion_negative": false,
+      "formula_only_rate_score_contribution": 0.000181779494,
+      "non_arbitrary_basis": "Small charged stream; only deterministic parity-preserving byte work is justified.",
+      "opportunity_class": "micro_recode_surface",
+      "protected": false,
+      "rank": 6,
+      "segment": "region"
+    },
+    {
+      "archive_byte_share": 0.000956298,
+      "best_lossless_recode_delta_bytes": 1,
+      "bits": 1808,
+      "bytes": 226,
+      "exact_deletion_negative": true,
+      "formula_only_rate_score_contribution": 0.000150484123,
+      "non_arbitrary_basis": "Deletion/preflight negatives protect this stream; only parity-preserving recodes are planning-safe.",
+      "opportunity_class": "protected_recode_only_surface",
+      "protected": true,
+      "rank": 7,
+      "segment": "shift"
+    },
+    {
+      "archive_byte_share": 0.000943604,
+      "best_lossless_recode_delta_bytes": 0,
+      "bits": 1784,
+      "bytes": 223,
+      "exact_deletion_negative": false,
+      "formula_only_rate_score_contribution": 0.000148486547,
+      "non_arbitrary_basis": "Small charged stream; only deterministic parity-preserving byte work is justified.",
+      "opportunity_class": "micro_recode_surface",
+      "protected": false,
+      "rank": 8,
+      "segment": "bias"
+    }
+  ],
+  "planning_only": true,
+  "schema": "pr85_archive_bit_budget_profile_v1",
+  "score_claim": false,
+  "score_claim_refusal": {
+    "dispatch_performed": false,
+    "reason": "Static byte accounting does not execute inflate or CUDA auth eval.",
+    "score_claim": false
+  },
+  "score_rate_formula": {
+    "formula_only": true,
+    "original_video_bytes": 37545489,
+    "rate_score_per_byte": 6.658589531221714e-07,
+    "score_claim_from_this_profile": false
+  },
+  "segments": [
+    {
+      "archive_byte_share": 0.67284029,
+      "bits": 1272088,
+      "bytes": 159011,
+      "cumulative_archive_byte_share_by_desc": 0.67284029,
+      "cumulative_bits_by_desc": 1272088,
+      "cumulative_bytes_by_desc": 159011,
+      "cumulative_member_byte_share_by_desc": 0.673125116,
+      "formula_only_rate_score_contribution": 0.105878897995,
+      "known_flags": {
+        "best_lossless_recode_delta_bytes": null,
+        "deletion_candidate_ids": [],
+        "deletion_negative_context": [],
+        "deletion_screened": false,
+        "dispatch_preflight_blocker_ids": [],
+        "exact_deletion_negative": false,
+        "lossless_recode_candidate_ids": [],
+        "lossless_recode_non_improving": false,
+        "protected": false,
+        "protected_reasons": [],
+        "sidechannel_candidate_ids": []
+      },
+      "member_byte_share": 0.673125116,
+      "name": "mask",
+      "offset": 24,
+      "rank_by_bytes": 1,
+      "sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179"
+    },
+    {
+      "archive_byte_share": 0.241503334,
+      "bits": 456592,
+      "bytes": 57074,
+      "cumulative_archive_byte_share_by_desc": 0.914343624,
+      "cumulative_bits_by_desc": 1728680,
+      "cumulative_bytes_by_desc": 216085,
+      "cumulative_member_byte_share_by_desc": 0.914730684,
+      "formula_only_rate_score_contribution": 0.03800323389,
+      "known_flags": {
+        "best_lossless_recode_delta_bytes": null,
+        "deletion_candidate_ids": [],
+        "deletion_negative_context": [],
+        "deletion_screened": false,
+        "dispatch_preflight_blocker_ids": [],
+        "exact_deletion_negative": false,
+        "lossless_recode_candidate_ids": [],
+        "lossless_recode_non_improving": false,
+        "protected": false,
+        "protected_reasons": [],
+        "sidechannel_candidate_ids": []
+      },
+      "member_byte_share": 0.241605568,
+      "name": "model",
+      "offset": 159035,
+      "rank_by_bytes": 2,
+      "sha256": "c9194c19d44d3c32c4e588bbe4f9986ed0c562779078f0f4d6b073f0799b5dbc"
+    },
+    {
+      "archive_byte_share": 0.006292103,
+      "bits": 11896,
+      "bytes": 1487,
+      "cumulative_archive_byte_share_by_desc": 0.988765614,
+      "cumulative_bits_by_desc": 1869384,
+      "cumulative_bytes_by_desc": 233673,
+      "cumulative_member_byte_share_by_desc": 0.989184178,
+      "formula_only_rate_score_contribution": 0.000990132263,
+      "known_flags": {
+        "best_lossless_recode_delta_bytes": null,
+        "deletion_candidate_ids": [],
+        "deletion_negative_context": [],
+        "deletion_screened": false,
+        "dispatch_preflight_blocker_ids": [],
+        "exact_deletion_negative": false,
+        "lossless_recode_candidate_ids": [],
+        "lossless_recode_non_improving": false,
+        "protected": false,
+        "protected_reasons": [],
+        "sidechannel_candidate_ids": []
+      },
+      "member_byte_share": 0.006294766,
+      "name": "pose",
+      "offset": 216109,
+      "rank_by_bytes": 4,
+      "sha256": "2b6e03e02fb17f662e3f3f9ce47daf2fc33bf1f76c96e34ffac005f1c5c4054c"
+    },
+    {
+      "archive_byte_share": 0.00592397,
+      "bits": 11200,
+      "bytes": 1400,
+      "cumulative_archive_byte_share_by_desc": 0.994689584,
+      "cumulative_bits_by_desc": 1880584,
+      "cumulative_bytes_by_desc": 235073,
+      "cumulative_member_byte_share_by_desc": 0.995110656,
+      "formula_only_rate_score_contribution": 0.000932202534,
+      "known_flags": {
+        "best_lossless_recode_delta_bytes": 39,
+        "deletion_candidate_ids": [
+          "minus_all_safe_corrections",
+          "minus_post",
+          "minus_post_motion"
+        ],
+        "deletion_negative_context": [
+          {
+            "auth_json": null,
+            "bytes_saved_vs_pr85": null,
+            "context_id": "minus_post",
+            "evidence_grade": null,
+            "net_score_delta_vs_pr85": null,
+            "role": "exact T4 negative; post stream carries high-value signal",
+            "score": 0.3093560838497741,
+            "source_summary": "experiments/results/pr85_post_motion_group_policy_candidates_20260504_codex/candidate_summary.json"
+          }
+        ],
+        "deletion_screened": true,
+        "dispatch_preflight_blocker_ids": [
+          "protected_qpost_group_deletion",
+          "whole_post_deletion"
+        ],
+        "exact_deletion_negative": true,
+        "lossless_recode_candidate_ids": [
+          "segment_post_best"
+        ],
+        "lossless_recode_non_improving": true,
+        "protected": true,
+        "protected_reasons": [
+          "exact T4 negative; post stream carries high-value signal",
+          "protected_qpost_group_deletion",
+          "whole_post_deletion"
+        ],
+        "sidechannel_candidate_ids": [
+          "bridge_no_randmulti_post123_motion",
+          "bridge_rm_top001_post123_motion",
+          "bridge_rm_top004_post23_motion",
+          "bridge_rm_top008_motion_only",
+          "minus_all_safe_corrections",
+          "minus_post",
+          "minus_post_motion",
+          "preserve_motion_only",
+          "preserve_post123_motion",
+          "preserve_post23_motion",
+          "segment_post_best"
+        ]
+      },
+      "member_byte_share": 0.005926478,
+      "name": "post",
+      "offset": 217596,
+      "rank_by_bytes": 5,
+      "sha256": "c3dc88e0fb5a1e48aec49eeacefeea20685e3c02598933deb1ff22dc09892575"
+    },
+    {
+      "archive_byte_share": 0.000956298,
+      "bits": 1808,
+      "bytes": 226,
+      "cumulative_archive_byte_share_by_desc": 0.996801056,
+      "cumulative_bits_by_desc": 1884576,
+      "cumulative_bytes_by_desc": 235572,
+      "cumulative_member_byte_share_by_desc": 0.997223022,
+      "formula_only_rate_score_contribution": 0.000150484123,
+      "known_flags": {
+        "best_lossless_recode_delta_bytes": 1,
+        "deletion_candidate_ids": [
+          "minus_all_safe_corrections",
+          "minus_motion_stack",
+          "minus_post_motion"
+        ],
+        "deletion_negative_context": [
+          {
+            "auth_json": null,
+            "bytes_saved_vs_pr85": null,
+            "context_id": "minus_motion_stack",
+            "evidence_grade": null,
+            "net_score_delta_vs_pr85": null,
+            "role": "exact T4 negative; motion streams carry high-value signal",
+            "score": 0.363610914426998,
+            "source_summary": "experiments/results/pr85_post_motion_group_policy_candidates_20260504_codex/candidate_summary.json"
+          }
+        ],
+        "deletion_screened": true,
+        "dispatch_preflight_blocker_ids": [
+          "protected_qpost_group_deletion"
+        ],
+        "exact_deletion_negative": true,
+        "lossless_recode_candidate_ids": [
+          "segment_shift_best"
+        ],
+        "lossless_recode_non_improving": true,
+        "protected": true,
+        "protected_reasons": [
+          "exact T4 negative; motion streams carry high-value signal",
+          "protected_qpost_group_deletion"
+        ],
+        "sidechannel_candidate_ids": [
+          "bridge_no_randmulti_post123_motion",
+          "bridge_rm_top001_post123_motion",
+          "bridge_rm_top004_post23_motion",
+          "bridge_rm_top008_motion_only",
+          "minus_all_safe_corrections",
+          "minus_motion_stack",
+          "minus_post_motion",
+          "segment_shift_best"
+        ]
+      },
+      "member_byte_share": 0.000956703,
+      "name": "shift",
+      "offset": 218996,
+      "rank_by_bytes": 7,
+      "sha256": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4"
+    },
+    {
+      "archive_byte_share": 0.000448529,
+      "bits": 848,
+      "bytes": 106,
+      "cumulative_archive_byte_share_by_desc": 0.999475306,
+      "cumulative_bits_by_desc": 1889632,
+      "cumulative_bytes_by_desc": 236204,
+      "cumulative_member_byte_share_by_desc": 0.999898403,
+      "formula_only_rate_score_contribution": 7.0581049e-05,
+      "known_flags": {
+        "best_lossless_recode_delta_bytes": 7,
+        "deletion_candidate_ids": [
+          "minus_all_safe_corrections",
+          "minus_motion_stack",
+          "minus_post_motion"
+        ],
+        "deletion_negative_context": [
+          {
+            "auth_json": null,
+            "bytes_saved_vs_pr85": null,
+            "context_id": "minus_motion_stack",
+            "evidence_grade": null,
+            "net_score_delta_vs_pr85": null,
+            "role": "exact T4 negative; motion streams carry high-value signal",
+            "score": 0.363610914426998,
+            "source_summary": "experiments/results/pr85_post_motion_group_policy_candidates_20260504_codex/candidate_summary.json"
+          }
+        ],
+        "deletion_screened": true,
+        "dispatch_preflight_blocker_ids": [
+          "protected_qpost_group_deletion"
+        ],
+        "exact_deletion_negative": true,
+        "lossless_recode_candidate_ids": [
+          "segment_frac_best"
+        ],
+        "lossless_recode_non_improving": true,
+        "protected": true,
+        "protected_reasons": [
+          "exact T4 negative; motion streams carry high-value signal",
+          "protected_qpost_group_deletion"
+        ],
+        "sidechannel_candidate_ids": [
+          "bridge_no_randmulti_post123_motion",
+          "bridge_rm_top001_post123_motion",
+          "bridge_rm_top004_post23_motion",
+          "bridge_rm_top008_motion_only",
+          "minus_all_safe_corrections",
+          "minus_motion_stack",
+          "minus_post_motion",
+          "preserve_post_all_shift",
+          "preserve_post_all_shift_frac2_frac3",
+          "segment_frac_best"
+        ]
+      },
+      "member_byte_share": 0.000448719,
+      "name": "frac",
+      "offset": 219222,
+      "rank_by_bytes": 11,
+      "sha256": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992"
+    },
+    {
+      "archive_byte_share": 0.00063048,
+      "bits": 1192,
+      "bytes": 149,
+      "cumulative_archive_byte_share_by_desc": 0.999026776,
+      "cumulative_bits_by_desc": 1888784,
+      "cumulative_bytes_by_desc": 236098,
+      "cumulative_member_byte_share_by_desc": 0.999449684,
+      "formula_only_rate_score_contribution": 9.9212984e-05,
+      "known_flags": {
+        "best_lossless_recode_delta_bytes": 1,
+        "deletion_candidate_ids": [
+          "minus_all_safe_corrections",
+          "minus_motion_stack",
+          "minus_post_motion"
+        ],
+        "deletion_negative_context": [
+          {
+            "auth_json": null,
+            "bytes_saved_vs_pr85": null,
+            "context_id": "minus_motion_stack",
+            "evidence_grade": null,
+            "net_score_delta_vs_pr85": null,
+            "role": "exact T4 negative; motion streams carry high-value signal",
+            "score": 0.363610914426998,
+            "source_summary": "experiments/results/pr85_post_motion_group_policy_candidates_20260504_codex/candidate_summary.json"
+          }
+        ],
+        "deletion_screened": true,
+        "dispatch_preflight_blocker_ids": [
+          "protected_qpost_group_deletion"
+        ],
+        "exact_deletion_negative": true,
+        "lossless_recode_candidate_ids": [
+          "segment_frac2_best"
+        ],
+        "lossless_recode_non_improving": true,
+        "protected": true,
+        "protected_reasons": [
+          "exact T4 negative; motion streams carry high-value signal",
+          "protected_qpost_group_deletion"
+        ],
+        "sidechannel_candidate_ids": [
+          "bridge_no_randmulti_post123_motion",
+          "bridge_rm_top001_post123_motion",
+          "bridge_rm_top004_post23_motion",
+          "bridge_rm_top008_motion_only",
+          "minus_all_safe_corrections",
+          "minus_motion_stack",
+          "minus_post_motion",
+          "preserve_post_all_shift",
+          "segment_frac2_best"
+        ]
+      },
+      "member_byte_share": 0.000630747,
+      "name": "frac2",
+      "offset": 219328,
+      "rank_by_bytes": 10,
+      "sha256": "3a01c7546d89d9d3ca846da37a20add7d456421e9211a6339850d946b856026b"
+    },
+    {
+      "archive_byte_share": 0.000651637,
+      "bits": 1232,
+      "bytes": 154,
+      "cumulative_archive_byte_share_by_desc": 0.998396297,
+      "cumulative_bits_by_desc": 1887592,
+      "cumulative_bytes_by_desc": 235949,
+      "cumulative_member_byte_share_by_desc": 0.998818938,
+      "formula_only_rate_score_contribution": 0.000102542279,
+      "known_flags": {
+        "best_lossless_recode_delta_bytes": 1,
+        "deletion_candidate_ids": [
+          "minus_all_safe_corrections",
+          "minus_motion_stack",
+          "minus_post_motion"
+        ],
+        "deletion_negative_context": [
+          {
+            "auth_json": null,
+            "bytes_saved_vs_pr85": null,
+            "context_id": "minus_motion_stack",
+            "evidence_grade": null,
+            "net_score_delta_vs_pr85": null,
+            "role": "exact T4 negative; motion streams carry high-value signal",
+            "score": 0.363610914426998,
+            "source_summary": "experiments/results/pr85_post_motion_group_policy_candidates_20260504_codex/candidate_summary.json"
+          }
+        ],
+        "deletion_screened": true,
+        "dispatch_preflight_blocker_ids": [
+          "protected_qpost_group_deletion"
+        ],
+        "exact_deletion_negative": true,
+        "lossless_recode_candidate_ids": [
+          "segment_frac3_best"
+        ],
+        "lossless_recode_non_improving": true,
+        "protected": true,
+        "protected_reasons": [
+          "exact T4 negative; motion streams carry high-value signal",
+          "protected_qpost_group_deletion"
+        ],
+        "sidechannel_candidate_ids": [
+          "bridge_no_randmulti_post123_motion",
+          "bridge_rm_top001_post123_motion",
+          "bridge_rm_top004_post23_motion",
+          "bridge_rm_top008_motion_only",
+          "minus_all_safe_corrections",
+          "minus_motion_stack",
+          "minus_post_motion",
+          "preserve_post_all_shift",
+          "segment_frac3_best"
+        ]
+      },
+      "member_byte_share": 0.000651913,
+      "name": "frac3",
+      "offset": 219477,
+      "rank_by_bytes": 9,
+      "sha256": "d725b01b604566c5a76a06b821c644c8d5d5bb9a57ab0597d3bdabc8389858b5"
+    },
+    {
+      "archive_byte_share": 0.000943604,
+      "bits": 1784,
+      "bytes": 223,
+      "cumulative_archive_byte_share_by_desc": 0.99774466,
+      "cumulative_bits_by_desc": 1886360,
+      "cumulative_bytes_by_desc": 235795,
+      "cumulative_member_byte_share_by_desc": 0.998167025,
+      "formula_only_rate_score_contribution": 0.000148486547,
+      "known_flags": {
+        "best_lossless_recode_delta_bytes": 0,
+        "deletion_candidate_ids": [],
+        "deletion_negative_context": [],
+        "deletion_screened": false,
+        "dispatch_preflight_blocker_ids": [],
+        "exact_deletion_negative": false,
+        "lossless_recode_candidate_ids": [
+          "segment_bias_best"
+        ],
+        "lossless_recode_non_improving": true,
+        "protected": false,
+        "protected_reasons": [],
+        "sidechannel_candidate_ids": [
+          "segment_bias_best"
+        ]
+      },
+      "member_byte_share": 0.000944003,
+      "name": "bias",
+      "offset": 219631,
+      "rank_by_bytes": 8,
+      "sha256": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b"
+    },
+    {
+      "archive_byte_share": 0.001155174,
+      "bits": 2184,
+      "bytes": 273,
+      "cumulative_archive_byte_share_by_desc": 0.995844758,
+      "cumulative_bits_by_desc": 1882768,
+      "cumulative_bytes_by_desc": 235346,
+      "cumulative_member_byte_share_by_desc": 0.996266319,
+      "formula_only_rate_score_contribution": 0.000181779494,
+      "known_flags": {
+        "best_lossless_recode_delta_bytes": 7,
+        "deletion_candidate_ids": [],
+        "deletion_negative_context": [],
+        "deletion_screened": false,
+        "dispatch_preflight_blocker_ids": [],
+        "exact_deletion_negative": false,
+        "lossless_recode_candidate_ids": [
+          "segment_region_best"
+        ],
+        "lossless_recode_non_improving": true,
+        "protected": false,
+        "protected_reasons": [],
+        "sidechannel_candidate_ids": [
+          "segment_region_best"
+        ]
+      },
+      "member_byte_share": 0.001155663,
+      "name": "region",
+      "offset": 219854,
+      "rank_by_bytes": 6,
+      "sha256": "4a7c16094fab281c30e27621a58577c095c4b1153c232518c9adbaba2a2b2392"
+    },
+    {
+      "archive_byte_share": 0.068129887,
+      "bits": 128808,
+      "bytes": 16101,
+      "cumulative_archive_byte_share_by_desc": 0.982473511,
+      "cumulative_bits_by_desc": 1857488,
+      "cumulative_bytes_by_desc": 232186,
+      "cumulative_member_byte_share_by_desc": 0.982889412,
+      "formula_only_rate_score_contribution": 0.010720995004,
+      "known_flags": {
+        "best_lossless_recode_delta_bytes": 353,
+        "deletion_candidate_ids": [
+          "minus_all_safe_corrections",
+          "minus_randmulti"
+        ],
+        "deletion_negative_context": [
+          {
+            "auth_json": null,
+            "bytes_saved_vs_pr85": null,
+            "context_id": "minus_randmulti",
+            "evidence_grade": null,
+            "net_score_delta_vs_pr85": null,
+            "role": "exact negative context only; this builder does not mutate randmulti",
+            "score": 0.282674,
+            "source_summary": "experiments/results/pr85_post_motion_group_policy_candidates_20260504_codex/candidate_summary.json"
+          }
+        ],
+        "deletion_screened": true,
+        "dispatch_preflight_blocker_ids": [
+          "whole_randmulti_deletion"
+        ],
+        "exact_deletion_negative": true,
+        "lossless_recode_candidate_ids": [
+          "randmulti_best"
+        ],
+        "lossless_recode_non_improving": true,
+        "protected": true,
+        "protected_reasons": [
+          "exact negative context only; this builder does not mutate randmulti",
+          "whole_randmulti_deletion"
+        ],
+        "sidechannel_candidate_ids": [
+          "bridge_no_randmulti_post123_motion",
+          "bridge_rm_top001_post123_motion",
+          "bridge_rm_top004_post23_motion",
+          "bridge_rm_top008_motion_only",
+          "minus_all_safe_corrections",
+          "minus_randmulti",
+          "randmulti_best"
+        ]
+      },
+      "member_byte_share": 0.068158728,
+      "name": "randmulti",
+      "offset": 220127,
+      "rank_by_bytes": 3,
+      "sha256": "c624372e60a0851c4c427dc333a60dcc5d6657ba8ed56951612e7c9d7be7629f"
+    }
+  ],
+  "tool": "experiments/profile_pr85_archive_bit_budget.py"
+}

@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-05-02T06:04:59Z",
+  "pybin": "/opt/conda/bin/python",
+  "uv_bin": "/root/.local/bin/uv",
+  "uv_project_environment": "/workspace/pact/experiments/results/qfaithful_snapshot_h100_wave_20260502T055846Z/qfaithful_2131_pr64_qpose14/uv_project_env",
+  "uv_cache_dir": "",
+  "uv_extra_index_url": "",
+  "uv_index_strategy": "",
+  "ffmpeg_bin": "/tmp/ffmpeg-master-latest-linux64-gpl/bin/ffmpeg",
+  "inflate_brotli_spec": "brotli==1.2.0",
+  "inflate_av_spec": "av==17.0.1",
+  "inflate_torch_spec": "torch==2.11.0",
+  "inflate_numpy_spec": "numpy==2.4.4",
+  "dali_bootstrap_dir": "/workspace/pact/experiments/results/qfaithful_snapshot_h100_wave_20260502T055846Z/qfaithful_2131_pr64_qpose14"
+}

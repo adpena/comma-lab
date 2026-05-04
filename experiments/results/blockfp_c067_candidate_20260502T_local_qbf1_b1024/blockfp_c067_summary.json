@@ -1,0 +1,33 @@
+{
+  "best_by_output_archive_bytes": {
+    "bytes": 283869,
+    "candidate_id": "qbf1_b1024",
+    "delta_bytes_vs_source_archive": 7655,
+    "formula_only_rate_delta_vs_source_archive": 0.0050971502861502215,
+    "sha256": "6d331e479d961df22a2baa8b3f09722394ece7d0c194821c80c6aa354cb1449b"
+  },
+  "block_sizes": [
+    1024
+  ],
+  "candidates": [
+    {
+      "archive_bytes": 283869,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/blockfp_c067_candidate_20260502T_local_qbf1_b1024/qbf1_b1024/archive.zip",
+      "archive_sha256": "6d331e479d961df22a2baa8b3f09722394ece7d0c194821c80c6aa354cb1449b",
+      "candidate_id": "qbf1_b1024",
+      "delta_bytes_vs_source_archive": 7655,
+      "local_archive_byte_win": false,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/blockfp_c067_candidate_20260502T_local_qbf1_b1024/qbf1_b1024/build_manifest.json",
+      "renderer_bytes": 121891,
+      "renderer_sha256": "82d275e87929bfcb0c2f99c947d0d694db2229e7004379c509d3f267ac3ef2a7"
+    }
+  ],
+  "promotion_eligible": false,
+  "schema": "blockfp_c067_archive_summary_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 276214,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c067_breakthrough_candidate_matrix_20260502T1030Z/line_search_source_c067_fixedslice/archive.zip",
+    "sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a"
+  }
+}

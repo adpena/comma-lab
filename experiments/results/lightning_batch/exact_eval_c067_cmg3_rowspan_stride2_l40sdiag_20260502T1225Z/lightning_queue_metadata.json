@@ -1,0 +1,42 @@
+{
+  "adjudication": {
+    "allow_component_gate_forensic_success": true,
+    "allow_sane_score_forensic_success": true,
+    "baseline_archive_size_bytes": 276214,
+    "baseline_posenet_dist": 0.00049637,
+    "baseline_score": 0.31561703078448233,
+    "baseline_segnet_dist": 0.00061244,
+    "component_reference_label": "C-067_T4_reference",
+    "delta_key": "score_delta_vs_c067_l40sdiag",
+    "max_posenet_dist": 0.01,
+    "max_posenet_relative": 30.0,
+    "max_sane_score": 40.0,
+    "max_segnet_dist": 0.005,
+    "max_segnet_relative": 10.0,
+    "predicted_band_high": 2.0,
+    "predicted_band_low": 0.2,
+    "provenance_name": "adjudication_provenance.json",
+    "regression_threshold": 0.2,
+    "required_device": "cuda",
+    "required_samples": 600,
+    "result_copy_name": "contest_auth_eval.adjudicated.json"
+  },
+  "artifact_recorded_at_utc": "2026-05-02T12:35:02Z",
+  "expected_archive_sha256": "4164132d26840db05124d341e02ebf72b5df171d90f9a413c2239f33112e61eb",
+  "expected_archive_size_bytes": 176108,
+  "job_name": "exact_eval_c067_cmg3_rowspan_stride2_l40sdiag_20260502T1225Z",
+  "queue_metadata": {
+    "baseline": "C-067_A++_T4",
+    "candidate": "c067_cmg3_rowspan_stride2_complete_policy",
+    "candidate_archive_bytes": "176108",
+    "candidate_archive_sha": "4164132d26840db05124d341e02ebf72b5df171d90f9a413c2239f33112e61eb",
+    "formula_only_if_components_hold": "0.24896055442323425",
+    "pixel_disagreement": "0.013449478149414062",
+    "policy": "row_fill_forward_draw_2_1_0_3_4",
+    "source_manifest": ".omx/state/exact_eval_c067_cmg3_rowspan_stride1_stride2_20260502T1225Z_manifest.json"
+  },
+  "role": "exact_cuda_eval",
+  "schema_version": 1,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

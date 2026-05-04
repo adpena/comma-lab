@@ -1,0 +1,42 @@
+{
+  "all_score_affecting_bits_inside_archive": true,
+  "archive_byte_delta_vs_prior_nozoom": 1222,
+  "controlled_transform": "preserve_existing_p_payload_byte_for_byte_and_add_charged_zoom_scalars_bin",
+  "evidence_grade": "empirical_byte_only_until_cuda_auth_eval",
+  "geometry_contract": "charged_zoom_scalars_bin",
+  "mask_frame_contract": "half",
+  "member_order": [
+    "p",
+    "zoom_scalars.bin"
+  ],
+  "members": {
+    "p": {
+      "bytes": 273003,
+      "identical_to_prior_nozoom": true,
+      "member_name": "p",
+      "sha256": "916e6f58c2bd5cdc1e49b016cb46c238accc77a4b8df5b62acc759f8f6958385"
+    },
+    "zoom_scalars.bin": {
+      "bytes": 1200,
+      "member_name": "zoom_scalars.bin",
+      "sha256": "accf5b88c811d6a79707ab19b1314646bb26aa4977f77eaaf4cbfad9ea1dba76",
+      "source_path": "experiments/results/zoom_scalars_v1.bin"
+    }
+  },
+  "next_required_evidence": "exact CUDA auth eval of this exact archive SHA before ranking or promotion",
+  "output_archive": "experiments/results/qfaithful_geometry_closed_candidates_20260502/2146_qzs3_pr64_qp1_direct_zoom_v1/archive.zip",
+  "output_archive_bytes": 274325,
+  "output_archive_sha256": "8a3d4e8348f9e356dbf614d69f5fe122fdcd6dfc50160671b734b2d38a01eb75",
+  "pose_codec": "pose_qp1_v1",
+  "promotable_exact_screen_contract": true,
+  "promotable_score_claim": false,
+  "schema_version": 1,
+  "score_claim": false,
+  "sidecars_score_affecting": false,
+  "source_prior_l40s_exact_json": "experiments/results/lightning_batch/exact_eval_qfaithful_snapshot_2146_pr64_qp1_l40s_20260501T2201Z/contest_auth_eval.json",
+  "source_prior_nozoom_archive": "experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2146Z_fix1/qzs3_pr64_qp1/archive.zip",
+  "source_prior_nozoom_archive_bytes": 273103,
+  "source_prior_nozoom_archive_sha256": "a34f493b77e3a2ccba7e059134127e9b3cb6e774a41862143d369fa3f5fc81af",
+  "submission_layout": "pr64_mask_first_single_blob_plus_charged_geometry_member",
+  "tool": "qfaithful_direct_geometry_closure_zip_builder"
+}

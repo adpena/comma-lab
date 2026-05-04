@@ -1,0 +1,278 @@
+{
+  "archive": {
+    "bytes": 253691,
+    "delta_bytes_vs_frontier": -22523,
+    "formula_only_rate_delta_vs_frontier": -0.014997141201,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c067_multimask_reconciliation_20260502_cmg3a_reconciler_threshold_fix1/extra069000/archive.zip",
+    "sha256": "06d01e06c4159974b6e756a2a47e84ff0548371db80a391730865c96609259fd"
+  },
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "cmg3": {
+    "body_bytes": 196083,
+    "body_sha256": "1a132f4c43d1a2cd707ac648f0684d3b6a21831d301b48dd1188c54907345b10",
+    "class_count": 5,
+    "compression_candidates": [
+      {
+        "body_bytes": 196083,
+        "body_sha256": "1a132f4c43d1a2cd707ac648f0684d3b6a21831d301b48dd1188c54907345b10",
+        "compressor": "bz2"
+      },
+      {
+        "body_bytes": 196892,
+        "body_sha256": "59229921488e2ecff3d59b0475a04048818e804d0f8ca65cce0e3620db70a7e4",
+        "compressor": "lzma_xz"
+      },
+      {
+        "body_bytes": 315099,
+        "body_sha256": "4c45a33925458224ff56cd3fb30b86c2195f48228f328134507498eaa06a4b42",
+        "compressor": "zlib"
+      },
+      {
+        "body_bytes": 1687040,
+        "body_sha256": "e57ae9a95773e50143093684e607c6ae995ca1be74d2a14c67e55064164171e4",
+        "compressor": "raw"
+      }
+    ],
+    "compressor": "bz2",
+    "default_class": 0,
+    "frame_count": 600,
+    "height": 384,
+    "lossless_under_builder": false,
+    "max_runs_per_row": 8,
+    "mode": "nonzero_row_runs_topk_v1",
+    "payload_bytes": 198940,
+    "payload_sha256": "338732d84db00107fc4faa43d3d3219f093b788938f21a0469d31fb70a2dd455",
+    "pixel_disagreement_count_vs_source": 111311,
+    "pixel_disagreement_vs_source": 0.0009435950385199653,
+    "promotion_eligible": false,
+    "reconstructed_mask_u8_sha256": "187067667be51a72ed8d492987791f99f9b6deea6fee273af0c7af49f40c7970",
+    "record_struct": "u8_count_then_u8_class_u16_start_u16_end_le",
+    "run_stats_vs_fused_input": {
+      "available_rank_histogram": {
+        "1": 222328,
+        "10": 10,
+        "11": 1,
+        "2": 50412,
+        "3": 21785,
+        "4": 8963,
+        "5": 4005,
+        "6": 1944,
+        "7": 825,
+        "8": 297,
+        "9": 82
+      },
+      "base_required_runs": 222328,
+      "base_runs_per_row": 1,
+      "base_top1_runs": 222328,
+      "body_search": {
+        "effective_extra_run_cap": 69000,
+        "selected_by": "target_extra_runs_only",
+        "target_body_bytes": null
+      },
+      "candidate_extra_runs": 88231,
+      "max_available_runs_per_row": 11,
+      "max_selected_runs_per_row": 8,
+      "pixel_disagreement": 0.0009435950385199653,
+      "pixel_disagreement_count": 111311,
+      "reconstructed_tensor_sha256": "187067667be51a72ed8d492987791f99f9b6deea6fee273af0c7af49f40c7970",
+      "rows_with_extra_runs": 32134,
+      "selected_class_histogram": {
+        "1": 42455,
+        "2": 153718,
+        "3": 31809,
+        "4": 63346
+      },
+      "selected_extra_class_histogram": {
+        "1": 13532,
+        "2": 29081,
+        "3": 24149,
+        "4": 2238
+      },
+      "selected_extra_priority_max": 84.8173828125,
+      "selected_extra_priority_min": 2.24103582,
+      "selected_extra_rank_histogram": {
+        "2": 32129,
+        "3": 21184,
+        "4": 8797,
+        "5": 3858,
+        "6": 1923,
+        "7": 814,
+        "8": 295
+      },
+      "selected_extra_runs": 69000,
+      "selected_rank_histogram": {
+        "1": 222328,
+        "2": 32129,
+        "3": 21184,
+        "4": 8797,
+        "5": 3858,
+        "6": 1923,
+        "7": 814,
+        "8": 295
+      },
+      "selected_rows_by_run_count": {
+        "0": 8072,
+        "1": 190194,
+        "2": 10944,
+        "3": 12404,
+        "4": 4928,
+        "5": 1935,
+        "6": 1109,
+        "7": 519,
+        "8": 295
+      },
+      "selected_run_fraction": 0.9377953465614256,
+      "selected_runs": 291328,
+      "total_nonzero_runs": 310652
+    },
+    "run_stream_bytes": 1687040,
+    "run_stream_sha256": "e57ae9a95773e50143093684e607c6ae995ca1be74d2a14c67e55064164171e4",
+    "schema": "cmg3a_adaptive_nonzero_row_runs_candidate_v1",
+    "score_claim": false,
+    "selection_policy": {
+      "adaptive_max_runs_per_row": 8,
+      "base_runs_per_row": 1,
+      "effective_extra_run_cap": 69000,
+      "evidence_boundary": "Policy is a deterministic byte-screen prior. It is not scorer, promotion, or retirement evidence without exact CUDA auth eval.",
+      "hard_frame_indices": {
+        "frame_count": 0,
+        "frames": [],
+        "sources": []
+      },
+      "priority_formula": "After base_runs_per_row ranked nonzero row runs are kept, extra atoms are ranked by length * class_weight * (1 + foveal_row_weight*row_center + foveal_col_weight*col_center) * hard_frame_multiplier_if_selected * (1 + boundary_detail_weight*short_run_prior) * rank_decay**max(0, rank-2) / raw_bytes_per_extra_atom",
+      "raw_bytes_per_extra_atom": 5.0,
+      "row_rank_prefix_required": false,
+      "schema": "cmg3a_adaptive_global_nonzero_row_run_policy_v1",
+      "selected_extra_runs": 69000,
+      "selected_max_runs_per_row": 8,
+      "selector": "global_weighted_budget_after_base_runs_per_row",
+      "sort_order": "priority_desc_then_frame_row_rank_start_end_class",
+      "target_body_bytes": null,
+      "target_extra_runs": 69000,
+      "weights": {
+        "boundary_detail_weight": 0.08,
+        "boundary_reference_run_length": 64,
+        "class_weight_note": "Explicit byte-screen priors only: class-id preference for likely vehicle/lane/boundary/source-sensitive mask structure. Not score evidence.",
+        "class_weights": {
+          "1": 1.08,
+          "2": 1.3,
+          "3": 1.22,
+          "4": 1.16
+        },
+        "foveal_col_weight": 0.2,
+        "foveal_row_weight": 0.2,
+        "hard_frame_multiplier": 1.35,
+        "rank_decay": 0.92
+      },
+      "wire_mode": "nonzero_row_runs_topk_v1"
+    },
+    "selector": "cmg3a_adaptive_global_budget",
+    "source_mask_u8_sha256": "d93d49ac14ba6d094760f59af6daaae987405b75466b27eaf49e65c1f3771c10",
+    "width": 512
+  },
+  "evidence_grade": "empirical_byte_screen_archive_candidate_until_exact_cuda",
+  "frontier_archive_bytes": 276214,
+  "mask_metrics": {
+    "fused_mask_sha256": "d93d49ac14ba6d094760f59af6daaae987405b75466b27eaf49e65c1f3771c10",
+    "fused_vs_source": {
+      "agreement_fraction": 0.997750456068,
+      "disagreement_count": 265367,
+      "disagreement_fraction": 0.002249543932
+    },
+    "reconstructed_mask_sha256": "187067667be51a72ed8d492987791f99f9b6deea6fee273af0c7af49f40c7970",
+    "reconstructed_vs_fused": {
+      "agreement_fraction": 0.999056404961,
+      "disagreement_count": 111311,
+      "disagreement_fraction": 0.000943595039
+    },
+    "reconstructed_vs_source": {
+      "agreement_fraction": 0.99680686103,
+      "disagreement_count": 376678,
+      "disagreement_fraction": 0.00319313897
+    }
+  },
+  "packed_payload": {
+    "brotli_quality": 11,
+    "evidence_grade": "empirical",
+    "formula_only_rate_delta": -0.008036251705231486,
+    "header": {
+      "members": [
+        {
+          "bytes": 59288,
+          "codec": "raw",
+          "name": "renderer.bin",
+          "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+        },
+        {
+          "bytes": 198940,
+          "codec": "raw",
+          "name": "masks.cmg3",
+          "sha256": "338732d84db00107fc4faa43d3d3219f093b788938f21a0469d31fb70a2dd455"
+        },
+        {
+          "bytes": 1140,
+          "codec": "pose_qp1_v1",
+          "decoded_bytes": 7200,
+          "decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f",
+          "lossy": true,
+          "name": "optimized_poses.bin",
+          "pose_error_stats": {
+            "max_abs_by_dim": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "pose_dim": 6,
+            "rmse_by_dim": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "rows": 600
+          },
+          "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583",
+          "source_decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+        }
+      ],
+      "schema": "renderer_payload_v1",
+      "source_archive_sha256": "241f4240fb5967fa09c34b6386954f2f9af88bdb7f5007732f9cc61195f1a158"
+    },
+    "output_archive": "/Users/adpena/Projects/pact/experiments/results/c067_multimask_reconciliation_20260502_cmg3a_reconciler_threshold_fix1/extra069000/archive.zip",
+    "output_archive_bytes": 253691,
+    "output_archive_sha256": "06d01e06c4159974b6e756a2a47e84ff0548371db80a391730865c96609259fd",
+    "payload_compressed_bytes": 253591,
+    "payload_format": "rpk1_json",
+    "payload_member": "p",
+    "payload_raw_bytes": 260245,
+    "pose_codec": "pose_qp1_v1",
+    "pose_residual_topk": 0,
+    "savings_bytes": 12069,
+    "score_claim": false,
+    "source_archive": "/Users/adpena/Projects/pact/experiments/results/c067_multimask_reconciliation_20260502_cmg3a_reconciler_threshold_fix1/extra069000/multimask_reconciler_source_members.zip",
+    "source_archive_bytes": 265760,
+    "source_archive_sha256": "241f4240fb5967fa09c34b6386954f2f9af88bdb7f5007732f9cc61195f1a158"
+  },
+  "promotion_eligible": false,
+  "runtime_contract": {
+    "mask_member": "masks.cmg3",
+    "mask_mode": "nonzero_row_runs_topk_v1",
+    "payload_member": "p",
+    "sidecars_required": false,
+    "zip_safe_single_member_archive": true
+  },
+  "schema": "c067_multimask_reconciler_candidate_record_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 265760,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c067_multimask_reconciliation_20260502_cmg3a_reconciler_threshold_fix1/extra069000/multimask_reconciler_source_members.zip",
+    "sha256": "241f4240fb5967fa09c34b6386954f2f9af88bdb7f5007732f9cc61195f1a158"
+  },
+  "target_body_bytes": null,
+  "target_extra_runs": 69000
+}

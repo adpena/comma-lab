@@ -1,0 +1,43 @@
+{
+  "adjudication_required": true,
+  "allowed_use": [
+    "debug",
+    "no_score_claim",
+    "no_promotion"
+  ],
+  "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda",
+  "command": [
+    "/usr/local/bin/python",
+    "-u",
+    "/workspace/pact/experiments/contest_auth_eval.py",
+    "--archive",
+    "/tmp/modal_auth_eval/archive.zip",
+    "--inflate-sh",
+    "/workspace/pact/experiments/results/public_pr95_intake_20260504_codex/pr95_src/submissions/hnerv_muon/inflate.sh",
+    "--upstream-dir",
+    "/workspace/pact/upstream",
+    "--video-names-file",
+    "/workspace/pact/upstream/public_test_video_names.txt",
+    "--device",
+    "cuda",
+    "--keep-work-dir",
+    "--work-dir",
+    "/tmp/modal_auth_eval/eval_work",
+    "--inflate-timeout",
+    "2400",
+    "--evaluate-timeout",
+    "2400"
+  ],
+  "expected_archive_sha256": "e976acd5fe565c94fb9a8c62e5200c949919f76150e84599f268d6a58588440a",
+  "expected_archive_size_bytes": 178417,
+  "inflate_sh_rel": "experiments/results/public_pr95_intake_20260504_codex/pr95_src/submissions/hnerv_muon/inflate.sh",
+  "modal_elapsed_seconds": 39.941482025,
+  "passed": false,
+  "promotion_eligible": false,
+  "returncode": 1,
+  "schema_version": 1,
+  "score_claim": false,
+  "validation_errors": [
+    "contest_auth_eval.json was not produced"
+  ]
+}

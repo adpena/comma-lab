@@ -1,0 +1,83 @@
+{
+  "epoch": 649,
+  "scorer": 14.80810735863544,
+  "pose": 20.594462597966196,
+  "seg": 0.004573364392854273,
+  "fp4_path": "/workspace/pact/lane_q_faithful_results/train/renderer_q_faithful_modal_best_fp4.pt",
+  "fp4_size": 121979,
+  "distillation_policy": {
+    "schema_version": 1,
+    "format": "distillation_policy_v1",
+    "family": "segnet_aux_kl",
+    "scope": "segnet_aux",
+    "weight": 0.002,
+    "temperature": 2.0,
+    "class_weights": {
+      "enabled": false,
+      "source": "none",
+      "values": null,
+      "num_classes": null,
+      "normalization": "none",
+      "metadata": {}
+    },
+    "roundtrip_contract": {
+      "eval_roundtrip": true,
+      "student_uses_eval_roundtrip": true,
+      "teacher_uses_eval_roundtrip": true,
+      "same_as_scorer_input": true,
+      "student_source": "renderer_output",
+      "teacher_source": "teacher_frames"
+    },
+    "promotion_eligible": true,
+    "promotion_capable": true,
+    "forensic_reason": null,
+    "allow_banned_primary": false,
+    "controller": {
+      "enabled": false,
+      "kind": null,
+      "parameters": {},
+      "state": {}
+    },
+    "promotion_blockers": []
+  },
+  "distillation_policy_sha256": "29de792cd25fb471bdb2311f21e052598e5ae0ae9a30c88ceca38017881906b9",
+  "score_claim_eligible": false,
+  "promotion_eligible": false,
+  "exact_cuda_auth_eval_required": true,
+  "args": {
+    "base_ch": 56,
+    "mid_ch": 64,
+    "embed_dim": 6,
+    "motion_hidden": 32,
+    "depth": 1,
+    "pretrain_epochs": 0,
+    "epochs": 3000,
+    "lr": 0.0005,
+    "profile": "q_faithful_dilated_88k",
+    "tag": "q_faithful_modal",
+    "variant": "quantizr_faithful",
+    "latent_ch": 8,
+    "latent_shapes": [
+      [
+        6,
+        8
+      ],
+      [
+        12,
+        16
+      ],
+      [
+        24,
+        32
+      ]
+    ],
+    "residual_hidden": 32,
+    "residual_layers": 2,
+    "residual_scale": 16.0,
+    "seed": 1234,
+    "deterministic": true,
+    "no_mask_encoder": false,
+    "informational_only": false,
+    "stacking_candidate": true
+  }
+}

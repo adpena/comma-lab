@@ -1,0 +1,158 @@
+{
+  "candidate_id": "zero_fp4_frame2_head.pre_0.05",
+  "evidence_grade": "empirical_archive_candidate_until_pose_safety_and_exact_cuda",
+  "non_renderer_preservation": {
+    "all_non_renderer_members_preserved": true,
+    "members": {
+      "masks.mkv": {
+        "bytes": 223385,
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      "optimized_poses.qp1": {
+        "bytes": 1140,
+        "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 176,
+        "sha256": "6551a4bee3a9741000dbd8e8c6de8c0ffeb6ca03b644c3ff8a47aa3078ae752b"
+      }
+    }
+  },
+  "output_archive": {
+    "byte_only_crosses_target": false,
+    "bytes": 276346,
+    "delta_bytes_vs_source_archive": -6,
+    "formula_only_rate_delta_vs_source_archive": -3.995153718733028e-06,
+    "frontier_score_if_only_bytes_change": 0.31549396990770656,
+    "frontier_score_target": 0.314,
+    "path": "/Users/adpena/Projects/pact/experiments/results/renderer_parity_shrink_search_20260503_worker/zero_fp4_frame2_head.pre_0.05/archive.zip",
+    "sha256": "b4998e8fba0b8451dafa3dd7cbcb1f2a4da7bd39f6640a34d3f5647d489de3c8"
+  },
+  "payload": {
+    "action_dict_slice_bytes": 0,
+    "actions_slice_bytes": 126,
+    "bytes": 276246,
+    "mask_slice_bytes": 219472,
+    "member_name": "p",
+    "payload_format": "pr75_p6_preserve_slices",
+    "pose_slice_bytes": 677,
+    "record_count": 44,
+    "renderer_slice_bytes": 55959,
+    "renderer_slice_sha256": "b58918f3faa38e09a185192565762900cb6b4a3f940583e7b3dab621cf5bea07",
+    "sha256": "c57158953c62bac336f4a05f4c0aa10d5e3e85b7d060f0cf8bec0f36103897be",
+    "source_payload_format": "P6"
+  },
+  "promotion_eligible": false,
+  "renderer_transform": {
+    "changed_tensor_count": 2,
+    "changed_tensors": [
+      {
+        "max_abs": 0.6331787109375,
+        "name": "frame2_head.pre.dw.weight",
+        "numel": 504,
+        "zeroed_fraction": 0.051587301587301584,
+        "zeroed_values": 26
+      },
+      {
+        "max_abs": 0.83056640625,
+        "name": "frame2_head.pre.pw.weight",
+        "numel": 2912,
+        "zeroed_fraction": 0.23351648351648352,
+        "zeroed_values": 680
+      }
+    ],
+    "eligible_value_count": 3416,
+    "output_block_size": 32,
+    "output_bytes": 59288,
+    "output_sha256": "41f25a71a283f3dad562b565c0ccdf27ed1f4a490f9ac57fac7b7a7f56f543fd",
+    "prefix": "frame2_head.pre",
+    "source_block_size": 32,
+    "source_bytes": 59288,
+    "source_sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb",
+    "threshold_fraction_of_tensor_max_abs": 0.05,
+    "transform_family": "qzs3_same_block_fp4_threshold_zero",
+    "wire_format": "QZS3",
+    "zeroed_fraction_of_eligible": 0.2066744730679157,
+    "zeroed_value_count": 706
+  },
+  "runtime_contract": {
+    "byte_closed": true,
+    "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+    "pose_safety_preflight_required_before_dispatch": true,
+    "remote_gpu_dispatch_performed": false,
+    "renderer_only_transplant": true,
+    "runtime_unpack_summary": {
+      "members": [
+        {
+          "bytes": 59288,
+          "name": "renderer.bin",
+          "sha256": "41f25a71a283f3dad562b565c0ccdf27ed1f4a490f9ac57fac7b7a7f56f543fd"
+        },
+        {
+          "bytes": 223385,
+          "name": "masks.mkv",
+          "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        {
+          "bytes": 1140,
+          "name": "optimized_poses.qp1",
+          "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+        },
+        {
+          "bytes": 176,
+          "name": "seg_tile_actions.bin",
+          "sha256": "6551a4bee3a9741000dbd8e8c6de8c0ffeb6ca03b644c3ff8a47aa3078ae752b"
+        }
+      ],
+      "payload_bytes": 276246,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+      "schema": "renderer_payload_pr64_len_table_v1",
+      "source_archive_sha256": null
+    },
+    "runtime_unpack_verified": true,
+    "single_payload_member": true
+  },
+  "schema": "renderer_parity_shrink_search_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 276352,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_lag_eval_top67_p6_t4_20260503T0608Z/archive.zip",
+    "sha256": "d73f0957cf2d8da0526c1786613443331ccb913f5648131cfaaac5e6f7eae972",
+    "source_archive_packaging": "packed_renderer_payload",
+    "source_logical_member_names": [
+      "renderer.bin",
+      "masks.mkv",
+      "optimized_poses.qp1",
+      "seg_tile_actions.bin"
+    ],
+    "source_payload_header_payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+    "source_payload_header_schema": "renderer_payload_pr64_len_table_v1",
+    "source_payload_member": "p",
+    "source_payload_member_bytes": 276252,
+    "source_payload_member_sha256": "b025f984becf664893d77a6b2c34be07ad941bbd01de97f27271533c6646f452",
+    "source_zip_members": [
+      "p"
+    ]
+  },
+  "source_evidence": {
+    "bytes": 36586,
+    "exists": true,
+    "json_parseable": true,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_lag_eval_top67_p6_t4_20260503T0608Z/contest_auth_eval.json",
+    "sha256": "41583056146e935c38a2c4ab0477dd33e0db51089f49efeb40dd8100bd86d90c",
+    "summary": {
+      "archive_size_bytes": 276352,
+      "avg_posenet_dist": 0.0004962,
+      "avg_segnet_dist": 0.00061045,
+      "canonical_score": 0.3154979650614253,
+      "n_samples": 600,
+      "provenance_archive_sha256": "d73f0957cf2d8da0526c1786613443331ccb913f5648131cfaaac5e6f7eae972",
+      "provenance_archive_size_bytes": 276352,
+      "provenance_device": "cuda",
+      "provenance_gpu_model": "Tesla T4\nTesla T4\nTesla T4\nTesla T4",
+      "score_recomputed_from_components": 0.3154979650614253
+    }
+  },
+  "tool": "experiments/search_renderer_parity_shrink_candidate.py",
+  "transform_spec": "zero-fp4-prefix:frame2_head.pre:0.05"
+}

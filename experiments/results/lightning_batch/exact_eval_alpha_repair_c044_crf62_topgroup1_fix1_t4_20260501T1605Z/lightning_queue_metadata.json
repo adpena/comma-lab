@@ -1,0 +1,40 @@
+{
+  "adjudication": {
+    "allow_component_gate_forensic_success": true,
+    "baseline_archive_size_bytes": 609963,
+    "baseline_posenet_dist": 0.00357302,
+    "baseline_score": 0.9975385870574276,
+    "baseline_segnet_dist": 0.00402365,
+    "component_reference_label": "c044_owv3_0120_stack_t4_frontier",
+    "delta_key": "score_delta_vs_c044_owv3_0120_stack_t4_frontier",
+    "max_posenet_dist": null,
+    "max_posenet_relative": 1.25,
+    "max_sane_score": 50.0,
+    "max_segnet_dist": null,
+    "max_segnet_relative": 1.25,
+    "predicted_band_high": 10.0,
+    "predicted_band_low": 0.5,
+    "provenance_name": "adjudication_provenance.json",
+    "regression_threshold": 50.0,
+    "required_device": "cuda",
+    "required_samples": 600,
+    "result_copy_name": "contest_auth_eval.adjudicated.json"
+  },
+  "artifact_recorded_at_utc": "2026-05-01T16:13:53Z",
+  "expected_archive_sha256": "98766ecc68e10ed446ce9fe9987baef9c293c06f68569ba0a4aa01730cf74b96",
+  "expected_archive_size_bytes": 533251,
+  "job_name": "exact_eval_alpha_repair_c044_crf62_topgroup1_fix1_t4_20260501T1605Z",
+  "queue_metadata": {
+    "anchor": "c044_owv3_0120_stack",
+    "archive_manifest": "experiments/results/alpha_mask_repair_c044_crf62_topgroup1_lzma_20260501/alpha_mask_repair_archive_manifest.json",
+    "lane": "alpha_sparse_repair",
+    "mask_crf": "62",
+    "repair_policy": "top_residual_frame_groups_0001_of_0024",
+    "rerun_reason": "contest_auth_eval_amr1_allowlist_fix",
+    "source_manifest": ".omx/state/alpha_repair_amr1_allowlist_fix_20260501T1605Z_manifest.json"
+  },
+  "role": "exact_cuda_eval",
+  "schema_version": 1,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

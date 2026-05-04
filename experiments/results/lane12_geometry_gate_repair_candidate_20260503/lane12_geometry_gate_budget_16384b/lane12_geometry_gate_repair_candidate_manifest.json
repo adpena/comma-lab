@@ -1,0 +1,1149 @@
+{
+  "auth_eval_required": true,
+  "base_archive": {
+    "bytes": 296478,
+    "members": [
+      "optimized_poses.bin",
+      "renderer.bin",
+      "masks.nrv"
+    ],
+    "path": "/Users/adpena/Projects/pact/experiments/results/lane_12_nerv_20260430_codex_jsonfix40/archive_lane_12_nerv.zip",
+    "sha256": "864549cc648f0b3a023076c11812ccd0f10b1d013ed3fd6bb24d20bbcde85c97"
+  },
+  "cdo1_builder_report": {
+    "auth_eval_required": true,
+    "base_archive": {
+      "bytes": 296478,
+      "members": [
+        {
+          "compressed_size_bytes": 6622,
+          "crc32": "85a9453a",
+          "name": "optimized_poses.bin",
+          "sha256": "aacbcd572abe7936c1dd438243c56a1d06bb9bbe89e90ce3eff4a23f6477867a",
+          "size_bytes": 7200
+        },
+        {
+          "compressed_size_bytes": 267399,
+          "crc32": "1827a837",
+          "name": "renderer.bin",
+          "sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529",
+          "size_bytes": 296776
+        },
+        {
+          "compressed_size_bytes": 22127,
+          "crc32": "13bed9e0",
+          "name": "masks.nrv",
+          "sha256": "b3258dad7550f5e7a496f4834ed9990a3e9900a192c9045dca951e751412a4de",
+          "size_bytes": 23594
+        }
+      ],
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane_12_nerv_20260430_codex_jsonfix40/archive_lane_12_nerv.zip",
+      "runtime_member_contract": {
+        "base_archive_layout": "expanded_members",
+        "source_zip_inventory": [
+          {
+            "compressed_size_bytes": 6622,
+            "crc32": "85a9453a",
+            "name": "optimized_poses.bin",
+            "sha256": "aacbcd572abe7936c1dd438243c56a1d06bb9bbe89e90ce3eff4a23f6477867a",
+            "size_bytes": 7200
+          },
+          {
+            "compressed_size_bytes": 267399,
+            "crc32": "1827a837",
+            "name": "renderer.bin",
+            "sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529",
+            "size_bytes": 296776
+          },
+          {
+            "compressed_size_bytes": 22127,
+            "crc32": "13bed9e0",
+            "name": "masks.nrv",
+            "sha256": "b3258dad7550f5e7a496f4834ed9990a3e9900a192c9045dca951e751412a4de",
+            "size_bytes": 23594
+          }
+        ],
+        "zip_payload_members": []
+      },
+      "sha256": "864549cc648f0b3a023076c11812ccd0f10b1d013ed3fd6bb24d20bbcde85c97"
+    },
+    "cdo1_overlay": {
+      "archive_member": "masks.cdo1.xz",
+      "compressed_bytes": 5108,
+      "compressed_sha256": "66295089e474adb7f4ce97d2433f4673c952e2b1edbdabf765215df5e42fe26c",
+      "compressor": "lzma_xz",
+      "pair_index_basis": "video_frame_pair_index",
+      "payload_header": {
+        "base_mask_tensor_sha256": "af2a6e647dce7509329e7a6ea2bad439274a041364afe78c99c8118097ab44db",
+        "pair_index_basis": "video_frame_pair_index",
+        "reconstructed_mask_u8_sha256": "be81c1d6fa0cc5bd263376462ceaf76a5a323967bcaac495648e844b9597ac6b",
+        "run_count": 1955,
+        "schema": "c067_decoded_delta_overlay_payload_v1",
+        "selected_pair_indices": [
+          54,
+          70,
+          74,
+          75,
+          79,
+          84,
+          88,
+          97,
+          101,
+          106,
+          110,
+          129,
+          133,
+          152,
+          158,
+          159,
+          178,
+          358,
+          527,
+          567,
+          595,
+          596,
+          598,
+          599
+        ],
+        "selected_pixel_count": 20098,
+        "shape": [
+          1200,
+          384,
+          512
+        ]
+      },
+      "raw_bytes": 18678,
+      "raw_sha256": "fcc89f6a1779d4c31c0756ef7024f6b508b64602aca5255e2dfd992d9f572b7d",
+      "selected_pair_indices": [
+        54,
+        70,
+        74,
+        75,
+        79,
+        84,
+        88,
+        97,
+        101,
+        106,
+        110,
+        129,
+        133,
+        152,
+        158,
+        159,
+        178,
+        358,
+        527,
+        567,
+        595,
+        596,
+        598,
+        599
+      ],
+      "source": {
+        "pair_index_basis": "video_frame_pair_index",
+        "path": "/Users/adpena/Projects/pact/experiments/results/lane12_geometry_gate_repair_candidate_20260503/lane12_geometry_gate_budget_16384b/masks.cdo1",
+        "payload_bytes": 18678,
+        "payload_header": {
+          "base_mask_tensor_sha256": "af2a6e647dce7509329e7a6ea2bad439274a041364afe78c99c8118097ab44db",
+          "pair_index_basis": "video_frame_pair_index",
+          "reconstructed_mask_u8_sha256": "be81c1d6fa0cc5bd263376462ceaf76a5a323967bcaac495648e844b9597ac6b",
+          "run_count": 1955,
+          "schema": "c067_decoded_delta_overlay_payload_v1",
+          "selected_pair_indices": [
+            54,
+            70,
+            74,
+            75,
+            79,
+            84,
+            88,
+            97,
+            101,
+            106,
+            110,
+            129,
+            133,
+            152,
+            158,
+            159,
+            178,
+            358,
+            527,
+            567,
+            595,
+            596,
+            598,
+            599
+          ],
+          "selected_pixel_count": 20098,
+          "shape": [
+            1200,
+            384,
+            512
+          ]
+        },
+        "payload_sha256": "fcc89f6a1779d4c31c0756ef7024f6b508b64602aca5255e2dfd992d9f572b7d",
+        "selected_pair_indices": [
+          54,
+          70,
+          74,
+          75,
+          79,
+          84,
+          88,
+          97,
+          101,
+          106,
+          110,
+          129,
+          133,
+          152,
+          158,
+          159,
+          178,
+          358,
+          527,
+          567,
+          595,
+          596,
+          598,
+          599
+        ],
+        "source": "payload"
+      }
+    },
+    "output_archive": {
+      "bytes": 301693,
+      "delta_bytes_vs_base_archive": 5215,
+      "inventory": [
+        {
+          "compress_type": 8,
+          "compressed_size_bytes": 267399,
+          "crc32": "1827a837",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "renderer.bin",
+          "permissions_octal": "0o644",
+          "sha256": "08f12d722dd33f9061deee72f49d782035597f78cd65ed1463a241ab430a7529",
+          "size_bytes": 296776
+        },
+        {
+          "compress_type": 8,
+          "compressed_size_bytes": 22127,
+          "crc32": "13bed9e0",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "masks.nrv",
+          "permissions_octal": "0o644",
+          "sha256": "b3258dad7550f5e7a496f4834ed9990a3e9900a192c9045dca951e751412a4de",
+          "size_bytes": 23594
+        },
+        {
+          "compress_type": 8,
+          "compressed_size_bytes": 5113,
+          "crc32": "ef035ece",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "masks.cdo1.xz",
+          "permissions_octal": "0o644",
+          "sha256": "66295089e474adb7f4ce97d2433f4673c952e2b1edbdabf765215df5e42fe26c",
+          "size_bytes": 5108
+        },
+        {
+          "compress_type": 8,
+          "compressed_size_bytes": 6622,
+          "crc32": "85a9453a",
+          "date_time": [
+            1980,
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "name": "optimized_poses.bin",
+          "permissions_octal": "0o644",
+          "sha256": "aacbcd572abe7936c1dd438243c56a1d06bb9bbe89e90ce3eff4a23f6477867a",
+          "size_bytes": 7200
+        }
+      ],
+      "packaging": {
+        "packed_output": false
+      },
+      "path": "/Users/adpena/Projects/pact/experiments/results/lane12_geometry_gate_repair_candidate_20260503/lane12_geometry_gate_budget_16384b/archive.zip",
+      "sha256": "b4bc5a571952a595c8410f1ccb609ec0dacb511b4bae80cd1f448bc934503bc2"
+    },
+    "producer": "experiments/build_c067_decoded_delta_overlay_candidate.py",
+    "promotion_eligible": false,
+    "runtime_contract": {
+      "base_mask_sha_checked_by_cdo1_header": true,
+      "exact_score_path": "archive.zip -> inflate.sh -> upstream/evaluate.py",
+      "reconstructed_mask_sha_checked_by_cdo1_header": true
+    },
+    "schema": "c067_decoded_delta_overlay_candidate_v1",
+    "score_claim": false
+  },
+  "dispatch_allowed": false,
+  "dispatch_gate": {
+    "exact_cuda_auth_eval_still_required": true,
+    "gate": "local_decoded_mask_global_residual_disagreement",
+    "max_residual_disagreement_fraction": 0.001,
+    "passed": false
+  },
+  "exact_eval_claim": false,
+  "exact_score_path": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "geometry_metrics": {
+    "candidate_disagreement_pixels_before": 2902861,
+    "global_disagreement_after": 0.01221874237060547,
+    "global_disagreement_before": 0.012303928799099393,
+    "repaired_disagreement_pixels": 20098,
+    "residual_disagreement_pixels_after": 2882763,
+    "residual_frame_count": 1200,
+    "residual_pair_count": 600,
+    "selected_frame_count": 25,
+    "selected_frames": [
+      108,
+      141,
+      149,
+      150,
+      159,
+      168,
+      177,
+      194,
+      203,
+      212,
+      221,
+      258,
+      267,
+      304,
+      305,
+      317,
+      318,
+      357,
+      716,
+      1055,
+      1134,
+      1191,
+      1193,
+      1197,
+      1198
+    ],
+    "selected_pair_indices": [
+      54,
+      70,
+      74,
+      75,
+      79,
+      84,
+      88,
+      97,
+      101,
+      106,
+      110,
+      129,
+      133,
+      152,
+      158,
+      159,
+      178,
+      358,
+      527,
+      567,
+      595,
+      596,
+      598,
+      599
+    ],
+    "selected_repair_pixels": 20098,
+    "total_pixels": 235929600
+  },
+  "output_archive": {
+    "bytes": 301693,
+    "delta_bytes_vs_base": 5215,
+    "delta_rate_score_vs_base": 0.0034724544405321236,
+    "members": [
+      "renderer.bin",
+      "masks.nrv",
+      "masks.cdo1.xz",
+      "optimized_poses.bin"
+    ],
+    "path": "experiments/results/lane12_geometry_gate_repair_candidate_20260503/lane12_geometry_gate_budget_16384b/archive.zip",
+    "rate_score_cost": 0.20088498514428724,
+    "sha256": "b4bc5a571952a595c8410f1ccb609ec0dacb511b4bae80cd1f448bc934503bc2"
+  },
+  "overlay_payload": {
+    "bytes": 18678,
+    "compressor": "lzma_xz",
+    "header": {
+      "base_mask_tensor_sha256": "af2a6e647dce7509329e7a6ea2bad439274a041364afe78c99c8118097ab44db",
+      "pair_index_basis": "video_frame_pair_index",
+      "policy_id": "lane12_geometry_gate_budget_16384b",
+      "producer": "experiments/build_lane12_geometry_gate_repair_candidate.py",
+      "reconstructed_mask_u8_sha256": "be81c1d6fa0cc5bd263376462ceaf76a5a323967bcaac495648e844b9597ac6b",
+      "run_count": 1955,
+      "run_struct": "u16_frame_u16_y_u16_x0_u16_length_u8_value_le",
+      "schema": "c067_decoded_delta_overlay_payload_v1",
+      "score_claim": false,
+      "selected_atom_count": 29,
+      "selected_pair_indices": [
+        54,
+        70,
+        74,
+        75,
+        79,
+        84,
+        88,
+        97,
+        101,
+        106,
+        110,
+        129,
+        133,
+        152,
+        158,
+        159,
+        178,
+        358,
+        527,
+        567,
+        595,
+        596,
+        598,
+        599
+      ],
+      "selected_pixel_count": 20098,
+      "shape": [
+        1200,
+        384,
+        512
+      ],
+      "source_plan": {
+        "path": "/Users/adpena/Projects/pact/experiments/results/lane12_geometry_gate_repair_atoms_20260503/lane12_geometry_gate_repair_atoms.json",
+        "schema": "lane12_geometry_gate_repair_atom_plan_v1",
+        "sha256": "2e0d465603f4c035d14a7a7d2e1776f95a611f5faf883d4b4b4051fb2f600a00"
+      },
+      "target_mask_tensor_sha256": "f1973d42b59933f787ad2b7dfcfc21e507fec7c3d6f8ca03cbcada91e26f37d1"
+    },
+    "path": "experiments/results/lane12_geometry_gate_repair_candidate_20260503/lane12_geometry_gate_budget_16384b/masks.cdo1",
+    "sha256": "fcc89f6a1779d4c31c0756ef7024f6b508b64602aca5255e2dfd992d9f572b7d"
+  },
+  "plan": {
+    "path": "/Users/adpena/Projects/pact/experiments/results/lane12_geometry_gate_repair_atoms_20260503/lane12_geometry_gate_repair_atoms.json",
+    "policy": {
+      "budget_estimated_charged_bytes": 16384,
+      "builder_status": "not_byte_closed_no_archive_emitted",
+      "dispatch_allowed": false,
+      "estimated_charged_bytes": 16265,
+      "estimated_rate_score_cost": 0.010830195872532117,
+      "exact_eval_claim": false,
+      "planning_signal_total": 118044.75,
+      "policy_id": "lane12_geometry_gate_budget_16384b",
+      "policy_kind": "planning_atom_selection",
+      "promotion_eligible": false,
+      "score_claim": false,
+      "selected_atom_count": 29,
+      "selected_atom_ids": [
+        "lane12_region_0001_f0267_c0028",
+        "lane12_region_0003_f1198_c0087",
+        "lane12_region_0011_f0305_c0145",
+        "lane12_region_0004_f1134_c0131",
+        "lane12_region_0008_f1197_c0092",
+        "lane12_critical_box_0007_f0159_c1",
+        "lane12_region_0005_f1193_c0082",
+        "lane12_critical_box_0020_f0150_c1",
+        "lane12_region_0018_f0258_c0111",
+        "lane12_critical_box_0002_f0305_c1",
+        "lane12_region_0010_f0221_c0171",
+        "lane12_critical_box_0023_f0357_c1",
+        "lane12_region_0014_f0203_c0177",
+        "lane12_critical_box_0005_f0168_c1",
+        "lane12_critical_box_0031_f0149_c1",
+        "lane12_critical_box_0010_f0177_c1",
+        "lane12_region_0002_f0716_c0040",
+        "lane12_critical_box_0001_f0221_c1",
+        "lane12_critical_box_0011_f0305_c1",
+        "lane12_critical_box_0028_f0141_c1",
+        "lane12_region_0020_f0304_c0122",
+        "lane12_region_0016_f1191_c0113",
+        "lane12_region_0017_f1055_c0134",
+        "lane12_critical_box_0008_f0318_c1",
+        "lane12_critical_box_0009_f0267_c1",
+        "lane12_critical_box_0016_f0108_c1",
+        "lane12_critical_box_0003_f0194_c1",
+        "lane12_critical_box_0024_f0212_c1",
+        "lane12_critical_box_0032_f0317_c1"
+      ]
+    },
+    "policy_id": "lane12_geometry_gate_budget_16384b",
+    "selected_atom_ids": [
+      "lane12_region_0001_f0267_c0028",
+      "lane12_region_0003_f1198_c0087",
+      "lane12_region_0011_f0305_c0145",
+      "lane12_region_0004_f1134_c0131",
+      "lane12_region_0008_f1197_c0092",
+      "lane12_critical_box_0007_f0159_c1",
+      "lane12_region_0005_f1193_c0082",
+      "lane12_critical_box_0020_f0150_c1",
+      "lane12_region_0018_f0258_c0111",
+      "lane12_critical_box_0002_f0305_c1",
+      "lane12_region_0010_f0221_c0171",
+      "lane12_critical_box_0023_f0357_c1",
+      "lane12_region_0014_f0203_c0177",
+      "lane12_critical_box_0005_f0168_c1",
+      "lane12_critical_box_0031_f0149_c1",
+      "lane12_critical_box_0010_f0177_c1",
+      "lane12_region_0002_f0716_c0040",
+      "lane12_critical_box_0001_f0221_c1",
+      "lane12_critical_box_0011_f0305_c1",
+      "lane12_critical_box_0028_f0141_c1",
+      "lane12_region_0020_f0304_c0122",
+      "lane12_region_0016_f1191_c0113",
+      "lane12_region_0017_f1055_c0134",
+      "lane12_critical_box_0008_f0318_c1",
+      "lane12_critical_box_0009_f0267_c1",
+      "lane12_critical_box_0016_f0108_c1",
+      "lane12_critical_box_0003_f0194_c1",
+      "lane12_critical_box_0024_f0212_c1",
+      "lane12_critical_box_0032_f0317_c1"
+    ],
+    "sha256": "2e0d465603f4c035d14a7a7d2e1776f95a611f5faf883d4b4b4051fb2f600a00"
+  },
+  "producer": "experiments/build_lane12_geometry_gate_repair_candidate.py",
+  "promotion_eligible": false,
+  "schema": "lane12_geometry_gate_repair_candidate_v1",
+  "score_claim": false,
+  "selection": {
+    "run_count": 1955,
+    "selected_atoms": [
+      {
+        "atom_id": "lane12_region_0001_f0267_c0028",
+        "atom_kind": "residual_region_patch",
+        "cumulative_selected_pixels": 6835,
+        "identity": {
+          "box_xyxy": [
+            0,
+            173,
+            131,
+            257
+          ],
+          "frame": 267,
+          "priority_bucket": 0,
+          "priority_label": "lower_field_lane_marking",
+          "rank": 1,
+          "residual_region_id": "f0267_c0028",
+          "suggested_repair": "lane_lower_field_residual"
+        },
+        "new_selected_pixels": 6835,
+        "overlap_pixels": 0
+      },
+      {
+        "atom_id": "lane12_region_0003_f1198_c0087",
+        "atom_kind": "residual_region_patch",
+        "cumulative_selected_pixels": 7513,
+        "identity": {
+          "box_xyxy": [
+            338,
+            230,
+            443,
+            288
+          ],
+          "frame": 1198,
+          "priority_bucket": 0,
+          "priority_label": "lower_field_lane_marking",
+          "rank": 3,
+          "residual_region_id": "f1198_c0087",
+          "suggested_repair": "lane_lower_field_residual"
+        },
+        "new_selected_pixels": 678,
+        "overlap_pixels": 0
+      },
+      {
+        "atom_id": "lane12_region_0011_f0305_c0145",
+        "atom_kind": "residual_region_patch",
+        "cumulative_selected_pixels": 8126,
+        "identity": {
+          "box_xyxy": [
+            356,
+            232,
+            496,
+            289
+          ],
+          "frame": 305,
+          "priority_bucket": 0,
+          "priority_label": "lower_field_lane_marking",
+          "rank": 11,
+          "residual_region_id": "f0305_c0145",
+          "suggested_repair": "lane_lower_field_residual"
+        },
+        "new_selected_pixels": 613,
+        "overlap_pixels": 0
+      },
+      {
+        "atom_id": "lane12_region_0004_f1134_c0131",
+        "atom_kind": "residual_region_patch",
+        "cumulative_selected_pixels": 8749,
+        "identity": {
+          "box_xyxy": [
+            359,
+            236,
+            452,
+            287
+          ],
+          "frame": 1134,
+          "priority_bucket": 0,
+          "priority_label": "lower_field_lane_marking",
+          "rank": 4,
+          "residual_region_id": "f1134_c0131",
+          "suggested_repair": "lane_lower_field_residual"
+        },
+        "new_selected_pixels": 623,
+        "overlap_pixels": 0
+      },
+      {
+        "atom_id": "lane12_region_0008_f1197_c0092",
+        "atom_kind": "residual_region_patch",
+        "cumulative_selected_pixels": 9337,
+        "identity": {
+          "box_xyxy": [
+            356,
+            241,
+            433,
+            288
+          ],
+          "frame": 1197,
+          "priority_bucket": 0,
+          "priority_label": "lower_field_lane_marking",
+          "rank": 8,
+          "residual_region_id": "f1197_c0092",
+          "suggested_repair": "lane_lower_field_residual"
+        },
+        "new_selected_pixels": 588,
+        "overlap_pixels": 0
+      },
+      {
+        "atom_id": "lane12_critical_box_0007_f0159_c1",
+        "atom_kind": "critical_component_box_patch",
+        "cumulative_selected_pixels": 9769,
+        "identity": {
+          "box_xyxy": [
+            400,
+            235,
+            512,
+            285
+          ],
+          "class_id": 1,
+          "class_name": "lane_marking",
+          "failure_type": "missing_component",
+          "frame": 159,
+          "pose_sensitive": true,
+          "rank": 7
+        },
+        "new_selected_pixels": 432,
+        "overlap_pixels": 0
+      },
+      {
+        "atom_id": "lane12_region_0005_f1193_c0082",
+        "atom_kind": "residual_region_patch",
+        "cumulative_selected_pixels": 10378,
+        "identity": {
+          "box_xyxy": [
+            337,
+            229,
+            441,
+            288
+          ],
+          "frame": 1193,
+          "priority_bucket": 0,
+          "priority_label": "lower_field_lane_marking",
+          "rank": 5,
+          "residual_region_id": "f1193_c0082",
+          "suggested_repair": "lane_lower_field_residual"
+        },
+        "new_selected_pixels": 609,
+        "overlap_pixels": 0
+      },
+      {
+        "atom_id": "lane12_critical_box_0020_f0150_c1",
+        "atom_kind": "critical_component_box_patch",
+        "cumulative_selected_pixels": 10786,
+        "identity": {
+          "box_xyxy": [
+            251,
+            234,
+            263,
+            282
+          ],
+          "class_id": 1,
+          "class_name": "lane_marking",
+          "failure_type": "missing_component",
+          "frame": 150,
+          "pose_sensitive": true,
+          "rank": 20
+        },
+        "new_selected_pixels": 408,
+        "overlap_pixels": 0
+      },
+      {
+        "atom_id": "lane12_region_0018_f0258_c0111",
+        "atom_kind": "residual_region_patch",
+        "cumulative_selected_pixels": 11271,
+        "identity": {
+          "box_xyxy": [
+            336,
+            232,
+            408,
+            287
+          ],
+          "frame": 258,
+          "priority_bucket": 0,
+          "priority_label": "lower_field_lane_marking",
+          "rank": 18,
+          "residual_region_id": "f0258_c0111",
+          "suggested_repair": "lane_lower_field_residual"
+        },
+        "new_selected_pixels": 485,
+        "overlap_pixels": 0
+      },
+      {
+        "atom_id": "lane12_critical_box_0002_f0305_c1",
+        "atom_kind": "critical_component_box_patch",
+        "cumulative_selected_pixels": 11271,
+        "identity": {
+          "box_xyxy": [
+            356,
+            232,
+            441,
+            288
+          ],
+          "class_id": 1,
+          "class_name": "lane_marking",
+          "failure_type": "missing_component",
+          "frame": 305,
+          "pose_sensitive": true,
+          "rank": 2
+        },
+        "new_selected_pixels": 0,
+        "overlap_pixels": 0
+      },
+      {
+        "atom_id": "lane12_region_0010_f0221_c0171",
+        "atom_kind": "residual_region_patch",
+        "cumulative_selected_pixels": 11797,
+        "identity": {
+          "box_xyxy": [
+            330,
+            226,
+            428,
+            288
+          ],
+          "frame": 221,
+          "priority_bucket": 0,
+          "priority_label": "lower_field_lane_marking",
+          "rank": 10,
+          "residual_region_id": "f0221_c0171",
+          "suggested_repair": "lane_lower_field_residual"
+        },
+        "new_selected_pixels": 526,
+        "overlap_pixels": 0
+      },
+      {
+        "atom_id": "lane12_critical_box_0023_f0357_c1",
+        "atom_kind": "critical_component_box_patch",
+        "cumulative_selected_pixels": 12245,
+        "identity": {
+          "box_xyxy": [
+            350,
+            239,
+            426,
+            287
+          ],
+          "class_id": 1,
+          "class_name": "lane_marking",
+          "failure_type": "missing_component",
+          "frame": 357,
+          "pose_sensitive": true,
+          "rank": 23
+        },
+        "new_selected_pixels": 448,
+        "overlap_pixels": 0
+      },
+      {
+        "atom_id": "lane12_region_0014_f0203_c0177",
+        "atom_kind": "residual_region_patch",
+        "cumulative_selected_pixels": 12784,
+        "identity": {
+          "box_xyxy": [
+            344,
+            227,
+            453,
+            287
+          ],
+          "frame": 203,
+          "priority_bucket": 0,
+          "priority_label": "lower_field_lane_marking",
+          "rank": 14,
+          "residual_region_id": "f0203_c0177",
+          "suggested_repair": "lane_lower_field_residual"
+        },
+        "new_selected_pixels": 539,
+        "overlap_pixels": 0
+      },
+      {
+        "atom_id": "lane12_critical_box_0005_f0168_c1",
+        "atom_kind": "critical_component_box_patch",
+        "cumulative_selected_pixels": 13231,
+        "identity": {
+          "box_xyxy": [
+            378,
+            234,
+            488,
+            286
+          ],
+          "class_id": 1,
+          "class_name": "lane_marking",
+          "failure_type": "missing_component",
+          "frame": 168,
+          "pose_sensitive": true,
+          "rank": 5
+        },
+        "new_selected_pixels": 447,
+        "overlap_pixels": 0
+      },
+      {
+        "atom_id": "lane12_critical_box_0031_f0149_c1",
+        "atom_kind": "critical_component_box_patch",
+        "cumulative_selected_pixels": 13636,
+        "identity": {
+          "box_xyxy": [
+            384,
+            223,
+            512,
+            271
+          ],
+          "class_id": 1,
+          "class_name": "lane_marking",
+          "failure_type": "missing_component",
+          "frame": 149,
+          "pose_sensitive": true,
+          "rank": 31
+        },
+        "new_selected_pixels": 405,
+        "overlap_pixels": 0
+      },
+      {
+        "atom_id": "lane12_critical_box_0010_f0177_c1",
+        "atom_kind": "critical_component_box_patch",
+        "cumulative_selected_pixels": 14074,
+        "identity": {
+          "box_xyxy": [
+            366,
+            235,
+            462,
+            287
+          ],
+          "class_id": 1,
+          "class_name": "lane_marking",
+          "failure_type": "missing_component",
+          "frame": 177,
+          "pose_sensitive": true,
+          "rank": 10
+        },
+        "new_selected_pixels": 438,
+        "overlap_pixels": 0
+      },
+      {
+        "atom_id": "lane12_region_0002_f0716_c0040",
+        "atom_kind": "residual_region_patch",
+        "cumulative_selected_pixels": 15061,
+        "identity": {
+          "box_xyxy": [
+            342,
+            190,
+            512,
+            233
+          ],
+          "frame": 716,
+          "priority_bucket": 0,
+          "priority_label": "lower_field_lane_marking",
+          "rank": 2,
+          "residual_region_id": "f0716_c0040",
+          "suggested_repair": "lane_lower_field_residual"
+        },
+        "new_selected_pixels": 987,
+        "overlap_pixels": 0
+      },
+      {
+        "atom_id": "lane12_critical_box_0001_f0221_c1",
+        "atom_kind": "critical_component_box_patch",
+        "cumulative_selected_pixels": 15061,
+        "identity": {
+          "box_xyxy": [
+            330,
+            226,
+            424,
+            287
+          ],
+          "class_id": 1,
+          "class_name": "lane_marking",
+          "failure_type": "missing_component",
+          "frame": 221,
+          "pose_sensitive": true,
+          "rank": 1
+        },
+        "new_selected_pixels": 0,
+        "overlap_pixels": 0
+      },
+      {
+        "atom_id": "lane12_critical_box_0011_f0305_c1",
+        "atom_kind": "critical_component_box_patch",
+        "cumulative_selected_pixels": 15493,
+        "identity": {
+          "box_xyxy": [
+            128,
+            234,
+            192,
+            289
+          ],
+          "class_id": 1,
+          "class_name": "lane_marking",
+          "failure_type": "missing_component",
+          "frame": 305,
+          "pose_sensitive": true,
+          "rank": 11
+        },
+        "new_selected_pixels": 432,
+        "overlap_pixels": 0
+      },
+      {
+        "atom_id": "lane12_critical_box_0028_f0141_c1",
+        "atom_kind": "critical_component_box_patch",
+        "cumulative_selected_pixels": 15886,
+        "identity": {
+          "box_xyxy": [
+            275,
+            229,
+            304,
+            282
+          ],
+          "class_id": 1,
+          "class_name": "lane_marking",
+          "failure_type": "missing_component",
+          "frame": 141,
+          "pose_sensitive": true,
+          "rank": 28
+        },
+        "new_selected_pixels": 393,
+        "overlap_pixels": 0
+      },
+      {
+        "atom_id": "lane12_region_0020_f0304_c0122",
+        "atom_kind": "residual_region_patch",
+        "cumulative_selected_pixels": 16448,
+        "identity": {
+          "box_xyxy": [
+            341,
+            224,
+            443,
+            287
+          ],
+          "frame": 304,
+          "priority_bucket": 0,
+          "priority_label": "lower_field_lane_marking",
+          "rank": 20,
+          "residual_region_id": "f0304_c0122",
+          "suggested_repair": "lane_lower_field_residual"
+        },
+        "new_selected_pixels": 562,
+        "overlap_pixels": 0
+      },
+      {
+        "atom_id": "lane12_region_0016_f1191_c0113",
+        "atom_kind": "residual_region_patch",
+        "cumulative_selected_pixels": 16941,
+        "identity": {
+          "box_xyxy": [
+            358,
+            238,
+            432,
+            287
+          ],
+          "frame": 1191,
+          "priority_bucket": 0,
+          "priority_label": "lower_field_lane_marking",
+          "rank": 16,
+          "residual_region_id": "f1191_c0113",
+          "suggested_repair": "lane_lower_field_residual"
+        },
+        "new_selected_pixels": 493,
+        "overlap_pixels": 0
+      },
+      {
+        "atom_id": "lane12_region_0017_f1055_c0134",
+        "atom_kind": "residual_region_patch",
+        "cumulative_selected_pixels": 17435,
+        "identity": {
+          "box_xyxy": [
+            337,
+            231,
+            420,
+            289
+          ],
+          "frame": 1055,
+          "priority_bucket": 0,
+          "priority_label": "lower_field_lane_marking",
+          "rank": 17,
+          "residual_region_id": "f1055_c0134",
+          "suggested_repair": "lane_lower_field_residual"
+        },
+        "new_selected_pixels": 494,
+        "overlap_pixels": 0
+      },
+      {
+        "atom_id": "lane12_critical_box_0008_f0318_c1",
+        "atom_kind": "critical_component_box_patch",
+        "cumulative_selected_pixels": 17913,
+        "identity": {
+          "box_xyxy": [
+            126,
+            231,
+            192,
+            290
+          ],
+          "class_id": 1,
+          "class_name": "lane_marking",
+          "failure_type": "missing_component",
+          "frame": 318,
+          "pose_sensitive": true,
+          "rank": 8
+        },
+        "new_selected_pixels": 478,
+        "overlap_pixels": 0
+      },
+      {
+        "atom_id": "lane12_critical_box_0009_f0267_c1",
+        "atom_kind": "critical_component_box_patch",
+        "cumulative_selected_pixels": 18345,
+        "identity": {
+          "box_xyxy": [
+            102,
+            232,
+            178,
+            288
+          ],
+          "class_id": 1,
+          "class_name": "lane_marking",
+          "failure_type": "missing_component",
+          "frame": 267,
+          "pose_sensitive": true,
+          "rank": 9
+        },
+        "new_selected_pixels": 432,
+        "overlap_pixels": 0
+      },
+      {
+        "atom_id": "lane12_critical_box_0016_f0108_c1",
+        "atom_kind": "critical_component_box_patch",
+        "cumulative_selected_pixels": 18821,
+        "identity": {
+          "box_xyxy": [
+            336,
+            232,
+            415,
+            288
+          ],
+          "class_id": 1,
+          "class_name": "lane_marking",
+          "failure_type": "missing_component",
+          "frame": 108,
+          "pose_sensitive": true,
+          "rank": 16
+        },
+        "new_selected_pixels": 476,
+        "overlap_pixels": 0
+      },
+      {
+        "atom_id": "lane12_critical_box_0003_f0194_c1",
+        "atom_kind": "critical_component_box_patch",
+        "cumulative_selected_pixels": 19309,
+        "identity": {
+          "box_xyxy": [
+            349,
+            227,
+            445,
+            287
+          ],
+          "class_id": 1,
+          "class_name": "lane_marking",
+          "failure_type": "missing_component",
+          "frame": 194,
+          "pose_sensitive": true,
+          "rank": 3
+        },
+        "new_selected_pixels": 488,
+        "overlap_pixels": 0
+      },
+      {
+        "atom_id": "lane12_critical_box_0024_f0212_c1",
+        "atom_kind": "critical_component_box_patch",
+        "cumulative_selected_pixels": 19708,
+        "identity": {
+          "box_xyxy": [
+            336,
+            225,
+            428,
+            282
+          ],
+          "class_id": 1,
+          "class_name": "lane_marking",
+          "failure_type": "missing_component",
+          "frame": 212,
+          "pose_sensitive": true,
+          "rank": 24
+        },
+        "new_selected_pixels": 399,
+        "overlap_pixels": 0
+      },
+      {
+        "atom_id": "lane12_critical_box_0032_f0317_c1",
+        "atom_kind": "critical_component_box_patch",
+        "cumulative_selected_pixels": 20098,
+        "identity": {
+          "box_xyxy": [
+            345,
+            226,
+            438,
+            282
+          ],
+          "class_id": 1,
+          "class_name": "lane_marking",
+          "failure_type": "missing_component",
+          "frame": 317,
+          "pose_sensitive": true,
+          "rank": 32
+        },
+        "new_selected_pixels": 390,
+        "overlap_pixels": 0
+      }
+    ],
+    "selected_pixel_count": 20098
+  }
+}

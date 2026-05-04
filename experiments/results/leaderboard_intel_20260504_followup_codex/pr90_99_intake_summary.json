@@ -1,0 +1,943 @@
+[
+  {
+    "body_excerpt": "# submission name:\nhnerv_muon_finetuned_from_pr95\n\n# upload zipped `archive.zip`\nhttps://github.com/EthanYangTW/comma_video_compression_challenge/releases/download/v1-hnerv-finetuned/archive.zip\n\n# report.txt\n```\n=== Evaluation config ===\n  batch_size: 16\n  device: cuda\n  num_threads: 2\n  prefetch_queue_depth: 4\n  report: submissions/pr95_qat_metric_eval/report.txt\n  seed: 1234\n  submission_dir: submissions/pr95_qat_metric_eval\n  uncompressed_dir: /root/comma_video_compression_challenge/videos\n  video_names_file: /root/comma_video_compression_challenge/public_test_video_names.txt\n=== Evaluation results over 600 samples ===\n  Average PoseNet Distortion: 0.00003489\n  Average SegNet Distortion: 0.00058795\n  Submission file size: 178,392 bytes\n  Original uncompressed size: 37,545,489 bytes\n  Compression Rate: 0.00475136\n  Final score: 100*segnet_dist + \u221a(10*posenet_dist) + 25*rate = 0.20\n```\n\n# does your submission require gpu for evaluation (inflation)?\nyes\n\n# did you include the compression script? and want it to be merged?\nyes\n\n# additional comments\nQAT fine-tuned from #95's pretrained HNeRV weights. Score is ~0.1963, an improvement from #95's 0.1988.",
+    "checks": [
+      {
+        "conclusion": "failure",
+        "html_url": "https://github.com/commaai/comma_video_compression_challenge/actions/runs/25311616166/job/74200552626",
+        "name": "Cleanup artifacts",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "html_url": "https://github.com/commaai/comma_video_compression_challenge/actions/runs/25311616166/job/74200504852",
+        "name": "Upload results",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "html_url": "https://github.com/commaai/comma_video_compression_challenge/actions/runs/25311616166/job/74199634125",
+        "name": "Agent",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "html_url": "https://github.com/commaai/comma_video_compression_challenge/actions/runs/25311616166/job/74199610783",
+        "name": "Prepare",
+        "status": "completed"
+      },
+      {
+        "conclusion": "success",
+        "html_url": "https://github.com/commaai/comma_video_compression_challenge/actions/runs/25311614804/job/74199605606",
+        "name": "welcome",
+        "status": "completed"
+      }
+    ],
+    "files": [
+      {
+        "additions": 21,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon_finetuned_from_pr95/README.md",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/1be9eff48c696ca04ae0613346fd383d20637325/submissions%2Fhnerv_muon_finetuned_from_pr95%2FREADME.md",
+        "status": "added"
+      },
+      {
+        "additions": 71,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon_finetuned_from_pr95/inflate.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/1be9eff48c696ca04ae0613346fd383d20637325/submissions%2Fhnerv_muon_finetuned_from_pr95%2Finflate.py",
+        "status": "added"
+      },
+      {
+        "additions": 28,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon_finetuned_from_pr95/inflate.sh",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/1be9eff48c696ca04ae0613346fd383d20637325/submissions%2Fhnerv_muon_finetuned_from_pr95%2Finflate.sh",
+        "status": "added"
+      },
+      {
+        "additions": 220,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon_finetuned_from_pr95/src/codec.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/1be9eff48c696ca04ae0613346fd383d20637325/submissions%2Fhnerv_muon_finetuned_from_pr95%2Fsrc%2Fcodec.py",
+        "status": "added"
+      },
+      {
+        "additions": 159,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon_finetuned_from_pr95/src/data.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/1be9eff48c696ca04ae0613346fd383d20637325/submissions%2Fhnerv_muon_finetuned_from_pr95%2Fsrc%2Fdata.py",
+        "status": "added"
+      },
+      {
+        "additions": 161,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon_finetuned_from_pr95/src/losses.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/1be9eff48c696ca04ae0613346fd383d20637325/submissions%2Fhnerv_muon_finetuned_from_pr95%2Fsrc%2Flosses.py",
+        "status": "added"
+      },
+      {
+        "additions": 54,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon_finetuned_from_pr95/src/model.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/1be9eff48c696ca04ae0613346fd383d20637325/submissions%2Fhnerv_muon_finetuned_from_pr95%2Fsrc%2Fmodel.py",
+        "status": "added"
+      },
+      {
+        "additions": 100,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon_finetuned_from_pr95/src/optim.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/1be9eff48c696ca04ae0613346fd383d20637325/submissions%2Fhnerv_muon_finetuned_from_pr95%2Fsrc%2Foptim.py",
+        "status": "added"
+      },
+      {
+        "additions": 131,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon_finetuned_from_pr95/src/score.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/1be9eff48c696ca04ae0613346fd383d20637325/submissions%2Fhnerv_muon_finetuned_from_pr95%2Fsrc%2Fscore.py",
+        "status": "added"
+      },
+      {
+        "additions": 71,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon_finetuned_from_pr95/src/stages/codec_stage.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/1be9eff48c696ca04ae0613346fd383d20637325/submissions%2Fhnerv_muon_finetuned_from_pr95%2Fsrc%2Fstages%2Fcodec_stage.py",
+        "status": "added"
+      },
+      {
+        "additions": 274,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon_finetuned_from_pr95/src/stages/common.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/1be9eff48c696ca04ae0613346fd383d20637325/submissions%2Fhnerv_muon_finetuned_from_pr95%2Fsrc%2Fstages%2Fcommon.py",
+        "status": "added"
+      },
+      {
+        "additions": 40,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon_finetuned_from_pr95/src/stages/stage1_v328_ce.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/1be9eff48c696ca04ae0613346fd383d20637325/submissions%2Fhnerv_muon_finetuned_from_pr95%2Fsrc%2Fstages%2Fstage1_v328_ce.py",
+        "status": "added"
+      },
+      {
+        "additions": 37,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon_finetuned_from_pr95/src/stages/stage2_v331_softplus.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/1be9eff48c696ca04ae0613346fd383d20637325/submissions%2Fhnerv_muon_finetuned_from_pr95%2Fsrc%2Fstages%2Fstage2_v331_softplus.py",
+        "status": "added"
+      },
+      {
+        "additions": 36,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon_finetuned_from_pr95/src/stages/stage3_v332_smooth.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/1be9eff48c696ca04ae0613346fd383d20637325/submissions%2Fhnerv_muon_finetuned_from_pr95%2Fsrc%2Fstages%2Fstage3_v332_smooth.py",
+        "status": "added"
+      },
+      {
+        "additions": 38,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon_finetuned_from_pr95/src/stages/stage4_v332_qat.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/1be9eff48c696ca04ae0613346fd383d20637325/submissions%2Fhnerv_muon_finetuned_from_pr95%2Fsrc%2Fstages%2Fstage4_v332_qat.py",
+        "status": "added"
+      },
+      {
+        "additions": 40,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon_finetuned_from_pr95/src/stages/stage5_c1a_l7.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/1be9eff48c696ca04ae0613346fd383d20637325/submissions%2Fhnerv_muon_finetuned_from_pr95%2Fsrc%2Fstages%2Fstage5_c1a_l7.py",
+        "status": "added"
+      },
+      {
+        "additions": 39,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon_finetuned_from_pr95/src/stages/stage6_lambda_sweep.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/1be9eff48c696ca04ae0613346fd383d20637325/submissions%2Fhnerv_muon_finetuned_from_pr95%2Fsrc%2Fstages%2Fstage6_lambda_sweep.py",
+        "status": "added"
+      },
+      {
+        "additions": 39,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon_finetuned_from_pr95/src/stages/stage7_sigma_sweep.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/1be9eff48c696ca04ae0613346fd383d20637325/submissions%2Fhnerv_muon_finetuned_from_pr95%2Fsrc%2Fstages%2Fstage7_sigma_sweep.py",
+        "status": "added"
+      },
+      {
+        "additions": 48,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon_finetuned_from_pr95/src/stages/stage8_muon_finetune.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/1be9eff48c696ca04ae0613346fd383d20637325/submissions%2Fhnerv_muon_finetuned_from_pr95%2Fsrc%2Fstages%2Fstage8_muon_finetune.py",
+        "status": "added"
+      },
+      {
+        "additions": 78,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon_finetuned_from_pr95/src/train.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/1be9eff48c696ca04ae0613346fd383d20637325/submissions%2Fhnerv_muon_finetuned_from_pr95%2Fsrc%2Ftrain.py",
+        "status": "added"
+      }
+    ],
+    "head_ref": "submission/hnerv-muon-finetuned",
+    "head_sha": "1be9eff48c696ca04ae0613346fd383d20637325",
+    "html_url": "https://github.com/commaai/comma_video_compression_challenge/pull/98",
+    "number": 98,
+    "statuses": [],
+    "title": "hnerv_muon_finetuned_from_pr95 (0.1963)",
+    "updated_at": "2026-05-04T09:39:26Z",
+    "user": "EthanYangTW"
+  },
+  {
+    "body_excerpt": "# submission name:\nhnerv_muon_lc\n\n# upload zipped `archive.zip`\nhttps://github.com/BradyMeighan/comma_video_compression_challenge/releases/download/hnerv-muon-lc-archive/archive.zip\n\n# report.txt\n```\n=== Evaluation config ===\n  batch_size: 16\n  device: cpu\n  num_threads: 2\n  prefetch_queue_depth: 4\n  report: submissions/hnerv_muon_lc/report.txt\n  seed: 1234\n  submission_dir: submissions/hnerv_muon_lc\n  uncompressed_dir: ./videos\n  video_names_file: ./public_test_video_names.txt\n=== Evaluation results over 600 samples ===\n  Average PoseNet Distortion: 0.00003349\n  Average SegNet Distortion: 0.00059494\n  Submission file size: 178,546 bytes\n  Original uncompressed size: 37,545,489 bytes\n  Compression Rate: 0.00475546\n  Final score: 100*segnet_dist + \u221a(10*posenet_dist) + 25*rate = 0.20\n```\nExact CI score: `0.19667`.\n\n# does your submission require gpu for evaluation (inflation)?\nno\n\n# did you include the compression script? and want it to be merged?\nno\n\n# additional comments\n\nThis is a re-pack of @AaronLeslie138's `hnerv_muon` archive (PR #95) with two layered improvements on top of his trained HNeRV decoder + latents:\n\n1. **Schema-driven INT8 repack** (~480 B saved on the decoder section). His decoder ships full layer-name strings + per-tensor shape arrays + fp32 scales inline (~1 KB metadata before brotli). We move the schema (28 tensor names + shapes) into our Python decoder and ship only fp16 scales (56 B) + a single concatenated INT8 codes blob, brotli'd. Bit-exact dequant.\n\n2. **Latent-correction sidecar** (615 B brotli'd). Per-pair single-dim perturbation of his 28-d HNeRV latents. We grid-search (dim \u2208 0..27) \u00d7 (\u03b4 \u2208 {\u00b10.02, \u00b10.05, \u00b10.10}) and pick the (dim, \u03b4) that minimizes the joint per-pair loss `100\u00b7seg_dist + \u03b1\u00b7pose_dist`, where \u03b1 = \u221a10 / (2\u00b7\u221amean_pose_baseline) \u2248 270 balances marginal score impact at his baseline. 598/600 pairs get a non-trivial correction, encoded as `(u8 dim, i8 quant_\u03b4_\u00d7100)` and brotli'd. Both seg and pose distortion drop (seg 0.000612 \u2192 0.000595, pose 0.0000349 \u2192 0.0000334).\n\nNotes:\n- All weights, the architecture, the 8-stage curriculum, the C1a regularizer and the Muon training are @AaronLeslie138's. Our contribution is purely byte-level (schema repack) plus inference-time latent correction (sidecar). Inflate path bit-exact dequantizes his INT8 weights, then perturbs latents per the sidecar before running his decoder unchanged.\n- We tried F1 warps (the technique from our `vibe_coder_final_boss` submission, PR #97) \u2014 they did NOT transfer to HNeRV. His model is positionally aligned with GT; the seg distortion comes from blur, not translation, so warps can't fix it (verified on the worst 30 pairs: best warp was always (0,0)).\n- We tried lower-bit quant (INT7/INT6) \u2014 broke his QAT (INT7 \u2192 score 0.18, INT6 \u2192 0.29). His training is razor-thin at INT8.\n- Pixel-level tweaks (brightness/gamma/blur+unsharp) on top of the latent corrections didn't pay back their sidecar bytes either.\n- Reproduced via the same eval.yml workflow on a fork before submitting: https://github.com/BradyMeighan/comma_video_compression_challenge/actions/runs/25311463434 (15m on ubuntu-latest CPU).\n\nSource: https://github.com/BradyMeighan/comma_video_compression_challenge/tree/submission/hnerv_muon_lc\n",
+    "checks": [
+      {
+        "conclusion": "success",
+        "html_url": "https://github.com/commaai/comma_video_compression_challenge/actions/runs/25311788009/job/74200155929",
+        "name": "welcome",
+        "status": "completed"
+      }
+    ],
+    "files": [
+      {
+        "additions": 3,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon_lc/archive.zip",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/6badd2506c1ce07751236fc299d0b14f2702ac29/submissions%2Fhnerv_muon_lc%2Farchive.zip",
+        "status": "added"
+      },
+      {
+        "additions": 54,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon_lc/hnerv_model.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/6badd2506c1ce07751236fc299d0b14f2702ac29/submissions%2Fhnerv_muon_lc%2Fhnerv_model.py",
+        "status": "added"
+      },
+      {
+        "additions": 127,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon_lc/inflate.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/6badd2506c1ce07751236fc299d0b14f2702ac29/submissions%2Fhnerv_muon_lc%2Finflate.py",
+        "status": "added"
+      },
+      {
+        "additions": 28,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon_lc/inflate.sh",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/6badd2506c1ce07751236fc299d0b14f2702ac29/submissions%2Fhnerv_muon_lc%2Finflate.sh",
+        "status": "added"
+      },
+      {
+        "additions": 38,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon_lc/schema.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/6badd2506c1ce07751236fc299d0b14f2702ac29/submissions%2Fhnerv_muon_lc%2Fschema.py",
+        "status": "added"
+      },
+      {
+        "additions": 49,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon_lc/sidecar.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/6badd2506c1ce07751236fc299d0b14f2702ac29/submissions%2Fhnerv_muon_lc%2Fsidecar.py",
+        "status": "added"
+      }
+    ],
+    "head_ref": "submission/hnerv_muon_lc",
+    "head_sha": "6badd2506c1ce07751236fc299d0b14f2702ac29",
+    "html_url": "https://github.com/commaai/comma_video_compression_challenge/pull/99",
+    "number": 99,
+    "statuses": [],
+    "title": "hnerv_muon_lc submission (0.20)",
+    "updated_at": "2026-05-04T09:36:00Z",
+    "user": "BradyMeighan"
+  },
+  {
+    "body_excerpt": "# submission name:\r\nvibe_coder_final_boss\r\n\r\n# upload zipped `archive.zip`\r\nhttps://github.com/BradyMeighan/comma_video_compression_challenge/releases/download/vcfb-archive/archive.zip\r\n\r\n# report.txt\r\n```\r\n=== Evaluation config ===\r\n  batch_size: 16\r\n  device: cpu\r\n  num_threads: 2\r\n  prefetch_queue_depth: 4\r\n  report: submissions/vibe_coder_final_boss/report.txt\r\n  seed: 1234\r\n  submission_dir: submissions/vibe_coder_final_boss\r\n  uncompressed_dir: /home/runner/work/comma_video_compression_challenge/comma_video_compression_challenge/videos\r\n  video_names_file: /home/runner/work/comma_video_compression_challenge/comma_video_compression_challenge/public_test_video_names.txt\r\n=== Evaluation results over 600 samples ===\r\n  Average PoseNet Distortion: 0.00049454\r\n  Average SegNet Distortion: 0.00027178\r\n  Submission file size: 197,160 bytes\r\n  Original uncompressed size: 37,545,489 bytes\r\n  Compression Rate: 0.00525123\r\n  Final score: 100*segnet_dist + sqrt(10*posenet_dist) + 25*rate = 0.23\r\n```\r\n\r\n# does your submission require gpu for evaluation (inflation)?\r\nno\r\n\r\n# did you include the compression script? and want it to be merged?\r\nno\r\n\r\n# additional comments\r\nHad a ton of fun. Lots of tokens used in the making of this.\r\n\r\nFull interactive writeup: https://comma-writeup.pages.dev/\r\nSmaller Markdown writeup: https://github.com/BradyMeighan/vibe-coder-final-boss/blob/main/WRITEUP.md\r\nSource: https://github.com/BradyMeighan/vibe-coder-final-boss\r\n\r\nReproduced via the same `eval.yml` workflow on my fork before submitting: https://github.com/BradyMeighan/comma_video_compression_challenge/actions/runs/25306126756 (16m17s on ubuntu-latest, well under the 30-min budget).\r\n",
+    "checks": [
+      {
+        "conclusion": "success",
+        "html_url": "https://github.com/commaai/comma_video_compression_challenge/actions/runs/25310802228/job/74196962706",
+        "name": "welcome",
+        "status": "completed"
+      }
+    ],
+    "files": [
+      {
+        "additions": 150,
+        "deletions": 0,
+        "filename": "submissions/vibe_coder_final_boss/flat_fp4.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/5dfad2f5db4bb8999800e322f8eb5c5591ef7017/submissions%2Fvibe_coder_final_boss%2Fflat_fp4.py",
+        "status": "added"
+      },
+      {
+        "additions": 230,
+        "deletions": 0,
+        "filename": "submissions/vibe_coder_final_boss/inflate.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/5dfad2f5db4bb8999800e322f8eb5c5591ef7017/submissions%2Fvibe_coder_final_boss%2Finflate.py",
+        "status": "added"
+      },
+      {
+        "additions": 16,
+        "deletions": 0,
+        "filename": "submissions/vibe_coder_final_boss/inflate.sh",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/5dfad2f5db4bb8999800e322f8eb5c5591ef7017/submissions%2Fvibe_coder_final_boss%2Finflate.sh",
+        "status": "added"
+      },
+      {
+        "additions": 215,
+        "deletions": 0,
+        "filename": "submissions/vibe_coder_final_boss/model.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/5dfad2f5db4bb8999800e322f8eb5c5591ef7017/submissions%2Fvibe_coder_final_boss%2Fmodel.py",
+        "status": "added"
+      },
+      {
+        "additions": 1462,
+        "deletions": 0,
+        "filename": "submissions/vibe_coder_final_boss/range_mask_codec.cpp",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/5dfad2f5db4bb8999800e322f8eb5c5591ef7017/submissions%2Fvibe_coder_final_boss%2Frange_mask_codec.cpp",
+        "status": "added"
+      },
+      {
+        "additions": 105,
+        "deletions": 0,
+        "filename": "submissions/vibe_coder_final_boss/schema_h3.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/5dfad2f5db4bb8999800e322f8eb5c5591ef7017/submissions%2Fvibe_coder_final_boss%2Fschema_h3.py",
+        "status": "added"
+      },
+      {
+        "additions": 161,
+        "deletions": 0,
+        "filename": "submissions/vibe_coder_final_boss/sidecar.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/5dfad2f5db4bb8999800e322f8eb5c5591ef7017/submissions%2Fvibe_coder_final_boss%2Fsidecar.py",
+        "status": "added"
+      }
+    ],
+    "head_ref": "submission/vibe_coder_final_boss",
+    "head_sha": "5dfad2f5db4bb8999800e322f8eb5c5591ef7017",
+    "html_url": "https://github.com/commaai/comma_video_compression_challenge/pull/97",
+    "number": 97,
+    "statuses": [],
+    "title": "vibe_coder_final_boss (0.23)",
+    "updated_at": "2026-05-04T09:12:12Z",
+    "user": "BradyMeighan"
+  },
+  {
+    "body_excerpt": "# submission name:\r\nrem2_HNeRV\r\n\r\n# upload zipped `archive.zip`\r\n[archive.zip](https://github.com/user-attachments/files/27339615/archive.zip)\r\n\r\n# report.txt\r\n```\r\n=== Evaluation config ===\r\n  batch_size: 16\r\n  device: cpu\r\n  num_threads: 2\r\n  prefetch_queue_depth: 4\r\n  report: submissions/rem2_HNeRV/report.txt\r\n  seed: 1234\r\n  submission_dir: submissions/rem2_HNeRV\r\n  uncompressed_dir: \r\n  video_names_file: \r\n=== Evaluation results over 600 samples ===\r\n  Average PoseNet Distortion: 0.00003675\r\n  Average SegNet Distortion: 0.00062231\r\n  Submission file size: 186,631 bytes\r\n  Original uncompressed size: 37,545,489 bytes\r\n  Compression Rate: 0.00497080\r\n  Final score: 100*segnet_dist + \u221a(10*posenet_dist) + 25*rate = 0.21\r\n```\r\n\r\n# does your submission require gpu for evaluation (inflation)?\r\nno\r\n\r\n# did you include the compression script? and want it to be merged?\r\nno\r\n\r\n# additional comments",
+    "checks": [
+      {
+        "conclusion": "success",
+        "html_url": "https://github.com/commaai/comma_video_compression_challenge/actions/runs/25309084531/job/74191542780",
+        "name": "welcome",
+        "status": "completed"
+      }
+    ],
+    "files": [
+      {
+        "additions": 183,
+        "deletions": 0,
+        "filename": "submissions/rem2_HNeRV/inflate.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/c692688419e8960d62201903c908f56b6c16c13d/submissions%2Frem2_HNeRV%2Finflate.py",
+        "status": "added"
+      },
+      {
+        "additions": 4,
+        "deletions": 0,
+        "filename": "submissions/rem2_HNeRV/inflate.sh",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/c692688419e8960d62201903c908f56b6c16c13d/submissions%2Frem2_HNeRV%2Finflate.sh",
+        "status": "added"
+      }
+    ],
+    "head_ref": "add-rem2_HNeRV",
+    "head_sha": "c692688419e8960d62201903c908f56b6c16c13d",
+    "html_url": "https://github.com/commaai/comma_video_compression_challenge/pull/96",
+    "number": 96,
+    "statuses": [],
+    "title": "rem2_HNeRV submission (0.21)",
+    "updated_at": "2026-05-04T08:32:12Z",
+    "user": "rem2"
+  },
+  {
+    "body_excerpt": "# submission name:\r\nhnerv_muon\r\n\r\n# upload zipped `archive.zip`\r\n[archive.zip](https://github.com/user-attachments/files/27332334/archive.zip)\r\n\r\n# report.txt\r\n```\r\n=== Evaluation results over 600 samples ===\r\n  Average PoseNet Distortion: 0.00003494\r\n  Average SegNet Distortion: 0.00061212\r\n  Submission file size: 178,417 bytes\r\n  Original uncompressed size: 37,545,489 bytes\r\n  Compression Rate: 0.00475202\r\n  Final score: 100*segnet_dist + \u221a(10*posenet_dist) + 25*rate = 0.20\r\n```\r\n\r\n# does your submission require gpu for evaluation (inflation)?\r\nno (CPU works; faster on GPU)\r\n\r\n# did you include the compression script? and want it to be merged?\r\nyes. `compress.sh` and `src/` are included and the pipeline is reproducible from random init\r\n\r\n# additional comments\r\n229K-parameter HNeRV decoder + 28-d-per-frame-pair latents (~600 pairs), INT8-quantized and brotli-compressed to 178 KB total. The decoder is trained via an 8-stage curriculum: cross-entropy seg \u2192 \u03c4-Softplus margin \u2192 smooth disagreement \u2192 +QAT \u2192 +L7 hard-pixel weighting + C1a regularizer \u2192 \u03bb-sweep \u2192 \u03c3-sweep \u2192 +Muon optimizer (with WD=5e-4 per Chen-Li-Liu's spectral-norm KKT theory). The C1a regularizer shapes the weight distribution toward the integer grid, which collapses the entropy floor for downstream brotli compression. Verified end-to-end via this repo's eval workflow on `ubuntu-latest` CPU; final score 0.1987\r\n\r\nFull writeup: https://aaronleslie.dev/blog/comma-compression\r\n",
+    "checks": [
+      {
+        "conclusion": "success",
+        "html_url": "https://github.com/commaai/comma_video_compression_challenge/actions/runs/25307287582/job/74185986215",
+        "name": "welcome",
+        "status": "completed"
+      }
+    ],
+    "files": [
+      {
+        "additions": 17,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon/README.md",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/9bdce26f2a4f996828c4e3fa2b87c454a0e8fcc9/submissions%2Fhnerv_muon%2FREADME.md",
+        "status": "added"
+      },
+      {
+        "additions": 30,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon/compress.sh",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/9bdce26f2a4f996828c4e3fa2b87c454a0e8fcc9/submissions%2Fhnerv_muon%2Fcompress.sh",
+        "status": "added"
+      },
+      {
+        "additions": 66,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon/inflate.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/9bdce26f2a4f996828c4e3fa2b87c454a0e8fcc9/submissions%2Fhnerv_muon%2Finflate.py",
+        "status": "added"
+      },
+      {
+        "additions": 28,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon/inflate.sh",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/9bdce26f2a4f996828c4e3fa2b87c454a0e8fcc9/submissions%2Fhnerv_muon%2Finflate.sh",
+        "status": "added"
+      },
+      {
+        "additions": 180,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon/src/codec.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/9bdce26f2a4f996828c4e3fa2b87c454a0e8fcc9/submissions%2Fhnerv_muon%2Fsrc%2Fcodec.py",
+        "status": "added"
+      },
+      {
+        "additions": 159,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon/src/data.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/9bdce26f2a4f996828c4e3fa2b87c454a0e8fcc9/submissions%2Fhnerv_muon%2Fsrc%2Fdata.py",
+        "status": "added"
+      },
+      {
+        "additions": 161,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon/src/losses.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/9bdce26f2a4f996828c4e3fa2b87c454a0e8fcc9/submissions%2Fhnerv_muon%2Fsrc%2Flosses.py",
+        "status": "added"
+      },
+      {
+        "additions": 54,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon/src/model.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/9bdce26f2a4f996828c4e3fa2b87c454a0e8fcc9/submissions%2Fhnerv_muon%2Fsrc%2Fmodel.py",
+        "status": "added"
+      },
+      {
+        "additions": 100,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon/src/optim.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/9bdce26f2a4f996828c4e3fa2b87c454a0e8fcc9/submissions%2Fhnerv_muon%2Fsrc%2Foptim.py",
+        "status": "added"
+      },
+      {
+        "additions": 131,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon/src/score.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/9bdce26f2a4f996828c4e3fa2b87c454a0e8fcc9/submissions%2Fhnerv_muon%2Fsrc%2Fscore.py",
+        "status": "added"
+      },
+      {
+        "additions": 71,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon/src/stages/codec_stage.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/9bdce26f2a4f996828c4e3fa2b87c454a0e8fcc9/submissions%2Fhnerv_muon%2Fsrc%2Fstages%2Fcodec_stage.py",
+        "status": "added"
+      },
+      {
+        "additions": 274,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon/src/stages/common.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/9bdce26f2a4f996828c4e3fa2b87c454a0e8fcc9/submissions%2Fhnerv_muon%2Fsrc%2Fstages%2Fcommon.py",
+        "status": "added"
+      },
+      {
+        "additions": 40,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon/src/stages/stage1_v328_ce.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/9bdce26f2a4f996828c4e3fa2b87c454a0e8fcc9/submissions%2Fhnerv_muon%2Fsrc%2Fstages%2Fstage1_v328_ce.py",
+        "status": "added"
+      },
+      {
+        "additions": 37,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon/src/stages/stage2_v331_softplus.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/9bdce26f2a4f996828c4e3fa2b87c454a0e8fcc9/submissions%2Fhnerv_muon%2Fsrc%2Fstages%2Fstage2_v331_softplus.py",
+        "status": "added"
+      },
+      {
+        "additions": 36,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon/src/stages/stage3_v332_smooth.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/9bdce26f2a4f996828c4e3fa2b87c454a0e8fcc9/submissions%2Fhnerv_muon%2Fsrc%2Fstages%2Fstage3_v332_smooth.py",
+        "status": "added"
+      },
+      {
+        "additions": 38,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon/src/stages/stage4_v332_qat.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/9bdce26f2a4f996828c4e3fa2b87c454a0e8fcc9/submissions%2Fhnerv_muon%2Fsrc%2Fstages%2Fstage4_v332_qat.py",
+        "status": "added"
+      },
+      {
+        "additions": 40,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon/src/stages/stage5_c1a_l7.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/9bdce26f2a4f996828c4e3fa2b87c454a0e8fcc9/submissions%2Fhnerv_muon%2Fsrc%2Fstages%2Fstage5_c1a_l7.py",
+        "status": "added"
+      },
+      {
+        "additions": 39,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon/src/stages/stage6_lambda_sweep.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/9bdce26f2a4f996828c4e3fa2b87c454a0e8fcc9/submissions%2Fhnerv_muon%2Fsrc%2Fstages%2Fstage6_lambda_sweep.py",
+        "status": "added"
+      },
+      {
+        "additions": 39,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon/src/stages/stage7_sigma_sweep.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/9bdce26f2a4f996828c4e3fa2b87c454a0e8fcc9/submissions%2Fhnerv_muon%2Fsrc%2Fstages%2Fstage7_sigma_sweep.py",
+        "status": "added"
+      },
+      {
+        "additions": 48,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon/src/stages/stage8_muon_finetune.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/9bdce26f2a4f996828c4e3fa2b87c454a0e8fcc9/submissions%2Fhnerv_muon%2Fsrc%2Fstages%2Fstage8_muon_finetune.py",
+        "status": "added"
+      },
+      {
+        "additions": 78,
+        "deletions": 0,
+        "filename": "submissions/hnerv_muon/src/train.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/9bdce26f2a4f996828c4e3fa2b87c454a0e8fcc9/submissions%2Fhnerv_muon%2Fsrc%2Ftrain.py",
+        "status": "added"
+      }
+    ],
+    "head_ref": "add-hnerv-muon",
+    "head_sha": "9bdce26f2a4f996828c4e3fa2b87c454a0e8fcc9",
+    "html_url": "https://github.com/commaai/comma_video_compression_challenge/pull/95",
+    "number": 95,
+    "statuses": [],
+    "title": "hnerv_muon submission (0.20)",
+    "updated_at": "2026-05-04T08:00:16Z",
+    "user": "AaronLeslie138"
+  },
+  {
+    "body_excerpt": "# submission name\r\n\r\noptimization_qpose_josema\r\n\r\n# archive.zip\r\n\r\nIncluded in this PR:\r\n\r\n`submissions/optimization_qpose/archive.zip`\r\n\r\n# report.txt\r\n\r\n```text\r\n=== Evaluation config ===\r\n  batch_size: 16\r\n  device: mps\r\n  num_threads: 2\r\n  prefetch_queue_depth: 4\r\n  report: submissions/optimization_qpose/report.txt\r\n  seed: 1234\r\n  submission_dir: submissions/optimization_qpose\r\n  uncompressed_dir: /Users/josemedina/comma_video_compression_challenge/videos\r\n  video_names_file: /Users/josemedina/comma_video_compression_challenge/public_test_video_names.txt\r\n=== Evaluation results over 600 samples ===\r\n  Average PoseNet Distortion: 0.00061985\r\n  Average SegNet Distortion: 0.00071020\r\n  Submission file size: 277,087 bytes\r\n  Original uncompressed size: 37,545,489 bytes\r\n  Compression Rate: 0.00738003\r\n  Final score: 100*segnet_dist + \u221a(10*posenet_dist) + 25*rate = 0.33\r\n\r\n```\r\n\r\n# does your submission require gpu for evaluation?\r\n\r\nyes\r\n\r\n# compression script included?\r\n\r\nno\r\n\r\n# notes\r\n\r\nqpose/tile-action based variant. Evaluated locally on Mac MPS.",
+    "checks": [
+      {
+        "conclusion": "success",
+        "html_url": "https://github.com/commaai/comma_video_compression_challenge/actions/runs/25306018120/job/74182050767",
+        "name": "welcome",
+        "status": "completed"
+      }
+    ],
+    "files": [
+      {
+        "additions": 1546,
+        "deletions": 0,
+        "filename": "submissions/hpac_coder_hybrid/inflate.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/ae765553e9dc4bb12a93f4150a41f73ca3d9af16/submissions%2Fhpac_coder_hybrid%2Finflate.py",
+        "status": "added"
+      },
+      {
+        "additions": 12,
+        "deletions": 0,
+        "filename": "submissions/hpac_coder_hybrid/inflate.sh",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/ae765553e9dc4bb12a93f4150a41f73ca3d9af16/submissions%2Fhpac_coder_hybrid%2Finflate.sh",
+        "status": "added"
+      },
+      {
+        "additions": 444,
+        "deletions": 0,
+        "filename": "submissions/hpac_coder_hybrid/pr86_hpac.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/ae765553e9dc4bb12a93f4150a41f73ca3d9af16/submissions%2Fhpac_coder_hybrid%2Fpr86_hpac.py",
+        "status": "added"
+      },
+      {
+        "additions": 1375,
+        "deletions": 0,
+        "filename": "submissions/hpac_coder_hybrid/range_mask_codec.cpp",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/ae765553e9dc4bb12a93f4150a41f73ca3d9af16/submissions%2Fhpac_coder_hybrid%2Frange_mask_codec.cpp",
+        "status": "added"
+      },
+      {
+        "additions": 3,
+        "deletions": 0,
+        "filename": "submissions/optimization_qpose/archive.zip",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/ae765553e9dc4bb12a93f4150a41f73ca3d9af16/submissions%2Foptimization_qpose%2Farchive.zip",
+        "status": "added"
+      },
+      {
+        "additions": 1016,
+        "deletions": 0,
+        "filename": "submissions/optimization_qpose/inflate.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/ae765553e9dc4bb12a93f4150a41f73ca3d9af16/submissions%2Foptimization_qpose%2Finflate.py",
+        "status": "added"
+      },
+      {
+        "additions": 12,
+        "deletions": 0,
+        "filename": "submissions/optimization_qpose/inflate.sh",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/ae765553e9dc4bb12a93f4150a41f73ca3d9af16/submissions%2Foptimization_qpose%2Finflate.sh",
+        "status": "added"
+      },
+      {
+        "additions": 17,
+        "deletions": 0,
+        "filename": "submissions/optimization_qpose/report.txt",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/ae765553e9dc4bb12a93f4150a41f73ca3d9af16/submissions%2Foptimization_qpose%2Freport.txt",
+        "status": "added"
+      }
+    ],
+    "head_ref": "submission/optimization_qpose_josema",
+    "head_sha": "ae765553e9dc4bb12a93f4150a41f73ca3d9af16",
+    "html_url": "https://github.com/commaai/comma_video_compression_challenge/pull/94",
+    "number": 94,
+    "statuses": [],
+    "title": "optimization_qpose_josema",
+    "updated_at": "2026-05-04T07:17:11Z",
+    "user": "Josemedinan"
+  },
+  {
+    "body_excerpt": "# submission name:\r\nqzs3_range_joint_r258\r\n\r\n# upload zipped `archive.zip`\r\nhttps://github.com/nick-neely/comma_video_compression_challenge/releases/download/qzs3-range-joint-r258/archive.zip\r\n\r\nSHA256: `f0dedeb7ad3c019ab3f4e2dea317f3192408e47a573897adb208030709d01490`\r\n\r\n# report.txt\r\n```\r\n=== Evaluation config ===\r\n  batch_size: 16\r\n  device: cuda\r\n  num_threads: 2\r\n  prefetch_queue_depth: 4\r\n  report: .runs/pr85/pr85_side_search/submission/report.txt\r\n  seed: 1234\r\n  submission_dir: .runs/pr85/pr85_side_search/submission\r\n  uncompressed_dir: /home/neely/dev/comma_video_compression_challenge/videos\r\n  video_names_file: /home/neely/dev/comma_video_compression_challenge/public_test_video_names.txt\r\n=== Evaluation results over 600 samples ===\r\n  Average PoseNet Distortion: 0.00018963\r\n  Average SegNet Distortion: 0.00057675\r\n  Submission file size: 236,516 bytes\r\n  Original uncompressed size: 37,545,489 bytes\r\n  Compression Rate: 0.00629945\r\n  Final score: 100*segnet_dist + \u221a(10*posenet_dist) + 25*rate = 0.26\r\n```\r\n\r\n# does your submission require gpu for evaluation (inflation)?\r\nyes\r\n\r\n# did you include the compression script? and want it to be merged?\r\nno\r\n\r\n# additional comments\r\nRange-coded semantic masks plus a compact joint-frame renderer and small correction stream. Influenced by the adaptive range-mask / joint-frame work in PR #85.\r\n",
+    "checks": [
+      {
+        "conclusion": "success",
+        "html_url": "https://github.com/commaai/comma_video_compression_challenge/actions/runs/25304301628/job/74176949643",
+        "name": "welcome",
+        "status": "completed"
+      }
+    ],
+    "files": [
+      {
+        "additions": 1939,
+        "deletions": 0,
+        "filename": "submissions/qzs3_range_joint_r258/inflate.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/95c711e8ec7a55e6cb066a0b4e20090391ccd2c2/submissions%2Fqzs3_range_joint_r258%2Finflate.py",
+        "status": "added"
+      },
+      {
+        "additions": 25,
+        "deletions": 0,
+        "filename": "submissions/qzs3_range_joint_r258/inflate.sh",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/95c711e8ec7a55e6cb066a0b4e20090391ccd2c2/submissions%2Fqzs3_range_joint_r258%2Finflate.sh",
+        "status": "added"
+      },
+      {
+        "additions": 1318,
+        "deletions": 0,
+        "filename": "submissions/qzs3_range_joint_r258/range_mask_codec.cpp",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/95c711e8ec7a55e6cb066a0b4e20090391ccd2c2/submissions%2Fqzs3_range_joint_r258%2Frange_mask_codec.cpp",
+        "status": "added"
+      }
+    ],
+    "head_ref": "submission/qzs3-range-joint-r258",
+    "head_sha": "95c711e8ec7a55e6cb066a0b4e20090391ccd2c2",
+    "html_url": "https://github.com/commaai/comma_video_compression_challenge/pull/92",
+    "number": 92,
+    "statuses": [],
+    "title": "qzs3_range_joint_r258 (0.26)",
+    "updated_at": "2026-05-04T06:24:44Z",
+    "user": "nick-neely"
+  },
+  {
+    "body_excerpt": "# submission name:\r\nflatpup\r\n\r\n# upload zipped `archive.zip`\r\n[archive.zip](https://github.com/user-attachments/files/27333625/archive.zip)\r\n\r\n\r\n# report.txt\r\n\r\n=== Evaluation config ===\r\n  batch_size: 16\r\n  device: cuda\r\n  num_threads: 2\r\n  prefetch_queue_depth: 4\r\n  report: submissions/flatpup/report.txt\r\n  seed: 1234\r\n  submission_dir: submissions/flatpup\r\n  uncompressed_dir: /home/danlu/proj/comma_video_compression_challenge/videos\r\n  video_names_file: /home/danlu/proj/comma_video_compression_challenge/public_test_video_names.txt\r\n=== Evaluation results over 600 samples ===\r\n  Average PoseNet Distortion: 0.00043391\r\n  Average SegNet Distortion: 0.00065235\r\n  Submission file size: 284,396 bytes\r\n  Original uncompressed size: 38,070,576 bytes\r\n  Compression Rate: 0.00747023\r\n  Final score: 100*segnet_dist + \u221a(10*posenet_dist) + 25*rate = 0.32\r\n\r\n\r\n# does your submission require gpu for evaluation (inflation)?\r\nyes\r\n\r\n# did you include the compression script? and want it to be merged?\r\nno\r\n\r\n# additional comments\r\n\r\na quantizr-derived submission.\r\n\r\nFinal promoted score: `0.317848`\r\n\r\nPackaging verification: the same `archive.zip` SHA256\r\n`67494f08f4637d5c21b182b4a9e7c65adf93e4b7f3d6ec078b88d00741e655c5`\r\nrescored from this directory at `0.317862` in a later DALI/NVDEC run. The small\r\ndifference was confined to PoseNet jitter; the archive bytes and SegNet term\r\nmatched the promoted experiment.\r\n\r\nComponent breakdown:\r\n\r\n- SegNet distortion: `0.00065235` -> `0.065235`\r\n- PoseNet distortion: `0.00043372` -> `0.065858`\r\n- Archive size: `284,396` bytes -> `0.186756`\r\n\r\nThis package is based on the best CRF50 reproduction, not on the later\r\nhigher-CRF follow-ups.\r\n\r\nThe submission format stays intentionally small:\r\n\r\n- `archive.zip` contains compact stored entries `m`, `w`, and `p`.\r\n- `inflate.py` only supports the compact promoted generator architecture.\r\n- `inflate.sh` is a thin evaluator entry point.\r\n- `compress.py` is a deterministic archive packer for already-trained payloads.\r\n\r\nMain changes versus the historical quantizr baseline:\r\n\r\n- Reproduced the old fp32/live-target training path with unseeded model\r\n  initialization and fixed loader seed `123`.\r\n- Added early lowpass-luma reconstruction on stable classes `0,2,4` with a\r\n  weight of `0.2`, faded over the first `200` epochs.\r\n- Added a tiny early PoseNet warmup (`0.001`, ramped over `80` epochs).\r\n- Kept the compact payload stack: `libaom-av1 --cpu-used 0` masks, `QZMB1`\r\n  compact model export, and delta-varint pose payloads.\r\n\r\nExperiments tried but not shipped:\r\n\r\n- Higher CRF masks reduced bytes but crossed the SegNet distortion knee. The\r\n  best full-stage CRF51 follow-up scored `0.319933`; CRF56 scored `0.331996`.\r\n  PoseNet was repairable, but the SegNet penalty outweighed the mask savings.\r\n- Skipping the anchor-boost stage at CRF50 improved PoseNet slightly but hurt\r\n  SegNet enough to score `0.319387`, worse than the promoted package.\r\n- Larger or more expressive model variants, including mask repair features,\r\n  one-hot/edge mask features, residual adapters, affine heads, and fiducial or\r\n  texture-style PoseNet hints, did not beat the compact default architecture.\r\n  Most either increased bytes, destabilized PoseNet, or failed to improve the\r\n  decoded-mask SegNet term.\r\n- AV1-only mask studies and class-permutation probes were useful diagnostics,\r\n  but they did not produce a promoted payload.\r\n- Seeded, AMP, teacher-cache, and transfer variants helped expose reproducibility\r\n  traps, but the historical-quality result required the old fp32/live-target\r\n  training path with unseeded model initialization.",
+    "checks": [
+      {
+        "conclusion": "success",
+        "html_url": "https://github.com/commaai/comma_video_compression_challenge/actions/runs/25304304055/job/74176956498",
+        "name": "welcome",
+        "status": "completed"
+      }
+    ],
+    "files": [
+      {
+        "additions": 56,
+        "deletions": 0,
+        "filename": "submissions/flatpup/README.md",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/887cccaccb376629829982660a1cf1ed06945bfc/submissions%2Fflatpup%2FREADME.md",
+        "status": "added"
+      },
+      {
+        "additions": 467,
+        "deletions": 0,
+        "filename": "submissions/flatpup/inflate.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/887cccaccb376629829982660a1cf1ed06945bfc/submissions%2Fflatpup%2Finflate.py",
+        "status": "added"
+      },
+      {
+        "additions": 5,
+        "deletions": 0,
+        "filename": "submissions/flatpup/inflate.sh",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/887cccaccb376629829982660a1cf1ed06945bfc/submissions%2Fflatpup%2Finflate.sh",
+        "status": "added"
+      }
+    ],
+    "head_ref": "flatpup",
+    "head_sha": "887cccaccb376629829982660a1cf1ed06945bfc",
+    "html_url": "https://github.com/commaai/comma_video_compression_challenge/pull/93",
+    "number": 93,
+    "statuses": [],
+    "title": "flatpup",
+    "updated_at": "2026-05-04T06:23:24Z",
+    "user": "dllu"
+  },
+  {
+    "body_excerpt": "# submission name:\r\nhpac_coder_hybrid\r\n\r\n# upload zipped `archive.zip`\r\n[archive.zip](https://github.com/user-attachments/files/27329777/archive.zip)\r\n\r\n\r\n# report.txt\r\n```\r\n=== Evaluation config ===\r\n  batch_size: 16\r\n  device: cuda\r\n  num_threads: 2\r\n  prefetch_queue_depth: 4\r\n  report: /root/comma_video_compression_challenge/submissions/hpac_coder_hybrid/report.txt\r\n  seed: 1234\r\n  submission_dir: /root/comma_video_compression_challenge/submissions/hpac_coder_hybrid\r\n  uncompressed_dir: /root/comma_video_compression_challenge/videos\r\n  video_names_file: /root/comma_video_compression_challenge/public_test_video_names.txt\r\n=== Evaluation results over 600 samples ===\r\n  Average PoseNet Distortion: 0.00018940\r\n  Average SegNet Distortion: 0.00057185\r\n  Submission file size: 222,404 bytes\r\n  Original uncompressed size: 37,545,489 bytes\r\n  Compression Rate: 0.00592359\r\n  Final score: 100*segnet_dist + \u221a(10*posenet_dist) + 25*rate = 0.25\r\n\r\n```\r\n\r\n# does your submission require gpu for evaluation (inflation)?\r\nyes\r\n\r\n# did you include the compression script? and want it to be merged?\r\nno\r\n\r\n# additional comments\r\nborrows #86 hpac mask compressor and compresses same masks from #85 coupled with other optimizations. Falls back to old pr when compressor fails. Credit to @jas0xf \r\n\r\nExact score: `0.24879480490416128`",
+    "checks": [
+      {
+        "conclusion": "success",
+        "html_url": "https://github.com/commaai/comma_video_compression_challenge/actions/runs/25301436737/job/74168960740",
+        "name": "welcome",
+        "status": "completed"
+      }
+    ],
+    "files": [
+      {
+        "additions": 1546,
+        "deletions": 0,
+        "filename": "submissions/hpac_coder_hybrid/inflate.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/77f958d24e55980d95e01e3e9767b5a94320ed43/submissions%2Fhpac_coder_hybrid%2Finflate.py",
+        "status": "added"
+      },
+      {
+        "additions": 12,
+        "deletions": 0,
+        "filename": "submissions/hpac_coder_hybrid/inflate.sh",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/77f958d24e55980d95e01e3e9767b5a94320ed43/submissions%2Fhpac_coder_hybrid%2Finflate.sh",
+        "status": "added"
+      },
+      {
+        "additions": 444,
+        "deletions": 0,
+        "filename": "submissions/hpac_coder_hybrid/pr86_hpac.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/77f958d24e55980d95e01e3e9767b5a94320ed43/submissions%2Fhpac_coder_hybrid%2Fpr86_hpac.py",
+        "status": "added"
+      },
+      {
+        "additions": 1375,
+        "deletions": 0,
+        "filename": "submissions/hpac_coder_hybrid/range_mask_codec.cpp",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/77f958d24e55980d95e01e3e9767b5a94320ed43/submissions%2Fhpac_coder_hybrid%2Frange_mask_codec.cpp",
+        "status": "added"
+      }
+    ],
+    "head_ref": "hpac-coder-hybrid",
+    "head_sha": "77f958d24e55980d95e01e3e9767b5a94320ed43",
+    "html_url": "https://github.com/commaai/comma_video_compression_challenge/pull/91",
+    "number": 91,
+    "statuses": [],
+    "title": "Hpac coder hybrid",
+    "updated_at": "2026-05-04T04:44:01Z",
+    "user": "ottokunkel"
+  },
+  {
+    "body_excerpt": "# submission name:\r\nqrepro\r\n\r\n# upload zipped `archive.zip`\r\nhttps://github.com/SajayR/comma_video_compression_challenge/releases/download/qrepro-archive-v1/archive.zip\r\n\r\n# report.txt\r\n```text\r\nAverage PoseNet Distortion: 0.00041977\r\nAverage SegNet Distortion: 0.00068872\r\nSubmission file size: 218,080 bytes\r\nCompression Rate: 0.00580842\r\nFinal score: 0.28\r\n```\r\n\r\n# does your submission require gpu for evaluation (inflation)?\r\n\r\nyes\r\n\r\n# did you include the compression script? and want it to be merged?\r\n\r\nno\r\n\r\n# additional comments\r\n\r\nSee submissions/qrepro/README.md for the technical writeup and visualizations.",
+    "checks": [
+      {
+        "conclusion": "success",
+        "html_url": "https://github.com/commaai/comma_video_compression_challenge/actions/runs/25300672193/job/74166929830",
+        "name": "welcome",
+        "status": "completed"
+      }
+    ],
+    "files": [
+      {
+        "additions": 200,
+        "deletions": 0,
+        "filename": "submissions/qrepro/README.md",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/cce857392701e73861ad513d34906faba523f719/submissions%2Fqrepro%2FREADME.md",
+        "status": "added"
+      },
+      {
+        "additions": 0,
+        "deletions": 0,
+        "filename": "submissions/qrepro/assets/animated_triptych.gif",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/cce857392701e73861ad513d34906faba523f719/submissions%2Fqrepro%2Fassets%2Fanimated_triptych.gif",
+        "status": "added"
+      },
+      {
+        "additions": 0,
+        "deletions": 0,
+        "filename": "submissions/qrepro/assets/archive_components.png",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/cce857392701e73861ad513d34906faba523f719/submissions%2Fqrepro%2Fassets%2Farchive_components.png",
+        "status": "added"
+      },
+      {
+        "additions": 0,
+        "deletions": 0,
+        "filename": "submissions/qrepro/assets/best_worst_gallery.png",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/cce857392701e73861ad513d34906faba523f719/submissions%2Fqrepro%2Fassets%2Fbest_worst_gallery.png",
+        "status": "added"
+      },
+      {
+        "additions": 0,
+        "deletions": 0,
+        "filename": "submissions/qrepro/assets/metric_sensitivity.png",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/cce857392701e73861ad513d34906faba523f719/submissions%2Fqrepro%2Fassets%2Fmetric_sensitivity.png",
+        "status": "added"
+      },
+      {
+        "additions": 0,
+        "deletions": 0,
+        "filename": "submissions/qrepro/assets/per_frame_score_timeline.png",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/cce857392701e73861ad513d34906faba523f719/submissions%2Fqrepro%2Fassets%2Fper_frame_score_timeline.png",
+        "status": "added"
+      },
+      {
+        "additions": 0,
+        "deletions": 0,
+        "filename": "submissions/qrepro/assets/qrgb_basis_gallery.png",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/cce857392701e73861ad513d34906faba523f719/submissions%2Fqrepro%2Fassets%2Fqrgb_basis_gallery.png",
+        "status": "added"
+      },
+      {
+        "additions": 0,
+        "deletions": 0,
+        "filename": "submissions/qrepro/assets/qrgb_correction_maps.png",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/cce857392701e73861ad513d34906faba523f719/submissions%2Fqrepro%2Fassets%2Fqrgb_correction_maps.png",
+        "status": "added"
+      },
+      {
+        "additions": 0,
+        "deletions": 0,
+        "filename": "submissions/qrepro/assets/qrgb_residual_heatmap.png",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/cce857392701e73861ad513d34906faba523f719/submissions%2Fqrepro%2Fassets%2Fqrgb_residual_heatmap.png",
+        "status": "added"
+      },
+      {
+        "additions": 0,
+        "deletions": 0,
+        "filename": "submissions/qrepro/assets/reconstruction_triptych.png",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/cce857392701e73861ad513d34906faba523f719/submissions%2Fqrepro%2Fassets%2Freconstruction_triptych.png",
+        "status": "added"
+      },
+      {
+        "additions": 0,
+        "deletions": 0,
+        "filename": "submissions/qrepro/assets/score_breakdown.png",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/cce857392701e73861ad513d34906faba523f719/submissions%2Fqrepro%2Fassets%2Fscore_breakdown.png",
+        "status": "added"
+      },
+      {
+        "additions": 0,
+        "deletions": 0,
+        "filename": "submissions/qrepro/assets/semantic_boundary_profiles.png",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/cce857392701e73861ad513d34906faba523f719/submissions%2Fqrepro%2Fassets%2Fsemantic_boundary_profiles.png",
+        "status": "added"
+      },
+      {
+        "additions": 0,
+        "deletions": 0,
+        "filename": "submissions/qrepro/assets/semantic_class_timeline.png",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/cce857392701e73861ad513d34906faba523f719/submissions%2Fqrepro%2Fassets%2Fsemantic_class_timeline.png",
+        "status": "added"
+      },
+      {
+        "additions": 0,
+        "deletions": 0,
+        "filename": "submissions/qrepro/assets/semantic_codec_components.png",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/cce857392701e73861ad513d34906faba523f719/submissions%2Fqrepro%2Fassets%2Fsemantic_codec_components.png",
+        "status": "added"
+      },
+      {
+        "additions": 0,
+        "deletions": 0,
+        "filename": "submissions/qrepro/assets/semantic_codec_flow.png",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/cce857392701e73861ad513d34906faba523f719/submissions%2Fqrepro%2Fassets%2Fsemantic_codec_flow.png",
+        "status": "added"
+      },
+      {
+        "additions": 0,
+        "deletions": 0,
+        "filename": "submissions/qrepro/assets/semantic_decomposition.png",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/cce857392701e73861ad513d34906faba523f719/submissions%2Fqrepro%2Fassets%2Fsemantic_decomposition.png",
+        "status": "added"
+      },
+      {
+        "additions": 0,
+        "deletions": 0,
+        "filename": "submissions/qrepro/assets/stack_overview.png",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/cce857392701e73861ad513d34906faba523f719/submissions%2Fqrepro%2Fassets%2Fstack_overview.png",
+        "status": "added"
+      },
+      {
+        "additions": 81,
+        "deletions": 0,
+        "filename": "submissions/qrepro/check_validity.sh",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/cce857392701e73861ad513d34906faba523f719/submissions%2Fqrepro%2Fcheck_validity.sh",
+        "status": "added"
+      },
+      {
+        "additions": 571,
+        "deletions": 0,
+        "filename": "submissions/qrepro/encode_seg_c2split_a1_purepy.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/cce857392701e73861ad513d34906faba523f719/submissions%2Fqrepro%2Fencode_seg_c2split_a1_purepy.py",
+        "status": "added"
+      },
+      {
+        "additions": 630,
+        "deletions": 0,
+        "filename": "submissions/qrepro/encode_seg_c2split_purepy.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/cce857392701e73861ad513d34906faba523f719/submissions%2Fqrepro%2Fencode_seg_c2split_purepy.py",
+        "status": "added"
+      },
+      {
+        "additions": 450,
+        "deletions": 0,
+        "filename": "submissions/qrepro/encode_seg_c2split_tr_purepy.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/cce857392701e73861ad513d34906faba523f719/submissions%2Fqrepro%2Fencode_seg_c2split_tr_purepy.py",
+        "status": "added"
+      },
+      {
+        "additions": 798,
+        "deletions": 0,
+        "filename": "submissions/qrepro/flat_fp4_codec.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/cce857392701e73861ad513d34906faba523f719/submissions%2Fqrepro%2Fflat_fp4_codec.py",
+        "status": "added"
+      },
+      {
+        "additions": 1161,
+        "deletions": 0,
+        "filename": "submissions/qrepro/inflate.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/cce857392701e73861ad513d34906faba523f719/submissions%2Fqrepro%2Finflate.py",
+        "status": "added"
+      },
+      {
+        "additions": 23,
+        "deletions": 0,
+        "filename": "submissions/qrepro/inflate.sh",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/cce857392701e73861ad513d34906faba523f719/submissions%2Fqrepro%2Finflate.sh",
+        "status": "added"
+      },
+      {
+        "additions": 156,
+        "deletions": 0,
+        "filename": "submissions/qrepro/range_coder.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/cce857392701e73861ad513d34906faba523f719/submissions%2Fqrepro%2Frange_coder.py",
+        "status": "added"
+      },
+      {
+        "additions": 1144,
+        "deletions": 0,
+        "filename": "submissions/qrepro/seg_sparse_m10_codec.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/cce857392701e73861ad513d34906faba523f719/submissions%2Fqrepro%2Fseg_sparse_m10_codec.py",
+        "status": "added"
+      },
+      {
+        "additions": 1013,
+        "deletions": 0,
+        "filename": "submissions/qrepro/seg_sparse_m5_codec.py",
+        "raw_url": "https://github.com/commaai/comma_video_compression_challenge/raw/cce857392701e73861ad513d34906faba523f719/submissions%2Fqrepro%2Fseg_sparse_m5_codec.py",
+        "status": "added"
+      }
+    ],
+    "head_ref": "qrepro-submission",
+    "head_sha": "cce857392701e73861ad513d34906faba523f719",
+    "html_url": "https://github.com/commaai/comma_video_compression_challenge/pull/90",
+    "number": 90,
+    "statuses": [],
+    "title": "add qrepro submission(0.28)",
+    "updated_at": "2026-05-04T04:16:45Z",
+    "user": "SajayR"
+  }
+]

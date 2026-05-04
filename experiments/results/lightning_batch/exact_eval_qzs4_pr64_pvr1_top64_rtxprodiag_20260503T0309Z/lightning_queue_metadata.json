@@ -1,0 +1,38 @@
+{
+  "adjudication": {
+    "allow_component_gate_forensic_success": true,
+    "allow_sane_score_forensic_success": true,
+    "baseline_archive_size_bytes": 276214,
+    "baseline_posenet_dist": 0.00049637,
+    "baseline_score": 0.31561703078448233,
+    "baseline_segnet_dist": 0.00061244,
+    "component_reference_label": "qzs4_pr64_pvr1_top64_vs_c067",
+    "delta_key": "score_delta_vs_c067",
+    "max_posenet_dist": null,
+    "max_posenet_relative": null,
+    "max_sane_score": 60.0,
+    "max_segnet_dist": null,
+    "max_segnet_relative": null,
+    "predicted_band_high": 30.0,
+    "predicted_band_low": 0.2,
+    "provenance_name": "adjudication_provenance.json",
+    "regression_threshold": 60.0,
+    "required_device": "cuda",
+    "required_samples": 600,
+    "result_copy_name": "contest_auth_eval.adjudicated.json"
+  },
+  "artifact_recorded_at_utc": "2026-05-03T03:16:09Z",
+  "expected_archive_sha256": "550f569984c985c40a60f18812c65fd0cc31024f2e50cc3c8ee815edee2d4ce3",
+  "expected_archive_size_bytes": 273749,
+  "job_name": "exact_eval_qzs4_pr64_pvr1_top64_rtxprodiag_20260503T0309Z",
+  "queue_metadata": {
+    "known_parent_qzs4_negative_sha": "32ce9cd3ebbbfa6b3468dc9ba7ac31f0fbd2802a8eb25f6bdd44c137d9f41c69",
+    "lane": "qzs4_pr64_pvr1_top64_rtxprodiag",
+    "score_claim": "false",
+    "source_archive_sha": "5145fb57be574b85639856d239420ffa35e605e32664f93e06753b120b21633f"
+  },
+  "role": "exact_cuda_eval",
+  "schema_version": 1,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

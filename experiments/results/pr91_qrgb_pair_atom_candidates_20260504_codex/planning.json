@@ -1,0 +1,631 @@
+{
+  "action_spec": {
+    "blocker_class": "none",
+    "blockers": [],
+    "candidate_count": 3,
+    "path": "experiments/results/pr85_qrgb_pair_atom_archive_candidates_20260504_codex/action_spec_bias_region.json",
+    "sha256": "b810fc7b0ded5c9fb7bd1e675c611d26b1698c00f222d97e639e5542d9b3975f",
+    "status": "passed",
+    "supported_streams": [
+      "bias",
+      "region"
+    ]
+  },
+  "blocker_class": "none",
+  "blockers": [],
+  "candidate_archive_count": 3,
+  "candidate_attempt_count": 3,
+  "candidates": [
+    {
+      "action_proofs": [
+        {
+          "candidate_value": 5,
+          "changed": true,
+          "pair_index": 60,
+          "rationale": "PR90 QRGB frame0 global RGB residual sign transferred to PR85 frame0 bias choice",
+          "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+          "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0060",
+          "source_value": 24,
+          "stream": "bias"
+        }
+      ],
+      "build_status": "built",
+      "candidate_archive": {
+        "archive_bytes": 222412,
+        "archive_path": "experiments/results/pr91_qrgb_pair_atom_candidates_20260504_codex/pr91_hpm1_qrgb_f1_bias_pair_0060/archive.zip",
+        "archive_sha256": "1086a22e825f0e4fa2a1c777b9be66e92c6db5c7e1501e2e6f0a026e1a1f38e5",
+        "member_bytes": 222312,
+        "member_name": "x",
+        "member_sha256": "8ff2c25117d06823a376efc102b89c349b2e4db55872a142cbfeb35275e8ba41",
+        "zip_stored": true
+      },
+      "candidate_bundle": {
+        "header_mode": "explicit_30",
+        "mask_contract_preserved": true,
+        "member_bytes": 222312,
+        "member_sha256": "8ff2c25117d06823a376efc102b89c349b2e4db55872a142cbfeb35275e8ba41",
+        "segment_lengths": {
+          "bias": 225,
+          "frac": 106,
+          "frac2": 149,
+          "frac3": 154,
+          "mask": 145087,
+          "model": 57074,
+          "pose": 1487,
+          "post": 1400,
+          "randmulti": 16101,
+          "region": 273,
+          "shift": 226
+        }
+      },
+      "candidate_id": "pr91_hpm1_qrgb_f1_bias_pair_0060",
+      "changed_segments": [
+        "bias"
+      ],
+      "charged_bytes": {
+        "byte_delta_vs_pr91_source_archive": 8,
+        "candidate_archive_bytes": 222412,
+        "formula_only_rate_score_delta_vs_pr91": 5.326871624977371e-06,
+        "source_archive_bytes": 222404
+      },
+      "dispatch_gate": "blocked_pr91_hpm1_runtime_preflight_and_exact_evidence",
+      "dispatch_performed": false,
+      "dispatch_unlocked": false,
+      "evidence_grade": "empirical_local_archive_build_only",
+      "next_gate": "Add reviewed PR91 HPM1 inflate support, run local runtime parity/preflight, then claim lane before exact CUDA auth eval.",
+      "non_noop_proof": {
+        "changed_segments": [
+          "bias"
+        ],
+        "decoded_sidechannel_semantics_changed": true,
+        "hpm1_mask_unchanged": true,
+        "payload_changed": true,
+        "status": "passed"
+      },
+      "pr91_scorer_gradient_consumed": false,
+      "remote_jobs_dispatched": false,
+      "schema": "pr91_hpm1_qrgb_pair_atom_candidate_v1",
+      "score_claim": false,
+      "scorer_gradient_claim": false,
+      "selected_pair_indices": [
+        60
+      ],
+      "selected_streams": [
+        "bias"
+      ],
+      "source_archive": {
+        "archive_bytes": 222404,
+        "archive_sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f",
+        "known_pr91_anchor_match": {
+          "expected_archive_bytes": 222404,
+          "expected_archive_sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f",
+          "matches": true
+        },
+        "member_bytes": 222304,
+        "member_name": "x",
+        "member_sha256": "5c213c61cc4d29b62286063bfdcb97e812af6b06c0021aeaecc8bc46644e17bf",
+        "path": "experiments/results/public_pr91_intake_20260504_worker/archive.zip",
+        "zip_stored": true
+      },
+      "source_bundle": {
+        "format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+        "header_bytes": 24,
+        "mask_contract": {
+          "codec": "HPM1",
+          "metadata": {
+            "H": 384,
+            "N": 600,
+            "P": 32,
+            "W": 512,
+            "ch": 64,
+            "delta": 2,
+            "header_bytes": 48,
+            "hpac_d_film": 8,
+            "hpac_len": 28243,
+            "hpac_ppmd_sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+            "ppmd_order": 4,
+            "runtime_contract": "HPM1_pr91_hpac_mask_stream",
+            "tail_bytes": 0,
+            "tokens_len": 116796,
+            "tokens_sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+            "tokens_uint32_aligned": true,
+            "tokens_uint32_words": 29199,
+            "use_spm": 1
+          },
+          "sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc"
+        },
+        "member_sha256": "5c213c61cc4d29b62286063bfdcb97e812af6b06c0021aeaecc8bc46644e17bf",
+        "segment_lengths": {
+          "bias": 223,
+          "frac": 106,
+          "frac2": 149,
+          "frac3": 154,
+          "mask": 145087,
+          "model": 57074,
+          "pose": 1487,
+          "post": 1400,
+          "randmulti": 16101,
+          "region": 273,
+          "shift": 226
+        }
+      },
+      "source_pr85_candidate_id": "pr85_qrgb_f1_bias_pair_0060",
+      "tool": "experiments/build_pr91_qrgb_pair_atom_candidates.py",
+      "transfer_basis": {
+        "action_spec_source": "experiments/results/pr85_qrgb_pair_atom_archive_candidates_20260504_codex/action_spec_bias_region.json",
+        "no_pr91_gradient_synthesized": true,
+        "source": "PR85 explicit QRGB action spec transferred only over PR85-identical PR91 side-channel streams"
+      },
+      "transforms": [
+        {
+          "brotli_lgwin": 24,
+          "brotli_quality": 11,
+          "candidate_raw_bytes": 603,
+          "candidate_raw_sha256": "0ce429e92128dc7814ce81d61b05cb62c3712f2042de14c5938f409b7232fc19",
+          "candidate_segment_bytes": 225,
+          "candidate_segment_sha256": "de7940e18bd561ab38ea4cbd1380fbeb7587b654065d73151f476087b68886da",
+          "changed_pair_indices": [
+            60
+          ],
+          "codec": "BD1",
+          "default_symbol": 13,
+          "segment_byte_delta": 2,
+          "semantic_sha256_after": "30f4e37bc899fdc097d904b32d866d4a670e4023905c2d93486cc0f259014f40",
+          "semantic_sha256_before": "605d2796b1808ab3257474cd569a244d349fc0c2b9a9d3870a7fa3927afd8f30",
+          "source_raw_bytes": 603,
+          "source_raw_sha256": "67751d89e4825a6a71d4e74a0aa6f0246a861c0f96fc11184eec407e9caf8d7c",
+          "source_segment_bytes": 223,
+          "source_segment_sha256": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b",
+          "stream": "bias"
+        }
+      ]
+    },
+    {
+      "action_proofs": [
+        {
+          "candidate_value": 21,
+          "changed": true,
+          "pair_index": 164,
+          "rationale": "PR90 QRGB frame0 global RGB residual sign transferred to PR85 frame0 bias choice",
+          "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+          "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0164",
+          "source_value": 3,
+          "stream": "bias"
+        }
+      ],
+      "build_status": "built",
+      "candidate_archive": {
+        "archive_bytes": 222411,
+        "archive_path": "experiments/results/pr91_qrgb_pair_atom_candidates_20260504_codex/pr91_hpm1_qrgb_f1_bias_pair_0164/archive.zip",
+        "archive_sha256": "dbf5cd22e08bc1cbcb69df987689c0561a7495105f1df437a4e76e520831ea6f",
+        "member_bytes": 222311,
+        "member_name": "x",
+        "member_sha256": "8cd799f8eb8b1b9cd67b840f7a212c870a65de1f416416331f372a7aa22f1b61",
+        "zip_stored": true
+      },
+      "candidate_bundle": {
+        "header_mode": "explicit_30",
+        "mask_contract_preserved": true,
+        "member_bytes": 222311,
+        "member_sha256": "8cd799f8eb8b1b9cd67b840f7a212c870a65de1f416416331f372a7aa22f1b61",
+        "segment_lengths": {
+          "bias": 224,
+          "frac": 106,
+          "frac2": 149,
+          "frac3": 154,
+          "mask": 145087,
+          "model": 57074,
+          "pose": 1487,
+          "post": 1400,
+          "randmulti": 16101,
+          "region": 273,
+          "shift": 226
+        }
+      },
+      "candidate_id": "pr91_hpm1_qrgb_f1_bias_pair_0164",
+      "changed_segments": [
+        "bias"
+      ],
+      "charged_bytes": {
+        "byte_delta_vs_pr91_source_archive": 7,
+        "candidate_archive_bytes": 222411,
+        "formula_only_rate_score_delta_vs_pr91": 4.6610126718552e-06,
+        "source_archive_bytes": 222404
+      },
+      "dispatch_gate": "blocked_pr91_hpm1_runtime_preflight_and_exact_evidence",
+      "dispatch_performed": false,
+      "dispatch_unlocked": false,
+      "evidence_grade": "empirical_local_archive_build_only",
+      "next_gate": "Add reviewed PR91 HPM1 inflate support, run local runtime parity/preflight, then claim lane before exact CUDA auth eval.",
+      "non_noop_proof": {
+        "changed_segments": [
+          "bias"
+        ],
+        "decoded_sidechannel_semantics_changed": true,
+        "hpm1_mask_unchanged": true,
+        "payload_changed": true,
+        "status": "passed"
+      },
+      "pr91_scorer_gradient_consumed": false,
+      "remote_jobs_dispatched": false,
+      "schema": "pr91_hpm1_qrgb_pair_atom_candidate_v1",
+      "score_claim": false,
+      "scorer_gradient_claim": false,
+      "selected_pair_indices": [
+        164
+      ],
+      "selected_streams": [
+        "bias"
+      ],
+      "source_archive": {
+        "archive_bytes": 222404,
+        "archive_sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f",
+        "known_pr91_anchor_match": {
+          "expected_archive_bytes": 222404,
+          "expected_archive_sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f",
+          "matches": true
+        },
+        "member_bytes": 222304,
+        "member_name": "x",
+        "member_sha256": "5c213c61cc4d29b62286063bfdcb97e812af6b06c0021aeaecc8bc46644e17bf",
+        "path": "experiments/results/public_pr91_intake_20260504_worker/archive.zip",
+        "zip_stored": true
+      },
+      "source_bundle": {
+        "format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+        "header_bytes": 24,
+        "mask_contract": {
+          "codec": "HPM1",
+          "metadata": {
+            "H": 384,
+            "N": 600,
+            "P": 32,
+            "W": 512,
+            "ch": 64,
+            "delta": 2,
+            "header_bytes": 48,
+            "hpac_d_film": 8,
+            "hpac_len": 28243,
+            "hpac_ppmd_sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+            "ppmd_order": 4,
+            "runtime_contract": "HPM1_pr91_hpac_mask_stream",
+            "tail_bytes": 0,
+            "tokens_len": 116796,
+            "tokens_sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+            "tokens_uint32_aligned": true,
+            "tokens_uint32_words": 29199,
+            "use_spm": 1
+          },
+          "sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc"
+        },
+        "member_sha256": "5c213c61cc4d29b62286063bfdcb97e812af6b06c0021aeaecc8bc46644e17bf",
+        "segment_lengths": {
+          "bias": 223,
+          "frac": 106,
+          "frac2": 149,
+          "frac3": 154,
+          "mask": 145087,
+          "model": 57074,
+          "pose": 1487,
+          "post": 1400,
+          "randmulti": 16101,
+          "region": 273,
+          "shift": 226
+        }
+      },
+      "source_pr85_candidate_id": "pr85_qrgb_f1_bias_pair_0164",
+      "tool": "experiments/build_pr91_qrgb_pair_atom_candidates.py",
+      "transfer_basis": {
+        "action_spec_source": "experiments/results/pr85_qrgb_pair_atom_archive_candidates_20260504_codex/action_spec_bias_region.json",
+        "no_pr91_gradient_synthesized": true,
+        "source": "PR85 explicit QRGB action spec transferred only over PR85-identical PR91 side-channel streams"
+      },
+      "transforms": [
+        {
+          "brotli_lgwin": 24,
+          "brotli_quality": 11,
+          "candidate_raw_bytes": 603,
+          "candidate_raw_sha256": "6fa33327462b8503c27c694b9469c1836b7ef770fbe06b5b79256ee447284013",
+          "candidate_segment_bytes": 224,
+          "candidate_segment_sha256": "d51937170e9fea893c81ba5adc0e8b7c664acc66820df98ce131c71e9b0d1304",
+          "changed_pair_indices": [
+            164
+          ],
+          "codec": "BD1",
+          "default_symbol": 13,
+          "segment_byte_delta": 1,
+          "semantic_sha256_after": "5114aab50b765ccc771366693a19bd58baa987b375bedd40e82b060883007ba0",
+          "semantic_sha256_before": "605d2796b1808ab3257474cd569a244d349fc0c2b9a9d3870a7fa3927afd8f30",
+          "source_raw_bytes": 603,
+          "source_raw_sha256": "67751d89e4825a6a71d4e74a0aa6f0246a861c0f96fc11184eec407e9caf8d7c",
+          "source_segment_bytes": 223,
+          "source_segment_sha256": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b",
+          "stream": "bias"
+        }
+      ]
+    },
+    {
+      "action_proofs": [
+        {
+          "candidate_value": 45,
+          "changed": true,
+          "pair_index": 197,
+          "rationale": "PR90 QRGB frame0 half-band residual transferred to PR85 frame0 region bias choice",
+          "source_artifact_sha256": "0c47de9d4666f72793821776a447562db8eca1201ceb05b09cb22a222741d427",
+          "source_atom_id": "exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z:pair_0197",
+          "source_value": 60,
+          "stream": "region"
+        }
+      ],
+      "build_status": "built",
+      "candidate_archive": {
+        "archive_bytes": 222411,
+        "archive_path": "experiments/results/pr91_qrgb_pair_atom_candidates_20260504_codex/pr91_hpm1_qrgb_f1_region_pair_0197/archive.zip",
+        "archive_sha256": "186c9645eb67dc3b2dec9c59c429ad4380bc272204c6852084982359e50fd567",
+        "member_bytes": 222311,
+        "member_name": "x",
+        "member_sha256": "13cfcc8aca3ad331cff5e78d5758be18aadfdd9bd3577e1a53f28e5f09600a7e",
+        "zip_stored": true
+      },
+      "candidate_bundle": {
+        "header_mode": "explicit_30",
+        "mask_contract_preserved": true,
+        "member_bytes": 222311,
+        "member_sha256": "13cfcc8aca3ad331cff5e78d5758be18aadfdd9bd3577e1a53f28e5f09600a7e",
+        "segment_lengths": {
+          "bias": 223,
+          "frac": 106,
+          "frac2": 149,
+          "frac3": 154,
+          "mask": 145087,
+          "model": 57074,
+          "pose": 1487,
+          "post": 1400,
+          "randmulti": 16101,
+          "region": 274,
+          "shift": 226
+        }
+      },
+      "candidate_id": "pr91_hpm1_qrgb_f1_region_pair_0197",
+      "changed_segments": [
+        "region"
+      ],
+      "charged_bytes": {
+        "byte_delta_vs_pr91_source_archive": 7,
+        "candidate_archive_bytes": 222411,
+        "formula_only_rate_score_delta_vs_pr91": 4.6610126718552e-06,
+        "source_archive_bytes": 222404
+      },
+      "dispatch_gate": "blocked_pr91_hpm1_runtime_preflight_and_exact_evidence",
+      "dispatch_performed": false,
+      "dispatch_unlocked": false,
+      "evidence_grade": "empirical_local_archive_build_only",
+      "next_gate": "Add reviewed PR91 HPM1 inflate support, run local runtime parity/preflight, then claim lane before exact CUDA auth eval.",
+      "non_noop_proof": {
+        "changed_segments": [
+          "region"
+        ],
+        "decoded_sidechannel_semantics_changed": true,
+        "hpm1_mask_unchanged": true,
+        "payload_changed": true,
+        "status": "passed"
+      },
+      "pr91_scorer_gradient_consumed": false,
+      "remote_jobs_dispatched": false,
+      "schema": "pr91_hpm1_qrgb_pair_atom_candidate_v1",
+      "score_claim": false,
+      "scorer_gradient_claim": false,
+      "selected_pair_indices": [
+        197
+      ],
+      "selected_streams": [
+        "region"
+      ],
+      "source_archive": {
+        "archive_bytes": 222404,
+        "archive_sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f",
+        "known_pr91_anchor_match": {
+          "expected_archive_bytes": 222404,
+          "expected_archive_sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f",
+          "matches": true
+        },
+        "member_bytes": 222304,
+        "member_name": "x",
+        "member_sha256": "5c213c61cc4d29b62286063bfdcb97e812af6b06c0021aeaecc8bc46644e17bf",
+        "path": "experiments/results/public_pr91_intake_20260504_worker/archive.zip",
+        "zip_stored": true
+      },
+      "source_bundle": {
+        "format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+        "header_bytes": 24,
+        "mask_contract": {
+          "codec": "HPM1",
+          "metadata": {
+            "H": 384,
+            "N": 600,
+            "P": 32,
+            "W": 512,
+            "ch": 64,
+            "delta": 2,
+            "header_bytes": 48,
+            "hpac_d_film": 8,
+            "hpac_len": 28243,
+            "hpac_ppmd_sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+            "ppmd_order": 4,
+            "runtime_contract": "HPM1_pr91_hpac_mask_stream",
+            "tail_bytes": 0,
+            "tokens_len": 116796,
+            "tokens_sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+            "tokens_uint32_aligned": true,
+            "tokens_uint32_words": 29199,
+            "use_spm": 1
+          },
+          "sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc"
+        },
+        "member_sha256": "5c213c61cc4d29b62286063bfdcb97e812af6b06c0021aeaecc8bc46644e17bf",
+        "segment_lengths": {
+          "bias": 223,
+          "frac": 106,
+          "frac2": 149,
+          "frac3": 154,
+          "mask": 145087,
+          "model": 57074,
+          "pose": 1487,
+          "post": 1400,
+          "randmulti": 16101,
+          "region": 273,
+          "shift": 226
+        }
+      },
+      "source_pr85_candidate_id": "pr85_qrgb_f1_region_pair_0197",
+      "tool": "experiments/build_pr91_qrgb_pair_atom_candidates.py",
+      "transfer_basis": {
+        "action_spec_source": "experiments/results/pr85_qrgb_pair_atom_archive_candidates_20260504_codex/action_spec_bias_region.json",
+        "no_pr91_gradient_synthesized": true,
+        "source": "PR85 explicit QRGB action spec transferred only over PR85-identical PR91 side-channel streams"
+      },
+      "transforms": [
+        {
+          "brotli_lgwin": 24,
+          "brotli_quality": 11,
+          "candidate_raw_bytes": 603,
+          "candidate_raw_sha256": "df64dc3dd58d088db3267911500e846587de4febc12909551485703bbf7f3a7b",
+          "candidate_segment_bytes": 274,
+          "candidate_segment_sha256": "2ac27e71a2bd346e3d7ea0e69fed9da834831c61d308a0a542c056fb3e26dcd3",
+          "changed_pair_indices": [
+            197
+          ],
+          "codec": "RH1",
+          "default_symbol": 0,
+          "segment_byte_delta": 1,
+          "semantic_sha256_after": "1e8973e7fdd2504bcb633c8cbee4ccd894b1a88db3e3618015fa09fbe420e19e",
+          "semantic_sha256_before": "62510a8f06b52c02622546cc6f364212217a720f3162250dddd46cdf01c0ad2e",
+          "source_raw_bytes": 603,
+          "source_raw_sha256": "8018b15bf5029b8bbf224b4ed1581afa2c51ae4e814e327183ffe8a697deb7e0",
+          "source_segment_bytes": 273,
+          "source_segment_sha256": "4a7c16094fab281c30e27621a58577c095c4b1153c232518c9adbaba2a2b2392",
+          "stream": "region"
+        }
+      ]
+    }
+  ],
+  "dispatch_performed": false,
+  "dispatch_unlocked": false,
+  "dispatch_unlocked_count": 0,
+  "gpu_required": false,
+  "next_dispatch_recommendation": "Do not dispatch yet; candidate archives are local byte-closed design artifacts pending PR91 HPM1 runtime/preflight parity and a lane claim.",
+  "planning_json_path": "experiments/results/pr91_qrgb_pair_atom_candidates_20260504_codex/planning.json",
+  "remote_jobs_dispatched": false,
+  "schema": "pr91_hpm1_qrgb_pair_atom_transfer_v1",
+  "score_claim": false,
+  "scorer_load_performed": false,
+  "segment_identity": {
+    "blocker_class": "none",
+    "blockers": [],
+    "identical_streams": [
+      "bias",
+      "frac",
+      "frac2",
+      "frac3",
+      "model",
+      "pose",
+      "post",
+      "randmulti",
+      "region",
+      "shift"
+    ],
+    "path": "experiments/results/public_pr91_intake_20260504_worker/pr91_vs_pr85_segment_diff.json",
+    "sha256": "83c2391b0aa9c3890b95ad62f6d5be8d5e80bea64a7fd1158e86c52aa3074eff",
+    "status": "passed"
+  },
+  "source_archive": {
+    "archive_bytes": 222404,
+    "archive_sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f",
+    "known_pr91_anchor_match": {
+      "expected_archive_bytes": 222404,
+      "expected_archive_sha256": "4c16d04c746c981feb902e4dd508ffadaf3615e532d351993c3d2f6eccda1b4f",
+      "matches": true
+    },
+    "member_bytes": 222304,
+    "member_name": "x",
+    "member_sha256": "5c213c61cc4d29b62286063bfdcb97e812af6b06c0021aeaecc8bc46644e17bf",
+    "path": "experiments/results/public_pr91_intake_20260504_worker/archive.zip",
+    "zip_stored": true
+  },
+  "source_bundle": {
+    "format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+    "header_bytes": 24,
+    "mask_contract": {
+      "codec": "HPM1",
+      "metadata": {
+        "H": 384,
+        "N": 600,
+        "P": 32,
+        "W": 512,
+        "ch": 64,
+        "delta": 2,
+        "header_bytes": 48,
+        "hpac_d_film": 8,
+        "hpac_len": 28243,
+        "hpac_ppmd_sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+        "ppmd_order": 4,
+        "runtime_contract": "HPM1_pr91_hpac_mask_stream",
+        "tail_bytes": 0,
+        "tokens_len": 116796,
+        "tokens_sha256": "541016d83852a5bb3e0738caa3b44d7b2b0f7372f1841085cf9554f039c6cf6b",
+        "tokens_uint32_aligned": true,
+        "tokens_uint32_words": 29199,
+        "use_spm": 1
+      },
+      "sha256": "a4ed57ff0af1d8c914f004de165aeead50ec8dd61e99b0afdfbfa2d1e7fd9fcc"
+    },
+    "segment_lengths": {
+      "bias": 223,
+      "frac": 106,
+      "frac2": 149,
+      "frac3": 154,
+      "mask": 145087,
+      "model": 57074,
+      "pose": 1487,
+      "post": 1400,
+      "randmulti": 16101,
+      "region": 273,
+      "shift": 226
+    }
+  },
+  "tool": "experiments/build_pr91_qrgb_pair_atom_candidates.py",
+  "transfer_decisions": {
+    "evidence_grade": "external_static_profile_plus_empirical_local_prefix_smokes",
+    "path": "experiments/results/public_pr91_intake_20260504_worker/pr91_transfer_decisions.json",
+    "sha256": "6f4aea4ff9d2a7ccbc76cd5cf98a40417e32b51c6b37431b5d1b406ff04e1bb3",
+    "source_blockers": [
+      {
+        "detail": "Tried to decode from compressed data that is invalid for the employed entropy model.",
+        "evidence": "experiments/results/public_pr91_intake_20260504_worker/pr91_hpm1_frame0_decode_smoke.json",
+        "id": "hpm1_entropy_decode_assertion",
+        "severity": "blocking"
+      },
+      {
+        "detail": "PR91 pyproject declares brotli but not constriction or pyppmd, while pr86_hpac.py imports both.",
+        "id": "missing_declared_hpac_dependencies",
+        "severity": "blocking_for_oss_replay"
+      },
+      {
+        "detail": "PR91 adds inflate/runtime files only; no HPAC encoder or build recipe for reproducing HPM1 tokens against PR85 masks.",
+        "id": "no_compressor_or_builder",
+        "severity": "blocking_for_transfer"
+      },
+      {
+        "detail": "HPM1 branch aborts on decode errors instead of falling back to QMA9/old PR.",
+        "id": "no_runtime_fallback_on_hpm_failure",
+        "severity": "blocking_for_fail_closed_runtime"
+      },
+      {
+        "detail": "PR91 range decoder did not reproduce recorded PR85 token SHA on the PR85 QMA9 segment.",
+        "id": "qma_fallback_parity_mismatch",
+        "severity": "blocking_for_old_pr_fallback"
+      }
+    ],
+    "status": "loaded"
+  }
+}

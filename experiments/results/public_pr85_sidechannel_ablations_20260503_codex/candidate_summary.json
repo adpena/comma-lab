@@ -1,0 +1,345 @@
+{
+  "candidate_count": 5,
+  "candidates": [
+    {
+      "bundle_format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+      "byte_delta_vs_source_archive": -18057,
+      "candidate": {
+        "archive_bytes": 218271,
+        "archive_path": "experiments/results/public_pr85_sidechannel_ablations_20260503_codex/minus_all_safe_corrections/archive.zip",
+        "archive_sha256": "ff23264c58666d041820eda73266f09a7ba2318d8233aedeb2790acd0ab6da41",
+        "member_bytes": 218171,
+        "member_name": "x",
+        "member_sha256": "49713973ee9635adf02fe9f3d3fc0a960c583d5528d91f5f75c9064e3628dacf",
+        "zip_stored": true
+      },
+      "dispatch_status": "not_dispatched",
+      "evidence_grade": "empirical_archive_attribution_candidate",
+      "fixed_length_segments": {
+        "bias": 223,
+        "region": 273
+      },
+      "neutralized_segments": [
+        "post",
+        "shift",
+        "frac",
+        "frac2",
+        "frac3",
+        "randmulti"
+      ],
+      "next_gate": "Run PR85 public-runtime exact CUDA eval only after lane claim; compare against exact PR85 replay.",
+      "policy_id": "minus_all_safe_corrections",
+      "replacements": {
+        "frac": {
+          "byte_delta": -97,
+          "neutral_bytes": 9,
+          "neutral_sha256": "ce55685d49865cf94f05da38ca515499be9c702bf204ee881fe5b2953ee385c8",
+          "source_bytes": 106,
+          "source_sha256": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992"
+        },
+        "frac2": {
+          "byte_delta": -134,
+          "neutral_bytes": 15,
+          "neutral_sha256": "999029275cbca0808d99a3b61a7ede1972d94a8ba5a0691584212674f4641ac9",
+          "source_bytes": 149,
+          "source_sha256": "3a01c7546d89d9d3ca846da37a20add7d456421e9211a6339850d946b856026b"
+        },
+        "frac3": {
+          "byte_delta": -139,
+          "neutral_bytes": 15,
+          "neutral_sha256": "851c81c5785f04d6a25ac2f735d4abda1c48da4bb24338a0ce061b8be5625bb9",
+          "source_bytes": 154,
+          "source_sha256": "d725b01b604566c5a76a06b821c644c8d5d5bb9a57ab0597d3bdabc8389858b5"
+        },
+        "post": {
+          "byte_delta": -1387,
+          "neutral_bytes": 13,
+          "neutral_sha256": "888edfc8e179fd7e0aff49405c5af01efe205fe58318e221afc220c8d2836efb",
+          "source_bytes": 1400,
+          "source_sha256": "c3dc88e0fb5a1e48aec49eeacefeea20685e3c02598933deb1ff22dc09892575"
+        },
+        "randmulti": {
+          "byte_delta": -16089,
+          "neutral_bytes": 12,
+          "neutral_sha256": "a1da428fbac69d239439b0156479282a0ec2fc49f89c988798bee7a9a13f597f",
+          "source_bytes": 16101,
+          "source_sha256": "c624372e60a0851c4c427dc333a60dcc5d6657ba8ed56951612e7c9d7be7629f"
+        },
+        "shift": {
+          "byte_delta": -211,
+          "neutral_bytes": 15,
+          "neutral_sha256": "e22e2324abe4d7c6712081f5eb37c34a3ba1a66565624f1a9f3d7e313c19115a",
+          "source_bytes": 226,
+          "source_sha256": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4"
+        }
+      },
+      "schema": "pr85_sidechannel_ablation_candidate_v1",
+      "score_claim": false,
+      "source_archive": {
+        "bytes": 236328,
+        "member_compress_size": 236228,
+        "member_crc32_hex": "c6356353",
+        "member_file_size": 236228,
+        "member_name": "x",
+        "member_sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+        "path": "experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+        "sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e"
+      },
+      "tool": "experiments/build_pr85_sidechannel_ablation_candidates.py"
+    },
+    {
+      "bundle_format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+      "byte_delta_vs_source_archive": -581,
+      "candidate": {
+        "archive_bytes": 235747,
+        "archive_path": "experiments/results/public_pr85_sidechannel_ablations_20260503_codex/minus_motion_stack/archive.zip",
+        "archive_sha256": "e0e68f6d58a0be1098bec59d3595c2f3b9ad371a58a351f2cdad2f0d7337a319",
+        "member_bytes": 235647,
+        "member_name": "x",
+        "member_sha256": "09cc339640e761dafb1f3ca20bb87b006cbce7f8597d940344b89b2f08fb2637",
+        "zip_stored": true
+      },
+      "dispatch_status": "not_dispatched",
+      "evidence_grade": "empirical_archive_attribution_candidate",
+      "fixed_length_segments": {
+        "bias": 223,
+        "region": 273
+      },
+      "neutralized_segments": [
+        "shift",
+        "frac",
+        "frac2",
+        "frac3"
+      ],
+      "next_gate": "Run PR85 public-runtime exact CUDA eval only after lane claim; compare against exact PR85 replay.",
+      "policy_id": "minus_motion_stack",
+      "replacements": {
+        "frac": {
+          "byte_delta": -97,
+          "neutral_bytes": 9,
+          "neutral_sha256": "ce55685d49865cf94f05da38ca515499be9c702bf204ee881fe5b2953ee385c8",
+          "source_bytes": 106,
+          "source_sha256": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992"
+        },
+        "frac2": {
+          "byte_delta": -134,
+          "neutral_bytes": 15,
+          "neutral_sha256": "999029275cbca0808d99a3b61a7ede1972d94a8ba5a0691584212674f4641ac9",
+          "source_bytes": 149,
+          "source_sha256": "3a01c7546d89d9d3ca846da37a20add7d456421e9211a6339850d946b856026b"
+        },
+        "frac3": {
+          "byte_delta": -139,
+          "neutral_bytes": 15,
+          "neutral_sha256": "851c81c5785f04d6a25ac2f735d4abda1c48da4bb24338a0ce061b8be5625bb9",
+          "source_bytes": 154,
+          "source_sha256": "d725b01b604566c5a76a06b821c644c8d5d5bb9a57ab0597d3bdabc8389858b5"
+        },
+        "shift": {
+          "byte_delta": -211,
+          "neutral_bytes": 15,
+          "neutral_sha256": "e22e2324abe4d7c6712081f5eb37c34a3ba1a66565624f1a9f3d7e313c19115a",
+          "source_bytes": 226,
+          "source_sha256": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4"
+        }
+      },
+      "schema": "pr85_sidechannel_ablation_candidate_v1",
+      "score_claim": false,
+      "source_archive": {
+        "bytes": 236328,
+        "member_compress_size": 236228,
+        "member_crc32_hex": "c6356353",
+        "member_file_size": 236228,
+        "member_name": "x",
+        "member_sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+        "path": "experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+        "sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e"
+      },
+      "tool": "experiments/build_pr85_sidechannel_ablation_candidates.py"
+    },
+    {
+      "bundle_format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+      "byte_delta_vs_source_archive": -1387,
+      "candidate": {
+        "archive_bytes": 234941,
+        "archive_path": "experiments/results/public_pr85_sidechannel_ablations_20260503_codex/minus_post/archive.zip",
+        "archive_sha256": "b370e0c406c4cc1080162a24f81b02f488a8eebac36a6aa037c1e0f658ba587d",
+        "member_bytes": 234841,
+        "member_name": "x",
+        "member_sha256": "dd1a623c3b101395dcb92f3ff8e261fec23afebbf079576525fac7abfd8aac4b",
+        "zip_stored": true
+      },
+      "dispatch_status": "not_dispatched",
+      "evidence_grade": "empirical_archive_attribution_candidate",
+      "fixed_length_segments": {
+        "bias": 223,
+        "region": 273
+      },
+      "neutralized_segments": [
+        "post"
+      ],
+      "next_gate": "Run PR85 public-runtime exact CUDA eval only after lane claim; compare against exact PR85 replay.",
+      "policy_id": "minus_post",
+      "replacements": {
+        "post": {
+          "byte_delta": -1387,
+          "neutral_bytes": 13,
+          "neutral_sha256": "888edfc8e179fd7e0aff49405c5af01efe205fe58318e221afc220c8d2836efb",
+          "source_bytes": 1400,
+          "source_sha256": "c3dc88e0fb5a1e48aec49eeacefeea20685e3c02598933deb1ff22dc09892575"
+        }
+      },
+      "schema": "pr85_sidechannel_ablation_candidate_v1",
+      "score_claim": false,
+      "source_archive": {
+        "bytes": 236328,
+        "member_compress_size": 236228,
+        "member_crc32_hex": "c6356353",
+        "member_file_size": 236228,
+        "member_name": "x",
+        "member_sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+        "path": "experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+        "sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e"
+      },
+      "tool": "experiments/build_pr85_sidechannel_ablation_candidates.py"
+    },
+    {
+      "bundle_format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+      "byte_delta_vs_source_archive": -1968,
+      "candidate": {
+        "archive_bytes": 234360,
+        "archive_path": "experiments/results/public_pr85_sidechannel_ablations_20260503_codex/minus_post_motion/archive.zip",
+        "archive_sha256": "be449e36b6d8ffeceb7a9984daad82240c4cce9f8af6b1f6b5dd4acd22c90262",
+        "member_bytes": 234260,
+        "member_name": "x",
+        "member_sha256": "08ce04871085372223354c9089fd69cb016f3487885ae9a1210278e53f2466dc",
+        "zip_stored": true
+      },
+      "dispatch_status": "not_dispatched",
+      "evidence_grade": "empirical_archive_attribution_candidate",
+      "fixed_length_segments": {
+        "bias": 223,
+        "region": 273
+      },
+      "neutralized_segments": [
+        "post",
+        "shift",
+        "frac",
+        "frac2",
+        "frac3"
+      ],
+      "next_gate": "Run PR85 public-runtime exact CUDA eval only after lane claim; compare against exact PR85 replay.",
+      "policy_id": "minus_post_motion",
+      "replacements": {
+        "frac": {
+          "byte_delta": -97,
+          "neutral_bytes": 9,
+          "neutral_sha256": "ce55685d49865cf94f05da38ca515499be9c702bf204ee881fe5b2953ee385c8",
+          "source_bytes": 106,
+          "source_sha256": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992"
+        },
+        "frac2": {
+          "byte_delta": -134,
+          "neutral_bytes": 15,
+          "neutral_sha256": "999029275cbca0808d99a3b61a7ede1972d94a8ba5a0691584212674f4641ac9",
+          "source_bytes": 149,
+          "source_sha256": "3a01c7546d89d9d3ca846da37a20add7d456421e9211a6339850d946b856026b"
+        },
+        "frac3": {
+          "byte_delta": -139,
+          "neutral_bytes": 15,
+          "neutral_sha256": "851c81c5785f04d6a25ac2f735d4abda1c48da4bb24338a0ce061b8be5625bb9",
+          "source_bytes": 154,
+          "source_sha256": "d725b01b604566c5a76a06b821c644c8d5d5bb9a57ab0597d3bdabc8389858b5"
+        },
+        "post": {
+          "byte_delta": -1387,
+          "neutral_bytes": 13,
+          "neutral_sha256": "888edfc8e179fd7e0aff49405c5af01efe205fe58318e221afc220c8d2836efb",
+          "source_bytes": 1400,
+          "source_sha256": "c3dc88e0fb5a1e48aec49eeacefeea20685e3c02598933deb1ff22dc09892575"
+        },
+        "shift": {
+          "byte_delta": -211,
+          "neutral_bytes": 15,
+          "neutral_sha256": "e22e2324abe4d7c6712081f5eb37c34a3ba1a66565624f1a9f3d7e313c19115a",
+          "source_bytes": 226,
+          "source_sha256": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4"
+        }
+      },
+      "schema": "pr85_sidechannel_ablation_candidate_v1",
+      "score_claim": false,
+      "source_archive": {
+        "bytes": 236328,
+        "member_compress_size": 236228,
+        "member_crc32_hex": "c6356353",
+        "member_file_size": 236228,
+        "member_name": "x",
+        "member_sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+        "path": "experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+        "sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e"
+      },
+      "tool": "experiments/build_pr85_sidechannel_ablation_candidates.py"
+    },
+    {
+      "bundle_format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+      "byte_delta_vs_source_archive": -16089,
+      "candidate": {
+        "archive_bytes": 220239,
+        "archive_path": "experiments/results/public_pr85_sidechannel_ablations_20260503_codex/minus_randmulti/archive.zip",
+        "archive_sha256": "f8ddecc5a96d013453acfdd5bbfc3265048f93ca65ccf97755cf45e3553ae995",
+        "member_bytes": 220139,
+        "member_name": "x",
+        "member_sha256": "bf96ae6d4a69429f514a6ae5975f8aa0799455ae2fd851b025806c2f1e4f9a76",
+        "zip_stored": true
+      },
+      "dispatch_status": "not_dispatched",
+      "evidence_grade": "empirical_archive_attribution_candidate",
+      "fixed_length_segments": {
+        "bias": 223,
+        "region": 273
+      },
+      "neutralized_segments": [
+        "randmulti"
+      ],
+      "next_gate": "Run PR85 public-runtime exact CUDA eval only after lane claim; compare against exact PR85 replay.",
+      "policy_id": "minus_randmulti",
+      "replacements": {
+        "randmulti": {
+          "byte_delta": -16089,
+          "neutral_bytes": 12,
+          "neutral_sha256": "a1da428fbac69d239439b0156479282a0ec2fc49f89c988798bee7a9a13f597f",
+          "source_bytes": 16101,
+          "source_sha256": "c624372e60a0851c4c427dc333a60dcc5d6657ba8ed56951612e7c9d7be7629f"
+        }
+      },
+      "schema": "pr85_sidechannel_ablation_candidate_v1",
+      "score_claim": false,
+      "source_archive": {
+        "bytes": 236328,
+        "member_compress_size": 236228,
+        "member_crc32_hex": "c6356353",
+        "member_file_size": 236228,
+        "member_name": "x",
+        "member_sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+        "path": "experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+        "sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e"
+      },
+      "tool": "experiments/build_pr85_sidechannel_ablation_candidates.py"
+    }
+  ],
+  "dispatch_performed": false,
+  "schema": "pr85_sidechannel_ablation_candidates_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 236328,
+    "member_compress_size": 236228,
+    "member_crc32_hex": "c6356353",
+    "member_file_size": 236228,
+    "member_name": "x",
+    "member_sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+    "path": "experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+    "sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e"
+  },
+  "tool": "experiments/build_pr85_sidechannel_ablation_candidates.py"
+}

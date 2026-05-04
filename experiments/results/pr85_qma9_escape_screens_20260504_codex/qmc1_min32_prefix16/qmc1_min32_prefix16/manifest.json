@@ -1,0 +1,92 @@
+{
+  "archive": {
+    "archive_bytes": 159172,
+    "archive_path": "experiments/results/pr85_qma9_escape_screens_20260504_codex/pr85_qma9_planning_fixedslice_wrapper.zip",
+    "archive_sha256": "23337100285209b989e960134b3fdbb9a0ac76032867f82b5bc32eb6d0e60694",
+    "member_bytes": 159072,
+    "member_name": "p",
+    "member_sha256": "071fb84350d746eed09f98c219f22937116197db3b8890108cc4a3311b456b5a",
+    "zip_overhead_bytes": 100
+  },
+  "candidate": "qma9_context_conditioned_run_escape_qmc1",
+  "candidate_id": "qmc1_min32_prefix16",
+  "context_run_escape": {
+    "base_modeled_pixels": 1668634,
+    "copied_pixel_fraction": 0.4695555369059245,
+    "copied_pixels": 1477094,
+    "copied_runs": 9026,
+    "eligible_acceptance_fraction": 0.8675509419454056,
+    "eligible_run_starts": 10404,
+    "escaped_model_update_pixels": 1477094,
+    "flag_context_count": 5,
+    "min_run_length": 32,
+    "model_update_policy": "copied runs update the base QMA9 adaptive model without emitting base symbols",
+    "rejected_runs": 1378,
+    "require_left_context": true,
+    "total_pixels": 3145728
+  },
+  "decision": {
+    "archive_relevant_state_change": true,
+    "dispatchable": false,
+    "local_screen_negative": true,
+    "non_dispatchable_reasons": [
+      "candidate does not beat exact subset QMA9 re-encode",
+      "planning-only bounded prefix projection",
+      "no contest runtime integration",
+      "no CUDA auth eval"
+    ],
+    "reason": "QMC1 did not beat exact subset QMA9 re-encode; copy flags and headers exceed skipped base-symbol savings."
+  },
+  "dispatch_performed": false,
+  "evidence_grade": "empirical/planning_only",
+  "full_stream_linear_projection": {
+    "candidate_range_mask_bytes": 182962,
+    "delta_bytes_vs_pr81_range_mask": 23951,
+    "dispatchable": false,
+    "projection": "candidate_subset_bytes * source_frame_count / subset_frames",
+    "rate_score_delta_if_components_unchanged": 0.015947987786229127,
+    "reason": "linear projection from a bounded prefix; requires full deterministic re-encode and runtime integration",
+    "reference_pr81_range_mask_bytes": 159011
+  },
+  "gpu_required": false,
+  "notes": [
+    "QMC1 charges copy flags inside the range-mask payload at deterministic row-above run starts.",
+    "Copied runs advance the base QMA9 adaptive model without emitting base pixel symbols, avoiding the QMB1 cold-model failure mode.",
+    "This artifact is not a score/component claim and did not invoke CUDA or a scorer."
+  ],
+  "schema": "qma9_context_run_escape_candidate_screen_v1",
+  "score_claim": false,
+  "source_qma9_header": {
+    "bitstream_bytes": 158991,
+    "bitstream_sha256": "77196f31a8fdfbf8f91c9c30600945473376534f15245bfb7622ddd77d17e3af",
+    "decoded_mask_bytes": 117964800,
+    "frame_count": 600,
+    "header_bytes": 20,
+    "height": 384,
+    "magic": "QMA9",
+    "packed_bytes": 159011,
+    "payload_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+    "width": 512
+  },
+  "split_constants": {
+    "PACKED_PAYLOAD_BYTES": 159072,
+    "POSE_STREAM_BYTES": 30,
+    "RANGE_MASK_BYTES": 159011,
+    "ROUTER_ACTION_BYTES": 0,
+    "SPLIT_MODEL_REORDERED_BYTES": 31
+  },
+  "subset": {
+    "baseline_qma9_bytes": 4392,
+    "baseline_subset_qma9_path": "experiments/results/pr85_qma9_escape_screens_20260504_codex/qmc1_min32_prefix16/qmc1_min32_prefix16/baseline_subset.qma9",
+    "candidate_qmc1_bytes": 4879,
+    "candidate_subset_qmc1_path": "experiments/results/pr85_qma9_escape_screens_20260504_codex/qmc1_min32_prefix16/qmc1_min32_prefix16/candidate_subset.qmc1",
+    "decode_parity": true,
+    "decoded_pixels": 3145728,
+    "delta_bytes_vs_subset_qma9": 487,
+    "frames": 16,
+    "rate_score_delta_if_subset_scaled": 0.012160249131393654,
+    "raw_path": "experiments/results/pr85_qma9_escape_screens_20260504_codex/qmc1_min32_prefix16/qmc1_min32_prefix16/decoded_prefix_mask.raw",
+    "raw_sha256": "32dc20e35a294e855b9902c5a2d33bf927a5d0c5049678a9d6e5eca7dabd0a7c"
+  },
+  "tool": "experiments/build_qma9_context_run_escape_candidate.py"
+}

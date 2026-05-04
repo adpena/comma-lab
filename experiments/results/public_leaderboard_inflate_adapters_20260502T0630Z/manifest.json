@@ -1,0 +1,40 @@
+{
+  "compatibility_replay_note": "pr65_torch25_compat changes one PyTorch boolean-indexing assignment to an explicit channel view; use only as external reverse-engineering signal, not as exact public-submission faithfulness evidence.",
+  "records": [
+    {
+      "bytes": 57981,
+      "path": "experiments/results/public_leaderboard_inflate_adapters_20260502T0630Z/pr65/inflate.py",
+      "sha256": "178592f5c8c7ebb2e55f7aa3e8453c2c102c3a54f3373fc360c6895f3c5edc84"
+    },
+    {
+      "bytes": 227,
+      "path": "experiments/results/public_leaderboard_inflate_adapters_20260502T0630Z/pr65/inflate.sh",
+      "sha256": "0649834da2c25884ca867f98e9d11b0fee43a241df9daada857b61c2c45a8be6"
+    },
+    {
+      "bytes": 39022,
+      "path": "experiments/results/public_leaderboard_inflate_adapters_20260502T0630Z/pr67/inflate.py",
+      "sha256": "882f03cec1615d1ae5d55f6263f54e62275d3e660b14e24381683bf86baf7194"
+    },
+    {
+      "bytes": 227,
+      "path": "experiments/results/public_leaderboard_inflate_adapters_20260502T0630Z/pr67/inflate.sh",
+      "sha256": "0649834da2c25884ca867f98e9d11b0fee43a241df9daada857b61c2c45a8be6"
+    },
+    {
+      "bytes": 58031,
+      "path": "experiments/results/public_leaderboard_inflate_adapters_20260502T0630Z/pr65_torch25_compat/inflate.py",
+      "role": "pr65_torch25_boolean_index_compatibility_replay_adapter",
+      "sha256": "4f4aee5af5cbd7455df61de762df8701bf226b6a5542e618e8ff879d2a40d505"
+    },
+    {
+      "bytes": 227,
+      "path": "experiments/results/public_leaderboard_inflate_adapters_20260502T0630Z/pr65_torch25_compat/inflate.sh",
+      "role": "pr65_torch25_boolean_index_compatibility_replay_adapter",
+      "sha256": "0649834da2c25884ca867f98e9d11b0fee43a241df9daada857b61c2c45a8be6"
+    }
+  ],
+  "role": "public_leaderboard_external_inflate_adapters",
+  "schema_version": 1,
+  "source_dir": "reports/raw/leaderboard_intel_20260501"
+}

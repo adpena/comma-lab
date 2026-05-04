@@ -1,0 +1,26 @@
+{
+  "blockers": [],
+  "candidate_id": "pr85_stbm1br_plus_pr92_rmb1_randmulti_recode",
+  "dispatch_performed": false,
+  "lane_claim": {
+    "active_conflicts": [],
+    "checked": false,
+    "claims_path": null,
+    "lane_id": "pr85_stbm1br_pr92_rmb1_randmulti"
+  },
+  "manifest_path": "experiments/results/pr85_stbm1br_pr92_rmb1_randmulti_20260504_worker/pr85_stbm1br_plus_pr92_rmb1_randmulti_recode/manifest.json",
+  "ready_for_exact_eval_dispatch": true,
+  "remote_jobs_dispatched": false,
+  "schema": "candidate_manifest_dispatch_readiness_preflight_v1",
+  "score_claim": false,
+  "warnings": [
+    {
+      "code": "formula_only_rate_summary_non_dispatching",
+      "detail": "formula_only_rate_delta_vs_stbm.archive_delta_bytes is recorded as a non-score explanatory rate projection"
+    },
+    {
+      "code": "formula_only_rate_summary_non_dispatching",
+      "detail": "formula_only_rate_delta_vs_stbm.score_delta_from_rate_only is recorded as a non-score explanatory rate projection"
+    }
+  ]
+}

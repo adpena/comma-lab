@@ -1,0 +1,79 @@
+{
+  "lane_id": "lane_sjkl_v1",
+  "name": "Wave-Ω-1 SJ-KL basis substitution",
+  "phase": 2,
+  "timestamp_utc": "2026-05-01T18:50:00Z",
+  "council_session": "FIELDS-MEDAL grand-council 2026-05-01 (Council #2)",
+  "council_vote": "22/22 GO",
+  "respawned_from_subagent": "ab7bce53c1e4a7a32 (died on quota at 6pm-CT reset boundary)",
+  "respawn_subagent_id": "this session",
+  "files_landed": [
+    "src/tac/sjkl_basis.py",
+    "src/tac/tests/test_sjkl_basis.py",
+    "experiments/build_sjkl_residual.py",
+    "experiments/measure_sjkl_fisher_rank_20260501.py"
+  ],
+  "test_suite": "src/tac/tests/test_sjkl_basis.py",
+  "test_count": 17,
+  "test_pass_rate": "17/17 (100%)",
+  "test_runtime_sec": 0.88,
+  "device_used_for_tests": "CPU (advisory; CLAUDE.md non-negotiable for production)",
+  "byte_budget_probe": {
+    "k": 8,
+    "basis_grid": "32x24",
+    "alpha_bits": 6,
+    "n_pairs": 600,
+    "random_basis_total_bytes": 36479,
+    "smooth_basis_total_bytes": 13982,
+    "random_basis_rate_contrib": 0.024290,
+    "smooth_basis_rate_contrib": 0.009310,
+    "council_section_5_3_target_kb": "13-18",
+    "verdict": "smooth-basis budget within target band; random-basis pessimistic but still affordable. Real Fisher eigenvectors (smoothed by SegNet stride-2 stem + PoseNet preprocessing) expected to land in smooth-basis regime."
+  },
+  "fisher_rank_synthetic_check": {
+    "fixture": "TinySegNetLike(in_h=4, in_w=4, num_classes=5) + TinyPoseNetLike(in_h=4, in_w=4)",
+    "input_dim": 3072,
+    "scorer_output_bound": 92,
+    "effective_rank": 48,
+    "lambda_8_over_lambda_0": 0.6587,
+    "spectrum_decay": "from 0.218 at top to 1e-8 at rank-48",
+    "verdict": "VERIFIED — Council Section 5.3 low-rank claim holds on synthetic fixture. Real upstream (EfficientNet-B2 SegNet + FastViT-T12 PoseNet) verification deferred to CUDA: each Fisher matvec needs JVP+VJP through both models which is too heavy on CPU/MPS."
+  },
+  "predicted_band": {
+    "standalone_contest_cuda": "[0.21, 0.245, 0.29] (Council #2 Section 5.3 prediction)",
+    "wave_omega_composed_stack": "[0.180, 0.220]",
+    "evidence_tag": "[prediction]"
+  },
+  "next_steps": {
+    "step_1_fisher_rank_real_cuda": {
+      "command": "PYTHONPATH=src:upstream:experiments python experiments/measure_sjkl_fisher_rank_20260501.py --device cuda --n-probe 200 --h 384 --w 512",
+      "estimated_cost_usd": 0.20,
+      "estimated_runtime_min": 5
+    },
+    "step_2_compress_time_basis_build": {
+      "command": "PYTHONPATH=src:upstream:experiments python experiments/build_sjkl_residual.py --renderer-output <renderer_outs.pt> --gt-pairs <gt_pairs.pt> --out experiments/results/lane_sjkl_v1_20260501/sjkl.bin --device cuda --manifest experiments/results/lane_sjkl_v1_20260501/manifest.json",
+      "blocker": "needs renderer output + GT pair tensors (Lane G v3 owv3_0120 anchor — extract via existing inflate_renderer pipeline)",
+      "estimated_cost_usd": 0.30
+    },
+    "step_3_archive_integration": {
+      "blocker": "needs inflate_renderer.py modification to call apply_sjkl_at_decode() in fake1/fake2 path (mirror of pr67_inflate.py:878-884 actuator pattern)",
+      "council_review_required": "yes — modifies inflate path"
+    },
+    "step_4_contest_cuda_eval": {
+      "command": "scripts/launch_lane_on_vastai.py full --lane-script scripts/remote_lane_sjkl_v1.sh --label lane_sjkl_v1_contest_eval --anchor-dirs experiments/results/lane_g_v3_owv3_0120_LANDED_1_002_20260501",
+      "blocker": "needs scripts/remote_lane_sjkl_v1.sh wrapper (NOT in subagent scope)",
+      "estimated_cost_usd": 2.50
+    }
+  },
+  "claude_md_compliance": {
+    "no_mps_strategic_decisions": "OK — all SJ-KL evidence currently tagged [prediction] or [synthetic-fixture]; no contest-CUDA score claimed",
+    "no_cli_invented_flags": "OK — build_sjkl_residual.py argparse self-consistent (no subprocess invocations into other tools)",
+    "additive_not_replacement": "OK — apply_sjkl_at_decode is purely additive on fake1/fake2 (mirrors pr67's actuator add pattern); does NOT replace existing components",
+    "strict_scorer_rule": "OK — basis is shipped IN archive; no scorer load at decode time"
+  },
+  "simpler_parameterization_findings": {
+    "council_spec_was": "store eigenvectors at full 384x512 resolution",
+    "subagent_finding": "Fisher rank ≤ scorer-output-dim bottleneck (~few thousand for real upstream) means eigenvectors are ALWAYS LOW-FREQUENCY (smoothed through SegNet stride-2 stem and PoseNet downsample). Storing them at 32x24 coarse grid + bilinear-upsample saves 196x storage with negligible reconstruction loss. ALSO: scale is sqrt(λ) eigenvalue prior — keeping the prior decoupled from the unit-normalized basis lets us re-encode alpha at different bit depths without recomputing the basis.",
+    "decision": "Council Section 5.3's coarse-grid suggestion was already in the spec; subagent confirmed it is empirically necessary to hit the ~13KB byte budget"
+  }
+}

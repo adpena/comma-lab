@@ -1,0 +1,1138 @@
+{
+  "additive_delta_contract": "Component and pass deltas are first-order predictions only. They must not promote, rank, or support paper claims until the complete stacked archive itself has exact CUDA auth eval on the exact archive bytes.",
+  "candidate_policies": [
+    {
+      "builder_command_status": "no existing builder consumes this full multi-pass stack",
+      "builder_commands": [],
+      "component_ids": [
+        "pass0_c067_fixedslice_anchor_exact",
+        "pass3_archive_bit_budget_profile"
+      ],
+      "dispatchable_from_this_plan": false,
+      "evidence_grade": "planning_only",
+      "exact_eval_branch_rule": {
+        "additive_delta_warning": "Component and pass deltas are first-order predictions only. They must not promote, rank, or support paper claims until the complete stacked archive itself has exact CUDA auth eval on the exact archive bytes.",
+        "branch": "materialize one byte-closed stacked archive -> verify payload closure, runtime tree hash, manifest, and no sidecars -> claim dispatch lane -> run exact CUDA auth eval on the exact archive bytes",
+        "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+        "dispatch_claim_required_before_remote_job": true,
+        "score_claim": false
+      },
+      "existing_builder_can_consume_full_stack": false,
+      "intent": "Preserve the apogee fixed-slice scorer basin and only test packer/self-compression around identical logical streams.",
+      "pass_antagonisms": [],
+      "pass_synergies": [],
+      "passes": [
+        {
+          "active": true,
+          "components": [
+            {
+              "component_id": "pass0_c067_fixedslice_anchor_exact",
+              "component_type": "fixedslice_full_resolution_anchor",
+              "logical_members": [
+                "masks.mkv",
+                "renderer.bin",
+                "optimized_poses.bin"
+              ],
+              "resolution_layer": "fixedslice_full_resolution_anchor",
+              "score_claim": false
+            }
+          ],
+          "optional": false,
+          "pass_index": 0,
+          "pass_name": "anchor"
+        },
+        {
+          "active": false,
+          "components": [],
+          "optional": false,
+          "pass_index": 1,
+          "pass_name": "coarse_global_representation"
+        },
+        {
+          "active": false,
+          "components": [],
+          "optional": false,
+          "pass_index": 2,
+          "pass_name": "high_resolution_repair"
+        },
+        {
+          "active": true,
+          "components": [
+            {
+              "component_id": "pass3_archive_bit_budget_profile",
+              "component_type": "archive_entropy_layer",
+              "logical_members": [
+                "p"
+              ],
+              "resolution_layer": "archive_entropy_layer",
+              "score_claim": false
+            }
+          ],
+          "optional": false,
+          "pass_index": 3,
+          "pass_name": "entropy_packer_self_compression"
+        },
+        {
+          "active": false,
+          "components": [],
+          "optional": true,
+          "pass_index": 4,
+          "pass_name": "pose_runtime_coadaptation"
+        }
+      ],
+      "policy_id": "c067_multires_p00_anchor_entropy_guard",
+      "predicted_delta": {
+        "additive_delta_warning": "Component and pass deltas are first-order predictions only. They must not promote, rank, or support paper claims until the complete stacked archive itself has exact CUDA auth eval on the exact archive bytes.",
+        "first_order_delta_bytes_vs_anchor": null,
+        "first_order_rate_score_delta": null,
+        "kind": "prediction",
+        "score_claim": false,
+        "standalone_exact_scores_seen": [],
+        "standalone_scores_are_not_stack_scores": true
+      },
+      "promotion_eligible": false,
+      "score_claim": false
+    },
+    {
+      "builder_command_status": "no existing builder consumes this full multi-pass stack",
+      "builder_commands": [],
+      "component_ids": [
+        "pass0_c067_fixedslice_anchor_exact",
+        "pass1_pmg_hotspot_lzma",
+        "pass2_hotspot_geometry_plan",
+        "pass3_archive_bit_budget_profile"
+      ],
+      "dispatchable_from_this_plan": false,
+      "evidence_grade": "planning_only",
+      "exact_eval_branch_rule": {
+        "additive_delta_warning": "Component and pass deltas are first-order predictions only. They must not promote, rank, or support paper claims until the complete stacked archive itself has exact CUDA auth eval on the exact archive bytes.",
+        "branch": "materialize one byte-closed stacked archive -> verify payload closure, runtime tree hash, manifest, and no sidecars -> claim dispatch lane -> run exact CUDA auth eval on the exact archive bytes",
+        "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+        "dispatch_claim_required_before_remote_job": true,
+        "score_claim": false
+      },
+      "existing_builder_can_consume_full_stack": false,
+      "intent": "Replace broad mask bytes with a coarse/global representation, then spend high-resolution repair only on hard-pair/foveal/boundary atoms.",
+      "pass_antagonisms": [
+        {
+          "from_component": "pass1_pmg_hotspot_lzma",
+          "reason": "overlapping score-affecting mask atoms target the same logical member and are not blindly additive",
+          "relation": "antagonism",
+          "score_claim": false,
+          "shared_logical_members": [
+            "masks.mkv"
+          ],
+          "to_component": "pass2_hotspot_geometry_plan"
+        },
+        {
+          "from_component": "pass1_pmg_hotspot_lzma",
+          "reason": "same-pass/same-member standalone exact-negative context exists; treat additive recovery as prediction until stacked exact CUDA eval",
+          "relation": "antagonism",
+          "score_claim": false,
+          "shared_logical_members": [
+            "masks.mkv"
+          ],
+          "to_component": "pass1_cmg3_nonzero_top2_exact_negative"
+        },
+        {
+          "from_component": "pass1_pmg_hotspot_lzma",
+          "reason": "same-pass/same-member standalone exact-negative context exists; treat additive recovery as prediction until stacked exact CUDA eval",
+          "relation": "antagonism",
+          "score_claim": false,
+          "shared_logical_members": [
+            "masks.mkv"
+          ],
+          "to_component": "pass1_pmg_hotspot_exact_negative"
+        },
+        {
+          "from_component": "pass2_hotspot_geometry_plan",
+          "reason": "same-pass/same-member standalone exact-negative context exists; treat additive recovery as prediction until stacked exact CUDA eval",
+          "relation": "antagonism",
+          "score_claim": false,
+          "shared_logical_members": [
+            "masks.mkv"
+          ],
+          "to_component": "pass2_cmg2_foveated_top256_exact"
+        }
+      ],
+      "pass_synergies": [
+        {
+          "from_component": "pass0_c067_fixedslice_anchor_exact",
+          "reason": "anchor supplies custody and baseline bytes for the later pass",
+          "relation": "synergy",
+          "score_claim": false,
+          "shared_logical_members": [
+            "masks.mkv"
+          ],
+          "to_component": "pass1_pmg_hotspot_lzma"
+        },
+        {
+          "from_component": "pass0_c067_fixedslice_anchor_exact",
+          "reason": "anchor supplies custody and baseline bytes for the later pass",
+          "relation": "synergy",
+          "score_claim": false,
+          "shared_logical_members": [
+            "masks.mkv"
+          ],
+          "to_component": "pass2_hotspot_geometry_plan"
+        }
+      ],
+      "passes": [
+        {
+          "active": true,
+          "components": [
+            {
+              "component_id": "pass0_c067_fixedslice_anchor_exact",
+              "component_type": "fixedslice_full_resolution_anchor",
+              "logical_members": [
+                "masks.mkv",
+                "renderer.bin",
+                "optimized_poses.bin"
+              ],
+              "resolution_layer": "fixedslice_full_resolution_anchor",
+              "score_claim": false
+            }
+          ],
+          "optional": false,
+          "pass_index": 0,
+          "pass_name": "anchor"
+        },
+        {
+          "active": true,
+          "components": [
+            {
+              "component_id": "pass1_pmg_hotspot_lzma",
+              "component_type": "coarse_row_run_mask_grammar",
+              "logical_members": [
+                "masks.mkv"
+              ],
+              "resolution_layer": "coarse_row_run_mask_grammar",
+              "score_claim": false
+            }
+          ],
+          "optional": false,
+          "pass_index": 1,
+          "pass_name": "coarse_global_representation"
+        },
+        {
+          "active": true,
+          "components": [
+            {
+              "component_id": "pass2_hotspot_geometry_plan",
+              "component_type": "high_res_hard_pair_foveal_boundary_repair",
+              "logical_members": [
+                "masks.mkv"
+              ],
+              "resolution_layer": "high_res_hard_pair_foveal_boundary_repair",
+              "score_claim": false
+            }
+          ],
+          "optional": false,
+          "pass_index": 2,
+          "pass_name": "high_resolution_repair"
+        },
+        {
+          "active": true,
+          "components": [
+            {
+              "component_id": "pass3_archive_bit_budget_profile",
+              "component_type": "archive_entropy_layer",
+              "logical_members": [
+                "p"
+              ],
+              "resolution_layer": "archive_entropy_layer",
+              "score_claim": false
+            }
+          ],
+          "optional": false,
+          "pass_index": 3,
+          "pass_name": "entropy_packer_self_compression"
+        },
+        {
+          "active": false,
+          "components": [],
+          "optional": true,
+          "pass_index": 4,
+          "pass_name": "pose_runtime_coadaptation"
+        }
+      ],
+      "policy_id": "c067_multires_p01_coarse_global_with_highres_repair",
+      "predicted_delta": {
+        "additive_delta_warning": "Component and pass deltas are first-order predictions only. They must not promote, rank, or support paper claims until the complete stacked archive itself has exact CUDA auth eval on the exact archive bytes.",
+        "first_order_delta_bytes_vs_anchor": -91616,
+        "first_order_rate_score_delta": -0.061003333849,
+        "kind": "prediction",
+        "score_claim": false,
+        "standalone_exact_scores_seen": [],
+        "standalone_scores_are_not_stack_scores": true
+      },
+      "promotion_eligible": false,
+      "score_claim": false
+    },
+    {
+      "builder_command_status": "no existing builder consumes this full multi-pass stack",
+      "builder_commands": [],
+      "component_ids": [
+        "pass0_c067_fixedslice_anchor_exact",
+        "pass1_cmg2_downsample2x2",
+        "pass2_multimask_reconciliation_plan"
+      ],
+      "dispatchable_from_this_plan": false,
+      "evidence_grade": "planning_only",
+      "exact_eval_branch_rule": {
+        "additive_delta_warning": "Component and pass deltas are first-order predictions only. They must not promote, rank, or support paper claims until the complete stacked archive itself has exact CUDA auth eval on the exact archive bytes.",
+        "branch": "materialize one byte-closed stacked archive -> verify payload closure, runtime tree hash, manifest, and no sidecars -> claim dispatch lane -> run exact CUDA auth eval on the exact archive bytes",
+        "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+        "dispatch_claim_required_before_remote_job": true,
+        "score_claim": false
+      },
+      "existing_builder_can_consume_full_stack": false,
+      "intent": "Use the next-best coarse mask grammar with an explicit repair/reconciliation pass and keep overlap conflicts visible.",
+      "pass_antagonisms": [
+        {
+          "from_component": "pass1_cmg2_downsample2x2",
+          "reason": "overlapping score-affecting mask atoms target the same logical member and are not blindly additive",
+          "relation": "antagonism",
+          "score_claim": false,
+          "shared_logical_members": [
+            "masks.mkv"
+          ],
+          "to_component": "pass2_multimask_reconciliation_plan"
+        },
+        {
+          "from_component": "pass1_cmg2_downsample2x2",
+          "reason": "same-pass/same-member standalone exact-negative context exists; treat additive recovery as prediction until stacked exact CUDA eval",
+          "relation": "antagonism",
+          "score_claim": false,
+          "shared_logical_members": [
+            "masks.mkv"
+          ],
+          "to_component": "pass1_cmg3_nonzero_top2_exact_negative"
+        },
+        {
+          "from_component": "pass1_cmg2_downsample2x2",
+          "reason": "same-pass/same-member standalone exact-negative context exists; treat additive recovery as prediction until stacked exact CUDA eval",
+          "relation": "antagonism",
+          "score_claim": false,
+          "shared_logical_members": [
+            "masks.mkv"
+          ],
+          "to_component": "pass1_pmg_hotspot_exact_negative"
+        },
+        {
+          "from_component": "pass2_multimask_reconciliation_plan",
+          "reason": "same-pass/same-member standalone exact-negative context exists; treat additive recovery as prediction until stacked exact CUDA eval",
+          "relation": "antagonism",
+          "score_claim": false,
+          "shared_logical_members": [
+            "masks.mkv"
+          ],
+          "to_component": "pass2_cmg2_foveated_top256_exact"
+        }
+      ],
+      "pass_synergies": [
+        {
+          "from_component": "pass0_c067_fixedslice_anchor_exact",
+          "reason": "anchor supplies custody and baseline bytes for the later pass",
+          "relation": "synergy",
+          "score_claim": false,
+          "shared_logical_members": [
+            "masks.mkv"
+          ],
+          "to_component": "pass1_cmg2_downsample2x2"
+        },
+        {
+          "from_component": "pass0_c067_fixedslice_anchor_exact",
+          "reason": "anchor supplies custody and baseline bytes for the later pass",
+          "relation": "synergy",
+          "score_claim": false,
+          "shared_logical_members": [
+            "masks.mkv"
+          ],
+          "to_component": "pass2_multimask_reconciliation_plan"
+        }
+      ],
+      "passes": [
+        {
+          "active": true,
+          "components": [
+            {
+              "component_id": "pass0_c067_fixedslice_anchor_exact",
+              "component_type": "fixedslice_full_resolution_anchor",
+              "logical_members": [
+                "masks.mkv",
+                "renderer.bin",
+                "optimized_poses.bin"
+              ],
+              "resolution_layer": "fixedslice_full_resolution_anchor",
+              "score_claim": false
+            }
+          ],
+          "optional": false,
+          "pass_index": 0,
+          "pass_name": "anchor"
+        },
+        {
+          "active": true,
+          "components": [
+            {
+              "component_id": "pass1_cmg2_downsample2x2",
+              "component_type": "coarse_downsample_mask_grid",
+              "logical_members": [
+                "masks.mkv"
+              ],
+              "resolution_layer": "coarse_downsample_mask_grid",
+              "score_claim": false
+            }
+          ],
+          "optional": false,
+          "pass_index": 1,
+          "pass_name": "coarse_global_representation"
+        },
+        {
+          "active": true,
+          "components": [
+            {
+              "component_id": "pass2_multimask_reconciliation_plan",
+              "component_type": "high_res_hard_pair_foveal_boundary_repair",
+              "logical_members": [
+                "masks.mkv"
+              ],
+              "resolution_layer": "high_res_hard_pair_foveal_boundary_repair",
+              "score_claim": false
+            }
+          ],
+          "optional": false,
+          "pass_index": 2,
+          "pass_name": "high_resolution_repair"
+        },
+        {
+          "active": false,
+          "components": [],
+          "optional": false,
+          "pass_index": 3,
+          "pass_name": "entropy_packer_self_compression"
+        },
+        {
+          "active": false,
+          "components": [],
+          "optional": true,
+          "pass_index": 4,
+          "pass_name": "pose_runtime_coadaptation"
+        }
+      ],
+      "policy_id": "c067_multires_p02_conservative_mask_grammar_recovery",
+      "predicted_delta": {
+        "additive_delta_warning": "Component and pass deltas are first-order predictions only. They must not promote, rank, or support paper claims until the complete stacked archive itself has exact CUDA auth eval on the exact archive bytes.",
+        "first_order_delta_bytes_vs_anchor": -82194,
+        "first_order_rate_score_delta": -0.054729610793,
+        "kind": "prediction",
+        "score_claim": false,
+        "standalone_exact_scores_seen": [],
+        "standalone_scores_are_not_stack_scores": true
+      },
+      "promotion_eligible": false,
+      "score_claim": false
+    },
+    {
+      "builder_command_status": "no existing builder consumes this full multi-pass stack",
+      "builder_commands": [],
+      "component_ids": [
+        "pass0_c067_fixedslice_anchor_exact",
+        "pass1_pmg_hotspot_lzma",
+        "pass2_hotspot_geometry_plan",
+        "pass4_ego_motion_field_plan"
+      ],
+      "dispatchable_from_this_plan": false,
+      "evidence_grade": "planning_only",
+      "exact_eval_branch_rule": {
+        "additive_delta_warning": "Component and pass deltas are first-order predictions only. They must not promote, rank, or support paper claims until the complete stacked archive itself has exact CUDA auth eval on the exact archive bytes.",
+        "branch": "materialize one byte-closed stacked archive -> verify payload closure, runtime tree hash, manifest, and no sidecars -> claim dispatch lane -> run exact CUDA auth eval on the exact archive bytes",
+        "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+        "dispatch_claim_required_before_remote_job": true,
+        "score_claim": false
+      },
+      "existing_builder_can_consume_full_stack": false,
+      "intent": "Treat pose/runtime co-adaptation as an optional final-pass basin shift after mask-stack repair, not as an additive byte-only win.",
+      "pass_antagonisms": [
+        {
+          "from_component": "pass1_pmg_hotspot_lzma",
+          "reason": "overlapping score-affecting mask atoms target the same logical member and are not blindly additive",
+          "relation": "antagonism",
+          "score_claim": false,
+          "shared_logical_members": [
+            "masks.mkv"
+          ],
+          "to_component": "pass2_hotspot_geometry_plan"
+        },
+        {
+          "from_component": "pass1_pmg_hotspot_lzma",
+          "reason": "same-pass/same-member standalone exact-negative context exists; treat additive recovery as prediction until stacked exact CUDA eval",
+          "relation": "antagonism",
+          "score_claim": false,
+          "shared_logical_members": [
+            "masks.mkv"
+          ],
+          "to_component": "pass1_cmg3_nonzero_top2_exact_negative"
+        },
+        {
+          "from_component": "pass1_pmg_hotspot_lzma",
+          "reason": "same-pass/same-member standalone exact-negative context exists; treat additive recovery as prediction until stacked exact CUDA eval",
+          "relation": "antagonism",
+          "score_claim": false,
+          "shared_logical_members": [
+            "masks.mkv"
+          ],
+          "to_component": "pass1_pmg_hotspot_exact_negative"
+        },
+        {
+          "from_component": "pass2_hotspot_geometry_plan",
+          "reason": "same-pass/same-member standalone exact-negative context exists; treat additive recovery as prediction until stacked exact CUDA eval",
+          "relation": "antagonism",
+          "score_claim": false,
+          "shared_logical_members": [
+            "masks.mkv"
+          ],
+          "to_component": "pass2_cmg2_foveated_top256_exact"
+        }
+      ],
+      "pass_synergies": [
+        {
+          "from_component": "pass0_c067_fixedslice_anchor_exact",
+          "reason": "anchor supplies custody and baseline bytes for the later pass",
+          "relation": "synergy",
+          "score_claim": false,
+          "shared_logical_members": [
+            "masks.mkv"
+          ],
+          "to_component": "pass1_pmg_hotspot_lzma"
+        },
+        {
+          "from_component": "pass0_c067_fixedslice_anchor_exact",
+          "reason": "anchor supplies custody and baseline bytes for the later pass",
+          "relation": "synergy",
+          "score_claim": false,
+          "shared_logical_members": [
+            "masks.mkv"
+          ],
+          "to_component": "pass2_hotspot_geometry_plan"
+        },
+        {
+          "from_component": "pass0_c067_fixedslice_anchor_exact",
+          "reason": "anchor supplies custody and baseline bytes for the later pass",
+          "relation": "synergy",
+          "score_claim": false,
+          "shared_logical_members": [
+            "optimized_poses.bin"
+          ],
+          "to_component": "pass4_ego_motion_field_plan"
+        }
+      ],
+      "passes": [
+        {
+          "active": true,
+          "components": [
+            {
+              "component_id": "pass0_c067_fixedslice_anchor_exact",
+              "component_type": "fixedslice_full_resolution_anchor",
+              "logical_members": [
+                "masks.mkv",
+                "renderer.bin",
+                "optimized_poses.bin"
+              ],
+              "resolution_layer": "fixedslice_full_resolution_anchor",
+              "score_claim": false
+            }
+          ],
+          "optional": false,
+          "pass_index": 0,
+          "pass_name": "anchor"
+        },
+        {
+          "active": true,
+          "components": [
+            {
+              "component_id": "pass1_pmg_hotspot_lzma",
+              "component_type": "coarse_row_run_mask_grammar",
+              "logical_members": [
+                "masks.mkv"
+              ],
+              "resolution_layer": "coarse_row_run_mask_grammar",
+              "score_claim": false
+            }
+          ],
+          "optional": false,
+          "pass_index": 1,
+          "pass_name": "coarse_global_representation"
+        },
+        {
+          "active": true,
+          "components": [
+            {
+              "component_id": "pass2_hotspot_geometry_plan",
+              "component_type": "high_res_hard_pair_foveal_boundary_repair",
+              "logical_members": [
+                "masks.mkv"
+              ],
+              "resolution_layer": "high_res_hard_pair_foveal_boundary_repair",
+              "score_claim": false
+            }
+          ],
+          "optional": false,
+          "pass_index": 2,
+          "pass_name": "high_resolution_repair"
+        },
+        {
+          "active": false,
+          "components": [],
+          "optional": false,
+          "pass_index": 3,
+          "pass_name": "entropy_packer_self_compression"
+        },
+        {
+          "active": true,
+          "components": [
+            {
+              "component_id": "pass4_ego_motion_field_plan",
+              "component_type": "pose_runtime_field",
+              "logical_members": [
+                "optimized_poses.bin",
+                "runtime"
+              ],
+              "resolution_layer": "pose_runtime_field",
+              "score_claim": false
+            }
+          ],
+          "optional": true,
+          "pass_index": 4,
+          "pass_name": "pose_runtime_coadaptation"
+        }
+      ],
+      "policy_id": "c067_multires_p03_optional_pose_runtime_coadaptation",
+      "predicted_delta": {
+        "additive_delta_warning": "Component and pass deltas are first-order predictions only. They must not promote, rank, or support paper claims until the complete stacked archive itself has exact CUDA auth eval on the exact archive bytes.",
+        "first_order_delta_bytes_vs_anchor": -91616,
+        "first_order_rate_score_delta": -0.061003333849,
+        "kind": "prediction",
+        "score_claim": false,
+        "standalone_exact_scores_seen": [],
+        "standalone_scores_are_not_stack_scores": true
+      },
+      "promotion_eligible": false,
+      "score_claim": false
+    }
+  ],
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "contest_formula": {
+    "lambda_rate": 6.658589531221714e-07,
+    "score": "100 * seg_dist + sqrt(10 * pose_dist) + 25 * archive_bytes / 37545489",
+    "score_claim": false
+  },
+  "cuda_jobs_launched": false,
+  "evidence_grade": "planning_only",
+  "exact_eval_branch_rule": {
+    "additive_delta_warning": "Component and pass deltas are first-order predictions only. They must not promote, rank, or support paper claims until the complete stacked archive itself has exact CUDA auth eval on the exact archive bytes.",
+    "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+    "required_for_any_candidate_policy": true,
+    "score_claim": false,
+    "steps": [
+      "build a byte-closed stacked archive with every pass payload charged",
+      "record deterministic manifest, archive bytes, archive SHA-256, and runtime tree hash",
+      "claim lane dispatch before any remote exact eval",
+      "run experiments/contest_auth_eval.py --device cuda on the exact archive bytes",
+      "promote only if component gates, payload closure, and recomputed formula pass"
+    ]
+  },
+  "loaded_artifacts": [
+    {
+      "archive_bytes": 276214,
+      "archive_sha256": null,
+      "artifact_id": "pass0_c067_fixedslice_anchor_exact",
+      "builder_consumable": false,
+      "component_type": "fixedslice_full_resolution_anchor",
+      "delta_bytes_vs_anchor": null,
+      "disagreement_fraction": null,
+      "evidence_grade": "exact_cuda_observation",
+      "exact_negative": false,
+      "label": "pass0_c067_fixedslice_anchor_exact",
+      "logical_members": [
+        "masks.mkv",
+        "renderer.bin",
+        "optimized_poses.bin"
+      ],
+      "notes": [
+        "exact_cuda_observation_input_not_a_new_score_claim"
+      ],
+      "observed_exact_cuda": {
+        "avg_posenet_dist": 0.00049637,
+        "avg_segnet_dist": 0.00061244,
+        "score_claim": false,
+        "score_recomputed_from_components": 0.31561703078448233
+      },
+      "pass_index": 0,
+      "pass_name": "anchor",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/contest_auth_eval.adjudicated.json",
+      "payload_bytes": null,
+      "promotion_eligible": false,
+      "resolution_layer": "fixedslice_full_resolution_anchor",
+      "schema": null,
+      "score_claim": false,
+      "sha256": "8cace9e008a9559a2e2e5710742103ef1e4e9c4eb387ce879efd7173ce0da969",
+      "source_builder": null
+    },
+    {
+      "archive_bytes": 194020,
+      "archive_sha256": "e695829a9c45e827b8abc430b87c4871f7d563ff5b26767a6776483613fff3b1",
+      "artifact_id": "pass1_cmg2_downsample2x2",
+      "builder_consumable": true,
+      "component_type": "coarse_downsample_mask_grid",
+      "delta_bytes_vs_anchor": -82194,
+      "disagreement_fraction": null,
+      "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
+      "exact_negative": false,
+      "label": "pass1_cmg2_downsample2x2",
+      "logical_members": [
+        "masks.mkv"
+      ],
+      "notes": [
+        "changes_mask_stream_geometry_or_reconstruction"
+      ],
+      "observed_exact_cuda": {
+        "avg_posenet_dist": null,
+        "avg_segnet_dist": null,
+        "score_claim": false,
+        "score_recomputed_from_components": null
+      },
+      "pass_index": 1,
+      "pass_name": "coarse_global_representation",
+      "path": "/Users/adpena/Projects/pact/experiments/results/c067_cmg2_downsample2x2_candidate_20260502T1010Z/build_manifest.json",
+      "payload_bytes": 132610,
+      "promotion_eligible": false,
+      "resolution_layer": "coarse_downsample_mask_grid",
+      "schema": "cmg2_downsample_candidate_v1",
+      "score_claim": false,
+      "sha256": "4b3fd84cdba7c020bc4d55a6b03b1c704f5b39a655beb1784681894a13b669aa",
+      "source_builder": "experiments/build_cmg2_downsample_candidate.py"
+    },
+    {
+      "archive_bytes": 229196,
+      "archive_sha256": "6ba74dc4ac94fd61e0188ae154b975e3b9890eec1c7827d8cdedfcd343b665fb",
+      "artifact_id": "pass1_cmg3_nonzero_top2",
+      "builder_consumable": true,
+      "component_type": "coarse_row_run_mask_grammar",
+      "delta_bytes_vs_anchor": -47018,
+      "disagreement_fraction": 0.011170213487413195,
+      "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
+      "exact_negative": false,
+      "label": "pass1_cmg3_nonzero_top2",
+      "logical_members": [
+        "masks.mkv"
+      ],
+      "notes": [
+        "changes_mask_stream_geometry_or_reconstruction"
+      ],
+      "observed_exact_cuda": {
+        "avg_posenet_dist": null,
+        "avg_segnet_dist": null,
+        "score_claim": false,
+        "score_recomputed_from_components": null
+      },
+      "pass_index": 1,
+      "pass_name": "coarse_global_representation",
+      "path": "/Users/adpena/Projects/pact/experiments/results/c067_cmg3_nonzero_runs_top2_candidate_20260502T105724Z/build_manifest.json",
+      "payload_bytes": 167786,
+      "promotion_eligible": false,
+      "resolution_layer": "coarse_row_run_mask_grammar",
+      "schema": "cmg3_nonzero_row_runs_candidate_v1",
+      "score_claim": false,
+      "sha256": "0a8103de1a250afbd550fee3679e99222a74bec7c650a407e805044e8c3c437c",
+      "source_builder": "experiments/build_cmg3_nonzero_runs_candidate.py"
+    },
+    {
+      "archive_bytes": 229196,
+      "archive_sha256": null,
+      "artifact_id": "pass1_cmg3_nonzero_top2_exact_negative",
+      "builder_consumable": false,
+      "component_type": "coarse_row_run_mask_grammar",
+      "delta_bytes_vs_anchor": null,
+      "disagreement_fraction": null,
+      "evidence_grade": "exact_cuda_observation",
+      "exact_negative": true,
+      "label": "pass1_cmg3_nonzero_top2_exact_negative",
+      "logical_members": [
+        "masks.mkv"
+      ],
+      "notes": [
+        "exact_cuda_observation_input_not_a_new_score_claim",
+        "known_exact_negative_or_component_collapse_for_standalone_candidate",
+        "changes_mask_stream_geometry_or_reconstruction"
+      ],
+      "observed_exact_cuda": {
+        "avg_posenet_dist": 6.90528297,
+        "avg_segnet_dist": 0.00952611,
+        "score_claim": false,
+        "score_recomputed_from_components": 9.415026478717273
+      },
+      "pass_index": 1,
+      "pass_name": "coarse_global_representation",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_cmg3_nonzero_top2_t4_20260502T1100Z/contest_auth_eval.json",
+      "payload_bytes": null,
+      "promotion_eligible": false,
+      "resolution_layer": "coarse_row_run_mask_grammar",
+      "schema": null,
+      "score_claim": false,
+      "sha256": "7031c9bfba227b0af84c2642b819472d07d90fc3ad1316a5593b7366103500f5",
+      "source_builder": null
+    },
+    {
+      "archive_bytes": 187144,
+      "archive_sha256": null,
+      "artifact_id": "pass1_pmg_hotspot_exact_negative",
+      "builder_consumable": false,
+      "component_type": "predictive_mask_grammar_global",
+      "delta_bytes_vs_anchor": null,
+      "disagreement_fraction": null,
+      "evidence_grade": "exact_cuda_observation",
+      "exact_negative": true,
+      "label": "pass1_pmg_hotspot_exact_negative",
+      "logical_members": [
+        "masks.mkv"
+      ],
+      "notes": [
+        "exact_cuda_observation_input_not_a_new_score_claim",
+        "known_exact_negative_or_component_collapse_for_standalone_candidate",
+        "changes_mask_stream_geometry_or_reconstruction"
+      ],
+      "observed_exact_cuda": {
+        "avg_posenet_dist": 69.20815277,
+        "avg_segnet_dist": 0.04498317,
+        "score_claim": false,
+        "score_recomputed_from_components": 30.930370939355445
+      },
+      "pass_index": 1,
+      "pass_name": "coarse_global_representation",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_pmg_hotspot_c067_t4_20260502T1402Z/contest_auth_eval.json",
+      "payload_bytes": null,
+      "promotion_eligible": false,
+      "resolution_layer": "predictive_mask_grammar_global",
+      "schema": null,
+      "score_claim": false,
+      "sha256": "502748e595f6aab00341e6868d4a0d712e1bc4c54fb3c58c72db0ed61ec8bf0c",
+      "source_builder": null
+    },
+    {
+      "archive_bytes": 184598,
+      "archive_sha256": "20b7cfe3d034f173be1d71193a71d9fa79c7da118790f92209ea0bf09643e660",
+      "artifact_id": "pass1_pmg_hotspot_lzma",
+      "builder_consumable": true,
+      "component_type": "coarse_row_run_mask_grammar",
+      "delta_bytes_vs_anchor": -91616,
+      "disagreement_fraction": 0.015210562811957465,
+      "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
+      "exact_negative": false,
+      "label": "pass1_pmg_hotspot_lzma",
+      "logical_members": [
+        "masks.mkv"
+      ],
+      "notes": [
+        "changes_mask_stream_geometry_or_reconstruction"
+      ],
+      "observed_exact_cuda": {
+        "avg_posenet_dist": null,
+        "avg_segnet_dist": null,
+        "score_claim": false,
+        "score_recomputed_from_components": null
+      },
+      "pass_index": 1,
+      "pass_name": "coarse_global_representation",
+      "path": "/Users/adpena/Projects/pact/experiments/results/pmg_hotspot_candidate_c067_20260502_lzma/build_manifest.json",
+      "payload_bytes": 123188,
+      "promotion_eligible": false,
+      "resolution_layer": "coarse_row_run_mask_grammar",
+      "schema": "pmg_hotspot_cmg3_candidate_v1",
+      "score_claim": false,
+      "sha256": "7c360b838db04b99568fc6a9f9a1e0a68f20424acd28095649f995638f452cfe",
+      "source_builder": "experiments/build_pmg_hotspot_candidate.py"
+    },
+    {
+      "archive_bytes": 219850,
+      "archive_sha256": null,
+      "artifact_id": "pass2_cmg2_foveated_top256_exact",
+      "builder_consumable": false,
+      "component_type": "high_res_hard_pair_foveal_boundary_repair",
+      "delta_bytes_vs_anchor": null,
+      "disagreement_fraction": null,
+      "evidence_grade": "exact_cuda_observation",
+      "exact_negative": true,
+      "label": "pass2_cmg2_foveated_top256_exact",
+      "logical_members": [
+        "masks.mkv"
+      ],
+      "notes": [
+        "exact_cuda_observation_input_not_a_new_score_claim",
+        "known_exact_negative_or_component_collapse_for_standalone_candidate",
+        "changes_mask_stream_geometry_or_reconstruction"
+      ],
+      "observed_exact_cuda": {
+        "avg_posenet_dist": 0.27912381,
+        "avg_segnet_dist": 0.00405869,
+        "score_claim": false,
+        "score_recomputed_from_components": 2.2229578832824526
+      },
+      "pass_index": 2,
+      "pass_name": "high_resolution_repair",
+      "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c067_cmg2_foveated_top256_t4_20260502T1007Z/contest_auth_eval.json",
+      "payload_bytes": null,
+      "promotion_eligible": false,
+      "resolution_layer": "high_res_hard_pair_foveal_boundary_repair",
+      "schema": null,
+      "score_claim": false,
+      "sha256": "b3964ad405ad243964fcc5cbf60000ff12d1052b90e997fcf77232e9fd4c6280",
+      "source_builder": null
+    },
+    {
+      "archive_bytes": null,
+      "archive_sha256": null,
+      "artifact_id": "pass2_hotspot_geometry_plan",
+      "builder_consumable": true,
+      "component_type": "high_res_hard_pair_foveal_boundary_repair",
+      "delta_bytes_vs_anchor": null,
+      "disagreement_fraction": null,
+      "evidence_grade": "planning_only",
+      "exact_negative": false,
+      "label": "pass2_hotspot_geometry_plan",
+      "logical_members": [
+        "masks.mkv"
+      ],
+      "notes": [
+        "changes_mask_stream_geometry_or_reconstruction"
+      ],
+      "observed_exact_cuda": {
+        "avg_posenet_dist": null,
+        "avg_segnet_dist": null,
+        "score_claim": false,
+        "score_recomputed_from_components": null
+      },
+      "pass_index": 2,
+      "pass_name": "high_resolution_repair",
+      "path": "/Users/adpena/Projects/pact/experiments/results/c067_hotspot_mask_geometry_compiler_20260502/c067_hotspot_mask_geometry_plan.json",
+      "payload_bytes": null,
+      "promotion_eligible": false,
+      "resolution_layer": "high_res_hard_pair_foveal_boundary_repair",
+      "schema": "c067_hotspot_mask_geometry_compiler_v1",
+      "score_claim": false,
+      "sha256": "8d21fc2be8e4f58090e5fd9268724b803925ad79a5acd50d7eca8a53618042f9",
+      "source_builder": "experiments/build_cmg3_adaptive_runs_candidate.py --field-policy-json"
+    },
+    {
+      "archive_bytes": null,
+      "archive_sha256": null,
+      "artifact_id": "pass2_multimask_reconciliation_plan",
+      "builder_consumable": false,
+      "component_type": "high_res_hard_pair_foveal_boundary_repair",
+      "delta_bytes_vs_anchor": null,
+      "disagreement_fraction": null,
+      "evidence_grade": "empirical",
+      "exact_negative": false,
+      "label": "pass2_multimask_reconciliation_plan",
+      "logical_members": [
+        "masks.mkv"
+      ],
+      "notes": [
+        "changes_mask_stream_geometry_or_reconstruction"
+      ],
+      "observed_exact_cuda": {
+        "avg_posenet_dist": null,
+        "avg_segnet_dist": null,
+        "score_claim": false,
+        "score_recomputed_from_components": null
+      },
+      "pass_index": 2,
+      "pass_name": "high_resolution_repair",
+      "path": "/Users/adpena/Projects/pact/experiments/results/c067_multimask_reconciliation_20260502/multimask_reconciliation_plan.json",
+      "payload_bytes": null,
+      "promotion_eligible": false,
+      "resolution_layer": "high_res_hard_pair_foveal_boundary_repair",
+      "schema": null,
+      "score_claim": false,
+      "sha256": "537950ff3fc13a3aea4db5c7c1c0f2872bdd2d8361a3f8bfdd3a1170009626f2",
+      "source_builder": null
+    },
+    {
+      "archive_bytes": null,
+      "archive_sha256": null,
+      "artifact_id": "pass3_archive_bit_budget_profile",
+      "builder_consumable": false,
+      "component_type": "archive_entropy_layer",
+      "delta_bytes_vs_anchor": null,
+      "disagreement_fraction": null,
+      "evidence_grade": "empirical_byte_profile",
+      "exact_negative": false,
+      "label": "pass3_archive_bit_budget_profile",
+      "logical_members": [
+        "p"
+      ],
+      "notes": [],
+      "observed_exact_cuda": {
+        "avg_posenet_dist": null,
+        "avg_segnet_dist": null,
+        "score_claim": false,
+        "score_recomputed_from_components": null
+      },
+      "pass_index": 3,
+      "pass_name": "entropy_packer_self_compression",
+      "path": "/Users/adpena/Projects/pact/experiments/results/archive_bit_budget_profile_c067_pr67_mix_20260502T1548Z/archive_bit_budget_profile.json",
+      "payload_bytes": null,
+      "promotion_eligible": false,
+      "resolution_layer": "archive_entropy_layer",
+      "schema": "archive_bit_budget_profile_v1",
+      "score_claim": false,
+      "sha256": "f7e0e2d9e9eb938509a05c2d1bf15e52960a619fb7df66bb0d7b2cfdb1cc41a0",
+      "source_builder": null
+    },
+    {
+      "archive_bytes": null,
+      "archive_sha256": null,
+      "artifact_id": "pass4_ego_motion_field_plan",
+      "builder_consumable": false,
+      "component_type": "pose_runtime_field",
+      "delta_bytes_vs_anchor": null,
+      "disagreement_fraction": null,
+      "evidence_grade": "planning_only",
+      "exact_negative": false,
+      "label": "pass4_ego_motion_field_plan",
+      "logical_members": [
+        "optimized_poses.bin",
+        "runtime"
+      ],
+      "notes": [],
+      "observed_exact_cuda": {
+        "avg_posenet_dist": null,
+        "avg_segnet_dist": null,
+        "score_claim": false,
+        "score_recomputed_from_components": null
+      },
+      "pass_index": 4,
+      "pass_name": "pose_runtime_coadaptation",
+      "path": "/Users/adpena/Projects/pact/experiments/results/c067_ego_motion_field_atoms_20260502/ego_motion_field_plan.json",
+      "payload_bytes": null,
+      "promotion_eligible": false,
+      "resolution_layer": "pose_runtime_field",
+      "schema": "ego_motion_field_atom_plan_v1",
+      "score_claim": false,
+      "sha256": "1156da437b2afd349daf604a1558a8d4c00ccf2b7ea6e7c4040f205115816271",
+      "source_builder": null
+    }
+  ],
+  "missing_artifacts": [],
+  "no_score_claim": true,
+  "pass_catalog": [
+    {
+      "artifact_ids": [
+        "pass0_c067_fixedslice_anchor_exact"
+      ],
+      "pass_index": 0,
+      "pass_name": "anchor",
+      "resolution_layers": [
+        "fixedslice_full_resolution_anchor"
+      ],
+      "score_claim": false
+    },
+    {
+      "artifact_ids": [
+        "pass1_pmg_hotspot_lzma",
+        "pass1_cmg2_downsample2x2",
+        "pass1_cmg3_nonzero_top2",
+        "pass1_pmg_hotspot_exact_negative",
+        "pass1_cmg3_nonzero_top2_exact_negative"
+      ],
+      "pass_index": 1,
+      "pass_name": "coarse_global_representation",
+      "resolution_layers": [
+        "coarse_downsample_mask_grid",
+        "coarse_row_run_mask_grammar",
+        "predictive_mask_grammar_global"
+      ],
+      "score_claim": false
+    },
+    {
+      "artifact_ids": [
+        "pass2_hotspot_geometry_plan",
+        "pass2_multimask_reconciliation_plan",
+        "pass2_cmg2_foveated_top256_exact"
+      ],
+      "pass_index": 2,
+      "pass_name": "high_resolution_repair",
+      "resolution_layers": [
+        "high_res_hard_pair_foveal_boundary_repair"
+      ],
+      "score_claim": false
+    },
+    {
+      "artifact_ids": [
+        "pass3_archive_bit_budget_profile"
+      ],
+      "pass_index": 3,
+      "pass_name": "entropy_packer_self_compression",
+      "resolution_layers": [
+        "archive_entropy_layer"
+      ],
+      "score_claim": false
+    },
+    {
+      "artifact_ids": [
+        "pass4_ego_motion_field_plan"
+      ],
+      "pass_index": 4,
+      "pass_name": "pose_runtime_coadaptation",
+      "resolution_layers": [
+        "pose_runtime_field"
+      ],
+      "score_claim": false
+    }
+  ],
+  "pass_contract": [
+    {
+      "pass_index": 0,
+      "pass_name": "anchor",
+      "required_role": "C067/apogee fixed-slice archive custody and exact-eval baseline",
+      "resolution_layer": "fixedslice_full_resolution_anchor",
+      "score_claim": false
+    },
+    {
+      "pass_index": 1,
+      "pass_name": "coarse_global_representation",
+      "required_role": "coarse mask/video representation that replaces broad bytes",
+      "resolution_layer": "coarse_global_mask_or_video",
+      "score_claim": false
+    },
+    {
+      "pass_index": 2,
+      "pass_name": "high_resolution_repair",
+      "required_role": "hard-pair, foveal, boundary, and residual atoms charged inside archive",
+      "resolution_layer": "high_res_repair_atoms",
+      "score_claim": false
+    },
+    {
+      "pass_index": 3,
+      "pass_name": "entropy_packer_self_compression",
+      "required_role": "deterministic packer or entropy pass over the selected stack bytes",
+      "resolution_layer": "archive_entropy_layer",
+      "score_claim": false
+    },
+    {
+      "optional": true,
+      "pass_index": 4,
+      "pass_name": "pose_runtime_coadaptation",
+      "required_role": "optional pose/runtime co-adaptation after mask-stack geometry is fixed",
+      "resolution_layer": "pose_runtime_field",
+      "score_claim": false
+    }
+  ],
+  "planning_only": true,
+  "producer": "experiments/plan_c067_multiresolution_stack_candidates.py",
+  "promotion_eligible": false,
+  "remote_jobs_dispatched": false,
+  "schema": "c067_multiresolution_stack_planner_v1",
+  "score_claim": false
+}

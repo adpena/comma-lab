@@ -1,0 +1,82 @@
+{
+  "candidate_archives": [],
+  "classification": {
+    "failure_class": null,
+    "notes": "All three Modal FunctionCall IDs returned TimeoutError with timeout=0 and official modal_recover_lane reports STILL RUNNING. No artifacts were returned, so local C089 transplant/readiness/pose-safety gates are blocked on terminal exports.",
+    "overall": "active_waiting_for_modal_completion"
+  },
+  "current_c089_source_archive": {
+    "avg_posenet_dist": 0.00049601,
+    "avg_segnet_dist": 0.00061038,
+    "bytes": 276342,
+    "device": "cuda",
+    "eval_json": "experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/contest_auth_eval.adjudicated.json",
+    "path": "experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/archive.zip",
+    "sample_count": 600,
+    "score_recomputed_from_components": 0.3154707273953505,
+    "sha256": "0ec53e5b871149ed6eea56c0b9bcca3baec998d5bfad4f371979e0c90e62cea8"
+  },
+  "generated_at_utc": "2026-05-03T11:10:16Z",
+  "highest_ev_next_action": {
+    "action": "poll_h100_first_then_run_c089_transplant_pose_safety_if_terminal_export_exists",
+    "exact_eval_gate": "Only if pose_safety_preflight.json reports safe_for_exact_eval_dispatch=true and a fresh tools/claim_lane_dispatch.py claim succeeds; otherwise return command only.",
+    "post_export_local_gate_sequence": [
+      ".venv/bin/python experiments/build_renderer_shrink_candidate.py --source-archive experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/archive.zip --renderer-export <recovered_renderer_qzs3.bin> --output-dir experiments/results/trained_renderer_transplant_recovery_worker_20260503/<candidate_id>/c089_transplant --qzs3-block-sizes 32,48,64,96,128 --force",
+      ".venv/bin/python experiments/preflight_renderer_transplant_pose_safety.py --source-archive experiments/results/lightning_batch/exact_eval_c067_pr75_qp1_top40_p6_t4_awsfix1_20260503T0630Z/archive.zip --candidate-archive <selected_candidate_archive.zip> --output-json experiments/results/trained_renderer_transplant_recovery_worker_20260503/<candidate_id>/pose_safety_preflight.json --max-pairs 5"
+    ],
+    "reason": "H100 was spawned first and has the earliest claim ETA; duplicating a burn or dispatching exact eval now would violate single-flight/custody gates.",
+    "recover_command": ".venv/bin/python experiments/modal_recover_lane.py --label c067_fixed_renderer_burn_fix3_modal_h100_20260503T0659Z"
+  },
+  "modal_calls": [
+    {
+      "artifacts_saved": 0,
+      "call_id": "fc-01KQP9K42CAWJH7XEV4KC0V28M",
+      "gpu": "H100",
+      "label": "c067_fixed_renderer_burn_fix3_modal_h100_20260503T0659Z",
+      "lane_id": "c067_fixed_renderer_burn_qfaithful_fix3_modal_h100",
+      "modal_app_id": "ap-tVgPQDqd9ns0I1MiXRAzV4",
+      "modal_app_log_tail": "experiments/results/trained_renderer_transplant_recovery_worker_20260503/modal_recovery/h100/modal_app_logs_tail.txt",
+      "modal_recover_lane_log": "experiments/results/trained_renderer_transplant_recovery_worker_20260503/modal_recovery/h100/modal_recover_lane_stdout.txt",
+      "output_dir": "experiments/results/trained_renderer_transplant_recovery_worker_20260503/modal_recovery/h100",
+      "status": "running",
+      "terminal": false
+    },
+    {
+      "artifacts_saved": 0,
+      "call_id": "fc-01KQP9T1VD14785MG63H7JM5VK",
+      "gpu": "A100",
+      "label": "c067_fixed_renderer_burn_fix3_modal_a100_20260503T0702Z",
+      "lane_id": "c067_fixed_renderer_burn_qfaithful_fix3_modal_a100",
+      "modal_app_id": "ap-mFnRt0CeC0nmT1ZKzCIx2v",
+      "modal_app_log_tail": "experiments/results/trained_renderer_transplant_recovery_worker_20260503/modal_recovery/app_ap-mFnRt0CeC0nmT1ZKzCIx2v_logs_tail.txt",
+      "modal_recover_lane_log": "experiments/results/trained_renderer_transplant_recovery_worker_20260503/modal_recovery/a100/modal_recover_lane_stdout.txt",
+      "output_dir": "experiments/results/trained_renderer_transplant_recovery_worker_20260503/modal_recovery/a100",
+      "status": "running",
+      "terminal": false
+    },
+    {
+      "artifacts_saved": 0,
+      "call_id": "fc-01KQP9T19Y7PMDETDN99WDMF2W",
+      "gpu": "A10G",
+      "label": "c067_fixed_renderer_burn_fix3_modal_a10g_20260503T0702Z",
+      "lane_id": "c067_fixed_renderer_burn_qfaithful_fix3_modal_a10g",
+      "modal_app_id": "ap-LsyGen7NErI9urFui6MUIo",
+      "modal_app_log_tail": "experiments/results/trained_renderer_transplant_recovery_worker_20260503/modal_recovery/app_ap-LsyGen7NErI9urFui6MUIo_logs_tail.txt",
+      "modal_recover_lane_log": "experiments/results/trained_renderer_transplant_recovery_worker_20260503/modal_recovery/a10g/modal_recover_lane_stdout.txt",
+      "output_dir": "experiments/results/trained_renderer_transplant_recovery_worker_20260503/modal_recovery/a10g",
+      "status": "running",
+      "terminal": false
+    }
+  ],
+  "promotion_eligible": false,
+  "remote_gpu_dispatch_performed": false,
+  "safety_gates": {
+    "dispatch_claim": "not_created_no_dispatchable_candidate",
+    "exact_eval_dispatch": "not_performed",
+    "preflight_readiness": "not_run_no_terminal_exports",
+    "renderer_transplant_pose_safety": "not_run_no_terminal_exports"
+  },
+  "schema": "trained_renderer_transplant_recovery_worker_triage_v1",
+  "score_claim": false,
+  "terminal_export_artifacts": []
+}

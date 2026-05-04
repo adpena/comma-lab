@@ -1,0 +1,68 @@
+{
+  "brotli_quality": 11,
+  "evidence_grade": "empirical",
+  "formula_only_rate_delta": -0.0024570195370208123,
+  "header": {
+    "members": [
+      {
+        "bytes": 59288,
+        "codec": "raw",
+        "name": "renderer.bin",
+        "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+      },
+      {
+        "bytes": 109183,
+        "codec": "raw",
+        "name": "masks.mkv",
+        "sha256": "e87e592d67e72e6e43cef5877090a8b637b20d2f8163f142d66623847fadb9f6"
+      },
+      {
+        "bytes": 1140,
+        "codec": "pose_qp1_v1",
+        "decoded_bytes": 7200,
+        "decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f",
+        "lossy": true,
+        "name": "optimized_poses.bin",
+        "pose_error_stats": {
+          "max_abs_by_dim": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "pose_dim": 6,
+          "rmse_by_dim": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          "rows": 600
+        },
+        "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583",
+        "source_decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+      }
+    ],
+    "payload_format": "public_pr64_mask_first_len_table",
+    "schema": "renderer_payload_pr64_len_table_v1",
+    "source_archive_sha256": "396bb3d6852fa67fec788fa2be009359905b8869df0d47d6d4b5598b37c2384c"
+  },
+  "output_archive": "experiments/results/c063_mask_av1_reencode_sweep_20260502/crf60/build/archive.zip",
+  "output_archive_bytes": 156564,
+  "output_archive_sha256": "2bab1ebd04f2eac79f3daa0d620c1b26d21991099d6c84b2e3933bb3a4c5b6e0",
+  "payload_compressed_bytes": 156464,
+  "payload_format": "public_pr64_mask_first_len_table",
+  "payload_member": "p",
+  "payload_raw_bytes": 169623,
+  "pose_codec": "pose_qp1_v1",
+  "pose_residual_topk": 0,
+  "savings_bytes": 3690,
+  "score_claim": false,
+  "source_archive": "experiments/results/c063_mask_av1_reencode_sweep_20260502/crf60/runtime_members.zip",
+  "source_archive_bytes": 160254,
+  "source_archive_sha256": "396bb3d6852fa67fec788fa2be009359905b8869df0d47d6d4b5598b37c2384c"
+}

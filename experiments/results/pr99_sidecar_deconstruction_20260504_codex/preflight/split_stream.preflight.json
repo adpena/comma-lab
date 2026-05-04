@@ -1,0 +1,131 @@
+{
+  "archive": {
+    "bytes": 178509,
+    "charged_member_allowlist": "passed",
+    "duplicate_member_names": [],
+    "member_names": [
+      "0.bin"
+    ],
+    "members": [
+      {
+        "compress_size": 178401,
+        "compress_type": 0,
+        "crc32_hex": "535198c3",
+        "decode_smoke": {
+          "bytes": 178401,
+          "magic_ascii": "[x\u0002\u0000[]~s",
+          "magic_hex": "5b7802005b5d7e73",
+          "name": "0.bin",
+          "sha256": "f02006d085f0e08496002f4eb72d5f824772d19535e6c59a739f6696112b584e",
+          "status": "passed"
+        },
+        "file_size": 178401,
+        "name": "0.bin",
+        "name_grammar": "passed"
+      }
+    ],
+    "path": "experiments/results/pr99_sidecar_deconstruction_20260504_codex/candidates/archive.split_stream.zip",
+    "sha256": "a50913059816fec4bb7f7796865b1219a34be61a9f50d5768f1b42677705de9b",
+    "status": "passed",
+    "zip_container_integrity": "passed"
+  },
+  "blockers": [],
+  "cuda_required_for_score": true,
+  "dispatch_performed": false,
+  "evidence_grade": "external/local_preflight_non_score_until_cuda",
+  "promotion_eligible": false,
+  "ready_for_exact_eval_dispatch": true,
+  "runtime": {
+    "inflate_sh": "experiments/results/pr99_sidecar_deconstruction_20260504_codex/runtime_variants/split_stream/inflate.sh",
+    "inflate_sh_sha256": "202e9d917c1a2f56ece729193de92c32f11a23ec341d3a44cf5cac1d4a8b19a7",
+    "runtime_manifest": {
+      "files": [
+        {
+          "bytes": 2197,
+          "relative_path": "hnerv_model.py",
+          "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+        },
+        {
+          "bytes": 4965,
+          "relative_path": "inflate.py",
+          "sha256": "2b4bcc6024433284b731b980145b1aa56b336a5a6b9ec71c3281b3dd00903c5b"
+        },
+        {
+          "bytes": 137,
+          "relative_path": "inflate.sh",
+          "sha256": "202e9d917c1a2f56ece729193de92c32f11a23ec341d3a44cf5cac1d4a8b19a7"
+        },
+        {
+          "bytes": 1081,
+          "relative_path": "schema.py",
+          "sha256": "bc434bd596e753dbeae97c0ddce4d9cf98a50cfe862a451834864d83620d6a0a"
+        },
+        {
+          "bytes": 3529,
+          "relative_path": "sidecar.py",
+          "sha256": "2b7847442aaa692f2f8256b596577cc28873376e5bb2db80d8371e20f73a7873"
+        }
+      ],
+      "repo_local_tac_import_manifest": {
+        "discovery": "static_ast_recursive_import_closure",
+        "file_count": 0,
+        "files": [],
+        "module_count": 0,
+        "parse_errors": [],
+        "root_import_modules": [],
+        "runtime_root_name": "split_stream",
+        "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+        "tac_root_relative_path": "src/tac",
+        "unresolved_modules": []
+      },
+      "runtime_file_count": 5,
+      "runtime_root": "/Users/adpena/Projects/pact/experiments/results/pr99_sidecar_deconstruction_20260504_codex/runtime_variants/split_stream",
+      "runtime_tree_sha256": "a7474576d61a621e5d511223af56bdedd56fa295e5c468207c7ad1289b4e8bc5",
+      "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+      "upstream_evaluate_py": {
+        "bytes": 6005,
+        "relative_path": "evaluate.py",
+        "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+      }
+    },
+    "runtime_root": "/Users/adpena/Projects/pact/experiments/results/pr99_sidecar_deconstruction_20260504_codex/runtime_variants/split_stream",
+    "runtime_tree_sha256": "a7474576d61a621e5d511223af56bdedd56fa295e5c468207c7ad1289b4e8bc5",
+    "source_payload_scan": {
+      "files": [
+        {
+          "bytes": 2197,
+          "path": "hnerv_model.py",
+          "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+        },
+        {
+          "bytes": 4965,
+          "path": "inflate.py",
+          "sha256": "2b4bcc6024433284b731b980145b1aa56b336a5a6b9ec71c3281b3dd00903c5b"
+        },
+        {
+          "bytes": 137,
+          "path": "inflate.sh",
+          "sha256": "202e9d917c1a2f56ece729193de92c32f11a23ec341d3a44cf5cac1d4a8b19a7"
+        },
+        {
+          "bytes": 1081,
+          "path": "schema.py",
+          "sha256": "bc434bd596e753dbeae97c0ddce4d9cf98a50cfe862a451834864d83620d6a0a"
+        },
+        {
+          "bytes": 3529,
+          "path": "sidecar.py",
+          "sha256": "2b7847442aaa692f2f8256b596577cc28873376e5bb2db80d8371e20f73a7873"
+        }
+      ],
+      "runtime_root": "experiments/results/pr99_sidecar_deconstruction_20260504_codex/runtime_variants/split_stream",
+      "source_bytes_py_sh": 11909,
+      "status": "passed",
+      "violations": []
+    },
+    "status": "passed"
+  },
+  "schema": "public_replay_intake_preflight_v1",
+  "score_claim": false,
+  "tool": "experiments/preflight_public_replay_intake.py"
+}

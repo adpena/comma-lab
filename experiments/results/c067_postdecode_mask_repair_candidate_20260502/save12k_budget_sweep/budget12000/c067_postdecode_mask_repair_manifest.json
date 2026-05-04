@@ -1,0 +1,806 @@
+{
+  "archive": {
+    "delta_vs_base_bytes": -29901,
+    "members": [
+      {
+        "compress_type": 8,
+        "compressed_size_bytes": 57609,
+        "crc32": "a9d99871",
+        "date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "name": "renderer.bin",
+        "permissions_octal": "0o644",
+        "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb",
+        "size_bytes": 59288
+      },
+      {
+        "compress_type": 8,
+        "compressed_size_bytes": 180426,
+        "crc32": "f249deab",
+        "date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "name": "masks.mkv",
+        "permissions_octal": "0o644",
+        "sha256": "002be9cb1a535e8ac3e519747ec79fbdd0306bdc3613667afc59b526f2e001c8",
+        "size_bytes": 185143
+      },
+      {
+        "compress_type": 8,
+        "compressed_size_bytes": 11757,
+        "crc32": "812438d1",
+        "date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "name": "alpha4_residual_repair.amr1.xz",
+        "permissions_octal": "0o644",
+        "sha256": "9461ec569a3859a010093a80992ce0c8008e2236544004082af9507011a38885",
+        "size_bytes": 11752
+      },
+      {
+        "compress_type": 8,
+        "compressed_size_bytes": 1144,
+        "crc32": "6bc12c2a",
+        "date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "name": "optimized_poses.bin",
+        "permissions_octal": "0o644",
+        "sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f",
+        "size_bytes": 7200
+      }
+    ],
+    "path": "/Users/adpena/Projects/pact/experiments/results/c067_postdecode_mask_repair_candidate_20260502/save12k_budget_sweep/budget12000/archive.zip",
+    "rate_term_delta_vs_base": -0.019909848557306046,
+    "sha256": "f22e2d2c6372cb6ab74031ce4a565cdddc40ea46e122c098b61680812fe4eaf1",
+    "size_bytes": 251402
+  },
+  "base": {
+    "path": "/Users/adpena/Projects/pact/experiments/results/c067_fixedslice_unpacked_runtime_20260502/archive.zip",
+    "runtime_member_inventory": [
+      {
+        "canonical_name": "renderer.bin",
+        "compressed_size_bytes": 57609,
+        "crc32": "a9d99871",
+        "name": "renderer.bin",
+        "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb",
+        "size_bytes": 59288
+      },
+      {
+        "canonical_name": "masks.mkv",
+        "compressed_size_bytes": 222220,
+        "crc32": "e986f7bc",
+        "name": "masks.mkv",
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+        "size_bytes": 223385
+      },
+      {
+        "canonical_name": "optimized_poses.bin",
+        "compressed_size_bytes": 1144,
+        "crc32": "6bc12c2a",
+        "name": "optimized_poses.bin",
+        "sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f",
+        "size_bytes": 7200
+      }
+    ],
+    "sha256": "886562a9f25f207c2004161fbc9d01881f28f125123e68a8582c330467e54f80",
+    "size_bytes": 281303,
+    "source": "archive",
+    "source_mask_stream": {
+      "decode": {
+        "decoded_frames": 600,
+        "decoder": "legacy_av1_class_scaled_gray",
+        "ffmpeg": "/opt/homebrew/Cellar/ffmpeg/8.1_1/bin/ffmpeg",
+        "ffprobe": "/opt/homebrew/Cellar/ffmpeg/8.1_1/bin/ffprobe",
+        "height": 384,
+        "max_frames": null,
+        "reported_frames": null,
+        "truncated_by_builder": false,
+        "width": 512
+      },
+      "decoded_class_u8_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+      "member": "masks.mkv",
+      "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+      "size_bytes": 223385
+    }
+  },
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "charged_member_accounting": {
+    "alpha4_residual_repair.amr1.xz": {
+      "bytes": 11752,
+      "role": "charged_postdecode_amr1_mask_repair",
+      "sha256": "9461ec569a3859a010093a80992ce0c8008e2236544004082af9507011a38885"
+    }
+  },
+  "cuda_jobs_launched": false,
+  "lossy_mask_candidate": {
+    "archive_member": "masks.mkv",
+    "decode": {
+      "decoded_frames": 600,
+      "decoder": "legacy_av1_class_scaled_gray",
+      "ffmpeg": "/opt/homebrew/Cellar/ffmpeg/8.1_1/bin/ffmpeg",
+      "ffprobe": "/opt/homebrew/Cellar/ffmpeg/8.1_1/bin/ffprobe",
+      "height": 384,
+      "max_frames": null,
+      "reported_frames": null,
+      "truncated_by_builder": false,
+      "width": 512
+    },
+    "decoded_class_u8_sha256": "46c33d28505be0eae99ca26719a164fbc54005805614d5e77282b58dbc72b627",
+    "member": "masks.mkv",
+    "path": "/Users/adpena/Projects/pact/experiments/results/c067_micro_mask_reencode_plan_20260502/builds/c067_micro_av1_mask_reencode_save12k/archive.zip",
+    "sha256": "002be9cb1a535e8ac3e519747ec79fbdd0306bdc3613667afc59b526f2e001c8",
+    "size_bytes": 185143,
+    "source": "archive"
+  },
+  "promotion_eligible": false,
+  "repair_payload": {
+    "archive_member": "alpha4_residual_repair.amr1.xz",
+    "compressed_sha256": "9461ec569a3859a010093a80992ce0c8008e2236544004082af9507011a38885",
+    "compressed_size_bytes": 11752,
+    "compressor": "lzma_xz",
+    "raw_amr1_sha256": "eed82bc1b6b7a33a7067effbad3c57400eda8266186964b2f17d66a72c96a021",
+    "raw_amr1_size_bytes": 55712,
+    "selection": {
+      "fail_on_partial_repair": false,
+      "partial_repair": true,
+      "policy": {
+        "atom_granularity": "frame_class",
+        "class_ids": [],
+        "frame_indices": [],
+        "label": "c067_save12k_budget12000_frameclass_postdecode_repair",
+        "max_atoms": null,
+        "max_repair_payload_bytes": 12000,
+        "pair_indices": [],
+        "policy": "top_pixels"
+      },
+      "score_claim": false,
+      "selected_atom_count": 26,
+      "selected_atoms": [
+        {
+          "atom_id": "frame0210_class1",
+          "changed_pixels": 546,
+          "class_id": 1,
+          "frames": [
+            210
+          ],
+          "pair_indices": [
+            105
+          ]
+        },
+        {
+          "atom_id": "frame0481_class1",
+          "changed_pixels": 512,
+          "class_id": 1,
+          "frames": [
+            481
+          ],
+          "pair_indices": [
+            240
+          ]
+        },
+        {
+          "atom_id": "frame0192_class1",
+          "changed_pixels": 505,
+          "class_id": 1,
+          "frames": [
+            192
+          ],
+          "pair_indices": [
+            96
+          ]
+        },
+        {
+          "atom_id": "frame0200_class1",
+          "changed_pixels": 497,
+          "class_id": 1,
+          "frames": [
+            200
+          ],
+          "pair_indices": [
+            100
+          ]
+        },
+        {
+          "atom_id": "frame0222_class1",
+          "changed_pixels": 486,
+          "class_id": 1,
+          "frames": [
+            222
+          ],
+          "pair_indices": [
+            111
+          ]
+        },
+        {
+          "atom_id": "frame0196_class1",
+          "changed_pixels": 483,
+          "class_id": 1,
+          "frames": [
+            196
+          ],
+          "pair_indices": [
+            98
+          ]
+        },
+        {
+          "atom_id": "frame0479_class1",
+          "changed_pixels": 472,
+          "class_id": 1,
+          "frames": [
+            479
+          ],
+          "pair_indices": [
+            239
+          ]
+        },
+        {
+          "atom_id": "frame0451_class1",
+          "changed_pixels": 467,
+          "class_id": 1,
+          "frames": [
+            451
+          ],
+          "pair_indices": [
+            225
+          ]
+        },
+        {
+          "atom_id": "frame0518_class1",
+          "changed_pixels": 467,
+          "class_id": 1,
+          "frames": [
+            518
+          ],
+          "pair_indices": [
+            259
+          ]
+        },
+        {
+          "atom_id": "frame0159_class1",
+          "changed_pixels": 465,
+          "class_id": 1,
+          "frames": [
+            159
+          ],
+          "pair_indices": [
+            79
+          ]
+        },
+        {
+          "atom_id": "frame0532_class1",
+          "changed_pixels": 450,
+          "class_id": 1,
+          "frames": [
+            532
+          ],
+          "pair_indices": [
+            266
+          ]
+        },
+        {
+          "atom_id": "frame0262_class1",
+          "changed_pixels": 448,
+          "class_id": 1,
+          "frames": [
+            262
+          ],
+          "pair_indices": [
+            131
+          ]
+        },
+        {
+          "atom_id": "frame0540_class1",
+          "changed_pixels": 444,
+          "class_id": 1,
+          "frames": [
+            540
+          ],
+          "pair_indices": [
+            270
+          ]
+        },
+        {
+          "atom_id": "frame0220_class1",
+          "changed_pixels": 443,
+          "class_id": 1,
+          "frames": [
+            220
+          ],
+          "pair_indices": [
+            110
+          ]
+        },
+        {
+          "atom_id": "frame0067_class1",
+          "changed_pixels": 441,
+          "class_id": 1,
+          "frames": [
+            67
+          ],
+          "pair_indices": [
+            33
+          ]
+        },
+        {
+          "atom_id": "frame0343_class1",
+          "changed_pixels": 439,
+          "class_id": 1,
+          "frames": [
+            343
+          ],
+          "pair_indices": [
+            171
+          ]
+        },
+        {
+          "atom_id": "frame0492_class0",
+          "changed_pixels": 433,
+          "class_id": 0,
+          "frames": [
+            492
+          ],
+          "pair_indices": [
+            246
+          ]
+        },
+        {
+          "atom_id": "frame0423_class1",
+          "changed_pixels": 431,
+          "class_id": 1,
+          "frames": [
+            423
+          ],
+          "pair_indices": [
+            211
+          ]
+        },
+        {
+          "atom_id": "frame0524_class1",
+          "changed_pixels": 431,
+          "class_id": 1,
+          "frames": [
+            524
+          ],
+          "pair_indices": [
+            262
+          ]
+        },
+        {
+          "atom_id": "frame0536_class1",
+          "changed_pixels": 431,
+          "class_id": 1,
+          "frames": [
+            536
+          ],
+          "pair_indices": [
+            268
+          ]
+        },
+        {
+          "atom_id": "frame0099_class1",
+          "changed_pixels": 429,
+          "class_id": 1,
+          "frames": [
+            99
+          ],
+          "pair_indices": [
+            49
+          ]
+        },
+        {
+          "atom_id": "frame0284_class1",
+          "changed_pixels": 428,
+          "class_id": 1,
+          "frames": [
+            284
+          ],
+          "pair_indices": [
+            142
+          ]
+        },
+        {
+          "atom_id": "frame0369_class1",
+          "changed_pixels": 428,
+          "class_id": 1,
+          "frames": [
+            369
+          ],
+          "pair_indices": [
+            184
+          ]
+        },
+        {
+          "atom_id": "frame0061_class1",
+          "changed_pixels": 427,
+          "class_id": 1,
+          "frames": [
+            61
+          ],
+          "pair_indices": [
+            30
+          ]
+        },
+        {
+          "atom_id": "frame0379_class1",
+          "changed_pixels": 427,
+          "class_id": 1,
+          "frames": [
+            379
+          ],
+          "pair_indices": [
+            189
+          ]
+        },
+        {
+          "atom_id": "frame0071_class1",
+          "changed_pixels": 426,
+          "class_id": 1,
+          "frames": [
+            71
+          ],
+          "pair_indices": [
+            35
+          ]
+        }
+      ],
+      "selected_repair_pixels": 11856,
+      "selected_repair_runs": 4742,
+      "strategy": "c067_postdecode_mask_repair_atoms_v1",
+      "total_candidate_atoms": 2979,
+      "total_residual_pixels": 359711
+    }
+  },
+  "repair_selector": {
+    "atom_granularity": "frame_class",
+    "compressed_byte_budget": {
+      "atoms_rejected_by_budget": 2953,
+      "budget_applied": true,
+      "candidate_atoms_before_budget": 2979,
+      "compressed_repair_bytes_after_budget": 11752,
+      "max_repair_payload_bytes": 12000
+    },
+    "partial_repair": true,
+    "policy": {
+      "atom_granularity": "frame_class",
+      "class_ids": [],
+      "frame_indices": [],
+      "label": "c067_save12k_budget12000_frameclass_postdecode_repair",
+      "max_atoms": null,
+      "max_repair_payload_bytes": 12000,
+      "pair_indices": [],
+      "policy": "top_pixels"
+    },
+    "rejected_atom_count": 2953,
+    "selected_atom_count": 26,
+    "selected_atoms": [
+      {
+        "atom_id": "frame0210_class1",
+        "changed_pixels": 546,
+        "class_id": 1,
+        "frames": [
+          210
+        ],
+        "pair_indices": [
+          105
+        ]
+      },
+      {
+        "atom_id": "frame0481_class1",
+        "changed_pixels": 512,
+        "class_id": 1,
+        "frames": [
+          481
+        ],
+        "pair_indices": [
+          240
+        ]
+      },
+      {
+        "atom_id": "frame0192_class1",
+        "changed_pixels": 505,
+        "class_id": 1,
+        "frames": [
+          192
+        ],
+        "pair_indices": [
+          96
+        ]
+      },
+      {
+        "atom_id": "frame0200_class1",
+        "changed_pixels": 497,
+        "class_id": 1,
+        "frames": [
+          200
+        ],
+        "pair_indices": [
+          100
+        ]
+      },
+      {
+        "atom_id": "frame0222_class1",
+        "changed_pixels": 486,
+        "class_id": 1,
+        "frames": [
+          222
+        ],
+        "pair_indices": [
+          111
+        ]
+      },
+      {
+        "atom_id": "frame0196_class1",
+        "changed_pixels": 483,
+        "class_id": 1,
+        "frames": [
+          196
+        ],
+        "pair_indices": [
+          98
+        ]
+      },
+      {
+        "atom_id": "frame0479_class1",
+        "changed_pixels": 472,
+        "class_id": 1,
+        "frames": [
+          479
+        ],
+        "pair_indices": [
+          239
+        ]
+      },
+      {
+        "atom_id": "frame0451_class1",
+        "changed_pixels": 467,
+        "class_id": 1,
+        "frames": [
+          451
+        ],
+        "pair_indices": [
+          225
+        ]
+      },
+      {
+        "atom_id": "frame0518_class1",
+        "changed_pixels": 467,
+        "class_id": 1,
+        "frames": [
+          518
+        ],
+        "pair_indices": [
+          259
+        ]
+      },
+      {
+        "atom_id": "frame0159_class1",
+        "changed_pixels": 465,
+        "class_id": 1,
+        "frames": [
+          159
+        ],
+        "pair_indices": [
+          79
+        ]
+      },
+      {
+        "atom_id": "frame0532_class1",
+        "changed_pixels": 450,
+        "class_id": 1,
+        "frames": [
+          532
+        ],
+        "pair_indices": [
+          266
+        ]
+      },
+      {
+        "atom_id": "frame0262_class1",
+        "changed_pixels": 448,
+        "class_id": 1,
+        "frames": [
+          262
+        ],
+        "pair_indices": [
+          131
+        ]
+      },
+      {
+        "atom_id": "frame0540_class1",
+        "changed_pixels": 444,
+        "class_id": 1,
+        "frames": [
+          540
+        ],
+        "pair_indices": [
+          270
+        ]
+      },
+      {
+        "atom_id": "frame0220_class1",
+        "changed_pixels": 443,
+        "class_id": 1,
+        "frames": [
+          220
+        ],
+        "pair_indices": [
+          110
+        ]
+      },
+      {
+        "atom_id": "frame0067_class1",
+        "changed_pixels": 441,
+        "class_id": 1,
+        "frames": [
+          67
+        ],
+        "pair_indices": [
+          33
+        ]
+      },
+      {
+        "atom_id": "frame0343_class1",
+        "changed_pixels": 439,
+        "class_id": 1,
+        "frames": [
+          343
+        ],
+        "pair_indices": [
+          171
+        ]
+      },
+      {
+        "atom_id": "frame0492_class0",
+        "changed_pixels": 433,
+        "class_id": 0,
+        "frames": [
+          492
+        ],
+        "pair_indices": [
+          246
+        ]
+      },
+      {
+        "atom_id": "frame0423_class1",
+        "changed_pixels": 431,
+        "class_id": 1,
+        "frames": [
+          423
+        ],
+        "pair_indices": [
+          211
+        ]
+      },
+      {
+        "atom_id": "frame0524_class1",
+        "changed_pixels": 431,
+        "class_id": 1,
+        "frames": [
+          524
+        ],
+        "pair_indices": [
+          262
+        ]
+      },
+      {
+        "atom_id": "frame0536_class1",
+        "changed_pixels": 431,
+        "class_id": 1,
+        "frames": [
+          536
+        ],
+        "pair_indices": [
+          268
+        ]
+      },
+      {
+        "atom_id": "frame0099_class1",
+        "changed_pixels": 429,
+        "class_id": 1,
+        "frames": [
+          99
+        ],
+        "pair_indices": [
+          49
+        ]
+      },
+      {
+        "atom_id": "frame0284_class1",
+        "changed_pixels": 428,
+        "class_id": 1,
+        "frames": [
+          284
+        ],
+        "pair_indices": [
+          142
+        ]
+      },
+      {
+        "atom_id": "frame0369_class1",
+        "changed_pixels": 428,
+        "class_id": 1,
+        "frames": [
+          369
+        ],
+        "pair_indices": [
+          184
+        ]
+      },
+      {
+        "atom_id": "frame0061_class1",
+        "changed_pixels": 427,
+        "class_id": 1,
+        "frames": [
+          61
+        ],
+        "pair_indices": [
+          30
+        ]
+      },
+      {
+        "atom_id": "frame0379_class1",
+        "changed_pixels": 427,
+        "class_id": 1,
+        "frames": [
+          379
+        ],
+        "pair_indices": [
+          189
+        ]
+      },
+      {
+        "atom_id": "frame0071_class1",
+        "changed_pixels": 426,
+        "class_id": 1,
+        "frames": [
+          71
+        ],
+        "pair_indices": [
+          35
+        ]
+      }
+    ],
+    "selected_repair_pixels": 11856,
+    "selected_repair_pixels_before_rle": 11856,
+    "selected_repair_runs": 4742,
+    "total_atoms": 2979,
+    "total_residual_pixels": 359711
+  },
+  "runtime_contract": {
+    "archive_members": [
+      "renderer.bin",
+      "masks.mkv",
+      "alpha4_residual_repair.amr1.xz",
+      "optimized_poses.bin"
+    ],
+    "inflate_hook": "submissions/robust_current/inflate_renderer.py applies charged AMR1 repair after decoding legacy masks.mkv when grayscale.mkv is absent",
+    "legacy_masks_member": "masks.mkv",
+    "payload_closure": "repair payload is inside archive.zip and source-affecting sidecars are forbidden",
+    "repair_member": "alpha4_residual_repair.amr1.xz"
+  },
+  "schema": "c067_postdecode_mask_repair_candidate_v1",
+  "score_claim": false,
+  "tool": "experiments/build_c067_postdecode_mask_repair_candidate.py"
+}

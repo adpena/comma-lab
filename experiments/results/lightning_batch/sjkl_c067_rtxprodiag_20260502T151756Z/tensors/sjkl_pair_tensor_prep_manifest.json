@@ -1,0 +1,49 @@
+{
+  "evidence_grade": "build_tensor_prep_only",
+  "inputs": {
+    "gt_video": {
+      "bytes": 37545489,
+      "path": "/teamspace/studios/this_studio/pact/upstream/videos/0.mkv",
+      "sha256": "2611f5f3e186f3529777749f97bd4cce3a208d6b3559e137bd45d256980d2fa9"
+    },
+    "renderer_source": {
+      "bytes": 2831157066,
+      "path": "/teamspace/studios/this_studio/pact/experiments/results/renderer_output_for_postfilter.pt",
+      "sha256": "d3eeb53d58963e3585161605b38c7a3d3e12b78fc8c4fcf264433e7f16b7f60b"
+    }
+  },
+  "next_command_template": "PYTHONPATH=src:upstream .venv/bin/python experiments/build_sjkl_residual.py --renderer-output /teamspace/studios/this_studio/pact/experiments/results/sjkl_c067_rtxprodiag_20260502T151756Z/tensors/renderer_target_slot_chw.pt --gt-pairs /teamspace/studios/this_studio/pact/experiments/results/sjkl_c067_rtxprodiag_20260502T151756Z/tensors/gt_pairs_btchw.pt --target-slot 0 --out /teamspace/studios/this_studio/pact/experiments/results/sjkl_c067_rtxprodiag_20260502T151756Z/tensors/sjkl.bin --manifest /teamspace/studios/this_studio/pact/experiments/results/sjkl_c067_rtxprodiag_20260502T151756Z/tensors/sjkl_manifest.json --device cuda",
+  "outputs": {
+    "gt_pairs_btchw": {
+      "bytes": 707790490,
+      "dtype": "torch.uint8",
+      "path": "/teamspace/studios/this_studio/pact/experiments/results/sjkl_c067_rtxprodiag_20260502T151756Z/tensors/gt_pairs_btchw.pt",
+      "sha256": "36349273f6549c6bd4418ceccdb4e1a95113e2ea91c8775130cc6a7de2c795b1",
+      "shape": [
+        600,
+        2,
+        3,
+        384,
+        512
+      ]
+    },
+    "renderer_target_slot_chw": {
+      "bytes": 1415579424,
+      "dtype": "torch.float32",
+      "path": "/teamspace/studios/this_studio/pact/experiments/results/sjkl_c067_rtxprodiag_20260502T151756Z/tensors/renderer_target_slot_chw.pt",
+      "sha256": "8adfc417c47c62048730f834fe10212ee4da87e7d4f6ed62d5eb14265a931d9f",
+      "shape": [
+        600,
+        3,
+        384,
+        512
+      ]
+    }
+  },
+  "promotion_eligible": false,
+  "runtime_target": "robust_current JointFrameGenerator pair slot 0 / fake1",
+  "schema": "sjkl_pair_tensor_prep_v1",
+  "score_claim": false,
+  "target_slot": 0,
+  "tool": "experiments/prepare_sjkl_pair_tensors.py"
+}

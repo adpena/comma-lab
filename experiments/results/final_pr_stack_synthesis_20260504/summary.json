@@ -1,0 +1,219 @@
+{
+  "schema": "final_pr_stack_synthesis_20260504_v1",
+  "score_claim": false,
+  "remote_jobs_dispatched": false,
+  "github_refresh": {
+    "repo": "commaai/comma_video_compression_challenge",
+    "raw_pr_list": "experiments/results/final_pr_stack_synthesis_20260504/github_pulls_latest_raw.json",
+    "raw_pr_list_sha256": "841319a4781be0b9156a1abc13fc89960a92f6e2a17b682673f8c2a7ab121046",
+    "raw_pr_list_bytes": 2089282,
+    "comments": [
+      "experiments/results/final_pr_stack_synthesis_20260504/pr85_issue_comments.json",
+      "experiments/results/final_pr_stack_synthesis_20260504/pr90_issue_comments.json",
+      "experiments/results/final_pr_stack_synthesis_20260504/pr91_issue_comments.json",
+      "experiments/results/final_pr_stack_synthesis_20260504/pr92_issue_comments.json",
+      "experiments/results/final_pr_stack_synthesis_20260504/pr93_issue_comments.json",
+      "experiments/results/final_pr_stack_synthesis_20260504/pr94_issue_comments.json",
+      "experiments/results/final_pr_stack_synthesis_20260504/pr95_issue_comments.json"
+    ]
+  },
+  "confirmed_frontier": {
+    "label": "PR85_STBM1BR",
+    "classification": "confirmed_A++",
+    "score": 0.25369011029397787,
+    "archive_bytes": 229756,
+    "archive_sha256": "c6f004d444ed32c628611a2f21f567c666af6bcbcceba618cc089ec024a0cda6",
+    "artifact": "experiments/results/lightning_batch/exact_eval_pr85_stbm1br_stbm_runtime_t4_g4dn2x_20260504T0613Z/contest_auth_eval.json",
+    "runtime_tree_sha256": "d195f4ecd0743cfd146efafee6729e96ee5428bfb28bbd0ca87cbad055494440",
+    "samples": 600,
+    "device": "cuda_t4"
+  },
+  "public_prs_85_plus": [
+    {
+      "pr": 85,
+      "state": "closed",
+      "title": "Adaptive masking joint frame model",
+      "head_sha": "515abfbac1dc6ef42499d5b912e424319f982fb2",
+      "score": 0.25806611029397786,
+      "archive_bytes": 236328,
+      "evidence_grade": "github_actions_cuda_external_and_local_A++_public_replay",
+      "stackability": "PR85 semantic basin; superseded internally by PR85_STBM1BR pure-rate mask recode"
+    },
+    {
+      "pr": 86,
+      "state": "closed",
+      "title": "jas0xf_adversarial_neural_representation (0.27)",
+      "head_sha": "0eabe354f09b7490fd1cbb2b05a9102ab528d4d4",
+      "score": 0.2736358503762718,
+      "archive_bytes": 207579,
+      "evidence_grade": "external_cuda_text_local_replay_invalid",
+      "stackability": "HPAC architecture signal only; not a PR85 byte drop-in"
+    },
+    {
+      "pr": 87,
+      "state": "closed",
+      "title": "Add 100_bytes submission",
+      "head_sha": "fde5153dd8472734796a1abc68843c98387328c3",
+      "score": 0.1,
+      "archive_bytes": 100,
+      "evidence_grade": "invalid_source_embedded_payload_loophole",
+      "stackability": "not contest-faithful; guardrail only"
+    },
+    {
+      "pr": 88,
+      "state": "closed",
+      "title": "qzs3 range mask gpu preflight",
+      "head_sha": "b330dd75232f06ac541726fbb29de80074db8eb5",
+      "score": 0.2878245063016197,
+      "archive_bytes": 215960,
+      "evidence_grade": "external_cpu_text_invalid_for_promotion",
+      "stackability": "diagnostic only"
+    },
+    {
+      "pr": 89,
+      "state": "closed",
+      "title": "henosis_final_bias (0.28)",
+      "head_sha": "d970a0eaf5065807f75fc2f386bf5c21fd982ae1",
+      "score": 0.27511038756764417,
+      "archive_bytes": 236676,
+      "evidence_grade": "external_cuda_text",
+      "stackability": "tiny side-channel idea; needs exact component benefit and was not rate-positive"
+    },
+    {
+      "pr": 90,
+      "state": "open",
+      "title": "add qrepro submission(0.28)",
+      "head_sha": "cce857392701e73861ad513d34906faba523f719",
+      "score": 0.2788721801656914,
+      "archive_bytes": 218080,
+      "evidence_grade": "external_text_plus_local_partial_cpu_smoke",
+      "stackability": "whole-stack architecture signal; QRGB and geometry priors only"
+    },
+    {
+      "pr": 91,
+      "state": "open",
+      "title": "Hpac coder hybrid",
+      "head_sha": "77f958d24e55980d95e01e3e9767b5a94320ed43",
+      "score": 0.24879480490416128,
+      "archive_bytes": 222404,
+      "evidence_grade": "external_cuda_text_local_replay_invalid",
+      "stackability": "highest PR85-family rate signal, blocked on HPM1 entropy contract"
+    },
+    {
+      "pr": 92,
+      "state": "open",
+      "title": "qzs3_range_joint_r258 (0.26)",
+      "head_sha": "95c711e8ec7a55e6cb066a0b4e20090391ccd2c2",
+      "score": 0.2587078229986317,
+      "archive_bytes": 236516,
+      "archive_sha256": "f0dedeb7ad3c019ab3f4e2dea317f3192408e47a573897adb208030709d01490",
+      "evidence_grade": "external_cuda_text_local_static_intake",
+      "stackability": "RMB1 randmulti contract useful; raw PR92 is behind STBM and side-info-coupled"
+    },
+    {
+      "pr": 93,
+      "state": "open",
+      "title": "flatpup",
+      "head_sha": "887cccaccb376629829982660a1cf1ed06945bfc",
+      "score": 0.317848,
+      "archive_bytes": 284396,
+      "evidence_grade": "external_cuda_text",
+      "stackability": "whole-stack Quantizr-derived archive; not a final frontier path"
+    },
+    {
+      "pr": 94,
+      "state": "open",
+      "title": "optimization_qpose_josema",
+      "head_sha": "ae765553e9dc4bb12a93f4150a41f73ca3d9af16",
+      "score": 0.33425141289817706,
+      "archive_bytes": 277087,
+      "archive_sha256": "280fc6555e684f2d5f56e0ef883a6d30d00ec4722bd1ce5d959e27525f06eac7",
+      "evidence_grade": "invalid_mps_text_local_static_intake",
+      "stackability": "qpose/tile-action signal only; not isolated or CUDA-promotable"
+    },
+    {
+      "pr": 95,
+      "state": "open",
+      "title": "hnerv_muon submission (0.20)",
+      "head_sha": "9bdce26f2a4f996828c4e3fa2b87c454a0e8fcc9",
+      "score": 0.1987048012202245,
+      "archive_bytes": 178417,
+      "archive_sha256": "e976acd5fe565c94fb9a8c62e5200c949919f76150e84599f268d6a58588440a",
+      "evidence_grade": "external_cpu_workflow_text_local_static_zip_intake",
+      "stackability": "whole-stack HNeRV replacement; validate, do not splice into PR85 streams"
+    }
+  ],
+  "top_experiments": [
+    {
+      "rank": 1,
+      "experiment": "canonical_cuda_replay_pr95_hnerv_muon",
+      "expected_score_if_report_reproduces": 0.1987048012202245,
+      "expected_delta_vs_confirmed_frontier": -0.05498530907375338,
+      "required_runtime": "PR95 hnerv_muon runtime plus downloaded 0.bin archive, canonical contest_auth_eval CUDA path",
+      "gate": "strict ZIP/source provenance, runtime tree SHA, Level-2 claim, exact CUDA JSON with 600 samples",
+      "risk": "external CPU-workflow claim, whole-stack replacement, possible CUDA/CPU drift or dependency issue",
+      "stop_condition": "any inflate/eval failure, non-600 sample count, source-side payload issue, or exact score not below 0.25369011029397787"
+    },
+    {
+      "rank": 2,
+      "experiment": "exact_cuda_pr85_stbm1br_rmb1",
+      "expected_score_if_components_flat": 0.25350633322291616,
+      "expected_delta_vs_confirmed_frontier": -0.0001837770710617193,
+      "required_runtime": "STBM replay runtime with RMB1 randmulti decode",
+      "gate": "pre-submission compliance already passed locally; next gate is Level-2 claim plus exact CUDA auth eval",
+      "risk": "low-rate recode risk; any decoded randmulti/runtime mismatch can move components",
+      "stop_condition": "component deltas differ from STBM anchor or exact score is not lower"
+    },
+    {
+      "rank": 3,
+      "experiment": "recover_pr91_hpm1_contract_then_hpm1_rmb1",
+      "expected_score_if_components_flat": 0.24861093819956195,
+      "expected_delta_vs_confirmed_frontier": -0.005079172094415922,
+      "required_runtime": "PR91/PR86 HPAC HPM1 decoder, native hpac-codec parity, STBM-family archive runtime",
+      "gate": "full HPM1 submitted-token decode, byte-exact reencode or reviewed source-contract proof, runtime parity, then Level-2 claim and exact CUDA",
+      "risk": "current local replay fails before score at a concrete entropy-model mismatch",
+      "stop_condition": "frame-0/full-stream HPM1 cannot decode under pinned contract, prefix bytes miss break-even, or decoded mask parity fails"
+    },
+    {
+      "rank": 4,
+      "experiment": "pr85_jfg_qfq4_style_model_recode",
+      "expected_score_if_bit_exact": 0.25325130924387035,
+      "expected_delta_vs_confirmed_frontier": -0.0004388010501075109,
+      "required_runtime": "narrow PR85-family QFQ4/QH0 model loader with output parity preflight",
+      "gate": "bit-exact tensor parity, deterministic byte-positive archive, runtime output parity, Level-2 claim, exact CUDA",
+      "risk": "current tensor parity fails for at least one FILM projection; numeric closeness is not enough",
+      "stop_condition": "no bit-exact model tensor parity or model segment is not byte-positive"
+    },
+    {
+      "rank": 5,
+      "experiment": "pr92_rsb1_qrgb_action_component_benefit_profile",
+      "expected_score_if_break_even_clears": "must beat +0.00012518148318696823 rate cost before dispatch",
+      "required_runtime": "local RSB1/RMB1 action decoder and PR85/STBM action mapping, no scorer load until a byte-closed candidate exists",
+      "gate": "non-noop action mapping, exact source/candidate SHA custody, component-response evidence, Level-2 claim, exact CUDA",
+      "risk": "raw PR92 is rate-negative vs STBM and PR85 QRGB singleton exact evals are negative",
+      "stop_condition": "no component-benefit path above the +188-byte break-even or any action is not consumed by inflate"
+    }
+  ],
+  "score_summary": {
+    "absolute_best_confirmed": {
+      "classification": "confirmed_A++",
+      "score": 0.25369011029397787,
+      "label": "PR85_STBM1BR"
+    },
+    "best_plausible_current_public_candidate": {
+      "classification": "external_prediction",
+      "score": 0.1987048012202245,
+      "label": "PR95_hnerv_muon_if_canonical_cuda_replay_matches_report"
+    },
+    "best_plausible_local_stack_candidate": {
+      "classification": "prediction",
+      "score": 0.25350633322291616,
+      "label": "PR85_STBM1BR_RMB1_if_components_flat"
+    },
+    "aggressive_theoretical_stack_band": {
+      "classification": "external_prediction",
+      "absolute_public_replacement_band": "0.195-0.199 if PR95 verifies and admits small entropy/payload refinements",
+      "pr85_family_band": "0.248-0.249 if HPM1 contract, RMB1, and QFQ4-style model recode all pass"
+    }
+  }
+}

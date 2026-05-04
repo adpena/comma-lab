@@ -1,0 +1,28 @@
+{
+  "members": [
+    {
+      "bytes": 59288,
+      "name": "renderer.bin",
+      "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+    },
+    {
+      "bytes": 223385,
+      "name": "masks.mkv",
+      "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+    },
+    {
+      "bytes": 7200,
+      "name": "optimized_poses.bin",
+      "sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+    },
+    {
+      "bytes": 52,
+      "name": "sjkl.bin",
+      "sha256": "d48399c086ca61af06de161ccd8138d9d99fa6ea84b454e0b317806791c6b7ca"
+    }
+  ],
+  "payload_bytes": 290577,
+  "payload_format": null,
+  "schema": "renderer_payload_v1",
+  "source_archive_sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a"
+}

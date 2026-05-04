@@ -1,0 +1,59 @@
+{
+  "baseline_contest_json": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z/evals/point_002_eps_p0/contest_auth_eval.json",
+  "geometry_basin_limits": {
+    "max_posenet_relative": 1.25,
+    "max_segnet_relative": 1.25
+  },
+  "name": "direct_fd_local_response_chart_20260501",
+  "points": [
+    {
+      "axis_id": "mixed_renderer_fd_axis",
+      "contest_auth_eval_json": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z/evals/point_000_eps_m2/contest_auth_eval.json",
+      "coordinate": "epsilon_-2",
+      "epsilon": -2.0,
+      "family": "direct_fd_renderer_response",
+      "point_id": "direct_fd_eps_m2",
+      "tags": [
+        "component_response",
+        "finite_difference"
+      ]
+    },
+    {
+      "axis_id": "mixed_renderer_fd_axis",
+      "contest_auth_eval_json": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z/evals/point_001_eps_m1/contest_auth_eval.json",
+      "coordinate": "epsilon_-1",
+      "epsilon": -1.0,
+      "family": "direct_fd_renderer_response",
+      "point_id": "direct_fd_eps_m1",
+      "tags": [
+        "component_response",
+        "finite_difference"
+      ]
+    },
+    {
+      "axis_id": "mixed_renderer_fd_axis",
+      "contest_auth_eval_json": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z/evals/point_003_eps_p1/contest_auth_eval.json",
+      "coordinate": "epsilon_+1",
+      "epsilon": 1.0,
+      "family": "direct_fd_renderer_response",
+      "point_id": "direct_fd_eps_p1",
+      "tags": [
+        "component_response",
+        "finite_difference"
+      ]
+    },
+    {
+      "axis_id": "mixed_renderer_fd_axis",
+      "contest_auth_eval_json": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z/evals/point_004_eps_p2/contest_auth_eval.json",
+      "coordinate": "epsilon_+2",
+      "epsilon": 2.0,
+      "family": "direct_fd_renderer_response",
+      "point_id": "direct_fd_eps_p2",
+      "tags": [
+        "component_response",
+        "finite_difference"
+      ]
+    }
+  ],
+  "schema": "component_manifold_probe_input_v1"
+}

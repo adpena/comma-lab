@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-05-02T05:01:17Z",
+  "archive_label": "mixed_qzs_component_frame2_all64_20260502",
+  "archive_path": "/workspace/pact/experiments/results/mixed_local_qzs_component_aware_20260502/component_aware_v1_frame2_all64/archive.zip",
+  "custody_archive_path": "/workspace/pact/experiments/results/archive_eval_mixed_qzs_component_frame2_all64_20260502/archive.zip",
+  "archive_size_bytes": 276282,
+  "archive_sha256": "86684e1eff2c111c2f266f43a762952ae64976c8d25816b8935fdfbe42d36d52"
+}

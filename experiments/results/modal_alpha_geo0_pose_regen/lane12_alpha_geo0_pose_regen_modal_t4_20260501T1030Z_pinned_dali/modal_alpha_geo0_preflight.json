@@ -1,0 +1,29 @@
+{
+  "app": "comma-alpha-geo0-pose-regen",
+  "canonical_path": "archive.zip -> inflate.sh -> upstream/evaluate.py --device cuda",
+  "device_required": "cuda",
+  "gpu_requested": "T4",
+  "gpu_t4_match": true,
+  "nvdec_probe_passed": false,
+  "nvdec_probe_returncode": 3,
+  "nvdec_probe_stderr_tail": "[probe_nvdec] FATAL: DALI/dependency build error (NOT a host problem).\n[probe_nvdec]   Output: PROBE_CLASSIFICATION:DALI_BUILD\nPROBE_ERROR:RuntimeError: Critical error in pipeline:\nCritical error in pipeline:\nError in MIXED operator `nvidia.dali.fn.experimental.inputs.video`,\nwhich was used in the pipeline definition with the following traceback:\n\n  File \"<string>\", line 115, in p\n\nencountered:\n\nnvml error (999): A nvml internal driver error occurred\nCurrent pipeline object is no longer valid.\nCurrent pipeline object is no longer valid.\nPROBE_TRACEBACK_TAIL:['nvml error (999): A nvml internal driver error occurred', 'Current pipeline object is no longer valid.', 'Current pipeline object is no longer valid.']\n[probe_nvdec]   Action: investigate the dependency / DALI install \u2014 host is likely fine.\n[probe_nvdec]   Reuse the host after fixing the dep, do NOT auto-destroy.\n",
+  "nvdec_probe_stdout_tail": "",
+  "nvidia_dali_import_ok": true,
+  "nvidia_dali_version": "1.52.0",
+  "nvidia_smi_path": "/usr/bin/nvidia-smi",
+  "nvidia_smi_query": "Tesla T4, 580.95.05",
+  "promotion_eligible": false,
+  "schema_version": 1,
+  "score_claim": false,
+  "started_at_utc": "2026-05-01T10:31:41Z",
+  "tool": "experiments/modal_alpha_geo0_pose_regen.py",
+  "torch_cuda_available": true,
+  "torch_cuda_capability": [
+    7,
+    5
+  ],
+  "torch_cuda_device_count": 1,
+  "torch_cuda_device_name": "Tesla T4",
+  "torch_cuda_version": "12.4",
+  "torch_version": "2.5.1+cu124"
+}

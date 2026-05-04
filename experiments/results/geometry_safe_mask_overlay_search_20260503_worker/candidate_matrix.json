@@ -1,0 +1,148 @@
+{
+  "best_bounded_by_bytes": {
+    "archive_bytes": 133099,
+    "archive_delta_bytes_vs_source": -143253,
+    "archive_path": "/Users/adpena/Projects/pact/experiments/results/geometry_safe_mask_overlay_search_20260503_worker/bounded_mask_reencode_crf60_preset13_g9999/archive.zip",
+    "archive_sha256": "912b391a3199b6bc4358cd2b04bfbcf632e5255d454e70a5f0b22c3ba98f7f44",
+    "candidate_id": "bounded_mask_reencode_crf60_preset13_g9999",
+    "candidate_kind": "bounded_lossy_mask_reencode",
+    "changed_pixel_count": 1093201,
+    "changed_pixel_fraction": 0.009267179701063367,
+    "dispatch_recommendation": "do_not_dispatch: decoded mask tensor changes; needs local component trace or operator-approved exact eval after dispatch claim",
+    "formula_only_rate_score_delta_vs_source": -0.09538629261161041,
+    "manifest_path": "/Users/adpena/Projects/pact/experiments/results/geometry_safe_mask_overlay_search_20260503_worker/bounded_mask_reencode_crf60_preset13_g9999/manifest.json",
+    "score_claim": false,
+    "zero_disagreement": false
+  },
+  "best_lossless": {
+    "archive_bytes": 276345,
+    "archive_delta_bytes_vs_source": -7,
+    "archive_path": "/Users/adpena/Projects/pact/experiments/results/geometry_safe_mask_overlay_search_20260503_worker/lossless_mask_obu_brotli_resweep_p6/archive.zip",
+    "archive_sha256": "7d294d4c8923648ae0c56f918b0bd13576eac098c74d400c2becf311a415ee02",
+    "candidate_id": "lossless_mask_obu_brotli_resweep_p6",
+    "candidate_kind": "lossless_mask_stream_rebrotli",
+    "changed_pixel_count": 0,
+    "changed_pixel_fraction": 0.0,
+    "dispatch_recommendation": "exact-ready but standalone value is too small; only dispatch if bundled with a larger exact-safe change",
+    "formula_only_rate_score_delta_vs_source": -4.6610126718552e-06,
+    "manifest_path": "/Users/adpena/Projects/pact/experiments/results/geometry_safe_mask_overlay_search_20260503_worker/lossless_mask_obu_brotli_resweep_p6/manifest.json",
+    "score_claim": false,
+    "zero_disagreement": true
+  },
+  "candidate_count": 5,
+  "candidates": [
+    {
+      "archive_bytes": 133099,
+      "archive_delta_bytes_vs_source": -143253,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/geometry_safe_mask_overlay_search_20260503_worker/bounded_mask_reencode_crf60_preset13_g9999/archive.zip",
+      "archive_sha256": "912b391a3199b6bc4358cd2b04bfbcf632e5255d454e70a5f0b22c3ba98f7f44",
+      "candidate_id": "bounded_mask_reencode_crf60_preset13_g9999",
+      "candidate_kind": "bounded_lossy_mask_reencode",
+      "changed_pixel_count": 1093201,
+      "changed_pixel_fraction": 0.009267179701063367,
+      "dispatch_recommendation": "do_not_dispatch: decoded mask tensor changes; needs local component trace or operator-approved exact eval after dispatch claim",
+      "formula_only_rate_score_delta_vs_source": -0.09538629261161041,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/geometry_safe_mask_overlay_search_20260503_worker/bounded_mask_reencode_crf60_preset13_g9999/manifest.json",
+      "score_claim": false,
+      "zero_disagreement": false
+    },
+    {
+      "archive_bytes": 155782,
+      "archive_delta_bytes_vs_source": -120570,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/geometry_safe_mask_overlay_search_20260503_worker/bounded_mask_reencode_crf58_preset13_g9999/archive.zip",
+      "archive_sha256": "33b559190bb302aa0993b4297d5915ec80bbaf06249c017e2a6682e83d308eed",
+      "candidate_id": "bounded_mask_reencode_crf58_preset13_g9999",
+      "candidate_kind": "bounded_lossy_mask_reencode",
+      "changed_pixel_count": 1041607,
+      "changed_pixel_fraction": 0.00882981194390191,
+      "dispatch_recommendation": "do_not_dispatch: decoded mask tensor changes; needs local component trace or operator-approved exact eval after dispatch claim",
+      "formula_only_rate_score_delta_vs_source": -0.0802826139779402,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/geometry_safe_mask_overlay_search_20260503_worker/bounded_mask_reencode_crf58_preset13_g9999/manifest.json",
+      "score_claim": false,
+      "zero_disagreement": false
+    },
+    {
+      "archive_bytes": 204443,
+      "archive_delta_bytes_vs_source": -71909,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/geometry_safe_mask_overlay_search_20260503_worker/bounded_mask_reencode_crf55_preset13_g9999/archive.zip",
+      "archive_sha256": "00887f03d32ef0187a4f43929d3f79575fd32cabd47a4c3666eaa9786bb2dcdf",
+      "candidate_id": "bounded_mask_reencode_crf55_preset13_g9999",
+      "candidate_kind": "bounded_lossy_mask_reencode",
+      "changed_pixel_count": 959366,
+      "changed_pixel_fraction": 0.008132646348741319,
+      "dispatch_recommendation": "do_not_dispatch: decoded mask tensor changes; needs local component trace or operator-approved exact eval after dispatch claim",
+      "formula_only_rate_score_delta_vs_source": -0.047881251460062224,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/geometry_safe_mask_overlay_search_20260503_worker/bounded_mask_reencode_crf55_preset13_g9999/manifest.json",
+      "score_claim": false,
+      "zero_disagreement": false
+    },
+    {
+      "archive_bytes": 263046,
+      "archive_delta_bytes_vs_source": -13306,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/geometry_safe_mask_overlay_search_20260503_worker/bounded_mask_reencode_crf52_preset13_g9999/archive.zip",
+      "archive_sha256": "3ccd680aec1f8ea124ce96468c7d7dec313e9053a6bf0b498edc838fbb22ee0f",
+      "candidate_id": "bounded_mask_reencode_crf52_preset13_g9999",
+      "candidate_kind": "bounded_lossy_mask_reencode",
+      "changed_pixel_count": 894813,
+      "changed_pixel_fraction": 0.007585423787434896,
+      "dispatch_recommendation": "do_not_dispatch: decoded mask tensor changes; needs local component trace or operator-approved exact eval after dispatch claim",
+      "formula_only_rate_score_delta_vs_source": -0.008859919230243613,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/geometry_safe_mask_overlay_search_20260503_worker/bounded_mask_reencode_crf52_preset13_g9999/manifest.json",
+      "score_claim": false,
+      "zero_disagreement": false
+    },
+    {
+      "archive_bytes": 276345,
+      "archive_delta_bytes_vs_source": -7,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/geometry_safe_mask_overlay_search_20260503_worker/lossless_mask_obu_brotli_resweep_p6/archive.zip",
+      "archive_sha256": "7d294d4c8923648ae0c56f918b0bd13576eac098c74d400c2becf311a415ee02",
+      "candidate_id": "lossless_mask_obu_brotli_resweep_p6",
+      "candidate_kind": "lossless_mask_stream_rebrotli",
+      "changed_pixel_count": 0,
+      "changed_pixel_fraction": 0.0,
+      "dispatch_recommendation": "exact-ready but standalone value is too small; only dispatch if bundled with a larger exact-safe change",
+      "formula_only_rate_score_delta_vs_source": -4.6610126718552e-06,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/geometry_safe_mask_overlay_search_20260503_worker/lossless_mask_obu_brotli_resweep_p6/manifest.json",
+      "score_claim": false,
+      "zero_disagreement": true
+    }
+  ],
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "evidence_grade": "empirical_local_mask_geometry_screen",
+  "overlay_economics_path": "/Users/adpena/Projects/pact/experiments/results/geometry_safe_mask_overlay_search_20260503_worker/overlay_economics.json",
+  "promotion_eligible": false,
+  "schema": "geometry_safe_mask_overlay_search_summary_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 276352,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c067_pr75_tile_action_compiler_p6_trace_ev_20260503_codex/c067_pr75_actions_lag_eval_top67_p6/archive.zip",
+    "sha256": "d73f0957cf2d8da0526c1786613443331ccb913f5648131cfaaac5e6f7eae972"
+  },
+  "source_decoded_members": {
+    "masks.mkv": {
+      "bytes": 223385,
+      "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+    },
+    "optimized_poses.qp1": {
+      "bytes": 1140,
+      "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583"
+    },
+    "renderer.bin": {
+      "bytes": 59288,
+      "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+    },
+    "seg_tile_actions.bin": {
+      "bytes": 176,
+      "sha256": "6551a4bee3a9741000dbd8e8c6de8c0ffeb6ca03b644c3ff8a47aa3078ae752b"
+    }
+  },
+  "source_mask_tensor": {
+    "sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+    "shape": [
+      600,
+      384,
+      512
+    ]
+  },
+  "tool": "experiments/geometry_safe_mask_overlay_search.py"
+}

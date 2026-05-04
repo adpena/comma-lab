@@ -1,0 +1,603 @@
+{
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "cmg3": {
+    "body_bytes": 71332,
+    "body_sha256": "4c7e4a5dd1debed2e2fcd99d29f9d84ae007518d5caa6dacd41bdf9874d4661d",
+    "class_count": 5,
+    "compression_candidates": [
+      {
+        "body_bytes": 71332,
+        "body_sha256": "4c7e4a5dd1debed2e2fcd99d29f9d84ae007518d5caa6dacd41bdf9874d4661d",
+        "compressor": "bz2"
+      },
+      {
+        "body_bytes": 79944,
+        "body_sha256": "807bd90bde99725626481116e3b51eb5c265f0128b0ee277fd8144ca5f87bcfd",
+        "compressor": "lzma_xz"
+      },
+      {
+        "body_bytes": 142191,
+        "body_sha256": "18959f5c824edb6dfedc0e866f129a4c283d2dd22c809fae88d0c0db1987b1b6",
+        "compressor": "zlib"
+      },
+      {
+        "body_bytes": 1342585,
+        "body_sha256": "e96f4455d3e2310ca8152c70699b43b4eaac6cc636d669d028d3057bdeaeba7c",
+        "compressor": "raw"
+      }
+    ],
+    "compressor": "bz2",
+    "default_class": 0,
+    "frame_count": 600,
+    "height": 384,
+    "lossless_under_builder": false,
+    "max_runs_per_row": 2,
+    "mode": "nonzero_row_runs_topk_v1",
+    "payload_bytes": 76333,
+    "payload_sha256": "85020c565d034ca4332c7691d89f5f31af40438071250f7563a9f32b9fc219ab",
+    "pixel_disagreement_count_vs_source": 4169453,
+    "pixel_disagreement_vs_source": 0.035344891018337675,
+    "promotion_eligible": false,
+    "reconstructed_mask_u8_sha256": "1f73150bc3580b0d2460bcd75e3cf69174a70f5251603b6e3b1c443b9ea4ab3c",
+    "record_struct": "u8_count_then_u8_class_u16_start_u16_end_le",
+    "run_stats": {
+      "available_rank_histogram": {
+        "1": 222328,
+        "10": 643,
+        "11": 441,
+        "12": 200,
+        "13": 120,
+        "14": 49,
+        "15": 30,
+        "16": 14,
+        "17": 4,
+        "18": 1,
+        "19": 1,
+        "2": 50412,
+        "3": 35409,
+        "4": 25847,
+        "5": 18189,
+        "6": 10749,
+        "7": 5745,
+        "8": 2272,
+        "9": 1275
+      },
+      "base_required_runs": 222328,
+      "base_runs_per_row": 1,
+      "base_top1_runs": 222328,
+      "body_search": {
+        "effective_extra_run_cap": 109,
+        "selected_by": "target_extra_runs_only",
+        "target_body_bytes": null
+      },
+      "candidate_extra_runs": 148623,
+      "max_available_runs_per_row": 19,
+      "max_selected_runs_per_row": 2,
+      "pixel_disagreement": 0.035344891018337675,
+      "pixel_disagreement_count": 4169453,
+      "reconstructed_tensor_sha256": "1f73150bc3580b0d2460bcd75e3cf69174a70f5251603b6e3b1c443b9ea4ab3c",
+      "rows_with_extra_runs": 109,
+      "selected_class_histogram": {
+        "1": 28923,
+        "2": 124746,
+        "3": 7660,
+        "4": 61108
+      },
+      "selected_extra_class_histogram": {
+        "2": 109
+      },
+      "selected_extra_priority_max": 59.26263281250001,
+      "selected_extra_priority_min": 34.3219296875,
+      "selected_extra_rank_histogram": {
+        "2": 76,
+        "3": 33
+      },
+      "selected_extra_runs": 109,
+      "selected_rank_histogram": {
+        "1": 222328,
+        "2": 76,
+        "3": 33
+      },
+      "selected_rows_by_run_count": {
+        "0": 8072,
+        "1": 222219,
+        "2": 109
+      },
+      "selected_run_fraction": 0.5951826055778385,
+      "selected_runs": 222437,
+      "total_nonzero_runs": 373729
+    },
+    "run_stream_bytes": 1342585,
+    "run_stream_sha256": "e96f4455d3e2310ca8152c70699b43b4eaac6cc636d669d028d3057bdeaeba7c",
+    "schema": "cmg3a_adaptive_nonzero_row_runs_candidate_v1",
+    "score_claim": false,
+    "selection_policy": {
+      "adaptive_max_runs_per_row": 8,
+      "base_runs_per_row": 1,
+      "effective_extra_run_cap": 50000,
+      "effective_field_candidate_pool": {
+        "candidate_extra_runs_available": 109,
+        "selected_extra_runs_from_field_pool": 109
+      },
+      "evidence_boundary": "Policy is a deterministic byte-screen prior. It is not scorer, promotion, or retirement evidence without exact CUDA auth eval.",
+      "field_atom_policy": {
+        "already_base_atom_count": 19,
+        "already_base_atoms": [
+          {
+            "class_id": 2,
+            "frame_index": 587,
+            "x0": 218,
+            "x1_exclusive": 505,
+            "y": 171
+          },
+          {
+            "class_id": 2,
+            "frame_index": 588,
+            "x0": 216,
+            "x1_exclusive": 503,
+            "y": 171
+          },
+          {
+            "class_id": 2,
+            "frame_index": 104,
+            "x0": 108,
+            "x1_exclusive": 323,
+            "y": 169
+          },
+          {
+            "class_id": 2,
+            "frame_index": 86,
+            "x0": 124,
+            "x1_exclusive": 344,
+            "y": 167
+          },
+          {
+            "class_id": 2,
+            "frame_index": 585,
+            "x0": 267,
+            "x1_exclusive": 490,
+            "y": 171
+          },
+          {
+            "class_id": 2,
+            "frame_index": 586,
+            "x0": 217,
+            "x1_exclusive": 484,
+            "y": 170
+          },
+          {
+            "class_id": 2,
+            "frame_index": 513,
+            "x0": 8,
+            "x1_exclusive": 246,
+            "y": 181
+          },
+          {
+            "class_id": 2,
+            "frame_index": 467,
+            "x0": 50,
+            "x1_exclusive": 250,
+            "y": 178
+          },
+          {
+            "class_id": 2,
+            "frame_index": 140,
+            "x0": 10,
+            "x1_exclusive": 182,
+            "y": 177
+          },
+          {
+            "class_id": 2,
+            "frame_index": 521,
+            "x0": 44,
+            "x1_exclusive": 251,
+            "y": 178
+          },
+          {
+            "class_id": 2,
+            "frame_index": 519,
+            "x0": 91,
+            "x1_exclusive": 264,
+            "y": 176
+          },
+          {
+            "class_id": 2,
+            "frame_index": 550,
+            "x0": 36,
+            "x1_exclusive": 231,
+            "y": 177
+          },
+          {
+            "class_id": 2,
+            "frame_index": 577,
+            "x0": 18,
+            "x1_exclusive": 218,
+            "y": 179
+          },
+          {
+            "class_id": 2,
+            "frame_index": 583,
+            "x0": 271,
+            "x1_exclusive": 463,
+            "y": 173
+          },
+          {
+            "class_id": 2,
+            "frame_index": 590,
+            "x0": 293,
+            "x1_exclusive": 511,
+            "y": 180
+          },
+          {
+            "class_id": 2,
+            "frame_index": 572,
+            "x0": 269,
+            "x1_exclusive": 406,
+            "y": 173
+          },
+          {
+            "class_id": 2,
+            "frame_index": 532,
+            "x0": 68,
+            "x1_exclusive": 232,
+            "y": 179
+          },
+          {
+            "class_id": 2,
+            "frame_index": 515,
+            "x0": 84,
+            "x1_exclusive": 236,
+            "y": 179
+          },
+          {
+            "class_id": 2,
+            "frame_index": 548,
+            "x0": 71,
+            "x1_exclusive": 216,
+            "y": 178
+          }
+        ],
+        "contract": "selected_row_run_atoms identify source row-run atoms by frame_index,y,x0,x1_exclusive,class_id. Atoms already present in the mandatory base_runs_per_row prefix are recorded and not re-encoded.",
+        "duplicate_selected_atom_count": 0,
+        "expected_base_runs_per_row": null,
+        "matched_extra_atom_count": 109,
+        "policy_id": "extopt_yf_rank1_sparse_pair_frame_class_top0128",
+        "requested_row_run_atom_count": 128,
+        "source_basename": "policies.json",
+        "source_mode": "contest",
+        "source_schema": "yousfi_fridrich_atom_field_allocator_v1",
+        "source_sha256": "0d95d81fe8c7c05617629969332de7f8b4c58d5cfac23e69d6b21f57f002b22e",
+        "unmatched_atom_count": 0,
+        "unmatched_atoms": []
+      },
+      "hard_frame_indices": {
+        "frame_count": 0,
+        "frames": [],
+        "sources": []
+      },
+      "priority_formula": "After base_runs_per_row ranked nonzero row runs are kept, extra atoms are ranked by length * class_weight * (1 + foveal_row_weight*row_center + foveal_col_weight*col_center) * hard_frame_multiplier_if_selected * (1 + boundary_detail_weight*short_run_prior) * rank_decay**max(0, rank-2) / raw_bytes_per_extra_atom",
+      "raw_bytes_per_extra_atom": 5.0,
+      "row_rank_prefix_required": false,
+      "schema": "cmg3a_adaptive_global_nonzero_row_run_policy_v1",
+      "selected_extra_runs": 109,
+      "selected_max_runs_per_row": 2,
+      "selector": "field_equation_explicit_row_run_policy_after_base_runs_per_row",
+      "sort_order": "priority_desc_then_frame_row_rank_start_end_class",
+      "target_body_bytes": null,
+      "target_extra_runs": null,
+      "weights": {
+        "boundary_detail_weight": 0.08,
+        "boundary_reference_run_length": 64,
+        "class_weight_note": "Explicit byte-screen priors only: class-id preference for likely vehicle/lane/boundary/source-sensitive mask structure. Not score evidence.",
+        "class_weights": {
+          "1": 1.08,
+          "2": 1.3,
+          "3": 1.22,
+          "4": 1.16
+        },
+        "foveal_col_weight": 0.2,
+        "foveal_row_weight": 0.2,
+        "hard_frame_multiplier": 1.35,
+        "rank_decay": 0.92
+      },
+      "wire_mode": "nonzero_row_runs_topk_v1"
+    },
+    "selector": "cmg3a_adaptive_global_budget",
+    "source_mask_u8_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45",
+    "width": 512
+  },
+  "decoded_mask_array": {
+    "npy_sha256": "13f81851ae206f6142cd3348db5537eda4ea832665052824816f4d1bf432de0c",
+    "path": "/Users/adpena/Projects/pact/experiments/results/c063_trace_weighted_mask_grammar_plan_20260502_codex/decoded_mask_array.npy",
+    "shape": [
+      600,
+      384,
+      512
+    ],
+    "tensor_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45"
+  },
+  "evidence_grade": "empirical_byte_screen_archive_candidate_until_exact_cuda",
+  "frontier_archive": {
+    "bytes": 276214,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip",
+    "sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a"
+  },
+  "output_archive": {
+    "bytes": 129775,
+    "delta_bytes_vs_frontier": -146439,
+    "formula_only_rate_delta_vs_frontier": -0.09750771923625765,
+    "path": "/Users/adpena/Projects/pact/experiments/results/external_optimizer_intake_yf_field_20260502/source_top0128/archive.zip",
+    "sha256": "936b2d0a0b05192145a1a172f3e604a611b8f15b5959fecbb77a7c01005a93e1"
+  },
+  "packed_payload": {
+    "brotli_quality": 11,
+    "evidence_grade": "empirical",
+    "formula_only_rate_delta": -0.008907861074868408,
+    "header": {
+      "members": [
+        {
+          "bytes": 59288,
+          "codec": "raw",
+          "name": "renderer.bin",
+          "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+        },
+        {
+          "bytes": 76333,
+          "codec": "raw",
+          "name": "masks.cmg3",
+          "sha256": "85020c565d034ca4332c7691d89f5f31af40438071250f7563a9f32b9fc219ab"
+        },
+        {
+          "bytes": 1140,
+          "codec": "pose_qp1_v1",
+          "decoded_bytes": 7200,
+          "decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f",
+          "lossy": true,
+          "name": "optimized_poses.bin",
+          "pose_error_stats": {
+            "max_abs_by_dim": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "pose_dim": 6,
+            "rmse_by_dim": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "rows": 600
+          },
+          "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583",
+          "source_decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+        }
+      ],
+      "schema": "renderer_payload_v1",
+      "source_archive_sha256": "a7269a4213da6fec2e381380c4e48cd24d5adb29bf37bb26a92895b10e6eed36"
+    },
+    "output_archive": "/Users/adpena/Projects/pact/experiments/results/external_optimizer_intake_yf_field_20260502/source_top0128/archive.zip",
+    "output_archive_bytes": 129775,
+    "output_archive_sha256": "936b2d0a0b05192145a1a172f3e604a611b8f15b5959fecbb77a7c01005a93e1",
+    "payload_compressed_bytes": 129675,
+    "payload_format": "rpk1_json",
+    "payload_member": "p",
+    "payload_raw_bytes": 137637,
+    "pose_codec": "pose_qp1_v1",
+    "pose_residual_topk": 0,
+    "savings_bytes": 13378,
+    "score_claim": false,
+    "source_archive": "/Users/adpena/Projects/pact/experiments/results/external_optimizer_intake_yf_field_20260502/source_top0128/cmg3a_adaptive_runs_source_members.zip",
+    "source_archive_bytes": 143153,
+    "source_archive_sha256": "a7269a4213da6fec2e381380c4e48cd24d5adb29bf37bb26a92895b10e6eed36"
+  },
+  "policy": {
+    "adaptive_max_runs_per_row": 8,
+    "base_runs_per_row": 1,
+    "effective_extra_run_cap": 50000,
+    "effective_field_candidate_pool": {
+      "candidate_extra_runs_available": 109,
+      "selected_extra_runs_from_field_pool": 109
+    },
+    "evidence_boundary": "Policy is a deterministic byte-screen prior. It is not scorer, promotion, or retirement evidence without exact CUDA auth eval.",
+    "field_atom_policy": {
+      "already_base_atom_count": 19,
+      "already_base_atoms": [
+        {
+          "class_id": 2,
+          "frame_index": 587,
+          "x0": 218,
+          "x1_exclusive": 505,
+          "y": 171
+        },
+        {
+          "class_id": 2,
+          "frame_index": 588,
+          "x0": 216,
+          "x1_exclusive": 503,
+          "y": 171
+        },
+        {
+          "class_id": 2,
+          "frame_index": 104,
+          "x0": 108,
+          "x1_exclusive": 323,
+          "y": 169
+        },
+        {
+          "class_id": 2,
+          "frame_index": 86,
+          "x0": 124,
+          "x1_exclusive": 344,
+          "y": 167
+        },
+        {
+          "class_id": 2,
+          "frame_index": 585,
+          "x0": 267,
+          "x1_exclusive": 490,
+          "y": 171
+        },
+        {
+          "class_id": 2,
+          "frame_index": 586,
+          "x0": 217,
+          "x1_exclusive": 484,
+          "y": 170
+        },
+        {
+          "class_id": 2,
+          "frame_index": 513,
+          "x0": 8,
+          "x1_exclusive": 246,
+          "y": 181
+        },
+        {
+          "class_id": 2,
+          "frame_index": 467,
+          "x0": 50,
+          "x1_exclusive": 250,
+          "y": 178
+        },
+        {
+          "class_id": 2,
+          "frame_index": 140,
+          "x0": 10,
+          "x1_exclusive": 182,
+          "y": 177
+        },
+        {
+          "class_id": 2,
+          "frame_index": 521,
+          "x0": 44,
+          "x1_exclusive": 251,
+          "y": 178
+        },
+        {
+          "class_id": 2,
+          "frame_index": 519,
+          "x0": 91,
+          "x1_exclusive": 264,
+          "y": 176
+        },
+        {
+          "class_id": 2,
+          "frame_index": 550,
+          "x0": 36,
+          "x1_exclusive": 231,
+          "y": 177
+        },
+        {
+          "class_id": 2,
+          "frame_index": 577,
+          "x0": 18,
+          "x1_exclusive": 218,
+          "y": 179
+        },
+        {
+          "class_id": 2,
+          "frame_index": 583,
+          "x0": 271,
+          "x1_exclusive": 463,
+          "y": 173
+        },
+        {
+          "class_id": 2,
+          "frame_index": 590,
+          "x0": 293,
+          "x1_exclusive": 511,
+          "y": 180
+        },
+        {
+          "class_id": 2,
+          "frame_index": 572,
+          "x0": 269,
+          "x1_exclusive": 406,
+          "y": 173
+        },
+        {
+          "class_id": 2,
+          "frame_index": 532,
+          "x0": 68,
+          "x1_exclusive": 232,
+          "y": 179
+        },
+        {
+          "class_id": 2,
+          "frame_index": 515,
+          "x0": 84,
+          "x1_exclusive": 236,
+          "y": 179
+        },
+        {
+          "class_id": 2,
+          "frame_index": 548,
+          "x0": 71,
+          "x1_exclusive": 216,
+          "y": 178
+        }
+      ],
+      "contract": "selected_row_run_atoms identify source row-run atoms by frame_index,y,x0,x1_exclusive,class_id. Atoms already present in the mandatory base_runs_per_row prefix are recorded and not re-encoded.",
+      "duplicate_selected_atom_count": 0,
+      "expected_base_runs_per_row": null,
+      "matched_extra_atom_count": 109,
+      "policy_id": "extopt_yf_rank1_sparse_pair_frame_class_top0128",
+      "requested_row_run_atom_count": 128,
+      "source_basename": "policies.json",
+      "source_mode": "contest",
+      "source_schema": "yousfi_fridrich_atom_field_allocator_v1",
+      "source_sha256": "0d95d81fe8c7c05617629969332de7f8b4c58d5cfac23e69d6b21f57f002b22e",
+      "unmatched_atom_count": 0,
+      "unmatched_atoms": []
+    },
+    "hard_frame_indices": {
+      "frame_count": 0,
+      "frames": [],
+      "sources": []
+    },
+    "priority_formula": "After base_runs_per_row ranked nonzero row runs are kept, extra atoms are ranked by length * class_weight * (1 + foveal_row_weight*row_center + foveal_col_weight*col_center) * hard_frame_multiplier_if_selected * (1 + boundary_detail_weight*short_run_prior) * rank_decay**max(0, rank-2) / raw_bytes_per_extra_atom",
+    "raw_bytes_per_extra_atom": 5.0,
+    "row_rank_prefix_required": false,
+    "schema": "cmg3a_adaptive_global_nonzero_row_run_policy_v1",
+    "selected_extra_runs": 109,
+    "selected_max_runs_per_row": 2,
+    "selector": "field_equation_explicit_row_run_policy_after_base_runs_per_row",
+    "sort_order": "priority_desc_then_frame_row_rank_start_end_class",
+    "target_body_bytes": null,
+    "target_extra_runs": null,
+    "weights": {
+      "boundary_detail_weight": 0.08,
+      "boundary_reference_run_length": 64,
+      "class_weight_note": "Explicit byte-screen priors only: class-id preference for likely vehicle/lane/boundary/source-sensitive mask structure. Not score evidence.",
+      "class_weights": {
+        "1": 1.08,
+        "2": 1.3,
+        "3": 1.22,
+        "4": 1.16
+      },
+      "foveal_col_weight": 0.2,
+      "foveal_row_weight": 0.2,
+      "hard_frame_multiplier": 1.35,
+      "rank_decay": 0.92
+    },
+    "wire_mode": "nonzero_row_runs_topk_v1"
+  },
+  "promotion_eligible": false,
+  "required_next_steps": [
+    "local unpack/inflate smoke to prove masks.cmg3 routes through runtime",
+    "exact CUDA diagnostic on the archive bytes",
+    "T4 promotion only if component gates are near or below C-067"
+  ],
+  "schema": "cmg3a_adaptive_nonzero_row_runs_candidate_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 143153,
+    "path": "/Users/adpena/Projects/pact/experiments/results/external_optimizer_intake_yf_field_20260502/source_top0128/cmg3a_adaptive_runs_source_members.zip",
+    "sha256": "a7269a4213da6fec2e381380c4e48cd24d5adb29bf37bb26a92895b10e6eed36"
+  }
+}

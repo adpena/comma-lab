@@ -1,0 +1,38 @@
+{
+  "pr67": {
+    "body_archive_bytes": 276741,
+    "body_pose": 0.00048653,
+    "body_score_recomputed_from_rounded_fields": 0.31470817503416587,
+    "body_seg": 0.00060686,
+    "body_sha256": "cc1dfa346811dade15044910fa0143e73a7a049b98aeec39b96a53481a0788bd",
+    "created_at": "2026-05-01T06:02:05Z",
+    "files_api_count": 4,
+    "head_ref": "submission/qpose14-r55",
+    "head_repo": "https://github.com/EthanYangTW/comma_video_compression_challenge",
+    "head_sha": "60297a385cdb0a5250be95e6ba2556585ec80bce",
+    "html_url": "https://github.com/commaai/comma_video_compression_challenge/pull/67",
+    "merged_at": "2026-05-03T02:22:08Z",
+    "release_archive_url": "https://github.com/EthanYangTW/comma_video_compression_challenge/releases/download/qpose14-r55-segactions-minp/archive.zip",
+    "state": "closed",
+    "title": "qpose14_r55_segactions_minp (0.31)",
+    "updated_at": "2026-05-03T02:27:12Z"
+  },
+  "pr75": {
+    "body_archive_bytes": 276741,
+    "body_pose": 0.00048653,
+    "body_score_recomputed_from_rounded_fields": 0.31470817503416587,
+    "body_seg": 0.00060686,
+    "body_sha256": "cc1dfa346811dade15044910fa0143e73a7a049b98aeec39b96a53481a0788bd",
+    "created_at": "2026-05-03T02:29:57Z",
+    "files_api_count": 2,
+    "head_ref": "submission/qpose14-r55-segactions-minp",
+    "head_repo": "https://github.com/EthanYangTW/comma_video_compression_challenge",
+    "head_sha": "6369f829d647f2a1aff8d457291d903f9801d113",
+    "html_url": "https://github.com/commaai/comma_video_compression_challenge/pull/75",
+    "merged_at": null,
+    "release_archive_url": "https://github.com/EthanYangTW/comma_video_compression_challenge/releases/download/qpose14-r55-segactions-minp/archive.zip",
+    "state": "open",
+    "title": "qpose14_r55_segactions_minp (0.31)",
+    "updated_at": "2026-05-03T02:52:49Z"
+  }
+}

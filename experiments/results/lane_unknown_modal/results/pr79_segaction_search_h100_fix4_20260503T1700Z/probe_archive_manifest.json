@@ -1,0 +1,18 @@
+{
+  "actions_bytes": 2140,
+  "candidate_archive": "/tmp/pact/results/pr79_segaction_search_h100_fix4_20260503T1700Z/probe_archive.zip",
+  "candidate_archive_bytes": 278366,
+  "candidate_archive_sha256": "ddfddbd682dc804a0e19613fe9afa0a8c8c49b3385736da81360bb0cca2f6836",
+  "evidence_grade": "remote_cuda_proxy_search_only_until_exact_t4_auth_eval",
+  "payload_bytes": 278266,
+  "schema": "pr79_segaction_search_probe_archive_v1",
+  "score_claim": false,
+  "slice_contract": {
+    "actions_bytes": 2140,
+    "mask_bytes": 219472,
+    "model_bytes": 55756,
+    "pose_bytes": 898
+  },
+  "source_archive_bytes": 277388,
+  "source_archive_sha256": "01dc02badf851d99108fd92c570271f36f74cc5424c6d2a8f1b499cb4d1c3446"
+}

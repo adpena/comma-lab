@@ -1,0 +1,148 @@
+{
+  "archive": {
+    "bytes": 229480,
+    "exists": true,
+    "members": [
+      {
+        "compress_size": 229380,
+        "compress_type": 0,
+        "date_time": [
+          1980,
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "external_attr": 27525120,
+        "file_size": 229380,
+        "local_header_name": "x",
+        "name": "x",
+        "sha256": "cfdb1c0d0b09aa2557aa3e61053edf7403cc99969f2ef46cd4320fbd7f4b4ae4"
+      }
+    ],
+    "path": "experiments/results/pr85_stbm1br_rmb1_randmulti_20260504_codex/pr85_stbm1br_plus_pr92_rmb1_randmulti/archive.zip",
+    "sha256": "f8d2dff12004fe15bdedefcd3f9574fab97f22c302fa1417a265c325468ad774"
+  },
+  "auth_eval": null,
+  "checks": [
+    {
+      "details": "submissions/robust_current/archive.zip",
+      "name": "required_file_present:archive.zip",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "submissions/robust_current/inflate.sh",
+      "name": "required_file_present:inflate.sh",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "submissions/robust_current/report.txt",
+      "name": "required_file_present:report.txt",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "mode=0o755",
+      "name": "inflate_sh_executable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "archive=experiments/results/pr85_stbm1br_rmb1_randmulti_20260504_codex/pr85_stbm1br_plus_pr92_rmb1_randmulti/archive.zip",
+      "name": "archive_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "zipfile opened and CRC scan completed",
+      "name": "archive_is_valid_zip",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "bad_crc_member=None",
+      "name": "archive_crc_ok",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "duplicates=[]",
+      "name": "archive_no_duplicate_members",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "safe member name",
+      "name": "archive_member_safe:x",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "local='x' central='x'",
+      "name": "archive_local_central_name_match:x",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=f8d2dff12004fe15bdedefcd3f9574fab97f22c302fa1417a265c325468ad774 observed=f8d2dff12004fe15bdedefcd3f9574fab97f22c302fa1417a265c325468ad774",
+      "name": "expected_archive_sha256",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=229480 observed=229480",
+      "name": "expected_archive_size_bytes",
+      "passed": true,
+      "severity": "error"
+    }
+  ],
+  "expectations": {
+    "expect_single_member": null,
+    "expected_archive_sha256": "f8d2dff12004fe15bdedefcd3f9574fab97f22c302fa1417a265c325468ad774",
+    "expected_archive_size_bytes": 229480,
+    "expected_runtime_tree_sha256": null,
+    "expected_samples": 600,
+    "require_auth_eval": false,
+    "require_t4_equivalent": false,
+    "required_files": [
+      "archive.zip",
+      "inflate.sh",
+      "report.txt"
+    ]
+  },
+  "failed_checks": [],
+  "provider_agnostic": true,
+  "public_hygiene": null,
+  "public_submission_refs": {},
+  "schema": "pre_submission_compliance_check_v1",
+  "score_claim": false,
+  "status": "passed",
+  "submission": {
+    "path": "submissions/robust_current",
+    "required_files": {
+      "archive.zip": {
+        "bytes": 686321,
+        "exists": true,
+        "path": "submissions/robust_current/archive.zip",
+        "sha256": "93e3ccad7b616898eb4db7a901d3f15adaff9e53371b08e61389c8313f8dc423"
+      },
+      "inflate.sh": {
+        "bytes": 19345,
+        "exists": true,
+        "path": "submissions/robust_current/inflate.sh",
+        "sha256": "e479b7fdfbb9686f9f9f4d7d9740d24f340b41b584b07c57dd3065f5f3923005"
+      },
+      "report.txt": {
+        "bytes": 890,
+        "exists": true,
+        "path": "submissions/robust_current/report.txt",
+        "sha256": "db613ab30f714010e6de0edca4874abd4a441abccadb86ac5a80359c2eb42c66"
+      }
+    }
+  },
+  "tool": "scripts/pre_submission_compliance_check.py",
+  "warning_checks": []
+}

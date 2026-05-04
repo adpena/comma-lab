@@ -1,0 +1,837 @@
+{
+  "schema_version": 1,
+  "started_at_utc": "2026-05-02T21:30:05Z",
+  "tool": "experiments/contest_auth_eval.py",
+  "archive_path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_sjkl_c067_sparse_k1g08_p32_a3_rtxprodiag_20260502T2123Z/archive.zip",
+  "archive_sha256": "f4146e137d9e2e12d1f7c8d26609f24e0e2bd0d19e5c0534f90c761c35658825",
+  "archive_size_bytes": 277455,
+  "inflate_script": "/teamspace/studios/this_studio/pact/submissions/robust_current/inflate.sh",
+  "inflate_script_sha256": "e479b7fdfbb9686f9f9f4d7d9740d24f340b41b584b07c57dd3065f5f3923005",
+  "inflate_runtime_manifest": {
+    "schema": "contest_auth_eval_runtime_dependency_manifest_v1",
+    "runtime_root": "/teamspace/studios/this_studio/pact/submissions/robust_current",
+    "runtime_file_count": 35,
+    "runtime_tree_sha256": "83454f7fa91b278fd08ebcf03aa15cad9d2925bb9723e9dd4b289fbcee07dd74",
+    "files": [
+      {
+        "relative_path": "analyze_roi.py",
+        "bytes": 189,
+        "sha256": "722ea96bc14e013fc4260f24dd86431d11966419292ea546d31a8f644d4dd16c"
+      },
+      {
+        "relative_path": "apply_qzs3_postprocess.py",
+        "bytes": 22091,
+        "sha256": "83a06ca93119dea43b74a8b466b417a5f99d6a8d64d772fdc85e0c3ea155abe0"
+      },
+      {
+        "relative_path": "auth_eval_renderer_fp4.json",
+        "bytes": 13406,
+        "sha256": "8a404a5bb720cf25b8ddb1b29cc1c095889d03225f8f8a9cbebdb3553680f368"
+      },
+      {
+        "relative_path": "compress.sh",
+        "bytes": 34678,
+        "sha256": "f5a649aeb3f1202a84d1bee6085e92dfe267de8bc40430b696aa8cc80be13d19"
+      },
+      {
+        "relative_path": "compress_archive.py",
+        "bytes": 16563,
+        "sha256": "eafec2c7c93bee473daa84f903cbbdcd8de9f92e62ce4825eadd663c5b5b4eb3"
+      },
+      {
+        "relative_path": "compress_masks.py",
+        "bytes": 11756,
+        "sha256": "8b25972521621e6b94396a8f1a0353b9ea10982a82043f456b9cc9f621347389"
+      },
+      {
+        "relative_path": "config.env",
+        "bytes": 507,
+        "sha256": "3b160a6747e6eec3588456e4ca3a5cb91613d2acce38557a31ea330ec0fa1e09"
+      },
+      {
+        "relative_path": "config_env.py",
+        "bytes": 1657,
+        "sha256": "1ed6df5bc08a9db4eed8c2d1f935e7cacf60b3b3f14e4b44c15bcf48608e40cc"
+      },
+      {
+        "relative_path": "contest_eval_archive.json",
+        "bytes": 516,
+        "sha256": "8579f49de350222abb35dd1958ea12bc11207cb0de90f2ac499445b95b943941"
+      },
+      {
+        "relative_path": "contest_eval_result.json",
+        "bytes": 516,
+        "sha256": "048e5f759b5230ac34914e455c02673054ac348e622e61e81c83bd2cb647ae34"
+      },
+      {
+        "relative_path": "diagnose_scorer.py",
+        "bytes": 11255,
+        "sha256": "2af6e9d93127e5c74cce7d8fc72ccc87f1af64bdf53f4c35af0829c175e24643"
+      },
+      {
+        "relative_path": "download_and_eval.sh",
+        "bytes": 3812,
+        "sha256": "aa2ecbb00f93bab0f8c8655ac5be7b1f1ff90829b5cbfa899ff48b5f057d362b"
+      },
+      {
+        "relative_path": "eval_runs/crf_32/config.env",
+        "bytes": 509,
+        "sha256": "04399bddaf1f5dc9a314c41d44299fb3dcc3d8ef50c42cd6f40eae9f167302ac"
+      },
+      {
+        "relative_path": "eval_runs/crf_32/state.json",
+        "bytes": 382,
+        "sha256": "d36c7498dd6f8ae14be81a37952dde8395f89ba07f92cb5841998b34fddf4398"
+      },
+      {
+        "relative_path": "eval_runs/verify_136_original/config.env",
+        "bytes": 509,
+        "sha256": "04399bddaf1f5dc9a314c41d44299fb3dcc3d8ef50c42cd6f40eae9f167302ac"
+      },
+      {
+        "relative_path": "eval_runs/verify_136_original/experiment_record.json",
+        "bytes": 1417,
+        "sha256": "8f4c28e9d43d80050db2594d3e1d3f469dd2224a108a58ceccb9a910126e0cc6"
+      },
+      {
+        "relative_path": "eval_runs/verify_136_original/report.json",
+        "bytes": 1058,
+        "sha256": "15f6c61e1bfc1767fa634f9ad2a745bc72c150489a872d9dd1af7cdd70948179"
+      },
+      {
+        "relative_path": "eval_runs/verify_136_original/report.txt",
+        "bytes": 882,
+        "sha256": "71465ba837bb11f29e6d6e1bf69b023d4a81d96135cefabd3e0113940698abc2"
+      },
+      {
+        "relative_path": "eval_runs/verify_136_original/state.json",
+        "bytes": 467,
+        "sha256": "09b078ec408eb1caab979e22cbff0afbaff0fcb95ccafe9147c9aa9f660aeb59"
+      },
+      {
+        "relative_path": "eval_runs/verify_correct_ckpt/config.env",
+        "bytes": 509,
+        "sha256": "04399bddaf1f5dc9a314c41d44299fb3dcc3d8ef50c42cd6f40eae9f167302ac"
+      },
+      {
+        "relative_path": "eval_runs/verify_correct_ckpt/experiment_record.json",
+        "bytes": 1449,
+        "sha256": "de190ee0a8d98c64958374ccb97dacb883bc76a316de1a38dd16715666e124ae"
+      },
+      {
+        "relative_path": "eval_runs/verify_correct_ckpt/report.json",
+        "bytes": 1058,
+        "sha256": "df1cdcfddb03a9ce85b29e3c20ad2ecb0c86f9bd3cd0dbd12ee57e0cc0cbae3e"
+      },
+      {
+        "relative_path": "eval_runs/verify_correct_ckpt/report.txt",
+        "bytes": 882,
+        "sha256": "8a2e009c501dcd4c0f24c2fbd1d58160fff421bb895c786539171e6ee29df5e0"
+      },
+      {
+        "relative_path": "eval_runs/verify_correct_ckpt/state.json",
+        "bytes": 674,
+        "sha256": "600399b6654c5cb0364a89a97f85409437a4b2f56d8910204322134316be4734"
+      },
+      {
+        "relative_path": "inflate.sh",
+        "bytes": 19345,
+        "sha256": "e479b7fdfbb9686f9f9f4d7d9740d24f340b41b584b07c57dd3065f5f3923005"
+      },
+      {
+        "relative_path": "inflate_postfilter.py",
+        "bytes": 54486,
+        "sha256": "89cb5ff35f3490f2d425c2353181857826fe54dc99b9b991eb299d394ba4376f"
+      },
+      {
+        "relative_path": "inflate_renderer.py",
+        "bytes": 280088,
+        "sha256": "d02cb99e8b1cca30cd1030ddbbf914d88335646d49e82f91ca5c51ef427c2bc7"
+      },
+      {
+        "relative_path": "inflate_renderer_grayscale.py",
+        "bytes": 16076,
+        "sha256": "383407e20aff8a5b7791f61d3cdfd7516ef870bab99145854ff2f399471b8f69"
+      },
+      {
+        "relative_path": "inflate_segmap.py",
+        "bytes": 11005,
+        "sha256": "1899c5a5226f767762c54e19e7689cedabd8b3f6b77793765b0dfd63236948ed"
+      },
+      {
+        "relative_path": "inflate_segmap_arithmetic.py",
+        "bytes": 8080,
+        "sha256": "e7a71d6f1d8e23c3a08269e5234a4738a9a1fcc860207419c561f6f379165321"
+      },
+      {
+        "relative_path": "inflate_segmap_film_canvas.py",
+        "bytes": 9758,
+        "sha256": "eefb8806e8a9e16cec3771649aefa86724d2c54080784d8997509684dc3dfa90"
+      },
+      {
+        "relative_path": "report.txt",
+        "bytes": 890,
+        "sha256": "db613ab30f714010e6de0edca4874abd4a441abccadb86ac5a80359c2eb42c66"
+      },
+      {
+        "relative_path": "runner.py",
+        "bytes": 55860,
+        "sha256": "f3d8c3712b2b8c85c0da1e502dad0fbcedaef569a5665b329a2a5ac049d60689"
+      },
+      {
+        "relative_path": "sky_degrade.py",
+        "bytes": 9625,
+        "sha256": "a9e6561235d8179368e934486356bc3eab8a2950765e47516ea7594759d8b289"
+      },
+      {
+        "relative_path": "unpack_renderer_payload.py",
+        "bytes": 41131,
+        "sha256": "dadacb5429ca5ddbfa234ff61c9aef10ce3dacd3fc114fafd4118634e3cec397"
+      }
+    ],
+    "repo_local_tac_import_manifest": {
+      "schema": "contest_auth_eval_repo_local_tac_import_manifest_v1",
+      "discovery": "static_ast_recursive_import_closure",
+      "runtime_root_name": "robust_current",
+      "tac_root_relative_path": "src/tac",
+      "root_import_modules": [
+        "tac.architectures",
+        "tac.arithmetic_qint_codec",
+        "tac.block_fp_codec",
+        "tac.camera",
+        "tac.constrained_gen",
+        "tac.contrib.szabolcs_renderer",
+        "tac.cost_tracker",
+        "tac.dp_sims_renderer",
+        "tac.imps_renderer_archive",
+        "tac.lane_mark_pose",
+        "tac.lossless.argmax_codec",
+        "tac.mask_codec",
+        "tac.mask_grayscale_lut",
+        "tac.mini_scorer",
+        "tac.nerv_mask_codec",
+        "tac.owv2_renderer_archive",
+        "tac.owv3_sensitivity_weighted",
+        "tac.pose_delta_codec",
+        "tac.pose_delta_codec_v2",
+        "tac.pose_from_embedding",
+        "tac.profiles",
+        "tac.qbf1_renderer_codec",
+        "tac.quantization",
+        "tac.quantizr_faithful_renderer",
+        "tac.quantizr_qzs3_codec",
+        "tac.quantizr_torch_fp4_codec",
+        "tac.radial_zoom",
+        "tac.renderer",
+        "tac.renderer_export",
+        "tac.roi_analysis",
+        "tac.scorer",
+        "tac.scorer_targets",
+        "tac.segmap_film_canvas_renderer",
+        "tac.segmap_renderer",
+        "tac.sjkl_basis",
+        "tac.stc_boundary_codec",
+        "tac.submission_archive",
+        "tac.trick_stack",
+        "tac.tto",
+        "tac.uniward_delta"
+      ],
+      "unresolved_modules": [],
+      "parse_errors": [],
+      "module_count": 90,
+      "file_count": 84,
+      "files": [
+        {
+          "module": "tac",
+          "relative_path": "src/tac/__init__.py",
+          "bytes": 2953,
+          "sha256": "1b724b7e33b5ff4dd7a2438c750b8a3ed040179dfdd4a3cb034268a34964db8f"
+        },
+        {
+          "module": "tac.architectures",
+          "relative_path": "src/tac/architectures.py",
+          "bytes": 35513,
+          "sha256": "fd21f739b05dce8385745b3a257bdd76b2f46b0af9efac77e95ac0559bdd9728"
+        },
+        {
+          "module": "tac.arithmetic_qint_codec",
+          "relative_path": "src/tac/arithmetic_qint_codec.py",
+          "bytes": 20577,
+          "sha256": "78db41250e837a160d0a4263b4972c255c02a4bcc336240c13af0b56123ec3ca"
+        },
+        {
+          "module": "tac.block_fp_codec",
+          "relative_path": "src/tac/block_fp_codec.py",
+          "bytes": 34945,
+          "sha256": "22e5a77d17a23c2202b74825e885b7cb54c55d6ee4e18008cd0587484ec4bdca"
+        },
+        {
+          "module": "tac.camera",
+          "relative_path": "src/tac/camera.py",
+          "bytes": 8814,
+          "sha256": "80822591474192712c55e45570394216292b237b0bbafc61fc818ecb07f40043"
+        },
+        {
+          "module": "tac.checkpoint_names",
+          "relative_path": "src/tac/checkpoint_names.py",
+          "bytes": 2342,
+          "sha256": "47e365227e4f43c2298274f28c44bad901e6508cf71a05602384035c56ec2689"
+        },
+        {
+          "module": "tac.constrained_gen",
+          "relative_path": "src/tac/constrained_gen.py",
+          "bytes": 111470,
+          "sha256": "2627f91e77c86ce3a1d73ccd57199eb81be7dfe415f8c6d5b65f557801d94ea8"
+        },
+        {
+          "module": "tac.contrib",
+          "relative_path": "src/tac/contrib/__init__.py",
+          "bytes": 549,
+          "sha256": "84f2c42a0d89a1d3d2227a483acd5e2f8140c624b556b0c538ceb2b1a35f871a"
+        },
+        {
+          "module": "tac.contrib.coolchic_renderer",
+          "relative_path": "src/tac/contrib/coolchic_renderer.py",
+          "bytes": 9786,
+          "sha256": "d6bacc5bf893090c9eacf4c4fd05ed776cbb6d89ef5bb4bfcbe994fc5c326038"
+        },
+        {
+          "module": "tac.contrib.hamiltonian_dynamics",
+          "relative_path": "src/tac/contrib/hamiltonian_dynamics.py",
+          "bytes": 24601,
+          "sha256": "0e18085862a53c883f868411d5e5e13db1b4320919cad8918196eef10a4cb319"
+        },
+        {
+          "module": "tac.contrib.scorer_manifold",
+          "relative_path": "src/tac/contrib/scorer_manifold.py",
+          "bytes": 28609,
+          "sha256": "685f8a51791d65a5d71f679f713c1b176ecd4b64b88b0a5d86836acac33dec13"
+        },
+        {
+          "module": "tac.contrib.szabolcs_renderer",
+          "relative_path": "src/tac/contrib/szabolcs_renderer.py",
+          "bytes": 23319,
+          "sha256": "f017910d085987126f00dc5fd138b559d5de3b0e1fac31bc6202a91f07fb7b3a"
+        },
+        {
+          "module": "tac.contrib.variational_gen",
+          "relative_path": "src/tac/contrib/variational_gen.py",
+          "bytes": 31844,
+          "sha256": "ffca92acaa5d2d13f56efda78f4dd432f30d51bd6ffed4544c0b621a10d9be86"
+        },
+        {
+          "module": "tac.cost_tracker",
+          "relative_path": "src/tac/cost_tracker.py",
+          "bytes": 8443,
+          "sha256": "97ce17eca8256183e928e74ca8d87a829e00b3cf3d4f6347a64672c35baf06f0"
+        },
+        {
+          "module": "tac.data",
+          "relative_path": "src/tac/data.py",
+          "bytes": 9333,
+          "sha256": "bbdde8fe93f5c1744cf6741c454d56cd228571ce19ebfbf2b14b6d6bed8ec4d4"
+        },
+        {
+          "module": "tac.deploy",
+          "relative_path": "src/tac/deploy/__init__.py",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "module": "tac.deploy.lightning",
+          "relative_path": "src/tac/deploy/lightning/__init__.py",
+          "bytes": 1484,
+          "sha256": "b21fba7249fe2acb673e10028f7afa0249ff6bc00532a37fc7b835e0ff00108e"
+        },
+        {
+          "module": "tac.deploy.lightning.batch_jobs",
+          "relative_path": "src/tac/deploy/lightning/batch_jobs.py",
+          "bytes": 208556,
+          "sha256": "376d04e0a1e780d205cda6c6d6d5ae52514bd161759a23b64d11179e7b57af95"
+        },
+        {
+          "module": "tac.depth_motion",
+          "relative_path": "src/tac/depth_motion.py",
+          "bytes": 10926,
+          "sha256": "90787560660e2773109c1d962ec3a359d3c924d6ba908ebc0c6f6f493aa7f893"
+        },
+        {
+          "module": "tac.dp_sims_renderer",
+          "relative_path": "src/tac/dp_sims_renderer.py",
+          "bytes": 43570,
+          "sha256": "7b6cc57afceb0f91ec4e264c076fd9217068cefddaae1da57f84e73af04b737d"
+        },
+        {
+          "module": "tac.entropy_bottleneck",
+          "relative_path": "src/tac/entropy_bottleneck.py",
+          "bytes": 3955,
+          "sha256": "0896c84760fdc46c781e07031b7d349d2f01a379a8ed44480913b2bfdbcf75d8"
+        },
+        {
+          "module": "tac.evaluate",
+          "relative_path": "src/tac/evaluate.py",
+          "bytes": 10156,
+          "sha256": "7afc3d623276c02547f8a31511103c68a209353523d30d5a3d724fddb7cdc9e4"
+        },
+        {
+          "module": "tac.fp4_quantize",
+          "relative_path": "src/tac/fp4_quantize.py",
+          "bytes": 26159,
+          "sha256": "14c9e66a0ef77716c38af46719b92e82e56544cadc9df08f66d22f90069d3cf1"
+        },
+        {
+          "module": "tac.fridrich",
+          "relative_path": "src/tac/fridrich.py",
+          "bytes": 52547,
+          "sha256": "7038be9b64b75da11028f6d9dc38a6abf703db6fa1fdfb85742aca2a3ec2d404"
+        },
+        {
+          "module": "tac.imps_renderer_archive",
+          "relative_path": "src/tac/imps_renderer_archive.py",
+          "bytes": 25136,
+          "sha256": "4bf49e1a236aba4615ce6255e26b7078c29da92f8f3e947c3c7911e93db56515"
+        },
+        {
+          "module": "tac.iterative_magnitude_pruning",
+          "relative_path": "src/tac/iterative_magnitude_pruning.py",
+          "bytes": 23727,
+          "sha256": "51da1856f17fefe03348e9c4eee43fd4658abf9f631784a8f7986b241d0746a2"
+        },
+        {
+          "module": "tac.kl_config",
+          "relative_path": "src/tac/kl_config.py",
+          "bytes": 36267,
+          "sha256": "098b4b3a9cd272251d35b9b6bfdfc0028d1f89437bec13597e4ad16b9cfd04b9"
+        },
+        {
+          "module": "tac.lane_c_compliance",
+          "relative_path": "src/tac/lane_c_compliance.py",
+          "bytes": 33349,
+          "sha256": "4077b01f29ed8b91936deac9f4cfa6130dba8c2b3eb604520b27ae23def7a8dd"
+        },
+        {
+          "module": "tac.lane_mark_pose",
+          "relative_path": "src/tac/lane_mark_pose.py",
+          "bytes": 11973,
+          "sha256": "62e0d1a221cf5558010bbebea3d45fd718484d937b56ee3f5d13d140131f2d3d"
+        },
+        {
+          "module": "tac.lane_mark_speed",
+          "relative_path": "src/tac/lane_mark_speed.py",
+          "bytes": 9517,
+          "sha256": "bfe2ddc290288ad29df67b1dd055c222650a64ad861b48f5f23720311d1f3615"
+        },
+        {
+          "module": "tac.learnable_bit_quant",
+          "relative_path": "src/tac/learnable_bit_quant.py",
+          "bytes": 45701,
+          "sha256": "55bb1467d8f020ca1200462761dbee1a45aab258bac048429243c19c19b0336b"
+        },
+        {
+          "module": "tac.lora_pose",
+          "relative_path": "src/tac/lora_pose.py",
+          "bytes": 8951,
+          "sha256": "60bd996645dc54f43fcffa769614d660056442b7ff3685df6d7bfac6db5e0b16"
+        },
+        {
+          "module": "tac.lora_pose_v2",
+          "relative_path": "src/tac/lora_pose_v2.py",
+          "bytes": 12662,
+          "sha256": "f8bfb519efa5d74e0ee13a2437ce54225ac58164a5785042a78dbe2d810397d9"
+        },
+        {
+          "module": "tac.losses",
+          "relative_path": "src/tac/losses.py",
+          "bytes": 71235,
+          "sha256": "0e393a98b52dc44c7903a437aec2c6819b199fa7409e420b52617f286e2b6dc8"
+        },
+        {
+          "module": "tac.lossless",
+          "relative_path": "src/tac/lossless/__init__.py",
+          "bytes": 2940,
+          "sha256": "2d62d9d49dbed80daf874c9504865d186fb41334d8fdacdfec13078c2ef096c8"
+        },
+        {
+          "module": "tac.lossless.argmax_codec",
+          "relative_path": "src/tac/lossless/argmax_codec.py",
+          "bytes": 34713,
+          "sha256": "e0e69dac6996b794699d4f24fbcf4634d2addb1757f806a3570df414ff73882c"
+        },
+        {
+          "module": "tac.mask_codec",
+          "relative_path": "src/tac/mask_codec.py",
+          "bytes": 36987,
+          "sha256": "616b4fbc9223f1a0c65fee52bd7c923025843bc196213b8c8956960fa3b2eecb"
+        },
+        {
+          "module": "tac.mask_entropy_coder",
+          "relative_path": "src/tac/mask_entropy_coder.py",
+          "bytes": 13323,
+          "sha256": "9a9c2b90f165f52d20329174a1f20031ca40210db10777f548fcdccb2bc7f571"
+        },
+        {
+          "module": "tac.mask_grayscale_lut",
+          "relative_path": "src/tac/mask_grayscale_lut.py",
+          "bytes": 8313,
+          "sha256": "ebfb02237c9887053ee5f4c845c87dcb20bd85686ac8ad97c28c3a2f3573584a"
+        },
+        {
+          "module": "tac.mini_scorer",
+          "relative_path": "src/tac/mini_scorer.py",
+          "bytes": 37698,
+          "sha256": "77e86fd58d18bbb2b41805ee0d0f4945bac8ca7d99858ca7e3d8d75793ab3f85"
+        },
+        {
+          "module": "tac.mixed_precision_export",
+          "relative_path": "src/tac/mixed_precision_export.py",
+          "bytes": 23808,
+          "sha256": "1a02aef059f155cb4e97de79d8923a3953ce2dd3fb5c86dfcd01d47420181622"
+        },
+        {
+          "module": "tac.models",
+          "relative_path": "src/tac/models.py",
+          "bytes": 2146,
+          "sha256": "5182bfeac975b138d7e6e2b1364c0bde1c8e2cb38217fc268f7447c405538fcf"
+        },
+        {
+          "module": "tac.multi_model_inflate",
+          "relative_path": "src/tac/multi_model_inflate.py",
+          "bytes": 11305,
+          "sha256": "6bd80cfb692046b8225b0f4a5b2099b3a9ad60b7d4e53b9c1dc65c937e67845f"
+        },
+        {
+          "module": "tac.nerv_mask_codec",
+          "relative_path": "src/tac/nerv_mask_codec.py",
+          "bytes": 37682,
+          "sha256": "69d710c229e5eb54dc8828d45eacf98e9ac50fe6bc1928a4e5a188be1003e2b8"
+        },
+        {
+          "module": "tac.neural_weight_codec",
+          "relative_path": "src/tac/neural_weight_codec.py",
+          "bytes": 16633,
+          "sha256": "a43d3adbf273bab2d254d462131baf078d3e6c267f3bca15cfdddc999b9af42e"
+        },
+        {
+          "module": "tac.neural_weight_codec_sensitivity",
+          "relative_path": "src/tac/neural_weight_codec_sensitivity.py",
+          "bytes": 41801,
+          "sha256": "efbbe7e8fa9345800673a04b4534e228ba62e4467217cd0493941c444c3e4236"
+        },
+        {
+          "module": "tac.neural_weight_corpus",
+          "relative_path": "src/tac/neural_weight_corpus.py",
+          "bytes": 22796,
+          "sha256": "4f312f6d6988e1697ad42e61d5b78e908d02d1285b47eaaad847ceb22c033233"
+        },
+        {
+          "module": "tac.owv2_renderer_archive",
+          "relative_path": "src/tac/owv2_renderer_archive.py",
+          "bytes": 24627,
+          "sha256": "c415471114d3404be163658f6288e32ed210977bba9b7fb734d9b0c2758449c3"
+        },
+        {
+          "module": "tac.owv3_sensitivity_weighted",
+          "relative_path": "src/tac/owv3_sensitivity_weighted.py",
+          "bytes": 41932,
+          "sha256": "2d0b3a9a354f48f290fd411906738d013bee203e7fd722c24514b041eb07ea1d"
+        },
+        {
+          "module": "tac.parallel_inflate",
+          "relative_path": "src/tac/parallel_inflate.py",
+          "bytes": 12116,
+          "sha256": "f324c1410e59dfdb3c39f156d7e0446d13dce642936a6925d161ac57105deb7d"
+        },
+        {
+          "module": "tac.pose_delta_codec",
+          "relative_path": "src/tac/pose_delta_codec.py",
+          "bytes": 9341,
+          "sha256": "7b50f1a5646691df050845f88dc3aa11dde1c045e1c4b3e013fa0add6c2f8458"
+        },
+        {
+          "module": "tac.pose_delta_codec_v2",
+          "relative_path": "src/tac/pose_delta_codec_v2.py",
+          "bytes": 19515,
+          "sha256": "46bb16843662d0c8ce896fafd126a70588875a44c4dc2e3a4f475d09406ec4eb"
+        },
+        {
+          "module": "tac.pose_from_embedding",
+          "relative_path": "src/tac/pose_from_embedding.py",
+          "bytes": 15988,
+          "sha256": "d7224a93e08d24db24d08bd669366b4ff6ed6d432e7d4a834fa4b1ae4da53664"
+        },
+        {
+          "module": "tac.precompute_corrections",
+          "relative_path": "src/tac/precompute_corrections.py",
+          "bytes": 36114,
+          "sha256": "2efdf5c245526c32e0b0a64408698e5ca9968ebbe890a30e793ea2ae49cb1104"
+        },
+        {
+          "module": "tac.preflight",
+          "relative_path": "src/tac/preflight.py",
+          "bytes": 905071,
+          "sha256": "928d6a786661ec7e0735657361708dcf892f0e37724bc2ceef3242505c6d369f"
+        },
+        {
+          "module": "tac.profiles",
+          "relative_path": "src/tac/profiles.py",
+          "bytes": 178660,
+          "sha256": "07a54668f6d4053de80dd944ae123aedde44cf6def5baf53689e7f079888f897"
+        },
+        {
+          "module": "tac.psd_lumaskip_renderer",
+          "relative_path": "src/tac/psd_lumaskip_renderer.py",
+          "bytes": 13931,
+          "sha256": "3978c7bed70795ddab3b87e3a48f52864aaa6d8657aaacd8a8074f4ae6e3381a"
+        },
+        {
+          "module": "tac.qbf1_renderer_codec",
+          "relative_path": "src/tac/qbf1_renderer_codec.py",
+          "bytes": 43288,
+          "sha256": "7f66efc76f8929a4d03e8a2667c8a376ec97ff5a440ee73ee2697467d3abf794"
+        },
+        {
+          "module": "tac.quantization",
+          "relative_path": "src/tac/quantization.py",
+          "bytes": 41635,
+          "sha256": "d650275312bae3faa4d16072efbafac0d93189088165586bd7a0ab397d27c681"
+        },
+        {
+          "module": "tac.quantizr_faithful_renderer",
+          "relative_path": "src/tac/quantizr_faithful_renderer.py",
+          "bytes": 11811,
+          "sha256": "6ab5d3b1cea06486386d9d37b3e257e1a4788219219b6fc830ab7bb885565b8e"
+        },
+        {
+          "module": "tac.quantizr_qzs3_codec",
+          "relative_path": "src/tac/quantizr_qzs3_codec.py",
+          "bytes": 29331,
+          "sha256": "d19ab43e974e203aa59f5850e2cff6f730cdd6bcc235b81c3120de8c29435d24"
+        },
+        {
+          "module": "tac.quantizr_torch_fp4_codec",
+          "relative_path": "src/tac/quantizr_torch_fp4_codec.py",
+          "bytes": 9359,
+          "sha256": "22d2a5b88dcce7e58a2726d45dbb7d3fa6c6e189c7c8130d229536a1e6099313"
+        },
+        {
+          "module": "tac.radial_zoom",
+          "relative_path": "src/tac/radial_zoom.py",
+          "bytes": 19172,
+          "sha256": "89657ee378d82039bd21a3a0d5aa9e39b5823ff1f9a5ac2bfb5412da20b4bcc8"
+        },
+        {
+          "module": "tac.renderer",
+          "relative_path": "src/tac/renderer.py",
+          "bytes": 80722,
+          "sha256": "f47141d99bcc822b422022ded965e341c64c00a7541b7f87de2934a78705ab40"
+        },
+        {
+          "module": "tac.renderer_export",
+          "relative_path": "src/tac/renderer_export.py",
+          "bytes": 183639,
+          "sha256": "4af114b3a2518ff9d697976f3c37176a68980f4db51fe760bf4b39af22afbb5a"
+        },
+        {
+          "module": "tac.roi_analysis",
+          "relative_path": "src/tac/roi_analysis.py",
+          "bytes": 28160,
+          "sha256": "4d7d2147a2ae46493cefb4be36f976a4828a1f1bd6c6244b14879488beba2c5b"
+        },
+        {
+          "module": "tac.scorer",
+          "relative_path": "src/tac/scorer.py",
+          "bytes": 18562,
+          "sha256": "d7cc469e4b3171ca80a3806f45848d72c3c31aea390f0140bdaa0c2637420373"
+        },
+        {
+          "module": "tac.scorer_exploits",
+          "relative_path": "src/tac/scorer_exploits.py",
+          "bytes": 50337,
+          "sha256": "c9c04ff09ffaa84e5086c3c0a08c6cd19b2743097fece00c2e17afbde8a581c6"
+        },
+        {
+          "module": "tac.scorer_loss_convergence_detector",
+          "relative_path": "src/tac/scorer_loss_convergence_detector.py",
+          "bytes": 9883,
+          "sha256": "e7a9d025cb19a6c83a12c8f39c2ceccea50a102efa3b53ab522787420a3812fa"
+        },
+        {
+          "module": "tac.scorer_targets",
+          "relative_path": "src/tac/scorer_targets.py",
+          "bytes": 10054,
+          "sha256": "d9327c3d92072536a472770f4c971cd02993c7aaec4242c22b630c31bedada83"
+        },
+        {
+          "module": "tac.segmap_film_canvas_renderer",
+          "relative_path": "src/tac/segmap_film_canvas_renderer.py",
+          "bytes": 7146,
+          "sha256": "2bda47f138dbedd5542323f3c135deebcf88842e0f68d8fc8607a9bb12ac89ab"
+        },
+        {
+          "module": "tac.segmap_renderer",
+          "relative_path": "src/tac/segmap_renderer.py",
+          "bytes": 36813,
+          "sha256": "d5ee8c57f6854a7dea7759f43b4f0e0c516bbf0b4b09b43e7c9b6927cedd7c3c"
+        },
+        {
+          "module": "tac.self_compress",
+          "relative_path": "src/tac/self_compress.py",
+          "bytes": 59861,
+          "sha256": "09be5ee4182ec8b577c39e66fd38e9fcf9c4f59338402978721f7ceb16cdde8b"
+        },
+        {
+          "module": "tac.sensitivity_map",
+          "relative_path": "src/tac/sensitivity_map.py",
+          "bytes": 13477,
+          "sha256": "694153b0ebb5b5a56045936e68be5a72112b449e7690e2f42515079e0b0a0e35"
+        },
+        {
+          "module": "tac.sjkl_basis",
+          "relative_path": "src/tac/sjkl_basis.py",
+          "bytes": 26003,
+          "sha256": "d6b7bc7913cfdacf8fa2dbf2535df116cb17145b2487a8685be4833b7a7fdbc1"
+        },
+        {
+          "module": "tac.stc_boundary_codec",
+          "relative_path": "src/tac/stc_boundary_codec.py",
+          "bytes": 25279,
+          "sha256": "58c73d33889ab99b4e72277e2c5b7c9ed3a2d7cc39076b7a50782e705f44c4e1"
+        },
+        {
+          "module": "tac.submission_archive",
+          "relative_path": "src/tac/submission_archive.py",
+          "bytes": 44974,
+          "sha256": "2b3ee4ec27f4f496135cbd4dc485650cc06d9c387f78d78584e3852422861ea3"
+        },
+        {
+          "module": "tac.szabolcs_archive",
+          "relative_path": "src/tac/szabolcs_archive.py",
+          "bytes": 13404,
+          "sha256": "a80f1f34c96cebf6bc14ccc25d2ecab764ca400bbc4cc5813115ff36c17fd41a"
+        },
+        {
+          "module": "tac.training",
+          "relative_path": "src/tac/training.py",
+          "bytes": 112627,
+          "sha256": "a75639d05831682102dc13ab401fd888413c99376617dc9a4dc110ba8b561412"
+        },
+        {
+          "module": "tac.trick_stack",
+          "relative_path": "src/tac/trick_stack.py",
+          "bytes": 60043,
+          "sha256": "1410ec827a5e844e1c46d85734c64189c20cdcacae6a8736c7e57eb242b7f097"
+        },
+        {
+          "module": "tac.tto",
+          "relative_path": "src/tac/tto.py",
+          "bytes": 19596,
+          "sha256": "43f9bedbbcdd986dd12f9e06bbff3bbdf0e4a5df6ed2bf9d2d8aafa372a1dc81"
+        },
+        {
+          "module": "tac.uniward_delta",
+          "relative_path": "src/tac/uniward_delta.py",
+          "bytes": 30285,
+          "sha256": "ebfb30923ceeb321dbe880e66ffaf25dd1679a3b94efcb7f8bb3d11cc57f4ff6"
+        },
+        {
+          "module": "tac.water_filling_codec",
+          "relative_path": "src/tac/water_filling_codec.py",
+          "bytes": 23405,
+          "sha256": "b03872122aa43842bbb8e35f65a7a81656744dc7937e5ebf6f08067207832433"
+        },
+        {
+          "module": "tac.water_filling_codec_v2",
+          "relative_path": "src/tac/water_filling_codec_v2.py",
+          "bytes": 24287,
+          "sha256": "c7b93d3c66d1c5d81d3279f4ea9cd010d74f7396d02eb57b3abe491d3527c6a3"
+        }
+      ]
+    },
+    "upstream_evaluate_py": {
+      "relative_path": "evaluate.py",
+      "bytes": 6005,
+      "sha256": "7da71a84ce24286bc6b583470f9bbd25c998971da301320d0d4e9d6fd40baa4b"
+    }
+  },
+  "upstream_dir": "/teamspace/studios/this_studio/pact/upstream",
+  "device": "cuda",
+  "inflate_timeout_seconds": 1800,
+  "evaluate_timeout_seconds": 1800,
+  "video_names_file": "upstream/public_test_video_names.txt",
+  "sys_argv": [
+    "experiments/contest_auth_eval.py",
+    "--archive",
+    "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_sjkl_c067_sparse_k1g08_p32_a3_rtxprodiag_20260502T2123Z/archive.zip",
+    "--inflate-sh",
+    "submissions/robust_current/inflate.sh",
+    "--upstream-dir",
+    "/teamspace/studios/this_studio/pact/upstream",
+    "--device",
+    "cuda",
+    "--keep-work-dir",
+    "--work-dir",
+    "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_sjkl_c067_sparse_k1g08_p32_a3_rtxprodiag_20260502T2123Z/eval_work"
+  ],
+  "env_vars": {
+    "PYTHONPATH": null,
+    "CUDA_VISIBLE_DEVICES": null,
+    "CUBLAS_WORKSPACE_CONFIG": null,
+    "PYTHONHASHSEED": null,
+    "PYTORCH_CUDA_ALLOC_CONF": null,
+    "LD_LIBRARY_PATH": "/opt/amazon/efa/lib:/opt/aws-ofi-nccl/lib:/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/local/cuda/lib64:/usr/local/cuda/extras/CUPTI/lib64",
+    "CONFIG_ENV_PATH": null,
+    "PYTHON_INFLATE": null,
+    "LANE_MM_SIGMA": null,
+    "INFLATE_BROTLI_SPEC": null,
+    "INFLATE_AV_SPEC": null,
+    "INFLATE_TORCH_SPEC": null,
+    "INFLATE_NUMPY_SPEC": null,
+    "UV_BIN": "/usr/local/bin/uv",
+    "UV_PROJECT_ENVIRONMENT": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_sjkl_c067_sparse_k1g08_p32_a3_rtxprodiag_20260502T2123Z/uv_project_env"
+  },
+  "gpu_model": "NVIDIA RTX PRO 6000 Blackwell Server Edition\nNVIDIA RTX PRO 6000 Blackwell Server Edition",
+  "gpu_driver": "580.126.20\n580.126.20",
+  "gpu_t4_match": false,
+  "torch_version": "2.11.0+cu130",
+  "cuda_version": "13.0",
+  "cuda_available": true,
+  "cuda_device_count": 2,
+  "ffmpeg_version": "ffmpeg version 8.0.1 Copyright (c) 2000-2025 the FFmpeg developers",
+  "libsvtav1_version": "configuration: --prefix=/home/zeus/miniconda3/envs/cloudspace --cc=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/x86_64-conda-linux-gnu-cc --cxx=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/x86_64-conda-linux-gnu-c++ --nm=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/x86_64-conda-linux-gnu-nm --ar=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/x86_64-conda-linux-gnu-ar --enable-openssl --enable-demuxer=dash --enable-hardcoded-tables --enable-libfreetype --enable-libharfbuzz --enable-libfontconfig --enable-libopenh264 --enable-libdav1d --enable-libmp3lame --enable-libaom --enable-libsvtav1 --enable-libxml2 --enable-pic --enable-shared --enable-version3 --enable-zlib --enable-libvorbis --enable-libopus --enable-libwebp --enable-libshaderc --disable-ffplay --disable-static --disable-gpl --disable-doc --pkg-config=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/pkg-config --arch=x86_64 --target-os=linux --cross-prefix=x86_64-conda-linux-gnu- --host-cc=/home/task_177437283662566/croot/ffmpeg_1774373731974/_build_env/bin/x86_64-conda-linux-gnu-cc --disable-gnutls --enable-libvpx --enable-pthreads --enable-alsa --enable-libpulse --enable-libdrm --enable-libvpl --enable-vaapi --enable-libtesseract --enable-libvpx --enable-libass --enable-librsvg",
+  "pact_commit": "<error:CalledProcessError(128, ['git', 'rev-parse', 'HEAD'])>",
+  "upstream_commit": "11ad728f563d8970929e8947a1cf6124ee6303e4",
+  "inflate_runtime_artifacts": {
+    "renderer_payload_unpack_summary": {
+      "path": "/teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_sjkl_c067_sparse_k1g08_p32_a3_rtxprodiag_20260502T2123Z/eval_work/extracted/renderer_payload_unpack_summary.json",
+      "sha256": "32862c927531a6fa0acfc863f716e783ac018141341078e750cc2c04c12c0c59",
+      "payload": {
+        "members": [
+          {
+            "bytes": 59288,
+            "name": "renderer.bin",
+            "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+          },
+          {
+            "bytes": 223385,
+            "name": "masks.mkv",
+            "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+          },
+          {
+            "bytes": 7200,
+            "name": "optimized_poses.bin",
+            "sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+          },
+          {
+            "bytes": 467,
+            "name": "sjkl.bin",
+            "sha256": "18c11b2f1e8c52df3bcdd87a6cc59db6d6aef627cb58bd9a45eb8866e0ea6243"
+          }
+        ],
+        "payload_bytes": 290993,
+        "payload_format": null,
+        "schema": "renderer_payload_v1",
+        "source_archive_sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a"
+      }
+    }
+  }
+}

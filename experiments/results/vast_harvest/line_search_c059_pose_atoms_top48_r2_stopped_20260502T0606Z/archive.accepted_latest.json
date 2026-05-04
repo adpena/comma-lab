@@ -1,0 +1,264 @@
+{
+  "archive_bytes": 276423,
+  "archive_path": "experiments/results/line_search_c059_pose_atoms_top48_r2_20260502T0529Z/archive.accepted_latest.zip",
+  "archive_sha256": "4b1cd748edff06871b3e1e3a1109063a88e3736130291419b77303d2c15a7fdb",
+  "blob_bytes": 276323,
+  "blob_sha256": "1c3f8eb415825e4fda7720a519bd300344ce007d909b3efac10c7d3e7d988306",
+  "evidence_grade": "empirical_metadata_for_line_search",
+  "mask_br_bytes": 219472,
+  "mask_br_sha256": "b59080359dbf18277d66a03d8105c3ff0df807cc49b396ce736ee5057da28ce0",
+  "model_br_bytes": 55965,
+  "model_br_sha256": "e7db844ed72457a2a07bda73c48f65628613384b539da04f775ef242aa9e4c43",
+  "model_uncompressed_bytes": 59288,
+  "payload_format": "pr67_fixed_slice_like_mask_qzs3_qp1",
+  "pose_br_bytes": 886,
+  "pose_br_sha256": "26b37c7b70344b99c72eb497ea65a0e1acab9007ec4bf04859f778df23d0274c",
+  "pose_codec": "qp1",
+  "pose_uncompressed_bytes": 1138,
+  "refinement": {
+    "basis_delta_set_index": 1,
+    "basis_delta_sets": [
+      {
+        "basis_delta_set_index": 1,
+        "kind": "pair_window",
+        "magnitudes": [
+          1,
+          2,
+          3,
+          5,
+          8
+        ]
+      },
+      {
+        "basis_delta_set_index": 2,
+        "kind": "pair_window",
+        "magnitudes": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "basis_delta_set_index": 3,
+        "kind": "pair_window",
+        "magnitudes": [
+          1
+        ]
+      }
+    ],
+    "basis_index": 25,
+    "basis_kind": "pair_window",
+    "basis_modes": [
+      0,
+      1,
+      2,
+      3,
+      5,
+      8,
+      13,
+      21
+    ],
+    "basis_pair_indices": [
+      164,
+      64,
+      130,
+      112,
+      97,
+      153,
+      70,
+      198,
+      420,
+      289,
+      166,
+      435,
+      78,
+      418,
+      87,
+      159,
+      67,
+      46,
+      496,
+      290,
+      156,
+      37,
+      103,
+      143,
+      546,
+      191,
+      107,
+      129,
+      111,
+      221,
+      426,
+      406,
+      177,
+      179,
+      183,
+      280,
+      431,
+      149,
+      114,
+      367,
+      427,
+      157,
+      73,
+      509,
+      122,
+      256,
+      267,
+      382
+    ],
+    "basis_signed_magnitude": 1,
+    "basis_vector_count": 36,
+    "basis_window_radius": 2,
+    "best_archive_size": 276423,
+    "best_obj": 0.2537696010444392,
+    "best_pose_bytes": 886,
+    "best_pose_mse": 0.0004859605625582238,
+    "checkpoint": "accepted_latest",
+    "delta_sets": null,
+    "device": "cuda:0",
+    "gradient_backtrack_deltas": [
+      1
+    ],
+    "gradient_delta_sets": null,
+    "pass": 1,
+    "passes": 2,
+    "pose_atom_selection": {
+      "atom_count": 12,
+      "atoms": [
+        {
+          "delta_q": 1,
+          "frame_in_pair": 1,
+          "frame_index": 221,
+          "pair_index": 110,
+          "refined_q": 4819,
+          "source_q": 4818
+        },
+        {
+          "delta_q": 1,
+          "frame_in_pair": 0,
+          "frame_index": 222,
+          "pair_index": 111,
+          "refined_q": 5658,
+          "source_q": 5657
+        },
+        {
+          "delta_q": 1,
+          "frame_in_pair": 1,
+          "frame_index": 223,
+          "pair_index": 111,
+          "refined_q": 5966,
+          "source_q": 5965
+        },
+        {
+          "delta_q": 1,
+          "frame_in_pair": 0,
+          "frame_index": 224,
+          "pair_index": 112,
+          "refined_q": 6292,
+          "source_q": 6291
+        },
+        {
+          "delta_q": 1,
+          "frame_in_pair": 1,
+          "frame_index": 353,
+          "pair_index": 176,
+          "refined_q": 5808,
+          "source_q": 5807
+        },
+        {
+          "delta_q": 1,
+          "frame_in_pair": 0,
+          "frame_index": 354,
+          "pair_index": 177,
+          "refined_q": 5779,
+          "source_q": 5778
+        },
+        {
+          "delta_q": 1,
+          "frame_in_pair": 1,
+          "frame_index": 355,
+          "pair_index": 177,
+          "refined_q": 5359,
+          "source_q": 5358
+        },
+        {
+          "delta_q": 1,
+          "frame_in_pair": 0,
+          "frame_index": 356,
+          "pair_index": 178,
+          "refined_q": 4876,
+          "source_q": 4875
+        },
+        {
+          "delta_q": -1,
+          "frame_in_pair": 1,
+          "frame_index": 441,
+          "pair_index": 220,
+          "refined_q": 5301,
+          "source_q": 5302
+        },
+        {
+          "delta_q": -1,
+          "frame_in_pair": 0,
+          "frame_index": 442,
+          "pair_index": 221,
+          "refined_q": 5405,
+          "source_q": 5406
+        },
+        {
+          "delta_q": -1,
+          "frame_in_pair": 1,
+          "frame_index": 443,
+          "pair_index": 221,
+          "refined_q": 5636,
+          "source_q": 5637
+        },
+        {
+          "delta_q": -1,
+          "frame_in_pair": 0,
+          "frame_index": 444,
+          "pair_index": 222,
+          "refined_q": 5802,
+          "source_q": 5803
+        }
+      ],
+      "charged_accounting": {
+        "all_score_affecting_bits_inside_archive": true,
+        "archive_bytes": 276423,
+        "pose_br_bytes": 886,
+        "sidecar_bytes": 0
+      },
+      "policy": "coordinate_descent_qp1_col0",
+      "pose_codec": "pose_qp1_v1",
+      "schema_version": 1,
+      "selection_hooks": {
+        "acceptance_rule": "complete rounded archive objective strictly improves",
+        "proposal_score_is_non_promotable_until_archive_eval": true,
+        "supports_bandit_or_rl_proposal_ordering": true,
+        "supports_multipass": true
+      },
+      "wire_format": "QP1+brotli"
+    },
+    "radii": [
+      1,
+      2,
+      3,
+      5,
+      8
+    ],
+    "reference": "pr67_line_search.py",
+    "search_stage_kind": "basis_delta_set",
+    "search_stage_label": "basis_delta_set=1 kind=pair_window",
+    "tool": "experiments/line_search_pose_refinement.py"
+  },
+  "schema_version": 1,
+  "score_claim": false,
+  "source_archive_path": "experiments/results/line_search_c059_weighted_pairs_top32_20260502T0410Z/archive.zip",
+  "source_archive_sha256": "877fc5ac13e9fbd5c4158a9c7fa9dec3354057522b086004a4a28c6822456fe8",
+  "source_build_provenance": "experiments/results/public_floor_qzs3_qp1_packer_20260502/pr63_qzs3_qp1_fixedslice/build_provenance.json",
+  "source_metadata_archive_path": "experiments/results/public_floor_qzs3_qp1_packer_20260502/pr63_qzs3_qp1_fixedslice/archive.zip",
+  "source_metadata_archive_sha256": "cda95e70440e9ef295985a042fda2d74715ef6a0e665a1c37871cddd051cd908",
+  "tool": "manual_metadata_from_pr67_fixedslice_build_provenance"
+}

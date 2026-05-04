@@ -1,0 +1,152 @@
+{
+  "current_floor_items": [],
+  "determinism": {
+    "expected_archive_hashes_enforced": true,
+    "no_host_paths": true,
+    "no_timestamps": true,
+    "pinned_pr_commits": true
+  },
+  "evidence_grade": "external_plus_empirical_byte_anatomy",
+  "items": [
+    {
+      "archive": {
+        "bytes": 276564,
+        "sha256": "a5ed8da0d9988943c986b231b4cd33cea0ab878a8e1628134341db5f7f41c765"
+      },
+      "container": {
+        "bytes": 276464,
+        "decoded_segments": [
+          {
+            "compressed_bytes": 219472,
+            "compressed_sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87",
+            "name": "mask_obu_br",
+            "raw_bytes": 223385,
+            "raw_head_hex": "12000a0a0000000c47fefefdfc5532dd",
+            "raw_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+          },
+          {
+            "compressed_bytes": 56093,
+            "compressed_sha256": "8d8863c32a264f28f199898a689b4d49ce96ebd12831164882b6babec93cbb9b",
+            "name": "model_qzs3_br",
+            "raw_bytes": 59288,
+            "raw_head_hex": "515a53332000167533ff3fe51fffa7ee",
+            "raw_sha256": "2333284a73446c3b323948fb883ade0f677baf9ad5d9d06aa1da7bec337bd9c9"
+          },
+          {
+            "compressed_bytes": 899,
+            "compressed_sha256": "83767bbd10ae72c3237e468351eb9c465a954e25a6af04a0e0cb84d1f7af9b51",
+            "name": "pose_qp1_br",
+            "raw_bytes": 1140,
+            "raw_head_hex": "5150316d1cd003c114ba0bce03c70197",
+            "raw_sha256": "8d77f6a39d1a84eca78fbe8fa5ddc31f6ada29814b49e32daeb800ea84a015cc"
+          }
+        ],
+        "fixed_segment_lengths": {
+          "mask_obu_br": 219472,
+          "model_qzs3_br": 56093,
+          "pose_qp1_br": 899
+        },
+        "head_hex": "5b986843441527963b0ed3ed8b0c614c",
+        "member": "p",
+        "qzs3_decode_validation": {
+          "all_tensors_finite": true,
+          "first_key": "shared_trunk.embedding.weight",
+          "last_key": "frame2_head.head.bias",
+          "parameter_count": 87836,
+          "state_dict_key_count": 111
+        },
+        "segmentation": "pr67_fixed_qpose14",
+        "sha256": "a64523528fad2adee466f948ad29839e8581ccfa70caf934b5e4b4a6d733f76f"
+      },
+      "label": "pr67_qpose14_qzs3_filmq9g_slsb1_r55",
+      "pr_number": 67,
+      "source": {
+        "archive_name": "archive.zip",
+        "commit": "696d4a1e64a7f2d9aada3e3833be3c91ad394c21",
+        "pull_ref": "refs/pull/67/head",
+        "repo_url": "https://github.com/commaai/comma_video_compression_challenge.git",
+        "submission_dir": "submissions/qpose14_qzs3_filmq9g_slsb1_r55"
+      },
+      "zip_members": [
+        {
+          "compress_size": 276464,
+          "file_size": 276464,
+          "name": "p",
+          "sha256": "a64523528fad2adee466f948ad29839e8581ccfa70caf934b5e4b4a6d733f76f"
+        }
+      ]
+    },
+    {
+      "archive": {
+        "bytes": 284425,
+        "sha256": "b331cb4f6df9d8929db966b943b8c73624cdf3b6db71acbde361570852e59e68"
+      },
+      "container": {
+        "bytes": 284325,
+        "first_32_24bit_lengths": [
+          219472,
+          57074,
+          1487,
+          1400,
+          226,
+          106,
+          149,
+          154,
+          223,
+          273,
+          6854747,
+          1393731,
+          3905063,
+          15586062,
+          6360203,
+          7454028,
+          3887987,
+          10445634,
+          12586724,
+          10485761,
+          14106678,
+          10865916,
+          5644117,
+          11392791,
+          14167301,
+          9461323,
+          14167871,
+          4206379,
+          15915787,
+          7339670,
+          16590245,
+          4117989
+        ],
+        "head_hex": "505903f2de00cf0500780500e200006a",
+        "member": "x",
+        "segmentation": "pr65_24bit_length_table",
+        "sha256": "1adc465971038009a0e0f2c1fc7209302256ef18ad3f52844fbb9832a9cb3cc6"
+      },
+      "label": "pr65_henosis_qz_n3z_r25_clean",
+      "pr_number": 65,
+      "source": {
+        "archive_name": "archive.zip",
+        "commit": "a8b53b5280ee8f05db65740cd48cf7c321a55497",
+        "pull_ref": "refs/pull/65/head",
+        "repo_url": "https://github.com/commaai/comma_video_compression_challenge.git",
+        "submission_dir": "submissions/henosis_qz_n3z_r25_clean"
+      },
+      "zip_members": [
+        {
+          "compress_size": 284325,
+          "file_size": 284325,
+          "name": "x",
+          "sha256": "1adc465971038009a0e0f2c1fc7209302256ef18ad3f52844fbb9832a9cb3cc6"
+        }
+      ]
+    }
+  ],
+  "local_jointframegenerator_reference": {
+    "module": "src/tac/quantizr_faithful_renderer.py",
+    "parameter_count": 87836,
+    "state_dict_key_count": 111
+  },
+  "schema_version": 2,
+  "score_claim": false,
+  "tool": "experiments/reverse_engineer_top_submissions.py"
+}

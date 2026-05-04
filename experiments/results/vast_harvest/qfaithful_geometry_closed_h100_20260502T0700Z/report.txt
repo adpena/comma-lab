@@ -1,0 +1,17 @@
+=== Evaluation config ===
+  batch_size: 16
+  device: cuda
+  num_threads: 2
+  prefetch_queue_depth: 4
+  report: /workspace/pact/experiments/results/qfaithful_geometry_closed_candidates_20260502/h100_diag_2146_pr64_qp1_direct_zoom_v2_20260502T0700Z/eval_work/report.txt
+  seed: 1234
+  submission_dir: /workspace/pact/experiments/results/qfaithful_geometry_closed_candidates_20260502/h100_diag_2146_pr64_qp1_direct_zoom_v2_20260502T0700Z/eval_work
+  uncompressed_dir: /workspace/pact/upstream/videos
+  video_names_file: /workspace/pact/upstream/public_test_video_names.txt
+=== Evaluation results over 600 samples ===
+  Average PoseNet Distortion: 46.54520035
+  Average SegNet Distortion: 0.00390678
+  Submission file size: 274,257 bytes
+  Original uncompressed size: 37,545,489 bytes
+  Compression Rate: 0.00730466
+  Final score: 100*segnet_dist + √(10*posenet_dist) + 25*rate = 22.15

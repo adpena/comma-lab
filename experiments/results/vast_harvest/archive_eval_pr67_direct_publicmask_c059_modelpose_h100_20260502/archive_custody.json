@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-05-02T05:47:22Z",
+  "archive_label": "pr67_direct_publicmask_c059_modelpose_h100_20260502",
+  "archive_path": "/workspace/pact/.omx/state/pr67_direct_publicmask_c059_modelpose_stage/archive.zip",
+  "custody_archive_path": "/workspace/pact/experiments/results/archive_eval_pr67_direct_publicmask_c059_modelpose_h100_20260502/archive.zip",
+  "archive_size_bytes": 276214,
+  "archive_sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a"
+}

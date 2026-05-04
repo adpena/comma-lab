@@ -1,0 +1,55 @@
+{
+  "archive_identity": {
+    "archive_sha256": "d82bc774de93c073b31c1acc9dd24c57b28d14b554cee53c7b7be3404c8f2e2c",
+    "archive_size_bytes": 232355
+  },
+  "classified_at_utc": "2026-05-03T22:45:24Z",
+  "evidence_grade": "invalid",
+  "expected_archive_sha256": "d82bc774de93c073b31c1acc9dd24c57b28d14b554cee53c7b7be3404c8f2e2c",
+  "expected_archive_size_bytes": 232355,
+  "failure_class": "runtime_or_harness_failure_before_score_json",
+  "job_artifact_files": [
+    "archive.zip",
+    "auth_eval.log",
+    "lightning_dali_bootstrap.json",
+    "lightning_dali_requirements.txt",
+    "lightning_inflate_runtime_bootstrap.json",
+    "lightning_queue_metadata.json",
+    "lightning_runner_preflight.json",
+    "lightning_supply_chain_scan.json",
+    "lightning_supply_chain_scan_pre.json"
+  ],
+  "method_evidence": false,
+  "missing_required_files": [
+    "contest_auth_eval.json",
+    "eval_provenance.json",
+    "report.txt",
+    "adjudication_provenance.json",
+    "contest_auth_eval.adjudicated.json"
+  ],
+  "promotion_eligible": false,
+  "reason": "remote Lightning exact-eval artifact directory contains partial artifacts but is missing required exact-score JSON/report files",
+  "recommended_action": "Preserve the partial artifacts and logs as a harness/runtime failure. Do not rank, retire, promote, or claim score without contest_auth_eval.json and adjudication artifacts.",
+  "schema_version": 1,
+  "score_claim": false,
+  "score_source": "none:missing_contest_auth_eval_json",
+  "ssh_source": {
+    "copied_files": [
+      "lightning_queue_metadata.json",
+      "archive.zip",
+      "lightning_dali_bootstrap.json",
+      "lightning_dali_requirements.txt",
+      "lightning_runner_preflight.json",
+      "lightning_supply_chain_scan_pre.json",
+      "lightning_supply_chain_scan.json",
+      "auth_eval.log",
+      "lightning_inflate_runtime_bootstrap.json"
+    ],
+    "mirror_dir": "experiments/results/lightning_batch/exact_eval_pr84_pr82_qrm1_all072_randmulti_packedp_g4dn_t4_20260503T2224Z",
+    "remote_dir": "/teamspace/jobs/exact-eval-pr84-pr82-qrm1-all072-randmulti-packedp-g4dn-t4-20260503t2224z/artifacts/pact/experiments/results/lightning_batch/exact_eval_pr84_pr82_qrm1_all072_randmulti_packedp_g4dn_t4_20260503T2224Z",
+    "ssh_connect_timeout": 15,
+    "ssh_target": "lightning-pact"
+  },
+  "status": "ARTIFACT_INFRA_FAILURE",
+  "terminal_class": "exact_eval_missing_score_json"
+}

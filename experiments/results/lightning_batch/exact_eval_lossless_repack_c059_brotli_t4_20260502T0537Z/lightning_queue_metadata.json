@@ -1,0 +1,37 @@
+{
+  "adjudication": {
+    "allow_component_gate_forensic_success": true,
+    "baseline_archive_size_bytes": 276347,
+    "baseline_posenet_dist": 0.00049637,
+    "baseline_score": 0.3157055307844823,
+    "baseline_segnet_dist": 0.00061244,
+    "component_reference_label": "C-059",
+    "delta_key": "score_delta_vs_c059_t4",
+    "max_posenet_dist": null,
+    "max_posenet_relative": 1.001,
+    "max_sane_score": 0.5,
+    "max_segnet_dist": null,
+    "max_segnet_relative": 1.001,
+    "predicted_band_high": 0.31567,
+    "predicted_band_low": 0.3156,
+    "provenance_name": "adjudication_provenance.json",
+    "regression_threshold": 0.31575,
+    "required_device": "cuda",
+    "required_samples": 600,
+    "result_copy_name": "contest_auth_eval.adjudicated.json"
+  },
+  "artifact_recorded_at_utc": "2026-05-02T05:47:35Z",
+  "expected_archive_sha256": "83615afd130afa08e972e4a02476612397bffea53327caf3591891f8317aa52d",
+  "expected_archive_size_bytes": 276223,
+  "job_name": "exact_eval_lossless_repack_c059_brotli_t4_20260502T0537Z",
+  "queue_metadata": {
+    "baseline": "C-059",
+    "candidate": "lossless_brotli_q11_mode2_lgwin18",
+    "lossless_manifest": "experiments/results/lossless_repack_c059_brotli_q11m2w18_20260502/manifest.json",
+    "source_manifest": ".omx/state/exact_eval_lossless_repack_c059_brotli_t4_20260502T0537Z_manifest.json"
+  },
+  "role": "exact_cuda_eval",
+  "schema_version": 1,
+  "score_source": "contest_auth_eval.json:score_recomputed_from_components",
+  "status_source": "lightning_sdk_job_attributes"
+}

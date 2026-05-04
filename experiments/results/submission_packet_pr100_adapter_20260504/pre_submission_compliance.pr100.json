@@ -1,0 +1,584 @@
+{
+  "archive": {
+    "bytes": 178981,
+    "exists": true,
+    "members": [
+      {
+        "compress_size": 178873,
+        "compress_type": 0,
+        "date_time": [
+          2026,
+          5,
+          4,
+          5,
+          52,
+          4
+        ],
+        "external_attr": 2176188416,
+        "file_size": 178873,
+        "flag_bits": 0,
+        "is_dir": false,
+        "local_header_flag_bits": 0,
+        "local_header_name": "0.bin",
+        "name": "0.bin",
+        "sha256": "3234f0689164cfc95b7ee9f9cdf38ecf4d082cfb7048058e2b3ff0f54f864e43"
+      }
+    ],
+    "path": "experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter/archive.zip",
+    "sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641"
+  },
+  "archive_manifest": {
+    "member_count": 1,
+    "path": "experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter/archive_manifest.json",
+    "present": true,
+    "sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+    "sha256_candidates": {
+      "archive_sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641"
+    },
+    "size_bytes": 178981,
+    "size_candidates": {
+      "archive_size_bytes": 178981
+    }
+  },
+  "auth_eval": {
+    "archive_sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+    "archive_size_bytes": 178981,
+    "cuda_available": true,
+    "device": "cuda",
+    "gpu_t4_match": true,
+    "n_samples": 600,
+    "path": "experiments/results/lightning_batch/exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z/contest_auth_eval.adjudicated.json",
+    "payload_archive_sha256": null,
+    "payload_archive_size_bytes": 178981,
+    "payload_device": null,
+    "present": true,
+    "provenance_archive_sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+    "provenance_archive_size_bytes": 178981,
+    "provenance_device": "cuda",
+    "runtime_file_manifest_candidates": {
+      "provenance.inflate_runtime_manifest.files": 5
+    },
+    "runtime_files": [
+      {
+        "bytes": 2197,
+        "relative_path": "hnerv_model.py",
+        "sha256": "e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b"
+      },
+      {
+        "bytes": 4963,
+        "relative_path": "inflate.py",
+        "sha256": "2b94d042f090155a19606e98f00f4bf1986974a3c3ad7059ae7b1c4ee23605db"
+      },
+      {
+        "bytes": 543,
+        "relative_path": "inflate.sh",
+        "sha256": "b8dd1979c49171fde4552956d0d07034646778f747ccbdc2029839a302f7a806"
+      },
+      {
+        "bytes": 1081,
+        "relative_path": "schema.py",
+        "sha256": "bc434bd596e753dbeae97c0ddce4d9cf98a50cfe862a451834864d83620d6a0a"
+      },
+      {
+        "bytes": 1837,
+        "relative_path": "sidecar.py",
+        "sha256": "52955000fe673914307b481bff29377a015bf7a0fe9dc38652e29153c033af75"
+      }
+    ],
+    "runtime_tree_candidates": {
+      "provenance.inflate_runtime_manifest.runtime_tree_sha256": "ef6323533666c9cac1c204a9d3f7054157d44a185b16fc859fb3f0438ccd1832"
+    },
+    "runtime_tree_sha256": "ef6323533666c9cac1c204a9d3f7054157d44a185b16fc859fb3f0438ccd1832",
+    "score_recomputed_from_components": 0.22826947142244708,
+    "score_recomputed_independently": 0.22826947142244708
+  },
+  "checks": [
+    {
+      "details": "experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter/archive.zip",
+      "name": "required_file_present:archive.zip",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter/inflate.sh",
+      "name": "required_file_present:inflate.sh",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter/report.txt",
+      "name": "required_file_present:report.txt",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "mode=0o755",
+      "name": "inflate_sh_executable",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "archive=experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter/archive.zip",
+      "name": "archive_exists",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "zipfile opened and CRC scan completed",
+      "name": "archive_is_valid_zip",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "bad_crc_member=None",
+      "name": "archive_crc_ok",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "duplicates=[]",
+      "name": "archive_no_duplicate_members",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "packed_payload_members=[]",
+      "name": "archive_packed_payload_singleton",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=['0.bin'] observed=['0.bin']",
+      "name": "archive_expected_single_member",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "safe member name",
+      "name": "archive_member_safe:0.bin",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "local='0.bin' central='0.bin'",
+      "name": "archive_local_central_name_match:0.bin",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "local=0 central=0",
+      "name": "archive_local_central_flag_bits_match:0.bin",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter/archive_manifest.json",
+      "name": "archive_manifest_present",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "sha256_candidates={'archive_sha256': 'afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641'}",
+      "name": "archive_manifest_sha256_present",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "size_candidates={'archive_size_bytes': 178981}",
+      "name": "archive_manifest_size_bytes_present",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "sha256_candidates={'archive_sha256': 'afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641'}",
+      "name": "archive_manifest_sha256_fields_consistent",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "size_candidates={'archive_size_bytes': 178981}",
+      "name": "archive_manifest_size_bytes_fields_consistent",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "manifest_sha256='afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641'",
+      "name": "archive_manifest_sha256_format",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "manifest_size_bytes=178981",
+      "name": "archive_manifest_size_bytes_integer",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "manifest=afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641 archive=afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+      "name": "archive_manifest_sha256_matches_archive",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "manifest=178981 archive=178981",
+      "name": "archive_manifest_size_bytes_matches_archive",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "duplicates=[]",
+      "name": "archive_manifest_members_unique",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "missing_from_archive=[] extra_archive_members=[]",
+      "name": "archive_manifest_members_match_archive",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "manifest=178873 archive=178873",
+      "name": "archive_manifest_member_bytes_match:0.bin",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "manifest=3234f0689164cfc95b7ee9f9cdf38ecf4d082cfb7048058e2b3ff0f54f864e43 archive=3234f0689164cfc95b7ee9f9cdf38ecf4d082cfb7048058e2b3ff0f54f864e43",
+      "name": "archive_manifest_member_sha256_match:0.bin",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "submission_sha=afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641 submission_bytes=178981 inspected_sha=afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641 inspected_bytes=178981",
+      "name": "submission_archive_matches_inspected_archive",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected_archive_sha256='afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641'",
+      "name": "expected_archive_sha256_format",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641 observed=afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+      "name": "expected_archive_sha256",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=178981 observed=178981",
+      "name": "expected_archive_size_bytes",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected_runtime_tree_sha256='ef6323533666c9cac1c204a9d3f7054157d44a185b16fc859fb3f0438ccd1832'",
+      "name": "expected_runtime_tree_sha256_format",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/lightning_batch/exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z/contest_auth_eval.adjudicated.json",
+      "name": "auth_eval_json_present",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "payload=None provenance='afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641'",
+      "name": "auth_eval_archive_sha256_fields_consistent",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "payload=178981 provenance=178981",
+      "name": "auth_eval_archive_size_bytes_fields_consistent",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "archive_sha256='afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641'",
+      "name": "auth_eval_archive_sha256_format",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "archive_size_bytes=178981",
+      "name": "auth_eval_archive_size_bytes_integer",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "payload=None provenance='cuda'",
+      "name": "auth_eval_device_fields_consistent",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "auth=afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641 archive=afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+      "name": "auth_eval_archive_sha_matches",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "auth=178981 archive=178981",
+      "name": "auth_eval_archive_bytes_match",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "device='cuda'",
+      "name": "auth_eval_cuda_device",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "cuda_available=True",
+      "name": "auth_eval_cuda_available",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "runtime_tree_sha256='ef6323533666c9cac1c204a9d3f7054157d44a185b16fc859fb3f0438ccd1832'",
+      "name": "auth_eval_runtime_tree_recorded",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "runtime_tree_candidates={'provenance.inflate_runtime_manifest.runtime_tree_sha256': 'ef6323533666c9cac1c204a9d3f7054157d44a185b16fc859fb3f0438ccd1832'}",
+      "name": "auth_eval_runtime_tree_fields_consistent",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "runtime_file_manifest_candidates=['provenance.inflate_runtime_manifest.files']",
+      "name": "auth_eval_runtime_file_manifest_fields_consistent",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=600 observed=600",
+      "name": "auth_eval_expected_samples",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "gpu_t4_match=True",
+      "name": "auth_eval_t4_equivalent",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected=ef6323533666c9cac1c204a9d3f7054157d44a185b16fc859fb3f0438ccd1832 observed=ef6323533666c9cac1c204a9d3f7054157d44a185b16fc859fb3f0438ccd1832",
+      "name": "auth_eval_runtime_tree_expected",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "runtime_file_count=5",
+      "name": "auth_eval_runtime_file_manifest_present",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "duplicates=[]",
+      "name": "auth_eval_runtime_file_manifest_paths_unique",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected_sha=e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b observed_sha=e63b04ad3df4942b9bc1e31afd8ec84177dfbe83827f67cf7c5a682b05c1b46b expected_bytes=2197 observed_bytes=2197",
+      "name": "auth_eval_runtime_file_matches_submission:hnerv_model.py",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected_sha=2b94d042f090155a19606e98f00f4bf1986974a3c3ad7059ae7b1c4ee23605db observed_sha=2b94d042f090155a19606e98f00f4bf1986974a3c3ad7059ae7b1c4ee23605db expected_bytes=4963 observed_bytes=4963",
+      "name": "auth_eval_runtime_file_matches_submission:inflate.py",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected_sha=b8dd1979c49171fde4552956d0d07034646778f747ccbdc2029839a302f7a806 observed_sha=b8dd1979c49171fde4552956d0d07034646778f747ccbdc2029839a302f7a806 expected_bytes=543 observed_bytes=543",
+      "name": "auth_eval_runtime_file_matches_submission:inflate.sh",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected_sha=bc434bd596e753dbeae97c0ddce4d9cf98a50cfe862a451834864d83620d6a0a observed_sha=bc434bd596e753dbeae97c0ddce4d9cf98a50cfe862a451834864d83620d6a0a expected_bytes=1081 observed_bytes=1081",
+      "name": "auth_eval_runtime_file_matches_submission:schema.py",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected_sha=52955000fe673914307b481bff29377a015bf7a0fe9dc38652e29153c033af75 observed_sha=52955000fe673914307b481bff29377a015bf7a0fe9dc38652e29153c033af75 expected_bytes=1837 observed_bytes=1837",
+      "name": "auth_eval_runtime_file_matches_submission:sidecar.py",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "deltas={'score_seg_contribution': 0.0, 'score_pose_contribution': 0.0, 'score_rate_contribution': 1.012887593521139e-07} tolerance=1e-06",
+      "name": "auth_eval_score_contributions_match_components",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "basis=json_contribution_fields computed=0.22826947142244708 json=0.22826947142244708 tolerance=1e-09",
+      "name": "auth_eval_score_recomputes",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "violations=0",
+      "name": "public_release_hygiene",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter/report.txt",
+      "name": "report_txt_present",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "report.txt must include the exact archive SHA-256",
+      "name": "report_links_exact_archive_sha256",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "report.txt must include the exact archive byte size",
+      "name": "report_links_exact_archive_size_bytes",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected_lane_id=public_pr100_hnerv_lc_v2_t4_adapter_replay",
+      "name": "report_links_expected_lane_id",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "expected_job_id=exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z",
+      "name": "report_links_expected_job_id",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": ".omx/state/active_lane_dispatch_claims.md",
+      "name": "dispatch_claims_file_present",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "matches=4",
+      "name": "dispatch_claim_matching_row_present",
+      "passed": true,
+      "severity": "error"
+    },
+    {
+      "details": "terminal_matches=1",
+      "name": "dispatch_claim_terminal_row_present",
+      "passed": true,
+      "severity": "error"
+    }
+  ],
+  "dispatch_claim_linkage": {
+    "expected_job_id": "exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z",
+    "expected_lane_id": "public_pr100_hnerv_lc_v2_t4_adapter_replay",
+    "matching_lines": [
+      "| 2026-05-04T12:33:57Z | codex:gpt-5.5 | public_pr100_hnerv_lc_v2_t4_adapter_replay | lightning | exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z | 2026-05-04T12:31Z | completed_score=0.22826947142244708 | A++ T4 adapter replay landed; archive sha afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641 bytes 178981 runtime tree ef6323533666c9cac1c204a9d3f7054157d44a185b16fc859fb3f0438ccd1832; promotion eligible and supersedes PR98/PR107 by -0.0010616432371564621. |",
+      "| 2026-05-04T12:15:17Z | codex:gpt-5.5 | public_pr100_hnerv_lc_v2_t4_adapter_replay | lightning | exact_eval_public_pr100_hnerv_lc_v2_adapter_gcp_t4_20260504T1219Z | 2026-05-04T12:31Z | eval | GCP T4 wall-clock hedge for same PR100 archive/runtime; archive sha afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641 bytes 178981. child_of=exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z parallel_reason=GCP n1-standard-8 T4 has short wait; AWS primary remains pending. |",
+      "| 2026-05-04T12:13:59Z | codex:gpt-5.5 | public_pr100_hnerv_lc_v2_t4_adapter_replay | lightning | exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_dup_20260504T1218Z | 2026-05-04T12:30Z | eval | Duplicate T4 hedge for same PR100 archive/runtime; archive sha afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641 bytes 178981; stop loser after first terminal result. child_of=exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z parallel_reason=Wall-clock hedge while primary PR100 exact replay remains Pending at zero cost. |",
+      "| 2026-05-04T12:11:26Z | codex:gpt-5.5 | public_pr100_hnerv_lc_v2_t4_adapter_replay | lightning | exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z | 2026-05-04T12:25Z | eval | PR100 hnerv_lc_v2 exact T4 adapter replay; archive sha afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641 bytes 178981; public claim 0.1954, local exact pending. |"
+    ],
+    "path": ".omx/state/active_lane_dispatch_claims.md",
+    "present": true,
+    "terminal_lines": [
+      "| 2026-05-04T12:33:57Z | codex:gpt-5.5 | public_pr100_hnerv_lc_v2_t4_adapter_replay | lightning | exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z | 2026-05-04T12:31Z | completed_score=0.22826947142244708 | A++ T4 adapter replay landed; archive sha afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641 bytes 178981 runtime tree ef6323533666c9cac1c204a9d3f7054157d44a185b16fc859fb3f0438ccd1832; promotion eligible and supersedes PR98/PR107 by -0.0010616432371564621. |"
+    ]
+  },
+  "expectations": {
+    "archive_manifest_json": "experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter/archive_manifest.json",
+    "contest_final": true,
+    "dispatch_claims_md": ".omx/state/active_lane_dispatch_claims.md",
+    "expect_single_member": "0.bin",
+    "expected_archive_sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641",
+    "expected_archive_size_bytes": 178981,
+    "expected_job_id": "exact_eval_public_pr100_hnerv_lc_v2_adapter_t4_20260504T1213Z",
+    "expected_lane_id": "public_pr100_hnerv_lc_v2_t4_adapter_replay",
+    "expected_runtime_tree_sha256": "ef6323533666c9cac1c204a9d3f7054157d44a185b16fc859fb3f0438ccd1832",
+    "expected_samples": 600,
+    "require_archive_manifest": true,
+    "require_auth_eval": true,
+    "require_report_archive_link": true,
+    "require_report_auth_score_link": false,
+    "require_submission_runtime_match": true,
+    "require_t4_equivalent": true,
+    "required_files": [
+      "archive.zip",
+      "inflate.sh",
+      "report.txt"
+    ]
+  },
+  "failed_checks": [],
+  "provider_agnostic": true,
+  "public_hygiene": {
+    "scanned_files": [
+      "experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter/archive_manifest.json",
+      "experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter/hnerv_model.py",
+      "experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter/inflate.py",
+      "experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter/inflate.sh",
+      "experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter/report.txt",
+      "experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter/schema.py",
+      "experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter/sidecar.py"
+    ],
+    "violations": []
+  },
+  "public_submission_refs": {
+    "PR100": {
+      "family": "hnerv_muon_lc_v2_latent_correction",
+      "key": "PR100",
+      "pr_number": 100,
+      "role": "HNeRV/Muon LC-v2 public frontier exact-replay target",
+      "url": "https://github.com/commaai/comma_video_compression_challenge/pull/100"
+    }
+  },
+  "report_linkage": {
+    "contains_archive_sha256": true,
+    "contains_archive_size_bytes": true,
+    "contains_expected_job_id": true,
+    "contains_expected_lane_id": true,
+    "path": "experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter/report.txt",
+    "present": true
+  },
+  "schema": "pre_submission_compliance_check_v1",
+  "score_claim": false,
+  "status": "passed",
+  "submission": {
+    "path": "experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter",
+    "required_files": {
+      "archive.zip": {
+        "bytes": 178981,
+        "exists": true,
+        "path": "experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter/archive.zip",
+        "sha256": "afd53348f50303bf0ec6a7ffecc1ac037df2f1c70745244b9c45c72e8eb80641"
+      },
+      "inflate.sh": {
+        "bytes": 543,
+        "exists": true,
+        "path": "experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter/inflate.sh",
+        "sha256": "b8dd1979c49171fde4552956d0d07034646778f747ccbdc2029839a302f7a806"
+      },
+      "report.txt": {
+        "bytes": 1310,
+        "exists": true,
+        "path": "experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter/report.txt",
+        "sha256": "2a991d63f08169adad78b869b65817236a74b645a69a016dd31b58e39ead06ef"
+      }
+    }
+  },
+  "tool": "scripts/pre_submission_compliance_check.py",
+  "warning_checks": []
+}

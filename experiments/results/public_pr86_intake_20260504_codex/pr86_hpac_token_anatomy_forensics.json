@@ -1,0 +1,1393 @@
+{
+  "archive_member_contract": {
+    "all_members_zip_stored": true,
+    "archive_bytes": 207579,
+    "archive_sha256": "e67b7c22240dbe33853c19d049b0044a5df16ce5f751ba8f1021cab8ceb03cef",
+    "duplicate_member_names": [],
+    "exists": true,
+    "expected_archive_bytes": 207579,
+    "expected_archive_sha256": "e67b7c22240dbe33853c19d049b0044a5df16ce5f751ba8f1021cab8ceb03cef",
+    "expected_identity_match": true,
+    "member_count": 5,
+    "members": [
+      {
+        "byte_share_of_archive": 0.150034,
+        "compress_size": 31144,
+        "crc32_hex": "20055e9d",
+        "file_size": 31144,
+        "header_offset": 0,
+        "magic_hex": "1f8b08084895f56902ff6d61",
+        "name": "master.pt.gz",
+        "role": "TokenRendererV62 master weights",
+        "sha256": "3f3ee2b19ba5cf97017559750c0d64bc422c3f84fedaed1877741ee6c6bd5236",
+        "unsafe_name": false,
+        "zip_compress_type": 0,
+        "zip_compress_type_name": "stored"
+      },
+      {
+        "byte_share_of_archive": 0.155541,
+        "compress_size": 32287,
+        "crc32_hex": "7b335818",
+        "file_size": 32287,
+        "header_offset": 31186,
+        "magic_hex": "1f8b08084895f56902ff736c",
+        "name": "slave.pt.gz",
+        "role": "ShrinkSingleNeRV slave weights",
+        "sha256": "817294dea0d940a8ef62c190bf96338f5a756930882f0f0d7f4d7c7eb87a82a8",
+        "unsafe_name": false,
+        "zip_compress_type": 0,
+        "zip_compress_type_name": "stored"
+      },
+      {
+        "byte_share_of_archive": 0.136059,
+        "compress_size": 28243,
+        "crc32_hex": "1624d441",
+        "file_size": 28243,
+        "header_offset": 63514,
+        "magic_hex": "4ff999560c89ef70a174026d",
+        "name": "hpac.pt.ppmd",
+        "role": "HPACMini entropy model weights",
+        "sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+        "unsafe_name": false,
+        "zip_compress_type": 0,
+        "zip_compress_type_name": "stored"
+      },
+      {
+        "byte_share_of_archive": 0.548707,
+        "compress_size": 113900,
+        "crc32_hex": "9e054fa5",
+        "file_size": 113900,
+        "header_offset": 91799,
+        "magic_hex": "f6865c9b8af9e3c3c5eff1f6",
+        "name": "tokens.bin",
+        "role": "constriction queue-coded token stream",
+        "sha256": "14144bde496631f89a02646496bc2e66306bba6da149ddca37e21d85d175f225",
+        "unsafe_name": false,
+        "zip_compress_type": 0,
+        "zip_compress_type_name": "stored"
+      },
+      {
+        "byte_share_of_archive": 0.007221,
+        "compress_size": 1499,
+        "crc32_hex": "d1b75b6b",
+        "file_size": 1499,
+        "header_offset": 205739,
+        "magic_hex": "504b03040000080800000000",
+        "name": "meta.pt",
+        "role": "runtime metadata",
+        "sha256": "848381e2da1b0f307670174f135a3925c43d8cdc73576b4bf05fadf833de4a08",
+        "unsafe_name": false,
+        "zip_compress_type": 0,
+        "zip_compress_type_name": "stored"
+      }
+    ],
+    "missing_required_members": [],
+    "path": "experiments/results/public_pr86_intake_20260504_codex/archive.zip",
+    "promotable_member_contract": true,
+    "required_member_names": [
+      "master.pt.gz",
+      "slave.pt.gz",
+      "hpac.pt.ppmd",
+      "tokens.bin",
+      "meta.pt"
+    ],
+    "sidecar_assumption_status": "passed_exact_required_member_set",
+    "unexpected_members": [],
+    "unsafe_member_names": []
+  },
+  "current_exact_replay_status": {
+    "archive_identity": {
+      "archive_sha256": "e67b7c22240dbe33853c19d049b0044a5df16ce5f751ba8f1021cab8ceb03cef",
+      "archive_size_bytes": 207579
+    },
+    "auth_eval_log_tail": [
+      "[contest_auth_eval] provenance saved: /teamspace/studios/this_studio/pact/experiments/results/lightning_batch/exact_eval_public_pr86_hpac_t4_hedge_20260504T0152Z/eval_work/provenance.json",
+      "[contest_auth_eval] archive sha256: e67b7c22240dbe33853c19d049b0044a5df16ce5f751ba8f1021cab8ceb03cef",
+      "[contest_auth_eval] extracted 5 member(s): ['master.pt.gz', 'slave.pt.gz', 'hpac.pt.ppmd', 'tokens.bin', 'meta.pt']",
+      "Traceback (most recent call last):",
+      "  File \"/teamspace/studios/this_studio/pact/experiments/contest_auth_eval.py\", line 1213, in <module>",
+      "    raise SystemExit(main())",
+      "                     ^^^^^^",
+      "  File \"/teamspace/studios/this_studio/pact/experiments/contest_auth_eval.py\", line 1161, in main",
+      "    _validate_archive_members(members)",
+      "  File \"/teamspace/studios/this_studio/pact/experiments/contest_auth_eval.py\", line 705, in _validate_archive_members",
+      "    raise RuntimeError(",
+      "RuntimeError: [archive-validate] UNKNOWN file types in archive: ['master.pt.gz', 'slave.pt.gz', 'hpac.pt.ppmd']. Allowed suffixes: ('.bin', '.bin.br', '.mkv', '.mp4', '.nrv', '.amrc', '.cmg1', '.cmg2', '.cmg3', '.cdo1', '.cdo1.xz', '.cdo1.zlib', '.cdo1.br', '.amr1', '.amr1.xz', '.amr1.zlib', '.amr1.br', '.pt', '.json', '.txt', '.bin.zst', '.bin.lzma', '.npy', '.npz'); allowed basenames: ('p', 'x', 'fb'). If a new artifact type was added intentionally, append its suffix or exact basename to the archive whitelist in experiments/contest_auth_eval.py."
+    ],
+    "evidence_grade": "invalid",
+    "failure_class": "runtime_or_harness_failure_before_score_json",
+    "missing_required_files": [
+      "contest_auth_eval.json",
+      "eval_provenance.json",
+      "report.txt",
+      "adjudication_provenance.json",
+      "contest_auth_eval.adjudicated.json"
+    ],
+    "reason": "remote Lightning exact-eval artifact directory contains partial artifacts but is missing required exact-score JSON/report files",
+    "replay_dir": "experiments/results/lightning_batch/exact_eval_public_pr86_hpac_t4_hedge_20260504T0152Z",
+    "score_claim": false,
+    "source_files": [
+      "experiments/results/lightning_batch/exact_eval_public_pr86_hpac_t4_hedge_20260504T0152Z/lightning_artifact_infra_failure.json",
+      "experiments/results/lightning_batch/exact_eval_public_pr86_hpac_t4_hedge_20260504T0152Z/auth_eval.log"
+    ],
+    "status": "archive_validator_whitelist_blocked",
+    "terminal_class": "exact_eval_missing_score_json"
+  },
+  "dispatch_performed": false,
+  "evidence_grade": "local_static_forensic_planning",
+  "member_payload_layers": {
+    "members": [
+      {
+        "decoded_bytes": 48444,
+        "decoded_magic_hex": "504b03040000080800000000",
+        "decoded_sha256": "f96d4c19d0926aeed1b96f1a55c54ace6584f89c1fefc0bc91c927ab3833fcc3",
+        "encoded_bytes": 31144,
+        "encoded_magic_hex": "1f8b08084895f56902ff6d61",
+        "encoded_sha256": "3f3ee2b19ba5cf97017559750c0d64bc422c3f84fedaed1877741ee6c6bd5236",
+        "inner_codec": "gzip",
+        "name": "master.pt.gz",
+        "role": "TokenRendererV62 master weights",
+        "torch_object": {
+          "dtype_counts": {
+            "torch.float16": 4,
+            "torch.float32": 9
+          },
+          "key_count": 13,
+          "non_tensor_key_count": 0,
+          "non_tensor_keys_prefix": [],
+          "object_type": "dict",
+          "simple_meta": {},
+          "status": "loaded",
+          "tensor_key_count": 13,
+          "tensor_samples": [
+            {
+              "dtype": "torch.float32",
+              "key": "frame_embed.weight",
+              "numel": 4800,
+              "shape": [
+                600,
+                8
+              ]
+            },
+            {
+              "dtype": "torch.float16",
+              "key": "film_gen.weight",
+              "numel": 512,
+              "shape": [
+                64,
+                8
+              ]
+            },
+            {
+              "dtype": "torch.float32",
+              "key": "film_gen.bias",
+              "numel": 64,
+              "shape": [
+                64
+              ]
+            },
+            {
+              "dtype": "torch.float16",
+              "key": "conv1.weight",
+              "numel": 1440,
+              "shape": [
+                32,
+                5,
+                3,
+                3
+              ]
+            },
+            {
+              "dtype": "torch.float32",
+              "key": "conv1.bias",
+              "numel": 32,
+              "shape": [
+                32
+              ]
+            },
+            {
+              "dtype": "torch.float32",
+              "key": "gn1.weight",
+              "numel": 32,
+              "shape": [
+                32
+              ]
+            },
+            {
+              "dtype": "torch.float32",
+              "key": "gn1.bias",
+              "numel": 32,
+              "shape": [
+                32
+              ]
+            },
+            {
+              "dtype": "torch.float16",
+              "key": "conv2.weight",
+              "numel": 9216,
+              "shape": [
+                32,
+                32,
+                3,
+                3
+              ]
+            },
+            {
+              "dtype": "torch.float32",
+              "key": "conv2.bias",
+              "numel": 32,
+              "shape": [
+                32
+              ]
+            },
+            {
+              "dtype": "torch.float32",
+              "key": "gn2.weight",
+              "numel": 32,
+              "shape": [
+                32
+              ]
+            },
+            {
+              "dtype": "torch.float32",
+              "key": "gn2.bias",
+              "numel": 32,
+              "shape": [
+                32
+              ]
+            },
+            {
+              "dtype": "torch.float16",
+              "key": "out_conv.weight",
+              "numel": 864,
+              "shape": [
+                3,
+                32,
+                3,
+                3
+              ]
+            },
+            {
+              "dtype": "torch.float32",
+              "key": "out_conv.bias",
+              "numel": 3,
+              "shape": [
+                3
+              ]
+            }
+          ],
+          "torch_load_attempted": true
+        },
+        "torch_zip": {
+          "entry_count": 19,
+          "entry_names_prefix": [
+            "archive/data.pkl",
+            "archive/.format_version",
+            "archive/.storage_alignment",
+            "archive/byteorder",
+            "archive/data/0",
+            "archive/data/1",
+            "archive/data/2",
+            "archive/data/3",
+            "archive/data/4",
+            "archive/data/5",
+            "archive/data/6",
+            "archive/data/7",
+            "archive/data/8",
+            "archive/data/9",
+            "archive/data/10",
+            "archive/data/11",
+            "archive/data/12",
+            "archive/version",
+            "archive/.data/serialization_id"
+          ],
+          "has_data_pkl": true,
+          "is_torch_zip_like": true,
+          "tensor_storage_entry_count": 13,
+          "total_entry_file_size": 45419
+        }
+      },
+      {
+        "decoded_bytes": 42395,
+        "decoded_magic_hex": "504b03040000080800000000",
+        "decoded_sha256": "a04a9eb14f005ad88948e2fabaa92f643eddc1818f5c2cbeb1a343cd8e6e937d",
+        "encoded_bytes": 32287,
+        "encoded_magic_hex": "1f8b08084895f56902ff736c",
+        "encoded_sha256": "817294dea0d940a8ef62c190bf96338f5a756930882f0f0d7f4d7c7eb87a82a8",
+        "inner_codec": "gzip",
+        "name": "slave.pt.gz",
+        "role": "ShrinkSingleNeRV slave weights",
+        "torch_object": {
+          "dtype_counts": {
+            "torch.float16": 24
+          },
+          "key_count": 24,
+          "non_tensor_key_count": 0,
+          "non_tensor_keys_prefix": [],
+          "object_type": "dict",
+          "simple_meta": {},
+          "status": "loaded",
+          "tensor_key_count": 24,
+          "tensor_samples": [
+            {
+              "dtype": "torch.float16",
+              "key": "codes.weight",
+              "numel": 3600,
+              "shape": [
+                600,
+                6
+              ]
+            },
+            {
+              "dtype": "torch.float16",
+              "key": "stem.weight",
+              "numel": 6912,
+              "shape": [
+                1152,
+                6
+              ]
+            },
+            {
+              "dtype": "torch.float16",
+              "key": "stem.bias",
+              "numel": 1152,
+              "shape": [
+                1152
+              ]
+            },
+            {
+              "dtype": "torch.float16",
+              "key": "blocks.0.dw.weight",
+              "numel": 216,
+              "shape": [
+                24,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "dtype": "torch.float16",
+              "key": "blocks.0.pw.weight",
+              "numel": 1536,
+              "shape": [
+                64,
+                24,
+                1,
+                1
+              ]
+            },
+            {
+              "dtype": "torch.float16",
+              "key": "blocks.0.pw.bias",
+              "numel": 64,
+              "shape": [
+                64
+              ]
+            },
+            {
+              "dtype": "torch.float16",
+              "key": "blocks.1.dw.weight",
+              "numel": 144,
+              "shape": [
+                16,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "dtype": "torch.float16",
+              "key": "blocks.1.pw.weight",
+              "numel": 768,
+              "shape": [
+                48,
+                16,
+                1,
+                1
+              ]
+            },
+            {
+              "dtype": "torch.float16",
+              "key": "blocks.1.pw.bias",
+              "numel": 48,
+              "shape": [
+                48
+              ]
+            },
+            {
+              "dtype": "torch.float16",
+              "key": "blocks.2.dw.weight",
+              "numel": 108,
+              "shape": [
+                12,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "dtype": "torch.float16",
+              "key": "blocks.2.pw.weight",
+              "numel": 384,
+              "shape": [
+                32,
+                12,
+                1,
+                1
+              ]
+            },
+            {
+              "dtype": "torch.float16",
+              "key": "blocks.2.pw.bias",
+              "numel": 32,
+              "shape": [
+                32
+              ]
+            },
+            {
+              "dtype": "torch.float16",
+              "key": "blocks.3.dw.weight",
+              "numel": 72,
+              "shape": [
+                8,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "dtype": "torch.float16",
+              "key": "blocks.3.pw.weight",
+              "numel": 256,
+              "shape": [
+                32,
+                8,
+                1,
+                1
+              ]
+            },
+            {
+              "dtype": "torch.float16",
+              "key": "blocks.3.pw.bias",
+              "numel": 32,
+              "shape": [
+                32
+              ]
+            },
+            {
+              "dtype": "torch.float16",
+              "key": "blocks.4.dw.weight",
+              "numel": 72,
+              "shape": [
+                8,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "dtype": "torch.float16",
+              "key": "blocks.4.pw.weight",
+              "numel": 192,
+              "shape": [
+                24,
+                8,
+                1,
+                1
+              ]
+            },
+            {
+              "dtype": "torch.float16",
+              "key": "blocks.4.pw.bias",
+              "numel": 24,
+              "shape": [
+                24
+              ]
+            },
+            {
+              "dtype": "torch.float16",
+              "key": "blocks.5.dw.weight",
+              "numel": 54,
+              "shape": [
+                6,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "dtype": "torch.float16",
+              "key": "blocks.5.pw.weight",
+              "numel": 144,
+              "shape": [
+                24,
+                6,
+                1,
+                1
+              ]
+            },
+            {
+              "dtype": "torch.float16",
+              "key": "blocks.5.pw.bias",
+              "numel": 24,
+              "shape": [
+                24
+              ]
+            },
+            {
+              "dtype": "torch.float16",
+              "key": "head.weight",
+              "numel": 18,
+              "shape": [
+                3,
+                6,
+                1,
+                1
+              ]
+            },
+            {
+              "dtype": "torch.float16",
+              "key": "head.bias",
+              "numel": 3,
+              "shape": [
+                3
+              ]
+            },
+            {
+              "dtype": "torch.float16",
+              "key": "per_pair_bias.weight",
+              "numel": 1800,
+              "shape": [
+                600,
+                3
+              ]
+            }
+          ],
+          "torch_load_attempted": true
+        },
+        "torch_zip": {
+          "entry_count": 30,
+          "entry_names_prefix": [
+            "archive/data.pkl",
+            "archive/.format_version",
+            "archive/.storage_alignment",
+            "archive/byteorder",
+            "archive/data/0",
+            "archive/data/1",
+            "archive/data/2",
+            "archive/data/3",
+            "archive/data/4",
+            "archive/data/5",
+            "archive/data/6",
+            "archive/data/7",
+            "archive/data/8",
+            "archive/data/9",
+            "archive/data/10",
+            "archive/data/11",
+            "archive/data/12",
+            "archive/data/13",
+            "archive/data/14",
+            "archive/data/15"
+          ],
+          "has_data_pkl": true,
+          "is_torch_zip_like": true,
+          "tensor_storage_entry_count": 24,
+          "total_entry_file_size": 37414
+        }
+      },
+      {
+        "decode_attempted": true,
+        "decoded_bytes": 55856,
+        "decoded_magic_hex": "504b03040000080800000000",
+        "decoded_sha256": "0710789f72200a640c1f3b2f6bc0d2f037affaa086f73b2c9e5034e006e80ac1",
+        "encoded_bytes": 28243,
+        "encoded_magic_hex": "4ff999560c89ef70a174026d",
+        "encoded_sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd",
+        "inner_codec": "ppmd",
+        "name": "hpac.pt.ppmd",
+        "ppmd_max_order": 4,
+        "ppmd_mem_size": 16777216,
+        "role": "HPACMini entropy model weights",
+        "status": "decoded",
+        "torch_object": {
+          "dtype_counts": {
+            "torch.float32": 25,
+            "torch.int8": 9
+          },
+          "key_count": 34,
+          "non_tensor_key_count": 0,
+          "non_tensor_keys_prefix": [],
+          "object_type": "dict",
+          "simple_meta": {},
+          "status": "loaded",
+          "tensor_key_count": 34,
+          "tensor_samples": [
+            {
+              "dtype": "torch.float32",
+              "key": "film_gen.bias",
+              "numel": 128,
+              "shape": [
+                128
+              ]
+            },
+            {
+              "dtype": "torch.float32",
+              "key": "conv_a.bias",
+              "numel": 64,
+              "shape": [
+                64
+              ]
+            },
+            {
+              "dtype": "torch.float32",
+              "key": "gn_a.scale",
+              "numel": 64,
+              "shape": [
+                64
+              ]
+            },
+            {
+              "dtype": "torch.float32",
+              "key": "gn_a.shift",
+              "numel": 64,
+              "shape": [
+                64
+              ]
+            },
+            {
+              "dtype": "torch.float32",
+              "key": "conv_b1.bias",
+              "numel": 64,
+              "shape": [
+                64
+              ]
+            },
+            {
+              "dtype": "torch.float32",
+              "key": "gn_b1.scale",
+              "numel": 64,
+              "shape": [
+                64
+              ]
+            },
+            {
+              "dtype": "torch.float32",
+              "key": "gn_b1.shift",
+              "numel": 64,
+              "shape": [
+                64
+              ]
+            },
+            {
+              "dtype": "torch.float32",
+              "key": "conv_b2.bias",
+              "numel": 64,
+              "shape": [
+                64
+              ]
+            },
+            {
+              "dtype": "torch.float32",
+              "key": "gn_b2.scale",
+              "numel": 64,
+              "shape": [
+                64
+              ]
+            },
+            {
+              "dtype": "torch.float32",
+              "key": "gn_b2.shift",
+              "numel": 64,
+              "shape": [
+                64
+              ]
+            },
+            {
+              "dtype": "torch.float32",
+              "key": "conv_past.bias",
+              "numel": 64,
+              "shape": [
+                64
+              ]
+            },
+            {
+              "dtype": "torch.float32",
+              "key": "spm.norm.scale",
+              "numel": 64,
+              "shape": [
+                64
+              ]
+            },
+            {
+              "dtype": "torch.float32",
+              "key": "spm.norm.shift",
+              "numel": 64,
+              "shape": [
+                64
+              ]
+            },
+            {
+              "dtype": "torch.float32",
+              "key": "spm.dw.bias",
+              "numel": 64,
+              "shape": [
+                64
+              ]
+            },
+            {
+              "dtype": "torch.float32",
+              "key": "spm.pw.bias",
+              "numel": 64,
+              "shape": [
+                64
+              ]
+            },
+            {
+              "dtype": "torch.float32",
+              "key": "head.bias",
+              "numel": 5,
+              "shape": [
+                5
+              ]
+            },
+            {
+              "dtype": "torch.int8",
+              "key": "conv_a.weight_q",
+              "numel": 21952,
+              "shape": [
+                64,
+                7,
+                7,
+                7
+              ]
+            },
+            {
+              "dtype": "torch.float32",
+              "key": "conv_a.weight_scale",
+              "numel": 64,
+              "shape": [
+                64
+              ]
+            },
+            {
+              "dtype": "torch.int8",
+              "key": "conv_b1.weight_q",
+              "numel": 1600,
+              "shape": [
+                64,
+                1,
+                5,
+                5
+              ]
+            },
+            {
+              "dtype": "torch.float32",
+              "key": "conv_b1.weight_scale",
+              "numel": 64,
+              "shape": [
+                64
+              ]
+            },
+            {
+              "dtype": "torch.int8",
+              "key": "conv_b2.weight_q",
+              "numel": 576,
+              "shape": [
+                64,
+                1,
+                3,
+                3
+              ]
+            },
+            {
+              "dtype": "torch.float32",
+              "key": "conv_b2.weight_scale",
+              "numel": 64,
+              "shape": [
+                64
+              ]
+            },
+            {
+              "dtype": "torch.int8",
+              "key": "conv_past.weight_q",
+              "numel": 2880,
+              "shape": [
+                64,
+                5,
+                3,
+                3
+              ]
+            },
+            {
+              "dtype": "torch.float32",
+              "key": "conv_past.weight_scale",
+              "numel": 64,
+              "shape": [
+                64
+              ]
+            }
+          ],
+          "torch_load_attempted": true
+        },
+        "torch_zip": {
+          "entry_count": 38,
+          "entry_names_prefix": [
+            "archive/data.pkl",
+            "archive/byteorder",
+            "archive/data/0",
+            "archive/data/1",
+            "archive/data/10",
+            "archive/data/11",
+            "archive/data/12",
+            "archive/data/13",
+            "archive/data/14",
+            "archive/data/15",
+            "archive/data/16",
+            "archive/data/17",
+            "archive/data/18",
+            "archive/data/19",
+            "archive/data/2",
+            "archive/data/20",
+            "archive/data/21",
+            "archive/data/22",
+            "archive/data/23",
+            "archive/data/24"
+          ],
+          "has_data_pkl": true,
+          "is_torch_zip_like": true,
+          "tensor_storage_entry_count": 34,
+          "total_entry_file_size": 49208
+        }
+      },
+      {
+        "constriction_queue_decoder_contract": "np.frombuffer(tokens.bin, dtype=np.uint32) -> constriction.stream.queue.RangeDecoder",
+        "encoded_bytes": 113900,
+        "encoded_magic_hex": "f6865c9b8af9e3c3c5eff1f6",
+        "encoded_sha256": "14144bde496631f89a02646496bc2e66306bba6da149ddca37e21d85d175f225",
+        "name": "tokens.bin",
+        "queue_word_dtype": "uint32",
+        "role": "constriction queue-coded token stream",
+        "status": "structurally_parseable",
+        "uint32_aligned": true,
+        "uint32_word_count": 28475
+      },
+      {
+        "encoded_bytes": 1499,
+        "encoded_magic_hex": "504b03040000080800000000",
+        "encoded_sha256": "848381e2da1b0f307670174f135a3925c43d8cdc73576b4bf05fadf833de4a08",
+        "meta_contract": {
+          "expected_fields": {
+            "N": 600,
+            "P": 32,
+            "ch": 64,
+            "delta": 2,
+            "hpac_d_film": 8,
+            "mode": "hpac",
+            "ppmd_max_order": 4,
+            "use_spm": true
+          },
+          "gt_decoder": "dali",
+          "mismatches": {},
+          "slave_channels": [
+            24,
+            16,
+            12,
+            8,
+            8,
+            6,
+            6
+          ],
+          "slave_d_lat": 6,
+          "status": "matches_expected_pr86_hpac_meta",
+          "tokens_bpp": 0.007724338107638889
+        },
+        "name": "meta.pt",
+        "role": "runtime metadata",
+        "torch_object": {
+          "dtype_counts": {},
+          "key_count": 15,
+          "non_tensor_key_count": 15,
+          "non_tensor_keys_prefix": [
+            "N",
+            "P",
+            "best_pose_train",
+            "best_seg_train",
+            "ch",
+            "d_film",
+            "delta",
+            "gt_decoder",
+            "hpac_d_film",
+            "mode",
+            "ppmd_max_order",
+            "slave_channels",
+            "slave_d_lat",
+            "tokens_bpp",
+            "use_spm"
+          ],
+          "object_type": "dict",
+          "simple_meta": {
+            "N": 600,
+            "P": 32,
+            "best_pose_train": null,
+            "best_seg_train": null,
+            "ch": 64,
+            "d_film": 8,
+            "delta": 2,
+            "gt_decoder": "dali",
+            "hpac_d_film": 8,
+            "mode": "hpac",
+            "ppmd_max_order": 4,
+            "slave_channels": [
+              24,
+              16,
+              12,
+              8,
+              8,
+              6,
+              6
+            ],
+            "slave_d_lat": 6,
+            "tokens_bpp": 0.007724338107638889,
+            "use_spm": true
+          },
+          "status": "loaded",
+          "tensor_key_count": 0,
+          "tensor_samples": [],
+          "torch_load_attempted": true
+        },
+        "torch_zip": {
+          "entry_count": 6,
+          "entry_names_prefix": [
+            "meta/data.pkl",
+            "meta/.format_version",
+            "meta/.storage_alignment",
+            "meta/byteorder",
+            "meta/version",
+            "meta/.data/serialization_id"
+          ],
+          "has_data_pkl": true,
+          "is_torch_zip_like": true,
+          "tensor_storage_entry_count": 0,
+          "total_entry_file_size": 359
+        }
+      }
+    ]
+  },
+  "model_runtime_dependency_closure": {
+    "archive_member_references_in_code": [
+      "master.pt.gz",
+      "slave.pt.gz",
+      "hpac.pt.ppmd",
+      "tokens.bin",
+      "meta.pt"
+    ],
+    "device_contract": {
+      "comment_claims_hpac_cpu": true,
+      "comment_code_mismatch": true,
+      "decompress_tokens_hpac_device_arg": "device",
+      "main_selects_cuda_when_available": true
+    },
+    "inflate_imports": [
+      {
+        "import": "__future__",
+        "kind": "from",
+        "lineno": 13,
+        "module": "__future__"
+      },
+      {
+        "import": "constriction",
+        "kind": "import",
+        "lineno": 25,
+        "module": "constriction"
+      },
+      {
+        "import": "gzip",
+        "kind": "import",
+        "lineno": 14,
+        "module": "gzip"
+      },
+      {
+        "import": "io",
+        "kind": "import",
+        "lineno": 14,
+        "module": "io"
+      },
+      {
+        "import": "numpy",
+        "kind": "import",
+        "lineno": 16,
+        "module": "numpy"
+      },
+      {
+        "import": "pathlib",
+        "kind": "from",
+        "lineno": 15,
+        "module": "pathlib"
+      },
+      {
+        "import": "pyppmd",
+        "kind": "import",
+        "lineno": 18,
+        "module": "pyppmd"
+      },
+      {
+        "import": "sys",
+        "kind": "import",
+        "lineno": 14,
+        "module": "sys"
+      },
+      {
+        "import": "time",
+        "kind": "import",
+        "lineno": 14,
+        "module": "time"
+      },
+      {
+        "import": "torch",
+        "kind": "import",
+        "lineno": 22,
+        "module": "torch"
+      },
+      {
+        "import": "torch.nn",
+        "kind": "import",
+        "lineno": 23,
+        "module": "torch"
+      },
+      {
+        "import": "torch.nn.functional",
+        "kind": "import",
+        "lineno": 24,
+        "module": "torch"
+      }
+    ],
+    "inflate_sh_lines": [
+      "#!/usr/bin/env bash",
+      "set -euo pipefail",
+      "HERE=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"",
+      "DATA_DIR=\"$1\"",
+      "OUTPUT_DIR=\"$2\"",
+      "FILE_LIST=\"$3\"",
+      "mkdir -p \"${OUTPUT_DIR}\"",
+      "while IFS= read -r line; do",
+      "[ -z \"${line}\" ] && continue",
+      "BASE=\"${line%.*}\"",
+      "DST=\"${OUTPUT_DIR}/${BASE}.raw\"",
+      "printf 'Inflating %s -> %s\\n' \"${BASE}\" \"${DST}\"",
+      "python \"${HERE}/inflate.py\" \"${DATA_DIR}\" \"${BASE}\" \"${DST}\"",
+      "done < \"${FILE_LIST}\""
+    ],
+    "inflate_symbols": {
+      "classes": [
+        "TokenRendererV62",
+        "_NeRVBlock",
+        "ShrinkSingleNeRV",
+        "_MaskedConv2dPG",
+        "_ChannelNorm2d",
+        "_CausalSPM",
+        "HPACMini"
+      ],
+      "functions": [
+        "_patch_group_mask",
+        "_reconstruct_hpac_state_dict",
+        "decompress_tokens_hpac",
+        "main"
+      ]
+    },
+    "local_runtime_dependency_versions": {
+      "constriction": "0.4.2",
+      "numpy": "2.4.4",
+      "pyppmd": "1.3.1",
+      "python": "3.12.13",
+      "torch": "2.11.0"
+    },
+    "paths": {
+      "inflate_py": "experiments/results/public_pr86_intake_20260504_codex/inflate.py",
+      "inflate_sh": "experiments/results/public_pr86_intake_20260504_codex/inflate.sh",
+      "pyproject": "pyproject.toml",
+      "training_archive_py": "experiments/results/public_pr86_intake_20260504_codex/training/archive.py",
+      "training_hpac_py": "experiments/results/public_pr86_intake_20260504_codex/training/hpac.py",
+      "training_readme": "experiments/results/public_pr86_intake_20260504_codex/training/README.md"
+    },
+    "pyproject_pr86_dependency_entries": [
+      "constriction>=0.4,<0.5",
+      "pyppmd>=1.3,<2.0"
+    ],
+    "required_archive_members_referenced": true,
+    "sidecar_dependency_summary": {
+      "archive_carries_metadata": true,
+      "archive_carries_model_weights": true,
+      "archive_carries_token_stream": true,
+      "external_python_packages_required": [
+        "numpy",
+        "torch",
+        "constriction",
+        "pyppmd"
+      ],
+      "note": "Static source inspection found the score-affecting model/token payloads referenced by inflate.py inside archive.zip. The runtime still depends on submission code plus Python packages.",
+      "score_affecting_sidecar_files_detected": []
+    },
+    "token_hpac_decode_contract": {
+      "archive_compute_gt_tokens_call_present": true,
+      "archive_write_tokens_second_arg": "gt",
+      "categorical_perfect_false_present": true,
+      "explicit_16384_grid_in_archive_or_inflate": false,
+      "inflate_reconstructs_residuals": false,
+      "probability_clip_eps": "1e-7",
+      "range_decoder_api_present": true,
+      "range_encoder_api_present": true,
+      "readme_mentions_16384_grid": true,
+      "submitted_archive_token_encoding": "raw_tokens",
+      "training_objective": "residual_tokens",
+      "training_residual_definition_present": true
+    }
+  },
+  "planning_only": true,
+  "pr85_reference_static": {
+    "archive_bytes": 236328,
+    "archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+    "bundle_format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+    "member_name": "x",
+    "member_sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+    "profile_path": "experiments/results/public_pr85_intake_20260503_codex/profile_pr85_bundle.json",
+    "segments": {
+      "bias": {
+        "bytes": 223,
+        "decoded_bytes": 603,
+        "magic_ascii": "BK\u0000\ufffd\ufffd\ufffd5\ufffd",
+        "sha256": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b"
+      },
+      "frac": {
+        "bytes": 106,
+        "decoded_bytes": 179,
+        "magic_ascii": "B\u0016\u0000\u0000\ufffd6\ufffd\ufffd",
+        "sha256": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992"
+      },
+      "frac2": {
+        "bytes": 149,
+        "decoded_bytes": 603,
+        "magic_ascii": "BK\u0000\ufffd\ufffdrut",
+        "sha256": "3a01c7546d89d9d3ca846da37a20add7d456421e9211a6339850d946b856026b"
+      },
+      "frac3": {
+        "bytes": 154,
+        "decoded_bytes": 603,
+        "magic_ascii": "BK\u0000\ufffd\ufffd\ufffd5\ufffd",
+        "sha256": "d725b01b604566c5a76a06b821c644c8d5d5bb9a57ab0597d3bdabc8389858b5"
+      },
+      "mask": {
+        "bytes": 159011,
+        "decoded_bytes": null,
+        "magic_ascii": "QMA9X\u0002\u0000\u0000",
+        "sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179"
+      },
+      "model": {
+        "bytes": 57074,
+        "decoded_bytes": 61590,
+        "magic_ascii": "\ufffd\ufffd\ufffd?\ufffd\ufffd\ufffdb",
+        "sha256": "c9194c19d44d3c32c4e588bbe4f9986ed0c562779078f0f4d6b073f0799b5dbc"
+      },
+      "pose": {
+        "bytes": 1487,
+        "decoded_bytes": 1806,
+        "magic_ascii": "\ufffd\ufffd \ufffd\ufffd4c\ufffd",
+        "sha256": "2b6e03e02fb17f662e3f3f9ce47daf2fc33bf1f76c96e34ffac005f1c5c4054c"
+      },
+      "post": {
+        "bytes": 1400,
+        "decoded_bytes": 2400,
+        "magic_ascii": "\ufffd+aFJ\ufffdg\ufffd",
+        "sha256": "c3dc88e0fb5a1e48aec49eeacefeea20685e3c02598933deb1ff22dc09892575"
+      },
+      "randmulti": {
+        "bytes": 16101,
+        "decoded_bytes": 27105,
+        "magic_ascii": "\ufffd\u0000O+Q\ufffd\ufffdN",
+        "sha256": "c624372e60a0851c4c427dc333a60dcc5d6657ba8ed56951612e7c9d7be7629f"
+      },
+      "region": {
+        "bytes": 273,
+        "decoded_bytes": 603,
+        "magic_ascii": "BK\u0000\ufffd\ufffdP\ufffd}",
+        "sha256": "4a7c16094fab281c30e27621a58577c095c4b1153c232518c9adbaba2a2b2392"
+      },
+      "shift": {
+        "bytes": 226,
+        "decoded_bytes": 603,
+        "magic_ascii": "BK\u0000\ufffd \ufffd:\ufffd",
+        "sha256": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4"
+      }
+    },
+    "t4_best_score_reference": 0.25806611029397786
+  },
+  "promotable": false,
+  "public_pr86_reference": {
+    "claimed_report_values_external": {
+      "archive_bytes": 207579,
+      "avg_posenet_dist": 0.00045701,
+      "avg_segnet_dist": 0.00067815,
+      "display_score": 0.27
+    },
+    "commit_oids": [
+      "b326decbdc4aefdca363e1c3fa770765a5bae250"
+    ],
+    "declared_dependency_note_present": true,
+    "head_ref": "jas0xf_adversarial_neural_representation",
+    "number": 86,
+    "requires_gpu_claim": false,
+    "score_claim_in_this_artifact": false,
+    "state": "OPEN",
+    "title": "jas0xf_adversarial_neural_representation (0.27)",
+    "updated_at": "2026-05-03T23:55:59Z",
+    "url": "https://github.com/commaai/comma_video_compression_challenge/pull/86"
+  },
+  "recommended_next_actions_by_exact_replay_outcome": {
+    "archive_validator_whitelist_blocked": [
+      "Do not dispatch from this artifact; keep all outputs as local planning evidence.",
+      "Classify the current T4 mirror as invalid pre-score evidence, not a PR86 method result.",
+      "Before another exact replay, close the archive validator/member-format contract for .pt.gz and .ppmd in a reviewed preflight path.",
+      "Continue local HPAC decode/reencode parity work; PR85 transplant remains blocked."
+    ],
+    "current_observed_replay_branch": [
+      "Current local mirror branch: archive validator whitelist blocked before score JSON.",
+      "No score claim is available; do not compare PR86 numerically to PR85 from this run.",
+      "Fix or preflight the member-format contract before any future exact replay attempt."
+    ],
+    "no_local_replay_artifacts": [
+      "Do not dispatch from this artifact; keep all outputs as local planning evidence.",
+      "Use this report as static intake only; wait for a local mirrored contest_auth_eval.json or failure classification.",
+      "Run only build-free local decode/parse tests meanwhile."
+    ],
+    "runtime_or_dependency_failure": [
+      "Do not dispatch from this artifact; keep all outputs as local planning evidence.",
+      "Pin and reproduce constriction/pyppmd/torch CPU-CUDA behavior locally before touching PR85 bytes.",
+      "Treat any entropy assertion as a decode-contract negative, not a family kill."
+    ],
+    "score_components_collapsed": [
+      "Do not dispatch from this artifact; keep all outputs as local planning evidence.",
+      "Preserve the exact replay as A-negative only after custody and component recomputation are complete.",
+      "Analyze whether collapse is renderer, token, pose, or runtime-custody specific before transplant work."
+    ],
+    "score_json_present_beats_pr85": [
+      "Do not dispatch from this artifact; keep all outputs as local planning evidence.",
+      "Adjudicate the exact replay JSON, runtime tree hash, sample count, and component gates.",
+      "If clean, prioritize HPAC-on-PR85 mask coding; the gross PR85 mask opportunity is 15369 bytes before new metadata/runtime costs.",
+      "Build PR85 token extraction and HPAC byte-exact reencode tests before any archive candidate."
+    ],
+    "score_json_present_not_better_than_pr85": [
+      "Do not dispatch from this artifact; keep all outputs as local planning evidence.",
+      "Keep PR86 as an architecture prior, but do not replace the PR85 champion wholesale.",
+      "Only pursue HPAC transfer if local PR85 token bpp estimates clear the PR85 score break-even after metadata/runtime costs."
+    ]
+  },
+  "recorded_at_utc": "2026-05-04T02:20:24+00:00",
+  "schema_version": 1,
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 207579,
+    "expected_bytes": 207579,
+    "expected_identity_match": true,
+    "expected_sha256": "e67b7c22240dbe33853c19d049b0044a5df16ce5f751ba8f1021cab8ceb03cef",
+    "path": "experiments/results/public_pr86_intake_20260504_codex/archive.zip",
+    "sha256": "e67b7c22240dbe33853c19d049b0044a5df16ce5f751ba8f1021cab8ceb03cef"
+  },
+  "stable_parse_digest_sha256": "b7438ee66e096f5b2840e93e9793ff43ae7ccaa6d5d208175577fd8bc572ed7f",
+  "token_hpac_decode_contract": {
+    "archive_compute_gt_tokens_call_present": true,
+    "archive_write_tokens_second_arg": "gt",
+    "categorical_perfect_false_present": true,
+    "explicit_16384_grid_in_archive_or_inflate": false,
+    "inflate_reconstructs_residuals": false,
+    "probability_clip_eps": "1e-7",
+    "range_decoder_api_present": true,
+    "range_encoder_api_present": true,
+    "readme_mentions_16384_grid": true,
+    "submitted_archive_token_encoding": "raw_tokens",
+    "training_objective": "residual_tokens",
+    "training_residual_definition_present": true
+  },
+  "tool": "experiments/profile_pr86_hpac_token_anatomy.py",
+  "transplant_opportunities_onto_pr85": [
+    {
+      "drop_in_status": "not_drop_in",
+      "gross_byte_math": {
+        "gross_saved_bytes_if_same_contract": 15369,
+        "pr85_mask_segment_bytes": 159011,
+        "pr86_hpac_tokens_meta_bytes": 143642
+      },
+      "id": "hpac_reencode_pr85_mask_tokens",
+      "priority_by_replay": "blocked_until_replay_contract_closes",
+      "required_local_gates": [
+        "full PR86 own-stream decode",
+        "byte-exact PR86 decode->encode tokens.bin parity",
+        "PR85 baseline token source extraction with shape/range proof",
+        "HPAC train or fit on PR85 token maps",
+        "PR85 output parity before exact eval",
+        "no unexpected archive members or sidecars"
+      ],
+      "score_claim": false,
+      "target": "Replace PR85 QMA9 mask segment with an HPAC-coded token stream.",
+      "why_not_drop_in": "PR86 tokens.bin is tied to PR86 HPACMini probabilities and raw SegNet token maps. PR85 uses a QMA9 mask segment inside a monolithic x bundle; direct byte transplant has no decoded-mask parity proof."
+    },
+    {
+      "drop_in_status": "full_runtime_replacement_only",
+      "gross_byte_math": {
+        "gross_saved_bytes_vs_pr85_archive": 28749,
+        "pr85_archive_bytes": 236328,
+        "pr86_archive_bytes": 207579,
+        "pr86_model_stack_bytes": 63431
+      },
+      "id": "full_pr86_runtime_as_external_baseline",
+      "priority_by_replay": "invalid_currently",
+      "required_local_gates": [
+        "archive validator must accept PR86 member formats or a contest-legal adapter must be proven",
+        "contest_auth_eval.json must exist with 600 CUDA samples",
+        "runtime tree hash must be captured for the exact replay",
+        "component gates must be adjudicated"
+      ],
+      "score_claim": false,
+      "target": "Treat PR86 as a full external neural-codec baseline, not a PR85 transplant."
+    },
+    {
+      "contract_facts_to_preserve": {
+        "categorical_perfect_false": true,
+        "probability_clip_eps": "1e-7",
+        "queue_dtype": "uint32",
+        "submitted_token_encoding": "raw_tokens"
+      },
+      "drop_in_status": "design_prior_only",
+      "gross_byte_math": {
+        "pr86_hpac_model_bytes": 28243,
+        "pr86_meta_bytes": 1499,
+        "pr86_tokens_bytes": 113900
+      },
+      "id": "hpac_probability_contract_port",
+      "required_local_gates": [
+        "deterministic parser for HPAC meta/model",
+        "same-order constriction queue roundtrip",
+        "CPU/CUDA HPAC decode contract closure",
+        "local decoded-token SHA manifest"
+      ],
+      "score_claim": false,
+      "target": "Port the HPAC probability model/coder contract into an Apogee-owned PR85 mask coder."
+    },
+    {
+      "drop_in_status": "not_drop_in",
+      "gross_byte_math": {
+        "gross_saved_bytes_if_replacing_all_nonmask_bytes": 13886,
+        "pr85_non_mask_archive_bytes_estimate": 77317,
+        "pr86_master_slave_bytes": 63431
+      },
+      "id": "pr86_model_stack_lessons_for_pr85_nonmask_bytes",
+      "required_local_gates": [
+        "separate decoded-output parity target",
+        "model/runtime closure under PR85 inflate path",
+        "byte accounting after any decoder code changes"
+      ],
+      "score_claim": false,
+      "target": "Use master/slave neural-renderer compression ideas against PR85 model/post/pose bytes.",
+      "why_not_drop_in": "PR86 master/slave generate video frames from tokens; PR85 model/pose/post segments are a different runtime contract."
+    }
+  ]
+}

@@ -1,0 +1,109 @@
+{
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
+  "output_archive": {
+    "bytes": 279553,
+    "delta_bytes_vs_source_archive": 3339,
+    "formula_only_rate_delta_vs_source_archive": 0.00222330304447493,
+    "path": "/Users/adpena/Projects/pact/experiments/results/sjkl_c067_sparse_repack_screen_20260502T_local/k2_g16x12_p64_a4_gain0125/pack/archive.zip",
+    "sha256": "00210f674fe34d2dd2243e81bf7ac02c374de2cd9c0c70e0810577bf4c8f4109"
+  },
+  "packed_payload": {
+    "brotli_quality": 11,
+    "header": {
+      "members": [
+        {
+          "bytes": 59288,
+          "codec": "raw",
+          "name": "renderer.bin",
+          "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+        },
+        {
+          "bytes": 223385,
+          "codec": "raw",
+          "name": "masks.mkv",
+          "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+        },
+        {
+          "bytes": 7200,
+          "codec": "raw",
+          "name": "optimized_poses.bin",
+          "sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+        },
+        {
+          "bytes": 2565,
+          "codec": "raw",
+          "name": "sjkl.bin",
+          "sha256": "3ff7483945b46232a27cab9d97019852d4d0de2362a78ab030a0544131fbf295"
+        }
+      ],
+      "schema": "renderer_payload_v1",
+      "source_archive_sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a"
+    },
+    "payload_compressed_bytes": 279453,
+    "payload_format": "rpk1_json",
+    "payload_member": "p",
+    "payload_raw_bytes": 293092
+  },
+  "payload_member_names": {
+    "output_archive_members": [
+      "p"
+    ],
+    "output_logical_runtime_members": [
+      "renderer.bin",
+      "masks.mkv",
+      "optimized_poses.bin",
+      "sjkl.bin"
+    ],
+    "output_packed_payload_member": "p",
+    "sjkl_member": "sjkl.bin"
+  },
+  "promotion_eligible": false,
+  "runtime_contract": {
+    "inflate_loader": "submissions/robust_current/inflate_renderer.py::_load_sjkl_residual_from_archive_dir",
+    "require_runtime_apply_proof": true,
+    "runtime_apply_proof": {
+      "path": "/Users/adpena/Projects/pact/submissions/robust_current/inflate_renderer.py",
+      "proof_tokens": [
+        "SJKL_REQUIRE_APPLIED",
+        "_finalize_sjkl_application_contract",
+        "_apply_sjkl_residual_to_pairs",
+        "applied_pair_count",
+        "charged sjkl.bin did not affect"
+      ],
+      "require_env": "SJKL_REQUIRE_APPLIED=1",
+      "sha256": "d02cb99e8b1cca30cd1030ddbbf914d88335646d49e82f91ca5c51ef427c2bc7",
+      "verified": true
+    },
+    "score_affecting_payload_charged_in_archive": true,
+    "sidecars_required": false,
+    "unpacker": "submissions/robust_current/unpack_renderer_payload.py"
+  },
+  "schema": "sjkl_c067_archive_builder_v1",
+  "score_claim": false,
+  "sjkl_payload": {
+    "bytes": 2565,
+    "max_bytes": 8192,
+    "member_name": "sjkl.bin",
+    "path": "/Users/adpena/Projects/pact/experiments/results/sjkl_c067_sparse_repack_screen_20260502T_local/k2_g16x12_p64_a4_gain0125/repack/sjkl.bin",
+    "replaced_existing": false,
+    "sha256": "3ff7483945b46232a27cab9d97019852d4d0de2362a78ab030a0544131fbf295"
+  },
+  "source_archive": {
+    "bytes": 276214,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c067_breakthrough_candidate_matrix_20260502T1030Z/line_search_source_c067_fixedslice/archive.zip",
+    "sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+    "source_archive_packaging": "packed_renderer_payload",
+    "source_logical_member_names": [
+      "renderer.bin",
+      "masks.mkv",
+      "optimized_poses.bin"
+    ],
+    "source_payload_header_payload_format": "public_pr67_qzs3_qp1_fixed_slices",
+    "source_payload_header_schema": "renderer_payload_pr64_len_table_v1",
+    "source_payload_member": "p",
+    "source_zip_members": [
+      "p"
+    ]
+  }
+}

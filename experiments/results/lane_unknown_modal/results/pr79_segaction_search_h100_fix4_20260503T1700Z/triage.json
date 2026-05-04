@@ -1,0 +1,161 @@
+{
+  "candidate_count": 2,
+  "candidates": [
+    {
+      "archive_bytes": 278019,
+      "archive_name": "archive_optimized.zip",
+      "archive_path": "experiments/results/lane_unknown_modal/results/pr79_segaction_search_h100_fix4_20260503T1700Z/archive_optimized.zip",
+      "archive_sha256": "2424681de9f298c78bf16db164115bf9a6958e808daa4f0cdabb9c9a5606fcc9",
+      "break_even_math": {
+        "rate_score_weight": 25.0,
+        "score_denominator_bytes": 37545489,
+        "versus_pr79_s2_frontier": {
+          "archive_byte_delta": 698,
+          "rate_score_delta": 0.0004647695492792756,
+          "required_component_improvement_to_beat_frontier": 0.0004647695492792647,
+          "required_component_improvement_to_beat_target": 0.00499832312246562
+        }
+      },
+      "byte_delta_vs_frontier": 698,
+      "dispatchable_after_parity_gate": false,
+      "evidence_grade": "empirical_modal_artifact_triage_only",
+      "frontier": {
+        "archive_bytes": 277321,
+        "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+        "score": 0.31453355357318635
+      },
+      "manifest_score_claim": false,
+      "next_gate": "do not dispatch until all PR79 action-search preflight guards pass",
+      "no_op_vs_frontier": false,
+      "preflight_guards": {
+        "action_record_accounting": {
+          "duplicate_pair_tile_accounting_present": false,
+          "duplicate_pair_tile_record_count": null,
+          "order_changed": false,
+          "passes": false,
+          "raw_output_parity_requirement_present": false,
+          "raw_output_parity_requirement_required": false
+        },
+        "archive_identity": {
+          "declared_bytes": 278019,
+          "declared_sha256": "2424681de9f298c78bf16db164115bf9a6958e808daa4f0cdabb9c9a5606fcc9",
+          "has_declared_bytes": true,
+          "has_declared_sha256": true,
+          "matches_actual": true
+        },
+        "break_even_math": {
+          "break_even_math_present": false,
+          "passes": false,
+          "versus_pr79_present": false,
+          "versus_pr79_s2_present": false
+        },
+        "failed": [
+          "s2_packing_or_explicit_reason",
+          "no_op_detection",
+          "duplicate_pair_tile_accounting",
+          "break_even_math_vs_pr79_and_s2"
+        ],
+        "no_op_detection": {
+          "no_op_detection_present": false,
+          "no_op_status": null,
+          "passes": false
+        },
+        "passed": false,
+        "s2_packing": {
+          "action_codec": null,
+          "has_s2_packing": false,
+          "s2_packing_absent_reason": null,
+          "s2_packing_or_explicit_reason": false
+        }
+      },
+      "projected_score_if_components_unchanged": 0.3149983231224656,
+      "rate_score_delta_vs_frontier": 0.0004647695492792756,
+      "score_claim": false,
+      "score_improvement_needed_to_beat_frontier": 0.0004647695492792647,
+      "score_improvement_needed_to_beat_target": 0.00499832312246562,
+      "source_archive_sha256_from_manifest": "01dc02badf851d99108fd92c570271f36f74cc5424c6d2a8f1b499cb4d1c3446",
+      "target_score": 0.31
+    },
+    {
+      "archive_bytes": 278366,
+      "archive_name": "probe_archive.zip",
+      "archive_path": "experiments/results/lane_unknown_modal/results/pr79_segaction_search_h100_fix4_20260503T1700Z/probe_archive.zip",
+      "archive_sha256": "ddfddbd682dc804a0e19613fe9afa0a8c8c49b3385736da81360bb0cca2f6836",
+      "break_even_math": {
+        "rate_score_weight": 25.0,
+        "score_denominator_bytes": 37545489,
+        "versus_pr79_s2_frontier": {
+          "archive_byte_delta": 1045,
+          "rate_score_delta": 0.0006958226060126691,
+          "required_component_improvement_to_beat_frontier": 0.0006958226060126416,
+          "required_component_improvement_to_beat_target": 0.005229376179198997
+        }
+      },
+      "byte_delta_vs_frontier": 1045,
+      "dispatchable_after_parity_gate": false,
+      "evidence_grade": "empirical_modal_artifact_triage_only",
+      "frontier": {
+        "archive_bytes": 277321,
+        "archive_sha256": "5740aca7e255b00093154eb1823b5b6207d8795f8eb287d35758c4cda438ec68",
+        "score": 0.31453355357318635
+      },
+      "manifest_score_claim": false,
+      "next_gate": "do not dispatch until all PR79 action-search preflight guards pass",
+      "no_op_vs_frontier": false,
+      "preflight_guards": {
+        "action_record_accounting": {
+          "duplicate_pair_tile_accounting_present": false,
+          "duplicate_pair_tile_record_count": null,
+          "order_changed": false,
+          "passes": false,
+          "raw_output_parity_requirement_present": false,
+          "raw_output_parity_requirement_required": false
+        },
+        "archive_identity": {
+          "declared_bytes": 278366,
+          "declared_sha256": "ddfddbd682dc804a0e19613fe9afa0a8c8c49b3385736da81360bb0cca2f6836",
+          "has_declared_bytes": true,
+          "has_declared_sha256": true,
+          "matches_actual": true
+        },
+        "break_even_math": {
+          "break_even_math_present": false,
+          "passes": false,
+          "versus_pr79_present": false,
+          "versus_pr79_s2_present": false
+        },
+        "failed": [
+          "s2_packing_or_explicit_reason",
+          "no_op_detection",
+          "duplicate_pair_tile_accounting",
+          "break_even_math_vs_pr79_and_s2"
+        ],
+        "no_op_detection": {
+          "no_op_detection_present": false,
+          "no_op_status": null,
+          "passes": false
+        },
+        "passed": false,
+        "s2_packing": {
+          "action_codec": null,
+          "has_s2_packing": false,
+          "s2_packing_absent_reason": null,
+          "s2_packing_or_explicit_reason": false
+        }
+      },
+      "projected_score_if_components_unchanged": 0.315229376179199,
+      "rate_score_delta_vs_frontier": 0.0006958226060126691,
+      "score_claim": false,
+      "score_improvement_needed_to_beat_frontier": 0.0006958226060126416,
+      "score_improvement_needed_to_beat_target": 0.005229376179198997,
+      "source_archive_sha256_from_manifest": "01dc02badf851d99108fd92c570271f36f74cc5424c6d2a8f1b499cb4d1c3446",
+      "target_score": 0.31
+    }
+  ],
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via exact CUDA auth eval",
+  "dispatchable_after_parity_gate_count": 0,
+  "promotion_eligible": false,
+  "result_dir": "experiments/results/lane_unknown_modal/results/pr79_segaction_search_h100_fix4_20260503T1700Z",
+  "schema": "pr79_action_search_result_triage_v1",
+  "score_claim": false
+}

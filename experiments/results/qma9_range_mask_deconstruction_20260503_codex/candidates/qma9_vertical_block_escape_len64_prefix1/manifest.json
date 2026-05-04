@@ -1,0 +1,92 @@
+{
+  "archive": {
+    "archive_bytes": 215960,
+    "archive_path": "/Users/adpena/Projects/pact/experiments/results/public_pr81_qzs3_range_mask_intake_20260503_codex/archive.zip",
+    "archive_sha256": "cd01378a52688fe00ee1bfb898c67695aed89a7b3ded602b597eb7fc3031d7fc",
+    "member_bytes": 215860,
+    "member_name": "p",
+    "member_sha256": "c59524610474c89e5a41433f47d2bb881f878e694f853db1377272699f9eb3e9",
+    "zip_overhead_bytes": 100
+  },
+  "block_copy_opportunities": {
+    "block_count_per_row": 6,
+    "block_width": 64,
+    "copied_block_fraction": 0.855512067840835,
+    "copied_blocks": 2623,
+    "copied_pixel_fraction": 0.8538411458333334,
+    "copied_pixels": 167872,
+    "eligible_blocks": 3066,
+    "total_pixels": 196608
+  },
+  "candidate": "qma9_vertical_block_escape_qmb1",
+  "candidate_id": "qma9_vertical_block_escape_len64_prefix1",
+  "candidate_qmb1_header": {
+    "bitstream_bytes": 410,
+    "bitstream_sha256": "5535ac076c2c7d5f74c9001e2163eff625b30aafb4c516ac5eabed8eb19a6d5f",
+    "block_width": 64,
+    "decoded_mask_bytes": 196608,
+    "frame_count": 1,
+    "header_bytes": 24,
+    "height": 384,
+    "magic": "QMB1",
+    "packed_bytes": 434,
+    "payload_sha256": "7a514427cbf908b1a26cbafcb1684da412591a6479c7400a7096e0d07148a39c",
+    "width": 512
+  },
+  "decision": {
+    "local_screen_negative": true,
+    "reason": "QMB1 must beat the exact subset QMA9 re-encode before any full-stream or runtime work is justified."
+  },
+  "dispatch_performed": false,
+  "evidence_grade": "empirical/planning_only",
+  "full_stream_linear_projection": {
+    "candidate_range_mask_bytes": 260400,
+    "delta_bytes_vs_pr81_range_mask": 101389,
+    "dispatchable": false,
+    "projection": "candidate_subset_bytes * source_frame_count / subset_frames",
+    "rate_score_delta_if_components_unchanged": 0.06751077339810384,
+    "reason": "linear projection from a bounded prefix; requires full deterministic re-encode and runtime integration",
+    "reference_pr81_range_mask_bytes": 159011
+  },
+  "gpu_required": false,
+  "notes": [
+    "QMB1 charges copy flags inside the range-mask payload and falls back to the current QMA9 pixel tree.",
+    "Copied blocks intentionally do not update the fallback QMA9 adaptive model; the byte screen measures that tradeoff directly.",
+    "This artifact is not a score/component claim and did not invoke CUDA or a scorer."
+  ],
+  "schema": "qma9_vertical_block_escape_candidate_screen_v1",
+  "score_claim": false,
+  "source_qma9_header": {
+    "bitstream_bytes": 158991,
+    "bitstream_sha256": "77196f31a8fdfbf8f91c9c30600945473376534f15245bfb7622ddd77d17e3af",
+    "decoded_mask_bytes": 117964800,
+    "frame_count": 600,
+    "header_bytes": 20,
+    "height": 384,
+    "magic": "QMA9",
+    "packed_bytes": 159011,
+    "payload_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+    "width": 512
+  },
+  "split_constants": {
+    "PACKED_PAYLOAD_BYTES": 215860,
+    "POSE_STREAM_BYTES": 899,
+    "RANGE_MASK_BYTES": 159011,
+    "ROUTER_ACTION_BYTES": 225,
+    "SPLIT_MODEL_REORDERED_BYTES": 55725
+  },
+  "subset": {
+    "baseline_qma9_bytes": 359,
+    "baseline_subset_qma9_path": "experiments/results/qma9_range_mask_deconstruction_20260503_codex/candidates/qma9_vertical_block_escape_len64_prefix1/baseline_subset.qma9",
+    "candidate_qmb1_bytes": 434,
+    "candidate_subset_qmb1_path": "experiments/results/qma9_range_mask_deconstruction_20260503_codex/candidates/qma9_vertical_block_escape_len64_prefix1/candidate_subset.qmb1",
+    "decode_parity": true,
+    "decoded_pixels": 196608,
+    "delta_bytes_vs_subset_qma9": 75,
+    "frames": 1,
+    "rate_score_delta_if_subset_scaled": 0.02996365289049771,
+    "raw_path": "experiments/results/qma9_range_mask_deconstruction_20260503_codex/candidates/qma9_vertical_block_escape_len64_prefix1/decoded_prefix_mask.raw",
+    "raw_sha256": "cce78dbebb6d2bdea7369c7c6671a1b27f7f04182a30dbe819485f07faadf061"
+  },
+  "tool": "experiments/build_qma9_vertical_block_escape_candidate.py"
+}

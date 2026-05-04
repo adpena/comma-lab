@@ -1,0 +1,45 @@
+{
+  "auth_eval_log_classification": "missing_artifacts",
+  "classified_at_utc": "2026-05-04T09:53:19Z",
+  "evidence_grade": "invalid",
+  "expected_archive_sha256": "278b1c7a1bd6b03a5bceddafcb3489b2624c558ad22825d9211b701333b6eefb",
+  "expected_archive_size_bytes": 178546,
+  "failure_class": "runtime_or_harness_failure_before_score_json",
+  "job_artifact_files": [
+    "lightning_dali_bootstrap.json",
+    "lightning_dali_requirements.txt",
+    "lightning_queue_metadata.json",
+    "lightning_supply_chain_scan_pre.json"
+  ],
+  "method_evidence": false,
+  "missing_required_files": [
+    "contest_auth_eval.json",
+    "archive.zip",
+    "eval_provenance.json",
+    "report.txt",
+    "lightning_runner_preflight.json",
+    "lightning_supply_chain_scan.json",
+    "adjudication_provenance.json",
+    "contest_auth_eval.adjudicated.json"
+  ],
+  "promotion_eligible": false,
+  "reason": "contest_auth_eval.json is missing and auth_eval.log was not present in the harvested artifacts",
+  "recommended_action": "Preserve the partial artifacts and logs as a harness/runtime failure. Do not rank, retire, promote, or claim score without contest_auth_eval.json and adjudication artifacts.",
+  "schema_version": 1,
+  "score_claim": false,
+  "score_source": "none:missing_contest_auth_eval_json",
+  "ssh_source": {
+    "copied_files": [
+      "lightning_queue_metadata.json",
+      "lightning_dali_bootstrap.json",
+      "lightning_dali_requirements.txt",
+      "lightning_supply_chain_scan_pre.json"
+    ],
+    "mirror_dir": "experiments/results/lightning_batch/exact_eval_public_pr99_hnerv_muon_lc_t4_20260504T0940Z",
+    "remote_dir": "/teamspace/jobs/exact-eval-public-pr99-hnerv-muon-lc-t4-20260504t0940z/artifacts/pact/experiments/results/lightning_batch/exact_eval_public_pr99_hnerv_muon_lc_t4_20260504T0940Z",
+    "ssh_connect_timeout": 15,
+    "ssh_target": "lightning-pact"
+  },
+  "status": "ARTIFACT_INFRA_FAILURE",
+  "terminal_class": "exact_eval_missing_score_json"
+}

@@ -1,0 +1,2421 @@
+{
+  "constants": {
+    "camera_height": 874,
+    "camera_width": 1164,
+    "frame_count": 1200,
+    "mask_class_count": 5,
+    "original_video_bytes": 37545489,
+    "pair_count": 600,
+    "rate_lambda": 6.658589531221714e-07,
+    "segnet_height": 384,
+    "segnet_width": 512
+  },
+  "current_frontier": {
+    "archive_bytes": 236328,
+    "archive_sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e",
+    "avg_posenet_dist": 0.0001894,
+    "avg_segnet_dist": 0.00057185,
+    "device": "cuda",
+    "evidence_grade": "A++",
+    "gpu_model": "Tesla T4",
+    "json_sha256": "f4dc4e0c30c6ea57960f36f4b96adc447ebae36e6a580e3e25b6f4647d8b60fe",
+    "label": "pr85_adaptive_masking_joint_frame_model_t4",
+    "n_samples": 600,
+    "path": "experiments/results/lightning_batch/exact_eval_public_pr85_adaptive_masking_joint_frame_model_t4_20260503T2332Z/contest_auth_eval.adjudicated.json",
+    "promotion_eligible": null,
+    "promotion_eligible_source": "absent_in_source_json_not_interpreted_as_false",
+    "reported_score_recomputed_from_components": 0.25806611029397786,
+    "score": 0.25806611029397786,
+    "score_formula_matches_reported_from_visible_components": false,
+    "score_from_visible_components": 0.25806622496743437,
+    "score_source": "score_recomputed_from_components",
+    "visible_component_score_delta_vs_canonical": 1.146734565082852e-07,
+    "visible_component_terms": {
+      "posenet_term": 0.043520110293977884,
+      "rate_term": 0.1573611146734565,
+      "score": 0.25806622496743437,
+      "segnet_term": 0.05718500000000001
+    }
+  },
+  "deterministic": true,
+  "dispatch_performed": false,
+  "equation_system": {
+    "action_functional": "S(A)=100*seg_dist(D_A)+sqrt(10*pose_dist(D_A))+25*|A|/37545489",
+    "calculus_and_linear_algebra_view": {
+      "active_subspace": "low-rank eigenspaces of empirical response identify high-benefit coordinates under byte constraints",
+      "differential": "dS = grad_seg dM + grad_pose dP + lambda_rate d|A|",
+      "hessian": "H approximates pair/frame/class/stream interactions and non-additive scorer curvature",
+      "matrix_objects": [
+        "pair x component trace matrix",
+        "atom x byte-cost vector",
+        "atom x scorer-benefit matrix",
+        "stream x stream interaction matrix",
+        "basis x frame coefficient matrix"
+      ],
+      "projection": "Dykstra/ADMM-style projections enforce rate, runtime, compliance, and reproducibility constraints",
+      "series_expansions": [
+        "Taylor/Frechet expansions for local scorer response",
+        "Fourier/DCT/Walsh expansions for mask and residual fields",
+        "Neumann-style iterative correction when operators are contractive inside a trust region"
+      ]
+    },
+    "constraints": [
+      "all score-affecting bits are charged inside archive.zip or fixed contest code",
+      "inflate is deterministic and finishes inside contest budget on T4/equivalent",
+      "no scorer patching, sidecars, network fetches, or host-local score bits",
+      "archive construction is byte-for-byte reproducible",
+      "score claims require exact CUDA auth eval on exact archive bytes",
+      "Apogee-owned native codecs and parsers prefer Rust over C++ unless public replay custody requires existing source"
+    ],
+    "field_bases": [
+      "pair/frame/class atoms",
+      "mask boundaries and connected components",
+      "ego-motion and foveation coordinates",
+      "pose active subspaces",
+      "renderer tensor blocks",
+      "sparse residual action groups",
+      "entropy-code symbols and packer layout bits"
+    ],
+    "local_variation": "delta S = <grad_seg+grad_pose,dphi> + 0.5<dphi,H dphi> + lambda_rate*delta_bytes + higher_order_terms",
+    "measure_theoretic_view": {
+      "empirical_measure": "uniform measure over the 600 official pair samples",
+      "posenet_measure": "mu_pose(pair, dim)=squared pose-coordinate error before outer sqrt",
+      "rate_measure": "mu_rate(atom)=charged_bytes(atom)",
+      "segnet_measure": "mu_seg(pair, pixel, class)=argmax-disagreement contribution after scorer preprocessing"
+    },
+    "number_theoretic_and_coding_view": {
+      "canonicalization": "member order, timestamps, permissions, and codec parameters are part of the integer byte solution",
+      "integer_lattice": "archive bytes, quantized symbols, row runs, pose deltas, and entropy-code states live on integer lattices",
+      "modular_constraints": "fixed-width and fixed-length PR85 fields impose congruence/length constraints before any shrink is valid",
+      "prefix_codes": "variable-length and arithmetic-coded streams must be uniquely decodable under the charged runtime grammar"
+    },
+    "optimization_variables": [
+      "archive byte string A",
+      "deterministic inflate program D_A",
+      "semantic mask field M",
+      "pose field P",
+      "renderer weights theta",
+      "correction/action fields z",
+      "entropy model/hyperprior h",
+      "packer grammar g"
+    ],
+    "promotion_oracle": "archive.zip -> inflate.sh -> upstream/evaluate.py on CUDA",
+    "set_theoretic_view": {
+      "archive_space": "A = {byte strings accepted by strict zip/archive validator}",
+      "feasible_set": "F = A intersect C_compliance intersect C_runtime intersect C_reproducibility",
+      "field_space": "Phi = M x P x Theta x Z x H x G",
+      "promotion_set": "P++ = F intersect {exact CUDA T4/equivalent evidence, 600 samples, clean custody}",
+      "runtime_space": "D = {deterministic inflate programs closed over archive bytes and fixed contest code}",
+      "stackability": "two transforms compose only when their read/write coordinate sets are disjoint or an exact stacked archive proves compatibility"
+    },
+    "signal_theoretic_view": {
+      "actionable_use": "choose low-dimensional proposal bases and anti-aliasing guards before exact CUDA archive tests",
+      "bases": [
+        "temporal prediction and residuals",
+        "mask-boundary finite differences",
+        "DCT/Fourier/Walsh low-rank modes",
+        "wavelet and multiresolution mask atoms",
+        "ego-motion/foveation vector fields",
+        "learned token and entropy-model latents"
+      ],
+      "risks": [
+        "aliasing or phase errors can be visually small but PoseNet-catastrophic",
+        "argmax semantic cliffs make smooth proxy losses non-promotable",
+        "generic entropy wins can be no-ops unless decoded signal identity or exact component deltas are recorded"
+      ],
+      "scorer_channels": "SegNet observes second-frame semantic content; PoseNet observes two-frame motion/geometry",
+      "source_signal": "1200-frame 1164x874 driving video sampled at 20 fps"
+    }
+  },
+  "evidence_grade": "planning_only_manifest",
+  "planning_constraints": [
+    "This manifest is planning-only and cannot rank or promote by itself.",
+    "Structured exact CUDA artifacts override all static and external fields.",
+    "Any future dispatch still requires an active lane claim."
+  ],
+  "public_basin_profiles": [
+    {
+      "bundle": {
+        "fixed_length_segments": {
+          "bias": 223,
+          "region": 273
+        },
+        "format": "pr85_v5_micro_24bit_lengths_fixed_bias_region",
+        "header_bytes": 24,
+        "segment_lengths": {
+          "bias": 223,
+          "frac": 106,
+          "frac2": 149,
+          "frac3": 154,
+          "mask": 159011,
+          "model": 57074,
+          "pose": 1487,
+          "post": 1400,
+          "randmulti": 16101,
+          "region": 273,
+          "shift": 226
+        },
+        "segment_offsets": {
+          "bias": 219631,
+          "frac": 219222,
+          "frac2": 219328,
+          "frac3": 219477,
+          "mask": 24,
+          "model": 159035,
+          "pose": 216109,
+          "post": 217596,
+          "randmulti": 220127,
+          "region": 219854,
+          "shift": 218996
+        }
+      },
+      "evidence_grade": "external/planning_only_static_anatomy",
+      "fields": [
+        {
+          "charged_bytes": 159011,
+          "container_codec": "raw",
+          "coordinate_kind": "semantic_mask_manifold",
+          "decoded_bytes": 159011,
+          "name": "mask",
+          "optimization_role": "dominant rate and SegNet/PoseNet geometry coordinate",
+          "rate_term": 0.10587889799490958,
+          "schema_facts": {
+            "actual_bitstream_bytes": 158991,
+            "class_count_assumption": 5,
+            "declared_bitstream_bytes": 158991,
+            "declared_length_matches_payload": true,
+            "decoded_mask_bytes": 117964800,
+            "frame_count": 600,
+            "header_bytes": 20,
+            "height": 512,
+            "kind": "qma9_range_mask",
+            "magic": "QMA9",
+            "recognized": true,
+            "width": 384
+          }
+        },
+        {
+          "charged_bytes": 57074,
+          "container_codec": "brotli",
+          "coordinate_kind": "learned_renderer_weight_chart",
+          "decoded_bytes": 61590,
+          "name": "model",
+          "optimization_role": "renderer capacity and self-compression coordinate",
+          "rate_term": 0.03800323389049481,
+          "schema_facts": {
+            "hilo_split": true,
+            "kind": "custom_quantized_joint_frame_model",
+            "magic": "QH0",
+            "recognized": true,
+            "runtime_imported": false,
+            "static_parse_limit": "tensor table depends on JointFrameGenerator module order in replay runtime"
+          }
+        },
+        {
+          "charged_bytes": 1487,
+          "container_codec": "brotli",
+          "coordinate_kind": "low_dimensional_pose_subspace",
+          "decoded_bytes": 1806,
+          "name": "pose",
+          "optimization_role": "PoseNet-sensitive low-byte coordinate",
+          "rate_term": 0.0009901322632926688,
+          "schema_facts": {
+            "dimension_count": 2,
+            "dimensions": [
+              0,
+              2
+            ],
+            "encoded_stream_bytes": 1795,
+            "frame_count_assumption": 600,
+            "header_bytes": 11,
+            "kind": "p1d1_delta_pose_stream",
+            "magic": "P1D1",
+            "payload_length_matches_streams": true,
+            "recognized": true,
+            "stream_lengths": [
+              1137,
+              658
+            ]
+          }
+        },
+        {
+          "charged_bytes": 1400,
+          "container_codec": "brotli",
+          "coordinate_kind": "pairwise_postprocess_code_field",
+          "decoded_bytes": 2400,
+          "name": "post",
+          "optimization_role": "small dense per-pair correction coordinate",
+          "rate_term": 0.0009322025343710399,
+          "schema_facts": {
+            "choice_stats_by_stage": [
+              {
+                "count": 600,
+                "dominant_symbol": 3,
+                "dominant_symbol_count": 84,
+                "dominant_symbol_fraction": 0.14,
+                "entropy_bits_per_symbol": 3.526757,
+                "ideal_entropy_bytes": 264.507,
+                "max": 11,
+                "min": 0,
+                "nonzero_count": 546,
+                "unique_count": 12
+              },
+              {
+                "count": 600,
+                "dominant_symbol": 49,
+                "dominant_symbol_count": 31,
+                "dominant_symbol_fraction": 0.051667,
+                "entropy_bits_per_symbol": 5.702992,
+                "ideal_entropy_bytes": 427.724,
+                "max": 64,
+                "min": 0,
+                "nonzero_count": 593,
+                "unique_count": 64
+              },
+              {
+                "count": 600,
+                "dominant_symbol": 115,
+                "dominant_symbol_count": 33,
+                "dominant_symbol_fraction": 0.055,
+                "entropy_bits_per_symbol": 6.120215,
+                "ideal_entropy_bytes": 459.016,
+                "max": 124,
+                "min": 0,
+                "nonzero_count": 597,
+                "unique_count": 109
+              },
+              {
+                "count": 600,
+                "dominant_symbol": 0,
+                "dominant_symbol_count": 461,
+                "dominant_symbol_fraction": 0.768333,
+                "entropy_bits_per_symbol": 1.619451,
+                "ideal_entropy_bytes": 121.459,
+                "max": 26,
+                "min": 0,
+                "nonzero_count": 139,
+                "unique_count": 18
+              }
+            ],
+            "ideal_entropy_bytes_total": 1272.706,
+            "kind": "headerless_post_code_stages",
+            "pairs_per_stage": 600,
+            "recognized": true,
+            "stage_count": 4
+          }
+        },
+        {
+          "charged_bytes": 226,
+          "container_codec": "brotli",
+          "coordinate_kind": "ego_motion_micro_choice_field",
+          "decoded_bytes": 603,
+          "name": "shift",
+          "optimization_role": "small ego-motion correction coordinate",
+          "rate_term": 0.00015048412340561073,
+          "schema_facts": {
+            "delta_zero_maps_to_choice": 40,
+            "encoded_choice_stats": {
+              "count": 600,
+              "dominant_symbol": 0,
+              "dominant_symbol_count": 419,
+              "dominant_symbol_fraction": 0.698333,
+              "entropy_bits_per_symbol": 2.446621,
+              "ideal_entropy_bytes": 183.497,
+              "max": 74,
+              "min": 0,
+              "nonzero_count": 181,
+              "unique_count": 50
+            },
+            "magic": "SD4",
+            "pair_count": 600,
+            "recognized": true
+          }
+        },
+        {
+          "charged_bytes": 106,
+          "container_codec": "brotli",
+          "coordinate_kind": "sparse_fractional_warp_field",
+          "decoded_bytes": 179,
+          "name": "frac",
+          "optimization_role": "sparse foveated warp correction coordinate",
+          "rate_term": 7.058104903095017e-05,
+          "schema_facts": {
+            "default_choice": 4,
+            "magic": "FV1",
+            "max_index": 566,
+            "min_index": 67,
+            "pair_count": 600,
+            "payload_length_matches_sparse_table": true,
+            "recognized": true,
+            "sparse_override_count": 87,
+            "sparse_override_fraction": 0.145,
+            "value_stats": {
+              "count": 87,
+              "dominant_symbol": 3,
+              "dominant_symbol_count": 21,
+              "dominant_symbol_fraction": 0.241379,
+              "entropy_bits_per_symbol": 2.655152,
+              "ideal_entropy_bytes": 28.875,
+              "max": 9,
+              "min": 1,
+              "nonzero_count": 87,
+              "unique_count": 8
+            }
+          }
+        },
+        {
+          "charged_bytes": 149,
+          "container_codec": "brotli",
+          "coordinate_kind": "dense_fractional_warp_field",
+          "decoded_bytes": 603,
+          "name": "frac2",
+          "optimization_role": "dense foveated warp correction coordinate",
+          "rate_term": 9.921298401520353e-05,
+          "schema_facts": {
+            "encoded_choice_stats": {
+              "count": 600,
+              "dominant_symbol": 4,
+              "dominant_symbol_count": 452,
+              "dominant_symbol_fraction": 0.753333,
+              "entropy_bits_per_symbol": 1.494013,
+              "ideal_entropy_bytes": 112.051,
+              "max": 8,
+              "min": 0,
+              "nonzero_count": 582,
+              "unique_count": 9
+            },
+            "magic": "FH2",
+            "pair_count": 600,
+            "recognized": true
+          }
+        },
+        {
+          "charged_bytes": 154,
+          "container_codec": "brotli",
+          "coordinate_kind": "dense_fractional_warp_field",
+          "decoded_bytes": 603,
+          "name": "frac3",
+          "optimization_role": "dense foveated warp correction coordinate",
+          "rate_term": 0.00010254227878081439,
+          "schema_facts": {
+            "delta_zero_maps_to_choice": 4,
+            "encoded_choice_stats": {
+              "count": 600,
+              "dominant_symbol": 0,
+              "dominant_symbol_count": 437,
+              "dominant_symbol_fraction": 0.728333,
+              "entropy_bits_per_symbol": 1.62584,
+              "ideal_entropy_bytes": 121.938,
+              "max": 9,
+              "min": 0,
+              "nonzero_count": 163,
+              "unique_count": 9
+            },
+            "magic": "FD3",
+            "pair_count": 600,
+            "recognized": true
+          }
+        },
+        {
+          "charged_bytes": 223,
+          "container_codec": "brotli",
+          "coordinate_kind": "pairwise_rgb_bias_field",
+          "decoded_bytes": 603,
+          "name": "bias",
+          "optimization_role": "fixed-length PR85 micro-bias coordinate",
+          "rate_term": 0.00014848654654624422,
+          "schema_facts": {
+            "delta_zero_maps_to_choice": 13,
+            "encoded_choice_stats": {
+              "count": 600,
+              "dominant_symbol": 0,
+              "dominant_symbol_count": 373,
+              "dominant_symbol_fraction": 0.621667,
+              "entropy_bits_per_symbol": 2.570944,
+              "ideal_entropy_bytes": 192.821,
+              "max": 27,
+              "min": 0,
+              "nonzero_count": 227,
+              "unique_count": 26
+            },
+            "magic": "BD1",
+            "pair_count": 600,
+            "recognized": true
+          }
+        },
+        {
+          "charged_bytes": 273,
+          "container_codec": "brotli",
+          "coordinate_kind": "region_conditioned_bias_field",
+          "decoded_bytes": 603,
+          "name": "region",
+          "optimization_role": "fixed-length PR85 region-bias coordinate",
+          "rate_term": 0.00018177949420235278,
+          "schema_facts": {
+            "encoded_choice_stats": {
+              "count": 600,
+              "dominant_symbol": 0,
+              "dominant_symbol_count": 345,
+              "dominant_symbol_fraction": 0.575,
+              "entropy_bits_per_symbol": 3.08377,
+              "ideal_entropy_bytes": 231.283,
+              "max": 92,
+              "min": 0,
+              "nonzero_count": 255,
+              "unique_count": 50
+            },
+            "magic": "RH1",
+            "pair_count": 600,
+            "recognized": true
+          }
+        },
+        {
+          "charged_bytes": 16101,
+          "container_codec": "brotli",
+          "coordinate_kind": "sparse_multiscale_residual_action_field",
+          "decoded_bytes": 27105,
+          "name": "randmulti",
+          "optimization_role": "largest explicit correction table and water-fill target",
+          "rate_term": 0.010720995004220081,
+          "schema_facts": {
+            "group_count": 72,
+            "groups": [
+              {
+                "amp": 1,
+                "group_index": 0,
+                "lh": 24,
+                "lw": 32,
+                "nonzero_density": 0.165833,
+                "nonzero_entries": 1194,
+                "possible_pair_rows": 7200,
+                "row_count_stats": {
+                  "count": 12,
+                  "dominant_symbol": 15,
+                  "dominant_symbol_count": 3,
+                  "dominant_symbol_fraction": 0.25,
+                  "entropy_bits_per_symbol": 3.022055,
+                  "ideal_entropy_bytes": 4.533,
+                  "max": 255,
+                  "min": 15,
+                  "nonzero_count": 12,
+                  "unique_count": 9
+                },
+                "selection_rows": 12
+              },
+              {
+                "amp": 1,
+                "group_index": 1,
+                "lh": 12,
+                "lw": 16,
+                "nonzero_density": 0.313333,
+                "nonzero_entries": 188,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 188,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 188,
+                  "min": 188,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 2,
+                "lh": 6,
+                "lw": 8,
+                "nonzero_density": 0.321667,
+                "nonzero_entries": 193,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 193,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 193,
+                  "min": 193,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 3,
+                "lh": 3,
+                "lw": 4,
+                "nonzero_density": 0.276667,
+                "nonzero_entries": 166,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 166,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 166,
+                  "min": 166,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 4,
+                "lh": 2,
+                "lw": 2,
+                "nonzero_density": 0.241667,
+                "nonzero_entries": 145,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 145,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 145,
+                  "min": 145,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 5,
+                "lh": 8,
+                "lw": 8,
+                "nonzero_density": 0.321667,
+                "nonzero_entries": 193,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 193,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 193,
+                  "min": 193,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 6,
+                "lh": 4,
+                "lw": 4,
+                "nonzero_density": 0.196667,
+                "nonzero_entries": 118,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 118,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 118,
+                  "min": 118,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 7,
+                "lh": 4,
+                "lw": 8,
+                "nonzero_density": 0.195,
+                "nonzero_entries": 117,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 117,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 117,
+                  "min": 117,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 8,
+                "lh": 2,
+                "lw": 4,
+                "nonzero_density": 0.178333,
+                "nonzero_entries": 107,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 107,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 107,
+                  "min": 107,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 9,
+                "lh": 2,
+                "lw": 8,
+                "nonzero_density": 0.17,
+                "nonzero_entries": 102,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 102,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 102,
+                  "min": 102,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 10,
+                "lh": 1,
+                "lw": 2,
+                "nonzero_density": 0.148333,
+                "nonzero_entries": 89,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 89,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 89,
+                  "min": 89,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 11,
+                "lh": 1,
+                "lw": 4,
+                "nonzero_density": 0.085,
+                "nonzero_entries": 51,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 51,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 51,
+                  "min": 51,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 12,
+                "lh": 2,
+                "lw": 1,
+                "nonzero_density": 0.071667,
+                "nonzero_entries": 43,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 43,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 43,
+                  "min": 43,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 13,
+                "lh": 4,
+                "lw": 1,
+                "nonzero_density": 0.176667,
+                "nonzero_entries": 106,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 106,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 106,
+                  "min": 106,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 14,
+                "lh": 8,
+                "lw": 1,
+                "nonzero_density": 0.371667,
+                "nonzero_entries": 223,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 223,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 223,
+                  "min": 223,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 15,
+                "lh": 1,
+                "lw": 8,
+                "nonzero_density": 0.133333,
+                "nonzero_entries": 80,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 80,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 80,
+                  "min": 80,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 16,
+                "lh": 16,
+                "lw": 1,
+                "nonzero_density": 0.278333,
+                "nonzero_entries": 167,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 167,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 167,
+                  "min": 167,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 17,
+                "lh": 1,
+                "lw": 16,
+                "nonzero_density": 0.103333,
+                "nonzero_entries": 62,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 62,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 62,
+                  "min": 62,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 18,
+                "lh": 32,
+                "lw": 1,
+                "nonzero_density": 0.34,
+                "nonzero_entries": 204,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 204,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 204,
+                  "min": 204,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 19,
+                "lh": 64,
+                "lw": 1,
+                "nonzero_density": 0.886667,
+                "nonzero_entries": 532,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 255,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 255,
+                  "min": 255,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 20,
+                "lh": 256,
+                "lw": 1,
+                "nonzero_density": 0.581667,
+                "nonzero_entries": 349,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 255,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 255,
+                  "min": 255,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 21,
+                "lh": 1024,
+                "lw": 1,
+                "nonzero_density": 0.611667,
+                "nonzero_entries": 367,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 255,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 255,
+                  "min": 255,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 22,
+                "lh": 2048,
+                "lw": 1,
+                "nonzero_density": 0.433333,
+                "nonzero_entries": 260,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 255,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 255,
+                  "min": 255,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 23,
+                "lh": 4096,
+                "lw": 1,
+                "nonzero_density": 0.376667,
+                "nonzero_entries": 226,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 226,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 226,
+                  "min": 226,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 24,
+                "lh": 8192,
+                "lw": 1,
+                "nonzero_density": 0.325,
+                "nonzero_entries": 195,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 195,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 195,
+                  "min": 195,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 25,
+                "lh": 8192,
+                "lw": 1,
+                "nonzero_density": 0.325,
+                "nonzero_entries": 195,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 195,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 195,
+                  "min": 195,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 26,
+                "lh": 16384,
+                "lw": 1,
+                "nonzero_density": 0.425,
+                "nonzero_entries": 255,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 255,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 255,
+                  "min": 255,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 27,
+                "lh": 32768,
+                "lw": 1,
+                "nonzero_density": 0.391667,
+                "nonzero_entries": 235,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 235,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 235,
+                  "min": 235,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 28,
+                "lh": 65536,
+                "lw": 1,
+                "nonzero_density": 0.385,
+                "nonzero_entries": 231,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 231,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 231,
+                  "min": 231,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 29,
+                "lh": 131072,
+                "lw": 1,
+                "nonzero_density": 0.366667,
+                "nonzero_entries": 220,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 220,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 220,
+                  "min": 220,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 30,
+                "lh": 262144,
+                "lw": 1,
+                "nonzero_density": 0.343333,
+                "nonzero_entries": 206,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 206,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 206,
+                  "min": 206,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 31,
+                "lh": 524288,
+                "lw": 1,
+                "nonzero_density": 0.385,
+                "nonzero_entries": 231,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 231,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 231,
+                  "min": 231,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 32,
+                "lh": 1048576,
+                "lw": 1,
+                "nonzero_density": 0.333333,
+                "nonzero_entries": 200,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 200,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 200,
+                  "min": 200,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 33,
+                "lh": 874,
+                "lw": 1,
+                "nonzero_density": 0.481667,
+                "nonzero_entries": 289,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 255,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 255,
+                  "min": 255,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 34,
+                "lh": 874,
+                "lw": 1,
+                "nonzero_density": 0.371667,
+                "nonzero_entries": 223,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 223,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 223,
+                  "min": 223,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 35,
+                "lh": 2097152,
+                "lw": 1,
+                "nonzero_density": 0.283333,
+                "nonzero_entries": 170,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 170,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 170,
+                  "min": 170,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 36,
+                "lh": 875,
+                "lw": 1,
+                "nonzero_density": 0.341667,
+                "nonzero_entries": 205,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 205,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 205,
+                  "min": 205,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 37,
+                "lh": 876,
+                "lw": 1,
+                "nonzero_density": 0.255,
+                "nonzero_entries": 153,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 153,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 153,
+                  "min": 153,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 38,
+                "lh": 877,
+                "lw": 1,
+                "nonzero_density": 0.286667,
+                "nonzero_entries": 172,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 172,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 172,
+                  "min": 172,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 39,
+                "lh": 1164,
+                "lw": 1,
+                "nonzero_density": 0.23,
+                "nonzero_entries": 138,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 138,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 138,
+                  "min": 138,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 40,
+                "lh": 878,
+                "lw": 1,
+                "nonzero_density": 0.161667,
+                "nonzero_entries": 97,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 97,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 97,
+                  "min": 97,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 41,
+                "lh": 879,
+                "lw": 1,
+                "nonzero_density": 0.203333,
+                "nonzero_entries": 122,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 122,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 122,
+                  "min": 122,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 42,
+                "lh": 880,
+                "lw": 1,
+                "nonzero_density": 0.358333,
+                "nonzero_entries": 215,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 215,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 215,
+                  "min": 215,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 43,
+                "lh": 881,
+                "lw": 1,
+                "nonzero_density": 0.186667,
+                "nonzero_entries": 112,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 112,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 112,
+                  "min": 112,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 44,
+                "lh": 882,
+                "lw": 1,
+                "nonzero_density": 0.25,
+                "nonzero_entries": 150,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 150,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 150,
+                  "min": 150,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 45,
+                "lh": 512,
+                "lw": 2,
+                "nonzero_density": 0.223333,
+                "nonzero_entries": 134,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 134,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 134,
+                  "min": 134,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 46,
+                "lh": 256,
+                "lw": 2,
+                "nonzero_density": 0.163333,
+                "nonzero_entries": 98,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 98,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 98,
+                  "min": 98,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 47,
+                "lh": 128,
+                "lw": 2,
+                "nonzero_density": 0.115,
+                "nonzero_entries": 69,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 69,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 69,
+                  "min": 69,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 48,
+                "lh": 64,
+                "lw": 2,
+                "nonzero_density": 0.106667,
+                "nonzero_entries": 64,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 64,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 64,
+                  "min": 64,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 49,
+                "lh": 32,
+                "lw": 2,
+                "nonzero_density": 0.331667,
+                "nonzero_entries": 199,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 199,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 199,
+                  "min": 199,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 50,
+                "lh": 16,
+                "lw": 2,
+                "nonzero_density": 0.278333,
+                "nonzero_entries": 167,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 167,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 167,
+                  "min": 167,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 51,
+                "lh": 8,
+                "lw": 2,
+                "nonzero_density": 0.25,
+                "nonzero_entries": 150,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 150,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 150,
+                  "min": 150,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 52,
+                "lh": 4,
+                "lw": 2,
+                "nonzero_density": 0.186667,
+                "nonzero_entries": 112,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 112,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 112,
+                  "min": 112,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 53,
+                "lh": 4,
+                "lw": 4,
+                "nonzero_density": 0.191667,
+                "nonzero_entries": 115,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 115,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 115,
+                  "min": 115,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 54,
+                "lh": 8,
+                "lw": 4,
+                "nonzero_density": 0.198333,
+                "nonzero_entries": 119,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 119,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 119,
+                  "min": 119,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 55,
+                "lh": 16,
+                "lw": 4,
+                "nonzero_density": 0.21,
+                "nonzero_entries": 126,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 126,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 126,
+                  "min": 126,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 56,
+                "lh": 32,
+                "lw": 4,
+                "nonzero_density": 0.161667,
+                "nonzero_entries": 97,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 97,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 97,
+                  "min": 97,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 57,
+                "lh": 64,
+                "lw": 4,
+                "nonzero_density": 0.135,
+                "nonzero_entries": 81,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 81,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 81,
+                  "min": 81,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 58,
+                "lh": 128,
+                "lw": 4,
+                "nonzero_density": 0.18,
+                "nonzero_entries": 108,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 108,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 108,
+                  "min": 108,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 59,
+                "lh": 64,
+                "lw": 8,
+                "nonzero_density": 0.105,
+                "nonzero_entries": 63,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 63,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 63,
+                  "min": 63,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 60,
+                "lh": 32,
+                "lw": 8,
+                "nonzero_density": 0.208333,
+                "nonzero_entries": 125,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 125,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 125,
+                  "min": 125,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 4,
+                "group_index": 61,
+                "lh": 222,
+                "lw": 222,
+                "nonzero_density": 0.343333,
+                "nonzero_entries": 206,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 206,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 206,
+                  "min": 206,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 4,
+                "group_index": 62,
+                "lh": 222,
+                "lw": 223,
+                "nonzero_density": 0.523333,
+                "nonzero_entries": 314,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 255,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 255,
+                  "min": 255,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 2,
+                "group_index": 63,
+                "lh": 223,
+                "lw": 222,
+                "nonzero_density": 0.633333,
+                "nonzero_entries": 380,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 255,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 255,
+                  "min": 255,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 4,
+                "group_index": 64,
+                "lh": 223,
+                "lw": 223,
+                "nonzero_density": 0.428333,
+                "nonzero_entries": 257,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 255,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 255,
+                  "min": 255,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 4,
+                "group_index": 65,
+                "lh": 223,
+                "lw": 221,
+                "nonzero_density": 0.493333,
+                "nonzero_entries": 296,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 255,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 255,
+                  "min": 255,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 4,
+                "group_index": 66,
+                "lh": 223,
+                "lw": 224,
+                "nonzero_density": 0.515,
+                "nonzero_entries": 309,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 255,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 255,
+                  "min": 255,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 4,
+                "group_index": 67,
+                "lh": 223,
+                "lw": 221,
+                "nonzero_density": 0.243333,
+                "nonzero_entries": 146,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 146,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 146,
+                  "min": 146,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 4,
+                "group_index": 68,
+                "lh": 223,
+                "lw": 219,
+                "nonzero_density": 0.331667,
+                "nonzero_entries": 199,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 199,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 199,
+                  "min": 199,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 69,
+                "lh": 64,
+                "lw": 16,
+                "nonzero_density": 0.105,
+                "nonzero_entries": 63,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 63,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 63,
+                  "min": 63,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 4,
+                "group_index": 70,
+                "lh": 223,
+                "lw": 218,
+                "nonzero_density": 0.233333,
+                "nonzero_entries": 140,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 140,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 140,
+                  "min": 140,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 4,
+                "group_index": 71,
+                "lh": 224,
+                "lw": 222,
+                "nonzero_density": 0.105,
+                "nonzero_entries": 63,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 63,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 63,
+                  "min": 63,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              }
+            ],
+            "kind": "headerless_randmulti_sparse_tables",
+            "max_nonzero_entries_in_row": 532,
+            "nonzero_density": 0.271004,
+            "nonzero_entries": 13496,
+            "pairs_per_row": 600,
+            "payload_length_matches_specs": true,
+            "possible_pair_rows": 49800,
+            "recognized": true,
+            "selection_rows": 83,
+            "top_groups_by_nonzero": [
+              {
+                "amp": 1,
+                "group_index": 0,
+                "lh": 24,
+                "lw": 32,
+                "nonzero_density": 0.165833,
+                "nonzero_entries": 1194,
+                "possible_pair_rows": 7200,
+                "row_count_stats": {
+                  "count": 12,
+                  "dominant_symbol": 15,
+                  "dominant_symbol_count": 3,
+                  "dominant_symbol_fraction": 0.25,
+                  "entropy_bits_per_symbol": 3.022055,
+                  "ideal_entropy_bytes": 4.533,
+                  "max": 255,
+                  "min": 15,
+                  "nonzero_count": 12,
+                  "unique_count": 9
+                },
+                "selection_rows": 12
+              },
+              {
+                "amp": 1,
+                "group_index": 19,
+                "lh": 64,
+                "lw": 1,
+                "nonzero_density": 0.886667,
+                "nonzero_entries": 532,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 255,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 255,
+                  "min": 255,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 2,
+                "group_index": 63,
+                "lh": 223,
+                "lw": 222,
+                "nonzero_density": 0.633333,
+                "nonzero_entries": 380,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 255,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 255,
+                  "min": 255,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 21,
+                "lh": 1024,
+                "lw": 1,
+                "nonzero_density": 0.611667,
+                "nonzero_entries": 367,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 255,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 255,
+                  "min": 255,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 20,
+                "lh": 256,
+                "lw": 1,
+                "nonzero_density": 0.581667,
+                "nonzero_entries": 349,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 255,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 255,
+                  "min": 255,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 4,
+                "group_index": 62,
+                "lh": 222,
+                "lw": 223,
+                "nonzero_density": 0.523333,
+                "nonzero_entries": 314,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 255,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 255,
+                  "min": 255,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 4,
+                "group_index": 66,
+                "lh": 223,
+                "lw": 224,
+                "nonzero_density": 0.515,
+                "nonzero_entries": 309,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 255,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 255,
+                  "min": 255,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 4,
+                "group_index": 65,
+                "lh": 223,
+                "lw": 221,
+                "nonzero_density": 0.493333,
+                "nonzero_entries": 296,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 255,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 255,
+                  "min": 255,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 33,
+                "lh": 874,
+                "lw": 1,
+                "nonzero_density": 0.481667,
+                "nonzero_entries": 289,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 255,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 255,
+                  "min": 255,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              },
+              {
+                "amp": 1,
+                "group_index": 22,
+                "lh": 2048,
+                "lw": 1,
+                "nonzero_density": 0.433333,
+                "nonzero_entries": 260,
+                "possible_pair_rows": 600,
+                "row_count_stats": {
+                  "count": 1,
+                  "dominant_symbol": 255,
+                  "dominant_symbol_count": 1,
+                  "dominant_symbol_fraction": 1.0,
+                  "entropy_bits_per_symbol": -0.0,
+                  "ideal_entropy_bytes": -0.0,
+                  "max": 255,
+                  "min": 255,
+                  "nonzero_count": 1,
+                  "unique_count": 1
+                },
+                "selection_rows": 1
+              }
+            ]
+          }
+        }
+      ],
+      "json_sha256": "ad8a856639dd40fb6d30350e3e5905682bcb52ef7e76d4f5353ebdcb556dd1b6",
+      "label": "public_pr85",
+      "path": "experiments/results/public_pr85_intake_20260503_codex/pr85_adaptive_masking_sidechannel_attribution_plan.json",
+      "source_archive": {
+        "bytes": 236328,
+        "member_compress_size": 236228,
+        "member_crc32_hex": "c6356353",
+        "member_file_size": 236228,
+        "member_name": "x",
+        "member_sha256": "53bc78effa78cc7850d08a9ddc5488665b93136e9843549d917c17df729a1c50",
+        "path": "experiments/results/public_pr85_intake_20260503_codex/archive.zip",
+        "sha256": "eb18df2f1b364e513f36933116ec0c1011c6d3bbf8022e16495e0508c6258f5e"
+      }
+    },
+    {
+      "archive_bytes": 207579,
+      "archive_sha256": "e67b7c22240dbe33853c19d049b0044a5df16ce5f751ba8f1021cab8ceb03cef",
+      "evidence_grade": "external_static_profile",
+      "fields": [
+        {
+          "charged_bytes": 31144,
+          "coordinate_kind": "master_neural_renderer_weights",
+          "decoded_bytes": 48444,
+          "name": "master.pt.gz",
+          "optimization_role": "learned representation coordinate",
+          "rate_term": 0.020737511236036905,
+          "sha256": "3f3ee2b19ba5cf97017559750c0d64bc422c3f84fedaed1877741ee6c6bd5236"
+        },
+        {
+          "charged_bytes": 32287,
+          "coordinate_kind": "slave_nerv_refinement_weights",
+          "decoded_bytes": 42395,
+          "name": "slave.pt.gz",
+          "optimization_role": "learned refinement coordinate",
+          "rate_term": 0.021498588019455547,
+          "sha256": "817294dea0d940a8ef62c190bf96338f5a756930882f0f0d7f4d7c7eb87a82a8"
+        },
+        {
+          "charged_bytes": 28243,
+          "coordinate_kind": "entropy_model_weights",
+          "decoded_bytes": null,
+          "name": "hpac.pt.ppmd",
+          "optimization_role": "self-compressed entropy prior",
+          "rate_term": 0.018805854413029486,
+          "sha256": "de7638c531c9dafa06148602cf784bf3ae9997f326f85cc25b9f3646b536abdd"
+        },
+        {
+          "charged_bytes": 113900,
+          "coordinate_kind": "arithmetic_coded_token_field",
+          "decoded_bytes": null,
+          "name": "tokens.bin",
+          "optimization_role": "dominant PR86 rate field and HPAC transfer target",
+          "rate_term": 0.07584133476061532,
+          "sha256": "14144bde496631f89a02646496bc2e66306bba6da149ddca37e21d85d175f225"
+        },
+        {
+          "charged_bytes": 1499,
+          "coordinate_kind": "runtime_metadata",
+          "decoded_bytes": null,
+          "name": "meta.pt",
+          "optimization_role": "small fixed runtime contract",
+          "rate_term": 0.0009981225707301348,
+          "sha256": "848381e2da1b0f307670174f135a3925c43d8cdc73576b4bf05fadf833de4a08"
+        }
+      ],
+      "json_sha256": "1e66adb4bc928ba87c72bafc9c801136a44619af164d01c010bc80b1c727102b",
+      "label": "public_pr86",
+      "path": "experiments/results/public_pr86_intake_20260504_codex/profile_pr86_archive_static.json",
+      "public_claim": {
+        "archive_bytes": 207579,
+        "avg_posenet_dist": 0.00045701,
+        "avg_segnet_dist": 0.00067815,
+        "evidence_grade": "external_report_not_our_score_claim",
+        "terms": {
+          "posenet_term": 0.06760251474612464,
+          "rate_term": 0.1382183356301472,
+          "score": 0.2736358503762718,
+          "segnet_term": 0.067815
+        }
+      }
+    }
+  ],
+  "schema": "contest_problem_space_manifest_v1",
+  "score_claim": false,
+  "score_formula": {
+    "terms": [
+      "segnet_term",
+      "posenet_term",
+      "rate_term"
+    ],
+    "text": "score = 100*seg_dist + sqrt(10*pose_dist) + 25*archive_bytes/37545489"
+  },
+  "stacking_rules": [
+    {
+      "example": "rate-only packer change plus unchanged decoded PR85 fields",
+      "required_evidence": "exact stacked archive before score claim",
+      "rule_id": "disjoint_coordinate_safe_until_runtime_coupling",
+      "set_condition": "write_set(T1) intersect write_set(T2) = empty"
+    },
+    {
+      "example": "two mask repair policies both editing QMA9-derived semantic geometry",
+      "required_evidence": "typed reconciliation manifest plus exact CUDA eval",
+      "rule_id": "same_coordinate_requires_reconciliation_operator",
+      "set_condition": "write_set(T1) intersect write_set(T2) != empty"
+    },
+    {
+      "example": "PR85 replay runtime with range_mask_codec.cpp included in hash",
+      "required_evidence": "runtime custody manifest and explicit comparison class",
+      "rule_id": "runtime_change_invalidates_archive_only_comparison",
+      "set_condition": "runtime_tree_sha256 changes"
+    },
+    {
+      "example": "entropy profile can rank atoms but cannot promote them",
+      "required_evidence": "exact CUDA auth eval on exact archive bytes",
+      "rule_id": "proxy_signal_is_not_membership_in_promotion_set",
+      "set_condition": "evidence_grade not in {A++, A}"
+    }
+  ],
+  "tool": "experiments/build_problem_space_manifest.py"
+}

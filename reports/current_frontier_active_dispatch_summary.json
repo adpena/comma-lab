@@ -1,0 +1,150 @@
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-05-03T21:47:42Z",
+  "artifact_kind": "current_frontier_active_dispatch_summary",
+  "public_release_hygiene": {
+    "classification": "safe_for_public_summary",
+    "contains_private_provider_urls": false,
+    "contains_secrets": false,
+    "path_policy": "repo_relative_paths_only",
+    "allowed_external_urls": [
+      "https://comma.ai/leaderboard",
+      "https://github.com/commaai/comma_video_compression_challenge/pull/81",
+      "https://github.com/commaai/comma_video_compression_challenge/pull/82",
+      "https://github.com/commaai/comma_video_compression_challenge/pull/84"
+    ],
+    "notes": "Private provider job links, account metadata, and raw command transcripts are intentionally excluded."
+  },
+  "score_convention": {
+    "lower_is_better": true,
+    "formula": "100 * seg_dist + sqrt(10 * pose_dist) + 25 * archive_bytes / 37545489"
+  },
+  "frontier": {
+    "internal_exact_frontier": {
+      "id": "pr84_adaptive_range_mask_no_router",
+      "public_pr": 84,
+      "public_pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/84",
+      "score": 0.2751401491321396,
+      "evidence_grade": "A++",
+      "status": "exact_t4_replay_harvested",
+      "archive_size_bytes": 215735,
+      "sample_count": 600,
+      "promotion_eligible": true,
+      "provenance_paths": [
+        "experiments/results/lightning_batch/exact_eval_public_pr84_adaptive_range_mask_no_router_t4_20260503T214008Z/contest_auth_eval.json",
+        "experiments/results/lightning_batch/exact_eval_public_pr84_adaptive_range_mask_no_router_t4_20260503T214008Z/contest_auth_eval.adjudicated.json",
+        "experiments/results/lightning_batch/exact_eval_public_pr84_adaptive_range_mask_no_router_t4_20260503T214008Z/adjudication_provenance.json",
+        ".omx/state/active_lane_dispatch_claims.md",
+        "reports/latest.md"
+      ]
+    },
+    "superseded_exact_frontier": {
+      "id": "pr81_qzs3_range_mask",
+      "public_pr": 81,
+      "public_pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/81",
+      "score": 0.2812078926981712,
+      "archive_size_bytes": 215960,
+      "local_archive_sha256": "cd01378a52688fe00ee1bfb898c67695aed89a7b3ded602b597eb7fc3031d7fc",
+      "status": "exact_t4_replay_harvested_superseded_by_pr84",
+      "score_delta_vs_pr84": 0.006067743566031625,
+      "provenance_paths": [
+        "experiments/results/lightning_batch/exact_eval_public_pr81_qzs3_range_mask_t4_depsfix_20260503T195657Z/contest_auth_eval.json",
+        "experiments/results/lightning_batch/exact_eval_public_pr81_qzs3_range_mask_t4_depsfix_20260503T195657Z/contest_auth_eval.adjudicated.json",
+        "experiments/results/lightning_batch/exact_eval_public_pr81_qzs3_range_mask_t4_depsfix_20260503T195657Z/adjudication_provenance.json",
+        ".omx/state/active_lane_dispatch_claims.md"
+      ]
+    },
+    "non_frontier_reference": {
+      "id": "pr82_henosis_frontier",
+      "public_pr": 82,
+      "public_pr_url": "https://github.com/commaai/comma_video_compression_challenge/pull/82",
+      "score": 0.2983246102939779,
+      "evidence_grade": "A++",
+      "status": "exact_t4_replay_harvested_non_frontier_vs_pr81",
+      "archive_size_bytes": 296789,
+      "sample_count": 600,
+      "provenance_paths": [
+        "experiments/results/lightning_batch/exact_eval_public_pr82_henosis_frontier_t4_depsfix_20260503T195657Z/contest_auth_eval.json",
+        "experiments/results/lightning_batch/exact_eval_public_pr82_henosis_frontier_t4_depsfix_20260503T195657Z/contest_auth_eval.adjudicated.json",
+        "experiments/results/lightning_batch/exact_eval_public_pr82_henosis_frontier_t4_depsfix_20260503T195657Z/adjudication_provenance.json"
+      ]
+    }
+  },
+  "active_dispatches": [
+    {
+      "id": "public_pr84_adaptive_range_mask_no_router_t4_replay",
+      "public_pr": 84,
+      "role": "exact_t4_replay",
+      "status": "completed_a_pp_frontier",
+      "queued_at_utc": "2026-05-03T21:40:14Z",
+      "expected_archive_sha256": "a607a6c3ae9b610e6edfb546c3206004ae40fc348ecaef2446b7134a19b8e07f",
+      "expected_archive_size_bytes": 215735,
+      "score_claim": true,
+      "exact_t4_score": 0.2751401491321396,
+      "provenance_paths": [
+        ".omx/state/active_lane_dispatch_claims.md",
+        "experiments/results/top_submission_reverse_engineering_20260503_pr84/archive.zip",
+        "experiments/results/lightning_batch/exact_eval_public_pr84_adaptive_range_mask_no_router_t4_20260503T214008Z/contest_auth_eval.adjudicated.json"
+      ]
+    },
+    {
+      "id": "pr81_pr82_qrm1_all072_randmulti_t4",
+      "role": "pr81_plus_pr82_all72_qrm1_randmulti_exact_t4_eval",
+      "status": "queued_eval",
+      "queued_at_utc": "2026-05-03T21:42:20Z",
+      "expected_archive_sha256": "05f26b0c47414661ed0c3049f6ef54ae35553b3a759824266d577db802e76fe3",
+      "expected_archive_size_bytes": 232580,
+      "planning_only_score_if_pr82_components_carry": 0.2555705856111325,
+      "score_claim": false,
+      "provenance_paths": [
+        "experiments/results/pr81_pr82_henosis_stack_20260503_codex/pr81_qma9_pr82_qps1_qrm1_all072_randmulti/archive.zip",
+        "experiments/results/pr81_pr82_henosis_stack_20260503_codex/pr81_qma9_pr82_qps1_qrm1_all072_randmulti/manifest.json",
+        ".omx/state/pr81_pr82_qrm1_all072_randmulti_g4dn_t4_20260503T214202Z_lightning_batch_record.json",
+        ".omx/state/pr81_pr82_qrm1_all072_randmulti_g4dn_t4_20260503T214202Z_lightning_exact_eval_repro_plan.json",
+        ".omx/state/active_lane_dispatch_claims.md"
+      ]
+    },
+    {
+      "id": "pr81_pr82_controls_qrm1_all072_t4",
+      "role": "pr81_plus_pr82_controls_and_all72_qrm1_exact_t4_eval",
+      "status": "queued_eval",
+      "queued_at_utc": "2026-05-03T21:42:20Z",
+      "expected_archive_sha256": "c0f030e2d2efdff53e25e0ad89e053dec0cc1ed2af221434b0145f09c3e46a12",
+      "expected_archive_size_bytes": 235111,
+      "planning_only_score_if_pr82_components_carry": 0.2572558746214847,
+      "score_claim": false,
+      "provenance_paths": [
+        "experiments/results/pr81_pr82_henosis_stack_20260503_codex/pr81_qma9_pr82_qps1_controls_qrm1_all072/archive.zip",
+        "experiments/results/pr81_pr82_henosis_stack_20260503_codex/pr81_qma9_pr82_qps1_controls_qrm1_all072/manifest.json",
+        ".omx/state/pr81_pr82_controls_qrm1_all072_g4dn_t4_20260503T214202Z_lightning_batch_record.json",
+        ".omx/state/pr81_pr82_controls_qrm1_all072_g4dn_t4_20260503T214202Z_lightning_exact_eval_repro_plan.json",
+        ".omx/state/active_lane_dispatch_claims.md"
+      ]
+    }
+  ],
+  "leaderboard_lag": {
+    "as_of_utc": "2026-05-03T21:47:42Z",
+    "public_leaderboard_url": "https://comma.ai/leaderboard",
+    "public_leaderboard_top_row": {
+      "rank": 1,
+      "score_displayed_rounded": 0.31,
+      "name": "qpose14_r55_segactions_minp",
+      "public_pr": 79,
+      "precision_note": "comma leaderboard displays rounded score text"
+    },
+    "lag_vs_pr84_internal_exact_frontier": {
+      "published_minus_internal_exact": 0.0348598508678604,
+      "interpretation": "current public leaderboard score display is higher/worse than the PR84 exact internal frontier by this amount"
+    },
+    "lag_vs_pr81_superseded_exact_frontier": {
+      "published_minus_pr81": 0.028792107301828795,
+      "interpretation": "PR81 remains exact A++ but has been superseded by PR84"
+    }
+  },
+  "status_notes": [
+    "PR84 is the current internal exact A++ frontier.",
+    "PR81 is exact A++ and superseded by PR84.",
+    "The PR81+PR82 all-72 queued jobs are score_claim=false until their CUDA JSON artifacts exist.",
+    "This summary excludes private provider URLs and raw job transcripts."
+  ]
+}

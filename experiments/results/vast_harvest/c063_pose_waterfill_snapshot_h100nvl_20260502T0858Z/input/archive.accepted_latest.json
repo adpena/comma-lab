@@ -1,0 +1,327 @@
+{
+  "archive_bytes": 276243,
+  "archive_path": "/workspace/pact/experiments/results/c063_breakthrough_candidate_matrix_20260502/h100_dispatch_matrix/c063_pose_waterfill_048_pr67_pr65_basis/archive.accepted_latest.zip",
+  "archive_sha256": "b3aeb646821b5267cbd71fb92adb3846de8ff3ebd57b819791f0b7c3224436a2",
+  "blob_bytes": 276143,
+  "blob_sha256": "a0404fe248477d2c8def7cac794aef46461d96ea6b1429b391c686108b30e3dc",
+  "brotli_quality": 11,
+  "decoded_member_sha256": {
+    "masks.mkv": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+    "optimized_poses.bin": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583",
+    "renderer.bin": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+  },
+  "evidence_grade": "empirical_metadata_for_line_search",
+  "mask_br_bytes": 219472,
+  "mask_br_sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87",
+  "mask_uncompressed_bytes": 223385,
+  "model_br_bytes": 55965,
+  "model_br_sha256": "2544dfe50d2631a56600cbfc7342e4a18c97f953526fc51425be0d62f97e22ad",
+  "model_uncompressed_bytes": 59288,
+  "payload_format": "c063_frontier_pr64_len_table_to_pr67_fixedslice",
+  "pose_br_bytes": 706,
+  "pose_br_sha256": "6dccfb9c5aa53f3698f8debad1196255ca8ffd50aa8f6948fa46efde8e1ae1ba",
+  "pose_codec": "qp1",
+  "pose_uncompressed_bytes": 1140,
+  "refinement": {
+    "basis_delta_set_index": 1,
+    "basis_delta_sets": [
+      {
+        "basis_delta_set_index": 1,
+        "kind": "pair_window",
+        "magnitudes": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "basis_delta_set_index": 2,
+        "kind": "dct",
+        "magnitudes": [
+          1,
+          2
+        ]
+      }
+    ],
+    "basis_index": 4,
+    "basis_kind": "pair_window",
+    "basis_modes": [
+      0,
+      1,
+      2,
+      3,
+      5,
+      8,
+      13,
+      21
+    ],
+    "basis_pair_indices": [
+      128,
+      67,
+      69,
+      64,
+      125,
+      423,
+      97,
+      70,
+      148,
+      121,
+      141,
+      289,
+      435,
+      78,
+      434,
+      150,
+      75,
+      310,
+      138,
+      418,
+      105,
+      159,
+      74,
+      421,
+      290,
+      101,
+      103,
+      191,
+      142,
+      200,
+      430,
+      126,
+      129,
+      95,
+      426,
+      85,
+      144,
+      179,
+      183,
+      133,
+      203,
+      431,
+      439,
+      98,
+      114,
+      96,
+      427,
+      429
+    ],
+    "basis_signed_magnitude": 2,
+    "basis_vector_count": 36,
+    "basis_window_radius": 1,
+    "best_archive_size": 276243,
+    "best_obj": 0.284903971569581,
+    "best_pose_bytes": 706,
+    "best_pose_mse": 0.001019395076824973,
+    "checkpoint": "accepted_latest",
+    "delta_sets": null,
+    "device": "cuda:0",
+    "gradient_backtrack_deltas": [
+      1
+    ],
+    "gradient_delta_sets": null,
+    "pass": 1,
+    "passes": 2,
+    "pose_atom_selection": {
+      "atom_count": 20,
+      "atoms": [
+        {
+          "delta_q": 3,
+          "frame_in_pair": 1,
+          "frame_index": 127,
+          "pair_index": 63,
+          "refined_q": 6531,
+          "source_q": 6528
+        },
+        {
+          "delta_q": 6,
+          "frame_in_pair": 0,
+          "frame_index": 128,
+          "pair_index": 64,
+          "refined_q": 5742,
+          "source_q": 5736
+        },
+        {
+          "delta_q": 6,
+          "frame_in_pair": 1,
+          "frame_index": 129,
+          "pair_index": 64,
+          "refined_q": 5926,
+          "source_q": 5920
+        },
+        {
+          "delta_q": 3,
+          "frame_in_pair": 0,
+          "frame_index": 130,
+          "pair_index": 65,
+          "refined_q": 6083,
+          "source_q": 6080
+        },
+        {
+          "delta_q": -3,
+          "frame_in_pair": 1,
+          "frame_index": 133,
+          "pair_index": 66,
+          "refined_q": 5461,
+          "source_q": 5464
+        },
+        {
+          "delta_q": -5,
+          "frame_in_pair": 0,
+          "frame_index": 134,
+          "pair_index": 67,
+          "refined_q": 5291,
+          "source_q": 5296
+        },
+        {
+          "delta_q": -5,
+          "frame_in_pair": 1,
+          "frame_index": 135,
+          "pair_index": 67,
+          "refined_q": 6099,
+          "source_q": 6104
+        },
+        {
+          "delta_q": -3,
+          "frame_in_pair": 0,
+          "frame_index": 136,
+          "pair_index": 68,
+          "refined_q": 5421,
+          "source_q": 5424
+        },
+        {
+          "delta_q": 3,
+          "frame_in_pair": 1,
+          "frame_index": 137,
+          "pair_index": 68,
+          "refined_q": 5971,
+          "source_q": 5968
+        },
+        {
+          "delta_q": 6,
+          "frame_in_pair": 0,
+          "frame_index": 138,
+          "pair_index": 69,
+          "refined_q": 5142,
+          "source_q": 5136
+        },
+        {
+          "delta_q": 6,
+          "frame_in_pair": 1,
+          "frame_index": 139,
+          "pair_index": 69,
+          "refined_q": 4998,
+          "source_q": 4992
+        },
+        {
+          "delta_q": 3,
+          "frame_in_pair": 0,
+          "frame_index": 140,
+          "pair_index": 70,
+          "refined_q": 5019,
+          "source_q": 5016
+        },
+        {
+          "delta_q": 1,
+          "frame_in_pair": 1,
+          "frame_index": 249,
+          "pair_index": 124,
+          "refined_q": 5633,
+          "source_q": 5632
+        },
+        {
+          "delta_q": 2,
+          "frame_in_pair": 0,
+          "frame_index": 250,
+          "pair_index": 125,
+          "refined_q": 5386,
+          "source_q": 5384
+        },
+        {
+          "delta_q": 2,
+          "frame_in_pair": 1,
+          "frame_index": 251,
+          "pair_index": 125,
+          "refined_q": 5890,
+          "source_q": 5888
+        },
+        {
+          "delta_q": 1,
+          "frame_in_pair": 0,
+          "frame_index": 252,
+          "pair_index": 126,
+          "refined_q": 5105,
+          "source_q": 5104
+        },
+        {
+          "delta_q": -1,
+          "frame_in_pair": 1,
+          "frame_index": 255,
+          "pair_index": 127,
+          "refined_q": 6103,
+          "source_q": 6104
+        },
+        {
+          "delta_q": -3,
+          "frame_in_pair": 0,
+          "frame_index": 256,
+          "pair_index": 128,
+          "refined_q": 6653,
+          "source_q": 6656
+        },
+        {
+          "delta_q": -3,
+          "frame_in_pair": 1,
+          "frame_index": 257,
+          "pair_index": 128,
+          "refined_q": 5741,
+          "source_q": 5744
+        },
+        {
+          "delta_q": -1,
+          "frame_in_pair": 0,
+          "frame_index": 258,
+          "pair_index": 129,
+          "refined_q": 5751,
+          "source_q": 5752
+        }
+      ],
+      "charged_accounting": {
+        "all_score_affecting_bits_inside_archive": true,
+        "archive_bytes": 276243,
+        "pose_br_bytes": 706,
+        "sidecar_bytes": 0
+      },
+      "policy": "coordinate_descent_qp1_col0",
+      "pose_codec": "pose_qp1_v1",
+      "schema_version": 1,
+      "selection_hooks": {
+        "acceptance_rule": "complete rounded archive objective strictly improves",
+        "proposal_score_is_non_promotable_until_archive_eval": true,
+        "supports_bandit_or_rl_proposal_ordering": true,
+        "supports_multipass": true
+      },
+      "wire_format": "QP1+brotli"
+    },
+    "radii": [
+      1,
+      2,
+      3,
+      5,
+      8
+    ],
+    "reference": "pr67_line_search.py",
+    "search_stage_kind": "basis_delta_set",
+    "search_stage_label": "basis_delta_set=1 kind=pair_window",
+    "tool": "experiments/line_search_pose_refinement.py"
+  },
+  "schema_version": 1,
+  "score_claim": false,
+  "source_archive": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_lossless_repack_c059_brotli_t4_20260502T0537Z/archive.zip",
+  "source_archive_path": "/workspace/pact/experiments/results/c063_breakthrough_candidate_matrix_20260502/line_search_source_c063_fixedslice/archive.zip",
+  "source_archive_sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+  "source_metadata_archive_path": "/Users/adpena/Projects/pact/experiments/results/c063_breakthrough_candidate_matrix_20260502/line_search_source_c063_fixedslice/archive.zip",
+  "source_metadata_archive_sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+  "source_payload_sha256": "b4cc31c8f16c3c48d34eb146509798f6cb5fb55df985b61303c71f6d2c8a2cf1",
+  "source_raw_payload_sha256": "a71d74cd13286ea8d16259fa94ff872d81008c790d7eee1d72ce3068919b608b",
+  "tool": "experiments/build_c063_breakthrough_candidate_matrix.py"
+}

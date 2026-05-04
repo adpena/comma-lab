@@ -1,0 +1,14 @@
+{
+  "archive_member_contract": "single_member_x",
+  "schema": "pr85_pair_atom_runtime_contract_v1",
+  "scorer_load_allowed": false,
+  "sidecars_allowed": false,
+  "supports_pair_specific_actions": true,
+  "supported_header_modes": [
+    "explicit_30"
+  ],
+  "supported_streams": [
+    "bias",
+    "region"
+  ]
+}

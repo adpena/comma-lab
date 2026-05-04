@@ -1,0 +1,82 @@
+{
+  "byte_matrix": [
+    {
+      "archive_bytes": 277388,
+      "archive_sha256": "01dc02badf851d99108fd92c570271f36f74cc5424c6d2a8f1b499cb4d1c3446",
+      "candidate_id": "source_pr79_noop_control",
+      "delta_bytes_vs_pr79": 0,
+      "payload_bytes": 277288,
+      "seg_tile_actions_brotli_bytes": 1162,
+      "seg_tile_actions_brotli_sha256": "3fdf6320b77685606283438e1a9bea4df3c83ecb525deb4750dade60c8e7dbdc",
+      "status": "source_reference"
+    },
+    {
+      "archive_bytes": 277347,
+      "archive_path": "experiments/results/pr79_pr77_lossless_s3_profile_20260503_codex/pr79_s1/pr79_s1_fixed_lossless_actions/archive.zip",
+      "archive_sha256": "d61527a43218b87871fd869dcb92b6875e99482bc28a8fdaf879caf6d8cfc4eb",
+      "candidate_id": "pr79_s1_fixed_lossless_actions",
+      "delta_bytes_vs_c102": 862,
+      "delta_bytes_vs_pr79": -41,
+      "dispatch_ready_now": false,
+      "manifest_path": "experiments/results/pr79_pr77_lossless_s3_profile_20260503_codex/pr79_s1/pr79_s1_fixed_lossless_actions/manifest.json",
+      "no_op_status": "decoded_action_semantics_preserved_action_bytes_changed",
+      "score_claim": false
+    },
+    {
+      "archive_bytes": 277357,
+      "archive_path": "experiments/results/pr79_pr77_lossless_s3_profile_20260503_codex/pr79_s1/pr79_s1_p3_lossless_actions/archive.zip",
+      "archive_sha256": "a0d20df571a0373d4f20ba44ae774a53a25bfa476886fbb69957c0a2ac60013f",
+      "candidate_id": "pr79_s1_p3_lossless_actions",
+      "delta_bytes_vs_c102": 872,
+      "delta_bytes_vs_pr79": -31,
+      "dispatch_ready_now": false,
+      "manifest_path": "experiments/results/pr79_pr77_lossless_s3_profile_20260503_codex/pr79_s1/pr79_s1_p3_lossless_actions/manifest.json",
+      "no_op_status": "decoded_action_semantics_preserved_action_bytes_changed",
+      "score_claim": false
+    }
+  ],
+  "c102_reference": {
+    "archive_bytes": 276485,
+    "archive_sha256": "79091f2c3f0c30ef3ca512808f3adc0306010e7f57fed3a09b3664c16fea4ea8"
+  },
+  "cuda_auth_eval_required": "No dispatch from this worker. Before any exact eval, claim a non-conflicting lane with tools/claim_lane_dispatch.py claim, then run exact T4-equivalent CUDA auth eval on identical archive bytes through archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda with expected archive SHA and size.",
+  "dispatch_decision": {
+    "best_candidate_id": "pr79_s1_fixed_lossless_actions",
+    "exact_eval_justified": true,
+    "no_remote_dispatch_performed": true,
+    "required_before_dispatch": [
+      "claim lane with tools/claim_lane_dispatch.py claim",
+      "run exact T4-equivalent CUDA auth eval on the exact archive SHA/bytes",
+      "record contest_auth_eval.json, runtime tree hash, and component gates"
+    ]
+  },
+  "evidence_grade": "empirical_lossless_byte_screen",
+  "remote_dispatch_performed": false,
+  "s1_action_stream": {
+    "brotli_bytes": 1121,
+    "brotli_params": {
+      "lgblock": 0,
+      "lgwin": 16,
+      "mode": 0,
+      "quality": 11
+    },
+    "brotli_sha256": "16c7fd9b49a50580342a18108c0093b087828635bf83678e6ac1103e7d9f057a",
+    "raw_bytes": 1450,
+    "raw_sha256": "a4aa6d139460db6ecd61ce9b65f3f69560dbd39392abd9b0553be4aa145cae97"
+  },
+  "schema": "pr79_action_lossless_repack_matrix_v1",
+  "score_claim": false,
+  "source_action_stream": {
+    "brotli_bytes": 1162,
+    "brotli_sha256": "3fdf6320b77685606283438e1a9bea4df3c83ecb525deb4750dade60c8e7dbdc",
+    "decoded_bytes": 2688,
+    "decoded_sha256": "a48bd4e49f8928158756610fd8094e8fb1611a2040121611055266f840faf13f",
+    "record_count": 672
+  },
+  "source_archive": {
+    "bytes": 277388,
+    "path": "experiments/results/top_submission_reverse_engineering_20260503_pr79/archive.zip",
+    "sha256": "01dc02badf851d99108fd92c570271f36f74cc5424c6d2a8f1b499cb4d1c3446"
+  },
+  "tool": "experiments/build_pr79_action_lossless_repack_candidates.py"
+}

@@ -1,0 +1,32 @@
+{
+  "archive_bytes": 276214,
+  "archive_path": "/Users/adpena/Projects/pact/experiments/results/c067_breakthrough_candidate_matrix_20260502T_now/line_search_source_c063_fixedslice/archive.zip",
+  "archive_sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+  "blob_bytes": 276114,
+  "blob_sha256": "1f0aaaa9d06967552df6f22d39905a48349239dee4731b093067951a20adc2af",
+  "brotli_quality": 11,
+  "decoded_member_sha256": {
+    "masks.mkv": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+    "optimized_poses.bin": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583",
+    "renderer.bin": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+  },
+  "evidence_grade": "empirical_metadata_for_line_search",
+  "mask_br_bytes": 219472,
+  "mask_br_sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87",
+  "mask_uncompressed_bytes": 223385,
+  "model_br_bytes": 55965,
+  "model_br_sha256": "2544dfe50d2631a56600cbfc7342e4a18c97f953526fc51425be0d62f97e22ad",
+  "model_uncompressed_bytes": 59288,
+  "payload_format": "c063_frontier_pr64_len_table_to_pr67_fixedslice",
+  "pose_br_bytes": 677,
+  "pose_br_sha256": "c998610e82bb46a686a073e8a1847987de1346f86852a1c60cfa3244a1ad43c5",
+  "pose_codec": "qp1",
+  "pose_uncompressed_bytes": 1140,
+  "schema_version": 1,
+  "score_claim": false,
+  "source_archive": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_lossless_repack_c059_brotli_t4_20260502T0537Z/archive.zip",
+  "source_archive_sha256": "83615afd130afa08e972e4a02476612397bffea53327caf3591891f8317aa52d",
+  "source_payload_sha256": "b4cc31c8f16c3c48d34eb146509798f6cb5fb55df985b61303c71f6d2c8a2cf1",
+  "source_raw_payload_sha256": "a71d74cd13286ea8d16259fa94ff872d81008c790d7eee1d72ce3068919b608b",
+  "tool": "experiments/build_c063_breakthrough_candidate_matrix.py"
+}

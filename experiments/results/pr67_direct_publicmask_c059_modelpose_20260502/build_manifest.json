@@ -1,0 +1,28 @@
+{
+  "archive_bytes": 276214,
+  "archive_sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a",
+  "payload_bytes": 276114,
+  "promotion_eligible": false,
+  "schema": "pr67_direct_publicmask_c059_modelpose_screen_v1",
+  "score_claim": false,
+  "segments": {
+    "c059_model_br": 55965,
+    "c059_model_raw_sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb",
+    "c059_pose_br": 677,
+    "c059_pose_raw_sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583",
+    "pr67_mask_br": 219472,
+    "pr67_mask_br_sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+  },
+  "source_c059_archive_sha256": "cf44aa7fdb13b9ab6236aefde1f5f58e915d7dfa99128246235443841396c6ab",
+  "source_pr67_archive_sha256": "a5ed8da0d9988943c986b231b4cd33cea0ab878a8e1628134341db5f7f41c765",
+  "variant": {
+    "archive_bytes": 276214,
+    "mode": 0,
+    "model_br": 55965,
+    "parseable": true,
+    "payload_bytes": 276114,
+    "pose_br": 677,
+    "q": 11
+  },
+  "warning": "uses public PR67 mask segment as charged archive bytes; exact CUDA required and external-source attribution required"
+}

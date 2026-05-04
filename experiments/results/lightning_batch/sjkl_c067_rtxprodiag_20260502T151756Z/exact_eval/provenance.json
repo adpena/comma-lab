@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "started_at_utc": "2026-05-02T15:44:53Z",
+  "git_hash": "no-git",
+  "gpu_name": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+  "driver_version": "580.126.20",
+  "lane_script": "scripts/remote_archive_only_eval.sh",
+  "tag": "sjkl_c067_rtxprodiag_20260502T151756Z",
+  "archive_path": "/teamspace/studios/this_studio/pact/experiments/results/sjkl_c067_rtxprodiag_20260502T151756Z/pack/archive.zip",
+  "inflate_sh": "/teamspace/studios/this_studio/pact/submissions/robust_current/inflate.sh",
+  "inflate_sh_sha256": "86449a1f52ac6b2be120d47287b8410f915dce7e562c69f480103f6e527c6017",
+  "predicted_band": [0.20, 0.80],
+  "controlled_baseline": "C067 A++ fixedslice archive plus charged SJ-KL residual payload; RTX PRO diagnostic hedge, no promotion until T4",
+  "no_training": true,
+  "no_build": true,
+  "strict_scorer_rule_compliant": true,
+  "design_memo": "scripts/remote_archive_only_eval.sh"
+}

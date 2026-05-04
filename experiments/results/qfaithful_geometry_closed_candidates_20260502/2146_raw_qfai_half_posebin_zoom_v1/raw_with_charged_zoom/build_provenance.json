@@ -1,0 +1,58 @@
+{
+  "all_score_affecting_bits_inside_archive": true,
+  "evidence_grade": "empirical_byte_only_until_cuda_auth_eval",
+  "geometry_contract": "charged_zoom_scalars_bin",
+  "mask_frame_contract": "half",
+  "output_archive": {
+    "bytes": 564187,
+    "member_names": [
+      "renderer.bin",
+      "masks.mkv",
+      "optimized_poses.bin",
+      "zoom_scalars.bin"
+    ],
+    "member_order": [
+      "renderer.bin",
+      "masks.mkv",
+      "optimized_poses.bin",
+      "zoom_scalars.bin"
+    ],
+    "members": {
+      "masks.mkv": {
+        "bytes": 223738,
+        "member_name": "masks.mkv",
+        "sha256": "568439a26dbb9e240cf2c385ff350ddc2cb81f5bc514577498446d6043b21178",
+        "source_path": "/Users/adpena/Projects/pact/experiments/results/qfaithful_geometry_closed_candidates_20260502/inputs_2146_raw_qfai_half_posebin/masks.mkv"
+      },
+      "optimized_poses.bin": {
+        "bytes": 7200,
+        "member_name": "optimized_poses.bin",
+        "sha256": "399c0898d110911979c8b1343be3f16420a30b27a072e1c61d4d0a552e6ec1e3",
+        "source_path": "/Users/adpena/Projects/pact/experiments/results/qfaithful_geometry_closed_candidates_20260502/inputs_2146_raw_qfai_half_posebin/optimized_poses.bin"
+      },
+      "renderer.bin": {
+        "bytes": 389756,
+        "member_name": "renderer.bin",
+        "sha256": "86d11569d5956be778d096c6b3372144bbc14f24478a53eb22c7f648a53f51ae",
+        "source_path": "/Users/adpena/Projects/pact/experiments/results/qfaithful_geometry_closed_candidates_20260502/inputs_2146_raw_qfai_half_posebin/renderer.bin"
+      },
+      "zoom_scalars.bin": {
+        "bytes": 1200,
+        "member_name": "zoom_scalars.bin",
+        "sha256": "accf5b88c811d6a79707ab19b1314646bb26aa4977f77eaaf4cbfad9ea1dba76",
+        "source_path": "/Users/adpena/Projects/pact/experiments/results/zoom_scalars_v1.bin"
+      }
+    },
+    "path": "/Users/adpena/Projects/pact/experiments/results/qfaithful_geometry_closed_candidates_20260502/2146_raw_qfai_half_posebin_zoom_v1/raw_with_charged_zoom/archive.zip",
+    "sha256": "d459fd748c32cdc08454eb713c99d9f37b15850e1e2b074937425794e2b5c460"
+  },
+  "schema_version": 1,
+  "score_claim": false,
+  "source_raw_archive": "/Users/adpena/Projects/pact/experiments/results/lane_q_faithful_retrain_20260501/remote_artifacts/postprocess_fixed_snapshot_20260501T2146Z_fix1/raw_qfai_half_posebin/archive.zip",
+  "source_raw_archive_bytes": 563025,
+  "source_raw_archive_sha256": "470604181772cc31136e427549ffe0aacdfdff57522487a3195badbe72c6a7db",
+  "tool": "scripts.q_faithful_snapshot_loop.build_raw_archive",
+  "zoom_bytes": 1200,
+  "zoom_sha256": "accf5b88c811d6a79707ab19b1314646bb26aa4977f77eaaf4cbfad9ea1dba76",
+  "zoom_source": "/Users/adpena/Projects/pact/experiments/results/zoom_scalars_v1.bin"
+}

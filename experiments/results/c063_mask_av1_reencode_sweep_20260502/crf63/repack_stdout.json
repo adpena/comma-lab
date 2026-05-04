@@ -1,0 +1,11 @@
+{
+  "archive_delta_bytes": 57,
+  "formula_only_rate_score_delta": 3.795396032796377e-05,
+  "output_archive": {
+    "bytes": 110304,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c063_mask_av1_reencode_sweep_20260502/crf63/archive.zip",
+    "sha256": "593d1825546c0ba6d254dfb849d72318bf426c0610fb34a205619d92aeb91d83"
+  },
+  "promotion_eligible": false,
+  "score_claim": false
+}

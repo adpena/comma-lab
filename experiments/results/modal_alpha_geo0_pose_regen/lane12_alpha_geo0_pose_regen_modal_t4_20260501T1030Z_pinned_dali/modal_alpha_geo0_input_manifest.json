@@ -1,0 +1,70 @@
+{
+  "baseline_archive_requirements": {
+    "archive": {
+      "bytes": 686635,
+      "path": "/tmp/modal_alpha_geo0_pose_regen/lane12_alpha_geo0_pose_regen_modal_t4_20260501T1030Z_pinned_dali/inputs/pfp16_baseline_archive.zip",
+      "sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    "members": {
+      "masks.mkv": {
+        "compress_size": 412169,
+        "file_size": 421483
+      },
+      "optimized_poses.bin": {
+        "compress_size": 6734,
+        "file_size": 7200
+      },
+      "renderer.bin": {
+        "compress_size": 267402,
+        "file_size": 296776
+      }
+    }
+  },
+  "candidate_archive_requirements": {
+    "archive": {
+      "bytes": 296478,
+      "path": "/tmp/modal_alpha_geo0_pose_regen/lane12_alpha_geo0_pose_regen_modal_t4_20260501T1030Z_pinned_dali/inputs/archive_lane_12_nerv.zip",
+      "sha256": "864549cc648f0b3a023076c11812ccd0f10b1d013ed3fd6bb24d20bbcde85c97"
+    },
+    "members": {
+      "masks.nrv": {
+        "compress_size": 22127,
+        "file_size": 23594
+      },
+      "optimized_poses.bin": {
+        "compress_size": 6622,
+        "file_size": 7200
+      },
+      "renderer.bin": {
+        "compress_size": 267399,
+        "file_size": 296776
+      }
+    }
+  },
+  "inputs": {
+    "baseline_archive": {
+      "bytes": 686635,
+      "path": "/tmp/modal_alpha_geo0_pose_regen/lane12_alpha_geo0_pose_regen_modal_t4_20260501T1030Z_pinned_dali/inputs/pfp16_baseline_archive.zip",
+      "sha256": "0af839abb30e0dfdcfbcbf75247b136db8731196ef26e58374c76a1b562ded7f"
+    },
+    "candidate_archive": {
+      "bytes": 296478,
+      "path": "/tmp/modal_alpha_geo0_pose_regen/lane12_alpha_geo0_pose_regen_modal_t4_20260501T1030Z_pinned_dali/inputs/archive_lane_12_nerv.zip",
+      "sha256": "864549cc648f0b3a023076c11812ccd0f10b1d013ed3fd6bb24d20bbcde85c97"
+    },
+    "gt_pose_targets": {
+      "bytes": 15620,
+      "path": "/tmp/modal_alpha_geo0_pose_regen/lane12_alpha_geo0_pose_regen_modal_t4_20260501T1030Z_pinned_dali/inputs/gt_pose_targets.pt",
+      "sha256": "9b8d6c63e44be105f4d81c17b344b272ca4585337c767af3e0af0aaeffbb83c5"
+    },
+    "warm_poses": {
+      "bytes": 15620,
+      "path": "/tmp/modal_alpha_geo0_pose_regen/lane12_alpha_geo0_pose_regen_modal_t4_20260501T1030Z_pinned_dali/inputs/warm_optimized_poses.pt",
+      "sha256": "cb8517f7a7e3c9382e952ff278dc3f8de44ba066db07746f16354c1dbe2cbca4"
+    }
+  },
+  "label": "lane12_alpha_geo0_pose_regen_modal_t4_20260501T1030Z_pinned_dali",
+  "promotion_eligible": false,
+  "schema_version": 1,
+  "score_claim": false
+}

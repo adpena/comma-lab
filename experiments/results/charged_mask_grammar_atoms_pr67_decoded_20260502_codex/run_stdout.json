@@ -1,0 +1,47 @@
+{
+  "extracted_mask_stream": {
+    "archive_member_name": "masks.mkv",
+    "artifact_path": "extracted_mask_stream.bin",
+    "bytes": 223385,
+    "payload_member_meta": {
+      "bytes": 219472,
+      "codec": "brotli_av1_obu",
+      "decoded_bytes": 223385,
+      "decoded_sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb",
+      "name": "masks.mkv",
+      "sha256": "d1ae0d39c848e5715b74bb0122269066a4a1ab60ba9e12f34e70fd62ac136d87"
+    },
+    "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+  },
+  "input_archive": {
+    "bytes": 276564,
+    "path": "/Users/adpena/Projects/pact/reports/raw/leaderboard_intel_20260501/pr67_archive.zip",
+    "sha256": "a5ed8da0d9988943c986b231b4cd33cea0ab878a8e1628134341db5f7f41c765"
+  },
+  "mask_decode_contract": {
+    "archive_member_name": "masks.mkv",
+    "contract": "The tensor was decoded only from charged extracted mask bytes via submissions/robust_current/inflate_renderer.py::_load_masks_from_archive; no scorer path, external sidecar, or score claim is involved.",
+    "expected_frames": 1200,
+    "helper": "submissions/robust_current/inflate_renderer.py",
+    "output_array": {
+      "artifact_path": "/private/tmp/pact_cmg/pr67_decoded_mask_array_20260502T0632Z.npy",
+      "bytes": 117964928,
+      "class_max": 4,
+      "class_min": 0,
+      "dtype_saved": "uint8",
+      "sha256": "13f81851ae206f6142cd3348db5537eda4ea832665052824816f4d1bf432de0c",
+      "shape": [
+        600,
+        384,
+        512
+      ]
+    },
+    "requested": true,
+    "runtime_function": "_load_masks_from_archive",
+    "status": "decoded",
+    "temporary_suffix": ".mkv"
+  },
+  "output_dir": "/Users/adpena/Projects/pact/experiments/results/charged_mask_grammar_atoms_pr67_decoded_20260502_codex",
+  "output_json": "/Users/adpena/Projects/pact/experiments/results/charged_mask_grammar_atoms_pr67_decoded_20260502_codex/atom_plan_manifest.json",
+  "score_claim": false
+}

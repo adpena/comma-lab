@@ -1,0 +1,91 @@
+{
+  "candidates": [
+    {
+      "archive_bytes": 276394,
+      "archive_delta_bytes_vs_source": -66,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/c082_pr75_lossless_repack_20260503_worker/c082_p6_delta_varint_actions_stream_resweep/archive.zip",
+      "archive_sha256": "9b78333dd39c12c986ca7fc02a4bb35a6a61ef5a1cc0c9c9c840820eb840058a",
+      "candidate_id": "c082_p6_delta_varint_actions_stream_resweep",
+      "decoded_stream_parity": true,
+      "formula_only_rate_score_delta_vs_source": -4.3946690906063314e-05,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/c082_pr75_lossless_repack_20260503_worker/c082_p6_delta_varint_actions_stream_resweep/manifest.json",
+      "noop": false,
+      "noop_status": "not_noop_repacked_payload",
+      "payload_bytes": 276294,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+      "score_claim": false,
+      "source_preservation_status": "lossless_decoded_stream_preserving_repack",
+      "source_preserving": true
+    },
+    {
+      "archive_bytes": 276402,
+      "archive_delta_bytes_vs_source": -58,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/c082_pr75_lossless_repack_20260503_worker/c082_p6_delta_varint_actions/archive.zip",
+      "archive_sha256": "1e0f44a4b199560f4b629fe2599c6ae682b5ed19c03adc620f4bd81771899034",
+      "candidate_id": "c082_p6_delta_varint_actions",
+      "decoded_stream_parity": true,
+      "formula_only_rate_score_delta_vs_source": -3.861981928108594e-05,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/c082_pr75_lossless_repack_20260503_worker/c082_p6_delta_varint_actions/manifest.json",
+      "noop": false,
+      "noop_status": "not_noop_repacked_payload",
+      "payload_bytes": 276302,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p6_delta_varint",
+      "score_claim": false,
+      "source_preservation_status": "lossless_decoded_stream_preserving_repack",
+      "source_preserving": true
+    },
+    {
+      "archive_bytes": 276452,
+      "archive_delta_bytes_vs_source": -8,
+      "archive_path": "/Users/adpena/Projects/pact/experiments/results/c082_pr75_lossless_repack_20260503_worker/c082_p3_stream_resweep/archive.zip",
+      "archive_sha256": "b13305713ba60af01eaaca8636509b5957cf7fd6ac8a1f442bb7fcbfb14f56bd",
+      "candidate_id": "c082_p3_stream_resweep",
+      "decoded_stream_parity": true,
+      "formula_only_rate_score_delta_vs_source": -5.326871624977371e-06,
+      "manifest_path": "/Users/adpena/Projects/pact/experiments/results/c082_pr75_lossless_repack_20260503_worker/c082_p3_stream_resweep/manifest.json",
+      "noop": false,
+      "noop_status": "not_noop_repacked_payload",
+      "payload_bytes": 276352,
+      "payload_format": "public_pr75_qzs3_qp1_segactions_p3",
+      "score_claim": false,
+      "source_preservation_status": "lossless_decoded_stream_preserving_repack",
+      "source_preserving": true
+    }
+  ],
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "evidence_grade": "empirical_lossless_byte_transform",
+  "noop_proof": {
+    "decoded_members": {
+      "masks.mkv": {
+        "bytes": 223385,
+        "sha256": "a5c2b89c110d75220cd09b2f27f2e92844626ae7ed0d2c797290dcf43c7068eb"
+      },
+      "optimized_poses.bin": {
+        "bytes": 7200,
+        "sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+      },
+      "renderer.bin": {
+        "bytes": 59288,
+        "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+      },
+      "seg_tile_actions.bin": {
+        "bytes": 268,
+        "sha256": "bfd46b2b481a5064cc1f64b7b1288640c51b89ad6aeb5598408150f7945eac15"
+      }
+    },
+    "source_archive_bytes": 276460,
+    "source_archive_sha256": "851a61ddd88c0ddb4a05762f11e900f132fb771fd9dba743ac2026637ddf15d9",
+    "source_payload_bytes": 276360,
+    "source_payload_format": "public_pr75_qzs3_qp1_segactions_p3",
+    "source_payload_sha256": "a50045d4c29fa0efc9b57eac3c14349f262526ba19546615b14cfb728e216014"
+  },
+  "promotion_eligible": false,
+  "schema": "pr75_lossless_repack_candidate_matrix_v1",
+  "score_claim": false,
+  "source_preservation_contract": {
+    "decoded_streams_byte_identical_required": true,
+    "noop_means_archive_and_payload_byte_identical_to_source": true,
+    "source_preserving_repack_means_decoded_streams_byte_identical": true
+  },
+  "tool": "experiments/build_pr75_lossless_repack_candidates.py"
+}

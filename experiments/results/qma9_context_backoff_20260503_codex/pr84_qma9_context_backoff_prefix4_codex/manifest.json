@@ -1,0 +1,306 @@
+{
+  "archive": {
+    "archive_bytes": 215735,
+    "archive_path": "/Users/adpena/Projects/pact/experiments/results/top_submission_reverse_engineering_20260503_pr84/archive.zip",
+    "archive_sha256": "a607a6c3ae9b610e6edfb546c3206004ae40fc348ecaef2446b7134a19b8e07f",
+    "member_bytes": 215635,
+    "member_name": "p",
+    "member_sha256": "35b14e37ee34eeb2197117d52d805afb7aff8b33378b367685476dc4097e324d",
+    "zip_overhead_bytes": 100
+  },
+  "baseline": {
+    "no_op_status": "source_preserving_reference_not_selectable",
+    "payload_bytes": 1221,
+    "payload_path": "experiments/results/qma9_context_backoff_20260503_codex/pr84_qma9_context_backoff_prefix4_codex/baseline.qma9",
+    "payload_sha256": "fcf143230da1c30885969b7490dba9549397a352bdf347efdfa706f6bcf6ffe3",
+    "raw_mask_parity": true,
+    "role": "reference_only"
+  },
+  "best_local_byte_win": null,
+  "candidate_id": "pr84_qma9_context_backoff_prefix4_codex",
+  "candidates": [
+    {
+      "archive_relevant_state_change": true,
+      "context_backoff": {
+        "backoff_pixel_fraction": 1.0,
+        "backoff_pixels": 786432,
+        "context_family_counts": {
+          "plu": 786432
+        },
+        "distinct_effective_contexts_used": 76,
+        "distinct_full_contexts_seen": 775,
+        "full9_pixels": 0,
+        "mode_id": "always_plu",
+        "pixels": 786432
+      },
+      "delta_bytes_vs_baseline": 528,
+      "error": null,
+      "mode_family": "qma9_context_backoff_zero_side_cost",
+      "mode_id": "always_plu",
+      "no_op_status": "state_changed",
+      "payload_bytes": 1749,
+      "payload_path": "experiments/results/qma9_context_backoff_20260503_codex/pr84_qma9_context_backoff_prefix4_codex/candidates/always_plu.qma9cb",
+      "payload_sha256": "0453b207defecbcfc40e1b6e50b73f57137c26d2507ceb14dd520ed26c45bfe0",
+      "projected_archive_bytes_if_other_streams_unchanged": 216263,
+      "rate_score_delta_if_components_unchanged": 0.00035157352724850645,
+      "raw_mask_parity": true,
+      "rejection_reasons": [
+        "no_local_byte_screen_win"
+      ],
+      "safe_for_remote_dispatch": false,
+      "selectable_for_local_followup": false
+    },
+    {
+      "archive_relevant_state_change": true,
+      "context_backoff": {
+        "backoff_pixel_fraction": 0.0025698343912760415,
+        "backoff_pixels": 2021,
+        "context_family_counts": {
+          "full9": 784411,
+          "plu": 2021
+        },
+        "distinct_effective_contexts_used": 413,
+        "distinct_full_contexts_seen": 775,
+        "full9_pixels": 784411,
+        "mode_id": "warm4_plu",
+        "pixels": 786432
+      },
+      "delta_bytes_vs_baseline": 15,
+      "error": null,
+      "mode_family": "qma9_context_backoff_zero_side_cost",
+      "mode_id": "warm4_plu",
+      "no_op_status": "state_changed",
+      "payload_bytes": 1236,
+      "payload_path": "experiments/results/qma9_context_backoff_20260503_codex/pr84_qma9_context_backoff_prefix4_codex/candidates/warm4_plu.qma9cb",
+      "payload_sha256": "ac176f7739e265f0004939cc3c731d83955b8e5afdaccfa5068d96baebe07f08",
+      "projected_archive_bytes_if_other_streams_unchanged": 215750,
+      "rate_score_delta_if_components_unchanged": 9.98788429683257e-06,
+      "raw_mask_parity": true,
+      "rejection_reasons": [
+        "no_local_byte_screen_win"
+      ],
+      "safe_for_remote_dispatch": false,
+      "selectable_for_local_followup": false
+    },
+    {
+      "archive_relevant_state_change": true,
+      "context_backoff": {
+        "backoff_pixel_fraction": 0.0067138671875,
+        "backoff_pixels": 5280,
+        "context_family_counts": {
+          "full9": 781152,
+          "plu": 5280
+        },
+        "distinct_effective_contexts_used": 299,
+        "distinct_full_contexts_seen": 775,
+        "full9_pixels": 781152,
+        "mode_id": "warm16_plu",
+        "pixels": 786432
+      },
+      "delta_bytes_vs_baseline": 50,
+      "error": null,
+      "mode_family": "qma9_context_backoff_zero_side_cost",
+      "mode_id": "warm16_plu",
+      "no_op_status": "state_changed",
+      "payload_bytes": 1271,
+      "payload_path": "experiments/results/qma9_context_backoff_20260503_codex/pr84_qma9_context_backoff_prefix4_codex/candidates/warm16_plu.qma9cb",
+      "payload_sha256": "497feb359cc6219b46075e41b9063e7ceafa7d0955a517f9beac83293750a6fe",
+      "projected_archive_bytes_if_other_streams_unchanged": 215785,
+      "rate_score_delta_if_components_unchanged": 3.3292947656108566e-05,
+      "raw_mask_parity": true,
+      "rejection_reasons": [
+        "no_local_byte_screen_win"
+      ],
+      "safe_for_remote_dispatch": false,
+      "selectable_for_local_followup": false
+    },
+    {
+      "archive_relevant_state_change": true,
+      "context_backoff": {
+        "backoff_pixel_fraction": 1.0,
+        "backoff_pixels": 786432,
+        "context_family_counts": {
+          "lu": 786432
+        },
+        "distinct_effective_contexts_used": 23,
+        "distinct_full_contexts_seen": 775,
+        "full9_pixels": 0,
+        "mode_id": "always_lu",
+        "pixels": 786432
+      },
+      "delta_bytes_vs_baseline": 1075,
+      "error": null,
+      "mode_family": "qma9_context_backoff_zero_side_cost",
+      "mode_id": "always_lu",
+      "no_op_status": "state_changed",
+      "payload_bytes": 2296,
+      "payload_path": "experiments/results/qma9_context_backoff_20260503_codex/pr84_qma9_context_backoff_prefix4_codex/candidates/always_lu.qma9cb",
+      "payload_sha256": "beb327e3a7032d511f2214c138e97dda551858c589048be9a3812fc7691d9f50",
+      "projected_archive_bytes_if_other_streams_unchanged": 216810,
+      "rate_score_delta_if_components_unchanged": 0.0007157983746063341,
+      "raw_mask_parity": true,
+      "rejection_reasons": [
+        "no_local_byte_screen_win"
+      ],
+      "safe_for_remote_dispatch": false,
+      "selectable_for_local_followup": false
+    },
+    {
+      "archive_relevant_state_change": true,
+      "context_backoff": {
+        "backoff_pixel_fraction": 0.0025698343912760415,
+        "backoff_pixels": 2021,
+        "context_family_counts": {
+          "full9": 784411,
+          "lu": 2021
+        },
+        "distinct_effective_contexts_used": 360,
+        "distinct_full_contexts_seen": 775,
+        "full9_pixels": 784411,
+        "mode_id": "warm4_lu",
+        "pixels": 786432
+      },
+      "delta_bytes_vs_baseline": 69,
+      "error": null,
+      "mode_family": "qma9_context_backoff_zero_side_cost",
+      "mode_id": "warm4_lu",
+      "no_op_status": "state_changed",
+      "payload_bytes": 1290,
+      "payload_path": "experiments/results/qma9_context_backoff_20260503_codex/pr84_qma9_context_backoff_prefix4_codex/candidates/warm4_lu.qma9cb",
+      "payload_sha256": "099c6ad724423a013cd0a95f8dd26be841cfafececb42d42fc8e0c90aa320e0b",
+      "projected_archive_bytes_if_other_streams_unchanged": 215804,
+      "rate_score_delta_if_components_unchanged": 4.594426776542982e-05,
+      "raw_mask_parity": true,
+      "rejection_reasons": [
+        "no_local_byte_screen_win"
+      ],
+      "safe_for_remote_dispatch": false,
+      "selectable_for_local_followup": false
+    },
+    {
+      "archive_relevant_state_change": true,
+      "context_backoff": {
+        "backoff_pixel_fraction": 0.0067138671875,
+        "backoff_pixels": 5280,
+        "context_family_counts": {
+          "full9": 781152,
+          "lu": 5280
+        },
+        "distinct_effective_contexts_used": 246,
+        "distinct_full_contexts_seen": 775,
+        "full9_pixels": 781152,
+        "mode_id": "warm16_lu",
+        "pixels": 786432
+      },
+      "delta_bytes_vs_baseline": 157,
+      "error": null,
+      "mode_family": "qma9_context_backoff_zero_side_cost",
+      "mode_id": "warm16_lu",
+      "no_op_status": "state_changed",
+      "payload_bytes": 1378,
+      "payload_path": "experiments/results/qma9_context_backoff_20260503_codex/pr84_qma9_context_backoff_prefix4_codex/candidates/warm16_lu.qma9cb",
+      "payload_sha256": "0b475402dba090965cd402f89cc5e2c2bd0d50504a05ef0ef796c754ac77043c",
+      "projected_archive_bytes_if_other_streams_unchanged": 215892,
+      "rate_score_delta_if_components_unchanged": 0.0001045398556401809,
+      "raw_mask_parity": true,
+      "rejection_reasons": [
+        "no_local_byte_screen_win"
+      ],
+      "safe_for_remote_dispatch": false,
+      "selectable_for_local_followup": false
+    }
+  ],
+  "decision": {
+    "archive_claim": false,
+    "best_delta_bytes_vs_baseline": null,
+    "reason": "no tested context-backoff mode produced a parity-clean local byte win",
+    "required_before_dispatch": [
+      "runtime consumes the context-backoff model from charged archive bytes",
+      "candidate remains raw-parity clean on the full stream",
+      "lane dispatch claim is active before any remote/GPU work",
+      "exact CUDA auth eval through archive.zip -> inflate.sh -> upstream/evaluate.py"
+    ],
+    "safe_for_remote_dispatch": false
+  },
+  "dispatch_performed": false,
+  "evidence_grade": "empirical/planning_only",
+  "gpu_required": false,
+  "mode_matrix": {
+    "candidate_count": 6,
+    "modes": [
+      "always_plu",
+      "warm4_plu",
+      "warm16_plu",
+      "always_lu",
+      "warm4_lu",
+      "warm16_lu"
+    ],
+    "selectable_local_byte_wins": 0
+  },
+  "notes": [
+    "Context-backoff uses deterministic decoder-side policy; no per-pixel flags or side tables are emitted.",
+    "The .qma9cb files use QMA9-shaped local payloads but require this tool's matching decoder.",
+    "No scorer, eval, training, GPU, remote dispatch, or archive promotion was performed."
+  ],
+  "planning_only": true,
+  "raw_mask": {
+    "decoded_by_tool": true,
+    "frames": 4,
+    "raw_bytes": 786432,
+    "raw_sha256": "e763e118ec695f667eccda8b987420b167fd2ba263e382ff2d9348c578e51a46",
+    "source": "archive_range_mask.qma9",
+    "source_kind": "prefix_qma9_decode"
+  },
+  "schema": "qma9_context_backoff_candidate_screen_v1",
+  "score_claim": false,
+  "segments": [
+    {
+      "codec": "qma9_adaptive9_binary_range_mask",
+      "name": "range_mask.qma9",
+      "offset": 0,
+      "sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+      "size_bytes": 159011
+    },
+    {
+      "codec": "brotli_reordered_qzs3_model_bundle",
+      "name": "split_model_reordered.br_bundle",
+      "offset": 159011,
+      "sha256": "b649b0dacb1dcc93fd7da2e7f5c6d398fa933d2fe3087520359612afc8e4832d",
+      "size_bytes": 55725
+    },
+    {
+      "codec": "brotli_qp1_pose_stream",
+      "name": "optimized_poses.qp1.br",
+      "offset": 214736,
+      "sha256": "83767bbd10ae72c3237e468351eb9c465a954e25a6af04a0e0cb84d1f7af9b51",
+      "size_bytes": 899
+    },
+    {
+      "codec": "absent_pr84_no_router_actions",
+      "name": "router_actions.3bit",
+      "offset": 215635,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0
+    }
+  ],
+  "source_qma9_header": {
+    "bitstream_bytes": 158991,
+    "bitstream_sha256": "77196f31a8fdfbf8f91c9c30600945473376534f15245bfb7622ddd77d17e3af",
+    "decoded_mask_bytes": 117964800,
+    "frame_count": 600,
+    "header_bytes": 20,
+    "height": 384,
+    "magic": "QMA9",
+    "packed_bytes": 159011,
+    "payload_sha256": "4b9d93fedb37a9d6fd435054cc33e216d703818b3ac94f4616c89969a4e0d179",
+    "width": 512
+  },
+  "split_constants": {
+    "PACKED_PAYLOAD_BYTES": 215860,
+    "POSE_STREAM_BYTES": 899,
+    "RANGE_MASK_BYTES": 159011,
+    "ROUTER_ACTION_BYTES": 225,
+    "SPLIT_MODEL_REORDERED_BYTES": 55725
+  },
+  "tool": "experiments/build_qma9_context_backoff_candidate.py"
+}

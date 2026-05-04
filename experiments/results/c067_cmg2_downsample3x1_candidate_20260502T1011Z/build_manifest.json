@@ -1,0 +1,129 @@
+{
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "cmg2": {
+    "body_bytes": 126638,
+    "body_sha256": "469cfdc51f4957981d2e9c7bc4b4afd10eb07f3b1e65a5efaf7377a4182b8741",
+    "compressor": "bz2",
+    "low_shape": [
+      600,
+      128,
+      512
+    ],
+    "low_tensor_bytes": 39321600,
+    "low_tensor_sha256": "9e602301b3d606e58bb1d6277774941d08757655e5d098a951de903fee135341",
+    "mode": "spatial_downsample_block_mode_v1",
+    "payload_bytes": 127053,
+    "payload_sha256": "991720361047d178eba1abb2b08181a2395b2062d60e563323b02672ea694fcd",
+    "pixel_disagreement_vs_frontier_masks": 0.007008048163519965,
+    "promotion_eligible": false,
+    "reconstructed_tensor_sha256": "72f2113461de851c8d8b998b172245243b210743d8e22f6d28c401cad1f9f24e",
+    "scale": [
+      3,
+      1
+    ],
+    "schema": "cmg2_downsample_candidate_v1",
+    "score_claim": false
+  },
+  "decoded_mask_array": {
+    "npy_sha256": "13f81851ae206f6142cd3348db5537eda4ea832665052824816f4d1bf432de0c",
+    "path": "/Users/adpena/Projects/pact/experiments/results/c063_trace_weighted_mask_grammar_plan_20260502_codex/decoded_mask_array.npy",
+    "shape": [
+      600,
+      384,
+      512
+    ],
+    "tensor_sha256": "0344fcfc39e683f21a71db1085a8697a94c4606f91f883362e9acc02fc7b5b45"
+  },
+  "evidence_grade": "empirical_archive_candidate_until_exact_cuda",
+  "frontier_archive": {
+    "bytes": 276214,
+    "path": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_c063_fixedslice_equiv_t4_20260502T0855Z/archive.zip",
+    "sha256": "226475de42ec00d66287a39f98fe6d2eb0464b90738714e5ef05fa4ee8efb38a"
+  },
+  "output_archive": {
+    "bytes": 188463,
+    "delta_bytes_vs_frontier": -87751,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c067_cmg2_downsample3x1_candidate_20260502T1011Z/archive.zip",
+    "sha256": "c6300612e3bfc4b27aa10b7321a87dbd76c6bb6bfcfddaf445e30703a0184e26"
+  },
+  "packed_payload": {
+    "brotli_quality": 11,
+    "evidence_grade": "empirical",
+    "formula_only_rate_delta": -0.003602296936390947,
+    "header": {
+      "members": [
+        {
+          "bytes": 59288,
+          "codec": "raw",
+          "name": "renderer.bin",
+          "sha256": "5657593aec0bf380f0bd614578cc4a76da8589b6ef8ce0331c28b6a4d6658efb"
+        },
+        {
+          "bytes": 127053,
+          "codec": "raw",
+          "name": "masks.cmg2",
+          "sha256": "991720361047d178eba1abb2b08181a2395b2062d60e563323b02672ea694fcd"
+        },
+        {
+          "bytes": 1140,
+          "codec": "pose_qp1_v1",
+          "decoded_bytes": 7200,
+          "decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f",
+          "lossy": true,
+          "name": "optimized_poses.bin",
+          "pose_error_stats": {
+            "max_abs_by_dim": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "pose_dim": 6,
+            "rmse_by_dim": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "rows": 600
+          },
+          "sha256": "1d2a6c31e836aa138bd09b3448db7e066f29f0cfcbf71b00e13357242655b583",
+          "source_decoded_sha256": "5236cf75cc95f6a9731b35f4e2fb1211aa99bfcc69e5964869edd19a7af3df9f"
+        }
+      ],
+      "schema": "renderer_payload_v1",
+      "source_archive_sha256": "c17ded59eb2d8e077816cefdacaf9e207c1d2e8f53f21a75f7a2931dece2e3de"
+    },
+    "output_archive": "/Users/adpena/Projects/pact/experiments/results/c067_cmg2_downsample3x1_candidate_20260502T1011Z/archive.zip",
+    "output_archive_bytes": 188463,
+    "output_archive_sha256": "c6300612e3bfc4b27aa10b7321a87dbd76c6bb6bfcfddaf445e30703a0184e26",
+    "payload_compressed_bytes": 188363,
+    "payload_format": "rpk1_json",
+    "payload_member": "p",
+    "payload_raw_bytes": 188358,
+    "pose_codec": "pose_qp1_v1",
+    "pose_residual_topk": 0,
+    "savings_bytes": 5410,
+    "score_claim": false,
+    "source_archive": "/Users/adpena/Projects/pact/experiments/results/c067_cmg2_downsample3x1_candidate_20260502T1011Z/cmg2_source_members.zip",
+    "source_archive_bytes": 193873,
+    "source_archive_sha256": "c17ded59eb2d8e077816cefdacaf9e207c1d2e8f53f21a75f7a2931dece2e3de"
+  },
+  "promotion_eligible": false,
+  "required_next_steps": [
+    "local unpack/inflate smoke to prove masks.cmg2 routes through runtime",
+    "fast H100 exact CUDA diagnostic",
+    "T4 promotion only if H100 component gates are near or below C-067"
+  ],
+  "schema": "cmg2_downsample_candidate_v1",
+  "score_claim": false,
+  "source_archive": {
+    "bytes": 193873,
+    "path": "/Users/adpena/Projects/pact/experiments/results/c067_cmg2_downsample3x1_candidate_20260502T1011Z/cmg2_source_members.zip",
+    "sha256": "c17ded59eb2d8e077816cefdacaf9e207c1d2e8f53f21a75f7a2931dece2e3de"
+  }
+}

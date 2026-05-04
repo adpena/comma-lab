@@ -1,0 +1,262 @@
+{
+  "best_byte_point": {
+    "archive_bytes": 102456,
+    "archive_delta_vs_frontier": -173758,
+    "archive_sha256": "48e70211fb621ae7919924b5eb57002473e1834dd7fbf758d673003597c1608a",
+    "candidate_id": "pmg_hotspot_rowspan_stride8",
+    "final_disagreement_fraction": 0.02741742451985677,
+    "formula_only_rate_delta_vs_frontier": -0.11569831997660225,
+    "manifest_path": "experiments/results/pmg_hotspot_candidate_c067_stride8_lzma_20260502/build_manifest.json",
+    "payload_bytes": 45860,
+    "protected_pair_count": null,
+    "residual_pixels_touched": 45553,
+    "score_claim": false
+  },
+  "best_geometry_point": {
+    "archive_bytes": 635102,
+    "archive_delta_vs_frontier": 358888,
+    "archive_sha256": "480e715c04102011436f1d8910aa36fda0d6dc47d7458ef5204a69c746e364ef",
+    "candidate_id": "pmg_hotspot_rowspan_stride2",
+    "final_disagreement_fraction": 0.0,
+    "formula_only_rate_delta_vs_frontier": 0.23896878796810983,
+    "manifest_path": "experiments/results/pmg_hotspot_candidate_c067_protect_top600_20260502/build_manifest.json",
+    "payload_bytes": 573692,
+    "protected_pair_count": 600,
+    "residual_pixels_touched": 1823949,
+    "score_claim": false
+  },
+  "canonical_score_source_required": "archive.zip -> inflate.sh -> upstream/evaluate.py via experiments/contest_auth_eval.py --device cuda",
+  "command": [
+    "experiments/plan_predictive_mask_residual_economics.py"
+  ],
+  "decision": "residual_rowspan_not_sub024_viable",
+  "frontier": {
+    "archive_bytes": 276214,
+    "mask_stream_bytes": 219472,
+    "score": 0.31561703078448233,
+    "sub024_target_archive_bytes_at_unchanged_distortion": 162650
+  },
+  "inputs": {
+    "manifest_count": 5,
+    "manifests_sha256": {
+      "experiments/results/pmg_hotspot_candidate_c067_protect_top10_20260502/build_manifest.json": "56f4c12a12461dbd6ecff8cb792745fe7db1b8e8262d1c12aafb178c3e861520",
+      "experiments/results/pmg_hotspot_candidate_c067_protect_top600_20260502/build_manifest.json": "cc13c43904bbc5518defc8bbc71f93a8b118b626f7644a791ed5ff1c1a45b133",
+      "experiments/results/pmg_hotspot_candidate_c067_protect_top80_20260502/build_manifest.json": "853ba94fd3464ec4e895bdd1b4f7f1754d9d92e4e5db7a877cff96384dce9204",
+      "experiments/results/pmg_hotspot_candidate_c067_stride4_lzma_20260502/build_manifest.json": "9be1a6b5ab9280a231aad433157dd1417b12f3cb71337c26fdf06ee94480e911",
+      "experiments/results/pmg_hotspot_candidate_c067_stride8_lzma_20260502/build_manifest.json": "8c9b9d15c3e6f4c4bd997c11f875f69657f889cc85232af04343305a973734a3"
+    },
+    "missing_manifests": []
+  },
+  "lower_envelope": [
+    {
+      "archive_bytes": 635102,
+      "archive_delta_vs_frontier": 358888,
+      "archive_sha256": "480e715c04102011436f1d8910aa36fda0d6dc47d7458ef5204a69c746e364ef",
+      "candidate_id": "pmg_hotspot_rowspan_stride2",
+      "final_disagreement_fraction": 0.0,
+      "formula_only_rate_delta_vs_frontier": 0.23896878796810983,
+      "manifest_path": "experiments/results/pmg_hotspot_candidate_c067_protect_top600_20260502/build_manifest.json",
+      "payload_bytes": 573692,
+      "protected_pair_count": 600,
+      "residual_pixels_touched": 1823949,
+      "score_claim": false
+    },
+    {
+      "archive_bytes": 253108,
+      "archive_delta_vs_frontier": -23106,
+      "archive_sha256": "27b2cbf11ef28ee2178cd113b337ec0d9aab5621220535adae677a3fb95c21d2",
+      "candidate_id": "pmg_hotspot_rowspan_stride2",
+      "final_disagreement_fraction": 0.012495210435655381,
+      "formula_only_rate_delta_vs_frontier": -0.015385336970840892,
+      "manifest_path": "experiments/results/pmg_hotspot_candidate_c067_protect_top80_20260502/build_manifest.json",
+      "payload_bytes": 191698,
+      "protected_pair_count": 80,
+      "residual_pixels_touched": 349954,
+      "score_claim": false
+    },
+    {
+      "archive_bytes": 194350,
+      "archive_delta_vs_frontier": -81864,
+      "archive_sha256": "5aad0c173f78e1cfd4d1d6e09d7a94713a2866975b54556c64a50f009f5adbe0",
+      "candidate_id": "pmg_hotspot_rowspan_stride2",
+      "final_disagreement_fraction": 0.014882481892903646,
+      "formula_only_rate_delta_vs_frontier": -0.054509877338393437,
+      "manifest_path": "experiments/results/pmg_hotspot_candidate_c067_protect_top10_20260502/build_manifest.json",
+      "payload_bytes": 132940,
+      "protected_pair_count": 10,
+      "residual_pixels_touched": 68340,
+      "score_claim": false
+    },
+    {
+      "archive_bytes": 136967,
+      "archive_delta_vs_frontier": -139247,
+      "archive_sha256": "145c7c2358badac72f53c396ba3a456ebe8f35e7cdc88514289cc58df3d5cad4",
+      "candidate_id": "pmg_hotspot_rowspan_stride4",
+      "final_disagreement_fraction": 0.018023028903537325,
+      "formula_only_rate_delta_vs_frontier": -0.092718861645403,
+      "manifest_path": "experiments/results/pmg_hotspot_candidate_c067_stride4_lzma_20260502/build_manifest.json",
+      "payload_bytes": 75558,
+      "protected_pair_count": null,
+      "residual_pixels_touched": 34534,
+      "score_claim": false
+    },
+    {
+      "archive_bytes": 102456,
+      "archive_delta_vs_frontier": -173758,
+      "archive_sha256": "48e70211fb621ae7919924b5eb57002473e1834dd7fbf758d673003597c1608a",
+      "candidate_id": "pmg_hotspot_rowspan_stride8",
+      "final_disagreement_fraction": 0.02741742451985677,
+      "formula_only_rate_delta_vs_frontier": -0.11569831997660225,
+      "manifest_path": "experiments/results/pmg_hotspot_candidate_c067_stride8_lzma_20260502/build_manifest.json",
+      "payload_bytes": 45860,
+      "protected_pair_count": null,
+      "residual_pixels_touched": 45553,
+      "score_claim": false
+    }
+  ],
+  "pass_counts": {
+    "byte_target_only": 2,
+    "geometry_target_only": 1,
+    "joint_byte_and_geometry": 0
+  },
+  "points": [
+    {
+      "archive_bytes": 635102,
+      "archive_delta_vs_frontier": 358888,
+      "archive_sha256": "480e715c04102011436f1d8910aa36fda0d6dc47d7458ef5204a69c746e364ef",
+      "candidate_id": "pmg_hotspot_rowspan_stride2",
+      "final_disagreement_fraction": 0.0,
+      "formula_only_rate_delta_vs_frontier": 0.23896878796810983,
+      "manifest_path": "experiments/results/pmg_hotspot_candidate_c067_protect_top600_20260502/build_manifest.json",
+      "payload_bytes": 573692,
+      "protected_pair_count": 600,
+      "residual_pixels_touched": 1823949,
+      "score_claim": false
+    },
+    {
+      "archive_bytes": 253108,
+      "archive_delta_vs_frontier": -23106,
+      "archive_sha256": "27b2cbf11ef28ee2178cd113b337ec0d9aab5621220535adae677a3fb95c21d2",
+      "candidate_id": "pmg_hotspot_rowspan_stride2",
+      "final_disagreement_fraction": 0.012495210435655381,
+      "formula_only_rate_delta_vs_frontier": -0.015385336970840892,
+      "manifest_path": "experiments/results/pmg_hotspot_candidate_c067_protect_top80_20260502/build_manifest.json",
+      "payload_bytes": 191698,
+      "protected_pair_count": 80,
+      "residual_pixels_touched": 349954,
+      "score_claim": false
+    },
+    {
+      "archive_bytes": 194350,
+      "archive_delta_vs_frontier": -81864,
+      "archive_sha256": "5aad0c173f78e1cfd4d1d6e09d7a94713a2866975b54556c64a50f009f5adbe0",
+      "candidate_id": "pmg_hotspot_rowspan_stride2",
+      "final_disagreement_fraction": 0.014882481892903646,
+      "formula_only_rate_delta_vs_frontier": -0.054509877338393437,
+      "manifest_path": "experiments/results/pmg_hotspot_candidate_c067_protect_top10_20260502/build_manifest.json",
+      "payload_bytes": 132940,
+      "protected_pair_count": 10,
+      "residual_pixels_touched": 68340,
+      "score_claim": false
+    },
+    {
+      "archive_bytes": 136967,
+      "archive_delta_vs_frontier": -139247,
+      "archive_sha256": "145c7c2358badac72f53c396ba3a456ebe8f35e7cdc88514289cc58df3d5cad4",
+      "candidate_id": "pmg_hotspot_rowspan_stride4",
+      "final_disagreement_fraction": 0.018023028903537325,
+      "formula_only_rate_delta_vs_frontier": -0.092718861645403,
+      "manifest_path": "experiments/results/pmg_hotspot_candidate_c067_stride4_lzma_20260502/build_manifest.json",
+      "payload_bytes": 75558,
+      "protected_pair_count": null,
+      "residual_pixels_touched": 34534,
+      "score_claim": false
+    },
+    {
+      "archive_bytes": 102456,
+      "archive_delta_vs_frontier": -173758,
+      "archive_sha256": "48e70211fb621ae7919924b5eb57002473e1834dd7fbf758d673003597c1608a",
+      "candidate_id": "pmg_hotspot_rowspan_stride8",
+      "final_disagreement_fraction": 0.02741742451985677,
+      "formula_only_rate_delta_vs_frontier": -0.11569831997660225,
+      "manifest_path": "experiments/results/pmg_hotspot_candidate_c067_stride8_lzma_20260502/build_manifest.json",
+      "payload_bytes": 45860,
+      "protected_pair_count": null,
+      "residual_pixels_touched": 45553,
+      "score_claim": false
+    }
+  ],
+  "producer": "experiments/plan_predictive_mask_residual_economics.py",
+  "promotion_eligible": false,
+  "ranked_next_actions": [
+    {
+      "action_id": "learned_geometry_preserving_mask_decoder",
+      "rank": 1,
+      "reason": "row-span residual coding has byte headroom only while disagreement remains far outside geometry trust; exact reconstruction is byte-regressive",
+      "status": "highest_ev"
+    },
+    {
+      "action_id": "use_residual_economics_as_training_loss_budget",
+      "rank": 2,
+      "reason": "the learned decoder must model geometry, not memorize per-pixel residuals; residual bytes define the fallback budget",
+      "status": "local_design_input"
+    },
+    {
+      "action_id": "remote_exact_eval",
+      "rank": 3,
+      "reason": "no PMG residual point currently satisfies both sub-0.24 bytes and geometry trust",
+      "status": "blocked"
+    }
+  ],
+  "remote_jobs_dispatched": false,
+  "schema": "predictive_mask_residual_economics_v1",
+  "score_claim": false,
+  "threshold_estimates": {
+    "exact_mask_reconstruction": {
+      "bracket": [
+        {
+          "archive_bytes": 635102,
+          "archive_delta_vs_frontier": 358888,
+          "archive_sha256": "480e715c04102011436f1d8910aa36fda0d6dc47d7458ef5204a69c746e364ef",
+          "candidate_id": "pmg_hotspot_rowspan_stride2",
+          "final_disagreement_fraction": 0.0,
+          "formula_only_rate_delta_vs_frontier": 0.23896878796810983,
+          "manifest_path": "experiments/results/pmg_hotspot_candidate_c067_protect_top600_20260502/build_manifest.json",
+          "payload_bytes": 573692,
+          "protected_pair_count": 600,
+          "residual_pixels_touched": 1823949,
+          "score_claim": false
+        }
+      ],
+      "estimated_archive_bytes": 635102,
+      "method": "observed_point",
+      "planning_only": true,
+      "threshold": 0.0
+    },
+    "geometry_trust": {
+      "bracket": [
+        {
+          "archive_bytes": 635102,
+          "archive_delta_vs_frontier": 358888,
+          "archive_sha256": "480e715c04102011436f1d8910aa36fda0d6dc47d7458ef5204a69c746e364ef",
+          "candidate_id": "pmg_hotspot_rowspan_stride2",
+          "final_disagreement_fraction": 0.0,
+          "formula_only_rate_delta_vs_frontier": 0.23896878796810983,
+          "manifest_path": "experiments/results/pmg_hotspot_candidate_c067_protect_top600_20260502/build_manifest.json",
+          "payload_bytes": 573692,
+          "protected_pair_count": 600,
+          "residual_pixels_touched": 1823949,
+          "score_claim": false
+        }
+      ],
+      "estimated_archive_bytes": 635102,
+      "method": "observed_point",
+      "planning_only": true,
+      "threshold": 0.001
+    }
+  },
+  "thresholds": {
+    "geometry_trust_disagreement_fraction": 0.001,
+    "sub024_archive_bytes": 162650
+  }
+}

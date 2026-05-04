@@ -1,0 +1,60 @@
+{
+  "archive_byte_delta": 6392,
+  "evidence_grade": "empirical_byte_only_until_cuda_auth_eval",
+  "formula_rate_score_delta": 0.0042561704283569195,
+  "members": {
+    "p": {
+      "bytes": 276326,
+      "sha256": "035d10a5b6d0d04de9d2a209d6c7fdf4235e8545065c25bd04ed528c64d7dd89"
+    },
+    "qpost.bin": {
+      "bytes": 6298,
+      "sha256": "f9f4db024d720d14257a33242c30eb1e5807fcf88914b5a16f06481ce488e6ee"
+    }
+  },
+  "output_archive": "/Users/adpena/Projects/pact/experiments/results/qzs3_postprocess_sidecar_pr65_r8_20260502T0146Z/archive.zip",
+  "output_archive_bytes": 282818,
+  "output_archive_sha256": "ce65a1d22276a3c13334682f065bd6595b11c36f54d95233e813754d232c7957",
+  "pr65_archive": "/Users/adpena/Projects/pact/reports/raw/leaderboard_intel_20260501/pr65_archive.zip",
+  "pr65_archive_sha256": "b331cb4f6df9d8929db966b943b8c73624cdf3b6db71acbde361570852e59e68",
+  "qpost_streams": {
+    "bias": {
+      "bytes": 223,
+      "sha256": "8910af036b9fa9f9bee2dbf241dede5afc9720ff9e7e5bcef784a7a3b3e4309b"
+    },
+    "frac": {
+      "bytes": 106,
+      "sha256": "a5039f64850da646535df761447cecd580703d1cc0c56040006ce1a50bc9a992"
+    },
+    "frac2": {
+      "bytes": 149,
+      "sha256": "3a01c7546d89d9d3ca846da37a20add7d456421e9211a6339850d946b856026b"
+    },
+    "frac3": {
+      "bytes": 154,
+      "sha256": "d725b01b604566c5a76a06b821c644c8d5d5bb9a57ab0597d3bdabc8389858b5"
+    },
+    "post": {
+      "bytes": 1400,
+      "sha256": "c3dc88e0fb5a1e48aec49eeacefeea20685e3c02598933deb1ff22dc09892575"
+    },
+    "randmulti": {
+      "bytes": 3731,
+      "sha256": "dddf4b4fec32190b219d3e916e05bba5d1711d4208d16966929fa09cbc39349e"
+    },
+    "region": {
+      "bytes": 273,
+      "sha256": "4a7c16094fab281c30e27621a58577c095c4b1153c232518c9adbaba2a2b2392"
+    },
+    "shift": {
+      "bytes": 226,
+      "sha256": "48a6ab5972eb594112c5e9c8ef2a35a757a3df818d489c893e30772f148e4dc4"
+    }
+  },
+  "schema_version": 1,
+  "score_claim": false,
+  "source_archive": "/Users/adpena/Projects/pact/experiments/results/lightning_batch/exact_eval_line_search_qzs3_qp1_r8_t4_20260502T0110Z/archive.zip",
+  "source_archive_bytes": 276426,
+  "source_archive_sha256": "c68b7522d4d2c8a89771e491c5956b0fb3460e744b3adba9f410f053783044b1",
+  "tool": "experiments/build_qzs3_postprocess_candidate.py"
+}
