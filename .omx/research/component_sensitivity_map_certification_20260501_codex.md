@@ -302,3 +302,117 @@ Alpha diagnostic feed into sensitivity/repair planning:
 - This packet is CPU empirical and cannot promote/rank/kill. It can inform
   Alpha repair geometry and finite-difference perturbation design once CUDA
   component-sensitivity evidence lands.
+
+## 2026-05-01T09:35Z Direct-FD Merge, Prediction Guard, And Response-Only Plans
+
+Full direct-FD map status:
+
+- Mixed fast merge completed with exactly-once 717/717 channel coverage:
+  `experiments/results/lightning_batch/component_sensitivity_pfp16_direct_fd_mixed_l40s_rtxpro_modal_20260501_complete_merge_20260501T091302Z`.
+  It combines L40S, RTX PRO, and one Modal shard; it is planning/diagnostic
+  only.
+- Homogeneous Modal A10G r3 completed all 16 shards and merged exactly-once:
+  `experiments/results/modal_component_sensitivity/pfp16_direct_fd_modal_a10g_20260501_r3_complete_merge_20260501T0929Z`.
+  This is an independent backend cross-check, still diagnostic/non-score.
+
+Top-channel agreement:
+
+- Mixed combined top channels: `renderer.head.weight` channels 2, 1, 0, then
+  `renderer.stem_res.conv1.weight` channel 0 and
+  `renderer.stem_res.conv2.weight` channel 4.
+- Modal A10G combined top channels: `renderer.head.weight` channels 2, 1, 0,
+  then `renderer.fuse_conv.weight` channel 0 and
+  `renderer.stem_res.conv1.weight` channel 0.
+- This confirms the head/stem/fuse sensitivity geometry is real enough for
+  perturbation selection, but not yet byte-unit prediction.
+
+Adversarial correction landed:
+
+- Grand Council review found the generated prediction deltas were
+  mathematically unit-inconsistent: direct-FD maps measure channel weight-space
+  response per RMS weight perturbation, not response per archive byte delta.
+- `experiments/build_component_response_prediction_deltas.py` now refuses to
+  produce archive-byte `predicted_delta` artifacts from direct-FD maps unless
+  map metadata explicitly records `archive_byte_prediction_eligible=true`.
+- `experiments/build_component_response_plan_from_sensitivity_artifacts.py`
+  now supports response-only plans with
+  `--response-only-no-prediction-deltas`; these plans are for official CUDA
+  response calibration only and cannot pass promotion certification by
+  prediction gates.
+- Explicit perturbation bases are now fail-closed against baseline archive
+  custody: source archive SHA/bytes must match and any recorded atom
+  `original_byte` must match the baseline member byte.
+- Merged-shard validation now cross-checks summary and validation merge
+  payloads, source-shard custody, source indices, and assigned-channel SHA
+  vectors.
+
+Clean response-only official-response plan packets:
+
+- Mixed response-only plan:
+  `experiments/results/official_component_response_pfp16_direct_fd_mixed_complete_response_only_20260501`.
+  Plan SHA-256:
+  `d0026cf7ec5f22ff3de4e8402d3f3a660767eb64e890d779cb466933ed60c23f`.
+- Modal A10G response-only plan:
+  `experiments/results/official_component_response_pfp16_direct_fd_modal_a10g_complete_response_only_20260501`.
+  Plan SHA-256:
+  `a460009d891a38287378164989ca8a417780a11f857ae998f5d724a5eaa310bf`.
+
+Superseded artifacts:
+
+- Earlier plan dirs without the `_response_only_` suffix contain invalid huge
+  byte-response predictions derived from weight-space direct-FD maps. Do not
+  submit those in `--require-passed` mode and do not use their prediction
+  deltas for claims.
+
+Lightning blocker:
+
+- SSH alias `scratch-studio-devbox` is configured and offers key fingerprint
+  `SHA256:af6xKc8r7y0WYc4FL6lGrvhHDT0qyo2gSruKhrk/c5Y`, but Lightning rejects
+  it with `Permission denied (publickey)`. This is a Lightning-side
+  account/Studio key authorization issue after the key is offered, not a repo
+  config failure. User action required: add/reauthorize
+  `~/.ssh/lightning_rsa.pub` in Lightning UI, then verify
+  `ssh -o BatchMode=yes scratch-studio-devbox true`.
+
+Verification:
+
+- `py_compile` passed for touched direct-FD planning, perturbation,
+  prediction, selector, and Lightning SSH config files.
+- Focused tests passed: `27 passed` across component-response perturbation
+  planning, sensitivity-ranked basis selection, and Lightning SSH config.
+- MCP preflight clean; Lightning supply-chain scan clean and recorded at
+  `.omx/state/lightning_supply_chain_local_codex_20260501T0939Z.json`;
+  `git diff --check` clean.
+
+## 2026-05-01T09:50Z Response-Only Calibration Dispatch
+
+The clean mixed direct-FD response-only packet has been staged and dispatched
+to Lightning Batch Jobs for official CUDA response measurement.
+
+Staging:
+
+- Manifest:
+  `.omx/state/component_response_direct_fd_mixed_response_only_20260501T0950Z_manifest.json`.
+- Manifest SHA-256:
+  `ca98d9a707ea5be6da5a69c045e89563a0bcd18917eb88242048dc918aebd907`.
+- File count/bytes: `1146` / `179556072`.
+- Remote manifest verification: OK.
+- Remote supply-chain scan: OK.
+- Interactive Studio CUDA: still unavailable; Batch Job CUDA preflight remains
+  the authority.
+
+Jobs:
+
+- `component_response_pfp16_direct_fd_mixed_response_only_t4_aws_20260501T0950Z`
+  (`g4dn.2xlarge`) submitted, first refresh `Pending`.
+- `component_response_pfp16_direct_fd_mixed_response_only_t4_aws_small_20260501T0950Z`
+  (`g4dn.xlarge`) submitted, first refresh `Pending`.
+- GCP `n1-standard-8` duplicate was rejected before creation because this
+  Studio submitted against an AWS cluster.
+
+Interpretation rule:
+
+- These jobs intentionally run without `--require-passed` because the nonzero
+  points have no archive-byte prediction deltas. The result should be used to
+  fit/calibrate byte-basis response, not to claim a certified sensitivity map
+  or score frontier by itself.
