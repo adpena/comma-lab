@@ -199,10 +199,44 @@ Every public or judge-facing packet should be generated from structured rows wit
 
 Contest deadline: **May 3 11:59 PM AOE = May 4 06:59 AM CDT (May 4 11:59 UTC)**. This report is now in final handoff mode for the confirmed PR100 adapter champion, not pre-deadline queue planning.
 
+## Internal sub-frontier launch-ready candidate — Lane Ω-W-V3 (post-deadline)
+
+**Lane Ω-W-V3** (water-filling codec v2 → PR106 HNeRV decoder) is fully scaffolded as of 2026-05-04 and ready for ~$0.30 GPU dispatch on Vast.ai 4090 (or T4-equivalent). Council 8/10 GO; predicted band [0.194, 0.204] [contest-CUDA].
+
+### Pipeline (5 commits today)
+
+| Stage | File | Commit | Purpose |
+|---|---|---|---|
+| 1 | `experiments/extract_pr106_decoder.py` | `45149f21` | Unpack PR106 0.bin → 28 tensors / 228,958 params + 600×28 latents |
+| 2 | `experiments/build_sensitivity_map_pr106.py` | `5ca67264` | Per-channel β-Fisher (CUDA-required); CPU stub OK |
+| 3 | `experiments/repack_pr106_with_water_filling.py` | `b2f958a4` | Per-Conv2d water-fill OWV2 + brotli-int8 fallback → apogee_v2 0.bin |
+| 4 | `submissions/apogee_v2/inflate.{py,sh}` + src | `c7f237eb` | Inverse parser; **round-trip VERIFIED** on real bytes |
+| 5 | `scripts/remote_lane_omega_w_v3_pr106.sh` | `ac3053ef` | 4-stage GPU dispatch wrapper |
+
+### Stub-mode preview (CPU, all-ones sensitivity) [empirical:experiments/results/apogee_v2_repack_20260504_claude/repack_metadata.json]
+
+| Metric | PR106 (current public frontier) | Apogee-v2 stub | Δ |
+|---|---:|---:|---:|
+| Archive bytes | 186,239 | 164,087 | **−22,152 (−11.9%)** |
+| Rate-component score | 0.124 | 0.109 | **−0.01475** |
+| Predicted total score (if distortion holds) | 0.20945673 | **~0.1947** | **SUB-0.20** |
+
+Real β-Fisher (CUDA dispatch) could shift bytes among layers and improve further. Distortion delta is UNKNOWN until contest_auth_eval runs on T4 — predicted band [0.194, 0.204] per audit assumes the per-channel water-fill quantization preserves PR106's PoseNet sensitivity (the dominant attack surface at 0.018306).
+
+### Operator one-liner (when GPU dispatch approved)
+
+```bash
+PR106_ARCHIVE=experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip \
+bash scripts/remote_lane_omega_w_v3_pr106.sh
+```
+
+Anchor: `experiments/results/internal_hidden_gem_audit_20260504_claude/revival_plans/revival_plan_01_water_filling_codec_v2_pr106_decoder.md` (Council 8/10 GO).
+
 ## Next Queue
 
 1. Use `experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter` as the release packet unless a newer exact T4 A++ packet is explicitly promoted.
 2. Keep PR100 source attribution and the exact T4 custody block with every public/judge-facing score claim.
 3. Run strict public-release hygiene on the exact PR body, notebook, and site bundle before publishing URLs.
 4. Keep PR96, PR91/HPM1, and any public body/CPU scores in external context until exact CUDA replay lands.
+5. **NEW**: Lane Ω-W-V3 GPU dispatch (~$0.30) is the highest-EV next move toward sub-0.20 — operator approval gate per CLAUDE.md "Design decisions — non-negotiable".
 </content>
