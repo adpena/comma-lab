@@ -49,11 +49,18 @@ def decode_video(
     path: str | Path,
     target_h: int = 874,
     target_w: int = 1164,
+    max_frames: int | None = None,
 ) -> list[torch.Tensor]:
     """Decode video to list of (H, W, 3) uint8 tensors.
 
     Upscales to target resolution via bicubic if needed.
+    When ``max_frames`` is set, stops decoding as soon as that many frames
+    have been materialized. This is a wall-clock guard for TTO/pose tools:
+    callers that need only the contest 1200 frames must not decode a longer
+    source video and slice afterward.
     """
+    if max_frames is not None and max_frames <= 0:
+        return []
     container = av.open(str(path))
     try:
         stream = container.streams.video[0]
@@ -66,6 +73,8 @@ def decode_video(
                 x = F.interpolate(x, size=(target_h, target_w), mode="bicubic", align_corners=False)
                 t = x.clamp(0, 255).squeeze(0).permute(1, 2, 0).round().to(torch.uint8)
             frames.append(t)
+            if max_frames is not None and len(frames) >= max_frames:
+                break
     finally:
         container.close()
     return frames
@@ -100,7 +109,12 @@ def load_gt_video(
     """
     from tac.camera import SEGNET_INPUT_H, SEGNET_INPUT_W
 
-    gt_frames_full = decode_video(video_path, target_h=SEGNET_INPUT_H, target_w=SEGNET_INPUT_W)
+    gt_frames_full = decode_video(
+        video_path,
+        target_h=SEGNET_INPUT_H,
+        target_w=SEGNET_INPUT_W,
+        max_frames=n_frames,
+    )
     gt_frames = gt_frames_full[:n_frames]
     # Ensure even frame count (PoseNet evaluates non-overlapping pairs)
     n = len(gt_frames) - (len(gt_frames) % 2)

@@ -508,7 +508,7 @@ class SegMapTrainer:
                     f"requires learnable_class_targets to project via LUT. "
                     f"Otherwise pass (B, T, NUM_CLASSES, H, W) one-hot."
                 )
-            from tac.mask_grayscale_lut import create_gaussian_softmax_lut, NUM_CLASSES as _NC
+            from tac.mask_grayscale_lut import NUM_CLASSES as _NC
             b, t, h, w = mask_pairs.shape
             num_classes = _NC
             # Compute LUT WITH gradient for raw_values (so backprop reaches
@@ -519,8 +519,8 @@ class SegMapTrainer:
             x = torch.arange(256, device=self.device, dtype=torch.float32).unsqueeze(1)
             squared_diff = (x - targets.unsqueeze(0)) ** 2
             sigma = 15.0
-            logits = -squared_diff / (2.0 * sigma * sigma)
-            lut = torch.softmax(logits, dim=1)  # (256, NUM_CLASSES) — differentiable in targets
+            bell = torch.exp(-squared_diff / (2.0 * sigma * sigma))
+            lut = torch.softmax(bell, dim=1)  # (256, NUM_CLASSES) — differentiable in targets
             # mask_pairs uint8 -> long indexer
             gray_idx = mask_pairs.to(self.device, dtype=torch.long).clamp(0, 255)
             # Embedding lookup: (B, T, H, W) -> (B, T, H, W, NUM_CLASSES)

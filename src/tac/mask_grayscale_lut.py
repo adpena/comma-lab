@@ -10,7 +10,7 @@ Why this matters for Lane MM
 ----------------------------
 Our existing canonical mask path is 5-channel one-hot AV1 (mask_codec.py).
 On Lane A's full-res 384x512 masks the AV1 stream is ~280KB.
-Selfcomp's PR #55 ships a single 1-channel grayscale AV1 stream that is
+The public Selfcomp submission ships a single 1-channel grayscale AV1 stream that is
 empirically ~50% smaller (~140KB) for the same 1200 frames at the same
 quality, because:
 
@@ -19,9 +19,11 @@ quality, because:
 2. The 5 grayscale targets [0, 64, 128, 192, 255] are spread across the full
    8-bit range, so AV1's quantizer has 64-pixel gaps (3) and 63-pixel gap (1) to absorb noise — the
    noisy decode still nearest-neighbours back to the correct class.
-3. The Gaussian-softmax LUT (sigma=15) at inflate time is a pure soft-max
-   over (gray - target)^2 / (2 sigma^2); it provides graceful degradation:
-   gray=70 → 92% class-2 (target 64) + 8% class-3 (target 128).
+3. The Gaussian-softmax LUT (sigma=15) at inflate time matches the public
+   Selfcomp reference: softmax(exp(-(gray - target)^2 / (2 sigma^2))). This
+   is intentionally much softer than a nearest-neighbour one-hot projection;
+   the renderer must be trained against this exact analog distribution if the
+   soft map is fed directly at inflate time.
 
 CLAUDE.md compliance
 --------------------
@@ -92,9 +94,9 @@ def encode_masks_grayscale(class_ids: torch.Tensor) -> torch.Tensor:
 def decode_grayscale_to_classes(gray: torch.Tensor) -> torch.Tensor:
     """Decode grayscale uint8 back to class ids via nearest-neighbour matching.
 
-    Used by the contest evaluator + Lane MM smoke tests; the production inflate
-    path uses ``create_gaussian_softmax_lut`` to get a soft probability map
-    and then argmaxes that.
+    Used by nearest-neighbour forensic paths and smoke tests. Production
+    soft-LUT SegMap inflates should use ``grayscale_to_probability_map`` so
+    runtime input matches the training distribution.
 
     Args:
         gray: (N, H, W) uint8 or int tensor in [0, 255].
@@ -119,13 +121,13 @@ def create_gaussian_softmax_lut(
 
     Mirrors Selfcomp inflate.py L175-180 (``create_gaussian_softmax_lut``):
     for each gray value v in [0, 255] and each class c in [0, NUM_CLASSES),
-    compute lut[v, c] = softmax_c(-((v - target[c])^2) / (2 sigma^2)).
+    compute lut[v, c] = softmax_c(exp(-((v - target[c])^2) / (2 sigma^2))).
 
     Args:
-        sigma: Gaussian width controlling how soft the class boundaries are.
-            Smaller sigma -> more confident assignments (closer to one-hot).
-            sigma=15 (Selfcomp default) gives a smooth transition that recovers
-            from AV1 quantization noise of ~10-15 gray levels.
+        sigma: Gaussian width controlling how fast the bell values decay away
+            from class targets. With the Selfcomp bell-softmax form the exact
+            target row is deliberately still soft, so renderers must be trained
+            against this distribution instead of assuming one-hot masks.
         targets: Optional custom class-target gray values, shape (NUM_CLASSES,)
             float, all in [0, 255]. If None, uses Selfcomp's default fixed
             CLASS_TO_GRAY mapping. Lane LCT supplies a learnable Parameter
@@ -154,18 +156,51 @@ def create_gaussian_softmax_lut(
     x = torch.arange(256, dtype=torch.float32).unsqueeze(1)  # (256, 1)
     targets_b = targets_t.unsqueeze(0)  # (1, NUM_CLASSES)
     squared_diff = (x - targets_b) ** 2
-    # Round 2 review Medium (LUT divergence note): Selfcomp's reference
-    # inflate.py L175-180 softmaxes ``exp(-(d^2)/(2sigma^2))`` (a temperature-
-    # scaled bell curve) directly. We softmax ``-(d^2)/(2sigma^2)`` (negative
-    # log-distance), which is mathematically equivalent for the SAME pixel-
-    # value rankings but produces SHARPER probability ratios (softmax in
-    # log-space vs softmax in odds-space). This is a deliberate fork —
-    # combined with the inflate-side argmax-then-one-hot path, the difference
-    # is invisible in practice. If we ever feed the SOFT probability map to
-    # the renderer (instead of one-hot), we should match Selfcomp's exp()
-    # bell-curve form to preserve numerical equivalence.
-    logits = -squared_diff / (2.0 * sigma * sigma)
-    return F.softmax(logits, dim=1)
+    bell = torch.exp(-squared_diff / (2.0 * sigma * sigma))
+    return F.softmax(bell, dim=1)
+
+
+def grayscale_to_probability_map(
+    gray: torch.Tensor,
+    *,
+    sigma: float = LUT_DEFAULT_SIGMA,
+    targets: torch.Tensor | None = None,
+    channel_first: bool = True,
+) -> torch.Tensor:
+    """Project uint8 grayscale masks to Selfcomp-style class probabilities.
+
+    The returned probabilities are the exact LUT distribution produced by
+    ``create_gaussian_softmax_lut``. This helper is the train/inflate parity
+    point for grayscale lanes: use it whenever a renderer consumes the soft
+    analog mask map directly.
+
+    Args:
+        gray: 2-D ``(H, W)``, 3-D ``(N, H, W)``, or 4-D ``(B, T, H, W)``
+            grayscale tensor. Values are clamped to [0, 255] before lookup.
+        sigma: LUT sigma.
+        targets: Optional class gray targets.
+        channel_first: If true, return ``(C, H, W)``, ``(N, C, H, W)``, or
+            ``(B, T, C, H, W)``. If false, keep the embedding channel last.
+
+    Returns:
+        Float32 probability tensor with class probabilities summing to one.
+    """
+    if gray.dim() not in (2, 3, 4):
+        raise ValueError(
+            f"gray must have 2, 3, or 4 dims, got shape {tuple(gray.shape)}"
+        )
+    lut = create_gaussian_softmax_lut(sigma=sigma, targets=targets).to(
+        device=gray.device
+    )
+    gray_idx = gray.to(torch.long).clamp(0, 255)
+    probs = F.embedding(gray_idx, lut)
+    if not channel_first:
+        return probs
+    if gray.dim() == 2:
+        return probs.permute(2, 0, 1).contiguous()
+    if gray.dim() == 3:
+        return probs.permute(0, 3, 1, 2).contiguous()
+    return probs.permute(0, 1, 4, 2, 3).contiguous()
 
 
 __all__ = [
@@ -175,4 +210,5 @@ __all__ = [
     "encode_masks_grayscale",
     "decode_grayscale_to_classes",
     "create_gaussian_softmax_lut",
+    "grayscale_to_probability_map",
 ]

@@ -39,6 +39,32 @@ import torch.nn.functional as F
 from tac.camera import FRAME_H as SEGNET_H, FRAME_W as SEGNET_W, NUM_CLASSES
 
 
+def _resolve_ffmpeg_candidate(value: str) -> str | None:
+    raw = str(value).strip()
+    if not raw:
+        return None
+    path = Path(raw)
+    if path.exists() and os.access(path, os.X_OK):
+        return str(path)
+    resolved = shutil.which(raw)
+    if resolved:
+        return resolved
+    return None
+
+
+def _ffmpeg_usable(binary: str) -> bool:
+    try:
+        proc = subprocess.run(
+            [binary, "-version"],
+            capture_output=True,
+            timeout=5,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    return proc.returncode == 0
+
+
 def _ffmpeg_binary() -> str:
     """Resolve the ffmpeg binary to use for mask encoding.
 
@@ -57,14 +83,19 @@ def _ffmpeg_binary() -> str:
     against ffmpeg-environment drift.
     """
     override = os.environ.get("TAC_FFMPEG")
-    if override and Path(override).exists() and os.access(override, os.X_OK):
-        return override
+    if override:
+        resolved = _resolve_ffmpeg_candidate(override)
+        if resolved and _ffmpeg_usable(resolved):
+            return resolved
+        raise RuntimeError(f"TAC_FFMPEG={override!r} is not an executable usable ffmpeg binary")
     upstream_dir = os.environ.get("TAC_UPSTREAM_DIR", "upstream")
     candidate = Path(upstream_dir) / "ffmpeg-new"
-    if candidate.exists() and os.access(candidate, os.X_OK):
+    if candidate.exists() and os.access(candidate, os.X_OK) and _ffmpeg_usable(str(candidate)):
         return str(candidate.resolve())
-    # Final fallback to PATH
-    return "ffmpeg"
+    resolved = shutil.which("ffmpeg")
+    if resolved and _ffmpeg_usable(resolved):
+        return resolved
+    raise RuntimeError("no usable ffmpeg binary found; set TAC_FFMPEG to a working ffmpeg")
 
 
 def extract_masks(

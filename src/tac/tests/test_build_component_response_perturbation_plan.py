@@ -416,6 +416,61 @@ def test_prediction_delta_builder_projects_component_maps(tmp_path: Path) -> Non
     assert summary["point_count"] == 3
 
 
+def test_prediction_delta_builder_rejects_uncalibrated_direct_fd_maps(tmp_path: Path) -> None:
+    script = REPO_ROOT / "experiments" / "build_component_response_prediction_deltas.py"
+    spec = importlib.util.spec_from_file_location(
+        "build_component_response_prediction_deltas_direct_fd_guard",
+        script,
+    )
+    assert spec is not None and spec.loader is not None
+    pred_module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = pred_module
+    spec.loader.exec_module(pred_module)
+
+    baseline = _write_archive(tmp_path / "baseline.zip", _baseline_members())
+    basis = tmp_path / "basis.json"
+    basis.write_text(
+        json.dumps(
+            {
+                "format": "perturbation_basis_v1",
+                "atoms": [
+                    {
+                        "atom_id": "a0",
+                        "member": "renderer.bin",
+                        "offset": 8,
+                        "delta_per_epsilon": 1,
+                        "metadata": {"layer_name": "conv", "channel_index": 0},
+                    }
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n"
+    )
+    maps: dict[str, Path] = {}
+    for component in ("posenet", "segnet", "combined"):
+        path = tmp_path / f"{component}.pt"
+        save_sensitivity_map(
+            path,
+            {"conv.weight": torch.tensor([1.0], dtype=torch.float32)},
+            metadata={
+                "component": component,
+                "device": "cuda",
+                "sensitivity_source": "direct_renderer_cuda_finite_difference_component_response",
+            },
+        )
+        maps[component] = path
+
+    with pytest.raises(pred_module.ComponentResponsePredictionError, match="archive-byte"):
+        pred_module.build_component_response_prediction_deltas(
+            baseline_archive=baseline,
+            perturbation_basis_json=basis,
+            output_json=tmp_path / "prediction_deltas.json",
+            component_maps=maps,
+            epsilons=[-1.0, 0.0, 1.0],
+        )
+
+
 def test_plan_from_sensitivity_artifacts_builds_prediction_and_plan(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -431,6 +486,7 @@ def test_plan_from_sensitivity_artifacts_builds_prediction_and_plan(
     spec.loader.exec_module(module)
 
     baseline = _write_archive(tmp_path / "baseline.zip", _baseline_members())
+    baseline_meta = module._file_meta(baseline)
     baseline_eval = tmp_path / "contest_auth_eval.json"
     baseline_eval.write_text('{"device":"cuda"}\n')
     artifact_dir = tmp_path / "sensitivity"
@@ -449,6 +505,10 @@ def test_plan_from_sensitivity_artifacts_builds_prediction_and_plan(
                         "channel_index": 0,
                     }
                 ],
+                "source_archive": {
+                    "bytes": baseline_meta["bytes"],
+                    "sha256": baseline_meta["sha256"],
+                },
             },
             sort_keys=True,
         )
@@ -461,7 +521,6 @@ def test_plan_from_sensitivity_artifacts_builds_prediction_and_plan(
             metadata={"component": component, "device": "cuda"},
         )
 
-    baseline_meta = module._file_meta(baseline)
     seen_validation_args: dict[str, object] = {}
 
     def _fake_validate(artifact_root, **kwargs):
@@ -520,6 +579,7 @@ def test_plan_from_sensitivity_artifacts_accepts_fresh_basis_override(
     spec.loader.exec_module(module)
 
     baseline = _write_archive(tmp_path / "baseline.zip", _baseline_members())
+    baseline_meta = module._file_meta(baseline)
     baseline_eval = tmp_path / "contest_auth_eval.json"
     baseline_eval.write_text('{"device":"cuda"}\n')
     artifact_dir = tmp_path / "sensitivity"
@@ -539,6 +599,10 @@ def test_plan_from_sensitivity_artifacts_accepts_fresh_basis_override(
                         "channel_index": 0,
                     }
                 ],
+                "source_archive": {
+                    "bytes": baseline_meta["bytes"],
+                    "sha256": baseline_meta["sha256"],
+                },
             },
             sort_keys=True,
         )
@@ -559,6 +623,10 @@ def test_plan_from_sensitivity_artifacts_accepts_fresh_basis_override(
                         "channel_index": 0,
                     }
                 ],
+                "source_archive": {
+                    "bytes": baseline_meta["bytes"],
+                    "sha256": baseline_meta["sha256"],
+                },
             },
             sort_keys=True,
         )
@@ -570,8 +638,6 @@ def test_plan_from_sensitivity_artifacts_accepts_fresh_basis_override(
             {"conv.weight": torch.tensor([0.01], dtype=torch.float32)},
             metadata={"component": component, "device": "cuda"},
         )
-
-    baseline_meta = module._file_meta(baseline)
 
     def _fake_validate(*_args, **_kwargs):
         return {
@@ -600,6 +666,202 @@ def test_plan_from_sensitivity_artifacts_accepts_fresh_basis_override(
     basis_out = json.loads((plan_path.parent / plan["perturbation"]["basis_path"]).read_text())
     assert summary["perturbation_basis"]["basis_source"] == "explicit_perturbation_basis_json"
     assert basis_out["atoms"][0]["atom_id"] == "fresh"
+
+
+def test_plan_from_sensitivity_artifacts_accepts_complete_merged_shard_artifact(
+    tmp_path: Path,
+) -> None:
+    script = REPO_ROOT / "experiments" / "build_component_response_plan_from_sensitivity_artifacts.py"
+    spec = importlib.util.spec_from_file_location(
+        "build_component_response_plan_from_sensitivity_artifacts_merged",
+        script,
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+
+    baseline = _write_archive(tmp_path / "baseline.zip", _baseline_members())
+    baseline_meta = module._file_meta(baseline)
+    baseline_eval = tmp_path / "contest_auth_eval.json"
+    baseline_eval.write_text('{"device":"cuda"}\n')
+    basis = tmp_path / "basis.json"
+    basis.write_text(
+        json.dumps(
+            {
+                "format": "perturbation_basis_v1",
+                "atoms": [
+                    {
+                        "atom_id": "merged_fresh",
+                        "member": "renderer.bin",
+                        "offset": 8,
+                        "delta_per_epsilon": 1,
+                        "layer_name": "conv",
+                        "channel_index": 0,
+                    }
+                ],
+                "source_archive": {
+                    "bytes": baseline_meta["bytes"],
+                    "sha256": baseline_meta["sha256"],
+                },
+            },
+            sort_keys=True,
+        )
+        + "\n"
+    )
+
+    source_dirs: list[Path] = []
+    for shard_index in range(2):
+        source_dir = tmp_path / f"source_shard_{shard_index}"
+        source_dir.mkdir()
+        source_dirs.append(source_dir)
+        (source_dir / "diagnostic_component_sensitivity_inputs.json").write_text(
+            json.dumps(
+                {
+                    "baseline_archive": {
+                        "bytes": baseline_meta["bytes"],
+                        "sha256": baseline_meta["sha256"],
+                    },
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                },
+                sort_keys=True,
+            )
+            + "\n"
+        )
+        (source_dir / "component_sensitivity_profile_summary.json").write_text(
+            json.dumps(
+                {
+                    "device": "cuda",
+                    "sensitivity_source": "direct_renderer_cuda_finite_difference_component_response",
+                    "score_claim": False,
+                    "promotion_eligible": False,
+                    "official_component_response": False,
+                    "canonical_scorer_path": False,
+                    "n_pairs_total": 600,
+                    "finite_difference_shard": {
+                        "is_shard": True,
+                        "shard_index": shard_index,
+                        "shard_count": 2,
+                        "assigned_channel_count": 1,
+                        "assigned_channel_sha256": f"sha{shard_index}",
+                    },
+                },
+                sort_keys=True,
+            )
+            + "\n"
+        )
+
+    artifact_dir = tmp_path / "merged_artifact"
+    artifact_dir.mkdir()
+    merged_shard = {
+        "is_shard": False,
+        "merge_required_for_certification_handoff": False,
+        "merged_from_shards": True,
+    }
+    merge = {
+        "schema": "component_sensitivity_direct_fd_merge_v1",
+        "coverage": "exactly_once",
+        "declared_shard_count": 2,
+        "source_shard_dirs": [str(path) for path in source_dirs],
+        "source_shard_count": 2,
+        "source_shard_indices": [0, 1],
+        "all_channel_count": 2,
+        "covered_channel_count": 2,
+        "missing_channel_count": 0,
+        "missing_shard_indices": [],
+        "certification_handoff_eligible": True,
+        "score_claim": False,
+        "promotion_eligible": False,
+    }
+    (artifact_dir / "component_sensitivity_profile_summary.json").write_text(
+        json.dumps(
+            {
+                "merge_tool": "experiments/merge_component_sensitivity_shards.py",
+                "device": "cuda",
+                "sensitivity_source": "direct_renderer_cuda_finite_difference_component_response",
+                "score_claim": False,
+                "promotion_eligible": False,
+                "official_component_response": False,
+                "canonical_scorer_path": False,
+                "n_pairs_total": 600,
+                "finite_difference_shard": merged_shard,
+                "finite_difference_merge": merge,
+            },
+            sort_keys=True,
+        )
+        + "\n"
+    )
+    (artifact_dir / "component_sensitivity_shard_merge_validation.json").write_text(
+        json.dumps(
+            {
+                "format": "component_sensitivity_shard_merge_validation_v1",
+                "coverage": "exactly_once",
+                "all_channel_count": 2,
+                "covered_channel_count": 2,
+                "missing_channel_count": 0,
+                "missing_shard_indices": [],
+                "certification_handoff_eligible": True,
+                "score_claim": False,
+                "promotion_eligible": False,
+                "finite_difference_merge": merge,
+                "source_shards": [
+                    {
+                        "path": str(source_dirs[0]),
+                        "shard_index": 0,
+                        "assigned_channel_count": 1,
+                        "assigned_channel_sha256": "sha0",
+                    },
+                    {
+                        "path": str(source_dirs[1]),
+                        "shard_index": 1,
+                        "assigned_channel_count": 1,
+                        "assigned_channel_sha256": "sha1",
+                    },
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n"
+    )
+    for component in ("posenet", "segnet", "combined"):
+        metadata = {
+            "component": component,
+            "scorer_target": component,
+            "device": "cuda",
+            "score_claim": False,
+            "promotion_eligible": False,
+            "official_component_response": False,
+            "canonical_scorer_path": False,
+            "sensitivity_source": "direct_renderer_cuda_finite_difference_component_response",
+            "finite_difference_shard": merged_shard,
+        }
+        save_sensitivity_map(
+            artifact_dir / f"{component}_sensitivity_map.pt",
+            {"conv.weight": torch.tensor([0.01], dtype=torch.float32)},
+            metadata=metadata,
+        )
+        save_sensitivity_map(
+            artifact_dir / f"{component}_holdout_sensitivity_map.pt",
+            {"conv.weight": torch.tensor([0.01], dtype=torch.float32)},
+            metadata={**metadata, "split": "holdout"},
+        )
+
+    summary = module.build_component_response_plan_from_sensitivity_artifacts(
+        sensitivity_artifact_dir=artifact_dir,
+        baseline_archive=baseline,
+        baseline_contest_auth_eval_json=baseline_eval,
+        perturbation_basis_json=basis,
+        output_dir=tmp_path / "out",
+        epsilons=[-1.0, 0.0, 1.0],
+        allow_merged_shard_artifact=True,
+        response_only_no_prediction_deltas=True,
+    )
+
+    assert summary["sensitivity_artifact"]["role"] == "diagnostic_component_sensitivity_merged_shards"
+    assert summary["sensitivity_artifact"]["score_claim"] is False
+    assert summary["response_only_no_prediction_deltas"] is True
+    assert Path(summary["official_response_plan"]["path"]).is_file()
 
 
 def test_plan_from_sensitivity_artifacts_cli_help_imports() -> None:

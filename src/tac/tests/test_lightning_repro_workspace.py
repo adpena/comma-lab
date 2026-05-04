@@ -82,6 +82,31 @@ def test_collect_files_excludes_generated_binary_source_payloads(tmp_path: Path)
     assert by_path["submissions/robust_current/archive.zip"]["role"] == "artifact"
 
 
+def test_collect_files_excludes_hidden_and_macos_source_paths(tmp_path: Path) -> None:
+    mod = _load_module()
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "pkg.py").write_text("x = 1\n")
+    (tmp_path / "src" / "._pkg.py").write_text("fork\n")
+    (tmp_path / ".github" / "workflows").mkdir(parents=True)
+    (tmp_path / ".github" / "workflows" / "ci.yml").write_text("name: ci\n")
+    (tmp_path / "__MACOSX").mkdir()
+    (tmp_path / "__MACOSX" / "payload").write_text("fork\n")
+    (tmp_path / ".DS_Store").write_bytes(b"finder")
+
+    source_only = mod.collect_files(
+        ["."],
+        [],
+        repo_root=tmp_path,
+    )
+    source_paths = {item["path"] for item in source_only}
+
+    assert "src/pkg.py" in source_paths
+    assert "src/._pkg.py" not in source_paths
+    assert ".github/workflows/ci.yml" not in source_paths
+    assert "__MACOSX/payload" not in source_paths
+    assert ".DS_Store" not in source_paths
+
+
 def test_parse_args_defaults_to_oss_repro_source_set() -> None:
     mod = _load_module()
     args = mod.parse_args([
@@ -94,6 +119,7 @@ def test_parse_args_defaults_to_oss_repro_source_set() -> None:
     assert "experiments" in args.source
     assert "submissions" not in args.source
     assert "submissions/robust_current/inflate.sh" in args.source
+    assert "submissions/robust_current/unpack_renderer_payload.py" in args.source
     assert args.requirements_mode == "uv-sync"
 
 
@@ -138,6 +164,41 @@ def test_parse_args_supports_ssh_preflight_diagnostics() -> None:
     assert args.ssh_check_only is True
     assert args.ssh_diagnostics_out == ".omx/state/ssh.json"
     assert args.ssh_connect_timeout == 7
+
+
+def test_local_uv_lock_preflight_accepts_current_lock(tmp_path: Path) -> None:
+    mod = _load_module()
+
+    def fake_run(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        assert cmd == ["uv", "lock", "--check"]
+        assert kwargs["cwd"] == tmp_path
+        assert kwargs["check"] is False
+        return subprocess.CompletedProcess(cmd, 0, "lock ok\n", "")
+
+    diagnostic = mod.ensure_local_uv_lock_current(cwd=tmp_path, runner=fake_run)
+
+    assert diagnostic["status"] == "ok"
+    assert diagnostic["command"] == ["uv", "lock", "--check"]
+
+
+def test_local_uv_lock_preflight_fails_before_remote_staging(tmp_path: Path) -> None:
+    mod = _load_module()
+
+    def fake_run(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        assert cmd == ["uv", "lock", "--check"]
+        return subprocess.CompletedProcess(
+            cmd,
+            1,
+            "Resolved 152 packages\n",
+            "The lockfile at `uv.lock` needs to be updated\n",
+        )
+
+    with pytest.raises(mod.LightningLocalUvLockError) as excinfo:
+        mod.ensure_local_uv_lock_current(cwd=tmp_path, runner=fake_run)
+
+    assert "local uv.lock is stale" in str(excinfo.value)
+    assert excinfo.value.diagnostic["status"] == "fail"
+    assert excinfo.value.diagnostic["returncode"] == 1
 
 
 def test_staging_transfer_commands_reuse_noninteractive_ssh_policy(tmp_path: Path) -> None:
@@ -403,5 +464,9 @@ def test_uv_sync_remote_command_forces_copy_link_mode_for_lightning_filesystems(
         python_bin=None,
         require_cuda=False,
     )
-    assert "UV_LINK_MODE=${UV_LINK_MODE:-copy} uv sync --locked --extra runtime" in command
+    ensure_idx = command.index("scripts/ensure_remote_uv.sh --symlink-system")
+    sync_idx = command.index('"$UV_BIN" sync --locked --extra runtime')
+    assert ensure_idx < sync_idx
+    assert "UV_LINK_MODE=${UV_LINK_MODE:-copy}" in command
+    assert "FATAL: uv is required for --requirements-mode uv-sync" not in command
     assert "PYBIN=.venv/bin/python" in command

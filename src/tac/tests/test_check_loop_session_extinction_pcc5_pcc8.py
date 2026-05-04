@@ -382,6 +382,25 @@ def test_launcher_default_disk_is_60():
     assert "if disk_gb < 60:" in text
 
 
+def test_launcher_exposes_fast_chip_preference():
+    """Phase1/full must support the sprint fast-chip preference."""
+    text = (REPO_ROOT / "scripts" / "launch_lane_on_vastai.py").read_text()
+    assert "prefer_fast_chip: bool = False" in text
+    assert "from probe_fastest_chip import probe" in text
+    assert "--prefer-fast-chip" in text
+    assert "H100/H200/A100" in text
+
+
+def test_launcher_includes_explicit_anchor_dirs_in_tarball():
+    """Explicit --anchor-dirs must change shipped bytes, not only metadata."""
+    text = (REPO_ROOT / "scripts" / "launch_lane_on_vastai.py").read_text()
+    assert "def build_tarball(anchor_dirs: list[str] | None = None)" in text
+    assert "paths += _expand_explicit_anchor_paths(anchor_dirs or [])" in text
+    assert "tar = build_tarball(args.anchor_dirs)" in text
+    assert "explicit anchor path does not exist" in text
+    assert '"tar", "-rzf"' not in text
+
+
 def test_instance_spec_default_disk_is_60():
     """src/tac/deploy/base.py InstanceSpec.disk_gb default must be 60."""
     text = (REPO_ROOT / "src" / "tac" / "deploy" / "base.py").read_text()

@@ -55,10 +55,8 @@ def test_inflate_sh_renderer_path_passes_with_brotli() -> None:
     text = INFLATE_SH.read_text()
 
     # Locate the renderer codepath (PYTHON_INFLATE=renderer) by looking
-    # for the inflate_renderer.py invocation. Then assert --with brotli
-    # appears on or near that line (within the same uv run invocation).
-    # We use a regex that allows other --with flags (av/torch/numpy) to
-    # appear in any order; we just require brotli to be present.
+    # for the inflate_renderer.py invocation. Then assert it uses the pinned
+    # renderer dependency array, which includes brotli plus av/torch/numpy.
     renderer_invocation = re.search(
         r'"\$UV_BIN"\s+run\s+([^\n]*?)python[^\n]*inflate_renderer\.py',
         text,
@@ -68,14 +66,22 @@ def test_inflate_sh_renderer_path_passes_with_brotli() -> None:
         "Did the layout of the renderer codepath change?"
     )
     flags = renderer_invocation.group(1)
-    assert "--with brotli" in flags, (
+    assert "UV_WITH_RENDERER_DEPS" in flags, (
         "inflate.sh's PYTHON_INFLATE=renderer codepath does NOT pass "
-        "--with brotli to uv run. Captured flags: "
+        "the pinned renderer dependency specs to uv run. Captured flags: "
         f"{flags!r}\n"
-        "Without --with brotli a clean contest env will fatal-exit at "
+        "Without the brotli spec a clean contest env will fatal-exit at "
         "_decompress_brotli_in_archive when it encounters renderer.bin.br. "
-        "Add `--with brotli` to the `uv run` invocation."
+        "Use UV_WITH_RENDERER_DEPS for renderer inflate."
     )
+    assert "INFLATE_BROTLI_SPEC" in text
+
+
+def test_inflate_sh_auto_selects_grayscale_renderer_for_grayscale_only_archive() -> None:
+    text = INFLATE_SH.read_text()
+    assert "auto-selecting PYTHON_INFLATE=renderer_grayscale" in text
+    assert '[ -f "$ARCHIVE_DIR/grayscale.mkv" ]' in text
+    assert '[ ! -f "$ARCHIVE_DIR/masks.mkv" ]' in text
 
 
 def test_brotli_in_mandatory_dependencies() -> None:
@@ -271,9 +277,9 @@ def test_inflate_sh_stage0_passes_with_brotli_to_uv_run() -> None:
     )
     assert block_match is not None, "Stage 0 block bounds not found"
     block = block_match.group(0)
-    assert "uv run --with brotli" in block or '"$UV_BIN" run --with brotli' in block, (
-        "Stage 0 must pass `--with brotli` to `uv run`. The clean-contest-env "
-        "guarantee depends on this."
+    assert "UV_WITH_BROTLI" in block and "INFLATE_BROTLI_SPEC" in text, (
+        "Stage 0 must pass the pinned brotli dependency spec to `uv run`. "
+        "The clean-contest-env guarantee depends on this."
     )
 
 

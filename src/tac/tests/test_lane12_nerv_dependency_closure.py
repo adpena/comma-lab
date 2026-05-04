@@ -637,6 +637,29 @@ def test_remote_lane_nerv_defaults_to_alpha_geo_build_only_guardrail() -> None:
     assert '--decoded-baseline-path "$DECODED_BASELINE_PATH"' in script
     assert '--decoded-baseline-member "$DECODED_BASELINE_MEMBER"' in script
     assert '--alpha-primitive-contract "$ALPHA_PRIMITIVE_CONTRACT"' in script
+    assert 'NERV_STEPS="${NERV_STEPS:-}"' in script
+    assert 'NERV_EVAL_EVERY="${NERV_EVAL_EVERY:-}"' in script
+    assert 'NERV_WEIGHT_DTYPE="${NERV_WEIGHT_DTYPE:-}"' in script
+    assert "NERV_TRAINING_ARGS=()" in script
+    assert 'NERV_TRAINING_ARGS+=(--steps "$NERV_STEPS")' in script
+    assert 'NERV_TRAINING_ARGS+=(--eval-every "$NERV_EVAL_EVERY")' in script
+    assert 'NERV_TRAINING_ARGS+=(--weight-dtype "$NERV_WEIGHT_DTYPE")' in script
+    assert '"${NERV_TRAINING_ARGS[@]}"' in script
+    assert '"nerv_steps_override": os.environ["NERV_STEPS"]' in script
+    assert '"nerv_eval_every_override": os.environ["NERV_EVAL_EVERY"]' in script
+    assert '"nerv_weight_dtype_override": os.environ["NERV_WEIGHT_DTYPE"]' in script
+
+
+def test_wave_omega_2_nerv_wrapper_forwards_full_cuda_overrides() -> None:
+    """Wave-Omega wrapper must not silently fall back to profile step defaults."""
+    script = (REPO_ROOT / "scripts" / "wave_omega_2_nerv_full_cuda.sh").read_text()
+
+    assert 'NERV_STEPS="${NERV_STEPS:-60000}"' in script
+    assert 'NERV_EVAL_EVERY="${NERV_EVAL_EVERY:-1000}"' in script
+    assert 'NERV_WEIGHT_DTYPE="${NERV_WEIGHT_DTYPE:-fp16}"' in script
+    assert "remote_lane_nerv.sh is missing NERV_TRAINING_ARGS forwarding" in script
+    assert "PROFILE_STEPS=" not in script
+    assert 'export NERV_STEPS NERV_EVAL_EVERY NERV_WEIGHT_DTYPE' in script
 
 
 def test_remote_lane_nerv_retains_gated_exact_cuda_archive_eval() -> None:

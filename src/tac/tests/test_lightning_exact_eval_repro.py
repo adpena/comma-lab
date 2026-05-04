@@ -164,6 +164,150 @@ def test_submit_requires_staging_or_explicit_remote_custody_and_target_backend(t
         mod.build_plan(no_backend, repo_root=tmp_path)
 
 
+def test_submit_requires_remote_alias_before_forwarding_submit_preflight(tmp_path: Path) -> None:
+    mod = _load_module()
+    archive, baseline = _fixture_repo(tmp_path)
+    args = mod.build_parser().parse_args(
+        _base_args(archive, baseline)
+        + [
+            "--submit",
+            "--allow-unstaged-submit",
+        ]
+    )
+    args.remote = None
+
+    with pytest.raises(ValueError, match="--remote"):
+        mod.build_plan(args, repo_root=tmp_path)
+
+
+def test_stage_workspace_rejects_bare_lightning_ssh_host(tmp_path: Path) -> None:
+    mod = _load_module()
+    archive, baseline = _fixture_repo(tmp_path)
+    args = mod.build_parser().parse_args(
+        _base_args(archive, baseline)
+        + [
+            "--stage-workspace",
+            "--remote",
+            "ssh.lightning.ai",
+        ]
+    )
+
+    with pytest.raises(ValueError, match="bare ssh\\.lightning\\.ai"):
+        mod.build_plan(args, repo_root=tmp_path)
+
+
+def test_wrapper_argparse_rejects_misspelled_remote_flag_with_real_surface(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    mod = _load_module()
+
+    with pytest.raises(SystemExit):
+        mod.build_parser().parse_args(["--job-name", "x", "--archive", "a.zip", "--rmote", "lightning-pact"])
+
+    captured = capsys.readouterr()
+    assert "--rmote: --remote" in captured.err
+    assert "Known options include:" in captured.err
+
+
+def test_submit_forwards_dispatch_claim_guard_flags(tmp_path: Path) -> None:
+    mod = _load_module()
+    archive, baseline = _fixture_repo(tmp_path)
+    args = mod.build_parser().parse_args(
+        _base_args(archive, baseline)
+        + [
+            "--submit",
+            "--stage-workspace",
+            "--remote",
+            "lightning-pact",
+            "--dispatch-lane-id",
+            "lane_renderer_eval",
+            "--dispatch-claims-path",
+            ".omx/state/active_lane_dispatch_claims.md",
+        ]
+    )
+
+    plan = mod.build_plan(args, repo_root=tmp_path)
+    queue_cmd = plan["commands"]["queue_exact_eval"]
+    assert queue_cmd is not None
+    assert "--dry-run" not in queue_cmd
+    assert _flag_value(queue_cmd, "--dispatch-lane-id") == "lane_renderer_eval"
+    assert _flag_value(queue_cmd, "--dispatch-claims-path") == ".omx/state/active_lane_dispatch_claims.md"
+
+
+def test_queue_command_forwards_exact_eval_env_overrides(tmp_path: Path) -> None:
+    mod = _load_module()
+    archive, baseline = _fixture_repo(tmp_path)
+    args = mod.build_parser().parse_args(
+        _base_args(archive, baseline)
+        + [
+            "--env",
+            "INFLATE_TORCH_SPEC=torch==2.5.1+cu124",
+            "--env",
+            "UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu124",
+        ]
+    )
+
+    plan = mod.build_plan(args, repo_root=tmp_path)
+    queue_cmd = plan["commands"]["queue_exact_eval"]
+    assert queue_cmd is not None
+
+    env_values = [
+        queue_cmd[index + 1]
+        for index, value in enumerate(queue_cmd)
+        if value == "--env"
+    ]
+    assert env_values == [
+        "INFLATE_TORCH_SPEC=torch==2.5.1+cu124",
+        "UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu124",
+    ]
+    assert plan["env"] == env_values
+
+
+def test_queue_command_can_request_component_trace(tmp_path: Path) -> None:
+    mod = _load_module()
+    archive, baseline = _fixture_repo(tmp_path)
+    args = mod.build_parser().parse_args(
+        _base_args(archive, baseline)
+        + [
+            "--component-trace",
+            "--component-trace-top-k",
+            "96",
+        ]
+    )
+
+    plan = mod.build_plan(args, repo_root=tmp_path)
+    queue_cmd = plan["commands"]["queue_exact_eval"]
+    assert queue_cmd is not None
+
+    assert "--component-trace" in queue_cmd
+    assert _flag_value(queue_cmd, "--component-trace-top-k") == "96"
+    assert plan["component_trace"] is True
+    assert plan["component_trace_top_k"] == 96
+
+
+def test_submit_forwards_dispatch_claim_break_glass_reason(tmp_path: Path) -> None:
+    mod = _load_module()
+    archive, baseline = _fixture_repo(tmp_path)
+    args = mod.build_parser().parse_args(
+        _base_args(archive, baseline)
+        + [
+            "--submit",
+            "--stage-workspace",
+            "--remote",
+            "lightning-pact",
+            "--allow-missing-dispatch-claim-reason",
+            "operator reviewed emergency rerun",
+        ]
+    )
+
+    plan = mod.build_plan(args, repo_root=tmp_path)
+    queue_cmd = plan["commands"]["queue_exact_eval"]
+    assert queue_cmd is not None
+    assert _flag_value(queue_cmd, "--allow-missing-dispatch-claim-reason") == (
+        "operator reviewed emergency rerun"
+    )
+
+
 def test_read_only_sdk_artifact_view_is_rejected_as_output_dir(tmp_path: Path) -> None:
     mod = _load_module()
     archive, baseline = _fixture_repo(tmp_path)

@@ -65,6 +65,19 @@ def _hwc_to_chw(pair_hwc: torch.Tensor) -> torch.Tensor:
     return pair_hwc.float().permute(0, 1, 4, 2, 3).contiguous()
 
 
+def _validate_kl_temperature(temperature: float, *, field: str = "temperature") -> float:
+    """Validate KL/distillation softmax temperature before division."""
+    if isinstance(temperature, bool):
+        raise ValueError(f"{field} must be a finite positive number")
+    try:
+        value = float(temperature)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{field} must be a finite positive number") from exc
+    if not math.isfinite(value) or value <= 0.0:
+        raise ValueError(f"{field} must be a finite positive number")
+    return value
+
+
 def _apply_class_weights(
     seg_per_pixel: torch.Tensor,
     gt_logits_or_probs: torch.Tensor,
@@ -860,7 +873,7 @@ def kl_distill_scorer_loss(
     with torch.no_grad():
         gs_logits = segnet(gs_in)  # (B, 5, H, W) — teacher, no gradients
 
-    T = temperature
+    T = _validate_kl_temperature(temperature)
     log_p = F.log_softmax(fs_logits / T, dim=1)
     q = F.softmax(gs_logits / T, dim=1)
 
@@ -946,7 +959,7 @@ def kl_distill_segnet_only(
     with torch.no_grad():
         gs_logits = segnet(gs_in)
 
-    T = temperature
+    T = _validate_kl_temperature(temperature)
     log_p = F.log_softmax(fs_logits / T, dim=1)
     q = F.softmax(gs_logits / T, dim=1)
     # 2026-04-27 council forensics (findings.md "Lane G — really dead, or
@@ -1020,8 +1033,8 @@ def segnet_uncertainty_weighted_loss(
     Returns:
         Scalar loss = inverse_entropy_weight-weighted L1 reconstruction.
     """
-    rx = _hwc_to_chw(rendered_frame_hwc.unsqueeze(1))[:, :, 0]  # (B, 3, H, W)
-    gx = _hwc_to_chw(gt_frame_hwc.unsqueeze(1))[:, :, 0]
+    rx = _hwc_to_chw(rendered_frame_hwc.unsqueeze(1))[:, 0]  # (B, 3, H, W)
+    gx = _hwc_to_chw(gt_frame_hwc.unsqueeze(1))[:, 0]
     with torch.no_grad():
         gs_in = segnet.preprocess_input(gx.unsqueeze(1))
         gs_logits = segnet(gs_in)

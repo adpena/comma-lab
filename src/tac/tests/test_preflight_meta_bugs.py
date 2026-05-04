@@ -22,6 +22,8 @@ from tac.preflight import (
     _scan_python_for_eval_roundtrip_false,
     _scan_python_for_mps_fallback,
     _scan_python_for_pack_sparse_delta_approved,
+    _scan_remote_script_for_plain_cmg3a_dispatch,
+    _scan_remote_script_for_plain_pmg_dispatch,
     _scan_remote_script_for_nvdec_probe,
     _scan_shell_for_missing_set_e,
     _scan_shell_for_pipefail_grep_q,
@@ -32,6 +34,8 @@ from tac.preflight import (
     check_no_live_mcp_processes,
     check_lightning_exact_eval_runner_bootstraps_dali,
     check_lightning_ssh_static_policy,
+    check_cmg3a_remote_dispatch_requires_pose_safety,
+    check_pmg_remote_dispatch_requires_geometry_escape,
     check_inflate_sh_handles_br_centrally,
     check_no_disable_eval_roundtrip_flag,
     check_no_eval_roundtrip_false,
@@ -40,6 +44,7 @@ from tac.preflight import (
     check_no_pipefail_grep_q_trap,
     check_no_scorer_load_at_inflate,
     check_no_shell_zip_binary,
+    check_public_release_hygiene,
     check_remote_scripts_have_nvdec_probe,
     check_shell_set_e_present,
     check_training_scripts_have_auth_eval,
@@ -58,6 +63,135 @@ def _stub_repo(tmp_path: Path) -> Path:
     (tmp_path / "scripts").mkdir(parents=True, exist_ok=True)
     (tmp_path / "tools").mkdir(parents=True, exist_ok=True)
     return tmp_path
+
+
+# ─── Check: CMG3A Pose-collapse dispatch guard ──────────────────────────────
+
+
+class TestCmg3aPoseSafetyDispatchGuard:
+    def test_plain_target_body_remote_dispatch_is_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        script = root / "scripts" / "remote_lane_bad_cmg3a.sh"
+        _write(script, """
+            #!/usr/bin/env bash
+            set -euo pipefail
+            python experiments/build_cmg3_adaptive_runs_candidate.py \\
+              --frontier-archive anchor.zip \\
+              --decoded-mask-array masks.npy \\
+              --output-dir out \\
+              --target-body-bytes 166000
+        """)
+        violations = _scan_remote_script_for_plain_cmg3a_dispatch(script, root)
+        assert violations
+        with pytest.raises(MetaBugViolation, match="CMG3A REMOTE DISPATCH"):
+            check_cmg3a_remote_dispatch_requires_pose_safety(
+                repo_root=root,
+                strict=True,
+                verbose=False,
+            )
+
+    def test_field_policy_remote_dispatch_passes(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        script = root / "scripts" / "remote_lane_good_cmg3a.sh"
+        _write(script, """
+            #!/usr/bin/env bash
+            set -euo pipefail
+            python experiments/build_cmg3_adaptive_runs_candidate.py \\
+              --frontier-archive anchor.zip \\
+              --decoded-mask-array masks.npy \\
+              --output-dir out \\
+              --target-body-bytes 166000 \\
+              --field-policy-json pose_safe_plan.json \\
+              --field-policy-id top0128
+        """)
+        assert _scan_remote_script_for_plain_cmg3a_dispatch(script, root) == []
+        assert check_cmg3a_remote_dispatch_requires_pose_safety(
+            repo_root=root,
+            strict=True,
+            verbose=False,
+        ) == []
+
+    def test_multimask_run_count_needs_review_marker(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        script = root / "scripts" / "remote_lane_multimask.sh"
+        _write(script, """
+            #!/usr/bin/env bash
+            set -euo pipefail
+            python experiments/build_c067_multimask_reconciler_candidate.py \\
+              --plan-json plan.json \\
+              --frontier-archive anchor.zip \\
+              --output-dir out \\
+              --target-extra-runs 72000
+        """)
+        assert _scan_remote_script_for_plain_cmg3a_dispatch(script, root)
+
+        _write(script, """
+            #!/usr/bin/env bash
+            set -euo pipefail
+            python experiments/build_c067_multimask_reconciler_candidate.py \\
+              --plan-json plan.json \\
+              --frontier-archive anchor.zip \\
+              --output-dir out \\
+              --target-extra-runs 72000 \\
+              # CMG3A_POSE_COLLAPSE_REVIEWED: exact negatives reviewed; dispatch only with new pose-safe stack rationale
+        """)
+        assert _scan_remote_script_for_plain_cmg3a_dispatch(script, root) == []
+
+
+# ─── Check: PMG row-span exact-negative dispatch guard ──────────────────────
+
+
+class TestPmgGeometryEscapeDispatchGuard:
+    def test_plain_pmg_archive_only_dispatch_is_caught(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        script = root / "scripts" / "remote_lane_bad_pmg.sh"
+        _write(script, """
+            #!/usr/bin/env bash
+            set -euo pipefail
+            export ARCHIVE_PATH="$PWD/experiments/results/pmg_hotspot_candidate/archive.zip"
+            bash scripts/remote_archive_only_eval.sh
+        """)
+        violations = _scan_remote_script_for_plain_pmg_dispatch(script, root)
+        assert violations
+        with pytest.raises(MetaBugViolation, match="PMG REMOTE DISPATCH"):
+            check_pmg_remote_dispatch_requires_geometry_escape(
+                repo_root=root,
+                strict=True,
+                verbose=False,
+            )
+
+    def test_geometry_escape_reviewed_pmg_dispatch_passes(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        script = root / "scripts" / "remote_lane_good_pmg.sh"
+        _write(script, """
+            #!/usr/bin/env bash
+            set -euo pipefail
+            # PMG_GEOMETRY_ESCAPE_REVIEWED: learned pose-conditioned decoder replaces raw row-span geometry
+            python scripts/launch_lightning_batch_job.py submit-exact-eval \\
+              --archive experiments/results/pmg_hotspot_pose_safe/archive.zip \\
+              --artifact experiments/results/predictive_mask_grammar_runtime_readiness_20260502/predictive_mask_grammar_runtime_readiness_plan.json
+        """)
+        assert _scan_remote_script_for_plain_pmg_dispatch(script, root) == []
+        assert check_pmg_remote_dispatch_requires_geometry_escape(
+            repo_root=root,
+            strict=True,
+            verbose=False,
+        ) == []
+
+    def test_historical_negative_replay_guard_passes(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        script = root / "scripts" / "remote_lane_old_pmg_replay.sh"
+        _write(script, """
+            #!/usr/bin/env bash
+            set -euo pipefail
+            if [[ "${ALLOW_REPLAY_EXACT_NEGATIVE_PMG:-0}" != "1" ]]; then
+              echo "PMG_EXACT_NEGATIVE_REPLAY_GUARD: refusing accidental replay"
+              exit 88
+            fi
+            export ARCHIVE_PATH="$PWD/experiments/results/pmg_hotspot_candidate/archive.zip"
+            bash scripts/remote_archive_only_eval.sh
+        """)
+        assert _scan_remote_script_for_plain_pmg_dispatch(script, root) == []
 
 
 # ─── Check 0: Lightning PyPI compromise guard ───────────────────────────────
@@ -1965,6 +2099,7 @@ class TestPreflightAllInvokesMetaBugChecks:
             "check_eval_roundtrip_gate_called_after_output_dir_resolution",
             "check_nvdec_probe_has_error_classification",
             "check_archive_builders_use_deterministic_zip",
+            "check_public_release_hygiene",
             "check_lightning_exact_eval_runner_bootstraps_dali",
         ]
         missing = [c for c in required_checks if c not in src]
@@ -2026,6 +2161,42 @@ class TestPreflightAllInvokesMetaBugChecks:
                         f"to warn-only."
                     )
                     break
+
+
+# ─── 2026-05-02: public release hygiene for Apogee supplement surfaces ─────
+
+
+class TestPublicReleaseHygiene:
+    def test_public_release_hygiene_catches_private_ops_surface(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        _write(root / "README.md", """
+            Notebook source: /Users/adpena/Projects/pact/reports/private.ipynb
+            API key: sk-thisIsNotARealTokenButItIsLongEnough12345
+            Debug job: https://lightning.ai/adpena/comma-lab/studios/lossy-compression-challenge/app
+            Vast shell: ssh4.vast.ai:25850
+        """)
+        with pytest.raises(MetaBugViolation, match="PUBLIC RELEASE HYGIENE"):
+            check_public_release_hygiene(
+                repo_root=root,
+                strict=True,
+                verbose=False,
+                scan_paths=["README.md"],
+            )
+
+    def test_public_release_hygiene_allows_hosting_placeholders(self, tmp_path: Path) -> None:
+        root = _stub_repo(tmp_path)
+        _write(root / "docs" / "release.md", """
+            Supplement: ${LIGHTNING_SUPPLEMENT_URL}
+            Site: ${CLOUDFLARE_PAGES_URL}
+            Public landing page: https://apogee.example.org/supplement
+        """)
+        violations = check_public_release_hygiene(
+            repo_root=root,
+            strict=True,
+            verbose=False,
+            scan_paths=["docs"],
+        )
+        assert violations == []
 
 
 # ─── codex R5-4 #1: NVDEC probe must not fail on missing PyAV ────────────────
@@ -2930,6 +3101,37 @@ class TestArchiveBuildersUseDeterministicZip:
             repo_root=root, strict=False, verbose=False,
         )
         assert v == [], v
+
+    def test_check_covers_repo_compress_archive_script(self, tmp_path: Path) -> None:
+        from tac.preflight import check_archive_builders_use_deterministic_zip
+
+        root = _stub_repo(tmp_path)
+        _write(root / "scripts" / "compress_archive.py", """
+            import zipfile
+            def main():
+                with zipfile.ZipFile("archive.zip", "w") as z:
+                    z.write("renderer.bin", arcname="renderer.bin")
+        """)
+        v = check_archive_builders_use_deterministic_zip(
+            repo_root=root, strict=False, verbose=False,
+        )
+        assert any("scripts/compress_archive.py" in s for s in v), v
+
+    def test_check_catches_compress_sh_inline_zipfile_write(self, tmp_path: Path) -> None:
+        from tac.preflight import check_archive_builders_use_deterministic_zip
+
+        root = _stub_repo(tmp_path)
+        _write(root / "submissions" / "robust_current" / "compress.sh", """
+            python3 - <<'PY'
+            import zipfile
+            with zipfile.ZipFile("archive.zip", "w") as zf:
+                zf.write("renderer.bin", "renderer.bin")
+            PY
+        """)
+        v = check_archive_builders_use_deterministic_zip(
+            repo_root=root, strict=False, verbose=False,
+        )
+        assert any("compress.sh" in s for s in v), v
 
     def test_deterministic_zip_helper_produces_byte_identical_archives(
         self, tmp_path: Path,

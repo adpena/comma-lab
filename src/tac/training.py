@@ -34,6 +34,7 @@ import torch.nn as nn
 from pydantic import BaseModel, Field, model_validator
 
 from .data import pair_from_frames, pair_start_indices, saliency_for_pair
+from .kl_config import DistillationPolicy, distillation_policy_sha256, normalize_distillation_policy
 from .losses import (
     dual_saliency_reconstruction_loss,
     eval_scorer_loss,
@@ -92,6 +93,37 @@ class TrainConfig(BaseModel):
         "standard", "temperature", "focal_ste", "kl_distill", "pcgrad",
         "feature_match", "segnet_kl", "posenet_embedding",
     ] = "standard"
+    kl_distill_scope: Literal["none", "segnet_aux", "primary_scorer"] = Field(
+        "none",
+        description=(
+            "Disambiguates loss_mode='kl_distill'. 'segnet_aux' means standard "
+            "scorer loss plus SegNet-only KL auxiliary. 'primary_scorer' is the "
+            "legacy kl_distill_scorer_loss path, which is banned for promotion "
+            "and requires allow_banned_primary_kl_distill=True."
+        ),
+    )
+    allow_banned_primary_kl_distill: bool = Field(
+        False,
+        description=(
+            "Explicit forensic opt-in for the legacy primary KL-distill scorer "
+            "loss. This path collapsed PoseNet in authoritative evals and must "
+            "not be used for promotion candidates."
+        ),
+    )
+    promotion_eligible: bool = Field(
+        True,
+        description=(
+            "Whether this config may be treated as promotion-eligible. Legacy "
+            "primary KL-distill configs must set this False."
+        ),
+    )
+    forensic_reason: str | None = Field(
+        None,
+        description=(
+            "Required explanation for forensic-only distillation families "
+            "such as primary scorer KL, legacy SegNet-KL, and JBL."
+        ),
+    )
     temperature_start: float = Field(1.0, gt=0.0)
     temperature_end: float = Field(0.05, gt=0.0)
     temp_schedule: str = Field(
@@ -342,6 +374,16 @@ class TrainConfig(BaseModel):
         "Defect #2 fix made this operator-controllable instead of a "
         "hard-coded literal in segmap_renderer.py.",
     )
+    kl_distill_temperature: float = Field(
+        2.0,
+        gt=0.0,
+        description=(
+            "Temperature for SegNet-only KL auxiliary helpers. Kept separate "
+            "from temperature_start/temperature_end so fixed-temperature KL "
+            "auxiliary configs do not masquerade as primary temperature "
+            "annealing schedules."
+        ),
+    )
 
     # Output
     output_dir: str = "experiments/postfilter_weights"
@@ -365,6 +407,26 @@ class TrainConfig(BaseModel):
                 stacklevel=2,
             )
         if self.loss_mode == "kl_distill":
+            if self.kl_distill_scope == "none":
+                raise ValueError(
+                    "loss_mode='kl_distill' is ambiguous and banned as a silent "
+                    "primary loss. Set kl_distill_scope='segnet_aux' for the "
+                    "SegNet-only auxiliary path, or kl_distill_scope='primary_scorer' "
+                    "with allow_banned_primary_kl_distill=True and "
+                    "promotion_eligible=False for a forensic legacy run."
+                )
+            if self.kl_distill_scope == "primary_scorer":
+                if not self.allow_banned_primary_kl_distill:
+                    raise ValueError(
+                        "primary kl_distill_scorer_loss is banned unless "
+                        "allow_banned_primary_kl_distill=True. Prior authoritative "
+                        "evals collapsed PoseNet; use segnet_aux for future KL work."
+                    )
+                if self.promotion_eligible:
+                    raise ValueError(
+                        "primary kl_distill_scorer_loss configs must set "
+                        "promotion_eligible=False. This loss mode is forensic-only."
+                    )
             if self.temperature_start < 2.0:
                 raise ValueError(
                     f"kl_distill requires temperature_start >= 2.0 (Hinton: anneal 5.0→1.0). "
@@ -375,6 +437,20 @@ class TrainConfig(BaseModel):
                     f"kl_distill requires temperature_end >= 0.1 (below 0.1 is numerically unstable). "
                     f"Got {self.temperature_end}. Use --temperature-end 0.2 for aggressive argmax pressure"
                 )
+        if self.loss_mode == "segnet_kl":
+            if self.kl_distill_scope != "segnet_aux":
+                raise ValueError(
+                    "loss_mode='segnet_kl' is a legacy SegNet auxiliary KL-like "
+                    "path and must set kl_distill_scope='segnet_aux'."
+                )
+            if self.promotion_eligible:
+                raise ValueError(
+                    "loss_mode='segnet_kl' is not promotion-eligible until "
+                    "migrated to kl_distill_segnet_only with exact CUDA "
+                    "component gates; set promotion_eligible=False for a "
+                    "forensic/debug run."
+                )
+        self.distillation_policy()
         if self.learn_loss_weights and self.adaptive_boundary:
             import warnings
 
@@ -386,6 +462,34 @@ class TrainConfig(BaseModel):
                 stacklevel=2,
             )
         return self
+
+    def distillation_policy(self) -> DistillationPolicy:
+        """Return the frozen KL/distillation policy represented by this config."""
+
+        source = self.model_dump() if hasattr(self, "model_dump") else dict(vars(self))
+        # A zero-weight KL configuration is useful for controlled no-op
+        # equivalence tests, but it is not an active distillation policy.
+        if (
+            source.get("loss_mode") == "kl_distill"
+            and source.get("kl_distill_scope") == "segnet_aux"
+            and float(source.get("kl_distill_weight", 0.0) or 0.0) == 0.0
+        ):
+            source.update(
+                {
+                    "family": "none",
+                    "scope": "none",
+                    "kl_distill_scope": "none",
+                    "weight": 0.0,
+                    "kl_distill_weight": 0.0,
+                }
+            )
+        return normalize_distillation_policy(source)
+
+    def distillation_policy_provenance(self) -> dict:
+        return self.distillation_policy().to_provenance()
+
+    def distillation_policy_sha256(self) -> str:
+        return distillation_policy_sha256(self.distillation_policy())
 
 
 class EMA:
@@ -544,6 +648,9 @@ class Trainer:
             self.model = self.model.to(memory_format=torch.channels_last)
         self.config = config
         self.device = device
+        self.distillation_policy = config.distillation_policy()
+        self.distillation_policy_provenance = self.distillation_policy.to_provenance()
+        self.distillation_policy_sha256 = distillation_policy_sha256(self.distillation_policy)
         # Codex finding 2 fix (2026-04-28):
         #   The entropy bottleneck MUST be installed on the model BEFORE the
         #   EMA snapshot is taken, otherwise EMA.shadow lacks the
@@ -775,6 +882,8 @@ class Trainer:
                 "best_scorer": self.best_scorer,
                 "best_epoch": self.best_epoch,
                 "plateau_reduced": self._plateau_reduced,
+                "distillation_policy": self.distillation_policy_provenance,
+                "distillation_policy_sha256": self.distillation_policy_sha256,
             },
             tmp_path,
         )
@@ -1099,6 +1208,8 @@ class Trainer:
             "hidden": self.config.hidden,
             "kernel": self.config.kernel,
             "alpha": self.config.alpha,
+            "distillation_policy": self.distillation_policy_provenance,
+            "distillation_policy_sha256": self.distillation_policy_sha256,
         }
         # Distribution shift guard: save encode config fingerprint so inflate
         # can warn if config.env changed after training (2026-04-11).
@@ -1129,6 +1240,11 @@ class Trainer:
                         "variant": self.config.variant,
                         "hidden": self.config.hidden,
                         "loss_mode": self.config.loss_mode,
+                        "kl_distill_scope": self.config.kl_distill_scope,
+                        "kl_distill_weight": self.config.kl_distill_weight,
+                        "kl_distill_temperature": self.config.kl_distill_temperature,
+                        "allow_banned_primary_kl_distill": self.config.allow_banned_primary_kl_distill,
+                        "promotion_eligible": self.config.promotion_eligible,
                         "boundary_weight": self.config.boundary_weight,
                         "segnet_loss_weight": self.config.segnet_loss_weight,
                         "hard_frame_ratio": self.config.hard_frame_ratio,
@@ -1137,6 +1253,8 @@ class Trainer:
                         "temp_schedule": self.config.temp_schedule,
                         "alpha": self.config.alpha,
                     },
+                    "distillation_policy": self.distillation_policy_provenance,
+                    "distillation_policy_sha256": self.distillation_policy_sha256,
                     "baseline_pose": getattr(self, "_baseline_pose", None),
                     "baseline_seg": getattr(self, "_baseline_seg", None),
                 },
@@ -1699,6 +1817,20 @@ class Trainer:
                         gamma=cfg.focal_gamma,
                     )
                 elif cfg.loss_mode == "kl_distill":
+                    if (
+                        cfg.kl_distill_scope != "primary_scorer"
+                        or not cfg.allow_banned_primary_kl_distill
+                        or cfg.promotion_eligible
+                    ):
+                        raise RuntimeError(
+                            "Trainer.fit_lazy would execute the legacy primary "
+                            "kl_distill_scorer_loss path, which is banned for "
+                            "promotion after PoseNet collapse. Use the SegNet-only "
+                            "auxiliary API instead, or set "
+                            "kl_distill_scope='primary_scorer', "
+                            "allow_banned_primary_kl_distill=True, and "
+                            "promotion_eligible=False for a forensic run."
+                        )
                     # Hinton-style KL distillation: T anneals from 5.0 → 0.5
                     progress = epoch / max(cfg.epochs - 1, 1)
                     if cfg.temp_schedule == "exponential" and cfg.temperature_start > cfg.temperature_end:

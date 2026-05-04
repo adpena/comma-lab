@@ -59,3 +59,24 @@ def test_replace_managed_block_is_idempotent():
     assert "Host tail" in updated
     assert updated.count(mod.BEGIN) == 1
     assert updated.count(mod.END) == 1
+
+
+def test_prune_duplicate_host_stanzas_keeps_managed_block():
+    mod = _load_module()
+    block = mod.render_block(alias="scratch-studio-devbox", user="s_one")
+    existing = (
+        block
+        + "\nHost scratch-studio-devbox lightning-pact\n"
+        + "  HostName ssh.lightning.ai\n"
+        + "  StrictHostKeyChecking no\n"
+        + "\nHost unrelated\n"
+        + "  HostName example.com\n"
+    )
+
+    updated = mod.prune_duplicate_host_stanzas(existing, alias="scratch-studio-devbox")
+
+    assert updated.count("Host scratch-studio-devbox") == 1
+    assert "StrictHostKeyChecking no" not in updated
+    assert "Host unrelated" in updated
+    assert updated.count(mod.BEGIN) == 1
+    assert updated.count(mod.END) == 1

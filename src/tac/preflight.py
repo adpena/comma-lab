@@ -117,6 +117,9 @@ def preflight_check(
             b"QFAI": "Q-FAITHFUL JointFrameGenerator runtime renderer",
             b"QZS3": "QZS3 JointFrameGenerator runtime renderer",
             b"MQZ1": "MQZ1 mixed/local QZS runtime renderer",
+            b"QH0": "PR85 QH0 JointFrameGenerator runtime renderer",
+            b"QM0": "PR85 QM0 JointFrameGenerator runtime renderer",
+            b"QH1": "PR85 QH1 lossless record-repack JointFrameGenerator runtime renderer",
             b"NWC1": "Neural weight codec runtime renderer",
             b"OWV2": "OWV2 runtime renderer",
             b"OWV3": "OWV3 runtime renderer",
@@ -142,6 +145,8 @@ def preflight_check(
             _warn("FP4 renderer — verify QAT was used during training (post-hoc QAT degrades 3-26x)")
         elif magic in runtime_renderer_magics:
             _pass(f"Renderer: {runtime_renderer_magics[magic]}, {len(raw):,}B")
+        elif raw[:3] in runtime_renderer_magics:
+            _pass(f"Renderer: {runtime_renderer_magics[raw[:3]]}, {len(raw):,}B")
         elif raw[:8] == b"NWCS1\0\0\0":
             _pass(f"Renderer: NWCS1 sensitivity-aware neural weight codec runtime renderer, {len(raw):,}B")
         elif raw.startswith(pytorch_pickle_magics):
@@ -306,6 +311,18 @@ def preflight_all(
         # score JSON is tied to preserved archive bytes. This catches wrapper
         # regressions before overwritten artifact paths create false evidence.
         check_remote_archive_only_eval_custody_closure(strict=True, verbose=verbose)
+        # 2026-05-02 Apogee CMG3A incident: byte-targeted/plain run-count
+        # mask grammars can clear archive-custody preflight yet collapse
+        # PoseNet by 3-5+ distance on exact CUDA. New remote dispatch code must
+        # carry a pose-safety selector, a field policy, or an explicit reviewed
+        # waiver marker before spending GPU on this measured-bad shape.
+        check_cmg3a_remote_dispatch_requires_pose_safety(strict=True, verbose=verbose)
+        # 2026-05-02 PMG-HOTSPOT incident: row-span/predictive mask grammars
+        # have attractive byte screens but exact CUDA showed catastrophic
+        # PoseNet collapse. Remote scripts may preserve old artifacts for
+        # forensics, but new spend needs an explicit geometry-escape proof or a
+        # guarded historical-replay marker.
+        check_pmg_remote_dispatch_requires_geometry_escape(strict=True, verbose=verbose)
         # 2026-05-02 standalone component traces hit the same runtime-boundary
         # class as archive-only evals: system ffmpeg can lack the explicit
         # color contract and inflate-side uv can mutate shared envs. Component
@@ -389,6 +406,11 @@ def preflight_all(
         check_eval_roundtrip_gate_called_after_output_dir_resolution(strict=True, verbose=verbose)
         check_nvdec_probe_has_error_classification(strict=True, verbose=verbose)
         check_archive_builders_use_deterministic_zip(strict=True, verbose=verbose)
+        # 2026-05-02 public Apogee supplement/site hygiene. The repo has
+        # legacy private custody/state docs, so the default full-preflight pass
+        # keeps this warn-only. Release tooling should call the same checker
+        # with strict=True over the explicit public publish surface.
+        check_public_release_hygiene(strict=False, verbose=verbose)
         # 2026-04-29 PM: silent-default override class. Audit hardened in
         # commit 4eeb6452 (246 noisy → 0 actionable); 3 real bugs fixed in
         # commit 256c5e42. Lands STRICT directly at 0 live violations.
@@ -3732,10 +3754,34 @@ def _scan_python_for_mps_fallback(path: Path, repo_root: Path) -> list[str]:
          covering the common `"cuda" if ... else "mps" if ... else "cpu"`.
 
     Tests / smoke files are skipped — they may legitimately probe MPS.
+    Vendored external PR-head clones under
+    ``experiments/results/.../pr_heads/`` and other reverse-engineering /
+    forensics mirrors are also skipped — they are read-only mirrors of other
+    competitors' submissions, not our own code, and we cannot retroactively
+    fix their MPS-fallback defaults.
     """
     rel = path.relative_to(repo_root) if path.is_absolute() else path
     rel_s = str(rel)
     if "/tests/" in rel_s or "test_" in path.name or "/smoke" in rel_s.lower():
+        return []
+    # Vendored external code (PR-head mirrors, reverse-engineering snapshots,
+    # leaderboard-intel raw clones, public-frontier intake replays). These are
+    # not our code; we don't ship them; we cannot fix their device defaults.
+    _VENDORED_PATH_MARKERS = (
+        "/pr_heads/",
+        "/leaderboard_intel_",
+        "/reverse_engineering_",
+        "/public_runtime_adapters_",
+        "/raw/kaggle_ingest/",
+        "/vendored/",
+        # Mirrored external public-PR intake clones — e.g.
+        # experiments/results/public_pr*_intake_*/{source,repo,pr*_src}/...
+        "_intake_",
+        # Upstream contest baseline (av1_crf31_bicubic) — vendored from
+        # comma's organizer baseline submission, not our code.
+        "/av1_crf31_bicubic/",
+    )
+    if any(marker in rel_s for marker in _VENDORED_PATH_MARKERS):
         return []
     try:
         text = path.read_text()
@@ -6040,7 +6086,20 @@ def _scan_python_for_unsafe_renderer_loader(path: Path) -> list[str]:
     # showed a refactor to `load_checkpoint`/`load_model`/`load_weights`/
     # `_load_ckpt`/`restore_model` would silently bypass the gate. The
     # expanded set catches the realistic rename surface.
-    SAFE_MAGIC_TOKENS = ("FP4A", "ASYM", "DPSM", "I4LZ", "PK\\x03\\x04")
+    SAFE_MAGIC_TOKENS = (
+        "FP4A",
+        "ASYM",
+        "DPSM",
+        "I4LZ",
+        "QH0",
+        "QM0",
+        "QH1",
+        "QZS3",
+        "MQZ1",
+        "QBF1",
+        "QFAI",
+        "PK\\x03\\x04",
+    )
 
     def _is_loader_name(name: str) -> bool:
         """Pattern 1 trigger: function names that are likely renderer/model
@@ -6979,7 +7038,14 @@ def check_nvdec_probe_has_error_classification(
 
 # ── Check E: archive builders must use deterministic zip ────────────────────
 _DET_ZIP_OPT_OUT = "DETERMINISTIC_ZIP_OK"
-_DET_ZIP_HINT_FNS = ("_deterministic_zip_write", "writestr", "ZipInfo")
+_DET_ZIP_HINT_FNS = (
+    "_deterministic_zip_write",
+    "deterministic_zip_directory",
+    "write_deterministic_zip_file",
+    "write_deterministic_zip_member",
+    "writestr",
+    "ZipInfo",
+)
 
 
 def _scan_python_for_nondeterministic_zip(
@@ -7043,6 +7109,13 @@ def check_archive_builders_use_deterministic_zip(
     if (root / "experiments").exists():
         candidates.extend(sorted((root / "experiments").rglob("build*.py")))
         candidates.extend(sorted((root / "experiments").rglob("*build_archive*.py")))
+    for rel in (
+        "scripts/compress_archive.py",
+        "submissions/robust_current/compress_archive.py",
+    ):
+        candidate = root / rel
+        if candidate.exists():
+            candidates.append(candidate)
     # Dedupe
     candidates = sorted({p for p in candidates if p.is_file()})
     for p in candidates:
@@ -7050,6 +7123,22 @@ def check_archive_builders_use_deterministic_zip(
             continue
         n_scanned += 1
         violations.extend(_scan_python_for_nondeterministic_zip(p, root))
+
+    compress_sh = root / "submissions" / "robust_current" / "compress.sh"
+    if compress_sh.exists():
+        n_scanned += 1
+        text = compress_sh.read_text()
+        if (
+            "zipfile.ZipFile" in text
+            and ".write(" in text
+            and not any(h in text for h in _DET_ZIP_HINT_FNS)
+            and _DET_ZIP_OPT_OUT not in text
+        ):
+            violations.append(
+                "submissions/robust_current/compress.sh: inline Python "
+                "ZipFile.write(...) fallback is non-deterministic. Use "
+                "tac.submission_archive.deterministic_zip_directory()."
+            )
 
     if verbose and violations:
         print(
@@ -7066,6 +7155,164 @@ def check_archive_builders_use_deterministic_zip(
             "DETERMINISTIC ZIP violations:\n"
             + "\n".join(f"  • {v}" for v in violations)
             + "\n\nUse fixed-timestamp ZipInfo + writestr (codex R5-r6 #5)."
+        )
+    return violations
+
+
+# ── Check F: public release docs must not leak private ops state ────────────
+_PUBLIC_RELEASE_SCAN_PATHS = (
+    "README.md",
+    "AGENTS.md",
+    "docs",
+    "notebooks",
+    "reports/latest.md",
+    "reports/writeup_working.md",
+    "reports/yousfi_fridrich_observability_20260502",
+)
+
+_PUBLIC_RELEASE_EXEMPT_PREFIXES = (
+    ".omx/",
+    "docs/superpowers/",
+    "experiments/results/",
+    "reports/raw/",
+    "reports/private/",
+    "submissions/robust_current/eval_runs/",
+)
+
+_PUBLIC_RELEASE_SECRET_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    (
+        "local absolute operator path",
+        re.compile(r"(?<![A-Za-z0-9_])/(?:Users|home)/[A-Za-z0-9._-]+(?:/[^\s)\"'<>`]*)?"),
+    ),
+    (
+        "private-key material",
+        re.compile(r"-----BEGIN (?:RSA |OPENSSH |EC |DSA )?PRIVATE KEY-----"),
+    ),
+    (
+        "OpenAI-style API token",
+        re.compile(r"\bsk-[A-Za-z0-9_-]{20,}\b"),
+    ),
+    (
+        "GitHub personal access token",
+        re.compile(r"\bgh[pousr]_[A-Za-z0-9_]{20,}\b"),
+    ),
+    (
+        "Hugging Face token",
+        re.compile(r"\bhf_[A-Za-z0-9]{20,}\b"),
+    ),
+    (
+        "explicit secret environment assignment",
+        re.compile(r"\b(?:VAST_API_KEY|LIGHTNING_API_KEY|CLOUDFLARE_API_TOKEN|OPENAI_API_KEY)\s*="),
+    ),
+    (
+        "concrete Vast SSH endpoint",
+        re.compile(r"\bssh\d+\.vast\.ai(?::\d+)?\b"),
+    ),
+    (
+        "private Lightning Studio app link",
+        re.compile(r"https://lightning\.ai/[^/\s)]+/[^/\s)]+/studios/"),
+    ),
+    (
+        "raw Modal call id",
+        re.compile(r"\bfc-[A-Z0-9]{20,}\b"),
+    ),
+    (
+        "raw Modal app id",
+        re.compile(r"\bap-[A-Za-z0-9]{10,}\b"),
+    ),
+)
+
+
+def _public_release_rel(path: Path, root: Path) -> str:
+    try:
+        return path.resolve().relative_to(root.resolve()).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def _public_release_path_exempt(rel: str) -> bool:
+    rel = rel.replace("\\", "/")
+    return any(rel == prefix.rstrip("/") or rel.startswith(prefix) for prefix in _PUBLIC_RELEASE_EXEMPT_PREFIXES)
+
+
+def _iter_public_release_scan_files(root: Path, scan_paths: list[str | Path] | None) -> list[Path]:
+    selected = scan_paths if scan_paths is not None else list(_PUBLIC_RELEASE_SCAN_PATHS)
+    files: list[Path] = []
+    for raw in selected:
+        path = Path(raw)
+        if not path.is_absolute():
+            path = root / path
+        if not path.exists():
+            continue
+        if path.is_file():
+            rel = _public_release_rel(path, root)
+            if not _public_release_path_exempt(rel):
+                files.append(path)
+            continue
+        for candidate in sorted(path.rglob("*")):
+            if not candidate.is_file():
+                continue
+            rel = _public_release_rel(candidate, root)
+            if _public_release_path_exempt(rel):
+                continue
+            if any(part in {"__pycache__", ".git", ".venv"} for part in candidate.parts):
+                continue
+            files.append(candidate)
+    return sorted({p.resolve() for p in files})
+
+
+def check_public_release_hygiene(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+    scan_paths: list[str | Path] | None = None,
+) -> list[str]:
+    """Guard public docs/site/notebook surfaces against private ops leakage.
+
+    This is intentionally a publish-surface check, not a research-ledger scrub.
+    Raw `.omx/state`, harvested manifests, and forensic logs may contain local
+    paths or provider identifiers for custody, but those files are not public
+    supplement inputs. Use placeholders such as `${LIGHTNING_SUPPLEMENT_URL}`
+    and `${CLOUDFLARE_PAGES_URL}` until a public release manifest deliberately
+    records the final URLs.
+    """
+    root = repo_root or REPO_ROOT
+    violations: list[str] = []
+    files = _iter_public_release_scan_files(root, scan_paths)
+    for path in files:
+        rel = _public_release_rel(path, root)
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+        for lineno, line in enumerate(text.splitlines(), start=1):
+            for label, pattern in _PUBLIC_RELEASE_SECRET_PATTERNS:
+                if pattern.search(line):
+                    violations.append(
+                        f"{rel}:{lineno}: public release hygiene violation: "
+                        f"{label}. Redact into a placeholder, local manifest, "
+                        f"or private custody artifact before GitHub/site publish."
+                    )
+
+    if verbose and violations:
+        print(
+            f"  [public-release-hygiene] {len(violations)} violation(s) "
+            f"across {len(files)} scanned public file(s):"
+        )
+        for v in violations[:20]:
+            print(f"    • {v}")
+        if len(violations) > 20:
+            print(f"    • ... {len(violations) - 20} more")
+    elif verbose:
+        print(f"  [public-release-hygiene] OK: {len(files)} public file(s) scanned")
+
+    if violations and strict:
+        raise MetaBugViolation(
+            "PUBLIC RELEASE HYGIENE violations:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+            + "\n\nDo not publish local paths, provider job surfaces, or "
+            + "secrets. Use sanitized public manifests for Lightning.ai and "
+            + "Cloudflare Pages supplement URLs."
         )
     return violations
 
@@ -15652,8 +15899,13 @@ def check_lightning_exact_eval_manifest_runtime_closure(
                 repo_dir="/repo",
                 queue_metadata=[],
                 env=[],
-                machine="L40S",
+                machine="T4",
             )
+            # Use machine="T4" so the studio-machine validator (added 2026-05-04
+            # to gate the deprecated symbolic L40S route in favour of g6e.4xlarge)
+            # short-circuits and we actually exercise the manifest closure path
+            # we are trying to test here.  L40S manifest closure is now exercised
+            # below via machine="g6e.4xlarge" instead.
             manifest.write_text(json.dumps({"files": [{"path": "archive.zip"}]}) + "\n")
             try:
                 module._validate_exact_eval_submit_inputs(args)
@@ -15682,10 +15934,16 @@ def check_lightning_exact_eval_manifest_runtime_closure(
                 )
                 + "\n"
             )
+            args.env = [
+                "INFLATE_TORCH_SPEC=torch==2.5.1+cu124",
+                "UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu124",
+                "UV_INDEX_STRATEGY=unsafe-best-match",
+            ]
             try:
                 module._validate_exact_eval_submit_inputs(args)
             except SystemExit as exc:
-                violations.append(f"exact-eval manifest closure rejected complete L40S manifest: {exc}")
+                violations.append(f"exact-eval manifest closure rejected complete T4 manifest: {exc}")
+            args.env = []
 
             args.machine = "g4dn.xlarge"
             args.env = []
@@ -15779,6 +16037,201 @@ def check_remote_archive_only_eval_custody_closure(
     if violations and strict:
         raise MetaBugViolation(
             "REMOTE ARCHIVE-ONLY EVAL CUSTODY VIOLATIONS:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+        )
+    return violations
+
+
+_CMG3A_REMOTE_DISPATCH_BUILDERS = (
+    "experiments/build_cmg3_adaptive_runs_candidate.py",
+    "experiments/build_c067_multimask_reconciler_candidate.py",
+)
+_CMG3A_REMOTE_DISPATCH_RISK_FLAGS = (
+    "--target-body-bytes",
+    "--target-extra-runs",
+)
+_CMG3A_REMOTE_DISPATCH_POSE_SAFE_TOKENS = (
+    "--field-policy-json",
+    "--hard-pair-indices",
+    "--hard-frame-indices",
+    "--class-weights-json",
+    "CMG3A_POSE_COLLAPSE_REVIEWED",
+)
+
+_PMG_REMOTE_DISPATCH_RISK_TOKENS = (
+    "pmg_hotspot",
+    "PMG-HOTSPOT",
+    "row_span_stride_class_predictor",
+    "build_pmg_hotspot_candidate.py",
+    "build_cmg3_rowspan_candidate.py",
+    "masks.cmg3",
+)
+_PMG_REMOTE_DISPATCH_EXEC_TOKENS = (
+    "remote_archive_only_eval.sh",
+    "launch_lightning_batch_job.py",
+    "contest_auth_eval.py",
+    "ARCHIVE_PATH",
+)
+_PMG_REMOTE_DISPATCH_ESCAPE_TOKENS = (
+    "PMG_GEOMETRY_ESCAPE_REVIEWED",
+    "PMG_EXACT_NEGATIVE_REPLAY_GUARD",
+    "--geometry-escape-json",
+    "--pose-safe-plan-json",
+    "--learned-mask-contract-json",
+    "predictive_mask_grammar_runtime_readiness_plan.json",
+)
+
+
+def _shell_continuation_blocks(text: str) -> list[tuple[int, str]]:
+    blocks: list[tuple[int, str]] = []
+    current: list[str] = []
+    start_line = 0
+    for line_no, line in enumerate(text.splitlines(), start=1):
+        stripped = line.rstrip()
+        if not current:
+            start_line = line_no
+        current.append(stripped)
+        if stripped.endswith("\\"):
+            continue
+        blocks.append((start_line, "\n".join(current)))
+        current = []
+    if current:
+        blocks.append((start_line, "\n".join(current)))
+    return blocks
+
+
+def _cmg3a_dispatch_rel(path: Path, repo_root: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(repo_root.resolve()))
+    except ValueError:
+        return str(path)
+
+
+def _scan_remote_script_for_plain_cmg3a_dispatch(path: Path, repo_root: Path) -> list[str]:
+    """Catch remote CMG3A byte/run-count dispatches lacking pose-safety review."""
+    rel = _cmg3a_dispatch_rel(path, repo_root)
+    try:
+        text = path.read_text(encoding="utf-8", errors="ignore")
+    except OSError as exc:
+        return [f"{rel}: unreadable for CMG3A dispatch scan: {exc}"]
+    if not any(builder in text for builder in _CMG3A_REMOTE_DISPATCH_BUILDERS):
+        return []
+    violations: list[str] = []
+    for start_line, block in _shell_continuation_blocks(text):
+        if not any(builder in block for builder in _CMG3A_REMOTE_DISPATCH_BUILDERS):
+            continue
+        if not any(flag in block for flag in _CMG3A_REMOTE_DISPATCH_RISK_FLAGS):
+            continue
+        if any(token in block for token in _CMG3A_REMOTE_DISPATCH_POSE_SAFE_TOKENS):
+            continue
+        violations.append(
+            f"{rel}:{start_line}: plain CMG3A target-body/extra-run dispatch "
+            "after exact PoseNet-collapse negatives needs --field-policy-json, "
+            "--hard-pair-indices/--hard-frame-indices, --class-weights-json, "
+            "or CMG3A_POSE_COLLAPSE_REVIEWED:<reason>"
+        )
+    return violations
+
+
+def _scan_remote_script_for_plain_pmg_dispatch(path: Path, repo_root: Path) -> list[str]:
+    """Catch PMG/row-span remote dispatches without geometry-escape review."""
+    rel = _cmg3a_dispatch_rel(path, repo_root)
+    try:
+        text = path.read_text(encoding="utf-8", errors="ignore")
+    except OSError as exc:
+        return [f"{rel}: unreadable for PMG dispatch scan: {exc}"]
+    if not any(token in text for token in _PMG_REMOTE_DISPATCH_RISK_TOKENS):
+        return []
+    if any(token in text for token in _PMG_REMOTE_DISPATCH_ESCAPE_TOKENS):
+        return []
+    violations: list[str] = []
+    for start_line, block in _shell_continuation_blocks(text):
+        if not any(token in block for token in _PMG_REMOTE_DISPATCH_RISK_TOKENS):
+            continue
+        if not any(token in block for token in _PMG_REMOTE_DISPATCH_EXEC_TOKENS):
+            continue
+        if any(token in block for token in _PMG_REMOTE_DISPATCH_ESCAPE_TOKENS):
+            continue
+        violations.append(
+            f"{rel}:{start_line}: PMG/row-span mask-grammar remote dispatch "
+            "after exact PoseNet-collapse negatives needs "
+            "PMG_GEOMETRY_ESCAPE_REVIEWED:<reason>, "
+            "PMG_EXACT_NEGATIVE_REPLAY_GUARD, --geometry-escape-json, "
+            "--pose-safe-plan-json, or --learned-mask-contract-json"
+        )
+    return violations
+
+
+def check_cmg3a_remote_dispatch_requires_pose_safety(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Block new remote GPU spend on the measured-bad plain CMG3A shape.
+
+    Local builders stay usable for planning and byte screens. The guard is
+    scoped to dispatch surfaces, where a bad command burns remote queue time
+    before exact evidence can correct the operator.
+    """
+    root = repo_root or REPO_ROOT
+    paths: list[Path] = []
+    scripts_root = root / "scripts"
+    if scripts_root.exists():
+        paths.extend(
+            p
+            for p in scripts_root.rglob("*")
+            if p.is_file() and p.suffix in {".sh", ".py"}
+        )
+    violations: list[str] = []
+    for path in sorted(paths):
+        violations.extend(_scan_remote_script_for_plain_cmg3a_dispatch(path, root))
+    if verbose:
+        if violations:
+            print(f"  [cmg3a-pose-safety] {len(violations)} violation(s):")
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print("  [cmg3a-pose-safety] OK: remote CMG3A dispatches carry pose-safety review")
+    if violations and strict:
+        raise MetaBugViolation(
+            "CMG3A REMOTE DISPATCH POSE-SAFETY VIOLATIONS:\n"
+            + "\n".join(f"  • {v}" for v in violations)
+        )
+    return violations
+
+
+def check_pmg_remote_dispatch_requires_geometry_escape(
+    repo_root: Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """Block repeated PMG/row-span remote spend without an escape proof.
+
+    This is scoped to remote dispatch surfaces. Local PMG/CMG3 planners remain
+    available for byte screens and geometry analysis.
+    """
+    root = repo_root or REPO_ROOT
+    paths: list[Path] = []
+    scripts_root = root / "scripts"
+    if scripts_root.exists():
+        paths.extend(
+            p
+            for p in scripts_root.rglob("*")
+            if p.is_file() and p.suffix in {".sh", ".py"}
+        )
+    violations: list[str] = []
+    for path in sorted(paths):
+        violations.extend(_scan_remote_script_for_plain_pmg_dispatch(path, root))
+    if verbose:
+        if violations:
+            print(f"  [pmg-geometry-escape] {len(violations)} violation(s):")
+            for v in violations:
+                print(f"    • {v}")
+        else:
+            print("  [pmg-geometry-escape] OK: remote PMG dispatches carry geometry-escape review")
+    if violations and strict:
+        raise MetaBugViolation(
+            "PMG REMOTE DISPATCH GEOMETRY-ESCAPE VIOLATIONS:\n"
             + "\n".join(f"  • {v}" for v in violations)
         )
     return violations

@@ -91,11 +91,70 @@ def test_adjudicator_uses_recomputed_json_score_not_human_formula(tmp_path: Path
     assert prov["lane_status"] == "IN_PREDICTED_BAND"
     assert prov["regression_triggered"] is False
     assert prov["regression_scope"] == "measured_implementation_config_only_pending_review"
-    assert prov["promotion_eligible"] is True
-    assert prov["paper_claim_grade"] == "A score-grade"
-    assert prov["allowed_use"] == ["promotion_review", "rank_frontier_candidate"]
+    assert prov["promotion_eligible"] is False
+    assert prov["scientific_score_eligible"] is True
+    assert prov["hardware_promotion_gate_triggered"] is True
+    assert prov["paper_claim_grade"] == "A score-grade; T4/equivalent promotion required"
+    assert prov["allowed_use"] == [
+        "diagnostic_score_screen",
+        "requires_t4_confirmation",
+        "no_promotion",
+    ]
     assert "hard_kill_triggered" not in prov
     assert prov["contest_cuda_gpu_t4_match"] is False
+    assert prov["contest_equivalent_hardware"] is False
+
+
+def test_adjudicator_regression_threshold_is_delta_vs_baseline(tmp_path: Path) -> None:
+    adjudicator = _load_adjudicator()
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"frontier archive")
+    archive_sha = hashlib.sha256(archive.read_bytes()).hexdigest()
+    contest_json = tmp_path / "contest_auth_eval.json"
+    contest_json.write_text(json.dumps({
+        "final_score": 0.32,
+        "score_recomputed_from_components": 0.3247176275031171,
+        "avg_posenet_dist": 0.00052391,
+        "avg_segnet_dist": 0.00061261,
+        "archive_size_bytes": archive.stat().st_size,
+        "n_samples": 600,
+        "provenance": {
+            "archive_sha256": archive_sha,
+            "device": "cuda",
+            "gpu_model": "Tesla T4",
+            "gpu_t4_match": True,
+        },
+    }))
+    args = argparse.Namespace(
+        contest_json=str(contest_json),
+        provenance=str(tmp_path / "provenance.json"),
+        archive=str(archive),
+        result_copy=None,
+        baseline_score=0.32518843312932477,
+        baseline_archive_bytes=287573,
+        predicted_band=[0.324, 0.326],
+        regression_threshold=0.01,
+        delta_key="score_delta_vs_public_pr63",
+        required_device="cuda",
+        required_samples=600,
+        max_sane_score=10.0,
+        max_posenet_dist=None,
+        max_segnet_dist=None,
+        baseline_posenet_dist=None,
+        baseline_segnet_dist=None,
+        max_posenet_relative=None,
+        max_segnet_relative=None,
+        component_reference_label="public_pr63_qpose14",
+    )
+
+    result = adjudicator.adjudicate(args)
+
+    assert result["lane_status"] == "IN_PREDICTED_BAND"
+    assert result["regression_triggered"] is False
+    assert result["promotion_eligible"] is True
+    prov = json.loads(Path(args.provenance).read_text())
+    assert prov["regression_threshold_mode"] == "delta_vs_baseline"
+    assert prov["score_delta_vs_public_pr63"] == pytest.approx(-0.00047080562620765987)
 
 
 def test_adjudicator_writes_forensic_artifacts_on_component_gate_violation(
@@ -156,6 +215,64 @@ def test_adjudicator_writes_forensic_artifacts_on_component_gate_violation(
     assert prov["paper_claim_grade"] == "A-negative scoped forensic"
     assert prov["allowed_use"] == ["forensic", "no_rank_frontier", "no_promotion"]
     assert prov["component_gate_violations"][0]["reason"] == "relative_component_gate"
+
+
+def test_adjudicator_writes_forensic_artifacts_on_sane_score_gate_violation(
+    tmp_path: Path,
+) -> None:
+    adjudicator = _load_adjudicator()
+    archive = tmp_path / "archive.zip"
+    archive.write_bytes(b"archive")
+    archive_sha = hashlib.sha256(archive.read_bytes()).hexdigest()
+    contest_json = tmp_path / "contest_auth_eval.json"
+    contest_json.write_text(json.dumps({
+        "final_score": 12.5,
+        "score_recomputed_from_components": 12.5,
+        "avg_posenet_dist": 10.0,
+        "avg_segnet_dist": 0.05,
+        "archive_size_bytes": archive.stat().st_size,
+        "n_samples": 600,
+        "provenance": {
+            "archive_sha256": archive_sha,
+            "device": "cuda",
+            "gpu_t4_match": True,
+        },
+    }))
+    provenance = tmp_path / "adjudication_provenance.json"
+    result_copy = tmp_path / "contest_auth_eval.adjudicated.json"
+    args = argparse.Namespace(
+        contest_json=str(contest_json),
+        provenance=str(provenance),
+        archive=str(archive),
+        result_copy=str(result_copy),
+        baseline_score=0.315,
+        baseline_archive_bytes=276214,
+        predicted_band=[0.2, 2.5],
+        regression_threshold=0.2,
+        delta_key="score_delta_vs_frontier",
+        required_device="cuda",
+        required_samples=600,
+        max_sane_score=5.0,
+        max_posenet_dist=None,
+        max_segnet_dist=None,
+        baseline_posenet_dist=None,
+        baseline_segnet_dist=None,
+        max_posenet_relative=None,
+        max_segnet_relative=None,
+        component_reference_label="frontier",
+    )
+
+    result = adjudicator.adjudicate(args)
+
+    assert result["sane_score_gate_triggered"] is True
+    assert result["promotion_eligible"] is False
+    assert result["paper_claim_grade"] == "A-negative scoped forensic"
+    assert result_copy.is_file()
+    assert provenance.is_file()
+    prov = json.loads(provenance.read_text())
+    assert prov["sane_score_gate_triggered"] is True
+    assert prov["sane_score_gate_violation"]["reason"] == "sane_score_gate"
+    assert prov["lane_status"] == "REGRESSION_AND_SANE_SCORE_REVIEW_REQUIRED"
 
 
 def test_adjudicator_cli_component_gate_fails_closed_by_default(tmp_path: Path) -> None:

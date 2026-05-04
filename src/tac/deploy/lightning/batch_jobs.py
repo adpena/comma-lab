@@ -11,15 +11,23 @@ No human logs are parsed for scores here.
 from __future__ import annotations
 
 import dataclasses
+import contextlib
 import hashlib
 import json
 import os
+import re
 import shlex
 import shutil
 import subprocess
+import tempfile
 import time
-from pathlib import Path
-from typing import Any
+from pathlib import Path, PurePosixPath
+from typing import Any, Callable
+
+try:
+    import fcntl
+except ImportError:  # pragma: no cover - Lightning tooling is POSIX in practice.
+    fcntl = None  # type: ignore[assignment]
 
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -28,6 +36,8 @@ ARTIFACT_METADATA = "lightning_queue_metadata.json"
 ARTIFACT_ARCHIVE = "archive.zip"
 ARTIFACT_VALIDATION = "lightning_artifact_mirror_validation.json"
 ARTIFACT_RUNNER_PREFLIGHT = "lightning_runner_preflight.json"
+ARTIFACT_INFLATE_RUNTIME_BOOTSTRAP = "lightning_inflate_runtime_bootstrap.json"
+ARTIFACT_INFLATE_RUNTIME_STATIC_PREFLIGHT = "lightning_inflate_runtime_static_preflight.json"
 ARTIFACT_DALI_BOOTSTRAP = "lightning_dali_bootstrap.json"
 ARTIFACT_DALI_REQUIREMENTS = "lightning_dali_requirements.txt"
 ARTIFACT_SUPPLY_CHAIN_SCAN_PRE = "lightning_supply_chain_scan_pre.json"
@@ -41,6 +51,11 @@ ARTIFACT_COMPONENT_SENSITIVITY_RUN = "diagnostic_component_sensitivity_run.json"
 ARTIFACT_COMPONENT_SENSITIVITY_VALIDATION = "diagnostic_component_sensitivity_artifact_validation.json"
 ARTIFACT_COMPONENT_SENSITIVITY_LOG = "diagnostic_component_sensitivity.log"
 ARTIFACT_COMPONENT_SENSITIVITY_SUMMARY = "component_sensitivity_profile_summary.json"
+ARTIFACT_COMPONENT_TRACE = "component_trace.json"
+ARTIFACT_COMPONENT_TRACE_LOG = "component_trace.log"
+ARTIFACT_INFRA_FAILURE = "lightning_artifact_infra_failure.json"
+LIGHTNING_EMPTY_ARTIFACT_INFRA_TERMINAL_CLASS = "empty_lightning_artifact_dir_infra"
+LIGHTNING_MISSING_EXACT_EVAL_JSON_TERMINAL_CLASS = "exact_eval_missing_score_json"
 COMPONENT_RESPONSE_COMPONENTS = ("posenet", "segnet", "combined")
 COMPONENT_RESPONSE_CURVE_FILES = tuple(
     f"{component}_official_response_curve.json"
@@ -85,7 +100,111 @@ CANONICAL_ARTIFACT_FILES = (
     "adjudication_provenance.json",
     "contest_auth_eval.adjudicated.json",
 )
-OPTIONAL_ARTIFACT_FILES = ("auth_eval.log", "adjudication.log")
+LIGHTNING_STUDIO_MACHINE_CLASS_PAIRS = {
+    "g4dn.xlarge": "T4_SMALL",
+    "g4dn.2xlarge": "T4",
+    "g4dn.12xlarge": "T4_X_4",
+    "g6e.4xlarge": "L40S",
+    "g7e.4xlarge": "RTXP_6000",
+    "g7e.12xlarge": "RTXP_6000_X_2",
+}
+LIGHTNING_STUDIO_SYMBOLIC_MACHINE_CLASSES = frozenset(
+    {"T4_SMALL", "T4", "T4_X_4"}
+)
+LIGHTNING_STUDIO_SYMBOLIC_MACHINE_SUGGESTIONS = {
+    "H100": "use a concrete Studio-compatible provider class, or submit an image-backed job on a matching cloud account",
+    "H200": "use a concrete Studio-compatible provider class, or submit an image-backed job on a matching cloud account",
+    "A100": "use a concrete Studio-compatible provider class, or submit an image-backed job on a matching cloud account",
+    "A100_SXM4": "use a concrete Studio-compatible provider class, or submit an image-backed job on a matching cloud account",
+    "L40S": "use g6e.4xlarge for the current Studio-backed AWS L40S route",
+    "RTXP_6000": "use g7e.4xlarge for the current Studio-backed RTX PRO route",
+    "RTXP_6000_X_2": "use g7e.12xlarge for the current Studio-backed dual RTX PRO route",
+}
+_LIGHTNING_STUDIO_PROVIDER_MACHINE_RE = re.compile(r"^[a-z][a-z0-9-]*\.[a-z0-9]+$")
+LIGHTNING_STUDIO_CLOUD_ACCOUNT_MISMATCH_FRAGMENT = (
+    "Studio cloud account does not match provided cloud account"
+)
+LIGHTNING_STUDIO_CLOUD_ACCOUNT_MISMATCH_TERMINAL_CLASS = (
+    "studio_cloud_account_namespace_mismatch"
+)
+
+
+class LightningStudioCloudAccountMismatchError(RuntimeError):
+    """Project diagnostic for Studio/env cloud-account namespace mismatches."""
+
+    terminal_class = LIGHTNING_STUDIO_CLOUD_ACCOUNT_MISMATCH_TERMINAL_CLASS
+
+    def __init__(
+        self,
+        *,
+        job_name: str,
+        studio: str | None,
+        cloud_account: str | None,
+        machine: str,
+        original_error_type: str,
+        original_message: str,
+    ) -> None:
+        self.job_name = job_name
+        self.studio = studio
+        self.cloud_account = cloud_account
+        self.machine = machine
+        self.original_error_type = original_error_type
+        self.original_message = original_message
+        super().__init__(
+            "Lightning Studio submit blocked: terminal_class="
+            f"{self.terminal_class}; job_name={job_name!r}; studio={studio!r}; "
+            f"machine={machine!r}; cloud_account={cloud_account!r}. "
+            "The selected Studio environment belongs to a different Lightning "
+            "cloud-account namespace than the explicit --cloud-account route. "
+            "Do not retry the same Studio-backed submit; use a Studio/env in "
+            "that cloud account, omit --cloud-account for the default Studio "
+            "account route, or submit an image-backed job on the target cloud "
+            f"account. SDK said {original_error_type}: {original_message}"
+        )
+
+
+def _is_studio_cloud_account_mismatch(exc: BaseException) -> bool:
+    return LIGHTNING_STUDIO_CLOUD_ACCOUNT_MISMATCH_FRAGMENT in str(exc)
+
+
+def _supported_studio_machine_pairs_text() -> str:
+    return ", ".join(
+        f"{machine}/{machine_class}"
+        for machine, machine_class in sorted(LIGHTNING_STUDIO_MACHINE_CLASS_PAIRS.items())
+    )
+
+
+def validate_studio_machine_class_pair(machine: str, *, cloud_account: str | None = None) -> None:
+    """Fail closed on Studio machine classes known not to exist for this workflow."""
+
+    del cloud_account  # reserved for future cloud-account-specific allowlists
+    value = str(machine or "").strip()
+    if not value:
+        raise ValueError("Lightning Studio machine is required")
+    key = value.upper()
+    if key in LIGHTNING_STUDIO_SYMBOLIC_MACHINE_CLASSES:
+        return
+    suggestion = LIGHTNING_STUDIO_SYMBOLIC_MACHINE_SUGGESTIONS.get(key)
+    if suggestion:
+        raise ValueError(
+            "unsupported symbolic Lightning Studio accelerator "
+            f"{value!r}: {suggestion}"
+        )
+    if value.lower() in LIGHTNING_STUDIO_MACHINE_CLASS_PAIRS:
+        return
+    if _LIGHTNING_STUDIO_PROVIDER_MACHINE_RE.fullmatch(value.lower()):
+        raise ValueError(
+            "unsupported Lightning Studio machine/class pair: "
+            f"{value!r}. Supported Studio pairs: {_supported_studio_machine_pairs_text()}"
+        )
+OPTIONAL_ARTIFACT_FILES = (
+    "auth_eval.log",
+    "adjudication.log",
+    ARTIFACT_INFLATE_RUNTIME_BOOTSTRAP,
+    ARTIFACT_INFLATE_RUNTIME_STATIC_PREFLIGHT,
+    ARTIFACT_COMPONENT_TRACE,
+    ARTIFACT_COMPONENT_TRACE_LOG,
+)
 SSH_AUTH_OPTIONS = (
     "-o",
     "BatchMode=yes",
@@ -370,10 +489,28 @@ def _command_sha256(command: str) -> str:
     return hashlib.sha256(command.encode("utf-8")).hexdigest()
 
 
+def _ensure_remote_uv_command(*, output_dir: str) -> str:
+    out = _quote(output_dir)
+    return "\n".join(
+        [
+            "if [ ! -f scripts/ensure_remote_uv.sh ]; then",
+            "  echo 'FATAL: scripts/ensure_remote_uv.sh missing; remote source bundle incomplete' >&2",
+            "  exit 31",
+            "fi",
+            f"UV_BOOTSTRAP_LOG={out}/uv_bootstrap.log",
+            "export UV_BOOTSTRAP_LOG",
+            "UV_BIN=$(bash scripts/ensure_remote_uv.sh --symlink-system)",
+            "export UV_BIN",
+            'export PATH="$(dirname "$UV_BIN"):$PATH"',
+            'test -x "$UV_BIN"',
+        ]
+    )
+
+
 def lightning_sdk_job_name(name: str) -> str:
     """Return the path/name form Lightning SDK uses for Job artifacts."""
 
-    return name.replace("_", "-")
+    return name.replace("_", "-").lower()
 
 
 def lightning_sdk_artifact_path(name: str) -> str:
@@ -414,6 +551,15 @@ def default_exact_eval_output_dir(*, repo_dir: str, job_name: str) -> str:
     return f"{repo}/experiments/results/lightning_batch/{job_name}"
 
 
+def default_exact_eval_local_artifact_dir(*, job_name: str) -> str:
+    """Return the deterministic local mirror directory for exact eval artifacts."""
+
+    name = str(job_name).strip()
+    if not name:
+        raise ValueError("job_name is required for default exact-eval local artifact dir")
+    return f"experiments/results/lightning_batch/{name}"
+
+
 def _validate_writable_output_dir(output_dir: str | Path) -> None:
     out = str(output_dir).rstrip("/")
     if not out:
@@ -449,6 +595,80 @@ def _require_expected_archive(expected_sha256: str | None, expected_size_bytes: 
             "exact eval jobs require expected_archive_sha256 and expected_archive_size_bytes; "
             "use --infer-expected-archive or pass the archive identity explicitly"
         )
+
+
+def _normalise_heredoc_marker(fragment: str) -> tuple[str | None, bool]:
+    """Return a shell heredoc marker from a ``<<...`` fragment."""
+
+    if fragment.startswith("<<-"):
+        raw = fragment[3:].strip().split(None, 1)[0] if fragment[3:].strip() else ""
+        strip_tabs = True
+    elif fragment.startswith("<<"):
+        raw = fragment[2:].strip().split(None, 1)[0] if fragment[2:].strip() else ""
+        strip_tabs = False
+    else:
+        return None, False
+    if not raw:
+        return None, strip_tabs
+    if (raw[0], raw[-1:]) in {("'", "'"), ('"', '"')} and len(raw) >= 2:
+        raw = raw[1:-1]
+    return raw or None, strip_tabs
+
+
+def _python_stdin_heredoc_prefix(prefix: str) -> bool:
+    tokens = prefix.strip().split()
+    command_index = None
+    for idx, token in enumerate(tokens):
+        if re.search(r"(?:^|/)python(?:\d+(?:\.\d+)?)?$", token):
+            command_index = idx
+            break
+    if command_index is None:
+        return False
+    command = tokens[command_index].rsplit("/", 1)[-1]
+    if command not in {"python", "python3"} and not command.startswith("python3."):
+        return False
+    return "-" in tokens[command_index + 1 :]
+
+
+def _validate_python_stdin_heredocs(command: str, *, job_name: str) -> None:
+    """Compile Python code embedded via ``python - <<'PY'`` before dispatch.
+
+    ``bash -n`` does not parse heredoc bodies. A malformed generic Lightning
+    training command can therefore pass shell syntax checks and fail only after
+    paid GPU allocation. Compile stdin Python heredocs locally so those jobs
+    fail before provider submission.
+    """
+
+    lines = command.splitlines()
+    idx = 0
+    while idx < len(lines):
+        line = lines[idx]
+        marker_at = line.find("<<")
+        if marker_at < 0:
+            idx += 1
+            continue
+        prefix = line[:marker_at]
+        marker, strip_tabs = _normalise_heredoc_marker(line[marker_at:])
+        if marker is None or not _python_stdin_heredoc_prefix(prefix):
+            idx += 1
+            continue
+        body_start = idx + 1
+        body_end = body_start
+        while body_end < len(lines):
+            candidate = lines[body_end].lstrip("\t") if strip_tabs else lines[body_end]
+            if candidate.strip() == marker:
+                break
+            body_end += 1
+        if body_end >= len(lines):
+            raise ValueError(f"{job_name}: unterminated Python heredoc marker {marker!r}")
+        source = "\n".join(lines[body_start:body_end]) + "\n"
+        try:
+            compile(source, f"<LightningBatchJobSpec {job_name} heredoc {marker}>", "exec")
+        except SyntaxError as exc:
+            raise ValueError(
+                f"{job_name}: embedded Python heredoc {marker!r} fails local compile: {exc.msg}"
+            ) from exc
+        idx = body_end + 1
 
 
 def _validate_optional_number(
@@ -697,19 +917,75 @@ def _validate_runner_preflight_artifact(path: Path) -> dict[str, Any]:
     return payload
 
 
-def _load_state(path: Path = LIGHTNING_BATCH_STATE) -> list[dict[str, Any]]:
+@contextlib.contextmanager
+def _state_file_lock(path: Path):
+    """Serialize state-file read/modify/write sequences across processes."""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lock_path = path.with_name(path.name + ".lock")
+    with lock_path.open("a+", encoding="utf-8") as lock_file:
+        if fcntl is not None:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            if fcntl is not None:
+                fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+
+
+def _load_state_unlocked(path: Path = LIGHTNING_BATCH_STATE) -> list[dict[str, Any]]:
     if not path.exists():
         return []
     try:
-        data = json.loads(path.read_text())
+        data = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError:
         return []
     return data if isinstance(data, list) else []
 
 
-def _save_state(records: list[dict[str, Any]], path: Path = LIGHTNING_BATCH_STATE) -> None:
+def _save_state_unlocked(records: list[dict[str, Any]], path: Path = LIGHTNING_BATCH_STATE) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(records, indent=2, sort_keys=True) + "\n")
+    fd, tmp_name = tempfile.mkstemp(
+        prefix=f".{path.name}.",
+        suffix=".tmp",
+        dir=str(path.parent),
+        text=True,
+    )
+    tmp_path = Path(tmp_name)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            json.dump(records, handle, indent=2, sort_keys=True)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp_path, path)
+        path.chmod(0o644)
+    finally:
+        if tmp_path.exists():
+            tmp_path.unlink()
+
+
+def _load_state(path: Path = LIGHTNING_BATCH_STATE) -> list[dict[str, Any]]:
+    with _state_file_lock(path):
+        return _load_state_unlocked(path)
+
+
+def _save_state(records: list[dict[str, Any]], path: Path = LIGHTNING_BATCH_STATE) -> None:
+    with _state_file_lock(path):
+        _save_state_unlocked(records, path)
+
+
+def _mutate_state(
+    path: Path,
+    mutator: Callable[[list[dict[str, Any]]], Any],
+) -> Any:
+    """Run a state mutation under one lock and atomically persist the result."""
+
+    with _state_file_lock(path):
+        records = _load_state_unlocked(path)
+        result = mutator(records)  # type: ignore[operator]
+        _save_state_unlocked(records, path)
+        return result
 
 
 def _safe_getattr(obj: object, name: str) -> Any:
@@ -749,6 +1025,7 @@ class LightningAdjudicationSpec:
     result_copy_name: str = "contest_auth_eval.adjudicated.json"
     provenance_name: str = "adjudication_provenance.json"
     allow_component_gate_forensic_success: bool = True
+    allow_sane_score_forensic_success: bool = True
 
     def validate(self) -> None:
         for field in ("baseline_score", "predicted_band_low", "predicted_band_high", "regression_threshold"):
@@ -814,6 +1091,7 @@ class LightningBatchJobSpec:
     teamspace: str | None = None
     org: str | None = None
     user: str | None = None
+    cloud_account: str | None = None
     env: dict[str, str] = dataclasses.field(default_factory=dict)
     interruptible: bool = False
     max_runtime: int | None = None
@@ -835,8 +1113,11 @@ class LightningBatchJobSpec:
             raise ValueError("machine is required")
         if not self.command:
             raise ValueError("command is required")
+        _validate_python_stdin_heredocs(self.command, job_name=self.name)
         if self.studio and self.image:
             raise ValueError("studio and image are mutually exclusive")
+        if self.studio:
+            validate_studio_machine_class_pair(self.machine, cloud_account=self.cloud_account)
         _validate_expected_archive(self.expected_archive_sha256, self.expected_archive_size_bytes)
         _normalise_metadata(self.queue_metadata)
         if self.adjudication is not None:
@@ -857,6 +1138,8 @@ class LightningBatchJobSpec:
                 raise ValueError("exact eval job command must run CUDA runner preflight")
             if "LIGHTNING_RUNNER_DALI_PREFLIGHT_OK" not in self.command:
                 raise ValueError("exact eval job command must run DALI runner preflight")
+            if "LIGHTNING_INFLATE_RUNTIME_STATIC_PREFLIGHT_OK" not in self.command:
+                raise ValueError("exact eval job command must run inflate runtime static preflight")
             if "--require-hashes" not in self.command or "--no-deps" not in self.command:
                 raise ValueError("exact eval DALI bootstrap must use hash-pinned no-deps install")
             if "--index-url" in self.command or "--extra-index-url" in self.command:
@@ -866,6 +1149,34 @@ class LightningBatchJobSpec:
             if "/teamspace/jobs/" in self.command:
                 raise ValueError(
                     "exact eval job command must not target /teamspace/jobs/...; "
+                    "Lightning exposes that as a read-only artifact view inside Studio jobs"
+                )
+        if self.role == "alpha_geo0_exact_eval":
+            if self.adjudication is None:
+                raise ValueError("Alpha-Geo-0 exact eval jobs require adjudication provenance")
+            if self.interruptible:
+                raise ValueError("Alpha-Geo-0 exact eval jobs must not be interruptible")
+            if "experiments/alpha_geo0_pose_regen.py" not in self.command:
+                raise ValueError("Alpha-Geo-0 exact eval job must run experiments/alpha_geo0_pose_regen.py")
+            if "--device cuda" not in self.command:
+                raise ValueError("Alpha-Geo-0 exact eval job command must require --device cuda")
+            if "contest_auth_eval.json" not in self.command:
+                raise ValueError("Alpha-Geo-0 exact eval job command must preserve contest_auth_eval.json")
+            if "scripts/scan_lightning_supply_chain.py" not in self.command:
+                raise ValueError("Alpha-Geo-0 exact eval job must run Lightning supply-chain scan")
+            if "LIGHTNING_RUNNER_CUDA_PREFLIGHT_OK" not in self.command:
+                raise ValueError("Alpha-Geo-0 exact eval job must run CUDA runner preflight")
+            if "LIGHTNING_RUNNER_DALI_PREFLIGHT_OK" not in self.command:
+                raise ValueError("Alpha-Geo-0 exact eval job must run DALI runner preflight")
+            if "--require-hashes" not in self.command or "--no-deps" not in self.command:
+                raise ValueError("Alpha-Geo-0 DALI bootstrap must use hash-pinned no-deps install")
+            if "--index-url" in self.command or "--extra-index-url" in self.command:
+                raise ValueError("Alpha-Geo-0 DALI bootstrap must use direct wheel URLs, not package indexes")
+            if self.remote_output_dir is not None:
+                _validate_writable_output_dir(self.remote_output_dir)
+            if "/teamspace/jobs/" in self.command:
+                raise ValueError(
+                    "Alpha-Geo-0 exact eval job command must not target /teamspace/jobs/...; "
                     "Lightning exposes that as a read-only artifact view inside Studio jobs"
                 )
         if self.role == "official_component_response":
@@ -1029,6 +1340,7 @@ def _dali_bootstrap_command(
         f"{out}/{ARTIFACT_DALI_REQUIREMENTS} {wheel_matrix} <<'PY'\n"
         "import importlib.metadata as metadata\n"
         "import json\n"
+        "import os\n"
         "import pathlib\n"
         "import shutil\n"
         "import subprocess\n"
@@ -1138,6 +1450,7 @@ def _dali_bootstrap_command(
         "    'requirements_path': str(REQUIREMENTS_TXT),\n"
         "    'selected_wheels': selected_wheels,\n"
         "    'installed': False,\n"
+        "    'installer_bootstrap_action': None,\n"
         "}\n"
         "_write_requirements()\n"
         "\n"
@@ -1156,9 +1469,12 @@ def _dali_bootstrap_command(
         "    raise SystemExit('FATAL: preinstalled DALI is not the exact expected package/version: ' + '; '.join(initial_violations))\n"
         "else:\n"
         "    payload['bootstrap_action'] = 'install_hash_pinned_wheels'\n"
-        "    uv = shutil.which('uv')\n"
+        "    uv_env = os.environ.get('UV_BIN')\n"
+        "    uv = uv_env if uv_env and pathlib.Path(uv_env).is_file() else shutil.which('uv')\n"
         "    if not uv:\n"
-        "        raise SystemExit('FATAL: uv is required to install pinned DALI into this pip-less runner env')\n"
+        "        raise SystemExit('FATAL: uv is required to install pinned DALI into this pip-less runner env; run scripts/ensure_remote_uv.sh first')\n"
+        "    payload['installer_bootstrap_action'] = 'uv_provided_by_shell_ensure_remote_uv' if uv_env else 'uv_already_available'\n"
+        "    payload['installer_uv_path'] = uv\n"
         "    cmd = [\n"
         "        uv,\n"
         "        'pip',\n"
@@ -1291,6 +1607,105 @@ def _runner_preflight_command(
     )
 
 
+def _inflate_runtime_bootstrap_command(
+    *,
+    python_bin: str,
+    output_dir: str,
+    env: dict[str, str] | None,
+) -> str:
+    py = _quote(python_bin)
+    out = _quote(output_dir)
+    specs = []
+    for key in ("INFLATE_BROTLI_SPEC", "INFLATE_AV_SPEC", "INFLATE_NUMPY_SPEC"):
+        value = str((env or {}).get(key, "")).strip()
+        if value:
+            specs.append(value)
+    specs_json = _quote(json.dumps(specs, sort_keys=True))
+    return (
+        f"{py} - {out}/{ARTIFACT_INFLATE_RUNTIME_BOOTSTRAP} {specs_json} {py} <<'PY'\n"
+        "import json, os, shutil, subprocess, sys, time\n"
+        "out_path = sys.argv[1]\n"
+        "specs = json.loads(sys.argv[2])\n"
+        "python_bin = sys.argv[3]\n"
+        "payload = {\n"
+        "    'schema_version': 1,\n"
+        "    'tool': 'lightning_exact_eval_inflate_runtime_bootstrap',\n"
+        "    'recorded_at_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),\n"
+        "    'python': python_bin,\n"
+        "    'requested_specs': specs,\n"
+        "    'installed': False,\n"
+        "    'install_command': None,\n"
+        "    'install_returncode': None,\n"
+        "    'stdout_tail': '',\n"
+        "    'stderr_tail': '',\n"
+        "}\n"
+        "if specs:\n"
+        "    uv = os.environ.get('UV_BIN') or shutil.which('uv')\n"
+        "    if not uv:\n"
+        "        raise SystemExit('FATAL: optional inflate runtime deps requested but uv is unavailable')\n"
+        "    cmd = [uv, 'pip', 'install', '--python', python_bin, *specs]\n"
+        "    payload['install_command'] = cmd\n"
+        "    result = subprocess.run(cmd, check=False, capture_output=True, text=True, timeout=600)\n"
+        "    payload['install_returncode'] = result.returncode\n"
+        "    payload['stdout_tail'] = result.stdout[-4000:]\n"
+        "    payload['stderr_tail'] = result.stderr[-4000:]\n"
+        "    payload['installed'] = result.returncode == 0\n"
+        "    if result.returncode != 0:\n"
+        "        open(out_path, 'w').write(json.dumps(payload, indent=2, sort_keys=True) + '\\n')\n"
+        "        raise SystemExit('FATAL: optional inflate runtime dependency install failed')\n"
+        "open(out_path, 'w').write(json.dumps(payload, indent=2, sort_keys=True) + '\\n')\n"
+        "print('LIGHTNING_INFLATE_RUNTIME_BOOTSTRAP_OK')\n"
+        "print(json.dumps({'requested_specs': specs, 'installed': payload['installed']}, sort_keys=True))\n"
+        "PY"
+    )
+
+
+def _inflate_runtime_static_preflight_command(
+    *,
+    python_bin: str,
+    output_dir: str,
+) -> str:
+    py = _quote(python_bin)
+    out = _quote(output_dir)
+    return (
+        f"{py} - {out}/{ARTIFACT_INFLATE_RUNTIME_STATIC_PREFLIGHT} <<'PY'\n"
+        "import inspect, json, py_compile, sys, time\n"
+        "from pathlib import Path\n"
+        "files = [\n"
+        "    'submissions/robust_current/inflate_renderer.py',\n"
+        "    'submissions/robust_current/unpack_renderer_payload.py',\n"
+        "    'submissions/robust_current/apply_qzs3_postprocess.py',\n"
+        "]\n"
+        "compiled = []\n"
+        "for rel in files:\n"
+        "    path = Path(rel)\n"
+        "    if path.is_file():\n"
+        "        py_compile.compile(str(path), doraise=True)\n"
+        "        compiled.append(rel)\n"
+        "import importlib.util\n"
+        "spec = importlib.util.spec_from_file_location('inflate_renderer_static_preflight', files[0])\n"
+        "module = importlib.util.module_from_spec(spec)\n"
+        "assert spec is not None and spec.loader is not None\n"
+        "spec.loader.exec_module(module)\n"
+        "signature = inspect.signature(module._generate_and_write)\n"
+        "if 'pr81_router_actions' not in signature.parameters:\n"
+        "    raise SystemExit('FATAL: inflate_renderer._generate_and_write lacks pr81_router_actions parameter')\n"
+        "payload = {\n"
+        "    'schema_version': 1,\n"
+        "    'tool': 'lightning_exact_eval_inflate_runtime_static_preflight',\n"
+        "    'recorded_at_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),\n"
+        "    'python': sys.executable,\n"
+        "    'compiled': compiled,\n"
+        "    'generate_and_write_parameters': list(signature.parameters),\n"
+        "    'no_router_qpost_guard': True,\n"
+        "}\n"
+        "Path(sys.argv[1]).write_text(json.dumps(payload, indent=2, sort_keys=True) + '\\n')\n"
+        "print('LIGHTNING_INFLATE_RUNTIME_STATIC_PREFLIGHT_OK')\n"
+        "print(json.dumps({'compiled': compiled, 'no_router_qpost_guard': True}, sort_keys=True))\n"
+        "PY"
+    )
+
+
 def _adjudication_command(
     *,
     python_bin: str,
@@ -1334,6 +1749,8 @@ def _adjudication_command(
         cmd.append(f"--max-segnet-relative {_quote(str(adjudication.max_segnet_relative))}")
     if adjudication.allow_component_gate_forensic_success:
         cmd.append("--allow-component-gate-forensic-success")
+    if adjudication.allow_sane_score_forensic_success:
+        cmd.append("--allow-sane-score-forensic-success")
     return " ".join(cmd) + f" 2>&1 | tee {out}/adjudication.log"
 
 
@@ -1349,7 +1766,10 @@ def exact_cuda_eval_command(
     expected_archive_sha256: str | None = None,
     expected_archive_size_bytes: int | None = None,
     queue_metadata: dict[str, Any] | None = None,
+    env: dict[str, str] | None = None,
     adjudication: LightningAdjudicationSpec | None = None,
+    component_trace: bool = False,
+    component_trace_top_k: int = 80,
 ) -> str:
     """Build a fail-closed exact CUDA auth-eval command for a Lightning job."""
 
@@ -1358,6 +1778,16 @@ def exact_cuda_eval_command(
     if adjudication is None:
         raise ValueError("exact CUDA eval command requires adjudication provenance")
     adjudication.validate()
+    expected_runtime_tree_sha256 = None
+    if isinstance(queue_metadata, dict):
+        raw_runtime_sha = queue_metadata.get("expected_runtime_tree_sha256")
+        if raw_runtime_sha is not None:
+            expected_runtime_tree_sha256 = str(raw_runtime_sha)
+    runtime_tree_arg = (
+        f"--expected-runtime-tree-sha256 {_quote(expected_runtime_tree_sha256)} "
+        if expected_runtime_tree_sha256
+        else ""
+    )
     repo = _quote(repo_dir)
     archive = _quote(archive_path)
     upstream = _quote(upstream_dir)
@@ -1378,15 +1808,20 @@ def exact_cuda_eval_command(
                 f"{out}/eval_provenance.json "
                 f"{out}/report.txt "
                 f"{out}/auth_eval.log "
+                f"{out}/{ARTIFACT_COMPONENT_TRACE} "
+                f"{out}/{ARTIFACT_COMPONENT_TRACE_LOG} "
                 f"{out}/adjudication.log "
                 f"{out}/adjudication_provenance.json "
                 f"{out}/{ARTIFACT_METADATA} "
                 f"{out}/{ARTIFACT_DALI_BOOTSTRAP} "
                 f"{out}/{ARTIFACT_DALI_REQUIREMENTS} "
                 f"{out}/{ARTIFACT_RUNNER_PREFLIGHT} "
+                f"{out}/{ARTIFACT_INFLATE_RUNTIME_BOOTSTRAP} "
+                f"{out}/{ARTIFACT_INFLATE_RUNTIME_STATIC_PREFLIGHT} "
                 f"{out}/{ARTIFACT_SUPPLY_CHAIN_SCAN_PRE} "
                 f"{out}/{ARTIFACT_SUPPLY_CHAIN_SCAN}"
             ),
+            _ensure_remote_uv_command(output_dir=output_dir),
             _write_metadata_command(
                 python_bin=python_bin,
                 output_dir=output_dir,
@@ -1400,6 +1835,15 @@ def exact_cuda_eval_command(
                 ),
             ),
             _runner_preflight_command(python_bin=python_bin, output_dir=output_dir),
+            _inflate_runtime_bootstrap_command(
+                python_bin=python_bin,
+                output_dir=output_dir,
+                env=env,
+            ),
+            _inflate_runtime_static_preflight_command(
+                python_bin=python_bin,
+                output_dir=output_dir,
+            ),
             f"cp {archive} {out}/{ARTIFACT_ARCHIVE}",
             _archive_preflight_command(
                 python_bin=python_bin,
@@ -1410,6 +1854,8 @@ def exact_cuda_eval_command(
             (
                 f"export UV_PROJECT_ENVIRONMENT={out}/uv_project_env\n"
                 "export UV_LINK_MODE=${UV_LINK_MODE:-copy}\n"
+                "export INFLATE_REQUIRE_CUDA=1\n"
+                f"export PATH=$(dirname {py}):$PATH\n"
                 f"{py} -u experiments/contest_auth_eval.py "
                 f"--archive {out}/{ARTIFACT_ARCHIVE} "
                 f"--inflate-sh {inflate} "
@@ -1417,6 +1863,7 @@ def exact_cuda_eval_command(
                 "--device cuda "
                 "--keep-work-dir "
                 f"--work-dir {out}/eval_work "
+                f"{runtime_tree_arg}"
                 f"2>&1 | tee {out}/auth_eval.log"
             ),
             f"test -f {out}/eval_work/contest_auth_eval.json",
@@ -1448,6 +1895,43 @@ def exact_cuda_eval_command(
             ),
         ]
     )
+    if component_trace:
+        command = "\n".join(
+            [
+                command,
+                (
+                    f"{py} -u experiments/contest_component_trace.py "
+                    f"--submission-dir {out}/eval_work "
+                    f"--upstream-dir {upstream} "
+                    f"--uncompressed-dir {upstream}/videos "
+                    f"--video-names-file {upstream}/public_test_video_names.txt "
+                    "--device cuda "
+                    f"--contest-auth-eval-json {out}/contest_auth_eval.json "
+                    f"--output-json {out}/{ARTIFACT_COMPONENT_TRACE} "
+                    f"--top-k {_quote(str(component_trace_top_k))} "
+                    f"2>&1 | tee {out}/{ARTIFACT_COMPONENT_TRACE_LOG}"
+                ),
+                f"test -f {out}/{ARTIFACT_COMPONENT_TRACE}",
+                (
+                    f"{py} - {out}/{ARTIFACT_COMPONENT_TRACE} <<'PY'\n"
+                    "import json, math, sys\n"
+                    "payload = json.load(open(sys.argv[1]))\n"
+                    "assert payload.get('score_claim') is False\n"
+                    "assert payload.get('evidence_grade') == 'diagnostic_component_trace'\n"
+                    "assert payload.get('n_samples') == 600, payload.get('n_samples')\n"
+                    "cross = payload.get('contest_auth_eval_cross_check') or {}\n"
+                    "assert cross.get('all_match') is True, cross\n"
+                    "score = payload.get('score_recomputed_from_components')\n"
+                    "assert isinstance(score, (int, float)) and math.isfinite(score), score\n"
+                    "print('LIGHTNING_COMPONENT_TRACE_JSON_OK')\n"
+                    "print(json.dumps({'n_samples': payload.get('n_samples'), "
+                    "'avg_posenet_dist': payload.get('avg_posenet_dist'), "
+                    "'avg_segnet_dist': payload.get('avg_segnet_dist'), "
+                    "'score_recomputed_from_components': score}, sort_keys=True))\n"
+                    "PY"
+                ),
+            ]
+        )
     command = "\n".join(
         [
             command,
@@ -1474,16 +1958,20 @@ def make_exact_eval_spec(
     studio: str | None = None,
     image: str | None = None,
     python_bin: str = ".venv/bin/python",
+    inflate_sh: str = "submissions/robust_current/inflate.sh",
     max_runtime: int | None = 3 * 60 * 60,
     env: dict[str, str] | None = None,
     teamspace: str | None = None,
     org: str | None = None,
     user: str | None = None,
+    cloud_account: str | None = None,
     expected_archive_sha256: str | None = None,
     expected_archive_size_bytes: int | None = None,
     queue_metadata: dict[str, Any] | None = None,
     local_artifact_dir: str | None = None,
     adjudication: LightningAdjudicationSpec | None = None,
+    component_trace: bool = False,
+    component_trace_top_k: int = 80,
 ) -> LightningBatchJobSpec:
     """Create a strict exact-eval job spec."""
 
@@ -1494,12 +1982,17 @@ def make_exact_eval_spec(
         upstream_dir=upstream_dir,
         output_dir=out,
         python_bin=python_bin,
+        inflate_sh=inflate_sh,
         job_name=name,
         expected_archive_sha256=expected_archive_sha256,
         expected_archive_size_bytes=expected_archive_size_bytes,
         queue_metadata=queue_metadata,
+        env=env,
         adjudication=adjudication,
+        component_trace=component_trace,
+        component_trace_top_k=component_trace_top_k,
     )
+    local_out = local_artifact_dir or default_exact_eval_local_artifact_dir(job_name=name)
     spec = LightningBatchJobSpec(
         name=name,
         machine=machine,
@@ -1509,6 +2002,7 @@ def make_exact_eval_spec(
         teamspace=teamspace,
         org=org,
         user=user,
+        cloud_account=cloud_account,
         env=dict(env or {}),
         interruptible=False,
         max_runtime=max_runtime,
@@ -1517,7 +2011,7 @@ def make_exact_eval_spec(
         expected_archive_sha256=expected_archive_sha256,
         expected_archive_size_bytes=expected_archive_size_bytes,
         queue_metadata=dict(queue_metadata or {}),
-        local_artifact_dir=local_artifact_dir,
+        local_artifact_dir=local_out,
         remote_output_dir=out,
         adjudication=adjudication,
     )
@@ -2018,6 +2512,7 @@ def diagnostic_component_sensitivity_command(
             f"mkdir -p {out}",
             f"rm -rf {out}/extracted {out}/uv_project_env",
             " ".join(["rm", "-f", *[f"{out}/{_quote(name)}" for name in files_to_remove]]),
+            _ensure_remote_uv_command(output_dir=output_dir),
             _write_metadata_command(
                 python_bin=python_bin,
                 output_dir=output_dir,
@@ -2073,6 +2568,7 @@ def make_diagnostic_component_sensitivity_spec(
     teamspace: str | None = None,
     org: str | None = None,
     user: str | None = None,
+    cloud_account: str | None = None,
     video_mkv: str | None = None,
     pair_weights_path: str | None = None,
     expected_baseline_archive_sha256: str | None = None,
@@ -2127,6 +2623,7 @@ def make_diagnostic_component_sensitivity_spec(
         teamspace=teamspace,
         org=org,
         user=user,
+        cloud_account=cloud_account,
         env=dict(env or {}),
         interruptible=False,
         max_runtime=max_runtime,
@@ -2438,6 +2935,7 @@ def official_component_response_command(
             f"mkdir -p {out}",
             f"rm -rf {out}/evals {out}/uv_project_env",
             " ".join(["rm", "-f", *[f"{out}/{_quote(name)}" for name in files_to_remove]]),
+            _ensure_remote_uv_command(output_dir=output_dir),
             _write_metadata_command(
                 python_bin=python_bin,
                 output_dir=output_dir,
@@ -2489,6 +2987,7 @@ def make_official_component_response_spec(
     teamspace: str | None = None,
     org: str | None = None,
     user: str | None = None,
+    cloud_account: str | None = None,
     baseline_contest_auth_eval_json: str | None = None,
     inflate_sh: str = "submissions/robust_current/inflate.sh",
     video_names_file: str = "upstream/public_test_video_names.txt",
@@ -2534,6 +3033,7 @@ def make_official_component_response_spec(
         teamspace=teamspace,
         org=org,
         user=user,
+        cloud_account=cloud_account,
         env=dict(env or {}),
         interruptible=False,
         max_runtime=max_runtime,
@@ -2558,6 +3058,7 @@ def _queue_record(spec: LightningBatchJobSpec, *, queued_at_utc: str) -> dict[st
         "job_name": spec.name,
         "role": spec.role,
         "machine": spec.machine,
+        "cloud_account": spec.cloud_account,
         "interruptible": spec.interruptible,
         "reuse_snapshot": spec.reuse_snapshot,
         "expected_archive_sha256": spec.expected_archive_sha256,
@@ -2643,6 +3144,7 @@ _LIGHTNING_TERMINAL_STATUSES = {
 
 _REMOTE_STATUS_RECONCILIATION_REQUIRED = "REMOTE_STATUS_RECONCILIATION_REQUIRED"
 _LIGHTNING_FAIL_CLOSED_ROLES = {
+    "alpha_geo0_exact_eval",
     "exact_cuda_eval",
     "official_component_response",
     "diagnostic_component_sensitivity",
@@ -2863,6 +3365,8 @@ def validate_local_artifact_dir(
     adjudication_lane_status: str | None = None
     adjudication_component_gate_triggered = False
     adjudication_regression_triggered = False
+    adjudication_sane_score_gate_triggered = False
+    adjudication_promotion_eligible: bool | None = None
     adjudication_meta = metadata.get("adjudication")
     if not isinstance(adjudication_meta, dict):
         raise ValueError(
@@ -2910,6 +3414,56 @@ def validate_local_artifact_dir(
         adjudication_regression_triggered = bool(
             adjudication_provenance.get("regression_triggered")
         )
+        adjudication_sane_score_gate_triggered = bool(
+            adjudication_provenance.get("sane_score_gate_triggered")
+        )
+        if "promotion_eligible" in adjudication_provenance:
+            adjudication_promotion_eligible = (
+                adjudication_provenance.get("promotion_eligible") is True
+            )
+
+    component_trace_validation: dict[str, Any] | None = None
+    component_trace_path = artifact_root / ARTIFACT_COMPONENT_TRACE
+    if component_trace_path.is_file():
+        component_trace_payload = _load_json_object(
+            component_trace_path,
+            label="component_trace.json",
+        )
+        if component_trace_payload.get("score_claim") is not False:
+            raise ValueError("component_trace.json must remain score_claim=false")
+        if component_trace_payload.get("evidence_grade") != "diagnostic_component_trace":
+            raise ValueError("component_trace.json has unexpected evidence_grade")
+        if component_trace_payload.get("n_samples") != 600:
+            raise ValueError("component_trace.json n_samples is not 600")
+        cross_check = component_trace_payload.get("contest_auth_eval_cross_check")
+        if not isinstance(cross_check, dict) or cross_check.get("all_match") is not True:
+            raise ValueError("component_trace.json cross-check did not match contest_auth_eval.json")
+        component_trace_validation = {
+            "path": str(component_trace_path),
+            "sha256": _sha256(component_trace_path),
+            "n_samples": component_trace_payload.get("n_samples"),
+            "avg_posenet_dist": component_trace_payload.get("avg_posenet_dist"),
+            "avg_segnet_dist": component_trace_payload.get("avg_segnet_dist"),
+            "score_recomputed_from_components": component_trace_payload.get(
+                "score_recomputed_from_components"
+            ),
+            "contest_auth_eval_cross_check": cross_check,
+        }
+
+    promotion_eligible = (
+        adjudication_promotion_eligible
+        if adjudication_promotion_eligible is not None
+        else (
+            adjudication_provenance is not None
+            and provenance.get("gpu_t4_match") is True
+        )
+    )
+    promotion_eligible = (
+        promotion_eligible
+        and not adjudication_component_gate_triggered
+        and not adjudication_regression_triggered
+        and not adjudication_sane_score_gate_triggered
+    )
 
     return {
         "schema_version": 1,
@@ -2931,13 +3485,247 @@ def validate_local_artifact_dir(
         "adjudication_lane_status": adjudication_lane_status,
         "adjudication_component_gate_triggered": adjudication_component_gate_triggered,
         "adjudication_regression_triggered": adjudication_regression_triggered,
-        "promotion_eligible": (
-            adjudication_provenance is not None
-            and not adjudication_component_gate_triggered
-            and not adjudication_regression_triggered
-        ),
+        "adjudication_sane_score_gate_triggered": adjudication_sane_score_gate_triggered,
+        "component_trace": component_trace_validation,
+        "promotion_eligible": promotion_eligible,
         "score_source": "contest_auth_eval.json:score_recomputed_from_components",
     }
+
+
+def _optional_finite_float(value: Any) -> float | None:
+    if value is None or isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    out = float(value)
+    if out != out or abs(out) == float("inf"):
+        return None
+    return out
+
+
+def _reconstruct_missing_adjudication_artifacts_from_metadata(
+    artifact_root: Path,
+) -> list[str]:
+    """Recover adjudication copies after a remote artifact-copy race.
+
+    Some Studio-backed jobs finish ``scripts/adjudicate_contest_auth_eval.py``
+    and flush ``adjudication.log`` before the JSON copies are visible in the
+    persisted artifact mirror. If the exact contest JSON, queue metadata,
+    provenance, and archive are present, we can deterministically regenerate
+    the two adjudication files from machine-readable inputs instead of
+    downgrading a valid exact eval to an infra failure.
+    """
+
+    metadata_path = artifact_root / ARTIFACT_METADATA
+    contest_json_path = artifact_root / "contest_auth_eval.json"
+    archive_path = artifact_root / ARTIFACT_ARCHIVE
+    if not (metadata_path.is_file() and contest_json_path.is_file() and archive_path.is_file()):
+        return []
+
+    metadata = _load_json_object(metadata_path, label="Lightning queue metadata")
+    adjudication_meta = metadata.get("adjudication")
+    if not isinstance(adjudication_meta, dict):
+        return []
+    provenance_name = str(adjudication_meta.get("provenance_name") or "adjudication_provenance.json")
+    result_copy_name = str(adjudication_meta.get("result_copy_name") or "contest_auth_eval.adjudicated.json")
+    provenance_path = artifact_root / provenance_name
+    result_copy_path = artifact_root / result_copy_name
+    missing_names = [
+        name
+        for name, path in (
+            (provenance_name, provenance_path),
+            (result_copy_name, result_copy_path),
+        )
+        if not path.is_file()
+    ]
+    if not missing_names:
+        return []
+
+    payload = _load_json_object(contest_json_path, label="contest_auth_eval.json")
+    score = _require_finite_number(payload, "score_recomputed_from_components")
+    final_score = _require_finite_number(payload, "final_score")
+    avg_posenet = _require_finite_number(payload, "avg_posenet_dist")
+    avg_segnet = _require_finite_number(payload, "avg_segnet_dist")
+    n_samples = payload.get("n_samples")
+    provenance = payload.get("provenance")
+    if not isinstance(provenance, dict):
+        return []
+    actual_identity = archive_identity(archive_path)
+    if payload.get("archive_size_bytes") != actual_identity["archive_size_bytes"]:
+        return []
+    payload_sha = provenance.get("archive_sha256") or payload.get("archive_sha256")
+    if payload_sha != actual_identity["archive_sha256"]:
+        return []
+    required_device = str(adjudication_meta.get("required_device") or "cuda")
+    required_samples = int(adjudication_meta.get("required_samples") or 600)
+    device = provenance.get("device")
+    if device != required_device or n_samples != required_samples:
+        return []
+
+    def component_gate(
+        *,
+        component: str,
+        metric: str,
+        observed: float,
+    ) -> tuple[dict[str, Any] | None, list[dict[str, Any]]]:
+        max_abs = _optional_finite_float(adjudication_meta.get(f"max_{component}_dist"))
+        reference = _optional_finite_float(adjudication_meta.get(f"baseline_{component}_dist"))
+        max_relative = _optional_finite_float(adjudication_meta.get(f"max_{component}_relative"))
+        if max_abs is None and max_relative is None:
+            return None, []
+        reference_label = str(adjudication_meta.get("component_reference_label") or "baseline")
+        gate: dict[str, Any] = {
+            "component": component,
+            "metric": metric,
+            "observed": observed,
+            "max_absolute": max_abs,
+            "reference": reference,
+            "reference_label": reference_label,
+            "max_relative": max_relative,
+            "relative_to_reference": None,
+            "passed": True,
+        }
+        violations: list[dict[str, Any]] = []
+        if max_abs is not None and observed > max_abs:
+            gate["passed"] = False
+            violations.append(
+                {
+                    "component": component,
+                    "metric": metric,
+                    "observed": observed,
+                    "max_absolute": max_abs,
+                    "reason": "absolute_component_gate",
+                }
+            )
+        if max_relative is not None and reference is not None and reference > 0.0:
+            relative = observed / reference
+            gate["relative_to_reference"] = relative
+            if relative > max_relative:
+                gate["passed"] = False
+                violations.append(
+                    {
+                        "component": component,
+                        "metric": metric,
+                        "observed": observed,
+                        "reference": reference,
+                        "reference_label": reference_label,
+                        "relative_to_reference": relative,
+                        "max_relative": max_relative,
+                        "reason": "relative_component_gate",
+                    }
+                )
+        return gate, violations
+
+    component_gates: list[dict[str, Any]] = []
+    component_violations: list[dict[str, Any]] = []
+    for gate, violations in (
+        component_gate(component="posenet", metric="avg_posenet_dist", observed=avg_posenet),
+        component_gate(component="segnet", metric="avg_segnet_dist", observed=avg_segnet),
+    ):
+        if gate is not None:
+            component_gates.append(gate)
+        component_violations.extend(violations)
+
+    baseline_score = _optional_finite_float(adjudication_meta.get("baseline_score"))
+    predicted_low = _optional_finite_float(adjudication_meta.get("predicted_band_low"))
+    predicted_high = _optional_finite_float(adjudication_meta.get("predicted_band_high"))
+    regression_threshold = _optional_finite_float(adjudication_meta.get("regression_threshold"))
+    score_delta_vs_baseline = None if baseline_score is None else score - baseline_score
+    regression_triggered = (
+        False
+        if score_delta_vs_baseline is None or regression_threshold is None
+        else score_delta_vs_baseline > regression_threshold
+    )
+    max_sane_score = _optional_finite_float(adjudication_meta.get("max_sane_score")) or 10.0
+    sane_score_gate_triggered = not (0.0 < score < max_sane_score)
+    component_gate_triggered = bool(component_violations)
+    if regression_triggered:
+        lane_status = "REGRESSION_REVIEW_REQUIRED"
+    elif predicted_low is not None and predicted_high is not None and predicted_low <= score <= predicted_high:
+        lane_status = "IN_PREDICTED_BAND"
+    elif predicted_low is not None and predicted_high is not None:
+        lane_status = "OUT_OF_PREDICTED_BAND"
+    else:
+        lane_status = "ADJUDICATION_ARTIFACT_RECOVERED_REVIEW_REQUIRED"
+    if component_gate_triggered:
+        lane_status = "COMPONENT_GATE_REVIEW_REQUIRED"
+    if sane_score_gate_triggered:
+        lane_status = "SANE_SCORE_REVIEW_REQUIRED"
+
+    contest_equivalent_hardware = provenance.get("gpu_t4_match") is True
+    scientific_score_eligible = (
+        not regression_triggered
+        and not component_gate_triggered
+        and not sane_score_gate_triggered
+    )
+    promotion_eligible = scientific_score_eligible and contest_equivalent_hardware
+    evidence_grade = "A++ contest T4" if contest_equivalent_hardware else "A score-grade"
+    paper_claim_grade = (
+        evidence_grade
+        if promotion_eligible
+        else (
+            "A score-grade; T4/equivalent promotion required"
+            if scientific_score_eligible
+            else "A-negative scoped forensic"
+        )
+    )
+    recovered_provenance = {
+        "completed_at_utc": _utc_now(),
+        "artifact_recovery": "reconstructed_missing_adjudication_artifacts_from_metadata",
+        "stacked_archive_bytes": actual_identity["archive_size_bytes"],
+        "final_archive_bytes": actual_identity["archive_size_bytes"],
+        "baseline_archive_bytes": adjudication_meta.get("baseline_archive_size_bytes"),
+        "archive_delta_bytes": (
+            actual_identity["archive_size_bytes"] - int(adjudication_meta["baseline_archive_size_bytes"])
+            if isinstance(adjudication_meta.get("baseline_archive_size_bytes"), int)
+            else None
+        ),
+        "contest_cuda_score": score,
+        "contest_cuda_score_recomputed": score,
+        "contest_cuda_score_reported_rounded": final_score,
+        "contest_cuda_score_source": "contest_auth_eval.json:score_recomputed_from_components",
+        "contest_cuda_avg_posenet_dist": avg_posenet,
+        "contest_cuda_avg_segnet_dist": avg_segnet,
+        "contest_cuda_result_json": str(result_copy_path),
+        "contest_cuda_n_samples": n_samples,
+        "contest_cuda_archive_sha256": actual_identity["archive_sha256"],
+        "contest_cuda_archive_bytes": actual_identity["archive_size_bytes"],
+        "contest_cuda_device": device,
+        "contest_cuda_gpu_model": provenance.get("gpu_model"),
+        "contest_cuda_gpu_t4_match": provenance.get("gpu_t4_match"),
+        "contest_equivalent_hardware": contest_equivalent_hardware,
+        "evidence_grade": evidence_grade,
+        "promotion_eligible": promotion_eligible,
+        "scientific_score_eligible": scientific_score_eligible,
+        "hardware_promotion_gate_triggered": scientific_score_eligible and not contest_equivalent_hardware,
+        "paper_claim_grade": paper_claim_grade,
+        "allowed_use": (
+            ["promotion_review", "rank_frontier_candidate"]
+            if promotion_eligible
+            else ["forensic", "no_rank_frontier", "no_promotion"]
+        ),
+        "score_tag": "[contest-CUDA]",
+        "result_tag": "[contest-CUDA]",
+        "score_delta_vs_baseline": score_delta_vs_baseline,
+        str(adjudication_meta.get("delta_key") or "score_delta_vs_baseline"): score_delta_vs_baseline,
+        "regression_threshold": regression_threshold,
+        "regression_threshold_mode": "delta_vs_baseline",
+        "regression_triggered": regression_triggered,
+        "regression_scope": "measured_implementation_config_only_pending_review",
+        "sane_score_gate_triggered": sane_score_gate_triggered,
+        "sane_score_gate_violation": None,
+        "max_sane_score": max_sane_score,
+        "component_gates": component_gates,
+        "component_gate_violations": component_violations,
+        "component_gate_triggered": component_gate_triggered,
+        "distillation_policy_active": False,
+        "distillation_policy_gate_violations": [],
+        "distillation_policy_gate_triggered": False,
+        "distillation_policy_sha256": None,
+        "distillation_policy_sha256_expected": None,
+        "lane_status": lane_status,
+    }
+    _write_json_replace(result_copy_path, payload)
+    _write_json_replace(provenance_path, recovered_provenance)
+    return missing_names
 
 
 def mirror_local_artifact_dir(
@@ -3584,6 +4372,128 @@ def _scp_command(
     return [scp_bin, *_ssh_transfer_options(connect_timeout), "-p", source, str(dest)]
 
 
+def _ssh_top_level_file_names(
+    *,
+    ssh_target: str,
+    remote_dir: str,
+    ssh_bin: str,
+    ssh_connect_timeout: int | None,
+) -> list[str]:
+    listing = subprocess.run(
+        _ssh_command(
+            ssh_bin,
+            ssh_target,
+            "find " + shlex.quote(remote_dir) + " -maxdepth 1 -type f -print",
+            connect_timeout=ssh_connect_timeout,
+        ),
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    prefix = remote_dir.rstrip("/") + "/"
+    names: list[str] = []
+    for raw_line in listing.stdout.splitlines():
+        value = raw_line.strip()
+        if not value:
+            continue
+        if value.startswith(prefix):
+            value = value[len(prefix) :]
+        else:
+            value = PurePosixPath(value).name
+        if value:
+            names.append(value)
+    return sorted(set(names))
+
+
+def classify_empty_ssh_exact_eval_artifact_dir(
+    *,
+    ssh_target: str,
+    remote_dir: str | Path,
+    mirror_dir: str | Path,
+    job_name: str,
+    sdk_job_name: str | None = None,
+    expected_archive_sha256: str | None = None,
+    expected_archive_size_bytes: int | None = None,
+    ssh_bin: str = "ssh",
+    ssh_connect_timeout: int | None = 15,
+) -> dict[str, Any] | None:
+    """Return an infra diagnostic when a remote exact-eval artifact dir is empty."""
+
+    target, remote = _validate_ssh_artifact_source(ssh_target, remote_dir)
+    exists_probe = subprocess.run(
+        _ssh_command(ssh_bin, target, "test -d " + shlex.quote(remote), connect_timeout=ssh_connect_timeout),
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if exists_probe.returncode != 0:
+        return {
+            "schema_version": 1,
+            "classified_at_utc": _utc_now(),
+            "status": "ARTIFACT_NOT_READY",
+            "failure_class": "remote_artifact_dir_missing_or_not_yet_persisted",
+            "reason": (
+                "remote Lightning exact-eval artifact directory is not present; "
+                "the job may still be pending/running or provider artifact "
+                "persistence may not have completed"
+            ),
+            "job_name": job_name,
+            "sdk_job_name": sdk_job_name,
+            "ssh_source": {
+                "ssh_target": target,
+                "remote_dir": remote,
+                "mirror_dir": str(mirror_dir),
+            },
+            "expected_archive_sha256": expected_archive_sha256,
+            "expected_archive_size_bytes": expected_archive_size_bytes,
+            "score_claim": False,
+            "method_evidence": False,
+            "promotion_eligible": False,
+            "evidence_grade": "invalid",
+            "score_source": "none:artifact_not_ready",
+            "recommended_action": "Refresh job status and retry harvest after artifacts are present.",
+        }
+    top_level_files = _ssh_top_level_file_names(
+        ssh_target=target,
+        remote_dir=remote,
+        ssh_bin=ssh_bin,
+        ssh_connect_timeout=ssh_connect_timeout,
+    )
+    if top_level_files:
+        return None
+    return {
+        "schema_version": 1,
+        "classified_at_utc": _utc_now(),
+        "status": "ARTIFACT_INFRA_FAILURE",
+        "terminal_class": LIGHTNING_EMPTY_ARTIFACT_INFRA_TERMINAL_CLASS,
+        "failure_class": "provider_or_artifact_transport_infrastructure",
+        "reason": (
+            "remote Lightning exact-eval artifact directory exists but contains "
+            "no top-level files; no contest_auth_eval.json or archive.zip was produced"
+        ),
+        "job_name": job_name,
+        "sdk_job_name": sdk_job_name,
+        "ssh_source": {
+            "ssh_target": target,
+            "remote_dir": remote,
+            "mirror_dir": str(mirror_dir),
+            "top_level_files": [],
+        },
+        "expected_archive_sha256": expected_archive_sha256,
+        "expected_archive_size_bytes": expected_archive_size_bytes,
+        "score_claim": False,
+        "method_evidence": False,
+        "promotion_eligible": False,
+        "evidence_grade": "invalid",
+        "score_source": "none:empty_lightning_artifact_dir",
+        "recommended_action": (
+            "Treat as provider/infrastructure failure, not PR84/PR82 method "
+            "evidence. Reroute or retry only after the orchestrator claims a "
+            "fresh lane/job."
+        ),
+    }
+
+
 def _safe_remote_rel(path: str) -> str:
     rel = str(path).strip()
     pure = Path(rel)
@@ -3626,8 +4536,19 @@ def mirror_ssh_artifact_dir(
         capture_output=True,
         text=True,
     )
+    top_level_files = _ssh_top_level_file_names(
+        ssh_target=target,
+        remote_dir=remote,
+        ssh_bin=ssh_bin,
+        ssh_connect_timeout=ssh_connect_timeout,
+    )
+    top_level_file_set = set(top_level_files)
     copied_files: list[str] = []
+    missing_required_files: list[str] = []
     for name in CANONICAL_ARTIFACT_FILES:
+        if name not in top_level_file_set:
+            missing_required_files.append(name)
+            continue
         subprocess.run(
             _scp_command(
                 scp_bin,
@@ -3666,6 +4587,71 @@ def mirror_ssh_artifact_dir(
             text=True,
         )
         copied_files.append(name)
+    if missing_required_files:
+        recovered_files = _reconstruct_missing_adjudication_artifacts_from_metadata(mirror)
+        if recovered_files:
+            copied_files.extend(f"{name}:reconstructed" for name in recovered_files)
+            missing_required_files = [
+                name for name in missing_required_files if not (mirror / name).is_file()
+            ]
+    if missing_required_files:
+        diagnostic: dict[str, Any] = {
+            "schema_version": 1,
+            "classified_at_utc": _utc_now(),
+            "status": "ARTIFACT_INFRA_FAILURE",
+            "terminal_class": LIGHTNING_MISSING_EXACT_EVAL_JSON_TERMINAL_CLASS,
+            "failure_class": "runtime_or_harness_failure_before_score_json",
+            "reason": (
+                "remote Lightning exact-eval artifact directory contains partial "
+                "artifacts but is missing required exact-score JSON/report files"
+            ),
+            "missing_required_files": missing_required_files,
+            "job_artifact_files": top_level_files,
+            "expected_archive_sha256": expected_archive_sha256,
+            "expected_archive_size_bytes": expected_archive_size_bytes,
+            "score_claim": False,
+            "method_evidence": False,
+            "promotion_eligible": False,
+            "evidence_grade": "invalid",
+            "score_source": "none:missing_contest_auth_eval_json",
+            "ssh_source": {
+                "ssh_target": target,
+                "remote_dir": remote,
+                "mirror_dir": str(mirror),
+                "copied_files": copied_files,
+                "ssh_connect_timeout": ssh_connect_timeout,
+            },
+            "recommended_action": (
+                "Preserve the partial artifacts and logs as a harness/runtime "
+                "failure. Do not rank, retire, promote, or claim score without "
+                "contest_auth_eval.json and adjudication artifacts."
+            ),
+        }
+        archive_path = mirror / ARTIFACT_ARCHIVE
+        if archive_path.is_file():
+            actual_identity = archive_identity(archive_path)
+            diagnostic["archive_identity"] = actual_identity
+            if (
+                expected_archive_sha256 is not None
+                and actual_identity["archive_sha256"] != expected_archive_sha256
+            ):
+                raise ValueError(
+                    "partial artifact archive sha256 does not match expected: "
+                    f"actual={actual_identity['archive_sha256']!r} "
+                    f"expected={expected_archive_sha256!r}"
+                )
+            if (
+                expected_archive_size_bytes is not None
+                and actual_identity["archive_size_bytes"] != expected_archive_size_bytes
+            ):
+                raise ValueError(
+                    "partial artifact archive bytes does not match expected: "
+                    f"actual={actual_identity['archive_size_bytes']} "
+                    f"expected={expected_archive_size_bytes}"
+                )
+        _write_json_replace(mirror / ARTIFACT_INFRA_FAILURE, diagnostic)
+        _write_json_replace(mirror / ARTIFACT_VALIDATION, diagnostic)
+        return diagnostic
     validation = validate_local_artifact_dir(
         mirror,
         expected_archive_sha256=expected_archive_sha256,
@@ -3913,14 +4899,40 @@ class LightningBatchJobsClient:
         return _load_state(self.state_path)
 
     def record(self, record: dict[str, Any]) -> None:
-        records = self.list_records()
-        records.append(record)
-        _save_state(records, self.state_path)
+        def append_record(records: list[dict[str, Any]]) -> None:
+            records.append(record)
+
+        _mutate_state(self.state_path, append_record)
 
     def _replace_record(self, index: int, record: dict[str, Any]) -> None:
-        records = self.list_records()
-        records[index] = record
-        _save_state(records, self.state_path)
+        def replace_record(records: list[dict[str, Any]]) -> None:
+            records[index] = record
+
+        _mutate_state(self.state_path, replace_record)
+
+    def replace_latest_record_for_job(
+        self,
+        job_name: str,
+        updater: Callable[[dict[str, Any]], dict[str, Any] | None],
+    ) -> dict[str, Any] | None:
+        """Atomically update and persist the newest state record for a job."""
+
+        def update_record(records: list[dict[str, Any]]) -> dict[str, Any] | None:
+            for idx in range(len(records) - 1, -1, -1):
+                record = records[idx]
+                spec = record.get("spec") if isinstance(record.get("spec"), dict) else {}
+                queue = record.get("queue") if isinstance(record.get("queue"), dict) else {}
+                job = record.get("job") if isinstance(record.get("job"), dict) else {}
+                if job_name not in {spec.get("name"), queue.get("job_name"), job.get("name")}:
+                    continue
+                updated = updater(dict(record))
+                if updated is None:
+                    return None
+                records[idx] = updated
+                return updated
+            raise KeyError(f"Lightning Batch Job record not found: {job_name}")
+
+        return _mutate_state(self.state_path, update_record)
 
     def _find_record_index(self, job_name: str) -> int:
         records = self.list_records()
@@ -3948,22 +4960,58 @@ class LightningBatchJobsClient:
             return record
 
         job_cls = self._job_cls or self._import_job_cls()
-        job = job_cls.run(
-            name=spec.name,
-            machine=spec.machine,
-            command=spec.command,
-            studio=spec.studio,
-            image=spec.image,
-            teamspace=spec.teamspace,
-            org=spec.org,
-            user=spec.user,
-            env=spec.env or None,
-            interruptible=spec.interruptible,
-            max_runtime=spec.max_runtime,
-            reuse_snapshot=spec.reuse_snapshot,
-            path_mappings=spec.path_mappings,
-            scratch_disks=spec.scratch_disks,
-        )
+        try:
+            job = job_cls.run(
+                name=spec.name,
+                machine=spec.machine,
+                command=spec.command,
+                studio=spec.studio,
+                image=spec.image,
+                teamspace=spec.teamspace,
+                org=spec.org,
+                user=spec.user,
+                cloud_account=spec.cloud_account,
+                env=spec.env or None,
+                interruptible=spec.interruptible,
+                max_runtime=spec.max_runtime,
+                reuse_snapshot=spec.reuse_snapshot,
+                path_mappings=spec.path_mappings,
+                scratch_disks=spec.scratch_disks,
+            )
+        except Exception as exc:
+            terminal_class = None
+            if spec.studio and spec.cloud_account and _is_studio_cloud_account_mismatch(exc):
+                terminal_class = LIGHTNING_STUDIO_CLOUD_ACCOUNT_MISMATCH_TERMINAL_CLASS
+            submit_error: dict[str, Any] = {
+                "type": type(exc).__name__,
+                "message": str(exc),
+            }
+            if terminal_class:
+                submit_error["terminal_class"] = terminal_class
+            record.update(
+                {
+                    "status": "SUBMIT_FAILED",
+                    "submit_failed_at_utc": _utc_now(),
+                    "submit_error": submit_error,
+                    "status_history": [
+                        {"recorded_at_utc": recorded_at, "status": "SUBMIT_ATTEMPTED"},
+                        {"recorded_at_utc": _utc_now(), "status": "SUBMIT_FAILED"},
+                    ],
+                }
+            )
+            if terminal_class:
+                record["terminal_class"] = terminal_class
+            self.record(record)
+            if terminal_class == LIGHTNING_STUDIO_CLOUD_ACCOUNT_MISMATCH_TERMINAL_CLASS:
+                raise LightningStudioCloudAccountMismatchError(
+                    job_name=spec.name,
+                    studio=spec.studio,
+                    cloud_account=spec.cloud_account,
+                    machine=spec.machine,
+                    original_error_type=type(exc).__name__,
+                    original_message=str(exc),
+                ) from exc
+            raise
         snapshot = job_status_snapshot(job)
         record.update(
             {
@@ -3978,56 +5026,59 @@ class LightningBatchJobsClient:
     def refresh_status_from_job(self, *, job_name: str, job: object) -> dict[str, Any]:
         """Refresh a local record from SDK job attributes; never reads logs."""
 
-        index = self._find_record_index(job_name)
-        records = self.list_records()
-        record = dict(records[index])
         snapshot = job_status_snapshot(job)
-        observed_status = _extract_job_status(snapshot)
-        previous_status = record.get("status")
-        anomaly = _lightning_status_transition_anomaly(previous_status, observed_status)
-        accepted_status = observed_status
-        if _lightning_refresh_requires_fail_closed_status(record, anomaly, observed_status):
-            accepted_status = _REMOTE_STATUS_RECONCILIATION_REQUIRED
-        if observed_status is not None:
-            record["status"] = accepted_status
-            record["remote_observed_status"] = observed_status
-            record["remote_status_accepted"] = accepted_status == observed_status
-        if snapshot.get("id") in (None, ""):
-            record["identity_confidence"] = "name_only"
-            record["identity_reconciliation_required"] = True
-        else:
-            record["identity_confidence"] = "sdk_job_id"
-            record["identity_reconciliation_required"] = False
-        record["job"] = snapshot
-        history = list(record.get("status_history") or [])
-        history_entry = {
-            "recorded_at_utc": snapshot["refreshed_at_utc"],
-            "previous_status": previous_status,
-            "observed_status": observed_status,
-            "accepted_status": record.get("status"),
-            "status": record.get("status"),
-            "source": snapshot["source"],
-            "job_snapshot": snapshot,
-            "identity_confidence": record.get("identity_confidence"),
-        }
-        if anomaly is not None:
-            anomaly = {
-                **anomaly,
+
+        def apply_snapshot(record: dict[str, Any]) -> dict[str, Any]:
+            observed_status = _extract_job_status(snapshot)
+            previous_status = record.get("status")
+            anomaly = _lightning_status_transition_anomaly(previous_status, observed_status)
+            accepted_status = observed_status
+            if _lightning_refresh_requires_fail_closed_status(record, anomaly, observed_status):
+                accepted_status = _REMOTE_STATUS_RECONCILIATION_REQUIRED
+            if observed_status is not None:
+                record["status"] = accepted_status
+                record["remote_observed_status"] = observed_status
+                record["remote_status_accepted"] = accepted_status == observed_status
+            if snapshot.get("id") in (None, ""):
+                record["identity_confidence"] = "name_only"
+                record["identity_reconciliation_required"] = True
+            else:
+                record["identity_confidence"] = "sdk_job_id"
+                record["identity_reconciliation_required"] = False
+            record["job"] = snapshot
+            history = list(record.get("status_history") or [])
+            history_entry = {
                 "recorded_at_utc": snapshot["refreshed_at_utc"],
-                "source": snapshot["source"],
-                "status_history_index": len(history),
+                "previous_status": previous_status,
+                "observed_status": observed_status,
                 "accepted_status": record.get("status"),
+                "status": record.get("status"),
+                "source": snapshot["source"],
+                "job_snapshot": snapshot,
+                "identity_confidence": record.get("identity_confidence"),
             }
-            anomalies = list(record.get("status_anomalies") or [])
-            anomalies.append(anomaly)
-            record["status_anomalies"] = anomalies
-            record["status_reconciliation_required"] = True
-            history_entry["anomaly"] = anomaly
-        history.append(history_entry)
-        record["status_history"] = history
-        _attach_lightning_status_history_anomalies(record)
-        self._replace_record(index, record)
-        return record
+            if anomaly is not None:
+                anomaly = {
+                    **anomaly,
+                    "recorded_at_utc": snapshot["refreshed_at_utc"],
+                    "source": snapshot["source"],
+                    "status_history_index": len(history),
+                    "accepted_status": record.get("status"),
+                }
+                anomalies = list(record.get("status_anomalies") or [])
+                anomalies.append(anomaly)
+                record["status_anomalies"] = anomalies
+                record["status_reconciliation_required"] = True
+                history_entry["anomaly"] = anomaly
+            history.append(history_entry)
+            record["status_history"] = history
+            _attach_lightning_status_history_anomalies(record)
+            return record
+
+        updated = self.replace_latest_record_for_job(job_name, apply_snapshot)
+        if updated is None:
+            raise KeyError(f"Lightning Batch Job record not found: {job_name}")
+        return updated
 
     def harvest_local_artifacts(
         self,
@@ -4068,6 +5119,7 @@ class LightningBatchJobsClient:
         harvests.append(validation)
         record["harvests"] = harvests
         record["status"] = "HARVESTED"
+        record.pop("terminal_class", None)
         history = list(record.get("status_history") or [])
         history.append(
             {
@@ -4120,6 +5172,41 @@ class LightningBatchJobsClient:
             raise ValueError("mirror dir is required; state record has no local_artifact_dir")
         expected_sha = expected_archive_sha256 or spec.get("expected_archive_sha256")
         expected_bytes = expected_archive_size_bytes or spec.get("expected_archive_size_bytes")
+        sdk_job_name = job.get("name") if isinstance(job.get("name"), str) else lightning_sdk_job_name(job_name)
+        infra_failure = classify_empty_ssh_exact_eval_artifact_dir(
+            ssh_target=ssh_target,
+            remote_dir=resolved_remote,
+            mirror_dir=resolved_mirror,
+            job_name=job_name,
+            sdk_job_name=sdk_job_name,
+            expected_archive_sha256=expected_sha if isinstance(expected_sha, str) else None,
+            expected_archive_size_bytes=expected_bytes if isinstance(expected_bytes, int) else None,
+            ssh_bin=ssh_bin,
+            ssh_connect_timeout=ssh_connect_timeout,
+        )
+        if infra_failure is not None:
+            if infra_failure.get("status") == "ARTIFACT_NOT_READY":
+                return infra_failure
+            mirror_path = Path(resolved_mirror)
+            mirror_path.mkdir(parents=True, exist_ok=True)
+            _write_json_replace(mirror_path / ARTIFACT_INFRA_FAILURE, infra_failure)
+            failures = list(record.get("artifact_failures") or [])
+            failures.append(infra_failure)
+            record["artifact_failures"] = failures
+            record["status"] = "ARTIFACT_INFRA_FAILURE"
+            record["terminal_class"] = infra_failure["terminal_class"]
+            history = list(record.get("status_history") or [])
+            history.append(
+                {
+                    "recorded_at_utc": infra_failure["classified_at_utc"],
+                    "status": "ARTIFACT_INFRA_FAILURE",
+                    "terminal_class": infra_failure["terminal_class"],
+                    "source": "ssh_artifact_preharvest_classification",
+                }
+            )
+            record["status_history"] = history
+            self._replace_record(index, record)
+            return infra_failure
         validation = mirror_ssh_artifact_dir(
             ssh_target=ssh_target,
             remote_dir=resolved_remote,
@@ -4133,9 +5220,29 @@ class LightningBatchJobsClient:
             ssh_connect_timeout=ssh_connect_timeout,
         )
         harvests = list(record.get("harvests") or [])
+        if validation.get("status") == "ARTIFACT_INFRA_FAILURE":
+            failures = list(record.get("artifact_failures") or [])
+            failures.append(validation)
+            record["artifact_failures"] = failures
+            record["status"] = "ARTIFACT_INFRA_FAILURE"
+            if isinstance(validation.get("terminal_class"), str):
+                record["terminal_class"] = validation["terminal_class"]
+            history = list(record.get("status_history") or [])
+            history.append(
+                {
+                    "recorded_at_utc": validation.get("classified_at_utc", _utc_now()),
+                    "status": "ARTIFACT_INFRA_FAILURE",
+                    "terminal_class": validation.get("terminal_class"),
+                    "source": "ssh_artifact_partial_failure_classification",
+                }
+            )
+            record["status_history"] = history
+            self._replace_record(index, record)
+            return validation
         harvests.append(validation)
         record["harvests"] = harvests
         record["status"] = "HARVESTED"
+        record.pop("terminal_class", None)
         history = list(record.get("status_history") or [])
         history.append(
             {

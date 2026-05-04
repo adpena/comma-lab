@@ -1,6 +1,9 @@
 """Tests for the Selfcomp grayscale-LUT mask codec."""
 from __future__ import annotations
 
+import importlib.util
+from pathlib import Path
+
 import pytest
 import torch
 
@@ -11,6 +14,7 @@ from tac.mask_grayscale_lut import (
     create_gaussian_softmax_lut,
     decode_grayscale_to_classes,
     encode_masks_grayscale,
+    grayscale_to_probability_map,
 )
 
 
@@ -59,6 +63,37 @@ def test_lut_shape_sums_to_1() -> None:
     assert torch.allclose(sums, torch.ones_like(sums), atol=1e-6)
 
 
+def test_lut_matches_selfcomp_bell_softmax_formula() -> None:
+    """Canonical LUT must match the public Selfcomp inflate formula exactly."""
+    lut = create_gaussian_softmax_lut(sigma=LUT_DEFAULT_SIGMA)
+    gray_axis = torch.arange(256, dtype=torch.float32).unsqueeze(1)
+    targets = torch.tensor([CLASS_TO_GRAY[c] for c in range(NUM_CLASSES)]).float()
+    squared_diff = (gray_axis - targets.unsqueeze(0)) ** 2
+    bell = torch.exp(-squared_diff / (2.0 * LUT_DEFAULT_SIGMA * LUT_DEFAULT_SIGMA))
+    expected = torch.softmax(bell, dim=1)
+    assert torch.allclose(lut, expected, atol=1e-7)
+    # At exact class targets this analog prior is deliberately not one-hot.
+    target_rows = lut[targets.long()]
+    assert torch.all(target_rows.max(dim=1).values < 0.5)
+
+
+def test_grayscale_to_probability_map_shapes() -> None:
+    gray_2d = torch.tensor([[0, 64], [128, 255]], dtype=torch.uint8)
+    probs_2d = grayscale_to_probability_map(gray_2d)
+    assert probs_2d.shape == (NUM_CLASSES, 2, 2)
+    assert torch.allclose(probs_2d.sum(dim=0), torch.ones(2, 2), atol=1e-6)
+
+    gray_3d = gray_2d.unsqueeze(0).repeat(3, 1, 1)
+    probs_3d = grayscale_to_probability_map(gray_3d)
+    assert probs_3d.shape == (3, NUM_CLASSES, 2, 2)
+    assert torch.allclose(probs_3d.sum(dim=1), torch.ones(3, 2, 2), atol=1e-6)
+
+    gray_4d = gray_3d.view(1, 3, 2, 2)
+    probs_4d = grayscale_to_probability_map(gray_4d)
+    assert probs_4d.shape == (1, 3, NUM_CLASSES, 2, 2)
+    assert torch.allclose(probs_4d.sum(dim=2), torch.ones(1, 3, 2, 2), atol=1e-6)
+
+
 def test_lut_argmax_matches_nearest_gray() -> None:
     """LUT argmax over gray rows matches the nearest-neighbour decoder.
 
@@ -100,3 +135,44 @@ def test_lut_rejects_invalid_custom_targets() -> None:
         create_gaussian_softmax_lut(targets=torch.zeros(NUM_CLASSES + 1))
     with pytest.raises(ValueError, match=r"\[0, 255\]"):
         create_gaussian_softmax_lut(targets=torch.tensor([0.0, 255.0, -1.0, 192.0, 128.0]))
+
+
+def _load_train_module(filename: str, module_name: str):
+    repo_root = Path(__file__).resolve().parents[3]
+    script = repo_root / "experiments" / filename
+    spec = importlib.util.spec_from_file_location(module_name, script)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _assert_build_pair_tensors_uses_soft_lut(module) -> None:
+    mask_classes = torch.tensor(
+        [
+            [[0, 1], [2, 3]],
+            [[4, 0], [1, 2]],
+        ],
+        dtype=torch.int64,
+    )
+    gt_frames = torch.zeros(2, 3, 4, 4)
+    mask_pairs, gt_pairs = module._build_pair_tensors(mask_classes, gt_frames)
+    expected = grayscale_to_probability_map(
+        encode_masks_grayscale(mask_classes), sigma=15.0, channel_first=True
+    ).view(1, 2, NUM_CLASSES, 2, 2)
+    assert mask_pairs.shape == (1, 2, NUM_CLASSES, 2, 2)
+    assert gt_pairs.shape == (1, 2, 3, 4, 4)
+    assert torch.allclose(mask_pairs, expected, atol=1e-7)
+    assert torch.all(mask_pairs.max(dim=2).values < 0.5)
+
+
+def test_train_segmap_pair_tensors_use_soft_lut() -> None:
+    module = _load_train_module("train_segmap.py", "train_segmap_under_test")
+    _assert_build_pair_tensors_uses_soft_lut(module)
+
+
+def test_train_segmap_film_canvas_pair_tensors_use_soft_lut() -> None:
+    module = _load_train_module(
+        "train_segmap_film_canvas.py", "train_segmap_film_canvas_under_test"
+    )
+    _assert_build_pair_tensors_uses_soft_lut(module)

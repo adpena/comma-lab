@@ -149,6 +149,26 @@ def test_smoke_whitelist_parity_with_contest_auth_eval() -> None:
     cae = (REPO / "experiments/contest_auth_eval.py").read_text()
     smoke = SMOKE_TOOL.read_text()
     # Both must list these canonical suffixes.
-    for sfx in (".bin", ".bin.br", ".mkv", ".pt", ".json", ".npz"):
+    for sfx in (
+        ".bin",
+        ".bin.br",
+        ".mkv",
+        ".pt",
+        ".json",
+        ".npz",
+        ".nrv",
+        ".amrc",
+        ".cmg1",
+        ".cdo1.xz",
+        ".amr1.xz",
+    ):
         assert sfx in cae, f"contest_auth_eval missing whitelist suffix {sfx}"
         assert sfx in smoke, f"smoke tool missing whitelist suffix {sfx}"
+    assert '"p"' in cae, "contest_auth_eval missing short payload basename p"
+    assert '"p"' in smoke, "smoke tool missing short payload basename p"
+
+
+def test_smoke_renderer_magic_knows_qzs3() -> None:
+    """Smoke preflight must recognize the top-submission JFG packer magic."""
+    smoke = SMOKE_TOOL.read_text()
+    assert 'b"QZS3"' in smoke

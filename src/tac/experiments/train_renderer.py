@@ -25,6 +25,7 @@ except (AttributeError, OSError):
 
 
 import argparse
+import hashlib
 import json
 import math
 import os as _os
@@ -693,6 +694,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                    help="Path to optimized_poses.bin for FiLM models. If the trained "
                         "renderer has pose_dim>0, this MUST be passed (auth_eval_renderer.py "
                         "hard-fails on FiLM + no poses, see feedback_film_eval_no_poses_critical).")
+    p.add_argument("--qfaithful-training-poses", type=str, default=None,
+                   help="Q-FAITHFUL only: optimized pose stream consumed during "
+                        "training. Required for variant=quantizr_faithful; the "
+                        "shim refuses zero-pose fallback so training and inflate "
+                        "share the same FiLM-pose contract.")
     p.add_argument("--auth-eval-upstream-dir", type=str,
                    default=str(_upstream),
                    help="Path to upstream/ for auth eval (defaults to repo upstream).")
@@ -1387,6 +1393,28 @@ def load_gt_frames(args: argparse.Namespace) -> list[torch.Tensor]:
         return decode_video(args.video)
 
 
+def training_mask_pair_from_index(
+    masks: torch.Tensor,
+    start_idx: int,
+    *,
+    pair_index_basis: str = "full_frame_index",
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Return a renderer mask pair for full-frame or half-frame training masks."""
+
+    if pair_index_basis == "full_frame_index":
+        return mask_pair_from_index(masks, start_idx)
+    if pair_index_basis == "half_frame_pair_index":
+        pair_idx = int(start_idx) // 2
+        if pair_idx < 0 or pair_idx >= int(masks.shape[0]):
+            raise IndexError(
+                f"half-frame mask pair index {pair_idx} out of bounds for "
+                f"{int(masks.shape[0])} masks"
+            )
+        mask = masks[pair_idx].unsqueeze(0)
+        return mask, mask
+    raise ValueError(f"unknown training mask pair index basis: {pair_index_basis!r}")
+
+
 # ── FP4 evaluation ─────────────────────────────────────────────────────
 
 
@@ -1406,6 +1434,7 @@ def evaluate_fp4(
     sim_zoom_warp=None,
     use_zoom_flow: bool = False,
     half_frame_mode: bool = False,
+    qfaithful_pose_lookup: torch.Tensor | None = None,
 ) -> tuple[float, float, float]:
     """Evaluate the EMA model after FP4 round-trip quantization.
 
@@ -1468,7 +1497,13 @@ def evaluate_fp4(
             # Per-pair index (shared by half-frame warp AND ego_flow lookup).
             # Pairs are formed as (frame[2k], frame[2k+1]); pair_starts steps
             # by SEQ_LEN=2, so pair_idx = start // 2.
-            pair_idx_t = torch.tensor([start // 2], device=device, dtype=torch.long)
+            pair_idx_int = start // 2
+            pair_idx_t = torch.tensor([pair_idx_int], device=device, dtype=torch.long)
+            qfaithful_pose = None
+            if qfaithful_pose_lookup is not None:
+                qfaithful_pose = qfaithful_pose_lookup[pair_idx_int:pair_idx_int + 1].to(
+                    device=device, dtype=torch.float32,
+                )
 
             # Codex R-Lane-D-Issue2: replicate inflate-side mask reconstruction
             # when the deployed archive will only ship odd-frame masks. This is
@@ -1489,6 +1524,8 @@ def evaluate_fp4(
 
             if ego_flow is not None:
                 rendered_pair = model(mask_t, mask_t1, ego_flow=ego_flow)
+            elif qfaithful_pose is not None:
+                rendered_pair = model(mask_t, mask_t1, pose=qfaithful_pose)
             else:
                 rendered_pair = model(mask_t, mask_t1)  # (1, 2, H, W, 3)
             # uint8 round-trip to match official scorer pipeline
@@ -1894,6 +1931,82 @@ def resize_pair_hwc(pair: torch.Tensor, target_h: int, target_w: int) -> torch.T
     return flat.permute(0, 2, 3, 1).contiguous().reshape(bsz, frames, target_h, target_w, channels)
 
 
+def _sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _load_qfaithful_training_poses(
+    args: argparse.Namespace,
+    *,
+    n_pairs: int,
+    device: torch.device,
+) -> tuple[torch.Tensor | None, dict | None]:
+    if getattr(args, "variant", None) != "quantizr_faithful":
+        return None, None
+
+    pose_path_value = (
+        getattr(args, "qfaithful_training_poses", None)
+        or getattr(args, "auth_eval_poses", None)
+    )
+    if not pose_path_value:
+        raise SystemExit(
+            "[lane-q-faithful] CONFIG ERROR: variant=quantizr_faithful requires "
+            "--qfaithful-training-poses pointing at the deployed nonzero pose "
+            "stream. Silent zero-pose fallback is forbidden because it trains a "
+            "different FiLM contract than inflate/eval uses."
+        )
+
+    from tac.submission_archive import load_optimized_poses
+
+    pose_path = Path(pose_path_value)
+    pose_dim = int(getattr(args, "pose_dim", 0) or 6)
+    poses = load_optimized_poses(
+        pose_path,
+        pose_dim=pose_dim,
+        expected_n_pairs=n_pairs,
+    ).to(dtype=torch.float32)
+    if poses.ndim != 2 or poses.shape != (n_pairs, pose_dim):
+        raise ValueError(
+            f"[lane-q-faithful] pose stream must have shape "
+            f"({n_pairs}, {pose_dim}); got {tuple(poses.shape)} from {pose_path}"
+        )
+    abs_sum = float(poses.abs().sum().item())
+    if abs_sum <= 0.0:
+        raise ValueError(
+            f"[lane-q-faithful] pose stream at {pose_path} is all-zero; "
+            "training must use the deployed nonzero pose stream."
+        )
+
+    sha = _sha256_file(pose_path)
+    contract = {
+        "schema_version": 1,
+        "training_pose_contract": "qfaithful_nonzero_deployed_pose_stream_v1",
+        "training_pose_contract_promotable": True,
+        "training_uses_nonzero_pose_stream": True,
+        "training_uses_deployed_pose_stream": True,
+        "zero_pose_fallback_allowed": False,
+        "pose_dim": pose_dim,
+        "n_pairs": n_pairs,
+        "pose_path": str(pose_path),
+        "pose_sha256": sha,
+        "pose_source_sha256": sha,
+        "pose_abs_sum": abs_sum,
+    }
+    print(
+        "[lane-q-faithful] training pose contract active: "
+        f"path={pose_path} sha256={sha} shape={tuple(poses.shape)}"
+    )
+    print(
+        "[lane-q-faithful] horizontal flip augmentation disabled: "
+        "pose-conditioned flips require an audited pose transform."
+    )
+    return poses.to(device), contract
+
+
 def _saug_v2_generator_for_device(device: torch.device, seed: int) -> torch.Generator:
     try:
         return torch.Generator(device=device).manual_seed(seed)
@@ -2059,18 +2172,28 @@ def train(args: argparse.Namespace):
     # mix in during training so the renderer becomes robust to AV1 quantization
     # at inflate time. (Yousfi 2026-04-25 diagnosis after CRF=63 gating.)
     noisy_masks = None
+    noisy_masks_pair_index_basis = "full_frame_index"
     if args.mask_noise_mkv is not None:
         from tac.mask_codec import decode_masks
         print(f"[masks] Decoding noisy masks from {args.mask_noise_mkv} ...")
         noisy_masks = decode_masks(args.mask_noise_mkv).cpu()
-        if noisy_masks.shape[0] != all_masks.shape[0]:
-            # Truncate or pad — must match GT mask count
-            n_match = min(noisy_masks.shape[0], all_masks.shape[0])
-            if noisy_masks.shape[0] != all_masks.shape[0]:
-                print(f"[masks] WARNING: noisy masks ({noisy_masks.shape[0]}) != "
-                      f"GT masks ({all_masks.shape[0]}); truncating both to {n_match}")
-                noisy_masks = noisy_masks[:n_match]
-                all_masks = all_masks[:n_match]
+        if noisy_masks.shape[0] == all_masks.shape[0]:
+            noisy_reference_masks = all_masks
+        elif noisy_masks.shape[0] * 2 == all_masks.shape[0]:
+            noisy_masks_pair_index_basis = "half_frame_pair_index"
+            noisy_reference_masks = all_masks[1::2]
+            print(
+                f"[masks] Noisy masks are half-frame pair-indexed "
+                f"({noisy_masks.shape[0]} pair masks for {all_masks.shape[0]} "
+                "GT masks); training will feed the archived pair mask as "
+                "mask_t1 and duplicate it for mask_t."
+            )
+        else:
+            raise ValueError(
+                f"Noisy mask count {noisy_masks.shape[0]} is incompatible with "
+                f"GT mask count {all_masks.shape[0]}; expected full-frame count "
+                "or half-frame pair count."
+            )
         # Sanity-check resolution match
         if noisy_masks.shape[1:] != all_masks.shape[1:]:
             raise ValueError(
@@ -2078,9 +2201,10 @@ def train(args: argparse.Namespace):
                 f"GT mask resolution {all_masks.shape[1:]}. "
                 f"Re-encode noisy masks at the renderer's input resolution."
             )
-        disagree = float((noisy_masks != all_masks).float().mean().item())
+        disagree = float((noisy_masks != noisy_reference_masks).float().mean().item())
         print(f"[masks] Noisy-mask augmentation enabled "
-              f"(prob={args.mask_noise_prob}, disagreement vs GT={disagree:.4f})")
+              f"(prob={args.mask_noise_prob}, basis={noisy_masks_pair_index_basis}, "
+              f"disagreement vs GT={disagree:.4f})")
 
     # Zoom warp precompute. The same RadialZoomWarp object serves TWO purposes:
     #
@@ -2251,12 +2375,12 @@ def train(args: argparse.Namespace):
                 # determines both frame reconstructions.
                 _ = mask_t
                 if pose is None:
-                    # Default zero-pose if caller didn't supply one. The
-                    # FiLM bias path keeps frame1 well-defined.
-                    pose = torch.zeros(
-                        mask_t1.shape[0], self.pose_dim,
-                        device=mask_t1.device, dtype=torch.float32,
+                    raise RuntimeError(
+                        "Q-FAITHFUL forward requires an explicit deployed "
+                        "pose tensor. Zero-pose fallback is forbidden because "
+                        "it trains a different FiLM contract than inflate/eval."
                     )
+                pose = pose.to(device=mask_t1.device, dtype=torch.float32)
                 f1, f2 = self.gen(mask_t1, pose)  # each (B, 3, H, W) [0, 255]
                 # Stack to (B, 2, 3, H, W) then permute -> (B, 2, H, W, 3)
                 pair = torch.stack([f1, f2], dim=1)
@@ -2483,6 +2607,10 @@ def train(args: argparse.Namespace):
     # Pair indices
     all_pair_starts = pair_start_indices(n_frames)
     n_total = len(all_pair_starts)
+    qfaithful_training_poses, qfaithful_training_pose_contract = (
+        _load_qfaithful_training_poses(args, n_pairs=n_total, device=device)
+    )
+    args.qfaithful_training_pose_contract = qfaithful_training_pose_contract
     train_size = max(1, n_total // args.subsample)
     print(f"[train] {args.epochs} epochs (pretrain={args.pretrain_epochs}), "
           f"{train_size}/{n_total} pairs/epoch, "
@@ -2564,6 +2692,10 @@ def train(args: argparse.Namespace):
             "distillation_policy": getattr(args, "distillation_policy_provenance", None),
             "distillation_policy_sha256": getattr(args, "distillation_policy_sha256", None),
         }
+        _qfaithful_pose_contract = getattr(args, "qfaithful_training_pose_contract", None)
+        if _qfaithful_pose_contract is not None:
+            arch_meta["qfaithful_training_pose_contract"] = _qfaithful_pose_contract
+            arch_meta["training_pose_contract"] = _qfaithful_pose_contract
         torch.save({
             "epoch": current_epoch,
             "model": model.state_dict(),
@@ -2577,6 +2709,8 @@ def train(args: argparse.Namespace):
             "seed": args.seed,
             "deterministic": args.deterministic,
             "arch_meta": arch_meta,
+            "qfaithful_training_pose_contract": _qfaithful_pose_contract,
+            "training_pose_contract": _qfaithful_pose_contract,
             "distillation_policy": getattr(args, "distillation_policy_provenance", None),
             "distillation_policy_sha256": getattr(args, "distillation_policy_sha256", None),
         }, tmp_path)
@@ -2887,7 +3021,11 @@ def train(args: argparse.Namespace):
             # renderer against the true frames — only the mask input is noisy).
             if (noisy_masks is not None
                     and random.random() < args.mask_noise_prob):
-                mask_t, mask_t1 = mask_pair_from_index(noisy_masks, start)
+                mask_t, mask_t1 = training_mask_pair_from_index(
+                    noisy_masks,
+                    start,
+                    pair_index_basis=noisy_masks_pair_index_basis,
+                )
             else:
                 mask_t, mask_t1 = mask_pair_from_index(all_masks, start)
             mask_t = mask_t.to(device)
@@ -2899,6 +3037,9 @@ def train(args: argparse.Namespace):
             pair_idx_int = start // 2
             pair_idx_t = torch.tensor([pair_idx_int], device=device,
                                       dtype=torch.long)
+            qfaithful_pose = None
+            if qfaithful_training_poses is not None:
+                qfaithful_pose = qfaithful_training_poses[pair_idx_int:pair_idx_int + 1]
 
             # Half-frame mask simulation (Quantizr paradigm, Lane D2). With prob
             # --mask-half-sim-prob, replace mask_t with inverse_warp(mask_t1)
@@ -2932,7 +3073,7 @@ def train(args: argparse.Namespace):
 
             # Horizontal flip augmentation (50% probability)
             flipped_h = False
-            if random.random() < 0.5:
+            if qfaithful_training_poses is None and random.random() < 0.5:
                 # mask shape is (B, H, W) so W is dim -1;
                 # gt_pair shape is (B, 2, H, W, 3) so W is dim -2
                 # (trailing channel dim shifts the index by one)
@@ -2984,6 +3125,8 @@ def train(args: argparse.Namespace):
             # variant-agnostic.
             if ego_flow is not None:
                 rendered_pair = model(mask_t, mask_t1, ego_flow=ego_flow)
+            elif qfaithful_pose is not None:
+                rendered_pair = model(mask_t, mask_t1, pose=qfaithful_pose)
             else:
                 rendered_pair = model(mask_t, mask_t1)  # (1, 2, H, W, 3)
 
@@ -3500,6 +3643,7 @@ def train(args: argparse.Namespace):
                 sim_zoom_warp=sim_zoom_warp,
                 use_zoom_flow=getattr(args, "use_zoom_flow", False),
                 half_frame_mode=False,
+                qfaithful_pose_lookup=qfaithful_training_poses,
             )
             if _halfframe_eval_active:
                 scorer_val_half, eval_pose_half, eval_seg_half = evaluate_fp4(
@@ -3510,6 +3654,7 @@ def train(args: argparse.Namespace):
                     sim_zoom_warp=sim_zoom_warp,
                     use_zoom_flow=getattr(args, "use_zoom_flow", False),
                     half_frame_mode=True,
+                    qfaithful_pose_lookup=qfaithful_training_poses,
                 )
                 # Best-gate on HALF-FRAME score (deployment metric).
                 scorer_val = scorer_val_half
@@ -3633,7 +3778,14 @@ def train(args: argparse.Namespace):
                 "distillation_policy": getattr(args, "distillation_policy_provenance", None),
                 "distillation_policy_sha256": getattr(args, "distillation_policy_sha256", None),
             }
+            _qfaithful_pose_contract = getattr(args, "qfaithful_training_pose_contract", None)
+            if _qfaithful_pose_contract is not None:
+                _arch_meta["qfaithful_training_pose_contract"] = _qfaithful_pose_contract
+                _arch_meta["training_pose_contract"] = _qfaithful_pose_contract
             fp4_packed["__meta__"] = _arch_meta
+            if _qfaithful_pose_contract is not None:
+                fp4_packed["qfaithful_training_pose_contract"] = _qfaithful_pose_contract
+                fp4_packed["training_pose_contract"] = _qfaithful_pose_contract
             fp4_tmp = fp4_path.with_suffix(".pt.tmp")
             torch.save(fp4_packed, fp4_tmp)
             fp4_tmp.rename(fp4_path)
@@ -3671,6 +3823,9 @@ def train(args: argparse.Namespace):
                 "model_state_dict": save_state,
                 "__meta__": dict(_arch_meta),
             }
+            if _qfaithful_pose_contract is not None:
+                fp32_payload["qfaithful_training_pose_contract"] = _qfaithful_pose_contract
+                fp32_payload["training_pose_contract"] = _qfaithful_pose_contract
             torch.save(fp32_payload, fp32_tmp)
             fp32_tmp.rename(fp32_path)
 
@@ -3685,6 +3840,7 @@ def train(args: argparse.Namespace):
                 "fp4_size": fp4_size,
                 "distillation_policy": getattr(args, "distillation_policy_provenance", None),
                 "distillation_policy_sha256": getattr(args, "distillation_policy_sha256", None),
+                "qfaithful_training_pose_contract": _qfaithful_pose_contract,
                 "score_claim_eligible": False,
                 "promotion_eligible": False,
                 "exact_cuda_auth_eval_required": True,
