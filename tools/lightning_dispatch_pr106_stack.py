@@ -124,13 +124,21 @@ def claim_lane(*, lane: str, job_name: str) -> None:
 
 def submit_dispatch(*, lane: str, job_name: str, archive: Path, manifest: Path,
                     inflate_sh: Path, predicted_low: float, predicted_high: float,
-                    ssh_target: str, machine: str, print_only: bool) -> int:
+                    ssh_target: str, machine: str, print_only: bool,
+                    remote_pact: str = DEFAULT_REMOTE_PACT) -> int:
+    # FIX 2026-05-05: --repo-dir / --upstream-dir MUST be the REMOTE Lightning
+    # path, not the operator's local mac path. Previously this passed
+    # str(REPO_ROOT) which evaluated to /Users/adpena/Projects/pact — a path
+    # that does NOT exist on the Lightning Studio runner. Every dispatched job
+    # failed at the first `cd` in the generated runner script. 8 of 8 jobs
+    # cost ~$1.55 wasted because of this single line. Root cause documented
+    # at memory feedback_lightning_dispatch_catastrophe_8of8_failed_20260505.
     cmd = [
         sys.executable, str(REPO_ROOT / "scripts" / "launch_lightning_batch_job.py"), "exact-eval",
         "--job-name", job_name,
         "--archive", str(archive),
-        "--repo-dir", str(REPO_ROOT),
-        "--upstream-dir", str(REPO_ROOT / "upstream"),
+        "--repo-dir", remote_pact,
+        "--upstream-dir", f"{remote_pact}/upstream",
         "--teamspace", LIGHTNING_TEAMSPACE,
         "--studio", LIGHTNING_STUDIO,
         "--user", LIGHTNING_USER,
@@ -240,6 +248,7 @@ def main(argv: list[str] | None = None) -> int:
         ssh_target=args.ssh_target,
         machine=args.machine,
         print_only=args.print_only,
+        remote_pact=args.remote_pact,
     )
 
 

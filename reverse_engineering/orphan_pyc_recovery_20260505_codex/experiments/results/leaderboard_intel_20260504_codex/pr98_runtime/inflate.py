@@ -1,10 +1,33 @@
-# vendored from EthanYangTW/comma_video_compression_challenge@1be9eff48c696ca04ae0613346fd383d20637325
-# path=submissions/hnerv_muon_finetuned_from_pr95/inflate.py
-# pyc-recovery: pristine source recovered via gh api raw blob fetch
-# Original PR: https://github.com/commaai/comma_video_compression_challenge/pull/98 (hnerv_muon_finetuned_from_pr95 0.1963)
-# Recovered: 2026-05-05 by Sherlock pass2
-#!/usr/bin/env python
-"""Inflate a single per-video archive to raw uint8 RGB frames.
+# pyc-recovery: STUB unreconstructible -- see .recovery_spec.json for dis() ground-truth
+# pycdc could not produce parseable output; raw decompiled text preserved in _PYCDC_PARTIAL_OUTPUT below.
+"""RECOVERY STUB - pycdc output preserved inside r-string for hand-rehydration.
+
+This file was decompiled from a .pyc orphan whose .py source was never
+committed. pycdc 3.12 produces substantially-complete output but trips on
+@dataclass/@property decorators, complex lambdas, and walrus operators,
+so the raw output does not parse: ``18:35: invalid syntax``.
+
+The raw pycdc output is preserved verbatim in ``_PYCDC_PARTIAL_OUTPUT``
+below. The companion ``inflate.recovery_spec.json`` contains co_names, co_consts,
+co_varnames, and dis() output for every code object - the structural
+ground-truth a hand-rehydrator should consult.
+
+This stub itself is a no-op; importing it just exposes the partial
+output as a string. Replace the stub with hand-rewritten Python once
+rehydration is done.
+"""
+from __future__ import annotations
+
+__recovery_status__ = "partial"
+__recovery_orphan__ = 'experiments/results/leaderboard_intel_20260504_codex/pr98_runtime/inflate.py'
+__recovery_spec__ = 'inflate.recovery_spec.json'
+__recovery_ast_error__ = '18:35: invalid syntax'
+
+_PYCDC_PARTIAL_OUTPUT = r"""
+# Source Generated with Decompyle++
+# File: inflate.cpython-312.pyc (Python 3.12)
+
+'''Inflate a single per-video archive to raw uint8 RGB frames.
 
 Reads <src>.bin (our compressed HNeRV decoder + per-frame-pair latents),
 runs the decoder forward, bicubic-upsamples to camera resolution, rounds to
@@ -12,65 +35,28 @@ uint8, and writes the contiguous (N, H, W, 3) bytes to <dst>.
 
 Invoked by inflate.sh as:
     python -m submissions.hnerv_muon.inflate <data_dir>/<base>.bin <output_dir>/<base>.raw
-"""
+'''
 import sys
 from pathlib import Path
-
 import torch
-import torch.nn.functional as F
 
-HERE = Path(__file__).resolve().parent
+functional
+Path(__file__).resolve().parent = import torch.nn.functional, nn
 sys.path.insert(0, str(HERE / 'src'))
-
 from model import HNeRVDecoder
 from codec import parse_archive
+(CAMERA_H, CAMERA_W) = (874, 1164)
 
-# Camera resolution required by the eval harness
-CAMERA_H, CAMERA_W = 874, 1164
+def inflate(src_bin = None, dst_raw = None):
+    f = open(src_bin, 'rb')
+    archive_bytes = f.read()
+    None(None, None)
+# WARNING: Decompyle incomplete
 
-
-def inflate(src_bin: str, dst_raw: str):
-    with open(src_bin, 'rb') as f:
-        archive_bytes = f.read()
-    decoder_sd, latents, meta = parse_archive(archive_bytes)
-
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    decoder = HNeRVDecoder(
-        latent_dim=meta['latent_dim'],
-        base_channels=meta['base_channels'],
-        eval_size=tuple(meta['eval_size']),
-    ).to(device)
-    decoder.load_state_dict(decoder_sd)
-    decoder.eval()
-
-    latents = latents.to(device)
-    n_pairs = meta['n_pairs']
-    eval_h, eval_w = meta['eval_size']
-
-    n = 0
-    with torch.inference_mode(), open(dst_raw, 'wb') as fout:
-        for i in range(0, n_pairs, 16):
-            j = min(i + 16, n_pairs)
-            B = j - i
-            decoded = decoder(latents[i:j])  # (B, 2, 3, eval_h, eval_w)
-            flat = decoded.reshape(B * 2, 3, eval_h, eval_w)
-            up = F.interpolate(flat, size=(CAMERA_H, CAMERA_W),
-                               mode='bicubic', align_corners=False)
-            up = up.reshape(B, 2, 3, CAMERA_H, CAMERA_W)
-            up[:, 0, 0].sub_(1.0)
-            up[:, 0, 2].sub_(1.0)
-            up[:, 1, 1].sub_(1.0)
-            up = up.reshape(B * 2, 3, CAMERA_H, CAMERA_W)
-            frames = (up.clamp(0, 255).permute(0, 2, 3, 1)
-                        .round().to(torch.uint8).cpu().numpy())
-            fout.write(frames.tobytes())
-            n += B * 2
-
-    print(f"saved {n} frames")
-    return n
-
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     if len(sys.argv) != 3:
-        sys.exit("Usage: python -m submissions.hnerv_muon.inflate <src.bin> <dst.raw>")
+        sys.exit('Usage: python -m submissions.hnerv_muon.inflate <src.bin> <dst.raw>')
     inflate(sys.argv[1], sys.argv[2])
+    return None
+
+"""
