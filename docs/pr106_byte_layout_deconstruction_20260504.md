@@ -69,20 +69,41 @@ Decoding: `delta_zz = (hi << 8) | lo`; reconstruct via cumulative-sum of zigzag-
 
 Per-frame-pair cost: **15,849 / 600 = 26.4 bytes/pair** (28 dims × 16-bit zigzag delta + tiny per-dim metadata, brotli-compressed).
 
-## Why apogee_intN is +1.5KB heavier than PR106 (int8 case)
+## Why apogee_intN is +1.5KB heavier than PR106 (int8 case) — CORRECTED 2026-05-04 evening
 
-Comparing apogee_int8 (187,731 bytes) vs PR106 (186,131 bytes):
+Empirically measured layout breakdown (apogee_int4..8 + PR106-int8):
 
-| Component | PR106 | apogee_int8 | Δ |
-|---|---:|---:|---:|
-| Decoder (brotli) | 170,278 | ~171,774 | +1,496 |
-| Latents (brotli) | 15,849 | 15,849 | 0 |
-| Magic + length headers | 4 | varies | ~0 |
-| **Total** | **186,131** | **187,731** | **+1,600** |
+| bits | total | name_overhead | weight_payload | latent | name_overhead % |
+|---|---:|---:|---:|---:|---:|
+| apogee_int4 | 109,888 | 564 | 93,471 | 15,853 | 0.51% |
+| apogee_int5 | 154,447 | 564 | 138,030 | 15,853 | 0.37% |
+| apogee_int6 | 170,342 | 564 | 153,925 | 15,853 | 0.33% |
+| apogee_int7 | 205,050 | 564 | 188,633 | 15,853 | 0.28% |
+| apogee_int8 | 187,623 | 564 | 171,206 | 15,853 | 0.30% |
+| **PR106** (int8 PACKED) | **186,131** | **4** | **170,278** (brotli) | **15,849** | **0.00%** |
 
-The +1,500 byte gap is the **per-tensor name+shape overhead** in apogee_intN's layout (28 tensors × ~50-byte names+shapes). PR106 avoids this by hardcoding the schema — no per-tensor metadata in the payload. To match PR106's per-tensor density at int8, an apogee variant would need to either:
-1. Adopt a hardcoded PACKED_STATE_SCHEMA-equivalent (loses generality across architectures)
-2. Use a 1-byte tensor index instead of full names (~28 bytes total instead of ~1500)
+The **+1,492-byte gap** between apogee_int8 (187,623) and PR106 (186,131) splits as:
+- **560 bytes** = per-tensor name+shape overhead (apogee_int8's 564 vs PR106's 4)
+- **928 bytes** = weight-payload overhead (apogee_int8's 171,206 vs PR106's 170,278)
+
+The **560-byte schema overhead** is the *minor* component. The **928-byte weight-payload overhead** is the *major* component — it's the cost of per-tensor brotli (28 separate brotli streams) vs PR106's single-stream brotli over the entire int8 zigzag corpus. Brotli's dictionary + Huffman tables amortize across one larger stream more efficiently than across 28 small streams.
+
+### Two independent savings opportunities
+
+| Optimization | Savings (bytes, all bits) | Score Δ | Trade-off |
+|---|---:|---:|---|
+| PACKED schema (drop names+shapes) | ~422 | 0.000281m | Lose generality across architectures |
+| Single-stream brotli (vs per-tensor) | ~928 (at int8; less at lower bits) | 0.000618m | None — pure encoder improvement |
+| **Combined** | **~1,350** | **~0.000899m** | Schema-locked to one architecture |
+
+Both savings are *minor* relative to the bit-width reduction (apogee_int5 already wins -31KB / -0.021 score Δ vs PR106 by going from 8→5 bits). The single-stream brotli optimization is the cleaner win: same code path, no architecture lock-in.
+
+### Why this matters less than initially thought
+
+The original deconstruction memo speculated the gap was "~1,500 bytes from per-tensor name+shape overhead." Empirical measurement shows the schema overhead is actually 560 bytes — most of the gap (928 bytes) is in the brotli encoding strategy, not the schema layout. The bit-width axis dominates everything:
+
+- 8→5 bits: -31,576 bytes (-0.021 score Δ — order of magnitude bigger)
+- single-brotli + PACKED schema: -1,350 bytes (-0.0009 score Δ — rounding error in comparison)
 
 ## Why apogee_int5 BEATS PR106 by 31KB
 
