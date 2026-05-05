@@ -1,43 +1,59 @@
-# pyc-recovery: STUB unreconstructible -- see .recovery_spec.json for dis() ground-truth
-# pycdc could not produce parseable output; raw decompiled text preserved in _PYCDC_PARTIAL_OUTPUT below.
-"""RECOVERY STUB - pycdc output preserved inside r-string for hand-rehydration.
-
-This file was decompiled from a .pyc orphan whose .py source was never
-committed. pycdc 3.12 produces substantially-complete output but trips on
-@dataclass/@property decorators, complex lambdas, and walrus operators,
-so the raw output does not parse: ``15:1: invalid syntax``.
-
-The raw pycdc output is preserved verbatim in ``_PYCDC_PARTIAL_OUTPUT``
-below. The companion ``model.recovery_spec.json`` contains co_names, co_consts,
-co_varnames, and dis() output for every code object - the structural
-ground-truth a hand-rehydrator should consult.
-
-This stub itself is a no-op; importing it just exposes the partial
-output as a string. Replace the stub with hand-rewritten Python once
-rehydration is done.
-"""
-from __future__ import annotations
-
-__recovery_status__ = "partial"
-__recovery_orphan__ = 'experiments/results/public_pr95_intake_20260504_codex/pr95_src/submissions/hnerv_muon/src/model.py'
-__recovery_spec__ = 'model.recovery_spec.json'
-__recovery_ast_error__ = '15:1: invalid syntax'
-
-_PYCDC_PARTIAL_OUTPUT = r"""
-# Source Generated with Decompyle++
-# File: model.cpython-312.pyc (Python 3.12)
-
-'''HNeRV-style decoder: 229K params, single-video memorization.
+# vendored from AaronLeslie138/comma_video_compression_challenge@9bdce26f2a4f996828c4e3fa2b87c454a0e8fcc9
+# path=submissions/hnerv_muon/src/model.py
+# pyc-recovery: pristine source recovered via gh api raw blob fetch
+# Original PR: https://github.com/commaai/comma_video_compression_challenge/pull/95 (hnerv_muon submission 0.20 (HNeRVDecoder model))
+# Recovered: 2026-05-05 by Sherlock pass2
+"""HNeRV-style decoder: 229K params, single-video memorization.
 
 Per-frame-pair latent (28-d) -> 6 upsample stages -> 384x512 RGB pair.
 
 Each stage: Conv(in, out*4, 3x3) + PixelShuffle(2) + bilinear-skip + sin().
 Final: dilated-conv refine residual + sigmoid RGB heads (separate frame 0 and 1).
-'''
-import torch
-from torch.nn import nn
-
-functional
-<NODE:12> = None
-
 """
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+
+class HNeRVDecoder(nn.Module):
+    def __init__(self, latent_dim=28, base_channels=36, eval_size=(384, 512)):
+        super().__init__()
+        self.eval_size = eval_size
+        self.base_h, self.base_w = 6, 8
+        C = base_channels
+
+        # 7 stages from 6x8 to 384x512; channel taper matches HNeRV paper
+        self.channels = [C, C, C, int(C * 0.75), int(C * 0.58), int(C * 0.5), int(C * 0.5)]
+
+        self.stem = nn.Linear(latent_dim, self.channels[0] * self.base_h * self.base_w)
+
+        self.blocks = nn.ModuleList()
+        self.skips = nn.ModuleList()
+        for i in range(6):
+            in_ch = self.channels[i]
+            out_ch = self.channels[i + 1]
+            self.blocks.append(nn.Conv2d(in_ch, out_ch * 4, 3, padding=1))
+            self.skips.append(nn.Conv2d(in_ch, out_ch, 1) if in_ch != out_ch else nn.Identity())
+        self.ps = nn.PixelShuffle(2)
+
+        final_ch = self.channels[-1]
+        self.refine = nn.Sequential(
+            nn.Conv2d(final_ch, final_ch // 2, 3, padding=2, dilation=2),
+            nn.Conv2d(final_ch // 2, final_ch, 3, padding=1),
+        )
+        self.rgb_0 = nn.Conv2d(final_ch, 3, 3, padding=1)
+        self.rgb_1 = nn.Conv2d(final_ch, 3, 3, padding=1)
+
+    def forward(self, z):
+        B = z.shape[0]
+        x = self.stem(z).view(B, self.channels[0], self.base_h, self.base_w)
+        x = torch.sin(x)
+        for block, skip in zip(self.blocks, self.skips):
+            identity = F.interpolate(x, scale_factor=2, mode='bilinear', align_corners=False)
+            identity = skip(identity)
+            x = self.ps(block(x))
+            x = torch.sin(x + identity)
+        x = x + 0.1 * torch.sin(self.refine(x))
+        f0 = torch.sigmoid(self.rgb_0(x)) * 255.0
+        f1 = torch.sigmoid(self.rgb_1(x)) * 255.0
+        return torch.stack([f0, f1], dim=1)
