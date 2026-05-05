@@ -18,10 +18,10 @@
 # Use WSL native filesystem for speed (NTFS /mnt/c/ causes IO errors)
 WORK_DIR="${HOME}/pact_eval"
 # Submission files stay on /mnt/c/ (where they were uploaded)
-UPLOAD_DIR="/mnt/c/Users/adpena/pact_eval"
+UPLOAD_DIR="${BAT00_UPLOAD_DIR:-/mnt/c/Users/${USER}/pact_eval}"
 SUBMISSION_DIR="${WORK_DIR}/submission"
 UPSTREAM_DIR="${WORK_DIR}/upstream"
-RESULTS_DIR="/mnt/c/Users/adpena/pact_eval/results"
+RESULTS_DIR="${BAT00_RESULTS_DIR:-${UPLOAD_DIR}/results}"
 LOG="${RESULTS_DIR}/setup.log"
 
 mkdir -p "$RESULTS_DIR"

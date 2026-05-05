@@ -48,9 +48,11 @@ echo "  uv: $(uv --version)"
 echo "[2/5] Repo sync..."
 if [ -d "$REPO_DIR/.git" ]; then
     cd "$REPO_DIR"
+    # Detached-checkout pattern (CLAUDE.md Checks 66-69): preserve any uncommitted
+    # local work; the runner consumes the remote tip read-only.
     git fetch origin main --depth=1
-    git reset --hard origin/main
-    echo "  Updated to $(git rev-parse --short HEAD)"
+    git checkout --detach origin/main
+    echo "  Checked out (detached) at $(git rev-parse --short HEAD)"
 else
     git clone --depth=1 "$REPO_URL" "$REPO_DIR"
     cd "$REPO_DIR"
