@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-05-05T02:10:53Z",
+  "updated_at": "2026-05-05T02:29:54Z",
   "description": "Canonical lane maturity registry. See feedback_production_hardened_standard_definition_20260430.md for the 7-gate Level 3 standard. Maintained via tools/lane_maturity.py \u2014 bare edits OK for seeding but mark/unmark/audit-log are the supported interface going forward.",
   "gate_definitions": {
     "impl_complete": "Production code lands; no NotImplementedError; all CLI flags wired; all error paths covered.",
@@ -1756,6 +1756,43 @@
         }
       },
       "notes": "PROPOSAL \u2014 pre-registered at L0 per CLAUDE.md. Per-pair (dim_idx, delta_q) sidecar adds ~1.2KB to PR106 archive; predicted -0.00218 score \u0394 via PR100-vs-PR105 empirical (same arch family, +1124b/-0.00218 = net win). Stacks orthogonally with apogee_intN bit-width reduction. Cost: ~$0.60 (Vast.ai 4090 brute-force search + contest-CUDA eval). Council gate REQUIRED before implementation per design-decisions-non-negotiable. Reactivation: council 5/8 GO + operator approves dispatch. Cross-ref: docs/pr100_latent_sidecar_porting_proposal_20260504.md"
+    },
+    {
+      "id": "lane_pr106_yshift_sidechannel",
+      "name": "PR106 + per-frame (dy, dx) pixel-translation sidechannel (codex_metric_yshift SC01 mode 7 pattern)",
+      "phase": 2.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": false,
+          "evidence": ""
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "docs/codex_metric_yshift_audit_20260504.md (93-line audit with apply-logic deconstruction + stacking analysis + cost estimate)"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "PROPOSAL \u2014 pre-registered at L0 per CLAUDE.md. Per-frame 3-byte (Y_offset, dy, dx) sidechannel; ~1-2KB brotli'd. Predicted -0.0005 to -0.0015 score \u0394 on PR106 base. STACKS orthogonally with lane_pr106_latent_sidecar (latent-space vs pixel-space corrections operate at different forward-pass stages). Stacked predicted ~-0.003 score \u0394 at ~3KB combined sidechannel cost. Cost: ~$0.60 (brute-force 49\u00d7255 dy/dx/Y candidates \u00d7 1200 frames on Vast.ai 4090). Council gate REQUIRED per design-decisions-non-negotiable. Implement only AFTER lane_pr106_latent_sidecar lands an empirical result. Cross-ref: docs/codex_metric_yshift_audit_20260504.md"
     }
   ]
 }
