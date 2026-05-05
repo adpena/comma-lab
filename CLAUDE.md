@@ -49,6 +49,68 @@ active claims.
 
 This rule exists because 2026-05-01 ~23:50 UTC the user reported a possible Q-FAITHFUL dispatch conflict between Claude (H100 SXM via Vast.ai) and codex (Lightning) — no formal cross-agent coordination existed and we may have burned $5-10 of duplicate GPU spend. Level 2 is now the norm: use the helper script and strict submitter checks, not manual table edits except for emergency recovery.
 
+## Operator gates must be wired and used — NON-NEGOTIABLE
+
+Recovered tools are not done when the source file exists. They must be wired
+into normal operator flows and documented where future agents will actually see
+them.
+
+Required gates:
+
+- `tac.preflight.preflight_all()` includes
+  `check_dispatch_cli_shell_hazards(strict=True)`.
+- `tools/all_lanes_preflight.py` runs
+  `tools/check_dispatch_cli_shell_hazards.py --strict` before lane dry-runs.
+- Before any judge-facing or public submission packet, run
+  `scripts/pre_submission_compliance_check.py --contest-final --strict` with
+  explicit `--expected-archive-sha256`, `--expected-archive-size-bytes`, the
+  canonical auth-eval JSON, archive manifest, and any dispatch-claim linkage.
+
+These gates close concrete bug classes: `--rmote` and other dead/typo flags,
+adjudicator-only flags passed to Lightning launchers, zsh `path` mutation,
+GNU-only `find -printf` in local/macOS surfaces, unsafe ZIP names, stale
+archive manifests, CPU/MPS promotion leakage, missing runtime-tree custody,
+and public supplement provider/private-path leaks.
+
+If you create a new profiler, packer, recovery script, hidden-gem tool, or
+submission checker, wire it into `preflight_all()`, `tools/all_lanes_preflight.py`,
+`tools/operator_briefing.py`, a runbook, or a dated `.omx/research/` ledger.
+Do not leave high-signal tooling buried under an obscure filename.
+
+## `tac` stays clean; comma-lab owns research state
+
+`tac` is the reusable codec/runtime library. Put real reusable Python
+implementation there: codec primitives, archive grammars, payload parsers,
+scorer/eval contracts, byte profilers, planning primitives, visualization
+primitives, and contest-relevant algorithms. Thin CLIs may live in
+`experiments/`, `scripts/`, or `tools/`, but they should delegate to `tac`
+modules instead of burying implementation in ad hoc entry points.
+
+Do not add Claude/OMX/provider/recovery policy to `tac` unless it is truly
+reusable codec, contest-runtime, or contest-preflight logic. Checks that protect
+archive validity, inflate/runtime compliance, CUDA-score custody, and package
+safety are canonical in `src/tac/preflight.py`. Put research-state custody,
+public-frontier intake, hosted supplement builds, provider ledgers, and recovery
+audits in `src/comma_lab/`, `tools/`, `docs/`, and `.omx/`.
+
+Use `reverse_engineering/` for clean public-submission deconstruction: curated
+runbooks, bit-level anatomy notes, adapter boundaries, and small manifests.
+Keep raw PR clones, archives, provider transcripts, and large generated
+artifacts in ignored custody locations with ledger links. Reusable parsers and
+planners still belong in `tac`.
+
+Track small durable `.omx/research` ledgers and small structured summaries.
+Do not track raw `.omx/state/*.json`, provider transcripts, auto-memory
+snapshots, generated public-site bundles, `reports/raw`, `reports/private`, or
+large rebuildable artifacts. Canonicalize interesting ignored state into dated
+`.omx/research` ledgers or `docs/paper/ara`, and host large canonical artifacts
+externally with a committed manifest.
+
+Use `python tools/audit_research_state_tracking.py --repo-root .` before
+release or cleanup. Its implementation lives in `src/comma_lab/research_state.py`
+on purpose. `src/comma_lab/preflight/strict_checks.py` is only an adapter/catalog
+surface for ARA, reports, hosted supplements, and dashboards.
+
 ## Public frontier watch and intake — NON-NEGOTIABLE
 
 During active contest or replay windows, refresh public PRs and official
@@ -118,6 +180,9 @@ Adding a kwarg to a helper without grepping for callers and updating each. Lane 
 
 **Forbidden MPS-derived strategic decision (the MPS-falsification trap):**
 Writing "GREEN" / "RED" / "KILL" / "promoted" / "FALSIFIED" in any record where the supporting evidence is an MPS or CPU forward pass through SegNet/PoseNet/renderer/distilled scorer. MPS PoseNet drift is 23×; SegNet 2×; score 2.5×. STC clean-source FALSIFICATION was made on MPS encoder; user correctly objected; withdrawn. Strategic decisions REQUIRE a `[contest-CUDA]` artifact in the same record/section. (See `feedback_no_local_mps_for_authoritative_kill_or_promote_20260429.md`.)
+
+**Forbidden premature KILL without research exhaustion (the kill-too-fast trap):**
+Writing "KILL" / "FALSIFIED" / "DEAD" / "RETIRED" as a final verdict on a lane based on a SINGLE empirical configuration's failure, when plausible alternative configurations have NOT been attempted. apogee_int4 NAIVE-PTQ falsification 2026-05-05 was initially recorded as KILL/FALSIFIED at score 1.4287 [contest-CUDA T4] WITHOUT trying QAT, LSQ, per-channel scaling, smaller block sizes, or outlier handling — all canonical fixes for low-bit PTQ collapse. User caught it: "we must only kill as a last resort after exhausting all research and grand council consensus" (2026-05-05). Default verdict for one-config failure is **DEFERRED-pending-research**, NOT KILLED. KILL conversion requires (a) every plausible alternative config attempted empirically, (b) **grand council CONSENSUS** (not just majority — every inner-ten member endorses), (c) reactivation criteria documented. Memo filename uses `_DEFERRED_pending_<reason>_<date>.md`, not `_killed_*.md`. See expanded "KILL/FALSIFIED memory verdicts — NON-NEGOTIABLE" section above for full enforcement.
 
 **Forbidden re-implementing remote bootstrap inline (the duplicated-bootstrap trap):**
 Writing `curl -LsSf https://astral.sh/uv/install.sh | sh` or `apt-get install ffmpeg` or `find upstream -name '._*' -delete` directly in any new chain driver / lane script / one-off. There is ONE canonical bootstrap function: `bootstrap_runtime_deps()` in `scripts/remote_archive_only_eval.sh`, which delegates uv install to `scripts/ensure_remote_uv.sh`. Any new remote script MUST call that wrapper or `source` its bootstrap function — NEVER copy-paste the install commands. Cost of NOT doing this (2026-05-01 loop session): 6 sequential bug-class re-discoveries on 4 destroyed Vast.ai instances burning ~$1.50 + 30 min wall-clock chasing the same lesson. Memory: `feedback_remote_archive_only_eval_self_bootstraps_all_deps_20260501.md`. (Sister rule for venv: `python -m ensurepip --upgrade` is the standard fix for "venv exists but no pip" — see `scripts/ensure_remote_uv.sh` style.)
@@ -525,6 +590,35 @@ This protocol caught 2 CRITICAL bugs (auto-kill at epoch 200, OOM fix bypassed) 
 Per user mandate 2026-04-30 ~22:55 UTC ("permanently fix all bugs and bug
 classes and metabugs and everything and have all design decisions and ultimate
 experiment subject to extreme paranoia and adversarial grand council reviews").
+
+### KILL is the LAST RESORT (user mandate 2026-05-05)
+
+Per additional user mandate 2026-05-05 ("we must only kill as a last resort
+after exhausting all research and everything and grand council consensus"),
+KILL/FALSIFIED-and-permanently-buried verdicts are **forbidden** unless ALL of:
+
+1. **Research-path exhaustion**: every plausible architectural / training /
+   codec / quantization angle has been attempted empirically. A single
+   contest-CUDA result with one config does NOT exhaust research. For a
+   quantization lane, "research" includes at minimum: QAT, LSQ, per-channel
+   scaling, group-wise scales, outlier handling, smaller block sizes,
+   GPTQ/AWQ-style calibration, hyperprior conditioning, mixed-precision
+   layer assignment.
+2. **Grand council CONSENSUS** (not just majority) — every inner-ten member
+   independently endorses the kill, with all dissent paths exhausted.
+3. **Reactivation criteria documented** — even after consensus KILL, every
+   such memo enumerates the precise empirical evidence that would reopen the
+   lane.
+
+Default verdict for "lane underperformed at one config" is **DEFERRED-pending-research**,
+NOT KILLED. The memo filename SHOULD use `_DEFERRED_pending_<reason>_<date>.md`,
+NOT `_killed_*.md`. The verdict line SHOULD say `DEFERRED-pending-research`,
+NOT `VERDICT: KILL`.
+
+A KILL verdict that has NOT exhausted research is a forbidden anti-pattern
+(see `forbidden_premature_kill_without_research_exhaustion`).
+
+### KILL/FALSIFIED memo structural requirements (when KILL is genuinely warranted)
 
 Any memory file claiming a lane is KILLED, FALSIFIED, DEAD, or RETIRED MUST contain:
 
