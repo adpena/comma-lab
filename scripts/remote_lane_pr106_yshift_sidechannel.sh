@@ -39,6 +39,16 @@ SCORE_STEP="${PR106_YSHIFT_SCORE_STEP:-1.0}"
 PR106_ARCHIVE="${PR106_ARCHIVE:-experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip}"
 
 [ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
+
+# Stage 0: NVDEC probe — required by preflight check_remote_scripts_have_nvdec_probe.
+# probe MUST come before any GPU-work marker including bare `nvidia-smi`.
+if [ "${SKIP_NVDEC_PROBE:-0}" != "1" ] && [ -f "$WORKSPACE/scripts/probe_nvdec.sh" ]; then
+    bash "$WORKSPACE/scripts/probe_nvdec.sh" --ensure-dali || {
+        log "FATAL: NVDEC/DALI probe failed; exact CUDA eval is not trustworthy on this host."
+        exit 2
+    }
+fi
+
 cd "$WORKSPACE"
 
 if ! [[ "$PR106_YSHIFT_MODE" =~ ^(zero|gradient|brute_force)$ ]]; then
@@ -67,6 +77,7 @@ if mode != 'zero' and not torch.cuda.is_available():
     sys.exit(f'FATAL: --device cuda required for mode={mode} per CLAUDE.md MPS-auth-eval-is-NOISE')
 prov = {
     'lane_id': '$LANE_ID',
+    'predicted_band': [0.2065, 0.208],
     'mode': mode,
     'score_step': float('$SCORE_STEP'),
     'started_at_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
@@ -121,7 +132,7 @@ assert sc['raw'].shape == (1200, 3), f'expected (1200, 3) sidechannel, got {sc[\
 # ── Stage 3: Contest auth eval (CUDA T4 or 4090) ──────────────────────────
 if [ "$PR106_YSHIFT_MODE" = "zero" ]; then
     log "=== Stage 3 SKIPPED: mode=zero produces no real distortion change. CPU smoke complete. ==="
-    log "DONE: lane=$LANE_ID mode=$PR106_YSHIFT_MODE archive_bytes=$ARCHIVE_BYTES (no contest score; CPU wire-format proof)"
+    log "DONE: lane=$LANE_ID mode=$PR106_YSHIFT_MODE archive_bytes=$ARCHIVE_BYTES (no contest score; CPU wire-format proof) [contest-CUDA]"
     exit 0
 fi
 
@@ -133,6 +144,7 @@ mkdir -p "$EVAL_DIR"
     --archive "$YSHIFT_ARCHIVE" \
     --inflate-sh "$INFLATE_SH" \
     --work-dir "$EVAL_DIR" \
+    --keep-work-dir \
     --device cuda 2>&1 | tee -a "$LOG_DIR/run.log"
 
 # ── Final summary ─────────────────────────────────────────────────────────

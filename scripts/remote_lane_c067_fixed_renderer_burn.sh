@@ -17,6 +17,16 @@ cd "$WORKSPACE"
 [ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
 mkdir -p "$LOG_DIR"
 
+# Stage 0: NVDEC probe — required by preflight check_remote_scripts_have_nvdec_probe.
+# Defensive even though this script delegates video decode to remote_archive_only_eval.sh,
+# which runs its own probe at its Stage 0.
+if [ "${SKIP_NVDEC_PROBE:-0}" != "1" ] && [ -f "$WORKSPACE/scripts/probe_nvdec.sh" ]; then
+    bash "$WORKSPACE/scripts/probe_nvdec.sh" --ensure-dali || {
+        printf '[c067-fixed-renderer-burn] FATAL: NVDEC/DALI probe failed; exact CUDA eval is not trustworthy on this host.\n' >&2
+        exit 2
+    }
+fi
+
 log() {
   printf '[c067-fixed-renderer-burn] %s %s\n' "$(date -u +%FT%TZ)" "$*" | tee -a "$LOG_DIR/vast_dispatch.log"
 }
@@ -57,6 +67,7 @@ payload = {
     "score_claim": False,
     "promotion_eligible": False,
     "operator_override": "minimum_wallclock_high_ev_renderer_training_burn",
+    "predicted_band": [0.27, 0.33],
 }
 try:
     probe = subprocess.run(

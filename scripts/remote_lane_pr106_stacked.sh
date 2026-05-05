@@ -47,6 +47,16 @@ STACKED_YSHIFT_ARCHIVE="${STACKED_YSHIFT_ARCHIVE:-}"
 STACKED_LRL1_ARCHIVE="${STACKED_LRL1_ARCHIVE:-}"
 
 [ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
+
+# Stage 0: NVDEC probe — required by preflight check_remote_scripts_have_nvdec_probe.
+# probe MUST come before any GPU-work marker including bare `nvidia-smi`.
+if [ "${SKIP_NVDEC_PROBE:-0}" != "1" ] && [ -f "$WORKSPACE/scripts/probe_nvdec.sh" ]; then
+    bash "$WORKSPACE/scripts/probe_nvdec.sh" --ensure-dali || {
+        log "FATAL: NVDEC/DALI probe failed; exact CUDA eval is not trustworthy on this host."
+        exit 2
+    }
+fi
+
 cd "$WORKSPACE"
 
 LANE_ID="lane_pr106_stacked"
@@ -82,6 +92,7 @@ for name, p in present.items():
         sys.exit(f'FATAL: sister archive {name} not found at {p}')
 prov = {
     'lane_id': '$LANE_ID',
+    'predicted_band': [0.15, 0.18],
     'started_at_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
     'git_hash': '$GIT_HASH',
     'gpu_name': '$GPU_NAME',
@@ -101,11 +112,14 @@ print(f'[stage-0] provenance written; CUDA={torch.cuda.is_available()}; '
 log "=== Stage 1: compose pr106_stacked from sister archives ==="
 BUILD_DIR="$LOG_DIR/build"
 mkdir -p "$BUILD_DIR"
-COMPOSE_ARGS=(--pr106-archive "$PR106_ARCHIVE" --output-dir "$BUILD_DIR")
-[ -n "$STACKED_LATENT_ARCHIVE" ] && COMPOSE_ARGS+=(--latent "$STACKED_LATENT_ARCHIVE")
-[ -n "$STACKED_YSHIFT_ARCHIVE" ] && COMPOSE_ARGS+=(--yshift "$STACKED_YSHIFT_ARCHIVE")
-[ -n "$STACKED_LRL1_ARCHIVE" ]   && COMPOSE_ARGS+=(--lrl1   "$STACKED_LRL1_ARCHIVE")
-"$PYBIN" -u experiments/build_pr106_stacked.py "${COMPOSE_ARGS[@]}" \
+COMPOSE_OPTIONAL=()
+[ -n "$STACKED_LATENT_ARCHIVE" ] && COMPOSE_OPTIONAL+=(--latent "$STACKED_LATENT_ARCHIVE")
+[ -n "$STACKED_YSHIFT_ARCHIVE" ] && COMPOSE_OPTIONAL+=(--yshift "$STACKED_YSHIFT_ARCHIVE")
+[ -n "$STACKED_LRL1_ARCHIVE" ]   && COMPOSE_OPTIONAL+=(--lrl1   "$STACKED_LRL1_ARCHIVE")
+"$PYBIN" -u experiments/build_pr106_stacked.py \
+    --pr106-archive "$PR106_ARCHIVE" \
+    --output-dir "$BUILD_DIR" \
+    "${COMPOSE_OPTIONAL[@]}" \
     2>&1 | tee -a "$LOG_DIR/run.log"
 STACKED_ARCHIVE="$BUILD_DIR/pr106_stacked_archive.zip"
 if [ ! -f "$STACKED_ARCHIVE" ]; then
@@ -145,13 +159,14 @@ mkdir -p "$EVAL_DIR"
     --archive "$STACKED_ARCHIVE" \
     --inflate-sh "$INFLATE_SH" \
     --work-dir "$EVAL_DIR" \
+    --keep-work-dir \
     --device cuda 2>&1 | tee -a "$LOG_DIR/run.log"
 
 # ── Final summary ─────────────────────────────────────────────────────────
 SCORE_JSON="$EVAL_DIR/contest_auth_eval.json"
 if [ -f "$SCORE_JSON" ]; then
     SCORE=$("$PYBIN" -c "import json; print(json.load(open('$SCORE_JSON'))['final_score'])" 2>/dev/null || echo "PARSE_FAIL")
-    log "DONE: lane=$LANE_ID archive_bytes=$ARCHIVE_BYTES contest_cuda_score=$SCORE"
+    log "DONE: lane=$LANE_ID archive_bytes=$ARCHIVE_BYTES contest_cuda_score=$SCORE [contest-CUDA]"
     log "  beats best individual sister landed score? Operator must compare via tools/score_dashboard.py."
     log "  predicted band: ~0.18 (3-sidechannel only) / ~0.16 (full apogee+3-sidechannel stack)"
     log "  cross-ref docs/INDEX_score_aware_sidechannel_thread_20260504.md + "

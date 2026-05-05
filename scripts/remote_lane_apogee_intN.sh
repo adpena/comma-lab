@@ -32,6 +32,16 @@ PR106_ARCHIVE="${PR106_ARCHIVE:-experiments/results/public_pr106_belt_and_suspen
 PR106_STATE_DICT="${PR106_STATE_DICT:-experiments/results/sensitivity_map_pr106_20260504_claude/state_dict.pt}"
 
 [ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
+
+# Stage 0: NVDEC probe — required by preflight check_remote_scripts_have_nvdec_probe.
+# probe MUST come before any GPU-work marker including bare `nvidia-smi`.
+if [ "${SKIP_NVDEC_PROBE:-0}" != "1" ] && [ -f "$WORKSPACE/scripts/probe_nvdec.sh" ]; then
+    bash "$WORKSPACE/scripts/probe_nvdec.sh" --ensure-dali || {
+        log "FATAL: NVDEC/DALI probe failed; exact CUDA eval is not trustworthy on this host."
+        exit 2
+    }
+fi
+
 cd "$WORKSPACE"
 
 if ! [[ "$APOGEE_INTN_BITS" =~ ^[4-8]$ ]]; then
@@ -59,6 +69,7 @@ if not torch.cuda.is_available():
     sys.exit('FATAL: --device cuda required per CLAUDE.md MPS-auth-eval-is-NOISE')
 prov = {
     'lane_id': '$LANE_ID',
+    'predicted_band': [0.155, 0.207],
     'apogee_intn_bits': int('$APOGEE_INTN_BITS'),
     'started_at_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
     'git_hash': '$GIT_HASH',
@@ -113,13 +124,14 @@ mkdir -p "$EVAL_DIR"
     --archive "$APOGEE_ARCHIVE" \
     --inflate-sh "$INFLATE_SH" \
     --work-dir "$EVAL_DIR" \
+    --keep-work-dir \
     --device cuda 2>&1 | tee -a "$LOG_DIR/run.log"
 
 # ── Final summary ─────────────────────────────────────────────────────────
 SCORE_JSON="$EVAL_DIR/contest_auth_eval.json"
 if [ -f "$SCORE_JSON" ]; then
     SCORE=$("$PYBIN" -c "import json; print(json.load(open('$SCORE_JSON'))['final_score'])" 2>/dev/null || echo "PARSE_FAIL")
-    log "DONE: lane=$LANE_ID bits=$APOGEE_INTN_BITS archive_bytes=$ARCHIVE_BYTES contest_cuda_score=$SCORE"
+    log "DONE: lane=$LANE_ID bits=$APOGEE_INTN_BITS archive_bytes=$ARCHIVE_BYTES contest_cuda_score=$SCORE [contest-CUDA]"
     log "  beats PR106 baseline 0.20946? $("$PYBIN" -c "
 s = $SCORE
 print('YES — new public-frontier candidate' if isinstance(s, (int, float)) and s < 0.20946 else f'no (score {s} >= 0.20946)')

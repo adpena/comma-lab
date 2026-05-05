@@ -14787,7 +14787,22 @@ def check_subprocess_run_checked(
     skip_dirs = {
         "tests", "test", "upstream", "node_modules", ".venv", "venv",
         "build", "dist", "__pycache__",
+        # Vendored python interpreter trees harvested from remote runs
+        "site-packages", "uv_project_env", "uv-cache", ".cache",
     }
+    # Vendored / third-party intake snapshots — same exclude markers as the
+    # MPS-fallback check above. We can't fix code we don't own; intake
+    # directories are evidence of public-PR state, not our authored code.
+    _VENDORED_INTAKE_MARKERS = (
+        "/pr_heads/",
+        "/leaderboard_intel_",
+        "/reverse_engineering_",
+        "/public_runtime_adapters_",
+        "/raw/kaggle_ingest/",
+        "/vendored/",
+        "_intake_",
+        "/av1_crf31_bicubic/",
+    )
     for py_path in sorted(root.rglob("*.py")):
         if py_path.resolve() == Path(__file__).resolve():
             continue
@@ -14796,6 +14811,9 @@ def check_subprocess_run_checked(
             continue
         top = rel_parts[0] if rel_parts else ""
         if top not in {"src", "scripts", "tools", "experiments"}:
+            continue
+        rel_s = str(py_path.relative_to(root))
+        if any(marker in rel_s for marker in _VENDORED_INTAKE_MARKERS):
             continue
         try:
             text = py_path.read_text()

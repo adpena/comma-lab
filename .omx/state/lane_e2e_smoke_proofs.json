@@ -24,7 +24,7 @@
   "remote_lane_12_alpha_geo0_pose_regen": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.024,
+    "elapsed_seconds": 0.042,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_12_alpha_geo0_pose_regen",
     "stages_passed": [
@@ -40,7 +40,7 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:48Z",
+    "timestamp_utc": "2026-05-05T12:42:02Z",
     "tool_version": 1
   },
   "remote_lane_12_owv3_0120_nerv_stack": {
@@ -68,7 +68,7 @@
   "remote_lane_19_logit_margin": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.022,
+    "elapsed_seconds": 0.039,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_19_logit_margin",
     "stages_passed": [
@@ -84,13 +84,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:48Z",
+    "timestamp_utc": "2026-05-05T12:42:02Z",
     "tool_version": 1
   },
   "remote_lane_19_score_snapshot": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.023,
+    "elapsed_seconds": 0.039,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_19_score_snapshot",
     "stages_passed": [
@@ -106,13 +106,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:48Z",
+    "timestamp_utc": "2026-05-05T12:42:02Z",
     "tool_version": 1
   },
   "remote_lane_20_balle": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.023,
+    "elapsed_seconds": 0.038,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_20_balle",
     "stages_passed": [
@@ -128,13 +128,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:48Z",
+    "timestamp_utc": "2026-05-05T12:42:02Z",
     "tool_version": 1
   },
   "remote_lane_8_multipass": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.022,
+    "elapsed_seconds": 0.039,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_8_multipass",
     "stages_passed": [
@@ -150,13 +150,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:48Z",
+    "timestamp_utc": "2026-05-05T12:42:02Z",
     "tool_version": 1
   },
   "remote_lane_a_optimized": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.022,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_a_optimized",
     "stages_passed": [
@@ -172,13 +172,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:48Z",
+    "timestamp_utc": "2026-05-05T12:42:02Z",
     "tool_version": 1
   },
   "remote_lane_a_pose_tto": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.023,
+    "elapsed_seconds": 0.039,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_a_pose_tto",
     "stages_passed": [
@@ -194,13 +194,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:48Z",
+    "timestamp_utc": "2026-05-05T12:42:02Z",
     "tool_version": 1
   },
   "remote_lane_a_sweep": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.023,
+    "elapsed_seconds": 0.039,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_a_sweep",
     "stages_passed": [
@@ -216,13 +216,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:48Z",
+    "timestamp_utc": "2026-05-05T12:42:02Z",
     "tool_version": 1
   },
   "remote_lane_ac_archive_codec": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.023,
+    "elapsed_seconds": 0.038,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_ac_archive_codec",
     "stages_passed": [
@@ -238,13 +238,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:48Z",
+    "timestamp_utc": "2026-05-05T12:42:02Z",
     "tool_version": 1
   },
   "remote_lane_al_analog_latent": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.023,
+    "elapsed_seconds": 0.039,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_al_analog_latent",
     "stages_passed": [
@@ -260,13 +260,35 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:02Z",
+    "tool_version": 1
+  },
+  "remote_lane_apogee_intN": {
+    "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
+    "archive_size_bytes": 694074,
+    "elapsed_seconds": 0.038,
+    "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
+    "lane_name": "remote_lane_apogee_intN",
+    "stages_passed": [
+      "extract",
+      "whitelist",
+      "renderer_magic",
+      "masks_present",
+      "config_env",
+      "inflate_dispatch_path",
+      "inflate_renderer_imports",
+      "upstream_evaluate_arity",
+      "gt_video_present",
+      "launcher_includes_env"
+    ],
+    "submission_dir": "submissions/robust_current",
+    "timestamp_utc": "2026-05-05T12:42:02Z",
     "tool_version": 1
   },
   "remote_lane_b_fp4_qat": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.023,
+    "elapsed_seconds": 0.039,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_b_fp4_qat",
     "stages_passed": [
@@ -282,13 +304,35 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:02Z",
+    "tool_version": 1
+  },
+  "remote_lane_c067_fixed_renderer_burn": {
+    "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
+    "archive_size_bytes": 694074,
+    "elapsed_seconds": 0.04,
+    "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
+    "lane_name": "remote_lane_c067_fixed_renderer_burn",
+    "stages_passed": [
+      "extract",
+      "whitelist",
+      "renderer_magic",
+      "masks_present",
+      "config_env",
+      "inflate_dispatch_path",
+      "inflate_renderer_imports",
+      "upstream_evaluate_arity",
+      "gt_video_present",
+      "launcher_includes_env"
+    ],
+    "submission_dir": "submissions/robust_current",
+    "timestamp_utc": "2026-05-05T12:42:02Z",
     "tool_version": 1
   },
   "remote_lane_cg_calibrated_pe": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.023,
+    "elapsed_seconds": 0.038,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_cg_calibrated_pe",
     "stages_passed": [
@@ -304,13 +348,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:02Z",
     "tool_version": 1
   },
   "remote_lane_d_halfframe_retrain": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.023,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_d_halfframe_retrain",
     "stages_passed": [
@@ -326,13 +370,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:02Z",
     "tool_version": 1
   },
   "remote_lane_d_v2_halfframe_retrain_lr_fix": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.023,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_d_v2_halfframe_retrain_lr_fix",
     "stages_passed": [
@@ -348,13 +392,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:02Z",
     "tool_version": 1
   },
   "remote_lane_d_v3_full_engineering": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.022,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_d_v3_full_engineering",
     "stages_passed": [
@@ -370,13 +414,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:02Z",
     "tool_version": 1
   },
   "remote_lane_darts_s_segmap_arch_sweep": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.022,
+    "elapsed_seconds": 0.039,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_darts_s_segmap_arch_sweep",
     "stages_passed": [
@@ -392,13 +436,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:02Z",
     "tool_version": 1
   },
   "remote_lane_ea_entropy_archive": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.022,
+    "elapsed_seconds": 0.038,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_ea_entropy_archive",
     "stages_passed": [
@@ -414,13 +458,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:02Z",
     "tool_version": 1
   },
   "remote_lane_ebr_entropy_bottleneck": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.023,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_ebr_entropy_bottleneck",
     "stages_passed": [
@@ -436,13 +480,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:02Z",
     "tool_version": 1
   },
   "remote_lane_ec_engineered_corrections": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.022,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_ec_engineered_corrections",
     "stages_passed": [
@@ -458,13 +502,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:02Z",
     "tool_version": 1
   },
   "remote_lane_ec_v2": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.023,
+    "elapsed_seconds": 0.041,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_ec_v2",
     "stages_passed": [
@@ -480,13 +524,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:02Z",
     "tool_version": 1
   },
   "remote_lane_f_v3_fp4_qat_int8warmup": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.023,
+    "elapsed_seconds": 0.039,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_f_v3_fp4_qat_int8warmup",
     "stages_passed": [
@@ -502,13 +546,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:02Z",
     "tool_version": 1
   },
   "remote_lane_f_v4_mixed_precision_fp4": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.024,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_f_v4_mixed_precision_fp4",
     "stages_passed": [
@@ -524,13 +568,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:02Z",
     "tool_version": 1
   },
   "remote_lane_f_v5_hardware_fp8": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.024,
+    "elapsed_seconds": 0.039,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_f_v5_hardware_fp8",
     "stages_passed": [
@@ -546,13 +590,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:03Z",
     "tool_version": 1
   },
   "remote_lane_fc_film_canvas": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_fc_film_canvas",
     "stages_passed": [
@@ -568,13 +612,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:03Z",
     "tool_version": 1
   },
   "remote_lane_fl_raft_derived_poses": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_fl_raft_derived_poses",
     "stages_passed": [
@@ -590,13 +634,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:03Z",
     "tool_version": 1
   },
   "remote_lane_fr_mm_sigma_sweep": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_fr_mm_sigma_sweep",
     "stages_passed": [
@@ -612,13 +656,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:03Z",
     "tool_version": 1
   },
   "remote_lane_fr_omega_fridrich_block_fp": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.039,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_fr_omega_fridrich_block_fp",
     "stages_passed": [
@@ -634,13 +678,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:03Z",
     "tool_version": 1
   },
   "remote_lane_g_kldistill_pose_tto": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.039,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_g_kldistill_pose_tto",
     "stages_passed": [
@@ -656,13 +700,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:03Z",
     "tool_version": 1
   },
   "remote_lane_g_v3_corrected_kl_weight": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.023,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_g_v3_corrected_kl_weight",
     "stages_passed": [
@@ -678,13 +722,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:51Z",
+    "timestamp_utc": "2026-05-05T12:42:03Z",
     "tool_version": 1
   },
   "remote_lane_g_v3_owv3_fisher_stack": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_g_v3_owv3_fisher_stack",
     "stages_passed": [
@@ -700,13 +744,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:03Z",
     "tool_version": 1
   },
   "remote_lane_g_v3_v2_lagrangian_snr": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.039,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_g_v3_v2_lagrangian_snr",
     "stages_passed": [
@@ -722,13 +766,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:03Z",
     "tool_version": 1
   },
   "remote_lane_ge_geodesic_pose": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.039,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_ge_geodesic_pose",
     "stages_passed": [
@@ -744,13 +788,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:03Z",
     "tool_version": 1
   },
   "remote_lane_gh_darts_ratio": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_gh_darts_ratio",
     "stages_passed": [
@@ -766,13 +810,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:03Z",
     "tool_version": 1
   },
   "remote_lane_gh_ghost_renderer": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_gh_ghost_renderer",
     "stages_passed": [
@@ -788,13 +832,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:03Z",
     "tool_version": 1
   },
   "remote_lane_gp_gaussian_process_pose": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.022,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_gp_gaussian_process_pose",
     "stages_passed": [
@@ -810,13 +854,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:03Z",
     "tool_version": 1
   },
   "remote_lane_h_crf56_v2": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_h_crf56_v2",
     "stages_passed": [
@@ -832,13 +876,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:03Z",
     "tool_version": 1
   },
   "remote_lane_h_crf56_v3": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.041,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_h_crf56_v3",
     "stages_passed": [
@@ -854,13 +898,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:03Z",
     "tool_version": 1
   },
   "remote_lane_h_v3_jointly_trained_halfframe": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.041,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_h_v3_jointly_trained_halfframe",
     "stages_passed": [
@@ -876,13 +920,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:03Z",
     "tool_version": 1
   },
   "remote_lane_hm_homography_motion": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_hm_homography_motion",
     "stages_passed": [
@@ -898,13 +942,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:03Z",
     "tool_version": 1
   },
   "remote_lane_hm_s_segmap_homography": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_hm_s_segmap_homography",
     "stages_passed": [
@@ -920,13 +964,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:03Z",
     "tool_version": 1
   },
   "remote_lane_i_coolchic_masks": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_i_coolchic_masks",
     "stages_passed": [
@@ -942,13 +986,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:03Z",
     "tool_version": 1
   },
   "remote_lane_i_darts_dims": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.039,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_i_darts_dims",
     "stages_passed": [
@@ -964,13 +1008,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:03Z",
     "tool_version": 1
   },
   "remote_lane_j_imp_iterative_magnitude_pruning": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.022,
+    "elapsed_seconds": 0.039,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_j_imp_iterative_magnitude_pruning",
     "stages_passed": [
@@ -986,13 +1030,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:03Z",
     "tool_version": 1
   },
   "remote_lane_j_jbl_jaccard_bls": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_j_jbl_jaccard_bls",
     "stages_passed": [
@@ -1008,13 +1052,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:03Z",
     "tool_version": 1
   },
   "remote_lane_j_nwc_neural_weight_compression": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.039,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_j_nwc_neural_weight_compression",
     "stages_passed": [
@@ -1030,13 +1074,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:03Z",
     "tool_version": 1
   },
   "remote_lane_j_nwcs_ec_stack": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_j_nwcs_ec_stack",
     "stages_passed": [
@@ -1052,13 +1096,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:03Z",
     "tool_version": 1
   },
   "remote_lane_j_nwcs_sensitivity_aware_codec": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.039,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_j_nwcs_sensitivity_aware_codec",
     "stages_passed": [
@@ -1074,13 +1118,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:04Z",
     "tool_version": 1
   },
   "remote_lane_k_darts_channels": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.039,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_k_darts_channels",
     "stages_passed": [
@@ -1096,13 +1140,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:04Z",
     "tool_version": 1
   },
   "remote_lane_k_dsconv_quantizr_killer": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_k_dsconv_quantizr_killer",
     "stages_passed": [
@@ -1118,13 +1162,35 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:04Z",
+    "tool_version": 1
+  },
+  "remote_lane_line_search_c067": {
+    "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
+    "archive_size_bytes": 694074,
+    "elapsed_seconds": 0.039,
+    "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
+    "lane_name": "remote_lane_line_search_c067",
+    "stages_passed": [
+      "extract",
+      "whitelist",
+      "renderer_magic",
+      "masks_present",
+      "config_env",
+      "inflate_dispatch_path",
+      "inflate_renderer_imports",
+      "upstream_evaluate_arity",
+      "gt_video_present",
+      "launcher_includes_env"
+    ],
+    "submission_dir": "submissions/robust_current",
+    "timestamp_utc": "2026-05-05T12:42:04Z",
     "tool_version": 1
   },
   "remote_lane_lm_v2_endpoint_tracking": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.039,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_lm_v2_endpoint_tracking",
     "stages_passed": [
@@ -1140,13 +1206,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:04Z",
     "tool_version": 1
   },
   "remote_lane_lm_zero_cost_poses": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_lm_zero_cost_poses",
     "stages_passed": [
@@ -1162,13 +1228,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:04Z",
     "tool_version": 1
   },
   "remote_lane_lr_lora_pose_tto": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_lr_lora_pose_tto",
     "stages_passed": [
@@ -1184,13 +1250,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:49Z",
+    "timestamp_utc": "2026-05-05T12:42:04Z",
     "tool_version": 1
   },
   "remote_lane_lr_v2_learnable_rank": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.039,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_lr_v2_learnable_rank",
     "stages_passed": [
@@ -1206,13 +1272,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:04Z",
     "tool_version": 1
   },
   "remote_lane_m_plus_eval": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_m_plus_eval",
     "stages_passed": [
@@ -1228,13 +1294,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:04Z",
     "tool_version": 1
   },
   "remote_lane_m_v2_radial_zoom_proper": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.039,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_m_v2_radial_zoom_proper",
     "stages_passed": [
@@ -1250,13 +1316,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:04Z",
     "tool_version": 1
   },
   "remote_lane_m_v3_pose_from_embedding": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_m_v3_pose_from_embedding",
     "stages_passed": [
@@ -1272,13 +1338,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:04Z",
     "tool_version": 1
   },
   "remote_lane_mae_v": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_mae_v",
     "stages_passed": [
@@ -1294,13 +1360,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:04Z",
     "tool_version": 1
   },
   "remote_lane_mm_grayscale_lut": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.022,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_mm_grayscale_lut",
     "stages_passed": [
@@ -1316,13 +1382,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:04Z",
     "tool_version": 1
   },
   "remote_lane_mn_combined": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_mn_combined",
     "stages_passed": [
@@ -1338,13 +1404,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:04Z",
     "tool_version": 1
   },
   "remote_lane_nerv": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.039,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_nerv",
     "stages_passed": [
@@ -1360,13 +1426,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:04Z",
     "tool_version": 1
   },
   "remote_lane_nwc": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.022,
+    "elapsed_seconds": 0.041,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_nwc",
     "stages_passed": [
@@ -1382,13 +1448,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:04Z",
     "tool_version": 1
   },
   "remote_lane_omega_hessian_qat": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.022,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_omega_hessian_qat",
     "stages_passed": [
@@ -1404,13 +1470,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:04Z",
     "tool_version": 1
   },
   "remote_lane_omega_v2_lagrangian": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.039,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_omega_v2_lagrangian",
     "stages_passed": [
@@ -1426,13 +1492,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:04Z",
     "tool_version": 1
   },
   "remote_lane_omega_v3_rate_frontier": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_omega_v3_rate_frontier",
     "stages_passed": [
@@ -1448,13 +1514,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:04Z",
     "tool_version": 1
   },
   "remote_lane_omega_w_v2_stack": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.041,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_omega_w_v2_stack",
     "stages_passed": [
@@ -1470,13 +1536,35 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:04Z",
+    "tool_version": 1
+  },
+  "remote_lane_omega_w_v3_pr106": {
+    "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
+    "archive_size_bytes": 694074,
+    "elapsed_seconds": 0.04,
+    "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
+    "lane_name": "remote_lane_omega_w_v3_pr106",
+    "stages_passed": [
+      "extract",
+      "whitelist",
+      "renderer_magic",
+      "masks_present",
+      "config_env",
+      "inflate_dispatch_path",
+      "inflate_renderer_imports",
+      "upstream_evaluate_arity",
+      "gt_video_present",
+      "launcher_includes_env"
+    ],
+    "submission_dir": "submissions/robust_current",
+    "timestamp_utc": "2026-05-05T12:42:04Z",
     "tool_version": 1
   },
   "remote_lane_omega_w_water_filling": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_omega_w_water_filling",
     "stages_passed": [
@@ -1492,13 +1580,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:04Z",
     "tool_version": 1
   },
   "remote_lane_os_supercombo_seed_tto": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_os_supercombo_seed_tto",
     "stages_passed": [
@@ -1514,13 +1602,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:04Z",
     "tool_version": 1
   },
   "remote_lane_pa_pose_as_affine": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.041,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_pa_pose_as_affine",
     "stages_passed": [
@@ -1536,13 +1624,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:04Z",
     "tool_version": 1
   },
   "remote_lane_pd_pose_deltas": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.023,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_pd_pose_deltas",
     "stages_passed": [
@@ -1558,13 +1646,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:05Z",
     "tool_version": 1
   },
   "remote_lane_pfp16_stack": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_pfp16_stack",
     "stages_passed": [
@@ -1580,13 +1668,101 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:05Z",
+    "tool_version": 1
+  },
+  "remote_lane_pr106_latent_sidecar": {
+    "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
+    "archive_size_bytes": 694074,
+    "elapsed_seconds": 0.04,
+    "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
+    "lane_name": "remote_lane_pr106_latent_sidecar",
+    "stages_passed": [
+      "extract",
+      "whitelist",
+      "renderer_magic",
+      "masks_present",
+      "config_env",
+      "inflate_dispatch_path",
+      "inflate_renderer_imports",
+      "upstream_evaluate_arity",
+      "gt_video_present",
+      "launcher_includes_env"
+    ],
+    "submission_dir": "submissions/robust_current",
+    "timestamp_utc": "2026-05-05T12:42:05Z",
+    "tool_version": 1
+  },
+  "remote_lane_pr106_lrl1_sidechannel": {
+    "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
+    "archive_size_bytes": 694074,
+    "elapsed_seconds": 0.04,
+    "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
+    "lane_name": "remote_lane_pr106_lrl1_sidechannel",
+    "stages_passed": [
+      "extract",
+      "whitelist",
+      "renderer_magic",
+      "masks_present",
+      "config_env",
+      "inflate_dispatch_path",
+      "inflate_renderer_imports",
+      "upstream_evaluate_arity",
+      "gt_video_present",
+      "launcher_includes_env"
+    ],
+    "submission_dir": "submissions/robust_current",
+    "timestamp_utc": "2026-05-05T12:42:05Z",
+    "tool_version": 1
+  },
+  "remote_lane_pr106_stacked": {
+    "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
+    "archive_size_bytes": 694074,
+    "elapsed_seconds": 0.039,
+    "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
+    "lane_name": "remote_lane_pr106_stacked",
+    "stages_passed": [
+      "extract",
+      "whitelist",
+      "renderer_magic",
+      "masks_present",
+      "config_env",
+      "inflate_dispatch_path",
+      "inflate_renderer_imports",
+      "upstream_evaluate_arity",
+      "gt_video_present",
+      "launcher_includes_env"
+    ],
+    "submission_dir": "submissions/robust_current",
+    "timestamp_utc": "2026-05-05T12:42:05Z",
+    "tool_version": 1
+  },
+  "remote_lane_pr106_yshift_sidechannel": {
+    "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
+    "archive_size_bytes": 694074,
+    "elapsed_seconds": 0.039,
+    "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
+    "lane_name": "remote_lane_pr106_yshift_sidechannel",
+    "stages_passed": [
+      "extract",
+      "whitelist",
+      "renderer_magic",
+      "masks_present",
+      "config_env",
+      "inflate_dispatch_path",
+      "inflate_renderer_imports",
+      "upstream_evaluate_arity",
+      "gt_video_present",
+      "launcher_includes_env"
+    ],
+    "submission_dir": "submissions/robust_current",
+    "timestamp_utc": "2026-05-05T12:42:05Z",
     "tool_version": 1
   },
   "remote_lane_ps_per_class_segnet": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.022,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_ps_per_class_segnet",
     "stages_passed": [
@@ -1602,13 +1778,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:05Z",
     "tool_version": 1
   },
   "remote_lane_ps_v2_learnable_class_weights": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.041,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_ps_v2_learnable_class_weights",
     "stages_passed": [
@@ -1624,13 +1800,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:05Z",
     "tool_version": 1
   },
   "remote_lane_psd_standard": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.041,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_psd_standard",
     "stages_passed": [
@@ -1646,7 +1822,7 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:05Z",
     "tool_version": 1
   },
   "remote_lane_q_faithful_jointgen": {
@@ -1674,7 +1850,7 @@
   "remote_lane_qat_sweep": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_qat_sweep",
     "stages_passed": [
@@ -1690,13 +1866,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:05Z",
     "tool_version": 1
   },
   "remote_lane_rm_riemannian_pose_tto": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.039,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_rm_riemannian_pose_tto",
     "stages_passed": [
@@ -1712,13 +1888,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:05Z",
     "tool_version": 1
   },
   "remote_lane_s_self_compress": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.041,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_s_self_compress",
     "stages_passed": [
@@ -1734,13 +1910,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:05Z",
     "tool_version": 1
   },
   "remote_lane_s_v2_auto_warmup": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.039,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_s_v2_auto_warmup",
     "stages_passed": [
@@ -1756,13 +1932,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:05Z",
     "tool_version": 1
   },
   "remote_lane_sa_segmap_clone": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.039,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_sa_segmap_clone",
     "stages_passed": [
@@ -1778,13 +1954,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:05Z",
     "tool_version": 1
   },
   "remote_lane_saug_v2": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.041,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_saug_v2",
     "stages_passed": [
@@ -1800,13 +1976,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:05Z",
     "tool_version": 1
   },
   "remote_lane_sc_plus_plus_kl_distill": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.039,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_sc_plus_plus_kl_distill",
     "stages_passed": [
@@ -1822,13 +1998,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:05Z",
     "tool_version": 1
   },
   "remote_lane_sh_shannon_arithmetic": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.039,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_sh_shannon_arithmetic",
     "stages_passed": [
@@ -1844,13 +2020,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:05Z",
     "tool_version": 1
   },
   "remote_lane_si_saliency_inversion": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.039,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_si_saliency_inversion",
     "stages_passed": [
@@ -1866,13 +2042,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:05Z",
     "tool_version": 1
   },
   "remote_lane_si_v2_learnable_threshold": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.039,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_si_v2_learnable_threshold",
     "stages_passed": [
@@ -1888,13 +2064,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:05Z",
     "tool_version": 1
   },
   "remote_lane_so_hessian_block_fp": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.023,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_so_hessian_block_fp",
     "stages_passed": [
@@ -1910,13 +2086,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:05Z",
     "tool_version": 1
   },
   "remote_lane_sq_semantic_quantization": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_sq_semantic_quantization",
     "stages_passed": [
@@ -1932,13 +2108,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:05Z",
     "tool_version": 1
   },
   "remote_lane_stc_boundary_coding": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_stc_boundary_coding",
     "stages_passed": [
@@ -1954,13 +2130,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:05Z",
     "tool_version": 1
   },
   "remote_lane_stc_clean_source": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.039,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_stc_clean_source",
     "stages_passed": [
@@ -1976,13 +2152,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:05Z",
     "tool_version": 1
   },
   "remote_lane_sz_phase2_full": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.042,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_sz_phase2_full",
     "stages_passed": [
@@ -1998,13 +2174,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:05Z",
     "tool_version": 1
   },
   "remote_lane_t2drop_bootstrap": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_t2drop_bootstrap",
     "stages_passed": [
@@ -2020,13 +2196,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:06Z",
     "tool_version": 1
   },
   "remote_lane_t2ratio_bootstrap": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_t2ratio_bootstrap",
     "stages_passed": [
@@ -2042,13 +2218,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:06Z",
     "tool_version": 1
   },
   "remote_lane_tr_temporal_residual": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.042,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_tr_temporal_residual",
     "stages_passed": [
@@ -2064,13 +2240,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:06Z",
     "tool_version": 1
   },
   "remote_lane_uniward_texture": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.039,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_uniward_texture",
     "stages_passed": [
@@ -2086,13 +2262,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:06Z",
     "tool_version": 1
   },
   "remote_lane_v_quantizr_replica_88k_halfframe": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.039,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_v_quantizr_replica_88k_halfframe",
     "stages_passed": [
@@ -2108,13 +2284,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:06Z",
     "tool_version": 1
   },
   "remote_lane_v_v2_annealed_halfframe": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.039,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_v_v2_annealed_halfframe",
     "stages_passed": [
@@ -2130,13 +2306,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:06Z",
     "tool_version": 1
   },
   "remote_lane_w_hard_pair_self_compress": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_w_hard_pair_self_compress",
     "stages_passed": [
@@ -2152,13 +2328,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:50Z",
+    "timestamp_utc": "2026-05-05T12:42:06Z",
     "tool_version": 1
   },
   "remote_lane_w_v2_learnable_hardness": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_w_v2_learnable_hardness",
     "stages_passed": [
@@ -2174,13 +2350,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:51Z",
+    "timestamp_utc": "2026-05-05T12:42:06Z",
     "tool_version": 1
   },
   "remote_lane_wc_curator_outlier": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.04,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_wc_curator_outlier",
     "stages_passed": [
@@ -2196,13 +2372,13 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:51Z",
+    "timestamp_utc": "2026-05-05T12:42:06Z",
     "tool_version": 1
   },
   "remote_lane_wc_s_curator_weighted": {
     "archive_sha256": "9b20bdfca246d8e32cc19da966c84cdae7e34f6b247161d107ec43cb9ef6870b",
     "archive_size_bytes": 694074,
-    "elapsed_seconds": 0.021,
+    "elapsed_seconds": 0.039,
     "fixture_archive": "experiments/results/lane_g_v3_landed/archive_lane_g_v3.zip",
     "lane_name": "remote_lane_wc_s_curator_weighted",
     "stages_passed": [
@@ -2218,7 +2394,7 @@
       "launcher_includes_env"
     ],
     "submission_dir": "submissions/robust_current",
-    "timestamp_utc": "2026-05-02T09:51:51Z",
+    "timestamp_utc": "2026-05-05T12:42:06Z",
     "tool_version": 1
   }
 }

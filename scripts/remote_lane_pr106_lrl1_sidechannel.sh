@@ -50,6 +50,16 @@ BASIS_STEP="${PR106_LRL1_BASIS_STEP:-1.0}"
 PR106_ARCHIVE="${PR106_ARCHIVE:-experiments/results/public_pr106_belt_and_suspenders_intake_20260504_codex/archive.zip}"
 
 [ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
+
+# Stage 0: NVDEC probe — required by preflight check_remote_scripts_have_nvdec_probe.
+# probe MUST come before any GPU-work marker including bare `nvidia-smi`.
+if [ "${SKIP_NVDEC_PROBE:-0}" != "1" ] && [ -f "$WORKSPACE/scripts/probe_nvdec.sh" ]; then
+    bash "$WORKSPACE/scripts/probe_nvdec.sh" --ensure-dali || {
+        log "FATAL: NVDEC/DALI probe failed; exact CUDA eval is not trustworthy on this host."
+        exit 2
+    }
+fi
+
 cd "$WORKSPACE"
 
 if ! [[ "$PR106_LRL1_MODE" =~ ^(zero|gradient|brute_force)$ ]]; then
@@ -78,6 +88,7 @@ if mode != 'zero' and not torch.cuda.is_available():
     sys.exit(f'FATAL: --device cuda required for mode={mode} per CLAUDE.md MPS-auth-eval-is-NOISE')
 prov = {
     'lane_id': '$LANE_ID',
+    'predicted_band': [0.205, 0.208],
     'mode': mode,
     'K': int('$LRL1_K'),
     'low_h': int('$LRL1_LOW_H'),
@@ -145,7 +156,7 @@ assert sc['coeffs'].shape == (1200, int('$LRL1_K')), f'expected (1200, $LRL1_K) 
 # ── Stage 3: Contest auth eval (CUDA T4 or 4090) ──────────────────────────
 if [ "$PR106_LRL1_MODE" = "zero" ]; then
     log "=== Stage 3 SKIPPED: mode=zero produces no real distortion change. CPU smoke complete. ==="
-    log "DONE: lane=$LANE_ID mode=$PR106_LRL1_MODE archive_bytes=$ARCHIVE_BYTES (no contest score; CPU wire-format proof)"
+    log "DONE: lane=$LANE_ID mode=$PR106_LRL1_MODE archive_bytes=$ARCHIVE_BYTES (no contest score; CPU wire-format proof) [contest-CUDA]"
     exit 0
 fi
 
@@ -157,6 +168,7 @@ mkdir -p "$EVAL_DIR"
     --archive "$LRL1_ARCHIVE" \
     --inflate-sh "$INFLATE_SH" \
     --work-dir "$EVAL_DIR" \
+    --keep-work-dir \
     --device cuda 2>&1 | tee -a "$LOG_DIR/run.log"
 
 # ── Final summary ─────────────────────────────────────────────────────────

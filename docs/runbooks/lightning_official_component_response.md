@@ -72,8 +72,8 @@ The following files must already exist before any non-dry-run dispatch:
 
 For reproducible staging, keep plan paths repo-relative or inside the repo.
 For remote Batch Jobs, point archives and per-point eval JSON inside the plan
-must be relative to the plan file. Host-local absolute paths such as
-`/Users/...` are non-portable and are blocked at submit. If a legacy plan has
+must be relative to the plan file. Host-local absolute paths
+(e.g. `<operator-home>/...` or `<wsl-home>/...`) are non-portable and are blocked at submit. If a legacy plan has
 a stale top-level `baseline_contest_auth_eval_json`, pass
 `--baseline-contest-auth-eval-json "$LIGHTNING_REMOTE_PACT/$BASELINE_JSON"`;
 the explicit CLI path is the authority.

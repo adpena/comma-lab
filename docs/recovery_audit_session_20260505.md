@@ -10,7 +10,7 @@ Searched these signal sources for lost/orphaned work:
 |---|---|
 | Active git worktrees | 1 (main checkout only — no orphans) |
 | `.git/worktrees/` orphan dirs | none |
-| External `pact*` worktrees in /Users/adpena/Projects | none |
+| External `pact*` worktrees in `<operator-projects-dir>` | none |
 | External `*pact*` dirs in /var/folders | none |
 | git stash | **4 stashes** preserved as safety branches |
 | git fsck unreachable commits | **10 unreachable commits** investigated |

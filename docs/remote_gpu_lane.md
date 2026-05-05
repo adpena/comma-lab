@@ -27,7 +27,7 @@ Implication:
 
 `bat00`:
 - host auth works via `adpena@bat00.local`
-- WSL path works at `/home/adpena/pact-side`
+- WSL path works at `<wsl-home>/pact-side`
 - `uv` is installed in WSL
 - CUDA works in WSL
 - the trainer now gets through:
@@ -125,7 +125,7 @@ Why:
 ### 4. Keep the environment pinned
 
 Inside WSL:
-- use one repo root, for example `/home/adpena/pact-side`
+- use one repo root, for example `<remote-home>/pact-side`
 - use one cache root, for example `/tmp/uv-cache` or a larger persistent path if `/tmp` is too small
 
 Recommended environment:

@@ -27,6 +27,16 @@ set -euo pipefail
 WORKSPACE="${WORKSPACE:-/workspace/pact}"
 PYBIN="${PYBIN:-/opt/conda/bin/python}"
 [ -f "$WORKSPACE/env.sh" ] && source "$WORKSPACE/env.sh"
+
+# Stage 0: NVDEC probe — required by preflight check_remote_scripts_have_nvdec_probe.
+# probe MUST come before any GPU-work marker including bare `nvidia-smi`.
+if [ "${SKIP_NVDEC_PROBE:-0}" != "1" ] && [ -f "$WORKSPACE/scripts/probe_nvdec.sh" ]; then
+    bash "$WORKSPACE/scripts/probe_nvdec.sh" --ensure-dali || {
+        log "FATAL: NVDEC/DALI probe failed; exact CUDA eval is not trustworthy on this host."
+        exit 2
+    }
+fi
+
 cd "$WORKSPACE"
 
 LANE_ID="lane_omega_w_v3_pr106"
@@ -49,6 +59,7 @@ if not torch.cuda.is_available():
     sys.exit('FATAL: --device cuda required per CLAUDE.md MPS-auth-eval-is-NOISE')
 prov = {
     'lane_id': '$LANE_ID',
+    'predicted_band': [0.194, 0.204],
     'started_at_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
     'git_hash': '$GIT_HASH',
     'gpu_name': '$GPU_NAME',
