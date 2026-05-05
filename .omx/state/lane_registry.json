@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-05-01T23:23:57Z",
+  "updated_at": "2026-05-05T00:41:14Z",
   "description": "Canonical lane maturity registry. See feedback_production_hardened_standard_definition_20260430.md for the 7-gate Level 3 standard. Maintained via tools/lane_maturity.py \u2014 bare edits OK for seeding but mark/unmark/audit-log are the supported interface going forward.",
   "gate_definitions": {
     "impl_complete": "Production code lands; no NotImplementedError; all CLI flags wired; all error paths covered.",
@@ -1021,11 +1021,11 @@
       "id": "lane_omega_w_v3",
       "name": "Lane \u03a9-W V3 (PoseNet-sensitivity weighting \u2014 pending Grand Council)",
       "phase": 1.0,
-      "level": 0,
+      "level": 1,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "experiments/repack_pr106_with_water_filling.py + submissions/apogee_v2/"
         },
         "real_archive_empirical": {
           "status": false,
@@ -1044,12 +1044,12 @@
           "evidence": ""
         },
         "memory_entry": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "docs/pr106_stacking_decision_table_20260504.md"
         },
         "deploy_runbook": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "scripts/remote_lane_omega_w_v3_pr106.sh"
         }
       },
       "notes": "Design pending Grand Council #294 verdict. Builds on \u03a9-W-V2 by weighting bit-budget by per-symbol PoseNet sensitivity (Hessian-aware). Council to decide weighting form."
@@ -1497,6 +1497,154 @@
         }
       },
       "notes": "Port of pr67_line_search.py onto Q-FAITHFUL+QZS3. Predicted +0.001-0.005 score gain stacked on Wave-1 anchor. Pure CPU/MPS dev; CUDA dispatch deferred to harvest."
+    },
+    {
+      "id": "lane_apogee_int4",
+      "name": "Lane #04 int4 (PR106 HIGH risk)",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "experiments/repack_pr106_with_intN_block_fp.py + submissions/apogee_intN/"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "docs/pr106_stacking_decision_table_20260504.md"
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/remote_lane_apogee_intN.sh"
+        }
+      },
+      "notes": "uniform 4-bit signed block-FP, predicted [0.155, 0.180]"
+    },
+    {
+      "id": "lane_apogee_int5",
+      "name": "Lane #04 int5 (PR106 sweet spot)",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "experiments/repack_pr106_with_intN_block_fp.py + submissions/apogee_intN/"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "docs/pr106_stacking_decision_table_20260504.md"
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/remote_lane_apogee_intN.sh"
+        }
+      },
+      "notes": "uniform 5-bit signed block-FP, predicted [0.180, 0.196]"
+    },
+    {
+      "id": "lane_apogee_int6",
+      "name": "Lane #04 int6 (PR106 safe)",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "experiments/repack_pr106_with_intN_block_fp.py + submissions/apogee_intN/"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "docs/pr106_stacking_decision_table_20260504.md"
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/remote_lane_apogee_intN.sh"
+        }
+      },
+      "notes": "uniform 6-bit signed block-FP, predicted [0.190, 0.204]"
+    },
+    {
+      "id": "lane_sjkl_c067",
+      "name": "Lane SJ-KL C067",
+      "phase": 1.0,
+      "level": 1,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "src/tac/sjkl_basis.py + experiments/build_sjkl_*.py + experiments/prepare_sjkl_pair_tensors.py + submissions/robust_current/unpack_renderer_payload.py"
+        },
+        "real_archive_empirical": {
+          "status": false,
+          "evidence": ""
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "docs/recovery_report_20260504.md"
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/remote_lane_sjkl_c067.sh"
+        }
+      },
+      "notes": "Score-Jacobian Karhunen-Loeve residual on C067 base; sibling layout"
     }
   ]
 }
