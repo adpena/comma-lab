@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-05-05T00:41:14Z",
+  "updated_at": "2026-05-05T01:00:31Z",
   "description": "Canonical lane maturity registry. See feedback_production_hardened_standard_definition_20260430.md for the 7-gate Level 3 standard. Maintained via tools/lane_maturity.py \u2014 bare edits OK for seeding but mark/unmark/audit-log are the supported interface going forward.",
   "gate_definitions": {
     "impl_complete": "Production code lands; no NotImplementedError; all CLI flags wired; all error paths covered.",
@@ -1284,7 +1284,7 @@
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": "experiments/build_owv3_0120_stack.py + experiments/results/lane_g_v3_owv3_0120_stacked_20260501/build_provenance.json (deterministic SHA 1e9195cb6e0e08fc...)"
+          "evidence": "experiments/results/lane_owv3_0120_orthogonal_stack_LANDED_0_997_20260501/owv3_0120_stack_archive.zip (LANDED 0.9974 [contest-CUDA])"
         },
         "real_archive_empirical": {
           "status": true,
@@ -1469,7 +1469,7 @@
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": "experiments/line_search_pose_refinement.py + src/tac/tests/test_line_search_pose.py (12 tests pass)"
+          "evidence": "experiments/results/vast_harvest/line_search_qzs3_qp1_fixedslice_20260502T0049Z/line_search.log (Vast.ai line-search PR67-style pose-refinement; multiple harvest logs at experiments/results/vast_harvest/line_search_*/)"
         },
         "real_archive_empirical": {
           "status": false,
@@ -1502,15 +1502,15 @@
       "id": "lane_apogee_int4",
       "name": "Lane #04 int4 (PR106 HIGH risk)",
       "phase": 1.0,
-      "level": 1,
+      "level": 2,
       "gates": {
         "impl_complete": {
           "status": true,
           "evidence": "experiments/repack_pr106_with_intN_block_fp.py + submissions/apogee_intN/"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "experiments/results/apogee_int4_repack_20260504_claude/repack_metadata.json"
         },
         "contest_cuda": {
           "status": false,
@@ -1539,15 +1539,15 @@
       "id": "lane_apogee_int5",
       "name": "Lane #04 int5 (PR106 sweet spot)",
       "phase": 1.0,
-      "level": 1,
+      "level": 2,
       "gates": {
         "impl_complete": {
           "status": true,
           "evidence": "experiments/repack_pr106_with_intN_block_fp.py + submissions/apogee_intN/"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "experiments/results/apogee_int5_repack_20260504_claude/repack_metadata.json"
         },
         "contest_cuda": {
           "status": false,
@@ -1576,15 +1576,15 @@
       "id": "lane_apogee_int6",
       "name": "Lane #04 int6 (PR106 safe)",
       "phase": 1.0,
-      "level": 1,
+      "level": 2,
       "gates": {
         "impl_complete": {
           "status": true,
           "evidence": "experiments/repack_pr106_with_intN_block_fp.py + submissions/apogee_intN/"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "experiments/results/apogee_int6_repack_20260504_claude/repack_metadata.json"
         },
         "contest_cuda": {
           "status": false,
@@ -1645,6 +1645,80 @@
         }
       },
       "notes": "Score-Jacobian Karhunen-Loeve residual on C067 base; sibling layout"
+    },
+    {
+      "id": "lane_apogee_int8",
+      "name": "Apogee int8 block-FP on PR106 (Pareto-frontier ALMOST LOSSLESS)",
+      "phase": 2.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "submissions/apogee_intN/inflate.py + experiments/repack_pr106_with_intN_block_fp.py + scripts/remote_lane_apogee_intN.sh (single producer/adapter/wrapper handles bits 4..8)"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "experiments/results/apogee_int8_repack_20260504_claude/repack_metadata.json"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "docs/pr106_stacking_decision_table_20260504.md"
+        },
+        "deploy_runbook": {
+          "status": true,
+          "evidence": "scripts/remote_lane_apogee_intN.sh"
+        }
+      },
+      "notes": "PR106 +1.5KB / +0.001 rate. ALMOST-LOSSLESS distortion. Pareto-frontier (int7 dominated by int8 due to bit-aligned packing penalty). Predicted band [0.196, 0.207] vs PR106 baseline 0.20946. Producer + adapter + wrapper landed at 62e3a51c/82ca9456/5c31755e. APOGEE_INTN_BITS=8 env var picks bit-width."
+    },
+    {
+      "id": "lane_apogee_int7",
+      "name": "Apogee int7 block-FP on PR106 (Pareto-DOMINATED by int8)",
+      "phase": 2.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "submissions/apogee_intN/inflate.py (single producer handles all bits 4..8 \u2014 int7 is intentionally Pareto-dominated)"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "experiments/results/apogee_int7_repack_20260504_claude/repack_metadata.json (205,158 bytes, FALSIFIED \u2014 Pareto-dominated by int8 187,731 bytes)"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "docs/pr106_stacking_decision_table_20260504.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": "FALSIFIED 2026-05-04 by tools/apogee_intN_pareto.py \u2014 int7 archive is 205,158 bytes (+18,919 vs int8 187,731 bytes) for the same VERY-LOW distortion class. The non-byte-aligned int7 packing requires shift/mask boilerplate per block whereas int8 fits cleanly. Reactivation: only if a future packer eliminates the bit-aligned overhead (e.g., 2x int7 -> 14-bit aligned; or context model on the bit-stream)."
     }
   ]
 }
