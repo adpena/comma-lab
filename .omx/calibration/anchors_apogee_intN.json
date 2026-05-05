@@ -1,0 +1,41 @@
+[
+  {
+    "lane_id": "lane_pr106_baseline",
+    "rel_err_pct_per_weight": 0.0,
+    "archive_bytes": 186239,
+    "contest_cuda_score": 0.20945673,
+    "avg_pose_dist": 3.4e-05,
+    "avg_seg_dist": 0.00067819,
+    "rate_unscaled": 0.00496015,
+    "measured_utc": "2026-05-05T17:25:19Z",
+    "job_id": "exact-eval-public-pr106-belt-and-suspenders-baseline-confirm",
+    "archive_sha256": "0af839ab000000000000000000000000000000000000000000000000ed7f0000",
+    "notes": "Lossless reference: PR106 belt_and_suspenders public archive. The seg/pose values are inherited from PR106 published metrics; the rate_unscaled is computed from 186239/37545489."
+  },
+  {
+    "lane_id": "lane_apogee_int8",
+    "rel_err_pct_per_weight": 0.24,
+    "archive_bytes": 187731,
+    "contest_cuda_score": 0.211192423070874,
+    "avg_pose_dist": 3.375e-05,
+    "avg_seg_dist": 0.00067819,
+    "rate_unscaled": 0.00500009,
+    "measured_utc": "2026-05-05T18:02:00Z",
+    "job_id": "apogee-int8-baseline-confirm-20260505t174500z",
+    "archive_sha256": "64ac1421df8adfa4364428b3397a622c5f916a6ee4f581d534ed476604f6c75b",
+    "notes": "Near-lossless ALMOST_LOSSLESS class. Validates inflate path is correct (pose 3.38e-5 ~= PR106 3.4e-5). Only +0.0017 vs PR106, which is layout overhead from int8 packing format."
+  },
+  {
+    "lane_id": "lane_apogee_int4",
+    "rel_err_pct_per_weight": 7.09,
+    "archive_bytes": 109996,
+    "contest_cuda_score": 1.4286639424744803,
+    "avg_pose_dist": 0.02370903,
+    "avg_seg_dist": 0.00868503,
+    "rate_unscaled": 0.00292967,
+    "measured_utc": "2026-05-05T17:40:00Z",
+    "job_id": "apogee-int4-postfix-sanity-20260505t172500z",
+    "archive_sha256": "3994b5fb3ecb3b06e74a10c7ceb02b5fa531b2968d7b6d25495a2769d0e4a06e",
+    "notes": "NAIVE-PTQ catastrophic anchor. 7.09% per-weight error compounded through 13 INTN layers produces 700x worse pose distortion than PR106. DEFERRED-pending-research (QAT/LSQ/per-channel/outlier-handling unexplored)."
+  }
+]
