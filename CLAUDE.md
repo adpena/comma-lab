@@ -907,15 +907,46 @@ We HAVE FakeQuantSTE, Uint8STE, FakeQuantFP4 in `src/tac/quantization.py`. We HA
 - **Budget**: $25 total ($24 hard cap). Track all spend. Destroy instances immediately when done.
 - **Modal credits exhausted** as of 2026-04-15. Use Vast.ai for all new GPU work.
 
-## SegNet paradigm shift — non-negotiable knowledge
+## SegNet vs PoseNet importance — operating-point dependent (UPDATED 2026-05-04)
 
-At our operating point, **SegNet is 77x more important than PoseNet** in the scoring formula:
-- SegNet: 100 × seg_dist → dominates the score
-- PoseNet: √(10 × pose_dist) → essentially solved at 100 TTO steps
-- **ALL optimization effort must prioritize SegNet reduction.**
-- PoseNet improvement has negligible score impact. SegNet improvement has massive score impact.
-- TTO step curve (empirical, Vast.ai 4090): phase transition at 80-100 steps for PoseNet. SegNet only moves at 300-500 steps.
-- The renderer has hit its SegNet architectural ceiling. Breaking through requires architectural changes, not more TTO.
+The **77× SegNet > PoseNet** heuristic was true at the OLD 1.x score operating
+point (pose_avg ~0.18). At PR106's frontier operating point (pose_avg ~3.4e-5),
+the **marginal value FLIPS**: pose marginal sensitivity is **2.71× SegNet's**.
+
+Operating-point-aware rule:
+
+| Operating point | pose_avg | d(seg)/d(seg_avg) | d(pose)/d(pose_avg) | Implication |
+|---|---|---:|---:|---|
+| Old 1.x scores | ~0.18 | 100 | ~12 | SegNet ~77× more important (original CLAUDE.md heuristic) |
+| **PR106 frontier** | **3.4e-5** | **100** | **271** | **POSE 2.71× more important (marginal)** |
+
+**Why**: the pose contribution is `sqrt(10 * pose_avg)`. The derivative is
+`5 / sqrt(10 * pose_avg)`. As `pose_avg → 0`, the derivative → ∞. SegNet's
+derivative is constant at 100. Below pose_avg ~ 2.5e-3 the pose marginal
+exceeds SegNet's; at PR106's level the gap is 2.71×.
+
+**Total contribution remains seg-dominated** at PR106 (seg 0.067 vs pose 0.018,
+3.67× larger by total). But **MARGINAL improvement** (which is what dispatch
+budgets buy) favors pose at this operating point.
+
+Operational rule (PR106 frontier and below):
+- **Prioritize pose-targeted lanes first** (latent sidecars, pixel translation
+  sidechannels, multi-stage training). Pose has higher marginal-value-per-byte.
+- **SegNet lanes are tertiary** until pose is exhausted. Trading pose AWAY for
+  seg gains (PR97's anti-pattern) is dominated.
+- **At the OLD 1.x operating point** the original 77× heuristic still applied
+  — SegNet improvements were 7× more cost-effective per unit. The flip
+  happened as pose_avg crossed ~2.5e-3.
+
+The renderer has hit its SegNet architectural ceiling at PR106's level
+(ε~6.7e-4). Pose has more room (PR106 pose_avg=3.4e-5 isn't at hardware
+floor yet). Both axes need different attack vectors at different operating
+points.
+
+**Empirical receipts** (full analysis): `docs/pr97_anti_pattern_pose_vs_seg_marginal_20260504.md`
++ `docs/pr_family_evolution_timeline_20260504.md`. The PR97 entry literally
+made the seg-for-pose trade and lost 0.042 score points despite winning
+SegNet by 65%.
 
 ## Ralph-style execution model
 
