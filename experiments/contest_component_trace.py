@@ -181,8 +181,10 @@ def _cross_check_against_auth_eval(
     auth = json.loads(auth_eval_json_path.read_text())
     avg_p = sum(p.p_i for p in pairs) / max(len(pairs), 1)
     avg_s = sum(p.s_i for p in pairs) / max(len(pairs), 1)
-    expected_p = auth.get("avg_posenet_dist") or auth.get("posenet_distortion")
-    expected_s = auth.get("avg_segnet_dist") or auth.get("segnet_distortion")
+    # is-None guard, not truthy fallback: an exact-0.0 score is valid and must
+    # not silently fall through to the legacy key (audit finding 2026-05-05).
+    expected_p = auth["avg_posenet_dist"] if "avg_posenet_dist" in auth else auth.get("posenet_distortion")
+    expected_s = auth["avg_segnet_dist"] if "avg_segnet_dist" in auth else auth.get("segnet_distortion")
     tolerances = {"posenet": 1e-5, "segnet": 1e-5}
     matches = {}
     if expected_p is not None:

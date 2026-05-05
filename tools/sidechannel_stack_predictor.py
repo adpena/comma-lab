@@ -130,11 +130,15 @@ def predict(bits: int, sidechannels: list[str]) -> dict:
     total_rate_delta = base.rate_delta + sum(SIDECHANNELS[n].rate_only_delta for n in sidechannels)
     total_distortion_delta = sum(SIDECHANNELS[n].predicted_distortion_delta for n in sidechannels)
 
-    # midpoint of base band as point estimate, then layer in sidechannel deltas
+    # midpoint of base band as point estimate, then layer in sidechannel deltas.
+    # Sidechannel rate overhead must be folded in (was missing pre-2026-05-05 audit).
+    sc_rate_overhead = sum(SIDECHANNELS[n].rate_only_delta for n in sidechannels)
     base_midpoint = 0.5 * (base.predicted_band_low + base.predicted_band_high)
-    point_estimate = base_midpoint + total_distortion_delta
-    band_low = base.predicted_band_low + total_distortion_delta + sum(SIDECHANNELS[n].band_low_offset for n in sidechannels)
-    band_high = base.predicted_band_high + total_distortion_delta + sum(SIDECHANNELS[n].band_high_offset for n in sidechannels)
+    point_estimate = base_midpoint + total_distortion_delta + sc_rate_overhead
+    band_low = (base.predicted_band_low + total_distortion_delta + sc_rate_overhead
+                + sum(SIDECHANNELS[n].band_low_offset for n in sidechannels))
+    band_high = (base.predicted_band_high + total_distortion_delta + sc_rate_overhead
+                 + sum(SIDECHANNELS[n].band_high_offset for n in sidechannels))
 
     return {
         "config": {

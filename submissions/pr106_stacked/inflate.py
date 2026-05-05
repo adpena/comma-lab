@@ -127,6 +127,7 @@ def parse_stacked_archive(
 
     sections: dict[int, dict] = {}
     pos = pr106_end
+    sentinel_seen = False
     while pos < len(archive_bytes):
         section_id = archive_bytes[pos]
         pos += 1
@@ -137,6 +138,7 @@ def parse_stacked_archive(
                     f"trailing bytes after end-of-sections sentinel: "
                     f"pos={pos}, total={len(archive_bytes)}"
                 )
+            sentinel_seen = True
             break
         if pos + 2 > len(archive_bytes):
             raise ValueError(
@@ -167,7 +169,7 @@ def parse_stacked_archive(
                 f"unknown section id 0x{section_id:02X} (expected one of "
                 f"{{0x01, 0x02, 0x03}} or 0x00 sentinel)"
             )
-    else:
+    if not sentinel_seen:
         # Loop exited via pos >= len(archive_bytes) WITHOUT hitting SECTION_END.
         raise ValueError(
             "missing end-of-sections sentinel (0x00) at archive tail"
