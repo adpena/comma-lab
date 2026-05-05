@@ -25,6 +25,7 @@ workspace/upstream_snapshot.json
 # this rule simply prevents it from leaking into the shared repo. (Codex F1
 # 2026-04-28: tracker had grown to 75 records / ~$305 active spend before
 # being caught.)
+.omx/state/
 .omx/state/vastai_active_instances.json
 .omx/state/instance_setup_first_seen.json
 
