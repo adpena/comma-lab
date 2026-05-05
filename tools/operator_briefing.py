@@ -107,6 +107,41 @@ PHASE_4_GATED_LANES = [
 ]
 
 
+# Phase-5 composition lanes: meta-composition lanes that compose multiple
+# pre-built sister-lane archives into a single dispatch. Gated on ALL the
+# sister single-sidechannel lanes landing empirically. Per the score-aware
+# sidechannel paradigm decision pipeline, composition lanes are the
+# single-dispatch payoff after the sister gates pass.
+PHASE_5_COMPOSITION_LANES = [
+    {
+        "lane_id": "lane_pr106_stacked",
+        "name": "PR106 + meta-composition of all 3 score-aware sidechannels (latent + yshift + lrl1)",
+        "predicted_band": (0.16, 0.20),
+        "estimated_cost_usd": 0.40,
+        "council_priority": 4,
+        "max_dph": 0.30,
+        "gate_condition": (
+            "DISPATCH ONLY IF lane_pr106_lrl1_sidechannel + sisters all land < 0.20800 "
+            "[contest-CUDA] empirically. Per tools/sidechannel_stack_predictor.py "
+            "--bits 5 --all, the int4+full-stack predicted score is 0.163 "
+            "(-0.046 vs PR106 0.20945). Composition lane is the single-dispatch "
+            "payoff of all 3 sister lanes — verify via "
+            "`tools/score_dashboard.py --filter pr106_lrl1_sidechannel`."
+        ),
+        "one_liner": (
+            ".venv/bin/python scripts/launch_lane_on_vastai.py full \\\n"
+            "  --lane-script scripts/remote_lane_pr106_stacked.sh \\\n"
+            "  --label lane_pr106_stacked \\\n"
+            "  --predicted-band 0.16 0.20 \\\n"
+            "  --estimated-cost 0.40 --council-priority 4 --max-dph 0.30 \\\n"
+            "  --env STACKED_LATENT_ARCHIVE=<path/to/sister_latent_archive.zip> \\\n"
+            "  --env STACKED_YSHIFT_ARCHIVE=<path/to/sister_yshift_archive.zip> \\\n"
+            "  --env STACKED_LRL1_ARCHIVE=<path/to/sister_lrl1_archive.zip>"
+        ),
+    },
+]
+
+
 def _format_supplementary_lanes() -> str:
     lines = []
     for lane in PHASE_1_SUPPLEMENTARY_LANES:
@@ -124,6 +159,21 @@ def _format_supplementary_lanes() -> str:
 def _format_gated_lanes() -> str:
     lines = []
     for lane in PHASE_4_GATED_LANES:
+        lo, hi = lane["predicted_band"]
+        lines.append(
+            f"  • {lane['lane_id']} — {lane['name']}\n"
+            f"    predicted [{lo:.4f}, {hi:.4f}]   est ${lane['estimated_cost_usd']:.2f}   "
+            f"council priority {lane['council_priority']}\n"
+            f"    GATE: {lane['gate_condition']}\n"
+            f"    Operator one-liner (post-gate):\n"
+            f"      {lane['one_liner']}"
+        )
+    return "\n\n".join(lines) if lines else "  (none)"
+
+
+def _format_composition_lanes() -> str:
+    lines = []
+    for lane in PHASE_5_COMPOSITION_LANES:
         lo, hi = lane["predicted_band"]
         lines.append(
             f"  • {lane['lane_id']} — {lane['name']}\n"
@@ -174,6 +224,8 @@ def main(argv: list[str] | None = None) -> int:
                         help="Skip Phase 3 (apogee_intN predicted-vs-actual).")
     parser.add_argument("--skip-gated", action="store_true",
                         help="Skip Phase 4 (gated next-tick lanes).")
+    parser.add_argument("--skip-composition", action="store_true",
+                        help="Skip Phase 5 (meta-composition lanes).")
     parser.add_argument("--json", action="store_true",
                         help="Machine-readable composite JSON output.")
     args = parser.parse_args(argv)
@@ -196,6 +248,8 @@ def main(argv: list[str] | None = None) -> int:
             out["reconciler"] = _run_json(RECONCILER)
         if not args.skip_gated:
             out["gated_lanes"] = PHASE_4_GATED_LANES
+        if not args.skip_composition:
+            out["composition_lanes"] = PHASE_5_COMPOSITION_LANES
         print(json.dumps(out, indent=2, default=str))
         return 0
 
@@ -224,6 +278,11 @@ def main(argv: list[str] | None = None) -> int:
         parts.append(_section(
             "Phase 4 — Gated next-tick lanes (sequential validation)",
             _format_gated_lanes(),
+        ))
+    if not args.skip_composition:
+        parts.append(_section(
+            "Phase 5 — Meta-composition lanes (single-dispatch payoff of multi-sister stacks)",
+            _format_composition_lanes(),
         ))
     print("\n".join(parts))
     return 0

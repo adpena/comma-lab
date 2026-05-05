@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-05-05T07:26:51Z",
+  "updated_at": "2026-05-05T08:03:59Z",
   "description": "Canonical lane maturity registry. See feedback_production_hardened_standard_definition_20260430.md for the 7-gate Level 3 standard. Maintained via tools/lane_maturity.py \u2014 bare edits OK for seeding but mark/unmark/audit-log are the supported interface going forward.",
   "gate_definitions": {
     "impl_complete": "Production code lands; no NotImplementedError; all CLI flags wired; all error paths covered.",
@@ -1823,6 +1823,43 @@
         "memory_entry": {
           "status": true,
           "evidence": "reference_score_aware_sidechannel_paradigm_20260504.md + docs/codex_metric_lrl1_audit_20260504.md"
+        },
+        "deploy_runbook": {
+          "status": false,
+          "evidence": ""
+        }
+      },
+      "notes": ""
+    },
+    {
+      "id": "lane_pr106_stacked",
+      "name": "PR106 Stacked Sidechannel Composition",
+      "phase": 2.0,
+      "level": 2,
+      "gates": {
+        "impl_complete": {
+          "status": true,
+          "evidence": "experiments/build_pr106_stacked.py + submissions/pr106_stacked/{inflate.py,inflate.sh,__init__.py} + scripts/remote_lane_pr106_stacked.sh + tools/operator_briefing.py Phase 5; CPU smoke OK; 27 tests pass"
+        },
+        "real_archive_empirical": {
+          "status": true,
+          "evidence": "/tmp/pr106_stacked_smoke/stacked_full/pr106_stacked_archive.zip (186348 bytes, +109 over PR106; full 3-stack; CPU compose-time roundtrip [advisory only])"
+        },
+        "contest_cuda": {
+          "status": false,
+          "evidence": ""
+        },
+        "strict_preflight": {
+          "status": false,
+          "evidence": ""
+        },
+        "three_clean_review": {
+          "status": false,
+          "evidence": ""
+        },
+        "memory_entry": {
+          "status": true,
+          "evidence": "tools/sidechannel_stack_predictor.py + sister-lane composition pattern"
         },
         "deploy_runbook": {
           "status": false,
