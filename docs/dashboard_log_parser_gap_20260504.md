@@ -1,5 +1,13 @@
 # Dashboard log-parser gap — PR106 frontier score off-dashboard (2026-05-04)
 
+> **STATUS: RESOLVED** (option #1 implemented at commit dbb0032d; regression
+> tests pinned at commit b3e07b24). Dashboard now shows 357 scores (up from
+> 64), with PR106 frontier at #1-2. The "Decision: DOCUMENT" section below
+> reflects the original tick's decision; the next tick reversed it after
+> seeing the operator briefing actually use the dashboard. Keeping the
+> original analysis for the cost-benefit reasoning trail.
+
+
 ## Discovery via operator briefing
 
 Ran `tools/operator_briefing.py --top 10` for the first state-of-stack
@@ -74,19 +82,31 @@ Option #4 is the immediate $0 / zero-risk move. Options #1-3 are queued
 for explicit decision on the next polish-tick if the operator wants
 the dashboard to be authoritative.
 
-## Decision: DOCUMENT (option #4)
+## Decision: DOCUMENT (option #4) — REVERSED next tick to option #1
 
-Pattern recognition: the dashboard is INFORMATIONAL, not AUTHORITATIVE.
-The reports/latest.md is the operator's canonical source-of-truth for the
-public frontier; the dashboard is for tracking *new* dispatches that produce
-proper JSON. Adding log-parsing complexity to the dashboard would conflate
-its design intent (find new scores) with archival lookup (find the canonical
-PR106 frontier).
+Original tick (this memo, commit 9a0d1652): chose option #4 (document the
+gap, defer fix) on the reasoning that "dashboard is INFORMATIONAL, not
+AUTHORITATIVE" — adding log-parsing would conflate design intent.
 
-Better: extend the operator briefing's preamble to explicitly link
-reports/latest.md as the canonical frontier, complementary to the dashboard's
-"recent JSON dispatches" view. This is still option #4 (documentation), just
-more proactively surfaced.
+Next-tick reversal (commit dbb0032d): implemented option #1 (extend
+score_dashboard.py to parse RESULT_JSON from auth_eval.log) after running
+the operator briefing for real and seeing PR106 frontier missing. The
+30-LOC change unblocked 293 additional scores (5.6× visibility increase).
+The empirical impact dwarfed the implementation cost, justifying the
+reversal.
+
+Lesson on the reversal: "informational not authoritative" was a *theory*;
+running the tool against real data revealed it WAS being implicitly used
+authoritatively (the operator briefing's Phase 2 is treated as the score
+ranking). When the gap between intent and use is visible at runtime, fix
+the use rather than rationalizing the intent.
+
+Regression coverage (commit b3e07b24): 4 tests in
+`src/tac/tests/test_score_dashboard_log_fallback.py` pin behavior:
+  - test_dashboard_picks_up_log_files
+  - test_dashboard_pr106_frontier_surfaces (asserts 0.20945673 + 186,239b)
+  - test_dashboard_canonical_json_takes_precedence
+  - test_dashboard_log_parser_extracts_components
 
 ## Cross-refs
 
