@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-05-05T02:29:54Z",
+  "updated_at": "2026-05-05T06:58:38Z",
   "description": "Canonical lane maturity registry. See feedback_production_hardened_standard_definition_20260430.md for the 7-gate Level 3 standard. Maintained via tools/lane_maturity.py \u2014 bare edits OK for seeding but mark/unmark/audit-log are the supported interface going forward.",
   "gate_definitions": {
     "impl_complete": "Production code lands; no NotImplementedError; all CLI flags wired; all error paths covered.",
@@ -1025,7 +1025,7 @@
       "gates": {
         "impl_complete": {
           "status": true,
-          "evidence": "experiments/repack_pr106_with_water_filling.py + submissions/apogee_v2/"
+          "evidence": "scripts/remote_lane_omega_w_v3_pr106.sh (6389b) + experiments/repack_pr106_with_water_filling.py (11953b) + submissions/apogee_v2/{inflate.py,inflate.sh,src/} all present. 4-test smoke suite (src/tac/tests/test_lane_omega_w_v3_local_smoke.py) passes; stub-mode preview verified PR106 186239B \u2192 apogee_v2 164087B (-22152 / -11.9%); parser-roundtrip 28 tensors / 228958 params byte-faithful at commit c7f237eb."
         },
         "real_archive_empirical": {
           "status": false,
@@ -1724,15 +1724,15 @@
       "id": "lane_pr106_latent_sidecar",
       "name": "PR106 + per-pair latent-correction sidecar (PR100 hnerv_lc_v2 pattern)",
       "phase": 2.0,
-      "level": 1,
+      "level": 2,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "experiments/build_pr106_latent_sidecar.py + submissions/pr106_latent_sidecar/{inflate.py,inflate.sh,src/} + scripts/remote_lane_pr106_latent_sidecar.sh + src/tac/tests/test_pr106_latent_sidecar.py (11/11 PASSED) [advisory only \u2014 CPU-smoke wire-format scaffolding; CUDA scorer-driven (dim, delta) at remote Stage 3]"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "experiments/results/lane_pr106_latent_sidecar_cpu_smoke_20260505/build_metadata.json \u2014 bit-exact PR106 unwrap roundtrip on real PR106 archive (sha256=7f2cc905b7611ae8...; 186131 bytes); sidecar_archive.zip (186262 bytes, +23 vs PR106) [advisory only \u2014 CPU smoke; CUDA empirical pending Stage 3 dispatch]"
         },
         "contest_cuda": {
           "status": false,
@@ -1761,15 +1761,15 @@
       "id": "lane_pr106_yshift_sidechannel",
       "name": "PR106 + per-frame (dy, dx) pixel-translation sidechannel (codex_metric_yshift SC01 mode 7 pattern)",
       "phase": 2.0,
-      "level": 1,
+      "level": 2,
       "gates": {
         "impl_complete": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "experiments/build_pr106_yshift_sidechannel.py + submissions/pr106_yshift_sidechannel/inflate.{py,sh} + scripts/remote_lane_pr106_yshift_sidechannel.sh + src/tac/tests/test_pr106_yshift_sidechannel.py landed; CPU smoke OK (21/21 tests pass; PR106\u2192pr106_yshift archive +44 bytes wire-format roundtrip verified)"
         },
         "real_archive_empirical": {
-          "status": false,
-          "evidence": ""
+          "status": true,
+          "evidence": "experiments/results/lane_pr106_yshift_sidechannel_smoke_20260505T065831Z_advisory/build_metadata.json [advisory only \u2014 CPU encode/decode roundtrip; +44 bytes wire-format proof on real PR106 anchor 186,131 bytes]"
         },
         "contest_cuda": {
           "status": false,
