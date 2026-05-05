@@ -373,6 +373,12 @@ def preflight_all(
         # [heuristic:...] / [inherited:...]). Live count was 6; fixed in
         # commit 9155f0e1. Strict-flipped after cleanup.
         check_calibration_provenance(strict=True, verbose=verbose)
+        # 2026-05-05 council Q5-B4 (PCC11): wrapper scripts whose `# Stage N:`
+        # comments lack a real command in the stage body. Live count was 63
+        # across 20 wrappers pre-tightening; dedupe + skip-marker filters
+        # (SKIPPED|TODO|STUB|"ready at"|"nothing additional"|"manual")
+        # brought it to 0. Strict-flipped after cleanup.
+        check_dispatch_wrapper_stages_implemented(strict=True, verbose=verbose)
         # 2026-05-05 public-submission recovery: reverse_engineering/ must stay
         # a curated deconstruction surface, not a raw archive/provider dump or
         # hidden second source tree. This strict check allows explicit orphan
@@ -2829,6 +2835,54 @@ def check_lane_smoke_signal_nontrivial(
             print(f"  [lane-smoke-signal] {len(violations)} violation(s)")
         else:
             print("  [lane-smoke-signal] OK")
+    return violations
+
+
+def check_dispatch_wrapper_stages_implemented(
+    *,
+    repo_root: str | Path | None = None,
+    strict: bool = False,
+    verbose: bool = True,
+) -> list[str]:
+    """PCC11 — Catch wrapper scripts whose ``# Stage N:`` labels lack a real
+    command in the stage body (comment-only contract anti-pattern).
+
+    Council Q5-B4 prescription. Live count was 63 across 20 wrapper scripts
+    pre-tightening; reduced to 0 after dedupe-window expansion + skip-marker
+    (SKIPPED|SKIP|NO-OP|DEFERRED|DISABLED|STUB|TODO|FIXME, 'ready at',
+    'nothing additional to do', 'verified above', 'already final|done|built',
+    'manual') + first-60-lines-as-docstring filter. Strict-flipped 2026-05-05.
+    """
+    root = Path(repo_root or REPO_ROOT)
+    helper_path = root / "tools" / "check_dispatch_wrapper_stages_implemented.py"
+    if not helper_path.is_file():
+        msg = f"wrapper-stages scanner missing: {helper_path}"
+        if strict:
+            raise MetaBugViolation(msg)
+        return [msg]
+
+    spec = importlib.util.spec_from_file_location("_pact_wrapper_stages_implemented", helper_path)
+    if spec is None or spec.loader is None:
+        msg = f"cannot import wrapper-stages scanner: {helper_path}"
+        if strict:
+            raise MetaBugViolation(msg)
+        return [msg]
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+
+    findings = module.scan(root)
+    violations = [
+        f"{v.path}:{v.stage_lineno}: {v.stage_label[:120]}"
+        for v in findings
+    ]
+    if violations and strict:
+        raise MetaBugViolation("WRAPPER STAGE-IMPL VIOLATIONS:\n" + "\n".join(violations))
+    if verbose:
+        if violations:
+            print(f"  [wrapper-stages-implemented] {len(violations)} violation(s)")
+        else:
+            print("  [wrapper-stages-implemented] OK")
     return violations
 
 

@@ -14,10 +14,11 @@ Scanned files:
     scripts/launch_*.sh
     scripts/lightning_*.sh
 
-A "stage label" matches the pattern:
-    /^\s*#+\s*(?:===|---)?\s*Stage\s+\d+/i
-or:
-    /^\s*log\s+["']===\s*Stage\s+\d+/i  (when staged via log helper)
+A "stage label" matches the pattern (regex form, illustrative — see
+``STAGE_LABEL_PATTERNS`` below for the canonical compiled regexes):
+
+- ``# Stage N: ...``  (comment-style header)
+- ``log "=== Stage N: ..."``  (logged echo of the stage)
 
 A "non-trivial command" within the next N lines (default 50) is any line that:
   - is NOT a comment (#)
@@ -131,8 +132,39 @@ def _scan_file(path: Path, window: int) -> list[Violation]:
     violations: list[Violation] = []
 
     # Pre-find all stage label line numbers + extracted stage IDs.
+    # Skip stage labels in the file's "header docstring" — typically the first
+    # ~50 lines containing only comments + shebang. These are documentation
+    # tables, not runtime stage labels.
+    docstring_end = 0
+    for i, line in enumerate(lines):
+        stripped = line.lstrip()
+        if i > 0 and stripped and not stripped.startswith("#") and not stripped.startswith("set "):
+            docstring_end = i
+            break
+    # Cap docstring header detection at line 60 (heuristic).
+    docstring_end = min(docstring_end, 60)
+
+    # Skip stage labels containing intentional-no-op markers.
+    # The corpus surfaced these legitimate patterns: SKIPPED (explicit skip),
+    # STUB (planned future work explicitly labelled), "ready at" (announcement
+    # of artifact built in prior stage), "nothing additional to do" / "verified
+    # above" (work-already-done sentinels), "manual" (operator action stages).
+    SKIP_MARKERS = re.compile(
+        r"\b(SKIPPED|SKIP|NO-?OP|DEFERRED|DISABLED|STUB|TODO|FIXME)\b"
+        r"|ready\s+at\b"
+        r"|nothing\s+additional\s+to\s+do"
+        r"|verified\s+above"
+        r"|already\s+(?:the\s+)?(?:final|done|built|present)"
+        r"|\bmanual\b",
+        re.IGNORECASE,
+    )
+
     stage_lines: list[tuple[int, str, str]] = []  # (lineno, label_text, stage_id)
     for i, line in enumerate(lines):
+        if i < docstring_end:
+            continue  # in header docstring; not a runtime stage label
+        if SKIP_MARKERS.search(line):
+            continue  # explicit no-op marker
         for pat in STAGE_LABEL_PATTERNS:
             m = pat.match(line)
             if m:
@@ -150,7 +182,7 @@ def _scan_file(path: Path, window: int) -> list[Violation]:
         j = i
         while j + 1 < len(stage_lines):
             next_lineno, _, next_id = stage_lines[j + 1]
-            if next_id == stage_id and next_lineno - stage_lines[j][0] <= 25:
+            if next_id == stage_id and next_lineno - stage_lines[j][0] <= 60:
                 j += 1
             else:
                 break

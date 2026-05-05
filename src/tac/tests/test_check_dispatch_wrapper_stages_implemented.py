@@ -84,12 +84,27 @@ python compute.py
 
 
 def test_pcc11_strict_exits_nonzero(tmp_path: Path) -> None:
-    """--strict mode exits 1 when violations exist."""
+    """--strict mode exits 1 when violations exist.
+
+    Uses padding lines + a body-content stage to bypass the docstring
+    heuristic and the SKIP_MARKERS regex (which skips TODO/STUB/etc).
+    """
     mod = _load_module()
     repo = _make_repo(tmp_path, "remote_buggy_strict.sh", """#!/usr/bin/env bash
+set -euo pipefail
+log() { echo "[$(date)] $*"; }
 
-# Stage 9: stale stage
-echo "not a real command"
+log "=== Stage 1: real implementation ==="
+python compute.py --input data.pt
+log "Stage 1 complete"
+
+# A bunch of padding to push past docstring detection
+A=1
+B=2
+C=3
+
+# Stage 9: contest-CUDA promotion check
+echo "informational only — no real work"
 """)
     rc = mod.main(["--repo-root", str(repo), "--strict"])
     assert rc == 1
