@@ -922,8 +922,10 @@ Operating-point-aware rule:
 
 **Why**: the pose contribution is `sqrt(10 * pose_avg)`. The derivative is
 `5 / sqrt(10 * pose_avg)`. As `pose_avg → 0`, the derivative → ∞. SegNet's
-derivative is constant at 100. Below pose_avg ~ 2.5e-3 the pose marginal
-exceeds SegNet's; at PR106's level the gap is 2.71×.
+derivative is constant at 100. Setting them equal: `100 = 5/sqrt(10*pose_avg)`
+→ `pose_avg = 2.5e-4` (the crossover threshold). Below pose_avg ~ 2.5e-4 the
+pose marginal exceeds SegNet's; at PR106's pose_avg = 3.4e-5 (about 7× below
+crossover), the gap is 2.71×.
 
 **Total contribution remains seg-dominated** at PR106 (seg 0.067 vs pose 0.018,
 3.67× larger by total). But **MARGINAL improvement** (which is what dispatch
