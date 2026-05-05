@@ -1,3 +1,5 @@
+# pyc-recovery: STUB unreconstructible -- see .recovery_spec.json for dis() ground-truth
+# pycdc could not produce parseable output; raw decompiled text preserved in _PYCDC_PARTIAL_OUTPUT below.
 """RECOVERY STUB - pycdc output preserved inside r-string for hand-rehydration.
 
 This file was decompiled from a .pyc orphan whose .py source was never

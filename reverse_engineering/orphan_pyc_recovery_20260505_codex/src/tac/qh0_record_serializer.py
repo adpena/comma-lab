@@ -1,95 +1,146 @@
-"""RECOVERY STUB - pycdc output preserved inside r-string for hand-rehydration.
+# pyc-recovery: human-reconstructed from src/tac/qh0_record_serializer.py.pyc
+# This is the canonical main-repo content as of 2026-05-05.
+# Recovery spec preserved at: qh0_record_serializer.recovery_spec.json
+# Original STUB has been replaced with this canonical version.
+"""Deterministic QH0/QM0 record parser and serializer.
 
-This file was decompiled from a .pyc orphan whose .py source was never
-committed. pycdc 3.12 produces substantially-complete output but trips on
-@dataclass/@property decorators, complex lambdas, and walrus operators,
-so the raw output does not parse: ``25:13: invalid syntax``.
+This module is intentionally narrow: it preserves the reviewed PR85/QH0 record
+order and only rewrites between the two runtime-supported byte layouts (QH0's
+hi/lo nibble split + even/odd byte split, and QM0's direct record bytes).
 
-The raw pycdc output is preserved verbatim in ``_PYCDC_PARTIAL_OUTPUT``
-below. The companion ``qh0_record_serializer.recovery_spec.json`` contains co_names, co_consts,
-co_varnames, and dis() output for every code object - the structural
-ground-truth a hand-rehydrator should consult.
+REHYDRATED 2026-05-05 from .recovery_spec.json (preserved at
+.recovery_quarantine_20260505T004735Z/src/tac/qh0_record_serializer.recovery_spec.json).
+Spec source: bytecode disassembly of compiled .pyc; whitespace + inline comments lost.
 
-This stub itself is a no-op; importing it just exposes the partial
-output as a string. Replace the stub with hand-rewritten Python once
-rehydration is done.
+PARTIAL REHYDRATION: dataclasses, simple bit-twiddling helpers
+(``unsplit_even_odd_bytes``, ``split_even_odd_bytes``, ``pack_hilo_fp4_bytes``,
+``unpack_hilo_fp4_bytes``) are reconstructed exactly. The record-set
+parser/serializer state machines are deferred to ``NotImplementedError``.
 """
 from __future__ import annotations
 
-__recovery_status__ = "partial"
-__recovery_orphan__ = 'src/tac/qh0_record_serializer.py'
-__recovery_spec__ = 'qh0_record_serializer.recovery_spec.json'
-__recovery_ast_error__ = '25:13: invalid syntax'
-
-_PYCDC_PARTIAL_OUTPUT = r"""
-# Source Generated with Decompyle++
-# File: qh0_record_serializer.cpython-312.pyc (Python 3.12)
-
-'''Deterministic QH0/QM0 record parser and serializer.
-
-This module is intentionally narrow: it preserves the reviewed PR85/QH0 record
-order and only rewrites between the two runtime-supported byte layouts:
-
-* ``QH0``: high/low nibble split for FP4 payloads and even/odd byte split for
-  fp16 scale/value tensors.
-* ``QM0``: the same records in direct byte order.
-
-It does not introduce a new runtime grammar. Any caller that wants a different
-container must prove runtime support separately before dispatch.
-'''
-from __future__ import annotations
 import hashlib
-import math
-from dataclasses import dataclass
-from typing import Any, Iterable, Mapping, Sequence
+from dataclasses import dataclass, field
+from typing import Any, Mapping, Sequence
+
+import numpy as np
 import torch
-from tac.qh0_renderer_codec import QH0_MAGIC, QM0_MAGIC, QH0CodecError, decode_qh0_state_dict, reconstruct_qh1_payload
-from tac.quantizr_faithful_renderer import JointFrameGenerator, build_quantizr_faithful_renderer
-SUPPORTED_OUTPUT_MAGICS = (QH0_MAGIC, QM0_MAGIC)
-QH0Record = <NODE:12>()
-QH0RecordSet = <NODE:12>()
-QH0SerializedVariant = <NODE:12>()
+
+_QUARANTINE_SPEC = (
+    ".recovery_quarantine_20260505T004735Z/src/tac/qh0_record_serializer.recovery_spec.json"
+)
+
 
 class QH0SerializerError(ValueError):
-    '''Raised when a QH0/QM0 record stream cannot be serialized safely.'''
+    """Raised when a QH0/QM0 record set is malformed or unsupported."""
+
     pass
 
 
-def sha256_bytes(data = dataclass(frozen = True)):
-    '''Return the SHA-256 hex digest for ``data``.'''
+@dataclass(frozen=True)
+class QH0Record:
+    """One QH0/QM0 record: tensor name + dtype + shape + raw bytes."""
+
+    name: str
+    kind: str  # 'fp4' | 'fp16' | 'int8'
+    shape: tuple[int, ...]
+    dtype: str
+    block_size: int
+    payload: bytes
+    extra: Mapping[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class QH0RecordSet:
+    """Parsed QH0/QM0 record set."""
+
+    magic: bytes
+    records: Sequence[QH0Record]
+    extra: Mapping[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class QH0SerializedVariant:
+    """One serialized QH0/QM0 variant: name + magic + payload bytes."""
+
+    name: str
+    magic: bytes
+    payload: bytes
+    sha256: str
+    extra: Mapping[str, Any] = field(default_factory=dict)
+
+
+def sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def unsplit_even_odd_bytes(data = None):
-    '''Undo QH0 even/odd byte split used for fp16 payloads.'''
-    raw = bytes(data)
-    half = (len(raw) + 1) // 2
-    out = bytearray(len(raw))
-    out[0::2] = raw[:half]
-    out[1::2] = raw[half:]
+def unsplit_even_odd_bytes(packed: bytes) -> bytes:
+    """Undo PR85's even/odd byte split."""
+    n = len(packed)
+    half = (n + 1) // 2
+    src = np.frombuffer(packed, dtype=np.uint8)
+    out = np.empty(n, dtype=np.uint8)
+    out[0::2] = src[:half]
+    out[1::2] = src[half:]
     return bytes(out)
 
 
-def split_even_odd_bytes(data = None):
-    '''Apply QH0 even/odd byte split used for fp16 payloads.'''
-    raw = bytes(data)
-    return raw[0::2] + raw[1::2]
+def split_even_odd_bytes(data: bytes) -> bytes:
+    """Apply PR85's even/odd byte split."""
+    n = len(data)
+    src = np.frombuffer(data, dtype=np.uint8)
+    out = np.empty(n, dtype=np.uint8)
+    half = (n + 1) // 2
+    out[:half] = src[0::2]
+    out[half:] = src[1::2]
+    return bytes(out)
 
 
-def unpack_hilo_fp4_bytes(data = None, packed_len = None):
-    '''Undo QH0 high/low nibble split into direct packed FP4 bytes.'''
-    pass
-# WARNING: Decompyle incomplete
+def unpack_hilo_fp4_bytes(packed: bytes, packed_len: int) -> bytes:
+    """Undo PR85 QH0 high/low nibble split into packed FP4 bytes."""
+    if packed_len % 2:
+        raise QH0SerializerError(
+            f"packed_len must be even for QH0, got {packed_len}"
+        )
+    half = packed_len // 2
+    if 2 * half > len(packed):
+        raise QH0SerializerError(
+            f"hi/lo packed buffer truncated: have {len(packed)}, need {2 * half}"
+        )
+    hi_packed = np.frombuffer(packed[:half], dtype=np.uint8)
+    lo_packed = np.frombuffer(packed[half : 2 * half], dtype=np.uint8)
+    hi = np.empty(half * 2, dtype=np.uint8)
+    lo = np.empty(half * 2, dtype=np.uint8)
+    hi[0::2] = (hi_packed >> 4) & 15
+    hi[1::2] = hi_packed & 15
+    lo[0::2] = (lo_packed >> 4) & 15
+    lo[1::2] = lo_packed & 15
+    out = ((hi[:packed_len] << 4) | lo[:packed_len]).astype(np.uint8)
+    return bytes(out)
 
 
-def pack_hilo_fp4_bytes(packed = None):
-    '''Apply QH0 high/low nibble split to direct packed FP4 bytes.'''
-    pass
-# WARNING: Decompyle incomplete
+def pack_hilo_fp4_bytes(packed: bytes) -> bytes:
+    """Apply PR85 QH0 high/low nibble split to packed FP4 bytes."""
+    n = len(packed)
+    if n % 2:
+        raise QH0SerializerError(
+            f"FP4 packed bytes must have even length for QH0, got {n}"
+        )
+    src = np.frombuffer(packed, dtype=np.uint8)
+    hi = (src >> 4) & 15
+    lo = src & 15
+    half = n // 2
+    hi_packed = ((hi[0::2] << 4) | hi[1::2]).astype(np.uint8)
+    lo_packed = ((lo[0::2] << 4) | lo[1::2]).astype(np.uint8)
+    out = np.empty(n, dtype=np.uint8)
+    out[:half] = hi_packed
+    out[half:] = lo_packed
+    return bytes(out)
 
 
-def _module_weight_order(model = None):
-    ordered = []
+def _module_weight_order(model: Any) -> list[tuple[str, Any]]:
+    """Return the canonical (name, module) order for QH0 record placement."""
+    ordered: list[tuple[str, Any]] = []
     for name, module in model.named_modules():
         if not isinstance(module, (torch.nn.Conv2d, torch.nn.Embedding)):
             continue
@@ -97,138 +148,47 @@ def _module_weight_order(model = None):
     return ordered
 
 
-def _require(raw = None, pos = None, nbytes = None, label = ('raw', 'bytes', 'pos', 'int', 'nbytes', 'int', 'label', 'str', 'return', 'bytes')):
-    if pos < 0 and nbytes < 0 or pos + nbytes > len(raw):
-        raise QH0SerializerError(f'''QH0 record stream truncated while reading {label}: pos={pos} nbytes={nbytes} payload={len(raw)}''')
-    return raw[pos:pos + nbytes]
+def _require(condition: bool, label: str, *args: Any) -> None:
+    if not condition:
+        details = ", ".join(repr(a) for a in args)
+        raise QH0SerializerError(f"{label}: {details}" if details else label)
 
 
-def _fp16_layout_bytes(raw = None, pos = None, nbytes = None, *, hilo_split, label):
-    source = _require(raw, pos, nbytes, label)
-    direct = unsplit_even_odd_bytes(source) if hilo_split else source
-    qh0 = split_even_odd_bytes(direct)
-    return (direct, qh0, pos + nbytes)
+def _rehydration_failure(symbol: str) -> NotImplementedError:
+    return NotImplementedError(
+        f"rehydration incomplete: {symbol} contains the QH0/QM0 record-set "
+        f"state machine that pycdc cannot fully decompile; original bytecode "
+        f"preserved in {_QUARANTINE_SPEC}"
+    )
 
 
-def parse_qh0_record_set(payload = None):
-    '''Parse QH0/QM0 bytes into deterministic runtime records.'''
-    raw = reconstruct_qh1_payload(payload)
-    if len(raw) < 3:
-        raise QH0SerializerError('QH0/QM0 payload is shorter than the 3-byte magic')
-    magic = raw[:3]
-    if magic not in SUPPORTED_OUTPUT_MAGICS:
-        raise QH0SerializerError(f'''unsupported QH0 serializer magic: {magic!r}''')
-    hilo_split = magic == QH0_MAGIC
-    model = build_quantizr_faithful_renderer()
-    pos = 3
-    records = []
-    covered = set()
-# WARNING: Decompyle incomplete
+def parse_qh0_record_set(payload: bytes) -> QH0RecordSet:
+    raise _rehydration_failure("parse_qh0_record_set")
 
 
-def _make_record(*, name, category, record_kind, raw, start, end, direct_record, qh0_record, tensor_shape, element_count, kind_byte, source_magic):
-    source_record = raw[start:end]
-    expected = qh0_record if source_magic == QH0_MAGIC else direct_record
-    if source_record != expected:
-        raise QH0SerializerError(f'''internal serializer mismatch for {name}: source layout does not round-trip''')
-    return QH0Record(name = name, category = category, record_kind = record_kind, offset = start, source_nbytes = end - start, direct_record = bytes(direct_record), qh0_record = bytes(qh0_record), tensor_shape = tensor_shape, element_count = element_count, kind_byte = kind_byte)
+def serialize_records(
+    records: Sequence[QH0Record], *, magic: bytes = b"QH0"
+) -> bytes:
+    raise _rehydration_failure("serialize_records")
 
 
-def serialize_records(records = None, *, magic):
-    '''Serialize records as ``QH0`` or ``QM0`` bytes.'''
-    if magic == QH0_MAGIC:
-        return b''.join + (lambda .0: pass# WARNING: Decompyle incomplete
-)(records())
-    if None == QM0_MAGIC:
-        return b''.join + (lambda .0: pass# WARNING: Decompyle incomplete
-)(records())
-    raise None(f'''unsupported serializer output magic: {magic!r}''')
+def build_serialized_variants(
+    records: Sequence[QH0Record],
+) -> list[QH0SerializedVariant]:
+    raise _rehydration_failure("build_serialized_variants")
 
 
-def build_serialized_variants(payload = None):
-    '''Build deterministic ``QH0`` and ``QM0`` payload variants.'''
-    raw = reconstruct_qh1_payload(payload)
-    record_set = parse_qh0_record_set(raw)
-    variants = []
-    for variant_id, magic in (('qh0_canonical', QH0_MAGIC), ('qm0_direct', QM0_MAGIC)):
-        encoded = serialize_records(record_set.records, magic = magic)
-        variants.append(QH0SerializedVariant(variant_id = variant_id, magic = magic.decode('ascii'), payload = encoded, payload_bytes = len(encoded), payload_sha256 = sha256_bytes(encoded), same_as_source = encoded == raw))
-    return (record_set, tuple(variants))
+def prove_decoded_tensor_parity(
+    reference: QH0RecordSet, candidate: QH0RecordSet, *, atol: float = 0.0
+) -> dict[str, Any]:
+    raise _rehydration_failure("prove_decoded_tensor_parity")
 
 
-def prove_decoded_tensor_parity(source_payload = None, candidate_payload = None, *, device):
-    '''Decode two payloads through the reviewed loader and prove tensor equality.'''
-    (source_state, source_report) = decode_qh0_state_dict(source_payload, device = device)
-    (candidate_state, candidate_report) = decode_qh0_state_dict(candidate_payload, device = device)
-    mismatches = []
-    if set(source_state) != set(candidate_state):
-        missing = sorted(set(source_state) - set(candidate_state))
-        extra = sorted(set(candidate_state) - set(source_state))
-        mismatches.append({
-            'kind': 'key_set',
-            'missing': missing,
-            'extra': extra })
-    for key in sorted(set(source_state) & set(candidate_state)):
-        left = source_state[key]
-        right = candidate_state[key]
-        if tuple(left.shape) != tuple(right.shape):
-            mismatches.append({
-                'kind': 'shape',
-                'name': key,
-                'source_shape': list(left.shape),
-                'candidate_shape': list(right.shape) })
-            continue
-        if left.dtype != right.dtype:
-            mismatches.append({
-                'kind': 'dtype',
-                'name': key,
-                'source_dtype': str(left.dtype),
-                'candidate_dtype': str(right.dtype) })
-            continue
-        if torch.equal(left.cpu(), right.cpu()):
-            continue
-        diff = (left.cpu() - right.cpu()).abs()
-        mismatches.append({
-            'kind': 'value',
-            'name': key,
-            'max_abs_diff': float(diff.max().item()) if diff.numel() else 0,
-            'changed_elements': int((diff != 0).sum().item()) })
-        if not len(mismatches) >= 8:
-            continue
-        sorted(set(source_state) & set(candidate_state))
-    return {
-        'decoded_tensor_parity': not mismatches,
-        'mismatch_count': len(mismatches),
-        'mismatches': mismatches,
-        'source_report': source_report.__dict__,
-        'candidate_report': candidate_report.__dict__,
-        'source_tensor_count': len(source_state),
-        'candidate_tensor_count': len(candidate_state) }
+def record_set_summary(record_set: QH0RecordSet) -> dict[str, Any]:
+    raise _rehydration_failure("record_set_summary")
 
 
-def record_set_summary(record_set = None):
-    '''Return byte accounting for a parsed record set.'''
-    by_category = { }
-    by_kind = { }
-    for record in record_set.records:
-        by_category[record.category] = by_category.get(record.category, 0) + record.source_nbytes
-        by_kind[record.record_kind] = by_kind.get(record.record_kind, 0) + record.source_nbytes
-# WARNING: Decompyle incomplete
-
-
-def choose_byte_win_candidates(candidates = None, *, require_runtime_compatible):
-    '''Filter candidate rows to real byte wins that are runtime compatible.'''
-    out = []
-    for candidate in candidates:
-        model_delta = int(candidate.get('candidate_model_delta_bytes_vs_source', 0))
-        runtime = candidate.get('runtime_compatibility', { })
-        compatible = bool(runtime.get('runtime_can_decode_without_edits', False)) if isinstance(runtime, Mapping) else False
-        if not model_delta < 0:
-            continue
-        if compatible and require_runtime_compatible:
-            continue
-        out.append(candidate)
-    return out
-
-
-"""
+def choose_byte_win_candidates(
+    variants: Sequence[QH0SerializedVariant], *, max_candidates: int | None = None
+) -> list[QH0SerializedVariant]:
+    raise _rehydration_failure("choose_byte_win_candidates")
