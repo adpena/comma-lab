@@ -1,0 +1,19 @@
+{
+  "archive_path": "experiments/results/apogee_int8_repack_20260504_claude/apogee_int8_archive.zip",
+  "archive_size_bytes": 187731,
+  "pr106_size_bytes": 186239,
+  "delta_bytes": 1492,
+  "rate_component_score_delta_vs_pr106": 0.0009934615580582797,
+  "bits": 8,
+  "block_size": 128,
+  "magic_byte": "0xA8",
+  "n_intn_layers": 13,
+  "n_brotli_int8_layers": 15,
+  "rel_err_pct_per_weight": 0.24,
+  "distortion_risk": "ALMOST LOSSLESS",
+  "predicted_score_band": "[0.196, 0.207]",
+  "tag": "[design-validation]",
+  "council_status": "NOT_REVIEWED",
+  "score_claim": false,
+  "next_step": "Dispatch contest-CUDA on Vast.ai 4090 (~$0.30 / 30min) to confirm distortion. Inflate adapter must handle magic byte high-nibble 0xA + bits-low-nibble (int4=0xA4, int5=0xA5, int6=0xA6). Build a generic apogee_intN/ submission adapter that dispatches on bits = magic & 0xF."
+}
