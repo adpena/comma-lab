@@ -10,20 +10,30 @@ recipe):
 3. Distortion curve coefficients are FITTED from empirical anchors, never
    hardcoded — see `fit_distortion_curve` and `.omx/calibration/anchors_*.json`.
 
-REFUSAL MODES (council Q1 prescription):
-  - INSUFFICIENT_ANCHORS: <3 calibration anchors loaded
-  - EXTRAPOLATION: requested rel_err outside calibration range
-  - LOSSY_BETTER_THAN_LOSSLESS_INCOHERENT: predicted_high < lossless baseline AND rel_err > 0
-  - HIGH_REL_ERR_WITHOUT_PROXY: rel_err > 1.0% AND no distortion_proxy provided
+REFUSAL MODES (council Q1 prescription) — checked in this exact order:
+  1. INSUFFICIENT_ANCHORS:  <3 calibration anchors loaded
+  2. EXTRAPOLATION:  requested rel_err outside calibration range (with 20% margin)
+  3. HIGH_REL_ERR_WITHOUT_PROXY:  rel_err > 1.0% AND no distortion_proxy provided
+  4. CURVE_FIT_DEGENERATE:  insufficient lossy anchors to fit power-law curve
+  5. CURVE_FIT_NON_MONOTONE:  fitted exponent b ≤ 0 (distortion would decrease with rel_err)
+  6. LOSSY_BETTER_THAN_LOSSLESS_INCOHERENT:  predicted_high < tightest lossless baseline AND rel_err > 0
 
 The empirical apogee_int4 fixture (rel_err=7.09%, score 1.4287) is the
 acceptance test in `src/tac/tests/test_score_band_predictor.py`.
+
+Adversarial review 2026-05-05 (subagent a0455937b64e0dbb5) added:
+  - CalibrationAnchor.__post_init__ validates rate_unscaled vs archive_bytes/denom (M3)
+  - sanity gate uses min(lossless score) not list[0] (M2)
+  - non-monotone curve guard (M1)
+  - prediction_method field distinguishes proxy vs power-law fit (N2)
+  - check order aligned with docstring (C1)
+  - dead `rate_contribution` removed (C2), `field` import removed (N1)
 """
 from __future__ import annotations
 
 import json
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Optional
 
@@ -42,7 +52,11 @@ HIGH_REL_ERR_THRESHOLD_PCT = 1.0  # [heuristic:Q1-Hotz "above 1%, run local prox
 class CalibrationAnchor:
     """A measured (rel_err_pct, contest_cuda_score) point.
 
-    Persisted in `.omx/calibration/anchors_<lane_class>.json`.
+    Persisted in `.omx/calibration/anchors_<lane_class>.json`. The
+    `__post_init__` validates that `rate_unscaled` matches
+    `archive_bytes / PR106_TOTAL_RATE_DENOM` within tolerance — guards against
+    stale JSON state where the byte count was bumped but the cached rate
+    wasn't recomputed (M3 from adversarial review 2026-05-05).
     """
     lane_id: str  # e.g. "lane_pr106_baseline", "lane_apogee_int8"
     rel_err_pct_per_weight: float  # 0.0 for lossless baseline
@@ -56,19 +70,37 @@ class CalibrationAnchor:
     archive_sha256: str
     notes: str = ""
 
+    def __post_init__(self) -> None:
+        # Validate rate_unscaled is consistent with archive_bytes/denom (M3).
+        # Tolerance 1e-6 allows for round-off from the JSON file's rounded
+        # rate_unscaled value but catches any sign error or wrong denominator.
+        expected = self.archive_bytes / PR106_TOTAL_RATE_DENOM
+        if abs(self.rate_unscaled - expected) > 1e-6:
+            raise ValueError(
+                f"CalibrationAnchor({self.lane_id}): rate_unscaled={self.rate_unscaled} "
+                f"inconsistent with archive_bytes={self.archive_bytes} "
+                f"/ PR106_TOTAL_RATE_DENOM={PR106_TOTAL_RATE_DENOM} "
+                f"(expected {expected:.10f}; diff {abs(self.rate_unscaled - expected):.2e})"
+            )
+
 
 @dataclass(frozen=True)
 class ScoreBand:
-    """Predicted score band with confidence and refusal handling."""
+    """Predicted score band with confidence and refusal handling.
+
+    `prediction_method` distinguishes how the distortion estimate was produced
+    so callers can apply different downstream tolerances (N2 from review).
+    """
     low: float
     high: float
-    confidence: str  # "calibrated_strong", "calibrated_weak", "extrapolation_risk"
+    confidence: str  # "calibrated_strong", "calibrated_weak", "extrapolation_risk", "none"
     refused: bool
     refusal_reason: str = ""
     distortion_estimate_used: bool = False
-    proxy_predicted_pose: float = 0.0
-    proxy_predicted_seg: float = 0.0
-    proxy_predicted_rate: float = 0.0
+    predicted_pose: float = 0.0
+    predicted_seg: float = 0.0
+    predicted_rate: float = 0.0
+    prediction_method: str = "none"  # "proxy" | "power_law_fit" | "none"
     derivation: str = ""  # short trace of how the band was computed
 
     def as_str(self) -> str:
@@ -182,21 +214,9 @@ def predict_score_band(
         )
 
     rate_unscaled = archive_bytes / PR106_TOTAL_RATE_DENOM
-    rate_contribution = RATE_COEFFICIENT * rate_unscaled
-
-    # ── Refusal #3: high rel_err without distortion proxy ─────────────────
-    if rel_err_pct_per_weight > HIGH_REL_ERR_THRESHOLD_PCT and distortion_proxy is None:
-        return ScoreBand(
-            low=0.0, high=0.0, confidence="none",
-            refused=True,
-            refusal_reason=(
-                f"high_rel_err_without_proxy: rel_err={rel_err_pct_per_weight:.2f}% > {HIGH_REL_ERR_THRESHOLD_PCT}% "
-                "and no distortion_proxy provided. Run local inflate + scorer to estimate distortion before banding."
-            ),
-            derivation="Council Q1 (Hotz): >1% per-weight error needs empirical distortion estimate.",
-        )
 
     # ── Refusal #2: extrapolation outside anchor range ────────────────────
+    # Order: extrapolation check before proxy gate per docstring contract (C1).
     rel_err_anchors = [a.rel_err_pct_per_weight for a in calibration_anchors]
     rel_err_min, rel_err_max = min(rel_err_anchors), max(rel_err_anchors)
     rel_err_range = max(rel_err_max - rel_err_min, 1e-9)
@@ -213,12 +233,25 @@ def predict_score_band(
             derivation="Council Q1 (Shannon): extrapolation outside calibration is unsupported.",
         )
 
+    # ── Refusal #3: high rel_err without distortion proxy ─────────────────
+    if rel_err_pct_per_weight > HIGH_REL_ERR_THRESHOLD_PCT and distortion_proxy is None:
+        return ScoreBand(
+            low=0.0, high=0.0, confidence="none",
+            refused=True,
+            refusal_reason=(
+                f"high_rel_err_without_proxy: rel_err={rel_err_pct_per_weight:.2f}% > {HIGH_REL_ERR_THRESHOLD_PCT}% "
+                "and no distortion_proxy provided. Run local inflate + scorer to estimate distortion before banding."
+            ),
+            derivation="Council Q1 (Hotz): >1% per-weight error needs empirical distortion estimate.",
+        )
+
     # ── Predict distortion ────────────────────────────────────────────────
     pred_pose: float
     pred_seg: float
+    method: str
     if distortion_proxy is not None:
         pred_pose, pred_seg = distortion_proxy(archive_bytes, rel_err_pct_per_weight, n_quantized_layers)
-        proxy_used = True
+        method = "proxy"
         derivation_pieces = ["distortion via local proxy"]
     else:
         # Use fitted curve for low-rel-err regime (≤1%).
@@ -229,6 +262,19 @@ def predict_score_band(
                 refused=True,
                 refusal_reason="curve_fit_degenerate: insufficient lossy anchors to fit distortion curve",
                 derivation="fit_distortion_curve returned NaN; need ≥2 lossy anchors.",
+            )
+        # ── Refusal #5: non-monotone fit (M1 from review) ─────────────────
+        if curve["b"] <= 0:
+            return ScoreBand(
+                low=0.0, high=0.0, confidence="none",
+                refused=True,
+                refusal_reason=(
+                    f"curve_fit_non_monotone: fitted exponent b={curve['b']:.4g} ≤ 0. "
+                    "Distortion would decrease with rel_err — physically impossible for naive PTQ. "
+                    "Likely cause: anchors include a QAT-suppressed point mixed with naive-PTQ points; "
+                    "split into separate lane classes before fitting."
+                ),
+                derivation="Council M1 (Shannon/Dykstra): power-law must be monotone.",
             )
         if rel_err_pct_per_weight == 0.0:
             d_total = curve["d_baseline"]
@@ -243,7 +289,7 @@ def predict_score_band(
             pose_ratio = 0.0
         pred_pose = d_total * pose_ratio
         pred_seg = d_total * (1.0 - pose_ratio)
-        proxy_used = False
+        method = "power_law_fit"
         derivation_pieces = [f"power-law fit a={curve['a']:.4g} b={curve['b']:.4g}"]
 
     point_score = _score_from_components(pred_pose, pred_seg, rate_unscaled)
@@ -251,24 +297,26 @@ def predict_score_band(
     band_high = point_score + band_half_width_score
     derivation_pieces.append(f"point_score={point_score:.4f} ± {band_half_width_score}")
 
-    # ── Refusal #4: lossy-better-than-lossless sanity gate ────────────────
+    # ── Refusal #6: lossy-better-than-lossless sanity gate ────────────────
+    # Use the TIGHTEST (best) lossless score per M2 from review — multiple
+    # lossless anchors should not let list[0] make the gate non-deterministic.
     lossless = [a for a in calibration_anchors if a.rel_err_pct_per_weight == 0.0]
     if lossless and rel_err_pct_per_weight > 0.0:
-        lossless_score = lossless[0].contest_cuda_score
+        lossless_score = min(a.contest_cuda_score for a in lossless)
         if band_high < lossless_score:
             return ScoreBand(
                 low=0.0, high=0.0, confidence="none",
                 refused=True,
                 refusal_reason=(
                     f"lossy_better_than_lossless_incoherent: predicted_high={band_high:.4f} < "
-                    f"lossless baseline {lossless_score:.4f}. A lossy compression cannot strictly improve "
+                    f"tightest lossless baseline {lossless_score:.4f}. A lossy compression cannot strictly improve "
                     "every component; this prediction is mathematically incoherent."
                 ),
                 derivation="Council Q1 (Contrarian): sanity gate fires.",
             )
 
     # ── Confidence label ──────────────────────────────────────────────────
-    if proxy_used:
+    if method == "proxy":
         confidence = "calibrated_strong"  # local proxy + anchors
     elif rel_err_min <= rel_err_pct_per_weight <= rel_err_max:
         confidence = "calibrated_weak"  # within range, no proxy
@@ -281,8 +329,9 @@ def predict_score_band(
         confidence=confidence,
         refused=False,
         distortion_estimate_used=True,
-        proxy_predicted_pose=pred_pose,
-        proxy_predicted_seg=pred_seg,
-        proxy_predicted_rate=rate_unscaled,
+        predicted_pose=pred_pose,
+        predicted_seg=pred_seg,
+        predicted_rate=rate_unscaled,
+        prediction_method=method,
         derivation=" | ".join(derivation_pieces),
     )
