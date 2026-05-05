@@ -236,13 +236,15 @@ Anchor: `experiments/results/internal_hidden_gem_audit_20260504_claude/revival_p
 
 The Lane #04 ternary-block_fp falsification was revived as a Pareto sweep over signed intN block-FP variants (int4..int8). Verified end-to-end byte-decodable locally (CPU stub mode):
 
-| Variant | Magic | Archive bytes | Rate Δ | Rel err per weight | Risk | Predicted band [contest-CUDA] |
-|---|---|---:|---:|---:|---|---|
-| int4 | `0xA4` | 109,981 | −0.0508 | 7.1% | HIGH | [0.155, 0.180] |
-| **int5** | **`0xA5`** | **154,555** | **−0.0211** | **3.3%** | **MEDIUM** | **[0.180, 0.196] — sweet spot** |
-| int6 | `0xA6` | 170,450 | −0.0105 | 1.55% | LOW | [0.190, 0.204] |
-| int7 | `0xA7` | (sketch only) | (TBD) | 0.79% | VERY LOW | [0.198, 0.208] |
-| int8 | `0xA8` | (sketch only) | (TBD) | 0.24% | ALMOST LOSSLESS | [0.196, 0.207] |
+| Variant | Magic | Archive bytes | Rate Δ | Rel err per weight | Risk | Predicted band [contest-CUDA] | Pareto |
+|---|---|---:|---:|---:|---|---|---|
+| int4 | `0xA4` | 109,996 | −0.0508 | 7.1% | HIGH | [0.155, 0.180] | FRONTIER |
+| **int5** | **`0xA5`** | **154,555** | **−0.0211** | **3.3%** | **MEDIUM** | **[0.180, 0.196] — sweet spot** | FRONTIER |
+| int6 | `0xA6` | 170,450 | −0.0105 | 1.55% | LOW | [0.190, 0.204] | FRONTIER |
+| int7 | `0xA7` | 205,158 | +0.0126 | 0.79% | VERY LOW | [0.198, 0.208] | **DOMINATED by int8** |
+| int8 | `0xA8` | 187,731 | +0.0010 | 0.24% | ALMOST LOSSLESS | [0.196, 0.207] | FRONTIER |
+
+**Pareto-domination finding (NEW)**: int7 is +18,919 bytes vs int8 for the *same* VERY-LOW distortion class. Non-byte-aligned int7 packing requires shift/mask boilerplate per block whereas int8 fits cleanly. Reactivation criterion only if a future packer eliminates the bit-aligned overhead (e.g., 2× int7 → 14-bit aligned, or context model on the bit-stream).
 
 **Lane #04 closed-loop chain — all four components landed this session:**
 - Producer: `experiments/repack_pr106_with_intN_block_fp.py` (`82ca9456`) — generic `--bits N`
@@ -256,7 +258,34 @@ The Lane #04 ternary-block_fp falsification was revived as a Pareto sweep over s
 APOGEE_INTN_BITS=5 bash scripts/remote_lane_apogee_intN.sh   # sweet spot
 APOGEE_INTN_BITS=6 bash scripts/remote_lane_apogee_intN.sh   # safe fallback
 APOGEE_INTN_BITS=4 bash scripts/remote_lane_apogee_intN.sh   # high-risk high-reward
+APOGEE_INTN_BITS=8 bash scripts/remote_lane_apogee_intN.sh   # almost-lossless calibration
 ```
+
+For full operator-ready `launch_lane_on_vastai.py full ...` commands per
+Pareto-frontier variant: `.venv/bin/python tools/apogee_intN_pareto.py`.
+
+## Dispatch feedback trio (NEW 2026-05-04 evening)
+
+A complete pre-/in-/post-dispatch tooling stack now lives in `tools/`. Each
+piece reads on-disk artifacts independently — no shared state, no orchestrator.
+
+| Tool | Phase | Reads | Output |
+|---|---|---|---|
+| `tools/apogee_intN_pareto.py` | **pre-dispatch** | `experiments/results/apogee_int*_repack_*/repack_metadata.json` | Pareto-frontier table + `launch_lane_on_vastai.py full ...` one-liners per non-dominated bits config |
+| `tools/score_dashboard.py` | **post-landing (general)** | `experiments/results/**/contest_auth_eval*.json` | Sorted view (best score first) of every contest_auth_eval ever produced; non-CUDA rows marked `*` per CLAUDE.md MPS-auth-eval-is-NOISE |
+| `tools/predicted_vs_actual_reconciler.py` | **post-landing (apogee_intN)** | both of the above | Per-bits in-band/out-of-band check + beats-PR106 verdict |
+
+10 regression tests pass (5 per tool that emits subprocess one-liners), all
+catching dead-flag-wiring (CLAUDE.md NEVER-INVENT-CLI-FLAGS), schema drift,
+band malformation, and stale wrapper-path renames. Smoke-verified on the
+live empirical manifests for all 5 bits configs.
+
+**Lane registry promotions (Check 90 STRICT validates clean)**: 4 apogee_intN
+lanes now at L2 INTEGRATION (impl_complete + real_archive_empirical satisfied).
+int7 also registered at L2 with a `Reactivation: <criteria>` note per the
+"KILLED lanes get registry entries too" discipline. Pre-existing stale-path
+findings on `lane_owv3_0120_stack` and `lane_line_search_pose_refinement`
+also repaired this session.
 
 ## Recovery + Lane SJ-KL launchability (NEW 2026-05-04 evening)
 
