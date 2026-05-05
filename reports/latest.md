@@ -232,11 +232,61 @@ bash scripts/remote_lane_omega_w_v3_pr106.sh
 
 Anchor: `experiments/results/internal_hidden_gem_audit_20260504_claude/revival_plans/revival_plan_01_water_filling_codec_v2_pr106_decoder.md` (Council 8/10 GO).
 
-## Next Queue
+## Lane #04 intN expansion (NEW 2026-05-04 evening) [empirical:experiments/repack_pr106_with_intN_block_fp.py]
+
+The Lane #04 ternary-block_fp falsification was revived as a Pareto sweep over signed intN block-FP variants (int4..int8). Verified end-to-end byte-decodable locally (CPU stub mode):
+
+| Variant | Magic | Archive bytes | Rate Δ | Rel err per weight | Risk | Predicted band [contest-CUDA] |
+|---|---|---:|---:|---:|---|---|
+| int4 | `0xA4` | 109,981 | −0.0508 | 7.1% | HIGH | [0.155, 0.180] |
+| **int5** | **`0xA5`** | **154,555** | **−0.0211** | **3.3%** | **MEDIUM** | **[0.180, 0.196] — sweet spot** |
+| int6 | `0xA6` | 170,450 | −0.0105 | 1.55% | LOW | [0.190, 0.204] |
+| int7 | `0xA7` | (sketch only) | (TBD) | 0.79% | VERY LOW | [0.198, 0.208] |
+| int8 | `0xA8` | (sketch only) | (TBD) | 0.24% | ALMOST LOSSLESS | [0.196, 0.207] |
+
+**Lane #04 closed-loop chain — all four components landed this session:**
+- Producer: `experiments/repack_pr106_with_intN_block_fp.py` (`82ca9456`) — generic `--bits N`
+- Inflate adapter: `submissions/apogee_intN/inflate.{py,sh}` + vendored `src/intn_codec.py` (`62e3a51c`)
+- Dispatch wrapper: `scripts/remote_lane_apogee_intN.sh` (`5c31755e`) — operator picks bits via `APOGEE_INTN_BITS` env
+- Decision matrix doc: `docs/pr106_stacking_decision_table_20260504.md` (`7b354a1a`)
+
+**Operator one-liners** (Vast.ai 4090 ~$0.30 / 30min each):
+
+```bash
+APOGEE_INTN_BITS=5 bash scripts/remote_lane_apogee_intN.sh   # sweet spot
+APOGEE_INTN_BITS=6 bash scripts/remote_lane_apogee_intN.sh   # safe fallback
+APOGEE_INTN_BITS=4 bash scripts/remote_lane_apogee_intN.sh   # high-risk high-reward
+```
+
+## Recovery + Lane SJ-KL launchability (NEW 2026-05-04 evening)
+
+A defensive-validation pass uncovered 8 lost helpers from a subagent-worktree-cleanup bug class (subagent built helpers + wrapper, only the wrapper got committed before quota; helpers wiped on cleanup). Full recovery doc: `docs/recovery_report_20260504.md`. Bug class structurally extinct via two new preflight checks (PCC9 + PCC9b, warn-only initially) that scan shell scripts + test files for runtime-executed file references that don't resolve to disk.
+
+**Lane SJ-KL C067 is now end-to-end runtime-decodable** after the 6 lost SJ-KL Python modules were rebuilt from runbook + addendum spec:
+- `src/tac/sjkl_basis.py` — full codec library (basis + alpha-block V1+V2 + full payload + runtime aliases), 26 tests pass
+- `experiments/build_sjkl_residual.py` — Lanczos top-K Fisher-info basis + per-pair alpha quantization → sjkl.bin
+- `experiments/prepare_sjkl_pair_tensors.py` — frame-pair I/O orchestration
+- `experiments/build_sjkl_c067_archive.py` — `top_level_sibling` layout fully implemented (preserves source `p` bytes exactly)
+- Plus the recovered `tools/claim_lane_dispatch.py` (full) + `scripts/ensure_remote_uv.sh` (canonical uv installer)
+
+End-to-end pipeline verified locally: prepare → build_residual → 942-byte sjkl.bin → build_archive → charged ZIP `{p untouched, sjkl.bin charged}` → decode via `tac.sjkl_basis`: byte-faithful basis + alpha extraction.
+
+**Operator one-liner** (Vast.ai 4090, separate base archive from PR106-stacking lanes):
+
+```bash
+bash scripts/remote_lane_sjkl_c067.sh
+```
+
+## Updated Next Queue
 
 1. Use `experiments/results/submission_packet_pr100_adapter_20260504/apogee_pr100_hnerv_lc_v2_adapter` as the release packet unless a newer exact T4 A++ packet is explicitly promoted.
 2. Keep PR100 source attribution and the exact T4 custody block with every public/judge-facing score claim.
 3. Run strict public-release hygiene on the exact PR body, notebook, and site bundle before publishing URLs.
 4. Keep PR96, PR91/HPM1, and any public body/CPU scores in external context until exact CUDA replay lands.
-5. **NEW**: Lane Ω-W-V3 GPU dispatch (~$0.30) is the highest-EV next move toward sub-0.20 — operator approval gate per CLAUDE.md "Design decisions — non-negotiable".
+5. **Lane Ω-W-V3 GPU dispatch (~$0.30)** — council 8/10 GO, predicted [0.194, 0.204], LOWEST risk of the sub-0.20 candidates. Operator approval gate per CLAUDE.md "Design decisions — non-negotiable".
+6. **Lane #04 int5 GPU dispatch (~$0.30)** — predicted [0.180, 0.196], MEDIUM risk, sweet spot of the int-N Pareto. Worth running in parallel with Ω-W-V3 since they're orthogonal (different codec families).
+7. **Lane #04 int6 GPU dispatch (~$0.30)** — predicted [0.190, 0.204], LOW risk fallback if int5 distortion exceeds tolerance.
+8. **Lane SJ-KL C067 GPU dispatch (~$0.30)** — uses C067 base archive (not PR106), so dispatchable in parallel with the PR106-stacking lanes. Predicted score band TBD pending first run.
+
+**Total dispatch matrix: 4 lanes × ~$0.30 = ~$1.20** for the highest-EV sweep that would land the first contest-CUDA score below PR106's 0.20946.
 </content>
